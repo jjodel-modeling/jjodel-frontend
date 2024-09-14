@@ -1,11 +1,16 @@
 import {
+    DEdge,
     DGraphElement,
     Dictionary,
     DState,
-    GObject, LGraphElement, LModelElement,
+    GObject,
+    LGraphElement,
+    LModelElement,
     Log,
-    LPointerTargetable, LViewElement,
-    Pointer, RuntimeAccessibleClass,
+    LPointerTargetable,
+    LViewElement,
+    Pointer,
+    RuntimeAccessibleClass,
     transientProperties,
     U,
     windoww
@@ -17,13 +22,11 @@ import {connect} from 'react-redux';
 import './style.scss'; // <-- tenuto per retro-compatibilità ma dovrebbe sparire
 import './editors.scss'; // <-- stile comune a tutte le tab editor (idealmente da tenere leggero)
 import './console.scss'; // <-- stile di questa tab
-
 import ReactDOM from "react-dom";
-import { useStateIfMounted } from 'use-state-if-mounted';
 import {Empty} from "./Empty";
 import {Tooltip} from "../forEndUser/Tooltip";
 
-var Convert = require('ansi-to-html');
+const Convert = require('ansi-to-html');
 
 let ansiConvert = (window as any).ansiConvert;
 if (!ansiConvert) (window as any).ansiconvert = ansiConvert = new Convert();
@@ -195,6 +198,7 @@ class ConsoleComponent extends PureComponent<AllProps, ThisState>{
     render(){
         /*const [expression, setExpression] = useStateIfMounted('data');
         const [output, setOutput] = useStateIfMounted('');*/
+        if(this.props.node?.className === DEdge.name) return <Empty msg={"Console not available on DEdge."} />;
         if (!this.props.node) return <Empty msg={"Select a node."} />;
         let expression = this.state.expression.trim();
         if (expression === 'this') expression = 'data';

@@ -238,6 +238,7 @@ export const MetricsPanel = (props: MetricsProps) => {
 export const Metrics = (props: MetricsProps) => {
 
 
+
 /*
     function getAttributes(c: LClass): number {
         let sum = 0;
@@ -262,16 +263,19 @@ export const Metrics = (props: MetricsProps) => {
     let dclasses: DClass[] = classes.map(c=>c.__raw);
     function getAllAttributes(): number {
         let sum = 0;
-        // classes.map(c => sum += getAttributes(c));
+        //props.data?.model.classes.map(c => sum += getAttributes(c));
         classes.forEach(c => sum += c.allAttributes.length); // includes attributes from inheritance at any level
         return sum;
     }
     function getAllReferences(): number {
         let sum = 0;
+        //props.data?.model.classes.map(d => sum += getReferences(d));
         classes.forEach(c => sum += c.allReferences.length);
         return sum;
     }
 
+    let allRefsCount = getAllReferences();
+    let allAttrCount = getAllAttributes();
     return (<div className={"value"}>
         {props.type === "package" && <>{model.allSubPackages.length}</>}
         {props.type === "metaclass" && <>{classes.length}</>}
@@ -279,11 +283,11 @@ export const Metrics = (props: MetricsProps) => {
         {props.type === "concrete" && <>{classes.length - dclasses.filter(c => c.abstract).length}</>}
         {props.type === "iflmc" && <>{dclasses.filter(c => (c.attributes.length + c.references.length) === 0).length}</>}
         {props.type === "mcws" && <>{dclasses.filter(c => c.extends.length > 0).length}</>}
-        {props.type === "sf" && <>{getAllAttributes() + getAllReferences()}</>}
-        {props.type === "asf" && <>{((getAllAttributes() + getAllReferences())/(dclasses.filter(c => !c.abstract).length)).toFixed(2)}</>}
+        {props.type === "sf" && <>{allAttrCount + allRefsCount}</>}
+        {props.type === "asf" && <>{((allAttrCount + allRefsCount)/(dclasses.filter(c => !c.abstract).length)).toFixed(2)}</>}
         {props.type === "enum" && <>{model.enumerators.length}/{model.literals.length}</>}
-        {props.type === "attr" && <>{model.attributes.length}/{getAllAttributes()}</>}
-        {props.type === "ref" && <>{model.references.length}/{getAllReferences()}</>}
+        {props.type === "attr" && <>{model.attributes.length}/{allAttrCount}</>}
+        {props.type === "ref" && <>{model.references.length}/{allRefsCount}</>}
         {props.type === "lmc" && <>{((model.classes.filter(c => c.extends.length === 0 && c.extendedBy.length === 0).length/model.classes.length)*100).toFixed(2)}%</>}
         {props.type === "ext" && <>{dclasses.reduce((acc, c) => acc+c.extends.length, 0)}</>}
         </div>);

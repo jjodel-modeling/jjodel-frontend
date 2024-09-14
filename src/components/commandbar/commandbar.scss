@@ -40,14 +40,31 @@
 
     & .tab-btn.disabled {
       cursor: normal!important;
-      color: var(--disabled)!important;
-      background-color: var(--bg-1-5)!important;
+      background-color: transparent!important;
+      margin-left: 0px!important;
+      padding-left: 0px!important;
+      padding-right: 0px!important;
+    }
+    & .tab-btn.bi.disabled::before {
+      color: var(--bg-3-1)!important;
+      margin-left: 0px!important;
+      padding-left: 0px!important;
+      padding-right: 5px!important;
+    }
+    & .tab-btn.bi.disabled {
+      cursor: default!important;
     }
 
-    & .tab-btn.disabled::before:hover {
-      background-color: none!important;
-      cursor: normal!important;
+    & .tab-btn.open.disabled {
+      padding-right: 0px!important;
+      margin-left: 0px!important;
     }
+    & .tab-btn.open.disabled::before {
+      padding-right: 0px!important;
+      margin-left: 0px!important;
+    }
+
+
 
 
 
@@ -73,6 +90,137 @@
     }
 
     & .tab-btn.up:hover::before {
+      border: 1px solid var(--btn-bg);
+      background-color: var(--btn-bg);
+      border-radius: var(--radius);
+    }
+
+    & .no-border & .tab-btn.up::before {
+      border: none!important;
+    }
+    & .no-border .tab-btn.up:hover::before {
+      border: none!important;
+    }
+
+    // favorite
+
+
+    & .tab-btn.favorite {
+      margin: auto;
+      color: var(--btn-back)!important;
+      margin-right: 2px!important;
+      transition: background-color 0.3s;
+    }
+
+    & .tab-btn.favorite:hover {
+
+    }
+    & .tab-btn.favorite::before {
+
+      border: 1px solid var(--bg-2);
+      border-radius: var(--radius);
+      display: block;
+      padding: 0px 0px;
+      text-align: center;
+      font-size: 0.9em;
+      margin-right: 2px;
+      content: "\F588"; // \F148";
+    }
+
+    & .tab-btn.favorite:hover::before {
+      border: 1px solid var(--btn-bg);
+      background-color: var(--btn-bg);
+      border-radius: var(--radius);
+    }
+
+    // edit
+
+
+    & .tab-btn.edit {
+      margin: auto;
+      color: var(--btn-back)!important;
+      margin-right: 2px!important;
+      transition: background-color 0.3s;
+    }
+
+    & .tab-btn.edit:hover {
+
+    }
+    & .tab-btn.edit::before {
+
+      border: 1px solid var(--bg-2);
+      border-radius: var(--radius);
+      display: block;
+      padding: 0px 0px;
+      text-align: center;
+      font-size: 0.9em;
+      margin-right: 2px;
+      content: "\F4CA"; // \F148";
+    }
+
+    & .tab-btn.edit:hover::before {
+      border: 1px solid var(--btn-bg);
+      background-color: var(--btn-bg);
+      border-radius: var(--radius);
+    }
+
+    // open
+
+
+    & .tab-btn.open {
+      margin: auto;
+      color: var(--btn-back)!important;
+      margin-right: 2px!important;
+      transition: background-color 0.3s;
+    }
+
+    & .tab-btn.open:hover {
+
+    }
+    & .tab-btn.open::before {
+
+      border: 1px solid var(--bg-2);
+      border-radius: var(--radius);
+      display: block;
+      padding: 0px 0px;
+      text-align: center;
+      font-size: 0.9em;
+      margin-right: 2px;
+      content: "\F3D5"; // \F148";
+    }
+
+    & .tab-btn.open:hover::before {
+      border: 1px solid var(--btn-bg);
+      background-color: var(--btn-bg);
+      border-radius: var(--radius);
+    }
+
+    // download
+
+
+    & .tab-btn.download {
+      margin: auto;
+      color: var(--btn-back)!important;
+      margin-right: 2px!important;
+      transition: background-color 0.3s;
+    }
+
+    & .tab-btn.download:hover {
+
+    }
+    & .tab-btn.download::before {
+
+      border: 1px solid var(--bg-2);
+      border-radius: var(--radius);
+      display: block;
+      padding: 0px 0px;
+      text-align: center;
+      font-size: 0.9em;
+      margin-right: 2px;
+      content: "\F29B"; // \F148";
+    }
+
+    & .tab-btn.download:hover::before {
       border: 1px solid var(--btn-bg);
       background-color: var(--btn-bg);
       border-radius: var(--radius);
@@ -550,6 +698,8 @@
       border-radius: var(--radius);
     }
 
+
+
     // close
 
     & .tab-btn.close {
@@ -562,7 +712,7 @@
     & .tab-btn.close:hover {
 
     }
-    & .tab-btn.close::before {
+    & † {
 
       border: 1px solid var(--bg-2);
       border-radius: var(--radius);
@@ -630,6 +780,7 @@
 
 
 
+
     // sizes
 
     & .tab-btn.x-small {
@@ -655,10 +806,10 @@
 
     // disabled
 
+  }
 
-
-
-
+  .no-border .tab-btn::before, .no-border .tab-btn:hover::before {
+    border: none!important;
   }
 
   button.jj-delete {

@@ -5,6 +5,8 @@ import "./menu.scss";
 type MenuProps = {
     children: any;
     position?: "left"|"right";
+    style?: React.CSSProperties;
+    theme?: "light"
 };
 
 function getFragment(command: string): any {
@@ -40,12 +42,13 @@ export const Menu = (props: MenuProps) => {
         setOpen(false);
     });
 
+    // const my_style = (props.style ? props.style : {border: '1px solid blue'} );
     return(<>
-        <div className={'menu-button'} ref={menuRef}>
+        <div className={'menu-button'} ref={menuRef}  style={props.style}>
             {open && <div className={`dropdown ${props.position ? props.position : 'right' }`}>
                 {props.children}
             </div>}
-            <i onClick={() => setOpen(!open)} className="bi bi-chevron-down"></i>
+            <i onClick={() => setOpen(!open)} className="bi bi-chevron-down" style={{fontSize: '10px!important'}}></i>
         </div>      
     </>);
 };
@@ -61,6 +64,7 @@ type ItemType = {
     children: any;
     action?: MouseEventHandler;
     keystroke?: string; 
+    
 }
 
 export const Item = (props: ItemType) => {

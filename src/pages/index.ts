@@ -10,5 +10,6 @@ export {RecentPage} from './Recent';
 export {SettingsPage} from './Settings';
 export {TemplatePage} from './Templates';
 export {UpdatesPage} from './Updates';
+export {ErrorPage} from './Error';
 
 

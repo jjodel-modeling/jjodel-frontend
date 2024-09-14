@@ -366,13 +366,19 @@ type ErrorProps = {
 
 export class DefaultView {
 
+    /* MODEL */
+
     public static model(): string { return (
-`<view className={'root model'}>
-{/*<ControlPanel node={node}></ControlPanel>*/}
+`<View className={'root model'}>
+{/* here you can insert viewpoint-wide descriptions, eg <Control> .. </Control> */}
 <label className={"detail-level"}>
     <input onChange={(e)=>{node.state = {level:+e.target.value}}} min="0" max="3" type="range" step="1" value={level}/>
     <div>Detail level:{level}</div>
 </label>
+
+<Control title={'Abstraction'} payoff={'Zooming'}>
+    <Slider name={'level'} title={'Detail level '} node={node} max={3} />
+</Control>
 <Scrollable graph={node}>
     {!data && "Model data missing."}
     <div className={'edges'}>
@@ -387,8 +393,9 @@ export class DefaultView {
     {level >= 1 && m1Objects.filter(o => o).map(m1object => <DefaultNode key={m1object.id} data={m1object} />)}
     {decorators}
     </Scrollable>
-</view>`
+</View>`
 );}
+
 
     public static void(): string { return (
 `<div className={'root void model-less round bg-white p-1'}>
@@ -398,8 +405,10 @@ export class DefaultView {
 </div>`
 );}
 
+    /* PACKAGE */
+
     public static package(): string { return (
-`<div className={'root package'}>
+`<View className={'root package'}>
     <Measurable draggable={true} resizable={true}><div>draggable resizable</div></Measurable>
     <Measurable draggable={true}><div>draggable</div></Measurable>
     <div className={'package-children'}>
@@ -419,7 +428,7 @@ export class DefaultView {
         ]}
     </div>
     {decorators}
-</div>`
+</View>`
 );}
 
     public static defaultPackage(): string { return (
@@ -431,59 +440,70 @@ export class DefaultView {
 </div>`
 );}
 
-    public static class(): string { return (
-`<View className={'root class'} onClick={()=>{/*node.events.e1(Math.random().toFixed(3))*/}}>
-    <div className={'header'}>
-        <b className={'class-name'}>{interface ? 'Interface' : abstract ? 'Abstract Class' : 'Class'}:</b>
-        <Input data={data} field={'name'} hidden={true} autosize={true} />
-    </div>
-    <hr/>
+    /* CLASS */
+
+// <View className={"root class " + (level === 1 && abstract ? "abstract")} + onClick={()=>{/*node.events.e1(Math.random().toFixed(3))*/}}>
+
+public static class(): string { return (`<View className={"root class"} onClick={()=>{/*node.events.e1(Math.random().toFixed(3))*/}}>
+<div className={'header'}>
+    {level > 1 && <b className={'class-name'}>{interface ? 'Interface' : abstract ? 'Abstract Class' : 'Class'}:</b>}
+    
+    {level === 1 && <i className="bi bi-c-square-fill"></i>}<Input data={data} field={'name'} hidden={true} autosize={true} />
+</div>
+{level > 2 && <hr/>}
+
+{level > 2 && 
     <div className={'class-children'}>
         {level >= 2 && [
             attributes.map(c => <DefaultNode key={c.id} data={c} />),
             references.map(c => <DefaultNode key={c.id} data={c} />),
             operations.map(c => <DefaultNode key={c.id} data={c} />)
-          ]
-         || [/*
-         <div className={""}><b>isInterface:</b><span className={"ms-1"}>{''+data.interface}</span></div>,
-         <div className={""}><b>isAbstract:</b><span className={"ms-1"}>{''+data.abstract}</span></div>,
-         <div className={""}><b>Instances:</b><span className={"ms-1"}>{data.instances.length}</span></div>,*/
-         <div className={"summary"}>{[
-             attributes.length ? attributes.length + " attributes" : '',
-             references.length ? references.length + " references" : '',
-             operations.length ? operations.length + " operations" : '',
-             !(attributes.length + references.length + operations.length) ? '- empty -' : ''
+        ]
+        || [
+        <div className={"summary"}>{[
+            attributes.length ? attributes.length + " attributes" : '',
+            references.length ? references.length + " references" : '',
+            operations.length ? operations.length + " operations" : '',
+            !(attributes.length + references.length + operations.length) ? '- empty -' : ''
             ].filter(v=>!!v).join(',')}</div>
-         ]
+        ]
         }
+    </div>
+}
+
+{decorators}
+</View>`);}
+
+    /* ENUM */
+
+public static enum(): string { return (
+`<View className={'root enumerator'}>
+    <div className={'header'}>
+        {level > 1 && <b className={'enumerator-name'}>Enum:</b>}
+        {level == 1 && <i className="bi bi-explicit-fill"></i>}<Input data={data} field={'name'} hidden={true} autosize={true} />
+    </div>
+    {level > 1 && <hr />}
+    <div className={'enumerator-children'}>
+        {level >= 2 && literals.map(c => <DefaultNode key={c.id} data={c}/>)}
     </div>
     {decorators}
 </View>`
 );}
 
-    public static enum(): string { return (
-`<div className={'root enumerator'}>
-    <div className={'header'}>
-        <b className={'enumerator-name'}>Enum:</b>
-        <Input data={data} field={'name'} hidden={true} autosize={true} />
-    </div>
-    <hr />
-    <div className={'enumerator-children'}>
-        {level >= 2 && literals.map(c => <DefaultNode key={c.id} data={c}/>)
-          || <div className={"summary"}>{literals.length} literals</div>}
-    </div>
-    {decorators}
-</div>`
-);}
+
+
+
+
 
     public static feature(): string { return (
-`<div className={'root feature w-100'}>
+`<View className={'root feature w-100'}>
     <span className={'feature-name'}>{data.name}:</span>
     <Select data={data} field={'type'} />
     {decorators}
-</div>`
+</View>`
 );}
 
+    /* LITERAL */
     public static literal(): string { return (
 `<label className={'root literal d-block text-center'}>
     {data.name}
@@ -491,8 +511,9 @@ export class DefaultView {
 </label>`
 );}
 
+    /* OPERATION */
     public static operation(): string { return (
-`<div className={'root operation w-100 hoverable'}>
+`<View className={'root operation w-100 hoverable'}>
         <span className={'feature-name'}>{data.name + ' =>'}</span>
         <Select data={data} field={'type'} />
     <div className={"parameters content"}>
@@ -501,18 +522,19 @@ export class DefaultView {
         level >= 3 && data.parameters.map(p => <DefaultNode data={p} key={p.id} />)
     }</div>
     {decorators}
-</div>`
+</View>`
 );}
 
+    /* PARAMETER */
 public static parameter(): string { return (
-`<div className={'root parameter w-100'}>
+`<View className={'root parameter w-100'}>
     <span className={'feature-name'}>
         {data.name + '' + (data.lowerBound === 0 ? '?:' : ':' )}
     </span>
     <Select data={data} field={'type'} />
     <span className={"modifier"}>{data.upperBound > 1 || data.upperBound === -1 ? '[]' : ''}</span>
     {decorators}
-</div>`
+</View>`
 );}
 
     // i want to keep it because it will be useful for a candidate next feature in m1 & layoutable elements
@@ -544,8 +566,20 @@ public static parameter(): string { return (
 </div>`);
 }
 
-    public static object(): string { return (
-`<div className={'root object'}>
+//     public static object(): string { return (
+// `<View className={'root object'}>
+//     <b className={'object-name'}>{data.instanceof ? data.instanceof.name : 'Object'}:</b>
+//     <Input data={data} field={'name'} hidden={true} autosize={true} />
+//     <hr/>
+//     <div className={'object-children'}>
+//         {level >= 2 && data.features.map(f => <DefaultNode key={f.id} data={f} />)}
+//     </div>
+//     {decorators}
+// </View>`
+// );}
+
+public static object(): string { return (
+`<View className={'root object'}>
     <b className={'object-name'}>{data.instanceof ? data.instanceof.name : 'Object'}:</b>
     <Input data={data} field={'name'} hidden={true} autosize={true} />
     <hr/>
@@ -553,20 +587,21 @@ public static parameter(): string { return (
         {level >= 2 && data.features.map(f => <DefaultNode key={f.id} data={f} />)}
     </div>
     {decorators}
-</div>`
+</View>`
 );}
 
+    /* VALUE */
+
     public static value() { return (
-`<div className={'root value d-flex'}>
+`<View className={'root value d-flex'}>
     {instanceofname && <label className={'d-block ms-1 name'}>{instanceofname}</label>}
     {!instanceofname && <Input className='name' data={data} field={'name'} hidden={true} autosize={true} />}
     <label className={'d-block m-auto values_str'} style={{color: constants[typeString] || 'gray'}}>
         : {valuesString}
     </label>
     {decorators}
-</div>`
+</View>`
 );}
-
 
     public static error(msg: undefined | ReactNode, errortype: string | "SYNTAX" | "RUNTIME",
                         data?: DModelElement | undefined, node?: DGraphElement | undefined, v?: LViewElement|DViewElement): React.ReactNode {

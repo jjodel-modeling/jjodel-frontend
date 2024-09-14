@@ -1,5 +1,5 @@
 .dock-style-editors .dock-tabpane section,
-.input-container {
+.collaborative-tab .input-container {
 
 
   color: var(--color);
@@ -19,7 +19,6 @@
     outline-color: var(--accent);
     outline-width: 1px;
     height: var(--input-height);
-
   }
 
   & input[type=text] {
@@ -166,7 +165,6 @@
   content: "";
   font-size: 1em;
   transition: border 0.3s;
-
 
 }
 

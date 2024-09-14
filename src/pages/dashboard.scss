@@ -44,7 +44,7 @@ project-card .tip {
 .project-card {
   position: relative;
   width: 23em;
-  height: 122px;
+  height: 100px;
   border-radius: 8px;
   background-color: var(--bg-2);
   background: linear-gradient(90deg, hsla(186, 33%, 94%, 1) 0%, hsla(216, 41%, 79%, 1) 100%);
@@ -127,6 +127,7 @@ project-card .tip {
 .leftbar {
   background-color: white;
   max-width: 250px!important;
+  min-width: 220px!important;
   flex-basis: 155px;
   flex-grow: 0.15;
   flex-shrink: 0;
@@ -248,6 +249,8 @@ project-card .tip {
 
 .project-card h5 {
   margin-bottom: 4px;
+  font-size: var(--h1-size);
+  font-weight: var(--h1-weight);
 }
 
 .project-card label {
@@ -256,14 +259,12 @@ project-card .tip {
 }
 
 .project-card .header {
-
   padding: 1.2em;
 }
 
 .project-card .tag {
 
   // background: linear-gradient(180deg, hsla(45, 100%, 88%, 1) 0%, hsla(191, 95%, 34%, 1) 100%);
-
 
   font-weight: 300;
   font-size: 13px;
@@ -302,25 +303,106 @@ project-card .tip {
   color: #eee;
 }
 
-.dashboard-container{
+.dashboard-container{ 
   display: flex;
-  min-height: 0;
+  height: 100%;
   flex-grow: 1;
+  width: 100%;
+  container-type: size;
 }
 
-.user {
+@container (width < 1680px) {
+  .details {
+    display: none;
+    transition: transform 0.3s;
+  }
+
+  .project-list {
+    width: 100%!important;
+    margin-right: 0;
+  }
+}
+@container (width < 1100px) {
+
+  .artifact-type {
+    display: none;
+    width: 0;
+  }
+
+  .project-list {
+    width: 100%!important;
+    margin-right: 0;
+  }
+  
+}
+@container (width < 900px) {
+
+  .created {
+    display: none;
+    width: 0;
+  }
+
+  .project-list {
+    width: 100%!important;
+    margin-right: 0;
+  }
+  
+}
+@container (width < 800px) {
+
+  .modified {
+    display: none;
+    width: 0;
+  }
+  .project-list {
+    width: 100%!important;
+    margin-right: 0;
+  }
+  
+}
+
+.dashboard-container .user {
   display: inline-flex;
-  .name {
-    float: left;
-    width: fit-content;
+  margin-top: 50px;
+  margin-left: 100px;
+  margin-right: 20px;
+  
+  width: 100%;
+
+  .name { 
+    width: 100%;
     padding-top: 5px;
+    padding-left: 0px!important;
+    margin-bottom: 100px;
+    
+
     h2 {
       font-weight: 400;
-      .bi {
-        color: var(--secondary);
-      }
+      font-size: var(--h1-lg-size);
+      color: var(--color);
+    }
+    h3 {
+      margin-top: 10px;
+      font-size: var(--h2-size);
+      width: 45%;
+    }
+    
+  }
+
+  .details {
+    // transform: scaleX(100%);
+    // transform-origin: 0%;
+    // transition: transform 0.3s;
+
+    & b {
+      font-weight: 600;
+      
     }
   }
+
+  
+
+
   .initials {
     text-align: center;
     font-size: 1.5em;
@@ -342,11 +424,6 @@ project-card .tip {
   }
 }
 
-/*
-
-  // uso il padding come spacing minimo, e margin-auto come spacing aggiuntivo se avanza spazio su schermi grandi
-  margin: auto;
-  padding: 30px 0;*/
 .catalog-container {
   padding: 20px;
   position: relative;
@@ -372,13 +449,6 @@ project-card .tip {
     }
   }
 
-/*
-  *{
-    outline: 1px solid gray;
-    .bi::before{
-      outline: 1px solid gray;
-    }
-  }*/
 }
 
 

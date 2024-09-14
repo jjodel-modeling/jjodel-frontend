@@ -13,6 +13,7 @@ import {
     DPointerTargetable,
     Log, EMeasurableEvents, TRANSACTION,
     KeyDownEvent, KeyUpEvent,
+    LoadAction, stateInitializer, DUser,
 } from "../joiner";
 import {
     DClassifier,
@@ -77,6 +78,10 @@ export class Color {
 @RuntimeAccessible('U')
 export class U {
 
+    static alert(type: 'i'|'w'|'e', message: string): void {
+        SetRootFieldAction.new('alert', `${type}:${message}`, '');
+    }
+
     static async decompressState(state: string): Promise<string> {
         return await decompressFromUTF16(state);
     }
@@ -87,7 +92,10 @@ export class U {
         return Storage.read('offline') === 'true';
     }
     static refresh(): void {
-        window.location.reload();
+        LoadAction.new(DState.new());
+        SetRootFieldAction.new('isLoading', true);
+        DUser.current = '';
+        stateInitializer().then(() => SetRootFieldAction.new('isLoading', false));
     }
 
     public static inspect(object: any, showHidden?: boolean, depth?: number | null, color?: boolean): string {
@@ -388,24 +396,6 @@ export class U {
             index += 1;
         }
         return randomString;
-    }
-
-    public static alert(title: string, text: string) {
-        let color = 'text-';
-        switch(title.toLowerCase()) {
-            case 'error': color += 'danger'; break;
-            default: color += 'primary'
-        }
-        let html = '<style>body.swal2-no-backdrop .swal2-container {background-color: rgb(0 0 0 / 60%) !important}</style>';
-        html += `<div><b><label class='fs-5 mb-2 text-uppercase ${color}'>${title}</label></b><hr/>`;
-        html += `<label class='fs-6 mt-3'>${text}</label><br/>`;
-        const result = Swal.fire({
-            html: html,
-            backdrop: false,
-            showCloseButton: true,
-            showConfirmButton: false
-            //confirmButtonText: 'GOT IT'
-        })
     }
 
     public static popup(element: any) {

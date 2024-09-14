@@ -79,6 +79,7 @@ body{
     --accent: #2D4E62; // #087E8B; // #087E8B; //#f3b700; // accent color, I'm considering to define it as the primary color
     --accent-secondary: #f3b700; // planned to be used, but it has been not - used for the enumerators in models
     --neutral: #525251; // #5F0F40; // dark gray
+    --disabled: var(--bg-4);
 
 // backgrounds
 
@@ -91,7 +92,7 @@ body{
     --bg-3-1: #c3c3c1;
     --bg-4: #8f908e;
     --bg-5: #525251;
-  
+
 // success/failure
     --danger: #ed474a;
     --failure: #ed474a;
@@ -104,21 +105,52 @@ body{
     --alert-border:#f5c6cc;
     --alert-background: #f8d7db;
 
-// control panel 
+// control panel
 
     --control-color: var(--control);
     --control-border: none; // 1px solid var(--bg-4);
     --control-background-dark: var(--bg-5);
     --control-background-light: var(--bg-2);
-    --control-opacity: 0.7; 
+    --control-opacity: 0.7;
 
-// *******
-  
+// font-size, font-weight
+
+    --h1-size: 1.2em;
+    --h1-weight: 600;
+    --h1-lg-size: 1.4rem!important;
+    --h1-lg-weight: 600;
+    --h2-size: 1.2em;
+    --h2-weight: 600;
+    --h3-size: 1.1em;
+    --h3-weight: 500;
+    --text-lg-size: 1.1em;
+    --text-lg-weight: 300;
+    --text-md-size: 1em;
+    --text-md-weight: 300;
+    --text-sm-size: 0.8em;
+    --text-sm-weight: 300;
+
+  // model palette
+
+    --model-color: rgb(45, 78, 98)!important; //
+    --model-accent: #087E8B;
+    --model-accent-secondary: #f3b700;
+    --model-background: white;
+    --model-radius: var(--radius);
+    --model-shadow: 0 0 6px silver;
+
+
+    --knob: 16px;
+
+
+
+    // *******
+
     --disabled: var(--bg-3);
-  
+
     --side-padding: 31px;
     --sep-padding: 4em;
-  
+
     --secondary: #087e8b;
     --terziary: #EE4266; // #5F0F40;
 

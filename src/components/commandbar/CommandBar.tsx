@@ -14,10 +14,13 @@ type BtnProps = {
         | "add2"
         | "delete"
         | "delete2"
+        | "open"
         | "edit"
+        | "favorite"
         | "shrink"
         | "expand"
         | "space"
+        | "minispace"
         | "sep"
         | "check"
         | "copy"
@@ -26,7 +29,8 @@ type BtnProps = {
         | "show"
         | "open-down"
         | "close-up"
-        | "settings";
+        | "settings"
+        | "download";
 
     tip?: string | ReactNode;
     label?: string;
@@ -103,29 +107,44 @@ export const Btn = (props: BtnProps) => {
                                 onClick={(e) => {props.action && props.action(e); e.stopPropagation();}}
                                 style={props.style}
                             />
-                        </Tooltip>}
+                        </Tooltip>
+                    }
                     </>
                 }
 
             </div>
         :
             <>
-            {props.icon === "space" ?
-                <span style={{display: 'block', width: '26px'}}></span>
-            :
-                <button className="btn btn-success my-btn">{props.icon === "add2" && props.label}</button>
-            }
+                {props.icon === "space" || props.icon === "minispace" ?
+                    <span style={{display: 'block', width: `${props.icon === 'space' ? '24px' : '4px'}`}}></span>
+                :
+
+                <Tooltip tooltip={'Disabled'} inline={true} position={'top'} offsetY={10} >
+                    <i className={`bi disabled tab-btn ${props.icon} commandbar-btn ${props.theme ? props.theme : 'light'} ${props.size && props.size} ${props.mode}`}
+                    style={props.style}
+                />
+            </Tooltip>
+                }
             </>
         }
     </>);
 }
 
-export const Sep = () => {
+
+
+export const Sep = (style?: any) => {
 
     return (<>
-            <div>
-                <div className={'tab-btn sep'}></div>
-            </div>
+            {style ?
+                <div>
+                    <div className={'tab-btn sep'}></div>
+                </div>
+            :
+                <div>
+                    <div className={'tab-btn sep'} style={style}></div>
+                </div>
+            }
+
     </>);
 }
 
@@ -133,20 +152,23 @@ export const Sep = () => {
 type CommandProps = {
     children: any,
     style?: React.CSSProperties,
-    className?: string
+    className?: string,
+    noBorder?: boolean;
 }
 
 export const CommandBar = (props: CommandProps) => {
 
     let style = props.style;
 
+    let noBorder = (props.noBorder ? props.noBorder: false);
+
     return(<>
         {props.style ?
-            <div className={`command-bar ${props.className && props.className}`} style={props.style}>
+            <div className={`command-bar ${props.className && props.className} ${noBorder && 'no-border'}`} style={props.style}>
                 {props.children}
             </div>
             :
-            <div className={`command-bar ${props.className && props.className}`} >
+            <div className={`command-bar ${props.className && props.className} ${noBorder && 'no-border'}`} >
                 {props.children}
             </div>
         }

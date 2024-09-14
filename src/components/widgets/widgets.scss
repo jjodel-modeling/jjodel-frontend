@@ -1,4 +1,80 @@
+/* Toggle */
 
+.toggle {
+  --width: 26px;
+  --height: 14px;
+  --knob: 12px;
+  --radius: 8px;
+  --border: 2px;
+  --active: var(--accent);
+  --neutral: var(--bg-2-5);
+  --label: 50px;
+  --global-width: 120px;
+  --global-height: 24px;
+  --font-size: 0.85em;
+}
+
+.toggle {
+  position: relative;
+  top: 1px;
+  right: 0;
+  min-width: var(--global-width);
+  height: var(--global-height);
+  padding-top: 0px;
+}
+
+.toggle .toggle-input {
+  display: none;
+}
+
+.toggle .toggle-input::before {
+  width: var(--width);
+  height: var(--height);
+}
+
+.toggle .toggle-label {
+  display: block;
+  width: fit-content;
+  position: absolute;
+  top: 4px;
+  width: var(--width);
+  height: var(--height);
+  background-color: var(--neutral);
+  cursor: pointer;
+  transition: background-color 0.3s;
+  border-radius: var(--radius);
+}
+
+.toggle .toggle-label::before {
+  content: "";
+  position: absolute;
+  width: var(--knob);
+  height: var(--knob);
+  border-radius: var(--knob);
+  border: 1px border var(--neutral);
+  top: 1px;
+  left: 1px;
+  background-color: #fff;
+  transition: transform 0.3s;
+}
+
+.toggle .toggle-input:checked + .toggle-label::before {
+  left: calc(var(--knob) + 1px);
+}
+
+.toggle .toggle-input:checked + .toggle-label {
+  background-color: var(--active);
+}
+
+.toggle .toggle-labels {
+  position: absolute;
+  top: 3px;
+  width: fit-content;
+  padding-left: calc(var(--width) + 6px);
+  white-space: pre;
+  font-size: var(--font-size);
+
+}
 
 /* HRule */
 

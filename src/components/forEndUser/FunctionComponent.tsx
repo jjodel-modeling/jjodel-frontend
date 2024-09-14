@@ -285,10 +285,15 @@ function FunctionComponent(props: AllProps) {
             <label>{tooltip}</label>
         </div>}
         {<div
-            className={"collapsable-section " + (state.collapsed ? "collapsed" : "expanded")}
+            className={"collapsable-section" + (state.collapsed ? "collapsed" : "expanded"}
             data-comment={"collapsable-section"}
-            style={{
+            style={{/*
+                transition: transitionTime + "ms all", // transformOrigin: "top", transform: "rotateX("+(state.collapsed ? 0 : 90 )+"deg)",
+                transform: "scaleY("+(state.collapsed ? 0 : 1 )+") ",
+                transformOrigin: "top",
+                overflow:"hidden"*/
             }}>
+
             <textarea className={"detailedMode input w-100"} disabled={readOnly} rows={Math.min(10, state.ta.v.split("\n").length)}
                   onInput={(e)=>textAreaChange(e, state, setState)}
                   onBlur={(e)=> !readOnly && onBlur(state, setState, props)}

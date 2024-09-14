@@ -15,7 +15,7 @@ import {
     GenericInput,
     TextArea,
     RuntimeAccessibleClass,
-    SetRootFieldAction,
+    SetRootFieldAction, DEdge,
 } from '../../joiner';
 import './editors.scss';
 import './node-editor.scss';
@@ -87,6 +87,7 @@ function NodeEditorComponent(props: AllProps) {
 
     let stackingOrder = <InputRow label={'Stacking order'} as={node} field={'zIndex'} type={'number'} />
 
+    if(node.className === DEdge.name) return <Empty msg={"Node Editor not available on DEdge."} />;
     return(<div className={'p-3 node-editor'}>
         {/*<Input obj={selected.node} field={'id'} label={'ID'} type={'text'} readonly={true}/>*/}
 
@@ -134,10 +135,10 @@ function NodeEditorComponent(props: AllProps) {
         </>}
 
         <div style={{marginTop:'1em', marginBottom:'1em', borderBottom:'1px solid gray'}}/>
-        
+
         {/* <div>
             <h6 className={'super'}>
-                Super element: 
+                Super element:
                 {node.father?.className ?
                     <span onClick={(e)=> dnode.father && openNode(dnode.father)} style={clickableStyle}>
                         {[node.father?.className, <i style={{paddingLeft: '8px'}} className="bi bi-chevron-up"></i>]}
@@ -150,7 +151,7 @@ function NodeEditorComponent(props: AllProps) {
 
         {node.father?.className && <div>
             <h6 style={{display: 'flex'}}>
-                Super element 
+                Super element
                     {/*<span onClick={(e)=> dnode.father && openNode(dnode.father)} style={clickableStyle}>
                         {[node.father?.className, <i style={{paddingLeft: '8px'}} className="bi bi-chevron-up"></i>]}
                     </span>*/}
@@ -176,13 +177,13 @@ function NodeEditorComponent(props: AllProps) {
                     : <span style={notFoundStyle}>Missing</span>
             }</h6></div>
         ]}
-        
+
         {/* <div>
             <h6 style={headerStyle} className='sub'>
                 Sub elements
-                {subElements.length ? 
-                    <i style={{paddingLeft: '8px'}}className="bi bi-chevron-down"></i> 
-                : 
+                {subElements.length ?
+                    <i style={{paddingLeft: '8px'}}className="bi bi-chevron-down"></i>
+                :
                     [': ', <span style={notFoundStyle}>None</span>]
                 }
             </h6>
@@ -193,13 +194,13 @@ function NodeEditorComponent(props: AllProps) {
 
             {subElements.length > 0 && <div>
             <h6 style={{display: 'flex'}}>
-                Sub elements 
-                
+                Sub elements
+
                 <CommandBar style={{paddingLeft: 'var(--tab-sep)', bottom: '3px'}}>
                     <Btn icon={'down'} action={(e)=> {}} tip={'Go down'}/>
                 </CommandBar>
             </h6>
-            
+
             {subElements.map(
                 n => <div className={'w-100 ms-2 sub-element'} onClick={(e)=> openNode(n.id)} style={clickableStyle}>{getNodeLabel(n)}</div>
             )}
@@ -213,7 +214,7 @@ function NodeEditorComponent(props: AllProps) {
                 </h6>
                 {edgesOut.length && edgesOut.map(n => <div className={'w-100 ms-2 sub-element'} onClick={(e)=> openNode(n.id)} style={clickableStyle}>{getEdgeLabel(n)}</div>)}
             </div>}
-            
+
             {edgesIn.length > 0 && <div>
                 <h6 style={{display: 'flex'}}>
                     Incoming Edges
@@ -227,9 +228,9 @@ function NodeEditorComponent(props: AllProps) {
                 </h6>
                 {edgesOut.length && edgesOut.map(n => <div className={'w-100 ms-2'} onClick={(e)=> openNode(n.id)} style={clickableStyle}>{getEdgeLabel(n)}</div>)}
             </div>
-            
+
             <div>
-                <h6 style={headerStyle}>Incoming Edges{edgesIn.length === 0 && <>: 
+                <h6 style={headerStyle}>Incoming Edges{edgesIn.length === 0 && <>:
                     <span style={notFoundStyle}>None</span></>}
                 </h6>
                 {edgesIn.map(n => <div className={'w-100 ms-2'} onClick={(e)=> openNode(n.id)} style={clickableStyle}>{getEdgeLabel(n)}</div>)}

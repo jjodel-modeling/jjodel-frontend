@@ -190,6 +190,8 @@
 
 .commandbar .card .body h5 {
     // margin-bottom: 0px; was messing with button alignment
+    font-size: var(--h1-size);
+    font-weight: var(--h1-weight); 
 }
 
 .commandbar .card .body {

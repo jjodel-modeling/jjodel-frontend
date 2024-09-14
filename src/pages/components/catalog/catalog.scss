@@ -1,10 +1,17 @@
 
 .details {
+  float: right;
   width: 253px;
   border: 1px solid var(--bg-3);
   border-radius: 8px;
   padding: 1.2em;
 }
+.details h5 {
+  font-size: var(--h1-size);
+  font-weight: var(--h1-weight);
+}
+
+
 .fallback-message{
   grid-column: 1 / -1;
   display: flex;
@@ -74,13 +81,15 @@
 }
 
 .catalog-header .right button:hover {
-  color: red;
+
 }
 
 
 .project-list {
-  width: 500px;
+  max-width: 1100px;
+  min-width: 650px;
   flex-grow: 1;
+  margin-left: 0px;
 
   .header {
     font-size: 1.2em;
@@ -99,6 +108,63 @@
       transition: color, background-color 0.3s;
     }
   }
+
+  input[type=text] {
+    margin-left: 4px!important;
+    border-radius: var(--radius);
+    outline: none;
+    font-size: 1rem!important;
+  }
+
+  input[type=text]:focus {
+    padding: 0!important;
+    margin-left: 4px!important;
+    border: none;
+    background-color: var(--bg-2-5);
+    padding: 12px 10px 10px 10px!important;
+    border-radius: var(--radius);
+    outline: none;
+    font-size: 1rem!important;
+  }
+
+  textarea:focus {
+    padding: 0!important;
+    margin-left: 4px!important;
+    border: none;
+    background-color: var(--bg-2-5);
+    padding: 20px!important;
+    border-radius: var(--radius);
+    outline: none;
+    
+  }
+
+
+
+  & h2 {
+    padding: 2px 0px;
+    
+  }
+
+  & .name, .artifact-type, .created, .modified {
+    white-space: pre;
+  }
+
+  & .legenda {
+    margin-top: 80px;
+    width: calc(100%);
+    background-color: var(--bg-2);
+    border-radius: var(--radius);
+    padding: 10px;
+
+    & h1 {
+      font-size: 1em;
+    }
+    & .item {
+      font-weight: 200;
+      white-space: pre;
+    }
+  }
+
 }
 
 

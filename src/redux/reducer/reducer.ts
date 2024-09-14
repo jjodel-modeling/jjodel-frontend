@@ -1028,32 +1028,22 @@ export async function stateInitializer() {
     let lClassesMap: Dictionary<string, typeof LPointerTargetable> = {};
     for (let name in RuntimeAccessibleClass.classes) {
         switch(name[0]) {
+            case 'D': dClassesMap[name] = RuntimeAccessibleClass.classes[name] as typeof DPointerTargetable; break;
+            case 'L': lClassesMap[name] = RuntimeAccessibleClass.classes[name] as typeof LPointerTargetable; break;
             default: break;
-            case "D": dClassesMap[name] = RuntimeAccessibleClass.classes[name] as typeof DPointerTargetable; break;
-            case "L": lClassesMap[name] = RuntimeAccessibleClass.classes[name] as typeof LPointerTargetable; break;
         }
     }
-    /*
-    let dClasses: string[] = RuntimeAccessibleClass.getAllNames().filter(rc => rc[0] === 'D');
-    let lClasses: string[] = RuntimeAccessibleClass.getAllNames().filter(rc => rc[0] === 'L');
-    let dClassesMap: Dictionary<string, typeof DPointerTargetable> =
-        dClasses.reduce((acc: GObject, curr) => {acc[curr] = RuntimeAccessibleClass.get(curr); return acc}, {});
-    let lClassesMap: Dictionary<string, typeof LPointerTargetable> =
-        lClasses.reduce((acc: GObject, curr) => {acc[curr] = RuntimeAccessibleClass.get(curr); return acc}, {}); */
 
     buildLSingletons(dClassesMap, lClassesMap);
-    setSubclasses(RuntimeAccessibleClass.get("DPointerTargetable"));// setSubclasses(lClassesMap);
+    setSubclasses(RuntimeAccessibleClass.get('DPointerTargetable'));
     windoww.defaultContext = {$: windoww.$, getPath, React: React, Selectors, ...RuntimeAccessibleClass.getAllClassesDictionary(), ...windoww.Components};
-    // global document events
-
 
     setDocumentEvents();
-
 
     DState.init();
     const user = Storage.read<DUser>('user');
     if(!user) return;
-    DUser.new(user.username, user.id);
+    DUser.new(user.name, user.surname, user.nickname, user.affiliation, user.country, user.newsletter, user.email, user.token, user.id);
     DUser.current = user.id;
     await ProjectsApi.getAll();
 }

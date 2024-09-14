@@ -5,6 +5,7 @@ import React, {Dispatch, ReactElement, useState} from "react";
 import {connect} from "react-redux";
 import { Metrics } from '../../components/metrics/Metrics';
 import { Tooltip } from '../../components/forEndUser/Tooltip';
+import { ControlBtn } from '../../components/forEndUser/Control';
 
 
 enum notificationType {

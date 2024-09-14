@@ -31,6 +31,7 @@ import {TooltipVisualizer} from "./components/forEndUser/Tooltip";
 import {MessageVisualizer} from "./components/forEndUser/SplashMessage";
 import {JQDock, MyDock} from "./components/dock/MyDock";
 import {BottomBar} from "./pages/components";
+import AlertVisualizer from "./components/alert/Alert";
 
 let userHasInteracted = false;
 function endPendingActions() {
@@ -49,12 +50,8 @@ function App(props: AllProps): JSX.Element {
 
     useEffectOnce(() => {
         (async function () {
-            SetRootFieldAction.new('isLoading', true);
-            await stateInitializer();
-            await U.sleep(2);
-            SetRootFieldAction.new('isLoading', false);
-        })();
-
+        SetRootFieldAction.new('isLoading', true);
+        stateInitializer().then(() => SetRootFieldAction.new('isLoading', false));
     });
 
     return(<>
@@ -62,31 +59,32 @@ function App(props: AllProps): JSX.Element {
             {isLoading && <Loader />}
             <ExternalLibraries />
             <TooltipVisualizer />
-            <MessageVisualizer />
+            {/*<MessageVisualizer />*/}
+            <AlertVisualizer />
             <Try><>
             </></Try>
             <HashRouter>
             <PathChecker />
             <Routes>
                 {DUser.current ? <>
-                    <Route path={'dock'} element={<MyDock />} />
+                    <Route path={'allProjects'} element={<AllProjectsPage />} />
+                    {/*<Route path={'dock'} element={<MyDock />} />*/}
                     <Route path={'account'} element={<AccountPage />} />
                     <Route path={'settings'} element={<SettingsPage />} />
                     <Route path={'updates'} element={<UpdatesPage />} />
                     <Route path={'community'} element={<CommunityPage />} />
-                    <Route path={'allProjects'} element={<AllProjectsPage />} />
                     <Route path={'templates'} element={<TemplatePage />} />
                     <Route path={'notes'} element={<NotesPage />} />
                     <Route path={'archive'} element={<ArchivePage />} />
                     <Route path={'project'} element={<ProjectPage />} />
                     <Route path={'recent'} element={<RecentPage />} />
                     <Route path={'profile'} element={<ProfilePage />} />
-                    <Route path={'*'} element={<AccountPage />} />
+                    <Route path={'*'} element={<AllProjectsPage />} />
                 </> : <Route path={'*'} element={<AuthPage />} />}
             </Routes>
         </HashRouter>
+        {DUser.current && <BottomBar />}
         </div>
-        <BottomBar />
     </>);
 
     /*

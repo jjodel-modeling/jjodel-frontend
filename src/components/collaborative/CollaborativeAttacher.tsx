@@ -1,7 +1,6 @@
 import Collaborative from './Collaborative';
 import type {CompositeAction, GObject, LProject, Pointer} from '../../joiner';
-import {Action, DUser, SetRootFieldAction} from '../../joiner';
-import {useEffectOnce} from 'usehooks-ts';
+import {Action, SetRootFieldAction} from '../../joiner';
 import {useEffect, useState} from "react";
 
 interface Props {project: LProject}
@@ -9,7 +8,7 @@ function CollaborativeAttacher(props: Props) {
     const project = props.project;
     const [actions, setActions] = useState<Pointer[]>([]);
 
-    useEffectOnce(() => {
+    useEffect(() => {
         SetRootFieldAction.new('collaborativeSession', true);
         Collaborative.client.io.opts.query = {'project': project.id};
         Collaborative.client.connect();
@@ -30,9 +29,7 @@ function CollaborativeAttacher(props: Props) {
                 receivedAction.fire();
             }
         });
-    });
-
-
+    }, []);
 
     return(<></>);
 }

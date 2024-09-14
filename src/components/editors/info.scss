@@ -3,10 +3,11 @@ section {
 }
 
 .console {
-  
+
 }
 
 .properties-tab,
+.collaborative-tab,
 .tree-view,
 .viewpoint-tab,
 .template-tab,
@@ -35,6 +36,7 @@ section {
   margin: 0.5rem;
 }
 
+.collaborative-tab h1,
 .properties-tab h1,
 .viewpoint-tab h1,
 .template-tab h1.view,
@@ -42,7 +44,7 @@ section {
 .events-tab h1.view,
 .options-tab h1.view,
 .node-editor h3,
-.console h1 { 
+.console h1 {
 
   font-size: 1.1em!important;
   color: var(--accent);
@@ -62,10 +64,71 @@ section {
   }
 }
 
+.collaborative-tab h1::before {
+  position: relative;
+  top: 2px;
+  font-size: 1.15em;
+  margin-right: var(--tab-sep);
+  font-family: bootstrap-icons;
+  content: "\F2EE";
+}
+.collaborative-tab h5 {
+  font-size: 1.1em!important;
+  color: var(--accent);
+}
+
+.collaborative-tab input {
+  color: var(--color);
+  outline: 1px solid var(--accent);
+  border: none;
+  // outline-color: var(--accent)!important;
+  // outline-width: 2px!important;
+  height: var(--input-height)!important;
+
+  padding: 1px 8px!important;
+  min-width: 170px;
+  transition: min-width 0.3s ease-in-out;
+}
+
+.collaborative-tab input::placeholder {
+  color: var(--bg-3);
+  font-style: italic;
+}
+
+.collaborative-tab input:focus {
+  padding: 2px 9px;
+  border-radius: var(--radius)!important;
+  height: var(--input-height);
+  outline: 2px solid var(--accent);
+
+  min-width: 70%;
+  border-radius: var(--radius)!important;
+  border: none;
+}
+.collaborative-tab .alert {
+  background-color: var(--accent);
+  color: white;
+  border: 1px dotted var(--accent);
+  padding: 6px 10px;
+  width: fit-content;
+  margin: 14px;
+
+  & i {
+    color: white;
+    padding-right: 4px;
+  }
+}
+
+
+
+
+
 .properties-tab h1 {padding-top: 0px!important;}
 .console h1::before {
   content: "\F5C3";
 }
+
+
 
 
 
@@ -131,7 +194,7 @@ section {
   & section.node {
     padding-left: 0;
     padding-right: 0;
-  
+
     & .px-2 {
       padding-left: 0!important;
     }
@@ -139,14 +202,14 @@ section {
 
   & section {
     padding-left: 0!important;
-    
+
     & .px-2.no-padding-left {
       padding-left: 0!important;
       padding-right: 0!important;
 
       & .input-container {
-        
-        
+
+
 
         &>label.mx-3 {
           margin-right: 0!important;
@@ -154,7 +217,7 @@ section {
         }
         &>label.mx-3 span {
           margin-right: 6px;
-          
+
           padding-top: 4px;
           margin-top: 6px;
         }
@@ -162,10 +225,10 @@ section {
         &>label.mx-3 select {
 
         }
-      }  
+      }
     }
   }
-  
+
 
 
 
@@ -174,7 +237,7 @@ section {
     padding-left: 0;
     font-size: 1em;
 
-    
+
 
     & h5 {
 
@@ -183,7 +246,7 @@ section {
       padding-left: 0!important;
       font-size: 1.2em;
     }
-    
+
   }
 }
 
@@ -192,7 +255,7 @@ section {
 }
 
 .node-editor {
-  
+
   & h3::before {
     position: relative;
     top: 2px;
@@ -225,5 +288,5 @@ section {
     padding: 0.5em;
     font-family: Lekton;
   }
-  
-} 
+
+}

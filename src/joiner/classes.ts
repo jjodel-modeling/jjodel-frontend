@@ -96,7 +96,6 @@ import type {
     Dictionary,
     DocString,
     GObject,
-    // Info,
     InitialVertexSize,
     InitialVertexSizeFunc,
     InitialVertexSizeObj,
@@ -115,7 +114,6 @@ import type {
 import type {LogicContext} from "./proxy";
 import {
     Action,
-    BEGIN,
     CreateElementAction,
     Defaults,
     DeleteElementAction,
@@ -123,7 +121,6 @@ import {
     DState,
     DViewPoint,
     EdgeSegment,
-    END,
     GraphPoint,
     GraphSize,
     LGraph,
@@ -134,7 +131,9 @@ import {
     LViewPoint,
     ParsedAction,
     SetFieldAction,
-    SetRootFieldAction, ShortAttribETypes, statehistory,
+    SetRootFieldAction,
+    ShortAttribETypes,
+    statehistory,
     store,
     TRANSACTION,
     U
@@ -749,9 +748,16 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         // this.className = thiss.className;
         return this; }
 
-    DUser(username: string): this {
+    DUser(name: string, surname: string, nickname: string, affiliation: string, country: string, newsletter: boolean, email: string, token: string): this {
         const _this: DUser = this.thiss as unknown as DUser;
-        _this.username = username;
+        _this.name = name;
+        _this.surname = surname;
+        _this.nickname = nickname;
+        _this.affiliation = affiliation;
+        _this.country = country;
+        _this.newsletter = newsletter;
+        _this.email = email;
+        _this.token = token;
         statehistory[_this.id] = {undoable:[], redoable:[]};
         // todo: make it able to combine last 2 changes with a keystroke.
         //  reapeat N times to combine N actions.
@@ -760,7 +766,8 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         if (this.persist) {
             // no pointedBy
         }
-        return this; }
+        return this;
+    }
 
     DNamedElement(name?: DNamedElement["name"]): this {
         const thiss: DNamedElement = this.thiss as any;
@@ -1044,7 +1051,7 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         _this.state = state || '';
         if(id) _this.id = id;
         _this.favorite = {};
-        _this.description = 'A new Project. Created by ' + (DPointerTargetable.from(DUser.current) as DUser).username + ' @' + new Date().toLocaleString();
+        _this.description = 'A new Project. Created by ' + (DPointerTargetable.from(DUser.current) as DUser).nickname + ' @' + new Date().toLocaleString();
         this.setExternalPtr(DUser.current, 'projects', '+=');
         return this;
     }
@@ -2102,15 +2109,21 @@ export class DUser extends DPointerTargetable {
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
     id!: Pointer<DUser>;
-    username!: string;
+    name!: string;
+    surname!: string;
+    nickname!: string;
+    country!: string;
+    affiliation!: string;
+    newsletter!: boolean;
+    email!: string;
     token!: string;
     projects: Pointer<DProject, 0, 'N', LProject> = [];
     project: Pointer<DProject, 0, 1, LProject> = '';
     __isUser: true = true; // necessary to trick duck typing to think this is NOT the superclass of anything that extends PointerTargetable.
     /*public static new(id?: DUser["id"], triggerActions: boolean = true): DUser {
         return new Constructors(new DUser('dwc'), undefined, false, undefined, id, true).DPointerTargetable().DUser().end(); }*/
-    public static new(username: string, id?: DUser['id'], persist: boolean = true): DUser {
-        return new Constructors(new DUser('dwc'), undefined, persist, undefined, id).DPointerTargetable().DUser(username).end();
+    public static new(name: string, surname: string, nickname: string, affiliation: string, country: string, newsletter: boolean, email: string, token: string, id?: DUser['id'], persist: boolean = true): DUser {
+        return new Constructors(new DUser('dwc'), undefined, persist, undefined, id).DPointerTargetable().DUser(name, surname, nickname, affiliation, country, newsletter, email, token).end();
     }
 }
 
@@ -2120,10 +2133,81 @@ export class LUser<Context extends LogicContext<DUser> = any, D extends DUser = 
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
     public __raw!: DUser;
     id!: Pointer<DUser>;
-    username!: string;
+    name!: string;
+    surname!: string;
+    nickname!: string;
+    country!: string;
+    affiliation!: string;
+    newsletter!: boolean;
+    email!: string;
+    token!: string;
     projects!: LProject[];
     project!: LProject|null;
     __isUser!: true;
+
+    protected get_name(context: Context): this['name'] {
+        return context.data.name;
+    }
+    protected set_name(val: this['name'], context: Context): boolean {
+        const data = context.data;
+        return SetFieldAction.new(data.id, 'name', val, '', false);
+    }
+
+    protected get_surname(context: Context): this['surname'] {
+        return context.data.surname;
+    }
+    protected set_surname(val: this['surname'], context: Context): boolean {
+        const data = context.data;
+        return SetFieldAction.new(data.id, 'surname', val, '', false);
+    }
+
+    protected get_nickname(context: Context): this['nickname'] {
+        return context.data.nickname;
+    }
+    protected set_nickname(val: this['nickname'], context: Context): boolean {
+        const data = context.data;
+        return SetFieldAction.new(data.id, 'nickname', val, '', false);
+    }
+
+    protected get_affiliation(context: Context): this['affiliation'] {
+        return context.data.affiliation;
+    }
+    protected set_affiliation(val: this['affiliation'], context: Context): boolean {
+        const data = context.data;
+        return SetFieldAction.new(data.id, 'affiliation', val, '', false);
+    }
+
+    protected get_country(context: Context): this['country'] {
+        return context.data.country;
+    }
+    protected set_country(val: this['country'], context: Context): boolean {
+        const data = context.data;
+        return SetFieldAction.new(data.id, 'country', val, '', false);
+    }
+
+    protected get_newsletter(context: Context): this['newsletter'] {
+        return context.data.newsletter;
+    }
+    protected set_newsletter(val: this['newsletter'], context: Context): boolean {
+        const data = context.data;
+        return SetFieldAction.new(data.id, 'newsletter', val, '', false);
+    }
+
+    protected get_email(context: Context): this['email'] {
+        return context.data.email;
+    }
+    protected set_email(val: this['email'], context: Context): boolean {
+        const data = context.data;
+        return SetFieldAction.new(data.id, 'email', val, '', false);
+    }
+
+    protected get_token(context: Context): this['token'] {
+        return context.data.token;
+    }
+    protected set_token(val: this['token'], context: Context): boolean {
+        const data = context.data;
+        return SetFieldAction.new(data.id, 'token', val, '', false);
+    }
 
     protected get_projects(context: Context): this['projects'] {
         return LProject.fromPointer(context.data.projects);
@@ -2171,7 +2255,15 @@ export class DProject extends DPointerTargetable {
     viewpoints: Pointer<DViewPoint, 0, 'N'> = [];
     activeViewpoint: Pointer<DViewPoint, 1, 1> = Defaults.viewpoints[0];
     favorite!: Dictionary<Pointer<DUser>, true | undefined>;
+
     description!: string;
+    creation: number = Date.now();
+    lastModified: number = Date.now();
+    viewpointsNumber: number = 0;
+    metamodelsNumber: number = 0;
+    modelsNumber: number = 0;
+    isFavorite: boolean = false;
+
     // collaborators dict user: priority
 
     state!: string;
@@ -2219,7 +2311,14 @@ export class LProject<Context extends LogicContext<DProject> = any, D extends DP
     viewpoints!: LViewPoint[];
     activeViewpoint!: LViewPoint;
     favorite!: boolean;
+
     description!: string;
+    creation!: number;
+    lastModified!: number;
+    viewpointsNumber!: number;
+    metamodelsNumber!: number;
+    modelsNumber!: number;
+    isFavorite!: boolean;
 
     // stringify state
     state!: string;
@@ -2250,6 +2349,62 @@ export class LProject<Context extends LogicContext<DProject> = any, D extends DP
     readonly views!: LViewElement[]; // derived from viewpoints.subView
 
     /* Functions */
+
+    protected get_description(context: Context): this['description'] {
+        return context.data.description;
+    }
+    protected set_description(val: this['description'], context: Context): boolean {
+        const data = context.data;
+        return SetFieldAction.new(data.id, 'description', val, '', false);
+    }
+
+    protected get_creation(context: Context): this['creation'] {
+        return context.data.creation;
+    }
+    protected set_creation(val: this['creation'], context: Context): boolean {
+        const data = context.data;
+        return SetFieldAction.new(data.id, 'creation', val, '', false);
+    }
+
+    protected get_lastModified(context: Context): this['lastModified'] {
+        return context.data.lastModified;
+    }
+    protected set_lastModified(val: this['lastModified'], context: Context): boolean {
+        const data = context.data;
+        return SetFieldAction.new(data.id, 'lastModified', val, '', false);
+    }
+
+    protected get_viewpointsNumber(context: Context): this['viewpointsNumber'] {
+        return context.data.viewpointsNumber;
+    }
+    protected set_viewpointsNumber(val: this['viewpointsNumber'], context: Context): boolean {
+        const data = context.data;
+        return SetFieldAction.new(data.id, 'viewpointsNumber', val, '', false);
+    }
+
+    protected get_metamodelsNumber(context: Context): this['metamodelsNumber'] {
+        return context.data.metamodelsNumber;
+    }
+    protected set_metamodelsNumber(val: this['metamodelsNumber'], context: Context): boolean {
+        const data = context.data;
+        return SetFieldAction.new(data.id, 'metamodelsNumber', val, '', false);
+    }
+
+    protected get_modelsNumber(context: Context): this['modelsNumber'] {
+        return context.data.modelsNumber;
+    }
+    protected set_modelsNumber(val: this['modelsNumber'], context: Context): boolean {
+        const data = context.data;
+        return SetFieldAction.new(data.id, 'modelsNumber', val, '', false);
+    }
+
+    protected get_isFavorite(context: Context): this['isFavorite'] {
+        return context.data.isFavorite;
+    }
+    protected set_isFavorite(val: this['isFavorite'], context: Context): boolean {
+        const data = context.data;
+        return SetFieldAction.new(data.id, 'isFavorite', val, '', false);
+    }
 
     protected get_favorite(c: Context): this['favorite'] {
         const uid = DUser.current;
@@ -2545,7 +2700,10 @@ export class LProject<Context extends LogicContext<DProject> = any, D extends DP
             let clone: DProject = DProject.new(c.data.type, c.data.name + ' Copy');
             for (let key in c.data){
                 switch (key){
-                    case 'pointedBy': case 'name': continue;
+                    case 'id':
+                    case 'pointedBy':
+                    case 'name':
+                        continue;
                     default:
                         // @ts-ignore
                         clone[key] = c.data[key];

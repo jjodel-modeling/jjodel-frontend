@@ -38,14 +38,13 @@ function AllProjectsComponent(props: AllProps): JSX.Element {
                         subtitle={'Import an existing jjodel project.'}
                         icon={'import'}
                         style={'blue'}
-                        action={ProjectsApi.importModal}
+                        action={ProjectsApi.import}
                     />
-                    {true && <Cards.Item icon={'question'} style={'clear'} title={'Ehy!'} subtitle={'What do you want to do today?'}/>}
+                    {false && <Cards.Item icon={'question'} style={'clear'} title={'Ehy!'} subtitle={'What do you want to do today?'}/>}
                 </Cards>
-
                 <Catalog projects={projects} />
-
             </React.Fragment>
+
         </Dashboard>
     </Try>);
 }

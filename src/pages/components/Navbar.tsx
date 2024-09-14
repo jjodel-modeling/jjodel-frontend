@@ -1,6 +1,7 @@
 import './style.scss';
 import './navbar.scss';
 import {
+    Dictionary,
     DModel,
     DState,
     DUser,
@@ -29,7 +30,7 @@ import TabDataMaker from "../../../src/components/abstract/tabs/TabDataMaker";
 import DockManager from "../../../src/components/abstract/DockManager";
 
 import {Divisor, Item, Menu} from '../components/menu/Menu';
-import {Toggle} from '../../components/widgets/Widgets';
+import {InternalToggle} from '../../components/widgets/Widgets';
 import jj from '../../static/img/jj-k.png';
 import Storage from '../../data/storage';
 import Collaborative from "../../components/collaborative/Collaborative";
@@ -80,17 +81,17 @@ function makeEntry(i: MenuEntry) {
         let slength = i.subItems ? i.subItems.length : 0;
         return (
             <li className={slength > 0 ? "hoverable" : ""} tabIndex={0} onClick={()=>i.function?.()}>
-                <label className='highlight'>
+                <label className={`highlight ${i.disabled && 'disabled'}`}>
                     {i.icon ?
                         <span>{i.icon} {i.name}</span> :
                         <span><i className="bi bi-app hidden"></i> {i.name}</span>
                     }
-                    {slength > 0 ?
+                    {!i.disabled && slength > 0 ?
                         <i className='bi bi-chevron-right icon-expand-submenu'></i> :
                         getKeyStrokes(i.keystroke)
                     }
                 </label>
-            {slength > 0 &&
+            {!i.disabled && slength > 0 &&
                 <div className='content right'>
                     <ul className='context-menu right'>
                         {i.subItems!.map(si => makeEntry(si))}
@@ -106,21 +107,27 @@ function makeEntry(i: MenuEntry) {
 
 
 
-type UserProps = {
-    user?: LUser;
-}
+type UserProps = {}
 const User = (props: UserProps) => {
-    const name = props.user ? props.user.username : 'Unknown';
-    const initials = name.split(' ').map((n)=>n[0]).join('');
+    const user: LUser = LUser.fromPointer(DUser.current);
+    const name = `${user?.name} ${user?.surname}`;
+    const initials = name.split(' ').map(n=>n[0]).join('');
     return (<div className={'user text-end'}>
-        <div className={"initials"}>
+        <div className={'initials'}>
             {initials.toUpperCase()}
         </div>&nbsp;
         <span>{name}</span>
     </div>);
 };
 
-type MenuEntry = {name: string, icon?: any, function?: ()=>any, keystroke?: string[], subItems?:MenuEntry[]};
+type MenuEntry = {
+    name: string,
+    icon?: any,
+    function?: ()=>any,
+    keystroke?: string[],
+    subItems?:MenuEntry[],
+    disabled?: boolean;
+};
 
 function NavbarComponent(props: AllProps) {
 
@@ -136,15 +143,45 @@ function NavbarComponent(props: AllProps) {
 
     const Key = Keystrokes;
     let projectItems: MenuEntry[] = [];
+    {/*name: 'Save as', icon: icon['save'], function:  () => {project && ProjectsApi.save(project)}, keystroke: [Key.shift, Key.cmd, 'S']*/}
+    {/*name: 'divisor', function: () => {}, keystroke: []*/}
+    {/*name: 'Import...', icon: icon['import'], function: () => {}, keystroke: []*/}
+    {/*
+        {name: 'divisor', function: () => {}, keystroke: []},
+        {name: 'View', icon: icon['view'],
+            subItems: [
+            {name: 'Show dot grid', icon: icon['grid'], function: async() => {}, keystroke: []},
+            {name: 'divisor', function: async() => {}, keystroke: []},
+            {name: 'Maximize editor', icon: icon['maximize'], function: async() => {}, keystroke: []},
+            {name: 'divisor', function: async() => {}, keystroke: []},
+            {name: 'Zoom in', icon: icon['zoom-in'], function: async() => {}, keystroke: [Key.cmd, '+']},
+            {name: 'Zoom out', icon: icon['zoom-out'], function: async() => {}, keystroke: [Key.cmd, '-']},
+            {name: 'Zoom to 100%', function: async() => {}, keystroke: [Key.cmd, '0']},
+        ],
+            keystroke: []
+        },
+    */}
+    //            {name: 'Close project', icon: icon['close'], function: () => {
+    //                 navigate('/allProjects');
+    //                 Collaborative.client.off('pullAction');
+    //                 Collaborative.client.disconnect();
+    //                 SetRootFieldAction.new('collaborativeSession', false);
+    //                 U.refresh();
+    //                 }, keystroke: [Key.cmd, 'Q']},
     if (project){
         projectItems = [
 
             {name: 'New metamodel', icon: icon['new'], function: ()=>createM2(project), keystroke: [Key.alt, Key.cmd, 'M']},
-            {name: 'New model', icon: icon['new'],
+
+            {
+                name: 'New model',
+                icon: icon['new'],
                 subItems: project.metamodels.map((m2, i)=>({
                     name: m2.name, function: () => { createM1(project, m2) }, keystroke: []
-                }))
+                })),
+                disabled: project.metamodels.length == 0
             },
+
             {name: 'divisor', function: () => {}, keystroke: []},
             {name: 'Close project', icon: icon['close'], function: () => {
                 navigate('/allProjects');
@@ -154,28 +191,19 @@ function NavbarComponent(props: AllProps) {
                 U.refresh();
                 }, keystroke: [Key.cmd, 'Q']},
             {name: 'divisor', function: () => {}, keystroke: []},
-            {name: 'Undo', icon: icon['undo'], function: () => {}, keystroke: [Key.cmd, 'Z']},
-            {name: 'Redo', icon: icon['redo'], function: () => {}, keystroke: [Key.shift, Key.cmd, 'Z']}, // maybe better cmd + Y ?
-            {name: 'divisor', function: () => {}, keystroke: []},
-            {name: 'Save', icon: icon['save'], function: () => {project && ProjectsApi.save(project)}, keystroke: [Key.cmd, 'S']},
-            {name: 'Save as', icon: icon['save'], function: () => {}, keystroke: [Key.shift, Key.cmd, 'S']},
-            {name: 'divisor', function: () => {}, keystroke: []},
-            {name: 'Import...', icon: icon['import'], function: () => {}, keystroke: []},
-            {name: 'Export as...', icon: icon['export'], function: () => {}, keystroke: []},
-            {name: 'divisor', function: () => {}, keystroke: []},
+            {name: 'Undo', icon: icon['undo'], function: () => {
 
-            {name: 'View', icon: icon['view'],
-                subItems: [
-                    {name: 'Show dot grid', icon: icon['grid'], function: async() => {}, keystroke: []},
-                    {name: 'divisor', function: async() => {}, keystroke: []},
-                    {name: 'Maximize editor', icon: icon['maximize'], function: async() => {}, keystroke: []},
-                    {name: 'divisor', function: async() => {}, keystroke: []},
-                    {name: 'Zoom in', icon: icon['zoom-in'], function: async() => {}, keystroke: [Key.cmd, '+']},
-                    {name: 'Zoom out', icon: icon['zoom-out'], function: async() => {}, keystroke: [Key.cmd, '-']},
-                    {name: 'Zoom to 100%', function: async() => {}, keystroke: [Key.cmd, '0']},
-                ],
-                keystroke: []
-            },
+                }, keystroke: [Key.cmd, 'Z']},
+            {name: 'Redo', icon: icon['redo'], function: () => {
+
+                }, keystroke: [Key.shift, Key.cmd, 'Z']}, // maybe better cmd + Y ?
+            {name: 'divisor', function: () => {}, keystroke: []},
+            {name: 'Save', icon: icon['save'], function: async() => {
+                if(project) await ProjectsApi.save(project);
+                }, keystroke: [Key.cmd, 'S']},
+            {name: 'Download', icon: icon['download'], function: () => {
+                    U.download(`${project.name}.jjodel`, JSON.stringify(project.__raw));
+                }, keystroke: []},
             {name: 'divisor', function: async() => {}, keystroke: []},
             {name: 'Help', icon: icon['help'], subItems: [
                     {name: 'What\'s new', icon: icon['whats-new'], function: async() => {}, keystroke: []},
@@ -188,8 +216,6 @@ function NavbarComponent(props: AllProps) {
                 ],
                 keystroke: []},
             {name: 'About jjodel', icon: icon['jjodel-dark'], function: async() => {}, keystroke: []}
-
-
         ];
     }
 
@@ -198,7 +224,7 @@ function NavbarComponent(props: AllProps) {
         {name: 'New project', icon: <i className="bi bi-plus-square"></i>, function:
             async()=>{
                 navigate('/allProjects');
-                ProjectsApi.create('public', undefined, undefined, undefined, props.user.projects);
+                await ProjectsApi.create('public', undefined, undefined, undefined, props.user.projects);
                 /*
                 SetRootFieldAction.new('isLoading', true);
                 await U.sleep(1);
@@ -206,7 +232,7 @@ function NavbarComponent(props: AllProps) {
                 SetRootFieldAction.new('isLoading', false);*/
             },
             keystroke: [Key.cmd, 'M']},
-        {name: 'Import...', icon: <i className="bi bi-arrow-bar-left"></i>, function: ProjectsApi.importModal, keystroke: []},
+        {name: 'Import...', icon: <i className="bi bi-arrow-bar-left"></i>, function: ProjectsApi.import, keystroke: []},
         {name: 'divisor', function: () => {}, keystroke: []},
         {name: 'Help', icon: <i className="bi bi-question-square"></i>, subItems: [
             {name: 'What\'s new', icon: <i className="bi bi-clock"></i>, function: () => {}, keystroke: []},
@@ -221,8 +247,8 @@ function NavbarComponent(props: AllProps) {
         {name: 'About jjodel', icon: <img src={jj} width={15}/>, function: () => {}, keystroke: []},
         {name: 'divisor', function: () => {}, keystroke: []},
         {name: 'Logout', icon: <i className="bi bi-box-arrow-right"></i>, function: async() => {
-            navigate('/auth');
-            await AuthApi.logout();
+                navigate('/auth');
+                await AuthApi.logout();
             }, keystroke: [Key.cmd, 'Q']}
     ];
 
@@ -263,12 +289,17 @@ function NavbarComponent(props: AllProps) {
 
     const Commands = () => {
         return (<div className='text-end nav-commands'>
-            {false && project && <Toggle name={'advanced'} values={{false:false, true:true}} labels={{false: 'base', true: 'advanced'}}/>}
-            {project && <Input type="checkbox"
+            {project && <InternalToggle
+                name={'advanced'}
+                labels={{false: 'base', true: 'advanced'}}
+                size={'small'}
+            />}
+            {/*project && <Input type="checkbox"
                                className={"d-flex"}
                                label={<span className={"my-auto me-1"}>{props.advanced ? "advanced" : "base"}</span>}
                                setter={(v) => {SetRootFieldAction.new('advanced', v);}}
-                               getter={()=>props.advanced}/>}
+                               getter={()=>props.advanced}/>
+            */}
         </div>);
     };
 
@@ -277,12 +308,24 @@ function NavbarComponent(props: AllProps) {
             <div className='text-end nav-side'>
                 <div style={{float: 'right', left: '300px!important', marginTop: '2px'}}>
                     <Menu position={'left'}>
-                        <Item icon={icon['dashboard']} action={() => {navigate('/allProjects')}}>Dashboard</Item>
+                        <Item icon={icon['dashboard']} action={() => {
+                            navigate('/allProjects');
+                            Collaborative.client.off('pullAction');
+                            Collaborative.client.disconnect();
+                            SetRootFieldAction.new('collaborativeSession', false);
+                            U.refresh();
+                        }}>Dashboard</Item>
                         <Divisor />
-                        <Item icon={icon['profile']}action={(e)=> {alert('')}}>Profile</Item>
+                        <Item icon={icon['profile']} action={()=> {
+                            navigate('/account');
+                            U.refresh();
+                        }}>Profile</Item>
                         <Item icon={icon['settings']} action={(e)=> {alert('')}}>Settings</Item>
                         <Divisor />
-                        <Item icon={icon['logout']} action={(e)=> {alert('')}}>Sign out</Item>
+                        <Item icon={icon['logout']} action={async() => {
+                            navigate('/auth');
+                            await AuthApi.logout();
+                        }}>Logout</Item>
                     </Menu>
                 </div>
             </div>
@@ -300,7 +343,7 @@ function NavbarComponent(props: AllProps) {
             <Logo />
             <UserMenu />
             <Commands />
-            <User user={props.user} /> {/* aggiungere utente loggato */}
+            <User />
         </nav>
 
         {project && clicked === 'new.metamodel' && <MetamodelPopup {...{project, setClicked}} />}
