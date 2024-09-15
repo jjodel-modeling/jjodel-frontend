@@ -5,6 +5,7 @@ import Storage from "./storage";
 export type Response = {code: number, data: Json|null}
 class Api {
     static persistance = `${process.env['REACT_APP_PERSISTANCE']}/persistance`;
+    static memorec = `${process.env['REACT_APP_MEMOREC']}/memorec`;
 
     private static headers(): {'auth-token': string} {
         return {'auth-token': Storage.read('token') || ''};

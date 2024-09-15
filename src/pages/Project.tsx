@@ -40,11 +40,12 @@ function ProjectComponent(props: AllProps): JSX.Element {
                 navigate('/allProject');
                 return;
             }
-            if(!project.state) return;
-            const state = JSON.parse(await U.decompressState(project.state));
-            state['idlookup'][DUser.current] = user.__raw;
-            if(!state['users'].includes(DUser.current)) state['users'].push(DUser.current);
-            SaveManager.load(JSON.stringify(state));
+            if(project.state) {
+                const state = JSON.parse(await U.decompressState(project.state));
+                state['idlookup'][DUser.current] = user.__raw;
+                if(!state['users'].includes(DUser.current)) state['users'].push(DUser.current);
+                SaveManager.load(JSON.stringify(state));
+            }
             user.project = LProject.fromPointer(project.id);
         })();
     }, [id]);
