@@ -528,7 +528,7 @@ input[type="number"]::-webkit-outer-spin-button {
   .dock-style-models .dock-tabpane {
     overflow-x: scroll;
   }
-
+/*
 .view-editor-root .dock-tabpane >* // universal selector for all view sub-tabs
 // #Dock_in_view_detail0 .page-root, // Apply to
 // #Dock_in_view_detail1 section, // Template
@@ -538,7 +538,8 @@ input[type="number"]::-webkit-outer-spin-button {
 {
   margin: 0.7em;
   border-radius: var(--radius);
-}
+  height: 100%;
+}*/
 
 
 .view-editor-header {

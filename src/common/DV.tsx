@@ -370,15 +370,6 @@ export class DefaultView {
 
     public static model(): string { return (
 `<View className={'root model'}>
-{/* here you can insert viewpoint-wide descriptions, eg <Control> .. </Control> */}
-<label className={"detail-level"}>
-    <input onChange={(e)=>{node.state = {level:+e.target.value}}} min="0" max="3" type="range" step="1" value={level}/>
-    <div>Detail level:{level}</div>
-</label>
-
-<Control title={'Abstraction'} payoff={'Zooming'}>
-    <Slider name={'level'} title={'Detail level '} node={node} max={3} />
-</Control>
 <Scrollable graph={node}>
     {!data && "Model data missing."}
     <div className={'edges'}>
@@ -392,7 +383,12 @@ export class DefaultView {
     {level >= 1 && firstPackage && firstPackage.children.filter(c => c).map(classifier => <DefaultNode key={classifier.id} data={classifier} />)}
     {level >= 1 && m1Objects.filter(o => o).map(m1object => <DefaultNode key={m1object.id} data={m1object} />)}
     {decorators}
-    </Scrollable>
+</Scrollable>
+{/* here you can insert viewpoint-wide descriptions, eg <Control> .. </Control> */}
+
+<Control title={'Abstraction'} payoff={'Zooming'}>
+    <Slider name={'level'} title={'Detail level '} node={node} max={3} />
+</Control>
 </View>`
 );}
 

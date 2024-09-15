@@ -5,7 +5,11 @@
   width: fit-content;
   height: fit-content;
   overflow: hidden;
+  &.panning-handle{
+    border: none;
+  }
 }
+.panning-handle
 
 .scrollable, .panning-handle, .panning-content{
   width: 100%;

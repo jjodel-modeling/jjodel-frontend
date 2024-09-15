@@ -269,16 +269,18 @@ body > .dragging-layer > div:last-child {
   /* work around for the height issue in content holder*/
   height: 0;
 }
-.dock-content .dock-tabpane {
+.dock-content .dock-tabpane{
   position: relative;
   overflow: hidden;
-  &>*{
-    overflow: auto;
-  }
   width: 100%;
   height: 100%;
   outline: none;
   flex: none;
+  display: flex;
+  &>*{
+    overflow: auto;
+    flex-grow:1;
+  }
 }
 .dock-nav {
   display: flex;
