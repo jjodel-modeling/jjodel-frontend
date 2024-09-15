@@ -2452,11 +2452,25 @@ export class Keystrokes {
             root[terminal] = entry.function;
         }
         let keyup = (e: KeyUpEvent) => {
+            // skip events happened in graph
+            let curr = e.target;
+            while (curr) {
+                if (curr.classList.contains('Graph')) return;
+                curr = curr.parentElement;
+            }
+            // handle event
             if (e.altKey) { $elems.removeClass('key-alt'); }
             if (e.shiftKey) { $elems.removeClass('key-shift'); }
             if (e.ctrlKey) { $elems.removeClass('key-ctrl'); }
         }
         let keydown = (e: KeyDownEvent) => {
+            // skip events happened in graph
+            let curr = e.target;
+            while (curr) {
+                if (curr.classList.contains('Graph')) return;
+                curr = curr.parentElement;
+            }
+            // handle event
             let root = optimizedKeyPaths;
             if (e.altKey) { root = root[Keystrokes.alt] || {}; $elems.addClass('key-alt'); }
             if (e.shiftKey) { root = root[Keystrokes.shift] || {}; $elems.addClass('key-shift'); }

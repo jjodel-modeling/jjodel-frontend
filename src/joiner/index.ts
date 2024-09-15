@@ -254,7 +254,7 @@ w.IPoint = IPoint;
 w.GraphPoint = GraphPoint;
 w.$s = $s;
 */
-export {GraphElements, Graphs, Vertexes, Edges, Fields} from './components';
+export {} from './components';
 export {
     TextArea, Select, Input, Edit, Edge, // Image,
     GraphsContainerComponent,
@@ -276,7 +276,9 @@ export {
     Asterisk, Ellipse, Enneagon, Hexagon, Nonagon,
     Octagon, Heptagon, Pentagon, Rectangle, Septagon,
     Square, Star, SimpleStar, DecoratedStar, Trapezoid, Triangle,
-    View, Try, ControlPanel, Measurable, MeasurableComponent
+    View, Try, ControlPanel,
+    GraphElements, Graphs, Vertexes, Edges, Fields,
+    MeasurableComponent, Measurable, Draggable, Rotatable, Resizable
 } from './components'
 //export {createOrOpenModelTab} from "../components/abstract/DockLayoutComponent"; // needs to be after docklayoutcomponent or to split the file
 export {fakeExport} from './ExecuteOnRead';

@@ -11,7 +11,7 @@ import {
     Pointer,
     RuntimeAccessible,
     ShortAttribETypes as SAType,
-    U
+    U, Draggable, Measurable
 } from '../joiner';
 import React, {ReactNode} from "react";
 import {PaletteType} from "../view/viewElement/view";
@@ -374,9 +374,9 @@ export class DefaultView {
     {!data && "Model data missing."}
     <div className={'edges'}>
         {[
-            refEdges.map(se => <Edge anchorStart={0} anchorEnd={0} key={se.id}
-            start={se.start.father.node} end={se.end.node} view={'Edge' + (se.start.composition ? 'Composition' : (se.start.aggregation ? 'Aggregation' : 'Association'))} />),
-            extendEdges.map(se => <Edge start={se.start} end={se.end} view={'EdgeInheritance'} key={se.id} />)
+            refEdges.map(se => <Edge data={se.start} start={se.startNode.father} end={se.endNode} anchorStart={0} anchorEnd={0} key={se.id} isReference={true} 
+             view={'Edge' + (se.start.composition ? 'Composition' : (se.start.aggregation ? 'Aggregation' : 'Association'))} />),
+            extendEdges.map(se => <Edge data={se.start} start={se.startNode} end={se.endNode} view={'EdgeInheritance'} isExtend={true} key={se.id} />)
         ]}
     </div>
     {otherPackages.filter(p => p).map(pkg => <DefaultNode key={pkg.id} data={pkg} />)}
@@ -610,7 +610,7 @@ public static object(): string { return (
         let lv: LViewElement | undefined = v ? ((v as any).__isProxy ? v as LViewElement : LPointerTargetable.wrap(v)) : undefined;
         let viewpointname = lv?.viewpoint?.name ||'';
 
-        return (<div className={'error-notification'}>
+        return (<Measurable draggable={true} resizable={true}><div className={'error-notification'}>
             <h1>Something Went Wrong...</h1>
             {v && <h2>Error in "{v?.name}" syntax view definition{viewpointname? ' in viewpoint ' + viewpointname : ''}.</h2>}
             <div className={'error-type'}>
@@ -620,7 +620,7 @@ public static object(): string { return (
                 </b>
             </div>
             <div className={'error-details'}>{msg}</div>
-        </div>);
+        </div></Measurable>);
     }
 
     public static error_string(msg: undefined | ReactNode, errortype: string | "SYNTAX" | "RUNTIME", data?: DModelElement | undefined,
@@ -642,7 +642,7 @@ public static object(): string { return (
         //         {${msg} && <label className={'text-center mx-1 d-block'} style={{color:"black"}}>${msg}</label>}
         //     </div>
         // </div>
-        return `<div className={'error-notification'}>
+        return `<Measurable draggable={true} resizable={true}><div className={'error-notification'}>
             <h1>Something Went Wrong...</h1>
             `+ (v && `<h2>Error in "${v?.name}" syntax view definition${viewpointname ? ' in viewpoint ' + viewpointname : ''}.</h2>`)+`
             <div className={'error-type'}>
@@ -652,7 +652,7 @@ public static object(): string { return (
                 </b>
             </div>
             <div className={'error-details'}>${msg}</div>
-        </div>)`;
+        </div></Measurable>)`;
     }
 
 

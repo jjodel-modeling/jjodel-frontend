@@ -2566,27 +2566,30 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
         // for (let extChild of extendChildren) { extChild._checkViolations(false); } // after instances have their meta-class changed, they might need to change shape or values.
         return true; }
 
-    unsetExtends(context: Context, superclass: LClass): void {
-        if (!superclass) return;
-        console.log('UnsetExtend:', context);
-        // todo: when Object is loaded in m3, set him there for easy access.
-        //  if (superclass.id === LClass.genericObjectid) { Log.w(true, 'Cannot un-extend "Object"'); return; }
-        const thiss: LClass = context.proxyObject;
-        let index: number = thiss.extends.indexOf(superclass);
-        if (index < 0) return;
+    unsetExtends(superclass: LClass): void { return this.cannotCall('unsetExtends'); }
+    get_unsetExtends(context: Context, superclass: LClass): (superclass: LClass)=>void {
+        return (superclass: LClass)=>{
+            if (!superclass) return;
+            console.log('UnsetExtend:', context);
+            // todo: when Object is loaded in m3, set him there for easy access.
+            //  if (superclass.id === LClass.genericObjectid) { Log.w(true, 'Cannot un-extend "Object"'); return; }
+            const thiss: LClass = context.proxyObject;
+            let index: number = thiss.extends.indexOf(superclass);
+            if (index < 0) return;
 
-        let newextends = thiss.extends.map(l => l.id);
-        let newextendedBy = superclass.extendedBy.map(l => l.id);
-        U.arrayRemoveAll(newextends, superclass.id)
-        U.arrayRemoveAll(newextendedBy, thiss.id)
-        SetFieldAction.new(thiss, 'extends', (newextends), '', true); // -=
-        SetFieldAction.new(superclass, 'extendedBy', (newextendedBy), '', true); // -=
-        // todo: update instances for (i = 0; i < thiss.instances.length; i++) { thiss.instances[i].unsetExtends(superclass); }
-        // todo: remove extend edge? here?
+            let newextends = thiss.extends.map(l => l.id);
+            let newextendedBy = superclass.extendedBy.map(l => l.id);
+            U.arrayRemoveAll(newextends, superclass.id)
+            U.arrayRemoveAll(newextendedBy, thiss.id)
+            SetFieldAction.new(thiss, 'extends', (newextends), '', true); // -=
+            SetFieldAction.new(superclass, 'extendedBy', (newextendedBy), '', true); // -=
+            // todo: update instances for (i = 0; i < thiss.instances.length; i++) { thiss.instances[i].unsetExtends(superclass); }
+            // todo: remove extend edge? here?
 
-        // todo: check violations
-        // const extendedby: LClass[] = [thiss, ...thiss.allSubClasses];
-        // for (i = 0; i < extendedby.length; i++) { extendedby[i].checkViolations(true); }
+            // todo: check violations
+            // const extendedby: LClass[] = [thiss, ...thiss.allSubClasses];
+            // for (i = 0; i < extendedby.length; i++) { extendedby[i].checkViolations(true); }
+        }
     }
 
     public instance(): DObject { return this.cannotCall('instance'); }

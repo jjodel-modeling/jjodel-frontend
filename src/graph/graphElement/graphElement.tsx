@@ -8,7 +8,7 @@ import {
     LGraph, MouseUpEvent, Point,
     Pointers,
     Selectors as Selectors_, Size, TRANSACTION, WGraph,
-    GraphDragManager, GraphPoint, Selectors, DNamedElement, DVoidEdge, LEdge
+    GraphDragManager, GraphPoint, Selectors, DNamedElement, DVoidEdge, LEdge, LPackage, LReference, LVoidEdge, LValue
 } from "../../joiner";
 import {DefaultUsageDeclarations} from "./sharedTypes/sharedTypes";
 
@@ -280,14 +280,21 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
                 let longestLabel = edgeOwnProps.label;
                 let labels = edgeOwnProps.labels;
                 // dge = DEdge.new(ownProps.htmlindex as number, ret.data?.id, parentnodeid, graphid, nodeid, startnodeid, endnodeid, longestLabel, labels);
-                dge = DEdge.new2(ret.data?.id, parentnodeid, graphid, nodeid, startnodeid, endnodeid, (d)=>{
+                let ddata = ret.data?.__raw;
+                dge = DEdge.new2(ddata?.id, parentnodeid, graphid, nodeid, startnodeid, endnodeid, (d: DEdge)=>{
                     //d.longestLabel = longestLabel;
                     //d.labels = labels;
+                    d.isReference = !!edgeOwnProps.isReference;
+                    if (edgeOwnProps.isValue !== undefined) d.isValue = !!edgeOwnProps.isValue;
+                    else d.isValue = (d.isReference && ddata && ddata.className === 'DValue');
+                    d.isDependency = !!edgeOwnProps.isDepencency;
+                    d.isExtend = !!edgeOwnProps.isExtend;
                     let tn = (transientProperties.node[nodeid]);
                     if (!tn) transientProperties.node[nodeid] = {} as any;
+                    tn.onDelete = edgeOwnProps.onDelete;
                     tn.labels = labels;
                     tn.longestLabel = longestLabel;
-                    d.zIndex = ownProps.htmlindex || 1;
+                    d.zIndex = edgeOwnProps.htmlindex || 1;
                     if (edgeOwnProps.anchorStart) d.anchorStart = edgeOwnProps.anchorStart;
                     if (edgeOwnProps.anchorEnd) d.anchorEnd = edgeOwnProps.anchorEnd;
                 });
@@ -296,6 +303,8 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
             else {
                 let initialSize = ownProps.initialSize;
                 dge = dGraphElementDataClass.new(ownProps.htmlindex as number, ret.data?.id, parentnodeid, graphid, nodeid, initialSize);
+                if (!tn) transientProperties.node[nodeid] = {} as any;
+                tn.onDelete = ownProps.onDelete;
                 ret.node =  MyProxyHandler.wrap(dge);
             }
             // console.log("map ge2", {nodeid: nodeid+'', dge: {...dge}, dgeid: dge.id});
@@ -742,6 +751,8 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         })
     }
     onKeyDown(e: React.KeyboardEvent){
+        console.log('keydown', e.key, {e, m:this.props.data?.name});
+        if (!(this.props.isGraph && !this.props.isVertex)) e.stopPropagation();
         if (e.key === Keystrokes.escape) {
             this.props.node.deselect();
             if (this.props.isEdgePending) {
@@ -749,12 +760,49 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
                 return;
             }
         }
-        if (e.ctrlKey || e.altKey) {
+        if (e.shiftKey) {
             // todo: make them a switch
-            if (e.key === "d") this.props.data?.duplicate(); else
-            if (e.key === "r") this.props.data?.delete();
+            if (e.key === "D" || e.key === "d") this.props.data?.duplicate(); else
+            if (e.key === "R" || e.key === "r") {
+                let nid = this.props.nodeid;
+                let tn = transientProperties.node[nid];
+                TRANSACTION(()=>{
+                    if (tn && tn.onDelete && tn.onDelete(this.props.node) === false) return;
+                    // if shapeless, erase the node directly.
+                    if (!this.props.data) {
+                        this.props.node.delete();
+                        return;
+                    }
+                    // if dictated by the model, change the model to erase indirectly the node.
+                    if (!this.props.isEdge) {
+                        this.props.data.delete();
+                        return;
+                    }
+                    // if edge
+                    let e = this.props.node as LVoidEdge;
+                    let de = e.__raw;
+                    if (de.isExtend) {
+                        let data: LClass = this.props.data as any;
+                        data.unsetExtends(e.end.model);
+                        // SetFieldAction(data.id, 'extends', )
+                    }
+                    if (de.isReference){
+                        if (this.props.data.className === 'DReference'){
+                            let ref: LReference = this.props.data as any;
+                            ref.type = ref.father.id as any;
+                        } else {
+                            let lval: LValue = this.props.data as any;
+                            lval.remove(e.end.model);
+                        }
+                    }
+                    if (de.isDependency){ // pkg dependency
+                        let ref: LPackage = this.props.data as any;
+                    }
+                    else {}
+                })
+            }
         }
-        if (e.altKey) {
+        if (e.ctrlKey) {
             // if (e.key === Keystrokes.escape) this.props.node.toggleMinimize();
             if (e.key === "a") this.props.data?.addChild("auto"); else // add class if on package, literal if on enum...
             if (e.key === "r") this.props.data?.addChild("reference"); else
@@ -854,6 +902,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         // because if the view is active for the other user, his synched jsx will generate the same function in transientProperties.
         // if it is inactive it does not matter, the value is not used.
         if (props.label) { tn.longestLabel = props.label; }
+        if (props.onDelete) { tn.onDelete = props.onDelete; }
         if (props.longestLabel) { tn.longestLabel = props.longestLabel; }
         if (props.labels) { tn.labels = props.labels; }
         if (props.anchorStart && props.isEdge) { (props.node as LEdge).anchorStart = props.anchorStart; }
@@ -869,13 +918,17 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         }
         if (props.anchorEnd) { tn.labels = props.labels; }
         // if (typeof props.viewid === 'string') { let old = props.viewid; if (old !== props.node.view.id) { this.forceUpdate(); ret = true;} }
-        if (typeof props.x === 'number') { let old = props.node.x; let n = +props.x; if (old !== n) { props.node.x = n; ret = true;} }
-        if (typeof props.y === 'number') { let old = props.node.y; let n = +props.y; if (old !== n) { props.node.y = n; ret = true;} }
+        if (typeof props.isReference) { let old = dnode.isReference; let n = !!props.isReference; if (old !== n) { props.node.isReference = n; ret = true;} }
+        if (typeof props.isExtend) { let old = dnode.isExtend; let n = !!props.isExtend; if (old !== n) { props.node.isExtend = n; ret = true;} }
+        if (typeof props.isValue) { let old = dnode.isValue; let n = !!props.isValue; if (old !== n) { props.node.isValue = n; ret = true;} }
+        if (typeof props.isDependency) { let old = dnode.iisDependency let n = !!props.isDependency; if (old !== n) { props.node.isDependency = n; ret = true;} }
+        if (typeof props.x === 'number') { let old = dnode.x; let n = +props.x; if (old !== n) { props.node.x = n; ret = true;} }
+        if (typeof props.y === 'number') { let old = dnode.y; let n = +props.y; if (old !== n) { props.node.y = n; ret = true;} }
         // risk loop: todo loop detection and skip setting
-        if (typeof props.w === 'number') { let old = props.node.w; let n = +props.w; if (old !== n) { props.node.w = n; ret = true;} }
-        if (typeof props.h === 'number') { let old = props.node.h; let n = +props.h; if (old !== n) { props.node.h = n; ret = true;} }
-        if (typeof props.width  === 'number') { let old = props.node.w; let n = +props.width;  if (old !== n) { props.node.w = n; ret = true;} }
-        if (typeof props.height === 'number') { let old = props.node.h; let n = +props.height; if (old !== n) { props.node.h = n; ret = true;} }
+        if (typeof props.w === 'number') { let old = dnode.w; let n = +props.w; if (old !== n) { props.node.w = n; ret = true;} }
+        if (typeof props.h === 'number') { let old = dnode.h; let n = +props.h; if (old !== n) { props.node.h = n; ret = true;} }
+        if (typeof props.width  === 'number') { let old = dnode.w; let n = +props.width;  if (old !== n) { props.node.w = n; ret = true;} }
+        if (typeof props.height === 'number') { let old = dnode.h; let n = +props.height; if (old !== n) { props.node.h = n; ret = true;} }
 
 
 
@@ -1047,6 +1100,8 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
                         onMouseDown: this.onMouseDown,
                         onMouseUp: this.onMouseUp,
                         onMouseMove: this.onMouseMove,
+                        onKeyDown: this.onKeyDown,
+                        // onKeyUp: this.onKeyUp,
                         onwheel: this.onScroll,
                         onMouseEnter: this.onEnter,
                         onMouseLeave: this.onLeave,

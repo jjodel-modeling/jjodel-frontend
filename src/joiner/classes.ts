@@ -3161,6 +3161,7 @@ export class NodeTransientProperties{
     longestLabel!: LVoidEdge['longestLabel'];
     labels!: LVoidEdge['labels'];
     //force1Update!: boolean;
+    onDelete?: (node: LGraphElement)=>boolean; // return false to prevent deletion
     constructor(){
         // this.stackViews = []; this.validMainViews = [];
         this.viewScores = {};

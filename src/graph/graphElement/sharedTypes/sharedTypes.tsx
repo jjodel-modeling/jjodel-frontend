@@ -96,6 +96,7 @@ export class GraphElementOwnProps extends BasicReactOwnProps {
     isEdge?: boolean;
     isVoid?: boolean;
     isField?: boolean = true;
+    onDelete?: (node: LGraphElement)=>boolean; // return false to prevent deletion
 
     initialSize?: InitialVertexSize;
 
@@ -125,6 +126,10 @@ export class EdgeOwnProps extends GraphElementOwnProps {
     anchorEnd?: string;
     isField?: boolean = false;
     isEdge?: boolean = true;
+    isReference?: boolean;
+    isExtend?: boolean;
+    isDepencency?: boolean; // package dep
+
     static new(): GObject<EdgeOwnProps>{
         let e: GObject<EdgeOwnProps> = new EdgeOwnProps();
         for (let k in e) if (e[k] === undefined) delete e[k];

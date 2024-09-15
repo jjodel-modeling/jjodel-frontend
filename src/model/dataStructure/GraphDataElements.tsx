@@ -1549,6 +1549,11 @@ export class DVoidEdge extends DGraphElement {
     labels?: DocString<"function">;
     anchorStart?: string;
     anchorEnd?: string;
+
+    isExtend!: boolean;
+    isReference!: boolean;
+    isValue!: boolean;
+    isDependency!: boolean;
     // endFollow!: boolean; they became derived attributes from static properties
     // startFollow!: boolean;
 
@@ -2648,7 +2653,6 @@ export class DEdge extends DVoidEdge { // DVoidEdge
     __isDEdge!: true;
     __isDVoidEdge!: true;
     midnodes!: Pointer<DEdgePoint, 1, 1, LEdgePoint>[];
-
 }
 
 @RuntimeAccessible('LEdge')
