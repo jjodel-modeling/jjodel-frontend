@@ -933,7 +933,6 @@ function fixResizables(e: MouseEvent){
 }
 
 export async function stateInitializer() {
-    statehistory[DUser.current] = {redoable: [], undoable: []};
     RuntimeAccessibleClass.fixStatics();
     let dClassesMap: Dictionary<string, typeof DPointerTargetable> = {};
     let lClassesMap: Dictionary<string, typeof LPointerTargetable> = {};
@@ -953,8 +952,11 @@ export async function stateInitializer() {
 
     DState.init();
     const user = Storage.read<DUser>('user');
-    if(!user) return;
-    DUser.new(user.name, user.surname, user.nickname, user.affiliation, user.country, user.newsletter, user.email, user.token, user.id);
-    DUser.current = user.id;
-    await ProjectsApi.getAll();
+    if(user) {
+        DUser.new(user.name, user.surname, user.nickname, user.affiliation, user.country, user.newsletter, user.email, user.token, user.id);
+        DUser.current = user.id;
+        statehistory[user.id] = {redoable: [], undoable: []};
+        await ProjectsApi.getAll();
+    } else DUser.current = '';
+
 }

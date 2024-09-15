@@ -11,7 +11,15 @@ import {
     Temporary,
     LPointerTargetable,
     DPointerTargetable,
-    Log, EMeasurableEvents, TRANSACTION, KeyDownEvent, SetRootFieldAction, LoadAction, stateInitializer, DUser,
+    Log,
+    EMeasurableEvents,
+    TRANSACTION,
+    KeyDownEvent,
+    SetRootFieldAction,
+    LoadAction,
+    stateInitializer,
+    DUser,
+    DProject,
 } from "../joiner";
 import {
     DClassifier,
@@ -76,6 +84,12 @@ export class Color {
 @RuntimeAccessible('U')
 export class U {
 
+    static keepKeys(dict: GObject, keys: string[]): Dictionary {
+        return Object.fromEntries(
+            Object.entries(dict).filter(([key]) => keys.includes(key))
+        );
+    }
+
     static alert(type: 'i'|'w'|'e', message: string): void {
         SetRootFieldAction.new('alert', `${type}:${message}`, '');
     }
@@ -83,8 +97,43 @@ export class U {
     static async decompressState(state: string): Promise<string> {
         return await decompressFromUTF16(state);
     }
-    static async compressedState(): Promise<string> {
+    static async compressedState(project: DProject): Promise<string> {
         return await compressToUTF16(JSON.stringify(store.getState()));
+        /*
+        const keys: (keyof DState)[]= [
+            'attributes',
+            'classifiers',
+            'classs',
+            'ecoreClasses',
+            'edgepoints',
+            'edges',
+            'enumerators',
+            'enumliterals',
+            'graphelements',
+            'graphs',
+            'm1models',
+            'm2models',
+            'models',
+            'objects',
+            'operations',
+            'packages',
+            'parameters',
+            'primitiveTypes',
+            'references',
+            'returnTypes',
+            'users',
+            'values',
+            'vertexs',
+            'viewelements',
+            'viewpoints',
+            'voidvertexs'
+        ];
+        const state = {...store.getState()};
+        const cleanedState = {...(U.keepKeys(state, keys)), projects: [project.id]};
+        const pointers: string[] = Object.values(cleanedState).flatMap(v => v).filter(v => String(v).startsWith('Pointer'));
+        const newState = {...cleanedState, idlookup: U.keepKeys(state['idlookup'], pointers)};
+        return await compressToUTF16(JSON.stringify(newState));
+        */
     }
     static isOffline(): boolean {
         return Storage.read('offline') === 'true';
@@ -92,7 +141,6 @@ export class U {
     static refresh(): void {
         LoadAction.new(DState.new());
         SetRootFieldAction.new('isLoading', true);
-        DUser.current = '';
         stateInitializer().then(() => SetRootFieldAction.new('isLoading', false));
     }
 
@@ -1277,19 +1325,19 @@ export class U {
 
 
     static download(filename: string = 'nameless.txt', text: string = '', debug: boolean = true): void {
-        if (!text) { return; }
+        if (!text) return;
         filename = U.toFileName(filename);
-        const htmla: HTMLAnchorElement = document.createElement('a');
+        const htmlA: HTMLAnchorElement = document.createElement('a');
         const blob: Blob = new Blob([text], {type: 'text/plain', endings: 'native'});
         const blobUrl: string = URL.createObjectURL(blob);
-        Log.l(debug, text + '|\r\n| <-- rn, |\n| <--n.');
-        htmla.style.display = 'none';
-        htmla.href = blobUrl;
-        htmla.download = filename;
-        document.body.appendChild(htmla);
-        htmla.click();
+        htmlA.style.display = 'none';
+        htmlA.href = blobUrl;
+        htmlA.download = filename;
+        document.body.appendChild(htmlA);
+        htmlA.click();
         window.URL.revokeObjectURL(blobUrl);
-        document.body.removeChild(htmla); }
+        document.body.removeChild(htmlA);
+    }
 
     static formatXml(xml: string): string {
         const reg = /(>)\s*(<)(\/*)/g;

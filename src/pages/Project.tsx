@@ -5,7 +5,7 @@ import {
     Dictionary,
     DState,
     DUser,
-    DViewElement,
+    DViewElement, GObject,
     LProject,
     LUser,
     LViewElement,
@@ -22,26 +22,30 @@ import {Dashboard} from "./components";
 import CollaborativeAttacher from "../components/collaborative/CollaborativeAttacher";
 import {Cards} from './components/cards/Cards';
 import Storage from "../data/storage";
+import {useNavigate} from "react-router-dom";
 
 
 function ProjectComponent(props: AllProps): JSX.Element {
 
-    const user = props.user;
+    const {user} = props;
+    const navigate = useNavigate();
     const query = useQuery();
     const id = query.get('id') || '';
-    if(user) user.project = LProject.fromPointer(id);
 
     useEffect(() => {
         (async function() {
             const project = await ProjectsApi.getOne(id);
-            if(!project || !project.state) return;
-            const state = await U.decompressState(project.state);
-            const rawUser = Storage.read<DUser>('user');
-            if(!rawUser) return;
-            SaveManager.load(state);
-            CreateElementAction.new(rawUser);
-            //DUser.new(rawUser.name, rawUser.surname, rawUser.nickname, rawUser.affiliation, rawUser.country, rawUser.newsletter, rawUser.email, rawUser.token, rawUser.id);
-            //DUser.current = rawUser.id;
+            if(!project) {
+                U.refresh();
+                navigate('/allProject');
+                return;
+            }
+            if(!project.state) return;
+            const state = JSON.parse(await U.decompressState(project.state));
+            state['idlookup'][DUser.current] = user.__raw;
+            if(!state['users'].includes(DUser.current)) state['users'].push(DUser.current);
+            SaveManager.load(JSON.stringify(state));
+            user.project = LProject.fromPointer(project.id);
         })();
     }, [id]);
 
@@ -49,8 +53,7 @@ function ProjectComponent(props: AllProps): JSX.Element {
     allViews = allViews.filter(v => v);
     const viewsDeDuplicator: Dictionary<Pointer<DViewElement>, LViewElement> = {};
     for (let v of allViews) viewsDeDuplicator[v.id] = v;
-    if(!user?.project) return (<div></div>);
-
+    if(!user?.project) return (<></>);
     return(<>
         <Try>
             <Dashboard active={'Project'} version={props.version} project={user.project}>
@@ -94,7 +97,6 @@ function ProjectComponent(props: AllProps): JSX.Element {
 interface OwnProps {}
 interface StateProps {
     user: LUser,
-    projects: LProject[],
     version: DState["version"],
 }
 interface DispatchProps {}

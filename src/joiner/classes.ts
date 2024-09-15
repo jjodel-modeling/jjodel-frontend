@@ -2392,15 +2392,15 @@ export class LProject<Context extends LogicContext<DProject> = any, D extends DP
         SetFieldAction.new(data.id, 'author', Pointers.from(val), '', true);
         return true;
     }
-    /*
-    public get_state(context: any): this['state'] {
+
+    public get_state(context: Context): this['state'] {
         return context.data.state;
     }
     public set_state(val: this['state'], context: Context): boolean {
         const data = context.data;
         SetFieldAction.new(data.id, 'state', val, '', false);
         return true;
-    }*/
+    }
 
     protected get_collaborators(context: Context): this['collaborators'] {
         return LUser.fromPointer(context.data.collaborators) || [];

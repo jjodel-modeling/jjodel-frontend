@@ -33,17 +33,15 @@ class ProjectsApi {
         if(U.isOffline()) return Offline.getOne(id);
         else return await Online.getOne(id);
     }
-    static async save(project: LUser['project']): Promise<void> {
-        if(!project) return;
-        const rawProject = project.__raw as DProject;
-        rawProject.lastModified = Date.now();
-        rawProject.viewpointsNumber = project.viewpoints.length;
-        rawProject.metamodelsNumber = project.metamodels.length;
-        rawProject.modelsNumber = project.models.length;
-        console.log('Saved', rawProject);
-        SetRootFieldAction.new('_lastSelected', undefined);
-        if(U.isOffline()) await Offline.save(rawProject);
-        else await Online.save(rawProject);
+    static async save(project: LProject): Promise<void> {
+        project.lastModified = Date.now();
+        project.viewpointsNumber = project.viewpoints.length;
+        project.metamodelsNumber = project.metamodels.length;
+        project.modelsNumber = project.models.length;
+        project.state = await U.compressedState(project.__raw as DProject);
+        const dProject = project.__raw as DProject;
+        if(U.isOffline()) await Offline.save(dProject);
+        else await Online.save(dProject);
     }
     static async favorite(project: DProject): Promise<void> {
         if(U.isOffline()) return Offline.favorite(project);
@@ -56,9 +54,6 @@ class ProjectsApi {
             const content = String(e.target?.result);
             try {
                 const project = JSON.parse(content) as DProject;
-                project.author = DUser.current;
-                project.creation = Date.now();
-                project.lastModified = Date.now();
                 project.isFavorite = false;
                 if(U.isOffline()) Offline.import(project);
                 else await Online.import(project);
@@ -111,8 +106,7 @@ class Offline {
     static async save(project: DProject): Promise<void> {
         const projects = Storage.read<DProject[]>('projects') || [];
         const filtered = projects.filter(p => p.id !== project.id);
-        const state = await U.compressedState();
-        Storage.write('projects', [...filtered, {...project, state}]);
+        Storage.write('projects', [...filtered, project]);
         U.alert('i', 'Project Saved!');
     }
     static async favorite(project: DProject): Promise<void> {
@@ -133,7 +127,7 @@ class Online {
     static async create (project: DProject): Promise<void> {
         await Api.post(`${Api.persistance}/projects`, {
             id: project.id,
-            creation: project.creation,
+            creation: project.creation || Date.now(),
             description: project.description,
             name: project.name,
             type: project.type
@@ -170,10 +164,9 @@ class Online {
         return U.wrapper<DProject>(response.data);
     }
     static async save(project: DProject): Promise<void> {
-        const state = await U.compressedState();
-        const response = await Api.patch(`${Api.persistance}/projects/${project.id}`, {...project, state});
+        const response = await Api.patch(`${Api.persistance}/projects/${project.id}`, {...project});
         if(response.code !== 200) U.alert('e', 'Cannot Save');
-        else U.alert('i', 'Project Saved!')
+        else U.alert('i', 'Project Saved!');
     }
     static async favorite(project: DProject): Promise<void> {
         const response = await Api.patch(`${Api.persistance}/projects/${project.id}`, {
@@ -184,7 +177,7 @@ class Online {
     }
     static async import(project: DProject): Promise<void> {
         await Online.create(project);
-        await Online.save(project);
+        await Api.patch(`${Api.persistance}/projects/${project.id}`, {...project});
     }
 }
 
