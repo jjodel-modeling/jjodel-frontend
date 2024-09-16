@@ -60,9 +60,9 @@ function ProjectComponent(props: AllProps): JSX.Element {
     const viewsDeDuplicator: Dictionary<Pointer<DViewElement>, LViewElement> = {};
     for (let v of allViews) viewsDeDuplicator[v.id] = v;
     if(!user?.project) return (<></>);
-    return(<>
+    return (<>
         <Try>
-            <Dashboard active={'Project'} version={props.version} project={user.project}>
+        <Dashboard active={'Project'} version={props.version} project={user.project}>
                 <React.Fragment>
                     <style id={"views-css-injector"}>
                         {Object.values(viewsDeDuplicator).map(v => v.compiled_css).join('\n\n')}
