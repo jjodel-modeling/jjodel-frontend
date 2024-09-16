@@ -150,7 +150,8 @@ input[type='checkbox']:checked { // was .input as class
 
 .btn {
   padding: 0.3em;
-  height: min-content; width: fit-content;
+  height: min-content;
+  width: fit-content;
   margin-top: auto; margin-bottom: auto;
   line-height: normal;
   border-radius: 0.4em;
@@ -166,6 +167,8 @@ input[type='checkbox']:checked { // was .input as class
 }
 
 /* tags */
+
+/*
 hr { margin: 0 0 !important; }
 label {
   height: min-content;
@@ -182,7 +185,7 @@ b {
 [rad]{
   transform-origin: center;
   transform: rotate(attr(rad)); // not working properly
-}
+}*/
 /*
 button:hover{// experimental, doesn't go well because it applies to N parent elements before applying to last node, so it is applied a ton of times.
   filter: hue-rotate(5deg);
