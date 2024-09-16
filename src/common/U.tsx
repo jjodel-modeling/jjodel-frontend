@@ -14,7 +14,6 @@ import {
     Log,
     EMeasurableEvents,
     TRANSACTION,
-    KeyDownEvent,
     SetRootFieldAction,
     LoadAction,
     KeyDownEvent, KeyUpEvent,
