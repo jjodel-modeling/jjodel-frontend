@@ -290,24 +290,24 @@ function NavbarComponent(props: AllProps) {
     }
 
     const Commands = () => {
-        return (<div className='text-end nav-commands'>
-            {project && <InternalToggle
-                name={'advanced'}
-                labels={{false: 'base', true: 'advanced'}}
-                size={'small'}
-            />}
-            {/*project && <Input type="checkbox"
-                               className={"d-flex"}
-                               label={<span className={"my-auto me-1"}>{props.advanced ? "advanced" : "base"}</span>}
-                               setter={(v) => {SetRootFieldAction.new('advanced', v);}}
-                               getter={()=>props.advanced}/>
-            */}
-        </div>);
+        return (<label className='text-end nav-commands d-flex'>
+            {project && <>
+                <span className={"my-auto me-1"}>{props.advanced ? "advanced" : "base"}</span>
+                <Input type="toggle"
+                       className={"my-auto"}
+                       style={{fontSize:'1.25em'}}
+                       setter={(v) => {
+                           SetRootFieldAction.new('advanced', v);
+                       }}
+                       getter={() => props.advanced}/>
+            </>
+            }
+        </label>);
     };
 
     const UserMenu = () => {
         return (<>
-            <div className='text-end nav-side'>
+        <div className='text-end nav-side'>
                 <div style={{float: 'right', left: '300px!important', marginTop: '2px'}}>
                     <Menu position={'left'}>
                         <Item icon={icon['dashboard']} action={() => {

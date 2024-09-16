@@ -103,12 +103,13 @@ class builder {
                 <label className={'input-container'}>
                     <b className={'me-2'}>Rootable:</b>
                     <Tooltip tooltip={"Whether the element can be a m1 root (present in toolbar)."}>
-                        <Input data={data} field={'rootable'} type={'checkbox'} threeStateCheckbox={true}/>
+                        <Input data={data} field={'rootable'} type={'checkbox3'}/>
                     </Tooltip>
                 </label>}
             <label className={'input-container'}>
                 <b className={'me-2'}>Singleton:</b>
-                <Tooltip tooltip={"Whether the element can be a m1 root (present in toolbar)."}>
+                <Tooltip tooltip={'A singleton element is always present exactly 1 time in every model.' +
+                    '\nA single instance is created dynamically and cannot be created by the user.'}>
                     <Input data={data} field={'singleton'} type={'checkbox'}/>
                 </Tooltip>
             </label>
@@ -116,6 +117,15 @@ class builder {
                 <b className={'me-2'}>Partial:</b>
                 <Input data={data} field={'partial'} type={'checkbox'}/>
             </label>}
+            <label className={'input-container'}>
+                <b className={'me-2'}>Rootable:</b>
+                <Tooltip tooltip={"Whether the element can be a m1 root (present in toolbar)."}>
+                    <Input data={data} field={'rootable'} type={'checkbox'} getter={()=>dclass.rootable} setter={(val)=>{
+                        lclass.rootable = val as any;
+                        console.log('setter', val);
+                    }}/>
+                </Tooltip>
+            </label>
         </section>);
     }
 

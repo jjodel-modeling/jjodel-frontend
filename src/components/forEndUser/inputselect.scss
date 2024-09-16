@@ -16,3 +16,45 @@
 }
 
 */
+// input[type="checkbox"].checkbox3::after{ display:none; }
+input.undetermined{
+  outline: 2px solid red;
+}
+input.switch[type="checkbox"]{
+  --active: var(--accent);
+  --neutral: var(--bg-2-5);
+
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  width: 2ic;
+  height: 1ic;
+  background: var(--neutral); // #ddd;
+  border-radius: 3em;
+  position: relative;
+  cursor: pointer;
+  outline: none;
+  -webkit-transition: all .2s ease-in-out;
+  transition: all .2s ease-in-out;
+
+  &:after {
+    position: absolute;
+    content: "";
+    width: 1ic;
+    height: 1ic;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 0 .25em rgba(0, 0, 0, .3);
+    transform: scale(.8);
+    left: 0;
+    -webkit-transition: all .2s ease-in-out;
+    transition: all .2s ease-in-out;
+  }
+  &:checked:after{
+    right: 0;
+    left: auto;
+  }
+  &:checked{
+    background: var(--active); // #0ebeff;
+  }
+}

@@ -129,7 +129,13 @@ export function InputComponent(props: AllProps) {
     // else if (props.disabled !== undefined) readOnly = props.disabled;
     else readOnly = props.debugmodee !== 'true' && Defaults.check(data?.id)
 
-    const type = (props.type) ? props.type : 'text';
+    let type = (props.type) ? props.type : 'text';
+    let subtype: string = type;
+    switch (type){
+        case 'toggle': type = 'checkbox'; subtype = 'switch'; break;
+        case 'checkbox3': case 'switch': type = 'checkbox'; break;
+        case 'slider': type = 'range'; break;
+    }
     let label: ReactNode | undefined = props.jsxLabel || props.label;
     let postlabel: ReactNode | undefined = props.postlabel;
     let tooltip: ReactNode|string|undefined = ((props.tooltip === true) ? data?.['__info_of__' + field]?.txt : props.tooltip) || '';
@@ -146,7 +152,8 @@ export function InputComponent(props: AllProps) {
         (props as any).onChange?.(evt);
         if (readOnly) return;
         if (isBoolean) {
-            const target = evt.target.checked;
+            let target = evt.target.checked;
+            if (subtype === 'checkbox3' && !value) { target = undefined as any; }
             if (setter) setter(target, data, field);
             else data[field] = target;
             setValue(target);
@@ -231,14 +238,18 @@ export function InputComponent(props: AllProps) {
     else cursor = 'auto';
 
     let inputProps: GObject = {...otherprops,
-        className: [props.inputClassName, css].join(' '),
+        className: [props.inputClassName||'', css].join(' '),
         style: (props.inputStyle || {}),
         spellCheck: (props as any).spellCkeck || false, readOnly, disabled: readOnly, type, value: serializeValue(value), checked,
         onChange, onBlur, onKeyDown} // key:`${field}.${data?.id}`
     if (!inputProps.style.cursor && cursor === 'not-allowed') { inputProps.style.cursor = cursor; }
+    switch(subtype){
+        case 'checkbox3': case 'switch': case 'slider': inputProps.className += ' ' + subtype + (oldValue===undefined?'undetermined':''); break;
+        default: break;
+    }
 
     let input: ReactNode;
-    let rootprops: GObject = {className: otherprops.className, style: otherprops.style};
+    let rootprops: GObject = {className: otherprops.className||'', style: otherprops.style||{}};
     switch (typeof rootprops.ref) {
         default: rootprops.ref = inputRef; break;
         case "object":
@@ -266,7 +277,9 @@ export function InputComponent(props: AllProps) {
         delete rootprops[k];
     }*/
 
-    if (!label && !postlabel && !autosize) {
+    console.log('iiii', {field, subtype, oldValue, cl:inputProps.className});
+    if (autosize) rootprops.className = (rootprops.className || '') + ' autosize-input-container';
+    else if (!label && !postlabel) {
         if (rootprops.className) inputProps.className = rootprops.className + ' ' + inputProps.className;
         if (rootprops.style) U.objectMergeInPlace(inputProps.style, rootprops.style);
         inputProps = {...rootprops, ...inputProps};
@@ -279,7 +292,6 @@ export function InputComponent(props: AllProps) {
                 return React.createElement(props.tag, inputProps, props.children);
         }
     }
-    if (autosize) rootprops.className = (rootprops.className || '') + ' autosize-input-container';
 
     switch (props.tag){
         case "textarea": input = <textarea {...inputProps}>{inputProps.value}</textarea>; break;
@@ -340,8 +352,9 @@ export interface InputOwnProps {
     label?: string | ReactNode;
     postlabel?: string | ReactNode;
     jsxLabel?: ReactNode; // @deprecated, use label
-    type?: 'checkbox'|'color'|'date'|'datetime-local'|'email'|'file'|'image'|'month'|'number'|'password'|'radio'|'range'|'tel'|'text'|'time'|'url'|'week';
-    threeStateCheckbox?: boolean;
+    type?: 'checkbox'|'color'|'date'|'datetime-local'|'email'|'file'|'image'|'month'|'number'|'password'
+        |'radio'|'range'|'tel'|'text'|'time'|'url'|'week'
+        |'checkbox3'|'toggle'|'switch'|'slider';
     className?: string;
     style?: GObject;
     readonly?: boolean;
