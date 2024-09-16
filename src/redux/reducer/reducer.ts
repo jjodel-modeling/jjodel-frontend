@@ -650,7 +650,6 @@ function unsafereducer(oldState: DState = initialState, action: Action): DState 
         }
         let matches = dv.usageDeclarations?.match(UDRegexp) || [];
         transientProperties.view[vid].UDList = matches.map(s=>{ s = s.trim(); return s.substring(s.indexOf('\.')+1, s.length-2).trim()});
-        console.log('matches', {matches, udlist:transientProperties.view[vid].UDList});
         // warning for user: do not redeclare ret in nested blocks.
         // do not use ret[key] syntax.
         // do not set nested values directly (ret.key.subkey syntax).
@@ -775,11 +774,9 @@ function unsafereducer(oldState: DState = initialState, action: Action): DState 
         for (let k of transientProperties.view[vid].constantsList) if (!allContextKeys[k]) allContextKeys[k] = true;
         for (let k of transientProperties.view[vid].UDList) if (!allContextKeys[k]) allContextKeys[k] = true;
         let paramStr = '{'+Object.keys(allContextKeys).join(',')+'}';
-        console.log('jsxparse', { allContextKeys, ud:transientProperties.view[vid].UDList, c:transientProperties.view[vid].constantsList });
 
         const body: string =  'return (' + UX.parseAndInject(DSL.parser(dv.jsxString), dv) + ')';
         // if (vid.includes('Model')) console.log("modelparse, jsx", {paramStr, body});
-        console.log('jsxparse', {vid, paramStr, body});
         try {
             transientProperties.view[vid].JSXFunction = new Function(paramStr, body) as ((...a: any) => any);
         }

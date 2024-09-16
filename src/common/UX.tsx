@@ -347,7 +347,6 @@ export class UX{
         let e: any;
         try { jsxCompiled = JSXT.fromString(jsxString, {factory: 'React.createElement'}); }
         catch (ee: any) { e = ee; jsxCompiled = GraphElementComponent.displayError(e, "JSX Syntax", v, undefined, undefined, true) as any; }
-        console.log('jsxparse' + (e ? '_ERROR' : '_ok'), {e, jsxString, jsxCompiled, v});
         return jsxCompiled;
     }
 }

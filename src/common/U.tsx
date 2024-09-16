@@ -2429,7 +2429,6 @@ export class Keystrokes {
             [Keystrokes.control]: {},
         }
         for (let entry of arr) {
-            console.log('registering keystrokes ', {entry, skipp:!entry.function || !entry.keystroke || !entry.keystroke.length});
             if (!entry.function || !entry.keystroke || !entry.keystroke.length) continue;
             let keymap = U.objectFromArrayValues(entry.keystroke);
             let root = optimizedKeyPaths
@@ -2448,7 +2447,6 @@ export class Keystrokes {
             let terminalKeys = entry.keystroke.filter(k => !(k in metakeysmap));
             Log.eDev(terminalKeys.length !== 1, "found a keystroke combination with multiple terminal keys", {entry, selector});
             let terminal = terminalKeys[0].toLowerCase();
-            console.log('registering keystrokes ', {keys:entry.keystroke, terminal, root, optimizedKeyPaths});
             root[terminal] = entry.function;
         }
         let keyup = (e: KeyUpEvent) => {

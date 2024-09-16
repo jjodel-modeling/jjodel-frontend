@@ -162,11 +162,9 @@ export class TabContent extends React.Component<TabContentProps, TabContentState
         const props: TabContentProps = this.props;
         let pinned = this.state.pinned;
         const content = <Try>{props.children}</Try>;
-        console.log("tabcontent portal pre pin", {pinned});
         if (!pinned) return content;
         const strip: PinnableStrip = (PinnableStrip as GObject)[pinned];
         const html: Element|null = tabdict_content[props.tid + '_pinned'];
-        console.log("tabcontent portal", {html, content, tabdict:tabdict_content, td:{...tabdict_content}});
         if (!html) return content;
         return <MyPortal container={html}>{content}</MyPortal>;
         /*
@@ -257,7 +255,6 @@ export class PinnableStrip extends PureComponent<PinnableStripProps, PinnableStr
         this.onupdate();
     }
     onupdate(){
-        console.log('strip updated', [...this.afterUpdateCallback_funcs]);
         for (let c of this.afterUpdateCallback_funcs) c();
         this.afterUpdateCallback_funcs = [];
     }

@@ -20,7 +20,7 @@ import { Tooltip } from './Tooltip';
 
 
 export function getSelectOptions(data: any, field: string, options: ReactNode, children?: ReactNode) {
-    console.log("select options", {data, field, children, options});
+    // console.log("select options", {data, field, children, options});
     if (options) return options;
     // children is auto-filled to empty array even if it is not set explicitly in jsx
     if (Array.isArray(children) && children.length > 0) return children;
@@ -62,7 +62,7 @@ export function getSelectOptions(data: any, field: string, options: ReactNode, c
         primitives = LPointerTargetable.fromPointer(state.returnTypes);
     }
 
-    console.log("select options", {data, field, returns, primitives, classes, enumerators});
+    // console.log("select options", {data, field, returns, primitives, classes, enumerators});
 
     return (
         <>

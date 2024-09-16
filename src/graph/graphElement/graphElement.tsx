@@ -371,6 +371,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
 
     public shouldComponentUpdate(nextProps: Readonly<AllProps>, nextState: Readonly<GraphElementState>, nextContext: any, oldProps?: Readonly<AllProps>): boolean {
         if (!oldProps) oldProps = this.props;//for subviewcomponent
+        let debug = false;
         // return GraphElementComponent.defaultShouldComponentUpdate(this, nextProps, nextState, nextContext);
         let data = nextProps.data?.__raw as DNamedElement | undefined;
 
@@ -392,7 +393,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
 
             nodeviewentry.shouldUpdate_reason = {...out};
             (nodeviewentry as any).shouldUpdate_reasonDebug = {old_ud, new_ud};
-            Log.l(true, "DECORATIVE_VIEW ShouldComponentUpdate " + data?.name + (nodeviewentry.shouldUpdate ? " UPDATED " : " REJECTED ")  + vid,
+            Log.l(debug, "DECORATIVE_VIEW ShouldComponentUpdate " + data?.name + (nodeviewentry.shouldUpdate ? " UPDATED " : " REJECTED ")  + vid,
                 {ret:nodeviewentry.shouldUpdate, reason: out.reason, old_ud, new_ud, oldProps:oldProps, nextProps, vid});
 
             if (!ret && nodeviewentry.shouldUpdate) ret = true;
@@ -407,7 +408,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         nodeviewentry.shouldUpdate_reason = {...out};
         (nodeviewentry as any).shouldUpdate_reasonDebug = {old_ud, new_ud};
 
-        Log.l(true, "ShouldComponentUpdate " + data?.name + (nodeviewentry.shouldUpdate ? " UPDATED " : " REJECTED ") + vid,
+        Log.l(debug, "ShouldComponentUpdate " + data?.name + (nodeviewentry.shouldUpdate ? " UPDATED " : " REJECTED ") + vid,
             {ret:nodeviewentry.shouldUpdate, reason: out.reason, old_ud, new_ud, oldProps:oldProps, nextProps});
         if (!ret && nodeviewentry.shouldUpdate) ret = true;
         return ret; // if any of main view or decorative views need updating
@@ -996,7 +997,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
 
         let jsxOutput: ReactNode = undefined as any;
         const tn = transientProperties.node[nid]
-        console.log("render", {mainView, otherViews, scores:tn.viewScores, tnv:tn.viewScores[this.props.viewid], ud:tn.viewScores[this.props.viewid].usageDeclarations});
+        //console.log("render", {mainView, otherViews, scores:tn.viewScores, tnv:tn.viewScores[this.props.viewid], ud:tn.viewScores[this.props.viewid].usageDeclarations});
         for (let v of allviews) { // main view is the last
             let viewnodescore = transientProperties.node[nid].viewScores[v.id];
             jsxOutput = viewnodescore.shouldUpdate ? undefined : viewnodescore.jsxOutput;
@@ -1029,7 +1030,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         }*/
 
         if (!ud) tnv.usageDeclarations = ud = computeUsageDeclarations(this, props, this.state, v);
-        console.log("renderView", {dv, tnv, ud});
+        //console.log("renderView", {dv, tnv, ud});
 
         if (ud.__invalidUsageDeclarations) {
             console.error("renderView error ud:", {dv, tnv, ud});
@@ -1189,7 +1190,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
             <div className={this.countRenders%2 ? "animate-on-update-even" : "animate-on-update-odd"} data-countrenders={this.countRenders++} />
         ]}</>/*/
 
-        console.log("renderView return:", rawRElement || rnode);
+        //console.log("renderView return:", rawRElement || rnode);
         return rawRElement || rnode;
     }
 
