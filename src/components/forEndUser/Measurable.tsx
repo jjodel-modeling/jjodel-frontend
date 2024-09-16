@@ -288,7 +288,7 @@ export class MeasurableComponent extends Component<MeasurableAllProps, Measurabl
         const optionmap = {draggable: "draggable", resizable: "resizable", rotatable: "rotatable"};
         const optionkey = optionmap[type];
         if (props[optionkey] === false || !props[optionkey]) {
-            console.log("measurable off " + type, {$measurable, type, datamap, optionkey, props});
+            // console.log("measurable off " + type, {$measurable, type, datamap, optionkey, props});
             if ($measurable.data(datamap[type])) ($measurable as GObject)[type]('disable');
             return;
         }

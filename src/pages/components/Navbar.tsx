@@ -178,7 +178,7 @@ function NavbarComponent(props: AllProps) {
             {
                 name: 'New model',
                 icon: icon['new'],
-                subItems: project.metamodels.map((m2, i)=>({
+                subItems: project.metamodels.filter(m2=>!!m2).map((m2, i)=>({
                     name: m2.name, function: () => { createM1(project, m2) }, keystroke: []
                 })),
                 disabled: project.metamodels.length == 0

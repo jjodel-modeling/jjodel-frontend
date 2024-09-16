@@ -89,11 +89,13 @@ function LeftBar(props: LeftBarProps): JSX.Element {
     const navigate = useNavigate();
 
     const toggleFavorite = (project: LProject) => {
-        project.favorite = !project.favorite;
+        project.isFavorite = !project.isFavorite;
     };
 
 
     const selectProject=()=> alert('todo: la funzione era inesistente nel pull');
+
+    let project: LProject = props.project as any;
 
     return(<>
 
@@ -108,7 +110,7 @@ function LeftBar(props: LeftBarProps): JSX.Element {
                     <Item action={() => {alert('edit')}} icon={icon['edit']}>Edit </Item>
                     <Item action={'allProjects'} icon={icon['export']}>Export as </Item>
                     <Item action={'allProjects'} icon={icon['duplicate']}>Duplicate </Item>
-                    <Item action={'allProjects'} icon={icon['favorite']}>Add to favorite </Item>
+                    <Item action={'allProjects'} icon={icon['favorite']}>{!project.isFavorite ? 'Add to favorites' : 'Remove from favorites'}</Item>
                     <Item action={'allProjects'} icon={icon['share']}>Public link </Item>
                     <Item action={'allProjects'} icon={icon['delete']}>Delete </Item>
                     <Item action={'allProjects'} icon={icon['close']}>Close project </Item>
@@ -143,9 +145,9 @@ function LeftBar(props: LeftBarProps): JSX.Element {
                     <Item action={'allProjects'} icon={icon['dashboard']}>All projects </Item>
                     <Item action={'recent'} icon={icon['recent']}>Recent</Item>
                 </Menu>
-                {props.projects && props.projects.filter(p => p.favorite).length > 0 &&
+                {props.projects && props.projects.filter(p => p.isFavorite).length > 0 &&
                     <Menu title={"Starred"} mode={'collapsable'}>
-                        {props.projects.filter(p => p.favorite).map(p => <Item icon={icon['folder']} action={e => selectProject()}>{p.name}</Item>)}
+                        {props.projects.filter(p => p.isFavorite).map(p => <Item icon={icon['folder']} action={e => selectProject()}>{p.name}</Item>)}
                     </Menu>
                 }
                 {/* <Menu>

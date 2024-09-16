@@ -93,14 +93,15 @@ function Project(props: Props): JSX.Element {
 
             <div className={'project-card'}>
                 <div className="project-actions d-flex" style={{position: 'absolute', top: 10, right: 5}}>
-
-                    {data.favorite ? <i onClick={(e) => toggleFavorite(data)} className="bi bi-star-fill"></i> : <i onClick={(e) => toggleFavorite(data)} className="bi bi-star"></i>}
+                    {data.isFavorite ? <i onClick={(e) => toggleFavorite(data)} className="bi bi-star-fill" />
+                        :
+                        <i onClick={(e) => toggleFavorite(data)} className="bi bi-star" />}
                     <Menu>
                             <Item icon={icon['new']} keystroke={'<i class="bi bi-command"></i>'} action={e => selectProject()}>Open</Item>
                             <Item icon={icon['duplicate']}>Duplicate</Item>
                             <Item icon={icon['download']} action={e => exportProject()}>Download</Item>
                             <Divisor />
-                            <Item icon={icon['favorite']} action={(e => toggleFavorite(data))}>Add to favorites</Item>
+                            <Item icon={icon['favorite']} action={(e => toggleFavorite(data))}>{!data.isFavorite ? 'Add to favorites' : 'Remove from favorites'}</Item>
                             <Divisor />
                             <Item icon={icon['delete']} action={async e => await deleteProject()}>Delete</Item>
                     </Menu>
@@ -160,7 +161,7 @@ function Project(props: Props): JSX.Element {
                 <div className={'col-2'}>{Math.floor((data.lastModified - data.creation) / (3600 * 1000))} hours ago</div>
                 <div className={'col-3'}>
                     <CommandBar noBorder={true} style={{marginBottom: '0'}}>
-                        <Btn icon={'favorite'} action={(e => toggleFavorite(data))} tip={'Add to favorites'} />
+                        <Btn icon={'favorite'} action={(e => toggleFavorite(data))} tip={!data.isFavorite ? 'Add to favorites' : 'Remove from favorites'} />
                         <Btn icon={'minispace'} />
                         <Btn icon={'copy'} action={e => props.data.duplicate()} tip={'Duplicate project'}/>
                         <Btn icon={'minispace'} />
