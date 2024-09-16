@@ -229,14 +229,11 @@ function ProjectCatalog(props: ProjectProps) {
 
     return (<>
         <ProjectInfoCard project={project}/>
-
             <div className={'row project-list'}  >
                 <div className='row header' >
 
                     <div className={'col-4 '}>Name</div>
                     <div className={'col-2 artifact-type'}>Type</div>
-                    <div className={'col-2 created'}>Created</div>
-                    <div className={'col-2 modified'}>Last modified</div>
                     <div className={'col-1'}>Operation</div>
                 </div>
 
@@ -244,15 +241,13 @@ function ProjectCatalog(props: ProjectProps) {
                     <div className="row data">
                         <div className={'col-4 '} onClick={async() => await DockManager.open2(mm)}><TbSquareRoundedLetterMFilled style={{fontSize: '1.5em'}}/> {mm.name}</div>
                         <div className={'col-2 artifact-type'}>Metamodel</div>
-                        <div className={'col-2 created'}>13 days ago</div>
-                        <div className={'col-2 modified'}>July 13, 2024</div>
                         <div className={'col-1'}>
                             <CommandBar noBorder={true} style={{marginBottom: '0'}}>
                                 <Btn icon={'open'} action={async() => await DockManager.open2(mm)} tip={'Open metamodel'}/>
                                 <Btn icon={'minispace'} />
-                                <Btn icon={'copy'} action={e => alert('Duplicate metamodel')} tip={'Duplicate metamodel'}/>
+                                <Btn icon={'copy'} action={e => {}} tip={'Duplicate metamodel'}/>
                                 <Sep />
-                                <Btn icon={'delete'} action={e => alert('Delete Metamodel')} tip={`Delete model "${mm.name}"`}/>
+                                <Btn icon={'delete'} action={e => mm.delete()} tip={`Delete model "${mm.name}"`}/>
                             </CommandBar>
                         </div>
                     </div>)
@@ -261,32 +256,28 @@ function ProjectCatalog(props: ProjectProps) {
                     <div className="row data">
                         <div className={'col-4 '} key={model.id} onClick={async() => await DockManager.open2(model)} ><TbSquareRoundedLetterM style={{fontSize: '1.5em'}}/> {model.name}</div>
                         <div className={'col-2 artifact-type'}>Model</div>
-                        <div className={'col-2 created'}>13 days ago</div>
-                        <div className={'col-2 modified'}>July 13, 2024</div>
                         <div className={'col-1'}>
                             <CommandBar noBorder={true} style={{marginBottom: '0'}}>
                                 <Btn icon={'open'} action={async() => await DockManager.open2(model)} tip={'Open model'}/>
                                 <Btn icon={'minispace'} />
-                                <Btn icon={'copy'} action={e => alert('Duplicate model')} tip={'Duplicate model'}/>
+                                <Btn icon={'copy'} action={e => {}} tip={'Duplicate model'}/>
                                 <Sep />
-                                <Btn icon={'delete'} action={e => alert('Delete Model')} tip={`Delete model "${model.name}"`}/>
+                                <Btn icon={'delete'} action={e => model.delete()} tip={`Delete model "${model.name}"`}/>
                             </CommandBar>
                         </div>
                     </div>)
                 }
                 {project.viewpoints.map(vp =>
                     <div className="row data">
-                        <div className={'col-4'} onClick={()=> {alert()}}>{vp.isOverlay ? <TbSquareRoundedLetterVFilled style={{fontSize: '1.5em'}}/> : <TbSquareRoundedLetterV style={{fontSize: '1.5em'}}/>} {vp.name}</div>
+                        <div className={'col-4'}>{vp.isOverlay ? <TbSquareRoundedLetterVFilled style={{fontSize: '1.5em'}}/> : <TbSquareRoundedLetterV style={{fontSize: '1.5em'}}/>} {vp.name}</div>
                         <div className={'col-2 artifact-type'}>Viewpoints</div>
-                        <div className={'col-2 created'}>13 days ago</div>
-                        <div className={'col-2 modified'}>July 13, 2024</div>
                         <div className={'col-1'}>
                             <CommandBar noBorder={true} style={{marginBottom: '0'}}>
-                                <Btn icon={'open'} tip={'Open model'}/>
+                                <Btn icon={'open'} tip={'Open viewpoint'}/>
                                 <Btn icon={'minispace'} />
-                                <Btn icon={'copy'} tip={'Duplicate model'}/>
+                                <Btn icon={'copy'} action={e => vp.duplicate()} tip={'Duplicate viewpoint'}/>
                                 <Sep />
-                                <Btn icon={'delete'} tip={'Delete viewpoint'}/>
+                                <Btn icon={'delete'} action={e => vp.delete()} tip={'Delete viewpoint'}/>
                             </CommandBar>
                         </div>
                     </div>)

@@ -1,5 +1,5 @@
 .context-menu {
-  
+
   position: absolute;
   z-index: 1001;
   top: 9%;
@@ -19,7 +19,7 @@
   padding: 3px 8px 3px 8px;
   font-size: 12px;
   font-weight: 200;
-  
+
 }
 
 .context-menu div hr.my-1{
@@ -32,7 +32,7 @@
 
 .context-menu div .item div {
   font-size: 0.9em;
-  
+
   font-kerning: none;
   float: right;
   padding-top: 2px;
@@ -76,7 +76,7 @@
 
 .context-menu div .submenu {
   padding: 2px!important;
-   
+
   & .item {
     font-size: 1.1em;
     width: 100%;
@@ -90,7 +90,7 @@
   height: 100%;
   width: 100%;
   top: 0; left: 0;
-  z-index: 999;
+  z-index: 999999;
   background-color: rgba(0, 0, 0, 0.4);
 }
 .memorec-popup {

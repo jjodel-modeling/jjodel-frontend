@@ -105,13 +105,13 @@ function LeftBar(props: LeftBarProps): JSX.Element {
 
                 {/* @ts-ignore */}
                 <Menu title={props.project.name}>
-                    <Item action={() => {alert('edit')}} icon={icon['edit']}>Edit </Item>
-                    <Item action={'allProjects'} icon={icon['export']}>Export as </Item>
-                    <Item action={'allProjects'} icon={icon['duplicate']}>Duplicate </Item>
-                    <Item action={'allProjects'} icon={icon['favorite']}>Add to favorite </Item>
-                    <Item action={'allProjects'} icon={icon['share']}>Public link </Item>
-                    <Item action={'allProjects'} icon={icon['delete']}>Delete </Item>
-                    <Item action={'allProjects'} icon={icon['close']}>Close project </Item>
+                    <Item icon={icon['edit']}>Edit </Item>
+                    <Item icon={icon['export']}>Export as...</Item>
+                    <Item icon={icon['duplicate']}>Duplicate </Item>
+                    <Item icon={icon['favorite']}>Add to favorite </Item>
+                    <Item icon={icon['share']}>Public link </Item>
+                    <Item icon={icon['delete']}>Delete </Item>
+                    <Item icon={icon['close']}>Close project </Item>
                 </Menu>
 
                 {/* {props.projects.filter(p => p.favorite).length > 0 &&
@@ -126,9 +126,9 @@ function LeftBar(props: LeftBarProps): JSX.Element {
                 </Menu>*/}
 
                 <Menu title={'Support'} mode={'collapsable'}>
-                    <Item action={'updates'} icon={icon['whats-new']}>What's new</Item>
-                    <Item action={'gettingstarted'} icon={icon['getting-started']}>Getting started</Item>
-                    <Item action={'guide'} icon={icon['manual']}>User guide</Item>
+                    <Item icon={icon['whats-new']}>What's new</Item>
+                    <Item icon={icon['getting-started']}>Getting started</Item>
+                    <Item icon={icon['manual']}>User guide</Item>
                 </Menu>
 
 

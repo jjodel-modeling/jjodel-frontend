@@ -57,9 +57,13 @@ function ContextMenuComponent(props: AllProps) {
         close();
     }
 
-    const structuralFeature = async () => {setMemorec(await MemoRec.structuralFeature(data))}
+    const structuralFeature = async () => {
+        setMemorec(await MemoRec.structuralFeature(data));
+    }
 
-    const classifier = async() => {setMemorec(await MemoRec.classifier(data))}
+    const classifier = async() => {
+        setMemorec(await MemoRec.classifier(data));
+    }
 
     const suggestOnClass = (isAttribute:boolean) => {
         const lClass: LClass = LClass.fromPointer(data.id);
@@ -250,17 +254,14 @@ function ContextMenuComponent(props: AllProps) {
                 <div className={'d-block text-center mb-1'}>Add <b>{suggestedName}</b> as:</div>
                 {(memorec.type === 'class') ? <>
                     <div tabIndex={-1} onClick={e =>suggestOnClass(true)} className={'d-flex memorec-button'}>
-                        <ModellingIcon className={'my-auto'} name={'attribute'} />
-                        <span className={'ms-2 my-auto'}>Attribute</span>
+                        <ModellingIcon className={'my-auto'} name={'attribute'} /> Attribute
                     </div>
                     <div tabIndex={-1} onClick={e =>suggestOnClass(false)} className={'d-flex memorec-button mt-1'}>
-                        <ModellingIcon className={'my-auto'} name={'reference'} />
-                        <span className={'ms-2 my-auto'}>Reference</span>
+                        <ModellingIcon className={'my-auto'} name={'reference'} /> Reference
                     </div>
                 </> :
                     <div tabIndex={-1} onClick={e =>suggestOnPackage()} className={'d-flex memorec-button mt-1'}>
-                        <ModellingIcon className={'my-auto'} name={'class'} />
-                        <span className={'ms-2 my-auto'}>Class</span>
+                        <ModellingIcon className={'my-auto'} name={'class'} /> Class
                     </div>
                 }
                 <div className={'d-flex memorec-button mt-3'} tabIndex={-1} onClick={e => close()}>

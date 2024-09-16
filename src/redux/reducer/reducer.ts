@@ -412,7 +412,38 @@ function unsafereducer(oldState: DState = initialState, action: Action): DState 
     ret.idlookup.__proto__ = DPointerTargetable.pendingCreation as any;
     // client synchronization stuff
     if (oldState?.collaborativeSession) {
-        const ignoredFields: (keyof DState)[]  = ['contextMenu', '_lastSelected', 'isLoading', 'collaborativeSession', 'alert'];
+        const ignoredFields: (keyof DState)[]  = [
+            'version',
+            'env',
+            'debug',
+            'isEdgePending',
+            'contextMenu',
+            '_lastSelected',
+            'isLoading',
+            'collaborativeSession',
+            'VIEWS_RECOMPILE_onDataUpdate',
+            'VIEWS_RECOMPILE_onDragStart',
+            'VIEWS_RECOMPILE_onDragEnd',
+            'VIEWS_RECOMPILE_whileDragging',
+            'VIEWS_RECOMPILE_onResizeStart',
+            'VIEWS_RECOMPILE_onResizeEnd',
+            'VIEWS_RECOMPILE_whileResizing',
+            'VIEWS_RECOMPILE_onRotationStart',
+            'VIEWS_RECOMPILE_onRotationEnd',
+            'VIEWS_RECOMPILE_whileRotating',
+            'VIEWS_RECOMPILE_constants',
+            'VIEWS_RECOMPILE_usageDeclarations',
+            'VIEWS_RECOMPILE_jsxString',
+            'VIEWS_RECOMPILE_preconditions',
+            'VIEWS_RECOMPILE_jsCondition',
+            'VIEWS_RECOMPILE_ocl',
+            'VIEWS_RECOMPILE_events',
+            'VIEWS_RECOMPILE_all',
+            'ClassNameChanged',
+            'tooltip',
+            'advanced',
+            'alert'
+        ];
         /* Checking if CompositeAction has some actions that MUST be ignored */
         let compositeAction: CompositeAction|null = null;
         if(action.type === CompositeAction.type) {

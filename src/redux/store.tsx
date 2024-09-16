@@ -194,11 +194,7 @@ export class DState extends DPointerTargetable{
     tooltip: string = '';
 
     /* IoT: Topic Table */
-    topics: Dictionary<string, unknown> = {
-        'sensors/1': [{value: {raw: 10, unit: 's'}, timestamp: 1}, {value: {raw: 12, unit: 's'}, timestamp: 2}],
-        'sensors/2': [{value: {raw: 20, unit: 's'}, timestamp: 2}],
-        'sensors/3': [{value: {raw: 30, unit: 's'}, timestamp: 3}]
-    };
+    topics: Dictionary<string, unknown> = {};
 
     advanced: boolean = false;
     alert: string = '';

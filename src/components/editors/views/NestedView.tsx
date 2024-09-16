@@ -69,7 +69,7 @@ function NestedViewComponent(props: AllProps) {
 
     const activateVP = (viewPoint: LViewPoint) => { project.activeViewpoint = viewPoint; }
     const clone = (v: LViewElement) => { v.duplicate(true); }
-    const getSubElements = (v: DViewElement) => v.subViews || {}; //
+    const getSubElements = (v: DViewElement) => v?.subViews || {}; //
     let activeViewpointId: Pointer<DPointerTargetable> = project.activeViewpoint.id;
 
     function renderEntry(e: DViewElement, childrens: Dictionary<Pointer, number>, isExpanded: boolean, toggleExpansion: ()=>any, depth: number, path: number[], metadata: Metadata): JSX.Element{

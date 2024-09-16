@@ -370,9 +370,8 @@ const ErrorMessage = (props: ErrorProps) => {
 
     return (<div className={'error-notification'}>
         <h1>Something Went Wrong...</h1>
-        <h2>Error in "{props.v.name}" syntax view definition in viewpoint {viewpointname}</h2>
-        
-    
+        <h2>Error in "{props.v && props.v.name}" syntax view definition in viewpoint {viewpointname}</h2>
+
         <div className={'error-type'}>
             <b data-dname={props.dname} data-nodename={props.nodename} data-str={true}>
                 {props.errortype} Error {props.on}
@@ -382,7 +381,7 @@ const ErrorMessage = (props: ErrorProps) => {
             </b>
         </div>
         <div className={'error-details'}>
-            {props.msg && props.msg}    
+            {props.msg && props.msg}
         </div>
     </div>);
 }
@@ -633,9 +632,9 @@ public static object(): string { return (
         if (dname && dname.length >= 10) dname = dname.substring(0, 7) + '…';
         let nodename: string = (node?.className || '').replace(/[^A-Z]+/g, "").substring(1);
         let on = dname && nodename ? " on " + dname + " / " + nodename : (dname || nodename ? " on " + (dname || nodename) : '');
-        
-        
-        return (<ErrorMessage 
+
+
+        return (<ErrorMessage
             dname={dname}
             nodename={nodename}
             errortype={errortype}
@@ -651,7 +650,7 @@ public static object(): string { return (
         let nodename: string = (node?.className || '').replace(/[^A-Z]+/g, "").substring(1);
         let on = dname && nodename ? " on " + dname + " / " + nodename : (dname || nodename ? " on " + (dname || nodename) : '');
 
-        return(<ErrorMessage 
+        return(<ErrorMessage
             dname={dname}
             nodename={nodename}
             errortype={errortype}

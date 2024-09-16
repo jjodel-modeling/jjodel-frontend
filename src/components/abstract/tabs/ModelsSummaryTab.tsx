@@ -4,7 +4,6 @@ import React, {Dispatch, ReactElement} from 'react';
 import {connect} from 'react-redux';
 import type {Dictionary, FakeStateProps} from '../../../joiner/types';
 import DockManager from "../DockManager";
-
 import {LeftBar} from '../../../pages/components';
 import {ProjectCatalog, Title} from '../../../pages/components/Dashboard';
 
@@ -17,11 +16,7 @@ type Props = {
     models: any;
 };
 
-
-
-
 const Project = (props: Props) => {
-
     const {name, metamodels, models} = props;
     const project = props.data;
 
@@ -75,17 +70,7 @@ function InfoTabComponent(props: AllProps) {
         modelmap[m2name].push(m);
     }
     models = Object.values(modelmap).flat();  // this way they are sorted by metamodel
-
-    // return(<div className={'p-3 summary w-75'}>
-    //     <div>
-    //         <Project key={project.id} name={project.name} data={project} metamodels={metamodels} models={models}/>
-    //     </div>
-    // </div>);
-
-    return(
-
-            <Project key={project.id} name={project.name} data={project} metamodels={metamodels} models={models}/>
-    );
+    return(<Project key={project.id} name={project.name} data={project} metamodels={metamodels} models={models}/>);
 }
 
 interface OwnProps {}
