@@ -14,6 +14,7 @@ import {
     Pointer, store,
     U, LoggerCategoryState
 } from '../../joiner';
+import { DefaultView } from '../../common/DV';
 /*
 *   What's uncatched:
 *   - reducer
@@ -116,7 +117,7 @@ class TryComponent extends React.Component<AllProps, State> {
         (window as any).tryerror = error;
         let reportstr = this.state.lz || this.stringreport(Log.getByError(error));
         let mongoreport = {state: state, when: new Date()+'', e:{'stack':error.stack, 'msg':error.message}, compostack: info?.componentStack};
-        // todo giordano: salva mongoreport su mongodb
+        // todo giordano: salva report su mongodb
 
         const msgbody_notencoded: string = "This mail is auto-generated, it might contain data of your views or model.\n" +
             "If your project have sensitive personal information please do a manual report instead."+// check the report below to omit them.\n\n" +
@@ -139,7 +140,7 @@ class TryComponent extends React.Component<AllProps, State> {
             </ul>
             {state.debug ? this.decompress() : undefined}
         </div>
-        return DV.error_raw(visibleMessage, "unhandled");
+        return DefaultView.error(visibleMessage, "unhandled");
     }
 
     decompress(){

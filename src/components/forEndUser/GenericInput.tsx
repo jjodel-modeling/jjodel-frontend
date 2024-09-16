@@ -82,8 +82,8 @@ class GenericInputComponent extends PureComponent<AllProps, ThisState/*undefined
         }
         else {
             if (typeof info.type === 'string') {
-                if (info.type.indexOf('Function') === 0) type = 'Function';
-                else type = info.type;
+                if (info.type.toLowerCase().indexOf('function') === 0) type = 'Function';
+                else type = info.type as any;
             }
             else {
                 if (!info.type) { Log.exDevv('missing __info_of__ type for ' + d.className + '.' + this.props.field, {d, info, props: this.props}); return <></>}

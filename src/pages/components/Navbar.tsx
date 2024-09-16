@@ -1,9 +1,11 @@
 import './style.scss';
 import './navbar.scss';
 import {
+    Dictionary,
     DModel,
     DState,
     DUser,
+    Input,
     Keystrokes,
     LGraph,
     LModel,
@@ -75,25 +77,24 @@ function makeEntry(i: MenuEntry) {
             </li>
         );
     } else {
+        if (i.subItems && i.subItems.length === 0) return undefined;
+        let slength = i.subItems ? i.subItems.length : 0;
         return (
-            <li className={i.subItems ? "hoverable" : ""} tabIndex={0} onClick={()=>i.function?.()}>
-
-                    <label className={`highlight ${i.disabled && 'disabled'}`}>
-
-
+            <li className={slength > 0 ? "hoverable" : ""} tabIndex={0} onClick={()=>i.function?.()}>
+                <label className={`highlight ${i.disabled && 'disabled'}`}>
                     {i.icon ?
                         <span>{i.icon} {i.name}</span> :
                         <span><i className="bi bi-app hidden"></i> {i.name}</span>
                     }
-                    {!i.disabled && i.subItems ?
+                    {!i.disabled && slength > 0 ?
                         <i className='bi bi-chevron-right icon-expand-submenu'></i> :
                         getKeyStrokes(i.keystroke)
                     }
                 </label>
-            {!i.disabled && i.subItems &&
+            {!i.disabled && slength > 0 &&
                 <div className='content right'>
                     <ul className='context-menu right'>
-                        {i.subItems.map(si => makeEntry(si))}
+                        {i.subItems!.map(si => makeEntry(si))}
                     </ul>
                 </div>
             }
@@ -110,11 +111,12 @@ type UserProps = {}
 const User = (props: UserProps) => {
     const user: LUser = LUser.fromPointer(DUser.current);
     const name = `${user?.name} ${user?.surname}`;
-    const initials = name.split(' ').map(n => n[0]).join('');
+    const initials = name.split(' ').map(n=>n[0]).join('');
     return (<div className={'user text-end'}>
         <div className={'initials'}>
             {initials.toUpperCase()}
-        </div>&nbsp;
+        </div>
+        &nbsp;
         <span>{name}</span>
     </div>);
 };
@@ -142,7 +144,7 @@ function NavbarComponent(props: AllProps) {
 
     const Key = Keystrokes;
     let projectItems: MenuEntry[] = [];
-    {/*name: 'Save as', icon: icon['save'], function: () => {}, keystroke: [Key.shift, Key.cmd, 'S']*/}
+    {/*name: 'Save as', icon: icon['save'], function:  () => {project && ProjectsApi.save(project)}, keystroke: [Key.shift, Key.cmd, 'S']*/}
     {/*name: 'divisor', function: () => {}, keystroke: []*/}
     {/*name: 'Import...', icon: icon['import'], function: () => {}, keystroke: []*/}
     {/*
@@ -159,7 +161,15 @@ function NavbarComponent(props: AllProps) {
         ],
             keystroke: []
         },
-    */}
+    */
+    }
+    //            {name: 'Close project', icon: icon['close'], function: () => {
+    //                 navigate('/allProjects');
+    //                 Collaborative.client.off('pullAction');
+    //                 Collaborative.client.disconnect();
+    //                 SetRootFieldAction.new('collaborativeSession', false);
+    //                 U.refresh();
+    //                 }, keystroke: [Key.cmd, 'Q']},
     if (project){
         projectItems = [
 
@@ -168,7 +178,7 @@ function NavbarComponent(props: AllProps) {
             {
                 name: 'New model',
                 icon: icon['new'],
-                subItems: project.metamodels.map((m2, i)=>({
+                subItems: project.metamodels.filter(m2=>!!m2).map((m2, i)=>({
                     name: m2.name, function: () => { createM1(project, m2) }, keystroke: []
                 })),
                 disabled: project.metamodels.length == 0
@@ -286,6 +296,12 @@ function NavbarComponent(props: AllProps) {
                 labels={{false: 'base', true: 'advanced'}}
                 size={'small'}
             />}
+            {/*project && <Input type="checkbox"
+                               className={"d-flex"}
+                               label={<span className={"my-auto me-1"}>{props.advanced ? "advanced" : "base"}</span>}
+                               setter={(v) => {SetRootFieldAction.new('advanced', v);}}
+                               getter={()=>props.advanced}/>
+            */}
         </div>);
     };
 

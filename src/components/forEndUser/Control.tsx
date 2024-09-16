@@ -28,7 +28,7 @@ const Notification = (props: NotificationProps) => {
                 <h1>You forgot something...</h1>
                 {props.type && <h2>Missing '{props.field}'' in '{props.widget}' in template definition.</h2>}
             </div>
-            
+
             {props.suggestion && <p>{props.suggestion}</p>}
         </div>
     );
@@ -49,7 +49,7 @@ const CheckProps = (widget: Widget, props: any): any => {
     let suggestion = '';
 
     switch(widget) {
-        case 'control': 
+        case 'control':
             if (!props.children) {
                 alert('You did not specify any children in <Control ...> </Control>');
                 // field = 'children';
@@ -57,18 +57,18 @@ const CheckProps = (widget: Widget, props: any): any => {
                 // suggestion = 'You did not specify any children in <Control ...> </Control>';
                 // notification = <Notification widget={widget} field={field} type={type} suggestion={suggestion}/>;
                 result = true;
-            } 
+            }
         break;
-        case 'slider': 
+        case 'slider':
             if (!props.node) {
                 alert('You did not specify node in <Slider .../>');
-                // field = 'node'; 
-                // type = 'missing'; 
+                // field = 'node';
+                // type = 'missing';
                 // suggestion = '';
                 // notification = <Notification widget={widget} field={field} type={type} suggestion={suggestion}/>;
                 result = true;
 
-            } 
+            }
             if (!props.name) {
                 alert('You did not specify name in <Slider .../>');
                 field = 'name';
@@ -76,7 +76,7 @@ const CheckProps = (widget: Widget, props: any): any => {
                 suggestion = 'You did not specify name in <Slider .../>';
                 notification = <Notification widget={widget} field={field} type={type} suggestion={suggestion}/>;
                 result = true;
-            } 
+            }
         break;
     }
 
@@ -93,7 +93,7 @@ type ControlProps = {
 
 function useClickOutside(ref: any, onClickOutside: any) {
     useEffect(() => {
-      
+
         function handleClickOutside(event: Event) {
             if (ref.current && !ref.current.contains(event.target)) {
                 onClickOutside();
@@ -125,14 +125,14 @@ const ControlComponent = (props: ControlProps, children?:ReactNode) => {
     useClickOutside(controlRef, () => {
         setControlOpen(false);
     });
-    
+
     return (<>
         <div className={`jjodel-control d-flex flex-row ${controlOpen ? 'opened' : 'closed'}`} ref={controlRef}>
             <div className={'control-header'}>
                 <h1>{props.title}</h1>
                 <h2>{props.payoff}</h2>
             </div>
-            {props.children || children} 
+            {props.children || children}
         </div>
         {controlOpen ?
             <div className={'jjodel-control-icon'}>
@@ -142,7 +142,7 @@ const ControlComponent = (props: ControlProps, children?:ReactNode) => {
             <div className={'jjodel-control-icon'}>
                 <i onClick={(e) => {toggleValue()}} className="bi bi-toggles"></i>
             </div>
-        } 
+        }
     </>);
 }
 
@@ -155,14 +155,15 @@ const Control = (props: VertexOwnProps, children: ReactNode = []): ReactElement 
 
 type SliderProps = {
     node: LGraphElement;
-    name: string;
+    name?: string;
     defaultValue?:number;
     title?:string;
     min?: number;
     max?: number;
     step?: number;
+    label?: string;
 }
- 
+
 const SliderComponent = (props: SliderProps) => {
 
     const min = props.min ? props.min : 0;
@@ -179,7 +180,7 @@ const SliderComponent = (props: SliderProps) => {
     );
 
     function updateValue(value: number) {
-        {/* @ts-ignore */}
+        // @ts-ignore
         props.node.state = {[name]: value};
     }
 
@@ -189,17 +190,17 @@ const SliderComponent = (props: SliderProps) => {
             {CheckProps('slider', props) || <div className={'control-widget control-slider'}>
                 {/* <div className={'track'} style={{transition: 'width 0.3s', width: `calc((100% - var(--knob) * 2 - 14px) / ${max} * ${props.node.state[name]})`}}></div>*/}
 
-                <div className={'track'} 
-                    style={{transition: 'width 0.3s', width: `calc((((100% - var(--knob) * 2 - 14px) / (${max})) * (${props.node.state[name]}))`}}>
+                <div className={'track'}
+                    style={{transition: 'width 0.3s', width: `calc((((100% - var(--knob) * 2 - 14px) / (${max})) * (${props.node.state[name as string]}))`}}>
                 </div>
 
-                <input 
-                    type={'range'} 
-                    min={min} 
-                    max={max} 
-                    step={step} 
+                <input
+                    type={'range'}
+                    min={min}
+                    max={max}
+                    step={step}
                     onChange={(e)=>{updateValue(+e.target.value)}} />
-                
+
                 {/* @ts-ignore */}
                 {props.title && <div className={'tip'}>{props.title} <label>{props.node.state[name]}</label></div>}
                 </div>
@@ -229,29 +230,29 @@ const Slider = (props: SliderProps, children: ReactNode = []): ReactElement => {
 
 // export const Toggle = (props: ToggleProps) => {
 //     const [value, setValue] = useState<boolean>(false);
-    
+
 //     const labels = props.labels ? props.labels : {true: props.name+' on', false: props.name+' off'};
 //     const toggleValue = () => {
 //         setValue(!value);
 //         SetRootFieldAction.new(props.name, !value);
 //     };
 
-    
+
 
 //     return (
 //         <div className={'toggle'} onClick={() => {toggleValue()}} style={props.style}>
-            
+
 //             <input className={'toggle-input'} id={props.name} type="checkbox" value="true" checked={value}  />
 //             <label className={'toggle-label'}></label>
-            
+
 //             <div className={"toggle-labels"}>
-//                 {value ? 
+//                 {value ?
 //                     <span className={"toggle-on"}>{labels['true']}</span>
 //                     :
 //                     <span className={"toggle-off"}>{labels['false']}</span>
 //                 }
 //             </div>
-            
+
 //         </div>
 //     );
 // }

@@ -1,6 +1,7 @@
 import * as jsxtt from 'jsx-transform/lib/jsx.js';
 import $$ from 'jquery';
 import {ReactNode} from "react";
+import Select from 'react-select'
 import * as _pr_json2xml from '../common/libraries/prj_json2xml.js';
 import * as _pr_xml2json from '../common/libraries/prj_xml2json.js';
 
@@ -12,7 +13,7 @@ import type {Log as LogType} from "../common/Log";
 var pathDataPolyfill = require("path-data-polyfill") // needs to be required (and automatically executed) before the creation of any svg element
 var windoww = (window as any);
 windoww.windoww = windoww;
-
+export const MultiSelect = Select;
 
 windoww.$ = $$;
 export const $: JQueryStatic = $$;
@@ -31,8 +32,9 @@ export type {Subtract, Class, Empty, Json, GObject, bool, Dictionary, Proxyfied,
     NotFound, DocString, nbool, nnumber, nstring, Nullable, TODO, UnixTimestamp, UObject, IsActually,
     Function, Function2, InOutParam,
     unArr, orArr, PrimitiveType, CClass, NonEmptyString, Overlap, Info,
-    Constructor, AbstractConstructor, ApiResponse
+    Constructor, AbstractConstructor, ApiResponse, Any
 } from "./types";
+
 export type {Pointer, PtrString, getWParams, WUser, WProject, WtoD, WtoL, DtoW, LtoW, LtoD, DtoL, PackArr, Pack, Pack1, ViewScore, EPSize,
 } from "./classes";
 export type { WAnnotation, WNamedElement, WFactory_useless_, WClass, WAttribute, WClassifier, WDataType, WMap, WModel,
@@ -49,7 +51,7 @@ export type {LoggerCategoryState, LoggerType} from "../common/Log";
 
 export {windoww, EdgeBendingMode, EdgeGapMode, EMeasurableEvents} from './types';
 export {GraphElementStatee, GraphElementDispatchProps, GraphElementReduxStateProps, GraphElementOwnProps,
-    EdgeStateProps, EdgeOwnProps} from "../graph/graphElement/sharedTypes/sharedTypes";
+    EdgeStateProps, EdgeOwnProps, VertexOwnProps, BasicReactOwnProps} from "../graph/graphElement/sharedTypes/sharedTypes";
 
 export {Constructors, JsType, RuntimeAccessibleClass, DPointerTargetable,
     LPointerTargetable, WPointerTargetable, MyError, RuntimeAccessible,
@@ -223,6 +225,7 @@ export type ClickEvent = JQuery.ClickEvent;
 export type MouseDownEvent = JQuery.MouseDownEvent;
 export type BlurEvent = JQuery.BlurEvent;
 export type KeyDownEvent = JQuery.KeyDownEvent;
+export type KeyUpEvent = JQuery.KeyUpEvent;
 export type KeyPressEvent = JQuery.KeyPressEvent;
 export type DoubleClickEvent = JQuery.DoubleClickEvent;
 export type DragEndEvent = JQuery.DragEndEvent;
@@ -253,7 +256,7 @@ w.IPoint = IPoint;
 w.GraphPoint = GraphPoint;
 w.$s = $s;
 */
-export {GraphElements, Graphs, Vertexes, Edges, Fields} from './components';
+export {} from './components';
 export {
     TextArea, Select, Input, Edit, Edge, // Image,
     GraphsContainerComponent,
@@ -275,7 +278,9 @@ export {
     Asterisk, Ellipse, Enneagon, Hexagon, Nonagon,
     Octagon, Heptagon, Pentagon, Rectangle, Septagon,
     Square, Star, SimpleStar, DecoratedStar, Trapezoid, Triangle,
-    View, Try, ControlPanel, Measurable, MeasurableComponent
+    View, Try, ControlPanel,
+    GraphElements, Graphs, Vertexes, Edges, Fields,
+    MeasurableComponent, Measurable, Draggable, Rotatable, Resizable
 } from './components'
 //export {createOrOpenModelTab} from "../components/abstract/DockLayoutComponent"; // needs to be after docklayoutcomponent or to split the file
 export {fakeExport} from './ExecuteOnRead';

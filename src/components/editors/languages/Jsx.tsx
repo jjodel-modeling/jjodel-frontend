@@ -25,7 +25,7 @@ function JsxEditorComponent(props: AllProps) {
     }
 
 
-    const blur = (evt: React.FocusEvent) => { // confirm in redux state for final state
+    const blur = (evt?: React.FocusEvent) => { // confirm in redux state for final state
         view.jsxString = jsx;
     }
 
@@ -61,8 +61,17 @@ function JsxEditorComponent(props: AllProps) {
 
     }, [monaco]);
 
-    const lines = (Math.round(dview.jsxString.split(/\r|\r\n|\n/).length*1.8) < 5 ? 5 : Math.round(dview.jsxString.split(/\r|\r\n|\n/).length*1.8));
+    //const lines = (Math.round(dview.jsxString.split(/\r|\r\n|\n/).length*1.8) < 5 ? 5 : Math.round(dview.jsxString.split(/\r|\r\n|\n/).length*1.8));
 
+    let lines: number;
+    if (expand) {
+        lines = 1;
+        for (let i = 0; i < dview.jsxString.length; i++) if (dview.jsxString[i] === '\n') lines++;
+        lines += 2; // "margin"
+    } else {
+        lines = 5;
+    }
+    if (lines < 5) lines = 5;
     return(<>
         <div className={'cursor-pointer d-flex'} onClick={e => setShow(!show)}>
             <span className={'my-auto'} tabIndex={-1} >
@@ -104,10 +113,10 @@ function JsxEditorComponent(props: AllProps) {
             </label>}
         </div>}
         {show && <div className={'monaco-editor-wrapper'}
-                      style={{padding: '5px', minHeight: '20px', transition: 'height 0.3s', height:`${expand ? lines+'lvh' : '10lvh'}`, resize: 'vertical', overflow:'hidden'}}
-                      onFocus={() => setExpand(true)}
-                      onBlur={(e) => {setExpand(false);blur(e)}}
-                      tabIndex={-1} >
+                    style={{padding: '5px', minHeight: '20px', transition: 'height 0.3s', height:`${expand ? 'calc('+(lines-1)+' * 16px)' : (5*16)+'px'}`, resize: 'vertical', overflow:'hidden'}}
+                    onFocus={() => setExpand(true)}
+                    onBlur={(e) => {setExpand(false); blur(e);}}
+                    tabIndex={-1} >
             <Editor className={'mx-1'} onChange={change} language={"typescript"}
                     options={{fontSize: 12, scrollbar: {vertical: 'hidden', horizontalScrollbarSize: 5}, minimap: {enabled: false}, readOnly: readOnly}}
                     defaultLanguage={'typescript'} value={dview.jsxString} />

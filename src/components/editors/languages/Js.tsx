@@ -4,6 +4,7 @@ import Editor, {useMonaco} from '@monaco-editor/react';
 import {Defaults, DState, DViewElement, LViewElement, Pointer} from '../../../joiner';
 import {useStateIfMounted} from 'use-state-if-mounted';
 import {FakeStateProps} from '../../../joiner/types';
+import { CommandBar, Btn } from '../../commandbar/CommandBar';
 
 function JsEditorComponent(props: AllProps) {
     const {view, field, placeHolder, height, title, getter, setter, jsxLabel} = props;
@@ -69,11 +70,11 @@ function JsEditorComponent(props: AllProps) {
             </CommandBar>*/}
         </div>
         {show && <div className={'monaco-editor-wrapper'}
-            /* style={{padding: '5px', minHeight: '20px', height: height ? `${height}px` : '100px', resize: 'vertical', overflow:'hidden'}}*/
-                      style={{padding: '5px', minHeight: '20px', height:`${expand ? lines+'lvh' : '5lvh'}`, transition: 'height 0.3s', resize: 'vertical', overflow:'hidden'}}
-                      tabIndex={-1}
-                      onFocus={() => setExpand(true)}
-                      onBlur={() => {setExpand(false);blur()}}>
+                /* style={{padding: '5px', minHeight: '20px', height: height ? `${height}px` : '100px', resize: 'vertical', overflow:'hidden'}}*/
+                style={{padding: '5px', minHeight: '20px', height:`${expand ? lines+'lvh' : '5lvh'}`, transition: 'height 0.3s', resize: 'vertical', overflow:'hidden'}}
+                tabIndex={-1}
+                onFocus={() => setExpand(true)}
+                onBlur={() => {setExpand(false);blur()}}>
             <Editor className={'mx-1'} onChange={change}
                     options={{fontSize: 12, scrollbar: {vertical: 'hidden', horizontalScrollbarSize: 5}, minimap: {enabled: false}, readOnly: readOnly}}
                     defaultLanguage={'typescript'} value={value} />

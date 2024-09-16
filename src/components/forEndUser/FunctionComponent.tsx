@@ -185,7 +185,7 @@ function FunctionComponent(props: AllProps) {
     for (let row of state.arr) {
         inputs.push(<label className={"d-flex template-item" + (advancedMode ? "" : " my-1")} key={row.index} data-key={row.index}>
             <span className={"my-auto detailedMode"}>{row.id.prefix}.</span>
-            <input className={"my-auto input"} 
+            <input className={"my-auto input"}
                 placeholder={"identifier"} value={row.id.value}  disabled={readOnly}
                 tabIndex={row.index*2}
                 onInput={(e)=>identifierChange(e, row.index, state, setState)}
@@ -194,9 +194,9 @@ function FunctionComponent(props: AllProps) {
             />
             <span className={"my-auto mx-1 simpleMode"} style={{paddingRight: '6px', paddingLeft: '6px'}}><i style={{fontSize: '1.2em'}} className="bi bi-arrow-left-square"></i></span>
             <span className={"my-auto mx-1 detailedMode"}>=</span> {/*  */}
-            <input className={"my-auto input"} 
-                placeholder={"expression"} 
-                value={row.exp.value} 
+            <input className={"my-auto input"}
+                placeholder={"expression"}
+                value={row.exp.value}
                 disabled={readOnly}
                 tabIndex={row.index*2+1}
                 onInput={(e)=>expressionChange(e, row.index, state, setState)}
@@ -224,52 +224,52 @@ function FunctionComponent(props: AllProps) {
                 {/* <button className={"btn button-add"} tabIndex={state.arr.length*2}
                         disabled={readOnly} onClick={()=> !readOnly && addClick(state, setState)}>+</button> */}
             </div>
-            
+
             <CommandBar style={{marginLeft: 'auto'}}>
-                {!state.collapsed ? 
+                {!state.collapsed ?
                     <>
                         <Btn icon={'add'} action={()=> !readOnly && addClick(state, setState)} tip={'Add new constant'}/>
                         <Sep />
-                        {showTooltip ? 
+                        {showTooltip ?
                             <Btn icon={'info'} action={()=> {setShowTooltip(false)}} tip={'Hide information'} mode={'negative'}/>
                             :
                             <Btn icon={'info'} action={()=> {setShowTooltip(true)}} tip={'Show information'} />
                         }
-                        
+
                         {advancedMode?
                             <Btn icon={'settings'} action={()=>setState( {...state, advancedMode:!state.advancedMode})} tip={'Close advanced mode'} mode={'negative'}/>
                             :
                             <Btn icon={'settings'} action={()=>setState( {...state, advancedMode:!state.advancedMode})} tip={'Open advanced mode'}/>
                         }
-                        
+
                         <Sep />
                         <Btn icon={'open-down'} action={()=>setState( {...state, collapsed:!state.collapsed})} tip={'Hide definitions'}/>
                     </>
-                    :    
+                    :
                     <Btn icon={'close-up'} action={()=>setState( {...state, collapsed:!state.collapsed})} tip={'Show definitions'}/>
                 }
-                
+
             </CommandBar>
 
 
-            {/* 
+            {/*
             <span className={"m-auto me-1"} style={{border: '1px solid red', cursor: 'auto'}}>
-            
+
             {tooltip && <i className={"p1 m-auto me-1 bi bi-info-square"} style={{cursor: 'help'}} />}
 
                 <span className={"m-auto"} style={{cursor: 'auto', height: "100%", display: "inline-block"}}
                       onMouseEnter={e => tooltip && setShowTooltip(false)} onMouseLeave={e =>  tooltip && setShowTooltip(true)}
                 >
-                
+
                 <i className={ "p1 m-auto mx-1 bi " + (advancedMode ? "btn-outline-secondary bi-eye-slash" : "btn-outline-secondary bi-eye")}
                    onClick={()=>setState( {...state, advancedMode:!state.advancedMode})} style={{cursor: 'pointer'}} />
-                
+
                    <i className={ "p1 bi m-auto mx-1 bi bi-chevron-down btn-outline-secondary"}
                    onClick={()=>setState( {...state, collapsed:!state.collapsed})}
                    style={{cursor: 'pointer', transition:transitionTime/2 + "ms all",
                        transform: "scaleY("+(state.collapsed ? 1 : -1 )+")  translateY(" + (state.collapsed ? -0 : 0.1) +"em)",
                    }} />
-                 
+
                 </span>
             </span>
             */}
@@ -278,30 +278,29 @@ function FunctionComponent(props: AllProps) {
 
         </div>
         {(tooltip && showTooltip) && <div className={'my-tooltip'} style={{marginBottom: '10px'}}>
-            {/* 
+            {/*
             <b className={'text-center text-capitalize'}>{props.field}</b>
             <br />
             */}
             <label>{tooltip}</label>
         </div>}
-        {<div 
-            className={"collapsable-section"} 
-            data-comment={"collapsable-section"} 
-            style={{
+        {<div
+            className={"collapsable-section" + (state.collapsed ? "collapsed" : "expanded")}
+            data-comment={"collapsable-section"}
+            style={{/*
                 transition: transitionTime + "ms all", // transformOrigin: "top", transform: "rotateX("+(state.collapsed ? 0 : 90 )+"deg)",
                 transform: "scaleY("+(state.collapsed ? 0 : 1 )+") ",
                 transformOrigin: "top",
-                overflow:"hidden"
+                overflow:"hidden"*/
             }}>
-            
+
             <textarea className={"detailedMode input w-100"} disabled={readOnly} rows={Math.min(10, state.ta.v.split("\n").length)}
                   onInput={(e)=>textAreaChange(e, state, setState)}
                   onBlur={(e)=> !readOnly && onBlur(state, setState, props)}
                   data-txtcontent={state.ta.v}
-                  value={state.ta.v}
-        />
-        {inputs}
-        {false && <div style={{whiteSpace:"pre"}}>{(props.data as any)[props.field]}</div>}
+                  value={state.ta.v} />
+            {inputs}
+            {false && <div style={{whiteSpace:"pre"}}>{(props.data as any)[props.field]}</div>}
         </div>}
     </div>;
 }

@@ -386,7 +386,7 @@ export class Selectors{
             explicitprio = (dview.jsCondition?.length || 1) + (dview.oclCondition?.length || 1);
         } else explicitprio = dview.explicitApplicationPriority;
 
-        console.log("getFinalScore", {entry, vid, dview, explicitprio, ep:dview.explicitApplicationPriority})
+        //console.log("getFinalScore", {entry, vid, dview, explicitprio, ep:dview.explicitApplicationPriority})
 
         let defualtViewMalus = dview.id.indexOf('View') >= 0 ? 0 : 0.1;
         return entry.viewPointMatch * entry.metaclassScore * pvScore * explicitprio + defualtViewMalus;
@@ -506,7 +506,7 @@ export class Selectors{
             // don't match exclusive views from other vp
             let dvp: DViewPoint = DPointerTargetable.fromPointer(dview.viewpoint, state);
             let oldVpMatch: number = tnv.viewPointMatch;
-            console.log("vp matching " +vid, {vid, dvp, activevpid });
+            // console.log("vp matching " +vid, {vid, dvp, activevpid });
             if (dvp.id === activevpid) tnv.viewPointMatch = ViewEClassMatch.VP_Explicit;
             else if (dvp.id === 'Pointer_ViewPointDefault') tnv.viewPointMatch = ViewEClassMatch.VP_Default;
             else if (!dvp.isExclusiveView) tnv.viewPointMatch = ViewEClassMatch.VP_Decorative;

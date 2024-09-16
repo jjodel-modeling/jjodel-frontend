@@ -66,7 +66,7 @@ export const toggleMetrics = () => {
 
 
 export const MetricsPanel = (props: MetricsProps) => {
-    
+
     const [mode,setMode] = useState<string>('EMF');
 
     const getWidth = (value:int, scale: int) => {
@@ -74,21 +74,21 @@ export const MetricsPanel = (props: MetricsProps) => {
     }
 
     return (<>
-        {windoww.MetricsPanelVisible && 
+        {windoww.MetricsPanelVisible &&
             <div className={'metrics-panel'}>
                 <h1>Metamodel Analytics
                     <CommandBar style={{float: 'right', height: '20px'}}>
                         <Btn icon={'close'} action={(e) => {hideMetrics(); return false;}} theme={'dark'} tip={'Close panel'}/>
                     </CommandBar>
                 </h1>
-                
+
                 <div className={'analytics-panel'}>
-            
+
                 <div className={'category'}>
                     <label>
                         <CommandBar style={{float: 'left'}}>
                             <Btn icon={"info"} action={(e) => {alert('information page')}} theme={'dark'}/>
-                        </CommandBar> 
+                        </CommandBar>
                         Metamodel classification as
                     </label>
                     <select id={'category'} onChange={(e) => {setMode(e.target.value)}}>
@@ -96,11 +96,11 @@ export const MetricsPanel = (props: MetricsProps) => {
                         <option value={'DSML'}>DSML</option>
                         <option value={'GPML'}>GPML</option>
                     </select>
-                    
+
                 </div>
 
 
-                {mode === 'GPML' && <> 
+                {mode === 'GPML' && <>
                     <div className={'chart GPML'}>
                         <div className={'legenda small'} >small</div>
                         <div className={'legenda medium'}>medium</div>
@@ -111,7 +111,7 @@ export const MetricsPanel = (props: MetricsProps) => {
                         <div className={'medium section'}>150</div>
                         <div className={'large section'}>250</div>
                     </div>
-                    <div className={'chart current'} 
+                    <div className={'chart current'}
                         style={{gridTemplateColumns: `${getWidth(props.data.model.classes.length, 250)} auto`}}>
                         <div></div>
                         <div>
@@ -131,7 +131,7 @@ export const MetricsPanel = (props: MetricsProps) => {
                         <div className={'medium section'}>50</div>
                         <div className={'large section'}>80</div>
                     </div>
-                    <div className={'chart current'} 
+                    <div className={'chart current'}
                         style={{gridTemplateColumns: `${getWidth(props.data.model.classes.length, 80)} auto`}}>
                         <div></div>
                         <div>
@@ -151,7 +151,7 @@ export const MetricsPanel = (props: MetricsProps) => {
                         <div className={'medium section'}>30</div>
                         <div className={'large section'}>50</div>
                     </div>
-                    <div className={'chart current'} 
+                    <div className={'chart current'}
                         style={{gridTemplateColumns: `${getWidth(props.data.model.classes.length, 50)} auto`}}>
                         <div></div>
                         <div>
@@ -169,27 +169,27 @@ export const MetricsPanel = (props: MetricsProps) => {
                     <div className={'hd'}>Acronym</div>
                     <div className={'hd'}>Name</div>
                     <div className={'hd value'}>Value</div>
-                
+
                     <div>PKG</div>
                     <div># Packages</div>
                     <Metrics type={'package'} data={props.data}/>
-                    
+
                     <div>MC</div>
                     <div># Metaclasses</div>
                     <Metrics type={'metaclass'} data={props.data}/>
-                    
+
                     <div>AMC</div>
                     <div># Abstract Metaclasses</div>
                     <Metrics type={'abstract'} data={props.data}/>
-                    
+
                     <div>CMC</div>
                     <div># Concrete Metaclasses</div>
                     <Metrics type={'concrete'} data={props.data}/>
-                    
+
                     <div>IFLMC</div>
                     <div># Concrete Featureless Metaclasses</div>
                     <Metrics type={'iflmc'} data={props.data}/>
-                    
+
                     <div>MCWS</div>
                     <div># Metaclasses with Superclass</div>
                     <Metrics type={'mcws'} data={props.data}/>
@@ -197,22 +197,22 @@ export const MetricsPanel = (props: MetricsProps) => {
                     <div>LMC</div>
                     <div>% Isolated Metaclasses</div>
                     <Metrics type={'lmc'} data={props.data}/>
-                    
+
                     <div>SF</div>
                     <div># Structural Features</div>
                     <Metrics type={'sf'} data={props.data}/>
-                    
+
                     <div>ASF</div>
                     <div>Avg # Structural Features</div>
                     <Metrics type={'asf'} data={props.data}/>
-                    
+
                     <div>EN/LIT</div>
                     <div># Enumeration/Literals</div>
                     <Metrics type={'enum'} data={props.data}/>
                 </div>
                 {/* <p><a target="_blank" href="https://dl.acm.org/doi/abs/10.1145/2593770.2593774">https://dl.acm.org/doi/abs/10.1145/2593770.2593774</a></p>*/}
             </div>
-                    
+
                     /*
                     <div className={'metrics-row'}>
                         <label className={'name'}>Attributes/Inherited:</label>
@@ -220,15 +220,15 @@ export const MetricsPanel = (props: MetricsProps) => {
                     </div>
                     <div className={'metrics-row'}>
                         <label className={'name'}>References/Inherited:</label>
-                        <Metrics type={'ref'} data={props.data}/> 
+                        <Metrics type={'ref'} data={props.data}/>
                     </div>
                     <div className={'metrics-row'}>
                         <label className={'name'}>Enumerators/Literals:</label>
-                        <Metrics type={'ref'} data={props.data}/> 
+                        <Metrics type={'ref'} data={props.data}/>
                     </div>
                     <div className={'metrics-row'}>
                         <label className={'name'}>Extend relations:</label>
-                        <Metrics type={'ext'} data={props.data}/> 
+                        <Metrics type={'ext'} data={props.data}/>
                     </div>
                 </div>
         </div>*/}
@@ -237,8 +237,9 @@ export const MetricsPanel = (props: MetricsProps) => {
 
 export const Metrics = (props: MetricsProps) => {
 
-    
 
+
+/*
     function getAttributes(c: LClass): number {
         let sum = 0;
         if (c.extends.length === 0) {
@@ -256,33 +257,41 @@ export const Metrics = (props: MetricsProps) => {
             c.extends.map(s => sum += getAttributes(s));
             return c.references.length + sum;
         }
-    }
+    }*/
+    let model: LModel = props.data.model;
+    let classes: LClass[] = model.classes;
+    let dclasses: DClass[] = classes.map(c=>c.__raw);
     function getAllAttributes(): number {
         let sum = 0;
-        props.data?.model.classes.map(c => sum += getAttributes(c));
+        //props.data?.model.classes.map(c => sum += getAttributes(c));
+        classes.forEach(c => sum += c.allAttributes.length); // includes attributes from inheritance at any level
         return sum;
     }
     function getAllReferences(): number {
         let sum = 0;
-        props.data?.model.classes.map(d => sum += getReferences(d));
+        //props.data?.model.classes.map(d => sum += getReferences(d));
+        classes.forEach(c => sum += c.allReferences.length);
         return sum;
     }
 
+    let allRefsCount = getAllReferences();
+    let allAttrCount = getAllAttributes();
     return (<div className={"value"}>
-        {props.type === "package" && <>{props.data?.model.packages.length}</>}
-        {props.type === "metaclass" && <>{props.data?.model.classes.length}</>}
-        {props.type === "abstract" && <>{props.data?.model.classes.filter(c => c.abstract).length}</>}
-        {props.type === "concrete" && <>{props.data?.model.classes.length - props.data?.model.classes.filter(c => c.abstract).length}</>}
-        {props.type === "iflmc" && <>{props.data?.model.classes.filter(c => c.attributes.length == 0 && c.references.length == 0).length}</>}
-        {props.type === "mcws" && <>{props.data?.model.classes.filter(c => c.extends.length > 0).length}</>}
-        {props.type === "sf" && <>{getAllAttributes() + getAllReferences()}</>}
-        {props.type === "asf" && <>{((getAllAttributes() + getAllReferences())/(props.data?.model.classes.filter(c => !c.abstract).length)).toFixed(2)}</>}
-        {props.type === "enum" && <>{props.data?.model.enumerators.length}/{props.data?.model.literals.length}</>} 
-        {props.type === "attr" && <>{props.data?.model.attributes.length}/{getAllAttributes()}</>}
-        {props.type === "ref" && <>{props.data?.model.references.length}/{getAllReferences()}</>}   
-        {props.type === "lmc" && <>{((props.data?.model.classes.filter(c => c.extends.length == 0 && c.extendedBy.length == 0).length/props.data?.model.classes.length)*100).toFixed(2)}%</>}
-
-        {props.type === "ext" && <>{props.data?.model.subNodes.filter(c => c.name === "EdgeInheritance").length}</>}
+        {props.type === "package" && <>{model.allSubPackages.length}</>}
+        {props.type === "metaclass" && <>{classes.length}</>}
+        {props.type === "abstract" && <>{dclasses.filter(c => c.abstract).length}</>}
+        {props.type === "concrete" && <>{classes.length - dclasses.filter(c => c.abstract).length}</>}
+        {props.type === "iflmc" && <>{dclasses.filter(c => (c.attributes.length + c.references.length) === 0).length}</>}
+        {props.type === "mcws" && <>{dclasses.filter(c => c.extends.length > 0).length}</>}
+        {props.type === "sf" && <>{allAttrCount + allRefsCount}</>}
+        {props.type === "asf" && <>{((allAttrCount + allRefsCount)/(dclasses.filter(c => !c.abstract).length)).toFixed(2)}</>}
+        {props.type === "enum" && <>{model.enumerators.length}/{model.literals.length}</>}
+        {props.type === "attr" && <>{model.attributes.length}/{allAttrCount}</>}
+        {props.type === "ref" && <>{model.references.length}/{allRefsCount}</>}
+        {props.type === "lmc" && <>{((model.classes.filter(c => c.extends.length === 0 && c.extendedBy.length === 0).length/model.classes.length)*100).toFixed(2)}%</>}
+        {props.type === "ext" && <>{dclasses.reduce((acc, c) => acc+c.extends.length, 0)}</>}
         </div>);
+    // {props.type === "ext" && <>{model?.subNodes.filter(c => c.name === "EdgeInheritance").length}</>}
+    // contare gli archi per gli extend non è corretto, uno potrebbe nasconderli.
 
 }

@@ -1,4 +1,4 @@
-import React, {Dispatch, ReactElement, useEffect} from 'react';
+import React, {Dispatch, ReactElement, useEffect,  useState} from 'react';
 import {connect} from 'react-redux';
 import {
     CreateElementAction,
@@ -23,6 +23,11 @@ import CollaborativeAttacher from "../components/collaborative/CollaborativeAtta
 import {Cards} from './components/cards/Cards';
 import Storage from "../data/storage";
 import {useNavigate} from "react-router-dom";
+import Loader from '../components/loader/Loader';
+import {Navbar} from "./components";
+import {CSS_Units} from "../view/viewElement/view";
+import {useEffectOnce} from "usehooks-ts";
+
 
 
 function ProjectComponent(props: AllProps): JSX.Element {
@@ -59,6 +64,11 @@ function ProjectComponent(props: AllProps): JSX.Element {
         <Try>
             <Dashboard active={'Project'} version={props.version} project={user.project}>
                 <React.Fragment>
+                    <style id={"views-css-injector"}>
+                        {Object.values(viewsDeDuplicator).map(v => v.compiled_css).join('\n\n')}
+                    </style>
+                    {CSS_Units.jsx}
+
                     <Cards>
                         {user.project.metamodels.length === 0 ?
                             <Cards.Item
@@ -66,7 +76,9 @@ function ProjectComponent(props: AllProps): JSX.Element {
                                 subtitle={'Create a new metamodel.'}
                                 icon={'add'}
                                 style={'red'}
-                                action={() => {alert('new metamodel')}}
+                                action={() => {
+                                    alert('new metamodel')
+                                }}
                             />
                             :
                             <React.Fragment>
@@ -75,27 +87,38 @@ function ProjectComponent(props: AllProps): JSX.Element {
                                     subtitle={'Create a new metamodel.'}
                                     icon={'add'}
                                     style={'red'}
-                                    action={() => {alert('another metamodel')}}
+                                    action={() => {
+                                        alert('another metamodel')
+                                    }}
                                 />
                                 <Cards.Item
                                     title={'Create a model ?'}
                                     subtitle={'Create a new model.'}
                                     icon={'add'}
                                     style={'red'}
-                                    action={() => {alert('new model')}}
+                                    action={() => {
+                                        alert('new model')
+                                    }}
                                 />
                             </React.Fragment>
                         }
-                        <Cards.Item icon={'question'} style={'clear'} title={'Ehy!'} subtitle={'What do you want to do today?'}/>
+                        <Cards.Item icon={'question'} style={'clear'} title={'Ehy!'}
+                                    subtitle={'What do you want to do today?'}/>
                     </Cards>
+
                 </React.Fragment>
             </Dashboard>
         </Try>
-        {user.project.type === 'collaborative' && <CollaborativeAttacher project={user.project} />}
+
+        {/*<Try><Dock /></Try>*/}
+        {user.project.type === 'collaborative' && <CollaborativeAttacher project={user.project}/>}
     </>);
 
 }
-interface OwnProps {}
+
+interface OwnProps {
+}
+
 interface StateProps {
     user: LUser,
     version: DState["version"],

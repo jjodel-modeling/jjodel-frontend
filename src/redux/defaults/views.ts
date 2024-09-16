@@ -46,15 +46,9 @@ class DefaultViews {
 
         view.css = `
 &, .Graph{
-  /*position: absolute; ddd*/
   background-color: var(--background-1);
-  &:hover{ overflow: hidden; }
   height: 100%;
   width: -webkit-fill-available;
-}
-.root {
-    overflow: hidden;
-    position: relative;
 }
 .edges {z-index: 101; position: absolute; top: 0; left: 0; height: 0; width: 0; overflow: visible; }
 .detail-level {
@@ -88,16 +82,15 @@ class DefaultViews {
 [data-nodetype="VoidVertex"],
 [data-nodetype="Vertex"],
 [data-nodetype="GraphVertex"] {
-  position: absolute;
   &>*{ border: 0.1em solid #a3a3a3; }
   &>.ui-resizable-handle{ border: none; }
 }
 &,[data-nodetype], [data-nodetype]>*{
   /* for some reason focus does not work?? so this is a fallback but needs to be properly fixed */
   overflow: hidden;
-  &.selected-by-me, &:has(.selected-by-me), &:hover, &:active, &:focus-within, &:focus{
+  &.selected-by-me, &:has(.selected-by-me, .Edge), &:hover, &:active, &:focus-within, &:focus{
     overflow: visible;
-    z-index: 1000 !important;
+    z-index: 100 !important;
   }
 }
 .Edge{
@@ -446,11 +439,11 @@ border-color: silver!important;
             view.adaptWidth = true; view.adaptHeight = true;
             view.oclCondition = 'context DObject inv: true';
             view.palette = {'color-':  U.hexToPalette('#f00', '#000', '#fff'), 'background-': U.hexToPalette('#fff', '#eee', '#f00')};
-            
+
             // view.css = '.object {border-radius: 0.2em; border-left: 0.25em solid var(--color-1); background: var(--background-1); color: var(--color-2);}\n';
             // view.css += '.object-name {font-weight: bold; color: var(--color-1);}\n';
             // view.css += '.object-children {background-color: var(--background-2); height: fit-content; width: -webkit-fill-available;}';
-            
+
             view.css = '.object {border-radius: var(--radius); background: white; color: var(--accent);}\n';
             view.css +='.object-name {padding: 10px; font-weight: 600; color: var(--accent);}\n';
             view.css += '.object-children {padding: 10px;background-color: white; height: fit-content; width: -webkit-fill-available;}';

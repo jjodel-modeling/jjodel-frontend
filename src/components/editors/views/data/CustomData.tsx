@@ -1,8 +1,13 @@
-import React, {Dispatch, ReactElement} from 'react';
-import {DState, DViewElement, GObject, LViewElement, Pointer, U} from '../../../../joiner';
+/* Viewpoints > Events */
+
+import React, {Dispatch, EventHandler, MouseEventHandler, ReactElement} from 'react';
+import {DState, DViewElement, GObject, LViewElement, Pointer, TextArea, U} from '../../../../joiner';
 import {connect} from "react-redux";
 import {JsEditor} from "../../languages";
-import {Btn, CommandBar} from '../../../commandbar/CommandBar';
+import {Function} from "../../../forEndUser/FunctionComponent";
+// import JsEditor from "../../jsEditor/JsEditor";
+
+import { CommandBar, Btn, Sep } from '../../../commandbar/CommandBar';
 
 function ViewEventsComponent(props: AllProps) {
     const view = props.view;
@@ -34,6 +39,7 @@ function ViewEventsComponent(props: AllProps) {
                 <Btn icon={'add'} action={addEvent}  tip={'New event'}/>
             </CommandBar>
         </div>
+
         {Object.keys(dview.events).map((k) => {
             let val = dview.events[k];
             if (!val) return;
@@ -57,6 +63,16 @@ function ViewEventsComponent(props: AllProps) {
                     view.events = newEvent;
                 }}/>
             </CommandBar>}
+
+            /* jsxLabel={<button className={'btn btn-danger my-auto ms-auto'} onClick={() => {
+                let newEvent: GObject = {};
+                newEvent[k] = undefined; // this is how you trigger deletion with object -= action
+                view.events = newEvent;
+            }}>
+                <i className={'p-1 bi bi-trash3-fill'} />
+            </button>}*/
+
+
             getter={() => val}
             setter={(js) => {
                 let newEvent: GObject = {};

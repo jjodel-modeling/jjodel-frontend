@@ -3,7 +3,7 @@ section {
 }
 
 .console {
-  
+
 }
 
 .properties-tab,
@@ -44,7 +44,7 @@ section {
 .events-tab h1.view,
 .options-tab h1.view,
 .node-editor h3,
-.console h1 { 
+.console h1 {
 
   font-size: 1.1em!important;
   color: var(--accent);
@@ -84,7 +84,7 @@ section {
   // outline-color: var(--accent)!important;
   // outline-width: 2px!important;
   height: var(--input-height)!important;
-  
+
   padding: 1px 8px!important;
   min-width: 170px;
   transition: min-width 0.3s ease-in-out;
@@ -99,7 +99,7 @@ section {
   padding: 2px 9px;
   border-radius: var(--radius)!important;
   height: var(--input-height);
-  outline: 2px solid var(--accent); 
+  outline: 2px solid var(--accent);
 
   min-width: 70%;
   border-radius: var(--radius)!important;
@@ -194,7 +194,7 @@ section {
   & section.node {
     padding-left: 0;
     padding-right: 0;
-  
+
     & .px-2 {
       padding-left: 0!important;
     }
@@ -202,14 +202,14 @@ section {
 
   & section {
     padding-left: 0!important;
-    
+
     & .px-2.no-padding-left {
       padding-left: 0!important;
       padding-right: 0!important;
 
       & .input-container {
-        
-        
+
+
 
         &>label.mx-3 {
           margin-right: 0!important;
@@ -217,7 +217,7 @@ section {
         }
         &>label.mx-3 span {
           margin-right: 6px;
-          
+
           padding-top: 4px;
           margin-top: 6px;
         }
@@ -225,10 +225,10 @@ section {
         &>label.mx-3 select {
 
         }
-      }  
+      }
     }
   }
-  
+
 
 
 
@@ -237,7 +237,7 @@ section {
     padding-left: 0;
     font-size: 1em;
 
-    
+
 
     & h5 {
 
@@ -246,7 +246,7 @@ section {
       padding-left: 0!important;
       font-size: 1.2em;
     }
-    
+
   }
 }
 
@@ -255,7 +255,7 @@ section {
 }
 
 .node-editor {
-  
+
   & h3::before {
     position: relative;
     top: 2px;
@@ -288,5 +288,5 @@ section {
     padding: 0.5em;
     font-family: Lekton;
   }
-  
-} 
+
+}

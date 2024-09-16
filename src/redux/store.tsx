@@ -163,6 +163,12 @@ export class DState extends DPointerTargetable{
     ////////////////     flags shared, but handled locally      /////////////////////////////
 
     /* RECOMPILES MODULE */
+    NODES_RECOMPILE_labels: Pointer<DGraphElement>[] = [];
+    NODES_RECOMPILE_longestLabel: Pointer<DGraphElement>[] = [];
+
+    VIEWS_RECOMPILE_labels: Pointer<DViewElement>[] = [];
+    VIEWS_RECOMPILE_longestLabel: Pointer<DViewElement>[] = [];
+
     VIEWS_RECOMPILE_onDataUpdate: Pointer<DViewElement>[] = [];
 
     VIEWS_RECOMPILE_onDragStart: Pointer<DViewElement>[] = [];
@@ -204,8 +210,10 @@ export class DState extends DPointerTargetable{
         (window as any).tinycolor = tinycolor;
         let tofix = ["tetrad", "triad", "splitcomplement"];
         for (let f of tofix) {
-            tinycolor.prototype[f + "0"] = tinycolor.prototype[f];
-            tinycolor.prototype[f] = function (){ let a = this.getAlpha(); return this[f+'0']().map((t: Instance) => t.setAlpha(a)); }
+            let f0 = f + '0';
+            if (tinycolor.prototype[f0]) return;
+            tinycolor.prototype[f0] = tinycolor.prototype[f];
+            tinycolor.prototype[f] = function (){ let a = this.getAlpha(); return this[f0]().map((t: Instance) => t.setAlpha(a)); }
         }
     }
     static init(store?: DState): void {

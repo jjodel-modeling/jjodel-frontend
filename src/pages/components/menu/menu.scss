@@ -74,6 +74,11 @@
     font-size: 1.2em;
     padding-right: 6px!important;
   }
+  .dropdown > div.item >.bi{
+    margin-right: 8px !important;
+    width: 1ric;
+    display: inline-block;
+  }
 
   .dropdown > div.item.disabled {
     color: var(--color-disabled);

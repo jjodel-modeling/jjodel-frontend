@@ -7,11 +7,11 @@ import {
     EdgeBendingMode,
     EdgeHead,
     GObject,
-    GraphPoint,
+    GraphPoint, LPointerTargetable, LViewElement,
     Pointer,
     RuntimeAccessible,
     ShortAttribETypes as SAType,
-    U
+    U, Draggable, Measurable
 } from '../joiner';
 import React, {ReactNode} from "react";
 import {PaletteType} from "../view/viewElement/view";
@@ -28,7 +28,7 @@ let ShortAttribETypes: typeof SAType = (window as any).ShortAttribETypes;
 @RuntimeAccessible('DV')
 export class DV {
     public static invisibleJsx(): string { return ''; }
-    public static modelView(): string { return beautify(DefaultView.model()); } // damiano: che fa beautify? magari potremmo settarlo in LView.set_jsx invece che solo qui, così viene formattato anche l'input utente?
+    public static modelView(): string { return beautify(DefaultView.model()); }
     public static packageView(): string { return beautify(DefaultView.package()); }
     public static classView(): string { return beautify(DefaultView.class()); }
     public static attributeView(): string { return beautify(DefaultView.feature()); }
@@ -45,15 +45,12 @@ export class DV {
     public static objectView(): string { return beautify(DefaultView.object()); }
     public static valueView(): string { return beautify(DefaultView.value()); }
     public static defaultPackage(): string { return beautify(DefaultView.defaultPackage()); }
-    public static error_raw(...a: Parameters<(typeof DefaultView)["error"]>): React.ReactNode {
-        return DefaultView.error(...a);
-    }
 
-    public static errorView(publicmsg: ReactNode, debughiddenmsg:any, errortype: string, data?: DModelElement | undefined, node?: DGraphElement | undefined, v?: DViewElement): React.ReactNode {
+    public static errorView(publicmsg: ReactNode, debughiddenmsg:any, errortype: string, data?: DModelElement | undefined, node?: DGraphElement | undefined, v?: LViewElement|DViewElement): React.ReactNode {
         let visibleMessage = publicmsg && typeof publicmsg === "string" ? U.replaceAll(publicmsg, "Parse Error:", "").trim() : publicmsg;
         console.error("error in view:", {publicmsg, debuginfo:debughiddenmsg});
         return DefaultView.error(visibleMessage, errortype, data, node, v); }
-    public static errorView_string(publicmsg: string, debughiddenmsg:any, errortype: string, data?: DModelElement | undefined, node?: DGraphElement | undefined, v?: DViewElement): React.ReactNode {
+    public static errorView_string(publicmsg: string, debughiddenmsg:any, errortype: string, data?: DModelElement | undefined, node?: DGraphElement | undefined, v?: LViewElement|DViewElement): React.ReactNode {
         let visibleMessage = publicmsg && typeof publicmsg === "string" ? U.replaceAll(publicmsg, "Parse Error:", "").trim() : publicmsg;
         console.error("error in view:", {publicmsg, debuginfo:debughiddenmsg});
         return DefaultView.error_string(visibleMessage, errortype, data, node, v); }
@@ -258,12 +255,12 @@ export class DV {
                 { /* edge tail */ }
                 ` + tail + `
                 { /* edge anchor start */ }
-                {edge.start && <circle className="edge-anchor content clickable"
+                {edge.start && <circle className="edge-anchor content clickable no-drag"
                  style={{transform: "translate(" + segments.all[0].start.pt.x +"px, " + segments.all[0].start.pt.y +"px)"}}
                  onMouseDown={()=> edge.startFollow=true}
                  onMouseUp={()=> edge.startfollow=false} />}
                 { /* edge anchor end */ }
-                {edge.end && <circle className="edge-anchor content clickable" `+ // cx={0*segments.all.last().end.pt.x} cy={0*segments.all.last().end.pt.y}
+                {edge.end && <circle className="edge-anchor content clickable no-drag" `+ // cx={0*segments.all.last().end.pt.x} cy={0*segments.all.last().end.pt.y}
                 `style={{transform: "translate(" + segments.all.last().end.pt.x +"px, " + segments.all.last().end.pt.y +"px)"}}
                  onMouseDown={()=> edge.endFollow=true}
                  onMouseUp={()=> edge.endfollow=false} />}
@@ -351,7 +348,6 @@ valuecolormap[ShortAttribETypes.EString] = "green";
 valuecolormap[ShortAttribETypes.EChar] = "green";
 valuecolormap[ShortAttribETypes.EVoid] = "gray";
 
-// &&[]bn
 let valuecolormap_str = JSON.stringify(valuecolormap); // can this be declared inside view.constants ?
 
 
@@ -364,56 +360,35 @@ type ErrorProps = {
     msg: any
 };
 
-const ErrorMessage = (props: ErrorProps) => {
-
-    let viewpointname = 'to do per damiano';
-
-    return (<div className={'error-notification'}>
-        <h1>Something Went Wrong...</h1>
-        <h2>Error in "{props.v && props.v.name}" syntax view definition in viewpoint {viewpointname}</h2>
-
-        <div className={'error-type'}>
-            <b data-dname={props.dname} data-nodename={props.nodename} data-str={true}>
-                {props.errortype} Error {props.on}
-                {props.v && <div>
-                    While applying view "{props.v.name}"
-                </div>}
-            </b>
-        </div>
-        <div className={'error-details'}>
-            {props.msg && props.msg}
-        </div>
-    </div>);
-}
 
 
 
 
-class DefaultView {
+export class DefaultView {
 
     /* MODEL */
 
     public static model(): string { return (
 `<View className={'root model'}>
+<Scrollable graph={node}>
     {!data && "Model data missing."}
-   
-    {/* here you can insert viewpoint-wide descriptions, eg <Control> .. </Control> */}
-
-    <Control title={'Abstraction'} payoff={'Zooming'}>
-        <Slider name={'level'} title={'Detail level '} node={node} max={3} />
-    </Control>
-
     <div className={'edges'}>
         {[
-            refEdges.map(se => <Edge anchorStart={0} anchorEnd={0} key={se.id}
-            start={se.start.father.node} end={se.end.node} view={'Edge' + ( se.start.containment && 'Composition' || 'Association')} />),
-            extendEdges.map(se => <Edge start={se.start} end={se.end} view={'EdgeInheritance'} key={se.id} />)
+            refEdges.map(se => <Edge data={se.start} start={se.startNode.father} end={se.endNode} anchorStart={0} anchorEnd={0} key={se.id} isReference={true} 
+             view={'Edge' + (se.start.composition ? 'Composition' : (se.start.aggregation ? 'Aggregation' : 'Association'))} />),
+            extendEdges.map(se => <Edge data={se.start} start={se.startNode} end={se.endNode} view={'EdgeInheritance'} isExtend={true} key={se.id} />)
         ]}
     </div>
     {otherPackages.filter(p => p).map(pkg => <DefaultNode key={pkg.id} data={pkg} />)}
     {level >= 1 && firstPackage && firstPackage.children.filter(c => c).map(classifier => <DefaultNode key={classifier.id} data={classifier} />)}
     {level >= 1 && m1Objects.filter(o => o).map(m1object => <DefaultNode key={m1object.id} data={m1object} />)}
     {decorators}
+</Scrollable>
+{/* here you can insert viewpoint-wide descriptions, eg <Control> .. </Control> */}
+
+<Control title={'Abstraction'} payoff={'Zooming'}>
+    <Slider name={'level'} title={'Detail level '} node={node} max={3} />
+</Control>
 </View>`
 );}
 
@@ -624,40 +599,60 @@ public static object(): string { return (
 </View>`
 );}
 
-
     public static error(msg: undefined | ReactNode, errortype: string | "SYNTAX" | "RUNTIME",
-                        data?: DModelElement | undefined, node?: DGraphElement | undefined, v?: DViewElement): React.ReactNode {
+                        data?: DModelElement | undefined, node?: DGraphElement | undefined, v?: LViewElement|DViewElement): React.ReactNode {
 
         let dname: string | undefined = data && ((data as any).name || data.className.substring(1));
         if (dname && dname.length >= 10) dname = dname.substring(0, 7) + '…';
         let nodename: string = (node?.className || '').replace(/[^A-Z]+/g, "").substring(1);
         let on = dname && nodename ? " on " + dname + " / " + nodename : (dname || nodename ? " on " + (dname || nodename) : '');
 
+        let lv: LViewElement | undefined = v ? ((v as any).__isProxy ? v as LViewElement : LPointerTargetable.wrap(v)) : undefined;
+        let viewpointname = lv?.viewpoint?.name ||'';
 
-        return (<ErrorMessage
-            dname={dname}
-            nodename={nodename}
-            errortype={errortype}
-            on={on}
-            v={v}
-            msg={msg}
-        />);
+        return (<Measurable draggable={true} resizable={true}><div className={'error-notification'}>
+            <h1>Something Went Wrong...</h1>
+            {v && <h2>Error in "{v?.name}" syntax view definition{viewpointname? ' in viewpoint ' + viewpointname : ''}.</h2>}
+            <div className={'error-type'}>
+                <b data-dname={dname} data-nodename={nodename} data-str={false}>
+                    {errortype} Error {on}
+                    {false && v && <div>While applying view "{v?.name}"</div>}
+                </b>
+            </div>
+            <div className={'error-details'}>{msg}</div>
+        </div></Measurable>);
     }
 
-    public static error_string(msg: undefined | ReactNode, errortype: string | "SYNTAX" | "RUNTIME", data?: DModelElement | undefined, node?: DGraphElement | undefined, v?: DViewElement) {
+    public static error_string(msg: undefined | ReactNode, errortype: string | "SYNTAX" | "RUNTIME", data?: DModelElement | undefined,
+                               node?: DGraphElement | undefined, v?: LViewElement|DViewElement) {
         let dname: string | undefined = data && ((data as any).name || data.className.substring(1));
         if (dname && dname.length >= 10) dname = dname.substring(0, 7) + '…';
         let nodename: string = (node?.className || '').replace(/[^A-Z]+/g, "").substring(1);
         let on = dname && nodename ? " on " + dname + " / " + nodename : (dname || nodename ? " on " + (dname || nodename) : '');
 
-        return(<ErrorMessage
-            dname={dname}
-            nodename={nodename}
-            errortype={errortype}
-            on={on}
-            v={v}
-            msg={msg}
-        />);
+        let lv: LViewElement | undefined = v ? ((v as any).__isProxy ? v as LViewElement : LPointerTargetable.wrap(v)) : undefined;
+        let viewpointname = lv?.viewpoint?.name ||'';
+        // <div className={'w-100 h-100 round bg-white border border-danger'} style={{minHeight:"50px", overflow:"scroll"}}>
+        //     <div className={'text-center text-danger'} tabIndex={-1} style={{background:"#fff", overflow: 'visible', zIndex:100, minWidth:"min-content"}}>
+        //         <b>{errortype}_ERROR` + on + `</b>
+        //         <hr/>
+        //         <label className={'text-center mx-1 d-block'}>
+        //             While applying view "${v?.name}"
+        //         </label>
+        //         {${msg} && <label className={'text-center mx-1 d-block'} style={{color:"black"}}>${msg}</label>}
+        //     </div>
+        // </div>
+        return `<Measurable draggable={true} resizable={true}><div className={'error-notification'}>
+            <h1>Something Went Wrong...</h1>
+            `+ (v && `<h2>Error in "${v?.name}" syntax view definition${viewpointname ? ' in viewpoint ' + viewpointname : ''}.</h2>`)+`
+            <div className={'error-type'}>
+                <b data-dname=${dname} data-nodename=${nodename} data-str={true}>
+                    ${errortype} Error ${on}
+                    {false && v && <div>While applying view "${v?.name}"</div>}
+                </b>
+            </div>
+            <div className={'error-details'}>${msg}</div>
+        </div></Measurable>)`;
     }
 
 

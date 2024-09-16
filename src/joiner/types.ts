@@ -184,6 +184,7 @@ export const windoww: typeof window & GObject= window;
 export type InOutParam<T> = T;
 
 export type IsActually<T> = any; // for some reason typescript complains about circular type references? this is a workaround
+export type Any<T> = any;
 
 type KeysnotOfType<T, TT> = { [P in keyof T as (T[P] extends TT ? never : P)]: T[P] };
 type ObjectWithoutStrings<T> = {

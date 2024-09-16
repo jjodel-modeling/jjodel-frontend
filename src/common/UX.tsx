@@ -75,7 +75,7 @@ export class UX{
         // const parentComponent = this;
         const type = (re.type as any).WrappedComponent?.name || re.type;
         let injectProps: GraphElementOwnProps = {} as any;
-        if (injectOffset) {
+        /* if (false && injectOffset) {
             const style = {...(re.props?.style || {})};
             let offset = injectOffset.offset;
             let scale = injectOffset.zoom;
@@ -85,7 +85,7 @@ export class UX{
             style.transform = "scale(" + scale.x + "," + scale.y + ")"
             injectProps.style = style;
             console.log("inject offset props:", {re, injectProps});
-        }
+        }*/
         //  fix the injection somehow. override Edge() Vertex() Asterisk() ...
         // const windoww = window as any;
         // console.log('ux.injectingProp pre ', {type: (re.type as any).WrappedComponent?.name || re.type}, {mycomponents: windoww.mycomponents, re, props:re.props});
@@ -143,7 +143,7 @@ export class UX{
                 const dataid = (typeof re.props.data === "string" ? re.props.data : re.props.data?.id) || "shapeless";
                 let idbasename: string;
 
-                console.log('injecting props ' + type, {re, pc: parentComponent, injectProps, ownProps: re.props});
+                //console.log('injecting props ' + type, {re, pc: parentComponent, injectProps, ownProps: re.props});
                 if (re.props.initialSize?.id) { idbasename = re.props.initialSize?.id; } else
                 if (re.props.nodeid) { idbasename = re.props.nodeid; } else
                 if (re.props.id) { idbasename = re.props.id; } else
@@ -159,7 +159,7 @@ export class UX{
                         idbasename = injectProps.parentnodeid + "_" + (dataid || re.props.startingSize?.id || indices.join("_")) + "EP";
                         break;
                     case EdgeComponent.cname: case "Edge":
-                        console.log('injecting props ' + type + " without key", {re, pc: parentComponent, injectProps, ownProps: re.props});
+                        //console.log('injecting props ' + type + " without key", {re, pc: parentComponent, injectProps, ownProps: re.props});
                         let edgeProps:EdgeOwnProps = re.props;
                         let edgestart_id: Pointer<DGraphElement> | Pointer<DModelElement> = (edgeProps.start as any).id || edgeProps.start;
                         let edgeend_id: Pointer<DGraphElement> | Pointer<DModelElement> = (edgeProps.end as any).id || edgeProps.end;
@@ -180,7 +180,7 @@ export class UX{
                 // console.log("cloning jsx:", re, injectProps);
                 Log.ex((injectProps.nodeid === injectProps.graphid||injectProps.nodeid === injectProps.parentnodeid) && type !== "GraphComponent", "User manually assigned a invalid node id. please remove or change prop \"nodeid\"", {type: (re.type as any).WrappedComponent?.cname || re.type}, {mycomponents: windoww.mycomponents, re, props:re.props});
         }
-        console.log('injecting props ' + type, {id: injectProps.nodeid, re, pc: parentComponent, injectProps});
+        //console.log('injecting props ' + type, {id: injectProps.nodeid, re, pc: parentComponent, injectProps});
         return React.cloneElement(re, injectProps);
     }
 
@@ -347,7 +347,6 @@ export class UX{
         let e: any;
         try { jsxCompiled = JSXT.fromString(jsxString, {factory: 'React.createElement'}); }
         catch (ee: any) { e = ee; jsxCompiled = GraphElementComponent.displayError(e, "JSX Syntax", v, undefined, undefined, true) as any; }
-        console.log('jsxparse' + (e ? '_ERROR' : '_ok'), {e, jsxString, jsxCompiled, v});
         return jsxCompiled;
     }
 }

@@ -18,7 +18,7 @@
 }
 
 .btn-danger {
-  border: 1px solide white!important;
+  border: 1px solid white !important;
 }
 
 // palette decoration 
@@ -353,6 +353,27 @@ div.controls div.palette-row-container div.palette-row.numeric input.value {
   flex-flow: column;
   position: absolute;
   z-index: 99999;
+    h6{
+      display:flex;
+      margin-bottom: 0.5rem;
+      margin-left: 1em;
+      // margin-left: 1rem;
+      &>.command-bar{
+        margin: auto 0;
+        margin-left: 4px;
+        .tab-btn.add{
+          &::before{
+            font-size: 1em;
+          }
+          &:hover::before{
+              color: black;
+          }
+        }
+      }
+      &>span{
+        margin: auto 0;
+      }
+    }
   }
 }
 .color-picker-root {

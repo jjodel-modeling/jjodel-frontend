@@ -47,7 +47,6 @@ function App(props: AllProps): JSX.Element {
     const tooltip = props.tooltip;
     let user: LUser = props.user;
 
-
     useEffectOnce(() => {
         SetRootFieldAction.new('isLoading', true);
         stateInitializer().then(() => SetRootFieldAction.new('isLoading', false));

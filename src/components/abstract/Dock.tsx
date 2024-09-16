@@ -9,6 +9,9 @@ import {NodeEditor} from "../editors/NodeEditor";
 import DockManager from './DockManager';
 import {PinnableDock, TabContent, TabHeader} from '../dock/MyRcDock';
 import ModelsSummaryTab from "./tabs/ModelsSummaryTab";
+//import MqttEditor from "../rightbar/mqtt/MqttEditor";
+//import NestedView from "../rightbar/nestedViewEditor/ViewEditorNestedVersion";
+//import CollaboratorsEditor from "../rightbar/collaboratorsEditor/CollaboratorsEditor";
 
 
 

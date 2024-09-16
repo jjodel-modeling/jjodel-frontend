@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import './widgets.scss';
 import { event } from 'jquery';
-import { int } from '../../joiner/types';
+import {int, PrimitiveType} from '../../joiner/types';
 import { windoww } from '../../joiner/types';
 import { SetRootFieldAction } from '../../joiner';
 import { MapStateToProps } from 'react-redux';
@@ -12,15 +12,15 @@ import { VertexOwnProps, VertexStateProps } from '../../graph/graphElement/share
 
 
 type InToggleValues = {
-    true: string | boolean;
-    false: string | boolean;
+    true: PrimitiveType;
+    false: PrimitiveType;
 }
 
 type InToggleProps = {
     name: string;
     values?: InToggleValues;
     labels?: InToggleValues;
-    size?: string;
+    size?: string; // "small" | "medium" | "large";
     style?: React.CSSProperties;
 };
 
@@ -34,18 +34,17 @@ export const InternalToggle = (props: InToggleProps) => {
         setValue(newValue);
         SetRootFieldAction.new(props.name, newValue);
     };
+    let trueval = props.values ? props.values.true : true;
+    let falseval = props.values ? props.values.false : false;
 
     return (
-        <div className={'toggle'} onClick={() => {toggleValue()}} style={props.style}>
+        <div className={'toggle ' + (props.size || 'medium')} onClick={() => {toggleValue()}} style={props.style}>
 
             <input className={'toggle-input'} id={props.name} type={'checkbox'} checked={value}  />
             <label className={'toggle-label'}></label>
             <div className={"toggle-labels"}>
-                {value ?
-                    <span className={"toggle-on"}>{labels['true']}</span>
-                    :
-                    <span className={"toggle-off"}>{labels['false']}</span>
-                }
+                {value === trueval && <span className={"toggle-on"}>{labels['true']}</span>}
+                {value === falseval && <span className={"toggle-off"}>{labels['false']}</span>}
             </div>
         </div>
     );

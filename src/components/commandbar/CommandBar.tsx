@@ -5,6 +5,7 @@ import { Tooltip } from "../forEndUser/Tooltip";
 
 type BtnProps = {
     disabled?: boolean;
+    active?: boolean;
     icon: "up"
         | "down"
         | "back"
@@ -76,7 +77,7 @@ export const Btn = (props: BtnProps) => {
 
     return (<>
         {props.action ?
-            <div>
+            <div className={'btn-component '+(props.active ? 'active' : '')}>
                 {props.icon === "delete2" ?
                     <div className={`delete2 ${props.theme ? props.theme : 'light'}`}>Delete</div>
                     :

@@ -17,6 +17,7 @@ import {
     KeyDownEvent,
     SetRootFieldAction,
     LoadAction,
+    KeyDownEvent, KeyUpEvent,
     stateInitializer,
     DUser,
     DProject,
@@ -368,6 +369,30 @@ export class U {
                         return false;
                     }
                 }
+
+                if (obj1.className !== obj2.className) {
+                    if (out) out.reason = o1Raw.className + 'replaced by another object type:' + o2Raw?.className;
+                    return false;
+                }
+                switch(obj1.className) {
+                    default: break;
+                    case "ISize": case "IPoint": case "GraphPoint": case "Point": case "Size":
+                        skipKeys.id = true;
+                        skipKeys.dontMixWithGraphSize = true;
+                        skipKeys.dontMixWithSize = true;
+                        skipKeys.dontmixwithGPoint = true;
+                        skipKeys.dontmixwithPoint = true;
+                        skipKeys.rad = true;
+                        break;
+                }
+                // if EdgeSegment is changed, this needs update too: search in IDE for "5khi2"
+                if (U.objectIncludeKeys(obj1, 'd', 'dpart', 'svgLetter')){
+                    let ret = obj1.d === obj2.d && obj1.dpart === obj2.dpart;
+                    if (out && !ret) out.reason = 'EdgeSegment changed:' + obj1.d +' --> ' + obj2.d;
+                    return ret;
+                }
+
+                // if it is any kind of unknown object type, do deep check on every subkey
                 if (depth > maxDepth) {
                     // to debug and see where is too deep, make returnIfMaxDepth = false, so the path is displayed in out.reason
                     if (out) out.reason = 'max depth reached, assumed ' + returnIfMaxDepth;
@@ -1198,16 +1223,7 @@ export class U {
         return defaultVal;
     }
 
-    static arrayDifference<T>(starting: T[], final: T[]): {added: T[], removed: T[], starting: T[], final: T[]} {
-        let ret: {added: T[], removed: T[], starting: T[], final: T[]} = {} as any;
-        ret.starting = starting;
-        ret.final = final;
-        if (!starting) starting = [];
-        if (!final) final = [];
-        ret.removed = Uarr.arraySubtract(starting, final, false); // start & !end
-        ret.added = Uarr.arraySubtract(final, starting, false); // end & !start
-        return ret;
-    }
+    static arrayDifference<T>(starting: T[], final: T[]): {added: T[], removed: T[], starting: T[], final: T[]} { return Uarr.arrayDifference(starting, final); }
 
     // returns <"what changed from old to neww"> and in nested objects recursively
     // todo: how can i tell at what point it's the fina lvalue (might be a nestedobj) and up to when it's a delta to follow and unroll?   using __isAdelta:true ?
@@ -2188,8 +2204,20 @@ export class U {
     }
 
     // warning: nodes from other iframes will say are not instance from Element of the current frame, in that case need duck typing.
-    private static isHtmlNode(element: any): element is Element {
+    public static isHtmlNode(element: any): element is Element {
         return element instanceof Element || element instanceof HTMLDocument || element instanceof SVGElement;
+    }
+
+    private static objectIncludeKeys(obj1: GObject, ...keys: string[]): boolean {
+        for (let k of keys) if (!(k in obj1)) return false;
+        return true;
+    }
+
+    static removeFromDom(e: Node): boolean {
+        let p = e.parentNode;
+        if (!p) return false;
+        p.removeChild(e);
+        return true;
     }
 
 }
@@ -2265,6 +2293,22 @@ export class myFileReader {
 }
 @RuntimeAccessible('Uarr')
 export class Uarr{
+
+    public static isSubArray(array: any[], subarray: any[]): boolean {
+        return subarray.every((el) => array.includes(el));
+    }
+
+    static arrayDifference<T>(starting: T[], final: T[]): {added: T[], removed: T[], starting: T[], final: T[]} {
+        let ret: {added: T[], removed: T[], starting: T[], final: T[]} = {} as any;
+        ret.starting = starting;
+        ret.final = final;
+        if (!starting) starting = [];
+        if (!final) final = [];
+        ret.removed = Uarr.arraySubtract(starting, final, false); // start & !end
+        ret.added = Uarr.arraySubtract(final, starting, false); // end & !start
+        return ret;
+    }
+
     public static arrayIntersection<T>(arr1: T[], arr2: T[]): T[]{
         if (!arr1 || ! arr2) return null as any;
         return arr1.filter( e => arr2.indexOf(e) >= 0);
@@ -2282,6 +2326,11 @@ export class Uarr{
         if (a1.length !== a2.length) return false;
         for (let i = 0; i < a1.length; i++) if (a1[i] !== a2[i]) return false;
         return true;
+    }
+
+    static equalsUnsorted(a1: any[], a2: any[]): boolean {
+        let diff = Uarr.arrayDifference(a1, a2);
+        return (diff.removed.length === 0 && diff.added.length === 0);
     }
 }
 
@@ -2405,7 +2454,7 @@ export class Keystrokes {
     public static meta = 'Meta'; // f1, or other f's with custom binding and windows key
     public static unidentified = 'Unidentified'; // brightness
     public static __NotReacting__ = 'fn, print, maybe others'; // not even triggering event?
-    private static RegisteredKeyStrokes: Dictionary<DocString<'selector'>, (e:any)=>any> = {};
+    private static RegisteredKeyStrokes: Dictionary<DocString<'selector'>, {keyup: (e:any)=>any, keydown: (e:any)=>any}> = {};
     public static register(selector: string, arr: {function?: ()=>any, keystroke?: Key[]}[]): void{
         if (Keystrokes.RegisteredKeyStrokes[selector]) return;
         let $elems = $(selector);// sort from most "uncommon" to most common key
@@ -2419,6 +2468,7 @@ export class Keystrokes {
         }; //  '??': 'metaKey'];*/
         // let metakeys = ['altKey', 'shiftKey', 'ctrlKey'];
 
+
         Log.exDev(!($elems.on as any), 'jQuery is required for Keystrokes.register');
         let optimizedKeyPaths: GObject = {
             [Keystrokes.alt]: {},
@@ -2426,7 +2476,6 @@ export class Keystrokes {
             [Keystrokes.control]: {},
         }
         for (let entry of arr) {
-            console.log('registering keystrokes ', {entry, skipp:!entry.function || !entry.keystroke || !entry.keystroke.length});
             if (!entry.function || !entry.keystroke || !entry.keystroke.length) continue;
             let keymap = U.objectFromArrayValues(entry.keystroke);
             let root = optimizedKeyPaths
@@ -2445,26 +2494,48 @@ export class Keystrokes {
             let terminalKeys = entry.keystroke.filter(k => !(k in metakeysmap));
             Log.eDev(terminalKeys.length !== 1, "found a keystroke combination with multiple terminal keys", {entry, selector});
             let terminal = terminalKeys[0].toLowerCase();
-            console.log('registering keystrokes ', {keys:entry.keystroke, terminal, root, optimizedKeyPaths});
             root[terminal] = entry.function;
         }
-        let func = (e: KeyDownEvent)=>{
+        let keyup = (e: KeyUpEvent) => {
+            // skip events happened in graph
+            let curr = e.target;
+            while (curr) {
+                if (curr.classList.contains('Graph')) return;
+                curr = curr.parentElement;
+            }
+            // handle event
+            if (e.altKey) { $elems.removeClass('key-alt'); }
+            if (e.shiftKey) { $elems.removeClass('key-shift'); }
+            if (e.ctrlKey) { $elems.removeClass('key-ctrl'); }
+        }
+        let keydown = (e: KeyDownEvent) => {
+            // skip events happened in graph
+            let curr = e.target;
+            while (curr) {
+                if (curr.classList.contains('Graph')) return;
+                curr = curr.parentElement;
+            }
+            // handle event
             let root = optimizedKeyPaths;
-            if (e.altKey) { root = root[Keystrokes.alt] || {}; }
-            if (e.shiftKey) { root = root[Keystrokes.shift] || {}; }
-            if (e.ctrlKey) { root = root[Keystrokes.control] || {}; }
-            root[e.key]?.();
-            console.log("execute keystrokes", {e, root, optimizedKeyPaths, up:{$elems, func, optimizedKeyPaths, arr}});
+            if (e.altKey) { root = root[Keystrokes.alt] || {}; $elems.addClass('key-alt'); }
+            if (e.shiftKey) { root = root[Keystrokes.shift] || {}; $elems.addClass('key-shift'); }
+            if (e.ctrlKey) { root = root[Keystrokes.control] || {}; $elems.addClass('key-ctrl'); }
+            let f = root[e.key];
+            console.log("execute keystrokes", {e, root, optimizedKeyPaths, up:{$elems, keydown, optimizedKeyPaths, arr}});
+            Log.exDev(f && typeof f !== 'function','found keystroke with invalid func', {f, root, e})
+            f?.();
         };
         /// todo: for graph can attack evt to graph root and use selector in on() lieke $graphcontainer.on('keydown', '.Class', classkeystrokehandler...)
-        Keystrokes.RegisteredKeyStrokes[selector] = func;
-        $elems.on('keydown', null, func);
-        console.log("register keystrokes", {$elems, func, optimizedKeyPaths, arr});
+        Keystrokes.RegisteredKeyStrokes[selector] = {keydown, keyup};
+        $elems.on('keydown', null, keydown);
+        $elems.on('keyup', null, keyup);
+        console.log("register keystrokes", {$elems, keydown, optimizedKeyPaths, arr});
 
     }
     public static unregister(selector: string): void{
         if (!Keystrokes.RegisteredKeyStrokes[selector]) return;
-        $(selector).off('keydown', null as any, Keystrokes.RegisteredKeyStrokes[selector]);
+        $(selector).off('keydown', null as any, Keystrokes.RegisteredKeyStrokes[selector].keydown);
+        $(selector).off('keyup', null as any, Keystrokes.RegisteredKeyStrokes[selector].keyup);
         delete Keystrokes.RegisteredKeyStrokes[selector];
     }
 

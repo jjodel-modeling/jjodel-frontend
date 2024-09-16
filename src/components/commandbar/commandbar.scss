@@ -11,9 +11,14 @@
     text-align: left!important;
     border-radius: 0!important;
     //border-bottom: 1px dotted var(--bg-3);
-    
+
     // CommandBar button
 
+    .btn-component.active{
+      .tab-btn::before{
+        background-color: var(--btn-bg);
+      }
+    }
     & .tab-btn {
       cursor: pointer;
       font-size: var(--btn-font-small-size)!important;
@@ -22,7 +27,7 @@
       margin-right: 2px!important;
       border: none!important;
       text-decoration: none!important;
-      
+
     }
       // theme
 
@@ -33,7 +38,7 @@
 
       // disabled
 
-    & .tab-btn.disabled { 
+    & .tab-btn.disabled {
       cursor: normal!important;
       background-color: transparent!important;
       margin-left: 0px!important;
@@ -59,9 +64,9 @@
       margin-left: 0px!important;
     }
 
-    
 
-    
+
+
 
     // up
 
@@ -72,9 +77,6 @@
       transition: background-color 0.3s;
     }
 
-    & .tab-btn.up:hover {
-      
-    }
     & .tab-btn.up::before {
 
       border: 1px solid var(--bg-2);
@@ -111,7 +113,7 @@
     }
 
     & .tab-btn.favorite:hover {
-      
+
     }
     & .tab-btn.favorite::before {
 
@@ -142,7 +144,7 @@
     }
 
     & .tab-btn.edit:hover {
-      
+
     }
     & .tab-btn.edit::before {
 
@@ -173,7 +175,7 @@
     }
 
     & .tab-btn.open:hover {
-      
+
     }
     & .tab-btn.open::before {
 
@@ -204,7 +206,7 @@
     }
 
     & .tab-btn.download:hover {
-      
+
     }
     & .tab-btn.download::before {
 
@@ -226,7 +228,7 @@
 
 
     // down
-    
+
     & .tab-btn.down {
       margin: auto;
       color: var(--btn-back)!important;
@@ -235,7 +237,7 @@
     }
 
     & .tab-btn.down:hover {
-      
+
     }
     & .tab-btn.down::before {
 
@@ -257,7 +259,7 @@
 
 
     // back
-    
+
     & .tab-btn.back {
       margin: auto;
       color: var(--btn-back)!important;
@@ -266,7 +268,7 @@
     }
 
     & .tab-btn.back:hover {
-      
+
     }
     & .tab-btn.back::before {
 
@@ -286,7 +288,7 @@
     }
 
     // add
-    
+
     & .tab-btn.add {
       margin: auto;
       color: var(--btn-back)!important;
@@ -295,7 +297,7 @@
     }
 
     & .tab-btn.add:hover {
-      
+
     }
     & .tab-btn.add::before {
 
@@ -314,11 +316,11 @@
       background-color: var(--btn-bg);
       border-radius: var(--radius);
     }
-    
-    
+
+
 
     // delete
-    
+
     & .tab-btn.delete {
       margin: auto;
       color: var(--btn-back)!important;
@@ -327,7 +329,7 @@
     }
 
     & .tab-btn.delete:hover {
-      
+
     }
     & .tab-btn.delete::before {
 
@@ -346,7 +348,7 @@
       background-color: var(--btn-bg);
       border-radius: var(--radius);
     }
-    
+
 
     // delete 2
 
@@ -367,7 +369,7 @@
       border: 1px solid white;
       width: 100%;
       color: white!important;
-    
+
     }
 
 
@@ -390,8 +392,8 @@
     }
 
 
-    // show 
-        
+    // show
+
     & .tab-btn.show {
       margin: auto;
       color: var(--btn-back)!important;
@@ -400,7 +402,7 @@
     }
 
     & .tab-btn.show:hover {
-      
+
     }
     & .tab-btn.show::before {
 
@@ -420,8 +422,8 @@
       border-radius: var(--radius);
     }
 
-    // open-down 
-        
+    // open-down
+
     & .tab-btn.open-down {
       margin: auto;
       color: var(--btn-back)!important;
@@ -430,7 +432,7 @@
     }
 
     & .tab-btn.open-down:hover {
-      
+
     }
     & .tab-btn.open-down::before {
 
@@ -449,8 +451,8 @@
       background-color: var(--btn-bg);
       border-radius: var(--radius);
     }
-    // close-up 
-        
+    // close-up
+
     & .tab-btn.close-up {
       margin: auto;
       color: var(--btn-back)!important;
@@ -459,7 +461,7 @@
     }
 
     & .tab-btn.close-up:hover {
-      
+
     }
     & .tab-btn.close-up::before {
 
@@ -486,7 +488,7 @@
       color: var(--btn-back)!important;
       margin-right: 2px!important;
       transition: background-color 0.3s;
-    } 
+    }
     & .tab-btn.info:hover {}
     & .tab-btn.info::before {
       border: 1px solid var(--bg-2);
@@ -518,7 +520,7 @@
     }
 
     & .tab-btn.info.dark:hover {
-      
+
     }
     & .tab-btn.info.dark::before {
       color: white;
@@ -541,8 +543,8 @@
 
 
 
-    // settings 
-        
+    // settings
+
     & .tab-btn.settings {
       margin: auto;
       color: var(--btn-back)!important;
@@ -571,7 +573,7 @@
     }
     & .tab-btn.settings.negative::before {
       background-color: var(--accent);
-     
+
     }
 
 
@@ -586,7 +588,7 @@
     }
 
     & .tab-btn.shrink:hover {
-      
+
     }
     & .tab-btn.shrink::before {
 
@@ -616,7 +618,7 @@
     }
 
     & .tab-btn.expand:hover {
-      
+
     }
     & .tab-btn.expand::before {
 
@@ -646,7 +648,7 @@
     }
 
     & .tab-btn.check:hover {
-      
+
     }
     & .tab-btn.check::before {
 
@@ -676,7 +678,7 @@
     }
 
     & .tab-btn.copy:hover {
-      
+
     }
     & .tab-btn.copy::before {
 
@@ -696,7 +698,7 @@
       border-radius: var(--radius);
     }
 
-    
+
 
     // close
 
@@ -708,7 +710,7 @@
     }
 
     & .tab-btn.close:hover {
-      
+
     }
     & † {
 
@@ -735,7 +737,7 @@
     }
 
     & .tab-btn.close.dark:hover {
-      
+
     }
     & .tab-btn.close.dark::before {
       color: white;
@@ -757,13 +759,13 @@
     }
 
 
-    
-    
+
+
 
     // sep, separator
 
     & .tab-btn.sep {
-      
+
     }
 
     & .tab-btn.sep::before {
@@ -775,14 +777,14 @@
       margin: 3px 6px 0 8px;
       content: "";
     }
-    
-    
 
-     
+
+
+
     // sizes
 
     & .tab-btn.x-small {
-      font-size: var(--btn-font-x-small-size)!important; 
+      font-size: var(--btn-font-x-small-size)!important;
       margin: 0!important;
       padding: 0!important;
     }

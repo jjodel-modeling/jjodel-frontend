@@ -181,7 +181,7 @@ export class LoggerComponent extends PureComponent<AllProps, ThisState>{
             </div>
             <ul className={"entries"}>
                 { allMessages.map( (msg) => (
-                        <li className={"hoverable cat cat_"+msg.category} key={msg.time+'_'+msg.short_string}>
+                        <li className={"hoverable cat cat_"+msg.category} key={msg.key/*time+'_'+msg.short_string*/}>
                             {false && <span className={"preview"}>{msg.short_string}</span>}
                             {false && <span className={"content"}>{msg.long_string}</span>}
                             {this.displayArgs(msg, msg.category)}

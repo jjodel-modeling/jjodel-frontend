@@ -807,7 +807,8 @@ export class EcoreParser{
         const annotations: Json[] = this.getAnnotations(json);
         for (let child of annotations) EcoreParser.parseDAnnotation(dObject, child, generated, (dObject as GObject).__fullname + "/");
         /// *** specific start *** ///
-        dObject.containment = U.fromBoolString(this.read(json, ECoreReference.containment, false), false);
+        dObject.composition = U.fromBoolString(this.read(json, ECoreReference.containment, false), false);
+        dObject.container = U.fromBoolString(this.read(json, ECoreReference.container, false), false);
         dObject.lowerBound = +this.read(json, ECoreAttribute.lowerbound, 0);
         dObject.upperBound = +this.read(json, ECoreAttribute.upperbound, 1);
         dObject.type = this.read(json, ECoreReference.eType, this.getEcoreTypeName(parent));
@@ -1032,6 +1033,7 @@ export class ECoreReference {
     static xsitype: string;
     static eType: string;
     static containment: string;
+    static container: string;
     static upperbound: string;
     static lowerbound: string;
     static namee: string; }

@@ -1,5 +1,5 @@
-import type { GObject, Temporary, TODO} from "../joiner";
-import {DPointerTargetable, RuntimeAccessible, windoww, Log, RuntimeAccessibleClass} from "../joiner";
+import {GObject, Temporary, TODO, U} from "../joiner";
+import {DPointerTargetable, RuntimeAccessible, windoww, Log, RuntimeAccessibleClass, Dictionary} from "../joiner";
 import React from "react";
 import {radian} from "../joiner/types";
 
@@ -146,7 +146,7 @@ export abstract class IPoint extends RuntimeAccessibleClass {
             (p2.x - p1.x) * (p2.x - p1.x);
         return Math.abs(top) / Math.sqrt(bot);  }
 
-    public equals(pt: IPoint, tolleranzaX: number = 0, tolleranzaY: number = 0): boolean {
+    public equals(pt: {x:number, y:number}, tolleranzaX: number = 0, tolleranzaY: number = 0): boolean {
         if (pt === null) { return false; }
         return Math.abs(this.x - pt.x) <= tolleranzaX && Math.abs(this.y - pt.y) <= tolleranzaY; }
 
@@ -434,7 +434,6 @@ export class Size extends ISize<Point> {
             if (displayStyles[i] === 'none' || (displayStyles[i] === '' && getComputedStyle(ancestors[i]).display === 'none')) { ancestors[i].style.display = 'block' }
         }
         // size = new Size(tmp.left, tmp.top, 0, 0);
-        console.log('crasssh', element, element0);
         let rect = element.getBoundingClientRect();
         size = new Size(0, 0, 0, 0);
 
@@ -714,7 +713,6 @@ export class PositionStr{
     public static fromPosString(position?: PositionStrTypes): PositionStr{
         let ret = new PositionStr(0, 0);
         let posarr = (position ?? 't').split(' '); // .map(s=>s[0]);
-        console.log('posarr inlinepos', posarr, ret, position);
         for (let p of posarr)
             switch (p) {
                 default:
@@ -758,6 +756,37 @@ export class PositionStr{
 
 @RuntimeAccessible('Geom')
 export class Geom extends RuntimeAccessibleClass {
+
+    static markings: Dictionary<string, HTMLElement> = {};
+    static unmark(key: string): boolean{
+        if (!Geom.markings[key]) return false;
+        let e = Geom.markings[key];
+        U.removeFromDom(e);
+        delete Geom.markings[key];
+        return true;
+    }
+    static markPt(key: string, pt: Point, color?: string, label?: string): HTMLElement{ return Geom.mark(key, pt.x, pt.y, 1, 1, color, label); }
+    static markSize(key: string, pt: Size, color?: string, label?: string): HTMLElement{ return Geom.mark(key, pt.x, pt.y, pt.w??1, pt.h??1, color, label); }
+    static mark(key: string, x: number, y: number, w: number=1, h: number=1, color: string='red', label: string=''): HTMLElement{
+        if (Geom.markings[key]) Geom.unmark(key);
+        let e: HTMLElement;
+        let pre = '<div class="debug-mark" data-key="'+key+'" data-label="'+label+'" style="position: absolute; z-index:99999; left:'+x+'px; top:'+y+'px; width: '+w+'px; height: '+h+'px;';
+        let post = '"/>';
+        if (w + h > 2) {
+            e = U.toHtml(pre+'border-radius:0; background: transparent;'+post) as HTMLElement;
+        }
+        else {
+            e = U.toHtml(pre+'border-radius:100%; background: '+color+'; outline: 1px solid '+color+'; outline-offset: 5px;'+post) as HTMLElement;
+        }
+        document.body.append(e);
+        Geom.markings[key] = e;
+        return e;
+    }
+    // warning: nodes from other iframes will say are not instance from Element of the current frame, in that case need duck typing.
+    public static isHtmlNode(element: any): element is Element {
+        return element instanceof Element || element instanceof HTMLDocument || element instanceof SVGElement;
+    }
+
 
     static isPositiveZero(m: number): boolean {
         if (!!Object.is) { return Object.is(m, +0); }

@@ -89,6 +89,10 @@ font-weight: 900 !important;
   min-height:2px;
 }
 
+.scrollable{
+  height: 100%;
+}
+
 .REACT-ROOT.debug{
   [data-nodetype]{
     &:hover::after{
@@ -230,7 +234,12 @@ svg.hoverable {
     }
   }
 }
-
+.draggable-child-mode{
+  left: 0 !important;
+  top: 0 !important;
+  transform: none !important;
+  position: relative !important;
+}
 //.EdgePoint{ transform: translate(-50%, -50%); }
 
 /*
@@ -317,6 +326,29 @@ input, textarea, [contenteditable], pre, .console-output-container, .selectable{
     font-style: normal; // removes italic
   }
 }
+.Graph, .GraphVertex{
+  --zoom-x: 1;
+  --zoom-y: 1;
+}
+.Vertex, .GraphVertex, .EdgePoint{
+  left: var(--left) !important;
+  top: var(--top) !important;
+}
+.Edge{
+  left: calc( -1 * var(--left)) !important;
+  top: calc( -1 * var(--top)) !important;
+}
+.debug-mark{
+  ::before{
+    content: attr(data-key);
+    float: top;
+  }
+  ::after{
+    content: attr(data-label); // todo: concat coordinates?
+    float: bottom;
+  }
+}
+
 .router-wrapper{
   flex-grow: 1;
   min-height: 0;

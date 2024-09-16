@@ -1,8 +1,7 @@
+.dock-style-editors .dock-tabpane section,
+.collaborative-tab .input-container {
 
 
-.dock-style-editors .dock-tabpane section, .collaborative-tab
-
-.input-container {
   color: var(--color);
   // margin: 1rem .5rem;
   // padding: 1rem 1.65rem;
@@ -20,7 +19,6 @@
     outline-color: var(--accent);
     outline-width: 1px;
     height: var(--input-height);
-    
   }
 
   & input[type=text] {
@@ -72,8 +70,6 @@
 
 
 /** pseudo fix per editor monaco **/
-
-/* todo per damiano, dopo gli ultimi aggiornamenti, l'editor monaco faceva schifo, gli ho dato una buona sistemata, ma non è perfetto - dacci un'occhiata, tra l'altro non so se questo è il posto migliore dove farlo */
 
 .dock-style-editors .dock-tabpane:has(input) .monaco-editor-wrapper section::before {
   content: none;
@@ -148,16 +144,16 @@
     outline-width: 1px;
   }
 
-  
+
 }
 
 //.dock-style-editors .dock-tabpane .input-container:has(input:focus) > .me-2::before, .dock-style-editors .dock-tabpane .input-container:has(input:hover) > .me-2::before,
 //.dock-style-editors .dock-tabpane .input-container:has(select:focus) > .me-2::before, .dock-style-editors .dock-tabpane .input-container:has(select:hover) > .me-2::before {
-  
+
 .input-container:has(input:focus) > .me-2::before, .input-container:has(input:hover) > .me-2::before,
 .input-container:has(select:focus) > .me-2::before, .input-container:has(select:hover) > .me-2::before,
-.properties-tab label:has(input:hover) > span::before, .properties-tab label:has(select:hover) > span::before {
-  
+.properties-tab label:has(input:hover) > span::before, .properties-tab label:has(select:hover) > span::before  {
+
   position: relative;
   right: 0px;
   top: 0;
@@ -169,7 +165,6 @@
   content: "";
   font-size: 1em;
   transition: border 0.3s;
-  
 
 }
 
@@ -236,7 +231,7 @@ input[type="number"]::-webkit-outer-spin-button {
   height: var(--input-height);
   width: 24px;
   padding-top: 2px!important;
-  cursor: pointer;  
+  cursor: pointer;
 
   background-color: var(--accent);
   color: white;
@@ -256,7 +251,7 @@ input[type="number"]::-webkit-outer-spin-button {
   height: var(--input-height);
   width: 24px;
   padding-top: 2px!important;
-  cursor: pointer;  
+  cursor: pointer;
 
   background-color: var(--accent);
   color: white!important;
@@ -533,7 +528,7 @@ input[type="number"]::-webkit-outer-spin-button {
   .dock-style-models .dock-tabpane {
     overflow-x: scroll;
   }
-
+/*
 .view-editor-root .dock-tabpane >* // universal selector for all view sub-tabs
 // #Dock_in_view_detail0 .page-root, // Apply to
 // #Dock_in_view_detail1 section, // Template
@@ -543,18 +538,9 @@ input[type="number"]::-webkit-outer-spin-button {
 {
   margin: 0.7em;
   border-radius: var(--radius);
-}
+  height: 100%;
+}*/
 
-
-.ms-2.mb-1.my-auto {
-  margin-top: 10px!important;
-  font-size: 1em!important;
-
-}
-
-.my-auto {
-  margin-top: 10px!important
-}
 
 .view-editor-header {
 

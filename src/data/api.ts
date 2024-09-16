@@ -1,6 +1,7 @@
 import Axios from 'axios';
 import {Json} from '../joiner';
 import Storage from "./storage";
+import Settings from "../settings/Settings";
 
 export type Response = {code: number, data: Json|null}
 class Api {

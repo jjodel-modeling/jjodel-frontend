@@ -33,7 +33,6 @@ function NodeEditorComponent(props: AllProps) {
     let isVertex = ['DVoidVertex', 'DVertex', 'DEdgePoint'].includes(cname); // RuntimeAccessibleClass.extends(cname, 'DVoidVertex');
     let isEdge = ['DVoidEdge', 'DEdge'].includes(cname); // RuntimeAccessibleClass.extends(cname, 'DVoidEdge');
     let isField = (!isGraph && !isVertex && !isEdge);
-    console.log('Style editor', {cname, isVertex, isGraph, isEdge, selected});
     let asGraph: LGraph | undefined = isGraph && node as any;
     let asVertex: LVoidVertex | undefined  = isVertex && node as any;
     let asEdge: LVoidEdge | undefined = isEdge && node as any;
@@ -111,17 +110,22 @@ function NodeEditorComponent(props: AllProps) {
         {asEdge && <><h3>Edge</h3>
             {stackingOrder}
 
-            <GenericInput data={asEdge} field={'longestLabel'}
-                          placeholder={'(edge/*LEdge*/, segment/*EdgeSegment*/, subNodes/*LGraphElement[]*/, allSegments/*EdgeSegment[]*/) => {' +
-                              '\n\t// a complex example. The label can be either a function like this or a simple string.' +
-                              '\n\t return (edge.start.model)?.name + \' ~ \' + (e.end.model)?.name + \'(\' + segment.length.toFixed(1) + \')\';' +
-                              '\n}'}/>
+            {
+            //  <>
+            //     moved to props & transient properties
+            //     <GenericInput data={asEdge} field={'longestLabel'}
+            //         placeholder={'(edge/*LEdge*/, segment/*EdgeSegment*/, subNodes/*LGraphElement[]*/, allSegments/*EdgeSegment[]*/) => {' +
+            //         '\n\t// a complex example. The label can be either a function like this or a simple string.' +
+            //         '\n\t return (edge.start.model)?.name + \' ~ \' + (e.end.model)?.name + \'(\' + segment.length.toFixed(1) + \')\';' +
+            //         '\n}'}/>
+            //     <GenericInput data={asEdge} field={'labels'}
+            //         placeholder={'(edge/*LEdge*/, segment/*EdgeSegment*/, subNodes/*LGraphElement[]*/, allSegments/*EdgeSegment[]*/) => {' +
+            //         '\n\t// a complex example. The label can be either a function like this or a simple string.' +
+            //         '\n\t return (edge.start.model)?.name + \' ~ \' + (e.end.model)?.name + \'(\' + segment.length.toFixed(1) + \')\';' +
+            //         '\n}'}/>
+            // </>
+            }
 
-            <GenericInput data={asEdge} field={'labels'}
-                          placeholder={'(edge/*LEdge*/, segment/*EdgeSegment*/, subNodes/*LGraphElement[]*/, allSegments/*EdgeSegment[]*/) => {' +
-                            '\n\t// a complex example. The label can be either a function like this or a simple string.' +
-                            '\n\t return (edge.start.model)?.name + \' ~ \' + (e.end.model)?.name + \'(\' + segment.length.toFixed(1) + \')\';' +
-                            '\n}'}/>
             <GenericInput data={asEdge} field={"anchorStart"}/>
             <GenericInput data={asEdge} field={"anchorEnd"}/>
         </>}

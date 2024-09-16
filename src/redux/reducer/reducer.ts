@@ -7,7 +7,15 @@ import {
     DViewElement,
     DClass,
     DModel,
-    UX, EdgeOwnProps, EdgeStateProps, GraphElementComponent, ViewEClassMatch, bool
+    UX,
+    EdgeOwnProps,
+    EdgeStateProps,
+    GraphElementComponent,
+    ViewEClassMatch,
+    bool,
+    NodeTransientProperties,
+    ViewTransientProperties,
+    DGraphElement, Uarr
 } from '../../joiner';
 import {
     Action,
@@ -491,12 +499,17 @@ function unsafereducer(oldState: DState = initialState, action: Action): DState 
     if (ret.VIEWS_RECOMPILE_all === true) ret.VIEWS_RECOMPILE_all = Object.keys(ret.idlookup);
     if ((ret.VIEWS_RECOMPILE_all as Pointer[])?.length) {
         let resetAllNodes: boolean = false;
+        let sk: keyof DState;
         for (let id of new Set(ret.VIEWS_RECOMPILE_all as Pointer[])){
             let d = ret.idlookup[id];
+            if (!d) continue;
             if (RuntimeAccessibleClass.extends(d.className, "DViewElement")) {
                 (d as DViewElement).css_MUST_RECOMPILE = true;
                 transientProperties.view[d.id as string] = { } as any;
-                for (let k of DViewElement.MeasurableKeys) (ret as any)['VIEWS_RECOMPILE_'+k].push(d.id);
+                // for (let k of DViewElement.MeasurableKeys) (ret as any)['VIEWS_RECOMPILE_'+k].push(d.id);
+                // for (let k of DViewElement.RecompileKeys) (ret as any)['VIEWS_RECOMPILE_'+k].push(d.id);
+                for (sk in ret) if (sk.indexOf('VIEWS_RECOMPILE') === 0) (ret[sk] as Pointer[]).push(id);
+                // ret.NODES_RECOMPILE_labels.push(id); ret.NODES_RECOMPILE_longestLabel.push(id);
                 if (!resetAllNodes) resetAllNodes = true;
             }
             if (RuntimeAccessibleClass.extends(d.className, "DModelElement")) {
@@ -505,13 +518,88 @@ function unsafereducer(oldState: DState = initialState, action: Action): DState 
                     let newname = (ret.idlookup[d.id] as DClass)?.name;
                     if (oldname !== newname) ret.ClassNameChanged[d.id as Pointer<DClass>] = oldname;
                 }
-                // transientProperties.modelElement[d.id] = { } as any; stuff in here does not need replacement, can never be dangerous.
+                for (sk in ret) if (sk.indexOf('MODELS_RECOMPILE') === 0) (ret[sk] as Pointer[]).push(id);
+                // transientProperties.modelElement[d.id] = { } as any; stuff in here does not need replacement, can never be dangerous (currently).
             }
             if (RuntimeAccessibleClass.extends(d.className, "DGraphElement")) {
                 transientProperties.node[d.id as string] = { } as any;
+                for (sk in ret) if (sk.indexOf('NODES_RECOMPILE') === 0) (ret[sk] as Pointer[]).push(id);
+                //ret.NODES_RECOMPILE_labels.push(id); ret.NODES_RECOMPILE_longestLabel.push(id);
             }
         }
-        if (resetAllNodes) for (let nid in transientProperties.node) transientProperties.node[nid] = {} as any;
+        if (resetAllNodes) for (let nid in transientProperties.node) {
+            transientProperties.node[nid] = {} as any;
+            for (sk in ret) if (sk.indexOf('NODES_RECOMPILE') === 0) (ret[sk] as Pointer[]).push(nid);
+            //ret.NODES_RECOMPILE_labels.push(id); ret.NODES_RECOMPILE_longestLabel.push(id);
+        }
+    }
+    ret.VIEWS_RECOMPILE_all = [];
+
+
+
+    function parseLabel(ptr: Pointer, key: "labels" | "longestLabel", isNode: boolean): boolean{
+        let dv: GObject<DViewElement | DGraphElement> = DPointerTargetable.fromPointer(ptr, ret);
+        let tp: NodeTransientProperties | ViewTransientProperties = ((isNode ? transientProperties.node : transientProperties.view) as GObject)[ptr];
+        if (!tp) ((isNode ? transientProperties.node : transientProperties.view) as GObject)[ptr] = tp = {} as any;
+        let val: string = dv[key];
+        if (!val) { tp[key] = undefined as any; return true; }
+        let allContextKeys = {...contextFixedKeys};
+        let vid: Pointer<DViewElement> = isNode ? (tp as NodeTransientProperties).mainView?.id : ptr as any;
+        if (!vid) return false; // leave pending & recompute them on next reducer action
+        let tv = transientProperties.view[vid];
+        for (let k of tv.constantsList) if (!allContextKeys[k]) allContextKeys[k] = true;
+        for (let k of tv.UDList) if (!allContextKeys[k]) allContextKeys[k] = true;
+        let paramStr = '{'+Object.keys(allContextKeys).join(',')+'}';
+        console.log('labels parse', { allContextKeys, ud:tv.UDList, c:tv.constantsList });
+        const body: string =  'return (' + val + ')';
+        // if (vid.includes('Model')) console.log("modelparse, laels", {paramStr, body});
+        console.log('labels parse', {vid: ptr, paramStr, body});
+        try {
+            if (isNode) {
+                // need to store the function in tnv instead of tn since if v changes, ud changes as well? in all of them?what if i make a new view?
+            }
+            else {
+                // tp[key] = new Function(paramStr, body) as ((...a: any) => any);
+            }
+            tp[key] = function(){ return 'label as an option is disabled, pass it through props instead.'; }
+        }
+        catch (e: any) {
+            /*try{
+                let try_to_get_better_error = eval("let __f = function(" + paramStr+") {\n" + body + "}");
+            } catch(eeval){
+                console.error("eval error same as func error", {e, eeval});
+                e = eeval;
+            }*/
+            console.error('error labels parse', {vid: ptr, e, paramStr, body});
+            tp[key] = val;// (context: GObject) => 'Error during label evaluation';
+        }
+        return true;
+        // implies recompilation of: ... nothing?
+    }
+    let arr: Pointer<any>[]
+    arr = ret.NODES_RECOMPILE_labels;
+    if (arr.length) {
+        let successfullyParsed: Dictionary<string, boolean> = {};
+        for (const id of new Set(arr)) successfullyParsed[id] = parseLabel(id, 'labels', true);
+        ret.NODES_RECOMPILE_labels = arr.filter(e => successfullyParsed[e]);
+    }
+    arr = ret.NODES_RECOMPILE_longestLabel;
+    if (arr.length) {
+        let successfullyParsed: Dictionary<string, boolean> = {};
+        for (const id of new Set(arr)) successfullyParsed[id] = parseLabel(id, 'longestLabel', true);
+        ret.NODES_RECOMPILE_longestLabel = arr.filter(e => successfullyParsed[e]);
+    }
+    arr = ret.VIEWS_RECOMPILE_labels;
+    if (arr.length) {
+        let successfullyParsed: Dictionary<string, boolean> = {};
+        for (const id of new Set(arr)) successfullyParsed[id] = parseLabel(id, 'labels', false);
+        ret.VIEWS_RECOMPILE_labels = arr.filter(e => successfullyParsed[e]);
+    }
+    arr = ret.VIEWS_RECOMPILE_longestLabel;
+    if (arr.length) {
+        let successfullyParsed: Dictionary<string, boolean> = {};
+        for (const id of new Set(arr)) successfullyParsed[id] = parseLabel(id, 'longestLabel', false);
+        ret.VIEWS_RECOMPILE_longestLabel = arr.filter(e => successfullyParsed[e]);
     }
 
     // local changes to out-of-redux stuff
@@ -593,7 +681,6 @@ function unsafereducer(oldState: DState = initialState, action: Action): DState 
         }
         let matches = dv.usageDeclarations?.match(UDRegexp) || [];
         transientProperties.view[vid].UDList = matches.map(s=>{ s = s.trim(); return s.substring(s.indexOf('\.')+1, s.length-2).trim()});
-        console.log('matches', {matches, udlist:transientProperties.view[vid].UDList});
         // warning for user: do not redeclare ret in nested blocks.
         // do not use ret[key] syntax.
         // do not set nested values directly (ret.key.subkey syntax).
@@ -718,10 +805,9 @@ function unsafereducer(oldState: DState = initialState, action: Action): DState 
         for (let k of transientProperties.view[vid].constantsList) if (!allContextKeys[k]) allContextKeys[k] = true;
         for (let k of transientProperties.view[vid].UDList) if (!allContextKeys[k]) allContextKeys[k] = true;
         let paramStr = '{'+Object.keys(allContextKeys).join(',')+'}';
-        console.log('jsxparse', { allContextKeys, ud:transientProperties.view[vid].UDList, c:transientProperties.view[vid].constantsList });
+
         const body: string =  'return (' + UX.parseAndInject(DSL.parser(dv.jsxString), dv) + ')';
         // if (vid.includes('Model')) console.log("modelparse, jsx", {paramStr, body});
-        console.log('jsxparse', {vid, paramStr, body});
         try {
             transientProperties.view[vid].JSXFunction = new Function(paramStr, body) as ((...a: any) => any);
         }

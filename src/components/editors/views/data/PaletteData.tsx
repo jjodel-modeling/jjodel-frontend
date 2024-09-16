@@ -1,4 +1,6 @@
-import React, {Dispatch, ReactElement, ReactNode, RefObject, useEffect, useRef, useState} from 'react';
+/* Viewpoints > Style */
+
+import React, {Dispatch, ReactElement, ReactNode, Ref, RefObject, SyntheticEvent, useState, useRef, useEffect} from 'react';
 import {connect} from "react-redux";
 import {useStateIfMounted} from "use-state-if-mounted";
 import tinycolor, {Instance} from "tinycolor2";
@@ -85,8 +87,7 @@ function PaletteDataComponent(props: AllProps) {
 
     function useClickOutside(ref: any, onClickOutside: any) {
         useEffect(() => {
-
-            function handleClickOutside(event: any) {
+            function handleClickOutside(event: Event) {
                 if (ref.current && !ref.current.contains(event.target)) {
                     onClickOutside();
                 }
@@ -308,7 +309,7 @@ function PaletteDataComponent(props: AllProps) {
         view.palette = palette = tmp;
     }
     const removeColor = (prefix: string, index: number) => {
-        if (readOnly || !palette[prefix]) {return};
+        if (readOnly || !palette[prefix]) return;
 
         let tmp: Dictionary<string, PaletteControl> = {...palette} as any;
         tmp[prefix].value = [...tmp[prefix].value];
@@ -377,7 +378,7 @@ function PaletteDataComponent(props: AllProps) {
                                                             style ={{background: 'white'}}
                                                             inputStyle ={{opacity: color.getAlpha()}}
                                                             childrenn={
-                                                                <div className={"content suggestions"} style={{backgroundColor: "inherit"}} onClick={(e) => {e.preventDefault(); e.stopPropagation();}}>
+                                                                <div className={"content suggestions"} tabIndex={-1} style={{backgroundColor: "inherit"}} onClick={(e) => {e.preventDefault(); e.stopPropagation();}}>
                                                                     {(()=>{ return <>
                                                                         <h6 title={"Alter current color transparency"}>Opacity</h6>
 
@@ -391,7 +392,7 @@ function PaletteDataComponent(props: AllProps) {
                                                                             <CommandBar style={{float: 'left', paddingRight: '8px'}}>
                                                                                 <Btn icon={'add'} size={'x-small'}  action={()=>addColor(prefix, color.analogous(7, 30/1.5), i)} theme={'dark'} tip={'Add all the colors'}/>
                                                                             </CommandBar>
-                                                                            Analogous
+                                                                            <span>Analogous</span>
                                                                         </h6>
 
                                                                         <div className={"roww"}>
@@ -411,10 +412,17 @@ function PaletteDataComponent(props: AllProps) {
 
                                                                         {/* Add all colors */}
                                                                         <h6 title={"Add all the colors"}>
-                                                                            <CommandBar style={{float: 'left', paddingRight: '8px'}}>
-                                                                                <Btn icon={'add'} size={'x-small'} tip={'Add all the colors'} theme={'dark'} action={()=>addColor(prefix, [1/12, 2/12, 3/12, 4/12, 5/12, 6/12].map(n=>color.clone().lighten(n*100)), i, false)}/>
+                                                                            <CommandBar style={{
+                                                                                float: 'left',
+                                                                                paddingRight: '8px'
+                                                                            }}>
+                                                                                <Btn icon={'add'} size={'x-small'}
+                                                                                     tip={'Add all the colors'}
+                                                                                     theme={'dark'}
+                                                                                     action={() => addColor(prefix, [1 / 12, 2 / 12, 3 / 12, 4 / 12, 5 / 12, 6 / 12].map(n => color.clone().lighten(n * 100)), i, false)}/>
                                                                             </CommandBar>
-                                                                            Lighten
+                                                                            <span>Lighten</span>
+
                                                                         </h6>
 
                                                                         <div className={"roww"}>
@@ -425,11 +433,16 @@ function PaletteDataComponent(props: AllProps) {
 
                                                                         {/* Add all colors */}
                                                                         <h6 title={"Add all the colors"}>
-                                                                            <CommandBar style={{float: 'left', paddingRight: '8px'}}>
-                                                                                <Btn icon={'add'} theme={'dark'} tip={'Add all the colors'} size={'x-small'} action={()=>addColor(prefix, [6/12, 5/12, 4/12, 3/12, 2/12, 1/12].map(n=>color.clone().darken(n*100)), i, false)}/>
+                                                                            <CommandBar style={{
+                                                                                float: 'left',
+                                                                                paddingRight: '8px'
+                                                                            }}>
+                                                                                <Btn icon={'add'} theme={'dark'}
+                                                                                     tip={'Add all the colors'}
+                                                                                     size={'x-small'}
+                                                                                     action={() => addColor(prefix, [6 / 12, 5 / 12, 4 / 12, 3 / 12, 2 / 12, 1 / 12].map(n => color.clone().darken(n * 100)), i, false)}/>
                                                                             </CommandBar>
-                                                                            Darken
-
+                                                                            <span>Darken</span>
                                                                         </h6>
 
                                                                         <div className={"roww"}>
@@ -440,10 +453,16 @@ function PaletteDataComponent(props: AllProps) {
 
                                                                         {/* Add all colors */}
                                                                         <h6 title={"Add all the colors"}>
-                                                                            <CommandBar style={{float: 'left', paddingRight: '8px'}}>
-                                                                                <Btn icon={'add'} tip={'Add all the colors'} theme={'dark'} size={'x-small'} action={()=>addColor(prefix, [color.complement(), tinycolor(invert(color))], i, false)}/>
+                                                                            <CommandBar style={{
+                                                                                float: 'left',
+                                                                                paddingRight: '8px'
+                                                                            }}>
+                                                                                <Btn icon={'add'}
+                                                                                     tip={'Add all the colors'}
+                                                                                     theme={'dark'} size={'x-small'}
+                                                                                     action={() => addColor(prefix, [color.complement(), tinycolor(invert(color))], i, false)}/>
                                                                             </CommandBar>
-                                                                            Complementary / Opposite
+                                                                            <span>Complementary / Opposite</span>
                                                                         </h6>
 
                                                                         <div className={"roww"}>
@@ -455,10 +474,16 @@ function PaletteDataComponent(props: AllProps) {
 
                                                                         {/* Add all colors */}
                                                                         <h6 title={"Add all the colors"}>
-                                                                        <CommandBar style={{float: 'left', paddingRight: '8px'}}>
-                                                                            <Btn icon={'add'} tip={'Add all the colors'} theme={'dark'} size={'x-small'} action={()=>addColor(prefix, color.splitcomplement(), i)}/>
-                                                                        </CommandBar>
-                                                                        Split Complementary
+                                                                            <CommandBar style={{
+                                                                                float: 'left',
+                                                                                paddingRight: '8px'
+                                                                            }}>
+                                                                                <Btn icon={'add'}
+                                                                                     tip={'Add all the colors'}
+                                                                                     theme={'dark'} size={'x-small'}
+                                                                                     action={() => addColor(prefix, color.splitcomplement(), i)}/>
+                                                                            </CommandBar>
+                                                                            <span>Split Complementary</span>
                                                                         </h6>
 
                                                                         <div className={"roww"}>
@@ -467,10 +492,16 @@ function PaletteDataComponent(props: AllProps) {
                                                                         </div>
 
                                                                         <h6 title={"Add all the colors"}>
-                                                                        <CommandBar style={{float: 'left', paddingRight: '8px'}}>
-                                                                                <Btn icon={'add'} tip={'Add all the colors'} theme={'dark'} size={'x-small'} action={()=>addColor(prefix, color.triad(), i)}/>
+                                                                            <CommandBar style={{
+                                                                                float: 'left',
+                                                                                paddingRight: '8px'
+                                                                            }}>
+                                                                                <Btn icon={'add'}
+                                                                                     tip={'Add all the colors'}
+                                                                                     theme={'dark'} size={'x-small'}
+                                                                                     action={() => addColor(prefix, color.triad(), i)}/>
                                                                             </CommandBar>
-                                                                            Triadic
+                                                                            <span>Triadic</span>
                                                                         </h6>
 
                                                                         <div className={"roww"}>
@@ -479,11 +510,17 @@ function PaletteDataComponent(props: AllProps) {
                                                                         </div>
 
                                                                         {/* Add all colors */}
-                                                                        <h6 title={"Add all the colors"}> {/* todo per damiano, todo per giordano: controllare che funzioni*/}
-                                                                        <CommandBar style={{float: 'left', paddingRight: '8px'}}>
-                                                                                <Btn icon={'add'} tip={'Add all the colors'} theme={'dark'} size={'x-small'} action={()=>addColor(prefix, color.tetrad(), i)}/>
+                                                                        <h6 title={"Add all the colors"}>
+                                                                            <CommandBar style={{
+                                                                                float: 'left',
+                                                                                paddingRight: '8px'
+                                                                            }}>
+                                                                                <Btn icon={'add'}
+                                                                                     tip={'Add all the colors'}
+                                                                                     theme={'dark'} size={'x-small'}
+                                                                                     action={() => addColor(prefix, color.tetrad(), i)}/>
                                                                             </CommandBar>
-                                                                            Tetradic
+                                                                            <span>Tetradic</span>
                                                                         </h6>
                                                                         <div className={"roww"}>
                                                                             {color.tetrad().map ( (c) => <button style={{...style(c)}} className="btn color-suggestion"

@@ -56,7 +56,14 @@ export class GraphElementReduxStateProps {
     dataid?: Pointer<DModelElement>;
     viewid!: Pointer<DViewElement>;
     viewsid!: Pointer<DViewElement>[];
-    parentviewid?:Pointer<DViewElement>
+    parentviewid?:Pointer<DViewElement>;
+
+    static new(): GObject<GraphElementReduxStateProps>{
+        let e: GObject<GraphElementReduxStateProps> = new GraphElementReduxStateProps();
+        for (let k in e) if (e[k] === undefined) delete e[k];
+        return e;
+    }
+    protected constructor(){  }
 }
 
 export class GraphElementDispatchProps {
@@ -69,12 +76,27 @@ export class BasicReactOwnProps {
     class?: string | string[]; // my add as a fault-tolerant fix for users not used to jsx
     className?: string | string[];
     key?: string;
+
+    static new(): GObject<BasicReactOwnProps>{
+        let e: GObject<BasicReactOwnProps> = new BasicReactOwnProps();
+        for (let k in e) if (e[k] === undefined) delete e[k];
+        return e;
+    }
+    protected constructor(){ }
 }
 
 export class GraphElementOwnProps extends BasicReactOwnProps {
     data?: Pointer<DModelElement, 0, 1, LModelElement> | LModelElement;
     view?: Pointer<DViewElement, 1, 1, LViewElement> | LViewElement;
     views?: LViewElement[] | Pointer<DViewElement>[];
+    isGraph?: boolean;
+    isGraphVertex?: boolean;
+    isVertex?: boolean;
+    isEdgePoint?: boolean;
+    isEdge?: boolean;
+    isVoid?: boolean;
+    isField?: boolean = true;
+    onDelete?: (node: LGraphElement)=>boolean; // return false to prevent deletion
 
     initialSize?: InitialVertexSize;
 
@@ -84,19 +106,37 @@ export class GraphElementOwnProps extends BasicReactOwnProps {
     parentViewId?: Pointer<DViewElement, 1, 1, LViewElement>; // injected
     htmlindex?: number; // injected
     childStyle?: CSSProperties; // obsolete use css // injected, indicates some properties are styled from <Polygon or such, and must be transferred to the first child of root
+
+    static new(): GObject<GraphElementOwnProps>{
+        let e: GObject<GraphElementOwnProps> = new GraphElementOwnProps();
+        for (let k in e) if (e[k] === undefined) delete e[k];
+        return e;
+    }
+    protected constructor(){ super(); }
 }
 
 export class EdgeOwnProps extends GraphElementOwnProps {
     onclick?: (e: React.MouseEvent<HTMLDivElement>) => void;
     onmousedown?: (e: React.MouseEvent<HTMLDivElement>) => void;
-    isgraph?: boolean = false;
-    isvertex?: boolean = true;
     start!: LGraphElement["id"];
     end!: LGraphElement["id"];
     label?: DEdge["longestLabel"];
     labels?: DEdge["labels"];
     anchorStart?: string;
     anchorEnd?: string;
+    isField?: boolean = false;
+    isEdge?: boolean = true;
+    isReference?: boolean;
+    isValue?: boolean; // if missing it is deduced from isReference.
+    isExtend?: boolean;
+    isDepencency?: boolean; // package dep
+
+    static new(): GObject<EdgeOwnProps>{
+        let e: GObject<EdgeOwnProps> = new EdgeOwnProps();
+        for (let k in e) if (e[k] === undefined) delete e[k];
+        return e;
+    }
+    protected constructor(){ super(); }
 }
 
 export class EdgeStateProps extends GraphElementReduxStateProps {
@@ -107,6 +147,12 @@ export class EdgeStateProps extends GraphElementReduxStateProps {
     viewpoint!: LViewPoint;
     start!: LGraphElement;
     end!: LGraphElement;
+    static new(): GObject<EdgeStateProps>{
+        let e: GObject<EdgeStateProps> = new EdgeStateProps();
+        for (let k in e) if (e[k] === undefined) delete e[k];
+        return e;
+    }
+    protected constructor(){ super(); }
     // key: string;
 }
 
@@ -135,16 +181,21 @@ export class EdgeDefaultUsageDeclarations extends DefaultUsageDeclarations{
 export class VertexOwnProps extends GraphElementOwnProps {
     // onclick?: (e: React.MouseEvent<HTMLDivElement>) => void;
     // onmousedown?: (e: React.MouseEvent<HTMLDivElement>) => void;
-    isedgepoint?: boolean = false;
-    isgraph?: boolean = false;
-    isvertex?: boolean = true;
-    isvoid?: boolean = false;
+    isField?: boolean = false;
+    isVertex?: boolean = true;
+
     decorated?: boolean; // for <decoratedStar /> (defaults true)
     sides?: number // for <Polygon />, <Star /> and <Cross />
     innerRadius?: number // for <Star /> and <Cross />
     ratio?: number // for <Trapezoid />
     rotate?: number // initial vertex rotation
 
+    static new(): GObject<VertexOwnProps>{
+        let e: GObject<VertexOwnProps> = new VertexOwnProps();
+        for (let k in e) if (e[k] === undefined) delete e[k];
+        return e;
+    }
+    protected constructor(){ super(); }
 }
 
 export class VertexStateProps extends GraphElementReduxStateProps {
@@ -153,7 +204,14 @@ export class VertexStateProps extends GraphElementReduxStateProps {
     // selected!: Dictionary<Pointer<DUser>, LModelElement|null>;
     //selected!: LGraphElement|null;
     isEdgePending!: { user: LUser, source: LClass };
-    viewpoint!: LViewPoint
+    viewpoint!: LViewPoint;
+
+    static new(): GObject<VertexStateProps>{
+        let e: GObject<VertexStateProps> = new VertexStateProps();
+        for (let k in e) if (e[k] === undefined) delete e[k];
+        return e;
+    }
+    protected constructor(){ super(); }
 }
 
 
@@ -161,6 +219,7 @@ export let contextFixedKeys: Dictionary<string, boolean> = {};
 setContextFixedKeys();
 
 function setContextFixedKeys(){
+    // @ts-ignore: here i must use the constructor instead of new to have the undefined properties included.
     let propmakers: GObject[] = [new EdgeOwnProps(), new EdgeStateProps(), new VertexOwnProps(), new VertexStateProps(), {
         // "model", "graph",
         "constants": true, "usageDeclarations": true,
@@ -170,7 +229,7 @@ function setContextFixedKeys(){
         "otherViews": true, 'decorators':true, // only on final jsx, decorators are injected
         //"data":true, "node":true, "parentViewId":true, "parentnodeid":true,// from props:
         //"view":true, "views":true, "viewScores":true,// from props:
-        //"children":true, "isgraph":true, "isvertex":true, "graphid":true, "nodeid":true,// from props:
+        //"children":true, "isGraph":true, "isVertex":true, isEdge:true, isEdgePoint:true, isVoid: true, "graphid":true, "nodeid":true,// from props:
     }];
     for (let props of propmakers) for (let k in props) contextFixedKeys[k] = true;
     delete contextFixedKeys.class;
