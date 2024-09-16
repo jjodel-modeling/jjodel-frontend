@@ -110,7 +110,7 @@ function LeftBar(props: LeftBarProps): JSX.Element {
                     <Item icon={icon['edit']}>Edit </Item>
                     <Item icon={icon['export']}>Export as...</Item>
                     <Item icon={icon['duplicate']}>Duplicate </Item>
-                    <Item icon={icon['favorite']}>{!project.isFavorite ? 'Add to favorites' : 'Remove from favorites'} </Item>
+                    <Item icon={icon['favorite']}>{!project.isFavorite ? 'Add to favorites ' : 'Remove from favorites '}</Item>
                     <Item icon={icon['share']}>Public link </Item>
                     <Item icon={icon['delete']}>Delete </Item>
                     <Item icon={icon['close']}>Close project </Item>
