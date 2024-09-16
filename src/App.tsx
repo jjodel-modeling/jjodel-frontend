@@ -56,32 +56,30 @@ function App(props: AllProps): JSX.Element {
         <div className={"router-wrapper"}>
             {isLoading && <Loader />}
             <ExternalLibraries />
-            <TooltipVisualizer />
+            <Try><TooltipVisualizer /></Try>
             {/*<MessageVisualizer />*/}
-            <AlertVisualizer />
-            <Try><>
-            </></Try>
+            <Try><AlertVisualizer /></Try>
             <HashRouter>
-            <PathChecker />
-            <Routes>
-                {DUser.current ? <>
-                    <Route path={'allProjects'} element={<AllProjectsPage />} />
-                    {/*<Route path={'dock'} element={<MyDock />} />*/}
-                    <Route path={'account'} element={<AccountPage />} />
-                    <Route path={'settings'} element={<SettingsPage />} />
-                    <Route path={'updates'} element={<UpdatesPage />} />
-                    <Route path={'community'} element={<CommunityPage />} />
-                    <Route path={'templates'} element={<TemplatePage />} />
-                    <Route path={'notes'} element={<NotesPage />} />
-                    <Route path={'archive'} element={<ArchivePage />} />
-                    <Route path={'project'} element={<ProjectPage />} />
-                    <Route path={'recent'} element={<RecentPage />} />
-                    <Route path={'profile'} element={<ProfilePage />} />
-                    <Route path={'*'} element={<AllProjectsPage />} />
-                </> : <Route path={'*'} element={<AuthPage />} />}
-            </Routes>
-        </HashRouter>
-        {DUser.current && <BottomBar />}
+                <Try><PathChecker /></Try>
+                <Try><Routes>
+                    {DUser.current ? <>
+                        <Route path={'allProjects'} element={<AllProjectsPage />} />
+                        {/*<Route path={'dock'} element={<MyDock />} />*/}
+                        <Route path={'account'} element={<AccountPage />} />
+                        <Route path={'settings'} element={<SettingsPage />} />
+                        <Route path={'updates'} element={<UpdatesPage />} />
+                        <Route path={'community'} element={<CommunityPage />} />
+                        <Route path={'templates'} element={<TemplatePage />} />
+                        <Route path={'notes'} element={<NotesPage />} />
+                        <Route path={'archive'} element={<ArchivePage />} />
+                        <Route path={'project'} element={<ProjectPage />} />
+                        <Route path={'recent'} element={<RecentPage />} />
+                        <Route path={'profile'} element={<ProfilePage />} />
+                        <Route path={'*'} element={<AllProjectsPage />} />
+                    </> : <Route path={'*'} element={<AuthPage />} />}
+                </Routes></Try>
+            </HashRouter>
+            {DUser.current && <Try><BottomBar /></Try>}
         </div>
     </>);
 

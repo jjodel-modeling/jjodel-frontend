@@ -81,14 +81,16 @@ function BottomBarComponent(props: AllProps): JSX.Element {
     let nodepos: string | undefined;
     if (node) {
         let size = {...node.size};
-        let ret = [
-            '', U.cropNum(+size.x.toFixed(2)),
-            ', ', U.cropNum(+size.y.toFixed(2)),
-            ', ', U.cropNum(+node.zIndex.toFixed(2)),
-            ' w:', U.cropNum(+size.w.toFixed(2)),
-            ' h:', U.cropNum(+size.h.toFixed(2)),
-        ]
-        nodepos = ret.join('');
+        if (size && typeof size === 'object'){
+            let ret = [
+                '', U.cropNum(+(+size.x||0).toFixed(2)),
+                ', ', U.cropNum(+(+size.y||0).toFixed(2)),
+                ', ', U.cropNum(+(+node.zIndex||0).toFixed(2)),
+                ' w:', U.cropNum(+(+size.w||0).toFixed(2)),
+                ' h:', U.cropNum(+(+size.h||0).toFixed(2)),
+            ]
+            nodepos = ret.join('');
+        }
     }
 
     return(<footer className={'footer'}>
