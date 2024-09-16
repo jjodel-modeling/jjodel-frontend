@@ -3,9 +3,7 @@
 [data-nodetype], [data-nodetype] > * {
   overflow: visible;
 }
-.toolbar-draggable{
-  overflow: visible;
-}
+
 .toolbar {
 
     --bg: var(--color);
@@ -91,6 +89,10 @@
       }
   }
 
+  .toolbar-hr {
+    padding-bottom: 4px!important;
+  }
+
   .w-100 {
     position: relative;
     width: 100%;
@@ -130,10 +132,11 @@
 }
 
 hr.my-1{
-  position: relative;
-  color: #8a8a8a;
-  width: 180px;
+  
+  color: white; //  #8a8a8a;
   left: 5px;
+  padding-bottom: 0px!important;
+  margin-bottom: 0px!important;
 }
 
 
