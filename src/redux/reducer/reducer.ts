@@ -412,7 +412,7 @@ function unsafereducer(oldState: DState = initialState, action: Action): DState 
     ret.idlookup.__proto__ = DPointerTargetable.pendingCreation as any;
     // client synchronization stuff
     if (oldState?.collaborativeSession) {
-        const ignoredFields: (keyof DState)[]  = ['contextMenu', '_lastSelected', 'isLoading', 'collaborativeSession'];
+        const ignoredFields: (keyof DState)[]  = ['contextMenu', '_lastSelected', 'isLoading', 'collaborativeSession', 'alert'];
         /* Checking if CompositeAction has some actions that MUST be ignored */
         let compositeAction: CompositeAction|null = null;
         if(action.type === CompositeAction.type) {

@@ -1938,10 +1938,7 @@ export class LPointerTargetable<Context extends LogicContext<DPointerTargetable>
         const dependencies = data.dependencies();
 
         const ret = () => {
-            // if (context.data.id.indexOf('Pointer_View')) return; // cannot delete default views/viewpoints
-
             if (context.data.id.indexOf('Pointer_View') !== -1 ) return; // cannot delete default views/viewpoints
-
             for (let child of data.children) {
                 child.delete();
                 // todo: if a m1-dvalue which conforms to a m2-reference with "containment" is deleted, need to delete also target.
@@ -1964,7 +1961,6 @@ export class LPointerTargetable<Context extends LogicContext<DPointerTargetable>
                 }
             }
             if (data.nodes) data.nodes.map((node: any) => node.delete());
-
             SetRootFieldAction.new('ELEMENT_DELETED', data.id, '+=', false); // here no need to IsPointer because it only affects Transient stuff
             SetRootFieldAction.new('idlookup', data.id, '-=', false); // damiano: shouldn't be isPointer = true?
             DeleteElementAction.new(data.id);

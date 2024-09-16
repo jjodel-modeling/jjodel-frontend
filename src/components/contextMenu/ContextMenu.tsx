@@ -176,7 +176,11 @@ function ContextMenuComponent(props: AllProps) {
         jsxList.push(<hr className={'my-1'} />);
 
         /* Delete */
-        jsxList.push(<div onClick={() => {close(); data.delete(); node.delete();}} className={'col item'}>{icon['delete']} Delete<i
+        jsxList.push(<div onClick={() => {
+            close();
+            data.delete();
+            node.delete();
+        }} className={'col item'}>{icon['delete']} Delete<i
             className='bi bi-backspace' style={{fontSize: '1em', float: 'right', paddingTop: '2px', fontWeight: '800'}}></i></div>);
         jsxList.push(<hr className={'my-1'} />);
         /* Refresh */

@@ -160,7 +160,7 @@ function GenericDashboard(props: DashProps): any {
     return (<>
         <Navbar />
         <div className={"dashboard-container"} tabIndex={-1}>
-            <LeftBar active={active} projects={user.projects}/>
+            <LeftBar active={active} projects={user?.projects}/>
             <div className={'user'}>
                 <div className={'name'}>
                     <>

@@ -26,13 +26,13 @@ function AllProjectsComponent(props: AllProps): JSX.Element {
                         style={'red'}
                         action={() => createProject('public')}
                     />
-                    <Cards.Item
+                    {!(U.isOffline()) && <Cards.Item
                         title={'New jjodel (Collaborative)'}
                         subtitle={'Create a new jjodel project.'}
                         icon={'add'}
                         style={'red'}
                         action={() => createProject('collaborative')}
-                    />
+                    />}
                     <Cards.Item
                         title={'Import jjodel'}
                         subtitle={'Import an existing jjodel project.'}
