@@ -284,19 +284,21 @@ function ToolBarComponent(props: AllProps, state: ThisState) {
         if (node) subleveloptions.push(...addChildren(downward[node.className]));
         let rootobjs = classes?.filter((lClass) => {return !lClass.abstract && !lClass.interface}).map((lClass, index) => {
             let dclass = lClass.__raw;
-            return <div
+            return <><div
                 onMouseEnter={e => SetRootFieldAction.new('tooltip', lClass.annotations.map(a => a.source).join(' '))}
                 onMouseLeave={e => SetRootFieldAction.new('tooltip', '')}
                 key={"LObject_"+dclass.id} className={"toolbar-item LObject"} tabIndex={ti} onClick={()=>select(model.addObject({}, lClass)) }>
                 {dclass._state.icon ? <ModellingIcon src={dclass._state.icon}/> : <ModellingIcon name={'object'} />}
                 <span className={'ms-1 my-auto text-capitalize'}>{U.stringMiddleCut(dclass.name, 14)}</span>
-            </div>
+            </div></>
         }) || [];
-        rootobjs.push(<div key={"RawObject"} className={'toolbar-item'} tabIndex={ti} onClick={()=>select(model.addObject({}, null))}>
+
+        rootobjs.push(<><hr className={'my-1 toolbar-hr'}/><div key={"RawObject"} className={'toolbar-item'} tabIndex={ti} onClick={()=>select(model.addObject({}, null))}>
+            
             <ModellingIcon name={'object'} />
-            <hr className={'my-1'} />
+            
             <span className={'ms-1 my-auto text-capitalize'}>Object</span>
-        </div>);
+        </div></>);
 
 
         if (rootobjs.length > 0) {
