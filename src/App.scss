@@ -89,6 +89,10 @@ font-weight: 900 !important;
   min-height:2px;
 }
 
+.scrollable{
+  height: 100%;
+}
+
 .REACT-ROOT.debug{
   [data-nodetype]{
     &:hover::after{

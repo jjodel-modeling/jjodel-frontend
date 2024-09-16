@@ -813,6 +813,7 @@ export class LNamedElement<Context extends LogicContext<DNamedElement> = any> ex
 
     // protected get_namespace(context: Context): string { throw new Error("?? get namespace ?? todo"); return ""; }
 
+    protected get_fullName(context: Context): this["fullname"] { return this.get_fullname(context); }
     protected get_fullname(context: Context): this["fullname"] {
         const containers = this.get_containers(context);
         let fullname: string = containers.reverse().slice(1, containers.length).map(c => c.name).join('.');
@@ -2391,18 +2392,41 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
             return LPointerTargetable.from(pointer)
         });
     }
-    protected set_extends(val: PackArr<this["extends"]>, context: Context): boolean {
+    protected set_extends(val: PackArr<this["extends"]>, c: Context): boolean {
         if (!val) val = [];
         else if (!Array.isArray(val)) val = [val];
-        const ptrs = [...new Set(val.map((val) => { return val && Pointers.from(val) }).filter(e=>!!e))];
-        SetFieldAction.new(context.data, 'extends', ptrs, "", true);
+        let ptrs: Pointer[] = [...new Set(val.map((val) => { return val && Pointers.from(val) }).filter(e=>!!e))];
+        let diff = Uarr.arrayDifference(c.data.extends, ptrs);
+        let invalid: GObject[] = [];
+        let invalidPtrs: Pointer[] = [];
+        for (let ptr of diff.added){
+            let reason: GObject = {ptr};
+            if (this.get_canExtend(c)(ptr as any, reason as any)) continue;
+            invalid.push(reason);
+            invalidPtrs.push(ptr);
+        }
+        if (invalid.length) {
+            Log.ww('tried to add invalid extends, they were ignored:', invalid);
+            ptrs = ptrs.filter(e=>!invalid.includes(e));
+        }
+        if (diff.removed.length === 0 && diff.added.length === invalid.length) return true;
+        SetFieldAction.new(c.data, 'extends', ptrs, "", true);
         return true;
     }
-    protected add_extends(val: PackArr<this["extends"]>, context: Context): void {
+
+    add_extends(val: PackArr<this["extends"]>): void { this.cannotCall('add_extends'); }
+    get_add_extends(val: PackArr<this["extends"]>, context: Context): this['add_extends'] {
+        return ((val: string[])=>this.impl_add_extends(val as any, context)) as any;
+    }
+    impl_add_extends(val: PackArr<this["extends"]>, context: Context): void {
         if (!val) val = [];
         else if (!Array.isArray(val)) val = [val];
         if (!val.length) return;
-        const ptrs = [...new Set(val.map((val) => { return val && Pointers.from(val) }).filter(e=>!!e && !context.data.extends.includes(e)))];
+        let ptrs = [...new Set(val.map((val) => { return val && Pointers.from(val) }).filter(e=>!!e && !context.data.extends.includes(e)))];
+
+        ptrs = ptrs.filter(ptr => this.get_canExtend(context)(ptr as any, {} as any));
+        if (!ptrs.length) return;
+        // todo: extendedby? or make it derived from pointedby
         SetFieldAction.new(context.data, 'extends', [...context.data.extends, ...ptrs], '', true);
     }
 
@@ -2520,6 +2544,7 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
     private _canExtend(c: Context, superclass: LClass, output: {reason: string, allTargetSuperClasses: LClass[]} = {reason: '', allTargetSuperClasses: []}): boolean {
         if (!superclass) { output.reason = 'Invalid extend target: ' + superclass; return false; }
         if (c.data.final) return false;
+        superclass = LPointerTargetable.wrap(superclass) as any;
         let sealed = c.data.sealed || []
         if (sealed.length && !sealed.includes(superclass.id)) return false;
         const thiss: LClass = c.proxyObject;
@@ -2567,25 +2592,24 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
         return true; }
 
     unsetExtends(superclass: LClass): void { return this.cannotCall('unsetExtends'); }
-    get_unsetExtends(context: Context, superclass: LClass): (superclass: LClass)=>void {
+    get_unsetExtends(c: Context, superclass: LClass): (superclass: LClass)=>void {
         return (superclass: LClass)=>{
+            superclass = LPointerTargetable.wrap(superclass) as any;
             if (!superclass) return;
-            console.log('UnsetExtend:', context);
+            console.log('UnsetExtend:', c, superclass);
             // todo: when Object is loaded in m3, set him there for easy access.
             //  if (superclass.id === LClass.genericObjectid) { Log.w(true, 'Cannot un-extend "Object"'); return; }
-            const thiss: LClass = context.proxyObject;
-            let index: number = thiss.extends.indexOf(superclass);
+            const thiss: LClass = c.proxyObject;
+            let superclassid = superclass.id;
+            let extendsarr = c.data.extends;
+            let index: number = extendsarr.indexOf(superclassid);
             if (index < 0) return;
-
-            let newextends = thiss.extends.map(l => l.id);
-            let newextendedBy = superclass.extendedBy.map(l => l.id);
-            U.arrayRemoveAll(newextends, superclass.id)
-            U.arrayRemoveAll(newextendedBy, thiss.id)
-            SetFieldAction.new(thiss, 'extends', (newextends), '', true); // -=
-            SetFieldAction.new(superclass, 'extendedBy', (newextendedBy), '', true); // -=
+            // let extendedby = superclass.__raw.extendedBy;
+            // @ts-ignore
+            SetFieldAction.new(thiss, 'extends', superclass.id, '-=', true);
+            // @ts-ignore
+            SetFieldAction.new(superclass, 'extendedBy', thiss.id, '-=', true);
             // todo: update instances for (i = 0; i < thiss.instances.length; i++) { thiss.instances[i].unsetExtends(superclass); }
-            // todo: remove extend edge? here?
-
             // todo: check violations
             // const extendedby: LClass[] = [thiss, ...thiss.allSubClasses];
             // for (i = 0; i < extendedby.length; i++) { extendedby[i].checkViolations(true); }

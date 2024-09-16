@@ -1,4 +1,5 @@
 import {
+    Any,
     DAttribute, DClass, DEnumerator, Dictionary, DocString, DReference,
     DState,
     Input, LAttribute, LClass, LClassifier, LEnumerator,
@@ -6,7 +7,7 @@ import {
     LModel,
     LModelElement,
     LObject, LPointerTargetable, LReference, LStructuralFeature, LValue,
-    LViewElement, Pointer,
+    LViewElement, MultiSelect, Pointer,
     Select,
     Selectors, SetFieldAction, U, ValueDetail
 } from '../../joiner';
@@ -57,6 +58,24 @@ class builder {
     }
 
     static class(data: LModelElement, advanced: boolean): JSX.Element {
+        let lclass: LClass = data as any;
+        // let extendOptions: {value: string, label: string}[] lclass.extends.map(lsubclass=> ({value: lsubclass.id, label: lsubclass.name}));
+        let m2: LModel = lclass.model;
+        let pkgs = m2.allSubPackages;
+        let dclass = lclass.__raw;
+        let extendsarr = dclass.extends;
+        let extendValue: {value: string, label: string}[] = [];
+        let extendOptions: {label: string, options: {value: string, label: string}[]}[] = pkgs.map(p => (
+            {label: p.fullname, options: p.classes.map(c=> {
+                let opt = {value:c.id, label: c.name};
+                if (!extendsarr.includes(opt.value)) return opt;
+                if (opt.value === dclass.id) return undefined;
+                extendValue.push(opt);
+                return undefined;
+            }).filter(e=>!!e) as {value: string, label: string}[]}));
+        //let extendOptions = pkgs.map(p => ({label: p.fullname, options: p.classes.map(c=> ({value:c.id as string, label:c.name}))}));
+
+
         return (<section className={'properties-tab'}>
             {this.named(data, advanced)}
             <label className={'input-container'}>
@@ -66,6 +85,13 @@ class builder {
             <label className={'input-container'}>
                 <b className={'me-2'}>Interface:</b>
                 <Input data={data} field={'interface'} type={'checkbox'}/>
+            </label>
+            <label className={'input-container'}>
+                <b className={'me-2'}>Extends:</b>
+                <MultiSelect isMulti={true} options={extendOptions as any} value={extendValue} onChange={(v) => {
+                    console.log('setting extend', v);
+                    lclass.extends = v.map(e => e.value) as Any<string[]>;
+                }}></MultiSelect>
             </label>
             <label className={'input-container'}>
                 <b className={'me-2'}>Final:</b>

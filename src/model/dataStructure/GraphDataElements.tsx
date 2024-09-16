@@ -1824,6 +1824,10 @@ export class LVoidEdge<Context extends LogicContext<DVoidEdge> = any, D extends 
     edge!: LVoidEdge; // returns self. useful to get edge from edgePoints without triggering error if you are already on edge.
     __info_of__edge: Info = {type:"?LEdge", txt:"returns this if called on an edge, the containing edge if called on an EdgePoint, undefined otherwise."}
 
+    isExtend!: boolean;
+    isReference!: boolean;
+    isValue!: boolean;
+    isDependency!: boolean;
 
 /*
 replaced by startPoint
@@ -2786,3 +2790,4 @@ export type WGraph = getWParams<LGraph, DGraph>;
 export type WGraphElement = getWParams<LGraphElement, DGraphElement>;
 
 console.warn('ts loading graphDataElement');
+

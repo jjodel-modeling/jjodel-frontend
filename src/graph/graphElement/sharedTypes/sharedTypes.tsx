@@ -127,6 +127,7 @@ export class EdgeOwnProps extends GraphElementOwnProps {
     isField?: boolean = false;
     isEdge?: boolean = true;
     isReference?: boolean;
+    isValue?: boolean; // if missing it is deduced from isReference.
     isExtend?: boolean;
     isDepencency?: boolean; // package dep
 

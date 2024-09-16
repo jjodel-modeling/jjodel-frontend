@@ -286,7 +286,8 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
                     //d.labels = labels;
                     d.isReference = !!edgeOwnProps.isReference;
                     if (edgeOwnProps.isValue !== undefined) d.isValue = !!edgeOwnProps.isValue;
-                    else d.isValue = (d.isReference && ddata && ddata.className === 'DValue');
+                    else d.isValue = !!(d.isReference && ddata && ddata.className === 'DValue');
+                    if (d.isValue) d.isReference = false;
                     d.isDependency = !!edgeOwnProps.isDepencency;
                     d.isExtend = !!edgeOwnProps.isExtend;
                     let tn = (transientProperties.node[nodeid]);
@@ -760,47 +761,51 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
                 return;
             }
         }
+        let isDelete: boolean = false;
+        if (e.key === Keystrokes.delete){ isDelete = true; }
         if (e.shiftKey) {
             // todo: make them a switch
             if (e.key === "D" || e.key === "d") this.props.data?.duplicate(); else
-            if (e.key === "R" || e.key === "r") {
-                let nid = this.props.nodeid;
-                let tn = transientProperties.node[nid];
-                TRANSACTION(()=>{
-                    if (tn && tn.onDelete && tn.onDelete(this.props.node) === false) return;
-                    // if shapeless, erase the node directly.
-                    if (!this.props.data) {
-                        this.props.node.delete();
-                        return;
+            if (e.key === "R" || e.key === "r") { isDelete = true; }
+        }
+        console.log('keydown isDelete', isDelete);
+        if (isDelete){
+            let nid = this.props.nodeid;
+            let tn = transientProperties.node[nid];
+            TRANSACTION(()=>{
+                if (tn && tn.onDelete && tn.onDelete(this.props.node) === false) return;
+                // if shapeless, erase the node directly.
+                if (!this.props.data) {
+                    this.props.node.delete();
+                    return;
+                }
+                // if dictated by the model, change the model to erase indirectly the node.
+                if (!this.props.isEdge) {
+                    this.props.data.delete();
+                    return;
+                }
+                // if edge
+                let e = this.props.node as LVoidEdge;
+                let de = e.__raw;
+                if (de.isExtend) {
+                    let data: LClass = this.props.data as any;
+                    data.unsetExtends(e.end.model as LClass);
+                    // SetFieldAction(data.id, 'extends', )
+                }
+                if (de.isReference){
+                    if (this.props.data.className === 'DReference'){
+                        let ref: LReference = this.props.data as any;
+                        ref.type = ref.father.id as any;
+                    } else {
+                        let lval: LValue = this.props.data as any;
+                        lval.remove(e.end.model);
                     }
-                    // if dictated by the model, change the model to erase indirectly the node.
-                    if (!this.props.isEdge) {
-                        this.props.data.delete();
-                        return;
-                    }
-                    // if edge
-                    let e = this.props.node as LVoidEdge;
-                    let de = e.__raw;
-                    if (de.isExtend) {
-                        let data: LClass = this.props.data as any;
-                        data.unsetExtends(e.end.model);
-                        // SetFieldAction(data.id, 'extends', )
-                    }
-                    if (de.isReference){
-                        if (this.props.data.className === 'DReference'){
-                            let ref: LReference = this.props.data as any;
-                            ref.type = ref.father.id as any;
-                        } else {
-                            let lval: LValue = this.props.data as any;
-                            lval.remove(e.end.model);
-                        }
-                    }
-                    if (de.isDependency){ // pkg dependency
-                        let ref: LPackage = this.props.data as any;
-                    }
-                    else {}
-                })
-            }
+                }
+                if (de.isDependency){ // pkg dependency
+                    let ref: LPackage = this.props.data as any;
+                }
+                else {}
+            })
         }
         if (e.ctrlKey) {
             // if (e.key === Keystrokes.escape) this.props.node.toggleMinimize();
@@ -896,7 +901,10 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         let tn = transientProperties.node[props.nodeid];
         let ptr: Pointer<any>;
         if (!props.node) return false;
-        let dnode = props.node.__raw;
+        let node = props.node;
+        let dnode = node.__raw;
+        let edge: LVoidEdge = props.node as any;
+        let dedge: DVoidEdge = dnode as any;
         // if edge.label props is func, do not set in the dedge, just in transientproperties. totally override the "text" system.
         // it does not need collab sync:
         // because if the view is active for the other user, his synched jsx will generate the same function in transientProperties.
@@ -905,32 +913,30 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         if (props.onDelete) { tn.onDelete = props.onDelete; }
         if (props.longestLabel) { tn.longestLabel = props.longestLabel; }
         if (props.labels) { tn.labels = props.labels; }
-        if (props.anchorStart && props.isEdge) { (props.node as LEdge).anchorStart = props.anchorStart; }
-        if (props.anchorEnd && props.isEdge) { (props.node as LEdge).anchorEnd = props.anchorEnd; }
+        if (props.anchorStart && props.isEdge) { edge.anchorStart = props.anchorStart; }
+        if (props.anchorEnd && props.isEdge) { edge.anchorEnd = props.anchorEnd; }
         if (props.start && props.isEdge) {
             ptr = Pointers.from(props.start);
-            if (dnode.id !== ptr) (props.node as LEdge).start = ptr as any;
+            if (dedge.id !== ptr) edge.start = ptr as any;
         }
-        console.log("changing endpt", props, props.end, props.end?.model?.name);
+        // console.log("changing endpt", props, props.end, props.end?.model?.name);
         if (props.end && props.isEdge) {
             ptr = Pointers.from(props.end);
-            if (dnode.id !== ptr) (props.node as LEdge).end = ptr as any;
+            if (dedge.id !== ptr) edge.end = ptr as any;
         }
         if (props.anchorEnd) { tn.labels = props.labels; }
         // if (typeof props.viewid === 'string') { let old = props.viewid; if (old !== props.node.view.id) { this.forceUpdate(); ret = true;} }
-        if (typeof props.isReference) { let old = dnode.isReference; let n = !!props.isReference; if (old !== n) { props.node.isReference = n; ret = true;} }
-        if (typeof props.isExtend) { let old = dnode.isExtend; let n = !!props.isExtend; if (old !== n) { props.node.isExtend = n; ret = true;} }
-        if (typeof props.isValue) { let old = dnode.isValue; let n = !!props.isValue; if (old !== n) { props.node.isValue = n; ret = true;} }
-        if (typeof props.isDependency) { let old = dnode.iisDependency let n = !!props.isDependency; if (old !== n) { props.node.isDependency = n; ret = true;} }
-        if (typeof props.x === 'number') { let old = dnode.x; let n = +props.x; if (old !== n) { props.node.x = n; ret = true;} }
-        if (typeof props.y === 'number') { let old = dnode.y; let n = +props.y; if (old !== n) { props.node.y = n; ret = true;} }
+        if (typeof props.isReference) { let old = dedge.isReference; let n = !!props.isReference; if (old !== n) { edge.isReference = n; ret = true;} }
+        if (typeof props.isExtend) { let old = dedge.isExtend; let n = !!props.isExtend; if (old !== n) { edge.isExtend = n; ret = true;} }
+        if (typeof props.isValue) { let old = dedge.isValue; let n = !!props.isValue; if (old !== n) { edge.isValue = n; ret = true;} }
+        if (typeof props.isDependency) { let old = dedge.isDependency; let n = !!props.isDependency; if (old !== n) { edge.isDependency = n; ret = true;} }
+        if (typeof props.x === 'number') { let old = dnode.x; let n = +props.x; if (old !== n) { node.x = n; ret = true;} }
+        if (typeof props.y === 'number') { let old = dnode.y; let n = +props.y; if (old !== n) { node.y = n; ret = true;} }
         // risk loop: todo loop detection and skip setting
-        if (typeof props.w === 'number') { let old = dnode.w; let n = +props.w; if (old !== n) { props.node.w = n; ret = true;} }
-        if (typeof props.h === 'number') { let old = dnode.h; let n = +props.h; if (old !== n) { props.node.h = n; ret = true;} }
-        if (typeof props.width  === 'number') { let old = dnode.w; let n = +props.width;  if (old !== n) { props.node.w = n; ret = true;} }
-        if (typeof props.height === 'number') { let old = dnode.h; let n = +props.height; if (old !== n) { props.node.h = n; ret = true;} }
-
-
+        if (typeof props.w === 'number') { let old = dnode.w; let n = +props.w; if (old !== n) { node.w = n; ret = true;} }
+        if (typeof props.h === 'number') { let old = dnode.h; let n = +props.h; if (old !== n) { node.h = n; ret = true;} }
+        if (typeof props.width  === 'number') { let old = dnode.w; let n = +props.width;  if (old !== n) { node.w = n; ret = true;} }
+        if (typeof props.height === 'number') { let old = dnode.h; let n = +props.height; if (old !== n) { node.h = n; ret = true;} }
 
         return ret;
     }
