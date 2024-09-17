@@ -182,8 +182,10 @@ function ContextMenuComponent(props: AllProps) {
         /* Delete */
         jsxList.push(<div onClick={() => {
             close();
-            data.delete();
-            node.delete();
+            console.log('delete ctxmenu', {data, node});
+            if (data) data.delete();
+            else node.delete();// if there is data, then the node is indirectly deleted, no need to call it too.
+            //node.delete();
         }} className={'col item'}>{icon['delete']} Delete<i
             className='bi bi-backspace' style={{fontSize: '1em', float: 'right', paddingTop: '2px', fontWeight: '800'}}></i></div>);
         jsxList.push(<hr className={'my-1'} />);
