@@ -2,10 +2,12 @@ import { meanBy } from 'lodash';
 import { useState, MouseEventHandler } from 'react';
 import { IconTheme } from 'react-hot-toast';
 import {useNavigate} from 'react-router-dom';
-import { LProject } from '../../joiner';
+import {DProject, LProject, SetRootFieldAction, U} from '../../joiner';
 
 import { icon } from './icons/Icons';
 import {DashProps} from "./Dashboard";
+import Collaborative from "../../components/collaborative/Collaborative";
+import {ProjectsApi} from "../../api/persistance";
 
 interface StateProps {
     projects: LProject[];
@@ -85,17 +87,27 @@ function LeftBar(props: LeftBarProps): JSX.Element {
 
     // };
 
-    const {active} = props;
+    const {active, project} = props;
     const navigate = useNavigate();
 
-    const toggleFavorite = (project: LProject) => {
-        project.isFavorite = !project.isFavorite;
+    const selectProject= (project: LProject) => {
+        navigate(`/project?id=${project.id}`);
+        U.refresh();
     };
 
-
-    const selectProject=()=> alert('todo: la funzione era inesistente nel pull');
-
-    let project: LProject = props.project as any;
+    const closeProject = () => {
+        navigate('/allProjects');
+        Collaborative.client.off('pullAction');
+        Collaborative.client.disconnect();
+        SetRootFieldAction.new('collaborativeSession', false);
+        U.refresh();
+    }
+    const toggleFavorite = async() => {
+        await ProjectsApi.favorite(project?.__raw as DProject);
+    };
+    const exportProject = async() => {
+        U.download(`${project?.name}.jjodel`, JSON.stringify(project?.__raw));
+    }
 
     return(<>
 
@@ -103,17 +115,17 @@ function LeftBar(props: LeftBarProps): JSX.Element {
             <div className={'leftbar border-end border-light-subtle '}>
 
                 <i className="bi bi-search"></i>
-                <input placeholder={'Search for anything'}type={'text'} name='search-text' />
+                <input placeholder={'Search for anything'} type={'text'} name='search-text' />
 
                 {/* @ts-ignore */}
                 <Menu title={props.project.name}>
                     <Item icon={icon['edit']}>Edit </Item>
-                    <Item icon={icon['export']}>Export as...</Item>
-                    <Item icon={icon['duplicate']}>Duplicate </Item>
-                    <Item icon={icon['favorite']}>{!project.isFavorite ? 'Add to favorites ' : 'Remove from favorites '}</Item>
-                    <Item icon={icon['share']}>Public link </Item>
-                    <Item icon={icon['delete']}>Delete </Item>
-                    <Item icon={icon['close']}>Close project </Item>
+                    <Item action={exportProject} icon={icon['download']}>Download</Item>
+                    {/*<Item icon={icon['duplicate']}>Duplicate </Item>*/}
+                    <Item action={toggleFavorite} icon={!project?.isFavorite ? icon['favorite'] : icon['favoriteFill']}>{!project?.isFavorite ? 'Add to favorites ' : 'Remove from favorites '}</Item>
+                    {/*<Item icon={icon['share']}>Public link </Item>*/}
+                    {/*<Item icon={icon['delete']}>Delete </Item>*/}
+                    <Item action={closeProject} icon={icon['close']}>Close project </Item>
                 </Menu>
 
                 {/* {props.projects.filter(p => p.favorite).length > 0 &&
@@ -139,7 +151,7 @@ function LeftBar(props: LeftBarProps): JSX.Element {
             <div className={'leftbar border-end border-light-subtle '}>
 
                 <i className="bi bi-search"></i>
-                <input placeholder={'Search for anything'}type={'text'} name='search-text' />
+                <input placeholder={'Search for anything'} type={'text'} name='search-text' />
 
                 <Menu>
                     <Item action={'allProjects'} icon={icon['dashboard']}>All projects </Item>
@@ -147,7 +159,7 @@ function LeftBar(props: LeftBarProps): JSX.Element {
                 </Menu>
                 {props.projects && props.projects.filter(p => p.isFavorite).length > 0 &&
                     <Menu title={"Starred"} mode={'collapsable'}>
-                        {props.projects.filter(p => p.isFavorite).map(p => <Item icon={icon['folder']} action={e => selectProject()}>{p.name}</Item>)}
+                        {props.projects.filter(p => p.isFavorite).map(p => <Item icon={icon['folder']} action={e => selectProject(p)}>{p.name}</Item>)}
                     </Menu>
                 }
                 {/* <Menu>
