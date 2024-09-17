@@ -6,8 +6,7 @@ import {useStateIfMounted} from 'use-state-if-mounted';
 import './inputselect.scss';
 
 
-function SelectComponent(props: AllProps) {
-
+function SelectorComponent(props: AllProps) {
     const data = props.data;
     const [showTooltip, setShowTooltip] = useStateIfMounted(false);
     if (!data) return(<></>);
@@ -25,15 +24,41 @@ function SelectComponent(props: AllProps) {
    // css += (jsxLabel) ? 'ms-1' : 'ms-auto';
     css += (props.hidden) ? ' hidden-input' : '';
 
-    let autofeed = (props.autofeed ? props.autofeed : false);
+    
+    /* @ts-ignore */
+    const setter = (id) => {l.value=id} 
+    
+    /* @ts-ignore */
+    const getter = () => l.$type.__raw.values[0];
+    
 
-    function SelectChange(evt: React.ChangeEvent<HTMLSelectElement>) {
+    function SelectorChange(evt: React.ChangeEvent<HTMLSelectElement>) {
         if (readOnly) return;
-        const newValue = evt.target.value;
-        const oldValue = props.getter ? props.getter(d, field) : d[field] as string;
-        if (newValue === oldValue) return;
-        if (props.setter) props.setter(data, field, newValue);
-        else (data as GObject)[field] = newValue;
+
+        const newValue = evt.target.value; alert(evt.target.value);
+        const oldValue = getter(); 
+        setter(newValue);
+    }
+
+    // 
+
+    function getOptions(): any {
+        {/* @ts-ignore */}
+
+        return (<>
+           {/* @ts-ignore */}
+            {l.type.father.instanceof[field].type.allInstances.map(cl =>   
+                <>
+                {l[field].value.id === cl.id ?
+                    <option value={cl.id} selected>{cl.name}</option>  
+                    :
+                    <option value={cl.id}>{cl.name}</option>  
+                }
+                </>
+            )}
+
+        </>)
+        
     }
 
     const otherprops: GObject = {...props};
@@ -53,34 +78,21 @@ function SelectComponent(props: AllProps) {
     U.objectMergeInPlace(inputStyle, props.inputStyle || {}, props.style || {});
     let className = [props.className, props.inputClassName, css].join(' ');
 
-    let select = (<select {...otherprops} className={className} disabled={readOnly}
+
+    let select = (<select {...otherprops} className={className + ' model-select'} disabled={readOnly}
             style={props.inputStyle}
             value={value}
-            onChange={SelectChange}>           
-
+            onChange={SelectorChange}>
+                {getOptions()}
     </select>);
 
 
-    return select;/*
-    return (<label ref={props.ref as any} className={'d-flex p-1'} {...otherprops}>
-        {(label || jsxLabel) && <label className={'my-auto'}
-                                       onMouseEnter={e => setShowTooltip(true)}
-                                       onMouseLeave={e => setShowTooltip(false)}>
-            {label}
-            {jsxLabel}
-        </label>}
-        {(tooltip && showTooltip) && <div className={'my-tooltip'}>
-            <b className={'text-center text-capitalize'}>{field}</b>
-            <br />
-            <label>{tooltip}</label>
-        </div>}
-        {select}
-    </label>);*/
+    return select;
 }
-SelectComponent.cname = 'SelectComponent';
-export interface SelectOwnProps {
+
+SelectorComponent.cname = 'SelectorComponent';
+export interface SelectorOwnProps {
     data?: DPointerTargetable | Pointer<DPointerTargetable, 1, 1, LPointerTargetable>;
-    autofeed: boolean;
     field: string;
     label?: string;
     jsxLabel?: ReactNode;
@@ -95,10 +107,10 @@ export interface SelectOwnProps {
     inputClassName?: string;
     inputStyle?: GObject;
     // DANGER: use the data provided in parameters instead of using js closure, as the proxy accessed from using closure won't be updated in rerenders.
-    getter?: <T extends DPointerTargetable = any>(data: any | T | Pointer<T>, field: (string | number | symbol) | keyof T) => string;
+    my_getter?: <T extends DPointerTargetable = any>(data: any | T | Pointer<T>, field: (string | number | symbol) | keyof T) => string;
     // setter?: <T extends DPointerTargetable = any>(data: T | Pointer<T>, field: keyof T, selectedValue: string) => void;
     // setter?: <T extends DPointerTargetable = any>(data: any | T | Pointer<T>, field: (string | number | symbol) | keyof T, selectedValue: string) => void;
-    setter?: (data: any, field: string, selectedValue: string) => void;
+    my_setter?: (data: any, field: string, selectedValue: string) => void;
 
 }
 interface StateProps {
@@ -108,10 +120,10 @@ interface StateProps {
     returns: LClass[]; }
 interface DispatchProps { }
 
-type AllProps = Overlap<SelectOwnProps, Overlap<StateProps, DispatchProps>>;
+type AllProps = Overlap<SelectorOwnProps, Overlap<StateProps, DispatchProps>>;
 
 
-function mapStateToProps(state: DState, ownProps: SelectOwnProps): StateProps {
+function mapStateToProps(state: DState, ownProps: SelectorOwnProps): StateProps {
     const ret: StateProps = {} as any;
     if (!ownProps.data) return ret;
     const pointer: Pointer = typeof ownProps.data === 'string' ? ownProps.data : ownProps.data.id;
@@ -128,17 +140,17 @@ function mapDispatchToProps(dispatch: Dispatch<any>): DispatchProps {
 }
 
 
-export const SelectConnected = connect<StateProps, DispatchProps, SelectOwnProps, DState>(
+export const SelectorConnected = connect<StateProps, DispatchProps, SelectorOwnProps, DState>(
     mapStateToProps,
     mapDispatchToProps
-)(SelectComponent);
+)(SelectorComponent);
 
-export const Select = (props: SelectOwnProps, children: (string | React.Component)[] = []): ReactElement => {
-    return <SelectConnected {...{...props, children}} />;
+export const Selector = (props: SelectorOwnProps, children: (string | React.Component)[] = []): ReactElement => {
+    return <SelectorConnected {...{...props, children}} />;
 }
 
 
-SelectComponent.cname = 'SelectComponent';
-SelectConnected.cname = 'SelectConnected';
-Select.cname = 'Select';
-export default Select;
+SelectorComponent.cname = 'SelectorComponent';
+SelectorConnected.cname = 'SelectorConnected';
+Selector.cname = 'Selector';
+export default Selector;
