@@ -37,8 +37,6 @@
     }
 
     .toolbar-section-label{
-
-        margin-bottom: 0.25rem;
         margin-left: 0.3rem;
         display: block;
         font-family: 'Inter Tight', sans-serif;
@@ -126,18 +124,16 @@
   & .my-auto {
     font-family: "Inter Tight", sans-serif;
     font-weight: 200;
-
     margin: 5px 10px 5px 10px!important;
+  }
+
+  hr.my-1{
+    color: white; //  #8a8a8a;
+    left: 5px;
+    width: calc(100% - 10px);
   }
 }
 
-hr.my-1{
-  
-  color: white; //  #8a8a8a;
-  left: 5px;
-  padding-bottom: 0px!important;
-  margin-bottom: 0px!important;
-}
 
 
 .element-icon {
@@ -149,6 +145,8 @@ hr.my-1{
   border-radius: 24px;
   text-align: center;
   margin-left: 2px;
+  margin-top: auto;
+  margin-bottom: auto;
 
 }
 

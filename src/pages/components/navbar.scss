@@ -231,7 +231,7 @@
   ul li hr {
     position: relative;
     color: #8a8a8a;
-    width: 180px;
+    width: calc(100% - 10px);
     left: 5px;
   }
 
