@@ -2001,14 +2001,31 @@ export class LPointerTargetable<Context extends LogicContext<DPointerTargetable>
                 // child.node?.delete();
             }
 
-            for (let dependency of dependencies) {
+
+            outerfor: for (let dependency of dependencies) {
                 const root = dependency.root;
-                const obj = dependency.obj;
+                const obj: DPointerTargetable = dependency.obj;
                 const field = dependency.field;
                 const op = dependency.op;
                 const val = (op === '-=') ? data.id : '';
+                let lobj = LPointerTargetable.wrap(obj);
+                if (!lobj) return;
+                switch (field as string){
+                    default: Log.ee('Unexpected case in delete:', field, data); break;
+                    case 'value': case 'values':
+                        SetFieldAction.new(obj, 'values', data.id, '-=', false); // pointedby would be removed from the element we are deleting, so it is irrelevant
+                        continue outerfor;
+                        break;
+                    case 'type':
+                        let dobj = lobj.__raw;
+                        if (lobj.className === 'DAttribute'){ lobj.type = "Pointer_ESTRING"; continue outerfor; }
+                        if (lobj.className === 'DReference'){ lobj.type = obj.id; continue outerfor; }
+                        break;
+                    // no-op già gestito sopra
+                    case 'subelements': case 'children': case 'subviews': break;
+                }
                 if ((root === 'idlookup') && obj && field) {
-                    console.log('Delete', `SetFieldAction.new('${obj}', '${field}', '${val}', '${op}');`);
+                    console.log('Delete', `SetFieldAction.new('${obj}', '${field}', '${val}', '${op}');`, {dependency});
                     SetFieldAction.new(obj, field, val, op, false);
                 } else {
                     console.log('Delete', `SetRootFieldAction.new('${root}', '${val}', '${op}');`);
