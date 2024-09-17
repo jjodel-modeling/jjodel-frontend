@@ -543,6 +543,7 @@ function unsafereducer(oldState: DState = initialState, action: Action): DState 
         if (!tp) ((isNode ? transientProperties.node : transientProperties.view) as GObject)[ptr] = tp = {} as any;
         let val: string = dv[key];
         if (!val) { tp[key] = undefined as any; return true; }
+        if (typeof val === "function") { tp[key] = val; return true; }
         let allContextKeys = {...contextFixedKeys};
         let vid: Pointer<DViewElement> = isNode ? (tp as NodeTransientProperties).mainView?.id : ptr as any;
         if (!vid) return false; // leave pending & recompute them on next reducer action
@@ -581,25 +582,25 @@ function unsafereducer(oldState: DState = initialState, action: Action): DState 
     if (arr.length) {
         let successfullyParsed: Dictionary<string, boolean> = {};
         for (const id of new Set(arr)) successfullyParsed[id] = parseLabel(id, 'labels', true);
-        ret.NODES_RECOMPILE_labels = arr.filter(e => successfullyParsed[e]);
+        ret.NODES_RECOMPILE_labels = arr.filter(e => !successfullyParsed[e]);
     }
     arr = ret.NODES_RECOMPILE_longestLabel;
     if (arr.length) {
         let successfullyParsed: Dictionary<string, boolean> = {};
         for (const id of new Set(arr)) successfullyParsed[id] = parseLabel(id, 'longestLabel', true);
-        ret.NODES_RECOMPILE_longestLabel = arr.filter(e => successfullyParsed[e]);
+        ret.NODES_RECOMPILE_longestLabel = arr.filter(e => !successfullyParsed[e]);
     }
     arr = ret.VIEWS_RECOMPILE_labels;
     if (arr.length) {
         let successfullyParsed: Dictionary<string, boolean> = {};
         for (const id of new Set(arr)) successfullyParsed[id] = parseLabel(id, 'labels', false);
-        ret.VIEWS_RECOMPILE_labels = arr.filter(e => successfullyParsed[e]);
+        ret.VIEWS_RECOMPILE_labels = arr.filter(e => !successfullyParsed[e]);
     }
     arr = ret.VIEWS_RECOMPILE_longestLabel;
     if (arr.length) {
         let successfullyParsed: Dictionary<string, boolean> = {};
         for (const id of new Set(arr)) successfullyParsed[id] = parseLabel(id, 'longestLabel', false);
-        ret.VIEWS_RECOMPILE_longestLabel = arr.filter(e => successfullyParsed[e]);
+        ret.VIEWS_RECOMPILE_longestLabel = arr.filter(e => !successfullyParsed[e]);
     }
 
     // local changes to out-of-redux stuff
