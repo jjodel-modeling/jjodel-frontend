@@ -970,10 +970,12 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         /// set classes
         if (this.props.node) {
             let isSelected: Dictionary<Pointer<DUser>, boolean> = this.props.node.__raw.isSelected;
-            if (isSelected[DUser.current]) { // todo: better to just use css attribute selectors [data-userselecting = "userID"]
-                classes.push('selected-by-me');
-                if (Object.keys(isSelected).length > 1) classes.push('selected-by-others');
-            } else if (Object.keys(isSelected).length) classes.push('selected-by-others');
+            if(isSelected) {
+                if (isSelected[DUser.current]) { // todo: better to just use css attribute selectors [data-userselecting = "userID"]
+                    classes.push('selected-by-me');
+                    if (Object.keys(isSelected).length > 1) classes.push('selected-by-others');
+                } else if (Object.keys(isSelected).length) classes.push('selected-by-others');
+            }
         }
 
         classes.push(this.props.data?.className || 'DVoid');
