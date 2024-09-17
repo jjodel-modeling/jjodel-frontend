@@ -97,8 +97,10 @@ export class U {
     static async decompressState(state: string): Promise<string> {
         return await decompressFromUTF16(state);
     }
-    static async compressedState(): Promise<string> {
-        return await compressToUTF16(JSON.stringify(store.getState()));
+    static async compressedState(id: Pointer): Promise<string> {
+        const state = store.getState();
+        state.idlookup[id].state = '';
+        return await compressToUTF16(JSON.stringify(state));
         /*
         const keys: (keyof DState)[]= [
             'attributes',

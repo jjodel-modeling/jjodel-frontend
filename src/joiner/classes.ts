@@ -142,6 +142,7 @@ import {OclEngine} from "@stekoe/ocl.js";
 import {ReactNode} from "react";
 import {ProjectsApi} from "../api/persistance";
 import {labelfunc} from "../model/dataStructure/GraphDataElements";
+import {Dummy} from "../common/Dummy";
 
 var windoww = window as any;
 // qui dichiarazioni di tipi che non sono importabili con "import type", ma che devono essere davvero importate a run-time (eg. per fare un "extend", chiamare un costruttore o usare un metodo statico)
@@ -1988,56 +1989,7 @@ export class LPointerTargetable<Context extends LogicContext<DPointerTargetable>
 
     public delete(): void {}
     protected get_delete(context: Context): () => void {
-        const data: LPointerTargetable & GObject = context.proxyObject;
-        const dependencies = this.get_dependencies(context)();
-
-        const ret = () => {
-            if (context.data.id.indexOf('Pointer_View') !== -1 ) return; // cannot delete default views/viewpoints
-            if (context.data.__readonly) return;
-            for (let child of data.children) {
-                child.delete();
-                // todo: if a m1-dvalue which conforms to a m2-reference with "containment" is deleted, need to delete also target.
-                // maybe better to do through override?
-                // child.node?.delete();
-            }
-
-
-            outerfor: for (let dependency of dependencies) {
-                const root = dependency.root;
-                const obj: DPointerTargetable = dependency.obj;
-                const field = dependency.field;
-                const op = dependency.op;
-                const val = (op === '-=') ? data.id : '';
-                let lobj = LPointerTargetable.wrap(obj);
-                if (!lobj) return;
-                switch (field as string){
-                    default: Log.ee('Unexpected case in delete:', field, data); break;
-                    case 'value': case 'values':
-                        SetFieldAction.new(obj, 'values', data.id, '-=', false); // pointedby would be removed from the element we are deleting, so it is irrelevant
-                        continue outerfor;
-                        break;
-                    case 'type':
-                        let dobj = lobj.__raw;
-                        if (lobj.className === 'DAttribute'){ lobj.type = "Pointer_ESTRING"; continue outerfor; }
-                        if (lobj.className === 'DReference'){ lobj.type = obj.id; continue outerfor; }
-                        break;
-                    // no-op già gestito sopra
-                    case 'subelements': case 'children': case 'subviews': break;
-                }
-                if ((root === 'idlookup') && obj && field) {
-                    console.log('Delete', `SetFieldAction.new('${obj}', '${field}', '${val}', '${op}');`, {dependency});
-                    SetFieldAction.new(obj, field, val, op, false);
-                } else {
-                    console.log('Delete', `SetRootFieldAction.new('${root}', '${val}', '${op}');`);
-                    SetRootFieldAction.new(root, val, op, false);
-                }
-            }
-            if (data.nodes) data.nodes.map((node: any) => node.delete());
-            SetRootFieldAction.new('ELEMENT_DELETED', data.id, '+=', false); // here no need to IsPointer because it only affects Transient stuff
-            //SetRootFieldAction.new('idlookup', data.id, '-=', false);
-            DeleteElementAction.new(data.id);
-        };
-        return () => TRANSACTION(ret);
+        return Dummy.get_delete(this, context);
     }
 }
 RuntimeAccessibleClass.set_extend(RuntimeAccessibleClass, LPointerTargetable);

@@ -4755,11 +4755,15 @@ export class LObject<Context extends LogicContext<DObject> = any, C extends Cont
     }
 
 
-    protected get_delete(c: Context): () => void{
-        return ()=>{
-            let m2: LClass = this.get_instanceof(c);
-            if (m2.isSingleton) { Log.ww('Object is a singleton and cannot be removed, remove his singleton flag in m2 first.', c.data); }
-            super.get_delete(c);
+    protected get_delete(context: Context): () => void {
+        return () => {
+            let c: LClass = this.get_instanceof(context);
+            if(c && c.isSingleton) {
+                Log.ww('Object is a singleton and cannot be removed, remove his singleton flag in m2 first.', context.data);
+                return;
+            }
+            console.log('test 0')
+            super.get_delete(context)();
         }
     }
     protected get_features(context: Context): this['features'] {

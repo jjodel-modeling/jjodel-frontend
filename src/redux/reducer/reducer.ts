@@ -409,7 +409,7 @@ ret .b = 3
 export function reducer(oldState: DState = initialState, action: Action): DState {
     try{ return unsafereducer(oldState, action); }
     catch(e) {
-        console.error('unhandled error in reducer', {oldState, action});
+        console.error('unhandled error in reducer', {e, oldState, action});
         return oldState;
     }
 }
