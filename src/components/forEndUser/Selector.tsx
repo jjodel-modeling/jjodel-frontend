@@ -26,16 +26,17 @@ function SelectorComponent(props: AllProps) {
 
     
     /* @ts-ignore */
-    const setter = (id) => {l.value=id} 
+    const setter = (id) => {l[field].value=id} 
     
     /* @ts-ignore */
-    const getter = () => l.$type.__raw.values[0];
+
+    const getter = () => l[field].value;//l.$type.__raw.values[0];
     
 
     function SelectorChange(evt: React.ChangeEvent<HTMLSelectElement>) {
         if (readOnly) return;
 
-        const newValue = evt.target.value; alert(evt.target.value);
+        const newValue = evt.target.value; 
         const oldValue = getter(); 
         setter(newValue);
     }
@@ -43,22 +44,23 @@ function SelectorComponent(props: AllProps) {
     // 
 
     function getOptions(): any {
-        {/* @ts-ignore */}
 
         return (<>
-           {/* @ts-ignore */}
-            {l.type.father.instanceof[field].type.allInstances.map(cl =>   
-                <>
-                {l[field].value.id === cl.id ?
-                    <option value={cl.id} selected>{cl.name}</option>  
+            {l[field].type.allInstances.map(cl =><>
+                {typeof(l[field].value) === 'undefined' ? 
+                    <option value={cl.id}>{cl.name}</option> 
                     :
-                    <option value={cl.id}>{cl.name}</option>  
+                    <>
+                    {l[field].value.id === cl.id ?
+                        <option value={cl.id} selected>{cl.name}</option> 
+                        :
+                        <option value={cl.id}>{cl.name}</option>  
+                    }
+                    </>
                 }
-                </>
-            )}
 
-        </>)
-        
+            </>)}
+        </>); 
     }
 
     const otherprops: GObject = {...props};

@@ -100,11 +100,11 @@ function BottomBarComponent(props: AllProps): JSX.Element {
             {data?.name}&nbsp;
             {nodepos}
         </div>
-        <div className={'widgetbar float-end'}>
+        {/* <div className={'widgetbar float-end'}>
             <Notify  type={notificationType.Clients} alert={alertType.Normal} message={''} />
             <Notify  type={notificationType.Terminal} alert={alertType.Normal} message={''} />
             <Notify  type={notificationType.Messages} alert={alertType.Normal} message={''} />
-        </div>
+        </div> */}
     </footer>)
 }
 interface OwnProps {}
