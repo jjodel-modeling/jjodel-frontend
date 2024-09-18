@@ -1,3 +1,5 @@
+/* Viewpoints */
+
 import React, {Dispatch, ReactElement, useState} from 'react';
 import {connect} from 'react-redux';
 import {
@@ -202,13 +204,13 @@ function NestedViewComponent(props: AllProps) {
                             <Sep />
                             <Btn icon={'add'} action={addVP} tip={'Create a new viewpoint'} />
                         </CommandBar>
-                        <InternalToggle
+                        {/* <InternalToggle
                             name={'advanced'}
                             values={{false: 'false', true: 'true'}}
                             labels={{false: 'show priorities', true: 'hide priorities'}}
                             style={{float: 'right', paddingRight: '20px', fontSize: '0.9em'}}
                             size={'small'}
-                        />
+                        /> */}
 
                     </h1>
                 </div>
