@@ -4,6 +4,7 @@ import {FakeStateProps} from "../../joiner/types";
 import React, {Dispatch, ReactElement, useState} from "react";
 import {connect} from "react-redux";
 
+import swen from '../../static/img/swen.png';
 
 enum notificationType {
     Clients = 0,
@@ -49,7 +50,7 @@ const Notify = (props: Props) => {
 
     return (
         <React.Fragment>
-            <div onClick={openNotify} className={'widget'}><i className={ `bi ${typeInfo[props.type].icon} ${isOpen != null && 'active'}` }></i><label>{typeInfo[props.type].name}</label></div>
+            <div onClick={openNotify} className={'widget'}><i className={`bi ${typeInfo[props.type].icon} ${isOpen != null && 'active'}` }></i><label>{typeInfo[props.type].name}</label></div>
 
             {isOpen != null &&
                 <div className={'notify show'}>
@@ -77,6 +78,7 @@ function openControl(){
 }
 
 function BottomBarComponent(props: AllProps): JSX.Element {
+    const [swenOpen, setSwen] = useState(false);
     const {node,data} = props;
     let nodepos: string | undefined;
     if (node) {
@@ -93,13 +95,21 @@ function BottomBarComponent(props: AllProps): JSX.Element {
 
     return(<footer className={'footer'}>
         <label className={'me-3'}>
-            Made with <i className="bi bi-heart-fill" /> in the swen group
+            Made with <i className="bi bi-heart-fill" onClick={() => setSwen(true)}/> in the swen group
         </label>
         <div style={{width: '100px'}}></div>
         <div className={'coordinates'} hidden={!node}>
             {data?.name}&nbsp;
             {nodepos}
         </div>
+        {swenOpen && 
+            <>
+                <div className='swen-container'></div>
+                <div className='swen'>
+                    <img src={swen} onClick={(e) => setSwen(false)}/>
+                </div>
+            </>
+        }
         {/* <div className={'widgetbar float-end'}>
             <Notify  type={notificationType.Clients} alert={alertType.Normal} message={''} />
             <Notify  type={notificationType.Terminal} alert={alertType.Normal} message={''} />
