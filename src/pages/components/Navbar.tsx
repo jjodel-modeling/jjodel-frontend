@@ -116,7 +116,7 @@ const User = (props: UserProps) => {
         <div className={'initials'}>
             {initials.toUpperCase()}
         </div>
-        &nbsp;
+        &nbsp;&nbsp;
         <span>{name}</span>
     </div>);
 };
