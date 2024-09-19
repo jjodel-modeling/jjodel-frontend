@@ -260,6 +260,9 @@ class builder {
                 </label>
             }
             {this.forceConform(object)}
+            {object.features.map(f => <div id={`Object-${f.id}`}>
+                {this.value(f, {}, advanced)}
+            </div>)}
         </section>);
     }
     static forceConform(me: LObject) {

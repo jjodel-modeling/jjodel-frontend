@@ -4557,7 +4557,8 @@ export class LObject<Context extends LogicContext<DObject> = any, C extends Cont
     protected get_allChildren(context: Context): this["children"] { return super.get_children(context); }
 
     protected get_children(context: Context, sort: boolean = true): this["children"] {
-        let childs: LValue[] = super.get_children(context);
+        const pointers = [...(new Set(super.get_children(context).map(c => c.id)))];
+        let childs: LValue[] = LValue.fromArr(pointers);
         let meta: LClass = context.proxyObject.instanceof;
         // if (!sort && (!meta || meta.partial)) return childs;
         let conformchildren: undefined | Pointer[] = meta && !meta.partial ? meta.allChildren.map(c => c.id) : undefined;
