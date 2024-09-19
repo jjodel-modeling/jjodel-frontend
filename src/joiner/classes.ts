@@ -804,7 +804,8 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
             if (lmodel){
                 let lthis: LModel = LPointerTargetable.fromD(this.thiss);
                 for (let c of lmodel.classes) {
-                    if (c.isSingleton) lthis.addObject({}, c, true);
+                    let d: DClass = c.__raw;
+                    if (d.isSingleton) lthis.addObject({name: d.name}, c, true);
                 }
             }
         });

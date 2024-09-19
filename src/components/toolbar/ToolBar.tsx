@@ -282,7 +282,7 @@ function ToolBarComponent(props: AllProps, state: ThisState) {
             </div>
         );
         if (node) subleveloptions.push(...addChildren(downward[node.className]));
-        let rootobjs = classes?.filter((lClass) => {return !lClass.abstract && !lClass.interface}).map((lClass, index) => {
+        let rootobjs = classes?.filter((lClass) => lClass.rootable).map((lClass, index) => {
             let dclass = lClass.__raw;
             return <><div
                 onMouseEnter={e => SetRootFieldAction.new('tooltip', lClass.annotations.map(a => a.source).join(' '))}
@@ -318,7 +318,6 @@ function ToolBarComponent(props: AllProps, state: ThisState) {
     let separator = <hr className={'my-1'} /> as any;
     // @ts-ignore
     content = contentarr.separator(separator);// .flat() as any;
-    console.log("toolbar", {contentarr, separator, content});
 
 
     /* backup  */
@@ -383,9 +382,9 @@ type AllProps = OwnProps & StateProps & DispatchProps;
 function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     const ret: StateProps = {} as any;
     const nodeid = state._lastSelected?.node;
-    if(nodeid) ret.node = LGraphElement.fromPointer(nodeid);
+    if (nodeid) ret.node = LGraphElement.fromPointer(nodeid);
     else ret.node = null;
-    if(ownProps.metamodelId) { ret.metamodel = LModel.fromPointer(ownProps.metamodelId); }
+    if (ownProps.metamodelId) { ret.metamodel = LModel.fromPointer(ownProps.metamodelId); }
     return ret;
 }
 /*

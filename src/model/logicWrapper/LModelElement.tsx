@@ -1,4 +1,4 @@
-import type {
+import {
     LVoidVertex,
     PackagePointers,
     EdgePointers,
@@ -54,6 +54,7 @@ import {
     ShortAttribSuperTypes,
     store,
     TargetableProxyHandler,
+    L,
     TRANSACTION,
     U, Uarr
 } from "../../joiner";
@@ -2013,6 +2014,7 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
     }
     get_isSingleton(c: Context): LClass['isSingleton'] { return this.get_singleton(c); }
     get_singleton(c: Context): LClass['isSingleton']{ return c.data.isSingleton; }
+    set_isSingleton(val: boolean, c: Context): boolean{ return this.set_singleton(val, c); }
     set_singleton(val: boolean, c: Context): boolean{
         if (c.data.instances.length > 1) { U.alert('e', 'Class cannot become a singleton since there are multiple instances already. Delete some and retry.'); return true; }
         if (c.data.extendedBy.length > 0) { U.alert('e', 'Class cannot become a singleton unless is also final, and is currently extended. Remove the subclasses before.'); return true; }
@@ -2025,7 +2027,7 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
                 let modelsWithInstance: Pointer<DModel>[] = instances.map( o => o.model?.id );
                 for (let m1 of m2.instances) {
                     if (modelsWithInstance.includes(m1.id)) continue;
-                    m1.addObject({}, c.data, true);
+                    m1.addObject({name: c.data.name}, c.data, true);
                 }
             }
         });
@@ -2051,10 +2053,16 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
         for (let r of refs) if (r&&r.composition) return true;
         return false;
     }
-    get_isRootable(c: Context): LClass['rootable'] { return this.get_instantiable(c); }
-    get_rootable(c: Context): LClass['rootable'] {
-        if (c.data.rootable !== undefined) return !!c.data.rootable;
-        return !(this.get_isComposed(c) || this.get_isAggregated(c)); }
+    get_isRootable(c: Context): LClass['rootable'] { return this.get_rootable(c); }
+    protected get_rootable(c: Context): this["rootable"] {
+        if (c.data.rootable !== undefined) return c.data.rootable;
+        else return this.get_instantiable(c) && !this.get_isComposed(c);
+    }
+    protected set_rootable(val: this["rootable"], c: Context): boolean {
+        SetFieldAction.new(c.data, 'rootable', val);
+        return true;
+    }
+
     protected get_ownAttributes(context: Context): this['ownAttributes'] {
         return LAttribute.fromPointer(context.data.attributes);
     }
@@ -3062,15 +3070,6 @@ export class LReference<Context extends LogicContext<DReference> = any, C extend
         })
         return true;
     }
-    protected get_rootable(c: Context): this["rootable"] {
-        if (c.data.rootable !== undefined) return c.data.rootable;
-        else return !c.data.composition;
-    }
-    protected set_rootable(val: this["rootable"], c: Context): boolean {
-        SetFieldAction.new(c.data, 'rootable', val);
-        return true;
-    }
-
 
     protected get_opposite(context: Context): this["opposite"] { return context.data.opposite && LPointerTargetable.from(context.data.opposite); }
     protected set_opposite(val: Pack<LReference | undefined>, context: Context): boolean {
@@ -4989,7 +4988,7 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
     // @eligibleClasses: search only between those targets.
     // @favoritematch: if this class is a valid match, it is given topmost priority regardless of tightness of excess features over the schema.
     // if a class name actually starts with $ character, it needs to be placed twice to get a match, as in class.$$name
-    public static getInstantiableClasses(thiss: LValue, c: LogicContext<DValue> | LogicContext<DModel>, schema?: GObject, loose: boolean = false, eligibleClasses?: LClass[], favoriteMatch?: LClass): LClass[] {
+    public static getInstantiableClasses(thiss: GObject<LValue|LModel>, c: LogicContext<DValue> | LogicContext<DModel>, schema?: GObject, loose: boolean = false, eligibleClasses?: LClass[], favoriteMatch?: LClass): LClass[] {
         // find eligible classes
         let isDValue: boolean =  c.data.className === "DValue";
         let isDModel: boolean =  c.data.className === "DModel";
@@ -4999,7 +4998,8 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
         if (isDValue && !isReference && !isShapeless) return []; // case DValue<Attribute>
         if (!eligibleClasses) {
             if (isReference && !isShapeless) { eligibleClasses = [type as LClass, ...(type as LClass).allSubClasses]; }
-            else { eligibleClasses = thiss.get_model(c).instanceof?.classes || []; }
+            // @ts-ignore
+            else {eligibleClasses = thiss.get_model(c).instanceof?.classes || []; }
         }
         let scoreMap: Dictionary<Pointer, {
             id: Pointer, score: number,
@@ -5093,10 +5093,11 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
     get_addObject(c: LogicContext<DValue> | LogicContext<DModel>): (json: GObject, metaclass?: Pack1<LClass> | DocString<"ClassName"> | null, forceCreation?:boolean)=>LObject{
         return (json: GObject = {}, metaclass: Pack1<LClass> | DocString<"ClassName"> | undefined | null = undefined, forceCreation:boolean = false): LObject => {
             let lobj: LObject = undefined as any;
+            let father: Pointer<DValue> | Pointer<DModel> = '';
+            let isDValue = c.data.className === "DValue";
+            let isDModel = c.data.className === "DModel";
+
             TRANSACTION(() => {
-                let father: Pointer<DValue> | Pointer<DModel> = '';
-                let isDValue = c.data.className === "DValue";
-                let isDModel = c.data.className === "DModel";
                 let instanceoff: undefined | LAttribute | LReference = isDValue ? this.get_instanceof(c as Context) : undefined;
                 let dinstanceoff: undefined | DAttribute | DReference = instanceoff && instanceoff.__raw;
                 // let ShapelessObjectID =
@@ -5110,8 +5111,8 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
                 father = isContainment ? c.data.id : this.get_model(c).id;
                 let constructorPointers: Partial<ObjectPointers> = {...json, father};
 
-                // if undefined = explicitely told to make it shapeless. if null, it's automatic selectyion by value.type or m2-model classes.
-                console.log('Object.new3', {metaclass, forceCreation, json});
+                // if undefined = explicitly told to make it shapeless. if null, it's automatic selectyion by value.type or m2-model classes.
+                //console.log('Object.new3', {metaclass, forceCreation, json});
                 if (metaclass !== null) {
                     let lmetaclass: LClass | undefined;
                     // find instance schema: 1) by explicit type argument
@@ -5173,7 +5174,11 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
                 // both dmodel.objects nad dvalue.values are updated by the Constructors by passing father parameter.
                 // phase 3: create object according to schema (or shapeless) and update parent container collection.
                 console.log("Object.new3", {constructorPointers});
-                let dobj = DObject.new3(constructorPointers, () => { }, DValue, true);
+                if (!constructorPointers.name && constructorPointers.instanceof){
+                    let meta = L.from(constructorPointers.instanceof);
+                    if (meta.isSingleton){ constructorPointers.name = meta.name; }
+                }
+                let dobj = DObject.new3(constructorPointers, () => { }, isDModel?DModel:DValue, true);
                 if (isReference && !isContainment){
                     // if is ref containment, object.father is set to value, which also appends the object to this.values
                     // if it's model, object.father = model, and it goes in model.objects and not in values.

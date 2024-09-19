@@ -20,7 +20,7 @@ import {
     GraphElementComponent,
     GraphPoint,
     GraphSize,
-    Info, IPoint, Keystrokes,
+    Info, IPoint, Keystrokes, L,
     Leaf,
     LModelElement,
     Log,
@@ -397,7 +397,6 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
         // (window as any).retry = ()=>view.getSize(context.data.id);
         let ret: EPSize = view.getSize(context.data.id) as any; // (this.props.dataid || this.props.nodeid as string)
 
-        console.log("getSize() from view", {ret: ret ? {...ret} : ret});
         if (!ret) {
             ret = new GraphSize() as EPSize;
             ret.x = context.data.x;
@@ -410,7 +409,6 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
             if (undefined===(ret.w)) { if (!def) def = view.defaultVSize; ret.w = def.w || 10;}
             if (undefined===(ret.h)) { if (!def) def = view.defaultVSize; ret.h = def.h | 10;}
             ret.currentCoordType = (context.data as DEdgePoint).currentCoordType as any;
-            console.log("getSize() from node merged with defaultVSize", {ret: ret ? {...ret} : ret});
         }
         if (context.data.className === DEdgePoint.cname) {
             ret = (this as any as LEdgePoint).decodePosCoords(context, ret, view);
@@ -428,8 +426,7 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
         let actualSize: Partial<Size> & {w:number, h:number} = html ? Size.of(html) : {w:0, h:0};
         let isOldElement = (context.data.clonedCounter as number) > 3;
         // if w = 0 i don't auto-set it as in first render it has w:0 because is not reredered and not resized.
-        // if (canTriggerSet) this.set_size({w:actualSize.w}, context);
-        console.log("getSize() cantriggerset html size", {ret: ret ? {...ret} : ret, html, actualSize, hcc:html?.dataset?.clonedcounter, ncc: context.data.clonedCounter});
+        // console.log("getSize() cantriggerset html size", {ret: ret ? {...ret} : ret, html, actualSize, hcc:html?.dataset?.clonedcounter, ncc: context.data.clonedCounter});
         if (!html || +(html.dataset.clonedcounter as string) !== context.data.clonedCounter) canTriggerSet = false;
         let updateSize: boolean = false;
         if (view.adaptWidth && ret.w !== actualSize.w) {
@@ -472,11 +469,11 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
 
     get_html(c: Context): this["html"] {
         let component = this.get_component(c);
-        let html = component.html.current;
+        let html = component?.html.current;
         if (html) return html;
         html = $('[nodeid="' + c.data.id + '"]')[0];
         if (!html) return undefined;
-        (component.html as any).current = html;
+        if (component) (component.html as any).current = html;
         return html;
     }
     // get_html(context: Context): this["html"] { return $("[node-id='" + context.data.id + "']")[0]; }
@@ -560,7 +557,7 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
     __info_of__subElements: Info = {type: 'LGraphElement[]',
         txt: "all direct subelements (nodes, edges, edgepoints, subgraphs...). not including deep subelements (subelements of subelements)"}
     get_subElements(context: Context): this["subElements"] {
-        return LPointerTargetable.fromArr([...new Set(context.data.subElements)]);
+        return LPointerTargetable.fromArr([...new Set(context.data.subElements)]).filter((e:L)=>!!e);
     }
     set_subElements(val: PackArr<this["subElements"]>, context: LogicContext<DGraphElement>): boolean {
         console.log("isDeepStrictEqual", {isDeepStrictEqual});
@@ -2126,10 +2123,8 @@ replaced by startPoint
         const all: segmentmaker[] = allNodes.flatMap((ge, i) => {
             let dge = ge.__raw;
             let size = outer ? ge.outerSize : ge.innerSize;
-            console.log("ttsize0", {root, innermost, rm:root?.model?.name, im:innermost?.model?.name})
 
             if (outer && root && innermost && innermost.id !== root.id) {
-                console.log("ttsize", {size0:{...size}, ri: root.translateSize(size, innermost), ir: innermost.translateSize(size, root)})
                 size = innermost.translateSize(size, root);
             }
             let base: segmentmaker = {view: ge.view, size, ge, pt: null as any, uncutPt: null as any};

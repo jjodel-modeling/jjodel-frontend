@@ -277,7 +277,6 @@ export function InputComponent(props: AllProps) {
         delete rootprops[k];
     }*/
 
-    console.log('iiii', {field, subtype, oldValue, cl:inputProps.className});
     if (autosize) rootprops.className = (rootprops.className || '') + ' autosize-input-container';
     else if (!label && !postlabel) {
         if (rootprops.className) inputProps.className = rootprops.className + ' ' + inputProps.className;
