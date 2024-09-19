@@ -244,14 +244,16 @@ used by Navbar_NEW_OLD.tsx (purple version)
 
 .swen {
     position: absolute;
-    top: 20%;
+    top: 30%;
     left: 35%;
-    width: 100%!important;
+    width: 30%;
     & img {
-        width: 30%;
-        border-radius: 15px!important;
+        width: 100%;
+        border-radius: 2px!important;
     }
     height: auto;
+    cursor: pointer;
+    box-shadow: 0 0 10px black;
 
 }
 
@@ -262,7 +264,7 @@ used by Navbar_NEW_OLD.tsx (purple version)
     width: 100%;
     height: 100%;
     background-color: gray;
-    opacity: 0.75;
-
+    opacity: 0.85;
+    
 
 }

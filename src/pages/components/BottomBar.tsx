@@ -4,7 +4,8 @@ import {FakeStateProps} from "../../joiner/types";
 import React, {Dispatch, ReactElement, useState} from "react";
 import {connect} from "react-redux";
 
-import swen from '../../static/img/swen.png';
+import swen from '../../static/img/swen-splash.png';
+import { Tooltip } from '../../components/forEndUser/Tooltip';
 
 enum notificationType {
     Clients = 0,
@@ -103,12 +104,14 @@ function BottomBarComponent(props: AllProps): JSX.Element {
             {nodepos}
         </div>
         {swenOpen && 
-            <>
+                <>
                 <div className='swen-container'></div>
-                <div className='swen'>
-                    <img src={swen} onClick={(e) => setSwen(false)}/>
-                </div>
-            </>
+                {/* <Tooltip tooltip={'More informations on https://www.disim.univaq.it/swen'}> */}
+                    <div className='swen'>
+                        <img src={swen} onClick={(e) => setSwen(false)}/>
+                    </div>
+                {/* </Tooltip> */}
+                </>
         }
         {/* <div className={'widgetbar float-end'}>
             <Notify  type={notificationType.Clients} alert={alertType.Normal} message={''} />
