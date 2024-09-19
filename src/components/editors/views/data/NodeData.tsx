@@ -1,8 +1,7 @@
 import React, {Dispatch} from 'react';
 import {DState, DViewElement, Input, LPointerTargetable, LViewElement, Pointer} from '../../../../joiner';
 import {FakeStateProps} from "../../../../joiner/types";
-import {connect} from "react-redux";
-
+import {connect} from "react-redux"
 function NodeDataComponent(props: AllProps) {
     const view = props.view;
     let dview = (view.__raw || view) as DViewElement;

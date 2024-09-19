@@ -87,7 +87,6 @@ function NodeEditorComponent(props: AllProps) {
 
     let stackingOrder = <InputRow label={'Stacking order'} as={node} field={'zIndex'} type={'number'} />
 
-    if(node.className === DEdge.name) return <Empty msg={"Node Editor not available on DEdge."} />;
     return(<div className={'p-3 node-editor'}>
         {/*<Input obj={selected.node} field={'id'} label={'ID'} type={'text'} readonly={true}/>*/}
 
@@ -126,8 +125,8 @@ function NodeEditorComponent(props: AllProps) {
             // </>
             }
 
-            <GenericInput data={asEdge} field={"anchorStart"}/>
-            <GenericInput data={asEdge} field={"anchorEnd"}/>
+            <GenericInput className='input-container' data={asEdge} field={"anchorStart"}/>
+            <GenericInput className='input-container' data={asEdge} field={"anchorEnd"}/>
         </>}
 
         {asField && <><h3>Field</h3>

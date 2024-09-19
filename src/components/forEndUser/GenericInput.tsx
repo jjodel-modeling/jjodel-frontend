@@ -190,8 +190,9 @@ class GenericInputComponent extends PureComponent<AllProps, ThisState/*undefined
                 break;
             case ShortAttribETypes.EDate.toLowerCase(): type = 'datetime-local'; break;
         }
+        let className = (this.props.className || '') + ' ' + ( this.props.rootClassName||'');
         // delete otherProps.field; delete otherProps.data; delete otherProps.infoof;
-        return <Input inputClassName={'my-auto ms-auto input'} {...otherProps} className={this.props.rootClassName}
+        return <Input {...otherProps} className={className}
                       data={this.props.data} field={this.props.field}
                       jsxLabel={label} tooltip={this.props.tooltip} type={type as any}/>;
     }
