@@ -99,7 +99,7 @@ export class U {
     }
     static async compressedState(id: Pointer): Promise<string> {
         const state = store.getState();
-        state.idlookup[id].state = '';
+        (state.idlookup[id] as DProject).state = '';
         return await compressToUTF16(JSON.stringify(state));
         /*
         const keys: (keyof DState)[]= [
