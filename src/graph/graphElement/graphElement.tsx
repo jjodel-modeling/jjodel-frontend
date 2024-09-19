@@ -754,6 +754,13 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
     }
     onKeyDown(e: React.KeyboardEvent){
         console.log('keydown', e.key, {e, m:this.props.data?.name});
+        let target: HTMLElement = e.target as any;
+        switch (target?.tagName.toLowerCase()) {
+            case 'input':
+            case 'textarea':
+                e.stopPropagation(); return;
+            default: if (target?.getAttribute('contenteditable') === 'true') { e.stopPropagation(); return; }
+        }
         if (!(this.props.isGraph && !this.props.isVertex)) e.stopPropagation();
         if (e.key === Keystrokes.escape) {
             this.props.node.deselect();

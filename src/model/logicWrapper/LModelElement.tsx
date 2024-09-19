@@ -3673,7 +3673,8 @@ export class EdgeStarter<T1=any, T2=any>{ // <T1 extends LPointerTargetable = LP
     otherEnds: LGraphElement[];
     overlaps: boolean;
     vertexOverlaps: boolean;
-    constructor(start: LModelElement, end: LModelElement, sn: LGraphElement, en: LGraphElement, otherPossibleEnds: LGraphElement[] = [], m1refindex: number = 0) {
+    constructor(start: LModelElement, end: LModelElement, sn: LGraphElement, en: LGraphElement,
+                otherPossibleEnds: LGraphElement[], m1refindex: number, type:string) {
         this.start = start;
         this.end = end;
         this.startNode = sn;
@@ -3696,7 +3697,7 @@ export class EdgeStarter<T1=any, T2=any>{ // <T1 extends LPointerTargetable = LP
         // mid -> mid                   is not safe for dvalues which might have duplicate references. (DValue.a -> [Object.b, Object.b])
         // mid + (valueindex) -> mid    is safe for everything i think.
         // !!!! REMEMBER, DOTS AND ~ ARE NOT ALLOWED IN ID (css selector char) !!!
-        this.id = start.id + ('_' + m1refindex) + '-' + end.id;
+        this.id = start.id + ('_' + m1refindex) + '-' + end.id + type;
     }
     /*
     static oneToMany<T1 extends LModelElement = LModelElement, T2 extends LModelElement = LModelElement>(start: T1, ends:T2[]): EdgeStarter<T1, T2>[] {
@@ -4056,7 +4057,7 @@ instanceof === undefined or missing  --> auto-detect and assign the type
                         let enode = ltarget.node;
                         if (!enode || !enode.html) continue inner;
                         if (!map[dval.id]) map[dval.id] = [];
-                        map[dval.id].push(new EdgeStarter(lval, ltarget, snode, enode, undefined, valindex));
+                        map[dval.id].push(new EdgeStarter(lval, ltarget, snode, enode, [], valindex, 'values'));
                     }
             }
         ret.reference = Object.values(map).flat();
@@ -4075,7 +4076,7 @@ instanceof === undefined or missing  --> auto-detect and assign the type
             // if (end.id === r.id) return undefined;
             let en = end?.node;
             if (!en || !en.html) return undefined;
-            return new EdgeStarter(r, end, sn, en);
+            return new EdgeStarter(r, end, sn, en, [], 0, 'association');
         }).filter<EdgeStarter>(function(e):e is EdgeStarter{ return !!e});
         // ret.extend = classes.flatMap( c => EdgeStarter.oneToMany(c, c.extends));
 
@@ -4102,7 +4103,7 @@ instanceof === undefined or missing  --> auto-detect and assign the type
             }
             return ret;
         }
-        ret.extend = classes.flatMap(c => SkipExtendNodeHidden(c, c.extends, true)).map( (es) => new EdgeStarter(es.start, es.end, es.sn, es.en));
+        ret.extend = classes.flatMap(c => SkipExtendNodeHidden(c, c.extends, true)).map( (es) => new EdgeStarter(es.start, es.end, es.sn, es.en, [], 0, 'extend'));
 
         let dependencies: {src:LModelElement, ends: LModelElement[]}[] =
             Debug.lightMode ? [] : [
@@ -4129,7 +4130,7 @@ instanceof === undefined or missing  --> auto-detect and assign the type
         }
         // todo: check
         ret.packageDependencies = pkgdependencies.flatMap(
-            (pd) => ( Object.values(pd.ends).map((end) => new EdgeStarter(pd.src, end.end, pd.sn, end.en)))
+            (pd) => ( Object.values(pd.ends).map((end) => new EdgeStarter(pd.src, end.end, pd.sn, end.en, [], 0, 'pkg_dep')))
         );
         return ret;
     }

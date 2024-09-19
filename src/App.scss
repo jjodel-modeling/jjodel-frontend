@@ -108,6 +108,12 @@ font-weight: 900 !important;
       z-index: 100000;
     }
   }
+  [data-nodetype]:has(>.overlap) {
+    width: 100%;
+    height: 100%;
+    position: absolute
+
+  }
   [data-nodetype="Field"]:hover::after {
       top: unset !important;
       left: -45px;

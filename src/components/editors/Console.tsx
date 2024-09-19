@@ -64,6 +64,7 @@ function fixproxy(output: any/*but not array*/, hideDKeys: boolean = true, addLK
         case "object":
             // if (Array.isArray(output)) { ret.output = output; break; /* no need to go inside, it is already done at render phase */ }
             ret.output = output = {...output};
+            // if (ret.output.anchors) ret.output.anchors = JSON.stringify(ret.output.anchors);
             if ((addLKeys && proxy)) {
                 let Lsingleton: GObject<'L singleton'> = (RuntimeAccessibleClass.get(output?.className)?.logic?.singleton) || {};
                 let comments: Dictionary<string, string | {type:string, txt:string}> = {};
@@ -77,6 +78,11 @@ function fixproxy(output: any/*but not array*/, hideDKeys: boolean = true, addLK
                         delete ret.shortcuts[key];
                         continue;
                     } else { if (ret.shortcuts[key] === undefined) ret.shortcuts[key] = ''; }
+                    if (key.indexOf("info") >=0 && key.indexOf("of") >=0){
+                        Log.eDevv('Possible error on __info_of__ misnamed as '+key+', if the name was intentional' +
+                            ' and not an Info object add an allowal rule here.');
+                        continue;
+                    }
                     if (Lsingleton["__info_of__" + key]) comments[key] = Lsingleton["__info_of__" + key];
                     if (comments[key]) continue; // if explicitly commented, i will not attempt to generate documentation.
                     let entryvalue = Lsingleton[key];
@@ -101,6 +107,11 @@ function fixproxy(output: any/*but not array*/, hideDKeys: boolean = true, addLK
             }
             break;
     }
+
+    //@ts-ignore
+    ret ={...ret, shortcuts: undefined, comments: undefined, hiddenkeys: undefined};
+    console.log('kkkk',  ret);
+
     return ret;
 }
 

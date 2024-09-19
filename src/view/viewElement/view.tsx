@@ -291,6 +291,7 @@ export class DViewElement extends DPointerTargetable {
         </div>
     </div>
     <div className={'body'}>To add information here,<br/> edit the view<br/><i>"{view.name}"</i></div>
+    {decorators}
 </div>`;
         const palettes: PaletteType = {
             "border-color-": {type:"color", value: [{r:187, g:187, b:187, a:1}]},

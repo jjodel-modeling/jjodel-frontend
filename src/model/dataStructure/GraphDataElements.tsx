@@ -557,7 +557,7 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
     set_allSubGraphs(val: never, c: Context): boolean { return this.cannotSet('allSubGraphs'); }
 
     subElements!: LGraphElement[]; // shallow, direct subelements
-    __info_of_subElements: Info = {type: 'LGraphElement[]',
+    __info_of__subElements: Info = {type: 'LGraphElement[]',
         txt: "all direct subelements (nodes, edges, edgepoints, subgraphs...). not including deep subelements (subelements of subelements)"}
     get_subElements(context: Context): this["subElements"] {
         return LPointerTargetable.fromArr([...new Set(context.data.subElements)]);
@@ -587,7 +587,7 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
     }
 
     allSubElements!: LGraphElement[]; // deep, nested subelements
-    __info_of_allSubElements: Info = {type: 'LGraphElement[]',
+    __info_of__allSubElements: Info = {type: 'LGraphElement[]',
         txt: "all deep subelements (nodes, edges, edgepoints, subgraphs...). including subelements of subelements."}
     private get_allSubElements(context: Context, state?: DState): this["allSubElements"] {
         // return context.data.packages.map(p => LPointerTargetable.from(p));
