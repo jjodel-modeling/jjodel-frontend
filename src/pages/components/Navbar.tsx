@@ -369,7 +369,7 @@ type AllProps = OwnProps & StateProps & DispatchProps;
 function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     const ret: StateProps = {} as FakeStateProps;
     ret.user = LUser.fromPointer(DUser.current);
-    ret.project = ret.user.project || undefined;
+    ret.project = ret.user?.project || undefined;
     ret.metamodels = LModel.fromArr(state.m2models);
     ret.version = state.version;
     ret.advanced = state.advanced;
