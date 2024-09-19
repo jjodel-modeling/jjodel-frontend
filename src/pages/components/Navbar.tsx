@@ -201,9 +201,10 @@ function NavbarComponent(props: AllProps) {
                 }, keystroke: [Key.shift, Key.cmd, 'Z']}, // maybe better cmd + Y ?
             {name: 'divisor', function: () => {}, keystroke: []},
             {name: 'Save', icon: icon['save'], function: async() => {
-                if(project) await ProjectsApi.save(project);
+                await ProjectsApi.save(project);
                 }, keystroke: [Key.cmd, 'S']},
-            {name: 'Download', icon: icon['download'], function: () => {
+            {name: 'Download', icon: icon['download'], function: async() => {
+                    await ProjectsApi.save(project);
                     U.download(`${project.name}.jjodel`, JSON.stringify(project.__raw));
                 }, keystroke: []},
             {name: 'divisor', function: async() => {}, keystroke: []},

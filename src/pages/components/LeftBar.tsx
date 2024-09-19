@@ -106,7 +106,10 @@ function LeftBar(props: LeftBarProps): JSX.Element {
         await ProjectsApi.favorite(project?.__raw as DProject);
     };
     const exportProject = async() => {
-        U.download(`${project?.name}.jjodel`, JSON.stringify(project?.__raw));
+        if(project) {
+            await ProjectsApi.save(project);
+            U.download(`${project?.name}.jjodel`, JSON.stringify(project?.__raw));
+        }
     }
 
     return(<>
