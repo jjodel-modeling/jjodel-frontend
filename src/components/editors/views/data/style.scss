@@ -6,7 +6,6 @@ section.page-root{
   display: flex;
   flex-flow: column;
   &>label{
-    flex-grow:1;
     display: flex;
     padding-top: 0.125em;
     padding-bottom: 0.125em;
