@@ -108,7 +108,7 @@ function BottomBarComponent(props: AllProps): JSX.Element {
                 <div className='swen-container'></div>
                 {/* <Tooltip tooltip={'More informations on https://www.disim.univaq.it/swen'}> */}
                     <div className='swen'>
-                        <img src={swen} onClick={(e) => setSwen(false)}/>
+                        <img src={swen} onClick={(e) => setSwen(false)} />
                     </div>
                 {/* </Tooltip> */}
                 </>
