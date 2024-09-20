@@ -336,11 +336,12 @@ input, textarea, [contenteditable], pre, .console-output-container, .selectable{
   --zoom-x: 1;
   --zoom-y: 1;
 }
-.Vertex, .GraphVertex, .EdgePoint{
+//.Vertex, .GraphVertex, .EdgePoint, .VoidVertex,
+[data-nodetype] {
   left: var(--left) !important;
   top: var(--top) !important;
 }
-.Edge{
+.Edge, .VoidEdge{
   left: calc( -1 * var(--left)) !important;
   top: calc( -1 * var(--top)) !important;
 }
