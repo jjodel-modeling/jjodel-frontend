@@ -14,6 +14,7 @@ import {
     VertexPointers,
     ModelPointers,
     LtoD,
+    LVertex, LEdgePoint, LGraph,
 } from "../../joiner";
 import {
     Abstract,
@@ -176,7 +177,6 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
         let proxyitself = c.proxyObject;
         // if not exist check for children names
         if (typeof k === "string" && k !== "children" && (!(k in c.data) && !(k in this))) { // __info_of_children__
-            console.log("me default child getter", {k});
             let lchildren: LPointerTargetable[];
             try { lchildren = this.get_children(c); }
             catch (e) { lchildren = []; }
@@ -361,8 +361,9 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
         }
     }
 
+    __info_of__nodes:Info={type: 'LGraphElement[]', txt: "Return all kind of graphic elements representing this modelElement currently displayed in the graph, including edges"};
     protected get_nodes(context: Context): this["nodes"] {
-        return Object.values(transientProperties.modelElement[context.data.id]?.nodes || {});/*
+        return Object.values(transientProperties.modelElement[context.data.id]?.nodes || {}).filter(n=>n&&n.html);/*
         const nodes: LGraphElement[] = [];
         const nodeElements = $('[data-dataid="' + context.data.id + '"]'); nope, this must become more efficient. when node is created set action to update data.nodes array? or to update a transient property (better)
         for (let nodeElement of nodeElements) {
@@ -375,10 +376,77 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
         return nodes;*/
     }
 
+    __info_of__node:Info={type: 'LGraphElement[]', txt: "Return the latest updated node representing this ModelElement, including those not currently displayed in the graph."};
     protected get_node(context: Context): this["node"] {
         return transientProperties.modelElement[context.data.id]?.node;
         // const nodes = context.proxyObject.nodes;
         // return nodes.filter( n => n.favoriteNode)[0] || nodes[0];
+    }
+    edges!: LEdge[];
+    edge!: LEdge;
+    __info_of__edges:Info={type: 'LEdge[]', txt: "The subset of \"nodes\" containing only edges."};
+    __info_of__edge:Info={type: 'LEdge[]', txt: "The first element of the collection edges"};
+    protected get_edges(context: Context): this["edges"] {
+        return this.get_nodes(context).filter( l => l.className?.includes('Edge')) as any;
+    }
+    protected get_edge(context: Context): this["edge"] {
+        return this.get_nodes(context).find( l => l.className?.includes('Edge')) as any;
+    }
+    notEdges!: LGraphElement[];
+    notEdge!: LGraphElement;
+    __info_of__notEdges:Info={type: 'LGraphElement[]', txt: "The subset of \"nodes\" excluding only edges."};
+    protected get_notEdges(context: Context): this["notEdges"] {
+        return this.get_nodes(context).filter( l => !(l.className?.includes('Edge'))) as any;
+    }
+    __info_of__notEdge:Info={type: 'LGraphElement', txt: "The first element of the collection notEdges"};
+    protected get_notEdge(context: Context): this["notEdge"] {
+        return this.get_nodes(context).find( l => !(l.className?.includes('Edge'))) as any;
+    }
+    vertexes!: LVertex[];
+    vertex!: LVertex;
+    __info_of__vertexes:Info={type: 'LVertex[]', txt: "The subset of \"nodes\" containing only vertexes."};
+    __info_of__vertex:Info={type: 'LVertex', txt: "The first element of the collection vertexes"};
+    protected get_vertexes(context: Context): this["vertexes"] {
+        return this.get_nodes(context).filter( l => l.className?.includes('Vertex')) as any;
+    }
+    protected get_vertex(context: Context): this["vertex"] {
+        return this.get_nodes(context).find( l => l.className?.includes('Vertex')) as any;
+    }
+    edgePoints!: LEdgePoint[];
+    edgePoint!: LEdgePoint;
+    __info_of__edgePoints:Info={type: 'LVertex[]', txt: "The subset of \"nodes\" containing only edgePoints."};
+    __info_of__edgePoint:Info={type: 'LVertex', txt: "The first element of the collection edgePoints"};
+    protected get_edgePoints(context: Context): this["edgePoints"] {
+        return this.get_nodes(context).filter( l => l.className?.includes('EdgePoint')) as any;
+    }
+    protected get_edgePoint(context: Context): this["edgePoint"] {
+        return this.get_nodes(context).find( l => l.className?.includes('EdgePoint')) as any;
+    }
+    graphs!: LGraph[];
+    graph!: LGraph;
+    __info_of__graphs:Info={type: 'LGraph[]', txt: "The subset of \"nodes\" containing only graphs."};
+    __info_of__graph:Info={type: 'LGraph', txt: "The first element of the collection graphs"};
+    protected get_graphs(context: Context): this["graphs"] {
+        return this.get_nodes(context).filter( l => {
+            let d = l.__raw;
+            return d.className === 'DGraph' || d.className === 'DGraphVertex'
+        }) as any;
+    }
+    protected get_graph(context: Context): this["graph"] {
+        return this.get_nodes(context).find( l => {
+            let d = l.__raw;
+            return d.className === 'DGraph' || d.className === 'DGraphVertex'
+        }) as any;
+    }
+    fields!: LGraphElement[];
+    field!: LGraphElement;
+    __info_of__fields:Info={type: 'LGraphElement[]', txt: "The subset of \"nodes\" containing only fields."};
+    __info_of__field:Info={type: 'LGraphElement', txt: "The first element of the collection fields"};
+    protected get_fields(context: Context): this["fields"] {
+        return this.get_nodes(context).filter( l => l.className === 'DGraphElement') as any;
+    }
+    protected get_field(context: Context): this["field"] {
+        return this.get_nodes(context).find( l => l.className === 'DGraphElement') as any;
     }
 
     /*
@@ -2360,7 +2428,6 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
     }
 
     public get_referencedBy(c: Context): this["referencedBy"] {
-        console.log('referencedBy0', {c});
         let keystr: string;
         if (c.data.className === 'DClass'){ keystr = '.type'; }
         // @ts-ignore
@@ -2380,8 +2447,6 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
             return e.source.substring('idlookup.'.length, index);
 
         }).filter(e=>!!e);
-
-        console.log('referencedBy9', {c, ptrs, pby: c.data.pointedBy, keystr});
 
         return LPointerTargetable.fromArr(ptrs);
         // return context.data.referencedBy.map((pointer) => LPointerTargetable.from(pointer) );
@@ -3679,14 +3744,18 @@ export class EdgeStarter<T1=any, T2=any>{ // <T1 extends LPointerTargetable = LP
         this.startNode = sn;
         this.endNode = en;
         this.otherEnds = otherPossibleEnds || end.nodes;
+        //console.log('edgestarter ss', {end, start, sn, en});
+
         this.startSize = sn.outerSize;
         this.endSize = en.outerSize;
         this.startVertex = sn.vertex as any;
         this.endVertex = en.vertex as any;
+        //console.log('edgestarter evs', {end, start, sn, en});
         this.startVertexSize = this.startVertex === sn ? this.startSize : this.startVertex.outerSize;
         this.endVertexSize = this.endVertex === en ? this.endSize : this.endVertex.outerSize;
         this.overlaps = this.startSize?.isOverlapping(this.endSize);
         this.vertexOverlaps = this.startVertexSize?.isOverlapping(this.endVertexSize);
+        //console.log('edgestarter end', {end, start, sn, en});
         // how to pick edgeid:
         // using nodeid is useless, as a ref might be hidden and take the node of a class or upper, it must be resolved at conceptual model-level
         // mid = model id
@@ -4047,13 +4116,13 @@ instanceof === undefined or missing  --> auto-detect and assign the type
                     for (let valindex = 0; valindex < values.length; valindex++) {
                         let v: any = values[valindex];
                         if (!Pointers.isPointer(v, state)) continue inner;
-                        let snode = lval.node;
+                        let snode = lval.notEdge;
                         if (!snode || !snode.html) continue outer;
                         if (v === dval.id) continue inner; // pointing to itself
                         let ltarget: undefined | LEnumLiteral | LObject = LPointerTargetable.fromPointer(v, state);
                         if (!ltarget) continue;
                         if (ltarget.className !== DObject.cname) continue inner;
-                        let enode = ltarget.node;
+                        let enode = ltarget.notEdge;
                         if (!enode || !enode.html) continue inner;
                         if (!map[dval.id]) map[dval.id] = [];
                         map[dval.id].push(new EdgeStarter(lval, ltarget, snode, enode, [], valindex, 'values'));
@@ -4069,12 +4138,13 @@ instanceof === undefined or missing  --> auto-detect and assign the type
         let classes: LClass[] = this.get_classes(context, s);
         let references: LReference[] = Debug.lightMode ? [] : classes.flatMap(c=>c.references);
         ret.reference = references.map( (r) => {
-            let sn = r?.node;
+            let sn = r?.notEdge;
             if (!sn || !sn.html) return undefined;
             let end = r.type;
             // if (end.id === r.id) return undefined;
-            let en = end?.node;
+            let en = end?.notEdge;
             if (!en || !en.html) return undefined;
+            //console.log('pre edgestarter', {r, end, sn, en});
             return new EdgeStarter(r, end, sn, en, [], 0, 'association');
         }).filter<EdgeStarter>(function(e):e is EdgeStarter{ return !!e});
         // ret.extend = classes.flatMap( c => EdgeStarter.oneToMany(c, c.extends));
@@ -4085,7 +4155,7 @@ instanceof === undefined or missing  --> auto-detect and assign the type
             let ret: {start: LClass, end: LClass, sn: LGraphElement, en: LGraphElement}[] = [] as any;
             if (rootCall) { alreadyAdded = {}; alreadyAdded[start.id] = start; } // end classes can get added twice if from a different starting subclass path (in classes.flatMap -> each one should have his own dict).
             // ret.start = start;
-            let sn = start.node;
+            let sn = start.notEdge;
             if (!sn || !sn.html) return [];
             //  let end: LClass[] = start.extends;
             for (let e of end) {
@@ -4093,7 +4163,7 @@ instanceof === undefined or missing  --> auto-detect and assign the type
                 let eid = e.id;
                 if (alreadyAdded[eid]) continue; // without this there might be duplicates if A extends B1, B2;  and both B1 & B2 extends C
                 alreadyAdded[eid] = e;
-                let en = e.node;
+                let en = e.notEdge;
                 if (en && en.html) { ret.push({start, end:e, sn, en}); continue; }
                 let secondTierExtends = e.extends;
                 // for (let eend of secondTierExtends) {
@@ -4115,13 +4185,13 @@ instanceof === undefined or missing  --> auto-detect and assign the type
         for (let d of dependencies) {
             let src: LPackage | null = d.src.package;
             if (!src) continue;
-            let srcnode: LGraphElement | undefined = src.node;
+            let srcnode: LGraphElement | undefined = src.notEdge;
             if (!srcnode || !srcnode.html) continue;
             let ends: Dictionary<Pointer, {end:LPackage, en:LGraphElement}> = {};
             for (let end of d.ends) {
                 let ep: LPackage|null = end.package;
                 if (!ep) continue;
-                let epnode: LGraphElement | undefined = ep.node;
+                let epnode: LGraphElement | undefined = ep.notEdge;
                 if (!epnode || !epnode.html) continue;
                 ends[ep.id] = {end:ep, en:epnode};
             }
