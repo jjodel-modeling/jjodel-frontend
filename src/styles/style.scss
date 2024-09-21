@@ -66,11 +66,11 @@ body {
     // todo: maybe they can be css variables injected with jsx, so can change ::after css rendering from jsx
     color: transparent !important;
     font-size: 1em !important;
-    border-width: 1px !important;
+    /*border-width: 1px !important;
     padding: 0px 2px !important;
     margin: 0 4px !important;
     border-radius: 0.2em !important;
-    line-height: 100% !important;
+    line-height: 100% !important;*/
   }
   &::after {
     content: attr(data-value) ' ';
@@ -86,6 +86,15 @@ body {
     text-overflow: ellipsis;
 
   }
+}
+
+.autosize-input-container > input, .autosize-input-container::after{
+  display: flex;
+  margin: 0;
+  padding: 0;
+  border: none;
+  height: 1lh;
+  font-style: inherit !important;
 }
 input[type="color"] {
   cursor: pointer;
@@ -459,7 +468,7 @@ i.bi {
 
 .login.bg-3 {
   justify-content: center;
-  background-image: url('/static/img/3.png');
+  background-image: url('//static/img/3.png');
   background-size: cover;
   background-repeat: no-repeat;
   & form {

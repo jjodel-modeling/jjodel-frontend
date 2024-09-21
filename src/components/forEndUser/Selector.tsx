@@ -15,7 +15,7 @@ function SelectorComponent(props: AllProps) {
     let gdata: GObject<LPointerTargetable> = data;
     const field: (keyof LPointerTargetable & keyof DPointerTargetable) = props.field as any;
     const readOnly = props.readonly !== undefined ? props.readonly : !props.debugmode && Defaults.check(data.id);
-    const value: string | Pointer = props.getter ? props.getter(d, field) : d[field] as string;
+    const value: string | Pointer = d[field] as string;
     const label: string|undefined = props.label;
     const jsxLabel: ReactNode|undefined = props.jsxLabel;
     let tooltip: string|undefined = (props.tooltip === true) ? ((gdata['__info_of__' + field]) ? gdata['__info_of__' + field].txt: '') : props.tooltip;
@@ -46,12 +46,16 @@ function SelectorComponent(props: AllProps) {
     function getOptions(): any {
 
         return (<>
+
+            {/*@ts-ignore*/}
             {l[field].type.allInstances.map(cl =><>
+                {/*@ts-ignore*/}
                 {typeof(l[field].value) === 'undefined' ? 
                     <option value={cl.id}>{cl.name}</option> 
                     :
                     <>
-                    {l[field].value.id === cl.id ?
+                        {/*@ts-ignore*/}
+                        {l[field].value.id === cl.id ?
                         <option value={cl.id} selected>{cl.name}</option> 
                         :
                         <option value={cl.id}>{cl.name}</option>  
