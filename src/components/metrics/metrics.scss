@@ -24,7 +24,7 @@
 .metrics-panel {
     
     z-index: 1000;
-    background-color: var(--color);
+    background-color: var(--bg);//var(--color);
     color: white;
     border-radius: calc(var(--radius) * 2);
     box-shadow: var(--smart-elevation-8);
@@ -157,7 +157,7 @@
     }
 
     .chart .legenda {
-        background-color: var(--color)!important;
+        background-color: var(--bg)!important;
         text-align: center!important;
         font-size: 0.9em!important;
     }

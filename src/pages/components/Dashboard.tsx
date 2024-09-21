@@ -30,6 +30,7 @@ import DockManager from '../../components/abstract/DockManager';
 import Dock from "../../components/abstract/Dock";
 import {CSS_Units} from "../../view/viewElement/view";
 import {useStateIfMounted} from 'use-state-if-mounted';
+import { Tooltip } from '../../components/forEndUser/Tooltip';
 
 
 type UserProps = {
@@ -86,9 +87,9 @@ const Title = (props: TitleProps) => {
                             </div>
                         </h2> :
                         <>
-                        <h2 onDoubleClick={() => {setEditTitle(!editTitle)}}>
+                        <Tooltip tooltip={'DoubleClick to edit'} inline={true} position={'left'} offsetX={10}><h2 onDoubleClick={() => {setEditTitle(!editTitle)}}>
                             {props.icon} {props.title}
-                        </h2>
+                        </h2></Tooltip>
                          </>
                     }
                     {editDes ?
@@ -105,12 +106,12 @@ const Title = (props: TitleProps) => {
                                             SetFieldAction.new(props.projectID, 'description', e.target.value, '', false)
                                         }}
                                     />
-                                </h3>}
-
+                                </h3>
+                                }
                         </>
                         :
                         <>
-                            {props.description && <h3 onDoubleClick={() => setEditDes(!editDes)} onBlur={() => setEditDes(!editDes)}>{props.description}</h3>}
+                            {props.description && <Tooltip tooltip={'DoubleClick to edit'} inline={true} position={'left'} offsetX={10}><h3 onDoubleClick={() => setEditDes(!editDes)} onBlur={() => setEditDes(!editDes)}>{props.description}</h3></Tooltip>}
                         </>
                     }
 

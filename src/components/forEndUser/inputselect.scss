@@ -58,3 +58,8 @@ input.switch[type="checkbox"]{
     background: var(--active); // #0ebeff;
   }
 }
+
+select.model-select {
+  height: var(--input-height)!important;
+  border-radius: var(--radius);
+}

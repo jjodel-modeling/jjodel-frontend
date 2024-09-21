@@ -172,6 +172,19 @@ function ContextMenuComponent(props: AllProps) {
             }
         }
 
+        /* Extend */
+        switch (data.className) {
+            case 'DValue': if ((data as any as LValue).instanceof) jsxList.pop(); break;
+            case 'DClass':
+                jsxList.push(<div onClick={() => {
+                    close();
+                    SetRootFieldAction.new('isEdgePending', {user: user.id, source: data.id});
+                }} className={'col item'}>{icon['extend']} Extend<div><i
+                className='bi bi-command'></i> E</div></div>);
+                jsxList.push(<hr className={'my-1'} />);
+                break;
+        }
+
         /* Deselect */
         jsxList.push(<div onClick={() => {
             close();
@@ -216,17 +229,7 @@ function ContextMenuComponent(props: AllProps) {
             jsxList.push(<hr className={'my-1'} />);
         }
 
-        switch (data.className) {
-            case 'DValue': if ((data as any as LValue).instanceof) jsxList.pop(); break;
-            case 'DClass':
-                jsxList.push(<div onClick={() => {
-                    close();
-                    SetRootFieldAction.new('isEdgePending', {user: user.id, source: data.id});
-                }} className={'col item'}>{icon['extend']} Extend<div><i
-                className='bi bi-command'></i> E</div></div>);
-                jsxList.push(<hr className={'my-1'} />);
-                break;
-        }
+        
 
         /* ADD VIEW */
         jsxList.push(<div onClick={async () => {close(); await addView();}} className={'col item'}>{icon['view']} Add View<div><i

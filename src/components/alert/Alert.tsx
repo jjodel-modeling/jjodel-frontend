@@ -7,21 +7,28 @@ import './style.scss';
 import { Btn, CommandBar } from '../commandbar/CommandBar';
 
 function AlertComponent(props: AllProps) {
-    const {type, message} = props;
+    let {type, message} = props;
     let typeLabel = <></>;
+
 
     
     switch (type) {
-        case 'w': typeLabel = <h1 className={'text-warning'}>Warning</h1>;  break;
-        case 'warning': typeLabel = <h1 className={'text-warning'}>Warning</h1>;  break;
+        case 'warning': type = 'w'; break;
+        case 'error': type= 'e'; break;
+    }
+    switch (type) {
+        case 'w': typeLabel = <h1 className={'text-warning'}>Warning</h1>; break;
         case 'e': typeLabel = <h1 className={'text-danger'}>Error</h1>; break;
-        case 'error': typeLabel = <h1 className={'text-danger'}>Error</h1>; break;
         default: typeLabel = <h1 className={'text-primary'}>Success</h1>;
     }
 
-    if(!type || !message) return(<></>);
+    
+
+
+
+    if (!type || !message) return(<></>);
     return(<div className={'alert-container'}>
-        <div className={'alert-card'}>
+        <div className={`alert-card ${type === 'w' ? 'warning' : (type === 'e' ? 'error' : 'success')}`}>
             <div className={'alert-header'}>
                 <div className={'alert-sign-outer'}>
                     <div className={'alert-sign-inner'}>

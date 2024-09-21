@@ -122,7 +122,7 @@ function LeftBar(props: LeftBarProps): JSX.Element {
 
                 {/* @ts-ignore */}
                 <Menu title={props.project.name}>
-                    <Item icon={icon['edit']}>Edit </Item>
+                    {/*<Item icon={icon['edit']}>Edit </Item>*/}
                     <Item action={exportProject} icon={icon['download']}>Download</Item>
                     {/*<Item icon={icon['duplicate']}>Duplicate </Item>*/}
                     <Item action={toggleFavorite} icon={!project?.isFavorite ? icon['favorite'] : icon['favoriteFill']}>{!project?.isFavorite ? 'Add to favorites ' : 'Remove from favorites '}</Item>
