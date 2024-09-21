@@ -272,7 +272,7 @@ export function InputComponent(props: AllProps) {
         inputProps = {...rootprops, ...inputProps};
         switch (props.tag){
             case "textarea": return <textarea {...inputProps}>{inputProps.value}</textarea>;
-            case "select": return <select {...inputProps}>{getSelectOptions(data, field, props.options, props.children)}</select>;
+            case "select": return <div><select {...inputProps}>{getSelectOptions(data, field, props.options, props.children)}</select></div>;
             case null: case undefined: case "": case "input": return <input {...inputProps} />;
             default:
                 inputProps.contentEditable = inputProps.contentEditable !== false;

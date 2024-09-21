@@ -33,7 +33,7 @@ export {GenericInput} from "../components/forEndUser/GenericInput"
 
 export {Input, Edit, TextArea, Select} from "../components/forEndUser/Input";
 // export {TextArea} from "../components/forEndUser/TextArea";
-// export {Select} from "../components/forEndUser/Select";
+export {Selector} from "../components/forEndUser/Selector";
 export {View} from "../components/forEndUser/Aliases";
 export {Try} from "../components/forEndUser/Try";
 
