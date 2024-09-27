@@ -1,0 +1,1 @@
+import {*} from 'react-icons/fa6';
