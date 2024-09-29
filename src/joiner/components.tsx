@@ -88,3 +88,7 @@ for (let key in GraphElements) if (!(GraphElements as any)[key]) { console.log({
 // U.objectMergeInPlace(GraphElements, Graphs, Edges as any, Vertexes, Fields, {Graphs, Edges, Vertexes, Fields});
 // console.info('components loaded');
 export {Measurable, MeasurableComponent, ScrollableComponent, Scrollable, Draggable, Resizable, Rotatable} from "../components/forEndUser/Measurable";
+
+// icons
+export * as Tb from 'react-icons/tb';
+export * as Fa from 'react-icons/fa';

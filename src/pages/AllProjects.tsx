@@ -1,3 +1,6 @@
+/* DASHBOARD */
+/* ALLPROJECTS */
+
 import React, {ChangeEvent, MouseEventHandler, Component, Dispatch, ReactElement, useState, useRef } from 'react';
 import {connect} from 'react-redux';
 import {DProject, DState, Log, LProject, Try, U} from '../joiner';
@@ -9,6 +12,7 @@ import { Cards, Card } from './components/cards/Cards';
 import { Catalog } from './components/catalog/Catalog';
 
 import {ProjectsApi} from "../api/persistance";
+import { LatestUpdates } from './components/LatestUpdates';
 
 function AllProjectsComponent(props: AllProps): JSX.Element {
     const {projects} = props;
@@ -16,6 +20,7 @@ function AllProjectsComponent(props: AllProps): JSX.Element {
         await ProjectsApi.create(type, undefined, undefined, undefined, projects);
     }
     return(<Try>
+        <>
         <Dashboard active={'All'} version={props.version}>
             <React.Fragment>
                 <Cards>
@@ -44,8 +49,10 @@ function AllProjectsComponent(props: AllProps): JSX.Element {
                 </Cards>
                 <Catalog projects={projects} />
             </React.Fragment>
-
         </Dashboard>
+        <LatestUpdates page={'AllProjects'}/>
+        </>
+
     </Try>);
 }
 

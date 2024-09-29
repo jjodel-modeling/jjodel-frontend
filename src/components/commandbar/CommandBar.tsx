@@ -82,7 +82,7 @@ export const Btn = (props: BtnProps) => {
                     <div className={`delete2 ${props.theme ? props.theme : 'light'}`}>Delete</div>
                     :
                     <>
-                    {props.icon === 'delete' ?
+                    {props.icon === 'delete' && !props.disabled ?
                         <>
                         {del ?
                             <Tooltip tooltip={'Are you sure?'} inline={true} position={'top'} offsetY={10} >
