@@ -189,10 +189,16 @@ class builder {
     static attribute(data: LModelElement, advanced: boolean): JSX.Element {
         return (<section  className={'properties-tab'}>
             {this.feature(data, advanced)}
-            {advanced && <label className={'input-container'}>
-                <b className={'me-2'}>ID:</b>
-                <Input data={data} field={'isID'} type={'checkbox'} />
-            </label>}
+            {advanced && <>
+                <label className={'input-container'}>
+                    <b className={'me-2'}>ID:</b>
+                    <Input data={data} field={'isID'} type={'checkbox'} />
+                </label>
+                <label className={'input-container'}>
+                    <b className={'me-2'}>IoT:</b>
+                    <Input data={data} field={'isIoT'} type={'checkbox'} />
+                </label>
+            </>}
         </section>);
     }
     static reference(data: LModelElement, advanced: boolean): JSX.Element {
@@ -437,9 +443,9 @@ class builder {
                 <hr className={'my-3'} />
                 <Select data={value} field={'topic'} label={'Topic'} options={<optgroup label={'Topics'}>
                     <option value={''}>------</option>
-                    {U.extractKeys(topics).map(t => <option key={t} value={t}>{t}</option>)}
+                    {U.extractTopics(topics).map(t => <option key={t} value={t}>{t}</option>)}
                 </optgroup>} />
-                {JSON.stringify(U.extractByKey(topics, value.topic))}
+                {JSON.stringify(U.extractValueFromTopic(topics, value.topic))}
             </>}
         </section>)
     }

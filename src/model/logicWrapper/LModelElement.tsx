@@ -5385,7 +5385,6 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
                                             shapeless: boolean = false, keepempties: boolean = true, withmetainfo?: T, maxlimit?: number,
                                             solveLiterals: "ordinals" | "literal_obj" | "literal_str" | "original" = "literal_obj")
         : (T extends undefined ? this["values"] : T extends false ? this["values"] : ValueDetail[]) & {type?: string}  {
-
         let ret: any[] = [...context.data.values] as [];
         let meta: LAttribute | LReference | undefined = shapeless ? undefined : context.proxyObject.instanceof;
         let dmeta: undefined | DAttribute | DReference = meta?.__raw;
