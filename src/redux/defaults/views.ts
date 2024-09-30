@@ -478,14 +478,13 @@ border-color: silver!important;
         const view = DViewElement.new2('Singleton', DV.singletonView(), vp, (view)=>{
             view.appliableToClasses = [DObject.cname];
             view.adaptWidth = false; view.adaptHeight = false;
-            //view.jsCondition = 'return data.instanceof.isSingleton';
-            view.oclCondition = 'context DObject inv: true';
+            view.jsCondition = 'return data.instanceof.isSingleton';
+            //view.oclCondition = 'context DObject inv: true';
 
-            view.palette = {'color-':  U.hexToPalette('#f00', '#000', '#fff'), 'background-': U.hexToPalette('#fff', '#eee', '#f00')};
+            //view.palette = {'color-':  U.hexToPalette('#f00', '#000', '#fff'), 'background-': U.hexToPalette('#fff', '#eee', '#f00')};
 
-            view.css = '.object {border-radius: var(--radius); background: white; color: var(--accent);}\n';
-            view.css +='.object-name {padding: 10px; font-weight: 600; color: var(--accent);}\n';
-            view.css += '.object-children {padding: 10px;background-color: white; height: fit-content; width: -webkit-fill-available;}';
+            view.css = '.singleton {text-align: center; border: none; background-color: var(--accent); color: white; padding: 4px 30px; width: fit-content; border-radius: var(--radius);}\n';
+            view.css += '.singleton::before {position: absolute; left: 10px; font-family: bootstrap-icons; content: "\\F799";}\n';
 
             view.defaultVSize = defaultVertexSize;
             view.appliableTo = 'Vertex';
