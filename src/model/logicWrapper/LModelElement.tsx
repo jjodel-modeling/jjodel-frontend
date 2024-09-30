@@ -130,7 +130,9 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
     // extends Mixin(DModelElement0, LPointerTargetable)
     // static logic: typeof LModelElement;
     // static structure: typeof DModelElement;
-    // static singleton: LModelElement;
+    
+    /* Alfonso */
+    static singleton: LModelElement;
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
     /*static ResolvePointer = resolvePointerFunction;

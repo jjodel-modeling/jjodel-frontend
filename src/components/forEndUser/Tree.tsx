@@ -135,7 +135,6 @@ function DataTree(props: DataTreeProps): JSX.Element {
                     <div className={'icon'}>{data.className.slice(1, 2)}</div>*/}
 
                 <div className={'type'}>
-
                     <div className={`icon tree-${data.className} ${(data as any).abstract && 'abstract-class'}`}>
                         {data.className === 'DEnumLiteral' ? 'L' : data.className.slice(1, 2)}
                     </div>
