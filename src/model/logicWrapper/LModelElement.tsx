@@ -5385,9 +5385,16 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
                                             shapeless: boolean = false, keepempties: boolean = true, withmetainfo?: T, maxlimit?: number,
                                             solveLiterals: "ordinals" | "literal_obj" | "literal_str" | "original" = "literal_obj")
         : (T extends undefined ? this["values"] : T extends false ? this["values"] : ValueDetail[]) & {type?: string}  {
+        const data = context.data;
         let ret: any[] = [...context.data.values] as [];
         let meta: LAttribute | LReference | undefined = shapeless ? undefined : context.proxyObject.instanceof;
         let dmeta: undefined | DAttribute | DReference = meta?.__raw;
+
+        if(data.topic) {
+            const topics = store.getState()['topics'];
+            const val = U.extractValueFromTopic(topics, data.topic);
+            ret = Array.isArray(val) ? val : [val];
+        }
 
         // if (meta && meta.className === DReference.name) ret = LPointerTargetable.fromArr(ret as DObject[]);
         let typestr: string = this.get_typeString(context);
