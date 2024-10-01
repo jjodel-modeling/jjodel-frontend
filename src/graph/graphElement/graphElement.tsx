@@ -797,7 +797,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
                 let de = e.__raw;
                 if (de.isExtend) {
                     let data: LClass = this.props.data as any;
-                    data.unsetExtends(e.end.model as LClass);
+                    data.unsetExtends( e.end.model as LClass);
                     // SetFieldAction(data.id, 'extends', )
                 }
                 if (de.isReference){

@@ -12,7 +12,7 @@ import {
     Input,
     LPointerTargetable,
     LViewElement,
-    LViewPoint,
+    LViewPoint, MultiSelect,
     Pointer,
     Select,
     Vertexes
@@ -73,7 +73,9 @@ function InfoDataComponent(props: AllProps) {
                 </>
             } setter={(val, data, key) => { view.forceNodeType = val === 'unset' ? undefined : val; }}
                     getter={(data, key) => { return data[key] || 'unset_'; }} />
-            <Select data={view} field={'appliableToClasses'} label={'Appliable to:'} readonly={readOnly} options={classesOptions} />
+
+            <Select data={view} field={'appliableToClasses'} label={'Appliable to:'} isMultiSelect={true} readonly={readOnly} options={classesOptions} />
+            {/*<Select data={view} field={'appliableToClasses'} label={'Appliable to:'} readonly={readOnly} options={classesOptions} />*/}
 
             <Select readonly={readOnly} data={view} field={'father'} label={"Viewpoint:"} getter={()=> vpid}>
                 {dallVP.map((viewpoint) => (

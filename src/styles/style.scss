@@ -90,10 +90,12 @@ body {
 
 .autosize-input-container > input, .autosize-input-container::after{
   display: flex;
-  margin: 0;
-  padding: 0;
-  border: none;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: none !important;
   height: 1lh;
+  max-height: 1lh !important;
+  min-height: 1lh !important;
   font-style: inherit !important;
 }
 input[type="color"] {

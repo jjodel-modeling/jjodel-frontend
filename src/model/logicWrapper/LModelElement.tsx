@@ -239,6 +239,7 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
         }
     }
 
+
     public static M1Classes = ['DModel', 'DObject', 'DValue']; // Dstrudturalfeature in shapeless obj??
     public static AbstractClasses = ['DModelElement', 'DNamedElement', '...'];
     public static M2InstantiableClasses = ['DModel', 'DOperation', 'DClass', 'DReference', 'DAttribute'];
@@ -1236,7 +1237,7 @@ export class LClassifier<Context extends LogicContext<DClassifier> = any> extend
         return EcoreParser.classTypePrefix + context.data.name;
     }
 
-    private get_typeString(context: Context) {
+    get_typeString(context: Context) {
         return context.data.name;
     }
 }
@@ -4651,6 +4652,16 @@ export class LObject<Context extends LogicContext<DObject> = any, C extends Cont
         return Object.values(bymetaparent).flat();
     }
 
+    typeStr!:string; // derivate attribute, abstract
+    typeString!:string; // derivate attribute, abstract
+    __info_of__typeStr: Info = {type: ShortAttribETypes.EString, txt: <div>Alias of<i>this.typeString</i></div>}
+    __info_of__typeString: Info = {type: ShortAttribETypes.EString, txt: <div>Stringified version of <i>this.type</i></div>}
+    protected get_typeString(c: Context): string { return this.get_typeStr(c); }
+    protected get_typeStr(c: Context): string {
+        let thiss: GObject<this> = this as any;
+        if (!thiss.get_instanceof) return 'shapeless';
+        let meta: any = thiss.get_instanceof(c);
+        return meta?.typeToShortString?.() || "shapeless"; }
 
     // protected get_fromlclass<T extends keyof (LClass)>(meta: LClass, key: T): LClass[T] { return meta[key]; }
     protected get_model(context: Context): LModelElement["model"] {
@@ -5361,9 +5372,8 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
     __info_of__typeStr: Info = {type: ShortAttribETypes.EString, txt: <div>Alias of<i>this.typeString</i></div>}
     __info_of__typeString: Info = {type: ShortAttribETypes.EString, txt: <div>Stringified version of <i>this.type</i></div>}
     protected get_typeString(c: Context): string { return this.get_typeStr(c); }
-    protected get_typeStr(c: Context): string {
-        let meta = this.get_instanceof(c);
-        return meta ? meta.typeToShortString() : "shapeless"; }
+    // @ts-ignore
+    protected get_typeStr(c: Context): string { return LObject.singleton.get_typeStr.call(this, c); }
 
     // individual value getters
     // if withMetaInfo, returns a wrapper for the first non-empty value found containing his index and metainfo

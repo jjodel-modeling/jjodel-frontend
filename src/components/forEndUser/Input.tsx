@@ -2,13 +2,14 @@ import React, {Dispatch, KeyboardEvent, LegacyRef, ReactElement, ReactNode, useR
 import {connect} from 'react-redux';
 import {DState} from '../../redux/store';
 import {
+    Any,
     Defaults,
     DObject,
     DPointerTargetable,
     GObject,
     Keystrokes, LAttribute,
     LClass, LEnumerator, LModel, LObject,
-    LPointerTargetable, LReference, LValue,
+    LPointerTargetable, LReference, LValue, MultiSelect,
     Overlap,
     Pointer, PrimitiveType, Selectors,
     store,
@@ -131,7 +132,7 @@ export function InputComponent(props: AllProps) {
 
     let type = (props.type) ? props.type : 'text';
     let subtype: string = type;
-    switch (type){
+    switch (type) {
         case 'toggle': type = 'checkbox'; subtype = 'switch'; break;
         case 'checkbox3': case 'switch': type = 'checkbox'; break;
         case 'slider': type = 'range'; break;
@@ -277,29 +278,35 @@ export function InputComponent(props: AllProps) {
         delete rootprops[k];
     }*/
 
+    let wrap = true;
     if (autosize) rootprops.className = (rootprops.className || '') + ' autosize-input-container';
     else if (!label && !postlabel) {
         if (rootprops.className) inputProps.className = rootprops.className + ' ' + inputProps.className;
         if (rootprops.style) U.objectMergeInPlace(inputProps.style, rootprops.style);
         inputProps = {...rootprops, ...inputProps};
-        switch (props.tag){
-            case "textarea": return <textarea {...inputProps}>{inputProps.value}</textarea>;
-            case "select": return <select {...inputProps}>{getSelectOptions(data, field, props.options, props.children)}</select>;
-            case null: case undefined: case "": case "input": return <input {...inputProps} />;
-            default:
-                inputProps.contentEditable = inputProps.contentEditable !== false;
-                return React.createElement(props.tag, inputProps, props.children);
-        }
+        wrap = false;
     }
 
     switch (props.tag){
         case "textarea": input = <textarea {...inputProps}>{inputProps.value}</textarea>; break;
-        case "select": input = <select {...inputProps}>{getSelectOptions(data, field, props.options, props.children)}</select>; break;
+        case "select":
+            let options = getSelectOptions(data, field, props.options, props.children);
+            if (props.isMultiSelect){
+                // @ts-ignore
+                input = <MultiSelect {...inputProps} isMulti={true} options={options} onChange={(v) => {
+                    console.log('setting multiselect', {v, value: inputProps.value, options});
+                    //lclass.extends = v.map(e => e.value) as Any<string[]>;
+                }} />
+            }
+            input = <select {...inputProps}>{options}</select>;
+        break;
         case null: case undefined: case "": case "input": input = <input {...inputProps} />; break;
         default:
             inputProps.contentEditable = inputProps.contentEditable !== false;
             input = React.createElement(props.tag, inputProps, props.children); break;
     }
+    if (!wrap) return input;
+
     if (typeof label === "string") label = <span>{label}</span>;
     if (typeof postlabel === "string") postlabel = <span>{postlabel}</span>;
 
@@ -341,7 +348,6 @@ export function InputComponent(props: AllProps) {
     */
 }
 
-InputComponent.cname = 'InputComponent';
 export interface InputOwnProps {
     data?: LPointerTargetable | DPointerTargetable | Pointer<DPointerTargetable, 1, 1, LPointerTargetable>;
     field?: string;
@@ -371,6 +377,7 @@ export interface InputOwnProps {
 export interface SelectOwnProps extends Omit<InputOwnProps, 'setter'> {
     options?: JSX.Element;
     setter?: (value: string, data: any, field: string) => void; // parent select has value: string | boolean
+    isMultiSelect?: boolean;
 }
 interface RealOwnProps extends Omit<SelectOwnProps, 'setter'>{
     setter: InputOwnProps['setter'];
@@ -399,25 +406,31 @@ function mapDispatchToProps(dispatch: Dispatch<any>): DispatchProps {
 }
 
 export const InputConnected =
+    // @ts-ignore
     connect<StateProps, DispatchProps, RealOwnProps, DState>(InputMapStateToProps, mapDispatchToProps)(InputComponent);
 
 
 // export function Input(props: InputOwnProps, children: (string | React.Component)[] = []): ReactElement { return 'input' as any; }
 export function Input(props: InputOwnProps): ReactElement {
+    // @ts-ignore
     return <InputConnected {...props as any}>{props.children}</InputConnected>;
 }
 
 // export function TextArea(props: InputOwnProps, children: (string | React.Component)[] = []): ReactElement { return 'textarea' as any; }
-export function TextArea(props: InputOwnProps): ReactElement {
-    return <InputConnected {...{...props, tag:"textarea"} as any}>{props.children}</InputConnected>;
+export function TextArea(props: InputOwnProps, c: any): ReactElement {
+    // @ts-ignore
+    return <InputConnected {...{...props, tag:"textarea"} as any}>{props.children||c}</InputConnected>;
 }
 //export function Select(props: SelectOwnProps, children: (string | React.Component)[] = []): ReactElement { return 'select' as any; }
-export function Select(props: SelectOwnProps): ReactElement {
-    return <InputConnected {...{...props, tag:"select"} as any}>{props.children}</InputConnected>;
+export function Select(props: SelectOwnProps, c: any): ReactElement {
+    // @ts-ignore
+    return <InputConnected {...{...props, tag:"select"} as any}>{props.children||c}</InputConnected>;
 }
 export const Edit = Input;
 
+// @ts-ignore
 InputComponent.cname = 'InputComponent';
+// @ts-ignore
 InputConnected.cname = 'InputConnected';
 Input.cname = 'Input';
 TextArea.cname = 'TextArea';
