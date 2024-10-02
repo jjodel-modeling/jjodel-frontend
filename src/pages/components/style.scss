@@ -109,7 +109,7 @@
     font-weight: 300;
     font-family: Anton;
     transition: color 0.3s!important;
-    
+
     &:hover {
         color: white!important;
     }
@@ -275,7 +275,20 @@ used by Navbar_NEW_OLD.tsx (purple version)
     height: auto;
     cursor: pointer;
     box-shadow: 0 0 10px black;
+}
 
+.swen.animal {
+    background-color: white;
+    padding: 20px;
+    border-radius: 2px!important;
+    color: var(--color);
+
+    & h1 {
+        font-size: 1.4em;
+    }
+    & p {
+        font-size: 1em;
+    }
 }
 
 .swen-container {
