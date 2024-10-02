@@ -78,6 +78,14 @@ function openControl(){
 
 }
 
+const JjodelName = () => {
+    return (
+        <div className={'jjodel'}>
+            <span>jjodel v1.1</span> <i className="bi bi-globe-americas"></i> lamantee
+        </div>
+    );
+}
+
 function BottomBarComponent(props: AllProps): JSX.Element {
     const [swenOpen, setSwen] = useState(false);
     const {node,data} = props;
@@ -120,6 +128,8 @@ function BottomBarComponent(props: AllProps): JSX.Element {
             <Notify  type={notificationType.Terminal} alert={alertType.Normal} message={''} />
             <Notify  type={notificationType.Messages} alert={alertType.Normal} message={''} />
         </div> */}
+        <JjodelName />
+
     </footer>)
 }
 interface OwnProps {}
