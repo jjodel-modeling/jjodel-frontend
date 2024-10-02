@@ -466,20 +466,9 @@ i.bi {
   }
 }
 
-.login.bg-3 {
+.login.bg {
   justify-content: center;
-  background-image: url('../static/img/4.png');
-  background-size: cover;
-  background-repeat: no-repeat;
-  & form {
-    opacity: 0.9;
-    margin-left: auto;
-    margin-right: auto;
-  }
-}
-.login.bg-4 {
-  justify-content: center;
-  background-image: url('../static/img/24.png'); // new background
+  background-image: url('../static/img/101.png'); // new background
   background-size: cover;
   background-repeat: no-repeat;
   
