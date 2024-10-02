@@ -12,7 +12,7 @@
 
 
 
-ul.ps-2.pt-2 .entry-root.DViewPoint.selected {
+ul.ps-2.pt-2 li.entry-rootDViewPoint.selected {
   position: relative;
   z-index: 0;
 
@@ -34,7 +34,7 @@ ul.ps-2.pt-2 .entry-root.DViewPoint.selected {
 
 
 
-ul.ps-2.pt-2 .entry-root.DViewPoint.selected::after {
+ul.ps-2.pt-2 .entry-rootDViewPoint.selected::after {
   position:absolute;
   left    : 4px;
   bottom  : 4px;
