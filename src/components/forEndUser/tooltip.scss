@@ -1,4 +1,4 @@
-.tooltip-wrapper{
+.tooltip-wrapper {
   position: fixed;
   z-index: 9999;
   top: 0;
@@ -6,18 +6,87 @@
   height: 100vh;
   pointer-events: none;
   display: flex;
-  &>*{
+  --pad-x: 1em;
+  --pad-y: 1em;
+  --border-x: 1px;
+  --border-y: 1px;
+  --safety-offset-x: 0px;
+  --safety-offset-y: 1px;
+  --test-maxx: calc(50vw - var(--size-w) / 2 - var(--pad-y) - var(--border-x) - var(--safety-offset-x));
+  --test-miny: -50vh; //calc(50vh - var(--test-h) / 2 - var(--pad-y) / 2 - var(--border-y) / 2 - var(--safety-offset-y));
+  --test-minx: calc(-50vw + var(--size-w) / 2 + var(--pad-y) + var(--border-x) + var(--safety-offset-x));
+  --test-maxy: calc(50vh - var(--size-h) - var(--pad-y) * 2 - var(--border-y) * 2 - var(--safety-offset-y));
+  // next 4 vars are overriden by inline style, they are listed just for fallback and documentation
+  --size-w: 0px;
+  --size-h: 0px;
+  --mid-x: 0px;
+  --mid-h: 0px;
+  // computed mixing css vars & computed js values injected in vars
+  --left: max( min(var(--mid-x), var(--test-maxx)), var(--test-minx));
+  --top: max( min(var(--mid-y), var(--test-maxy)), var(--test-miny));
+
+  // --test-maxy: calc(-50vh + var(--size-h) / 2 + var(--pad-y) + var(--border-y) + var(--safety-offset-y));
+  &.fixed{
+    &.top>*{
+      margin-top: 10vh;
+    }
+    &.bottom>*{
+      margin-bottom: 10vh;
+    }
+  }
+  &.inline{
+    left: var(--left) !important;
+    top: var(--top) !important;
+    &.top>*{
+      transform: translate(0, -50%);
+    }
+    &.bottom>*{
+      transform: translate(0, 50%);
+    }
+    &.left>*{
+      transform: translate(-50%);
+    }
+    &.right>*{
+      transform: translate(50%);
+    }
+
+    &.top.left>*{
+      transform: translate(-50%, -50%);
+    }
+    &.top.right>*{
+      transform: translate( 50%, -50%);
+    }
+    &.bottom.left>*{
+      transform: translate(-50%, 50%);
+    }
+    &.bottom.right>*{
+      transform: translate( 50%, 50%);
+    }
+    &.center{
+
+    }
+  }
+  &> *{
     pointer-events: all;
     margin: auto;
     background: whitesmoke; //var(--palette-w);
-    padding: 1em;
     border: 1px solid var(--palette-g);
-    border-radius: 0.5em;
+    padding: 0.4em;
+    border-radius: var(--radius); //.5em;
   }
-  &.top>*{
-    margin-top: 10vh;
+
+  &> .dark * {
+    pointer-events: all;
+    margin: auto;
+    background: var(--palette-w);
+    border: 1px solid var(--palette-g);
+    color: white;
+    padding: 0.4em;
+    border-radius: var(--radius); //.5em;
   }
-  &.bottom>*{
-    margin-bottom: 10vh;
+  
+  &.inline>*{
+    margin: auto;
+    pointer-events: none;
   }
 }

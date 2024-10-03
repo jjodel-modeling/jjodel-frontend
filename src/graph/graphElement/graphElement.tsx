@@ -8,7 +8,7 @@ import {
     LGraph, MouseUpEvent, Point,
     Pointers,
     Selectors as Selectors_, Size, TRANSACTION, WGraph,
-    GraphDragManager, GraphPoint, Selectors, DNamedElement, DVoidEdge
+    GraphDragManager, GraphPoint, Selectors, DNamedElement, DVoidEdge, LEdge, LPackage, LReference, LVoidEdge, LValue
 } from "../../joiner";
 import {DefaultUsageDeclarations} from "./sharedTypes/sharedTypes";
 
@@ -50,7 +50,6 @@ import {EdgeStateProps, LGraphElement, store, VertexComponent,
     UX,
     windoww, transientProperties
 } from "../../joiner";
-import subViewsData from "../../components/rightbar/viewsEditor/data/SubViewsData";
 import {NodeTransientProperties, Pack1} from "../../joiner/classes";
 
 // const Selectors: typeof Selectors_ = windoww.Selectors;
@@ -139,6 +138,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
     public static cname: string;
     static all: Dictionary<number, GraphElementComponent> = {};
     public static map: Dictionary<Pointer<DGraphElement>, GraphElementComponent> = {};
+    static defaultProps: Partial<GraphElementOwnProps> = GraphElementOwnProps.new();
     static maxid: number = 0;
     id: number;
 
@@ -278,12 +278,24 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
                 Log.e(!endnodeid, "Cannot create an edge without end node (yet)", {endnodeid, data:ret.data, propsEnd:edgeOwnProps.end});
                 if (!startnodeid || !endnodeid) return;
                 let longestLabel = edgeOwnProps.label;
-                let labels: DEdge["labels"] = edgeOwnProps.labels || [];
+                let labels = edgeOwnProps.labels;
                 // dge = DEdge.new(ownProps.htmlindex as number, ret.data?.id, parentnodeid, graphid, nodeid, startnodeid, endnodeid, longestLabel, labels);
-                dge = DEdge.new2(ret.data?.id, parentnodeid, graphid, nodeid, startnodeid, endnodeid, (d)=>{
-                    d.longestLabel = longestLabel;
-                    d.labels = labels;
-                    d.zIndex = ownProps.htmlindex || 1;
+                let ddata = ret.data?.__raw;
+                dge = DEdge.new2(ddata?.id, parentnodeid, graphid, nodeid, startnodeid, endnodeid, (d: DEdge)=>{
+                    //d.longestLabel = longestLabel;
+                    //d.labels = labels;
+                    d.isReference = !!edgeOwnProps.isReference;
+                    if (edgeOwnProps.isValue !== undefined) d.isValue = !!edgeOwnProps.isValue;
+                    else d.isValue = !!(d.isReference && ddata && ddata.className === 'DValue');
+                    if (d.isValue) d.isReference = false;
+                    d.isDependency = !!edgeOwnProps.isDepencency;
+                    d.isExtend = !!edgeOwnProps.isExtend;
+                    let tn = (transientProperties.node[nodeid]);
+                    if (!tn) transientProperties.node[nodeid] = {} as any;
+                    tn.onDelete = edgeOwnProps.onDelete;
+                    tn.labels = labels;
+                    tn.longestLabel = longestLabel;
+                    d.zIndex = edgeOwnProps.htmlindex || 1;
                     if (edgeOwnProps.anchorStart) d.anchorStart = edgeOwnProps.anchorStart;
                     if (edgeOwnProps.anchorEnd) d.anchorEnd = edgeOwnProps.anchorEnd;
                 });
@@ -292,6 +304,8 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
             else {
                 let initialSize = ownProps.initialSize;
                 dge = dGraphElementDataClass.new(ownProps.htmlindex as number, ret.data?.id, parentnodeid, graphid, nodeid, initialSize);
+                if (!tn) transientProperties.node[nodeid] = {} as any;
+                tn.onDelete = ownProps.onDelete;
                 ret.node =  MyProxyHandler.wrap(dge);
             }
             // console.log("map ge2", {nodeid: nodeid+'', dge: {...dge}, dgeid: dge.id});
@@ -316,7 +330,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
     ////// mapper func
     static mapStateToProps(state: DState, ownProps: GraphElementOwnProps, dGraphDataClass: (typeof DGraphElement | typeof DEdge) = DGraphElement, startingobj?: GObject): GraphElementReduxStateProps {
         // console.log('dragx GE mapstate', {dGraphDataClass});
-        let ret: GraphElementReduxStateProps = (startingobj || {}) as GraphElementReduxStateProps; // NB: cannot use a constructor, must be pojo
+        let ret: GraphElementReduxStateProps = (startingobj || GraphElementReduxStateProps.new()) as GraphElementReduxStateProps; // NB: cannot use a constructor, must be pojo
         // console.log("viewsss mapstate 0 " + ownProps.view + " " + ret.data?.name, {views:ret.views, ownProps, stateProps:{...ret}, thiss:this});
 
         GraphElementComponent.mapLModelStuff(state, ownProps, ret);
@@ -337,6 +351,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         ret.forceupdate = state.forceupdate;
 
         // Log.l((ret.data as any)?.name === "concept 1", "mapstatetoprops concept 1", {newnode: ret.node});
+        U.removeEmptyObjectKeys(ret);
         return ret;
     }
 
@@ -354,9 +369,9 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
     stopUpdateEvents?: number; // undefined or view.clonedCounter;
     dataOldClonedCounter?: number; // undefined or data.clonedCounter;
 
-
     public shouldComponentUpdate(nextProps: Readonly<AllProps>, nextState: Readonly<GraphElementState>, nextContext: any, oldProps?: Readonly<AllProps>): boolean {
         if (!oldProps) oldProps = this.props;//for subviewcomponent
+        let debug = false;
         // return GraphElementComponent.defaultShouldComponentUpdate(this, nextProps, nextState, nextContext);
         let data = nextProps.data?.__raw as DNamedElement | undefined;
 
@@ -378,7 +393,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
 
             nodeviewentry.shouldUpdate_reason = {...out};
             (nodeviewentry as any).shouldUpdate_reasonDebug = {old_ud, new_ud};
-            Log.l(true, "DECORATIVE_VIEW ShouldComponentUpdate " + data?.name + (nodeviewentry.shouldUpdate ? " UPDATED " : " REJECTED ")  + vid,
+            Log.l(debug, "DECORATIVE_VIEW ShouldComponentUpdate " + data?.name + (nodeviewentry.shouldUpdate ? " UPDATED " : " REJECTED ")  + vid,
                 {ret:nodeviewentry.shouldUpdate, reason: out.reason, old_ud, new_ud, oldProps:oldProps, nextProps, vid});
 
             if (!ret && nodeviewentry.shouldUpdate) ret = true;
@@ -393,7 +408,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         nodeviewentry.shouldUpdate_reason = {...out};
         (nodeviewentry as any).shouldUpdate_reasonDebug = {old_ud, new_ud};
 
-        Log.l(true, "ShouldComponentUpdate " + data?.name + (nodeviewentry.shouldUpdate ? " UPDATED " : " REJECTED ") + vid,
+        Log.l(debug, "ShouldComponentUpdate " + data?.name + (nodeviewentry.shouldUpdate ? " UPDATED " : " REJECTED ") + vid,
             {ret:nodeviewentry.shouldUpdate, reason: out.reason, old_ud, new_ud, oldProps:oldProps, nextProps});
         if (!ret && nodeviewentry.shouldUpdate) ret = true;
         return ret; // if any of main view or decorative views need updating
@@ -451,7 +466,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         let functionsToBind = [this.onClick,
             this.onLeave, this.onEnter,
             this.doContextMenu, this.onContextMenu,
-            this.onMouseDown, this.onMouseUp, this.onKeyDown, this.onScroll];/*
+            this.onMouseDown, this.onMouseUp, this.onKeyDown, this.onScroll, this.onMouseMove];/*
         this.onClick = this.onClick.bind(this);
         this.onLeave = this.onLeave.bind(this);
         this.onContextMenu = this.onContextMenu.bind(this);
@@ -702,7 +717,8 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         TRANSACTION(()=>{
             if (e.button === Keystrokes.clickRight) { this.doContextMenu(e); }
             let p: GObject = this.props;
-            if (p.isGraph && !p.isvertex || p.isGraph && p.isvertex && e.ctrlKey) GraphDragManager.startPanning(e, this.props.node as LGraph);
+            console.log('try drag', {p, ig: p.isGraph, iv:p.isVertex});
+            // if ((p.isGraph && !p.isVertex) || (p.isGraph && p.isVertex && e.ctrlKey)) GraphDragManager.startPanning(e, this.props.node as LGraph);
         })
     }
 
@@ -725,15 +741,27 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         })
         e.stopPropagation();
     }
-    onMouseUp(e: React.MouseEvent): void {
+    onMouseMove(e: React.MouseEvent): void {
+        //this.onMouseUp(e);
+    }
+    onMouseUp(e: React.MouseEvent, frommousemove: boolean = false): void {
         e.stopPropagation();
         TRANSACTION(()=>{
-            GraphDragManager.stopPanning(e);
+            //GraphDragManager.stopPanning(e);
             if (GraphElementComponent.mousedownComponent !== this) { return; }
-            this.doOnClick(e);
+            if (!frommousemove) this.doOnClick(e);
         })
     }
     onKeyDown(e: React.KeyboardEvent){
+        console.log('keydown', e.key, {e, m:this.props.data?.name});
+        let target: HTMLElement = e.target as any;
+        switch (target?.tagName.toLowerCase()) {
+            case 'input':
+            case 'textarea':
+                e.stopPropagation(); return;
+            default: if (target?.getAttribute('contenteditable') === 'true') { e.stopPropagation(); return; }
+        }
+        if (!(this.props.isGraph && !this.props.isVertex)) e.stopPropagation();
         if (e.key === Keystrokes.escape) {
             this.props.node.deselect();
             if (this.props.isEdgePending) {
@@ -741,12 +769,53 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
                 return;
             }
         }
-        if (e.ctrlKey || e.altKey) {
+        let isDelete: boolean = false;
+        if (e.key === Keystrokes.delete){ isDelete = true; }
+        if (e.shiftKey) {
             // todo: make them a switch
-            if (e.key === "d") this.props.data?.duplicate(); else
-            if (e.key === "r") this.props.data?.delete();
+            if (e.key === "D" || e.key === "d") this.props.data?.duplicate(); else
+            if (e.key === "R" || e.key === "r") { isDelete = true; }
         }
-        if (e.altKey) {
+        console.log('keydown isDelete', isDelete);
+        if (isDelete){
+            let nid = this.props.nodeid;
+            let tn = transientProperties.node[nid];
+            TRANSACTION(()=>{
+                if (tn && tn.onDelete && tn.onDelete(this.props.node) === false) return;
+                // if shapeless, erase the node directly.
+                if (!this.props.data) {
+                    this.props.node.delete();
+                    return;
+                }
+                // if dictated by the model, change the model to erase indirectly the node.
+                if (!this.props.isEdge) {
+                    this.props.data.delete();
+                    return;
+                }
+                // if edge
+                let e = this.props.node as LVoidEdge;
+                let de = e.__raw;
+                if (de.isExtend) {
+                    let data: LClass = this.props.data as any;
+                    data.unsetExtends(e.end.model as LClass);
+                    // SetFieldAction(data.id, 'extends', )
+                }
+                if (de.isReference){
+                    if (this.props.data.className === 'DReference'){
+                        let ref: LReference = this.props.data as any;
+                        ref.type = ref.father.id as any;
+                    } else {
+                        let lval: LValue = this.props.data as any;
+                        lval.remove(e.end.model);
+                    }
+                }
+                if (de.isDependency){ // pkg dependency
+                    let ref: LPackage = this.props.data as any;
+                }
+                else {}
+            })
+        }
+        if (e.ctrlKey) {
             // if (e.key === Keystrokes.escape) this.props.node.toggleMinimize();
             if (e.key === "a") this.props.data?.addChild("auto"); else // add class if on package, literal if on enum...
             if (e.key === "r") this.props.data?.addChild("reference"); else
@@ -772,7 +841,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
             if (this.props.data?.className !== "DClass") return;
             // const user = this.props.isEdgePending.user;
             const extendError: {reason: string, allTargetSuperClasses: LClass[]} = {reason: '', allTargetSuperClasses: []}
-            const canBeExtend = this.props.data && edgePendingSource.canExtend(this.props.data as LClass, extendError);
+            const canBeExtend = this.props.data && edgePendingSource.canExtend(this.props.data as any as LClass, extendError);
             if (canBeExtend && this.props.data) {
                 const lClass: LClass = LPointerTargetable.from(this.props.data.id);
                 // SetFieldAction.new(lClass.id, "extendedBy", source.id, "", true); // todo: this should throw a error for wrong type.
@@ -833,6 +902,53 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
     }
     }
 
+
+    // returns: true if an action is fired and component needs re-rendering
+    updateNodeFromProps(props: GObject<AllProps>): boolean {
+        let ret = false;
+        let tn = transientProperties.node[props.nodeid];
+        let ptr: Pointer<any>;
+        if (!props.node) return false;
+        let node = props.node;
+        let dnode = node.__raw;
+        let edge: LVoidEdge = props.node as any;
+        let dedge: DVoidEdge = dnode as any;
+        // if edge.label props is func, do not set in the dedge, just in transientproperties. totally override the "text" system.
+        // it does not need collab sync:
+        // because if the view is active for the other user, his synched jsx will generate the same function in transientProperties.
+        // if it is inactive it does not matter, the value is not used.
+        if (props.label) { tn.longestLabel = props.label; }
+        if (props.onDelete) { tn.onDelete = props.onDelete; }
+        if (props.longestLabel) { tn.longestLabel = props.longestLabel; }
+        if (props.labels) { tn.labels = props.labels; }
+        if (props.anchorStart && props.isEdge) { edge.anchorStart = props.anchorStart; }
+        if (props.anchorEnd && props.isEdge) { edge.anchorEnd = props.anchorEnd; }
+        if (props.start && props.isEdge) {
+            ptr = Pointers.from(props.start);
+            if (dedge.id !== ptr) edge.start = ptr as any;
+        }
+        // console.log("changing endpt", props, props.end, props.end?.model?.name);
+        if (props.end && props.isEdge) {
+            ptr = Pointers.from(props.end);
+            if (dedge.id !== ptr) edge.end = ptr as any;
+        }
+        if (props.anchorEnd) { tn.labels = props.labels; }
+        // if (typeof props.viewid === 'string') { let old = props.viewid; if (old !== props.node.view.id) { this.forceUpdate(); ret = true;} }
+        if (typeof props.isReference) { let old = dedge.isReference; let n = !!props.isReference; if (old !== n) { edge.isReference = n; ret = true;} }
+        if (typeof props.isExtend) { let old = dedge.isExtend; let n = !!props.isExtend; if (old !== n) { edge.isExtend = n; ret = true;} }
+        if (typeof props.isValue) { let old = dedge.isValue; let n = !!props.isValue; if (old !== n) { edge.isValue = n; ret = true;} }
+        if (typeof props.isDependency) { let old = dedge.isDependency; let n = !!props.isDependency; if (old !== n) { edge.isDependency = n; ret = true;} }
+        if (typeof props.x === 'number') { let old = dnode.x; let n = +props.x; if (old !== n) { node.x = n; ret = true;} }
+        if (typeof props.y === 'number') { let old = dnode.y; let n = +props.y; if (old !== n) { node.y = n; ret = true;} }
+        // risk loop: todo loop detection and skip setting
+        if (typeof props.w === 'number') { let old = dnode.w; let n = +props.w; if (old !== n) { node.w = n; ret = true;} }
+        if (typeof props.h === 'number') { let old = dnode.h; let n = +props.h; if (old !== n) { node.h = n; ret = true;} }
+        if (typeof props.width  === 'number') { let old = dnode.w; let n = +props.width;  if (old !== n) { node.w = n; ret = true;} }
+        if (typeof props.height === 'number') { let old = dnode.h; let n = +props.height; if (old !== n) { node.h = n; ret = true;} }
+
+        return ret;
+    }
+
     public render(nodeType:string = '', styleoverride:React.CSSProperties={}, classes: string[]=[]): ReactNode {
         GraphElementComponent.map[this.props.nodeid as Pointer<DGraphElement>] = this; // props might change at runtime, setting in constructor is not enough
         if (Debug.lightMode && (!this.props.data || !(lightModeAllowedElements.includes(this.props.data.className)))){
@@ -843,6 +959,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
             this.onViewChange();
             return "Updating view...";
         }*/
+        if (this.updateNodeFromProps(this.props as GObject<any>)) return 'Updating...';
         let nid = this.props.nodeid;
         let allviews = [...this.props.views, this.props.view]; // main view must be last, for renderView ordering
 
@@ -860,10 +977,12 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         /// set classes
         if (this.props.node) {
             let isSelected: Dictionary<Pointer<DUser>, boolean> = this.props.node.__raw.isSelected;
-            if (isSelected[DUser.current]) { // todo: better to just use css attribute selectors [data-userselecting = "userID"]
-                classes.push('selected-by-me');
-                if (Object.keys(isSelected).length > 1) classes.push('selected-by-others');
-            } else if (Object.keys(isSelected).length) classes.push('selected-by-others');
+            if(isSelected) {
+                if (isSelected[DUser.current]) { // todo: better to just use css attribute selectors [data-userselecting = "userID"]
+                    classes.push('selected-by-me');
+                    if (Object.keys(isSelected).length > 1) classes.push('selected-by-others');
+                } else if (Object.keys(isSelected).length) classes.push('selected-by-others');
+            }
         }
 
         classes.push(this.props.data?.className || 'DVoid');
@@ -887,7 +1006,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
 
         let jsxOutput: ReactNode = undefined as any;
         const tn = transientProperties.node[nid]
-        console.log("render", {mainView, otherViews, scores:tn.viewScores, tnv:tn.viewScores[this.props.viewid], ud:tn.viewScores[this.props.viewid].usageDeclarations});
+        //console.log("render", {mainView, otherViews, scores:tn.viewScores, tnv:tn.viewScores[this.props.viewid], ud:tn.viewScores[this.props.viewid].usageDeclarations});
         for (let v of allviews) { // main view is the last
             let viewnodescore = transientProperties.node[nid].viewScores[v.id];
             jsxOutput = viewnodescore.shouldUpdate ? undefined : viewnodescore.jsxOutput;
@@ -920,7 +1039,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         }*/
 
         if (!ud) tnv.usageDeclarations = ud = computeUsageDeclarations(this, props, this.state, v);
-        console.log("renderView", {dv, tnv, ud});
+        //console.log("renderView", {dv, tnv, ud});
 
         if (ud.__invalidUsageDeclarations) {
             console.error("renderView error ud:", {dv, tnv, ud});
@@ -953,7 +1072,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         const addprops: boolean = true;
         let fiximport = !!this.props.node;
         //let a: false = true as any; if (a) return "Loading...";
-        if (this.props.data?.name === "Concept 1") console.log("shouldcomponentupdate rendering " + this.props.data?.name, {cc: this.props.data.clonedCounter, attrs: (this.props.data as any).attributes});
+        // if (this.props.data?.name === "Concept 1") console.log("shouldcomponentupdate rendering " + this.props.data?.name, {cc: this.props.data.clonedCounter, attrs: (this.props.data as any).attributes});
         if (addprops && rawRElement && fiximport) {
             if (windoww.debugcount && debugcount++>windoww.debugcount) throw new Error("debug triggered stop");
             let fixdoubleroot = true;
@@ -996,11 +1115,15 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
                         onContextMenu: this.onContextMenu,
                         onMouseDown: this.onMouseDown,
                         onMouseUp: this.onMouseUp,
+                        onMouseMove: this.onMouseMove,
+                        onKeyDown: this.onKeyDown,
+                        // onKeyUp: this.onKeyUp,
                         onwheel: this.onScroll,
                         onMouseEnter: this.onEnter,
                         onMouseLeave: this.onLeave,
                         tabIndex: (props as any).tabIndex || -1,
                         "data-countrenders": this.countRenders++,
+                        "data-clonedcounter": props.node?.clonedCounter || -1,
                         // decorators: otherViews,
                     };
                     let p: GObject = this.props;
@@ -1016,7 +1139,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
                 injectProps.children = UX.recursiveMap(rawRElement/*.props.children*/,
                     (rn: ReactNode, index: number, depthIndexes: number[]) => {
                         let injectOffset: undefined | LGraph = ((this.props as any).isGraph && !depthIndexes[0] && !index) && (this.props.node as LGraph);
-                        injectOffset&&console.log("inject offset props0:", {injectOffset});
+                        //injectOffset&&console.log("inject offset props0:", {injectOffset});
                         //console.log("inject offset props00:", {injectOffset, ig:(this.props as any).isGraph, props:this.props, depthIndexes, index});
                         return UX.injectProp(this, rn, subElements, this.props.parentnodeid as string, index, depthIndexes, injectOffset)
                     });
@@ -1065,7 +1188,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
 
         // console.log("nodeee", {thiss:this, props:this.props, node: this.props.node});
         if (false && dv.isExclusiveView && (props.node?.__raw as DGraphElement).father) {
-            let $containedIn = $('#' + props.node.father);
+            let $containedIn = $('#' + props.node.__raw.father);
             let $containerDropArea = $containedIn.find(".VertexContainer");
             const droparea = $containerDropArea[0] || $containedIn[0];
             Log.exDev(!droparea, 'invalid vertex container target', {$containedIn, $containerDropArea});
@@ -1076,7 +1199,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
             <div className={this.countRenders%2 ? "animate-on-update-even" : "animate-on-update-odd"} data-countrenders={this.countRenders++} />
         ]}</>/*/
 
-        console.log("renderView return:", rawRElement || rnode);
+        //console.log("renderView return:", rawRElement || rnode);
         return rawRElement || rnode;
     }
 

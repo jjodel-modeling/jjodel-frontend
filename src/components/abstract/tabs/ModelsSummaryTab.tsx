@@ -1,24 +1,61 @@
 import type {DState, LProject} from '../../../joiner';
-import {U, Input, DUser, LUser, LModel} from '../../../joiner';
+import {DUser, LModel, LUser} from '../../../joiner';
 import React, {Dispatch, ReactElement} from 'react';
 import {connect} from 'react-redux';
 import type {Dictionary, FakeStateProps} from '../../../joiner/types';
 import DockManager from "../DockManager";
+import {LeftBar} from '../../../pages/components';
+import {ProjectCatalog, Title} from '../../../pages/components/Dashboard';
+
+
+type Props = {
+    key: string;
+    name: string;
+    data: any;
+    metamodels: any;
+    models: any;
+};
+
+const Project = (props: Props) => {
+    const {name, metamodels, models} = props;
+    const project = props.data;
+
+    return (
+        <React.Fragment>
+            <div className={"dashboard-container"} tabIndex={-1}>
+                <LeftBar active={'Project'} project={project} />
+                <div className={'user'}>
+                    <div className={'name'}>
+                        <Title projectID={project.id} active={'Project'} title={project.name} icon={<i className="bi bi-p-square"></i>} description={project.description}/>
+                        <ProjectCatalog project={project} />
+                    </div>
+                </div>
+            </div>
+        </React.Fragment>
+    );
+}
 
 function m2Row(model: LModel) { return mRow(model, false) }
 function m1Row(model: LModel) { return mRow(model, true) }
 // too small to justify a separate file
+
 function mRow(model: LModel, showInstanceOf: boolean = false) {
     if(!model) return(<></>);
     return (
-        <label className={'ms-3 d-block'} key={model.id} onClick={()=>DockManager.open2(model)} style={{cursor: 'pointer'}}>
-            - {model.name}{
-            showInstanceOf && <><b className={'text-success'}> {model.instanceof ? 'conforms to' : 'is shapeless'}</b> {model.instanceof?.name}</>
+        <p className={'d-block'} key={model.id} onClick={()=>DockManager.open2(model)} style={{cursor: 'pointer'}}>
+            <i className="bi bi-folder"></i> {model.name}{
+                showInstanceOf && <><span className={'text-success'}> {model.instanceof ? 'conforming to' : 'is shapeless'}</span> {model.instanceof?.name}</>
             }
-            <button style={{borderRadius: '999px'}} className={'ms-2 btn btn-primary p-0'} onClick={() => DockManager.open2(model)}>
-                <i className={'bi bi-arrow-right-short'} />
-            </button>
-        </label>)
+            <i className="bi bi-chevron-down hoverable">
+                <div className="content context-menu">
+                    <div className={'col item'}>Open</div>
+                    <div className={'col item'}>Duplicate</div>
+                    <div className={'col item'}>Close</div>
+                    <hr className={'my-1'} />
+                    <div className={'col item'}>Delete</div>
+                </div>
+            </i>
+        </p>)
 }
 
 function InfoTabComponent(props: AllProps) {
@@ -33,24 +70,7 @@ function InfoTabComponent(props: AllProps) {
         modelmap[m2name].push(m);
     }
     models = Object.values(modelmap).flat();  // this way they are sorted by metamodel
-
-    return(<div className={'p-3'}>
-        <div className={'input-container w-50'}>
-            <b className={'me-2'}>Project Name:</b>
-            <Input data={project.id} field={'name'} hidden={true} />
-        </div>
-        {(project.type === 'collaborative') &&
-            <b className={'d-block'}><label className={'text-primary '}>Online Users:</label> {project.onlineUsers}</b>
-        }
-        <b><label className={'text-primary'}>Metamodels ({metamodels.length}):</label></b>
-        <section>
-            {metamodels.map(m2Row)}
-        </section>
-        <b><label className={'text-primary'}>Models ({models.length}):</label></b>
-        <section>
-            {models.map(m1Row)}
-        </section>
-    </div>);
+    return(<Project key={project.id} name={project.name} data={project} metamodels={metamodels} models={models}/>);
 }
 
 interface OwnProps {}

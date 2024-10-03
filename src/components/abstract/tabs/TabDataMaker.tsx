@@ -7,7 +7,7 @@ class TabDataMaker {
     static metamodel (model: DModel|LModel): TabData {
         return {
             id: model.id,
-            title: model.name,
+            title: <div className={"active-on-mouseenter"}>{model.name}</div>,
             group: 'models',
             closable: true,
             content: <MetamodelTab modelid={model.id} />
@@ -16,7 +16,7 @@ class TabDataMaker {
     static model(model: DModel|LModel): TabData {
         return {
             id: model.id,
-            title: model.name,
+            title: <div className={"active-on-mouseenter"}>{model.name}</div>,
             group: 'models',
             closable: true,
             content: <ModelTab modelid={model.id} metamodelid={(model.instanceof as any)?.id || model.instanceof} />

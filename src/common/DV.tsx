@@ -7,47 +7,51 @@ import {
     EdgeBendingMode,
     EdgeHead,
     GObject,
-    GraphPoint, Input, LModelElement,
+    GraphPoint, LPointerTargetable, LViewElement,
     Pointer,
     RuntimeAccessible,
     ShortAttribETypes as SAType,
-    U
+    U, Draggable, Measurable
 } from '../joiner';
 import React, {ReactNode} from "react";
 import {PaletteType} from "../view/viewElement/view";
+import "./error.scss";
+
+
+
 // const beautify = require('js-beautify').html; // BEWARE: this adds some newline that might be breaking and introduce syntax errors in our JSX parser
 const beautify = (s: string) => s;
 let ShortAttribETypes: typeof SAType = (window as any).ShortAttribETypes;
 
+
+
 @RuntimeAccessible('DV')
 export class DV {
     public static invisibleJsx(): string { return ''; }
-    public static modelView(): string { return beautify(DefaultView.model()); } // damiano: che fa beautify? magari potremmo settarlo in LView.set_jsx invece che solo qui, così viene formattato anche l'input utente?
+    public static modelView(): string { return beautify(DefaultView.model()); }
     public static packageView(): string { return beautify(DefaultView.package()); }
     public static classView(): string { return beautify(DefaultView.class()); }
     public static attributeView(): string { return beautify(DefaultView.feature()); }
     public static referenceView(): string { return beautify(DefaultView.feature()); }
     public static enumeratorView(): string { return beautify(DefaultView.enum()); }
     public static literalView(): string { return beautify(DefaultView.literal()); }
-    public static voidView(): string { return beautify(DefaultView.void()); }
+    public static fallbackView(): string { return beautify(DefaultView.void()); }
     public static operationView(): string { return beautify(DefaultView.operation()); }
     public static parameterView(): string { return beautify(DefaultView.parameter()); }
 
-    // damiano: i want to keep it because it will be useful for a candidate next feature in m1 & layoutable elements
+    // i want to keep it because it will be useful for a candidate next feature in m1 & layoutable elements
     // it is still work in progress.
     public static operationViewm1(): string { return beautify(DefaultView.operationm1()); }
     public static objectView(): string { return beautify(DefaultView.object()); }
     public static valueView(): string { return beautify(DefaultView.value()); }
+    public static singletonView(): string { return beautify(DefaultView.singleton()); }
     public static defaultPackage(): string { return beautify(DefaultView.defaultPackage()); }
-    public static error_raw(...a: Parameters<(typeof DefaultView)["error"]>): React.ReactNode {
-        return DefaultView.error(...a);
-    }
 
-    public static errorView(publicmsg: ReactNode, debughiddenmsg:any, errortype: string, data?: DModelElement | undefined, node?: DGraphElement | undefined, v?: DViewElement): React.ReactNode {
+    public static errorView(publicmsg: ReactNode, debughiddenmsg:any, errortype: string, data?: DModelElement | undefined, node?: DGraphElement | undefined, v?: LViewElement|DViewElement): React.ReactNode {
         let visibleMessage = publicmsg && typeof publicmsg === "string" ? U.replaceAll(publicmsg, "Parse Error:", "").trim() : publicmsg;
         console.error("error in view:", {publicmsg, debuginfo:debughiddenmsg});
         return DefaultView.error(visibleMessage, errortype, data, node, v); }
-    public static errorView_string(publicmsg: string, debughiddenmsg:any, errortype: string, data?: DModelElement | undefined, node?: DGraphElement | undefined, v?: DViewElement): React.ReactNode {
+    public static errorView_string(publicmsg: string, debughiddenmsg:any, errortype: string, data?: DModelElement | undefined, node?: DGraphElement | undefined, v?: LViewElement|DViewElement): React.ReactNode {
         let visibleMessage = publicmsg && typeof publicmsg === "string" ? U.replaceAll(publicmsg, "Parse Error:", "").trim() : publicmsg;
         console.error("error in view:", {publicmsg, debuginfo:debughiddenmsg});
         return DefaultView.error_string(visibleMessage, errortype, data, node, v); }
@@ -120,7 +124,7 @@ export class DV {
 
     // about label rotation in .edge > foreignObect > div (label)
     // first transform is h-center. second is rotate, third adds [0, 50%] of 50% vertical offset AFTER rotation to take label out of edge. fourth is to add a margin.
-    static edgeView(modename: EdgeHead, headSize: GraphPoint, tailSize: GraphPoint, dashing: string | undefined, vp: Pointer<DViewPoint>, name: string): DViewElement {
+    static edgeView(modename: EdgeHead, headSize: GraphPoint, tailSize: GraphPoint, dashing: string | undefined, vp: DViewElement, name: string): DViewElement {
         let fill: string;
         switch (modename){
             case EdgeHead.reference:
@@ -252,12 +256,12 @@ export class DV {
                 { /* edge tail */ }
                 ` + tail + `
                 { /* edge anchor start */ }
-                {edge.start && <circle className="edge-anchor content clickable"
+                {edge.start && <circle className="edge-anchor content clickable no-drag"
                  style={{transform: "translate(" + segments.all[0].start.pt.x +"px, " + segments.all[0].start.pt.y +"px)"}}
                  onMouseDown={()=> edge.startFollow=true}
                  onMouseUp={()=> edge.startfollow=false} />}
                 { /* edge anchor end */ }
-                {edge.end && <circle className="edge-anchor content clickable" `+ // cx={0*segments.all.last().end.pt.x} cy={0*segments.all.last().end.pt.y}
+                {edge.end && <circle className="edge-anchor content clickable no-drag" `+ // cx={0*segments.all.last().end.pt.x} cy={0*segments.all.last().end.pt.y}
                 `style={{transform: "translate(" + segments.all.last().end.pt.x +"px, " + segments.all.last().end.pt.y +"px)"}}
                  onMouseDown={()=> edge.endFollow=true}
                  onMouseUp={()=> edge.endfollow=false} />}
@@ -289,9 +293,9 @@ export class DV {
             "ret.end = edge.end\n"+
             "ret.segments = edge.segments\n"+
             "}";
-        let ev = DViewElement.new2("Edge"+name, jsx,
+        let ev = DViewElement.new2("Edge"+name, jsx, vp,
             (v: DViewElement) => {
-                v.appliableToClasses = [DVoidEdge.cname];
+                // v.appliableToClasses = [DVoidEdge.cname];
                 v.appliableTo = 'Edge';
                 v.bendingMode = EdgeBendingMode.Line;
                 v.edgeHeadSize = headSize;
@@ -301,7 +305,7 @@ export class DV {
                 v.css = css
                 v.usageDeclarations = edgeUsageDeclarations;
                 v.preRenderFunc = edgePrerenderFunc;
-            }, false, vp, 'Pointer_ViewEdge' + name);
+            }, false, 'Pointer_ViewEdge' + name);
         return ev;
     }
     /*
@@ -345,44 +349,72 @@ valuecolormap[ShortAttribETypes.EString] = "green";
 valuecolormap[ShortAttribETypes.EChar] = "green";
 valuecolormap[ShortAttribETypes.EVoid] = "gray";
 
-// &&[]bn
 let valuecolormap_str = JSON.stringify(valuecolormap); // can this be declared inside view.constants ?
 
 
-class DefaultView {
+type ErrorProps = {
+    dname: any,
+    nodename: any,
+    errortype: any,
+    on: any,
+    v: any,
+    msg: any
+};
+
+
+
+
+
+export class DefaultView {
+
+    /* MODEL */
 
     public static model(): string { return (
-`<div className={'root'}>
+`<View className={'root model'}>
+<Scrollable graph={node}>
     {!data && "Model data missing."}
-    {/*<ControlPanel node={node}></ControlPanel>*/}
-    <label className={"detail-level"}>
-        <input onChange={(e)=>{node.state = {level:+e.target.value}}} min="0" max="3" type="range" step="1" value={level}/>
-        <div>Detail level:{level}</div>
-    </label>
-    <div className={'edges'}>
-        {[
-            refEdges.map(se => <Edge anchorStart={0} anchorEnd={0} key={se.id}
-            start={se.start.father.node} end={se.end.node} view={'Edge' + ( se.start.containment && 'Composition' || 'Association')} />),
-            extendEdges.map(se => <Edge start={se.start} end={se.end} view={'EdgeInheritance'} key={se.id} />)
-        ]}
-    </div>
-    {otherPackages.filter(p => p).map(pkg => <DefaultNode key={pkg.id} data={pkg} />)}
-    {level >= 1 && firstPackage && firstPackage.children.filter(c => c).map(classifier => <DefaultNode key={classifier.id} data={classifier} />)}
+
+    {/* metamodel */}
+
+    {data.isMetamodel && 
+        [<div className={'edges'}>
+            {[
+                refEdges.map(se => <Edge data={se.start} start={se.startNode.father} end={se.endNode} anchorStart={0} anchorEnd={0} key={se.id} isReference={true} 
+                view={'Edge' + (se.start.composition ? 'Composition' : (se.start.aggregation ? 'Aggregation' : 'Association'))} />),
+                extendEdges.map(se => <Edge data={se.start} start={se.startNode} end={se.endNode} view={'EdgeInheritance'} isExtend={true} key={se.id} />)
+            ]}
+        </div>,
+        otherPackages.filter(p => p).map(pkg => <DefaultNode key={pkg.id} data={pkg} />),
+        level >= 1 && firstPackage && firstPackage.children.filter(c => c).map(classifier => <DefaultNode key={classifier.id} data={classifier} />)]
+    }
+
+    {/* metamodel */}
+    
     {level >= 1 && m1Objects.filter(o => o).map(m1object => <DefaultNode key={m1object.id} data={m1object} />)}
     {decorators}
-</div>`
+</Scrollable>
+
+    {/* language designer defined controls */}
+    
+<Control title={'Semantic'} payoff={'Zooming'}>
+    <Slider name={'level'} title={'Detail level '} node={node} max={3} />
+</Control>
+</View>`
 );}
 
+
     public static void(): string { return (
-`<div className={'round bg-white root void model-less p-1'}>
+`<div className={'root void model-less round bg-white p-1'}>
     <div>voidvertex element test</div>
     <div>data: {props.data ? props.data.name : "empty"}</div>
     {decorators}
 </div>`
 );}
 
+    /* PACKAGE */
+
     public static package(): string { return (
-`<div className={'root package'}>
+`<View className={'root package'}>
     <Measurable draggable={true} resizable={true}><div>draggable resizable</div></Measurable>
     <Measurable draggable={true}><div>draggable</div></Measurable>
     <div className={'package-children'}>
@@ -402,11 +434,11 @@ class DefaultView {
         ]}
     </div>
     {decorators}
-</div>`
+</View>`
 );}
 
     public static defaultPackage(): string { return (
-`<div className={'root'}>
+`<div className={'root package'}>
     <div className={'package-children'}>
         {data.children.map(c => <DefaultNode key={c.id} data={c} />)}
     </div>
@@ -414,98 +446,107 @@ class DefaultView {
 </div>`
 );}
 
-    public static class(): string { return (
-`<View className={'root class'} onClick={()=>{/*node.events.e1(Math.random().toFixed(3))*/}}>
-    <div>
-        <div className={'input-container mx-2'}>
-            <b className={'class-name'}>{interface ? 'Interface' : abstract ? 'Abstract Class' : 'Class'}:</b>
-            <Input data={data} field={'name'} hidden={true} />
-        </div>
-    </div>
-    <hr/>
+    /* CLASS */
+
+public static class(): string { return (`<View className={"root class"} onClick={()=>{/*node.events.e1(Math.random().toFixed(3))*/}}>
+
+{/* ver 2.1 */}
+
+<div className={'header'}>
+    {data.isSingleton && <i className='bi bi-1-square'></i>} 
+    {level > 1 && <b className={'class-name'}> {interface ? 'Interface' : abstract ? 'Abstract Class' : 'Class'}:</b>}
+    {level === 1 && !data.isSingleton && <i className="bi bi-c-square-fill"></i>} <Input data={data} field={'name'} hidden={true} autosize={true} />
+</div>
+
+{level > 2 && data.children.length > 0 && <hr/>}
+
+{level > 2 && 
     <div className={'class-children'}>
         {level >= 2 && [
             attributes.map(c => <DefaultNode key={c.id} data={c} />),
             references.map(c => <DefaultNode key={c.id} data={c} />),
             operations.map(c => <DefaultNode key={c.id} data={c} />)
-          ]
-         || [/*
-         <div className={""}><b>isInterface:</b><span className={"ms-1"}>{''+data.interface}</span></div>,
-         <div className={""}><b>isAbstract:</b><span className={"ms-1"}>{''+data.abstract}</span></div>,
-         <div className={""}><b>Instances:</b><span className={"ms-1"}>{data.instances.length}</span></div>,*/
-         <div className={"summary"}>{[
-             attributes.length ? attributes.length + " attributes" : '',
-             references.length ? references.length + " references" : '',
-             operations.length ? operations.length + " operations" : '',
-             !(attributes.length + references.length + operations.length) ? '- empty -' : ''
+        ]
+        || [
+        <div className={"summary"}>{[
+            attributes.length ? attributes.length + " attributes" : '',
+            references.length ? references.length + " references" : '',
+            operations.length ? operations.length + " operations" : '',
+            !(attributes.length + references.length + operations.length) ? '- empty -' : ''
             ].filter(v=>!!v).join(',')}</div>
-         ]
+        ]
         }
+    </div>
+}
+
+{decorators}
+</View>`);}
+
+
+    /* ENUM */
+
+public static enum(): string { return (
+`<View className={'root enumerator'}>
+    <div className={'header'}>
+        {level > 1 && <b className={'enumerator-name'}>Enum:</b>}
+        {level == 1 && <i className="bi bi-explicit-fill"></i>}<Input data={data} field={'name'} hidden={true} autosize={true} />
+    </div>
+    {level > 1 && <hr />}
+    <div className={'enumerator-children'}>
+        {level >= 2 && literals.map(c => <DefaultNode key={c.id} data={c}/>)}
     </div>
     {decorators}
 </View>`
 );}
 
-    public static enum(): string { return (
-`<div className={'root enumerator'}>
-    <div className={'input-container mx-2'}>
-        <b className={'enumerator-name'}>Enum:</b>
-        <Input data={data} field={'name'} hidden={true} />
-    </div>
-    <hr />
-    <div className={'enumerator-children'}>
-        {level >= 2 && literals.map(c => <DefaultNode key={c.id} data={c}/>)
-          || <div className={"summary"}>{literals.length} literals</div>}
-    </div>
-    {decorators}
-</div>`
-);}
+    /* FEATURE */
 
     public static feature(): string { return (
-`<div className={'root w-100 feature'}>
-    <div className={'input-container mx-2'}>
-        <b className={'feature-name'}>{data.name}:</b>
-        <Select data={data} field={'type'} />
-    </div>
+`<View className={'root feature w-100'}>
+    <span className={'feature-name'}>{data.name}:</span>
+    <Select data={data} field={'type'} />
     {decorators}
-</div>`
+</View>`
 );}
 
+    /* LITERAL */
+
     public static literal(): string { return (
-`<label className={'root d-block text-center'}>
+`<label className={'root literal d-block text-center'}>
     {data.name}
     {decorators}
 </label>`
 );}
 
+    /* OPERATION */
+
     public static operation(): string { return (
-`<div className={'root w-100'}>
-    <div className={'input-container mx-2'}>
-        <b className={'feature-name'}>{data.name + ' =>'}</b>
+`<View className={'root operation w-100 hoverable'}>
+        <span className={'feature-name'}>{data.name + ' =>'}</span>
         <Select data={data} field={'type'} />
-    </div>
+    <div className={"parameters content"}>
     {data.exceptions.length ? " throws " + data.exceptions.join(", ") : ''}
-    <div className={"parameters"}>{
+    {
         level >= 3 && data.parameters.map(p => <DefaultNode data={p} key={p.id} />)
     }</div>
     {decorators}
-</div>`
+</View>`
 );}
 
+    /* PARAMETER */
+    
 public static parameter(): string { return (
-`<div className={'root w-100 ms-1'}>
-    <div className={'input-container mx-2'}>
-        <b className={'feature-name'}>
-            {data.name + '' + (data.lowerBound === 0 ? '?:' : ':' )}
-            {data.upperBound === 0 ? '&nbsp;&nbsp;' : '[]'}
-        </b>
-        <Select data={data} field={'type'} />
-    </div>
+`<View className={'root parameter w-100'}>
+    <span className={'feature-name'}>
+        {data.name + '' + (data.lowerBound === 0 ? '?:' : ':' )}
+    </span>
+    <Select data={data} field={'type'} />
+    <span className={"modifier"}>{data.upperBound > 1 || data.upperBound === -1 ? '[]' : ''}</span>
     {decorators}
-</div>`
+</View>`
 );}
 
-    // damiano: i want to keep it because it will be useful for a candidate next feature in m1 & layoutable elements
+    // i want to keep it because it will be useful for a candidate next feature in m1 & layoutable elements
     // it is still work in progress.
     public static operationm1(): string { return (
 `<div className={'d-flex root operationm1'} style={{paddingRight: "6px"}}>
@@ -534,77 +575,111 @@ public static parameter(): string { return (
 </div>`);
 }
 
-    public static object(): string { return (
-`<div className={'root object'}>
-    <div className={'input-container mx-2'}>
-        <b className={'object-name'}>{data.instanceof ? data.instanceof.name : 'Object'}:</b>
-        <Input data={data} field={'name'} hidden={true} />
-    </div>
+//     public static object(): string { return (
+// `<View className={'root object'}>
+//     <b className={'object-name'}>{data.instanceof ? data.instanceof.name : 'Object'}:</b>
+//     <Input data={data} field={'name'} hidden={true} autosize={true} />
+//     <hr/>
+//     <div className={'object-children'}>
+//         {level >= 2 && data.features.map(f => <DefaultNode key={f.id} data={f} />)}
+//     </div>
+//     {decorators}
+// </View>`
+// );}
+
+/* OBJECT */
+
+public static object(): string { return (
+`<View className={'root object'}>
+    <b className={'object-name'}>{data.instanceof ? data.instanceof.name : 'Object'}:</b>
+    <Input data={data} field={'name'} hidden={true} autosize={true} />
     <hr/>
     <div className={'object-children'}>
         {level >= 2 && data.features.map(f => <DefaultNode key={f.id} data={f} />)}
     </div>
     {decorators}
-</div>`
+</View>`
 );}
 
+    /* VALUE */
+
     public static value() { return (
-`<div className={'root d-flex value'}>
-    {instanceofname && <label className={'d-block ms-1'}>{instanceofname}</label>}
-    {!instanceofname && <div className={'input-container mx-2'}>
-        <b className={'object-name'}>Name:</b>
-        <Input data={data} field={'name'} hidden={true} />
-    </div>}
+`<View className={'root value d-flex'}>
+    {instanceofname && <label className={'d-block ms-1 name'}>{instanceofname}</label>}
+    {!instanceofname && <Input className='name' data={data} field={'name'} hidden={true} autosize={true} />}
     <label className={'d-block m-auto values_str'} style={{color: constants[typeString] || 'gray'}}>
         : {valuesString}
     </label>
     {decorators}
-</div>`
+</View>`
 );}
 
+    /* SINGLETON OBJECT */
 
+    public static singleton(): string { return (
+    `<div className={'singleton'}>
+        <div className={'header'}>
+            {data.name}        
+        </div>
+    </div>`);}
+
+    /* ERROR */
 
     public static error(msg: undefined | ReactNode, errortype: string | "SYNTAX" | "RUNTIME",
-                        data?: DModelElement | undefined, node?: DGraphElement | undefined, v?: DViewElement): React.ReactNode {
+                        data?: DModelElement | undefined, node?: DGraphElement | undefined, v?: LViewElement|DViewElement): React.ReactNode {
 
         let dname: string | undefined = data && ((data as any).name || data.className.substring(1));
         if (dname && dname.length >= 10) dname = dname.substring(0, 7) + '…';
         let nodename: string = (node?.className || '').replace(/[^A-Z]+/g, "").substring(1);
         let on = dname && nodename ? " on " + dname + " / " + nodename : (dname || nodename ? " on " + (dname || nodename) : '');
-        return <div className={(v ? 'w-100 h-100' : 'raw_error') + ' round bg-white border border-danger'} style={{minHeight:"50px", overflow:"scroll"}}>
-            <div className={'text-center text-danger'} tabIndex={-1} style={{background:"#fff", overflow: 'visible', zIndex:100, minWidth:"min-content"}}>
-                <b data-dname={dname} data-nodename={nodename} data-str={true}>
-                    {errortype} ERROR{on}</b>
-                <hr/>
-                {v && <label className={'text-center mx-1 d-block'}>
-                    While applying view "{v.name}"
-                </label>}
-                {msg && <label className={'text-center mx-1 d-block'} style={{color:"black"}}>{msg}</label>}
+
+        let lv: LViewElement | undefined = v ? ((v as any).__isProxy ? v as LViewElement : LPointerTargetable.wrap(v)) : undefined;
+        let viewpointname = lv?.viewpoint?.name ||'';
+
+        return (<Measurable draggable={true} resizable={true}><div className={'error-notification'}>
+            <h1>Something Went Wrong...</h1>
+            {v && <h2>Error in "{v?.name}" syntax view definition{viewpointname? ' in viewpoint ' + viewpointname : ''}.</h2>}
+            <div className={'error-type'}>
+                <b data-dname={dname} data-nodename={nodename} data-str={false}>
+                    {errortype} Error {on}
+                    {false && v && <div>While applying view "{v?.name}"</div>}
+                </b>
             </div>
-        </div>;
+            <div className={'error-details'}>{msg}</div>
+        </div></Measurable>);
     }
-    public static error_string(msg: undefined | ReactNode, errortype: string | "SYNTAX" | "RUNTIME", data?: DModelElement | undefined, node?: DGraphElement | undefined, v?: DViewElement) {
+
+    public static error_string(msg: undefined | ReactNode, errortype: string | "SYNTAX" | "RUNTIME", data?: DModelElement | undefined,
+                               node?: DGraphElement | undefined, v?: LViewElement|DViewElement) {
         let dname: string | undefined = data && ((data as any).name || data.className.substring(1));
         if (dname && dname.length >= 10) dname = dname.substring(0, 7) + '…';
         let nodename: string = (node?.className || '').replace(/[^A-Z]+/g, "").substring(1);
         let on = dname && nodename ? " on " + dname + " / " + nodename : (dname || nodename ? " on " + (dname || nodename) : '');
-        return `<div className={'w-100 h-100 round bg-white border border-danger'} style={{minHeight:"50px", overflow:"scroll"}}>
-            <div className={'text-center text-danger'} tabIndex={-1} style={{background:"#fff", overflow: 'visible', zIndex:100, minWidth:"min-content"}}>
-                <b>{errortype}_ERROR` + on + `</b>
-                <hr/>
-                <label className={'text-center mx-1 d-block'}>
-                    While applying view "${v?.name}"
-                </label>
-                {${msg} && <label className={'text-center mx-1 d-block'} style={{color:"black"}}>${msg}</label>}
+
+        let lv: LViewElement | undefined = v ? ((v as any).__isProxy ? v as LViewElement : LPointerTargetable.wrap(v)) : undefined;
+        let viewpointname = lv?.viewpoint?.name ||'';
+        // <div className={'w-100 h-100 round bg-white border border-danger'} style={{minHeight:"50px", overflow:"scroll"}}>
+        //     <div className={'text-center text-danger'} tabIndex={-1} style={{background:"#fff", overflow: 'visible', zIndex:100, minWidth:"min-content"}}>
+        //         <b>{errortype}_ERROR` + on + `</b>
+        //         <hr/>
+        //         <label className={'text-center mx-1 d-block'}>
+        //             While applying view "${v?.name}"
+        //         </label>
+        //         {${msg} && <label className={'text-center mx-1 d-block'} style={{color:"black"}}>${msg}</label>}
+        //     </div>
+        // </div>
+        return `<Measurable draggable={true} resizable={true}><div className={'error-notification'}>
+            <h1>Something Went Wrong...</h1>
+            `+ (v && `<h2>Error in "${v?.name}" syntax view definition${viewpointname ? ' in viewpoint ' + viewpointname : ''}.</h2>`)+`
+            <div className={'error-type'}>
+                <b data-dname=${dname} data-nodename=${nodename} data-str={true}>
+                    ${errortype} Error ${on}
+                    {false && v && <div>While applying view "${v?.name}"</div>}
+                </b>
             </div>
-        </div>`;
+            <div className={'error-details'}>${msg}</div>
+        </div></Measurable>)`;
     }
 
-    public static input(label: string, data: unknown, field: string, type: 'text'|'number'|'checkbox') {
-        return(<div className={'input-container'}>
-            <b className={'me-2'}>{label}:</b>
-            <Input data={data as LModelElement} field={field} type={type} />
-        </div>);
-    }
 
 }

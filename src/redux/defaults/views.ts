@@ -31,28 +31,24 @@ const udLevelPkg = udLevelG + 'ret.upperLevel = node.graph.state.level ?? 3\n';
 
 class DefaultViews {
 
+    static model(vp: DViewElement): DViewElement {
+        const view = DViewElement.new2(
+            'Model', DSL.parser(DV.modelView()), vp,(d)=> {
+                d.appliableTo = 'Graph';
+                d.appliableToClasses = [DModel.cname];
+                d.oclCondition = 'context DModel inv: true';
+                d.draggable = false; d.resizable = false;
+                d.palette = {
+                    'background-': U.hexToPalette('#fff'),
+                    'color-': U.hexToPalette('#123cd0', '#4b0082', '#ff0000', '#3191bb', '#3191bb')
+                };
+            }, false, 'Pointer_ViewModel');
 
-    static model(vp: Pointer<DViewPoint>): DViewElement {
-        const view = DViewElement.new('Model', DSL.parser(DV.modelView()), undefined, '', '', '', [DModel.cname],
-            '', 1, false, true, vp);
-        view.draggable = false; view.resizable = false;
-        view.appliableTo = 'Graph';
-        view.oclCondition = 'context DModel inv: true';
-        view.palette = {
-            'background-': U.hexToPalette('#fff'),
-            'color-': U.hexToPalette('#123cd0', '#4b0082', '#ff0000', '#3191bb', '#3191bb')
-        };
         view.css = `
 &, .Graph{
-  //position: absolute;
   background-color: var(--background-1);
-  &:hover{ overflow: hidden; }
   height: 100%;
   width: -webkit-fill-available;
-}
-.root {
-    overflow: hidden;
-    position: relative;
 }
 .edges {z-index: 101; position: absolute; top: 0; left: 0; height: 0; width: 0; overflow: visible; }
 .detail-level {
@@ -86,109 +82,44 @@ class DefaultViews {
 [data-nodetype="VoidVertex"],
 [data-nodetype="Vertex"],
 [data-nodetype="GraphVertex"] {
-  position: absolute;
   &>*{ border: 0.1em solid #a3a3a3; }
   &>.ui-resizable-handle{ border: none; }
 }
 &,[data-nodetype], [data-nodetype]>*{
   /* for some reason focus does not work?? so this is a fallback but needs to be properly fixed */
   overflow: hidden;
-  &.selected-by-me, &:has(.selected-by-me), &:hover, &:active, &:focus-within, &:focus{
+  &.selected-by-me, &:has(.selected-by-me, .Edge), &:hover, &:active, &:focus-within, &:focus{
     overflow: visible;
-    z-index: 1000 !important;
+    z-index: 100 !important;
   }
 }
 .Edge{
     overflow: visible;
 }
 
-/*** CONTROL PANEL BEGIN ***/
- 
-.control-panel-container {
-   position: absolute;
-   z-index: 1000;
-   top: 0px;
-   right: -269px; /* open: 0px, close: -275px */
-   width: 320px;
-   height: 100%;
-   transition: right 0.6s;
-   transition-timing-function: cubic-bezier(0.32, 0, 0.58, 1);
-}
-.control-panel-container .open {
-   right: -0px;
-}
-.control-panel-container .button {
-   position: absolute;
-   z-index: 1001;
-   top: 10px;
-   left: 36px;
-   font-size: 1.5em;
-   width: 16px;
-   height: 62px;
-   padding: 14px 0 0 0px;
-   border-radius: 4px 0 0 4px;
-   color: var(--color-5);
-   background-color: var(--color-2);
-   border-left: 3px solid var(--color-1);
-   border-top: 0px solid var(--color-4);
-   border-bottom: 0px solid var(--color-4);
-   &:hover {
-      cursor: pointer;
-   }
-}
-.control-panel-container .button .bi {
-   color: var(--color-1);
-   font-size: 14px;
-}
-.control-panel {
-   position: relative;
-   margin-left: 50px;
-   height: 100%;
-   width: 270px;
-   background: var(--color-1);
-   display: block;
-   opacity: 1;
-   border-left: 3px solid var(--color-2);
-   color: var(--color-2);
-   padding: 20px;
-   box-shadow: -0px -0px 1px var(--color-4);
-   
-}
-.open {
-   position: absolute;
-   right: 0px!important;
-   transition: right 0.6s;
-   transition-timing-function: cubic-bezier(0.32, 0, 0.58, 1);
-}
-.control-panel h1 {
-   font-size: 1.4em;
-}
-.control-panel .section h2 {
-   font-size: 1.2em;
-   padding: 40px 0px 10px 0px;
-}
-.control-panel .btn-close {
-   padding-top: 0px;
-   float: right;
-   display: block;
-   color: var(--color-2);
-   opacity: 1;
-   &:hover {
-      cursor: pointer;
-   }
-   
-}
-.control-panel .section .slider {
-   margin-top: 15px;
-   position: relative;
-   display: flex;
-   
-}
-control-panel .section .toggle {
-   width: 100%;
+/* level-specific rules */
+
+.model-0 {
+  height: 100%!important;
+  width: 100%!important;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
-/*** CONTROL PANEL END ***/
+.metamodel {
+  position: absolute;
+  width: max-content;
+  height: max-content;
+  padding: 10px;
+  border: 1px solid var(--secondary)!important;
+  border-radius: var(--radius);
+}
+
+.model-1 {}
+.model-2 {}
+.model-3 {}
+
 `;
 
         view.usageDeclarations = '(ret) => {\n' +
@@ -200,6 +131,7 @@ control-panel .section .toggle {
             'let suggestedEdges = data?.suggestedEdges || {};\n' +
             '// data, node, view are dependencies by default. delete them above if you want to remove them.\n' +
             '// add preparation code here (like for loops to count something), then list the dependencies below.\n' +
+            // ¡ The element will update only if one of the listed dependencies has changed !
             '// ** declarations here ** //\n' +
             'ret.firstPackage = packages[0]\n'+
             'ret.otherPackages = packages.slice(1)\n'+
@@ -211,12 +143,13 @@ control-panel .section .toggle {
         return view;
     }
 
-    static package(vp: Pointer<DViewPoint>): DViewElement {
-        const view = DViewElement.new('Package', DV.packageView(), undefined, '', '', '', [DPackage.cname], '', 1, false, true, vp);
-        view.oclCondition = 'context DPackage inv: true';
-        view.appliableTo = 'GraphVertex';
-        view.palette = {'color-':  U.hexToPalette('#028012'), 'background-':  U.hexToPalette('#fff')};
-        view.css = `
+    static package(vp: DViewElement): DViewElement {
+        const view = DViewElement.new2('Package', DV.packageView(), vp, (view)=>{
+            view.appliableToClasses = [DPackage.cname];
+            view.oclCondition = 'context DPackage inv: true';
+            view.appliableTo = 'GraphVertex';
+            view.palette = {'color-':  U.hexToPalette('#028012'), 'background-':  U.hexToPalette('#fff')};
+            view.css = `
 .package { background-color: var(--background-0); border-radius: 0.2em; border-left: 0.25em solid var(--color-1); }
 .package-children { height: -webkit-fill-available; width: -webkit-fill-available; }
 .summary { padding: 0.25rem; text-align: center; }
@@ -230,161 +163,356 @@ control-panel .section .toggle {
         transform: rotate(90deg) translate(0, 100%);
     }
 }`
-        view.defaultVSize = defaultPackageSize;
-        view.usageDeclarations = '(ret) => {\n' +
-            '// ** preparations and default behaviour here ** //\n' +
-            'ret.data = data\n' +
-            'ret.node = node\n' +
-            'ret.view = view\n' +
-            '// custom preparations:\n' +
-            '// data, node, view are dependencies by default. delete them above if you want to remove them.\n' +
-            '// add preparation code here (like for loops to count something), then list the dependencies below.\n' +
-            '// ** declarations here ** //\n' +
-            udLevelPkg +
-            '}';
+            view.defaultVSize = defaultPackageSize;
+            view.usageDeclarations = '(ret) => {\n' +
+                '// ** preparations and default behaviour here ** //\n' +
+                'ret.data = data\n' +
+                'ret.node = node\n' +
+                'ret.view = view\n' +
+                '// custom preparations:\n' +
+                '// data, node, view are dependencies by default. delete them above if you want to remove them.\n' +
+                '// add preparation code here (like for loops to count something), then list the dependencies below.\n' +
+                // ¡ The element will update only if one of the listed dependencies has changed !
+                '// ** declarations here ** //\n' +
+                udLevelPkg +
+                '}';
+        }, false, 'Pointer_ViewPackage');
         return view
     }
 
-    static class(vp: Pointer<DViewPoint>): DViewElement {
-        const view = DViewElement.new('Class', DV.classView(), undefined, '', '', '', [DClass.cname], '', 1, false, true, vp);
-        view.adaptWidth = true; view.adaptHeight = true;
-        view.appliableTo = 'Vertex';
-        view.oclCondition = 'context DClass inv: true';
-        view.palette = {'color-': U.hexToPalette('#f00', '#000', '#fff'), 'background-':  U.hexToPalette('#fff', '#eee', '#f00')};
-        view.css = `
-.class { border-radius: 0.2em; border-left: 0.25em solid var(--color-1); background: var(--background-1); color:var(--color-2); }
-.class-name{  font-weight: bold; color: var(--color-1); }
-.class-children { background-color: var(--background-2); height: fit-content; width: -webkit-fill-available; }
-.abstract { font-style: italic; }
-.summary { padding: 0.25rem; text-align: center; }`;
-        view.defaultVSize = defaultVertexSize;
-        view.usageDeclarations = '(ret) => {\n' +
-            '// ** preparations and default behaviour here ** //\n' +
-            'ret.node = node\n' +
-            'ret.view = view\n' +
-            '// custom preparations:\n' +
-            '// data, node, view are dependencies by default. delete them above if you want to remove them.\n' +
-            '// add preparation code here (like for loops to count something), then list the dependencies below.\n' +
-            '// ** declarations here ** //\n' +
-            'ret.attributes = data.attributes\n' +
-            'ret.references = data.references\n' +
-            'ret.operations = data.operations\n' +
-            'ret.abstract = data.abstract\n' +
-            'ret.interface = data.interface\n' +
-            udLevel +
-            '}';
-        // view.events = {e1:"(num) => {\n\tdata.name = num;\n}"}
+    static class(vp: DViewElement): DViewElement {
+        const view = DViewElement.new2('Class', DV.classView(), vp, (view)=>{
+            view.appliableToClasses = [DClass.cname];
+            view.adaptWidth = true; view.adaptHeight = true;
+            view.appliableTo = 'Vertex';
+            view.oclCondition = 'context DClass inv: true';
+            view.palette = {'color-': U.hexToPalette('#f00', '#000', '#fff'), 'background-':  U.hexToPalette('#fff', '#eee', '#f00')};
+            view.css = `
+
+
+/* class */
+
+.class {
+    border-radius: var(--model-radius);
+    background: var(--model-background);
+    color:var(--model-color);
+
+    &>.header{
+        padding: 3px 6px;
+        white-space: pre;
+    }
+    .class-name{ 
+        font-weight: bold; 
+        color: var(--model-accent); 
+    }
+    .bi {
+        color: var(--model-accent); 
+        padding-right: 3px;
+    }
+    .class-children {
+        background-color: var(--model-background);
+        height: fit-content;
+        width: -webkit-fill-available;
+        &>*:last-child { padding-bottom: 0.125em; }
+    }
+    .abstract { font-style: italic; }
+    .summary { padding: 0.25rem; text-align: center; }
+}
+.abstract {
+border-style: dotted!important;
+border-color: silver!important;
+    }
+
+.class:hover {
+    box-shadow: var(--model-shadow);
+}
+            
+`;
+            view.defaultVSize = defaultVertexSize;
+            view.usageDeclarations = `(ret) => {
+    // ** preparations and default behaviour here ** //
+    // ret.data = data; intentionally excluded: i'm picking the used values individually reducing the re-renders.
+    ret.node = node
+    ret.view = view
+    // custom preparations:
+    // data, node, view are dependencies by default. delete them above if you want to remove them.
+    // add preparation code here (like for loops to count something), then list the dependencies below.
+    // ¡ The element will update only if one of the listed dependencies has changed !
+    // ** declarations here ** //
+    ret.attributes = data.attributes
+    ret.references = data.references
+    ret.operations = data.operations
+    ret.abstract = data.abstract
+    ret.interface = data.interface
+    ${udLevel}
+}`;
+            // view.events = {e1:"(num) => {\n\tdata.name = num;\n}"}
+        }, false, 'Pointer_ViewClass');
         return view;
     }
 
-    static enum(vp: Pointer<DViewPoint>): DViewElement {
-        const view = DViewElement.new('Enum', DV.enumeratorView(), undefined, '', '', '', [DEnumerator.cname], '', 1, false, true, vp);
-        view.adaptWidth = true; view.adaptHeight = true;
-        view.appliableTo = 'Vertex';
-        view.oclCondition = 'context DEnumerator inv: true';
-        view.palette = {'color-':  U.hexToPalette('#ffa500', '#000', '#fff'), 'background-':  U.hexToPalette('#fff', '#eee', '#f00')};
-        view.css =  `
-.enumerator { border-radius: 0.2em; border-left: 0.25em solid var(--color-1); background: var(--background-1); color: var(--color-2); }
-.enumerator-name { font-weight: bold; color: var(--color-1); }
-.enumerator-children { background-color: var(--background-2); height: fit-content; width: -webkit-fill-available; }
-.summary { padding: 0.25rem; text-align: center; }
+    /* ENUM */
+
+    static enum(vp: DViewElement): DViewElement {
+        const view = DViewElement.new2('Enum', DV.enumeratorView(), vp, (view)=>{
+            view.appliableToClasses = [DEnumerator.cname];
+            view.adaptWidth = true; view.adaptHeight = true;
+            view.appliableTo = 'Vertex';
+            view.oclCondition = 'context DEnumerator inv: true';
+            view.palette = {'color-':  U.hexToPalette('#ffa500', '#000', '#fff'), 'background-':  U.hexToPalette('#fff', '#eee', '#f00')};
+//             view.css =  `
+// .enumerator {
+//     border-radius: 0.2em;
+//     border-left: 0.25em solid var(--color-1);
+//     background: var(--background-1);
+//     color:var(--color-2);
+//     &>.header{
+//         padding: 3px 6px;
+//         white-space: pre;
+//     }
+//     .enumerator-name { font-weight: bold; color: var(--color-1); }
+//     .enumerator-children {
+//         background-color: var(--background-2);
+//         height: fit-content;
+//         width: -webkit-fill-available;
+//         &>*:last-child { padding-bottom: 0.125em; }
+//     }
+//     .summary { padding: 0.25rem; text-align: center; }
+// }
+// `
+
+            view.css = `
+.enumerator {
+    border-radius: var(--radius);
+    background: white;
+    color:var(--model-color);
+    &>.header{
+        padding: 3px 6px;
+        white-space: pre;
+    }
+    .enumerator-name { font-weight: bold; color: var(--accent-secondary); }
+    .bi {
+        color: var(--accent-secondary);
+    }
+    .enumerator-children {
+        background-color: white; 
+        height: fit-content;
+        width: -webkit-fill-available;
+        &>*:last-child { padding-bottom: 0.125em; }
+    }
+    .summary { padding: 0.25rem; text-align: center; }
+}
+
+.enumerator:hover {
+    box-shadow: 0 0 5px silver;
+}
 `
-        view.defaultVSize = defaultVertexSize;
-        view.usageDeclarations = '(ret) => {\n' +
-            '// ** preparations and default behaviour here ** //\n' +
-            'ret.node = node\n' +
-            'ret.view = view\n' +
-            '// custom preparations:\n' +
-            '// data, node, view are dependencies by default. delete them above if you want to remove them.\n' +
-            '// add preparation code here (like for loops to count something), then list the dependencies below.\n' +
-            '// ** declarations here ** //\n' +
-            'ret.literals = data.literals\n' +
-            udLevel +
-            '}';
-        return view;
-    }
-    static attribute(vp: Pointer<DViewPoint>): DViewElement {
-        const view = DViewElement.new('Attribute', DV.attributeView(), undefined, '', '', '', [DAttribute.cname], '', 1, false, true, vp);
-        view.oclCondition = 'context DAttribute inv: true';
-        view.appliableTo = 'Field';
-        view.palette = {};
+            view.defaultVSize = defaultVertexSize;
+            view.usageDeclarations = `(ret) => {
+    // ** preparations and default behaviour here ** //
+    // ret.data = data; intentionally excluded: i'm picking the used values individually reducing the re-renders.
+    ret.node = node
+    ret.view = view
+    // custom preparations:
+    // data, node, view are dependencies by default. delete them above if you want to remove them.
+    // add preparation code here (like for loops to count something), then list the dependencies below.
+    // ¡ The element will update only if one of the listed dependencies has changed !
+    // ** declarations here ** //
+    ret.literals = data.literals
+    ${udLevel}
+}`;
+        }, false, 'Pointer_ViewEnum');
         return view;
     }
 
-    static reference(vp: Pointer<DViewPoint>): DViewElement {
-        const view = DViewElement.new('Reference', DV.referenceView(), undefined, '', '', '', [DReference.cname], '', 1, false, true, vp);
-        view.oclCondition = 'context DReference inv: true';
-        view.appliableTo = 'Field';
-        view.palette = {};
+    /* ATTRIBUTE */
+
+    static attribute(vp: DViewElement): DViewElement {
+        const view = DViewElement.new2('Attribute', DV.attributeView(), vp, (view)=>{
+            view.appliableToClasses = [DAttribute.cname];
+            view.oclCondition = 'context DAttribute inv: true';
+            view.appliableTo = 'Field';
+            view.css = `
+.feature{
+    display: flex;
+    padding: 2px 5px;
+    select {
+        margin-left: auto;
+        width: max(33%, 75px);
+    }
+}`;
+        }, false, 'Pointer_ViewAttribute');
         return view;
     }
 
-    static operation(vp: Pointer<DViewPoint>): DViewElement {
-        const view = DViewElement.new('Operation', DV.operationView(), undefined, '', '', '', [DOperation.cname], '', 1, false, true, vp);
-        view.oclCondition = 'context DOperation inv: true';
-        view.appliableTo = 'Field';
-        view.palette = {};
-        view.usageDeclarations = '(ret) => {\n' +
-            '// ** preparations and default behaviour here ** //\n' +
-            'ret.data = data\n' +
-            'ret.node = node\n' +
-            'ret.view = view\n' +
-            '// custom preparations:\n' +
-            '// data, node, view are dependencies by default. delete them above if you want to remove them.\n' +
-            '// add preparation code here (like for loops to count something), then list the dependencies below.\n' +
-            '// ** declarations here ** //\n' +
-            udLevel +
-            '}';
+    /* REFERENCE */
+
+    static reference(vp: DViewElement): DViewElement {
+        const view = DViewElement.new2('Reference', DV.referenceView(), vp, (view)=>{
+            view.appliableToClasses = [DReference.cname];
+            view.oclCondition = 'context DReference inv: true';
+            view.appliableTo = 'Field';
+            view.css = `
+.feature{
+    display: flex;
+    padding: 2px 5px;
+    select {
+        margin-left: auto;
+        width: max(33%, 75px);
+    }
+}`;
+        }, false, 'Pointer_ViewReference');
         return view;
     }
 
-    static parameter(vp: Pointer<DViewPoint>): DViewElement {
-        const view = DViewElement.new('Parameter', DV.parameterView(), undefined, '', '', '', [DParameter.cname],
-            '', 1, false, true, vp);
-        view.palette = {};
-        view.appliableTo = 'Field';
-        view.css = '*{\n\tfontSize:0.8rem;\n}';
+    /* OPERATION */
+
+    static operation(vp: DViewElement): DViewElement {
+        const view = DViewElement.new2('Operation', DV.operationView(), vp, (view)=>{
+            view.appliableToClasses = [DOperation.cname];
+            view.oclCondition = 'context DOperation inv: true';
+            view.appliableTo = 'Field';
+            view.usageDeclarations = `(ret) => {
+    // ** preparations and default behaviour here ** //
+    ret.data = data
+    ret.node = node
+    ret.view = view
+    // custom preparations:
+    // data, node, view are dependencies by default. delete them above if you want to remove them.
+    // add preparation code here (like for loops to count something), then list the dependencies below.
+    // ¡ The element will update only if one of the listed dependencies has changed !
+    // ** declarations here ** //
+    ${udLevel}
+}`;
+            view.css = `
+.operation{
+    display: flex;
+    padding: 2px 5px;
+    select {
+        margin-left: auto;
+        width: max(33%, 75px);
+    }
+    .parameters{
+        background-color: var(--background-2);
+        left: 0;
+        top: 100%;
+        width: 100%;
+    }
+}`;
+        }, false, 'Pointer_ViewOperation');
         return view;
     }
 
-    static literal(vp: Pointer<DViewPoint>): DViewElement {
-        const view: DViewElement = DViewElement.new('Literal', DV.literalView(), undefined, '', '', '', [DEnumLiteral.cname], '', 1, false, true, vp);
-        view.oclCondition = 'context DEnumLiteral inv: true';
-        view.appliableTo = 'Field';
-        view.palette = {};
-        view.css = "display: block;";
+    /* PARAMETER */
+
+    static parameter(vp: DViewElement): DViewElement {
+        const view = DViewElement.new2('Parameter', DV.parameterView(), vp, (view)=>{
+            view.appliableToClasses = [DParameter.cname];
+            view.appliableTo = 'Field';
+        }, false, 'Pointer_ViewParameter');
+        view.css = `
+.parameter{
+    display: flex;
+    padding-left: 1em;
+    width: calc(100% - 1em);
+    .modifier{
+        width: 1ic;
+        text-align: center;
+    }
+}`
         return view;
     }
 
-    static object(vp: Pointer<DViewPoint>): DViewElement {
-        const view = DViewElement.new('Object', DV.objectView(), undefined, '', '', '', [DObject.cname], '', 1, false, true, vp);
-        view.adaptWidth = true; view.adaptHeight = true;
-        view.oclCondition = 'context DObject inv: true';
-        view.palette = {'color-':  U.hexToPalette('#f00', '#000', '#fff'), 'background-': U.hexToPalette('#fff', '#eee', '#f00')};
-        view.css = '.object {border-radius: 0.2em; border-left: 0.25em solid var(--color-1); background: var(--background-1); color: var(--color-2);}\n';
-        view.css += '.object-name {font-weight: bold; color: var(--color-1);}\n';
-        view.css += '.object-children {background-color: var(--background-2); height: fit-content; width: -webkit-fill-available;}';
-        view.defaultVSize = defaultVertexSize;
-        view.appliableTo = 'Vertex';
-        view.usageDeclarations = '(ret) => {\n' +
-            '// ** preparations and default behaviour here ** //\n' +
-            'ret.data = data\n' +
-            'ret.node = node\n' +
-            'ret.view = view\n' +
-            '// data, node, view are dependencies by default. delete them above if you want to remove them.\n' +
-            '// add preparation code here (like for loops to count something), then list the dependencies below.\n' +
-            '// ** declarations here ** //\n' +
-            'ret.metaclassName = data.instanceof?.name || \'Object\'\n' +
-            udLevel +
-        '}';
+    /* LITERAL */
+
+    static literal(vp: DViewElement): DViewElement {
+        const view: DViewElement = DViewElement.new2('Literal', DV.literalView(), vp, (view)=>{
+            view.appliableToClasses = [DEnumLiteral.cname];
+            view.oclCondition = 'context DEnumLiteral inv: true';
+            view.appliableTo = 'Field';
+            view.palette = {};
+            view.css = "display: block;";
+        }, false, 'Pointer_ViewLiteral');
         return view;
     }
 
-    static value(vp: Pointer<DViewPoint>): DViewElement {
-        const view = DViewElement.new('Value', DV.valueView(), undefined, '', '', '', [DValue.cname], '', 1, false, true, vp);
-        view.oclCondition = 'context DValue inv: true';
-        view.palette = {};
-        view.css = `.value{
+    /* OBJECT */
+
+    static object(vp: DViewElement): DViewElement {
+        const view = DViewElement.new2('Object', DV.objectView(), vp, (view)=>{
+            view.appliableToClasses = [DObject.cname];
+            view.adaptWidth = true; view.adaptHeight = true;
+            view.oclCondition = 'context DObject inv: true';
+            view.palette = {'color-':  U.hexToPalette('#f00', '#000', '#fff'), 'background-': U.hexToPalette('#fff', '#eee', '#f00')};
+
+            // view.css = '.object {border-radius: 0.2em; border-left: 0.25em solid var(--color-1); background: var(--background-1); color: var(--color-2);}\n';
+            // view.css += '.object-name {font-weight: bold; color: var(--color-1);}\n';
+            // view.css += '.object-children {background-color: var(--background-2); height: fit-content; width: -webkit-fill-available;}';
+
+            view.css = '.object {border-radius: var(--radius); background: white; color: var(--accent);}\n';
+            view.css +='.object-name {padding: 10px; font-weight: 600; color: var(--accent);}\n';
+            view.css += '.object-children {padding: 10px;background-color: white; height: fit-content; width: -webkit-fill-available;}';
+
+
+            view.defaultVSize = defaultVertexSize;
+            view.appliableTo = 'Vertex';
+            view.usageDeclarations = '(ret) => {\n' +
+                '// ** preparations and default behaviour here ** //\n' +
+                'ret.data = data\n' +
+                'ret.node = node\n' +
+                'ret.view = view\n' +
+                '// data, node, view are dependencies by default. delete them above if you want to remove them.\n' +
+                '// add preparation code here (like for loops to count something), then list the dependencies below.\n' +
+                // ¡ The element will update only if one of the listed dependencies has changed !
+                '// ** declarations here ** //\n' +
+                'ret.metaclassName = data.instanceof?.name || \'Object\'\n' +
+                udLevel +
+                '}';
+        }, false, 'Pointer_ViewObject');
+        return view;
+    }
+
+    /* SINGLETON OBJECT */
+
+    static singleton(vp: DViewElement): DViewElement {
+        const view = DViewElement.new2('Singleton', DV.singletonView(), vp, (view)=>{
+            view.appliableToClasses = [DObject.cname];
+            view.adaptWidth = false; view.adaptHeight = false;
+            view.jsCondition = 'return data.instanceof.isSingleton';
+            //view.oclCondition = 'context DObject inv: true';
+
+            //view.palette = {'color-':  U.hexToPalette('#f00', '#000', '#fff'), 'background-': U.hexToPalette('#fff', '#eee', '#f00')};
+
+            view.css = '.singleton {text-align: center; border: none; background-color: var(--accent); color: white; padding: 4px 30px; width: fit-content; border-radius: var(--radius);}\n';
+            view.css += '.singleton::before {position: absolute; left: 10px; font-family: bootstrap-icons; content: "\\F799";}\n';
+
+            view.defaultVSize = defaultVertexSize;
+            view.appliableTo = 'Vertex';
+            view.usageDeclarations = '(ret) => {\n' +
+                '// ** preparations and default behaviour here ** //\n' +
+                'ret.data = data\n' +
+                'ret.node = node\n' +
+                'ret.view = view\n' +
+                '// data, node, view are dependencies by default. delete them above if you want to remove them.\n' +
+                '// add preparation code here (like for loops to count something), then list the dependencies below.\n' +
+                // ¡ The element will update only if one of the listed dependencies has changed !
+                '// ** declarations here ** //\n' +
+                'ret.metaclassName = data.instanceof?.name || \'Object\'\n' +
+                'ret.isSingleton = data.instanceof?.isSingleton || false\n' +
+                udLevel +
+                '}';
+        }, false, 'Pointer_ViewSingleton');
+        return view;
+    }
+
+    /* VALUE */
+
+    static value(vp: DViewElement): DViewElement {
+        const view = DViewElement.new2('Value', DV.valueView(), vp, (view)=>{
+            view.appliableToClasses = [DValue.cname];
+            view.oclCondition = 'context DValue inv: true';
+            view.palette = {};
+            view.css = `.value{
     padding-right: 6px;
     max-width: 300px;
     min-width: 100%;
@@ -394,27 +522,24 @@ control-panel .section .toggle {
         maxWidth: 100px;
     }*/
 }`;
-        view.appliableTo = 'Field';
-        view.usageDeclarations = '(ret) =>  {\n' +
-            '// ** preparations and default behaviour here ** //\n' +
-            'ret.node = node\n' +
-            'ret.view = view\n' +
-            '// data, node, view are dependencies by default. delete them above if you want to remove them.\n' +
-            '// add preparation code here (like for loops to count something), then list the dependencies below.\n' +
-            '// ** declarations here ** //\n' +
-            'ret.instanceofname = data.instanceof?.name\n' +
-            'ret.valuesString = data.valuesString()\n' +
-            'ret.typeString = data.typeString\n' +
-        '}';
+            view.appliableTo = 'Field';
+            view.usageDeclarations = '(ret) =>  {\n' +
+                '// ** preparations and default behaviour here ** //\n' +
+                'ret.node = node\n' +
+                'ret.view = view\n' +
+                '// data, node, view are dependencies by default. delete them above if you want to remove them.\n' +
+                '// add preparation code here (like for loops to count something), then list the dependencies below.\n' +
+                // ¡ The element will update only if one of the listed dependencies has changed !
+                '// ** declarations here ** //\n' +
+                'ret.instanceofname = data.instanceof?.name\n' +
+                'ret.valuesString = data.valuesString()\n' +
+                'ret.typeString = data.typeString\n' +
+                '}';
+        }, false, 'Pointer_ViewValue');
         return view;
     }
-    static edgepoint(vp: Pointer<DViewPoint>): DViewElement{
-        let view: DViewElement = DViewElement.new('EdgePoint', DV.edgePointView(), new GraphSize(0, 0, 25, 25), '', '', '',
-            [], '', undefined, false, true, vp);
-        view.appliableTo = 'EdgePoint';
-        view.resizable = false;
-        view.palette = {'color-':  U.hexToPalette('#000'), 'background-': U.hexToPalette('#fff'), 'border-':  U.hexToPalette('#000'), 'hover-scale':{type:'number', unit:'', value:1.3}};
-        view.css = `.edgePoint{
+    static edgepoint(vp: DViewElement): DViewElement{
+        let css = `.edgePoint{
     border: 2px solid var(--border-1);
     background: var(--background-1);
     color: var(--color-1);
@@ -434,21 +559,82 @@ control-panel .section .toggle {
 }
 
 `;
-        view.usageDeclarations = "(ret)=>{ // scope contains: data, node, view, constants, state\n" +
+        let usageDeclarations = "(ret)=>{ // scope contains: data, node, view, constants, state\n" +
             "// ** preparations and default behaviour here ** //\n" +
             "ret.data = data\n" +
             "ret.node = node\n" +
             "ret.view = view\n" +
             "// data, node, view are dependencies by default. delete them above if you want to remove them.\n" +
             "// add preparation code here (like for loops to count something), then list the dependencies below.\n\n" +
+            // ¡ The element will update only if one of the listed dependencies has changed !
             "// ** declarations here ** //\n" +
             "ret.edgestart = node.edge.start?.size+''\n" +
             "ret.edgeend = node.edge.end?.size+''\n" +
             "}"
         // edgePointView.edgePointCoordMode = CoordinateMode.relativePercent;
-        view.edgePointCoordMode = CoordinateMode.absolute;
-        view.defaultVSize = defaultEdgePointSize;
+        let view: DViewElement = DViewElement.new2('EdgePoint', DV.edgePointView(), vp, (d)=>{
+            d.appliableTo = 'EdgePoint';
+            d.resizable = false;
+            d.palette = {'color-':  U.hexToPalette('#000'), 'background-': U.hexToPalette('#fff'), 'border-':  U.hexToPalette('#000'), 'hover-scale':{type:'number', unit:'', value:1.3}};
+            d.css = css;
+            d.usageDeclarations = usageDeclarations;
+            d.edgePointCoordMode = CoordinateMode.absolute;
+            d.defaultVSize = defaultEdgePointSize;
+            // d.defaultVSize = new GraphSize(0, 0, 25, 25);
+        }, false, 'Pointer_ViewEdgePoint');
         return view;
+    }
+
+    static anchor(vp: DViewElement): DViewElement {
+        let ret = DViewElement.new2('Anchors', DV.anchorJSX(), vp, (v) => {
+            v.isExclusiveView = false;
+            v.palette={'anchor-': U.hexToPalette('#77f', '#f77', '#007'),
+                'anchor-hover-': U.hexToPalette('#7f7', '#a44', '#070')};
+            v.usageDeclarations = "(ret)=>{ // scope: data, node, view, state, \n" +
+                "// ** preparations and default behaviour here ** //\n" +
+                "// add preparation code here (like for loops to count something), then list the dependencies below.\n" +
+                "// ** declarations here ** //\n" +
+                "ret.anchors = (node && node.anchors || {});\n"+
+                "ret.dragAnchor = node.events.dragAnchor; // @autogenerated, do not edit\n"+
+                "ret.assignAnchor = node.events.assignAnchor; // @autogenerated, do not edit\n"+
+                "}";
+            v.events = {
+                dragAnchor: '(coords /*Point*/, anchorName /*string*/)=>{\n' +
+                    '\tconst updateAnchor = {};\n'+
+                    '\tupdateAnchor[anchorName] = coords;\n'+
+                    '\tnode.anchors=updateAnchor;\n'+
+                    '}',
+                assignAnchor: '(anchorName /*string*/)=>{\n' +
+                    '\tnode.assignEdgeAnchor(anchorName);\n'+
+                    '}'}
+            v.css = `
+.anchor.valid-anchor{
+    display:block;
+}
+
+.anchor{
+    display:none;
+    position: absolute;
+    background-color: var(--anchor-1);
+    outline: 2px solid var(--anchor-3);
+    transform: translate(-50%, -50%);
+    pointer-events: all;
+    cursor: crosshair;
+    
+    &:hover{
+        background-color: var(--anchor-hover-1);
+        outline: 2px solid var(--anchor-hover-3);
+    }
+    &.active-anchor{
+        background-color: var(--anchor-2);
+        &:hover{
+            background-color: var(--anchor-hover-2);
+        }
+    }
+}
+`
+        }, false, 'Pointer_ViewAnchors' );
+        return ret;
     }
 }
 

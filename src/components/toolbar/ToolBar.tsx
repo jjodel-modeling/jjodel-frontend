@@ -33,6 +33,7 @@ import {
     LEdgePoint, DUser,
     U, LPointerTargetable, SetRootFieldAction, GObject, EMeasurableEvents, TRANSACTION
 } from "../../joiner";
+
 import {InitialVertexSizeObj} from "../../joiner/types";
 import ModellingIcon from "../forEndUser/ModellingIcon";
 
@@ -70,20 +71,14 @@ function toolbarClick(item_dname: string, data: LModelElement|undefined, myDictV
                 else if (prevNodeid === dedge.end) prevnodeindex = subelements.length;
                 else Log.exDevv("edgepoint insert position not found", {subelements, prevNodeid, longestSeg, dedge, ledge});
             } else prevnodeindex += 1;
-            let goodway = true; // not working// todo: keep his true branch and remove this when finished debug. false crashed for missing father on subelements, guess i need more delay??
-            if (goodway) newmp.index = prevnodeindex;
+            newmp.index = prevnodeindex;
             // delete (newmp as any).id;
             let mp = [...dedge.midPoints];
             mp.splice(longestIndex, 0, newmp);
             wedge.midPoints = mp;
-            //
             let olddebug = [...subelements];
             subelements.splice(prevnodeindex, 0, newmp.id as string);
             console.log("injecting ep", {prevnodeindex, newmp, prevNodeid, longestSeg, old: olddebug, new: subelements, ledge, dedge});
-            // this might break pointers too
-            let fixorder = () => { wedge.subElements = subelements; }
-            if (!goodway) setTimeout( fixorder, 1); // need to wait edgepoint creation
-            // selectNode(newmp);
             break;
         default:
             if (!data || !myDictValidator) return;
@@ -160,9 +155,48 @@ function selectNode(d: DGraphElement|{id: string}): any {
     if (d && d.id) setTimeout(()=>$(".Graph [data-nodeid='"+d?.id+"']").trigger("click"), 10);
     return d; }
 
+function useClickOutside(ref: any, onClickOutside: any) {
+    useEffect(() => {
+        
+        function handleClickOutside(event: Event) {
+            if (ref.current && !ref.current.contains(event.target)) {
+                onClickOutside();
+            }
+        }
+
+        // Bind
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => {
+        // dispose
+        document.removeEventListener("mousedown", handleClickOutside);
+        };
+    }, [ref, onClickOutside]);
+}
+
 function ToolBarComponent(props: AllProps, state: ThisState) {
+    
     const node = props.node;
     let [pinned, setPinned] = useState(true);
+    let [collapsed, setCollapsed] = useState(true);
+    let [position, setPosition] = useState([20,50]); 
+
+    const menuRef = useRef();
+
+    useClickOutside(menuRef, () => {
+        setCollapsed(true);
+    });
+
+    const minimize = (ref: any) => {
+        ref.current.style.opacity = 0;
+
+        // ref.current.style.visibility = 'hidden';
+        // ref.current.style.display = 'none'; 
+        setCollapsed(true);
+    }
+    const maximize = (ref: any) => {
+        ref.current.style.opacity = 1;
+        setCollapsed(false);
+    }
 
     const htmlref: React.MutableRefObject<null | HTMLDivElement>= useRef(null);
     useEffect(() => {
@@ -188,6 +222,7 @@ function ToolBarComponent(props: AllProps, state: ThisState) {
 
     // downward["DModel"] = ["DPackage"];
     // downward["DModel"] = ["DPackage"];
+
     downward["DPackage"] = ["DPackage", "DClass", "DEnumerator"];
     downward["DClass"] = ["DAttribute", "DReference", "DOperation"];
     downward["DEnumerator"] = ["DLiteral"];
@@ -199,6 +234,7 @@ function ToolBarComponent(props: AllProps, state: ThisState) {
     downward["DVoidEdge"] = ["DEdgePoint"]
 
     // for (let parentKey in downward) myDictValidator.set(parentKey, addChildren("package"));
+
     let upward: Dictionary<DocString<"DClassName (model)">, DocString<"hisDParents">[]> = {};
     for (let parentKey in downward){
         let vals = downward[parentKey];
@@ -223,8 +259,10 @@ function ToolBarComponent(props: AllProps, state: ThisState) {
         let siblings = data ? addChildren(upward[data.className]) : [];
         if (node) siblings.push(...addChildren(upward[node.className]));
         let subelements = data ? addChildren(downward[data.className]) : [];
-        if (siblings.length > 0)    contentarr.push([<b className={'toolbar-section-label'}>Sibling</b>, siblings]);
-        if (subelements.length > 0) contentarr.push([<b className={'toolbar-section-label'}>Sublevel</b>, subelements]);
+
+
+        if (siblings.length > 0)    { contentarr.push([<span className={'toolbar-section-label'}>Structure</span>, <hr className={'my-1'} />, siblings]); }
+        if (subelements.length > 0) { contentarr.push([<span className={'toolbar-section-label'}>Features</span>, <hr className={'my-1'} />, subelements]); }
 
     }
     else {
@@ -244,48 +282,87 @@ function ToolBarComponent(props: AllProps, state: ThisState) {
             </div>
         );
         if (node) subleveloptions.push(...addChildren(downward[node.className]));
-        let rootobjs = classes?.filter((lClass) => {return !lClass.abstract && !lClass.interface}).map((lClass, index) => {
+        let rootobjs = classes?.filter((lClass) => lClass.rootable).map((lClass, index) => {
             let dclass = lClass.__raw;
-            return <div
+            return <><div
                 onMouseEnter={e => SetRootFieldAction.new('tooltip', lClass.annotations.map(a => a.source).join(' '))}
                 onMouseLeave={e => SetRootFieldAction.new('tooltip', '')}
                 key={"LObject_"+dclass.id} className={"toolbar-item LObject"} tabIndex={ti} onClick={()=>select(model.addObject({}, lClass)) }>
                 {dclass._state.icon ? <ModellingIcon src={dclass._state.icon}/> : <ModellingIcon name={'object'} />}
                 <span className={'ms-1 my-auto text-capitalize'}>{U.stringMiddleCut(dclass.name, 14)}</span>
-            </div>
+            </div></>
         }) || [];
-        rootobjs.push(<div key={"RawObject"} className={'toolbar-item'} tabIndex={ti} onClick={()=>select(model.addObject({}, null))}>
+
+        rootobjs.push(<><hr className={'my-1 toolbar-hr'}/><div key={"RawObject"} className={'toolbar-item'} tabIndex={ti} onClick={()=>select(model.addObject({}, null))}>
+            
             <ModellingIcon name={'object'} />
+            
             <span className={'ms-1 my-auto text-capitalize'}>Object</span>
-        </div>);
+        </div></>);
 
 
-        if (rootobjs.length > 0)    contentarr.push([<b className={'toolbar-section-label'} style={{marginRight:"1.5em"/*to avoid overlap with pin*/}}>Root level</b>, rootobjs]);
-        if (subleveloptions.length > 0) contentarr.push([<b className={'toolbar-section-label'}>Sublevel</b>, subleveloptions]);
+        if (rootobjs.length > 0) {
+            contentarr.push([<b className={'toolbar-section-label'} style={{marginRight:"1.5em"/*to avoid overlap with pin*/}}>Root level</b>, rootobjs]);
+        }
+        if (subleveloptions.length > 0) {
+            contentarr.push([<b className={'toolbar-section-label'}>Sublevel</b>, subleveloptions]);
+        }
     }
 
 
     let shapes = node ? addChildren(downward[node.className]) : [];
-    if (shapes.length > 0)      contentarr.push([<b className={'toolbar-section-label'}>Shape</b>, shapes]);
+    if (shapes.length > 0) {
+        contentarr.push([<b className={'toolbar-section-label'}>Shape</b>, shapes]);
+    }
 
-    let separator = <hr className={'my-2'} /> as any;
+    let separator = <hr className={'my-1'} /> as any;
     // @ts-ignore
     content = contentarr.separator(separator);// .flat() as any;
-    console.log("toolbar", {contentarr, separator, content});
 
-    return (
-        <div className="toolbar-draggable" ref={htmlref} style={{top: '35px', position:"absolute"}} // refuses to focus without event...
-             onClick={(e)=>{ console.log("click focus", {htmlref}); setTimeout(()=> {
-                 if (htmlref.current) (htmlref.current as any).children[0].focus();
-             }, 1)}}>
+
+    /* backup  */
+
+    /* return (
+        <div className="toolbar-draggable"
+            ref={htmlref}
+            style={{ border: 'none', top: '35px', position: "absolute", backgroundColor: 'red !important' }} // refuses to focus without event...
+            onClick={(e) => {
+                console.log("click focus", { htmlref }); setTimeout(() => {
+                    if (htmlref.current) (htmlref.current as any).children[0].focus();
+                }, 1)
+            }}>
             <div className={"toolbar hoverable" + (pinned ? " pinned" : '')} tabIndex={0}>
-                <div className={"drag-handle dark"}>
+                <i className={"content pin bi bi-pin-angle" + (pinned ? "-fill" : '')} onClick={() => setPinned(!pinned)} />
+                <div className={"content inline w-100"}>
+                    {content}
                 </div>
-
-                <i className={"content pin bi bi-pin-angle"+(pinned ? "-fill" : '')} onClick={()=> setPinned(!pinned) } />
-                <div className={"content inline"}>{content}</div>
             </div>
-        </div>);
+        </div>);*/ 
+
+    return (<>
+    
+        <div className="toolbar-draggable"
+            ref={htmlref}
+            style={{ border: 'none', top: '35px', position: "absolute", backgroundColor: 'red !important' }} // refuses to focus without event...
+            onClick={(e) => {
+                console.log("click focus", { htmlref }); setTimeout(() => {
+                    if (htmlref.current) (htmlref.current as any).children[0].focus();
+                }, 1)
+            }}>
+            <div className={"toolbar hoverable" + (pinned ? " pinned" : '')} tabIndex={0}>
+                <i style={{marginTop: '8px'}} className={"content pin bi bi-x-lg"} onClick={() => minimize(htmlref)} />
+                <div className={"content inline w-100"}>
+                    {content}
+                </div>
+            </div>
+        </div>
+        
+        {collapsed ? 
+            <div className="toolbar-collapsed" onClick={() => maximize(htmlref)}></div>
+            :
+            <div className="toolbar-collapsed" onClick={() => minimize(htmlref)}></div>
+        }
+    </>);
 }
 
 interface OwnProps {
@@ -305,9 +382,9 @@ type AllProps = OwnProps & StateProps & DispatchProps;
 function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     const ret: StateProps = {} as any;
     const nodeid = state._lastSelected?.node;
-    if(nodeid) ret.node = LGraphElement.fromPointer(nodeid);
+    if (nodeid) ret.node = LGraphElement.fromPointer(nodeid);
     else ret.node = null;
-    if(ownProps.metamodelId) { ret.metamodel = LModel.fromPointer(ownProps.metamodelId); }
+    if (ownProps.metamodelId) { ret.metamodel = LModel.fromPointer(ownProps.metamodelId); }
     return ret;
 }
 /*

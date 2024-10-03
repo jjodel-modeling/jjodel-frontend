@@ -55,7 +55,6 @@
 //     hidden?: boolean;
 //     autosize?: boolean;
 //     inputClassName?: string;
-//     asLabel?: boolean
 // }
 // interface StateProps {
 //     operation: LOperation;

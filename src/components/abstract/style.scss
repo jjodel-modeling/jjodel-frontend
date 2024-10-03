@@ -1,3 +1,31 @@
+body{
+  --panel-content-color: rgba(0,0, 0, 0.85);
+
+  --color: #233d4d;
+  --accent: #048BA8;
+  --accent-50: var(--bg-4);
+  --secondary: #048BA8;
+  --terziary: #5F0F40;
+  --accent-secondary: #F3B700;
+
+  --bg-1: white;
+  --bg-2: #f5f5f5;
+  --bg-2-5: #EBEBEB;
+  --bg-3: #e2e2e1;
+  --bg-3-1: #c3c3c1;
+
+  --bg-4: #8f908e;
+  --bg-5: #525251;
+
+  --dock-bg: var(-bg-1);
+  --disabled: red; //var(--bg-4);
+
+  --danger: #ed474a;
+  --success: #3ddc97;
+  --side-padding: 2em;
+  --sep-padding: 4em;
+}
+
 body > .dragging-layer {
   position: absolute !important;
   z-index: 9999;
@@ -10,7 +38,7 @@ body > .dragging-layer {
   font-size: 14px;
   line-height: 1.5;
   white-space: nowrap;
-  --default-background-color: #fff;
+  --default-background-color: var(--bg-1);
   /* dragging element */
   /* icon */
 }
@@ -59,14 +87,19 @@ body > .dragging-layer > div:last-child {
   position: absolute;
   box-sizing: border-box;
   margin-top: -3px;
-  background-color: #108ee9;
+  background-color: white; // var(--accent);
   transform-origin: 0 0;
-  width: 0;
-  height: 0;
+  width: 0px;
+  height: 0px;
 }
+/*
+.dock-tab-btn:has(.dock-tab-close-btn) {
+  padding-top: 4px!important;
+}*/
+
 .dock-tab-btn-disabled {
   cursor: default;
-  color: #ccc;
+  color: var(--disabled);
 }
 .dock-nav-animated {
   transition: transform 0.25s cubic-bezier(0.35, 0, 0.25, 1);
@@ -76,37 +109,57 @@ body > .dragging-layer > div:last-child {
   position: relative;
   display: block;
   min-width: 30px;
-  height: 30px;
   text-align: center;
   transition: color 0.25s cubic-bezier(0.35, 0, 0.25, 1);
-  padding: 0;
-  font-weight: 500;
-  border-bottom: 1px solid #ddd;
+  padding: 0px;
+  font-weight: 400;
+  margin-top: 6px;
+  border-top-right-radius: 4px;
+  border-top-left-radius: 4px;
+  border: 1px solid var(--bg-3);
+  border-top: 3px solid var(--bg-3);
   cursor: pointer;
   float: left;
   margin-right: 10px;
-  background: #fafafd;
+  background: var(--dock-bg);
   outline: none;
+  top: 3px;
+  transition: top 0.3s;
+}
+
+.dock-tab:hover {
+  cursor: pointer;
 }
 .dock-tab.dragging {
   opacity: 0.3;
 }
 
 .dock-tab:hover {
-  color: #349fec;
+  color: var(--accent-50);
+  border-top: 3px solid var(--accent-50);
+  top: 0px;
+  transition: top 0.3s;
 }
 .dock-tab-active,
 .dock-tab-active:hover {
-  color: #108ee9;
+  border-top: 3px solid var(--terziary)!important;
+  color: var(--terziary);
   cursor: default;
   transform: translateZ(0);
+
 }
+.dock-tab-active {
+  top: 0px;
+  z-index: 10;
+  transition: top 0.3s;
+}
+
 .dock-tab-disabled {
   cursor: default;
-  color: #ccc;
+  color: var(--disabled);
 }
 .dock-tab-disabled:hover {
-  color: #ccc;
+  color: var(--disabled);
 }
 .dock-content-animated {
   transition: margin 0.3s;
@@ -128,6 +181,7 @@ body > .dragging-layer > div:last-child {
   animation-name: dock-fadeOut;
   animation-duration: 0.5s;
 }
+
 @keyframes dock-fadeOut {
   from {
     height: 100%;
@@ -143,8 +197,8 @@ body > .dragging-layer > div:last-child {
 }
 .dock-top .dock-bar {
   flex: 0 0 auto;
-  background: #fafafd;
-  border-bottom: 1px solid #f3f3f3;
+  background: var(--bg-1);
+  border-bottom: 1px solid var(--bg-3);
   padding-left: 8px;
 }
 .dock-top .dock-content-animated {
@@ -155,35 +209,41 @@ body > .dragging-layer > div:last-child {
 }
 .dock-top .dock-ink-bar {
   height: 2px;
-  bottom: 0;
+  bottom: 0px;
   left: 0;
 }
+
 .dock-tab-close-btn {
   position: absolute;
   cursor: pointer;
-  font-family: 'Fredoka One', sans-serif;
-  color: #ddd;
+  font-family: 'Inter Tight', sans-serif;
+  color: var(--bg-3);
   right: -3px;
   font-size: 12px;
-  width: 16px;
+  width: 10px;
+  height: 10px;
   text-align: center;
-  top: 6px;
+  top: 10px;
+  opacity: 0;
+  margin-right: 4px!important;
   outline: none;
   transition: all 0.25s ease-in-out;
+  padding-right: 6px;
+
+  background-image: url('/static/img/close-on.png');
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 6px 6px;
+
 }
+
+/*
+
 .dock-tab-close-btn:before {
-  content: "X";
+  content: "";
 }
-.dock-tab-close-btn:hover,
-.dock-tab-close-btn:focus {
-  color: #666;
-  transform: scale(1.1, 1.1);
-}
-.dock-tab:hover .dock-tab-close-btn,
-.dock-tab-close-btn:focus {
-  opacity: 1;
-  color: #a2a2a2;
-}
+*/
+
 .dock-tab-hit-area {
   position: absolute;
   pointer-events: none;
@@ -200,6 +260,7 @@ body > .dragging-layer > div:last-child {
   display: flex;
   width: 100%;
   height: 100%;
+  color: var(--color);
 }
 .dock-content-holder {
   flex: auto;
@@ -208,14 +269,18 @@ body > .dragging-layer > div:last-child {
   /* work around for the height issue in content holder*/
   height: 0;
 }
-.dock-content .dock-tabpane {
+.dock-content .dock-tabpane{
   position: relative;
-  overflow-x: hidden;
-  overflow-y: hidden;
+  overflow: hidden;
   width: 100%;
   height: 100%;
   outline: none;
   flex: none;
+  display: flex;
+  &>*{
+    overflow: auto;
+    flex-grow:1;
+  }
 }
 .dock-nav {
   display: flex;
@@ -228,7 +293,7 @@ body > .dragging-layer > div:last-child {
 .dock-nav-more {
   height: 30px;
   border: none;
-  color: rgba(0, 0, 0, 0.85);
+  color: var(--panel-content-color);
   background: transparent;
   cursor: pointer;
   position: relative;
@@ -258,16 +323,13 @@ body > .dragging-layer > div:last-child {
   display: flex;
   position: relative;
   transition: transform 0.3s;
-}
-.dock-extra-content {
-  display: flex;
-  height: 30px;
+  height: min-content;
 }
 .dock-dropdown {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
-  color: rgba(0, 0, 0, 0.85);
+  color: var(--panel-content-color);
   font-size: 14px;
   font-variant: tabular-nums;
   line-height: 1.5715;
@@ -290,7 +352,7 @@ body > .dragging-layer > div:last-child {
   overflow-y: auto;
   text-align: left;
   list-style-type: none;
-  background-color: #fff;
+  background-color: var(--bg-1);
   background-clip: padding-box;
   border-radius: 2px;
   outline: none;
@@ -301,7 +363,7 @@ body > .dragging-layer > div:last-child {
   margin: 0;
   padding: 5px 12px;
   overflow: hidden;
-  color: rgba(0, 0, 0, 0.85);
+  color: var(--color);
   font-weight: 400;
   font-size: 14px;
   line-height: 22px;
@@ -319,11 +381,11 @@ body > .dragging-layer > div:last-child {
   right: 2px;
 }
 .dock-dropdown-menu-item:hover {
-  background: #f5f5f5;
+  background: var(--bg-2);
 }
 .dock-dropdown-menu-item-disabled,
 .dock-dropdown-menu-item-disabled:hover {
-  color: #ccc;
+  color: var(--disabled);
   background: 0 0;
   cursor: not-allowed;
 }
@@ -340,9 +402,9 @@ body.dock-dragging iframe {
 .dock-panel {
   box-sizing: border-box;
   position: relative;
-  color: rgba(0, 0, 0, 0.85);
-  background: #fff;
-  border: 1px solid #ddd;
+  color: var(--color);
+  background: var(--bg-1);
+  border: 1px solid var(--bg-1);
 }
 .dock-panel.dragging {
   opacity: 0.3;
@@ -392,9 +454,21 @@ body.dock-dragging iframe {
 .dock-divider {
   box-sizing: border-box;
   flex: 0 0 4px;
-  background: rgba(0, 0, 0, 0);
+  background: var(--bg-2-5);
+  border-left: 1px solid var(--bg-1);
+  border-right: 2px solid var(--bg-1);
+  // background-image: url('/static/img/dock-handle.png');
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 8px 800px;
   z-index: 1;
 }
+
+.dock-divider:hover {
+  background-image: none;
+  background-color: var(--accent);
+}
+
 .dock-hbox > .dock-divider {
   transform: scaleX(3);
   cursor: ew-resize;
@@ -486,8 +560,8 @@ body.dock-dragging iframe {
   box-sizing: border-box;
   pointer-events: none;
   z-index: 400;
-  border: solid 1px #fff;
-  background: #88c7f4;
+  border: solid 1px var(--bg-1);
+  background: var(--accent);
   opacity: 0.5;
   box-shadow: 0 0 4px #ddd;
   display: none;
@@ -500,7 +574,7 @@ body.dock-dragging iframe {
   right: 0;
   bottom: 0;
   z-index: 100;
-  background: white;
+  background: red; // var(--bg-1);
   border: none;
   opacity: 0.01;
 }
@@ -519,16 +593,22 @@ body.dock-dragging iframe {
   z-index: 300;
   width: 32px;
   height: 32px;
-  font-family: 'Fredoka One', sans-serif;
-  color: #ddd;
-  background: #fff;
-  border: 1px solid transparent;
   left: calc(50% - 16px);
   top: calc(50% - 16px);
+  font-family: 'Inter Tight', sans-serif;
+  // color: #ddd;
+  // background: #fff;
+  // border: 1px solid transparent;
+  background: inherit;
+  color: inherit;
+  //border: 1.99px solid var(--accent-secondary);
+  background-color: var(--accent-secondary);
+  border-radius: 4px;
+  scale: 1;
 }
 .dock-drop-layer .dock-drop-square .dock-drop-square-box {
   box-sizing: border-box;
-  border: 1px solid #ddd;
+  border: 1px solid var(--bg-1) ;
   width: 100%;
   height: 100%;
 }
@@ -599,52 +679,71 @@ body.dock-dragging iframe {
   transform: rotate(90deg);
 }
 .dock-drop-layer .dock-drop-square-dropping {
-  background: #88c7f4;
+  background: var(--accent);
   color: white;
 }
 .dock-panel.dock-panel-dropping .dock-tab-close-btn {
   pointer-events: none;
 }
 .dock-panel-max-btn {
-  height: 15px;
-  width: 15px;
-  font-family: 'Fredoka One', sans-serif;
-  margin: 2px 2px 2px 0;
-  padding: 6px 4px 4px 2px;
-  cursor: pointer;
+  position: relative;
+  top: 10px;
+  right: 10px;
   transition: all 0.25s ease-in-out;
-  outline: none;
-  user-select: none;
+
+  //background-image: url('/static/img/max-btn.png');
+  // background-repeat: no-repeat;
+  // background-position: center;
+  // background-size: 14px 14px;
 }
-.dock-panel-max-btn:before {
-  position: absolute;
-  content: " ";
-  border: 2px solid #ddd;
-  border-radius: 1px;
-  width: 9px;
-  height: 9px;
+
+.dock-panel-max-btn::before {
+  display: block;
+  position: relative;
+  height: 20px;
+  width: 20px;
+  font-family: bootstrap-icons;
+  font-size: 1.1em;
+  color: var(--color);
+  content: "\F3DF"; // max
+  cursor: pointer;
+
 }
+
+
 .dock-panel-max-btn:hover,
 .dock-panel-max-btn:focus {
-  color: #a2a2a2;
+  color: var(--accent);
 }
 .dock-panel-max-btn:hover:before,
 .dock-panel-max-btn:focus:before {
-  border-color: #a2a2a2;
+
 }
 .dock-panel-max-btn:hover {
-  transform: scale(1.1);
+
 }
+
+.dock-mbox .dock-panel-max-btn {
+  /* background-image: url('/static/img/btn-min.png');
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 17px 17px;*/
+}
+
 .dock-mbox .dock-panel-max-btn:before {
-  border: none;
-  content: "-";
-  color: #666;
-  font-size: 20px;
-  line-height: 4px;
+  display: block;
+  position: relative;
+  height: 24px;
+  width: 24px;
+  font-family: bootstrap-icons;
+  font-size: 1.1em;
+  color: var(--color);
+  content: "\F3DE"; // min
+  cursor: pointer;
 }
 .dock-mbox .dock-panel-max-btn:hover:before,
 .dock-mbox .dock-panel-max-btn:focus:before {
-  color: #999;
+  color: var(--accent);
 }
 /*
 .dock-panel.dock-style-place-holder {
@@ -689,8 +788,8 @@ body.dock-dragging iframe {
   border-radius: 5px 5px 0 0;
 }
 .dock-panel.dock-style-card .dock-tab.dock-tab-active {
-  border-bottom: 1px solid #fff;
-  background: #fff;
+  border-bottom: 1px solid var(--bg-1);
+  background: var(--bg-1);
 }
 .dock-panel.dock-style-card .dock-bar {
   border-bottom: 1px solid #ddd;
@@ -702,7 +801,7 @@ body.dock-dragging iframe {
 }
 .dock-panel.dock-style-card .dock-ink-bar {
   /* hide animated ink bar */
-  background: #fff;
+  background: var(--bg-1);
   opacity: 0;
 }
 .dock-panel.dock-style-card .dock-tab-hit-area {
@@ -714,8 +813,8 @@ body.dock-dragging iframe {
   margin-top: 4px;
 }
 .dock-panel.dock-style-card .dock-tab-close-btn {
-  right: 0;
-  font-size: 10px;
+  right: 0px;
+  font-size: 11px;
   top: 8px;
 }
 .dock-panel.dock-style-card .dock-extra-content {

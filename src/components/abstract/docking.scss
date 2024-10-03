@@ -8,6 +8,10 @@
   --color4: #000;
 }
 
+.dock-tabpane {
+  border: 1px soplid red!important;
+}
+
 .dock-panel.dock-style-custom .dock-tab {
   margin-right: 0;
   border: 1px solid var(--background2);
@@ -90,6 +94,11 @@
 .dock-mbox .dock-panel.dock-style-card .dock-panel-max-btn{
   //background-image: url("../../img/google/2x/baseline_fullscreen_exit_black_24dp.png");
 }
+
+.dock-panel-max-btn {
+  background-color: red!important;
+}
+
 
 /* different color for the focused panel */
 .dock-panel.dock-style-card{

@@ -1,85 +1,112 @@
+@import "../../styles/variables.scss";
+
 [data-nodetype], [data-nodetype] > * {
   overflow: visible;
 }
 
 .toolbar {
-  padding: 0.5rem;
-  cursor: move;
-  display: flex;
-  font-size: 1rem;
 
-  --palette-1: #53616A;
-  --palette-w: #D4DAE2;
+    // --bg: #233d4d;
+    --fg: white;
 
-  .drag-handle{
-    flex-grow: 1;
-    // width: 1em;
-    width: 12px;
-    height: 30px;
-    /*margin-left: 0.55em;
-    margin-top: 0.25em;
-    margin-right: 0.7em;
-    margin-bottom: 0.25em;*/
-    margin-left: calc(-0.5rem + 0.4rem);
-    margin-right: calc(-0.3rem + 0.4rem);
-    margin-top: 0.25em;
-    margin-bottom: 0.25em;
-
-  }
-
-  .toolbar-section-label{
-    margin-bottom: 0.25rem;
-    margin-left: 0.3rem;
-    // margin-right: 2em;
-    //text-transform: uppercase;
-    // text-align: center;
-    display: block;
-    font-size: 0.9rem;
-    font-weight: bold;
-
-  }
-
-  background: var(--palette-1);
-  color: var(--palette-w);
-  white-space: pre;
-
-  .bi.pin{/*
-    background: var(--palette-1);*/
-    color: var(--palette-w);
-    cursor: pointer;
-    position: absolute;
-    top: 0.25rem;
-    right: 0.25rem;
-    z-index: 2 !important;
-    box-shadow: none !important;
-    padding: 0 4px;
-    &:hover{
-      color: var(--palette-1);
-      background: var(--palette-w);
-      border-radius: 999px;
-      scale: 1.15;
-    }
-  }
-  .toolbar-item{
-    border-radius: 6px;
-    padding-right: 0.25em;
+    padding: 0.5rem;
+    margin: 0;
+    z-index: 12000;
+    cursor: move;
     display: flex;
-    cursor: pointer;
+    font-size: 13px;
+    background-color: var(--bg);
+    color: var(--fg);
+    white-space: pre;
+    width: 205px;
+    margin-right: 100px;
+    border-radius: 8px;
+    box-shadow:0px 10px 20px rgba(000,000,000,0.3),inset 0px 0px 1px rgba(255,255,255,0.8);
+    left: 20px;
 
-    > span{
-      display: inline-block;
-      overflow: hidden;
-      white-space: nowrap;
-      text-overflow: ellipsis;
-      max-width: 400px;
-      margin: auto;
+    .drag-handle{
+      flex-grow: 0;
+      width: 12px;
+      height: 30px;
+
+      margin-left: calc(-0.5rem + 0.4rem);
+      margin-right: calc(-0.3rem + 0.4rem);
+      margin-top: 0.25em;
+      margin-bottom: 0.25em;
+
     }
+
+    .toolbar-section-label{
+        margin-left: 0.3rem;
+        display: block;
+        font-family: 'Inter Tight', sans-serif;
+        font-size: 1.1em;
+        font-weight: 300;
+    }
+
+    .toolbar-section-label::before {
+      font-family: bootstrap-icons;
+      content: "";
+      padding-right: 0px;
+    }
+
+    .bi.pin{
+      color: var(--fg);
+      cursor: pointer;
+      position: absolute;
+      top: 0.25rem;
+      right: 0.25rem;
+      z-index: 2 !important;
+      box-shadow: none !important;
+      padding: 0 4px;
+
+      & :hover{
+        color: var(--fg);
+        background-color: var(--bg);
+        border-radius: 999px;
+        scale: 1.15;
+      }
+    }
+
+    .toolbar-item {
+      width: 100%;
+      border-radius: 4px;
+      margin-right: 0!important;
+      padding-left: 2px;
+      display: flex;
+      cursor: pointer;
+
+      > span{
+        width: 100%;
+        display: inline-block;
+        overflow: hidden;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+        max-width: 400px;
+        margin: auto;
+      }
+  }
+
+  .toolbar-hr {
+    padding-bottom: 4px!important;
+  }
+
+  .w-100 {
+    position: relative;
+    width: 100%;
+    padding-right: 0px;
+    margin-left: 0;
+    left: -0  px;
+  }
+
+  .toolbar .content {
+      width: 100%;
   }
   .toolbar-item:hover, .toolbar-item:focus{
-    background: var(--palette-w);
-    color: var(--palette-1);
+    background-color: var(--secondary);
+    color: var(--fg);
   }
-  z-index: 1;
+  z-index: 1200;
   box-shadow: var(--smart-elevation-8); // 6px 0 4px -4px #999, -6px 0 4px -4px #999;
 
   b {
@@ -90,29 +117,61 @@
     display: flex;
     cursor: pointer;
     padding: 2px;
+    height: fit-content;
     // border-left: 2px solid;
   }
-  /*
-  .package {
-    border-left-color: $package-color;
+
+  & .my-auto {
+    font-family: "Inter Tight", sans-serif;
+    font-weight: 200;
+    margin: 5px 10px 5px 10px!important;
   }
-  .class {
-    border-left-color: $class-color;
+
+  hr.my-1{
+    color: #8a8a8a;
+    left: 5px;
+    width: calc(100% - 10px);
   }
-  .enumerator {
-    border-left-color: $enum-color;
-  }
-  .attribute, .reference, .operation, .feature, .parameter, .exception, .literal {
-    border-left-color: $feature-color;
-  }
-  .edgepoint, .edge, .vertex, .voidvertex, .voidedge{
-    border-left-color: $vertex-color;
-  }
-  .annotation {
-    border-left-color: $annotation-color;
-  }
-  .object, .LObject {
-    border-left: 2px solid $object-color;
-  }
-  */
+}
+
+
+
+.element-icon {
+  font-size: 0.9em;
+  display: block;
+  width: 23px!important;
+  height: 20px!important;
+  border: 1px solid white;
+  border-radius: 24px;
+  text-align: center;
+  margin-left: 2px;
+  margin-top: auto;
+  margin-bottom: auto;
+
+}
+
+
+.toolbar-collapsed::before {
+  position: absolute;
+  z-index: 12000;
+  display: block;
+  bottom: 20px;
+  left: 20px;
+  height: 40px;
+  width: 40px;
+  border-radius: 40px;
+  text-align: center;
+  padding-top: 4px;
+  height: 40px;
+  width: 40px;
+  border-radius:50%;
+  color: white;
+  font-family: bootstrap-icons;
+  content: "\F466"; // chat: "\F24D"; // list: "\F479";
+  cursor: pointer;
+  font-size: 1.7em;
+  transition: 0.3s;background-color: var(--color);
+  box-shadow: var(--smart-elevation-8);
+  transition: all 0.3s;
+  
 }

@@ -89,9 +89,9 @@ everytime you put hands into a D-Object shape or valid values, you should docume
         // purpose: save in state 1 of each D-objects with all the possible sub-objects in every possible structure shape
         // values can be dummy but syntactical valid
         //DState.new(); nope, i'm using current state, just call it from an empty project with no models.
-        DViewElement.new2("View", "jsx", (d)=>{
+        DViewElement.new2("View", "jsx", undefined,(d)=>{
             d.appliableTo = 'Any';
-            d.subViews = {["View"]: 3.5};
+            d.subViews = {["Sample-fake-subView"]: 3.5};
             d.oclUpdateCondition = '(view: LViewElement) => { return false; } <--- as a string'
             d.defaultVSize = new GraphSize(5,5,5,5);
             d.palette = {
@@ -109,7 +109,7 @@ everytime you put hands into a D-Object shape or valid values, you should docume
             d.edgePointCoordMode = CoordinateMode.relativePercent;
             d.edgeHeadSize = new GraphPoint(5,5);
             d.edgeTailSize = new GraphPoint(5,5);
-        }, true, Defaults.viewpoints[0], 'DViewElement');
+        }, true, 'DViewElement');
 
 
 
@@ -153,6 +153,10 @@ everytime you put hands into a D-Object shape or valid values, you should docume
     }
 
 
+    private d<D extends DPointerTargetable, L extends LPointerTargetable>(ptr: Pointer<D>, s: DState): D{
+        return s.idlookup[ptr] as any;
+        // {n}
+    }
     private ['0 -> 2.1'](s: DState): DState {
         s.version = {n: 2.1, date:"_reconverted", conversionList:[0]};
         return s;
@@ -161,11 +165,15 @@ everytime you put hands into a D-Object shape or valid values, you should docume
         s.version.conversionList = [...s.version.conversionList, s.version.n];
         s.version.n = 2.2;
         // let ls: LState = LPointerTargetable.from(s); nope, avoid L-ojects. actions would fire in present state instead of in parameter state
-        for (let c of (s.classs).map(p=> this.d(p, s))) c.isSingleton = !!c.isSingleton; // booleanize the undefined
+        for (let c of (s.classs).map(p=> this.d(p, s))) {
+            c.isSingleton = !!c.isSingleton; // booleanize the undefined
+            c.sealed = [];
+            c.final = false;
+            c.rootable = undefined;
+        }
+        for (let c of (s.viewelements).map(p=> this.d(p, s))) { c.father = c.viewpoint; }
+        for (let c of (s.projects).map(p=> this.d(p, s))) { c.favorite = {}; c.description = ''; }
+        for (let c of (s.references).map(p=> this.d(p, s))) { if (c.composition === undefined) c.aggregation = !(c.composition = !!(c as any).containment); }
         return s;
-    }
-    private d<D extends DPointerTargetable, L extends LPointerTargetable>(ptr: Pointer<D>, s: DState): D{
-        return s.idlookup[ptr] as any;
-        // {n}
     }
 }

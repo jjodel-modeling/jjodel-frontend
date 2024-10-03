@@ -10,49 +10,81 @@ export class StateMachine_Views {
     }
 
     private static create(project: LProject, state: LClass, command: LClass, event: LClass, transition: LClass): [LViewPoint, LViewElement, LViewElement] {
+        let name: string;
+        let ptr: string = 'Pointer_';
         /* Viewpoint */
-        const viewpoint = DViewPoint.new2('StateMachine', '');
+        name = "StateMachine";
+        const viewpoint = DViewPoint.newVP(name, undefined, true, ptr+name);
         /* Model */
-        const modelView = DViewElement.new('Model', ModelViews.zero);
-        modelView.viewpoint = viewpoint.id; modelView.explicitApplicationPriority = 10;
-        modelView.oclCondition = 'context DModel inv: self.isMetamodel = false';
+        name = "Model";
+        const modelView = DViewElement.new2(name, ModelViews.zero, viewpoint, (d)=>{
+            d.appliableToClasses = ['DModel'];
+            modelView.explicitApplicationPriority = 10;
+            modelView.oclCondition = 'context DModel inv: self.isMetamodel = false';
+        }, true, ptr+name);
         /* State */
-        const stateView = DViewElement.new('State', this.state(command));
-        stateView.viewpoint = viewpoint.id; stateView.explicitApplicationPriority = 10;
-        stateView.oclCondition = `context DObject inv: self.instanceof.id = '${state.id}'`;
-        stateView.adaptWidth = true; stateView.adaptHeight = true;
-        stateView.usageDeclarations = Dependencies.state;
+        name = 'state';
+        const stateView = DViewElement.new2(name, this.state(command), viewpoint, (d)=>{
+            d.explicitApplicationPriority = 10;
+            d.appliableToClasses = ['DObject'];
+            d.oclCondition = `context DObject inv: self.instanceof.id = '${ptr+name}'`;
+            d.adaptWidth = true;
+            d.adaptHeight = true;
+            d.usageDeclarations = Dependencies.state;
+        }, true, ptr+name);
         /* Command */
-        const commandView = DViewElement.new('Command', this.command);
-        commandView.viewpoint = viewpoint.id; commandView.explicitApplicationPriority = 10;
-        commandView.oclCondition = `context DObject inv: self.instanceof.id = '${command.id}'`;
-        commandView.draggable = false; commandView.resizable = false;
-        commandView.usageDeclarations = Dependencies.command;
+        name = "Command";
+        const commandView = DViewElement.new2(name, this.command, viewpoint, (d)=>{
+            d.explicitApplicationPriority = 10;
+            d.appliableToClasses = ['DObject'];
+            d.oclCondition = `context DObject inv: self.instanceof.id = '${ptr+name}'`;
+            d.draggable = false;
+            d.resizable = false;
+            d.usageDeclarations = Dependencies.command;
+        }, true, ptr+name);
         /* Events */
-        const eventsView = DViewElement.new('Events', this.events);
-        eventsView.viewpoint = viewpoint.id; eventsView.explicitApplicationPriority = 10;
-        eventsView.oclCondition = `context DObject inv: self.name = 'obj_1'`;
-        eventsView.adaptWidth = true; eventsView.adaptHeight = true;
-        eventsView.usageDeclarations = Dependencies.events(event);
+        name = 'Events';
+        const eventsView = DViewElement.new2(name, this.events, viewpoint, (d)=>{
+            d.explicitApplicationPriority = 10;
+            d.appliableToClasses = ['DObject'];
+            d.oclCondition = `context DObject inv: self.name = 'obj_1'`;
+            d.adaptWidth = true;
+            d.adaptHeight = true;
+            d.usageDeclarations = Dependencies.events(event);
+        }, true, ptr+name);
         /* Event */
-        const eventView = DViewElement.new('Event', this.event);
-        eventView.viewpoint = viewpoint.id; eventView.explicitApplicationPriority = 10;
-        eventView.oclCondition = `context DObject inv: self.instanceof.id = '${event.id}'`;
-        eventView.draggable = false; eventView.resizable = false;
-        eventView.usageDeclarations = Dependencies.event;
+        name = 'Event';
+        const eventView = DViewElement.new2(name, this.event, viewpoint, (d)=>{
+            d.explicitApplicationPriority = 10;
+            d.appliableToClasses = ['DObject'];
+            d.oclCondition = `context DObject inv: self.instanceof.id = '${ptr+name}'`;
+            d.draggable = false;
+            d.resizable = false;
+            d.usageDeclarations = Dependencies.event;
+        }, true, ptr+name);
         /* Transition */
-        const transitionView = DViewElement.new('Transition', this.transition);
-        transitionView.viewpoint = viewpoint.id; transitionView.explicitApplicationPriority = 2;
-        transitionView.oclCondition = `context DObject inv: self.instanceof.id = '${transition.id}'`;
-        transitionView.adaptWidth = true; transitionView.adaptHeight = true;
-        transitionView.usageDeclarations = Dependencies.transition;
+        name = 'Transition'
+        const transitionView = DViewElement.new2(name, this.transition, viewpoint, (d)=>{
+            d.explicitApplicationPriority = 2;
+            d.oclCondition = `context DObject inv: self.instanceof.id = '${ptr+name}'`;
+            d.adaptWidth = true;
+            d.adaptHeight = true;
+            d.usageDeclarations = Dependencies.transition;
+        }, true, ptr+name);
 
         /* Model to Text */
-        const textViewpoint = DViewPoint.new('Text', '');
-        const textView = DViewElement.new('Model', TextView.zero);
-        textView.viewpoint = textViewpoint.id; textView.explicitApplicationPriority = 10;
-        textView.oclCondition = `context DModel inv: not self.isMetamodel`;
+        name = 'Text';
+        const textViewpoint = DViewPoint.newVP(name, undefined, true, ptr+name);
+        name = 'Model Text';
+        const textView = DViewElement.new2(name, TextView.zero, viewpoint, (d)=>{
+            textView.explicitApplicationPriority = 10;
+            textView.oclCondition = `context DModel inv: not self.isMetamodel`;
+        }, true, ptr+name);
         // textView.oclCondition = `context DModel inv: self.id = '${m1.id}'`;
+
+        // by damiano: pointers should not be set like this, they are missing the "pointedBy" and might cause issues later.
+        // if you remove those assignments they will immediately be without subviews/parent, but updated as soon the first action batch fires.
+        // i kept it because if you use them right away it might break by removing them without further corrections.
 
         // @ts-ignore
         viewpoint.subViews = [modelView, stateView, commandView, eventsView, transitionView].map(v => v.id);
@@ -69,6 +101,7 @@ export class StateMachine_Views {
                 'padding':'4px 2px 4px 2px'
             }}>
                 {data.instanceof.name}:<b className={'ms-1'}>{data.$name.value}</b>
+                
                 <button className={'ms-1 circle btn btn-primary p-0'} onClick={e => {
                     const dObject = data.model.addObject({}, command.id);
                     const lObject = LObject.fromD(dObject);

@@ -1,5 +1,5 @@
-import type { GObject, Temporary, TODO} from "../joiner";
-import {DPointerTargetable, RuntimeAccessible, windoww, Log, RuntimeAccessibleClass} from "../joiner";
+import {GObject, Temporary, TODO, U} from "../joiner";
+import {DPointerTargetable, RuntimeAccessible, windoww, Log, RuntimeAccessibleClass, Dictionary} from "../joiner";
 import React from "react";
 import {radian} from "../joiner/types";
 
@@ -146,7 +146,7 @@ export abstract class IPoint extends RuntimeAccessibleClass {
             (p2.x - p1.x) * (p2.x - p1.x);
         return Math.abs(top) / Math.sqrt(bot);  }
 
-    public equals(pt: IPoint, tolleranzaX: number = 0, tolleranzaY: number = 0): boolean {
+    public equals(pt: {x:number, y:number}, tolleranzaX: number = 0, tolleranzaY: number = 0): boolean {
         if (pt === null) { return false; }
         return Math.abs(this.x - pt.x) <= tolleranzaX && Math.abs(this.y - pt.y) <= tolleranzaY; }
 
@@ -415,7 +415,7 @@ export class Size extends ISize<Point> {
             element = document.body as any;
         }
         const $element = $(element);
-        Log.e(!element || element.tagName === 'foreignObject', 'sizeof()', 'SvgForeignElementObject have a bug with size, measure a child instead.', element);
+        Log.ex(!element || element.tagName === 'foreignObject', 'sizeof()', 'SvgForeignElementObject have a bug with size, measure a child instead.', element);
         let tmp;
         let size: Size;
         if (!Size.sizeofvar) {
@@ -433,15 +433,19 @@ export class Size extends ISize<Point> {
             displayStyles[i] = ancestors[i]?.style?.display;
             if (displayStyles[i] === 'none' || (displayStyles[i] === '' && getComputedStyle(ancestors[i]).display === 'none')) { ancestors[i].style.display = 'block' }
         }
-        tmp = $element.offset() as JQuery.Coordinates; // made sure cannot be undefined by removing display:none
-        size = new Size(tmp.left, tmp.top, 0, 0);
+        // size = new Size(tmp.left, tmp.top, 0, 0);
+        let rect = element.getBoundingClientRect();
+        size = new Size(0, 0, 0, 0);
+
+        let win = (element.ownerDocument?.defaultView || window);
+        size.x = rect.left + win.scrollX;
+        size.y = rect.top + win.scrollY;
         if (sizePostTransform) {
-            tmp = element.getBoundingClientRect();
-            size.w = tmp.width;
-            size.h = tmp.height;
+            size.w = rect.width;
+            size.h = rect.height;
         }
         else {
-            size.w = element.offsetWidth;
+            size.w = element.offsetWidth; // element.scrollWidth;
             size.h = element.offsetHeight;
         }
         // restore visibility
@@ -665,8 +669,124 @@ export class GraphSize extends ISize<GraphPoint> {
 RuntimeAccessibleClass.set_extend(RuntimeAccessibleClass, ISize);
 RuntimeAccessibleClass.set_extend(ISize, Size);
 RuntimeAccessibleClass.set_extend(ISize, GraphSize);
+
+
+
+export type PositionStrTypes =
+    "top" | "bottom" | "left" | "right" | "" | // '' = x&y center, undefined = top
+    "top right" | "top left" | "bottom left" | "bottom right" |
+    "right top" | "left top" | "left bottom" | "right bottom" |
+    "t" | "b" | "l" | "r" |
+    "tl" | "tr" | "bl" | "br" |
+    "lt" | "rt" | "lb" | "rb";
+
+@RuntimeAccessible('PositionStr')
+export class PositionStr{
+    public static cname = 'PositionStr';
+
+    x: -1 | 0 | 1; // left, centered, right
+    y: -1 | 0 | 1;
+    constructor(x?: PositionStr['x'], y? :PositionStr['y']){
+        this.x = x ?? 0;
+        this.y = y ?? -1;
+    }
+    toString(): PositionStrTypes{
+        return PositionStr.toPosString(this);
+    }
+    invert(x = true, y = true): this {
+        if (x) this.x = -this.x as 1|0|-1;
+        if (y) this.y = -this.y as 1|0|-1;
+        return this;
+    }
+    public static toPosString(o: PositionStr): PositionStrTypes{
+        let s: string;
+        if (o.y === -1) s = 't';
+        else if (o.y === 1) s = 'b';
+        else s = '';
+
+        if (o.x === -1) s += 'l';
+        else if (o.x === 1) s += 'r';
+        // else s = +'';
+        // if (!s) return "c";
+        return s as PositionStrTypes;
+    }
+    public static fromPosString(position?: PositionStrTypes): PositionStr{
+        let ret = new PositionStr(0, 0);
+        let posarr = (position ?? 't').split(' '); // .map(s=>s[0]);
+        for (let p of posarr)
+            switch (p) {
+                default:
+                case "t": case "top":                       ret.y = -1; break;
+                case "b": case "bottom":                    ret.y =  1; break;
+                case "l": case "left":                      ret.x = -1; break;
+                case "r": case "right":                     ret.x =  1; break;
+                case "tl": case "lt": case "top left":      ret.y = -1; ret.x = -1; break;
+                case "tr": case "rt": case "top right":     ret.y = -1; ret.x =  1; break;
+                case '': case 'c':                          ret.x =  0; ret.y =  0; break;
+                case "bl": case "lb": case "bottom left":   ret.y =  1; ret.x = -1; break;
+                case "br": case "rb": case "bottom right":  ret.y =  1; ret.x =  1; break;
+            }
+        return ret;
+    }
+    public static invertPosStr(pos?: PositionStrTypes): PositionStrTypes{
+        return PositionStr.fromPosString(pos).invert().toString() as any;
+    }
+
+    private static toFullLabelSingle(position: string | "" | "c" | "t" | "b" | "l" | "r"): "top" | "bottom" | "left" | "right" | "center" {
+        switch (position?.trim()[0]){
+            case 'c': case '': return 'center';
+            case 't': return 'top';
+            default: if (position.trim() === '') return 'center'; return 'bottom';
+            case 'b': return 'bottom';
+            case 'l': return 'left';
+            case 'r': return 'right';
+        }
+    }
+    // tl -> top left
+    static toSeparateFullLabels(position?: PositionStrTypes): string {
+        let pos = (position ?? 'b').trim();
+
+        if (pos.length === 2) {
+            return PositionStr.toFullLabelSingle(pos[0]) + ' ' + PositionStr.toFullLabelSingle(pos[1]);
+        } else if (pos.indexOf(' ')) { return pos.split(' ').map(s => PositionStr.toFullLabelSingle(s as any)).join(' '); }
+        else return PositionStr.toFullLabelSingle(pos[0]);
+        return "";
+    }
+}
+
 @RuntimeAccessible('Geom')
 export class Geom extends RuntimeAccessibleClass {
+
+    static markings: Dictionary<string, HTMLElement> = {};
+    static unmark(key: string): boolean{
+        if (!Geom.markings[key]) return false;
+        let e = Geom.markings[key];
+        U.removeFromDom(e);
+        delete Geom.markings[key];
+        return true;
+    }
+    static markPt(key: string, pt: Point, color?: string, label?: string): HTMLElement{ return Geom.mark(key, pt.x, pt.y, 1, 1, color, label); }
+    static markSize(key: string, pt: Size, color?: string, label?: string): HTMLElement{ return Geom.mark(key, pt.x, pt.y, pt.w??1, pt.h??1, color, label); }
+    static mark(key: string, x: number, y: number, w: number=1, h: number=1, color: string='red', label: string=''): HTMLElement{
+        if (Geom.markings[key]) Geom.unmark(key);
+        let e: HTMLElement;
+        let pre = '<div class="debug-mark" data-key="'+key+'" data-label="'+label+'" style="position: absolute; z-index:99999; left:'+x+'px; top:'+y+'px; width: '+w+'px; height: '+h+'px;';
+        let post = '"/>';
+        if (w + h > 2) {
+            e = U.toHtml(pre+'border-radius:0; background: transparent;'+post) as HTMLElement;
+        }
+        else {
+            e = U.toHtml(pre+'border-radius:100%; background: '+color+'; outline: 1px solid '+color+'; outline-offset: 5px;'+post) as HTMLElement;
+        }
+        document.body.append(e);
+        Geom.markings[key] = e;
+        return e;
+    }
+    // warning: nodes from other iframes will say are not instance from Element of the current frame, in that case need duck typing.
+    public static isHtmlNode(element: any): element is Element {
+        return element instanceof Element || element instanceof HTMLDocument || element instanceof SVGElement;
+    }
+
 
     static isPositiveZero(m: number): boolean {
         if (!!Object.is) { return Object.is(m, +0); }

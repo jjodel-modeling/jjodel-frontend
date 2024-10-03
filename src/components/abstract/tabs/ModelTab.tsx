@@ -5,6 +5,7 @@ import {CreateElementAction, DGraph, DModelElement, DState, LGraph, LModel, LMod
 import {DefaultNode} from "../../../joiner/components";
 import ToolBar from "../../toolbar/ToolBar";
 import ContextMenu from "../../contextMenu/ContextMenu";
+import { MetricsPanel } from "../../metrics/Metrics";
 
 
 function ModelTabComponent(props: AllProps) {

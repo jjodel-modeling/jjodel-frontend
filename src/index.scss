@@ -1,26 +1,48 @@
 
 img { -webkit-user-drag: none; }
 body {
+
+    color: var(--color);
     &,#root{
         max-width: 100vw;
         max-height: 100vh;
         width: 100vw;
         height: 100vh;
-        background-color: whitesmoke;
+        background-color: white;
         overflow: hidden;
     }
-    // font-family: Lato, 'Helvetica Neue', Arial,Helvetica, sans-serif !important;
-    font-family: 'Inter Tight', sans-serif;
+    // font-family: , 'Helvetica Neue', Arial,Helvetica, sans-serif !important;
+
+    font-family: 'Inter Tight', Lato, sans-serif;
     font-optical-sizing: auto;
     font-weight: 400;
     font-style: normal;
     font-size: small;
+
     #root{
         position: fixed; // without this, it can scroll
         display: flex;
         flex-direction: column;
     }
 }
+
+.view-icons {
+    float: right;
+}
+.view-icons .bi {
+    font-size: 1.5em;
+    margin-left: 2px;
+    border-radius: 4px;
+    padding: 2px 4px 2px 4px;
+}
+.view-icons .bi-list {
+    font-size: 1.5em;
+}
+
+.view-icons .bi.selected {
+    background-color: var(--bg-3);
+}
+
 
 ::-webkit-scrollbar {
     width: 0.2rem;
@@ -40,19 +62,4 @@ body {
 
 .debug {
     border: 1px dashed red;
-}
-.ui-draggable, .ui-resizable, ui-rotatable{
-    position: absolute !important; // because jqui sets the html style attr to relative
-    border: 1px solid var(--palette-g);
-    width: fit-content;
-    height: fit-content;
-    overflow: hidden;
-}
-/*
-.form-control:focus {
-    border-color: #e0e0e0 !important;
-    box-shadow: none;
-}*/
-html {
-    font-size: 0.85em;
 }

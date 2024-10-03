@@ -181,15 +181,15 @@
   *:disabled {
     cursor: not-allowed !important;
   }
-
-  input[type=checkbox] {
+/*
+  input[type='checkbox'] {
     -moz-appearance: checkbox !important;
   }
 
-  input[type=radio] {
+  input[type='radio'] {
     -moz-appearance: radio !important;
   }
-
+*/
   input:disabled {
     opacity: .75;
     filter: alpha(opacity=75); /* IE<9 */
@@ -427,26 +427,6 @@
   /*::-webkit-scrollbar {
   display: none;
   }*/
-  *:disabled {
-    cursor: not-allowed !important;
-  }
-
-  input[type=checkbox] {
-    -moz-appearance: checkbox !important;
-  }
-
-  input[type=radio] {
-    -moz-appearance: radio !important;
-  }
-
-  input:disabled {
-    opacity: .75;
-    filter: alpha(opacity=75); /* IE<9 */
-  }
-
-  .styleEditorSelected {
-    outline: 3px dashed red !important;
-  }
 
   /*olds*/
 

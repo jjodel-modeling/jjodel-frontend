@@ -96,7 +96,6 @@ import type {
     Dictionary,
     DocString,
     GObject,
-    // Info,
     InitialVertexSize,
     InitialVertexSizeFunc,
     InitialVertexSizeObj,
@@ -115,7 +114,6 @@ import type {
 import type {LogicContext} from "./proxy";
 import {
     Action,
-    BEGIN,
     CreateElementAction,
     Defaults,
     DeleteElementAction,
@@ -123,7 +121,6 @@ import {
     DState,
     DViewPoint,
     EdgeSegment,
-    END,
     GraphPoint,
     GraphSize,
     LGraph,
@@ -134,13 +131,18 @@ import {
     LViewPoint,
     ParsedAction,
     SetFieldAction,
-    SetRootFieldAction, ShortAttribETypes, statehistory,
+    SetRootFieldAction,
+    ShortAttribETypes,
+    statehistory,
     store,
     TRANSACTION,
     U
 } from "./index";
 import {OclEngine} from "@stekoe/ocl.js";
 import {ReactNode} from "react";
+import {ProjectsApi} from "../api/persistance";
+import {labelfunc} from "../model/dataStructure/GraphDataElements";
+import {Dummy} from "../common/Dummy";
 
 var windoww = window as any;
 // qui dichiarazioni di tipi che non sono importabili con "import type", ma che devono essere davvero importate a run-time (eg. per fare un "extend", chiamare un costruttore o usare un metodo statico)
@@ -181,7 +183,7 @@ export abstract class RuntimeAccessibleClass extends AbstractMixedClass {
         (Array.prototype as any).contains = function (o:any): boolean{
             return this.indexOf(o) !== -1;
         };
-        (Array.prototype as any).joinOriginal = Array.prototype.join;
+        // (Array.prototype as any).joinOriginal = Array.prototype.join;
         // @ts-ignore
         Array.prototype.first = function(){ return this[0]; }
         // @ts-ignore
@@ -492,7 +494,6 @@ export type LtoD<LX extends LPointerTargetable, DX = LX extends LEnumerator ? DE
 export type LtoW<LX extends LPointerTargetable, WX = LX extends LEnumerator ? WEnumerator : (LX extends LAttribute ? WAttribute : (LX extends LReference ? WReference : (LX extends LRefEdge ? WRefEdge : (LX extends LExtEdge ? WExtEdge : (LX extends LDataType ? WDataType : (LX extends LClass ? WClass : (LX extends LStructuralFeature ? WStructuralFeature : (LX extends LParameter ? WParameter : (LX extends LOperation ? WOperation : (LX extends LEdge ? WEdge : (LX extends LEdgePoint ? WEdgePoint : (LX extends LGraphVertex ? WGraphVertex : (LX extends LModel ? WModel : (LX extends LValue ? WValue : (LX extends LObject ? WObject : (LX extends LEnumLiteral ? WEnumLiteral : (LX extends LPackage ? WPackage : (LX extends LClassifier ? WClassifier : (LX extends LTypedElement ? WTypedElement : (LX extends LVertex ? WVertex : (LX extends LVoidEdge ? WVoidEdge : (LX extends LVoidVertex ? WVoidVertex : (LX extends LGraph ? WGraph : (LX extends LNamedElement ? WNamedElement : (LX extends LAnnotation ? WAnnotation : (LX extends LGraphElement ? WGraphElement : (LX extends LMap ? WMap : (LX extends LModelElement ? WModelElement : (LX extends LUser ? WUser : (LX extends LPointerTargetable ? WPointerTargetable : (ERROR)))))))))))))))))))))))))))))))> = WX;
 export type WtoD<IN extends WPointerTargetable, OUT = IN extends WEnumerator ? DEnumerator : (IN extends WAttribute ? DAttribute : (IN extends WReference ? DReference : (IN extends WRefEdge ? DRefEdge : (IN extends WExtEdge ? DExtEdge : (IN extends WDataType ? DDataType : (IN extends WClass ? DClass : (IN extends WStructuralFeature ? DStructuralFeature : (IN extends WParameter ? DParameter : (IN extends WOperation ? DOperation : (IN extends WEdge ? DEdge : (IN extends WEdgePoint ? DEdgePoint : (IN extends WGraphVertex ? DGraphVertex : (IN extends WModel ? DModel : (IN extends WValue ? DValue : (IN extends WObject ? DObject : (IN extends WEnumLiteral ? DEnumLiteral : (IN extends WPackage ? DPackage : (IN extends WClassifier ? DClassifier : (IN extends WTypedElement ? DTypedElement : (IN extends WVertex ? DVertex : (IN extends WVoidEdge ? DVoidEdge : (IN extends WVoidVertex ? DVoidVertex : (IN extends WGraph ? DGraph : (IN extends WNamedElement ? DNamedElement : (IN extends WAnnotation ? DAnnotation : (IN extends WGraphElement ? DGraphElement : (IN extends WMap ? DMap : (IN extends WModelElement ? DModelElement : (IN extends WUser ? DUser : (IN extends WPointerTargetable ? DPointerTargetable : (IN extends WViewElement ? DViewElement : (IN extends WViewTransientProperties ? DViewTransientProperties : (ERROR)))))))))))))))))))))))))))))))))> = OUT;
 export type WtoL<IN extends WPointerTargetable, OUT = IN extends WEnumerator ? LEnumerator : (IN extends WAttribute ? LAttribute : (IN extends WReference ? LReference : (IN extends WRefEdge ? LRefEdge : (IN extends WExtEdge ? LExtEdge : (IN extends WDataType ? LDataType : (IN extends WClass ? LClass : (IN extends WStructuralFeature ? LStructuralFeature : (IN extends WParameter ? LParameter : (IN extends WOperation ? LOperation : (IN extends WEdge ? LEdge : (IN extends WEdgePoint ? LEdgePoint : (IN extends WGraphVertex ? LGraphVertex : (IN extends WModel ? LModel : (IN extends WValue ? LValue : (IN extends WObject ? LObject : (IN extends WEnumLiteral ? LEnumLiteral : (IN extends WPackage ? LPackage : (IN extends WClassifier ? LClassifier : (IN extends WTypedElement ? LTypedElement : (IN extends WVertex ? LVertex : (IN extends WVoidEdge ? LVoidEdge : (IN extends WVoidVertex ? LVoidVertex : (IN extends WGraph ? LGraph : (IN extends WNamedElement ? LNamedElement : (IN extends WAnnotation ? LAnnotation : (IN extends WGraphElement ? LGraphElement : (IN extends WMap ? LMap : (IN extends WModelElement ? LModelElement : (IN extends WUser ? LUser : (IN extends WPointerTargetable ? LPointerTargetable : (IN extends WViewElement ? LViewElement : (IN extends WViewTransientProperties ? LViewTransientProperties : (ERROR)))))))))))))))))))))))))))))))))> = OUT;
-export type labelfunc = (e:LVoidEdge, segment: EdgeSegment, allNodes: LEdge["allNodes"], allSegments: EdgeSegment[]) => PrimitiveType;
 export enum CoordinateMode {
     "absolute"              = "absolute",
     "relativePercent"       = "relative%",
@@ -520,6 +521,7 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
     // private callbacks: Function[];
     private nonPersistentCallbacks: Function[];
     fatherType?: typeof RuntimeAccessibleClass;
+    private fatherPtr?: Pointer // T['father'];
     private state?: DState; // set only if requested by setWithSideEffect
     /*
     problem: if isPersistent is set to false, but the object is later made persistent with an action, you lose all the callback effects afecting other elements (as setting opposite relations like instances-typeof or losing pointedBy's)
@@ -539,6 +541,8 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         t._persistCallbacks = [];
         t._derivedSubElements = [];
         this.nonPersistentCallbacks = [];
+        this.fatherPtr = father;
+
         if (this.thiss.hasOwnProperty("father")) {
             this.fatherType = fatherType as any;
             this.setPtr("father", father);
@@ -634,7 +638,10 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         return this;
     }
 
-    DModelElement(): this { return this; }
+    DModelElement(): this {
+        let thiss: GObject<DModelElement> = this.thiss as any;
+        if ('instances' in thiss) thiss.instances = [];
+        return this; }
     DClassifier(): this { return this; }
     DParameter(defaultValue?: any): this {
         let thiss: DParameter = this.thiss as any;
@@ -680,6 +687,9 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
     }
     DReference(): this {
         let thiss: DReference = this.thiss as any;
+        thiss.aggregation = false;
+        thiss.composition = false;
+        thiss.rootable = undefined;
         this.setExternalPtr(thiss.father, "references", "+=");
         return this; }
 
@@ -739,9 +749,16 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         // this.className = thiss.className;
         return this; }
 
-    DUser(username: string): this {
+    DUser(name: string, surname: string, nickname: string, affiliation: string, country: string, newsletter: boolean, email: string, token: string): this {
         const _this: DUser = this.thiss as unknown as DUser;
-        _this.username = username;
+        _this.name = name;
+        _this.surname = surname;
+        _this.nickname = nickname;
+        _this.affiliation = affiliation;
+        _this.country = country;
+        _this.newsletter = newsletter;
+        _this.email = email;
+        _this.token = token;
         statehistory[_this.id] = {undoable:[], redoable:[]};
         // todo: make it able to combine last 2 changes with a keystroke.
         //  reapeat N times to combine N actions.
@@ -750,7 +767,8 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         if (this.persist) {
             // no pointedBy
         }
-        return this; }
+        return this;
+    }
 
     DNamedElement(name?: DNamedElement["name"]): this {
         const thiss: DNamedElement = this.thiss as any;
@@ -781,6 +799,16 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         thiss.packages = []; // packages;
         thiss.isMetamodel = isMetamodel || false;
         this.setPtr("instanceof", instanceoff || null);
+        let lmodel = instanceoff ? LPointerTargetable.fromPointer(instanceoff) : undefined;
+        this.thiss._persistCallbacks.push(()=>{
+            if (lmodel){
+                let lthis: LModel = LPointerTargetable.fromD(this.thiss);
+                for (let c of lmodel.classes) {
+                    let d: DClass = c.__raw;
+                    if (d.isSingleton) lthis.addObject({name: d.name}, c, true);
+                }
+            }
+        });
         instanceoff && this.setExternalPtr(instanceoff, "instances", "+=");
         // todo: check all D.new calls to make sure there are not actions in callbacks in new2() versions that will go outside the Transaction of persist(),, better move ptrs as .new() parameters
         // or make it so new2 splits pointer and non-pointer declarations (or just allow non-ptrs and ptrs must be DSomething.new() explicit parameters)
@@ -805,6 +833,9 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         thiss.partial = partial;
         thiss.partialdefaultname = partialdefaultname;
         thiss.isSingleton = false;
+        thiss.rootable = undefined;
+        thiss.sealed = [];
+        thiss.final = false;
         this.setExternalPtr(thiss.father, "classifiers", "+=");
         this.setExternalRootProperty('ClassNameChanged.'+thiss.id, thiss.name, '', false);
 
@@ -849,7 +880,7 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         // thiss.labels = undefined;
         let ll: labelfunc = (e: LVoidEdge, s: EdgeSegment, allNodes: LGraphElement[], allSegments: EdgeSegment[]
         ) => /*defining the edge label (e.start.model as any)?.name + " ~ " + (e.end.model as any)?.name */" (" + s.length.toFixed(1) + ")";
-        // complex edge label func example: (thiss.longestLabel = ll)
+        // complex edge label func example: (thiss.longestLabel = ll) but assign to transientnodeproperties or in jsx props instead on this.longestLabel
         thiss.longestLabel = longestLabel;
         this.setPtr("start", startid);
         this.setPtr("end", endid);
@@ -880,6 +911,7 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         thiss.isSelected = {};
         thiss.edgesIn = [];
         thiss.edgesOut = [];
+        thiss.subElements = [];
         // thiss.state = {id: thiss.id+".state", className: thiss.className};
         // 5-way anchors thiss.anchors = {'0':{x:0.5, y:0.5}, '1':{x:0.5, y:0}, '2':{x:1, y:0.5}, '3':{x:0.5, y:1}, '4':{x:0, y:0.5}} as any;
         thiss.anchors = {'0':{x:0.5, y:0.5}, 't':{x:0.5, y:0},
@@ -904,7 +936,8 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         return this;
     }
 
-    DViewElement(name: string, jsxString: string, vp?: Pointer<DViewPoint>, defaultVSize?: GraphSize, usageDeclarations: string = '', constants: string = '',
+    DViewElement(name: string, jsxString: string, vp?: Pointer<DViewPoint>,
+                 defaultVSize?: GraphSize, usageDeclarations: string = '', constants: string = '',
                  preRenderFunc: string = '', appliableToClasses: string[] = [], oclCondition: string = '', priority?: number): this {
         const thiss: DViewElement = this.thiss as any;
         const vid = thiss.id;
@@ -978,15 +1011,16 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         // const project = user?.project; if(!project) return this;
         if (!vp) vp = user?.project?.activeViewpoint.id || Defaults.viewpoints[0];
         if (vp !== 'skip') {
-            let dvp = DPointerTargetable.fromPointer(vp);
+            // let dvp = DPointerTargetable.fromPointer(vp);
             // let subviews = {...dvp.subViews}; subviews[thiss.id] = 1.5;
             // this.setExternalPtr(vp, 'subViews', '', subviews);
-            let subviews: GObject = {}; subviews[thiss.id] = 1.5;
-            this.setExternalPtr(vp, 'subViews', '+=', subviews);
             this.setPtr('viewpoint', vp);
         }
 
-        let trview = transientProperties.view[thiss.id] = {} as any;
+        this.setExternalPtr(this.fatherPtr as Pointer<DViewElement>, 'subViews', '+=', {[thiss.id]: 1.5});
+        transientProperties.view[thiss.id] = {} as any;
+
+        // let trview = transientProperties.view[thiss.id];
         // trview.?? = ???
 
         TRANSACTION(() => {
@@ -1016,8 +1050,10 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         _this.models = m1;
         _this.type = type;
         _this.name = name;
-        _this.state = state;
+        _this.state = state || '';
         if(id) _this.id = id;
+        _this.favorite = {};
+        _this.description = 'A new Project. Created by ' + (DPointerTargetable.from(DUser.current) as DUser).nickname + ' @' + new Date().toLocaleString();
         this.setExternalPtr(DUser.current, 'projects', '+=');
         return this;
     }
@@ -1119,6 +1155,7 @@ export class DPointerTargetable extends RuntimeAccessibleClass {
     // ma gli oggetti puntati da A tramite sotto-oggetti o attributi (subviews...) non vengono aggiornati in "pointedby"
     pointedBy: PointedBy[] = [];
     public className!: string;
+    public __readonly!: boolean;
     _state: GObject = {};
 
     static defaultname<L extends LModelElement = LModelElement>(startingPrefix: string | ((meta:L)=>string), father?: Pointer | DPointerTargetable | ((a:string)=>boolean), metaptr?: Pointer | null): string {
@@ -1566,18 +1603,50 @@ export class LPointerTargetable<Context extends LogicContext<DPointerTargetable>
     public static structure: typeof DPointerTargetable;
     public static singleton: LPointerTargetable;
     public __raw!: D;
-    public pointedBy!: PointedBy[];
     public clonedCounter?: number;
 
     public __isProxy!: boolean;
     public __serialize!: DocString<"json">;
     private inspect!: D;
     private __random!: number;
+    public __readonly!: boolean;
+    public state!: any;
     // public r!: this;
 
     private __info_of__id = {type:"Pointer&lt;this&gt;",
         txt:"<a href=\"https://github.com/DamianoNaraku/jodel-react/wiki/identifiers\">" +
             "<span>Unique identifier, and value used to point this object.</span></a>"};
+
+    private __info_of____readonly = {type:"boolean", txt:"prevent any change to the current object."};
+    protected set___readonly(val: any, c: Context): boolean {
+        val = !!val;
+        let thiss: GObject = this;
+        let childrens = (thiss.get_children && thiss.get_children(c)) || [];
+        let annotations = (thiss.get_annotations && thiss.get_annotations(c)) || [];
+        if (val === c.data.__readonly) return true;
+        TRANSACTION(()=>{
+            for (let c of childrens) { c.__readonly = val; }
+            for (let c of annotations) { c.__readonly = val; }
+            SetFieldAction.new(c.data, '__readonly', val);
+        });
+        return true;
+    }
+
+
+    public pointedBy!: PointedBy[];
+    // pointedBy!: LPointerTargetable[];
+    get_pointedBy(context: Context): LPointerTargetable["pointedBy"] {
+        let state: DState = store.getState();
+        let targeting: LPointerTargetable[] = LPointerTargetable.fromArr(context.data.pointedBy.map( p => {
+            let s: GObject = state;
+            for (let key of PointedBy.getPathArr(p)) {
+                s = s[key];
+                if (!s) return null;
+                if (s.className) return s.id;
+            }
+        }));
+        return targeting as any;
+    }
 
     protected wrongAccessMessage(str: string): any {
         let msg = "Method "+str+" should not be called directly, attempting to do so should trigger get_"+str+"(). This is only a signature for type checking.";
@@ -1605,7 +1674,7 @@ export class LPointerTargetable<Context extends LogicContext<DPointerTargetable>
     }
 
 
-    protected cannotSet(field: string): any { return Log.exx('"' + field + '" field is read-only', this); }
+    protected cannotSet(field: string, msg?:string): any { return Log.exx('"' + field + '" field is read-only' + (msg ? '.\n'+msg : '')); }
     protected get_id(context: Context): this["id"] { return context.data.id; }
     protected set_id(): boolean { return this.cannotSet('id'); }
 
@@ -1718,6 +1787,7 @@ export class LPointerTargetable<Context extends LogicContext<DPointerTargetable>
     protected __defaultSetter(v0: any, c: Context, k: keyof Context["data"]): boolean {
         // todo: get the those lobjects -> pointer checks from set_state
         let v: any = this.__sanitizeValue(v0, false, false);
+        if (!k) return Log.exx('a key is mandatory for default setter', {v0, k, c});
         if (true || k in c.data) {
             // check if is pointer
             let isPointer: boolean;
@@ -1893,10 +1963,10 @@ export class LPointerTargetable<Context extends LogicContext<DPointerTargetable>
     */
     public dependencies(): Dependency[] { return []; }
     protected get_dependencies(context: Context): () => Dependency[] {
-        const data = context.proxyObject;
+        const data = context.data;
         const dependencies: Dependency[] = [];
         const ret = () => {
-            for(let pointedBy of data.pointedBy) {
+            for (let pointedBy of data.pointedBy) {
                 const raw = pointedBy.source.split('.');
                 let root = raw[0];
                 const obj = raw[1] || '';
@@ -1920,38 +1990,7 @@ export class LPointerTargetable<Context extends LogicContext<DPointerTargetable>
 
     public delete(): void {}
     protected get_delete(context: Context): () => void {
-        const data: LPointerTargetable & GObject = context.proxyObject;
-        const dependencies = data.dependencies();
-
-        const ret = () => {
-            for(let child of data.children) {
-                child.delete();
-                // todo: if a m1-dvalue which conforms to a m2-reference with "containment" is deleted, need to delete also target.
-                // maybe better to do through override?
-                child.node?.delete();
-            }
-
-            for (let dependency of dependencies) {
-                const root = dependency.root;
-                const obj = dependency.obj;
-                const field = dependency.field;
-                const op = dependency.op;
-                const val = (op === '-=') ? data.id : '';
-                if((root === 'idlookup') && obj && field) {
-                    console.log('Delete', `SetFieldAction.new('${obj}', '${field}', '${val}', '${op}');`);
-                    SetFieldAction.new(obj, field, val, op, false);
-                } else {
-                    console.log('Delete', `SetRootFieldAction.new('${root}', '${val}', '${op}');`);
-                    SetRootFieldAction.new(root, val, op, false);
-                }
-            }
-            if (data.nodes) data.nodes.map((node: any) => node.delete());
-
-            SetRootFieldAction.new('ELEMENT_DELETED', data.id, '+=', false); // here no need to IsPointer because it only affects Transient stuff
-            SetRootFieldAction.new('idlookup', data.id, '-=', false); // damiano: shouldn't be isPointer = true?
-            DeleteElementAction.new(data.id);
-        };
-        return () => TRANSACTION(ret);
+        return Dummy.get_delete(this, context);
     }
 }
 RuntimeAccessibleClass.set_extend(RuntimeAccessibleClass, LPointerTargetable);
@@ -2038,15 +2077,21 @@ export class DUser extends DPointerTargetable {
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
     id!: Pointer<DUser>;
-    username!: string;
+    name!: string;
+    surname!: string;
+    nickname!: string;
+    country!: string;
+    affiliation!: string;
+    newsletter!: boolean;
+    email!: string;
     token!: string;
     projects: Pointer<DProject, 0, 'N', LProject> = [];
     project: Pointer<DProject, 0, 1, LProject> = '';
     __isUser: true = true; // necessary to trick duck typing to think this is NOT the superclass of anything that extends PointerTargetable.
     /*public static new(id?: DUser["id"], triggerActions: boolean = true): DUser {
         return new Constructors(new DUser('dwc'), undefined, false, undefined, id, true).DPointerTargetable().DUser().end(); }*/
-    public static new(username: string, id?: DUser['id'], persist: boolean = true): DUser {
-        return new Constructors(new DUser('dwc'), undefined, persist, undefined, id).DPointerTargetable().DUser(username).end();
+    public static new(name: string, surname: string, nickname: string, affiliation: string, country: string, newsletter: boolean, email: string, token: string, id?: DUser['id'], persist: boolean = true): DUser {
+        return new Constructors(new DUser('dwc'), undefined, persist, undefined, id).DPointerTargetable().DUser(name, surname, nickname, affiliation, country, newsletter, email, token).end();
     }
 }
 
@@ -2056,10 +2101,81 @@ export class LUser<Context extends LogicContext<DUser> = any, D extends DUser = 
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
     public __raw!: DUser;
     id!: Pointer<DUser>;
-    username!: string;
+    name!: string;
+    surname!: string;
+    nickname!: string;
+    country!: string;
+    affiliation!: string;
+    newsletter!: boolean;
+    email!: string;
+    token!: string;
     projects!: LProject[];
     project!: LProject|null;
     __isUser!: true;
+
+    protected get_name(context: Context): this['name'] {
+        return context.data.name;
+    }
+    protected set_name(val: this['name'], context: Context): boolean {
+        const data = context.data;
+        return SetFieldAction.new(data.id, 'name', val, '', false);
+    }
+
+    protected get_surname(context: Context): this['surname'] {
+        return context.data.surname;
+    }
+    protected set_surname(val: this['surname'], context: Context): boolean {
+        const data = context.data;
+        return SetFieldAction.new(data.id, 'surname', val, '', false);
+    }
+
+    protected get_nickname(context: Context): this['nickname'] {
+        return context.data.nickname;
+    }
+    protected set_nickname(val: this['nickname'], context: Context): boolean {
+        const data = context.data;
+        return SetFieldAction.new(data.id, 'nickname', val, '', false);
+    }
+
+    protected get_affiliation(context: Context): this['affiliation'] {
+        return context.data.affiliation;
+    }
+    protected set_affiliation(val: this['affiliation'], context: Context): boolean {
+        const data = context.data;
+        return SetFieldAction.new(data.id, 'affiliation', val, '', false);
+    }
+
+    protected get_country(context: Context): this['country'] {
+        return context.data.country;
+    }
+    protected set_country(val: this['country'], context: Context): boolean {
+        const data = context.data;
+        return SetFieldAction.new(data.id, 'country', val, '', false);
+    }
+
+    protected get_newsletter(context: Context): this['newsletter'] {
+        return context.data.newsletter;
+    }
+    protected set_newsletter(val: this['newsletter'], context: Context): boolean {
+        const data = context.data;
+        return SetFieldAction.new(data.id, 'newsletter', val, '', false);
+    }
+
+    protected get_email(context: Context): this['email'] {
+        return context.data.email;
+    }
+    protected set_email(val: this['email'], context: Context): boolean {
+        const data = context.data;
+        return SetFieldAction.new(data.id, 'email', val, '', false);
+    }
+
+    protected get_token(context: Context): this['token'] {
+        return context.data.token;
+    }
+    protected set_token(val: this['token'], context: Context): boolean {
+        const data = context.data;
+        return SetFieldAction.new(data.id, 'token', val, '', false);
+    }
 
     protected get_projects(context: Context): this['projects'] {
         return LProject.fromPointer(context.data.projects);
@@ -2106,11 +2222,38 @@ export class DProject extends DPointerTargetable {
     // stackViews: Pointer<DViewPoint, 0, 'N'> = []; // ??
     viewpoints: Pointer<DViewPoint, 0, 'N'> = [];
     activeViewpoint: Pointer<DViewPoint, 1, 1> = Defaults.viewpoints[0];
+    favorite!: Dictionary<Pointer<DUser>, true | undefined>;
+
+    description!: string;
+    creation: number = Date.now();
+    lastModified: number = Date.now();
+    viewpointsNumber: number = 0;
+    metamodelsNumber: number = 0;
+    modelsNumber: number = 0;
+    isFavorite: boolean = false;
+
     // collaborators dict user: priority
 
-    state: string = '';
+    state!: string;
 
-    public static new(type: DProject['type'], name: string, state?: DProject['state'], m2?: DProject['metamodels'], m1?: DProject['models'], id?: DProject['id']): DProject {
+    public static new(type: DProject['type'], name?: string, state?: DProject['state'],
+                      m2?: DProject['metamodels'], m1?: DProject['models'], id?: DProject['id'], otherProjects?:LProject[]): DProject {
+
+        // fix name
+        if (!otherProjects) otherProjects = LPointerTargetable.fromPointer(DUser.current).projects;
+        if (!name) {
+            // autofix default name
+            let regexp = /Project (\d+)/;
+            const matches = otherProjects.map(p=>(+(regexp.exec(p.name)?.[1] as any) || 0));
+            let maxnum = Math.max(...matches, 0);
+            name = 'Project ' + (1 + maxnum);
+        }
+        else {
+            // autofix manually inputted name
+            let allProjectNames: Dictionary<string, LProject> = U.objectFromArray(otherProjects, (p)=>p.name);
+            name = U.increaseEndingNumber(name, false, false, (s)=>!!allProjectNames[s]);
+        }
+
         return new Constructors(new DProject('dwc'), undefined, true, undefined)
             .DPointerTargetable().DProject(type, name, state || '', m2 || [], m1 || [], id).end(); }
 }
@@ -2132,6 +2275,15 @@ export class LProject<Context extends LogicContext<DProject> = any, D extends DP
     // stackViews!: LViewElement[];
     viewpoints!: LViewPoint[];
     activeViewpoint!: LViewPoint;
+    favorite!: boolean;
+
+    description!: string;
+    creation!: number;
+    lastModified!: number;
+    viewpointsNumber!: number;
+    metamodelsNumber!: number;
+    modelsNumber!: number;
+    isFavorite!: boolean;
 
     // stringify state
     state!: string;
@@ -2163,6 +2315,84 @@ export class LProject<Context extends LogicContext<DProject> = any, D extends DP
 
     /* Functions */
 
+    protected get_description(context: Context): this['description'] {
+        return context.data.description;
+    }
+    protected set_description(val: this['description'], context: Context): boolean {
+        const data = context.data;
+        return SetFieldAction.new(data.id, 'description', val, '', false);
+    }
+
+    protected get_creation(context: Context): this['creation'] {
+        return context.data.creation;
+    }
+    protected set_creation(val: this['creation'], context: Context): boolean {
+        const data = context.data;
+        return SetFieldAction.new(data.id, 'creation', val, '', false);
+    }
+
+    protected get_lastModified(context: Context): this['lastModified'] {
+        return context.data.lastModified;
+    }
+    protected set_lastModified(val: this['lastModified'], context: Context): boolean {
+        const data = context.data;
+        return SetFieldAction.new(data.id, 'lastModified', val, '', false);
+    }
+
+    protected get_viewpointsNumber(context: Context): this['viewpointsNumber'] {
+        return context.data.viewpointsNumber;
+    }
+    protected set_viewpointsNumber(val: this['viewpointsNumber'], context: Context): boolean {
+        const data = context.data;
+        return SetFieldAction.new(data.id, 'viewpointsNumber', val, '', false);
+    }
+
+    protected get_metamodelsNumber(context: Context): this['metamodelsNumber'] {
+        return context.data.metamodelsNumber;
+    }
+    protected set_metamodelsNumber(val: this['metamodelsNumber'], context: Context): boolean {
+        const data = context.data;
+        return SetFieldAction.new(data.id, 'metamodelsNumber', val, '', false);
+    }
+
+    protected get_modelsNumber(context: Context): this['modelsNumber'] {
+        return context.data.modelsNumber;
+    }
+    protected set_modelsNumber(val: this['modelsNumber'], context: Context): boolean {
+        const data = context.data;
+        return SetFieldAction.new(data.id, 'modelsNumber', val, '', false);
+    }
+
+    protected get_isFavorite(context: Context): this['isFavorite'] {
+        return context.data.isFavorite;
+    }
+    protected set_isFavorite(val: this['isFavorite'], context: Context): boolean {
+        const data = context.data;
+        return SetFieldAction.new(data.id, 'isFavorite', val, '', false);
+    }
+
+    protected get_favorite(c: Context): this['favorite'] {
+        const uid = DUser.current;
+        if (!c.data.favorite) return false;
+        return !!c.data.favorite[uid];
+    }
+    protected set_favorite(v: boolean, c: Context): true {
+        let favMap = c.data.favorite;
+        if (!favMap) {
+            favMap = {};
+            SetFieldAction.new(c.data.id, 'favorite', favMap);
+        }
+        const uid = DUser.current;
+        if (v) { // case favorite
+            if (favMap[uid]) return true;
+            SetFieldAction.new(c.data.id, 'favorite', {[uid]: true}, '+=');
+        }
+        else { // case un-favorite
+            if (!favMap[uid]) return true;
+            SetFieldAction.new(c.data.id, 'favorite', {[uid]: undefined} as any, '-=');
+        }
+        return true;
+    }
     protected get_name(context: Context): this['name'] {
         return context.data.name;
     }
@@ -2181,7 +2411,7 @@ export class LProject<Context extends LogicContext<DProject> = any, D extends DP
         return true;
     }
 
-    public get_state(context: any): this['state'] {
+    public get_state(context: Context): this['state'] {
         return context.data.state;
     }
     public set_state(val: this['state'], context: Context): boolean {
@@ -2191,7 +2421,7 @@ export class LProject<Context extends LogicContext<DProject> = any, D extends DP
     }
 
     protected get_collaborators(context: Context): this['collaborators'] {
-        return LUser.fromPointer(context.data.collaborators);
+        return LUser.fromPointer(context.data.collaborators) || [];
     }
     protected set_collaborators(val: PackArr<this['collaborators']>, context: Context): boolean {
         const data = context.data;
@@ -2209,7 +2439,7 @@ export class LProject<Context extends LogicContext<DProject> = any, D extends DP
     }
 
     protected get_metamodels(context: Context): this['metamodels'] {
-        return LModel.fromPointer(context.data.metamodels);
+        return LModel.fromPointer(context.data.metamodels) || [];
     }
     protected set_metamodels(val: PackArr<this['metamodels']>, context: Context): boolean {
         const data = context.data;
@@ -2218,7 +2448,7 @@ export class LProject<Context extends LogicContext<DProject> = any, D extends DP
     }
 
     protected get_models(context: Context): this['models'] {
-        return LModel.fromPointer(context.data.models);
+        return LModel.fromPointer(context.data.models) || [];
     }
     protected set_models(val: PackArr<this['models']>, context: Context): boolean {
         const data = context.data;
@@ -2227,7 +2457,7 @@ export class LProject<Context extends LogicContext<DProject> = any, D extends DP
     }
 
     protected get_graphs(context: Context): this['graphs'] {
-        return LGraph.fromPointer(context.data.graphs);
+        return LGraph.fromPointer(context.data.graphs) || [];
     }
     protected set_graphs(val: PackArr<this['graphs']>, context: Context): boolean {
         const data = context.data;
@@ -2238,7 +2468,7 @@ export class LProject<Context extends LogicContext<DProject> = any, D extends DP
     protected get_views(c: Context): this['views'] {
         // return LViewElement.fromPointer([...c.data.views, ...Defaults.views]);
         let duplicateRemover: Dictionary<Pointer, LViewElement> = {};
-        let varr = this.get_viewpoints(c).flatMap(vp => vp.subViews);
+        let varr = this.get_viewpoints(c).flatMap(vp => vp.allSubViews);
         for (let v of varr) duplicateRemover[v.id] = v;
         return Object.values(duplicateRemover);
     }
@@ -2264,7 +2494,7 @@ export class LProject<Context extends LogicContext<DProject> = any, D extends DP
         }*/
 
     protected get_viewpoints(context: Context): this['viewpoints'] {
-        return LViewPoint.fromPointer([...Defaults.viewpoints, ...context.data.viewpoints]);
+        return LViewPoint.fromPointer([...Defaults.viewpoints, ...(context.data.viewpoints || [])]);
     }
     protected set_viewpoints(val: PackArr<this['viewpoints']>, context: Context): boolean {
         const data = context.data;
@@ -2417,16 +2647,38 @@ export class LProject<Context extends LogicContext<DProject> = any, D extends DP
     public delete(): void {
         throw new Error('cannot be called directly, should trigger getter. this is only for correct signature');
     }
-    protected get_delete(context: Context): () => void {
-        const data = context.proxyObject as LProject;
+    protected get_delete(c: Context): () => void {
+        const data = c.proxyObject as LProject;
         return () => {
             TRANSACTION(()=> {
-                data.children.map(c => c && c.delete());
-                SetFieldAction.new(DUser.current, 'projects', data.id as any, '-=', true);
+                // this crashes, there is no get_children() (data.children || []).map(c => c && c.delete());
+                SetFieldAction.new(DUser.current, 'projects', c.data.id as any, '-=', true);
                 DeleteElementAction.new(data.id);
-                SetRootFieldAction.new('projects', data.id, '-=', true);
+                SetRootFieldAction.new('projects', c.data.id, '-=', true);
             });
         }
+    }
+
+    duplicate(): LProject{ return this.wrongAccessMessage('LProject.duplicate()')};
+    get_duplicate(c: Context): ()=>LProject{
+        return () => {
+            let clone: DProject = DProject.new(c.data.type, c.data.name + ' Copy');
+            for (let key in c.data){
+                switch (key){
+                    case 'id':
+                    case 'pointedBy':
+                    case 'name':
+                        continue;
+                    default:
+                        // @ts-ignore
+                        clone[key] = c.data[key];
+                        break;
+            }
+        }
+        clone.author = DUser.current;
+        clone.onlineUsers = 0;// i think this should not be a presistent data, but a fake attribute available only on LProject
+        // todo per giordano: assign project to user & set persistent stuff with ProjectsAPI ?
+        return LPointerTargetable.fromD(clone); }
     }
 }
 
@@ -2870,7 +3122,10 @@ export class NodeTransientProperties{
     viewScores: Dictionary<Pointer<DViewElement>, ViewScore> = {} as any;
     evalContext!: GObject; // global for this node (without view-specific usageDeclaration)
     needSorting!: boolean;
+    longestLabel!: LVoidEdge['longestLabel'];
+    labels!: LVoidEdge['labels'];
     //force1Update!: boolean;
+    onDelete?: (node: LGraphElement)=>boolean; // return false to prevent deletion
     constructor(){
         // this.stackViews = []; this.validMainViews = [];
         this.viewScores = {};
@@ -2900,6 +3155,9 @@ export class ViewTransientProperties {
     onRotationStart!: undefined | ((context:GObject)=>void);
     onRotationEnd!: undefined | ((context:GObject)=>void);
     whileRotating!: undefined | ((context:GObject)=>void);
+
+    longestLabel!: LVoidEdge['longestLabel'];
+    labels!: LVoidEdge['labels'];
 
     constructor(){
         this.events = {};

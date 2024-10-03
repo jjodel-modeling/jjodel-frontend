@@ -4,6 +4,7 @@ import {ReactNode} from "react";
 
 
 type Props = {node: LGraphElement & {state: GObject & {showPanel: boolean}}, children?: ReactNode};
+
 function ControlPanel(props: Props) {
     const node = props.node;
     const showPanel = node.state.showPanel || false;
@@ -21,3 +22,7 @@ function ControlPanel(props: Props) {
 }
 
 export {ControlPanel};
+
+
+
+

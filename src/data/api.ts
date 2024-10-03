@@ -1,10 +1,13 @@
 import Axios from 'axios';
 import {Json} from '../joiner';
 import Storage from "./storage";
+import Settings from "../settings/Settings";
 
 export type Response = {code: number, data: Json|null}
 class Api {
-    static persistance = 'http://localhost:5002/persistance';
+    static persistance = `${process.env['REACT_APP_PERSISTANCE']}/persistance`;
+    static memorec = `${process.env['REACT_APP_MEMOREC']}/memorec`;
+
     private static headers(): {'auth-token': string} {
         return {'auth-token': Storage.read('token') || ''};
     }

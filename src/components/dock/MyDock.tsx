@@ -9,8 +9,11 @@ import 'jqwidgets-scripts/jqwidgets/styles/jqx.base.css';
 import 'jqwidgets-scripts/jqwidgets/styles/jqx.material-purple.css';
 import $ from "jquery";
 import {Dictionary, DocString, GObject, Log} from "../../joiner";
-import {DockingLayout} from 'smart-webcomponents-react/dockinglayout';
+import { DockingLayout } from 'smart-webcomponents-react/dockinglayout';
 
+import {DockLayout, LayoutData} from 'rc-dock';
+import { Slider } from 'smart-webcomponents-react/slider';
+import { MultilineTextBox } from 'smart-webcomponents-react/multilinetextbox';
 class PortalOwnProps{
     children!: ReactNode;
     container!: string | Element;
@@ -89,13 +92,13 @@ const defaultLayout = [{
         }
     ]
 }];
-/*
+
 export class SmartDock extends React.Component {
     public layout: GObject;
     constructor(props: any) {
         super(props);
-        let layoutString = localStorage.getItem('smartDockingLayoutdocking-smart-1') || '';
-        let layout: GObject | null = layoutString ? JSON.parse(layoutString) : null;
+        let layoutstr = localStorage.getItem('smartDockingLayoutdocking-smart-1');
+        let layout: GObject | null = layoutstr ? JSON.parse(layoutstr) : null;
         if (!layout) {
             layout = defaultLayout;
         }
@@ -146,7 +149,7 @@ export class SmartDock extends React.Component {
     render() {
         const random = Math.random();
         let layout: GObject = this.layout;
-        let r = (random*255).toFixed(0);
+        let r = (random * 255).toFixed(0);
         this.beforeUpdate();
         return (
             <div onMouseEnter={() => this.forceUpdate()} ref={e => this.html = e}>
@@ -154,18 +157,20 @@ export class SmartDock extends React.Component {
                 <DockingLayout id={'docking-smart-1'} autoSaveState={true} autoLoadState={true}
                                ref={(e)=> {
                                    this.dock = e;
-                                   if (!this.dock) return; //
+                                   if (!this.dock) return;
                                    // this.dock.loadState(layout);
                                }}
                                style={{backgroundColor: `rgb(${r}, ${r}, ${r})`}}
-                               onReady={()=>this.dockReady()} layout={layout} draggable={true}>
+                    onReady={() => this.dockReady()} layout={layout} draggable={true}>
                 </DockingLayout>
-                <MyPortal container={'#tab1'}><div id={"tab1content"}>tab1 content!</div></MyPortal>
+                <MyPortal container={'#tab1'}>
+                    <div id={'tab1content'}>tab1 content!</div>
+                </MyPortal>
             </div>
         );
     }
 }
-*/
+
 /*
 how to do custom pinned tabs:
 
@@ -359,7 +364,7 @@ export class JQDock extends React.PureComponent<{}, IDockingLayoutProps> {
                 </div>
                 {/* floatGroup */}
                 <div data-container={'OutputPanel'}>
-                    <div style={{ fontFamily: 'Consolas' }}>
+                    <div style={{ fontFamily: 'Inter Tight' }}>
                         <p>
                             Themes installation complete.
                         </p>

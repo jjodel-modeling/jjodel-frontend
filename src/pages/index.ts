@@ -1,8 +1,15 @@
 export {AccountPage} from './Account';
 export {AllProjectsPage} from './AllProjects';
-export {AuthPage} from './Auth';
 export {ArchivePage} from './Archive';
+export {AuthPage} from './Auth';
 export {CommunityPage} from './Community';
-export {SettingsPage} from './Settings';
-export {UpdatesPage} from './Updates';
+export {NotesPage} from './Notes';
+export {ProfilePage} from './Profile';
 export {ProjectPage} from './Project';
+export {RecentPage} from './Recent';
+export {SettingsPage} from './Settings';
+export {TemplatePage} from './Templates';
+export {UpdatesPage} from './Updates';
+export {ErrorPage} from './Error';
+
+

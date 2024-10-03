@@ -1,0 +1,48 @@
+.dock-content-holder #DockComponent_rightbar_5 {
+
+    // Node
+  
+  
+    section {
+      margin: 1rem 0.5rem;
+    }
+  
+    .node-editor {
+        margin: 0.5rem;
+        border-radius: var(--radius);
+        background-color: var(--bg-2);
+
+
+        h3 {
+            color: var(--accent);
+            font-size: 1.3em;
+            padding-bottom: 6px;
+            height: auto;
+            margin-bottom: 20px;
+            border-bottom: 1px solid var(--bg-2-5);
+
+        }
+        h3::before {
+            position: relative;
+            top: 3px;
+            margin-top: 10px;
+            color: var(--accent);
+            font-family: bootstrap-icons;
+            content: "\F4CA";
+            margin-right: 6px;
+            font-size: 1.1em;
+        }
+
+        .my-auto {
+            font-weight: 400;
+            font-family: "Inter Tight", sans-serif!important;
+            color: var(--color);
+            font-size: 1em;
+        }
+
+        input[type=number] {
+            padding-right: 0;
+        }
+    }
+  }
+  

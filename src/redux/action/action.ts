@@ -98,12 +98,16 @@ let t = new TransactionStatus();
 windoww.transactionStatus = t;
 
 export function BEGIN() {
+    if (t.transactionDepthLevel === 0) t.hasAborted = false;
     t.hasBegun = true; // redundant but actions are reading this, minimize changes
     t.transactionDepthLevel++;
 }
-export function ABORT() {
+export function ABORT(): boolean {
+    let ret: boolean = t.transactionDepthLevel > 0;
     t.hasAborted = true; // at any depth level since i have only a flat TRANSACTION array
     END();
+    return ret;
+
 }
 export function END(actionstoPrepend: Action[] = []): boolean {
     t.transactionDepthLevel--;
@@ -114,7 +118,6 @@ export function END(actionstoPrepend: Action[] = []): boolean {
     return false;
 }
 export function FINAL_END(): boolean{
-    console.warn("FINAL_END");
     t.hasBegun = false;
     // pendingActions.sort( (a, b) => a.timestamp - b.timestamp)
     if (t.hasAborted) {

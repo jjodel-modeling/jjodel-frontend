@@ -1,12 +1,15 @@
 import {OclEngine} from "@stekoe/ocl.js"
 import {
     Constructor, DGraphElement,
-    DModelElement, DViewElement,
+    DModel,
+    DModelElement, DPointerTargetable, DState, DViewElement,
     GObject, LGraphElement,
     LModelElement,
+    Log,
+    LPointerTargetable,
     LViewElement,
     RuntimeAccessible,
-    RuntimeAccessibleClass, ViewEClassMatch
+    RuntimeAccessibleClass, store, transientProperties, ViewEClassMatch
 } from "../joiner";
 import {OclResult} from "@stekoe/ocl.js/dist/components/OclResult";
 
@@ -57,6 +60,57 @@ export class OCL{
         return oclResult;
     }
 
+    public static test_bugged_new(mp0: DModelElement | LModelElement | undefined, view0: LViewElement | DViewElement | undefined, node0?: LGraphElement | DGraphElement): boolean | (typeof ViewEClassMatch)["MISMATCH_OCL"] {
+        if (!mp0 || !view0) return ViewEClassMatch.MISMATCH_OCL;
+        let mp: DModelElement, lmp: LModelElement;
+        let node: DGraphElement, lnode: LGraphElement;
+        let view: DViewElement;
+        // @ts-ignore
+        if ((mp = mp0.__raw)) lmp = mp0; else { lmp = mp0; mp = (lmp as LModelElement)?.__raw; }
+        // @ts-ignore
+        if ((node = node0?.__raw)) lnode = node0; else { lnode = node0; node = lnode?.__raw; }
+        // @ts-ignore
+        view = view0?.__raw || view0;
+        let oclCondition = view.oclCondition;
+        let tv = transientProperties.view[view.id];
+        console.log("Evaluating ocl: "+view.oclCondition, {view, ocl:view.oclCondition});
+        if (!view.oclCondition) { return true; }
+        let oclEngine: OclEngine;
+        if (!tv) transientProperties.view[view.id] = tv = {} as any;
+        if (tv.oclEngine) oclEngine = tv.oclEngine;
+        else {
+            windoww.OclEngine = OclEngine;
+            tv.oclEngine = oclEngine = OclEngine.create();
+            let state: DState = store.getState();
+            let rootModel: DModel = mp as any;
+            windoww.rootModel = rootModel;
+            while (rootModel && rootModel.className !== "DModel") rootModel = DPointerTargetable.fromPointer(rootModel.father, state);
+            oclEngine.registerTypes(RuntimeAccessibleClass.getOCLClasses(rootModel.id));
+            oclEngine.addOclExpression(oclCondition);
+            console.log("4 Evaluating ocl: "+view.oclCondition, {view, ocl:view.oclCondition, mp, lmp, oclEngine});
+        }
+        try {
+            let oclResult: OclResult;
+            if (!lmp) lmp = LPointerTargetable.fromD(mp);
+            if (node) {
+                // dangerous cheat, to make ocl be able to access current "node" if model have multiple nodes.
+                const oldNode = transientProperties.modelElement[mp.id].node;
+                transientProperties.modelElement[mp.id].node = lnode || LPointerTargetable.fromD(node);
+                oclResult = oclEngine.evaluate(lmp)
+                transientProperties.modelElement[mp.id].node = oldNode;
+            }
+            else oclResult = oclEngine.evaluate(lmp);
+            windoww.oclDebug={oclResult, oclEngine, lmp, oclCondition};
+            console.log("5 Evaluating ocl: "+view.oclCondition, {view, ocl:view.oclCondition, mp, lmp, oclResult, oclEngine});
+            // return oclResult ? OCL.getOCLScore(oclCondition) : ViewEClassMatch.MISMATCH_OCL;
+            let matches: boolean = oclResult && oclResult.getEvaluatedContexts().length > 0 && oclResult.getResult();
+            return matches || ViewEClassMatch.MISMATCH_OCL;
+        } catch(e) {
+            Log.ee('failed to evalute OCL expression:', {e, obj: mp, view: view.name, oclexp: view.oclCondition, node});
+            return ViewEClassMatch.MISMATCH_OCL;
+        }
+        // oclEngine.setTypeDeterminer()
+    }
     public static test(me: DModelElement | LModelElement | undefined, view: LViewElement | DViewElement | undefined, node?: LGraphElement | DGraphElement): boolean | (typeof ViewEClassMatch)["MISMATCH_OCL"] {
         if (!me || !view) return false;
         const condition = view.oclCondition;
@@ -71,10 +125,13 @@ export class OCL{
     }
 
 
+    // warning: do not read ret.result with returntype='ocl'
+    // it neeeds to be evaluated both with  ret.getEvaluatedContexts().length > 0 && ret.getResult();
     public static filter<T extends GObject>(keepIndex: boolean, returnType: 'ocl' | 'bool' | 'src', obj0: T[], oclexp: string, typeused: Constructor[]=[]) {
         windoww.OclEngine = OclEngine;
         var oclEngine = OclEngine.create();
         var oclResult = null;
+        windoww.oclEngine = oclEngine;
         const typeregister: GObject = {};
         for (let type of typeused) { typeregister[(type as any as typeof RuntimeAccessibleClass).cname || type.name] = type; }
         oclEngine.registerTypes(typeregister);

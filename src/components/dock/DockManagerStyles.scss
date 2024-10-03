@@ -1,7 +1,36 @@
+.dock-tab {
+    --color: #233d4d;
+  --accent: #048BA8;
+  --accent-50: var(--bg-4);
+  --secondary: #048BA8;
+  --terziary: #5F0F40;
+  --accent-secondary: #F3B700;
+  --bg-1: white;
+  --bg-2: #f5f5f5;
+  --bg-2-5: #EBEBEB;
+  --bg-3: #e2e2e1;
+  --bg-3-1: #c3c3c1;
+
+  --bg-4: #8f908e;
+  --bg-5: #525251;
+
+  --dock-bg: var(-bg-1);
+  --disabled: var(--bg-4);
+  --failure: #ed474a;
+  --danger: #ed474a;
+  --success: #3ddc97;
+  --side-padding: 2em;
+  --sep-padding: 4em;
+}
+
 .pinnable-dock-root{
     display: flex;
     flex-flow: column;
     flex-grow:1;
+
+    --content-border-opposite: none;
+    --content-border-side: 1px solid gray;
+    --content-border-main: 1px solid gray;
 
     //.dock:hover{overflow: visible;}
 
@@ -9,16 +38,37 @@
         --pinnable-strip-h: calc(0px + 31px);
         --pinnable-strip-w: calc(0px + 31px);
         --content-border: 1px solid #108ee9;
-        --navbar-h: 42px;
+        --navbar-h: 32px;
+        --footer-h: 28px;
         position: relative;
         background-color: whitesmoke;
+        display: flex;
+        &>.bi{
+            margin: auto 0.5ric;
+            position: absolute;
+            z-index: 1;
+            width: 1ric;
+            height: 31px;
+            display: flex;
+            &::before{
+                margin: auto;
+            }
+        }/*
+        .dock-layout{
+            width: 0;
+            flex-grow: 1;
+        }*/
+        .dock-nav-list{
+            margin-left: 1.5ric;
+        }
         &.empty{
             display: none;
         }
-        .view-editor+.dock-layout{
+        .view-editor-header+.dock-layout{
             position: relative !important;// rc-dock sets pos:absolute in direct style
             min-height: 75vh;
             min-width: 550px;
+            border: 1px solid red;
         }
         .view-list-elem{
             // min-width: 550px; if you want the whole view editor to match single view size
@@ -36,7 +86,7 @@
     .pinnable-strip .dock-content{
         position: absolute;
         left: 100%;
-        border: 2px solid red;
+        // border: 2px solid red;
     }
 
 
@@ -81,14 +131,6 @@
     transform-style: preserve-3d;
     //.dock-nav-list:hover{ background: red; }
     .pinnable-strip{
-        .dock-content-holder{
-            opacity: 0;
-            min-height: 50px;
-            min-width: 50px;
-            background: whitesmoke;
-            transition: all .3s ease-in;
-            // transition-delay: 0.5s;
-        }
 
         transform-style: preserve-3d;
 
@@ -109,14 +151,6 @@
             }
         }
     }
-
-    .pinnable-strip:has(.dock-nav-list:hover, .dock-content-holder:hover){
-        transform-style: preserve-3d;
-        .dock-content-holder{
-            transition: all .3s ease-out;
-            opacity: 1;
-        }
-    }
 }
 
 .pinnable-strip{
@@ -132,6 +166,7 @@
         // otherwise since the tab header content is portal-ed, it bubbles the event to the source docklayout,
         // so i need to trigger it from the "static" empty tab header container
         >*{pointer-events: none;}
+
     }
     .active-on-mouseenter{ pointer-events: all; }
 
@@ -142,16 +177,26 @@
         pointer-events: all;
     }
     .dock-content-holder{
-        // display: none;
-        // &:hover{ display: block; }
+        .ui-resizable-handle {
+            // background: red;
+            min-width: 20px;
+            min-height: 20px;
+        }
+
+        opacity: 0;
+        background: whitesmoke;
+        border: 1px solid var(--content-border);
+        transition: all .3s ease-in;
+        // transition-delay: 0.5s;
+
         position: absolute;
         z-index: 999;
-        height: max-content;
-        width: max-content;
+        // min-height: 150px; // max-content does not work for height, because it is the "inline" content size, and inline only grows horizontally. max-content;
+        // min-width: max-content; // max(max-content, 50px);
         --safetymargin: 0px;
         pointer-events: all;
-        max-width: calc(100vw - var(--pinnable-strip-w) - var(--safetymargin));
-        max-height: calc(100vh - var(--navbar-h) - var(--pinnable-strip-h) - var(--safetymargin));
+        max-width: calc(100vw - 0 * var(--pinnable-strip-w) - var(--safetymargin));
+        max-height: calc(100vh - var(--footer-h) - var(--navbar-h) - 0 * var(--pinnable-strip-h) - var(--safetymargin));
 
         overflow: auto;
         //outline: 2px solid red;
@@ -161,22 +206,49 @@
         }
 
     }
-    .dock-content{
-        display:block;
+    .dock-content-holder{
+        .dock-content{
+            display:block;
+            // overflow: hidden; // jqui resizable sicons make it overflow
+        }
+        .ui-resizable-n{
+            top: 0;
+        }
+        .ui-resizable-s{
+            bottom: 0;
+        }
+        .ui-resizable-e{
+            right: 0;
+        }
+        .ui-resizable-w{
+            left: 0;
+        }
+        .ui-resizable-sw{
+            left: 0;
+            bottom:0;
+        }
+        .ui-resizable-se{
+            right: 0;
+            bottom:0;
+        }
+        .ui-resizable-nw{
+            left: 0;
+            top:0;
+        }
+        .ui-resizable-ne{
+            right: 0;
+            top:0;
+        }
     }
 }
 .dock-tab > div {
-    padding: 4px 14px;
-    outline-color: #108ee9;
+    padding: 1px 14px;
+    outline-color: none;
 }
 .pinnable-strip{
-    .dock-content-holder{
-        border: 1px solid var(--content-border);
-    }
     .dock-tab > div {
         padding: 0px;
     }
-
     .dock-tab-btn, .drag-initiator, .drag-initiator>div{
         height: 100%;
         width: 100%;
@@ -193,34 +265,150 @@
     display: none;
 }
 
+.dock-tab{
+    margin-top: 0;
+    margin-bottom: 0;
+}
+.pinnable-strip{
+    .dock-tab{
+        margin-top: 0;
+        margin-bottom: 0;
+    }
+}
+
+.dock-tab-close-btn:hover,
+.dock-tab-close-btn:focus {
+    transform: scale(1.1);
+}
+
+.dock-tab:hover .dock-tab-close-btn,
+.dock-tab-close-btn:focus {
+    opacity: 1;
+    color: var(--terziary);
+}
+
+.dock-nav-operations{
+    float: right;
+    height: 100%;
+    .dock-nav-more{
+        margin: auto;
+    }
+}
+.dock-extra-content {
+    /*display: flex;
+    height: 30px;*//*
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    right: 0.5rem;*/
+    float: right;
+    height: 100%;
+    margin-right: 0.5rem;
+    width: auto;
+    display: flex;
+    .dock-panel-max-btn{
+        position: unset; // overrides default style
+        margin: auto;
+        width: 1.25ric;
+        &:hover{
+            transform: scale(1.1);
+        }
+    }
+}
+
+.not-strip>.dock-layout:not(:has(.dock-style-models .dock-tab:nth-child(2))){
+    .dock-style-editors, .dock-divider{ display: none; }
+}
+.dock-nav{
+    height: 100%;
+}
+.dock-tab-close-btn {
+    background-image: none;
+    top: 0;
+    bottom: 0;
+    height: auto;
+    padding: 0;
+    // background: red;
+    display: flex;
+    width: 28px;
+    color: var(--terziary);
+    &:hover{ color: red; }
+    &::before{
+        margin: auto;
+        content: "\f629"; // "\f623" x in a circle | "\f62a" x only | "\f629" square-x
+        font-size: 0.8rem;
+
+        font-family: bootstrap-icons !important;
+        font-style: normal;
+        font-weight: normal !important;
+        font-variant: normal;
+        text-transform: none;
+    }
+}
 .pinnable-strip-t, .pinnable-strip-b{
     width: 100%;
     height: var(--pinnable-strip-h);
     .dock-content-holder {
-        border-top: none;
+        // override inline-style set by my js to make dynamic panel size float near the tab, now they occupy all the height/width
+        left: 0 !important;
         transform: translateZ(1px) scaleY(0);
-        //width: 100vw;
+        width: 100vw;
+        height: 33vh;
         // width: calc(100vw - var(--pinnable-strip-w));
-        height: max-content;
-        width: max-content;
     }
-
-    &:has(.dock-nav-list:hover, .dock-content-holder:hover){
-        .dock-content-holder {
+    .dock-content .dock-tabpane{
+        overflow-y: auto;
+    }
+    &:has(
+        .dock-nav-list:hover, .dock-nav-list:focus-within, .dock-nav-list:focus, .dock-nav-list:active,
+        .dock-content-holder:hover, .dock-content-holder:focus-within, .dock-content-holder:focus, .dock-content-holder:active
+    ){
+        transform-style: preserve-3d;
+        .dock-content-holder{
             transform: translateZ(1px) scaleY(1) !important;
+            transition: transform .3s ease-out;
+            left: unset !important; // override jqui
+            opacity: 1;
         }
     }
+    &.pinned{
+         transform-style: preserve-3d;
+         .dock-content-holder{
+             transform: translateZ(0.1px) scaleY(1) !important;
+             transition: transform .3s ease-out;
+             left: unset !important; // override jqui
+             opacity: 1;
+         }
+     }
 }
+
+.pinnable-strip{
+    .dock-content-holder{
+        border: var(--content-border-side);
+    }
+}
+
 .pinnable-strip-t{
     .dock-content-holder{
         transform-origin: top;
         top: calc(var(--pinnable-strip-h) - 3px);
+        border-bottom: var(--content-border-main);
+        border-top: var(--content-border-opposite);
+    }
+    .dock-content{
+        padding-bottom: 10px; // resize bar is 20px, but i allow some overlap
     }
 }
 .pinnable-strip-b{
     .dock-content-holder{
         transform-origin: bottom;
+        border-bottom: none;
         bottom: calc(var(--pinnable-strip-h) - 3px);
+        border-top: var(--content-border-main);
+        border-bottom: var(--content-border-opposite);
+    }
+    .dock-content{
+        padding-top: 10px; // resize bar is 20px, but i allow some overlap
     }
 }
 
@@ -228,23 +416,42 @@
     width: var(--pinnable-strip-w);
     height: 100%;
     .dock-content-holder {
+        // override inline-style set by my js to make dynamic panel size float near the tab, now they occupy all the height/width
+        top: 0 !important; //calc( -1 * var(--pinnable-strip-h)) !important;
+        left: unset !important; // override jqui
         transform: translateZ(1px) scaleX(0);
-        //height: 100vh;
-        // height: calc(100vh - var(--navbar-h) - var(--pinnable-strip-h));
-        width: max-content;
-        height: max-content;
+        // height: 100vh;
+        width: 33vw;
+        height: 100vh;
     }
-    &:has(.dock-nav-list:hover, .dock-content-holder:hover){
-        .dock-content-holder {
+    .dock-content .dock-tabpane{
+        overflow-x: auto;
+    }
+    &:has(
+        .dock-nav-list:hover, .dock-nav-list:focus-within, .dock-nav-list:focus, .dock-nav-list:active,
+        .dock-content-holder:hover, .dock-content-holder:focus-within, .dock-content-holder:focus, .dock-content-holder:active
+    ){
+        transform-style: preserve-3d;
+        .dock-content-holder{
             transform: translateZ(1px) scaleX(1) !important;
+            transition: transform .3s ease-out;
+            opacity: 1;
         }
     }
+    &.pinned{
+          transform-style: preserve-3d;
+          .dock-content-holder{
+              transform: translateZ(0.1px) scaleX(1) !important;
+              transition: transform .3s ease-out;
+              opacity: 1;
+          }
+      }
     .dock-nav{
         transform: translateX(23px) rotate(90deg);
         // transform: translateX(calc(var(--pinnable-strip-h) - 2px)) rotate(90deg);
         //transform: translateX(29px) rotate(90deg);
         transform-origin: top left;
-        width: calc(100vh - var(--navbar-h) - var(--pinnable-strip-h)) !important;
+        width: calc(100vh - var(--footer-h) - var(--navbar-h) - 0 * var(--pinnable-strip-h)) !important;
         height: var(--pinnable-strip-h) !important;
 
     }
@@ -252,13 +459,30 @@
 .pinnable-strip-l{
     .dock-content-holder{
         transform-origin: left;
-        left: calc(var(--pinnable-strip-w) - 2px);
+        border-left: var(--content-border-opposite);
+        border-right: var(--content-border-main);
+        left: calc(var(--pinnable-strip-w) - 2px) !important;
+    }
+
+    .dock-content{
+        padding-right: 10px; // resize bar is 20px, but i allow some overlap
+    }
+    .dock-nav-wrap{
+        transform: translate(-0px, 2px) scaleY(-1);
+        .active-on-mouseenter{
+            transform: scaleX(-1);
+        }
     }
 }
 .pinnable-strip-r{
     .dock-content-holder{
         transform-origin: right;
+        border-right: var(--content-border-opposite);
+        border-left: var(--content-border-main);
         right: calc(var(--pinnable-strip-w) - 2px);
+    }
+    .dock-content{
+        padding-left: 10px; // resize bar is 20px, but i allow some overlap
     }
 }
 .pinnable-dock-middle-strip{
@@ -283,32 +507,40 @@
 
 div.dock-drop-layer{
     --drop-button-size: 32px;
+    .dock-drop-square.dock-drop-top-anchor,
+    .dock-drop-square.dock-drop-left-anchor,
+    .dock-drop-square.dock-drop-right-anchor,
+    .dock-drop-square.dock-drop-bottom-anchor{
+        &:hover{background: #88c7f4;  color: white;}
+        //&::before{content:'📌'}
+        >.dock-drop-square-box{
+            display: flex;
+            >.bi{
+                color: inherit;
+                margin:auto;
+            }
+        }
+    }
     .dock-drop-square.dock-drop-top-anchor{
         top: calc(50% - var(--drop-button-size) * 3);
-        &::before{content:'📌'}
-        &:hover{background: #88c7f4;  color: white;}
     }
     .dock-drop-square.dock-drop-left-anchor{
         left: calc(50% - var(--drop-button-size) * 3);
-        &::before{content:'📌'}
-        &:hover{background: #88c7f4;  color: white;}
     }
     .dock-drop-square.dock-drop-right-anchor{
         left: calc(50% + var(--drop-button-size) * 2);
-        &::before{content:'📌'}
-        &:hover{background: #88c7f4;  color: white;}
     }
     .dock-drop-square.dock-drop-bottom-anchor{
         top: calc(50% + var(--drop-button-size) * 2);
-        &::before{content:'📌'}
-        &:hover{background: #88c7f4;  color: white;}
     }
 }
 
 
 .pinnable-dock-root.gray-style{
     --hover-color: black;
-    --font-color: #767676;
+    --font-color: rgba(0,0, 0, 0.85);
+    --panel-content-color: rgba(0,0, 0, 0.85);
+    --inactive-tab-font-color: #767676;
     --underline-color: #B2B2B2;
     --bg-color: #D9D9D9;
 
@@ -326,7 +558,7 @@ div.dock-drop-layer{
         background: var(--bg-color);
         .dock-tab{
             background: var(--bg-color);
-            color: var(--font-color); //rgba(0, 0, 0, 0.85);
+            color: var(--inactive-tab-font-color); //rgba(0, 0, 0, 0.85);
             border-bottom: 1px solid var(--underline-color); //#ddd;
 
             &.dock-tab-active{
@@ -334,7 +566,7 @@ div.dock-drop-layer{
             }
         }
         .dock-tab > div {
-            padding: 8px 8px;
+            padding: 4px 8px;
         }
         .dock-ink-bar{
             background-color: var(--hover-color); //#108ee9
@@ -350,5 +582,45 @@ div.dock-drop-layer{
     }
     .dock-content .dock-tabpane{
         background-color: var(--bg-color); // whitesmoke;
+        overflow:hidden;
     }
+}
+.not-strip{
+    flex-grow: 1;
+    display: flex;
+    &>.dock-layout{
+        .dock-panel{
+            display:none;
+            &:has(.not-pinned){
+                display: block;
+            }
+            // undo for nested docks
+            .dock-layout{
+                .dock-panel{
+                    display:block;
+                }
+            }
+        }
+    }
+
+}
+.not-strip .dock-tab {
+    margin-top: 4px;
+}
+
+/// default styles for graph
+.GraphContainer {/*
+    *:has(>select, >input){
+        display: flex;
+        select, input{
+            flex-grow: 1;
+            flex-basis: 50px;
+            min-width: 50px;
+        }
+    }*/
+    /*
+    select, input{
+        min-width: 50px;
+        width: 33%
+    }*/
 }

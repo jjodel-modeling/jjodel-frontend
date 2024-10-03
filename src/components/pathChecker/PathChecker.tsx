@@ -9,7 +9,7 @@ function PathChecker(props: Props) {
 
     useEffect(() => {
         const newRenders = renders + 1;
-        if(pathname === '/project' && newRenders > 1) U.refresh();
+        if(/*pathname === '/project' && */newRenders > 1) U.refresh();
         setRenders(newRenders);
     }, [pathname]);
 

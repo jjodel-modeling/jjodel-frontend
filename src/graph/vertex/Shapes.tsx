@@ -89,7 +89,7 @@ function makeSvg(pts: Point[]): string{
 
 // geom shortcuts
 function addStyle(props0: VertexOwnProps, children:any, childStyle: React.CSSProperties, style: React.CSSProperties = {}){
-    let props: GObject = {...props0, children, isgraph:false, isvertex:true, isvoid:true};
+    let props: GObject = {...props0, children, isGraph:false, isGraphVertex: false, isVertex:true, isEdgePoint: false, isField: false, isEdge: false, isVoid:true};
     // props.style = !props0.style ? {} : {...props0.style};
     props.childStyle = props.childStyle ? {...props.childStyle} : {};
     props.style = props.style ? {...props.style} : {};
@@ -169,7 +169,7 @@ step 2) when parsing jsx to build nodes, edges, check if props like edge.start o
 in that case, update such value
 */
 export const Square = (props: VertexOwnProps, children: ReactNode | undefined = []): ReactElement => { // rectangle
-    return <VertexConnected {...{...props, children}} isgraph={false} isvertex={true} isvoid={true} />; }
+    return <VertexConnected {...{...props, children}} isGraph={false} isVertex={true} isVoid={true} />; }
 Square.cname = 'Rectangle/Square';
 /*
 export const Rhombus = (props: VertexOwnProps, children: ReactNode | undefined = []): ReactElement => { // rectangle

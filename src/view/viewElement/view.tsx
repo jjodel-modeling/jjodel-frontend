@@ -11,9 +11,9 @@ import {
     DocString,
     DPointerTargetable,
     DState,
-    DViewPoint,
+    DViewPoint, DVoidEdge,
     EdgeBendingMode,
-    EdgeGapMode,
+    EdgeGapMode, EdgeSegment,
     EGraphElements,
     EModelElements,
     END,
@@ -21,16 +21,18 @@ import {
     GObject,
     GraphPoint,
     GraphSize,
-    Info, LEdgePoint, LModelElement,
+    Info, LEdge, LEdgePoint, LGraphElement, LModelElement,
     Log,
     LogicContext,
     LPointerTargetable, LUser,
     LViewPoint,
+    LVoidEdge,
     MyProxyHandler,
     Pointer,
-    Pointers,
+    Pointers, PrimitiveType,
     RuntimeAccessible,
     RuntimeAccessibleClass,
+    Selectors,
     SetFieldAction, SetRootFieldAction,
     ShortAttribETypes,
     store,
@@ -39,9 +41,9 @@ import {
     windoww
 } from "../../joiner";
 import {DUser, EPSize, Pack1, transientProperties } from "../../joiner/classes";
-import subViewsData from "../../components/rightbar/viewsEditor/data/SubViewsData";
 import DSL from "../../DSL/DSL";
 import {ReactNode} from "react";
+import {labeltype} from "../../model/dataStructure/GraphDataElements";
 
 let CSS_Units0 = {'Local-font relative':{
         'cap':     'cap - (Cap height) the nominal height of capital letters of the element\'s font.',
@@ -168,8 +170,17 @@ export class DViewElement extends DPointerTargetable {
         'onResizeEnd', 'whileResizing', 'onRotationStart', 'onRotationEnd', 'whileRotating'];
     public static RecompileKeys: string[] = ['onDataUpdate', 'onDragStart', 'onDragEnd', 'whileDragging', 'onResizeStart',
         'onResizeEnd', 'whileResizing', 'onRotationStart', 'onRotationEnd', 'whileRotating',
-        'constants', 'usageDeclarations', 'jsxString', 'preconditions', 'jsCondition', 'ocl', 'events'];
+        'constants', 'usageDeclarations', 'jsxString', 'preconditions', 'jsCondition', 'ocl', 'events', 'labels', 'longestLabel'];
 
+    static LFromHtml(target?: Element | null): LViewElement | undefined { return LPointerTargetable.fromPointer(DViewElement.PtrFromHtml(target) as Pointer); }
+    static DFromHtml(target?: Element | null): DViewElement | undefined { return DPointerTargetable.fromPointer(DViewElement.PtrFromHtml(target) as Pointer); }
+    static PtrFromHtml(target?: Element | null): Pointer<DViewElement> | undefined {
+        while (target) {
+            if ((target.attributes as any).viewid) return (target.attributes as any).viewid.value;
+            target = target.parentElement;
+        }
+        return undefined;
+    }
     // inherited redefine
     // public __raw!: DViewElement;
     id!: Pointer<DViewElement, 1, 1, LViewElement>;
@@ -189,6 +200,9 @@ export class DViewElement extends DPointerTargetable {
 
     jsxString!: string; // l'html template
     usageDeclarations?: string;
+
+    longestLabel?: DocString<"function">;
+    labels?: DocString<"function">;
 
     forceNodeType?: DocString<'component name (Vertex, Field, GraphVertex, Graph)'>; // used in DefaultNode
     // scalezoomx: boolean = false; // whether to resize the element normally using width-height or resize it using zoom-scale css
@@ -247,18 +261,24 @@ export class DViewElement extends DPointerTargetable {
     cssIsGlobal!: boolean;
     /* private */ compiled_css!: string;
     /* private */ css_MUST_RECOMPILE!: boolean;
-
-    public static new(name: string, jsxString: string, defaultVSize?: GraphSize, usageDeclarations: string = '', constants: string = '',
+    father?: Pointer<DViewElement>;
+/*
+    public static new(name: string, jsxString: string, father?: DViewElement, defaultVSize?: GraphSize, usageDeclarations: string = '', constants: string = '',
                       preRenderFunc: string = '', appliableToClasses: string[] = [], oclCondition: string = '',
-                      priority?: number, persist: boolean = true, isDefaultView: boolean = false, vp?: Pointer<DViewPoint> | 'skip'): DViewElement {
+                      priority?: number, persist: boolean = true, isDefaultView: boolean = false): DViewElement {
         let id = isDefaultView ? 'Pointer_View' + name : undefined;
-        return new Constructors(new DViewElement('dwc'), undefined, persist, undefined, id).DPointerTargetable().DViewElement(name, jsxString, vp, defaultVSize, usageDeclarations, constants,
+        let vp = father.viewpoint;
+        return new Constructors(new DViewElement('dwc'), father.id, persist, undefined, id).DPointerTargetable()
+            .DViewElement(name, jsxString, vp, defaultVSize, usageDeclarations, constants,
             preRenderFunc, appliableToClasses, oclCondition, priority).end();
-
-    }
-    public static new2(name: string, jsxString: string, callback?: (d:DViewElement)=>void, persist: boolean = true, vp?: Pointer<DViewPoint> | 'skip', id?: string): DViewElement {
+    }*/
+    public static new(...a:never): any{}
+    public static new2(name: string, jsxString: string, father0?: DViewElement, callback?: (d:DViewElement)=>void, persist: boolean = true,
+                       id?: string): DViewElement {
         // let id = isDefaultView ? 'Pointer_View' + name : undefined;
-        return new Constructors(new DViewElement('dwc'), undefined, persist, undefined, id)
+        let father: DViewElement = father0 || DPointerTargetable.from(Defaults.viewpoints[0]);
+        let vp = father.viewpoint || Defaults.viewpoints[0];
+        return new Constructors(new DViewElement('dwc'), father.id, persist, undefined, id)
             .DPointerTargetable().DViewElement(name, jsxString, vp).end(callback);
     }
 
@@ -267,10 +287,11 @@ export class DViewElement extends DPointerTargetable {
     <div className={'header'}>
         <div className={'input-container mx-2'}>
             <b className={'object-name'}>Name:</b>
-            <Input data={data} field={'name'} hidden={true} />
+            <Input data={data} field={'name'} hidden={true} autosize={true} />
         </div>
     </div>
     <div className={'body'}>To add information here,<br/> edit the view<br/><i>"{view.name}"</i></div>
+    {decorators}
 </div>`;
         const palettes: PaletteType = {
             "border-color-": {type:"color", value: [{r:187, g:187, b:187, a:1}]},
@@ -324,14 +345,14 @@ export class DViewElement extends DPointerTargetable {
         const user = LUser.fromPointer(DUser.current);
         // const project = user?.project; if(!project) return this;
         let name: string;
+        const vp: LViewPoint = user?.project?.activeViewpoint || LPointerTargetable.fromPointer(Defaults.viewpoints[0]);
         if (forData?.name) {
             name = forData.name + 'View';
         } else {
-            const vp: LViewPoint = user?.project?.activeViewpoint || LPointerTargetable.fromPointer(Defaults.viewpoints[0]);
             let names: string[] = vp.subViews.map(v => v && v.name);
             name = U.increaseEndingNumber( 'view_' + 0, false, false, newName => names.indexOf(newName) >= 0);
         }
-        return DViewElement.new2(name, jsx, (d)=>{
+        return DViewElement.new2(name, jsx, vp.__raw,(d)=>{
             d.css = css;
             d.palette = palettes;
             d.css_MUST_RECOMPILE = true;
@@ -367,6 +388,57 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
     get_isOverlay(c: Context): this["isOverlay"] { return this.get_isExclusiveView(c); }
     set_isOverlay(val: this["isOverlay"], c: Context): boolean { return this.set_isExclusiveView(val, c); }
 
+    label!: this["longestLabel"];  // should never be read change their documentation in write only. their values is "read" in this.segments
+    longestLabel!: labeltype; // (e:LVoidEdge, segment: EdgeSegment, allNodes: LEdge["allNodes"], allSegments: EdgeSegment[]) => PrimitiveType;
+    labels!: labeltype; // (e:LVoidEdge, segment: EdgeSegment, allNodes: LEdge["allNodes"], allSegments: EdgeSegment[]) => PrimitiveType;
+    __info_of__longestLabel: Info = {label:"Longest label", type:"function(edge)=>string",
+        readType: "(edge:LEdge, segment: EdgeSegment, allNodes: DGraphElement[], allSegments: EdgeSegment[]) => PrimitiveType",
+        writeType: "string",
+        txt: <span>Label assigned to the longest path segment.</span>}
+    __info_of__label: Info = {type: "", txt: <span>Alias for longestLabel</span>};
+    __info_of__labels: Info = {label:"Multiple labels",
+        readType: "type of longestLabel | longestLabel[]",
+        writeType: "string",
+        txt: <span>Instructions to label to multiple or all path segments in an edge</span>
+    };
+    get_label(c: Context): this["longestLabel"] { return this.get_longestLabel(c); }
+    set_label(val: DVoidEdge["longestLabel"], c: Context): boolean { return this.set_longestLabel(val, c); }
+    get_longestLabel(c: Context): this["longestLabel"] { return transientProperties.view[c.data.id].longestLabel; }
+    get_labels(c: Context): this["labels"] { return transientProperties.view[c.data.id].labels; }
+    set_longestLabel(val: DVoidEdge["longestLabel"], c: Context): boolean {
+        Log.exDevv('Edge.labels are disabled, pass it through props instead');
+        if (val === c.data.longestLabel) return true;
+        TRANSACTION(()=>{
+            SetFieldAction.new(c.data, "longestLabel", val);
+            SetRootFieldAction.new("VIEWS_RECOMPILE_longestLabel+=", c.data.id);
+        });
+        return true;
+    }
+    set_labels(val: DVoidEdge["labels"], c: Context): boolean {
+        Log.exDevv('Edge.labels are disabled, pass it through props instead');
+        if (val === c.data.labels) return true;
+        TRANSACTION(()=>{
+            SetFieldAction.new(c.data, "labels", val);
+            SetRootFieldAction.new("VIEWS_RECOMPILE_labels+=", c.data.id);
+        });
+        return true; }
+
+    allPossibleParentViews!: LViewElement[];
+    __info_of__allPossibleParentViews: Info = {isGlobal: true, type: 'LViewElement[]', txt: 'All views except subviews and this view.' }
+    get_allPossibleParentViews(c: Context): this['allPossibleParentViews']{
+        let subviewsarr = this.get_allSubViews(c);
+        let subviews = U.objectFromArray(subviewsarr, (sv)=>sv.id);
+        let allviewsarr: LViewElement[] = Selectors.getAll(DViewElement, undefined, undefined, true, true);
+        let allviews = U.objectFromArray(allviewsarr, (sv)=>sv.id);
+        console.log('allPossibleParentViews', {subviews, subviewsarr, allviews:{...allviews}, allviewsarr});
+        for (let k in subviews) {
+            delete allviews[k];
+        }
+        delete allviews[c.data.id];
+        console.log('allPossibleParentViews ret', {allviews});
+        return Object.values(allviews);
+    }
+
 
 
     explicitApplicationPriority!: number; // priority of the view, if a node have multiple applicable views, the view with highest priority is applied.
@@ -376,6 +448,15 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
         if (c.data.explicitApplicationPriority !== undefined) return c.data.explicitApplicationPriority;
         else return (c.data.jsCondition?.length || 1) + (c.data.oclCondition?.length || 1); }
     set_explicitApplicationPriority(val: this["explicitApplicationPriority"] | undefined, c: Context): boolean {
+        if (c.data.explicitApplicationPriority === val) return true;
+        for (let nid in transientProperties.node){
+            let tn = transientProperties.node[nid];
+            for (let vid in tn.viewScores){
+                let tnv = tn.viewScores[vid];
+                if (!tnv.metaclassScore || !tnv.OCLScore) continue;
+                if (tnv.jsScore === true) tn.needSorting = true; // recompute final score.
+            }
+        }
         SetFieldAction.new(c.data, "explicitApplicationPriority", val as number, '', false);
         return true;
     }
@@ -1098,31 +1179,61 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
         return true;
     }
 
-    public get_viewpoint(context: Context): this["viewpoint"] {
-        return (LViewPoint.fromPointer(context.data.viewpoint as Pointer<DViewPoint>));
+    fatherChain!: LViewElement[];
+    __info_of__fatherChain: Info = {type: 'LViewElement[]', txt: 'a list of all father elements sorted from the closest to farthest'};
+    public get_fatherChain(c: Context): this["fatherChain"] {
+        let current = this.get_father(c);
+        if (!current) return [] as any;
+        let ret: LViewElement[] = [];
+        while (current) {
+            ret.push(current);
+            current = current.father;
+        }
+        return ret;
+    }
+    father?: LViewElement;
+    public get_father(c: Context): this["father"] {
+        return (LViewPoint.fromPointer(c.data.father as Pointer<DViewPoint>));
+    }
+    public get_viewpoint(c: Context): this["viewpoint"] {
+        let p = c.data.father;
+        if (!p) return LPointerTargetable.fromD(c.data);
+        let curr: LViewElement = LPointerTargetable.fromPointer(p);
+        while (curr) {
+            let prev = curr.father;
+            if (!prev) return curr;
+            curr = prev;
+        }
+        return undefined as any;
     }
     // public set_subViews(v: Pointer<DViewPoint>[], context: Context): boolean { return this.cannotSet('subViews, call set_viewpoint on the sub-elements instead.'); }
 
     // WARNING!! if there are mass vp assignments, preserveOrder=true will cause a vp to "lose" subviews and keep only the last assigned.
     public set_viewpoint(v: Pointer<DViewPoint>, context: Context, manualDview?: DViewElement, preserveOrder: boolean = false): boolean {
+        Log.exDevv('setViewpoint() should not be called, call view.setFather(viewpoint) instead');
+        return true;
+    }
+    public set_father(v: Pointer<DViewPoint>, context: Context, manualDview?: DViewElement, preserveOrder: boolean = false): boolean {
         let ret = false;
-        let vpid: Pointer<DViewPoint> = v && Pointers.from(v);
+        let pvid: Pointer<DViewPoint> = v && Pointers.from(v);
         const data =  (manualDview || context.data);
         let id = data.id;
-        let oldvpid: Pointer<DViewPoint> = data.viewpoint;
-        if (vpid === oldvpid) return true;
+        let oldpvid = data.father;
+        if (pvid === oldpvid) return true;
+        let dfather: DViewElement = (v && typeof v === "object") ? ((v as any).__raw || v) as any : DPointerTargetable.fromPointer(pvid);
 
         TRANSACTION(()=>{
-            ret = SetFieldAction.new(id, "viewpoint", vpid, '', true);
-            if (oldvpid) {
-                let subViews = {...DPointerTargetable.fromPointer(oldvpid).subViews};
+            ret = SetFieldAction.new(id, "father", pvid, '', true);
+            if (data.viewpoint !== dfather.viewpoint) SetFieldAction.new(id, "viewpoint", dfather.viewpoint, '', true);
+            if (oldpvid) {
+                let subViews = {...DPointerTargetable.fromPointer(oldpvid).subViews};
                 delete subViews[id];
-                SetFieldAction.new(oldvpid, "subViews", subViews, '', true);
+                SetFieldAction.new(oldpvid, "subViews", subViews, '', true);
             }
-            if (vpid) {
+            if (pvid) {
                 let name = data.name;
                 let copyPos = name.indexOf("Copy");
-                let oldSubViews = DPointerTargetable.fromPointer(vpid).subViews;
+                let oldSubViews = DPointerTargetable.fromPointer(pvid).subViews;
                 let insertBefore: string = '';
                 let subViews: GObject = {};
                 if (copyPos) {
@@ -1144,14 +1255,14 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
                     }
                 } else { subViews = {...oldSubViews}; subViews[id] = 1.5; }
                 subViews[id] = insertBefore ? subViews[insertBefore] : 1.5;
-                SetFieldAction.new(vpid, "subViews", subViews, '+=', true);
+                SetFieldAction.new(pvid, "subViews", subViews, '+=', true);
             }
         })
         return ret;
     }
 
 
-    public get_subViews(context: Context, key: string): LViewElement[]{
+    public get_subViews(context: Context): LViewElement[]{
         let subViewsPointers = context.data.subViews;
         let subViews: LViewElement[] = [];
         for (let pointer in subViewsPointers) {
@@ -1171,9 +1282,10 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
                 if (vp?.storeSize) return vp.updateSize(id, size);
                 return false;
             }
-            let vsize: EPSize = (context.data.size[id] || vp?.__raw.size[id]) as EPSize;
+            let vsize: EPSize = (context.data.size[id] || vp?.__raw.size[id]) as EPSize || {} as any;
             let newSize: EPSize = new GraphSize() as EPSize;
-            if (size.currentCoordType === vsize.currentCoordType) { // if samecoord system mix them.
+            console.log({vsize, newSize, size, vp, d:context.data})
+            if (size.currentCoordType === vsize?.currentCoordType) { // if samecoord system mix them.
                 newSize.x = size?.x !== undefined ? size.x : vsize.x;
                 newSize.y = size?.y !== undefined ? size.y : vsize.y;
             } else if (size.x !== undefined && size.y !== undefined) { // if different coord system pick all of size
@@ -1210,7 +1322,8 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
             let ret: GraphSize;
             if (view.storeSize){
                 ret = view.size[id];
-                if(ret) return ret; }
+                if (ret) return ret;
+            }
             let vp = context.proxyObject.viewpoint;
             if (vp && view.id !== vp.id && vp.storeSize){
                 ret = vp.size[id];
@@ -1226,7 +1339,8 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
         return true;
     }
 
-    get_children(context: Context): never[] { return []; }
+    children!: LViewElement[];
+    get_children(context: Context): this['children'] { return this.get_subViews(context); }
 
 
     get_lazySizeUpdate(context: Context): D["lazySizeUpdate"] { return Debug.lightMode || context.data.lazySizeUpdate; }
@@ -1313,8 +1427,10 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
             TRANSACTION( () => {
                 let pvid: Pointer<DViewPoint> = c.data.viewpoint as Pointer<DViewPoint>;
                 const dclone: DViewElement = c.data.className === 'DViewPoint' ?
-                    DViewPoint.new2(`${c.data.name} Copy`, '', undefined, true) :
-                    DViewElement.new2(`${c.data.name} Copy`, '', undefined, true, 'skip');
+                    DViewPoint.newVP(`${c.data.name} Copy`) :
+                    DViewElement.new2(`${c.data.name} Copy`, '', DPointerTargetable.from(c.data.father as any),
+                        undefined, true);
+                // todo: test if this have correct parent, vp and pointedby
                 lview = LPointerTargetable.fromD(dclone);
                 const new_vp: DuplicateVPChange = new_vp0 || {pvid};
                 // || {pvid,  score: (DPointerTargetable.from(pvid, state) as DViewElement).subViews[c.data.id]}
@@ -1333,6 +1449,8 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
                             //lview.subViews = subviews as any;
                             break;
                         case 'father':
+                            this.set_father(new_vp.pvid, undefined as any, dclone, !deep);
+                            break;
                         case 'viewpoint':
                             // update parent view
                             /*
@@ -1341,7 +1459,7 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
                             SetFieldAction.new(new_vp.pvid, 'subViews', subviews, '+=', true);
                             SetFieldAction.new(dclone.id, 'viewpoint', new_vp.pvid, '+=', true);*/
                             // insert in-place right after the cloned view, with old score.
-                            this.set_viewpoint(new_vp.pvid, undefined as any, dclone, !deep);
+                            //this.set_viewpoint(new_vp.pvid, undefined as any, dclone, !deep);
                             // SetFieldAction.new(dclone.id, 'father', new_vp.vpid, '+=', true);
                             break;
                         case '':

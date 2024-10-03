@@ -1,0 +1,15 @@
+.options-tab{
+  .edgepoint-adjust{
+    // labels for genericinput->input and genericinput>select
+    &>label:has(~label),&>span{
+      display:none;
+      margin-top: auto;
+      margin-bottom: auto;
+    }
+  }
+  .edgepoint-adjust>label>span{
+    display:none;
+    margin-top: auto;
+    margin-bottom: auto;
+  }
+}

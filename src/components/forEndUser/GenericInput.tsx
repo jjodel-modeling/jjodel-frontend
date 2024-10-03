@@ -1,22 +1,26 @@
 import React, {Dispatch, InputHTMLAttributes, PureComponent, ReactNode} from 'react';
-import { connect } from 'react-redux';
+import {connect} from 'react-redux';
 import './GenericInput.scss';
 import {
-    Pointer,
-    Info,
-    GObject,
-    DocString,
     Dictionary,
+    DocString,
+    DPointerTargetable,
+    DState,
+    DViewElement,
+    GObject,
+    Info,
+    Input,
     Log,
-    TextArea,
+    LPointerTargetable,
+    LViewElement,
+    RuntimeAccessibleClass,
     Select,
     ShortAttribETypes,
-    Input, LViewElement, DViewElement, U
+    TextArea,
+    U
 } from '../../joiner';
-import {DState, DPointerTargetable, LPointerTargetable, RuntimeAccessibleClass} from '../../joiner';
 import {SizeInput} from './SizeInput';
-import JsEditor from "../rightbar/jsEditor/JsEditor";
-import JavascriptEditor from "../rightbar/jsEditor/JavascriptEditor";
+import {JavascriptEditor} from "../editors/languages";
 
 // private
 interface ThisState {
@@ -78,8 +82,8 @@ class GenericInputComponent extends PureComponent<AllProps, ThisState/*undefined
         }
         else {
             if (typeof info.type === 'string') {
-                if (info.type.indexOf('Function') === 0) type = 'Function';
-                else type = info.type;
+                if (info.type.toLowerCase().indexOf('function') === 0) type = 'Function';
+                else type = info.type as any;
             }
             else {
                 if (!info.type) { Log.exDevv('missing __info_of__ type for ' + d.className + '.' + this.props.field, {d, info, props: this.props}); return <></>}
@@ -108,6 +112,7 @@ class GenericInputComponent extends PureComponent<AllProps, ThisState/*undefined
             if (info.max !== undefined) otherProps.max = info.max;
             else otherProps.max = info.positive === false ? max/2 - 1 : max-1; // assume true if non specified
         }
+
         let label: ReactNode = info.label || this.props.field;
         if (typeof label === "string") label = U.uppercaseFirstLetter(info.label || this.props.field);
 
@@ -119,7 +124,7 @@ class GenericInputComponent extends PureComponent<AllProps, ThisState/*undefined
             case 'point': case 'graphpoint': case 'size': case 'graphSsize':
                 return <SizeInput {...otherProps} data={l} field={this.props.field} label={label} />;
             case 'text':
-                return <TextArea inputClassName={'input my-auto ms-auto '} {...otherProps} className={(this.props.rootClassName||'')+' '+(this.props.className||'')}
+                return <TextArea inputClassName={'input my-auto ms-auto '} {...otherProps as any} className={(this.props.rootClassName||'')+' '+(this.props.className||'')}
                                  data={this.props.data} field={this.props.field}
                                  jsxLabel={label} tooltip={this.props.tooltip} />;
             case 'function':
@@ -132,7 +137,7 @@ class GenericInputComponent extends PureComponent<AllProps, ThisState/*undefined
                                          height={this.props.height}
                                          {...otherProps as any /*not working? i had to list them all*/}  />;
             case 'eenum':
-                return <Select inputClassName={'my-auto ms-auto select'} {...otherProps} className={this.props.rootClassName}
+                return <Select inputClassName={'my-auto ms-auto select'} {...otherProps as any} className={this.props.rootClassName}
                                data={this.props.data} field={this.props.field} options={enumOptionsJSX}
                                jsxLabel={label} tooltip={this.props.tooltip} />;
                 // <input> natives
@@ -185,8 +190,9 @@ class GenericInputComponent extends PureComponent<AllProps, ThisState/*undefined
                 break;
             case ShortAttribETypes.EDate.toLowerCase(): type = 'datetime-local'; break;
         }
+        let className = (this.props.className || '') + ' ' + ( this.props.rootClassName||'');
         // delete otherProps.field; delete otherProps.data; delete otherProps.infoof;
-        return <Input inputClassName={'my-auto ms-auto input'} {...otherProps} className={this.props.rootClassName}
+        return <Input {...otherProps} className={className}
                       data={this.props.data} field={this.props.field}
                       jsxLabel={label} tooltip={this.props.tooltip} type={type as any}/>;
     }

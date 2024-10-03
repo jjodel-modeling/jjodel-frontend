@@ -27,11 +27,11 @@ view{
   display: inline-block;
 }
 .monospace{
-  font-family: Consolas, "Courier New", monospace;
+  font-family: Lekton, "Courier New", monospace;
 }
 .toolbar-item>span{
   white-space: nowrap;
-  font-family: Consolas, "Courier New", monospace;
+  font-family: Lekton, "Courier New", monospace;
 }
 label{
   cursor: inherit;
@@ -89,6 +89,10 @@ font-weight: 900 !important;
   min-height:2px;
 }
 
+.scrollable{
+  height: 100%;
+}
+
 .REACT-ROOT.debug{
   [data-nodetype]{
     &:hover::after{
@@ -103,6 +107,12 @@ font-weight: 900 !important;
       // color: white;
       z-index: 100000;
     }
+  }
+  [data-nodetype]:has(>.overlap) {
+    width: 100%;
+    height: 100%;
+    position: absolute
+
   }
   [data-nodetype="Field"]:hover::after {
       top: unset !important;
@@ -230,7 +240,12 @@ svg.hoverable {
     }
   }
 }
-
+.draggable-child-mode{
+  left: 0 !important;
+  top: 0 !important;
+  transform: none !important;
+  position: relative !important;
+}
 //.EdgePoint{ transform: translate(-50%, -50%); }
 
 /*
@@ -301,7 +316,49 @@ input, textarea, [contenteditable], pre, .console-output-container, .selectable{
   }
   // border-radius: 7.5px;
 }
-
+.bx:before {
+  line-height: 1;
+  vertical-align: -.125em;
+}
 .dock-content .dock-tabpane:has(.GraphContainer){
   overflow-y: hidden;
+}
+.text-icon{
+  &::before{
+    content: attr(data-val);
+    text-transform: capitalize;
+    font-variant: normal;
+    // font-weight: normal;
+    font-style: normal; // removes italic
+  }
+}
+.Graph, .GraphVertex{
+  --zoom-x: 1;
+  --zoom-y: 1;
+}
+//.Vertex, .GraphVertex, .EdgePoint, .VoidVertex,
+[data-nodetype] {
+  left: var(--left) !important;
+  top: var(--top) !important;
+}
+.Edge, .VoidEdge{
+  left: calc( -1 * var(--left)) !important;
+  top: calc( -1 * var(--top)) !important;
+}
+.debug-mark{
+  ::before{
+    content: attr(data-key);
+    float: top;
+  }
+  ::after{
+    content: attr(data-label); // todo: concat coordinates?
+    float: bottom;
+  }
+}
+
+.router-wrapper{
+  flex-grow: 1;
+  min-height: 0;
+  display: flex;
+  flex-flow: column;
 }

@@ -163,6 +163,12 @@ export class DState extends DPointerTargetable{
     ////////////////     flags shared, but handled locally      /////////////////////////////
 
     /* RECOMPILES MODULE */
+    NODES_RECOMPILE_labels: Pointer<DGraphElement>[] = [];
+    NODES_RECOMPILE_longestLabel: Pointer<DGraphElement>[] = [];
+
+    VIEWS_RECOMPILE_labels: Pointer<DViewElement>[] = [];
+    VIEWS_RECOMPILE_longestLabel: Pointer<DViewElement>[] = [];
+
     VIEWS_RECOMPILE_onDataUpdate: Pointer<DViewElement>[] = [];
 
     VIEWS_RECOMPILE_onDragStart: Pointer<DViewElement>[] = [];
@@ -197,24 +203,28 @@ export class DState extends DPointerTargetable{
     topics: Dictionary<string, unknown> = {};
 
     advanced: boolean = false;
+    alert: string = '';
 
 
     static fixcolors(){
         (window as any).tinycolor = tinycolor;
         let tofix = ["tetrad", "triad", "splitcomplement"];
         for (let f of tofix) {
-            tinycolor.prototype[f + "0"] = tinycolor.prototype[f];
-            tinycolor.prototype[f] = function (){ let a = this.getAlpha(); return this[f+'0']().map((t: Instance) => t.setAlpha(a)); }
+            let f0 = f + '0';
+            if (tinycolor.prototype[f0]) return;
+            tinycolor.prototype[f0] = tinycolor.prototype[f];
+            tinycolor.prototype[f] = function (){ let a = this.getAlpha(); return this[f0]().map((t: Instance) => t.setAlpha(a)); }
         }
     }
     static init(store?: DState): void {
         this.fixcolors();
         BEGIN()
-        const viewpoint = DViewPoint.new2('Default', '', (vp)=>{ vp.isExclusiveView = false; }, true, 'Pointer_ViewPointDefault');
-        const validationViewpoint = DViewPoint.new2('Validation default', '', (vp)=>{ vp.isExclusiveView = false; vp.isValidation = true;}, true, 'Pointer_ViewPointValidation');
+        const viewpoint = DViewPoint.newVP('Default', undefined,true, 'Pointer_ViewPointDefault');
+        const validationViewpoint = DViewPoint.newVP('Validation default',
+            (vp)=>{ vp.isExclusiveView = false; vp.isValidation = true;}, true, 'Pointer_ViewPointValidation');
 
         Log.exDev(viewpoint.id !== Defaults.viewpoints[0], "wrong vp id initialization", {viewpoint, def:Defaults.viewpoints});
-        const views: DViewElement[] = makeDefaultGraphViews(viewpoint.id, validationViewpoint.id);
+        const views: DViewElement[] = makeDefaultGraphViews(viewpoint, validationViewpoint);
 
         for (let view of views) { CreateElementAction.new(view); }
 
@@ -247,9 +257,9 @@ export class DState extends DPointerTargetable{
 }
 
 
-function makeDefaultGraphViews(vp: Pointer<DViewPoint>, validationVP: Pointer<DViewPoint>): DViewElement[] {
+function makeDefaultGraphViews(vp: DViewPoint, validationVP: DViewPoint): DViewElement[] {
 
-    let errorOverlayView: DViewElement = DViewElement.new2('Semantic error view', DV.semanticErrorOverlay(), (v) => {
+    let errorOverlayView: DViewElement = DViewElement.new2('Generic error view', DV.semanticErrorOverlay(), validationVP, (v) => {
         v.jsCondition = 'let nstate = node?.state || {};\nObject.keys(nstate).filter(k => k.indexOf("error_")===0).map(k=>nstate[k]).join(\'\\n\').length>0';
         v.usageDeclarations = "(ret)=>{\n" +
         "// ** preparations and default behaviour here ** //\n" +
@@ -261,79 +271,41 @@ function makeDefaultGraphViews(vp: Pointer<DViewPoint>, validationVP: Pointer<DV
         "\n}"
         v.isExclusiveView = false;
         v.css =
-`&.mainView { text-decoration-line: spelling-error; }
+`/* -- v2.0 - */
+&.mainView { text-decoration-line: spelling-error; }
 &.decorativeView {
     text-decoration-line: spelling-error;
     
     .overlap{
-      outline: 4px solid var(--background-3);
+      outline: 1px dotted var(--failure);
       display: flex;
     }
+
     .error-message{
-        color: var(--color-3);
-        background: var(--background-3);
-        border-radius: 0 16px 16px 0;
+        color: var(--accent);
+        background: var(--bg-2-5);
+        border-radius: var(--radius);
         margin: auto;
-        padding: 8px;
+        padding: 8px 14px 16px 10px;
         position:absolute;
         top:50%; right:0;
-        transform: translate(calc(100% + 3px), calc(-50%));
-    }
-}`
-    }, false, validationVP, 'Pointer_ViewOverlay' );
+        transform: translate(calc(100% + 20px), calc(-50%));
 
-    let anchorView: DViewElement = DViewElement.new2('Anchors', DV.anchorJSX(), (v) => {
-        v.isExclusiveView = false;
-        v.palette={'anchor-': U.hexToPalette('#77f', '#f77', '#007'),
-            'anchor-hover-': U.hexToPalette('#7f7', '#a44', '#070')}
-        v.usageDeclarations = "(ret)=>{ // scope: data, node, view, state, \n" +
-            "// ** preparations and default behaviour here ** //\n" +
-            "// add preparation code here (like for loops to count something), then list the dependencies below.\n" +
-            "// ** declarations here ** //\n" +
-            "ret.anchors = data && node.anchors;\n"+
-            "ret.dragAnchor = node.events.dragAnchor; // @autogenerated, do not edit\n"+
-            "ret.assignAnchor = node.events.assignAnchor; // @autogenerated, do not edit\n"+
-            "}";
-        v.events = {
-            dragAnchor: '(coords /*Point*/, anchorName /*string*/)=>{\n' +
-                '\tconst updateAnchor = {};\n'+
-                '\tupdateAnchor[anchorName] = coords;\n'+
-                '\tnode.anchors=updateAnchor;\n'+
-                '}',
-            assignAnchor: '(anchorName /*string*/)=>{\n' +
-                '\tnode.assignEdgeAnchor(anchorName);\n'+
-                '}'}
-        v.css = `
-.anchor.valid-anchor{
-    display:block;
-}
-
-.anchor{
-    display:none;
-    position: absolute;
-    background-color: var(--anchor-1);
-    outline: 2px solid var(--anchor-3);
-    transform: translate(-50%, -50%);
-    pointer-events: all;
-    cursor: crosshair;
-    
-    &:hover{
-        background-color: var(--anchor-hover-1);
-        outline: 2px solid var(--anchor-hover-3);
     }
-    &.active-anchor{
-        background-color: var(--anchor-2);
-        &:hover{
-            background-color: var(--anchor-hover-2);
-        }
+    .error-message::before {
+      position: relative;
+      top: 4px;
+      font-family: bootstrap-icons;
+      font-size: 1.2rem;
+      content: '\\F333';
+      margin-right: 10px;
+      padding-top: 10px!important;
     }
 }
-
-
 `
-    }, false, vp, 'Pointer_ViewAnchors' );
+    }, false, 'Pointer_ViewOverlay' );
 
-    let errorCheckName: DViewElement = DViewElement.new2('Naming error view', DV.invisibleJsx(), (v) => {
+    let errorCheckName: DViewElement = DViewElement.new2('Naming error view', DV.invisibleJsx(), validationVP, (v) => {
         v.isExclusiveView = false;
         v.usageDeclarations = "(ret)=>{ // scope: data, node, view, state, \n" +
             "// ** preparations and default behaviour here ** //\n" +
@@ -349,9 +321,9 @@ if (name.length === 0 && type !== "shapeless") err = type + "es must be named.";
 else if (!name[0].match(/[A-Za-z_$]/)) err = type + " names must begin with an alphabet letter or $_ symbols.";
 else if (!name.match(/^[A-Za-z_$]+[A-Za-z0-9$_\\s]*$/)) err = type + " names can only contain an alphanumeric chars or or $_ symbols";
 node.state = {error_naming:err};
-`;}, false, validationVP, 'Pointer_ViewCheckName' );
+`;}, false, 'Pointer_ViewCheckName' );
 
-let errorCheckLowerbound: DViewElement = DViewElement.new2('Lowerbound error view', DV.invisibleJsx(), (v) => {
+let errorCheckLowerbound: DViewElement = DViewElement.new2('Lowerbound error view', DV.invisibleJsx(), validationVP, (v) => {
             // v.jsCondition = '(data, node)=> {\nnode.state.errors?.length>0';
             v.appliableToClasses = ['DValue'];
             v.isExclusiveView = false;
@@ -368,7 +340,7 @@ if (missingLowerbound > 0) err = (data.className.substring(1))\n
  \t\t+ ' Lowerbound violation, missing ' + missingLowerbound + ' values.';\n
 node.state = {error_lowerbound: err};\n
 `;
-    }, false, validationVP, 'Pointer_ViewLowerbound' );
+    }, false, 'Pointer_ViewLowerbound' );
     // errorOverlayView.oclCondition = 'context DValue inv: self.value < 0';
 
     let valuecolormap: GObject = {};
@@ -385,19 +357,30 @@ node.state = {error_lowerbound: err};\n
     valuecolormap[ShortAttribETypes.EVoid] = "gray";
 
 
-    let voidView: DViewElement = DViewElement.new('Void', DV.voidView(), undefined, '', '', '',
-        [], '', undefined, false, true, vp);
-    // voidView.appliableToClasses=["VoidVertex"];
-    voidView.adaptWidth = true; voidView.adaptHeight = true;
-
+    let voidView: DViewElement = DViewElement.new2('Fallback', DV.fallbackView(), vp, undefined, false, 'fallback');
 
 
     let edgeViews: DViewElement[] = [];
     let size0: GraphPoint = new GraphPoint(0, 0), size1: GraphPoint = new GraphPoint(12, 12), size2: GraphPoint = new GraphPoint(18, 12);
 
 
+    let model = DefaultViews.model(vp);
+    let packagee = DefaultViews.package(model);
+    let classs = DefaultViews.class(packagee);
+    let enumm = DefaultViews.enum(packagee);
+    let attr = DefaultViews.attribute(classs);
+    let ref = DefaultViews.reference(classs);
+    let op = DefaultViews.operation(classs);
+    let par = DefaultViews.parameter(op);
+    let lit = DefaultViews.literal(enumm);
+    let obj = DefaultViews.object(model);
+    /* ALFONSO */
+    let single = DefaultViews.singleton(model);
+    let val = DefaultViews.value(obj);
+    let anchorView = DefaultViews.anchor(model);
+
     function makeEdgeView(name: string, type: EdgeHead, headSize: GraphPoint | undefined, tailSize: GraphPoint | undefined, dashing: boolean): DViewElement{
-        let ev = DV.edgeView(type, headSize || size0, tailSize || size0, dashing ? "10.5,9,0,0" : undefined, vp, name);
+        let ev = DV.edgeView(type, headSize || size0, tailSize || size0, dashing ? "10.5,9,0,0" : undefined, model, name);
         edgeViews.push(ev);
         return ev;
     }
@@ -418,9 +401,12 @@ node.state = {error_lowerbound: err};\n
     // nb: Error is not a view, just jsx. transform it in a view so users can edit it
 
 
-    let dv_subviews = [DefaultViews.model(vp), DefaultViews.package(vp), DefaultViews.class(vp), DefaultViews.enum(vp),
-        DefaultViews.attribute(vp), DefaultViews.reference(vp), DefaultViews.operation(vp), DefaultViews.parameter(vp),
-        DefaultViews.literal(vp), DefaultViews.object(vp), DefaultViews.value(vp), anchorView, voidView, ...edgeViews, DefaultViews.edgepoint(vp)];
+
+    let dv_subviews = [model, packagee, classs, enumm, attr, ref, op, par,
+        lit, obj, val, single, voidView,
+        ...edgeViews,
+        DefaultViews.edgepoint(model),
+        anchorView];
 
     let validation_subviews = [errorOverlayView, errorCheckLowerbound, errorCheckName];
     // SetFieldAction.new(vp, 'subViews', U.objectFromArrayValues(dv_subviews.map(dv=>dv.id), 1.5));

@@ -1,24 +1,88 @@
 .context-menu {
+
   position: absolute;
   z-index: 1001;
   top: 9%;
-  box-shadow: 0 0 2px #C0C0C0;
-  background: whitesmoke;
-  border-radius: 4px;
+  width: 200px;
+  border-radius: 8px;
   border-style: solid;
   border-width: 1px;
-  border-color: lightgray;
+  border-color: #233d4d;
   padding: 3px;
+  color: white;
+  background: #233d4d;
 }
 
-.context-menu > div >.item {
+.context-menu  div .item {
   cursor: pointer;
-  padding: 7px 30px 7px 30px;
+  margin: 0 4px 0 4px;
+  padding: 3px 8px 3px 8px;
   font-size: 12px;
+  font-weight: 200;
+
 }
 
-.context-menu > div > .item:hover {
-  background-color: #e0e0e0;
+.context-menu div hr.my-1{
+  position: relative;
+  color: #8a8a8a;
+  width: calc(100% - 10px);
+  left: 5px;
+
+}
+
+.context-menu div .item div {
+  font-size: 0.9em;
+
+  font-kerning: none;
+  float: right;
+  padding-top: 2px;
+}
+
+
+.context-menu  div .item .bi {
+  color: white!important;
+}
+
+.highlight li {
+  text-align: left;
+}
+
+.highlight > span > img {
+  margin-right: 10px;
+  border: 1px solid white;
+  border-radius: 2px;
+  background-color: white;
+}
+
+.highlight .bi {
+  color: white;
+  font-size: 1.2em;
+  padding-right: 8px!important;
+  padding-top: 2px;
+}
+
+.highlight .hidden {
+  color: var(--color);
+}
+.highlight:hover .hidden {
+  color: var(--secondary);
+}
+
+.context-menu div .item:hover {
+  background-color: var(--accent);
+  border-radius: var(--radius);
+}
+
+
+.context-menu div .submenu {
+  padding: 2px!important;
+
+  & .item {
+    font-size: 1.1em;
+    width: 100%;
+    margin-left: 2px!important;
+    margin-right: 0px;
+   }
 }
 
 .memorec-overlay {
@@ -26,7 +90,7 @@
   height: 100%;
   width: 100%;
   top: 0; left: 0;
-  z-index: 999;
+  z-index: 999999;
   background-color: rgba(0, 0, 0, 0.4);
 }
 .memorec-popup {

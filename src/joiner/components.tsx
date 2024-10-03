@@ -15,6 +15,7 @@ import {GraphsContainer, GraphsContainerComponent} from "../graph/graph/graphCon
 import {Edge, EdgeComponent} from "../graph/damedges/damedge";
 import {GenericInput} from "../components/forEndUser/GenericInput"
 import {U} from "./index";
+import { Control } from "../components/forEndUser/Control";
 // exports graphelements
 export {GraphElement, GraphElementComponent} from "../graph/graphElement/graphElement";
 export {Graph, Vertex, VoidVertex, GraphVertex, Field, EdgePoint, VertexComponent} from "../graph/vertex/Vertex"; // require overlap, graphelement
@@ -29,12 +30,10 @@ export {Edge, EdgeComponent,} from "../graph/damedges/damedge";
 export {GenericInput} from "../components/forEndUser/GenericInput"
 // other exports
 //export {DockLayoutComponent} from "../components/abstract/DockLayoutComponent";
-export {OclEditor} from "../components/rightbar/oclEditor/OclEditor";
-export {JsEditor} from "../components/rightbar/jsEditor/JsEditor";
 
-export {Input, Edit} from "../components/forEndUser/Input";
-export {TextArea} from "../components/forEndUser/TextArea";
-export {Select} from "../components/forEndUser/Select";
+export {Input, Edit, TextArea, Select} from "../components/forEndUser/Input";
+// export {TextArea} from "../components/forEndUser/TextArea";
+export {Selector} from "../components/forEndUser/Selector";
 export {View} from "../components/forEndUser/Aliases";
 export {Try} from "../components/forEndUser/Try";
 
@@ -49,7 +48,8 @@ export {LoggerComponent} from "../components/logger/loggerComponent";
 export {Overlap} from "../components/forEndUser/Overlap";
 
 export {ControlPanel} from '../components/forEndUser/ControlPanel';
-export {Popup} from '../components/popup/Popup';
+
+export {Control, Slider} from '../components/forEndUser/Control';
 
 type dict = Dictionary<string, typeof GraphElement | typeof Edge>;
 
@@ -87,4 +87,8 @@ export const GraphElements: dict = {...Graphs, ...Vertexes, ...Fields, ...Edges}
 for (let key in GraphElements) if (!(GraphElements as any)[key]) { console.log({GraphElements, v:(GraphElements as any)[key]}); throw new Error("wrong initialization fo components"); }
 // U.objectMergeInPlace(GraphElements, Graphs, Edges as any, Vertexes, Fields, {Graphs, Edges, Vertexes, Fields});
 // console.info('components loaded');
-export {Measurable, MeasurableComponent} from "../components/forEndUser/Measurable";
+export {Measurable, MeasurableComponent, ScrollableComponent, Scrollable, Draggable, Resizable, Rotatable} from "../components/forEndUser/Measurable";
+
+// icons
+export * as Tb from 'react-icons/tb';
+export * as Fa from 'react-icons/fa';

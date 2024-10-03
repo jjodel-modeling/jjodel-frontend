@@ -10,7 +10,6 @@ class DockManager {
     static async open(group: 'models'|'editors', tab: TabData): Promise<void> {
         if(!DockManager.dock) return;
         const index = (group === 'models') ? 0 : 1;
-        // await U.sleep(1); // damiano why?
         console.log("TabManager open()", group, tab);
         DockManager.dock.dockMove(tab, DockManager.dock.getLayout().dockbox.children[index], 'middle');
     }

@@ -4,12 +4,14 @@ import {NotBool} from "../joiner/types";
 
 export type LoggerType = "l" | "i" | "w" | "e" | "ex" | "eDev" | "exDev";
 export class LoggerCategoryState{
+    static counter: number = 0;
     category: LoggerType;
     time: number;
     raw_args: any[];
     short_string: string;
     long_string: string;
     exception?: Error
+    key: string | number;
 
 
     constructor(args: any[], short_string: string, cat: LoggerType, exception?: Error) {
@@ -19,6 +21,7 @@ export class LoggerCategoryState{
         this.short_string = short_string;
         this.long_string = '';
         this.exception = exception;
+        this.key = (LoggerCategoryState.counter++); // + '_' + this.time + '_' + this.short_string;
 
         // this.long_string = JSON.stringify(U.cropDeepObject(args, 10, 20, 45, 35, 5), null, '\t');
         /*

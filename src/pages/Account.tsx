@@ -3,16 +3,104 @@ import {Dashboard} from './components';
 import {FakeStateProps} from '../joiner/types';
 import React, {Component, Dispatch, ReactElement} from "react";
 import {connect} from "react-redux";
+import { Edit, EditCountry } from './components/Edit/Edit';
+
+
+
 
 function AccountComponent(props: AllProps): JSX.Element {
     const {user} = props;
     return(<Try>
         <Dashboard active={'Account'} version={props.version}>
-            <div className={'p-2'}>
-                <text className={'d-block'}><b>ID: </b>{user.id}</text>
-                <text className={'d-block'}><b>Username: </b>{user.username}</text>
-                <text className={'d-block'}><b>Projects: </b>{user.projects.length}</text>
+            <>
+            <div className={'p-2 edit-container'}>
+                <h2><i className="bi bi-person-square"></i> Profile</h2>
+
+                <Edit name={'name'} 
+                    label={'Name'} 
+                    type={'text'} 
+                    value={user.name} 
+                    required={true}
+                    tooltip={'Your first name.'}
+                />
+                <Edit name={'surname'} 
+                    label={'Surname'} 
+                    type={'text'} 
+                    value={user.surname} 
+                    required={true}
+                    tooltip={'Your family name.'}
+                />
+                <Edit name={'nickname'} 
+                    label={'Nickname'} 
+                    type={'text'} 
+                    value={user.nickname} 
+                    required={true}
+                    tooltip={'Your nickname, it will be used as a short form for addressing you.'}
+                />
+                <Edit name={'email'} 
+                    label={'Email'} 
+                    type={'email'} 
+                    value={user.email} 
+                    disabled={true}
+                    tooltip={'Your email, it is not possible to change it.'}
+                />
+                <Edit name={'affiliation'} 
+                    label={'Affiliation'} 
+                    type={'text'} 
+                    value={user.affiliation}
+                    required={true}
+                    tooltip={'Your current affiliation.'}
+                />
+                <Edit name={'country'} 
+                    label={'Country'} 
+                    type={'country'} 
+                    value={user.country}
+                    tooltip={'Select your affiliation country.'}
+                />
+                
+                <Edit name={'newsletter'} 
+                    label={'Newsletter'} 
+                    type={'checkbox'} 
+                    value={user.newsletter+''}
+                    tooltip={'Select it if you want to receive low-intensity updates from us (e.g., new releases, new learning and teaching material, and the likes).'}
+                />
+
+                <button className="btn alert-btn my-2  px-4 space-above">save</button>
             </div>
+            <div className={'p-2 edit-container space-above'}>
+                <div className={'password-container'}>
+                    <h3><i className="bi bi-fingerprint"></i> Password</h3>
+
+                    <Edit name={'password'} 
+                        label={'Password'} 
+                        type={'password'} 
+                        value={'user.password'}                 
+                    />
+                    <Edit name={'password'} 
+                        label={'New Password'} 
+                        type={'password'} 
+                        value={'user.password'}
+                        className={'space-above small'}                 
+                    />
+                    <Edit name={'password'} 
+                        label={'Confirm Password'} 
+                        type={'password'} 
+                        value={'user.password'}                 
+                    />
+                    <button className="btn alert-btn my-2  px-4 space-above">change password</button>
+                </div>
+
+
+                {/* <text className={'d-block'}><b>Name: </b>{user.name}</text>
+
+                <text className={'d-block'}><b>Surname: </b>{user.surname}</text>
+                <text className={'d-block'}><b>Nickname: </b>{user.nickname}</text>
+                <text className={'d-block'}><b>Email: </b>{user.email}</text>
+                <text className={'d-block'}><b>Country: </b>{user.country}</text>
+                <text className={'d-block'}><b>Affiliation: </b>{user.affiliation}</text>
+                <text className={'d-block'}><b>Newsletter: </b>{user.newsletter + ''}</text>*/}
+            </div>
+            </>
         </Dashboard>
     </Try>);
 }

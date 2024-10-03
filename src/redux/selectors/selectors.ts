@@ -366,11 +366,6 @@ export class Selectors{
         return undefined;
     }
 
-
-    // todo: idea, set query complexity = explicitpriority amd autoset explicit priority to query lemgth
-    private static getQueryComplexity = (query: string) => query.length; // todo: the more "or" and navigations there are, the more a query is "complex", the more the query match is a priority.
-
-
     static getAllGraphElementPointers(): Pointer<DGraphElement>[] {
         // graphelements = fields;
         let state: DState = store.getState();
@@ -391,7 +386,10 @@ export class Selectors{
             explicitprio = (dview.jsCondition?.length || 1) + (dview.oclCondition?.length || 1);
         } else explicitprio = dview.explicitApplicationPriority;
 
-        return entry.viewPointMatch * entry.metaclassScore * pvScore * explicitprio;
+        //console.log("getFinalScore", {entry, vid, dview, explicitprio, ep:dview.explicitApplicationPriority})
+
+        let defualtViewMalus = dview.id.indexOf('View') >= 0 ? 0 : 0.1;
+        return entry.viewPointMatch * entry.metaclassScore * pvScore * explicitprio + defualtViewMalus;
         //score = precoditiom * paremtview(comfiguravle) * (explicitprio = jsValid*jslemgth + oclvalid*ocllemgth)
         // or if jscomditiom returmed mumver --> * jsscore
     }

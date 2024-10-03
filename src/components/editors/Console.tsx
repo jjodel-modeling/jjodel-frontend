@@ -1,29 +1,43 @@
 import {
+    DEdge,
     DGraphElement,
     Dictionary,
     DState,
-    GObject, LGraphElement, LModelElement,
+    GObject,
+    LGraphElement,
+    LModelElement,
     Log,
-    LPointerTargetable, LViewElement,
-    Pointer, RuntimeAccessibleClass,
+    LPointerTargetable,
+    LViewElement,
+    Pointer,
+    RuntimeAccessibleClass,
     transientProperties,
     U,
     windoww
 } from '../../joiner';
 import {FakeStateProps} from '../../joiner/types';
-import React, {Component, Dispatch, PureComponent, ReactElement} from 'react';
+import React, {Component, Dispatch, PureComponent, ReactElement, ReactNode} from 'react';
 import {connect} from 'react-redux';
-import './style.scss';
-import ReactDOM from "react-dom";
 
-var Convert = require('ansi-to-html');
+import './style.scss'; // <-- tenuto per retro-compatibilità ma dovrebbe sparire
+import './editors.scss'; // <-- stile comune a tutte le tab editor (idealmente da tenere leggero)
+import './console.scss'; // <-- stile di questa tab
+import ReactDOM from "react-dom";
+import {Empty} from "./Empty";
+import {Tooltip} from "../forEndUser/Tooltip";
+
+const Convert = require('ansi-to-html');
 
 let ansiConvert = (window as any).ansiConvert;
 if (!ansiConvert) (window as any).ansiconvert = ansiConvert = new Convert();
 
 class ThisState{
-    expression!: string;
-    output: any;
+    expression: string = '';
+    output: any = null;
+    expressionIndex: number = 0;
+    expressionHistory: string[] = [''];
+    initialState: boolean = true;
+    time: number = 0;
 }
 
 // trasformato in class component così puoi usare il this nella console. e non usa accidentalmente window come contesto
@@ -32,20 +46,26 @@ let hiddenkeys = ["jsxString", "pointedBy", "clonedCounter", "parent", "_subMaps
 function fixproxy(output: any/*but not array*/, hideDKeys: boolean = true, addLKeys: boolean = true):
     { output: any, shortcuts?: GObject<'L singleton'>, comments?: Dictionary<string, string | {type:string, txt:string}>, hiddenkeys?: GObject} {
 
+    let ret: ReturnType<typeof fixproxy> = {output};
+    if (!output) return ret;
+
     let proxy: LPointerTargetable | undefined;
     if (output?.__isProxy) {
         proxy = output;
         output = output.__raw; //Object.fromEntries(Object.getOwnPropertyNames(p).map(k => [k, p[k]]));
     } else proxy = undefined;
 
-    let ret: ReturnType<typeof fixproxy> = {output};
-    switch(typeof output) {
-        case "function": return {output: U.buildFunctionDocumentation(output)};
-        default: return {output};
+    switch (typeof output) {
+        case "function": {
+            let fdata =  U.buildFunctionDocumentation(output);
+            return {output: fdata};
+        }
+        default: return ret;
         case "object":
+            // if (Array.isArray(output)) { ret.output = output; break; /* no need to go inside, it is already done at render phase */ }
             ret.output = output = {...output};
+            // if (ret.output.anchors) ret.output.anchors = JSON.stringify(ret.output.anchors);
             if ((addLKeys && proxy)) {
-                console.log("console output", {output, proxy});
                 let Lsingleton: GObject<'L singleton'> = (RuntimeAccessibleClass.get(output?.className)?.logic?.singleton) || {};
                 let comments: Dictionary<string, string | {type:string, txt:string}> = {};
                 ret.shortcuts = {...Lsingleton};
@@ -58,6 +78,11 @@ function fixproxy(output: any/*but not array*/, hideDKeys: boolean = true, addLK
                         delete ret.shortcuts[key];
                         continue;
                     } else { if (ret.shortcuts[key] === undefined) ret.shortcuts[key] = ''; }
+                    if (key.indexOf("info") >=0 && key.indexOf("of") >=0){
+                        Log.eDevv('Possible error on __info_of__ misnamed as '+key+', if the name was intentional' +
+                            ' and not an Info object add an allowal rule here.');
+                        continue;
+                    }
                     if (Lsingleton["__info_of__" + key]) comments[key] = Lsingleton["__info_of__" + key];
                     if (comments[key]) continue; // if explicitly commented, i will not attempt to generate documentation.
                     let entryvalue = Lsingleton[key];
@@ -82,22 +107,29 @@ function fixproxy(output: any/*but not array*/, hideDKeys: boolean = true, addLK
             }
             break;
     }
+
+    //@ts-ignore
+    ret ={...ret, shortcuts: undefined, comments: undefined, hiddenkeys: undefined};
+    console.log('kkkk',  ret);
+
     return ret;
 }
+
 
 class ConsoleComponent extends PureComponent<AllProps, ThisState>{
     public static cname: string = "ConsoleComponent";
     lastNode?: Pointer<DGraphElement>;
     constructor(props: AllProps) {
         super(props);
-        this.state = {expression:'', output: null};
+        this.state = new ThisState();
         this.change = this.change.bind(this);
         this.change(undefined);
     }
     private _context: GObject = {};
     change(evt?: React.ChangeEvent<HTMLTextAreaElement>) {
         if (!this) return; // component being destroyed and remade after code hot update
-        let expression: string | undefined = evt?.target.value.trim() || this.state.expression || '';
+        let expression0: string = (evt ? evt.target.value : this.state.expression) || '';
+        let expression: string = expression0.trim();
         let output;
         // let context = {...this.props, props: this.props}; // makeEvalContext(this.props as any, {} as any);
 
@@ -111,18 +143,77 @@ class ConsoleComponent extends PureComponent<AllProps, ThisState>{
         else {
             this._context = {...this.props, props: this.props};
         }
-        try { output = U.evalInContextAndScope(expression || 'undefined', this._context, this._context); }
+        try {
+            // if (expression === 'this') expression = 'data'; // it does a mess by taking a L-singleton with all his __info_of__ stuff
+            if (expression === 'this') output = this._context;
+            else output = U.evalInContextAndScope(expression || '<span class="console-msg">undefined</span>', this._context, this._context);
+        }
         catch (e: any) {
             console.error("console error", e);
-            output = '<span style="color:red">Invalid Syntax!<br></span>' + e.toString(); }
-        this.setState({expression, output});
+            // output = '<span class="console-error">Invalid Syntax!</span> <span class="console-error-msg">' + e.toString() + '<span>' ; }
+            output = '<span class="console-error-msg"><i class="bi bi-exclamation-square-fill"></i><span>' + e.toString() + '</span></span>' ; }
+        this.setState({expression:expression0, output });
     }
 
+    // textarea: HTMLTextAreaElement | null = null;
+    getClickableEntry(expression: string, k: string, arr?: any): JSX.Element{
+        return <li onClick={()=> {
+            let isnum = !isNaN(+k);
+            let isregular: boolean = isnum ? true : /\w/.test(k);
+            let append: string;
+            if (isnum) append = '['+k+']';
+            else if (isregular) append = '.'+k;
+            else append = '['+JSON.stringify(k)+']';
+            this.setState({expression: (expression ? expression + append : k)}/*, ()=> { this.change(); }*/);
+        }}>{k}{arr && arr[k] ? <>:{arr[k]}</> : undefined}</li>;
+    }
+
+    outputhtml: HTMLElement | null = null;
+    setState(s: GObject<Partial<ThisState>> | null, callback?: (...a:any) => any): void{
+        if (s){
+            if (s.initialState) {
+                delete s.initialState;
+                return super.setState(s as any);
+            }
+            let s0: GObject<ThisState> = {...s} as any;
+            let olds = this.state;
+            if (s0.expressionIndex && s0.expressionIndex !== olds.expressionIndex) s.expression = olds.expressionHistory[s0.expressionIndex];
+            if (s0.expressionHistory && s0.expressionHistory !== olds.expressionHistory){
+                let len = s0.expressionHistory.length;
+                if (len > 10) s.expressionHistory = s0.expressionHistory.slice(len - 10, len);
+            }
+            if (s0.expression && s0.expression !== olds.expression) {
+                let time = new Date().getTime();
+                let oldtime = olds.time;
+                Log.exDev(s0.expressionIndex !== undefined, 'cannot set both index and expression together');
+                let i = s.expressionIndex ?? olds.expressionIndex;
+                let slice: string[];
+                if (time - oldtime < 1000) {
+                    slice = olds.expressionHistory.slice(0, i);
+                }
+                else {
+                    slice = olds.expressionHistory.slice(0, i+1);
+                    s.expressionIndex = i + 1;
+                }
+                s.time = time;
+                s.expressionHistory = [...slice, s0.expression];
+                console.log('setstate', {olds: {...olds}, s, slice, i, s0});
+            }
+            if (s.expression !== olds.expression && !('output' in s)) {
+                let call0 = callback;
+                callback = () => { call0?.(); this.change(); }
+            }
+        }
+        super.setState(s as any, callback);
+    }
     render(){
-        const data = this.props.data;/*
-        const [expression, setExpression] = useStateIfMounted('data');
+        /*const [expression, setExpression] = useStateIfMounted('data');
         const [output, setOutput] = useStateIfMounted('');*/
-        if (!this.props.node) return(<></>);
+
+        if (!this.props.node) return <Empty msg={"Select a node."} />;
+        let expression = this.state.expression.trim();
+        if (expression === 'this') expression = 'data';
+        const data = this.props.data;
         if (this.lastNode !== this.props.node.id) this.change(); // force reevaluation if selected node changed
         this.lastNode = this.props.node.id;
 
@@ -136,15 +227,15 @@ class ConsoleComponent extends PureComponent<AllProps, ThisState>{
         let comments: Dictionary<string, string | {type:string, txt:string}> | undefined = undefined;
         let hidden: Dictionary<string, string> | undefined = undefined;
         let jsxComments: Dictionary<string, JSX.Element[]> = {};
+        let shortcutsjsx: ReactNode = undefined;
         try {
             if (Array.isArray(output)){
                 comments = {"separator": '<span>Similar to <a href={"https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/join"}>Array.join(separator)</a>' +
                         ', but supports array of JSX nodes and JSX as separator argument.</span>'};
                 shortcuts = {"separator": ""};
             }
-            if (Array.isArray(output) && output[0]?.__isProxy) {
+            if (Array.isArray(output)) {
                 output = output.map(o => fixproxy(o).output);
-                console.log("console result (array):", {output});
             }
             else {
                 let ret = fixproxy(output);
@@ -152,14 +243,13 @@ class ConsoleComponent extends PureComponent<AllProps, ThisState>{
                 comments = ret.comments;
                 shortcuts = ret.shortcuts;
                 hidden = ret.hiddenkeys;
-                console.log("console result:", {output, ret});
             }
             // todo: as i fix the displaying of a LViewElement without replacing it with __raw,
             //  i will fix window, component and props displaying too i think they crash for props.data, props.view...
             if (output?._reactInternals) {
                 output = {"React.Component": {props:"...navigate to expand...", state:"", _isMounted:output._isMounted}}
             }
-            outstr = '<h4>Result:</h4><div class="output-row" tabindex="984">' + U.objectInspect(output)+"<span>";
+            outstr = '<h4>Result</h4><section class="group result-container"><div class="output-row" tabindex="984">' + U.objectInspect(output)+"<span>";
             let commentsPopup = "";
             if (shortcuts || comments){
                 // if(!shortcuts) shortcuts = {};
@@ -170,12 +260,12 @@ class ConsoleComponent extends PureComponent<AllProps, ThisState>{
                     if (txt && typeof txt !== "string") {
                         // try to inject jsx
                         jsxComments[commentKey] = txt;
-                        txt = "<span id='console_output_comment_" + commentKey + "' />";
+                        txt = "<span id='console_output_comment_" + commentKey + "'  class='console-msg'/>";
                         // fallback read text, that should go deep iteration, but 1 level deep should be enough.
                         // let arr: any[] = (Array.isArray(txt?.props?.children) ? txt.props.children : (txt.props.children ? [txt.props.children] : []));
                         // txt = arr.map(e => typeof e === "string" ? e : e?.props?.children + '' || '').join("");
                     }
-                    if (commentVal?.type) commentVal = "\t\t<span style='color: #999'>" + (commentVal?.type?.cname || commentVal.type)+"</span>"; // + " ~ " + txt;
+                    if (commentVal?.type) commentVal = "\t\t<span class='console-msg'>" + (commentVal?.type?.cname || commentVal.type)+"</span>"; // + " ~ " + txt;
                     // warning: unicode char but should not make a problem. 𐀹
                     commentVal += '<div class="output-comment my-tooltip">' + txt + '</div></div><div class="output-row" tabindex="984">'
 
@@ -187,14 +277,24 @@ class ConsoleComponent extends PureComponent<AllProps, ThisState>{
                     outstr = outstr.replace(regexpCloseTags,  "</span>$1");
                     outstr = U.replaceAll(outstr, "£", "$");
                 }
-                if (shortcuts) outstr += "</div><br><br><h4>Shortcuts</h4><div class=\"output-row\" tabindex=\"984\">" + U.objectInspect(shortcuts);
+
+
+                /*if (shortcuts) outstr += "</div></section><br><br>" +
+                    "<h4>Shortcuts</h4><section class='group shortcuts-container'><div class=\"output-row\" tabindex=\"984\">" + U.objectInspect(shortcuts)+"</section>";
+                */
+
+                if (shortcuts) {
+                    shortcutsjsx = <ul>{
+                        Object.keys(shortcuts).sort().map(k=>this.getClickableEntry(expression, k, shortcuts))
+                    }</ul>
+                }
                 // if (hidden) outstr +="</div><br><br><h4>Other less useful properties</h4><div class=\"output-row\" tabindex=\"984\">" + format(hidden);
                 // warning: unicode char but should not make a problem.
                 // outstr = U.replaceAll( outstr, '𐀹,\n', '],</span>\n</div><div class="output-row" tabindex="984"><span style="color:#000">');
-                outstr = U.replaceAll( outstr, '<span style="color:#000">,\n',
-                    '</span><span style="color:#000">,</span>\n</div><div class="output-row" tabindex="984"><span style="color:#000">');
-                outstr = U.replaceAll( outstr, '],\n', '],</span>\n</div><div class="output-row" tabindex="984"><span style="color:#000">');
-                outstr = U.replaceAll( outstr, '},\n', '},</span>\n</div><div class="output-row" tabindex="984"><span style="color:#000">');
+                outstr = U.replaceAll( outstr, '<span style="color:#000" class="console-msg">,\n',
+                    '</span><span style="color:#000" class="console-msg">,</span>\n</div><div class="output-row" tabindex="984"><span class="console-msg" style="color:#000">');
+                outstr = U.replaceAll( outstr, '],\n', '],</span>\n</div><div class="output-row" tabindex="984"><span class="console-msg" style="color:#000">');
+                outstr = U.replaceAll( outstr, '},\n', '},</span>\n</div><div class="output-row" tabindex="984"><span class="console-msg" style="color:#000">');
             }
             ashtml = true; }
         catch(e: any) {
@@ -203,13 +303,21 @@ class ConsoleComponent extends PureComponent<AllProps, ThisState>{
             outstr = "[circular object]: " + e.toString();
             ashtml = false;
         }
-        console.log("console result (string)", {outstr, jsxComments});
-        let contextkeys;
+        let contextkeysarr: (string)[];
+        let contextkeys: ReactNode = '';
+        if (this.state.expression.trim() === "this") contextkeys = "Warning: \"this\" in the console is aliased to data instead of the whole context of a GraphElement component.";
+
         let objraw = this.state.output?.__raw || (typeof this.state.output === "object" ? this.state.output : "[primitiveValue]") || {};
-        if (this.state.expression.trim() === "") contextkeys = ["data", "node", "view", "component"].join(", ");
-        else if (this.state.expression.trim() === "this") contextkeys = ["Warning: \"this\" will refer to the Console component instead of a GraphElement component."].join(", ");
-        else if (typeof objraw === "string") { contextkeys = "- length\n- all string functions"}
-        else contextkeys = Array.isArray(objraw) ? ["array[index]", ...Object.keys(Array.prototype)].join(",\n") : Object.getOwnPropertyNames(objraw).join(",\n");// || []).join(", ")
+        if (this.state.expression.trim() === "") contextkeysarr = ["data", "node", "view", "component"];
+        else if (typeof objraw === "string") { contextkeysarr = Object.keys(String.prototype); }
+        else contextkeysarr = (Array.isArray(objraw) ?
+                [...(Object.keys(objraw) as any as number[]).filter(k => (k) <= 10).map(k=>k===10 ? '...' : ''+k), ...Object.keys(Array.prototype)]
+                : Object.getOwnPropertyNames(objraw)) || [];
+
+        contextkeys = <ul>{
+            contextkeysarr.sort().map(k=>this.getClickableEntry(expression, k))
+        }</ul>;
+
 
         let injectCommentJSX = () => {
             try{ for (let key in jsxComments) {
@@ -222,17 +330,64 @@ class ConsoleComponent extends PureComponent<AllProps, ThisState>{
         }
         setTimeout(injectCommentJSX, 1)
         this.setNativeConsoleVariables();
+        windoww.output = output;
+        windoww.contextkeysarr = contextkeysarr;
+        windoww.contextkeys = contextkeys;
+        const undo = ()=>{
+            let expressionIndex = Math.max(0, this.state.expressionIndex - 1);
+            if (expressionIndex === this.state.expressionIndex) return;
+            this.setState({ expressionIndex })
+        }
+        const redo = ()=>{
+            const expressionHistory = this.state.expressionHistory;
+            let expressionIndex = Math.min(expressionHistory.length-1, this.state.expressionIndex + 1);
+            if (expressionIndex === this.state.expressionIndex) return;
+            this.setState({ expressionIndex })
+        }
+        let canredo = this.state.expressionIndex < this.state.expressionHistory.length - 1;
+        let canundo = this.state.expressionIndex > 0;
 
-        return(<div className={'w-100 h-100 p-2'}>
-            <textarea spellCheck={false} className={'p-0 input mb-2 w-100'} onChange={this.change} />
+        return(<div className={'w-100 h-100 p-2 console'}>
+            <h1>
+                On {((data as GObject)?.name || "model-less node (" + this.props.node?.className + ")") + " - " + this.props.node?.className}
+            </h1>
+            <div className='console-terminal p-0 mb-2 w-100'>
+                <div className='commands'>
+                    <i onClick={(e) => { this.setState({expression:''})} } title={'Empty console'} className="bi bi-slash-circle" />
+                    <i onClick={(e) => {
+                        if (!this.state.expression.trim()) { return Tooltip.show('Nothing to copy', undefined, undefined, 2); }
+                        let s = this.outputhtml?.innerText || '';
+                        s = s.substring('Result'.length).trim();
+                        U.clipboardCopy(s, ()=> Tooltip.show('Content copied to clipboard', undefined, undefined, 2));
+                    }} title={'Copy in the clipboard'} className="bi bi-clipboard-plus" />
+                    {/* @ts-ignore */}
+                    <i onClick={redo} title={'redo'} className={"redo bi bi-arrow-right-square" + (canredo ? '':" disabled")} />
+                    {/* @ts-ignore */}
+                    <i onClick={undo} title={'undo'} className={"undo bi bi-arrow-left-square" + (canundo ? '':" disabled")} />
+                </div>
+                <textarea id={'console'} spellCheck={false} className={'p-0 input w-100'} onChange={this.change} value={this.state.expression} ></textarea>
+            </div>
+            {false && <div>Debug history (index = {this.state.expressionIndex})
+                {this.state.expressionHistory.map((s, i) => (<>
+                        <div style={{
+                            border: '1px solid ' + (i === this.state.expressionIndex ? 'red' : 'gray'),
+                            marginTop: '5px',
+                            height: '30px'
+                        }}>{s}</div>
+                    </>
+                ))}</div>}
             {/*<label>Query {(this.state.expression)}</label>*/}
-            <label>On {((data as GObject)?.name || "model-less node (" + this.props.node?.className + ")") + " - " + this.props.node?.className}</label>
             <hr className={'mt-1 mb-1'} />
-            { this.state.expression &&  ashtml && <div className={"console-output-container"} dangerouslySetInnerHTML={ashtml ? { __html: outstr as string} : undefined} /> }
-            { this.state.expression && !ashtml && <div style={{whiteSpace:"pre"}}>{ outstr }</div>}
-            <label className={"mt-2"}>Context keys:</label>
+            { this.state.expression &&  ashtml && <div className={"console-output-container console-msg"}
+                        ref={(e)=>this.outputhtml = e} dangerouslySetInnerHTML={ashtml ? { __html: outstr as string} : undefined} /> }
+
+            { this.state.expression && !ashtml && <div className={"console-output-container console-msg"}
+                        ref={(e)=>this.outputhtml = e} style={{whiteSpace:"pre"}}>{ outstr }</div>}
+
+            {shortcutsjsx && <><h4>Shortcuts</h4><section className='group shortcuts-container'>{shortcutsjsx}</section></>}
+            <label className={"context-keys mt-2"}>Context keys</label>
             {
-                <div style={{whiteSpace:"pre"}}> {contextkeys} </div>
+                <section className={'group context-keys-list'} style={{whiteSpace:"pre"}}>{contextkeys} </section>
             }
         </div>)
     }

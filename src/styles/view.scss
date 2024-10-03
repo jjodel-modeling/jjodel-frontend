@@ -16,4 +16,7 @@
 .selected-by-others {
   outline: 1px dashed indigo;
 }
+.Edge.selected-by-me, .Edge.selected-by-others{
+  outline: none;
+}
 
