@@ -12,7 +12,10 @@ jobs:
     steps:
       - name: checkout
         uses: actions/checkout@v4
-      - name: build image
+      - name: build nodejs
+        run: |
+          npm run build
+      - name: build docker image
         run: |
           docker build . -t giordanotin/jjodel:latest
       - name: push image to docker hub
