@@ -88,13 +88,14 @@ export class U {
 
     static publish(topic: string, value: unknown) {
         if(!IoT.client.connected) {
-            alert('error');
+            SetRootFieldAction.new('alert', '3:Cannot connect to broker!');
             return;
         }
         IoT.client.emit('push-action', {
             topic: topic,
             value: JSON.stringify(value)
         });
+        SetRootFieldAction.new('alert', '1:Publish done!');
     }
 
     static extractValueFromTopic(obj: Dictionary, path: string) {

@@ -3,14 +3,14 @@ import {
     CompositeAction,
     DState,
     DUser,
-    GObject,
+    GObject, Input,
     LUser,
     Pointer,
     SetRootFieldAction,
     store,
     U
 } from '../../joiner';
-import {Dispatch, ReactElement, ReactNode, useState} from 'react';
+import React, {Dispatch, ReactElement, ReactNode, useState} from 'react';
 import {connect} from 'react-redux';
 import IoT from "../../iot/IoT";
 import {FakeStateProps} from "../../joiner/types";
@@ -25,8 +25,8 @@ function makeInput(label: string, type: 'text'|'number'|'password'): ReactNode {
 function BrokerEditorComponent(props: AllProps) {
     const {user} = props;
     const [connected, setConnected] = useState(IoT.client.connected);
-    const [url, setUrl] = useState('');
-    const [port, setPort] = useState(0);
+    const [url, setUrl] = useState('http://localhost');
+    const [port, setPort] = useState(1883);
     const [actions, setActions] = useState<Pointer[]>([]);
 
 
@@ -34,9 +34,9 @@ function BrokerEditorComponent(props: AllProps) {
         SetRootFieldAction.new('isLoading', true);
         IoT.client.io.opts.query = {'project': user.project?.id, 'brokerUrl': `${url}:${port}`};
         IoT.client.connect();
-        IoT.client.off('pull-action');
+        // IoT.client.off('pull-action');
         IoT.client.on('pull-action', (receivedAction: GObject<Action & CompositeAction>) => {
-            if(actions.includes(receivedAction.id)) return;
+            // if(actions.includes(receivedAction.id)) return;
             const action = Action.fromJson(receivedAction);
             console.log('Received Action from server.', action);
             action.fire();
@@ -54,25 +54,27 @@ function BrokerEditorComponent(props: AllProps) {
         setConnected(IoT.client.connected);
     }
 
-    return <section className={'p-2'}>
-        <div className={'d-flex'}>
-            <h4 className={'d-block my-auto'}>MQTT</h4>
-            <div style={{width: '15px', height: '15px'}} className={`d-block ms-2 my-auto circle ${connected ? 'bg-success' : 'bg-danger'}`}></div>
-        </div>
-        <div className={'p-1 d-flex'}>
-            <label className={'my-auto'}>Url</label>
-            <input onChange={e => setUrl(e.target.value)} type={'text'} className={'my-auto input ms-auto'} spellCheck={false} />
-        </div>
-        <div className={'p-1 d-flex'}>
-            <label className={'my-auto'}>Port</label>
-            <input onChange={e => setPort(e.target.valueAsNumber)} type={'number'} className={'my-auto input ms-auto'} spellCheck={false} />
-        </div>
-        <hr className={'my-2'} />
-        {makeInput('Username', 'text')}
-        {makeInput('Password', 'password')}
-        {!connected && <button onClick={connect} className={'mt-3 btn btn-primary w-100 p-2'}>Connect</button>}
-        {connected && <button onClick={disconnect} className={'mt-3 btn btn-primary w-100 p-2'}>Disconnect</button>}
-        <button onClick={e => U.publish('sensors/1', {test: 15, other: true})}>click</button>
+    return <section className={'properties-tab'}>
+        <div style={{position: 'absolute', bottom: 10, right: 10, width: '20px', height: '20px'}} className={`d-block ms-2 my-auto circle ${connected ? 'bg-success' : 'bg-danger'}`}></div>
+        <label className={'input-container'}>
+            <b className={'me-2'}>Url:</b>
+            <Input getter={() => url} setter={v => setUrl(String(v))} type={'text'} />
+        </label>
+        <label className={'input-container'}>
+            <b className={'me-2'}>Port:</b>
+            <Input getter={() => String(port)} setter={v => setPort(Number(v))} type={'number'} />
+        </label>
+        <label className={'input-container'}>
+            <b className={'me-2'}>Username:</b>
+            <Input getter={() => ''} setter={v => {}} type={'text'} />
+        </label>
+        <label className={'input-container'}>
+            <b className={'me-2'}>Password:</b>
+            <Input getter={() => ''} setter={v => {}} type={'text'} />
+        </label>
+        {!connected && <button onClick={connect} className={'mt-2 btn btn-primary w-25 p-2'}>Connect</button>}
+        {connected && <button onClick={disconnect} className={'mt-2 btn btn-primary w-25 p-2'}>Disconnect</button>}
+        {/*<button onClick={e => U.publish('sensors', {test: 15, other: true})}>click</button>*/}
     </section>;
 }
 interface OwnProps {}
