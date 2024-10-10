@@ -1,4 +1,4 @@
-import React, {Dispatch} from 'react';
+import React, {Dispatch, useState} from 'react';
 import './App.scss';
 import './styles/view.scss';
 import './styles/style.scss';
@@ -46,12 +46,18 @@ function App(props: AllProps): JSX.Element {
     const isLoading = props.isLoading;
     const tooltip = props.tooltip;
     let user: LUser = props.user;
+    const [loaded, setLoaded] = useState(false);
 
     useEffectOnce(() => {
         SetRootFieldAction.new('isLoading', true);
-        stateInitializer().then(() => SetRootFieldAction.new('isLoading', false));
+        stateInitializer().then(async() => {
+            await U.sleep(1);
+            setLoaded(true);
+            SetRootFieldAction.new('isLoading', false);
+        });
     });
 
+    if(!loaded) return(<></>);
     return(<>
         <div className={"router-wrapper"}>
             {isLoading && <Loader />}

@@ -43,7 +43,7 @@ function Project(props: Props): JSX.Element {
         U.refresh();
     }
     const exportProject = async() => {
-        await ProjectsApi.save(data);
+        // await ProjectsApi.save(data);
         U.download(`${data.name}.jjodel`, JSON.stringify(data.__raw));
     }
     const deleteProject = async() => {
