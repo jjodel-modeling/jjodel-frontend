@@ -1,30 +1,39 @@
 import React, {CSSProperties, Dispatch, ReactElement, ReactNode, useEffect} from 'react';
 import {connect} from 'react-redux';
 import Editor, {useMonaco} from '@monaco-editor/react';
-import {Defaults, DState, DViewElement, LViewElement, Pointer} from '../../../joiner';
+import {
+    Defaults,
+    DPointerTargetable,
+    DState,
+    DViewElement,
+    LPointerTargetable,
+    LViewElement, Overlap,
+    Pointer
+} from '../../../joiner';
 import {useStateIfMounted} from 'use-state-if-mounted';
 import {FakeStateProps} from '../../../joiner/types';
 import { CommandBar, Btn } from '../../commandbar/CommandBar';
 
 function JsEditorComponent(props: AllProps) {
-    const {view, field, placeHolder, height, title, getter, setter, jsxLabel} = props;
-    const [js, setJs] = useStateIfMounted(view.jsCondition);
-    const [show, setShow] = useStateIfMounted(props.initialExpand ? props.initialExpand(view, field) : false);
-
+    const {placeHolder, height, title, getter, setter, jsxLabel, field} = props;
+    let data: LPointerTargetable = LPointerTargetable.wrap(props.data) as any;
+    let value = getter ? getter(data, field) : ((data|| {}) as any)[field as any];
+    const [js, setJs] = useStateIfMounted(value);
+    const [show, setShow] = useStateIfMounted(props.initialExpand ? props.initialExpand(data, field) : false);
     const [expand, setExpand] = useStateIfMounted(false);
+    const monaco = useMonaco();
+    (window as any).monaco = monaco;
 
-    const readOnly = props.readonly !== undefined ? props.readonly : Defaults.check(view.id);
+    const readOnly = props.readonly !== undefined ? props.readonly : !props.debugmode && Defaults.check(data.id);
     const change = (value: string|undefined) => {
         /* save in local state for frequent changes */
-        if(value !== undefined) setJs(value);
+        if (value !== undefined) setJs(value);
     }
     const blur = () => {
         /* confirm in redux state for final state */
-        if(js && setter) setter(js);
-        else if(field) (view as any)[field] = js;
+        if (js && setter) setter(js, data, field);
+        else if(field) (data as any)[field] = js;
     }
-    const monaco = useMonaco();
-    (window as any).monaco = monaco;
 
     useEffect(() => {
         if (!monaco) return;
@@ -43,13 +52,11 @@ function JsEditorComponent(props: AllProps) {
         monaco.languages.typescript.javascriptDefaults.setEagerModelSync(true);
         monaco.languages.typescript.typescriptDefaults.addExtraLib(`declare var data: 'datatype';`);
     }, [monaco]);
+    if (!((data && field) || (getter && setter))) return(<>Either props.data & field or both getter & setter are required.</>);
 
-    let value = '';
-    if(getter) value = getter();
-    else if(placeHolder) value = placeHolder;
-    else if(field && view[field]) value = (view as any)[field];
+    if (placeHolder && !js) value = placeHolder;
 
-    const lines = (Math.round(view.oclCondition.split(/\r|\r\n|\n/).length*1.8) < 5 ? 10 : Math.round(view.oclCondition.split(/\r|\r\n|\n/).length*1.8));
+    const lines = (Math.round(value.split(/\r|\r\n|\n/).length*1.8) < 5 ? 10 : Math.round(value.split(/\r|\r\n|\n/).length*1.8));
 
     return <>
         <div style={{...(props.style || {})}} className={'cursor-pointer d-flex'} onClick={e => setShow(!show)}>
@@ -83,25 +90,28 @@ function JsEditorComponent(props: AllProps) {
 }
 interface OwnProps {
     readonly?: boolean;
-    viewID: Pointer<DViewElement, 1, 1, LViewElement>;
-    field?: keyof LViewElement;
+    data?: Pointer | DPointerTargetable | LPointerTargetable;
+    field?: string;
     placeHolder?: string;
     title?: ReactNode;
     height?: number;
     style?: CSSProperties;
     jsxLabel?: ReactNode;
-    getter?: () => string;
-    setter?: (js: string) => void;
-    initialExpand?: (data: LViewElement, field?: string) => boolean;
+    getter?: (data?:LPointerTargetable, field?: string) => string;
+    setter?: (js: string, data?:LPointerTargetable, field?: string) => void;
+    initialExpand?: (data: LPointerTargetable, field?: string) => boolean;
 }
-interface StateProps { view: LViewElement }
+interface StateProps {
+    data?: LPointerTargetable;
+    debugmode: boolean;}
 interface DispatchProps {}
-type AllProps = OwnProps & StateProps & DispatchProps;
+type AllProps = Overlap<Overlap<OwnProps, StateProps>, DispatchProps>;
 
 
 function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     const ret: StateProps = {} as FakeStateProps;
-    ret.view = LViewElement.fromPointer(ownProps.viewID);
+    ret.data = LViewElement.wrap(ownProps.data);
+    ret.debugmode = state.debug;
     return ret;
 }
 

@@ -389,8 +389,39 @@ i.bi {
   border-radius: 4px;
   padding-left: 10px;
 }
+.clearfix{
+  display: inline-block;
+  display: flow-root;
+  &::after{
+    content: "";
+    display: table;
+    clear: both;
+  }
+}
 
 
+.Pointer_ViewModel{
+  &, & [data-nodetype], & [data-nodetype] > * {
+    &:has(.css-1nmdiq5-menu) {
+      min-height: min-content !important;
+    }
+  }
+}
+// multi-select popup
+body .css-1nmdiq5-menu{
+  margin: -10px 0px;
+  padding: 18px 0px;
+  background-color: transparent;
+  box-shadow: none;
+  //position: unset;
+  position: relative;
+  z-index: 1;
+  &>*{
+    background-color: rgb(255, 255, 255);
+    border-radius: 4px;
+    box-shadow: rgba(0, 0, 0, 0.1) 0px 0px 0px 1px, rgba(0, 0, 0, 0.1) 0px 4px 11px;
+  }
+}
 // LOGIN
 
 .login {

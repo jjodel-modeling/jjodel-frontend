@@ -14,7 +14,7 @@ import {
     VertexPointers,
     ModelPointers,
     LtoD,
-    LVertex, LEdgePoint, LGraph,
+    LVertex, LEdgePoint, LGraph, MultiSelectOptGroup, UX,
 } from "../../joiner";
 import {
     Abstract,
@@ -77,7 +77,7 @@ import {
 import {ValuePointers} from "./PointerDefinitions";
 import {ShortDefaultEClasses} from "../../common/U";
 import {transientProperties} from "../../joiner/classes";
-import {ReactNode} from "react";
+import React, {ReactNode} from "react";
 
 
 @Node
@@ -2164,7 +2164,8 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
     public isSubClassOf(superClass: LClass, returnIfSameClass: boolean = true): boolean { return this.cannotCall("isSubClassOf"); }
     public isSuperClassOf(subClass: LClass, returnIfSameClass: boolean = true): boolean { return this.cannotCall("isSuperClassOf"); }
     protected get_isSubClassOf(c: Context): ((superClass: LClass, returnIfSameClass?: boolean) => boolean) {
-        return (superClass: LClass, returnIfSameClass: boolean = true) => {
+        return (superClass?: LClass, returnIfSameClass: boolean = true) => {
+            superClass = LPointerTargetable.wrap(superClass);
             if (!superClass) return false;
             if (superClass.id === c.data.id) return returnIfSameClass;
             for (let subclass of this.get_extendsChain(c)) {
@@ -2312,8 +2313,8 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
         return true;
     }
 
-    allInstances!: LValue[];
-    __info_of__allInstances: Info = {type: 'LValue[]', txt: "Instances in m1 of this class and of all subclasses."};
+    allInstances!: LObject[];
+    __info_of__allInstances: Info = {type: 'LObject[]', txt: "Instances in m1 of this class and of all subclasses."};
     protected get_allInstances(context: Context): this["instances"] {
         let sc = this.get_allSubClasses(context, true);
         return sc.flatMap( (c) => c.instances);
@@ -2616,11 +2617,22 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
 
 
     private _canExtend(c: Context, superclass: LClass, output: {reason: string, allTargetSuperClasses: LClass[]} = {reason: '', allTargetSuperClasses: []}): boolean {
+        if (!output) output = {allTargetSuperClasses:[]} as any;
+        superclass = superclass && LPointerTargetable.wrap(superclass) as any;
         if (!superclass) { output.reason = 'Invalid extend target: ' + superclass; return false; }
-        if (c.data.final) return false;
-        superclass = LPointerTargetable.wrap(superclass) as any;
-        let sealed = c.data.sealed || []
-        if (sealed.length && !sealed.includes(superclass.id)) return false;
+        let sealed = superclass.sealed || [];
+        if (sealed.length) {
+            let inSealed = false;
+            for (let allowed of sealed) if (allowed && allowed.isSubClassOf(c.proxyObject)) { inSealed = true; break; }
+            if (!inSealed) {
+                output.reason = 'sealed on attempted superclass';
+                return false;
+            }
+        }
+        if (superclass.final) {
+            output.reason = 'final on attempted superclass';
+            return false;
+        }
         const thiss: LClass = c.proxyObject;
         if (superclass.id === thiss.id) { output.reason = 'Classes cannot extend themselves.'; return false; }
         // todo: se diversi proxy dello stesso oggetto sono considerati diversi questo fallisce, in tal caso fai thiss.extends.map( l => l.id).indexof(superclass.id)
@@ -5654,14 +5666,16 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
             let isPtr: boolean = undefined as any;
             let lval: LObject | LEnumLiteral = undefined as any;
             if (val === null) val = undefined;
-            if (context.data.values[index] === val) return { success: false, reason: "identical assignment" };
+            let oldval = context.data.values[index];
+            if (oldval === val) return { success: false, reason: "identical assignment" };
+            let state = store.getState();
             if ((val as any)?.id && (val as any)?.className) {
-                lval = (val.__isProxy ? val : LPointerTargetable.wrap<DObject>(val));
-                isPtr = !!lval;
+                lval = (val.__isProxy ? val : LPointerTargetable.wrap<DObject>(val, state));
+                isPtr = !!(lval || Pointers.isPointer(oldval));//LPointerTargetable.wrap(oldval, state));
                 val = (val as any).id;
             }
             let info = (info0 || {}) as unknown as SetValueAtPositionInfoType;
-            if (isPtr === undefined) isPtr = (info.isPtr === undefined ? Pointers.isPointer(val) : info.isPtr);
+            if (isPtr === undefined) isPtr = (info.isPtr === undefined ? Pointers.isPointer(val) || Pointers.isPointer(oldval) : info.isPtr);
 
             // set sideeffect part
             if (val !== undefined) {
@@ -5719,22 +5733,27 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
 
             // clear sideeffect part
             this._clearValueAtPosition(context, index, info, true);
-
+            console.log('set value index', {index, val, isPtr});
             // actual set
             SetFieldAction.new(context.data, 'values.' + index as any, val, '', isPtr);
             if (info.setMirage !== false) SetFieldAction.new(context.data, 'isMirage', false, '', false);
 
-            // assegnato a giordano todo: wrap this and set toaster with failure message if it fails or better launch Log.w and bind toasts of different colors to Log funcs
+            // todo: wrap this func and set toaster with failure message if it fails or better launch Log.w and bind toasts of different colors to Log funcs
             return {success: true};
         }
     }
     protected set_values(val: orArr<D["values"]>, context: Context): boolean {
-        const list: D["values"] = ((Array.isArray(val)) ? val : [val]) as D["values"];
+        const list: D["values"] = (Array.isArray(val) ? val : [val]) as D["values"];
         let modified = false;
-        for (let i = 0; i < list.length; i++) {
-            modified = this.get_setValueAtPosition(context)(i, list[i], {setMirage: false} as any).success || modified;
-        }
-        if (modified) context.data.isMirage && SetFieldAction.new(context.data, 'isMirage', false, '', false);
+        list.length = Math.max(list.length, context.data.values.length);
+        TRANSACTION(()=>{
+            for (let i = 0; i < list.length; i++) {
+                let out = this.get_setValueAtPosition(context)(i, list[i], {setMirage: false} as any);
+                modified = out.success || modified;
+                console.log('set_values', {list, i, modifiedreason:out});
+            }
+            if (modified) context.data.isMirage && SetFieldAction.new(context.data, 'isMirage', false, '', false);
+        });
         return true;
 
         // old implementation
@@ -5780,6 +5799,56 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
         let r = this.get_setValueAtPosition(context)(v?.index || 0, val);
         Log.e(!r.success,  r.reason);
         return r.success;
+    }
+
+    get_isCrossReference(c: Context): boolean {
+        return false; // todo
+    }
+    validTargetsJSX!: JSX.Element[];
+    validTargets!: (LObject | LEnumLiteral)[];
+    get_validTargetsJSX(c: Context): this['validTargetsJSX'] {
+        let opts: MultiSelectOptGroup[] = [];
+        this.get_validTargets(c, opts);
+        return UX.options(opts);
+    }
+
+    get_validTargets(c: Context, out?: MultiSelectOptGroup[]): this['validTargets'] {
+        let selectOptions: MultiSelectOptGroup[];
+        let meta: LReference | LAttribute = this.get_instanceof(c) as LReference | LAttribute;
+        let isShapeless = !meta;
+        let isReference = isShapeless || meta.className === 'DReference';
+        let isAttribute = isShapeless || meta.className === 'DAttribute';
+        let isCrossRef = this.get_isCrossReference(c);
+        let freeObjects: LObject[] = [];
+        let boundObjects: LObject[] = [];
+        let literals: LEnumLiteral[] = [];
+        let isContainment = isShapeless || isReference && (meta as LReference).containment;
+        let m1: LModel = this.get_model(c);
+        let m2 = m1.instanceof;
+        let map = (object: LNamedElement) => ({value:object.id, label: object.name});
+        if (isReference) {
+            let isContainment: boolean = this.get_containment(c);
+            let containerObjectsID: Pointer[] = this.get_fatherList(c).map(lm => lm.id);
+            let validObjects = (isCrossRef ? Selectors.getObjects() : m1.allSubObjects)
+            if (isContainment) validObjects = validObjects.filter(obj => !containerObjectsID.includes(obj.id));
+            let type = meta.type;
+            if (!isShapeless) validObjects = validObjects.filter((obj) => (type as LClass).isSuperClassOf(obj.instanceof, true))
+            // avoiding containment loops damiano todo: put this filter in set_value too
+            for (let o of validObjects) {
+                //  continue; // no self contain
+                if (o.isRoot) freeObjects.push(o); else boundObjects.push(o);
+            }
+            if (out) out.push({label: 'Free     Objects', options: freeObjects.map(map)});
+            if (out) out.push({label: 'Bound Objects', options: freeObjects.map(map)});
+        }
+        if (isAttribute) {
+            let enumm: LEnumerator[] = isShapeless ? (isCrossRef || !m2 ? LPointerTargetable.from(Selectors.getAllEnumerators()) : m2.enumerators) : [meta.type as LEnumerator].filter(t=>t?.className === 'DEnumerator');
+            for (let e of enumm) {
+                let currLiterals = e.literals;
+                literals.push(...currLiterals);
+                if (out) out.push({label: 'Literals of ' + e.name, options: currLiterals.map(map)});
+            }}
+        return U.arrayMergeInPlace(freeObjects, boundObjects, literals as any);
     }
 
     protected generateEcoreJson_impl(context: Context, loopDetectionObj: Dictionary<Pointer, DModelElement> = {}): Json {

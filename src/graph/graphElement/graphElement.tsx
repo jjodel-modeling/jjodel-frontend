@@ -712,12 +712,13 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
 
     static mousedownComponent: GraphElementComponent | undefined;
     onMouseDown(e: React.MouseEvent): void {
+        if (UX.isStoppedEvt(e)) return;
         e.stopPropagation();
         GraphElementComponent.mousedownComponent = this;
         TRANSACTION(()=>{
             if (e.button === Keystrokes.clickRight) { this.doContextMenu(e); }
             let p: GObject = this.props;
-            console.log('try drag', {p, ig: p.isGraph, iv:p.isVertex});
+            console.log('try drag', {p, ig: p.isGraph, iv:p.isVertex, e});
             // if ((p.isGraph && !p.isVertex) || (p.isGraph && p.isVertex && e.ctrlKey)) GraphDragManager.startPanning(e, this.props.node as LGraph);
         })
     }
@@ -835,7 +836,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         let state: DState = store.getState();
         if (e.button !== Keystrokes.clickRight && state.contextMenu?.display) SetRootFieldAction.new("contextMenu", {display: false, x: 0, y: 0}); // todo: need to move it on document or <App>
         const edgePendingSource = this.props.isEdgePending?.source;
-        console.log('mousedown select() check PRE:', {name: this.props.data?.name, isSelected: this.props.node.isSelected(), 'nodeIsSelectedMapProxy': this.props.node?.isSelected, nodeIsSelectedRaw:this.props.node?.__raw.isSelected});
+        console.log('mousedown select() check PRE:', {e, name: this.props.data?.name, isSelected: this.props.node.isSelected(), 'nodeIsSelectedMapProxy': this.props.node?.isSelected, nodeIsSelectedRaw:this.props.node?.__raw.isSelected});
 
         if (edgePendingSource) {
             if (this.props.data?.className !== "DClass") return;
@@ -852,7 +853,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
             SetRootFieldAction.new('isEdgePending', { user: '',  source: '' });
             return;
         }
-        console.log('mousedown select() check:', {isSelected: this.props.node.isSelected(), 'nodeIsSelectedMapProxy': this.props.node?.isSelected, nodeIsSelectedRaw:this.props.node?.__raw.isSelected});
+        console.log('mousedown select() check:', {e, isSelected: this.props.node.isSelected(), 'nodeIsSelectedMapProxy': this.props.node?.isSelected, nodeIsSelectedRaw:this.props.node?.__raw.isSelected});
         BEGIN();
         windoww.node = this.props.node;
         this.props.node.toggleSelected(DUser.current);

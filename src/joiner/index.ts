@@ -32,7 +32,7 @@ export type {Subtract, Class, Empty, Json, GObject, bool, Dictionary, Proxyfied,
     NotFound, DocString, nbool, nnumber, nstring, Nullable, TODO, UnixTimestamp, UObject, IsActually,
     Function, Function2, InOutParam,
     unArr, orArr, PrimitiveType, CClass, NonEmptyString, Overlap, Info,
-    Constructor, AbstractConstructor, ApiResponse, Any
+    Constructor, AbstractConstructor, ApiResponse, Any, MultiSelectOptGroup, MultiSelectOption
 } from "./types";
 
 export type {Pointer, PtrString, getWParams, WUser, WProject, WtoD, WtoL, DtoW, LtoW, LtoD, DtoL, PackArr, Pack, Pack1, ViewScore, EPSize,

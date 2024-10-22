@@ -34,9 +34,10 @@ function InfoDataComponent(props: AllProps) {
     // readOnly = false;
 
     const objectTypes = ['', 'DModel', 'DPackage', 'DEnumerator', 'DEnumLiteral', 'DClass', 'DAttribute', 'DReference', 'DOperation', 'DParameter', 'DObject', 'DValue', 'DStructuralFeature'];
-    const classesOptions = <optgroup label={'Object type'}>
+    const classesOptionsJSX = <optgroup label={'Object type'}>
             {objectTypes.map((o)=><option key={o} value={o}>{o ? o.substring(1) : 'anything'}</option>)}
     </optgroup>;
+    const classesOptions = [{label:'apply to', options: objectTypes.map(o=>({value:o, label:o ? o.substring(1) : 'anything'}))}];
 
     let isVP: boolean = view.className === DViewPoint.cname;
     let isV: boolean = !isVP;
@@ -74,7 +75,7 @@ function InfoDataComponent(props: AllProps) {
             } setter={(val, data, key) => { view.forceNodeType = val === 'unset' ? undefined : val; }}
                     getter={(data, key) => { return data[key] || 'unset_'; }} />
 
-            <Select data={view} field={'appliableToClasses'} label={'Appliable to:'} isMultiSelect={true} readonly={readOnly} options={classesOptions} />
+            <Select data={view} field={'appliableToClasses'} label={'Appliable to:'} readonly={readOnly} isMultiSelect={true} options={classesOptions as any} />
             {/*<Select data={view} field={'appliableToClasses'} label={'Appliable to:'} readonly={readOnly} options={classesOptions} />*/}
 
             <Select readonly={readOnly} data={view} field={'father'} label={"Viewpoint:"} getter={()=> vpid}>
@@ -87,9 +88,9 @@ function InfoDataComponent(props: AllProps) {
                     <option key={view.id} value={view.id}>{view.name}</option>
                 ))}
             </Select>
-            <OclEditor viewID={view.id} />
+            <OclEditor viewID={view.id} readonly={readOnly} />
             <JsEditor
-                viewID={view.id} field={'jsCondition'}
+                data={view} field={'jsCondition'}
                 placeHolder={'/* Last line must return a boolean */'}
             />
         </>}

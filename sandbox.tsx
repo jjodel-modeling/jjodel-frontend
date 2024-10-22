@@ -8,6 +8,12 @@ export const aaa = 0;
 let data:any, node:any, view:any, component:any;
 let otherViews: any, m1Objects:any, firstPackage:any, DefaultNode: any, otherPackages:any, refEdges:any, extendEdges:any, React:any, Edge:any;
 /*
+
+lvalue <Select value and values> are working
+need to test <select multi={true} value and values/>
+
+
+
 with manuual view assignment (edges) if you type wrong view it becomes a mess crash
 
 when deleting viewpoint, it is not removed from project.viewpoints.
