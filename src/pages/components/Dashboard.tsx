@@ -313,7 +313,9 @@ function ProjectDashboard(props: DashProps): any {
     const id = query.get('id') || '';
     const project: LProject = LProject.fromPointer(id);
 
-    let allViews = project?.viewpoints.flatMap((vp: LViewPoint) => vp && vp.allSubViews) || [];
+    let vparr = project?.viewpoints || [];
+    let allViews = vparr.flatMap((vp: LViewPoint) => vp && vp.allSubViews);
+    allViews.push(...vparr as LViewElement[]);
     allViews = allViews.filter(v => v);
     const viewsDeDuplicator: Dictionary<Pointer<DViewElement>, LViewElement> = {};
     for (let v of allViews) viewsDeDuplicator[v.id] = v;
@@ -321,7 +323,7 @@ function ProjectDashboard(props: DashProps): any {
     return (<>
         <Try>
             <>
-                <style id={"views-css-injector"}>
+                <style id={"views-css-injector-d"}>
                     {Object.values(viewsDeDuplicator).map(v => v.compiled_css).join('\n\n')}
                 </style>
                 {CSS_Units.jsx}

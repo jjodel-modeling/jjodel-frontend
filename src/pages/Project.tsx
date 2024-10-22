@@ -55,7 +55,9 @@ function ProjectComponent(props: AllProps): JSX.Element {
         })();
     }, [id]);
 
-    let allViews = user?.project?.viewpoints.flatMap((vp: LViewPoint) => vp && vp.allSubViews) || [];
+    let vparr = user?.project?.viewpoints || [];
+    let allViews = vparr.flatMap((vp: LViewPoint) => vp && vp.allSubViews);
+    allViews.push(...vparr as LViewElement[]);
     allViews = allViews.filter(v => v);
     const viewsDeDuplicator: Dictionary<Pointer<DViewElement>, LViewElement> = {};
     for (let v of allViews) viewsDeDuplicator[v.id] = v;
@@ -64,7 +66,7 @@ function ProjectComponent(props: AllProps): JSX.Element {
         <Try>
         <Dashboard active={'Project'} version={props.version} project={user.project}>
                 <React.Fragment>
-                    <style id={"views-css-injector"}>
+                    <style id={"views-css-injector-p"}>
                         {Object.values(viewsDeDuplicator).map(v => v.compiled_css).join('\n\n')}
                     </style>
                     {CSS_Units.jsx}

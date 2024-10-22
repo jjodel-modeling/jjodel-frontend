@@ -24,12 +24,14 @@ export class Defaults { /// TODO: this really needs to become dynamically genera
         'Pointer_ViewEdgePoint',
         // 'Pointer_ViewAnchors',
     ];
-    // @ts-ignore
-    static defaultViewsMap: Dictionary<Pointer, boolean> = Defaults.views.reduce((acc, val) => { acc[val] = true; return acc; }, {}); // U.objectFromArrayValues(Defaults.views);
-
     static viewpoints: Pointer<DViewPoint>[] = ['Pointer_ViewPointDefault', 'Pointer_ViewPointValidation'];
 
+    // @ts-ignore
+    static defaultViewsMap: Dictionary<Pointer, boolean> = Defaults.views.reduce((acc, val) => { acc[val] = true; return acc; }, {}); // U.objectFromArrayValues(Defaults.views);
+    // @ts-ignore
+    static defaultViewPointsMap: Dictionary<Pointer, boolean> = Defaults.viewpoints.reduce((acc, val) => { acc[val] = true; return acc; }, {});
+
     static check(id: string): boolean {
-        return !!Defaults.defaultViewsMap[id]; // id.indexOf('Pointer_View') !== -1
+        return !!Defaults.defaultViewsMap[id] || !!Defaults.defaultViewPointsMap[id]; // id.indexOf('Pointer_View') !== -1
     }
 }
