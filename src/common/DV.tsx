@@ -442,7 +442,7 @@ export class DefaultView {
 
 public static class(): string { return (`<View className={"root class"} onClick={()=>{/*node.events.e1(Math.random().toFixed(3))*/}}>
 <div className={'header'}>
-{data.isSingleton && <i className='bi bi-1-square'></i>} {level > 1 && <b className={'class-name'}>{interface ? 'Interface' : abstract ? 'Abstract Class' : 'Class'}:</b>}
+{data.isSingleton && <i className='bi bi-1-square'>&nbsp;</i>}{level > 1 && <b className={'class-name'}>{interface ? 'Interface' : abstract ? 'Abstract Class' : 'Class'}: </b>}
     
     {level === 1 && <i className="bi bi-c-square-fill"></i>}<Input data={data} field={'name'} hidden={true} autosize={true} />
 </div>

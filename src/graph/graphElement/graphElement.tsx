@@ -173,7 +173,10 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
             Log.w(!!explicitView, "Requested main view "+ownProps.view+" not found. Another view got assigned: " + ret.view?.__raw.name, {requested: ownProps.view, props: ownProps, state: ret});
         }
         if (!tn.validMainViews?.[0] || tn.validMainViews[0].id !== tn.mainView?.id) tn.validMainViews = [tn.mainView, ...(tn.validMainViews || [])];
-        Log.ex(!ret.view, "Could not find any view appliable to element.",
+        // @ts-ignore
+        let vname: string = !ret.view && ownProps.view ? ' Check the manual assignment of props view={"'+(ownProps.view?.name || ownProps.view) +'"}' : '';
+        let pview: LViewElement|undefined = !ret.view && ret.node?.father?.view;
+        Log.ex(!ret.view, "Could not find any view applicable to element." + vname + (pview ? ' in view "'+pview.name+'"' : ''),
             {data:ret.data, props: ownProps, state: ret, scores: (ret as any).viewScores, nid: ownProps.nodeid, tn:transientProperties.node[ownProps.nodeid as any]});
 
         if (explicitViews){
