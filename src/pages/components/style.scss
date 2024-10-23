@@ -60,8 +60,11 @@
 }
 
 .footer label {
+    color: silver!important;
     border-right: 1px solid var(--bg-5);
     padding: 0.25em 2em 0.25em 2em;
+    font-family: Anton;
+
 }
 
 .footer .coordinates {
@@ -92,6 +95,24 @@
     right: 2em;
     font-size: 13px;
     font-weight: 100;
+    color: var(--bg-2);
+    
+}
+
+.router-wrapper footer.footer div.jjodel {
+    float: right!important;
+    position: absolute;
+    bottom: 4px;
+    color: silver!important;
+    right: 2em;
+    font-size: 13px;
+    font-weight: 300;
+    font-family: Anton;
+    transition: color 0.3s!important;
+
+    &:hover {
+        color: white!important;
+    }
 }
 
 .footer .widgetbar .widget {
@@ -254,7 +275,20 @@ used by Navbar_NEW_OLD.tsx (purple version)
     height: auto;
     cursor: pointer;
     box-shadow: 0 0 10px black;
+}
 
+.swen.animal {
+    background-color: white;
+    padding: 20px;
+    border-radius: 2px!important;
+    color: var(--color);
+
+    & h1 {
+        font-size: 1.4em;
+    }
+    & p {
+        font-size: 1em;
+    }
 }
 
 .swen-container {

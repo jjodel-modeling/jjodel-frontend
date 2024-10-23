@@ -1,0 +1,26 @@
+div.updates-container {
+    position: absolute;
+    background-color: var(--bg-2);
+    border: none;
+    border-radius: var(--radius);
+    left: 320px;
+    bottom: 100px;
+    width: 1100px;
+    min-height: 200px;
+
+    padding: 20px;
+
+    & h1 {
+        font-size: 1.3em;
+        font-weight: 500;
+    }
+
+    & .updates-item {
+        & h2 {
+            margin-top: 10px;
+            font-size: 1.1em;
+            display: inline;
+        }
+    }
+
+}

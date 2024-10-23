@@ -1,0 +1,154 @@
+.edit-container {
+    max-width: 1100px;
+}
+
+.edit-container h2 {
+    padding-bottom: 60px!important;
+}
+
+div.edit {
+    width: 1100px;
+    margin-bottom: 0px;
+}
+
+div.edit label {
+    width: 100%;
+    text-align: start;
+}
+div.edit label span {
+    position: relative;
+    width: fit-content;
+    top: 16px;
+    display: block;
+    background-color: white;
+    margin-left: 6px!important;
+    padding-left: 4px;
+    padding-right: 4px;
+    padding-top: 0px;
+    padding-bottom: 0px;
+    margin-bottom: 4px!important;
+}
+
+div.edit input[type=text],
+div.edit input[type=email],
+div.edit input[type=password] {  
+    border-radius: var(--radius)!important; 
+    font-size: 1.2em;
+    padding: 1px 8px;
+    outline-color: var(--color);
+    outline-width: 1px;
+    height: calc(var(--input-height)*1.3);
+}
+    
+div.edit input[type=text]:focus,
+div.edit input[type=email]:focus,
+div.edit select:focus,
+div.edit input[type=password]:focus
+{
+    outline-color: var(--accent);
+    outline-width: 2px;
+    outline-style: solid;
+    border: none;
+
+}
+
+div.edit select {
+    width: 70%;
+    margin-top: 20px!important;
+    border-radius: var(--radius)!important; 
+    font-size: 1.2em;
+    padding: 1px 8px;
+    outline-color: var(--color);
+    outline-width: 1px;
+    height: calc(var(--input-height)*1.3);
+    border: 1px solid var(--color);
+}
+
+div.edit.checkbox input[type=checkbox] {
+
+}
+
+div.edit.checkbox {
+    height: 40px;
+    padding-left: 8px;
+
+    --active: var(--accent);
+    --neutral: var(--bg-2-5);
+
+}
+div.edit.checkbox input[type='checkbox'] { // was .input as class
+    background-image: url("../../../static/svg/toggle-off.svg");
+    background-repeat: no-repeat; background-size: cover;
+    cursor: pointer;
+    height: 1lh;
+    width: 1lh;
+  
+  
+    /* this works only on native checkbos (no background-image)
+    padding: 0.5lh; // half line-height, not well-know unit but works
+    scale: 1.35; // padding makes it correctly a full-line height, but visually it looks less, this fixes it without making container bigger or overflowing.
+    */
+    background-color: transparent;
+    border: none;
+  }
+  div.edit.checkbox input[type='checkbox']:checked { // was .input as class
+    background-image: url("../../../static/svg/toggle-on.svg");
+  }
+
+
+
+
+
+div.edit.checkbox label {
+    margin-top: 10px;
+    display: block;
+}
+div.edit.checkbox label input {
+    float: left;
+    display: block;
+    padding-right: 6px;
+}
+div.edit.checkbox label span {
+    top: 8px;
+    display: inline-block;
+    margin-bottom: 10px;
+    font-size: 1.2em;
+}
+
+.edit-container .password-container {
+    width: calc(70% + 10px);
+    margin-top: 20px;
+    border-radius: var(--radius);
+    background-color: var(--bg-2);
+    color: var(--color);
+    border: none;
+    padding: 20px;
+
+    & input[type=password] {
+        background-color: var(--bg-2);
+        width: 25%;
+    }
+
+    & div.edit label span {
+        background-color: var(--bg-2);
+    }
+}
+
+div.space-above {
+    margin-top: 60px;
+}
+
+div.space-above.small {
+    margin-top: 30px;
+}
+
+button.space-above {
+    margin-top: 30px!important;
+}
+
+
+
+
+
+
+

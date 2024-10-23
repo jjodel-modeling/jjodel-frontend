@@ -78,6 +78,30 @@ function openControl(){
 
 }
 
+const JjodelName = () => {
+const [animal, setAnimal] = useState(false);
+
+
+    return (<>
+        {false && 
+            <>
+            <div className='swen-container'></div>
+            
+                <div className='swen animal'>
+                    <h1>Manatees</h1>
+                    <p>
+                    Manatees (/ˈmænətiːz/, family Trichechidae, genus Trichechus) are large, fully aquatic, mostly herbivorous marine mammals sometimes known as sea cows. There are three accepted living species of Trichechidae, representing three of the four living species in the order Sirenia: the Amazonian manatee (Trichechus inunguis), the West Indian manatee (Trichechus manatus), and the West African manatee (Trichechus senegalensis). They measure up to 4.0 metres (13 ft 1 in) long, weigh as much as 590 kilograms (1,300 lb),[2] and have paddle-like tails.
+                    </p>
+                </div>
+
+            </>
+        } 
+        <div className={'jjodel'} onClick={(e) => setAnimal(!animal)}>
+            <span>jjodel v1.1</span> <i className="bi bi-globe-americas"></i> manatee
+        </div>
+        </>);
+}
+
 function BottomBarComponent(props: AllProps): JSX.Element {
     const [swenOpen, setSwen] = useState(false);
     const {node,data} = props;
@@ -120,6 +144,8 @@ function BottomBarComponent(props: AllProps): JSX.Element {
             <Notify  type={notificationType.Terminal} alert={alertType.Normal} message={''} />
             <Notify  type={notificationType.Messages} alert={alertType.Normal} message={''} />
         </div> */}
+        <JjodelName />
+
     </footer>)
 }
 interface OwnProps {}

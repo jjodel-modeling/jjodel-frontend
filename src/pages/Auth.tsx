@@ -67,7 +67,7 @@ function AuthPage(): JSX.Element {
 
     let login_skin = Math.round(Math.random()*5.5 +1);
 
-    return(<section className={`w-100 h-100 login bg-3 ${isRegister && 'register'}`}>
+    return(<section className={`w-100 h-100 login bg ${isRegister && 'register'}`}>
 
         <form className={'d-block bg-white rounded border mx-auto w-fit px-5 py-4 mt-5'} onSubmit={onSubmit}>
             <label className={'fs-1 d-block text-center text-primary login-header'}>

@@ -130,7 +130,9 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
     // extends Mixin(DModelElement0, LPointerTargetable)
     // static logic: typeof LModelElement;
     // static structure: typeof DModelElement;
-    // static singleton: LModelElement;
+
+    /* Alfonso */
+    static singleton: LModelElement;
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
     /*static ResolvePointer = resolvePointerFunction;
@@ -5407,6 +5409,14 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
                                             shapeless: boolean = false, keepempties: boolean = true, withmetainfo?: T, maxlimit?: number,
                                             solveLiterals: "ordinals" | "literal_obj" | "literal_str" | "original" = "literal_obj")
         : (T extends undefined ? this["values"] : T extends false ? this["values"] : ValueDetail[]) & {type?: string}  {
+
+        const data = context.proxyObject;
+        if(data.topic) {
+            let value: any = store.getState()['topics'];
+            const path = data.topic.split('.');
+            for(const field of path) value = value[field];
+            return [value];
+        }
 
         let ret: any[] = [...context.data.values] as [];
         let meta: LAttribute | LReference | undefined = shapeless ? undefined : context.proxyObject.instanceof;

@@ -44,6 +44,7 @@ export class DV {
     public static operationViewm1(): string { return beautify(DefaultView.operationm1()); }
     public static objectView(): string { return beautify(DefaultView.object()); }
     public static valueView(): string { return beautify(DefaultView.value()); }
+    public static singletonView(): string { return beautify(DefaultView.singleton()); }
     public static defaultPackage(): string { return beautify(DefaultView.defaultPackage()); }
 
     public static errorView(publicmsg: ReactNode, debughiddenmsg:any, errortype: string, data?: DModelElement | undefined, node?: DGraphElement | undefined, v?: LViewElement|DViewElement): React.ReactNode {
@@ -372,21 +373,27 @@ export class DefaultView {
 `<View className={'root model'}>
 <Scrollable graph={node}>
     {!data && "Model data missing."}
-    <div className={'edges'}>
-        {[
-            refEdges.map(se => <Edge data={se.start} start={se.startNode.father} end={se.endNode} anchorStart={0} anchorEnd={0} key={se.id} isReference={true} 
-             view={'Edge' + (se.start.composition ? 'Composition' : (se.start.aggregation ? 'Aggregation' : 'Association'))} />),
-            extendEdges.map(se => <Edge data={se.start} start={se.startNode} end={se.endNode} view={'EdgeInheritance'} isExtend={true} key={se.id} />)
-        ]}
-    </div>
-    {otherPackages.filter(p => p).map(pkg => <DefaultNode key={pkg.id} data={pkg} />)}
-    {level >= 1 && firstPackage && firstPackage.children.filter(c => c).map(classifier => <DefaultNode key={classifier.id} data={classifier} />)}
+
+    {/* metamodel */}
+    {data.isMetamodel && 
+        [<div className={'edges'}>
+            {[
+                refEdges.map(se => <Edge data={se.start} start={se.startNode.father} end={se.endNode} anchorStart={0} anchorEnd={0} key={se.id} isReference={true} 
+                view={'Edge' + (se.start.composition ? 'Composition' : (se.start.aggregation ? 'Aggregation' : 'Association'))} />),
+                extendEdges.map(se => <Edge data={se.start} start={se.startNode} end={se.endNode} view={'EdgeInheritance'} isExtend={true} key={se.id} />)
+            ]}
+        </div>,
+        otherPackages.filter(p => p).map(pkg => <DefaultNode key={pkg.id} data={pkg} />),
+        level >= 1 && firstPackage && firstPackage.children.filter(c => c).map(classifier => <DefaultNode key={classifier.id} data={classifier} />)]
+    }
+
+    {/* model */}
     {level >= 1 && m1Objects.filter(o => o).map(m1object => <DefaultNode key={m1object.id} data={m1object} />)}
     {decorators}
 </Scrollable>
-{/* here you can insert viewpoint-wide descriptions, eg <Control> .. </Control> */}
 
-<Control title={'Abstraction'} payoff={'Zooming'}>
+{/* language designer defined controls */}
+<Control title={'Semantic'} payoff={'Zooming'}>
     <Slider name={'level'} title={'Detail level '} node={node} max={3} />
 </Control>
 </View>`
@@ -442,11 +449,12 @@ export class DefaultView {
 
 public static class(): string { return (`<View className={"root class"} onClick={()=>{/*node.events.e1(Math.random().toFixed(3))*/}}>
 <div className={'header'}>
-{data.isSingleton && <i className='bi bi-1-square'>&nbsp;</i>}{level > 1 && <b className={'class-name'}>{interface ? 'Interface' : abstract ? 'Abstract Class' : 'Class'}: </b>}
-    
+    {data.isSingleton && <i className='bi bi-1-square'>&nbsp;</i>}
+    {level > 1 && <b className={'class-name'}>{interface ? 'Interface' : abstract ? 'Abstract Class' : 'Class'}: </b>}    
     {level === 1 && <i className="bi bi-c-square-fill"></i>}<Input data={data} field={'name'} hidden={true} autosize={true} />
 </div>
-{level > 2 && <hr/>}
+
+{level > 2 && data.children.length > 0 && <hr/>}
 
 {level > 2 && 
     <div className={'class-children'}>
@@ -470,6 +478,7 @@ public static class(): string { return (`<View className={"root class"} onClick=
 {decorators}
 </View>`);}
 
+
     /* ENUM */
 
 public static enum(): string { return (
@@ -486,10 +495,7 @@ public static enum(): string { return (
 </View>`
 );}
 
-
-
-
-
+    /* FEATURE */
 
     public static feature(): string { return (
 `<View className={'root feature w-100'}>
@@ -500,6 +506,7 @@ public static enum(): string { return (
 );}
 
     /* LITERAL */
+
     public static literal(): string { return (
 `<label className={'root literal d-block text-center'}>
     {data.name}
@@ -508,6 +515,7 @@ public static enum(): string { return (
 );}
 
     /* OPERATION */
+
     public static operation(): string { return (
 `<View className={'root operation w-100 hoverable'}>
         <span className={'feature-name'}>{data.name + ' =>'}</span>
@@ -522,6 +530,7 @@ public static enum(): string { return (
 );}
 
     /* PARAMETER */
+
 public static parameter(): string { return (
 `<View className={'root parameter w-100'}>
     <span className={'feature-name'}>
@@ -574,6 +583,8 @@ public static parameter(): string { return (
 // </View>`
 // );}
 
+/* OBJECT */
+
 public static object(): string { return (
 `<View className={'root object'}>
     <b className={'object-name'}>{data.instanceof ? data.instanceof.name : 'Object'}:</b>
@@ -598,6 +609,17 @@ public static object(): string { return (
     {decorators}
 </View>`
 );}
+
+    /* SINGLETON OBJECT */
+
+    public static singleton(): string { return (
+    `<div className={'singleton'}>
+        <div className={'header'}>
+            {data.name}        
+        </div>
+    </div>`);}
+
+    /* ERROR */
 
     public static error(msg: undefined | ReactNode, errortype: string | "SYNTAX" | "RUNTIME",
                         data?: DModelElement | undefined, node?: DGraphElement | undefined, v?: LViewElement|DViewElement): React.ReactNode {

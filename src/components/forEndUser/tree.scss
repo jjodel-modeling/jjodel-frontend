@@ -104,7 +104,7 @@ section.datatree-entry-root, div.d-flex tree{
 }
 .tree-DClass, .tree-Class {
   background-color: #DF1619;
-  padding-top: 2px;
+  padding-top: 0px;
   font-weight: 400;
   //background-color: white;
   //border: 2px solid #DF1619;
@@ -137,7 +137,7 @@ section.datatree-entry-root, div.d-flex tree{
 }
 .tree-DEnumerator, .tree-Enumerator {
   background-color: #F3B700;
-  padding-top: 2px;
+  padding-top: 0px;
   font-weight: 400;
   //background-color: white;
   //border: 2px solid #F3B700;
@@ -146,12 +146,21 @@ section.datatree-entry-root, div.d-flex tree{
 .tree-DEnumLiteral, .tree-EnumLiteral {
   //background-color: #857C8D;
   background-color: white;
-  border: 2px solid #F3B700;
+  border: 0px solid #F3B700;
   color: var(--bg-5);
 }
 .tree-DObject, .tree-Object {
   background-color: #C2B2B4;
-  padding-top: 2px;
+  padding-top: 0px;
+  font-weight: 400;
+  //background-color: white;
+  //border: 2px solid #C2B2B4;
+  //color: var(--bg-5);
+}
+.tree-Singleton {
+  background-color: var(--accent);
+  color: white;
+  padding-top: 0px;
   font-weight: 400;
   //background-color: white;
   //border: 2px solid #C2B2B4;

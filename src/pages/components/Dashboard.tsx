@@ -269,7 +269,7 @@ function ProjectCatalog(props: ProjectProps) {
                     </div>)
                 }
                 {project.viewpoints.map(vp =>
-                    <div className="row data">
+                    <div className="row data viewpoint">
                         <div className={'col-4'}>{vp.isOverlay ? <TbSquareRoundedLetterVFilled style={{fontSize: '1.5em'}}/> : <TbSquareRoundedLetterV style={{fontSize: '1.5em'}}/>} {vp.name}</div>
                         <div className={'col-2 artifact-type'}>Viewpoints</div>
                         <div className={'col-1'}>
@@ -278,7 +278,11 @@ function ProjectCatalog(props: ProjectProps) {
                                 <Btn icon={'minispace'} />
                                 <Btn icon={'copy'} action={e => vp.duplicate()} tip={'Duplicate viewpoint'}/>
                                 <Sep />
-                                <Btn icon={'delete'} action={e => vp.delete()} tip={'Delete viewpoint'}/>
+                                {(vp.name !== 'Default' && vp.name !== 'Validation default') ? 
+                                    <Btn icon={'delete'} action={e => vp.delete()} tip={'Delete viewpoint'}/>
+                                    :
+                                    <Btn icon={'delete'} action={e => vp.delete()} tip={'Delete viewpoint'} disabled={true}/>
+                                }
                             </CommandBar>
                         </div>
                     </div>)

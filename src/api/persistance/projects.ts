@@ -31,7 +31,6 @@ class ProjectsApi {
         project.state = state;
         const dProject = project.__raw as DProject;
         dProject.state = state;
-        console.log('Saving project', dProject);
         if(U.isOffline()) await Offline.save(dProject);
         else await Online.save(dProject);
     }

@@ -29,7 +29,7 @@ const Toggle = (props: ToggleProps) => {
 
     return (
         <div className={`toggle ${props.size ? props.size : 'medium'}`} onClick={() => {toggleValue()}} style={props.style}>
-            <input id={props.name} type="checkbox" value="true" checked={props.data}  />
+            c<input id={props.name} type="checkbox" value="true" checked={props.data}  />
             <div className={"labels"}>
                 <span className={"on"}>{labels['true']}</span>
                 <span className={"off"}>{labels['false']}</span>

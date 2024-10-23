@@ -374,6 +374,8 @@ node.state = {error_lowerbound: err};\n
     let par = DefaultViews.parameter(op);
     let lit = DefaultViews.literal(enumm);
     let obj = DefaultViews.object(model);
+    /* ALFONSO */
+    let single = DefaultViews.singleton(model);
     let val = DefaultViews.value(obj);
     let anchorView = DefaultViews.anchor(model);
 
@@ -401,7 +403,7 @@ node.state = {error_lowerbound: err};\n
 
 
     let dv_subviews = [model, packagee, classs, enumm, attr, ref, op, par,
-        lit, obj, val, voidView,
+        lit, obj, val, single, voidView,
         ...edgeViews,
         DefaultViews.edgepoint(model),
         anchorView];

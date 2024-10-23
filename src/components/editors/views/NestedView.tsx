@@ -100,7 +100,7 @@ function NestedViewComponent(props: AllProps) {
 
         function select(ptr: Pointer<DViewPoint>){ project.activeViewpoint = ptr as any; }
 
-
+        let appliableToEnhanced = (d.name === 'Singleton' ? 'Singleton' : appliableTo);
 
         const max_priority = l.explicitApplicationPriority
 
@@ -119,8 +119,8 @@ function NestedViewComponent(props: AllProps) {
                     }
                 </div>
                 <div className={"mid-stuff vertical-centering"} style={{marginLeft: '8px'}}>
-                    <div className={`icon type tree-${appliableTo} ${d.className}`} style={{width: '24px', height: '24px'}}>{
-                        isVP ? 'VP' : (appliableTo === "Any" ? "✲" : appliableTo[0])
+                    <div className={`icon type tree-${appliableToEnhanced} ${d.className}`} style={{width: '24px', height: '24px'}}>{
+                        isVP ? 'VP' : (appliableToEnhanced === "Any" ? "✲" : appliableToEnhanced === 'Singleton' ? 'S' : appliableToEnhanced[0])
                     }</div>
                     <div style={{marginLeft: '4px'}}>{d.name}</div>
                 </div>
@@ -206,13 +206,6 @@ function NestedViewComponent(props: AllProps) {
                             <Sep />
                             <Btn icon={'add'} action={addVP} tip={'Create a new viewpoint'} />
                         </CommandBar>
-                        {/* <InternalToggle
-                            name={'advanced'}
-                            values={{false: 'false', true: 'true'}}
-                            labels={{false: 'show priorities', true: 'hide priorities'}}
-                            style={{float: 'right', paddingRight: '20px', fontSize: '0.9em'}}
-                            size={'small'}
-                        /> */}
 
                     </h1>
                 </div>

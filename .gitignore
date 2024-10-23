@@ -9,11 +9,6 @@
 # testing
 /coverage
 
-# production
-/build/*
-/build
-build
-
 # misc
 .DS_Store
 .env.local
@@ -30,6 +25,3 @@ sandbox/sandbox.tsx
 .idea/misc.xml
 .idea/jodel-react.iml
 sandbox.tsx
-/build
-/build
-/build

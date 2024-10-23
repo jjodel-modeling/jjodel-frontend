@@ -189,7 +189,8 @@ class DefaultViews {
             view.palette = {'color-': U.hexToPalette('#f00', '#000', '#fff'), 'background-':  U.hexToPalette('#fff', '#eee', '#f00')};
             view.css = `
 
-    /* class */
+
+/* class */
 
 .class {
     border-radius: var(--model-radius);
@@ -206,6 +207,7 @@ class DefaultViews {
     }
     .bi {
         color: var(--model-accent); 
+        padding-right: 3px;
     }
     .class-children {
         background-color: var(--model-background);
@@ -224,6 +226,7 @@ border-color: silver!important;
 .class:hover {
     box-shadow: var(--model-shadow);
 }
+            
 `;
             view.defaultVSize = defaultVertexSize;
             view.usageDeclarations = `(ret) => {
@@ -433,6 +436,8 @@ border-color: silver!important;
         return view;
     }
 
+    /* OBJECT */
+
     static object(vp: DViewElement): DViewElement {
         const view = DViewElement.new2('Object', DV.objectView(), vp, (view)=>{
             view.appliableToClasses = [DObject.cname];
@@ -447,7 +452,6 @@ border-color: silver!important;
             view.css = '.object {border-radius: var(--radius); background: white; color: var(--accent);}\n';
             view.css +='.object-name {padding: 10px; font-weight: 600; color: var(--accent);}\n';
             view.css += '.object-children {padding: 10px;background-color: white; height: fit-content; width: -webkit-fill-available;}';
-
 
 
             view.defaultVSize = defaultVertexSize;
@@ -467,6 +471,41 @@ border-color: silver!important;
         }, false, 'Pointer_ViewObject');
         return view;
     }
+
+    /* SINGLETON OBJECT */
+
+    static singleton(vp: DViewElement): DViewElement {
+        const view = DViewElement.new2('Singleton', DV.singletonView(), vp, (view)=>{
+            view.appliableToClasses = [DObject.cname];
+            view.adaptWidth = false; view.adaptHeight = false;
+            view.jsCondition = 'return data.instanceof.isSingleton';
+            //view.oclCondition = 'context DObject inv: true';
+
+            //view.palette = {'color-':  U.hexToPalette('#f00', '#000', '#fff'), 'background-': U.hexToPalette('#fff', '#eee', '#f00')};
+
+            view.css = '.singleton {text-align: center; border: none; background-color: var(--accent); color: white; padding: 4px 30px; width: fit-content; border-radius: var(--radius);}\n';
+            view.css += '.singleton::before {position: absolute; left: 10px; font-family: bootstrap-icons; content: "\\F799";}\n';
+
+            view.defaultVSize = defaultVertexSize;
+            view.appliableTo = 'Vertex';
+            view.usageDeclarations = '(ret) => {\n' +
+                '// ** preparations and default behaviour here ** //\n' +
+                'ret.data = data\n' +
+                'ret.node = node\n' +
+                'ret.view = view\n' +
+                '// data, node, view are dependencies by default. delete them above if you want to remove them.\n' +
+                '// add preparation code here (like for loops to count something), then list the dependencies below.\n' +
+                // ¡ The element will update only if one of the listed dependencies has changed !
+                '// ** declarations here ** //\n' +
+                'ret.metaclassName = data.instanceof?.name || \'Object\'\n' +
+                'ret.isSingleton = data.instanceof?.isSingleton || false\n' +
+                udLevel +
+                '}';
+        }, false, 'Pointer_ViewSingleton');
+        return view;
+    }
+
+    /* VALUE */
 
     static value(vp: DViewElement): DViewElement {
         const view = DViewElement.new2('Value', DV.valueView(), vp, (view)=>{

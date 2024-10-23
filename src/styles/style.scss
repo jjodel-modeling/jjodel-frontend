@@ -504,11 +504,12 @@ body .css-1nmdiq5-menu{
   }
 }
 
-.login.bg-3 {
+.login.bg {
   justify-content: center;
-  background-image: url('//static/img/3.png');
+  background-image: url('../static/img/101.png'); // new background
   background-size: cover;
   background-repeat: no-repeat;
+  
   & form {
     opacity: 0.9;
     margin-left: auto;
