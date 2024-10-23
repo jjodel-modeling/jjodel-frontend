@@ -104,7 +104,7 @@ function NestedViewComponent(props: AllProps) {
 
         const max_priority = l.explicitApplicationPriority
 
-        return <li className={"entry-root" + d.className + (d.id === activeViewpointId ? ' selected' : '')} key={d.id}>
+        return <li className={"entry-root " + d.className + (d.id === activeViewpointId ? ' selected' : '')} key={d.id}>
 
             <div className={'inline-row'} onClick={()=>setView(d.id)} onDoubleClick={(e) => {select(d.id)}}> {/* activate anche con il dblclick */}
 

@@ -20,7 +20,7 @@ import {
 import {JsEditor, OclEditor} from "../../languages";
 import {FakeStateProps} from "../../../../joiner/types";
 import {connect} from "react-redux";
-import "./style.scss";
+import "./viewapplyto.scss";
 import "./viewoptions.scss"
 
 
