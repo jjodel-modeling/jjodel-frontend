@@ -50,7 +50,6 @@ function App(props: AllProps): JSX.Element {
     useEffectOnce(() => {
         SetRootFieldAction.new('isLoading', true);
         stateInitializer().then(() => {
-            U.sleep(3);
             SetRootFieldAction.new('isLoading', false);
         });
     });

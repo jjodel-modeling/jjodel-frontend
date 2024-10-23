@@ -97,45 +97,17 @@ export class U {
     static async decompressState(state: string): Promise<string> {
         return await decompressFromUTF16(state);
     }
-    static async compressedState(id: Pointer): Promise<string> {
+    static async compressedState(id: Pointer<DProject>): Promise<string> {
         const state = store.getState();
+        const idlookup: Record<Pointer<DPointerTargetable>, DPointerTargetable> = {};
+        for(const [pointer, object] of Object.entries(state.idlookup)) {
+            if(object.className === DProject.name && pointer !== id) continue;
+            idlookup[pointer] = object;
+        }
         (state.idlookup[id] as DProject).state = '';
+        state.projects = [id];
+        state.idlookup = idlookup;
         return await compressToUTF16(JSON.stringify(state));
-        /*
-        const keys: (keyof DState)[]= [
-            'attributes',
-            'classifiers',
-            'classs',
-            'ecoreClasses',
-            'edgepoints',
-            'edges',
-            'enumerators',
-            'enumliterals',
-            'graphelements',
-            'graphs',
-            'm1models',
-            'm2models',
-            'models',
-            'objects',
-            'operations',
-            'packages',
-            'parameters',
-            'primitiveTypes',
-            'references',
-            'returnTypes',
-            'users',
-            'values',
-            'vertexs',
-            'viewelements',
-            'viewpoints',
-            'voidvertexs'
-        ];
-        const state = {...store.getState()};
-        const cleanedState = {...(U.keepKeys(state, keys)), projects: [project.id]};
-        const pointers: string[] = Object.values(cleanedState).flatMap(v => v).filter(v => String(v).startsWith('Pointer'));
-        const newState = {...cleanedState, idlookup: U.keepKeys(state['idlookup'], pointers)};
-        return await compressToUTF16(JSON.stringify(newState));
-        */
     }
     static isOffline(): boolean {
         return Storage.read('offline') === 'true';
