@@ -169,7 +169,9 @@ function NestedViewComponent(props: AllProps) {
                             </>
                         }
                         <Tooltip tooltip={<div>is {d.isExclusiveView ? "" : "not"} mutually exclusive with other "Ex" views.</div>} position={"bottom"} inline={true}>
-                            <span className={"right-icon feature-border ex-icon vertical-centering " + (d.isExclusiveView ? '' : "hidden")}></span></Tooltip>
+                            <span className={"right-icon feature-border ex-icon vertical-centering " + (d.isExclusiveView ? '' : "hidden")}
+                                  onClick={()=>l.isExclusiveView = !d.isExclusiveView}
+                            /></Tooltip>
                     </div>
                 </div>
             </div>
