@@ -9,6 +9,7 @@ section.page-root{
     display: flex;
     padding-top: 0.125em;
     padding-bottom: 0.125em;
+    min-height: min-content;
     height: 32px;
     font-size: 1.1em!important;
     color: var(--color);

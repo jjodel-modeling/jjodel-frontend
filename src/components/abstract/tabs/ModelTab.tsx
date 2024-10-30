@@ -1,6 +1,6 @@
 import React, {Dispatch, ReactElement} from "react";
 import {connect} from "react-redux";
-import type {DModel, Pointer} from "../../../joiner";
+import {DModel, Pointer, Try} from "../../../joiner";
 import {CreateElementAction, DGraph, DModelElement, DState, LGraph, LModel, LModelElement} from "../../../joiner";
 import {DefaultNode} from "../../../joiner/components";
 import ToolBar from "../../toolbar/ToolBar";
@@ -24,9 +24,11 @@ function ModelTabComponent(props: AllProps) {
         <ContextMenu />
         <div className={'d-flex h-100'}>
             <ToolBar model={model.id} isMetamodel={model.isMetamodel} metamodelId={props.metamodelid} />
-            <div className={"GraphContainer h-100 w-100"} style={{position:"relative"}}>
-                {graph && <DefaultNode data={model} nodeid={graph.id} graphid={graph.id} />}
-            </div>
+            <Try>
+                <div className={"GraphContainer h-100 w-100"} style={{position:"relative"}}>
+                    {graph && <DefaultNode data={model} nodeid={graph.id} graphid={graph.id} />}
+                </div>
+            </Try>
         </div>
     </div>);
 }

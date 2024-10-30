@@ -90,10 +90,12 @@ body {
 
 .autosize-input-container > input, .autosize-input-container::after{
   display: flex;
-  margin: 0;
-  padding: 0;
-  border: none;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: none !important;
   height: 1lh;
+  max-height: 1lh !important;
+  min-height: 1lh !important;
   font-style: inherit !important;
 }
 input[type="color"] {
@@ -387,8 +389,44 @@ i.bi {
   border-radius: 4px;
   padding-left: 10px;
 }
+.clearfix{
+  display: inline-block;
+  display: flow-root;
+  &::after{
+    content: "";
+    display: table;
+    clear: both;
+  }
+}
 
 
+.Pointer_ViewModel{
+  &, & [data-nodetype], & [data-nodetype] > * {
+    &:has(.css-1nmdiq5-menu) {
+      min-height: min-content !important;
+    }
+  }
+}
+
+.css-b62m3t-container{
+  min-height: fit-content;
+}
+
+// multi-select popup
+body .css-1nmdiq5-menu{
+  margin: -10px 0px;
+  padding: 18px 0px;
+  background-color: transparent;
+  box-shadow: none;
+  //position: unset;
+  position: relative;
+  z-index: 1;
+  &>*{
+    background-color: rgb(255, 255, 255);
+    border-radius: 4px;
+    box-shadow: rgba(0, 0, 0, 0.1) 0px 0px 0px 1px, rgba(0, 0, 0, 0.1) 0px 4px 11px;
+  }
+}
 // LOGIN
 
 .login {

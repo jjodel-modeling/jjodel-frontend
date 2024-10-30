@@ -81,12 +81,14 @@ function Tree(props: TreeProps) {
 
     let up = data?.father;
     let down = data?.children[0];
-    if (data) return(<>
-        <CommandBar>
-            <Btn icon={'up'} size={'medium'} disabled={!up} action={(e) => { setME(up)} } tip={'Click to go up to the ancestor element'} />
-            <Btn icon={'down'} size={'medium'} disabled={!down} action={(e) => { setME(down)} } tip={'Select the first child'} />
-        </CommandBar>
-        <DataTree data={data} depth={depth} hide={hide} setFilter={setFilter}  /></>)
+    if (data) return(
+        <>
+            {!props.depth && <CommandBar>
+                <Btn icon={'up'} size={'medium'} disabled={!up} action={(e) => { setME(up)} } tip={'Click to go up to the ancestor element'} />
+                <Btn icon={'down'} size={'medium'} disabled={!down} action={(e) => { setME(down)} } tip={'Select the first child'} />
+            </CommandBar>}
+            <DataTree data={data} depth={depth} hide={hide} setFilter={setFilter} />
+        </>)
     if (children) return(<><HtmlTree data={children} hide={hide} depth={depth} setFilter={setFilter} /></>);
     return(<></>);
 }
@@ -120,7 +122,7 @@ function DataTree(props: DataTreeProps): JSX.Element {
         case 'DValue': icon = ''; break;
     }*/
 
-    return(<section>
+    return(<section className={'datatree-entry-root'}>
 
         <div className={'d-flex tree'}>
             {data.children?.length >= 1 ? ((data.children?.length && hide) ?

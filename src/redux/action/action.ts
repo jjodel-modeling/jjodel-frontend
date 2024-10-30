@@ -16,6 +16,7 @@ import {
     RuntimeAccessible,
     RuntimeAccessibleClass,
     store,
+    U,
     unArr,
     windoww
 } from "../../joiner";
@@ -438,11 +439,21 @@ export class SetFieldAction extends SetRootFieldAction {
     }
 
     fire(forceRelaunch: boolean = false): boolean {
+        let fire = this.fire0(forceRelaunch);
+        console.log('set value index firing', {fire});
+        return fire;
+
+    }
+    fire0(forceRelaunch: boolean = false): boolean {
         // if action would not change the value, i don't fire it at all
         // by id because if item was updated, this.me as DElement might be an old version, different from the one in store.
         let d: GObject<any> = DPointerTargetable.from((this.me as DPointerTargetable)?.id || this.me as any);
         // console.warn("me fire", {thiss:this, d, typeofd:typeof d, field:this.me_field, dfield:d[this.me_field], val:this.value});
-        if (d && typeof d === "object" && d[this.me_field] === this.value) return false;
+        if (d && typeof d === "object") {
+            let oldv = U.followPath(d, this.me_field);
+            console.log('set value index firing 0', {ov:d[this.me_field], me_field:this.me_field, oldv, d, newv:this.value});
+            if (oldv === this.value) return false;
+        }
         return super.fire(forceRelaunch, false);
     }
 }

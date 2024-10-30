@@ -2,7 +2,7 @@ import ReactJson from 'react-json-view' // npm i react-json-view
 import React, {ReactElement, ReactNode} from "react";
 import withReactContent from "sweetalert2-react-content";
 import Swal from "sweetalert2";
-import type { GraphElementOwnProps, GObject, Dictionary, DocString, Pointer, LGraph } from "../joiner";
+import {GraphElementOwnProps, GObject, Dictionary, DocString, Pointer, LGraph, MultiSelectOptGroup} from "../joiner";
 import type { InputOwnProps, SelectOwnProps } from '../components/forEndUser/Input';
 import type {  } from '../components/forEndUser/Select';
 import {
@@ -348,6 +348,34 @@ export class UX{
         try { jsxCompiled = JSXT.fromString(jsxString, {factory: 'React.createElement'}); }
         catch (ee: any) { e = ee; jsxCompiled = GraphElementComponent.displayError(e, "JSX Syntax", v, undefined, undefined, true) as any; }
         return jsxCompiled;
+    }
+    static stopEvt(e: GObject<React.SyntheticEvent>): void{
+        if (!e) return;
+        e.persist?.();
+        (e as any).stopImmediatePropagation?.();
+        e.stopPropagation?.();
+        let ne: any = e.nativeEvent;
+        e._jjIsStopped = true;
+        if (!ne) return;
+        ne.stopImmediatePropagation?.();
+        ne.stopPropagation?.();
+        if (!ne.isPropagationStopped) ne.isPropagationStopped = ()=>true;
+        ne._jjIsStopped = true;
+    }
+    static isStoppedEvt(e: GObject<React.SyntheticEvent>): boolean{
+        if (!e) return true;
+        if (e._jjIsStopped || e.isPropagationStopped?.()) return true;
+        let ne: any = e.nativeEvent;
+        if (!ne) return false;
+        return !!(ne._jjIsStopped || ne.isPropagationStopped?.());
+    }
+
+    static options(validTargets: MultiSelectOptGroup[]): JSX.Element[] {
+        return validTargets
+            .filter(e=>!!e)
+            .map(e => <optgroup label={e.label}>
+                { e.options.filter(o=>!!o).map(o=><option value={o.value}>{o.label}</option>) }
+            </optgroup>);
     }
 }
 

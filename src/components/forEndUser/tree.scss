@@ -81,8 +81,10 @@
   opacity: 0.5!important;
 }
 
+section.datatree-entry-root, div.d-flex tree{
+  padding: 0.125rem;
+}
 .tree-item .parent-class {
-  color: rent;
 }
 
 .tree-DModel, .tree-Model {

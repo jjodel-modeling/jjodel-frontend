@@ -9,7 +9,15 @@ let data:any, node:any, view:any, component:any;
 let otherViews: any, m1Objects:any, firstPackage:any, DefaultNode: any, otherPackages:any, refEdges:any, extendEdges:any, React:any, Edge:any;
 /*
 
+lvalue <Select value and values> are working
+need to test <select multi={true} value and values/>
 
+
+
+with manuual view assignment (edges) if you type wrong view it becomes a mess crash
+
+when deleting viewpoint, it is not removed from project.viewpoints.
+make multiselect o isAplialeto && referece default view
 !!!!!!!!! for offset
 fai che offset settadelle variabili --offset-x, --offset-y che settano in css left e top del grafo.
 MA: disabilita la regola se il grafo ha ui-dragging o simile qualsiasi cosa metta jqui
@@ -41,9 +49,9 @@ node crazy pos: when i resize a node with an edge it goes off screen?
 
  only when changing relative % -> absolute it goes crazy, i think it uses absolute pos as a %
 
-<div onDragEnd={"dragAnchor("+i+")"}></div>
-<div onDragEnd={e()=> node.anchor[1].x = e.x;}></div>
-<div onDragEnd={e()=> node.anchor[2].x = e.x;}></div>
+ <div onDragEnd={"dragAnchor("+i+")"}></div>
+ <div onDragEnd={e()=> node.anchor[1].x = e.x;}></div>
+ <div onDragEnd={e()=> node.anchor[2].x = e.x;}></div>
 
 
  anchor roadmap
@@ -51,7 +59,6 @@ node crazy pos: when i resize a node with an edge it goes off screen?
 
  */
 // todo: check oldprops.views-nextprops.views and always set shouldupdate to views newly introduced or remo**ved
-
 
 
 // need to merge file declarations? or use a filename such as the imports will work (use inmemory://? or real urls)
@@ -247,7 +254,6 @@ for (keys in []) gives "joinOriginal" and "separator"!!! i did not override the 
 
 // todo: inject offset in a subnode with .container or some other special class, and put it everywhere in DV
 // because currently in package, it is child[0].child[0], but in model it's just child[0]
-
 
 
 // optimize actions, verify toolbox create must make only 1 compositeaction for dmodelelement and 1 for dgraphelement. thenverify transaction nested nad beign end nested

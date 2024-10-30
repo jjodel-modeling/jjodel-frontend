@@ -1040,6 +1040,7 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         const project = user?.project;
         if (!project) return this;
         this.setExternalPtr(project.id, 'viewpoints', '+=');
+        // thiss.cssIsGlobal = true;
         // thiss._persistCallbacks.push( SetFieldAction.create(project.id, 'stackViews', [], '', false) );
         return this;
     }
@@ -1618,6 +1619,10 @@ export class LPointerTargetable<Context extends LogicContext<DPointerTargetable>
             "<span>Unique identifier, and value used to point this object.</span></a>"};
 
     private __info_of____readonly = {type:"boolean", txt:"prevent any change to the current object."};
+    project!: LProject|null;
+    protected get_project(c: GObject<Context>): LProject | null {
+        return LPointerTargetable.fromPointer(DUser.current as Pointer<DUser>)?.project || null;
+    }
     protected set___readonly(val: any, c: Context): boolean {
         val = !!val;
         let thiss: GObject = this;
@@ -2188,8 +2193,7 @@ export class LUser<Context extends LogicContext<DUser> = any, D extends DUser = 
 
     protected get_project(context: Context): this['project'] {
         const project = context.data.project;
-        if(project) return LProject.fromPointer(project);
-        return null;
+        return project && LProject.fromPointer(project) || null;
     }
     protected set_project(val: Pack<Exclude<this['project'], null>>|null, context: Context): boolean {
         const data = context.data;

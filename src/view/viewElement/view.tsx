@@ -9,7 +9,7 @@ import {
     DModelElement,
     DNamedElement,
     DocString,
-    DPointerTargetable,
+    DPointerTargetable, DProject,
     DState,
     DViewPoint, DVoidEdge,
     EdgeBendingMode,
@@ -24,7 +24,7 @@ import {
     Info, LEdge, LEdgePoint, LGraphElement, LModelElement,
     Log,
     LogicContext,
-    LPointerTargetable, LUser,
+    LPointerTargetable, LProject, LUser,
     LViewPoint,
     LVoidEdge,
     MyProxyHandler,
@@ -561,7 +561,9 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
     private css_MUST_RECOMPILE!: boolean;
     public cssIsGlobal!: boolean;
     __info_of__cssIsGlobal: Info = {type: ShortAttribETypes.EBoolean, txt: "Use with caution!\nIf true, custom css can affect even elements not matched with this view, or outside the graph."}
-    get_cssIsGlobal(c: Context): this["cssIsGlobal"] { return c.data.cssIsGlobal; }
+    get_cssIsGlobal(c: Context): this["cssIsGlobal"] {
+        return c.data.cssIsGlobal;
+    }
     set_cssIsGlobal(val: this["cssIsGlobal"], c: Context): boolean {
         TRANSACTION(()=>{
             SetFieldAction.new(c.data, "cssIsGlobal", !!val, '', false);
@@ -585,6 +587,11 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
     compiled_css!: string;
     __info_of__compiled_css: Info = { hidden: true, txt:'css + palettes compiled from less in css'};
     get_compiled_css(c: Context): this["compiled_css"] {
+        if (c.data.isExclusiveView && c.data.className === DViewPoint.cname && !Defaults.check(c.data.id) ) {
+            let project = this.get_project(c);
+            let dproject = project?.__raw as DProject | undefined;
+            if (!(dproject && dproject.activeViewpoint === c.data.id)) return '';
+        }
         if (!c.data.css_MUST_RECOMPILE) return c.data.compiled_css; // return c.proxyObject.r.__raw.compiled_css;
         let s = '';
         const allowLESS = false;
@@ -668,7 +675,7 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
             }
         }
         s += '\n\t' + U.replaceAll(c.data.css, '\n', '\n\t');
-        const localViewSelector = '.'+c.data.id; // '[data-viewid="'+c.data.id+'"]';
+        const localViewSelector: string = (c.data.className === 'DViewPoint') ? '.GraphContainer' : '.'+c.data.id; // '[data-viewid="'+c.data.id+'"]';
         s = (!c.data.cssIsGlobal ? localViewSelector : 'body') +' {\n' + s + '\n}';
         // not an error, i'm updating directly d-view that is usually wrong, this is to prevent multiple nodes with same view to trigger compile and redux actions
         // count as if it's a derived attribute not really part of the store.

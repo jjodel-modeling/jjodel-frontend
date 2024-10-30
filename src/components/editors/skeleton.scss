@@ -186,7 +186,7 @@
   }
 }
 
-.dock-content-holder #DockComponent_rightbar_4 {
+.dock-content-holder.tree-view {
 
   // Tree View
 
@@ -196,11 +196,11 @@
     border-radius: var(--tab-radius);
 
   }
-
+/*
   & section:has(section) section {
     padding: 0;
     margin: 0;
-  }
+  }*/
 
   & section:has(section) section .command-bar:nth-child(1) {
     display: none;
@@ -548,5 +548,9 @@ input[type="number"]::-webkit-outer-spin-button {
   margin-bottom: 6px;
 
 
+}
+section{
+  padding: 0;
+  margin: 0;
 }
 

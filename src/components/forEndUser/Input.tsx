@@ -2,54 +2,70 @@ import React, {Dispatch, KeyboardEvent, LegacyRef, ReactElement, ReactNode, useR
 import {connect} from 'react-redux';
 import {DState} from '../../redux/store';
 import {
+    Any,
     Defaults,
     DObject,
     DPointerTargetable,
     GObject,
     Keystrokes, LAttribute,
-    LClass, LEnumerator, LModel, LObject,
-    LPointerTargetable, LReference, LValue,
+    LClass, LEnumerator, LEnumLiteral, LModel, LObject,
+    LPointerTargetable, LReference, LValue, MultiSelect, MultiSelectOptGroup,
+    MultiSelectOption,
     Overlap,
     Pointer, PrimitiveType, Selectors,
     store,
-    U
+    U,
+    UX
 } from '../../joiner';
 import {useStateIfMounted} from 'use-state-if-mounted';
 import './inputselect.scss';
 import { Tooltip } from './Tooltip';
 
 
-export function getSelectOptions(data: any, field: string, options: ReactNode, children?: ReactNode) {
+export function getSelectOptions_raw(data: any, field: string): MultiSelectOptGroup[] {
+    if (!data) return [];
     // console.log("select options", {data, field, children, options});
-    if (options) return options;
-    // children is auto-filled to empty array even if it is not set explicitly in jsx
-    if (Array.isArray(children) && children.length > 0) return children;
     let returns: LClass[] | undefined;
     let primitives: LClass[] | undefined;
     let classes: LClass[] | undefined;
     let enumerators: LEnumerator[] | undefined;
-    let objects: LObject[] | undefined;
+    let objects: (LObject | LEnumLiteral)[] | undefined;
     let m2classname: string | undefined;
     let hasPrimitives: boolean = false;
     let hasReturnTypes: boolean = false;
-    if ((field) === 'type') {
-        if (data) {
+    let cname = data.className;
+    if (!field) switch(cname) {
+        case 'DAttribute':  case 'DReference': case 'DOperation': case 'DParameter': field = 'type'; break;
+        case 'DValue': field = 'values'; break;
+        case 'DClass': field = 'extends'; break;
+    }
+    switch(field) {
+        case 'type':
             let model = data.model;
-            switch (data.className) {
-                case 'DValue':
-                    let m2: LReference | LAttribute | undefined = (data as LValue).instanceof;
-                    if (!m2) return (data as LValue).model.allSubObjects;
-                    let dm2 = m2.__raw;
-                    if (dm2.className === "DAttribute") break;
-                    m2classname = dm2.name;
-                    let m1modelid = model.id;
-                    return m2.instances.filter( o => o.model.id === m1modelid);
+            switch (cname) {
+                default: break;
                 case 'DAttribute': enumerators = model.enums; hasPrimitives = true; break;
                 case 'DReference': classes = model.classes; break;
                 case 'DOperation': classes = model.classes; enumerators = model.enums; hasPrimitives = hasReturnTypes = true; break;
                 case 'DParameter': classes = model.classes; enumerators = model.enums; hasPrimitives = true; break;
             }
-        }
+            break;
+        case 'value': case 'values':
+            if (cname !== 'DValue') break;
+            objects = (data as LValue).validTargets;
+            /*
+            let m2: LReference | LAttribute | undefined = (data as LValue).instanceof;
+            if (!m2) {
+                objects = (data as LValue).model.allSubObjects;
+                break;
+            }
+            let dm2 = m2.__raw;
+            if (dm2.className === "DAttribute") break;
+            let type: LClass = m2.type as LClass;
+            if (!type) break;
+            m2classname = type.name;
+            let m1modelid = data.model.id;
+            objects = (type.allInstances || []).filter( o => o.model.id === m1modelid);*/
     }
     let state: DState | undefined;
     // todo: all this stuff might be better moved in mapstatetoprops, or the select list won't update properly.
@@ -59,53 +75,58 @@ export function getSelectOptions(data: any, field: string, options: ReactNode, c
     }
     if (hasReturnTypes) {
         if (!state) state = store.getState();
-        primitives = LPointerTargetable.fromPointer(state.returnTypes);
+        returns = LPointerTargetable.fromPointer(state.returnTypes);
     }
 
     // console.log("select options", {data, field, returns, primitives, classes, enumerators});
 
-    return (
-        <>
-            {(returns && returns.length > 0) && <optgroup label={'Defaults'}>
-                {returns.map((returnType, i) => {
-                    return <option key={i} value={returnType.id}>{returnType.name}</option>
-                })}
-            </optgroup>}
-            {(primitives && primitives.length) && <optgroup label={'Primitives'}>
-                {primitives.map((primitive, i) => {
-                    return <option key={i} value={primitive.id}>{primitive.name}</option>
-                })}
-            </optgroup>}
-            {(enumerators && enumerators.length > 0) && <optgroup label={'Enumerators'}>
-                {enumerators.map((enumerator, i) => {
-                    return <option key={i} value={enumerator.id}>{enumerator.name}</option>
-                })}
-            </optgroup>}
-            {(classes && classes.length > 0) && <optgroup label={'Classes'}>
-                {classes.map((classifier, i) => {
-                    return <option key={i} value={classifier.id}>{classifier.name}</option>
-                })}
-            </optgroup>}
-            {(objects && objects.length > 0) && <optgroup label={m2classname ? 'Instances of ' + m2classname : "All objects"}>
-                {objects.map((classifier, i) => {
-                    return <option key={i} value={classifier.id}>{classifier.name}</option>
-                })}
-            </optgroup>}
-            {/*options*/}
-        </>);
+    let ret:MultiSelectOptGroup[] = [];
+    if (returns && returns.length) ret.push({label: 'Defaults', options: returns.map((r, i)=>({value: r.id, label:r.name}))});
+    if (primitives && primitives.length) ret.push({label: 'Primitives', options: primitives.map((r, i)=>({value: r.id, label:r.name}))});
+    if (enumerators && enumerators.length) ret.push({label: 'Enumerators', options: enumerators.map((r, i)=>({value: r.id, label:r.name}))});
+    if (classes && classes.length) ret.push({label: 'Classes', options: classes.map((r, i)=>({value: r.id, label:r.name}))});
+    if (objects && objects.length) ret.push({label: m2classname ? 'Instances of ' + m2classname : "All objects", options:
+            [{value: undefined as any, label: '_empty_'}, ...objects.map((r, i)=>({value: r.id, label:r.name}))]});
+    return ret;
 }
+export function getSelectOptions(data: any, field: string, options: ReactNode, children?: ReactNode): ReactNode {
+    if (options) return options;
+    // children is auto-filled to empty array even if it is not set explicitly in jsx
+    if (Array.isArray(children) && children.length > 0) return children;
+    let ret = getSelectOptions_raw(data, field);
+    return selectOptionsToJSX(ret);
+}
+function selectOptionsToJSX(ret: MultiSelectOptGroup[]): ReactNode{
+    return(
+        <>{
+            ret.map(optgrp => <optgroup label={optgrp.label}>{
+                optgrp.options.map((e, i) => <option key={i} value={e.value}>{e.label}</option>)
+            }</optgroup>).filter(e=>!!e)
+        }</>);
+}
+
 export function InputComponent(props: AllProps) {
     const data = props.data;
     const getter = props.getter;
     const setter = props.setter;
     const field: string = props.field as string;
-    const oldValue: PrimitiveType | LPointerTargetable = (getter) ? getter(data, field) : (data ? data[field] : undefined); // !== undefined); ? data[field] : 'undefined'
-    let [value, setValue] = useStateIfMounted<PrimitiveType | LPointerTargetable>(oldValue);
+    const oldValue: PrimitiveType | PrimitiveType[] | LPointerTargetable = (getter) ? getter(data, field) : (data ? data[field] : undefined); // !== undefined); ? data[field] : 'undefined'
+    let [value, setValue] = useStateIfMounted<PrimitiveType | PrimitiveType[] | LPointerTargetable>(oldValue);
 
     const [isTouched, setIsTouched] = useStateIfMounted(false);
     const inputRef = useRef<Element | null>(null);
     if (props.tag === 'select') value = oldValue; // select does not use state.
-    let serializeValue = (val: LPointerTargetable | PrimitiveType): string | PrimitiveType => (val as LPointerTargetable)?.id || (val as any);
+    let serializeValue = (val: LPointerTargetable | PrimitiveType | PrimitiveType[], maxDepth=1, currDepth = 0): string | PrimitiveType | PrimitiveType[] => {
+        if (Array.isArray(val)) {
+            if (props.isMultiSelect && currDepth < maxDepth) {
+                // return val.map(e => serializeValue(e, maxDepth, currDepth + 1)) as PrimitiveType[];
+                return val.map(e => (e as any)?.id||e) as PrimitiveType[];
+            }
+            if (currDepth < maxDepth) return serializeValue(val[0], maxDepth, currDepth + 1);
+            else return undefined;
+        }
+        return (val as LPointerTargetable)?.id || (val as any);
+    };
 
     function valueDidChange(v1: any, v2: any): boolean {
         return serializeValue(v1) !== serializeValue(v2);
@@ -131,7 +152,7 @@ export function InputComponent(props: AllProps) {
 
     let type = (props.type) ? props.type : 'text';
     let subtype: string = type;
-    switch (type){
+    switch (type) {
         case 'toggle': type = 'checkbox'; subtype = 'switch'; break;
         case 'checkbox3': case 'switch': type = 'checkbox'; break;
         case 'slider': type = 'range'; break;
@@ -201,13 +222,13 @@ export function InputComponent(props: AllProps) {
         if (props.tag === 'select') return;
         confirmValue(evt);
     }
-    const confirmValue = (evt: { target: HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement }) => {
+    const confirmValue = (evt: { target: HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement }|undefined, val?: PrimitiveType|PrimitiveType[]) => {
         if (readOnly || isBoolean) return;
-        const newValue: string = getValueFromEvent(evt);
+        const newValue = val || (evt && getValueFromEvent(evt));
         const oldValue = getter ? getter(data, field) : data[field];
-        // console.log("onChange confirm", {evt, newValue, oldValue, changed: valueDidChange(newValue, oldValue), readOnly, isBoolean, nnv:serializeValue(newValue)});
+        console.log("onChange confirm", {evt, newValue, oldValue, field, changed: valueDidChange(newValue, oldValue), readOnly, isBoolean, setter, nnv:serializeValue(newValue)});
         if (valueDidChange(newValue, oldValue)){
-            if (setter) setter(newValue, data, field);
+            if (setter) setter(newValue as any, data, field);
             else data[field] = serializeValue(newValue);
         }
         // I terminate my editing, so I communicate it to other <Input /> that render the same field.
@@ -240,7 +261,9 @@ export function InputComponent(props: AllProps) {
     let inputProps: GObject = {...otherprops,
         className: [props.inputClassName||'', css].join(' '),
         style: (props.inputStyle || {}),
-        spellCheck: (props as any).spellCkeck || false, readOnly, disabled: readOnly, type, value: serializeValue(value), checked,
+        spellCheck: (props as any).spellCkeck || false, readOnly, disabled: readOnly, type,
+        value: serializeValue(value),
+        checked,
         onChange, onBlur, onKeyDown} // key:`${field}.${data?.id}`
     if (!inputProps.style.cursor && cursor === 'not-allowed') { inputProps.style.cursor = cursor; }
     switch(subtype){
@@ -277,29 +300,54 @@ export function InputComponent(props: AllProps) {
         delete rootprops[k];
     }*/
 
+    let wrap = true;
     if (autosize) rootprops.className = (rootprops.className || '') + ' autosize-input-container';
-    else if (!label && !postlabel) {
+    else if (!label && !postlabel && !props.isMultiSelect) {
         if (rootprops.className) inputProps.className = rootprops.className + ' ' + inputProps.className;
         if (rootprops.style) U.objectMergeInPlace(inputProps.style, rootprops.style);
         inputProps = {...rootprops, ...inputProps};
-        switch (props.tag){
-            case "textarea": return <textarea {...inputProps}>{inputProps.value}</textarea>;
-            case "select": return <select {...inputProps}>{getSelectOptions(data, field, props.options, props.children)}</select>;
-            case null: case undefined: case "": case "input": return <input {...inputProps} />;
-            default:
-                inputProps.contentEditable = inputProps.contentEditable !== false;
-                return React.createElement(props.tag, inputProps, props.children);
-        }
+        wrap = false;
     }
 
     switch (props.tag){
         case "textarea": input = <textarea {...inputProps}>{inputProps.value}</textarea>; break;
-        case "select": input = <select {...inputProps}>{getSelectOptions(data, field, props.options, props.children)}</select>; break;
+        case "select":
+            if (props.isMultiSelect){
+                let options = props.options as any || getSelectOptions_raw(data, field);
+                let multiOptions = options as MultiSelectOptGroup[];
+                console.log('setting multiselect pre', {multiOptions, value, ivalue: inputProps.value, options, data, df:data[field], field});
+                let valuesMap = U.objectFromArrayValues((inputProps.value||[]));
+                delete valuesMap[undefined as any];
+                inputProps.value = [];
+                for (let optgrp of multiOptions) for (let opt of optgrp.options) if (valuesMap[opt.value]) inputProps.value.push(opt);
+                // rootprops.className = (rootprops.className || '') + ' clearfix';
+                let old = {...rootprops};
+                rootprops.onMouseMove = (e:any) => { UX.stopEvt(e); old.onMouseMove?.(); console.log('multiselect onmove'); };
+                /*rootprops.onMouseDown = (e:any) => { UX.stopEvt(e); old.onMouseDown?.(); console.log('multiselect onMouseDown'); };
+                rootprops.onMouseUp = (e:any) => { UX.stopEvt(e); old.onMouseUp?.(); console.log('multiselect onMouseUp'); };
+                rootprops.onClick = (e:any) => { UX.stopEvt(e); old.onClick?.(); console.log('multiselect onClick'); };
+                rootprops.onMouseLeave = (e:any) => { UX.stopEvt(e); old.onMouseLeave?.(); console.log('multiselect onMouseLeave'); };*/
+                // @ts-ignore
+                input = <MultiSelect {...inputProps} isMulti={true} options={options}
+                    onChange={((v0: MultiSelectOption[]) => {
+                        let v = v0.map(v => v.value);
+                        confirmValue(undefined, v);
+                        console.log('setting multiselect onchange', {v, v0, value, ivalue: inputProps.value, options});
+                    }) as any}
+                />;
+            }
+            else {
+                let options = getSelectOptions(data, field, props.options, props.children);
+                input = <select {...inputProps}>{options}</select>;
+            }
+            break;
         case null: case undefined: case "": case "input": input = <input {...inputProps} />; break;
         default:
             inputProps.contentEditable = inputProps.contentEditable !== false;
             input = React.createElement(props.tag, inputProps, props.children); break;
     }
+    if (!wrap) return input;
+
     if (typeof label === "string") label = <span>{label}</span>;
     if (typeof postlabel === "string") postlabel = <span>{postlabel}</span>;
 
@@ -315,7 +363,7 @@ export function InputComponent(props: AllProps) {
         select?.click();
     }
     return <label className={'input-container'} {...rootprops} /*onClick={openSelect}*/>
-    {label || undefined}{input}{postlabel || undefined}</label>;
+        {label || undefined}{input}{postlabel || undefined}</label>;
     /*
     return(<label className={'p-1'} {...otherprops}
                   style={rootStyle}>
@@ -341,7 +389,6 @@ export function InputComponent(props: AllProps) {
     */
 }
 
-InputComponent.cname = 'InputComponent';
 export interface InputOwnProps {
     data?: LPointerTargetable | DPointerTargetable | Pointer<DPointerTargetable, 1, 1, LPointerTargetable>;
     field?: string;
@@ -370,7 +417,8 @@ export interface InputOwnProps {
 
 export interface SelectOwnProps extends Omit<InputOwnProps, 'setter'> {
     options?: JSX.Element;
-    setter?: (value: string, data: any, field: string) => void; // parent select has value: string | boolean
+    setter?: (value: string/*|PrimitiveType[]*/, data: any, field: string) => void; // parent select has value: string | boolean
+    isMultiSelect?: boolean;
 }
 interface RealOwnProps extends Omit<SelectOwnProps, 'setter'>{
     setter: InputOwnProps['setter'];
@@ -399,25 +447,31 @@ function mapDispatchToProps(dispatch: Dispatch<any>): DispatchProps {
 }
 
 export const InputConnected =
+    // @ts-ignore
     connect<StateProps, DispatchProps, RealOwnProps, DState>(InputMapStateToProps, mapDispatchToProps)(InputComponent);
 
 
 // export function Input(props: InputOwnProps, children: (string | React.Component)[] = []): ReactElement { return 'input' as any; }
 export function Input(props: InputOwnProps): ReactElement {
+    // @ts-ignore
     return <InputConnected {...props as any}>{props.children}</InputConnected>;
 }
 
 // export function TextArea(props: InputOwnProps, children: (string | React.Component)[] = []): ReactElement { return 'textarea' as any; }
-export function TextArea(props: InputOwnProps): ReactElement {
-    return <InputConnected {...{...props, tag:"textarea"} as any}>{props.children}</InputConnected>;
+export function TextArea(props: InputOwnProps, c: any): ReactElement {
+    // @ts-ignore
+    return <InputConnected {...{...props, tag:"textarea"} as any}>{props.children||c}</InputConnected>;
 }
 //export function Select(props: SelectOwnProps, children: (string | React.Component)[] = []): ReactElement { return 'select' as any; }
-export function Select(props: SelectOwnProps): ReactElement {
-    return <InputConnected {...{...props, tag:"select"} as any}>{props.children}</InputConnected>;
+export function Select(props: SelectOwnProps, c: any): ReactElement {
+    // @ts-ignore
+    return <InputConnected {...{...props, tag:"select"} as any}>{props.children||c}</InputConnected>;
 }
 export const Edit = Input;
 
+// @ts-ignore
 InputComponent.cname = 'InputComponent';
+// @ts-ignore
 InputConnected.cname = 'InputConnected';
 Input.cname = 'Input';
 TextArea.cname = 'TextArea';

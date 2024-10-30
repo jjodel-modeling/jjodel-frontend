@@ -104,7 +104,7 @@ function NestedViewComponent(props: AllProps) {
 
         const max_priority = l.explicitApplicationPriority
 
-        return <li className={"entry-root" + d.className + (d.id === activeViewpointId ? ' selected' : '')} key={d.id}>
+        return <li className={"entry-root " + d.className + (d.id === activeViewpointId ? ' selected' : '')} key={d.id}>
 
             <div className={'inline-row'} onClick={()=>setView(d.id)} onDoubleClick={(e) => {select(d.id)}}> {/* activate anche con il dblclick */}
 
@@ -169,7 +169,9 @@ function NestedViewComponent(props: AllProps) {
                             </>
                         }
                         <Tooltip tooltip={<div>is {d.isExclusiveView ? "" : "not"} mutually exclusive with other "Ex" views.</div>} position={"bottom"} inline={true}>
-                            <span className={"right-icon feature-border ex-icon vertical-centering " + (d.isExclusiveView ? '' : "hidden")}></span></Tooltip>
+                            <span className={"right-icon feature-border ex-icon vertical-centering " + (d.isExclusiveView ? '' : "hidden")}
+                                  onClick={()=>l.isExclusiveView = !d.isExclusiveView}
+                            /></Tooltip>
                     </div>
                 </div>
             </div>

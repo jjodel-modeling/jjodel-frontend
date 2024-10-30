@@ -91,7 +91,7 @@ class builder {
                 <MultiSelect isMulti={true} options={extendOptions as any} value={extendValue} onChange={(v) => {
                     console.log('setting extend', v);
                     lclass.extends = v.map(e => e.value) as Any<string[]>;
-                }}></MultiSelect>
+                }} />
             </label>
             <label className={'input-container'}>
                 <b className={'me-2'}>Final:</b>
@@ -329,67 +329,7 @@ class builder {
             case DReference.cname: isReference = true; break;
             default: isShapeless = true; break;
         }
-        let selectOptions: JSX.Element | JSX.Element[] | null;
-        if (isReference) {
-            let isContainment: boolean = value.containment;
-            let containerObjectsID: Pointer[] = value.fatherList.map(lm => lm.id);
-            let validObjects = Selectors.getObjects().filter((obj) => (featureType as LClass).isSuperClassOf(obj.instanceof, true));
-            validObjects =  validObjects.filter( obj => !containerObjectsID.includes(obj.id)); // avoiding containment loops damiano todo: put this filter in set_value too
-            let freeObjects = [];
-            let boundObjects = [];
-            for (let o of validObjects) {
-                // todo: this check of self contain is too simple does not detect loops, would need to use fatherChain
-                if (isContainment && o.id === value.father.id) continue; // no self contain
-                if (o.isRoot) freeObjects.push(o); else boundObjects.push(o);
-            }
-            let map = (object: LObject) => <option key={object.id} value={object.id}>{object.name/*.feature('name')*/}</option>;
-            selectOptions = <><optgroup label={'Free     Objects'}>{freeObjects.map(map)}</optgroup><optgroup label={'Bound Objects'}>{boundObjects.map(map)}</optgroup></>; }
-        else if (isEnumerator) {
-            selectOptions = <optgroup label={'Literals of ' + featureType.name}>{(featureType as LEnumerator).literals.map((literal, i) => <option key={literal.id} value={literal.id}>{literal.name}</option>)}</optgroup>;
-        }
-        else if (isShapeless) {
-            // damiano todo: rewrite entirely this section to separate bound and free objects, copying from if(isref)
-            // pointables = {objects: Selectors.getObjects(), literals: LPointerTargetable.fromArr(Selectors.getAllEnumLiterals())};
-            let isContainment: boolean = value.containment;
-            let enums: LEnumerator[] = LPointerTargetable.fromArr(Selectors.getAllEnumerators())
-            let classes: LClass[] = LPointerTargetable.fromArr(Selectors.getAllClasses())
-            let shapelessObjects: LObject[] = Selectors.getObjects().filter((o) => !o.instanceof);
-            // console.log('select_options', {enums, classes, shapelessObjects});
-            let classmap: Dictionary<DocString<'classname'>, {free:LObject[], bound:LObject[], all: LObject[]}> = {};
-            let shapeless: {free:LObject[], bound:LObject[], all: LObject[]} = {free:[], bound:[], all: shapelessObjects};
-            for (let c of classes) {
-                let row: {free:LObject[], bound:LObject[], all: LObject[]} = {free: [], bound:[], all: c.instances};
-                classmap[c.name] = row;
-                for (let o of row.all) {
-                    // todo: this check of self contain is too simple does not detect loops, would need to use fatherChain
-                    if (isContainment && o.id === value.father.id) continue; // no self contain
-                    if (o.isRoot) row.free.push(o); else row.bound.push(o);
-                }
-            }
-            for (let o of shapelessObjects) { if (o.isRoot) shapeless.free.push(o); else shapeless.bound.push(o); }
-
-            selectOptions = <>
-                <option value={''} key={0}>--- Not a Reference ---</option>
-                {Object.keys(classmap).map((cname) => !classmap[cname].all.length ? null :
-                    <>
-                        {!classmap[cname].free.length ? null :
-                            <optgroup label={'Free    instances of ' + cname} key={'f-' + cname}>
-                                {classmap[cname].free.map((o) => <option value={o.id} key={o.id}>{o.name}</option>)}
-                            </optgroup>
-                        }
-                        {!classmap[cname].bound.length ? null :
-                            <optgroup label={'Bound instances of ' + cname} key={'b-' + cname}>
-                                {classmap[cname].bound.map((o) => <option value={o.id} key={o.id}>{o.name}</option>)}
-                            </optgroup>
-                        }
-                    </>) }
-                {!shapeless.free.length ? null : <optgroup label={'Free    shapeless objects'}>{shapeless.free.map( (o) => <option value={o.id} key={o.id}>{o.name}</option>)}</optgroup>}
-                {!shapeless.bound.length ? null : <optgroup label={'Bound shapeless objects'}>{shapeless.bound.map( (o) => <option value={o.id} key={o.id}>{o.name}</option>)}</optgroup>}
-                {enums.map((c) => !c.literals.length ? null : <optgroup label={'Literals of ' + c.name}>{ c.literals.map((o)=> <option value={o.id} key={o.id}>{o.name}</option>)}</optgroup>)}
-            </>
-            // console.log('select_options post', {select_options, enums, classes, shapelessObjects});
-        }
-        else selectOptions = null;
+        let selectOptions: JSX.Element | JSX.Element[] | null = value.validTargetsJSX;
 
         let isPtr = isAttribute ? false : (isEnumerator || isReference ? true : undefined);
         const valueslist = (filteredValues).map((val, index) =>

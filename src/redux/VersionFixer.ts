@@ -172,6 +172,7 @@ everytime you put hands into a D-Object shape or valid values, you should docume
             c.rootable = undefined;
         }
         for (let c of (s.viewelements).map(p=> this.d(p, s))) { c.father = c.viewpoint; }
+        for (let c of (s.viewpoints).map(p=> this.d(p, s))) { c.cssIsGlobal = true; }
         for (let c of (s.projects).map(p=> this.d(p, s))) { c.favorite = {}; c.description = ''; }
         for (let c of (s.references).map(p=> this.d(p, s))) { if (c.composition === undefined) c.aggregation = !(c.composition = !!(c as any).containment); }
         return s;

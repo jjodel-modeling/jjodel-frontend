@@ -375,7 +375,6 @@ export class DefaultView {
     {!data && "Model data missing."}
 
     {/* metamodel */}
-
     {data.isMetamodel && 
         [<div className={'edges'}>
             {[
@@ -388,14 +387,12 @@ export class DefaultView {
         level >= 1 && firstPackage && firstPackage.children.filter(c => c).map(classifier => <DefaultNode key={classifier.id} data={classifier} />)]
     }
 
-    {/* metamodel */}
-    
+    {/* model */}
     {level >= 1 && m1Objects.filter(o => o).map(m1object => <DefaultNode key={m1object.id} data={m1object} />)}
     {decorators}
 </Scrollable>
 
-    {/* language designer defined controls */}
-    
+{/* language designer defined controls */}
 <Control title={'Semantic'} payoff={'Zooming'}>
     <Slider name={'level'} title={'Detail level '} node={node} max={3} />
 </Control>
@@ -448,14 +445,13 @@ export class DefaultView {
 
     /* CLASS */
 
+// <View className={"root class " + (level === 1 && abstract ? "abstract")} + onClick={()=>{/*node.events.e1(Math.random().toFixed(3))*/}}>
+
 public static class(): string { return (`<View className={"root class"} onClick={()=>{/*node.events.e1(Math.random().toFixed(3))*/}}>
-
-{/* ver 2.1 */}
-
 <div className={'header'}>
-    {data.isSingleton && <i className='bi bi-1-square'></i>} 
-    {level > 1 && <b className={'class-name'}> {interface ? 'Interface' : abstract ? 'Abstract Class' : 'Class'}:</b>}
-    {level === 1 && !data.isSingleton && <i className="bi bi-c-square-fill"></i>} <Input data={data} field={'name'} hidden={true} autosize={true} />
+    {data.isSingleton && <i className='bi bi-1-square'>&nbsp;</i>}
+    {level > 1 && <b className={'class-name'}>{interface ? 'Interface' : abstract ? 'Abstract Class' : 'Class'}: </b>}    
+    {level === 1 && <i className="bi bi-c-square-fill"></i>}<Input data={data} field={'name'} hidden={true} autosize={true} />
 </div>
 
 {level > 2 && data.children.length > 0 && <hr/>}
@@ -534,7 +530,7 @@ public static enum(): string { return (
 );}
 
     /* PARAMETER */
-    
+
 public static parameter(): string { return (
 `<View className={'root parameter w-100'}>
     <span className={'feature-name'}>
