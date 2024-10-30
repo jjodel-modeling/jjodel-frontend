@@ -16,14 +16,14 @@ import {
     AllProjectsPage,
     ArchivePage,
     AuthPage,
-    CommunityPage,
+    CommunityPage, NewsPage,
     NotesPage,
     ProfilePage,
-    ProjectPage,
+    ProjectPage, ProjectsInfoPage,
     RecentPage,
     SettingsPage,
     TemplatePage,
-    UpdatesPage
+    UpdatesPage, UsersInfoPage
 } from "./pages";
 
 import {ExternalLibraries} from "./components/forEndUser/ExternalLibraries";
@@ -77,6 +77,9 @@ function App(props: AllProps): JSX.Element {
                         <Route path={'project'} element={<ProjectPage />} />
                         <Route path={'recent'} element={<RecentPage />} />
                         <Route path={'profile'} element={<ProfilePage />} />
+                        <Route path={'usersInfo'} element={<UsersInfoPage />} />
+                        <Route path={'projectsInfo'} element={<ProjectsInfoPage />} />
+                        <Route path={'news'} element={<NewsPage />} />
                         <Route path={'*'} element={<AllProjectsPage />} />
                     </> : <Route path={'*'} element={<AuthPage />} />}
                 </Routes></Try>

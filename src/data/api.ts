@@ -1,7 +1,6 @@
 import Axios from 'axios';
-import {Json} from '../joiner';
+import {Json, DUser} from '../joiner';
 import Storage from "./storage";
-import Settings from "../settings/Settings";
 
 export type Response = {code: number, data: Json|null}
 class Api {
@@ -9,7 +8,8 @@ class Api {
     static memorec = `${process.env['REACT_APP_MEMOREC']}/memorec`;
 
     private static headers(): {'auth-token': string} {
-        return {'auth-token': Storage.read('token') || ''};
+        let token: string = Storage.read('token') || '';
+        return {'auth-token': token};
     }
     static async get(path: string): Promise<Response> {
         try {

@@ -130,7 +130,7 @@ const Title = (props: TitleProps) => {
 export type DashProps = {
     children?: JSX.Element,
     // NB: account and profile are both used, i don't know which to keep
-    active: 'Account'|'Profile'|'Settings'|'Updates'|'Community'|'All'|'Archive'|'Templates'|'Recent' | 'Notes' | 'Project';
+    active: 'Account'|'Profile'|'Settings'|'Updates'|'Community'|'All'|'Archive'|'Templates'|'Recent' | 'Notes' | 'Project' | 'UsersInfo' | 'ProjectsInfo' | 'News';
     version?: Partial<DState["version"]>;
     project?: LProject;
     projects?:LProject[];
@@ -161,7 +161,7 @@ function GenericDashboard(props: DashProps): any {
     return (<>
         <Navbar />
         <div className={"dashboard-container"} tabIndex={-1}>
-            <LeftBar active={active} projects={user?.projects}/>
+            <LeftBar user={user} active={active} projects={user?.projects}/>
             <div className={'user'}>
                 <div className={'name'}>
                     <>
@@ -278,7 +278,7 @@ function ProjectCatalog(props: ProjectProps) {
                                 <Btn icon={'minispace'} />
                                 <Btn icon={'copy'} action={e => vp.duplicate()} tip={'Duplicate viewpoint'}/>
                                 <Sep />
-                                {(vp.name !== 'Default' && vp.name !== 'Validation default') ? 
+                                {(vp.name !== 'Default' && vp.name !== 'Validation default') ?
                                     <Btn icon={'delete'} action={e => vp.delete()} tip={'Delete viewpoint'}/>
                                     :
                                     <Btn icon={'delete'} action={e => vp.delete()} tip={'Delete viewpoint'} disabled={true}/>
