@@ -1,11 +1,11 @@
 {
   "files": {
-    "main.css": "./static/css/main.6b236bac.css",
-    "main.js": "./static/js/main.105ea528.js",
-    "main.css.map": "./static/css/main.6b236bac.css.map",
-    "main.js.map": "./static/js/main.105ea528.js.map",
+    "main.css": "./static/css/main.2bd89199.css",
+    "main.js": "./static/js/main.61a6689c.js",
+    "main.css.map": "./static/css/main.2bd89199.css.map",
+    "main.js.map": "./static/js/main.61a6689c.js.map",
     "index.html": "./index.html",
-    "static/media/style.scss": "./static/media/toggle-on.a35a28df.svg",
+    "static/media/style.scss": "./static/media/toggle-on.9def6bc6.svg",
     "static/media/bootstrap-icons.css": "./static/media/bootstrap-icons.b7bcc075.woff2",
     "static/media/card.png": "./static/media/card.053f13fc.png",
     "static/media/colors.png": "./static/media/colors.e573584a.png",
@@ -14,7 +14,7 @@
     "static/media/swen-splash.png": "./static/media/swen-splash.4fd389d2.png"
   },
   "entrypoints": [
-    "static/css/main.6b236bac.css",
-    "static/js/main.105ea528.js"
+    "static/css/main.2bd89199.css",
+    "static/js/main.61a6689c.js"
   ]
 }

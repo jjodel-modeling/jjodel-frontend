@@ -1,6 +1,6 @@
 import {
     Any,
-    DAttribute, DClass, DEnumerator, Dictionary, DocString, DReference,
+    DAttribute, DClass, DEnumerator, Dictionary, DModel, DocString, DReference,
     DState,
     Input, LAttribute, LClass, LClassifier, LEnumerator,
     LGraphElement,
@@ -9,7 +9,7 @@ import {
     LObject, LPointerTargetable, LReference, LStructuralFeature, LValue,
     LViewElement, MultiSelect, Pointer,
     Select,
-    Selectors, SetFieldAction, U, ValueDetail
+    Selectors, SetFieldAction, store, U, ValueDetail
 } from '../../joiner';
 import {FakeStateProps} from '../../joiner/types';
 import React, {Component, Dispatch, ReactElement, ReactNode} from 'react';
@@ -37,8 +37,33 @@ class builder {
     }
 
     static model(data: LModelElement, advanced: boolean): JSX.Element {
+        let l = data as LModel;
+        let d = l.__raw;
+        let multiselectArr = d.dependencies;
+        let multiselectValue: {value: string, label: string}[] = [];
+        let state = store.getState();
+        let validoptionsarr = Selectors.getAll(DModel, undefined, state, true, false) as DModel[];
+        let multiselectOptions: {value: string, label: string}[] = validoptionsarr.map(c => {
+            let opt = {value:c.id, label: c.name};
+            console.log('msel0', {d, c, did:d.id, cid:c.id, n:opt.label});
+            if (opt.value === d.id) return undefined;
+            if (!multiselectArr.includes(opt.value)) return opt;
+            console.log('msel', {d, c, did:d.id, cid:c.id, n:opt.label});
+            multiselectValue.push(opt);
+            return undefined;
+        }).filter(e=>!!e) as {value: string, label: string}[];
+        // <Select data={data} isMulti={true} field={'dependencies'}/>
+
         return (<section className={'properties-tab'}>
             {this.named(data, advanced)}
+
+            <label className={'input-container'}>
+                <b className={'me-2'}>Dependends from models:</b>
+                <MultiSelect isMulti={true} options={multiselectOptions as any} value={multiselectValue} onChange={(v) => {
+                    console.log('setting model dependencies', v);
+                    l.dependencies = v.map(e => e.value) as Any<string[]>;
+                }} />
+            </label>
         </section>);
     }
 
@@ -68,8 +93,8 @@ class builder {
         let extendOptions: {label: string, options: {value: string, label: string}[]}[] = pkgs.map(p => (
             {label: p.fullname, options: p.classes.map(c=> {
                 let opt = {value:c.id, label: c.name};
-                if (!extendsarr.includes(opt.value)) return opt;
                 if (opt.value === dclass.id) return undefined;
+                if (!extendsarr.includes(opt.value)) return opt;
                 extendValue.push(opt);
                 return undefined;
             }).filter(e=>!!e) as {value: string, label: string}[]}));
@@ -157,37 +182,42 @@ class builder {
             {advanced && <>
                 <label className={'input-container'}>
                     <b className={'me-2'}>Unique:</b>
-                    <Input data={data} field={'unique'} type={'checkbox'} />
+                    <Input data={data} field={'unique'} type={'checkbox'}/>
                 </label>
                 <label className={'input-container'}>
                     <b className={'me-2'}>Ordered:</b>
-                    <Input data={data} field={'ordered'} type={'checkbox'} />
+                    <Input data={data} field={'ordered'} type={'checkbox'}/>
                 </label>
                 <label className={'input-container'}>
                     <b className={'me-2'}>Changeable:</b>
-                    <Input data={data} field={'changeable'} type={'checkbox'} />
+                    <Input data={data} field={'changeable'} type={'checkbox'}/>
                 </label>
                 <label className={'input-container'}>
                     <b className={'me-2'}>Volatile:</b>
-                    <Input data={data} field={'volatile'} type={'checkbox'} />
+                    <Input data={data} field={'volatile'} type={'checkbox'}/>
                 </label>
                 <label className={'input-container'}>
                     <b className={'me-2'}>Transient:</b>
-                    <Input data={data} field={'transient'} type={'checkbox'} />
+                    <Input data={data} field={'transient'} type={'checkbox'}/>
                 </label>
                 <label className={'input-container'}>
                     <b className={'me-2'}>Unsettable:</b>
-                    <Input data={data} field={'unsettable'} type={'checkbox'} />
+                    <Input data={data} field={'unsettable'} type={'checkbox'}/>
                 </label>
                 <label className={'input-container'}>
                     <b className={'me-2'}>Derived:</b>
-                    <Input data={data} field={'derived'} type={'checkbox'} />
+                    <Input data={data} field={'derived'} type={'checkbox'}/>
+                </label>
+                <label className={'input-container'}>
+                    <b className={'me-2'}>Cross Reference:</b>
+                    <Input data={data} field={'allowCrossReference'} type={'checkbox'}/>
                 </label>
             </>}
         </>);
     }
+
     static attribute(data: LModelElement, advanced: boolean): JSX.Element {
-        return (<section  className={'properties-tab'}>
+        return (<section className={'properties-tab'}>
             {this.feature(data, advanced)}
             {advanced && <label className={'input-container'}>
                 <b className={'me-2'}>ID:</b>

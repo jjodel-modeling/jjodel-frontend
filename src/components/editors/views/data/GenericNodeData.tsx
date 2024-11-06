@@ -1,5 +1,5 @@
 import React, {Dispatch} from 'react';
-import {DState, DViewElement, LPointerTargetable, LViewElement, Pointer} from '../../../../joiner';
+import {DState, DViewElement, LPointerTargetable, LViewElement, Overlap, Pointer} from '../../../../joiner';
 import {FakeStateProps} from "../../../../joiner/types";
 import {connect} from "react-redux";
 import EdgeData from "./EdgeData";
@@ -53,7 +53,7 @@ interface StateProps {
 }
 
 interface DispatchProps {}
-type AllProps = OwnProps & StateProps & DispatchProps;
+type AllProps = Overlap<Overlap<OwnProps, StateProps>, DispatchProps>;
 
 function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     const ret: StateProps = {} as FakeStateProps;

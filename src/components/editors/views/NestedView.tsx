@@ -250,11 +250,10 @@ function NestedViewComponent(props: AllProps) {
                         label={"Is exclusive"}
                         readonly={validation || index <= 0}
                     />
-                    {(!validation || true) && <button className={'btn btn-success ms-1'} disabled={active.id === viewpoint.id}
+                    {<button className={'btn btn-success ms-1'} disabled={active.id === viewpoint.id}
                                                       onClick={(evt) => {selectt(viewpoint.id)}}>
                         <i className={'p-1 bi bi-check2'}/>
                     </button>
-                        // todo: validation views should not be "activable" but so far it is the only way to see the subviews in it.
                     }
                     <button
                         className={'btn btn-success ms-1'}

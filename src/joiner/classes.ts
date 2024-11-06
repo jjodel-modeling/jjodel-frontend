@@ -92,7 +92,6 @@ import type {
 import type {
     CClass,
     Constructor,
-    Dependency,
     Dictionary,
     DocString,
     GObject,
@@ -122,7 +121,7 @@ import {
     DViewPoint,
     EdgeSegment,
     GraphPoint,
-    GraphSize,
+    GraphSize, IPoint, ISize,
     LGraph,
     LLog,
     LModel,
@@ -545,6 +544,7 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
 
         if (this.thiss.hasOwnProperty("father")) {
             this.fatherType = fatherType as any;
+            // console.log('x6 addchild() set ptr father', {father, thiss:this.thiss});
             this.setPtr("father", father);
         }
     }
@@ -614,6 +614,8 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
                 if (!fromCreateAction) CreateElementAction.new(e, false);
                 for (let c of subElements) Constructors.persist([c]);
                 // finally fire the actions for "this"
+
+                // console.log('x6 addchild pre firing act()', {callbacks, d:e});
                 for (let c of callbacks) (c as Action).fire ? (c as Action).fire() : (c as () => void)();
                 SetRootFieldAction.new('ELEMENT_CREATED', e.id, '+=', false); // here no need to IsPointer because it only affects Transient stuff
             }
@@ -652,6 +654,7 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         if (this.thiss.className === 'DOperation') return this;
         // if (!this.persist) return this;
         let thiss: DAttribute|DReference = this.thiss as any;
+        thiss.allowCrossReference = false;
         const _DClass: typeof DClass = windoww.DClass;
         const _DValue: typeof DValue = windoww.DValue;
 
@@ -722,6 +725,7 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         if (val === undefined) val = [];
         else if(!Array.isArray(val)) val = [val];
         thiss.values = [];// because reducer calculating newly added pointedby must find something to start comparison
+        thiss.allowCrossReference = false;
         this.setPtr("values", val, this.state);
 
         // update father's collections (pointedby's here are set automatically)
@@ -798,8 +802,9 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         const thiss: DModel = this.thiss as any;
         thiss.packages = []; // packages;
         thiss.isMetamodel = isMetamodel || false;
+        thiss.dependencies = [];
         this.setPtr("instanceof", instanceoff || null);
-        let lmodel = instanceoff ? LPointerTargetable.fromPointer(instanceoff) : undefined;
+        let lmodel: LModel | undefined = instanceoff ? LPointerTargetable.fromPointer(instanceoff) : undefined;
         this.thiss._persistCallbacks.push(()=>{
             if (lmodel){
                 let lthis: LModel = LPointerTargetable.fromD(this.thiss);
@@ -836,6 +841,7 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         thiss.rootable = undefined;
         thiss.sealed = [];
         thiss.final = false;
+        thiss.allowCrossReference = false;
         this.setExternalPtr(thiss.father, "classifiers", "+=");
         this.setExternalRootProperty('ClassNameChanged.'+thiss.id, thiss.name, '', false);
 
@@ -1742,8 +1748,13 @@ export class LPointerTargetable<Context extends LogicContext<DPointerTargetable>
         return true;
     }
     protected __sanitizeValue(val: any, canEditVal: boolean = true, canEditValDeep:boolean = false): any{
-        if (val === undefined) { return val; }
-        if (val.__isProxy || val.id && val.className) return val.id;
+        if (!val) { return val; }
+        let className = val.className;
+        if ((val.__isProxy || val.id && className)
+            && !RuntimeAccessibleClass.extends(className, IPoint.cname)
+            && !RuntimeAccessibleClass.extends(className, ISize.cname)) {
+            return val.id;
+        }
         // if (typeof val === "string") { return val; } else
         if (typeof val !== "object") { return val; }
         else if (Array.isArray(val)) { return val.map(v => this.__sanitizeValue(v, canEditValDeep, canEditValDeep)); }
@@ -1754,7 +1765,6 @@ export class LPointerTargetable<Context extends LogicContext<DPointerTargetable>
             else if (val[k] && (val[k].__isProxy || val[k].id && val[k].className)) ret[k] = val[k].id;
         }
         return ret;
-
     }
 
     // protected _defaultCollectionGetter(c: Context, k: keyof Context["data"]): LPointerTargetable[] { return LPointerTargetable.fromPointer((c.data as any)[k]); }
@@ -1800,7 +1810,7 @@ export class LPointerTargetable<Context extends LogicContext<DPointerTargetable>
                 if (v.length === 0) isPointer = true; // assumed, should not cause harm if it is not.
                     // it will delete remove an entry in pointedBy from all oldValue entries in the array that should not be present anyway.
                 // like oldVal.map( id => U.arrayRemove(LData.wrap(id).pointedBy, c.data.this_id)
-                else isPointer = Pointers.isPointer(v[0] as any);
+                else isPointer = v.some(p=>Pointers.isPointer(p)); //Pointers.isPointer(v[0] as any);
             } else isPointer = Pointers.isPointer(v);
 
             // autofix value
@@ -1966,33 +1976,8 @@ export class LPointerTargetable<Context extends LogicContext<DPointerTargetable>
         }
     }
     */
-    public dependencies(): Dependency[] { return []; }
-    protected get_dependencies(context: Context): () => Dependency[] {
-        const data = context.data;
-        const dependencies: Dependency[] = [];
-        const ret = () => {
-            for (let pointedBy of data.pointedBy) {
-                const raw = pointedBy.source.split('.');
-                let root = raw[0];
-                const obj = raw[1] || '';
-                let field = raw[2] || '';
-
-                // Delete chars from end that are not in [azAZ].
-                const regex = /[^a-zA-Z]+$/;
-                root = root.replace(regex, '');
-                field = field.replace(regex, '');
-                // damiano: this is likely to cause a bug for sure somewhere when a key ends with "s" but is not an array. keep in mind when naming variables.
-                let op: ''|'-=' = (field && field.endsWith('s')) ? '-=' : '';
-                if(!field && root.endsWith('s')) op = '-=';
-
-                const dependency: Dependency = {root: root  as keyof DState, obj, field: field as keyof DPointerTargetable, op};
-                if(!dependencies.includes(dependency)) dependencies.push(dependency);
-            }
-            return dependencies
-        }
-        return ret;
-    }
-
+    /*
+*/
     public delete(): void {}
     protected get_delete(context: Context): () => void {
         return Dummy.get_delete(this, context);
@@ -3172,6 +3157,8 @@ export class ViewTransientProperties {
 export class DataTransientProperties {
     nodes!: Dictionary<Pointer<DGraphElement>, LGraphElement>;
     node?: LGraphElement;
+    derived_read?: (data: LModelElement, originalValues: any[]) => any; // derived attributes and references
+    derived_write?: (value:any, data:LModelElement, oldValue:any[]) => any; // derived attributes and references
     constructor(){
         this.nodes = {};
     }

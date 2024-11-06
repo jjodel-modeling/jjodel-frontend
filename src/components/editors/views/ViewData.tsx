@@ -24,6 +24,9 @@ import GenericNodeData from "./data/GenericNodeData";
 
 import {Btn, CommandBar} from '../../commandbar/CommandBar';
 import "./nestedView.scss";
+import {PermissionViewTab} from "./data/PermissionViewTab";
+import {ComponentsTab} from "./data/ComponentsTab";
+import {PermissionViewpointTab} from "./data/PermissionViewpointTab";
 
 const tabidprefix = "Dock_in_view_detail";
 
@@ -50,18 +53,15 @@ function ViewDataComponent(props: AllProps) {
     let isVP: boolean = view.className === DViewPoint.cname;
     let isV: boolean = !isVP;
 
-    const tabs = [
-
-
-
-
-
-    ];
+    const tabs = [];
     tabs.push({id: id(), title: 'Apply to', group: '1', closable: false, content: <Try><InfoData viewID={view.id} viewpointsID={viewpoints.map(vp => vp.id)} readonly={readOnly} /></Try>});
     if(isV) tabs.push({id: id(), title: 'Template', group: '1', closable: false, content: <Try><TemplateData viewID={view.id} readonly={readOnly} /></Try>});
     tabs.push({id: id(), title: 'Style', group: '1', closable: false, content: <Try><PaletteData viewID={view.id} readonly={readOnly} /></Try>});
     if(isV) tabs.push({id: id(), title: 'Events', group: '1', closable: false, content: <Try><EventsData viewID={view.id} readonly={readOnly} /></Try>});
     if(isV) tabs.push({id: id(), title: 'Options', group: '1', closable: false, content: <Try><GenericNodeData viewID={view.id} readonly={readOnly} /></Try>});
+    if(isV) tabs.push({id: id(), title: 'Permissions', group: '1', closable: false, content: <Try><PermissionViewTab viewID={view.id} readonly={readOnly} /></Try>});
+    if(isVP) tabs.push({id: id(), title: 'Permissions', group: '1', closable: false, content: <Try><PermissionViewpointTab viewID={view.id} readonly={readOnly} /></Try>});
+    if(isVP) tabs.push({id: id(), title: 'Components', group: '1', closable: false, content: <Try><ComponentsTab viewID={view.id} readonly={readOnly} /></Try>});
 
 
     // Log.exx('$crash', "test crash", {propss:props});

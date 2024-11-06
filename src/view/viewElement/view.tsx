@@ -1485,7 +1485,9 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
                             break;
                         default:
                             try {
-                                (lview as any)[key] = (c.data as any)[key];
+                                let v: any = (c.data as any)[key];
+                                if (typeof v === 'object') v = (Array.isArray(v) ? [...v] : {...v});
+                                (lview as any)[key] = v;
                             } catch(e) {
                             //    Log.ee('Error on duplicate view:', e);
                             }

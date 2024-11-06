@@ -54,7 +54,10 @@ class SizeInputComponent extends PureComponent<AllProps, ThisState>{
             </div>
         ));
 
+
         let size: Partial<ISize> = (l[field] || {}) as GObject;
+        console.log('sizeinput debug', {l, field, size})
+
         const inputStyle = {justifyContent: "right", width: "auto", marginRight:"5px"};
         let labelStyle = {height: '100%', display: 'inline-block', marginRight:"5px"}
         return (<>

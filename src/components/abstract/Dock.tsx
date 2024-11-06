@@ -9,6 +9,7 @@ import {NodeEditor} from "../editors/NodeEditor";
 import DockManager from './DockManager';
 import {PinnableDock, TabContent, TabHeader} from '../dock/MyRcDock';
 import ModelsSummaryTab from "./tabs/ModelsSummaryTab";
+import {PermissionModelTab} from "../editors/PermissionModelTab";
 //import MqttEditor from "../rightbar/mqtt/MqttEditor";
 //import NestedView from "../rightbar/nestedViewEditor/ViewEditorNestedVersion";
 //import CollaboratorsEditor from "../rightbar/collaboratorsEditor/CollaboratorsEditor";
@@ -47,6 +48,7 @@ function DockComponent(props: AllProps) {
     //const mqtt = {id: id(), title: <TabHeader tid={tid()}>Mqtt</TabHeader>, group: 'editors', closable: false, content: <TabContent tid={tid()}><MqttEditor /></TabContent>};
     const console = {id: id(), title: <TabHeader tid={tid()}>Console</TabHeader>, group: 'editors', closable: false, content: <TabContent tid={tid()}><Console /></TabContent>};
     const logger = {id: id(), title: <TabHeader tid={tid()}>Logger</TabHeader>, group: 'editors', closable: false, content: <TabContent tid={tid()}><Logger/></TabContent>};
+    const permissions = {id: id(), title: <TabHeader tid={tid()}>Permissions</TabHeader>, group: 'editors', closable: false, content: <TabContent tid={tid()}><PermissionModelTab/></TabContent>};
 
     const layout: LayoutData = {dockbox: {mode: 'horizontal', children: []}};
     layout.dockbox.children.push({tabs: [ModelsSummary]});
@@ -58,9 +60,10 @@ function DockComponent(props: AllProps) {
         // mqtt,
         node,
         console,
-        logger
+        logger,
     ];
-    if(user?.project?.type === 'collaborative') tabs.push(collaborative);
+    if (user?.project?.type === 'collaborative') tabs.push(collaborative);
+    if (true || user?.project?.type === 'collaborative') tabs.push(permissions);
     layout.dockbox.children.push({tabs});
 
     return (<PinnableDock ref={dock => DockManager.dock = dock} defaultLayout={layout} groups={groups} />);

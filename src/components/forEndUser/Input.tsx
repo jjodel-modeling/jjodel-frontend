@@ -9,7 +9,7 @@ import {
     GObject,
     Keystrokes, LAttribute,
     LClass, LEnumerator, LEnumLiteral, LModel, LObject,
-    LPointerTargetable, LReference, LValue, MultiSelect, MultiSelectOptGroup,
+    LPointerTargetable, LReference, LStructuralFeature, LValue, MultiSelect, MultiSelectOptGroup,
     MultiSelectOption,
     Overlap,
     Pointer, PrimitiveType, Selectors,
@@ -22,7 +22,7 @@ import './inputselect.scss';
 import { Tooltip } from './Tooltip';
 
 
-export function getSelectOptions_raw(data: any, field: string): MultiSelectOptGroup[] {
+export function getSelectOptions_raw(data: LPointerTargetable, field: string): MultiSelectOptGroup[] {
     if (!data) return [];
     // console.log("select options", {data, field, children, options});
     let returns: LClass[] | undefined;
@@ -39,9 +39,17 @@ export function getSelectOptions_raw(data: any, field: string): MultiSelectOptGr
         case 'DValue': field = 'values'; break;
         case 'DClass': field = 'extends'; break;
     }
+/*
+    let newmode = true;
+    if (newmode){
+        switch(field){
+            case 'extends': case 'type': return data.validTargetOptions;
+        }
+        return [];
+    }*/
     switch(field) {
         case 'type':
-            let model = data.model;
+            let model = (data as LStructuralFeature).model;
             switch (cname) {
                 default: break;
                 case 'DAttribute': enumerators = model.enums; hasPrimitives = true; break;
@@ -89,13 +97,21 @@ export function getSelectOptions_raw(data: any, field: string): MultiSelectOptGr
             [{value: undefined as any, label: '_empty_'}, ...objects.map((r, i)=>({value: r.id, label:r.name}))]});
     return ret;
 }
-export function getSelectOptions(data: any, field: string, options: ReactNode, children?: ReactNode): ReactNode {
+export function getSelectOptions(data: LPointerTargetable, field: string, options: ReactNode, children?: ReactNode): ReactNode {
     if (options) return options;
     // children is auto-filled to empty array even if it is not set explicitly in jsx
     if (Array.isArray(children) && children.length > 0) return children;
-    let ret = getSelectOptions_raw(data, field);
-    return selectOptionsToJSX(ret);
-}
+    let ret: ReactNode | undefined;
+    let newmode = true;
+    if (newmode){
+        switch(field){
+            case 'extends': case 'type': ret = (data as any).validTargetJSX; break;
+        }
+    }
+    if (ret) return ret;
+    let opts = getSelectOptions_raw(data, field); // old to remove?
+    return UX.options(opts); // selectOptionsToJSX(opts);
+}/*
 function selectOptionsToJSX(ret: MultiSelectOptGroup[]): ReactNode{
     return(
         <>{
@@ -103,7 +119,7 @@ function selectOptionsToJSX(ret: MultiSelectOptGroup[]): ReactNode{
                 optgrp.options.map((e, i) => <option key={i} value={e.value}>{e.label}</option>)
             }</optgroup>).filter(e=>!!e)
         }</>);
-}
+}*/
 
 export function InputComponent(props: AllProps) {
     const data = props.data;

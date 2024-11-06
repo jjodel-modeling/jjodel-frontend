@@ -14,7 +14,7 @@ import {
     VertexPointers,
     ModelPointers,
     LtoD,
-    LVertex, LEdgePoint, LGraph, MultiSelectOptGroup, UX,
+    LVertex, LEdgePoint, LGraph, MultiSelectOptGroup, UX, Function2, Any, MultiSelectOption,
 } from "../../joiner";
 import {
     Abstract,
@@ -548,6 +548,7 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
     protected get_addChild(c: Context): (type?: string, ...params: any[]) => LModelElement { // just for add new, not for add pre-existing.
         return (type, ...args: any) => {
             let ret: undefined | ((...params: any[]) => LModelElement);
+            let type0 = type;
             if (!type || type === "auto") {
                 switch(c.data.className){
                     case DModel.cname: if ((c.data as DModel).isMetamodel) type = "package"; else type = "object"; break;
@@ -617,6 +618,7 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
                     ret = (this as any).get_addException(c as any);
                     break; */
             }
+            // console.log('x6 addchild()', {type0, type, args, fatherElement, ret, rts:ret?.toString()});
             return ret ? ret(...args) : null as any;
         }
     }
@@ -1570,6 +1572,7 @@ export class DOperation extends DPointerTargetable { // extends DTypedElement
     parameters: Pointer<DParameter, 0, 'N', LParameter> = [];
     visibility: AccessModifier = AccessModifier.private;
     implementation!: string;
+    allowCrossReference!: boolean;
 
     public static new(name?: DNamedElement["name"], type?: DOperation["type"], exceptions: DOperation["exceptions"] = [], father?: DOperation["father"], persist: boolean = true): DOperation {
         if (!name) name = this.defaultname("fx_", father);
@@ -1626,6 +1629,7 @@ export class LOperation<Context extends LogicContext<DOperation> = any, C extend
     exceptions!: LClassifier[];
     parameters!: LParameter[];
     visibility!: AccessModifier;
+    allowCrossReference!: boolean;
 
 
     protected generateEcoreJson_impl(context: Context, loopDetectionObj: Dictionary<Pointer, DModelElement> = {}): Json {
@@ -1772,6 +1776,7 @@ export class DParameter extends DPointerTargetable { // extends DTypedElement
     required!: boolean;
     defaultValue!: any;
     // personal
+    allowCrossReference!: boolean;
 
     public static new(name?: DNamedElement["name"], type?: DTypedElement["type"], father?: Pointer, persist: boolean = true): DParameter {
         if (!type) type = LPointerTargetable.from(Selectors.getFirstPrimitiveTypes()).id; // default type as string
@@ -1820,6 +1825,7 @@ export class LParameter<Context extends LogicContext<DParameter> = any, C extend
     required!: boolean;
     // personal
     defaultValue!: any;
+    allowCrossReference!: boolean;
 
     protected generateEcoreJson_impl(context: Context, loopDetectionObj: Dictionary<Pointer, DModelElement> = {}): Json {
         loopDetectionObj[context.data.id] = context.data;
@@ -1916,6 +1922,7 @@ export class DClass extends DPointerTargetable { // extends DClassifier
     rootable?: boolean;
     sealed!: Pointer<DClass>[];
     final!: boolean;
+    allowCrossReference!: boolean;//for extend
 
     // for m1:
     // hideExcessFeatures: boolean = true; // isn't it like partial?? // old comment: se attivo questo e creo una DClass di sistema senza nessuna feature e di nome Object, ho creato lo schema di un oggetto schema-less a cui tutti sono conformi
@@ -1923,6 +1930,8 @@ export class DClass extends DPointerTargetable { // extends DClassifier
     public static new(name?: DNamedElement["name"], isInterface: DClass["interface"] = false, isAbstract: DClass["abstract"] = false, isPrimitive: DClass["isPrimitive"] = false, partial?: DClass["partial"],
                       partialDefaultName?: DClass["partialdefaultname"], father?: Pointer, persist: boolean = true, id?: string): DClass {
         if (!name) name = this.defaultname("Concept ", father);
+
+        // console.log('x6 addchild() new class', {father, arguments, name});
         return new Constructors(new DClass('dwc'), father, persist, undefined, id).DPointerTargetable().DModelElement()
             .DNamedElement(name).DClassifier().DClass(isInterface, isAbstract, isPrimitive, partial, partialDefaultName).end();
     }
@@ -1983,14 +1992,7 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
     extendsChain!: LClass[];  // list of all super classes (father, father of father, ...)  todo: isn't this the same as "superclasses" ? check implementation differeces, eventually remove one.
     extendedBy!: LClass[];
     nodes!: LGraphElement[]; // ipotesi, non so se tenerlo
-
-    test(){
-        let cc: LClassifier = null as any;
-        let c: LClass = null as any;
-        cc = c;
-    }
-
-
+    allowCrossReference!: boolean;
     sealed!: LClass[];
     __info_of__sealed: Info = {type: 'LClass[]', txt:'A sealed class can specify a list of other classes that are allowed to extend it.' +
             '\n A sealed class that does not allow any class to extend it is a "final" class.'}
@@ -2255,7 +2257,10 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
     }
 
     protected get_children_idlist(context: Context): Pointer<DAnnotation | DStructuralFeature | DOperation, 1, 'N'> {
-        return [...super.get_children_idlist(context) as Pointer<DAnnotation | DStructuralFeature, 1, 'N'>, ...context.data.attributes, ...context.data.references, ...context.data.operations];
+        return [...super.get_children_idlist(context) as Pointer<DAnnotation | DStructuralFeature, 1, 'N'>,
+            ...context.data.attributes,
+            ...context.data.references,
+            ...context.data.operations];
     }
 
 
@@ -2835,7 +2840,22 @@ export class DStructuralFeature extends DPointerTargetable { // DTypedElement
     volatile: boolean = true;
     transient: boolean = false;
     unsettable: boolean = false;// if the feature can be "unsetted" aka undefined/deleted ?
-    derived: boolean = false;
+    allowCrossReference!:boolean;
+    public derived!: boolean;
+    /*protected */derived_read?: string;
+    /*protected */derived_write?: string;
+    /*protected*/ __info_of__derived: Info = {type: 'string', txt:'A ECore flag to signal the values of this feature depend on other features.\n' +
+            'To make it usable at runtime in jjodel check derived_read and derived_write.'}
+    /*protected*/ __info_of__derived_read: Info = {type: 'string', txt:'A function in string format with 2 or less attributes: (data, oldValue).\n' +
+            '- data is the LValue hosting this derived feature\n' +
+            '- originalValues are the current **non-derived** values actually memorized in the data.values\n'+
+            'The mandatory return value of this function will be returned when attempted to read data.values.'}
+    /*protected*/ __info_of__derived_write: Info = {type: 'string', txt:'A function in string format with 3 or less attributes: (value, data, oldValue).\n' +
+            '- value is the value currently attempted to be set, which triggered the function call.\n' +
+            '- data is the LValue hosting this derived feature\n' +
+            '- originalValues are the current **non-derived** values actually memorized in the data.values\n'+
+            'The optional return value of this function will be stored inside data, allowing for hybrid dependency-persistant features' +
+            '\n or for a feature "depending on itself". like uppercasing his values before setting them.'}
     defaultValue!: (Pointer<DObject, 1, 1, LObject> | PrimitiveType)[];
 
     public static new(name?: DNamedElement["name"], type?: DTypedElement["type"], father?: Pointer, persist: boolean = true): DStructuralFeature {
@@ -2850,7 +2870,8 @@ export class DStructuralFeature extends DPointerTargetable { // DTypedElement
 
 @Abstract
 @RuntimeAccessible('LStructuralFeature')
-export class LStructuralFeature<Context extends LogicContext<DStructuralFeature> = any, C extends Context = Context>  extends LTypedElement { // DTypedElement
+export class LStructuralFeature<Context extends LogicContext<DStructuralFeature> = any,
+    C extends Context = Context, D extends DStructuralFeature = DStructuralFeature>  extends LTypedElement { // DTypedElement
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
     public __raw!: DStructuralFeature;
@@ -2872,18 +2893,101 @@ export class LStructuralFeature<Context extends LogicContext<DStructuralFeature>
     upperBound: number = 1;
     many!: boolean;
     required!: boolean;
+    public derived!: boolean;
+    /*protected */derived_read?: string;
+    /*protected */derived_write?: string;
+    /*protected*/ __info_of__derived: Info = {type: 'string', txt:'A ECore flag to signal the values of this feature depend on other features.\n' +
+            'To make it usable at runtime in jjodel check derived_read and derived_write.'}
+    /*protected*/ __info_of__derived_read: Info = {type: 'string', txt:'A function in string format with 2 or less attributes: (data, oldValue).\n' +
+            '- data is the LValue hosting this derived feature\n' +
+            '- originalValues are the current **non-derived** values actually memorized in the data.values\n'+
+            'The mandatory return value of this function will be returned when attempted to read data.values.'}
+    /*protected*/ __info_of__derived_write: Info = {type: 'string', txt:'A function in string format with 3 or less attributes: (value, data, oldValue).\n' +
+            '- value is the value currently attempted to be set, which triggered the function call.\n' +
+            '- data is the LValue hosting this derived feature\n' +
+            '- originalValues are the current **non-derived** values actually memorized in the data.values\n'+
+            'The optional return value of this function will be stored inside data, allowing for hybrid dependency-persistant features' +
+            '\n or for a feature "depending on itself". like uppercasing his values before setting them.'}
     // personal
     instances!: LValue[];
     changeable!: boolean;
     volatile!: boolean;
     transient!: boolean;
     unsettable!: boolean;
-    derived!: boolean;
     // defaultValueLiteral!: string;
     defaultValue!: (LObject[] | PrimitiveType[]);
     // getFeatureID(): number;
     // getContainerClass(): EJavaClass
+    allowCrossReference!:boolean;
 
+    get_crossReference(c: Context): this['allowCrossReference'] { return this.get_allowCrossReference(c); }
+    get_isCrossReference(c: Context): this['allowCrossReference'] { return this.get_allowCrossReference(c); }
+    set_crossReference(v: this['allowCrossReference'], c: Context): boolean { return this.set_allowCrossReference(v, c); }
+    set_isCrossReference(v: this['allowCrossReference'], c: Context): boolean { return this.set_allowCrossReference(v, c); }
+    get_allowCrossReference(c: Context): boolean { return c.data.allowCrossReference; }
+    set_allowCrossReference(v: this['allowCrossReference'], c: Context): boolean {
+        v = !!v;
+        if (v !== c.data.allowCrossReference) SetFieldAction.new(c.data, 'allowCrossReference', v);
+        return true;
+    }
+
+    validTargetsJSX!: JSX.Element[];
+    validTargetOptions!: MultiSelectOptGroup[];
+    validTargets!: (LObject | LEnumLiteral)[];
+    get_validTargetsJSX(c: Context): this['validTargetsJSX'] {
+        let opts: MultiSelectOptGroup[] = [];
+        this.get_validTargets(c, opts);
+        return UX.options(opts);
+    }
+    get_validTargetOptions(c: Context): this['validTargetOptions'] {
+        let opts: MultiSelectOptGroup[] = [];
+        this.get_validTargets(c, opts);
+        return opts;
+    }
+
+    get_validTargets(c: Context, out?: MultiSelectOptGroup[]): this['validTargets'] {
+        let selectOptions: MultiSelectOptGroup[];
+        let addClasses: boolean = false;
+        let addEnums: boolean = false;
+        let addPrimitives: boolean = false;
+        let addReturnTypes: boolean = false;
+
+
+        let thiss: GObject<LReference> = this as any;
+        let isCrossRef = this.get_isCrossReference(c);
+        let d = c.data;
+        switch (d.className){
+            case DReference.cname: addClasses = true; break;
+            case DAttribute.cname:              addPrimitives = addEnums = true; break;
+            case DParameter.cname: addClasses = addPrimitives = addEnums = true; break;
+            case DOperation.cname: addClasses = addPrimitives = addEnums = addReturnTypes = true; break;
+        }
+        let m2: LModel = this.get_model(c);
+        let map = (object: LNamedElement): MultiSelectOption => ({value:object.id, label: object.fullname});
+        let sort = (a:MultiSelectOption, b: MultiSelectOption) => (a.label > b.label ? +1 : -1);
+        let validClasses: LClass[] = [];
+        let validEnums: LEnumerator[] = [];
+        let validPrimitives: LClass[] = [];
+        let state: DState | null = null;
+        if (addPrimitives) {
+            if (!state) state = store.getState();
+            validPrimitives = LPointerTargetable.fromPointer(state.primitiveTypes);
+        }
+        if (addReturnTypes) {
+            if (!state) state = store.getState();
+            U.arrayMergeInPlace(validPrimitives, LPointerTargetable.fromPointer(state.returnTypes));
+            if (out) out.push({label: 'Primitives', options: validClasses.map(map).sort(sort)});
+        }
+        if (addClasses) {
+            validClasses = (isCrossRef ? m2.crossClasses : m2.classes);
+            if (out) out.push({label: 'Classes_', options: validClasses.map(map).sort(sort)});
+        }
+        if (addEnums) {
+            validEnums = (isCrossRef ? m2.crossEnumerators : m2.enumerators);
+            if (out) out.push({label: 'Enumerators', options: validEnums.map(map).sort(sort)});
+        }
+        return U.arrayMergeInPlace(validClasses as any[], validPrimitives, validEnums);
+    }
     protected get_instances(context: Context): this["instances"] {
         return context.data.instances.map((pointer) => {
             return LPointerTargetable.from(pointer)
@@ -2920,9 +3024,9 @@ export class LStructuralFeature<Context extends LogicContext<DStructuralFeature>
         return true;
     }
 
-    protected get_derived(context: Context): this["derived"] { return context.data.derived; }
-    protected set_derived(val: this["derived"], context: Context): boolean {
-        SetFieldAction.new(context.data, 'derived', val);
+    protected get_derived(context: Context): D["derived"] { return context.data.derived; }
+    protected set_derived(val: D["derived"], context: Context): boolean {
+        SetFieldAction.new(context.data, 'derived', !!val);
         return true;
     }
     /*
@@ -2961,12 +3065,27 @@ export class DReference extends DPointerTargetable { // DStructuralFeature
     volatile: boolean = true;
     transient: boolean = false;
     unsettable: boolean = false;
-    derived: boolean = false;
     defaultValueLiteral: string = '';
     parent: Pointer<DClass, 0, 'N', LClass> = [];
     father!: Pointer<DClass, 1, 1, LClass>;
     instances: Pointer<DValue, 0, 'N', LValue> = [];
     defaultValue!: Pointer<DObject, 1, 1, LObject>[];
+    allowCrossReference!:boolean;
+    public derived!: boolean;
+    /*protected */derived_read?: string;
+    /*protected */derived_write?: string;
+    /*protected*/ __info_of__derived: Info = {type: 'string', txt:'A ECore flag to signal the values of this feature depend on other features.\n' +
+            'To make it usable at runtime in jjodel check derived_read and derived_write.'}
+    /*protected*/ __info_of__derived_read: Info = {type: 'string', txt:'A function in string format with 2 or less attributes: (data, oldValue).\n' +
+            '- data is the LValue hosting this derived feature\n' +
+            '- originalValues are the current **non-derived** values actually memorized in the data.values\n'+
+            'The mandatory return value of this function will be returned when attempted to read data.values.'}
+    /*protected*/__info_of__derived_write: Info = {type: 'string', txt:'A function in string format with 3 or less attributes: (value, data, oldValue).\n' +
+            '- value is the value currently attempted to be set, which triggered the function call.\n' +
+            '- data is the LValue hosting this derived feature\n' +
+            '- originalValues are the current **non-derived** values actually memorized in the data.values\n'+
+            'The optional return value of this function will be stored inside data, allowing for hybrid dependency-persistant features' +
+            '\n or for a feature "depending on itself". like uppercasing his values before setting them.'}
 
     // personal
     rootable?:boolean;
@@ -3029,7 +3148,22 @@ export class LReference<Context extends LogicContext<DReference> = any, C extend
     volatile!: boolean;
     transient!: boolean;
     unsettable!: boolean;
-    derived!: boolean;
+    allowCrossReference!:boolean;
+    public derived!: boolean;
+    /*protected */derived_read?: string;
+    /*protected */derived_write?: string;
+    /*protected */__info_of__derived: Info = {type: 'string', txt:'A ECore flag to signal the values of this feature depend on other features.\n' +
+            'To make it usable at runtime in jjodel check derived_read and derived_write.'}
+    /*protected */__info_of__derived_read: Info = {type: 'string', txt:'A function in string format with 2 or less attributes: (data, oldValue).\n' +
+            '- data is the LValue hosting this derived feature\n' +
+            '- originalValues are the current **non-derived** values actually memorized in the data.values\n'+
+            'The mandatory return value of this function will be returned when attempted to read data.values.'}
+    /*protected */__info_of__derived_write: Info = {type: 'string', txt:'A function in string format with 3 or less attributes: (value, data, oldValue).\n' +
+            '- value is the value currently attempted to be set, which triggered the function call.\n' +
+            '- data is the LValue hosting this derived feature\n' +
+            '- originalValues are the current **non-derived** values actually memorized in the data.values\n'+
+            'The optional return value of this function will be stored inside data, allowing for hybrid dependency-persistant features' +
+            '\n or for a feature "depending on itself". like uppercasing his values before setting them.'}
     defaultValueLiteral!: string;
     parent!: LClass[];
     father!: LClass;
@@ -3123,8 +3257,8 @@ export class LReference<Context extends LogicContext<DReference> = any, C extend
         } }
 
 
-    protected get_containment(context: Context): this["containment"] { return context.data.composition || context.data.aggregation; }
-    protected set_containment(val: this["containment"], context: Context): boolean { return this.cannotSet('containment', 'set aggregation or composition instead'); }
+    get_containment(context: Context): this["containment"] { return context.data.composition || context.data.aggregation; }
+    set_containment(val: this["containment"], context: Context): boolean { return this.cannotSet('containment', 'set aggregation or composition instead'); }
 
     protected get_aggregation(context: Context): this["aggregation"] { return context.data.aggregation; }
     protected get_composition(context: Context): this["composition"] { return context.data.composition; }
@@ -3218,8 +3352,23 @@ export class DAttribute extends DPointerTargetable { // DStructuralFeature
     volatile: boolean = true;
     transient: boolean = false;
     unsettable: boolean = false;
-    derived: boolean = false;
     defaultValueLiteral: string = '';
+    allowCrossReference!:boolean;
+    public derived!: boolean;
+    /*protected */derived_read?: string;
+    /*protected */derived_write?: string;
+    /*protected*/ __info_of__derived: Info = {type: 'string', txt:'A ECore flag to signal the values of this feature depend on other features.\n' +
+            'To make it usable at runtime in jjodel check derived_read and derived_write.'}
+    /*protected*/ __info_of__derived_read: Info = {type: 'string', txt:'A function in string format with 2 or less attributes: (data, oldValue).\n' +
+            '- data is the LValue hosting this derived feature\n' +
+            '- originalValues are the current **non-derived** values actually memorized in the data.values\n'+
+            'The mandatory return value of this function will be returned when attempted to read data.values.'}
+    /*protected*/ __info_of__derived_write: Info = {type: 'string', txt:'A function in string format with 3 or less attributes: (value, data, oldValue).\n' +
+            '- value is the value currently attempted to be set, which triggered the function call.\n' +
+            '- data is the LValue hosting this derived feature\n' +
+            '- originalValues are the current **non-derived** values actually memorized in the data.values\n'+
+            'The optional return value of this function will be stored inside data, allowing for hybrid dependency-persistant features' +
+            '\n or for a feature "depending on itself". like uppercasing his values before setting them.'}
     //@obsolete_attribute()
     parent: Pointer<DClass, 0, 'N', LClass> = [];
 
@@ -3283,7 +3432,6 @@ export class LAttribute <Context extends LogicContext<DAttribute> = any, C exten
     volatile!: boolean;
     transient!: boolean;
     unsettable!: boolean;
-    derived!: boolean;
     // defaultValueLiteral!: string;
     defaultValue!: PrimitiveType[];
     parent!: LClass[];
@@ -3293,6 +3441,7 @@ export class LAttribute <Context extends LogicContext<DAttribute> = any, C exten
     // personal
     isID: boolean = false; // ? exist in ecore as "iD" ?
     isIoT: boolean = false;
+    allowCrossReference!:boolean;
 
     protected generateEcoreJson_impl(context: Context, loopDetectionObj: Dictionary<Pointer, DModelElement> = {}): Json {
         loopDetectionObj[context.data.id] = context.data;
@@ -3709,6 +3858,7 @@ export class DModel extends DNamedElement { // DNamedElement
     models: Pointer<DModel, 0, 'N', LModel> = [];
     instanceof?: Pointer<DModel>;
     instances!: Pointer<DModelElement>[];
+    dependencies!: Pointer<DModel>[];
 
     public static new(name?: DNamedElement["name"], instanceoff?: DModel["instanceof"], isMetamodel?: DModel["isMetamodel"], persist: boolean = true): DModel {
         let dmodels: DModel[] = Selectors.getAll(DModel, undefined, undefined, true, false);
@@ -3820,16 +3970,24 @@ export class LModel<Context extends LogicContext<DModel> = any, C extends Contex
     packages!: LPackage[];
     models!: LModel[];
     instances!: LModel[];
+    dependencies!: LModel[]; // points to other models of the same level
+    allDependencies!: LModel[];
+    __info_of__dependencies: Info = {type: 'LModel[]',
+        txt:'Include other models as prerequisite for this model, it is as if this model is "extending" other models.'};
+    __info_of__allDependencies: Info = {type: 'LModel[]', txt:'Same as dependencies, but it solves recursively the dependencies of his dependencies.'};
 
     // Model
     instanceof?: LModel;
     objects!: LObject[];
+    crossObjects!: LObject[];
     roots!: LObject[];
 
     // utilities to go down in the tree (plural names)
     enums!: LEnumerator[] & Dictionary<DocString<"$name">, LEnumerator>; // alias for enumerators
     enumerators!: LEnumerator[] & Dictionary<DocString<"$name">, LEnumerator>;
+    crossEnumerators!: LEnumerator[] & Dictionary<DocString<"$name">, LEnumerator>;
     classes!: LClass[] & Dictionary<DocString<"$name">, LClass>;
+    crossClasses!: LClass[] & Dictionary<DocString<"$name">, LClass>;
     operations!: LOperation[];
     parameters!: LParameter[];
     exceptions!: LClassifier[];
@@ -3838,9 +3996,13 @@ export class LModel<Context extends LogicContext<DModel> = any, C extends Contex
     literals!: LEnumLiteral[];
     values!: LValue[];
     allSubAnnotations!: LAnnotation[];
+    allCrossSubAnnotations!: LAnnotation[];
     allSubPackages!: LPackage[];
+    allCrossSubPackages!: LPackage[];
     allSubObjects!: LObject[];
+    allCrossSubObjects!: LObject[];
     allSubValues!: LValue[];
+    allCrossSubValues!: LValue[];
     suggestedEdges!: {extend: EdgeStarter[], reference:EdgeStarter[], packageDependencies: EdgeStarter[]}; //, model: EdgeStarter[], package:EdgeStarter[], class:EdgeStarter[]};
     __info_of__suggestedEdges: Info = {type: 'Dictionary<"extend" | "reference" | "packageDependencies" | DmodelName, EdgeStarter[]>', txt: "A map to access all possible kind of edges based on model data." +
             "<br/>extend and reference are the most commonly used for horizontal references (outside the containment tree schema)." +
@@ -3875,6 +4037,29 @@ export class LModel<Context extends LogicContext<DModel> = any, C extends Contex
             return LPointerTargetable.fromD(DPackage.new(name, uri, prefix, context.data.id, true, DModel));
         }
     }
+
+    public get_dependencies(c: Context): this['dependencies']{
+        return LPointerTargetable.fromPointer(c.data.dependencies);
+    }
+    public get_allDependencies(c: Context): this['allDependencies']{
+        let deduplicator: Dictionary<Pointer, LModel> = {};
+        let stack: LModel[] = LPointerTargetable.fromPointer(c.data.dependencies);
+        let ret = [];
+        while (stack.length) {
+            let arr = stack;
+            stack = [];
+            for (let m of arr) {
+                let mid = m.id;
+                if (deduplicator[mid]) continue;
+                deduplicator[mid] = m;
+                stack.push(...m.dependencies);
+            }
+        }
+        return Object.values(deduplicator);
+    }
+    /*public set_dependencies(c: Context): this['dependencies']{
+        default setter is fine, should automatically do the difference of pointers and trigger -= or +=
+    }*/
 
     public static namesORDObjectsToID<T extends DPointerTargetable = DPointerTargetable>(a: T): Pointer<T>[];
     public static namesORDObjectsToID<T extends DPointerTargetable = DPointerTargetable>(a: T[]): Pointer<T>[];
@@ -4278,17 +4463,19 @@ instanceof === undefined or missing  --> auto-detect and assign the type
         return true;
     }
 
-    protected get_objects(context: Context): this['objects'] {
-        return context.data.objects.map((pointer) => {
-            return LPointerTargetable.from(pointer)
-        });
+    protected get_crossObjects(context: Context): this["objects"] { return this.get_objects(context, true); }
+    protected get_objects(context: Context, includeCrossReferences: boolean = false): this['objects'] {
+        let ret: LObject[] = context.data.objects.map((pointer) => LPointerTargetable.from(pointer));
+        if (includeCrossReferences) U.arrayMergeInPlace(ret, context.proxyObject.allDependencies.flatMap(dep=>dep.objects));
+        return ret;
     }
+    protected get_crossPackages(context: Context): this["packages"] { return this.get_packages(context, true); }
 
-    protected get_packages(context: Context): this["packages"] {
+    protected get_packages(context: Context, includeCrossReferences: boolean = false): this["packages"] {
         if (!context.data.isMetamodel) { return context.data.instanceof ? (this.get_instanceof(context) as LModel).packages : []; }
-        return context.data.packages.map((pointer) => {
-            return LPointerTargetable.from(pointer)
-        });
+        let ret: LPackage[] = context.data.packages.map((pointer) => LPointerTargetable.from(pointer));
+        if (includeCrossReferences) U.arrayMergeInPlace(ret, context.proxyObject.allDependencies.flatMap(dep=>dep.packages));
+        return ret;
     }
 
     protected set_packages(val: PackArr<this["packages"]>, context: Context): boolean {
@@ -4311,46 +4498,71 @@ instanceof === undefined or missing  --> auto-detect and assign the type
         return true;
     }
 
-    protected get_roots(context: Context): this["roots"] {
-        return this.get_objects(context).filter( o => o.isRoot);
-    }
-    protected get_classes(context: Context, s?: DState): this["classes"] {
-        //if (!s) s = store.getState();+
-        if (!context.data.isMetamodel) { return context.data.instanceof ? (this.get_instanceof(context) as LModel).classes : [] as any; }
-        const ret: LClass[] & Dictionary<DocString<"$name">, LClass> = [] as any;
-        const pkgs: LPackage[] = this.get_packages(context);  // it's ok not having deep packages
-        for (let p of pkgs) {
-            const classes: LClass[] & Dictionary<DocString<"$name">> = p.allSubClasses || [];
-            U.mergeNamedArray(ret, classes);
-        }
-        return ret;
-    }
-    protected get_references(context: Context, s?: DState): this["references"] {
-        if (!context.data.isMetamodel) { return context.data.instanceof ? (this.get_instanceof(context) as LModel).references : []; }
-        s = s||store.getState();
-        return this.get_classes(context, s).flatMap(p => p.references || []);
+    protected get_crossRoots(context: Context): this["roots"] { return this.get_roots(context, true); }
+    protected get_roots(context: Context, includeCross: boolean = false): this["roots"] {
+        return this.get_objects(context, includeCross);//.filter( o => o.isRoot);
     }
 
+    protected get_crossClasses(c: Context, s?: DState): this["classes"] { return this.get_classes(c, s, true); }
+    protected get_classes(c: Context, s?: DState, includeCross: boolean = false): this["classes"] {
+        let key = 'classes';
+        let crossKey = 'crossClasses';
+        let kind = DClass;
+        if (!c.data.isMetamodel) {
+            if (!c.data.instanceof) return [] as any;
+            let meta = this.get_instanceof(c) as GObject<LModel>;
+            if (includeCross && c.data.dependencies.length) return meta[crossKey];
+            return meta[key];
+        }
+        return this._getallSub(c, s, kind, includeCross);
+    }
+    protected get_crossReferences(c: Context, s?: DState): this["references"] { return this.get_references(c, s, true); }
+    protected get_references(c: Context, s?: DState, includeCross: boolean = false): this["references"] {
+        let key = 'references';
+        let crossKey = 'crossReferences';
+        let kind = DReference;
+        if (!c.data.isMetamodel) {
+            if (!c.data.instanceof) return [] as any;
+            let meta = this.get_instanceof(c) as GObject<LModel>;
+            if (includeCross && c.data.dependencies.length) return meta[crossKey];
+            return meta[key];
+        }
+        return this._getallSub(c, s, kind, includeCross);
+    }
+
+    protected get_crossEnums(context: Context): this["enums"] { return this.get_enumerators(context, undefined, true); }
     protected get_enums(context: Context): this["enums"] {
         if (!context.data.isMetamodel) { return context.data.instanceof ? (this.get_instanceof(context) as LModel).enumerators : [] as any; }
-        return this.get_enumerators(context);
+        return this.get_enumerators(context, undefined, false);
     }
 
-    protected get_enumerators(context: Context, s?: DState): this["enums"] {
-        if (!context.data.isMetamodel) { return context.data.instanceof ? (this.get_instanceof(context) as LModel).enumerators : [] as any; }
-        // if (!s) s = store.getState();
-        const ret: LEnumerator[] & Dictionary<DocString<"$name">, LEnumerator> = [] as any;
-        const pkgs: LPackage[] = this.get_packages(context);  // it's ok not having deep packages
-        for (let p of pkgs) {
-            const enums: LEnumerator[] & Dictionary<DocString<"$name">> = p.allSubEnums || [];
-            U.mergeNamedArray(ret, enums);
+    protected get_crossEnumerators(context: Context, s?: DState): this["enums"] { return this.get_enumerators(context, s, true); }
+    protected get_enumerators(c: Context, s?: DState, includeCross:boolean = false): this["enums"] {
+        let key = 'enumerators';
+        let crossKey = 'crossEnumerators';
+        let kind = DEnumerator;
+        if (!c.data.isMetamodel) {
+            if (!c.data.instanceof) return [] as any;
+            let meta = this.get_instanceof(c) as GObject<LModel>;
+            if (includeCross && c.data.dependencies.length) return meta[crossKey];
+            return meta[key];
         }
-        return ret;
+        return this._getallSub(c, s, kind, includeCross);
     }
+    protected get_allCrossSubPackages(c: Context, s?: DState): this["allCrossSubPackages"] { return this.get_allSubPackages(c, s, true); }
 
-    protected get_allSubPackages(context: Context, state?: DState): this["allSubPackages"] {
-        if (!context.data.isMetamodel) { return context.data.instanceof ? (this.get_instanceof(context) as LModel).allSubPackages : []; }
-        state = state || store.getState();
+    protected get_allSubPackages(c: Context, s?: DState, includeCross: boolean = false): this["allSubPackages"] {
+        let key = 'allSubPackages';
+        let crossKey = 'allCrossSubPackages';
+        let kind = DPackage;
+        if (!c.data.isMetamodel) {
+            if (!c.data.instanceof) return [] as any;
+            let meta = this.get_instanceof(c) as GObject<LModel>;
+            if (includeCross && c.data.dependencies.length) return meta[crossKey];
+            return meta[key];
+        }
+        return this._getallSub(c, s, kind, includeCross);
+        /*state = state || store.getState();
         let tocheck: Pointer<DPackage>[] = context.data.packages || [];
         let checked: Dictionary<Pointer, DPackage> = {};
         while (tocheck.length) {
@@ -4366,39 +4578,37 @@ instanceof === undefined or missing  --> auto-detect and assign the type
         let darr: DPackage[] = Object.values(checked);
         let larr: LPackage[] & Dictionary<DocString<"$name">, LPackage> = LPointerTargetable.fromArr(darr, state);
         U.toNamedArray(larr, darr);
-        return larr;
+        return larr;*/
     }
 
-    protected get_allSubValues(context: Context, state?: DState): this["allSubValues"] {
-        state = state || store.getState();
-        let darr = Selectors.getAll(DValue, undefined, state, true, false) as DValue[];
-        let larr = [];
-        for (let i = 0; i < darr.length; i++){
-            let l = LPointerTargetable.fromD(darr[i]);
-            if (!l || l.model.id !== context.data.id) {
-                darr[i] = undefined as any;
-                continue;
-            }
-            larr.push(l);
-        }
-        darr = darr.filter(d=>!!d);
-        U.toNamedArray(larr, darr);
-        return larr;
-    }
+    protected get_allCrossSubValues(c: Context, s?: DState): this["allCrossSubValues"] { return this.get_allSubValues(c, s, true); }
+    protected get_allSubValues(c: Context, s?: DState, includeCross?:boolean): this["allSubValues"] { return this._getallSub(c, s, DValue, includeCross); }
+    // allCrossSubAnnotations!: LAnnotation[];     allCrossSubPackages!: LPackage[];     allCrossObjects!: LObject[];     allCrossSubValues!: LValue[];
+    protected get_allCrossSubObjects(c: Context, s?: DState): this["allCrossSubObjects"] { return this.get_allSubObjects(c, s, true); }
 
-    protected get_allSubObjects(context: Context, state?: DState): this["allSubObjects"] {
+    protected get_allSubObjects(c: Context, s?: DState, includeCross?:boolean): this["allSubObjects"] {
+        return this._getallSub(c, s, DObject, includeCross);
+    }
+    protected _getallSub(context: Context, state: DState|undefined, kind: Any<typeof DModelElement>, includeCross?:boolean): any[]&Dictionary<any, any> {
         state = state || store.getState();
-        let darr = Selectors.getAll(DObject, undefined, state, true, false) as DObject[];
+        let darr = Selectors.getAll(kind, undefined, state, true, false) as DModelElement[];
         // console.log("gao", {darr:[...darr]});
         let larr = [];
+        // let validModels = includeCross ? [c.data.id, ...c.data.dependencies] : [c.data.id];
+        let allDeps = includeCross ? this.get_allDependencies(context) : [];
+        let allDepPtrs = allDeps.map(m=>m.id);
         for (let i = 0; i < darr.length; i++){
             let l = LPointerTargetable.fromD(darr[i]);
-            Log.exDev(l && !l.model, "missing model in model element", {l, context});
-            if (!l || l.model.id !== context.data.id) {
-                darr[i] = undefined as any;
-                continue;
+            if (!l) continue;
+            let lmodel = l.model;
+            // Log.exDev(!lmodel, "missing model in model element", {l, context}); normal for primitive types in "m3"
+            if (!lmodel) continue;
+            let lmodelid = l.model.id;
+            if (lmodelid === context.data.id || includeCross && allDepPtrs.includes(lmodelid)) {
+                larr.push(l);
             }
-            larr.push(l);
+            darr[i] = undefined as any;
+            continue;
         }
         // console.log("gao", {darr:[...darr], larr});
         darr = darr.filter(d=>!!d);
@@ -4781,7 +4991,12 @@ export class LObject<Context extends LogicContext<DObject> = any, C extends Cont
 
         let features = context.proxyObject.features || [];
         console.log("features", {features});
-        for (let f of features) (!json[f.name]) && (json[f.name] = f.generateEcoreJson(loopDetectionObj));
+        for (let f of features) {
+            if (!f) continue;
+            let meta = f.instanceof;
+            if (meta?.volatile) { continue; }
+            (!json[f.name]) && (json[f.name] = f.generateEcoreJson(loopDetectionObj));
+        }
         return json; }
 
     public addValue(name?: DValue["name"], instanceoff?: DValue["instanceof"], value?: DValue["values"], isMirage?: boolean): LValue { return this.cannotCall("addValue"); }
@@ -4906,6 +5121,7 @@ export class DValue extends DModelElement { // extends DModelElement, m1 value (
     edges!: Pointer<DEdge, 0, 'N', LEdge>;
     // conformsTo!: Pointer<DStructuralFeature, 0, 'N', LStructuralFeature>; // low priority to do: attributo fittizio controlla a quali elementi m2 è conforme quando viene richiesto
     isMirage!: boolean;
+    allowCrossReference!: boolean;
     // IoT Section
     topic: string = '';
 
@@ -4953,12 +5169,27 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
     upperBound!: number;
     many!: boolean;
     required!: boolean;
+    allowCrossReference!: boolean;
 
     changeable!: boolean;
     volatile!: boolean;
     transient!: boolean;
     unsettable!: boolean;
-    derived!: boolean;
+    public derived!: boolean;
+    /*protected */derived_read?: string;
+    /*protected */derived_write?: string;
+    /*protected*/ __info_of__derived: Info = {type: 'string', txt:'A ECore flag to signal the values of this feature depend on other features.\n' +
+            'To make it usable at runtime in jjodel check derived_read and derived_write.'}
+    /*protected*/ __info_of__derived_read: Info = {type: 'string', txt:'A function in string format with 2 or less attributes: (data, oldValue).\n' +
+            '- data is the LValue hosting this derived feature\n' +
+            '- originalValues are the current **non-derived** values actually memorized in the data.values\n'+
+            'The mandatory return value of this function will be returned when attempted to read data.values.'}
+    /*protected*/ __info_of__derived_write: Info = {type: 'string', txt:'A function in string format with 3 or less attributes: (value, data, oldValue).\n' +
+            '- value is the value currently attempted to be set, which triggered the function call.\n' +
+            '- data is the LValue hosting this derived feature\n' +
+            '- originalValues are the current **non-derived** values actually memorized in the data.values\n'+
+            'The optional return value of this function will be stored inside data, allowing for hybrid dependency-persistant features' +
+            '\n or for a feature "depending on itself". like uppercasing his values before setting them.'}
     defaultValue!: DStructuralFeature["defaultValue"];
     // defaultValueLiteral!: string;
     // target!: LClass[]; is value[]
@@ -5039,6 +5270,14 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
         this.__defaultSetter(v, c, k);
         return true;
     }
+
+
+    protected get_derived(context: Context): this["derived"] { return context.proxyObject.derived; }
+    protected get_derived_read(context: Context): this["derived_read"] { return context.proxyObject.derived_read; }
+    protected get_derived_write(context: Context): this["derived_write"] { return context.proxyObject.derived_write; }
+    protected set_derived(val: this["derived"], context: Context): boolean { return this.cannotSet('LValue.derived'); }
+    protected set_derived_read(val: this["derived_read"], context: Context): boolean { return this.cannotSet('LValue.derived_read'); }
+    protected set_derived_write(val: this["derived_write"], context: Context): boolean { return this.cannotSet('LValue.derived_write'); }
 
     add(...val: any[]): void { return this.cannotCall("LValue.add"); }
     __info_of__add: Info = {type: "(...val: any|any[]) => void", txt: "Adds a value in the current value collection"}
@@ -5342,7 +5581,7 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
         return this.get_fromlfeature(iof as LReference, "containment"); }
     // protected get_defaultValueLiteral(context: Context): LStructuralFeature["defaultValueLiteral"] { return this.get_fromlfeature(context.proxyObject.instanceof, "defaultValueLiteral"); }
     protected get_defaultValue(context: Context): LStructuralFeature["defaultValue"] { return this.get_fromlfeature(context.proxyObject.instanceof, "defaultValue"); }
-    protected get_defaultderived(context: Context): LStructuralFeature["derived"] { return this.get_fromlfeature(context.proxyObject.instanceof, "derived"); }
+    protected get_defaultderived(context: Context): DStructuralFeature["derived"] { return this.get_fromlfeature(context.proxyObject.instanceof, "derived"); }
     protected get_defaultunsettable(context: Context): LStructuralFeature["unsettable"] { return this.get_fromlfeature(context.proxyObject.instanceof, "unsettable"); }
     protected get_defaulttransient(context: Context): LStructuralFeature["transient"] { return this.get_fromlfeature(context.proxyObject.instanceof, "transient"); }
     protected get_isVolatile(c: Context): LReference["volatile"] { return this.get_volatile(c); }
@@ -5411,19 +5650,55 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
         : (T extends undefined ? this["values"] : T extends false ? this["values"] : ValueDetail[]) & {type?: string}  {
 
         const data = context.proxyObject;
+        const ldata = context.proxyObject;
+        const ddata = context.data;
+        let typestr: string = this.get_typeString(context);
         if(data.topic) {
             let value: any = store.getState()['topics'];
             const path = data.topic.split('.');
             for(const field of path) value = value[field];
-            return [value];
+            let ret: any = [value];
+            ret.type = typestr; // 'topic';
+            return ret;
         }
 
         let ret: any[] = [...context.data.values] as [];
-        let meta: LAttribute | LReference | undefined = shapeless ? undefined : context.proxyObject.instanceof;
+        let meta: LAttribute | LReference | undefined = shapeless ? undefined : ldata.instanceof;
         let dmeta: undefined | DAttribute | DReference = meta?.__raw;
 
         // if (meta && meta.className === DReference.name) ret = LPointerTargetable.fromArr(ret as DObject[]);
-        let typestr: string = this.get_typeString(context);
+        if(data.topic) {
+            let value: any = store.getState()['topics'];
+            const path = data.topic.split('.');
+            for(const field of path) value = value[field];
+            let ret: any = [value];
+            ret.type = typestr; // 'topic';
+            return ret;
+        }
+
+        if (dmeta?.derived) {
+            let td = transientProperties.modelElement[dmeta.id];
+            if (!td.derived_read) {
+                try {
+                    let txt = dmeta.derived_read || '(data, originalValues)=>{return originalValues}';
+                    // data.derived examples: '(d, o)=>3', '(ddd, ooo)=>{return 3}',
+                    td.derived_read = new Function('data, originalValues', 'return ('+txt+')(data, originalValues)') as Function2;
+                }
+                catch (error: any) {
+                    Log.ee('invalid derived (get) attribute expression: ' + dmeta.name, {error, derivedText:dmeta.derived_read});
+                }
+                if (td.derived_read) try {
+                    ret = td.derived_read(ldata, ret);
+                    if (ret === undefined) ret = [];
+                    if (!Array.isArray(ret)) ret = [ret];
+                }
+                catch (error: any) {
+                    Log.ee('Error during derived (get) attribute evaluation: ' + dmeta.name, {error, derivedText:dmeta.derived_read});
+                }
+            }
+        }
+
+
         (ret as GObject).type = typestr;
         if (!Array.isArray(ret)) ret = [];
         if (dmeta && fitSize && ret.length < dmeta.lowerBound && dmeta.lowerBound > 0) {
@@ -5752,21 +6027,51 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
             return {success: true};
         }
     }
-    protected set_values(val: orArr<D["values"]>, context: Context): boolean {
-        const list: D["values"] = (Array.isArray(val) ? val : [val]) as D["values"];
+    protected set_values(val0: orArr<D["values"]>, c: Context): boolean {
+        let val: any = val0 as any;
         let modified = false;
-        list.length = Math.max(list.length, context.data.values.length);
-        TRANSACTION(()=>{
-            for (let i = 0; i < list.length; i++) {
-                let out = this.get_setValueAtPosition(context)(i, list[i], {setMirage: false} as any);
-                modified = out.success || modified;
-                console.log('set_values', {list, i, modifiedreason:out});
+        let meta = this.get_instanceof(c);
+        let dmeta: DReference | DAttribute | undefined = meta?.__raw;
+        if (dmeta?.derived) {
+            let td = transientProperties.modelElement[dmeta.id];
+            if (!td.derived_write) {
+                try {
+                    let txt = dmeta.derived_write || '(values, data, oldValues)=>{ data.values = values; }';
+                    td.derived_write = new Function('values, data, oldValues', 'return ('+txt+')(data, originalValues)') as Function2;
+                }
+                catch (error: any) {
+                    Log.ee('invalid derived (set) attribute expression: ' + dmeta.name, {error, derivedText:dmeta.derived_write});
+                }
+                if(td.derived_write) try {
+                    TRANSACTION(()=>{
+                        let ret = td?.derived_write?.(val, c.proxyObject, c.data.values);
+                        if (ret !== undefined) {
+                            val = ret;
+                            modified = true;
+                        }
+                    })
+                }
+                catch (error: any) {
+                    Log.ee('Error during derived (set) attribute evaluation: ' + dmeta.name, {error, derivedText:dmeta.derived_write});
+                }
             }
-            if (modified) context.data.isMirage && SetFieldAction.new(context.data, 'isMirage', false, '', false);
+        }
+
+        val = (Array.isArray(val0) ? val0 : [val0]) as D["values"];
+        val.length = Math.max(val.length, c.data.values.length);
+        TRANSACTION(()=>{
+            for (let i = 0; i < val.length; i++) {
+                let out = this.get_setValueAtPosition(c)(i, val[i], {setMirage: false} as any);
+                modified = out.success || modified;
+                console.log('set_values', {val, i, modifiedreason:out});
+            }
+            if (modified) c.data.isMirage && SetFieldAction.new(c.data, 'isMirage', false, '', false);
         });
         return true;
 
         // old implementation
+        let list: any = val;
+        let context = c;
         let l = context.proxyObject;
         let instanceoff: LReference | LAttribute | undefined = l.instanceof;
         let isRef: boolean | undefined = (!instanceoff ? undefined : instanceoff?.className === DReference.cname);
@@ -5811,9 +6116,14 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
         return r.success;
     }
 
-    get_isCrossReference(c: Context): boolean {
-        return false; // todo
-    }
+    get_crossReference(c: Context): this['allowCrossReference'] { return this.get_allowCrossReference(c); }
+    get_isCrossReference(c: Context): this['allowCrossReference'] { return this.get_allowCrossReference(c); }
+    set_crossReference(v: this['allowCrossReference'], c: Context): boolean { return this.set_allowCrossReference(v, c); }
+    set_isCrossReference(v: this['allowCrossReference'], c: Context): boolean { return this.set_allowCrossReference(v, c); }
+    get_allowCrossReference(c: Context): boolean { return c.data.instanceof ? !!c.proxyObject.instanceof?.allowCrossReference : true; }
+    set_allowCrossReference(v: this['allowCrossReference'], c: Context): boolean { return this.cannotSet('LValue.allowCrossReference'); }
+
+
     validTargetsJSX!: JSX.Element[];
     validTargets!: (LObject | LEnumLiteral)[];
     get_validTargetsJSX(c: Context): this['validTargetsJSX'] {
@@ -5839,7 +6149,7 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
         if (isReference) {
             let isContainment: boolean = this.get_containment(c);
             let containerObjectsID: Pointer[] = this.get_fatherList(c).map(lm => lm.id);
-            let validObjects = (isCrossRef ? Selectors.getObjects() : m1.allSubObjects)
+            let validObjects = (isCrossRef ? m1.allCrossSubObjects : m1.allSubObjects)
             if (isContainment) validObjects = validObjects.filter(obj => !containerObjectsID.includes(obj.id));
             let type = meta.type;
             if (!isShapeless) validObjects = validObjects.filter((obj) => (type as LClass).isSuperClassOf(obj.instanceof, true))
@@ -5852,7 +6162,15 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
             if (out) out.push({label: 'Bound Objects', options: freeObjects.map(map)});
         }
         if (isAttribute) {
-            let enumm: LEnumerator[] = isShapeless ? (isCrossRef || !m2 ? LPointerTargetable.from(Selectors.getAllEnumerators()) : m2.enumerators) : [meta.type as LEnumerator].filter(t=>t?.className === 'DEnumerator');
+            let enumm: LEnumerator[];
+            if (isShapeless){
+                if (!m2) enumm = LPointerTargetable.from(Selectors.getAllEnumerators());
+                else enumm = (isCrossRef && m2) ? m2.crossEnumerators : m2.enumerators;
+            }
+            else {
+                let type = meta.type;
+                enumm = (type.className === 'DEnumerator') ? [type as LEnumerator] : [];
+            }
             for (let e of enumm) {
                 let currLiterals = e.literals;
                 literals.push(...currLiterals);
@@ -5861,9 +6179,9 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
         return U.arrayMergeInPlace(freeObjects, boundObjects, literals as any);
     }
 
-    protected generateEcoreJson_impl(context: Context, loopDetectionObj: Dictionary<Pointer, DModelElement> = {}): Json {
-        loopDetectionObj[context.data.id] = context.data;
-        let values = this.get_values(context, true, false, true, false, false);
+    protected generateEcoreJson_impl(c: Context, loopDetectionObj: Dictionary<Pointer, DModelElement> = {}): Json {
+        loopDetectionObj[c.data.id] = c.data;
+        let values = this.get_values(c, true, false, true, false, false);//, false, undefined, "literal_str");
         delete values["type"];
         let ret: any = [];
         the_loop: for (let v of values){

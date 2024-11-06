@@ -374,7 +374,7 @@ export class UX{
         return validTargets
             .filter(e=>!!e)
             .map(e => <optgroup label={e.label}>
-                { e.options.filter(o=>!!o).map(o=><option value={o.value}>{o.label}</option>) }
+                { e.options.filter(o=>!!o).map(o=><option value={o.value} key={o.value}>{o.label}</option>) }
             </optgroup>);
     }
 }

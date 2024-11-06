@@ -5,14 +5,42 @@ import {
     Log,
     LPointerTargetable, Pointer,
     SetFieldAction, U,
-    SetRootFieldAction, TRANSACTION
+    SetRootFieldAction, TRANSACTION, DPointerTargetable
 } from '../joiner';
+import {Dependency} from "../joiner/types";
 
 export class Dummy {
+    protected static get_dependencies(context: any): () => Dependency[] {
+        const data = context.data;
+        const dependencies: Dependency[] = [];
+        const ret = () => {
+            for (let pointedBy of data.pointedBy) {
+                const raw = pointedBy.source.split('.');
+                let root = raw[0];
+                const obj = raw[1] || '';
+                let field = raw[2] || '';
+
+                // Delete chars from end that are not in [azAZ].
+                const regex = /[^a-zA-Z]+$/;
+                root = root.replace(regex, '');
+                field = field.replace(regex, '');
+                // damiano: this is likely to cause a bug for sure somewhere when a key ends with "s" but is not an array. keep in mind when naming variables.
+                let op: ''|'-=' = (field && field.endsWith('s')) ? '-=' : '';
+                if(!field && root.endsWith('s')) op = '-=';
+
+                const dependency: Dependency = {root: root  as keyof DState, obj, field: field as keyof DPointerTargetable, op};
+                if(!dependencies.includes(dependency)) dependencies.push(dependency);
+            }
+            return dependencies
+        }
+        return ret;
+    }
     static get_delete(thiss: any, context: any): () => void {
+
+
         const lData: LPointerTargetable & GObject = context.proxyObject;
         const dData = context.data;
-        const dependencies = thiss.get_dependencies(context)();
+        const dependencies = Dummy.get_dependencies(context)();
 
         const ret = () => {
             SetRootFieldAction.new('_lastSelected', undefined, '');

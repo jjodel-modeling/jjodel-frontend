@@ -55,7 +55,7 @@ function JsEditorComponent(props: AllProps) {
     if (!((data && field) || (getter && setter))) return(<>Either props.data & field or both getter & setter are required.</>);
 
     if (placeHolder && !js) value = placeHolder;
-
+    if (!value) value = '';
     const lines = (Math.round(value.split(/\r|\r\n|\n/).length*1.8) < 5 ? 10 : Math.round(value.split(/\r|\r\n|\n/).length*1.8));
 
     return <>

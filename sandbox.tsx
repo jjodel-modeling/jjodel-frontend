@@ -12,6 +12,14 @@ let otherViews: any, m1Objects:any, firstPackage:any, DefaultNode: any, otherPac
 lvalue <Select value and values> are working
 need to test <select multi={true} value and values/>
 
+UML
+- stereotype                   skip
+- composite structure          skip (similar to component) https://stackoverflow.com/questions/33724003/differences-between-composite-structure-and-component-diagram
+- package / class / object     merged in default view
+
+
+
+
 
 
 with manuual view assignment (edges) if you type wrong view it becomes a mess crash
@@ -23,6 +31,9 @@ fai che offset settadelle variabili --offset-x, --offset-y che settano in css le
 MA: disabilita la regola se il grafo ha ui-dragging o simile qualsiasi cosa metta jqui
 questo risolve il problema che il grafo parte a 0,0 a prescindere dall'offset salvato in memoria senza rompere il dragging e offset salvato solo ondragend.
 
+for crossref: fix all .father and .parent loops and U."until" or similar stuff to prevent getting the wrong model through .father chain.
+data.crossref.target.model  --> other model
+data.model --> current model
 
 
 during first render of any modelelement trigger forceUpdate() because it will lack jqueryui-html events as html was not there.

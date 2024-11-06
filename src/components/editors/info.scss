@@ -15,12 +15,13 @@
 .events-tab,
 .options-tab,
 .node-editor,
+.permission-tab,
 .console {
-  margin: 0.5rem!important;
+  margin: 0.5rem !important;
+  padding: 0.5rem !important;
   background-color: var(--bg-2);
-  padding-top: 0.5rem!important;
-  padding-left: 1.5em!important;
-  padding-left: 1.5em!important;
+  // padding-left: 1.5rem !important;
+  // padding-right: 0.5rem!important;
 
   & section {
 

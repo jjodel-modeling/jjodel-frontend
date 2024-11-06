@@ -10,7 +10,7 @@ function MqttEditorComponent(props: AllProps) {
     const [port, setPort] = useState(1883);
 
     const connect = async() => {
-        U.writeLog('create', 'MQTT', 'Connection');
+        // U.writeLog('create', 'MQTT', 'Connection');
         SetRootFieldAction.new('isLoading', true);
         WebSockets.iot.io.opts.query = {
             'project': user.project?.id,

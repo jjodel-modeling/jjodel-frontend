@@ -1,8 +1,8 @@
 import {
     CoordinateMode,
     Defaults,
-    Dictionary, DocString, DPointerTargetable,
-    DState,
+    Dictionary, DocString, DPointerTargetable, DReference,
+    DState, DStructuralFeature,
     DViewElement,
     EdgeBendingMode,
     EdgeGapMode,
@@ -171,10 +171,19 @@ everytime you put hands into a D-Object shape or valid values, you should docume
             c.final = false;
             c.rootable = undefined;
         }
+        for (let c of Object.values(s.idlookup) as any[]) { if (c?.className && c.id && c.isCrossReference === undefined) c.isCrossReference = false; }
         for (let c of (s.viewelements).map(p=> this.d(p, s))) { c.father = c.viewpoint; }
         for (let c of (s.viewpoints).map(p=> this.d(p, s))) { c.cssIsGlobal = true; }
         for (let c of (s.projects).map(p=> this.d(p, s))) { c.favorite = {}; c.description = ''; }
         for (let c of (s.references).map(p=> this.d(p, s))) { if (c.composition === undefined) c.aggregation = !(c.composition = !!(c as any).containment); }
+        for (let c of (s.models).map(p=> this.d(p, s))) { if (c.dependencies === undefined) c.dependencies = []; }
+        for (let c of (s.attributes).map(p=> this.d(p, s))) {
+            c.derived = !!c.derived;
+            c.derived_write = undefined; // c.derived ? '' : undefined;
+            c.derived_read = undefined; // c.derived ? '' : undefined;
+        }
+
+        let d2: DStructuralFeature = null as any as DReference;
         return s;
     }
 }
