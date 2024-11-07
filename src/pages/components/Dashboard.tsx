@@ -278,11 +278,7 @@ function ProjectCatalog(props: ProjectProps) {
                                 <Btn icon={'minispace'} />
                                 <Btn icon={'copy'} action={e => vp.duplicate()} tip={'Duplicate viewpoint'}/>
                                 <Sep />
-                                {(vp.name !== 'Default' && vp.name !== 'Validation default') ?
-                                    <Btn icon={'delete'} action={e => vp.delete()} tip={'Delete viewpoint'}/>
-                                    :
-                                    <Btn icon={'delete'} action={e => vp.delete()} tip={'Delete viewpoint'} disabled={true}/>
-                                }
+                                <Btn icon={'delete'} action={e => vp.delete()} tip={'Delete viewpoint'} disabled={vp.name === 'Default' || vp.name === 'Validation default'}/>
                             </CommandBar>
                         </div>
                     </div>)
