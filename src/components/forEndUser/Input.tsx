@@ -21,105 +21,131 @@ import {useStateIfMounted} from 'use-state-if-mounted';
 import './inputselect.scss';
 import { Tooltip } from './Tooltip';
 
-
 export function getSelectOptions_raw(data: LPointerTargetable, field: string): MultiSelectOptGroup[] {
     if (!data) return [];
-    // console.log("select options", {data, field, children, options});
-    let returns: LClass[] | undefined;
-    let primitives: LClass[] | undefined;
-    let classes: LClass[] | undefined;
-    let enumerators: LEnumerator[] | undefined;
-    let objects: (LObject | LEnumLiteral)[] | undefined;
-    let m2classname: string | undefined;
-    let hasPrimitives: boolean = false;
-    let hasReturnTypes: boolean = false;
-    let cname = data.className;
-    if (!field) switch(cname) {
-        case 'DAttribute':  case 'DReference': case 'DOperation': case 'DParameter': field = 'type'; break;
-        case 'DValue': field = 'values'; break;
-        case 'DClass': field = 'extends'; break;
-    }
-/*
-    let newmode = true;
-    if (newmode){
-        switch(field){
-            case 'extends': case 'type': return data.validTargetOptions;
-        }
-        return [];
-    }*/
-    switch(field) {
+    switch (field){
+        default:
+        case 'extends':
         case 'type':
-            let model = (data as LStructuralFeature).model;
-            switch (cname) {
-                default: break;
-                case 'DAttribute': enumerators = model.enums; hasPrimitives = true; break;
-                case 'DReference': classes = model.classes; break;
-                case 'DOperation': classes = model.classes; enumerators = model.enums; hasPrimitives = hasReturnTypes = true; break;
-                case 'DParameter': classes = model.classes; enumerators = model.enums; hasPrimitives = true; break;
-            }
-            break;
-        case 'value': case 'values':
-            if (cname !== 'DValue') break;
-            objects = (data as LValue).validTargets;
-            /*
-            let m2: LReference | LAttribute | undefined = (data as LValue).instanceof;
-            if (!m2) {
-                objects = (data as LValue).model.allSubObjects;
-                break;
-            }
-            let dm2 = m2.__raw;
-            if (dm2.className === "DAttribute") break;
-            let type: LClass = m2.type as LClass;
-            if (!type) break;
-            m2classname = type.name;
-            let m1modelid = data.model.id;
-            objects = (type.allInstances || []).filter( o => o.model.id === m1modelid);*/
+        case 'values': return (data as LValue | LStructuralFeature | LClass).validTargetOptions;
     }
-    let state: DState | undefined;
-    // todo: all this stuff might be better moved in mapstatetoprops, or the select list won't update properly.
-    if (hasPrimitives) {
-        if (!state) state = store.getState();
-        primitives = LPointerTargetable.fromPointer(state.primitiveTypes);
-    }
-    if (hasReturnTypes) {
-        if (!state) state = store.getState();
-        returns = LPointerTargetable.fromPointer(state.returnTypes);
-    }
-
-    // console.log("select options", {data, field, returns, primitives, classes, enumerators});
-
-    let ret:MultiSelectOptGroup[] = [];
-    if (returns && returns.length) ret.push({label: 'Defaults', options: returns.map((r, i)=>({value: r.id, label:r.name}))});
-    if (primitives && primitives.length) ret.push({label: 'Primitives', options: primitives.map((r, i)=>({value: r.id, label:r.name}))});
-    if (enumerators && enumerators.length) ret.push({label: 'Enumerators', options: enumerators.map((r, i)=>({value: r.id, label:r.name}))});
-    if (classes && classes.length) ret.push({label: 'Classes', options: classes.map((r, i)=>({value: r.id, label:r.name}))});
-    if (objects && objects.length) ret.push({label: m2classname ? 'Instances of ' + m2classname : "All objects", options:
-            [{value: undefined as any, label: '_empty_'}, ...objects.map((r, i)=>({value: r.id, label:r.name}))]});
-    return ret;
+    return [];
 }
+
 export function getSelectOptions(data: LPointerTargetable, field: string, options: ReactNode, children?: ReactNode): ReactNode {
     if (options) return options;
     // children is auto-filled to empty array even if it is not set explicitly in jsx
     if (Array.isArray(children) && children.length > 0) return children;
     let ret: ReactNode | undefined;
-    let newmode = true;
-    if (newmode){
-        switch(field){
-            case 'extends': case 'type': ret = (data as any).validTargetJSX; break;
-        }
+    switch (field) {
+        default:
+        case 'extends':
+        case 'type':
+        case 'values': return (data as LValue | LStructuralFeature | LClass).validTargetsJSX; break;
     }
-    if (ret) return ret;
-    let opts = getSelectOptions_raw(data, field); // old to remove?
-    return UX.options(opts); // selectOptionsToJSX(opts);
-}/*
-function selectOptionsToJSX(ret: MultiSelectOptGroup[]): ReactNode{
-    return(
-        <>{
-            ret.map(optgrp => <optgroup label={optgrp.label}>{
-                optgrp.options.map((e, i) => <option key={i} value={e.value}>{e.label}</option>)
-            }</optgroup>).filter(e=>!!e)
-        }</>);
-}*/
+    console.log('msel ret opt', {ret, data, vt: (data as any).validTargetJSX, field})
+    return ret;
+}
+    /*
+    export function getSelectOptions_raw(data: LPointerTargetable, field: string): MultiSelectOptGroup[] {
+        if (!data) return [];
+        // console.log("select options", {data, field, children, options});
+        let returns: LClass[] | undefined;
+        let primitives: LClass[] | undefined;
+        let classes: LClass[] | undefined;
+        let enumerators: LEnumerator[] | undefined;
+        let objects: (LObject | LEnumLiteral)[] | undefined;
+        let m2classname: string | undefined;
+        let hasPrimitives: boolean = false;
+        let hasReturnTypes: boolean = false;
+        let cname = data.className;
+        if (!field) switch(cname) {
+            case 'DAttribute':  case 'DReference': case 'DOperation': case 'DParameter': field = 'type'; break;
+            case 'DValue': field = 'values'; break;
+            case 'DClass': field = 'extends'; break;
+        }
+    /*
+        let newmode = true;
+        if (newmode){
+            switch(field){
+                case 'extends': case 'type': return data.validTargetOptions;
+            }
+            return [];
+        }* /
+        switch(field) {
+            case 'type':
+                let model = (data as LStructuralFeature).model;
+                switch (cname) {
+                    default: break;
+                    case 'DAttribute': enumerators = model.enums; hasPrimitives = true; break;
+                    case 'DReference': classes = model.classes; break;
+                    case 'DOperation': classes = model.classes; enumerators = model.enums; hasPrimitives = hasReturnTypes = true; break;
+                    case 'DParameter': classes = model.classes; enumerators = model.enums; hasPrimitives = true; break;
+                }
+                break;
+            case 'value': case 'values':
+                if (cname !== 'DValue') break;
+                objects = (data as LValue).validTargets;
+                /*
+                let m2: LReference | LAttribute | undefined = (data as LValue).instanceof;
+                if (!m2) {
+                    objects = (data as LValue).model.allSubObjects;
+                    break;
+                }
+                let dm2 = m2.__raw;
+                if (dm2.className === "DAttribute") break;
+                let type: LClass = m2.type as LClass;
+                if (!type) break;
+                m2classname = type.name;
+                let m1modelid = data.model.id;
+                objects = (type.allInstances || []).filter( o => o.model.id === m1modelid);* /
+        }
+        let state: DState | undefined;
+        // todo: all this stuff might be better moved in mapstatetoprops, or the select list won't update properly.
+        if (hasPrimitives) {
+            if (!state) state = store.getState();
+            primitives = LPointerTargetable.fromPointer(state.primitiveTypes);
+        }
+        if (hasReturnTypes) {
+            if (!state) state = store.getState();
+            returns = LPointerTargetable.fromPointer(state.returnTypes);
+        }
+
+        // console.log("select options", {data, field, returns, primitives, classes, enumerators});
+
+        let ret:MultiSelectOptGroup[] = [];
+        if (returns && returns.length) ret.push({label: 'Defaults', options: returns.map((r, i)=>({value: r.id, label:r.name}))});
+        if (primitives && primitives.length) ret.push({label: 'Primitives', options: primitives.map((r, i)=>({value: r.id, label:r.name}))});
+        if (enumerators && enumerators.length) ret.push({label: 'Enumerators', options: enumerators.map((r, i)=>({value: r.id, label:r.name}))});
+        if (classes && classes.length) ret.push({label: 'Classes#', options: classes.map((r, i)=>({value: r.id, label:r.name}))});
+        if (objects && objects.length) ret.push({label: m2classname ? 'Instances of ' + m2classname : "All objects", options:
+                [{value: undefined as any, label: '_empty_'}, ...objects.map((r, i)=>({value: r.id, label:r.name}))]});
+        return ret;
+    }
+    export function getSelectOptions(data: LPointerTargetable, field: string, options: ReactNode, children?: ReactNode): ReactNode {
+        if (options) return options;
+        // children is auto-filled to empty array even if it is not set explicitly in jsx
+        if (Array.isArray(children) && children.length > 0) return children;
+        let ret: ReactNode | undefined;
+        let newmode = true;
+        if (newmode){
+            switch(field){
+                case 'extends': case 'type': ret = (data as any).validTargetJSX; break;
+            }
+            console.log('msel ret opt', {ret, data, vt: (data as any).validTargetJSX, field})
+        }
+        if (ret) return ret;
+        let opts = getSelectOptions_raw(data, field); // old to remove?
+        return UX.options(opts); // selectOptionsToJSX(opts);
+    }
+    function selectOptionsToJSX(ret: MultiSelectOptGroup[]): ReactNode{
+        return(
+            <>{
+                ret.map(optgrp => <optgroup label={optgrp.label}>{
+                    optgrp.options.map((e, i) => <option key={i} value={e.value}>{e.label}</option>)
+                }</optgroup>).filter(e=>!!e)
+            }</>);
+    }*/
 
 export function InputComponent(props: AllProps) {
     const data = props.data;

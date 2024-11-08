@@ -193,8 +193,8 @@ export class TargetableProxyHandler<ME extends GObject = DModelElement, LE exten
         super();
         this.d = d;
         if (!l) {
-            l = RuntimeAccessibleClass.get(d?.className)?.logic?.singleton as LE;
-            Log.exDev(!l, 'Trying to wrap class without singleton or logic mapped: ' + d?.className, { object: d, className: d.className })
+            l = RuntimeAccessibleClass.get(d.className)?.logic?.singleton as LE;
+            Log.exDev(!l, 'Trying to wrap class without singleton or logic mapped: ' + d.className, { object: d, className: d.className })
         }
         this.baseObjInLookup = baseObjInLookup || d as any;
         this.additionalPath = additionalPath;

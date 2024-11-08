@@ -66,6 +66,7 @@ export class EdgeComponent<AllProps extends AllPropss = AllPropss, ThisState ext
         return U.pairArrayElements(this.pathCoords(), true); }
 */
     render(): ReactNode {
+        if (this.props.__skipRender) return null;
         if (!this.props.node) return "loading";
         // set classes
         let nodeType = "Edge";
@@ -86,6 +87,7 @@ type AllPropss = Overlap<Overlap<EdgeOwnProps, EdgeStateProps>, DispatchProps>;
 
 function mapStateToProps(state: DState, ownProps: EdgeOwnProps): EdgeStateProps {
     let ret: EdgeStateProps = EdgeStateProps.new();
+    if (!ownProps.data && !ownProps.start || !ownProps.end) return {__skipRender: true} as any;
     if (!ownProps.data) {
         let lstart = LPointerTargetable.from(ownProps.start);
         if (RuntimeAccessibleClass.extends(lstart.className, DModelElement.cname)) ret.data = lstart as any;
@@ -98,10 +100,11 @@ function mapStateToProps(state: DState, ownProps: EdgeOwnProps): EdgeStateProps 
     };
     let l: GObject;
 
-    if (typeof ownProps.start){ l = LPointerTargetable.from(ownProps.start); if (l) ret.start = l as LVertex; }
-    if (typeof ownProps.end){ l = LPointerTargetable.from(ownProps.end); if (l) ret.end = l as LVertex; }
+    if (ownProps.start){ l = LPointerTargetable.from(ownProps.start); if (l) ret.start = l as LVertex; }
+    if (ownProps.end){ l = LPointerTargetable.from(ownProps.end); if (l) ret.end = l as LVertex; }
 
     U.removeEmptyObjectKeys(ret);
+    if (!ret.start || !ret.end) return {__skipRender: true} as any;
     return ret;
 }
 

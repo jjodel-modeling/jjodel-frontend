@@ -19,7 +19,7 @@ import {
     KeyDownEvent, KeyUpEvent,
     stateInitializer,
     DUser,
-    DProject,
+    DProject, D, L,
 } from "../joiner";
 import {
     DClassifier,
@@ -2193,6 +2193,30 @@ export class U {
         return true;
     }
 
+    static findInChildProperties<T extends D|L>(initialArr: (T)[], getChildrens: ((e:T) => (T)[]),
+                                                getID:((e:T)=>PrimitiveType)|undefined, returnWhenFound:((e:T)=>boolean), filter?:((e:T)=>boolean)): (T) {
+        return U.iterateChildProperties(initialArr, getChildrens, getID, returnWhenFound, filter)[0];
+    }
+    static iterateChildProperties<T extends D|L>(initialArr: (T)[], getChildrens: ((e:T) => (T)[]),
+                                                 getID?:((e:T)=>PrimitiveType), returnWhenFound?:((e:T)=>boolean), filter?:((e:T)=>boolean)): (T)[] {
+        let targets = initialArr;
+        let alreadyParsed: Dictionary<string|number, (T)> = {};
+        while (targets.length) {
+            let nextTargets: (T)[] = [];
+            for (let target of targets) {
+                if (!target) continue;
+                let tid = (getID ? getID(target) : (target?.id)) as any as (string | number);
+                if (!alreadyParsed[tid]) continue;
+                if (filter && !filter(target)) continue;
+                alreadyParsed[tid] = target;
+                if (returnWhenFound && returnWhenFound(target)) return [target];
+                U.arrayMergeInPlace(nextTargets, getChildrens(target));
+            }
+            targets = nextTargets;
+        }
+        return Object.values(alreadyParsed);
+
+    }
 }
 export class DDate{
     static cname: string = "DDate";

@@ -251,6 +251,8 @@ export abstract class RuntimeAccessibleClass extends AbstractMixedClass {
             else return undefined as any;
         }
         if (!data) return data;
+        // @ts-ignore
+        if (!data.className) return undefined;
         // console.log('ProxyWrapping:', {data, baseObjInLookup, path});
         return new Proxy(data, new windoww.TargetableProxyHandler(data, baseObjInLookup, path)) as L;
     }

@@ -374,8 +374,32 @@ export class UX{
         return validTargets
             .filter(e=>!!e)
             .map(e => <optgroup label={e.label}>
-                { e.options.filter(o=>!!o).map(o=><option value={o.value} key={o.value}>{o.label}</option>) }
+                { e.options.filter(o=>!!o).map(o=><option value={o.value} key={o.value} title={o.title}>{o.label}</option>) }
             </optgroup>);
+    }
+    /*
+    does not catch: visibility: hidden, opacity:0, invisible stuff inside a overflow:scroll element, overlapping z-index (returns true)
+    does catch display:none, top:-999999px, width:0 (returns false)
+    possibly zoom can mess it up
+    */
+    static isElementInViewport(el?: Element, includePartiallyVisible: boolean = true): boolean {
+        if (!el) return false;
+        var rect = el.getBoundingClientRect(); // safely returns a 0-filled struct for non-in-dom elements
+        return (
+            rect.top + (includePartiallyVisible ? rect.height : 0) >= 0 &&
+            rect.left + (includePartiallyVisible ? rect.width : 0)  >= 0 &&
+            rect.bottom <= (window.innerHeight || document.documentElement.clientHeight) &&
+            rect.right <= (window.innerWidth || document.documentElement.clientWidth)
+        );
+    }
+    static onVisibilityChange(el: Element, callback: ()=>any):(()=>void) {
+        var old_visible: boolean;
+        return function () {
+            var visible = UX.isElementInViewport(el);
+            if (visible === old_visible) return;
+            old_visible = visible;
+            if (typeof callback == 'function') { callback(); }
+        }
     }
 }
 

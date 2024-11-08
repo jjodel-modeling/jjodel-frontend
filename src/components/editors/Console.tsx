@@ -43,7 +43,7 @@ class ThisState{
 // trasformato in class component così puoi usare il this nella console. e non usa accidentalmente window come contesto
 
 let hiddenkeys = ["jsxString", "pointedBy", "clonedCounter", "parent", "_subMaps", "inspect", "__random"];
-function fixproxy(output: any/*but not array*/, hideDKeys: boolean = true, addLKeys: boolean = true):
+function fixproxy(output: any/*but not array*/, addDKeys: boolean = true, addLKeys: boolean = true):
     { output: any, shortcuts?: GObject<'L singleton'>, comments?: Dictionary<string, string | {type:string, txt:string}>, hiddenkeys?: GObject} {
 
     let ret: ReturnType<typeof fixproxy> = {output};
@@ -55,6 +55,8 @@ function fixproxy(output: any/*but not array*/, hideDKeys: boolean = true, addLK
         output = output.__raw; //Object.fromEntries(Object.getOwnPropertyNames(p).map(k => [k, p[k]]));
     } else proxy = undefined;
 
+    console.log('console short in 1', {output, proxy, ret, addLKeys, iff:addLKeys && proxy});
+
     switch (typeof output) {
         case "function": {
             let fdata =  U.buildFunctionDocumentation(output);
@@ -65,10 +67,11 @@ function fixproxy(output: any/*but not array*/, hideDKeys: boolean = true, addLK
             // if (Array.isArray(output)) { ret.output = output; break; /* no need to go inside, it is already done at render phase */ }
             ret.output = output = {...output};
             // if (ret.output.anchors) ret.output.anchors = JSON.stringify(ret.output.anchors);
-            if ((addLKeys && proxy)) {
+            if (addLKeys && proxy) {
                 let Lsingleton: GObject<'L singleton'> = (RuntimeAccessibleClass.get(output?.className)?.logic?.singleton) || {};
                 let comments: Dictionary<string, string | {type:string, txt:string}> = {};
                 ret.shortcuts = {...Lsingleton};
+                console.log('console short in 2', {output, rett:{...ret, shortt:{...(ret.shortcuts||{})}}, Lsingleton, DClass:RuntimeAccessibleClass.get(output?.className), LClass:RuntimeAccessibleClass.get(output?.className)?.logic});
                 ret.comments = comments;
                 for (let key in output) {
                     if (Lsingleton["__info_of__" + key]) comments[key] = Lsingleton["__info_of__" + key];
@@ -96,21 +99,22 @@ function fixproxy(output: any/*but not array*/, hideDKeys: boolean = true, addLK
                             break;
                     }
                 }
+                console.log('console short in 3', {ret});
+
             }
             if (hiddenkeys) {
                 ret.hiddenkeys = {};
                 for (let key of hiddenkeys) {
                     ret.hiddenkeys[key] = output[key];
                     delete output[key];
-                    // delete output.shortcuts[key];
+                    if (ret.shortcuts) delete ret.shortcuts[key];
                 }
             }
             break;
     }
 
     //@ts-ignore
-    ret ={...ret, shortcuts: undefined, comments: undefined, hiddenkeys: undefined};
-    console.log('kkkk',  ret);
+    //ret ={...ret, shortcuts: undefined, comments: undefined, hiddenkeys: undefined};
 
     return ret;
 }
@@ -233,15 +237,15 @@ class ConsoleComponent extends PureComponent<AllProps, ThisState>{
                 comments = {"separator": '<span>Similar to <a href={"https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/join"}>Array.join(separator)</a>' +
                         ', but supports array of JSX nodes and JSX as separator argument.</span>'};
                 shortcuts = {"separator": ""};
-            }
-            if (Array.isArray(output)) {
                 output = output.map(o => fixproxy(o).output);
             }
             else {
+                console.log('console short pre', {output});
                 let ret = fixproxy(output);
                 output = ret.output;
                 comments = ret.comments;
                 shortcuts = ret.shortcuts;
+                console.log('console short', {shortcuts, ret, output});
                 hidden = ret.hiddenkeys;
             }
             // todo: as i fix the displaying of a LViewElement without replacing it with __raw,
@@ -331,8 +335,6 @@ class ConsoleComponent extends PureComponent<AllProps, ThisState>{
         setTimeout(injectCommentJSX, 1)
         this.setNativeConsoleVariables();
         windoww.output = output;
-        windoww.contextkeysarr = contextkeysarr;
-        windoww.contextkeys = contextkeys;
         const undo = ()=>{
             let expressionIndex = Math.max(0, this.state.expressionIndex - 1);
             if (expressionIndex === this.state.expressionIndex) return;
@@ -346,6 +348,7 @@ class ConsoleComponent extends PureComponent<AllProps, ThisState>{
         }
         let canredo = this.state.expressionIndex < this.state.expressionHistory.length - 1;
         let canundo = this.state.expressionIndex > 0;
+        let advanced = this.props.advanced;
 
         return(<div className={'w-100 h-100 p-2 console'}>
             <h1>
@@ -353,42 +356,55 @@ class ConsoleComponent extends PureComponent<AllProps, ThisState>{
             </h1>
             <div className='console-terminal p-0 mb-2 w-100'>
                 <div className='commands'>
-                    <i onClick={(e) => { this.setState({expression:''})} } title={'Empty console'} className="bi bi-slash-circle" />
                     <i onClick={(e) => {
-                        if (!this.state.expression.trim()) { return Tooltip.show('Nothing to copy', undefined, undefined, 2); }
+                        this.setState({expression: ''})
+                    }} title={'Empty console'} className="bi bi-slash-circle"/>
+                    <i onClick={(e) => {
+                        if (!this.state.expression.trim()) {
+                            return Tooltip.show('Nothing to copy', undefined, undefined, 2);
+                        }
                         let s = this.outputhtml?.innerText || '';
                         s = s.substring('Result'.length).trim();
-                        U.clipboardCopy(s, ()=> Tooltip.show('Content copied to clipboard', undefined, undefined, 2));
-                    }} title={'Copy in the clipboard'} className="bi bi-clipboard-plus" />
+                        U.clipboardCopy(s, () => Tooltip.show('Content copied to clipboard', undefined, undefined, 2));
+                    }} title={'Copy in the clipboard'} className="bi bi-clipboard-plus"/>
                     {/* @ts-ignore */}
-                    <i onClick={redo} title={'redo'} className={"redo bi bi-arrow-right-square" + (canredo ? '':" disabled")} />
+                    <i onClick={redo} title={'redo'}
+                       className={"redo bi bi-arrow-right-square" + (canredo ? '' : " disabled")}/>
                     {/* @ts-ignore */}
-                    <i onClick={undo} title={'undo'} className={"undo bi bi-arrow-left-square" + (canundo ? '':" disabled")} />
+                    <i onClick={undo} title={'undo'}
+                       className={"undo bi bi-arrow-left-square" + (canundo ? '' : " disabled")}/>
                 </div>
-                <textarea id={'console'} spellCheck={false} className={'p-0 input w-100'} onChange={this.change} value={this.state.expression} ></textarea>
+                <textarea id={'console'} spellCheck={false} className={'p-0 input w-100'} onChange={this.change}
+                          value={this.state.expression}></textarea>
             </div>
-            {false && <div>Debug history (index = {this.state.expressionIndex})
-                {this.state.expressionHistory.map((s, i) => (<>
-                        <div style={{
-                            border: '1px solid ' + (i === this.state.expressionIndex ? 'red' : 'gray'),
-                            marginTop: '5px',
-                            height: '30px'
-                        }}>{s}</div>
-                    </>
-                ))}</div>}
+            {advanced && <div>Debug history (index = {this.state.expressionIndex + 1})
+                {this.state.expressionHistory.slice(-5).map((s, i) => <>
+                    <div style={{
+                        border: '1px solid ' + (i === this.state.expressionIndex ? 'red' : 'gray'),
+                        marginTop: '5px',
+                        height: '30px'
+                    }}>{(i + 1) + ') ' + s}</div>
+                </>)}</div>}
             {/*<label>Query {(this.state.expression)}</label>*/}
-            <hr className={'mt-1 mb-1'} />
-            { this.state.expression &&  ashtml && <div className={"console-output-container console-msg"}
-                        ref={(e)=>this.outputhtml = e} dangerouslySetInnerHTML={ashtml ? { __html: outstr as string} : undefined} /> }
+            <hr className={'mt-1 mb-1'}/>
+            {this.state.expression && ashtml && <div className={"console-output-container console-msg"}
+                                                     ref={(e) => this.outputhtml = e}
+                                                     dangerouslySetInnerHTML={ashtml ? {__html: outstr as string} : undefined}/>}
 
-            { this.state.expression && !ashtml && <div className={"console-output-container console-msg"}
-                        ref={(e)=>this.outputhtml = e} style={{whiteSpace:"pre"}}>{ outstr }</div>}
+            {this.state.expression && !ashtml && <div className={"console-output-container console-msg"}
+                                                      ref={(e) => this.outputhtml = e}
+                                                      style={{whiteSpace: "pre"}}>{outstr}</div>}
 
-            {shortcutsjsx && <><h4>Shortcuts</h4><section className='group shortcuts-container'>{shortcutsjsx}</section></>}
-            <label className={"context-keys mt-2"}>Context keys</label>
-            {
-                <section className={'group context-keys-list'} style={{whiteSpace:"pre"}}>{contextkeys} </section>
+
+            {contextkeysarr.length && <section className={'group context-keys-list'} style={{whiteSpace: "pre"}}>
+                    <label className={"context-keys"}>Context keys</label>
+                    {contextkeys}
+                </section>
             }
+            {shortcutsjsx && <section className='group shortcuts-container'>
+                <label className={"context-keys pt-0"}>Shortcuts</label>
+                {shortcutsjsx}
+            </section>}
         </div>)
     }
 
@@ -405,9 +421,10 @@ class ConsoleComponent extends PureComponent<AllProps, ThisState>{
 
 interface OwnProps {}
 interface StateProps {
-    data: LModelElement|null
-    node: LGraphElement|null
-    view: LViewElement|null
+    data: LModelElement|null;
+    node: LGraphElement|null;
+    view: LViewElement|null;
+    advanced: boolean;
 }
 interface DispatchProps {}
 
@@ -420,6 +437,7 @@ function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     ret.node = node;
     ret.data = (node?.model) ? node.model : null;
     ret.view = (node?.view) ? node.view : null;
+    ret.advanced = state.advanced;
     return ret;
 }
 

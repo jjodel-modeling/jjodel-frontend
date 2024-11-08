@@ -1340,6 +1340,15 @@ export class LPackage<Context extends LogicContext<DPackage> = any, C extends Co
     references!: LReference[];
     literals!: LEnumLiteral[];
 
+    protected get_name(c: Context): this['name'] {
+        let l = c.proxyObject;
+        let ret: string = (l as GObject)['$name']?.value || c.data.name;
+        if (ret === 'default') {
+            let model = this.get_model(c);
+            if (model.__raw.packages[0] === c.data.id) return model.name;
+        }
+        return ret;
+    }
     protected generateEcoreJson_impltemplate(context: Context, loopDetectionObj: Dictionary<Pointer, DModelElement> = {}): Json {
         loopDetectionObj[context.data.id] = context.data;
         const json: GObject = {};
@@ -2054,6 +2063,42 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
     parameters!: LParameter[] | null;
     // [`@${string}`]: LModelElement; todo: try to put it
 
+
+    validTargetsJSX!: JSX.Element[];
+    get_validTargetsJSX(c: Context): this['validTargetsJSX'] {
+        let opts: MultiSelectOptGroup[] = [];
+        this.get_validTargets(c, opts);
+        return UX.options(opts);
+    }
+    validTargetOptions!: MultiSelectOptGroup[];
+    get_validTargetOptions(c: Context): this['validTargetOptions'] {
+        let opts: MultiSelectOptGroup[] = [];
+        this.get_validTargets(c, opts);
+        return opts;
+    }
+    validTargets!: LClass[];
+    get_validTargets(c: Context, out?: MultiSelectOptGroup[]): this['validTargets'] {
+        let lclass: LClass = c.proxyObject as any;
+        // let extendOptions: {value: string, label: string}[] lclass.extends.map(lsubclass=> ({value: lsubclass.id, label: lsubclass.name}));
+        let m2: LModel = lclass.model;
+        let dclass = c.data;
+        let extendsarr = lclass.extendsChain.map(l=>l.id); //dclass.extends;
+        let pkgs = dclass.allowCrossReference ? m2.allCrossSubPackages : m2.allSubPackages;
+        let extendValue: {value: string, label: string}[] = [];
+        if (!out) out = [];
+        let ret: LClass[] = [];
+        out.push(...pkgs.map(p => (
+            {label: p.fullname, options: p.classes.map(c => {
+                    let opt = {value:c.id, label: c.name};
+                    if (opt.value === dclass.id) return undefined;
+                    if (!extendsarr.includes(opt.value)) return opt;
+                    extendValue.push(opt);
+                    ret.push(c);
+                    return undefined;
+                }).filter(e=>!!e) as {value: string, label: string}[]})));
+        return ret;
+    }
+
     get_childNames(c: Context): string[] { return this.get_allChildren(c).map( c => c.name).filter(c=>!!c) as string[]; }
     //get_isSealed(c: Context): LClass['sealed'] { return this.get_sealed(c); }
     get_sealed(c: Context): LClass['sealed'] { return LPointerTargetable.wrapAll(c.data.sealed); }
@@ -2150,19 +2195,21 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
             this.get_ownOperations(context));
     }
 
+    allExtends!: this['extendsChain'];
+    get_allExtends(c:Context): this['extendsChain']{ return this.get_extendsChain(c); }
     private get_extendsChain(context: Context): this['extendsChain'] {
         let targets: LClass[] = LClass.fromArr(context.data.extends);
         let alreadyParsed: Dictionary<Pointer, LClass> = {};
-        while(targets.length) {
+        while (targets.length) {
             let nextTargets = [];
-            for(let target of targets){
-                if(alreadyParsed[target.id]) continue;
+            for (let target of targets){
+                if (alreadyParsed[target.id]) continue;
                 alreadyParsed[target.id] = target;
-                for(let father of target.extends) nextTargets.push(father);
+                for (let next of target.extends) nextTargets.push(next);
             }
             targets = nextTargets;
         }
-        return [...new Set<LClass>(Object.values(alreadyParsed))];
+        return Object.values(alreadyParsed);
     }
 
     public isSubClassOf(superClass: LClass, returnIfSameClass: boolean = true): boolean { return this.cannotCall("isSubClassOf"); }
@@ -2932,28 +2979,23 @@ export class LStructuralFeature<Context extends LogicContext<DStructuralFeature>
     }
 
     validTargetsJSX!: JSX.Element[];
-    validTargetOptions!: MultiSelectOptGroup[];
-    validTargets!: (LObject | LEnumLiteral)[];
     get_validTargetsJSX(c: Context): this['validTargetsJSX'] {
         let opts: MultiSelectOptGroup[] = [];
         this.get_validTargets(c, opts);
         return UX.options(opts);
     }
+    validTargetOptions!: MultiSelectOptGroup[];
     get_validTargetOptions(c: Context): this['validTargetOptions'] {
         let opts: MultiSelectOptGroup[] = [];
         this.get_validTargets(c, opts);
         return opts;
     }
-
+    validTargets!: (LObject | LEnumLiteral)[];
     get_validTargets(c: Context, out?: MultiSelectOptGroup[]): this['validTargets'] {
-        let selectOptions: MultiSelectOptGroup[];
         let addClasses: boolean = false;
         let addEnums: boolean = false;
         let addPrimitives: boolean = false;
         let addReturnTypes: boolean = false;
-
-
-        let thiss: GObject<LReference> = this as any;
         let isCrossRef = this.get_isCrossReference(c);
         let d = c.data;
         switch (d.className){
@@ -2963,7 +3005,14 @@ export class LStructuralFeature<Context extends LogicContext<DStructuralFeature>
             case DOperation.cname: addClasses = addPrimitives = addEnums = addReturnTypes = true; break;
         }
         let m2: LModel = this.get_model(c);
-        let map = (object: LNamedElement): MultiSelectOption => ({value:object.id, label: object.fullname});
+        let map = (object: LNamedElement): MultiSelectOption => {
+            let fname = object.fullname;
+            return {value:object.id, label: isCrossRef ? fname : object.name, title: object.fullname}
+        };
+        let map2 = (object: LNamedElement): MultiSelectOption => {
+            let name = object.name;
+            return {value:object.id, label: name, title: name}
+        };
         let sort = (a:MultiSelectOption, b: MultiSelectOption) => (a.label > b.label ? +1 : -1);
         let validClasses: LClass[] = [];
         let validEnums: LEnumerator[] = [];
@@ -2976,15 +3025,28 @@ export class LStructuralFeature<Context extends LogicContext<DStructuralFeature>
         if (addReturnTypes) {
             if (!state) state = store.getState();
             U.arrayMergeInPlace(validPrimitives, LPointerTargetable.fromPointer(state.returnTypes));
-            if (out) out.push({label: 'Primitives', options: validClasses.map(map).sort(sort)});
+            if (out) out.push({label: 'Primitives', options: validClasses.map(map2).sort(sort)});
         }
         if (addClasses) {
-            validClasses = (isCrossRef ? m2.crossClasses : m2.classes);
-            if (out) out.push({label: 'Classes_', options: validClasses.map(map).sort(sort)});
+            let m = this.get_model(c);
+            let pkgs = isCrossRef ? m.allCrossSubPackages : m.allSubPackages;
+            if (out) for (let pkg of pkgs){
+                let classes = pkg.classes;
+                if (classes.length === 0) continue;
+                out.push({label: 'Classes ('+pkg.fullname+')', options: classes.map(map2).sort(sort)});
+                U.arrayMergeInPlace(validClasses, classes);
+            } else validClasses = (isCrossRef ? m2.crossClasses : m2.classes);
         }
         if (addEnums) {
-            validEnums = (isCrossRef ? m2.crossEnumerators : m2.enumerators);
-            if (out) out.push({label: 'Enumerators', options: validEnums.map(map).sort(sort)});
+            let m = this.get_model(c);
+            let pkgs = isCrossRef ? m.allCrossSubPackages : m.allSubPackages;
+            if (out) for (let pkg of pkgs){
+                let enums = pkg.enumerators;
+                if (enums.length === 0) continue;
+                out.push({label: 'Enumerators ('+pkg.fullname+')', options: enums.map(map2).sort(sort)});
+                U.arrayMergeInPlace(validEnums, enums);
+            } else validEnums = (isCrossRef ? m2.crossEnumerators : m2.enumerators);
+            //if (out) out.push({label: 'Enumerators', options: validEnums.map(map).sort(sort)});
         }
         return U.arrayMergeInPlace(validClasses as any[], validPrimitives, validEnums);
     }
@@ -3895,26 +3957,40 @@ export class EdgeStarter<T1=any, T2=any>{ // <T1 extends LPointerTargetable = LP
     endNode: LGraphElement;
     startVertex: LVoidVertex;
     endVertex: LVoidVertex;
+    startGraph: LGraph;
+    endGraph: LGraph;
     startSize: GraphSize;
     endSize: GraphSize;
     startVertexSize: GraphSize;
     endVertexSize: GraphSize;
     otherEnds: LGraphElement[];
+    extendTargets: LGraphElement[];
+    sameGraph: boolean;
+    isSameGraph: boolean;
     overlaps: boolean;
-    vertexOverlaps: boolean;
+    vertexOverlaps: boolean;/*
+    firstRenderedStartNode: LGraphElement;
+    firstRenderedEndNode: LGraphElement;*/
+    // todo: if you want to get the first visible parent node (like for pkg dependencies), use edgestarter.startNode.firstRenderedNode
     constructor(start: LModelElement, end: LModelElement, sn: LGraphElement, en: LGraphElement,
                 otherPossibleEnds: LGraphElement[], m1refindex: number, type:string) {
         this.start = start;
         this.end = end;
         this.startNode = sn;
         this.endNode = en;
-        this.otherEnds = otherPossibleEnds || end.nodes;
+        this.otherEnds = this.extendTargets = otherPossibleEnds;// || end.nodes;
         //console.log('edgestarter ss', {end, start, sn, en});
 
         this.startSize = sn.outerSize;
         this.endSize = en.outerSize;
         this.startVertex = sn.vertex as any;
         this.endVertex = en.vertex as any;
+        this.startGraph = this.startVertex?.root;
+        this.endGraph = this.endVertex?.root;
+        this.sameGraph = this.isSameGraph = this.endGraph?.id === this.startGraph?.id;
+        //this.firstRenderedStartNode = this.startNode.firstRenderedNode;
+        //this.firstRenderedEndNode = this.startNode.firstRenderedNode;
+        // this.firstVisibleStart = this.startNode.firstRenderedNode;
         //console.log('edgestarter evs', {end, start, sn, en});
         this.startVertexSize = this.startVertex === sn ? this.startSize : this.startVertex.outerSize;
         this.endVertexSize = this.endVertex === en ? this.endSize : this.endVertex.outerSize;
@@ -4042,20 +4118,19 @@ export class LModel<Context extends LogicContext<DModel> = any, C extends Contex
         return LPointerTargetable.fromPointer(c.data.dependencies);
     }
     public get_allDependencies(c: Context): this['allDependencies']{
-        let deduplicator: Dictionary<Pointer, LModel> = {};
-        let stack: LModel[] = LPointerTargetable.fromPointer(c.data.dependencies);
-        let ret = [];
-        while (stack.length) {
-            let arr = stack;
-            stack = [];
-            for (let m of arr) {
-                let mid = m.id;
-                if (deduplicator[mid]) continue;
-                deduplicator[mid] = m;
-                stack.push(...m.dependencies);
+        let targets: LModel[] = L.fromArr(c.data.dependencies);
+        return U.iterateChildProperties(targets, (e)=>e.dependencies);
+        /*let alreadyParsed: Dictionary<Pointer, LModel> = {};
+        while (targets.length) {
+            let nextTargets = [];
+            for (let target of targets){
+                if (alreadyParsed[target.id]) continue;
+                alreadyParsed[target.id] = target;
+                U.arrayMergeInPlace(nextTargets, target.dependencies);
             }
+            targets = nextTargets;
         }
-        return Object.values(deduplicator);
+        return Object.values(alreadyParsed);*/
     }
     /*public set_dependencies(c: Context): this['dependencies']{
         default setter is fine, should automatically do the difference of pointers and trigger -= or +=
@@ -4372,7 +4447,14 @@ instanceof === undefined or missing  --> auto-detect and assign the type
             }
             return ret;
         }
-        ret.extend = classes.flatMap(c => SkipExtendNodeHidden(c, c.extends, true)).map( (es) => new EdgeStarter(es.start, es.end, es.sn, es.en, [], 0, 'extend'));
+        ret.extend = classes.flatMap(c => SkipExtendNodeHidden(c, c.extends, true)).map( (es) => {
+            let otherEdgeEnds = es.start.extendsChain.flatMap(c=>(c?.nodes||[])).filter(c=> {
+                if (!c || !c.rendered) return false;
+                if (es.sn?.root?.id !== c.root?.id) return false;
+                return true;
+            }) as LGraphElement[];
+            return new EdgeStarter(es.start, es.end, es.sn, es.en, otherEdgeEnds, 0, 'extend');
+        });
 
         let dependencies: {src:LModelElement, ends: LModelElement[]}[] =
             Debug.lightMode ? [] : [
@@ -6124,14 +6206,19 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
     set_allowCrossReference(v: this['allowCrossReference'], c: Context): boolean { return this.cannotSet('LValue.allowCrossReference'); }
 
 
+    validTargetOptions!: MultiSelectOptGroup[];
+    get_validTargetOptions(c: Context): this['validTargetOptions'] {
+        let opts: MultiSelectOptGroup[] = [];
+        this.get_validTargets(c, opts);
+        return opts;
+    }
     validTargetsJSX!: JSX.Element[];
-    validTargets!: (LObject | LEnumLiteral)[];
     get_validTargetsJSX(c: Context): this['validTargetsJSX'] {
         let opts: MultiSelectOptGroup[] = [];
         this.get_validTargets(c, opts);
         return UX.options(opts);
     }
-
+    validTargets!: (LObject | LEnumLiteral)[];
     get_validTargets(c: Context, out?: MultiSelectOptGroup[]): this['validTargets'] {
         let selectOptions: MultiSelectOptGroup[];
         let meta: LReference | LAttribute = this.get_instanceof(c) as LReference | LAttribute;
@@ -6145,7 +6232,11 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
         let isContainment = isShapeless || isReference && (meta as LReference).containment;
         let m1: LModel = this.get_model(c);
         let m2 = m1.instanceof;
-        let map = (object: LNamedElement) => ({value:object.id, label: object.name});
+        // let map = (object: LNamedElement) => ({value:object.id, label: object.name});
+        let map = (object: LNamedElement): MultiSelectOption => {
+            let fname = object.fullname;
+            return {value:object.id, label: isCrossRef ? fname : object.name, title: object.fullname}
+        };
         if (isReference) {
             let isContainment: boolean = this.get_containment(c);
             let containerObjectsID: Pointer[] = this.get_fatherList(c).map(lm => lm.id);
@@ -6156,7 +6247,8 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
             // avoiding containment loops damiano todo: put this filter in set_value too
             for (let o of validObjects) {
                 //  continue; // no self contain
-                if (o.isRoot) freeObjects.push(o); else boundObjects.push(o);
+                if (o.isRoot) freeObjects.push(o);
+                else boundObjects.push(o);
             }
             if (out) out.push({label: 'Free     Objects', options: freeObjects.map(map)});
             if (out) out.push({label: 'Bound Objects', options: freeObjects.map(map)});

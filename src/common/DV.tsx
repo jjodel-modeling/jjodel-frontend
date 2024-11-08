@@ -378,9 +378,9 @@ export class DefaultView {
     {data.isMetamodel && 
         [<div className={'edges'}>
             {[
-                refEdges.map(se => <Edge data={se.start} start={se.startNode.father} end={se.endNode} anchorStart={0} anchorEnd={0} key={se.id} isReference={true} 
+                refEdges.map(se => <Edge data={se.start} start={se.startNode.firstRenderedNode} end={se.endNode} anchorStart={0} anchorEnd={0} key={se.id} isReference={true} 
                 view={'Edge' + (se.start.composition ? 'Composition' : (se.start.aggregation ? 'Aggregation' : 'Association'))} />),
-                extendEdges.map(se => <Edge data={se.start} start={se.startNode} end={se.endNode} view={'EdgeInheritance'} isExtend={true} key={se.id} />)
+                extendEdges.map(se => <Edge data={se.start} start={se.startNode} end={se.extendTargets[0]} view={'EdgeInheritance'} isExtend={true} key={se.id} />)
             ]}
         </div>,
         otherPackages.filter(p => p).map(pkg => <DefaultNode key={pkg.id} data={pkg} />),

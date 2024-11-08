@@ -58,7 +58,7 @@ interface NoApply { apply?: never; }
 interface NoCall { call?: never; }
 
 
-export type MultiSelectOption = {value: string, label: string};
+export type MultiSelectOption = {value: string, label: string, title?:string};
 export type MultiSelectOptGroup = {label: string, options: MultiSelectOption[]};
 
 

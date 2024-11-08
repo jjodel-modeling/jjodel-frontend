@@ -215,16 +215,18 @@ function ContextMenuComponent(props: AllProps) {
 
         jsxList.push(<hr className={'my-1'} />);
         /* LOCK-UNLOCK */
-        jsxList.push(<div onClick={() => {close(); data.delete(); node.delete();}} className={'col item'}>{icon['lock']} Lock/Unlock<div> <i
+        jsxList.push(<div onClick={() => {close(); data.delete(); /*node.delete();*/}} className={'col item'}>{icon['lock']} Lock/Unlock<div> <i
             className='bi bi-command'></i> L</div></div>);
+        jsxList.push(<div onClick={() => {close(); let gn = node as GObject; if (gn.isResized) gn.isResized = false; }} className={'col item'}>{icon['lock']} Restore default size<div> <i
+            className='bi bi-command'></i> T</div></div>);
         /* UNLOCK ALL ELEMENTS */
-        jsxList.push(<div onClick={() => {close(); data.delete(); node.delete();}} className={'col item'}>{icon['unlock']} Unlock all<div><i className="bi bi-alt"></i> <i
+        jsxList.push(<div onClick={() => {close(); data.delete(); /* node.delete();*/}} className={'col item'}>{icon['unlock']} Unlock all<div><i className="bi bi-alt"></i> <i
             className='bi bi-command'></i> L</div></div>);
 
         jsxList.push(<hr className={'my-1'} />);
         /* METRICS */
         if (data.model.isMetamodel) {
-        jsxList.push(<div onClick={() => {toggleMetrics(); close();}} className={'col item'}>{icon['metrics']} Analytics<div> <i
+        jsxList.push(<div onClick={() => {close(); toggleMetrics();}} className={'col item'}>{icon['metrics']} Analytics<div> <i
             className='bi bi-command'></i> A</div></div>);
             jsxList.push(<hr className={'my-1'} />);
         }

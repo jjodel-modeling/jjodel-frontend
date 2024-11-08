@@ -23,7 +23,7 @@
   }
   div:has(> .my-tooltip):hover .my-tooltip {
     display: block;
-    animation: fadeIn 1s;
+    //animation: fadeIn 1s;
   }
   div:has(> .my-tooltip):hover  {
     cursor: help;

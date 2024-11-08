@@ -46,6 +46,7 @@ export class GraphElementReduxStateProps {
     //template!: string;
     node!: LGraphElement;
     data?: LModelElement;
+    __skipRender?: boolean;
     // usageDeclarations!: DefaultUsageDeclarations;
     // invalidUsageDeclarations?: Error; // moved in stateProps.usageDeclarations.__invalidUsageDeclarations
     // graph!: LGraph;
@@ -147,6 +148,7 @@ export class EdgeStateProps extends GraphElementReduxStateProps {
     viewpoint!: LViewPoint;
     start!: LGraphElement;
     end!: LGraphElement;
+    __skipRender?: boolean; // in case start or end are undefined -> do not render the edge
     static new(): GObject<EdgeStateProps>{
         let e: GObject<EdgeStateProps> = new EdgeStateProps();
         for (let k in e) if (e[k] === undefined) delete e[k];
