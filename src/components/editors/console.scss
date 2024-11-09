@@ -18,6 +18,7 @@
   position: relative;
 
   .output-comment {
+    font-family: var(--default-font-family);
     display: none;
     position: absolute;
     z-index:1;
@@ -196,7 +197,7 @@
   }
 
   h4 {
-    font-family: "Inter Tight", sans-serif;
+    font-family: var(--default-font-family);
     color: var(--accent);
     font-size: 1.3em;
     margin-left: 8px;

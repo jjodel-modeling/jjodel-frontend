@@ -35,7 +35,7 @@
 
         .my-auto {
             font-weight: 400;
-            font-family: "Inter Tight", sans-serif!important;
+            font-family: var(--default-font-family);
             color: var(--color);
             font-size: 1em;
         }

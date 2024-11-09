@@ -12,8 +12,8 @@ body {
         overflow: hidden;
     }
     // font-family: , 'Helvetica Neue', Arial,Helvetica, sans-serif !important;
-
-    font-family: 'Inter Tight', Lato, sans-serif;
+    --default-font-family: 'Inter Tight', Lato, sans-serif;
+    font-family: var(--default-font-family);
     font-optical-sizing: auto;
     font-weight: 400;
     font-style: normal;

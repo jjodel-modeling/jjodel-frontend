@@ -550,28 +550,28 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
             return true; }*/
 
     nodes!:LVoidVertex[];
-    __type_of__nodes:Info = {type:'LVertex[]', txt: "all direct sub-nodes. not including deep subelements (subelements of subelements)"};
+    __info_of__nodes:Info = {type:'LVertex[]', txt: "all direct sub-nodes. not including deep subelements (subelements of subelements)"};
     get_nodes(c: Context): this['nodes'] { return this.get_subElements(c).filter(c => c && c.className.indexOf('Vertex') >= 0) as any; }
     set_nodes(val: never, c: Context): boolean { return this.cannotSet('nodes'); }
     edges!:LVoidVertex[];
-    __type_of__edges:Info = {type:'LEdge[]', txt: "all direct sub-edges. not including deep subelements (subelements of subelements)"};
+    __info_of__edges:Info = {type:'LEdge[]', txt: "all direct sub-edges. not including deep subelements (subelements of subelements)"};
     get_edges(c: Context): this['edges'] { return this.get_subElements(c).filter(c => c && c.className.indexOf('Edge') >= 0) as any; }
     set_edges(val: never, c: Context): boolean { return this.cannotSet('edges'); }
     graphs!:LVoidVertex[];
-    __type_of__graphs:Info = {type:'LGraph[]', txt: "all direct sub-graphs. not including deep subelements (subelements of subelements)"};
+    __info_of__graphs:Info = {type:'LGraph[]', txt: "all direct sub-graphs. not including deep subelements (subelements of subelements)"};
     get_graphs(c: Context): this['graphs'] { return this.get_subElements(c).filter(c => c && c.className.indexOf('Graph') >= 0) as any; }
     set_graphs(val: never, c: Context): boolean { return this.cannotSet('graphs'); }
 
     allSubNodes!: LVoidVertex[];
-    __type_of__allSubNodes:Info = {type:'LVertex[]', txt: "all deep sub-nodes. including subelements of subelements."};
+    __info_of__allSubNodes:Info = {type:'LVertex[]', txt: "all deep sub-nodes. including subelements of subelements."};
     get_allSubNodes(c: Context): this['allSubNodes'] { return this.get_allSubElements(c).filter(c => c && c.className.indexOf('Vertex') >= 0) as any; }
     set_allSubNodes(val: never, c: Context): boolean { return this.cannotSet('allSubNodes'); }
     allSubEdges!: LVoidEdge[];
-    __type_of__allSubEdges:Info = {type:'LEdge[]', txt: "all deep sub-edges. including subelements of subelements."};
+    __info_of__allSubEdges:Info = {type:'LEdge[]', txt: "all deep sub-edges. including subelements of subelements."};
     get_allSubEdges(c: Context): this['allSubEdges'] { return this.get_allSubElements(c).filter(c => c && c.className.indexOf('Edge') >= 0) as any; }
     set_allSubEdges(val: never, c: Context): boolean { return this.cannotSet('allSubEdges'); }
     allSubGraphs!: (LGraph | LGraphVertex)[];
-    __type_of__allSubGraphs:Info = {type:'LGraph[]', txt: "all deep sub-graphs. including subelements of subelements."};
+    __info_of__allSubGraphs:Info = {type:'LGraph[]', txt: "all deep sub-graphs. including subelements of subelements."};
     get_allSubGraphs(c: Context): this['allSubGraphs'] { return this.get_allSubElements(c).filter(c => c && c.className.indexOf('Graph') >= 0) as any; }
     set_allSubGraphs(val: never, c: Context): boolean { return this.cannotSet('allSubGraphs'); }
 

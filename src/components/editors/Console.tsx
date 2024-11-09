@@ -3,7 +3,7 @@ import {
     DGraphElement,
     Dictionary,
     DState,
-    GObject,
+    GObject, Info,
     LGraphElement,
     LModelElement,
     Log,
@@ -42,7 +42,7 @@ class ThisState{
 
 // trasformato in class component così puoi usare il this nella console. e non usa accidentalmente window come contesto
 
-let hiddenkeys = ["jsxString", "pointedBy", "clonedCounter", "parent", "_subMaps", "inspect", "__random"];
+let hiddenkeys = ["jsxString", "pointedBy", "clonedCounter", "parent", "_subMaps", "inspect", "__random", '__serialize'];
 function fixproxy(output: any/*but not array*/, addDKeys: boolean = true, addLKeys: boolean = true):
     { output: any, shortcuts?: GObject<'L singleton'>, comments?: Dictionary<string, string | {type:string, txt:string}>, hiddenkeys?: GObject} {
 
@@ -160,7 +160,16 @@ class ConsoleComponent extends PureComponent<AllProps, ThisState>{
     }
 
     // textarea: HTMLTextAreaElement | null = null;
-    getClickableEntry(expression: string, k: string, arr?: any): JSX.Element{
+    getClickableEntry(jsxComments: Dictionary<string, ReactNode>, strcomments: Dictionary<string, Info>, expression: string, k: string, arr?: any): JSX.Element{
+        let isReactNode = !!jsxComments[k];
+        let infoof_tooltip: string | ReactNode;
+        if (isReactNode){
+            infoof_tooltip = "<span id='console_output_comment_key_" + k + "' class='tooltip-msg'/>";//jsxComments[k];
+        } else {
+            infoof_tooltip = strcomments[k]?.txt||null;
+        }
+        if (k === 'father') console.log('jsx comment', {k, infoof_tooltip, jsxComments:{...jsxComments}});
+        if (k === 'isM1') console.log('jsx comment', {k, infoof_tooltip, jsxComments:{...jsxComments}});
         return <li onClick={()=> {
             let isnum = !isNaN(+k);
             let isregular: boolean = isnum ? true : /\w/.test(k);
@@ -169,7 +178,7 @@ class ConsoleComponent extends PureComponent<AllProps, ThisState>{
             else if (isregular) append = '.'+k;
             else append = '['+JSON.stringify(k)+']';
             this.setState({expression: (expression ? expression + append : k)}/*, ()=> { this.change(); }*/);
-        }}>{k}{arr && arr[k] ? <>:{arr[k]}</> : undefined}</li>;
+        }}>{k}{arr && arr[k] || undefined}{infoof_tooltip}</li>;
     }
 
     outputhtml: HTMLElement | null = null;
@@ -181,7 +190,7 @@ class ConsoleComponent extends PureComponent<AllProps, ThisState>{
             }
             let s0: GObject<ThisState> = {...s} as any;
             let olds = this.state;
-            if (s0.expressionIndex && s0.expressionIndex !== olds.expressionIndex) s.expression = olds.expressionHistory[s0.expressionIndex];
+            if (s0.expressionIndex !== undefined && s0.expressionIndex !== olds.expressionIndex) s.expression = olds.expressionHistory[s0.expressionIndex];
             if (s0.expressionHistory && s0.expressionHistory !== olds.expressionHistory){
                 let len = s0.expressionHistory.length;
                 if (len > 10) s.expressionHistory = s0.expressionHistory.slice(len - 10, len);
@@ -262,10 +271,10 @@ class ConsoleComponent extends PureComponent<AllProps, ThisState>{
                 for (let commentKey in comments){
                     let commentVal: any = comments[commentKey];
                     let txt = commentVal?.txt;
-                    if (txt && typeof txt !== "string") {
+                    if (txt && typeof txt !== "string") {// only for infoof that have txt = reactNode
                         // try to inject jsx
                         jsxComments[commentKey] = txt;
-                        txt = "<span id='console_output_comment_" + commentKey + "'  class='console-msg'/>";
+                        txt = "<span id='console_output_comment_" + commentKey + "'  class='tooltip-msg'/>";
                         // fallback read text, that should go deep iteration, but 1 level deep should be enough.
                         // let arr: any[] = (Array.isArray(txt?.props?.children) ? txt.props.children : (txt.props.children ? [txt.props.children] : []));
                         // txt = arr.map(e => typeof e === "string" ? e : e?.props?.children + '' || '').join("");
@@ -291,11 +300,6 @@ class ConsoleComponent extends PureComponent<AllProps, ThisState>{
                     "<h4>Shortcuts</h4><section class='group shortcuts-container'><div class=\"output-row\" tabindex=\"984\">" + U.objectInspect(shortcuts)+"</section>";
                 */
 
-                if (shortcuts) {
-                    shortcutsjsx = <ul>{
-                        Object.keys(shortcuts).sort().map(k=>this.getClickableEntry(expression, k, shortcuts))
-                    }</ul>
-                }
                 // if (hidden) outstr +="</div><br><br><h4>Other less useful properties</h4><div class=\"output-row\" tabindex=\"984\">" + format(hidden);
                 // warning: unicode char but should not make a problem.
                 // outstr = U.replaceAll( outstr, '𐀹,\n', '],</span>\n</div><div class="output-row" tabindex="984"><span style="color:#000">');
@@ -352,16 +356,15 @@ class ConsoleComponent extends PureComponent<AllProps, ThisState>{
                 [...(Object.keys(objraw) as any as number[]).filter(k => (k) <= 10).map(k=>k===10 ? '...' : ''+k), ...Object.keys(Array.prototype)]
                 : Object.getOwnPropertyNames(objraw)) || [];
 
-        contextkeys = <ul>{
-            contextkeysarr.sort().map(k=>this.getClickableEntry(expression, k))
-        }</ul>;
-
 
         let injectCommentJSX = () => {
             try{ for (let key in jsxComments) {
                 if (hiddenkeys.includes(key)) continue;
                 let commentNode: HTMLElement | null = document.getElementById("console_output_comment_"+key);
                 Log.eDev(!commentNode, "failed to find comment placeholder", {key, v:jsxComments[key], jsxComments});
+                if (commentNode) ReactDOM.render(jsxComments[key], commentNode);
+                // for shortcut or context keys, this can fail without warning as some shortcuts are missing
+                commentNode = document.getElementById("console_output_comment_key_"+key);
                 if (commentNode) ReactDOM.render(jsxComments[key], commentNode);
             } }
             catch (e) { console.error("failed to inject console output comment:", e)}
@@ -384,6 +387,16 @@ class ConsoleComponent extends PureComponent<AllProps, ThisState>{
         let canundo = this.state.expressionIndex > 0;
         let advanced = this.props.advanced;
 
+        contextkeys = <ul>{
+            contextkeysarr.sort().map(k=>this.getClickableEntry(jsxComments, comments||{} as any, expression, k))
+        }</ul>;
+
+        if (shortcuts) {
+            shortcutsjsx = <ul>{
+                Object.keys(shortcuts).sort().map(k=>this.getClickableEntry(jsxComments, comments||{} as any, expression, k, shortcuts))
+            }</ul>
+        }
+
         return(<div className={'w-100 h-100 p-2 console'}>
             <h1>
                 On {((data as GObject)?.name || "model-less node (" + this.props.node?.className + ")") + " - " + this.props.node?.className}
@@ -391,7 +404,7 @@ class ConsoleComponent extends PureComponent<AllProps, ThisState>{
             <div className='console-terminal p-0 mb-2 w-100'>
                 <div className='commands'>
                     <i onClick={(e) => {
-                        this.setState({expression: ''})
+                        this.setState({expression: '', expressionHistory:[''], expressionIndex:0})
                     }} title={'Empty console'} className="bi bi-slash-circle"/>
                     <i onClick={(e) => {
                         if (!this.state.expression.trim()) {
@@ -411,13 +424,13 @@ class ConsoleComponent extends PureComponent<AllProps, ThisState>{
                 <textarea id={'console'} spellCheck={false} className={'p-0 input w-100'} onChange={this.change}
                           value={this.state.expression}></textarea>
             </div>
-            {advanced && <div>Debug history (index = {this.state.expressionIndex + 1})
-                {this.state.expressionHistory.slice(-5).map((s, i) => <>
+            {advanced && this.state.expressionHistory.length>1 && <div>Advanced query history (index = {this.state.expressionIndex})
+                {this.state.expressionHistory.slice(-5).map((s, i) => i === 0 ? null : <>
                     <div style={{
                         border: '1px solid ' + (i === this.state.expressionIndex ? 'red' : 'gray'),
                         marginTop: '5px',
                         height: '30px'
-                    }}>{(i + 1) + ') ' + s}</div>
+                    }}>{(i) + ') ' + s}</div>
                 </>)}</div>}
             {/*<label>Query {(this.state.expression)}</label>*/}
             <hr className={'mt-1 mb-1'}/>

@@ -214,7 +214,7 @@ body > .dragging-layer > div:last-child {
 .dock-tab-close-btn {
   position: absolute;
   cursor: pointer;
-  font-family: 'Inter Tight', sans-serif;
+  font-family: var(--default-font-family);
   color: var(--bg-3);
   right: -3px;
   font-size: 12px;
@@ -587,7 +587,7 @@ body.dock-dragging iframe {
   height: 32px;
   left: calc(50% - 16px);
   top: calc(50% - 16px);
-  font-family: 'Inter Tight', sans-serif;
+  font-family: var(--default-font-family);
   // color: #ddd;
   // background: #fff;
   // border: 1px solid transparent;
@@ -685,7 +685,7 @@ body.dock-dragging iframe {
   width: 16px;
   height: 16px;
 
-  font-family: 'Inter Tight', sans-serif;
+  font-family: var(--default-font-family);
 
   cursor: pointer;
   transition: all 0.25s ease-in-out;

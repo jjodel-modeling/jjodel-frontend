@@ -39,7 +39,7 @@
     .toolbar-section-label{
         margin-left: 0.3rem;
         display: block;
-        font-family: 'Inter Tight', sans-serif;
+      font-family: var(--default-font-family);
         font-size: 1.1em;
         font-weight: 300;
     }
@@ -122,7 +122,7 @@
   }
 
   & .my-auto {
-    font-family: "Inter Tight", sans-serif;
+    font-family: var(--default-font-family);
     font-weight: 200;
     margin: 5px 10px 5px 10px!important;
   }

@@ -449,7 +449,7 @@ input[type="number"]::-webkit-outer-spin-button {
     }
 
     & h4 {
-      font-family: "Inter Tight", sans-serif;
+      font-family: var(--default-font-family);
       color: var(--accent);
       font-size: 1.3em;
     }
