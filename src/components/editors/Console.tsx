@@ -215,6 +215,7 @@ class ConsoleComponent extends PureComponent<AllProps, ThisState>{
         const [output, setOutput] = useStateIfMounted('');*/
 
         if (!this.props.node) return <Empty msg={"Select a node."} />;
+        let postprocess: boolean = true;
         let expression = this.state.expression.trim();
         if (expression === 'this') expression = 'data';
         const data = this.props.data;
@@ -273,13 +274,16 @@ class ConsoleComponent extends PureComponent<AllProps, ThisState>{
                     // warning: unicode char but should not make a problem. 𐀹
                     commentVal += '<div class="output-comment my-tooltip">' + txt + '</div></div><div class="output-row" tabindex="984">'
 
-                    let commentKeyEscaped = U.multiReplaceAll(commentKey, ["$", "-"], ["\\$", "\\-"]); // _ should be safe, .-,?^ not happening?
-                    let regexp = new RegExp("^({?\\s*" +commentKeyEscaped+":.*)$", "gm");
-                    let regexpCloseTags = new RegExp("(\\<span style\\=\"color\\:\\#)", "gm");
-                    outstr = U.replaceAll( outstr, "$", "£");
-                    outstr = outstr.replace(regexp, "$1" + commentVal);
-                    outstr = outstr.replace(regexpCloseTags,  "</span>$1");
-                    outstr = U.replaceAll(outstr, "£", "$");
+                    if (postprocess){
+                        let commentKeyEscaped = U.multiReplaceAll(commentKey, ["$", "-"], ["\\$", "\\-"]); // _ should be safe, .-,?^ not happening?
+
+                        let regexp = new RegExp("^({?\\s*" +commentKeyEscaped+":.*)$", "gm");
+                        let regexpCloseTags = new RegExp("(\\<span style\\=\"color\\:\\#)", "gm");
+                        outstr = U.replaceAll(outstr, "$", "£");
+                        outstr = outstr.replace(regexp, "$1" + commentVal);
+                        outstr = outstr.replace(regexpCloseTags,  "</span>$1");
+                        outstr = U.replaceAll(outstr, "£", "$");
+                    }
                 }
 
 
@@ -295,10 +299,40 @@ class ConsoleComponent extends PureComponent<AllProps, ThisState>{
                 // if (hidden) outstr +="</div><br><br><h4>Other less useful properties</h4><div class=\"output-row\" tabindex=\"984\">" + format(hidden);
                 // warning: unicode char but should not make a problem.
                 // outstr = U.replaceAll( outstr, '𐀹,\n', '],</span>\n</div><div class="output-row" tabindex="984"><span style="color:#000">');
-                outstr = U.replaceAll( outstr, '<span style="color:#000" class="console-msg">,\n',
-                    '</span><span style="color:#000" class="console-msg">,</span>\n</div><div class="output-row" tabindex="984"><span class="console-msg" style="color:#000">');
-                outstr = U.replaceAll( outstr, '],\n', '],</span>\n</div><div class="output-row" tabindex="984"><span class="console-msg" style="color:#000">');
-                outstr = U.replaceAll( outstr, '},\n', '},</span>\n</div><div class="output-row" tabindex="984"><span class="console-msg" style="color:#000">');
+                windoww.outstr = outstr.substring(0, 500);
+                windoww.outstrr = outstr;
+                // [length]: <span style="color:#A50">1<span style="color:#000"> ]
+                if (postprocess){
+                    // let closetagsafely = '</span>';
+                    let closetagsafely = '</span></span></span></span></span></span></span></span></span></span>';
+
+                    outstr = U.replaceAll( outstr, '<span style="color:#000">,\n',
+                        closetagsafely+'\n</div>' + '<div class="output-row" tabindex="984"><span class="console-msg" style="color:#000">');
+
+                    outstr = U.replaceAll( outstr, '<span style="color:#000"> ],\n',
+                        ']</span>\n</div>' + '<div class="output-row" tabindex="984"><span class="console-msg" style="color:#000">');
+
+                    outstr = U.replaceAll( outstr, ': {},\n',
+                        ': {}</span>\n</div>' + '<div class="output-row" tabindex="984">');
+                    // let regexpFixArray = /,?\s\[length\]:\s<span style="color:#A50">\d<span style="color:#000">\s/gm;
+                    windoww.outp = outstr;
+                    // let regexpFixArray = /,?\s\[length\]:\s(<\/span>)+<span style="color:#A50">\d(<\/span>)+]/gm;
+                    let regexpFixArray = /,?\s\[length\]:\s(<\/span>)+<span style="color:#A50">\d(<\/span>)+(<span style="color:#000">\s){0,1}]/gm
+                    outstr = outstr.replaceAll(regexpFixArray, "&nbsp;]</span>");
+                    outstr = U.replaceAll( outstr, ': [&nbsp;]', ': []');
+
+                }
+                let postprocessold: boolean = false;
+                if (postprocessold){
+                    outstr = U.replaceAll( outstr, '<span style="color:#000" class="console-msg">,\n',
+                        '</span><span style="color:#000" class="console-msg">,</span>\n</div><div class="output-row" tabindex="984"><span class="console-msg" style="color:#000">');
+                    /*outstr = U.replaceAll( outstr, '<span style="color:#000" class="console-msg">,\n',
+                        '</span><span style="color:#000" class="console-msg">,</span>\n</div><div class="output-row" tabindex="984"><span class="console-msg" style="color:#000">');*/
+
+                    outstr = U.replaceAll( outstr, '],\n', '],</span>\n</div><div class="output-row" tabindex="984"><span class="console-msg" style="color:#000">');
+                    outstr = U.replaceAll( outstr, '},\n', '},</span>\n</div><div class="output-row" tabindex="984"><span class="console-msg" style="color:#000">');
+
+                }
             }
             ashtml = true; }
         catch(e: any) {

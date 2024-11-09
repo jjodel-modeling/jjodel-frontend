@@ -14,15 +14,19 @@
 
 .output-row {
   // white-space: pre;
-
+  // --vertical-line-space: 0.05rc;
+  position: relative;
 
   .output-comment {
     display: none;
-    position: fixed;
-    background: white;
+    position: absolute;
+    z-index:1;
+    background-color: var(--bg-1);
     padding: 1em;
-    margin-left: -1em;
+    margin-left: calc(-2px - 2rch);
     border-radius: 1em;
+    margin-top: -2px; //var(--vertical-line-space);
+    border: 2px solid var(--bg-3);
     box-shadow: var(--model-shadow);
   }
   &:hover .output-comment,
@@ -30,9 +34,7 @@
   &:focus .output-comment,
   &:active .output-comment
   {
-    &:first-of-type{
       display: block;
-    }
   }
 
 
@@ -113,6 +115,10 @@
     color: var(--btn-generic-accennt);
     content: "\F721";
     cursor: pointer;
+  }
+
+  div.output-row:has(.my-tooltip):hover {
+    cursor: help;
   }
 
   & .console-terminal .commands {
@@ -204,10 +210,10 @@
     border-bottom: none;
 
     background-color: var(--bg-2);
-    padding: 1rem;
-    padding: 0.15rem 1rem;
+    //padding: 1rem;
+    padding: 0rem 2rch;
   }
-  .output-row:first-of-type {
+  .output-row:first-of-type {/*
     border-top: 2px solid var(--bg-3);
     border-left: 2px solid var(--bg-3);
     border-right: 2px solid var(--bg-3);
@@ -216,7 +222,9 @@
     background-color: var(--bg-2);
     border-top-left-radius: var(--radius);
     border-top-right-radius: var(--radius);
-    padding: 1rem;
+    padding: 1rem;*/
+    padding-left: 0.4rch;
+    padding-top: 1rch;// width of '0' char
   }
   .output-row:last-of-type {
     border-bottom: 2px solid var(--bg-3);
@@ -227,7 +235,7 @@
     background-color: var(--bg-2);
     border-bottom-left-radius: var(--radius);
     border-bottom-right-radius: var(--radius);
-    padding: 1rem;
+    padding-bottom: 1rch;
   }
 
   h4 + .output-row  {
