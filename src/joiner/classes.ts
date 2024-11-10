@@ -1698,9 +1698,9 @@ export class LPointerTargetable<Context extends LogicContext<DPointerTargetable>
 
     _state!: GObject;
     __info_of___state = {type:"GObject", txt: `<div>A space where the user can store informations for their operations/views.<br/>
-            Example: The Validation viewpoint uses it to store validation messages.<br/>
-            WARNING! do not set proxies in the state, set pointers instead.<br/>
-            <a href='https://github.com/MDEGroup/jjodel/wiki/L%E2%80%90Object-state'>Learn more on the wiki</a></div>`};
+Example: The Validation viewpoint uses it to store validation messages.<br/>
+WARNING! do not set proxies in the state, set pointers instead.<br/>
+<a href='https://github.com/MDEGroup/jjodel/wiki/L%E2%80%90Object-state'>Learn more on the wiki</a></div>`};
 
     // get__state(c: Context): any { return this.wrongAccessMessage('_state',', use obj.state instead.'); }
     // set__state(val: this["_state"], c: Context): boolean { return this.cannotSet('_state', 'use obj.state instead.'); }

@@ -166,7 +166,9 @@ class ConsoleComponent extends PureComponent<AllProps, ThisState>{
         if (isReactNode){
             infoof_tooltip = "<span id='console_output_comment_key_" + k + "' class='tooltip-msg'/>";//jsxComments[k];
         } else {
-            infoof_tooltip = strcomments[k]?.txt||null;
+            let str = (strcomments[k]?.txt as string)||'';
+            if (str) infoof_tooltip = <div className="my-tooltip output-comment" dangerouslySetInnerHTML={{__html:str}}/>;
+            else infoof_tooltip = null;
         }
         if (k === 'father') console.log('jsx comment', {k, infoof_tooltip, jsxComments:{...jsxComments}});
         if (k === 'isM1') console.log('jsx comment', {k, infoof_tooltip, jsxComments:{...jsxComments}});
@@ -178,7 +180,7 @@ class ConsoleComponent extends PureComponent<AllProps, ThisState>{
             else if (isregular) append = '.'+k;
             else append = '['+JSON.stringify(k)+']';
             this.setState({expression: (expression ? expression + append : k)}/*, ()=> { this.change(); }*/);
-        }}>{k}{arr && arr[k] || undefined}{infoof_tooltip}</li>;
+        }}>{k}{arr && arr[k] || null}{infoof_tooltip}</li>;
     }
 
     outputhtml: HTMLElement | null = null;
@@ -443,12 +445,12 @@ class ConsoleComponent extends PureComponent<AllProps, ThisState>{
                                                       style={{whiteSpace: "pre"}}>{outstr}</div>}
 
 
-            {contextkeysarr.length && <section className={'group context-keys-list'} style={{whiteSpace: "pre"}}>
+            {contextkeysarr.length && <section className={'group suggestion-keys context-keys-list'} style={{whiteSpace: "pre"}}>
                     <label className={"context-keys"}>Context keys</label>
                     {contextkeys}
                 </section>
             }
-            {shortcutsjsx && <section className='group shortcuts-container'>
+            {shortcutsjsx && <section className='group  suggestion-keys shortcuts-container'>
                 <label className={"context-keys pt-0"}>Shortcuts</label>
                 {shortcutsjsx}
             </section>}

@@ -1,5 +1,11 @@
-.group {
-  ul li{
+
+.suggestion-keys ul {
+  font-family: Lekton, monospace;
+  padding-left: 3px;
+  display: flex;
+  flex-flow: wrap;
+  justify-content: center; // space-evenly;
+  li{
     cursor: pointer;
   }
 }
@@ -12,33 +18,21 @@
 
 }
 
-.output-row {
-  // white-space: pre;
-  // --vertical-line-space: 0.05rc;
+.output-row, .suggestion-keys ul {
   position: relative;
-
-  .output-comment {
-    font-family: var(--default-font-family);
-    display: none;
-    position: absolute;
-    z-index:1;
-    background-color: var(--bg-1);
-    padding: 1em;
-    margin-left: calc(-2px - 2rch);
-    border-radius: 1em;
-    margin-top: -2px; //var(--vertical-line-space);
-    border: 2px solid var(--bg-3);
-    box-shadow: var(--model-shadow);
-  }
+}
+.output-row, .suggestion-keys ul li {
   &:hover .output-comment,
   &:focus-within .output-comment,
   &:focus .output-comment,
-  &:active .output-comment
-  {
-      display: block;
+  &:active .output-comment {
+    display: block;
   }
+}
 
-
+.suggestion-keys ul li .output-comment {
+  left: 2ch;
+  right: 0;
 }
 
 .console {
@@ -52,6 +46,22 @@
   background-color: var(--bg-1-5)!important;
   // transition: opacity 0.3s ease-in;
   width:  calc(100% - 1rem)!important;
+
+  .output-comment {
+    font-family: var(--default-font-family);
+    color: var(--font-color-1);
+    display: none;
+    position: absolute;
+    z-index:1;
+    background-color: var(--bg-1);
+    padding: 1em;
+    margin-left: calc(-2px - 2ch);
+    border-radius: 1em;
+    margin-top: -2px; //var(--vertical-line-space);
+    border: 2px solid var(--bg-3);
+    box-shadow: var(--model-shadow);
+    white-space: normal;
+  }
 
   .console-terminal {
     position: relative;
@@ -212,7 +222,7 @@
 
     background-color: var(--bg-2);
     //padding: 1rem;
-    padding: 0rem 2rch;
+    padding: 0rem 2ch;
   }
   .output-row:first-of-type {/*
     border-top: 2px solid var(--bg-3);
@@ -224,8 +234,8 @@
     border-top-left-radius: var(--radius);
     border-top-right-radius: var(--radius);
     padding: 1rem;*/
-    padding-left: 0.4rch;
-    padding-top: 1rch;// width of '0' char
+    padding-left: 0ch;
+    padding-top: 1ch;// width of '0' char
   }
   .output-row:last-of-type {
     border-bottom: 2px solid var(--bg-3);
@@ -236,7 +246,7 @@
     background-color: var(--bg-2);
     border-bottom-left-radius: var(--radius);
     border-bottom-right-radius: var(--radius);
-    padding-bottom: 1rch;
+    padding-bottom: 1ch;
   }
 
   h4 + .output-row  {
@@ -290,13 +300,6 @@
 
   .group {
     padding-left: 0;
-    & ul {
-      font-family: Lekton, monospace;
-      padding-left: 3px;
-      display: flex;
-      flex-flow: wrap;
-      justify-content: center; // space-evenly;
-    }
   }
 
   .console-msg {

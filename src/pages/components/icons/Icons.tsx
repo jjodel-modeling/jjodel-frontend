@@ -2,8 +2,8 @@ import './icons.scss';
 
 import jj from '../../../static/img/jj-k.png';
 
-let icon: { [name: string]: any}  = {
-    new: <i className="bi bi-plus-circle-dotted menuitem"></i>,
+export let icon/*: { [name: string]: any} */ = {
+    'new': <i className="bi bi-plus-circle-dotted menuitem"></i>,
     close: <i className="bi bi-x-lg menuitem"></i>,
     edit: <i className="bi bi-pencil-square menuitem"></i>,
     duplicate: <i className="bi bi-files menuitem"></i>,
@@ -15,14 +15,14 @@ let icon: { [name: string]: any}  = {
     deselect: <i className="bi bi-check2 menuitem"></i>,
     add: <i className="bi bi-plus-circle-dotted menuitem"></i>,
 
-    import: <i className="bi bi-arrow-bar-left menuitem"></i>,
-    export: <i className="bi bi-arrow-bar-right menuitem"></i>,
+    'import': <i className="bi bi-arrow-bar-left menuitem"></i>,
+    'export': <i className="bi bi-arrow-bar-right menuitem"></i>,
     download: <i className="bi bi-cloud-download menuitem"></i>,
 
     favorite: <i className="bi bi-star menuitem"></i>,
     favoriteFill: <i className="bi bi-star-fill menuitem"></i>,
     share: <i className="bi bi-share menuitem"></i>,
-    delete: <i className="bi bi-trash3 menuitem"></i>,
+    'delete': <i className="bi bi-trash3 menuitem"></i>,
     'delete-confirm': <i className="bi bi-question-square-fill menuitem confirm"></i>,
     refresh: <i className="bi bi-arrow-clockwise menuitem"></i>,
     up: <i className="bi bi-arrow-up menuitem"></i>,
@@ -55,7 +55,8 @@ let icon: { [name: string]: any}  = {
     extend: <i className="bi bi-caret-up menuitem" style={{paddingBottom: '2px'}}></i>,
     ai: <i className="bi bi-stars"></i>,
     metrics: <i className="bi bi-graph-up" style={{marginRight: '10px'}}></i>,
-    submenu: <i className="bi bi-chevron-right menuitem float-end"></i>
+    submenu: <i className="bi bi-chevron-right menuitem float-end"></i>,
+    'contract': <i className="bi bi-arrows-angle-contract"></i>,
+    'expand': <i className="bi bi-arrows-angle-expand"></i>,
 };
 
-export {icon};

@@ -212,13 +212,16 @@ function ContextMenuComponent(props: AllProps) {
         className='bi bi-command'></i><i className="bi bi-arrow-up"></i></div></div>);
         jsxList.push(<div onClick={() => {close(); node.zIndex -= 1;}} className={'col item'}>{icon['down']} Down<div><i
         className='bi bi-command'></i><i className="bi bi-arrow-down"></i></div></div>);
-
+        let gn = node as GObject;
         jsxList.push(<hr className={'my-1'} />);
+        /* AUTO-SIZING */
+        if (gn.isResized) jsxList.push(<div onClick={() => {close(); gn.isResized = false; }} className={'col item'}>{icon['contract']} Restore auto-sizing<div> <i
+            className='bi bi-command'></i> T</div></div>);
+        else jsxList.push(<div onClick={() => {close(); gn.isResized = true; }} className={'col item'}>{icon['expand']} Disable auto-sizing<div> <i
+            className='bi bi-command'></i> T</div></div>);
         /* LOCK-UNLOCK */
         jsxList.push(<div onClick={() => {close(); data.delete(); /*node.delete();*/}} className={'col item'}>{icon['lock']} Lock/Unlock<div> <i
             className='bi bi-command'></i> L</div></div>);
-        jsxList.push(<div onClick={() => {close(); let gn = node as GObject; if (gn.isResized) gn.isResized = false; }} className={'col item'}>{icon['lock']} Restore default size<div> <i
-            className='bi bi-command'></i> T</div></div>);
         /* UNLOCK ALL ELEMENTS */
         jsxList.push(<div onClick={() => {close(); data.delete(); /* node.delete();*/}} className={'col item'}>{icon['unlock']} Unlock all<div><i className="bi bi-alt"></i> <i
             className='bi bi-command'></i> L</div></div>);

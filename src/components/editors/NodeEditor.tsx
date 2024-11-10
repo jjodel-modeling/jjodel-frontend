@@ -100,6 +100,7 @@ function NodeEditorComponent(props: AllProps) {
         {asVertex && <><h3>Vertex</h3>
             {stackingOrder}
 
+            <InputRow label={'isResized'} as={asVertex} field={'isResized'} type={'checkbox'} />
             <InputRow label={'X Position'} as={asVertex} field={'x'} type={'number'} />
             <InputRow label={'Y Position'} as={asVertex} field={'y'} type={'number'} />
             <InputRow label={'Width'} as={asVertex} field={'width'} type={'number'} />

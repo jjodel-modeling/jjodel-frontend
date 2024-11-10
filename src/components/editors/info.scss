@@ -35,6 +35,13 @@
 .no-data-to-display {
   background-color: var(--bg-2-5);
   margin: 0.5rem;
+  display: flex;
+  height: 100%;
+  width: 100%;
+  >*{
+    margin: auto;
+    font-size: 3rem;
+  }
 }
 
 .collaborative-tab h1,
