@@ -83,6 +83,40 @@ export class Color {
 
 @RuntimeAccessible('U')
 export class U {
+    private static clickedOutsideMap: WeakMap<Element, (e: Element, evt: JQuery.ClickEvent)=>void> = null as any;
+    private static clickedOutsideMapEntries: Element[] = null as any; // because weak maps are not iterable and cannot get a list of keys
+
+
+    // to register call with both parameters. to remove a listener call with callback=undefined
+    static clickedOutside(currentTarget: Element, callback: undefined | ((e: Element, evt: JQuery.ClickEvent) => void)) {
+        if (!currentTarget) return;
+        let map = U.clickedOutsideMap;
+        let arr = U.clickedOutsideMapEntries;
+        if (!map) {
+           U.clickedOutsideMap = map = new WeakMap();
+           U.clickedOutsideMapEntries = arr = [];
+           $(document).on('click', U.clickedOutsideCallback);
+        }
+        if (callback) {
+            map.set(currentTarget, callback);
+            if (!arr.includes(currentTarget)) arr.push(currentTarget);
+        }
+        else {
+            map.delete(currentTarget);
+            U.arrayRemoveAll(arr, currentTarget);
+        }
+    }
+    private static clickedOutsideCallback(e: JQuery.ClickEvent){
+        let ancestors = U.ancestorArray(e.currentTarget);
+        let map = U.clickedOutsideMap;
+        let arr = U.clickedOutsideMapEntries;
+        for (let elem of arr) {
+            let callback = map.get(elem);
+            if (!callback) continue;
+            if (!ancestors.includes(elem)) continue;
+            callback(e.target, e);
+        }
+    }
 
     static keepKeys(dict: GObject, keys: string[]): Dictionary {
         return Object.fromEntries(

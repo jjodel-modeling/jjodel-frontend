@@ -104,7 +104,8 @@ function NestedViewComponent(props: AllProps) {
 
         const max_priority = l.explicitApplicationPriority
 
-        return <li className={"entry-root " + d.className + (d.id === activeViewpointId ? ' selected' : '')} key={d.id}>
+        let isActive = d.id === activeViewpointId;
+        return <li className={"entry-root " + d.className + (isActive ? ' selected' : '')} key={d.id}>
 
             <div className={'inline-row'} onClick={()=>setView(d.id)} onDoubleClick={(e) => {select(d.id)}}> {/* activate anche con il dblclick */}
 
@@ -128,7 +129,7 @@ function NestedViewComponent(props: AllProps) {
                     <div className={"ms-auto d-flex"} onClick={preventClick}>
                         {isVP &&
                             <CommandBar style={{transition: '1s 0.3s', marginTop: '2px'}}>
-                                <Btn icon={'check'} action={(evt) => {select(d.id)}} tip={'Activate'}/>
+                                <Btn icon={'check'} action={() => {select(d.id)}} tip={'Activate'}/>
                             </CommandBar>
 
                             /* <button className="bg btn-delete my-auto ms-2 green" disabled={active.id === d.id}
@@ -139,8 +140,8 @@ function NestedViewComponent(props: AllProps) {
 
 
                         <CommandBar style={{transition: '1s 0.3s', marginTop: '2px'}}>
-                            <Btn icon={'delete'} action={(e)=> { l.delete(); preventClick(e);}} tip={'Delete'}/> {/* todo per damiano, la cancellazione non funziona - visto con giordano, l'elemento non è correttamente eliminato, rimane quale dipendenza appesa ("cannot read properties of undefined")*/}
-                            <Btn icon={'copy'} action={(e)=> { l.duplicate(); preventClick(e);}} tip={'Duplicate'}/>
+                            <Btn icon={'delete'} action={(e)=> { l.delete(); preventClick(e);}} tip={'Delete'} disabled={isActive} />
+                            <Btn icon={'copy'} action={(e)=> { l.duplicate(); preventClick(e);}} tip={'Duplicate'} />
                         </CommandBar>
 
                         {/* <button className="bg btn-delete my-auto ms-2 green" onClick={(e)=> { l.duplicate(); preventClick(e);}}><i className='bx bx-duplicate' /></button>

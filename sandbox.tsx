@@ -19,6 +19,8 @@ UML
 
 
 
+        fix delete vp & model & clone view
+        undoredo, export
 
 
 

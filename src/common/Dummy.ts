@@ -5,7 +5,7 @@ import {
     Log,
     LPointerTargetable, Pointer,
     SetFieldAction, U,
-    SetRootFieldAction, TRANSACTION, DPointerTargetable
+    SetRootFieldAction, TRANSACTION, DPointerTargetable, LViewPoint
 } from '../joiner';
 import {Dependency} from "../joiner/types";
 
@@ -36,8 +36,6 @@ export class Dummy {
         return ret;
     }
     static get_delete(thiss: any, context: any): () => void {
-
-
         const lData: LPointerTargetable & GObject = context.proxyObject;
         const dData = context.data;
         const dependencies = Dummy.get_dependencies(context)();
@@ -54,8 +52,17 @@ export class Dummy {
                 // child.node?.delete();
             }
 
-            if(dData.className === 'DViewElement')
-                SetFieldAction.new(dData.father, 'subViews', dataID, '-=', false);
+            // those 2 are exceptions because the pointer is a key in an object instead of a normal value as a field or array member.
+            switch (dData.className) {
+                case 'DViewElement':
+                    SetFieldAction.new(dData.father, 'subViews', dataID, '-=', false);
+                    break;
+                case 'DViewPoint':
+                    let projectid = (lData as LViewPoint)?.project?.id;
+                    Log.eDevv('cannot find project id while deleting a viewpoint', {dData, context, dependencies});
+                    if (projectid) SetFieldAction.new(projectid, 'viewpoints', dataID, '-=', false);
+                    break;
+            }
 
             for (let dependency of dependencies) {
                 const root: keyof DState = dependency.root;
@@ -71,21 +78,26 @@ export class Dummy {
                 switch (field as string) {
                     /* on '-=' pointedby would be removed from the element we are deleting, so it is irrelevant */
                     default:
-                        Log.ee('Unexpected case in delete:', field, lData);
-                        continue;
-                    case 'value':
+                        Log.eDevv('Unexpected case in delete:', field, lData);
+                        break;
+                    case 'metamodels':
+                        console.log('mm filter', {newmm:dObj.metamodels.filter((id: Pointer) => id !== dataID), oldmm:dObj.metamodels, dataID})
+                        lObj.metamodels = dObj.metamodels.filter((id: Pointer) => id !== dataID);
+                        break;
+                    case 'dependencies':
+                        lObj.dependencies = dObj.dependencies.filter((id: Pointer) => id !== dataID);
+                        break;
                     case 'values':
-                        // this is className DModel (M1): inspect better
-                        lObj.values = lObj.values.filter((o: any) => o?.id !== dataID);
-                        continue;
+                        lObj.values = dObj.values.filter((o: any) => o !== dataID);
+                        break;
                     case 'type':
-                        if (lObj.className === 'DAttribute') {
-                            lObj.type = 'Pointer_ESTRING';
-                            continue;
-                        }
-                        if (lObj.className === 'DReference'){
-                            lObj.type = dObj.father;
-                            continue;
+                        switch (dObj.className) {
+                            case 'DAttribute': lObj.type = 'Pointer_ESTRING'; break;
+                            case 'DReference': case 'DOperation':
+                                // would be nice to set dObj.extends[0] instead but i cannot tell if it was deleted too.
+                                // dobj.father instead is safe as even if it's deleted it does not matter as it will delete the feature together
+                                lObj.type = dObj.father;
+                                break;
                         }
                         break;
                     case 'model':

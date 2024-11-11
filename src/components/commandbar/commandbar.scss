@@ -2,7 +2,6 @@
 
 
 .command-bar {
-
     position: relative;
     display: flex;
     left: 0!important;
@@ -14,7 +13,21 @@
 
     // CommandBar button
 
-    .btn-component.active{
+  i.disabled::before, i:disabled::before {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .btn-component{
+    i.question{
+      display: flex;
+    }
+    // min-height:fit-content;
+    >div {
+      display: block;
+    }
+  }
+  .btn-component.active{
       .tab-btn::before{
         background-color: var(--btn-bg);
       }
@@ -46,10 +59,9 @@
       padding-right: 0px!important;
     }
     & .tab-btn.bi.disabled::before {
-      color: var(--bg-3-1)!important;
+      color: var(--bg-3-1)/*!important;
       margin-left: 0px!important;
-      padding-left: 0px!important;
-      padding-right: 5px!important;
+      margin-right: 5px!important;*/
     }
     & .tab-btn.bi.disabled {
       cursor: default!important;

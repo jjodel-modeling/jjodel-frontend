@@ -12,7 +12,7 @@
 
 
 
-ul.ps-2.pt-2 li.entry-rootDViewPoint.selected {
+ul.ps-2.pt-2 li.entry-root.DViewPoint.selected {
   position: relative;
   z-index: 0;
 
@@ -34,7 +34,7 @@ ul.ps-2.pt-2 li.entry-rootDViewPoint.selected {
 
 
 
-ul.ps-2.pt-2 .entry-rootDViewPoint.selected::after {
+ul.ps-2.pt-2 .entry-root.DViewPoint.selected::after {
   position:absolute;
   left    : 4px;
   bottom  : 4px;
@@ -132,12 +132,26 @@ input[type='number']::-webkit-outer-spin-button {
   margin-left: 2px;
   height: 24px;
   transition: background-color 0.3s;
-  .bi { color: inherit; }
   &.hidden{
     opacity: 0.33;
     color: #333;
     outline-color: #333;
     text-shadow: none;
+  }
+}
+
+.viewpoint-tab .entry-root.DViewPoint .hover-stuff .bi{
+  &::before {
+    border: none;
+    color: inherit;
+    background-color: var(--btn-bg);
+    border-radius: 5px;
+  }
+  &:hover::before {
+    outline: 1px solid black;
+  }
+  &.disabled:hover::before, &:hover:disabled::before{
+    outline: none;
   }
 }
 

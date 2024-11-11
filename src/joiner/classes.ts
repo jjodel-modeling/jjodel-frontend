@@ -2642,10 +2642,12 @@ export class LProject<Context extends LogicContext<DProject> = any, D extends DP
         const data = c.proxyObject as LProject;
         return () => {
             TRANSACTION(()=> {
-                // this crashes, there is no get_children() (data.children || []).map(c => c && c.delete());
                 SetFieldAction.new(DUser.current, 'projects', c.data.id as any, '-=', true);
                 DeleteElementAction.new(data.id);
                 SetRootFieldAction.new('projects', c.data.id, '-=', true);
+
+                // project can only be deleted in homepage, project list is not even present in editor state.
+                // if (windoww.location.href.includes('project') windoww.location.href = windoww.location.origin;
             });
         }
     }

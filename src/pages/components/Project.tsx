@@ -130,6 +130,23 @@ function Project(props: Props): JSX.Element {
     /* LIST */
 
     function ProjectList(props: Props): JSX.Element {
+        let timeago = Date.now() - data.lastModified;
+        let timeunit: string;
+        let sec = 1000;
+        let min = sec*60;
+        let hr = min*60;
+        let day = hr*24;
+        let week = day*7;
+        let month = day*24;
+        let year = day*365;
+        if (timeago < min) { timeago /= sec; timeunit = 'seconds'; }
+        else if (timeago >= min && timeago < hr) { timeago /= min; timeunit = 'minutes'; }
+        else if (timeago >= hr && timeago < day) { timeago /= hr; timeunit = 'hours'; }
+        else if (timeago >= day && timeago < week) { timeago /= day; timeunit = 'days'; }
+        else if (timeago >= week && timeago < month) { timeago /= week; timeunit = 'weeks'; }
+        else if (timeago >= month && timeago < year) { timeago /= month; timeunit = 'months'; }
+        else { timeago/= min; timeunit = 'years'; }
+
         return (<>
             <div className="row data">
                 {/* <div className={'col-sm-1'} style={{width: '30px'}}>
@@ -157,8 +174,7 @@ function Project(props: Props): JSX.Element {
                 </div> */}
                 <div className={'col-3'} onClick={()=> {selectProject()}}>{data.name}</div>
                 <div className={'col-2'}>{data.type}</div>
-                <div className={'col-2'}>{Math.floor((data.lastModified - data.creation) / (3600 * 1000 * 24))} days ago</div>
-                <div className={'col-2'}>{Math.floor((data.lastModified - data.creation) / (3600 * 1000))} hours ago</div>
+                <div className={'col-2'}>{Math.floor(timeago)} {timeunit} ago</div>
                 <div className={'col-3'}>
                     <CommandBar noBorder={true} style={{marginBottom: '0'}}>
                         <Btn icon={'favorite'} action={(e => toggleFavorite(data))} tip={!data.isFavorite ? 'Add to favorites' : 'Remove from favorites'} />

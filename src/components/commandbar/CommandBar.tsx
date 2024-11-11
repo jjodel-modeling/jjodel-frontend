@@ -2,6 +2,7 @@ import React, {MouseEventHandler, ClassAttributes, useState, useRef, useEffect, 
 import './commandbar.scss';
 import { inherits } from "util";
 import { Tooltip } from "../forEndUser/Tooltip";
+import { U } from "../../joiner";
 
 type BtnProps = {
     disabled?: boolean;
@@ -39,95 +40,42 @@ type BtnProps = {
     size?: "x-small" | "small" | "medium" | "large",
     style?: React.CSSProperties,
     mode?: 'normal' | 'negative'
+    className?: string;
+    needConfirm?:boolean;
 }
 
-function useClickOutside(ref: any, onClickOutside: any) {
-
-    useEffect(() => {
-
-        function handleClickOutside(event: Event) {
-            if (ref.current && !ref.current.contains(event.target)) {
-                onClickOutside();
-            }
-        }
-
-      // Bind
-      document.addEventListener("mousedown", handleClickOutside); // mousedown
-      return () => {
-        // dispose
-        document.removeEventListener("mousedown", handleClickOutside);
-      };
-    }, [ref, onClickOutside]);
-  }
-
-type EditorProps = {
-    style?: React.CSSProperties;
-}
 
 export const Btn = (props: BtnProps) => {
-
-    const [del,setDel] = useState(false);
-    const delRef = useRef(null);
-
-    useClickOutside(delRef, () => {
-        setDel(false);
-    });
-
+    const [askingConfirm, setConfirm] = useState(false);
     const mode = (props.mode ? props.mode : 'normal');
+    let needConfirm = props.needConfirm || props.icon === 'delete' && !props.disabled;
+    let i_classes = (props.className||'') + ` bi tab-btn commandbar-btn ${askingConfirm ? 'bi-question-square-fill question': props.icon} ${props.theme ? props.theme : 'light'} ${props.size||''} ${mode} ${props.disabled ? 'disabled ' : ''}`
+    let action = (e: React.MouseEvent<any,any>) => {
+        if (props.disabled || !props.action) return;
+        if (!askingConfirm && needConfirm) { setConfirm(true); return; }
+        props.action(e);
+        e.stopPropagation();
+        U.clickedOutside(e.currentTarget, ()=>setConfirm(false))
+    }
+    let icon: ReactNode = null;
 
-    return (<>
-        {props.action ?
-            <div className={'btn-component '+(props.active ? 'active' : '')}>
-                {props.icon === "delete2" ?
-                    <div className={`delete2 ${props.theme ? props.theme : 'light'}`}>Delete</div>
-                    :
-                    <>
-                    {props.icon === 'delete' && !props.disabled ?
-                        <>
-                        {del ?
-                            <Tooltip tooltip={'Are you sure?'} inline={true} position={'top'} offsetY={10} >
-                                <i onClick={(e) => {props.action && props.action(e); setDel(false); e.stopPropagation()}}
-                                    className={`bi tab-btn bi-question-square-fill commandbar-btn ${props.theme ? props.theme : 'light'} question ${props.size && props.size} ${props.disabled && 'disabled'}`}
-                                    ref={delRef}
-                                    style={props.style}
-                                />
-                            </Tooltip>
-                            :
-                            <Tooltip tooltip={`${props.tip && props.tip}`} inline={true} position={'top'} offsetY={10} >
-                                <i className={`bi tab-btn ${props.icon} commandbar-btn ${props.theme ? props.theme : 'light'} ${props.size && props.size} ${props.disabled && 'disabled'}`}
-                                    onClick={(e) => {setDel(true);e.stopPropagation();}}
-                                    style={props.style}
-                                />
-                            </Tooltip>
-                        }
-                        </>
-                        :
-                        <Tooltip tooltip={`${props.tip && props.tip}`} inline={true} position={'top'} offsetY={10} >
-                            <i className={`bi tab-btn ${props.icon} commandbar-btn ${props.theme ? props.theme : 'light'} ${props.size && props.size} ${props.mode} ${props.disabled && 'disabled'}`}
-                                onClick={(e) => {props.action && props.action(e); e.stopPropagation();}}
-                                style={props.style}
-                            />
-                        </Tooltip>
-                    }
-                    </>
-                }
+    switch (props.icon){
+        case 'delete2':
+            icon = <div className={`delete2 ${props.theme ? props.theme : 'light'}`}>Delete</div>; break;
 
-            </div>
-        :
-            <>
-                {props.icon === "space" || props.icon === "minispace" ?
-                    <span style={{display: 'block', width: `${props.icon === 'space' ? '24px' : '4px'}`}}></span>
-                :
+        case 'delete':
+            icon = <Tooltip tooltip={askingConfirm ? 'Are you sure?' : props.tip} inline={true} position={'top'} offsetY={10} >
+                <i onClick={action} style={props.style} className={i_classes} />
+            </Tooltip>; break;
 
-                <Tooltip tooltip={'Disabled'} inline={true} position={'top'} offsetY={10} >
-                    <i className={`bi disabled tab-btn ${props.icon} commandbar-btn ${props.theme ? props.theme : 'light'} ${props.size && props.size} ${props.mode}`}
-                    style={props.style}
-                />
-            </Tooltip>
-                }
-            </>
-        }
-    </>);
+        default:
+            icon = <Tooltip tooltip={props.tip} inline={true} position={'top'} offsetY={10}>
+                <i className={i_classes} onClick={action} style={props.style}/>
+            </Tooltip>; break;
+    }
+
+    if (props.icon === "space" || props.icon === "minispace") return <span style={{display: 'block', width: `${props.icon === 'space' ? '24px' : '4px'}`}} />;
+    return <div className={'btn-component '+(props.active ? 'active' : '')}>{icon}</div>;
 }
 
 
