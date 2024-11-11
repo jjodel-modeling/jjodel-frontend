@@ -3027,7 +3027,7 @@ export class LStructuralFeature<Context extends LogicContext<DStructuralFeature>
             U.arrayMergeInPlace(validPrimitives, LPointerTargetable.fromPointer(state.returnTypes));
         }
         if (out && validPrimitives.length) out.push({label: 'Primitives', options: validPrimitives.map(map2).sort(sort)});
-        
+
         if (addClasses) {
             let m = this.get_model(c);
             let pkgs = isCrossRef ? m.allCrossSubPackages : m.allSubPackages;

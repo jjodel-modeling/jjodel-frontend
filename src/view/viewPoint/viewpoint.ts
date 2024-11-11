@@ -2,7 +2,7 @@ import {
     Constructors,
     DPointerTargetable,
     DViewElement,
-    GraphSize,
+    GraphSize, LogicContext,
     LPointerTargetable,
     LViewElement,
     Pointer,
@@ -37,12 +37,15 @@ export class DViewPoint extends DViewElement {
 }
 
 @RuntimeAccessible('LViewPoint')
-export class LViewPoint extends LViewElement {
+export class LViewPoint<Context extends LogicContext<DViewPoint, LViewPoint> = any, D extends DViewPoint = any> extends LViewElement {
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
     //public __raw!: DViewPoint;
     id!: Pointer<DViewPoint, 1, 1, LViewPoint>;
     name!: string;
+    /*protected*/ get_duplicate(c: Context){
+        return ()=>super.get_duplicate(c)(true);
+    }
 }
 
 RuntimeAccessibleClass.set_extend(DPointerTargetable, DViewPoint);

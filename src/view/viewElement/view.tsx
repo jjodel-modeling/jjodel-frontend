@@ -1208,7 +1208,7 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
         let curr: LViewElement = LPointerTargetable.fromPointer(p);
         while (curr) {
             let prev = curr.father;
-            if (!prev) return curr;
+            if (!prev) return curr as LViewPoint;
             curr = prev;
         }
         return undefined as any;
@@ -1426,7 +1426,7 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
 
     public duplicate(deep: boolean = true, new_vp?: DuplicateVPChange): this {
         return this.wrongAccessMessage( (this.constructor as typeof RuntimeAccessibleClass).cname + "duplicate()"); }
-    protected get_duplicate(c: Context): ((deep?: boolean, new_vp?: DuplicateVPChange) => LViewElement) {
+    /*protected*/ get_duplicate(c: Context): ((deep?: boolean, new_vp?: DuplicateVPChange) => LViewElement) {
         return (deep: boolean = false, new_vp0?: DuplicateVPChange) => {
             console.log("DViewelement.duplicate", {cn: c.data.className, n:c.data.name, deep, new_vp0});
             let lview: LViewElement = undefined as any;
