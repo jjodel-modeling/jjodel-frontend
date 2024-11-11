@@ -52,10 +52,13 @@ export const Btn = (props: BtnProps) => {
     let i_classes = (props.className||'') + ` bi tab-btn commandbar-btn ${askingConfirm ? 'bi-question-square-fill question': props.icon} ${props.theme ? props.theme : 'light'} ${props.size||''} ${mode} ${props.disabled ? 'disabled ' : ''}`
     let action = (e: React.MouseEvent<any,any>) => {
         if (props.disabled || !props.action) return;
-        if (!askingConfirm && needConfirm) { setConfirm(true); return; }
+        if (!askingConfirm && needConfirm) {
+            setConfirm(true);
+            U.clickedOutside(e.currentTarget, ()=>setConfirm(false));
+            return;
+        }
         props.action(e);
         e.stopPropagation();
-        U.clickedOutside(e.currentTarget, ()=>setConfirm(false))
     }
     let icon: ReactNode = null;
 

@@ -19,7 +19,7 @@ import {
     KeyDownEvent, KeyUpEvent,
     stateInitializer,
     DUser,
-    DProject, D, L,
+    DProject, D, L, ClickEvent,
 } from "../joiner";
 import {
     DClassifier,
@@ -95,8 +95,10 @@ export class U {
         if (!map) {
            U.clickedOutsideMap = map = new WeakMap();
            U.clickedOutsideMapEntries = arr = [];
-           $(document).on('click', U.clickedOutsideCallback);
+           document.addEventListener('click', U.clickedOutsideCallback, true); // bubbling event! called before normal events.
+           // $(document).on('click', U.clickedOutsideCallback);
         }
+        console.log('clickedOutside registering', {currentTarget, callback, map, arr});
         if (callback) {
             map.set(currentTarget, callback);
             if (!arr.includes(currentTarget)) arr.push(currentTarget);
@@ -106,15 +108,18 @@ export class U {
             U.arrayRemoveAll(arr, currentTarget);
         }
     }
-    private static clickedOutsideCallback(e: JQuery.ClickEvent){
-        let ancestors = U.ancestorArray(e.currentTarget);
+    private static clickedOutsideCallback(e: any & ClickEvent){
+        let target = e.target;
+        let ancestors = U.ancestorArray(e.target as Element);
         let map = U.clickedOutsideMap;
         let arr = U.clickedOutsideMapEntries;
+
+        console.log('clickedOutside callback exec', {e, target, ancestors, arr, map, callbacks: arr.map(e=>map.get(e))});
         for (let elem of arr) {
             let callback = map.get(elem);
             if (!callback) continue;
-            if (!ancestors.includes(elem)) continue;
-            callback(e.target, e);
+            if (ancestors.includes(elem)) continue;
+            callback(target, e);
         }
     }
 
