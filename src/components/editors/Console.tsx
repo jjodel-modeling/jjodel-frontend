@@ -164,7 +164,7 @@ class ConsoleComponent extends PureComponent<AllProps, ThisState>{
         let isReactNode = !!jsxComments[k];
         let infoof_tooltip: string | ReactNode;
         if (isReactNode){
-            infoof_tooltip = "<span id='console_output_comment_key_" + k + "' class='tooltip-msg'/>";//jsxComments[k];
+            infoof_tooltip = <span id={'console_output_comment_key_' + k} className='my-tooltip output-comment tooltip-msg'/>;//jsxComments[k];
         } else {
             let str = (strcomments[k]?.txt as string)||'';
             if (str) infoof_tooltip = <div className="my-tooltip output-comment" dangerouslySetInnerHTML={{__html:str}}/>;
@@ -193,10 +193,6 @@ class ConsoleComponent extends PureComponent<AllProps, ThisState>{
             let s0: GObject<ThisState> = {...s} as any;
             let olds = this.state;
             if (s0.expressionIndex !== undefined && s0.expressionIndex !== olds.expressionIndex) s.expression = olds.expressionHistory[s0.expressionIndex];
-            if (s0.expressionHistory && s0.expressionHistory !== olds.expressionHistory){
-                let len = s0.expressionHistory.length;
-                if (len > 10) s.expressionHistory = s0.expressionHistory.slice(len - 10, len);
-            }
             if (s0.expression && s0.expression !== olds.expression) {
                 let time = new Date().getTime();
                 let oldtime = olds.time;
@@ -232,6 +228,17 @@ class ConsoleComponent extends PureComponent<AllProps, ThisState>{
         const data = this.props.data;
         if (this.lastNode !== this.props.node.id) this.change(); // force reevaluation if selected node changed
         this.lastNode = this.props.node.id;
+
+        /*display history*/
+        let history = this.state.expressionHistory||[];
+        let hlen = history.length;
+        let hindex = this.state.expressionIndex;
+        const entries = 10;
+        let max = Math.floor(Math.min(hindex+entries/2, hlen));
+        let min = Math.floor(hindex + entries - Math.max((hlen-max), entries/2));
+        history = history.slice(min, max);
+        console.log('chistory', {min, max, oldh: this.state.expressionHistory, h: history, selected: history[entries/2]});
+
 
         let outstr;
         // try { outstr = U.circularStringify(this.state.output, (key, value)=> { return value.__isProxy ? value.name : value; }, "\t", 1) }
@@ -426,10 +433,10 @@ class ConsoleComponent extends PureComponent<AllProps, ThisState>{
                 <textarea id={'console'} spellCheck={false} className={'p-0 input w-100'} onChange={this.change}
                           value={this.state.expression}></textarea>
             </div>
-            {advanced && this.state.expressionHistory.length>1 && <div>Advanced query history (index = {this.state.expressionIndex})
-                {this.state.expressionHistory.slice(-5).map((s, i) => i === 0 ? null : <>
+            {advanced && history.length>1 && <div>Advanced query history (index = {this.state.expressionIndex})
+                {history.map((s, i) => i === 0 ? null : <>
                     <div style={{
-                        border: '1px solid ' + (i === this.state.expressionIndex ? 'red' : 'gray'),
+                        border: '1px solid ' + (i === history.length/2) ? 'red' : 'gray',
                         marginTop: '5px',
                         height: '30px'
                     }}>{(i) + ') ' + s}</div>

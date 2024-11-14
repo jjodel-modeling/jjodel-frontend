@@ -890,7 +890,7 @@ export class LNamedElement<Context extends LogicContext<DNamedElement> = any> ex
     protected get_fullName(context: Context): this["fullname"] { return this.get_fullname(context); }
     protected get_fullname(context: Context): this["fullname"] {
         const containers = this.get_containers(context);
-        let fullname: string = containers.reverse().slice(1, containers.length).map(c => c.name).join('.');
+        let fullname: string = containers.reverse().slice(0, containers.length).map(c => c.name).join('.');
         return fullname;
     }
 
