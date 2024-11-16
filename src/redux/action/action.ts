@@ -440,11 +440,18 @@ export class SetFieldAction extends SetRootFieldAction {
 
     fire(forceRelaunch: boolean = false): boolean {
         let fire = this.fire0(forceRelaunch);
-        console.log('set value index firing', {fire});
         return fire;
 
     }
     fire0(forceRelaunch: boolean = false): boolean {
+        return super.fire(forceRelaunch, false);
+        // IMPORTANT system discarded!
+        // if in a composite action there are 2 editos on the same value, like like a.v = 1; a.v = 0; if v initial value was 0 this would accept a.v=1 and refuse a.v=0;
+        // this is making an issue in containment lvalue.values = lvalue.values
+        // because the values are first disconnected to model, then reconnected to .father=lvalue. but the second command is not firing.
+
+
+    /*
         // if action would not change the value, i don't fire it at all
         // by id because if item was updated, this.me as DElement might be an old version, different from the one in store.
         let d: GObject<any> = DPointerTargetable.from((this.me as DPointerTargetable)?.id || this.me as any);
@@ -454,7 +461,7 @@ export class SetFieldAction extends SetRootFieldAction {
             console.log('set value index firing 0', {ov:d[this.me_field], me_field:this.me_field, oldv, d, newv:this.value});
             if (oldv === this.value) return false;
         }
-        return super.fire(forceRelaunch, false);
+        return super.fire(forceRelaunch, false);*/
     }
 }
 

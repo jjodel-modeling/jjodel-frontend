@@ -117,9 +117,6 @@ function ContextMenuComponent(props: AllProps) {
             jsxList.push(<hr className={'my-1'} />);
         }
 
-        error on set_values: se creo un containment dval con X containment, e poi faccio lval.values = []; diventa un array vuoto da 5 elementi. (viene sovrascritto tramite .length?)
-        instaead dval.__raw.values = [] works; it is 90% a direct set on .length
-        also the selects on propertybar don't work
         if (ddata?.className === 'DObject') {
             jsxList.push(...(ldata as LObject).features.map(feat=>getAddChildren(feat, model, [])));
             jsxList.push(<hr className={'my-1'} />);

@@ -7,9 +7,9 @@ import {
     LModel,
     LModelElement,
     LObject, LPointerTargetable, LReference, LStructuralFeature, LValue,
-    LViewElement, MultiSelect, Pointer,
+    LViewElement, MultiSelect, Pointer, Pointers,
     Select,
-    Selectors, SetFieldAction, store, U, ValueDetail
+    Selectors, SetFieldAction, store, TRANSACTION, U, ValueDetail
 } from '../../joiner';
 import {FakeStateProps} from '../../joiner/types';
 import React, {Component, Dispatch, ReactElement, ReactNode} from 'react';
@@ -315,7 +315,7 @@ class builder {
         </label>);
     }
     static value(data: LModelElement, topics: Dictionary<string, unknown>, advanced: boolean): JSX.Element {
-        const value: LValue = LValue.fromPointer(data.id);
+        let value: LValue = LValue.fromPointer(data.id);
         const feature: LStructuralFeature = LStructuralFeature.fromPointer(value.instanceof?.id);
         let field = 'text'; let stepSize = 1; let maxLength = 524288;
         const min = -9223372036854775808;
@@ -337,17 +337,38 @@ class builder {
         let filteredValues: ValueDetail[] = value.getValues(true, false, false, false, true, true) as any;
 
         const add = () => {
+            value = value.r;
             SetFieldAction.new(value.id, 'values', U.initializeValue(feature?.type), '+=', false);
         }
         const remove = (index: number, isPointer: boolean | undefined) => {
-            if (isPointer === undefined) isPointer = !!(filteredValues[index].value as any)?.__isProxy; // Pointers.isPointer
-            SetFieldAction.new(value.id, 'values', index, '-=', isPointer);
+            console.log('remove clicked');
+            value = value.r;
+            if (isPointer === undefined) isPointer = Pointers.isPointer(filteredValues[index].rawValue); // !!(filteredValues[index].value as any)?.__isProxy ||
+            // SetFieldAction.new(value.id, 'values', index, '-=', isPointer);
+
+            let result = value.setValueAtPosition(index, undefined, {isPtr: isPointer});
+            console.log('clearing containment DValue', {result, index, value});
         }
         function changeDValue(event: React.ChangeEvent<HTMLInputElement|HTMLSelectElement>, index: number, isPointer: boolean | undefined) {
-            let inputValue: string | boolean = field === 'checkbox' ? (event.target as HTMLInputElement).checked : event.target.value;
-            if (inputValue === 'undefined') inputValue = undefined as any;
-            let result = value.setValueAtPosition(index, inputValue, {isPtr: isPointer});
-            console.log('setting DValue', {inputValue, result, value});
+            TRANSACTION(()=>{
+                value = value.r;
+                let inputValue: string | boolean = field === 'checkbox' ? (event.target as HTMLInputElement).checked : event.target.value;
+                if (inputValue === 'undefined') inputValue = undefined as any;
+                let raw_values = value.__raw.values;
+                isPointer = isPointer || Pointers.isPointer(raw_values[index]) || Pointers.isPointer(inputValue);
+
+                let oldvi = raw_values[index];
+                if (isPointer && value.containment){
+                    let indexDuplicate = raw_values.indexOf(inputValue as any);
+                    if (indexDuplicate === index) return;
+                    if (indexDuplicate >= 0) {
+                        let result = value.setValueAtPosition(indexDuplicate, undefined, {isPtr: true});
+                        console.log('clearing containment DValue', {inputValue, result, indexDuplicate, raw_values, index, oldvi});
+                    }
+                }
+                let result = value.setValueAtPosition(index, inputValue, {isPtr: isPointer});
+                console.log('setting DValue', {inputValue, result, value, index, oldvi});
+            })
         }
         const featureType: LClassifier = feature?.type;
         let isAttribute = false, isEnumerator = false, isReference = false, isShapeless = false;

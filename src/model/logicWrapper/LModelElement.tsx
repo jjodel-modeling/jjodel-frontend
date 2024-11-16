@@ -79,6 +79,8 @@ import {ShortDefaultEClasses} from "../../common/U";
 import {transientProperties} from "../../joiner/classes";
 import React, {ReactNode} from "react";
 
+type outactions = {clear:(()=>void)[], set:(()=>void)[], immediatefire?: boolean};
+
 
 @Node
 @RuntimeAccessible('DModelElement')
@@ -889,8 +891,9 @@ export class LNamedElement<Context extends LogicContext<DNamedElement> = any> ex
 
     protected get_fullName(context: Context): this["fullname"] { return this.get_fullname(context); }
     protected get_fullname(context: Context): this["fullname"] {
-        const containers = this.get_containers(context);
-        let fullname: string = containers.reverse().slice(0, containers.length).map(c => c.name).join('.');
+        const containers = this.get_containers(context).reverse();
+        // let sliceindex = (containers[0] as LModel).dependencies.length ? 1 : 0;
+        let fullname: string = containers.slice(0, containers.length).map(c => c.name).join('.');
         return fullname;
     }
 
@@ -1486,7 +1489,7 @@ export class LPackage<Context extends LogicContext<DPackage> = any, C extends Co
         });
     }
     protected set_classifiers(val: PackArr<this["classifiers"]>, context: Context): boolean {
-        const list = val.map((lItem) => { return Pointers.from(lItem) });
+        const list: Pointer<DClassifier>[] = val.map((lItem) => { return Pointers.from(lItem) });
         const oldList = context.data.classifiers;
         const diff = U.arrayDifference(oldList, list);
         BEGIN();
@@ -4979,7 +4982,7 @@ export class LObject<Context extends LogicContext<DObject> = any, C extends Cont
     protected set_namespace(val: string, context: Context): boolean { return this.cannotSet("namespace"); }
     // protected get_namespace(context: Context): LClass["namespace"] { return context.proxyObject.instanceof.namespace; }
     protected set_fullname(val: string, context: Context): boolean { return this.cannotSet("fullname"); }
-    protected get_fullname(context: Context): LClass["fullname"] { return context.proxyObject.instanceof.fullname; }
+    // protected get_fullname(context: Context): LClass["fullname"] { return context.proxyObject.instanceof.fullname; }
     protected set_ecoreRootName(val: string, context: Context): boolean { return this.cannotSet("ecoreRootName"); }
     protected get_ecoreRootName(context: Context): LObject["ecoreRootName"] {
         let instanceoff: LClass = context.proxyObject.instanceof;
@@ -6008,6 +6011,7 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
 
     // only use through setValueAtPosition
     protected _clearValueAtPosition(context: Context, index: number, info0?: Partial<SetValueAtPositionInfoType>, skipSettingUndefined: boolean = false) {
+        // if (!outactions) outactions = {clear:[], set:[]};
         let info = (info0 || {}) as unknown as SetValueAtPositionInfoType;
         let oldVal = context.data.values[index];
         let oldTarget: LObject | undefined = typeof oldVal === "string" ? LObject.fromPointer(oldVal) : undefined;
@@ -6029,27 +6033,31 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
         }
         if (!skipSettingUndefined) SetFieldAction.new(context.data, 'values.' + index as any, undefined, '', info.isPtr);
     }
-    protected get_setValueAtPosition(context: Context): ((index: number, val: this["values"][0], info?: Partial<SetValueAtPositionInfoType>) => {success: boolean, reason?: string}) {
-        return (index: number, val: this["values"][0] | any, info0?: Partial<SetValueAtPositionInfoType>): { success: boolean, reason?: string } => {
+    protected get_setValueAtPosition(c: Context): ((index: number, val: this["values"][0], info?: Partial<SetValueAtPositionInfoType>, outactions?:outactions) => {success: boolean, reason?: string}) {
+        return (index: number, val: this["values"][0] | any, info0?: Partial<SetValueAtPositionInfoType>, outactions?: outactions): { success: boolean, reason?: string } => {
+            if (!outactions) outactions = {clear:[], set:[], immediatefire: true}
             let isPtr: boolean = undefined as any;
             let lval: LObject | LEnumLiteral = undefined as any;
             if (val === null) val = undefined;
-            let oldval = context.data.values[index];
+            let oldval = c.data.values[index];
             if (oldval === val) return { success: false, reason: "identical assignment" };
+            let tmpval_id = Pointers.from(val) ;
+            if (oldval === tmpval_id) return { success: false, reason: "identical object assignment" };
             let state = store.getState();
-            if ((val as any)?.id && (val as any)?.className) {
-                lval = (val.__isProxy ? val : LPointerTargetable.wrap<DObject>(val, state));
+            if (tmpval_id && (val as any)?.className) {
+                lval = LPointerTargetable.wrap<DObject>(val, state) as LObject | LEnumLiteral;
                 isPtr = !!(lval || Pointers.isPointer(oldval));//LPointerTargetable.wrap(oldval, state));
-                val = (val as any).id;
+                val = tmpval_id;
             }
             let info = (info0 || {}) as unknown as SetValueAtPositionInfoType;
             if (isPtr === undefined) isPtr = (info.isPtr === undefined ? Pointers.isPointer(val) || Pointers.isPointer(oldval) : info.isPtr);
 
+
             // set sideeffect part
             if (val !== undefined) {
                 if (isPtr) {
-                    if (info.type === undefined) info.type = context.proxyObject.type;
-                    if (info.instanceof === undefined) info.instanceof = context.proxyObject.instanceof;
+                    if (info.type === undefined) info.type = c.proxyObject.type;
+                    if (info.instanceof === undefined) info.instanceof = c.proxyObject.instanceof;
                     if (info.isContainment === undefined) {
                         info.isContainment = !info.instanceof || (info.instanceof.className === DReference.cname && (info.instanceof as LReference).containment);
                     }
@@ -6063,30 +6071,35 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
                     }
                     // is ref
                     if (lval.className === DObject.cname){
+
                         let lvalo = lval as LObject;
-                        let lvalmeta: LClassifier | undefined = lvalo.instanceof;
+                        //let lvalmeta: LClassifier | undefined = lvalo.instanceof;
                         // if (info.instanceof && info.type && (!(lvalmeta as LClass)?.isExtending(info.type))) return {success: false, reason: "target is not of correct type"}; damiano todo: enable and implement isExtending
-                        if (info.fatherList === undefined) info.fatherList = context.proxyObject.fatherList;
+                        if (info.fatherList === undefined) info.fatherList = c.proxyObject.fatherList;
                         if (info.isContainment) {
                             if ((info.fatherList as LPointerTargetable[]).map(father => father.id).includes(val))
                                 return {success: false, reason: "cannot create a containment loop"}; // todo: in LReference.set_containment need to forbid setting to true if there is a loop
                             let oldContainer: LValue | LModel = lvalo.father;
                             let oldContainerValue: LValue = (oldContainer.className === DModel.cname) ? undefined as any : (oldContainer as LValue);
                             // detach contaied object from old parent
-                            if (oldContainerValue) {
+                            if (oldContainerValue && oldContainerValue.id !== c.data.id) outactions.clear.push(()=>{
                                 let valarr: any[] = oldContainerValue.__raw.values;
+
                                 for (let i = 0; i < valarr.length; i++) {
                                     let v = valarr[i];
                                     if (v === val) oldContainerValue.setValueAtPosition(i, undefined as any, undefined);
                                 }
-                            }
-                            SetFieldAction.new(val as Pointer<DObject>, "father", context.data.id, undefined, true);
+
+                            });
+                            outactions.set.push(()=> {
+                                SetFieldAction.new(val as Pointer<DObject>, "father", c.data.id, undefined, true)
+                            });
                         }
                     }
-                    // automatic? SetFieldAction.new(val as Pointer<DObject>, "pointedBy", PointedBy.fromID(context.data.id, "values." + index as any), "+=");
+                    // automatic? SetFieldAction.new(val as Pointer<DObject>, "pointedBy", PointedBy.fromID(c.data.id, "values." + index as any), "+=");
                 } else {
                     // loose checks, i can assign any primitive to any primitive (will cast on get)
-                    if (info.instanceof === undefined) info.instanceof = context.proxyObject.instanceof;
+                    if (info.instanceof === undefined) info.instanceof = c.proxyObject.instanceof;
                     let metatype: string = (info.instanceof as LAttribute)?.typeToShortString() || "shapeless";
                     if (typeof val === "object") {
                         if (val.constructor === Date && (metatype !== "EString" && metatype !== "EDate" && metatype !== "shapeless"))
@@ -6100,12 +6113,16 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
             }
 
             // clear sideeffect part
-            this._clearValueAtPosition(context, index, info, true);
-            console.log('set value index', {index, val, isPtr});
+            outactions.clear.push(()=>this._clearValueAtPosition(c, index, info, true));
+            // console.log('set value index', {index, val, isPtr});
             // actual set
-            SetFieldAction.new(context.data, 'values.' + index as any, val, '', isPtr);
-            if (info.setMirage !== false) SetFieldAction.new(context.data, 'isMirage', false, '', false);
+            outactions.set.push(()=>SetFieldAction.new(c.data, 'values.' + index as any, val, '', isPtr));
+            if (info.setMirage !== false) SetFieldAction.new(c.data, 'isMirage', false, '', false);
 
+            if (outactions.immediatefire) {
+                for (let a of outactions.clear) a();
+                for (let a of outactions.set) a();
+            }
             // todo: wrap this func and set toaster with failure message if it fails or better launch Log.w and bind toasts of different colors to Log funcs
             return {success: true};
         }
@@ -6141,13 +6158,26 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
         }
 
         val = (Array.isArray(val0) ? val0 : [val0]) as D["values"];
-        val.length = Math.max(val.length, c.data.values.length);
+        // val.length = Math.max(val.length, c.data.values.length);
+        let isContainment = this.get_isContainment(c);
+        if (isContainment) { // remove duplicates in containment
+            val = val.map((v: any) => v?.id || v);
+            let idmap: Dictionary<string, true> = {}
+            val = val.filter((e: any)=> { if (typeof e !== 'string' || !idmap[e]) return true; idmap[e] = true; return true;} )
+        }
         TRANSACTION(()=>{
+            let outactions: outactions = {clear:[], set:[], immediatefire: false};
             for (let i = 0; i < val.length; i++) {
-                let out = this.get_setValueAtPosition(c)(i, val[i], {setMirage: false} as any);
+                let out = this.get_setValueAtPosition(c)(i, val[i], {setMirage: false} as any, outactions);
                 modified = out.success || modified;
-                console.log('set_values', {val, i, modifiedreason:out});
+                // console.log('set_values', {val, i, modifiedreason:out});
             }
+            let excess = c.data.values.length - val.length;
+            while (excess-- > 0) {
+                SetFieldAction.new(c.data.id, 'values', undefined as any, '-=', true);
+            }
+            for (let a of outactions.clear) a();
+            for (let a of outactions.set) a();
             if (modified) c.data.isMirage && SetFieldAction.new(c.data, 'isMirage', false, '', false);
         });
         return true;
@@ -6192,9 +6222,11 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
         return true;
     }
 
-    protected set_value(val: D["values"][0], context: Context): boolean {
-        let v: ValueDetail = this.get_value(context, false, false, false, true, true);
-        let r = this.get_setValueAtPosition(context)(v?.index || 0, val);
+    protected set_value(val: D["values"][0], c: Context): boolean {
+        let v: ValueDetail = this.get_value(c, false, false, false, true, true);
+        let val_id = (val as any)?.id || val;
+        if (Pointers.isPointer(val_id) && c.data.values.includes(val_id as any) && this.get_isContainment(c)) { return true; }
+        let r = this.get_setValueAtPosition(c)(v?.index || 0, val_id || val);
         Log.e(!r.success,  r.reason);
         return r.success;
     }
@@ -6252,7 +6284,7 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
                 else boundObjects.push(o);
             }
             if (out) out.push({label: 'Free     Objects', options: freeObjects.map(map)});
-            if (out) out.push({label: 'Bound Objects', options: freeObjects.map(map)});
+            if (out) out.push({label: 'Bound Objects', options: boundObjects.map(map)});
         }
         if (isAttribute) {
             let enumm: LEnumerator[];

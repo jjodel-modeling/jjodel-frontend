@@ -374,7 +374,6 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
     // inherited redefine
     public __raw!: DViewElement;
     id!: Pointer<DViewElement, 1, 1, LViewElement>;
-    public r!: this;
 
 
 

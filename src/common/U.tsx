@@ -108,17 +108,33 @@ export class U {
             U.arrayRemoveAll(arr, currentTarget);
         }
     }
+
+    //private static lastClicked?: Element;
+    private static lastClickedAncestors: Element[] = [];
+    private static lastClickedTime: number = 0;
     private static clickedOutsideCallback(e: any & ClickEvent){
-        let target = e.target;
-        let ancestors = U.ancestorArray(e.target as Element);
+        let target = e.target as Element;
+        let clickedAncestors = U.ancestorArray(target, undefined, true);
+
+        // when i click on something containined in a label+input, the event fires twice:
+        // once for actually clicked element and 1 emulating a click on input/select
+        if ((Date.now() - U.lastClickedTime < 300)){
+            let labelAncestors = clickedAncestors.filter((e, i) => i>0 && e.tagName === 'LABEL');
+            if (U.lastClickedAncestors.filter(e=>labelAncestors.includes(e))) return;
+            //if (labelAncestors.includes(U.lastClicked)) return;
+        }
+        //U.lastClicked = target;
+        U.lastClickedAncestors = clickedAncestors;
+        U.lastClickedTime = Date.now();
         let map = U.clickedOutsideMap;
         let arr = U.clickedOutsideMapEntries;
 
-        console.log('clickedOutside callback exec', {e, target, ancestors, arr, map, callbacks: arr.map(e=>map.get(e))});
+        // console.log('clickedOutside callback exec', {e, target, clickedAncestors, arr, map, callbacks: arr.map(e=>map.get(e))});
         for (let elem of arr) {
             let callback = map.get(elem);
             if (!callback) continue;
-            if (ancestors.includes(elem)) continue;
+            // if (target === elem) continue;
+            if (clickedAncestors.includes(elem)) continue;
             callback(target, e);
         }
     }
