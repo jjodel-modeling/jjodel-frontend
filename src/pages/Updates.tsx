@@ -83,8 +83,8 @@ let warnicon = <i className="bi bi-exclamation-triangle-fill"/>
 // <i className="bi bi-exclamation-square-fill" />;
 
 function versionsetup() {
-    localStorage.setItem('_jj_update_date', '' + Math.min(Date.now(), new Date('2024-11-17').getTime()));
-    new Version('2.2', 'manatee', '13/nov/2024')
+    localStorage.setItem('_jj_update_date', '' + Math.min(Date.now(), new Date('2024-11-19').getTime()));
+    new Version('2.2', 'manatee', '19/nov/2024')
         .newbug(<>{warnicon} Edges</>, <>Some update were made on edge's internal behaviour, old saves might have side effects.
             If edges are not behaving properly create a new project, copy the default model's JSX and paste it in the old project.
             <br/>To enable edits on default views right-click on the jjodel logo at the top-center of the page.
