@@ -4,29 +4,41 @@ import {Dashboard} from './components';
 import {Cards, Card} from './components/cards/Cards';
 import {Catalog} from './components/catalog/Catalog';
 import {ReactNode, useState} from "react";
+import "./DashStyles/updates.scss"
 
 type keys = 'fix' | 'newbug' | 'opt' | 'feat' | 'info';
 
 class InfoEntry {
-    constructor(public title: ReactNode, public content: ReactNode) {
+    constructor(public title: ReactNode, public content: ReactNode, public key: keys) {
     }
 }
 
 class Version {
     static all: Version[] = [];
     entries: Dictionary<keys, InfoEntry[]>;
-    minorEntries: Dictionary<keys, InfoEntry[]>;
+    majorEntries: InfoEntry[];
+    minorEntries: InfoEntry[];
     _minor: boolean;
+    number: string;
+    name: string;
+    date: string;
 
-    constructor(number: string, name: string, data: string) {
+    constructor(number: string, name: string, date: string) {
+        this.number = number;
+        this.name = name;
+        this.date = date;
         this.entries = {fix: [], newbug: [], opt: [], feat: [], info: []};
-        this.minorEntries = {fix: [], newbug: [], opt: [], feat: [], info: []};
+        this.majorEntries = [];
+        this.minorEntries = [];
         this._minor = false;
         Version.all.push(this);
     }
 
     add(key: keys, title: ReactNode, node: ReactNode = null): this {
-        this.entries[key].push(new InfoEntry(title, node));
+        let entry = new InfoEntry(title, node, key);
+        this.entries[key].push(entry);
+        // if (this._minor) this.minorEntries.push(entry) else
+        this.majorEntries.push(entry);
         return this;
     }
 
@@ -71,6 +83,7 @@ let warnicon = <i className="bi bi-exclamation-triangle-fill"/>
 // <i className="bi bi-exclamation-square-fill" />;
 
 function versionsetup() {
+    localStorage.setItem('_jj_update_date', '' + Math.min(Date.now(), new Date('2024-11-17').getTime()));
     new Version('2.2', 'manatee', '13/nov/2024')
         .newbug(<>{warnicon} Edges</>, <>Some update were made on edge's internal behaviour, old saves might have side effects.
             If edges are not behaving properly create a new project, copy the default model's JSX and paste it in the old project.
@@ -90,7 +103,7 @@ function versionsetup() {
         </>)
         .feat('context-menu containment', <>The option to add containment objects has been expanded, it is now available
             to individual features too.</>)
-        .engine('validTargets', <>Can be used to create custom DSL and filtered to restrict model transformations, it
+        .engine('data.validTargets (JDL Engine)', <>Can be used to create custom DSL and filtered to restrict model transformations, it
             provides a list of valid targets for:
             <ul>
                 <li>class extension</li>
@@ -111,6 +124,7 @@ function versionsetup() {
                 <br/>Without it the value would update immediately but the graphical representation would always be 1 state behind.
             </>)
         .fix('structure editor', 'The layout was occasionally breaking')
+        .feat('changelog', 'Yes, this one. It deserved a mention.')
 }
 
 function UpdatesPage(): JSX.Element {
@@ -120,6 +134,10 @@ function UpdatesPage(): JSX.Element {
     let [fix, setFix] = useState(true);
     let [newbug, setNewbug] = useState(true);
     let [opt, setOpt] = useState(false);
+    let [versionCollapse, setVersionCollapse] = useState({} as Dictionary<string, boolean>);
+
+    if (!Version.all.length) versionsetup();
+    let allowedDict: Dictionary<keys, boolean> = {info, feat, fix, newbug, opt};
     let cards: ReactNode =
         <Cards>
             <Cards.Item
@@ -132,7 +150,6 @@ function UpdatesPage(): JSX.Element {
                                  subtitle={'What do you want to do today?'}/>}
         </Cards>;
     cards = null;
-    versionsetup();
 
     return (<Try>
         <Dashboard active={'Updates'} version={{n: 0, date: 'fake-date'}}>
@@ -146,31 +163,41 @@ function UpdatesPage(): JSX.Element {
                     </select>
                 </h2>
                 <div className={'filter-container'}>
-                    <button className={'feat btn-' + (feat ? '' : 'outline-') + 'info'}
-                            onClick={e => setFix(!feat)}>Feature
+                    <button className={'feat btn btn-' + (feat ? '' : 'outline-') + 'info'}
+                            onClick={e => setFeat(!feat)}>Feature
                     </button>
-                    <button className={'fix btn-' + (newbug ? '' : 'outline-') + 'success'}
+                    <button className={'fix btn btn-' + (fix ? '' : 'outline-') + 'success'}
                             onClick={e => setFix(!fix)}>Bugfix
                     </button>
-                    <button className={'newbug btn-' + (newbug ? '' : 'outline-') + 'danger'}
+                    <button className={'newbug btn btn-' + (newbug ? '' : 'outline-') + 'danger'}
                             onClick={e => setNewbug(!newbug)}>New known bug
                     </button>
-                    <button className={'info btn-' + (info ? '' : 'outline-') + 'secondary'}
+                    <button className={'info btn btn-' + (info ? '' : 'outline-') + 'secondary'}
                             onClick={e => setInfo(!info)}>Information
                     </button>
-                    <button className={'opt btn-' + (opt ? '' : 'outline-') + 'warning'}
-                            onClick={e => setInfo(!opt)}>Optimization
+                    <button className={'opt btn btn-' + (opt ? '' : 'outline-') + 'warning'}
+                            onClick={e => setOpt(!opt)}>Optimization
                     </button>
                 </div>
                 <ul className={'version-list'}>
+                    {Version.all.map(v=>
                     <li className={'version'}>
-                        <h2 className={'version-name'}>2.2 manatee (11/nov/2024)</h2>
-                        <ul className={'entry-list'}>
-                            <li className={'entry'}></li>
-
-                        </ul>
-                    </li>
-
+                        <h2 className={'version-name'} onClick={()=>{setVersionCollapse({...versionCollapse, [v.number]: !versionCollapse[v.number]})}}>{
+                            <i className={"bi bi-chevron-" + (!versionCollapse[v.number] ? 'up' : 'down')}/>
+                        } {v.number} {v.name} {v.date}
+                        </h2>
+                        {!versionCollapse[v.number] && <ul className={'entry-list'}>
+                            {v.majorEntries.map(e => {
+                                if (!allowedDict[e.key]) return null;
+                                return <li className={'entry ' + e.key}>
+                                    <span className={'title'}>{e.title}</span>
+                                    <span className={'content'}>{e.content}</span>
+                                </li>
+                            })
+                            }
+                        </ul>}
+                    </li>)
+                    }
                 </ul>
             </div>
         </Dashboard>

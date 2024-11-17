@@ -4686,6 +4686,8 @@ instanceof === undefined or missing  --> auto-detect and assign the type
     protected _getallSub(context: Context, state: DState|undefined, kind: Any<typeof DModelElement>, includeCross?:boolean): any[]&Dictionary<any, any> {
         state = state || store.getState();
         let darr = Selectors.getAll(kind, undefined, state, true, false) as DModelElement[];
+
+        console.log('get_allSubPackages', {includeCross, kind});
         // console.log("gao", {darr:[...darr]});
         let larr = [];
         // let validModels = includeCross ? [c.data.id, ...c.data.dependencies] : [c.data.id];
@@ -6261,7 +6263,6 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
     }
     validTargets!: (LObject | LEnumLiteral)[];
     get_validTargets(c: Context, out?: MultiSelectOptGroup[]): this['validTargets'] {
-        let selectOptions: MultiSelectOptGroup[];
         let meta: LReference | LAttribute = this.get_instanceof(c) as LReference | LAttribute;
         let isShapeless = !meta;
         let isReference = isShapeless || meta.className === 'DReference';

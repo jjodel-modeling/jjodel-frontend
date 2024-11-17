@@ -8,6 +8,7 @@ import { icon } from './icons/Icons';
 import {DashProps} from "./Dashboard";
 import Collaborative from "../../components/collaborative/Collaborative";
 import {ProjectsApi} from "../../api/persistance";
+import storage from "../../data/storage";
 
 interface StateProps {
     projects: LProject[];
@@ -26,17 +27,18 @@ type ItemProps = {
     children: string;
     icon?: any;
     action?: string | MouseEventHandler;
+    dot?: boolean;
+    onClick?: MouseEventHandler
 };
 
 const Item = (props: ItemProps) => {
     const navigate = useNavigate();
-    const type = (typeof props.action);
+    let action: (e:any)=>any = props.action as any;
+    if (typeof action === 'string') action = (e => navigate(`/${props.action}`));
+    let finalaction = (e:any) =>{ props.onClick?.(e); action(e); }
+
     return (<>
-        {(typeof props.action) === 'string' ?
-            <div onClick={e => navigate(`/${props.action}`)} className={'item'}>{props.icon && props.icon} {props.children}</div>
-        :
-            <div onClick={(props.action as MouseEventHandler)} className={'item'}>{props.icon && props.icon} {props.children}</div>
-        }
+            <div onClick={finalaction} className={'item ' + (props.dot ? 'red-dot' : '')}>{props.icon && props.icon}&nbsp;<span>{props.children}</span></div>
     </>);
 }
 
@@ -170,7 +172,10 @@ function LeftBar(props: LeftBarProps): JSX.Element {
                     <Item action={'notes'} icon={icon['edit']}>Notes</Item>
                 </Menu>*/}
                 <Menu title={'Support'} mode={'collapsable'}>
-                    <Item action={'updates'} icon={icon['whats-new']}>What's new</Item>
+                    <Item action={'updates'} icon={icon['whats-new']}
+                          dot={+(localStorage.getItem('_jj_update_seen')||0)<+(localStorage.getItem('_jj_update_date')||Number.POSITIVE_INFINITY)}
+                          onClick={()=>localStorage.setItem('_jj_update_seen', ''+Date.now())}
+                    >What's new</Item>
                     <Item action={'gettingstarted'} icon={icon['getting-started']}>Getting started</Item>
                     <Item action={'guide'} icon={icon['manual']}>User guide</Item>
                 </Menu>
