@@ -2996,12 +2996,14 @@ export class LStructuralFeature<Context extends LogicContext<DStructuralFeature>
     validTargets!: (LObject | LEnumLiteral)[];
     get_validTargets(c: Context, out?: MultiSelectOptGroup[]): this['validTargets'] {
         let addClasses: boolean = false;
+        let addModels: boolean = false;
         let addEnums: boolean = false;
         let addPrimitives: boolean = false;
         let addReturnTypes: boolean = false;
         let isCrossRef = this.get_isCrossReference(c);
         let d = c.data;
         switch (d.className){
+            case DModel.cname:     addModels = true; break;
             case DReference.cname: addClasses = true; break;
             case DAttribute.cname:              addPrimitives = addEnums = true; break;
             case DParameter.cname: addClasses = addPrimitives = addEnums = true; break;
@@ -3020,7 +3022,13 @@ export class LStructuralFeature<Context extends LogicContext<DStructuralFeature>
         let validClasses: LClass[] = [];
         let validEnums: LEnumerator[] = [];
         let validPrimitives: LClass[] = [];
+        let validModels: LModel[] = [];
         let state: DState | null = null;
+        if (addModels) {
+            if (!state) state = store.getState();
+            validModels = LPointerTargetable.fromPointer(state.m2models);
+            if (out) out.push({label: 'Models', options: validModels.map(map2).sort(sort)});
+        }
         if (addPrimitives) {
             if (!state) state = store.getState();
             validPrimitives = LPointerTargetable.fromPointer(state.primitiveTypes);
@@ -3052,7 +3060,7 @@ export class LStructuralFeature<Context extends LogicContext<DStructuralFeature>
             } else validEnums = (isCrossRef ? m2.crossEnumerators : m2.enumerators);
             //if (out) out.push({label: 'Enumerators', options: validEnums.map(map).sort(sort)});
         }
-        return U.arrayMergeInPlace(validClasses as any[], validPrimitives, validEnums);
+        return U.arrayMergeInPlace(validClasses as any[], validPrimitives, validEnums, validModels);
     }
     protected get_instances(context: Context): this["instances"] {
         return context.data.instances.map((pointer) => {
@@ -5358,9 +5366,9 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
     }
 
 
-    protected get_derived(context: Context): this["derived"] { return context.proxyObject.derived; }
-    protected get_derived_read(context: Context): this["derived_read"] { return context.proxyObject.derived_read; }
-    protected get_derived_write(context: Context): this["derived_write"] { return context.proxyObject.derived_write; }
+    protected get_derived(c: Context): this["derived"] { return (this.get_instanceof(c) as LReference).derived; }
+    protected get_derived_read(c: Context): this["derived_read"] { return (this.get_instanceof(c) as LReference).derived_read; }
+    protected get_derived_write(c: Context): this["derived_write"] { return (this.get_instanceof(c) as LReference).derived_write; }
     protected set_derived(val: this["derived"], context: Context): boolean { return this.cannotSet('LValue.derived'); }
     protected set_derived_read(val: this["derived_read"], context: Context): boolean { return this.cannotSet('LValue.derived_read'); }
     protected set_derived_write(val: this["derived_write"], context: Context): boolean { return this.cannotSet('LValue.derived_write'); }
@@ -5687,7 +5695,7 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
     protected get_classType(context: Context): LStructuralFeature["classType"] { return this.get_fromlfeature(context.proxyObject.instanceof, "classType"); }
     protected get_primitiveType(context: Context): LStructuralFeature["primitiveType"] { return this.get_fromlfeature(context.proxyObject.instanceof, "primitiveType"); }
     protected get_type(context: Context): LStructuralFeature["type"] { return this.get_fromlfeature(context.proxyObject.instanceof, "type"); }
-    protected get_fullname(context: Context): LStructuralFeature["fullname"] { return this.get_fromlfeature(context.proxyObject.instanceof, "fullname"); }
+    // protected get_fullname(context: Context): LStructuralFeature["fullname"] { return this.get_fromlfeature(context.proxyObject.instanceof, "fullname"); }
     protected get_namespace(context: Context): LStructuralFeature["namespace"] { return this.get_fromlfeature(context.proxyObject.instanceof, "namespace"); }
     protected get_name(context: Context): LStructuralFeature["name"] { return context.data.instanceof ? this.get_fromlfeature(context.proxyObject.instanceof, "name") : context.data.name || ''; }
 

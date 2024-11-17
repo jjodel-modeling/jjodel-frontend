@@ -136,8 +136,8 @@ class DefaultViews {
             'ret.firstPackage = packages[0]\n'+
             'ret.otherPackages = packages.slice(1)\n'+
             'ret.m1Objects = data && !data.isMetamodel ? data.allSubObjects : []\n'+
-            'ret.refEdges = (suggestedEdges.reference || []).filter(e => !e.vertexOverlaps)\n'+
-            'ret.extendEdges = (suggestedEdges.extend || []).filter(e => !e.vertexOverlaps)\n'+
+            'ret.refEdges = (suggestedEdges.reference || []).filter(e => !e.vertexOverlaps && e.sameGraph)\n'+
+            'ret.extendEdges = (suggestedEdges.extend || []).filter(e => !e.vertexOverlaps && e.sameGraph)\n'+
             udLevelG +
             '}';
         return view;

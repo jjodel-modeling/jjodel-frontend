@@ -508,16 +508,16 @@ export class PinnableDock extends DockLayout{
         super.componentDidUpdate(prevProps, prevState, snapshot);
         if (this.state.dropRect) {
             let droparea = this.state.dropRect.element;
-            if (!droparea) return;
+            if (!droparea || droparea.classList.contains('dock-style-models')) return;
             /*<div class="dock-drop-square dock-drop-top anchor"><div class="dock-drop-square-box"></div></div>*/
             let droplayer = droparea.querySelector('.dock-drop-layer');
             currentDropArea = droparea;
-            dockLayout = this._ref;
+            dockLayout = windoww.htmldockLayout = this._ref;
             currentDropRect = this.state.dropRect;
-            windoww.htmldockLayout = this._ref;
             if (!droplayer) return;
             droplayer.append(...anchorControls);
             let tab = PinnableDock.getTabFromDropRect(droparea);
+            console.log('activating pin buttons', {tab, currentDropRect, dockLayout, droparea, prevProps, prevState, snapshot}, );
             // todo: tabfocus but not the active one, the clicked one
             // droparea.style.backgroundColor = "red";
         }

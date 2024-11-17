@@ -6,6 +6,42 @@
 }
 
 
+.dashboard-container{
+  .dash-content{
+    flex-grow: 1;
+    display: flex;
+    flex-flow: column;
+    .name{
+      margin: auto;
+    }
+    .catalog-header{
+      margin-bottom: 1rem;
+      // margin-bottom: auto;
+      // padding-bottom: 1rem;
+    }
+    .catalog{
+      overflow: hidden;
+      &:has(.project-list){
+        height: 100%;
+      }
+      .details{
+        height: min-content;
+        position: absolute; // because contextmenu must go above it
+        right: 42.5px;
+      }
+      .card-holder{
+        overflow-y: auto;
+        padding-right: 253px; // space for details image
+      }
+      .row.project-list{ // list visualization of projects
+        overflow-y: auto;
+        overflow-x: hidden;
+        display: flex;
+        flex-flow: column;
+      }
+    }
+  }
+}
 
 project-card .tip {
   display: none;
@@ -364,7 +400,6 @@ project-card .tip {
 }
 
 .dashboard-container .user {
-  display: inline-flex;
   margin-top: 50px;
   margin-left: 100px;
   margin-right: 20px;
@@ -379,7 +414,6 @@ project-card .tip {
     
 
     h2 {
-      font-weight: 400;
       font-size: var(--h1-lg-size);
       color: var(--color);
     }

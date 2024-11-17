@@ -8,12 +8,14 @@ import Storage from "../data/storage";
 import {Menu, Item, Divisor} from './components/menu/Menu';
 
 import colors from '../static/img/colors.png';
+import {CatalogInfoCard} from "./components/catalog/Catalog";
 
 
 
 type CardsType = {
     children: any;
 };
+
 
 const Cards = (props: CardsType): any => {
     return (
@@ -136,15 +138,6 @@ const Catalog = (props: ChildrenType) => {
         );
     }
 
-    const CatalogInfoCard = (props: any) => {
-        return (
-            <div className={'details'}>
-                <h5>Your projects</h5>
-                <p>You developed <strong>{props.projects.length}</strong> projects with an overall number of 12 artifacts.</p>
-                <img src={colors} width={220} />
-            </div>
-        );
-    }
 
     type CatalogType = {
         projects: LProject[];

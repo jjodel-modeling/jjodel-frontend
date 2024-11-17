@@ -1,5 +1,6 @@
 // import * as detectzoooom from 'detect-zoom'; alternative: https://www.npmjs.com/package/zoom-level
 // import {Mixin} from "ts-mixer";
+import type {Any} from "../joiner";
 import {
     AbstractConstructor,
     Constructor,
@@ -88,7 +89,9 @@ export class U {
 
 
     // to register call with both parameters. to remove a listener call with callback=undefined
-    static clickedOutside(currentTarget: Element, callback: undefined | ((e: Element, evt: JQuery.ClickEvent) => void)) {
+    static clickedOutside(currentTarget0: Element|Any<Event>, callback: undefined | ((e: Element, evt: JQuery.ClickEvent) => void)) {
+        if (!currentTarget0) return;
+        let currentTarget: Element = (currentTarget0 as any)?.currentTarget || currentTarget0 as any;
         if (!currentTarget) return;
         let map = U.clickedOutsideMap;
         let arr = U.clickedOutsideMapEntries;

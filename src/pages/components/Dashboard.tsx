@@ -162,8 +162,8 @@ function GenericDashboard(props: DashProps): any {
         <Navbar />
         <div className={"dashboard-container"} tabIndex={-1}>
             <LeftBar active={active} projects={user?.projects}/>
-            <div className={'user'}>
-                <div className={'name'}>
+            <div className={'dash-content user'}>
+                <div>
                     <>
                         {active === "All" && <Title active={active} title={'Dashboard'} icon={<i className="bi bi-columns-gap"></i>} />}
                         {active === "Recent" && <Title  active={active} title={'Recent'} icon={<i className="bi bi-clock"></i>} />}
@@ -172,8 +172,8 @@ function GenericDashboard(props: DashProps): any {
                         {active === "Updates" && <Title  active={active} title={'What\'s new'} icon={<i className="bi bi-clock-history"></i>} />}
                         {active === "Profile" && <Title  active={active} title={'Profile'} icon={<i className="bi bi-clock-history"></i>} />}
                     </>
-                    <Catalog children={children}/>
                 </div>
+                <Catalog children={children}/>
             </div>
         </div>
     </>);

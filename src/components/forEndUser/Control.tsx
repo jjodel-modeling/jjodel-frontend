@@ -1,4 +1,4 @@
-import { ControlPanel, LGraphElement, SetRootFieldAction } from "../../joiner";
+import {ClickEvent, ControlPanel, LGraphElement, SetRootFieldAction, U} from "../../joiner";
 import { ReactElement, ReactNode, useEffect, useRef, useState } from "react";
 
 import "./control.scss";
@@ -115,35 +115,32 @@ function useClickOutside(ref: any, onClickOutside: any) {
 const ControlComponent = (props: ControlProps, children?:ReactNode) => {
     
     const [controlOpen, setControlOpen] = useStateIfMounted(false);
-    const controlRef = useRef(null);
 
     const toggleValue = () => {
         setControlOpen(!controlOpen);
 
     }
 
-    useClickOutside(controlRef, () => {
-        setControlOpen(false);
-    });
 
-    return (<>
-        <div className={`jjodel-control d-flex flex-row ${controlOpen ? 'opened' : 'closed'}`} ref={controlRef}>
+    function onClick(e: any){
+        console.log('setup hide control');
+        U.clickedOutside(e, ()=> {
+            console.log('hide control');
+            setControlOpen(false)
+        });
+    }
+    return (<div className={`jjodel-control-root`} onClick={onClick}>
+        <div className={`jjodel-control d-flex flex-row ${controlOpen ? 'opened' : 'closed'}`}>
             <div className={'control-header'}>
                 <h1>{props.title}</h1>
                 <h2>{props.payoff}</h2>
             </div>
             {props.children || children}
         </div>
-        {controlOpen ?
-            <div className={'jjodel-control-icon'}>
-                <i onClick={(e) => {toggleValue()}} className="bi bi-toggles"></i>
-            </div>
-            :
-            <div className={'jjodel-control-icon'}>
-                <i onClick={(e) => {toggleValue()}} className="bi bi-toggles"></i>
-            </div>
-        }
-    </>);
+        <div className={'jjodel-control-icon'}>
+            <i onClick={(e) => {toggleValue()}} className="bi bi-toggles"/>
+        </div>
+    </div>);
 }
 
 const Control = (props: VertexOwnProps, children: ReactNode = []): ReactElement => {

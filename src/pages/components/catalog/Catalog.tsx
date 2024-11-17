@@ -7,7 +7,24 @@ import colors from '../../../static/img/colors.png';
 import { icon } from "../icons/Icons";
 import "./catalog.scss"
 
-
+export const CatalogInfoCard = (props: any) => {
+    return (
+        <div className={'details'}>
+            {props.projects ?
+                <>
+                    <h5>Your projects</h5>
+                    <p>You developed <strong>{props.projects.length}</strong> projects{false && ' with an overall number of 12 artifacts'}.</p>
+                    <img src={colors} width={220} />
+                </>
+                :
+                <>
+                    <h5>No projects so far</h5>
+                    <img src={colors} width={220} />
+                </>
+            }
+        </div>
+    );
+}
 type ChildrenType = {
     projects?: any;
     children?: any;
@@ -76,25 +93,7 @@ const Catalog = (props: ChildrenType) => {
         );
     }
 
-    const CatalogInfoCard = (props: any) => {
-        return (
-            <div className={'details'}>
 
-                {props.projects ?
-                    <>
-                        <h5>Your projects</h5>
-                        <p>You developed <strong>{props.projects.length}</strong> projects with an overall number of 12 artifacts.</p>
-                        <img src={colors} width={220} />
-                    </>
-                :
-                    <>
-                        <h5>No projects so far</h5>
-                        <img src={colors} width={220} />
-                    </>
-                }
-            </div>
-        );
-    }
 
     type CatalogType = {
         projects: LProject[];

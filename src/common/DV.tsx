@@ -373,21 +373,20 @@ export class DefaultView {
 `<View className={'root model'}>
 <Scrollable graph={node}>
     {!data && "Model data missing."}
-
-    {/* metamodel */}
-    {data.isMetamodel && 
-        [<div className={'edges'}>
-            {[
-                refEdges.map(se => <Edge data={se.start} start={se.startNode.firstRenderedNode} end={se.endNode} anchorStart={0} anchorEnd={0} key={se.id} isReference={true} 
-                view={'Edge' + (se.start.composition ? 'Composition' : (se.start.aggregation ? 'Aggregation' : 'Association'))} />),
-                extendEdges.map(se => <Edge data={se.start} start={se.startNode} end={se.extendTargets[0]} view={'EdgeInheritance'} isExtend={true} key={se.id} />)
-            ]}
-        </div>,
+    <div className={'edges'}>
+        {[
+            refEdges.map(se => <Edge data={se.start} start={se.startVertex} end={se.endVertex} anchorStart={0} anchorEnd={0} key={se.id} isReference={true} 
+            view={'Edge' + (se.start.composition ? 'Composition' : (se.start.aggregation ? 'Aggregation' : 'Association'))} />),
+            extendEdges.map(se => <Edge data={se.start} start={se.startNode} end={se.extendTargets[0]} view={'EdgeInheritance'} isExtend={true} key={se.id} />)
+        ]}
+    </div>
+    {/* metamodel only */}
+    {[
         otherPackages.filter(p => p).map(pkg => <DefaultNode key={pkg.id} data={pkg} />),
-        level >= 1 && firstPackage && firstPackage.children.filter(c => c).map(classifier => <DefaultNode key={classifier.id} data={classifier} />)]
-    }
+        level >= 1 && firstPackage && firstPackage.children.filter(c => c).map(classifier => <DefaultNode key={classifier.id} data={classifier} />)
+    ]}
 
-    {/* model */}
+    {/* model only */}
     {level >= 1 && m1Objects.filter(o => o).map(m1object => <DefaultNode key={m1object.id} data={m1object} />)}
     {decorators}
 </Scrollable>

@@ -102,6 +102,8 @@ export class DState extends DPointerTargetable{
     debug: boolean = false;
     logs: Pointer<DLog>[] = [];
     models: Pointer<DModel, 0, 'N'> = []; // Pointer<DModel, 0, 'N'>[] = [];
+    m2models: Pointer<DModel, 0, 'N'> = [];
+    m1models: Pointer<DModel, 0, 'N'> = [];
 
 
     viewelements: Pointer<DViewElement, 0, 'N'> = [];
@@ -153,8 +155,6 @@ export class DState extends DPointerTargetable{
     viewpoint: Pointer<DViewPoint> = '';
     viewpoints: Pointer<DViewPoint, 0, 'N'> = [];
 
-    m2models: Pointer<DModel, 0, 'N'> = [];
-    m1models: Pointer<DModel, 0, 'N'> = [];
 
     isLoading: boolean = false;
 
