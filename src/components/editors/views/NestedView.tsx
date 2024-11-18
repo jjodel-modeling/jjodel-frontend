@@ -102,9 +102,8 @@ function NestedViewComponent(props: AllProps) {
 
         let appliableToEnhanced = (d.name === 'Singleton' ? 'Singleton' : appliableTo);
 
-        const max_priority = l.explicitApplicationPriority
-
         let isActive = d.id === activeViewpointId;
+        let canDelete = !isActive && !isDefault;
         return <li className={"entry-root " + d.className + (isActive ? ' selected' : '')} key={d.id}>
 
             <div className={'inline-row'} onClick={()=>setView(d.id)} onDoubleClick={(e) => {select(d.id)}}> {/* activate anche con il dblclick */}
@@ -140,7 +139,8 @@ function NestedViewComponent(props: AllProps) {
 
 
                         <CommandBar style={{transition: '1s 0.3s', marginTop: '2px'}}>
-                            <Btn icon={'delete'} action={(e)=> { l.delete(); preventClick(e);}} tip={'Delete'} disabled={isActive} />
+                            <Btn icon={'delete'} action={(e)=> { l.delete(); preventClick(e);}} disabled={!canDelete} tip={
+                                isActive ? 'Cannot delete active viewpoint' : (isDefault ? 'Cannot delete default views' : 'Delete' )} />
                             <Btn icon={'copy'} action={(e)=> { l.duplicate(); preventClick(e);}} tip={'Duplicate'} />
                         </CommandBar>
 

@@ -379,7 +379,6 @@ export class Selectors{
         let pvMatch: boolean = parentView ? vid in parentView.subViews : false;
         let pvScore: number = pvMatch ? (parentView as DViewElement).subViews[vid] : 1;
         let explicitprio: number;
-        if (!dview) console.trace('explicitapplicationpriority', {entry, dview});
         if (typeof entry.jsScore === 'number') {
             explicitprio = entry.jsScore;
         } else if (dview.explicitApplicationPriority === undefined) {
@@ -575,7 +574,7 @@ export class Selectors{
             for (let vid of Object.keys(tn.viewScores)) {
                 let tnv = tn.viewScores[vid];
                 const dview: DViewElement = DPointerTargetable.fromPointer(vid, state);
-                if (!dview) console.warn('explicitapplicationpriority 0', {dview, vid, state});
+                if (!dview) console.error('missing view, is it an old save with less default views?', {dview, vid, state});
                 if (!dview) continue;
 
                 const score = tnv.finalScore = Selectors.getFinalScore(tnv, vid, pv, dview);
