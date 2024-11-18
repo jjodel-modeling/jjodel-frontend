@@ -77,7 +77,8 @@ function App(props: AllProps): JSX.Element {
                         <Route path={'project'} element={<ProjectPage />} />
                         <Route path={'recent'} element={<RecentPage />} />
                         <Route path={'profile'} element={<ProfilePage />} />
-                        <Route path={'*'} element={<AllProjectsPage />} />
+                        <Route path={''} element={<AllProjectsPage />} />
+                        { window.location.hostname !== 'localhost' && false && <Route path={'*'} element={<AllProjectsPage />} />}
                     </> : <Route path={'*'} element={<AuthPage />} />}
                 </Routes></Try>
             </HashRouter>

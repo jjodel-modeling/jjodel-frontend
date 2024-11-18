@@ -1,29 +1,47 @@
 import {
-    Dictionary, DUser,
-    EcoreParser, GObject, DState,
+    Dictionary,
+    DUser,
+    EcoreParser,
+    GObject,
+    DState,
     Json,
     LModel,
     LoadAction,
-    Log, U,
-    LPointerTargetable, prjson2xml, prxml2json,
-    store, RuntimeAccessible, DModelElement, SetRootFieldAction, Selectors, Debug, DViewElement, transientProperties
+    Log,
+    U,
+    LPointerTargetable,
+    prjson2xml,
+    prxml2json,
+    store,
+    RuntimeAccessible,
+    DModelElement,
+    SetRootFieldAction,
+    Selectors,
+    Debug,
+    DViewElement,
+    transientProperties,
+    LUser
 } from '../../joiner';
+import {ProjectsApi} from "../../api/persistance";
+import {VersionFixer} from "../../redux/VersionFixer";
 
 @RuntimeAccessible('SaveManager')
 export class SaveManager {
     private static tmpsave: DState;
 
     static save(): void {
-        SaveManager.tmpsave = store.getState();
+        let project = LUser.fromPointer(DUser.current)?.project;
+        if (project) ProjectsApi.save(project);
+        /*SaveManager.tmpsave = store.getState();
         localStorage.setItem("tmpsave", JSON.stringify(SaveManager.tmpsave));
         console.clear();
-        console.log(JSON.stringify(SaveManager.tmpsave))
+        console.log(JSON.stringify(SaveManager.tmpsave))*/
     }
 
-    static load(state?: string): void {
-        if (!state && SaveManager.tmpsave) { LoadAction.new(SaveManager.tmpsave); return; }
-        state = state || localStorage.getItem('tmpsave') || 'null'; // priorities: 1) argument from file 2) state variable cached 3) localstorage 4) null prevent crash
-        let save: GObject<DState> = SaveManager.tmpsave = JSON.parse(state);
+    static load(state0?: string | GObject<DState>): void {
+        if (!state0 && SaveManager.tmpsave) { LoadAction.new(SaveManager.tmpsave); return; }
+        state0 = state0 || localStorage.getItem('tmpsave') || 'null'; // priorities: 1) argument from file 2) state variable cached 3) localstorage 4) null prevent crash
+        let save: GObject<DState> = SaveManager.tmpsave = typeof state0 === 'string' ? JSON.parse(state0) : state0;
         for (let vid of [...save.viewelements, ...save.viewpoints]) {
             for (let key of DViewElement.RecompileKeys) {
                 if(!transientProperties.view[vid]) transientProperties.view[vid] = {name: (save.idlookup[vid] as any)?.name || 'Unnamed'} as any;
@@ -32,6 +50,7 @@ export class SaveManager {
                 save[key].push(vid);
             }
         }
+        VersionFixer.update(save);
         LoadAction.new(save);
     }
 

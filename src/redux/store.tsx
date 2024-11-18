@@ -69,6 +69,7 @@ import { GraphElements, Graphs, Vertexes, Edges, Fields } from '../joiner';
 import DefaultViews from "./defaults/views";
 import tinycolor, {Instance} from "tinycolor2";
 import {ReactNode} from "react";
+import {VersionFixer} from "./VersionFixer";
 
 console.warn('ts loading store');
 
@@ -95,8 +96,8 @@ export class DState extends DPointerTargetable{
         return ds; // do not trigger persist and CreateElement for state, or it will be stored in idlookup making a loop
     }
 
-    // important! every new version update version.n, but leave date = new Date().toString() and conversionList = empty arr []
-    version:{n:number, date:string, conversionList: number[]} = {n:2.2, date: new Date().toString(), conversionList: []};
+    // no need to manually update for each update
+    version:{n:number, date:string, conversionList: number[]} = {n:VersionFixer.get_highestversion(), date: new Date().toString(), conversionList: []};
 
     env: Dictionary = process.env;  //damiano: this might make problems on load
     debug: boolean = false;

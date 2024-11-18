@@ -49,7 +49,7 @@ function ProjectComponent(props: AllProps): JSX.Element {
                 const state = JSON.parse(await U.decompressState(project.state));
                 state['idlookup'][DUser.current] = user.__raw;
                 if(!state['users'].includes(DUser.current)) state['users'].push(DUser.current);
-                SaveManager.load(JSON.stringify(state));
+                SaveManager.load(state);
             }
             user.project = LProject.fromPointer(project.id);
         })();
