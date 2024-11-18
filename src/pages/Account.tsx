@@ -90,15 +90,6 @@ function AccountComponent(props: AllProps): JSX.Element {
                     <button className="btn alert-btn my-2  px-4 space-above">change password</button>
                 </div>
 
-
-                {/* <text className={'d-block'}><b>Name: </b>{user.name}</text>
-
-                <text className={'d-block'}><b>Surname: </b>{user.surname}</text>
-                <text className={'d-block'}><b>Nickname: </b>{user.nickname}</text>
-                <text className={'d-block'}><b>Email: </b>{user.email}</text>
-                <text className={'d-block'}><b>Country: </b>{user.country}</text>
-                <text className={'d-block'}><b>Affiliation: </b>{user.affiliation}</text>
-                <text className={'d-block'}><b>Newsletter: </b>{user.newsletter + ''}</text>*/}
             </div>
             </>
         </Dashboard>

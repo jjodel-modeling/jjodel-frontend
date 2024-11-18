@@ -433,6 +433,14 @@ body .css-1nmdiq5-menu{
   overflow: scroll;
   position: absolute;
 
+  & label {
+    width: 100%;
+    & input {
+      margin-top: 0!important;
+      margin-bottom: 6px;
+    }
+  }
+
   & form {
     position: relative;
     top: 20%!important;
@@ -518,9 +526,29 @@ body .css-1nmdiq5-menu{
 }
 
 
-.login.register {
+.login.register { 
 
-  & form {
+  & form { 
+    margin: auto;
+    padding-left: 100px!important;
+    padding-right: 100px!important;
+    width: 800px!important;
+    top: 0%!important;
+
+    & label {
+      width: 100%;
+      & input {
+        margin-top: 0!important;
+        margin-bottom: 6px;
+      }
+    }
+  }
+}
+
+.login.retrieve {
+
+  & form { 
+    margin: auto;
     padding-left: 100px!important;
     padding-right: 100px!important;
     width: 800px!important;
@@ -533,4 +561,6 @@ body .css-1nmdiq5-menu{
       }
     }
   }
+
+
 }

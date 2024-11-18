@@ -8,7 +8,7 @@ import logo from '../static/img/jjodel.jpg';
 import {Tooltip} from '../components/forEndUser/Tooltip';
 
 function AuthPage(): JSX.Element {
-    const [isRegister, setIsRegister] = useStateIfMounted(false);
+    const [action, setAction] = useStateIfMounted<'login'|'register'|'retrieve-password'>('login'); 
     const [nickname, setNickname] = useStateIfMounted('');
     const [name, setName] = useStateIfMounted('');
     const [surname, setSurname] = useStateIfMounted('');
@@ -23,14 +23,30 @@ function AuthPage(): JSX.Element {
     const onSubmit = async(e: FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         SetRootFieldAction.new('isLoading', true);
-        if(isRegister) await register();
-        else await login();
+        
+        switch (action) {
+            case 'login':
+                await login();
+                break;
+            case 'register': 
+                await register();
+                break;
+            case 'retrieve-password':
+                await retrieve_password();
+                break;
+        }
+
         SetRootFieldAction.new('isLoading', false);
     }
+
+    const retrieve_password = async() => {
+        /* something to be provided here */
+    }
+
     const login = async() => {
         const response = await AuthApi.login(email, password);
         if(response.code !== 200) {
-            U.alert('e', 'Bad Data!');
+            U.alert('e', 'Email or password unknown.');
             return;
         }
         const data = U.wrapper<DUser>(response.data);
@@ -41,6 +57,7 @@ function AuthPage(): JSX.Element {
         navigate('/allProjects');
         U.refresh();
     }
+
     const register = async() => {
         if(password !== passwordCheck) {
             U.alert('e', 'The two passwords are different');
@@ -48,7 +65,7 @@ function AuthPage(): JSX.Element {
         }
         const response = await AuthApi.register(name, surname, country, affiliation, newsletter, nickname, email, password);
         if(response.code !== 200) {
-            U.alert('e', 'Bad Data!');
+            U.alert('e', 'Username or password not valid.');
             return;
         }
         const data = U.wrapper<DUser>(response.data);
@@ -58,23 +75,26 @@ function AuthPage(): JSX.Element {
         navigate('/allProjects');
         U.refresh();
     }
+
     const offline = () => {
         AuthApi.offline();
         navigate('/allProjects');
         U.refresh();
     }
 
-
-    let login_skin = Math.round(Math.random()*5.5 +1);
-
-    return(<section className={`w-100 h-100 login bg ${isRegister && 'register'}`}>
+    return(<section className={`w-100 h-100 login bg ${action === 'register' ? 'register' : action === 'retrieve-password' && 'retrieve' } `}>
 
         <form className={'d-block bg-white rounded border mx-auto w-fit px-5 py-4 mt-5'} onSubmit={onSubmit}>
             <label className={'fs-1 d-block text-center text-primary login-header'}>
-                {isRegister ? 'Create an Account' : 'Sign In'}
+
+                {action === 'register' && 'Create an Account'}
+                {action === 'login' && 'Sign In'}
+                {action === 'retrieve-password' && 'Retrieve your Password'}
+
+            
             </label>
 
-            {isRegister ? <>
+            {action === 'register' && <>
 
                 {/* REGISTRATION */}
 
@@ -100,7 +120,7 @@ function AuthPage(): JSX.Element {
                     </label>
                 </Tooltip>
 
-                    <Tooltip tooltip={<div style={{padding: '10px', maxWidth: '600px'}}><h6>Last Name</h6>Your nickname will be visible to others whenever you interact with them, such as during collaboration on shared projects.</div>} >
+                    <Tooltip tooltip={<div style={{padding: '10px', maxWidth: '600px'}}><h6>Nickname</h6>Your nickname will be visible to others whenever you interact with them, such as during collaboration on shared projects.</div>} >
                         <label>
                             Nickname
                             <input className={'w-100 input w-fit d-block mx-auto mt-2'}
@@ -400,7 +420,7 @@ function AuthPage(): JSX.Element {
                 </label>
 
                 <br /><br /><br />
-                <Tooltip tooltip={<div style={{padding: '10px', maxWidth: '600px'}}><h6>Email</h6>Your email address will be used for communication, notifications, and to identify you in the system, but it won’t be shared publicly without your consent.</div>} >
+                <Tooltip tooltip={<div style={{padding: '10px', maxWidth: '600px'}}><h6>Newsletter</h6>Select this option for remaining updated about Jjodel new releases, updates, and initiatives.</div>} >
                     <label>
 
                         <input className={'checkbox'}
@@ -421,41 +441,71 @@ function AuthPage(): JSX.Element {
                 <button className={'d-block btn btn-primary p-1 mx-auto mt-3 login-button'} type={'submit'}>
                     Create
                 </button>
-            </>
-            :
-
+            </>}
+            
+            {action === 'login' && 
 
             <>
                 {/* LOGIN */}
-
-                <input className={'w-100 input w-fit d-block mx-auto mt-3'}
-                    value={email}
-                    onChange={e => setEmail(e.target.value)} type={'email'}
-                    required={true}
+                <label>
+                    Email 
+                    <input className={'w-100 input w-fit d-block mx-auto mt-3'}
+                        value={email}
+                        onChange={e => setEmail(e.target.value)} type={'email'}
+                        required={true}
+                    />
+                </label>
+                <label>
+                    Password
+                    <input className={'w-100 input w-fit d-block mx-auto  mt-2'}
+                        value={password}
+                        onChange={e => setPassword(e.target.value)}
+                        type={'password'}
+                        required={true}
                 />
-                <input className={'w-100 input w-fit d-block mx-auto  mt-2'}
-                    value={password}
-                    onChange={e => setPassword(e.target.value)}
-                    type={'password'}
-                    required={true}
-                />
+                {window.location.host.includes('localhost') &&
+                    <button className={'d-block btn btn-primary p-1 mx-auto mt-3 login-button'} onClick={(e) => offline()}>Offline mode</button>
+                }
+                </label>
                 <button className={'d-block btn btn-primary p-1 mx-auto mt-3 login-button'} type={'submit'}>
                     Login
                 </button>
             </>}
 
+            {action === 'retrieve-password' && 
+
+            <>
+                {/* RETRIEVE PASSWORD */}
+                <label>
+                    Enter your email
+                    <input className={'w-100 input w-fit d-block mx-auto mt-3'}
+                        value={email}
+                        onChange={e => setEmail(e.target.value)} type={'email'}
+                        required={true}
+                    />
+                </label>
+                
+                <button className={'d-block btn btn-primary p-1 mx-auto mt-3 login-button'} type={'submit'}>
+                    Retrieve
+                </button>
+            </>}
+
 
             <label className={'mt-3 d-block text-center'}>
-                {isRegister ? 'Already have an account?' : 'Don\'t have an account?'}
-                <b tabIndex={-1} onClick={e => setIsRegister(!isRegister)} className={'ms-1 text-primary text-decoration-none cursor-pointer login-link'}>
-                    click here
-                </b>
-                <br/>Or start in
-                <b tabIndex={-1} className={'ms-1 text-primary text-decoration-none cursor-pointer login-link'}
-                   onClick={e => offline()}
-                >
-                    offline mode
-                </b>
+                {action === 'register' && <>Already have an account? <span tabIndex={-1} onClick={e => {setAction('login')}} className={'ms-1 text-primary text-decoration-none cursor-pointer login-link'}>Sign In</span></>}
+                {action === 'login' && 
+                    <>
+                        Don't have an account? <span tabIndex={-1} onClick={e => {setAction('register')}} className={'ms-1 text-primary text-decoration-none cursor-pointer login-link'}>Register</span><br/>
+                        <span tabIndex={-1} onClick={e => {setAction('retrieve-password')}} className={'ms-1 text-primary text-decoration-none cursor-pointer login-link'}>Forgot your password?</span>
+                    </>
+                }
+                {action === 'retrieve-password' && 
+                    <>
+                        Go back to the <span tabIndex={-1} onClick={e => {setAction('login')}} className={'ms-1 text-primary text-decoration-none cursor-pointer login-link'}>Sign In</span> page<br/>
+                        Don't have an account? <span tabIndex={-1} onClick={e => {setAction('register')}} className={'ms-1 text-primary text-decoration-none cursor-pointer login-link'}>Register</span><br/>
+                    </>
+                }
+                
             </label>
             <div className='login-logo'><img src={logo}></img></div>
         </form>
