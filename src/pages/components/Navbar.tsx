@@ -34,6 +34,7 @@ import {InternalToggle} from '../../components/widgets/Widgets';
 import jj from '../../static/img/jj-k.png';
 import Storage from '../../data/storage';
 import Collaborative from "../../components/collaborative/Collaborative";
+let windoww = window as any;
 
 const createM2 = (project: LProject) => {
     let name = 'metamodel_' + 1;
@@ -217,8 +218,8 @@ function NavbarComponent(props: AllProps) {
                     {name: 'divisor', function: async() => {}, keystroke: []},
                     {name: 'Legal terms', icon: icon['legal'], function: async() => {}, keystroke: []}
                 ],
-                keystroke: []},
-            {name: 'About jjodel', icon: icon['jjodel-dark'], function: async() => {}, keystroke: []}
+                keystroke: []}
+
         ];
     }
 
@@ -247,7 +248,7 @@ function NavbarComponent(props: AllProps) {
             {name: 'Legal terms', icon: <i className="bi bi-mortarboard"></i>, function: () => {}, keystroke: []}
         ],
         keystroke: []},
-        {name: 'About jjodel', icon: <img src={jj} width={15}/>, function: () => {}, keystroke: []},
+        {name: 'About jjodel', icon: <i className="bi bi-info-square"></i>, function: () => {}, keystroke: []},
         {name: 'divisor', function: () => {}, keystroke: []},
         {name: 'Logout', icon: <i className="bi bi-box-arrow-right"></i>, function: async() => {
                 navigate('/auth');

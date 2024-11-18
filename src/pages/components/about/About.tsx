@@ -10,14 +10,14 @@ type Props = {
 
 const About = (props: Props) => {
 
+
     const [open, setOpen] = useState<boolean>(false);
 
-    // <i className="bi bi-globe-americas"></i> 
 
     return (
         <>
             <span className={'about'} onClick={(e) => setOpen(!open)}>Jjodel v{props.ver} <i className="bi bi-globe-americas"></i> {props.name}</span>
-            {open && 
+            {open  &&
                 <>
                     <div className='modal-container'></div>
                     <div className='modal'>
