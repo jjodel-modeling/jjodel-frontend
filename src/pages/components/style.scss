@@ -316,8 +316,8 @@ used by Navbar_NEW_OLD.tsx (purple version)
     border-radius: 10px;
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2); /* Add shadow for depth */
     z-index: 1000; /* Ensure it appears above the background */
-    width: 30%; /* Responsive modal width */
-    height: 30%; /* Prevent overflow */
+    width: 580px; /* Responsive modal width */
+    height: 340px; /* Prevent overflow */
     overflow-y: auto; /* Scroll for tall content */
 }
 
