@@ -375,7 +375,7 @@ export class DefaultView {
     {!data && "Model data missing."}
 
     {/* metamodel */}
-    {data.isMetamodel && 
+    {true && 
         [<div className={'edges'}>
             {[
                 refEdges.map(se => <Edge data={se.start} start={se.startNode.father} end={se.endNode} anchorStart={0} anchorEnd={0} key={se.id} isReference={true} 

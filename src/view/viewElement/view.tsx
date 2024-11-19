@@ -302,10 +302,7 @@ export class DViewElement extends DPointerTargetable {
     border: 1px solid var(--border-color-1);
     border-radius: 4px;
     background-color: var(--background-1);
-    
-    font-family: Verdana, sans-serif;
     color: var(--color-1);
-    font-size: 0.7rem;
 }
  
 .root div.header {
@@ -315,13 +312,6 @@ export class DViewElement extends DPointerTargetable {
     margin: 0px;
 }
  
-.root div.header {
-    font-size: 1rem;
-}
- 
-.root div.header input:empty {
-    margin-left: 0px;
-}
 .root div.body {
     text-align: center;
     font-weight: normal;  
