@@ -165,7 +165,7 @@ div.jjodel-control .control-slider  {
 
  div.jjodel-control .control-slider ::-webkit-slider-thumb {
     position: relative;
-    top: calc((var(--knob) / 2) * (-1) + 2px);
+    top: calc((var(--knob) / 2) * (-1) + 1px);
     appearance: none;
     height: var(--knob);
     width: var(--knob);
