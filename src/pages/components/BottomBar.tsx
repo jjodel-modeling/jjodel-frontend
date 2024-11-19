@@ -36,7 +36,7 @@ const [animal, setAnimal] = useState(false);
 
     return (<>
         <div className={'jjodel'}>
-            <span><About ver={'1.41'} name={'manatee'}/></span>
+            <span><About ver={'1.41'} name={'manatee'} /></span>
         </div>
         </>);
 }

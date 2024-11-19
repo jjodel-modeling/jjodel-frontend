@@ -23,8 +23,8 @@ const About = (props: Props) => {
                     <div className='modal'>
                         <div><img src={logo} /></div>
                         <div>
-                            Manatees are large, fully aquatic, mostly herbivorous marine mammals sometimes known as sea cows. 
-                            The main causes of death for manatees are human-related issues. As usual, we are the most dangerous animal on earth.
+                        Manatees are large, fully aquatic, mostly herbivorous marine mammals sometimes known as sea cows. 
+                        The main causes of death for manatees are human-related issues. As usual, we are the most dangerous animal on earth.
                         </div>
                         <div><img src={manatee} /></div>
                         
