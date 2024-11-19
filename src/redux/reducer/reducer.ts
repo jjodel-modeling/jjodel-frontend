@@ -113,9 +113,11 @@ function deepCopyButOnlyFollowingPath(oldStateDoNotModify: DState, action: Parse
                     case "string":
                         newVal = U.replaceAll(oldValue, newVal, '');
                         break;
-                    default: newVal -= oldValue; break;
+                    case 'number': newVal = oldValue - newVal; break;
+                    default: isArrayRemove = true; break;
                 }
-                isArrayRemove = true; }
+                // isArrayRemove = true;
+            }
 
             // let unpointedElement: DPointerTargetable | undefined;
             // perform final assignment

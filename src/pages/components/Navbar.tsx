@@ -193,12 +193,11 @@ function NavbarComponent(props: AllProps) {
                 U.refresh();
                 }, keystroke: [Key.cmd, 'Q']},
             {name: 'divisor', function: () => {}, keystroke: []},
-            {name: 'Undo', icon: icon['undo'], function: () => {
-
+            /*{name: 'Undo', icon: icon['undo'], function: () => {
                 }, keystroke: [Key.cmd, 'Z']},
             {name: 'Redo', icon: icon['redo'], function: () => {
-
-                }, keystroke: [Key.shift, Key.cmd, 'Z']}, // maybe better cmd + Y ?
+                }, keystroke: [Key.cmd, 'Y']}, // maybe better cmd + Y ?
+            */
             {name: 'divisor', function: () => {}, keystroke: []},
             {name: 'Save', icon: icon['save'], function: async() => {
                 await ProjectsApi.save(project);

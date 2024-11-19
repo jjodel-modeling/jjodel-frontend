@@ -14,7 +14,7 @@ import {
     VertexPointers,
     ModelPointers,
     LtoD,
-    LVertex, LEdgePoint, LGraph, MultiSelectOptGroup, UX, Function2, Any, MultiSelectOption,
+    LVertex, LEdgePoint, LGraph, MultiSelectOptGroup, UX, Function2, Any, MultiSelectOption, windoww,
 } from "../../joiner";
 import {
     Abstract,
@@ -3332,7 +3332,56 @@ export class LReference<Context extends LogicContext<DReference> = any, C extend
 
 
     get_containment(context: Context): this["containment"] { return context.data.composition || context.data.aggregation; }
-    set_containment(val: this["containment"], context: Context): boolean { return this.cannotSet('containment', 'set aggregation or composition instead'); }
+    set_containment(val: this["containment"], c: Context, mainkey:'composition'|'aggregation' = 'composition', altkey:'composition'|'aggregation' = 'aggregation'): boolean {
+        // return this.cannotSet('containment', 'set aggregation or composition instead');
+        val = !!val;
+        if (c.data[mainkey] === val) return true;
+        TRANSACTION(()=>{
+            // set composition and unset aggregation or viceversa
+            SetFieldAction.new(c.data, mainkey, val);
+            if (val && c.data[altkey]) SetFieldAction.new(c.data, altkey, !val);
+            let containedObjects: Dictionary<Pointer, LObject> = {};
+            let removedValues: Pointer[] = [];
+            let parentChanges: LObject[] = [];
+            for (let lval of this.get_instances(c) as LValue[]) {
+                // todo: in set_values crop the arr to max upperbound
+                let dval = lval.__raw
+                let values = dval.values;
+                let lmodel = lval.model;
+                let dmodel = lmodel.__raw;
+                for (let ptr of values) {
+                    if (!Pointers.isPointer(ptr)) continue;
+                    if (containedObjects[ptr]) {
+                        // Log.ee('Cannot activate ' + mainkey+ ' on this reference because some objects are referenced twice in the model')
+                        // todo: ask for confirmation if want to abort or delete those values.
+                        if (val) {
+                            SetFieldAction.new(dval, 'values', ptr as any, '-=', true); // if is containment=true prevent the targets from being contained twice}
+                            removedValues.push(ptr);
+                            continue;
+                        }
+                    }
+                    // update parent
+                    let pointedobj = containedObjects[ptr] = LPointerTargetable.fromPointer(ptr);
+                    let newid = (val ? dval.id : dmodel.id) as any;
+                    let oldparent = pointedobj.father;
+                    if (oldparent?.id === newid) continue;
+                    pointedobj.father = newid;
+                    parentChanges.push(pointedobj);
+                }
+            }
+            if (removedValues.length || parentChanges.length){
+                Log.ww([
+                    removedValues.length ? removedValues.length+' values were removed':undefined,
+                    parentChanges.length ? parentChanges.length+' parents were changed':undefined
+                ].filter(e=>!!e).join(' and ') + ' as result.',//\n If you want to check chem, write "containmentSideEffects[\''+c.data.id+'\']" in console.',
+                {removedValues, parentChanges}
+                );
+            }
+            //if (!windoww.containmentSideEffects) windoww.containmentSideEffects = {};
+            //windoww.containmentSideEffects[c.data.id] = {removedValues, parentChanges};
+        });
+        return true;
+    }
 
     protected get_aggregation(context: Context): this["aggregation"] { return context.data.aggregation; }
     protected get_composition(context: Context): this["composition"] { return context.data.composition; }
@@ -3340,24 +3389,8 @@ export class LReference<Context extends LogicContext<DReference> = any, C extend
     protected get_container(context: Context): this["container"] { return context.data.container; }
     protected set_container(val: this["container"], context: Context): boolean { return SetFieldAction.new(context.data, 'container', val); }*/
 
-    protected set_aggregation(val: this["aggregation"], c: Context): boolean {
-        val = !!val;
-        if (c.data.aggregation === val) return true;
-        TRANSACTION(()=>{
-            SetFieldAction.new(c.data, 'aggregation', val);
-            if (val && c.data.composition) SetFieldAction.new(c.data, 'composition', !val);
-        })
-        return true;
-    }
-    protected set_composition(val: this["composition"], c: Context): boolean {
-        val = !!val;
-        if (c.data.composition === val) return true;
-        TRANSACTION(()=>{
-            SetFieldAction.new(c.data, 'composition', val);
-            if (val && c.data.aggregation) SetFieldAction.new(c.data, 'aggregation', !val);
-        })
-        return true;
-    }
+    protected set_aggregation(val: this["aggregation"], c: Context): boolean { return this.set_containment(val, c, 'aggregation', 'composition'); }
+    protected set_composition(val: this["composition"], c: Context): boolean { return this.set_containment(val, c, 'composition', 'aggregation'); }
 
     protected get_opposite(context: Context): this["opposite"] { return context.data.opposite && LPointerTargetable.from(context.data.opposite); }
     protected set_opposite(val: Pack<LReference | undefined>, context: Context): boolean {
