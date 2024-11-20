@@ -16,6 +16,7 @@ class AuthApi {
         Storage.reset();
         U.resetState();
     }
+
     static offline(): void {
         Storage.reset(); Storage.write('offline', 'true');
         const user = DUser.new('Offline', 'User', 'Unknown', 'Unknown', 'Unknown', false, 'Unknown', 'Unknown', `Pointer${Date.now()}_OfflineUser`);

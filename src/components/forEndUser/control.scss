@@ -75,7 +75,6 @@ div.jjodel-control {
         // border-left: 1px dotted var(--bg-4);
     }
     & .control-widget:first-of-type {
-        // border: 1px solid red!important;
         border-left: 1px dotted var(--bg-4)!important;
     }
 
@@ -116,7 +115,6 @@ div.jjodel-control .control-slider  {
  }
 
  div.jjodel-control .control-slider:hover {
-
 
     & input[type="range"] {
        transition: all 300ms ease-in-out;
@@ -163,15 +161,17 @@ div.jjodel-control .control-slider  {
      height: 3px;
  }
 
+ // KNOB 
+
  div.jjodel-control .control-slider ::-webkit-slider-thumb {
     position: relative;
-    top: calc((var(--knob) / 2) * (-1) + 2px);
+    top: calc((var(--knob) / 2) * (-1) + 1px);
     appearance: none;
     height: var(--knob);
     width: var(--knob);
     border-radius: 50%;
     border: 5px solid var(--bg-2-5);
-    background-color: red; // var(--model-color);
+    background-color: var(--model-color);
     transition: all 300ms ease-in-out;
  }
 

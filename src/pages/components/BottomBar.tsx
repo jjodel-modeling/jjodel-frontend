@@ -4,8 +4,9 @@ import {FakeStateProps} from "../../joiner/types";
 import React, {Dispatch, ReactElement, useState} from "react";
 import {connect} from "react-redux";
 
+
 import swen from '../../static/img/swen-splash.png';
-import { Tooltip } from '../../components/forEndUser/Tooltip';
+import { About } from './about/About';
 
 enum notificationType {
     Clients = 0,
@@ -29,75 +30,13 @@ type Props = {
 };
 
 
-
-
-const Notify = (props: Props) => {
-
-    const [isOpen, setIsOpen] = useState<number|null>(null);
-
-    const typeInfo = [
-        {name: 'clients', icon: 'bi bi-diagram-3', defaultMessage: 'There are currently no clients connected.'},
-        {name: 'terminal', icon: 'bi bi-terminal-fill', defaultMessage: ''},
-        {name: 'messages', icon: 'bi bi-bell-fill', defaultMessage: 'There are no messages.'}
-    ];
-
-    const openNotify = () => {
-            setIsOpen(props.type);
-    };
-
-    const closeNotify = () => {
-        setIsOpen(null);
-    }
-
-    return (
-        <React.Fragment>
-            <div onClick={openNotify} className={'widget'}><i className={`bi ${typeInfo[props.type].icon} ${isOpen != null && 'active'}` }></i><label>{typeInfo[props.type].name}</label></div>
-
-            {isOpen != null &&
-                <div className={'notify show'}>
-                    <div  className={'message'}>
-                        {props.message ? props.message : typeInfo[props.type].defaultMessage}
-                    </div>
-                    <div className={'button'}>
-                        <i className={ `bi ${typeInfo[props.type].icon}` }></i>
-                        <i onClick={closeNotify} className="bi bi-chevron-down"></i>
-                    </div>
-                </div>
-            }
-
-
-        </React.Fragment>
-
-    );
-  };
-
-
-
-
-function openControl(){
-
-}
-
 const JjodelName = () => {
 const [animal, setAnimal] = useState(false);
 
 
     return (<>
-        {false && 
-            <>
-            <div className='swen-container'></div>
-            
-                <div className='swen animal'>
-                    <h1>Manatees</h1>
-                    <p>
-                    Manatees (/ˈmænətiːz/, family Trichechidae, genus Trichechus) are large, fully aquatic, mostly herbivorous marine mammals sometimes known as sea cows. There are three accepted living species of Trichechidae, representing three of the four living species in the order Sirenia: the Amazonian manatee (Trichechus inunguis), the West Indian manatee (Trichechus manatus), and the West African manatee (Trichechus senegalensis). They measure up to 4.0 metres (13 ft 1 in) long, weigh as much as 590 kilograms (1,300 lb),[2] and have paddle-like tails.
-                    </p>
-                </div>
-
-            </>
-        } 
-        <div className={'jjodel'} onClick={(e) => setAnimal(!animal)}>
-            <span>jjodel v1.1</span> <i className="bi bi-globe-americas"></i> manatee
+        <div className={'jjodel'}>
+            <span><About ver={'1.41'} name={'manatee'} /></span>
         </div>
         </>);
 }
@@ -131,23 +70,17 @@ function BottomBarComponent(props: AllProps): JSX.Element {
         </div>
         {swenOpen && 
                 <>
-                <div className='swen-container'></div>
-                {/* <Tooltip tooltip={'More informations on https://www.disim.univaq.it/swen'}> */}
+                    <div className='modal-container'></div>
                     <div className='swen'>
                         <img src={swen} onClick={(e) => setSwen(false)} />
                     </div>
-                {/* </Tooltip> */}
                 </>
         }
-        {/* <div className={'widgetbar float-end'}>
-            <Notify  type={notificationType.Clients} alert={alertType.Normal} message={''} />
-            <Notify  type={notificationType.Terminal} alert={alertType.Normal} message={''} />
-            <Notify  type={notificationType.Messages} alert={alertType.Normal} message={''} />
-        </div> */}
         <JjodelName />
 
     </footer>)
 }
+
 interface OwnProps {}
 interface StateProps {
     node?: LGraphElement;
