@@ -2,7 +2,7 @@ import { meanBy } from 'lodash';
 import { useState, MouseEventHandler } from 'react';
 import { IconTheme } from 'react-hot-toast';
 import {useNavigate} from 'react-router-dom';
-import {DProject, LProject, LUser, SetRootFieldAction, U} from '../../joiner';
+import {DProject, DUser, L, LProject, LUser, SetRootFieldAction, U} from '../../joiner';
 
 import { icon } from './icons/Icons';
 import {DashProps} from "./Dashboard";
@@ -16,7 +16,7 @@ interface StateProps {
 
 
 export type LeftBarProps = {
-    user: LUser;
+    user?: LUser;
     active: DashProps['active']; // prende il tipo dal parent-component, così si evita di aggiornare entrambi o avere tipi discordanti.
     projects?: LProject[];
     project?: LProject;
@@ -90,7 +90,8 @@ function LeftBar(props: LeftBarProps): JSX.Element {
 
     // };
 
-    const {active, project, user} = props;
+    const {active, project} = props;
+    let user: LUser = props.user || L.fromPointer(DUser.current);
     const navigate = useNavigate();
 
     const selectProject= (project: LProject) => {
