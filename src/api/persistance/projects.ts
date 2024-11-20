@@ -128,7 +128,6 @@ class Online {
         const response = await Api.get(`${Api.persistance}/projects`);
         if(response.code !== 200) {
             /* 401: Unauthorized -> Invalid Token (Local Storage)  */
-            Storage.reset();
             U.resetState();
             return;
         }

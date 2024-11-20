@@ -102,6 +102,7 @@ function AuthPage(): JSX.Element {
                     <label>
                         First Name
                         <input className={'w-100 input w-fit d-block mx-auto mt-2'}
+                            placeholder={'john'}
                             value={name}
                             onChange={e => setName(e.target.value)}
                             type={'text'} required={true}
@@ -113,6 +114,7 @@ function AuthPage(): JSX.Element {
                     <label>
                         Last Name
                         <input className={'w-100 input w-fit d-block mx-auto mt-2'}
+                               placeholder={'doe'}
                                value={surname}
                                onChange={e => setSurname(e.target.value)}
                                type={'text'} required={true}
@@ -124,6 +126,7 @@ function AuthPage(): JSX.Element {
                         <label>
                             Nickname
                             <input className={'w-100 input w-fit d-block mx-auto mt-2'}
+                                   placeholder={''}
                                    value={nickname}
                                    onChange={e => setNickname(e.target.value)}
                                    type={'text'} required={true}
@@ -134,6 +137,7 @@ function AuthPage(): JSX.Element {
                 <Tooltip tooltip={<div style={{padding: '10px', maxWidth: '600px'}}><h6>Affiliation</h6>Your affiliation refers to the organization, institution, or company you’re associated with, will be displayed in relevant contexts like project collaborations or professional interactions, and will help us keep track of where jjodel is being used.</div>} ><label>
                     Affiliation
                     <input className={'w-100 input w-fit d-block mx-auto mt-2'}
+                        placeholder={'eg: univaq'}
                         value={affiliation}
                         onChange={e => setAffiliation(e.target.value)}
                         type={'text'} required={false}
@@ -393,6 +397,7 @@ function AuthPage(): JSX.Element {
                     <label>
                         Email
                         <input className={'w-100 input w-fit d-block mx-auto mt-2'}
+                            placeholder={'johndoe@mail.com'}
                             value={email}
                             onChange={e => setEmail(e.target.value)}
                             type={'email'} required={true}
@@ -403,6 +408,7 @@ function AuthPage(): JSX.Element {
                 <label>
                     Password
                     <input className={'w-100 input w-fit d-block mx-auto mt-2'}
+                        placeholder={'password'}
                         value={password}
                         onChange={e => setPassword(e.target.value)}
                         type={'password'} required={true}
@@ -413,6 +419,7 @@ function AuthPage(): JSX.Element {
                 <label>
                     Confirm Password
                     <input className={'w-100 input w-fit d-block mx-auto mt-2'}
+                        placeholder={'confirm password'}
                         value={passwordCheck}
                         onChange={e => setPasswordCheck(e.target.value)}
                         type={'password'} required={true}
@@ -422,7 +429,6 @@ function AuthPage(): JSX.Element {
                 <br /><br /><br />
                 <Tooltip tooltip={<div style={{padding: '10px', maxWidth: '600px'}}><h6>Newsletter</h6>Select this option for remaining updated about Jjodel new releases, updates, and initiatives.</div>} >
                     <label>
-
                         <input className={'checkbox'}
                             placeholder={'newsletter'}
                             checked={newsletter}
@@ -450,6 +456,7 @@ function AuthPage(): JSX.Element {
                 <label>
                     Email
                     <input className={'w-100 input w-fit d-block mx-auto mt-3'}
+                        placeholder={'e-mail'}
                         value={email}
                         onChange={e => setEmail(e.target.value)} type={'email'}
                         required={true}
@@ -458,18 +465,19 @@ function AuthPage(): JSX.Element {
                 <label>
                     Password
                     <input className={'w-100 input w-fit d-block mx-auto  mt-2'}
+                        placeholder={'password'}
                         value={password}
                         onChange={e => setPassword(e.target.value)}
                         type={'password'}
                         required={true}
                 />
-                {(true || window.location.host.includes('localhost')) &&
-                    <button className={'d-block btn btn-primary p-1 mx-auto mt-3 login-button'} onClick={(e) => offline()}>Offline mode</button>
-                }
                 </label>
                 <button className={'d-block btn btn-primary p-1 mx-auto mt-3 login-button'} type={'submit'}>
                     Login
                 </button>
+                {(true || window.location.host.includes('localhost')) &&
+                    <button className={'d-block btn btn-primary p-1 mx-auto mt-3 login-button'} onClick={(e) => offline()}>Offline mode</button>
+                }
             </>}
 
             {action === 'retrieve-password' &&
@@ -479,6 +487,7 @@ function AuthPage(): JSX.Element {
                 <label>
                     Enter your email
                     <input className={'w-100 input w-fit d-block mx-auto mt-3'}
+                        placeholder={'e-mail'}
                         value={email}
                         onChange={e => setEmail(e.target.value)} type={'email'}
                         required={true}
