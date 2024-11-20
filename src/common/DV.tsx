@@ -370,7 +370,7 @@ export class DefaultView {
     /* MODEL */
 
     public static model(): string { return (
-`<View className={'root model'}>
+`<View className={\`root model ` + "${grid && 'grid'}" + `\`}>
 <Scrollable graph={node}>
     {!data && "Model data missing."}
 
