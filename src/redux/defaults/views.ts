@@ -26,7 +26,11 @@ var defaultVertexSize: GraphSize = {x:0, y:0, w:140.6818084716797, h:32.52840805
 var defaultPackageSize = new GraphSize(0, 0, 400, 500);
 
 const udLevel = 'ret.level = node.graph.state.level ?? 3\n';
+const udGrid = 'ret.grid = node.graph.state.grid ?? false\n'
+
 const udLevelG = 'ret.level = node.state.level ?? 3\n';
+const udGridG = 'ret.grid = node.state.grid ?? false\n';
+
 const udLevelPkg = udLevelG + 'ret.upperLevel = node.graph.state.level ?? 3\n';
 
 class DefaultViews {
@@ -120,6 +124,12 @@ class DefaultViews {
 .model-2 {}
 .model-3 {}
 
+.grid {
+    background-image: radial-gradient(silver 1px, transparent 0);
+    background-size: 15px 15px;
+    background-position: 10px 10px;
+}
+
 `;
 
         view.usageDeclarations = '(ret) => {\n' +
@@ -138,7 +148,7 @@ class DefaultViews {
             'ret.m1Objects = data && !data.isMetamodel ? data.allSubObjects : []\n'+
             'ret.refEdges = (suggestedEdges.reference || []).filter(e => !e.vertexOverlaps && e.sameGraph)\n'+
             'ret.extendEdges = (suggestedEdges.extend || []).filter(e => !e.vertexOverlaps && e.sameGraph)\n'+
-            udLevelG +
+            udLevelG + udGridG +
             '}';
         return view;
     }
@@ -177,6 +187,7 @@ class DefaultViews {
                 udLevelPkg +
                 '}';
         }, false, 'Pointer_ViewPackage');
+        view.onDataUpdate = "if (grid) {\n   node.x = node.x - (node.x % 15);\n   node.y = node.y - (node.y % 15);\n}";
         return view
     }
 
@@ -245,9 +256,12 @@ border-color: silver!important;
     ret.abstract = data.abstract
     ret.interface = data.interface
     ${udLevel}
+    ${udGrid}
 }`;
             // view.events = {e1:"(num) => {\n\tdata.name = num;\n}"}
         }, false, 'Pointer_ViewClass');
+        view.onDataUpdate = "if (grid) {\n   node.x = node.x - (node.x % 15);\n   node.y = node.y - (node.y % 15);\n}";
+
         return view;
     }
 
@@ -322,6 +336,8 @@ border-color: silver!important;
     ${udLevel}
 }`;
         }, false, 'Pointer_ViewEnum');
+        view.onDataUpdate = "if (grid) {\n   node.x = node.x - (node.x % 15);\n   node.y = node.y - (node.y % 15);\n}";
+
         return view;
     }
 
@@ -469,6 +485,8 @@ border-color: silver!important;
                 udLevel +
                 '}';
         }, false, 'Pointer_ViewObject');
+        view.onDataUpdate = "if (grid) {\n   node.x = node.x - (node.x % 15);\n   node.y = node.y - (node.y % 15);\n}";
+
         return view;
     }
 
@@ -502,6 +520,8 @@ border-color: silver!important;
                 udLevel +
                 '}';
         }, false, 'Pointer_ViewSingleton');
+        view.onDataUpdate = "if (grid) {\n   node.x = node.x - (node.x % 15);\n   node.y = node.y - (node.y % 15);\n}";
+
         return view;
     }
 

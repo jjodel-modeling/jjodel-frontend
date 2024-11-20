@@ -370,7 +370,7 @@ export class DefaultView {
     /* MODEL */
 
     public static model(): string { return (
-`<View className={'root model'}>
+`<View className={\`root model ` + "${grid && 'grid'}" + `\`}>
 <Scrollable graph={node}>
     {!data && "Model data missing."}
     <div className={'edges'}>
@@ -392,8 +392,9 @@ export class DefaultView {
 </Scrollable>
 
 {/* language designer defined controls */}
-<Control title={'Semantic'} payoff={'Zooming'}>
+<Control title={'Workbench'} payoff={'Options'}>
     <Slider name={'level'} title={'Detail level '} node={node} max={3} />
+    <Toggle name={'grid'} title={'Grid'} node={node} />
 </Control>
 </View>`
 );}

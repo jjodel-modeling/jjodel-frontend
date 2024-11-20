@@ -54,7 +54,7 @@ div.toggle{
       display: block;
       border: none; // var(--border) solid var(--bg-3-1); 
       border-radius: var(--dimension);
-      background: white;
+      background:  white;
       transition: all 0.3s ease-in;
       width: calc(var(--dimension) - var(--border)*2);
       height: calc(var(--dimension) - var(--border)*2);
