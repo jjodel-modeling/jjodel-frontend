@@ -1,3 +1,4 @@
+export let deleted = true;
 // import { useState } from "react";
 // import { SetRootFieldAction } from "../../joiner";
 
