@@ -393,7 +393,7 @@ export class DefaultView {
 </Scrollable>
 
 {/* language designer defined controls */}
-<Control title={'Semantic'} payoff={'Zooming'}>
+<Control title={'Workbench'} payoff={'Options'}>
     <Slider name={'level'} title={'Detail level '} node={node} max={3} />
     <Toggle name={'grid'} title={'Grid'} node={node} />
 </Control>
