@@ -395,6 +395,7 @@ export class DefaultView {
 {/* language designer defined controls */}
 <Control title={'Semantic'} payoff={'Zooming'}>
     <Slider name={'level'} title={'Detail level '} node={node} max={3} />
+    <Toggle name={'grid'} title={'Grid'} node={node} />
 </Control>
 </View>`
 );}
