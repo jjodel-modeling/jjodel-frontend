@@ -188,7 +188,6 @@ const SliderComponent = (props: SliderProps) => {
     return (
         <>
             {CheckProps('slider', props) || <div className={'control-widget control-slider'}>
-                {/* <div className={'track'} style={{transition: 'width 0.3s', width: `calc((100% - var(--knob) * 2 - 14px) / ${max} * ${props.node.state[name]})`}}></div>*/}
 
                 <div className={'track'}
                     style={{transition: 'width 0.3s', position: 'relative', left: '10px',
@@ -218,51 +217,66 @@ const Slider = (props: SliderProps, children: ReactNode = []): ReactElement => {
 
 /* Toggle */
 
-// type ToggleValues = {
-//     true: string;
-//     false: string;
-// }
+type ToggleValues = {
+    true: string;
+    false: string;
+}
 
-// type ToggleProps = {
-//     name: string;
-//     values?: ToggleValues;
-//     labels?: ToggleValues;
-//     size?: string;
-//     style?: React.CSSProperties;
-// };
+type ToggleProps = {
+    name: string;
+    values?: ToggleValues;
+    labels?: ToggleValues;
+    size?: string;
+    style?: React.CSSProperties;
+    title?: string;
+};
 
-// export const Toggle = (props: ToggleProps) => {
-//     const [value, setValue] = useState<boolean>(false);
+const ToggleComponent = (props: ToggleProps) => {
+    const [value, setValue] = useState<boolean>(false);
+    const defaultValue = false;
 
-//     const labels = props.labels ? props.labels : {true: props.name+' on', false: props.name+' off'};
-//     const toggleValue = () => {
-//         setValue(!value);
-//         SetRootFieldAction.new(props.name, !value);
-//     };
+    const labels = props.labels ? props.labels : {true: 'On', false: 'Off'};
 
+    useEffectOnce(
+        () => {
+            {/* @ts-ignore */}
+            props.node.state = {[props.name] : defaultValue};
+        }
+    );
 
+    function updateValue(value: boolean) {
+        // @ts-ignore
+        props.node.state = {[props.name]: value};
+    }
 
-//     return (
-//         <div className={'toggle'} onClick={() => {toggleValue()}} style={props.style}>
+    return (
+        <div className={'toggle control-widget'} onClick={(e) => {updateValue(!value)}} style={props.style}>
 
-//             <input className={'toggle-input'} id={props.name} type="checkbox" value="true" checked={value}  />
-//             <label className={'toggle-label'}></label>
+            <input type="checkbox" 
+                className={'toggle-input'} 
+                id={props.name} 
+                value={"true"} 
+                onChange={(e)=>{alert(e.target.value)}} // updateValue(+e.target.value)
+            />
 
-//             <div className={"toggle-labels"}>
-//                 {value ?
-//                     <span className={"toggle-on"}>{labels['true']}</span>
-//                     :
-//                     <span className={"toggle-off"}>{labels['false']}</span>
-//                 }
-//             </div>
+            <label className={'toggle-label'}></label>
 
-//         </div>
-//     );
-// }
+            <div className={"toggle-labels"}>
+                {value ?
+                    <span className={"toggle-on"}>{labels['true']}</span>
+                    :
+                    <span className={"toggle-off"}>{labels['false']}</span>
+                }
+            </div>
+            <div className={"tip"}>{props.title}</div>
 
-/* Checkbox */
+        </div>
+    );
+}
 
+const Toggle = (props: ToggleProps, children: ReactNode = []): ReactElement => {
+    return <ToggleComponent {...props} />;
+}
 
-
-export {Control, Slider};
+export {Control, Slider, Toggle};
 
