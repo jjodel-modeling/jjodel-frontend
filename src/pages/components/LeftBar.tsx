@@ -94,7 +94,7 @@ function LeftBar(props: LeftBarProps): JSX.Element {
 
     const selectProject= (project: LProject) => {
         navigate(`/project?id=${project.id}`);
-        U.refresh();
+        U.resetState();
     };
 
     const closeProject = () => {
@@ -102,7 +102,7 @@ function LeftBar(props: LeftBarProps): JSX.Element {
         Collaborative.client.off('pullAction');
         Collaborative.client.disconnect();
         SetRootFieldAction.new('collaborativeSession', false);
-        U.refresh();
+        U.resetState();
     }
     const toggleFavorite = async() => {
         await ProjectsApi.favorite(project?.__raw as DProject);

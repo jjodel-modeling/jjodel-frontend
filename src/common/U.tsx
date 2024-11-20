@@ -204,9 +204,8 @@ export class U {
     static isOffline(): boolean {
         return Storage.read('offline') === 'true';
     }
-    static refresh(): void {
-        LoadAction.new(DState.new());
-        SetRootFieldAction.new('isLoading', true);
+    static resetState(): void {
+        LoadAction.new({...DState.new(), 'isLoading':true});
         stateInitializer().then(() => SetRootFieldAction.new('isLoading', false));
     }
 

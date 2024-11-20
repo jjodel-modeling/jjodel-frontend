@@ -41,7 +41,7 @@ function ProjectComponent(props: AllProps): JSX.Element {
         (async function() {
             const project = await ProjectsApi.getOne(id);
             if(!project) {
-                U.refresh();
+                U.resetState();
                 navigate('/allProject');
                 return;
             }

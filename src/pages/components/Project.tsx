@@ -40,7 +40,7 @@ function Project(props: Props): JSX.Element {
     };
     const selectProject = () => {
         navigate(`/project?id=${data.id}`);
-        U.refresh();
+        U.resetState();
     }
     const exportProject = async() => {
         // await ProjectsApi.save(data);

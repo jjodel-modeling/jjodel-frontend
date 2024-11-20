@@ -58,7 +58,7 @@ class ProjectsApi {
             const file = files[0];
             reader.readAsText(file);
         }, extensions, true);
-        U.refresh();
+        U.resetState();
     }
 }
 
@@ -129,7 +129,7 @@ class Online {
         if(response.code !== 200) {
             /* 401: Unauthorized -> Invalid Token (Local Storage)  */
             Storage.reset();
-            U.refresh();
+            U.resetState();
             return;
         }
         const data = U.wrapper<DProject[]>(response.data);

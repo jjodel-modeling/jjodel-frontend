@@ -48,10 +48,8 @@ function App(props: AllProps): JSX.Element {
     let user: LUser = props.user;
 
     useEffectOnce(() => {
-        SetRootFieldAction.new('isLoading', true);
-        stateInitializer().then(() => { fix this
-            SetRootFieldAction.new('isLoading', false);
-        });
+        // SetRootFieldAction.new('isLoading', true);
+        // stateInitializer().then(() => SetRootFieldAction.new('isLoading', false));
     });
 
     return(<>

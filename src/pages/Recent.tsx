@@ -26,7 +26,7 @@ function AllProjectsComponent(props: AllProps): JSX.Element {
             const filtered = projects.filter(p => p.id !== project.id);
             filtered.push(project);
             Storage.write('projects', filtered);
-            U.refresh();
+            U.resetState();
         } catch (e) {alert('Invalid File.')}
     }
     

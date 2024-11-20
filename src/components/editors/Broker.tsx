@@ -31,7 +31,7 @@ function BrokerEditorComponent(props: AllProps) {
 
 
     const connect = async() => {
-        SetRootFieldAction.new('isLoading', true);
+        //SetRootFieldAction.new('isLoading', true);
         IoT.client.io.opts.query = {'project': user.project?.id, 'brokerUrl': `${url}:${port}`};
         IoT.client.connect();
         // IoT.client.off('pull-action');
@@ -42,15 +42,15 @@ function BrokerEditorComponent(props: AllProps) {
             action.fire();
         });
         await U.sleep(1);
-        SetRootFieldAction.new('isLoading', false);
+        //SetRootFieldAction.new('isLoading', false);
         setConnected(IoT.client.connected);
     }
     const disconnect = async() => {
-        SetRootFieldAction.new('isLoading', true);
+        //SetRootFieldAction.new('isLoading', true);
         IoT.client.off('pull-action');
         IoT.client.disconnect();
         await U.sleep(1);
-        SetRootFieldAction.new('isLoading', false);
+        //SetRootFieldAction.new('isLoading', false);
         setConnected(IoT.client.connected);
     }
 

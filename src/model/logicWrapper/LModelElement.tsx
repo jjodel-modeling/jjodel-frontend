@@ -5777,12 +5777,12 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
                                             shapeless: boolean = false, keepempties: boolean = true, withmetainfo?: T, maxlimit?: number,
                                             solveLiterals: "ordinals" | "literal_obj" | "literal_str" | "original" = "literal_obj")
         : (T extends undefined ? this["values"] : T extends false ? this["values"] : ValueDetail[]) & {type?: string}  {
-
-        const data = context.proxyObject; check usages
         const ldata = context.proxyObject;
         const ddata = context.data;
         let typestr: string = this.get_typeString(context);
-        if(data.topic) {/*
+        let ret: any[];
+
+        if (ddata.topic) {/*
             let value: any = store.getState()['topics'];
             const path = data.topic.split('.');
             for(const field of path) value = value[field];
@@ -5790,23 +5790,16 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
             const topics = store.getState()['topics'];
             const val = U.extractValueFromTopic(topics, ddata.topic);
             ret = Array.isArray(val) ? val : [val];
-            ret.type = typestr; // 'topic';
-            return ret;
+            //return ret;
         }
+        else ret = [...ddata.values];
+        (ret as any).type = typestr; // 'topic';
 
-        let ret: any[] = [...context.data.values] as [];
         let meta: LAttribute | LReference | undefined = shapeless ? undefined : ldata.instanceof;
         let dmeta: undefined | DAttribute | DReference = meta?.__raw;
 
         // if (meta && meta.className === DReference.name) ret = LPointerTargetable.fromArr(ret as DObject[]);
-        if(data.topic) {
-            let value: any = store.getState()['topics'];
-            const path = data.topic.split('.');
-            for(const field of path) value = value[field];
-            let ret: any = [value];
-            ret.type = typestr; // 'topic';
-            return ret;
-        }
+
 
         if (dmeta?.derived) {
             let td = transientProperties.modelElement[dmeta.id];

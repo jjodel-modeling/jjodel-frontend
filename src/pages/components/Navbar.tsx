@@ -190,7 +190,7 @@ function NavbarComponent(props: AllProps) {
                 Collaborative.client.off('pullAction');
                 Collaborative.client.disconnect();
                 SetRootFieldAction.new('collaborativeSession', false);
-                U.refresh();
+                U.resetState();
                 }, keystroke: [Key.cmd, 'Q']},
             {name: 'divisor', function: () => {}, keystroke: []},
             /*{name: 'Undo', icon: icon['undo'], function: () => {
@@ -315,12 +315,12 @@ function NavbarComponent(props: AllProps) {
                             Collaborative.client.off('pullAction');
                             Collaborative.client.disconnect();
                             SetRootFieldAction.new('collaborativeSession', false);
-                            U.refresh();
+                            U.resetState();
                         }}>Dashboard</Item>
                         <Divisor />
                         <Item icon={icon['profile']} action={()=> {
                             navigate('/account');
-                            U.refresh();
+                            U.resetState();
                         }}>Profile</Item>
                         <Item icon={icon['settings']} action={(e)=> {alert('')}}>Settings</Item>
                         <Divisor />

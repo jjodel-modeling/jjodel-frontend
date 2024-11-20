@@ -11,7 +11,7 @@ function MqttEditorComponent(props: AllProps) {
 
     const connect = async() => {
         // U.writeLog('create', 'MQTT', 'Connection');
-        SetRootFieldAction.new('isLoading', true);
+        //SetRootFieldAction.new('isLoading', true);
         WebSockets.iot.io.opts.query = {
             'project': user.project?.id,
             'brokerUrl': `${ip}:${port}`
@@ -23,16 +23,16 @@ function MqttEditorComponent(props: AllProps) {
             action.fire();
         });
         WebSockets.iot.connect();
-        await U.sleep(1);
-        SetRootFieldAction.new('isLoading', false);
+        //await U.sleep(1);
+        //SetRootFieldAction.new('isLoading', false);
     }
     const disconnect = async() => {
-        SetRootFieldAction.new('isLoading', true);
+        //SetRootFieldAction.new('isLoading', true);
         WebSockets.iot.off('pull-action');
         WebSockets.iot.off('logger');
         WebSockets.iot.disconnect();
-        await U.sleep(1);
-        SetRootFieldAction.new('isLoading', false);
+        //await U.sleep(1);
+        //SetRootFieldAction.new('isLoading', false);
     }
 
     return <section className={'p-2'}>

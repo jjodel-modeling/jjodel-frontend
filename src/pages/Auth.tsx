@@ -23,7 +23,7 @@ function AuthPage(): JSX.Element {
     const onSubmit = async(e: FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         SetRootFieldAction.new('isLoading', true);
-        if(isRegister) await register();
+        if (isRegister) await register();
         else await login();
         SetRootFieldAction.new('isLoading', false);
     }
@@ -39,7 +39,7 @@ function AuthPage(): JSX.Element {
         Storage.write('token', user.token);
         //navigate('/dashboard');
         navigate('/allProjects');
-        U.refresh();
+        U.resetState();
     }
     const register = async() => {
         if(password !== passwordCheck) {
@@ -56,12 +56,12 @@ function AuthPage(): JSX.Element {
         const user = DUser.new(data.name, data.surname, data.nickname, data.affiliation, data.country, data.newsletter || false, data.email, data.token, data.id);
         Storage.write('user', user);
         navigate('/allProjects');
-        U.refresh();
+        U.resetState();
     }
     const offline = () => {
         AuthApi.offline();
         navigate('/allProjects');
-        U.refresh();
+        U.resetState();
     }
 
 
