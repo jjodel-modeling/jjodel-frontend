@@ -206,7 +206,10 @@ div.jjodel-control .control-slider  {
     }
  }
 
+ /* Toggle */
+
  div.jjodel-control div.toggle {
+   
     background-color: var(--bg-2-5);
     border-radius: 4px;
     height: 31px;
@@ -214,6 +217,7 @@ div.jjodel-control .control-slider  {
     display: flex;
     justify-content: center;
     align-items: center;
+    
     
     top: -1px;
     padding-top: 10px;
@@ -228,7 +232,12 @@ div.jjodel-control .control-slider  {
         & span {
             margin-left: 30px;
         }
-        & .toggle-on, .toggle-off {
+        & .toggle-on {
+            display: block;
+            padding-top: 5px;
+        }
+
+        & .toggle-off {
             display: block;
             padding-top: 5px;
         }
@@ -239,6 +248,7 @@ div.jjodel-control .control-slider  {
     & .tip {
         top: 30px;
     }
+
  }
 
 

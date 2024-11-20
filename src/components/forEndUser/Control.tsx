@@ -249,17 +249,21 @@ const ToggleComponent = (props: ToggleProps) => {
         props.node.state = {[props.name]: value};
     }
 
-    return (
-        <div className={'toggle control-widget'} onClick={(e) => {updateValue(!value)}} style={props.style}>
+    function toggleValue() {
+        const newValue = !value;
+        setValue(newValue);
 
-            <input type="checkbox" 
-                className={'toggle-input'} 
-                id={props.name} 
-                value={"true"} 
-                onChange={(e)=>{alert(e.target.value)}} // updateValue(+e.target.value)
-            />
+        // @ts-ignore
+        props.node.state = {[props.name]: newValue};
+    }
+    // // updateValue(+e.target.value) 
 
-            <label className={'toggle-label'}></label>
+    return (<>
+        
+        <div className={'toggle'} onClick={(e) => {toggleValue()}}>
+            <input type={'checkbox'} className={'toggle-input'} id={props.name} checked={value} onChange={(e)=>{alert(e.target.value)}}  onClick={(e) => alert('input, click')} /> 
+
+            <label onClick={() => alert()} className={'toggle-label'}></label>
 
             <div className={"toggle-labels"}>
                 {value ?
@@ -270,7 +274,7 @@ const ToggleComponent = (props: ToggleProps) => {
             </div>
             <div className={"tip"}>{props.title}</div>
 
-        </div>
+        </div></>
     );
 }
 
