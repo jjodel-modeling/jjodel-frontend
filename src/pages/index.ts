@@ -11,5 +11,8 @@ export {SettingsPage} from './Settings';
 export {TemplatePage} from './Templates';
 export {UpdatesPage} from './Updates';
 export {ErrorPage} from './Error';
+export {UsersInfoPage} from './UsersInfo';
+export {ProjectsInfoPage} from './ProjectsInfo';
+export {NewsPage} from './News';
 
 

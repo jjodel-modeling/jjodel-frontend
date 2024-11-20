@@ -2,7 +2,7 @@ import { meanBy } from 'lodash';
 import { useState, MouseEventHandler } from 'react';
 import { IconTheme } from 'react-hot-toast';
 import {useNavigate} from 'react-router-dom';
-import {DProject, LProject, SetRootFieldAction, U} from '../../joiner';
+import {DProject, LProject, LUser, SetRootFieldAction, U} from '../../joiner';
 
 import { icon } from './icons/Icons';
 import {DashProps} from "./Dashboard";
@@ -16,6 +16,7 @@ interface StateProps {
 
 
 export type LeftBarProps = {
+    user: LUser;
     active: DashProps['active']; // prende il tipo dal parent-component, così si evita di aggiornare entrambi o avere tipi discordanti.
     projects?: LProject[];
     project?: LProject;
@@ -89,7 +90,7 @@ function LeftBar(props: LeftBarProps): JSX.Element {
 
     // };
 
-    const {active, project} = props;
+    const {active, project, user} = props;
     const navigate = useNavigate();
 
     const selectProject= (project: LProject) => {
@@ -121,7 +122,6 @@ function LeftBar(props: LeftBarProps): JSX.Element {
 
                 <i className="bi bi-search"></i>
                 <input placeholder={'Search for anything'} type={'text'} name='search-text' />
-
                 {/* @ts-ignore */}
                 <Menu title={props.project.name}>
                     {/*<Item icon={icon['edit']}>Edit </Item>*/}
@@ -157,6 +157,13 @@ function LeftBar(props: LeftBarProps): JSX.Element {
 
                 <i className="bi bi-search"></i>
                 <input placeholder={'Search for anything'} type={'text'} name='search-text' />
+
+
+                {user.email === 'admin@gmail.it' && <Menu title={'Administration'} mode={'collapsable'}>
+                    <Item action={'usersInfo'} icon={icon['profile']}>Users</Item>
+                    <Item action={'projectsInfo'} icon={icon['folder']}>Projects</Item>
+                    <Item action={'news'} icon={icon['manual']}>News</Item>
+                </Menu>}
 
                 <Menu>
                     <Item action={'allProjects'} icon={icon['dashboard']}>All projects </Item>
