@@ -187,6 +187,7 @@ class DefaultViews {
                 udLevelPkg +
                 '}';
         }, false, 'Pointer_ViewPackage');
+        view.onDataUpdate = "if (grid) {\n   node.x = node.x - (node.x % 15);\n   node.y = node.y - (node.y % 15);\n}";
         return view
     }
 
@@ -259,6 +260,8 @@ border-color: silver!important;
 }`;
             // view.events = {e1:"(num) => {\n\tdata.name = num;\n}"}
         }, false, 'Pointer_ViewClass');
+        view.onDataUpdate = "if (grid) {\n   node.x = node.x - (node.x % 15);\n   node.y = node.y - (node.y % 15);\n}";
+
         return view;
     }
 
@@ -333,6 +336,8 @@ border-color: silver!important;
     ${udLevel}
 }`;
         }, false, 'Pointer_ViewEnum');
+        view.onDataUpdate = "if (grid) {\n   node.x = node.x - (node.x % 15);\n   node.y = node.y - (node.y % 15);\n}";
+
         return view;
     }
 
@@ -480,6 +485,8 @@ border-color: silver!important;
                 udLevel +
                 '}';
         }, false, 'Pointer_ViewObject');
+        view.onDataUpdate = "if (grid) {\n   node.x = node.x - (node.x % 15);\n   node.y = node.y - (node.y % 15);\n}";
+
         return view;
     }
 
@@ -513,6 +520,8 @@ border-color: silver!important;
                 udLevel +
                 '}';
         }, false, 'Pointer_ViewSingleton');
+        view.onDataUpdate = "if (grid) {\n   node.x = node.x - (node.x % 15);\n   node.y = node.y - (node.y % 15);\n}";
+
         return view;
     }
 
