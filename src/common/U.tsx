@@ -44,6 +44,8 @@ import tinycolor from "tinycolor2";
 import util from "util";
 import Convert from "ansi-to-html";
 import React, {isValidElement} from "react";
+import IoT from "../iot/IoT";
+import Collaborative from "../components/collaborative/Collaborative";
 // var Convert = require('ansi-to-html');
 // import KeyDownEvent = JQuery.KeyDownEvent; // https://github.com/tombigel/detect-zoom broken 2013? but works
 
@@ -140,6 +142,38 @@ export class U {
             if (clickedAncestors.includes(elem)) continue;
             callback(target, e);
         }
+    }
+
+    static publish(topic: string, value: unknown) {
+        if(!IoT.client.connected) {
+            SetRootFieldAction.new('alert', '3:Cannot connect to broker!');
+            return;
+        }
+        IoT.client.emit('push-action', {
+            topic: topic,
+            value: JSON.stringify(value)
+        });
+        SetRootFieldAction.new('alert', '1:Publish done!');
+    }
+
+    static extractValueFromTopic(obj: Dictionary, path: string) {
+        const keys = path.split('.');
+        let result = obj;
+        for (let key of keys) {
+            result = result[key];
+            if (result === undefined) return undefined;
+        }
+        return result;
+    }
+
+    static extractTopics(obj: Dictionary, parentKey = ''): string[] {
+        let keys: string[] = [];
+        for (let key in obj) {
+            if (typeof obj[key] === 'object' && !Array.isArray(obj[key]))
+                keys = keys.concat(this.extractTopics(obj[key], `${parentKey}${key}.`));
+            else keys.push(parentKey + key);
+        }
+        return keys.filter(k => k !== 'clonedCounter');
     }
 
     static keepKeys(dict: GObject, keys: string[]): Dictionary {
@@ -245,35 +279,6 @@ export class U {
             i++;
         }
         return ret;
-    }
-
-    static extractByKey(dict: Dictionary, path: string): PrimitiveType[]|undefined {
-        const keys = path.split('.');
-        const topic = keys[0];
-        const data = dict[topic];
-        const values: PrimitiveType[] = [];
-        if(!Array.isArray(data)) return undefined;
-        for(const d of data) {
-            let value = d;
-            for (const k of keys) if (value.hasOwnProperty(k)) value = value[k];
-            values.push(value);
-        }
-        return values;
-
-    }
-
-    static extractKeys(dict: Dictionary): string[] {
-        const keys: string[] = [];
-        function traverse(obj: any, path: string) {
-            for (const key in obj) {
-                if (typeof obj[key] === 'object') traverse(obj[key], path ? `${path}.${key}` : key);
-                else keys.push(path ? `${path}.${key}` : key);
-            }
-        }
-        for (const key in dict) {
-            traverse(dict[key][0], key);
-        }
-        return keys;
     }
 
     // eseguire una funzione costa in performance, anche se è brutto fare questi cast

@@ -219,10 +219,16 @@ class builder {
     static attribute(data: LModelElement, advanced: boolean): JSX.Element {
         return (<section className={'properties-tab'}>
             {this.feature(data, advanced)}
-            {advanced && <label className={'input-container'}>
-                <b className={'me-2'}>ID:</b>
-                <Input data={data} field={'isID'} type={'checkbox'} />
-            </label>}
+            {advanced && <>
+                <label className={'input-container'}>
+                    <b className={'me-2'}>ID:</b>
+                    <Input data={data} field={'isID'} type={'checkbox'} />
+                </label>
+                <label className={'input-container'}>
+                    <b className={'me-2'}>IoT:</b>
+                    <Input data={data} field={'isIoT'} type={'checkbox'} />
+                </label>
+            </>}
         </section>);
     }
     static reference(data: LModelElement, advanced: boolean): JSX.Element {
@@ -260,7 +266,7 @@ class builder {
             </label>
         </section>);
     }
-    static object(data: LModelElement, advanced: boolean): JSX.Element {
+    static object(data: LModelElement, topics: Dictionary<string, unknown>, advanced: boolean): JSX.Element {
         const object: LObject = LObject.fromPointer(data.id);
         let conform = true;
         for(const feature of object.features) {
@@ -291,7 +297,7 @@ class builder {
             }
             {this.forceConform(object)}
             {object.features.map(f => <div id={`Object-${f.id}`}>
-                {this.value(f, {}, advanced)}
+                {this.value(f, topics, advanced)}
             </div>)}
         </section>);
     }
@@ -424,14 +430,15 @@ class builder {
                 </button>*/}
             </label>
             {valueslist}
-            {value.instanceof?.className === 'DAttribute' && (value.instanceof as LAttribute).isIoT && <>
-                <hr className={'my-3'} />
-                <Select data={value} field={'topic'} label={'Topic'} options={<optgroup label={'Topics'}>
-                    <option value={''}>------</option>
-                    {U.extractKeys(topics).map(t => <option key={t} value={t}>{t}</option>)}
-                </optgroup>} />
-                {JSON.stringify(U.extractByKey(topics, value.topic))}
-            </>}
+            {value.instanceof?.className === 'DAttribute' && (value.instanceof as LAttribute).isIoT && <label className={'mt-2 input-container'}>
+                <b className={'me-2'}>Topic:</b>
+                <select className={'my-auto ms-auto select'} defaultValue={value.topic} onChange={e => value.topic = e.target.value}>
+                    <optgroup label={'topics'}>
+                        <option value={''}>------</option>
+                        {U.extractTopics(topics).map(t => <option key={t} value={t}>{t}</option>)}
+                    </optgroup>
+                </select>
+            </label>}
         </section>)
     }
 }
@@ -459,7 +466,7 @@ function InfoComponent(props: AllProps) {
         case 'DEnumLiteral':
             return builder.literal(data, advanced);
         case 'DObject':
-            return builder.object(data, advanced);
+            return builder.object(data, topics, advanced);
         case 'DValue':
             return builder.value(data, topics, advanced);
     }

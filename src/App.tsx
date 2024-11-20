@@ -49,7 +49,7 @@ function App(props: AllProps): JSX.Element {
 
     useEffectOnce(() => {
         SetRootFieldAction.new('isLoading', true);
-        stateInitializer().then(() => {
+        stateInitializer().then(() => { fix this
             SetRootFieldAction.new('isLoading', false);
         });
     });
