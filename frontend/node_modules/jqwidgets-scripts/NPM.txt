@@ -1,0 +1,34 @@
+The jQWidgets framework NPM packages:
+
+jQuery, Javascript, Angular, Vue, React:
+
+https://www.npmjs.com/package/jqwidgets-scripts - source files.
+https://www.npmjs.com/package/jqwidgets-framework - source files, demos, docs, images. 
+
+Angular Modules:
+
+https://www.npmjs.com/package/jqwidgets-ng
+
+
+Blazor
+
+dotnet add package jQWidgets.Blazor
+
+Smart UI Components
+
+1. Web Components:
+
+https://www.npmjs.com/package/smart-webcomponents 
+
+2. React Components:
+
+https://www.npmjs.com/package/smart-webcomponents-react
+
+3. Angular Components:
+
+https://www.npmjs.com/package/smart-webcomponents-angular
+
+
+4. Blazor
+
+dotnet add package Smart.Blazor

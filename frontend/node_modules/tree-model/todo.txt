@@ -1,0 +1,10 @@
+# TODO
+  [ ] Check browserify 'browser' support and how it relates to the package.json 'browser' field
+  [ ] Add the lib to cdnjs if I get an answer
+  [ ] Improve the relase process with the info here https://docs.npmjs.com/cli/version
+  [ ] Suportar skip: antes de visitar um nó chamo o stop e skip predicates (2)
+  [ ] Deprecar o return false? [BREAKING] (3)
+  [ ] Replace recursion with iteration (but first TDD it to make sure it causes stack overflow) (4)
+  [ ] Migrate to ES6 with babel (3)
+  [ ] Methods to functions? [BREAKING] (3)
+

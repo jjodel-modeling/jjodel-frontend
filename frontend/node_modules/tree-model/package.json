@@ -1,0 +1,44 @@
+{
+  "name": "tree-model",
+  "version": "1.0.7",
+  "description": "Manipulate and traverse tree-like structures in javascript.",
+  "keywords": [
+    "tree",
+    "hierarchy",
+    "browser",
+    "node",
+    "requirejs"
+  ],
+  "homepage": "http://jnuno.com/tree-model-js",
+  "repository": "https://github.com/joaonuno/tree-model-js",
+  "bugs": "https://github.com/joaonuno/tree-model-js/issues",
+  "license": "MIT",
+  "author": "João Nuno Silva <jnss81@gmail.com> (http://jnuno.com)",
+  "main": "index.js",
+  "scripts": {
+    "test": "istanbul cover _mocha",
+    "cov": "cat ./coverage/lcov.info | coveralls",
+    "lint": "jshint index.js test/test.js && eslint index.js test/test.js && npm run dtslint",
+    "preversion": "npm test && npm run lint && npm run dist && git add dist/TreeModel*.js",
+    "postversion": "git push && git push --tags && echo 'Dont forget to publish to npm...'",
+    "dist": "rm -rf dist && mkdir -p dist && browserify index.js -o dist/TreeModel.js -s TreeModel && uglifyjs dist/TreeModel.js > dist/TreeModel-min.js",
+    "dtslint": "dtslint types"
+  },
+  "devDependencies": {
+    "browserify": "^16",
+    "chai": "^4",
+    "coveralls": "^3",
+    "dtslint": "0.3.0",
+    "eslint": "^4",
+    "istanbul": "^0",
+    "jshint": "^2",
+    "mocha": "^5",
+    "sinon": "^5",
+    "uglify-js": "^3"
+  },
+  "dependencies": {
+    "mergesort": "0.0.1",
+    "find-insert-index": "0.0.1"
+  },
+  "types": "types"
+}
