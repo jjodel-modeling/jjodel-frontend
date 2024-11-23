@@ -78,6 +78,7 @@ import {ValuePointers} from "./PointerDefinitions";
 import {ShortDefaultEClasses} from "../../common/U";
 import {transientProperties} from "../../joiner/classes";
 import React, {ReactNode} from "react";
+import {useBoolean} from "usehooks-ts";
 
 type outactions = {clear:(()=>void)[], set:(()=>void)[], immediatefire?: boolean};
 
@@ -4471,34 +4472,62 @@ instanceof === undefined or missing  --> auto-detect and assign the type
 
         let alreadyAdded: Dictionary<Pointer, LClass> = {};
         // if A extends B1, B2;    B1 extends C1, C2;    and node B1 is hidden. instead of edge from A to B, i display edge from A~C1, A~C2, A~B2
-        function SkipExtendNodeHidden(start: LClass, end: LClass[], rootCall: boolean = true): ({start: LClass, end: LClass, sn: LGraphElement, en: LGraphElement})[] {
-            let ret: {start: LClass, end: LClass, sn: LGraphElement, en: LGraphElement}[] = [] as any;
-            if (rootCall) { alreadyAdded = {}; alreadyAdded[start.id] = start; } // end classes can get added twice if from a different starting subclass path (in classes.flatMap -> each one should have his own dict).
+        function SkipExtendNodeHidden(start: LClass): ({start: LClass, end: LClass, sn: LGraphElement, en: LGraphElement, oth:LGraphElement[]})[] {
+            return SkipExtendNodeHidden_recstep(start);
+        }
+        function SkipExtendNodeHidden_recstep(start: LClass, sn?: LGraphElement, end?: LClass[], startgraphid: Pointer|null = null): ({start: LClass, end: LClass, sn: LGraphElement, en: LGraphElement, oth:LGraphElement[]})[] {
+            let ret: {start: LClass, end: LClass, sn: LGraphElement, en: LGraphElement, oth:LGraphElement[]}[] = [] as any;
             // ret.start = start;
-            let sn = start.notEdge;
-            if (!sn || !sn.html) return [];
-            //  let end: LClass[] = start.extends;
+            let isRootcall = !startgraphid;
+            if (isRootcall) {
+                // end classes can get added twice if from a different starting subclass path:
+                // in classes.flatMap -> do not initialize the dict, it must be shared and initialized here locally
+                alreadyAdded = {[start.id]: start};
+                sn = start.nodes.find(node=>filternode(node, null)); // start.notEdge;
+                if (!sn || !sn.html) return [];
+                startgraphid = sn.graph?.id;
+                if (!startgraphid) return [];
+                if (!end) end = start.extends;
+            }
+            if (!end) return [];
             for (let e of end) {
                 if (!e) continue;
                 let eid = e.id;
                 if (alreadyAdded[eid]) continue; // without this there might be duplicates if A extends B1, B2;  and both B1 & B2 extends C
                 alreadyAdded[eid] = e;
-                let en = e.notEdge;
-                if (en && en.html) { ret.push({start, end:e, sn, en}); continue; }
+                let nodes = e.nodes.filter(o=>filternode(o, startgraphid));// let en = e.notEdge; if (en && en.html) { ret.push({start, end:e, sn, en}); continue; }
+                if (nodes.length) {
+                    ret.push({start, sn:sn as LGraphElement, end:e, en:nodes[0], oth:nodes});
+                    continue;
+                }
                 let secondTierExtends = e.extends;
-                // for (let eend of secondTierExtends) {
-                ret.push(...SkipExtendNodeHidden(start, secondTierExtends, false));
-                //}
+                ret.push(...SkipExtendNodeHidden_recstep(start, sn, secondTierExtends, startgraphid));
             }
             return ret;
         }
-        ret.extend = classes.flatMap(c => SkipExtendNodeHidden(c, c.extends, true)).map( (es) => {
-            let otherEdgeEnds = es.start.extendsChain.flatMap(c=>(c?.nodes||[])).filter(c=> {
+        windoww.SkipExtendNodeHidden = SkipExtendNodeHidden;
+
+        function filternode(c: LGraphElement, startgraphid: Pointer | null): boolean {
+            if (!c || !c.rendered) return false;
+            let qualify = U.categorizeNode(c);
+            if (qualify.edge || qualify.edgepoint || qualify.puregraph) return false;
+            if (startgraphid && startgraphid !== c.root?.id) return false;
+            return true;
+        }
+        ret.extend = classes.flatMap( (c) => SkipExtendNodeHidden(c).map(es=>{
+            return new EdgeStarter(es.start, es.end, es.sn, es.en, es.oth, 0, 'extend');
+        }));
+
+        if (false) ret.extend = classes.flatMap(c => SkipExtendNodeHidden(c)).map( (es) => {
+            let otherEdgeEnds = es;/*.start.extendsChain.flatMap(c=>(c?.nodes||[])).filter(c=> {
                 if (!c || !c.rendered) return false;
+                let qualify = U.categorizeNode(c);
+                if (qualify.edge || qualify.edgepoint || qualify.puregraph) return false;
                 if (es.sn?.root?.id !== c.root?.id) return false;
                 return true;
             }) as LGraphElement[];
-            return new EdgeStarter(es.start, es.end, es.sn, es.en, otherEdgeEnds, 0, 'extend');
+*/
+            return new EdgeStarter(es.start, es.end, es.sn, es.en, [], 0, 'extend');
         });
 
         let dependencies: {src:LModelElement, ends: LModelElement[]}[] =

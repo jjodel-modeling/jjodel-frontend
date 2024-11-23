@@ -27,3 +27,6 @@ sandbox/sandbox.tsx
 .idea/jodel-react.iml
 sandbox.tsx
 /frontend/.idea
+/frontend/node_modules
+/frontend/.idea
+/frontend/node_modules

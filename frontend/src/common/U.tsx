@@ -1,6 +1,6 @@
 // import * as detectzoooom from 'detect-zoom'; alternative: https://www.npmjs.com/package/zoom-level
 // import {Mixin} from "ts-mixer";
-import type {Any} from "../joiner";
+import {Any, DGraphElement, LGraphElement} from "../joiner";
 import {
     AbstractConstructor,
     Constructor,
@@ -2284,6 +2284,24 @@ export class U {
         return Object.values(alreadyParsed);
 
     }
+
+   static categorizeNode(c: LGraphElement|DGraphElement): {vertex: boolean, purevertex:boolean, field: boolean, graphvertex:boolean, puregraph: boolean, graph: boolean, edge:boolean, edgepoint: boolean}{
+        let ret = {} as any;
+        if (!c) return ret;
+        switch (c.className) {
+            case 'DEdge':
+            case 'DVoidEdge': ret.edge = true; break;
+            case 'DEdgePoint': ret.vertex = ret.edgepoint = true; ret.purevertex = false; break;
+            case 'DVertex':
+            case 'DVoidVertex': ret.vertex = ret.purevertex = true; break;
+            case 'DGraphVertex': ret.graph = true; ret.puregraph = ret.purevertex = false; break;
+            case 'DGraph': ret.graph = ret.puregraph = true; break;
+            case 'DGraphElement': ret.field = true; break;
+            default: Log.ee('unexpected node type:'+c.className); break;
+        }
+        return ret;
+    }
+
 }
 export class DDate{
     static cname: string = "DDate";

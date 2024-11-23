@@ -4,7 +4,14 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="0aeeff8f-3831-4015-b7d7-5f063d31b3b5" name="Changes" comment="" />
+    <list default="true" id="0aeeff8f-3831-4015-b7d7-5f063d31b3b5" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/common/DV.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/common/DV.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/common/U.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/common/U.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/forEndUser/FunctionComponent.scss" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/forEndUser/FunctionComponent.scss" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/forEndUser/FunctionComponent.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/forEndUser/FunctionComponent.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/model/logicWrapper/LModelElement.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/model/logicWrapper/LModelElement.tsx" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -62,7 +69,7 @@
     "npm.start.executor": "Debug",
     "settings.editor.selected.configurable": "preferences.pluginManager",
     "settings.editor.splitter.proportion": "0.11856474",
-    "ts.external.directory.path": "C:\\0Programmi\\Dev\\projects\\frontend\\jjodel\\node_modules\\typescript\\lib",
+    "ts.external.directory.path": "C:\\0Programmi\\Dev\\projects\\frontend\\jjodel\\frontend\\node_modules\\typescript\\lib",
     "vue.rearranger.settings.migration": "true"
   }
 }]]></component>
@@ -158,6 +165,7 @@
       <workItem from="1731503680808" duration="4361000" />
       <workItem from="1731554914572" duration="103453000" />
       <workItem from="1732200437112" duration="1817000" />
+      <workItem from="1732226926843" duration="14984000" />
     </task>
     <servers />
   </component>
