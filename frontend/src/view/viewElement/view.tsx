@@ -1427,7 +1427,6 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
                 const new_vp: DuplicateVPChange = new_vp0 || {pvid};
                 const dfather = DPointerTargetable.fromPointer(new_vp.pvid);
                 console.log("DViewelement.duplicate", {cn: c.data.className, n:c.data.name, deep, new_vp0, dfather});
-                //father is changed to dviewelement eventually when cloning a lot? find out why
                 const dclone: DViewElement = c.data.className === 'DViewPoint' ?
                     DViewPoint.newVP(`${c.data.name} Copy`) :
                     DViewElement.new2(`${c.data.name} Copy`, '', dfather,
