@@ -1,5 +1,6 @@
 # Editor
 /.idea
+/.run
 
 # dependencies
 /node_modules
@@ -25,5 +26,8 @@ sandbox/sandbox.tsx
 .idea/misc.xml
 .idea/jodel-react.iml
 sandbox.tsx
+/frontend/.idea
 /frontend/node_modules
 /frontend/.idea
+/frontend/node_modules
+/gitignoreresources
