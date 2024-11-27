@@ -69,8 +69,6 @@ function NestedViewComponent(props: AllProps) {
     //     return ret;
     // }
 
-    const activateVP = (viewPoint: LViewPoint) => { project.activeViewpoint = viewPoint; }
-    const clone = (v: LViewElement) => { v.duplicate(true); }
     const getSubElements = (v: DViewElement) => v?.subViews || {}; //
     let activeViewpointId: Pointer<DPointerTargetable> = project.activeViewpoint.id;
 
@@ -195,11 +193,10 @@ function NestedViewComponent(props: AllProps) {
         </li>;
     }
 
-    let test = windoww;
 
     let [view, setView] = useStateIfMounted(undefined as (undefined | Pointer<DViewElement>));
     let vieweditor = view && <div className={"single-view-content"}><ViewData key={view} viewid={view} viewpoints={viewpoints.map(v=>v.id)} setSelectedView={setView} /></div>;
-    if (test) return(<div className={"view-editor-root"}>
+    return(<div className={"view-editor-root"}>
         <section className={'viewpoint-tab'}>
             <div className={"view-editor-fullsize-content"}>
                 <div className={'d-flexd-flex'}>
@@ -228,57 +225,6 @@ function NestedViewComponent(props: AllProps) {
         </section>
     </div>);
 
-    let hoverID: any = '';
-    function setHoverID(a:any){}
-    function selectt(a: any){}
-    let validation: false;// props.validation
-    return (<div>
-        {viewpoints.map((viewpoint, index) => {
-
-            return (
-                <div key={index}
-                     className={'d-flex p-1 mt-1 border round mx-1 viewpoint'}
-                     onMouseEnter={(e) => setHoverID(viewpoint.id)}
-                     onMouseLeave={(e) => setHoverID('')}
-                     style={{backgroundColor: (active.id === viewpoint.id) ? 'white' :
-                             (hoverID === viewpoint.id ? '#E0E0E0' : 'transparent')}}>
-                    <input
-                        className={'p-0 input hidden-input'}
-                        value={viewpoint.name} type={'text'}
-                        onChange={(evt) => {editName(evt, viewpoint)}}
-                        disabled={index <= 0}
-                    />
-                    <Input
-                        className={"ms-auto"}
-                        data={viewpoint}
-                        field={"isExclusiveView"}
-                        type={"checkbox"}
-                        label={"Is exclusive"}
-                        readonly={validation || index <= 0}
-                    />
-                    {<button className={'btn btn-success ms-1'} disabled={active.id === viewpoint.id}
-                                                      onClick={(evt) => {selectt(viewpoint.id)}}>
-                        <i className={'p-1 bi bi-check2'}/>
-                    </button>
-                    }
-                    <button
-                        className={'btn btn-success ms-1'}
-                        onClick={(evt) => {clone(viewpoint)}}>
-                        <i className={'p-1 bi bi-clipboard2-fill'}></i>
-                    </button>
-                    <button
-                        className={'btn btn-danger ms-1'}
-                        disabled={index <= 0 || active.id === viewpoint.id}
-                        onClick={(e) => deleteV(e, viewpoint)}>
-                        <i className={'p-1 bi bi-trash3-fill'}></i>
-                    </button>
-                </div>
-            )
-        })}
-        <label className={'p-1'}>
-            *To apply a custom viewpoint, first activate the default one, and then proceed to activate the custom one.
-        </label>
-    </div>);
 }
 interface OwnProps {
 }

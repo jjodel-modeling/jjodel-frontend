@@ -43,9 +43,9 @@ export class LViewPoint<Context extends LogicContext<DViewPoint, LViewPoint> = a
     //public __raw!: DViewPoint;
     id!: Pointer<DViewPoint, 1, 1, LViewPoint>;
     name!: string;
-    /*protected*/ get_duplicate(c: Context){
-        return ()=>super.get_duplicate(c)(true);
-    }
+    /*protected* / get_duplicate(c: Context): ((deep?: boolean, new_vp?: DuplicateVPChange) => LViewElement){
+        return (deep?: boolean, new_vp?: DuplicateVPChange)=>super.get_duplicate(c)(deep, new_vp);
+    }*/
 }
 
 RuntimeAccessibleClass.set_extend(DPointerTargetable, DViewPoint);
