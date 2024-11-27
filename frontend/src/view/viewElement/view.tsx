@@ -672,8 +672,7 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
         return c.data.compiled_css = s;
     }
     set_compiled_css(val: this["compiled_css"], c: Context): boolean {
-        Log.exx("Do not use setter for this, set it directly in d-object, along with compiled_css." +
-        "\nOtherwise multiple nodes of the same view will start compiling together.\n" as any);
+        Log.exx("Do not use setter for this, set it directly in d-object or use view.css.");
         return false;
     }
 
@@ -717,7 +716,7 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
     __info_of__subViews: Info = {isGlobal: true, hidden: true, type: "DViewElement[]", label:"sub-views",
         txt:<div>Views that are suggested to render elements contained in the current one with a higher match priority.
             <br/>Like a package view giving priority to a specific Class or Enum view to render his contained Classifiers in a common theme.
-            <br/>If you wish to see the subview weight attached to the collection, access view.__raw.subviews instead.</div>}
+            <br/>If you wish to see the subview weight attached to the collection, access view.__raw.subViews instead.</div>}
     get_SubViews(c: Context): this["subViews"] {
         delete c.data.subViews.clonedCounter;
         return Object.keys(c.data.subViews).map( vid => LPointerTargetable.fromPointer(vid) as LViewElement);
@@ -1222,9 +1221,12 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
             ret = SetFieldAction.new(id, "father", pvid, '', true);
             if (data.viewpoint !== dfather.viewpoint) SetFieldAction.new(id, "viewpoint", dfather.viewpoint, '', true);
             if (oldpvid) {
-                let subViews = {...DPointerTargetable.fromPointer(oldpvid).subViews};
-                delete subViews[id];
-                SetFieldAction.new(oldpvid, "subViews", subViews, '', true);
+                let subViews = DPointerTargetable.fromPointer(oldpvid).subViews;
+                if (id in subViews) {
+                    /*subViews = {...subViews};
+                    delete subViews[id];*/
+                    SetFieldAction.new(oldpvid, "subViews", {[id]:'valueispointless'} as any, '-=', true);
+                }
             }
             if (pvid) {
                 let name = data.name;
@@ -1417,19 +1419,21 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
         return this.wrongAccessMessage( (this.constructor as typeof RuntimeAccessibleClass).cname + "duplicate()"); }
     /*protected*/ get_duplicate(c: Context): ((deep?: boolean, new_vp?: DuplicateVPChange) => LViewElement) {
         return (deep: boolean = false, new_vp0?: DuplicateVPChange) => {
-            console.log("DViewelement.duplicate", {cn: c.data.className, n:c.data.name, deep, new_vp0});
             let lview: LViewElement = undefined as any;
             let state: DState = store.getState();
             TRANSACTION( () => {
                 // let pvid: Pointer<DViewPoint> = c.data.viewpoint as Pointer<DViewPoint>;
                 let pvid: Pointer<DViewPoint> = c.data.father as Pointer<DViewPoint>;
+                const new_vp: DuplicateVPChange = new_vp0 || {pvid};
+                const dfather = DPointerTargetable.fromPointer(new_vp.pvid);
+                console.log("DViewelement.duplicate", {cn: c.data.className, n:c.data.name, deep, new_vp0, dfather});
+                //father is changed to dviewelement eventually when cloning a lot? find out why
                 const dclone: DViewElement = c.data.className === 'DViewPoint' ?
                     DViewPoint.newVP(`${c.data.name} Copy`) :
-                    DViewElement.new2(`${c.data.name} Copy`, '', DPointerTargetable.from(c.data.father as any),
+                    DViewElement.new2(`${c.data.name} Copy`, '', dfather,
                         undefined, true);
                 // todo: test if this have correct parent, vp and pointedby
                 lview = LPointerTargetable.fromD(dclone);
-                const new_vp: DuplicateVPChange = new_vp0 || {pvid};
                 // || {pvid,  score: (DPointerTargetable.from(pvid, state) as DViewElement).subViews[c.data.id]}
 
                 for (let key in c.data) {
@@ -1445,8 +1449,12 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
                             }
                             //lview.subViews = subviews as any;
                             break;
+                        case 'compiled_css':
+                        case 'longestLabel': case 'labels': break;
                         case 'father':
-                            this.set_father(new_vp.pvid, undefined as any, dclone, !deep);
+                            // already set in DViewElement.new2()
+                            //console.log('set_father', {thiss:dclone.id, cdata:c.data.id, father:new_vp.pvid});
+                            //this.set_father(new_vp.pvid, undefined as any, dclone, !deep);
                             break;
                         case 'viewpoint':
                             // update parent view
@@ -1468,12 +1476,12 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
                         case '_subMaps':
                         case 'clonedCounter': break;
                         case 'css_MUST_RECOMPILE': break;
-
                         case 'isValidation':
                             console.log("duplicate " + c.data.name + " set isvalidation", {data:c.data, iv:c.data.isValidation});
                             (lview as any)[key] = (c.data as any)[key];
                             break;
                         default:
+                            if (key.includes('RECOMPILE')) break;
                             try {
                                 let v: any = (c.data as any)[key];
                                 if (typeof v === 'object') v = (Array.isArray(v) ? [...v] : {...v});
