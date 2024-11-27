@@ -1421,7 +1421,8 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
             let lview: LViewElement = undefined as any;
             let state: DState = store.getState();
             TRANSACTION( () => {
-                let pvid: Pointer<DViewPoint> = c.data.viewpoint as Pointer<DViewPoint>;
+                // let pvid: Pointer<DViewPoint> = c.data.viewpoint as Pointer<DViewPoint>;
+                let pvid: Pointer<DViewPoint> = c.data.father as Pointer<DViewPoint>;
                 const dclone: DViewElement = c.data.className === 'DViewPoint' ?
                     DViewPoint.newVP(`${c.data.name} Copy`) :
                     DViewElement.new2(`${c.data.name} Copy`, '', DPointerTargetable.from(c.data.father as any),
@@ -1432,7 +1433,7 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
                 // || {pvid,  score: (DPointerTargetable.from(pvid, state) as DViewElement).subViews[c.data.id]}
 
                 for (let key in c.data) {
-                    switch(key) {
+                    switch (key) {
                         case 'subViews':
                             // duplicate childrens only if deep
                             if (!deep) break;

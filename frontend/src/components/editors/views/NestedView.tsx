@@ -141,7 +141,12 @@ function NestedViewComponent(props: AllProps) {
                         <CommandBar style={{transition: '1s 0.3s', marginTop: '2px'}}>
                             <Btn icon={'delete'} action={(e)=> { l.delete(); preventClick(e);}} disabled={!canDelete} tip={
                                 isActive ? 'Cannot delete active viewpoint' : (isDefault ? 'Cannot delete default views' : 'Delete' )} />
-                            <Btn icon={'copy'} action={(e)=> { l.duplicate(); preventClick(e);}} tip={'Duplicate'} />
+                            <Tooltip tooltip={'Duplicate'} inline={true} position={'top'} offsetY={10} >
+                                <i onClick={(e)=> { l.duplicate(); preventClick(e); }} className={'bx bx-copy'}/>
+                            </Tooltip>
+                            <Tooltip tooltip={'Deep duplication'} inline={true} position={'top'} offsetY={10} >
+                                <i onClick={(e)=> { l.duplicate(true); preventClick(e); }} className={'bx bx-duplicate'}/>
+                            </Tooltip>
                         </CommandBar>
 
                         {/* <button className="bg btn-delete my-auto ms-2 green" onClick={(e)=> { l.duplicate(); preventClick(e);}}><i className='bx bx-duplicate' /></button>

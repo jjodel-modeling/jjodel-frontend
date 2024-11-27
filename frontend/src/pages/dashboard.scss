@@ -29,10 +29,6 @@
         position: absolute; // because contextmenu must go above it
         right: 42.5px;
       }
-      .card-holder{
-        overflow-y: auto;
-        padding-right: 253px; // space for details image
-      }
       .row.project-list{ // list visualization of projects
         overflow-y: auto;
         overflow-x: hidden;
