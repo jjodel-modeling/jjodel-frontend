@@ -1,4 +1,6 @@
 {
+
+  "outDir": "./src/static/tsc_output",
   "compilerOptions": {
     "target": "es5",
     "lib": [
@@ -8,6 +10,8 @@
     ],
     "experimentalDecorators": true,
     "allowJs": true,
+    "noImplicitAny": true,
+    "downlevelIteration": true,
     "skipLibCheck": true,
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
@@ -23,5 +27,9 @@
   },
   "include": [
     "src"
+  ],
+  "exclude": [
+    "common/libraries/*"
   ]
+  // "noImplicitUseStrict": true = "use strict" of js
 }
