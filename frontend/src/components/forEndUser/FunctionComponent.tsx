@@ -285,7 +285,7 @@ function FunctionComponent(props: AllProps) {
             <label>{tooltip}</label>
         </div>}
         {<div
-            className={"collapsable-section" + (state.collapsed ? "collapsed" : "expanded")}
+            className={"collapsable-section " + (state.collapsed ? "collapsed" : "expanded")}
             data-comment={"collapsable-section"}
             style={{/*
                 transition: transitionTime + "ms all", // transformOrigin: "top", transform: "rotateX("+(state.collapsed ? 0 : 90 )+"deg)",
