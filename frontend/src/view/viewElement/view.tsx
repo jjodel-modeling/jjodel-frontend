@@ -1,5 +1,4 @@
 import {
-    BEGIN,
     Constructors,
     CoordinateMode,
     Debug, DEdgePoint,
@@ -16,7 +15,6 @@ import {
     EdgeGapMode, EdgeSegment,
     EGraphElements,
     EModelElements,
-    END,
     getWParams,
     GObject,
     GraphPoint,
@@ -1360,10 +1358,10 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
         }
 
         console.log("set_appliableTo", {forceNodeType, val});
-        BEGIN()
-        if (forceNodeType !== c.data.forceNodeType) SetFieldAction.new(c.data, "forceNodeType", forceNodeType, '', false);
-        SetFieldAction.new(c.data, "appliableTo", val, '', false);
-        END();
+        TRANSACTION(()=>{
+            if (forceNodeType !== c.data.forceNodeType) SetFieldAction.new(c.data, "forceNodeType", forceNodeType, '', false);
+            SetFieldAction.new(c.data, "appliableTo", val, '', false);
+        })
         return true;
     }
     set_forceNodeType(val: this["forceNodeType"], c: Context): boolean {
@@ -1374,10 +1372,11 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
             //case 'GraphVertex': if ((appliableTo as any) !== 'Graph' && (appliableTo as any) !== 'Vertex') appliableTo = val; break;
             default: appliableTo = val; break;
         }*/
-        BEGIN()
-        // if (appliableTo !== c.data.appliableTo) SetFieldAction.new(c.data, "appliableTo", appliableTo, '', false);
-        SetFieldAction.new(c.data, "forceNodeType", val, '', false);
-        END();
+
+        TRANSACTION(()=>{
+            // if (appliableTo !== c.data.appliableTo) SetFieldAction.new(c.data, "appliableTo", appliableTo, '', false);
+            SetFieldAction.new(c.data, "forceNodeType", val, '', false);
+        })
         return true;
     }
     get_appliableToClasses(context: Context): this["appliableToClasses"] { return context.data.appliableToClasses || []; }

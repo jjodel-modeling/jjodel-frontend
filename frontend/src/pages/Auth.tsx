@@ -45,14 +45,15 @@ function AuthPage(): JSX.Element {
 
     const login = async() => {
         const response = await AuthApi.login(email, password);
-        if(response.code !== 200) {
-            U.alert('e', 'Email or password unknown.');
+        if (response.code !== 200) {
+            U.alert('e', 'Login failed.');
             return;
         }
         const data = U.wrapper<DUser>(response.data);
         const user = DUser.new(data.name, data.surname, data.nickname, data.affiliation, data.country, data.newsletter || false, data.email, data.token, data.id);
         Storage.write('user', user);
         Storage.write('token', user.token);
+        Storage.write('offline', 'false');
         //navigate('/dashboard');
         navigate('/allProjects');
         U.resetState();
@@ -65,13 +66,14 @@ function AuthPage(): JSX.Element {
         }
         const response = await AuthApi.register(name, surname, country, affiliation, newsletter, nickname, email, password);
         if(response.code !== 200) {
-            U.alert('e', 'Username or password not valid.');
+            U.alert('e', 'Registration failed.');
             return;
         }
         const data = U.wrapper<DUser>(response.data);
         Storage.write('token', data.token);
         const user = DUser.new(data.name, data.surname, data.nickname, data.affiliation, data.country, data.newsletter || false, data.email, data.token, data.id);
         Storage.write('user', user);
+        Storage.write('offline', 'false');
         navigate('/allProjects');
         U.resetState();
     }

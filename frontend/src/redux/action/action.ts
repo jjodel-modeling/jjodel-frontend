@@ -98,7 +98,7 @@ class TransactionStatus{
 let t = new TransactionStatus();
 windoww.transactionStatus = t;
 
-export function BEGIN() {
+function BEGIN() {
     if (t.transactionDepthLevel === 0) t.hasAborted = false;
     t.hasBegun = true; // redundant but actions are reading this, minimize changes
     t.transactionDepthLevel++;
@@ -108,17 +108,16 @@ export function ABORT(): boolean {
     t.hasAborted = true; // at any depth level since i have only a flat TRANSACTION array
     END();
     return ret;
-
 }
-export function END(actionstoPrepend: Action[] = []): boolean {
+function END(actionstoPrepend: Action[] = [], path?: string, oldval?: any, newval?: any, desc?:string): boolean {
     t.transactionDepthLevel--;
     if (actionstoPrepend.length) t.pendingActions = [...actionstoPrepend, ...t.pendingActions];
 
     if (t.transactionDepthLevel < 0) { console.error("mismatching END()"); t.transactionDepthLevel = 0; }
-    if (t.transactionDepthLevel === 0) return FINAL_END();
+    if (t.transactionDepthLevel === 0) return FINAL_END(path, oldval, newval, desc);
     return false;
 }
-export function FINAL_END(): boolean{
+function FINAL_END(path?: string, oldval?: any, newval?: any, desc?:string): boolean{
     t.hasBegun = false;
     // pendingActions.sort( (a, b) => a.timestamp - b.timestamp)
     if (t.hasAborted) {
@@ -127,8 +126,21 @@ export function FINAL_END(): boolean{
         return false;
     }
     const ca: CompositeAction = new CompositeAction(t.pendingActions, false);
+    ca.descriptor = new ActionDescriptor(path, oldval, newval, desc);
     t.pendingActions = [];
     return ca.fire();
+}
+export class ActionDescriptor{
+    path?: string;
+    desc?: string;
+    oldval: any;
+    newval: any;
+    public constructor (path?: string, oldval?: any, newval?: any, desc?:string){
+        this.path = path;
+        this.oldval = oldval;
+        this.newval = newval;
+        this.desc = desc;
+    }
 }
 type NotPromise<T> = T extends Promise<any> ? never : T;
 
@@ -140,11 +152,17 @@ type NoAsyncFn<
 // minor todo: type as (...args: infer P) => any) ?
 // NB: cannot be async, it changes execution order and break many codes where return value is determined in a transaction.
 // also because BEGIN() becomes stuck and actions cannot fire until the server replies or times out.
-export function TRANSACTION<F extends (...args: any)=>any>(func: NoAsyncFn<F>, ...params: Parameters<F>): boolean | DState {
+// export function TRANSACTION<F extends (...args: any)=>any>(func: NoAsyncFn<F>, ...params: Parameters<F>): boolean | DState {
+export function TRANSACTION(func: ()=> void): boolean {
 //export function TRANSACTION<F extends NoAsyncFn)>(func: F, ...params: Parameters<F>): boolean | DState {
     BEGIN();
-    // minor todo: potrei fare l'override di Error() per fare in modo che gli errori vengano presi anche se non uso TRANSACTION o try-catch ?
-    try { func(...params); } catch(e) { Log.ee('Transaction failed:', e); ABORT(); return false; }
+    let e: Error = null as any;
+    try { func(); } catch(err: any) { e = err; ABORT(); }
+    if (t.hasAborted) {
+        if (e) Log.ee('Transaction failed:', e);
+        else Log.ee('Transaction aborted.');
+        return false;
+    }
     return END();
 }
 (window as any).TRANSACTION = TRANSACTION;
@@ -174,7 +192,7 @@ export class Action extends RuntimeAccessibleClass {
     value: any;
     id: Pointer;
     timestamp: number;
-    sender: Pointer<DUser, 0, 1>;
+    sender: Pointer<DUser>;
     hasFired: number = 0;
     // targetID: string | undefined;
     // target: IClass = null as any;
@@ -483,13 +501,15 @@ SetFieldAction.new(dclass, 'name.5', '') // ok, equivale a dicitura array
 export class RedoAction extends Action {
     public static cname: string = "RedoAction";
     static type = 'RedoAction';
-    public static new<F extends boolean = true>(amount: number = 1, notfire?: F): (F extends false ? boolean : RedoAction) {
-        let act = new RedoAction(amount);
+    forUser: Pointer<DUser>
+    public static new<F extends boolean = true>(amount: number = 1, forUser: Pointer<DUser>, notfire?: F): (F extends false ? boolean : RedoAction) {
+        let act = new RedoAction(amount, forUser);
         if (!notfire) return act.fire() as any;
         return act as any;
     }
-    private constructor(amount: number = 1) {
+    private constructor(amount: number = 1, forUser:Pointer<DUser>) {
         super('', amount);
+        this.forUser = forUser;
         this.className = (this.constructor as typeof RuntimeAccessibleClass).cname || this.constructor.name;
     }
 }
@@ -498,13 +518,15 @@ export class RedoAction extends Action {
 export class UndoAction extends Action {
     public static cname: string = "UndoAction";
     static type = 'UndoAction';
-    public static new<F extends boolean = true>(amount: number = 1, notfire?: F): (F extends false ? boolean : UndoAction) {
-        let act = new UndoAction(amount);
+    forUser: Pointer<DUser>;
+    public static new<F extends boolean = true>(amount: number = 1, forUser:Pointer<DUser>, notfire?: F): (F extends false ? boolean : UndoAction) {
+        let act = new UndoAction(amount, forUser);
         if (!notfire) return act.fire() as any;
         return act as any;
     }
-    private constructor(amount: number = 1) {
+    private constructor(amount: number = 1, forUser:Pointer<DUser>) {
         super('', amount);
+        this.forUser = forUser;
         this.className = (this.constructor as typeof RuntimeAccessibleClass).cname || this.constructor.name;
     }
 }
@@ -588,6 +610,7 @@ export class IDLinkAction extends Action{
 export class CompositeAction extends Action {
     static type: string = 'COMPOSITE_ACTION';
     actions: Action[] = [];
+    descriptor?: ActionDescriptor;
 
     public static new(actions: Action[], launch: boolean = true): CompositeAction { return new CompositeAction(actions, launch); }
     constructor(actions: Action[], launch: boolean = false) {

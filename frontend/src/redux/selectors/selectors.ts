@@ -455,7 +455,9 @@ export class Selectors{
         let firstEvaluationForNode: boolean = false;
         let firstEvaluationForNodeView: boolean = false;
         let tn = transientProperties.node[nid];
+        console.log('2302 0, getviews evaluating view ', {tn:(tn ? {...tn} : tn), nid});
         if (!tn) { transientProperties.node[nid] = tn = new NodeTransientProperties(); firstEvaluationForNode = true; }
+        console.log('2302 1, getviews evaluating view ' , {tn:(tn ? {...tn} : tn), nid});
         let olddata = tn.viewSorted_modelused as LModelElement;
         //let oldnode = transientProperties.node[nid]?.viewSorted_nodeused as LGraphElement;
         const data: LModelElement = data0 as LModelElement;
@@ -488,12 +490,14 @@ export class Selectors{
             let vid = dview.id;
             let tv = transientProperties.view[vid];
             if (!tv) transientProperties.view[vid] = tv = {} as any;
+            console.log('2302 2, getviews evaluating view ' + vid, {vid, dview, tn});
+            if (!tn?.viewScores) console.error('2302 3, getviews evaluating view ' + vid, {vid, dview, tn});
             let tnv = tn.viewScores[vid];
-            //console.log('2302, getviews evaluating view ' + vid, {vid, dview});
+
             // check initialization
 
             if (!tnv) {
-                transientProperties.node[nid].viewScores[vid] = tnv = {} as any;
+                tn.viewScores[vid] = tnv = {} as any;
                 /*{
                     score: ViewEClassMatch.NOT_EVALUATED_YET,
                     metaclassScore: ViewEClassMatch.NOT_EVALUATED_YET,
@@ -566,6 +570,8 @@ export class Selectors{
 
         let tn: NodeTransientProperties = transientProperties.node[nid]; // needs to be placed after updateScores() which will initialize it.
         if (!needsorting && tn.needSorting) needsorting = tn.needSorting;
+
+
 
         type ViewScoreEntry = {element: Pointer<DViewElement>, score: number, view: LViewElement};
         if (needsorting || !tn.stackViews) {

@@ -18,7 +18,6 @@ import {
 } from "../../joiner";
 import {
     Abstract,
-    BEGIN,
     ClassPointers,
     Constructor,
     Constructors,
@@ -29,7 +28,6 @@ import {
     DPointerTargetable,
     DState,
     DtoL,
-    END,
     getWParams,
     GObject,
     GraphSize,
@@ -577,6 +575,7 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
                     fatherElement = this.get_package(c);
                     if (!fatherElement) {
                         let model = this.get_model(c);
+                        //if (model && !model.isMetamodel) model = model.instanceof;
                         fatherElement = model.packages[0];
                         if (!fatherElement) fatherElement = model.addPackage();
                     }
@@ -588,6 +587,7 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
                     fatherElement = this.get_package(c);
                     if (!fatherElement) {
                         let model = this.get_model(c);
+                        //if (model && !model.isMetamodel) model = model.instanceof;
                         fatherElement = model.packages[0];
                         if (!fatherElement) fatherElement = model.addPackage();
                     }
@@ -768,15 +768,17 @@ export class LAnnotation<Context extends LogicContext<DAnnotation> = any, D exte
         return this.cannotCall(((this.constructor as typeof RuntimeAccessibleClass).cname || this.constructor.name) + "duplicate()");
     }
 
-    protected get_duplicate(context: Context): ((deep?: boolean) => this) {
+    protected get_duplicate(context: Context): ((deep?: boolean) => LAnnotation) {
         return (deep: boolean = false) => {
-            BEGIN()
-            let de = context.proxyObject.father.addAnnotation(context.data.source, (deep ? context.proxyObject.details.map(ldet => ldet.duplicate().__raw) : context.data.details));
-            let le: this = LPointerTargetable.fromD(de);
-            let we: WAnnotation = le as any;
-            we.annotations = deep ? context.proxyObject.annotations.map(lchild => lchild.duplicate(deep).id) : context.data.annotations;
-            END()
-            return le;
+            let ret: LAnnotation = null as any;
+            TRANSACTION(()=>{
+                let de = context.proxyObject.father.addAnnotation(context.data.source, (deep ? context.proxyObject.details.map(ldet => ldet.duplicate().__raw) : context.data.details));
+                let le: LAnnotation = LPointerTargetable.fromD(de);
+                let we: WAnnotation = le as any;
+                we.annotations = deep ? context.proxyObject.annotations.map(lchild => lchild.duplicate(deep).id) : context.data.annotations;
+                ret = le; // set ret = le only if the transaction is complete.
+            })
+            return ret;
         }
     }
 
@@ -1379,15 +1381,17 @@ export class LPackage<Context extends LogicContext<DPackage> = any, C extends Co
         return this.cannotCall( ((this.constructor as typeof RuntimeAccessibleClass).cname || this.constructor.name) + "duplicate()"); }
     protected get_duplicate(context: Context): ((deep?: boolean) => LPackage) {
         return (deep: boolean = false) => {
-            BEGIN()
-            let le: LPackage = context.proxyObject.father.addPackage(context.data.name, context.data.uri, context.data.prefix);
-            let de: D = le.__raw as D;
-            let we: WPackage = le as any;
-            we.subpackages = deep ? context.proxyObject.subpackages.map( lchild => lchild.duplicate(deep).id) : context.data.subpackages;
-            we.classifiers = deep ? context.proxyObject.classifiers.map( lchild => lchild.duplicate(deep).id) : context.data.classifiers;
-            we.annotations = deep ? context.proxyObject.annotations.map( lchild => lchild.duplicate(deep).id) : context.data.annotations;
-            END()
-            return le;
+            let ret: LPackage = null as any;
+            TRANSACTION(()=>{
+                let le: LPackage = context.proxyObject.father.addPackage(context.data.name, context.data.uri, context.data.prefix);
+                let de: D = le.__raw as D;
+                let we: WPackage = le as any;
+                we.subpackages = deep ? context.proxyObject.subpackages.map( lchild => lchild.duplicate(deep).id) : context.data.subpackages;
+                we.classifiers = deep ? context.proxyObject.classifiers.map( lchild => lchild.duplicate(deep).id) : context.data.classifiers;
+                we.annotations = deep ? context.proxyObject.annotations.map( lchild => lchild.duplicate(deep).id) : context.data.annotations;
+                ret = le;
+            })
+            return ret;
         }
     }
 
@@ -1412,7 +1416,8 @@ export class LPackage<Context extends LogicContext<DPackage> = any, C extends Co
     protected get_addEnum(context: Context): this["addEnumerator"] { return this.get_addEnumerator(context); }
     public addEnumerator(name?: DEnumerator["name"]): LEnumerator { return this.cannotCall("addEnumerator"); }
     protected get_addEnumerator(context: Context): this["addEnumerator"] {
-        return (name?: DEnumerator["name"]) => LPointerTargetable.fromD(DEnumerator.new(name, context.data.id, true)); }
+        return (name?: DEnumerator["name"]) => LPointerTargetable.fromD(DEnumerator.new(name, context.data.id, true));
+    }
 
     protected get_classes(context: Context, state?: DState, setNameKeys: boolean = true): LClass[] & Dictionary<DocString<"$name">, LClass> {
         if (!context.data.classifiers.length) return [] as any;
@@ -1493,19 +1498,19 @@ export class LPackage<Context extends LogicContext<DPackage> = any, C extends Co
         const list: Pointer<DClassifier>[] = val.map((lItem) => { return Pointers.from(lItem) });
         const oldList = context.data.classifiers;
         const diff = U.arrayDifference(oldList, list);
-        BEGIN();
-        SetFieldAction.new(context.data, 'classifiers', list, "", true);
-        for (let id of diff.added) {
-            SetFieldAction.new(id, 'father', context.data.id, '', true);
-            SetFieldAction.new(id, 'parent', context.data.id, '+=', true);
-        }
-        for (let id of diff.removed as Pointer<DModelElement>[]) {
-            SetFieldAction.new(id, 'father', undefined, '', true);
-            const parent = DPointerTargetable.from(id).parent;
-            U.arrayRemoveAll(parent, context.data.id);
-            SetFieldAction.new(id, 'parent', parent, '', true);
-        }
-        END();
+        TRANSACTION(()=>{
+            SetFieldAction.new(context.data, 'classifiers', list, "", true);
+            for (let id of diff.added) {
+                SetFieldAction.new(id, 'father', context.data.id, '', true);
+                SetFieldAction.new(id, 'parent', context.data.id, '+=', true);
+            }
+            for (let id of diff.removed as Pointer<DModelElement>[]) {
+                SetFieldAction.new(id, 'father', undefined, '', true);
+                const parent = DPointerTargetable.from(id).parent;
+                U.arrayRemoveAll(parent, context.data.id);
+                SetFieldAction.new(id, 'parent', parent, '', true);
+            }
+        })
         return true;
     }
 
@@ -1518,19 +1523,19 @@ export class LPackage<Context extends LogicContext<DPackage> = any, C extends Co
         const list = val.map((lItem) => { return Pointers.from(lItem) });
         const oldList = context.data.subpackages;
         const diff = U.arrayDifference(oldList, list);
-        BEGIN();
-        SetFieldAction.new(context.data, 'subpackages', list, "", true);
-        for (let id of diff.added) {
-            SetFieldAction.new(id, 'father', context.data.id, '', true);
-            SetFieldAction.new(id, 'parent', context.data.id, '+=', true);
-        }
-        for (let id of diff.removed as Pointer<DModelElement>[]) {
-            SetFieldAction.new(id, 'father', undefined, '', true);
-            const parent = DPointerTargetable.from(id).parent;
-            U.arrayRemoveAll(parent, context.data.id);
-            SetFieldAction.new(id, 'parent', parent, '', true);
-        }
-        END();
+        TRANSACTION(()=>{
+            SetFieldAction.new(context.data, 'subpackages', list, "", true);
+            for (let id of diff.added) {
+                SetFieldAction.new(id, 'father', context.data.id, '', true);
+                SetFieldAction.new(id, 'parent', context.data.id, '+=', true);
+            }
+            for (let id of diff.removed as Pointer<DModelElement>[]) {
+                SetFieldAction.new(id, 'father', undefined, '', true);
+                const parent = DPointerTargetable.from(id).parent;
+                U.arrayRemoveAll(parent, context.data.id);
+                SetFieldAction.new(id, 'parent', parent, '', true);
+            }
+        })
         return true;
     }
 
@@ -1662,23 +1667,25 @@ export class LOperation<Context extends LogicContext<DOperation> = any, C extend
         return this.cannotCall( ((this.constructor as typeof RuntimeAccessibleClass).cname || this.constructor.name) + "duplicate()"); }
     protected get_duplicate(context: Context): ((deep?: boolean) => LOperation) {
         return (deep: boolean = false) => {
-            BEGIN()
-            let le: LOperation = context.proxyObject.father.addOperation(context.data.name, context.data.type);
-            let de: D = le.__raw as D;
-            de.many = context.data.many;
-            de.lowerBound = context.data.lowerBound;
-            de.upperBound = context.data.upperBound;
-            de.ordered = context.data.ordered;
-            de.required = context.data.required;
-            de.unique = context.data.unique;
-            de.visibility = context.data.visibility;
-            de.exceptions = context.data.exceptions;
-            let we: WOperation = le as any;
-            we.annotations = deep ? context.proxyObject.annotations.map(lchild => lchild.duplicate(deep).id) : context.data.annotations;
-            we.parameters = deep ? context.proxyObject.parameters.map(lchild => lchild.duplicate(deep).id) : context.data.parameters;
-            we.exceptions = context.data.exceptions;
-            END()
-            return le; }
+            let ret: LOperation = null as any;
+            TRANSACTION(()=>{
+                let le: LOperation = context.proxyObject.father.addOperation(context.data.name, context.data.type);
+                let de: D = le.__raw as D;
+                de.many = context.data.many;
+                de.lowerBound = context.data.lowerBound;
+                de.upperBound = context.data.upperBound;
+                de.ordered = context.data.ordered;
+                de.required = context.data.required;
+                de.unique = context.data.unique;
+                de.visibility = context.data.visibility;
+                de.exceptions = context.data.exceptions;
+                let we: WOperation = le as any;
+                we.annotations = deep ? context.proxyObject.annotations.map(lchild => lchild.duplicate(deep).id) : context.data.annotations;
+                we.parameters = deep ? context.proxyObject.parameters.map(lchild => lchild.duplicate(deep).id) : context.data.parameters;
+                we.exceptions = context.data.exceptions;
+                ret = le;
+            })
+            return ret; }
     }
 
     public addParameter(name?: DParameter["name"], type?: DParameter["type"]): LParameter { return this.cannotCall("addParameter"); }
@@ -1730,19 +1737,19 @@ export class LOperation<Context extends LogicContext<DOperation> = any, C extend
         const list = val.map((lItem) => { return Pointers.from(lItem) });
         const oldList = context.data.parameters;
         const diff = U.arrayDifference(oldList, list);
-        BEGIN();
-        SetFieldAction.new(context.data, 'parameters', list, "", true);
-        for (let id of diff.added) {
-            SetFieldAction.new(id, 'father', context.data.id, '', true);
-            SetFieldAction.new(id, 'parent', context.data.id, '+=', true);
-        }
-        for (let id of diff.removed as Pointer<DModelElement>[]) {
-            SetFieldAction.new(id, 'father', undefined, '', true);
-            const parent = DPointerTargetable.from(id).parent;
-            U.arrayRemoveAll(parent, context.data.id);
-            SetFieldAction.new(id, 'parent', parent, '', true);
-        }
-        END();
+        TRANSACTION(()=>{
+            SetFieldAction.new(context.data, 'parameters', list, "", true);
+            for (let id of diff.added) {
+                SetFieldAction.new(id, 'father', context.data.id, '', true);
+                SetFieldAction.new(id, 'parent', context.data.id, '+=', true);
+            }
+            for (let id of diff.removed as Pointer<DModelElement>[]) {
+                SetFieldAction.new(id, 'father', undefined, '', true);
+                const parent = DPointerTargetable.from(id).parent;
+                U.arrayRemoveAll(parent, context.data.id);
+                SetFieldAction.new(id, 'parent', parent, '', true);
+            }
+        })
         return true;
     }
 
@@ -1856,19 +1863,21 @@ export class LParameter<Context extends LogicContext<DParameter> = any, C extend
         return this.cannotCall( ((this.constructor as typeof RuntimeAccessibleClass).cname || this.constructor.name) + "duplicate()"); }
     protected get_duplicate(context: Context): ((deep?: boolean) => LParameter) {
         return (deep: boolean = false) => {
-            BEGIN()
-            let le: LParameter = context.proxyObject.father.addParameter(context.data.name, context.data.type);
-            let de: D = le.__raw as D;
-            de.many = context.data.many;
-            de.lowerBound = context.data.lowerBound;
-            de.upperBound = context.data.upperBound;
-            de.ordered = context.data.ordered;
-            de.required = context.data.required;
-            de.unique = context.data.unique;
-            let we: WParameter = le as any;
-            we.annotations = deep ? context.proxyObject.annotations.map(lchild => lchild.duplicate(deep).id) : context.data.annotations;
-            END()
-            return le; }
+            let ret: LParameter = null as any;
+            TRANSACTION(()=>{
+                let le: LParameter = context.proxyObject.father.addParameter(context.data.name, context.data.type);
+                let de: D = le.__raw as D;
+                de.many = context.data.many;
+                de.lowerBound = context.data.lowerBound;
+                de.upperBound = context.data.upperBound;
+                de.ordered = context.data.ordered;
+                de.required = context.data.required;
+                de.unique = context.data.unique;
+                let we: WParameter = le as any;
+                we.annotations = deep ? context.proxyObject.annotations.map(lchild => lchild.duplicate(deep).id) : context.data.annotations;
+                ret = le;
+            })
+            return ret; }
     }
 }
 RuntimeAccessibleClass.set_extend(DTypedElement, DParameter);
@@ -2291,7 +2300,7 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
         return this.cannotCall( ((this.constructor as typeof RuntimeAccessibleClass).cname || this.constructor.name) + "duplicate()"); }
     protected get_duplicate(context: Context): ((deep?: boolean) => LClass) {
         return (deep: boolean = false) => {
-            let ret: LClass = undefined as any;
+            let ret: LClass = null as any;
             TRANSACTION( () => {
                 let le: LClass = context.proxyObject.father.addClass(context.data.name, context.data.interface, context.data.abstract, context.data.isPrimitive);
                 let de: D = le.__raw as D;
@@ -2398,19 +2407,19 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
         const list = val.map((lItem) => { return Pointers.from(lItem) });
         const oldList = context.data.operations;
         const diff = U.arrayDifference(oldList, list);
-        BEGIN();
-        SetFieldAction.new(context.data, 'operations', list, "", true);
-        for (let id of diff.added) {
-            SetFieldAction.new(id, 'father', context.data.id, '', true);
-            SetFieldAction.new(id, 'parent', context.data.id, '+=', true);
-        }
-        for (let id of diff.removed as Pointer<DModelElement>[]) {
-            SetFieldAction.new(id, 'father', undefined, '', true);
-            const parent = DPointerTargetable.from(id).parent;
-            U.arrayRemoveAll(parent, context.data.id);
-            SetFieldAction.new(id, 'parent', parent, '', true);
-        }
-        END();
+        TRANSACTION(()=>{
+            SetFieldAction.new(context.data, 'operations', list, "", true);
+            for (let id of diff.added) {
+                SetFieldAction.new(id, 'father', context.data.id, '', true);
+                SetFieldAction.new(id, 'parent', context.data.id, '+=', true);
+            }
+            for (let id of diff.removed as Pointer<DModelElement>[]) {
+                SetFieldAction.new(id, 'father', undefined, '', true);
+                const parent = DPointerTargetable.from(id).parent;
+                U.arrayRemoveAll(parent, context.data.id);
+                SetFieldAction.new(id, 'parent', parent, '', true);
+            }
+        })
         return true;
     }
 
@@ -2421,19 +2430,20 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
         const list = val.map((lItem) => { return Pointers.from(lItem) });
         const oldList = context.data.features;
         const diff = U.arrayDifference(oldList, list);
-        BEGIN();
-        SetFieldAction.new(context.data, 'features', list, "", true);
-        for (let id of diff.added) {
-            SetFieldAction.new(id, 'father', context.data.id, '', true);
-            SetFieldAction.new(id, 'parent', context.data.id, '+=', true);
-        }
-        for (let id of diff.removed as Pointer<DModelElement>[]) {
-            SetFieldAction.new(id, 'father', undefined, '', true);
-            const parent = DPointerTargetable.from(id).parent;
-            U.arrayRemoveAll(parent, context.data.id);
-            SetFieldAction.new(id, 'parent', parent, '', true);
-        }
-        END();
+        let le: this = null as any;
+        TRANSACTION(()=>{
+            SetFieldAction.new(context.data, 'features', list, "", true);
+            for (let id of diff.added) {
+                SetFieldAction.new(id, 'father', context.data.id, '', true);
+                SetFieldAction.new(id, 'parent', context.data.id, '+=', true);
+            }
+            for (let id of diff.removed as Pointer<DModelElement>[]) {
+                SetFieldAction.new(id, 'father', undefined, '', true);
+                const parent = DPointerTargetable.from(id).parent;
+                U.arrayRemoveAll(parent, context.data.id);
+                SetFieldAction.new(id, 'parent', parent, '', true);
+            }
+        })
         return true;
     }
 
@@ -2446,19 +2456,20 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
         const list = val.map((lItem) => { return Pointers.from(lItem) });
         const oldList = context.data.references;
         const diff = U.arrayDifference(oldList, list);
-        BEGIN();
-        SetFieldAction.new(context.data, 'references', list, "", true);
-        for (let id of diff.added) {
-            SetFieldAction.new(id, 'father', context.data.id, '', true);
-            SetFieldAction.new(id, 'parent', context.data.id, '+=', true);
-        }
-        for (let id of diff.removed as Pointer<DModelElement>[]) {
-            SetFieldAction.new(id, 'father', undefined, '', true);
-            const parent = DPointerTargetable.from(id).parent;
-            U.arrayRemoveAll(parent, context.data.id);
-            SetFieldAction.new(id, 'parent', parent, '', true);
-        }
-        END();
+        let le: this = null as any;
+        TRANSACTION(()=>{
+            SetFieldAction.new(context.data, 'references', list, "", true);
+            for (let id of diff.added) {
+                SetFieldAction.new(id, 'father', context.data.id, '', true);
+                SetFieldAction.new(id, 'parent', context.data.id, '+=', true);
+            }
+            for (let id of diff.removed as Pointer<DModelElement>[]) {
+                SetFieldAction.new(id, 'father', undefined, '', true);
+                const parent = DPointerTargetable.from(id).parent;
+                U.arrayRemoveAll(parent, context.data.id);
+                SetFieldAction.new(id, 'parent', parent, '', true);
+            }
+        })
         return true;
     }
 
@@ -2471,19 +2482,19 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
         const list = val.map((lItem) => { return Pointers.from(lItem) });
         const oldList = context.data.attributes;
         const diff = U.arrayDifference(oldList, list);
-        BEGIN();
-        SetFieldAction.new(context.data, 'attributes', list, "", true);
-        for (let id of diff.added) {
-            SetFieldAction.new(id, 'father', context.data.id, '', true);
-            SetFieldAction.new(id, 'parent', context.data.id, '+=', true);
-        }
-        for (let id of diff.removed as Pointer<DModelElement>[]) {
-            SetFieldAction.new(id, 'father', undefined, '', true);
-            const parent = DPointerTargetable.from(id).parent;
-            U.arrayRemoveAll(parent, context.data.id);
-            SetFieldAction.new(id, 'parent', parent, '', true);
-        }
-        END();
+        TRANSACTION(()=>{
+            SetFieldAction.new(context.data, 'attributes', list, "", true);
+            for (let id of diff.added) {
+                SetFieldAction.new(id, 'father', context.data.id, '', true);
+                SetFieldAction.new(id, 'parent', context.data.id, '+=', true);
+            }
+            for (let id of diff.removed as Pointer<DModelElement>[]) {
+                SetFieldAction.new(id, 'father', undefined, '', true);
+                const parent = DPointerTargetable.from(id).parent;
+                U.arrayRemoveAll(parent, context.data.id);
+                SetFieldAction.new(id, 'parent', parent, '', true);
+            }
+        })
         return true;
     }
 
@@ -3283,33 +3294,34 @@ export class LReference<Context extends LogicContext<DReference> = any, C extend
         return this.cannotCall( ((this.constructor as typeof RuntimeAccessibleClass).cname || this.constructor.name) + "duplicate()"); }
     protected get_duplicate(context: Context): ((deep?: boolean) => LReference) {
         return (deep: boolean = false) => {
-            BEGIN()
-            let le: LReference = context.proxyObject.father.addReference(context.data.name, context.data.type);
-            let de: D = le.__raw as D;
-
-            de.many = context.data.many;
-            de.lowerBound = context.data.lowerBound;
-            de.upperBound = context.data.upperBound;
-            de.ordered = context.data.ordered;
-            de.required = context.data.required;
-            de.unique = context.data.unique;
-            de.changeable = context.data.changeable;
-            de.container = context.data.container;
-            de.composition = context.data.composition;
-            de.aggregation = context.data.aggregation;
-            de.defaultValueLiteral = context.data.defaultValueLiteral;
-            de.derived = context.data.derived;
-            de.transient = context.data.transient;
-            de.unsettable = context.data.unsettable;
-            de.volatile = context.data.unsettable;
-            let we: WReference = le as any;
-            we.opposite = context.data.opposite || undefined;
-            we.defaultValue = context.data.defaultValue;
-            we.type = context.data.type;
-            we.annotations = deep ? context.proxyObject.annotations.map(lchild => lchild.duplicate(deep).id) : context.data.annotations;
-            // we.target = deep ? context.proxyObject.target.map(lchild => lchild.duplicate(deep).id) : context.data.target;
-            END()
-            return le; }
+            let ret: LReference = undefined as any;
+            TRANSACTION(()=>{
+                let le: LReference = context.proxyObject.father.addReference(context.data.name, context.data.type);
+                let de: D = le.__raw as D;
+                de.many = context.data.many;
+                de.lowerBound = context.data.lowerBound;
+                de.upperBound = context.data.upperBound;
+                de.ordered = context.data.ordered;
+                de.required = context.data.required;
+                de.unique = context.data.unique;
+                de.changeable = context.data.changeable;
+                de.container = context.data.container;
+                de.composition = context.data.composition;
+                de.aggregation = context.data.aggregation;
+                de.defaultValueLiteral = context.data.defaultValueLiteral;
+                de.derived = context.data.derived;
+                de.transient = context.data.transient;
+                de.unsettable = context.data.unsettable;
+                de.volatile = context.data.unsettable;
+                let we: WReference = le as any;
+                we.opposite = context.data.opposite || undefined;
+                we.defaultValue = context.data.defaultValue;
+                we.type = context.data.type;
+                we.annotations = deep ? context.proxyObject.annotations.map(lchild => lchild.duplicate(deep).id) : context.data.annotations;
+                // we.target = deep ? context.proxyObject.target.map(lchild => lchild.duplicate(deep).id) : context.data.target;
+                ret = le;
+            })
+            return ret; }
     }
 
     protected set_type(val: Pack1<this["type"]>, context: Context): boolean {
@@ -3323,11 +3335,12 @@ export class LReference<Context extends LogicContext<DReference> = any, C extend
     protected get_addClass(context: Context): this["addClass"] {
         return (name?: DClass["name"], isInterface?: DClass["interface"], isAbstract?: DClass["abstract"], isPrimitive?: DClass["isPrimitive"],
                 isPartial?: DClass["partial"], partialDefaultName?: DClass["partialdefaultname"]) => {
-            BEGIN()
-            let dclass = DClass.new(name, isInterface, isAbstract, isPrimitive, isPartial, partialDefaultName, context.proxyObject.package!.id, true);
-            // SetFieldAction.new(context.data.id, "type", dclass.id);
-            this.set_type(dclass.id as any, context);
-            END();
+            let dclass: DClass = null as any
+            TRANSACTION(()=>{
+                dclass = DClass.new(name, isInterface, isAbstract, isPrimitive, isPartial, partialDefaultName, context.proxyObject.package!.id, true);
+                // SetFieldAction.new(context.data.id, "type", dclass.id);
+                this.set_type(dclass.id as any, context);
+            })
             return LPointerTargetable.fromD(dclass);
         } }
 
@@ -3568,29 +3581,31 @@ export class LAttribute <Context extends LogicContext<DAttribute> = any, C exten
         return this.cannotCall( ((this.constructor as typeof RuntimeAccessibleClass).cname || this.constructor.name) + "duplicate()"); }
     protected get_duplicate(context: Context): ((deep?: boolean) => LAttribute) {
         return (deep: boolean = false) => {
-            BEGIN()
-            let le: LAttribute = context.proxyObject.father.addAttribute(context.data.name, context.data.type);
-            let de: D = le.__raw as D;
-            de.many = context.data.many;
-            de.lowerBound = context.data.lowerBound;
-            de.upperBound = context.data.upperBound;
-            de.ordered = context.data.ordered;
-            de.required = context.data.required;
-            de.unique = context.data.unique;
-            de.changeable = context.data.changeable;
-            de.defaultValue = context.data.defaultValue;
-            de.defaultValueLiteral = context.data.defaultValueLiteral;
-            de.derived = context.data.derived;
-            de.transient = context.data.transient;
-            de.unsettable = context.data.unsettable;
-            de.volatile = context.data.volatile;
-            de.isID = context.data.isID;
-            de.isIoT = context.data.isIoT;
-            let we: WAttribute = le as any;
-            we.type = context.data.type;
-            we.annotations = deep ? context.proxyObject.annotations.map(lchild => lchild.duplicate(deep).id) : context.data.annotations;
-            END()
-            return le; }
+            let ret: LAttribute = null as any;
+            TRANSACTION(()=>{
+                let le: LAttribute = context.proxyObject.father.addAttribute(context.data.name, context.data.type);
+                let de: D = le.__raw as D;
+                de.many = context.data.many;
+                de.lowerBound = context.data.lowerBound;
+                de.upperBound = context.data.upperBound;
+                de.ordered = context.data.ordered;
+                de.required = context.data.required;
+                de.unique = context.data.unique;
+                de.changeable = context.data.changeable;
+                de.defaultValue = context.data.defaultValue;
+                de.defaultValueLiteral = context.data.defaultValueLiteral;
+                de.derived = context.data.derived;
+                de.transient = context.data.transient;
+                de.unsettable = context.data.unsettable;
+                de.volatile = context.data.volatile;
+                de.isID = context.data.isID;
+                de.isIoT = context.data.isIoT;
+                let we: WAttribute = le as any;
+                we.type = context.data.type;
+                we.annotations = deep ? context.proxyObject.annotations.map(lchild => lchild.duplicate(deep).id) : context.data.annotations;
+                ret = le;
+            })
+            return ret; }
     }
 
     public addEnum(...p:Parameters<this["addEnumerator"]>): LEnumerator { return this.addEnumerator(...p); }
@@ -3709,15 +3724,17 @@ export class LEnumLiteral<Context extends LogicContext<DEnumLiteral> = any, C ex
         return this.cannotCall( ((this.constructor as typeof RuntimeAccessibleClass).cname || this.constructor.name) + "duplicate()"); }
     protected get_duplicate(context: Context): ((deep?: boolean) => LEnumLiteral) {
         return (deep: boolean = false) => {
-            BEGIN()
-            let le: LEnumLiteral = context.proxyObject.father.addLiteral(context.data.name, context.data.value);
-            let de: D = le.__raw as D;
-            de.literal = context.data.literal;
-            de.value = context.data.value;
-            let we: WEnumLiteral = le as any;
-            we.annotations = deep ? context.proxyObject.annotations.map(lchild => lchild.duplicate(deep).id) : context.data.annotations;
-            END()
-            return le; }
+            let ret: LEnumLiteral = null as any;
+            TRANSACTION(()=>{
+                let le: LEnumLiteral = context.proxyObject.father.addLiteral(context.data.name, context.data.value);
+                let de: D = le.__raw as D;
+                de.literal = context.data.literal;
+                de.value = context.data.value;
+                let we: WEnumLiteral = le as any;
+                we.annotations = deep ? context.proxyObject.annotations.map(lchild => lchild.duplicate(deep).id) : context.data.annotations;
+                ret = le;
+            })
+            return ret; }
     }
 
 
@@ -3841,16 +3858,18 @@ export class LEnumerator<Context extends LogicContext<DEnumerator> = any, C exte
         return this.cannotCall( ((this.constructor as typeof RuntimeAccessibleClass).cname || this.constructor.name) + "duplicate()"); }
     protected get_duplicate(context: Context): ((deep?: boolean) => LEnumerator) {
         return (deep: boolean = false) => {
-            BEGIN()
-            let le: LEnumerator = context.proxyObject.father.addEnumerator(context.data.name);
-            let de: D = le.__raw as D;
-            de.defaultValue = context.data.defaultValue;
-            de.serializable = context.data.serializable;
-            let we: WEnumerator = le as any;
-            we.annotations = deep ? context.proxyObject.annotations.map(lchild => lchild.duplicate(deep).id) : context.data.annotations;
-            we.literals = deep ? context.proxyObject.literals.map(lchild => lchild.duplicate(deep).id) : context.data.literals;
-            END()
-            return le; }
+            let ret: LEnumerator = null as any;
+            TRANSACTION(()=>{
+                let le: LEnumerator = context.proxyObject.father.addEnumerator(context.data.name);
+                let de: D = le.__raw as D;
+                de.defaultValue = context.data.defaultValue;
+                de.serializable = context.data.serializable;
+                let we: WEnumerator = le as any;
+                we.annotations = deep ? context.proxyObject.annotations.map(lchild => lchild.duplicate(deep).id) : context.data.annotations;
+                we.literals = deep ? context.proxyObject.literals.map(lchild => lchild.duplicate(deep).id) : context.data.literals;
+                ret = le;
+            })
+            return ret; }
     }
 
 
@@ -3870,19 +3889,19 @@ export class LEnumerator<Context extends LogicContext<DEnumerator> = any, C exte
         const list = val.map((lItem) => { return Pointers.from(lItem) });
         const oldList = context.data.literals;
         const diff = U.arrayDifference(oldList, list);
-        BEGIN();
-        SetFieldAction.new(context.data, 'literals', list, "", true);
-        for (let id of diff.added) {
-            SetFieldAction.new(id, 'father', context.data.id, '', true);
-            SetFieldAction.new(id, 'parent', context.data.id, '+=', true);
-        }
-        for (let id of diff.removed as Pointer<DModelElement>[]) {
-            SetFieldAction.new(id, 'father', undefined, '', true);
-            const parent = DPointerTargetable.from(id).parent;
-            U.arrayRemoveAll(parent, context.data.id);
-            SetFieldAction.new(id, 'parent', parent, '', true);
-        }
-        END();
+        TRANSACTION(()=>{
+            SetFieldAction.new(context.data, 'literals', list, "", true);
+            for (let id of diff.added) {
+                SetFieldAction.new(id, 'father', context.data.id, '', true);
+                SetFieldAction.new(id, 'parent', context.data.id, '+=', true);
+            }
+            for (let id of diff.removed as Pointer<DModelElement>[]) {
+                SetFieldAction.new(id, 'father', undefined, '', true);
+                const parent = DPointerTargetable.from(id).parent;
+                U.arrayRemoveAll(parent, context.data.id);
+                SetFieldAction.new(id, 'parent', parent, '', true);
+            }
+        })
         return true; }
 
     protected get_ordinals(context: Context): this["ordinals"]{
@@ -4568,19 +4587,19 @@ instanceof === undefined or missing  --> auto-detect and assign the type
         const list = val.map((lItem) => { return Pointers.from(lItem) });
         const oldList = context.data.models;
         const diff = U.arrayDifference(oldList, list);
-        BEGIN();
-        SetFieldAction.new(context.data, 'models', list, '', true);
-        for (let id of diff.added) {
-            SetFieldAction.new(id, 'father', context.data.id, '', true);
-            SetFieldAction.new(id, 'parent', context.data.id, '+=', true);
-        }
-        for (let id of diff.removed as Pointer<DModelElement>[]) {
-            SetFieldAction.new(id, 'father', undefined, '', true);
-            const parent = DPointerTargetable.from(id).parent;
-            U.arrayRemoveAll(parent, context.data.id);
-            SetFieldAction.new(id, 'parent', parent, '', true);
-        }
-        END();
+        TRANSACTION(()=>{
+            SetFieldAction.new(context.data, 'models', list, '', true);
+            for (let id of diff.added) {
+                SetFieldAction.new(id, 'father', context.data.id, '', true);
+                SetFieldAction.new(id, 'parent', context.data.id, '+=', true);
+            }
+            for (let id of diff.removed as Pointer<DModelElement>[]) {
+                SetFieldAction.new(id, 'father', undefined, '', true);
+                const parent = DPointerTargetable.from(id).parent;
+                U.arrayRemoveAll(parent, context.data.id);
+                SetFieldAction.new(id, 'parent', parent, '', true);
+            }
+        })
         return true;
     }
 
@@ -4638,19 +4657,19 @@ instanceof === undefined or missing  --> auto-detect and assign the type
         const list = val.map((lItem) => { return Pointers.from(lItem) });
         const oldList = context.data.packages;
         const diff = U.arrayDifference(oldList, list);
-        BEGIN();
-        SetFieldAction.new(context.data, 'packages', list, "", true);
-        for (let id of diff.added) {
-            SetFieldAction.new(id, 'father', context.data.id, '', true);
-            SetFieldAction.new(id, 'parent', context.data.id, '+=', true);
-        }
-        for (let id of diff.removed as Pointer<DModelElement>[]) {
-            SetFieldAction.new(id, 'father', undefined, '', true);
-            const parent = DPointerTargetable.from(id).parent;
-            U.arrayRemoveAll(parent, context.data.id);
-            SetFieldAction.new(id, 'parent', parent, '', true);
-        }
-        END();
+        TRANSACTION(()=>{
+            SetFieldAction.new(context.data, 'packages', list, "", true);
+            for (let id of diff.added) {
+                SetFieldAction.new(id, 'father', context.data.id, '', true);
+                SetFieldAction.new(id, 'parent', context.data.id, '+=', true);
+            }
+            for (let id of diff.removed as Pointer<DModelElement>[]) {
+                SetFieldAction.new(id, 'father', undefined, '', true);
+                const parent = DPointerTargetable.from(id).parent;
+                U.arrayRemoveAll(parent, context.data.id);
+                SetFieldAction.new(id, 'parent', parent, '', true);
+            }
+        })
         return true;
     }
 

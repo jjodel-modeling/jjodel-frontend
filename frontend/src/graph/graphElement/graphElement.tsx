@@ -13,7 +13,6 @@ import {
 import {DefaultUsageDeclarations} from "./sharedTypes/sharedTypes";
 
 import {EdgeStateProps, LGraphElement, store, VertexComponent,
-    BEGIN,
     CreateElementAction, DClass, Debug,
     DEdge, DEnumerator,
     DGraph,
@@ -26,7 +25,7 @@ import {EdgeStateProps, LGraphElement, store, VertexComponent,
     DUser,
     DV,
     DViewElement,
-    EMeasurableEvents, END,
+    EMeasurableEvents,
     GObject,
     GraphElementDispatchProps,
     GraphElementOwnProps,
@@ -294,7 +293,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
                     d.isDependency = !!edgeOwnProps.isDepencency;
                     d.isExtend = !!edgeOwnProps.isExtend;
                     let tn = (transientProperties.node[nodeid]);
-                    if (!tn) transientProperties.node[nodeid] = {} as any;
+                    if (!tn) transientProperties.node[nodeid] = new NodeTransientProperties();
                     tn.onDelete = edgeOwnProps.onDelete;
                     tn.labels = labels;
                     tn.longestLabel = longestLabel;
@@ -307,7 +306,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
             else {
                 let initialSize = ownProps.initialSize;
                 dge = dGraphElementDataClass.new(ownProps.htmlindex as number, ret.data?.id, parentnodeid, graphid, nodeid, initialSize);
-                if (!tn) transientProperties.node[nodeid] = {} as any;
+                if (!tn) transientProperties.node[nodeid] = new NodeTransientProperties();
                 tn.onDelete = ownProps.onDelete;
                 ret.node =  MyProxyHandler.wrap(dge);
             }
@@ -438,13 +437,13 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
 
     select(forUser?: Pointer<DUser>): void {
         // if (forUser === DUser.current && this.html.current) this.html.current.focus();
-        BEGIN();
-        this.props.node?.select(forUser);
-        SetRootFieldAction.new('_lastSelected', {
-            node: this.props.nodeid,
-            view: this.props.view.id,
-            modelElement: this.props.data?.id
-        });/*
+        TRANSACTION(()=>{
+            this.props.node?.select(forUser);
+            SetRootFieldAction.new('_lastSelected', {
+                node: this.props.nodeid,
+                view: this.props.view.id,
+                modelElement: this.props.data?.id
+            });/*
         // ? why this?
         const id = this.props.data?.id;
         if (id) {
@@ -452,8 +451,8 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
             SetRootFieldAction.new('selected', id, '', true);
         }*/
 
-        // SetRootFieldAction.new(`selected.${DUser.current}`, nodeid, '', true);
-        END();
+            // SetRootFieldAction.new(`selected.${DUser.current}`, nodeid, '', true);
+        })
     }
 
     constructor(props: AllProps, context: any) {
@@ -683,19 +682,19 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
     }
 
     doContextMenu(e: React.MouseEvent<Element>) {
-        BEGIN()
-        this.props.node.select();
-        if (this.html.current) this.html.current.focus();
-        let state: DState = store.getState();
-        if (state.contextMenu?.x !== e.clientX) {
-            SetRootFieldAction.new("contextMenu", {
-                display: true,
-                x: e.clientX,
-                y: e.clientY,
-                nodeid: this.props.node?.id
-            });
-        }
-        END();
+        TRANSACTION(()=>{
+            this.props.node.select();
+            if (this.html.current) this.html.current.focus();
+            let state: DState = store.getState();
+            if (state.contextMenu?.x !== e.clientX) {
+                SetRootFieldAction.new("contextMenu", {
+                    display: true,
+                    x: e.clientX,
+                    y: e.clientY,
+                    nodeid: this.props.node?.id
+                });
+            }
+        })
     }
 
     onEnter(e: React.MouseEvent<Element>) { // instead of doing it here, might set this class on render, and trigger it visually operative with :hover selector css
@@ -858,24 +857,25 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
             return;
         }
         console.log('mousedown select() check:', {e, isSelected: this.props.node.isSelected(), 'nodeIsSelectedMapProxy': this.props.node?.isSelected, nodeIsSelectedRaw:this.props.node?.__raw.isSelected});
-        BEGIN();
         windoww.node = this.props.node;
-        this.props.node.toggleSelected(DUser.current);
-        if (state._lastSelected?.node !== this.props.nodeid) {
-            SetRootFieldAction.new('_lastSelected', {
-                node: this.props.nodeid,
-                view: this.props.view.id,
-                modelElement: this.props.data?.id
-            });
-        }
 
-        if (e.shiftKey || e.ctrlKey) { }
-        else {
-            let allNodes: LGraphElement[] | undefined = this.props.node?.graph.allSubNodes;
-            let nid = this.props.node.id;
-            if (allNodes) for (let node of allNodes) if (node.id !== nid) node.deselect(DUser.current);
-        }
-        END();
+        TRANSACTION(()=>{
+            this.props.node.toggleSelected(DUser.current);
+            if (state._lastSelected?.node !== this.props.nodeid) {
+                SetRootFieldAction.new('_lastSelected', {
+                    node: this.props.nodeid,
+                    view: this.props.view.id,
+                    modelElement: this.props.data?.id
+                });
+            }
+
+            if (e.shiftKey || e.ctrlKey) { }
+            else {
+                let allNodes: LGraphElement[] | undefined = this.props.node?.graph.allSubNodes;
+                let nid = this.props.node.id;
+                if (allNodes) for (let node of allNodes) if (node.id !== nid) node.deselect(DUser.current);
+            }
+        })
     }
 
     onClick(e: React.MouseEvent): void {
@@ -912,6 +912,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
     updateNodeFromProps(props: GObject<AllProps>): boolean {
         let ret = false;
         let tn = transientProperties.node[props.nodeid];
+        if (tn && !tn.viewScores) console.error('tn error 1', {tn:tn && {...tn}});
         let ptr: Pointer<any>;
         if (!props.node) return false;
         let node = props.node;

@@ -1,7 +1,6 @@
 // import {Mixin} from "ts-mixer";
 import {isDeepStrictEqual} from "util";
 import {
-    BEGIN,
     Constructors,
     CoordinateMode,
     Debug,
@@ -13,7 +12,6 @@ import {
     DUser,
     DViewElement,
     EdgeBendingMode,
-    END,
     EPSize,
     getWParams,
     GObject,
@@ -354,10 +352,10 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
 
     get_position(context: Context): this["position"] { return new GraphPoint(context.data.x, context.data.y); }
     set_position(val: this["position"], context: Context): boolean {
-        BEGIN()
-        SetFieldAction.new(context.data.id, "x", val.x, undefined, false);
-        SetFieldAction.new(context.data.id, "y", val.y, undefined, false);
-        END()
+        TRANSACTION(()=>{
+            SetFieldAction.new(context.data.id, "x", val.x, undefined, false);
+            SetFieldAction.new(context.data.id, "y", val.y, undefined, false);
+        })
         return true; }
 
     get_sizeold(context: Context): this["size"] { return new GraphSize(context.data.x, context.data.y, context.data.w, context.data.h); }
@@ -479,14 +477,15 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
         if (c.data.className === DEdgePoint.cname && size.currentCoordType !== CoordinateMode.absolute) size = (this as any as LEdgePoint).encodePosCoords(c as any, size, view);
 
         if (view.updateSize(c.data.id, size)) return true;
-        BEGIN()
-        if (size.x !== c.data.x && size.x !== undefined) SetFieldAction.new(c.data.id, "x", size.x, undefined, false);
-        if (size.y !== c.data.y && size.y !== undefined) SetFieldAction.new(c.data.id, "y", size.y, undefined, false);
-        if (size.w !== c.data.w && size.w !== undefined) SetFieldAction.new(c.data.id, "w", size.w, undefined, false);
-        if (size.h !== c.data.h && size.h !== undefined) SetFieldAction.new(c.data.id, "h", size.h, undefined, false);
-        let epdata: DEdgePoint = c.data as DEdgePoint;
-        if (size.currentCoordType !== epdata.currentCoordType && size.currentCoordType !== undefined) SetFieldAction.new(epdata.id, "currentCoordType", size.currentCoordType, undefined, false);
-        END()
+
+        TRANSACTION(()=>{
+            if (size.x !== c.data.x && size.x !== undefined) SetFieldAction.new(c.data.id, "x", size.x, undefined, false);
+            if (size.y !== c.data.y && size.y !== undefined) SetFieldAction.new(c.data.id, "y", size.y, undefined, false);
+            if (size.w !== c.data.w && size.w !== undefined) SetFieldAction.new(c.data.id, "w", size.w, undefined, false);
+            if (size.h !== c.data.h && size.h !== undefined) SetFieldAction.new(c.data.id, "h", size.h, undefined, false);
+            let epdata: DEdgePoint = c.data as DEdgePoint;
+            if (size.currentCoordType !== epdata.currentCoordType && size.currentCoordType !== undefined) SetFieldAction.new(epdata.id, "currentCoordType", size.currentCoordType, undefined, false);
+        })
         return true; }
 
     get_html(c: Context): this["html"] {

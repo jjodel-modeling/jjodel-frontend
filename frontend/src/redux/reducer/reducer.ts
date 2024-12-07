@@ -469,6 +469,8 @@ function unsafereducer(oldState: DState = initialState, action: Action): DState 
         }
     }
 
+
+    // recompile stuff
     for (let ptr of ret.ELEMENT_CREATED){
         let d = ret.idlookup[ptr];
         if (!d) continue; // creation rejected, no-op
@@ -477,7 +479,7 @@ function unsafereducer(oldState: DState = initialState, action: Action): DState 
             case "DViewElement":
                 for(let nid in transientProperties.node){
                     let tn = transientProperties.node[nid];
-                    tn.viewScores[d.id as any] = {} as any;
+                    delete tn.viewScores[d.id as any]; //= {} as any;
                 }
         }
     }
@@ -524,13 +526,17 @@ function unsafereducer(oldState: DState = initialState, action: Action): DState 
                 // transientProperties.modelElement[d.id] = { } as any; stuff in here does not need replacement, can never be dangerous (currently).
             }
             if (RuntimeAccessibleClass.extends(d.className, "DGraphElement")) {
-                transientProperties.node[d.id as string] = { } as any;
+                delete transientProperties.node[d.id as string]; // = { } as any;
+                // transientProperties.node[d.id as string] = undefined as any;
+                console.error('tn deleted', {tn:transientProperties.node[d.id as string], id:d.id});
                 for (sk in ret) if (sk.indexOf('NODES_RECOMPILE') === 0) (ret[sk] as Pointer[]).push(id);
                 //ret.NODES_RECOMPILE_labels.push(id); ret.NODES_RECOMPILE_longestLabel.push(id);
             }
         }
         if (resetAllNodes) for (let nid in transientProperties.node) {
-            transientProperties.node[nid] = {} as any;
+            delete transientProperties.node[nid];// = {} as any;
+            // transientProperties.node[nid] = undefined as any;
+            console.error('tn deleted 2', {tn:transientProperties.node[nid], nid});
             for (sk in ret) if (sk.indexOf('NODES_RECOMPILE') === 0) (ret[sk] as Pointer[]).push(nid);
             //ret.NODES_RECOMPILE_labels.push(id); ret.NODES_RECOMPILE_longestLabel.push(id);
         }
@@ -542,7 +548,10 @@ function unsafereducer(oldState: DState = initialState, action: Action): DState 
     function parseLabel(ptr: Pointer, key: "labels" | "longestLabel", isNode: boolean): boolean{
         let dv: GObject<DViewElement | DGraphElement> = DPointerTargetable.fromPointer(ptr, ret);
         let tp: NodeTransientProperties | ViewTransientProperties = ((isNode ? transientProperties.node : transientProperties.view) as GObject)[ptr];
-        if (!tp) ((isNode ? transientProperties.node : transientProperties.view) as GObject)[ptr] = tp = {} as any;
+        if (!tp) {
+            if (isNode) transientProperties.node[ptr as any] = tp = new NodeTransientProperties();
+            else transientProperties.view[ptr as any] = tp = new ViewTransientProperties();
+        }
         let val: string = dv[key];
         if (!val) { tp[key] = undefined as any; return true; }
         if (typeof val === "function") { tp[key] = val; return true; }
@@ -868,7 +877,7 @@ function unsafereducer(oldState: DState = initialState, action: Action): DState 
 
         // if it's first creation of a modelpiece
         if (!transientProperties.modelElement[dataid]) {
-            transientProperties.modelElement[dataid] = {nodes: {}};
+            // transientProperties.modelElement[dataid] = {nodes: {}};
         }
         // update ocl type names
         let data: DClass = ret.idlookup[dataid] as DClass;
@@ -891,12 +900,21 @@ export function _reducer/*<S extends StateNoFunc, A extends Action>*/(oldState: 
             times = action.value;
             state = oldState;
             Log.exDev(times<=0, "undo must be positive", action);
+            // if (desc) { ret.action_title = desc.desc + ': ' + desc.oldval + ' -> ' + desc.newval; ...}
+            state.action_title = 'undone ' + times + ' steps';
+            state.action_description = 'undone ' + times + ' steps';
+
             while (times--) {
-                const delta = statehistory[DUser.current].undoable.pop();
+                let forUser = (action as UndoAction).forUser;
+                const delta = statehistory[forUser].undoable.pop();
+                for (let user in statehistory){
+                    U.arrayRemoveAll(statehistory[user]?.undoable, delta);
+                }
+                if (!delta) continue;
                 removedDeltas.push(delta);
-                state = undo(state, delta);
+                state = undo(state, action as UndoAction, delta, true);
             }
-            state.VIEWS_RECOMPILE_all = removedDeltas.flatMap( d => Object.keys(d?.idlookup||{}));
+            state.VIEWS_RECOMPILE_all = [...new Set(removedDeltas.flatMap( d => Object.keys(d?.idlookup||{})))];
             // state.VIEWS_RECOMPILE_all = true;
             return state;
 
@@ -904,12 +922,20 @@ export function _reducer/*<S extends StateNoFunc, A extends Action>*/(oldState: 
             times = action.value;
             state = oldState;
             Log.exDev(times<=0, "redo must be positive", action);
+            // if (desc) { ret.action_title = desc.desc + ': ' + desc.oldval + ' -> ' + desc.newval; ...}
+            state.action_title = 'redone ' + times + ' steps';
+            state.action_description = 'redone ' + times + ' steps';
             while (times--) {
-                const delta = statehistory[DUser.current].redoable.pop();
+                let forUser = (action as UndoAction).forUser;
+                const delta = statehistory[forUser].redoable.pop();
+                for (let user in statehistory){
+                    U.arrayRemoveAll(statehistory[user]?.redoable, delta);
+                }
+                if (!delta) continue;
                 removedDeltas.push(delta);
-                state = undo(state, delta, false);
+                state = undo(state, action as RedoAction, delta, false);
             }
-            state.VIEWS_RECOMPILE_all = removedDeltas.flatMap( d => Object.keys(d?.idlookup||{}));
+            state.VIEWS_RECOMPILE_all = [...new Set(removedDeltas.flatMap( d => Object.keys(d?.idlookup||{})))];
             // state.VIEWS_RECOMPILE_all = true;
             return state;
         // case CombineHistoryAction.type: return combineHistory(oldState); break;
@@ -918,10 +944,27 @@ export function _reducer/*<S extends StateNoFunc, A extends Action>*/(oldState: 
             let ret = doreducer(oldState, action);
             if (ret === oldState) return ret;
             // statehistory[DUser.current].redoable = [];   <-- Moved to stateInitializer()
-            let delta =  U.objectDelta(ret, oldState);
+            let delta = U.objectDelta(ret, oldState, true, false);
             if (!filterundoableactions(delta)) return ret;
             // console.log("setting undoable action:", {ret, oldState0:{...oldState}, oldState, delta});
-            if (oldState !== null) statehistory[DUser.current].undoable.push(delta);
+
+            let user = (action as Action).sender;
+            if (oldState !== null/* && Object.keys(delta).length*/) {
+                statehistory[user].undoable.push(delta);
+                statehistory.all.undoable.push(delta);
+            }
+
+            // undo-redo description
+
+            let desc = (action as CompositeAction).descriptor;
+            if (desc) {
+                ret.action_title = desc.desc + ': ' + desc.oldval + ' -> ' + desc.newval;
+                ret.action_description = desc.path + ': ' + desc.oldval + ' -> ' + desc.newval;
+            }
+            else {
+                ret.action_title = '';
+                ret.action_description = '';
+            }
             return ret;
     }
 }
@@ -935,14 +978,21 @@ function filterundoableactions(delta: Partial<DState>): boolean {
     }
     return true;
 }
-function undo(state: DState, delta: GObject | undefined, isundo = true): DState {
+function undo(state: DState, action: UndoAction | RedoAction, delta: GObject | undefined, isundo = true): DState {
     if (!delta) return state;
     let undonestate: DState = {...state} as DState;
     //   controlla se vengono shallow-copied solo e tutti gli oggetti nested lungo la catena del percorso delle modifiche
     //   es: root.a.b.c=3 + root.a.b.d=3 = 4+1 modifiche, 5 shallow copies including the root
     undorecursive(delta, undonestate);
-    if (isundo) statehistory[DUser.current].redoable.push( U.objectDelta(undonestate, state) ); // reverses from undo to redo and viceversa swapping arguments, so the target result after appliying the delta changes
-    else statehistory[DUser.current].undoable.push( U.objectDelta(undonestate, state) ); // redo is "undoing an undo", reversing his changes just like an undo reverses an ordinary action changes.
+    let forUser = action.forUser;
+    let user = action.sender;
+    // todo: check if delta2 === delta or is his opposite in values but same shape
+    let delta2 = U.objectDelta(undonestate, state);
+    // reverses from undo to redo and viceversa swapping arguments, so the target result after appliying the delta changes
+    // redo is "undoing an undo", reversing his changes just like an undo reverses an ordinary action changes.
+    let key: 'redoable'|'undoable' = isundo ? 'redoable' : 'undoable';
+    statehistory[user][key].push(delta2);
+    statehistory.all[key].push(delta2);
     return undonestate;
 }
 
@@ -1037,10 +1087,11 @@ function setDocumentEvents(){
     // do not use typings or class constructors here or it will change import order
     setTimeout(
         ()=> $(document).on("mouseup",
-            (e: MouseUpEvent) => RuntimeAccessibleClass.get<typeof GraphDragManager>("GraphDragManager").stopPanning(e)),
-        // ()=> $(document).on("mouseup", (e: MouseUpEvent) => (window as any).GraphDragManager.stopPanning(e)), //a
-        1
-    );
+            (e: MouseUpEvent) => {
+                statehistory.globalcanundostate = true;
+                RuntimeAccessibleClass.get<typeof GraphDragManager>("GraphDragManager").stopPanning(e);
+            })
+        , 1);
     // document.body.addEventListener("mousedown", fixResizables, false);
 }
 function fixResizables(e: MouseEvent){
@@ -1072,7 +1123,7 @@ export async function stateInitializer() {
 
     DState.init();
     const user = Storage.read<DUser>('user');
-    if(user) {
+    if (user) {
         DUser.new(user.name, user.surname, user.nickname, user.affiliation, user.country, user.newsletter, user.email, user.token, user.id);
         DUser.current = user.id;
         statehistory[user.id] = {redoable: [], undoable: []};

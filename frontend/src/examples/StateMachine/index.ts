@@ -1,9 +1,7 @@
 import {
-    BEGIN,
     DProject,
     DUser,
     DViewElement,
-    END,
     LClass,
     LModel,
     LObject,
@@ -53,28 +51,28 @@ export class StateMachine {
     private static loadM2(name: string) {
         this.user = LUser.fromPointer(DUser.current);
         /* Metamodel */
-        BEGIN()
-        const dProject = DProject.new('private', name);
-        this.project = LProject.fromD(dProject);
-        this.user.project = this.project;
-        const elementsM2 = StateMachine_M2.load(this.project);
-        this.M2 = elementsM2[0];
-        this.pkg = elementsM2[1];
-        this.state = elementsM2[2];
-        this.transition = elementsM2[3];
-        const abstractEvent = elementsM2[4];
-        this.command = elementsM2[5];
-        this.event = elementsM2[6];
-        END()
+        TRANSACTION(()=>{
+            const dProject = DProject.new('private', name);
+            this.project = LProject.fromD(dProject);
+            this.user.project = this.project;
+            const elementsM2 = StateMachine_M2.load(this.project);
+            this.M2 = elementsM2[0];
+            this.pkg = elementsM2[1];
+            this.state = elementsM2[2];
+            this.transition = elementsM2[3];
+            const abstractEvent = elementsM2[4];
+            this.command = elementsM2[5];
+            this.event = elementsM2[6];
+        })
     }
     private static loadViews() {
         /* Views */
-        BEGIN()
-        const viewElements = StateMachine_Views.load(this.project, this.state, this.command, this.event, this.transition);
-        END()
-        this.viewpoint = viewElements[0];
-        this.modelView = viewElements[1];
-        this.textView = viewElements[2];
+        TRANSACTION(()=>{
+            const viewElements = StateMachine_Views.load(this.project, this.state, this.command, this.event, this.transition);
+            this.viewpoint = viewElements[0];
+            this.modelView = viewElements[1];
+            this.textView = viewElements[2];
+        })
     }
 
     static loadBig(name: string) {

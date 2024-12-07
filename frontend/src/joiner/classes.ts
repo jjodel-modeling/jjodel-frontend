@@ -3124,11 +3124,13 @@ export class NodeTransientProperties{
     needSorting!: boolean;
     longestLabel!: LVoidEdge['longestLabel'];
     labels!: LVoidEdge['labels'];
+    src: any;
     //force1Update!: boolean;
     onDelete?: (node: LGraphElement)=>boolean; // return false to prevent deletion
     constructor(){
         // this.stackViews = []; this.validMainViews = [];
         this.viewScores = {};
+        this.src = U.getStackTrace();
     }
 }
 export class ViewTransientProperties {

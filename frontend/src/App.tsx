@@ -32,14 +32,8 @@ import {MessageVisualizer} from "./components/forEndUser/SplashMessage";
 import {JQDock, MyDock} from "./components/dock/MyDock";
 import {BottomBar} from "./pages/components";
 import AlertVisualizer from "./components/alert/Alert";
+import Storage from "./data/storage";
 
-let userHasInteracted = false;
-function endPendingActions() {
-    if (!userHasInteracted) firstInteraction();
-}
-function firstInteraction(){
-    statehistory.globalcanundostate = true;
-}
 
 function App(props: AllProps): JSX.Element {
     const debug = props.debug;
@@ -52,6 +46,7 @@ function App(props: AllProps): JSX.Element {
         // stateInitializer().then(() => SetRootFieldAction.new('isLoading', false));
     });
 
+    console.log('routing', {user:Storage.read('user'), du: DUser.current})
     return(<>
         <div className={"router-wrapper"}>
             {isLoading && <Loader />}

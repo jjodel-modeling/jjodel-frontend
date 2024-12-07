@@ -34,6 +34,7 @@ import {InternalToggle} from '../../components/widgets/Widgets';
 import jj from '../../static/img/jj-k.png';
 import Storage from '../../data/storage';
 import Collaborative from "../../components/collaborative/Collaborative";
+import {Undoredocomponent} from "../../components/topbar/undoredocomponent";
 let windoww = window as any;
 
 const createM2 = (project: LProject) => {
@@ -339,7 +340,10 @@ function NavbarComponent(props: AllProps) {
     return(<>
         <nav className={'w-100 nav-container d-flex'} style={{zIndex: 99}}>
             {project ?
-                <MainMenu items={projectItems}/>
+                <>
+                    <MainMenu items={projectItems}/>
+                    <Undoredocomponent project={project}/>
+                </>
                 :
                 <MainMenu items={dashboardItems} />
             }

@@ -960,6 +960,17 @@ export class U {
             tmp = tmp.parentNode as T; }
         return arr; }
 
+    public static monitorObjectProperty(o: GObject, key: string, callback:((k:string, v:any, isWrite: boolean, oldVal: any)=>void),
+                                        read: boolean=true, write: boolean=true): void{
+        if (!o || !callback || !read && !write) return;
+        let propDescriptor: GObject = {};
+        let prefixed = '_monitorObject_' + key;
+        o[prefixed] = o[key];
+        if (read) propDescriptor.get = () => { callback(key, o[prefixed], false, undefined); return o[prefixed]; };
+        if (write) propDescriptor.set = (newVal: any) => { callback(key, newVal, true, o[prefixed]); o[prefixed] = newVal; };
+        Object.defineProperty(o, key, propDescriptor);
+    }
+
     static toHtml<T extends Element>(html: string, container?: Element, containerTag: string = 'div'): T {
         if (!container) { container = document.createElement(containerTag); }
         Log.e(!html || html === '', 'toHtml', 'require a non-empty string', html);
@@ -990,6 +1001,7 @@ export class U {
             return previous;
         }, '');
     }
+
     public static getClosestPropertyNames(names: string[], name: string): string[] {
         let distances: {distance: number, value: string}[] = names.map( value => { return {distance: U.levenshtein(value, name), value}; });
         return distances.sort( (a, b) => a.distance - b.distance).map( e => e.value);
@@ -1263,38 +1275,57 @@ export class U {
     // returns <"what changed from old to neww"> and in nested objects recursively
     // todo: how can i tell at what point it's the fina lvalue (might be a nestedobj) and up to when it's a delta to follow and unroll?   using __isAdelta:true ?
     // NB: this returns the delta that generates the future. if you want the delta that generate the past one, invert parameter order.
-    public static objectDelta<T extends object>(old: T, neww: T, deep: boolean = true): Partial<T>{
+    public static objectDelta<T extends object>(old: T, neww: T, deep: boolean = true, includeProto: boolean = false): Partial<T>{
         let newwobj: GObject = neww;
         let oldobj: GObject = old;
         if (old === neww) return {};
-        let diff = U.objdiff(old, neww); // todo: optimize this, remove the 3 loops below and add those directly in U.objdiff(old, neww, ret); writing inside the obj in third parameter
+        let diff = U.objdiff(old, neww, includeProto); // todo: optimize this, remove the 3 loops below and add those directly in U.objdiff(old, neww, ret); writing inside the obj in third parameter
 
         let ret: GObject = {}; // {__isAdelta:true};
-        for (let key in diff.added) { ret[key] = newwobj[key]; }
+        for (let key in diff.added) {
+            //if (!includeProto && diff.added.hasOwnProperty(key)) continue;
+            ret[key] = newwobj[key];
+        }
         for (let key in diff.changed) {
             let subold = oldobj[key];
             let subnew = newwobj[key];
-            if (typeof subold === typeof subnew && typeof subold === "object") { ret[key] = deep ? U.objectDelta(subold, subnew, true) : subnew; }
+            if (typeof subold === typeof subnew && typeof subold === "object") { ret[key] = deep ? U.objectDelta(subold, subnew, true, includeProto) : subnew; }
             else ret[key] = subnew;
         }
         // todo: add to variable naming rules: can't start with "_-", like in "_-keyname", it means "keyname" removed in undo delta
         let removedprefix = ""; // "_-";
-        for (let key in diff.removed) { ret[removedprefix + key] = undefined; } //newwobj[key]; }
+        for (let key in diff.removed) {
+            ///if (!includeProto && diff.removed.hasOwnProperty(key)) continue;
+            ret[removedprefix + key] = undefined;
+        } //newwobj[key]; }
         // console.log("objdiff", {old, neww, diff, ret});
         return ret as Partial<T>;
     }
 
     // difference react-style. lazy check by === equality field by field. parameters are readonly
-    public static objdiff<T extends GObject>(old:T, neww: T): {removed: Partial<T>, added: Partial<T>, changed: Partial<T>, unchanged: Partial<T>} {
+    public static objdiff<T extends GObject>(old:T, neww: T, includeProto: boolean = false): {removed: Partial<T>, added: Partial<T>, changed: Partial<T>, unchanged: Partial<T>} {
         // let ret: GObject = {removed:{}, added:{}, changed:{}};
         let ret: {removed: Partial<T>, added: Partial<T>, changed: Partial<T>, unchanged: Partial<T>}  = {removed:{}, added:{}, changed:{}, unchanged: {}};
         if (!neww && !old) { return ret; }
-        if (!neww) { ret.removed = old; return ret; }
-        if (!old) { ret.added = neww; return ret; }
+        if (!neww) {
+            ret.removed = old;
+            if (!includeProto){
+                ret.removed = {...ret.removed, __proto__:{}};
+            }
+            return ret;
+        }
+        if (!old) {
+            ret.added = neww;
+            if (!includeProto) {
+                ret.added = {...ret.added, __proto__:{}};
+            }
+            return ret;
+        }
         // let oldkeys: string[] = Object.keys(old); let newkeys: string[] = Object.keys(neww);
 
         let key: any;
         for (key in old) {
+            if (!includeProto && !old.hasOwnProperty(key)) continue;
             // if (neww[key] === undefined){
             // if neww have a key with undefined value, it counts (and should) as having that property key defined
             if (!(key in neww)){ (ret.removed as GObject)[key] = old[key]; }
@@ -1302,6 +1333,7 @@ export class U {
             else (ret.changed as GObject)[key] = old[key];
         }
         for (let key in neww) {
+            if (!includeProto && !neww.hasOwnProperty(key)) continue;
             if (!(key in old)){ (ret.added as GObject)[key] = neww[key]; }
         }
         return ret;

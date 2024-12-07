@@ -1,6 +1,6 @@
 import {
     Asterisk,
-    BEGIN, Circle,
+    Circle,
     Constructors,
     CoordinateMode,
     CreateElementAction, Cross,
@@ -35,7 +35,7 @@ import {
     DVoidEdge, Edge,
     EdgeBendingMode,
     EdgeHead, EdgePoint, Ellipse,
-    END, Enneagon, Field,
+    Enneagon, Field,
     GObject, Graph, GraphElement,
     GraphPoint,
     GraphSize, GraphVertex, Heptagon, Hexagon,
@@ -60,7 +60,7 @@ import {
     RuntimeAccessibleClass, Septagon, SetFieldAction,
     SetRootFieldAction,
     ShortAttribETypes, SimpleStar, Square, Star,
-    store, Trapezoid, Triangle, U, Vertex, VoidVertex,
+    store, TRANSACTION, Trapezoid, Triangle, U, Vertex, VoidVertex,
 } from '../joiner';
 import {DV} from "../common/DV";
 //import {Selected} from "../joiner/types";
@@ -78,10 +78,12 @@ console.warn('ts loading store');
 
 // export const statehistory_obsoleteidea: {past: IStore[], current: IStore, future: IStore[]} = { past:[], current: null, future:[] } as any;
 export const statehistory: {
-        [userpointer:Pointer<DUser>]: {undoable:GObject<"delta">[], redoable: GObject<"delta">[]}
+        [userpointer:Pointer<DUser>]: {undoable:GObject<"delta">[], redoable: GObject<"delta">[]},
+        all: {undoable:GObject<"delta">[], redoable: GObject<"delta">[]}
 } & {
+    all: {undoable:GObject<"delta">[], redoable: GObject<"delta">[]}
     globalcanundostate: boolean // set to true at first user click }
-} = { globalcanundostate: false} as any;
+} = {globalcanundostate: false, all:{undoable:[], redoable:[]}} as any;
 (window as any).statehistory = statehistory;
 
 @RuntimeAccessible('DState')
@@ -205,6 +207,8 @@ export class DState extends DPointerTargetable{
 
     advanced: boolean = false;
     alert: string = '';
+    action_description: string = '';
+    action_title: string = '';
 
 
     static fixcolors(){
@@ -219,41 +223,41 @@ export class DState extends DPointerTargetable{
     }
     static init(store?: DState): void {
         this.fixcolors();
-        BEGIN()
-        const viewpoint = DViewPoint.newVP('Default', undefined,true, 'Pointer_ViewPointDefault');
-        const validationViewpoint = DViewPoint.newVP('Validation default',
-            (vp)=>{ vp.isExclusiveView = false; vp.isValidation = true;}, true, 'Pointer_ViewPointValidation');
+        TRANSACTION(()=>{
+            const viewpoint = DViewPoint.newVP('Default', undefined, true, 'Pointer_ViewPointDefault');
+            const validationViewpoint = DViewPoint.newVP('Validation default',
+                (vp)=>{ vp.isExclusiveView = false; vp.isValidation = true;}, true, 'Pointer_ViewPointValidation');
 
-        Log.exDev(viewpoint.id !== Defaults.viewpoints[0], "wrong vp id initialization", {viewpoint, def:Defaults.viewpoints});
-        const views: DViewElement[] = makeDefaultGraphViews(viewpoint, validationViewpoint);
+            Log.exDev(viewpoint.id !== Defaults.viewpoints[0], "wrong vp id initialization", {viewpoint, def:Defaults.viewpoints});
+            const views: DViewElement[] = makeDefaultGraphViews(viewpoint, validationViewpoint);
 
-        for (let view of views) { CreateElementAction.new(view); }
+            for (let view of views) { CreateElementAction.new(view); }
 
-        for (let primitiveType of Object.values(ShortAttribETypes)) {
-            let dPrimitiveType;
-            if (primitiveType === ShortAttribETypes.EVoid) continue; // or make void too without primitiveType = true, but with returnType = true?
-            dPrimitiveType = DClass.new(primitiveType, false, false, true, false, '', undefined, true, 'Pointer_' + primitiveType.toUpperCase());
-            SetRootFieldAction.new('primitiveTypes', dPrimitiveType.id, '+=', true);
-        }
+            for (let primitiveType of Object.values(ShortAttribETypes)) {
+                let dPrimitiveType;
+                if (primitiveType === ShortAttribETypes.EVoid) continue; // or make void too without primitiveType = true, but with returnType = true?
+                dPrimitiveType = DClass.new(primitiveType, false, false, true, false, '', undefined, true, 'Pointer_' + primitiveType.toUpperCase());
+                SetRootFieldAction.new('primitiveTypes', dPrimitiveType.id, '+=', true);
+            }
 
-        /// creating m3 "Object" metaclass
-        let dObject = DClass.new(ShortDefaultEClasses.EObject, false, false, false, false,
-            '', undefined, true, 'Pointer_' + ShortDefaultEClasses.EObject.toUpperCase());
+            /// creating m3 "Object" metaclass
+            let dObject = DClass.new(ShortDefaultEClasses.EObject, false, false, false, false,
+                '', undefined, true, 'Pointer_' + ShortDefaultEClasses.EObject.toUpperCase());
 
-        SetRootFieldAction.new('ecoreClasses', dObject.id, '+=', true);
-        for (let defaultEcoreClass of Object.values(DefaultEClasses)) {
-            // todo: creat everyone and not just object, make the whole m3 populated.
-        }
+            SetRootFieldAction.new('ecoreClasses', dObject.id, '+=', true);
+            for (let defaultEcoreClass of Object.values(DefaultEClasses)) {
+                // todo: creat everyone and not just object, make the whole m3 populated.
+            }
 
-        /*
-        let tmp = Object.values(GraphElements);
-        for (let k in tmp) {
-            let v: any = tmp[k];
-            Log.exDev(!v, 'wrong import order', {k, v, GraphElements, tmp});
-            if (!v.cname) continue; // it is a subdictionary
-            GraphElements[(v.cname as string)] = GraphElements[k] = v;
-        }*/
-        END();
+            /*
+            let tmp = Object.values(GraphElements);
+            for (let k in tmp) {
+                let v: any = tmp[k];
+                Log.exDev(!v, 'wrong import order', {k, v, GraphElements, tmp});
+                if (!v.cname) continue; // it is a subdictionary
+                GraphElements[(v.cname as string)] = GraphElements[k] = v;
+            }*/
+        })
     }
 }
 
