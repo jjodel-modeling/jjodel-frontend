@@ -24,7 +24,8 @@ import {
     TbSquareRoundedLetterM,
     TbSquareRoundedLetterMFilled,
     TbSquareRoundedLetterV,
-    TbSquareRoundedLetterVFilled
+    TbSquareRoundedLetterVFilled,
+    TbSquareRoundedLetterE
 } from "react-icons/tb";
 import DockManager from '../../components/abstract/DockManager';
 import Dock from "../../components/abstract/Dock";
@@ -292,17 +293,20 @@ function ProjectCatalog(props: ProjectProps) {
                 <div className={'legenda'}>
                     <h1>Legenda</h1>
                     <div className={'row'}>
-                        <div className={'col-sm'}>
+                        <div className={'col'}>
                         <TbSquareRoundedLetterMFilled style={{fontSize: '1.3em'}}/> Metamodels
                         </div>
-                        <div className={'col-sm'}>
+                        <div className={'col'}>
                         <TbSquareRoundedLetterM style={{fontSize: '1.3em'}}/> Models
                         </div>
-                        <div className={'col-sm'}>
+                        <div className={'col'}>
                         <TbSquareRoundedLetterVFilled style={{fontSize: '1.3em'}}/> Viewpoints
                         </div>
-                        <div className={'col-sm'}>
+                        <div className={'col'}>
                         <TbSquareRoundedLetterV style={{fontSize: '1.3em'}}/> Overlay Viewpoints
+                        </div>
+                        <div className={'col disabled'}>
+                        <TbSquareRoundedLetterE className={'disabled'} style={{fontSize: '1.3em'}}/> Epsilon Transformations
                         </div>
                     </div>
                 </div>
