@@ -223,7 +223,7 @@ export class DState extends DPointerTargetable{
     }
     static init(store?: DState): void {
         this.fixcolors();
-        TRANSACTION(()=>{
+        TRANSACTION('init jodel state', ()=>{
             const viewpoint = DViewPoint.newVP('Default', undefined, true, 'Pointer_ViewPointDefault');
             const validationViewpoint = DViewPoint.newVP('Validation default',
                 (vp)=>{ vp.isExclusiveView = false; vp.isValidation = true;}, true, 'Pointer_ViewPointValidation');

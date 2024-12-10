@@ -51,7 +51,7 @@ export class StateMachine {
     private static loadM2(name: string) {
         this.user = LUser.fromPointer(DUser.current);
         /* Metamodel */
-        TRANSACTION(()=>{
+        TRANSACTION('load metamodel', ()=>{
             const dProject = DProject.new('private', name);
             this.project = LProject.fromD(dProject);
             this.user.project = this.project;
@@ -67,7 +67,7 @@ export class StateMachine {
     }
     private static loadViews() {
         /* Views */
-        TRANSACTION(()=>{
+        TRANSACTION('load views', ()=>{
             const viewElements = StateMachine_Views.load(this.project, this.state, this.command, this.event, this.transition);
             this.viewpoint = viewElements[0];
             this.modelView = viewElements[1];
@@ -78,7 +78,7 @@ export class StateMachine {
     static loadBig(name: string) {
         this.loadM2(name);
         /* Model */
-        TRANSACTION(() => {
+        TRANSACTION('load big (test)', () => {
             for(let i = 0; i < 72; i++) {
                 StateMachine_M1.load2(`diagram_${i + 1}`, this.project, this.M2, this.state, this.transition, this.command, this.event);
             }
@@ -124,7 +124,7 @@ export class StateMachine {
     static load3(name: string, save?: boolean) {
         this.load2(name);
         this.resetView = LViewElement.fromD(DViewElement.new2('Reset', `<div className={'root bg-white p-2'}>RESET</div>`));
-        TRANSACTION(() => {
+        TRANSACTION('load test3',() => {
             SetFieldAction.new(this.resetView.id, 'explicitApplicationPriority', 10, '', false);
             SetFieldAction.new(this.resetView.id, 'viewpoint', this.viewpoint.id, '', true);
             SetFieldAction.new(this.viewpoint.id, 'subViews', this.resetView.id, '+=', true);

@@ -604,7 +604,7 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
     static persist(d: DPointerTargetable[]): void;
     static persist(d: orArr<DPointerTargetable>, fromCreateAction?: boolean): void {
         if (Constructors.paused) return;
-        TRANSACTION(()=> {
+        TRANSACTION('Create element', ()=> {
             if (!Array.isArray(d)) d = [d];
             // first create "this"
             for (let e of d) {
@@ -1031,7 +1031,7 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         // let trview = transientProperties.view[thiss.id];
         // trview.?? = ???
 
-        TRANSACTION(() => {
+        TRANSACTION('recompile jsx & more', () => {
             // add relation to vp
             for(let key of (windoww.DViewElement as typeof DViewElement).RecompileKeys)
                 this.setExternalRootProperty('VIEWS_RECOMPILE_'+key, thiss.id, '+=', false) // is pointer, but no need to set pointedby
@@ -1166,6 +1166,7 @@ export class DPointerTargetable extends RuntimeAccessibleClass {
     public className!: string;
     public __readonly!: boolean;
     _state: GObject = {};
+    name?:string;
 
     static defaultname<L extends LModelElement = LModelElement>(startingPrefix: string | ((meta:L)=>string), father?: Pointer | DPointerTargetable | ((a:string)=>boolean), metaptr?: Pointer | null): string {
         let lfather: LModelElement;
@@ -1644,11 +1645,11 @@ export class LPointerTargetable<Context extends LogicContext<DPointerTargetable>
         let childrens = (thiss.get_children && thiss.get_children(c)) || [];
         let annotations = (thiss.get_annotations && thiss.get_annotations(c)) || [];
         if (val === c.data.__readonly) return true;
-        TRANSACTION(()=>{
+        TRANSACTION('readonly ' + + this.get_name(c), ()=>{
             for (let c of childrens) { c.__readonly = val; }
             for (let c of annotations) { c.__readonly = val; }
             SetFieldAction.new(c.data, '__readonly', val);
-        });
+        }, val, !val);
         return true;
     }
 
@@ -1667,6 +1668,42 @@ export class LPointerTargetable<Context extends LogicContext<DPointerTargetable>
         }));
         return targeting as any;
     }
+
+
+    name!:string;
+    protected get_name(c: Context): this["name"] {
+        let nameattribute = (c.proxyObject as any).$name;
+        let ret: string = undefined as any;
+        if (nameattribute && nameattribute.className === 'LValue') {
+            ret = nameattribute.value;
+        }
+        if (ret === undefined) ret = c.data.name || c.data.className;
+        return ret;
+    }
+
+
+    protected set_name(val: this["name"], c: Context): boolean {
+        let name = val;
+        const father: LPointerTargetable = (c.proxyObject as LModelElement).father;
+        if (father) {
+            const check = (father as LModelElement).children?.filter((child) => {
+                return (D.fromPointer(child.id) as DNamedElement).name === name;
+            });
+            if (check.length > 0) {
+                U.alert('e', 'Cannot rename the selected element since this name is already taken.');
+                return true;
+            }
+        }
+        let nameattribute = (c.proxyObject as any).$name;
+        if (nameattribute && nameattribute.className === 'LValue') {
+            nameattribute.value = val;
+        }
+        else {
+            SetFieldAction.new(c.data, 'name', name, '', false);
+        }
+        return true;
+    }
+
 
     protected wrongAccessMessage(str: string): any {
         let msg = "Method "+str+" should not be called directly, attempting to do so should trigger get_"+str+"(). This is only a signature for type checking.";
@@ -1988,8 +2025,8 @@ WARNING! do not set proxies in the state, set pointers instead.<br/>
     /*
 */
     public delete(): void {}
-    protected get_delete(context: Context): () => void {
-        return Dummy.get_delete(this, context);
+    protected get_delete(c: Context): () => void {
+        return ()=>TRANSACTION('delete '+this.get_name(c), ()=>Dummy.get_delete(this, c));
     }
 }
 RuntimeAccessibleClass.set_extend(RuntimeAccessibleClass, LPointerTargetable);
@@ -2648,7 +2685,7 @@ export class LProject<Context extends LogicContext<DProject> = any, D extends DP
     protected get_delete(c: Context): () => void {
         const data = c.proxyObject as LProject;
         return () => {
-            TRANSACTION(()=> {
+            TRANSACTION('delete ' + this.get_name(c), ()=> {
                 SetFieldAction.new(DUser.current, 'projects', c.data.id as any, '-=', true);
                 DeleteElementAction.new(data.id);
                 SetRootFieldAction.new('projects', c.data.id, '-=', true);

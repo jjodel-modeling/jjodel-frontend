@@ -43,7 +43,7 @@ function NestedViewComponent(props: AllProps) {
     }
     const deleteV = (e: React.MouseEvent, viewPoint: LViewElement) => {
         e.stopPropagation();
-        TRANSACTION(()=>{
+        TRANSACTION('delete ' + viewPoint.name, ()=>{
             // viewPoint.subViews.map(v => v.delete());
             viewPoint.delete();
             // SetFieldAction.new(project.id, 'viewpoints', viewPoint.id as any, '-=', false);
@@ -51,7 +51,7 @@ function NestedViewComponent(props: AllProps) {
     }
     const deleteVP = (e: React.MouseEvent, viewPoint: LViewPoint) => {
         e.stopPropagation();
-        TRANSACTION(()=>{
+        TRANSACTION('delete viewpoint '+viewPoint.name, ()=>{
             // viewPoint.subViews.map(v => v.delete());
             viewPoint.delete();
             // SetFieldAction.new(project.id, 'viewpoints', viewPoint.id as any, '-=', false);

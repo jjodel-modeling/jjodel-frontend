@@ -147,6 +147,6 @@ export class Dummy {
             U.sleep(1).then(() => SetRootFieldAction.new(`idlookup.${dataID}`, undefined, '', false));
             // DeleteElementAction.new(data.id);
         };
-        return () => TRANSACTION(ret);
+        return () => TRANSACTION('delete view ' + thiss.get_name(context), ret);
     }
 }

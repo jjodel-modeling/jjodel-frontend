@@ -227,8 +227,8 @@ export class U {
     }
 
     // exponential: undefined = only if it's over digits. false = never, true = always.
-    public static cropNum(num: number, digits: number=5, exponential?: boolean, atLeast1Decimal:boolean=true): number | string{
-        if (!digits || isNaN(num)) return num;
+    public static cropNum(num: number|undefined|null, digits: number=5, exponential?: boolean, atLeast1Decimal:boolean=true): number | string{
+        if (!digits || num === null || num === undefined || isNaN(num)) return num as any;
         if (exponential) return num.toExponential(digits-1);
         else if (exponential === undefined) {
             let limit = 10**(digits + 4); // 3 extra chars for e+x

@@ -943,28 +943,34 @@ export function _reducer/*<S extends StateNoFunc, A extends Action>*/(oldState: 
         default:
             let ret = doreducer(oldState, action);
             if (ret === oldState) return ret;
+
+            // undo-redo description
+            let desc = (action as CompositeAction).descriptor;
+            if (desc) {
+                console.log('set action descriptor in state', {desc, action});
+                ret.action_title = desc.path||'';
+                let valchange: string;
+                if (desc.oldval !== undefined && desc.newval!== undefined) valchange = ': ' + desc.oldval + ' -> ' + desc.newval;
+                else if (desc.oldval === undefined && desc.newval!== undefined) valchange = ': ' + desc.newval;
+                else valchange = '';
+                ret.action_description = desc.desc + valchange;
+            }
+            else {
+                ret.action_title = '';
+                ret.action_description = '';
+            }
+
+            // update state history
             // statehistory[DUser.current].redoable = [];   <-- Moved to stateInitializer()
             let delta = U.objectDelta(ret, oldState, true, false);
             if (!filterundoableactions(delta)) return ret;
             // console.log("setting undoable action:", {ret, oldState0:{...oldState}, oldState, delta});
-
             let user = (action as Action).sender;
             if (oldState !== null/* && Object.keys(delta).length*/) {
                 statehistory[user].undoable.push(delta);
                 statehistory.all.undoable.push(delta);
             }
 
-            // undo-redo description
-
-            let desc = (action as CompositeAction).descriptor;
-            if (desc) {
-                ret.action_title = desc.desc + ': ' + desc.oldval + ' -> ' + desc.newval;
-                ret.action_description = desc.path + ': ' + desc.oldval + ' -> ' + desc.newval;
-            }
-            else {
-                ret.action_title = '';
-                ret.action_description = '';
-            }
             return ret;
     }
 }

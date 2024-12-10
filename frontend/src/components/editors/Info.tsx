@@ -356,7 +356,7 @@ class builder {
             console.log('clearing containment DValue', {result, index, value});
         }
         function changeDValue(event: React.ChangeEvent<HTMLInputElement|HTMLSelectElement>, index: number, isPointer: boolean | undefined) {
-            TRANSACTION(()=>{
+            TRANSACTION('change value (sidebar)', ()=>{
                 value = value.r;
                 let inputValue: string | boolean = field === 'checkbox' ? (event.target as HTMLInputElement).checked : event.target.value;
                 if (inputValue === 'undefined') inputValue = undefined as any;

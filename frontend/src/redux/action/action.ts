@@ -126,7 +126,7 @@ function FINAL_END(path?: string, oldval?: any, newval?: any, desc?:string): boo
         return false;
     }
     const ca: CompositeAction = new CompositeAction(t.pendingActions, false);
-    ca.descriptor = new ActionDescriptor(path, oldval, newval, desc);
+    if (path) ca.descriptor = new ActionDescriptor(path, oldval, newval, desc);
     t.pendingActions = [];
     return ca.fire();
 }
@@ -153,7 +153,7 @@ type NoAsyncFn<
 // NB: cannot be async, it changes execution order and break many codes where return value is determined in a transaction.
 // also because BEGIN() becomes stuck and actions cannot fire until the server replies or times out.
 // export function TRANSACTION<F extends (...args: any)=>any>(func: NoAsyncFn<F>, ...params: Parameters<F>): boolean | DState {
-export function TRANSACTION(func: ()=> void): boolean {
+export function TRANSACTION(name:string, func: ()=> void, oldval?: any, newval?: any, desc?:string): boolean {
 //export function TRANSACTION<F extends NoAsyncFn)>(func: F, ...params: Parameters<F>): boolean | DState {
     BEGIN();
     let e: Error = null as any;
@@ -163,7 +163,7 @@ export function TRANSACTION(func: ()=> void): boolean {
         else Log.ee('Transaction aborted.');
         return false;
     }
-    return END();
+    return END([], name, oldval, newval, desc);
 }
 (window as any).TRANSACTION = TRANSACTION;
 (window as any).BEGIN = BEGIN;
@@ -554,7 +554,10 @@ export class CreateElementAction extends Action {
     value!: DPointerTargetable;
     public static newBatch<F extends boolean = true>(me: DPointerTargetable[], notfire?: F): (F extends false ? boolean : CreateElementAction)[]{
         let ret: any[] = [];
-        TRANSACTION(()=>(ret = me.map( (e) => CreateElementAction.new(e, notfire))));
+        if (!me.length) return [] as any;
+        let types = [...new Set(me.map(e=>e?.className))];
+        let typedesc = types.length > 1 ? ' objects of mixed types.' : me[0].className + 'objects.';
+        TRANSACTION('Created '+me.length+' '+typedesc, ()=>(ret = me.map( (e) => CreateElementAction.new(e, notfire))));
         return ret;
     }
 
@@ -575,7 +578,7 @@ export class CreateElementAction extends Action {
     }
     public fire(forceRelaunch: boolean = false): boolean {
         let ret = false;
-        TRANSACTION( () => {
+        TRANSACTION('Create ' + this.value?.className, () => {
             ret = super.fire(forceRelaunch);
             if (this.value._derivedSubElements || this.value._persistCallbacks) { Constructors.persist(this.value, true); }
         });

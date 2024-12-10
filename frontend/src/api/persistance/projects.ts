@@ -71,8 +71,8 @@ class Offline {
     static getAll(): void {
         const projects = Storage.read<DProject[]>('projects') || [];
         for(const project of projects) {
-            DProject.new(project.type, project.name, project.state, [], [], project.id);
-            TRANSACTION(() => {
+            TRANSACTION('loading projects', () => {
+                DProject.new(project.type, project.name, project.state, [], [], project.id);
                 SetFieldAction.new(project.id, 'creation', project.creation, '', false);
                 SetFieldAction.new(project.id, 'lastModified', project.lastModified, '', false);
                 SetFieldAction.new(project.id, 'description', project.description, '', false);
@@ -132,9 +132,9 @@ class Online {
             return;
         }
         const data = U.wrapper<DProject[]>(response.data);
-        for(const project of data) {
-            DProject.new(project.type, project.name, project.state, [], [], project.id);
-            TRANSACTION(() => {
+        for (const project of data) {
+            TRANSACTION('loading projects', () => {
+                DProject.new(project.type, project.name, project.state, [], [], project.id);
                 SetFieldAction.new(project.id, 'creation', project.creation, '', false);
                 SetFieldAction.new(project.id, 'lastModified', project.lastModified, '', false);
                 SetFieldAction.new(project.id, 'description', project.description, '', false);

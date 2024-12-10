@@ -167,7 +167,7 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
 
     property!: keyof DModelElement;
     containers!: LNamedElement[]; // list of fathers until the model is reached.
-    name?:string;
+    //name?:string;
 
 
     [key: `@${string}`]: LModelElement;
@@ -242,6 +242,28 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
         }
     }
 
+    fullname!:string;
+    protected get_fullName(context: Context): this["fullname"] { return this.get_fullname(context); }
+    protected get_fullname(context: Context): this["fullname"] {
+        const containers = this.get_containers(context).reverse();
+        // let sliceindex = (containers[0] as LModel).dependencies.length ? 1 : 0;
+        let fullname: string = containers.slice(0, containers.length).map(c => c.name).join('.');
+        return fullname;
+    }
+
+
+    protected _autofix_name(val: string, context: Context): string {
+        // NB: NON fare autofix di univocità nome tra i children o qualsiasi cosa dipendente dal contesto, questo potrebbe essere valido in alcuni modelli e invalido in altri e modificare un oggetto condiviso.
+        return val.replaceAll(/\s/g, '_');
+    }
+
+    protected get_autofix_name(val: string, context: Context): (val: string) => string {
+        return (val: string) => this._autofix_name(val, context);
+    }
+
+    public autofix_name(val: string): string {
+        return this.wrongAccessMessage("autofix_name");
+    }
 
     public static M1Classes = ['DModel', 'DObject', 'DValue']; // Dstrudturalfeature in shapeless obj??
     public static AbstractClasses = ['DModelElement', 'DNamedElement', '...'];
@@ -768,14 +790,14 @@ export class LAnnotation<Context extends LogicContext<DAnnotation> = any, D exte
         return this.cannotCall(((this.constructor as typeof RuntimeAccessibleClass).cname || this.constructor.name) + "duplicate()");
     }
 
-    protected get_duplicate(context: Context): ((deep?: boolean) => LAnnotation) {
+    protected get_duplicate(c: Context): ((deep?: boolean) => LAnnotation) {
         return (deep: boolean = false) => {
             let ret: LAnnotation = null as any;
-            TRANSACTION(()=>{
-                let de = context.proxyObject.father.addAnnotation(context.data.source, (deep ? context.proxyObject.details.map(ldet => ldet.duplicate().__raw) : context.data.details));
+            TRANSACTION('duplicate ' + this.get_name(c), ()=>{
+                let de = c.proxyObject.father.addAnnotation(c.data.source, (deep ? c.proxyObject.details.map(ldet => ldet.duplicate().__raw) : c.data.details));
                 let le: LAnnotation = LPointerTargetable.fromD(de);
                 let we: WAnnotation = le as any;
-                we.annotations = deep ? context.proxyObject.annotations.map(lchild => lchild.duplicate(deep).id) : context.data.annotations;
+                we.annotations = deep ? c.proxyObject.annotations.map(lchild => lchild.duplicate(deep).id) : c.data.annotations;
                 ret = le; // set ret = le only if the transaction is complete.
             })
             return ret;
@@ -873,7 +895,6 @@ export class LNamedElement<Context extends LogicContext<DNamedElement> = any> ex
     // personal
     name!: string;
     namespace!: string;
-    fullname!: string;
 
     protected set_containers(): boolean {
         return this.cannotSet('containers');
@@ -892,56 +913,6 @@ export class LNamedElement<Context extends LogicContext<DNamedElement> = any> ex
 
     // protected get_namespace(context: Context): string { throw new Error("?? get namespace ?? todo"); return ""; }
 
-    protected get_fullName(context: Context): this["fullname"] { return this.get_fullname(context); }
-    protected get_fullname(context: Context): this["fullname"] {
-        const containers = this.get_containers(context).reverse();
-        // let sliceindex = (containers[0] as LModel).dependencies.length ? 1 : 0;
-        let fullname: string = containers.slice(0, containers.length).map(c => c.name).join('.');
-        return fullname;
-    }
-
-
-    protected get_name(context: Context): this["name"] {
-        return context.data.name;
-    }
-
-    protected set_name(val: this["name"], context: Context): boolean {
-        let name = val;
-        const father = context.proxyObject.father;
-        if (father) {
-            const check = father.children.filter((child) => {
-                return (DNamedElement.fromPointer(child.id) as DNamedElement).name === name
-            });
-            if (check.length > 0) {
-                U.alert('e', 'Cannot rename the selected element since this name is already taken.');
-                return true
-            }
-        }
-        SetFieldAction.new(context.data, 'name', name, '', false);
-        return true;
-
-        /*
-        // this autofix removes spaces with _
-        if (val.match(/\s/)) val = this._autofix_name(val, context);
-        // todo: validate if operation can be completed or need autocorrection, then either return false (invalid parameter cannot complete) or send newVal at redux
-        const fixedVal: string = val;
-        SetFieldAction.new(context.data, 'name', fixedVal, '', false);
-        return true;
-        */
-    }
-
-    protected _autofix_name(val: string, context: Context): string {
-        // NB: NON fare autofix di univocità nome tra i children o qualsiasi cosa dipendente dal contesto, questo potrebbe essere valido in alcuni modelli e invalido in altri e modificare un oggetto condiviso.
-        return val.replaceAll(/\s/g, '_');
-    }
-
-    protected get_autofix_name(val: string, context: Context): (val: string) => string {
-        return (val: string) => this._autofix_name(val, context);
-    }
-
-    public autofix_name(val: string): string {
-        return this.wrongAccessMessage("autofix_name");
-    }
 }
 
 
@@ -1379,16 +1350,16 @@ export class LPackage<Context extends LogicContext<DPackage> = any, C extends Co
 
     public duplicate(deep: boolean = true): this {
         return this.cannotCall( ((this.constructor as typeof RuntimeAccessibleClass).cname || this.constructor.name) + "duplicate()"); }
-    protected get_duplicate(context: Context): ((deep?: boolean) => LPackage) {
+    protected get_duplicate(c: Context): ((deep?: boolean) => LPackage) {
         return (deep: boolean = false) => {
             let ret: LPackage = null as any;
-            TRANSACTION(()=>{
-                let le: LPackage = context.proxyObject.father.addPackage(context.data.name, context.data.uri, context.data.prefix);
+            TRANSACTION('duplicate ' + this.get_name(c), ()=>{
+                let le: LPackage = c.proxyObject.father.addPackage(c.data.name, c.data.uri, c.data.prefix);
                 let de: D = le.__raw as D;
                 let we: WPackage = le as any;
-                we.subpackages = deep ? context.proxyObject.subpackages.map( lchild => lchild.duplicate(deep).id) : context.data.subpackages;
-                we.classifiers = deep ? context.proxyObject.classifiers.map( lchild => lchild.duplicate(deep).id) : context.data.classifiers;
-                we.annotations = deep ? context.proxyObject.annotations.map( lchild => lchild.duplicate(deep).id) : context.data.annotations;
+                we.subpackages = deep ? c.proxyObject.subpackages.map( lchild => lchild.duplicate(deep).id) : c.data.subpackages;
+                we.classifiers = deep ? c.proxyObject.classifiers.map( lchild => lchild.duplicate(deep).id) : c.data.classifiers;
+                we.annotations = deep ? c.proxyObject.annotations.map( lchild => lchild.duplicate(deep).id) : c.data.annotations;
                 ret = le;
             })
             return ret;
@@ -1494,20 +1465,20 @@ export class LPackage<Context extends LogicContext<DPackage> = any, C extends Co
             return LPointerTargetable.from(pointer)
         });
     }
-    protected set_classifiers(val: PackArr<this["classifiers"]>, context: Context): boolean {
+    protected set_classifiers(val: PackArr<this["classifiers"]>, c: Context): boolean {
         const list: Pointer<DClassifier>[] = val.map((lItem) => { return Pointers.from(lItem) });
-        const oldList = context.data.classifiers;
+        const oldList = c.data.classifiers;
         const diff = U.arrayDifference(oldList, list);
-        TRANSACTION(()=>{
-            SetFieldAction.new(context.data, 'classifiers', list, "", true);
+        TRANSACTION('changed '+this.get_name(c)+'.classifiers', ()=>{
+            SetFieldAction.new(c.data, 'classifiers', list, "", true);
             for (let id of diff.added) {
-                SetFieldAction.new(id, 'father', context.data.id, '', true);
-                SetFieldAction.new(id, 'parent', context.data.id, '+=', true);
+                SetFieldAction.new(id, 'father', c.data.id, '', true);
+                SetFieldAction.new(id, 'parent', c.data.id, '+=', true);
             }
             for (let id of diff.removed as Pointer<DModelElement>[]) {
                 SetFieldAction.new(id, 'father', undefined, '', true);
                 const parent = DPointerTargetable.from(id).parent;
-                U.arrayRemoveAll(parent, context.data.id);
+                U.arrayRemoveAll(parent, c.data.id);
                 SetFieldAction.new(id, 'parent', parent, '', true);
             }
         })
@@ -1519,20 +1490,20 @@ export class LPackage<Context extends LogicContext<DPackage> = any, C extends Co
             return LPointerTargetable.from(pointer)
         });
     }
-    protected set_subpackages(val: PackArr<this["subpackages"]>, context: Context): boolean {
+    protected set_subpackages(val: PackArr<this["subpackages"]>, c: Context): boolean {
         const list = val.map((lItem) => { return Pointers.from(lItem) });
-        const oldList = context.data.subpackages;
+        const oldList = c.data.subpackages;
         const diff = U.arrayDifference(oldList, list);
-        TRANSACTION(()=>{
-            SetFieldAction.new(context.data, 'subpackages', list, "", true);
+        TRANSACTION('changed ' + this.get_name(c)+'.packages', ()=>{
+            SetFieldAction.new(c.data, 'subpackages', list, "", true);
             for (let id of diff.added) {
-                SetFieldAction.new(id, 'father', context.data.id, '', true);
-                SetFieldAction.new(id, 'parent', context.data.id, '+=', true);
+                SetFieldAction.new(id, 'father', c.data.id, '', true);
+                SetFieldAction.new(id, 'parent', c.data.id, '+=', true);
             }
             for (let id of diff.removed as Pointer<DModelElement>[]) {
                 SetFieldAction.new(id, 'father', undefined, '', true);
                 const parent = DPointerTargetable.from(id).parent;
-                U.arrayRemoveAll(parent, context.data.id);
+                U.arrayRemoveAll(parent, c.data.id);
                 SetFieldAction.new(id, 'parent', parent, '', true);
             }
         })
@@ -1668,7 +1639,7 @@ export class LOperation<Context extends LogicContext<DOperation> = any, C extend
     protected get_duplicate(context: Context): ((deep?: boolean) => LOperation) {
         return (deep: boolean = false) => {
             let ret: LOperation = null as any;
-            TRANSACTION(()=>{
+            TRANSACTION('duplicate ' + this.get_name(context), ()=>{
                 let le: LOperation = context.proxyObject.father.addOperation(context.data.name, context.data.type);
                 let de: D = le.__raw as D;
                 de.many = context.data.many;
@@ -1733,20 +1704,20 @@ export class LOperation<Context extends LogicContext<DOperation> = any, C extend
             return LPointerTargetable.from(pointer)
         });
     }
-    protected set_parameters(val: PackArr<this["parameters"]>, context: Context): boolean {
+    protected set_parameters(val: PackArr<this["parameters"]>, c: Context): boolean {
         const list = val.map((lItem) => { return Pointers.from(lItem) });
-        const oldList = context.data.parameters;
+        const oldList = c.data.parameters;
         const diff = U.arrayDifference(oldList, list);
-        TRANSACTION(()=>{
-            SetFieldAction.new(context.data, 'parameters', list, "", true);
+        TRANSACTION('changed ' + this.get_name(c)+'.parameters', ()=>{
+            SetFieldAction.new(c.data, 'parameters', list, "", true);
             for (let id of diff.added) {
-                SetFieldAction.new(id, 'father', context.data.id, '', true);
-                SetFieldAction.new(id, 'parent', context.data.id, '+=', true);
+                SetFieldAction.new(id, 'father', c.data.id, '', true);
+                SetFieldAction.new(id, 'parent', c.data.id, '+=', true);
             }
             for (let id of diff.removed as Pointer<DModelElement>[]) {
                 SetFieldAction.new(id, 'father', undefined, '', true);
                 const parent = DPointerTargetable.from(id).parent;
-                U.arrayRemoveAll(parent, context.data.id);
+                U.arrayRemoveAll(parent, c.data.id);
                 SetFieldAction.new(id, 'parent', parent, '', true);
             }
         })
@@ -1864,7 +1835,7 @@ export class LParameter<Context extends LogicContext<DParameter> = any, C extend
     protected get_duplicate(context: Context): ((deep?: boolean) => LParameter) {
         return (deep: boolean = false) => {
             let ret: LParameter = null as any;
-            TRANSACTION(()=>{
+            TRANSACTION('duplicate ' + this.get_name(context), ()=>{
                 let le: LParameter = context.proxyObject.father.addParameter(context.data.name, context.data.type);
                 let de: D = le.__raw as D;
                 de.many = context.data.many;
@@ -2120,7 +2091,7 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
         else if (!Array.isArray(val)) val = [val];
         const ptrs = [...new Set(val.map((val) => { return val && Pointers.from(val) }).filter(e=>!!e))];
         if (Uarr.equalsUnsorted(c.data.sealed, ptrs)) return true;
-        TRANSACTION(()=>{
+        TRANSACTION('changed '+this.get_name(c)+'.sealed ', ()=>{
             SetFieldAction.new(c.data, 'sealed', ptrs, '', true);
             if (ptrs.length) {
                 SetFieldAction.new(c.data, 'isSingleton', false);
@@ -2134,22 +2105,24 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
     get_isFinal(c: Context): LClass['final'] { return this.get_final(c); }
     get_final(c: Context): LClass['final']{ return c.data.final; }
     set_final(val: boolean, c: Context): boolean{
+        val = !!val;
         if (val === c.data.final) return true;
         if (c.data.extendedBy.length > 0) { U.alert('e', 'Class cannot become final as it is currently extended. Remove the subclasses before.'); return true; }
-        TRANSACTION(()=>{
+        TRANSACTION('class ' + this.get_name(c)+'.final', ()=>{
             SetFieldAction.new(c.data, 'final', val);
             SetFieldAction.new(c.data, 'sealed', [], '', true);
             if (!val) SetFieldAction.new(c.data, 'isSingleton', false);
-        });
+        }, c.data.final, val);
         return true;
     }
     get_isSingleton(c: Context): LClass['isSingleton'] { return this.get_singleton(c); }
     get_singleton(c: Context): LClass['isSingleton']{ return c.data.isSingleton; }
     set_isSingleton(val: boolean, c: Context): boolean{ return this.set_singleton(val, c); }
     set_singleton(val: boolean, c: Context): boolean{
+        val = !!val;
         if (c.data.instances.length > 1) { U.alert('e', 'Class cannot become a singleton since there are multiple instances already. Delete some and retry.'); return true; }
         if (c.data.extendedBy.length > 0) { U.alert('e', 'Class cannot become a singleton unless is also final, and is currently extended. Remove the subclasses before.'); return true; }
-        TRANSACTION(()=>{
+        TRANSACTION('class ' + this.get_name(c)+'.singleton', ()=>{
             SetFieldAction.new(c.data, 'isSingleton', val);
             if (val) {
                 SetFieldAction.new(c.data, 'final', true);
@@ -2161,7 +2134,7 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
                     m1.addObject({name: c.data.name}, c.data, true);
                 }
             }
-        });
+        }, c.data.isSingleton, val);
         return c.data.final;
     }
     get_instantiable(c: Context): LClass['instantiable']{ return !(c.data.abstract || c.data.interface || c.data.isSingleton); }
@@ -2301,7 +2274,7 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
     protected get_duplicate(context: Context): ((deep?: boolean) => LClass) {
         return (deep: boolean = false) => {
             let ret: LClass = null as any;
-            TRANSACTION( () => {
+            TRANSACTION('duplicate '+this.get_name(context), () => {
                 let le: LClass = context.proxyObject.father.addClass(context.data.name, context.data.interface, context.data.abstract, context.data.isPrimitive);
                 let de: D = le.__raw as D;
                 // de.hideExcessFeatures = context.data.hideExcessFeatures;
@@ -2407,7 +2380,7 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
         const list = val.map((lItem) => { return Pointers.from(lItem) });
         const oldList = context.data.operations;
         const diff = U.arrayDifference(oldList, list);
-        TRANSACTION(()=>{
+        TRANSACTION('changed ' + this.get_name(context)+'.operations', ()=>{
             SetFieldAction.new(context.data, 'operations', list, "", true);
             for (let id of diff.added) {
                 SetFieldAction.new(id, 'father', context.data.id, '', true);
@@ -2431,7 +2404,7 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
         const oldList = context.data.features;
         const diff = U.arrayDifference(oldList, list);
         let le: this = null as any;
-        TRANSACTION(()=>{
+        TRANSACTION('changed ' + this.get_name(context)+'.features', ()=>{
             SetFieldAction.new(context.data, 'features', list, "", true);
             for (let id of diff.added) {
                 SetFieldAction.new(id, 'father', context.data.id, '', true);
@@ -2457,7 +2430,7 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
         const oldList = context.data.references;
         const diff = U.arrayDifference(oldList, list);
         let le: this = null as any;
-        TRANSACTION(()=>{
+        TRANSACTION('changed ' + this.get_name(context)+'.references', ()=>{
             SetFieldAction.new(context.data, 'references', list, "", true);
             for (let id of diff.added) {
                 SetFieldAction.new(id, 'father', context.data.id, '', true);
@@ -2482,7 +2455,7 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
         const list = val.map((lItem) => { return Pointers.from(lItem) });
         const oldList = context.data.attributes;
         const diff = U.arrayDifference(oldList, list);
-        TRANSACTION(()=>{
+        TRANSACTION('changed ' + this.get_name(context)+'.attributes', ()=>{
             SetFieldAction.new(context.data, 'attributes', list, "", true);
             for (let id of diff.added) {
                 SetFieldAction.new(id, 'father', context.data.id, '', true);
@@ -3295,7 +3268,7 @@ export class LReference<Context extends LogicContext<DReference> = any, C extend
     protected get_duplicate(context: Context): ((deep?: boolean) => LReference) {
         return (deep: boolean = false) => {
             let ret: LReference = undefined as any;
-            TRANSACTION(()=>{
+            TRANSACTION('duplicate ' + this.get_name(context), ()=>{
                 let le: LReference = context.proxyObject.father.addReference(context.data.name, context.data.type);
                 let de: D = le.__raw as D;
                 de.many = context.data.many;
@@ -3332,14 +3305,14 @@ export class LReference<Context extends LogicContext<DReference> = any, C extend
     public addClass(name?: DClass["name"], isInterface?: DClass["interface"], isAbstract?: DClass["abstract"], isPrimitive?: DClass["isPrimitive"],
                     isPartial?: DClass["partial"], partialDefaultName?: DClass["partialdefaultname"]): LClass {
         return this.cannotCall("LReference.addClass"); }
-    protected get_addClass(context: Context): this["addClass"] {
+    protected get_addClass(c: Context): this["addClass"] {
         return (name?: DClass["name"], isInterface?: DClass["interface"], isAbstract?: DClass["abstract"], isPrimitive?: DClass["isPrimitive"],
                 isPartial?: DClass["partial"], partialDefaultName?: DClass["partialdefaultname"]) => {
             let dclass: DClass = null as any
-            TRANSACTION(()=>{
-                dclass = DClass.new(name, isInterface, isAbstract, isPrimitive, isPartial, partialDefaultName, context.proxyObject.package!.id, true);
+            TRANSACTION('' + this.get_name(c)+'.addClass()', ()=>{
+                dclass = DClass.new(name, isInterface, isAbstract, isPrimitive, isPartial, partialDefaultName, c.proxyObject.package!.id, true);
                 // SetFieldAction.new(context.data.id, "type", dclass.id);
-                this.set_type(dclass.id as any, context);
+                this.set_type(dclass.id as any, c);
             })
             return LPointerTargetable.fromD(dclass);
         } }
@@ -3350,7 +3323,7 @@ export class LReference<Context extends LogicContext<DReference> = any, C extend
         // return this.cannotSet('containment', 'set aggregation or composition instead');
         val = !!val;
         if (c.data[mainkey] === val) return true;
-        TRANSACTION(()=>{
+        TRANSACTION('changed ' + this.get_name(c)+'.'+mainkey, ()=>{
             // set composition and unset aggregation or viceversa
             SetFieldAction.new(c.data, mainkey, val);
             if (val && c.data[altkey]) SetFieldAction.new(c.data, altkey, !val);
@@ -3393,7 +3366,7 @@ export class LReference<Context extends LogicContext<DReference> = any, C extend
             }
             //if (!windoww.containmentSideEffects) windoww.containmentSideEffects = {};
             //windoww.containmentSideEffects[c.data.id] = {removedValues, parentChanges};
-        });
+        }, c.data[mainkey], val);
         return true;
     }
 
@@ -3582,7 +3555,7 @@ export class LAttribute <Context extends LogicContext<DAttribute> = any, C exten
     protected get_duplicate(context: Context): ((deep?: boolean) => LAttribute) {
         return (deep: boolean = false) => {
             let ret: LAttribute = null as any;
-            TRANSACTION(()=>{
+            TRANSACTION('duplicate ' + this.get_name(context), ()=>{
                 let le: LAttribute = context.proxyObject.father.addAttribute(context.data.name, context.data.type);
                 let de: D = le.__raw as D;
                 de.many = context.data.many;
@@ -3620,13 +3593,14 @@ export class LAttribute <Context extends LogicContext<DAttribute> = any, C exten
         return true;
     }
     protected get_isIoT(context: Context): this["isIoT"] { return context.data.isIoT; }
-    protected set_isIoT(val: this["isIoT"], context: Context): boolean {
-        TRANSACTION(() => {
-            for(const value of context.proxyObject.instances) {
+    protected set_isIoT(val: this["isIoT"], c: Context): boolean {
+        val = !!val;
+        TRANSACTION('changed ' + this.get_name(c)+'.isIoT', () => {
+            for(const value of c.proxyObject.instances) {
                 SetFieldAction.new(value, 'topic', '', '', false);
             }
-            SetFieldAction.new(context.data, 'isIoT', val);
-        })
+            SetFieldAction.new(c.data, 'isIoT', val);
+        }, c.data.isIoT, val)
         return true;
     }
     protected get_defaultValue(context: Context): this["defaultValue"] { return context.data.defaultValue; }
@@ -3722,16 +3696,16 @@ export class LEnumLiteral<Context extends LogicContext<DEnumLiteral> = any, C ex
 
     public duplicate(deep: boolean = true): this {
         return this.cannotCall( ((this.constructor as typeof RuntimeAccessibleClass).cname || this.constructor.name) + "duplicate()"); }
-    protected get_duplicate(context: Context): ((deep?: boolean) => LEnumLiteral) {
+    protected get_duplicate(c: Context): ((deep?: boolean) => LEnumLiteral) {
         return (deep: boolean = false) => {
             let ret: LEnumLiteral = null as any;
-            TRANSACTION(()=>{
-                let le: LEnumLiteral = context.proxyObject.father.addLiteral(context.data.name, context.data.value);
+            TRANSACTION(this.get_name(c)+'.duplicate()', ()=>{
+                let le: LEnumLiteral = c.proxyObject.father.addLiteral(c.data.name, c.data.value);
                 let de: D = le.__raw as D;
-                de.literal = context.data.literal;
-                de.value = context.data.value;
+                de.literal = c.data.literal;
+                de.value = c.data.value;
                 let we: WEnumLiteral = le as any;
-                we.annotations = deep ? context.proxyObject.annotations.map(lchild => lchild.duplicate(deep).id) : context.data.annotations;
+                we.annotations = deep ? c.proxyObject.annotations.map(lchild => lchild.duplicate(deep).id) : c.data.annotations;
                 ret = le;
             })
             return ret; }
@@ -3856,29 +3830,29 @@ export class LEnumerator<Context extends LogicContext<DEnumerator> = any, C exte
 
     public duplicate(deep: boolean = true): this {
         return this.cannotCall( ((this.constructor as typeof RuntimeAccessibleClass).cname || this.constructor.name) + "duplicate()"); }
-    protected get_duplicate(context: Context): ((deep?: boolean) => LEnumerator) {
+    protected get_duplicate(c: Context): ((deep?: boolean) => LEnumerator) {
         return (deep: boolean = false) => {
             let ret: LEnumerator = null as any;
-            TRANSACTION(()=>{
-                let le: LEnumerator = context.proxyObject.father.addEnumerator(context.data.name);
+            TRANSACTION(this.get_name(c)+'.duplicate()', ()=>{
+                let le: LEnumerator = c.proxyObject.father.addEnumerator(c.data.name);
                 let de: D = le.__raw as D;
-                de.defaultValue = context.data.defaultValue;
-                de.serializable = context.data.serializable;
+                de.defaultValue = c.data.defaultValue;
+                de.serializable = c.data.serializable;
                 let we: WEnumerator = le as any;
-                we.annotations = deep ? context.proxyObject.annotations.map(lchild => lchild.duplicate(deep).id) : context.data.annotations;
-                we.literals = deep ? context.proxyObject.literals.map(lchild => lchild.duplicate(deep).id) : context.data.literals;
+                we.annotations = deep ? c.proxyObject.annotations.map(lchild => lchild.duplicate(deep).id) : c.data.annotations;
+                we.literals = deep ? c.proxyObject.literals.map(lchild => lchild.duplicate(deep).id) : c.data.literals;
                 ret = le;
             })
             return ret; }
     }
 
 
-    protected get_children_idlist(context: Context): Pointer<DAnnotation | DEnumLiteral, 1, 'N'> {
-        return [...super.get_children_idlist(context) as Pointer<DAnnotation | DEnumLiteral, 1, 'N'>, ...context.data.literals]; }
+    protected get_children_idlist(c: Context): Pointer<DAnnotation | DEnumLiteral, 1, 'N'> {
+        return [...super.get_children_idlist(c) as Pointer<DAnnotation | DEnumLiteral, 1, 'N'>, ...c.data.literals]; }
 
     public addLiteral(name?: DEnumLiteral["name"], value?: DEnumLiteral["value"]): LEnumLiteral { return this.cannotCall("addLiteral"); }
-    protected get_addLiteral(context: Context): this["addLiteral"] {
-        return (name?: DEnumLiteral["name"], value?: DEnumLiteral["value"]) => LPointerTargetable.fromD(DEnumLiteral.new(name, value, context.data.id, true)); }
+    protected get_addLiteral(c: Context): this["addLiteral"] {
+        return (name?: DEnumLiteral["name"], value?: DEnumLiteral["value"]) => LPointerTargetable.fromD(DEnumLiteral.new(name, value, c.data.id, true)); }
 
     protected get_literals(context: Context): this["literals"] {
         return context.data.literals.map((pointer) => {
@@ -3889,7 +3863,7 @@ export class LEnumerator<Context extends LogicContext<DEnumerator> = any, C exte
         const list = val.map((lItem) => { return Pointers.from(lItem) });
         const oldList = context.data.literals;
         const diff = U.arrayDifference(oldList, list);
-        TRANSACTION(()=>{
+        TRANSACTION('changed ' + this.get_name(context)+'.literals', ()=>{
             SetFieldAction.new(context.data, 'literals', list, "", true);
             for (let id of diff.added) {
                 SetFieldAction.new(id, 'father', context.data.id, '', true);
@@ -4587,7 +4561,7 @@ instanceof === undefined or missing  --> auto-detect and assign the type
         const list = val.map((lItem) => { return Pointers.from(lItem) });
         const oldList = context.data.models;
         const diff = U.arrayDifference(oldList, list);
-        TRANSACTION(()=>{
+        TRANSACTION('changed ' + this.get_name(context)+'.models', ()=>{
             SetFieldAction.new(context.data, 'models', list, '', true);
             for (let id of diff.added) {
                 SetFieldAction.new(id, 'father', context.data.id, '', true);
@@ -4653,20 +4627,20 @@ instanceof === undefined or missing  --> auto-detect and assign the type
         return ret;
     }
 
-    protected set_packages(val: PackArr<this["packages"]>, context: Context): boolean {
+    protected set_packages(val: PackArr<this["packages"]>, c: Context): boolean {
         const list = val.map((lItem) => { return Pointers.from(lItem) });
-        const oldList = context.data.packages;
+        const oldList = c.data.packages;
         const diff = U.arrayDifference(oldList, list);
-        TRANSACTION(()=>{
-            SetFieldAction.new(context.data, 'packages', list, "", true);
+        TRANSACTION('changed ' + this.get_name(c)+'.packages', ()=>{
+            SetFieldAction.new(c.data, 'packages', list, "", true);
             for (let id of diff.added) {
-                SetFieldAction.new(id, 'father', context.data.id, '', true);
-                SetFieldAction.new(id, 'parent', context.data.id, '+=', true);
+                SetFieldAction.new(id, 'father', c.data.id, '', true);
+                SetFieldAction.new(id, 'parent', c.data.id, '+=', true);
             }
             for (let id of diff.removed as Pointer<DModelElement>[]) {
                 SetFieldAction.new(id, 'father', undefined, '', true);
                 const parent = DPointerTargetable.from(id).parent;
-                U.arrayRemoveAll(parent, context.data.id);
+                U.arrayRemoveAll(parent, c.data.id);
                 SetFieldAction.new(id, 'parent', parent, '', true);
             }
         })
@@ -4973,7 +4947,6 @@ export class LObject<Context extends LogicContext<DObject> = any, C extends Cont
     name!: string;
     ecoreRootName!: string;
     namespace!: string;
-    fullname!:string;
     defaultValue!: DClass["defaultValue"];
     // abstract!: boolean;
     // interface!: boolean;
@@ -5288,7 +5261,7 @@ export class DValue extends DModelElement { // extends DModelElement, m1 value (
     parent: Pointer<DObject, 0, 'N', LObject> = [];
     father!: Pointer<DObject, 1, 1, LObject>;
     annotations: Pointer<DAnnotation, 0, 'N', LAnnotation> = [];
-    name?: string; // nome opzionale solo per modelli schema-less
+    //name!: string; // nome opzionale solo per modelli schema-less//, ma se manca restsituisce 'DValue'
 
     // personal
     // value: PrimitiveType | Pointer<DObject, 1, 1, LObject>; // vv4
@@ -5608,7 +5581,7 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
             let isDValue = c.data.className === "DValue";
             let isDModel = c.data.className === "DModel";
 
-            TRANSACTION(() => {
+            TRANSACTION(this.get_name(c as any)+'.addObject()', () => {
                 let instanceoff: undefined | LAttribute | LReference = isDValue ? this.get_instanceof(c as Context) : undefined;
                 let dinstanceoff: undefined | DAttribute | DReference = instanceoff && instanceoff.__raw;
                 // let ShapelessObjectID =
@@ -5706,7 +5679,7 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
                 let isPartial: boolean = !!lmetaclass?.partial;
                 let childnames: Dictionary<string> = lmetaclass ? U.objectFromArrayValues(lmetaclass.childNames) : {};
                 // because at current time Constructor.setPtr actions are not executed yet. so dobject.features is empty, even through LPoint.from(valueid) canaccess the "pending" local dvalue not in store.
-                setTimeout(()=>TRANSACTION(()=>{
+                setTimeout(()=>TRANSACTION(this.get_name(c as any)+'.addObject() initializing values', ()=>{
                     for (let key in json) {
                         if (TargetableProxyHandler.childKeys[key[0]]) { // if $ is prepended, priority is first and only child values check
                             if (key in childnames) { // if child dvalue with that name including char $ exist, like in "$" + "$name"
@@ -6230,7 +6203,7 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
                     Log.ee('invalid derived (set) attribute expression: ' + dmeta.name, {error, derivedText:dmeta.derived_write});
                 }
                 if(td.derived_write) try {
-                    TRANSACTION(()=>{
+                    TRANSACTION('changed ' + this.get_name(c)+' derived attributes', ()=>{
                         let ret = td?.derived_write?.(val, c.proxyObject, c.data.values);
                         if (ret !== undefined) {
                             val = ret;
@@ -6252,7 +6225,7 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
             let idmap: Dictionary<string, true> = {}
             val = val.filter((e: any)=> { if (typeof e !== 'string' || !idmap[e]) return true; idmap[e] = true; return true;} )
         }
-        TRANSACTION(()=>{
+        TRANSACTION(this.get_fullname(c)+'.values', ()=>{
             let outactions: outactions = {clear:[], set:[], immediatefire: false};
             for (let i = 0; i < val.length; i++) {
                 let out = this.get_setValueAtPosition(c)(i, val[i], {setMirage: false} as any, outactions);

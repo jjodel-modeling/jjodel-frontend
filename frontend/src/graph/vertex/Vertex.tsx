@@ -136,17 +136,19 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
                 },
                 // disabled: !(view.draggable),
                 start: (event: GObject, obj: GObject) => {
-                    for (let vid of allviews) this.doMeasurableEvent(EMeasurableEvents.onDragStart, vid);
+                    TRANSACTION('Vertex dragStart ' + this.props.node.name, ()=> {
+                        for (let vid of allviews) this.doMeasurableEvent(EMeasurableEvents.onDragStart, vid);
+                    })
                 },
                 drag: (event: GObject, obj: GObject) => {
-                    TRANSACTION(()=>{
-                        console.log('Vertex.setsize', obj);
+                    TRANSACTION('Vertex dragging ' + this.props.node.name, ()=>{
+                        // console.log('Vertex.setsize', obj);
                         if (!this.props.view.lazySizeUpdate) this.setSize({x:obj.position.left, y:obj.position.top});
                         for (let vid of allviews) this.doMeasurableEvent(EMeasurableEvents.whileDragging, vid);
                     })
                 },
                 stop: (event: GObject, obj: GObject) => {
-                    TRANSACTION(()=>{
+                    TRANSACTION('Vertex dragEnd ' + this.props.node.name, ()=>{
                         this.setSize({x:obj.position.left, y:obj.position.top});
                         for (let vid of allviews) this.doMeasurableEvent(EMeasurableEvents.onDragEnd, vid);
                     })
@@ -173,13 +175,13 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
             this.resizableOptions = {
                 helper: 'selected-by-me',
                 start: (event: GObject, obj: GObject) => {
-                    TRANSACTION(()=>{
+                    TRANSACTION('onResizeStart events ' + this.props.node.name, ()=>{
                         if (!this.props.node.isResized) this.props.node.isResized = true; // set only on manual resize, so here and not on setSize()
                         for (let vid of allviews) this.doMeasurableEvent(EMeasurableEvents.onResizeStart, vid);
                     })
                 },
                 resize: (event: GObject, obj: GObject) => {
-                    TRANSACTION(()=>{
+                    TRANSACTION('resizing events ' + this.props.node.name, ()=>{
                         if (!this.props.view.lazySizeUpdate) this.setSize({w:obj.position.width, h:obj.position.height});
                         for (let vid of allviews) this.doMeasurableEvent(EMeasurableEvents.whileResizing, vid);
                     })
@@ -251,7 +253,7 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
                     }
                     else newSize = {w:obj.size.width, h:obj.size.height};
                     // evt coordinates: clientX, layerX, offsetX, pageX, screenX
-                    TRANSACTION(()=>{/*
+                    TRANSACTION('onResizeEnd events ' + this.props.node.name, ()=>{/*
                         delete newSize.x;
                         delete newSize.y;*/
                         this.setSize(newSize);

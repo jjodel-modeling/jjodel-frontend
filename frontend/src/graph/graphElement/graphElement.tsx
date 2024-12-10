@@ -437,13 +437,13 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
 
     select(forUser?: Pointer<DUser>): void {
         // if (forUser === DUser.current && this.html.current) this.html.current.focus();
-        TRANSACTION(()=>{
+        TRANSACTION('selection', ()=>{
             this.props.node?.select(forUser);
             SetRootFieldAction.new('_lastSelected', {
                 node: this.props.nodeid,
                 view: this.props.view.id,
                 modelElement: this.props.data?.id
-            });/*
+            }, (this.props.data as any).name);/*
         // ? why this?
         const id = this.props.data?.id;
         if (id) {
@@ -682,7 +682,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
     }
 
     doContextMenu(e: React.MouseEvent<Element>) {
-        TRANSACTION(()=>{
+        TRANSACTION('contextmenu', ()=>{
             this.props.node.select();
             if (this.html.current) this.html.current.focus();
             let state: DState = store.getState();
@@ -694,7 +694,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
                     nodeid: this.props.node?.id
                 });
             }
-        })
+        }, true, false)
     }
 
     onEnter(e: React.MouseEvent<Element>) { // instead of doing it here, might set this class on render, and trigger it visually operative with :hover selector css
@@ -718,12 +718,12 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         if (UX.isStoppedEvt(e)) return;
         e.stopPropagation();
         GraphElementComponent.mousedownComponent = this;
-        TRANSACTION(()=>{
+        //TRANSACTION('contextmenu', ()=>{
             if (e.button === Keystrokes.clickRight) { this.doContextMenu(e); }
             let p: GObject = this.props;
             console.log('try drag', {p, ig: p.isGraph, iv:p.isVertex, e});
             // if ((p.isGraph && !p.isVertex) || (p.isGraph && p.isVertex && e.ctrlKey)) GraphDragManager.startPanning(e, this.props.node as LGraph);
-        })
+        //})
     }
 
 
@@ -739,7 +739,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         let gscrollOrigin: GraphPoint = oldOffset.add(scrollOrigin.multiply(oldZoom, true), true);
         let newscrollOrigin: GraphPoint = oldOffset.add(scrollOrigin.multiply(newZoom, true), true);
         let newOffset: GraphPoint = oldOffset.add( gscrollOrigin.subtract(newscrollOrigin, true), true);
-        TRANSACTION(()=>{
+        TRANSACTION('scroll graph', ()=>{
             g.offset = newOffset;
             g.zoom = newZoom;
         })
@@ -750,7 +750,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
     }
     onMouseUp(e: React.MouseEvent, frommousemove: boolean = false): void {
         e.stopPropagation();
-        TRANSACTION(()=>{
+        TRANSACTION('Vertex click-events', ()=>{
             //GraphDragManager.stopPanning(e);
             if (GraphElementComponent.mousedownComponent !== this) { return; }
             if (!frommousemove) this.doOnClick(e);
@@ -784,7 +784,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         if (isDelete){
             let nid = this.props.nodeid;
             let tn = transientProperties.node[nid];
-            TRANSACTION(()=>{
+            TRANSACTION('delete ' + this.props.node.name, ()=>{
                 if (tn && tn.onDelete && tn.onDelete(this.props.node) === false) return;
                 // if shapeless, erase the node directly.
                 if (!this.props.data) {
@@ -859,7 +859,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         console.log('mousedown select() check:', {e, isSelected: this.props.node.isSelected(), 'nodeIsSelectedMapProxy': this.props.node?.isSelected, nodeIsSelectedRaw:this.props.node?.__raw.isSelected});
         windoww.node = this.props.node;
 
-        TRANSACTION(()=>{
+        TRANSACTION('select', ()=>{
             this.props.node.toggleSelected(DUser.current);
             if (state._lastSelected?.node !== this.props.nodeid) {
                 SetRootFieldAction.new('_lastSelected', {

@@ -198,6 +198,8 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
         let arr = [c.proxyObject];
         return U.findInChildProperties(arr, (e)=>[e.father], undefined, (e)=>e.rendered);
     }
+    name!:string;
+    public get_name(c: Context): string{ return c.data.model && this.get_model(c)?.name || (c.data as any).name || c.data.className; }
     /*firstRenderedNodes!: LGraphElement;
     __info_of__firstRenderedNodes:Info={type: 'LGraphElement', txt: "The first currently rendered node in the collection: [this.nodes, this.father.nodes, this.father.father.nodes , ...]"};
     protected get_firstRenderedNodes(c: Context): this["firstRenderedNodes"] {
@@ -351,11 +353,12 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
     set_height(val: this["h"], context: Context): boolean { return this.set_h(val, context); }
 
     get_position(context: Context): this["position"] { return new GraphPoint(context.data.x, context.data.y); }
-    set_position(val: this["position"], context: Context): boolean {
-        TRANSACTION(()=>{
-            SetFieldAction.new(context.data.id, "x", val.x, undefined, false);
-            SetFieldAction.new(context.data.id, "y", val.y, undefined, false);
-        })
+    set_position(val: this["position"], c: Context): boolean {
+        TRANSACTION('drag vertex', ()=>{
+            SetFieldAction.new(c.data.id, "x", val.x, undefined, false);
+            SetFieldAction.new(c.data.id, "y", val.y, undefined, false);
+        },  `(${U.cropNum(c.data.x)}, ${U.cropNum(c.data.y)})`,
+            `(${U.cropNum(val.x)}, ${U.cropNum(val.y)})`)
         return true; }
 
     get_sizeold(context: Context): this["size"] { return new GraphSize(context.data.x, context.data.y, context.data.w, context.data.h); }
@@ -478,14 +481,15 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
 
         if (view.updateSize(c.data.id, size)) return true;
 
-        TRANSACTION(()=>{
+        TRANSACTION('resize vertex', ()=>{
             if (size.x !== c.data.x && size.x !== undefined) SetFieldAction.new(c.data.id, "x", size.x, undefined, false);
             if (size.y !== c.data.y && size.y !== undefined) SetFieldAction.new(c.data.id, "y", size.y, undefined, false);
             if (size.w !== c.data.w && size.w !== undefined) SetFieldAction.new(c.data.id, "w", size.w, undefined, false);
             if (size.h !== c.data.h && size.h !== undefined) SetFieldAction.new(c.data.id, "h", size.h, undefined, false);
             let epdata: DEdgePoint = c.data as DEdgePoint;
             if (size.currentCoordType !== epdata.currentCoordType && size.currentCoordType !== undefined) SetFieldAction.new(epdata.id, "currentCoordType", size.currentCoordType, undefined, false);
-        })
+        }, `(${U.cropNum(c.data.x)}, ${U.cropNum(c.data.y)}, ${U.cropNum(c.data.w)}, ${U.cropNum(c.data.h)})`,
+            `(${U.cropNum(size.x)}, ${U.cropNum(size.y)}, ${U.cropNum(size.w)}, ${U.cropNum(size.h)})`)
         return true; }
 
     get_html(c: Context): this["html"] {
@@ -1924,19 +1928,19 @@ replaced by startPoint
     set_longestLabel(val: DVoidEdge["longestLabel"], c: Context): boolean {
         Log.exDevv('Edge.labels are disabled, pass it through props instead');
         if (val === c.data.longestLabel) return true;
-        TRANSACTION(()=>{
+        TRANSACTION('label', ()=>{
             SetFieldAction.new(c.data, "longestLabel", val);
             SetRootFieldAction.new("NODES_RECOMPILE_longestLabel+=", c.data.id);
-        });
+        }, c.data.longestLabel, val);
         return true;
     }
     set_labels(val: DVoidEdge["labels"], c: Context): boolean {
         Log.exDevv('Edge.labels are disabled, pass it through props instead');
         if (val === c.data.labels) return true;
-        TRANSACTION(()=>{
+        TRANSACTION('labels', ()=>{
             SetFieldAction.new(c.data, "labels", val);
             SetRootFieldAction.new("NODES_RECOMPILE_labels+=", c.data.id);
-        });
+        }, c.data.labels, val);
         return true; }
 
     public headPos_impl(c: Context, isHead: boolean, headSize0?: GraphPoint, segment0?: EdgeSegment, zoom0?: GraphPoint): GraphSize & {rad: number} {
