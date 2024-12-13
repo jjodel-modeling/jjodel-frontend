@@ -185,6 +185,12 @@ export abstract class IPoint extends RuntimeAccessibleClass {
         pt.y += distance * Math.sin(rad);
         return pt;
     }
+
+    static stringify(ptlike: {x?:number, y?:number}): string {
+        if (!ptlike) return ptlike;
+        let str: string[];
+        return '('+U.cropNum(ptlike.x||0)+', '+U.cropNum(ptlike.y||0)+')';
+    }
 }
 
 @RuntimeAccessible('GraphPoint')
@@ -240,6 +246,20 @@ export abstract class ISize<PT extends IPoint = IPoint> extends RuntimeAccessibl
         // erasing the value set in super or in the functions called by the constructor as side effect (static_init called from constructor will be overridden too)
         // if need to override types, build the "new" static function like in DModelElement
         ISize.init_constructor(this, x, y, w, h);
+    }
+
+
+    static stringify(ptlike: {x?:number, y?:number, w?:number, h?:number, width?:number, height?:number}): string {
+        if (!ptlike) return ptlike as any;
+        let str: string[] = [];
+        if (ptlike.x && !isNaN(ptlike.x)|| ptlike.x === 0) str.push('x:'+U.cropNum(ptlike.x));
+        if (ptlike.y && !isNaN(ptlike.y)|| ptlike.y === 0) str.push('y:'+U.cropNum(ptlike.y));
+        if (ptlike.w && !isNaN(ptlike.w)|| ptlike.w === 0) str.push('w:'+U.cropNum(ptlike.w));
+        if (ptlike.h && !isNaN(ptlike.h)|| ptlike.h === 0) str.push('h:'+U.cropNum(ptlike.h));
+        if (ptlike.width && !isNaN(ptlike.width)|| ptlike.width === 0) str.push('W:'+U.cropNum(ptlike.width));
+        if (ptlike.height && !isNaN(ptlike.height)|| ptlike.height === 0) str.push('H:'+U.cropNum(ptlike.height));
+        // if (str.length === 0) return '{}';
+        return '{'+str.join(', ')+'}'
     }
 
     static init_constructor(thiss: GObject, x: any = 0, y: any = 0, w: any = 0, h: any = 0, ...a: any): void {

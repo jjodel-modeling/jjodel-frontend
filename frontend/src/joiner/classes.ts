@@ -1681,7 +1681,6 @@ export class LPointerTargetable<Context extends LogicContext<DPointerTargetable>
         return ret;
     }
 
-
     protected set_name(val: this["name"], c: Context): boolean {
         let name = val;
         const father: LPointerTargetable = (c.proxyObject as LModelElement).father;
@@ -1704,6 +1703,9 @@ export class LPointerTargetable<Context extends LogicContext<DPointerTargetable>
         return true;
     }
 
+
+    fullname!:string;
+    protected get_fullname(c: Context): this["name"] { return this.get_name(c); } // fallback
 
     protected wrongAccessMessage(str: string): any {
         let msg = "Method "+str+" should not be called directly, attempting to do so should trigger get_"+str+"(). This is only a signature for type checking.";

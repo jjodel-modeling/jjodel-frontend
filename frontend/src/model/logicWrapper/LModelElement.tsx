@@ -524,141 +524,167 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
         return Log.exx('children is a derived read-only collection', context.data);
     }
 
-
-    add_parent(val: Pack<this["parent"]>, logicContext: Context): boolean { // todo: when will be used?
+/*
+    add_parent(val: Pack<this["parent"]>, c: Context): boolean { // will be used?
         const ptr = Pointers.from(val);
-        return SetFieldAction.new(logicContext.data, 'parent', ptr, '+=', true); // todo: need to update children of the old and new parents
+        TRANSACTION(this.get_name(c)+'.parent+=', ()=>{
+            SetFieldAction.new(c.data, 'parent', ptr, '+=', true); // need to update children of the old and new parents
+        })
+        return true;
+    }
+    protected remove_parent(c: Context): boolean {
+        return SetFieldAction.new(c.data, 'parent', [], '', true);
     }
 
-    protected remove_parent(logicContext: Context): boolean { // todo: perchè senza bersaglio? perchè sempre elimina tutti?
-        return SetFieldAction.new(logicContext.data, 'parent', [], '', true);
-    }
+    protected get_parent(c: Context): this["parent"] {
+        return LPointerTargetable.from(c.data.id);
+    }*/
 
-    protected get_parent(context: Context): this["parent"] {
-        return LPointerTargetable.from(context.data.id);
-    }
-
-    protected set_parent(val: Pack<LAnnotation>, context: Context): boolean { // val: Pack<DModelElement>
+    protected set_parent(val: Pack<LAnnotation>, c: Context): boolean { // val: Pack<DModelElement>
         const ptrs = Pointers.from(val);
-        SetFieldAction.new(context.data, 'father', ptrs?.[0] || ptrs, '', true);
-        return SetFieldAction.new(context.data, 'parent', ptrs, '', true);
+        let ptr: Pointer;
+        if (Array.isArray(ptrs)) ptr = ptrs[0];
+        else ptr = ptrs;
+        if (c.data.father === ptr) return true;
+        TRANSACTION(this.get_name(c)+'.parent', ()=>{
+            SetFieldAction.new(c.data, 'father', ptr, '', true);
+            //SetFieldAction.new(c.data, 'parent', ptrs, '', true);
+        }, this.get_father(c)?.name, LPointerTargetable.wrap(ptr)?.name)
+        return true;
     }
 
-    add_annotation(val: Pack<this["annotations"]>, context: Context): boolean {
+    add_annotation(val: Pack<this["annotations"]>, c: Context): boolean {
         const ptrs = Pointers.from(val);
-        return SetFieldAction.new(context.data, 'annotations', ptrs, '+=', true);
+        TRANSACTION(this.get_name(c)+'.annotations+=', ()=>{
+            SetFieldAction.new(c.data, 'annotations', ptrs, '+=', true);
+        }, undefined, ptrs.length)
+        return true;
     }
 
-    remove_annotation(val: Pack<this["annotations"]>, context: Context): boolean { // todo: when this will be ever used? this should be triggered by LObject but only get_ / set_ and delete of whole elements should be triggerable.
-        //todo: remove as any
-        const ptrs: Pointer<DAnnotation, 1, 'N', LAnnotation> = Pointers.from(val) as any;
-        let indexes = ptrs.map(ptr => context.data.annotations.indexOf(ptr)).filter(p => p >= 0);
-        return SetFieldAction.new(context.data, 'annotations', indexes, '-=', true);
+    remove_annotation(val: Pack<this["annotations"]>, c: Context): boolean { // todo: when this will be ever used? this should be triggered by LObject but only get_ / set_ and delete of whole elements should be triggerable.
+        let ptrs: Pointer<DAnnotation, 1, 'N', LAnnotation> = Pointers.from(val) as any;
+        if (!Array.isArray(ptrs)) ptrs = [ptrs] as any;
+        let indexes = ptrs.map(ptr => c.data.annotations.indexOf(ptr)).filter(p => p >= 0);
+        if (indexes.length === 0) return true;
+        TRANSACTION(this.get_name(c)+'.annotations-=', ()=>{
+            SetFieldAction.new(c.data, 'annotations', indexes, '-=', true);
+        }, undefined, ptrs.length)
+        return true;
     }
 
     protected get_annotations(context: Context): this["annotations"] {
         return LPointerTargetable.fromPointer(context.data.annotations);
     }
 
-    protected set_annotations(val: Pack<LAnnotation>, context: Context): boolean {
+    protected set_annotations(val: Pack<LAnnotation>, c: Context): boolean {
         //  if (!Array.isArray(val)) val = [val];
         //         val = val.map( v => (v instanceof LAnnotation ? v.id : ( Pointers.filterValid(v) ? v : null ))) as Pointer<DAnnotation>[];
-        const ptrs = Pointers.from(val);
-        SetFieldAction.new(context.data, 'annotations', ptrs, '', true);
+        let ptrs = Pointers.from(val);
+        if (!Array.isArray(ptrs)) ptrs = [ptrs] as any;
+        if (!ptrs.length) return true;
+        TRANSACTION(this.get_name(c)+'.annotations', ()=>{
+            SetFieldAction.new(c.data, 'annotations', ptrs, '', true);
+        }, undefined, ptrs.length)
         return true;
     }
 
     protected get_addChild(c: Context): (type?: string, ...params: any[]) => LModelElement { // just for add new, not for add pre-existing.
-        return (type, ...args: any) => {
-            let ret: undefined | ((...params: any[]) => LModelElement);
-            let type0 = type;
-            if (!type || type === "auto") {
-                switch(c.data.className){
-                    case DModel.cname: if ((c.data as DModel).isMetamodel) type = "package"; else type = "object"; break;
-                    case DObject.cname: type = "value"; break;
-                    case DPackage.cname: type = "package"; break;
-                    case DClass.cname: type = "attribute"; break;
-                    case DEnumerator.cname: type = "literal"; break;
-                    case DOperation.cname: type = "parameter"; break;
-                    default: type = "annotation"; break;
+        return (type?: string, ...args: any) => {
+            let ret: undefined | ((...params: any[]) => LModelElement) = undefined;
+            TRANSACTION(this.get_name(c)+'.addChild()', ()=>{
+                let type0 = type;
+                if (!type || type === "auto") {
+                    switch(c.data.className){
+                        case DModel.cname: if ((c.data as DModel).isMetamodel) type = "package"; else type = "object"; break;
+                        case DObject.cname: type = "value"; break;
+                        case DPackage.cname: type = "package"; break;
+                        case DClass.cname: type = "attribute"; break;
+                        case DEnumerator.cname: type = "literal"; break;
+                        case DOperation.cname: type = "parameter"; break;
+                        default: type = "annotation"; break;
+                    }
                 }
-            }
-            let fatherElement;
-            switch (type.toLowerCase()) {
-                default:
-                    Log.ee('cannot find children type requested to add:', {type: (type || '').toLowerCase(), c});
-                    ret = () => undefined as any;
-                    break;
-                case "package":
-                    ret = (this.get_package(c) || this.get_model(c))?.addPackage;
-                    break;
-                case "class":
-                    // let current = c.proxyObject;
-                    fatherElement = this.get_package(c);
-                    if (!fatherElement) {
-                        let model = this.get_model(c);
-                        //if (model && !model.isMetamodel) model = model.instanceof;
-                        fatherElement = model.packages[0];
-                        if (!fatherElement) fatherElement = model.addPackage();
-                    }
-                    ret = fatherElement.addClass;
-                    //ret = (this as any).get_addClass(context as any);
-                    break;
-                case "enum":
-                case "enumerator":
-                    fatherElement = this.get_package(c);
-                    if (!fatherElement) {
-                        let model = this.get_model(c);
-                        //if (model && !model.isMetamodel) model = model.instanceof;
-                        fatherElement = model.packages[0];
-                        if (!fatherElement) fatherElement = model.addPackage();
-                    }
-                    ret = fatherElement.addEnumerator;
-                    break;
-                case "attribute":
-                    ret = this.get_class(c)?.addAttribute;
-                    break;
-                case "reference":
-                    ret = this.get_class(c)?.addReference;
-                    break;
-                case "literal":
-                    ret = this.get_enum(c)?.addLiteral;
-                    break;
-                case "operation":
-                    ret = this.get_class(c)?.addOperation;
-                    break;
-                case "parameter":
-                    ret = this.get_operation(c)?.addParameter;
-                    break;
-                case "object":
-                    if (c.data.className === "DValue") {
-                        ret = (this as any as LValue).get_addObject(c as any as LogicContext<DValue>);
-                    }
-                    else {
-                        ret = this.get_model(c).addObject;
-                    }
+                let fatherElement;
+                switch (type.toLowerCase()) {
+                    default:
+                        Log.ee('cannot find children type requested to add:', {type: (type || '').toLowerCase(), c});
+                        ret = () => undefined as any;
+                        break;
+                    case "package":
+                        ret = (this.get_package(c) || this.get_model(c))?.addPackage;
+                        break;
+                    case "class":
+                        // let current = c.proxyObject;
+                        fatherElement = this.get_package(c);
+                        if (!fatherElement) {
+                            let model = this.get_model(c);
+                            //if (model && !model.isMetamodel) model = model.instanceof;
+                            fatherElement = model.packages[0];
+                            if (!fatherElement) fatherElement = model.addPackage();
+                        }
+                        ret = fatherElement.addClass;
+                        //ret = (this as any).get_addClass(context as any);
+                        break;
+                    case "enum":
+                    case "enumerator":
+                        fatherElement = this.get_package(c);
+                        if (!fatherElement) {
+                            let model = this.get_model(c);
+                            //if (model && !model.isMetamodel) model = model.instanceof;
+                            fatherElement = model.packages[0];
+                            if (!fatherElement) fatherElement = model.addPackage();
+                        }
+                        ret = fatherElement.addEnumerator;
+                        break;
+                    case "attribute":
+                        ret = this.get_class(c)?.addAttribute;
+                        break;
+                    case "reference":
+                        ret = this.get_class(c)?.addReference;
+                        break;
+                    case "literal":
+                        ret = this.get_enum(c)?.addLiteral;
+                        break;
+                    case "operation":
+                        ret = this.get_class(c)?.addOperation;
+                        break;
+                    case "parameter":
+                        ret = this.get_operation(c)?.addParameter;
+                        break;
+                    case "object":
+                        if (c.data.className === "DValue") {
+                            ret = (this as any as LValue).get_addObject(c as any as LogicContext<DValue>);
+                        }
+                        else {
+                            ret = this.get_model(c).addObject;
+                        }
 
-                //case "exception": ret = ((exception: Pack1<LClassifier>) => { let rett = this.get_addException(context as any); rett(exception); }) as any; break;
-                /*case "exception": exceptions should not be "added" here, this is for creating objects. exceptions are not created but just linked. they are classes.
-                    ret = (this as any).get_addException(c as any);
-                    break; */
-            }
-            // console.log('x6 addchild()', {type0, type, args, fatherElement, ret, rts:ret?.toString()});
-            return ret ? ret(...args) : null as any;
+                    //case "exception": ret = ((exception: Pack1<LClassifier>) => { let rett = this.get_addException(context as any); rett(exception); }) as any; break;
+                    /*case "exception": exceptions should not be "added" here, this is for creating objects. exceptions are not created but just linked. they are classes.
+                        ret = (this as any).get_addException(c as any);
+                        break; */
+                }
+                // console.log('x6 addchild()', {type0, type, args, fatherElement, ret, rts:ret?.toString()});
+                ret = ret ? ret(...args) : null as any;
+            })
+            return ret as any;
         }
     }
 
-    protected get_addException(context: Context): () => void {
-        let ret = () => {
-        };
-        const dOperation: DOperation | null = (context.data?.className === "DOperation") ? context.data as DOperation : null;
-        if (dOperation) {
-            const dClass = DPointerTargetable.from(dOperation.father);
-            ret = () => {
+    protected get_addException(c: Context): () => void {
+        let ret = () => {};
+        const dOperation: DOperation | null = (c.data?.className === "DOperation") ? c.data as DOperation : null;
+        if (!dOperation) return ret;
+        const dClass = DPointerTargetable.from(dOperation.father);
+        if (!dClass) return ret;
+        ret = () => {
+            TRANSACTION(this.get_name(c)+'.exceptions+=', ()=>{
                 SetFieldAction.new(dOperation, "exceptions", dClass.id, '+=', true);
-            }
+            }, undefined, LPointerTargetable.fromD(dClass).name)
         }
         ret();
+        // todo: test & fix this double call, i suspect if you call it
+        //  from get_addChildren it triggers once (return is ignored) but twice if directly
         return ret;
     }
 
@@ -808,8 +834,11 @@ export class LAnnotation<Context extends LogicContext<DAnnotation> = any, D exte
         return context.data.source;
     }
 
-    protected set_source(val: this["source"], context: Context): boolean {
-        SetFieldAction.new(context.data, 'source', val, '', false);
+    protected set_source(val: this["source"], c: Context): boolean {
+        if (val === c.data.source) return true;
+        TRANSACTION(this.get_name(c)+'.source', ()=>{
+            SetFieldAction.new(c.data, 'source', val, '', false);
+        }, c.data.source, val);
         return true;
     }
 
@@ -817,8 +846,11 @@ export class LAnnotation<Context extends LogicContext<DAnnotation> = any, D exte
         return TargetableProxyHandler.wrapAll(context.data.details);
     }
 
-    protected set_details(val: this["details"], context: Context): boolean {
-        SetFieldAction.new(context.data, 'details', val);
+    protected set_details(val: this["details"], c: Context): boolean {
+        if (val === c.data.details) return true;
+        TRANSACTION(this.get_name(c)+'.details', ()=>{
+            SetFieldAction.new(c.data, 'details', val);
+        }, c.data.details, val)
         return true;
     }
 }
@@ -1003,10 +1035,13 @@ export class LTypedElement<Context extends LogicContext<DTypedElement> = any> ex
         return LPointerTargetable.from(context.data.type);
     }
 
-    protected set_type(val: Pack1<this["type"]>, context: Context): boolean {
-        const data = context.data;
-        let instances: LValue[] = context.proxyObject.instances;
-        SetFieldAction.new(context.data, 'type', Pointers.from(val), "", true);
+    protected set_type(val: Pack1<this["type"]>, c: Context): boolean {
+        // let instances: LValue[] = this.get_instances(c);
+        let ptr = Pointers.from(val);
+        if (c.data.type === ptr) return true;
+        TRANSACTION(this.get_name(c)+'.type', ()=>{
+            SetFieldAction.new(c.data, 'type', ptr, "", true);
+        }, this.get_type(c)?.fullname, LPointerTargetable.wrap(val)?.fullname);
         return true;
     }
 
@@ -1014,28 +1049,41 @@ export class LTypedElement<Context extends LogicContext<DTypedElement> = any> ex
         return context.data.ordered;
     }
 
-    protected set_ordered(val: this["ordered"], logicContext: Context): boolean {
-        return SetFieldAction.new(logicContext.data, 'ordered', val);
+    protected set_ordered(val: this["ordered"], c: Context): boolean {
+        val = !!val;
+        if (c.data.ordered === val) return true;
+        TRANSACTION(this.get_name(c)+'.ordered', ()=>{
+            SetFieldAction.new(c.data, 'ordered', val);
+        }, c.data.ordered, val)
+        return true;
     }
 
     protected get_unique(context: Context): this["unique"] {
         return context.data.unique;
     }
 
-    protected set_unique(val: this["unique"], logicContext: Context): boolean {
-        return SetFieldAction.new(logicContext.data, 'unique', val);
+    protected set_unique(val: this["unique"], c: Context): boolean {
+        val = !!val;
+        if (c.data.ordered === val) return true;
+        TRANSACTION(this.get_name(c)+'.unique', ()=>{
+            SetFieldAction.new(c.data, 'unique', val);
+        }, c.data.unique, val)
+        return true;
     }
 
     protected get_lowerBound(context: Context): this["lowerBound"] {
         return context.data.lowerBound;
     }
 
-    protected set_lowerBound(val: this["lowerBound"], context: Context): boolean {
+    protected set_lowerBound(val: this["lowerBound"], c: Context): boolean {
         val = +val;
         if (isNaN(val)) val = 0;
         else val = Math.max(0, val);
-        SetFieldAction.new(context.data, 'lowerBound', val);
-        if (context.data.upperBound !=-1 && val > context.data.upperBound) SetFieldAction.new(context.data, 'upperBound', val);
+        if (val === c.data.lowerBound) return true;
+        TRANSACTION(this.get_name(c)+'.lowerBound', ()=>{
+            SetFieldAction.new(c.data, 'lowerBound', val);
+            if (c.data.upperBound !=-1 && val > c.data.upperBound) SetFieldAction.new(c.data, 'upperBound', val);
+        }, c.data.lowerBound, val)
         return true;
     }
 
@@ -1043,12 +1091,15 @@ export class LTypedElement<Context extends LogicContext<DTypedElement> = any> ex
         return context.data.upperBound;
     }
 
-    protected set_upperBound(val: this["upperBound"], context: Context): boolean {
+    protected set_upperBound(val: this["upperBound"], c: Context): boolean {
         val = +val;
         if (isNaN(val)) val = -1;
         else val = Math.max(-1, val);
-        SetFieldAction.new(context.data, 'upperBound', val);
-        if (val !== -1 && val < context.data.lowerBound) SetFieldAction.new(context.data, 'lowerBound', val);
+
+        TRANSACTION(this.get_name(c)+'.upperBound', ()=>{
+            SetFieldAction.new(c.data, 'upperBound', val);
+            if (val !== -1 && val < c.data.lowerBound) SetFieldAction.new(c.data, 'lowerBound', val);
+        }, c.data.upperBound, val)
         return true;
     }
 
@@ -1056,8 +1107,12 @@ export class LTypedElement<Context extends LogicContext<DTypedElement> = any> ex
         return context.data.many;
     }
 
-    protected set_many(val: this["many"], context: Context): boolean {
-        SetFieldAction.new(context.data, 'many', val);
+    protected set_many(val: this["many"], c: Context): boolean {
+        val = !!val;
+        if (val === c.data.many) return true;
+        TRANSACTION(this.get_name(c)+'.many', ()=>{
+            SetFieldAction.new(c.data, 'many', val);
+        }, c.data.many, val)
         return true;
     }
 
@@ -1065,8 +1120,12 @@ export class LTypedElement<Context extends LogicContext<DTypedElement> = any> ex
         return context.data.required;
     }
 
-    protected set_required(val: this["required"], context: Context): boolean {
-        SetFieldAction.new(context.data, 'required', val);
+    protected set_required(val: this["required"], c: Context): boolean {
+        val = !!val;
+        if (val === c.data.many) return true;
+        TRANSACTION(this.get_name(c)+'.required', ()=>{
+            SetFieldAction.new(c.data, 'required', val);
+        }, c.data.many, val)
         return true;
     }
 
@@ -1172,8 +1231,10 @@ export class LClassifier<Context extends LogicContext<DClassifier> = any> extend
         return context.data.instanceClassName;
     }
 
-    protected set_instanceClassName(val: this["instanceClassName"], context: Context): boolean {
-        SetFieldAction.new(context.data, 'instanceClassName', val, "", false);
+    protected set_instanceClassName(val: this["instanceClassName"], c: Context): boolean {
+        TRANSACTION(this.get_name(c)+'.instanceClassName', ()=>{
+            SetFieldAction.new(c.data, 'instanceClassName', val, "", false);
+        }, c.data.instanceClassName, val)
         return true;
     }
 
@@ -1201,21 +1262,23 @@ export class LClassifier<Context extends LogicContext<DClassifier> = any> extend
         return context.data.className === DEnumerator.cname;
     }
 
-    protected set_defaultValue(val: this["defaultValue"] | DClassifier["defaultValue"], context: Context): boolean {
-        if (typeof val !== "object" && !Pointers.isPointer(val)) {
-            // primitive default value for enums
-            SetFieldAction.new(context.data, 'defaultValue', val, "", false);
-        } else {
-            SetFieldAction.new(context.data, 'defaultValue', Pointers.from(val as Pointer[]) || [], "", true);
-        }
+    protected set_defaultValue(val: this["defaultValue"] | DClassifier["defaultValue"], c: Context): boolean {
+        TRANSACTION(this.get_name(c)+'.defaultValue', ()=>{
+            if (typeof val !== "object" && !Pointers.isPointer(val)) {
+                // primitive default value for enums
+                SetFieldAction.new(c.data, 'defaultValue', val, "", false);
+            } else {
+                SetFieldAction.new(c.data, 'defaultValue', Pointers.from(val as Pointer[]) || [], "", true);
+            }
+        })
         return true;
     }
 
     typeEcoreString!: string;
     typeString!: string;
 
-    private get_typeEcoreString(context: Context) {
-        return EcoreParser.classTypePrefix + context.data.name;
+    private get_typeEcoreString(c: Context) {
+        return EcoreParser.classTypePrefix + c.data.name;
     }
 
     get_typeString(context: Context) {
@@ -1469,7 +1532,7 @@ export class LPackage<Context extends LogicContext<DPackage> = any, C extends Co
         const list: Pointer<DClassifier>[] = val.map((lItem) => { return Pointers.from(lItem) });
         const oldList = c.data.classifiers;
         const diff = U.arrayDifference(oldList, list);
-        TRANSACTION('changed '+this.get_name(c)+'.classifiers', ()=>{
+        TRANSACTION(''+this.get_name(c)+'.classifiers', ()=>{
             SetFieldAction.new(c.data, 'classifiers', list, "", true);
             for (let id of diff.added) {
                 SetFieldAction.new(id, 'father', c.data.id, '', true);
@@ -1494,7 +1557,7 @@ export class LPackage<Context extends LogicContext<DPackage> = any, C extends Co
         const list = val.map((lItem) => { return Pointers.from(lItem) });
         const oldList = c.data.subpackages;
         const diff = U.arrayDifference(oldList, list);
-        TRANSACTION('changed ' + this.get_name(c)+'.packages', ()=>{
+        TRANSACTION(this.get_name(c)+'.packages', ()=>{
             SetFieldAction.new(c.data, 'subpackages', list, "", true);
             for (let id of diff.added) {
                 SetFieldAction.new(id, 'father', c.data.id, '', true);
@@ -1514,16 +1577,22 @@ export class LPackage<Context extends LogicContext<DPackage> = any, C extends Co
         if (context.data.uri) return context.data.uri + "." + context.data.name;
         return ('org.jodel-react.') + (context.proxyObject.model?.name || "username") + "." + context.data.name;
     }
-    protected set_uri(val: this["uri"], context: Context): boolean {
+    protected set_uri(val: this["uri"], c: Context): boolean {
         val = val || '';
-        let pos = val.lastIndexOf(context.data.name);
+        let pos = val.lastIndexOf(c.data.name);
         if (pos) val = val.substring(0, pos - 1); // removes final name and dot, to keep the name part dinamically added in the getter.
-        SetFieldAction.new(context.data, 'uri', val, "", false);
+        if (val === c.data.uri) return true;
+        TRANSACTION(this.get_name(c)+'.uri', ()=>{
+            SetFieldAction.new(c.data, 'uri', val, "", false);
+        }, c.data.uri, val);
         return true;
     }
     protected get_prefix(context: Context): this["uri"] { return context.data.prefix; }
-    protected set_prefix(val: this["prefix"], context: Context): boolean {
-        SetFieldAction.new(context.data, 'prefix', val, "", false);
+    protected set_prefix(val: this["prefix"], c: Context): boolean {
+        if (c.data.prefix === val) return true;
+        TRANSACTION(this.get_name(c)+'.prefix', ()=>{
+            SetFieldAction.new(c.data, 'prefix', val, "", false);
+        }, c.data.prefix, val)
         return true;
     }
 
@@ -1670,7 +1739,12 @@ export class LOperation<Context extends LogicContext<DOperation> = any, C extend
             func.apply(thiss, params);
         };
     }
-    public set_implementation(val: this["implementation"], context: Context): boolean { return SetFieldAction.new(context.data.id, "implementation", val, undefined, false); }
+    public set_implementation(val: this["implementation"], c: Context): boolean {
+        TRANSACTION(this.get_fullname(c)+'.implementation', ()=>{
+            SetFieldAction.new(c.data.id, "implementation", val, undefined, false);
+        })
+        return true;
+    }
     public get_implementation(context: Context): this["implementation"] { return context.data.implementation; }
     public set_signatureImplementation(val: this["signatureImplementation"], context: Context): boolean { return this.cannotSet("signatureImplementation"); }
     public get_signatureImplementation(context: Context, typedComments: boolean = true): this["signatureImplementation"] {
@@ -1693,9 +1767,11 @@ export class LOperation<Context extends LogicContext<DOperation> = any, C extend
             return LPointerTargetable.from(pointer)
         });
     }
-    protected set_exceptions(val: PackArr<this["exceptions"]>, context: Context): boolean {
+    protected set_exceptions(val: PackArr<this["exceptions"]>, c: Context): boolean {
         const list = val.map((lItem) => { return Pointers.from(lItem) });
-        SetFieldAction.new(context.data, 'exceptions', list, "", true);
+        TRANSACTION(this.get_name(c)+'.exceptions', ()=>{
+            SetFieldAction.new(c.data, 'exceptions', list, "", true);
+        })
         return true;
     }
 
@@ -1708,7 +1784,7 @@ export class LOperation<Context extends LogicContext<DOperation> = any, C extend
         const list = val.map((lItem) => { return Pointers.from(lItem) });
         const oldList = c.data.parameters;
         const diff = U.arrayDifference(oldList, list);
-        TRANSACTION('changed ' + this.get_name(c)+'.parameters', ()=>{
+        TRANSACTION(this.get_name(c)+'.parameters', ()=>{
             SetFieldAction.new(c.data, 'parameters', list, "", true);
             for (let id of diff.added) {
                 SetFieldAction.new(id, 'father', c.data.id, '', true);
@@ -2091,7 +2167,7 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
         else if (!Array.isArray(val)) val = [val];
         const ptrs = [...new Set(val.map((val) => { return val && Pointers.from(val) }).filter(e=>!!e))];
         if (Uarr.equalsUnsorted(c.data.sealed, ptrs)) return true;
-        TRANSACTION('changed '+this.get_name(c)+'.sealed ', ()=>{
+        TRANSACTION(this.get_name(c)+'.sealed ', ()=>{
             SetFieldAction.new(c.data, 'sealed', ptrs, '', true);
             if (ptrs.length) {
                 SetFieldAction.new(c.data, 'isSingleton', false);
@@ -2108,7 +2184,7 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
         val = !!val;
         if (val === c.data.final) return true;
         if (c.data.extendedBy.length > 0) { U.alert('e', 'Class cannot become final as it is currently extended. Remove the subclasses before.'); return true; }
-        TRANSACTION('class ' + this.get_name(c)+'.final', ()=>{
+        TRANSACTION(this.get_name(c)+'.final', ()=>{
             SetFieldAction.new(c.data, 'final', val);
             SetFieldAction.new(c.data, 'sealed', [], '', true);
             if (!val) SetFieldAction.new(c.data, 'isSingleton', false);
@@ -2122,7 +2198,7 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
         val = !!val;
         if (c.data.instances.length > 1) { U.alert('e', 'Class cannot become a singleton since there are multiple instances already. Delete some and retry.'); return true; }
         if (c.data.extendedBy.length > 0) { U.alert('e', 'Class cannot become a singleton unless is also final, and is currently extended. Remove the subclasses before.'); return true; }
-        TRANSACTION('class ' + this.get_name(c)+'.singleton', ()=>{
+        TRANSACTION(this.get_name(c)+'.singleton', ()=>{
             SetFieldAction.new(c.data, 'isSingleton', val);
             if (val) {
                 SetFieldAction.new(c.data, 'final', true);
@@ -2163,7 +2239,11 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
         else return this.get_instantiable(c) && !this.get_isComposed(c);
     }
     protected set_rootable(val: this["rootable"], c: Context): boolean {
-        SetFieldAction.new(c.data, 'rootable', val);
+        if (c.data.rootable === val) return true;
+
+        TRANSACTION(this.get_name(c)+'.rootable', ()=>{
+            SetFieldAction.new(c.data, 'rootable', val);
+        }, c.data.rootable, val);
         return true;
     }
 
@@ -2307,10 +2387,23 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
     partial!: boolean;
     __info_of__partial: Info = {type: 'boolean', txt:'A partial object have can add unlisted features as a shapeless (schemaless) object does,' +
             ' on top of a set of fixed listed features.'}
-    protected set_partial(val: D["partial"], context: Context): boolean { return SetFieldAction.new(context.data.id, "partial", val); }
+    protected set_partial(val: D["partial"], c: Context): boolean {
+        val = !!val;
+        if (val === c.data.partial) return true;
+        TRANSACTION(this.get_name(c)+'.@@@@@@', ()=>{
+            SetFieldAction.new(c.data.id, "partial", val);
+        }, c.data.partial, val)
+        return true;
+    }
     protected get_partial(context: Context): D["partial"] { return context.data.partial; }
 
-    protected set_partialdefaultname(val: D["partialdefaultname"], context: Context): boolean { return SetFieldAction.new(context.data.id, "partialdefaultname", val, undefined, false); }
+    protected set_partialdefaultname(val: D["partialdefaultname"], c: Context): boolean {
+        if (val === c.data.partialdefaultname) return true;
+        TRANSACTION(this.get_name(c)+'.partialdefaultname', ()=>{
+            SetFieldAction.new(c.data.id, "partialdefaultname", val, undefined, false);
+        })
+        return true;
+    }
     protected get_partialdefaultname(context: Context): D["partialdefaultname"] { return context.data.partialdefaultname; }
 
     public addAttribute(name?: DAttribute["name"], type?: DAttribute["type"]): LAttribute { return this.cannotCall("addAttribute"); }
@@ -2330,25 +2423,40 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
 
 
     protected get_abstract(context: Context): this["abstract"] { return context.data.abstract; }
-    protected set_abstract(val: this["abstract"], context: Context): boolean {
-        const data = context.data;
+    protected set_abstract(val: this["abstract"], c: Context): boolean {
+        const data = c.data;
+        val = !!val;
+        if (val === c.data.abstract) return true;
         if(val && data.instances.length > 0) {
             U.alert('e', 'Cannot change the abstraction level since there are instances.');
         } else {
-            SetFieldAction.new(data, 'abstract', val);
+            TRANSACTION(this.get_name(c)+'.abstract', ()=>{
+                SetFieldAction.new(data, 'abstract', val);
+            }, c.data.abstract, val)
         }
         return true;
     }
 
-    protected set_isPrimitive(val: this["isPrimitive"], context: Context): boolean { SetFieldAction.new(context. data, 'isPrimitive', val); return true; }
+    protected set_isPrimitive(val: this["isPrimitive"], c: Context): boolean {
+        val = !!val;
+        if (val === c.data.isPrimitive) return true;
+        TRANSACTION(this.get_name(c)+'.isPrimitive', ()=>{
+            SetFieldAction.new(c. data, 'isPrimitive', val);
+        })
+        return true;
+    }
     // get is in classifier with all other "type"s getter and setter
 
     protected get_interface(context: Context): this["interface"] { return context.data.interface; }
     protected set_interface(val: this["interface"], c: Context): boolean {
+        val = !!val;
+        if (c.data.interface === val) return true;
         if (val && c.data.instances.length > 0) {
             U.alert('e', 'Class cannot become an interface since there are instances.');
         } else {
-            SetFieldAction.new(c.data, 'interface', val);
+            TRANSACTION(this.get_name(c)+'.interface', ()=>{
+                SetFieldAction.new(c.data, 'interface', val);
+            }, c.data.interface, val)
         }
         return true;
     }
@@ -2365,9 +2473,11 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
             return LPointerTargetable.from(pointer)
         });
     }
-    protected set_instances(val: PackArr<this["instances"]>, context: Context): boolean {
+    protected set_instances(val: PackArr<this["instances"]>, c: Context): boolean {
         const list = val.map((lItem) => { return Pointers.from(lItem) });
-        SetFieldAction.new(context.data, 'instances', list, "", true);
+        TRANSACTION(this.get_name(c)+'.instances', ()=>{
+            SetFieldAction.new(c.data, 'instances', list, "", true);
+        })
         return true;
     }
 
@@ -2380,7 +2490,7 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
         const list = val.map((lItem) => { return Pointers.from(lItem) });
         const oldList = context.data.operations;
         const diff = U.arrayDifference(oldList, list);
-        TRANSACTION('changed ' + this.get_name(context)+'.operations', ()=>{
+        TRANSACTION(this.get_name(context)+'.operations', ()=>{
             SetFieldAction.new(context.data, 'operations', list, "", true);
             for (let id of diff.added) {
                 SetFieldAction.new(id, 'father', context.data.id, '', true);
@@ -2404,7 +2514,7 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
         const oldList = context.data.features;
         const diff = U.arrayDifference(oldList, list);
         let le: this = null as any;
-        TRANSACTION('changed ' + this.get_name(context)+'.features', ()=>{
+        TRANSACTION(this.get_name(context)+'.features', ()=>{
             SetFieldAction.new(context.data, 'features', list, "", true);
             for (let id of diff.added) {
                 SetFieldAction.new(id, 'father', context.data.id, '', true);
@@ -2429,8 +2539,7 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
         const list = val.map((lItem) => { return Pointers.from(lItem) });
         const oldList = context.data.references;
         const diff = U.arrayDifference(oldList, list);
-        let le: this = null as any;
-        TRANSACTION('changed ' + this.get_name(context)+'.references', ()=>{
+        TRANSACTION(this.get_name(context)+'.references', ()=>{
             SetFieldAction.new(context.data, 'references', list, "", true);
             for (let id of diff.added) {
                 SetFieldAction.new(id, 'father', context.data.id, '', true);
@@ -2455,7 +2564,7 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
         const list = val.map((lItem) => { return Pointers.from(lItem) });
         const oldList = context.data.attributes;
         const diff = U.arrayDifference(oldList, list);
-        TRANSACTION('changed ' + this.get_name(context)+'.attributes', ()=>{
+        TRANSACTION(this.get_name(context)+'.attributes', ()=>{
             SetFieldAction.new(context.data, 'attributes', list, "", true);
             for (let id of diff.added) {
                 SetFieldAction.new(id, 'father', context.data.id, '', true);
@@ -2527,7 +2636,10 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
             ptrs = ptrs.filter(e=>!invalid.includes(e));
         }
         if (diff.removed.length === 0 && diff.added.length === invalid.length) return true;
-        SetFieldAction.new(c.data, 'extends', ptrs, "", true);
+
+        TRANSACTION(this.get_name(c)+'.extends', ()=>{
+            SetFieldAction.new(c.data, 'extends', ptrs, "", true);
+        }, undefined, ('+'+diff.added.length+', -'+diff.removed.length))
         return true;
     }
 
@@ -2535,54 +2647,66 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
     get_add_extends(val: PackArr<this["extends"]>, context: Context): this['add_extends'] {
         return ((val: string[])=>this.impl_add_extends(val as any, context)) as any;
     }
-    impl_add_extends(val: PackArr<this["extends"]>, context: Context): void {
+    impl_add_extends(val: PackArr<this["extends"]>, c: Context): void {
         if (!val) val = [];
         else if (!Array.isArray(val)) val = [val];
         if (!val.length) return;
-        let ptrs = [...new Set(val.map((val) => { return val && Pointers.from(val) }).filter(e=>!!e && !context.data.extends.includes(e)))];
+        let ptrs = [...new Set(val.map((val) => { return val && Pointers.from(val) }).filter(e=>!!e && !c.data.extends.includes(e)))];
 
-        ptrs = ptrs.filter(ptr => this.get_canExtend(context)(ptr as any, {} as any));
+        ptrs = ptrs.filter(ptr => this.get_canExtend(c)(ptr as any, {} as any));
         if (!ptrs.length) return;
         // todo: extendedby? or make it derived from pointedby
-        SetFieldAction.new(context.data, 'extends', [...context.data.extends, ...ptrs], '', true);
+
+        TRANSACTION(this.get_name(c)+'.extends+=', ()=>{
+            SetFieldAction.new(c.data, 'extends', [...c.data.extends, ...ptrs], '', true);
+        }, undefined, ptrs.length)
     }
 
-    protected remove_extends(val: PackArr<this["extends"]> | number | number[], context: Context): void {
+    protected remove_extends(val: PackArr<this["extends"]> | number | number[], c: Context): void {
         if (!val) val = [];
         else if (!Array.isArray(val)) val = [val];
         if (!val.length) return;
         let finalVal: D["extends"];
-        if (typeof val[0] === "number") { finalVal = context.data.extends.filter((elem,index,arr)=> { return (val as any[]).includes(index); }); }
+        if (typeof val[0] === "number") { finalVal = c.data.extends.filter((elem,index,arr)=> { return (val as any[]).includes(index); }); }
         else {
-            finalVal = [...context.data.extends];
+            finalVal = [...c.data.extends];
             let ptrs: Pointer<DClass> = Pointers.from(val as PackArr<this["extends"]>) as any;
             for (let v of ptrs) { U.arrayRemoveAll(finalVal, v); }
         }
-        SetFieldAction.new(context.data, 'extends', finalVal, '', true);
+
+        TRANSACTION(this.get_name(c)+'.extends-=', ()=>{
+            SetFieldAction.new(c.data, 'extends', finalVal, '', true);
+        }, undefined, c.data.extends.length - finalVal.length)
     }
 
-    protected get_extendedBy(context: Context): this["extendedBy"] {
-        return context.data.extendedBy.map((pointer) => {
+    protected get_extendedBy(c: Context): this["extendedBy"] {
+        return c.data.extendedBy.map((pointer) => {
             return LPointerTargetable.from(pointer)
         });
     }
-    protected set_extendedBy(val: PackArr<this["extendedBy"]>, context: Context): boolean {
+    protected set_extendedBy(val: PackArr<this["extendedBy"]>, c: Context): boolean {
         if (!val) val = [];
         else if (!Array.isArray(val)) val = [val];
         const ptrs = [...new Set(val.map((val) => { return val && Pointers.from(val) }).filter(e=>!!e))];
-        SetFieldAction.new(context.data, 'extendedBy', ptrs, "", true);
+        TRANSACTION(this.get_name(c)+'.extendedBy', ()=>{
+            SetFieldAction.new(c.data, 'extendedBy', ptrs, "", true);
+        })
         return true;
     }
 
     protected get_implements(context: Context): this["implements"] { return context.data.implements; }
-    protected set_implements(val: this["implements"], context: Context): boolean {
-        SetFieldAction.new(context.data, 'implements', val, "", true);
+    protected set_implements(val: this["implements"], c: Context): boolean {
+        TRANSACTION(this.get_name(c)+'.implements', ()=>{
+            SetFieldAction.new(c.data, 'implements', val, "", true);
+        })
         return true;
     }
 
     protected get_implementedBy(context: Context): this["implementedBy"] { return context.data.implementedBy; }
-    protected set_implementedBy(val: this["implementedBy"], context: Context): boolean {
-        SetFieldAction.new(context.data, 'implementedBy', val, "", true);
+    protected set_implementedBy(val: this["implementedBy"], c: Context): boolean {
+        TRANSACTION(this.get_name(c)+'.implementedBy', ()=>{
+            SetFieldAction.new(c.data, 'implementedBy', val, "", true);
+        })
         return true;
     }
 
@@ -2708,12 +2832,17 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
         if (!superclass) return false;
         return this.get_superclasses(context, orEqual).includes(superclass); }
 
-    private add_Extends(context: Context, superclass: LClass, force: boolean = false): boolean {
+    private add_Extends(c: Context, superclass: LClass, force: boolean = false): boolean {
         let out: {reason: string, allTargetSuperClasses: LClass[]} = {reason: '', allTargetSuperClasses: []};
-        const thiss: LClass = context.proxyObject;
-        if (!force && !this._canExtend(context, superclass, out)) {  return false; }
-        SetFieldAction.new(thiss.__raw, 'extends', [superclass.id], '+=', true);
-        SetFieldAction.new(superclass.__raw, 'extendedBy', [thiss.id], '+=', true);
+        const thiss: LClass = c.proxyObject;
+        superclass = LPointerTargetable.wrap(superclass) as any;
+        if (!superclass) return true;
+        if (!force && !this._canExtend(c, superclass, out)) {  return false; }
+
+        TRANSACTION(this.get_name(c)+'.extends+=', ()=>{
+            SetFieldAction.new(thiss.__raw, 'extends', [superclass.id], '+=', true);
+            SetFieldAction.new(superclass.__raw, 'extendedBy', [thiss.id], '+=', true);
+        }, undefined, superclass.fullname)
         // const extendChildren: LClass[] =  [thiss, ...thiss.superclasses];
         // console.log('calculateViolationsExtend children:'  + extendChildren, this);
         // for (let extChild of extendChildren) { extChild._checkViolations(false); } // after instances have their meta-class changed, they might need to change shape or values.
@@ -2733,10 +2862,13 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
             let index: number = extendsarr.indexOf(superclassid);
             if (index < 0) return;
             // let extendedby = superclass.__raw.extendedBy;
-            // @ts-ignore
-            SetFieldAction.new(thiss, 'extends', superclass.id, '-=', true);
-            // @ts-ignore
-            SetFieldAction.new(superclass, 'extendedBy', thiss.id, '-=', true);
+
+            TRANSACTION(this.get_name(c)+'.extends-=', ()=>{
+                // @ts-ignore
+                SetFieldAction.new(thiss, 'extends', superclass.id, '-=', true);
+                // @ts-ignore
+                SetFieldAction.new(superclass, 'extendedBy', thiss.id, '-=', true);
+            }, undefined, superclass.fullname)
             // todo: update instances for (i = 0; i < thiss.instances.length; i++) { thiss.instances[i].unsetExtends(superclass); }
             // todo: check violations
             // const extendedby: LClass[] = [thiss, ...thiss.allSubClasses];
@@ -2839,8 +2971,12 @@ export class LDataType<Context extends LogicContext<DDataType> = any, C extends 
 
 
     protected get_serializable(context: Context): this["serializable"] { return context.data.serializable; }
-    protected set_serializable(val: this["serializable"], context: Context): boolean {
-        SetFieldAction.new(context.data, 'serializable', val);
+    protected set_serializable(val: this["serializable"], c: Context): boolean {
+        val = !!val;
+        if (val === c.data.serializable) return true;
+        TRANSACTION(this.get_name(c)+'.serializable', ()=>{
+            SetFieldAction.new(c.data, 'serializable', val);
+        }, c.data.serializable, val)
         return true;
     }
 
@@ -2962,7 +3098,10 @@ export class LStructuralFeature<Context extends LogicContext<DStructuralFeature>
     get_allowCrossReference(c: Context): boolean { return c.data.allowCrossReference; }
     set_allowCrossReference(v: this['allowCrossReference'], c: Context): boolean {
         v = !!v;
-        if (v !== c.data.allowCrossReference) SetFieldAction.new(c.data, 'allowCrossReference', v);
+        if (v === c.data.allowCrossReference) return true;
+        TRANSACTION(this.get_name(c)+'.allowCrossReference', ()=>{
+            SetFieldAction.new(c.data, 'allowCrossReference', v);
+        }, c.data.allowCrossReference, v)
         return true;
     }
 
@@ -3053,39 +3192,61 @@ export class LStructuralFeature<Context extends LogicContext<DStructuralFeature>
         });
     }
 
-    protected set_instances(val: PackArr<this["instances"]>, context: Context): boolean {
+    protected set_instances(val: PackArr<this["instances"]>, c: Context): boolean {
         const list = val.map((lItem) => { return Pointers.from(lItem) });
-        SetFieldAction.new(context.data, 'instances', list, "", true);
+        TRANSACTION(this.get_name(c)+'.instances', ()=>{
+            SetFieldAction.new(c.data, 'instances', list, "", true);
+        })
         return true;
     }
 
     protected get_changeable(context: Context): this["changeable"] { return context.data.changeable; }
-    protected set_changeable(val: this["changeable"], context: Context): boolean {
-        SetFieldAction.new(context.data, 'changeable', val);
+    protected set_changeable(val: this["changeable"], c: Context): boolean {
+        val = !!val;
+        if (c.data.changeable === val) return true;
+        TRANSACTION(this.get_name(c)+'.changeable', ()=>{
+            SetFieldAction.new(c.data, 'changeable', val);
+        }, c.data.changeable, val)
         return true;
     }
 
     protected get_volatile(context: Context): this["volatile"] { return context.data.volatile; }
-    protected set_volatile(val: this["volatile"], context: Context): boolean {
-        SetFieldAction.new(context.data, 'volatile', val);
+    protected set_volatile(val: this["volatile"], c: Context): boolean {
+        val = !!val;
+        if (c.data.volatile === val) return true;
+        TRANSACTION(this.get_name(c)+'.volatile', ()=>{
+            SetFieldAction.new(c.data, 'volatile', val);
+        }, c.data.volatile, val)
         return true;
     }
 
     protected get_transient(context: Context): this["transient"] { return context.data.transient; }
-    protected set_transient(val: this["transient"], context: Context): boolean {
-        SetFieldAction.new(context.data, 'transient', val);
+    protected set_transient(val: this["transient"], c: Context): boolean {
+        val = !!val;
+        if (c.data.transient === val) return true;
+        TRANSACTION(this.get_name(c)+'.transient', ()=>{
+            SetFieldAction.new(c.data, 'transient', val);
+        }, c.data.transient, val)
         return true;
     }
 
     protected get_unsettable(context: Context): this["unsettable"] { return context.data.unsettable; }
-    protected set_unsettable(val: this["unsettable"], context: Context): boolean {
-        SetFieldAction.new(context.data, 'unsettable', val);
+    protected set_unsettable(val: this["unsettable"], c: Context): boolean {
+        val = !!val;
+        if (c.data.unsettable === val) return true;
+        TRANSACTION(this.get_name(c)+'.unsettable', ()=>{
+            SetFieldAction.new(c.data, 'unsettable', val);
+        }, c.data.unsettable, val)
         return true;
     }
 
     protected get_derived(context: Context): D["derived"] { return context.data.derived; }
-    protected set_derived(val: D["derived"], context: Context): boolean {
-        SetFieldAction.new(context.data, 'derived', !!val);
+    protected set_derived(val: D["derived"], c: Context): boolean {
+        val = !!val;
+        if (c.data.derived === val) return true;
+        TRANSACTION(this.get_name(c)+'.derived', ()=>{
+            SetFieldAction.new(c.data, 'derived', val);
+        }, c.data.derived, val)
         return true;
     }
     /*
@@ -3309,11 +3470,11 @@ export class LReference<Context extends LogicContext<DReference> = any, C extend
         return (name?: DClass["name"], isInterface?: DClass["interface"], isAbstract?: DClass["abstract"], isPrimitive?: DClass["isPrimitive"],
                 isPartial?: DClass["partial"], partialDefaultName?: DClass["partialdefaultname"]) => {
             let dclass: DClass = null as any
-            TRANSACTION('' + this.get_name(c)+'.addClass()', ()=>{
+            TRANSACTION(this.get_name(c)+'.addClass()', ()=>{
                 dclass = DClass.new(name, isInterface, isAbstract, isPrimitive, isPartial, partialDefaultName, c.proxyObject.package!.id, true);
                 // SetFieldAction.new(context.data.id, "type", dclass.id);
                 this.set_type(dclass.id as any, c);
-            })
+            }, undefined, name)
             return LPointerTargetable.fromD(dclass);
         } }
 
@@ -3322,8 +3483,8 @@ export class LReference<Context extends LogicContext<DReference> = any, C extend
     set_containment(val: this["containment"], c: Context, mainkey:'composition'|'aggregation' = 'composition', altkey:'composition'|'aggregation' = 'aggregation'): boolean {
         // return this.cannotSet('containment', 'set aggregation or composition instead');
         val = !!val;
-        if (c.data[mainkey] === val) return true;
-        TRANSACTION('changed ' + this.get_name(c)+'.'+mainkey, ()=>{
+        if (!!c.data[mainkey] === val) return true;
+        TRANSACTION(this.get_name(c)+'.'+mainkey, ()=>{
             // set composition and unset aggregation or viceversa
             SetFieldAction.new(c.data, mainkey, val);
             if (val && c.data[altkey]) SetFieldAction.new(c.data, altkey, !val);
@@ -3380,8 +3541,12 @@ export class LReference<Context extends LogicContext<DReference> = any, C extend
     protected set_composition(val: this["composition"], c: Context): boolean { return this.set_containment(val, c, 'composition', 'aggregation'); }
 
     protected get_opposite(context: Context): this["opposite"] { return context.data.opposite && LPointerTargetable.from(context.data.opposite); }
-    protected set_opposite(val: Pack<LReference | undefined>, context: Context): boolean {
-        SetFieldAction.new(context.data, 'opposite', Pointers.from(val) as any as LAnnotation["id"], "", true);
+    protected set_opposite(val: Pack<LReference | undefined>, c: Context): boolean {
+        let ptr = Pointers.from(val) as any as LAnnotation["id"];
+        if (ptr === c.data.opposite) return true;
+        TRANSACTION(this.get_name(c)+'.opposite', ()=>{
+            SetFieldAction.new(c.data, 'opposite', ptr, "", true);
+        }, LPointerTargetable.wrap(c.data.opposite)?.fullname, LPointerTargetable.wrap(ptr)?.fullname)
         return true;
     }
     /*
@@ -3394,11 +3559,13 @@ export class LReference<Context extends LogicContext<DReference> = any, C extend
         }*/
 
     protected get_defaultValue(context: Context): this["defaultValue"] { return LPointerTargetable.fromPointer(context.data.defaultValue); }
-    protected set_defaultValue(val: PackArr<this["defaultValue"]>, context: Context): boolean {
+    protected set_defaultValue(val: PackArr<this["defaultValue"]>, c: Context): boolean {
         // @ts-ignore
         if (!val) (val) = []; else if (!Array.isArray(val)) val = [val];
         let ptrs = Pointers.from(val);
-        SetFieldAction.new(context.data, 'defaultValue', ptrs, '', false);
+        TRANSACTION(this.get_name(c)+'.defaultValue', ()=>{
+            SetFieldAction.new(c.data, 'defaultValue', ptrs, '', false);
+        })
         return true; }
 
     protected get_edges(context: Context): this["edges"] {
@@ -3406,9 +3573,11 @@ export class LReference<Context extends LogicContext<DReference> = any, C extend
             return LPointerTargetable.from(pointer)
         });
     }
-    protected set_edges(val: PackArr<this["edges"]>, context: Context): boolean {
+    protected set_edges(val: PackArr<this["edges"]>, c: Context): boolean {
         const list = val.map((lItem) => { return Pointers.from(lItem) });
-        SetFieldAction.new(context.data, 'edges', list, "", true);
+        TRANSACTION(this.get_name(c)+'.edges', ()=>{
+            SetFieldAction.new(c.data, 'edges', list, "", true);
+        })
         return true;
     }
 }
@@ -3588,15 +3757,20 @@ export class LAttribute <Context extends LogicContext<DAttribute> = any, C exten
         return (name?: DEnumerator["name"], father?: DEnumerator["father"]) => LPointerTargetable.fromD(DEnumerator.new(name, context.proxyObject.package?.id, true)); }
 
     protected get_isID(context: Context): this["isID"] { return context.data.isID; }
-    protected set_isID(val: this["isID"], context: Context): boolean {
-        SetFieldAction.new(context.data, 'isID', val);
+    protected set_isID(val: this["isID"], c: Context): boolean {
+        val = !!val;
+        if (!!c.data.isID === val) return true;
+        TRANSACTION(this.get_name(c)+'.isID', ()=>{
+            SetFieldAction.new(c.data, 'isID', val);
+        }, c.data.isID, val)
         return true;
     }
     protected get_isIoT(context: Context): this["isIoT"] { return context.data.isIoT; }
     protected set_isIoT(val: this["isIoT"], c: Context): boolean {
         val = !!val;
-        TRANSACTION('changed ' + this.get_name(c)+'.isIoT', () => {
-            for(const value of c.proxyObject.instances) {
+        if (!!c.data.isIoT === val) return true;
+        TRANSACTION(this.get_name(c)+'.isIoT', () => {
+            for (const value of c.proxyObject.instances) {
                 SetFieldAction.new(value, 'topic', '', '', false);
             }
             SetFieldAction.new(c.data, 'isIoT', val);
@@ -3604,10 +3778,12 @@ export class LAttribute <Context extends LogicContext<DAttribute> = any, C exten
         return true;
     }
     protected get_defaultValue(context: Context): this["defaultValue"] { return context.data.defaultValue; }
-    protected set_defaultValue(val: unArr<this["defaultValue"]>, context: Context): boolean {
+    protected set_defaultValue(val: unArr<this["defaultValue"]>, c: Context): boolean {
         // @ts-ignore
         if (!val) (val) = []; else if (!Array.isArray(val)) val = [val];
-        SetFieldAction.new(context.data, 'defaultValue', val, '', false);
+        TRANSACTION(this.get_name(c)+'.defaultValue', ()=>{
+            SetFieldAction.new(c.data, 'defaultValue', val, '', false);
+        })
         return true; }
 
 }
@@ -3720,21 +3896,30 @@ export class LEnumLiteral<Context extends LogicContext<DEnumLiteral> = any, C ex
         if (!ordinalAssumedByPosition) return context.data.value || 0;
         return context.proxyObject.father.ordinals.map( o => o?.id).indexOf(context.data.id);
     }
-    protected set_value(val: this["value"], context: Context): boolean {
-        if (val === context.data.value) return true;
-        let ordinals = context.proxyObject.father.ordinals;
+    protected set_value(val: this["value"], c: Context): boolean {
+        if (val === c.data.value) return true;
+        let ordinals = (this.get_father(c) as LEnumerator).ordinals;
         if (ordinals[val]) {
-            Log.e(true, "that ordinal place is already taken by " + ordinals[val].name, {sameOrdinalLit:ordinals[val], ordinals, thiss:context.data});
+            Log.e(true, "that ordinal place is already taken by " + ordinals[val].name, {sameOrdinalLit:ordinals[val], ordinals, thiss:c.data});
             return true; }
-        return SetFieldAction.new(context.data, 'value', val); }
+
+        TRANSACTION(this.get_name(c)+'.value', ()=>{
+            SetFieldAction.new(c.data, 'value', val);
+        }, c.data.value, val)
+        return true;
+    }
     /*
         protected get_literal(context: Context): this["literal"] { return context.data.literal; }
         protected set_literal(val: this["literal"], context: Context): boolean {
             return SetFieldAction.new(context.data, 'literal', val, '', false); }*/
     protected get_literal(context: Context): this["literal"] { return context.data.name; }
-    protected set_literal(val: this["literal"], context: Context): boolean {
-        if (val === context.data.name) return true;
-        return SetFieldAction.new(context.data, 'name', val, '', false); }
+    protected set_literal(val: this["literal"], c: Context): boolean {
+        if (val === c.data.name) return true;
+        TRANSACTION(this.get_name(c)+'.name', ()=>{
+            return SetFieldAction.new(c.data, 'name', val, '', false);
+        }, c.data.name, val)
+        return true;
+    }
 
 
 }
@@ -3863,7 +4048,7 @@ export class LEnumerator<Context extends LogicContext<DEnumerator> = any, C exte
         const list = val.map((lItem) => { return Pointers.from(lItem) });
         const oldList = context.data.literals;
         const diff = U.arrayDifference(oldList, list);
-        TRANSACTION('changed ' + this.get_name(context)+'.literals', ()=>{
+        TRANSACTION(this.get_name(context)+'.literals', ()=>{
             SetFieldAction.new(context.data, 'literals', list, "", true);
             for (let id of diff.added) {
                 SetFieldAction.new(id, 'father', context.data.id, '', true);
@@ -4561,7 +4746,7 @@ instanceof === undefined or missing  --> auto-detect and assign the type
         const list = val.map((lItem) => { return Pointers.from(lItem) });
         const oldList = context.data.models;
         const diff = U.arrayDifference(oldList, list);
-        TRANSACTION('changed ' + this.get_name(context)+'.models', ()=>{
+        TRANSACTION(this.get_name(context)+'.models', ()=>{
             SetFieldAction.new(context.data, 'models', list, '', true);
             for (let id of diff.added) {
                 SetFieldAction.new(id, 'father', context.data.id, '', true);
@@ -4579,20 +4764,28 @@ instanceof === undefined or missing  --> auto-detect and assign the type
 
     public duplicate(deep: boolean = true): this { throw new Error("Model.duplicate(): use export/import ecore instead."); }
 
-    protected set_instanceof(val: Pack1<this["instanceof"]>, context: Context): boolean {
-        let ptr = Pointers.from(val);
-        SetFieldAction.new(context.data.id, "instanceof", ptr, undefined, true);
-        // update father's collections (pointedby's here are set automatically)
-        // todo: ptr && SetFieldAction.new(ptr, "instances", context.data.id, '+=', true);
+    protected set_instanceof(val: Pack1<this["instanceof"]>, c: Context): boolean {
+        let ptr = Pointers.from<DNamedElement>(val as any);// as (undefined | Pointer<DNamedElement>);
+        if (c.data.instanceof === ptr) return true;
+        TRANSACTION(this.get_name(c)+'.instanceof', ()=>{
+            SetFieldAction.new(c.data.id, "instanceof", ptr, undefined, true);
+            // update father's collections (pointedby's here are set automatically)
+            // todo: ptr && SetFieldAction.new(ptr, "instances", context.data.id, '+=', true);
+        }, this.get_instanceof(c)?.fullname, LPointerTargetable.wrap(ptr)?.fullname)
         return true; }
-    protected get_instanceof(context: Context): this["instanceof"] { return context.data.instanceof ? LPointerTargetable.fromPointer(context.data.instanceof) : undefined; }
+    protected get_instanceof(c: Context): this["instanceof"] {
+        return c.data.instanceof ? LPointerTargetable.fromPointer(c.data.instanceof) : undefined;
+    }
 
-    protected set_name(val: this['name'], context: Context): boolean {
+    protected set_name(val: this['name'], c: Context): boolean {
         const models: LModel[] = LModel.fromPointer(store.getState()['models']);
-        if(models.filter((model) => { return model.name === val }).length > 0) {
-            U.alert('e', 'Cannot rename the selected element since this name is already taken.');
+        if (models.filter((model) => { return model.name === val }).length > 0) {
+            U.alert('e', 'Cannot rename the selected model, this name is already taken.');
         } else {
-            SetFieldAction.new(context.data, 'name', val, '', false);
+            if (c.data.name === val) return true;
+            TRANSACTION(this.get_name(c)+'.name', ()=>{
+                SetFieldAction.new(c.data, 'name', val, '', false);
+            }, undefined, val)
         }
         return true;
     }
@@ -4605,10 +4798,14 @@ instanceof === undefined or missing  --> auto-detect and assign the type
     }
 
     protected get_isMetamodel(context: Context): this['isMetamodel'] {
-        return context.data.isMetamodel;
+        return !!context.data.isMetamodel;
     }
-    protected set_isMetamodel(val: this['isMetamodel'], context: Context): boolean {
-        if (context.data.isMetamodel !== val) SetFieldAction.new(context.data, 'isMetamodel', val, '', false);
+    protected set_isMetamodel(val: this['isMetamodel'], c: Context): boolean {
+        val = !!val;
+        if (!!c.data.isMetamodel === val) return true;
+        TRANSACTION(this.get_name(c)+'.isMetamodel', ()=>{
+            SetFieldAction.new(c.data, 'isMetamodel', val, '', false);
+        }, c.data.isMetamodel, val)
         return true;
     }
 
@@ -4631,7 +4828,7 @@ instanceof === undefined or missing  --> auto-detect and assign the type
         const list = val.map((lItem) => { return Pointers.from(lItem) });
         const oldList = c.data.packages;
         const diff = U.arrayDifference(oldList, list);
-        TRANSACTION('changed ' + this.get_name(c)+'.packages', ()=>{
+        TRANSACTION(this.get_name(c)+'.packages', ()=>{
             SetFieldAction.new(c.data, 'packages', list, "", true);
             for (let id of diff.added) {
                 SetFieldAction.new(id, 'father', c.data.id, '', true);
@@ -5174,13 +5371,16 @@ export class LObject<Context extends LogicContext<DObject> = any, C extends Cont
         const pointer = context.data.instanceof;
         return pointer && LPointerTargetable.from(pointer)
     }
-    protected set_instanceof(val: Pack1<this["instanceof"]>, context: Context): boolean {
+    protected set_instanceof(val: Pack1<this["instanceof"]>, c: Context): boolean {
         const metaptr: D["instanceof"] = Pointers.from(val);
-        this._removeConformity(context);
-        SetFieldAction.new(context.data.id, "instanceof", metaptr, undefined, true);
-        // update father's collections (pointedby's here are set automatically)
-        metaptr && SetFieldAction.new(metaptr as Pointer<DClass>, "instances", context.data.id, '+=', true);
-        if (metaptr) this._forceConformity(context, metaptr);
+        if (metaptr === c.data.instanceof) return true;
+        TRANSACTION(this.get_name(c)+'.instanceof', ()=>{
+            this._removeConformity(c);
+            SetFieldAction.new(c.data.id, "instanceof", metaptr, undefined, true);
+            // update father's collections (pointedby's here are set automatically)
+            metaptr && SetFieldAction.new(metaptr as Pointer<DClass>, "instances", c.data.id, '+=', true);
+            if (metaptr) this._forceConformity(c, metaptr);
+        }, this.get_instanceof(c)?.fullname, LPointerTargetable.wrap(metaptr)?.fullname)
         return true;
     }
 
@@ -5367,7 +5567,7 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
 
     protected set___readonly(val: any, c: Context): boolean {
         val = !!val;
-        if (val === c.data.__readonly) return true;
+        if (val === !!c.data.__readonly) return true;
         super.set___readonly(val, c);
         let lref: LReference = this.get_instanceof(c) as LReference;
         if (!lref) return true;
@@ -5760,15 +5960,25 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
         if (!pointer) return undefined;
         return LPointerTargetable.from(pointer)
     }
-    protected set_instanceof(val: Pack1<this["instanceof"]>, context: Context): boolean {
+    protected set_instanceof(val: Pack1<this["instanceof"]>, c: Context): boolean {
         // const list = val.map((lItem) => { return Pointers.from(lItem) });
-        let ptr = Pointers.from(val);
-        SetFieldAction.new(context.data, 'instanceof', ptr, "", true);
+        let ptr = Pointers.from<DNamedElement>(val as any);
+        if (ptr === c.data.instanceof) return true;
+        TRANSACTION(this.get_name(c)+'.instanceof', ()=>{
+            SetFieldAction.new(c.data, 'instanceof', ptr, "", true);
+        }, this.get_instanceof(c)?.fullname, LPointerTargetable.wrap(ptr)?.fullname)
         return true;
     }
 
-    protected get_isMirage(context: Context): this["isMirage"] { return context.data.isMirage; }
-    protected set_isMirage(val: this["isMirage"], context: Context): boolean { SetFieldAction.new(context.data, 'isMirage', val, "", false); return true; }
+    protected get_isMirage(context: Context): this["isMirage"] { return !!context.data.isMirage; }
+    protected set_isMirage(val: this["isMirage"], c: Context): boolean {
+        val = !!val;
+        if (val === !!c.data.isMirage) return true;
+        TRANSACTION(this.get_name(c)+'.isMirage', ()=>{
+            SetFieldAction.new(c.data, 'isMirage', val, "", false);
+        }, c.data.isMirage, val)
+        return true;
+    }
 
     typeStr!:string; // derivate attribute, abstract
     typeString!:string; // derivate attribute, abstract
@@ -6072,6 +6282,7 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
     // only use through setValueAtPosition
     protected _clearValueAtPosition(context: Context, index: number, info0?: Partial<SetValueAtPositionInfoType>, skipSettingUndefined: boolean = false) {
         // if (!outactions) outactions = {clear:[], set:[]};
+        if (index < 0) return;
         let info = (info0 || {}) as unknown as SetValueAtPositionInfoType;
         let oldVal = context.data.values[index];
         let oldTarget: LObject | undefined = typeof oldVal === "string" ? LObject.fromPointer(oldVal) : undefined;
@@ -6172,17 +6383,20 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
                 }
             }
 
-            // clear sideeffect part
-            outactions.clear.push(()=>this._clearValueAtPosition(c, index, info, true));
-            // console.log('set value index', {index, val, isPtr});
-            // actual set
-            outactions.set.push(()=>SetFieldAction.new(c.data, 'values.' + index as any, val, '', isPtr));
-            if (info.setMirage !== false) SetFieldAction.new(c.data, 'isMirage', false, '', false);
+            TRANSACTION(this.get_name(c)+'.setValue('+index+': index)', ()=>{
+                if (!outactions) return;
+                // clear sideeffect part
+                outactions.clear.push(()=>this._clearValueAtPosition(c, index, info, true));
+                // console.log('set value index', {index, val, isPtr});
+                // actual set
+                outactions.set.push(()=>SetFieldAction.new(c.data, 'values.' + index as any, val, '', isPtr));
+                if (info.setMirage !== false) SetFieldAction.new(c.data, 'isMirage', false, '', false);
 
-            if (outactions.immediatefire) {
-                for (let a of outactions.clear) a();
-                for (let a of outactions.set) a();
-            }
+                if (outactions.immediatefire) {
+                    for (let a of outactions.clear) a();
+                    for (let a of outactions.set) a();
+                }
+            }, c.data.values[index], val)
             // todo: wrap this func and set toaster with failure message if it fails or better launch Log.w and bind toasts of different colors to Log funcs
             return {success: true};
         }
@@ -6402,8 +6616,11 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
     protected get_topic(context: Context): this["topic"] {
         return context.data.topic;
     }
-    protected set_topic(val: string, context: Context): boolean {
-        SetFieldAction.new(context.data, 'topic', val, '', false);
+    protected set_topic(val: string, c: Context): boolean {
+        if (c.data.topic === val) return true;
+        TRANSACTION(this.get_name(c)+'.topic', ()=>{
+            SetFieldAction.new(c.data, 'topic', val, '', false);
+        }, c.data.topic, val)
         return true;
     }
 }

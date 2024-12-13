@@ -239,7 +239,9 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
                 // if (v[ka].h === undefined || isNaN(v[ka].h)) v[ka].h = 5;
             }
         }
-        SetFieldAction.new(c.data, "anchors", v, '+=', false);
+        TRANSACTION(this.get_name(c)+'.anchors', ()=> {
+            SetFieldAction.new(c.data, "anchors", v, '', false)
+        });
         return true; }
 
     edgesIn!: LVoidEdge[];
@@ -250,8 +252,19 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
     __info_of__edgesEnd: Info = {type:"LEdge[]", txt:<div>Alias for this.edgesIn</div>}
     public get_edgesIn(context: Context): this["edgesIn"] { return LPointerTargetable.fromArr(context.data.edgesIn); }
     public get_edgesOut(context: Context): this["edgesOut"]  { return LPointerTargetable.fromArr(context.data.edgesOut); }
-    public set_edgesIn(val: PackArr<LVoidEdge>, c: Context): boolean { return SetFieldAction.new(c.data.id, "edgesIn", Pointers.fromArr(val), '', true); }
-    public set_edgesOut(val: PackArr<LVoidEdge>, c: Context): boolean { return SetFieldAction.new(c.data.id, "edgesOut", Pointers.fromArr(val), '', true); }
+    public set_edgesIn(val: PackArr<LVoidEdge>, c: Context): boolean {
+        TRANSACTION(this.get_name(c)+'edgesIn', ()=> {
+            SetFieldAction.new(c.data.id, "edgesIn", Pointers.fromArr(val), '', true);
+        })
+        return true;
+
+    }
+    public set_edgesOut(val: PackArr<LVoidEdge>, c: Context): boolean {
+        TRANSACTION(this.get_name(c)+'.edgesOut', ()=> {
+            SetFieldAction.new(c.data.id, "edgesOut", Pointers.fromArr(val), '', true);
+        })
+        return true;
+    }
     public get_edgesStart(context: Context): this["edgesIn"]  { return this.get_edgesIn(context); }
     public get_edgesEnd(context: Context): this["edgesOut"]  { return this.get_edgesOut(context); }
     public set_edgesStart(val: PackArr<LVoidEdge>, context: Context): boolean { return this.set_edgesIn(val, context); }
@@ -354,7 +367,7 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
 
     get_position(context: Context): this["position"] { return new GraphPoint(context.data.x, context.data.y); }
     set_position(val: this["position"], c: Context): boolean {
-        TRANSACTION('drag vertex', ()=>{
+        TRANSACTION('drag' + this.get_name(c), ()=>{
             SetFieldAction.new(c.data.id, "x", val.x, undefined, false);
             SetFieldAction.new(c.data.id, "y", val.y, undefined, false);
         },  `(${U.cropNum(c.data.x)}, ${U.cropNum(c.data.y)})`,
@@ -481,7 +494,7 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
 
         if (view.updateSize(c.data.id, size)) return true;
 
-        TRANSACTION('resize vertex', ()=>{
+        TRANSACTION('resize '+this.get_name(c), ()=>{
             if (size.x !== c.data.x && size.x !== undefined) SetFieldAction.new(c.data.id, "x", size.x, undefined, false);
             if (size.y !== c.data.y && size.y !== undefined) SetFieldAction.new(c.data.id, "y", size.y, undefined, false);
             if (size.w !== c.data.w && size.w !== undefined) SetFieldAction.new(c.data.id, "w", size.w, undefined, false);
@@ -538,8 +551,12 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
     * fixed: by updating it directly in GraphElement.render()
     * */
     get_zIndex(context: Context): this["zIndex"] { return (+context.data.zIndex || 0); }
-    set_zIndex(val: this["zIndex"], context: Context): boolean {
-        SetFieldAction.new(context.data.id, "zIndex", +val ?? 0, undefined, false);
+    set_zIndex(val: this["zIndex"], c: Context): boolean {
+        val = +val ?? 0;
+        if (val === c.data.zIndex) return true;
+        TRANSACTION(this.get_name(c)+'.zIndex', ()=> {
+            SetFieldAction.new(c.data.id, "zIndex", val, undefined, false);
+        }, c.data.zIndex, val)
         return true; }
     get_z(context: Context): this["zIndex"] { return context.data.zIndex; }
     set_z(val: this["zIndex"], context: Context): boolean { return this.set_zIndex(val, context); }
@@ -590,21 +607,24 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
         // if (isDeepStrictEqual(context.data.subElements, val)) return true;
         let pointers: Pointer<DGraphElement, 0, 'N', LGraphElement> = Pointers.from(val) || [];
         if (Uarr.equals(pointers, context.data.subElements, false)) return true;
-        SetFieldAction.new(context.data, 'subElements', pointers, '', true);
-        const idlookup = store.getState().idlookup;
-        let arrdiff = U.arrayDifference(context.data.subElements, pointers);
-        // old subelements
-        for (let oldsubelementid of arrdiff.removed) {
-            let subelement: DGraphElement = (oldsubelementid && idlookup[oldsubelementid]) as DGraphElement;
-            if (subelement.father !== context.data.id) continue;
-            LPointerTargetable.from(subelement).father = null as any; // todo: can this happen? è transitorio o causa vertici senza parent permanenti?
-        }
-        // new subelements
-        for (let newsubelementid of arrdiff.added) {
-            let subelement: DGraphElement = (newsubelementid && idlookup[newsubelementid]) as DGraphElement;
-            if (subelement.father === context.data.id) continue;
-            LPointerTargetable.from(subelement).father = context.data.id as any; // trigger side-action
-        }
+
+        TRANSACTION(this.get_name(context as any)+'.subElements', ()=> {
+            SetFieldAction.new(context.data, 'subElements', pointers, '', true);
+            const idlookup = store.getState().idlookup;
+            let arrdiff = U.arrayDifference(context.data.subElements, pointers);
+            // old subelements
+            for (let oldsubelementid of arrdiff.removed) {
+                let subelement: DGraphElement = (oldsubelementid && idlookup[oldsubelementid]) as DGraphElement;
+                if (subelement.father !== context.data.id) continue;
+                LPointerTargetable.from(subelement).father = null as any; // todo: can this happen? è transitorio o causa vertici senza parent permanenti?
+            }
+            // new subelements
+            for (let newsubelementid of arrdiff.added) {
+                let subelement: DGraphElement = (newsubelementid && idlookup[newsubelementid]) as DGraphElement;
+                if (subelement.father === context.data.id) continue;
+                LPointerTargetable.from(subelement).father = context.data.id as any; // trigger side-action
+            }
+        })
         return true;
     }
 
@@ -622,7 +642,13 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
         while (tocheck.length) {
             let newtocheck: Pointer<DGraphElement>[] = [];
             for (let ptr of tocheck) {
-                Log.eDev(checked[ptr], "loop in GraphElements containing themselves", {dblcheck, context, ptr, checked, fistContainer:dblcheck[ptr]});
+                Log.eDev(checked[ptr], "loop in GraphElements containing themselves", {
+                    dblcheck,
+                    context,
+                    ptr,
+                    checked,
+                    fistContainer: dblcheck[ptr]
+                });
                 if (checked[ptr]) continue;
                 checked[ptr] = true;
                 let subnode: DGraphElement = DPointerTargetable.from(ptr, state);
@@ -635,11 +661,19 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
         delete checked[context.data.id];
         return LPointerTargetable.from(Object.keys(checked), state);
     }
-    set_allSubElements(val: never, c: Context): boolean { return this.cannotSet('allSubElements'); }
 
-    get_isResized(context: LogicContext<DVoidVertex>): DVoidVertex["isResized"] { return context.data.isResized; }
-    set_isResized(val: DVoidVertex["isResized"], context: LogicContext<DVoidVertex>): DVoidVertex["isResized"] {
-        return SetFieldAction.new(context.data.id, "isResized", val);
+    set_allSubElements(val: never, c: Context): boolean {
+        return this.cannotSet('allSubElements');
+    }
+
+    get_isResized(context: LogicContext<DVoidVertex>): DVoidVertex["isResized"] { return (context.data as DVertex).isResized; }
+    set_isResized(val: DVoidVertex["isResized"], c: LogicContext<DVoidVertex>): DVoidVertex["isResized"] {
+        val = !!val;
+        if (!!c.data.isResized === val) return true;
+        TRANSACTION(this.get_name(c as any as Context)+'.isResized', ()=> {
+            SetFieldAction.new(c.data.id, "isResized", val);
+        }, c.data.isResized, val)
+        return true;
     }
 
     get_model(context: Context): this["model"] {
@@ -691,10 +725,12 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
 
 
     get_father(context: Context): this["father"] { return LPointerTargetable.fromPointer(context.data.father); }
-    set_father(val: Pack1<this["father"]>, context: Context): boolean {
+    set_father(val: Pack1<this["father"]>, c: Context): boolean {
         let ptr: DGraphElement["father"] = Pointers.from(val) as any;
-        SetFieldAction.new(context.data, 'father', ptr, undefined, true);
-        if (ptr) SetFieldAction.new(ptr as any, 'subElements+=', context.data.id);
+        TRANSACTION(this.get_name(c)+'.father', ()=> {
+            SetFieldAction.new(c.data, 'father', ptr, undefined, true);
+            if (ptr) SetFieldAction.new(ptr as any, 'subElements+=', c.data.id);
+        }, this.get_father(c).name, L.fromPointer(ptr).name)
         return true; }
 
     __info_of__isselected: Info = {type: "Dictionary<Pointer<User>, true>",
@@ -709,23 +745,32 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
     toggleSelected(forUser?: Pointer<DUser>): void { return this.wrongAccessMessage("node.toggleSelected()"); }
     isSelected(forUser?: Pointer<DUser>): boolean { return this.wrongAccessMessage("node.isSelected()"); }
     get_select(c: Context): (forUser?: Pointer<DUser>)=>void {
-        return (forUser?: Pointer<DUser>)=> {
+        return (forUser?: Pointer<DUser>)=>{
             if (!forUser) forUser = DUser.current;
+            Log.exDev(typeof forUser !== 'string', 'unexpected parameter in select()', {forUser});
             if (c.data.isSelected[forUser]) return; // no-op
             let map = {...c.data.isSelected};
             map[forUser] = true;
-            SetFieldAction.new(c.data.id, "isSelected", map, undefined, false);
+            let duser = DPointerTargetable.fromPointer(forUser);
+            TRANSACTION(this.get_name(c)+'.select('+ duser.name+')', ()=>{
+                SetFieldAction.new(c.data.id, "isSelected", map, undefined, false);
+            }, false, true)
             // todo: actually they are pointer to users, but i'm assuming users are not erased at runtime. on deselect too
         }
     }
     get_deselect(c: Context): (forUser?: Pointer<DUser>)=>void {
-        return (forUser?: Pointer<DUser>)=> {
+        return (forUser?: Pointer<DUser>)=>{
             if (!forUser) forUser = DUser.current;
+            Log.exDev(typeof forUser !== 'string', 'unexpected parameter in deselect()', {forUser});
             if (!c.data.isSelected[forUser]) return; // no-op
             let map = {...c.data.isSelected};
             delete map[forUser];
-            SetFieldAction.new(c.data.id, "isSelected", map, undefined, false);
-            // todo: actually they are pointer to users, but i'm assuming users are not erased at runtime. on deselect too
+            let duser = DPointerTargetable.fromPointer(forUser);
+
+            TRANSACTION(this.get_name(c)+'.select('+ duser.name+')', ()=>{
+                // todo: actually they are pointer to users, but i'm assuming users are not erased at runtime. on deselect too
+                SetFieldAction.new(c.data.id, "isSelected", map, undefined, false);
+            })
         }
     }
     get_toggleSelected(context: Context): ((forUser?: Pointer<DUser>) => boolean) {
@@ -871,7 +916,10 @@ export class LGraph<Context extends LogicContext<DGraph> = any, D extends DGraph
         if (val.w === undefined && offset.w !== val.w) val.w = offset.w;
         if (val.h === undefined && offset.h !== val.h) val.h = offset.h;
         if (offset.x === val.x && offset.y === val.y && offset.w === val.w && offset.h == val.h) return true;
-        SetFieldAction.new(context.data, "offset", val as any);
+
+        TRANSACTION(this.get_name(context)+'.offset', ()=>{
+            SetFieldAction.new(context.data, "offset", val as any);
+        }, IPoint.stringify(offset), IPoint.stringify(val))
         return true;
     }
 
@@ -902,7 +950,10 @@ export class LGraph<Context extends LogicContext<DGraph> = any, D extends DGraph
         if (!val.x) val.x = zoom.x; // remember zero is not allowed value
         if (!val.y) val.y = zoom.y;
         if (zoom.x === val.x && zoom.y === val.y) return true;
-        SetFieldAction.new(c.data, 'zoom', val as any, '+=', false);
+
+        TRANSACTION(this.get_name(c)+'.zoom', ()=>{
+            SetFieldAction.new(c.data, 'zoom', val as any, '+=', false);
+        }, IPoint.stringify(zoom), IPoint.stringify(val))
         return true;
     }
 
@@ -1137,7 +1188,12 @@ export class LVoidVertex<Context extends LogicContext<DVoidVertex> = any, C exte
 
     get_isResized(context: LogicContext<DVoidVertex>): DVoidVertex["isResized"] { return context.data.isResized; }
     set_isResized(val: DVoidVertex["isResized"], context: LogicContext<DVoidVertex>): DVoidVertex["isResized"] {
-        return SetFieldAction.new(context.data.id, "isResized", val);
+        val = !!val;
+        if (!!context.data.isResized === val) return true;
+        TRANSACTION(this.get_name(context)+'.isResized', ()=>{
+            SetFieldAction.new(context.data.id, "isResized", val);
+        }, context.data.isResized, val)
+        return true;
     }
 
 
@@ -1899,7 +1955,11 @@ replaced by startPoint
     set_start(val: Pack1<LGraphElement>, c: Context): boolean {
         let ptr = Pointers.from(val);
         if (!ptr) { Log.exx("attempting to set an invalid LEdge.start: " + ptr, {ptr, data: c.data}); return true; }
-        if (ptr !== c.data.start) SetFieldAction.new(c.data.id, 'start', ptr, '', true);
+        if (ptr === c.data.start) return true;
+        let name = this.get_name(c)||'';
+        TRANSACTION((name.toLowerCase().indexOf('edge')>=0 ? name : 'Edge: '+name)+'.start', ()=>{
+            SetFieldAction.new(c.data.id, 'start', ptr, '', true);
+        }, LPointerTargetable.from(c.data.start).name, LPointerTargetable.from(ptr).name)
         return true;
     }
     end!: LGraphElement;
@@ -1908,7 +1968,11 @@ replaced by startPoint
     set_end(val: Pack1<LGraphElement>, c: Context): boolean {
         let ptr = Pointers.from(val);
         if (!ptr) { Log.exx("attempting to set an invalid LEdge.end: " + ptr, {ptr, data: c.data}); return true; }
-        if (ptr !== c.data.end) SetFieldAction.new(c.data.id, 'end', ptr, '', true);
+        if (ptr === c.data.end) return true;
+        let name = this.get_name(c)||'';
+        TRANSACTION((name.toLowerCase().indexOf('edge')>=0 ? name : 'Edge: '+name)+'.end', ()=>{
+            SetFieldAction.new(c.data.id, 'end', ptr, '', true);
+        }, LPointerTargetable.from(c.data.end).name, LPointerTargetable.from(ptr).name)
         return true;
     }
 
@@ -1928,7 +1992,8 @@ replaced by startPoint
     set_longestLabel(val: DVoidEdge["longestLabel"], c: Context): boolean {
         Log.exDevv('Edge.labels are disabled, pass it through props instead');
         if (val === c.data.longestLabel) return true;
-        TRANSACTION('label', ()=>{
+        let name = this.get_name(c)||'';
+        TRANSACTION((name.toLowerCase().indexOf('edge')>=0 ? name : 'Edge: '+name)+'.label', ()=>{
             SetFieldAction.new(c.data, "longestLabel", val);
             SetRootFieldAction.new("NODES_RECOMPILE_longestLabel+=", c.data.id);
         }, c.data.longestLabel, val);
@@ -1937,7 +2002,8 @@ replaced by startPoint
     set_labels(val: DVoidEdge["labels"], c: Context): boolean {
         Log.exDevv('Edge.labels are disabled, pass it through props instead');
         if (val === c.data.labels) return true;
-        TRANSACTION('labels', ()=>{
+        let name = this.get_name(c)||'';
+        TRANSACTION((name.toLowerCase().indexOf('edge')>=0 ? name : 'Edge: '+name)+'.labels', ()=>{
             SetFieldAction.new(c.data, "labels", val);
             SetRootFieldAction.new("NODES_RECOMPILE_labels+=", c.data.id);
         }, c.data.labels, val);
@@ -2027,10 +2093,18 @@ replaced by startPoint
     public addMidPoint(v: this["midPoints"][0]): boolean { return this.wrongAccessMessage("addMidPoint"); }
     protected get_addMidPoint(c: Context): (v: this["midPoints"][0]) => boolean { return (v:this["midPoints"][0]) => this.impl_addMidPoints(v, c); }
     protected set_midPoints(val: this["midPoints"], c: Context): boolean {
-        return SetFieldAction.new(c.data.id, "midPoints", val, undefined, false);
+        let name = this.get_name(c)||'';
+        TRANSACTION((name.toLowerCase().indexOf('edge')>=0 ? name : 'Edge: '+name)+'.midpoints', ()=>{
+            SetFieldAction.new(c.data.id, "midPoints", val, undefined, false);
+        });
+        return true;
     }
     protected impl_addMidPoints(val: this["midPoints"][0], c: Context): boolean {
-        return SetFieldAction.new(c.data.id, "midPoints", val, '+=', false);
+        let name = this.get_name(c)||'';
+        TRANSACTION((name.toLowerCase().indexOf('edge')>=0 ? name : 'Edge: '+name)+' add midpoints', ()=>{
+           SetFieldAction.new(c.data.id, "midPoints", val, '+=', false);
+        });
+        return true;
     }
     protected get_label_impl(c: Context, segment: EdgeSegment, nodes: this["allNodes"], segments: EdgeSegment[]): PrimitiveType | undefined {
         let key: "longestLabel" | "labels" = segment.isLongest ? "longestLabel" : "labels"; // : keyof this
@@ -2450,7 +2524,12 @@ replaced by startPoint
         return LPointerTargetable.wrapAll(context.data.subElements);
     }
     protected set_midnodes(val: D["midnodes"], context: Context): boolean {
-        return SetFieldAction.new(context.data.id, "midnodes", val, '', true);
+
+        let name = this.get_name(context)||'';
+        TRANSACTION((name.toLowerCase().indexOf('edge')>=0 ? name : 'Edge: '+name)+'.midpoints', ()=>{
+            SetFieldAction.new(context.data.id, "midnodes", val, '', true);
+        });
+        return true;
     }
 
 
