@@ -8,6 +8,7 @@ import logo from '../static/img/jjodel.jpg';
 import {Tooltip} from '../components/forEndUser/Tooltip';
 
 function AuthPage(): JSX.Element {
+
     const [action, setAction] = useStateIfMounted<'login'|'register'|'retrieve-password'>('login');
     const [nickname, setNickname] = useStateIfMounted('');
     const [name, setName] = useStateIfMounted('');
@@ -18,6 +19,7 @@ function AuthPage(): JSX.Element {
     const [password, setPassword] = useStateIfMounted('');
     const [passwordCheck, setPasswordCheck] = useStateIfMounted('');
     const [newsletter, setNewsletter] = useStateIfMounted(false);
+
     const navigate = useNavigate();
 
     const onSubmit = async(e: FormEvent<HTMLFormElement>) => {
@@ -49,11 +51,12 @@ function AuthPage(): JSX.Element {
             U.alert('e', 'Email or password unknown.');
             return;
         }
+
         const data = U.wrapper<DUser>(response.data);
+        
         const user = DUser.new(data.name, data.surname, data.nickname, data.affiliation, data.country, data.newsletter || false, data.email, data.token, data.id);
         Storage.write('user', user);
         Storage.write('token', user.token);
-        //navigate('/dashboard');
         navigate('/allProjects');
         U.resetState();
     }
@@ -475,7 +478,7 @@ function AuthPage(): JSX.Element {
                 <button className={'d-block btn btn-primary p-1 mx-auto mt-3 login-button'} type={'submit'}>
                     Login
                 </button>
-                {(true || window.location.host.includes('localhost')) &&
+                {(window.location.host.includes('localhost')) &&
                     <button className={'d-block btn btn-primary p-1 mx-auto mt-3 login-button'} onClick={(e) => offline()}>Offline mode</button>
                 }
             </>}

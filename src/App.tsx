@@ -141,12 +141,3 @@ export const AppConnected = connect<StateProps, DispatchProps, OwnProps, DState>
 )(App);
 
 export default AppConnected;
-
-
-/* SPLASH SCREEN
-return(<div className={'w-100 h-100 text-center bg-smoke'}>
-    <img style={{height: '60%', width: '80%'}} className={'mt-3 rounded shadow'} src={SplashImage}></img>
-    <Oval height={80} width={80} wrapperStyle={{justifyContent: 'center'}} wrapperClass={'mt-3'}
-          color={'#475e6c'} secondaryColor={'#ff8811'} />
-</div>);
-*/
