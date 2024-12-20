@@ -55,7 +55,7 @@ export const Menu = (props: MenuProps) => {
 
 export const Divisor = () => {
     return(
-        <hr className="my-1" />
+        <hr className="my-1 divisor" />
     );
 };
 

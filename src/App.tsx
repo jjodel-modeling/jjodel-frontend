@@ -48,8 +48,8 @@ function App(props: AllProps): JSX.Element {
     let user: LUser = props.user;
 
     useEffectOnce(() => {
-        // SetRootFieldAction.new('isLoading', true);
-        // stateInitializer().then(() => SetRootFieldAction.new('isLoading', false));
+        SetRootFieldAction.new('isLoading', true);
+        stateInitializer().then(() => SetRootFieldAction.new('isLoading', false));
     });
 
     return(<>
@@ -62,7 +62,7 @@ function App(props: AllProps): JSX.Element {
             <HashRouter>
                 <Try><PathChecker /></Try>
                 <Try><Routes>
-                    {DUser.current ? <>
+                   {DUser.current  ? <> 
                         <Route path={'allProjects'} element={<AllProjectsPage />} />
                         {/*<Route path={'dock'} element={<MyDock />} />*/}
                         <Route path={'account'} element={<AccountPage />} />
@@ -79,8 +79,10 @@ function App(props: AllProps): JSX.Element {
                         <Route path={'projectsInfo'} element={<ProjectsInfoPage />} />
                         <Route path={'news'} element={<NewsPage />} />
                         <Route path={''} element={<AllProjectsPage />} />
-                        { window.location.hostname !== 'localhost' && false && <Route path={'*'} element={<AllProjectsPage />} />}
+                        {window.location.hostname !== 'localhost' && false && <Route path={'*'} element={<AllProjectsPage />} />
+                    }
                     </> : <Route path={'*'} element={<AuthPage />} />}
+                        
                 </Routes></Try>
             </HashRouter>
             {DUser.current && <Try><BottomBar /></Try>}
@@ -141,12 +143,3 @@ export const AppConnected = connect<StateProps, DispatchProps, OwnProps, DState>
 )(App);
 
 export default AppConnected;
-
-
-/* SPLASH SCREEN
-return(<div className={'w-100 h-100 text-center bg-smoke'}>
-    <img style={{height: '60%', width: '80%'}} className={'mt-3 rounded shadow'} src={SplashImage}></img>
-    <Oval height={80} width={80} wrapperStyle={{justifyContent: 'center'}} wrapperClass={'mt-3'}
-          color={'#475e6c'} secondaryColor={'#ff8811'} />
-</div>);
-*/

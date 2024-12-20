@@ -104,10 +104,6 @@ function makeEntry(i: MenuEntry) {
     }
 }
 
-
-
-
-
 type UserProps = {}
 const User = (props: UserProps) => {
     const user: LUser = LUser.fromPointer(DUser.current);
@@ -141,7 +137,12 @@ function NavbarComponent(props: AllProps) {
 
     const project = props.project;
 
+    
+    
+    
     // const menuType = "normal";
+
+
 
     const Key = Keystrokes;
     let projectItems: MenuEntry[] = [];

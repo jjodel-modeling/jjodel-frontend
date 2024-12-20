@@ -10,6 +10,7 @@ import {Tooltip} from '../components/forEndUser/Tooltip';
 function AuthPage(): JSX.Element {
 
     const [action, setAction] = useStateIfMounted<'login'|'register'|'retrieve-password'>('login');
+
     const [nickname, setNickname] = useStateIfMounted('');
     const [name, setName] = useStateIfMounted('');
     const [surname, setSurname] = useStateIfMounted('');
@@ -56,7 +57,11 @@ function AuthPage(): JSX.Element {
         
         const user = DUser.new(data.name, data.surname, data.nickname, data.affiliation, data.country, data.newsletter || false, data.email, data.token, data.id);
         Storage.write('user', user);
-        Storage.write('token', user.token);
+        Storage.write('token', user.token); 
+
+
+        // await user.save();
+
         navigate('/allProjects');
         U.resetState();
     }
