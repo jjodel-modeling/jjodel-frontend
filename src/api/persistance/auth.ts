@@ -13,6 +13,9 @@ class AuthApi {
     }
     static async logout(): Promise<void> {
         if(!U.isOffline()) await Api.delete(`${Api.persistance}/auth/logout`);
+        
+        Storage.reset();
+
         U.resetState();
     }
 
