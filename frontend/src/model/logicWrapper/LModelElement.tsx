@@ -2390,7 +2390,7 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
     protected set_partial(val: D["partial"], c: Context): boolean {
         val = !!val;
         if (val === c.data.partial) return true;
-        TRANSACTION(this.get_name(c)+'.@@@@@@', ()=>{
+        TRANSACTION(this.get_name(c)+'.partial', ()=>{
             SetFieldAction.new(c.data.id, "partial", val);
         }, c.data.partial, val)
         return true;

@@ -92,23 +92,29 @@ export class SaveManagerComponent extends PureComponent<AllProps, ThisState>{
         // let arr = [...(this.props as GObject)[key]].reverse().slice(0, this.props.maxlistsize);
         let arr = [...(key === 'undo' ? undoarr : redoarr)].reverse().slice(0, this.props.maxlistsize);
         let list = arr.map((delta, index) => {
-            let prevDelta = arr[index + 1]; //[index + (key === 'undo' ? -1 : +1)]
+            let prevDelta = delta; // arr[index + 1]; //[index + (key === 'undo' ? -1 : +1)]
+            // let actiodesc = key ==='undo' ? arr[index + 1] : ) || s;
+
             let out: {best: R}&R[] = [] as GObject as R[] & {best:R};
             U.ObjectToAssignementStrings(delta, 10, 6, 20, "…", out, true);
             if (!index) console.log('debug undoredo', {out, delta, arr});
             console.log("undoredo update", out);
             if ((prevDelta||s).action_title) out.best.str = (prevDelta||s).action_title;
             if ((prevDelta||s).action_description) out.best.fullstr = (prevDelta||s).action_description;
+            out.best.str = U.cropStr(out.best.str, 1, 0, 13, 12);
+            out.best.fullstr = U.cropStr(out.best.fullstr, 1, 0, 25, 25);
             //this.improveText(out.best, s);
             let other = out.slice(0, this.props.maxDetailSize); //.map(e=>this.improveText(e));
-            return <li onClick={() => ((this as GObject)["do_"+key](index))} className="hoverable" key={index} style={{overflow: "visible", height: "24px"}}>
+            return <li onClick={() => ((this as GObject)["do_" + key](index))} className="hoverable" key={index} tabIndex={0}
+                       style={{overflow: "visible", height: "24px"}}>
                 <div className={"preview"}>{out.best.str}</div>
+                <div className={"content"}>{out.best.fullstr}</div>
                 <div className={"content detail-list"}>{
                     other.map(row => (
                         <div className={'detail-entry'}>{row.fullpath.join(".") + " = " + row.fullvalue}</div>
-                    ))
-                }
-                {out.length !== other.length ? <div></div> : null}</div>
+                    ))}
+                    {out.length !== other.length ? <div className={'detail-entry'}>...</div> : null}
+                </div>
             </li>
         });
         let jsx = <>{list}</>;

@@ -98,7 +98,7 @@ class TransactionStatus{
 let t = new TransactionStatus();
 windoww.transactionStatus = t;
 
-function BEGIN() {
+export function BEGIN() {
     if (t.transactionDepthLevel === 0) t.hasAborted = false;
     t.hasBegun = true; // redundant but actions are reading this, minimize changes
     t.transactionDepthLevel++;
@@ -109,7 +109,20 @@ export function ABORT(): boolean {
     END();
     return ret;
 }
-function END(actionstoPrepend: Action[] = [], path?: string, oldval?: any, newval?: any, desc?:string): boolean {
+export function COMMIT(): boolean {
+    let olddepth = t.transactionDepthLevel;
+    if (olddepth<=0) {
+        END(); //just safety to restore has begun state, should be necessary.
+        return false;
+    }
+    t.transactionDepthLevel = 1;
+    END();
+    t.transactionDepthLevel = olddepth-1;
+    BEGIN();
+    return true;
+}
+
+export function END(actionstoPrepend: Action[] = [], path?: string, oldval?: any, newval?: any, desc?:string): boolean {
     t.transactionDepthLevel--;
     if (actionstoPrepend.length) t.pendingActions = [...actionstoPrepend, ...t.pendingActions];
 
@@ -126,6 +139,13 @@ function FINAL_END(path?: string, oldval?: any, newval?: any, desc?:string): boo
         return false;
     }
     const ca: CompositeAction = new CompositeAction(t.pendingActions, false);
+    if (lastDescription) {
+        path = lastDescription.name;
+        oldval = lastDescription.oldval;
+        newval = lastDescription.newval;
+        desc = lastDescription.desc;
+        lastDescription = undefined;
+    }
     if (path) ca.descriptor = new ActionDescriptor(path, oldval, newval, desc);
     t.pendingActions = [];
     return ca.fire();
@@ -148,6 +168,8 @@ type NoAsyncFn<
     T extends (...args: any)=>any,
     ReturnsPromise extends (...args: any)=>any = ReturnType<T> extends Promise<any> ? never:T
     >=ReturnsPromise;
+
+let lastDescription: {name: string, oldval: any, newval: any, desc?: string} | undefined = undefined;
 // make class isinstorage e mettici il path studia annotazioni per annotare gli oggett in modo che vengano rwappati prima di farli ritornare se sono annotati
 // minor todo: type as (...args: infer P) => any) ?
 // NB: cannot be async, it changes execution order and break many codes where return value is determined in a transaction.
@@ -156,6 +178,7 @@ type NoAsyncFn<
 export function TRANSACTION(name:string, func: ()=> void, oldval?: any, newval?: any, desc?:string): boolean {
 //export function TRANSACTION<F extends NoAsyncFn)>(func: F, ...params: Parameters<F>): boolean | DState {
     BEGIN();
+    if (!lastDescription) lastDescription = {name, oldval, newval, desc};
     let e: Error = null as any;
     try { func(); } catch(err: any) { e = err; ABORT(); }
     if (t.hasAborted) {
@@ -163,7 +186,7 @@ export function TRANSACTION(name:string, func: ()=> void, oldval?: any, newval?:
         else Log.ee('Transaction aborted.');
         return false;
     }
-    return END([], name, oldval, newval, desc);
+    return END([]);
 }
 (window as any).TRANSACTION = TRANSACTION;
 (window as any).BEGIN = BEGIN;

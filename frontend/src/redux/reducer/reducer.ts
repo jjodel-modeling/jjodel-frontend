@@ -43,7 +43,7 @@ import {
     statehistory
 } from "../../joiner";
 import React from "react";
-import {LoadAction, RedoAction, UndoAction} from "../action/action";
+import {BEGIN, COMMIT, END, LoadAction, RedoAction, UndoAction} from "../action/action";
 import Collaborative from "../../components/collaborative/Collaborative";
 import {SimpleTree} from "../../common/SimpleTree";
 import {transientProperties, Selectors} from "../../joiner";
@@ -1099,6 +1099,7 @@ function setDocumentEvents(){
             })
         , 1);
     // document.body.addEventListener("mousedown", fixResizables, false);
+    setInterval(()=>{ END(); BEGIN(); }, 300);
 }
 function fixResizables(e: MouseEvent){
     /*let parents = U.ancestorArray(e.target as HTMLElement);

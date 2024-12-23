@@ -268,7 +268,7 @@ export function InputComponent(props: AllProps) {
         if (readOnly || isBoolean) return;
         const newValue = val || (evt && getValueFromEvent(evt));
         const oldValue = getter ? getter(data, field) : data[field];
-        console.log("onChange confirm", {evt, newValue, oldValue, field, changed: valueDidChange(newValue, oldValue), readOnly, isBoolean, setter, nnv:serializeValue(newValue)});
+        console.log("onChange confirm", {evt, newValue, oldValue, data, field, changed: valueDidChange(newValue, oldValue), readOnly, isBoolean, setter, nnv:serializeValue(newValue)});
         if (valueDidChange(newValue, oldValue)){
             if (setter) setter(newValue as any, data, field);
             else data[field] = serializeValue(newValue);

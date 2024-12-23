@@ -1693,13 +1693,14 @@ export class LPointerTargetable<Context extends LogicContext<DPointerTargetable>
                 return true;
             }
         }
-        let nameattribute = (c.proxyObject as any).$name;
-        if (nameattribute && nameattribute.className === 'LValue') {
-            nameattribute.value = val;
-        }
-        else {
+
+        TRANSACTION(this.get_name(c)+'.name', ()=>{
+            let nameattribute = (c.proxyObject as any).$name;
+            if (nameattribute && nameattribute.className === 'LValue') {
+                nameattribute.value = val;
+            }
             SetFieldAction.new(c.data, 'name', name, '', false);
-        }
+        }, undefined, val)
         return true;
     }
 
@@ -1792,7 +1793,9 @@ WARNING! do not set proxies in the state, set pointers instead.<br/>
 
         if (!changed) return true;
 
-        SetFieldAction.new(c.data, "_state", newState, undefined, false);
+        TRANSACTION(this.get_name(c)+'.state', ()=>{
+            SetFieldAction.new(c.data, "_state", newState, undefined, false);
+        })
         return true;
     }
     protected __sanitizeValue(val: any, canEditVal: boolean = true, canEditValDeep:boolean = false): any{
@@ -1887,7 +1890,14 @@ WARNING! do not set proxies in the state, set pointers instead.<br/>
                 else if (v < min) v = min;
             }
             console.log("default Setter["+k+"] = " + v , {type, v, v0, oldv:(c.data as any)[k], isPointer});
-            SetFieldAction.new(c.data, k as any, v, '', isPointer);
+
+            let oldv = c.data[k as keyof DPointerTargetable];
+            let newv = v;
+            if (!U.isPrimitive(oldv)) oldv = undefined;
+            if (!U.isPrimitive(newv)) newv = undefined;
+            TRANSACTION(this.get_name(c)+'.'+k, ()=>{
+                SetFieldAction.new(c.data, k as any, v, '', isPointer);
+            }, oldv, newv)
             return true;
         }
         return true;
@@ -2154,73 +2164,91 @@ export class LUser<Context extends LogicContext<DUser> = any, D extends DUser = 
     protected get_name(context: Context): this['name'] {
         return context.data.name;
     }
-    protected set_name(val: this['name'], context: Context): boolean {
-        const data = context.data;
-        return SetFieldAction.new(data.id, 'name', val, '', false);
+    protected set_name(val: this['name'], c: Context): boolean {
+        TRANSACTION(this.get_name(c)+'.name', ()=>{
+            SetFieldAction.new(c.data.id, 'name', val, '', false);
+        }, undefined, val)
+        return true;
     }
 
     protected get_surname(context: Context): this['surname'] {
         return context.data.surname;
     }
-    protected set_surname(val: this['surname'], context: Context): boolean {
-        const data = context.data;
-        return SetFieldAction.new(data.id, 'surname', val, '', false);
+    protected set_surname(val: this['surname'], c: Context): boolean {
+        TRANSACTION(this.get_name(c)+'.surname', ()=>{
+            SetFieldAction.new(c.data.id, 'surname', val, '', false);
+        }, c.data.surname, val)
+        return true;
     }
 
     protected get_nickname(context: Context): this['nickname'] {
         return context.data.nickname;
     }
-    protected set_nickname(val: this['nickname'], context: Context): boolean {
-        const data = context.data;
-        return SetFieldAction.new(data.id, 'nickname', val, '', false);
+    protected set_nickname(val: this['nickname'], c: Context): boolean {
+        TRANSACTION(this.get_name(c)+'.nickname', ()=>{
+            SetFieldAction.new(c.data.id, 'nickname', val, '', false);
+        }, c.data.nickname, val)
+        return true;
     }
 
     protected get_affiliation(context: Context): this['affiliation'] {
         return context.data.affiliation;
     }
-    protected set_affiliation(val: this['affiliation'], context: Context): boolean {
-        const data = context.data;
-        return SetFieldAction.new(data.id, 'affiliation', val, '', false);
+    protected set_affiliation(val: this['affiliation'], c: Context): boolean {
+        TRANSACTION(this.get_name(c)+'.affiliation', ()=>{
+            SetFieldAction.new(c.data.id, 'affiliation', val, '', false);
+        }, c.data.affiliation, val)
+        return true;
     }
 
     protected get_country(context: Context): this['country'] {
         return context.data.country;
     }
-    protected set_country(val: this['country'], context: Context): boolean {
-        const data = context.data;
-        return SetFieldAction.new(data.id, 'country', val, '', false);
+    protected set_country(val: this['country'], c: Context): boolean {
+        TRANSACTION(this.get_name(c)+'.country', ()=>{
+            SetFieldAction.new(c.data.id, 'country', val, '', false);
+        }, c.data.country, val)
+        return true;
     }
 
     protected get_newsletter(context: Context): this['newsletter'] {
         return context.data.newsletter;
     }
-    protected set_newsletter(val: this['newsletter'], context: Context): boolean {
-        const data = context.data;
-        return SetFieldAction.new(data.id, 'newsletter', val, '', false);
+    protected set_newsletter(val: this['newsletter'], c: Context): boolean {
+        TRANSACTION(this.get_name(c)+'.newsletter', ()=>{
+            SetFieldAction.new(c.data.id, 'newsletter', val, '', false);
+        }, c.data.newsletter, val)
+        return true;
     }
 
     protected get_email(context: Context): this['email'] {
         return context.data.email;
     }
-    protected set_email(val: this['email'], context: Context): boolean {
-        const data = context.data;
-        return SetFieldAction.new(data.id, 'email', val, '', false);
+    protected set_email(val: this['email'], c: Context): boolean {
+        TRANSACTION(this.get_name(c)+'.email', ()=>{
+            SetFieldAction.new(c.data.id, 'email', val, '', false);
+        }, c.data.email, val)
+        return true;
     }
 
     protected get_token(context: Context): this['token'] {
         return context.data.token;
     }
-    protected set_token(val: this['token'], context: Context): boolean {
-        const data = context.data;
-        return SetFieldAction.new(data.id, 'token', val, '', false);
+    protected set_token(val: this['token'], c: Context): boolean {
+        TRANSACTION(this.get_name(c)+'.token', ()=>{
+            SetFieldAction.new(c.data.id, 'token', val, '', false);
+        }, c.data.token, val)
+        return true;
     }
 
     protected get_projects(context: Context): this['projects'] {
         return LProject.fromPointer(context.data.projects);
     }
-    protected set_projects(val: PackArr<this['projects']>, context: Context): boolean {
-        const data = context.data;
-        SetFieldAction.new(data.id, 'projects', Pointers.from(val), '', true);
+    protected set_projects(val: PackArr<this['projects']>, c: Context): boolean {
+        let ptrs = Pointers.from(val)||[];
+        TRANSACTION(this.get_name(c)+'.projects', ()=>{
+            SetFieldAction.new(c.data.id, 'projects', ptrs, '', true);
+        })
         return true;
     }
 
@@ -2228,10 +2256,14 @@ export class LUser<Context extends LogicContext<DUser> = any, D extends DUser = 
         const project = context.data.project;
         return project && LProject.fromPointer(project) || null;
     }
-    protected set_project(val: Pack<Exclude<this['project'], null>>|null, context: Context): boolean {
-        const data = context.data;
-        if(val === null) SetFieldAction.new(data.id, 'project', '', '', false);
-        else SetFieldAction.new(data.id, 'project', Pointers.from(val), '', true);
+    protected set_project(val: Pack<Exclude<this['project'], null>>|null, c: Context): boolean {
+        let ptr: Pointer<LProject> = Pointers.from(val as any);
+        if (!ptr) ptr = '';
+        if (ptr === c.data.project) return true;
+
+        TRANSACTION(this.get_name(c)+'.project', ()=>{
+            SetFieldAction.new(c.data.id, 'project', ptr, '', true);
+        })
         return true;
     }
 }
@@ -2355,49 +2387,61 @@ export class LProject<Context extends LogicContext<DProject> = any, D extends DP
     protected get_description(context: Context): this['description'] {
         return context.data.description;
     }
-    protected set_description(val: this['description'], context: Context): boolean {
-        const data = context.data;
-        return SetFieldAction.new(data.id, 'description', val, '', false);
+    protected set_description(val: this['description'], c: Context): boolean {
+        TRANSACTION(this.get_name(c)+'.description', ()=>{
+            SetFieldAction.new(c.data.id, 'description', val, '', false);
+        }, c.data.description, val)
+        return true;
     }
 
     protected get_creation(context: Context): this['creation'] {
         return context.data.creation;
     }
-    protected set_creation(val: this['creation'], context: Context): boolean {
-        const data = context.data;
-        return SetFieldAction.new(data.id, 'creation', val, '', false);
+    protected set_creation(val: this['creation'], c: Context): boolean {
+        TRANSACTION(this.get_name(c)+'.creation', ()=>{
+            SetFieldAction.new(c.data.id, 'creation', val, '', false);
+        }, c.data.creation, val)
+        return true;
     }
 
     protected get_lastModified(context: Context): this['lastModified'] {
         return context.data.lastModified;
     }
-    protected set_lastModified(val: this['lastModified'], context: Context): boolean {
-        const data = context.data;
-        return SetFieldAction.new(data.id, 'lastModified', val, '', false);
+    protected set_lastModified(val: this['lastModified'], c: Context): boolean {
+        TRANSACTION(this.get_name(c)+'.lastModified', ()=>{
+            SetFieldAction.new(c.data.id, 'lastModified', val, '', false);
+        }, c.data.lastModified, val)
+        return true;
     }
 
-    protected get_viewpointsNumber(context: Context): this['viewpointsNumber'] {
-        return context.data.viewpointsNumber;
+    protected get_viewpointsNumber(c: Context): this['viewpointsNumber'] {
+        return c.data.viewpointsNumber;
     }
-    protected set_viewpointsNumber(val: this['viewpointsNumber'], context: Context): boolean {
-        const data = context.data;
-        return SetFieldAction.new(data.id, 'viewpointsNumber', val, '', false);
+    protected set_viewpointsNumber(val: this['viewpointsNumber'], c: Context): boolean {
+        TRANSACTION(this.get_name(c)+'.viewpointsNumber', ()=>{
+            SetFieldAction.new(c.data.id, 'viewpointsNumber', val, '', false);
+        }, c.data.viewpointsNumber, val)
+        return true;
     }
 
-    protected get_metamodelsNumber(context: Context): this['metamodelsNumber'] {
-        return context.data.metamodelsNumber;
+    protected get_metamodelsNumber(c: Context): this['metamodelsNumber'] {
+        return c.data.metamodelsNumber;
     }
-    protected set_metamodelsNumber(val: this['metamodelsNumber'], context: Context): boolean {
-        const data = context.data;
-        return SetFieldAction.new(data.id, 'metamodelsNumber', val, '', false);
+    protected set_metamodelsNumber(val: this['metamodelsNumber'], c: Context): boolean {
+        TRANSACTION(this.get_name(c)+'.metamodelsNumber', ()=>{
+            SetFieldAction.new(c.data.id, 'metamodelsNumber', val, '', false);
+        }, c.data.metamodelsNumber, val)
+        return true;
     }
 
     protected get_modelsNumber(context: Context): this['modelsNumber'] {
         return context.data.modelsNumber;
     }
-    protected set_modelsNumber(val: this['modelsNumber'], context: Context): boolean {
-        const data = context.data;
-        return SetFieldAction.new(data.id, 'modelsNumber', val, '', false);
+    protected set_modelsNumber(val: this['modelsNumber'], c: Context): boolean {
+        TRANSACTION(this.get_name(c)+'.modelsNumber', ()=>{
+            SetFieldAction.new(c.data.id, 'modelsNumber', val, '', false);
+        }, c.data.modelsNumber, val)
+        return true;
     }
 
     protected get_isFavorite(context: Context): this['isFavorite'] {
@@ -2415,90 +2459,97 @@ export class LProject<Context extends LogicContext<DProject> = any, D extends DP
     }
     protected set_favorite(v: boolean, c: Context): true {
         let favMap = c.data.favorite;
-        if (!favMap) {
-            favMap = {};
-            SetFieldAction.new(c.data.id, 'favorite', favMap);
-        }
         const uid = DUser.current;
-        if (v) { // case favorite
-            if (favMap[uid]) return true;
-            SetFieldAction.new(c.data.id, 'favorite', {[uid]: true}, '+=');
-        }
-        else { // case un-favorite
-            if (!favMap[uid]) return true;
-            SetFieldAction.new(c.data.id, 'favorite', {[uid]: undefined} as any, '-=');
-        }
+        v = !!v;
+        if (!v && !favMap || v === favMap[uid]) return true;
+        TRANSACTION(this.get_name(c)+'.favorite', ()=>{
+            SetFieldAction.new(c.data.id, 'favorite', {[uid]: v ? true : undefined}, v ? '+=' : '-='); //!favMap ? '' : (v ? '+=' : '-=');
+        }, !!favMap?.[uid], v)
         return true;
     }
     protected get_name(context: Context): this['name'] {
         return context.data.name;
     }
-    protected set_name(val: this['name'], context: Context): boolean {
-        const data = context.data;
-        SetFieldAction.new(data.id, 'name', val, '', false);
+    protected set_name(val: this['name'], c: Context): boolean {
+        if (c.data.name === val) return true;
+        TRANSACTION(this.get_name(c)+'.name', ()=>{
+            SetFieldAction.new(c.data.id, 'name', val, '', false);
+        }, undefined, val)
         return true;
     }
 
     protected get_author(context: Context): this['author'] {
         return LUser.fromPointer(context.data.author);
     }
-    protected set_author(val: Pack<this['author']>, context: Context): boolean {
-        const data = context.data;
-        SetFieldAction.new(data.id, 'author', Pointers.from(val), '', true);
+    protected set_author(val0: Pack<this['author']>, c: Context): boolean {
+        let val: Pointer<LUser> = Pointers.from(val0) as any;
+        TRANSACTION(this.get_name(c)+'.author', ()=> {
+            SetFieldAction.new(c.data.id, 'author', val, '', true);
+        })
         return true;
     }
 
     public get_state(context: Context): this['state'] {
         return context.data.state;
     }
-    public set_state(val: this['state'], context: Context): boolean {
-        const data = context.data;
-        SetFieldAction.new(data.id, 'state', val, '', false);
+    public set_state(val: this['state'], c: Context): boolean {
+        TRANSACTION(this.get_name(c)+'.state', ()=>{
+            SetFieldAction.new(c.data.id, 'state', val, '', false);
+        })
         return true;
     }
 
     protected get_collaborators(context: Context): this['collaborators'] {
         return LUser.fromPointer(context.data.collaborators) || [];
     }
-    protected set_collaborators(val: PackArr<this['collaborators']>, context: Context): boolean {
-        const data = context.data;
-        SetFieldAction.new(data.id, 'collaborators', Pointers.from(val), '', true);
+    protected set_collaborators(val0: PackArr<this['collaborators']>, c: Context): boolean {
+        let val: Pointer<LUser> = Pointers.from(val0) as any;
+        TRANSACTION(this.get_name(c)+'.collaborators', ()=>{
+            SetFieldAction.new(c.data.id, 'collaborators', val, '', true);
+        })
         return true;
     }
 
     protected get_onlineUsers(context: Context): this['onlineUsers'] {
         return context.data.onlineUsers;
     }
-    protected set_onlineUsers(val: this['onlineUsers'], context: Context): boolean {
-        const data = context.data;
-        SetFieldAction.new(data.id, 'onlineUsers', val, '', false);
+    protected set_onlineUsers(val: this['onlineUsers'], c: Context): boolean {
+        TRANSACTION(this.get_name(c)+'.onlineUsers', ()=>{
+            SetFieldAction.new(c.data.id, 'onlineUsers', val, '', false);
+        }, c.data.onlineUsers, val)
         return true;
     }
 
     protected get_metamodels(context: Context): this['metamodels'] {
         return LModel.fromPointer(context.data.metamodels) || [];
     }
-    protected set_metamodels(val: PackArr<this['metamodels']>, context: Context): boolean {
-        const data = context.data;
-        SetFieldAction.new(data.id, 'metamodels', Pointers.from(val), '', true);
+    protected set_metamodels(val0: PackArr<this['metamodels']>, c: Context): boolean {
+        let val = Pointers.from(val0);
+        TRANSACTION(this.get_name(c)+'.metamodels', ()=>{
+            SetFieldAction.new(c.data.id, 'metamodels', val, '', true);
+        })
         return true;
     }
 
     protected get_models(context: Context): this['models'] {
         return LModel.fromPointer(context.data.models) || [];
     }
-    protected set_models(val: PackArr<this['models']>, context: Context): boolean {
-        const data = context.data;
-        SetFieldAction.new(data.id, 'models', Pointers.from(val), '', true);
+    protected set_models(val0: PackArr<this['models']>, c: Context): boolean {
+        let val = Pointers.from(val0);
+        TRANSACTION(this.get_name(c)+'.models', ()=>{
+            SetFieldAction.new(c.data.id, 'models', val, '', true);
+        })
         return true;
     }
 
     protected get_graphs(context: Context): this['graphs'] {
         return LGraph.fromPointer(context.data.graphs) || [];
     }
-    protected set_graphs(val: PackArr<this['graphs']>, context: Context): boolean {
-        const data = context.data;
-        SetFieldAction.new(data.id, 'graphs', Pointers.from(val), '', true);
+    protected set_graphs(val0: PackArr<this['graphs']>, c: Context): boolean {
+        let val = Pointers.from(val0);
+        TRANSACTION(this.get_name(c)+'.graphs', ()=>{
+            SetFieldAction.new(c.data.id, 'graphs', val, '', true);
+        })
         return true;
     }
 
@@ -2533,24 +2584,28 @@ export class LProject<Context extends LogicContext<DProject> = any, D extends DP
     protected get_viewpoints(context: Context): this['viewpoints'] {
         return LViewPoint.fromPointer([...Defaults.viewpoints, ...(context.data.viewpoints || [])]);
     }
-    protected set_viewpoints(val: PackArr<this['viewpoints']>, context: Context): boolean {
-        const data = context.data;
-        SetFieldAction.new(data.id, 'viewpoints', Pointers.from(val), '', true);
+    protected set_viewpoints(val0: PackArr<this['viewpoints']>, c: Context): boolean {
+        let val = Pointers.from(val0);
+        TRANSACTION(this.get_name(c)+'.viewpoints', ()=>{
+            SetFieldAction.new(c.data.id, 'viewpoints', val, '', true);
+        })
         return true;
     }
 
     protected get_activeViewpoint(context: Context): this['activeViewpoint'] {
         return LViewPoint.fromPointer(context.data.activeViewpoint || Defaults.viewpoints[0]);
     }
-    protected set_activeViewpoint(val: Pack1<this['activeViewpoint']>, context: Context): boolean {
-        const data = context.data;
-        SetFieldAction.new(data.id, 'activeViewpoint', Pointers.from(val), '', true);
+    protected set_activeViewpoint(val0: Pack1<this['activeViewpoint']>, c: Context): boolean {
+        let val = Pointers.from(val0);
+        TRANSACTION(this.get_name(c)+'.activeViewpoint', ()=>{
+            SetFieldAction.new(c.data.id, 'activeViewpoint', val, '', true);
+        })
         return true;
     }
 
     /* DATA Getter */
-    protected get_packages(context: Context): this['packages'] {
-        const data = context.proxyObject as LProject;
+    protected get_packages(c: Context): this['packages'] {
+        const data = c.proxyObject as LProject;
         return data.metamodels.flatMap(m => m.allSubPackages);
     }
     protected get_classes(context: Context): this['classes'] {

@@ -259,7 +259,7 @@ export abstract class ISize<PT extends IPoint = IPoint> extends RuntimeAccessibl
         if (ptlike.width && !isNaN(ptlike.width)|| ptlike.width === 0) str.push('W:'+U.cropNum(ptlike.width));
         if (ptlike.height && !isNaN(ptlike.height)|| ptlike.height === 0) str.push('H:'+U.cropNum(ptlike.height));
         // if (str.length === 0) return '{}';
-        return '{'+str.join(', ')+'}'
+        return '{'+str.join(', ')+'}';
     }
 
     static init_constructor(thiss: GObject, x: any = 0, y: any = 0, w: any = 0, h: any = 0, ...a: any): void {
