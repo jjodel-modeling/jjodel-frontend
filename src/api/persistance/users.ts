@@ -34,6 +34,10 @@ class UsersApi {
             newsletter: boolean): Promise<LUser|null> {
 
         const response = await Api.get(`${Api.persistance}/users?id=${id}`);
+        
+        console.log("JURI: ", response);
+        alert();
+        
         if(response.code !== 200) return null;
 
         const patch_response = await Api.patch(`${Api.persistance}/users/update?id=${id}`, {name: name, surname: surname, country: country, nickname: nickname, affiliation: affiliation, newsletter: newsletter});

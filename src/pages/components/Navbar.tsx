@@ -236,6 +236,8 @@ function NavbarComponent(props: AllProps) {
                 SetRootFieldAction.new('isLoading', false);*/
             },
             keystroke: [Key.cmd, 'M']},
+            {name: 'divisor', function: () => {}, keystroke: []},
+
         {name: 'Import...', icon: <i className="bi bi-arrow-bar-left"></i>, function: ProjectsApi.import, keystroke: []},
         {name: 'divisor', function: () => {}, keystroke: []},
         {name: 'Help', icon: <i className="bi bi-question-square"></i>, subItems: [

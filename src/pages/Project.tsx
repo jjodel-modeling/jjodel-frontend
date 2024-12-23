@@ -28,14 +28,14 @@ import {Navbar} from "./components";
 import {CSS_Units} from "../view/viewElement/view";
 import {useEffectOnce} from "usehooks-ts";
 
-
-
 function ProjectComponent(props: AllProps): JSX.Element {
 
     const {user} = props;
     const navigate = useNavigate();
     const query = useQuery();
     const id = query.get('id') || '';
+
+
 
     useEffect(() => {
         (async function() {
@@ -62,6 +62,7 @@ function ProjectComponent(props: AllProps): JSX.Element {
     const viewsDeDuplicator: Dictionary<Pointer<DViewElement>, LViewElement> = {};
     for (let v of allViews) viewsDeDuplicator[v.id] = v;
     if(!user?.project) return (<></>);
+
     return (<>
         <Try>
         <Dashboard active={'Project'} version={props.version} project={user.project}>

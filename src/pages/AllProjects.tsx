@@ -3,7 +3,7 @@
 
 import React, {ChangeEvent, MouseEventHandler, Component, Dispatch, ReactElement, useState, useRef } from 'react';
 import {connect} from 'react-redux';
-import {DProject, DState, Log, LProject, Try, U} from '../joiner';
+import {DProject, DState, Log, LProject, SetRootFieldAction, Try, U} from '../joiner';
 import {Dictionary, FakeStateProps} from '../joiner/types';
 import {Dashboard, Project} from './components';
 import Storage from "../data/storage";
