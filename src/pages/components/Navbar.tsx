@@ -199,8 +199,8 @@ function NavbarComponent(props: AllProps) {
                 }, keystroke: [Key.cmd, 'Z']},
             {name: 'Redo', icon: icon['redo'], function: () => {
                 }, keystroke: [Key.cmd, 'Y']}, // maybe better cmd + Y ?
-            */
-            {name: 'divisor', function: () => {}, keystroke: []},
+            
+            {name: 'divisor', function: () => {}, keystroke: []},*/
             {name: 'Save', icon: icon['save'], function: async() => {
                 await ProjectsApi.save(project);
                 }, keystroke: [Key.cmd, 'S']},
@@ -210,13 +210,13 @@ function NavbarComponent(props: AllProps) {
                 }, keystroke: []},
             {name: 'divisor', function: async() => {}, keystroke: []},
             {name: 'Help', icon: icon['help'], subItems: [
-                    {name: 'What\'s new', icon: icon['whats-new'], function: async() => {}, keystroke: []},
+                    {name: 'What\'s new', icon: icon['whats-new'], function: async() => {document.location.href="https://www.jjodel.io/whats-new/"}, keystroke: []},
                     {name: 'divisor', function: async() => {}, keystroke: []},
-                    {name: 'Homepage', icon: icon['home'], function: async() => {}, keystroke: []},
-                    {name: 'Getting started', icon: icon['getting-started'], function: async() => {}, keystroke: []},
-                    {name: 'User guide', icon: icon['manual'], function: async() => {}, keystroke: []},
+                    {name: 'Homepage', icon: icon['home'], function: async() => {document.location.href="https://www.jjodel.io/"}, keystroke: []},
+                    {name: 'Getting started', icon: icon['getting-started'], function: async() => {document.location.href="https://www.jjodel.io/getting-started/"}, keystroke: []},
+                    {name: 'User guide', icon: icon['manual'], function: async() => {document.location.href="https://www.jjodel.io/manual/"}, keystroke: []},
                     {name: 'divisor', function: async() => {}, keystroke: []},
-                    {name: 'Legal terms', icon: icon['legal'], function: async() => {}, keystroke: []}
+                    {name: 'Legal terms', icon: icon['legal'], function: async() => {document.location.href="https://www.jjodel.io/terms-conditions-page/"}, keystroke: []}
                 ],
                 keystroke: []}
 
@@ -241,13 +241,13 @@ function NavbarComponent(props: AllProps) {
         {name: 'Import...', icon: <i className="bi bi-arrow-bar-left"></i>, function: ProjectsApi.import, keystroke: []},
         {name: 'divisor', function: () => {}, keystroke: []},
         {name: 'Help', icon: <i className="bi bi-question-square"></i>, subItems: [
-            {name: 'What\'s new', icon: <i className="bi bi-clock"></i>, function: () => {}, keystroke: []},
+            {name: 'What\'s new', icon: <i className="bi bi-clock"></i>, function: () => {document.location.href="https://www.jjodel.io/whats-new/"}, keystroke: []},
             {name: 'divisor', function: () => {}, keystroke: []},
-            {name: 'Homepage', icon: <i className="bi bi-house"></i>, function: () => {}, keystroke: []},
-            {name: 'Getting started', icon: <i className="bi bi-airplane"></i>, function: () => {}, keystroke: []},
-            {name: 'User guide', icon: <i className="bi bi-journals"></i>, function: () => {}, keystroke: []},
+            {name: 'Homepage', icon: <i className="bi bi-house"></i>, function: () => {document.location.href="https://www.jjodel.io/"}, keystroke: []},
+            {name: 'Getting started', icon: <i className="bi bi-airplane"></i>, function: () => {document.location.href="https://www.jjodel.io/getting-started/"}, keystroke: []},
+            {name: 'User guide', icon: <i className="bi bi-journals"></i>, function: () => {document.location.href="https://www.jjodel.io/manual/"}, keystroke: []},
             {name: 'divisor', function: () => {}, keystroke: []},
-            {name: 'Legal terms', icon: <i className="bi bi-mortarboard"></i>, function: () => {}, keystroke: []}
+            {name: 'Legal terms', icon: <i className="bi bi-mortarboard"></i>, function: () => {document.location.href="https://www.jjodel.io/terms-conditions-page/"}, keystroke: []}
         ],
         keystroke: []},
         {name: 'About jjodel', icon: <i className="bi bi-info-square"></i>, function: () => {}, keystroke: []},

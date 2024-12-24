@@ -180,12 +180,25 @@ function LeftBar(props: LeftBarProps): JSX.Element {
                     <Item action={'notes'} icon={icon['edit']}>Notes</Item>
                 </Menu>*/}
                 <Menu title={'Support'} mode={'collapsable'}>
-                    <Item action={'updates'} icon={icon['whats-new']}
+                    {/* <Item action={'updates'} icon={icon['whats-new']}
                           dot={+(localStorage.getItem('_jj_update_seen')||0)<+(localStorage.getItem('_jj_update_date')||Number.POSITIVE_INFINITY)}
                           onClick={()=>localStorage.setItem('_jj_update_seen', ''+Date.now())}
+                    >What's new</Item>*/}
+                    <Item 
+                        action={'updates'} 
+                        icon={icon['whats-new']}
+                        onClick={() => {document.location.href="https://www.jjodel.io/whats-new/"}}
                     >What's new</Item>
-                    <Item action={'gettingstarted'} icon={icon['getting-started']}>Getting started</Item>
-                    <Item action={'guide'} icon={icon['manual']}>User guide</Item>
+                    <Item 
+                        action={'gettingstarted'} 
+                        icon={icon['getting-started']}
+                        onClick={() => {document.location.href="https://www.jjodel.io/getting-started/"}}
+                    >Getting started</Item>
+                    <Item 
+                        action={'guide'} 
+                        icon={icon['manual']}
+                        onClick={() => {document.location.href="https://www.jjodel.io/manual/"}}
+                    >User guide</Item>
                 </Menu>
 
                 <Upload />
