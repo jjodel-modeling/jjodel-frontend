@@ -52,7 +52,7 @@ export class SaveManagerComponent extends PureComponent<AllProps, ThisState>{
     public static cname: string = "SaveManagerComponent";
     private undoredolistoutdated: boolean;
     do_undo = (index: number) => {
-        UndoAction.new(index+1, this.state.user);
+        UndoAction.new(index+1, this.state.user).commit();
         this.undoenter(); // updates list
     }
     do_redo = (index: number) => {

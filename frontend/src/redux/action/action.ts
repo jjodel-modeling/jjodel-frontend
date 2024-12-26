@@ -109,7 +109,8 @@ export function ABORT(): boolean {
     END();
     return ret;
 }
-export function COMMIT(): boolean {
+// if without parameter: commits the current pending stuff, with parameter: fires the action ignoring transaction block while keeping te transaction active
+export function COMMIT(action?:Action): boolean {
     let olddepth = t.transactionDepthLevel;
     if (olddepth<=0) {
         END(); //just safety to restore has begun state, should be necessary.
@@ -239,6 +240,10 @@ export class Action extends RuntimeAccessibleClass {
         this.className = (this.constructor as typeof RuntimeAccessibleClass).cname || this.constructor.name;
     }
 
+    // forces the action to fire alone ignoring a TRANSACTION or BEGIN/END blocks
+    commit(): boolean{
+        return COMMIT(this);
+    }
     fire(forceRelaunch: boolean = false): boolean {
         if (this.hasFired && !forceRelaunch) return false;
         if (this.value && this.value.__isProxy) {

@@ -1,6 +1,6 @@
 import React, {Dispatch, PureComponent, ReactNode} from "react";
 import { connect } from "react-redux";
-import {DState, Input} from "../joiner";
+import {DState, Input, Overlap} from "../joiner";
 import './example.scss';
 import {InputConnected} from "../components/forEndUser/Input";
 
@@ -37,7 +37,7 @@ interface DispatchProps {
 
 
 // private
-type AllProps = OwnProps & StateProps & DispatchProps;
+type AllProps = Overlap<Overlap<OwnProps, StateProps>, DispatchProps>;
 
 ////// mapper func
 

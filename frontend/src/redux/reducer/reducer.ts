@@ -1010,7 +1010,8 @@ function undorecursive(deltalevel: GObject, statelevel: GObject): void {
         if (key.indexOf("_-") === 0) { delete statelevel[key.substring(2)]; continue; }
         if (typeof delta === "object") {
         // if (U.isObject(delta, false, false, true)) {
-            statelevel[key] = {...statelevel[key]};
+            if (Array.isArray(delta)) statelevel[key] = [...statelevel[key]];
+            else statelevel[key] = {...statelevel[key]};
             undorecursive(deltalevel[key], statelevel[key]); }
         else { statelevel[key] = delta; }
     }
