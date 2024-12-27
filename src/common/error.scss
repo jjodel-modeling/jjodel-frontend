@@ -171,7 +171,7 @@
 .notification-icon.opened::before {
     position: relative;
     font-family: 'bootstrap-icons';
-    color: silver;
+    color: var(--accent);
     text-align: center;
     padding-left: 5px;
     display: block;

@@ -45,26 +45,59 @@ function SelectorComponent(props: AllProps) {
 
     function getOptions(): any {
 
-        return (<>
 
-            {/*@ts-ignore*/}
-            {l[field].type.allInstances.map(cl =><>
-                {/*@ts-ignore*/}
-                {typeof(l[field].value) === 'undefined' ? 
-                    <option value={cl.id}>{cl.name}</option> 
-                    :
-                    <>
+        {/*@ts-ignore*/}
+        switch (l[field].type.className) {
+            case 'DClass':
+                return (<>
+
+                    {/*@ts-ignore*/}
+                    {l[field].type.allInstances.map(cl =><>
                         {/*@ts-ignore*/}
-                        {l[field].value.id === cl.id ?
-                        <option value={cl.id} selected>{cl.name}</option> 
-                        :
-                        <option value={cl.id}>{cl.name}</option>  
-                    }
-                    </>
-                }
+                        {typeof(l[field].value) === 'undefined' ? 
+                            <option value={cl.id}>{cl.name}</option> 
+                            :
+                            <>
+                                {/*@ts-ignore*/}
+                                {l[field].value.id === cl.id ?
+                                <option value={cl.id} selected>{cl.name}</option> 
+                                :
+                                <option value={cl.id}>{cl.name}</option>  
+                            }
+                            </>
+                        }
+        
+                    </>)}
+                </>); 
+            break;
+            case 'DEnumerator':
+                return (<>
 
-            </>)}
-        </>); 
+                    {/*@ts-ignore*/}
+                    {l[field].type.literals.map(lit =><>
+                        {/*@ts-ignore*/}
+                        {typeof(l[field].value) === 'undefined' ? 
+                            <option value={lit.name}>{lit.name}</option> 
+                            :
+                            <>
+                                {/*@ts-ignore*/}
+                                {l[field].value.name === lit.name ?
+                                    <option value={lit.name} selected>{lit.name}</option> 
+                                    :
+                                    <option value={lit.name}>{lit.name}</option>  
+                                }
+                            </>
+                        }
+        
+                    </>)}
+                </>);
+            break;
+
+        }
+
+
+
+        
     }
 
     const otherprops: GObject = {...props};

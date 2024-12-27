@@ -633,7 +633,7 @@ public static object(): string { return (
         let viewpointname = lv?.viewpoint?.name ||'';
 
         function openNotification(e: any) {
-            U.alert('e', 'Error in ' + v?.name + (viewpointname ? ' > '+viewpointname : ''), msg.props.children);
+            U.alert('e', 'Error in ' + v?.name + (viewpointname ? ' > '+viewpointname : ''), (msg.props ? msg.props.children : ''));
             e.target.classList.add('opened');
         }
 
