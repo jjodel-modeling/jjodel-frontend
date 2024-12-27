@@ -49,7 +49,7 @@ function AuthPage(): JSX.Element {
     const login = async() => {
         const response = await AuthApi.login(email, password);
         if(response.code !== 200) {
-            U.alert('e', 'Email or password unknown.');
+            U.alert('e', 'Email or password unknown.','');
             return;
         }
 
@@ -68,12 +68,12 @@ function AuthPage(): JSX.Element {
 
     const register = async() => {
         if(password !== passwordCheck) {
-            U.alert('e', 'The two passwords are different');
+            U.alert('e', 'The two passwords are different','');
             return;
         }
         const response = await AuthApi.register(name, surname, country, affiliation, newsletter, nickname, email, password);
         if(response.code !== 200) {
-            U.alert('e', 'Username or password not valid.');
+            U.alert('e', 'Username or password not valid.','');
             return;
         }
         const data = U.wrapper<DUser>(response.data);

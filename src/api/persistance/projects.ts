@@ -49,7 +49,7 @@ class ProjectsApi {
                 if(U.isOffline()) Offline.import(project);
                 else await Online.import(project);
                 CreateElementAction.new(project);
-            } catch (e) {U.alert('e', 'Invalid File.')}
+            } catch (e) {U.alert('e', 'Invalid File.', 'Something went wrong ...')}
         }
 
         let extensions = ['*.jjodel'];
@@ -98,7 +98,7 @@ class Offline {
         const projects = Storage.read<DProject[]>('projects') || [];
         const filtered = projects.filter(p => p.id !== project.id);
         Storage.write('projects', [...filtered, project]);
-        U.alert('i', 'Project Saved!');
+        U.alert('i', 'Project Saved!', '');
     }
     static async favorite(project: DProject): Promise<void> {
         const projects = Storage.read<DProject[]>('projects') || [];
@@ -155,14 +155,14 @@ class Online {
     }
     static async save(project: DProject): Promise<void> {
         const response = await Api.patch(`${Api.persistance}/projects/${project.id}`, {...project});
-        if(response.code !== 200) U.alert('e', 'Cannot Save');
-        else U.alert('i', 'Project Saved!');
+        if(response.code !== 200) U.alert('e', 'Cannot Save','Something went wrong ...');
+        else U.alert('i', 'Project Saved!', '');
     }
     static async favorite(project: DProject): Promise<void> {
         const response = await Api.patch(`${Api.persistance}/projects/${project.id}`, {
             isFavorite: !project.isFavorite
         });
-        if(response.code !== 200) U.alert('e', 'Cannot set this property!');
+        if(response.code !== 200) U.alert('e', 'Cannot set this property!', 'Something went wrong ...');
         SetFieldAction.new(project.id, 'isFavorite', !project.isFavorite);
     }
     static async import(project: DProject): Promise<void> {

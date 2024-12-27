@@ -38,23 +38,23 @@ function AccountComponent(props: AllProps): JSX.Element {
         const response = await Api.post(`${Api.persistance}/auth/login`, {email: email, password: old_password});
 
         if (response.code !== 200) {
-            U.alert('e', 'Your password does not match our records.');
+            U.alert('e', 'Your password does not match our records.','');
             return;
         }
         if (new_password !== check_password) {
-            U.alert('e', 'Paswords do not match.');
+            U.alert('e', 'Paswords do not match.','');
             return;
         }
 
         const response_password = await UsersApi.updatePasswordById(user.id, new_password);
 
         if (response_password === null) {
-            U.alert('e', 'Something went wrong.');
+            U.alert('e', 'Something went wrong.','');
             return;
         }
 
         
-        U.alert('i', 'Your password has been successfully updated!');
+        U.alert('i', 'Your password has been successfully updated!','');
         
         
         
@@ -91,7 +91,7 @@ function AccountComponent(props: AllProps): JSX.Element {
 
 
         if (response === null) {
-            U.alert('e', 'Something went wrong while updating your profile.');
+            U.alert('e', 'Could not update your profile.', 'Something went wrong ...');
             return;
         } 
 
@@ -99,7 +99,7 @@ function AccountComponent(props: AllProps): JSX.Element {
         Storage.write('user', updated_user);
         U.resetState();
         
-        U.alert('i', 'Your profile has been updated!');
+        U.alert('i', 'Your profile has been updated!','');
         
     }
 

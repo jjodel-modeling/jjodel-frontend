@@ -27,7 +27,7 @@ function CollaborativeComponent(props: AllProps) {
     const addCollaborator = async(e: string) => {
         const user = await UsersApi.getUserByEmail(e);
         if(!user) {
-            U.alert('e', 'Cannot retrieve user data.');
+            U.alert('e', 'Cannot retrieve user data.', 'Something went wrong ...');
             return;
         }
         if(!users.map(u => u.id).includes(user.id))

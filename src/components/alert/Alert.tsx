@@ -7,7 +7,7 @@ import './style.scss';
 import { Btn, CommandBar } from '../commandbar/CommandBar';
 
 function AlertComponent(props: AllProps) {
-    let {type, message} = props;
+    let {type, title, message} = props;
     let typeLabel = <></>;
 
 
@@ -17,16 +17,13 @@ function AlertComponent(props: AllProps) {
         case 'error': type= 'e'; break;
     }
     switch (type) {
-        case 'w': typeLabel = <h1 className={'text-warning'}>Warning</h1>; break;
-        case 'e': typeLabel = <h1 className={'text-danger'}>Error</h1>; break;
-        default: typeLabel = <h1 className={'text-primary'}>Success</h1>;
+        case 'w': typeLabel = <h1 className={'text-warning'}>{title ? title : 'Warning'}</h1>; break;
+        case 'e': typeLabel = <h1 className={'text-danger'}>{title ? title : 'Error'}</h1>; break;
+        default: typeLabel = <h1 className={'text-primary'}>{title ? title : 'Success'}</h1>;
     }
 
-    
-
-
-
     if (!type || !message) return(<></>);
+
     return(<div className={'alert-container'}>
         <div className={`alert-card ${type === 'w' ? 'warning' : (type === 'e' ? 'error' : 'success')}`}>
             <div className={'alert-header'}>
@@ -50,6 +47,7 @@ function AlertComponent(props: AllProps) {
 interface OwnProps {}
 interface StateProps {
     type?: string;
+    title?:string;
     message?: string;
 }
 interface DispatchProps {}
@@ -58,10 +56,14 @@ type AllProps = OwnProps & StateProps & DispatchProps;
 
 function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     const ret: StateProps = {} as FakeStateProps;
-    const alert = state.alert;
+    let alert = state.alert;
     if(!alert) return ret;
-    ret.type = alert.charAt(0).toLowerCase();
-    ret.message = alert.slice(2);
+    alert = alert + ' ';
+    let pieces = alert.split(':');
+    ret.type = pieces[0];
+    ret.title = pieces[1];
+    ret.message = (!pieces[2] ? '': pieces[2]);
+
     return ret;
 }
 
