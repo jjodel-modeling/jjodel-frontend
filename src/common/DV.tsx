@@ -13,17 +13,15 @@ import {
     ShortAttribETypes as SAType,
     U, Draggable, Measurable
 } from '../joiner';
-import React, {ReactNode} from "react";
+import React, {ReactNode, useState} from "react";
 import {PaletteType} from "../view/viewElement/view";
 import "./error.scss";
 
-
+const notificationType: 'classic'|'alert'|'notification' = 'notification';
 
 // const beautify = require('js-beautify').html; // BEWARE: this adds some newline that might be breaking and introduce syntax errors in our JSX parser
 const beautify = (s: string) => s;
 let ShortAttribETypes: typeof SAType = (window as any).ShortAttribETypes;
-
-
 
 @RuntimeAccessible('DV')
 export class DV {
@@ -621,6 +619,8 @@ public static object(): string { return (
 
     /* ERROR */
 
+    
+
     public static error(msg: undefined | ReactNode, errortype: string | "SYNTAX" | "RUNTIME",
                         data?: DModelElement | undefined, node?: DGraphElement | undefined, v?: LViewElement|DViewElement): React.ReactNode {
 
@@ -632,17 +632,32 @@ public static object(): string { return (
         let lv: LViewElement | undefined = v ? ((v as any).__isProxy ? v as LViewElement : LPointerTargetable.wrap(v)) : undefined;
         let viewpointname = lv?.viewpoint?.name ||'';
 
-        return (<Measurable draggable={true} resizable={true}><div className={'error-notification'}>
-            <h1>Something Went Wrong...</h1>
-            {v && <h2>Error in "{v?.name}" syntax view definition{viewpointname? ' in viewpoint ' + viewpointname : ''}.</h2>}
-            <div className={'error-type'}>
-                <b data-dname={dname} data-nodename={nodename} data-str={false}>
-                    {errortype} Error {on}
-                    {false && v && <div>While applying view "{v?.name}"</div>}
-                </b>
-            </div>
-            <div className={'error-details'}>{msg}</div>
-        </div></Measurable>);
+        function openNotification(e: any) {
+            U.alert('e', 'Error in ' + v?.name + (viewpointname ? ' > '+viewpointname : ''), msg.props.children);
+            e.target.classList.add('opened');
+        }
+
+        switch (notificationType) {
+            case 'classic':
+                return (<Measurable draggable={true} resizable={true}><div className={'error-notification'}>
+                        <h1>Something Went Wrong...</h1>
+                        {v && <h2>Error in "{v?.name}" syntax view definition{viewpointname? ' in viewpoint ' + viewpointname : ''}.</h2>}
+                        <div className={'error-type'}>
+                            <b data-dname={dname} data-nodename={nodename} data-str={false}>
+                                {errortype} Error {on}
+                                {false && v && <div>While applying view "{v?.name}"</div>}
+                            </b>
+                        </div>
+                        <div className={'error-details'}>{msg}</div>
+                    </div></Measurable>);
+                break;
+            case 'alert':
+                U.alert('e', 'Error in ' + v?.name + (viewpointname ? 'of '+viewpointname : ''), msg.props.children);
+                break;
+            case 'notification':
+                return (<div className='notification-icon' onClick={(e) => openNotification(e)}/>);
+                break;
+        }
     }
 
     public static error_string(msg: undefined | ReactNode, errortype: string | "SYNTAX" | "RUNTIME", data?: DModelElement | undefined,

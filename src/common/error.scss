@@ -148,3 +148,33 @@
     content: "\F333";
     float: left;
 }
+
+.notification-icon {
+    position: absolute;
+    display:block;
+    top: 2px;
+    right: 5px;
+    cursor: pointer;
+}
+
+.notification-icon::before {
+    position: relative;
+    font-family: 'bootstrap-icons';
+    color: red;
+    text-align: center;
+    padding-left: 5px;
+    display: block;
+
+    content: '\F332';
+} 
+
+.notification-icon.opened::before {
+    position: relative;
+    font-family: 'bootstrap-icons';
+    color: silver;
+    text-align: center;
+    padding-left: 5px;
+    display: block;
+
+    content: '\F332';
+} 

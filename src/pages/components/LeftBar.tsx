@@ -185,19 +185,16 @@ function LeftBar(props: LeftBarProps): JSX.Element {
                           onClick={()=>localStorage.setItem('_jj_update_seen', ''+Date.now())}
                     >What's new</Item>*/}
                     <Item 
-                        action={'updates'} 
+                        action={() => {document.location.href="https://www.jjodel.io/whats-new/"}} 
                         icon={icon['whats-new']}
-                        onClick={() => {document.location.href="https://www.jjodel.io/whats-new/"}}
                     >What's new</Item>
                     <Item 
-                        action={'gettingstarted'} 
+                        action={() => {document.location.href="https://www.jjodel.io/getting-started/"}} 
                         icon={icon['getting-started']}
-                        onClick={() => {document.location.href="https://www.jjodel.io/getting-started/"}}
                     >Getting started</Item>
                     <Item 
-                        action={'guide'} 
+                        action={() => {document.location.href="https://www.jjodel.io/manual/"}} 
                         icon={icon['manual']}
-                        onClick={() => {document.location.href="https://www.jjodel.io/manual/"}}
                     >User guide</Item>
                 </Menu>
 
