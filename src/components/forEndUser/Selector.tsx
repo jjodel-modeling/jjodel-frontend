@@ -92,6 +92,9 @@ function SelectorComponent(props: AllProps) {
                     </>)}
                 </>);
             break;
+            default:
+                return (<>Unsupported type</>);
+            break;
 
         }
 
