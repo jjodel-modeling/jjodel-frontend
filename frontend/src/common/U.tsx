@@ -635,11 +635,11 @@ export class U {
                     }
             }
     }
-
+/*
     public static log(obj: unknown, label: string = '###') {
         console.clear();
         console.log(label, obj);
-    }
+    }*/
 
     static removeEmptyObjectKeys(obj: GObject): void{
         for (let key of Object.keys(obj)) {

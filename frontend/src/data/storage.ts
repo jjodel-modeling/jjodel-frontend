@@ -16,4 +16,4 @@ export class Storage {
 }
 
 export default Storage;
-
+(window as any).JStorage = Storage;

@@ -1112,6 +1112,7 @@ function fixResizables(e: MouseEvent){
 }
 
 export async function stateInitializer() {
+    console.trace('stateinitializer');
     RuntimeAccessibleClass.fixStatics();
     let dClassesMap: Dictionary<string, typeof DPointerTargetable> = {};
     let lClassesMap: Dictionary<string, typeof LPointerTargetable> = {};
@@ -1127,15 +1128,12 @@ export async function stateInitializer() {
     setSubclasses(RuntimeAccessibleClass.get('DPointerTargetable'));
     windoww.defaultContext = {$: windoww.$, getPath, React: React, Selectors, ...RuntimeAccessibleClass.getAllClassesDictionary(), ...windoww.Components};
 
-    setDocumentEvents();
-
     DState.init();
-    const user = Storage.read<DUser>('user');
-    if (user) {
-        DUser.new(user.name, user.surname, user.nickname, user.affiliation, user.country, user.newsletter, user.email, user.token, user.id);
-        DUser.current = user.id;
-        statehistory[user.id] = {redoable: [], undoable: []};
-        await ProjectsApi.getAll();
-    } else DUser.current = '';
+    await DUser.loadOffline(); // if it's online mode this is a no-op and user should be already loaded
+    console.log('FIRING action pre')
+    await ProjectsApi.getAll();
+    console.log('FIRING action post')
+    //await ProjectsApi.getAll();
+    setDocumentEvents();
 
 }

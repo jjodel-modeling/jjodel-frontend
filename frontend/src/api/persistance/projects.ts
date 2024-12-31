@@ -70,8 +70,8 @@ class Offline {
     }
     static getAll(): void {
         const projects = Storage.read<DProject[]>('projects') || [];
-        for(const project of projects) {
-            TRANSACTION('loading projects', () => {
+        TRANSACTION('loading projects (offline)', () => {
+            for (const project of projects) {
                 DProject.new(project.type, project.name, project.state, [], [], project.id);
                 SetFieldAction.new(project.id, 'creation', project.creation, '', false);
                 SetFieldAction.new(project.id, 'lastModified', project.lastModified, '', false);
@@ -80,8 +80,8 @@ class Offline {
                 SetFieldAction.new(project.id, 'metamodelsNumber', project.metamodelsNumber, '', false);
                 SetFieldAction.new(project.id, 'modelsNumber', project.modelsNumber, '', false);
                 SetFieldAction.new(project.id, 'isFavorite', project.isFavorite, '', false);
-            });
-        }
+            }
+        });
     }
     static delete(project: DProject): void {
         const projects = Storage.read<DProject[]>('projects') || [];
@@ -132,8 +132,8 @@ class Online {
             return;
         }
         const data = U.wrapper<DProject[]>(response.data);
-        for (const project of data) {
-            TRANSACTION('loading projects', () => {
+        TRANSACTION('loading projects', () => {
+            for (const project of data) {
                 DProject.new(project.type, project.name, project.state, [], [], project.id);
                 SetFieldAction.new(project.id, 'creation', project.creation, '', false);
                 SetFieldAction.new(project.id, 'lastModified', project.lastModified, '', false);
@@ -142,8 +142,8 @@ class Online {
                 SetFieldAction.new(project.id, 'metamodelsNumber', project.metamodelsNumber, '', false);
                 SetFieldAction.new(project.id, 'modelsNumber', project.modelsNumber, '', false);
                 SetFieldAction.new(project.id, 'isFavorite', project.isFavorite, '', false);
-            });
-        }
+            }
+        });
     }
     static async delete(project: DProject): Promise<void> {
         await Api.delete(`${Api.persistance}/projects/${project.id}`);

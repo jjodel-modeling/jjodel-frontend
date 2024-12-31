@@ -142,6 +142,7 @@ import {ReactNode} from "react";
 import {ProjectsApi} from "../api/persistance";
 import {labelfunc} from "../model/dataStructure/GraphDataElements";
 import {Dummy} from "../common/Dummy";
+import Storage from "../data/storage";
 
 var windoww = window as any;
 // qui dichiarazioni di tipi che non sono importabili con "import type", ma che devono essere davvero importate a run-time (eg. per fare un "extend", chiamare un costruttore o usare un metodo statico)
@@ -2121,7 +2122,7 @@ export class DUser extends DPointerTargetable {
     public static offlineMode: boolean = !!localStorage.getItem("offlineMode");
     public static isStateMachine = false;
     // static current: Pointer<DUser> = 'Pointer_AnonymousUser';
-    static current: Pointer<DUser> = '';
+    static current: Pointer<DUser> = undefined as any;
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
     id!: Pointer<DUser>;
@@ -2140,6 +2141,16 @@ export class DUser extends DPointerTargetable {
         return new Constructors(new DUser('dwc'), undefined, false, undefined, id, true).DPointerTargetable().DUser().end(); }*/
     public static new(name: string, surname: string, nickname: string, affiliation: string, country: string, newsletter: boolean, email: string, token: string, id?: DUser['id'], persist: boolean = true): DUser {
         return new Constructors(new DUser('dwc'), undefined, persist, undefined, id).DPointerTargetable().DUser(name, surname, nickname, affiliation, country, newsletter, email, token).end();
+    }
+
+    static async loadOffline(): Promise<void> {
+        if (DUser.current) return;
+        const user = Storage.read<DUser>('user');
+        if (user) {
+            DUser.new(user.name, user.surname, user.nickname, user.affiliation, user.country, user.newsletter, user.email, user.token, user.id);
+            DUser.current = user.id;
+            statehistory[user.id] = {redoable: [], undoable: []};
+        } else DUser.current = '';
     }
 }
 

@@ -256,13 +256,20 @@ export class Action extends RuntimeAccessibleClass {
         } else {
             // if ((window as any).maxActionFiring++ >= 400) return false;
             let storee = store || windoww.store;
-            console.log('firing action:', {
-                field: this.field,
-                val: this.value,
-                // stack:this.src,
-                thiss:this,
-                n:(this as any).actions?.length || 1
-            });
+            let printobj: GObject = {};
+            if (this.className === CompositeAction.cname) {
+                let ca: CompositeAction = this as any;
+                printobj.title = ca.descriptor?.path;
+                printobj.desc = ca.descriptor;
+                printobj.n = ca.actions?.length || 1;
+            }
+            else {
+                printobj.field = this.field;
+                printobj.val = this.value
+            }
+            printobj['this'] = this;
+            printobj['stack'] = this.stack;
+            console.log('firing action:', printobj);
             storee.dispatch({...this});
         }
         return true;

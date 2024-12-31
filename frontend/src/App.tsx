@@ -1,4 +1,4 @@
-import React, {Dispatch} from 'react';
+import React, {Dispatch, useState} from 'react';
 import './App.scss';
 import './styles/view.scss';
 import './styles/style.scss';
@@ -34,19 +34,26 @@ import {BottomBar} from "./pages/components";
 import AlertVisualizer from "./components/alert/Alert";
 import Storage from "./data/storage";
 
-
+let firstLoading = true;
 function App(props: AllProps): JSX.Element {
     const debug = props.debug;
     const isLoading = props.isLoading;
+    /*
     const tooltip = props.tooltip;
     let user: LUser = props.user;
-
     useEffectOnce(() => {
         // SetRootFieldAction.new('isLoading', true);
         // stateInitializer().then(() => SetRootFieldAction.new('isLoading', false));
-    });
+    });*/
 
-    console.log('routing', {user:Storage.read('user'), du: DUser.current})
+    //let user = LUser.fromPointer(DUser.current);
+    let [, forceUpdate] = useState(0);
+    if (firstLoading) {
+        firstLoading = false;
+        stateInitializer();
+        forceUpdate(1);
+        return <Loader/>;
+    }
     return(<>
         <div className={"router-wrapper"}>
             {isLoading && <Loader />}
@@ -106,8 +113,7 @@ interface StateProps {
     offlineMode: boolean,
     debug: boolean,
     isLoading: boolean
-    tooltip: string,
-    user: LUser
+    tooltip: string
 }
 interface DispatchProps {}
 type AllProps = OwnProps & StateProps & DispatchProps;
@@ -117,7 +123,7 @@ function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     const ret: StateProps = {} as FakeStateProps;
     ret.debug = state.debug;
     ret.isLoading = state.isLoading;
-    ret.user = LUser.fromPointer(DUser.current);
+    // ret.user = LUser.fromPointer(DUser.current);
     // needed here as props, because apparently functional components are memoized by default.
     ret.offlineMode = DUser.offlineMode;
     ret.tooltip = state.tooltip;

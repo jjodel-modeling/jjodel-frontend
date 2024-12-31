@@ -320,12 +320,12 @@ function makeDefaultGraphViews(vp: DViewPoint, validationVP: DViewPoint): DViewE
             "ret.type = data && data.className.substring(1) || 'shapeless';\n"+
             "}";
         v.onDataUpdate = `
-let err = undefined;
-//if (name.indexOf(" ") >= 0) err = "" + type + " names cannot contain white spaces."; else
-if (name.length === 0 && type !== "shapeless") err = type + "es must be named.";
-else if (!name[0].match(/[A-Za-z_$]/)) err = type + " names must begin with an alphabet letter or $_ symbols.";
-else if (!name.match(/^[A-Za-z_$]+[A-Za-z0-9$_\\s]*$/)) err = type + " names can only contain an alphanumeric chars or or $_ symbols";
-node.state = {error_naming:err};
+let err = "";
+//if (name.indexOf(" ") >= 0) err = " names cannot contain white spaces."; else
+if (name.length === 0 && type !== "shapeless") err = " must be named.";
+else if (!name[0].match(/[A-Za-z_$]/)) err = " names must begin with an alphabet letter or $_ symbols.";
+else if (!name.match(/^[A-Za-z_$]+[A-Za-z0-9$_\\s]*$/)) err = " names can only contain an alphanumeric chars or or $_ symbols";
+node.state = {error_naming: type + err};
 `;}, false, 'Pointer_ViewCheckName' );
 
 let errorCheckLowerbound: DViewElement = DViewElement.new2('Lowerbound error view', DV.invisibleJsx(), validationVP, (v) => {
@@ -417,7 +417,6 @@ node.state = {error_lowerbound: err};\n
     // SetFieldAction.new(vp, 'subViews', U.objectFromArrayValues(dv_subviews.map(dv=>dv.id), 1.5));
     // SetFieldAction.new(validationVP, 'subViews', U.objectFromArrayValues(validation_subviews.map(dv=>dv.id), 1.5));
     const ret = [...dv_subviews, ...validation_subviews];
-    console.clear();
     for (let v of ret) Log.e(!v.events, "missing events on view " + v.name, {v, ret});
     for (let v of ret) Log.w(!!!v.events, "found events on view " + v.name, {v, ret});
     return ret;
