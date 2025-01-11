@@ -50,6 +50,7 @@ function SelectComponent(props: AllProps) {
     U.objectMergeInPlace(inputStyle, props.inputStyle || {}, props.style || {});
     let className = [props.className, props.inputClassName, css].join(' ');
 
+    alert(value);
     let select = (<select {...otherprops} className={className} disabled={readOnly}
             style={props.inputStyle}
             value={value}

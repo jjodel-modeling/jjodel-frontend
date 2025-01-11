@@ -351,6 +351,40 @@ button.close:hover {
     border: 2px solid #2D4E62;
     color: #2D4E62;
 }
-  
 
+span.project-link {
     
+    display: inline-block;
+    margin-left: 20px;
+    padding-bottom: 4px;
+    width: fit-content;
+    height: 20px;
+    background-color: var(--bg-2);
+    font-size: 0.8em;
+    padding: 0px 5px 5px 10px;
+    border-radius: 3px 3px 3px 3px;
+    font-family: Lekton, monospace;
+    font-weight: 400;
+    cursor: pointer;
+    color: var(--bg-3-1)
+}
+
+span.project-link > span {
+    color: var(--bg-5);
+}
+span.project-link > span ~ span {
+    color: var(--bg-3-1);
+}
+
+
+span.project-link::after {
+    background-color: var(--bg-2);
+    position: relative;
+    left: 0!important;
+    top: 3px;
+    font-family: bootstrap-icons;
+    font-size: 1em;
+    content: "\F28E";
+    padding-left: 20px;
+}
+

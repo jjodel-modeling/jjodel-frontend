@@ -36,6 +36,7 @@ function SelectorComponent(props: AllProps) {
     function SelectorChange(evt: React.ChangeEvent<HTMLSelectElement>) {
         if (readOnly) return;
 
+        
         const newValue = evt.target.value; 
         const oldValue = getter(); 
         setter(newValue);
@@ -71,20 +72,23 @@ function SelectorComponent(props: AllProps) {
                 </>); 
             break;
             case 'DEnumerator':
+                
                 return (<>
-
+                    <option value="" disabled selected>Select your option</option>
                     {/*@ts-ignore*/}
                     {l[field].type.literals.map(lit =><>
+                        
                         {/*@ts-ignore*/}
                         {typeof(l[field].value) === 'undefined' ? 
-                            <option value={lit.name}>{lit.name}</option> 
+                            
+                            <option value={lit.id}>{lit.name}</option>
                             :
                             <>
                                 {/*@ts-ignore*/}
                                 {l[field].value.name === lit.name ?
-                                    <option value={lit.name} selected>{lit.name}</option> 
+                                    <option value={lit.id} selected>{lit.name}</option> 
                                     :
-                                    <option value={lit.name}>{lit.name}</option>  
+                                    <option value={lit.id}>{lit.name}</option>  
                                 }
                             </>
                         }
@@ -93,7 +97,7 @@ function SelectorComponent(props: AllProps) {
                 </>);
             break;
             default:
-                return (<>Unsupported type</>);
+                return (U.alert('e', 'Unsupported type','Selector Component'));
             break;
 
         }
@@ -120,12 +124,13 @@ function SelectorComponent(props: AllProps) {
     U.objectMergeInPlace(inputStyle, props.inputStyle || {}, props.style || {});
     let className = [props.className, props.inputClassName, css].join(' ');
 
+    let get_options = getOptions();
 
-    let select = (<select {...otherprops} className={className + ' model-select'} disabled={readOnly}
+    let select = (<select {...otherprops} className={className + ' model-select'} disabled={readOnly} placeholder={'-----'}
             style={props.inputStyle}
             value={value}
             onChange={SelectorChange}>
-                {getOptions()}
+                {get_options ? get_options : U.alert('e', 'Error in Selector component', 'Something went wrong ...')}
     </select>);
 
 

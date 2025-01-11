@@ -18,7 +18,7 @@ export const CatalogInfoCard = (props: any) => {
                 </>
                 :
                 <>
-                    <h5>No projects so far</h5>
+                    <h5>No projects so far. Are you new to Jjodel? why not exploring the Getting Started section?</h5>
                     <img src={colors} width={220} />
                 </>
             }
@@ -116,8 +116,6 @@ const Catalog = (props: ChildrenType) => {
             items_collaborative = props.projects.filter(p => p.type === "collaborative");
         }
 
-        //var items  = items_public.concat(items_private,items_collaborative);
-
         var items = props.projects.filter(p =>
             (filters[0] && p.type ==="public" || filters[1] && p.type ==="private" || filters[2] && p.type ==="collaborative" || !filters[0] && !filters[1] && !filters[2]));
 
@@ -153,8 +151,8 @@ const Catalog = (props: ChildrenType) => {
                         <div className={'col-sm-1'}></div> */}
 
                         <div className={'col-3'}>Name</div>
-                        <div className={'col-2'}>Type</div>
-                        <div className={'col-2'}>Created</div>
+                        <div className={'col-1'}>Type</div>
+                        <div className={'col-3'}>Created</div>
                         <div className={'col-2'}>Last modified</div>
                         <div className={'col-3'}>Operation</div>
                     </div>

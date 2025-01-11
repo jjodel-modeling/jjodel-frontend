@@ -8,6 +8,7 @@ import {Divisor, Item, Menu} from './menu/Menu';
 import card from '../../static/img/card.png';
 import {icon} from './icons/Icons';
 import {Btn, CommandBar, Sep} from '../../components/commandbar/CommandBar';
+import { int } from '../../joiner/types';
 
 
 type Props = {
@@ -131,6 +132,7 @@ function Project(props: Props): JSX.Element {
     /* LIST */
 
     function ProjectList(props: Props): JSX.Element {
+
         let timeago = Date.now() - data.lastModified;
         let timeunit: string;
         let sec = 1000;
@@ -148,6 +150,38 @@ function Project(props: Props): JSX.Element {
         else if (timeago >= month && timeago < year) { timeago /= month; timeunit = 'months'; }
         else { timeago/= min; timeunit = 'years'; }
 
+
+        function timeConverter(UNIX_timestamp: int){
+            var a = new Date(UNIX_timestamp);
+            
+            const formattedDate2 = a.toISOString();
+
+            const formattedDate = new Intl.DateTimeFormat('en-US', {
+                day: '2-digit',
+                month: 'short', // "long" for full month name
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                //second: '2-digit',
+                //fractionalSecondDigits: 3, // Includes milliseconds
+                //timeZone: 'UTC', // Optional, set the timezone
+              }).format(a);
+
+            return formattedDate;
+
+
+
+            
+            // var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+            // var year = a.getFullYear();
+            // var month = months[a.getMonth()];
+            // var date = a.getDate();
+            // var hour = a.getHours();
+            // var min = a.getMinutes();
+            // var sec = a.getSeconds();
+            // var time = month + ' '+ date +', ' + year + ' ' + hour + ':' + min ;
+            // return time;
+        }
         return (<>
             <div className="row data">
                 {/* <div className={'col-sm-1'} style={{width: '30px'}}>
@@ -174,7 +208,8 @@ function Project(props: Props): JSX.Element {
 
                 </div> */}
                 <div className={'col-3'} onClick={()=> {selectProject()}}>{data.name}</div>
-                <div className={'col-2'}>{data.type}</div>
+                <div className={'col-1'}>{data.type}</div>
+                <div className={'col-3'}>{timeConverter(data.creation+0)}</div>
                 <div className={'col-2'}>{Math.floor(timeago)} {timeunit} ago</div>
                 <div className={'col-3'}>
                     <CommandBar noBorder={true} style={{marginBottom: '0'}}>

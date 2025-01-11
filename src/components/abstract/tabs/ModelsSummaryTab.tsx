@@ -26,7 +26,7 @@ const Project = (props: Props) => {
                 <LeftBar active={'Project'} project={project} />
                 <div className={'user'}>
                     <div className={'name'}>
-                        <Title projectID={project.id} active={'Project'} title={project.name} icon={<i className="bi bi-p-square"></i>} description={project.description}/>
+                        <Title projectID={project.id} active={'Project'} title={project.name} icon={<i className="bi bi-p-square"></i>} description={project.description} type={project.type}/>
                         <ProjectCatalog project={project} />
                     </div>
                 </div>
