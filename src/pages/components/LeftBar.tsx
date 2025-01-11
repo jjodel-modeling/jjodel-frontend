@@ -124,7 +124,7 @@ function LeftBar(props: LeftBarProps): JSX.Element {
                 <i className="bi bi-search"></i>
                 <input placeholder={'Search for anything'} type={'text'} name='search-text' />
                 {/* @ts-ignore */}
-                <Menu title={props.project.name}>
+                <Menu title={props.project.name ? props.project.name : 'Unnamed Project'}>
                     {/*<Item icon={icon['edit']}>Edit </Item>*/}
                     <Item action={exportProject} icon={icon['download']}>Download</Item>
                     {/*<Item icon={icon['duplicate']}>Duplicate </Item>*/}
