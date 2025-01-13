@@ -36,10 +36,20 @@ import Storage from '../../data/storage';
 import Collaborative from "../../components/collaborative/Collaborative";
 let windoww = window as any;
 
-const createM2 = (project: LProject) => {
+windoww.projectModified = false;
+
+windoww.setProjectModified = function() {
+    windoww.projectModified = true;
+}
+
+windoww.unseProjecttModified = function() {
+    windoww.projectModified = false;
+}
+
+function createM2(project: LProject) {
     let name = 'metamodel_' + 1;
     let names: string[] = Selectors.getAllMetamodels().map(m => m.name);
-    name = U.increaseEndingNumber(name, false, false, newName => names.indexOf(newName) >= 0)
+    name = U.increaseEndingNumber(name, false, false, newName => names.indexOf(newName) >= 0);
     const dModel = DModel.new(name, undefined, true);
     const lModel: LModel = LModel.fromD(dModel);
     project.metamodels = [...project.metamodels, lModel];
@@ -103,6 +113,8 @@ function makeEntry(i: MenuEntry) {
         );
     }
 }
+
+
 
 type UserProps = {}
 const User = (props: UserProps) => {
@@ -337,7 +349,6 @@ function NavbarComponent(props: AllProps) {
             </div>
         </>);
     }
-
 
     return(<>
         <nav className={'w-100 nav-container d-flex'} style={{zIndex: 99}}>

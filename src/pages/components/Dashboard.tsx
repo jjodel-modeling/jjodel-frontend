@@ -13,7 +13,8 @@ import {
     SetFieldAction,
     SetRootFieldAction,
     U,
-    Try
+    Try,
+    windoww
 } from '../../joiner';
 import {LeftBar, Navbar} from './';
 
@@ -36,6 +37,8 @@ import Dock from "../../components/abstract/Dock";
 import {CSS_Units} from "../../view/viewElement/view";
 import {useStateIfMounted} from 'use-state-if-mounted';
 import { Tooltip } from '../../components/forEndUser/Tooltip';
+import { ProjectsApi } from '../../api/persistance';
+import { setPriority } from 'os';
 
 
 type UserProps = {
@@ -82,7 +85,7 @@ const Title = (props: TitleProps) => {
             const link = document.getElementById('link');
             
             navigator.clipboard.writeText(server.innerText+link.innerText);
-            U.alert('i', "Copied", "The project link has been copied to the Clipboard.");
+            U.alert('i', "Copied", "The project link has been copied to the Clipboard. dialog");
 
         }
 
@@ -99,6 +102,7 @@ const Title = (props: TitleProps) => {
                             setter={(v) => {
                                 if(!props.projectID) return;
                                 SetFieldAction.new(props.projectID, 'type', v ? "public" : "private", '', false);
+                                windoww.projectModified = true;
                                 if (v) U.alert('i', "The project "+title+" is public", "It can be accessed only by those who have the public link.");
                             }}
                             getter={() => type}
@@ -121,13 +125,12 @@ const Title = (props: TitleProps) => {
         // <h2 onBlur={() => setEditTitle(!editTitle)} >
 
         function setTitle(e: any) {
-
             if (title === '') {
                 U.alert('e', 'Title cannot be empty', 'Please enter a title for the project.');
                 e.target.focus();
                 return;
             }
-        
+            windoww.setProjectModified();
             setEditTitle(!editTitle);
         }
 
@@ -138,8 +141,12 @@ const Title = (props: TitleProps) => {
                 e.target.focus();
                 return;
             }
-
+            windoww.setProjectModified();
             setEditDes(!editDes);
+        }
+
+        function setPrivacy(e: any) {
+            windoww.setProjectModified();
         }
 
 
@@ -149,7 +156,7 @@ const Title = (props: TitleProps) => {
             {props.active === 'Project' ?
                 <div className={'name project-list'}>
                     {editTitle ?
-                        <h2 onBlur={(e) => setTitle(e)} >
+                        <h2 onChange={(e) => setTitle(e)} >
                             <div>
                                 {props.icon}
                                 <input
@@ -173,7 +180,7 @@ const Title = (props: TitleProps) => {
                     <h6><ProjectProperties/></h6>
                     
                     {editDes ? 
-                        <h3 onDoubleClick={() => setEditDes(!editDes)} onBlur={(e) => setDescription(e)}>
+                        <h3 onDoubleClick={() => setEditDes(!editDes)} onChange={(e) => setDescription(e)}>
                             <textarea
                                 placeholder={'Enter project description'}
                                 autoFocus
@@ -182,7 +189,8 @@ const Title = (props: TitleProps) => {
                                 value={props.description}
                                 onChange={e => {
                                     if(!props.projectID) return;
-                                    SetFieldAction.new(props.projectID, 'description', e.target.value, '', false)
+                                    SetFieldAction.new(props.projectID, 'description', e.target.value, '', false);
+                                    setPrivacy(e);
                                 }}
                             />
                         </h3>
@@ -269,7 +277,7 @@ const ProjectInfoCard = (props: ProjectProps) => {
     return (
         <div className={'details'}>
             <>
-                <h5>{project.name}</h5>
+                <h5>{project.name ? project.name : 'Unnamed Project'}</h5>
                 {project.description && <p>{project.description}</p>}
                 <img src={colors} width={220} style={{paddingBottom: '10px'}}/>
 

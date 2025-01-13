@@ -2,7 +2,7 @@ import { meanBy } from 'lodash';
 import { useState, MouseEventHandler } from 'react';
 import { IconTheme } from 'react-hot-toast';
 import {useNavigate} from 'react-router-dom';
-import {DProject, DUser, L, LProject, LUser, SetRootFieldAction, U} from '../../joiner';
+import {DProject, DUser, L, LProject, LUser, SetRootFieldAction, U, windoww} from '../../joiner';
 
 import { icon } from './icons/Icons';
 import {DashProps} from "./Dashboard";
@@ -57,17 +57,20 @@ type MenuProps = {
     children: any;
     title?: string;
     mode?: "collapsable";
+    project?: boolean;
 };
 
 const Menu = (props: MenuProps) => {
     const [open,setOpen] = useState(true);
 
     return (<>
+
         {props.title && props.mode && open && <i className={'bi bi-chevron-down'} onClick={(e) => setOpen(!open)}></i>}
         {props.title && props.mode && !open && <i className={'bi bi-chevron-right'} onClick={(e) => setOpen(!open)}></i>}
+        
 
         <div className='menu border-bottom'>
-            {props.title && <h1>{props.title}</h1>}
+            {windoww.projectModified && props.title ? <h1>{props.title} <i className="bi bi-circle-fill modified"></i> </h1> : <h1> {props.title} </h1>}
             <div>
                 {open && props.children}
             </div>
@@ -124,7 +127,7 @@ function LeftBar(props: LeftBarProps): JSX.Element {
                 <i className="bi bi-search"></i>
                 <input placeholder={'Search for anything'} type={'text'} name='search-text' />
                 {/* @ts-ignore */}
-                <Menu title={props.project.name ? props.project.name : 'Unnamed Project'}>
+                <Menu title={props.project.name ? props.project.name : 'Unnamed Project'} project>
                     {/*<Item icon={icon['edit']}>Edit </Item>*/}
                     <Item action={exportProject} icon={icon['download']}>Download</Item>
                     {/*<Item icon={icon['duplicate']}>Duplicate </Item>*/}
