@@ -200,6 +200,8 @@ function NavbarComponent(props: AllProps) {
 
             {name: 'divisor', function: () => {}, keystroke: []},
             {name: 'Close project', icon: icon['close'], function: () => {
+                if (windoww.projectModified) {U.alert('e', 'Please save your project before closing it.', ''); return;}
+                windoww.unseProjecttModified();
                 navigate('/allProjects');
                 Collaborative.client.off('pullAction');
                 Collaborative.client.disconnect();
@@ -213,8 +215,9 @@ function NavbarComponent(props: AllProps) {
                 }, keystroke: [Key.cmd, 'Y']}, // maybe better cmd + Y ?
             
             {name: 'divisor', function: () => {}, keystroke: []},*/
-            {name: 'Save', icon: icon['save'], function: async() => {
-                await ProjectsApi.save(project);
+            {name: 'Save', icon: icon['save'], function: async() => { 
+                await ProjectsApi.save(project); 
+                windoww.unseProjecttModified();
                 }, keystroke: [Key.cmd, 'S']},
             {name: 'Download', icon: icon['download'], function: async() => {
                     await ProjectsApi.save(project);
@@ -341,7 +344,9 @@ function NavbarComponent(props: AllProps) {
                         <Item icon={icon['settings']} action={(e)=> {alert('')}}>Settings</Item>
                         <Divisor />
                         <Item icon={icon['logout']} action={async() => {
+                            if (windoww.projectModified) {U.alert('e', 'Please save your project before logging out.', ''); return;}
                             navigate('/auth');
+                            windoww.unseProjecttModified();
                             await AuthApi.logout();
                         }}>Logout</Item>
                     </Menu>
