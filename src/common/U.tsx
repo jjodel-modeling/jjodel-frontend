@@ -46,6 +46,7 @@ import Convert from "ansi-to-html";
 import React, {isValidElement} from "react";
 import IoT from "../iot/IoT";
 import Collaborative from "../components/collaborative/Collaborative";
+import { Await } from "react-router-dom";
 // var Convert = require('ansi-to-html');
 // import KeyDownEvent = JQuery.KeyDownEvent; // https://github.com/tombigel/detect-zoom broken 2013? but works
 
@@ -184,6 +185,11 @@ export class U {
 
     static alert(type: 'i'|'w'|'e', title: string, message: string): void {
         SetRootFieldAction.new('alert', `${type}:${title}:${message}`, '');
+    }
+
+    static dialog(message: string, label: string, action: () => any): void {
+        windoww.dialog_action = action;
+        SetRootFieldAction.new('dialog', `${message}:${label}`, '');
     }
 
     static async decompressState(state: string): Promise<string> {

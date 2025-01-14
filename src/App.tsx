@@ -32,6 +32,7 @@ import {MessageVisualizer} from "./components/forEndUser/SplashMessage";
 import {JQDock, MyDock} from "./components/dock/MyDock";
 import {BottomBar} from "./pages/components";
 import AlertVisualizer from "./components/alert/Alert";
+import DialogVisualizer from './components/alert/Dialog';
 
 let userHasInteracted = false;
 function endPendingActions() {
@@ -59,6 +60,7 @@ function App(props: AllProps): JSX.Element {
             <Try><TooltipVisualizer /></Try>
             {/*<MessageVisualizer />*/}
             <Try><AlertVisualizer /></Try>
+            <Try><DialogVisualizer /></Try>
             <HashRouter>
                 <Try><PathChecker /></Try>
                 <Try><Routes>

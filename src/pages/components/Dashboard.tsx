@@ -13,8 +13,7 @@ import {
     SetFieldAction,
     SetRootFieldAction,
     U,
-    Try,
-    windoww
+    Try
 } from '../../joiner';
 import {LeftBar, Navbar} from './';
 
@@ -39,6 +38,7 @@ import {useStateIfMounted} from 'use-state-if-mounted';
 import { Tooltip } from '../../components/forEndUser/Tooltip';
 import { ProjectsApi } from '../../api/persistance';
 import { setPriority } from 'os';
+import { setProjectModified } from '../../common/libraries/projectModified';
 
 
 type UserProps = {
@@ -85,7 +85,7 @@ const Title = (props: TitleProps) => {
             const link = document.getElementById('link');
             
             navigator.clipboard.writeText(server.innerText+link.innerText);
-            U.alert('i', "Copied", "The project link has been copied to the Clipboard. dialog");
+            U.alert('i', "Copied", "The project link has been copied to the Clipboard.");
 
         }
 
@@ -102,7 +102,7 @@ const Title = (props: TitleProps) => {
                             setter={(v) => {
                                 if(!props.projectID) return;
                                 SetFieldAction.new(props.projectID, 'type', v ? "public" : "private", '', false);
-                                windoww.projectModified = true;
+                                setProjectModified();
                                 if (v) U.alert('i', "The project "+title+" is public", "It can be accessed only by those who have the public link.");
                             }}
                             getter={() => type}
@@ -130,7 +130,7 @@ const Title = (props: TitleProps) => {
                 e.target.focus();
                 return;
             }
-            windoww.setProjectModified();
+            setProjectModified();
             setEditTitle(!editTitle);
         }
 
@@ -141,12 +141,12 @@ const Title = (props: TitleProps) => {
                 e.target.focus();
                 return;
             }
-            windoww.setProjectModified();
+            setProjectModified();
             setEditDes(!editDes);
         }
 
         function setPrivacy(e: any) {
-            windoww.setProjectModified();
+            setProjectModified();
         }
 
 

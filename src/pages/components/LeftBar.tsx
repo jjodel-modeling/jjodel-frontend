@@ -9,6 +9,7 @@ import {DashProps} from "./Dashboard";
 import Collaborative from "../../components/collaborative/Collaborative";
 import {ProjectsApi} from "../../api/persistance";
 import storage from "../../data/storage";
+import { isProjectModified } from '../../common/libraries/projectModified';
 
 interface StateProps {
     projects: LProject[];
@@ -70,7 +71,7 @@ const Menu = (props: MenuProps) => {
         
 
         <div className='menu border-bottom'>
-            {windoww.projectModified && props.title ? <h1>{props.title} <i className="bi bi-circle-fill modified"></i> </h1> : <h1> {props.title} </h1>}
+            {isProjectModified() && props.title ? <h1>{props.title} <i className="bi bi-circle-fill modified"></i> </h1> : <h1> {props.title} </h1>}
             <div>
                 {open && props.children}
             </div>
@@ -163,7 +164,7 @@ function LeftBar(props: LeftBarProps): JSX.Element {
                 <input placeholder={'Search for anything'} type={'text'} name='search-text' />
 
 
-                {user.email === 'admin@gmail.it' && <Menu title={'Administration'} mode={'collapsable'}>
+                {user && user.email === 'admin@gmail.it' && <Menu title={'Administration'} mode={'collapsable'}>
                     <Item action={'usersInfo'} icon={icon['profile']}>Users</Item>
                     <Item action={'projectsInfo'} icon={icon['folder']}>Projects</Item>
                     <Item action={'news'} icon={icon['manual']}>News</Item>

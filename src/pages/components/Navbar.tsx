@@ -34,17 +34,10 @@ import {InternalToggle} from '../../components/widgets/Widgets';
 import jj from '../../static/img/jj-k.png';
 import Storage from '../../data/storage';
 import Collaborative from "../../components/collaborative/Collaborative";
+import { isProjectModified, setProjectModified, unsetProjectModified } from '../../common/libraries/projectModified';
+
+
 let windoww = window as any;
-
-windoww.projectModified = false;
-
-windoww.setProjectModified = function() {
-    windoww.projectModified = true;
-}
-
-windoww.unseProjecttModified = function() {
-    windoww.projectModified = false;
-}
 
 function createM2(project: LProject) {
     let name = 'metamodel_' + 1;
@@ -151,9 +144,36 @@ function NavbarComponent(props: AllProps) {
 
     
     
-    
-    // const menuType = "normal";
+    // let response: string |null = null;
 
+    // function getResponse2() {
+        
+    //     console.log('dialog_response', windoww.dialog_response);
+    //     if (typeof(windoww.dialog_response) !== "undefined") {
+    //         windoww.dialog_response = undefined;
+    //         return response;
+    //     }
+    //     window.setTimeout(function() {
+    //         getResponse();
+    //     }, 500);
+    // }
+
+    // function getResponse() {
+
+    //     response = localStorage.getItem('dialog_response');
+        
+    //     window.setInterval(function() {
+    //         if (response === "true" || response === "false") {
+    //             return;
+    //         }
+    //     }, 500);
+        
+    //     // let response = windoww.dialog_response;
+
+    //     alert('getResponse '+response);
+    //     return response;
+    // }
+        
 
 
     const Key = Keystrokes;
@@ -187,26 +207,31 @@ function NavbarComponent(props: AllProps) {
     if (project){
         projectItems = [
 
-            {name: 'New metamodel', icon: icon['new'], function: ()=>createM2(project), keystroke: [Key.alt, Key.cmd, 'M']},
+            {name: 'New metamodel', icon: icon['new'], function: ()=>{createM2(project); setProjectModified();}, keystroke: [Key.alt, Key.cmd, 'M']},
 
             {
                 name: 'New model',
                 icon: icon['new'],
                 subItems: project.metamodels.filter(m2=>!!m2).map((m2, i)=>({
-                    name: m2.name, function: () => { createM1(project, m2) }, keystroke: []
+                    name: m2.name, function: () => { createM1(project, m2); setProjectModified(); }, keystroke: []
                 })),
                 disabled: project.metamodels.length == 0
             },
 
             {name: 'divisor', function: () => {}, keystroke: []},
             {name: 'Close project', icon: icon['close'], function: () => {
-                if (windoww.projectModified) {U.alert('e', 'Please save your project before closing it.', ''); return;}
-                windoww.unseProjecttModified();
-                navigate('/allProjects');
-                Collaborative.client.off('pullAction');
-                Collaborative.client.disconnect();
-                SetRootFieldAction.new('collaborativeSession', false);
-                U.resetState();
+                if (isProjectModified()) {
+                    U.dialog('Close the project without saving?', 'close project', ()=>{
+                        unsetProjectModified();
+                        navigate('/allProjects');
+                        Collaborative.client.off('pullAction');
+                        Collaborative.client.disconnect();
+                        SetRootFieldAction.new('collaborativeSession', false);
+                        U.resetState();
+                    }); 
+                }
+                
+                
                 }, keystroke: [Key.cmd, 'Q']},
             {name: 'divisor', function: () => {}, keystroke: []},
             /*{name: 'Undo', icon: icon['undo'], function: () => {
@@ -216,8 +241,8 @@ function NavbarComponent(props: AllProps) {
             
             {name: 'divisor', function: () => {}, keystroke: []},*/
             {name: 'Save', icon: icon['save'], function: async() => { 
+                unsetProjectModified();
                 await ProjectsApi.save(project); 
-                windoww.unseProjecttModified();
                 }, keystroke: [Key.cmd, 'S']},
             {name: 'Download', icon: icon['download'], function: async() => {
                     await ProjectsApi.save(project);
@@ -344,11 +369,12 @@ function NavbarComponent(props: AllProps) {
                         <Item icon={icon['settings']} action={(e)=> {alert('')}}>Settings</Item>
                         <Divisor />
                         <Item icon={icon['logout']} action={async() => {
-                            if (windoww.projectModified) {U.alert('e', 'Please save your project before logging out.', ''); return;}
-                            navigate('/auth');
-                            windoww.unseProjecttModified();
-                            await AuthApi.logout();
-                        }}>Logout</Item>
+                            if (isProjectModified()) {U.dialog('You are about to log out without saving your project. Do you want to proceed?', 'logout', ()=>{
+                                navigate('/auth');
+                                unsetProjectModified();
+                                AuthApi.logout();
+                            });
+                        }}}>Logout</Item>
                     </Menu>
                 </div>
             </div>

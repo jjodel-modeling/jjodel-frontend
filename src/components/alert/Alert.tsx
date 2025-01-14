@@ -4,13 +4,10 @@ import React, {Component, Dispatch, ReactElement} from 'react';
 import {connect} from 'react-redux';
 import './style.scss';
 
-import { Btn, CommandBar } from '../commandbar/CommandBar';
 
 function AlertComponent(props: AllProps) {
     let {type, title, message} = props;
     let typeLabel = <></>;
-
-
     
     switch (type) {
         case 'warning': type = 'w'; break;
