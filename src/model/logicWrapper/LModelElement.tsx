@@ -78,6 +78,7 @@ import {ValuePointers} from "./PointerDefinitions";
 import {ShortDefaultEClasses} from "../../common/U";
 import {transientProperties} from "../../joiner/classes";
 import React, {ReactNode} from "react";
+import { setProjectModified } from "../../common/libraries/projectModified";
 
 type outactions = {clear:(()=>void)[], set:(()=>void)[], immediatefire?: boolean};
 
@@ -649,7 +650,7 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
         this.cannotCall('addClass');
     }
 
-    public addAttribute(): void {
+    public addAttribute(): void { 
         this.cannotCall('addAttribute');
     }
 
@@ -1391,9 +1392,12 @@ export class LPackage<Context extends LogicContext<DPackage> = any, C extends Co
     }
 
     public addPackage(name?: D["name"], uri?: D["uri"], prefix?: D["prefix"]): LPackage { return this.cannotCall("addPackage"); }
+    
     protected get_addPackage(context: Context): this["addPackage"] {
         console.log("Package.get_addPackage()", {context, thiss:this});
         return (name?: D["name"], uri?: D["uri"], prefix?: D["prefix"]) => {
+            setProjectModified();
+
             return LPointerTargetable.fromD(DPackage.new(name, uri, prefix, context.data.id, true, DPackage));
         }
     }
@@ -1402,15 +1406,18 @@ export class LPackage<Context extends LogicContext<DPackage> = any, C extends Co
                     isPartial?: DClass["partial"], partialDefaultName?: DClass["partialdefaultname"]): LClass {
         return this.cannotCall("addClass"); }
     protected get_addClass(context: Context): this["addClass"] {
+        setProjectModified();
         return (name?: DClass["name"], isInterface?: DClass["interface"], isAbstract?: DClass["abstract"], isPrimitive?: DClass["isPrimitive"],
                 isPartial?: DClass["partial"], partialDefaultName?: DClass["partialdefaultname"]
         ) => LPointerTargetable.fromD(DClass.new(name, isInterface, isAbstract, isPrimitive, isPartial, partialDefaultName, context.data.id, true));
     }
 
     public addEnum(...p:Parameters<this["addEnumerator"]>): LEnumerator { return this.addEnumerator(...p); }
-    protected get_addEnum(context: Context): this["addEnumerator"] { return this.get_addEnumerator(context); }
+    protected get_addEnum(context: Context): this["addEnumerator"] {         
+        return this.get_addEnumerator(context); }
     public addEnumerator(name?: DEnumerator["name"]): LEnumerator { return this.cannotCall("addEnumerator"); }
     protected get_addEnumerator(context: Context): this["addEnumerator"] {
+        setProjectModified();
         return (name?: DEnumerator["name"]) => LPointerTargetable.fromD(DEnumerator.new(name, context.data.id, true)); }
 
     protected get_classes(context: Context, state?: DState, setNameKeys: boolean = true): LClass[] & Dictionary<DocString<"$name">, LClass> {
@@ -2332,16 +2339,19 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
 
     public addAttribute(name?: DAttribute["name"], type?: DAttribute["type"]): LAttribute { return this.cannotCall("addAttribute"); }
     protected get_addAttribute(context: Context): this["addAttribute"] {
+        setProjectModified();
         return (name?: DAttribute["name"], type?: DAttribute["type"]) => LPointerTargetable.fromD(DAttribute.new(name, type, context.data.id, true));
     }
 
     public addReference(name?: DReference["name"], type?: DReference["type"]): LReference { return this.cannotCall("addReference"); }
     protected get_addReference(context: Context): this["addReference"] {
+        setProjectModified();
         return (name?: DReference["name"], type?: DReference["type"]) => LPointerTargetable.fromD(DReference.new(name, type, context.data.id, true));
     }
 
     public addOperation(name?: DOperation["name"], type?: DOperation["type"]): LOperation { return this.cannotCall("addOperation"); }
     protected get_addOperation(context: Context): this["addOperation"] {
+        setProjectModified();
         return (name?: DOperation["name"], type?: DOperation["type"]) => LPointerTargetable.fromD(DOperation.new(name, type, [], context.data.id, true));
     }
 
@@ -3318,6 +3328,7 @@ export class LReference<Context extends LogicContext<DReference> = any, C extend
 
     public addClass(name?: DClass["name"], isInterface?: DClass["interface"], isAbstract?: DClass["abstract"], isPrimitive?: DClass["isPrimitive"],
                     isPartial?: DClass["partial"], partialDefaultName?: DClass["partialdefaultname"]): LClass {
+
         return this.cannotCall("LReference.addClass"); }
     protected get_addClass(context: Context): this["addClass"] {
         return (name?: DClass["name"], isInterface?: DClass["interface"], isAbstract?: DClass["abstract"], isPrimitive?: DClass["isPrimitive"],
@@ -3327,6 +3338,8 @@ export class LReference<Context extends LogicContext<DReference> = any, C extend
             // SetFieldAction.new(context.data.id, "type", dclass.id);
             this.set_type(dclass.id as any, context);
             END();
+
+
             return LPointerTargetable.fromD(dclass);
         } }
 

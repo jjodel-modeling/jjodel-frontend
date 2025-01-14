@@ -27,6 +27,7 @@ import {ViewData} from './ViewData';
 import {Tooltip} from "../../forEndUser/Tooltip";
 import {Btn, CommandBar, Sep} from '../../commandbar/CommandBar';
 import {InternalToggle} from '../../widgets/Widgets';
+import { setProjectModified } from '../../../common/libraries/projectModified';
 
 type Metadata = {setView: (p: Pointer)=>any, scoreBoost: number}
 function NestedViewComponent(props: AllProps) {
@@ -40,6 +41,7 @@ function NestedViewComponent(props: AllProps) {
         let viewpointNames: string[] = viewpoints.map(vp => vp && vp.name);
         name = U.increaseEndingNumber(name, false, false, newName => viewpointNames.indexOf(newName) >= 0);
         DViewPoint.newVP(name);
+        setProjectModified();
     }
     const deleteV = (e: React.MouseEvent, viewPoint: LViewElement) => {
         e.stopPropagation();
@@ -141,7 +143,7 @@ function NestedViewComponent(props: AllProps) {
                         <CommandBar style={{transition: '1s 0.3s', marginTop: '2px'}}>
                             <Btn icon={'delete'} action={(e)=> { l.delete(); preventClick(e);}} disabled={!canDelete} tip={
                                 isActive ? 'Cannot delete active viewpoint' : (isDefault ? 'Cannot delete default views' : 'Delete' )} />
-                            <Btn icon={'copy'} action={(e)=> { l.duplicate(); preventClick(e);}} tip={'Duplicate'} />
+                            <Btn icon={'copy'} action={(e)=> { l.duplicate(); preventClick(e);}} tip={'Duplicate'} changeMonitor/>
                         </CommandBar>
 
                         {/* <button className="bg btn-delete my-auto ms-2 green" onClick={(e)=> { l.duplicate(); preventClick(e);}}><i className='bx bx-duplicate' /></button>
