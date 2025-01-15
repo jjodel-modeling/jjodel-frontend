@@ -20,6 +20,7 @@ import './style.scss';
 import {Empty} from "./Empty";
 import { CommandBar, Btn } from '../commandbar/CommandBar';
 import { Tooltip } from '../forEndUser/Tooltip';
+import { setProjectModified } from '../../common/libraries/projectModified';
 
 class builder {
     static named(data: LModelElement, advanced: boolean): ReactNode {
@@ -116,6 +117,7 @@ class builder {
                 <MultiSelect isMulti={true} options={extendOptions as any} value={extendValue} onChange={(v) => {
                     console.log('setting extend', v);
                     lclass.extends = v.map(e => e.value) as Any<string[]>;
+                    setProjectModified();
                 }} />
             </label>
             <label className={'input-container'}>
