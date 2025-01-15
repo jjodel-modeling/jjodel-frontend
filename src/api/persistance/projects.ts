@@ -129,7 +129,7 @@ class Online {
         if(response.code !== 200) {
             /* 401: Unauthorized -> Invalid Token (Local Storage)  */
             U.resetState();
-            return;
+            return Promise.reject('Invalid Token');
         }
         const data = U.wrapper<DProject[]>(response.data);
         for(const project of data) {
@@ -144,6 +144,7 @@ class Online {
                 SetFieldAction.new(project.id, 'isFavorite', project.isFavorite, '', false);
             });
         }
+        return Promise.resolve();
     }
     static async delete(project: DProject): Promise<void> {
         await Api.delete(`${Api.persistance}/projects/${project.id}`);

@@ -49,6 +49,7 @@ function App(props: AllProps): JSX.Element {
     let user: LUser = props.user;
 
     useEffectOnce(() => {
+        console.log("ALFI: App useEffectOnce");
         SetRootFieldAction.new('isLoading', true);
         stateInitializer().then(() => SetRootFieldAction.new('isLoading', false));
     });

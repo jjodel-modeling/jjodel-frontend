@@ -1072,11 +1072,18 @@ export async function stateInitializer() {
 
     DState.init();
     const user = Storage.read<DUser>('user');
+
     if(user) {
         DUser.new(user.name, user.surname, user.nickname, user.affiliation, user.country, user.newsletter, user.email, user.token, user.id);
         DUser.current = user.id;
         statehistory[user.id] = {redoable: [], undoable: []};
-        await ProjectsApi.getAll();
+
+        try {
+            await ProjectsApi.getAll();
+        } catch (error) {
+            // U.alert('e','You are already logged on another client','');
+            DUser.current = '';
+        }
     } else DUser.current = '';
 
 }

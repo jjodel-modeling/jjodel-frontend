@@ -306,6 +306,7 @@ const ProjectInfoCard = (props: ProjectProps) => {
     );
 }
 
+/* Project Details / Project Summary */
 
 function ProjectCatalog(props: ProjectProps) {
 

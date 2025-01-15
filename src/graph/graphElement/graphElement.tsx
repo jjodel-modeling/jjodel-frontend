@@ -51,6 +51,7 @@ import {EdgeStateProps, LGraphElement, store, VertexComponent,
     windoww, transientProperties
 } from "../../joiner";
 import {NodeTransientProperties, Pack1} from "../../joiner/classes";
+import { setProjectModified } from "../../common/libraries/projectModified";
 
 // const Selectors: typeof Selectors_ = windoww.Selectors;
 /*
@@ -769,7 +770,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         if (!(this.props.isGraph && !this.props.isVertex)) e.stopPropagation();
         if (e.key === Keystrokes.escape) {
             this.props.node.deselect();
-            if (this.props.isEdgePending) {
+            if (this.props.isEdgePending) { 
                 // this.stopPendingEdge(); todo
                 return;
             }
@@ -842,12 +843,14 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         const edgePendingSource = this.props.isEdgePending?.source;
         console.log('mousedown select() check PRE:', {e, name: this.props.data?.name, isSelected: this.props.node.isSelected(), 'nodeIsSelectedMapProxy': this.props.node?.isSelected, nodeIsSelectedRaw:this.props.node?.__raw.isSelected});
 
-        if (edgePendingSource) {
+        if (edgePendingSource) { 
+            
             if (this.props.data?.className !== "DClass") return;
             // const user = this.props.isEdgePending.user;
             const extendError: {reason: string, allTargetSuperClasses: LClass[]} = {reason: '', allTargetSuperClasses: []}
             const canBeExtend = this.props.data && edgePendingSource.canExtend(this.props.data as any as LClass, extendError);
             if (canBeExtend && this.props.data) {
+                setProjectModified();
                 const lClass: LClass = LPointerTargetable.from(this.props.data.id);
                 // SetFieldAction.new(lClass.id, "extendedBy", source.id, "", true); // todo: this should throw a error for wrong type.
                 // todo: use source.addExtends(lClass); or something (source is LClass)

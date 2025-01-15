@@ -10,6 +10,16 @@ import {icon} from './icons/Icons';
 import {Btn, CommandBar, Sep} from '../../components/commandbar/CommandBar';
 import { int } from '../../joiner/types';
 
+import { 
+    VscLock as Lock,
+    VscUnlock as UnLock,
+    VscBroadcast as Share
+} from "react-icons/vsc";
+
+import { SlShare as Share2 } from "react-icons/sl";
+import { Tooltip } from '../../components/forEndUser/Tooltip';
+
+
 
 type Props = {
     data: LProject;
@@ -64,7 +74,7 @@ function Project(props: Props): JSX.Element {
 
     const Empty = (props: ProjectProps) => {
         return (<>
-            {props.project.metamodelsNumber == 0 && props.project.modelsNumber == 0 && <><i title="empty project" className="bi bi-exclamation-circle"></i> <span>Empty project</span></>}
+            {props.project.metamodelsNumber == 0 && props.project.modelsNumber == 0 && <><i title="empty project" className="bi bi-exclamation-circle"></i> <span>Empty</span></>}
             {/* {props.project.metamodels.length == 0 && props.project.models.length != 0 && <i style={{float: 'left'}} title="no models" className="bi bi-circle-half"></i>}
             {props.project.metamodels.length != 0 && props.project.models.length != 0 && <i style={{float: 'left'}} title="artifacts present" className="bi bi-circle-fill"></i>}*/}
         </>);
@@ -97,7 +107,9 @@ function Project(props: Props): JSX.Element {
                 <div className="project-actions d-flex" style={{position: 'absolute', top: 10, right: 5}}>
                     {data.isFavorite ? <i onClick={(e) => toggleFavorite(data)} className="bi bi-star-fill" />
                         :
-                        <i onClick={(e) => toggleFavorite(data)} className="bi bi-star" />}
+                        <i onClick={(e) => toggleFavorite(data)} className="bi bi-star" />
+                    }
+                    
                     <Menu>
                             <Item icon={icon['new']} keystroke={'<i class="bi bi-command"></i>'} action={e => selectProject()}>Open</Item>
                             <Item icon={icon['duplicate']}>Duplicate</Item>
@@ -109,15 +121,23 @@ function Project(props: Props): JSX.Element {
                     </Menu>
                 </div>
                 <div className='header'>
-                    <h5 className={'d-block'} style={{cursor: 'pointer'}} onClick={e => selectProject()}>{data.name}</h5>
-                    <label className={'d-block'}><i className="bi bi-clock"></i> Edited {Math.floor((data.lastModified - data.creation) / (3600 * 1000))} hours ago
-                    <Empty project={props.data}/></label>
+                    <h5 className={'d-block'} style={{cursor: 'pointer'}} onClick={e => selectProject()}>
+                        {data.name}
+                    </h5>
+                    <label className={'d-block'}>
+                        {data.type === 'public' && <Tooltip tooltip={'Public Project'} inline={true} position={'top'} offsetY={10}><UnLock style={{fontSize: '1.5em', marginBottom: '2px', marginRight: '8px', padding: '1.5px', borderRadius: '2px', border: '0px solid var(--color)', backgroundColor: '#B5C6E0', color: 'white' }}/></Tooltip>}
+                        {data.type === 'private' && <Tooltip tooltip={'Private Project'} inline={true} position={'top'} offsetY={10}><Lock style={{fontSize: '1.5em', marginBottom: '2px', marginRight: '8px', padding: '1.5px', borderRadius: '2px', border: '0px solid var(--color)', backgroundColor: '#B5C6E0', color: 'white' }}/></Tooltip>} 
+                        {data.type === 'collaborative' && <Tooltip tooltip={'Collaborative Project'} inline={true} position={'top'} offsetY={10}><Share2 style={{fontSize: '1.5em', marginBottom: '2px', marginRight: '8px', padding: '3px', borderRadius: '2px', border: '0px solid var(--color)', backgroundColor: '#B5C6E0', color: 'white' }}/></Tooltip>} 
+                        <i className="bi bi-clock"></i> Edited {Math.floor((data.lastModified - data.creation) / (3600 * 1000))} hours ago
+                        <Empty project={props.data}/>
+                    </label>
                 </div>
-
+                    
                 <Meter project={data}></Meter>
 
                 <div className={'tag'}>
                     <div>
+                        
                         {/* <i className="bi bi-files"></i> {props.data.metamodels.length} metamodel(s), {props.data.models.length} model(s)<br/>
                         <i className="bi bi-file-code"></i> {props.data.viewpoints.length-1} viewpoint(s)*/}
                     </div>

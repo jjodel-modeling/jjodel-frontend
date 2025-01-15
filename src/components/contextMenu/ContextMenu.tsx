@@ -158,10 +158,12 @@ function ContextMenuComponent(props: AllProps) {
         }
 
         /* Extend */
+
         switch (ddata.className) {
+
             default:
             case undefined: break;
-            case 'DValue': if ((ldata as any as LValue).instanceof) jsxList.pop(); break;
+            case 'DValue': if ((ldata as any as LValue).instanceof) jsxList.pop();break;
             case 'DClass':
                 jsxList.push(<div onClick={() => {
                     close();
@@ -169,10 +171,12 @@ function ContextMenuComponent(props: AllProps) {
                 }} className={'col item'}>{icon['extend']} Extend<div><i
                     className='bi bi-command'></i> E</div></div>);
                 jsxList.push(<hr className={'my-1'} />);
+                
                 break;
         }
 
         /* Deselect */
+
         jsxList.push(<div onClick={() => {
             close();
             SetRootFieldAction.new(`selected.${DUser.current}`, '', '', false);
@@ -181,7 +185,9 @@ function ContextMenuComponent(props: AllProps) {
 
         
         /* Delete */
-        jsxList.push(<div onClick={() => {
+        
+        jsxList.push(<div onClick={() => { 
+            setProjectModified();
             close();
             console.log('delete ctxmenu', {data, node});
             if (ldata) ldata.delete();
