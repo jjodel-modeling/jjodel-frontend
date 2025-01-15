@@ -18,6 +18,7 @@ function DialogComponent(props: AllProps) {
     };
 
     function confirm(e: any) {
+        
         if (windoww.dialog_action) {
             windoww.dialog_action(); 
             windoww.dialog_action = null;
@@ -70,7 +71,6 @@ function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     let pieces = dialog.split(':');
     ret.message = pieces[0];
     ret.label = pieces[1];
-    ret.response = state.dialog_response === 'true';
 
     return ret;
 }

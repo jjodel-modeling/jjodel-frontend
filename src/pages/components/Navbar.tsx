@@ -229,6 +229,12 @@ function NavbarComponent(props: AllProps) {
                         SetRootFieldAction.new('collaborativeSession', false);
                         U.resetState();
                     }); 
+                } else {
+                    navigate('/allProjects');
+                    Collaborative.client.off('pullAction');
+                    Collaborative.client.disconnect();
+                    SetRootFieldAction.new('collaborativeSession', false);
+                    U.resetState();
                 }
                 
                 
@@ -373,8 +379,12 @@ function NavbarComponent(props: AllProps) {
                                 navigate('/auth');
                                 unsetProjectModified();
                                 AuthApi.logout();
-                            });
-                        }}}>Logout</Item>
+                            });} else {
+                                navigate('/auth');
+                                unsetProjectModified();
+                                await AuthApi.logout();
+                            }
+                        }}>Logout</Item>
                     </Menu>
                 </div>
             </div>
