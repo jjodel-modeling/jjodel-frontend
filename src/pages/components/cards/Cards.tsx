@@ -6,7 +6,7 @@ type CardsType = {
     children: any;
 };
 
-export const Cards = (props: CardsType): any => {
+export const Cards = (props: CardsProps): any => {
     return (
         <React.Fragment>
             <div className='mb-5 commandbar'>
@@ -16,15 +16,16 @@ export const Cards = (props: CardsType): any => {
     );
 }
 
-type CardType = {
+type CardProps = {
     icon: "add" | "import" | "question" | "gettingstarted" | "alexa";
-    style?: "ottanio" | "red" | "dark" | "blue" | "clear" | "rainbow" | "red-orange" | "default";
+    style?: "ottanio" | "red" | "dark" | "blue" | "clear" | "rainbow" | "red-orange" | "yellow" | "green" | "gray" | "light-green" | "azure" | "orange-yellow" | "dark-blue" | "default";
     title: string;
     subtitle: string;
     action?: MouseEventHandler;
+    url?: string;
 };
 
-export const Card = (props: CardType) => {
+export const Card = (props: CardProps) => {
 
     const icons = {
         add: "bi-plus-circle",
@@ -39,7 +40,14 @@ export const Card = (props: CardType) => {
                 <div className={'col icon'}>
                     {props.action ?
                         <i onClick={props.action} className={`bi ${icons[props.icon]}`}></i> :
-                        <i className={`bi ${icons[props.icon]} disabled`}></i>
+                            props.url ?
+                                <i onClick={() => {
+                                    window.open(
+                                        props.url,
+                                        '_blank' // <- This is what makes it open in a new window.
+                                      );
+                                }} className={`bi ${icons[props.icon]}`}></i> :
+                            <i className={`bi ${icons[props.icon]} disabled`}></i>
                     }
                 </div>
                 <div className={'col body'}>

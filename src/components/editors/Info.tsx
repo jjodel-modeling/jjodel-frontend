@@ -63,6 +63,7 @@ class builder {
                 <MultiSelect isMulti={true} options={multiselectOptions as any} value={multiselectValue} onChange={(v) => {
                     console.log('setting model dependencies', v);
                     l.dependencies = v.map(e => e.value) as Any<string[]>;
+                    setProjectModified();
                 }} />
             </label>
         </section>);

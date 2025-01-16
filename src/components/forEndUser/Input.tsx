@@ -465,6 +465,7 @@ export interface InputOwnProps {
     tag?: string;
     children?: ReactNode;
     changeMonitor?: boolean;
+    onChange?: () => {};
 }
 
 export interface SelectOwnProps extends Omit<InputOwnProps, 'setter'> {

@@ -18,6 +18,7 @@ import {
 
 import { SlShare as Share2 } from "react-icons/sl";
 import { Tooltip } from '../../components/forEndUser/Tooltip';
+import { TbHexagonLetterJ as Logo} from "react-icons/tb";
 
 
 
@@ -90,6 +91,7 @@ function Project(props: Props): JSX.Element {
             const mm_length = Math.round(90/length*props.project.metamodelsNumber);
             const m_length = Math.round(90/length*props.project.modelsNumber);
             const vp_length = Math.round(90/length*props.project.viewpointsNumber);
+            
             return (<>
 
                     <div className={'meter'} style={{width: '90%'}}>
@@ -101,9 +103,10 @@ function Project(props: Props): JSX.Element {
              </>);
         };
 
-        return (<>
 
-            <div className={'project-card'}>
+        return (
+
+            <div className={`project-card-v2 ${data.type}`}>
                 <div className="project-actions d-flex" style={{position: 'absolute', top: 10, right: 5}}>
                     {data.isFavorite ? <i onClick={(e) => toggleFavorite(data)} className="bi bi-star-fill" />
                         :
@@ -121,32 +124,94 @@ function Project(props: Props): JSX.Element {
                     </Menu>
                 </div>
                 <div className='header'>
+                <Logo style={{fontSize: '2em', float: 'left', marginTop: '5px', marginBottom: '20px', marginRight: '10px'}}/>
                     <h5 className={'d-block'} style={{cursor: 'pointer'}} onClick={e => selectProject()}>
                         {data.name}
                     </h5>
-                    <label className={'d-block'}>
-                        {data.type === 'public' && <Tooltip tooltip={'Public Project'} inline={true} position={'top'} offsetY={10}><UnLock style={{fontSize: '1.5em', marginBottom: '2px', marginRight: '8px', padding: '1.5px', borderRadius: '2px', border: '0px solid var(--color)', backgroundColor: '#B5C6E0', color: 'white' }}/></Tooltip>}
-                        {data.type === 'private' && <Tooltip tooltip={'Private Project'} inline={true} position={'top'} offsetY={10}><Lock style={{fontSize: '1.5em', marginBottom: '2px', marginRight: '8px', padding: '1.5px', borderRadius: '2px', border: '0px solid var(--color)', backgroundColor: '#B5C6E0', color: 'white' }}/></Tooltip>} 
-                        {data.type === 'collaborative' && <Tooltip tooltip={'Collaborative Project'} inline={true} position={'top'} offsetY={10}><Share2 style={{fontSize: '1.5em', marginBottom: '2px', marginRight: '8px', padding: '3px', borderRadius: '2px', border: '0px solid var(--color)', backgroundColor: '#B5C6E0', color: 'white' }}/></Tooltip>} 
-                        <i className="bi bi-clock"></i> Edited {Math.floor((data.lastModified - data.creation) / (3600 * 1000))} hours ago
-                        <Empty project={props.data}/>
-                    </label>
-                </div>
-                    
-                <Meter project={data}></Meter>
-
-                <div className={'tag'}>
-                    <div>
+                    <p className={'description'}>{data.description}</p>
+                    <div className={'last-updated'}>
+                        <div className='date'><i className="bi bi-clock-history"></i> Last updated Jan 06, 2025</div>
                         
-                        {/* <i className="bi bi-files"></i> {props.data.metamodels.length} metamodel(s), {props.data.models.length} model(s)<br/>
-                        <i className="bi bi-file-code"></i> {props.data.viewpoints.length-1} viewpoint(s)*/}
-                    </div>
+                        <div className={'type'}>
+                            {data.type === 'public' && <UnLock style={{fontSize: '1.2em', color: 'var(--bg-4)'}}/>}
+                            {data.type === 'private' && <Lock  style={{fontSize: '1.2em', color: 'var(--bg-4)'}}/>} 
+                            {data.type === 'collaborative' && <Share2  style={{fontSize: '1.2em', color: 'var(--bg-4)'}}/>} 
+                        </div>
+                    </div>                   
                 </div>
-            </div>
-
-
-        </>);
+            </div>);
     }
+
+    /* ProjectCard Backup */
+
+    // function ProjectCard2(props: Props): JSX.Element {
+
+
+    //     const Meter = (props: ProjectProps) => {
+
+    //         const length = props.project.metamodelsNumber + props.project.modelsNumber + props.project.viewpointsNumber;
+    //         const unit = Math.round(90/length);
+    //         const mm_length = Math.round(90/length*props.project.metamodelsNumber);
+    //         const m_length = Math.round(90/length*props.project.modelsNumber);
+    //         const vp_length = Math.round(90/length*props.project.viewpointsNumber);
+            
+    //         return (<>
+
+    //                 <div className={'meter'} style={{width: '90%'}}>
+    //                     {Array.from(Array(props.project.viewpointsNumber)).map((m,i) => <div className={'artifact viewpoints'} style={{width: `${unit}%`}}>{i == props.project.viewpointsNumber - 1 && <span>VP</span>}</div>)}
+    //                     {Array.from(Array(props.project.modelsNumber)).map((m,i) => <div className={'artifact models'} style={{width: `${unit}%`}}>{i == props.project.modelsNumber - 1 && <span>M1</span>}</div>)}
+    //                     {Array.from(Array(props.project.metamodelsNumber)).map((m,i) => <div className={'artifact metamodels'} style={{width: `${unit}%`}}>{i == props.project.metamodelsNumber - 1 && <span>M2</span>}</div>)}
+    //                 </div>
+
+    //          </>);
+    //     };
+
+    //     return (<>
+
+    //         <div className={'project-card v2'}>
+    //             <div className="project-actions d-flex" style={{position: 'absolute', top: 10, right: 5}}>
+    //                 {data.isFavorite ? <i onClick={(e) => toggleFavorite(data)} className="bi bi-star-fill" />
+    //                     :
+    //                     <i onClick={(e) => toggleFavorite(data)} className="bi bi-star" />
+    //                 }
+                    
+    //                 <Menu>
+    //                         <Item icon={icon['new']} keystroke={'<i class="bi bi-command"></i>'} action={e => selectProject()}>Open</Item>
+    //                         <Item icon={icon['duplicate']}>Duplicate</Item>
+    //                         <Item icon={icon['download']} action={e => exportProject()}>Download</Item>
+    //                         <Divisor />
+    //                         <Item icon={icon['favorite']} action={(e => toggleFavorite(data))}>{!data.isFavorite ? 'Add to favorites' : 'Remove from favorites'}</Item>
+    //                         <Divisor />
+    //                         <Item icon={icon['delete']} action={async e => await deleteProject()}>Delete</Item>
+    //                 </Menu>
+    //             </div>
+    //             <div className='header'>
+    //                 <h5 className={'d-block'} style={{cursor: 'pointer'}} onClick={e => selectProject()}>
+    //                     {data.name}
+    //                 </h5>
+    //                 <label className={'d-block'}>
+    //                     {data.type === 'public' && <Tooltip tooltip={'Public Project'} inline={true} position={'top'} offsetY={10}><UnLock style={{fontSize: '1.5em', marginBottom: '2px', marginRight: '8px', padding: '1.5px', borderRadius: '2px', border: '0px solid var(--color)', backgroundColor: '#B5C6E0', color: 'white' }}/></Tooltip>}
+    //                     {data.type === 'private' && <Tooltip tooltip={'Private Project'} inline={true} position={'top'} offsetY={10}><Lock style={{fontSize: '1.5em', marginBottom: '2px', marginRight: '8px', padding: '1.5px', borderRadius: '2px', border: '0px solid var(--color)', backgroundColor: '#B5C6E0', color: 'white' }}/></Tooltip>} 
+    //                     {data.type === 'collaborative' && <Tooltip tooltip={'Collaborative Project'} inline={true} position={'top'} offsetY={10}><Share2 style={{fontSize: '1.5em', marginBottom: '2px', marginRight: '8px', padding: '3px', borderRadius: '2px', border: '0px solid var(--color)', backgroundColor: '#B5C6E0', color: 'white' }}/></Tooltip>} 
+    //                     <i className="bi bi-clock"></i> Edited {Math.floor((data.lastModified - data.creation) / (3600 * 1000))} hours ago
+    //                     <Empty project={props.data}/>
+    //                 </label>
+    //             </div>
+                    
+    //             <Meter project={data}></Meter>
+
+    //             <div className={'tag'}>
+    //                 <div>
+                        
+    //                     {/* <i className="bi bi-files"></i> {props.data.metamodels.length} metamodel(s), {props.data.models.length} model(s)<br/>
+    //                     <i className="bi bi-file-code"></i> {props.data.viewpoints.length-1} viewpoint(s)*/}
+    //                 </div>
+    //             </div>
+    //         </div>
+
+
+    //     </>);
+    // }
 
 
     /* LIST */

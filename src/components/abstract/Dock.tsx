@@ -11,9 +11,11 @@ import {PinnableDock, TabContent, TabHeader} from '../dock/MyRcDock';
 import ModelsSummaryTab from "./tabs/ModelsSummaryTab";
 import BrokerEditor from "../editors/Broker";
 import {PermissionModelTab} from "../editors/PermissionModelTab";
+import { isProjectModified } from '../../common/libraries/projectModified';
 //import MqttEditor from "../rightbar/mqtt/MqttEditor";
 //import NestedView from "../rightbar/nestedViewEditor/ViewEditorNestedVersion";
 //import CollaboratorsEditor from "../rightbar/collaboratorsEditor/CollaboratorsEditor";
+
 
 
 
