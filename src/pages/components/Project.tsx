@@ -105,7 +105,7 @@ function Project(props: Props): JSX.Element {
 
     function multiplicity(n: int, none: string, one: string, many: string){
         
-        if (n == 0) return n + ' ' + none;
+        if (n == 0) return  none;
         if (n == 1) return n + ' ' + one;
         if (n > 1) return n + ' ' + many;
         
@@ -122,7 +122,9 @@ function Project(props: Props): JSX.Element {
 
         return (
 
-            <Tooltip tooltip={`${multiplicity(props.data.metamodelsNumber,'no metamodels', 'metamodel', 'metamodels')}, ${multiplicity(props.data.modelsNumber,'no models', 'model', 'models')}, ${multiplicity(props.data.viewpointsNumber, 'no viewpoints', 'viewpoint', 'viewpoints')}` } position={'top'} offsetY={10} theme={'dark'} inline><div className={`project-card-v2 ${data.type}`} 
+            <Tooltip tooltip={`${props.data.type} project with ${multiplicity(props.data.metamodelsNumber,'no metamodels', 'metamodel', 'metamodels')}, 
+                ${multiplicity(props.data.modelsNumber,'no models', 'model', 'models')}, 
+                ${multiplicity(props.data.viewpointsNumber -2, 'no (custom) viewpoints', '(custom) viewpoint', '(custom) viewpoints')}` } position={'top'} offsetY={10} theme={'dark'} inline><div className={`project-card-v2 ${data.type}`} 
                 onClick={e => getClickedElement(e)}>
                 <div className="project-actions d-flex" style={{position: 'absolute', top: 10, right: 5}}>
                     {data.isFavorite ? <i onClick={(e) => toggleFavorite(data)} className="bi bi-star-fill" />
