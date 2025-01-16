@@ -103,12 +103,42 @@ project-card .tip {
   }
 }
 
+.project-card-v2:hover {
+  cursor: pointer;
+  background-color: var(--color)!important;
+  border-left: 4px solid var(--bg-3)!important;
+  border: 1px solid var(--color);
+  color: white;
+
+  & p.description {
+    color: white;
+  }
+
+  & .date {
+    color: white;
+  }
+
+  & .bi {
+    color: white;
+  }
+
+  & svg {
+    color: white;
+  }
+
+  & .type-icon {
+    fill: white;
+  }
+}
+
+
 .project-card-v2 {
   position: relative;
   width: 23em;
   height: 120px;
   border-radius: 4px;
   background-color: var(--bg-2)!important;
+  transition: background-color 0.3s;
   background:none;
   
   border: 1px solid var(--bg-2-5);
@@ -164,9 +194,6 @@ project-card .tip {
   border-left: 4px solid #FF0D7A;
 }
 
-project-card-v2:hover {
-  cursor: pointer;
-}
 
 .project-card .meter {
   margin-left: 0;

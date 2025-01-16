@@ -103,10 +103,27 @@ function Project(props: Props): JSX.Element {
              </>);
         };
 
+    function multiplicity(n: int, none: string, one: string, many: string){
+        
+        if (n == 0) return n + ' ' + none;
+        if (n == 1) return n + ' ' + one;
+        if (n > 1) return n + ' ' + many;
+        
+    }
+
+    function getClickedElement(e: any){
+
+        if(e.target.className === 'bi bi-star-fill' || e.target.className === 'bi bi-star' || e.target.className === 'bi bi-chevron-down' || e.target.className === 'item') {
+            return;
+        } else {
+            selectProject(); 
+        }
+    }
 
         return (
 
-            <div className={`project-card-v2 ${data.type}`}>
+            <Tooltip tooltip={`${multiplicity(props.data.metamodelsNumber,'no metamodels', 'metamodel', 'metamodels')}, ${multiplicity(props.data.modelsNumber,'no models', 'model', 'models')}, ${multiplicity(props.data.viewpointsNumber, 'no viewpoints', 'viewpoint', 'viewpoints')}` } position={'top'} offsetY={10} theme={'dark'} inline><div className={`project-card-v2 ${data.type}`} 
+                onClick={e => getClickedElement(e)}>
                 <div className="project-actions d-flex" style={{position: 'absolute', top: 10, right: 5}}>
                     {data.isFavorite ? <i onClick={(e) => toggleFavorite(data)} className="bi bi-star-fill" />
                         :
@@ -114,7 +131,7 @@ function Project(props: Props): JSX.Element {
                     }
                     
                     <Menu>
-                            <Item icon={icon['new']} keystroke={'<i class="bi bi-command"></i>'} action={e => selectProject()}>Open</Item>
+                            <Item icon={icon['new']} keystroke={'<i class="bi bi-command"></i>'} action={e => {selectProject()}}>Open</Item>
                             <Item icon={icon['duplicate']}>Duplicate</Item>
                             <Item icon={icon['download']} action={e => exportProject()}>Download</Item>
                             <Divisor />
@@ -133,13 +150,13 @@ function Project(props: Props): JSX.Element {
                         <div className='date'><i className="bi bi-clock-history"></i> Last updated Jan 06, 2025</div>
                         
                         <div className={'type'}>
-                            {data.type === 'public' && <UnLock style={{fontSize: '1.2em', color: 'var(--bg-4)'}}/>}
-                            {data.type === 'private' && <Lock  style={{fontSize: '1.2em', color: 'var(--bg-4)'}}/>} 
-                            {data.type === 'collaborative' && <Share2  style={{fontSize: '1.2em', color: 'var(--bg-4)'}}/>} 
+                            {data.type === 'public' && <UnLock className={'type-icon'} style={{fontSize: '1.2em', color: 'var(--bg-4)'}}/>}
+                            {data.type === 'private' && <Lock  className={'type-icon'} style={{fontSize: '1.2em', color: 'var(--bg-4)'}}/>} 
+                            {data.type === 'collaborative' && <Share2 className={'type-icon'} style={{fontSize: '1.2em', color: 'var(--bg-4)'}}/>} 
                         </div>
                     </div>                   
                 </div>
-            </div>);
+            </div></Tooltip>);
     }
 
     /* ProjectCard Backup */
