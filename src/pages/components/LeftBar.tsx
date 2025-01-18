@@ -10,6 +10,7 @@ import Collaborative from "../../components/collaborative/Collaborative";
 import {ProjectsApi} from "../../api/persistance";
 import storage from "../../data/storage";
 import { isProjectModified } from '../../common/libraries/projectModified';
+import { Tooltip } from '../../components/forEndUser/Tooltip';
 
 interface StateProps {
     projects: LProject[];
@@ -120,6 +121,8 @@ function LeftBar(props: LeftBarProps): JSX.Element {
         }
     }
 
+    
+
     return(<>
 
         {active === 'Project' ?
@@ -177,6 +180,14 @@ function LeftBar(props: LeftBarProps): JSX.Element {
                 {props.projects && props.projects.filter(p => p.isFavorite).length > 0 &&
                     <Menu title={"Starred"} mode={'collapsable'}>
                         {props.projects.filter(p => p.isFavorite).map(p => <Item icon={icon['folder']} action={e => selectProject(p)}>{p.name}</Item>)}
+                    </Menu>
+                }
+                {props.projects && props.projects.filter(p => p.isFavorite).length > 0 &&
+                    <Menu title={"Recent"} mode={'collapsable'}>
+                        {props.projects
+                            .sort((a,b) => (b.lastModified < a.lastModified) ?  1 : -1)
+                            .slice(0,5)
+                            .map(p => <Item icon={icon['folder']} action={e => selectProject(p)}>{p.name}</Item>)}
                     </Menu>
                 }
                 {/* <Menu>

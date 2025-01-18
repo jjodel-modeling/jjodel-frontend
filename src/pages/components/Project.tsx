@@ -19,7 +19,31 @@ import {
 import { SlShare as Share2 } from "react-icons/sl";
 import { Tooltip } from '../../components/forEndUser/Tooltip';
 import { TbHexagonLetterJ as Logo} from "react-icons/tb";
+import { time } from 'console';
 
+
+function formatDate(lastModified: number){
+    
+    let timeago = Date.now() - lastModified;
+    let timeunit: string;
+    let sec = 1000;
+    let min = sec*60;
+    let hr = min*60;
+    let day = hr*24;
+    let week = day*7;
+    let month = day*24;
+    let year = day*365;
+
+    if (timeago < min) { timeago /= sec; timeunit = 'seconds'; }
+    else if (timeago >= min && timeago < hr) { timeago /= min; timeunit = 'minutes'; }
+    else if (timeago >= hr && timeago < day) { timeago /= hr; timeunit = 'hours'; }
+    else if (timeago >= day && timeago < week) { timeago /= day; timeunit = 'days'; }
+    else if (timeago >= week && timeago < month) { timeago /= week; timeunit = 'weeks'; }
+    else if (timeago >= month && timeago < year) { timeago /= month; timeunit = 'months'; }
+    else { timeago/= min; timeunit = 'years'; }
+
+    return Math.round(timeago) + ' ' + timeunit + ' ago';
+}
 
 
 type Props = {
@@ -84,24 +108,24 @@ function Project(props: Props): JSX.Element {
     function ProjectCard(props: Props): JSX.Element {
 
 
-        const Meter = (props: ProjectProps) => {
+        // const Meter = (props: ProjectProps) => {
 
-            const length = props.project.metamodelsNumber + props.project.modelsNumber + props.project.viewpointsNumber;
-            const unit = Math.round(90/length);
-            const mm_length = Math.round(90/length*props.project.metamodelsNumber);
-            const m_length = Math.round(90/length*props.project.modelsNumber);
-            const vp_length = Math.round(90/length*props.project.viewpointsNumber);
+        //     const length = props.project.metamodelsNumber + props.project.modelsNumber + props.project.viewpointsNumber;
+        //     const unit = Math.round(90/length);
+        //     const mm_length = Math.round(90/length*props.project.metamodelsNumber);
+        //     const m_length = Math.round(90/length*props.project.modelsNumber);
+        //     const vp_length = Math.round(90/length*props.project.viewpointsNumber);
             
-            return (<>
+        //     return (<>
 
-                    <div className={'meter'} style={{width: '90%'}}>
-                        {Array.from(Array(props.project.viewpointsNumber)).map((m,i) => <div className={'artifact viewpoints'} style={{width: `${unit}%`}}>{i == props.project.viewpointsNumber - 1 && <span>VP</span>}</div>)}
-                        {Array.from(Array(props.project.modelsNumber)).map((m,i) => <div className={'artifact models'} style={{width: `${unit}%`}}>{i == props.project.modelsNumber - 1 && <span>M1</span>}</div>)}
-                        {Array.from(Array(props.project.metamodelsNumber)).map((m,i) => <div className={'artifact metamodels'} style={{width: `${unit}%`}}>{i == props.project.metamodelsNumber - 1 && <span>M2</span>}</div>)}
-                    </div>
+        //             <div className={'meter'} style={{width: '90%'}}>
+        //                 {Array.from(Array(props.project.viewpointsNumber)).map((m,i) => <div className={'artifact viewpoints'} style={{width: `${unit}%`}}>{i == props.project.viewpointsNumber - 1 && <span>VP</span>}</div>)}
+        //                 {Array.from(Array(props.project.modelsNumber)).map((m,i) => <div className={'artifact models'} style={{width: `${unit}%`}}>{i == props.project.modelsNumber - 1 && <span>M1</span>}</div>)}
+        //                 {Array.from(Array(props.project.metamodelsNumber)).map((m,i) => <div className={'artifact metamodels'} style={{width: `${unit}%`}}>{i == props.project.metamodelsNumber - 1 && <span>M2</span>}</div>)}
+        //             </div>
 
-             </>);
-        };
+        //      </>);
+        // };
 
     function multiplicity(n: int, none: string, one: string, many: string){
         
@@ -120,45 +144,45 @@ function Project(props: Props): JSX.Element {
         }
     }
 
-        return (
+    return (
 
-            <Tooltip tooltip={`${props.data.type} project with ${multiplicity(props.data.metamodelsNumber,'no metamodels', 'metamodel', 'metamodels')}, 
-                ${multiplicity(props.data.modelsNumber,'no models', 'model', 'models')}, 
-                ${multiplicity(props.data.viewpointsNumber -2, 'no (custom) viewpoints', '(custom) viewpoint', '(custom) viewpoints')}` } position={'top'} offsetY={10} theme={'dark'} inline><div className={`project-card-v2 ${data.type}`} 
-                onClick={e => getClickedElement(e)}>
-                <div className="project-actions d-flex" style={{position: 'absolute', top: 10, right: 5}}>
-                    {data.isFavorite ? <i onClick={(e) => toggleFavorite(data)} className="bi bi-star-fill" />
-                        :
-                        <i onClick={(e) => toggleFavorite(data)} className="bi bi-star" />
-                    }
+        <Tooltip tooltip={`${props.data.type} project with ${multiplicity(props.data.metamodelsNumber,'no metamodels', 'metamodel', 'metamodels')}, 
+            ${multiplicity(props.data.modelsNumber,'no models', 'model', 'models')}, 
+            ${multiplicity(props.data.viewpointsNumber -2, 'no (custom) viewpoints', '(custom) viewpoint', '(custom) viewpoints')}` } position={'top'} offsetY={10} theme={'dark'} inline><div className={`project-card-v2 ${data.type}`} 
+            onClick={e => getClickedElement(e)}>
+            <div className="project-actions d-flex" style={{position: 'absolute', top: 10, right: 5}}>
+                {data.isFavorite ? <i onClick={(e) => toggleFavorite(data)} className="bi bi-star-fill" />
+                    :
+                    <i onClick={(e) => toggleFavorite(data)} className="bi bi-star" />
+                }
+                
+                <Menu>
+                        <Item icon={icon['new']} keystroke={'<i class="bi bi-command"></i>'} action={e => {selectProject()}}>Open</Item>
+                        <Item icon={icon['duplicate']}>Duplicate</Item>
+                        <Item icon={icon['download']} action={e => exportProject()}>Download</Item>
+                        <Divisor />
+                        <Item icon={icon['favorite']} action={(e => toggleFavorite(data))}>{!data.isFavorite ? 'Add to favorites' : 'Remove from favorites'}</Item>
+                        <Divisor />
+                        <Item icon={icon['delete']} action={async e => await deleteProject()}>Delete</Item>
+                </Menu>
+            </div>
+            <div className='header'>
+            <Logo style={{fontSize: '2em', float: 'left', marginTop: '0px', marginBottom: '20px', marginRight: '10px'}}/>
+                <h5 className={'d-block'} style={{cursor: 'pointer'}} onClick={e => selectProject()}>
+                    {data.name}
+                </h5>
+                <p className={'description'}>{data.description}</p>
+                <div className={'last-updated'}>
+                    <div className='date'><i className="bi bi-clock-history"></i> Last updated {formatDate(data.lastModified)}</div>
                     
-                    <Menu>
-                            <Item icon={icon['new']} keystroke={'<i class="bi bi-command"></i>'} action={e => {selectProject()}}>Open</Item>
-                            <Item icon={icon['duplicate']}>Duplicate</Item>
-                            <Item icon={icon['download']} action={e => exportProject()}>Download</Item>
-                            <Divisor />
-                            <Item icon={icon['favorite']} action={(e => toggleFavorite(data))}>{!data.isFavorite ? 'Add to favorites' : 'Remove from favorites'}</Item>
-                            <Divisor />
-                            <Item icon={icon['delete']} action={async e => await deleteProject()}>Delete</Item>
-                    </Menu>
-                </div>
-                <div className='header'>
-                <Logo style={{fontSize: '2em', float: 'left', marginTop: '5px', marginBottom: '20px', marginRight: '10px'}}/>
-                    <h5 className={'d-block'} style={{cursor: 'pointer'}} onClick={e => selectProject()}>
-                        {data.name}
-                    </h5>
-                    <p className={'description'}>{data.description}</p>
-                    <div className={'last-updated'}>
-                        <div className='date'><i className="bi bi-clock-history"></i> Last updated Jan 06, 2025</div>
-                        
-                        <div className={'type'}>
-                            {data.type === 'public' && <UnLock className={'type-icon'} style={{fontSize: '1.2em', color: 'var(--bg-4)'}}/>}
-                            {data.type === 'private' && <Lock  className={'type-icon'} style={{fontSize: '1.2em', color: 'var(--bg-4)'}}/>} 
-                            {data.type === 'collaborative' && <Share2 className={'type-icon'} style={{fontSize: '1.2em', color: 'var(--bg-4)'}}/>} 
-                        </div>
-                    </div>                   
-                </div>
-            </div></Tooltip>);
+                    <div className={'type'}>
+                        {data.type === 'public' && <UnLock className={'type-icon'} style={{fontSize: '1.2em', color: 'var(--bg-4)'}}/>}
+                        {data.type === 'private' && <Lock  className={'type-icon'} style={{fontSize: '1.2em', color: 'var(--bg-4)'}}/>} 
+                        {data.type === 'collaborative' && <Share2 className={'type-icon'} style={{fontSize: '1.2em', color: 'var(--bg-4)'}}/>} 
+                    </div>
+                </div>                   
+            </div>
+        </div></Tooltip>);
     }
 
     /* ProjectCard Backup */
@@ -246,6 +270,7 @@ function Project(props: Props): JSX.Element {
         let week = day*7;
         let month = day*24;
         let year = day*365;
+
         if (timeago < min) { timeago /= sec; timeunit = 'seconds'; }
         else if (timeago >= min && timeago < hr) { timeago /= min; timeunit = 'minutes'; }
         else if (timeago >= hr && timeago < day) { timeago /= hr; timeunit = 'hours'; }
