@@ -167,7 +167,7 @@ project-card .tip {
 
   & div.last-updated {
     position: absolute;
-    bottom: 0px;
+    bottom: 6px;
     width: calc(100% - 20px);
     color: var(--bg-4);
     padding-left: 35px;
@@ -184,13 +184,13 @@ project-card .tip {
   } 
 }
 
-.project-card-v2.collaborative {
+.project-card-v2.collaborative, .collaborative {
   border-left: 4px solid #F4B800;
 }
-.project-card-v2.public {
+.project-card-v2.public, .public {
   border-left: 4px solid #0C7E8B;
 }
-.project-card-v2.private {
+.project-card-v2.private, .private {
   border-left: 4px solid #FF0D7A;
 }
 
