@@ -31,7 +31,6 @@ import DockManager from "../../../src/components/abstract/DockManager";
 
 import {Divisor, Item, Menu} from '../components/menu/Menu';
 import {InternalToggle} from '../../components/widgets/Widgets';
-import jj from '../../static/img/jj-k.png';
 import Storage from '../../data/storage';
 import Collaborative from "../../components/collaborative/Collaborative";
 import { isProjectModified, setProjectModified, unsetProjectModified } from '../../common/libraries/projectModified';
@@ -273,9 +272,7 @@ function NavbarComponent(props: AllProps) {
                 await ProjectsApi.save(project); 
             }, keystroke: [Key.cmd, 'S']},
 
-            /* ----- */
-
-            {name: 'divisor', function: () => {}, keystroke: []},
+            
             
             /* Download */ 
             
@@ -384,6 +381,7 @@ function NavbarComponent(props: AllProps) {
                        style={{fontSize:'1.25em'}}
                        setter={(v) => {
                            SetRootFieldAction.new('advanced', v);
+                           windoww.advanced = v;
                        }}
                        getter={() => props.advanced}/>
             </>

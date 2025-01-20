@@ -93,10 +93,10 @@
 
 
 .dashboard-container .project-list {
-  max-width: 1100px;
-  min-width: 650px;
+  max-width: 1340px;
+  // height: 100%;
   flex-grow: 1;
-  margin-left: 0px;
+  padding-bottom: 40px;
 
   .buttons{
     width: fit-content;
@@ -165,7 +165,7 @@
 
   & .legenda {
     margin-top: 80px;
-    width: calc(100%);
+    width: calc(100% - 20px);
     background-color: var(--bg-2);
     border-radius: var(--radius);
     padding: 10px;

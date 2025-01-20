@@ -40,7 +40,7 @@ const Catalog = (props: ChildrenType) => {
 
     const Header = (props: ChildrenType) => {
         return (
-            <div className='row catalog-header'>
+            <div className='row catalog-header' style={{maxWidth: '1250px'}}>
                 {props.children}
             </div>
         );
@@ -147,7 +147,7 @@ const Catalog = (props: ChildrenType) => {
             :
                 /* list mode */
 
-                <div className={'row project-list'} style={{marginRight: '35%'}}>
+                <div className={'row project-list'}>
                     <div className='row header'>
                         <div className={'col-4'}>Name</div>
                         <div className={'col-1'}>Type</div>

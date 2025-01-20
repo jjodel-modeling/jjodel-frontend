@@ -2,7 +2,7 @@ import './style.scss';
 import {Dispatch, ReactElement} from 'react';
 import {connect} from 'react-redux';
 import {DState, DUser, LProject, LUser} from '../../joiner';
-import {FakeStateProps} from '../../joiner/types';
+import {FakeStateProps, windoww} from '../../joiner/types';
 import {LayoutData} from 'rc-dock';
 import {Collaborative, Console, Info, Logger, Skeleton, MetaData, NestedView} from "../editors";
 import {NodeEditor} from "../editors/NodeEditor";
@@ -41,10 +41,13 @@ function DockComponent(props: AllProps) {
     /* Models */
     // const ModelsSummary = {id: id(), title: <TabHeader tid={tid()}><JLogo style={{marginLeft: '-10px', fontSize: '1.5rem', paddingRight: '6px'}}/> Summary</TabHeader>, group: 'models', closable: false, content: <TabContent tid={tid()}><ModelsSummaryTab /></TabContent>};
 
-    const ModelsSummary = {id: id(), title: <TabHeader tid={tid()}><Logo type={1} style={{marginLeft: '-10px', fontSize: '1.5rem', paddingRight: '6px'}}/> {user?.project?.name}</TabHeader>, group: 'models', closable: false, content: <TabContent tid={tid()}><ModelsSummaryTab /></TabContent>};
+    const ModelsSummary = {id: id(), title: <TabHeader tid={tid()}><Logo style={{marginLeft: '-10px', fontSize: '1.5rem', paddingRight: '6px'}}/> {user?.project?.name}</TabHeader>, group: 'models', closable: false, content: <TabContent tid={tid()}><ModelsSummaryTab /></TabContent>};
 
 
     /* Editors */
+
+    let advanced:boolean = windoww.advanced;
+    
     //const test = {id: id(), title: 'Test', group: 'editors', closable: false, content: <TestTab />};
     const structure = {id: id(), title: <TabHeader tid={tid()}>Properties</TabHeader>, group: 'editors', closable: false, content: <TabContent tid={tid()}><Info /></TabContent>};
     const metadata = {id: id(), title: <TabHeader tid={tid()}>Metadata</TabHeader>, group: 'editors', closable: false, content: <TabContent tid={tid()}><MetaData /></TabContent>};
@@ -62,19 +65,28 @@ function DockComponent(props: AllProps) {
 
     const layout: LayoutData = {dockbox: {mode: 'horizontal', children: []}};
     layout.dockbox.children.push({tabs: [ModelsSummary]});
-    const tabs = [
+    const tabs2 = [
         structure,
         // metadata,
         tree,
         views,
         // mqtt,
-        broker,
+        // broker,
         node,
         console,
         logger,
     ];
+    const tabs = [];
+    tabs.push(structure);
+    tabs.push(tree);
+    tabs.push(views);
+    if (advanced) {tabs.push(broker)};
+    tabs.push(node);
+    tabs.push(console);
+    if (advanced) tabs.push(logger);
+
     if (user?.project?.type === 'collaborative') tabs.push(collaborative);
-    if (true || user?.project?.type === 'collaborative') tabs.push(permissions);
+    if (false && user?.project?.type === 'collaborative') tabs.push(permissions);
     layout.dockbox.children.push({tabs});
 
     return (<PinnableDock ref={dock => DockManager.dock = dock} defaultLayout={layout} groups={groups} />);

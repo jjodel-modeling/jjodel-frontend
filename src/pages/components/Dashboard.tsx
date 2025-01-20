@@ -155,7 +155,7 @@ const Title = (props: TitleProps) => {
     return (<>
         <div className={'title'}>
             {props.active === 'Project' ?
-                <div className={'name project-list'}>
+                <div className={'project-list'}> {/* name */}
                     {editTitle ?
                         <h2>
                             <div>
@@ -211,7 +211,7 @@ const Title = (props: TitleProps) => {
                     
                 </div>
                 :
-                <div className={'name'}>
+                <div className={'header'}>
                     <h2>{props.icon} {props.title}</h2>
                     {props.description && <h3>{props.description}</h3>}
                 </div>
@@ -370,7 +370,7 @@ function ProjectCatalog(props: ProjectProps) {
             {project.viewpoints.map(vp =>
                 <div className="row data viewpoint">
                     <div className={'col-4'}>{vp.isOverlay ? <TbSquareRoundedLetterVFilled style={{fontSize: '1.5em'}}/> : <TbSquareRoundedLetterV style={{fontSize: '1.5em'}}/>} {vp.name}</div>
-                    <div className={'col-2 artifact-type'}>Viewpoints</div>
+                    <div className={'col-2 artifact-type'}>Viewpoint</div>
                     <div className={'buttons'}>
                         <CommandBar noBorder={true} style={{marginBottom: '0'}}>
                             <Btn icon={'open'} tip={'Open viewpoint'} disabled={true}/>

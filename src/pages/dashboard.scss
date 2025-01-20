@@ -6,44 +6,94 @@
 }
 
 
-.dashboard-container{
-  .dash-content{
-    flex-grow: 1;
+.dashboard-container { 
+  width: 100%!important;
+  display: flex;
+  justify-content: center;
+  container-type: inline-size;
+
+  .dash-content {
+    background-color: white;
+
     display: flex;
     flex-flow: column;
+    top: 20%;
+
+    // border: 1px solid red;
+    border-radius: 10px;
+    max-width: 1330px;
+    max-height: fit-content;
+    padding: 40px;
+    
+    margin-left: auto;
+    margin-right: auto;
+
+
     .name{
       margin: auto;
     }
     .catalog-header{
       margin-bottom: 1rem;
-      // margin-bottom: auto;
-      // padding-bottom: 1rem;
     }
     .catalog{
-      overflow: hidden;
+      overflow: visible; 
+      max-height: min-content;
+
       &:has(.project-list){
         height: 100%;
+        width: 100%;
       }
       .details{
+        
         height: min-content;
         position: absolute; // because contextmenu must go above it
-        right: 42.5px;
+        right: 30px;
+
       }
       .card-holder{
         overflow-y: auto;
-        //padding-right: 253px; // space for details image
-        max-width: 1250px;
+        max-width: 1300px;
 
       }
       .row.project-list{ // list visualization of projects
-        overflow-y: auto;
+
+        width: 100%!important;
         overflow-x: hidden;
-        display: flex;
-        flex-flow: column;
+        margin-right: 0;
+
       }
     }
   }
 }
+
+
+@container (width < 2000px) {
+  .dashboard-container .dash-content .catalog .details, .dashboard-container .user .name .details {
+    display: none!important;
+    transition: transform 0.3s;
+  }
+
+  .project-list {
+    margin-right: 0;
+  }
+
+}
+
+@container (width < 1850px) {
+  .dashboard-container .dash-content {
+    position: absolute;
+    left: 250px!important;
+    top: 40px;
+  }
+
+  .dashboard-container .user .name {
+    position: absolute;
+    left: 250px!important;
+    top: 54px;
+  }
+}
+
+
 
 .legenda .disabled {
   color: silver;
@@ -266,6 +316,10 @@ project-card .tip {
 }
 
 .leftbar {
+
+    position: absolute;
+    left: 0;
+
     background-color: white;
     max-width: 250px!important;
     min-width: 220px!important;
@@ -273,7 +327,7 @@ project-card .tip {
     flex-grow: 0.15;
     flex-shrink: 0;
 
-    height: 100%;
+    height: 100%!important;
     color: var(--color);
 
     .item{
@@ -463,11 +517,8 @@ project-card .tip {
 }
 
 .dashboard-container{ 
-  display: flex;
-  height: 100%;
-  flex-grow: 1;
-  width: 100%;
-  container-type: size;
+  background-color: var(--bg-1-5) ;
+  height: 100%; 
 }
 
 .project-list div.row.header {
@@ -479,17 +530,9 @@ project-card .tip {
   padding: 14px 0 0 20px;
 }
 
-@container (width < 1880px) {
-  .details {
-    display: none;
-    transition: transform 0.3s;
-  }
 
-  .project-list {
-    width: 100%!important;
-    margin-right: 0;
-  }
-}
+
+
 @container (width < 1100px) {
 
   .artifact-type {
@@ -531,18 +574,13 @@ project-card .tip {
 
 .dashboard-container .user {
   margin-top: 50px;
-  margin-left: 100px;
-  margin-right: 20px;
-  
   width: 100%;
+  
+  display: flex;
+  justify-content: center;
 
-  .name { 
-    width: 100%;
-    padding-top: 5px;
-    padding-left: 0px!important;
+  .header {
     margin-bottom: 100px;
-    
-
     h2 {
       font-size: var(--h1-lg-size);
       color: var(--color);
@@ -552,20 +590,41 @@ project-card .tip {
       font-size: var(--h2-size);
       width: 45%;
     }
+
+    
+  }
+ 
+  .name { 
+    width: 1340px;
+    padding:40px;
+    margin-bottom: 100px;
+    background-color: white;
+    max-height: fit-content;
+    padding: 40px;
+    border-radius: 10px;
+
+
+    .details {
+      position: absolute;
+      right: 30px;
+    }
     
   }
 
-  .details {
-    // transform: scaleX(100%);
-    // transform-origin: 0%;
-    // transition: transform 0.3s;
-
-    & b {
-      font-weight: 600;
-      
+  .project-list {
+    h2 {
+      font-size: var(--h1-lg-size);
+      color: var(--color);
     }
-  }
+    
+    h3 {
+    padding-top: 10px;
+    font-size: var(--h2-size);
+    }
+  } 
 
+
+  
   
 
 
