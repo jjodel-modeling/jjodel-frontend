@@ -39,6 +39,7 @@ import { Tooltip } from '../../components/forEndUser/Tooltip';
 import { ProjectsApi } from '../../api/persistance';
 import { setPriority } from 'os';
 import { setProjectModified } from '../../common/libraries/projectModified';
+import { set } from 'lodash';
 
 
 type UserProps = {
@@ -124,30 +125,30 @@ const Title = (props: TitleProps) => {
 
         // <h2 onBlur={() => setEditTitle(!editTitle)} >
 
-        function setTitle(e: any) {
-            if (title === '') {
-                U.alert('e', 'Title cannot be empty', 'Please enter a title for the project.');
-                e.target.focus();
-                return;
-            }
-            setProjectModified();
-            setEditTitle(!editTitle);
-        }
+        // function setTitle(e: any) {
+        //     if (title === '') {
+        //         U.alert('e', 'Title cannot be empty', 'Please enter a title for the project.');
+        //         e.target.focus();
+        //         return;
+        //     }
+        //     setProjectModified();
+        //     setEditTitle(!editTitle);
+        // }
 
-        function setDescription(e: any) {
+        // function setDescription(e: any) {
 
-            if (description === '') {
-                U.alert('e', 'Description cannot be empty', 'Please enter a description for the project.');
-                e.target.focus();
-                return;
-            }
-            setProjectModified();
-            setEditDes(!editDes);
-        }
+        //     if (description === '') {
+        //         U.alert('e', 'Description cannot be empty', 'Please enter a description for the project.');
+        //         e.target.focus();
+        //         return;
+        //     }
+        //     setProjectModified();
+        //     setEditDes(!editDes);
+        // }
 
-        function setPrivacy(e: any) {
-            setProjectModified();
-        }
+        // function setPrivacy(e: any) {
+        //     setProjectModified();
+        // }
 
 
 
@@ -156,7 +157,7 @@ const Title = (props: TitleProps) => {
             {props.active === 'Project' ?
                 <div className={'name project-list'}>
                     {editTitle ?
-                        <h2 onChange={(e) => setTitle(e)} >
+                        <h2>
                             <div>
                                 {props.icon}
                                 <input
@@ -167,6 +168,11 @@ const Title = (props: TitleProps) => {
                                     onChange={e => {
                                         if(!props.projectID) return;
                                         SetFieldAction.new(props.projectID, 'name', e.target.value, '', false)
+                                        setProjectModified();
+                                    }}
+                                    onBlur={(e) => {
+                                        if (e.target.value === '') {U.alert('e', 'A Project Name is required.', 'Please provide a name to identify and organize your project effectively.');e.target.focus(); return;}
+                                        setEditTitle(!editTitle);
                                     }}
                                 />
                             </div>
@@ -180,23 +186,26 @@ const Title = (props: TitleProps) => {
                     <h6><ProjectProperties/></h6>
                     
                     {editDes ? 
-                        <h3 onDoubleClick={() => setEditDes(!editDes)} onChange={(e) => setDescription(e)}>
+                        <h3>
                             <textarea
-                                placeholder={'Enter project description'}
                                 autoFocus
                                 rows={4}
-                                cols={60}
-                                value={props.description}
+                                cols={80}
+                                value={description}
                                 onChange={e => {
                                     if(!props.projectID) return;
-                                    SetFieldAction.new(props.projectID, 'description', e.target.value, '', false);
-                                    setPrivacy(e);
+                                    SetFieldAction.new(props.projectID, 'description', e.target.value, '', false)
+                                    setProjectModified();
+                                }}
+                                onBlur={e => {
+                                    if (e.target.value === '') {e.target.focus();U.alert('e', 'A Project Description is required.', 'Adding a description helps provide clarity and context for your project.'); return;}
+                                        setEditDes(!editDes);
                                 }}
                             />
                         </h3>
                         :
                         <>
-                            {props.description && <Tooltip tooltip={'DoubleClick to edit'} inline={true} position={'left'} offsetX={10}><h3 onDoubleClick={() => setEditDes(!editDes)} onBlur={() => setEditDes(!editDes)}>{props.description}</h3></Tooltip>}
+                            {props.description && <Tooltip tooltip={'DoubleClick to edit'} inline={true} position={'left'} offsetX={10}><h3 onDoubleClick={() => setEditDes(!editDes)}>{props.description}</h3></Tooltip>}
                         </>
                     }
                     

@@ -207,8 +207,11 @@ function NavbarComponent(props: AllProps) {
     if (project){
         projectItems = [
 
+            /* New Metamodel */
+
             {name: 'New metamodel', icon: icon['new'], function: ()=>{createM2(project); setProjectModified();}, keystroke: [Key.alt, Key.cmd, 'M']},
 
+            /* New Model */
             {
                 name: 'New model',
                 icon: icon['new'],
@@ -218,8 +221,13 @@ function NavbarComponent(props: AllProps) {
                 disabled: project.metamodels.length == 0
             },
 
+            /* ----- */
+
             {name: 'divisor', function: () => {}, keystroke: []},
-            {name: 'Close project', icon: icon['close'], function: () => {
+
+            /* Close */
+
+            {name: 'Close', icon: icon['close'], function: () => {
                 if (isProjectModified()) {
                     U.dialog('Close the project without saving?', 'close project', ()=>{
                         unsetProjectModified();
@@ -236,36 +244,64 @@ function NavbarComponent(props: AllProps) {
                     SetRootFieldAction.new('collaborativeSession', false);
                     U.resetState();
                 }
-                
-                
-                }, keystroke: [Key.cmd, 'Q']},
+            }, keystroke: [Key.cmd, 'W']},
+
+            /* ----- */
+
             {name: 'divisor', function: () => {}, keystroke: []},
-            /*{name: 'Undo', icon: icon['undo'], function: () => {
-                }, keystroke: [Key.cmd, 'Z']},
-            {name: 'Redo', icon: icon['redo'], function: () => {
-                }, keystroke: [Key.cmd, 'Y']}, // maybe better cmd + Y ?
-            
-            {name: 'divisor', function: () => {}, keystroke: []},*/
+
+            /* Save & Close */
+
+            {name: 'Save & Close', icon: icon['close'], function: async () => {
+                if (isProjectModified()) {
+                    unsetProjectModified();
+                    await ProjectsApi.save(project); 
+                }
+                    
+                unsetProjectModified();
+                navigate('/allProjects');
+                Collaborative.client.off('pullAction');
+                Collaborative.client.disconnect();
+                SetRootFieldAction.new('collaborativeSession', false);
+                U.resetState();
+            }, keystroke: []},
+
+            /* Save */
+
             {name: 'Save', icon: icon['save'], function: async() => { 
                 unsetProjectModified();
                 await ProjectsApi.save(project); 
-                }, keystroke: [Key.cmd, 'S']},
-            {name: 'Download', icon: icon['download'], function: async() => {
-                    await ProjectsApi.save(project);
-                    U.download(`${project.name}.jjodel`, JSON.stringify(project.__raw));
-                }, keystroke: []},
-            {name: 'divisor', function: async() => {}, keystroke: []},
-            {name: 'Help', icon: icon['help'], subItems: [
-                    {name: 'What\'s new', icon: icon['whats-new'], function: async() => {document.location.href="https://www.jjodel.io/whats-new/"}, keystroke: []},
-                    {name: 'divisor', function: async() => {}, keystroke: []},
-                    {name: 'Homepage', icon: icon['home'], function: async() => {document.location.href="https://www.jjodel.io/"}, keystroke: []},
-                    {name: 'Getting started', icon: icon['getting-started'], function: async() => {document.location.href="https://www.jjodel.io/getting-started/"}, keystroke: []},
-                    {name: 'User guide', icon: icon['manual'], function: async() => {document.location.href="https://www.jjodel.io/manual/"}, keystroke: []},
-                    {name: 'divisor', function: async() => {}, keystroke: []},
-                    {name: 'Legal terms', icon: icon['legal'], function: async() => {document.location.href="https://www.jjodel.io/terms-conditions-page/"}, keystroke: []}
-                ],
-                keystroke: []}
+            }, keystroke: [Key.cmd, 'S']},
 
+            /* ----- */
+
+            {name: 'divisor', function: () => {}, keystroke: []},
+            
+            /* Download */ 
+            
+            {name: 'Download', icon: icon['download'], function: async() => {
+                await ProjectsApi.save(project);
+                U.download(`${project.name}.jjodel`, JSON.stringify(project.__raw));
+            }, keystroke: []},
+            
+            
+
+            /* ----- */
+
+            {name: 'divisor', function: () => {}, keystroke: []},
+
+            /* Help */
+
+            {name: 'Help', icon: icon['help'], subItems: [
+                {name: 'What\'s new', icon: icon['whats-new'], function: async() => {document.location.href="https://www.jjodel.io/whats-new/"}, keystroke: []},
+                {name: 'divisor', function: async() => {}, keystroke: []},
+                {name: 'Homepage', icon: icon['home'], function: async() => {document.location.href="https://www.jjodel.io/"}, keystroke: []},
+                {name: 'Getting started', icon: icon['getting-started'], function: async() => {document.location.href="https://www.jjodel.io/getting-started/"}, keystroke: []},
+                {name: 'User guide', icon: icon['manual'], function: async() => {document.location.href="https://www.jjodel.io/manual/"}, keystroke: []},
+                {name: 'divisor', function: async() => {}, keystroke: []},
+                {name: 'Legal terms', icon: icon['legal'], function: async() => {document.location.href="https://www.jjodel.io/terms-conditions-page/"}, keystroke: []}
+            ],
+            keystroke: []}            
         ];
     }
 

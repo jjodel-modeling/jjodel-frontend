@@ -142,7 +142,7 @@
     font-size: 1rem;
   }
 
-  textarea:focus {
+  textarea {
     padding: 0!important;
     margin-left: 4px!important;
     border: none;
@@ -150,7 +150,6 @@
     padding: 20px!important;
     border-radius: var(--radius);
     outline: none;
-    
   }
 
 

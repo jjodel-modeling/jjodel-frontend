@@ -12,9 +12,12 @@ import ModelsSummaryTab from "./tabs/ModelsSummaryTab";
 import BrokerEditor from "../editors/Broker";
 import {PermissionModelTab} from "../editors/PermissionModelTab";
 import { isProjectModified } from '../../common/libraries/projectModified';
+import { Logo } from '../logo/logo';
 //import MqttEditor from "../rightbar/mqtt/MqttEditor";
 //import NestedView from "../rightbar/nestedViewEditor/ViewEditorNestedVersion";
 //import CollaboratorsEditor from "../rightbar/collaboratorsEditor/CollaboratorsEditor";
+
+
 
 
 
@@ -36,7 +39,10 @@ function DockComponent(props: AllProps) {
     };
 
     /* Models */
-    const ModelsSummary = {id: id(), title: <TabHeader tid={tid()}>Summary</TabHeader>, group: 'models', closable: false, content: <TabContent tid={tid()}><ModelsSummaryTab /></TabContent>};
+    // const ModelsSummary = {id: id(), title: <TabHeader tid={tid()}><JLogo style={{marginLeft: '-10px', fontSize: '1.5rem', paddingRight: '6px'}}/> Summary</TabHeader>, group: 'models', closable: false, content: <TabContent tid={tid()}><ModelsSummaryTab /></TabContent>};
+
+    const ModelsSummary = {id: id(), title: <TabHeader tid={tid()}><Logo type={1} style={{marginLeft: '-10px', fontSize: '1.5rem', paddingRight: '6px'}}/> {user?.project?.name}</TabHeader>, group: 'models', closable: false, content: <TabContent tid={tid()}><ModelsSummaryTab /></TabContent>};
+
 
     /* Editors */
     //const test = {id: id(), title: 'Test', group: 'editors', closable: false, content: <TestTab />};

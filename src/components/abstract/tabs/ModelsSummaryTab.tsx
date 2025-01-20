@@ -6,7 +6,7 @@ import type {Dictionary, FakeStateProps} from '../../../joiner/types';
 import DockManager from "../DockManager";
 import {LeftBar} from '../../../pages/components';
 import {ProjectCatalog, Title} from '../../../pages/components/Dashboard';
-import { TbHexagonLetterJ as Logo} from "react-icons/tb";
+import { Logo } from '../../logo/logo';
 
 
 type Props = {
@@ -27,9 +27,6 @@ const Project = (props: Props) => {
                 <LeftBar active={'Project'} project={project} />
                 <div className={'user'}>
                     <div className={'name'}>
-                        {/* <Title projectID={project.id} active={'Project'} title={project.name} icon={<i className="bi bi-p-square"></i>} description={project.description} type={project.type}/>
-                        
-                        */}
                         <Title projectID={project.id} active={'Project'} title={project.name} icon={<Logo className={project.type} style={{paddingLeft: '4px', fontSize: '2em'}}/>} description={project.description} type={project.type}/>                       
                         <ProjectCatalog project={project} />
                     </div>

@@ -18,8 +18,8 @@ import {
 
 import { SlShare as Share2 } from "react-icons/sl";
 import { Tooltip } from '../../components/forEndUser/Tooltip';
-import { TbHexagonLetterJ as Logo} from "react-icons/tb";
 import { time } from 'console';
+import { Logo } from '../../components/logo/logo';
 
 
 function formatDate(lastModified: number){
