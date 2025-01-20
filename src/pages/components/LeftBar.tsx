@@ -175,17 +175,21 @@ function LeftBar(props: LeftBarProps): JSX.Element {
 
                 <Menu>
                     <Item action={'allProjects'} icon={icon['dashboard']}>All projects </Item>
-                    <Item action={'recent'} icon={icon['recent']}>Recent</Item>
                 </Menu>
                 {props.projects && props.projects.filter(p => p.isFavorite).length > 0 &&
                     <Menu title={"Starred"} mode={'collapsable'}>
-                        {props.projects.filter(p => p.isFavorite).map(p => <Item icon={icon['folder']} action={e => selectProject(p)}>{p.name}</Item>)}
+                        {props.projects
+                            .filter(p => p.isFavorite)
+                            .map(p => 
+                                <Item icon={icon['folder']} action={e => selectProject(p)}>{p.name}</Item>
+                            )
+                        }
                     </Menu>
                 }
                 {props.projects && props.projects.filter(p => p.isFavorite).length > 0 &&
                     <Menu title={"Recent"} mode={'collapsable'}>
                         {props.projects
-                            .sort((a,b) => (b.lastModified < a.lastModified) ?  1 : -1)
+                            .sort((a,b) => (b.lastModified > a.lastModified) ?  1 : -1)
                             .slice(0,5)
                             .map(p => <Item icon={icon['folder']} action={e => selectProject(p)}>{p.name}</Item>)}
                     </Menu>

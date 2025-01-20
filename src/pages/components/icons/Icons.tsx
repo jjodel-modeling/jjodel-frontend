@@ -1,8 +1,9 @@
 import './icons.scss';
 
 import jj from '../../../static/img/jj-k.png';
+import { Tooltip } from '../../../components/forEndUser/Tooltip';
 
-export let icon/*: { [name: string]: any} */ = {
+export let icon: { [name: string]: any} = {
     'new': <i className="bi bi-plus-circle-dotted menuitem"></i>,
     close: <i className="bi bi-x-lg menuitem"></i>,
     edit: <i className="bi bi-pencil-square menuitem"></i>,
@@ -58,5 +59,9 @@ export let icon/*: { [name: string]: any} */ = {
     submenu: <i className="bi bi-chevron-right menuitem float-end"></i>,
     'contract': <i className="bi bi-arrows-angle-contract"></i>,
     'expand': <i className="bi bi-arrows-angle-expand"></i>,
+    alphabetical: <i className="bi bi-sort-alpha-down"></i>,
+    created: <i className="bi bi-calendar2-plus"></i>,
+    modified: <i className="bi bi-clock"></i>,
+    lastModified: <i className="bi bi-clock"></i>
 };
 
