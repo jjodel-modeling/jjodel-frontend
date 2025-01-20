@@ -67,10 +67,16 @@
   border-radius: 3px;
 }
 
+.catalog-header button:first-child {
+  margin-left: 8px;
+}
+
 
 .catalog-header button:hover {
   background-color: var(--bg-2);
 }
+
+
 
 .catalog-header button.active {
   background-color: var(--bg-2);
@@ -187,7 +193,7 @@
   width: 100%;
   padding: 0;
   display: flex;
-  .details{
+  .details{ 
     order: 2;
   }
   .card-holder{

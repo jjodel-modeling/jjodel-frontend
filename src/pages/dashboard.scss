@@ -31,7 +31,9 @@
       }
       .card-holder{
         overflow-y: auto;
-        padding-right: 253px; // space for details image
+        //padding-right: 253px; // space for details image
+        max-width: 1250px;
+
       }
       .row.project-list{ // list visualization of projects
         overflow-y: auto;
@@ -468,7 +470,16 @@ project-card .tip {
   container-type: size;
 }
 
-@container (width < 1680px) {
+.project-list div.row.header {
+  color: var(--color);
+  font-weight: 600;
+}
+
+.project-list {
+  padding: 14px 0 0 20px;
+}
+
+@container (width < 1880px) {
   .details {
     display: none;
     transition: transform 0.3s;

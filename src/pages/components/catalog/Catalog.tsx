@@ -110,16 +110,19 @@ const Catalog = (props: ChildrenType) => {
                 (filters[0] && p.type ==="public" || filters[1] && p.type ==="private" || filters[2] && p.type ==="collaborative" || !filters[0] && !filters[1] && !filters[2]));
         
         var sorted = items;
+        var iteratees: ((obj: LProject) => any) | string = 'created';
 
         switch(sortingMode) {
             case "alphabetical":
                 sorted = _.sortBy(items, 'name');
                 break;
             case "created":
-                sorted = _.sortBy(items, 'created');
+                iteratees = (obj: LProject) => -new Date(obj.creation).getTime();
+                sorted = _.sortBy(items, iteratees);
                 break;
             case "modified":
-                sorted = _.sortBy(items, 'lastModified');
+                iteratees = (obj: LProject) => -new Date(obj.lastModified).getTime();
+                sorted = _.sortBy(items, iteratees);
                 break;
         }
 
@@ -146,17 +149,14 @@ const Catalog = (props: ChildrenType) => {
 
                 <div className={'row project-list'} style={{marginRight: '35%'}}>
                     <div className='row header'>
-                        {/* <div className={'col-sm-1'} style={{width: '30px'}}></div>
-                        <div className={'col-sm-1'}></div> */}
-
-                        <div className={'col-3'}>Name</div>
+                        <div className={'col-4'}>Name</div>
                         <div className={'col-1'}>Type</div>
                         <div className={'col-3'}>Created</div>
                         <div className={'col-2'}>Last modified</div>
-                        <div className={'col-3'}>Operation</div>
+                        <div className={'col-2'}>Operation</div>
                     </div>
                     {
-                        props.projects.map(p => <>
+                        sorted.map(p => <>
                             {filters[0] && p.type === "public" && <Project key={p.id} data={p} mode={mode} />}
                             {filters[1] && p.type === "private" && <Project key={p.id} data={p} mode={mode} />}
                             {filters[2] && p.type === "collaborative" && <Project key={p.id} data={p} mode={mode} />}

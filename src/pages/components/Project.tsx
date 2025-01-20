@@ -86,6 +86,29 @@ function Project(props: Props): JSX.Element {
         await ProjectsApi.delete(data);
     }
 
+    const typeIcon = (type: string) => {
+    
+        var icon = <></>;
+
+        switch(type){
+            case 'public':
+                icon = <UnLock className={'type-icon'} style={{fontSize: '1.2em'}}/>;
+                break;
+            case 'private':
+                icon = <Lock className={'type-icon'} style={{fontSize: '1.2em'}}/>;
+                break;
+            case 'collaborative':
+                icon = <Share2 className={'type-icon'} style={{fontSize: '1.2em'}}/>;
+                break;
+        }
+
+        return(
+            icon
+        );
+    
+    
+    }
+
     /* CARDS */
 
     var sectionStyle = {
@@ -108,153 +131,63 @@ function Project(props: Props): JSX.Element {
     function ProjectCard(props: Props): JSX.Element {
 
 
-        // const Meter = (props: ProjectProps) => {
-
-        //     const length = props.project.metamodelsNumber + props.project.modelsNumber + props.project.viewpointsNumber;
-        //     const unit = Math.round(90/length);
-        //     const mm_length = Math.round(90/length*props.project.metamodelsNumber);
-        //     const m_length = Math.round(90/length*props.project.modelsNumber);
-        //     const vp_length = Math.round(90/length*props.project.viewpointsNumber);
+        function multiplicity(n: int, none: string, one: string, many: string){
             
-        //     return (<>
-
-        //             <div className={'meter'} style={{width: '90%'}}>
-        //                 {Array.from(Array(props.project.viewpointsNumber)).map((m,i) => <div className={'artifact viewpoints'} style={{width: `${unit}%`}}>{i == props.project.viewpointsNumber - 1 && <span>VP</span>}</div>)}
-        //                 {Array.from(Array(props.project.modelsNumber)).map((m,i) => <div className={'artifact models'} style={{width: `${unit}%`}}>{i == props.project.modelsNumber - 1 && <span>M1</span>}</div>)}
-        //                 {Array.from(Array(props.project.metamodelsNumber)).map((m,i) => <div className={'artifact metamodels'} style={{width: `${unit}%`}}>{i == props.project.metamodelsNumber - 1 && <span>M2</span>}</div>)}
-        //             </div>
-
-        //      </>);
-        // };
-
-    function multiplicity(n: int, none: string, one: string, many: string){
-        
-        if (n == 0) return  none;
-        if (n == 1) return n + ' ' + one;
-        if (n > 1) return n + ' ' + many;
-        
-    }
-
-    function getClickedElement(e: any){
-
-        if(e.target.className === 'bi bi-star-fill' || e.target.className === 'bi bi-star' || e.target.className === 'bi bi-chevron-down' || e.target.className === 'item') {
-            return;
-        } else {
-            selectProject(); 
+            if (n == 0) return  none;
+            if (n == 1) return n + ' ' + one;
+            if (n > 1) return n + ' ' + many;
+            
         }
-    }
 
-    return (
+        function getClickedElement(e: any){
 
-        <Tooltip tooltip={`${props.data.type} project with ${multiplicity(props.data.metamodelsNumber,'no metamodels', 'metamodel', 'metamodels')}, 
-            ${multiplicity(props.data.modelsNumber,'no models', 'model', 'models')}, 
-            ${multiplicity(props.data.viewpointsNumber -2, 'no (custom) viewpoints', '(custom) viewpoint', '(custom) viewpoints')}` } position={'top'} offsetY={10} theme={'dark'} inline><div className={`project-card-v2 ${data.type}`} 
-            onClick={e => getClickedElement(e)}>
-            <div className="project-actions d-flex" style={{position: 'absolute', top: 10, right: 5}}>
-                {data.isFavorite ? <i onClick={(e) => toggleFavorite(data)} className="bi bi-star-fill" />
-                    :
-                    <i onClick={(e) => toggleFavorite(data)} className="bi bi-star" />
-                }
-                
-                <Menu>
-                        <Item icon={icon['new']} keystroke={'<i class="bi bi-command"></i>'} action={e => {selectProject()}}>Open</Item>
-                        <Item icon={icon['duplicate']}>Duplicate</Item>
-                        <Item icon={icon['download']} action={e => exportProject()}>Download</Item>
-                        <Divisor />
-                        <Item icon={icon['favorite']} action={(e => toggleFavorite(data))}>{!data.isFavorite ? 'Add to favorites' : 'Remove from favorites'}</Item>
-                        <Divisor />
-                        <Item icon={icon['delete']} action={async e => await deleteProject()}>Delete</Item>
-                </Menu>
-            </div>
-            <div className='header'>
-            <Logo style={{fontSize: '2em', float: 'left', marginTop: '0px', marginBottom: '20px', marginRight: '10px'}}/>
-                <h5 className={'d-block'} style={{cursor: 'pointer'}} onClick={e => selectProject()}>
-                    {data.name}
-                </h5>
-                <p className={'description'}>{data.description}</p>
-                <div className={'last-updated'}>
-                    <div className='date'><i className="bi bi-clock-history"></i> Last updated {formatDate(data.lastModified)}</div>
+            if(e.target.className === 'bi bi-star-fill' || e.target.className === 'bi bi-star' || e.target.className === 'bi bi-chevron-down' || e.target.className === 'item') {
+                return;
+            } else {
+                selectProject(); 
+            }
+        }
+
+        return (
+
+            <Tooltip tooltip={`${props.data.type} project with ${multiplicity(props.data.metamodelsNumber,'no metamodels', 'metamodel', 'metamodels')}, 
+                ${multiplicity(props.data.modelsNumber,'no models', 'model', 'models')}, 
+                ${multiplicity(props.data.viewpointsNumber -2, 'no (custom) viewpoints', '(custom) viewpoint', '(custom) viewpoints')}` } position={'top'} offsetY={10} theme={'dark'} inline><div className={`project-card-v2 ${data.type}`} 
+                onClick={e => getClickedElement(e)}>
+                <div className="project-actions d-flex" style={{position: 'absolute', top: 10, right: 5}}>
+                    {data.isFavorite ? <i onClick={(e) => toggleFavorite(data)} className="bi bi-star-fill" />
+                        :
+                        <i onClick={(e) => toggleFavorite(data)} className="bi bi-star" />
+                    }
                     
-                    <div className={'type'}>
-                        {data.type === 'public' && <UnLock className={'type-icon'} style={{fontSize: '1.2em', color: 'var(--bg-4)'}}/>}
-                        {data.type === 'private' && <Lock  className={'type-icon'} style={{fontSize: '1.2em', color: 'var(--bg-4)'}}/>} 
-                        {data.type === 'collaborative' && <Share2 className={'type-icon'} style={{fontSize: '1.2em', color: 'var(--bg-4)'}}/>} 
-                    </div>
-                </div>                   
-            </div>
-        </div></Tooltip>);
-    }
-
-    /* ProjectCard Backup */
-
-    // function ProjectCard2(props: Props): JSX.Element {
-
-
-    //     const Meter = (props: ProjectProps) => {
-
-    //         const length = props.project.metamodelsNumber + props.project.modelsNumber + props.project.viewpointsNumber;
-    //         const unit = Math.round(90/length);
-    //         const mm_length = Math.round(90/length*props.project.metamodelsNumber);
-    //         const m_length = Math.round(90/length*props.project.modelsNumber);
-    //         const vp_length = Math.round(90/length*props.project.viewpointsNumber);
-            
-    //         return (<>
-
-    //                 <div className={'meter'} style={{width: '90%'}}>
-    //                     {Array.from(Array(props.project.viewpointsNumber)).map((m,i) => <div className={'artifact viewpoints'} style={{width: `${unit}%`}}>{i == props.project.viewpointsNumber - 1 && <span>VP</span>}</div>)}
-    //                     {Array.from(Array(props.project.modelsNumber)).map((m,i) => <div className={'artifact models'} style={{width: `${unit}%`}}>{i == props.project.modelsNumber - 1 && <span>M1</span>}</div>)}
-    //                     {Array.from(Array(props.project.metamodelsNumber)).map((m,i) => <div className={'artifact metamodels'} style={{width: `${unit}%`}}>{i == props.project.metamodelsNumber - 1 && <span>M2</span>}</div>)}
-    //                 </div>
-
-    //          </>);
-    //     };
-
-    //     return (<>
-
-    //         <div className={'project-card v2'}>
-    //             <div className="project-actions d-flex" style={{position: 'absolute', top: 10, right: 5}}>
-    //                 {data.isFavorite ? <i onClick={(e) => toggleFavorite(data)} className="bi bi-star-fill" />
-    //                     :
-    //                     <i onClick={(e) => toggleFavorite(data)} className="bi bi-star" />
-    //                 }
-                    
-    //                 <Menu>
-    //                         <Item icon={icon['new']} keystroke={'<i class="bi bi-command"></i>'} action={e => selectProject()}>Open</Item>
-    //                         <Item icon={icon['duplicate']}>Duplicate</Item>
-    //                         <Item icon={icon['download']} action={e => exportProject()}>Download</Item>
-    //                         <Divisor />
-    //                         <Item icon={icon['favorite']} action={(e => toggleFavorite(data))}>{!data.isFavorite ? 'Add to favorites' : 'Remove from favorites'}</Item>
-    //                         <Divisor />
-    //                         <Item icon={icon['delete']} action={async e => await deleteProject()}>Delete</Item>
-    //                 </Menu>
-    //             </div>
-    //             <div className='header'>
-    //                 <h5 className={'d-block'} style={{cursor: 'pointer'}} onClick={e => selectProject()}>
-    //                     {data.name}
-    //                 </h5>
-    //                 <label className={'d-block'}>
-    //                     {data.type === 'public' && <Tooltip tooltip={'Public Project'} inline={true} position={'top'} offsetY={10}><UnLock style={{fontSize: '1.5em', marginBottom: '2px', marginRight: '8px', padding: '1.5px', borderRadius: '2px', border: '0px solid var(--color)', backgroundColor: '#B5C6E0', color: 'white' }}/></Tooltip>}
-    //                     {data.type === 'private' && <Tooltip tooltip={'Private Project'} inline={true} position={'top'} offsetY={10}><Lock style={{fontSize: '1.5em', marginBottom: '2px', marginRight: '8px', padding: '1.5px', borderRadius: '2px', border: '0px solid var(--color)', backgroundColor: '#B5C6E0', color: 'white' }}/></Tooltip>} 
-    //                     {data.type === 'collaborative' && <Tooltip tooltip={'Collaborative Project'} inline={true} position={'top'} offsetY={10}><Share2 style={{fontSize: '1.5em', marginBottom: '2px', marginRight: '8px', padding: '3px', borderRadius: '2px', border: '0px solid var(--color)', backgroundColor: '#B5C6E0', color: 'white' }}/></Tooltip>} 
-    //                     <i className="bi bi-clock"></i> Edited {Math.floor((data.lastModified - data.creation) / (3600 * 1000))} hours ago
-    //                     <Empty project={props.data}/>
-    //                 </label>
-    //             </div>
-                    
-    //             <Meter project={data}></Meter>
-
-    //             <div className={'tag'}>
-    //                 <div>
+                    <Menu>
+                            <Item icon={icon['new']} keystroke={'<i class="bi bi-command"></i>'} action={e => {selectProject()}}>Open</Item>
+                            <Item icon={icon['duplicate']}>Duplicate</Item>
+                            <Item icon={icon['download']} action={e => exportProject()}>Download</Item>
+                            <Divisor />
+                            <Item icon={icon['favorite']} action={(e => toggleFavorite(data))}>{!data.isFavorite ? 'Add to favorites' : 'Remove from favorites'}</Item>
+                            <Divisor />
+                            <Item icon={icon['delete']} action={async e => await deleteProject()}>Delete</Item>
+                    </Menu>
+                </div>
+                <div className='header'>
+                <Logo style={{fontSize: '2em', float: 'left', marginTop: '0px', marginBottom: '20px', marginRight: '10px'}}/>
+                    <h5 className={'d-block'} style={{cursor: 'pointer'}} onClick={e => selectProject()}>
+                        {data.name}
+                    </h5>
+                    <p className={'description'}>{data.description}</p>
+                    <div className={'last-updated'}>
+                        <div className='date'><i className="bi bi-clock-history"></i> Last updated {formatDate(data.lastModified)}</div>
                         
-    //                     {/* <i className="bi bi-files"></i> {props.data.metamodels.length} metamodel(s), {props.data.models.length} model(s)<br/>
-    //                     <i className="bi bi-file-code"></i> {props.data.viewpoints.length-1} viewpoint(s)*/}
-    //                 </div>
-    //             </div>
-    //         </div>
-
-
-    //     </>);
-    // }
+                        <div className={'type'}>
+                            {data.type === 'public' && <UnLock className={'type-icon'} style={{fontSize: '1.2em', color: 'var(--bg-4)'}}/>}
+                            {data.type === 'private' && <Lock  className={'type-icon'} style={{fontSize: '1.2em', color: 'var(--bg-4)'}}/>} 
+                            {data.type === 'collaborative' && <Share2 className={'type-icon'} style={{fontSize: '1.2em', color: 'var(--bg-4)'}}/>} 
+                        </div>
+                    </div>                   
+                </div>
+            </div></Tooltip>);
+        }
 
 
     /* LIST */
@@ -297,50 +230,16 @@ function Project(props: Props): JSX.Element {
               }).format(a);
 
             return formattedDate;
-
-
-
-            
-            // var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-            // var year = a.getFullYear();
-            // var month = months[a.getMonth()];
-            // var date = a.getDate();
-            // var hour = a.getHours();
-            // var min = a.getMinutes();
-            // var sec = a.getSeconds();
-            // var time = month + ' '+ date +', ' + year + ' ' + hour + ':' + min ;
-            // return time;
         }
+
         return (<>
             <div className="row data">
-                {/* <div className={'col-sm-1'} style={{width: '30px'}}>
-                    <Menu position='right'>
-                        <Item icon={<i className="bi bi-plus-square"></i>} action={e => selectProject()}>Open</Item>
-                        <Item icon={<i className="bi bi-files"></i>} action={(e => props.data.duplicate())}>Duplicate</Item>
-                        <Item  icon={<i className="bi bi-download"></i>} action={e => exportProject()}>Download</Item>
-                        <Divisor />
-                        <Item icon={<i className="bi bi-star"></i>}  action={(e => toggleFavorite(data))}>Add to favorites</Item>
-                        <Item icon={<i className="bi bi-share"></i>}>Share</Item>
-                        <Divisor />
-                        <Item icon={<i className="bi bi-trash3"></i>} action={async e => await deleteProject()}>Delete</Item>
-                    </Menu>
-                </div>
-                <div className={'col-sm-1'}>
-                    {data.favorite ?
-                        <i style={{float: 'left'}} onClick={(e) => toggleFavorite(data)} className="bi bi-star-fill"></i> :
-                        <i style={{float: 'left'}} onClick={(e) => toggleFavorite(data)} className="bi bi-star"></i>}
-                    &nbsp;
-                    {data.type === "public" && <i className="bi bi-unlock"></i>}
-                    {data.type === "private" && <i className="bi bi-lock"></i>}
-                    {data.type === "collaborative" && <i className="bi bi-diagram-3"></i>}
-
-
-                </div> */}
-                <div className={'col-3'} onClick={()=> {selectProject()}}>{data.name}</div>
-                <div className={'col-1'}>{data.type}</div>
-                <div className={'col-3'}>{timeConverter(data.creation+0)}</div>
-                <div className={'col-2'}>{Math.floor(timeago)} {timeunit} ago</div>
-                <div className={'col-3'}>
+                
+                <div style={{paddingLeft: '15px'}} className={'col-4'} onClick={()=> {selectProject()}}>{data.name}</div>
+                <div className={'col-1'} onClick={()=> {selectProject()}}>{typeIcon(data.type)}</div>
+                <div className={'col-3'} onClick={()=> {selectProject()}}>{timeConverter(data.creation+0)}</div>
+                <div className={'col-2'} onClick={()=> {selectProject()}}>{Math.floor(timeago)} {timeunit} ago</div>
+                <div className={'col-2'}>
                     <CommandBar noBorder={true} style={{marginBottom: '0'}}>
                         <Btn icon={'favorite'} action={(e => toggleFavorite(data))} tip={!data.isFavorite ? 'Add to favorites' : 'Remove from favorites'} />
                         <Btn icon={'minispace'} />
