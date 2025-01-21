@@ -186,6 +186,7 @@ project-card .tip {
 
 .project-card-v2 {
   position: relative;
+  
   width: 23em;
   height: 120px;
   border-radius: 4px;
@@ -518,6 +519,12 @@ project-card .tip {
 
 .dashboard-container{ 
   background-color: var(--bg-1-5) ;
+
+    // background-image: url('../static/img/delete.jpg');
+    // background-repeat: no-repeat;
+    // background-size: cover;
+  
+  
   height: 100%; 
 }
 
@@ -648,6 +655,8 @@ project-card .tip {
     margin-left: 0;
   }
 }
+
+
 
 .catalog-container {
   padding: 20px;

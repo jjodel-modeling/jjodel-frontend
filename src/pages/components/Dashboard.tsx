@@ -228,6 +228,7 @@ export type DashProps = {
     version?: Partial<DState["version"]>;
     project?: LProject;
     projects?:LProject[];
+    style?: any;
 };
 
 
@@ -256,7 +257,7 @@ function GenericDashboard(props: DashProps): any {
         <Navbar />
         <div className={"dashboard-container"} tabIndex={-1}>
             <LeftBar active={active} projects={user?.projects}/>
-            <div className={'dash-content user'}>
+            <div className={`dash-content user ${props.style && props.style}`}>
                 <div>
                     <>
                         {active === "All" && <Title active={active} title={'Dashboard'} icon={<i className="bi bi-columns-gap"></i>} />}
@@ -441,7 +442,7 @@ function Dashboard(props: DashProps): any {
 
     return(<>
         {active === 'Project' ?
-            <ProjectDashboard version={version} active={active} project={project} children={children}/> :
+            <ProjectDashboard version={version} active={active} project={project} children={children} className={'bg'}/> :
             <GenericDashboard version={version} active={active} children={children}/>
         }
     </>);
