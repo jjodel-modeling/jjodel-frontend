@@ -15,7 +15,13 @@
 }*/
 
 .undoredo{
-  display: inline-block;
+
+display: inline-block;
+  .content.inline{
+    position: unset;
+    background-color: unset;
+    box-shadow: unset;
+  }
   .detail-list{
     overflow: visible;
     width: max-content;

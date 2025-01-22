@@ -64,10 +64,11 @@ export {Constructors, JsType, RuntimeAccessibleClass, DPointerTargetable,
 export {getPath, TargetableProxyHandler, MyProxyHandler, MapProxyHandler, LogicContext, MapLogicContext} from './proxy';
 // import independent generic modules (only dependent from types and RuntimeAccessible
 
-export {Uarr,  DDate, ParseNumberOrBooleanOptions, myFileReader,
+export {Uarr, DDate, ParseNumberOrBooleanOptions, myFileReader,
     Keystrokes, ShortAttribETypes, AttribETypes, FileReadTypeEnum, FocusHistoryEntry, SelectorOutput,
     toShortEType, toLongEType, ShortAttribSuperTypes,
     } from "../common/U";
+export {Uobj} from "../common/UObj";
 export {Log} from "../common/Log";
 export {DV} from '../common/DV';
 export {Defaults} from '../common/Defaults';

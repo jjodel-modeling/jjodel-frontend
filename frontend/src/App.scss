@@ -64,7 +64,7 @@ font-weight: 900 !important;
 
   &>.content.inline, &>svg>.content.inline{
     display: inline-block;
-    position: relative;
+    position: unset;
     box-shadow: none;
   }
 

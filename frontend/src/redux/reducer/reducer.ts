@@ -15,7 +15,7 @@ import {
     bool,
     NodeTransientProperties,
     ViewTransientProperties,
-    DGraphElement, Uarr
+    DGraphElement, Uarr, Uobj
 } from '../../joiner';
 import {
     Action,
@@ -334,14 +334,7 @@ function CompositeActionReducer(oldState: DState, actionBatch: CompositeAction):
 
         switch (actiontype) {
             /*
-            case '@@redux/INIT6.x.f.d.r.e':
-            case '@@redux/INITm.f.1.s.o.g':
-            case '@@redux/INIT5.t.4.v.d.o':
-            case '@@redux/INITy.a.d.r.l.a':
-            case '@@redux/INIT4.2.q.u.z.k':
-            case '@@redux/INITj.8.e.g.y.p':
-            case '@@redux/INITp.k.q.g.z.w':
-            case '@@redux/INITq.c.u.w.f.e': ... etc*/
+            case '@@redux/INIT' + randomstr:... etc*/
             default:
                 if (action.type.indexOf('@@redux/') === 0) break;
                 return Log.exDevv('unexpected action type:', action.type);
@@ -417,6 +410,9 @@ export function reducer(oldState: DState = initialState, action: Action): DState
 }
 
 function unsafereducer(oldState: DState = initialState, action: Action): DState {
+    if (!oldState) { oldState = initialState = DState.new(); }
+    // console.log('external REDUCER', {action, CEtype:CreateElementAction.type});
+
     const ret = _reducer(oldState, action);
     if (ret === oldState) return oldState;
     ret.idlookup.__proto__ = DPointerTargetable.pendingCreation as any;
@@ -470,6 +466,7 @@ function unsafereducer(oldState: DState = initialState, action: Action): DState 
     }
 
 
+    console.log('ret.ELEMENT_CREATED', ret.ELEMENT_CREATED);
     // recompile stuff
     for (let ptr of ret.ELEMENT_CREATED){
         let d = ret.idlookup[ptr];
@@ -901,8 +898,8 @@ export function _reducer/*<S extends StateNoFunc, A extends Action>*/(oldState: 
             state = oldState;
             Log.exDev(times<=0, "undo must be positive", action);
             // if (desc) { ret.action_title = desc.desc + ': ' + desc.oldval + ' -> ' + desc.newval; ...}
-            state.action_title = 'undone ' + times + ' steps';
-            state.action_description = 'undone ' + times + ' steps';
+            //state.action_title = 'undone ' + times + ' steps';
+            //state.action_description = 'undone ' + times + ' steps';
 
             while (times--) {
                 let forUser = (action as UndoAction).forUser;
@@ -914,6 +911,9 @@ export function _reducer/*<S extends StateNoFunc, A extends Action>*/(oldState: 
                 removedDeltas.push(delta);
                 state = undo(state, action as UndoAction, delta, true);
             }
+
+            state.action_title = 'undone ' + times + ' steps' + (state.action_title ? ': '+state.action_title : '.');
+            state.action_description =  'undone ' + times + ' steps' + (state.action_description ? ': '+state.action_description : '.');
             state.VIEWS_RECOMPILE_all = [...new Set(removedDeltas.flatMap( d => Object.keys(d?.idlookup||{})))];
             // state.VIEWS_RECOMPILE_all = true;
             return state;
@@ -923,8 +923,8 @@ export function _reducer/*<S extends StateNoFunc, A extends Action>*/(oldState: 
             state = oldState;
             Log.exDev(times<=0, "redo must be positive", action);
             // if (desc) { ret.action_title = desc.desc + ': ' + desc.oldval + ' -> ' + desc.newval; ...}
-            state.action_title = 'redone ' + times + ' steps';
-            state.action_description = 'redone ' + times + ' steps';
+            // state.action_title = 'redone ' + times + ' steps';
+            // state.action_description =  'redone ' + times + ' steps';
             while (times--) {
                 let forUser = (action as UndoAction).forUser;
                 const delta = statehistory[forUser].redoable.pop();
@@ -935,34 +935,46 @@ export function _reducer/*<S extends StateNoFunc, A extends Action>*/(oldState: 
                 removedDeltas.push(delta);
                 state = undo(state, action as RedoAction, delta, false);
             }
+
+            state.action_title = 'redone ' + times + ' steps' + (state.action_title ? ': '+state.action_title : '.');
+            state.action_description =  'redone ' + times + ' steps' + (state.action_description ? ': '+state.action_description : '.');
             state.VIEWS_RECOMPILE_all = [...new Set(removedDeltas.flatMap( d => Object.keys(d?.idlookup||{})))];
             // state.VIEWS_RECOMPILE_all = true;
             return state;
         // case CombineHistoryAction.type: return combineHistory(oldState); break;
         // todo: se al posto di "annullare l'undo" memorizzo l'azione e la rieseguo, posso ripetere l'ultimo passo N volte e questa azione diventa utile per combinare passi e ripetere blocchi di azioni assieme
         default:
+            if (action.type?.indexOf('@@redux/') === 0) {
+                console.error('redux init', {action, oldState, initialState});
+                return oldState;
+            }
+            if (!(action?.className)) { Log.exDevv('unexpected action type:', action.type); return oldState; }
             let ret = doreducer(oldState, action);
             if (ret === oldState) return ret;
 
             // undo-redo description
-            let desc = (action as CompositeAction).descriptor;
-            if (desc) {
+            if (action.className === 'CompositeAction') {
+                let desc = (action as CompositeAction).descriptor;
                 console.log('set action descriptor in state', {desc, action});
-                ret.action_title = desc.path||'';
-                let valchange: string;
-                if (desc.oldval !== undefined && desc.newval!== undefined) valchange = ': ' + desc.oldval + ' -> ' + desc.newval;
-                else if (desc.oldval === undefined && desc.newval!== undefined) valchange = ': ' + desc.newval;
-                else valchange = '';
-                ret.action_description = desc.desc + valchange;
-            }
-            else {
-                ret.action_title = '';
-                ret.action_description = '';
+                if (desc) {
+                    ret.action_title = desc.path||'';
+                    let valchange: string;
+                    if (desc.oldval !== undefined && desc.newval!== undefined) valchange = ': ' + desc.oldval + ' -> ' + desc.newval;
+                    else if (desc.oldval === undefined && desc.newval!== undefined) valchange = ': ' + desc.newval;
+                    else valchange = '';
+                    ret.action_description = (desc.desc || '') + valchange;
+                }
+                else {
+                    ret.action_title = '';
+                    ret.action_description = '';
+                }
             }
 
             // update state history
             // statehistory[DUser.current].redoable = [];   <-- Moved to stateInitializer()
-            let delta = U.objectDelta(ret, oldState, true, false);
+            let delta = Uobj.objectDelta(ret, oldState, true, false);
+            let debug = Uobj.applyObjectDelta(ret, delta, false, oldState);
+
             if (!filterundoableactions(delta)) return ret;
             // console.log("setting undoable action:", {ret, oldState0:{...oldState}, oldState, delta});
             let user = (action as Action).sender;
@@ -993,7 +1005,8 @@ function undo(state: DState, action: UndoAction | RedoAction, delta: GObject | u
     let forUser = action.forUser;
     let user = action.sender;
     // todo: check if delta2 === delta or is his opposite in values but same shape
-    let delta2 = U.objectDelta(undonestate, state);
+    let delta2 = Uobj.objectDelta(undonestate, state);
+    let debug = Uobj.applyObjectDelta(undonestate, delta2, false, state);
     // reverses from undo to redo and viceversa swapping arguments, so the target result after appliying the delta changes
     // redo is "undoing an undo", reversing his changes just like an undo reverses an ordinary action changes.
     let key: 'redoable'|'undoable' = isundo ? 'redoable' : 'undoable';
@@ -1018,25 +1031,15 @@ function undorecursive(deltalevel: GObject, statelevel: GObject): void {
 }
 
 function doreducer/*<S extends StateNoFunc, A extends Action>*/(oldState: DState = initialState, action: Action): DState{
-    if (!oldState) { oldState = initialState = DState.new(); }
     let ca: CompositeAction;
-    // console.log('external REDUCER', {action, CEtype:CreateElementAction.type});
-    if (!storeLoaded) {
-        // new SetRootFieldAction('forceinit', true);
-        storeLoaded = true;
-    }
-    if (!(oldState as any).forceinit) {
-        // afterStoreLoad();
-        // new SetRootFieldAction('forceinit', true);
-    } //  setTimeout(afterStoreLoad, 1);
     switch (action.type) {
         case CompositeAction.type: ca = action as CompositeAction; break;
         case LoadAction.type:
-        default:
-            if (action.type.indexOf('@@redux/') === 0) {
+        default:/*
+            if (action.type.indexOf('@@redux/') === 0) { handled on upper levels
                 //storeLoaded = true;
                 return oldState;
-            }
+            }*/
             ca = new CompositeAction([action], false);
             break;
     }

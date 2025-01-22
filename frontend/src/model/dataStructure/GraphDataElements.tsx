@@ -370,8 +370,7 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
         TRANSACTION('drag' + this.get_name(c), ()=>{
             SetFieldAction.new(c.data.id, "x", val.x, undefined, false);
             SetFieldAction.new(c.data.id, "y", val.y, undefined, false);
-        },  `(${U.cropNum(c.data.x)}, ${U.cropNum(c.data.y)})`,
-            `(${U.cropNum(val.x)}, ${U.cropNum(val.y)})`)
+        }, IPoint.printDiff(c.data, val))
         return true; }
 
     get_sizeold(context: Context): this["size"] { return new GraphSize(context.data.x, context.data.y, context.data.w, context.data.h); }
@@ -501,8 +500,7 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
             if (size.h !== c.data.h && size.h !== undefined) SetFieldAction.new(c.data.id, "h", size.h, undefined, false);
             let epdata: DEdgePoint = c.data as DEdgePoint;
             if (size.currentCoordType !== epdata.currentCoordType && size.currentCoordType !== undefined) SetFieldAction.new(epdata.id, "currentCoordType", size.currentCoordType, undefined, false);
-        }, `(${U.cropNum(c.data.x)}, ${U.cropNum(c.data.y)}, ${U.cropNum(c.data.w)}, ${U.cropNum(c.data.h)})`,
-            `(${U.cropNum(size.x)}, ${U.cropNum(size.y)}, ${U.cropNum(size.w)}, ${U.cropNum(size.h)})`)
+        }, undefined, ISize.printDiff(c.data, size))
         return true; }
 
     get_html(c: Context): this["html"] {

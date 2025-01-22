@@ -128,7 +128,7 @@ import {
     Log,
     LViewElement,
     LViewPoint,
-    ParsedAction,
+    ParsedAction, Selectors,
     SetFieldAction,
     SetRootFieldAction,
     ShortAttribETypes,
@@ -784,6 +784,32 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
 
     DTypedElement(type?: DTypedElement["type"]): this {
         const thiss: DTypedElement = this.thiss as any;
+        let dtype = Selectors.getByName2(type) as DClassifier | null;
+        switch (dtype?.className){
+            default: type = undefined; break;
+            case 'DClass':
+                switch (thiss.className) {
+                    case 'DReference':
+                    case 'DOperation':
+                    case 'DParameter':
+                        type = dtype.id;
+                        break;
+                    case 'DAttribute':
+                    default: type = undefined; break;
+                }
+                break;
+            case 'DEnumerator':
+                switch (thiss.className) {
+                    case 'DAttribute':
+                    case 'DOperation':
+                    case 'DParameter':
+                        type = dtype.id;
+                        break;
+                    case 'DReference':
+                    default: type = undefined; break;
+                }
+                break;
+        }
         this.setPtr("type", type);
         return this; }
 

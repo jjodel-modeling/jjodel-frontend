@@ -14,7 +14,7 @@ import {
     VertexPointers,
     ModelPointers,
     LtoD,
-    LVertex, LEdgePoint, LGraph, MultiSelectOptGroup, UX, Function2, Any, MultiSelectOption, windoww,
+    LVertex, LEdgePoint, LGraph, MultiSelectOptGroup, UX, Function2, Any, MultiSelectOption, windoww, Uobj,
 } from "../../joiner";
 import {
     Abstract,
@@ -5713,7 +5713,7 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
             for (let ptr in scoreMap) {
                 let score = scoreMap[ptr];
                 score.namesMap = U.objectFromArrayValues(score.class.childNames);
-                let diff = U.objdiff(score.namesMap, schema);
+                let diff = Uobj.objdiff(score.namesMap, schema);
                 console.log( "objDiff", {schema, names:score.namesMap, data:score.class});
                 score.id = ptr;
                 score.excessFeatures = diff.removed;

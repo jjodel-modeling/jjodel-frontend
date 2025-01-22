@@ -35,6 +35,10 @@ export abstract class IPoint extends RuntimeAccessibleClass {
         thiss.className = this.cname;
     }
 
+
+    static printDiff(s1: SizeLike, s2: SizeLike) {
+        return ISize.printDiff(s1, s2, true);
+    }
     public raw(): {x: number, y: number} { return {x: this.x, y: this.y}; }
 
     public toString(letters: boolean=true, separator: string = " "): string {
@@ -249,6 +253,33 @@ export abstract class ISize<PT extends IPoint = IPoint> extends RuntimeAccessibl
     }
 
 
+    static printDiff(s1: SizeLike, s2: SizeLike, asPoints:boolean = false, maxDigits:number = 5) {
+        s1 = {...s1, w: s1.w ?? s1.width, h: s1.h ?? s1.height};
+        s1.x = s1.x ?? s2.x;
+        s1.y = s1.y ?? s2.y;
+        s2 = {...s2, w: s2.w ?? s2.width, h: s2.h ?? s2.height};
+        if (!asPoints) {
+            s1.w = s1.w ?? s2.w;
+            s1.h = s1.h ?? s2.h;
+        }
+        let s1coords: (number | string)[] = [];
+        s1coords.push(!U.isNumber(s1.x) ? '' : U.cropNum(s1.x, maxDigits));
+        s1coords.push(!U.isNumber(s1.y) ? ',' : ', '+U.cropNum(s1.y, maxDigits));
+        if (!asPoints) {
+            s1coords.push(!U.isNumber(s1.w) ? ',' : ', '+U.cropNum(s1.w, maxDigits));
+            s1coords.push(!U.isNumber(s1.h) ? ',' : ', '+U.cropNum(s1.h, maxDigits));
+        }
+        let s2coords: (number | string)[] = [];
+        s2coords.push(s2.x === s1.x || !U.isNumber(s2.x) ? '' : U.cropNum(s2.x, maxDigits));
+        s2coords.push(s2.y === s1.y || !U.isNumber(s2.y) ? ',' : ', '+U.cropNum(s2.y, maxDigits));
+        if (!asPoints) {
+            s2coords.push(s2.w === s1.w || !U.isNumber(s2.w) ? ',' : ', '+U.cropNum(s2.w, maxDigits));
+            s2coords.push(s2.h === s1.h || !U.isNumber(s2.h) ? ',' : ', '+U.cropNum(s2.h, maxDigits));
+        }
+
+        // → 🡲
+        return `(`+s1coords.join('')+`)🡲(`+s2coords.join('')+`)`;
+    }
     static stringify(ptlike: {x?:number, y?:number, w?:number, h?:number, width?:number, height?:number}): string {
         if (!ptlike) return ptlike as any;
         let str: string[] = [];
@@ -256,8 +287,8 @@ export abstract class ISize<PT extends IPoint = IPoint> extends RuntimeAccessibl
         if (ptlike.y && !isNaN(ptlike.y)|| ptlike.y === 0) str.push('y:'+U.cropNum(ptlike.y));
         if (ptlike.w && !isNaN(ptlike.w)|| ptlike.w === 0) str.push('w:'+U.cropNum(ptlike.w));
         if (ptlike.h && !isNaN(ptlike.h)|| ptlike.h === 0) str.push('h:'+U.cropNum(ptlike.h));
-        if (ptlike.width && !isNaN(ptlike.width)|| ptlike.width === 0) str.push('W:'+U.cropNum(ptlike.width));
-        if (ptlike.height && !isNaN(ptlike.height)|| ptlike.height === 0) str.push('H:'+U.cropNum(ptlike.height));
+        if (ptlike.width && !isNaN(ptlike.width) || ptlike.width === 0) str.push('W:'+U.cropNum(ptlike.width));
+        if (ptlike.height && !isNaN(ptlike.height) || ptlike.height === 0) str.push('H:'+U.cropNum(ptlike.height));
         // if (str.length === 0) return '{}';
         return '{'+str.join(', ')+'}';
     }
@@ -415,6 +446,8 @@ export abstract class ISize<PT extends IPoint = IPoint> extends RuntimeAccessibl
         this.w -= this.x;
     }
 }
+type SizeLike = {x?: number, y?: number, w?: number, h?:number, width?: number, height?: number}
+type PointLike = {x?: number, y?: number}
 
 @RuntimeAccessible('Size')
 export class Size extends ISize<Point> {

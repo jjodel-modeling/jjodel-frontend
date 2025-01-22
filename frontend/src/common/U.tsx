@@ -229,33 +229,39 @@ export class U {
     // exponential: undefined = only if it's over digits. false = never, true = always.
     public static cropNum(num: number|undefined|null, digits: number=5, exponential?: boolean, atLeast1Decimal:boolean=true): number | string{
         if (!digits || num === null || num === undefined || isNaN(num)) return num as any;
+        let sign = (num < 0 ? '-' : '');
+        if (sign.length) digits--;
         if (exponential) return num.toExponential(digits-1);
         else if (exponential === undefined) {
-            let limit = 10**(digits + 4); // 3 extra chars for e+x
-            if (num >= limit || num <= -limit) return num.toExponential(digits-1);
+            if (digits <= 4) digits = 4; // 4 extra chars for .e+x
+            // NB: i'm not checking if exponent is over 1 char (tens of billions)
+            let limit = 10**(digits);
+            if (num >= limit || -num >= limit) return num.toExponential(Math.max(0, digits-5));
         }
         let intpart: number = Math.trunc(num);
-        if (intpart === num) return num;
+        if (intpart === num) { return num; }
         /*let s = ''+num;
         let excess = (s.length - digits);
         if (excess <= 0) return num;*/
         // must cut decimals
         let intpart_s = intpart + '';
         let allowedDecimals = digits - intpart_s.length - 1;
+
+        console.log('cropnum', {digits,num, intpart, is:intpart_s.length, allowedDecimals});
         if (allowedDecimals <= 0) {
             if (!atLeast1Decimal) return intpart;
             else allowedDecimals = 1;
         }
         let decimalPart = num%1;
+        console.log('cropnum', {allowedDecimals, decimalPart});
 
         // nb: here in concatenation ((-0)+'') --> '0'. it will lose sign on cropNum(x) with x € (-1, 0)
         // so need to check if it was negative
-        let sign = (num < 0 ? '-' : '');
         // let exp = (10**allowedDecimals);
         // return sign + (intpart_s)+'.'+ (Math.round(decimalPart * exp)/exp).substring(2, allowedDecimals+2);
         let decimal_s = decimalPart+'';
         let firsti = sign.length + 2; // 0. in decimal string
-        let lasti = allowedDecimals + firsti +1;
+        let lasti = allowedDecimals + firsti;
         while (--lasti > firsti && decimal_s[lasti] === '0') {   }
         if (++lasti <= firsti) return intpart;
         let ret = +((num < 0 && intpart === -0 ? '-' : '') + (intpart_s)+'.'+ (decimal_s.substring(firsti, lasti)));
@@ -1284,74 +1290,9 @@ export class U {
 
     static arrayDifference<T>(starting: T[], final: T[]): {added: T[], removed: T[], starting: T[], final: T[]} { return Uarr.arrayDifference(starting, final); }
 
-    // returns <"what changed from old to neww"> and in nested objects recursively
-    // todo: how can i tell at what point it's the fina lvalue (might be a nestedobj) and up to when it's a delta to follow and unroll?   using __isAdelta:true ?
-    // NB: this returns the delta that generates the future. if you want the delta that generate the past one, invert parameter order.
-    public static objectDelta<T extends object>(old: T, neww: T, deep: boolean = true, includeProto: boolean = false): Partial<T>{
-        let newwobj: GObject = neww;
-        let oldobj: GObject = old;
-        if (old === neww) return {};
-        let diff = U.objdiff(old, neww, includeProto); // todo: optimize this, remove the 3 loops below and add those directly in U.objdiff(old, neww, ret); writing inside the obj in third parameter
-
-        let ret: GObject = {}; // {__isAdelta:true};
-        for (let key in diff.added) {
-            //if (!includeProto && diff.added.hasOwnProperty(key)) continue;
-            ret[key] = newwobj[key];
-        }
-        for (let key in diff.changed) {
-            let subold = oldobj[key];
-            let subnew = newwobj[key];
-            if (typeof subold === typeof subnew && typeof subold === "object") { ret[key] = deep ? U.objectDelta(subold, subnew, true, includeProto) : subnew; }
-            else ret[key] = subnew;
-        }
-        // todo: add to variable naming rules: can't start with "_-", like in "_-keyname", it means "keyname" removed in undo delta
-        let removedprefix = ""; // "_-";
-        for (let key in diff.removed) {
-            ///if (!includeProto && diff.removed.hasOwnProperty(key)) continue;
-            ret[removedprefix + key] = undefined;
-        } //newwobj[key]; }
-        // console.log("objdiff", {old, neww, diff, ret});
-        return ret as Partial<T>;
-    }
-
-    // difference react-style. lazy check by === equality field by field. parameters are readonly
-    public static objdiff<T extends GObject>(old:T, neww: T, includeProto: boolean = false): {removed: Partial<T>, added: Partial<T>, changed: Partial<T>, unchanged: Partial<T>} {
-        // let ret: GObject = {removed:{}, added:{}, changed:{}};
-        let ret: {removed: Partial<T>, added: Partial<T>, changed: Partial<T>, unchanged: Partial<T>}  = {removed:{}, added:{}, changed:{}, unchanged: {}};
-        if (!neww && !old) { return ret; }
-        if (!neww) {
-            ret.removed = old;
-            if (!includeProto){
-                ret.removed = {...ret.removed, __proto__:{}};
-            }
-            return ret;
-        }
-        if (!old) {
-            ret.added = neww;
-            if (!includeProto) {
-                ret.added = {...ret.added, __proto__:{}};
-            }
-            return ret;
-        }
-        // let oldkeys: string[] = Object.keys(old); let newkeys: string[] = Object.keys(neww);
-
-        let key: any;
-        for (key in old) {
-            if (!includeProto && !old.hasOwnProperty(key)) continue;
-            // if (neww[key] === undefined){
-            // if neww have a key with undefined value, it counts (and should) as having that property key defined
-            if (!(key in neww)){ (ret.removed as GObject)[key] = old[key]; }
-            else if (neww[key] === old[key]) { (ret.unchanged as GObject)[key] = old[key] }
-            else (ret.changed as GObject)[key] = old[key];
-        }
-        for (let key in neww) {
-            if (!includeProto && !neww.hasOwnProperty(key)) continue;
-            if (!(key in old)){ (ret.added as GObject)[key] = neww[key]; }
-        }
-        return ret;
-    }
     /*  {a: { b: { c1: 1, c2:2, c3:3 } }, d: 1 }     ---->  {"a.b.c1":1, "a.b.c2":2, "a.b.c3":3. "d":1}*/
     public static flattenObjectToRoot(obj: GObject, prefix: string = '', pathseparator: string = '.'): GObject{
+        if (!obj) { Log.ee('invalid flattenobject call', {obj, prefix}); return obj; }
         return Object.keys(obj).reduce((acc: GObject, k: string) => {
             const pre = prefix.length ? prefix + pathseparator : '';
             if (typeof obj[k] === 'object') Object.assign(acc, U.flattenObjectToRoot(obj[k], pre + k, pathseparator));
@@ -2419,6 +2360,21 @@ export class myFileReader {
 }
 @RuntimeAccessible('Uarr')
 export class Uarr{
+
+    static arrayShallowCopy<T extends any | undefined | null>(arr: T, includeCustomKeys: boolean = true): T{
+        if (!arr) return arr;
+        if (!Array.isArray(arr)) return arr;
+        let ret: T&any[] = [] as any;
+        if (!includeCustomKeys) ret = arr.map(e=>e) as any; // because [...arr] is transforming empty positions in undefined
+        else {
+            for (let k in arr) {
+                if (!(arr as any[]).hasOwnProperty(k)) continue;
+                ret[k] = arr[k]; // it takes array custom keys
+            }
+        }
+        ret.length = (arr as any[]).length;
+        return ret;
+    }
 
     public static isSubArray(array: any[], subarray: any[]): boolean {
         return subarray.every((el) => array.includes(el));

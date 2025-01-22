@@ -32,7 +32,9 @@ import {
     Dictionary,
     LUser,
     DUser,
-    Defaults, LProject, ViewScore,
+    Defaults,
+    LProject,
+    ViewScore,
     DViewElement,
     DPointerTargetable,
     DModel,
@@ -45,7 +47,13 @@ import {
     store,
     U,
     toShortEType,
-    NodeTransientProperties, transientProperties, ViewEClassMatch, ViewTransientProperties, DProject, DViewPoint
+    NodeTransientProperties,
+    transientProperties,
+    ViewEClassMatch,
+    ViewTransientProperties,
+    DProject,
+    DViewPoint,
+    DNamedElement
 } from "../../joiner";
 import {DefaultEClasses, ShortDefaultEClasses, toShortEClass} from "../../common/U";
 
@@ -287,10 +295,42 @@ export class Selectors{
         return ret;
     }
 
+    static getName(d: DPointerTargetable | LPointerTargetable | string, s: DState): string {
+        if (!d) return d;
+        if (typeof d === 'string') return d;
+        d = (d as LPointerTargetable).__raw || d;
+        if (d.className !== DObject.cname) return (d as DNamedElement).name;
+        let dobject: DObject = d as DObject;
+        for (let feat_id of dobject.features) {
+            let feat: DNamedElement | undefined = s.idlookup[feat_id] as any;
+            if (feat && feat.name.toLowerCase() === 'name') return feat.name;
+        }
+        return dobject.name;
+    }
+    static getByName2(name?: string | DPointerTargetable | LPointerTargetable, dtype?: typeof DPointerTargetable | undefined | string, caseSensitive: boolean = false, s?:DState): DPointerTargetable | null {
+        if (!name) { return null; }
+        if (typeof name === 'object') { return name as DPointerTargetable; }
+        if (!s) s = store.getState();
+        //let ret: DPointerTargetable[];
+        let classname: string | undefined = (dtype as typeof DClass)?.cname || dtype as string; // Selectors.getName(dtype, s); this was if dtype was allowed to be a class (filter Humans instead of filter DObjects)
+        if (!caseSensitive) {
+            name = name.toLowerCase();
+            classname = classname?.toLowerCase();
+        }
+        for (let id in s.idlookup) {
+            let d = s.idlookup[id];
+            if (!d || typeof d !== 'object') continue;
+            if (classname !== (caseSensitive ? d.className : d.className.toLowerCase())) continue;
+            let dname = Selectors.getName(d, s);
+            if (!caseSensitive) dname = dname?.toLowerCase();
+            if (dname === name) return d;
+        }
+        return null;
+    }
     static getByName(classe: typeof DPointerTargetable, name: string, caseSensitive: boolean = false, wrap: boolean = false): DPointerTargetable | LPointerTargetable | null {
         return Selectors.getByField(classe, 'name', name, caseSensitive, wrap); }
 
-    static getByField(classe: typeof DPointerTargetable, field: string, value: string, caseSensitive: boolean = false, wrap: boolean = false): DPointerTargetable | LPointerTargetable | null {
+    static getByField(classe: typeof DPointerTargetable | undefined, field: string, value: string, caseSensitive: boolean = false, wrap: boolean = false): DPointerTargetable | LPointerTargetable | null {
         if (!caseSensitive) value = value.toLowerCase();
         let condition = (d: any) => {
             let ret = (caseSensitive ? d[field] : d[field]?.toLowerCase()) === value;

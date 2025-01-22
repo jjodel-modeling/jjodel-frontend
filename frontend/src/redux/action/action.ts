@@ -114,10 +114,12 @@ export function COMMIT(action?:Action): boolean {
     let olddepth = t.transactionDepthLevel;
     if (olddepth<=0) {
         END(); //just safety to restore has begun state, should be necessary.
+        action?.fire();
         return false;
     }
     t.transactionDepthLevel = 1;
     END();
+    action?.fire();
     t.transactionDepthLevel = olddepth-1;
     BEGIN();
     return true;
@@ -171,6 +173,7 @@ type NoAsyncFn<
     >=ReturnsPromise;
 
 let lastDescription: {name: string, oldval: any, newval: any, desc?: string} | undefined = undefined;
+(window as any).getLastDesc = () => lastDescription;
 // make class isinstorage e mettici il path studia annotazioni per annotare gli oggett in modo che vengano rwappati prima di farli ritornare se sono annotati
 // minor todo: type as (...args: infer P) => any) ?
 // NB: cannot be async, it changes execution order and break many codes where return value is determined in a transaction.
@@ -537,10 +540,13 @@ export class RedoAction extends Action {
     public static cname: string = "RedoAction";
     static type = 'RedoAction';
     forUser: Pointer<DUser>
-    public static new<F extends boolean = true>(amount: number = 1, forUser: Pointer<DUser>, notfire?: F): (F extends false ? boolean : RedoAction) {
+
+    public static new<F extends boolean = true>(amount: number = 1, forUser:Pointer<DUser>, fire: F = true as F):
+        (F extends true ? boolean : (F extends undefined ? UndoAction : UndoAction)) {
         let act = new RedoAction(amount, forUser);
-        if (!notfire) return act.fire() as any;
+        if (fire) return act.fire() as any;
         return act as any;
+
     }
     private constructor(amount: number = 1, forUser:Pointer<DUser>) {
         super('', amount);
@@ -554,9 +560,10 @@ export class UndoAction extends Action {
     public static cname: string = "UndoAction";
     static type = 'UndoAction';
     forUser: Pointer<DUser>;
-    public static new<F extends boolean = true>(amount: number = 1, forUser:Pointer<DUser>, notfire?: F): (F extends false ? boolean : UndoAction) {
+    public static new<F extends boolean = false>(amount: number = 1, forUser:Pointer<DUser>, fire: F = true as F):
+        (F extends true ? boolean : (F extends undefined ? UndoAction : UndoAction)) {
         let act = new UndoAction(amount, forUser);
-        if (!notfire) return act.fire() as any;
+        if (fire) return act.fire() as any;
         return act as any;
     }
     private constructor(amount: number = 1, forUser:Pointer<DUser>) {

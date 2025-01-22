@@ -52,12 +52,12 @@ export class SaveManagerComponent extends PureComponent<AllProps, ThisState>{
     public static cname: string = "SaveManagerComponent";
     private undoredolistoutdated: boolean;
     do_undo = (index: number) => {
-        UndoAction.new(index+1, this.state.user).commit();
+        UndoAction.new(index+1, this.state.user, false).commit();
         this.undoenter(); // updates list
     }
     do_redo = (index: number) => {
         console.log("redo(" + index + ")");
-        RedoAction.new(index+1, this.state.user);
+        RedoAction.new(index+1, this.state.user, false).commit();
         this.redoenter();
     }
     printablePointer(pathsegment: string, state: DState){
@@ -93,26 +93,36 @@ export class SaveManagerComponent extends PureComponent<AllProps, ThisState>{
         let arr = [...(key === 'undo' ? undoarr : redoarr)].reverse().slice(0, this.props.maxlistsize);
         let list = arr.map((delta, index) => {
             let prevDelta = delta; // arr[index + 1]; //[index + (key === 'undo' ? -1 : +1)]
+            let otherDelta = arr[index + 1]; //[index + (key === 'undo' ? -1 : +1)]
             // let actiodesc = key ==='undo' ? arr[index + 1] : ) || s;
-
             let out: {best: R}&R[] = [] as GObject as R[] & {best:R};
+            let out_otherdelta: {best: R}&R[] = [] as GObject as R[] & {best:R};
             U.ObjectToAssignementStrings(delta, 10, 6, 20, "…", out, true);
-            if (!index) console.log('debug undoredo', {out, delta, arr});
-            console.log("undoredo update", out);
+            if (otherDelta) U.ObjectToAssignementStrings(otherDelta, 10, 6, 20, "…", out_otherdelta, true);
+            // if (!index) console.log('debug undoredo', {out, delta, arr});
             if ((prevDelta||s).action_title) out.best.str = (prevDelta||s).action_title;
+            if ((otherDelta)?.action_title) out_otherdelta.best.str = (otherDelta||s).action_title;
             if ((prevDelta||s).action_description) out.best.fullstr = (prevDelta||s).action_description;
+            if ((otherDelta)?.action_description) out_otherdelta.best.fullstr = (otherDelta||s).action_description;
             out.best.str = U.cropStr(out.best.str, 1, 0, 13, 12);
-            out.best.fullstr = U.cropStr(out.best.fullstr, 1, 0, 25, 25);
+            out.best.fullstr = U.cropStr(out.best.fullstr, 1, 0, 250, 250);
+            //out_otherdelta.best.str = U.cropStr(out_otherdelta.best.str, 1, 0, 13, 12);
+            //out_otherdelta.best.fullstr = U.cropStr(out_otherdelta.best.fullstr, 1, 0, 250, 250);
             //this.improveText(out.best, s);
             let other = out.slice(0, this.props.maxDetailSize); //.map(e=>this.improveText(e));
+            let other2 = out_otherdelta.slice(0, this.props.maxDetailSize); //.map(e=>this.improveText(e));
             return <li onClick={() => ((this as GObject)["do_" + key](index))} className="hoverable" key={index} tabIndex={0}
                        style={{overflow: "visible", height: "24px"}}>
                 <div className={"preview"}>{out.best.str}</div>
-                <div className={"content"}>{out.best.fullstr}</div>
+                <div className={"content inline"}>{out.best.fullstr}</div>
                 <div className={"content detail-list"}>{
-                    other.map(row => (
-                        <div className={'detail-entry'}>{row.fullpath.join(".") + " = " + row.fullvalue}</div>
-                    ))}
+                    other.map((row, ii) => {
+                        let row2 = other2[ii];
+                        return <div className={'detail-entry hoverable'}>
+                            <span className='preview inline'>{row.fullpath.join(".") + " = " + row.fullvalue}</span>
+                            <span className='content inline'>{row2 && (row2.fullpath.join(".") + " = " + row2.fullvalue)}</span>
+                        </div>
+                    })}
                     {out.length !== other.length ? <div className={'detail-entry'}>...</div> : null}
                 </div>
             </li>
