@@ -525,7 +525,7 @@ function unsafereducer(oldState: DState = initialState, action: Action): DState 
             if (RuntimeAccessibleClass.extends(d.className, "DGraphElement")) {
                 delete transientProperties.node[d.id as string]; // = { } as any;
                 // transientProperties.node[d.id as string] = undefined as any;
-                console.error('tn deleted', {tn:transientProperties.node[d.id as string], id:d.id});
+                console.warn('tn deleted', {tn:transientProperties.node[d.id as string], id:d.id});
                 for (sk in ret) if (sk.indexOf('NODES_RECOMPILE') === 0) (ret[sk] as Pointer[]).push(id);
                 //ret.NODES_RECOMPILE_labels.push(id); ret.NODES_RECOMPILE_longestLabel.push(id);
             }
@@ -533,7 +533,7 @@ function unsafereducer(oldState: DState = initialState, action: Action): DState 
         if (resetAllNodes) for (let nid in transientProperties.node) {
             delete transientProperties.node[nid];// = {} as any;
             // transientProperties.node[nid] = undefined as any;
-            console.error('tn deleted 2', {tn:transientProperties.node[nid], nid});
+            console.warn('tn deleted 2', {tn:transientProperties.node[nid], nid});
             for (sk in ret) if (sk.indexOf('NODES_RECOMPILE') === 0) (ret[sk] as Pointer[]).push(nid);
             //ret.NODES_RECOMPILE_labels.push(id); ret.NODES_RECOMPILE_longestLabel.push(id);
         }
@@ -998,29 +998,31 @@ function filterundoableactions(delta: Partial<DState>): boolean {
 }
 function undo(state: DState, action: UndoAction | RedoAction, delta: GObject | undefined, isundo = true): DState {
     if (!delta) return state;
-    let undonestate: DState = {...state} as DState;
+    //let undonestate: DState = {...state} as DState;
     //   controlla se vengono shallow-copied solo e tutti gli oggetti nested lungo la catena del percorso delle modifiche
     //   es: root.a.b.c=3 + root.a.b.d=3 = 4+1 modifiche, 5 shallow copies including the root
-    undorecursive(delta, undonestate);
-    let forUser = action.forUser;
-    let user = action.sender;
+    //undorecursive(delta, undonestate);
+
+    let undonestate = Uobj.applyObjectDelta(state, delta, false);
     // todo: check if delta2 === delta or is his opposite in values but same shape
     let delta2 = Uobj.objectDelta(undonestate, state);
     let debug = Uobj.applyObjectDelta(undonestate, delta2, false, state);
+    let forUser = action.forUser;
+    let user = action.sender;
     // reverses from undo to redo and viceversa swapping arguments, so the target result after appliying the delta changes
     // redo is "undoing an undo", reversing his changes just like an undo reverses an ordinary action changes.
     let key: 'redoable'|'undoable' = isundo ? 'redoable' : 'undoable';
     statehistory[user][key].push(delta2);
     statehistory.all[key].push(delta2);
-    return undonestate;
+    return undonestate as GObject<DState>;
 }
-
+/*
 function undorecursive(deltalevel: GObject, statelevel: GObject): void {
     // statelevel = {...statelevel}; not working if i do it here, just a new var. first time copy id done in caller func undo(). recursive copies are done before recursive step
     for (let key in deltalevel) {
         let delta = deltalevel[key];
         console.log("undoing", {delta, key, deltalevel, statelevel})
-        if (key.indexOf("_-") === 0) { delete statelevel[key.substring(2)]; continue; }
+        //if (key.indexOf("_-") === 0) { delete statelevel[key.substring(2)]; continue; }
         if (typeof delta === "object") {
         // if (U.isObject(delta, false, false, true)) {
             if (Array.isArray(delta)) statelevel[key] = [...statelevel[key]];
@@ -1028,7 +1030,7 @@ function undorecursive(deltalevel: GObject, statelevel: GObject): void {
             undorecursive(deltalevel[key], statelevel[key]); }
         else { statelevel[key] = delta; }
     }
-}
+}*/
 
 function doreducer/*<S extends StateNoFunc, A extends Action>*/(oldState: DState = initialState, action: Action): DState{
     let ca: CompositeAction;

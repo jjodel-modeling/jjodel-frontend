@@ -7,7 +7,7 @@ export class Uobj {
     static cname: string = 'Uobj';
 
     // difference react-style. lazy check by === equality field by field. parameters are readonly
-    public static objdiff<T extends GObject>(old:T, neww: T, includeProto: boolean = false): {removed: Partial<T>, added: Partial<T>, changed: Partial<T>, unchanged: Partial<T>} {
+    public static objdiff<T extends GObject>(old:T, neww: T, includeProto: boolean = true): {removed: Partial<T>, added: Partial<T>, changed: Partial<T>, unchanged: Partial<T>} {
         // let ret: GObject = {removed:{}, added:{}, changed:{}};
         let ret: {removed: Partial<T>, added: Partial<T>, changed: Partial<T>, unchanged: Partial<T>}  = {removed:{}, added:{}, changed:{}, unchanged: {}};
         if (!neww && !old) { return ret; }
@@ -60,13 +60,19 @@ export class Uobj {
         let newwobj: GObject = neww;
         let oldobj: GObject = old;
         if (old === neww) return {};
-        if (!neww) return old;
+        if (!neww) {
+            if (includeProto) return old;
+            return {...old}; // destructure because i need to remove prototype
+        }
         let diff = Uobj.objdiff(old, neww, includeProto); // todo: optimize this, remove the 3 loops below and add those directly in Uobj.objdiff(old, neww, ret); writing inside the obj in third parameter
         console.log('objdiff', {diff, old, neww})
         let isArr = false;
         let to = typeof old;
         let tn = typeof old;
-        if (to !== 'object'/* && tn === 'object'*/) { return neww as any; }
+        if (to !== 'object'/* && tn === 'object'*/) {
+            if (includeProto) return neww;
+            return {...neww} as any;
+        }
         if (tn === 'object' && Array.isArray(neww)) { isArr = true; }
         let ret: GObject = {}; // {__isAdelta:true};
         for (let key in diff.added) {
@@ -120,12 +126,14 @@ export class Uobj {
         else if (targetIsArr && !Array.isArray(statelevel)) statelevel = Uarr.arrayShallowCopy(statelevel); // forced to ignore inplace requirement due to change of type (obj -> arr)
 
         // statelevel = {...statelevel}; not working if i do it here, just a new var. first time copy id done in caller func undo(). recursive copies are done before recursive step
+        let includeProto = false;
         for (let key in deltalevel) {
             let delta = deltalevel[key];
+            if (!includeProto && !deltalevel.hasOwnProperty(key)) { continue; }
             // console.log("undoing", {delta, key, deltalevel, statelevel})
-            if (key.indexOf("_-") === 0) { delete statelevel[key.substring(2)]; continue; } // ????????????????????????????????????? todo: check
+            // if (key.indexOf("_-") === 0) { delete statelevel[key.substring(2)]; continue; } // ????????????????????????????????????? todo: check
             if (key === '__jjObjDiffIsArr') continue; // the key is the string, the val is true
-            if (deltalevel[key] === '__jjObjDiffEmptyElem') { // the key is the index,the  val is the string
+            if (delta === '__jjObjDiffEmptyElem') { // the key is the index,the  val is the string
                 delete statelevel[key];
                 continue;
             }
@@ -146,7 +154,22 @@ export class Uobj {
             }
 
             //delete statelevel.__jjObjDiffIsArr;
-            statelevel.length = old.length;
+            let len: number = null as any;
+            if (Array.isArray(deltalevel) || 'length' in deltalevel) len = deltalevel.length;
+            else if ('length' in old) len = old.length;
+            else Log.exDevv('cannot find array length', {old, statelevel, deltalevel, asserteq});
+            if (!(len>=0)) {
+                console.error('invalid array length set', {old, statelevel, deltalevel, asserteq});
+            }
+            else {
+                try { statelevel.length = len; } catch(e){
+                    console.error('invalid array length set err', {e, old,
+                        len, linold:'length' in old, 'lindelta': 'length' in deltalevel,
+                        statelevel, deltalevel, asserteq});
+                    throw e;
+                }
+
+            }
         }
 
         if (asserteq) {
