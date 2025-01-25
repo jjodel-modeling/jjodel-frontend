@@ -839,7 +839,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         let state: DState = store.getState();
         if (e.button !== Keystrokes.clickRight && state.contextMenu?.display) SetRootFieldAction.new("contextMenu", {display: false, x: 0, y: 0}); // todo: need to move it on document or <App>
         const edgePendingSource = this.props.isEdgePending?.source;
-        console.log('mousedown select() check PRE:', {e, name: this.props.data?.name, isSelected: this.props.node.isSelected(), 'nodeIsSelectedMapProxy': this.props.node?.isSelected, nodeIsSelectedRaw:this.props.node?.__raw.isSelected});
+        //console.log('mousedown select() check PRE:', {e, name: this.props.data?.name, isSelected: this.props.node.isSelected(), 'nodeIsSelectedMapProxy': this.props.node?.isSelected, nodeIsSelectedRaw:this.props.node?.__raw.isSelected});
 
         if (edgePendingSource) {
             if (this.props.data?.className !== "DClass") return;
@@ -856,7 +856,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
             SetRootFieldAction.new('isEdgePending', { user: '',  source: '' });
             return;
         }
-        console.log('mousedown select() check:', {e, isSelected: this.props.node.isSelected(), 'nodeIsSelectedMapProxy': this.props.node?.isSelected, nodeIsSelectedRaw:this.props.node?.__raw.isSelected});
+        //console.log('mousedown select() check:', {e, isSelected: this.props.node.isSelected(), 'nodeIsSelectedMapProxy': this.props.node?.isSelected, nodeIsSelectedRaw:this.props.node?.__raw.isSelected});
         windoww.node = this.props.node;
 
         TRANSACTION('select', ()=>{
@@ -939,11 +939,12 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
             if (dedge.id !== ptr) edge.end = ptr as any;
         }
         if (props.anchorEnd) { tn.labels = props.labels; }
+        let todoremovethis = true;
         // if (typeof props.viewid === 'string') { let old = props.viewid; if (old !== props.node.view.id) { this.forceUpdate(); ret = true;} }
-        if (typeof props.isReference) { let old = dedge.isReference; let n = !!props.isReference; if (old !== n) { edge.isReference = n; ret = true;} }
-        if (typeof props.isExtend) { let old = dedge.isExtend; let n = !!props.isExtend; if (old !== n) { edge.isExtend = n; ret = true;} }
-        if (typeof props.isValue) { let old = dedge.isValue; let n = !!props.isValue; if (old !== n) { edge.isValue = n; ret = true;} }
-        if (typeof props.isDependency) { let old = dedge.isDependency; let n = !!props.isDependency; if (old !== n) { edge.isDependency = n; ret = true;} }
+        if (todoremovethis || props.isReference !== undefined) { let old = dedge.isReference; let n = !!props.isReference; if (old !== n) { edge.isReference = n; ret = true;} }
+        if (todoremovethis || props.isExtend !== undefined) { let old = dedge.isExtend; let n = !!props.isExtend; if (old !== n) { edge.isExtend = n; ret = true;} }
+        if (todoremovethis || props.isValue !== undefined) { let old = dedge.isValue; let n = !!props.isValue; if (old !== n) { edge.isValue = n; ret = true;} }
+        if (todoremovethis || props.isDependency !== undefined) { let old = dedge.isDependency; let n = !!props.isDependency; if (old !== n) { edge.isDependency = n; ret = true;} }
         if (typeof props.x === 'number') { let old = dnode.x; let n = +props.x; if (old !== n) { node.x = n; ret = true;} }
         if (typeof props.y === 'number') { let old = dnode.y; let n = +props.y; if (old !== n) { node.y = n; ret = true;} }
         // risk loop: todo loop detection and skip setting

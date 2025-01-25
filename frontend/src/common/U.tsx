@@ -1304,15 +1304,25 @@ export class U {
     // from {a:{aa:true, ab:"ab"}, b:4} to ["a.aa = true", "a.ab = \"ab\"", "a.b = 4"]
     // maxkeylength is max length of any individual key, after it it will become: superlongpath --> supe...path
     // maxsubpaths is how many subpaths are displayed at most. after it it will be: super.rea.lly.long.pa.th --> super.rea.pa.th
-    public static ObjectToAssignementStrings<R extends {str: string, fullstr: string, path:string[], fullpath:string[], val: string, fullvalue: string, pathlength?: number}>
+    /*public static ObjectToAssignementStrings2<R extends {str: string, fullstr: string, path:string[], fullpath:string[], val: string, fullvalue: string, pathlength?: number}>
     (obj: GObject, maxkeylength: number = 10, maxsubpaths: number = 6, maxvallength: number = 20, toolongreplacer: string = "…", out?:{best: R}&R[], quotestrings: boolean = true): {best: string}&string[] {
+        out.__jjsplitstrings = true;
+        let ret = U.ObjectToAssignementStrings(obj, maxkeylength, maxsubpaths, maxvallength, toolongreplacer, out, quotestrings)
+        delete out.__jjsplitstrings;
+        return ret;
+    }*/
+         public static ObjectToAssignementStrings<R extends {str: string, fullstr: string, path:string[], fullpath:string[],
+             val: string, fullvalue: string, pathlength?: number}>
+    (obj: GObject, maxkeylength: number = 10, maxsubpaths: number = 6, maxvallength: number = 20, toolongreplacer: string = "…",
+     out?:{best: R, obj: GObject}&R[], quotestrings: boolean = true, filterFunction?: (e:R)=>boolean): {best: string}&string[] {
         const pathseparator = ".";
         const valueseparator = " = ";
-        const filterrow = (rowpaths: string[]) => { return (!rowpaths.includes("clonedCounter") && !rowpaths.includes("pointedBy")); };
+        //const filterrow = (rowpaths: string[]) => { return (!rowpaths.includes("clonedCounter") && !rowpaths.includes("pointedBy")); };
         let flatten = U.flattenObjectToRoot(obj, '', pathseparator);
         let i = -1;
         let tmp;
-        let ret: {best: string} & string[] = [] as GObject as {best: string} & string[];
+        const ret: {best: string, obj: GObject} & string[] = [] as any;
+        ret.obj = obj;
         tmp = (maxkeylength - toolongreplacer.length)/2;
         let halfpath = { start: (window as any).Math.floor(tmp), end: (window as any).Math.ceil(tmp) };
         tmp = (maxvallength - toolongreplacer.length)/2;
@@ -1326,17 +1336,19 @@ export class U {
         let countsize = (total: number, arrelem: string): number => total + arrelem.length;
         const filterbest = (row: R) => {
             row.pathlength = row.fullstr.length; // row.fullpath.reduce<number>(countsize, 0);
-            if (!best || bestpathsize < row.pathlength && filterrow(row.fullpath)) {
-                best = row; bestpathsize = row.pathlength;
+            if (!best || bestpathsize < row.pathlength) { // && filterrow(row.fullpath)) {
+                best = row;
+                bestpathsize = row.pathlength;
                 if (out) out.best = best;
                 ret.best = best.str;
             }
         }
         console.log("u get assignements", {flatten, obj});
 
+
         for (let key in flatten) {
             let row: R = {fullpath: key.split(pathseparator), fullstr: key} as R;
-            // if (!filterrow(row.fullpath)) continue;
+            if (filterFunction && !filterFunction(row)) continue;
             // stringify(undefined) = undefined, so i add + ""
             try {
                 if (!quotestrings && typeof flatten[key] === "string") row.fullvalue = flatten[key];
@@ -1352,7 +1364,9 @@ export class U {
             // row.path = row.fullpath.length <= maxsubpaths ? row.fullpath : [...row.fullpath.slice(0, halfsubpaths.start), ...row.fullpath.toomanyarraycopies];
             row.path = row.path.map((p: string) => (p.length <= maxkeylength ? p : p.substring(0, halfpath.start) + toolongreplacer + p.substring(p.length - halfpath.end)));
             if (out) { out.push(row); }
-            row.str = row.path.join(pathseparator) + valueseparator + row.val;
+
+            if (row.val === '__jjObjDiffEmptyElem') row.str = 'DELETE '+row.path.join(pathseparator)+';';
+            else row.str = row.path.join(pathseparator) + valueseparator + row.val;
             ret.push( row.str );
             filterbest(row);
         }

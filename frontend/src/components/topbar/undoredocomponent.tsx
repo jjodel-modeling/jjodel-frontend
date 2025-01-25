@@ -67,6 +67,23 @@ export class SaveManagerComponent extends PureComponent<AllProps, ThisState>{
         if (obj.className) return "#"+obj.className;
         return pathsegment;
     }
+
+    // redo list is updated only when the user mouse-enters it. for efficiency.
+    undoredoenter2 = (key: "undo"|"redo" = "undo") => {
+        let history = this.get_history(this.state.user);
+        let undoarr = history.undoable;
+        let redoarr = history.redoable;
+        console.log("statemanager undo update", {thiss:this, undoarr, redoarr, user: this.state.user, props: this.props, state:this.state});
+        if (!this.undoredolistoutdated) return;
+        let s: DState = store.getState();
+        let arr = [...(key === 'undo' ? undoarr : redoarr)].reverse().slice(0, this.props.maxlistsize);
+        let out: {best: R, obj: GObject}&R[] = [] as any;
+        let strings = arr.map( delta => U.ObjectToAssignementStrings(delta, 10, 6, 20, "…", out, true));
+        //todo: make it just for current index, then get the next val from index+1 or current state, using R.path and replacing just the value. on mouseover switch it val of the delta vs next val
+            let list = arr.map((delta, index) => {})
+
+    }
+
     improveText(e: R, s: DState) {
         if (e.fullstr.includes("Pointer")) {
             let editedfullpath = e.fullpath.map( (pathsegment) => {
@@ -81,8 +98,8 @@ export class SaveManagerComponent extends PureComponent<AllProps, ThisState>{
             e.str = e.str.substring(0, e.str.lastIndexOf("=")) + "= " + e.val;
         }
     }
-    // redo list is updated only when the user mouse-enters it. for efficiency.
     undoredoenter = (key: "undo"|"redo" = "undo") => {
+        let debug = this.props.debug;
         let history = this.get_history(this.state.user);
         let undoarr = history.undoable;
         let redoarr = history.redoable;
@@ -90,19 +107,28 @@ export class SaveManagerComponent extends PureComponent<AllProps, ThisState>{
         if (!this.undoredolistoutdated) return;
         let s: DState = store.getState();
         // let arr = [...(this.props as GObject)[key]].reverse().slice(0, this.props.maxlistsize);
-        let arr = [...(key === 'undo' ? undoarr : redoarr)].reverse().slice(0, this.props.maxlistsize);
+        let fullarr = [...(key === 'undo' ? undoarr : redoarr)].reverse()
+        let arr = fullarr.slice(0, this.props.maxlistsize);
         let list = arr.map((delta, index) => {
-            let prevDelta = delta; // arr[index + 1]; //[index + (key === 'undo' ? -1 : +1)]
+            let out: {best: R, obj: GObject}&R[] = [] as GObject as any;
+            let out_otherdelta: {best: R, obj: GObject}&R[] = [] as any;
+            let titleDelta = arr[index + (key === 'undo' ? -1 : 0)]
             let otherDelta = arr[index + 1]; //[index + (key === 'undo' ? -1 : +1)]
             // let actiodesc = key ==='undo' ? arr[index + 1] : ) || s;
-            let out: {best: R}&R[] = [] as GObject as R[] & {best:R};
-            let out_otherdelta: {best: R}&R[] = [] as GObject as R[] & {best:R};
-            U.ObjectToAssignementStrings(delta, 10, 6, 20, "…", out, true);
+
+            let excludedPaths: Dictionary<string, boolean> = {'action.title': true, 'action.description': true};
+            let filterrow = (e:R)=> {
+                console.log('filterrow', {debug, e});
+                return debug || !excludedPaths[key] && !e.fullpath.includes("clonedCounter")
+                    && !e.fullpath.includes("pointedBy")
+                    && !e.fullpath.includes('__jjObjDiffIsArr');
+            }
+            U.ObjectToAssignementStrings(delta, 10, 6, 20, "…", out, true, filterrow);
             if (otherDelta) U.ObjectToAssignementStrings(otherDelta, 10, 6, 20, "…", out_otherdelta, true);
             // if (!index) console.log('debug undoredo', {out, delta, arr});
-            if ((prevDelta||s).action_title) out.best.str = (prevDelta||s).action_title;
+            if ((titleDelta||s).action_title) out.best.str = (titleDelta||s).action_title;
             if ((otherDelta)?.action_title) out_otherdelta.best.str = (otherDelta||s).action_title;
-            if ((prevDelta||s).action_description) out.best.fullstr = (prevDelta||s).action_description;
+            if ((titleDelta||s).action_description) out.best.fullstr = (titleDelta||s).action_description;
             if ((otherDelta)?.action_description) out_otherdelta.best.fullstr = (otherDelta||s).action_description;
             out.best.str = U.cropStr(out.best.str, 1, 0, 13, 12);
             out.best.fullstr = U.cropStr(out.best.fullstr, 1, 0, 250, 250);
@@ -120,7 +146,7 @@ export class SaveManagerComponent extends PureComponent<AllProps, ThisState>{
                         let row2 = other2[ii];
                         return <div className={'detail-entry hoverable'}>
                             <span className='preview inline'>{row.fullpath.join(".") + " = " + row.fullvalue}</span>
-                            <span className='content inline'>{row2 && (row2.fullpath.join(".") + " = " + row2.fullvalue)}</span>
+                            <span className='content inline'>r2:@@@{row2 && (row2.fullpath.join(".") + " = " + row2.fullvalue)}</span>
                         </div>
                     })}
                     {out.length !== other.length ? <div className={'detail-entry'}>...</div> : null}
@@ -179,7 +205,9 @@ export class SaveManagerComponent extends PureComponent<AllProps, ThisState>{
                 <span className={"hoverable"} style={{position: "relative", background: "white"}} onMouseEnter={this.undoenter} onMouseLeave={this.undoleave}>
                     <button className={'item border round ms-1'} onClick={(e)=> { this.do_undo(0) }}>Undo ({undo.length})</button>
                     {this.props.debug && undo.length ?
-                        <ul style={{background: "inherit", width: "max-content", zIndex:10000}} className={"content"}>{this.state.undo.jsx}</ul>
+                        <ul style={{background: "inherit", width: "max-content", zIndex:10000}} className={"content"}>
+                            {this.state.undo.jsx}
+                        </ul>
                         : null}
                 </span>
                 <span className={"hoverable"} style={{position: "relative", background: "white"}} onMouseEnter={this.redoenter} onMouseLeave={this.redoleave}>
@@ -200,7 +228,6 @@ function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     ret.maxlistsize = 10;
     ret.maxDetailSize = 20;
     ret.debug = state.debug;
-    /// to fill
     return ret; }
 
 function mapDispatchToProps(dispatch: Dispatch<any>): DispatchProps {
