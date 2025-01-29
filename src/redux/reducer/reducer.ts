@@ -15,7 +15,9 @@ import {
     bool,
     NodeTransientProperties,
     ViewTransientProperties,
-    DGraphElement, Uarr
+    DGraphElement, Uarr,
+    LProject,
+    DProject
 } from '../../joiner';
 import {
     Action,
@@ -1084,6 +1086,8 @@ export async function stateInitializer() {
             // U.alert('e','You are already logged on another client','');
             DUser.current = '';
         }
+
+
     } else DUser.current = '';
 
 }

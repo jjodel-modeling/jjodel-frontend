@@ -186,6 +186,7 @@ function LeftBar(props: LeftBarProps): JSX.Element {
                         }
                     </Menu>
                 }
+
                 {props.projects && props.projects.filter(p => p.isFavorite).length > 0 &&
                     <Menu title={"Recent"} mode={'collapsable'}>
                         {props.projects
@@ -194,10 +195,7 @@ function LeftBar(props: LeftBarProps): JSX.Element {
                             .map(p => <Item icon={icon['folder']} action={e => selectProject(p)}>{p.name}</Item>)}
                     </Menu>
                 }
-                {/* <Menu>
-                    <Item action={'templates'} icon={icon['template2']}>Templates</Item>
-                    <Item action={'notes'} icon={icon['edit']}>Notes</Item>
-                </Menu>*/}
+                
                 <Menu title={'Support'} mode={'collapsable'}>
                     {/* <Item action={'updates'} icon={icon['whats-new']}
                           dot={+(localStorage.getItem('_jj_update_seen')||0)<+(localStorage.getItem('_jj_update_date')||Number.POSITIVE_INFINITY)}

@@ -1,10 +1,9 @@
 .context-menu {
-
   position: absolute;
   z-index: 1001;
   top: 9%;
   width: 200px;
-  border-radius: 8px;
+  border-radius: 6px;
   border-style: solid;
   border-width: 1px;
   border-color: #233d4d;
@@ -13,7 +12,7 @@
   background: #233d4d;
 }
 
-.context-menu  div .item {
+.context-menu div .item {
   cursor: pointer;
   margin: 0 4px 0 4px;
   padding: 3px 8px 3px 8px;
@@ -32,12 +31,10 @@
 
 .context-menu div .item div {
   font-size: 0.9em;
-
   font-kerning: none;
   float: right;
-  padding-top: 2px;
+  padding-top: 2px; 
 }
-
 
 .context-menu div .item .bi {
   color: white!important;
@@ -71,9 +68,8 @@
 
 .context-menu div .item:hover {
   background-color: var(--accent);
-  border-radius: var(--radius);
+  border-radius: var(--radius); 
 }
-
 
 .context-menu div .submenu {
   padding: 2px!important;

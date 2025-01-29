@@ -23,6 +23,7 @@ import { CommandBar, Btn } from "../commandbar/CommandBar";
 import { SetRootFieldAction } from "../../joiner";
 import './metrics.scss';
 import { int } from "../../joiner/types";
+import ReactDOM from "react-dom";
 
 type MetricsProps = {
     data: LModelElement;
@@ -64,6 +65,15 @@ export const toggleMetrics = () => {
     }
 }
 
+class MetricsPanelManager {
+    static open(model: any) {
+        if (!document) return;
+        
+        const metricsElement = document.createElement('div');
+        ReactDOM.render(React.createElement(MetricsPanel, {data: model}), metricsElement);
+        document.body.append(metricsElement);
+    }
+}
 
 export const MetricsPanel = (props: MetricsProps) => {
 
@@ -212,26 +222,7 @@ export const MetricsPanel = (props: MetricsProps) => {
                 </div>
                 {/* <p><a target="_blank" href="https://dl.acm.org/doi/abs/10.1145/2593770.2593774">https://dl.acm.org/doi/abs/10.1145/2593770.2593774</a></p>*/}
             </div>
-
-                    /*
-                    <div className={'metrics-row'}>
-                        <label className={'name'}>Attributes/Inherited:</label>
-                        <Metrics type={'attr'} data={props.data}/>
-                    </div>
-                    <div className={'metrics-row'}>
-                        <label className={'name'}>References/Inherited:</label>
-                        <Metrics type={'ref'} data={props.data}/>
-                    </div>
-                    <div className={'metrics-row'}>
-                        <label className={'name'}>Enumerators/Literals:</label>
-                        <Metrics type={'ref'} data={props.data}/>
-                    </div>
-                    <div className={'metrics-row'}>
-                        <label className={'name'}>Extend relations:</label>
-                        <Metrics type={'ext'} data={props.data}/>
-                    </div>
-                </div>
-        </div>*/}
+            }
     </>);
 }
 
@@ -295,3 +286,5 @@ export const Metrics = (props: MetricsProps) => {
     // contare gli archi per gli extend non è corretto, uno potrebbe nasconderli.
 
 }
+
+export {MetricsPanelManager};

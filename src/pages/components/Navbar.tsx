@@ -3,10 +3,12 @@ import './navbar.scss';
 import {
     Dictionary,
     DModel,
+    DProject,
     DState,
     DUser,
     Input,
     Keystrokes,
+    L,
     LGraph,
     LModel,
     LPackage,
@@ -14,6 +16,7 @@ import {
     LUser,
     Selectors,
     SetRootFieldAction,
+    store,
     U
 } from '../../joiner';
 
@@ -30,10 +33,13 @@ import TabDataMaker from "../../../src/components/abstract/tabs/TabDataMaker";
 import DockManager from "../../../src/components/abstract/DockManager";
 
 import {Divisor, Item, Menu} from '../components/menu/Menu';
-import {InternalToggle} from '../../components/widgets/Widgets';
-import Storage from '../../data/storage';
+
 import Collaborative from "../../components/collaborative/Collaborative";
 import { isProjectModified, setProjectModified, unsetProjectModified } from '../../common/libraries/projectModified';
+import { AboutModal } from './about/About';
+import { MetricsPanelManager } from '../../components/metrics/Metrics';
+import Api from '../../data/api';
+
 
 
 let windoww = window as any;
@@ -82,6 +88,7 @@ function makeEntry(i: MenuEntry) {
     } else {
         if (i.subItems && i.subItems.length === 0) return undefined;
         let slength = i.subItems ? i.subItems.length : 0;
+
         return (
             <li className={slength > 0 ? "hoverable" : ""} tabIndex={0} onClick={()=>i.function?.()}>
                 <label className={`highlight ${i.disabled && 'disabled'}`}>
@@ -142,69 +149,19 @@ function NavbarComponent(props: AllProps) {
     const project = props.project;
 
     
-    
-    // let response: string |null = null;
-
-    // function getResponse2() {
-        
-    //     console.log('dialog_response', windoww.dialog_response);
-    //     if (typeof(windoww.dialog_response) !== "undefined") {
-    //         windoww.dialog_response = undefined;
-    //         return response;
-    //     }
-    //     window.setTimeout(function() {
-    //         getResponse();
-    //     }, 500);
-    // }
-
-    // function getResponse() {
-
-    //     response = localStorage.getItem('dialog_response');
-        
-    //     window.setInterval(function() {
-    //         if (response === "true" || response === "false") {
-    //             return;
-    //         }
-    //     }, 500);
-        
-    //     // let response = windoww.dialog_response;
-
-    //     alert('getResponse '+response);
-    //     return response;
-    // }
-        
+    const open = (url: string) => {
+        window.open(
+            url,
+            '_blank' 
+          );
+    }
 
 
     const Key = Keystrokes;
-    let projectItems: MenuEntry[] = [];
-    {/*name: 'Save as', icon: icon['save'], function:  () => {project && ProjectsApi.save(project)}, keystroke: [Key.shift, Key.cmd, 'S']*/}
-    {/*name: 'divisor', function: () => {}, keystroke: []*/}
-    {/*name: 'Import...', icon: icon['import'], function: () => {}, keystroke: []*/}
-    {/*
-        {name: 'divisor', function: () => {}, keystroke: []},
-        {name: 'View', icon: icon['view'],
-            subItems: [
-            {name: 'Show dot grid', icon: icon['grid'], function: async() => {}, keystroke: []},
-            {name: 'divisor', function: async() => {}, keystroke: []},
-            {name: 'Maximize editor', icon: icon['maximize'], function: async() => {}, keystroke: []},
-            {name: 'divisor', function: async() => {}, keystroke: []},
-            {name: 'Zoom in', icon: icon['zoom-in'], function: async() => {}, keystroke: [Key.cmd, '+']},
-            {name: 'Zoom out', icon: icon['zoom-out'], function: async() => {}, keystroke: [Key.cmd, '-']},
-            {name: 'Zoom to 100%', function: async() => {}, keystroke: [Key.cmd, '0']},
-        ],
-            keystroke: []
-        },
-    */
-    }
-    //            {name: 'Close project', icon: icon['close'], function: () => {
-    //                 navigate('/allProjects');
-    //                 Collaborative.client.off('pullAction');
-    //                 Collaborative.client.disconnect();
-    //                 SetRootFieldAction.new('collaborativeSession', false);
-    //                 U.refresh();
-    //                 }, keystroke: [Key.cmd, 'Q']},
+    let projectItems2: MenuEntry[] = [];
+    
     if (project){
-        projectItems = [
+        projectItems2 = [
 
             /* New Metamodel */
 
@@ -290,7 +247,7 @@ function NavbarComponent(props: AllProps) {
             /* Help */
 
             {name: 'Help', icon: icon['help'], subItems: [
-                {name: 'What\'s new', icon: icon['whats-new'], function: async() => {document.location.href="https://www.jjodel.io/whats-new/"}, keystroke: []},
+                {name: 'What\'s new', icon: icon['whats-new'], function: async() => {open("https://www.jjodel.io/whats-new/")}, keystroke: []},
                 {name: 'divisor', function: async() => {}, keystroke: []},
                 {name: 'Homepage', icon: icon['home'], function: async() => {document.location.href="https://www.jjodel.io/"}, keystroke: []},
                 {name: 'Getting started', icon: icon['getting-started'], function: async() => {document.location.href="https://www.jjodel.io/getting-started/"}, keystroke: []},
@@ -302,7 +259,7 @@ function NavbarComponent(props: AllProps) {
         ];
     }
 
-    const dashboardItems: MenuEntry[] = [
+    const dashboardItems2: MenuEntry[] = [
 
         {name: 'New project', icon: <i className="bi bi-plus-square"></i>, function:
             async()=>{
@@ -329,6 +286,7 @@ function NavbarComponent(props: AllProps) {
             {name: 'Legal terms', icon: <i className="bi bi-mortarboard"></i>, function: () => {document.location.href="https://www.jjodel.io/terms-conditions-page/"}, keystroke: []}
         ],
         keystroke: []},
+        
         {name: 'About jjodel', icon: <i className="bi bi-info-square"></i>, function: () => {}, keystroke: []},
         {name: 'divisor', function: () => {}, keystroke: []},
         {name: 'Logout', icon: <i className="bi bi-box-arrow-right"></i>, function: async() => {
@@ -337,11 +295,429 @@ function NavbarComponent(props: AllProps) {
             }, keystroke: [Key.cmd, 'Q']}
     ];
 
-    let itemsToRegister: MenuEntry[] = [...dashboardItems, ...projectItems];
+    /* Alfonso: this has to be fixed */
+
+    let itemsToRegister: MenuEntry[] = [...dashboardItems2, ...projectItems2];
     Keystrokes.register('#root', Object.values(itemsToRegister));
 
-    type MenuProps = { items: MenuEntry[] }
+
+    /* -- */
+
+    const recentProjects: MenuEntry[] = [];
+    const recentProjectsDisabled: MenuEntry[] = [];
+    let user: LUser = L.fromPointer(DUser.current); // props.user || L.fromPointer(DUser.current);
+
+
+
+    /* 
+
+        The following is used for toggling fullscreen mode from the View menu
+
+    */
+
+    const [fullscreen, setFullscreen] = useState(false);
+
+    function isFullscreen() {
+        return fullscreen;
+    }
+
+    function toggleFullScreen() {
+        // ## The below if statement seems to work better ## if ((document.fullScreenElement && document.fullScreenElement !== null) || (document.msfullscreenElement && document.msfullscreenElement !== null) || (!document.mozFullScreen && !document.webkitIsFullScreen)) {
+        
+        const elem = document.body;
+        
+        if ((document.fullscreenElement !== undefined && document.fullscreenElement === null)) {
+            elem.requestFullscreen();
+        } else {
+
+                document.exitFullscreen();
+        }
+
+        setFullscreen(!fullscreen);
+    }
+
+    /* 
+
+        An error occurs in 'Recent projects' when a project is selected, then is saved - at this points all projects in user.projects are lost
+
+    */
+
+    /* retrieve all projects */ 
+
+    // if (user.projects[0]) {
+    //     localStorage.setItem('projects', JSON.stringify(user.projects));
+    //     let projects = user.projects;
+    // } else {
+    //     let projects = JSON.parse(localStorage.getItem('projects') || '[]');
+    // }
+
+
+    /* -- */
+
+    if (user.projects) { 
+
+        user.projects
+            .sort((a,b) => (b.lastModified > a.lastModified) ?  1 : -1)
+            .slice(0,20)
+            .map(p => 
+                recentProjects.push({name: p.name, function: ()=>{alert(p.name)}, icon: icon['project']})
+            );
+        
+        user.projects
+            .sort((a,b) => (b.lastModified > a.lastModified) ?  1 : -1)
+            .slice(0,20)
+            .map(p => 
+                recentProjectsDisabled.push({name: p.name, function: ()=>{alert(p.name)}, icon: icon['project'], disabled: true})
+            );
+    }
+
+    let newModel: MenuEntry[] = [];
+
+    if (project && project.metamodels.length > 0) {
+        newModel.push({
+            name: 'Model',
+            icon: icon['model'],
+            subItems: project.metamodels.filter(m2=>!!m2).map((m2, i)=>({
+                name: m2.name, function: () => { createM1(project, m2); setProjectModified(); }, keystroke: []
+            }))
+        });
+    } else {
+        newModel.push({
+            name: 'Model',
+            icon: icon['model'],
+            disabled: true
+        });
+    }
+
+
+    /* DASHBOARD MENU */
+
+    const dashboardItems: MenuEntry[] = [
+
+        /* Jjodel OK */
+
+        {name: 'Jjodel',
+            subItems: [
+                {name: 'About Jjodel',function: () => {AboutModal.open();}, icon: icon['jjodel']},
+                {name: 'Roadmap',function: () => open('https://www.jjodel.io/roadmap/'), icon: icon['roadmap']},
+                {name: 'divisor'},
+    
+                {name: 'Settings', function: ()=> alert(), icon: icon['settings'], disabled: true}, // TO-DO
+                {name: 'divisor'},
+                {name: 'Logout', function: async() => {
+                    if (isProjectModified()) {U.dialog('You are about to log out without saving your project. Do you want to proceed?', 'logout', ()=>{
+                        navigate('/auth');
+                        unsetProjectModified();
+                        AuthApi.logout();
+                    });} else {
+                        navigate('/auth');
+                        unsetProjectModified();
+                        await AuthApi.logout();
+                    }},
+                    icon: icon['logout']}
+        ]},
+
+        /* FILE */
+
+        {name: 'File',
+        subItems: [
+            {name: 'New',function: () => {}, icon: icon['new'], 
+                subItems: [
+                    {name: 'Project', function: ()=>{}, icon: icon['project']},
+                    {name: 'Metamodel', icon: icon['metamodel'], function: ()=>{}, keystroke: [Key.alt, Key.cmd, 'M'], disabled: true},
+                    newModel[0] 
+                ]
+            },
+            {name: 'Recent Projects',function: () => {alert()}, icon: icon['recent'], subItems: recentProjects},
+            {name: 'Import Project', function: ProjectsApi.import, icon: icon['import']},
+            {name: 'divisor'},
+
+
+            {name: 'Save Project', 
+                function: () => {}, icon: icon['save'], keystroke: [Key.cmd, 'S'], disabled: true},
+
+            /* Close Project OK */
+
+            {name: 'Close Project',function: () => {}, icon: icon['close'], keystroke: [Key.cmd, 'W'], disabled: true},
+
+            /* Delete Project - vedere come fare */
+
+            {name: 'Delete Project', function: ()=>{}, icon: icon['delete'], disabled: true},
+
+            /* Download Project OK */
+
+            {name: 'Download Project', function: () => {}, icon: icon['download'], disabled: true}
+
+        ]},
+        {name: 'Edit', subItems: [
+            {name: 'Undo',function: () => {},icon: icon['undo'], keystroke: [Key.cmd, 'Z'], disabled: true}, 
+            {name: 'Redo',function: () => {}, icon: icon['redo'], keystroke: [Key.shift, Key.cmd, 'Z'], disabled: true},
+            {name: 'divisor'},
+            {name: 'Add to Favorites', function: () => {}, icon: icon['favorite'], disabled: true}, // vedere in leftbar // TODO
+            {name: 'Copy Public Link', function: () =>{}, icon: icon['link'], disabled: true} // vedere in scheda progetto // TODO
+        ]},
+
+        {name: 'View',
+            subItems: [
+                {name: 'Zoom-in', function: ()=>{}, icon: icon['zoom-in'], disabled: true}, 
+                {name: 'Zoom-out', function: ()=>{}, icon: icon['zoom-out'], disabled: true}, 
+                
+                {name: 'divisor'},
+                {name: 'Toggle Grid', function: ()=>{}, icon: icon['toggle-grid'], disabled: true}, 
+                {name: 'Toggle Snap-to-Grid', function: ()=>{}, icon: icon['toggle-snap'], disabled: true}, 
+
+                {name: 'divisor'},
+                {name: 'Show/Hide Sidebar', function: ()=>{}, icon: icon['sidebar'], disabled: true}, 
+                {name: 'Show/Hide Toolbar', function: ()=>{}, icon: icon['toolbar2'], disabled: true}, 
+
+                {name: `${isFullscreen() ? 'Exit Fullscreen Mode' : 'Fullscreen Mode'}`, function: ()=>{toggleFullScreen()}, icon: icon['fullscreen']},
+                {name: 'Reset Layout', function: ()=>{}, icon: icon['reset-layout'], disabled: true} 
+
+                
+
+            ]
+        },
+    
+        /* ANALYZE OK */ 
+
+        {name: 'Analyze',
+            subItems: [
+                {name: 'Live Validation',function: () => {},icon: icon['validation'], disabled: true}, 
+                {name: 'Validate',function: () => {}, icon: icon['validate'], disabled: true}, 
+                {name: 'divisor'},
+                {name: 'Analytics', function: () => {}, icon: icon['metrics'], disabled: true} 
+
+            ]
+        },
+
+        /* HELP ok */
+
+        {name: 'Help',
+            subItems: [
+                {name: 'What\'s New in Jjodel',function: () => open("https://www.jjodel.io/whats-new/"),icon: <i className="bi bi-bell"></i>}, 
+                {name: 'divisor'},
+                {name: 'Homepage',function: () => open("https://www.jjodel.io"), icon: <i className="bi bi-house"></i>},
+                {name: 'divisor'},
+                {name: 'Learn Jjodel', function: () => open("https://www.jjodel.io/learn-jjodel/"), icon: icon['learn']},
+                {name: 'Getting Started', function: ()=> open("https://www.jjodel.io/getting-started/"), icon: icon['getting-started']},
+                {name: 'Video Tutorials', function: ()=> open("https://www.jjodel.io/video-tutorials/"), icon: icon['video']},
+                {name: 'User Guide', function: ()=> open('https://www.jjodel.io/getting-started/'), icon: <i className="bi bi-journal-text"></i>},
+                {name: 'Glossary', function: ()=> open('https://www.jjodel.io/glossary/'), icon: <i className="bi bi-book"></i>},
+                {name: 'FAQ',function: () => {}, icon: icon['faq'], disabled: true},
+                {name: 'divisor'},
+                {name: 'Support', function: ()=>{}, icon: icon['support'],
+                    subItems: [
+                        {name: 'Report a Bug', function: ()=>{}, icon: icon['report-bug'], disabled: true}, // TODO
+                        {name: 'Request a Feature', function: ()=>{}, icon: icon['feature-request'], disabled: true}, // TODO
+                        {name: 'Contact', function: ()=>{}, icon: icon['contact'], disabled: true} // TODO 
+                    ]}
+            ]}
+    ];
+
+    /* PROJECT MENU */
+
+    const projectItems: MenuEntry[] = [
+
+        // Jjodel OK
+
+        {name: 'Jjodel', 
+        subItems: [
+            {name: 'About Jjodel',function: () => {AboutModal.open();}, icon: icon['jjodel']},
+            {name: 'Roadmap',function: () => open('https://www.jjodel.io/roadmap/'), icon: icon['roadmap']},
+            {name: 'divisor'},
+
+            {name: 'Settings', function: ()=> alert(), icon: icon['settings'], disabled: true}, // TO-DO
+            {name: 'divisor'},
+            {name: 'Logout', function: async() => {
+                if (isProjectModified()) {U.dialog('You are about to log out without saving your project. Do you want to proceed?', 'logout', ()=>{
+                    navigate('/auth');
+                    unsetProjectModified();
+                    AuthApi.logout();
+                });} else {
+                    navigate('/auth');
+                    unsetProjectModified();
+                    await AuthApi.logout();
+                }},
+                icon: icon['logout']}
+        ]},
+
+        /* File */
+
+        {name: 'File',  
+        subItems: [
+
+            /* New OK */
+
+            {name: 'New',function: () => {}, icon: icon['new'], 
+                subItems: [
+                    {name: 'Project', function: () => {}, icon: icon['project'], disabled: true},
+                    {name: 'Metamodel', icon: icon['metamodel'], function: ()=>{project && createM2(project); setProjectModified();}, keystroke: [Key.alt, Key.cmd, 'M']},
+                    newModel[0] 
+                ]
+            },
+
+            /* Recent Projects OK - va sistemato il refersh dei progetti */ 
+
+            {name: 'Recent Projects',function: () => {}, icon: icon['recent'], subItems: recentProjectsDisabled},
+
+            /* Import Project OK */
+
+            {name: 'Import Project', function: ()=> {}, icon: icon['import'], disabled: true},
+            {name: 'divisor'},
+
+            /* Save Project OK */
+
+            {name: 'Save Project', 
+                function: async () => { 
+                    if (project) {
+                        try {
+                            await ProjectsApi.save(project); 
+                            unsetProjectModified();
+                        } catch (error: any) {
+                            U.alert('e', 'Error while Saving Project', error.message);
+                        }
+                        
+                        
+                    }
+                }
+                , icon: icon['save'], keystroke: [Key.cmd, 'S']},
+
+            /* Close Project OK */
+
+            {name: 'Close Project',function: () => {
+                if (isProjectModified()) {
+                    U.dialog('Close the project without saving?', 'close project', ()=>{
+                        unsetProjectModified();
+                        navigate('/allProjects');
+                        Collaborative.client.off('pullAction');
+                        Collaborative.client.disconnect();
+                        SetRootFieldAction.new('collaborativeSession', false);
+                        U.resetState();
+                    }); 
+                } else {
+                    navigate('/allProjects');
+                    Collaborative.client.off('pullAction');
+                    Collaborative.client.disconnect();
+                    SetRootFieldAction.new('collaborativeSession', false);
+                    U.resetState();
+                }
+            }, icon: icon['close'], keystroke: [Key.cmd, 'W']},
+
+            /* Delete Project - vedere come fare */
+
+            {name: 'Delete Project', function: ()=>{}, icon: icon['delete'], disabled: true},
+
+            /* Download Project OK */
+
+            {name: 'Download Project', function: async() => {
+                if (project) {
+                    await ProjectsApi.save(project);
+                    U.download(`${project.name}.jjodel`, JSON.stringify(project.__raw));
+                }
+            }, icon: icon['download']}
+        ]},
+
+        /* Edit: Damiano aggiungere funzioni undo/redo */
+
+        {name: 'Edit',
+            subItems: [
+                {name: 'Undo',function: () => {alert('undo')},icon: icon['undo'], keystroke: [Key.cmd, 'Z']}, 
+                {name: 'Redo',function: () => {alert('redo')}, icon: icon['redo'], keystroke: [Key.shift, Key.cmd, 'Z']},
+                {name: 'divisor'},
+                {name: 'Add to Favorites', function: () => {}, icon: icon['favorite']}, // vedere in leftbar // TODO
+                {name: 'Copy Public Link', function: () =>{}, icon: icon['link']} // vedere in scheda progetto // TODO
+            ]
+        },
+
+        /* View - da fare */
+        {name: 'View', 
+            subItems: [
+                {name: 'Zoom-in', function: ()=>{}, icon: icon['zoom-in'], disabled: true}, // TODO
+                {name: 'Zoom-out', function: ()=>{}, icon: icon['zoom-out'], disabled: true}, // TODO
+                
+                {name: 'divisor'},
+                {name: 'Toggle Grid', function: ()=>{}, icon: icon['toggle-grid'], disabled: true}, // TODO
+                {name: 'Toggle Snap-to-Grid', function: ()=>{}, icon: icon['toggle-snap'], disabled: true}, // TODO
+
+                {name: 'divisor'},
+                {name: 'Show/Hide Sidebar', function: ()=>{}, icon: icon['sidebar'], disabled: true}, // TODO
+                {name: 'Show/Hide Toolbar', function: ()=>{}, icon: icon['toolbar2'], disabled: true}, // TODO
+
+                {name: `${isFullscreen() ? 'Exit Fullscreen Mode' : 'Fullscreen Mode'}`, function: ()=>{toggleFullScreen()}, icon: icon['fullscreen']},
+                {name: 'Reset Layout', function: ()=>{}, icon: icon['reset-layout'], disabled: true} // TODO
+
+                
+
+            ]
+        },
+        /* ANALYZE - da fare */ 
+
+        {name: 'Analyze',
+            subItems: [
+                {name: 'Live Validation',function: () => {},icon: icon['validation'], disabled: true}, // TODO
+                {name: 'Validate',function: () => {}, icon: icon['validate'], disabled: true}, // TODO
+                {name: 'divisor'},
+                {name: 'Analytics', function: () => {}, icon: icon['metrics'], disabled: true} // TODO
+
+            ]
+        },
+
+        /* HELP ok */
+
+        {name: 'Help',
+            subItems: [
+                {name: 'What\'s New in Jjodel',function: () => open("https://www.jjodel.io/whats-new/"),icon: <i className="bi bi-bell"></i>}, 
+                {name: 'divisor'},
+                {name: 'Homepage',function: () => open("https://www.jjodel.io"), icon: <i className="bi bi-house"></i>},
+                {name: 'divisor'},
+                {name: 'Learn Jjodel', function: () => open("https://www.jjodel.io/learn-jjodel/"), icon: icon['learn']},
+                {name: 'Getting Started', function: ()=> open("https://www.jjodel.io/getting-started/"), icon: icon['getting-started']},
+                {name: 'Video Tutorials', function: ()=> open("https://www.jjodel.io/video-tutorials/"), icon: icon['video']},
+                {name: 'User Guide', function: ()=> open('https://www.jjodel.io/getting-started/'), icon: <i className="bi bi-journal-text"></i>},
+                {name: 'Glossary', function: ()=> open('https://www.jjodel.io/glossary/'), icon: <i className="bi bi-book"></i>},
+                {name: 'FAQ',function: () => {}, icon: icon['faq'], disabled: true},
+                {name: 'divisor'},
+                {name: 'Support', function: ()=>{}, icon: icon['support'],
+                    subItems: [
+                        {name: 'Report a Bug', function: ()=>{}, icon: icon['report-bug'], disabled: true}, // TODO
+                        {name: 'Request a Feature', function: ()=>{}, icon: icon['feature-request'], disabled: true}, // TODO
+                        {name: 'Contact', function: ()=>{}, icon: icon['contact'], disabled: true} // TODO 
+                    ]}
+            ]}
+        
+    ];
+
+
+
+
+    type MenuProps = { 
+        title?: string;
+        items: MenuEntry[];
+    }
+
     const MainMenu = (props: MenuProps) => {
+
+        return(<>
+            {props.items.map(m => m.subItems && <Submenu title={m.name} items={m.subItems} />)}  
+            </>
+        );
+    };
+
+    const Submenu = (props: MenuProps) => {
+
+        return(<div className='nav-hamburger hoverable inline' tabIndex={0} >
+            {props.title && <span className={'menu-title'}>{props.title}</span>}
+
+                    <div className={'content context-menu'}>
+                        <ul>
+                            {props.items && props.items.map(i => makeEntry(i))}
+                        </ul>
+                    </div>
+
+        </div>
+    )}
+
+    const MainMenu2 = (props: MenuProps) => {
 
         return(
             <div className='nav-hamburger hoverable' tabIndex={0}>
@@ -355,7 +731,7 @@ function NavbarComponent(props: AllProps) {
         );
     };
 
-    const Logo = () => {
+    const MainLogo = () => {
         return (
         <div className='nav-logo'>
             <div className={"aligner"}>
@@ -427,12 +803,19 @@ function NavbarComponent(props: AllProps) {
 
     return(<>
         <nav className={'w-100 nav-container d-flex'} style={{zIndex: 99}}>
+            {/* {project ?
+                <MainMenu2 items={projectItems}/>
+                :
+                <MainMenu2 items={dashboardItems} />
+            } */}
+
             {project ?
                 <MainMenu items={projectItems}/>
                 :
                 <MainMenu items={dashboardItems} />
-            }
-            <Logo />
+            } 
+                            
+            <MainLogo />
             <UserMenu />
             <Commands />
             <User />

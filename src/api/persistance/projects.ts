@@ -132,6 +132,7 @@ class Online {
             return Promise.reject('Invalid Token');
         }
         const data = U.wrapper<DProject[]>(response.data);
+
         for(const project of data) {
             DProject.new(project.type, project.name, project.state, [], [], project.id);
             TRANSACTION(() => {
