@@ -4435,7 +4435,6 @@ export class LModel<Context extends LogicContext<DModel> = any, C extends Contex
             // look for m1 matches
             let deepmatch: LObject | undefined;
             let k = key.substring(1).toLowerCase();
-            console.log("$getter 0", {k, key, deepmatch});
 
             const directSubObjects: Dictionary<Pointer, boolean> = U.objectFromArrayValues(c.data.objects);
             for (let subobject of this.get_allSubObjects(c)){
@@ -4445,31 +4444,26 @@ export class LModel<Context extends LogicContext<DModel> = any, C extends Contex
                 if (directSubObjects[subobject.id]) return subobject; // actually cannot do direct match, because proxy get function will solve it directly before calling _defaultGetter
                 else if (!deepmatch) deepmatch = subobject;
             }
-            console.log("$getter 1", {k, key, deepmatch});
             // A1) match with deep sub-object
             if (deepmatch) return deepmatch;
 
             // look for m2 matches
             let m2: LModel | undefined = this.get_instanceof(c);
-            console.log("$getter 2", {k, key, m2});
             if (!m2) return Log.ee("Could not find m1 match for data.$name. And the metamodel is missing, so cannot get instances by type.", {c, key, m2});
             let m2item: LClass | LPackage;
             // check for a perfect m2 name match and return it
             m2item = (m2 as GObject)[key];
-            console.log("$getter 3", {k, key, m2, m2item});
             if (m2item) return m2item; //this.instancesOf(key);
             if (!m2) Log.ee("Could not find property " + key + " on M1 Model", {c, key, m2});
             // if not a perfect name match, i try name+s match for instances
             if (key[key.length - 1] === "s") {
                 let key1 = key.substring(0, key.length - 1);
                 m2item = (m2 as GObject)[key1];
-                console.log("$getter 4", {k, key, key1, m2, m2item});
                 if (m2item) {
                     if (m2item.className === "DClass") return this.get_instancesOf(c)(m2item as LClass);
                     else return Log.ee("Could not get instances of " + key1 + ".", {c, key, m2});
                 }
             }
-            console.log("$getter 5", {k, key, m2, m2item});
             if (!m2) return Log.ee("Could not find any subelement with name " + key + " on M1 or M2 Models", {c, key, m1: c.data, m2});
         }
 
@@ -4939,7 +4933,7 @@ instanceof === undefined or missing  --> auto-detect and assign the type
         state = state || store.getState();
         let darr = Selectors.getAll(kind, undefined, state, true, false) as DModelElement[];
 
-        console.log('get_allSubPackages', {includeCross, kind});
+        //console.log('get_allSubPackages', {includeCross, kind});
         // console.log("gao", {darr:[...darr]});
         let larr = [];
         // let validModels = includeCross ? [c.data.id, ...c.data.dependencies] : [c.data.id];

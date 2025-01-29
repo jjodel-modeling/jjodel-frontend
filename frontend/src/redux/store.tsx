@@ -100,6 +100,8 @@ export class DState extends DPointerTargetable{
 
     // no need to manually update for each update
     version:{n:number, date:string, conversionList: number[]} = {n:VersionFixer.get_highestversion(), date: new Date().toString(), conversionList: []};
+    timestamp!: number;
+    timestampdiff!: number;
 
     env: Dictionary = process.env;  //damiano: this might make problems on load
     debug: boolean = false;

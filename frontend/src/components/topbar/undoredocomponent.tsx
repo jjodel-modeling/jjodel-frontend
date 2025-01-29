@@ -109,10 +109,24 @@ export class SaveManagerComponent extends PureComponent<AllProps, ThisState>{
         // let arr = [...(this.props as GObject)[key]].reverse().slice(0, this.props.maxlistsize);
         let fullarr = [...(key === 'undo' ? undoarr : redoarr)].reverse()
         let arr = fullarr.slice(0, this.props.maxlistsize);
+
+        function getLatestDelta(i: number, searchPath: string[], direction: -1 | 1 = 1): GObject {
+            outer: for (; i < fullarr.length+1 && i >= -1; i+=direction) {
+                let rootdelta = fullarr[i] || s;
+                let currDelta = rootdelta;
+                for (let pathSeg of searchPath){
+                    if (!(pathSeg in currDelta)) continue outer;
+                    else currDelta = currDelta[pathSeg];
+                }
+                return rootdelta;
+            }
+            return s;
+        }
         let list = arr.map((delta, index) => {
             let out: {best: R, obj: GObject}&R[] = [] as GObject as any;
             let out_otherdelta: {best: R, obj: GObject}&R[] = [] as any;
-            let titleDelta = arr[index + (key === 'undo' ? -1 : 0)]
+            let titleindex = index + (key === 'undo' ? -1 : 0);
+            let titleDelta = arr[titleindex]
             let otherDelta = arr[index + 1]; //[index + (key === 'undo' ? -1 : +1)]
             // let actiodesc = key ==='undo' ? arr[index + 1] : ) || s;
 
@@ -126,9 +140,15 @@ export class SaveManagerComponent extends PureComponent<AllProps, ThisState>{
             U.ObjectToAssignementStrings(delta, 10, 6, 20, "…", out, true, filterrow);
             if (otherDelta) U.ObjectToAssignementStrings(otherDelta, 10, 6, 20, "…", out_otherdelta, true);
             // if (!index) console.log('debug undoredo', {out, delta, arr});
-            if ((titleDelta||s).action_title) out.best.str = (titleDelta||s).action_title;
+            // if out.best is undef, then get most recent titles until you find a delta with a title or the current(state)
+            let latestTitleDelta = getLatestDelta(titleindex, ['action_title'], (key === 'undo' ? -1 : +1));
+            let debugTitle = (titleDelta||s).action_title;
+            console.log('getLatestDelta', {delta, latestTitleDelta, best:out.best?.str, titleDelta, dt:(titleDelta||s).action_title, titleindex, out})
+            if (latestTitleDelta.action_title) out.best.str = latestTitleDelta.action_title;
+            if (latestTitleDelta.action_description) out.best.fullstr = latestTitleDelta.action_description;
+            else out.best.fullstr = out.length + ' subchanges';
+            if (latestTitleDelta.action_title !== debugTitle) out.best.str = '* ' + out.best.str;
             if ((otherDelta)?.action_title) out_otherdelta.best.str = (otherDelta||s).action_title;
-            if ((titleDelta||s).action_description) out.best.fullstr = (titleDelta||s).action_description;
             if ((otherDelta)?.action_description) out_otherdelta.best.fullstr = (otherDelta||s).action_description;
             out.best.str = U.cropStr(out.best.str, 1, 0, 13, 12);
             out.best.fullstr = U.cropStr(out.best.fullstr, 1, 0, 250, 250);
@@ -176,7 +196,7 @@ export class SaveManagerComponent extends PureComponent<AllProps, ThisState>{
     }
     get_history(user: Pointer<DUser> | 'all'): {redoable: GObject[], undoable: GObject[]}{
         // let ret = {redoable: [] as GObject[], undoable: [] as GObject[]};
-            return statehistory[user];
+        return statehistory[user];
     }
     erase_history(user: Pointer<DUser> | 'all', project: LProject){
         if (user === 'all'){/*
@@ -204,7 +224,7 @@ export class SaveManagerComponent extends PureComponent<AllProps, ThisState>{
             <div className='undoredo'>
                 <span className={"hoverable"} style={{position: "relative", background: "white"}} onMouseEnter={this.undoenter} onMouseLeave={this.undoleave}>
                     <button className={'item border round ms-1'} onClick={(e)=> { this.do_undo(0) }}>Undo ({undo.length})</button>
-                    {this.props.debug && undo.length ?
+                    {undo.length ?
                         <ul style={{background: "inherit", width: "max-content", zIndex:10000}} className={"content"}>
                             {this.state.undo.jsx}
                         </ul>
@@ -212,7 +232,7 @@ export class SaveManagerComponent extends PureComponent<AllProps, ThisState>{
                 </span>
                 <span className={"hoverable"} style={{position: "relative", background: "white"}} onMouseEnter={this.redoenter} onMouseLeave={this.redoleave}>
                     <button className={'item border round ms-1'} onClick={(e)=> { this.do_redo(0) }}>Redo ({redo.length})</button>
-                    {this.props.debug && redo.length ? <ul style={{background: "inherit", width: "max-content", zIndex:10000}} className={"content"}>{this.state.redo.jsx}</ul> : null}
+                    { redo.length ? <ul style={{background: "inherit", width: "max-content", zIndex:10000}} className={"content"}>{this.state.redo.jsx}</ul> : null}
                 </span>
                 <button onClick={()=>{this.erase_history(user, this.props.project)}}>x</button>
             </div>
@@ -225,8 +245,8 @@ function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     const ret: StateProps = {} as any;
     //ret.undo = statehistory[DUser.current].undoable;
     //ret.redo = statehistory[DUser.current].redoable;
-    ret.maxlistsize = 10;
-    ret.maxDetailSize = 20;
+    ret.maxlistsize = 20;
+    ret.maxDetailSize = 30;
     ret.debug = state.debug;
     return ret; }
 

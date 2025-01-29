@@ -15,7 +15,7 @@ import {
     bool,
     NodeTransientProperties,
     ViewTransientProperties,
-    DGraphElement, Uarr, Uobj
+    DGraphElement, Uarr, Uobj, LocalStorage, DProject, LUser
 } from '../../joiner';
 import {
     Action,
@@ -402,6 +402,8 @@ ret .b = 3
 // then add to it: content of props, constants, usageDeclarations
 
 export function reducer(oldState: DState = initialState, action: Action): DState {
+    if (!windoww.actions) windoww.jjactions = [];
+    windoww.jjactions.push(action);
     try{ return unsafereducer(oldState, action); }
     catch(e) {
         console.error('unhandled error in reducer', {e, oldState, action});
@@ -465,10 +467,13 @@ function unsafereducer(oldState: DState = initialState, action: Action): DState 
         }
     }
 
-
-    console.log('ret.ELEMENT_CREATED', ret.ELEMENT_CREATED);
+    function filterSet<T extends any>(r: T[]): Set<T>{
+        if (!Array.isArray(r)) r = [];
+        r = r.filter(e=>!!e);
+        return new Set(r);
+    }
     // recompile stuff
-    for (let ptr of ret.ELEMENT_CREATED){
+    for (let ptr of filterSet(ret.ELEMENT_CREATED)){
         let d = ret.idlookup[ptr];
         if (!d) continue; // creation rejected, no-op
         switch(d.className){
@@ -481,7 +486,7 @@ function unsafereducer(oldState: DState = initialState, action: Action): DState 
         }
     }
     ret.ELEMENT_CREATED = [];
-    for (let ptr of ret.ELEMENT_DELETED){
+    for (let ptr of filterSet(ret.ELEMENT_DELETED)){
         let d = oldState.idlookup[ptr];
         if (!d) continue; // already deleted, no-op
         switch(d.className){
@@ -501,7 +506,7 @@ function unsafereducer(oldState: DState = initialState, action: Action): DState 
     if ((ret.VIEWS_RECOMPILE_all as Pointer[])?.length) {
         let resetAllNodes: boolean = false;
         let sk: keyof DState;
-        for (let id of new Set(ret.VIEWS_RECOMPILE_all as Pointer[])){
+        for (let id of filterSet(ret.VIEWS_RECOMPILE_all as Pointer[])){
             let d = ret.idlookup[id];
             if (!d) continue;
             if (RuntimeAccessibleClass.extends(d.className, "DViewElement")) {
@@ -530,6 +535,7 @@ function unsafereducer(oldState: DState = initialState, action: Action): DState 
                 //ret.NODES_RECOMPILE_labels.push(id); ret.NODES_RECOMPILE_longestLabel.push(id);
             }
         }
+
         if (resetAllNodes) for (let nid in transientProperties.node) {
             delete transientProperties.node[nid];// = {} as any;
             // transientProperties.node[nid] = undefined as any;
@@ -539,7 +545,6 @@ function unsafereducer(oldState: DState = initialState, action: Action): DState 
         }
     }
     ret.VIEWS_RECOMPILE_all = [];
-
 
 
     function parseLabel(ptr: Pointer, key: "labels" | "longestLabel", isNode: boolean): boolean{
@@ -589,33 +594,33 @@ function unsafereducer(oldState: DState = initialState, action: Action): DState 
     arr = ret.NODES_RECOMPILE_labels;
     if (arr.length) {
         let successfullyParsed: Dictionary<string, boolean> = {};
-        for (const id of new Set(arr)) successfullyParsed[id] = parseLabel(id, 'labels', true);
+        for (const id of filterSet(arr)) successfullyParsed[id] = parseLabel(id, 'labels', true);
         ret.NODES_RECOMPILE_labels = arr.filter(e => !successfullyParsed[e]);
     }
     arr = ret.NODES_RECOMPILE_longestLabel;
     if (arr.length) {
         let successfullyParsed: Dictionary<string, boolean> = {};
-        for (const id of new Set(arr)) successfullyParsed[id] = parseLabel(id, 'longestLabel', true);
+        for (const id of filterSet(arr)) successfullyParsed[id] = parseLabel(id, 'longestLabel', true);
         ret.NODES_RECOMPILE_longestLabel = arr.filter(e => !successfullyParsed[e]);
     }
     arr = ret.VIEWS_RECOMPILE_labels;
     if (arr.length) {
         let successfullyParsed: Dictionary<string, boolean> = {};
-        for (const id of new Set(arr)) successfullyParsed[id] = parseLabel(id, 'labels', false);
+        for (const id of filterSet(arr)) successfullyParsed[id] = parseLabel(id, 'labels', false);
         ret.VIEWS_RECOMPILE_labels = arr.filter(e => !successfullyParsed[e]);
     }
     arr = ret.VIEWS_RECOMPILE_longestLabel;
     if (arr.length) {
         let successfullyParsed: Dictionary<string, boolean> = {};
-        for (const id of new Set(arr)) successfullyParsed[id] = parseLabel(id, 'longestLabel', false);
+        for (const id of filterSet(arr)) successfullyParsed[id] = parseLabel(id, 'longestLabel', false);
         ret.VIEWS_RECOMPILE_longestLabel = arr.filter(e => !successfullyParsed[e]);
     }
 
     // local changes to out-of-redux stuff
     if (ret.VIEWS_RECOMPILE_ocl.length) {
-        // for (let gid of ret.graphs) Selectors.updateViewMatchings(gid, ret.modelElements, Object.values(ret.idlookup).map( d => RuntimeAccessibleClass.extends(d, DModelElement.cname)));
-        // for (let vid of ret.VIEW_APPLIABLETO_NEEDS_RECALCULATION) { }
-        for (let vid of new Set(ret.VIEWS_RECOMPILE_ocl)) {
+        // for (let gid of filterSet(ret.graphs)) Selectors.updateViewMatchings(gid, ret.modelElements, Object.values(ret.idlookup).map( d => RuntimeAccessibleClass.extends(d, DModelElement.cname)));
+        // for (let vid of filterSet(ret.VIEW_APPLIABLETO_NEEDS_RECALCULATION)) { }
+        for (let vid of filterSet(ret.VIEWS_RECOMPILE_ocl)) {
             if (!transientProperties.view[vid]) transientProperties.view[vid] = {} as any;
             transientProperties.view[vid].oclEngine = undefined as any; // force re-parse
             transientProperties.view[vid].oclChanged = true;
@@ -633,7 +638,7 @@ function unsafereducer(oldState: DState = initialState, action: Action): DState 
     }*/
 
     if (ret.VIEWS_RECOMPILE_preconditions.length) {
-        for (let vid of new Set(ret.VIEWS_RECOMPILE_preconditions)) {
+        for (let vid of filterSet(ret.VIEWS_RECOMPILE_preconditions)) {
             for (let nid in transientProperties.node) {
                 let tnv = transientProperties.node[nid].viewScores[vid];
                 if (tnv?.metaclassScore !== ViewEClassMatch.NOT_EVALUATED_YET) tnv.metaclassScore = ViewEClassMatch.NOT_EVALUATED_YET as any as number;
@@ -643,7 +648,7 @@ function unsafereducer(oldState: DState = initialState, action: Action): DState 
     }
 
     if (ret.VIEWS_RECOMPILE_constants?.length)
-    for (const vid of new Set(ret.VIEWS_RECOMPILE_constants)) { // compiled in func, and executed, result does not vary between nodes.
+    for (const vid of filterSet(ret.VIEWS_RECOMPILE_constants)) { // compiled in func, and executed, result does not vary between nodes.
         let dv: DViewElement = DPointerTargetable.fromPointer(vid, ret);
         // transientProperties.view[vid].constantsList = dv.constants?.match(UDRegexp).map(s=>s.substring(4, s.length-1).trim()) || [];
         // let allContextKeys = {...contextFixedKeys};
@@ -678,7 +683,7 @@ function unsafereducer(oldState: DState = initialState, action: Action): DState 
     ret.VIEWS_RECOMPILE_constants = [];
 
     if (ret.VIEWS_RECOMPILE_usageDeclarations?.length)
-    for (const vid of new Set(ret.VIEWS_RECOMPILE_usageDeclarations)) { // compiled in func, but NOT executed, result varies between nodes.
+    for (const vid of filterSet(ret.VIEWS_RECOMPILE_usageDeclarations)) { // compiled in func, but NOT executed, result varies between nodes.
         let dv: DViewElement = DPointerTargetable.fromPointer(vid, ret);
         let tv = transientProperties.view[vid];
         if (!tv) transientProperties.view[vid] = tv = {} as any;
@@ -726,9 +731,9 @@ function unsafereducer(oldState: DState = initialState, action: Action): DState 
     ret.VIEWS_RECOMPILE_usageDeclarations = [];
 
     if (ret.VIEWS_RECOMPILE_events.length) {
-        // for (let gid of ret.graphs) Selectors.updateViewMatchings(gid, ret.modelElements, Object.values(ret.idlookup).map( d => RuntimeAccessibleClass.extends(d, DModelElement.cname)));
-        // for (let vid of ret.VIEW_APPLIABLETO_NEEDS_RECALCULATION) { }
-        for (let entry of new Set(ret.VIEWS_RECOMPILE_events)) {
+        // for (let gid of filterSet(ret.graphs)) Selectors.updateViewMatchings(gid, ret.modelElements, Object.values(ret.idlookup).map( d => RuntimeAccessibleClass.extends(d, DModelElement.cname)));
+        // for (let vid of filterSet(ret.VIEW_APPLIABLETO_NEEDS_RECALCULATION)) { }
+        for (let entry of filterSet(ret.VIEWS_RECOMPILE_events)) {
             let vid: string;
             let dv: DViewElement;
             let keys: string[];
@@ -774,7 +779,7 @@ function unsafereducer(oldState: DState = initialState, action: Action): DState 
     }
 
     if (ret.VIEWS_RECOMPILE_jsCondition?.length)
-    for (const vid of new Set(ret.VIEWS_RECOMPILE_jsCondition)) {
+    for (const vid of filterSet(ret.VIEWS_RECOMPILE_jsCondition)) {
         const dv: DViewElement = DPointerTargetable.fromPointer(vid, ret);
         let tv = transientProperties.view[vid];
         if (!tv) transientProperties.view[vid] = tv = {} as any;
@@ -805,7 +810,7 @@ function unsafereducer(oldState: DState = initialState, action: Action): DState 
 
 
     if (ret.VIEWS_RECOMPILE_jsxString?.length)
-    for (const vid of new Set(ret.VIEWS_RECOMPILE_jsxString)) { // compiled in func, but NOT executed, result varies between nodes.
+    for (const vid of filterSet(ret.VIEWS_RECOMPILE_jsxString)) { // compiled in func, but NOT executed, result varies between nodes.
         let dv: DViewElement = DPointerTargetable.fromPointer(vid, ret);
         let tv = transientProperties.view[vid];
         if (!tv) transientProperties.view[vid] = tv = {} as any;
@@ -838,7 +843,7 @@ function unsafereducer(oldState: DState = initialState, action: Action): DState 
 
     for (const key of DViewElement.MeasurableKeys) {
         if ((ret as any)['VIEWS_RECOMPILE_'+key]?.length)
-        for (let vid of new Set((ret as any)['VIEWS_RECOMPILE_'+key]) as any) {
+        for (let vid of filterSet((ret as any)['VIEWS_RECOMPILE_'+key]) as any) {
             let dv: DViewElement = DPointerTargetable.fromPointer(vid, ret);
             let tv = transientProperties.view[vid];
             if (!tv) transientProperties.view[vid] = tv = {} as any;
@@ -887,11 +892,12 @@ function unsafereducer(oldState: DState = initialState, action: Action): DState 
     return ret;
 
 }
-
+const mergeTolerance = 300;
 export function _reducer/*<S extends StateNoFunc, A extends Action>*/(oldState: DState = initialState, action: Action): DState{
     let times: number;
     let state: DState;
     let removedDeltas: (GObject | undefined)[] = [];
+
     switch (action.type) {
         case UndoAction.type:
             times = action.value;
@@ -951,12 +957,15 @@ export function _reducer/*<S extends StateNoFunc, A extends Action>*/(oldState: 
             if (!(action?.className)) { Log.exDevv('unexpected action type:', action.type); return oldState; }
             let ret = doreducer(oldState, action);
             if (ret === oldState) return ret;
-
+            ret.timestamp = Date.now();
+            console.log('00 UNset action descriptor in state', {action});
+            ret.action_title = '';
+            ret.action_description = '';
             // undo-redo description
             if (action.className === 'CompositeAction') {
                 let desc = (action as CompositeAction).descriptor;
-                console.log('set action descriptor in state', {desc, action});
                 if (desc) {
+                    console.log('set action descriptor in state', {desc, action, t: desc.path, oldt: ret.action_title});
                     ret.action_title = desc.path||'';
                     let valchange: string;
                     if (desc.oldval !== undefined && desc.newval!== undefined) valchange = ': ' + desc.oldval + ' -> ' + desc.newval;
@@ -965,29 +974,85 @@ export function _reducer/*<S extends StateNoFunc, A extends Action>*/(oldState: 
                     ret.action_description = (desc.desc || '') + valchange;
                 }
                 else {
+                    console.log('11 UNset action descriptor in state', {action});
                     ret.action_title = '';
                     ret.action_description = '';
                 }
             }
+            if (!oldState/* || !Object.keys(delta).length*/) return ret;
 
             // update state history
-            // statehistory[DUser.current].redoable = [];   <-- Moved to stateInitializer()
             let delta = Uobj.objectDelta(ret, oldState, true, false);
             let debug = Uobj.applyObjectDelta(ret, delta, false, oldState);
+            delta.timestamp = ret.timestamp;
+            delta.timestampdiff = ret.timestampdiff = ret.timestamp - (oldState?.timestamp || 0);
+            let pastDelta = statehistory.all.undoable[statehistory.all.undoable.length-1];
+            const allowMerge = true; // switch for debugging
+            let isRelevantChange = isRelevantChangeCheck(delta as GObject<DState>, pastDelta as GObject<DState>);
+            // merge if: there is a past delta, and the delta doesn't pass the filter to exist individually
+            let shouldMerge = !isRelevantChange;
+            let debugMerge = true;
+            if (!shouldMerge && (delta.vertexs || delta.graphvertexs || delta.graphelements || delta.edgepoints || delta.edges || delta.graphs)) shouldMerge = true;
+            if (!pastDelta) shouldMerge = false;
 
-            if (!filterundoableactions(delta)) return ret;
-            // console.log("setting undoable action:", {ret, oldState0:{...oldState}, oldState, delta});
-            let user = (action as Action).sender;
-            if (oldState !== null/* && Object.keys(delta).length*/) {
+            if(pastDelta)console.log("merge deltas", {forVertex:delta.vertexs || delta.graphvertexs || delta.graphelements || delta.edgepoints || delta.edges || delta.graphs,
+                isRelevantChange,
+                shouldMerge, irl: pastDelta && delta.timestamp - pastDelta.timestamp < mergeTolerance,
+                mergeTolerance, dt: delta.timestamp, pdt: pastDelta.timestamp, diff: delta.timestamp - pastDelta.timestamp,
+                oldState, delta});
+            //todo: for cooperative prevent merge from different authors, store user in delta from action.sender when you set timestamp.
+            if (shouldMerge && allowMerge) {
+                // pastDelta = Uobj.applyObjectDelta(pastDelta, delta); no because special handling
+                //   of __jjisEmpty etc must not be done at this stage.
+                let gdelta: Dictionary<string, string[] | GObject> = {};
+                let allkeys: Set<string> = new Set([...Object.keys(delta), ...Object.keys(pastDelta)]);
+                let mergeRecompileArr = (k: string) => {
+                    if (!(k.indexOf('RECOMPILE') >= 0 || k.indexOf('ELEMENT_') >= 0 || k === 'ClassNameChanged')) return;
+                    if (k === 'ClassNameChanged') {
+                        let merged: Dictionary<string> = {};
+                        for (let p of allkeys) {
+                            let vnow = (delta as GObject)[k][p];
+                            let vpast = pastDelta[k][p];
+                            if (vnow === vpast) { merged[p] = vnow; continue; }
+                            if (vnow.indexOf('__jjObjDiff') !== -1) { merged[p] = vpast; continue; }
+                            merged[p] = vnow;
+                        }
+                        gdelta.ClassNameChanged = merged;
+                        return;
+                    }
+                    // todo: this is troublesome because ['id1', 'empty'] + ['id2'] =  ['id1', 'empty', 'id2'] but should not have side effects? can the empty sparse arr make problems?
+                    if (!Array.isArray((delta as GObject)[k] || [])) console.error('mergerecompilearr err',
+                        {sm:shouldMerge, pd:!!pastDelta, delta, pastDelta, k, dk: (delta as any)?.[k], pdk: pastDelta?.[k]});
+                    if (!Array.isArray((delta as GObject)[k]||[])) console.log('err in delta merge', {arr:(delta as GObject)[k]||[], delta, k});
+                    if (!Array.isArray((pastDelta as GObject)[k]||[])) console.log('err in past delta merge', {arr:(pastDelta as GObject)[k]||[], pastDelta, k});
+                    gdelta[k] = [...new Set(U.arrayMergeInPlace((delta as GObject)[k]||[], pastDelta[k]||[]))] as string[];
+                }
+
+                for (let k of allkeys) mergeRecompileArr(k);
+                U.objectMergeInPlace(pastDelta, delta);
+                delta = pastDelta; // must be inaccessible now as it merged with pastdelta, use that instead
+                for (let k in gdelta) {
+                    if (Array.isArray(gdelta[k])) pastDelta[k] = gdelta[k].filter((e:string) => e && e.indexOf('__jjObjDiff') === -1);
+                    else pastDelta[k] = gdelta[k];
+                }
+                if (debugMerge) (ret as any).mergeCounter = (pastDelta as any).mergeCounter = 1+((ret as any).mergeCounter||0)
+            }
+            else if (isRelevantChange) {
+                let user = (action as Action).sender;
                 statehistory[user].undoable.push(delta);
                 statehistory.all.undoable.push(delta);
+                if (debugMerge) {
+                    if (shouldMerge) (ret as any).notMergeCounter = (delta as any).notMergeCounter = 1+((ret as any).notMergeCounter || 0)
+                    else (ret as any).notMergeCounter = 0;
+                }
             }
 
             return ret;
     }
 }
 
-function filterundoableactions(delta: Partial<DState>): boolean {
+function isRelevantChangeCheck(delta: GObject<DState>, pastDelta?: GObject<DState>): boolean {
+    if (pastDelta && delta.timestamp - pastDelta.timestamp < mergeTolerance) return false;
     if (!statehistory.globalcanundostate) return false;
     if (Object.keys(delta).length === 1) {
         if ("dragging" in delta) return false;
@@ -1140,5 +1205,17 @@ export async function stateInitializer() {
     console.log('FIRING action post')
     //await ProjectsApi.getAll();
     setDocumentEvents();
+    /*type RecentEntry = {id: Pointer<DProject>[], name: string};
+    let recent: RecentEntry[] = JSON.parse(localStorage.getItem('_jjRecent') || '[]') as any[];
+    if (window.location.hash.indexOf('#/project') === 0) {
+        let user: LUser = LPointerTargetable.from(DUser.current);
+        let project = user?.projects.filter(p=>!!p)[0]?.__raw as any;
+        //console.log('test recents', {project, user, recent});
+        let current: RecentEntry = {name: project.name, id:project.id};
+        // the filter looks if the current project was already in recent list, and prevents duplicates
+        recent = recent.filter(p=> p.id !== current.id);
+        recent.push(current);
+        localStorage.setItem('_jjRecent', JSON.stringify(recent));
+    }*/
 
 }

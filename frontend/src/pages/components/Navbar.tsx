@@ -13,7 +13,7 @@ import {
     LProject,
     LUser,
     Selectors,
-    SetRootFieldAction,
+    SetRootFieldAction, TRANSACTION,
     U
 } from '../../joiner';
 
@@ -275,14 +275,18 @@ function NavbarComponent(props: AllProps) {
     };
 
     const Logo = () => {
+        let toggleDebug = (e: any)=>{
+            e.preventDefault();
+            TRANSACTION('debug', ()=>SetRootFieldAction.new('debug', !props.debug), props.debug, !props.debug);
+        }
         return (
         <div className='nav-logo'>
             <div className={"aligner"}>
 
                 {props.debug ?
-                    <div className='logo-on' onContextMenu={(e)=>{ e.preventDefault(); SetRootFieldAction.new('debug', !props.debug)}}></div>
+                    <div className='logo-on' onContextMenu={toggleDebug}></div>
                     :
-                    <div className='logo' onContextMenu={(e)=>{ e.preventDefault(); SetRootFieldAction.new('debug', !props.debug)}}></div>
+                    <div className='logo' onContextMenu={toggleDebug}></div>
                 }
                 {props.debug && <i className="bi bi-bug-fill"></i>}
 
