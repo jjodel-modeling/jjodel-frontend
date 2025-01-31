@@ -1,0 +1,35 @@
+{
+    "name": "@types/js-beautify",
+    "version": "1.14.3",
+    "description": "TypeScript definitions for js-beautify",
+    "homepage": "https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/js-beautify",
+    "license": "MIT",
+    "contributors": [
+        {
+            "name": "Hans Windhoff",
+            "githubUsername": "hansrwindhoff",
+            "url": "https://github.com/hansrwindhoff"
+        },
+        {
+            "name": "Gavin Rehkemper",
+            "githubUsername": "gavinr",
+            "url": "https://github.com/gavinr"
+        },
+        {
+            "name": "Piotr Błażejewicz",
+            "githubUsername": "peterblazejewicz",
+            "url": "https://github.com/peterblazejewicz"
+        }
+    ],
+    "main": "",
+    "types": "index.d.ts",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/DefinitelyTyped/DefinitelyTyped.git",
+        "directory": "types/js-beautify"
+    },
+    "scripts": {},
+    "dependencies": {},
+    "typesPublisherContentHash": "d29e52522fda99c695046e37cc396bbdc1fe519d64e3a7d9e2ab3e0103349896",
+    "typeScriptVersion": "4.5"
+}
