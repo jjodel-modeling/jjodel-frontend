@@ -892,61 +892,46 @@ function unsafereducer(oldState: DState = initialState, action: Action): DState 
     return ret;
 
 }
-const mergeTolerance = 300;
-export function _reducer/*<S extends StateNoFunc, A extends Action>*/(oldState: DState = initialState, action: Action): DState{
-    let times: number;
-    let state: DState;
+const mergeTolerance = 500;
+function doUndoRedo(oldState: DState, action: Action, isUndo:'undo'|'redo'): DState {
+    let state: DState = oldState;
+    let times: number = action.value;
     let removedDeltas: (GObject | undefined)[] = [];
+    let steps = times;
+    Log.exDev(times<=0, isUndo+" must be positive", action);
+    console.log('redo debug 0', {oldState, action, isUndo, times, steps});
+    let isUndoCheck = isUndo === 'undo';
+    while (times--) {
+        let forUser = (action as UndoAction | RedoAction).forUser;
+        const delta = statehistory[forUser][isUndo+'able' as 'undoable'|'redoable'].pop();
+        for (let user in statehistory){
+            U.arrayRemoveAll(statehistory[user]?.[isUndo+'able' as 'undoable'|'redoable'], delta);
+        }
+        if (!delta) continue;
+        removedDeltas.push(delta);
+        console.log('redo debug 1', {delta, times: times});
+        state = undo(state, action as UndoAction | RedoAction, delta, isUndoCheck);
+    }
+
+    if (steps > 1) {
+        /*let title = state.action_title || '.'
+        let cleanedTitle = title.indexOf('done') === 2 ? title.substring(title.indexOf(':')).trim() : title;
+        let desc = state.action_description || '.';
+        let cleanedDesc = desc.indexOf('done') === 2 ? desc.substring(desc.indexOf(':')).trim() : desc;
+        state.action_title = isUndo+'ne '+steps+' steps' +cleanedTitle;
+        state.action_description = isUndo+'ne '+steps+' steps'+cleanedDesc;
+        */
+    }
+    // state.VIEWS_RECOMPILE_all = true;
+    state.VIEWS_RECOMPILE_all = [...new Set(removedDeltas.flatMap( d => Object.keys(d?.idlookup||{})))];
+    return state;
+}
+
+export function _reducer/*<S extends StateNoFunc, A extends Action>*/(oldState: DState = initialState, action: Action): DState{
 
     switch (action.type) {
-        case UndoAction.type:
-            times = action.value;
-            state = oldState;
-            Log.exDev(times<=0, "undo must be positive", action);
-            // if (desc) { ret.action_title = desc.desc + ': ' + desc.oldval + ' -> ' + desc.newval; ...}
-            //state.action_title = 'undone ' + times + ' steps';
-            //state.action_description = 'undone ' + times + ' steps';
-
-            while (times--) {
-                let forUser = (action as UndoAction).forUser;
-                const delta = statehistory[forUser].undoable.pop();
-                for (let user in statehistory){
-                    U.arrayRemoveAll(statehistory[user]?.undoable, delta);
-                }
-                if (!delta) continue;
-                removedDeltas.push(delta);
-                state = undo(state, action as UndoAction, delta, true);
-            }
-
-            state.action_title = 'undone ' + times + ' steps' + (state.action_title ? ': '+state.action_title : '.');
-            state.action_description =  'undone ' + times + ' steps' + (state.action_description ? ': '+state.action_description : '.');
-            state.VIEWS_RECOMPILE_all = [...new Set(removedDeltas.flatMap( d => Object.keys(d?.idlookup||{})))];
-            // state.VIEWS_RECOMPILE_all = true;
-            return state;
-
-        case RedoAction.type:
-            times = action.value;
-            state = oldState;
-            Log.exDev(times<=0, "redo must be positive", action);
-            // if (desc) { ret.action_title = desc.desc + ': ' + desc.oldval + ' -> ' + desc.newval; ...}
-            // state.action_title = 'redone ' + times + ' steps';
-            // state.action_description =  'redone ' + times + ' steps';
-            while (times--) {
-                let forUser = (action as UndoAction).forUser;
-                const delta = statehistory[forUser].redoable.pop();
-                for (let user in statehistory){
-                    U.arrayRemoveAll(statehistory[user]?.redoable, delta);
-                }
-                if (!delta) continue;
-                removedDeltas.push(delta);
-                state = undo(state, action as RedoAction, delta, false);
-            }
-
-            state.action_title = 'redone ' + times + ' steps' + (state.action_title ? ': '+state.action_title : '.');
-            state.action_description =  'redone ' + times + ' steps' + (state.action_description ? ': '+state.action_description : '.');
-            state.VIEWS_RECOMPILE_all = [...new Set(removedDeltas.flatMap( d => Object.keys(d?.idlookup||{})))];
-            // state.VIEWS_RECOMPILE_all = true;
-            return state;
+        case UndoAction.type: return doUndoRedo(oldState, action, 'undo');
+        case RedoAction.type: return doUndoRedo(oldState, action, 'redo');
         // case CombineHistoryAction.type: return combineHistory(oldState); break;
         // todo: se al posto di "annullare l'undo" memorizzo l'azione e la rieseguo, posso ripetere l'ultimo passo N volte e questa azione diventa utile per combinare passi e ripetere blocchi di azioni assieme
         default:
@@ -998,7 +983,7 @@ export function _reducer/*<S extends StateNoFunc, A extends Action>*/(oldState: 
             if(pastDelta)console.log("merge deltas", {forVertex:delta.vertexs || delta.graphvertexs || delta.graphelements || delta.edgepoints || delta.edges || delta.graphs,
                 isRelevantChange,
                 shouldMerge, irl: pastDelta && delta.timestamp - pastDelta.timestamp < mergeTolerance,
-                mergeTolerance, dt: delta.timestamp, pdt: pastDelta.timestamp, diff: delta.timestamp - pastDelta.timestamp,
+                 dt: delta.timestamp, pdt: pastDelta.timestamp, diff: delta.timestamp - pastDelta.timestamp,
                 oldState, delta});
             //todo: for cooperative prevent merge from different authors, store user in delta from action.sender when you set timestamp.
             if (shouldMerge && allowMerge) {
@@ -1007,6 +992,8 @@ export function _reducer/*<S extends StateNoFunc, A extends Action>*/(oldState: 
                 let gdelta: Dictionary<string, string[] | GObject> = {};
                 let allkeys: Set<string> = new Set([...Object.keys(delta), ...Object.keys(pastDelta)]);
                 let mergeRecompileArr = (k: string) => {
+                    // todo: reenable fix last line but remember they can be either true arrays or delta object fake arrays __jjObjDiffIsArr = true
+                    return;
                     if (!(k.indexOf('RECOMPILE') >= 0 || k.indexOf('ELEMENT_') >= 0 || k === 'ClassNameChanged')) return;
                     if (k === 'ClassNameChanged') {
                         let merged: Dictionary<string> = {};

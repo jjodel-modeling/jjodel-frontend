@@ -144,6 +144,10 @@ export class SaveManagerComponent extends PureComponent<AllProps, ThisState>{
             let latestTitleDelta = getLatestDelta(titleindex, ['action_title'], (key === 'undo' ? -1 : +1));
             let debugTitle = (titleDelta||s).action_title;
             console.log('getLatestDelta', {delta, latestTitleDelta, best:out.best?.str, titleDelta, dt:(titleDelta||s).action_title, titleindex, out})
+            if (!out.best?.str) {
+                console.error('generated wrong delta??');
+                return <></>;
+            }
             if (latestTitleDelta.action_title) out.best.str = latestTitleDelta.action_title;
             if (latestTitleDelta.action_description) out.best.fullstr = latestTitleDelta.action_description;
             else out.best.fullstr = out.length + ' subchanges';

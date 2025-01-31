@@ -177,8 +177,6 @@ export class Uobj {
             let rs = stringify(statelevel);
             Log.eDev(as !== rs, 'deltas: error in Uobj.diff, UObj.delta or UObj.patch, assertion failed',
                 {oldState, deltalevel, ret:statelevel, asserteq, rs, as, old, targetIsArr});
-            if (as === rs) console.log('deltas: error in Uobj.diff, UObj.delta or UObj.patch, assertion failed',
-                {oldState, deltalevel, ret:statelevel, asserteq, rs, as, old, targetIsArr});
         }
         return statelevel;
     }

@@ -911,6 +911,13 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
     // returns: true if an action is fired and component needs re-rendering
     updateNodeFromProps(props: GObject<AllProps>): boolean {
         let ret = false;
+        TRANSACTION('update node from props', ()=>{
+            ret = this.updateNodeFromProps0(props);
+        });
+        return ret;
+    }
+    updateNodeFromProps0(props: GObject<AllProps>): boolean {
+        let ret = false;
         let tn = transientProperties.node[props.nodeid];
         if (tn && !tn.viewScores) console.error('tn error 1', {tn:tn && {...tn}});
         let ptr: Pointer<any>;
@@ -939,7 +946,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
             if (dedge.id !== ptr) edge.end = ptr as any;
         }
         if (props.anchorEnd) { tn.labels = props.labels; }
-        let todoremovethis = true;
+        let todoremovethis = false;
         // if (typeof props.viewid === 'string') { let old = props.viewid; if (old !== props.node.view.id) { this.forceUpdate(); ret = true;} }
         if (todoremovethis || props.isReference !== undefined) { let old = dedge.isReference; let n = !!props.isReference; if (old !== n) { edge.isReference = n; ret = true;} }
         if (todoremovethis || props.isExtend !== undefined) { let old = dedge.isExtend; let n = !!props.isExtend; if (old !== n) { edge.isExtend = n; ret = true;} }
