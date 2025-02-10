@@ -36,6 +36,7 @@ import {
 
 import {InitialVertexSizeObj} from "../../joiner/types";
 import ModellingIcon from "../forEndUser/ModellingIcon";
+import { setProjectModified } from "../../common/libraries/projectModified";
 
 interface ThisState {}
 
@@ -273,10 +274,10 @@ function ToolBarComponent(props: AllProps, state: ThisState) {
 
         let subleveloptions = [];
         if (lobj && (!lobj.instanceof || lobj.partial)) subleveloptions.push(
-            <div key={"Feature"} className={"toolbar-item feature"} tabIndex={ti} onClick={() => { lobj.addValue(); }}>+Feature</div>
+            <div key={"Feature"} className={"toolbar-item feature"} tabIndex={ti} onClick={() => { lobj.addValue(); setProjectModified(); }}>+Feature</div>
         );
         if (lfeat && lfeat.values.length < lfeat.upperBound) subleveloptions.push(
-            <div key={"Value"} className={"toolbar-item value"} tabIndex={ti} onClick={() => {SetFieldAction.new(lfeat.id, 'value' as any, undefined, '+=', false); }}>
+            <div key={"Value"} className={"toolbar-item value"} tabIndex={ti} onClick={() => {SetFieldAction.new(lfeat.id, 'value' as any, undefined, '+=', false); alert(280);}}>
                 <ModellingIcon name={'value'} />
                 <span className={'ms-1 my-auto text-capitalize'}>value</span>
             </div>
@@ -287,16 +288,16 @@ function ToolBarComponent(props: AllProps, state: ThisState) {
             return <><div
                 onMouseEnter={e => SetRootFieldAction.new('tooltip', lClass.annotations.map(a => a.source).join(' '))}
                 onMouseLeave={e => SetRootFieldAction.new('tooltip', '')}
-                key={"LObject_"+dclass.id} className={"toolbar-item LObject"} tabIndex={ti} onClick={()=>select(model.addObject({}, lClass)) }>
+                key={"LObject_"+dclass.id} className={"toolbar-item LObject"} tabIndex={ti} onClick={()=>{select(model.addObject({}, lClass));setProjectModified();} }>
                 {dclass._state.icon ? <ModellingIcon src={dclass._state.icon}/> : <ModellingIcon name={'object'} />}
                 <span className={'ms-1 my-auto text-capitalize'}>{U.stringMiddleCut(dclass.name, 14)}</span>
             </div></>
         }) || [];
 
-        rootobjs.push(<><hr className={'my-1 toolbar-hr'}/><div key={"RawObject"} className={'toolbar-item'} tabIndex={ti} onClick={()=>select(model.addObject({}, null))}>
+        rootobjs.push(<><hr className={'my-1 toolbar-hr'}/><div key={"RawObject"} className={'toolbar-item'} tabIndex={ti} onClick={()=> {select(model.addObject({}, null)); setProjectModified();}}>
             
             <ModellingIcon name={'object'} />
-            
+        
             <span className={'ms-1 my-auto text-capitalize'}>Object</span>
         </div></>);
 
@@ -318,26 +319,6 @@ function ToolBarComponent(props: AllProps, state: ThisState) {
     let separator = <hr className={'my-1'} /> as any;
     // @ts-ignore
     content = contentarr.separator(separator);// .flat() as any;
-
-
-    /* backup  */
-
-    /* return (
-        <div className="toolbar-draggable"
-            ref={htmlref}
-            style={{ border: 'none', top: '35px', position: "absolute", backgroundColor: 'red !important' }} // refuses to focus without event...
-            onClick={(e) => {
-                console.log("click focus", { htmlref }); setTimeout(() => {
-                    if (htmlref.current) (htmlref.current as any).children[0].focus();
-                }, 1)
-            }}>
-            <div className={"toolbar hoverable" + (pinned ? " pinned" : '')} tabIndex={0}>
-                <i className={"content pin bi bi-pin-angle" + (pinned ? "-fill" : '')} onClick={() => setPinned(!pinned)} />
-                <div className={"content inline w-100"}>
-                    {content}
-                </div>
-            </div>
-        </div>);*/ 
 
     return (<>
     
@@ -387,18 +368,6 @@ function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     if (ownProps.metamodelId) { ret.metamodel = LModel.fromPointer(ownProps.metamodelId); }
     return ret;
 }
-/*
-function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
-    const ret: StateProps = {} as any;
-    ret.selectedid = state._lastSelected;
-    ret.selected = ret.selectedid && {
-        node: LPointerTargetable.from(ret.selectedid.node, state) as LGraphElement,
-        view: LPointerTargetable.from(ret.selectedid.view, state) as LViewElement,
-        modelElement: ret.selectedid.modelElement ? LPointerTargetable.from(ret.selectedid.modelElement, state) : undefined
-    };
-    if (ownProps.metamodelId) { ret.metamodel = LModel.fromPointer(ownProps.metamodelId); }
-    return ret;
-}*/
 
 function mapDispatchToProps(dispatch: Dispatch<any>): DispatchProps {
     const ret: DispatchProps = {} as any;

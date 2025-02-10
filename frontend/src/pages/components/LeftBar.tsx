@@ -2,13 +2,15 @@ import { meanBy } from 'lodash';
 import { useState, MouseEventHandler } from 'react';
 import { IconTheme } from 'react-hot-toast';
 import {useNavigate} from 'react-router-dom';
-import {DProject, DUser, L, LProject, LUser, SetRootFieldAction, U} from '../../joiner';
+import {DProject, DUser, L, LProject, LUser, SetRootFieldAction, U, windoww} from '../../joiner';
 
 import { icon } from './icons/Icons';
 import {DashProps} from "./Dashboard";
 import Collaborative from "../../components/collaborative/Collaborative";
 import {ProjectsApi} from "../../api/persistance";
 import storage from "../../data/storage";
+import { isProjectModified } from '../../common/libraries/projectModified';
+import { Tooltip } from '../../components/forEndUser/Tooltip';
 
 interface StateProps {
     projects: LProject[];
@@ -57,17 +59,20 @@ type MenuProps = {
     children: any;
     title?: string;
     mode?: "collapsable";
+    project?: boolean;
 };
 
 const Menu = (props: MenuProps) => {
     const [open,setOpen] = useState(true);
 
     return (<>
+
         {props.title && props.mode && open && <i className={'bi bi-chevron-down'} onClick={(e) => setOpen(!open)}></i>}
         {props.title && props.mode && !open && <i className={'bi bi-chevron-right'} onClick={(e) => setOpen(!open)}></i>}
+        
 
         <div className='menu border-bottom'>
-            {props.title && <h1>{props.title}</h1>}
+            {isProjectModified() && props.title ? <h1>{props.title} <i className="bi bi-circle-fill modified"></i> </h1> : <h1> {props.title} </h1>}
             <div>
                 {open && props.children}
             </div>
@@ -116,6 +121,8 @@ function LeftBar(props: LeftBarProps): JSX.Element {
         }
     }
 
+    
+
     return(<>
 
         {active === 'Project' ?
@@ -124,7 +131,7 @@ function LeftBar(props: LeftBarProps): JSX.Element {
                 <i className="bi bi-search"></i>
                 <input placeholder={'Search for anything'} type={'text'} name='search-text' />
                 {/* @ts-ignore */}
-                <Menu title={props.project.name}>
+                <Menu title={props.project.name ? props.project.name : 'Unnamed Project'} project>
                     {/*<Item icon={icon['edit']}>Edit </Item>*/}
                     <Item action={exportProject} icon={icon['download']}>Download</Item>
                     {/*<Item icon={icon['duplicate']}>Duplicate </Item>*/}
@@ -160,7 +167,7 @@ function LeftBar(props: LeftBarProps): JSX.Element {
                 <input placeholder={'Search for anything'} type={'text'} name='search-text' />
 
 
-                {user.email === 'admin@gmail.it' && <Menu title={'Administration'} mode={'collapsable'}>
+                {user && user.email === 'admin@gmail.it' && <Menu title={'Administration'} mode={'collapsable'}>
                     <Item action={'usersInfo'} icon={icon['profile']}>Users</Item>
                     <Item action={'projectsInfo'} icon={icon['folder']}>Projects</Item>
                     <Item action={'news'} icon={icon['manual']}>News</Item>
@@ -168,24 +175,44 @@ function LeftBar(props: LeftBarProps): JSX.Element {
 
                 <Menu>
                     <Item action={'allProjects'} icon={icon['dashboard']}>All projects </Item>
-                    <Item action={'recent'} icon={icon['recent']}>Recent</Item>
                 </Menu>
                 {props.projects && props.projects.filter(p => p.isFavorite).length > 0 &&
                     <Menu title={"Starred"} mode={'collapsable'}>
-                        {props.projects.filter(p => p.isFavorite).map(p => <Item icon={icon['folder']} action={e => selectProject(p)}>{p.name}</Item>)}
+                        {props.projects
+                            .filter(p => p.isFavorite)
+                            .map(p => 
+                                <Item icon={icon['folder']} action={e => selectProject(p)}>{p.name}</Item>
+                            )
+                        }
                     </Menu>
                 }
-                {/* <Menu>
-                    <Item action={'templates'} icon={icon['template2']}>Templates</Item>
-                    <Item action={'notes'} icon={icon['edit']}>Notes</Item>
-                </Menu>*/}
+
+                {props.projects && props.projects.filter(p => p.isFavorite).length > 0 &&
+                    <Menu title={"Recent"} mode={'collapsable'}>
+                        {props.projects
+                            .sort((a,b) => (b.lastModified > a.lastModified) ?  1 : -1)
+                            .slice(0,5)
+                            .map(p => <Item icon={icon['folder']} action={e => selectProject(p)}>{p.name}</Item>)}
+                    </Menu>
+                }
+                
                 <Menu title={'Support'} mode={'collapsable'}>
-                    <Item action={'updates'} icon={icon['whats-new']}
+                    {/* <Item action={'updates'} icon={icon['whats-new']}
                           dot={+(localStorage.getItem('_jj_update_seen')||0)<+(localStorage.getItem('_jj_update_date')||Number.POSITIVE_INFINITY)}
                           onClick={()=>localStorage.setItem('_jj_update_seen', ''+Date.now())}
+                    >What's new</Item>*/}
+                    <Item 
+                        action={() => {document.location.href="https://www.jjodel.io/whats-new/"}} 
+                        icon={icon['whats-new']}
                     >What's new</Item>
-                    <Item action={'gettingstarted'} icon={icon['getting-started']}>Getting started</Item>
-                    <Item action={'guide'} icon={icon['manual']}>User guide</Item>
+                    <Item 
+                        action={() => {document.location.href="https://www.jjodel.io/getting-started/"}} 
+                        icon={icon['getting-started']}
+                    >Getting started</Item>
+                    <Item 
+                        action={() => {document.location.href="https://www.jjodel.io/manual/"}} 
+                        icon={icon['manual']}
+                    >User guide</Item>
                 </Menu>
 
                 <Upload />

@@ -85,7 +85,7 @@
 
 /* Show the dropdown menu on hover */
 .new-dropdown:hover .new-dropdown-content {
-  display: block;
+  display: block; 
 }
 
 
@@ -164,10 +164,10 @@
 
   .nav-commands{
     margin-right: 3rem;
-    margin-left: auto;
+    margin-left: auto; 
   }
 
-  .nav-hamburger {
+  .nav-hamburger { 
     margin-right: auto;
     color: var(--color);
     font-size: 1.5em;
@@ -175,17 +175,40 @@
     display: block;
     margin-top: auto;
     margin-bottom: auto;
+
+
+    
     >.bi::before{
       transform: rotate(0deg);
       transform-origin: center;
       transition: 0.3s linear transform; // ease-in-out
     }
+
     >.bi:hover::before{
       transform: rotate(180deg);
     }
+
     label div {
-      float: right;
+      float: right; 
     }
+  }
+
+  & span.menu-title {
+    cursor: pointer;
+    font-size: 0.80em;
+    font-weight: 500;
+    margin-right: 0px;
+    padding: 4px 16px;
+    border-radius: 4px;;
+  }
+
+  & span.menu-title:hover { 
+    background-color: var(--bg-2-5);
+
+  }
+
+  & span.menu-title:selected {
+    color: red;
   }
 }
 
@@ -196,6 +219,11 @@
   padding-top: 2px;
   font-weight: 800;
 }
+
+.nav-container .nav-hamburger.inline {
+  margin-right: 10px;
+}
+
 
 .nav-commands {
 
@@ -277,7 +305,9 @@
 
 
 .nav-container .content.context-menu {
-  width: auto;
+  width: auto; 
+  margin-left: 20px;
+  margin-top: 10px;
 }
 .nav-container .content.context-menu ul {
   --palette-1-hover: white;

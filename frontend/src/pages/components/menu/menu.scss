@@ -28,9 +28,13 @@
     font-size: 1rem;
   }
 
+
+
   .menu-button:hover {
     background-color: var(--bg-3);
   }
+
+  
 
   .menu-button:hover .bi {
     color: var(--accent);
@@ -110,5 +114,18 @@
 
 .dropdown.left {
   left: -180px;
+}
+
+hr.divisor {
+
+  height: 0px;
+  background-color: transparent;
+  border-top:1px dotted silver;
+  margin-left: 10px;
+  margin-right: 10px;
+
+
+
+
 }
 

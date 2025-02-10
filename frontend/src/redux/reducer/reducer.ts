@@ -15,7 +15,11 @@ import {
     bool,
     NodeTransientProperties,
     ViewTransientProperties,
-    DGraphElement, Uarr, Uobj, LocalStorage, DProject, LUser
+    DGraphElement, Uarr,
+    Uobj, LocalStorage,
+    LProject,
+    DProject,
+    LUser,
 } from '../../joiner';
 import {
     Action,
@@ -1187,10 +1191,12 @@ export async function stateInitializer() {
 
     DState.init();
     await DUser.loadOffline(); // if it's online mode this is a no-op and user should be already loaded
-    console.log('FIRING action pre')
-    await ProjectsApi.getAll();
-    console.log('FIRING action post')
-    //await ProjectsApi.getAll();
+    try {
+        await ProjectsApi.getAll();
+    } catch (error) {
+        // U.alert('e','You are already logged on another client','');
+        DUser.current = '';
+    }
     setDocumentEvents();
     /*type RecentEntry = {id: Pointer<DProject>[], name: string};
     let recent: RecentEntry[] = JSON.parse(localStorage.getItem('_jjRecent') || '[]') as any[];

@@ -3,12 +3,16 @@ import {
     DState,
     DUser,
     DViewElement,
+    Input,
     LPointerTargetable,
     LProject,
     LUser,
     LViewElement,
     LViewPoint,
-    Pointer, SetFieldAction,
+    Pointer, 
+    SetFieldAction,
+    SetRootFieldAction,
+    U,
     Try
 } from '../../joiner';
 import {LeftBar, Navbar} from './';
@@ -24,13 +28,18 @@ import {
     TbSquareRoundedLetterM,
     TbSquareRoundedLetterMFilled,
     TbSquareRoundedLetterV,
-    TbSquareRoundedLetterVFilled
+    TbSquareRoundedLetterVFilled,
+    TbSquareRoundedLetterE
 } from "react-icons/tb";
 import DockManager from '../../components/abstract/DockManager';
 import Dock from "../../components/abstract/Dock";
 import {CSS_Units} from "../../view/viewElement/view";
 import {useStateIfMounted} from 'use-state-if-mounted';
 import { Tooltip } from '../../components/forEndUser/Tooltip';
+import { ProjectsApi } from '../../api/persistance';
+import { setPriority } from 'os';
+import { setProjectModified } from '../../common/libraries/projectModified';
+import { set } from 'lodash';
 
 
 type UserProps = {
@@ -47,18 +56,19 @@ const User = (props: UserProps) => {
     </>);
 };
 
-
 type TitleProps = {
     projectID?: Pointer<DProject>;
     active: string;
     title: string;
     icon: ReactElement;
     description?: string;
+    type?: 'private'|'public'|'collaborative';
 }
+
 
 const Title = (props: TitleProps) => {
 
-    let {title, description} = props;
+    let {title, description} = props;   
 
     const [editTitle, setEditTitle] = useStateIfMounted(false);
     const [editDes, setEditDes] = useStateIfMounted(false);
@@ -66,12 +76,88 @@ const Title = (props: TitleProps) => {
     const titleRef = useRef();
     const desRef = useRef();
 
+    const ProjectProperties = () => {
+
+        const server = 'http://app.jjodel.io';
+        const projectLink = '/#/project?id='+props.projectID;
+
+        function copyToClipboard(e: any) {
+            const server = document.getElementById('server');
+            const link = document.getElementById('link');
+            
+            navigator.clipboard.writeText(server.innerText+link.innerText);
+            U.alert('i', "Copied", "The project link has been copied to the Clipboard.");
+
+        }
+
+        let type = (props.type === "public");
+            return (<><label className='text-end nav-commands d-flex' 
+                        style={{float: `${props.type === 'public' ? 'left': 'none'}`}}>
+                {props.type && <>
+                    <span className={"my-auto me-1"}>{props.type === "public" ? "public" : props.type === "private" ? "private" : "collaborative"}</span>
+                    
+                    {props.type !== "collaborative" && 
+                        <Input type="toggle"
+                            className={"my-auto"}
+                            style={{fontSize:'1.25em'}}
+                            setter={(v) => {
+                                if(!props.projectID) return;
+                                SetFieldAction.new(props.projectID, 'type', v ? "public" : "private", '', false);
+                                setProjectModified();
+                                if (v) U.alert('i', "The project "+title+" is public", "It can be accessed only by those who have the public link.");
+                            }}
+                            getter={() => type}
+                        />    
+                    }
+                </>
+                }
+            </label>
+            {props.type === "public" &&
+                <Tooltip tooltip={'Copy to Clipboard'} inline={true} position={'top'} offsetY={10}>
+                    <span onClick={(e) => copyToClipboard(e)}className={'project-link'}>
+                        <span id={'server'}>{server}</span><span id={'link'}>{projectLink}</span>
+                    </span>
+                </Tooltip>
+            }
+            </>
+            );
+        };
+
+        // <h2 onBlur={() => setEditTitle(!editTitle)} >
+
+        // function setTitle(e: any) {
+        //     if (title === '') {
+        //         U.alert('e', 'Title cannot be empty', 'Please enter a title for the project.');
+        //         e.target.focus();
+        //         return;
+        //     }
+        //     setProjectModified();
+        //     setEditTitle(!editTitle);
+        // }
+
+        // function setDescription(e: any) {
+
+        //     if (description === '') {
+        //         U.alert('e', 'Description cannot be empty', 'Please enter a description for the project.');
+        //         e.target.focus();
+        //         return;
+        //     }
+        //     setProjectModified();
+        //     setEditDes(!editDes);
+        // }
+
+        // function setPrivacy(e: any) {
+        //     setProjectModified();
+        // }
+
+
+
     return (<>
         <div className={'title'}>
             {props.active === 'Project' ?
-                <div className={'name project-list'}>
+                <div className={'project-list'}> {/* name */}
                     {editTitle ?
-                        <h2 onBlur={() => setEditTitle(!editTitle)} >
+                        <h2>
                             <div>
                                 {props.icon}
                                 <input
@@ -82,6 +168,11 @@ const Title = (props: TitleProps) => {
                                     onChange={e => {
                                         if(!props.projectID) return;
                                         SetFieldAction.new(props.projectID, 'name', e.target.value, '', false)
+                                        setProjectModified();
+                                    }}
+                                    onBlur={(e) => {
+                                        if (e.target.value === '') {U.alert('e', 'A Project Name is required.', 'Please provide a name to identify and organize your project effectively.');e.target.focus(); return;}
+                                        setEditTitle(!editTitle);
                                     }}
                                 />
                             </div>
@@ -92,32 +183,35 @@ const Title = (props: TitleProps) => {
                         </h2></Tooltip>
                          </>
                     }
-                    {editDes ?
-                        <>
-                            {props.description &&
-                                <h3 onDoubleClick={() => setEditDes(!editDes)} onBlur={() => setEditDes(!editDes)}>
-                                    <textarea
-                                        autoFocus
-                                        rows={4}
-                                        cols={60}
-                                        value={props.description}
-                                        onChange={e => {
-                                            if(!props.projectID) return;
-                                            SetFieldAction.new(props.projectID, 'description', e.target.value, '', false)
-                                        }}
-                                    />
-                                </h3>
-                                }
-                        </>
+                    <h6><ProjectProperties/></h6>
+                    
+                    {editDes ? 
+                        <h3>
+                            <textarea
+                                autoFocus
+                                rows={4}
+                                cols={80}
+                                value={description}
+                                onChange={e => {
+                                    if(!props.projectID) return;
+                                    SetFieldAction.new(props.projectID, 'description', e.target.value, '', false)
+                                    setProjectModified();
+                                }}
+                                onBlur={e => {
+                                    if (e.target.value === '') {e.target.focus();U.alert('e', 'A Project Description is required.', 'Adding a description helps provide clarity and context for your project.'); return;}
+                                        setEditDes(!editDes);
+                                }}
+                            />
+                        </h3>
                         :
                         <>
-                            {props.description && <Tooltip tooltip={'DoubleClick to edit'} inline={true} position={'left'} offsetX={10}><h3 onDoubleClick={() => setEditDes(!editDes)} onBlur={() => setEditDes(!editDes)}>{props.description}</h3></Tooltip>}
+                            {props.description && <Tooltip tooltip={'DoubleClick to edit'} inline={true} position={'left'} offsetX={10}><h3 onDoubleClick={() => setEditDes(!editDes)}>{props.description}</h3></Tooltip>}
                         </>
                     }
-
+                    
                 </div>
                 :
-                <div className={'name'}>
+                <div className={'header'}>
                     <h2>{props.icon} {props.title}</h2>
                     {props.description && <h3>{props.description}</h3>}
                 </div>
@@ -134,6 +228,7 @@ export type DashProps = {
     version?: Partial<DState["version"]>;
     project?: LProject;
     projects?:LProject[];
+    style?: any;
 };
 
 
@@ -162,7 +257,7 @@ function GenericDashboard(props: DashProps): any {
         <Navbar />
         <div className={"dashboard-container"} tabIndex={-1}>
             <LeftBar active={active} projects={user?.projects}/>
-            <div className={'dash-content user'}>
+            <div className={`dash-content user ${props.style && props.style}`}>
                 <div>
                     <>
                         {active === "All" && <Title active={active} title={'Dashboard'} icon={<i className="bi bi-columns-gap"></i>} />}
@@ -191,38 +286,37 @@ const ProjectInfoCard = (props: ProjectProps) => {
 
     return (
         <div className={'details'}>
+            <>
+                <h5>{project.name ? project.name : 'Unnamed Project'}</h5>
+                {project.description && <p>{project.description}</p>}
+                <img src={colors} width={220} style={{paddingBottom: '10px'}}/>
 
-                <>
-                    <h5>{project.name}</h5>
-                    {project.description && <p>{project.description}</p>}
-                    <img src={colors} width={220} style={{paddingBottom: '10px'}}/>
-
-                    {project.metamodels.length === 0 ?
-                        <p>This project does not contain any metamodel and consequently no models yet; it only contains the default viewpoints.</p>
+                {project.metamodels.length === 0 ?
+                    <p>This project does not contain any metamodel and consequently no models yet; it only contains the default viewpoints.</p>
+                    :
+                    <p>
+                    {project.metamodels.length === 1 && <>In this project, <b>one metamodel</b> is defined</>}
+                    {project.metamodels.length > 1 && <>In this project, <b>{project.metamodels.length} metamodels</b> are defined </>}
+                    {project.models.length === 0  ?
+                        <> and does not contain any model (it only includes the default viewpoints).</>
                         :
-                        <p>
-                        {project.metamodels.length === 1 && <>In this project, <b>one metamodel</b> is defined</>}
-                        {project.metamodels.length > 1 && <>In this project, <b>{project.metamodels.length} metamodels</b> are defined </>}
-                        {project.models.length === 0  ?
-                            <> and does not contain any model (it only includes the default viewpoints).</>
-                            :
-                            <>
-                            {project.models.length === 1  && <>, from which <b>one model</b> is instantiated. </>}
-                            {project.models.length > 1  && <>, from which <b>{project.models.length}</b> models are instantiated. </>}
+                        <>
+                        {project.models.length === 1  && <>, from which <b>one model</b> is instantiated. </>}
+                        {project.models.length > 1  && <>, from which <b>{project.models.length}</b> models are instantiated. </>}
 
-                            <>These models are explored and analyzed through <b>{project.viewpoints.length} viewpoints</b> (including the default ones), each offering a distinct perspective on different system concerns. </>
-                            </>
-                        }
-
-
-                        </p>
+                        <>These models are explored and analyzed through <b>{project.viewpoints.length} viewpoints</b> (including the default ones), each offering a distinct perspective on different system concerns. </>
+                        </>
                     }
-                </>
 
+
+                    </p>
+                }
+            </>
         </div>
     );
 }
 
+/* Project Details / Project Summary */
 
 function ProjectCatalog(props: ProjectProps) {
 
@@ -230,84 +324,86 @@ function ProjectCatalog(props: ProjectProps) {
 
     return (<>
         <ProjectInfoCard project={project}/>
-            <div className={'row project-list'}  >
-                <div className='row header' >
+        <div className={'row project-list'}  >
+            
+            <div className='row header' >
+                <div className={'col-4 '}>Name</div>
+                <div className={'col-2 artifact-type'}>Type</div>
+                <div className={'col-1'}>Operation</div>
+            </div>
 
-                    <div className={'col-4 '}>Name</div>
-                    <div className={'col-2 artifact-type'}>Type</div>
-                    <div className={'col-1'}>Operation</div>
-                </div>
-
-                {project.metamodels.map(mm =>
-                    <div className="row data">
-                        <div className={'col-4 '} onClick={async () => await DockManager.open2(mm)}>
-                            <TbSquareRoundedLetterMFilled style={{fontSize: '1.5em'}}/> {mm.name}</div>
-                        <div className={'col-2 artifact-type'}>Metamodel</div>
-                        <div className={'buttons'}>
-                            <CommandBar noBorder={true} style={{marginBottom: '0'}}>
-                                <Btn icon={'open'} action={async () => await DockManager.open2(mm)}
-                                     tip={'Open metamodel'}/>
-                                <Btn icon={'minispace'}/>
-                                <Btn icon={'copy'} action={e => {
-                                }} tip={'Duplicate metamodel'}/>
-                                <Sep/>
-                                <Btn icon={'delete'} action={e => mm.delete()} tip={`Delete model "${mm.name}"`}/>
-                            </CommandBar>
-                        </div>
-                    </div>)
-                }
-                {project.models.map(model =>
-                    <div className="row data">
-                        <div className={'col-4 '} key={model.id} onClick={async () => await DockManager.open2(model)}>
-                            <TbSquareRoundedLetterM style={{fontSize: '1.5em'}}/> {model.name}</div>
-                        <div className={'col-2 artifact-type'}>Model</div>
-                        <div className={'buttons'}>
-                            <CommandBar noBorder={true} style={{marginBottom: '0'}}>
-                                <Btn icon={'open'} action={async () => await DockManager.open2(model)}
-                                     tip={'Open model'}/>
-                                <Btn icon={'minispace'}/>
-                                <Btn icon={'copy'} action={e => {
-                                }} tip={'Duplicate model'}/>
-                                <Sep/>
-                                <Btn icon={'delete'} action={e => model.delete()} tip={`Delete model "${model.name}"`}/>
-                            </CommandBar>
-                        </div>
-                    </div>)
-                }
-                {project.viewpoints.map(vp =>
-                    <div className="row data viewpoint">
-                        <div className={'col-4'}>{vp.isOverlay ? <TbSquareRoundedLetterVFilled style={{fontSize: '1.5em'}}/> : <TbSquareRoundedLetterV style={{fontSize: '1.5em'}}/>} {vp.name}</div>
-                        <div className={'col-2 artifact-type'}>Viewpoints</div>
-                        <div className={'buttons'}>
-                            <CommandBar noBorder={true} style={{marginBottom: '0'}}>
-                                <Btn icon={'open'} tip={'Open viewpoint'} disabled={true}/>
-                                <Btn icon={'minispace'} />
-                                <Btn icon={'copy'} action={e => vp.duplicate()} tip={'Duplicate viewpoint'}/>
-                                <Sep />
-                                <Btn icon={'delete'} action={e => vp.delete()} tip={'Delete viewpoint'} disabled={vp.name === 'Default' || vp.name === 'Validation default'}/>
-                            </CommandBar>
-                        </div>
-                    </div>)
-                }
-                <div className={'legenda'}>
-                    <h1>Legenda</h1>
-                    <div className={'row'}>
-                        <div className={'col-sm'}>
+            {project.metamodels.map(mm =>
+                <div className="row data">
+                    <div className={'col-4 '} onClick={async () => await DockManager.open2(mm)}>
+                        <TbSquareRoundedLetterMFilled style={{fontSize: '1.5em'}}/> {mm.name}</div>
+                    <div className={'col-2 artifact-type'}>Metamodel</div>
+                    <div className={'buttons'}>
+                        <CommandBar noBorder={true} style={{marginBottom: '0'}}>
+                            <Btn icon={'open'} action={async () => await DockManager.open2(mm)}
+                                    tip={'Open metamodel'}/>
+                            <Btn icon={'minispace'}/>
+                            <Btn icon={'copy'} action={e => {
+                            }} tip={'Duplicate metamodel'}/>
+                            <Sep/>
+                            <Btn icon={'delete'} action={e => mm.delete()} tip={`Delete model "${mm.name}"`}/>
+                        </CommandBar>
+                    </div>
+                </div>)
+            }
+            {project.models.map(model =>
+                <div className="row data">
+                    <div className={'col-4 '} key={model.id} onClick={async () => await DockManager.open2(model)}>
+                        <TbSquareRoundedLetterM style={{fontSize: '1.5em'}}/> {model.name}</div>
+                    <div className={'col-2 artifact-type'}>Model</div>
+                    <div className={'buttons'}>
+                        <CommandBar noBorder={true} style={{marginBottom: '0'}}>
+                            <Btn icon={'open'} action={async () => await DockManager.open2(model)}
+                                    tip={'Open model'}/>
+                            <Btn icon={'minispace'}/>
+                            <Btn icon={'copy'} action={e => {
+                            }} tip={'Duplicate model'}/>
+                            <Sep/>
+                            <Btn icon={'delete'} action={e => model.delete()} tip={`Delete model "${model.name}"`}/>
+                        </CommandBar>
+                    </div>
+                </div>)
+            }
+            {project.viewpoints.map(vp =>
+                <div className="row data viewpoint">
+                    <div className={'col-4'}>{vp.isOverlay ? <TbSquareRoundedLetterVFilled style={{fontSize: '1.5em'}}/> : <TbSquareRoundedLetterV style={{fontSize: '1.5em'}}/>} {vp.name}</div>
+                    <div className={'col-2 artifact-type'}>Viewpoint</div>
+                    <div className={'buttons'}>
+                        <CommandBar noBorder={true} style={{marginBottom: '0'}}>
+                            <Btn icon={'open'} tip={'Open viewpoint'} disabled={true}/>
+                            <Btn icon={'minispace'} />
+                            <Btn icon={'copy'} action={e => vp.duplicate()} tip={'Duplicate viewpoint'}/>
+                            <Sep />
+                            <Btn icon={'delete'} action={e => vp.delete()} tip={'Delete viewpoint'} disabled={vp.name === 'Default' || vp.name === 'Validation default'}/>
+                        </CommandBar>
+                    </div>
+                </div>)
+            }
+            <div className={'legenda'}>
+                <h1>Legenda</h1>
+                <div className={'row'}>
+                    <div className={'col'}>
                         <TbSquareRoundedLetterMFilled style={{fontSize: '1.3em'}}/> Metamodels
-                        </div>
-                        <div className={'col-sm'}>
+                    </div>
+                    <div className={'col'}>
                         <TbSquareRoundedLetterM style={{fontSize: '1.3em'}}/> Models
-                        </div>
-                        <div className={'col-sm'}>
+                    </div>
+                    <div className={'col'}>
                         <TbSquareRoundedLetterVFilled style={{fontSize: '1.3em'}}/> Viewpoints
-                        </div>
-                        <div className={'col-sm'}>
+                    </div>
+                    <div className={'col'}>
                         <TbSquareRoundedLetterV style={{fontSize: '1.3em'}}/> Overlay Viewpoints
-                        </div>
+                    </div>
+                    <div className={'col disabled'}>
+                        <TbSquareRoundedLetterE className={'disabled'} style={{fontSize: '1.3em'}}/> Epsilon Transformations
                     </div>
                 </div>
             </div>
-
+        </div>
     </>)}
 
 
@@ -346,7 +442,7 @@ function Dashboard(props: DashProps): any {
 
     return(<>
         {active === 'Project' ?
-            <ProjectDashboard version={version} active={active} project={project} children={children}/> :
+            <ProjectDashboard version={version} active={active} project={project} children={children} className={'bg'}/> :
             <GenericDashboard version={version} active={active} children={children}/>
         }
     </>);

@@ -36,6 +36,7 @@ function SelectorComponent(props: AllProps) {
     function SelectorChange(evt: React.ChangeEvent<HTMLSelectElement>) {
         if (readOnly) return;
 
+        
         const newValue = evt.target.value; 
         const oldValue = getter(); 
         setter(newValue);
@@ -45,26 +46,65 @@ function SelectorComponent(props: AllProps) {
 
     function getOptions(): any {
 
-        return (<>
 
-            {/*@ts-ignore*/}
-            {l[field].type.allInstances.map(cl =><>
-                {/*@ts-ignore*/}
-                {typeof(l[field].value) === 'undefined' ? 
-                    <option value={cl.id}>{cl.name}</option> 
-                    :
-                    <>
+        {/*@ts-ignore*/}
+        switch (l[field].type.className) {
+            case 'DClass':
+                return (<>
+
+                    {/*@ts-ignore*/}
+                    {l[field].type.allInstances.map(cl =><>
                         {/*@ts-ignore*/}
-                        {l[field].value.id === cl.id ?
-                        <option value={cl.id} selected>{cl.name}</option> 
-                        :
-                        <option value={cl.id}>{cl.name}</option>  
-                    }
-                    </>
-                }
+                        {typeof(l[field].value) === 'undefined' ? 
+                            <option value={cl.id}>{cl.name}</option> 
+                            :
+                            <>
+                                {/*@ts-ignore*/}
+                                {l[field].value.id === cl.id ?
+                                <option value={cl.id} selected>{cl.name}</option> 
+                                :
+                                <option value={cl.id}>{cl.name}</option>  
+                            }
+                            </>
+                        }
+        
+                    </>)}
+                </>); 
+            break;
+            case 'DEnumerator':
+                
+                return (<>
+                    <option value="" disabled selected>Select your option</option>
+                    {/*@ts-ignore*/}
+                    {l[field].type.literals.map(lit =><>
+                        
+                        {/*@ts-ignore*/}
+                        {typeof(l[field].value) === 'undefined' ? 
+                            
+                            <option value={lit.id}>{lit.name}</option>
+                            :
+                            <>
+                                {/*@ts-ignore*/}
+                                {l[field].value.name === lit.name ?
+                                    <option value={lit.id} selected>{lit.name}</option> 
+                                    :
+                                    <option value={lit.id}>{lit.name}</option>  
+                                }
+                            </>
+                        }
+        
+                    </>)}
+                </>);
+            break;
+            default:
+                return (U.alert('e', 'Unsupported type','Selector Component'));
+            break;
 
-            </>)}
-        </>); 
+        }
+
+
+
+        
     }
 
     const otherprops: GObject = {...props};
@@ -84,12 +124,13 @@ function SelectorComponent(props: AllProps) {
     U.objectMergeInPlace(inputStyle, props.inputStyle || {}, props.style || {});
     let className = [props.className, props.inputClassName, css].join(' ');
 
+    let get_options = getOptions();
 
-    let select = (<select {...otherprops} className={className + ' model-select'} disabled={readOnly}
+    let select = (<select {...otherprops} className={className + ' model-select'} disabled={readOnly} placeholder={'-----'}
             style={props.inputStyle}
             value={value}
             onChange={SelectorChange}>
-                {getOptions()}
+                {get_options ? get_options : U.alert('e', 'Error in Selector component', 'Something went wrong ...')}
     </select>);
 
 

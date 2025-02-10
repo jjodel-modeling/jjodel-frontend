@@ -36,7 +36,7 @@ const [animal, setAnimal] = useState(false);
 
     return (<>
         <div className={'jjodel'}>
-            <span><About ver={'1.41'} name={'manatee'} /></span>
+            <span><About ver={'1.6'} name={'manatee'} /></span>
         </div>
         </>);
 }
@@ -61,7 +61,7 @@ function BottomBarComponent(props: AllProps): JSX.Element {
 
     return(<footer className={'footer'}>
         <label className={'me-3'}>
-            Made with <i className="bi bi-heart-fill" onClick={() => setSwen(true)}/> in the swen group
+            Made with <i className="bi bi-heart-fill" /> in the swen group
         </label>
         <div style={{width: '100px'}}></div>
         <div className={'coordinates'} hidden={!node}>

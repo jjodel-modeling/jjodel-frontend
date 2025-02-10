@@ -28,8 +28,6 @@ import {Navbar} from "./components";
 import {CSS_Units} from "../view/viewElement/view";
 import {useEffectOnce} from "usehooks-ts";
 
-
-
 function ProjectComponent(props: AllProps): JSX.Element {
 
     const {user} = props;
@@ -39,7 +37,7 @@ function ProjectComponent(props: AllProps): JSX.Element {
 
     useEffect(() => {
         (async function() {
-            const project = await ProjectsApi.getOne(id);
+            const project = await ProjectsApi.getOne(id); 
             if(!project) {
                 U.resetState();
                 navigate('/allProject');
@@ -62,54 +60,55 @@ function ProjectComponent(props: AllProps): JSX.Element {
     const viewsDeDuplicator: Dictionary<Pointer<DViewElement>, LViewElement> = {};
     for (let v of allViews) viewsDeDuplicator[v.id] = v;
     if(!user?.project) return (<></>);
+
     return (<>
         <Try>
         <Dashboard active={'Project'} version={props.version} project={user.project}>
-                <React.Fragment>
-                    <style id={"views-css-injector-p"}>
-                        {Object.values(viewsDeDuplicator).map(v => v.compiled_css).join('\n\n')}
-                    </style>
-                    {CSS_Units.jsx}
+            <React.Fragment>
+                <style id={"views-css-injector-p"}>
+                    {Object.values(viewsDeDuplicator).map(v => v.compiled_css).join('\n\n')}
+                </style>
+                {CSS_Units.jsx}
 
-                    <Cards>
-                        {user.project.metamodels.length === 0 ?
+                <Cards>
+                    {user.project.metamodels.length === 0 ?
+                        <Cards.Item
+                            title={'Your first metamodel ?'}
+                            subtitle={'Create a new metamodel.'}
+                            icon={'add'}
+                            style={'red'}
+                            action={() => {
+                                alert('new metamodel')
+                            }}
+                        />
+                        :
+                        <React.Fragment>
                             <Cards.Item
-                                title={'Your first metamodel ?'}
+                                title={'Create another metamodel ?'}
                                 subtitle={'Create a new metamodel.'}
                                 icon={'add'}
                                 style={'red'}
                                 action={() => {
-                                    alert('new metamodel')
+                                    alert('another metamodel')
                                 }}
                             />
-                            :
-                            <React.Fragment>
-                                <Cards.Item
-                                    title={'Create another metamodel ?'}
-                                    subtitle={'Create a new metamodel.'}
-                                    icon={'add'}
-                                    style={'red'}
-                                    action={() => {
-                                        alert('another metamodel')
-                                    }}
-                                />
-                                <Cards.Item
-                                    title={'Create a model ?'}
-                                    subtitle={'Create a new model.'}
-                                    icon={'add'}
-                                    style={'red'}
-                                    action={() => {
-                                        alert('new model')
-                                    }}
-                                />
-                            </React.Fragment>
-                        }
-                        <Cards.Item icon={'question'} style={'clear'} title={'Ehy!'}
-                                    subtitle={'What do you want to do today?'}/>
-                    </Cards>
+                            <Cards.Item
+                                title={'Create a model ?'}
+                                subtitle={'Create a new model.'}
+                                icon={'add'}
+                                style={'red'}
+                                action={() => {
+                                    alert('new model')
+                                }}
+                            />
+                        </React.Fragment>
+                    }
+                    <Cards.Item icon={'question'} style={'clear'} title={'Ehy!'}
+                                subtitle={'What do you want to do today?'}/>
+                </Cards>
 
-                </React.Fragment>
-            </Dashboard>
+            </React.Fragment>
+        </Dashboard>
         </Try>
 
         {/*<Try><Dock /></Try>*/}

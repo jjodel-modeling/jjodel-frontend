@@ -27,6 +27,7 @@ import ModellingIcon from "../forEndUser/ModellingIcon";
 import {FakeStateProps} from "../../joiner/types";
 import {toggleMetrics} from '../metrics/Metrics';
 import {icon} from '../../pages/components/icons/Icons';
+import { setProjectModified } from '../../common/libraries/projectModified';
 
 function ContextMenuComponent(props: AllProps) {
     const user = props.user;
@@ -40,7 +41,6 @@ function ContextMenuComponent(props: AllProps) {
     if (!node || !display) return(<></>);
     const data: LNamedElement | undefined = LNamedElement.fromPointer(node?.model?.id);
     let jsxList: ReactNode[] = [];
-
 
     let ldata: LNamedElement = data as LNamedElement;
     let ddata: DNamedElement = ldata?.__raw as DNamedElement;
@@ -112,20 +112,35 @@ function ContextMenuComponent(props: AllProps) {
     }
 
     if (display) {
+
+
         if (ddata?.name) {
-            jsxList.push(<div className={'mt-1 col'} style={{paddingLeft: '12px', fontWeight: '300'}}>{ddata.className}: <i>{ldata.name}</i></div>);
+            if (ldata && model?.isMetamodel) {
+                jsxList.push(<div className={'mt-1 col'} style={{fontSize: '0.9rem', paddingLeft: '12px', fontWeight: '300'}}>{ddata.className}: <i>{ldata.name}</i></div>);
+            } else {
+                jsxList.push(<div className={'mt-1 col'} style={{fontSize: '0.9rem', paddingLeft: '12px', fontWeight: '300'}}>{ldata.name}</div>);
+            }
             jsxList.push(<hr className={'my-1'} />);
         }
 
+        // if (ddata?.className === 'DObject') {
+        //     jsxList.push(...(ldata as LObject).features.map(feat=>getAddChildren(feat, model, [])));
+        //     jsxList.push(<hr className={'my-1'} />);
+        // }
+
         if (ddata?.className === 'DObject') {
-            jsxList.push(...(ldata as LObject).features.map(feat=>getAddChildren(feat, model, [])));
-            jsxList.push(<hr className={'my-1'} />);
+            let children = (ldata as LObject).features.map(feat=>getAddChildren(feat, model, []));
+            jsxList.push(...(ldata as LObject).features.map(feat=>getAddChildren(feat, model, []))); 
+            /* @ts-ignore */
+            if (children[1]['$$typeof'] !== undefined) jsxList.push(<hr className={'my-1'}/>);
         }
 
         if (ddata?.className === 'DValue') {
             jsxList.push(getAddChildren(ldata as any as LValue, model, []));
-            jsxList.push(<hr className={'my-1'} />);
+            jsxList.push(<hr className={'my-1'}/>);
         }
+
+        
 
 
         /* Memorec */
@@ -143,10 +158,12 @@ function ContextMenuComponent(props: AllProps) {
         }
 
         /* Extend */
+
         switch (ddata.className) {
+
             default:
             case undefined: break;
-            case 'DValue': if ((ldata as any as LValue).instanceof) jsxList.pop(); break;
+            case 'DValue': if ((ldata as any as LValue).instanceof) jsxList.pop();break;
             case 'DClass':
                 jsxList.push(<div onClick={() => {
                     close();
@@ -154,18 +171,23 @@ function ContextMenuComponent(props: AllProps) {
                 }} className={'col item'}>{icon['extend']} Extend<div><i
                     className='bi bi-command'></i> E</div></div>);
                 jsxList.push(<hr className={'my-1'} />);
+                
                 break;
         }
 
         /* Deselect */
+
         jsxList.push(<div onClick={() => {
             close();
             SetRootFieldAction.new(`selected.${DUser.current}`, '', '', false);
         }} className={'col item'}>{icon['deselect']} Deselect</div>);
-        jsxList.push(<hr className={'my-1'} />);
+        //jsxList.push(<hr className={'my-1'} />);
 
+        
         /* Delete */
-        jsxList.push(<div onClick={() => {
+        
+        jsxList.push(<div onClick={() => { 
+            setProjectModified();
             close();
             console.log('delete ctxmenu', {data, node});
             if (ldata) ldata.delete();
@@ -174,6 +196,7 @@ function ContextMenuComponent(props: AllProps) {
         }} className={'col item'}>{icon['delete']} Delete<i
             className='bi bi-backspace' style={{fontSize: '1em', float: 'right', paddingTop: '2px', fontWeight: '800'}} /></div>);
         jsxList.push(<hr className={'my-1'} />);
+        
         /* Refresh */
 
         // jsxList.push(<div onClick={() => {alert('refresh')}} className={'col item'}>{icon['refresh']} Refresh</div>);
@@ -186,11 +209,13 @@ function ContextMenuComponent(props: AllProps) {
             <i className='bi bi-command' /><i className="bi bi-arrow-down" /></div></div>);
         let gn = node as GObject;
         jsxList.push(<hr className={'my-1'} />);
+        
         /* AUTO-SIZING */
         if (gn.isResized) jsxList.push(<div onClick={() => {close(); gn.isResized = false; }} className={'col item'}>{icon['contract']} Restore auto-sizing<div> <i
             className='bi bi-command'></i> T</div></div>);
         else jsxList.push(<div onClick={() => {close(); gn.isResized = true; }} className={'col item'}>{icon['expand']} Disable auto-sizing<div> <i
             className='bi bi-command'></i> T</div></div>);
+        
         // /* LOCK-UNLOCK */
         // jsxList.push(<div onClick={() => {close(); ldata.delete(); /*node.delete();*/}} className={'col item'}>{icon['lock']} Lock/Unlock<div> <i
         //     className='bi bi-command'></i> L</div></div>);
@@ -199,6 +224,7 @@ function ContextMenuComponent(props: AllProps) {
         //     className='bi bi-command'></i> L</div></div>);
 
         jsxList.push(<hr className={'my-1'} />);
+        
         /* METRICS */
         if (ldata && model?.isMetamodel) {
             jsxList.push(<div onClick={() => {close(); toggleMetrics();}} className={'col item'}>{icon['metrics']} Analytics<div>
@@ -207,9 +233,8 @@ function ContextMenuComponent(props: AllProps) {
         }
 
 
-
         /* ADD VIEW */
-        jsxList.push(<div onClick={async () => {close(); addView();}} className={'col item'}>{icon['view']} Add View<div>
+        jsxList.push(<div onClick={async () => {close(); addView(); setProjectModified();}} className={'col item'}>{icon['view']} Add View<div>
             <i className='bi bi-alt' /> <i className='bi bi-command' /> A</div></div>);
     }
 

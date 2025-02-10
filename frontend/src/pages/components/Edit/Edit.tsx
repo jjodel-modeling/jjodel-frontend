@@ -1,8 +1,10 @@
 
+import { UsersApi } from '../../../api/persistance/users';
 import { Tooltip } from '../../../components/forEndUser/Tooltip';
 import './edit.scss';
 
 type EditProps = {
+    id: string;
     name: string;
     label: string;
     type: 'text' | 'email' | 'password' | 'checkbox' | 'country';
@@ -11,6 +13,7 @@ type EditProps = {
     disabled?: boolean;
     tooltip?:string;
     className?:string;
+    onChange?: (e: any)=>void; // MouseEvent
 }
 
 const EditCountry = (props: EditProps) => {
@@ -28,9 +31,9 @@ const EditCountry = (props: EditProps) => {
                         name={props.name}
                         style={{height: 'calc(var(--input-height)*1.3)'}} 
                         defaultValue={props.value} 
-                        onChange={e => alert('')}
                         required={required}
-                        disabled = {disabled}>
+                        disabled = {disabled}
+                        onChange={props.onChange}>
                             
                         <option value="Afghanistan">Afghanistan</option>
                         <option value="Åland Islands">Åland Islands</option>
@@ -294,14 +297,14 @@ const EditCheckbox = (props: EditProps) => {
         <div className={'form-group edit checkbox'}>
             <Tooltip tooltip={tooltip}>
                 <label>
-                            <input className={'input text-start d-block mt-2 '+className}
-                                value={props.value}
-                                onChange={e => alert(props.name)}
-                                type={props.type} 
-                                required={required}
-                                disabled = {disabled}
-                            />
-                            <span>{props.label}{props.required && <> (*)</>}</span>
+                    <input className={'input text-start d-block mt-2 '+className}
+                        type={"checkbox"} 
+                        required={required}
+                        disabled={disabled}
+                        checked={props.value === 'true'? true: false}
+                        onChange={props.onChange}
+                    />
+                    <span>{props.label}{props.required && <> (*)</>}</span>
                 </label>
             </Tooltip>
         </div>
@@ -322,19 +325,65 @@ const EditDefault = (props: EditProps) => {
             <Tooltip tooltip={tooltip}>
                 <label>
                     <span>{props.label}{props.required && <> (*)</>}</span>
+                    
                     <input className={'input text-start d-block mt-2'}
                         value={props.value}
-                        onChange={e => alert(props.name)}
-                        type={props.type} 
+                        type={props.type}
                         required={required}
                         disabled = {disabled}
+                        onChange={props.onChange}
                     />
+                    
                 </label>
             </Tooltip>
         </div>
         
     </>);
 }
+
+const EditPassword = (props: EditProps) => {
+
+    let required = props.required ? props.required : false;
+    let disabled = props.disabled ? props.disabled : false;
+    let tooltip = props.tooltip ? props.tooltip : '';
+    let className = props.className ? props.className : '';
+
+    function focus_in(e: any) {
+        if (e.target.value === props.value) {
+            e.target.value = '';
+        } 
+    }
+    function focus_out(e: any) {
+        if (e.target.value === '') {
+            e.target.value = props.value;
+        } 
+    }
+
+    return (<>
+        
+        <div className={'form-group edit ' + className}>
+
+            <Tooltip tooltip={tooltip}>
+                <label>
+                    <span>{props.label}{props.required && <> (*)</>}</span>
+                    
+                    <input className={'input text-start d-block mt-2'}
+                        value={props.value}
+                        type={"password"}
+                        required={required}
+                        disabled = {disabled}
+                        onChange={props.onChange}
+                        onFocus={(e) => focus_in(e)}
+                        onBlur={(e) => focus_out(e)}
+                    />
+                    
+                </label>
+            </Tooltip>
+        </div>
+        
+    </>);
+}
+
 
 const Edit = (props: EditProps) => {
 
@@ -343,7 +392,7 @@ const Edit = (props: EditProps) => {
         {props.type === 'checkbox' && <EditCheckbox {...props}/>}
         {props.type === 'text' && <EditDefault {...props}/>}
         {props.type === 'email' && <EditDefault {...props}/>}
-        {props.type === 'password' && <EditDefault {...props}/>}
+        {props.type === 'password' && <EditPassword {...props}/>}
     </>);
 }
 

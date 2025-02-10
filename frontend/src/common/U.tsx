@@ -46,6 +46,7 @@ import Convert from "ansi-to-html";
 import React, {isValidElement} from "react";
 import IoT from "../iot/IoT";
 import Collaborative from "../components/collaborative/Collaborative";
+import { Await } from "react-router-dom";
 // var Convert = require('ansi-to-html');
 // import KeyDownEvent = JQuery.KeyDownEvent; // https://github.com/tombigel/detect-zoom broken 2013? but works
 
@@ -146,14 +147,14 @@ export class U {
 
     static publish(topic: string, value: unknown) {
         if(!IoT.client.connected) {
-            SetRootFieldAction.new('alert', '3:Cannot connect to broker!');
+            SetRootFieldAction.new('alert', '3:Cannot connect to broker!:','');
             return;
         }
         IoT.client.emit('push-action', {
             topic: topic,
             value: JSON.stringify(value)
         });
-        SetRootFieldAction.new('alert', '1:Publish done!');
+        SetRootFieldAction.new('alert', '1:Publish done!:','');
     }
 
     static extractValueFromTopic(obj: Dictionary, path: string) {
@@ -182,8 +183,13 @@ export class U {
         );
     }
 
-    static alert(type: 'i'|'w'|'e', message: string): void {
-        SetRootFieldAction.new('alert', `${type}:${message}`, '');
+    static alert(type: 'i'|'w'|'e', title: string, message: string): void {
+        SetRootFieldAction.new('alert', `${type}:${title}:${message}`, '');
+    }
+
+    static dialog(message: string, label: string, action: () => any): void {
+        windoww.dialog_action = action;
+        SetRootFieldAction.new('dialog', `${message}:${label}`, '');
     }
 
     static async decompressState(state: string): Promise<string> {

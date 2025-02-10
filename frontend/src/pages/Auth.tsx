@@ -8,7 +8,9 @@ import logo from '../static/img/jjodel.jpg';
 import {Tooltip} from '../components/forEndUser/Tooltip';
 
 function AuthPage(): JSX.Element {
+
     const [action, setAction] = useStateIfMounted<'login'|'register'|'retrieve-password'>('login');
+
     const [nickname, setNickname] = useStateIfMounted('');
     const [name, setName] = useStateIfMounted('');
     const [surname, setSurname] = useStateIfMounted('');
@@ -18,6 +20,7 @@ function AuthPage(): JSX.Element {
     const [password, setPassword] = useStateIfMounted('');
     const [passwordCheck, setPasswordCheck] = useStateIfMounted('');
     const [newsletter, setNewsletter] = useStateIfMounted(false);
+
     const navigate = useNavigate();
 
     const onSubmit = async(e: FormEvent<HTMLFormElement>) => {
@@ -46,10 +49,12 @@ function AuthPage(): JSX.Element {
     const login = async() => {
         const response = await AuthApi.login(email, password);
         if (response.code !== 200) {
-            U.alert('e', 'Login failed.');
+            U.alert('e', 'Login failed.','');
             return;
         }
+
         const data = U.wrapper<DUser>(response.data);
+
         const user = DUser.new(data.name, data.surname, data.nickname, data.affiliation, data.country, data.newsletter || false, data.email, data.token, data.id);
         Storage.write('user', user);
         Storage.write('token', user.token);
@@ -60,13 +65,13 @@ function AuthPage(): JSX.Element {
     }
 
     const register = async() => {
-        if(password !== passwordCheck) {
-            U.alert('e', 'The two passwords are different');
+        if (password !== passwordCheck) {
+            U.alert('e', 'The two passwords are different','');
             return;
         }
         const response = await AuthApi.register(name, surname, country, affiliation, newsletter, nickname, email, password);
-        if(response.code !== 200) {
-            U.alert('e', 'Registration failed.');
+        if (response.code !== 200) {
+            U.alert('e', 'Registration failed.', '');
             return;
         }
         const data = U.wrapper<DUser>(response.data);

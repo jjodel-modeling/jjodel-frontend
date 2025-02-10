@@ -12,7 +12,7 @@ export class Storage {
         localStorage.setItem(key, JSON.stringify(obj || 'undefined'));
     }
 
-    /*static reset(): void { localStorage.clear(); } NO! never fully reset the state or offline mode breaks completely with lost data. */
+    static reset(): void { localStorage.clear(); } /* NO! never fully reset the state or offline mode breaks completely with lost data. */
 }
 
 export default Storage;

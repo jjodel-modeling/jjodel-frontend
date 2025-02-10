@@ -1,93 +1,235 @@
 import {DState, DUser, LUser, Try} from '../joiner';
 import {Dashboard} from './components';
-import {FakeStateProps} from '../joiner/types';
+import {FakeStateProps, windoww} from '../joiner/types';
 import React, {Component, Dispatch, ReactElement} from "react";
 import {connect} from "react-redux";
 import { Edit, EditCountry } from './components/Edit/Edit';
-
-
+import { UsersApi } from '../api/persistance';
+import { useStateIfMounted } from 'use-state-if-mounted';
+import { on } from 'events';
+import Api from '../data/api';
+import Storage from '../data/storage';
 
 
 function AccountComponent(props: AllProps): JSX.Element {
     const {user} = props;
+
+    const [name, setName] = useStateIfMounted(user.name);
+    const [surname, setSurname] = useStateIfMounted(user.surname);
+    const [nickname, setNickname] = useStateIfMounted(user.nickname);
+    const [country, setCountry] = useStateIfMounted(user.country);
+    const [affiliation, setAffiliation] = useStateIfMounted(user.affiliation);
+    const [newsletter, setNewsletter] = useStateIfMounted(user.newsletter);
+    
+    const [email, setEmail] = useStateIfMounted(user.email);
+
+    const [old_password, setOldPassword] = useStateIfMounted('01234567');
+    const [new_password, setNewPassword] = useStateIfMounted('12345678');
+    const [check_password, setCheckPassword] = useStateIfMounted('23456789');
+
+
+    async function update_password(
+        old_password: string, 
+        new_password:string, 
+        check_password:string) {
+
+        const U = windoww.U;
+        
+        const response = await Api.post(`${Api.persistance}/auth/login`, {email: email, password: old_password});
+
+        if (response.code !== 200) {
+            U.alert('e', 'Your password does not match our records.','');
+            return;
+        }
+        if (new_password !== check_password) {
+            U.alert('e', 'Paswords do not match.','');
+            return;
+        }
+
+        const response_password = await UsersApi.updatePasswordById(user.id, new_password);
+
+        if (response_password === null) {
+            U.alert('e', 'Something went wrong.','');
+            return;
+        }
+
+        
+        U.alert('i', 'Your password has been successfully updated!','');
+        
+        
+        
+        
+        setNewPassword('01234567');
+        setCheckPassword('12345678');
+
+
+    }
+   
+    function update_newsletter(check_value: boolean) {
+        setNewsletter(check_value);
+    }
+
+    function update_profile (
+        id: string, 
+        name: string, 
+        surname: string, 
+        nickname: string,
+        country: string, 
+        affiliation: string,
+        newsletter: boolean) {
+
+        const U = windoww.U;
+
+        const response = UsersApi.updateUserById(
+            user.id, 
+            name, 
+            surname, 
+            nickname, 
+            country, 
+            affiliation, 
+            newsletter);
+
+
+        if (response === null) {
+            U.alert('e', 'Could not update your profile.', 'Something went wrong ...');
+            return;
+        } 
+
+        const updated_user = DUser.new(name, surname, nickname, affiliation, country, newsletter, user.email, user.token, user.id);
+        Storage.write('user', updated_user);
+        U.resetState();
+        
+        U.alert('i', 'Your profile has been updated!','');
+        
+    }
+
     return(<Try>
         <Dashboard active={'Account'} version={props.version}>
             <>
             <div className={'p-2 edit-container'}>
                 <h2><i className="bi bi-person-square"></i> Profile</h2>
 
-                <Edit name={'name'} 
+                <Edit 
+                    id={user.id}
+                    name={'name'} 
                     label={'Name'} 
                     type={'text'} 
-                    value={user.name} 
+                    value={name} 
                     required={true}
-                    tooltip={'Your first name.'}
+                    disabled={false}
+                    onChange={(e) => setName(e.target.value)}
+                    tooltip={'Your first name.'}  
                 />
-                <Edit name={'surname'} 
+                <Edit 
+                    id={user.id}
+                    name={'surname'} 
                     label={'Surname'} 
                     type={'text'} 
-                    value={user.surname} 
+                    value={surname} 
                     required={true}
+                    onChange={(e) => setSurname(e.target.value)}
                     tooltip={'Your family name.'}
                 />
-                <Edit name={'nickname'} 
+                <Edit 
+                    id={user.id}
+                    name={'nickname'} 
                     label={'Nickname'} 
                     type={'text'} 
-                    value={user.nickname} 
+                    value={nickname} 
                     required={true}
+                    onChange={(e) => setNickname(e.target.value)}
                     tooltip={'Your nickname, it will be used as a short form for addressing you.'}
                 />
-                <Edit name={'email'} 
+                <Edit 
+                    id={user.id}
+                    name={'email'} 
                     label={'Email'} 
                     type={'email'} 
                     value={user.email} 
                     disabled={true}
                     tooltip={'Your email, it is not possible to change it.'}
                 />
-                <Edit name={'affiliation'} 
+                <Edit 
+                    id={user.id}
+                    name={'affiliation'} 
                     label={'Affiliation'} 
                     type={'text'} 
-                    value={user.affiliation}
+                    value={affiliation}
                     required={true}
+                    onChange={(e) => setAffiliation(e.target.value)}
                     tooltip={'Your current affiliation.'}
                 />
-                <Edit name={'country'} 
+                <Edit 
+                    id={user.id}
+                    name={'country'} 
                     label={'Country'} 
                     type={'country'} 
-                    value={user.country}
+                    value={country}
+                    onChange={(e) => setCountry(e.target.value)}
                     tooltip={'Select your affiliation country.'}
                 />
                 
-                <Edit name={'newsletter'} 
+                <Edit 
+                    id={user.id}
+                    name={'newsletter'} 
                     label={'Newsletter'} 
                     type={'checkbox'} 
-                    value={user.newsletter+''}
+                    value={newsletter+''}
+                    onChange={(e) => update_newsletter(!newsletter)}
                     tooltip={'Select it if you want to receive low-intensity updates from us (e.g., new releases, new learning and teaching material, and the likes).'}
                 />
 
-                <button className="btn alert-btn my-2  px-4 space-above">save</button>
+                <button 
+                    className="btn alert-btn my-2 px-4 space-above" 
+                    onClick={(e) => {update_profile(
+                        user.id, 
+                        name, 
+                        surname, 
+                        nickname, 
+                        country, 
+                        affiliation, 
+                        newsletter)}}>save</button>
+
+
             </div>
             <div className={'p-2 edit-container space-above'}>
                 <div className={'password-container'}>
                     <h3><i className="bi bi-fingerprint"></i> Password</h3>
 
-                    <Edit name={'password'} 
+                    <Edit 
+                        id={user.id}
+                        name={'old_password'} 
                         label={'Password'} 
                         type={'password'} 
-                        value={'user.password'}                 
+                        value={old_password}
+                        required={true}
+                        onChange={(e) => setOldPassword(e.target.value)}              
                     />
-                    <Edit name={'password'} 
+
+
+                    <Edit 
+                        id={user.id}
+                        name={'new_password'} 
                         label={'New Password'} 
                         type={'password'} 
-                        value={'user.password'}
-                        className={'space-above small'}                 
+                        value={new_password}
+                        required={true}
+                        onChange={(e) => setNewPassword(e.target.value)} 
+                        className={'space-above'}                 
                     />
-                    <Edit name={'password'} 
+                    <Edit 
+                        id={user.id}
+                        name={'check_password'} 
                         label={'Confirm Password'} 
                         type={'password'} 
-                        value={'user.password'}                 
+                        required={true}
+                        value={check_password}
+                        onChange={(e) => setCheckPassword(e.target.value)}              
                     />
-                    <button className="btn alert-btn my-2  px-4 space-above">change password</button>
+                    <button 
+                        className="btn alert-btn my-2  px-4 space-above"
+                        onClick={(e) => update_password(old_password, new_password, check_password)}
+                        >change password</button>
                 </div>
 
             </div>

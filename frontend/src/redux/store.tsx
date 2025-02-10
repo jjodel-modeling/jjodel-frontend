@@ -209,6 +209,8 @@ export class DState extends DPointerTargetable{
 
     advanced: boolean = false;
     alert: string = '';
+    dialog: string = '';??
+    dialog_response: string = '';
     action_description: string = '';
     action_title: string = '';
 

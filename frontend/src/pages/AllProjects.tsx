@@ -3,7 +3,7 @@
 
 import React, {ChangeEvent, MouseEventHandler, Component, Dispatch, ReactElement, useState, useRef } from 'react';
 import {connect} from 'react-redux';
-import {DProject, DState, Log, LProject, Try, U} from '../joiner';
+import {DProject, DState, Log, LProject, SetRootFieldAction, Try, U} from '../joiner';
 import {Dictionary, FakeStateProps} from '../joiner/types';
 import {Dashboard, Project} from './components';
 import Storage from "../data/storage";
@@ -25,27 +25,27 @@ function AllProjectsComponent(props: AllProps): JSX.Element {
             <>
                 <Cards>
                     <Cards.Item
-                        title={'New jjodel (Public)'}
-                        subtitle={'Create a new jjodel project.'}
+                        title={'New Jjodel'}
+                        subtitle={'Create a new Jjodel project.'}
                         icon={'add'}
-                        style={'red'}
-                        action={() => createProject('public')}
+                        style={'green'}
+                        action={() => createProject('private')}
                     />
                     {!(U.isOffline()) && <Cards.Item
-                        title={'New jjodel (Collaborative)'}
-                        subtitle={'Create a new jjodel project.'}
+                        title={'New Jjodel (Collaborative)'}
+                        subtitle={'Create a new Jjodel project.'}
                         icon={'add'}
-                        style={'red'}
+                        style={'yellow'}
                         action={() => createProject('collaborative')}
                     />}
                     <Cards.Item
-                        title={'Import jjodel'}
-                        subtitle={'Import an existing jjodel project.'}
+                        title={'Import Jjodel'}
+                        subtitle={'Import an existing Jjodel project.'}
                         icon={'import'}
-                        style={'blue'}
+                        style={'dark'}
                         action={ProjectsApi.import}
                     />
-                    {false && <Cards.Item icon={'question'} style={'clear'} title={'Ehy!'} subtitle={'What do you want to do today?'}/>}
+                    {true && <Cards.Item icon={'gettingstarted'} url={'https://www.jjodel.io/getting-started/'} style={'red-orange'} title={'Getting Started'} subtitle={'New to Jjodel? No worries'}/>}
                 </Cards>
                 <Catalog projects={projects} />
             </>

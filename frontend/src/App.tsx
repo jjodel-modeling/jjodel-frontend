@@ -32,6 +32,7 @@ import {MessageVisualizer} from "./components/forEndUser/SplashMessage";
 import {JQDock, MyDock} from "./components/dock/MyDock";
 import {BottomBar} from "./pages/components";
 import AlertVisualizer from "./components/alert/Alert";
+import DialogVisualizer from './components/alert/Dialog';
 import Storage from "./data/storage";
 
 let firstLoading = true;
@@ -42,6 +43,7 @@ function App(props: AllProps): JSX.Element {
     const tooltip = props.tooltip;
     let user: LUser = props.user;
     useEffectOnce(() => {
+        console.log("ALFI: App useEffectOnce");
         // SetRootFieldAction.new('isLoading', true);
         // stateInitializer().then(() => SetRootFieldAction.new('isLoading', false));
     });*/
@@ -61,6 +63,7 @@ function App(props: AllProps): JSX.Element {
             <Try><TooltipVisualizer /></Try>
             {/*<MessageVisualizer />*/}
             <Try><AlertVisualizer /></Try>
+            <Try><DialogVisualizer /></Try>
             <HashRouter>
                 <Try><PathChecker /></Try>
                 <Try><Routes>
@@ -81,8 +84,9 @@ function App(props: AllProps): JSX.Element {
                         <Route path={'projectsInfo'} element={<ProjectsInfoPage />} />
                         <Route path={'news'} element={<NewsPage />} />
                         <Route path={''} element={<AllProjectsPage />} />
-                        { window.location.hostname !== 'localhost' && false && <Route path={'*'} element={<AllProjectsPage />} />}
+                        {window.location.hostname !== 'localhost' && false && <Route path={'*'} element={<AllProjectsPage />} />}
                     </> : <Route path={'*'} element={<AuthPage />} />}
+
                 </Routes></Try>
             </HashRouter>
             {DUser.current && <Try><BottomBar /></Try>}
@@ -142,12 +146,3 @@ export const AppConnected = connect<StateProps, DispatchProps, OwnProps, DState>
 )(App);
 
 export default AppConnected;
-
-
-/* SPLASH SCREEN
-return(<div className={'w-100 h-100 text-center bg-smoke'}>
-    <img style={{height: '60%', width: '80%'}} className={'mt-3 rounded shadow'} src={SplashImage}></img>
-    <Oval height={80} width={80} wrapperStyle={{justifyContent: 'center'}} wrapperClass={'mt-3'}
-          color={'#475e6c'} secondaryColor={'#ff8811'} />
-</div>);
-*/

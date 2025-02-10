@@ -20,18 +20,19 @@ import './style.scss';
 import {Empty} from "./Empty";
 import { CommandBar, Btn } from '../commandbar/CommandBar';
 import { Tooltip } from '../forEndUser/Tooltip';
+import { setProjectModified } from '../../common/libraries/projectModified';
 
 class builder {
     static named(data: LModelElement, advanced: boolean): ReactNode {
         return (<><h1>{data.name}</h1>
             <label className={'input-container'}>
                 <b className={'me-2'}>Name:</b>
-                <Input data={data} field={'name'} type={'text'}/>
+                <Input data={data} field={'name'} type={'text'} changeMonitor/>
             </label>
 
             <label className={'input-container'}>
                 <b className={'me-2'}>Readonly:</b>
-                <Input data={data} field={'__readonly'} type={'checkbox'}/>
+                <Input data={data} field={'__readonly'} type={'checkbox'} changeMonitor/>
             </label>
         </>);
     }
@@ -62,6 +63,7 @@ class builder {
                 <MultiSelect isMulti={true} options={multiselectOptions as any} value={multiselectValue} onChange={(v) => {
                     console.log('setting model dependencies', v);
                     l.dependencies = v.map(e => e.value) as Any<string[]>;
+                    setProjectModified();
                 }} />
             </label>
         </section>);
@@ -105,42 +107,43 @@ class builder {
             {this.named(data, advanced)}
             <label className={'input-container'}>
                 <b className={'me-2'}>Abstract:</b>
-                <Input data={data} field={'abstract'} type={'checkbox'}/>
+                <Input data={data} field={'abstract'} type={'checkbox'} changeMonitor/>
             </label>
             <label className={'input-container'}>
                 <b className={'me-2'}>Interface:</b>
-                <Input data={data} field={'interface'} type={'checkbox'}/>
+                <Input data={data} field={'interface'} type={'checkbox'} changeMonitor/>
             </label>
             <label className={'input-container'}>
                 <b className={'me-2'}>Extends:</b>
                 <MultiSelect isMulti={true} options={extendOptions as any} value={extendValue} onChange={(v) => {
                     console.log('setting extend', v);
                     lclass.extends = v.map(e => e.value) as Any<string[]>;
+                    setProjectModified();
                 }} />
             </label>
             <label className={'input-container'}>
                 <b className={'me-2'}>Final:</b>
                 <Tooltip tooltip={"Defines if the class can be extended."}>
-                    <Input data={data} field={'final'} type={'checkbox'}/>
+                    <Input data={data} field={'final'} type={'checkbox'} changeMonitor/>
                 </Tooltip>
             </label>
             {false &&
                 <label className={'input-container'}>
                     <b className={'me-2'}>Rootable:</b>
                     <Tooltip tooltip={"Whether the element can be a m1 root (present in toolbar)."}>
-                        <Input data={data} field={'rootable'} type={'checkbox3'}/>
+                        <Input data={data} field={'rootable'} type={'checkbox3' }/>
                     </Tooltip>
                 </label>}
             <label className={'input-container'}>
                 <b className={'me-2'}>Singleton:</b>
                 <Tooltip tooltip={'A singleton element is always present exactly 1 time in every model.' +
                     '\nA single instance is created dynamically and cannot be created by the user.'}>
-                    <Input data={data} field={'singleton'} type={'checkbox'}/>
+                    <Input data={data} field={'singleton'} type={'checkbox'} changeMonitor/>
                 </Tooltip>
             </label>
             {advanced && <label className={'input-container'}>
                 <b className={'me-2'}>Partial:</b>
-                <Input data={data} field={'partial'} type={'checkbox'}/>
+                <Input data={data} field={'partial'} type={'checkbox'} changeMonitor/>
             </label>}
             <label className={'input-container'}>
                 <b className={'me-2'}>Rootable:</b>
@@ -148,7 +151,7 @@ class builder {
                     <Input data={data} field={'rootable'} type={'checkbox'} getter={()=>dclass.rootable} setter={(val)=>{
                         lclass.rootable = val as any;
                         console.log('setter', val);
-                    }}/>
+                    }} changeMonitor/>
                 </Tooltip>
             </label>
         </section>);

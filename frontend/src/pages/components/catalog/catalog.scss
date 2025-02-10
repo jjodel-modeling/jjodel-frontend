@@ -67,10 +67,16 @@
   border-radius: 3px;
 }
 
+.catalog-header button:first-child {
+  margin-left: 8px;
+}
+
 
 .catalog-header button:hover {
   background-color: var(--bg-2);
 }
+
+
 
 .catalog-header button.active {
   background-color: var(--bg-2);
@@ -87,10 +93,10 @@
 
 
 .dashboard-container .project-list {
-  max-width: 1100px;
-  min-width: 650px;
+  max-width: 1340px;
+  // height: 100%;
   flex-grow: 1;
-  margin-left: 0px;
+  padding-bottom: 40px;
 
   .buttons{
     width: fit-content;
@@ -122,7 +128,7 @@
     margin-left: 4px!important;
     border-radius: var(--radius);
     outline: none;
-    font-size: 1rem!important;
+    font-size: 1rem;
   }
 
   input[type=text]:focus {
@@ -133,10 +139,10 @@
     padding: 12px 10px 10px 10px!important;
     border-radius: var(--radius);
     outline: none;
-    font-size: 1rem!important;
+    font-size: 1rem;
   }
 
-  textarea:focus {
+  textarea {
     padding: 0!important;
     margin-left: 4px!important;
     border: none;
@@ -144,7 +150,6 @@
     padding: 20px!important;
     border-radius: var(--radius);
     outline: none;
-    
   }
 
 
@@ -160,7 +165,7 @@
 
   & .legenda {
     margin-top: 80px;
-    width: calc(100%);
+    width: calc(100% - 20px);
     background-color: var(--bg-2);
     border-radius: var(--radius);
     padding: 10px;
@@ -187,7 +192,7 @@
   width: 100%;
   padding: 0;
   display: flex;
-  .details{
+  .details{ 
     order: 2;
   }
   .card-holder{
@@ -204,8 +209,8 @@
     display: grid;
     flex-grow: 1;
     flex-grow: 1;
-    grid-template-columns: repeat(auto-fit, 300px);
-    grid-column-gap: 2em;
+    grid-template-columns: repeat(auto-fit, 290px);
+    grid-column-gap: 1.8em;
     grid-row-gap: 2em;
 
     .project-card{

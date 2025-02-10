@@ -169,7 +169,7 @@
 
 .commandbar .card {
     display: grid;
-    grid-template-columns: 20% 80%;
+    grid-template-columns: auto auto auto auto; //20% 80%;
     grid-gap: 0px;
 }
 

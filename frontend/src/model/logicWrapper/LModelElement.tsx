@@ -76,7 +76,7 @@ import {ValuePointers} from "./PointerDefinitions";
 import {ShortDefaultEClasses} from "../../common/U";
 import {transientProperties} from "../../joiner/classes";
 import React, {ReactNode} from "react";
-import {useBoolean} from "usehooks-ts";
+import { setProjectModified } from "../../common/libraries/projectModified";
 
 type outactions = {clear:(()=>void)[], set:(()=>void)[], immediatefire?: boolean};
 
@@ -1430,6 +1430,7 @@ export class LPackage<Context extends LogicContext<DPackage> = any, C extends Co
     }
 
     public addPackage(name?: D["name"], uri?: D["uri"], prefix?: D["prefix"]): LPackage { return this.cannotCall("addPackage"); }
+
     protected get_addPackage(context: Context): this["addPackage"] {
         console.log("Package.get_addPackage()", {context, thiss:this});
         return (name?: D["name"], uri?: D["uri"], prefix?: D["prefix"]) => {
@@ -1441,13 +1442,15 @@ export class LPackage<Context extends LogicContext<DPackage> = any, C extends Co
                     isPartial?: DClass["partial"], partialDefaultName?: DClass["partialdefaultname"]): LClass {
         return this.cannotCall("addClass"); }
     protected get_addClass(context: Context): this["addClass"] {
+        setProjectModified(); todo: look and delete all of those.
         return (name?: DClass["name"], isInterface?: DClass["interface"], isAbstract?: DClass["abstract"], isPrimitive?: DClass["isPrimitive"],
                 isPartial?: DClass["partial"], partialDefaultName?: DClass["partialdefaultname"]
         ) => LPointerTargetable.fromD(DClass.new(name, isInterface, isAbstract, isPrimitive, isPartial, partialDefaultName, context.data.id, true));
     }
 
     public addEnum(...p:Parameters<this["addEnumerator"]>): LEnumerator { return this.addEnumerator(...p); }
-    protected get_addEnum(context: Context): this["addEnumerator"] { return this.get_addEnumerator(context); }
+    protected get_addEnum(context: Context): this["addEnumerator"] {
+        return this.get_addEnumerator(context); }
     public addEnumerator(name?: DEnumerator["name"]): LEnumerator { return this.cannotCall("addEnumerator"); }
     protected get_addEnumerator(context: Context): this["addEnumerator"] {
         return (name?: DEnumerator["name"]) => LPointerTargetable.fromD(DEnumerator.new(name, context.data.id, true));
@@ -2183,7 +2186,7 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
     set_final(val: boolean, c: Context): boolean{
         val = !!val;
         if (val === c.data.final) return true;
-        if (c.data.extendedBy.length > 0) { U.alert('e', 'Class cannot become final as it is currently extended. Remove the subclasses before.'); return true; }
+        if (c.data.extendedBy.length > 0) { U.alert('e', 'Class cannot become final as it is currently extended.', 'Remove the subclasses before.'); return true; }
         TRANSACTION(this.get_name(c)+'.final', ()=>{
             SetFieldAction.new(c.data, 'final', val);
             SetFieldAction.new(c.data, 'sealed', [], '', true);
@@ -2196,8 +2199,8 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
     set_isSingleton(val: boolean, c: Context): boolean{ return this.set_singleton(val, c); }
     set_singleton(val: boolean, c: Context): boolean{
         val = !!val;
-        if (c.data.instances.length > 1) { U.alert('e', 'Class cannot become a singleton since there are multiple instances already. Delete some and retry.'); return true; }
-        if (c.data.extendedBy.length > 0) { U.alert('e', 'Class cannot become a singleton unless is also final, and is currently extended. Remove the subclasses before.'); return true; }
+        if (c.data.instances.length > 1) { U.alert('e', 'Class cannot become a singleton since there are multiple instances already.','Delete some and retry.'); return true; }
+        if (c.data.extendedBy.length > 0) { U.alert('e', 'Class cannot become a singleton unless is also final, and is currently extended.', 'Remove the subclasses before.'); return true; }
         TRANSACTION(this.get_name(c)+'.singleton', ()=>{
             SetFieldAction.new(c.data, 'isSingleton', val);
             if (val) {
@@ -2428,7 +2431,7 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
         val = !!val;
         if (val === c.data.abstract) return true;
         if(val && data.instances.length > 0) {
-            U.alert('e', 'Cannot change the abstraction level since there are instances.');
+            U.alert('e', 'Cannot change the abstraction level since there are instances.','');
         } else {
             TRANSACTION(this.get_name(c)+'.abstract', ()=>{
                 SetFieldAction.new(data, 'abstract', val);
@@ -2452,7 +2455,7 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
         val = !!val;
         if (c.data.interface === val) return true;
         if (val && c.data.instances.length > 0) {
-            U.alert('e', 'Class cannot become an interface since there are instances.');
+            U.alert('e', 'Class cannot become an interface since there are instances.', '');
         } else {
             TRANSACTION(this.get_name(c)+'.interface', ()=>{
                 SetFieldAction.new(c.data, 'interface', val);

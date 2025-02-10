@@ -8,6 +8,42 @@ import {Divisor, Item, Menu} from './menu/Menu';
 import card from '../../static/img/card.png';
 import {icon} from './icons/Icons';
 import {Btn, CommandBar, Sep} from '../../components/commandbar/CommandBar';
+import { int } from '../../joiner/types';
+
+import { 
+    VscLock as Lock,
+    VscUnlock as UnLock,
+    VscBroadcast as Share
+} from "react-icons/vsc";
+
+import { SlShare as Share2 } from "react-icons/sl";
+import { Tooltip } from '../../components/forEndUser/Tooltip';
+import { time } from 'console';
+import { Logo } from '../../components/logo/logo';
+
+
+function formatDate(lastModified: number){
+    
+    let timeago = Date.now() - lastModified;
+    let timeunit: string;
+    let sec = 1000;
+    let min = sec*60;
+    let hr = min*60;
+    let day = hr*24;
+    let week = day*7;
+    let month = day*24;
+    let year = day*365;
+
+    if (timeago < min) { timeago /= sec; timeunit = 'seconds'; }
+    else if (timeago >= min && timeago < hr) { timeago /= min; timeunit = 'minutes'; }
+    else if (timeago >= hr && timeago < day) { timeago /= hr; timeunit = 'hours'; }
+    else if (timeago >= day && timeago < week) { timeago /= day; timeunit = 'days'; }
+    else if (timeago >= week && timeago < month) { timeago /= week; timeunit = 'weeks'; }
+    else if (timeago >= month && timeago < year) { timeago /= month; timeunit = 'months'; }
+    else { timeago/= min; timeunit = 'years'; }
+
+    return Math.round(timeago) + ' ' + timeunit + ' ago';
+}
 
 
 type Props = {
@@ -50,6 +86,29 @@ function Project(props: Props): JSX.Element {
         await ProjectsApi.delete(data);
     }
 
+    const typeIcon = (type: string) => {
+    
+        var icon = <></>;
+
+        switch(type){
+            case 'public':
+                icon = <UnLock className={'type-icon'} style={{fontSize: '1.2em'}}/>;
+                break;
+            case 'private':
+                icon = <Lock className={'type-icon'} style={{fontSize: '1.2em'}}/>;
+                break;
+            case 'collaborative':
+                icon = <Share2 className={'type-icon'} style={{fontSize: '1.2em'}}/>;
+                break;
+        }
+
+        return(
+            icon
+        );
+    
+    
+    }
+
     /* CARDS */
 
     var sectionStyle = {
@@ -63,7 +122,7 @@ function Project(props: Props): JSX.Element {
 
     const Empty = (props: ProjectProps) => {
         return (<>
-            {props.project.metamodelsNumber == 0 && props.project.modelsNumber == 0 && <><i title="empty project" className="bi bi-exclamation-circle"></i> <span>Empty project</span></>}
+            {props.project.metamodelsNumber == 0 && props.project.modelsNumber == 0 && <><i title="empty project" className="bi bi-exclamation-circle"></i> <span>Empty</span></>}
             {/* {props.project.metamodels.length == 0 && props.project.models.length != 0 && <i style={{float: 'left'}} title="no models" className="bi bi-circle-half"></i>}
             {props.project.metamodels.length != 0 && props.project.models.length != 0 && <i style={{float: 'left'}} title="artifacts present" className="bi bi-circle-fill"></i>}*/}
         </>);
@@ -72,33 +131,37 @@ function Project(props: Props): JSX.Element {
     function ProjectCard(props: Props): JSX.Element {
 
 
-        const Meter = (props: ProjectProps) => {
+        function multiplicity(n: int, none: string, one: string, many: string){
+            
+            if (n == 0) return  none;
+            if (n == 1) return n + ' ' + one;
+            if (n > 1) return n + ' ' + many;
+            
+        }
 
-            const length = props.project.metamodelsNumber + props.project.modelsNumber + props.project.viewpointsNumber;
-            const unit = Math.round(90/length);
-            const mm_length = Math.round(90/length*props.project.metamodelsNumber);
-            const m_length = Math.round(90/length*props.project.modelsNumber);
-            const vp_length = Math.round(90/length*props.project.viewpointsNumber);
-            return (<>
+        function getClickedElement(e: any){
 
-                    <div className={'meter'} style={{width: '90%'}}>
-                        {Array.from(Array(props.project.viewpointsNumber)).map((m,i) => <div className={'artifact viewpoints'} style={{width: `${unit}%`}}>{i == props.project.viewpointsNumber - 1 && <span>VP</span>}</div>)}
-                        {Array.from(Array(props.project.modelsNumber)).map((m,i) => <div className={'artifact models'} style={{width: `${unit}%`}}>{i == props.project.modelsNumber - 1 && <span>M1</span>}</div>)}
-                        {Array.from(Array(props.project.metamodelsNumber)).map((m,i) => <div className={'artifact metamodels'} style={{width: `${unit}%`}}>{i == props.project.metamodelsNumber - 1 && <span>M2</span>}</div>)}
-                    </div>
+            if(e.target.className === 'bi bi-star-fill' || e.target.className === 'bi bi-star' || e.target.className === 'bi bi-chevron-down' || e.target.className === 'item') {
+                return;
+            } else {
+                selectProject(); 
+            }
+        }
 
-             </>);
-        };
+        return (
 
-        return (<>
-
-            <div className={'project-card'}>
+            <Tooltip tooltip={`${props.data.type} project with ${multiplicity(props.data.metamodelsNumber,'no metamodels', 'metamodel', 'metamodels')}, 
+                ${multiplicity(props.data.modelsNumber,'no models', 'model', 'models')}, 
+                ${multiplicity(props.data.viewpointsNumber -2, 'no (custom) viewpoints', '(custom) viewpoint', '(custom) viewpoints')}` } position={'top'} offsetY={10} theme={'dark'} inline><div className={`project-card-v2 ${data.type}`} 
+                onClick={e => getClickedElement(e)}>
                 <div className="project-actions d-flex" style={{position: 'absolute', top: 10, right: 5}}>
                     {data.isFavorite ? <i onClick={(e) => toggleFavorite(data)} className="bi bi-star-fill" />
                         :
-                        <i onClick={(e) => toggleFavorite(data)} className="bi bi-star" />}
+                        <i onClick={(e) => toggleFavorite(data)} className="bi bi-star" />
+                    }
+                    
                     <Menu>
-                            <Item icon={icon['new']} keystroke={'<i class="bi bi-command"></i>'} action={e => selectProject()}>Open</Item>
+                            <Item icon={icon['new']} keystroke={'<i class="bi bi-command"></i>'} action={e => {selectProject()}}>Open</Item>
                             <Item icon={icon['duplicate']}>Duplicate</Item>
                             <Item icon={icon['download']} action={e => exportProject()}>Download</Item>
                             <Divisor />
@@ -108,29 +171,29 @@ function Project(props: Props): JSX.Element {
                     </Menu>
                 </div>
                 <div className='header'>
-                    <h5 className={'d-block'} style={{cursor: 'pointer'}} onClick={e => selectProject()}>{data.name}</h5>
-                    <label className={'d-block'}><i className="bi bi-clock"></i> Edited {Math.floor((data.lastModified - data.creation) / (3600 * 1000))} hours ago
-                    <Empty project={props.data}/></label>
+                <Logo style={{fontSize: '2em', float: 'left', marginTop: '0px', marginBottom: '20px', marginRight: '10px'}}/>
+                    <h5 className={'d-block'} style={{cursor: 'pointer'}} onClick={e => selectProject()}>
+                        {data.name}
+                    </h5>
+                    <p className={'description'}>{data.description}</p>
+                    <div className={'last-updated'}>
+                        <div className='date'><i className="bi bi-clock-history"></i> Last updated {formatDate(data.lastModified)}</div>
+                        
+                        <div className={'type'}>
+                            {data.type === 'public' && <UnLock className={'type-icon'} style={{fontSize: '1.2em', color: 'var(--bg-4)'}}/>}
+                            {data.type === 'private' && <Lock  className={'type-icon'} style={{fontSize: '1.2em', color: 'var(--bg-4)'}}/>} 
+                            {data.type === 'collaborative' && <Share2 className={'type-icon'} style={{fontSize: '1.2em', color: 'var(--bg-4)'}}/>} 
+                        </div>
+                    </div>                   
                 </div>
-
-                <Meter project={data}></Meter>
-
-                <div className={'tag'}>
-                    <div>
-                        {/* <i className="bi bi-files"></i> {props.data.metamodels.length} metamodel(s), {props.data.models.length} model(s)<br/>
-                        <i className="bi bi-file-code"></i> {props.data.viewpoints.length-1} viewpoint(s)*/}
-                    </div>
-                </div>
-            </div>
-
-
-        </>);
-    }
+            </div></Tooltip>);
+        }
 
 
     /* LIST */
 
     function ProjectList(props: Props): JSX.Element {
+
         let timeago = Date.now() - data.lastModified;
         let timeunit: string;
         let sec = 1000;
@@ -140,6 +203,7 @@ function Project(props: Props): JSX.Element {
         let week = day*7;
         let month = day*24;
         let year = day*365;
+
         if (timeago < min) { timeago /= sec; timeunit = 'seconds'; }
         else if (timeago >= min && timeago < hr) { timeago /= min; timeunit = 'minutes'; }
         else if (timeago >= hr && timeago < day) { timeago /= hr; timeunit = 'hours'; }
@@ -148,35 +212,34 @@ function Project(props: Props): JSX.Element {
         else if (timeago >= month && timeago < year) { timeago /= month; timeunit = 'months'; }
         else { timeago/= min; timeunit = 'years'; }
 
+
+        function timeConverter(UNIX_timestamp: int){
+            var a = new Date(UNIX_timestamp);
+            
+            const formattedDate2 = a.toISOString();
+
+            const formattedDate = new Intl.DateTimeFormat('en-US', {
+                day: '2-digit',
+                month: 'short', // "long" for full month name
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                //second: '2-digit',
+                //fractionalSecondDigits: 3, // Includes milliseconds
+                //timeZone: 'UTC', // Optional, set the timezone
+              }).format(a);
+
+            return formattedDate;
+        }
+
         return (<>
             <div className="row data">
-                {/* <div className={'col-sm-1'} style={{width: '30px'}}>
-                    <Menu position='right'>
-                        <Item icon={<i className="bi bi-plus-square"></i>} action={e => selectProject()}>Open</Item>
-                        <Item icon={<i className="bi bi-files"></i>} action={(e => props.data.duplicate())}>Duplicate</Item>
-                        <Item  icon={<i className="bi bi-download"></i>} action={e => exportProject()}>Download</Item>
-                        <Divisor />
-                        <Item icon={<i className="bi bi-star"></i>}  action={(e => toggleFavorite(data))}>Add to favorites</Item>
-                        <Item icon={<i className="bi bi-share"></i>}>Share</Item>
-                        <Divisor />
-                        <Item icon={<i className="bi bi-trash3"></i>} action={async e => await deleteProject()}>Delete</Item>
-                    </Menu>
-                </div>
-                <div className={'col-sm-1'}>
-                    {data.favorite ?
-                        <i style={{float: 'left'}} onClick={(e) => toggleFavorite(data)} className="bi bi-star-fill"></i> :
-                        <i style={{float: 'left'}} onClick={(e) => toggleFavorite(data)} className="bi bi-star"></i>}
-                    &nbsp;
-                    {data.type === "public" && <i className="bi bi-unlock"></i>}
-                    {data.type === "private" && <i className="bi bi-lock"></i>}
-                    {data.type === "collaborative" && <i className="bi bi-diagram-3"></i>}
-
-
-                </div> */}
-                <div className={'col-3'} onClick={()=> {selectProject()}}>{data.name}</div>
-                <div className={'col-2'}>{data.type}</div>
-                <div className={'col-2'}>{Math.floor(timeago)} {timeunit} ago</div>
-                <div className={'col-3'}>
+                
+                <div style={{paddingLeft: '15px'}} className={'col-4'} onClick={()=> {selectProject()}}>{data.name}</div>
+                <div className={'col-1'} onClick={()=> {selectProject()}}>{typeIcon(data.type)}</div>
+                <div className={'col-3'} onClick={()=> {selectProject()}}>{timeConverter(data.creation+0)}</div>
+                <div className={'col-2'} onClick={()=> {selectProject()}}>{Math.floor(timeago)} {timeunit} ago</div>
+                <div className={'col-2'}>
                     <CommandBar noBorder={true} style={{marginBottom: '0'}}>
                         <Btn icon={'favorite'} action={(e => toggleFavorite(data))} tip={!data.isFavorite ? 'Add to favorites' : 'Remove from favorites'} />
                         <Btn icon={'minispace'} />

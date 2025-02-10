@@ -20,6 +20,8 @@ import {
 import {useStateIfMounted} from 'use-state-if-mounted';
 import './inputselect.scss';
 import { Tooltip } from './Tooltip';
+import { setProjectModified } from '../../common/libraries/projectModified';
+import { set } from 'lodash';
 
 export function getSelectOptions_raw(data: LPointerTargetable, field: string): MultiSelectOptGroup[] {
     if (!data) return [];
@@ -171,6 +173,7 @@ export function InputComponent(props: AllProps) {
     };
 
     function valueDidChange(v1: any, v2: any): boolean {
+
         return serializeValue(v1) !== serializeValue(v2);
         /*
         let rawv1 = v1?.__raw || v1;
@@ -214,6 +217,10 @@ export function InputComponent(props: AllProps) {
     const onChange = (evt: React.ChangeEvent<HTMLInputElement>) => {
         (props as any).onChange?.(evt);
         if (readOnly) return;
+
+        if (props.changeMonitor) {
+            setProjectModified();
+        }
         if (isBoolean) {
             let target = evt.target.checked;
             if (subtype === 'checkbox3' && !value) { target = undefined as any; }
@@ -230,6 +237,8 @@ export function InputComponent(props: AllProps) {
             setIsTouched(true);     // I'm editing the element in my local state.
             // the actual set is done in onBlur
         }
+
+        
     }
     const onKeyDown = (evt: React.KeyboardEvent<HTMLInputElement>) => {
         (props as any).onKeyDown?.(evt);
@@ -455,6 +464,8 @@ export interface InputOwnProps {
     placeholder?: string;
     tag?: string;
     children?: ReactNode;
+    changeMonitor?: boolean;
+    onChange?: () => {};
 }
 
 export interface SelectOwnProps extends Omit<InputOwnProps, 'setter'> {

@@ -7,6 +7,7 @@ type MenuProps = {
     position?: "left"|"right";
     style?: React.CSSProperties;
     theme?: "light"
+    title?: string;
 };
 
 function getFragment(command: string): any {
@@ -44,18 +45,19 @@ export const Menu = (props: MenuProps) => {
 
     // const my_style = (props.style ? props.style : {border: '1px solid blue'} );
     return(<>
-        <div className={'menu-button'} ref={menuRef}  style={props.style}>
+        {props.title && <span onClick={(e) => {e.preventDefault();setOpen(!open);}} className={"top-level"}>{props.title}</span>}
+        <div className={`menu-button ${props.title && 'no-display'}`} ref={menuRef}  style={props.style}>
             {open && <div className={`dropdown ${props.position ? props.position : 'right' }`}>
                 {props.children}
             </div>}
-            <i onClick={() => setOpen(!open)} className="bi bi-chevron-down" style={{fontSize: '10px!important'}}></i>
+            {!props.title && <i onClick={() => setOpen(!open)} className="bi bi-chevron-down" style={{fontSize: '10px!important'}}></i>}
         </div>      
     </>);
 };
 
 export const Divisor = () => {
     return(
-        <hr className="my-1" />
+        <hr className="my-1 divisor" />
     );
 };
 
