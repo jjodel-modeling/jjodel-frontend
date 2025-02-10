@@ -10,6 +10,8 @@ class ProjectsApi {
         return project;
     }
     static async getAll(): Promise<void> {
+        let isOffline = U.isOffline();
+        console.log('getAll', {isOffline});
         if(U.isOffline()) Offline.getAll();
         else await Online.getAll();
     }
@@ -128,8 +130,8 @@ class Online {
         const response = await Api.get(`${Api.persistance}/projects`);
         if(response.code !== 200) {
             /* 401: Unauthorized -> Invalid Token (Local Storage)  */
-            U.resetState();
-            return Promise.reject('Invalid Token');???
+            // U.resetState();
+            return Promise.reject('Invalid Token');
         }
         const data = U.wrapper<DProject[]>(response.data);
         TRANSACTION('loading projects', () => {
@@ -144,7 +146,7 @@ class Online {
                 SetFieldAction.new(project.id, 'isFavorite', project.isFavorite, '', false);
             }
         });
-        return Promise.resolve();???
+        return Promise.resolve();
     }
     static async delete(project: DProject): Promise<void> {
         await Api.delete(`${Api.persistance}/projects/${project.id}`);

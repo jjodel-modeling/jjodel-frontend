@@ -202,14 +202,7 @@
     border-radius: 4px;;
   }
 
-  & span.menu-title:hover { 
-    background-color: var(--bg-2-5);
 
-  }
-
-  & span.menu-title:selected {
-    color: red;
-  }
 }
 
 
@@ -223,7 +216,11 @@
 .nav-container .nav-hamburger.inline {
   margin-right: 10px;
 }
-
+.nav-hamburger:hover {
+  span.menu-title {
+    background-color: var(--bg-2-5);
+  }
+}
 
 .nav-commands {
 
@@ -233,19 +230,28 @@
 }
 
 .nav-container .content {
-  background-color: var(--color);
-  min-width: 200px;
-  top: 100%;
-  font-size: 12px;
-  left: -20px;
-  box-shadow: none;
-  height: fit-content;
+  &>ul{
+    background-color: var(--color);
+    box-shadow: var(--smart-elevation-8);
+    border: inherit;
+    border-color: #233d4d;
+    border-radius: 6px;
 
-  & ul {
     padding-right: 0;
     padding-left: 0;
     list-style: none;
   }
+  background-color: transparent;
+  border-radius: 0;
+  border: none;
+
+  min-width: 200px;
+  top: 100%;
+  font-size: 12px;
+  left: -20px;
+  box-shadow: none !important;
+  height: fit-content;
+
 
   & ul li {
     padding-left: 0;
@@ -306,8 +312,12 @@
 
 .nav-container .content.context-menu {
   width: auto; 
-  margin-left: 20px;
-  margin-top: 10px;
+  padding-left: 20px;
+  padding-top: 10px;
+
+  padding-right: 10px;
+  padding-bottom: 10px;
+
 }
 .nav-container .content.context-menu ul {
   --palette-1-hover: white;

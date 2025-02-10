@@ -2,7 +2,7 @@ import './icons.scss';
 
 import jj from '../../../static/img/jj-k.png';
 import { Tooltip } from '../../../components/forEndUser/Tooltip';
-import { Logo, MetamodelIcon, ModelIcon } from '../../../components/logo/logo';
+import { Logo, MetamodelIcon, ModelIcon } from '../../../components/logo';
 
 import { LuPackage2 } from "react-icons/lu";
 import { CgToolbarTop as Toolbar } from "react-icons/cg";
@@ -89,7 +89,7 @@ export let icon: { [name: string]: any} = {
     'feature-request': <i className="bi bi-hand-index menuitem"></i>,
     contact: <i className="bi bi-card-text menuitem"></i>,
     'toggle-grid': <i className="bi bi-grid-1x2 menuitem"></i>,
-    'toggle-snap': <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" class="bi bi-layout-sidebar" viewBox="0 0 16 16">
+    'toggle-snap': <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" className="bi bi-layout-sidebar" viewBox="0 0 16 16">
     <path d="M6 1H1v14h5z m9 0h-5v5h5zm0 9v5M0 1a1 1 0 0 1 1-1h5a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H1a1 1 0 0 1-1-1zm9 0a1 1 0 0 1 1-1h5a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1h-5a1 1 0 0 1-1-1zm1 8a1 1 0 0 0-1 1v5a1 1 0 0 0 1 1h5a1 1 0 0 0 1-1v-5a1 1 0 0 0-1-1z"/>
   </svg>,
     'reset-layout': <i className="bi bi-columns menuitem"></i>,

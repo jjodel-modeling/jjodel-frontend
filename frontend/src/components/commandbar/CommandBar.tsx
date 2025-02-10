@@ -3,7 +3,6 @@ import './commandbar.scss';
 import { inherits } from "util";
 import { Tooltip } from "../forEndUser/Tooltip";
 import { U } from "../../joiner";
-import { setProjectModified } from "../../common/libraries/projectModified";
 
 type BtnProps = {
     disabled?: boolean;
@@ -43,18 +42,10 @@ type BtnProps = {
     mode?: 'normal' | 'negative'
     className?: string;
     needConfirm?:boolean;
-    changeMonitor?: boolean;
 }
 
 
 export const Btn = (props: BtnProps) => {
-
-    function checkMonitor() {
-        if (props.changeMonitor) {
-            setProjectModified();
-        }
-    }
-
 
     const [askingConfirm, setConfirm] = useState(false);
     const mode = (props.mode ? props.mode : 'normal');
@@ -64,8 +55,7 @@ export const Btn = (props: BtnProps) => {
         console.log('commandbar action', {disabled: props.disabled, action:props.action, askingConfirm, needConfirm});
         if (props.disabled || !props.action) return;
         if (!askingConfirm && needConfirm) {
-            setConfirm(true); 
-            checkMonitor();
+            setConfirm(true);
             U.clickedOutside(e, ()=> {
                 console.log('clicked outside remove confirm');
                 setConfirm(false)
@@ -73,7 +63,6 @@ export const Btn = (props: BtnProps) => {
             return;
         }
         props.action(e);
-        checkMonitor();
         e.stopPropagation();
     }
     let icon: ReactNode = null;

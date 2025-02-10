@@ -1043,6 +1043,7 @@ export function _reducer/*<S extends StateNoFunc, A extends Action>*/(oldState: 
 }
 
 function isRelevantChangeCheck(delta: GObject<DState>, pastDelta?: GObject<DState>): boolean {
+    if (!U.userHasInteracted) return false;
     if (pastDelta && delta.timestamp - pastDelta.timestamp < mergeTolerance) return false;
     if (!statehistory.globalcanundostate) return false;
     if (Object.keys(delta).length === 1) {
@@ -1190,17 +1191,18 @@ export async function stateInitializer() {
     windoww.defaultContext = {$: windoww.$, getPath, React: React, Selectors, ...RuntimeAccessibleClass.getAllClassesDictionary(), ...windoww.Components};
 
     DState.init();
-    await DUser.loadOffline(); // if it's online mode this is a no-op and user should be already loaded
+    let duser = DUser.offline(); // if it's online mode this is a no-op and user should be already loaded
+    if (duser) DUser.current = duser.id;
     try {
         await ProjectsApi.getAll();
     } catch (error) {
-        // U.alert('e','You are already logged on another client','');
+        U.alert('e','Failed to fetch projects','');
         DUser.current = '';
     }
     setDocumentEvents();
     /*type RecentEntry = {id: Pointer<DProject>[], name: string};
     let recent: RecentEntry[] = JSON.parse(localStorage.getItem('_jjRecent') || '[]') as any[];
-    if (window.location.hash.indexOf('#/project') === 0) {
+    if (window.location.hash.indexOf('#/project') === 0) { use R.navigate
         let user: LUser = LPointerTargetable.from(DUser.current);
         let project = user?.projects.filter(p=>!!p)[0]?.__raw as any;
         //console.log('test recents', {project, user, recent});

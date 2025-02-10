@@ -70,7 +70,7 @@ import DefaultViews from "./defaults/views";
 import tinycolor, {Instance} from "tinycolor2";
 import {ReactNode} from "react";
 import {VersionFixer} from "./VersionFixer";
-
+let windoww: GObject<typeof window> = window;
 console.warn('ts loading store');
 
 // @RuntimeAccessible
@@ -209,7 +209,7 @@ export class DState extends DPointerTargetable{
 
     advanced: boolean = false;
     alert: string = '';
-    dialog: string = '';??
+    dialog: string = '';
     dialog_response: string = '';
     action_description: string = '';
     action_title: string = '';
@@ -226,6 +226,13 @@ export class DState extends DPointerTargetable{
         }
     }
     static init(store?: DState): void {
+        if (windoww.location.pathname === '/project') this.init_editor(store);
+        else this.init_dashboard(store);
+    }
+    static init_dashboard(store?: DState): void {
+        console.error('init_dash');
+    }
+    static init_editor(store?: DState): void {
         this.fixcolors();
         TRANSACTION('init jodel state', ()=>{
             const viewpoint = DViewPoint.newVP('Default', undefined, true, 'Pointer_ViewPointDefault');
@@ -325,11 +332,11 @@ function makeDefaultGraphViews(vp: DViewPoint, validationVP: DViewPoint): DViewE
             "}";
         v.onDataUpdate = `
 let err = "";
-//if (name.indexOf(" ") >= 0) err = " names cannot contain white spaces."; else
-if (name.length === 0 && type !== "shapeless") err = " must be named.";
-else if (!name[0].match(/[A-Za-z_$]/)) err = " names must begin with an alphabet letter or $_ symbols.";
-else if (!name.match(/^[A-Za-z_$]+[A-Za-z0-9$_\\s]*$/)) err = " names can only contain an alphanumeric chars or or $_ symbols";
-node.state = {error_naming: type + err};
+//if (name.indexOf(" ") >= 0) err = type + " names cannot contain white spaces."; else
+if (name.length === 0 && type !== "shapeless") err = type + " must be named.";
+else if (!name[0].match(/[A-Za-z_$]/)) err = type + " names must begin with an alphabet letter or $_ symbols.";
+else if (!name.match(/^[A-Za-z_$]+[A-Za-z0-9$_\\s]*$/)) err = type + " names can only contain an alphanumeric chars or or $_ symbols";
+node.state = {error_naming: err};
 `;}, false, 'Pointer_ViewCheckName' );
 
 let errorCheckLowerbound: DViewElement = DViewElement.new2('Lowerbound error view', DV.invisibleJsx(), validationVP, (v) => {

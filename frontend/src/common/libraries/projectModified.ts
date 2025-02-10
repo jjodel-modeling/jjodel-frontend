@@ -1,15 +1,18 @@
 /* simple library to keep track of whether the project has been modified or not */
 
-localStorage.setItem('projectModified', 'false');
+import {U} from "../../joiner";
 
-export const setProjectModified = function() {
+/*
+localStorage.setItem('projectModified', 'false');
+export const setProjectModified = function(nope: 'nope') {
     localStorage.setItem('projectModified', 'true');
 
 }
-export const unsetProjectModified = function() {
+export const unsetProjectModified = function(nope: 'nope') {
     localStorage.setItem('projectModified', 'false');
-}
+}*/
 
 export const isProjectModified = function() {
-    return localStorage.getItem('projectModified') === 'true';
+    return U.userHasInteracted;
+    // return store.getState().idlookup.clonedCounter !==
 }

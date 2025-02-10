@@ -46,7 +46,7 @@ import Convert from "ansi-to-html";
 import React, {isValidElement} from "react";
 import IoT from "../iot/IoT";
 import Collaborative from "../components/collaborative/Collaborative";
-import { Await } from "react-router-dom";
+import {Await, NavigateFunction} from "react-router-dom";
 // var Convert = require('ansi-to-html');
 // import KeyDownEvent = JQuery.KeyDownEvent; // https://github.com/tombigel/detect-zoom broken 2013? but works
 
@@ -84,6 +84,33 @@ export class Color {
     }
 }
 
+@RuntimeAccessible('R')
+export class R{
+    public static cname: string = 'R';
+
+    // from: 1.com/2/3
+    // /5       --> 1.com/5/
+    // ./5      --> 1.com/1/2/3/5
+    // 5        --> 1.com/1/2/3/5
+    //
+    public static open_new_page(url: string): void {
+        window.open(url, '_blank');
+    }
+    public static replace(path: string): void {
+        window.location.replace(path);
+    }
+    public static navigate(path: string, refresh: (true|NavigateFunction) = true): void {
+        // window.location.assign = window.location = window.location.href = window.open(url, '_self')
+
+        let debug: false = true as any;
+        if (debug || refresh === true ) {
+            if (path[0] !== '/') path = '/'+path;
+            console.log('navigating: ', {path, url:window.location.origin + '/#' + path});
+            window.location.href = window.location.origin + '/#' + path;
+        }
+        else refresh(path); // useNavigator()(path);
+    }
+}
 
 @RuntimeAccessible('U')
 export class U {
@@ -118,6 +145,7 @@ export class U {
     //private static lastClicked?: Element;
     private static lastClickedAncestors: Element[] = [];
     private static lastClickedTime: number = 0;
+    public static userHasInteracted: boolean = false;
     private static clickedOutsideCallback(e: any & ClickEvent){
         let target = e.target as Element;
         let clickedAncestors = U.ancestorArray(target, undefined, true);
@@ -183,7 +211,7 @@ export class U {
         );
     }
 
-    static alert(type: 'i'|'w'|'e', title: string, message: string): void {
+    static alert(type: 'i'|'w'|'e', title: string, message: string = ''): void {
         SetRootFieldAction.new('alert', `${type}:${title}:${message}`, '');
     }
 
@@ -208,7 +236,7 @@ export class U {
         return await compressToUTF16(JSON.stringify(state));
     }
     static isOffline(): boolean {
-        return Storage.read('offline') === 'true';
+        return Storage.read('offline') === true;
     }
     static resetState(): void {
         LoadAction.new({...DState.new(), 'isLoading':true});

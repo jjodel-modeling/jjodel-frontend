@@ -33,3 +33,4 @@ sandbox.tsx
 /gitignoreresources
 /frontend/node_modules
 /frontend/.idea
+/frontend/build

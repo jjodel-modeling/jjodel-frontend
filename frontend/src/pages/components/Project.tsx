@@ -1,8 +1,7 @@
-import {DProject, LProject, U} from '../../joiner';
+import {DProject, LProject, R, U} from '../../joiner';
 import React from "react";
 
 import {ProjectsApi} from '../../api/persistance';
-import {useNavigate} from 'react-router-dom';
 import {Divisor, Item, Menu} from './menu/Menu';
 
 import card from '../../static/img/card.png';
@@ -19,7 +18,7 @@ import {
 import { SlShare as Share2 } from "react-icons/sl";
 import { Tooltip } from '../../components/forEndUser/Tooltip';
 import { time } from 'console';
-import { Logo } from '../../components/logo/logo';
+import { Logo } from '../../components/logo';
 
 
 function formatDate(lastModified: number){
@@ -67,7 +66,6 @@ function ProjectType(props: ProjectTypeType){
 
 function Project(props: Props): JSX.Element {
     const {data} = props;
-    const navigate = useNavigate();
 
     // const [favorite, setFavorite] = useState(false);
 
@@ -75,8 +73,8 @@ function Project(props: Props): JSX.Element {
         await ProjectsApi.favorite(project.__raw as DProject);
     };
     const selectProject = () => {
-        navigate(`/project?id=${data.id}`);
-        U.resetState();
+        R.navigate(`/project?id=${data.id}`, true);
+        //U.resetState();
     }
     const exportProject = async() => {
         // await ProjectsApi.save(data);
@@ -132,11 +130,9 @@ function Project(props: Props): JSX.Element {
 
 
         function multiplicity(n: int, none: string, one: string, many: string){
-            
-            if (n == 0) return  none;
-            if (n == 1) return n + ' ' + one;
+            if (n <= 0) return none;
+            if (n === 1) return n + ' ' + one;
             if (n > 1) return n + ' ' + many;
-            
         }
 
         function getClickedElement(e: any){
@@ -149,7 +145,6 @@ function Project(props: Props): JSX.Element {
         }
 
         return (
-
             <Tooltip tooltip={`${props.data.type} project with ${multiplicity(props.data.metamodelsNumber,'no metamodels', 'metamodel', 'metamodels')}, 
                 ${multiplicity(props.data.modelsNumber,'no models', 'model', 'models')}, 
                 ${multiplicity(props.data.viewpointsNumber -2, 'no (custom) viewpoints', '(custom) viewpoint', '(custom) viewpoints')}` } position={'top'} offsetY={10} theme={'dark'} inline><div className={`project-card-v2 ${data.type}`} 
@@ -171,7 +166,7 @@ function Project(props: Props): JSX.Element {
                     </Menu>
                 </div>
                 <div className='header'>
-                <Logo style={{fontSize: '2em', float: 'left', marginTop: '0px', marginBottom: '20px', marginRight: '10px'}}/>
+                    <Logo style={{fontSize: '2em', float: 'left', marginTop: '0px', marginBottom: '20px', marginRight: '10px'}}/>
                     <h5 className={'d-block'} style={{cursor: 'pointer'}} onClick={e => selectProject()}>
                         {data.name}
                     </h5>

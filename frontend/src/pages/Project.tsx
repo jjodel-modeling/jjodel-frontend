@@ -11,6 +11,7 @@ import {
     LViewElement,
     LViewPoint,
     Pointer,
+    R,
     Try,
     U
 } from '../joiner';
@@ -22,16 +23,13 @@ import {Dashboard} from "./components";
 import CollaborativeAttacher from "../components/collaborative/CollaborativeAttacher";
 import {Cards} from './components/cards/Cards';
 import Storage from "../data/storage";
-import {useNavigate} from "react-router-dom";
 import Loader from '../components/loader/Loader';
 import {Navbar} from "./components";
 import {CSS_Units} from "../view/viewElement/view";
 import {useEffectOnce} from "usehooks-ts";
 
 function ProjectComponent(props: AllProps): JSX.Element {
-
     const {user} = props;
-    const navigate = useNavigate();
     const query = useQuery();
     const id = query.get('id') || '';
 
@@ -40,7 +38,7 @@ function ProjectComponent(props: AllProps): JSX.Element {
             const project = await ProjectsApi.getOne(id); 
             if(!project) {
                 U.resetState();
-                navigate('/allProject');
+                R.navigate('/allProject');
                 return;
             }
             if(project.state) {
@@ -49,6 +47,7 @@ function ProjectComponent(props: AllProps): JSX.Element {
                 if(!state['users'].includes(DUser.current)) state['users'].push(DUser.current);
                 SaveManager.load(state);
             }
+
             user.project = LProject.fromPointer(project.id);
         })();
     }, [id]);
@@ -59,7 +58,7 @@ function ProjectComponent(props: AllProps): JSX.Element {
     allViews = allViews.filter(v => v);
     const viewsDeDuplicator: Dictionary<Pointer<DViewElement>, LViewElement> = {};
     for (let v of allViews) viewsDeDuplicator[v.id] = v;
-    if(!user?.project) return (<></>);
+    if(!user?.project) return (<div style={{margin: 'auto'}} onClick={(e)=> R.navigate('/allProjects')}>Project not found, click to go back</div>);
 
     return (<>
         <Try>

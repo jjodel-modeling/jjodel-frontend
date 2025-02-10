@@ -18,11 +18,14 @@ export const Cards = (props: CardsProps): any => {
 
 type CardProps = {
     icon: "add" | "import" | "question" | "gettingstarted" | "alexa";
-    style?: "ottanio" | "red" | "dark" | "blue" | "clear" | "rainbow" | "red-orange" | "yellow" | "green" | "gray" | "light-green" | "azure" | "orange-yellow" | "dark-blue" | "default";
+    style: "ottanio" | "red" | "dark" | "blue" | "clear" | "rainbow" | "red-orange" | "yellow" | "green" | "gray" | "light-green" | "azure" | "orange-yellow" | "dark-blue" | "default";
     title: string;
-    subtitle: string;
+    subtitle?: string;
     action?: MouseEventHandler;
     url?: string;
+};
+type CardsProps = {
+    children: ReactNode;
 };
 
 export const Card = (props: CardProps) => {

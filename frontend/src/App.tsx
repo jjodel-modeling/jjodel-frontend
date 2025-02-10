@@ -77,16 +77,15 @@ function App(props: AllProps): JSX.Element {
                         <Route path={'templates'} element={<TemplatePage />} />
                         <Route path={'notes'} element={<NotesPage />} />
                         <Route path={'archive'} element={<ArchivePage />} />
-                        <Route path={'project'} element={<ProjectPage />} />
+                        <Route path={'project'} element={<><ProjectPage /></>} />
                         <Route path={'recent'} element={<RecentPage />} />
                         <Route path={'profile'} element={<ProfilePage />} />
                         <Route path={'usersInfo'} element={<UsersInfoPage />} />
                         <Route path={'projectsInfo'} element={<ProjectsInfoPage />} />
                         <Route path={'news'} element={<NewsPage />} />
-                        <Route path={''} element={<AllProjectsPage />} />
+                        <Route path={'*'} element={<AllProjectsPage />} />
                         {window.location.hostname !== 'localhost' && false && <Route path={'*'} element={<AllProjectsPage />} />}
                     </> : <Route path={'*'} element={<AuthPage />} />}
-
                 </Routes></Try>
             </HashRouter>
             {DUser.current && <Try><BottomBar /></Try>}

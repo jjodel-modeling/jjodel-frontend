@@ -633,7 +633,7 @@ public static object(): string { return (
         let viewpointname = lv?.viewpoint?.name ||'';
 
         function openNotification(e: any) {
-            U.alert('e', 'Error in ' + v?.name + (viewpointname ? ' > '+viewpointname : ''), (msg.props ? msg.props.children : ''));
+            U.alert('e', 'Error in ' + v?.name + (viewpointname ? ' > '+viewpointname : ''), dname);
             e.target.classList.add('opened');
         }
 
@@ -652,7 +652,7 @@ public static object(): string { return (
                     </div></Measurable>);
                 break;
             case 'alert':
-                U.alert('e', 'Error in ' + v?.name + (viewpointname ? 'of '+viewpointname : ''), msg.props.children);
+                U.alert('e', 'Error in ' + v?.name + (viewpointname ? 'of '+viewpointname : ''), dname);
                 break;
             case 'notification':
                 return (<div className='notification-icon' onClick={(e) => openNotification(e)}/>);

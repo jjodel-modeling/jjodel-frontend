@@ -9,11 +9,11 @@ import {
     LUser,
     LViewElement,
     LViewPoint,
-    Pointer, 
+    Pointer,
     SetFieldAction,
     SetRootFieldAction,
     U,
-    Try
+    Try, TRANSACTION, L
 } from '../../joiner';
 import {LeftBar, Navbar} from './';
 
@@ -37,9 +37,6 @@ import {CSS_Units} from "../../view/viewElement/view";
 import {useStateIfMounted} from 'use-state-if-mounted';
 import { Tooltip } from '../../components/forEndUser/Tooltip';
 import { ProjectsApi } from '../../api/persistance';
-import { setPriority } from 'os';
-import { setProjectModified } from '../../common/libraries/projectModified';
-import { set } from 'lodash';
 
 
 type UserProps = {
@@ -82,12 +79,13 @@ const Title = (props: TitleProps) => {
         const projectLink = '/#/project?id='+props.projectID;
 
         function copyToClipboard(e: any) {
-            const server = document.getElementById('server');
-            const link = document.getElementById('link');
-            
-            navigator.clipboard.writeText(server.innerText+link.innerText);
-            U.alert('i', "Copied", "The project link has been copied to the Clipboard.");
-
+            //const server = document.getElementById('server');
+            //const link = document.getElementById('link');
+            let full_link = server + projectLink
+            navigator.clipboard.writeText(full_link)
+                .then( // server?.innerText+link?.innerText
+                    ()=>U.alert('i', "Copied", "The project link has been copied to the Clipboard.")
+                );
         }
 
         let type = (props.type === "public");
@@ -101,9 +99,9 @@ const Title = (props: TitleProps) => {
                             className={"my-auto"}
                             style={{fontSize:'1.25em'}}
                             setter={(v) => {
-                                if(!props.projectID) return;
-                                SetFieldAction.new(props.projectID, 'type', v ? "public" : "private", '', false);
-                                setProjectModified();
+                                if (!props.projectID) return;
+                                let project: LProject = L.fromPointer(props.projectID);
+                                project.type = v ? "public" : "private";
                                 if (v) U.alert('i', "The project "+title+" is public", "It can be accessed only by those who have the public link.");
                             }}
                             getter={() => type}
@@ -165,20 +163,23 @@ const Title = (props: TitleProps) => {
                                     type={'text'}
                                     value={title}
                                     style={{padding: '0px', margin: '0'}}
-                                    onChange={e => {
-                                        if(!props.projectID) return;
-                                        SetFieldAction.new(props.projectID, 'name', e.target.value, '', false)
-                                        setProjectModified();
-                                    }}
                                     onBlur={(e) => {
-                                        if (e.target.value === '') {U.alert('e', 'A Project Name is required.', 'Please provide a name to identify and organize your project effectively.');e.target.focus(); return;}
-                                        setEditTitle(!editTitle);
+                                        if (!props.projectID) return;
+                                        if (!e.target.value) {
+                                            U.alert('e', 'A Project Name is required.', 'Please provide a name to identify and organize your project effectively.');
+                                            e.target.focus();
+                                            return;
+                                        }
+                                        let project: LProject = L.fromPointer(props.projectID);
+                                        project.name = e.target.value;
+                                        setEditTitle(false);
                                     }}
                                 />
                             </div>
                         </h2> :
                         <>
-                        <Tooltip tooltip={'DoubleClick to edit'} inline={true} position={'left'} offsetX={10}><h2 onDoubleClick={() => {setEditTitle(!editTitle)}}>
+                        <Tooltip tooltip={'DoubleClick to edit'} inline={true} position={'left'} offsetX={10}>
+                            <h2 onDoubleClick={() => {setEditTitle(true)}}>
                             {props.icon} {props.title}
                         </h2></Tooltip>
                          </>
@@ -192,20 +193,23 @@ const Title = (props: TitleProps) => {
                                 rows={4}
                                 cols={80}
                                 value={description}
-                                onChange={e => {
-                                    if(!props.projectID) return;
-                                    SetFieldAction.new(props.projectID, 'description', e.target.value, '', false)
-                                    setProjectModified();
-                                }}
                                 onBlur={e => {
-                                    if (e.target.value === '') {e.target.focus();U.alert('e', 'A Project Description is required.', 'Adding a description helps provide clarity and context for your project.'); return;}
-                                        setEditDes(!editDes);
+                                    if (!props.projectID) return;
+                                    if (!e.target.value) {
+                                        e.target.focus();
+                                        U.alert('e', 'A Project Description is required.', 'Adding a description helps provide clarity and context for your project.');
+                                        return;}
+                                    let project: LProject = L.fromPointer(props.projectID);
+                                    project.description = e.target.value;
+                                    setEditDes(false);
                                 }}
                             />
                         </h3>
                         :
                         <>
-                            {props.description && <Tooltip tooltip={'DoubleClick to edit'} inline={true} position={'left'} offsetX={10}><h3 onDoubleClick={() => setEditDes(!editDes)}>{props.description}</h3></Tooltip>}
+                            {props.description && <Tooltip tooltip={'DoubleClick to edit'} inline={true} position={'left'} offsetX={10}>
+                                <h3 onDoubleClick={() => setEditDes(!editDes)}>{props.description}</h3>
+                            </Tooltip>}
                         </>
                     }
                     
@@ -223,6 +227,7 @@ const Title = (props: TitleProps) => {
 
 export type DashProps = {
     children?: JSX.Element,
+    className?: string;
     // NB: account and profile are both used, i don't know which to keep
     active: 'Account'|'Profile'|'Settings'|'Updates'|'Community'|'All'|'Archive'|'Templates'|'Recent' | 'Notes' | 'Project' | 'UsersInfo' | 'ProjectsInfo' | 'News';
     version?: Partial<DState["version"]>;
@@ -368,7 +373,7 @@ function ProjectCatalog(props: ProjectProps) {
                     </div>
                 </div>)
             }
-            {project.viewpoints.map(vp =>
+            {project.viewpoints.map(vp => !vp ? <div>errorvp: {vp+''}</div> :
                 <div className="row data viewpoint">
                     <div className={'col-4'}>{vp.isOverlay ? <TbSquareRoundedLetterVFilled style={{fontSize: '1.5em'}}/> : <TbSquareRoundedLetterV style={{fontSize: '1.5em'}}/>} {vp.name}</div>
                     <div className={'col-2 artifact-type'}>Viewpoint</div>
@@ -438,14 +443,9 @@ function ProjectDashboard(props: DashProps): any {
 
 function Dashboard(props: DashProps): any {
 
-    const {active, children, version, project} = props;
-
-    return(<>
-        {active === 'Project' ?
-            <ProjectDashboard version={version} active={active} project={project} children={children} className={'bg'}/> :
-            <GenericDashboard version={version} active={active} children={children}/>
-        }
-    </>);
+    return props.active === 'Project' ?
+            <ProjectDashboard {...props} className={(props.className||'') + ' bg'} /> :
+            <GenericDashboard {...props} />
 }
 
 export {Dashboard, ProjectCatalog, Title};

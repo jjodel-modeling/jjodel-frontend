@@ -1,8 +1,7 @@
 import { meanBy } from 'lodash';
 import { useState, MouseEventHandler } from 'react';
 import { IconTheme } from 'react-hot-toast';
-import {useNavigate} from 'react-router-dom';
-import {DProject, DUser, L, LProject, LUser, SetRootFieldAction, U, windoww} from '../../joiner';
+import {DProject, DUser, L, LProject, LUser, R, SetRootFieldAction, U, windoww} from '../../joiner';
 
 import { icon } from './icons/Icons';
 import {DashProps} from "./Dashboard";
@@ -11,6 +10,8 @@ import {ProjectsApi} from "../../api/persistance";
 import storage from "../../data/storage";
 import { isProjectModified } from '../../common/libraries/projectModified';
 import { Tooltip } from '../../components/forEndUser/Tooltip';
+import {SaveManager} from "../../components/topbar/SaveManager";
+import {Link, useNavigate} from "react-router-dom";
 
 interface StateProps {
     projects: LProject[];
@@ -35,13 +36,19 @@ type ItemProps = {
 };
 
 const Item = (props: ItemProps) => {
-    const navigate = useNavigate();
     let action: (e:any)=>any = props.action as any;
-    if (typeof action === 'string') action = (e => navigate(`/${props.action}`));
+    let navigate = useNavigate();
+    if (typeof action === 'string') action = (e => R.navigate(`/${props.action}`, navigate));
     let finalaction = (e:any) =>{ props.onClick?.(e); action(e); }
-
+/*
+    let url: string = '';
+    if (typeof props.action === 'string') url = props.action;*/
     return (<>
-            <div onClick={finalaction} className={'item ' + (props.dot ? 'red-dot' : '')}>{props.icon && props.icon}&nbsp;<span>{props.children}</span></div>
+
+        {/*<Link to={url} className={'item ' + (props.dot ? 'red-dot' : '')}>{props.icon && props.icon}&nbsp;{props.children}</Link>*/}
+            <div onClick={finalaction} className={'item ' + (props.dot ? 'red-dot' : '')}>
+                {props.icon && props.icon}&nbsp;<span>{props.children}</span>
+            </div>
     </>);
 }
 
@@ -97,19 +104,28 @@ function LeftBar(props: LeftBarProps): JSX.Element {
 
     const {active, project} = props;
     let user: LUser = props.user || L.fromPointer(DUser.current);
-    const navigate = useNavigate();
 
     const selectProject= (project: LProject) => {
-        navigate(`/project?id=${project.id}`);
+        R.navigate(`/project?id=${project.id}`, true);
         U.resetState();
     };
 
     const closeProject = () => {
-        navigate('/allProjects');
-        Collaborative.client.off('pullAction');
-        Collaborative.client.disconnect();
-        SetRootFieldAction.new('collaborativeSession', false);
-        U.resetState();
+        function doclose(){
+            R.navigate('/allProjects', true);
+            Collaborative.client.off('pullAction');
+            Collaborative.client.disconnect();
+            SetRootFieldAction.new('collaborativeSession', false);
+            U.resetState();
+        }
+        /*
+        if (isProjectModified()) {
+            U.dialog('Close the project without saving?', 'close project', ()=>{
+                doclose();
+            })
+        }
+        else doclose();*/
+        doclose();
     }
     const toggleFavorite = async() => {
         await ProjectsApi.favorite(project?.__raw as DProject);
@@ -202,15 +218,15 @@ function LeftBar(props: LeftBarProps): JSX.Element {
                           onClick={()=>localStorage.setItem('_jj_update_seen', ''+Date.now())}
                     >What's new</Item>*/}
                     <Item 
-                        action={() => {document.location.href="https://www.jjodel.io/whats-new/"}} 
+                        action={() => {R.navigate("https://www.jjodel.io/whats-new/")}}
                         icon={icon['whats-new']}
                     >What's new</Item>
                     <Item 
-                        action={() => {document.location.href="https://www.jjodel.io/getting-started/"}} 
+                        action={() => {R.navigate("https://www.jjodel.io/getting-started/")}}
                         icon={icon['getting-started']}
                     >Getting started</Item>
                     <Item 
-                        action={() => {document.location.href="https://www.jjodel.io/manual/"}} 
+                        action={() => {R.navigate("https://www.jjodel.io/manual/")}}
                         icon={icon['manual']}
                     >User guide</Item>
                 </Menu>

@@ -222,8 +222,8 @@ export class SaveManagerComponent extends PureComponent<AllProps, ThisState>{
         this.undoredolistoutdated = true; // if render is called it means redux state props he's watching (redux-state) changed, so the preview list in component-state is outdated.
         // console.log("undoredomanager", {thiss:this, undo:this.props.undo, props: this.props, state:this.state});
         let history = this.get_history(user);
-        let undo = history.undoable;
-        let redo = history.redoable;
+        let undo = history?.undoable || [];
+        let redo = history?.redoable || [];
         return(<>
             <div className='undoredo'>
                 <span className={"hoverable"} style={{position: "relative", background: "white"}} onMouseEnter={this.undoenter} onMouseLeave={this.undoleave}>

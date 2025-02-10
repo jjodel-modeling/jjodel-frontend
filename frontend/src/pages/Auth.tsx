@@ -1,8 +1,7 @@
 import {FormEvent} from 'react';
 import {useStateIfMounted} from 'use-state-if-mounted';
-import {DUser, SetRootFieldAction, U} from '../joiner';
+import {DUser, R, SetRootFieldAction, U} from '../joiner';
 import Storage from '../data/storage';
-import {useNavigate} from "react-router-dom";
 import {AuthApi} from "../api/persistance";
 import logo from '../static/img/jjodel.jpg';
 import {Tooltip} from '../components/forEndUser/Tooltip';
@@ -21,7 +20,6 @@ function AuthPage(): JSX.Element {
     const [passwordCheck, setPasswordCheck] = useStateIfMounted('');
     const [newsletter, setNewsletter] = useStateIfMounted(false);
 
-    const navigate = useNavigate();
 
     const onSubmit = async(e: FormEvent<HTMLFormElement>) => {
         e.preventDefault();
@@ -59,8 +57,8 @@ function AuthPage(): JSX.Element {
         Storage.write('user', user);
         Storage.write('token', user.token);
         Storage.write('offline', 'false');
-        //navigate('/dashboard');
-        navigate('/allProjects');
+        //R.navigate('/dashboard');
+        R.navigate('/allProjects');
         U.resetState();
     }
 
@@ -79,13 +77,13 @@ function AuthPage(): JSX.Element {
         const user = DUser.new(data.name, data.surname, data.nickname, data.affiliation, data.country, data.newsletter || false, data.email, data.token, data.id);
         Storage.write('user', user);
         Storage.write('offline', 'false');
-        navigate('/allProjects');
+        R.navigate('/allProjects');
         U.resetState();
     }
 
     const offline = () => {
         AuthApi.offline();
-        navigate('/allProjects');
+        R.navigate('/allProjects');
         U.resetState();
     }
 

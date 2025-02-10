@@ -2169,6 +2169,7 @@ export class DUser extends DPointerTargetable {
         return new Constructors(new DUser('dwc'), undefined, persist, undefined, id).DPointerTargetable().DUser(name, surname, nickname, affiliation, country, newsletter, email, token).end();
     }
 
+    /*
     static async loadOffline(): Promise<void> {
         if (DUser.current) return;
         const user = Storage.read<DUser>('user');
@@ -2177,6 +2178,23 @@ export class DUser extends DPointerTargetable {
             DUser.current = user.id;
             statehistory[user.id] = {redoable: [], undoable: []};
         } else DUser.current = '';
+    }*/
+
+    static offline(): DUser {
+        let d: DUser = D.from(DUser.current);
+        let ptr: Pointer<DUser> = 'Pointer_OfflineUser';
+        if (d) return d;
+        // if (d?.id === ptr) return d;
+        let state = store.getState();
+        if (state && state.idlookup[ptr]) return state.idlookup[ptr] as DUser;
+        d = Storage.read<DUser>('user') as DUser;
+        if (d) {
+            if (state?.idlookup) state.idlookup[ptr] = d;
+            return d;
+        }
+        d = DUser.new('Offline', 'User', 'Unknown', 'Unknown', 'Unknown', false, 'Unknown', 'Unknown', ptr);//`Pointer${Date.now()}_OfflineUser`);
+        Storage.write('user', d);
+        return d as DUser;
     }
 }
 
@@ -2785,7 +2803,7 @@ export class LProject<Context extends LogicContext<DProject> = any, D extends DP
                 SetRootFieldAction.new('projects', c.data.id, '-=', true);
 
                 // project can only be deleted in homepage, project list is not even present in editor state.
-                // if (windoww.location.href.includes('project') windoww.location.href = windoww.location.origin;
+                // if (windoww.location.href.includes('project') windoww.location.href = windoww.location.origin; use R.navigate
             });
         }
     }

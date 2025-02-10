@@ -12,7 +12,7 @@ import ModelsSummaryTab from "./tabs/ModelsSummaryTab";
 import BrokerEditor from "../editors/Broker";
 import {PermissionModelTab} from "../editors/PermissionModelTab";
 import { isProjectModified } from '../../common/libraries/projectModified';
-import { Logo } from '../logo/logo';
+import { Logo } from '../../components/logo';
 //import MqttEditor from "../rightbar/mqtt/MqttEditor";
 //import NestedView from "../rightbar/nestedViewEditor/ViewEditorNestedVersion";
 //import CollaboratorsEditor from "../rightbar/collaboratorsEditor/CollaboratorsEditor";

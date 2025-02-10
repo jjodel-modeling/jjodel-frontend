@@ -20,8 +20,6 @@ import {
 import {useStateIfMounted} from 'use-state-if-mounted';
 import './inputselect.scss';
 import { Tooltip } from './Tooltip';
-import { setProjectModified } from '../../common/libraries/projectModified';
-import { set } from 'lodash';
 
 export function getSelectOptions_raw(data: LPointerTargetable, field: string): MultiSelectOptGroup[] {
     if (!data) return [];
@@ -218,9 +216,6 @@ export function InputComponent(props: AllProps) {
         (props as any).onChange?.(evt);
         if (readOnly) return;
 
-        if (props.changeMonitor) {
-            setProjectModified();
-        }
         if (isBoolean) {
             let target = evt.target.checked;
             if (subtype === 'checkbox3' && !value) { target = undefined as any; }
@@ -464,8 +459,6 @@ export interface InputOwnProps {
     placeholder?: string;
     tag?: string;
     children?: ReactNode;
-    changeMonitor?: boolean;
-    onChange?: () => {};
 }
 
 export interface SelectOwnProps extends Omit<InputOwnProps, 'setter'> {

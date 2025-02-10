@@ -6,8 +6,7 @@ import type {Dictionary, FakeStateProps} from '../../../joiner/types';
 import DockManager from "../DockManager";
 import {LeftBar} from '../../../pages/components';
 import {ProjectCatalog, Title} from '../../../pages/components/Dashboard';
-import { Logo } from '../../logo/logo';
-
+import { Logo } from '../../../components/logo';
 
 type Props = {
     key: string;

@@ -1,6 +1,6 @@
 import React, {Dispatch, ReactElement} from "react";
 import {connect} from "react-redux";
-import {DModel, Pointer, Try} from "../../../joiner";
+import {DModel, Pointer, Try, U} from "../../../joiner";
 import {
     DState,
     CreateElementAction,
@@ -46,7 +46,8 @@ function MetamodelTabComponent(props: AllProps) {
         <div className={'d-flex h-100'}>
             <ToolBar model={model.id} isMetamodel={model.isMetamodel} />
             <Try>
-                <div className={"GraphContainer h-100 w-100"} style={{position:"relative"}}>
+                <div className={"GraphContainer h-100 w-100"} style={{position:"relative"}}
+                     onClick={ e => {if(!U.userHasInteracted) U.userHasInteracted = true}}>
                     {graph && <DefaultNode data={model} nodeid={graph.id} graphid={graph.id}/> || <div>Error: missing DGraph prop</div> }
                 </div>
             </Try>

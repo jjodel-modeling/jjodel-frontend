@@ -27,7 +27,6 @@ import ModellingIcon from "../forEndUser/ModellingIcon";
 import {FakeStateProps} from "../../joiner/types";
 import {toggleMetrics} from '../metrics/Metrics';
 import {icon} from '../../pages/components/icons/Icons';
-import { setProjectModified } from '../../common/libraries/projectModified';
 
 function ContextMenuComponent(props: AllProps) {
     const user = props.user;
@@ -187,7 +186,6 @@ function ContextMenuComponent(props: AllProps) {
         /* Delete */
         
         jsxList.push(<div onClick={() => { 
-            setProjectModified();
             close();
             console.log('delete ctxmenu', {data, node});
             if (ldata) ldata.delete();
@@ -234,7 +232,7 @@ function ContextMenuComponent(props: AllProps) {
 
 
         /* ADD VIEW */
-        jsxList.push(<div onClick={async () => {close(); addView(); setProjectModified();}} className={'col item'}>{icon['view']} Add View<div>
+        jsxList.push(<div onClick={async () => {close(); addView();}} className={'col item'}>{icon['view']} Add View<div>
             <i className='bi bi-alt' /> <i className='bi bi-command' /> A</div></div>);
     }
 

@@ -18,7 +18,8 @@ import {
     SetRootFieldAction,
     TRANSACTION,
     store,
-    U
+    U,
+    R
 } from '../../joiner';
 
 import {icon} from '../components/icons/Icons';
@@ -36,7 +37,7 @@ import DockManager from "../../../src/components/abstract/DockManager";
 import {Divisor, Item, Menu} from '../components/menu/Menu';
 
 import Collaborative from "../../components/collaborative/Collaborative";
-import { isProjectModified, setProjectModified, unsetProjectModified } from '../../common/libraries/projectModified';
+import { isProjectModified } from '../../common/libraries/projectModified';
 import { AboutModal } from './about/About';
 import { MetricsPanelManager } from '../../components/metrics/Metrics';
 import Api from '../../data/api';
@@ -140,14 +141,10 @@ type MenuEntry = {
 };
 
 function NavbarComponent(props: AllProps) {
-
-    const navigate = useNavigate();
-
-    const {version, metamodels, advanced, debug} = props;
+    const {version, metamodels, advanced, debug, project} = props;
     const [focussed, setFocussed] = useState('');
     const [clicked, setClicked] = useState('');
-
-    const project = props.project;
+    const navigate = useNavigate();
 
     const open = (url: string) => { window.open(url, '_blank'); }
 
@@ -159,14 +156,14 @@ function NavbarComponent(props: AllProps) {
 
             /* New Metamodel */
 
-            {name: 'New metamodel', icon: icon['new'], function: ()=>{createM2(project); setProjectModified();}, keystroke: [Key.alt, Key.cmd, 'M']},
+            {name: 'New metamodel', icon: icon['new'], function: () => createM2(project), keystroke: [Key.alt, Key.cmd, 'M']},
 
             /* New Model */
             {
                 name: 'New model',
                 icon: icon['new'],
                 subItems: project.metamodels.filter(m2=>!!m2).map((m2, i)=>({
-                    name: m2.name, function: () => { createM1(project, m2); setProjectModified(); }, keystroke: []
+                    name: m2.name, function: () => createM1(project, m2), keystroke: []
                 })),
                 disabled: project.metamodels.length == 0
             },
@@ -180,15 +177,14 @@ function NavbarComponent(props: AllProps) {
             {name: 'Close', icon: icon['close'], function: () => {
                 if (isProjectModified()) {
                     U.dialog('Close the project without saving?', 'close project', ()=>{
-                        unsetProjectModified();
-                        navigate('/allProjects');
+                        R.navigate('/allProjects');
                         Collaborative.client.off('pullAction');
                         Collaborative.client.disconnect();
                         SetRootFieldAction.new('collaborativeSession', false);
                         U.resetState();
                     });
                 } else {
-                    navigate('/allProjects');
+                    R.navigate('/allProjects');
                     Collaborative.client.off('pullAction');
                     Collaborative.client.disconnect();
                     SetRootFieldAction.new('collaborativeSession', false);
@@ -204,12 +200,10 @@ function NavbarComponent(props: AllProps) {
 
             {name: 'Save & Close', icon: icon['close'], function: async () => {
                 if (isProjectModified()) {
-                    unsetProjectModified();
                     await ProjectsApi.save(project);
                 }
 
-                unsetProjectModified();
-                navigate('/allProjects');
+                R.navigate('/allProjects');
                 Collaborative.client.off('pullAction');
                 Collaborative.client.disconnect();
                 SetRootFieldAction.new('collaborativeSession', false);
@@ -219,7 +213,6 @@ function NavbarComponent(props: AllProps) {
             /* Save */
 
             {name: 'Save', icon: icon['save'], function: async() => {
-                unsetProjectModified();
                 await ProjectsApi.save(project);
             }, keystroke: [Key.cmd, 'S']},
 
@@ -241,13 +234,13 @@ function NavbarComponent(props: AllProps) {
             /* Help */
 
             {name: 'Help', icon: icon['help'], subItems: [
-                {name: 'What\'s new', icon: icon['whats-new'], function: async() => {open("https://www.jjodel.io/whats-new/")}, keystroke: []},
+                {name: 'What\'s new', icon: icon['whats-new'], function: async() => {R.navigate("https://www.jjodel.io/whats-new/")}, keystroke: []},
                 {name: 'divisor', function: async() => {}, keystroke: []},
-                {name: 'Homepage', icon: icon['home'], function: async() => {document.location.href="https://www.jjodel.io/"}, keystroke: []},
-                {name: 'Getting started', icon: icon['getting-started'], function: async() => {document.location.href="https://www.jjodel.io/getting-started/"}, keystroke: []},
-                {name: 'User guide', icon: icon['manual'], function: async() => {document.location.href="https://www.jjodel.io/manual/"}, keystroke: []},
+                {name: 'Homepage', icon: icon['home'], function: async() => {R.navigate("https://www.jjodel.io/")}, keystroke: []},
+                {name: 'Getting started', icon: icon['getting-started'], function: async() => {R.navigate("https://www.jjodel.io/getting-started/")}, keystroke: []},
+                {name: 'User guide', icon: icon['manual'], function: async() => {R.navigate("https://www.jjodel.io/manual/")}, keystroke: []},
                 {name: 'divisor', function: async() => {}, keystroke: []},
-                {name: 'Legal terms', icon: icon['legal'], function: async() => {document.location.href="https://www.jjodel.io/terms-conditions-page/"}, keystroke: []}
+                {name: 'Legal terms', icon: icon['legal'], function: async() => {R.navigate("https://www.jjodel.io/terms-conditions-page/")}, keystroke: []}
             ],
             keystroke: []}
         ];
@@ -257,7 +250,7 @@ function NavbarComponent(props: AllProps) {
 
         {name: 'New project', icon: <i className="bi bi-plus-square"></i>, function:
             async()=>{
-                navigate('/allProjects');
+                R.navigate('/allProjects');
                 await ProjectsApi.create('public', undefined, undefined, undefined, props.user.projects);
                 /*
                 SetRootFieldAction.new('isLoading', true);
@@ -271,25 +264,25 @@ function NavbarComponent(props: AllProps) {
         {name: 'Import...', icon: <i className="bi bi-arrow-bar-left"></i>, function: ProjectsApi.import, keystroke: []},
         {name: 'divisor', function: () => {}, keystroke: []},
         {name: 'Help', icon: <i className="bi bi-question-square"></i>, subItems: [
-            {name: 'What\'s new', icon: <i className="bi bi-clock"></i>, function: () => {document.location.href="https://www.jjodel.io/whats-new/"}, keystroke: []},
+            {name: 'What\'s new', icon: <i className="bi bi-clock"></i>, function: () => {R.navigate("https://www.jjodel.io/whats-new/", navigate)}, keystroke: []},
             {name: 'divisor', function: () => {}, keystroke: []},
-            {name: 'Homepage', icon: <i className="bi bi-house"></i>, function: () => {document.location.href="https://www.jjodel.io/"}, keystroke: []},
-            {name: 'Getting started', icon: <i className="bi bi-airplane"></i>, function: () => {document.location.href="https://www.jjodel.io/getting-started/"}, keystroke: []},
-            {name: 'User guide', icon: <i className="bi bi-journals"></i>, function: () => {document.location.href="https://www.jjodel.io/manual/"}, keystroke: []},
+            {name: 'Homepage', icon: <i className="bi bi-house"></i>, function: () => {R.navigate("https://www.jjodel.io/", navigate)}, keystroke: []},
+            {name: 'Getting started', icon: <i className="bi bi-airplane"></i>, function: () => {R.navigate("https://www.jjodel.io/getting-started/", navigate)}, keystroke: []},
+            {name: 'User guide', icon: <i className="bi bi-journals"></i>, function: () => {R.navigate("https://www.jjodel.io/manual/", navigate)}, keystroke: []},
             {name: 'divisor', function: () => {}, keystroke: []},
-            {name: 'Legal terms', icon: <i className="bi bi-mortarboard"></i>, function: () => {document.location.href="https://www.jjodel.io/terms-conditions-page/"}, keystroke: []}
+            {name: 'Legal terms', icon: <i className="bi bi-mortarboard"></i>, function: () => {R.navigate("https://www.jjodel.io/terms-conditions-page/", navigate)}, keystroke: []}
         ],
         keystroke: []},
 
         {name: 'About jjodel', icon: <i className="bi bi-info-square"></i>, function: () => {}, keystroke: []},
         {name: 'divisor', function: () => {}, keystroke: []},
         {name: 'Logout', icon: <i className="bi bi-box-arrow-right"></i>, function: async() => {
-                navigate('/auth');
                 await AuthApi.logout();
+                R.navigate('/auth', true);
             }, keystroke: [Key.cmd, 'Q']}
     ];
 
-    /* Alfonso: this has to be fixed */ ??
+    /* Alfonso: this has to be fixed */
 
     let itemsToRegister: MenuEntry[] = [...dashboardItems2, ...projectItems2];
     Keystrokes.register('#root', Object.values(itemsToRegister));
@@ -372,7 +365,7 @@ function NavbarComponent(props: AllProps) {
             name: 'Model',
             icon: icon['model'],
             subItems: project.metamodels.filter(m2=>!!m2).map((m2, i)=>({
-                name: m2.name, function: () => { createM1(project, m2); setProjectModified(); }, keystroke: []
+                name: m2.name, function: () => createM1(project, m2), keystroke: []
             }))
         });
     } else {
@@ -399,14 +392,12 @@ function NavbarComponent(props: AllProps) {
                 {name: 'Settings', function: ()=> alert(), icon: icon['settings'], disabled: true}, // TO-DO
                 {name: 'divisor'},
                 {name: 'Logout', function: async() => {
-                    if (isProjectModified()) {U.dialog('You are about to log out without saving your project. Do you want to proceed?', 'logout', ()=>{
-                        navigate('/auth');
-                        unsetProjectModified();
+                    if (isProjectModified()) { U.dialog('You are about to log out without saving your project. Do you want to proceed?', 'logout', ()=>{
                         AuthApi.logout();
+                        R.navigate('/auth');
                     });} else {
-                        navigate('/auth');
-                        unsetProjectModified();
                         await AuthApi.logout();
+                        R.navigate('/auth');
                     }},
                     icon: icon['logout']}
         ]},
@@ -523,14 +514,14 @@ function NavbarComponent(props: AllProps) {
             {name: 'Settings', function: ()=> alert(), icon: icon['settings'], disabled: true}, // TO-DO
             {name: 'divisor'},
             {name: 'Logout', function: async() => {
-                if (isProjectModified()) {U.dialog('You are about to log out without saving your project. Do you want to proceed?', 'logout', ()=>{
-                    navigate('/auth');
-                    unsetProjectModified();
-                    AuthApi.logout();
-                });} else {
-                    navigate('/auth');
-                    unsetProjectModified();
+                if (isProjectModified()) {
+                    U.dialog('You are about to log out without saving your project. Do you want to proceed?', 'logout', async ()=>{
+                        await AuthApi.logout();
+                        R.navigate('/auth');
+                    });
+                } else {
                     await AuthApi.logout();
+                    R.navigate('/auth');
                 }},
                 icon: icon['logout']}
         ]},
@@ -545,7 +536,7 @@ function NavbarComponent(props: AllProps) {
             {name: 'New',function: () => {}, icon: icon['new'],
                 subItems: [
                     {name: 'Project', function: () => {}, icon: icon['project'], disabled: true},
-                    {name: 'Metamodel', icon: icon['metamodel'], function: ()=>{project && createM2(project); setProjectModified();}, keystroke: [Key.alt, Key.cmd, 'M']},
+                    {name: 'Metamodel', icon: icon['metamodel'], function: ()=>{ project && createM2(project); }, keystroke: [Key.alt, Key.cmd, 'M']},
                     newModel[0]
                 ]
             },
@@ -566,7 +557,6 @@ function NavbarComponent(props: AllProps) {
                     if (project) {
                         try {
                             await ProjectsApi.save(project);
-                            unsetProjectModified();
                         } catch (error: any) {
                             U.alert('e', 'Error while Saving Project', error.message);
                         }
@@ -578,22 +568,21 @@ function NavbarComponent(props: AllProps) {
 
             /* Close Project OK */
 
-            {name: 'Close Project',function: () => {
+            {name: 'Close Project',function: async() => {
                 if (isProjectModified()) {
-                    U.dialog('Close the project without saving?', 'close project', ()=>{
-                        unsetProjectModified();
-                        navigate('/allProjects');
+                    U.dialog('Close the project without saving?', 'close project', async()=>{
                         Collaborative.client.off('pullAction');
-                        Collaborative.client.disconnect();
+                        await Collaborative.client.disconnect();
                         SetRootFieldAction.new('collaborativeSession', false);
                         U.resetState();
+                        R.navigate('/allProjects', true);
                     });
                 } else {
-                    navigate('/allProjects');
                     Collaborative.client.off('pullAction');
-                    Collaborative.client.disconnect();
+                    await Collaborative.client.disconnect();
                     SetRootFieldAction.new('collaborativeSession', false);
                     U.resetState();
+                    R.navigate('/allProjects', true);
                 }
             }, icon: icon['close'], keystroke: [Key.cmd, 'W']},
 
@@ -768,29 +757,29 @@ function NavbarComponent(props: AllProps) {
         <div className='text-end nav-side'>
                 <div style={{float: 'right', left: '300px!important', marginTop: '2px'}}>
                     <Menu position={'left'}>
-                        <Item icon={icon['dashboard']} action={() => {
-                            navigate('/allProjects');
+                        <Item icon={icon['dashboard']} action={async() => {
                             Collaborative.client.off('pullAction');
-                            Collaborative.client.disconnect();
+                            await Collaborative.client.disconnect();
                             SetRootFieldAction.new('collaborativeSession', false);
                             U.resetState();
+                            R.navigate('/allProjects');
                         }}>Dashboard</Item>
                         <Divisor />
                         <Item icon={icon['profile']} action={()=> {
-                            navigate('/account');
+                            R.navigate('/account');
                             U.resetState();
                         }}>Profile</Item>
                         <Item icon={icon['settings']} action={(e)=> {alert('')}}>Settings</Item>
                         <Divisor />
-                        <Item icon={icon['logout']} action={async() => {
-                            if (isProjectModified()) {U.dialog('You are about to log out without saving your project. Do you want to proceed?', 'logout', ()=>{
-                                navigate('/auth');
-                                unsetProjectModified();
-                                AuthApi.logout();
-                            });} else {
-                                navigate('/auth');
-                                unsetProjectModified();
+                        <Item icon={icon['logout']} action={async () => {
+                            if (isProjectModified()) {
+                                U.dialog('You are about to log out without saving your project. Do you want to proceed?', 'logout', async ()=>{
+                                    await AuthApi.logout();
+                                    R.navigate('/auth');
+                                });
+                            } else {
                                 await AuthApi.logout();
+                                R.navigate('/auth');
                             }
                         }}>Logout</Item>
                     </Menu>

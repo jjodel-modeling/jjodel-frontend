@@ -66,7 +66,7 @@ export {getPath, TargetableProxyHandler, MyProxyHandler, MapProxyHandler, LogicC
 
 export {Uarr, DDate, ParseNumberOrBooleanOptions, myFileReader,
     Keystrokes, ShortAttribETypes, AttribETypes, FileReadTypeEnum, FocusHistoryEntry, SelectorOutput,
-    toShortEType, toLongEType, ShortAttribSuperTypes,
+    toShortEType, toLongEType, ShortAttribSuperTypes, R
     } from "../common/U";
 export {Uobj} from "../common/UObj";
 export {Log} from "../common/Log";

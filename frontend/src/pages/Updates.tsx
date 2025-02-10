@@ -1,4 +1,4 @@
-import {Dictionary, Try, windoww} from '../joiner';
+import {Dictionary, R, Try, windoww} from '../joiner';
 import {Dashboard} from './components';
 
 import {Cards, Card} from './components/cards/Cards';
@@ -156,7 +156,7 @@ function UpdatesPage(): JSX.Element {
             <div id={'updates-page'}>{cards}
                 <h2>Past versions
                     <select className={'ms-2'}
-                            onChange={(e) => windoww.location = (window.location.origin + e.target.value) as any}>
+                            onChange={(e) => R.navigate(e.target.value)}>
                         <option value='/jjodel/2.2' title={'13/nov/2024'}>2.2</option>
                         <option value='/jjodel/2.1' disabled>2.1</option>
                         <option value='/jjodel/2.0' disabled>2.0</option>
