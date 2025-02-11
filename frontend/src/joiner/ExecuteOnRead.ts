@@ -139,10 +139,11 @@ windoww.enumerators = {};
 (window as any).enumerators.EdgeGapMode = EdgeGapMode;
 (window as any).EdgeBendingMode = EdgeBendingMode;
 (window as any).enumerators.EdgeBendingMode = EdgeBendingMode;
-
+/*
 function afterStoreLoad() {
     stateInitializer();
 }
 
 // afterStoreLoad();
-//setTimeout( afterStoreLoad, 0);
+setTimeout( afterStoreLoad, 0);
+*/

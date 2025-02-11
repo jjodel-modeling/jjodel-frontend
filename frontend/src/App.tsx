@@ -50,8 +50,7 @@ function App(props: AllProps): JSX.Element {
     let [, forceUpdate] = useState(0);
     if (firstLoading) {
         firstLoading = false;
-        stateInitializer();
-        forceUpdate(1);
+        stateInitializer().then(()=>forceUpdate(1));
         return <Loader/>;
     }
     return(<>
