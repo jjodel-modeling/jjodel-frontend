@@ -2304,7 +2304,7 @@ export class LUser<Context extends LogicContext<DUser> = any, D extends DUser = 
     }
 
     protected get_projects(context: Context): this['projects'] {
-        return LProject.fromPointer(context.data.projects);
+        return (LProject.fromPointer(context.data.projects) as this['projects']).filter(p=>!!p);
     }
     protected set_projects(val: PackArr<this['projects']>, c: Context): boolean {
         let ptrs = Pointers.from(val)||[];

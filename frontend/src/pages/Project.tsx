@@ -58,7 +58,11 @@ function ProjectComponent(props: AllProps): JSX.Element {
     allViews = allViews.filter(v => v);
     const viewsDeDuplicator: Dictionary<Pointer<DViewElement>, LViewElement> = {};
     for (let v of allViews) viewsDeDuplicator[v.id] = v;
-    if(!user?.project) return (<div style={{margin: 'auto'}} onClick={(e)=> R.navigate('/allProjects')}>Project not found, click to go back</div>);
+    if (!user?.project) {
+        return (
+            <div style={{margin: 'auto'}} onClick={(e) => R.navigate('/allProjects')}>Project loading, click to go back</div>
+        );
+    }
 
     return (<>
         <Try>
