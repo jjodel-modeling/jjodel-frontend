@@ -107,6 +107,7 @@ export class R{
             if (path[0] !== '/') path = '/'+path;
             console.log('navigating: ', {path, url:window.location.origin + '/#' + path});
             window.location.href = window.location.origin + '/#' + path;
+            window.location.reload();
         }
         else refresh(path); // useNavigator()(path);
     }
