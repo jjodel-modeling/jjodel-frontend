@@ -4,10 +4,11 @@ import {
     GObject, DState,
     Log, U, RedoAction,
     statehistory,
-    UndoAction, store, DPointerTargetable, Pointer, LProject,
+    UndoAction, store, DPointerTargetable, Pointer, LProject, UserHistory,
 } from '../../joiner';
 import {connect} from "react-redux";
 import "./undoredo.scss"
+import {icon} from "../../pages/components/icons/Icons";
 
 interface SaveManagerProps {}
 
@@ -44,7 +45,16 @@ interface DispatchProps {
     // propsFromReduxActions: typeof funzioneTriggeraAzioneDaImportare;
 }
 
-type R = {str: string, fullstr: string, path:string[], fullpath:string[], val: string, fullvalue: string, pathlength?: number};
+type R = {
+    str: string,
+    fullstr: string,
+    path:string[],
+    fullpath:string[],
+    fullpath_str?:string, // fullpath.join('.') only saved temporarly in render phase
+    val: string,
+    fullvalue: string,
+    pathlength?: number
+};
 
 // private
 type AllProps = OwnProps & StateProps & DispatchProps;
@@ -134,11 +144,14 @@ export class SaveManagerComponent extends PureComponent<AllProps, ThisState>{
             let filterrow = (e:R)=> {
                 console.log('filterrow', {debug, e});
                 return debug || !excludedPaths[key] && !e.fullpath.includes("clonedCounter")
+                    && !e.fullpath.includes("timestamp")
+                    && !e.fullpath.includes("timestampdiff")
+                    && !e.fullpath.includes("pointedBy")
                     && !e.fullpath.includes("pointedBy")
                     && !e.fullpath.includes('__jjObjDiffIsArr');
             }
             U.ObjectToAssignementStrings(delta, 10, 6, 20, "…", out, true, filterrow);
-            if (otherDelta) U.ObjectToAssignementStrings(otherDelta, 10, 6, 20, "…", out_otherdelta, true);
+            if (otherDelta) U.ObjectToAssignementStrings(otherDelta, 10, 6, 20, "…", out_otherdelta, true, filterrow);
             // if (!index) console.log('debug undoredo', {out, delta, arr});
             // if out.best is undef, then get most recent titles until you find a delta with a title or the current(state)
             let latestTitleDelta = getLatestDelta(titleindex, ['action_title'], (key === 'undo' ? -1 : +1));
@@ -161,23 +174,50 @@ export class SaveManagerComponent extends PureComponent<AllProps, ThisState>{
             //this.improveText(out.best, s);
             let other = out.slice(0, this.props.maxDetailSize); //.map(e=>this.improveText(e));
             let other2 = out_otherdelta.slice(0, this.props.maxDetailSize); //.map(e=>this.improveText(e));
-            return <li onClick={() => ((this as GObject)["do_" + key](index))} className="hoverable" key={index} tabIndex={0}
-                       style={{overflow: "visible", height: "24px"}}>
-                <div className={"preview"}>{out.best.str}</div>
-                <div className={"content inline"}>{out.best.fullstr}</div>
-                <div className={"content detail-list"}>{
-                    other.map((row, ii) => {
-                        let row2 = other2[ii];
-                        return <div className={'detail-entry hoverable'}>
-                            <span className='preview inline'>{row.fullpath.join(".") + " = " + row.fullvalue}</span>
-                            <span className='content inline'>r2:@@@{row2 && (row2.fullpath.join(".") + " = " + row2.fullvalue)}</span>
-                        </div>
-                    })}
-                    {out.length !== other.length ? <div className={'detail-entry'}>...</div> : null}
-                </div>
+
+            let newstyle: boolean = true as any;
+
+            let entry = (): JSX.Element => {
+                return (
+                    <li onClick={() => ((this as GObject)["do_" + key](index))} className="hoverable" key={index} tabIndex={0}>
+                        <label className="highlight undefined">
+                            <span><i className="bi bi-app hidden"/> i</span>
+                        </label>
+                    </li>)
+            }
+            // if (newstyle) return entry();
+
+
+            for (let e of other2){ e.fullpath_str = e.fullpath.join("")}
+            for (let e of other){ e.fullpath_str = e.fullpath.join("")}
+            return <li onClick={() => ((this as GObject)["do_" + key](index))} className="" key={index}
+                       tabIndex={0}
+                       style={{/*overflow: "visible", height: "24px"*/}}>
+                <label className="highlight undefined hoverable">
+                    <div className={"preview"}>{out.best.str}</div>
+                    <div className={"content inline"}>{out.best.fullstr}</div>
+                    <div className={"content right detail-list"}>
+                        <ul className="context-menu right">{
+                            other.map((row, ii) => {
+                                let row2 = other2.filter(e=>e.fullpath_str === row.fullpath_str)[0];//other2[ii];
+                                return <li className={'detail-entry hoverable'} onClick={(e=> {
+                                    e.stopPropagation()
+                                })}>
+                                    <label className={`highlight disabled hoverable`}>
+                                    <span
+                                        className='preview inline'>{row.fullpath_str + " = " + row.fullvalue}</span>
+                                        <span className='content inline'>{row2 && (row2.fullpath_str + " = " + row2.fullvalue)}</span>
+                                    </label>
+                                </li>
+                            })}
+                            {out.length !== other.length ? <div className={'detail-entry'}>...</div> : null}
+                        </ul>
+                    </div>
+                </label>
             </li>
         });
-        let jsx = <>{list}</>;
+        let jsx =
+            <>{list}</>;
         let obj: GObject = {};
         obj[key] = {...(this.state as GObject)[key], hover: true, jsx};
         // {undo: {...this.state.undo, hover: true, jsx}}
@@ -221,13 +261,38 @@ export class SaveManagerComponent extends PureComponent<AllProps, ThisState>{
         let user = this.state.user;
         this.undoredolistoutdated = true; // if render is called it means redux state props he's watching (redux-state) changed, so the preview list in component-state is outdated.
         // console.log("undoredomanager", {thiss:this, undo:this.props.undo, props: this.props, state:this.state});
-        let history = this.get_history(user);
-        let undo = history?.undoable || [];
-        let redo = history?.redoable || [];
-        return(<>
+        let history: UserHistory = this.get_history(user);
+        let undo: GObject<"delta">[] = history?.undoable || [];
+        let redo: GObject<"delta">[] = history?.redoable || [];
+
+        let contextmenustyle =(undoStr: 'Undo'|'Redo', undoarr: GObject<"delta">[]): JSX.Element => {
+            return (
+            <li className={"undoredo hoverable " +(!undoarr.length?'disabled':'')} tabIndex={0} onMouseEnter={this.undoenter} onMouseLeave={this.undoleave}>
+                <label className="highlight undefined" onClick={(e) => {
+                    undoarr === undo ? this.do_undo(0) : this.do_redo(0)
+                }}>
+                    <span>{icon[undoStr.toLowerCase()]} {undoStr+' '+((undoarr).length||'')}</span>
+                    { undoarr.length ? <i className="bi bi-chevron-right icon-expand-submenu"/> : null}
+                </label>
+                <div className="content right">
+                    {undoarr.length ? <ul className="context-menu right">{this.state.undo.jsx}</ul> : null}
+                </div>
+            </li>)
+        }
+
+        let testnew: boolean = true as any;
+        if (testnew) return <>
+            {contextmenustyle('Undo', undo)}
+            {contextmenustyle('Redo', redo)}
+        </>
+
+        return (<>
             <div className='undoredo'>
-                <span className={"hoverable"} style={{position: "relative", background: "white"}} onMouseEnter={this.undoenter} onMouseLeave={this.undoleave}>
-                    <button className={'item border round ms-1'} onClick={(e)=> { this.do_undo(0) }}>Undo ({undo.length})</button>
+                <span className={"hoverable"} style={{position: "relative", background: "white"}}
+                      onMouseEnter={this.undoenter} onMouseLeave={this.undoleave}>
+                    <button className={'item border round ms-1'} onClick={(e) => {
+                        this.do_undo(0)
+                    }}>Undo ({undo.length})</button>
                     {undo.length ?
                         <ul style={{background: "inherit", width: "max-content", zIndex:10000}} className={"content"}>
                             {this.state.undo.jsx}

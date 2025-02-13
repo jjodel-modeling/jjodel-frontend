@@ -290,7 +290,7 @@
 
   & label.disabled:hover {
     background-color: transparent!important;
-    cursor: default;
+    cursor: not-allowed;
   }
 
   & label:hover {

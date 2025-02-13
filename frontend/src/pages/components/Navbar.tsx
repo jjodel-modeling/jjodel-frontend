@@ -79,8 +79,17 @@ function getKeyStrokes(keys?: string[]){
     </div>
 }
 
+let globalProject: LProject|undefined = undefined as any;
 function makeEntry(i: MenuEntry) {
+    let isUndo = (i.name === "Undo" || i.name === "Redo");
+    console.log('makeentry', {i, n:i.name});
+    // if (true as any) return <li >{i.name}</li>;
 
+    if (i.name === "Redo") { return null; }
+    if (i.name === "Undo") {
+        if (!globalProject) return null;
+        return <Undoredocomponent project={globalProject} />
+    }
     if (i.name === "divisor") {
         return (
             <li className='divisor'>
@@ -91,8 +100,10 @@ function makeEntry(i: MenuEntry) {
         if (i.subItems && i.subItems.length === 0) return undefined;
         let slength = i.subItems ? i.subItems.length : 0;
 
+        let hasSubItems = (!i.disabled && slength > 0) || isUndo;
+
         return (
-            <li className={slength > 0 ? "hoverable" : ""} tabIndex={0} onClick={()=>i.function?.()}>
+            <li className={hasSubItems ? "hoverable" : ""} tabIndex={0} onClick={()=>i.function?.()}>
                 <label className={`highlight ${i.disabled && 'disabled'}`}>
                     {i.icon ?
                         <span>{i.icon} {i.name}</span> :
@@ -103,10 +114,13 @@ function makeEntry(i: MenuEntry) {
                         getKeyStrokes(i.keystroke)
                     }
                 </label>
-            {!i.disabled && slength > 0 &&
+            {hasSubItems &&
                 <div className='content right'>
                     <ul className='context-menu right'>
-                        {i.subItems!.map(si => makeEntry(si))}
+                        {
+                            isUndo && <div>undosu_bitems</div>
+                        }
+                        {i.subItems && i.subItems.map(si => makeEntry(si))}
                     </ul>
                 </div>
             }
@@ -145,6 +159,7 @@ function NavbarComponent(props: AllProps) {
     const [focussed, setFocussed] = useState('');
     const [clicked, setClicked] = useState('');
     const navigate = useNavigate();
+    globalProject = project;
 
     const open = (url: string) => { window.open(url, '_blank'); }
 
@@ -605,7 +620,7 @@ function NavbarComponent(props: AllProps) {
         {name: 'Edit',
             subItems: [
                 {name: 'Undo',function: () => {alert('undo')},icon: icon['undo'], keystroke: [Key.cmd, 'Z']},
-                {name: 'Redo',function: () => {alert('redo')}, icon: icon['redo'], keystroke: [Key.shift, Key.cmd, 'Z']},
+                {name: 'Redo',function: () => {}, icon: icon['redo'], keystroke: [Key.cmd, 'Y'], subItems:[{name:"i"}]},
                 /*
                 {name: 'Undo',function:()=>{undo(1)}, disabled:disabledUndo, icon: icon['undo'],
                     keystroke: [Key.cmd, 'Z'], subItems:hoverUndo},
@@ -696,13 +711,11 @@ function NavbarComponent(props: AllProps) {
 
         return(<div className='nav-hamburger hoverable inline' tabIndex={0} >
             {props.title && <span className={'menu-title'}>{props.title}</span>}
-
-                    <div className={'content context-menu'}>
-                        <ul>
-                            {props.items && props.items.map(i => makeEntry(i))}
-                        </ul>
-                    </div>
-
+            <div className={'content context-menu'}>
+                <ul>
+                    {props.items && props.items.map(i => makeEntry(i))}
+                </ul>
+            </div>
         </div>
     )}
 
@@ -805,7 +818,7 @@ function NavbarComponent(props: AllProps) {
             {project ?
                 <>
                     <MainMenu items={projectItems}/>
-                    <Undoredocomponent project={project}/>
+                    {/*<Undoredocomponent project={project}/>*/}
                 </>
                 :
                 <MainMenu items={dashboardItems} />
