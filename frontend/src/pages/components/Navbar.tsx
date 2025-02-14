@@ -606,6 +606,12 @@ function NavbarComponent(props: AllProps) {
             subItems: [
                 {name: 'Undo',function: () => {alert('undo')},icon: icon['undo'], keystroke: [Key.cmd, 'Z']},
                 {name: 'Redo',function: () => {alert('redo')}, icon: icon['redo'], keystroke: [Key.shift, Key.cmd, 'Z']},
+                /*
+                {name: 'Undo',function:()=>{undo(1)}, disabled:disabledUndo, icon: icon['undo'],
+                    keystroke: [Key.cmd, 'Z'], subItems:hoverUndo},
+                {name: 'Redo',function:()=>{redo(1)}, disabled:disabledRedo, icon: icon['redo'],
+                    keystroke: [Key.shift, Key.cmd, 'Z'], subItems:hoverRedo},
+                */
                 {name: 'divisor'},
                 {name: 'Add to Favorites', function: () => {}, icon: icon['favorite']}, // vedere in leftbar // TODO
                 {name: 'Copy Public Link', function: () =>{}, icon: icon['link']} // vedere in scheda progetto // TODO

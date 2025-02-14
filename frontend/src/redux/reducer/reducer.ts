@@ -19,7 +19,7 @@ import {
     Uobj, LocalStorage,
     LProject,
     DProject,
-    LUser,
+    LUser, UserHistory,
 } from '../../joiner';
 import {
     Action,
@@ -975,7 +975,8 @@ export function _reducer/*<S extends StateNoFunc, A extends Action>*/(oldState: 
             let debug = Uobj.applyObjectDelta(ret, delta, false, oldState);
             delta.timestamp = ret.timestamp;
             delta.timestampdiff = ret.timestampdiff = ret.timestamp - (oldState?.timestamp || 0);
-            let pastDelta = statehistory.all.undoable[statehistory.all.undoable.length-1];
+            if (!statehistory[action.sender]) statehistory[action.sender] = new UserHistory();
+            let pastDelta = statehistory[action.sender].undoable[statehistory.all.undoable.length-1];
             const allowMerge = true; // switch for debugging
             let isRelevantChange = isRelevantChangeCheck(delta as GObject<DState>, pastDelta as GObject<DState>);
             // merge if: there is a past delta, and the delta doesn't pass the filter to exist individually
@@ -1197,6 +1198,7 @@ export async function stateInitializer() {
         await ProjectsApi.getAll();
     } catch (error) {
         U.alert('e','Failed to fetch projects','');
+        console.error(error);
         DUser.current = '';
     }
     setDocumentEvents();

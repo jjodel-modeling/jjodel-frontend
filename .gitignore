@@ -26,11 +26,18 @@ sandbox/sandbox.tsx
 .idea/misc.xml
 .idea/jodel-react.iml
 sandbox.tsx
-/frontend/.idea
-/frontend/node_modules
-/frontend/.idea
-/frontend/node_modules
 /gitignoreresources
-/frontend/node_modules
+
+
+# frontend
+/frontend/sandbox.tsx
 /frontend/.idea
+/frontend/.idea/
+/frontend/.idea/*
+/frontend/node_modules
+/frontend/node_modules/
+/frontend/node_modules/*
 /frontend/build
+/frontend/build/
+/frontend/build/*
+

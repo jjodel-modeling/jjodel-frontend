@@ -446,7 +446,7 @@ function PaletteDataComponent(props: AllProps) {
                                                                         </h6>
 
                                                                         <div className={"roww"}>
-                                                                            {[6/12, 5/12, 4/12, 3/12, 2/12, 1/12].map(n=>color.clone().darken(n*100))
+                                                                            {[6/12, 5/12, 4/12, 3/12, 2/12, 1/12].reverse().map(n=>color.clone().darken(n*100))
                                                                                 .map((c,ii) => <button style={style(c)} className="btn color-suggestion"
                                                                                                        onClick={(e)=>{addColor(prefix, c, i)}}><i style={style(c)} className="bi bi-plus-lg"></i></button>)}
                                                                         </div>

@@ -128,14 +128,12 @@ export class TabHeader extends React.Component<TabHeaderProps, TabHeaderState>{
             {/*<i className={"pin-button bi bi-pin-angle" + (this.state.fixed ? '-fill' : '')} onClick={()=>this.toggleFixed()}/>*/}
             <i className={"pin-button bi bi-arrow-down"} onClick={()=>this.unpin()}/>
         </div>;
-        console.log("tabheader portal pre pin", {pinned});
         if (!pinned) {
             let selectTab = () => PinnableDock.instance.setAsActiveTab(props.tid);
             return <div className={"active-on-mouseenter not-pinned"} onMouseDown={selectTab} /*onMouseEnter={selectTab}*/>{content}</div>;
         }
         const strip: PinnableStrip = (PinnableStrip as GObject)[pinned];
         const html: Element|null = tabdict_title[props.tid + '_pinned'];
-        console.log("tabheader portal", {html, content, tabdict:tabdict_title, td:{...tabdict_title}});
         if (!html) { // unpinned tab
             Log.exDevv("cannot find html", {html, pinned, 'this': this});
             let selectTab = () => PinnableDock.instance.setAsActiveTab(props.tid);

@@ -60,7 +60,7 @@ import {
     RuntimeAccessibleClass, Septagon, SetFieldAction,
     SetRootFieldAction,
     ShortAttribETypes, SimpleStar, Square, Star,
-    store, TRANSACTION, Trapezoid, Triangle, U, Vertex, VoidVertex,
+    store, TRANSACTION, Trapezoid, Triangle, U, UserHistory, Vertex, VoidVertex,
 } from '../joiner';
 import {DV} from "../common/DV";
 //import {Selected} from "../joiner/types";
@@ -76,14 +76,15 @@ console.warn('ts loading store');
 // @RuntimeAccessible
 // NB: le voci che iniziano con '_' sono personali e non condivise
 
+
 // export const statehistory_obsoleteidea: {past: IStore[], current: IStore, future: IStore[]} = { past:[], current: null, future:[] } as any;
 export const statehistory: {
-        [userpointer:Pointer<DUser>]: {undoable:GObject<"delta">[], redoable: GObject<"delta">[]},
-        all: {undoable:GObject<"delta">[], redoable: GObject<"delta">[]}
+    [userpointer:Pointer<DUser>]: UserHistory,
+    all: UserHistory
 } & {
-    all: {undoable:GObject<"delta">[], redoable: GObject<"delta">[]}
+    all: UserHistory,
     globalcanundostate: boolean // set to true at first user click }
-} = {globalcanundostate: false, all:{undoable:[], redoable:[]}} as any;
+} = {globalcanundostate: false, all: new UserHistory()} as any;
 (window as any).statehistory = statehistory;
 
 @RuntimeAccessible('DState')
@@ -226,7 +227,7 @@ export class DState extends DPointerTargetable{
         }
     }
     static init(store?: DState): void {
-        if (windoww.location.pathname === '/project') this.init_editor(store);
+        if (windoww.location.hash.indexOf('#/project') === 0) this.init_editor(store);
         else this.init_dashboard(store);
     }
     static init_dashboard(store?: DState): void {

@@ -208,7 +208,7 @@ windoww.Person = Persona;
 windoww.Company = Company;
 windoww.oclEngine = oclEngine;
 
-console.log('tests:', '\n' +
+if (false as any) console.log('tests:', '\n' +
     'oclEngine.addOclExpression(`\n' +
     '    -- No one should work that long...\n' +
     '    context Company inv:\n' +

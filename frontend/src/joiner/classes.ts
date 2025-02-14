@@ -513,6 +513,13 @@ export enum EdgeHead {
 }
 
 
+@RuntimeAccessible('UserHistory')
+export class UserHistory{
+    static cnamne: string = 'UserHistory';
+    constructor(public undoable:GObject<"delta">[] = [], public redoable: GObject<"delta">[] = []){
+
+    }
+}
 
 let canFireActions: boolean = true;
 @RuntimeAccessible('Constructors')
@@ -766,7 +773,7 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         _this.newsletter = newsletter;
         _this.email = email;
         _this.token = token;
-        statehistory[_this.id] = {undoable:[], redoable:[]};
+        // statehistory[_this.id] = new UserHistory();
         // todo: make it able to combine last 2 changes with a keystroke.
         //  reapeat N times to combine N actions.
         //  let it "redo" multiple times, it's like recording a macro.
@@ -2176,7 +2183,7 @@ export class DUser extends DPointerTargetable {
         if (user) {
             DUser.new(user.name, user.surname, user.nickname, user.affiliation, user.country, user.newsletter, user.email, user.token, user.id);
             DUser.current = user.id;
-            statehistory[user.id] = {redoable: [], undoable: []};
+            statehistory[user.id] = new UserHistory();
         } else DUser.current = '';
     }*/
 
