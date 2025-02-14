@@ -1,11 +1,28 @@
-import {ReactElement, ReactNode} from "react";
+import { TbHexagonLetterJ as Logo1} from "react-icons/tb";
+import { IoLogoWebComponent as Logo2} from "react-icons/io5";
+import {
+    TbSquareRoundedLetterM,
+    TbSquareRoundedLetterMFilled,
+    TbSquareRoundedLetterV,
+    TbSquareRoundedLetterVFilled,
+    TbSquareRoundedLetterE
+} from "react-icons/tb";
 
-export function Logo(p:any): JSX.Element {
-    return <>LogoToFix</>;
+import { int } from "../joiner/types";
+
+type LogoProps = {
+    style?: any;
+    className?: any;
 }
-export function MetamodelIcon(p:any): JSX.Element {
-    return <>M2_Ico</>;
+
+export const Logo = (props: LogoProps) => {
+    return (<Logo1 style={props.style && props.style} className={`logo ${props.className && props.className}`} />);
 }
-export function ModelIcon(p:any): JSX.Element {
-    return <>M1_Ico</>;
+
+export const MetamodelIcon = (props: LogoProps) => {
+    return (<TbSquareRoundedLetterMFilled style={props.style && props.style} className={`logo ${props.className && props.className}`} />);
+}
+
+export const ModelIcon = (props: LogoProps) => {
+    return (<TbSquareRoundedLetterM style={props.style && props.style} className={`logo ${props.className && props.className}`} />);
 }
