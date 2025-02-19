@@ -42,3 +42,5 @@ sandbox.tsx
 /frontend/build/*
 
 /frontend/node_modules/.cache
+/database
+/frontend/build

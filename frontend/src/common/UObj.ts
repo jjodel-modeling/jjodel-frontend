@@ -65,7 +65,6 @@ export class Uobj {
             return {...old}; // destructure because i need to remove prototype
         }
         let diff = Uobj.objdiff(old, neww, includeProto); // todo: optimize this, remove the 3 loops below and add those directly in Uobj.objdiff(old, neww, ret); writing inside the obj in third parameter
-        console.log('objdiff', {diff, old, neww})
         let isArr = false;
         let to = typeof old;
         let tn = typeof old;
@@ -101,7 +100,7 @@ export class Uobj {
         for (let key in diff.removed) {
             ///if (!includeProto && !diff.removed.hasOwnProperty(key)) continue;
             if (ret[removedprefix + key] === undefined) {
-                console.log('undef empty probl<em', {r:diff.removed, val:ret[removedprefix + key], pkey:removedprefix + key, key, ret, old, neww})
+                //console.log('undef empty probl<em', {r:diff.removed, val:ret[removedprefix + key], pkey:removedprefix + key, key, ret, old, neww})
             }
             if (key in neww) ret[removedprefix + key] = undefined;
             else ret[removedprefix + key] = '__jjObjDiffEmptyElem';

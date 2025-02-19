@@ -13,6 +13,6 @@ export const unsetProjectModified = function(nope: 'nope') {
 }*/
 
 export const isProjectModified = function() {
-    return U.userHasInteracted;
+    return U.isProjectModified;
     // return store.getState().idlookup.clonedCounter !==
 }

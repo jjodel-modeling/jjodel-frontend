@@ -11,6 +11,7 @@ import {PinnableDock, TabContent, TabHeader} from '../dock/MyRcDock';
 import ModelsSummaryTab from "./tabs/ModelsSummaryTab";
 import BrokerEditor from "../editors/Broker";
 import {PermissionModelTab} from "../editors/PermissionModelTab";
+import {MTM} from "../editors/MTM";
 import { isProjectModified } from '../../common/libraries/projectModified';
 import { Logo } from '../../components/logo';
 //import MqttEditor from "../rightbar/mqtt/MqttEditor";
@@ -62,34 +63,27 @@ function DockComponent(props: AllProps) {
     const console = {id: id(), title: <TabHeader tid={tid()}>Console</TabHeader>, group: 'editors', closable: false, content: <TabContent tid={tid()}><Console /></TabContent>};
     const logger = {id: id(), title: <TabHeader tid={tid()}>Logger</TabHeader>, group: 'editors', closable: false, content: <TabContent tid={tid()}><Logger/></TabContent>};
     const permissions = {id: id(), title: <TabHeader tid={tid()}>Permissions</TabHeader>, group: 'editors', closable: false, content: <TabContent tid={tid()}><PermissionModelTab/></TabContent>};
+    const mtm = {id: id(), title: <TabHeader tid={tid()}>M→T→M</TabHeader>, group: 'editors', closable: false, content: <TabContent tid={tid()}><MTM/></TabContent>};
 
     const layout: LayoutData = {dockbox: {mode: 'horizontal', children: []}};
     layout.dockbox.children.push({tabs: [ModelsSummary]});
-    const tabs2 = [
-        structure,
-        // metadata,
-        tree,
-        views,
-        // mqtt,
-        // broker,
-        node,
-        console,
-        logger,
-    ];
+
     const tabs = [];
     tabs.push(structure);
     tabs.push(tree);
     tabs.push(views);
-    if (advanced) {tabs.push(broker)};
+    if (advanced) tabs.push(metadata);
+    if (advanced) tabs.push(broker);
     tabs.push(node);
     tabs.push(console);
+    if (advanced) tabs.push(mtm);
     if (advanced) tabs.push(logger);
 
     if (user?.project?.type === 'collaborative') tabs.push(collaborative);
     if (false && user?.project?.type === 'collaborative') tabs.push(permissions);
     layout.dockbox.children.push({tabs});
 
-    return (<PinnableDock ref={dock => DockManager.dock = dock} defaultLayout={layout} groups={groups} />);
+    return (<PinnableDock key={''+advanced} ref={dock => DockManager.dock = dock} defaultLayout={layout} groups={groups} />);
 }
 interface OwnProps {}
 interface StateProps {

@@ -334,7 +334,7 @@ function CompositeActionReducer(oldState: DState, actionBatch: CompositeAction):
         const prevAction: ParsedAction = actions[i-1];
         const action: ParsedAction = actions[i];
         const actiontype = action.type.indexOf('@@') === 0 ? 'redux' : action.type;
-        console.log('executing action:', {a:action, t:actiontype, field: action.field, v:action.value}); //, count: ++action.executionCount});
+        // console.log('executing action:', {a:action, t:actiontype, field: action.field, v:action.value}); //, count: ++action.executionCount});
 
         switch (actiontype) {
             /*
@@ -406,7 +406,8 @@ ret .b = 3
 // then add to it: content of props, constants, usageDeclarations
 
 export function reducer(oldState: DState = initialState, action: Action): DState {
-    if (!windoww.actions) windoww.jjactions = [];
+    if (U.navigating) return oldState;
+    if (!windoww.jjactions) windoww.jjactions = [];
     windoww.jjactions.push(action);
     try{ return unsafereducer(oldState, action); }
     catch(e) {
@@ -570,7 +571,6 @@ function unsafereducer(oldState: DState = initialState, action: Action): DState 
         let paramStr = '{'+Object.keys(allContextKeys).join(',')+'}';
         console.log('labels parse', { allContextKeys, ud:tv.UDList, c:tv.constantsList });
         const body: string =  'return (' + val + ')';
-        // if (vid.includes('Model')) console.log("modelparse, laels", {paramStr, body});
         console.log('labels parse', {vid: ptr, paramStr, body});
         try {
             if (isNode) {
@@ -712,7 +712,7 @@ function unsafereducer(oldState: DState = initialState, action: Action): DState 
         let allContextKeys: Dictionary = {...contextFixedKeys};
         for (let k of tv.constantsList) if (!allContextKeys[k]) allContextKeys[k] = true;
         let paramStr = '{'+Object.keys(allContextKeys).join(',')+'}, ret';
-        if (vid.includes('Model')) console.log("modelparse, ud", {paramStr, udstr:dv.usageDeclarations, udlist:transientProperties.view[vid].UDList});
+
         try {
             tv.UDFunction = new Function(paramStr, 'return ('+dv.usageDeclarations+')(ret)') as (...a:any)=>any;
         } catch (e:any) {
@@ -763,7 +763,6 @@ function unsafereducer(oldState: DState = initialState, action: Action): DState 
                 let paramStr = '{'+Object.keys(allContextKeys).join(',')+'}, ..._params';
                 // dv.events[key] = (...params)=> code
                 const body: string = 'return (' +dv.events[key]+')(..._params)';
-                // if (vid.includes('Model')) console.log("modelparse, jsx", {paramStr, body});
                 try {
                     tv.events[key] = new Function(paramStr, body) as ((...a:any[])=>any);
                     // tv.events_raw[key] = new Function(paramStr, body) as ((...a:any)=>any);
@@ -825,7 +824,6 @@ function unsafereducer(oldState: DState = initialState, action: Action): DState 
         let paramStr = '{'+Object.keys(allContextKeys).join(',')+'}';
 
         const body: string =  'return (' + UX.parseAndInject(DSL.parser(dv.jsxString), dv) + ')';
-        // if (vid.includes('Model')) console.log("modelparse, jsx", {paramStr, body});
         try {
             transientProperties.view[vid].JSXFunction = new Function(paramStr, body) as ((...a: any) => any);
         }
@@ -860,8 +858,7 @@ function unsafereducer(oldState: DState = initialState, action: Action): DState 
             for (let k of transientProperties.view[vid].constantsList) if (!allContextKeys[k]) allContextKeys[k] = true;
             for (let k of transientProperties.view[vid].UDList) if (!allContextKeys[k]) allContextKeys[k] = true;
             let paramStr = '{'+Object.keys(allContextKeys).join(',')+'}';
-            console.log('measurable parse '+key, {allContextKeys, ud:transientProperties.view[vid].UDList, c:transientProperties.view[vid].constantsList });
-            console.log('measurable parse '+key, {vid, paramStr, body:str});
+            // console.log('measurable parse '+key, {allContextKeys, ud:transientProperties.view[vid].UDList, c:transientProperties.view[vid].constantsList });
             try {
                 (transientProperties.view[vid] as any)[key] = new Function(paramStr, str);
             }
@@ -947,14 +944,12 @@ export function _reducer/*<S extends StateNoFunc, A extends Action>*/(oldState: 
             let ret = doreducer(oldState, action);
             if (ret === oldState) return ret;
             ret.timestamp = Date.now();
-            console.log('00 UNset action descriptor in state', {action});
             ret.action_title = '';
             ret.action_description = '';
             // undo-redo description
             if (action.className === 'CompositeAction') {
                 let desc = (action as CompositeAction).descriptor;
                 if (desc) {
-                    console.log('set action descriptor in state', {desc, action, t: desc.path, oldt: ret.action_title});
                     ret.action_title = desc.path||'';
                     let valchange: string;
                     if (desc.oldval !== undefined && desc.newval!== undefined) valchange = ': ' + desc.oldval + ' -> ' + desc.newval;
@@ -963,7 +958,6 @@ export function _reducer/*<S extends StateNoFunc, A extends Action>*/(oldState: 
                     ret.action_description = (desc.desc || '') + valchange;
                 }
                 else {
-                    console.log('11 UNset action descriptor in state', {action});
                     ret.action_title = '';
                     ret.action_description = '';
                 }
@@ -1192,13 +1186,19 @@ export async function stateInitializer() {
     windoww.defaultContext = {$: windoww.$, getPath, React: React, Selectors, ...RuntimeAccessibleClass.getAllClassesDictionary(), ...windoww.Components};
 
     DState.init();
-    let duser = DUser.offline(); // if it's online mode this is a no-op and user should be already loaded
-    if (duser) DUser.current = duser.id;
+    // let duser = DUser.offline(); // if it's online mode this is a no-op and user should be already loaded
+    let duser = DUser.load();
+    if (!duser?.id) {
+        DUser.current = '';
+        console.warn('user not logged, redirecting to #/auth');
+        return;
+    }
+    DUser.current = duser.id;
     try {
         await ProjectsApi.getAll();
     } catch (error) {
         U.alert('e','Failed to fetch projects','');
-        console.error(error);
+        console.error('Failed to fetch projects', {error, user:DUser.current});
         DUser.current = '';
     }
     setDocumentEvents();

@@ -2152,7 +2152,7 @@ let bb2 = fffff(a);
 @Leaf
 @RuntimeAccessible('DUser')
 export class DUser extends DPointerTargetable {
-    public static offlineMode: boolean = !!localStorage.getItem("offlineMode");
+    //public static offlineMode: boolean = !!localStorage.getItem("offlineMode");
     public static isStateMachine = false;
     // static current: Pointer<DUser> = 'Pointer_AnonymousUser';
     static current: Pointer<DUser> = undefined as any;
@@ -2187,21 +2187,64 @@ export class DUser extends DPointerTargetable {
         } else DUser.current = '';
     }*/
 
-    static offline(): DUser {
-        let d: DUser = D.from(DUser.current);
+    static offline(allowOffline:boolean=true, allowOnline: boolean = false): DUser | null {
         let ptr: Pointer<DUser> = 'Pointer_OfflineUser';
-        if (d) return d;
-        // if (d?.id === ptr) return d;
+        let isOffline = U.isOffline();
+        if (!isOffline) allowOffline = false;
+        let isValid = (d: DUser)=>{
+            if (!d) return false;
+            let savedUserIsOffline = d.id === ptr;
+            if (savedUserIsOffline){
+                if (!allowOffline) return false;
+            } else if (!allowOnline) return false;
+            return true;
+        }
+
+        let d: DUser = D.from(DUser.current);
+        console.log('User.load 0 D.from', {d, cu:DUser.current, isOffline, '+':{allowOffline, allowOnline}})
+        if (d && isValid(d)) return d;
         let state = store.getState();
-        if (state && state.idlookup[ptr]) return state.idlookup[ptr] as DUser;
+        let timer: any = -1;
+        let saveToState = ()=>{
+            state = store.getState();
+            console.log('User.load interval', {state, d, cu:DUser.current, isOffline, '+':{allowOffline, allowOnline}})
+            if (!state) return;
+            state.idlookup[d.id] = d;
+            clearInterval(timer);
+        }
+        console.log('User.load 1 check state', {d, cu:DUser.current, isOffline, '+':{allowOffline, allowOnline}})
+
+        if (state){
+            d = state.idlookup[ptr] as DUser;
+            if (d && isValid(d)) return d;
+        }
+        console.log('User.load 2 check store', {d, cu:DUser.current, isOffline, '+':{allowOffline, allowOnline}})
+
         d = Storage.read<DUser>('user') as DUser;
-        if (d) {
-            if (state?.idlookup) state.idlookup[ptr] = d;
+        if (d && isValid(d)) {
+            if (state?.idlookup) saveToState(); //state.idlookup[d.id] = d;
+            else {
+                timer = setInterval(saveToState, 1);
+            }
             return d;
         }
+        console.log('User.load 4 exit notoff', {d, cu:DUser.current, isOffline, '+':{allowOffline, allowOnline}})
+
+        if (!allowOffline) return null; // load offline user only if in offline mode
         d = DUser.new('Offline', 'User', 'Unknown', 'Unknown', 'Unknown', false, 'Unknown', 'Unknown', ptr);//`Pointer${Date.now()}_OfflineUser`);
-        Storage.write('user', d);
-        return d as DUser;
+        console.log('User.load 5 off init', {d, cu:DUser.current, isOffline, '+':{allowOffline, allowOnline}})
+
+        if (d && isValid(d)){
+            Storage.write('user', d);
+            return d as DUser;
+        }
+        console.log('User.load failend', {d, cu:DUser.current, isOffline, '+':{allowOffline, allowOnline}})
+
+        return null;
+    }
+
+    static load(): DUser | null {
+        return DUser.offline(true, true);
     }
 }
 

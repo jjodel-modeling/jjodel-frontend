@@ -53,6 +53,7 @@
     "react-scripts": "^4.0.3",
     "react-select": "^5.8.0",
     "sass": "^1.49.9",
+    "serve": "^14.2.4",
     "smart-webcomponents-react": "^9.3.53",
     "socket.io-client": "^4.7.2",
     "sweetalert2": "^11.7.3",

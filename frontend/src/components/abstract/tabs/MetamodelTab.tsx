@@ -47,7 +47,9 @@ function MetamodelTabComponent(props: AllProps) {
             <ToolBar model={model.id} isMetamodel={model.isMetamodel} />
             <Try>
                 <div className={"GraphContainer h-100 w-100"} style={{position:"relative"}}
-                     onClick={ e => {if(!U.userHasInteracted) U.userHasInteracted = true}}>
+                     onClick={ e => {
+                         if(!U.isProjectModified) U.isProjectModified = U.userHasInteracted = true
+                     }}>
                     {graph && <DefaultNode data={model} nodeid={graph.id} graphid={graph.id}/> || <div>Error: missing DGraph prop</div> }
                 </div>
             </Try>

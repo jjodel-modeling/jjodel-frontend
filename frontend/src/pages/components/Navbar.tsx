@@ -82,7 +82,6 @@ function getKeyStrokes(keys?: string[]){
 let globalProject: LProject|undefined = undefined as any;
 function makeEntry(i: MenuEntry) {
     let isUndo = (i.name === "Undo" || i.name === "Redo");
-    console.log('makeentry', {i, n:i.name});
     // if (true as any) return <li >{i.name}</li>;
 
     if (i.name === "Redo") { return null; }
@@ -266,7 +265,7 @@ function NavbarComponent(props: AllProps) {
         {name: 'New project', icon: <i className="bi bi-plus-square"></i>, function:
             async()=>{
                 R.navigate('/allProjects');
-                await ProjectsApi.create('public', undefined, undefined, undefined, props.user.projects);
+                await ProjectsApi.create('public', undefined, undefined, undefined, props.user?.projects);
                 /*
                 SetRootFieldAction.new('isLoading', true);
                 await U.sleep(1);
@@ -356,7 +355,7 @@ function NavbarComponent(props: AllProps) {
 
     /* -- */
 
-    if (user.projects) {
+    if (user?.projects) {
 
         user.projects
             .sort((a,b) => (b.lastModified > a.lastModified) ?  1 : -1)

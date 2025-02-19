@@ -2,7 +2,7 @@ import React, {Dispatch, useState} from 'react';
 import './App.scss';
 import './styles/view.scss';
 import './styles/style.scss';
-import {DState, DUser, LUser, SetRootFieldAction, statehistory, stateInitializer, Try, U} from "./joiner";
+import {DState, DUser, LUser, Pointer, SetRootFieldAction, statehistory, stateInitializer, Try, U} from "./joiner";
 import {connect} from "react-redux";
 import Loader from "./components/loader/Loader";
 import {FakeStateProps} from "./joiner/types";
@@ -37,11 +37,15 @@ import Storage from "./data/storage";
 
 let firstLoading = true;
 function App(props: AllProps): JSX.Element {
-    const debug = props.debug;
+    //const debug = props.debug;
     const isLoading = props.isLoading;
+    let [user, updateUser] = useState(DUser.current);
+    let [useless, forceUpdate] = useState(0);
+    console.log('forceupdate app', {pu: props.user, u:DUser.current})
+
     /*
     const tooltip = props.tooltip;
-    let user: LUser = props.user;
+    let user: LUser = LPointerTargetable.wrap(user);
     useEffectOnce(() => {
         console.log("ALFI: App useEffectOnce");
         // SetRootFieldAction.new('isLoading', true);
@@ -49,46 +53,55 @@ function App(props: AllProps): JSX.Element {
     });*/
 
     //let user = LUser.fromPointer(DUser.current);
-    let [, forceUpdate] = useState(0);
     if (firstLoading) {
         firstLoading = false;
-        stateInitializer();
-        forceUpdate(1);
+        stateInitializer().then(()=> {
+            console.log('forceupdate trigger', {'#':window.location.hash, o:{pu:props.user, u:DUser.current}});
+            updateUser(DUser.current);
+            forceUpdate(1);
+        });
         return <Loader/>;
     }
-    return(<>
+    if (U.navigating) return <Loader/>;
+    let debugx = <span style={{position: 'absolute', zIndex: 9999, border: '1px solid red', background: 'white'}}>{props.user}</span>;
+    console.log('forceupdate done', {pu:props.user, u:DUser.current});
+
+    if (DUser.current !== user) updateUser(DUser.current);
+    return (<>
         <div className={"router-wrapper"}>
-            {isLoading && <Loader />}
-            <ExternalLibraries />
-            <Try><TooltipVisualizer /></Try>
+            {isLoading && <Loader/>}
+            <ExternalLibraries/>
+            <Try><TooltipVisualizer/></Try>
+
             {/*<MessageVisualizer />*/}
-            <Try><AlertVisualizer /></Try>
-            <Try><DialogVisualizer /></Try>
+            <Try><AlertVisualizer/></Try>
+            <Try><DialogVisualizer/></Try>
             <HashRouter>
-                <Try><PathChecker /></Try>
+                <Try><PathChecker/></Try>
                 <Try><Routes>
-                    {DUser.current ? <>
-                        <Route path={'allProjects'} element={<AllProjectsPage />} />
+                    {user ? <>
+                        <Route path={'allProjects'} element={<AllProjectsPage/>}/>
                         {/*<Route path={'dock'} element={<MyDock />} />*/}
-                        <Route path={'account'} element={<AccountPage />} />
-                        <Route path={'settings'} element={<SettingsPage />} />
-                        <Route path={'updates'} element={<UpdatesPage />} />
-                        <Route path={'community'} element={<CommunityPage />} />
-                        <Route path={'templates'} element={<TemplatePage />} />
-                        <Route path={'notes'} element={<NotesPage />} />
-                        <Route path={'archive'} element={<ArchivePage />} />
-                        <Route path={'project'} element={<><ProjectPage /></>} />
-                        <Route path={'recent'} element={<RecentPage />} />
-                        <Route path={'profile'} element={<ProfilePage />} />
-                        <Route path={'usersInfo'} element={<UsersInfoPage />} />
-                        <Route path={'projectsInfo'} element={<ProjectsInfoPage />} />
-                        <Route path={'news'} element={<NewsPage />} />
-                        <Route path={'*'} element={<AllProjectsPage />} />
-                        {window.location.hostname !== 'localhost' && false && <Route path={'*'} element={<AllProjectsPage />} />}
-                    </> : <Route path={'*'} element={<>aaa<AuthPage /></>} />}
+                        <Route path={'account'} element={<AccountPage/>}/>
+                        <Route path={'settings'} element={<SettingsPage/>}/>
+                        <Route path={'updates'} element={<UpdatesPage/>}/>
+                        <Route path={'community'} element={<CommunityPage/>}/>
+                        <Route path={'templates'} element={<TemplatePage/>}/>
+                        <Route path={'notes'} element={<NotesPage/>}/>
+                        <Route path={'archive'} element={<ArchivePage/>}/>
+                        <Route path={'project'} element={<><ProjectPage/></>}/>
+                        <Route path={'recent'} element={<RecentPage/>}/>
+                        <Route path={'profile'} element={<ProfilePage/>}/>
+                        <Route path={'usersInfo'} element={<UsersInfoPage/>}/>
+                        <Route path={'projectsInfo'} element={<ProjectsInfoPage/>}/>
+                        <Route path={'news'} element={<NewsPage/>}/>
+                        <Route path={'*'} element={<AllProjectsPage/>}/>
+                        {window.location.hostname !== 'localhost' && false &&
+                            <Route path={'*'} element={<AllProjectsPage/>}/>}
+                    </> : <Route path={'*'} element={<AuthPage/>}/>}
                 </Routes></Try>
             </HashRouter>
-            {DUser.current && <Try><BottomBar /></Try>}
+            {user && <Try><BottomBar/></Try>}
         </div>
     </>);
 
@@ -111,12 +124,16 @@ function App(props: AllProps): JSX.Element {
     */
 }
 
-interface OwnProps {room?: string}
+interface OwnProps {
+    room?: string
+}
+
 interface StateProps {
-    offlineMode: boolean,
+    //offlineMode: boolean,
     debug: boolean,
     isLoading: boolean
     tooltip: string
+    user: Pointer<DUser>; // do not use, just for triggering rerender. use state.user instead
 }
 interface DispatchProps {}
 type AllProps = OwnProps & StateProps & DispatchProps;
@@ -124,12 +141,13 @@ type AllProps = OwnProps & StateProps & DispatchProps;
 
 function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     const ret: StateProps = {} as FakeStateProps;
-    ret.debug = state.debug;
+    //ret.debug = state.debug;
     ret.isLoading = state.isLoading;
+    ret.user = DUser.current;
     // ret.user = LUser.fromPointer(DUser.current);
     // needed here as props, because apparently functional components are memoized by default.
-    ret.offlineMode = DUser.offlineMode;
-    ret.tooltip = state.tooltip;
+    //ret.offlineMode = DUser.offlineMode;
+    // ret.tooltip = state.tooltip;
     // console.log("app re mapstate", {u:DUser.current, o:DUser.offlineMode});
     return ret;
 }

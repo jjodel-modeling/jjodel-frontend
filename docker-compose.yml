@@ -1,17 +1,60 @@
-version: "3.8"
-
+version: '3.8'
 services:
-
-  frontend:
-    container_name: jjodel
-    image: giordanotin/jjodel:2.0
+  mongo:
+    image: mongo
+    container_name: mongo
     ports:
-      - '3000:3000'
+      - 27017:27017
+    volumes:
+      - ./database/db:/data/db
+      - ./database/dev.archive:/Databases/dev.archive
+      - ./database/production:/Databases/production
+    restart: always
+ 
+  mongo-express:
+    image: mongo-express
+    container_name: mexpress
+    environment:
+      - ME_CONFIG_BASICAUTH_USERNAME=admin
+      - ME_CONFIG_BASICAUTH_PASSWORD=admin
     links:
-      - memorec
-
+      - mongo
+    ports:
+      - 8081:8081
+    restart: always
+ 
+  collaborative:
+    image: giordanotin/collaborative:1.2
+    container_name: collaborative
+    links:
+      - mongo
+    ports:
+      - 5001:5001
+    restart: always
+ 
+  persistance:
+    image: md2manoppello/persistance:1.1
+    container_name: persistance
+    links:
+      - mongo
+    ports:
+      - 5002:5002
+    restart: always
+ 
   memorec:
     container_name: memorec
-    image: giordanotin/memorec:1.5
+    image: giordanotin/memorec:1.8
     ports:
-      - '8080:8080'
+      - 8080:8080
+    restart: always
+ 
+  frontend:
+    image: damianodivincenzo7/jjodel:latest
+    container_name: frontend
+    depends_on:
+      - memorec
+      - collaborative
+      - persistance
+    ports:
+      - 80:80
+    restart: always

@@ -48,6 +48,7 @@
   }
 }
 
+.rightbar-title,
 .collaborative-tab h1,
 .properties-tab h1,
 .viewpoint-tab h1,
@@ -57,7 +58,6 @@
 .options-tab h1.view,
 .node-editor h3,
 .console h1 {
-
   font-size: 1.1em!important;
   color: var(--accent);
   padding-bottom: 0.5em!important;

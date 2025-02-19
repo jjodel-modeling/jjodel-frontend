@@ -108,7 +108,7 @@ export class SaveManagerComponent extends PureComponent<AllProps, ThisState>{
             e.str = e.str.substring(0, e.str.lastIndexOf("=")) + "= " + e.val;
         }
     }
-    undoredoenter = (key: "undo"|"redo" = "undo") => {
+    undoredoenter = (key: "undo"|"redo" = "undo??" as any) => {
         let debug = this.props.debug;
         let history = this.get_history(this.state.user);
         let undoarr = history.undoable;
@@ -158,8 +158,8 @@ export class SaveManagerComponent extends PureComponent<AllProps, ThisState>{
             let debugTitle = (titleDelta||s).action_title;
             console.log('getLatestDelta', {delta, latestTitleDelta, best:out.best?.str, titleDelta, dt:(titleDelta||s).action_title, titleindex, out})
             if (!out.best?.str) {
-                console.error('generated wrong delta??');
-                return <></>;
+                console.error('generated wrong delta??', {out, best:out?.best});
+                return <><div>errored</div></>;
             }
             if (latestTitleDelta.action_title) out.best.str = latestTitleDelta.action_title;
             if (latestTitleDelta.action_description) out.best.fullstr = latestTitleDelta.action_description;
@@ -223,6 +223,7 @@ export class SaveManagerComponent extends PureComponent<AllProps, ThisState>{
         // {undo: {...this.state.undo, hover: true, jsx}}
         this.undoredolistoutdated = false;
         this.setState(obj as ThisState);
+        console.log('undoredo state', this.state, {key});
     }
 
     undoenter = ()=>{ return this.undoredoenter("undo"); }
@@ -266,16 +267,19 @@ export class SaveManagerComponent extends PureComponent<AllProps, ThisState>{
         let redo: GObject<"delta">[] = history?.redoable || [];
 
         let contextmenustyle =(undoStr: 'Undo'|'Redo', undoarr: GObject<"delta">[]): JSX.Element => {
+            let undostr = undoStr.toLowerCase() as 'undo'|'redo';
+            let isUndo = undoarr === undo;
             return (
-            <li className={"undoredo hoverable " +(!undoarr.length?'disabled':'')} tabIndex={0} onMouseEnter={this.undoenter} onMouseLeave={this.undoleave}>
-                <label className="highlight undefined" onClick={(e) => {
-                    undoarr === undo ? this.do_undo(0) : this.do_redo(0)
-                }}>
+            <li className={"undoredo hoverable " +(!undoarr.length?'disabled':'')} tabIndex={0}
+                onMouseEnter={isUndo?this.undoenter:this.redoenter}
+                onMouseLeave={isUndo?this.undoleave:this.redoleave}>
+
+                <label className="highlight undefined" onClick={(e) => { isUndo ? this.do_undo(0) : this.do_redo(0) }}>
                     <span>{icon[undoStr.toLowerCase()]} {undoStr+' '+((undoarr).length||'')}</span>
                     { undoarr.length ? <i className="bi bi-chevron-right icon-expand-submenu"/> : null}
                 </label>
                 <div className="content right">
-                    {undoarr.length ? <ul className="context-menu right">{this.state.undo.jsx}</ul> : null}
+                    {undoarr.length ? <ul className="context-menu right">{this.state[undoStr.toLowerCase() as 'undo'|'redo'].jsx}</ul> : null}
                 </div>
             </li>)
         }

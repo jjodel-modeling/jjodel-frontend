@@ -106,6 +106,7 @@ export class R{
         if (debug || refresh === true ) {
             if (path[0] !== '/') path = '/'+path;
             console.log('navigating: ', {path, url:window.location.origin + '/#' + path});
+            U.navigating = true;
             window.location.href = window.location.origin + '/#' + path;
             window.location.reload();
         }
@@ -120,6 +121,7 @@ export class U {
 
 
     // to register call with both parameters. to remove a listener call with callback=undefined
+    public static navigating: boolean = false; // if i'm changing page, i stop rendering to prevent meaningless errors.
     static clickedOutside(currentTarget0: Element|Any<Event>, callback: undefined | ((e: Element, evt: JQuery.ClickEvent) => void)) {
         if (!currentTarget0) return;
         let currentTarget: Element = (currentTarget0 as any)?.currentTarget || currentTarget0 as any;
@@ -147,6 +149,7 @@ export class U {
     private static lastClickedAncestors: Element[] = [];
     private static lastClickedTime: number = 0;
     public static userHasInteracted: boolean = false;
+    public static isProjectModified: boolean = false;
     private static clickedOutsideCallback(e: any & ClickEvent){
         let target = e.target as Element;
         let clickedAncestors = U.ancestorArray(target, undefined, true);

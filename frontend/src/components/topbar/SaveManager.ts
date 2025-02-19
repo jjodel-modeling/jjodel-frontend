@@ -32,6 +32,7 @@ export class SaveManager {
     static save(): void {
         let project = LUser.fromPointer(DUser.current)?.project;
         if (project) ProjectsApi.save(project);
+        U.isProjectModified = false;
         /*SaveManager.tmpsave = store.getState();
         localStorage.setItem("tmpsave", JSON.stringify(SaveManager.tmpsave));
         console.clear();

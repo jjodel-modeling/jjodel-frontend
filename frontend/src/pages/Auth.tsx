@@ -56,7 +56,7 @@ function AuthPage(): JSX.Element {
         const user = DUser.new(data.name, data.surname, data.nickname, data.affiliation, data.country, data.newsletter || false, data.email, data.token, data.id);
         Storage.write('user', user);
         Storage.write('token', user.token);
-        Storage.write('offline', 'false');
+        Storage.write('offline', false);
         //R.navigate('/dashboard');
         R.navigate('/allProjects');
         U.resetState();
@@ -76,7 +76,7 @@ function AuthPage(): JSX.Element {
         Storage.write('token', data.token);
         const user = DUser.new(data.name, data.surname, data.nickname, data.affiliation, data.country, data.newsletter || false, data.email, data.token, data.id);
         Storage.write('user', user);
-        Storage.write('offline', 'false');
+        Storage.write('offline', false);
         R.navigate('/allProjects');
         U.resetState();
     }
@@ -405,7 +405,7 @@ function AuthPage(): JSX.Element {
                             placeholder={'johndoe@mail.com'}
                             value={email}
                             onChange={e => setEmail(e.target.value)}
-                            type={'email'} required={true}
+                            type={'email'} name='email' autoComplete={'on'} required={true}
                         />
                     </label>
                 </Tooltip>

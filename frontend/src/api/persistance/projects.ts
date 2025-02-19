@@ -35,6 +35,7 @@ class ProjectsApi {
         dProject.state = state;
         if(U.isOffline()) await Offline.save(dProject);
         else await Online.save(dProject);
+        U.isProjectModified = false;
     }
     static async favorite(project: DProject): Promise<void> {
         if(U.isOffline()) return Offline.favorite(project);
@@ -134,6 +135,7 @@ class Online {
             return Promise.reject('Invalid Token');
         }
         const data = U.wrapper<DProject[]>(response.data);
+        console.trace('loading projects');
         TRANSACTION('loading projects', () => {
             for (const project of data) {
                 DProject.new(project.type, project.name, project.state, [], [], project.id);

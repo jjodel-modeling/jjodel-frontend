@@ -327,6 +327,9 @@
   --font-color-1: white;
   .highlight{
     height: 30px;
+    &>span{
+      margin: auto;
+    }
   }
   .context-menu{
     margin-top: -5px; // undo the padding (4) and border (1) to align the nested submenu
@@ -368,10 +371,11 @@
           // border: 1px solid red;
           text-align:center;
           order: 1;
-          vertical-align: middle;
+          //vertical-align: middle;
+          margin-top: -0.5px;
           height: 100%;
           &::before{
-            vertical-align: middle;
+            // vertical-align: middle;
             height: 100%;
           }
         }
