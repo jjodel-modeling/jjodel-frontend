@@ -285,13 +285,13 @@ export class U {
         let intpart_s = intpart + '';
         let allowedDecimals = digits - intpart_s.length - 1;
 
-        console.log('cropnum', {digits,num, intpart, is:intpart_s.length, allowedDecimals});
+        // console.log('cropnum', {digits,num, intpart, is:intpart_s.length, allowedDecimals});
         if (allowedDecimals <= 0) {
             if (!atLeast1Decimal) return intpart;
             else allowedDecimals = 1;
         }
         let decimalPart = num%1;
-        console.log('cropnum', {allowedDecimals, decimalPart});
+        //console.log('cropnum', {allowedDecimals, decimalPart});
 
         // nb: here in concatenation ((-0)+'') --> '0'. it will lose sign on cropNum(x) with x € (-1, 0)
         // so need to check if it was negative

@@ -142,7 +142,7 @@ export class SaveManagerComponent extends PureComponent<AllProps, ThisState>{
 
             let excludedPaths: Dictionary<string, boolean> = {'action.title': true, 'action.description': true};
             let filterrow = (e:R)=> {
-                console.log('filterrow', {debug, e});
+                //console.log('filterrow', {debug, e});
                 return debug || !excludedPaths[key] && !e.fullpath.includes("clonedCounter")
                     && !e.fullpath.includes("timestamp")
                     && !e.fullpath.includes("timestampdiff")
@@ -223,7 +223,6 @@ export class SaveManagerComponent extends PureComponent<AllProps, ThisState>{
         // {undo: {...this.state.undo, hover: true, jsx}}
         this.undoredolistoutdated = false;
         this.setState(obj as ThisState);
-        console.log('undoredo state', this.state, {key});
     }
 
     undoenter = ()=>{ return this.undoredoenter("undo"); }

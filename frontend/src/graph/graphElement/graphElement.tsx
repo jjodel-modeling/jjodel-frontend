@@ -721,7 +721,6 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         //TRANSACTION('contextmenu', ()=>{
             if (e.button === Keystrokes.clickRight) { this.doContextMenu(e); }
             let p: GObject = this.props;
-            console.log('try drag', {p, ig: p.isGraph, iv:p.isVertex, e});
             // if ((p.isGraph && !p.isVertex) || (p.isGraph && p.isVertex && e.ctrlKey)) GraphDragManager.startPanning(e, this.props.node as LGraph);
         //})
     }

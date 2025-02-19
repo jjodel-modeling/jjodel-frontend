@@ -45,10 +45,8 @@ class builder {
         let validoptionsarr = Selectors.getAll(DModel, undefined, state, true, false) as DModel[];
         let multiselectOptions: {value: string, label: string}[] = validoptionsarr.map(c => {
             let opt = {value:c.id, label: c.name};
-            console.log('msel0', {d, c, did:d.id, cid:c.id, n:opt.label});
             if (opt.value === d.id) return undefined;
             if (!multiselectArr.includes(opt.value)) return opt;
-            console.log('msel', {d, c, did:d.id, cid:c.id, n:opt.label});
             multiselectValue.push(opt);
             return undefined;
         }).filter(e=>!!e) as {value: string, label: string}[];

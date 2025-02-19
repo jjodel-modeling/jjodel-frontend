@@ -43,7 +43,6 @@ export function getSelectOptions(data: LPointerTargetable, field: string, option
         case 'type':
         case 'values': return (data as LValue | LStructuralFeature | LClass).validTargetsJSX; break;
     }
-    console.log('msel ret opt', {ret, data, vt: (data as any).validTargetJSX, field})
     return ret;
 }
     /*
