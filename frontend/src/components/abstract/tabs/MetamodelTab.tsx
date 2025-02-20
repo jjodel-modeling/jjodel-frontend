@@ -72,7 +72,7 @@ function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     ret.model = LModel.fromPointer(ownProps.modelid);
     const graphs: DGraph[] = DGraph.fromPointer(state.graphs);
     const pointers = graphs.filter((graph) => { return graph.model === ret.model?.id });
-    if(pointers.length > 0) ret.graph = LGraph.fromPointer(pointers[0].id);
+    if (pointers.length > 0) ret.graph = LGraph.fromPointer(pointers[0].id);
     ret.isEdgePending = state.isEdgePending
     return ret;
 }

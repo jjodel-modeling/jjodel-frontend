@@ -39,12 +39,16 @@ export class Dummy {
         const lData: LPointerTargetable & GObject = context.proxyObject;
         const dData = context.data;
         const dependencies = Dummy.get_dependencies(context)();
+        console.log('get_delete '+(dData as any).name, {dData, dependencies});
 
         const ret = () => {
+            console.log('0 get_delete() '+(dData as any)?.name, {dData, cn:dData?.className, dependencies});
             SetRootFieldAction.new('_lastSelected', undefined, '');
             const dataID = dData.id as any;
+
             if (dData.id.indexOf('Pointer_View') !== -1 ) return; // cannot delete default views/viewpoints
             if (dData.__readonly) return;
+            console.log('1 get_delete() '+(dData as any)?.name, {dData, cn:dData?.className, dependencies});
             for (let child of lData.children) {
                 child.delete();
                 // todo: if a m1-dvalue which conforms to a m2-reference with "containment" is deleted, need to delete also target.
@@ -52,6 +56,7 @@ export class Dummy {
                 // child.node?.delete();
             }
 
+            console.log('2 get_delete() '+(dData as any)?.name, {dData, cn:dData?.className});
             // those 2 are exceptions because the pointer is a key in an object instead of a normal value as a field or array member.
             switch (dData.className) {
                 case 'DViewElement':
@@ -142,11 +147,21 @@ export class Dummy {
                 }
                 */
             }
+
+            console.log('3 get_delete() '+(dData as any)?.name, {dData, cn:dData?.className});
             if (lData.nodes) lData.nodes.map((node: any) => node.delete());
+            console.log('4 get_delete() '+(dData as any)?.name, {dData, cn:dData?.className});
             SetRootFieldAction.new('ELEMENT_DELETED', dataID, '+=', false); // here no need to IsPointer because it only affects Transient stuff
-            U.sleep(1).then(() => SetRootFieldAction.new(`idlookup.${dataID}`, undefined, '', false));
-            // DeleteElementAction.new(data.id);
+            //U.sleep(1).then(() => SetRootFieldAction.new(`idlookup.${dataID}`, undefined, '', false));
+            //SetRootFieldAction.new(`idlookup.${dataID}`, undefined, '', false);
+            console.log('5 get_delete() '+(dData as any)?.name, {dData, cn:dData?.className});
+            DeleteElementAction.new(dData.id);
         };
-        return () => TRANSACTION('delete view ' + thiss.get_name(context), ret);
+        console.log('00 get_delete '+(dData as any)?.name, {dData, cn:dData?.className});
+        return () => {
+            console.log('00 get_delete() '+(dData as any)?.name, {dData, cn:dData?.className});
+            TRANSACTION('delete ' + thiss.get_name(context), ()=>{
+                console.log('0000 get_delete '+(dData as any)?.name, {dData, cn:dData?.className}); ret(); })
+        }
     }
 }

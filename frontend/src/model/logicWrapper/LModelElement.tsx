@@ -5418,7 +5418,6 @@ export class LObject<Context extends LogicContext<DObject> = any, C extends Cont
                 Log.ww('Object is a singleton and cannot be removed, remove his singleton flag in m2 first.', context.data);
                 return;
             }
-            console.log('test 0')
             super.get_delete(context)();
         }
     }

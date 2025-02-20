@@ -19,7 +19,7 @@ import {
     Uobj, LocalStorage,
     LProject,
     DProject,
-    LUser, UserHistory,
+    LUser, UserHistory, R,
 } from '../../joiner';
 import {
     Action,
@@ -325,8 +325,14 @@ function CompositeActionReducer(oldState: DState, actionBatch: CompositeAction):
     // console.error({U, Umip:U.arrayMergeInPlace, WU: windoww.U, WUmip: windoww.U.arrayMergeInPlace});
     actions = U.arrayMergeInPlace<ParsedAction>(actions, derivedActions);
 
-    // ordino i path con segmenti comuni
-    actions = actions.sort( (a1, a2) => U.stringCompare(a1.path, a2.path));
+    // ordino i path con segmenti comuni todo: da rimuovere
+    actions = actions.sort( (a1, a2) => {
+        if (a1.className !== a2.className) {
+            if (a1.className === DeleteElementAction.cname) return 1;
+            if (a2.className === DeleteElementAction.cname) return -1;
+        }
+        return U.stringCompare(a1.path, a2.path);
+    });
 
     // destrutturo solo i nodi intermedi e solo la prima volta che li incontro (richiede le azioni ordinate in base al path)
 
@@ -334,7 +340,7 @@ function CompositeActionReducer(oldState: DState, actionBatch: CompositeAction):
         const prevAction: ParsedAction = actions[i-1];
         const action: ParsedAction = actions[i];
         const actiontype = action.type.indexOf('@@') === 0 ? 'redux' : action.type;
-        // console.log('executing action:', {a:action, t:actiontype, field: action.field, v:action.value}); //, count: ++action.executionCount});
+        console.log('executing action:', {a:action, t:actiontype, field: action.field, v:action.value}); //, count: ++action.executionCount});
 
         switch (actiontype) {
             /*
@@ -1197,9 +1203,10 @@ export async function stateInitializer() {
     try {
         await ProjectsApi.getAll();
     } catch (error) {
-        U.alert('e','Failed to fetch projects','');
+        // U.alert('e','Failed to fetch projects','');
         console.error('Failed to fetch projects', {error, user:DUser.current});
         DUser.current = '';
+        // R.navigate('/auth');
     }
     setDocumentEvents();
     /*type RecentEntry = {id: Pointer<DProject>[], name: string};

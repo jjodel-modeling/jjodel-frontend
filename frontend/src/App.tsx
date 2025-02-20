@@ -95,6 +95,7 @@ function App(props: AllProps): JSX.Element {
                         <Route path={'usersInfo'} element={<UsersInfoPage/>}/>
                         <Route path={'projectsInfo'} element={<ProjectsInfoPage/>}/>
                         <Route path={'news'} element={<NewsPage/>}/>
+                        <Route path={'auth'} element={<AuthPage/>}/>
                         <Route path={'*'} element={<AllProjectsPage/>}/>
                         {window.location.hostname !== 'localhost' && false &&
                             <Route path={'*'} element={<AllProjectsPage/>}/>}

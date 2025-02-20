@@ -1,6 +1,6 @@
 import React, {Dispatch, ReactElement} from "react";
 import {connect} from "react-redux";
-import {DModel, Pointer, Try} from "../../../joiner";
+import {DModel, DPointerTargetable, Pointer, Try} from "../../../joiner";
 import {CreateElementAction, DGraph, DModelElement, DState, LGraph, LModel, LModelElement} from "../../../joiner";
 import {DefaultNode} from "../../../joiner/components";
 import ToolBar from "../../toolbar/ToolBar";
@@ -14,7 +14,8 @@ function ModelTabComponent(props: AllProps) {
 
     if (!model) return(<>closed tab</>);
     if (!graph) {
-        CreateElementAction.new(DGraph.new(0, model.id));
+        DGraph.new(0, model.id);
+        console.log('create m1 graph', {model});
         return(<div style={{width: "100%", height: "100%", display: "flex"}}>
             <span style={{margin: "auto"}}>Building the Graph...</span>
         </div>);
@@ -45,8 +46,9 @@ function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     const ret: StateProps = {} as any;
     ret.model = LModel.fromPointer(ownProps.modelid);
     const graphs: DGraph[] = DGraph.fromPointer(state.graphs);
+    console.log('create m1 graph map', {pc:{...DPointerTargetable.pendingCreation}});
     const pointers = graphs.filter((graph) => { return graph.model === ownProps.modelid });
-    if(pointers.length > 0) ret.graph = LGraph.fromPointer(pointers[0].id);
+    if (pointers.length > 0) ret.graph = LGraph.fromPointer(pointers[0].id);
     return ret;
 }
 

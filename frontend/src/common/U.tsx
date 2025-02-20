@@ -99,15 +99,18 @@ export class R{
     public static replace(path: string): void {
         window.location.replace(path);
     }
+
     public static navigate(path: string, refresh: (true|NavigateFunction) = true): void {
         // window.location.assign = window.location = window.location.href = window.open(url, '_self')
 
         let debug: false = true as any;
         if (debug || refresh === true ) {
             if (path[0] !== '/') path = '/'+path;
-            console.log('navigating: ', {path, url:window.location.origin + '/#' + path});
+            path = '/#' + path;
+            console.log('navigating: ', {path, url:window.location.origin + path, currHash:window.location.hash});
+            if ('/'+window.location.hash === path) return;
             U.navigating = true;
-            window.location.href = window.location.origin + '/#' + path;
+            window.location.href = window.location.origin + path;
             window.location.reload();
         }
         else refresh(path); // useNavigator()(path);

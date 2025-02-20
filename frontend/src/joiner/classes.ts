@@ -2072,7 +2072,7 @@ WARNING! do not set proxies in the state, set pointers instead.<br/>
 */
     public delete(): void {}
     protected get_delete(c: Context): () => void {
-        return ()=>TRANSACTION('delete '+this.get_name(c), ()=>Dummy.get_delete(this, c));
+        return ()=>TRANSACTION('delete '+this.get_name(c), Dummy.get_delete(this, c));
     }
 }
 RuntimeAccessibleClass.set_extend(RuntimeAccessibleClass, LPointerTargetable);
