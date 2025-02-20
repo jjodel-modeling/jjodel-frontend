@@ -391,20 +391,24 @@ class builder {
             val.hidden ? null :
                 <label className={'mt-1 d-flex ms-4'} key={index}>
                     <div className={'border border-dark'}></div>
-                    {isAttribute && <input onChange={(evt) => { changeDValue(evt, index, false) }} className={'input m-auto ms-1'} value={val.value + ''}
-                                       checked={!!val.value} min={min} max={max} type={field} step={stepSize} maxLength={maxLength} placeholder={'empty'}/> }
-                    {isEnumerator && <select onChange={(evt) => {changeDValue(evt, index, true)}} className={'m-auto ms-1 select'} value={val.rawValue+''} data-valuedebug={val.rawValue}>
+                    {isAttribute && <Input key={'a'+index} setter={(val: any) => { changeDValue({target:{value:val}} as any, index, false) }}
+                                           className={'input m-auto ms-1' /*@ts-ignore*/}
+                                           getter={()=>val.value as any} min={min} max={max} type={field as any} step={stepSize}
+                                           maxLength={maxLength} placeholder={'empty'}/> }
+                    {isEnumerator && <select key={'e'+index} onBlur={(evt) => {changeDValue(evt, index, true)}} className={'m-auto ms-1 select'} value={val.rawValue+''} data-valuedebug={val.rawValue}>
                         {<option key='undefined' value={'undefined'}>-----</option>}
                         {selectOptions}
                     </select>}
-                    {isReference && <select onChange={(evt) => {changeDValue(evt, index, true)}} className={'m-auto ms-1 select'} value={val.rawValue+''} data-valuedebug={val.rawValue}>
+                    {isReference && <select key={'r'+index} onChange={(evt) => {changeDValue(evt, index, true)}} className={'m-auto ms-1 select'} value={val.rawValue+''} data-valuedebug={val.rawValue}>
                         <option value={'undefined'}>-----</option>
                         {selectOptions}
                     </select>}
                     {isShapeless && <>
-                        {<input key={'raw' + index} onChange={(evt) => {changeDValue(evt, index, false)}} className={'input m-auto ms-1'} value={val.rawValue+''} list={'objectdatalist'} type={'text'} placeholder={'empty'}/>}
+                        {<Input key={'raw' + index} setter={(val: any) => {changeDValue({target:{value:val}} as any, index, false)}}
+                                className={'input m-auto ms-1' /*@ts-ignore*/}
+                                getter={()=>val.rawValue} list={'objectdatalist'} type={'text'} placeholder={'empty'}/>}
                         <span className={'ms-1 my-auto'}>→</span>
-                        {<select key={index} onChange={(evt) => {changeDValue(evt, index, undefined)}} className={'select m-auto ms-1'} value={val.rawValue+''}>
+                        {<select key={index} onBlur={(evt) => {changeDValue(evt, index, undefined)}} className={'select m-auto ms-1'} value={val.rawValue+''}>
                             {selectOptions}
                         </select>}
                     </>}
