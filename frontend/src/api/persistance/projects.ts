@@ -41,18 +41,20 @@ class ProjectsApi {
         if(U.isOffline()) return Offline.favorite(project);
         else return await Online.favorite(project);
     }
-
+    static async importFromText(content: string, name: string = '', date: number = Date.now()) {
+        const project = JSON.parse(content) as DProject;
+        project.isFavorite = false;
+        if (U.isOffline()) Offline.import(project);
+        else await Online.import(project);
+        CreateElementAction.new(project);
+    }
     static import() {
         const reader = new FileReader();
         reader.onload = async e => {
             const content = String(e.target?.result);
             try {
-                const project = JSON.parse(content) as DProject;
-                project.isFavorite = false;
-                if(U.isOffline()) Offline.import(project);
-                else await Online.import(project);
-                CreateElementAction.new(project);
-            } catch (e) {U.alert('e', 'Invalid File.', 'Something went wrong ...')}
+                await ProjectsApi.importFromText(content);
+            } catch (e) { U.alert('e', 'Invalid File.', 'Something went wrong ...'); }
         }
 
         let extensions = ['*.jjodel'];

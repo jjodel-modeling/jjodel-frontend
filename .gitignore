@@ -46,3 +46,4 @@ sandbox.tsx
 /frontend/build
 /frontend/node_modules
 /frontend/node_modules/.cache
+frontend/.env.production
