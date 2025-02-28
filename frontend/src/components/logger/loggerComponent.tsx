@@ -27,7 +27,23 @@ class ThisState {
     minDate: UnixTimestamp;
     maxDate: UnixTimestamp;
 }*/
-
+let count = 0;
+const msgdurations: Dictionary<LoggerType, number> = {
+    'exDev': 2,
+    'eDev': 2,
+    'ex': 2,
+    'e': 2,
+    'w': 1.5,
+    'l': 1.25,
+    'i': 1,
+}
+function getDuration(msg: LoggerCategoryState): number{
+    // average English reading speed is 250 WPM
+    // average english word is 4.5 char
+    // 18.5 char/sec;
+    let len = msg.short_string.length/18.5;
+    return (len < 1000 ? 100 : len) * (msgdurations[msg.category] || 1);
+}
 export class LoggerComponent extends PureComponent<AllProps, ThisState>{
     public static cname: string = "LoggerComponent";
     public static loggers: LoggerComponent[] = [];
@@ -49,6 +65,29 @@ export class LoggerComponent extends PureComponent<AllProps, ThisState>{
 
         this.categoryAliases = {l: null as any, ex:"e", exDev:"eDev"};
         // Log.registerLogger(this, Log.e);
+    }
+    private generateToasts(allMessages: LoggerCategoryState[], categories: LoggerType[]): JSX.Element {
+        let now = Date.now();
+        let old = allMessages;
+        return <div className={'jjtoast-holder text-selectable'}>
+            <button>{count++}</button>
+            {allMessages.map(msg=>this.toast(msg))}
+        </div>
+    }
+    private toast(msg: LoggerCategoryState): JSX.Element {
+        if (!msg.expireTime) msg.expireTime = msg.time + getDuration(msg);
+
+        return <div className={'jjtoast ' + msg.category}
+                    key={msg.time + msg.short_string[0]}
+                    data-duration={(msg.expireTime - msg.time)+''}
+                    onClick={() => { U.clipboardCopy(msg.long_string); (msg.expireTime as number) += getDuration(msg); }}>
+            <div className={'msg'}>{(msg as any).primitiveStringified}</div>
+            <i className={'bi bi-x-lg closebtn'} onClick={() => { msg.toastHidden = true; }} />
+            {/*
+            <div className={'preview inline'}>{msg.short_string}</div>
+            <div className={'content inline'}>{msg.long_string}</div>
+            */}
+        </div>
     }
 
     private isCatActive(cat: LoggerType): boolean {
@@ -100,6 +139,7 @@ export class LoggerComponent extends PureComponent<AllProps, ThisState>{
         if (!Array.isArray(args)) args = [args];
         let objs: GObject[] = [];
         let primitives: any[] = [];
+
         for (let a of args){
             switch(typeof a){
                 case "object": case "function": objs.push(a); primitives.push("["+(typeof a)+"_"+(objs.length)+"]"); break;
@@ -107,9 +147,11 @@ export class LoggerComponent extends PureComponent<AllProps, ThisState>{
                 default: primitives.push(a);
             }
         }
+        (msg as any).primitiveStringified = primitives.join(' ');
         let date = new Date(msg.time);
+
         return <div className={"cat hoverable cat_"+category}>
-            <div className={"text"}>{primitives.join(" ")}</div>
+            <div className={"text"}>{(msg as any).primitiveStringified}</div>
             <div className={"text content"} style={{right: 0, top: 0, boxShadow: 'none', background: 'inherit'}}>
                 {date.getDate() +'/'+ date.toLocaleTimeString()}
                 <button title={"copy to clipboard"} className={"bg btn-clipboard my-auto ms-2"}
@@ -138,11 +180,8 @@ export class LoggerComponent extends PureComponent<AllProps, ThisState>{
         // just need to modify any counter in a way that is different from both curr val and the next counter update
         // this.setState({e_counter: -1});
     }
-    render(): ReactNode {
+    getAllMessages(categories: LoggerType[]): LoggerCategoryState[] {
         let key: LoggerType;
-        const categoryAliases = this.categoryAliases;
-        const labelAliases: Dictionary<string, string> = {i:"Info", w:"Warning", e:"Errors", eDev:"Exceptions"};
-        const categories: LoggerType[] = (Object.keys(Log.messageMapping) as LoggerType[]).filter(c => categoryAliases[c] !== null);
         let allMessages: LoggerCategoryState[] = [];
         for (key of categories) {
             if (!this.isCatActive(key)) continue; // U.arrayMergeInPlace(allMessages, Log.messageMapping[key])
@@ -152,9 +191,16 @@ export class LoggerComponent extends PureComponent<AllProps, ThisState>{
             }
         }
         // order is reversed so newest is first in list
-        allMessages = allMessages.sort((a, b) => b.time - a.time);
+        return allMessages.sort((a, b) => b.time - a.time);
+    }
+    render(): ReactNode {
+        const categoryAliases = this.categoryAliases;
+        const categories: LoggerType[] = (Object.keys(Log.messageMapping) as LoggerType[]).filter(c => categoryAliases[c] !== null);
+        // order is reversed so newest is first in list
+        let allMessages: LoggerCategoryState[] = this.getAllMessages(categories)
+        const labelAliases: Dictionary<string, string> = {i:"Info", w:"Warning", e:"Errors", eDev:"Exceptions"};
 
-        return (<>
+        return (<div className={'logger-tab'}>
             <div>
                 <div className={"d-flex search-row p-1"}>
                     <input placeholder={"filter"} className={"form-control search " + (this.state.regexpIsInvalid && "invalid")} type={"search"} value={this.state.searchTag} onChange={ this.changeSearch } />
@@ -188,7 +234,7 @@ export class LoggerComponent extends PureComponent<AllProps, ThisState>{
                         </li>))
                 }
             </ul>
-        </>); }
+        </div>); }
 
 
 /*

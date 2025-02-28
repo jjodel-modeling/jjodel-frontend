@@ -1,0 +1,11 @@
+
+
+1) window.location.reload(); // i think this is causing a firefox bug, it refreshes old url
+so to open projects you have to copy the url insted of clicking them.
+
+2) mouseup does not work in the graph area.
+you cannot stop panning, dragging, resizin unless you click outside the graph area
+
+
+
+---

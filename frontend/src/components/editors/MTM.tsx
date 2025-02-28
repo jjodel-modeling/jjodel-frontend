@@ -22,7 +22,7 @@ export function MTMComponent(props: AllProps): JSX.Element{
     let [language, setLanguage] = useState('MyCustomLanguage');
 
     let m2t: string = 'not implemented, this is a placeholder';
-    switch(language){
+    switch (language){
         case 'MyCustomLanguage':
             m2t = 'Dog: kirk // ID is either here after class name (optional) or in [*] if it coincides with an attribute pointers are *\n' +
                 '\tname: kirk\n' + // '\tname: kirk[*]\n' +

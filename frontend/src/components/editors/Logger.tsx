@@ -5,6 +5,23 @@ import {connect} from 'react-redux';
 import './style.scss';
 import {Empty} from "./Empty";
 
+const msgdurations: Dictionary<LoggerType, number> = {
+    'exDev': 2,
+    'eDev': 2,
+    'ex': 2,
+    'e': 2,
+    'w': 1.5,
+    'l': 1.25,
+    'i': 1,
+}
+function getDuration(msg: LoggerCategoryState): number{
+    // average English reading speed is 250 WPM
+    // average english word is 4.5 char
+    // 18.5 char/sec;
+    let len = msg.short_string.length/18.5;
+    return (len < 1000 ? 1000 : len) * (msgdurations[msg.category] || 1) * 2;
+}
+
 class ThisState {
     categoriesActive: Dictionary<LoggerType, boolean> = {l: true, i: true, w: true, e: true, ex: true, eDev: true, exDev: true};
     searchTag: string = '';
@@ -21,7 +38,7 @@ class ThisState {
     eDev_counter: number = 0;
     exDev_counter: number = 0;
 }
-
+let count = 0;
 class LoggerComponent extends PureComponent<AllProps, ThisState> {
     public static cname: string = "LoggerComponent";
     public static loggers: LoggerComponent[] = [];
@@ -99,9 +116,11 @@ class LoggerComponent extends PureComponent<AllProps, ThisState> {
                 default: primitives.push(a);
             }
         }
+        (msg as any).primitiveStringified = primitives.join(' ');
         let date = new Date(msg.time);
+
         return <div className={"cat hoverable cat_"+category}>
-            <div className={"text"}>{primitives.join(" ")}</div>
+            <div className={"text"}>{(msg as any).primitiveStringified}</div>
             <div className={"text content"} style={{right: 0, top: 0, boxShadow: 'none', background: 'inherit'}}>
                 {date.getDate() +'/'+ date.toLocaleTimeString()}
                 <button title={"copy to clipboard"} className={"bg btn-clipboard my-auto ms-2"}
@@ -130,10 +149,67 @@ class LoggerComponent extends PureComponent<AllProps, ThisState> {
         // just need to modify any counter in a way that is different from both curr val and the next counter update
         // this.setState({e_counter: -1});
     }
+
+    hide(e?: HTMLElement|null) {
+        if (!e) return;
+        // todo: should manual trigger animation instead
+        e.style.display = 'none';
+    }
+    private generateToasts(allMessages: LoggerCategoryState[], categories: LoggerType[]): JSX.Element {
+        let now = Date.now();
+        let old = allMessages;
+        allMessages = allMessages.filter(msg => !msg.toastHidden && (msg.expireTime === undefined || msg.expireTime > now));
+
+        console.log('generateToasts', {allMessages, old})
+        let out = {maxDuration:0};
+        return <div className={'jjtoast-holder text-selectable'}>
+            {allMessages.map(msg => this.toast(msg, out))}
+            {allMessages.length > 2 ?
+                <button key={'closebtn'} className={'close-all'} data-count={count++} data-duration={out.maxDuration} onClick={(e) => {
+                    let target: HTMLElement = (e.target as any).parentNode as HTMLElement;
+                    // todo: should manual trigger animation instead
+                    for (let c of target.children) this.hide(c as HTMLElement);
+                    allMessages.map(m => m.toastHidden = true);
+                    }}>
+                    <i className={'bi bi-x-lg closebtn'}/>
+                </button>
+                : null}
+        </div>
+    }
+
+    private toast(msg: LoggerCategoryState, out:{maxDuration: number}): JSX.Element {
+        let duration = getDuration(msg);
+        if (out.maxDuration < duration) out.maxDuration = duration;
+        if (!msg.expireTime) msg.expireTime = msg.time + duration;
+
+
+        console.log('msg toast', {msg});
+        return <div className={'jjtoast outer cat_' + msg.category}
+                    key={msg.time + (msg as any).primitiveStringified[0]}
+                    data-duration={(msg.expireTime - msg.time)+''}
+                    onClick={() => { U.clipboardCopy(msg.long_string); (msg.expireTime as number) += getDuration(msg); }}>
+            <div className={'jjtoast inner'} tabIndex={-1}>
+                <div className={'msg'}>{(msg as any).primitiveStringified}</div>
+                <i className={'bi bi-x-lg closebtn'} onClick={(e) => {
+
+                    let target: HTMLElement | null = e.target as any;
+                    while (target && !target.className.includes('jjtoast')) target = target.parentElement;
+                    this.hide(target);
+
+                    msg.toastHidden = true;
+                }}/>
+            </div>
+            {/*
+            <div className={'preview inline'}>{msg.short_string}</div>
+            <div className={'content inline'}>{msg.long_string}</div>
+            */}
+        </div>
+    }
+
     render(): ReactNode {
         let key: LoggerType;
         const categoryAliases = this.categoryAliases;
-        const labelAliases: Dictionary<string, string> = {i:"Info", w:"Warning", e:"Errors", eDev:"Exceptions"};
+        const labelAliases: Dictionary<string, string> = {i: "Info", w: "Warning", e: "Errors", eDev:"Exceptions"};
         const categories: LoggerType[] = (Object.keys(Log.messageMapping) as LoggerType[]).filter(c => categoryAliases[c] !== null);
         let allMessages: LoggerCategoryState[] = [];
         for (key of categories) {
@@ -144,9 +220,9 @@ class LoggerComponent extends PureComponent<AllProps, ThisState> {
             }
         }
         // order is reversed so newest is first in list
-        allMessages = allMessages.sort((a, b) => b.time - a.time);
+        allMessages.sort((a, b) => b.time - a.time);
 
-        return (<section className={'p-2'}>
+        return (<section className={'p-2 logger-tab'}>
             <div>
                 <div className={"d-flex search-row p-1"}>
                     <input placeholder={"filter"} className={"input search " + (this.state.regexpIsInvalid && "invalid")} type={"search"} value={this.state.searchTag} onChange={ this.changeSearch } />
@@ -181,6 +257,7 @@ class LoggerComponent extends PureComponent<AllProps, ThisState> {
                 }
                 { allMessages.length === 0 && <Empty /> }
             </ul>
+            {this.generateToasts(allMessages, categories)}
         </section>);
     }
 }

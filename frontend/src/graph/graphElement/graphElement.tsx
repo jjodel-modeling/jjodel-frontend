@@ -113,7 +113,7 @@ function computeUsageDeclarations(component: GraphElementComponent, allProps: Al
     } catch (e: any) {
         e.isSyntax = false;
         udret = {data: allProps.data, view, node: allProps.node, __invalidUsageDeclarations: e};// "@runtime:" +e};
-        Log.ee("Invalid usage declarations", {e, str: view.usageDeclarations, view, data: allProps.data, stateProps: allProps});
+        Log.ee("Invalid usage declarations on " + view?.name, {e, str: view.usageDeclarations, view, data: allProps.data, stateProps: allProps});
     }
 
     transientProperties.node[allProps.nodeid].viewScores[vid].usageDeclarations = udret;

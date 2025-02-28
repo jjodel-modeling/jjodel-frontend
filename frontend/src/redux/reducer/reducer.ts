@@ -1204,7 +1204,7 @@ export async function stateInitializer() {
         await ProjectsApi.getAll();
     } catch (error) {
         // U.alert('e','Failed to fetch projects','');
-        console.error('Failed to fetch projects', {error, user:DUser.current});
+        console.error('Failed to fetch projects', {error});
         DUser.current = '';
         // R.navigate('/auth');
     }

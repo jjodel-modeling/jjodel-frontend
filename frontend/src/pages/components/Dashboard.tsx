@@ -65,10 +65,14 @@ type TitleProps = {
 
 const Title = (props: TitleProps) => {
 
-    let {title, description} = props;   
+    let [title, setTitle] = useStateIfMounted(props.title);
+    let [description, setDescription] = useStateIfMounted(props.description);
+
 
     const [editTitle, setEditTitle] = useStateIfMounted(false);
     const [editDes, setEditDes] = useStateIfMounted(false);
+    //if (!editTitle && title !== props.title) setTitle(props.title);
+    //if (!editDes && description !== props.description) setDescription(props.description);
 
     const titleRef = useRef();
     const desRef = useRef();
@@ -81,11 +85,9 @@ const Title = (props: TitleProps) => {
         function copyToClipboard(e: any) {
             //const server = document.getElementById('server');
             //const link = document.getElementById('link');
-            let full_link = server + projectLink
-            navigator.clipboard.writeText(full_link)
-                .then( // server?.innerText+link?.innerText
-                    ()=>U.alert('i', "Copied", "The project link has been copied to the Clipboard.")
-                );
+            let full_link = server + projectLink;
+            console.log('copy to clipboard');
+            U.clipboardCopy(full_link, ()=>U.alert('i', "Copied", "The project link has been copied to the Clipboard."));
         }
 
         let type = (props.type === "public");
@@ -162,6 +164,7 @@ const Title = (props: TitleProps) => {
                                     autoFocus
                                     type={'text'}
                                     value={title}
+                                    onChange={(e)=>setTitle(e.target.value)}
                                     style={{padding: '0px', margin: '0'}}
                                     onBlur={(e) => {
                                         if (!props.projectID) return;
@@ -193,6 +196,13 @@ const Title = (props: TitleProps) => {
                                 rows={4}
                                 cols={80}
                                 value={description}
+                                onChange={(e)=> {
+                                    console.log('onchange', {e, tv:e.target.value, pv:props.description, sv:description})
+                                    setDescription(e.target.value)
+                                }}
+                                onInput={(e)=> {
+                                    console.log('onInput', {e, tv:e.target, pv:props.description, sv:description})
+                                }}
                                 onBlur={e => {
                                     if (!props.projectID) return;
                                     if (!e.target.value) {

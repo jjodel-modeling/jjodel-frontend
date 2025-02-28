@@ -1,3 +1,137 @@
+
+@keyframes fade-remove {
+  from {
+    transform: scale(1, 1);
+    opacity: 1;
+  }
+  to {
+    transform: scale(0.9, 0.9);
+    opacity: 0;
+  }
+  100% {
+    visibility: hidden;
+  }
+}
+@keyframes resize-remove {
+  from {
+    max-height: 400px;
+    padding: 0.5em 1em;
+    overflow: hidden;
+    transform: scale(1, 1);
+    //opacity: 1;
+  }
+  to {
+    max-height: 0;
+    padding: 0 0;
+    overflow: hidden;
+    transform: scale(0.5, 1);
+    visibility: hidden;
+    //opacity: 0;
+  }
+}
+
+.jjtoast-holder{
+  overflow-y: visible;
+  position: fixed;
+  display: flex;
+  flex-flow: column-reverse;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  outline: 2px solid black;
+  min-width: 10px;
+  min-height: 10px;
+  z-index: 999;
+  //pointer-events: none;
+
+  .close-all{
+    animation: linear 1.0s forwards;
+    animation-delay: attr(data-duration ms);
+    animation-name: sudden-remove;
+  }
+  .jjtoast.outer{
+    margin: 0 auto;
+    padding: 4.5px 0;
+    //width: 25vw;
+    animation: ease-in 1.0s forwards;
+    animation-delay: attr(data-duration ms);
+    animation-name: resize-remove;
+    &:hover, &:focus-within{
+      animation-play-state: paused !important;
+    }
+
+    --font: #fff;
+    &.cat_l{
+      --cat-color: #0bf;
+      --border: #09f;
+    }
+    &.cat_i{
+      --cat-color: #09f;
+      --border: #047;
+    }
+    &.cat_w{
+      --cat-color: #ca0;
+      --border: #b70;
+    }
+    &.cat_e, &.cat_ex{
+      --cat-color: #f00;
+      --border: #700;
+    }
+    &.cat_eDev, &.cat_exDev{
+      --cat-color: #900;
+      --border: #f00;
+    }
+
+  }
+  .jjtoast.inner{
+    display: flex;
+    flex-wrap: nowrap;
+    //width: 25vw;
+    max-width: 33vw;
+    max-height: 25vh;
+    border-radius: 8px;
+    pointer-events: all;
+    padding: 0.5em 1em;
+
+    color: var(--font);
+    outline: 2px solid var(--border);
+    background-color: var(--cat-color);
+    &:hover{
+      background-color: var(--border);
+      outline: 2px solid var(--font);
+    }
+
+    .msg{
+      flex-grow:1;
+      margin-right: 0.5rem;
+      // css animation to hide after delay, no need to update refresh on jsx
+    }
+
+    i.closebtn{
+      margin: auto 0;
+      border-radius: 100%;
+      width: 1lh;
+      height: 1lh;
+      display: flex;
+      &:before{
+        margin: auto;
+        color: var(--font)
+      }
+      // background-color: var(--cat-color);
+      // background-color: var(--border);
+      outline: 1px solid var(--border);
+      &:hover{
+        // background-color: var(--border);
+        outline: 1px solid var(--font);
+      }
+    }
+  }
+}
+.text-selectable{
+  user-select: auto !important;
+}
+
+
+
 .copy-to-clipboard-container{
   display: none !important; // default copy button from JSON JSX library is bugged, cannot handle recursive objects.
 }

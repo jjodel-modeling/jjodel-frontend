@@ -328,12 +328,12 @@ function NavbarComponent(props: AllProps) {
         const elem = document.body;
 
         if ((document.fullscreenElement !== undefined && document.fullscreenElement === null)) {
-            elem.requestFullscreen();
+            let ret = elem.requestFullscreen();
+            console.log('fullscreen onn', {ret, elem});
         } else {
-
-                document.exitFullscreen();
+            let ret = document.exitFullscreen();
+            console.log('fullscreen off', {ret, elem});
         }
-
         setFullscreen(!fullscreen);
     }
 

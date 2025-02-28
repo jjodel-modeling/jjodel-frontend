@@ -1030,8 +1030,11 @@ export class LTypedElement<Context extends LogicContext<DTypedElement> = any> ex
         return type.isPrimitive ? type as LClass : undefined;
     }
 
-    protected get_type(context: Context): this["type"] {
-        return LPointerTargetable.from(context.data.type);
+    protected get_type(c: Context): this["type"] {
+        let type = LPointerTargetable.from(c.data.type);
+        if (type) return type;
+        if (c.className === 'DReference') return LPointerTargetable.from(c.data.father);
+        else return LPointerTargetable.fromPointer('Pointer_ESTRING');
     }
 
     protected set_type(val: Pack1<this["type"]>, c: Context): boolean {
@@ -1147,7 +1150,10 @@ export class LTypedElement<Context extends LogicContext<DTypedElement> = any> ex
         // if (context.data.classType) return '' + context.data.classType.name;
         // if (context.data.enumType) return '' + context.data.enumType.name;
         // if (context.data.primitiveType) return '' + context.data.primitiveType.getName();
-        return () => context.proxyObject.type.typeString;
+        return () => {
+            console.log('get_typeToShortString', {context, type: context.proxyObject.type});
+            return context.proxyObject.type.typeString;
+        }
     }
 
     canOverride(context: Context, other: LTypedElement): boolean {

@@ -60,7 +60,12 @@ function ProjectComponent(props: AllProps): JSX.Element {
     for (let v of allViews) viewsDeDuplicator[v.id] = v;
     if (!user?.project) {
         return (
-            <div style={{margin: 'auto'}} onClick={(e) => R.navigate('/allProjects')}>Project loading, click to go back</div>
+            <div className={'w-100 h-100 d-flex'}>
+                <div className={'m-auto d-flex p-5'} style={{flexFlow: 'column', cursor:'pointer'}}onClick={(e) => R.navigate('/allProjects')}>
+                    <h4 className={'mx-auto'}>Project loading...</h4>
+                    <div className={'mx-auto'}>if it takes too long try refreshing the page, or click to go back</div>
+                </div>
+            </div>
         );
     }
 

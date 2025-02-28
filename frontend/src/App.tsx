@@ -36,6 +36,7 @@ import DialogVisualizer from './components/alert/Dialog';
 import Storage from "./data/storage";
 
 let firstLoading = true;
+let browserData = U.getOSBrowserData();
 function App(props: AllProps): JSX.Element {
     //const debug = props.debug;
     const isLoading = props.isLoading;
@@ -67,6 +68,8 @@ function App(props: AllProps): JSX.Element {
     console.log('forceupdate done', {pu:props.user, u:DUser.current});
 
     if (DUser.current !== user) updateUser(DUser.current);
+    if (browserData.browser === 'Firefox') U.alert('e', 'Unsupported browser',
+        'Firefox is not supported yet and have known issues.\nplease open this website on another browser.');
     return (<>
         <div className={"router-wrapper"}>
             {isLoading && <Loader/>}

@@ -56,7 +56,7 @@ function AllProjectsComponent(props: AllProps): JSX.Element {
     return(<Try>
         <>
         <Dashboard active={'All'} version={props.version}>
-            <div className={''} onDrop={dropConfirm} onDragOver={dropPreview} onMouseLeave={mouseleave}>
+            <div className={'droparea'} onDrop={dropConfirm} onDragOver={dropPreview} onMouseLeave={mouseleave}>
                 <div style={{opacity: isDropping ? 0.5 : 1}}>
                 <Cards>
                     <Cards.Item

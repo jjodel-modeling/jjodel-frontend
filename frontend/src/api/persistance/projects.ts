@@ -11,8 +11,8 @@ class ProjectsApi {
     }
     static async getAll(): Promise<void> {
         let isOffline = U.isOffline();
-        console.log('getAll', {isOffline});
-        if(U.isOffline()) Offline.getAll();
+        console.log('poly getAll', {isOffline, io:null});
+        if(isOffline) Offline.getAll();
         else await Online.getAll();
     }
     static async delete(project: LProject): Promise<void> {
@@ -131,13 +131,14 @@ class Online {
     }
     static async getAll(): Promise<void> {
         const response = await Api.get(`${Api.persistance}/projects`);
-        if(response.code !== 200) {
+        console.log('loading projects getall', {response});
+        if (response.code !== 200) {
             /* 401: Unauthorized -> Invalid Token (Local Storage)  */
             // U.resetState();
             return Promise.reject('Invalid Token');
         }
         const data = U.wrapper<DProject[]>(response.data);
-        console.trace('loading projects');
+        console.log('loading projects', {data});
         TRANSACTION('loading projects', () => {
             for (const project of data) {
                 DProject.new(project.type, project.name, project.state, [], [], project.id);
@@ -177,5 +178,7 @@ class Online {
         await Api.patch(`${Api.persistance}/projects/${project.id}`, {...project});
     }
 }
-
+let windoww = window as any;
+windoww.ProjectsApi = ProjectsApi;
+windoww.Api = Api;
 export {ProjectsApi};

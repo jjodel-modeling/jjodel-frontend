@@ -7,11 +7,13 @@ export class LoggerCategoryState{
     static counter: number = 0;
     category: LoggerType;
     time: number;
+    expireTime?: number; // set dynamically during display phase, it is just a cache.
     raw_args: any[];
     short_string: string;
     long_string: string;
     exception?: Error
     key: string | number;
+    toastHidden?: undefined | true;
 
 
     constructor(args: any[], short_string: string, cat: LoggerType, exception?: Error) {

@@ -709,6 +709,7 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
     DAttribute(): this {
         let thiss: DAttribute = this.thiss as any;
         this.setExternalPtr(thiss.father, "attributes", "+=");
+        this.setPtr("type", "Pointer_EBOOLEAN");
         return this; }
 
     DDataType(): this { return this; }
@@ -802,7 +803,7 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
                         type = dtype.id;
                         break;
                     case 'DAttribute':
-                    default: type = undefined; break;
+                    default: type = dtype.id; break;
                 }
                 break;
             case 'DEnumerator':
@@ -2853,7 +2854,7 @@ export class LProject<Context extends LogicContext<DProject> = any, D extends DP
                 SetRootFieldAction.new('projects', c.data.id, '-=', true);
 
                 // project can only be deleted in homepage, project list is not even present in editor state.
-                // if (windoww.location.href.includes('project') windoww.location.href = windoww.location.origin; use R.navigate
+                // if (windoww.location.hasg.includes('project') windoww.location.href = windoww.location.origin; use R.navigate
             });
         }
     }
