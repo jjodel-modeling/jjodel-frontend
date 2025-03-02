@@ -36,6 +36,9 @@ view{
 label{
   cursor: inherit;
 }
+.dd-flex{
+  display: flex; // without !important that bootstrap have
+}
 .bi-chevron-down::before{
 content: "\f282";
 transform: inherit;
@@ -58,7 +61,9 @@ font-weight: 900 !important;
   }
 
   &>.content, &>svg>.content{
-    display: block; z-index:1; position: absolute;
+    display: block;
+    z-index:1;
+    position: absolute;
     box-shadow: var(--smart-elevation-8);
   }
 

@@ -188,14 +188,14 @@ export class SaveManagerComponent extends PureComponent<AllProps, ThisState>{
             // if (newstyle) return entry();
 
 
-            for (let e of other2){ e.fullpath_str = e.fullpath.join("")}
-            for (let e of other){ e.fullpath_str = e.fullpath.join("")}
+            for (let e of other2){ e.fullpath_str = e.fullpath.join(".")}
+            for (let e of other){ e.fullpath_str = e.fullpath.join(".")}
             return <li onClick={() => ((this as GObject)["do_" + key](index))} className="" key={index}
                        tabIndex={0}
                        style={{/*overflow: "visible", height: "24px"*/}}>
                 <label className="highlight undefined hoverable">
-                    <div className={"preview"}>{out.best.str}</div>
-                    <div className={"content inline"}>{out.best.fullstr}</div>
+                    <div className={"my-auto preview"}>{out.best.str}</div>
+                    <div className={"my-auto content inline"}>{out.best.fullstr}</div>
                     <div className={"content right detail-list"}>
                         <ul className="context-menu right">{
                             other.map((row, ii) => {
@@ -273,9 +273,15 @@ export class SaveManagerComponent extends PureComponent<AllProps, ThisState>{
                 onMouseEnter={isUndo?this.undoenter:this.redoenter}
                 onMouseLeave={isUndo?this.undoleave:this.redoleave}>
 
-                <label className="highlight undefined" onClick={(e) => { isUndo ? this.do_undo(0) : this.do_redo(0) }}>
-                    <span>{icon[undoStr.toLowerCase()]} {undoStr+' '+((undoarr).length||'')}</span>
-                    { undoarr.length ? <i className="bi bi-chevron-right icon-expand-submenu"/> : null}
+                <label className="highlight undefined" onClick={(e) => {
+                    isUndo ? this.do_undo(0) : this.do_redo(0)
+                }}>
+                    <span>{icon[undoStr.toLowerCase()]} <span>{undoStr + ' ' + ((undoarr).length || '')}</span></span>
+                    {<div className="keystrokes">
+                        <i className="text-icon ctrl" title="Control" data-val="ctrl" data-content="Control"/>
+                        <span>{isUndo ? 'Z' : 'Y'}</span>
+                    </div>}
+                    {undoarr.length ? <i className="bi bi-chevron-right icon-expand-submenu"/> : null}
                 </label>
                 <div className="content right">
                     {undoarr.length ? <ul className="context-menu right">{this.state[undoStr.toLowerCase() as 'undo'|'redo'].jsx}</ul> : null}

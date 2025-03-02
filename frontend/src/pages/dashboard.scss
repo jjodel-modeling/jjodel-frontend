@@ -602,7 +602,8 @@ project-card .tip {
   .name {
     width: 1340px;
     padding:40px;
-    margin-bottom: 100px;
+    margin-bottom: 50px;
+    overflow: auto;
     background-color: white;
     max-height: fit-content;
     padding: 40px;

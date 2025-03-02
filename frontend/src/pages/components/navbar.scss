@@ -209,7 +209,6 @@
 .nav-container .nav-hamburger label div .bi {
   color: white;
   font-size: 0.75em;
-  padding-top: 2px;
   font-weight: 800;
 }
 
@@ -302,7 +301,6 @@
   & .keystroke .bi {
     font-size: 0.9em;
     font-kerning: none;
-    padding-top: 2px;
   }
 
 }
@@ -327,8 +325,21 @@
   --font-color-1: white;
   .highlight{
     height: 30px;
-    &>span{
-      margin: auto;
+    &>span {
+      margin-top: auto;
+      margin-bottom: auto;
+      // display: flex; makes problems in undoredo component
+      >*{
+        margin-top:auto;
+        margin-bottom:auto;
+      }
+      .menuitem{
+        min-width: 1ric;
+        max-width: 1ric;
+      }
+      svg.menuitem{
+        scale: 1.2;
+      }
     }
   }
   .context-menu{
@@ -400,9 +411,6 @@
 .win{
   .keystrokes{
     line-height: 1.7;
-    .bi-shift{
-
-    }
   }
 }
 

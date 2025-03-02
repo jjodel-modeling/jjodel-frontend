@@ -2326,7 +2326,7 @@ export class U {
 
     }
 
-   static categorizeNode(c: LGraphElement|DGraphElement): {vertex: boolean, purevertex:boolean, field: boolean, graphvertex:boolean, puregraph: boolean, graph: boolean, edge:boolean, edgepoint: boolean}{
+    static categorizeNode(c: LGraphElement|DGraphElement): {vertex: boolean, purevertex:boolean, field: boolean, graphvertex:boolean, puregraph: boolean, graph: boolean, edge:boolean, edgepoint: boolean}{
         let ret = {} as any;
         if (!c) return ret;
         switch (c.className) {
@@ -2343,6 +2343,50 @@ export class U {
         return ret;
     }
 
+    // returns: isFullscreen
+    static toggleFullscreen(elem: HTMLElement): boolean {
+        if (U.fullscreenElement() === elem) { U.exitFullscreen(); return false; }
+        else { U.fullscreen(elem); return true; }
+    }
+
+    static fullscreen(elem: HTMLElement): Promise<void> {
+        // Find the right method, call on correct element
+        let e: any = elem;
+        if (e.requestFullscreen) return e.requestFullscreen();
+        if (e.mozRequestFullScreen) return e.mozRequestFullScreen();
+        if (e.webkitRequestFullscreen) return e.webkitRequestFullscreen();
+        if (e.msRequestFullscreen) return e.msRequestFullscreen();
+        return Promise.reject('unsupported');
+
+    }
+    static isFullscreen(): boolean {
+        let d: any = window.document;
+        return d.fullscreenEnabled || d.mozFullScreenEnabled || d.webkitFullscreenEnabled;
+    }
+    static fullscreenElement(): Element {
+        let d: any = window.document;
+        return d.fullscreenElement || d.mozFullScreenElement || d.webkitFullscreenElement;
+    }
+
+    static exitFullscreen(): Promise<void> {
+        let d: any = window.document;
+        if (d.exitFullscreen) return d.exitFullscreen();
+        if (d.mozCancelFullScreen) return d.mozCancelFullScreen();
+        if (d.webkitExitFullscreen) return d.webkitExitFullscreen();
+        return Promise.reject('unsupported');
+    }
+
+    static flattenObjectByKey<T extends GObject>(arr: (T|null|undefined)[], childKey: string):T[] {
+        let isArray = Array.isArray(arr);
+        if (!isArray) arr = [arr] as any;
+        let ret: T[] = [...arr as any];
+        for (let e of ret) {
+            let children = (e as any)?.[childKey];
+            if (!children || children.length === 0) continue;
+            U.arrayMergeInPlace(ret, U.flattenObjectByKey(children, childKey));
+        }
+        return ret;
+    }
 }
 export class DDate{
     static cname: string = "DDate";
@@ -2553,7 +2597,9 @@ export class SelectorOutput {
 }
 // compare it with event.key
 export type Key = string;
+@RuntimeAccessible('Keystrokes')
 export class Keystrokes {
+    static cname: string = 'Keystrokes'
     public static clickLeft = 0;
     public static clickWheel = 1;
     public static clickRight = 2;
@@ -2614,7 +2660,7 @@ export class Keystrokes {
             [Keystrokes.control]: {},
         }
         for (let entry of arr) {
-            if (!entry.function || !entry.keystroke || !entry.keystroke.length) continue;
+            if (!entry || !entry.function || !entry.keystroke || !entry.keystroke.length) continue;
             let keymap = U.objectFromArrayValues(entry.keystroke);
             let root = optimizedKeyPaths
             if (keymap[Keystrokes.alt]) {
@@ -2649,6 +2695,7 @@ export class Keystrokes {
         let keydown = (e: KeyDownEvent) => {
             // skip events happened in graph
             let curr = e.target;
+            console.log('keydown', {selector, e, curr, ct:e.currentTarget});
             while (curr) {
                 if (curr.classList.contains('Graph')) return;
                 curr = curr.parentElement;
@@ -2664,16 +2711,24 @@ export class Keystrokes {
             f?.();
         };
         /// todo: for graph can attack evt to graph root and use selector in on() lieke $graphcontainer.on('keydown', '.Class', classkeystrokehandler...)
-        Keystrokes.RegisteredKeyStrokes[selector] = {keydown, keyup};
-        $elems.on('keydown', null, keydown);
-        $elems.on('keyup', null, keyup);
+        Keystrokes.RegisteredKeyStrokes[selector] = {keydown, keyup, arr, optimizedKeyPaths} as any;
+        // $elems.off('keydown').on('keydown', null, keydown);
+        // $elems.off('keydown').on('keyup', null, keyup);
+        let $doc = $(document.body);
+        $doc.off('keydown', selector, keydown).on('keydown', selector, keydown);
+        $doc.off('keyup', selector, keyup).on('keyup', selector, keyup);
         console.log("register keystrokes", {$elems, keydown, optimizedKeyPaths, arr});
 
     }
     public static unregister(selector: string): void{
         if (!Keystrokes.RegisteredKeyStrokes[selector]) return;
-        $(selector).off('keydown', null as any, Keystrokes.RegisteredKeyStrokes[selector].keydown);
-        $(selector).off('keyup', null as any, Keystrokes.RegisteredKeyStrokes[selector].keyup);
+        //$(selector).off('keydown', null as any, Keystrokes.RegisteredKeyStrokes[selector].keydown);
+        //$(selector).off('keyup', null as any, Keystrokes.RegisteredKeyStrokes[selector].keyup);
+
+        let $doc = $(document.body);
+        $doc.off('keydown', selector, Keystrokes.RegisteredKeyStrokes[selector].keydown);
+        $doc.off('keyup', selector, Keystrokes.RegisteredKeyStrokes[selector].keyup);
+
         delete Keystrokes.RegisteredKeyStrokes[selector];
     }
 

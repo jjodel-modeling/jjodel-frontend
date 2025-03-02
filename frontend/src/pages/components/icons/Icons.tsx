@@ -43,6 +43,7 @@ export let icon: { [name: string]: any} = {
     grid: <i className="bi bi-grid-3x3-gap menuitem"></i>,
     maximize: <i className="bi bi-arrows-fullscreen menuitem"></i>,
     fullscreen: <i className="bi bi-arrows-fullscreen menuitem"></i>,
+    'fullscreen-exit': <i className="bi bi-fullscreen-exit"></i>,
     'zoom-in': <i className="bi bi-zoom-in menuitem"></i>,
     'zoom-out': <i className="bi bi-zoom-out menuitem"></i>,
     help: <i className="bi bi-question-square menuitem"></i>,
@@ -52,14 +53,16 @@ export let icon: { [name: string]: any} = {
     manual: <i className="bi bi-journals menuitem"></i>,
     legal: <i className="bi bi-mortarboard menuitem"></i>,
     about: <Logo style={{width: 15}} className={'menuitem'}/>,
-   'jjodel-dark': <img src={jj} width={15} className={'menuitem'}/>,
-   'jjodel-clear': <img style={{border: '1px solid var(--color)', borderRadius: '2px', marginTop: '2px', marginRight: '-2px'}} src={jj} width={16} className={'menuitem'}/>,
-    
-    jjodel: <Logo style={{fontSize: '1.5em'}} className={'menuitem'} />,
-    metamodel: <MetamodelIcon className={'menuitem'}  style={{fontSize: '1.5em'}}/>,
-    model: <ModelIcon className={'menuitem'}  style={{fontSize: '1.5em'}}/>,
-    project: <LuPackage2 style={{fontSize: '1.5em'}} className='menuitem' />,
-   
+    'jjodel-dark': <img src={jj} width={15} className={'menuitem'}/>,
+    'jjodel-clear': <img
+        style={{border: '1px solid var(--color)', borderRadius: '2px', marginTop: '2px', marginRight: '-2px'}} src={jj}
+        width={16} className={'menuitem'}/>,
+
+    jjodel: <Logo style={{fontSize: '1.5em'}} className={'menuitem'}/>,
+    metamodel: <MetamodelIcon className={'menuitem'} style={{fontSize: '1.5em'}}/>,
+    model: <ModelIcon className={'menuitem'} style={{fontSize: '1.5em'}}/>,
+    project: <LuPackage2 style={{fontSize: '1.5em'}} className='menuitem'/>,
+
     logout: <i className="bi bi-box-arrow-right menuitem"></i>,
     dashboard2: <i className="bi bi-grid menuitem"></i>,
     dashboard: <i className="bi bi-columns-gap menuitem"></i>,
@@ -80,7 +83,8 @@ export let icon: { [name: string]: any} = {
     created: <i className="bi bi-calendar2-plus"></i>,
     modified: <i className="bi bi-clock"></i>,
     lastModified: <i className="bi bi-clock"></i>,
-    link: <i style={{fontSize: '1.1rem', paddingRight: '0', marginRight: '0'}} className="bi bi-link-45deg menuitem"></i>,
+    link: <i style={{scale: '1.2'}}
+             className="bi bi-link-45deg menuitem"></i>,
     learn: <i className="bi bi-infinity menuitem"></i>,
     video: <i className="bi bi-youtube menuitem"></i>,
     roadmap: <i className="bi bi-calendar3 menuitem"></i>,
@@ -89,13 +93,17 @@ export let icon: { [name: string]: any} = {
     'feature-request': <i className="bi bi-hand-index menuitem"></i>,
     contact: <i className="bi bi-card-text menuitem"></i>,
     'toggle-grid': <i className="bi bi-grid-1x2 menuitem"></i>,
-    'toggle-snap': <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" className="bi bi-layout-sidebar" viewBox="0 0 16 16">
-    <path d="M6 1H1v14h5z m9 0h-5v5h5zm0 9v5M0 1a1 1 0 0 1 1-1h5a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H1a1 1 0 0 1-1-1zm9 0a1 1 0 0 1 1-1h5a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1h-5a1 1 0 0 1-1-1zm1 8a1 1 0 0 0-1 1v5a1 1 0 0 0 1 1h5a1 1 0 0 0 1-1v-5a1 1 0 0 0-1-1z"/>
-  </svg>,
+    'toggle-snap': <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor"
+                        className="bi bi-layout-sidebar" viewBox="0 0 16 16">
+        <path
+            d="M6 1H1v14h5z m9 0h-5v5h5zm0 9v5M0 1a1 1 0 0 1 1-1h5a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H1a1 1 0 0 1-1-1zm9 0a1 1 0 0 1 1-1h5a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1h-5a1 1 0 0 1-1-1zm1 8a1 1 0 0 0-1 1v5a1 1 0 0 0 1 1h5a1 1 0 0 0 1-1v-5a1 1 0 0 0-1-1z"/>
+    </svg>,
     'reset-layout': <i className="bi bi-columns menuitem"></i>,
     sidebar: <i className="bi bi-layout-sidebar menuitem"></i>,
-    toolbar2: <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" className="bi bi-layout-sidebar" viewBox="0 0 16 16">
-    <path d="M0 3a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2z m2 -1 a1 1 0 0 0 -1 1v2h14v-2a1 1 0 0 0 -1 -1zm -1 4l 0 7a1 1 0 0 0 1 1h12a1 1 0 0 0 1 -1v-7z"/>
-</svg>
+    toolbar2: <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor"
+                   className="bi bi-layout-sidebar" viewBox="0 0 16 16">
+        <path
+            d="M0 3a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2z m2 -1 a1 1 0 0 0 -1 1v2h14v-2a1 1 0 0 0 -1 -1zm -1 4l 0 7a1 1 0 0 0 1 1h12a1 1 0 0 0 1 -1v-7z"/>
+    </svg>
 }
 

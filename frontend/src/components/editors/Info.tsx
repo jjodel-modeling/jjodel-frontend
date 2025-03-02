@@ -395,7 +395,7 @@ class builder {
                                            className={'input m-auto ms-1' /*@ts-ignore*/}
                                            getter={()=>val.value as any} min={min} max={max} type={field as any} step={stepSize}
                                            maxLength={maxLength} placeholder={'empty'}/> }
-                    {isEnumerator && <select key={'e'+index} onBlur={(evt) => {changeDValue(evt, index, true)}} className={'m-auto ms-1 select'} value={val.rawValue+''} data-valuedebug={val.rawValue}>
+                    {isEnumerator && <select key={'e'+index} onChange={(evt) => {changeDValue(evt, index, true)}} className={'m-auto ms-1 select'} value={val.rawValue+''} data-valuedebug={val.rawValue}>
                         {<option key='undefined' value={'undefined'}>-----</option>}
                         {selectOptions}
                     </select>}
@@ -408,7 +408,7 @@ class builder {
                                 className={'input m-auto ms-1' /*@ts-ignore*/}
                                 getter={()=>val.rawValue} list={'objectdatalist'} type={'text'} placeholder={'empty'}/>}
                         <span className={'ms-1 my-auto'}>→</span>
-                        {<select key={index} onBlur={(evt) => {changeDValue(evt, index, undefined)}} className={'select m-auto ms-1'} value={val.rawValue+''}>
+                        {<select key={index} onChange={(evt) => {changeDValue(evt, index, undefined)}} className={'select m-auto ms-1'} value={val.rawValue+''}>
                             {selectOptions}
                         </select>}
                     </>}
