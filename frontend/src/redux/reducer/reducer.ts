@@ -340,7 +340,7 @@ function CompositeActionReducer(oldState: DState, actionBatch: CompositeAction):
         const prevAction: ParsedAction = actions[i-1];
         const action: ParsedAction = actions[i];
         const actiontype = action.type.indexOf('@@') === 0 ? 'redux' : action.type;
-        console.log('executing action:', {a:action, t:actiontype, field: action.field, v:action.value}); //, count: ++action.executionCount});
+        if (U.debug) console.log('executing action:', {a:action, t:actiontype, field: action.field, v:action.value}); //, count: ++action.executionCount});
 
         switch (actiontype) {
             /*
@@ -348,7 +348,10 @@ function CompositeActionReducer(oldState: DState, actionBatch: CompositeAction):
             default:
                 if (action.type.indexOf('@@redux/') === 0) break;
                 return Log.exDevv('unexpected action type:', action.type);
-            case LoadAction.type: newState = action.value; break;
+            case LoadAction.type:
+                newState = action.value;
+                U.debug = newState.debug;
+                break;
             case CreateElementAction.type:
             case SetRootFieldAction.type:
             case DeleteElementAction.type:
@@ -1175,7 +1178,7 @@ function fixResizables(e: MouseEvent){
 }
 
 export async function stateInitializer() {
-    console.trace('stateinitializer');
+    console.warn('stateinitializer');
     RuntimeAccessibleClass.fixStatics();
     let dClassesMap: Dictionary<string, typeof DPointerTargetable> = {};
     let lClassesMap: Dictionary<string, typeof LPointerTargetable> = {};

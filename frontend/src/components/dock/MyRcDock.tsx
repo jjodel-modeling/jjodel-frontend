@@ -424,7 +424,6 @@ export class PinnableDock extends DockLayout{
     static instance: PinnableDock;
     constructor(props: any) {
         super(props);
-        console.trace("pinnableDock instance", this);
         //Log.exDevv(PinnableDock.instance, "current PinnableDock is a singleton, cannot make 2 instances", {thiss:this, oldnstance: PinnableDock.instance});
         PinnableDock.instance = this;
         let debug:boolean = false;

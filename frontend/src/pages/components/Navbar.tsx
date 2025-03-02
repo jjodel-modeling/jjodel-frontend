@@ -585,6 +585,7 @@ function NavbarComponent(props: AllProps) {
         let toggleDebug = (e: any)=>{
             e.preventDefault();
             TRANSACTION('debug', ()=>SetRootFieldAction.new('debug', !props.debug), props.debug, !props.debug);
+            U.debug = !props.debug;
         }
         return (
         <div className='nav-logo'>

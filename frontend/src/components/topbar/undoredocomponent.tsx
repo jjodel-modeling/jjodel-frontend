@@ -83,7 +83,7 @@ export class SaveManagerComponent extends PureComponent<AllProps, ThisState>{
         let history = this.get_history(this.state.user);
         let undoarr = history.undoable;
         let redoarr = history.redoable;
-        console.log("statemanager undo update", {thiss:this, undoarr, redoarr, user: this.state.user, props: this.props, state:this.state});
+        // console.log("statemanager undo update", {thiss:this, undoarr, redoarr, user: this.state.user, props: this.props, state:this.state});
         if (!this.undoredolistoutdated) return;
         let s: DState = store.getState();
         let arr = [...(key === 'undo' ? undoarr : redoarr)].reverse().slice(0, this.props.maxlistsize);
@@ -113,7 +113,7 @@ export class SaveManagerComponent extends PureComponent<AllProps, ThisState>{
         let history = this.get_history(this.state.user);
         let undoarr = history.undoable;
         let redoarr = history.redoable;
-        console.log("statemanager undo update", {thiss:this, undoarr, redoarr, user: this.state.user, props: this.props, state:this.state});
+        // console.log("statemanager undo update", {thiss:this, undoarr, redoarr, user: this.state.user, props: this.props, state:this.state});
         if (!this.undoredolistoutdated) return;
         let s: DState = store.getState();
         // let arr = [...(this.props as GObject)[key]].reverse().slice(0, this.props.maxlistsize);
@@ -156,7 +156,7 @@ export class SaveManagerComponent extends PureComponent<AllProps, ThisState>{
             // if out.best is undef, then get most recent titles until you find a delta with a title or the current(state)
             let latestTitleDelta = getLatestDelta(titleindex, ['action_title'], (key === 'undo' ? -1 : +1));
             let debugTitle = (titleDelta||s).action_title;
-            console.log('getLatestDelta', {delta, latestTitleDelta, best:out.best?.str, titleDelta, dt:(titleDelta||s).action_title, titleindex, out})
+            // console.log('getLatestDelta', {delta, latestTitleDelta, best:out.best?.str, titleDelta, dt:(titleDelta||s).action_title, titleindex, out})
             if (!out.best?.str) {
                 console.error('generated wrong delta??', {out, best:out?.best});
                 return <><div>errored</div></>;

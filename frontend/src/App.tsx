@@ -42,7 +42,6 @@ function App(props: AllProps): JSX.Element {
     const isLoading = props.isLoading;
     let [user, updateUser] = useState(DUser.current);
     let [useless, forceUpdate] = useState(0);
-    console.log('forceupdate app', {pu: props.user, u:DUser.current})
 
     /*
     const tooltip = props.tooltip;
@@ -57,7 +56,6 @@ function App(props: AllProps): JSX.Element {
     if (firstLoading) {
         firstLoading = false;
         stateInitializer().then(()=> {
-            console.log('forceupdate trigger', {'#':window.location.hash, o:{pu:props.user, u:DUser.current}});
             updateUser(DUser.current);
             forceUpdate(1);
         });
@@ -65,7 +63,6 @@ function App(props: AllProps): JSX.Element {
     }
     if (U.navigating) return <Loader/>;
     let debugx = <span style={{position: 'absolute', zIndex: 9999, border: '1px solid red', background: 'white'}}>{props.user}</span>;
-    console.log('forceupdate done', {pu:props.user, u:DUser.current});
 
     if (DUser.current !== user) updateUser(DUser.current);
     if (browserData.browser === 'Firefox') U.alert('e', 'Unsupported browser',

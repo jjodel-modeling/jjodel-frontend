@@ -126,6 +126,7 @@ export class U {
 
     // to register call with both parameters. to remove a listener call with callback=undefined
     public static navigating: boolean = false; // if i'm changing page, i stop rendering to prevent meaningless errors.
+    static debug: boolean = false;
     static clickedOutside(currentTarget0: Element|Any<Event>, callback: undefined | ((e: Element, evt: JQuery.ClickEvent) => void)) {
         if (!currentTarget0) return;
         let currentTarget: Element = (currentTarget0 as any)?.currentTarget || currentTarget0 as any;
@@ -1385,7 +1386,6 @@ export class U {
                 ret.best = best.str;
             }
         }
-        console.log("u get assignements", {flatten, obj});
 
 
         for (let key in flatten) {
@@ -2717,7 +2717,6 @@ export class Keystrokes {
         let $doc = $(document.body);
         $doc.off('keydown', selector, keydown).on('keydown', selector, keydown);
         $doc.off('keyup', selector, keyup).on('keyup', selector, keyup);
-        console.log("register keystrokes", {$elems, keydown, optimizedKeyPaths, arr});
 
     }
     public static unregister(selector: string): void{
