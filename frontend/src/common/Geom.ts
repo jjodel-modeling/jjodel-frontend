@@ -534,15 +534,18 @@ export class GraphSize extends ISize<GraphPoint> {
         return new GraphSize(minX, minY, maxX - minX, maxY - minY); }
 
     // both pt and targetPt are readonly-safe parameters
-    public static closestIntersection(size: GraphSize, pt: GraphPoint, targetPt: GraphPoint, gridAlign?: GraphPoint, m0?:number, q0?:number): GraphPoint | undefined {
+    public static closestIntersection(size: GraphSize, pt: GraphPoint/*segment start*/, targetPt: GraphPoint/*segment end*/, gridAlign?: GraphPoint, m0?:number, q0?:number): GraphPoint | undefined {
         // let pt: GraphPoint = pt0.duplicate();
         const m = m0 || GraphPoint.getM(targetPt, pt);
         const q = q0 || GraphPoint.getQ(targetPt, pt);
         // console.log("closestIntersection()", {size, pt0, targetPt, m, q});
+        // let mrecalc = GraphPoint.getM(targetPt, pt);
+        // if (mrecalc !== m) console.error('closestIntersection err', {size, pt, targetPt, mrecalc, m, q, mcorrect: mrecalc == m, qcorrect: GraphPoint.getQ(targetPt, pt) === q})
+        // else  console.log('closestIntersection 0', {size, pt, targetPt, m, q, mcorrect: mrecalc == m, mrecalc, qcorrect: GraphPoint.getQ(targetPt, pt) === q})
         // if perfectly vertical line
-        if (m === Number.POSITIVE_INFINITY/* && q === Number.NEGATIVE_INFINITY*/) {
+        if (U.isInfinite(m)) {
             // top center
-            if (Math.abs(targetPt.y - size.y) <= Math.abs(targetPt.y - size.y - size.h)) return pt;
+            if (Math.abs(targetPt.y - size.y) <= Math.abs(targetPt.y - size.y - size.h)) return new GraphPoint(pt.x, size.y);
             // bottom center
             else return new GraphPoint(pt.x, size.y + size.h);
         }
@@ -562,13 +565,14 @@ export class GraphSize extends ISize<GraphPoint> {
         allowR = Geom.isNumberBetween(tr.x, tl.x, targetPt.x);
         // console.log("closestIntersection pt0", {size, targetPt, pt0:pt0.raw(), gridAlign,
         //     corners:{tl:tl.raw(), tr:tr.raw(), bl:bl.raw(), br:br.raw()}, allows:{allowT, allowB, allowL, allowR}});
+        console.log("closestIntersection 1", {isInternal:!(allowT || allowB || allowL || allowR), allowT, allowB, allowL, allowR});
         if (!(allowT || allowB || allowL || allowR)) return undefined; // point is internal to size
         if (allowT) intersectionT = Geom.lineToSegmentIntersection(tl, tr, q, m); else
         if (allowB) intersectionB = Geom.lineToSegmentIntersection(bl, br, q, m); // NOT else, (T|B) AND (L|R) can happen, or just 1 or 0 of those.
         if (allowL) intersectionL = Geom.lineToSegmentIntersection(tl, bl, q, m); else
         if (allowR) intersectionR = Geom.lineToSegmentIntersection(tr, br, q, m);
 
-        // console.log("closestIntersection pt2", {intersectionT, intersectionB, intersectionL, intersectionR});
+        console.log("closestIntersection 2", {intersectionT, intersectionB, intersectionL, intersectionR});
         // only 1 intersection can happen
         return intersectionT || intersectionB || intersectionL || intersectionR;
     }
@@ -586,7 +590,7 @@ export class GraphSize extends ISize<GraphPoint> {
     const isT = prevPt.y < pt.y;
     const isR = !isL;
     const isB = !isT; */
-        if (m === Number.POSITIVE_INFINITY && q === Number.NEGATIVE_INFINITY) { // bottom middle
+        if (U.isInfinite(m)) { // bottom middle
             return new GraphPoint(vertexGSize.x + vertexGSize.w / 2, vertexGSize.y + vertexGSize.h); }
         // console.log('pt:', pt, 'm:', m, 'q:', q);
         let L: GraphPoint | null = new GraphPoint(0, 0);
@@ -657,10 +661,12 @@ export class GraphSize extends ISize<GraphPoint> {
         // L'edge non è visibile e il valore ritornato è irrilevante.
 
         if (closest === Number.POSITIVE_INFINITY) {
+            console.error('x01 case +inf, this case should not be possible', {closest, T, B, L, R, vertexGSize, prevPt, pt0});
             /* top center */
             pt = vertexGSize.tl();
             pt.x += vertexGSize.w / 2; } else
-        if (closest === Number.POSITIVE_INFINITY) {
+        if (closest === Number.NEGATIVE_INFINITY) {
+            console.error('x01 case -inf, this case should not be possible', {closest, T, B, L, R, vertexGSize, prevPt, pt0});
             /* bottom center */
             pt = vertexGSize.br();
             pt.x -= vertexGSize.w / 2; } else
@@ -854,7 +860,7 @@ export class Geom extends RuntimeAccessibleClass {
         if (Geom.isPositiveZero(n)) { return 0; }
         if (n === Number.POSITIVE_INFINITY) { return 90; }
         if (Geom.isNegativeZero(n)) { return 180; }
-        if (n === Number.POSITIVE_INFINITY) { return 270; }
+        if (n === Number.NEGATIVE_INFINITY) { return 270; }
         return Geom.RadToDegree((window as any).Math.atan(n)); }
 
     static RadToDegree(radians: number): number { return Geom.radToDeg(radians); }
@@ -967,26 +973,53 @@ export class Geom extends RuntimeAccessibleClass {
         // 4B) ELSE done
     }
 
-    static lineToSegmentIntersection(segStart: GraphPoint, segEnd: GraphPoint, q: number, m: number): GraphPoint | undefined {
-        if (segStart.x === segEnd.x){
-            let y = m*segStart.x + q;
-            if (Geom.isNumberBetween(y, segStart.y, segEnd.y)) return new GraphPoint(segStart.x, y);
-            else return undefined;
+    // @param: lineX = only required if m === (+-)infinite, is the X coord where the vertical line lies.
+    static lineToSegmentIntersection(segStart: GraphPoint, segEnd: GraphPoint, q: number, m: number, lineX?: number): GraphPoint | undefined {
+        let lineIsVertical = m === Number.POSITIVE_INFINITY || m === Number.NEGATIVE_INFINITY;
+        let lineIsHorizontal = +m === 0; // unary plus operator is required because: +(-0)  === 0, but not sure if -0 === 0
+        let isNaNm = isNaN(m);
+        let isNaNq = isNaN(q);
+        Log.eDev(isNaNm && isNaNq || isNaNm && !isNaNq, 'Error in Geom lineSegmentIntersection, m and q are not coherent', {m, q});
+        Log.w((isNaNm || isNaNq) && lineX === undefined, 'Error in Geom lineSegmentIntersection, m is infinite and no points were provided', {m, q});
+        if (segStart.x === segEnd.x){ // vertical segment |
+            if (lineIsVertical) {
+                if (lineX !== undefined && lineX === segStart.x) return new GraphPoint(lineX, (segStart.y + segEnd.y)/2); // complete overlap of segment and line, i take middle
+                return undefined; // parallel vertical segment-line
+            } else { // vertical segment, skewed or horizontal line
+                let y = m*segStart.x + q;
+                if (Geom.isNumberBetween(y, segStart.y, segEnd.y)) return new GraphPoint(segStart.x, y);
+                else return undefined;
+            }
         }
-        else if (segStart.y === segEnd.y) {
-            let x = (segStart.y-q)/m;
-            if (Geom.isNumberBetween(x, segStart.x, segEnd.x)) return new GraphPoint(x, segStart.y);
-            else return undefined;
-            //
+        else if (segStart.y === segEnd.y) { // horizontal segment -------------------
+            if (lineIsVertical) {
+                if (lineX !== undefined && Geom.isNumberBetween(lineX, segStart.x, segEnd.x)) return new GraphPoint(lineX, segStart.y); // perpendicular and intersecating
+                return undefined; // perpendicular but outside segment width
+            }
+            else if (lineIsHorizontal) { // horizontal line
+                if (Geom.isNumberBetween(q, segStart.y, segEnd.y)) return new GraphPoint((segStart.x + segEnd.x), q); // complete overlap of segment and line, i take middle
+                return undefined; // parallel horizontal line-segment
+            } else {
+                let x = (segStart.y-q)/m;
+                if (Geom.isNumberBetween(x, segStart.x, segEnd.x)) return new GraphPoint(x, segStart.y);
+                else return undefined;
+            }
         }
 
         let m2 = segStart.getM(segEnd);
         let q2 = IPoint.getQ(segStart, segEnd);
-        if (m === m2) {
-            if (q2 === q) return segStart; // line and segment coincident
+        // NB: at this point m2 cannot be infinite | -infinite, but can be -0, m can be anything
+        if (+m === +m2) {
+            if (+q === +q2) return segStart; // line and segment coincident
             return undefined; // parallel
         }
-        let intersect = Geom.lineToLineIntersection(m, q, m2, q2);
+        let intersect: GraphPoint | undefined;
+        if (U.isInfinite(m)) {
+            if (lineX !== undefined) intersect = new GraphPoint(lineX, m2*lineX + q2);
+            return undefined;
+        } else {
+            intersect = Geom.lineToLineIntersection(m, q, m2, q2, undefined);
+        }
         if (intersect && Geom.isNumberBetween(intersect.x, segStart.x, segEnd.x) && Geom.isNumberBetween(intersect.y, segStart.y, segEnd.y)) return intersect;
         else return undefined;
     }
@@ -996,15 +1029,19 @@ export class Geom extends RuntimeAccessibleClass {
         let min = Math.min(s, e);
         return target >= min && target <= max; }
 
-    private static lineToLineIntersection(m: number, q: number, m2: number, q2: number, retIfParallel: any = undefined, retIfCoincident: any = undefined): undefined | GraphPoint {
-        if (m === m2) {
-            if (q === q2) return retIfCoincident;
-            return retIfParallel;
+
+    // NB invalid if any of the lines are verytical, in which case need to take the X of the vertical line (xVertical) and intersection is: new Point(xVertical, m_otherLine * xVertical + q_otherLine)
+    private static lineToLineIntersection(m: number, q: number, m2: number, q2: number, retIfInvalid: any, retIfParallel: any = undefined, retIfCoincident: any = undefined): undefined | GraphPoint {
+
+        if (+m === +m2 || U.isInfinite(m) && U.isInfinite(m2)) {
+            if (+q === +q2 || U.isInfinite(q) && U.isInfinite(q2)) return retIfCoincident; // line and segment coincident
+            return retIfParallel; // parallel
         }
+
         if (m === Number.POSITIVE_INFINITY || m === Number.NEGATIVE_INFINITY || m2 === Number.POSITIVE_INFINITY || m2 === Number.NEGATIVE_INFINITY) {
             // m or m2 are a vertical line, Q must be invalid too and i don't have a single point of the line.
             // it's actually infinite possible vertical parallel lines.
-            return undefined;
+            return retIfInvalid;
         }
         /*
             y = mx + q

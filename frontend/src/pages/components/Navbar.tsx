@@ -551,15 +551,15 @@ function NavbarComponent(props: AllProps) {
 
     const MainMenu = (props: MenuProps) => {
         return(<>
-                { props.items.map(m => !m || !m.subItems?.length ? null : <Submenu title={m.name} items={m.subItems} />) }
+                { props.items.map(m => !m || !m.subItems?.length ? null : <Submenu key={m.name} title={m.name} items={m.subItems} />) }
             </>
         );
     }
 
     const Submenu = (props: MenuProps) => {
         return (<div className='nav-hamburger hoverable inline' key={props.title} tabIndex={0}>
-            {props.title && <span className={'menu-title'}>{props.title}</span>}
-            <div className={'content context-menu'}>
+            {props.title && <span className={'menu-title'} key={'title'}>{props.title}</span>}
+            <div className={'content context-menu'} key={'content'}>
                 <ul>
                     {props.items && props.items.map((i, index) => makeEntry(i, index))}
                 </ul>

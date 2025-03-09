@@ -2387,6 +2387,12 @@ export class U {
         }
         return ret;
     }
+
+    static isInfinite(m: number, positive = true, negative = true): m is (typeof NaN) {
+        if (m === Number.POSITIVE_INFINITY) return positive;
+        if (m === Number.NEGATIVE_INFINITY) return negative;
+        return false;
+    }
 }
 export class DDate{
     static cname: string = "DDate";
@@ -2736,14 +2742,14 @@ export class Keystrokes {
         let os = U.getOSBrowserData().os.substring(0, 3).toLowerCase();
         let obj = iconKeys['bi_' + os];
         if (!obj) return Log.eDevv('Found unexpected OS: ' + os, {data:U.getOSBrowserData()}) && '';
-        if (allowBootIcons && key in obj) { let val = obj[key]; return <i className={"bi " + val} title={key}/>; }
+        if (allowBootIcons && key in obj) { let val = obj[key]; return <i key={key} className={"bi " + val} title={key}/>; }
         //obj = iconKeys['box_' + os];
         // if (!obj) return Log.eDevv('Found unexpected OS: ' + os, {data:U.getOSBrowserData()}) && '';
         //if (allowBoxIcons && key in obj) { let val = obj[key]; return <span><i className={"box-icons?? " + val todo} title={key}/></span>; }
         obj = iconKeys['text_' + os];
         if (!obj) return Log.eDevv('Found unexpected OS: ' + os, {data:U.getOSBrowserData()}) && '';
-        if (allowTextIcons && key in obj) { let val = obj[key]; return <i className={"text-icon " + val} title={key} data-val={val} data-content={key}/>; }
-        return <span>{key.toUpperCase()}</span>;
+        if (allowTextIcons && key in obj) { let val = obj[key]; return <i key={key} className={"text-icon " + val} title={key} data-val={val} data-content={key}/>; }
+        return <span key={key}>{key.toUpperCase()}</span>;
     }
     public static NamedKeys: Dictionary<string, boolean>;
 }

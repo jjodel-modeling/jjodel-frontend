@@ -11,7 +11,6 @@ class ProjectsApi {
     }
     static async getAll(): Promise<void> {
         let isOffline = U.isOffline();
-        console.log('poly getAll', {isOffline, io:null});
         if(isOffline) Offline.getAll();
         else await Online.getAll();
     }

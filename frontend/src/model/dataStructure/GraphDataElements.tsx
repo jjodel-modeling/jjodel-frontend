@@ -2042,21 +2042,23 @@ replaced by startPoint
         // let isVertical = m >=1 ;
         let x4headsize = new GraphSize(start.x - headPos.w, start.y - headPos.h, headPos.w*2, headPos.h*2);
         // first intersection is segment origin. second is found with the box containing all possible edgeHead positions that touch the startPoint
-        // (doing x4 his shape and placing 4 "rectangles" all around startPoint) to cover all possible segment directions.
+        // (doing x4 his shape and placing 4 "rectangles" all around startPoint forming a 2x2 square) to cover all possible segment directions.
         // or finding first direction (vertical if m >1, horizontal if m<0) and vector direction and intersecting with only the "correct" placed edgeHead rectangle.
         // then the intersection will likely not fall on the extreme angle of EdgeHead and i can re-center edgeHead
         // so that first and second intersections are equal spaced with the center segment
+        // later comment: i think original head is placed with .tl() equal to edge.endPoint (target anchor pos),
+        // then you build a 2x2 square around it (center of 2x2 square is edge.endPoint) to move it where the edge is coming, intersecting it.
         let secondIntersection: GraphPoint | undefined;
         let segmentDistance = start.distanceFromPoint(end);
-        if (segmentDistance <= Math.sqrt(headPos.w**2 + headPos.h**2)){
+        if (segmentDistance <= Math.sqrt(headPos.w**2 + headPos.h**2)){ // todo: if pts are too close and m is infinite, this crashes?
             let safeDistance = Math.max(headPos.w, headPos.h)*5;
             end = new GraphPoint( end.y + safeDistance, end.y + m * safeDistance); // move the point away so it doesn't intersect anymore. i just need direction
             // too small to fit edgeHead, i simply put it centered on the whole segment
             // secondIntersection = end;
         }
-        secondIntersection = GraphSize.closestIntersection(x4headsize, start, end, undefined);
+        secondIntersection = GraphSize.closestIntersection(x4headsize, start, end, undefined, m, undefined);
         if (!secondIntersection) {
-           return Log.exDevv("failed to intersect edge head", {x4headsize, segment, headPos, c, start, end, useBezierPoints});
+           return Log.exDevv("failed to intersect edge head", {x4headsize, segment, headPos, c, start, end, useBezierPoints, m});
         }
         tmp = secondIntersection.add(start, false).divide(2); // center of edgehead
         headPos.x = tmp.x - headPos.w / 2; // tl corner

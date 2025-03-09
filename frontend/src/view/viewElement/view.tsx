@@ -128,11 +128,11 @@ CSS_Units.jsx = <datalist id={"__jodel_CSS_units"}>{
    (Object.keys(CSS_Units) as (keyof typeof CSS_Units0)[]).map(k1 => {
         let v1: GObject = CSS_Units[k1];
 
-       return <optgroup label={k1}>
+       return <optgroup label={k1} key={k1}>
             {Object.keys(v1).map(k => {
                 let v = v1[k];
                 pattern.push(k);
-                return <option value={k} title={v}></option>
+                return <option key={k} value={k} title={v}></option>
             })}
         </optgroup>
     })

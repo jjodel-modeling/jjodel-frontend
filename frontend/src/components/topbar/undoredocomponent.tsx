@@ -296,7 +296,7 @@ export class SaveManagerComponent extends PureComponent<AllProps, ThisState>{
         </>
 
         return (<>
-            <div className='undoredo'>
+            <div className='undoredo' key={'undo'}>
                 <span className={"hoverable"} style={{position: "relative", background: "white"}}
                       onMouseEnter={this.undoenter} onMouseLeave={this.undoleave}>
                     <button className={'item border round ms-1'} onClick={(e) => {

@@ -9,10 +9,11 @@ import {ReactElement, ReactNode} from "react";
 // used in App.tsx
 
 export function ExternalLibraries(): any {
+    let i = 0;
     return [
         // @ts-ignore  // .js is not included in source files?
-        <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet' />,
-        <script src="https://unpkg.com/boxicons@2.1.4/dist/boxicons.js"></script>,
+        <link key={i++} href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet' />,
+        <script key={i++} src="https://unpkg.com/boxicons@2.1.4/dist/boxicons.js" />,
         // <link href='https://unpkg.com/boxicons@2.1.4/dist/boxicons.js' rel='stylesheet' > in docs was like this??
     ];
 }

@@ -1151,7 +1151,6 @@ export class LTypedElement<Context extends LogicContext<DTypedElement> = any> ex
         // if (context.data.enumType) return '' + context.data.enumType.name;
         // if (context.data.primitiveType) return '' + context.data.primitiveType.getName();
         return () => {
-            console.log('get_typeToShortString', {context, type: context.proxyObject.type});
             return context.proxyObject.type.typeString;
         }
     }

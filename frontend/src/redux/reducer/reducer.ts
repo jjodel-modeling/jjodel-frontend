@@ -946,7 +946,7 @@ export function _reducer/*<S extends StateNoFunc, A extends Action>*/(oldState: 
         // todo: se al posto di "annullare l'undo" memorizzo l'azione e la rieseguo, posso ripetere l'ultimo passo N volte e questa azione diventa utile per combinare passi e ripetere blocchi di azioni assieme
         default:
             if (action.type?.indexOf('@@redux/') === 0) {
-                console.error('redux init', {action, oldState, initialState});
+                console.log('redux init', {action, oldState, initialState});
                 return oldState;
             }
             if (!(action?.className)) { Log.exDevv('unexpected action type:', action.type); return oldState; }

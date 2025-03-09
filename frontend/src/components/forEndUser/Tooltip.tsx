@@ -36,10 +36,11 @@ class TooltipVisualizerState{
         this.position = 'b';
     }
 }
-export class TooltipVisualizer extends React.Component<{}, TooltipVisualizerState> {
+type TooltipProps = {};
+export class TooltipVisualizer extends React.Component<TooltipProps, TooltipVisualizerState> {
     public static component: TooltipVisualizer;
-    constructor(){
-        super({});
+    constructor(props: TooltipProps){
+        super(props);
         this.state = new TooltipVisualizerState();
         TooltipVisualizer.component = this;
     }
