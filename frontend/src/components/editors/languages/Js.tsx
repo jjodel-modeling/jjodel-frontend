@@ -24,7 +24,7 @@ function JsEditorComponent(props: AllProps) {
     const monaco = useMonaco();
     (window as any).monaco = monaco;
 
-    const readOnly = props.readonly !== undefined ? props.readonly : !props.debugmode && Defaults.check(data.id);
+    const readOnly = props.readOnly !== undefined ? props.readOnly : !props.debugmode && Defaults.check(data.id);
     const change = (value: string|undefined) => {
         /* save in local state for frequent changes */
         if (value !== undefined) setJs(value);
@@ -89,7 +89,7 @@ function JsEditorComponent(props: AllProps) {
     </>;
 }
 interface OwnProps {
-    readonly?: boolean;
+    readOnly?: boolean;
     data?: Pointer | DPointerTargetable | LPointerTargetable;
     field?: string;
     placeHolder?: string;

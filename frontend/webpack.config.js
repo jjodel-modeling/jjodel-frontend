@@ -7,6 +7,16 @@ module.exports = (env) => {
     const dotenvFilename = isProduction ? '.env.production' : '.env.development';
 
     return {
+        stats: {// disables console.warn with eslint-like messages in browser
+            logging: 'none'//'error',
+        },
+        infrastructureLogging: {// disables console.warn with eslint-like messages in browser
+            //appendOnly: true,
+            level: 'none'// 'error',
+        },
+        devServer: {
+            clientLogLevel: 'none' // disables console.warn with eslint-like messages in browser
+        },
         entry: './src/index.js',
         output: {
             path: path.resolve(__dirname, 'dist'),

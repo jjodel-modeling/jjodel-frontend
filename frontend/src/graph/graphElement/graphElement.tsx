@@ -90,6 +90,32 @@ function setTemplateString(stateProps: InOutParam<GraphElementReduxStateProps>, 
 
 }*/
 
+function htmlValidProps_dynamic(props: GObject): GObject {
+    return props;
+    //let ret = {...props};
+}
+
+// NB: i was thinking of sanitizing root vertex props before render to avoid react's warning of unknown prop in html.
+// BUT gave up because props are passed to the root element of the jsx (which is duplicated), before his .render()
+// so if it needs some props for render logic it cannot be serialized and react warning is unavoidable.
+// at this point if the root is a native html tag, props will trigger the warning,
+// if it isn't it really needs it and a serialized prop will cause an error.
+function htmlValidProps_static(props: GObject): GObject {
+    let ret = {...props};
+    /*delete ret.skiparenderforloading;
+    for( let k in ret) {
+        let deleteOriginal = false;
+        switch (k) {
+            case 'isVoid':
+                delete ret[k];
+                ret[k.toLowerCase()] = '' + ret[k];
+                deleteOriginal = true;
+                break;
+        }
+        if (false as boolean && deleteOriginal) delete ret[k]; // keeping it because of
+    }*/
+    return ret;
+}
 function computeUsageDeclarations(component: GraphElementComponent, allProps: AllPropss, state: GraphElementStatee, lview: LViewElement): GObject {
     // compute usageDeclarations
     let udret: GObject = {__notInitialized: true};
@@ -151,7 +177,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
 
     // requires data and node wrapping first
     static mapViewStuff(state: DState, ret: GraphElementReduxStateProps, ownProps: GraphElementOwnProps) {
-        // let dnode: DGraphElement | undefined = ownProps?.nodeid && DPointerTargetable.from(ownProps.nodeid, state) as any;
+            // let dnode: DGraphElement | undefined = ownProps?.nodeid && DPointerTargetable.from(ownProps.nodeid, state) as any;
         // console.log("viewsss mapstate 3 " + ret.node?.className + " " + ret.data?.name, {views:ret.views, vv:ret.view, ownProps, stateProps:{...ret}, thiss:this});
         ret.parentviewid = ownProps.parentViewId;
 
@@ -164,7 +190,6 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         if (explicitView) {
             let idorname: string = Pointers.from(explicitView) || explicitView as any as string;
             ret.view = tn.mainView = LPointerTargetable.fromD(Selectors.getViewByIDOrNameD(idorname, state) as DViewElement);
-
         }
         if (!ret.view) { // if view is not explicitly set or the assigned view is not found, match a new one.
             if (!scores) scores = getScores(ret, ownProps);
@@ -176,7 +201,8 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         let vname: string = !ret.view && ownProps.view ? ' Check the manual assignment of props view={"'+(ownProps.view?.name || ownProps.view) +'"}' : '';
         let pview: LViewElement|undefined = !ret.view ?  ret.node?.father?.view : undefined;
         Log.ex(!ret.view, "Could not find any view applicable to element." + vname + (pview ? ' in view "'+pview.name+'"' : ''),
-            {data:ret.data, props: ownProps, state: ret, scores: (ret as any).viewScores, nid: ownProps.nodeid, tn:transientProperties.node[ownProps.nodeid as any]});
+            {data:ret.data, props: ownProps, state: ret, scores: (ret as any).viewScores,
+                nid: ownProps.nodeid, tn:transientProperties.node[ownProps.nodeid as any], ret, explicitView});
 
         if (explicitViews){
             // ret.views = tn.stackViews = LPointerTargetable.fromArr(explicitView);
@@ -373,49 +399,134 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
 
     public shouldComponentUpdate(nextProps: Readonly<AllProps>, nextState: Readonly<GraphElementState>, nextContext: any, oldProps?: Readonly<AllProps>): boolean {
         if (!oldProps) oldProps = this.props;//for subviewcomponent
-        if (nextProps.__skipRender) return true;
-        let debug = false;
+        if (nextProps.__skipRender) return false;
+        let debug = true;
         // return GraphElementComponent.defaultShouldComponentUpdate(this, nextProps, nextState, nextContext);
         let data = nextProps.data?.__raw as DNamedElement | undefined;
 
-        let out = {reason:undefined};
+        let out: GObject & {reason: string[]} = {reason:[]};
         let skipDeepKeys = {pointedBy:true, clonedCounter: true};// clonedCounter is checked manually before looping object keys
         // let skipPropKeys = {...skipDeepKeys, usageDeclarations: true, node:true, data:true, initialSize: true};
-        let ret = false; // !U.isShallowEqualWithProxies(oldProps, nextProps, 0, 1, skipPropKeys, out);
         // if node and data in props must be ignored and not checked for changes. but they are checked if present in usageDeclarations
         let component = nextProps.node.component;
         const nid = nextProps.nodeid;
-        // U.arrayDiff()
-        for (let v of nextProps.views) {
-            const vid: Pointer<DViewElement> = v.__raw.id;
+
+        let subViewUpdated = false;
+        let newViews: Dictionary<Pointer, LViewElement> = U.objectFromArray(nextProps.views, 'id');
+        let oldViews: Dictionary<Pointer, LViewElement> = U.objectFromArray(this.props?.views||[], 'id');;
+        for (let vid in newViews) {
             let nodeviewentry = transientProperties.node[nid].viewScores[vid];
+            if (false as any && !(vid in oldViews)) { // newly inserted view
+                // this should not be necessary, the ud diff will always trigger it for first render,
+                // and for subsequent ones if the UD did not change, i can use the cached jsxOutput
+                // to append the subview jsx without re-rendering it (if jsxOutput is missing it triggers rerender anyway)
+                nodeviewentry.jsxChanged = false;
+                nodeviewentry.shouldUpdate = true;
+                let reason = 'subview newly matched ('+vid+')';
+                out.reason.push(reason);
+                nodeviewentry.shouldUpdate_reason = {...out, reason};
+            }
+
+            // error: deleting ud in subview do not update mainview
+            let v = newViews[vid];
+
+            // UD needs to be computed anyway even if we are already 100% sure it needs to be updated, so done before all exit conditions
             let old_ud = nodeviewentry.usageDeclarations;
             computeUsageDeclarations(component, nextProps, nextState, v);
             let new_ud = nodeviewentry.usageDeclarations;
-            nodeviewentry.shouldUpdate = !U.isShallowEqualWithProxies(old_ud, new_ud, skipDeepKeys, out);
 
-            nodeviewentry.shouldUpdate_reason = {...out};
-            (nodeviewentry as any).shouldUpdate_reasonDebug = {old_ud, new_ud};
+            if (nodeviewentry.jsxChanged) { // check for jsx changes
+                nodeviewentry.jsxChanged = false;
+                nodeviewentry.shouldUpdate = true;
+                let reason = 'subview jsx or ud text changed ('+vid+')';
+                out.reason.push(reason);
+                nodeviewentry.shouldUpdate_reason = {...out, reason};
+            }
+            else { // check for ud changes
+                let tmpout = { reason: '' };
+                nodeviewentry.shouldUpdate = !U.isShallowEqualWithProxies(old_ud, new_ud, skipDeepKeys, tmpout);
+                nodeviewentry.shouldUpdate_reason = {...tmpout};
+                if (tmpout.reason) out.reason.push(tmpout.reason+' ('+vid+')');
+                (nodeviewentry as any).shouldUpdate_reasonDebug = {old_ud, new_ud};
+            }
+
             Log.l(debug, "DECORATIVE_VIEW ShouldComponentUpdate " + data?.name + (nodeviewentry.shouldUpdate ? " UPDATED " : " REJECTED ")  + vid,
                 {ret:nodeviewentry.shouldUpdate, reason: out.reason, old_ud, new_ud, oldProps:oldProps, nextProps, vid});
-
-            if (!ret && nodeviewentry.shouldUpdate) ret = true;
+            if (!subViewUpdated && nodeviewentry.shouldUpdate) subViewUpdated = true;
         }
 
+        if (!subViewUpdated && this.props?.views) {
+            // check for deactivated views (were in list but not anymore).
+            // this is not necessary if the element or any subview has changed and the element is rendering anyway
+            for (let vid in oldViews) {
+                if (vid in newViews) continue;
+                // let v = oldViews[vid];
+                let nodeviewentry = transientProperties.node[nid].viewScores[vid];
+                subViewUpdated = nodeviewentry.shouldUpdate = true;
+                let reason = 'subview removed'
+                out.reason.push(reason);
+                nodeviewentry.shouldUpdate_reason = {...out, reason};
+                break;
+            }
+
+        }
+
+        /////// check for main view
+
+        // UD needs to be computed anyway even if we are already 100% sure it needs to be updated, so done before all exit conditions
         const vid: Pointer<DViewElement> = nextProps.view.__raw.id;
         let nodeviewentry = transientProperties.node[nextProps.nodeid].viewScores[vid];
         let old_ud = nodeviewentry.usageDeclarations;
         computeUsageDeclarations(component, nextProps, nextState, nextProps.view);
         let new_ud = nodeviewentry.usageDeclarations;
-        nodeviewentry.shouldUpdate = !U.isShallowEqualWithProxies(old_ud, new_ud,  skipDeepKeys, out);
-        nodeviewentry.shouldUpdate_reason = {...out};
-        (nodeviewentry as any).shouldUpdate_reasonDebug = {old_ud, new_ud};
 
-        Log.l(debug, "ShouldComponentUpdate " + data?.name + (nodeviewentry.shouldUpdate ? " UPDATED " : " REJECTED ") + vid,
+        let ret = false; // !U.isShallowEqualWithProxies(oldProps, nextProps, 0, 1, skipPropKeys, out);
+        if (subViewUpdated) {
+            // if a subview is updated, need to update main view as well.
+            ret = nodeviewentry.shouldUpdate = true;
+            let reason = 'subview changed';
+            out.reason.push(reason);
+            nodeviewentry.shouldUpdate_reason = {...out};
+        }
+        if (!ret && nodeviewentry.jsxChanged) { // check for jsx changes
+            ret = nodeviewentry.shouldUpdate = true;
+            let reason = 'main jsx changed';
+            out.reason.push(reason);
+            nodeviewentry.shouldUpdate_reason = {...out};
+        }
+        if (!ret) {
+            // NB: UD changes as a string are handled in reducer and triggers JSX recompilation.
+            // UD computed value changes are computed above
+            // and finally structural changes led by logic inside UD (if(node.x) delete ret['...']) are handled here.
+            // (dynamic adds or remove elements from ud.ret without string change)
+
+            /* already handled in computeud + shallowequal
+            let nextVids = nextProps.views.map(v=>v.id);
+            let pastVids = oldProps.views.map(v=>v.id);
+            if (nextVids.length !== pastVids.length){
+                let diff = U.arrayDifference(nextVids, pastVids);
+                if (diff.added.length + diff.removed.length) {
+                    nodeviewentry.shouldUpdate = true;
+                    out.reason = 'decorative view list changed';
+                    nodeviewentry.shouldUpdate_reason = {...out};
+                    return true;
+                }
+            }*/
+        }
+
+        if (!ret) {
+            let tmpout = {reason:''}
+            ret = nodeviewentry.shouldUpdate = !U.isShallowEqualWithProxies(old_ud, new_ud, skipDeepKeys, tmpout);
+            if (tmpout.reason) out.reason.push(tmpout.reason);
+            nodeviewentry.shouldUpdate_reason = {...out};
+            (nodeviewentry as any).shouldUpdate_reasonDebug = {old_ud, new_ud};
+        }
+
+        Log.l(debug, "MAIN_VIEW ShouldComponentUpdate " + data?.name + (nodeviewentry.shouldUpdate ? " UPDATED " : " REJECTED ") + vid,
             {ret:nodeviewentry.shouldUpdate, reason: out.reason, old_ud, new_ud, oldProps:oldProps, nextProps});
         if (!ret && nodeviewentry.shouldUpdate) ret = true;
         return ret; // if any of main view or decorative views need updating
-        // apparently node changes are not working? also check docklayout shouldupdate
+        // also check docklayout shouldupdate
     }
 
     protected doMeasurableEvent(type: EMeasurableEvents, vid: Pointer<DViewElement>): boolean {
@@ -423,6 +534,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         let measurableFunc: undefined | ((context:GObject)=>void) = (transientProperties.view[vid] as any)[type];
         if (!measurableFunc) return false;
         let context: GObject = this.getJSXContext(vid); // context + usagedeclarations of main view only
+        // console.log("render debug measurable " + type + " view: " + vid, {context, type, lm: Debug.lightMode, vid});
         try {
             measurableFunc.call(context, context);
             console.log("measurable executed", {type, measurableFunc, vid, transient:transientProperties.view[vid]});
@@ -432,7 +544,6 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         // i just need to know if he had the chance to do side-effects and the answer is yes regardless of exceptions
         return true;
     }
-
 
 
     select(forUser?: Pointer<DUser>): void {
@@ -617,24 +728,29 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         return ret;
     }*/
     protected getTemplate3(vid: Pointer<DViewElement>, v: LViewElement, context: GObject): ReactNode {
-        let tnv = transientProperties.node[this.props.nodeid].viewScores[vid];
-        let tv = transientProperties.view[vid];
+        // let tnv = transientProperties.node[this.props.nodeid].viewScores[vid];
+        // let tv = transientProperties.view[vid];
         // console.log("getTemplate jsx", {vid, v, context, tnv, tv, shouldUp: tnv.shouldUpdate, jsxFunc:tv.JSXFunction});
         let ret = this.getTemplate3_(vid, v, context);
         return ret;
     }
     protected getTemplate3_(vid: Pointer<DViewElement>, v: LViewElement, context: GObject): ReactNode{
         let tnv = transientProperties.node[this.props.nodeid].viewScores[vid];
+        console.log("render debug view template 0: " + v.name, {tnv, s_up:tnv.shouldUpdate, oldjsx:tnv.jsxOutput});
+
         if (!tnv.shouldUpdate && tnv.jsxOutput) return tnv.jsxOutput;
+
+        console.log("render debug view template 1: " + v.name,);
+
         let tv = transientProperties.view[vid];
         let ret = tnv.jsxOutput = (tv.JSXFunction ? tv.JSXFunction.call(context, context) : null);
         if (typeof ret === "object" && ret !== null && !React.isValidElement(ret)) {
-            // plain objects cannot be react nodes, but react noeds are objects. so i try serializing
+            // plain objects cannot be react nodes, but react nodes are objects. so i try serializing
             // this only happens if someone puts an object in jsx
             try{
                 ret = JSON.stringify(ret);
             }
-            catch(e){ ret = "{__ Cyclic Object __}"; }
+            catch (e) { ret = "{__ Cyclic Object __}"; }
         }
         return ret;
     }
@@ -729,15 +845,16 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
 
     onScroll(e: React.MouseEvent): void {
         console.log("onScroll");
+        e.preventDefault()
         let scroll: Point = new Point(e.currentTarget.scrollLeft, e.currentTarget.scrollTop);
         let scrollOrigin: Point = new Point(e.nativeEvent.offsetX, e.nativeEvent.offsetY);
         let g: LGraph = this.props.node.graph;
         let oldZoom: GraphPoint = g.zoom;
         let newZoom: GraphPoint = new GraphPoint(oldZoom.x+0.1, oldZoom.y+0.1);
-        let oldOffset: GraphPoint = g.offset;
-        let gscrollOrigin: GraphPoint = oldOffset.add(scrollOrigin.multiply(oldZoom, true), true);
-        let newscrollOrigin: GraphPoint = oldOffset.add(scrollOrigin.multiply(newZoom, true), true);
-        let newOffset: GraphPoint = oldOffset.add( gscrollOrigin.subtract(newscrollOrigin, true), true);
+        let oldOffset = g.offset;
+        let gscrollOrigin = oldOffset.add(scrollOrigin.multiply(oldZoom, true), true);
+        let newscrollOrigin = oldOffset.add(scrollOrigin.multiply(newZoom, true), true);
+        let newOffset = oldOffset.add( gscrollOrigin.subtract(newscrollOrigin, true), true);
         TRANSACTION('scroll graph', ()=>{
             g.offset = newOffset;
             g.zoom = newZoom;
@@ -881,10 +998,11 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
 
     }
 
-    onDataUpdateMeasurable(view: LViewElement, vid: Pointer<DViewElement>, index: number): void{
+    onDataUpdateMeasurable(v: LViewElement, vid: Pointer<DViewElement>, index: number): void{
         if (index > 0) { this.doMeasurableEvent(EMeasurableEvents.onDataUpdate, vid); return; }
         // only on first of a sequence of onDataUpdate events for all stackviews (the mainview),
-        // set time of current stack of updates, to check if they are generating a loop
+        // sets time of current stack of updates, to check if they are generating a loop
+
 
         // EMeasurableEvents.onDataUpdate -> handling and checking for loops
         if (!this.stopUpdateEvents || this.stopUpdateEvents !== this.props.view.clonedCounter) {
@@ -1018,19 +1136,30 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         }*/
 
         let jsxOutput: ReactNode = undefined as any;
-        const tn = transientProperties.node[nid]
-        //console.log("render", {mainView, otherViews, scores:tn.viewScores, tnv:tn.viewScores[this.props.viewid], ud:tn.viewScores[this.props.viewid].usageDeclarations});
+        const tn = transientProperties.node[nid];
+        console.log("render debug", {mainView, otherViews,
+            dbg:allviews.map(v=>({v:v.id, shouldup:tn.viewScores[v.id].shouldUpdate})),
+            scores:tn.viewScores,
+            tnv:tn.viewScores[this.props.viewid], ud:tn.viewScores[this.props.viewid].usageDeclarations});
         for (let v of allviews) { // main view is the last
-            let viewnodescore = transientProperties.node[nid].viewScores[v.id];
+            let viewnodescore = tn.viewScores[v.id];
             jsxOutput = viewnodescore.shouldUpdate ? undefined : viewnodescore.jsxOutput;
             let isMain: true | undefined = v === mainView || undefined;
             if (!jsxOutput) viewnodescore.jsxOutput = jsxOutput =
                 this.renderView(this.props, v, nodeType, classes, styleoverride,
                     isMain && decoratorViewsOutput, mainView.id, isMain && otherViews.map(v=>v.id));
             if (!isMain) decoratorViewsOutput.push(jsxOutput);
-            if (viewnodescore.shouldUpdate) viewnodescore.shouldUpdate = false; // this needs to be placed post renderView call
         }
 
+        // do ondataupdate measurables
+        for (let i = 0 ; i < allviews.length; i++){
+            let v = allviews[i];
+            let vid = v.id;
+            let viewnodescore = tn.viewScores[vid];
+            if (!viewnodescore.shouldUpdate) continue;
+            this.onDataUpdateMeasurable(v, vid, i);
+            if (viewnodescore.shouldUpdate) viewnodescore.shouldUpdate = false; // this needs to stay placed after this.renderView() call
+        }
         let mainViewOutput: ReactNode = jsxOutput;
         return mainViewOutput;
         // console.log('rendering view stack', {mainView, otherViews, mainViewOutput, decoratorsJSX:decoratorViewsOutput});
@@ -1051,6 +1180,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
             return <div>Loading...</div>;
         }*/
 
+        console.log("render debug view: " + v.name, {otherViews, ud});
         if (!ud) tnv.usageDeclarations = ud = computeUsageDeclarations(this, props, this.state, v);
         //console.log("renderView", {dv, tnv, ud});
 
@@ -1131,7 +1261,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
                         onMouseMove: this.onMouseMove,
                         onKeyDown: this.onKeyDown,
                         // onKeyUp: this.onKeyUp,
-                        onwheel: this.onScroll,
+                        onWheel: this.onScroll,
                         onMouseEnter: this.onEnter,
                         onMouseLeave: this.onLeave,
                         tabIndex: (props as any).tabIndex || -1,
@@ -1146,7 +1276,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
                     }
                 }
                 else injectProps = {"data-viewid": v.id, className: "decorativeView " + v.id, "data-mainview": mainviewid};
-
+                // htmlValidProps_static(injectProps); read func comment
 
                 let debug: GObject = {};
                 injectProps.children = UX.recursiveMap(rawRElement/*.props.children*/,
@@ -1165,11 +1295,11 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
                 if (otherViews && false) injectProps.children = [...injectProps.children, ...makeItArray(props.children), ...(otherViews as any[])];
 
                 // injectProps.children = [...makeItArray(rawRElement.props.children), ...makeItArray(injectProps.children)];
-                let children = makeItArray(injectProps.children); // [...makeItArray(rawRElement.props.children), ...makeItArray(injectProps.children)]; rawRElement.child are already in injectprops
+                // let children = makeItArray(injectProps.children); // [...makeItArray(rawRElement.props.children), ...makeItArray(injectProps.children)]; rawRElement.child are already in injectprops
                 // injectProps.children = [<div>{children}</div>];//[]; making any change at injectprops.children breaks it?
                 rawRElement = React.cloneElement(rawRElement, injectProps);//, ...children); // adding chioldrens after injectprops seems pointless
 
-                debug.rawRElementPostInjection = {node:rawRElement, text: getNodeText(rawRElement)};
+                // debug.rawRElementPostInjection = {node:rawRElement, text: getNodeText(rawRElement)};
                 // rawRElement = React.cloneElement(rawRElement, {children: [...makeItArray(rawRElement.props.children), ...makeItArray(injectProps.children)]});
                 // console.log('rendering view stack fixing doubles', {v0:rnode, v1:rawRElement, fixed:rawRElement.props.children})
                 fixdoubleroot = false; // need to set the props to new root in that case.

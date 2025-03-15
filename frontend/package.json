@@ -32,6 +32,7 @@
     "jquery": "^3.6.0",
     "jqueryui": "^1.11.1",
     "jqwidgets-scripts": "^19.2.0",
+    "json-stable-stringify": "^1.2.1",
     "jsx-parser": "^1.0.8",
     "jsx-recast": "^0.1.1",
     "jsx-runtime": "^1.2.0",
@@ -105,7 +106,11 @@
     "extends": [
       "react-app",
       "react-app/jest"
-    ]
+    ],
+    "rules": {
+      "no-unused-vars": 0,
+      "@typescript-eslint/no-unused-vars": 0
+    }
   },
   "browserslist": {
     "production": [

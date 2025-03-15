@@ -188,5 +188,39 @@ export class Log{
         }
 
     }
+
+    static filterMessages() {
+        let err = console.error;
+        let warn = console.warn;
+        console.warn = (...e): void => {
+            let e0 = e[0];
+            if (e0 && (e0[0] === 's' && e0[14] === 's' && e0.substring(0,15) === 'src\\api\\data.ts')) {
+                console.info(...e);
+                return;
+            }
+            /*switch (e[0]) { // [0] {} bn
+            }*/
+            return warn(...e);
+        }
+        console.error = (...e): void => {
+            switch (e[0]) { // [0] {} bn
+                case "Warning: The tag <%s> is unrecognized in this browser. If you meant to render a React component, start its name with an uppercase letter.%s":
+                    switch (e[1]) {
+                        case 'view':
+                            return;
+                    }
+                    break;
+                case "Warning: React does not recognize the `%s` prop on a DOM element. If you intentionally want it to appear in the DOM as a custom attribute, spell it as lowercase `%s` instead. If you accidentally passed it from a parent component, remove it from the DOM element.%s":
+                    return;
+                case "Warning: Each child in a list should have a unique \"key\" prop.%s%s See https://reactjs.org/link/warning-keys for more information.%s":
+                case "Warning: Each child in a list should have a unique \"key\" prop.%s%s See https://reactjs.org/link/warning-keys for more information.%s":
+                    warn(...e, {args: e});
+                    return;
+                default:
+                    break;
+            }
+            err(...e);
+        }
+    }
 }
 // (window as any).Log = Log;

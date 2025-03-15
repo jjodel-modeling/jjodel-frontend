@@ -44,19 +44,19 @@ function InfoDataComponent(props: AllProps) {
 
     return(<section className={'page-root properties-tab'}>
         <h1 className={'view'}>View: {view.name}</h1>
-        <Input data={view} field={'name'} label={'Name:'} readonly={readOnly}/>
-        <Input data={view} field={'isExclusiveView'} label={'Is Exclusive:'} type={"checkbox"} readonly={readOnly}
+        <Input data={view} field={'name'} label={'Name:'} readOnly={readOnly}/>
+        <Input data={view} field={'isExclusiveView'} label={'Is Exclusive:'} type={"checkbox"} readOnly={readOnly}
                //setter={(val) => { view.isExclusiveView = !val}}
                //getter={(data) => !(data as LViewElement).isExclusiveView as any
         />
         {isV && <>
-            <Input data={view} field={'explicitApplicationPriority'} label={'Priority:'} type={'number'} readonly={readOnly}
+            <Input data={view} field={'explicitApplicationPriority'} label={'Priority:'} type={'number'} readOnly={readOnly}
                getter={(data: LViewElement)=>{ let v = data.__raw.explicitApplicationPriority; return v === undefined ? v : ''+v; }}
                setter={(v)=>{ view.explicitApplicationPriority = (v ? +v as number : undefined as any); }}
                placeholder={'automatic: ' + view.explicitApplicationPriority}
                key={''+view.explicitApplicationPriority/*just to force reupdate if placeholder changes*/}
         />
-            <Select data={view} field={'forceNodeType'} label={'Preferred appearance:'} readonly={readOnly} options={
+            <Select data={view} field={'forceNodeType'} label={'Preferred appearance:'} readOnly={readOnly} options={
                 <>
                     <option value={'unset'} key={-1}>Automatic by model type (package, object, feature...)</option>
                     <optgroup label={'Graph'} key={0}>{
@@ -75,20 +75,20 @@ function InfoDataComponent(props: AllProps) {
             } setter={(val, data, key) => { view.forceNodeType = val === 'unset' ? undefined : val; }}
                     getter={(data, key) => { return data[key] || 'unset_'; }} />
 
-            <Select data={view} field={'appliableToClasses'} label={'Appliable to:'} readonly={readOnly} isMultiSelect={true} options={classesOptions as any} />
+            <Select data={view} field={'appliableToClasses'} label={'Appliable to:'} readOnly={readOnly} isMultiSelect={true} options={classesOptions as any} />
             {/*<Select data={view} field={'appliableToClasses'} label={'Appliable to:'} readonly={readOnly} options={classesOptions} />*/}
 
-            <Select readonly={readOnly} data={view} field={'father'} label={"Viewpoint:"} getter={()=> vpid}>
+            <Select readOnly={readOnly} data={view} field={'father'} label={"Viewpoint:"} getter={()=> vpid}>
                 {dallVP.map((viewpoint) => (
                     <option key={viewpoint.id} value={viewpoint.id}>{viewpoint.name}</option>
                 ))}
             </Select>
-            <Select readonly={readOnly} data={view} field={'father'} label={"Parent view:"}>
+            <Select readOnly={readOnly} data={view} field={'father'} label={"Parent view:"}>
                 {view.allPossibleParentViews.filter(v=>v.viewpoint?.id === vpid).map((view) => (
                     <option key={view.id} value={view.id}>{view.name}</option>
                 ))}
             </Select>
-            <OclEditor viewID={view.id} readonly={readOnly} />
+            <OclEditor viewID={view.id} readOnly={readOnly} />
             <JsEditor
                 data={view} field={'jsCondition'}
                 placeHolder={'/* Last line must return a boolean */'}

@@ -592,6 +592,9 @@ export class Selectors{
                 // but OCL is computationally heavy, so i decided it is now a requirement to update the model to reevaluate ocl.
                 let oldScore = tnv.OCLScore;
                 tnv.OCLScore = OCL.test(data, dview, node)//Selectors.calculateOCLScore({data, node, dview});
+                if (vid === 'fallback'){
+                    console.log('fallback ocl', {oldScore, newScore:tnv.OCLScore, data, dview});
+                }
                 tv.oclChanged = false;
                 if (!needsorting && tnv.OCLScore !== oldScore) needsorting = true;
                 if (tnv.OCLScore === ViewEClassMatch.MISMATCH_OCL) { tnv.finalScore = ViewEClassMatch.MISMATCH; continue; }

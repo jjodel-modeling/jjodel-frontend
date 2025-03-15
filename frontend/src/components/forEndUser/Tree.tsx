@@ -147,7 +147,7 @@ function DataTree(props: DataTreeProps): JSX.Element {
                         {(data.name) ? data.name : 'unnamed'}
                         {(data as LClass).extends && (data as LClass).extends.length > 0 &&
                             <span className={'extends'}>
-                                &nbsp; <i className="bi bi-caret-right"></i> [{(data as LClass).extends.map((s,i) => <><i>{s.name}</i>{i < (data as LClass).extends.length - 1 ? ', ' :''}</>)}]
+                                &nbsp; <i className="bi bi-caret-right"></i> [{(data as LClass).extends.map((s,i) => <><i key={s.id}>{s.name}</i>{i < (data as LClass).extends.length - 1 ? ', ' :''}</>)}]
                             </span>
                         }
                     </span>
@@ -156,7 +156,7 @@ function DataTree(props: DataTreeProps): JSX.Element {
 
         </div>
         {!hide && Array.isArray(data.children) && data.children?.map((child: LModelElement) => {
-            return(<div style={{marginLeft: '1em'}}>
+            return(<div style={{marginLeft: '1em'}} key={child.id}>
                 <Tree data={child} depth={depth} />
             </div>);
         })}

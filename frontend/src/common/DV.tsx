@@ -241,9 +241,9 @@ export class DV {
                 <path className={"preview edge full` + (dashing ? ' dashed' : '') + `"} d={this.edge.d} />
                 <path className={"preview edge full hover-activator"} d={this.edge.d} />
                 { /* edge separate segments */ }
-                {segments && segments.all && segments.all.flatMap(s => [
-                    <path tabIndex="-1" className={"clickable content segment"} d={s.dpart}></path>,
-                    s.label && <foreignObject className="label" x={(s.start.pt.x + s.end.pt.x)/2+"px"} y={(s.start.pt.y + s.end.pt.y)/2+"px"}>
+                {segments && segments.all && segments.all.flatMap((s, i) => [
+                    <path key={i} tabIndex="-1" className={"clickable content segment"} d={s.dpart} />,
+                    s.label && <foreignObject key={'label'} className="label" x={(s.start.pt.x + s.end.pt.x)/2+"px"} y={(s.start.pt.y + s.end.pt.y)/2+"px"}>
                     <div className={"label-text"}
                      style={{transform: "translate(-50%, 0%) rotate("+s.radLabels+"rad) translate(0%, -"+(1-0.5*Math.abs(Math.abs(s.radLabels)%Math.PI)/(Math.PI/2))*100+"%)"+
                      " translate(0%, -5px"}}>{s.label}</div>
@@ -327,7 +327,16 @@ export class DV {
 </section>`
 )}    static semanticErrorOverlay() { return (
 `<section className="overlap">
-    <div className="error-message">{errors.join(<br/>)}</div>
+    {
+    /* how it works: when a validated property changes to an invalid state (let's say lowerbound)
+     - lowerbound updated, this cause an update on both the main and lowerbound views (due to usageDeclarations)
+     - the update triggers "onDataUpdate" event of main and lowerbound views, the latter updates the state setting the invalid message.
+     - this triggers another update of main and generic error views (not working??)
+     - 
+     */
+     errors.length ? null : <div className="error-message">{errors.separator(<br/>)}</div>
+    }
+    
 </section>`
 )}
 
@@ -400,8 +409,8 @@ export class DefaultView {
 
     public static void(): string { return (
 `<div className={'root void model-less round bg-white p-1'}>
-    <div>voidvertex element test</div>
-    <div>data: {props.data ? props.data.name : "empty"}</div>
+    <div>{data ? data.name : "Shapeless"} element</div>
+    <div>This element didn't match any primary view.</div>
     {decorators}
 </div>`
 );}

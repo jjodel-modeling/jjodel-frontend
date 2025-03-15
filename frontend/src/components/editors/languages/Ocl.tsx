@@ -14,7 +14,7 @@ function OclEditorComponent(props: AllProps) {
     const [expand, setExpand] = useStateIfMounted(false);
 
     if(!view) return(<></>);
-    const readOnly = props.readonly !== undefined ? props.readonly : Defaults.check(view.id);
+    const readOnly = props.readOnly !== undefined ? props.readOnly : Defaults.check(view.id);
     const change = (value: string|undefined) => { // save in local state for frequent changes.
         if(value !== undefined) setOcl(value);
     }
@@ -53,7 +53,7 @@ function OclEditorComponent(props: AllProps) {
     </>);
 }
 interface OwnProps {
-    readonly?: boolean;
+    readOnly?: boolean;
     viewID: Pointer<DViewElement, 1, 1, LViewElement>;
     style?: CSSProperties;
 }

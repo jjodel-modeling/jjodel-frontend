@@ -188,7 +188,7 @@ export function InputComponent(props: AllProps) {
 
     if (!((data && field) || (getter && setter))) return(<>Either props.data & field or both getter & setter are required.</>);
     let readOnly: boolean;
-    if (props.readonly !== undefined) readOnly = props.readonly;
+    if (props.readOnly !== undefined) readOnly = props.readOnly;
     // else if (props.disabled !== undefined) readOnly = props.disabled;
     else readOnly = props.debugmodee !== 'true' && Defaults.check(data?.id)
 
@@ -211,6 +211,12 @@ export function InputComponent(props: AllProps) {
     const isBoolean = (['checkbox', 'radio'].includes(type));
 
 
+    const onDoubleClick = (evt: React.MouseEvent<HTMLInputElement>) => {
+        evt.preventDefault();
+        evt.stopPropagation();
+        console.warn('input dblclick', {t:evt.target, evt}); //, ets:(evt.target as HTMLInputElement).select()};
+        (evt.target as HTMLInputElement).select();
+    }
     const onChange = (evt: React.ChangeEvent<HTMLInputElement>) => {
         (props as any).onChange?.(evt);
         if (readOnly) return;
@@ -232,7 +238,7 @@ export function InputComponent(props: AllProps) {
             // the actual set is done in onBlur
         }
 
-        
+
     }
     const onKeyDown = (evt: React.KeyboardEvent<HTMLInputElement>) => {
         (props as any).onKeyDown?.(evt);
@@ -309,6 +315,7 @@ export function InputComponent(props: AllProps) {
         spellCheck: (props as any).spellCkeck || false, readOnly, disabled: readOnly, type,
         value: serializeValue(value),
         checked,
+        onDoubleClick,
         onChange, onBlur, onKeyDown} // key:`${field}.${data?.id}`
     if (!inputProps.style.cursor && cursor === 'not-allowed') { inputProps.style.cursor = cursor; }
     switch(subtype){
@@ -448,7 +455,7 @@ export interface InputOwnProps {
         |'checkbox3'|'toggle'|'switch'|'slider';
     className?: string;
     style?: GObject;
-    readonly?: boolean;
+    readOnly?: boolean;
     tooltip?: boolean | ReactNode;
     hidden?: boolean;
     autosize?: boolean;

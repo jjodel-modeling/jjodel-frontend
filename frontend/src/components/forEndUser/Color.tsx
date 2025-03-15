@@ -15,7 +15,7 @@ function ColorComponent(props: AllProps) {
     const setter = props.setter || ((value:string) => { props.data[props.field] = value; });
     //const field = props.field;
     // const oldValue = (!data) ? undefined : (getter) ? getter(data) : data[field]; // !== undefined); ? data[field] : 'undefined'
-    const readOnly = (props.readonly !== undefined) ? props.readonly : props.debugmodee !== 'true' && Defaults.check(props.data.id);
+    const readOnly = (props.readOnly !== undefined) ? props.readOnly : props.debugmodee !== 'true' && Defaults.check(props.data.id);
     const type = (props.type) ? props.type : 'text';
     const label: string|undefined = props.label;
     const jsxLabel: ReactNode|undefined = props.jsxLabel;
@@ -91,7 +91,7 @@ export interface InputOwnProps {
         'number'|'password'|'radio'|'range'|'tel'|'text'|'time'|'url'|'week';
     className?: string;
     style?: GObject;
-    readonly?: boolean;
+    readOnly?: boolean;
     tooltip?: string | boolean | ReactElement;
     hidden?: boolean;
     autosize?: boolean;

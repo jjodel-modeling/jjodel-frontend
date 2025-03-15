@@ -14,7 +14,7 @@ function JsxEditorComponent(props: AllProps) {
     const monaco = useMonaco();
     const view = props.view;
     const dview = view.__raw;
-    const readOnly = props.readonly !== undefined ? props.readonly : !props.debugmode && Defaults.check(dview.id);
+    const readOnly = props.readOnly !== undefined ? props.readOnly : !props.debugmode && Defaults.check(dview.id);
     const [jsx, setJsx] = useStateIfMounted(dview.jsxString || '');
     const [show, setShow] = useStateIfMounted(true);
 
@@ -125,7 +125,7 @@ function JsxEditorComponent(props: AllProps) {
 }
 interface OwnProps {
     viewid: Pointer<DViewElement, 1, 1, LViewElement>;
-    readonly?: boolean;
+    readOnly?: boolean;
 }
 
 interface StateProps {

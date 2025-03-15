@@ -820,7 +820,7 @@ function unsafereducer(oldState: DState = initialState, action: Action): DState 
     }
     ret.VIEWS_RECOMPILE_jsCondition = [];
 
-
+// todo: consider moving view matching stuff from vertex -> connect -> mapstatetoprops -> mapViewStuff to here.
     if (ret.VIEWS_RECOMPILE_jsxString?.length)
     for (const vid of filterSet(ret.VIEWS_RECOMPILE_jsxString)) { // compiled in func, but NOT executed, result varies between nodes.
         let dv: DViewElement = DPointerTargetable.fromPointer(vid, ret);
@@ -845,6 +845,12 @@ function unsafereducer(oldState: DState = initialState, action: Action): DState 
             }*/
             console.error('error jsxparse', {vid, e, paramStr, body});
             transientProperties.view[vid].JSXFunction = (context) => GraphElementComponent.displayError(e, 'JSX Syntax', dv);
+        }
+        for (let nid of Object.keys(transientProperties.node)) {
+            let tn = transientProperties.node[nid];
+            tn.viewScores[vid].jsxChanged = true; // forced rerender.
+            // PS: not needed for UD because they are always checked after every reducer() in shouldupdate()
+            // not sure if constants are checked anywhere.
         }
         // implies recompilation of: ... nothing?
     }

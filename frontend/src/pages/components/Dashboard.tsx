@@ -388,25 +388,28 @@ function ProjectCatalog(props: ProjectProps) {
                 </div>)
             })
             }
-            {project.viewpoints.map(vp => !vp ? <div>errorvp: {vp + ''}</div> :
-                <div className="row data viewpoint">
-                    <div className={'col-4'}>{vp.isOverlay ?
-                        <TbSquareRoundedLetterVFilled style={{fontSize: '1.5em'}}/> :
-                        <TbSquareRoundedLetterV style={{fontSize: '1.5em'}}/>} {vp.name}</div>
-                    <div className={'col-2 artifact-type'}>Viewpoint</div>
-                    <div className={'buttons'}>
-                        <CommandBar noBorder={true} style={{marginBottom: '0'}}>
-                            <Btn icon={'open'} tip={'Open viewpoint'} disabled={true}/>
-                            <Btn icon={'minispace'}/>
-                            <Btn icon={'copy'} action={e => vp.duplicate()} tip={'Duplicate viewpoint'}/>
-                            <Sep/>
-                            <Btn icon={'delete'} action={e => vp.delete()} tip={'Delete viewpoint'}
-                                 disabled={vp.name === 'Default' || vp.name === 'Validation default'}/>
-                        </CommandBar>
-                    </div>
-                </div>)
+            {project.viewpoints.map(vp => {
+                let name = vp?.name;
+                return (!vp ? <div key={name||'error_'+vp}>errorvp: {vp + ''}</div> :
+                    <div className="row data viewpoint" key={name}>
+                        <div className={'col-4'}>{vp.isOverlay ?
+                            <TbSquareRoundedLetterVFilled style={{fontSize: '1.5em'}}/> :
+                            <TbSquareRoundedLetterV style={{fontSize: '1.5em'}}/>} {name}</div>
+                        <div className={'col-2 artifact-type'}>Viewpoint</div>
+                        <div className={'buttons'}>
+                            <CommandBar noBorder={true} style={{marginBottom: '0'}}>
+                                <Btn icon={'open'} tip={'Open viewpoint'} disabled={true}/>
+                                <Btn icon={'minispace'}/>
+                                <Btn icon={'copy'} action={e => vp.duplicate()} tip={'Duplicate viewpoint'}/>
+                                <Sep/>
+                                <Btn icon={'delete'} action={e => vp.delete()} tip={'Delete viewpoint'}
+                                     disabled={name === 'Default' || name === 'Validation default'}/>
+                            </CommandBar>
+                        </div>
+                    </div>)
+            })
             }
-            <div className={'legenda'}>
+            <div className={'legenda'} key={'legenda'}>
                 <h1>Legenda</h1>
                 <div className={'row'}>
                     <div className={'col'}>

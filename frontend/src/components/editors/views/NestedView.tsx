@@ -162,7 +162,7 @@ function NestedViewComponent(props: AllProps) {
                                 <Input type="number"
                                        className={"change-boost hidden-input priority-booster"}
                                        inputClassName={"change-boost hidden-input"}
-                                       readonly={false}
+                                       readOnly={false}
                                        data={l}
                                        getter={()=>scoreBoost + ''}
                                        setter={(v)=>{l.subViews = {...childrens, [d.id]: +v} as any}}
@@ -200,21 +200,20 @@ function NestedViewComponent(props: AllProps) {
         <section className={'viewpoint-tab'}>
             <div className={"view-editor-fullsize-content"}>
                 <div className={'d-flexd-flex'}>
-                    <h1>Viewpoints
-
-
+                    <h1>
+                        Viewpoints
                         <CommandBar style={{float: 'right'}}>
                             <Btn icon={'shrink'} active={collapseAll}         action={() => {setCollapseAll(true)}}  tip={'Collapse all'} />
                             <Btn icon={'expand'} active={collapseAll===false} action={() => {setCollapseAll(false)}} tip={'Expand all'}   />
                             <Sep />
                             <Btn icon={'add'} action={addVP} tip={'Create a new viewpoint'} />
                         </CommandBar>
-
                     </h1>
                 </div>
                 {vieweditor}
                 <ul className={"ps-2 pt-2"}>
                     {viewpoints.map(vp=><GenericTree
+                        key={vp.id}
                         data={vp.__raw}
                         getSubElements={getSubElements}
                         renderEntry={renderEntry}
@@ -224,8 +223,8 @@ function NestedViewComponent(props: AllProps) {
             </div>
         </section>
     </div>);
-
 }
+
 interface OwnProps {
 }
 interface StateProps {

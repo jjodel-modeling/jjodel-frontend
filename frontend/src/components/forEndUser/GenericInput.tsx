@@ -133,7 +133,7 @@ class GenericInputComponent extends PureComponent<AllProps, ThisState/*undefined
                                          data={this.props.data} field={this.props.field} tooltip={this.props.tooltip}
                                          hide={this.props.hide} style={this.props.style} title={this.props.title}
                                          getter={this.props.getter} setter={this.props.setter} key={this.props.key}
-                                         readonly={this.props.readOnly}
+                                         readOnly={this.props.readOnly}
                                          height={this.props.height}
                                          {...otherProps as any /*not working? i had to list them all*/}  />;
             case 'eenum':

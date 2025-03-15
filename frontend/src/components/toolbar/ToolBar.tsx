@@ -178,7 +178,7 @@ function ToolBarComponent(props: AllProps, state: ThisState) {
     const node = props.node;
     let [pinned, setPinned] = useState(true);
     let [collapsed, setCollapsed] = useState(true);
-    let [position, setPosition] = useState([20,50]); 
+    let [position, setPosition] = useState([20,50]);
 
     const menuRef = useRef();
 
@@ -187,14 +187,14 @@ function ToolBarComponent(props: AllProps, state: ThisState) {
     });
 
     const minimize = (ref: any) => {
-        ref.current.style.opacity = 0;
+        //ref.current.style.opacity = 0;
 
         // ref.current.style.visibility = 'hidden';
         // ref.current.style.display = 'none'; 
         setCollapsed(true);
     }
     const maximize = (ref: any) => {
-        ref.current.style.opacity = 1;
+        //ref.current.style.opacity = 1;
         setCollapsed(false);
     }
 
@@ -261,8 +261,8 @@ function ToolBarComponent(props: AllProps, state: ThisState) {
         let subelements = data ? addChildren(downward[data.className]) : [];
 
 
-        if (siblings.length > 0)    { contentarr.push([<span className={'toolbar-section-label'}>Structure</span>, <hr className={'my-1'} />, siblings]); }
-        if (subelements.length > 0) { contentarr.push([<span className={'toolbar-section-label'}>Features</span>, <hr className={'my-1'} />, subelements]); }
+        if (siblings.length > 0)    { contentarr.push([<span className={'toolbar-section-label'} key={'str'}>Structure</span>, <hr className={'my-1'}  key={'h_str'}/>, siblings]); }
+        if (subelements.length > 0) { contentarr.push([<span className={'toolbar-section-label'} key={'ftr'}>Features</span>, <hr className={'my-1'}  key={'h_ftr'}/>, subelements]); }
 
     }
     else {
@@ -272,52 +272,63 @@ function ToolBarComponent(props: AllProps, state: ThisState) {
         const lfeat: LValue | undefined = data.className === "DValue" ? data as LValue : undefined;
 
         let subleveloptions = [];
-        if (lobj && (!lobj.instanceof || lobj.partial)) subleveloptions.push(
-            <div key={"Feature"} className={"toolbar-item feature"} tabIndex={ti} onClick={() => { lobj.addValue(); }}>+Feature</div>
+        if (lobj && (!lobj.instanceof || lobj.partial)) subleveloptions.push( //@ts-ignore
+            <diva key={"Feature"} className={"toolbar-item feature"} tabIndex={ti} onClick={() => { lobj.addValue(); }}>+Feature</diva>
         );
-        if (lfeat && lfeat.values.length < lfeat.upperBound) subleveloptions.push(
-            <div key={"Value"} className={"toolbar-item value"} tabIndex={ti} onClick={() => {SetFieldAction.new(lfeat.id, 'value' as any, undefined, '+=', false); alert(280);}}>
+        if (lfeat && lfeat.values.length < lfeat.upperBound) subleveloptions.push( //@ts-ignore
+            <divb key={"Value"} className={"toolbar-item value"} tabIndex={ti} onClick={() => {SetFieldAction.new(lfeat.id, 'value' as any, undefined, '+=', false); alert(280);}}>
                 <ModellingIcon name={'value'} />
                 <span className={'ms-1 my-auto text-capitalize'}>value</span>
-            </div>
+                {/*@ts-ignore*/}
+            </divb>
         );
         if (node) subleveloptions.push(...addChildren(downward[node.className]));
         let rootobjs = classes?.filter((lClass) => lClass.rootable).map((lClass, index) => {
             let dclass = lClass.__raw;
-            return <><div
-                onMouseEnter={e => SetRootFieldAction.new('tooltip', lClass.annotations.map(a => a.source).join(' '))}
-                onMouseLeave={e => SetRootFieldAction.new('tooltip', '')}
-                key={"LObject_"+dclass.id} className={"toolbar-item LObject"} tabIndex={ti} onClick={()=> select(model.addObject({}, lClass)) }>
-                {dclass._state.icon ? <ModellingIcon src={dclass._state.icon}/> : <ModellingIcon name={'object'} />}
-                <span className={'ms-1 my-auto text-capitalize'}>{U.stringMiddleCut(dclass.name, 14)}</span>
-            </div></>
+            return ( //@ts-ignore
+                <divc key={"LObject_"+dclass.id}
+                    onMouseEnter={() => SetRootFieldAction.new('tooltip', lClass.annotations.map(a => a.source).join(' '))}
+                    onMouseLeave={() => SetRootFieldAction.new('tooltip', '')}
+                    className={"toolbar-item LObject"} tabIndex={ti} onClick={()=> select(model.addObject({}, lClass)) }>
+                    {dclass._state.icon ? <ModellingIcon src={dclass._state.icon}/> : <ModellingIcon name={'object'} />}
+                    <span className={'ms-1 my-auto text-capitalize'}>{U.stringMiddleCut(dclass.name, 14)}</span>
+                    {/*@ts-ignore*/}
+                </divc>)
         }) || [];
 
-        rootobjs.push(<><hr className={'my-1 toolbar-hr'}/><div key={"RawObject"} className={'toolbar-item'} tabIndex={ti} onClick={()=> select(model.addObject({}, null)) }>
-            
-            <ModellingIcon name={'object'} />
-        
-            <span className={'ms-1 my-auto text-capitalize'}>Object</span>
-        </div></>);
+        // @ts-ignore TS2339
+        //
+        rootobjs.push(<>
+            <hr className={'my-1 toolbar-hr'} key={'h_robj'}/>
+            {/*@ts-ignore*/}
+            <divd key={"RawObject"} className={'toolbar-item'} tabIndex={ti} onClick={()=> select(model.addObject({}, null)) }>
+                <ModellingIcon name={'object'} />
+                <span className={'ms-1 my-auto text-capitalize'} >Object</span>
+                {/*@ts-ignore*/}
+            </divd>
+        </>);
 
 
         if (rootobjs.length > 0) {
-            contentarr.push([<b className={'toolbar-section-label'} style={{marginRight:"1.5em"/*to avoid overlap with pin*/}}>Root level</b>, rootobjs]);
+            contentarr.push([<b key={'rlvl'} className={'toolbar-section-label'} style={{marginRight:"1.5em"/*to avoid overlap with pin*/}}>Root level</b>, rootobjs]);
         }
         if (subleveloptions.length > 0) {
-            contentarr.push([<b className={'toolbar-section-label'}>Sublevel</b>, subleveloptions]);
+            contentarr.push([<b key='slo' className={'toolbar-section-label'}>Sublevel</b>, subleveloptions]);
         }
     }
 
 
     let shapes = node ? addChildren(downward[node.className]) : [];
     if (shapes.length > 0) {
-        contentarr.push([<b className={'toolbar-section-label'}>Shape</b>, shapes]);
+        contentarr.push([<b key={'shape'} className={'toolbar-section-label'}>Shape</b>, shapes]);
     }
 
     let separator = <hr className={'my-1'} /> as any;
+
     // @ts-ignore
-    content = contentarr.separator(separator);// .flat() as any;
+    // console.error('toolbar', {ct:[...contentarr], ctm:contentarr.map(e=>e?.key), carr:contentarr.separator(separator).flat().flat()})
+    // @ts-ignore
+    content = contentarr.separator(separator).flat().flat() as any;
 
     return (<>
     
@@ -331,9 +342,9 @@ function ToolBarComponent(props: AllProps, state: ThisState) {
             }}>
             <div className={"toolbar hoverable" + (pinned ? " pinned" : '')} tabIndex={0}>
                 <i style={{marginTop: '8px'}} className={"content pin bi bi-x-lg"} onClick={() => minimize(htmlref)} />
-                <div className={"content inline w-100"}>
+                <section className={"content inline w-100"}>
                     {content}
-                </div>
+                </section>
             </div>
         </div>
         

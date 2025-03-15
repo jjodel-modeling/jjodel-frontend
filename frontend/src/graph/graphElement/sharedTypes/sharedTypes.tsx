@@ -62,7 +62,7 @@ export class GraphElementReduxStateProps {
     static new(): GObject<GraphElementReduxStateProps>{
         let e: GObject<GraphElementReduxStateProps> = new GraphElementReduxStateProps();
         for (let k in e) if (e[k] === undefined) delete e[k];
-        return e;
+        return {...e}; // NB: because react complains if it's not a POJO.
     }
     protected constructor(){  }
 }
@@ -152,7 +152,7 @@ export class EdgeStateProps extends GraphElementReduxStateProps {
     static new(): GObject<EdgeStateProps>{
         let e: GObject<EdgeStateProps> = new EdgeStateProps();
         for (let k in e) if (e[k] === undefined) delete e[k];
-        return e;
+        return {...e}; // NB: because react complains if it's not a POJO.
     }
     protected constructor(){ super(); }
     // key: string;
@@ -211,7 +211,7 @@ export class VertexStateProps extends GraphElementReduxStateProps {
     static new(): GObject<VertexStateProps>{
         let e: GObject<VertexStateProps> = new VertexStateProps();
         for (let k in e) if (e[k] === undefined) delete e[k];
-        return e;
+        return {...e}; // NB: because react complains if it's not a POJO.
     }
     protected constructor(){ super(); }
 }

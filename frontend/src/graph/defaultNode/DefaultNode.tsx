@@ -93,7 +93,7 @@ export class DefaultNodeComponent<AllProps extends AllPropss = AllPropss, NodeSt
         GraphElementComponent.mapViewStuff(state, ret, ownProps);
 
             // GraphElementComponent.mapViewStuff(state, ret, ownProps);
-            (ret as any).skiparenderforloading = false;
+            // (ret as any).skiparenderforloading = false;
         //} catch(e) {
             //(ret as any).skiparenderforloading = true; // model id is updated, but he's still trying to load old model which got replaced and is not in state.
             /* crashes on loading because old model and new model have different timestamps? looks by id of old model with same number and diffferent timestamp*/
@@ -123,7 +123,7 @@ export class DefaultNodeComponent<AllProps extends AllPropss = AllPropss, NodeSt
         let componentMap: Dictionary<string, (props: GObject, children?: (string | React.Component)[]) => ReactElement> = windoww.components;
         let dmodelMap: Dictionary<string, typeof DModelElement> = RuntimeAccessibleClass.classes as any;
 
-        let serializableProps = {...this.props, data: this.props.data, view: this.props.view, views: this.props.views};
+        let serializableProps = {...this.props};
         // let serializableProps = {...this.props, data: this.props.data?.id, view: this.props.view?.id, views: this.props.views?.map( v => v.id )};
 
         // console.log('dnode render', {props: {...this.props}, serializableProps});

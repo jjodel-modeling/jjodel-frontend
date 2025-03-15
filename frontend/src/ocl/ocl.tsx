@@ -112,16 +112,16 @@ export class OCL{
         // oclEngine.setTypeDeterminer()
     }
     public static test(me: DModelElement | LModelElement | undefined, view: LViewElement | DViewElement | undefined, node?: LGraphElement | DGraphElement): boolean | (typeof ViewEClassMatch)["MISMATCH_OCL"] {
-        if (!me || !view) return false;
+        if (!view) return false;
         const condition = view.oclCondition;
         if (!condition) return true;
+        if (!me) return false;
         try {
             const types = RuntimeAccessibleClass.getAllClasses();
             return !!OCL.filter(true, 'src', [me], condition, types as any)[0];
         } catch (e) {
             return false
         }
-
     }
 
 

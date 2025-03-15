@@ -71,7 +71,7 @@ import tinycolor, {Instance} from "tinycolor2";
 import {ReactNode} from "react";
 import {VersionFixer} from "./VersionFixer";
 let windoww: GObject<typeof window> = window;
-console.warn('ts loading store');
+//console.warn('ts loading store');
 
 // @RuntimeAccessible
 // NB: le voci che iniziano con '_' sono personali e non condivise
@@ -277,15 +277,16 @@ export class DState extends DPointerTargetable{
 function makeDefaultGraphViews(vp: DViewPoint, validationVP: DViewPoint): DViewElement[] {
 
     let errorOverlayView: DViewElement = DViewElement.new2('Generic error view', DV.semanticErrorOverlay(), validationVP, (v) => {
-        v.jsCondition = 'let nstate = node?.state || {};\nObject.keys(nstate).filter(k => k.indexOf("error_")===0).map(k=>nstate[k]).join(\'\\n\').length>0';
+        v.jsCondition = 'let nstate = node?.state || {};\nObject.keys(nstate).filter(k => k.indexOf("error_")===0 && nstate[k]).length>0';
         v.usageDeclarations = "(ret)=>{\n" +
         "// ** preparations and default behaviour here ** //\n" +
         "// add preparation code here (like for loops to count something), then list the dependencies below.\n" +
         "// ** declarations here ** //\n" +
         "// console.log('overlayView ud inner ' + data.name, {errs:node.state, node, noder:node.r, data});\n" +
         "ret.nstate = node.state\n" +
-        "ret.errors = Object.keys(ret.nstate).filter(k => k.indexOf(\"error_\")===0).map(k=>ret.nstate[k])\n" +
-        "\n}"
+        // "ret.errors = Object.keys(ret.nstate).filter(k => k.indexOf(\"error_\")===0).map(k=>ret.nstate[k])\n" +
+        "ret.errors = Object.keys(ret.nstate).map(k => k.indexOf(\"error_\")===0 ? nstate[k] : '').filter(e=>e)\n" +
+        "\n}";
         v.isExclusiveView = false;
         v.css =
 `/* -- v2.0 - */

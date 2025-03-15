@@ -32,8 +32,10 @@ function tid(){
     return tabidprefix + (idcounter);
 }
 
+
 function DockComponent(props: AllProps) {
     const {user} = props;
+    idcounter = 0;
     const groups = {
         'models': {floatable: true, maximizable: true},
         'editors': {floatable: true, maximizable: true}
@@ -42,13 +44,12 @@ function DockComponent(props: AllProps) {
     /* Models */
     // const ModelsSummary = {id: id(), title: <TabHeader tid={tid()}><JLogo style={{marginLeft: '-10px', fontSize: '1.5rem', paddingRight: '6px'}}/> Summary</TabHeader>, group: 'models', closable: false, content: <TabContent tid={tid()}><ModelsSummaryTab /></TabContent>};
 
-    const ModelsSummary = {id: id(), title: <TabHeader tid={tid()}><Logo style={{marginLeft: '-10px', fontSize: '1.5rem', paddingRight: '6px'}}/> {user?.project?.name}</TabHeader>, group: 'models', closable: false, content: <TabContent tid={tid()}><ModelsSummaryTab /></TabContent>};
 
-
+    let advanced:boolean = props.advanced;
     /* Editors */
 
-    let advanced:boolean = windoww.advanced;
-    
+
+    const ModelsSummary = {id: id(), title: <TabHeader tid={tid()}><Logo style={{marginLeft: '-10px', fontSize: '1.5rem', paddingRight: '6px'}}/> {user?.project?.name}</TabHeader>, group: 'models', closable: false, content: <TabContent tid={tid()}><ModelsSummaryTab /></TabContent>};
     //const test = {id: id(), title: 'Test', group: 'editors', closable: false, content: <TestTab />};
     const structure = {id: id(), title: <TabHeader tid={tid()}>Properties</TabHeader>, group: 'editors', closable: false, content: <TabContent tid={tid()}><Info /></TabContent>};
     const metadata = {id: id(), title: <TabHeader tid={tid()}>Metadata</TabHeader>, group: 'editors', closable: false, content: <TabContent tid={tid()}><MetaData /></TabContent>};
@@ -88,6 +89,7 @@ function DockComponent(props: AllProps) {
 interface OwnProps {}
 interface StateProps {
     user: LUser|null
+    advanced: boolean;
 }
 interface DispatchProps {}
 type AllProps = OwnProps & StateProps & DispatchProps;
@@ -97,6 +99,7 @@ function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     const ret: StateProps = {} as FakeStateProps;
     if(DUser.current) ret.user = LUser.fromPointer(DUser.current);
     else ret.user = null;
+    ret.advanced = state.advanced;
     return ret;
 }
 

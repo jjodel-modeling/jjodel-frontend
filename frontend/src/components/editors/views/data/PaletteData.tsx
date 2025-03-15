@@ -372,7 +372,7 @@ function PaletteDataComponent(props: AllProps) {
                     <div className="palette-row">
 
                         <div className="color-container" style={{maxHeight: 'var(--input-height)', borderRadius: 'var(--radius)'}}>{
-                            colors.map((color, i) => <Color key={prefix+i} readonly={readOnly}
+                            colors.map((color, i) => <Color key={prefix+i} readOnly={readOnly}
                                                             data={view} field={'palette'} canDelete={!readOnly}
                                                             getter={()=>colors[i].toHexString()} setter={(newVal) => { setColor(prefix, i, newVal) }}
                                                             style ={{background: 'white'}}

@@ -2,7 +2,7 @@ import React, {Dispatch, useState} from 'react';
 import './App.scss';
 import './styles/view.scss';
 import './styles/style.scss';
-import {DState, DUser, LUser, Pointer, SetRootFieldAction, statehistory, stateInitializer, Try, U} from "./joiner";
+import {DState, DUser, Log, LUser, Pointer, SetRootFieldAction, statehistory, stateInitializer, Try, U} from "./joiner";
 import {connect} from "react-redux";
 import Loader from "./components/loader/Loader";
 import {FakeStateProps} from "./joiner/types";
@@ -34,9 +34,11 @@ import {BottomBar} from "./pages/components";
 import AlertVisualizer from "./components/alert/Alert";
 import DialogVisualizer from './components/alert/Dialog';
 import Storage from "./data/storage";
+import {Console} from "./components/editors";
 
 let firstLoading = true;
 let browserData = U.getOSBrowserData();
+Log.filterMessages();
 function App(props: AllProps): JSX.Element {
     //const debug = props.debug;
     const isLoading = props.isLoading;

@@ -169,7 +169,7 @@ function FunctionComponent(props: AllProps) {
     const [showTooltip, setShowTooltip] = useStateIfMounted(false);
     // if (!props.data) return <></>;
     let advancedMode: boolean = state.advancedMode,
-        readOnly = props.readonly; // (props.readonly !== undefined) ? props.readonly : !props.debugMode && props.data.id.indexOf("Pointer_View") !== -1;
+        readOnly = props.readOnly; // (props.readonly !== undefined) ? props.readonly : !props.debugMode && props.data.id.indexOf("Pointer_View") !== -1;
 
     // NB: could be heavily optimized by cutting the original string with indexes and substring,
     // but it is a function called too rarely and not impactful on overall performances
@@ -186,7 +186,7 @@ function FunctionComponent(props: AllProps) {
         inputs.push(<label className={"d-flex template-item" + (advancedMode ? "" : " my-1")} key={row.index} data-key={row.index}>
             <span className={"my-auto detailedMode"}>{row.id.prefix}.</span>
             <input className={"my-auto input"}
-                placeholder={"identifier"} value={row.id.value}  disabled={readOnly}
+                placeholder={"identifier"} value={row.id.value} disabled={readOnly}
                 tabIndex={row.index*2}
                 onInput={(e)=>identifierChange(e, row.index, state, setState)}
                 onBlur={(e)=> !readOnly && onBlur(state, setState, props, row.index)}
@@ -312,7 +312,7 @@ interface OwnProps {
     field: string;
     getter?: (data: LPointerTargetable) => string;
     setter?: (value: string|boolean) => void;
-    readonly?: boolean;
+    readOnly?: boolean;
     // not used for now
     label?: string;
     jsxLabel?: ReactNode;

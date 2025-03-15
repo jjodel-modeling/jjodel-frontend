@@ -31,45 +31,45 @@ function NodeDataComponent(props: AllProps) {
         <div className={'px-2'}>
             <div className={'input-container'}>
                 <b className={'me-2'}>Store Size in View:</b>
-                {<Input data={view} field={"storeSize"} readonly={readOnly} tooltip={
+                {<Input data={view} field={"storeSize"} readOnly={readOnly} tooltip={
                     <div>On - The node position depends from the view currently displayed.<br/>Off - It depends from the graph.</div>} type={"checkbox"} />
                     /* on = EuseSizeFrom.nv,   off = EuseSizeFrom.n */
                 }
             </div>
             <div className={'input-container'}>
                 <b className={'me-2'}>Lazy Update:</b>
-                <Input data={view} field={"lazySizeUpdate"} type={"checkbox"} tooltip={true} readonly={readOnly} />
+                <Input data={view} field={"lazySizeUpdate"} type={"checkbox"} tooltip={true} readOnly={readOnly} />
             </div>
 
             <div className={'input-container'}>
                 <b className={'me-2'}>Adapt Width:</b>
-                <Input data={view} field={"adaptWidth"} type={"checkbox"} readonly={readOnly} tooltip={true}/>
+                <Input data={view} field={"adaptWidth"} type={"checkbox"} readOnly={readOnly} tooltip={true}/>
             </div>
 
             <div className={'input-container'}>
                 <b className={'me-2'}>Adapt Height:</b>
-                <Input data={view} field={"adaptHeight"} type={"checkbox"} readonly={readOnly} />
+                <Input data={view} field={"adaptHeight"} type={"checkbox"} readOnly={readOnly} />
             </div>
 
             <div className={'input-container'}>
                 <b className={'me-2'}>Draggable:</b>
-                <Input data={view} field={"draggable"} type={"checkbox"} readonly={readOnly} />
+                <Input data={view} field={"draggable"} type={"checkbox"} readOnly={readOnly} />
             </div>
 
             <div className={'input-container'}>
                 <b className={'me-2'}>Resizable:</b>
-                <Input data={view} field={"resizable"} type={"checkbox"} readonly={readOnly} />
+                <Input data={view} field={"resizable"} type={"checkbox"} readOnly={readOnly} />
             </div>
 
             <div className={'input-container'} hidden={dview.adaptWidth}>
                 <b className={'me-2'}>Default Width:</b>
-                <Input data={view} type={"number"} readonly={readOnly}
+                <Input data={view} type={"number"} readOnly={readOnly}
                        getter={() => '' + view.defaultVSize.w} setter={(val) => view.defaultVSize = {w: +val} as any}/>
             </div>
 
             <div className={'input-container'} hidden={dview.adaptHeight}>
                 <b className={'me-2'}>Default Height:</b>
-                <Input data={view} type={"number"} readonly={readOnly}
+                <Input data={view} type={"number"} readOnly={readOnly}
                        getter={() => '' + view.defaultVSize.h} setter={(val) => view.defaultVSize = {h: +val} as any} />
             </div>
         </div>

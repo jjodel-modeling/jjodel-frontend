@@ -17,7 +17,7 @@ function TemplateData(props: AllProps) {
             <h1 className={'view'}>View: {props.view.name}</h1>
             {/*<TextArea data={view} field={"constants"} label={"Constants"}  readonly={readOnly} />*/}
             {/*<TextArea data={view} field={"preRenderFunc"} label={"PreRender Function"}  readonly={readOnly} />*/}
-            <JsxEditor viewid={view.id}  readonly={readOnly} />
+            <JsxEditor viewid={view.id} readOnly={readOnly} />
             <HRule theme={'light'} style={{paddingTop: '40px!important', display: 'block'}}/>
             <Function
                 data={view}
@@ -25,17 +25,17 @@ function TemplateData(props: AllProps) {
                 jsxLabel={<label
                 className={"d-block jj-editor-title"}>Constants</label>}
                 payoff={'Evaluated once'}
-                readonly={readOnly}
+                readOnly={readOnly}
             />
 
             <Function
                 data={view}
                 field={"usageDeclarations"}
                 jsxLabel={<label className={"d-block jj-editor-title"}>Listed dependencies</label>}
-                readonly={readOnly}
+                readOnly={readOnly}
             />
 
-            { false && <Function data={view} field={"preRenderFunc"} jsxLabel={<label className={"d-block jj-editor-title"}>Preparations before JSX</label>} readonly={readOnly} /> }
+            { false && <Function data={view} field={"preRenderFunc"} jsxLabel={<label className={"d-block jj-editor-title"}>Preparations before JSX</label>} readOnly={readOnly} /> }
 
         </section>
     </>);

@@ -50,7 +50,7 @@ import {Await, NavigateFunction} from "react-router-dom";
 // var Convert = require('ansi-to-html');
 // import KeyDownEvent = JQuery.KeyDownEvent; // https://github.com/tombigel/detect-zoom broken 2013? but works
 
-console.warn('loading ts U log');
+// console.warn('ts loading U log');
 
 @RuntimeAccessible('Color')
 export class Color {
@@ -1303,9 +1303,15 @@ export class U {
         // nb: mind that typeof [] === 'object'
         return typeof v === 'object'; }
 
-    static objectFromArray<V extends any>(arr: V[], getKey: (entry:V) => string): Dictionary<string, V>{
+    static objectFromArray<V extends any>(arr: V[], getKey: keyof V|((entry:V) => string)): Dictionary<string, V>{
         // @ts-ignore
-        return arr.reduce((acc, val) => { acc[getKey(val)] = val; return acc; }, {});
+        return arr.reduce((acc, val) => {
+            // @ts-ignore
+            let key = typeof getKey === 'string' ? val[getKey] : getKey(val);
+            // @ts-ignore
+            acc[key] = val;
+            return acc;
+        }, {});
     }
 
     static objectFromArrayValues<T extends any>(arr: (string | number)[], val: T = true as T): Dictionary<string | number, T> {

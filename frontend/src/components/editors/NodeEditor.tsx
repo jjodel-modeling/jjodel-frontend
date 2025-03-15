@@ -80,7 +80,7 @@ function NodeEditorComponent(props: AllProps) {
         return (
             <div className='input-container'>
                 <b className={'me-2'}>{props.label}</b>
-                <Input data={props.as} field={props.field} type={props.type} readonly={!editable} />
+                <Input data={props.as} field={props.field} type={props.type} readOnly={!editable} />
             </div>
         );
     };
@@ -162,14 +162,14 @@ function NodeEditorComponent(props: AllProps) {
         </div>}
 
         {asEdge && [
-            <div><h6 style={headerStyle}>Edge start:{
+            <div key={'es'}><h6 style={headerStyle}>Edge start:{
                 edgeStart ?
                     <span className={'ms-2'} onClick={(e)=> openNode(edgeStart.id)} style={clickableStyle}>
                         {getNodeLabel(edgeStart)}<i className={'ms-1 bi bi-arrow-right'}/>
                     </span>
                     : <span style={notFoundStyle}>Missing</span>
             }</h6></div>,
-            <div><h6 style={headerStyle}>Edge End:{
+            <div key={'ee'}><h6 style={headerStyle}>Edge End:{
                 edgeEnd ?
                     <span className={'ms-2'} onClick={(e)=> openNode(edgeEnd.id)} style={clickableStyle}>
                         {getNodeLabel(edgeEnd)}<i className={'ms-1 bi bi-arrow-left'}/>
@@ -195,31 +195,29 @@ function NodeEditorComponent(props: AllProps) {
             {subElements.length > 0 && <div>
             <h6 style={{display: 'flex'}}>
                 Sub elements
-
                 <CommandBar style={{paddingLeft: 'var(--tab-sep)', bottom: '3px'}}>
                     <Btn icon={'down'} action={(e)=> {}} tip={'Go down'}/>
                 </CommandBar>
             </h6>
 
             {subElements.map(
-                n => <div className={'w-100 ms-2 sub-element'} onClick={(e)=> openNode(n.id)} style={clickableStyle}>{getNodeLabel(n)}</div>
+                n => <div key={n.id} className={'w-100 ms-2 sub-element'} onClick={(e)=> openNode(n.id)} style={clickableStyle}>{getNodeLabel(n)}</div>
             )}
             </div>}
 
         {!asEdge && <>
-
             {edgesOut.length > 0 && <div>
                 <h6 style={{display: 'flex'}}>
                     Outgoing Edges
                 </h6>
-                {edgesOut.length && edgesOut.map(n => <div className={'w-100 ms-2 sub-element'} onClick={(e)=> openNode(n.id)} style={clickableStyle}>{getEdgeLabel(n)}</div>)}
+                {edgesOut.map(n => <div key={n.id} className={'w-100 ms-2 sub-element'} onClick={(e)=> openNode(n.id)} style={clickableStyle}>{getEdgeLabel(n)}</div>)}
             </div>}
 
             {edgesIn.length > 0 && <div>
                 <h6 style={{display: 'flex'}}>
                     Incoming Edges
                 </h6>
-                {edgesIn.map(n => <div className={'w-100 ms-2 sub-element'} onClick={(e)=> openNode(n.id)} style={clickableStyle}>{getEdgeLabel(n)}</div>)}
+                {edgesIn.map(n => <div key={n.id} className={'w-100 ms-2 sub-element'} onClick={(e)=> openNode(n.id)} style={clickableStyle}>{getEdgeLabel(n)}</div>)}
             </div>}
 
             {/*<div>

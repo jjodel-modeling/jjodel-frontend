@@ -238,7 +238,7 @@ export class UX{
             'onContextMenu: component.onContextMenu,' +
             'onMouseDown: component.onMouseDown,' +
             'onMouseUp: component.onMouseUp,' +
-            'onwheel: component.onScroll,' +
+            'onWheel: component.onScroll,' +
             'onMouseEnter: component.onEnter,' +
             'onMouseLeave: component.onLeave,' +
             'tabIndex: (props as any).tabIndex || node.zIndex || -1,' +
@@ -373,8 +373,10 @@ export class UX{
     static options(validTargets: MultiSelectOptGroup[]): JSX.Element[] {
         return validTargets
             .filter(e=>!!e)
-            .map(e => <optgroup label={e.label}>
-                { e.options.filter(o=>!!o).map(o=><option value={o.value} key={o.value} title={o.title}>{o.label}</option>) }
+            .map(e => <optgroup label={e.label} key={e.label}>
+                { e.options.filter(o=>!!o).map(o=>(
+                    <option value={o.value} key={o.value} title={o.title}>{o.label}</option>
+                )) }
             </optgroup>);
     }
     /*

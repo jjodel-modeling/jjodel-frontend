@@ -172,7 +172,7 @@ class ConsoleComponent extends PureComponent<AllProps, ThisState>{
         }
         if (k === 'father') console.log('jsx comment', {k, infoof_tooltip, jsxComments:{...jsxComments}});
         if (k === 'isM1') console.log('jsx comment', {k, infoof_tooltip, jsxComments:{...jsxComments}});
-        return <li onClick={()=> {
+        return <li key={k} onClick={()=> {
             let isnum = !isNaN(+k);
             let isregular: boolean = isnum ? true : /\w/.test(k);
             let append: string;

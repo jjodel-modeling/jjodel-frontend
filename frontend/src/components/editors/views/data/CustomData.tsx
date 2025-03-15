@@ -26,13 +26,13 @@ function ViewEventsComponent(props: AllProps) {
     return(<section className={'p-3 events-tab'}>
         <h1 className={'view'}>View: {view.name}</h1>
         <h2>Default Events</h2>
-        <JsEditor key='odu' data={view} field={'onDataUpdate'} title={'onDataUpdate'} initialExpand={initialExpand} readonly={readOnly}/>
-        <JsEditor key='ods' data={view} field={'onDragStart'} title={'onDragStart'} initialExpand={initialExpand} readonly={readOnly}/>
-        <JsEditor key='odw' data={view} field={'whileDragging'} title={'whileDragging'} initialExpand={initialExpand} readonly={readOnly}/>
-        <JsEditor key='ode' data={view} field={'onDragEnd'} title={'onDragEnd'} initialExpand={initialExpand} readonly={readOnly}/>
-        <JsEditor key='ors' data={view} field={'onResizeStart'} title={'onResizeStart'} initialExpand={initialExpand} readonly={readOnly}/>
-        <JsEditor key='orw' data={view} field={'whileResizing'} title={'whileResizing'} initialExpand={initialExpand} readonly={readOnly}/>
-        <JsEditor key='ore' data={view} field={'onResizeEnd'} title={'onResizeEnd'} initialExpand={initialExpand} readonly={readOnly}/>
+        <JsEditor key='odu' data={view} field={'onDataUpdate'} title={'onDataUpdate'} initialExpand={initialExpand} readOnly={readOnly}/>
+        <JsEditor key='ods' data={view} field={'onDragStart'} title={'onDragStart'} initialExpand={initialExpand} readOnly={readOnly}/>
+        <JsEditor key='odw' data={view} field={'whileDragging'} title={'whileDragging'} initialExpand={initialExpand} readOnly={readOnly}/>
+        <JsEditor key='ode' data={view} field={'onDragEnd'} title={'onDragEnd'} initialExpand={initialExpand} readOnly={readOnly}/>
+        <JsEditor key='ors' data={view} field={'onResizeStart'} title={'onResizeStart'} initialExpand={initialExpand} readOnly={readOnly}/>
+        <JsEditor key='orw' data={view} field={'whileResizing'} title={'whileResizing'} initialExpand={initialExpand} readOnly={readOnly}/>
+        <JsEditor key='ore' data={view} field={'onResizeEnd'} title={'onResizeEnd'} initialExpand={initialExpand} readOnly={readOnly}/>
         <div className={'d-flex mx-auto'} style={{marginTop: '14px'}}>
             <h2>Custom Events</h2>
             <CommandBar className={'ms-auto'} style={{paddingTop: '12px'}}>
@@ -46,7 +46,7 @@ function ViewEventsComponent(props: AllProps) {
             return <>
             <JsEditor
             data={view} key={k/* if val does not update, concatenate it to the key (k+val)*/}
-            readonly={readOnly}
+            readOnly={readOnly}
             initialExpand={()=>true}
             title={<input defaultValue={k} disabled={readOnly} onBlur={(e)=>{
                 let newname = e.target.value;
