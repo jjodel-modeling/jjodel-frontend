@@ -2764,9 +2764,6 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
         const thiss: LClass = context.proxyObject;
         let extendedBy = thiss.extendedBy;
         let ebyIDS = extendedBy.map(e => e.id);
-        /* old version, remade longer but more efficient
-        const set: Set<LClass> = plusThis ? new Set<LClass>([thiss.id, ...ebyIDS]) : new Set(ebyIDS);
-        for (let i = 0; i < extendedBy.length; i++) { U.SetMerge(true, set, extendedBy[i].allSubClasses.map(e=>e.id)); }*/
         let parsedSubclasses: Dictionary<Pointer, DClass> = {}
         parsedSubclasses[context.data.id] = context.data;
         let stack: DClass[] = [context.data];

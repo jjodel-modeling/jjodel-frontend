@@ -165,7 +165,7 @@ function NestedViewComponent(props: AllProps) {
                                        readOnly={false}
                                        data={l}
                                        getter={()=>scoreBoost + ''}
-                                       setter={(v)=>{l.subViews = {...childrens, [d.id]: +v} as any}}
+                                       setter={(v)=>{let pv = l.father; if (pv) pv.subViews = {...pv.__raw.subViews, [d.id]: +v} as any}}
                                 />
                             </>}
                                 <span className={"right-icon feature-border ocl-icon vertical-centering " + (d.oclCondition.length ? "" : "hidden")}></span>
