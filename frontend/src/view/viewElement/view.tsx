@@ -420,6 +420,8 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
             delete allviews[k];
         }
         delete allviews[c.data.id];
+        let vp = this.get_viewpoint(c);
+        allviews[vp.id] = vp; 
         console.log('allPossibleParentViews ret', {allviews});
         return Object.values(allviews);
     }

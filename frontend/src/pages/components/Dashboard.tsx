@@ -349,7 +349,7 @@ function ProjectCatalog(props: ProjectProps) {
             {project.metamodels.map((mm) =>{
                 let name = mm.name
                 return (
-                <div className="row data" key={name}>
+                <div className="row data" key={mm.id}>
                     <div className={'col-4 '} onClick={async () => await DockManager.open2(mm)}>
                         <TbSquareRoundedLetterMFilled style={{fontSize: '1.5em'}}/> {name}</div>
                     <div className={'col-2 artifact-type'}>Metamodel</div>
@@ -370,7 +370,7 @@ function ProjectCatalog(props: ProjectProps) {
             {project.models.map(model => {
                 let name = model.name;
                 return (
-                <div className="row data" key={name}>
+                <div className="row data" key={model.id}>
                     <div className={'col-4 '} onClick={async () => await DockManager.open2(model)}>
                         <TbSquareRoundedLetterM style={{fontSize: '1.5em'}}/> {name}</div>
                     <div className={'col-2 artifact-type'}>Model</div>

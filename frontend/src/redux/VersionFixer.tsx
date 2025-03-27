@@ -9,15 +9,17 @@ import {
     GObject,
     GraphPoint,
     GraphSize, LClass,
-    Log, LPointerTargetable, LState, Pointer, RuntimeAccessible, RuntimeAccessibleClass, store,
+    Log, LPointerTargetable, LState, Pointer, Pointers, RuntimeAccessible, RuntimeAccessibleClass, store,
     U
 } from "../joiner";
 import {NumberControl, PaletteControl, PathControl, StringControl} from "../view/viewElement/view";
+import {Tooltip} from "../components/forEndUser/Tooltip";
 
 /*
                                     TODO for every update: check the VersionFixer.help() function
 */
 
+const deleteDState = false; // there is also one in Constructors, update them together
 @RuntimeAccessible('VersionFixer')
 export class VersionFixer {
     public static cname = 'VersionFixer';
@@ -107,6 +109,8 @@ everytime you put hands into a D-Object shape or valid values, you should docume
         let prevVer = s.version.n || 0;
         let currVer = prevVer;
         let singleton = new VersionFixer();
+        let canAutocorrect = U.getHashParam('repair') === '1';
+        if (canAutocorrect) VersionFixer.autocorrect(s);
         while (currVer !== VersionFixer.highestVersion) {
             Log.exDev(!VersionFixer.versionAdapters[currVer], "missing version adapter from \""+ currVer+"\", please notify the developers.",
                 {adapers: VersionFixer.versionAdapters, curr: VersionFixer.versionAdapters[currVer]});
@@ -120,6 +124,7 @@ everytime you put hands into a D-Object shape or valid values, you should docume
             Log.exDev(currVer <= prevVer, "version updater found loop at version \""+currVer+"\", please notify the developers.");
             prevVer = currVer;
         }
+        if (canAutocorrect) VersionFixer.autocorrect(s);
         return s;
     }
 
@@ -149,13 +154,137 @@ everytime you put hands into a D-Object shape or valid values, you should docume
         for (let c of (s.projects).map(p=> this.d(p, s))) { c.favorite = {}; c.description = ''; }
         for (let c of (s.references).map(p=> this.d(p, s))) { if (c.composition === undefined) c.aggregation = !(c.composition = !!(c as any).containment); }
         for (let c of (s.models).map(p=> this.d(p, s))) { if (c.dependencies === undefined) c.dependencies = []; }
-        for (let c of (s.attributes).map(p=> this.d(p, s))) {
+        for (let c of (s.attributes).map(p => this.d(p, s))) {
             c.derived = !!c.derived;
             c.derived_write = undefined; // c.derived ? '' : undefined;
             c.derived_read = undefined; // c.derived ? '' : undefined;
         }
 
         return s;
+    }
+
+    public static autocorrect(s0?: DState): void {
+        let s: DState;
+        if (s0) s = s0;
+        else s = store.getState();
+
+        let validPtrs: typeof s.idlookup = {};
+        let oldIDlookup = {...s.idlookup};
+        for (let ptr in s.idlookup) {
+            if (ptr === 'clonedCounter') continue;
+            if (!Pointers.isPointer(ptr)) {
+                Log.eDevv('invalid key in idlookup', {ptr, s});
+                continue;
+            }
+            let v = s.idlookup[ptr];
+            if (Object.keys(v).length < 5 || deleteDState && v.className === 'DState') { // totally euristic lowerbound to detect semi-deleted objects or ill-created
+                console.log('autocorrect: removed incomplete object ', {d:s.idlookup[ptr], cn:s.idlookup[ptr]?.className, ptr})
+                delete s.idlookup[ptr];
+            }
+        }
+
+        // remove invalid pointers (with values but pointing to nothing).
+        let removedPointers: Pointer[] = [];
+        let hasDeleted: boolean;
+        do {
+            hasDeleted = false;
+            U.deepReplace(s, (key:string|number|undefined, obj: any, fullpath:string[]) => {
+                if (!Pointers.isPointer(obj) || s.idlookup[obj]) return obj; // if is valid pointer, no-op
+                // pointer is invalid
+                // if: invalid pointer implicates full object removal
+                if (
+                    key === 'father' && fullpath.length === 3 // idlookup.someid.father = 3 keys
+                    || key === 'end' && fullpath.length === 3
+                    || key === 'start' && fullpath.length === 3
+                    //|| key === 'viewpoint' && fullpath.length === 3
+                ) {
+                    let id: Pointer<any> = fullpath[1];
+                    if (!Pointers.isPointer(id)) { Log.eDevv('found mandatory key in an unexpected position', {fullpath, obj, s}); return obj; }
+                    let d = s.idlookup[id];issues:
+                    if (key === 'father' && d?.className === 'DObject') return obj; // dobj can have missing father
+                    removedPointers.push(id);
+                    if (!(id in s.idlookup)) return undefined;
+                    console.log('autocorrect: removed for missing mandatory pointer ', {obj, id, fullpath})
+
+                    delete s.idlookup[id]; // NB: in theory this might be replaced during deepReplace causing a conflict, but in practice it shouldn't.
+                    hasDeleted = true;
+                    return undefined;
+                }
+                // if: invalid pointer implicates self-removal (just the pointer from a collection/variable)
+                return undefined;
+            })
+        } while (hasDeleted);
+
+
+        let lookup: Dictionary<DocString<'className', DPointerTargetable[]>> = {};
+        for (let k in s.idlookup) {
+            let v = s.idlookup[k];
+            if (typeof v !== 'object' || !v.className) continue;
+            if (!lookup[v.className]) lookup[v.className] = [];
+            lookup[v.className].push(v);
+        }
+        let common = ['father', 'instances', 'instanceof', 'node', 'model', 'annotations', 'graph'];
+        let out = {counter: 0};
+        VersionFixer.removeNulls(out, s, lookup, 'DModel', [...common, 'packages'])
+        VersionFixer.removeNulls(out, s, lookup, 'DPackage', [...common, 'classifiers', 'subpackages'])
+        VersionFixer.removeNulls(out, s, lookup, 'DClass', [...common, 'references', 'attributes', 'operations', 'extends', 'extendedBy'])
+        VersionFixer.removeNulls(out, s, lookup, 'DAttribute', [...common, 'type'])
+        VersionFixer.removeNulls(out, s, lookup, 'DReference', [...common, 'type'])
+        VersionFixer.removeNulls(out, s, lookup, 'DOperation', [...common, 'type'])
+        VersionFixer.removeNulls(out, s, lookup, 'DParameter', [...common, 'type', 'parameters', 'exceptions'])
+        VersionFixer.removeNulls(out, s, lookup, 'DEnumerator', [...common, 'literals'])
+        VersionFixer.removeNulls(out, s, lookup, 'DObject', [...common, 'features'])
+        VersionFixer.removeNulls(out, s, lookup, 'DValue', [...common, 'values'])
+        VersionFixer.removeNulls(out, s, lookup, 'DGraph', [...common, 'subElements'])
+        VersionFixer.removeNulls(out, s, lookup, 'DGraphVertex', [...common, 'subElements'])
+        VersionFixer.removeNulls(out, s, lookup, 'DGraphElement', [...common, 'subElements'])
+        VersionFixer.removeNulls(out, s, lookup, 'DEdgePoint', [...common, 'subElements'])
+        VersionFixer.removeNulls(out, s, lookup, 'DVertex', [...common, 'subElements'])
+        VersionFixer.removeNulls(out, s, lookup, 'DVoidVertex', [...common, 'subElements'])
+        VersionFixer.removeNulls(out, s, lookup, 'DVoidEdge', [...common, 'subElements', 'start', 'end', 'midnodes'])
+        VersionFixer.removeNulls(out, s, lookup, 'DEdge', [...common, 'subElements', 'start', 'end', 'midnodes'])
+        VersionFixer.removeNulls(out, s, lookup, 'DViewPoint', [...common, 'subViews', 'viewpoint'])
+        VersionFixer.removeNulls(out, s, lookup, 'DViewElement', [...common, 'subViews', 'viewpoint'])
+
+        let output: string[] = ['Project repair'];
+        let removedDObjects = Object.keys(oldIDlookup).length - Object.keys(s.idlookup).length;
+        let diff = U.arrayDifference(Object.keys(oldIDlookup), Object.keys(s.idlookup));
+        if (removedDObjects) {
+            output.push('removed ' + removedDObjects + ' invalid objects.',); // dobjects
+        }
+        if (removedPointers.length) output.push('removed ' + removedPointers.length+' invalid pointers.'); // ptr to non-existing elem
+        if (out.counter) {
+            output.push('removed ' + removedDObjects + ' invalid values.'); // undef in ptr collection
+        }
+        if (output.length > 1) {
+            Tooltip.show(<>{(output as any).separator(<br/>)}</>, undefined, undefined, 3);
+            Log.ii('project repair report', {removedPointers,
+                removedObjects_num: removedDObjects, removedObjects: diff.removed.map(e=>oldIDlookup[e]),
+                removedValues: out.counter, output})
+        }
+        else {
+            Log.ii('project repair report:\tall good, nothing to repair!')
+        }
+
+    }
+
+    public static mandatoryKeys = ['father'];
+    public static removeNulls(out:{counter:number}, s: DState, lookup: Dictionary<DocString<'className'>, DPointerTargetable[]>,
+                    cn: DocString<'ClassName'>, keys: string[]): void {
+        for (let d of (lookup[cn]||[])) {
+            for (let k in keys) {
+                if (!(k in d)) continue;
+                let v = (d as GObject)[k];
+                if (Pointers.isPointer(v)) continue; // it's a valid single value
+                /* if (!Array.isArray(v)) {
+                       d[k] = undefined; // removal of single elements is already handled by deepReplace, this just ensures it is always undef and not null or so.
+                       continue;
+                   }
+                */
+                (d as GObject)[k] = (v as any[]).filter(e => !!(e && Pointers.isPointer(e)));
+                if (out) out.counter += v.length - (d as GObject)[k].length
+            }
+        }
     }
 }
 

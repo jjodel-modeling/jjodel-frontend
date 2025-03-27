@@ -345,9 +345,6 @@
   .context-menu{
     margin-top: -5px; // undo the padding (4) and border (1) to align the nested submenu
   }
-  .content.right{
-    min-height: 100%;
-  }
   >li{
     display: flex;
     width: 100%;
@@ -414,23 +411,6 @@
   }
 }
 
-.nav-container .content.right {
-  left: calc(100% - 20px);
-  padding-left: 30px;
-  background-color: transparent;
-  top: 0px;
-  ul {
-    position: relative;
-  }
-  box-shadow: none;
-
-  & .keystroke {
-    float: right;
-    margin-right: 10px;
-
-  }
-}
-
 .nav-container .user {
   padding-right: 25px;
   margin-left: 20px!important;
@@ -483,4 +463,25 @@
   top: 4px;
   margin-top: auto;
   margin-bottom: auto;
+}
+
+
+
+/*.nav-container */.content.right {
+   min-height: 100%;
+   left: calc(100% - 20px);
+   padding-left: 30px;
+   background-color: transparent;
+   top: 0px;
+   box-shadow: none;
+   ul {
+     position: relative;
+   }
+   box-shadow: none;
+
+   & .keystroke {
+     float: right;
+     margin-right: 10px;
+
+   }
 }

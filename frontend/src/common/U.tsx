@@ -614,14 +614,15 @@ export class U {
     }
 
 
-    public static followPath(base: GObject, path: string): {chain: GObject[], lastObject: GObject, keys:string[], lastkey: string, lastval: any, failedRemainingPath: string[]} {
-        let patharr = path.split('.');
-        let base0 = base;
-        let ret: {chain: GObject[], lastObject: GObject, keys: string[], lastkey: string, lastval: any, failedRemainingPath: string[]}  = {} as any;
+    public static followPath(base: GObject, path: string|string[]): {chain: GObject[], lastObject: GObject, keys:string[], lastkey: string, lastval: any, failedRemainingPath: string[]} {
+        let ret: {chain: GObject[], lastObject: GObject, keys: string[], lastkey: string, lastval: any, failedRemainingPath: string[]}
+            = {lastObject:base, chain:[base], keys:[], failedRemainingPath:[]} as any;
+        if (!path) return ret;
+        let patharr: string[] = Array.isArray(path) ? path : (path+'').split('.');
         ret.keys = patharr;
-        ret.chain = [base];
-        let lastObject = base;
+        if (!base) return ret;
 
+        let lastObject = base;
         for (let i = 0; i < patharr.length; i++) {
             let path = ret.lastkey = patharr[i];
             lastObject = base;
@@ -1158,16 +1159,17 @@ export class U {
         for (let iterable of iterables) { for (let item of iterable) { set.add(item); } }
         return set; }
 
-    // merge with unique elements
-    static ArrayMergeU(arr1: any[], ...arr2: any[]): void { U.ArrayMerge0(true, arr1, arr2); }
-    // merge without unique check
-    static ArrayMerge(arr1: any[], ...arr2: any[]): void { U.ArrayMerge0(false, arr1, arr2); }
+    // merge in-place with unique elements
+    static ArrayMergeU(arr1: any[], ...arr2: any[]): any[] { return U.ArrayMerge0(true, arr1, arr2); }
+    // merge in-place without unique check
+    static ArrayMerge(arr1: any[], ...arr2: any[]): any[] { return U.ArrayMerge0(false, arr1, arr2); }
     // implementation
-    static ArrayMerge0(unique: boolean, arrtarget: any[], ...arrays: any[]): void {
-        if (!arrtarget || !arrays) return;
+    static ArrayMerge0(unique: boolean, arrtarget: any[], ...arrays: any[]): any[] {
+        if (!arrtarget || !arrays) return arrtarget as any;
 
         if (unique) { for (let arri of arrays) for (let e of arri) U.ArrayAdd(arrtarget, e); }
         else { for (let arri of arrays) Array.prototype.push.apply(arrtarget, arri); }
+        return arrtarget;
     }
 
     static ArrayAdd<T>(arr: Array<T>, elem: T, unique: boolean = true, throwIfContained: boolean = false): boolean {
@@ -1756,8 +1758,8 @@ export class U {
 
     public static cropDeepObject(o: any, lines_start_crop: number=20, lines_end_crop: number=10, string_start_crop: number=45, string_end_crop: number=35, num_digit_crop: number=5): any{
         if (!o) return o;
-        let replacer = (key: string | number | undefined, o: GObject, depth: number) => {
-            switch(key) {
+        let replacer = (key: string | number | undefined, o: GObject, fullpath:string[], depth: number) => {
+            switch (key) {
                 case "props": return "[_props_]";
             }
             switch (typeof o) {
@@ -1811,7 +1813,7 @@ export class U {
     }
 
     // does make a deep copy too.
-    static deepReplace(obj: any, replacer?: ((key: undefined | string | number, o: any, depth: number) => any),
+    static deepReplace(obj: any, replacer?: ((key: undefined | string | number, o: any, fullpath:string[], depth: number) => any),
                        circularReferenceValue: any | ((obj_alreadymet: GObject)=>any) = (o: GObject)=>((o.__raw || o).id || '_circular_ref_')): any {
 
         const avoidloop: WeakMap<any, true> = new WeakMap();
@@ -1838,38 +1840,57 @@ export class U {
      so i need to copy the current map and pass a new copy every time i go deep on a new subobject, branching a tree.
      let a = {id:"a1", l:{b:1}};    [a,a] will still return [a,a] with no '_loop_' tags
      instead let a = {l:{b:1}, a:a};    [a,a] will return [{l:{b:1}, a:'_loop_'}, {l:{b:1}, a:'_loop_'}] with no '_loop_' tags
-     while
-     */
-    static deepReplace_rec(obj: any, avoidloop: GObject & WeakMap<any, true>, replacer?: ((key: undefined | string | number, o: any, depth: number) => any),
-                           circularReferenceValue?: any | ((obj_alreadymet: GObject)=>any), key?: number | string, curdept:number=0, eagerLoopReturn: boolean = false): any {
-        if (typeof obj === "symbol") return replacer ? replacer(key, obj, curdept) : obj;
 
-        let old_obj = obj;
-        switch (typeof old_obj) {
+     replacer func:
+         @obj is the current object.
+         @key is the last key followed to reach obj from the root.
+         @fullpath is the full path from root to obj
+     */
+    static weakmapSet(m: WeakMap<any, any>, k: any, v: any): void { // because weakmaps cannot store non-object keys, if i try to store a primitive key i use it as a pojo
+        if (k && typeof k === 'object') m.set(k, v)
+        else (m as GObject)[k] = v;
+    }
+    static weakmapGet(m: WeakMap<any, any>, k: any): any { // because weakmaps cannot store non-object keys, if i try to get from a primitive key i use it as a pojo
+        if (k && typeof k === 'object') return m.get(k)
+        else return (m as GObject)[k];
+    }
+    static weakmapHas(m: WeakMap<any, any>, k: any): boolean {
+        if (k && typeof k === 'object') return m.has(k);
+        else return !!(m as GObject)[k];
+    }
+
+    static debugcounter = 0;
+    static deepReplace_rec(obj: any, avoidloop: WeakMap<any, true>, replacer?: ((key: undefined | string | number, o: any, fullpath: string[], depth: number) => any),
+                           circularReferenceValue?: any | ((obj_alreadymet: GObject)=>any), key?: number | string, fullpath:string[]=[], curdept:number=0, eagerLoopReturn: boolean = false): any {
+
+        if (U.debugcounter % 100) console.warn('possible loop in deepreplace', {fullpath, obj})
+        switch (typeof obj) {
             case "symbol": // don't know what really do with symbols and funcs
             case "function":
-                break;
+                return replacer ? replacer(key, obj, fullpath, curdept) : obj;
             default: // because primitive types cannot be used as WeakMap.set(key), but can as Object keys
-                if (obj in avoidloop) return avoidloop[obj];
-                else avoidloop[old_obj] = obj;
+                /*if (obj in avoidloop) return U.weakmapGet(avoidloop, obj);
+                else U.weakmapSet(avoidloop, obj, obj); */
                 break;
+
             case "object":
-                if (old_obj === null) {
-                    if (avoidloop[old_obj]) return avoidloop[old_obj];
-                    else avoidloop[old_obj] = obj;
+                if (obj === null) {
+                    /*if (avoidloop.has(obj)) return avoidloop.get(obj);
+                    else avoidloop.set(obj, obj);*/
                     break;
                 }
                 if (avoidloop.has(obj)) { // for objects
-                    if (Array.isArray(obj) && obj.length === 0 || Object.keys(obj).length === 0) return obj;
+                    // for duplicate empty arr or objects, i avoid printing the {__circular_reference__} message and just display the empty obj, pretending is not duped.
+                    // if (!replacer && ((Array.isArray(obj) && obj.length === 0) || Object.keys(obj).length === 0)) break; // return obj;
 
                     if (circularReferenceValue === "__preserve" || typeof obj !== "object") return avoidloop.get(obj);
                     else return typeof circularReferenceValue === "function" ? circularReferenceValue(obj) : circularReferenceValue;
-                } else avoidloop.set(old_obj, obj);
+                } else avoidloop.set(obj, obj);
                 break;
         }
 
-
-        if (replacer) obj = replacer(key, obj, curdept);
+        let old_obj = obj;
+        if (replacer) obj = replacer(key, obj, fullpath, curdept);
         switch (typeof obj){
             default: break; // obj = obj; return obj; // for any leaf type
             case "object":
@@ -1877,12 +1898,12 @@ export class U {
                 if (isValidElement(obj)) return obj;
                 if (U.isError(obj)) return obj;
                 if (Array.isArray(obj)) {
-                    obj = obj.map((o, i) => U.deepReplace_rec(o, avoidloop, replacer, circularReferenceValue, i,curdept+1));
+                    obj = obj.map((o, i) => U.deepReplace_rec(o, avoidloop, replacer, circularReferenceValue, i, [...fullpath, ''+i], curdept+1));
                     break;
                 }
                 let o: GObject = {};
                 for (let k in obj) {
-                    o[k] = U.deepReplace_rec(obj[k], avoidloop, replacer, circularReferenceValue, k, curdept+1);
+                    o[k] = U.deepReplace_rec(obj[k], avoidloop, replacer, circularReferenceValue, k, [...fullpath, k], curdept+1);
                 }
                 obj = o;
                 break;
@@ -2399,6 +2420,21 @@ export class U {
         if (m === Number.NEGATIVE_INFINITY) return negative;
         return false;
     }
+
+    public static getHashParams(value: string): Dictionary<string, string>{
+        let search = window.location.hash;
+        let _index = search.indexOf('?');
+        if (_index >= 0) search = search.substring(_index+1);
+        let ret: Dictionary<string, string> = {};
+        for (let [key, entry] of new URLSearchParams(search).entries()) ret[key] = entry;
+        return ret;
+    }
+    public static getHashParam(arg_name: string): string | null {
+        let search = window.location.hash;
+        let _index = search.indexOf('?');
+        if (_index >= 0) search = search.substring(_index+1);
+        return new URLSearchParams(search).get(arg_name);
+    }
 }
 export class DDate{
     static cname: string = "DDate";
@@ -2472,6 +2508,15 @@ export class myFileReader {
 }
 @RuntimeAccessible('Uarr')
 export class Uarr{
+    // filter can either be a value or a filter function
+    static findAllIndexes<T extends any>(arr: T[], filter: T | ((val: T, index: number, arr: T[]) => boolean)): number[] {
+        const ret: number[] = [];
+        let isFunc = typeof filter === 'function';
+        for (let i = 0; i < arr.length; i++) {
+            if (isFunc ? (filter as Function)(arr[i], i, arr) : arr[i] === filter) ret.push(i);
+        }
+        return ret;
+    }
 
     static arrayShallowCopy<T extends any | undefined | null>(arr: T, includeCustomKeys: boolean = true): T{
         if (!arr) return arr;

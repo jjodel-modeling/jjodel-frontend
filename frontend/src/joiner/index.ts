@@ -35,7 +35,7 @@ export type {Subtract, Class, Empty, Json, GObject, bool, Dictionary, Proxyfied,
     Constructor, AbstractConstructor, ApiResponse, Any, MultiSelectOptGroup, MultiSelectOption
 } from "./types";
 
-export type {Pointer, PtrString, getWParams, WUser, WProject, WtoD, WtoL, DtoW, LtoW, LtoD, DtoL, PackArr, Pack, Pack1, ViewScore, EPSize,
+export type {Pointer, PtrString, getWParams, WUser, WProject, WtoD, WtoL, DtoW, LtoW, LtoD, DtoL, PackArr, Pack, Pack1, EPSize,
 } from "./classes";
 export type { WAnnotation, WNamedElement, WFactory_useless_, WClass, WAttribute, WClassifier, WDataType, WMap, WModel,
     WModelElement, WEnumerator, WObject, WPackage, WOperation, WValue, WParameter, WReference, WTypedElement, WEnumLiteral, WStructuralFeature,
@@ -58,6 +58,7 @@ export {Constructors, JsType, RuntimeAccessibleClass, DPointerTargetable,
     L, D, P,
     Obsolete, Leaf, Node, Abstract, Instantiable, MixOnlyFuncs,
     NodeTransientProperties, ViewTransientProperties, DataTransientProperties,
+    ViewScore,
     UserHistory,
     LUser, DUser, DProject, LProject, Pointers, PointedBy, PendingPointedByPaths, CoordinateMode, EdgeHead, EGraphElements, EModelElements, transientProperties, ViewEClassMatch} from "./classes";
 

@@ -54,6 +54,10 @@ body {
   }
 }
 
+[disabled], .disabled{
+  cursor: not-allowed !important;
+}
+
 .autosize-input-container {
   position: relative;
   &:focus-within{

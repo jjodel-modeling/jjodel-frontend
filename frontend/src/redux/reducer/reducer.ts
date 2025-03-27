@@ -68,6 +68,7 @@ function deepCopyButOnlyFollowingPath(oldStateDoNotModify: DState, action: Parse
     let gotChanged: boolean = false; // dovrebbe cambiare sempre, se non cambia non lancio neanche l'azione e non faccio la shallow copy, ma non si sa mai, così posso evitare un render se succede l' "insuccedibile"
     let alreadyPastDivergencePoint = false; // true dal momento in cui il path dell'azione attuale e della azione precedente divergono, false fino al sotto-segmento in cui combaciano
     // console.log('deepCopyButOnlyFollowingPath', arguments);
+
     for (let i = 0; i < action.pathArray.length; i++) {
         let key = action.pathArray[i].trim();
         let prevActionPathKey = prevAction?.pathArray[i];
@@ -77,14 +78,17 @@ function deepCopyButOnlyFollowingPath(oldStateDoNotModify: DState, action: Parse
             if (alreadyPastDivergencePoint || key !== prevActionPathKey) {
                 // se l'oggetto è stato già duplicato in una azione composita, non lo duplico 2 volte.
                 alreadyPastDivergencePoint = true;
+                if (!current[key] || typeof current[key] !== 'object') {
+                    Log.eDevv('Invalid action path 0', {state: oldStateDoNotModify, path:action.pathArray, action, curr:current[key], key});
+                    return false;
+                }
                 current[key] = Array.isArray(current[key]) ? [...current[key]] : {...current[key]};
                 current[key].clonedCounter = 1 + (current[key].clonedCounter || 0);
             }
             current = current[key];
             continue;
         }
-        // Giordano: added this on 03/12/2023 to prevent "Cannot read properties of undefined".
-        // if(!current) continue; damiano: temp removed to check if there are invalid actions firing
+
         // perform final assignment
         if (i >= action.pathArray.length - 1) {
             let isArrayAppend = false;
@@ -94,6 +98,10 @@ function deepCopyButOnlyFollowingPath(oldStateDoNotModify: DState, action: Parse
             // console.log('isarrayappend?', {endswith: U.endsWith(key, ['+=', '[]', '-1']), key, action, i});
             // console.log('isarraydelete?', {endswith: U.endsWith(key, ['-='])});
 
+            if (!current || typeof current !== 'object') {
+                Log.eDevv('Invalid action path', {state: oldStateDoNotModify, path:action.pathArray, action, current});
+                return false;
+            }
             let oldValue: any;
             if (U.endsWith(key, ['+=', '[]'])) {
                 key = key.substr(0, key.length - 2).trim();
@@ -107,7 +115,7 @@ function deepCopyButOnlyFollowingPath(oldStateDoNotModify: DState, action: Parse
                 }
             }
             if (U.endsWith(key, ['-='])) {
-                key = key.substr(0, key.length - 2).trim();
+                key = key.substring(0, key.length - 2).trim();
                 oldValue = current[key];
                 switch (typeof oldValue){
                     case 'object':
@@ -136,13 +144,16 @@ function deepCopyButOnlyFollowingPath(oldStateDoNotModify: DState, action: Parse
                 if (typeof newVal === 'string') { let tmp: any = {}; tmp[newVal] = true; newVal = tmp; }
                 oldValue = {...current[key]};
                 current[key] = {...current[key]};
+
                 for (let subkey in newVal) {
                     // console.warn("object merge", {current, key, subkey, newVal, old:current[key][subkey], new:newVal[subkey]});
                     if (current[key][subkey] === newVal[subkey]) continue;
-                    current[key][subkey] = newVal[subkey];
+                    let subval = current[key][subkey] = newVal[subkey];
                     gotChanged = true;
-                    if (action.isPointer) { newRoot = PointedBy.add(key as Pointer, action, newRoot, "+="); }
+                    if (action.isPointer && Pointers.isPointer(subkey)) newRoot = PointedBy.add(subkey as Pointer, action, newRoot, "+=");
+                    if (action.isPointer && Pointers.isPointer(subval)) newRoot = PointedBy.add(subval as Pointer, action, newRoot, "+=");
                 }
+                if (action.isPointer && Pointers.isPointer(key)) newRoot = PointedBy.add(key as Pointer, action, newRoot, "+=");
             } else
             if (isObjectDifference) {
                 if (typeof newVal === 'string') { let tmp: any = {}; tmp[newVal] = true; newVal = tmp; }
@@ -150,64 +161,82 @@ function deepCopyButOnlyFollowingPath(oldStateDoNotModify: DState, action: Parse
                 current[key] = {...current[key]};
                 for (let subkey in newVal) {
                     if (!(subkey in current[key])) continue;
+                    let subval = current[key][subkey];
                     delete current[key][subkey];
                     gotChanged = true;
-                    if (action.isPointer) { newRoot = PointedBy.add(key as Pointer, action, newRoot, "-="); }
+                    if (action.isPointer && Pointers.isPointer(subkey)) newRoot = PointedBy.add(subkey as Pointer, action, newRoot, "-=");
+                    if (action.isPointer && Pointers.isPointer(subval)) newRoot = PointedBy.add(subval as Pointer, action, newRoot, "-=");
                 }
+                if (action.isPointer && Pointers.isPointer(key)) newRoot = PointedBy.add(key as Pointer, action, newRoot, "-=");
             } else
             if (isArrayAppend) {
                 gotChanged = true;
-                if (!Array.isArray(current[key])) { current[key] = []; }
-                oldValue = [...current[key]];
-                current[key] = [...current[key]];
-                current[key].push(newVal);
-                // unpointedElement = undefined;
-                if (action.isPointer) { newRoot = PointedBy.add(newVal as Pointer, action, newRoot, "+="); }
+                if (allowFixingNullArr && !Array.isArray(current[key])) { current[key] = []; }
+                if (Array.isArray(current[key])) {
+                    oldValue = [...current[key]];
+                    current[key] = [...current[key]];
+                    current[key].push(newVal);
+                    // unpointedElement = undefined;
+                    if (action.isPointer) { newRoot = PointedBy.add(newVal as Pointer, action, newRoot, "+="); }
+                }
             } else
             if (isArrayRemove) {
-                if (!Array.isArray(current[key])) { current[key] = []; }
+                if (allowFixingNullArr && !Array.isArray(current[key])) { current[key] = []; }
+                if (!Array.isArray(current[key])) break;
                 oldValue = [...current[key]];
-                let index: number;
+                let indexes: number[] = [];
                 if (U.isNumber(newVal)) { // delete by index
-                    index = newVal;
+                    let index = newVal;
                     if (index < 0) index = oldValue.length + index; // if index is -2, i remove the penultimate element
+                    if (index >= 0 && index <= oldValue.length) indexes = [index];
                 } else
                 if (newVal === undefined) {
-                    index = oldValue.length - 1;
+                    let index = oldValue.length - 1;
+                    if (index >= 0 && index <= oldValue.length) indexes = [index];
                 }
-                else {
-                    index = oldValue.indexOf(newVal);
+                else { // remove by value (auto-find index)
+                    let removeAllMode = true;
+                    if (!removeAllMode) { // mode remove single
+                        let index = oldValue.indexOf(newVal);
+                        if (index >= 0 && index <= oldValue.length) indexes = [index];
+                    }
+                    else {
+                        indexes = Uarr.findAllIndexes(current[key] as any[], newVal);
+                    }
                 }
                 // if it's negatively or positively out of boundary, i skip it
-                gotChanged = index >= 0 && index < current[key].length;
+                gotChanged = !!indexes.length;
                 if (gotChanged) {
+                    console.log('reducer array delete '+(current?.name||current?.className)+'.'+key,
+                        {gotChanged, indexes, newVal, current, cn: current?.name, key, v:current[key], path:action.pathArray, action})
                     current[key] = [...current[key]];
-                    let removedval = current[key].splice(index, 1); // in-place edit
-                    if (action.isPointer) { newRoot = PointedBy.remove(removedval as Pointer, action, newRoot, '-='); }
-                    /*
-                    fixed problem: se ho [dobj1, dobj2]... e li swappo, cambia un indice nel percorso "pointedby" e non me ne accorgo mai e un oggetto risulta "pointedby" da oggetti che non lo puntano o non esistono più a quell'indice
-                    SOLVED! by not including index in pointedBy path, but making it like "parentObject.arrayKey+=" instead of "parentObject.arrayKey.4"
-                    and knowing it's in the array it's enough info.
+                    for (let index of indexes) {
+                        let removedval = current[key].splice(index, 1); // in-place edit
+                        if (action.isPointer) { newRoot = PointedBy.remove(removedval as Pointer, action, newRoot, '-='); }
+                        /*
+                        fixed problem: se ho [dobj1, dobj2]... e li swappo, cambia un indice nel percorso "pointedby" e non me ne accorgo mai e un oggetto risulta "pointedby" da oggetti che non lo puntano o non esistono più a quell'indice
+                        SOLVED! by not including index in pointedBy path, but making it like "parentObject.arrayKey+=" instead of "parentObject.arrayKey.4"
+                        and knowing it's in the array it's enough info.
 
-                    // a.pointsto = [x, y, z]; a.pointsto = [x, z]       --->    remove a from y.pointedby
-                    const elementsThatChangedIndex: DPointerTargetable[] = current[key].slice(index);
+                        // a.pointsto = [x, y, z]; a.pointsto = [x, z]       --->    remove a from y.pointedby
+                        const elementsThatChangedIndex: DPointerTargetable[] = current[key].slice(index);
 
-                    for (let j = 0; j < elementsThatChangedIndex.length; j++) {
-                        let newindex = index + j - 1;
-                        let oldFullpathTrimmed = action.pathArray.join('.');
-                        se realizzi "pointedby" qui è to do: remove old paths and re-add them with updated index
+                        for (let j = 0; j < elementsThatChangedIndex.length; j++) {
+                            let newindex = index + j - 1;
+                            let oldFullpathTrimmed = action.pathArray.join('.');
+                            se realizzi "pointedby" qui è to do: remove old paths and re-add them with updated index
+                        }
+                        unpointedElement = newRoot.idlookup[oldValue];
+                        */
                     }
-                    unpointedElement = newRoot.idlookup[oldValue];
-                    */
                 }
             } else
             if ((action.type === DeleteElementAction.type && !(key in current)) || current[key] === newVal) {
                 // value not changed
                 gotChanged = false;
-            } else {
+            }
+            else {
                 // value changed
-                // todo: caso in cui setto manualmente classes.1 = pointer;
-                //  the latest element is array and not DPointerTargetable, so might need to buffer upper level in the tree? or instead of "current" keep an array of sub-objects encountered navigating the path in state.
                 oldValue = current[key];
                 gotChanged = true;
                 // unpointedElement = newRoot.idlookup[oldValue];
@@ -223,33 +252,25 @@ function deepCopyButOnlyFollowingPath(oldStateDoNotModify: DState, action: Parse
                 // already fixed: might need to evaluate this if block always regardless of action.isPointer,
                 // and do checks every time both on old and new value if they actually are ptrs.
                 if (true || action.isPointer) {
-                    let oldpointerdestinations: unknown[];
-                    let newpointerdestinations: unknown[];
-                    if (Array.isArray(newVal)) {
-                        newpointerdestinations = newVal;
-                        if (Array.isArray(oldValue)) { // case: path.array = array;
-                            oldpointerdestinations = oldValue;
-                        }
-                        else { // case: path.object = array; + case: path.value = array;
-                            oldpointerdestinations = [oldValue];
-                        }
-                    }
-                    else {
-                        // case: path.array = object; + case: path.array = value;
-                        newpointerdestinations = [newVal];
-                        if (Array.isArray(oldValue)) {
-                            oldpointerdestinations = oldValue;
-                        } else {
-                            // case: path.object = object; and all other cases without arrays involved
-                            oldpointerdestinations = [oldValue];
-                        }
-                    }
+                    let oldpointerdestinations: Pointer[];
+                    let newpointerdestinations: Pointer[];
+                    if (newVal && typeof newVal === 'object') {
+                        if (Array.isArray(newVal)) newpointerdestinations = newVal;
+                        else newpointerdestinations = U.ArrayMerge(Object.keys(newVal), Object.values(newVal));
+                    } else newpointerdestinations = [newVal];
+                    if (oldValue && typeof oldValue === 'object') {
+                        if (Array.isArray(oldValue)) oldpointerdestinations = oldValue;
+                        else oldpointerdestinations = U.ArrayMerge(Object.keys(oldValue), Object.values(oldValue));
+                    } else oldpointerdestinations = [oldValue];
+
+                    newpointerdestinations = newpointerdestinations.filter(e=>!!e && Pointers.isPointer(e));
+                    oldpointerdestinations = oldpointerdestinations.filter(e=>!!e && Pointers.isPointer(e));
+
                     // after i mapped all cases to path.array = array; i solve it for that case.
                     let difference = U.arrayDifference(oldpointerdestinations, newpointerdestinations); // : {added: Pointer[], removed: Pointer[], starting: Pointer[], final: Pointer[]}
-                    for (let rem of difference.removed) {if (Pointers.isPointer(rem))
-                        newRoot = PointedBy.remove(rem, action, newRoot, undefined, oldStateDoNotModify); }
-                    for (let add of difference.added) { if (Pointers.isPointer(add))
-                        newRoot = PointedBy.add(add, action, newRoot, undefined, oldStateDoNotModify); }
+
+                    for (let rem of difference.removed) { newRoot = PointedBy.remove(rem, action, newRoot, undefined, oldStateDoNotModify); }
+                    for (let add of difference.added)   { newRoot = PointedBy.add(add, action, newRoot, undefined, oldStateDoNotModify); }
                     // a.pointsto = [a, b, c];  a.pointsto = [a, b, x];    ------>     c.pointedby.remove(a) & x.pointedby.add(a)
                     // idlookup.somelongid.pointsto = [...b];
                 }
@@ -267,15 +288,16 @@ function CompositeActionReducer(oldState: DState, actionBatch: CompositeAction):
     // per via di thunk se arrivo qui lo stato cambia sicuro in mono-client non synchro (non ri-assegno valori equivalenti)
     // todo: ma se arrivano in ordine sbagliato da altri client? posso permetterlo?
     let actions: ParsedAction[];
+    let newState = oldState;
     if (actionBatch.actions) actions = Action.parse(actionBatch.actions);
     else actions = [Action.parse(actionBatch)]; // else-case is if it's a single action and not an actual compositeaction
-    if (PendingPointedByPaths.all.length) actions.push(...PendingPointedByPaths.getSolveableActions(oldState)); //.all.map( p=> p.resolve() ) );
+    // if (PendingPointedByPaths.all.length) actions.push(...PendingPointedByPaths.getSolveableActions(oldState)); //.all.map( p=> p.resolve() ) );
+    if (PendingPointedByPaths.all.length) newState = PendingPointedByPaths.getSolveableActions2(newState, oldState); //.all.map( p=> p.resolve() ) );
 
     Action.possibleInconsistencies = {};
 
     // estraggo le azioni derivate
     let derivedActions: ParsedAction[] = [];
-    let newState = oldState;
     for (let action of actions) {
         switch (action.type){
             default: break;
@@ -846,9 +868,13 @@ function unsafereducer(oldState: DState = initialState, action: Action): DState 
             console.error('error jsxparse', {vid, e, paramStr, body});
             transientProperties.view[vid].JSXFunction = (context) => GraphElementComponent.displayError(e, 'JSX Syntax', dv);
         }
-        for (let nid of Object.keys(transientProperties.node)) {
+        for (let nid of Object.keys(transientProperties.node)) { // forced rerender.
             let tn = transientProperties.node[nid];
-            tn.viewScores[vid].jsxChanged = true; // forced rerender.
+            if (!tn) continue;
+            let tnv = tn.viewScores[vid];
+            if (!tnv) continue; // if tn or tnv are missing, it is already a force-rerender + reevaluate of apply condition, UD and everything
+
+            tnv.jsxChanged = true;
             // PS: not needed for UD because they are always checked after every reducer() in shouldupdate()
             // not sure if constants are checked anywhere.
         }
@@ -943,6 +969,7 @@ function doUndoRedo(oldState: DState, action: Action, isUndo:'undo'|'redo'): DSt
     return state;
 }
 
+const allowFixingNullArr: boolean = false;
 export function _reducer/*<S extends StateNoFunc, A extends Action>*/(oldState: DState = initialState, action: Action): DState{
 
     switch (action.type) {

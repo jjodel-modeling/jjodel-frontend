@@ -102,11 +102,13 @@ export function BEGIN() {
     if (t.transactionDepthLevel === 0) t.hasAborted = false;
     t.hasBegun = true; // redundant but actions are reading this, minimize changes
     t.transactionDepthLevel++;
+    // console.warn('TRANSACTION BEGIN', {depth: t.transactionDepthLevel});
+
 }
 export function ABORT(): boolean {
     let ret: boolean = t.transactionDepthLevel > 0;
     t.hasAborted = true; // at any depth level since i have only a flat TRANSACTION array
-    END();
+    //END(); // abort cannot call end, otherwise if i do a TRANSACTION (() => if(x) ABORT()) it risks calling END() twice.
     return ret;
 }
 // if without parameter: commits the current pending stuff, with parameter: fires the action ignoring transaction block while keeping te transaction active
@@ -118,7 +120,7 @@ export function COMMIT(action?:Action): boolean {
         return false;
     }
     t.transactionDepthLevel = 1;
-    END();
+    END(); // triggers FINAL_END
     action?.fire();
     t.transactionDepthLevel = olddepth-1;
     BEGIN();
@@ -127,6 +129,7 @@ export function COMMIT(action?:Action): boolean {
 
 export function END(actionstoPrepend: Action[] = [], path?: string, oldval?: any, newval?: any, desc?:string): boolean {
     t.transactionDepthLevel--;
+    // console.warn('TRANSACTION END', {depth: t.transactionDepthLevel});
     if (actionstoPrepend.length) t.pendingActions = [...actionstoPrepend, ...t.pendingActions];
 
     if (t.transactionDepthLevel < 0) { console.error("mismatching END()"); t.transactionDepthLevel = 0; }
@@ -184,11 +187,15 @@ export function TRANSACTION(name:string, func: ()=> void, oldval?: any, newval?:
     BEGIN();
     if (!lastDescription) lastDescription = {name, oldval, newval, desc};
     let e: Error = null as any;
-    try { func(); } catch(err: any) { e = err; ABORT(); }
+    try {
+        let lenient = false as boolean;
+        if (lenient || !t.hasAborted) func();
+    } catch (err: any) { e = err; ABORT(); }
     if (t.hasAborted) {
-        if (e) Log.ee('Transaction failed:', e);
-        else Log.ee('Transaction aborted.');
-        return false;
+        if (e) Log.ee('Transaction failed:', e, {depth:t.transactionDepthLevel});
+        else {
+            Log.ee('Transaction aborted.', {depth: t.transactionDepthLevel});
+        }
     }
     return END([]);
 }

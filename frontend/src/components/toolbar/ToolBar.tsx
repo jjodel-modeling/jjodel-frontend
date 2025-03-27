@@ -174,31 +174,19 @@ function useClickOutside(ref: any, onClickOutside: any) {
 }
 
 function ToolBarComponent(props: AllProps, state: ThisState) {
-    
+
     const node = props.node;
     let [pinned, setPinned] = useState(true);
-    let [collapsed, setCollapsed] = useState(true);
-    let [position, setPosition] = useState([20,50]);
+    let [collapsed, setCollapsed] = useState(false);
+    let [position, setPosition] = useState([20, 50]);
 
     const menuRef = useRef();
 
-    useClickOutside(menuRef, () => {
+    /*useClickOutside(menuRef, () => {
         setCollapsed(true);
-    });
+    });*/
 
-    const minimize = (ref: any) => {
-        //ref.current.style.opacity = 0;
-
-        // ref.current.style.visibility = 'hidden';
-        // ref.current.style.display = 'none'; 
-        setCollapsed(true);
-    }
-    const maximize = (ref: any) => {
-        //ref.current.style.opacity = 1;
-        setCollapsed(false);
-    }
-
-    const htmlref: React.MutableRefObject<null | HTMLDivElement>= useRef(null);
+    const htmlref: React.MutableRefObject<null | HTMLDivElement> = useRef(null);
     useEffect(() => {
         if (!htmlref.current) return;
         let draggableOptions = {
@@ -213,142 +201,177 @@ function ToolBarComponent(props: AllProps, state: ThisState) {
     }, [htmlref.current]);
 
     if (!node) return null;
-    const data: LModelElement|LModel = (node.model) ? node.model : LModel.fromPointer(props.model);
 
-    const isMetamodel: boolean = props.isMetamodel;
-    const metamodel: LModel|undefined = props.metamodel;
-    const downward: Dictionary<DocString<"DClassName">, DocString<"hisChildren">[]> = {}
-    const addChildren = (items: string[]) => items ? getItems(data, downward, [...new Set(items)], node) : [];
+    const minimize = (ref: any) => {
+        //ref.current.style.opacity = 0;
 
-    // downward["DModel"] = ["DPackage"];
-    // downward["DModel"] = ["DPackage"];
+        // ref.current.style.visibility = 'hidden';
+        // ref.current.style.display = 'none';
+        setCollapsed(true);
+    }
+    const maximize = (ref: any) => {
+        //ref.current.style.opacity = 1;
+        setCollapsed(false);
+    }
+    let toolbarContent = null;
+    if (!collapsed) {
 
-    downward["DPackage"] = ["DPackage", "DClass", "DEnumerator"];
-    downward["DClass"] = ["DAttribute", "DReference", "DOperation"];
-    downward["DEnumerator"] = ["DLiteral"];
-    downward["DOperation"] = ["DParameter", "DException"];
+        const data: LModelElement | LModel = (node.model) ? node.model : LModel.fromPointer(props.model);
+
+        const isMetamodel: boolean = props.isMetamodel;
+        const metamodel: LModel | undefined = props.metamodel;
+        const downward: Dictionary<DocString<"DClassName">, DocString<"hisChildren">[]> = {}
+        const addChildren = (items: string[]) => items ? getItems(data, downward, [...new Set(items)], node) : [];
+
+        // downward["DModel"] = ["DPackage"];
+        // downward["DModel"] = ["DPackage"];
+
+        downward["DPackage"] = ["DPackage", "DClass", "DEnumerator"];
+        downward["DClass"] = ["DAttribute", "DReference", "DOperation"];
+        downward["DEnumerator"] = ["DLiteral"];
+        downward["DOperation"] = ["DParameter", "DException"];
 
 
-    // nodes
-    downward["DEdge"] = ["DEdgePoint"]
-    downward["DVoidEdge"] = ["DEdgePoint"]
+        // nodes
+        downward["DEdge"] = ["DEdgePoint"]
+        downward["DVoidEdge"] = ["DEdgePoint"]
 
-    // for (let parentKey in downward) myDictValidator.set(parentKey, addChildren("package"));
+        // for (let parentKey in downward) myDictValidator.set(parentKey, addChildren("package"));
 
-    let upward: Dictionary<DocString<"DClassName (model)">, DocString<"hisDParents">[]> = {};
-    for (let parentKey in downward){
-        let vals = downward[parentKey];
-        if(!vals) continue;
-        for (let child of vals) {
-            if (!upward[child]) upward[child] = [];
-            upward[child].push(parentKey)
-            upward[child].push(...(downward[parentKey]||[]));
+        let upward: Dictionary<DocString<"DClassName (model)">, DocString<"hisDParents">[]> = {};
+        for (let parentKey in downward) {
+            let vals = downward[parentKey];
+            if (!vals) continue;
+            for (let child of vals) {
+                if (!upward[child]) upward[child] = [];
+                upward[child].push(parentKey)
+                upward[child].push(...(downward[parentKey] || []));
+            }
         }
-    }
-    downward["DModel"] = downward["DPackage"];
+        downward["DModel"] = downward["DPackage"];
 
-    // exceptions:
-    upward["DPackage"] = ["_pDPackage"]; //, "DModel"]; because from a package, i don't want to prompt the user to create a model in toolbar.
-    upward["DEdgePoint"] = ["DEdgePoint"]; //, "DEdge", "DVoidEdge"]; because from a edgeNode, i don't want to prompt the user to create a edge in toolbar.
-    // upward["DClass"] = ["_pDPackage", "DClass", "DEnumerator"];
+        // exceptions:
+        upward["DPackage"] = ["_pDPackage"]; //, "DModel"]; because from a package, i don't want to prompt the user to create a model in toolbar.
+        upward["DEdgePoint"] = ["DEdgePoint"]; //, "DEdge", "DVoidEdge"]; because from a edgeNode, i don't want to prompt the user to create a edge in toolbar.
+        // upward["DClass"] = ["_pDPackage", "DClass", "DEnumerator"];
 
-    let content: ReactNode;
-    // if (RuntimeAccessibleClass.extends(props.selected?.node?.className, DVoidEdge)) { }
-    let contentarr: ReactNode[][] = [];
-    if (isMetamodel) {
-        let siblings = data ? addChildren(upward[data.className]) : [];
-        if (node) siblings.push(...addChildren(upward[node.className]));
-        let subelements = data ? addChildren(downward[data.className]) : [];
+        let content: ReactNode;
+        // if (RuntimeAccessibleClass.extends(props.selected?.node?.className, DVoidEdge)) { }
+        let contentarr: ReactNode[][] = [];
+        if (isMetamodel) {
+            let siblings = data ? addChildren(upward[data.className]) : [];
+            if (node) siblings.push(...addChildren(upward[node.className]));
+            let subelements = data ? addChildren(downward[data.className]) : [];
 
 
-        if (siblings.length > 0)    { contentarr.push([<span className={'toolbar-section-label'} key={'str'}>Structure</span>, <hr className={'my-1'}  key={'h_str'}/>, siblings]); }
-        if (subelements.length > 0) { contentarr.push([<span className={'toolbar-section-label'} key={'ftr'}>Features</span>, <hr className={'my-1'}  key={'h_ftr'}/>, subelements]); }
+            if (siblings.length > 0) {
+                contentarr.push([<span className={'toolbar-section-label'} key={'str'}>Structure</span>,
+                    <hr className={'my-1'} key={'h_str'}/>, siblings]);
+            }
+            if (subelements.length > 0) {
+                contentarr.push([<span className={'toolbar-section-label'} key={'ftr'}>Features</span>,
+                    <hr className={'my-1'} key={'h_ftr'}/>, subelements]);
+            }
 
-    }
-    else {
-        const classes = metamodel?.classes;
-        const model: LModel = LModel.fromPointer(props.model);
-        const lobj: LObject | undefined = data.className === "DObject" ? data as LObject : undefined;
-        const lfeat: LValue | undefined = data.className === "DValue" ? data as LValue : undefined;
+        } else {
+            const classes = metamodel?.classes;
+            const model: LModel = LModel.fromPointer(props.model);
+            const lobj: LObject | undefined = data.className === "DObject" ? data as LObject : undefined;
+            const lfeat: LValue | undefined = data.className === "DValue" ? data as LValue : undefined;
 
-        let subleveloptions = [];
-        if (lobj && (!lobj.instanceof || lobj.partial)) subleveloptions.push( //@ts-ignore
-            <diva key={"Feature"} className={"toolbar-item feature"} tabIndex={ti} onClick={() => { lobj.addValue(); }}>+Feature</diva>
-        );
-        if (lfeat && lfeat.values.length < lfeat.upperBound) subleveloptions.push( //@ts-ignore
-            <divb key={"Value"} className={"toolbar-item value"} tabIndex={ti} onClick={() => {SetFieldAction.new(lfeat.id, 'value' as any, undefined, '+=', false); alert(280);}}>
-                <ModellingIcon name={'value'} />
-                <span className={'ms-1 my-auto text-capitalize'}>value</span>
-                {/*@ts-ignore*/}
-            </divb>
-        );
-        if (node) subleveloptions.push(...addChildren(downward[node.className]));
-        let rootobjs = classes?.filter((lClass) => lClass.rootable).map((lClass, index) => {
-            let dclass = lClass.__raw;
-            return ( //@ts-ignore
-                <divc key={"LObject_"+dclass.id}
-                    onMouseEnter={() => SetRootFieldAction.new('tooltip', lClass.annotations.map(a => a.source).join(' '))}
-                    onMouseLeave={() => SetRootFieldAction.new('tooltip', '')}
-                    className={"toolbar-item LObject"} tabIndex={ti} onClick={()=> select(model.addObject({}, lClass)) }>
-                    {dclass._state.icon ? <ModellingIcon src={dclass._state.icon}/> : <ModellingIcon name={'object'} />}
-                    <span className={'ms-1 my-auto text-capitalize'}>{U.stringMiddleCut(dclass.name, 14)}</span>
+            let subleveloptions = [];
+            if (lobj && (!lobj.instanceof || lobj.partial)) subleveloptions.push( //@ts-ignore
+                <div key={"Feature"} className={"toolbar-item feature"} tabIndex={ti} onClick={() => {
+                    lobj.addValue();
+                }}>+Feature</div>
+            );
+            if (lfeat && lfeat.values.length < lfeat.upperBound) subleveloptions.push( //@ts-ignore
+                <div key={"Value"} className={"toolbar-item value"} tabIndex={ti} onClick={() => {
+                    SetFieldAction.new(lfeat.id, 'value' as any, undefined, '+=', false);
+                    alert(280);
+                }}>
+                    <ModellingIcon name={'value'}/>
+                    <span className={'ms-1 my-auto text-capitalize'}>value</span>
                     {/*@ts-ignore*/}
-                </divc>)
-        }) || [];
+                </div>
+            );
+            if (node) subleveloptions.push(...addChildren(downward[node.className]));
+            let rootobjs = classes?.filter((lClass) => lClass.rootable).map((lClass, index) => {
+                let dclass = lClass.__raw;
+                return ( //@ts-ignore
+                    <div key={"LObject_" + dclass.id}
+                          onMouseEnter={() => SetRootFieldAction.new('tooltip', lClass.annotations.map(a => a.source).join(' '))}
+                          onMouseLeave={() => SetRootFieldAction.new('tooltip', '')}
+                          className={"toolbar-item LObject"} tabIndex={ti}
+                          onClick={() => select(model.addObject({}, lClass))}>
+                        {dclass._state.icon ? <ModellingIcon src={dclass._state.icon}/> : <ModellingIcon name={'object'}/>}
+                        <span className={'ms-1 my-auto text-capitalize'}>{U.stringMiddleCut(dclass.name, 14)}</span>
+                        {/*@ts-ignore*/}
+                    </div>)
+            }) || [];
 
-        // @ts-ignore TS2339
-        //
-        rootobjs.push(<>
-            <hr className={'my-1 toolbar-hr'} key={'h_robj'}/>
-            {/*@ts-ignore*/}
-            <divd key={"RawObject"} className={'toolbar-item'} tabIndex={ti} onClick={()=> select(model.addObject({}, null)) }>
-                <ModellingIcon name={'object'} />
-                <span className={'ms-1 my-auto text-capitalize'} >Object</span>
+            // @ts-ignore TS2339
+            //
+            rootobjs.push(<>
+                <hr className={'my-1 toolbar-hr'} key={'h_robj'}/>
                 {/*@ts-ignore*/}
-            </divd>
-        </>);
+                <divd key={"RawObject"} className={'toolbar-item'} tabIndex={ti}
+                      onClick={() => select(model.addObject({}, null))}>
+                    <ModellingIcon name={'object'}/>
+                    <span className={'ms-1 my-auto text-capitalize'}>Object</span>
+                    {/*@ts-ignore*/}
+                </divd>
+            </>);
 
 
-        if (rootobjs.length > 0) {
-            contentarr.push([<b key={'rlvl'} className={'toolbar-section-label'} style={{marginRight:"1.5em"/*to avoid overlap with pin*/}}>Root level</b>, rootobjs]);
+            if (rootobjs.length > 0) {
+                contentarr.push([<b key={'rlvl'} className={'toolbar-section-label'}
+                                    style={{marginRight: "1.5em"/*to avoid overlap with pin*/}}>Root level</b>, rootobjs]);
+            }
+            if (subleveloptions.length > 0) {
+                contentarr.push([<b key='slo' className={'toolbar-section-label'}>Sublevel</b>, subleveloptions]);
+            }
         }
-        if (subleveloptions.length > 0) {
-            contentarr.push([<b key='slo' className={'toolbar-section-label'}>Sublevel</b>, subleveloptions]);
+
+
+        let shapes = node ? addChildren(downward[node.className]) : [];
+        if (shapes.length > 0) {
+            contentarr.push([<b key={'shape'} className={'toolbar-section-label'}>Shape</b>, shapes]);
         }
+
+        let separator = <hr className={'my-1'}/> as any;
+
+        // @ts-ignore
+        // console.error('toolbar', {ct:[...contentarr], ctm:contentarr.map(e=>e?.key), carr:contentarr.separator(separator).flat().flat()})
+        // @ts-ignore
+        content = contentarr.separator(separator).flat().flat() as any;
+
+        toolbarContent = (
+            <div className="toolbar-draggable"
+                 ref={htmlref}
+                 style={{
+                     border: 'none',
+                     top: '35px',
+                     position: "absolute",
+                     backgroundColor: 'red !important'
+                 }} // refuses to focus without event...
+                 onClick={(e) => {
+                     console.log("click focus", {htmlref});
+                     setTimeout(() => {
+                         if (htmlref.current) (htmlref.current as any).children[0].focus();
+                     }, 1)
+                 }}>
+                <div className={"toolbar hoverable" + (pinned ? " pinned" : '')} tabIndex={0}>
+                    <i style={{marginTop: '8px'}} className={"content pin bi bi-x-lg"} onClick={() => minimize(htmlref)}/>
+                    <section className={"content inline w-100"}>
+                        {content}
+                    </section>
+                </div>
+            </div>);
     }
-
-
-    let shapes = node ? addChildren(downward[node.className]) : [];
-    if (shapes.length > 0) {
-        contentarr.push([<b key={'shape'} className={'toolbar-section-label'}>Shape</b>, shapes]);
-    }
-
-    let separator = <hr className={'my-1'} /> as any;
-
-    // @ts-ignore
-    // console.error('toolbar', {ct:[...contentarr], ctm:contentarr.map(e=>e?.key), carr:contentarr.separator(separator).flat().flat()})
-    // @ts-ignore
-    content = contentarr.separator(separator).flat().flat() as any;
-
     return (<>
-    
-        <div className="toolbar-draggable"
-            ref={htmlref}
-            style={{ border: 'none', top: '35px', position: "absolute", backgroundColor: 'red !important' }} // refuses to focus without event...
-            onClick={(e) => {
-                console.log("click focus", { htmlref }); setTimeout(() => {
-                    if (htmlref.current) (htmlref.current as any).children[0].focus();
-                }, 1)
-            }}>
-            <div className={"toolbar hoverable" + (pinned ? " pinned" : '')} tabIndex={0}>
-                <i style={{marginTop: '8px'}} className={"content pin bi bi-x-lg"} onClick={() => minimize(htmlref)} />
-                <section className={"content inline w-100"}>
-                    {content}
-                </section>
-            </div>
-        </div>
-        
-        {collapsed ? 
+        {toolbarContent}
+        {collapsed ?
             <div className="toolbar-collapsed" onClick={() => maximize(htmlref)}></div>
             :
             <div className="toolbar-collapsed" onClick={() => minimize(htmlref)}></div>
@@ -363,10 +386,13 @@ interface OwnProps {
 }
 
 interface StateProps {
-    node: LGraphElement|null;
+    node: LGraphElement | null;
     metamodel?: LModel;
 }
-interface DispatchProps {}
+
+interface DispatchProps {
+}
+
 type AllProps = OwnProps & StateProps & DispatchProps;
 
 //* 23/11 versione giordano
@@ -375,7 +401,9 @@ function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     const nodeid = state._lastSelected?.node;
     if (nodeid) ret.node = LGraphElement.fromPointer(nodeid);
     else ret.node = null;
-    if (ownProps.metamodelId) { ret.metamodel = LModel.fromPointer(ownProps.metamodelId); }
+    if (ownProps.metamodelId) {
+        ret.metamodel = LModel.fromPointer(ownProps.metamodelId);
+    }
     return ret;
 }
 

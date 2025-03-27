@@ -607,6 +607,11 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
         return LPointerTargetable.fromArr([...new Set(context.data.subElements)]).filter((e:L)=>!!e);
     }
     set_subElements(val: PackArr<this["subElements"]>, context: LogicContext<DGraphElement>): boolean {
+        if (true as boolean) return this.cannotSet('subElements', 'set .father properties from subelements instead.');
+        /*
+         this code updates the parent of removed subelements, but it risks to go in conflict if subelem.father is in a pending action
+                so i choose to handle this safely from set_father instead, and never use set_subElements directly;
+        */
         console.log("isDeepStrictEqual", {isDeepStrictEqual});
         Log.eDev([...new Set(val)].length !== val.length, "subelemnts setter have duplicates", {val, context});
         // if (isDeepStrictEqual(context.data.subElements, val)) return true;
@@ -619,9 +624,11 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
             let arrdiff = U.arrayDifference(context.data.subElements, pointers);
             // old subelements
             for (let oldsubelementid of arrdiff.removed) {
-                let subelement: DGraphElement = (oldsubelementid && idlookup[oldsubelementid]) as DGraphElement;
-                if (subelement.father !== context.data.id) continue;
-                LPointerTargetable.from(subelement).father = null as any; // todo: can this happen? è transitorio o causa vertici senza parent permanenti?
+                /*
+                let subelement: DGraphElement = (oldsubelementid && DPointerTargetable.fromPointer(oldsubelementid)) as DGraphElement;
+                if (!subelement || subelement.father !== context.data.id) continue;
+                let lsubelement = LPointerTargetable.fromD(subelement);
+                lsubelement.father = this.get_graph(context)?.id as any;*/
             }
             // new subelements
             for (let newsubelementid of arrdiff.added) {

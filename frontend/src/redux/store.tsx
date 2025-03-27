@@ -285,7 +285,7 @@ function makeDefaultGraphViews(vp: DViewPoint, validationVP: DViewPoint): DViewE
         "// console.log('overlayView ud inner ' + data.name, {errs:node.state, node, noder:node.r, data});\n" +
         "ret.nstate = node.state\n" +
         // "ret.errors = Object.keys(ret.nstate).filter(k => k.indexOf(\"error_\")===0).map(k=>ret.nstate[k])\n" +
-        "ret.errors = Object.keys(ret.nstate).map(k => k.indexOf(\"error_\")===0 ? nstate[k] : '').filter(e=>e)\n" +
+        "ret.errors = Object.keys(ret.nstate).map(k => k.indexOf(\"error_\")===0 ? ret.nstate[k] : '').filter(e=>e)\n" +
         "\n}";
         v.isExclusiveView = false;
         v.css =
@@ -333,12 +333,12 @@ function makeDefaultGraphViews(vp: DViewPoint, validationVP: DViewPoint): DViewE
             "ret.type = data && data.className.substring(1) || 'shapeless';\n"+
             "}";
         v.onDataUpdate = `
-let err = "";
+let err = undefined;
 //if (name.indexOf(" ") >= 0) err = type + " names cannot contain white spaces."; else
 if (name.length === 0 && type !== "shapeless") err = type + " must be named.";
 else if (!name[0].match(/[A-Za-z_$]/)) err = type + " names must begin with an alphabet letter or $_ symbols.";
 else if (!name.match(/^[A-Za-z_$]+[A-Za-z0-9$_\\s]*$/)) err = type + " names can only contain an alphanumeric chars or or $_ symbols";
-node.state = {error_naming: err};
+if (node.state.error_naming !== err) node.state = {error_naming: err};
 `;}, false, 'Pointer_ViewCheckName' );
 
 let errorCheckLowerbound: DViewElement = DViewElement.new2('Lowerbound error view', DV.invisibleJsx(), validationVP, (v) => {
@@ -375,7 +375,7 @@ node.state = {error_lowerbound: err};\n
     valuecolormap[ShortAttribETypes.EVoid] = "gray";
 
 
-    let voidView: DViewElement = DViewElement.new2('Fallback', DV.fallbackView(), vp, undefined, false, 'fallback');
+    let voidView: DViewElement = DViewElement.new2('Fallback', DV.fallbackView(), vp, undefined, false, 'Pointer_fallback');
 
 
     let edgeViews: DViewElement[] = [];

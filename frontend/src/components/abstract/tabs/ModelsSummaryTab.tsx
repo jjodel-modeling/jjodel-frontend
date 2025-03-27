@@ -1,4 +1,4 @@
-import type {DState, LProject} from '../../../joiner';
+import {DState, LProject, windoww} from '../../../joiner';
 import {DUser, LModel, LUser} from '../../../joiner';
 import React, {Dispatch, ReactElement} from 'react';
 import {connect} from 'react-redux';
@@ -62,7 +62,8 @@ function InfoTabComponent(props: AllProps) {
     const project = props.project;
     const metamodels = project.metamodels;
     let models = project.models;
-    let modelmap: Dictionary<string, LModel[]> = {}
+    let modelmap: Dictionary<string, LModel[]> = {};
+    windoww.project = project;
     for (let m of models) {
         let m2 = m.instanceof;
         let m2name = m2?.name as string;

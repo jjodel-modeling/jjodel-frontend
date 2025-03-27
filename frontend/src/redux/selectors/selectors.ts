@@ -308,6 +308,7 @@ export class Selectors{
         return dobject.name;
     }
     static getByName2(name?: string | DPointerTargetable | LPointerTargetable, dtype?: typeof DPointerTargetable | undefined | string, caseSensitive: boolean = false, s?:DState): DPointerTargetable | null {
+        console.log('getByName2', {name, dtype, caseSensitive});
         if (!name) { return null; }
         if (typeof name === 'object') { return name as DPointerTargetable; }
         if (!s) s = store.getState();
@@ -320,6 +321,7 @@ export class Selectors{
         for (let id in s.idlookup) {
             let d = s.idlookup[id];
             if (!d || typeof d !== 'object') continue;
+            console.log('getByName2 crash2', {d, name, dtype, caseSensitive});
             if (classname !== (caseSensitive ? d.className : d.className.toLowerCase())) continue;
             let dname = Selectors.getName(d, s);
             if (!caseSensitive) dname = dname?.toLowerCase();
@@ -532,12 +534,12 @@ export class Selectors{
             if (!tv) transientProperties.view[vid] = tv = {} as any;
             //console.log('2302 2, getviews evaluating view ' + vid, {vid, dview, tn});
             if (!tn?.viewScores) console.error('2302 3, getviews evaluating view ' + vid, {vid, dview, tn});
-            let tnv = tn.viewScores[vid];
+            let tnv: ViewScore = tn.viewScores[vid];
 
             // check initialization
 
             if (!tnv) {
-                tn.viewScores[vid] = tnv = {} as any;
+                tn.viewScores[vid] = tnv = new ViewScore();
                 /*{
                     score: ViewEClassMatch.NOT_EVALUATED_YET,
                     metaclassScore: ViewEClassMatch.NOT_EVALUATED_YET,
@@ -592,7 +594,7 @@ export class Selectors{
                 // but OCL is computationally heavy, so i decided it is now a requirement to update the model to reevaluate ocl.
                 let oldScore = tnv.OCLScore;
                 tnv.OCLScore = OCL.test(data, dview, node)//Selectors.calculateOCLScore({data, node, dview});
-                if (vid === 'fallback'){
+                if (vid === 'Pointer_fallback'){
                     console.log('fallback ocl', {oldScore, newScore:tnv.OCLScore, data, dview});
                 }
                 tv.oclChanged = false;

@@ -9,6 +9,7 @@ import {
 import {connect} from "react-redux";
 import "./undoredo.scss"
 import {icon} from "../../pages/components/icons/Icons";
+import {COMMIT} from "../../redux/action/action";
 
 interface SaveManagerProps {}
 

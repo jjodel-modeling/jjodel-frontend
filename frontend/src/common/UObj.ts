@@ -117,8 +117,8 @@ export class Uobj {
     public static applyObjectDelta(statelevel: GObject, deltalevel: GObject, inplace: boolean = false, asserteq?: GObject): GObject {
         if (!statelevel) statelevel = {};
         // todo: if delta = ObjectDelta('str', {0:'s', 1:'t', 2:'X'}); applydelta('str', delta); what happes?
-        if (typeof statelevel !== 'object') statelevel = {}; // return statelevel;
-        if (typeof deltalevel !== 'object') return deltalevel as any;
+        if (statelevel === null || typeof statelevel !== 'object') statelevel = {}; // return statelevel;
+        if (deltalevel === null || typeof deltalevel !== 'object') return deltalevel as any;
         let oldState = {...statelevel}; // just for debug
         let targetIsArr = deltalevel.__jjObjDiffIsArr || Array.isArray(deltalevel);
         if (!inplace) statelevel = Array.isArray(statelevel) ? Uarr.arrayShallowCopy(statelevel) : {...statelevel}; // NB: [ ...{obj} ] is invalid, but {...[]} is valid, careful

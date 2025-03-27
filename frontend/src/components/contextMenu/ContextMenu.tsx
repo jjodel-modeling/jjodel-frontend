@@ -6,7 +6,7 @@ import {
     DClass,
     DNamedElement,
     DState,
-    DUser,
+    DUser, DV,
     DValue,
     DViewElement,
     GObject,
@@ -40,9 +40,12 @@ function ContextMenuComponent(props: AllProps) {
     if (!node || !display) return(<></>);
     const data: LNamedElement | undefined = LNamedElement.fromPointer(node?.model?.id);
     let jsxList: ReactNode[] = [];
+    let hri: number = 0;
 
-    let ldata: LNamedElement = data as LNamedElement;
-    let ddata: DNamedElement = ldata?.__raw as DNamedElement;
+    // let ldata: LNamedElement = data as LNamedElement;
+    // let ddata: DNamedElement = ldata?.__raw as DNamedElement;
+    let ldata = data
+    let ddata = ldata?.__raw;
     let model = ldata?.model;
 
     const close = () => {
@@ -60,27 +63,28 @@ function ContextMenuComponent(props: AllProps) {
     }
 
     const structuralFeature = async () => {
-        setMemorec(await MemoRec.structuralFeature(ldata));
+        ldata && setMemorec(await MemoRec.structuralFeature(ldata));
     }
 
     const classifier = async() => {
-        setMemorec(await MemoRec.classifier(ldata));
+        ldata && setMemorec(await MemoRec.classifier(ldata));
     }
 
     const suggestOnClass = (isAttribute:boolean) => {
+        if (!ldata) close();
         const lClass: LClass = (ldata as LClass);
         if (isAttribute) lClass.addAttribute(suggestedName);
         else lClass.addReference(suggestedName);
         close();
-
     }
-    const suggestOnPackage = () => { (ldata as LPackage).addClass(suggestedName); close(); }
+
+    const suggestOnPackage = () => { ldata && (ldata as LPackage).addClass(suggestedName); close(); }
 
     /* Handling the add of composition children to specific M1 Object */
 
 
-    const getAddChildren = (l:LValue, model: LModel, out: LClass[] = []): ReactNode => {
-        let d = l.__raw;
+    const getAddChildren = (l:LValue | undefined, model: LModel, out: LClass[] = []): ReactNode => {
+        if (!l) return [];
         const lref = l.instanceof as LReference;
         if (!lref) return [];
         let dref = lref.__raw;
@@ -91,52 +95,71 @@ function ContextMenuComponent(props: AllProps) {
         let type = lref.type;
         out = [type, ...type.allSubClasses].filter(e=>!!e);
         let jsxret: ReactNode;
-        if (out.length === 1) jsxret = <div onClick={() => { close(); l.addObject({}, out[0]); }} className={'col item'}>{icon['add']} Add {out[0].name}</div>
-        else jsxret = <div onClick={(e) => { setChildrenMenu(!childrenMenu)}} className={'col item'}>
-            {icon['add']} Add {icon['submenu']}
-            {childrenMenu && <div className={'context-menu round submenu'} style={{top: position.y - 216, left: position.x - 333}} onContextMenu={(e)=>e.preventDefault()}>
-                {out.map(lc =>
-                    <div onClick={() => {
-                        close();
-                        setChildrenMenu(false);
-                        const child = l.addObject({}, lc);
-                        l.values = [...(l.values as LObject[]), child];
-                    }} className={'col item'}>
-                        {lc.name}
-                    </div>
-                )}
-            </div>}
+        if (out.length === 1) {
+            let name = out[0].name;
+            jsxret = <div key={'single_'+l.id} onClick={() => { close(); l.addObject({}, out[0]); }} className={'col item'}>{icon['add']} Add {name}</div>
+        }
+        else jsxret = <div key={'multi'+l.id} onClick={(e) => { setChildrenMenu(!childrenMenu)}} className={'col item submenu-holder hoverable'}>
+            {icon['add']} Add <div style={{position: 'absolute', right: '0'}}>{icon['submenu']}</div>
+            {childrenMenu && <section className={'round content right'} style={{/*top: position.y - 216, left: position.x - 333*/}} onContextMenu={(e)=>e.preventDefault()}>
+                <ul className={'right context-menu'}>
+                    {out.map(lc => { let lcname = lc.name; return (
+                        <li key={lcname} onClick={() => {
+                            close();
+                            setChildrenMenu(false);
+                            const child = l.addObject({}, lc);
+                            l.values = [...(l.values as LObject[]), child];
+                        }} className={'col item'}>
+                            {lcname}
+                        </li>)}
+                    )}
+                </ul>
+            </section>}
         </div>;
         return jsxret;
     }
 
+
     if (display) {
 
-
         if (ddata?.name) {
+            let lname = (ldata as LNamedElement).name;
             if (ldata && model?.isMetamodel) {
-                jsxList.push(<div className={'mt-1 col'} style={{fontSize: '0.9rem', paddingLeft: '12px', fontWeight: '300'}}>{ddata.className}: <i>{ldata.name}</i></div>);
+                jsxList.push(<div key={lname} className={'col name'} style={{fontSize: '0.9rem', paddingLeft: '12px', fontWeight: '300'}}>
+                    {ddata.className.substring(1)}: <i>{lname}</i></div>);
             } else {
-                jsxList.push(<div className={'mt-1 col'} style={{fontSize: '0.9rem', paddingLeft: '12px', fontWeight: '300'}}>{ldata.name}</div>);
+                jsxList.push(<div key={lname} className={'col name'} style={{fontSize: '0.9rem', paddingLeft: '12px', fontWeight: '300'}}>
+                    {ddata.className.substring(1)}: <i>{[ldata?.father?.name, lname].join('.')}</i></div>);
             }
-            jsxList.push(<hr className={'my-1'} />);
+            jsxList.push(<hr key={hri++} className={'my-1'} />);
         }
 
         // if (ddata?.className === 'DObject') {
         //     jsxList.push(...(ldata as LObject).features.map(feat=>getAddChildren(feat, model, [])));
-        //     jsxList.push(<hr className={'my-1'} />);
+        //     jsxList.push(<hr key={hri++} className={'my-1'} />);
         // }
 
         if (ddata?.className === 'DObject') {
-            let children = (ldata as LObject).features.map(feat=>getAddChildren(feat, model, []));
-            jsxList.push(...(ldata as LObject).features.map(feat=>getAddChildren(feat, model, []))); 
+            let out: any[] = [];
+            let children = (ldata as LObject).features.map(feat=>getAddChildren(feat, model as any, out)).filter(e => !(Array.isArray(e) && e.length === 0));
+            console.log('ctxmenu obj', {out, data, children});
+
+            if (!Array.isArray(children) || children.length > 0) {
+                jsxList.push(...children);
+                jsxList.push(<hr key={hri++} className={'my-1'} />);
+            }
             /* @ts-ignore */
-            if (children[1]['$$typeof'] !== undefined) jsxList.push(<hr className={'my-1'}/>);
+            // if (children[1]['$$typeof'] !== undefined) jsxList.push(<hr key={hri++} className={'my-1'}/>);
         }
 
         if (ddata?.className === 'DValue') {
-            jsxList.push(getAddChildren(ldata as any as LValue, model, []));
-            jsxList.push(<hr className={'my-1'}/>);
+            let out: any[] = [];
+            let children = getAddChildren(ldata as any as LValue, model as any, out);
+            console.log('ctxmenu val', {out, data, children});
+            if (!Array.isArray(children) || children.length > 0) {
+                jsxList.push(children);
+                jsxList.push(<hr key={hri++} className={'my-1'} />);
+            }
         }
 
         
@@ -145,74 +168,79 @@ function ContextMenuComponent(props: AllProps) {
         /* Memorec */
         if(ddata && !U.isOffline()) {
             if(ddata.className === 'DClass') {
-                jsxList.push(<div onClick={structuralFeature} className={'col item'}>{icon['ai']} AI Suggest <i
-                    className='bi bi-chevron-right' style={{fontSize: '0.75em', float: 'right', paddingTop: '2px', fontWeight: '800'}} /></div>);
-                jsxList.push(<hr className={'my-1'} />);
+                jsxList.push(<div key='ai-c' onClick={structuralFeature} className={'col item'}>{icon['ai']} AI Suggest
+                    <div><i className='bi bi-chevron-right' style={{fontSize: '0.75em', float: 'right', paddingTop: '2px', fontWeight: '800'}} /></div>
+                    </div>);
+                jsxList.push(<hr key={hri++} className={'my-1'} />);
             }
             if(ddata.className === 'DPackage') {
-                jsxList.push(<div onClick={classifier} className={'col item'}>{icon['ai']} AI Suggest <i
-                    className={'ms-1 bi bi-chevron-right'} style={{fontSize: '0.75em', float: 'right', paddingTop: '2px', fontWeight: '800'}} /></div>);
-                jsxList.push(<hr className={'my-1'} />);
+                jsxList.push(<div key='ai-p' onClick={classifier} className={'col item'}>{icon['ai']} AI Suggest
+                    <div><i className={'ms-1 bi bi-chevron-right'} style={{fontSize: '0.75em', float: 'right', paddingTop: '2px', fontWeight: '800'}} /></div>
+                </div>);
+                jsxList.push(<hr key={hri++} className={'my-1'} />);
             }
         }
 
         /* Extend */
 
-        switch (ddata.className) {
-
+        switch (ddata?.className) {
             default:
             case undefined: break;
-            case 'DValue': if ((ldata as any as LValue).instanceof) jsxList.pop();break;
+            //case 'DValue': if ((ldata as any as LValue).instanceof) jsxList.pop(); ???? break;
             case 'DClass':
-                jsxList.push(<div onClick={() => {
+                jsxList.push(<div key='ext' onClick={() => {
                     close();
-                    SetRootFieldAction.new('isEdgePending', {user: user.id, source: ddata.id});
-                }} className={'col item'}>{icon['extend']} Extend<div><i
-                    className='bi bi-command'></i> E</div></div>);
-                jsxList.push(<hr className={'my-1'} />);
-                
+                    SetRootFieldAction.new('isEdgePending', {user: user.id, source: (ddata as any).id});
+                }} className={'col item'}>{icon['extend']} Extend
+                    <div><i className='bi bi-command'></i> E</div></div>);
+                jsxList.push(<hr key={hri++} className={'my-1'} />);
                 break;
         }
 
         /* Deselect */
 
-        jsxList.push(<div onClick={() => {
+        jsxList.push(<div key='-select' onClick={() => {
             close();
             SetRootFieldAction.new(`selected.${DUser.current}`, '', '', false);
         }} className={'col item'}>{icon['deselect']} Deselect</div>);
-        //jsxList.push(<hr className={'my-1'} />);
+        //jsxList.push(<hr key={hri++} className={'my-1'} />);
 
         
         /* Delete */
-        
-        jsxList.push(<div onClick={() => { 
-            close();
-            console.log('delete ctxmenu', {data, node});
-            if (ldata) ldata.delete();
-            else node.delete();// if there is data, then the node is indirectly deleted, no need to call it too.
-            //node.delete();
-        }} className={'col item'}>{icon['delete']} Delete<i
-            className='bi bi-backspace' style={{fontSize: '1em', float: 'right', paddingTop: '2px', fontWeight: '800'}} /></div>);
-        jsxList.push(<hr className={'my-1'} />);
+        let cannotDelete = ddata?.className === 'DValue' && (ddata as any as DValue).instanceof;
+        jsxList.push( // @ts-ignore: disabled
+            <div key='delete' disabled={cannotDelete} onClick={() => {
+                if (cannotDelete) return;
+                close();
+                if (ldata) ldata.delete();
+                else node.delete();
+                // if there is data, then the node is indirectly deleted, no need to call it too.
+            }} className={'col item'} data-cannotdelete={cannotDelete+''}>
+                {icon['delete']}
+                Delete
+                <div><i className='bi bi-backspace' style={{fontSize: '1em', float: 'right', paddingTop: '2px', fontWeight: '800'}} /></div>
+            </div>
+        );
+        jsxList.push(<hr key={hri++} className={'my-1'}/>);
         
         /* Refresh */
 
         // jsxList.push(<div onClick={() => {alert('refresh')}} className={'col item'}>{icon['refresh']} Refresh</div>);
-        // jsxList.push(<hr className={'my-1'} />);
+        // jsxList.push(<hr key={hri++} className={'my-1'} />);
 
         /* Up / Down */
-        jsxList.push(<div onClick={() => {close(); node.zIndex += 1;}} className={'col item'}>{icon['up']} Up<div>
-            <i className='bi bi-command' /><i className="bi bi-arrow-up" /></div></div>);
-        jsxList.push(<div onClick={() => {close(); node.zIndex -= 1;}} className={'col item'}>{icon['down']} Down<div>
-            <i className='bi bi-command' /><i className="bi bi-arrow-down" /></div></div>);
+        jsxList.push(<div key='up' onClick={() => {close(); node.zIndex += 1;}} className={'col item'}>{icon['up']} Up
+            <div><i className='bi bi-command' /><i className="bi bi-arrow-up" /></div></div>);
+        jsxList.push(<div key='down' onClick={() => {close(); node.zIndex -= 1;}} className={'col item'}>{icon['down']} Down
+            <div><i className='bi bi-command' /><i className="bi bi-arrow-down" /></div></div>);
         let gn = node as GObject;
-        jsxList.push(<hr className={'my-1'} />);
+        jsxList.push(<hr key={hri++} className={'my-1'} />);
         
         /* AUTO-SIZING */
-        if (gn.isResized) jsxList.push(<div onClick={() => {close(); gn.isResized = false; }} className={'col item'}>{icon['contract']} Restore auto-sizing<div> <i
-            className='bi bi-command'></i> T</div></div>);
-        else jsxList.push(<div onClick={() => {close(); gn.isResized = true; }} className={'col item'}>{icon['expand']} Disable auto-sizing<div> <i
-            className='bi bi-command'></i> T</div></div>);
+        if (gn.isResized) jsxList.push(<div key='asize' onClick={() => {close(); gn.isResized = false; }} className={'col item'}>{icon['contract']} Restore auto-sizing
+            <div> <i className='bi bi-command'></i> T</div></div>);
+        else jsxList.push(<div key='nasize' onClick={() => {close(); gn.isResized = true; }} className={'col item'}>{icon['expand']} Disable auto-sizing
+            <div> <i className='bi bi-command'></i> T</div></div>);
         
         // /* LOCK-UNLOCK */
         // jsxList.push(<div onClick={() => {close(); ldata.delete(); /*node.delete();*/}} className={'col item'}>{icon['lock']} Lock/Unlock<div> <i
@@ -221,24 +249,25 @@ function ContextMenuComponent(props: AllProps) {
         // jsxList.push(<div onClick={() => {close(); ldata.delete(); /* node.delete();*/}} className={'col item'}>{icon['unlock']} Unlock all<div><i className="bi bi-alt"></i> <i
         //     className='bi bi-command'></i> L</div></div>);
 
-        jsxList.push(<hr className={'my-1'} />);
+        jsxList.push(<hr key={hri++} className={'my-1'} />);
         
         /* METRICS */
         if (ldata && model?.isMetamodel) {
-            jsxList.push(<div onClick={() => {close(); toggleMetrics();}} className={'col item'}>{icon['metrics']} Analytics<div>
-                <i className='bi bi-command' /> A</div></div>);
-            jsxList.push(<hr className={'my-1'} />);
+            jsxList.push(<div key='analytic' onClick={() => {close(); toggleMetrics();}} className={'col item'}>{icon['metrics']} Analytics
+                <div><i className='bi bi-command' /> A</div></div>);
+            jsxList.push(<hr key={hri++} className={'my-1'} />);
         }
 
 
         /* ADD VIEW */
-        jsxList.push(<div onClick={async () => {close(); addView();}} className={'col item'}>{icon['view']} Add View<div>
-            <i className='bi bi-alt' /> <i className='bi bi-command' /> A</div></div>);
+        jsxList.push(<div key='view+' onClick={async () => {close(); addView();}} className={'col item'}>{icon['view']} Add View
+            <div><i className='bi bi-alt' /> <i className='bi bi-command' /> A</div>
+        </div>);
     }
 
     return(<>
         <div className={'context-menu round'} style={{top: position.y - 100, left: position.x - 10}} onContextMenu={(e)=>e.preventDefault()}>
-            {jsxList.map((jsx, index) => {return <div key={index}>{jsx}</div>})}
+            {jsxList/*.map((jsx, index) => {return <li key={index}>{jsx}</li>})*/}
         </div>
 
 

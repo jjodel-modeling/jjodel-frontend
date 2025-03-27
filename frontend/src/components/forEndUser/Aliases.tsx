@@ -10,6 +10,6 @@ type AllProps = GObject; // Overlap<OwnProps, Overlap<StateProps, DispatchProps>
 export function View(props: AllProps, children: ReactNode) {
     // @ts-ignore
     // console.log("VIEWW", {props, thiss: this as any, args: arguments});
-    return(<view className={"view " + props.className}>{props.children || children}</view>); }
+    return(<view className={"view " + (props.className||'')} {...props}>{props.children || children}</view>); }
 
 View.cname = 'View';

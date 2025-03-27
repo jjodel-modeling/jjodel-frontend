@@ -331,7 +331,7 @@ export class TargetableProxyHandler<ME extends GObject = DModelElement, LE exten
 
         if ((this.d as GObject).__readonly && propKey !== '__readonly') {
             //todo if there is a transaction open i should throw exception?
-            if(ABORT()){
+            if (ABORT()){
                 Log.ee('Transaction aborted because an object is readonly:', this.d);
             }
             return true;

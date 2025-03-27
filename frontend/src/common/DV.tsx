@@ -334,7 +334,7 @@ export class DV {
      - this triggers another update of main and generic error views (not working??)
      - 
      */
-     errors.length ? null : <div className="error-message">{errors.separator(<br/>)}</div>
+     !errors.length ? null : <div className="error-message">{errors.separator(<br/>)}</div>
     }
     
 </section>`

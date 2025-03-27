@@ -431,7 +431,7 @@ export class ScrollableComponent extends Component<ScrollOwnProps, ScrollState>{
             // $(target).data({uiDraggable:{offset:{left: graph.offset.x, top: graph.offset.y}}});
         }
         return (
-            <div className={"scrollable"}>
+            <div {...this.props} className={(this.props.className || '' ) + " scrollable"} >
                 <Measurable draggable={{create}}
                             isPanning={graph}
                             onDragEnd={graph ? (coords, ...args: any)=>{
@@ -452,6 +452,7 @@ export class ScrollableComponent extends Component<ScrollOwnProps, ScrollState>{
 // private
 interface ScrollOwnProps {
     children: ReactChild[] | ReactChild;
+    className?: string;
     graph: LGraph;
 }
 interface MeasurableOwnProps {

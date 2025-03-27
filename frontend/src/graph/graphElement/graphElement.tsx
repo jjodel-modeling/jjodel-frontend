@@ -400,7 +400,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
     public shouldComponentUpdate(nextProps: Readonly<AllProps>, nextState: Readonly<GraphElementState>, nextContext: any, oldProps?: Readonly<AllProps>): boolean {
         if (!oldProps) oldProps = this.props;//for subviewcomponent
         if (nextProps.__skipRender) return false;
-        let debug = true;
+        let debug = false;
         // return GraphElementComponent.defaultShouldComponentUpdate(this, nextProps, nextState, nextContext);
         let data = nextProps.data?.__raw as DNamedElement | undefined;
 

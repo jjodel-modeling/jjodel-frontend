@@ -89,12 +89,12 @@ import type {
     WTypedElement,
     WValue
 } from "../model/logicWrapper";
-import type {
+import {
     CClass,
-    Constructor,
+    Constructor, Dependency,
     Dictionary,
     DocString,
-    GObject,
+    GObject, type Info,
     InitialVertexSize,
     InitialVertexSizeFunc,
     InitialVertexSizeObj,
@@ -634,6 +634,8 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
     }
     // start(thiss: any): this { this.thiss = thiss; return this; }
     end(simpledatacallback?: (d:T, c: this) => void): T {
+        const deleteDState = false; // don't save DState in idlookup
+        if (this.thiss.className === 'DState' && deleteDState) return this.thiss;
         if (simpledatacallback) simpledatacallback(this.thiss, this); // callback for setting primitive types, not pointers not context-dependant values (name being potentially invalid / chosen according to parent)
         if (this.nonPersistentCallbacks.length) {
             for (let cb of this.nonPersistentCallbacks) cb();
@@ -664,8 +666,7 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
     DStructuralFeature(): this {
         if (this.thiss.className === 'DOperation') return this;
         // if (!this.persist) return this;
-        let thiss: DAttribute|DReference = this.thiss as any;
-        thiss.allowCrossReference = false;
+        let thiss = this.thiss as any;
         const _DClass: typeof DClass = windoww.DClass;
         const _DValue: typeof DValue = windoww.DValue;
 
@@ -688,8 +689,12 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         }
         //(thiss as DPointerTargetable)._persistCallbacks.push(()=>{
         // When a feature is added in m2, i loop instanced m1 objects to add that feature as a DValue.
+        console.log('adding feature to existing objects 0 ', {alreadyParsed})
+        let state = store.getState();
         for (let pointer in alreadyParsed) {
             for (let instanceObjPtr of alreadyParsed[pointer].instances) {
+                console.log('adding feature to existing objects 1 ', {alreadyParsed, instanceObjPtr, idl:state.idlookup[instanceObjPtr]})
+
                 // this._derivedSubElements.push(_DValue.new(thiss.name, thiss.id, undefined, instanceObjPtr));
                 thiss._derivedSubElements.push(_DValue.new3({name: undefined, instanceof: thiss.id, father: instanceObjPtr}, undefined, false));
             }
@@ -792,6 +797,8 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
 
     DTypedElement(type?: DTypedElement["type"]): this {
         const thiss: DTypedElement = this.thiss as any;
+        thiss.allowCrossReference = false;
+
         let dtype = Selectors.getByName2(type) as DClassifier | null;
         switch (dtype?.className){
             default: type = undefined; break;
@@ -817,6 +824,21 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
                     default: type = undefined; break;
                 }
                 break;
+        }
+
+        if (!type) {
+            switch (thiss.className) {
+                default:
+                case 'DReference':
+                    type = this.fatherPtr as Pointer<DClass> || undefined;
+                    break;
+                case 'DOperation':
+                case 'DParameter':
+                    type = this.fatherPtr as Pointer<DClass> || Pointers.ESTRING;
+                    break;
+                case 'DAttribute':
+                type = Pointers.ESTRING; break;
+            }
         }
         this.setPtr("type", type);
         return this; }
@@ -1324,6 +1346,9 @@ export class DPointerTargetable extends RuntimeAccessibleClass {
     _persistCallbacks!: ((() => void) | Action)[]; // deleted when it becomes persistent
     _derivedSubElements!: DModelElement[]; // deleted when it becomes persistent
     // persist(): void { Constructors.persist(this); }// deleted when it becomes persistent
+
+
+    /*protected */derivedMap!: Dictionary<string, DerivedD>;
 }
 
 RuntimeAccessibleClass.set_extend(RuntimeAccessibleClass, DPointerTargetable);
@@ -1344,6 +1369,8 @@ type Pack<D extends DPointerTargetable, L extends LPointerTargetable = DtoL<D>, 
 
 @RuntimeAccessible('Pointers')
 export class Pointers{
+    public static ESTRING = 'Pointer_ESTRING';
+
     static filterValid<P extends (Pointer | Pointer[]) = any, RET = P extends Pointer[] ? P : P | null>
     (p: P): P | null {
         const pointerval: DPointerTargetable | DPointerTargetable[] = DPointerTargetable.from(p);
@@ -1522,18 +1549,21 @@ export class PendingPointedByPaths{
 
     // tmp fields, not sure what i need
     public action!: ParsedAction; // todo: remove
-    static new(action: ParsedAction, oldState: DState): PendingPointedByPaths {
-        const ptr: Pointer = action.value;
-        const target: DPointerTargetable | null = oldState.idlookup[ptr as string];
-        let pendingPointedBy = new PendingPointedByPaths(action.path, ptr);
+    // the mistake was: i was getting the val from action, and the val was an array.
+    // i can either: manually pass it (better?)
+    // or: calculate array difference but risk duplicate entries (for 2 difference gets called 2 times and add both twice)
+    static new(action: ParsedAction, oldState: DState, ptr: Pointer, casee: "+=" | "-=" | undefined = undefined): PendingPointedByPaths {
+        //const ptr: Pointer = action.value;
+        // const target: DPointerTargetable | null = oldState.idlookup[ptr as string];
+        let pendingPointedBy = new PendingPointedByPaths(action.path, ptr, casee);
         pendingPointedBy.action = action;
         return pendingPointedBy;
     }
 
     private constructor(
         public from: DocString<"full Path in store including field key">,
-        // todo 6: how about actions that do not include index but just += -= [] ?
-        public to: Pointer){
+        public holder: Pointer,
+        public casee: "+=" | "-=" | undefined = undefined){
         this.stackTrace = U.getStackTrace();
     }
     static attemptimplementationdelete(pb: PointedBy) {
@@ -1545,21 +1575,46 @@ export class PendingPointedByPaths{
         if (this.canBeResolved(state)) return this.resolve();
         return null;
     }
+    public attemptResolveDirectly(state: DState, oldState: DState): DState {
+        if (this.canBeResolved(state)) state = this.resolveDirectly(state, oldState);
+        return state;
+    }
 
-    private resolve(): ParsedAction{
+    private resolve(state?: DState, oldState?: DState): ParsedAction{
         U.arrayRemoveAll(PendingPointedByPaths.all, this);
-        return Action.parse(SetRootFieldAction.create("idlookup." + this.to + '.pointedBy', PointedBy.new(this.action.path), '+=', false));
+        return Action.parse(SetRootFieldAction.create("idlookup." + this.holder + '.pointedBy', PointedBy.new(this.action.path, this.casee), '+=', false));
+    }
+
+    private resolveDirectly(state: DState, oldState: DState): DState {
+        U.arrayRemoveAll(PendingPointedByPaths.all, this);
+        if (state === oldState) state = {...state} as any;
+        if (state.idlookup === oldState.idlookup) state.idlookup = {...state.idlookup};
+        if (state.idlookup[this.holder] === oldState.idlookup[this.holder]) state.idlookup[this.holder] = {...state.idlookup[this.holder]} as any;
+        let dobj = state.idlookup[this.holder];
+        let oldobj = state.idlookup[this.holder];
+        if (dobj.pointedBy === oldobj.pointedBy) dobj.pointedBy = [...dobj.pointedBy]
+        dobj.pointedBy.push(PointedBy.new(this.action.path, this.casee));
+
+        //Action.parse(SetRootFieldAction.create("idlookup." + this.holder + '.pointedBy', '+=', false));
+        return state;
     }
 
     public saveForLater(): void { PendingPointedByPaths.all.push(this); }
     private canBeResolved(state: DState): boolean {
         this.solveAttempts++;
-        Log.exDev(this.solveAttempts >= PendingPointedByPaths.maxSolveAttempts, "pending PointedBy action is not revolved for too long, some pointer was wrongly set up.", this.stackTrace, this, state);
-        return !!state.idlookup[this.to]; }
+        Log.w(this.solveAttempts >= 3 /*PendingPointedByPaths.maxSolveAttempts*/,
+            "pending PointedBy action is not revolved for too long, some pointer was wrongly set up.", this.stackTrace, this, state);
+        return !!state.idlookup[this.holder];
+    }
 
     static getSolveableActions(oldState: DState): ParsedAction[] {
         let allClone = [...this.all]; // necessary because the array will remove some elements during iteration as they are solved.
         return allClone.map( p => p.attemptResolve(oldState)).filter(p => (!!p)) as ParsedAction[];
+    }
+    static getSolveableActions2(state: DState, oldState: DState): DState {
+        let allClone = [...this.all]; // necessary because the array will remove some elements during iteration as they are solved.
+        for (let p of allClone) state = p.attemptResolveDirectly(state, oldState); //.filter(p => (!!p));
+        return state;
     }
 }
 
@@ -1619,12 +1674,29 @@ export class PointedBy {
     }
 
     // important! must be called only in reducer
-    public static add(newtargetptr: Pointer | undefined, action: ParsedAction, state: DState, casee: "+=" | "-=" | undefined = undefined, oldState?:DState): DState {
-        if (!newtargetptr) return state;
+    public static add(pointed_val: Pointer | undefined, action: ParsedAction, state: DState, casee: "+=" | "-=" | undefined = undefined, oldState?:DState): DState {
+
+        if (!Pointers.isPointer(pointed_val)) {
+            // this is the case when the pointed element is not in the value, but in the key of a terminal part of the path,
+            // like idlookup.viewid.subviews.subviewid = 5 (score);
+            let newtargetptrarr: Pointer[] = (action.pathArray.filter(e => Pointers.isPointer(e)) as any);
+            // Log.eDev(!newtargetptr, 'cannot find pointer in pointedby', {newtargetptr, action});
+            if (newtargetptrarr.length < 2) return state;
+            let pval: string = (newtargetptrarr as any).last();
+
+            let len = pval.length;
+            if (pval[len-1] === ']' &&  pval[len-2] === '[' ||
+                pval[len-1] === '=' && (pval[len-2] === '-' || pval[len-2] === '+')) {
+                pval = pval.substring(0, len-2);
+            }
+            pointed_val = pval;
+        }
+        if (!pointed_val) return state;
+
         // todo: if can't be done because newtarget doesn't exist, build an action from this and set it pending.
-        let newtarget: DPointerTargetable = state.idlookup[newtargetptr];
+        let newtarget: DPointerTargetable = state.idlookup[pointed_val];
         if (!newtarget) {
-            PendingPointedByPaths.new(action, state).saveForLater(); // {from: action.path, field: action.field, to: target});
+            PendingPointedByPaths.new(action,state,pointed_val, casee).saveForLater(); // {from: action.path, field: action.field, to: target});
             return state;
         }
         /* simpler version but does unnecessary shallow copies
@@ -1633,14 +1705,33 @@ export class PointedBy {
         state.idlookup[newtargetptr] = {...newtarget, pointedBy:  [...newtarget.pointedBy, PointedBy.new(action.path, casee)]} as any;*/
         if (oldState === state) state = {...state} as DState;
         if (oldState?.idlookup === state.idlookup) state.idlookup = {...state.idlookup};
-        if (oldState?.idlookup[newtargetptr] === state.idlookup[newtargetptr]) {
-            state.idlookup[newtargetptr] = {...newtarget, pointedBy:  [...newtarget.pointedBy, PointedBy.new(action.path, casee)]} as any;
-        }
-        else {
-            state.idlookup[newtargetptr].pointedBy = [...newtarget.pointedBy, PointedBy.new(action.path, casee)];
-        }
-        // console.warn('pointedby add:', {from: oldtarget.pointedBy, to: state.idlookup[newtargetptr].pointedBy, obj: state.idlookup[newtargetptr]});
+        if (oldState?.idlookup[pointed_val] === newtarget) { state.idlookup[pointed_val] = {...newtarget} as any; }
+        let newpb = PointedBy.new(action.path, casee);
+        state.idlookup[pointed_val].pointedBy = [...newtarget.pointedBy, newpb];
+
+        // console.warn('pointedby add:', {to: newtarget, from: state.idlookup[pointed_val], newpb, pby: state.idlookup[pointed_val].pointedBy});
         return state;
+    }
+}
+
+class DerivedD{
+    read: string;
+    write: string;
+    target: string[];
+    constructor() {
+        this.read = '';
+        this.write = '';
+        this.target = [];
+    }
+}
+class DerivedL{
+    read!: Function;
+    write!: Function;
+    target!: string[];
+    constructor(target: string[], read: Function, write: Function) {
+        this.target = target;
+        this.read = read;
+        this.write = write;
     }
 }
 
@@ -1693,6 +1784,27 @@ export class LPointerTargetable<Context extends LogicContext<DPointerTargetable>
         return true;
     }
 
+    /*protected derivedMap!: Dictionary<DocString<"propertyName">, DerivedL>;*/
+    /*protected*/ __info_of__derivedMap: Info = {type: 'Dictionary<propertyName, {read: function, write: function}>', txt:'todo'}
+
+    get_derivedMap(c: Context): LPointerTargetable["derivedMap"] {
+        let map: Dictionary<DocString<"propertyName">, DerivedL> = (c.data.derivedMap ? {...c.data.derivedMap} : {}) as GObject;
+        for (let k in map) {
+            if (!map[k] || !map[k].target?.length) { delete map[k]; continue; }
+            map[k] = new DerivedL(map[k].target, ()=>'Derived attributes todo', ()=>'Derived attributes todo');
+        }
+        return map as GObject;
+    }
+
+    protected setderivedMap(val0: this["derivedMap"] & GObject, c: Context): boolean {
+        let val: GObject = val0 || {};
+        if (!Object.keys(val).length) return true;
+        TRANSACTION('update derived expressions on ' + this.get_name(c), ()=>{
+            SetFieldAction.new(c.data.id, 'derivedMap', val, '+=');
+        })
+        return true;
+    }
+
 
     public pointedBy!: PointedBy[];
     // pointedBy!: LPointerTargetable[];
@@ -1709,6 +1821,57 @@ export class LPointerTargetable<Context extends LogicContext<DPointerTargetable>
         return targeting as any;
     }
 
+    private _jjdependencies!: Dependency[]; // used in delete to find all objects referencing this, not meant to be used by users.
+    public get__jjdependencies(context: any): Dependency[] {
+        const data = context.data;
+        const dependencies: Dependency[] = [];
+        let s = store.getState();
+        for (let pointedBy of data.pointedBy) {
+            let pbyString = pointedBy.source;
+            const pathArr: string[] = pbyString.split('.');
+            let lastKey = pathArr[pathArr.length-1];
+            switch (pbyString.substring(pbyString.length - 2)){
+                default: break;
+                case '-=':
+                case '+=':
+                case '[]': pbyString = pbyString.substring(0, pbyString.length - 2); break;
+            }
+            let firstKey = pathArr[0];
+            let ptr = pathArr.find(e=>Pointers.isPointer(e));
+            let followPath = U.followPath(s, pathArr); // it should be either: a Pointer, array of pointers, object with Pointers as keys
+            let lastVal = followPath.lastval;
+            let isArr = Array.isArray(lastVal);
+            let arrIndex: number = Number.NaN;
+            if (U.isNumber(+lastKey)) {
+                arrIndex = (+lastKey as number);
+                lastKey = pathArr[pathArr.length-2];
+                // Log.eDev(U.isNumber(arrIndex), 'unexpected index in pointedBy: ', {arrIndex, pointedBy, context});
+            }
+            let lastValArr: Pointer[];
+            if (!lastVal) {
+                // was deleted?
+                continue;
+            }
+            else if (isArr) {
+                lastValArr = lastVal;
+            }
+            else if (typeof lastVal === 'object') {
+                Log.eDevv('unexpected pointedBy case ending with an object, still not supported', {lastVal, pointedBy, context});
+                continue;
+            }
+            else {
+                lastValArr = [lastVal];
+            }
+            for (let v of lastValArr){
+                // if (!v || Pointer.isPointer(v)) continue;
+                if (v !== context.data.id) continue;
+                const dependency: Dependency = {firstKey: firstKey as keyof DState, lastKey: lastKey as keyof DPointerTargetable,
+                    lastVal, isArr, arrIndex: +(arrIndex as any), obj: ptr, pathArr, pointedBy, path: pbyString};
+                dependencies.push(dependency);
+            }
+        }
+        return dependencies;
+    }
 
     name!:string;
     protected get_name(c: Context): this["name"] {
@@ -1774,7 +1937,7 @@ export class LPointerTargetable<Context extends LogicContext<DPointerTargetable>
     }
 
 
-    protected cannotSet(field: string, msg?:string): any { return Log.exx('"' + field + '" field is read-only' + (msg ? '.\n'+msg : '')); }
+    protected cannotSet(field: string, msg?:string): any { return Log.exx('"' + field + '" field is read-only.' + (msg ? '\n'+msg : '')); }
     protected get_id(context: Context): this["id"] { return context.data.id; }
     protected set_id(): boolean { return this.cannotSet('id'); }
 
@@ -2629,18 +2792,20 @@ export class LProject<Context extends LogicContext<DProject> = any, D extends DP
     }
     protected set_metamodels(val0: PackArr<this['metamodels']>, c: Context): boolean {
         let val = Pointers.from(val0);
-        TRANSACTION(this.get_name(c)+'.metamodels', ()=>{
+        TRANSACTION(this.get_name(c)+'.metamodels', () => {
             SetFieldAction.new(c.data.id, 'metamodels', val, '', true);
         })
         return true;
     }
 
-    protected get_models(context: Context): this['models'] {
-        return LModel.fromPointer(context.data.models) || [];
+    protected get_models(c: Context): this['models'] {
+        let ret = (L.fromPointer(c.data.models) || []).filter(e=>!!e) as LModel[];
+        if (ret.length !== c.data.models.length) this.set_models(ret.map(e=>e.id) as any, c); // fix for older projects
+        return ret;
     }
     protected set_models(val0: PackArr<this['models']>, c: Context): boolean {
         let val = Pointers.from(val0);
-        TRANSACTION(this.get_name(c)+'.models', ()=>{
+        TRANSACTION(this.get_name(c)+'.models', () => {
             SetFieldAction.new(c.data.id, 'models', val, '', true);
         })
         return true;
@@ -2651,7 +2816,7 @@ export class LProject<Context extends LogicContext<DProject> = any, D extends DP
     }
     protected set_graphs(val0: PackArr<this['graphs']>, c: Context): boolean {
         let val = Pointers.from(val0);
-        TRANSACTION(this.get_name(c)+'.graphs', ()=>{
+        TRANSACTION(this.get_name(c)+'.graphs', () => {
             SetFieldAction.new(c.data.id, 'graphs', val, '', true);
         })
         return true;
@@ -3293,24 +3458,28 @@ export class ViewEClassMatch {
     static VP_Explicit = 2;
 }
 
-export type ViewScore = {
-    viewPointMatch: number;
-    jsxOutput: React.ReactNode | React.ReactElement | undefined;
-    metaclassScore: number;
-    jsScore: number | boolean;
-    OCLScore: boolean;
-    finalScore: number;
-    usageDeclarations: GObject;
-    evalContext: GObject; // with added usageDeclarations for the current view
-    shouldUpdate: boolean; // computed along usageDeclarations in shouldComponentUpdate
-    shouldUpdate_reason: GObject;
+export class ViewScore {
+    viewPointMatch!: number;
+    jsxOutput?: React.ReactNode | React.ReactElement | undefined;
+    metaclassScore!: number;
+    jsScore!: number | boolean;
+    OCLScore!: boolean;
+    finalScore!: number;
+    usageDeclarations!: GObject;
+    evalContext!: GObject; // with added usageDeclarations for the current view
+    shouldUpdate!: boolean; // computed along usageDeclarations in shouldComponentUpdate
+    shouldUpdate_reason!: GObject;
     nodeidcounter: Dictionary<number/*jsx char index*/, number/*counter:how many nodes generated by that jsx string line until now*/>
-    jsxChanged: boolean;
+    jsxChanged!: boolean;
+    constructor() {
+        this.nodeidcounter = {};
+    }
 
     // usageDeclarations!: DefaultUsageDeclarations;
     // oldNode: DGraphElement; moved to viewSorted_nodeused // ref to the actual node, not pointer. so even if it's modified through redux,
     // it is still possible to compare old version and new version to check if view.oclUpdateCondition should trigger
 }
+
 export class NodeTransientProperties{
     viewSorted_modelused?: LModelElement; // L-version because it is used in oclUpdate function
     viewSorted_pvid_used?: DViewElement;

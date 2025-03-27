@@ -1,5 +1,5 @@
 // export type Class = { new(...args: any[]): any; };
-import type {Pointer, RuntimeAccessibleClass, ShortAttribETypes} from "../joiner";
+import {PointedBy, Pointer, RuntimeAccessibleClass, ShortAttribETypes} from "../joiner";
 import {
     DGraphElement,
     DPointerTargetable,
@@ -208,10 +208,15 @@ export type InitialVertexSizeObj = Partial<{
 export type InitialVertexSizeFunc = ((parent: LVoidEdge|LGraphElement, thiss: LVoidVertex|LEdgePoint)=>InitialVertexSizeObj);
 export type InitialVertexSize =  undefined | InitialVertexSizeObj | InitialVertexSizeFunc; // | ((segment: EdgeSegment) => privateTempIVS);
 export type Dependency = {
-    root: keyof DState,
-    obj: Pointer<DPointerTargetable, 0, 1>,
-    field: keyof DPointerTargetable|'',
-    op: ''|'-='
+    firstKey: keyof DState,
+    lastKey: keyof DPointerTargetable,
+    lastVal: Pointer | Pointer[] | GObject,
+    obj?: Pointer,
+    arrIndex: number|typeof NaN; // if isArr, it is the "true" last key, and "lastKey" becomes the penultimate one.
+    isArr: boolean,
+    pathArr: string[],
+    pointedBy: PointedBy,
+    path: string,
 };
 export type Selected = Dictionary<Pointer<DUser>, Pointer<DGraphElement, 0, 1>>;
 export type FakeStateProps = any;
