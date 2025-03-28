@@ -76,6 +76,7 @@ import {ValuePointers} from "./PointerDefinitions";
 import {ShortDefaultEClasses} from "../../common/U";
 import {transientProperties} from "../../joiner/classes";
 import React, {ReactNode} from "react";
+import {UpdatingTimer} from "../../redux/reducer/reducer";
 
 type outactions = {clear:(()=>void)[], set:(()=>void)[], immediatefire?: boolean};
 
@@ -1041,13 +1042,11 @@ export class LTypedElement<Context extends LogicContext<DTypedElement> = any> ex
     validTargetOptions!: MultiSelectOptGroup[];
     get_validTargetOptions(c: Context): this['validTargetOptions'] {
         let opts: MultiSelectOptGroup[] = [];
-        console.log('dfeature.validTargetsOptions', {c});
         this.get_validTargets(c, opts);
         return opts;
     }
     validTargets!: (LObject | LEnumLiteral)[];
     get_validTargets(c: Context, out?: MultiSelectOptGroup[]): this['validTargets'] {
-        console.log('dfeature.validTargets', {c});
         let addClasses: boolean = false;
         let addModels: boolean = false;
         let addEnums: boolean = false;
@@ -1134,9 +1133,7 @@ export class LTypedElement<Context extends LogicContext<DTypedElement> = any> ex
 
     protected get_type(c: Context): this["type"] {
         let type = LPointerTargetable.from(c.data.type);
-        console.log('get_type 0', {type, c});
         if (type) return type;
-        console.log('get_type 1', {type, c, cn:c.className, father: LPointerTargetable.from(c.data.father)});
         if (c.data.className === 'DReference') return LPointerTargetable.from(c.data.father);
         else return LPointerTargetable.fromPointer('Pointer_ESTRING');
     }
@@ -5859,8 +5856,9 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
                         else {
                             // redoing the whole childmatch attempt for shaped and shapeless, when first char is not $, as a fallback.
                             if (key in childnames) { // if child dvalue with that name excluding char $ exist, like in "$" + "name" (as normal)
-                                console.log("get_addObject() adding values", {lobj, key, json, childnames, d:constructorPointers.instanceof});
-                                (lobj as GObject<LObject>)["$" + key].values = json[key];
+                                let feature = (lobj as GObject<LObject>)["$" + key];
+                                // console.log("get_addObject() adding values", {lobj, key, feature, json, childnames, d:constructorPointers.instanceof});
+                                feature.values = json[key];
                                 continue;
                             }
                             else if (isShapeless || isPartial) { lobj.addValue(key, undefined, json[key], false); continue; }
@@ -5869,7 +5867,7 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
                             continue;
                         }
                     }
-                }), 100);
+                }), UpdatingTimer * 2);
             });
             return lobj;
         }

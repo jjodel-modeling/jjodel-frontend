@@ -211,7 +211,7 @@ export function InputComponent(props: AllProps) {
     const isBoolean = (['checkbox', 'radio'].includes(type));
 
 
-    const onDoubleClick = (evt: React.MouseEvent<HTMLInputElement>) => {
+    const onDoubleClick = (evt: React.MouseEvent<HTMLInputElement>) => { // fully select the text
         evt.preventDefault();
         evt.stopPropagation();
         console.warn('input dblclick', {t:evt.target, evt}); //, ets:(evt.target as HTMLInputElement).select()};
@@ -317,7 +317,7 @@ export function InputComponent(props: AllProps) {
         checked,
         onDoubleClick,
         onChange, onBlur, onKeyDown} // key:`${field}.${data?.id}`
-    if (!inputProps.style.cursor && cursor === 'not-allowed') { inputProps.style.cursor = cursor; }
+    if (!inputProps.style.cursor) { inputProps.style.cursor = cursor; }
     switch(subtype){
         case 'checkbox3': case 'switch': case 'slider': inputProps.className += ' ' + subtype + (oldValue===undefined?'undetermined':''); break;
         default: break;

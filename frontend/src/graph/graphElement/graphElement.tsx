@@ -736,11 +736,11 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
     }
     protected getTemplate3_(vid: Pointer<DViewElement>, v: LViewElement, context: GObject): ReactNode{
         let tnv = transientProperties.node[this.props.nodeid].viewScores[vid];
-        console.log("render debug view template 0: " + v.name, {tnv, s_up:tnv.shouldUpdate, oldjsx:tnv.jsxOutput});
+        //console.log("render debug view template 0: " + v.name, {tnv, s_up:tnv.shouldUpdate, oldjsx:tnv.jsxOutput});
 
         if (!tnv.shouldUpdate && tnv.jsxOutput) return tnv.jsxOutput;
 
-        console.log("render debug view template 1: " + v.name,);
+        //console.log("render debug view template 1: " + v.name,);
 
         let tv = transientProperties.view[vid];
         let ret = tnv.jsxOutput = (tv.JSXFunction ? tv.JSXFunction.call(context, context) : null);
@@ -1137,10 +1137,10 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
 
         let jsxOutput: ReactNode = undefined as any;
         const tn = transientProperties.node[nid];
-        console.log("render debug", {mainView, otherViews,
+        /*console.log("render debug", {mainView, otherViews,
             dbg:allviews.map(v=>({v:v.id, shouldup:tn.viewScores[v.id].shouldUpdate})),
             scores:tn.viewScores,
-            tnv:tn.viewScores[this.props.viewid], ud:tn.viewScores[this.props.viewid].usageDeclarations});
+            tnv:tn.viewScores[this.props.viewid], ud:tn.viewScores[this.props.viewid].usageDeclarations});*/
         for (let v of allviews) { // main view is the last
             let viewnodescore = tn.viewScores[v.id];
             jsxOutput = viewnodescore.shouldUpdate ? undefined : viewnodescore.jsxOutput;
@@ -1180,7 +1180,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
             return <div>Loading...</div>;
         }*/
 
-        console.log("render debug view: " + v.name, {otherViews, ud});
+        // console.log("render debug view: " + v.name, {otherViews, ud});
         if (!ud) tnv.usageDeclarations = ud = computeUsageDeclarations(this, props, this.state, v);
         //console.log("renderView", {dv, tnv, ud});
 

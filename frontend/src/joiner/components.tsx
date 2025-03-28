@@ -32,6 +32,7 @@ export {GenericInput} from "../components/forEndUser/GenericInput"
 //export {DockLayoutComponent} from "../components/abstract/DockLayoutComponent";
 
 export {Input, Edit, TextArea, Select} from "../components/forEndUser/Input";
+export {T2M, M2T} from "../components/forEndUser/MTM";
 // export {TextArea} from "../components/forEndUser/TextArea";
 export {Selector} from "../components/forEndUser/Selector";
 export {View} from "../components/forEndUser/Aliases";

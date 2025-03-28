@@ -1189,6 +1189,7 @@ function buildLSingletons(alld: Dictionary<string, typeof DPointerTargetable>, a
         // for (let sc of d.subclasses) { if (!sc["_extends"]) sc["_extends"] = [];  sc["_extends"].push(d); }
     }
 }
+export const UpdatingTimer = 300;
 function setDocumentEvents(){
     // do not use typings or class constructors here or it will change import order
     setTimeout(
@@ -1199,7 +1200,7 @@ function setDocumentEvents(){
             })
         , 1);
     // document.body.addEventListener("mousedown", fixResizables, false);
-    setInterval(()=>{ END(); BEGIN(); }, 300);
+    setInterval(()=>{ END(); BEGIN(); }, UpdatingTimer);
 }
 function fixResizables(e: MouseEvent){
     /*let parents = U.ancestorArray(e.target as HTMLElement);

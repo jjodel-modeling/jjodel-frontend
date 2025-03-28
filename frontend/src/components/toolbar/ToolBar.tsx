@@ -315,12 +315,12 @@ function ToolBarComponent(props: AllProps, state: ThisState) {
             rootobjs.push(<>
                 <hr className={'my-1 toolbar-hr'} key={'h_robj'}/>
                 {/*@ts-ignore*/}
-                <divd key={"RawObject"} className={'toolbar-item'} tabIndex={ti}
+                <div key={"RawObject"} className={'toolbar-item'} tabIndex={ti}
                       onClick={() => select(model.addObject({}, null))}>
                     <ModellingIcon name={'object'}/>
                     <span className={'ms-1 my-auto text-capitalize'}>Object</span>
                     {/*@ts-ignore*/}
-                </divd>
+                </div>
             </>);
 
 
