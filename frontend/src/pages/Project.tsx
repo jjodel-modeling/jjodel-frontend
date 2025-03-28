@@ -35,16 +35,16 @@ function ProjectComponent(props: AllProps): JSX.Element {
 
     useEffect(() => {
         (async function() {
-            const project = await ProjectsApi.getOne(id); 
-            if(!project) {
+            const project = await ProjectsApi.getOne(id);
+            if (!project) {
                 U.resetState();
                 R.navigate('/allProject');
                 return;
             }
-            if(project.state) {
+            if (project.state) {
                 const state = JSON.parse(await U.decompressState(project.state));
                 state['idlookup'][DUser.current] = user.__raw;
-                if(!state['users'].includes(DUser.current)) state['users'].push(DUser.current);
+                if (!state['users'].includes(DUser.current)) state['users'].push(DUser.current);
                 SaveManager.load(state);
             }
 
