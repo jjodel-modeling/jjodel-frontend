@@ -1,4 +1,14 @@
-import {CreateElementAction, DModel, DProject, LProject, Pointer, SetFieldAction, TRANSACTION, U} from '../../joiner';
+import {
+    CreateElementAction,
+    DModel,
+    DProject,
+    Log,
+    LProject,
+    Pointer,
+    SetFieldAction,
+    TRANSACTION,
+    U
+} from '../../joiner';
 import Storage from "../../data/storage";
 import Api from "../../data/api";
 
@@ -129,7 +139,8 @@ class Online {
         });
     }
     static async getAll(): Promise<void> {
-        const response = await Api.get(`${Api.persistance}/projects`);
+        const url = `${Api.persistance}/projects`;
+        const response = await Api.get(url);
         console.log('loading projects getall', {response});
         if (response.code !== 200) {
             /* 401: Unauthorized -> Invalid Token (Local Storage)  */
@@ -138,6 +149,7 @@ class Online {
         }
         const data = U.wrapper<DProject[]>(response.data);
         console.log('loading projects', {data});
+        if (typeof (data as any) === 'string') Log.exDevv('Invalid API call to fetch project', {url, response, data:response.data})
         TRANSACTION('loading projects', () => {
             for (const project of data) {
                 DProject.new(project.type, project.name, project.state, [], [], project.id);

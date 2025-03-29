@@ -8,7 +8,6 @@ import Editor, { useMonaco } from "@monaco-editor/react";
 // import monacoTypes2 from '!raw-loader!../../../static/monacotypes';
 import monacoTypes from '../../../static/monacotypes';
 import { CommandBar, Btn } from "../../commandbar/CommandBar";
-import { uniqueId } from "lodash";
 
 function JsxEditorComponent(props: AllProps) {
     const monaco = useMonaco();
