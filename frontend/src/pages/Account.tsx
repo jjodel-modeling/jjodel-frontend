@@ -4,11 +4,11 @@ import {FakeStateProps, windoww} from '../joiner/types';
 import React, {Component, Dispatch, ReactElement} from "react";
 import {connect} from "react-redux";
 import { Edit, EditCountry } from './components/Edit/Edit';
-import { UsersApi } from '../api/persistance';
+import {AuthApi, UsersApi} from '../api/persistance';
 import { useStateIfMounted } from 'use-state-if-mounted';
-import { on } from 'events';
-import Api from '../data/api';
 import Storage from '../data/storage';
+import { ResetPasswordRequest } from '../api/DTO/ResetPasswordRequest';
+import {UpdateUserRequest} from "../api/DTO/UpdateUserRequest";
 
 
 function AccountComponent(props: AllProps): JSX.Element {
@@ -20,7 +20,6 @@ function AccountComponent(props: AllProps): JSX.Element {
     const [country, setCountry] = useStateIfMounted(user.country);
     const [affiliation, setAffiliation] = useStateIfMounted(user.affiliation);
     const [newsletter, setNewsletter] = useStateIfMounted(user.newsletter);
-    
     const [email, setEmail] = useStateIfMounted(user.email);
 
     const [old_password, setOldPassword] = useStateIfMounted('01234567');
@@ -35,12 +34,14 @@ function AccountComponent(props: AllProps): JSX.Element {
 
         const U = windoww.U;
         
-        const response = await Api.post(`${Api.persistance}/auth/login`, {email: email, password: old_password});
+        //const response = await AuthApi.login(email, old_password);
 
+        /*
         if (response.code !== 200) {
             U.alert('e', 'Your password does not match our records.','');
             return;
-        }
+        } 
+            */ 
         if (new_password !== check_password) {
             U.alert('e', 'Paswords do not match.','');
             return;
@@ -69,25 +70,49 @@ function AccountComponent(props: AllProps): JSX.Element {
         setNewsletter(check_value);
     }
 
-    function update_profile (
-        id: string, 
-        name: string, 
-        surname: string, 
-        nickname: string,
-        country: string, 
-        affiliation: string,
-        newsletter: boolean) {
+    /*
 
+    function update_profile (id: string,  name: string,  surname: string,  nickname: string, email :string, country: string, affiliation: string, newsletter: boolean) {
+
+        alert("sono nella funzione update_profile")
         const U = windoww.U;
 
-        const response = UsersApi.updateUserById(
-            user.id, 
-            name, 
-            surname, 
-            nickname, 
-            country, 
-            affiliation, 
-            newsletter);
+        const updateUserRequest :UpdateUserRequest = new UpdateUserRequest();
+        updateUserRequest.id = user.id;
+        updateUserRequest.name = name;
+        updateUserRequest.surname = surname;
+        updateUserRequest.nickname = nickname;
+        updateUserRequest.country = country;
+        updateUserRequest.email = email;
+        updateUserRequest.affiliation = affiliation;
+        updateUserRequest.newsletter = newsletter;
+
+        console.log(updateUserRequest);
+
+        const response = UsersApi.updateUserById(updateUserRequest);
+
+
+        if (response === null) {
+            U.alert('e', 'Could not update your profile.', 'Something went wrong ...');
+            return;
+        }
+
+        const updated_user = DUser.new(name, surname, nickname, affiliation, country, newsletter, user.email, user.token, user.id);
+        Storage.write('user', updated_user);
+        U.resetState();
+
+        U.alert('i', 'Your profile has been updated!','');
+
+    }
+    */
+
+
+    function update_profile (id: string,  name: string,  surname: string,  nickname: string, country: string, affiliation: string, newsletter: boolean) {
+
+        alert("sono nella funzione update_profile")
+        const U = windoww.U;
+
+        const response = UsersApi.updateUserById(user.id, name, surname, nickname, country, affiliation, newsletter);
 
 
         if (response === null) {
@@ -102,6 +127,7 @@ function AccountComponent(props: AllProps): JSX.Element {
         U.alert('i', 'Your profile has been updated!','');
         
     }
+
 
     return(<Try>
         <Dashboard active={'Account'} version={props.version}>
@@ -130,23 +156,27 @@ function AccountComponent(props: AllProps): JSX.Element {
                     onChange={(e) => setSurname(e.target.value)}
                     tooltip={'Your family name.'}
                 />
-                <Edit 
+
+                <Edit
                     id={user.id}
-                    name={'nickname'} 
-                    label={'Nickname'} 
-                    type={'text'} 
-                    value={nickname} 
+                    name={'nickname'}
+                    label={'Nickname'}
+                    type={'text'}
+                    value={nickname}
                     required={true}
                     onChange={(e) => setNickname(e.target.value)}
                     tooltip={'Your nickname, it will be used as a short form for addressing you.'}
                 />
-                <Edit 
+
+                <Edit
                     id={user.id}
                     name={'email'} 
                     label={'Email'} 
                     type={'email'} 
-                    value={user.email} 
+                    value={email}
                     disabled={true}
+                    //required={true}
+                    onChange={(e) => setEmail(e.target.value)}
                     tooltip={'Your email, it is not possible to change it.'}
                 />
                 <Edit 
@@ -168,6 +198,7 @@ function AccountComponent(props: AllProps): JSX.Element {
                     onChange={(e) => setCountry(e.target.value)}
                     tooltip={'Select your affiliation country.'}
                 />
+
                 
                 <Edit 
                     id={user.id}
@@ -185,9 +216,9 @@ function AccountComponent(props: AllProps): JSX.Element {
                         user.id, 
                         name, 
                         surname, 
-                        nickname, 
-                        country, 
-                        affiliation, 
+                        nickname,
+                        country,
+                        affiliation,
                         newsletter)}}>save</button>
 
 

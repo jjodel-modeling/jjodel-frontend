@@ -5,6 +5,11 @@ import Storage from '../data/storage';
 import {AuthApi} from "../api/persistance";
 import logo from '../static/img/jjodel.jpg';
 import {Tooltip} from '../components/forEndUser/Tooltip';
+import { RegisterRequest } from '../api/DTO/RegisterRequest';
+import { LoginRequest } from '../api/DTO/LoginRequest';
+import { TokenResponse } from '../api/DTO/TokenResponse';
+import {ResetPasswordRequest} from "../api/DTO/ResetPasswordRequest";
+
 
 function AuthPage(): JSX.Element {
 
@@ -33,41 +38,90 @@ function AuthPage(): JSX.Element {
                 await register();
                 break;
             case 'retrieve-password':
-                await retrieve_password();
+                await reset_password();
                 break;
         }
 
         SetRootFieldAction.new('isLoading', false);
     }
 
+    /*
     const retrieve_password = async() => {
-        /* something to be provided here */
-    }
 
-    const login = async() => {
-        const response = await AuthApi.login(email, password);
-        if (response.code !== 200) {
-            U.alert('e', 'Login failed.','');
-            return;
+    }
+    */
+
+    const reset_password = async () => {
+
+
+        try {
+            const resetPasswordRequest = new ResetPasswordRequest();
+
+            resetPasswordRequest.email = email;
+            const response = await AuthApi.reset_password(resetPasswordRequest);
+
+            if (response.code === 200) {
+                console.log("Ti abbiamo inviato una mail per il reset della password.");
+            }
+
+        } catch (e) {
+            console.error("Errore nella richiesta:", e);
+            alert("Errore imprevisto.");
+
         }
-
-        const data = U.wrapper<DUser>(response.data);
-
-        const user = DUser.new(data.name, data.surname, data.nickname, data.affiliation, data.country, data.newsletter || false, data.email, data.token, data.id);
-        Storage.write('user', user);
-        Storage.write('token', user.token);
-        Storage.write('offline', false);
-        //R.navigate('/dashboard');
-        R.navigate('/allProjects');
-        U.resetState();
     }
+
+    const login   = async () => {
+        try {
+          const loginRequest   = new LoginRequest();
+          loginRequest.email = email;
+          loginRequest.password = password;
+
+          const response = await AuthApi.login(loginRequest);
+          const raw: TokenResponse | null = response.data;
+
+          if (response.code !== 200 || !raw?.token || typeof raw.token !== 'string') {
+            U.alert('e', 'Login failed or invalid token.', '');
+            return;
+          }
+
+          const claims = AuthApi.readJwtToken(raw.token);
+          if (!claims) {
+            U.alert('e', 'Invalid token.', '');
+            return;
+          }
+
+          const user : DUser = DUser.new(claims.name, '', claims.nickname, '',  '', false, claims.email, raw.token, claims.id,  true);
+
+          AuthApi.storeSessionData(raw.token, !claims.exp ? 0 : claims.exp, user);
+          U.resetState();
+          R.navigate('/allProjects');
+
+        } catch (e) {
+          console.error("Login error:", e);
+          U.alert('e', 'Unexpected error during login.', '');
+        }
+      };
 
     const register = async() => {
+   
+
         if (password !== passwordCheck) {
             U.alert('e', 'The two passwords are different','');
             return;
         }
-        const response = await AuthApi.register(name, surname, country, affiliation, newsletter, nickname, email, password);
+        const registerRequest : RegisterRequest = new RegisterRequest();
+        registerRequest.name = name;
+        registerRequest.surname = surname;
+        registerRequest.country = country;
+        registerRequest.affiliation = affiliation;
+        registerRequest.newsletterEnabled = newsletter;
+        registerRequest.nickname = nickname;
+        registerRequest.email = email;
+        registerRequest.password = password;
+        
+        const response = await AuthApi.register(registerRequest);
+
         if (response.code !== 200) {
             U.alert('e', 'Registration failed.', '');
             return;

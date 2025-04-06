@@ -1,25 +1,81 @@
-import Api, {Response} from '../../data/api';
-import Storage from '../../data/storage';
-import {DUser, U} from '../../joiner';
+import Api, {Response} from "../api";
+import Storage from "../../data/storage";
+import {DUser, U} from "../../joiner";
+import {jwtDecode, JwtPayload} from "jwt-decode";
+import { RegisterRequest } from "../DTO/RegisterRequest";
+import { LoginRequest } from "../DTO/LoginRequest";
+import { JwtClaims } from "../DTO/JwtClaims";
+import { JwtPayloadKey } from "../memorec/types";
+import {ResetPasswordRequest} from "../DTO/ResetPasswordRequest";
+import {ConfirmAccountRequest} from "../DTO/ConfirmAccountRequest";
 
 class AuthApi {
-    static async login(email: string, password: string): Promise<Response> {
+
+    static async login(loginRequest: LoginRequest): Promise<Response> {
         Storage.write('offline', false);
-        return await Api.post(`${Api.persistance}/auth/login`, {email, password});
+
+        return await Api.post(`${Api.persistance}/account/login`, {...loginRequest}, true);
+
     }
-    static async register(name: string, surname: string, country: string, affiliation: string, newsLetter: boolean, nickname: string, email: string, password: string): Promise<Response> {
+  
+    static async register(request: RegisterRequest): Promise<Response> {
+
         Storage.write('offline', false);
-        return await Api.post(`${Api.persistance}/auth/register`, {name, surname, country, affiliation, newsLetter, nickname, email, password});
+        return await Api.post(`${Api.persistance}/account/register`, {...request});
+    
     }
+
+    static async reset_password(request: ResetPasswordRequest): Promise<Response> {
+        return await Api.post(`${Api.persistance}/account/resetPasswordWithEmail`, {...request}, true);
+    }
+
+
     static async logout(): Promise<void> {
-        if(!U.isOffline()) await Api.delete(`${Api.persistance}/auth/logout`);
+        Api.token = null;
+
         U.resetState();
         Storage.reset();
     }
+    static async confirmAccount(request: ConfirmAccountRequest): Promise<Response> {
+        return await Api.post(`${Api.persistance}/account/confirm`, {...request}, true);
+    }
+
 
     static offline(): void {
         Storage.write('offline', true);
         DUser.current = DUser.offline()?.id||'';
+    }
+
+    // decode jwt
+    static readJwtToken(token: string): JwtClaims | null {
+        try {
+            const decoded = jwtDecode<any>(token);
+            
+            const claims : JwtClaims = new JwtClaims();
+            claims.email = decoded[JwtPayloadKey.Email];
+
+            claims.role = decoded[JwtPayloadKey.Roles];
+
+            claims.exp = decoded[JwtPayloadKey.Exp];
+
+            claims.iss = decoded[JwtPayloadKey.Iss];
+            claims.aud = decoded[JwtPayloadKey.Aud];
+
+           return claims;
+
+        } catch (error) {
+            
+            console.error("Errore durante la decodifica del token:", error);
+            return null;
+        }
+    }
+
+    // write storage
+    static storeSessionData(token: string, tokenExp: number, user :DUser): void {
+        Storage.write('token', token);
+        Storage.write('tokenExp', tokenExp);
+        Storage.write('user', user);
+        Storage.write('offline', false);
     }
 }
 

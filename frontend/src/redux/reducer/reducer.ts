@@ -54,7 +54,7 @@ import {transientProperties, Selectors} from "../../joiner";
 import {OclEngine} from "@stekoe/ocl.js";
 import { contextFixedKeys } from '../../graph/graphElement/sharedTypes/sharedTypes';
 import Storage from "../../data/storage";
-import {ProjectsApi} from "../../api/persistance";
+import {AuthApi, ProjectsApi} from "../../api/persistance";
 import DSL from "../../DSL/DSL";
 
 let windoww = window as any;
@@ -1201,9 +1201,11 @@ export async function stateInitializer() {
     }
     DUser.current = duser.id;
     try {
-        await ProjectsApi.getAll();
+        let c = await ProjectsApi.getAll();
+
     } catch (error) {
         // U.alert('e','Failed to fetch projects','');
+        AuthApi.logout();
         console.error('Failed to fetch projects', {error});
         DUser.current = '';
         // R.navigate('/auth');

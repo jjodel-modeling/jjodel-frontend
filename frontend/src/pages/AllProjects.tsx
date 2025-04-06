@@ -1,12 +1,11 @@
 /* DASHBOARD */
 /* ALLPROJECTS */
 
-import React, {ChangeEvent, MouseEventHandler, Component, Dispatch, ReactElement, useState, useRef } from 'react';
+import React, {Component, Dispatch, ReactElement, useState } from 'react';
 import {connect} from 'react-redux';
-import {DProject, DState, Log, LProject, SetRootFieldAction, Try, U} from '../joiner';
-import {Dictionary, FakeStateProps} from '../joiner/types';
+import {DProject, DState, Log, LProject, Try, U} from '../joiner';
+import {FakeStateProps} from '../joiner/types';
 import {Dashboard, Project} from './components';
-import Storage from "../data/storage";
 
 import { Cards, Card } from './components/cards/Cards';
 import { Catalog } from './components/catalog/Catalog';
@@ -17,9 +16,13 @@ import { LatestUpdates } from './components/LatestUpdates';
 function AllProjectsComponent(props: AllProps): JSX.Element {
     const {projects} = props;
     const [isDropping, setDropping] = useState(false);
+
     const createProject = async(type: DProject['type']) => {
+        console.log("sono nella classe AllProjects, metodo createProject");
+
         await ProjectsApi.create(type, undefined, undefined, undefined, projects);
     }
+
     function dropConfirm(e: React.DragEvent<HTMLElement>){
         e.preventDefault();
         e.stopPropagation();
@@ -44,9 +47,11 @@ function AllProjectsComponent(props: AllProps): JSX.Element {
         //let file = e.dataTransfer.getData('file');
         setDropping(false);
     }
+
     function mouseleave(e: any){ // should use onDragLeave but it is flashing
         setDropping(false);
     }
+
     function dropPreview(e: React.DragEvent<any>){
         e.stopPropagation();
         e.preventDefault();

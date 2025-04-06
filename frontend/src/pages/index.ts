@@ -14,5 +14,6 @@ export {ErrorPage} from './Error';
 export {UsersInfoPage} from './UsersInfo';
 export {ProjectsInfoPage} from './ProjectsInfo';
 export {NewsPage} from './News';
+export {ConfirmAccount} from './ConfirmAccount';
 
 

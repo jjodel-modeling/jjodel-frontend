@@ -7,9 +7,8 @@ import {connect} from "react-redux";
 import Loader from "./components/loader/Loader";
 import {FakeStateProps} from "./joiner/types";
 import {useEffectOnce} from "usehooks-ts";
-import {HashRouter, Route, Routes} from 'react-router-dom';
+import {HashRouter, BrowserRouter, Route, Routes} from 'react-router-dom';
 import PathChecker from "./components/pathChecker/PathChecker";
-import {AuthApi} from "./api/persistance";
 
 import {
     AccountPage,
@@ -23,7 +22,8 @@ import {
     RecentPage,
     SettingsPage,
     TemplatePage,
-    UpdatesPage, UsersInfoPage
+    UpdatesPage, UsersInfoPage,
+    ConfirmAccount
 } from "./pages";
 
 import {ExternalLibraries} from "./components/forEndUser/ExternalLibraries";
@@ -34,9 +34,13 @@ import {BottomBar} from "./pages/components";
 import AlertVisualizer from "./components/alert/Alert";
 import DialogVisualizer from './components/alert/Dialog';
 import Storage from "./data/storage";
+import Api from "./api/api";
+
 
 let firstLoading = true;
 let browserData = U.getOSBrowserData();
+
+
 function App(props: AllProps): JSX.Element {
     //const debug = props.debug;
     const isLoading = props.isLoading;
@@ -56,6 +60,7 @@ function App(props: AllProps): JSX.Element {
     //let user = LUser.fromPointer(DUser.current);
     if (firstLoading) {
         firstLoading = false;
+
         stateInitializer().then(()=> {
             console.log('forceupdate trigger', {'#':window.location.hash, o:{pu:props.user, u:DUser.current}});
             updateUser(DUser.current);
@@ -82,6 +87,7 @@ function App(props: AllProps): JSX.Element {
             <HashRouter>
                 <Try><PathChecker/></Try>
                 <Try><Routes>
+
                     {user ? <>
                         <Route path={'allProjects'} element={<AllProjectsPage/>}/>
                         {/*<Route path={'dock'} element={<MyDock />} />*/}
@@ -99,10 +105,17 @@ function App(props: AllProps): JSX.Element {
                         <Route path={'projectsInfo'} element={<ProjectsInfoPage/>}/>
                         <Route path={'news'} element={<NewsPage/>}/>
                         <Route path={'auth'} element={<AuthPage/>}/>
+
                         <Route path={'*'} element={<AllProjectsPage/>}/>
                         {window.location.hostname !== 'localhost' && false &&
                             <Route path={'*'} element={<AllProjectsPage/>}/>}
-                    </> : <Route path={'*'} element={<AuthPage/>}/>}
+                    </> :
+                        <>
+                            <Route path={'confirm/:id/:token'} element={<ConfirmAccount />}/>
+                            <Route path={'*'} element={<AuthPage/>}/>
+                            </>
+
+                    }
                 </Routes></Try>
             </HashRouter>
             {user && <Try><BottomBar/></Try>}

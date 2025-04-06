@@ -40,7 +40,7 @@ import Collaborative from "../../components/collaborative/Collaborative";
 import { isProjectModified } from '../../common/libraries/projectModified';
 import { AboutModal } from './about/About';
 import { MetricsPanelManager } from '../../components/metrics/Metrics';
-import Api from '../../data/api';
+
 import {Undoredocomponent} from "../../components/topbar/undoredocomponent";
 
 
@@ -647,6 +647,7 @@ function NavbarComponent(props: AllProps) {
                             } else {
                                 await AuthApi.logout();
                                 R.navigate('/auth');
+
                             }
                         }}>Logout</Item>
                     </Menu>

@@ -102,7 +102,7 @@ export class R{
 
     public static navigate(path: string, refresh: (true|NavigateFunction) = true): void {
         // window.location.assign = window.location = window.location.href = window.open(url, '_self')
-        console.warn('R.navigate()', {path, refresh})
+        console.warn('R.navigate()', {path, refresh});
         //if (path.indexOf('allProject') >= 0) return;
         let debug: false = true as any;
         if (debug || refresh === true ) {
@@ -112,7 +112,8 @@ export class R{
             if ('/'+window.location.hash === path) return;
             U.navigating = true;
             window.location.href = window.location.origin + path;
-            window.location.reload(); // i think this is causing a firefox bug, it refreshes old url
+
+           // window.location.reload(); // i think this is causing a firefox bug, it refreshes old url
         }
         else refresh(path); // useNavigator()(path);
     }
