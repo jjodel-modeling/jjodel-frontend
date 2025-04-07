@@ -51,7 +51,7 @@ import {
     LPointerTargetable,
     Pointer,
     DGraphElement,
-    DPointerTargetable, LGraphElement, transientProperties
+    DPointerTargetable, LGraphElement, transientProperties, DataTransientProperties
 } from "../../joiner";
 import { GraphElements } from "../../joiner/components";
 // import {Field, Graph, GraphVertex} from "../vertex/Vertex";
@@ -85,9 +85,10 @@ export class DefaultNodeComponent<AllProps extends AllPropss = AllPropss, NodeSt
         ret.node = LPointerTargetable.wrap(ownProps.nodeid) as LGraphElement;
         if (ret.dataid) {
             // set up transient model-> node map
-            if (!transientProperties.modelElement[ret.dataid]) transientProperties.modelElement[ret.dataid] = {nodes: {}} as any;
-            transientProperties.modelElement[ret.dataid].nodes[ownProps.nodeid as string] = ret.node;
-            transientProperties.modelElement[ret.dataid].node = ret.node;
+            let tm = transientProperties.modelElement[ret.dataid];
+            if (!tm) transientProperties.modelElement[ret.dataid] = tm = new DataTransientProperties();
+            tm.nodes[ownProps.nodeid as string] = ret.node;
+            tm.node = ret.node;
         }
 
         GraphElementComponent.mapViewStuff(state, ret, ownProps);

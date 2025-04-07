@@ -1,6 +1,6 @@
 import {OclEngine} from "@stekoe/ocl.js"
 import {
-    Constructor, DGraphElement,
+    Constructor, DataTransientProperties, DGraphElement,
     DModel,
     DModelElement, DPointerTargetable, DState, DViewElement,
     GObject, LGraphElement,
@@ -70,7 +70,9 @@ export class OCL{
         // @ts-ignore
         if ((node = node0?.__raw)) lnode = node0; else { lnode = node0; node = lnode?.__raw; }
         // @ts-ignore
-        view = view0?.__raw || view0;
+        let td = transientProperties.modelElement[mp.id];
+        if (!td) transientProperties.modelElement[mp.id] = td = new DataTransientProperties();
+        view = (view0 as LViewElement)?.__raw || view0;
         let oclCondition = view.oclCondition;
         let tv = transientProperties.view[view.id];
         console.log("Evaluating ocl: "+view.oclCondition, {view, ocl:view.oclCondition});
@@ -94,10 +96,10 @@ export class OCL{
             if (!lmp) lmp = LPointerTargetable.fromD(mp);
             if (node) {
                 // dangerous cheat, to make ocl be able to access current "node" if model have multiple nodes.
-                const oldNode = transientProperties.modelElement[mp.id].node;
-                transientProperties.modelElement[mp.id].node = lnode || LPointerTargetable.fromD(node);
+                const oldNode = td.node;
+                td.node = lnode || LPointerTargetable.fromD(node);
                 oclResult = oclEngine.evaluate(lmp)
-                transientProperties.modelElement[mp.id].node = oldNode;
+                td.node = oldNode;
             }
             else oclResult = oclEngine.evaluate(lmp);
             windoww.oclDebug={oclResult, oclEngine, lmp, oclCondition};

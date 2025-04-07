@@ -19,7 +19,7 @@ import {
     Uobj, LocalStorage,
     LProject,
     DProject,
-    LUser, UserHistory, R,
+    LUser, UserHistory, R, DataTransientProperties,
 } from '../../joiner';
 import {
     Action,
@@ -920,9 +920,8 @@ function unsafereducer(oldState: DState = initialState, action: Action): DState 
         // i would need to update this every time a DClass property changes instead of only when name changes.
 
         // if it's first creation of a modelpiece
-        if (!transientProperties.modelElement[dataid]) {
-            // transientProperties.modelElement[dataid] = {nodes: {}};
-        }
+        // NB: not handled here because in load project this does not happen, so it is handled elsewhere.
+        // if (!transientProperties.modelElement[dataid]) { transientProperties.modelElement[dataid] = new DataTransientProperties(); }
         // update ocl type names
         let data: DClass = ret.idlookup[dataid] as DClass;
         RuntimeAccessibleClass.makeOCLConstructor(data, ret, oldState);

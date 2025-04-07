@@ -496,7 +496,7 @@ border-color: silver!important;
         const view = DViewElement.new2('Singleton', DV.singletonView(), vp, (view)=>{
             view.appliableToClasses = [DObject.cname];
             view.adaptWidth = false; view.adaptHeight = false;
-            view.jsCondition = 'return data.instanceof.isSingleton';
+            view.jsCondition = 'return data?.instanceof?.isSingleton';
             //view.oclCondition = 'context DObject inv: true';
 
             //view.palette = {'color-':  U.hexToPalette('#f00', '#000', '#fff'), 'background-': U.hexToPalette('#fff', '#eee', '#f00')};

@@ -5,10 +5,25 @@ import './graphElement.scss';
 import type {EdgeOwnProps} from "./sharedTypes/sharedTypes";
 import {
     GraphSize,
-    LGraph, MouseUpEvent, Point,
+    LGraph,
+    MouseUpEvent,
+    Point,
     Pointers,
-    Selectors as Selectors_, Size, TRANSACTION, WGraph,
-    GraphDragManager, GraphPoint, Selectors, DNamedElement, DVoidEdge, LEdge, LPackage, LReference, LVoidEdge, LValue
+    Selectors as Selectors_,
+    Size,
+    TRANSACTION,
+    WGraph,
+    GraphDragManager,
+    GraphPoint,
+    Selectors,
+    DNamedElement,
+    DVoidEdge,
+    LEdge,
+    LPackage,
+    LReference,
+    LVoidEdge,
+    LValue,
+    DataTransientProperties
 } from "../../joiner";
 import {DefaultUsageDeclarations} from "./sharedTypes/sharedTypes";
 
@@ -347,7 +362,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         if (ret.dataid) {
             // set up transient model-> node map
             let ta = transientProperties.modelElement[ret.dataid];
-            if (!ta) transientProperties.modelElement[ret.dataid] = {nodes: {}} as any;
+            if (!ta) transientProperties.modelElement[ret.dataid] = ta = new DataTransientProperties();
             ta.nodes[ownProps.nodeid as string] = ret.node;
             ta.node = ret.node;
         }

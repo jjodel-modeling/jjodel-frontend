@@ -53,7 +53,7 @@ import {
     ViewTransientProperties,
     DProject,
     DViewPoint,
-    DNamedElement
+    DNamedElement, DReference, DEnumLiteral
 } from "../../joiner";
 import {DefaultEClasses, ShortDefaultEClasses, toShortEClass} from "../../common/U";
 
@@ -173,16 +173,16 @@ export class Selectors{
         const state: DState = store.getState();
         return Object.values((state).attributes);
     }
-    static getAllEnumLiterals(): string[] {
+    static getAllEnumLiterals(): Pointer<DEnumLiteral>[] {
         const state: DState = store.getState();
         return Object.values((state).enumliterals);
     }
-    static getAllReferences(): string[] {
+    static getAllReferences(): Pointer<DReference>[] {
         const state: DState = store.getState();
         return Object.values((state).references);
     }
     // static getAllReferenceEdges(): string[] { const state: DState = store.getState(); return Object.values((state).refEdges); }
-    static getAllClasses(): string[] {
+    static getAllClasses(): Pointer<DClass>[] {
         const state: DState = store.getState();
         return Object.values((state).classs);
     }

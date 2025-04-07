@@ -1670,6 +1670,8 @@ export class U {
         return ret;
     }
 
+
+    // arrayMergeInPlace is faster for non-named ones
     static mergeNamedArray<T extends GObject>(ret: T[] & Dictionary<DocString<"$name">, T>, classes: T[] & Dictionary<DocString<"$name">, T>) {
         for (let key of Object.getOwnPropertyNames(classes)) { // ownPropertyNames skips "first, last, separator" created by extending array prototype
             if (key === "length") continue;
