@@ -45,11 +45,7 @@ function AuthPage(): JSX.Element {
         SetRootFieldAction.new('isLoading', false);
     }
 
-    /*
-    const retrieve_password = async() => {
 
-    }
-    */
 
     const reset_password = async () => {
 
@@ -80,6 +76,7 @@ function AuthPage(): JSX.Element {
           const response = await AuthApi.login(loginRequest);
           const raw: TokenResponse | null = response.data;
 
+
           if (response.code !== 200 || !raw?.token || typeof raw.token !== 'string') {
             U.alert('e', 'Login failed or invalid token.', '');
             return;
@@ -91,14 +88,14 @@ function AuthPage(): JSX.Element {
             return;
           }
 
-          const user : DUser = DUser.new(claims.name, '', claims.nickname, '',  '', false, claims.email, raw.token, claims.id,  true);
+          const user : DUser = DUser.new(claims.name, '', claims.nickname, '',  '', false, claims.email,  raw.token, claims.id,  true);
 
           AuthApi.storeSessionData(raw.token, !claims.exp ? 0 : claims.exp, user);
           U.resetState();
           R.navigate('/allProjects');
 
         } catch (e) {
-          console.error("Login error:", e);
+          console.error("Login error:");
           U.alert('e', 'Unexpected error during login.', '');
         }
       };

@@ -3,7 +3,7 @@ export class JwtClaims {
   nickname: string = '';
   email: string | any = '';
   id: string = '';
-  role: string[] = []; // può contenere uno o più ruoli
+  role: string[] = [];
   exp?: number;
   iss?: string;
   aud?: string;

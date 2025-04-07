@@ -2,6 +2,7 @@ import {DUser, LUser, U} from '../../joiner';
 import Api from '../api';
 import { ResetPasswordRequest } from '../DTO/ResetPasswordRequest';
 import {UpdateUserRequest} from "../DTO/UpdateUserRequest";
+import {ChangePasswordRequest} from "../DTO/ChangePasswordRequest";
 
 class UsersApi {
 
@@ -27,11 +28,9 @@ class UsersApi {
         const users = U.wrapper<DUser[]>(response.data);
         return users.filter(u => u.id !== DUser.current).map(u => u.email);
     }
-/*
+
     static async updateUserById(updateUserRequest :UpdateUserRequest): Promise<LUser|null> {
         console.log("JURI: ", updateUserRequest);
-        alert("nuovo updateUser");
-        
 
         console.log({...updateUserRequest});
         const response = await Api.put(`${Api.persistance}/account/`, {...updateUserRequest});
@@ -43,8 +42,9 @@ class UsersApi {
         const user = U.wrapper<DUser>(response.data);  
 
         return LUser.fromD(user); 
-    } */
+    }
 
+    /*
     static async updateUserById(id: string, name: string, surname: string, nickname: string, country: string, affiliation: string, newsletter: boolean): Promise<LUser|null> {
 
         const response = await Api.get(`${Api.persistance}/users?id=${id}`);
@@ -63,10 +63,22 @@ class UsersApi {
 
         return LUser.fromD(user);
     }
+    */
 
 
+    static async updatePassword(changePasswordRequest :ChangePasswordRequest): Promise<LUser|null> {
 
+        console.log(changePasswordRequest);
+        const response = await Api.post(`${Api.persistance}/account/change-password`, {...changePasswordRequest});
+        if(response.code !== 200) {
+            return null;
+        }
+        const user = U.wrapper<DUser>(response.data);
 
+        return LUser.fromD(user);
+    }
+
+    /*
     static async updatePasswordById(id: string, password: string): Promise<LUser|null> {
 
         const patch_response = await Api.patch(`${Api.persistance}/users/set_password?id=${id}`, {password: password});
@@ -80,6 +92,7 @@ class UsersApi {
 
         return LUser.fromD(user); 
     }
+    */
 
 
     static async resetPassword(resetPasswordRequest : ResetPasswordRequest) {

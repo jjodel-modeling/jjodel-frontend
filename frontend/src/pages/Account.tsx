@@ -9,6 +9,8 @@ import { useStateIfMounted } from 'use-state-if-mounted';
 import Storage from '../data/storage';
 import { ResetPasswordRequest } from '../api/DTO/ResetPasswordRequest';
 import {UpdateUserRequest} from "../api/DTO/UpdateUserRequest";
+import {ChangePasswordRequest} from "../api/DTO/ChangePasswordRequest";
+import {LoginRequest} from "../api/DTO/LoginRequest";
 
 
 function AccountComponent(props: AllProps): JSX.Element {
@@ -26,22 +28,53 @@ function AccountComponent(props: AllProps): JSX.Element {
     const [new_password, setNewPassword] = useStateIfMounted('12345678');
     const [check_password, setCheckPassword] = useStateIfMounted('23456789');
 
+    async function update_password(old_password: string, new_password:string, check_password:string) {
 
-    async function update_password(
-        old_password: string, 
-        new_password:string, 
-        check_password:string) {
+        const U = windoww.U;
+
+        /*
+        if(response.code !== 200) {
+            U.alert('e', 'Your password does not match our records.','');
+            return;
+        }
+        */
+
+        if (new_password !== check_password) {
+            U.alert('e', 'Paswords do not match.','');
+            return;
+        }
+
+        const changePasswordRequest :ChangePasswordRequest = new ChangePasswordRequest();
+        changePasswordRequest.UserName = nickname;
+        changePasswordRequest.OldPassword = old_password;
+        changePasswordRequest.Password= new_password;
+        changePasswordRequest.PasswordConfirm = check_password;
+
+        const response_password = await UsersApi.updatePassword(changePasswordRequest);
+
+        if(response_password === null) {
+            U.alert('e', 'Something went wrong.','');
+            return;
+        }
+
+        U.alert('i', 'Your password has been successfully updated!','');
+    }
+
+
+    /*
+
+    async function update_password(old_password: string, new_password:string, check_password:string) {
 
         const U = windoww.U;
         
         //const response = await AuthApi.login(email, old_password);
 
-        /*
+
         if (response.code !== 200) {
             U.alert('e', 'Your password does not match our records.','');
             return;
         } 
-            */ 
+
         if (new_password !== check_password) {
             U.alert('e', 'Paswords do not match.','');
             return;
@@ -65,27 +98,39 @@ function AccountComponent(props: AllProps): JSX.Element {
 
 
     }
+    */
+
+
+
    
-    function update_newsletter(check_value: boolean) {
+    function update_newsletter(check_value: boolean): boolean {
+
+        if(!check_value) {
+            return false;
+        }
         setNewsletter(check_value);
+        return true;
+
+
     }
 
-    /*
+
 
     function update_profile (id: string,  name: string,  surname: string,  nickname: string, email :string, country: string, affiliation: string, newsletter: boolean) {
 
-        alert("sono nella funzione update_profile")
         const U = windoww.U;
+        const readUser = Storage.read<DUser>('user');
 
         const updateUserRequest :UpdateUserRequest = new UpdateUserRequest();
-        updateUserRequest.id = user.id;
+        updateUserRequest.id = readUser.id;
+        console.log(updateUserRequest.id);
         updateUserRequest.name = name;
         updateUserRequest.surname = surname;
         updateUserRequest.nickname = nickname;
         updateUserRequest.country = country;
         updateUserRequest.email = email;
         updateUserRequest.affiliation = affiliation;
-        updateUserRequest.newsletter = newsletter;
+        updateUserRequest.newsletter = update_newsletter(newsletter);
 
         console.log(updateUserRequest);
 
@@ -97,15 +142,16 @@ function AccountComponent(props: AllProps): JSX.Element {
             return;
         }
 
-        const updated_user = DUser.new(name, surname, nickname, affiliation, country, newsletter, user.email, user.token, user.id);
+        const updated_user = DUser.new(name, surname, nickname, affiliation, country, newsletter, email, user.token, updateUserRequest.id);
+        console.log("NUOVO UTENTE", updated_user);
         Storage.write('user', updated_user);
         U.resetState();
 
         U.alert('i', 'Your profile has been updated!','');
 
     }
-    */
 
+    /*
 
     function update_profile (id: string,  name: string,  surname: string,  nickname: string, country: string, affiliation: string, newsletter: boolean) {
 
@@ -127,6 +173,8 @@ function AccountComponent(props: AllProps): JSX.Element {
         U.alert('i', 'Your profile has been updated!','');
         
     }
+
+     */
 
 
     return(<Try>
@@ -174,7 +222,7 @@ function AccountComponent(props: AllProps): JSX.Element {
                     label={'Email'} 
                     type={'email'} 
                     value={email}
-                    disabled={true}
+                    required={true}
                     //required={true}
                     onChange={(e) => setEmail(e.target.value)}
                     tooltip={'Your email, it is not possible to change it.'}
@@ -217,6 +265,7 @@ function AccountComponent(props: AllProps): JSX.Element {
                         name, 
                         surname, 
                         nickname,
+                        email,
                         country,
                         affiliation,
                         newsletter)}}>save</button>
@@ -260,6 +309,7 @@ function AccountComponent(props: AllProps): JSX.Element {
                     <button 
                         className="btn alert-btn my-2  px-4 space-above"
                         onClick={(e) => update_password(old_password, new_password, check_password)}
+                        //onClick={(e) => update_password(old_password, new_password, check_password)}
                         >change password</button>
                 </div>
 

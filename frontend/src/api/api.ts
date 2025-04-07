@@ -72,7 +72,7 @@ class Api {
             return {code: 400, data: null};
         }
     }
-/*
+
     static async put(path: string, obj: Json, allowAnonymous:boolean = false): Promise<Response> {
         try {
             if(allowAnonymous || await Api.checkToken()) {
@@ -85,8 +85,7 @@ class Api {
             return {code: 400, data: null};
         }
     }
-    */
- 
+
 
     static async patch(path: string, obj: Json, allowAnonymous:boolean = false): Promise<Response> {
         try {

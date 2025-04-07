@@ -52,12 +52,13 @@ class AuthApi {
             const decoded = jwtDecode<any>(token);
             
             const claims : JwtClaims = new JwtClaims();
+
+            claims.id = decoded[JwtPayloadKey.Id];
+            claims.nickname = decoded[JwtPayloadKey.Nickname];
+            console.log("readJwtToken per nickname", claims.nickname);
             claims.email = decoded[JwtPayloadKey.Email];
-
             claims.role = decoded[JwtPayloadKey.Roles];
-
             claims.exp = decoded[JwtPayloadKey.Exp];
-
             claims.iss = decoded[JwtPayloadKey.Iss];
             claims.aud = decoded[JwtPayloadKey.Aud];
 
