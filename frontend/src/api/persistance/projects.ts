@@ -31,6 +31,8 @@ class ProjectsApi {
         else await Online.getAll();
     }
 
+
+
     static async delete(project: LProject): Promise<void> {
         if(U.isOffline()) Offline.delete(project.__raw as DProject);
         else await Online.delete(project.__raw as DProject);

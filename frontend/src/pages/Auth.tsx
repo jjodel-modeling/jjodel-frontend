@@ -108,15 +108,15 @@ function AuthPage(): JSX.Element {
             return;
         }
         const registerRequest : RegisterRequest = new RegisterRequest();
-        registerRequest.name = name;
-        registerRequest.surname = surname;
-        registerRequest.country = country;
-        registerRequest.affiliation = affiliation;
-        registerRequest.newsletterEnabled = newsletter;
-        registerRequest.nickname = nickname;
-        registerRequest.email = email;
-        registerRequest.password = password;
-        
+        registerRequest.Name = name;
+        registerRequest.Surname = surname;
+        registerRequest.Country = country;
+        registerRequest.Affiliation = affiliation;
+        registerRequest.NewsletterEnabled = newsletter;
+        registerRequest.Nickname = nickname;
+        registerRequest.Email = email;
+        registerRequest.Password = password;
+        console.log(registerRequest);
         const response = await AuthApi.register(registerRequest);
 
         if (response.code !== 200) {

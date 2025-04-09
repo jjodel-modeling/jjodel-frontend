@@ -17,7 +17,8 @@ function ProfilePage(): JSX.Element {
                     icon={'gettingstarted'} 
                     style={'rainbow'}   
                 />
-                {true && <Cards.Item icon={'question'} style={'clear'} title={'Ehy!'} subtitle={'What do you want to do today?'}/>}
+                {<Cards.Item icon={'question'} style={'clear'} title={'Ehy!'}
+                             subtitle={'What do you want to do today?'}/>}
             </Cards>
 
             <ul>

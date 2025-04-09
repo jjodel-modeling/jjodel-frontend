@@ -3,7 +3,7 @@
 
 import React, {Component, Dispatch, ReactElement, useState } from 'react';
 import {connect} from 'react-redux';
-import {DProject, DState, Log, LProject, Try, U} from '../joiner';
+import {DProject, DState, Log, LProject, SetRootFieldAction, Try, U} from '../joiner';
 import {FakeStateProps} from '../joiner/types';
 import {Dashboard, Project} from './components';
 
@@ -16,7 +16,7 @@ import { LatestUpdates } from './components/LatestUpdates';
 function AllProjectsComponent(props: AllProps): JSX.Element {
     const {projects} = props;
     const [isDropping, setDropping] = useState(false);
-
+  
     const createProject = async(type: DProject['type']) => {
         console.log("sono nella classe AllProjects, metodo createProject");
 
@@ -85,7 +85,7 @@ function AllProjectsComponent(props: AllProps): JSX.Element {
                         style={'dark'}
                         action={ProjectsApi.import}
                     />
-                    {true && <Cards.Item icon={'gettingstarted'} url={'https://www.jjodel.io/getting-started/'} style={'red-orange'} title={'Getting Started'} subtitle={'New to Jjodel? No worries'}/>}
+                    {<Cards.Item icon={'gettingstarted'} url={'https://www.jjodel.io/getting-started/'} style={'red-orange'} title={'Getting Started'} subtitle={'New to Jjodel? No worries'}/>}
                 </Cards>
                 <Catalog projects={projects} />
             </div>

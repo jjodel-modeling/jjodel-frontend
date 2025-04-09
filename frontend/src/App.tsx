@@ -2,7 +2,7 @@ import React, {Dispatch, useState} from 'react';
 import './App.scss';
 import './styles/view.scss';
 import './styles/style.scss';
-import {DState, DUser, LUser, Pointer, SetRootFieldAction, statehistory, stateInitializer, Try, U} from "./joiner";
+import {DState, DUser, LUser, Pointer, R, SetRootFieldAction, statehistory, stateInitializer, Try, U} from "./joiner";
 import {connect} from "react-redux";
 import Loader from "./components/loader/Loader";
 import {FakeStateProps} from "./joiner/types";
@@ -28,13 +28,10 @@ import {
 
 import {ExternalLibraries} from "./components/forEndUser/ExternalLibraries";
 import {TooltipVisualizer} from "./components/forEndUser/Tooltip";
-import {MessageVisualizer} from "./components/forEndUser/SplashMessage";
-import {JQDock, MyDock} from "./components/dock/MyDock";
 import {BottomBar} from "./pages/components";
 import AlertVisualizer from "./components/alert/Alert";
 import DialogVisualizer from './components/alert/Dialog';
-import Storage from "./data/storage";
-import Api from "./api/api";
+
 
 
 let firstLoading = true;
@@ -60,16 +57,15 @@ function App(props: AllProps): JSX.Element {
     //let user = LUser.fromPointer(DUser.current);
     if (firstLoading) {
         firstLoading = false;
-
-        stateInitializer().then(()=> {
-            console.log('forceupdate trigger', {'#':window.location.hash, o:{pu:props.user, u:DUser.current}});
+        console.log("entro in app.tsx nel costrutto per verificare se è il firstLoading");
+        stateInitializer().then(()=> {console.log('forceupdate trigger', {'#':window.location.hash, o:{pu:props.user, u:DUser.current}});
             updateUser(DUser.current);
             forceUpdate(1);
+
         });
         return <Loader/>;
     }
     if (U.navigating) return <Loader/>;
-    let debugx = <span style={{position: 'absolute', zIndex: 9999, border: '1px solid red', background: 'white'}}>{props.user}</span>;
     console.log('forceupdate done', {pu:props.user, u:DUser.current});
 
     if (DUser.current !== user) updateUser(DUser.current);
