@@ -29,6 +29,7 @@ jobs:
         run: |
           chmod +x node_modules/.bin/react-app-rewired
           chmod +x -R node_modules
+          npm install
           npm run build-ssl --if-present
 
       - name: Zip artifact for deployment
