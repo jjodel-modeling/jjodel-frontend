@@ -28,8 +28,6 @@ jobs:
         working-directory: ./frontend
         run: |
           chmod +x node_modules/.bin/react-app-rewired
-          npm ls gopd
-          npm install gopd@latest --save
           npm i json-stable-stringify
           npm ls gopd
           npm install
