@@ -29,6 +29,8 @@ jobs:
         run: |
           chmod +x node_modules/.bin/react-app-rewired
           chmod +x -R node_modules
+          rm -rf node_modules package-lock.json
+          npm cache clean --force
           npm install
           npm run build-ssl --if-present
 
