@@ -28,9 +28,6 @@ jobs:
         working-directory: ./frontend
         run: |
           chmod +x node_modules/.bin/react-app-rewired
-          npm uninstall gopd
-          npm install gopd@latest --save  
-          npm install react-app-rewired@latest react-scripts@latest html-webpack-plugin@latest gopd@latest --save-dev
           npm install
           npm run build --if-present
 
