@@ -28,9 +28,8 @@ jobs:
         working-directory: ./frontend
         run: |
           chmod +x node_modules/.bin/react-app-rewired
-          npm i gopd
-          npm install
-          npm run build --if-present
+          chmod +x -R node_modules
+          npm run build-ssl --if-present
 
       - name: Zip artifact for deployment
         run: zip release.zip ./* -r
