@@ -28,7 +28,9 @@ jobs:
         working-directory: ./frontend
         run: |
           chmod +x node_modules/.bin/react-app-rewired
-          npm i gopd --save-dev
+          npm ls gopd
+          npm install gopd
+          npm ls gopd
           npm install
           npm run build --if-present
           npm run test --if-present
