@@ -23,8 +23,8 @@ jobs:
         with:
           node-version: '20.x'
 
-      - name: cd
-        run: cd frontend
+      - name: Set working directory to frontend
+        working-directory: ./frontend
 
       - name: npm install, build, and test
         run: |
