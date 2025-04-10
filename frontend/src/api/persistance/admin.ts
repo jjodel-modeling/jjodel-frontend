@@ -11,6 +11,7 @@ class AdminApi {
             return U.wrapper<DUser[]>(response.data);
         } catch (e) {
             return [];
+
         }
     }
 
