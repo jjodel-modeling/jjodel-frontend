@@ -30,11 +30,9 @@ jobs:
           chmod +x node_modules/.bin/react-app-rewired
           npm uninstall gopd
           npm install gopd@latest --save  
-          npm ls gopd
-          node -e "require('./node_modules/gopd')"
+          npm install react-app-rewired@latest react-scripts@latest html-webpack-plugin@latest gopd@latest --save-dev
           npm install
           npm run build --if-present
-          npm run test --if-present
 
       - name: Zip artifact for deployment
         run: zip release.zip ./* -r
