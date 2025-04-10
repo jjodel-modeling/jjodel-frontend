@@ -144,6 +144,18 @@ class Offline {
 }
 
 class Online {
+
+    static async create (project: Project): Promise<void> {
+        console.log("entro nella create online di projects");
+        await Api.post(`${Api.persistance}/project`, {
+            id: project.id,
+            creation: project.creation || Date.now(),
+            description: project.description,
+            name: project.name,
+            type: project.type
+        });
+    }
+    /*
     static async create (project: Project): Promise<void> {
         console.log("entro nella create online di projects");
         await Api.post(`${Api.persistance}/project`, {
