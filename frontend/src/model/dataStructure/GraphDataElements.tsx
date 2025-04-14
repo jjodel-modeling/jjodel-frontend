@@ -2,9 +2,9 @@
 import {isDeepStrictEqual} from "util";
 import {
     Constructors,
-    CoordinateMode,
+    CoordinateMode, D,
     Debug,
-    Dictionary,
+    Dictionary, type DModel,
     DModelElement,
     DocString,
     DPointerTargetable,
@@ -34,7 +34,7 @@ import {
     Pointers,
     PrimitiveType,
     RuntimeAccessible,
-    RuntimeAccessibleClass,
+    RuntimeAccessibleClass, Selectors,
     SetFieldAction, SetRootFieldAction,
     ShortAttribETypes,
     Size,
@@ -210,6 +210,18 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
         return U.findInChildProperties(arr, (e)=>[e.father], undefined, (e)=>e.rendered);
     }*/
 
+    get_getByFullPath(c: Context): this['getByFullPath'] {
+        return (path: string | string[]): L | null => {
+            let patharr = Array.isArray(path) ? path : path.split('.');
+            let rootType: typeof D;
+            let root: L | null = Selectors.getByName(DGraph, patharr[0], true, true) as L;
+            // NB: do not use .parent or .model because the first key because it is the model name, and it might not be the current one.
+            if (!root) return null;
+            if (patharr.length === 1) return root;
+            patharr.splice(0, 1);
+            return root.getByPath(patharr);
+        }
+    }
 
     __info_of__graphAncestors: Info = {type:"LGraph[]",
         txt:"<span>collection of the stack of Graphs containing the current element where [0] is the most nested graph, and last is root graph.</span>"};

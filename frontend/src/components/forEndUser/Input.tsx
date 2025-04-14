@@ -223,7 +223,7 @@ export function InputComponent(props: AllProps) {
 
         if (isBoolean) {
             let target = evt.target.checked;
-            if (subtype === 'checkbox3' && !value) { target = undefined as any; }
+            if (subtype === 'checkbox3' && value === false) { target = undefined as any; }
             if (setter) setter(target, data, field);
             else data[field] = target;
             setValue(target);

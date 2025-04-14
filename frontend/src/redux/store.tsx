@@ -3,7 +3,7 @@ import {
     Circle,
     Constructors,
     CoordinateMode,
-    CreateElementAction, Cross,
+    CreateElementAction, Cross, D,
     DAttribute,
     DClass,
     DClassifier, Decagon, DecoratedStar, DEdge,
@@ -38,7 +38,7 @@ import {
     Enneagon, Field,
     GObject, Graph, GraphElement,
     GraphPoint,
-    GraphSize, GraphVertex, Heptagon, Hexagon,
+    GraphSize, GraphVertex, Heptagon, Hexagon, L,
     LGraphElement,
     LModelElement,
     LObject, Log,
@@ -57,7 +57,7 @@ import {
     Pointer,
     Pointers, Polygon, Rectangle,
     RuntimeAccessible,
-    RuntimeAccessibleClass, Septagon, SetFieldAction,
+    RuntimeAccessibleClass, Selectors, Septagon, SetFieldAction,
     SetRootFieldAction,
     ShortAttribETypes, SimpleStar, Square, Star,
     store, TRANSACTION, Trapezoid, Triangle, U, UserHistory, Vertex, VoidVertex,
@@ -490,6 +490,8 @@ export class LState<Context extends LogicContext<DState> = any, C extends Contex
         }
         return v;
     }
+
+    get_getByFullPath(c: Context): this['getByFullPath'] { return this.wrongAccessMessage('LState.getByFullPath'); }
 }
 
 RuntimeAccessibleClass.set_extend(DPointerTargetable, DState);

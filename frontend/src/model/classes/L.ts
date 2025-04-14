@@ -1,4 +1,4 @@
-import {LPointerTargetable, RuntimeAccessible} from "../../joiner";
+import {D, type DModel, L, LPointerTargetable, RuntimeAccessible, Selectors} from "../../joiner";
 
 @RuntimeAccessible('LLog')
 export class LLog extends LPointerTargetable {
@@ -7,4 +7,6 @@ export class LLog extends LPointerTargetable {
     // static singleton: LLog;
     value!: string;
 //    protected constructor(value: string) {super(); }
+
+    get_getByFullPath(c: any): any { this.wrongAccessMessage('LLog.getByFullPath'); }
 }

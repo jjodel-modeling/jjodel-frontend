@@ -1216,7 +1216,7 @@ export async function stateInitializer() {
     let dClassesMap: Dictionary<string, typeof DPointerTargetable> = {};
     let lClassesMap: Dictionary<string, typeof LPointerTargetable> = {};
     for (let name in RuntimeAccessibleClass.classes) {
-        switch(name[0]) {
+        switch (name[0]) {
             case 'D': dClassesMap[name] = RuntimeAccessibleClass.classes[name] as typeof DPointerTargetable; break;
             case 'L': lClassesMap[name] = RuntimeAccessibleClass.classes[name] as typeof LPointerTargetable; break;
             default: break;

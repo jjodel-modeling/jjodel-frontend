@@ -1,10 +1,10 @@
 import {
     Constructors,
-    CoordinateMode,
+    CoordinateMode, D,
     Debug, DEdgePoint,
     Defaults,
     DGraphElement,
-    Dictionary,
+    Dictionary, type DModel,
     DModelElement,
     DNamedElement,
     DocString,
@@ -19,7 +19,7 @@ import {
     GObject,
     GraphPoint,
     GraphSize,
-    Info, LEdge, LEdgePoint, LGraphElement, LModelElement,
+    Info, L, LEdge, LEdgePoint, LGraphElement, LModelElement,
     Log,
     LogicContext,
     LPointerTargetable, LProject, LUser,
@@ -472,6 +472,19 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
     protected _defaultGetter(c: Context, k: keyof Context["data"]): any { return this.__defaultGetter(c, k); }
 
     protected _defaultSetter(v: any, c: Context, k: keyof Context["data"]): any { return this.__defaultSetter(v, c, k); }
+
+    get_getByFullPath(c: Context): this['getByFullPath'] {
+        return (path: string | string[]): L | null => {
+            let patharr = Array.isArray(path) ? path : path.split('.');
+            let rootType: typeof D;
+            let root: L | null = Selectors.getByName(DViewPoint, patharr[0], true, true) as L;
+            // NB: do not use .parent or .model because the first key because it is the model name, and it might not be the current one.
+            if (!root) return null;
+            if (patharr.length === 1) return root;
+            patharr.splice(0, 1);
+            return root.getByPath(patharr);
+        }
+    }
 
     jsxString!: string;
     __info_of__jsxString: Info = {isGlobal: true, type: "text", label:"JSX template",
@@ -1524,57 +1537,6 @@ type DuplicateVPChange = {
 }
 export type WViewElement = getWParams<LViewElement, DPointerTargetable>;
 
-@RuntimeAccessible('DViewTransientProperties')
-export class DViewTransientProperties extends RuntimeAccessibleClass{
-    static logic: typeof LPointerTargetable;
-    _isDViewTransientProperties!: true;
-    // isSelected: Dictionary<DocString<Pointer<DUser>>, boolean> = {};
-    // private: DViewPrivateTransientProperties;
-}
-
-RuntimeAccessibleClass.set_extend(RuntimeAccessibleClass, DViewTransientProperties);
-@RuntimeAccessible('LViewTransientProperties')
-export class LViewTransientProperties extends LPointerTargetable{
-    static structure: typeof DPointerTargetable;
-    static singleton: LViewTransientProperties;
-    _isLViewTransientProperties!: true;
-
-    // isSelected: Dictionary<DocString<Pointer<DUser>>, boolean> = {};
-    // private!: LViewPrivateTransientProperties;
-    /*
-        get_private(c: LogicContext<DViewTransientProperties>): LViewPrivateTransientProperties {
-            return LViewTransientProperties.wrap(c.data.private, c.proxy.baseObjInLookup, c.proxy.additionalPath + '.private'); }*/
-    /*
-        get_isSelected(logicContext: LogicContext<TargetableProxyHandler<DViewTransientProperties>, DViewTransientProperties>): Proxyfied<Dictionary> {
-            // @ts-ignore for $ at end of getpath
-            console.log('GET_ISSELECTED handler func');
-            return TargetableProxyHandler.getMap(logicContext.data.isSelected, logicContext, logicContext.proxy.additionalPath + '.' + (getPath as this).isSelected.$);
-        }*/
-}
-
-RuntimeAccessibleClass.set_extend(DPointerTargetable, DViewTransientProperties);
-RuntimeAccessibleClass.set_extend(LPointerTargetable, LViewTransientProperties);
-export type WViewTransientProperties = getWParams<LViewTransientProperties, DViewTransientProperties>;
-
-/*
-
-@RuntimeAccessible
-export class DViewPrivateTransientProperties extends DPointerTargetable{
-    static logic: typeof LViewPrivateTransientProperties;
-
-    public size: GraphSize
-    constructor(size?: GraphSize) {
-        super();
-        this.size = size || defaultVSize;
-    }
-}
-
-@RuntimeAccessible
-export class LViewPrivateTransientProperties extends DViewPrivateTransientProperties{
-    static structure: typeof DViewPrivateTransientProperties;
-    static singleton: LViewPrivateTransientProperties;
-
-}*/
 // shapeless component, receive jsx from redux
 // can access any of the redux state, but will usually access 1-2 var among many,
 // how can i dynamically mapStateToProps to map only the required ones?

@@ -978,16 +978,7 @@ export class U {
     // only create a context for "this", wich is bound by .call(), should never be called without .call()
     private static evalContextFunction(code: string): any { eval(code); }
 */
-    public static highOrderFunctionExampleTyped<T extends (...args: any[]) => ReturnType<T>>(func: T): (...funcArgs: Parameters<T>) => ReturnType<T> {
-        const funcName = (func as any).cname || func.name;
 
-        // Return a new function that tracks how long the original took
-        return (...args: Parameters<T>): ReturnType<T> => {
-            console.time(funcName);
-            const results = func(...args);
-            console.timeEnd(funcName);
-            return results; };
-    }
 
     static asClass<T extends Function>(obj: any, classe: T, elseReturn: T | null = null): null | T { return obj instanceof classe ? obj as any as T: elseReturn; }
     static asString<T>(propKey: unknown, elseReturn: T | null = null): string | null | T { return typeof propKey === 'string' ? propKey : elseReturn; }

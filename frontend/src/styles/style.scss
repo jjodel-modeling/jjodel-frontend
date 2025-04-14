@@ -26,6 +26,11 @@ body {
 .hidden-input:focus { border: 1px dashed $border-color; }
 .w-fill { width: $fill; }
 .h-fill { height: $fill; }
+.t2m{
+  white-space: pre-wrap;
+  padding-left: 1ic;
+  padding-top:1ic;
+}
 
 .autosize-input{
   // opacity:0;

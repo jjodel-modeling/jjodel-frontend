@@ -153,8 +153,8 @@ export {
 
 // export {GraphDragHandler} from "../graph/vertex/GraphDragHandler";
 
-export type {WViewElement, WViewTransientProperties} from "../view/viewElement/view";
-export {DViewTransientProperties, LViewTransientProperties, LViewElement, DViewElement} from "../view/viewElement/view";
+export type {WViewElement} from "../view/viewElement/view";
+export {LViewElement, DViewElement} from "../view/viewElement/view";
 export {DViewPoint, LViewPoint} from "../view/viewPoint/viewpoint";
 
 export {Action, CreateElementAction, DeleteElementAction, SetFieldAction, SetRootFieldAction, CompositeAction, ParsedAction, LoadAction, CombineHistoryAction, RedoAction, UndoAction,

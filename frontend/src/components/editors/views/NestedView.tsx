@@ -156,7 +156,7 @@ function NestedViewComponent(props: AllProps) {
                         {
                             isVP ? <>
                                 <div className={"spacer"}/>
-                            </> : <>{ props.isAdvanced && <>
+                            </> : <>{ props.isAdvanced && d.isExclusiveView && <>
                                 <span className={"priority"}>priority: {l.explicitApplicationPriority} </span><i style={{paddingTop: '4px'}} className="bi bi-x"></i>
                                 <div className={"spacer"}/>
                                 <Input type="number"

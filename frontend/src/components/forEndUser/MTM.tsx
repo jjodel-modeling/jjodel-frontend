@@ -21,11 +21,16 @@ import {useStateIfMounted} from 'use-state-if-mounted';
 import './inputselect.scss';
 import { Tooltip } from './Tooltip';
 import Editor from "@monaco-editor/react";
+import {on} from "events";
 
 
 function doT2M(data: LPointerTargetable | Pointer, language: string, text: string): void{
     let ldata = LPointerTargetable.from(data);
+    console.log('doT2M called', {ldata, data, language, text, arguments});
     if (!ldata) return;
+    let json = JSON.parse(text);
+    console.log('doT2M json', {ldata, text, json});
+    (ldata as LObject).t2m(json);
 }
 function doM2T(data: LPointerTargetable | Pointer, language: string): string{
     let ldata = LPointerTargetable.from(data);
@@ -36,15 +41,27 @@ function doM2T(data: LPointerTargetable | Pointer, language: string): string{
 export function T2M(props: T2M_AllProps, child?: any) {
     const data: LPointerTargetable = L.from(props.data as any);
     const language = props.language || 'JSON';
-    console.log('T2M called', {data, language, arguments});
+    console.log('T2M render called', {data, language, arguments});
     let debug = true;
+    function onBlur(e: Event){
+        props.onChange?.(e);
+        props.onBlur?.(e);
+        let value = (e.target as HTMLElement).innerText;
+        doT2M(data, props.language, value);
+    }
+    let rootProps: GObject = {...props};
+    delete rootProps.setter;
+    delete rootProps.getter;
+    rootProps.tabIndex = rootProps.tabIndex || 0;
+    rootProps.onBlur = onBlur;
+
     if (debug) {
         let children = props.children || child;
-        return <div className={'t2m'} contentEditable={true} {...props}>{children}</div>;
+        return <div className={'t2m' + (props.className||'')} contentEditable={true} {...rootProps}>{children}</div>;
     }
     return 'todo'
- }
-    export function T2M_(props: T2M_AllProps, child?: any) {
+}
+export function T2M_WithEditor(props: T2M_AllProps, child?: any) {
     const [oldValue, setOldValue] = useStateIfMounted<string>('');
     let [value, setValue] = useStateIfMounted<string>(oldValue);
     const [isTouched, setIsTouched] = useStateIfMounted(false);
@@ -89,19 +106,19 @@ export function T2M(props: T2M_AllProps, child?: any) {
         (props as any).onChange?.(evt);
         if (readOnly) return;
 
-        //console.log("setValue", {value, nv: getValueFromEvent(evt), evt, ev: evt.target.value});
+        console.log("setValue", {value, nv: getValueFromEvent(evt), evt, ev: evt.target.value});
         setValue(getValueFromEvent(evt));
         setIsTouched(true);     // I'm editing the element in my local state.
         // the actual set is done in onBlur
     }
     const getValueFromEvent = (evt: { target: HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement }) => {
-         return evt.target.innerText; // return evt.target.value;
+         return value; // evt.target.innerText;
     }
 
 
     const onBlur = (evt: { target: HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement }) => {
         (props as any).onBlur?.(evt);
-        //confirmValue(evt);
+        confirmValue(evt, getValueFromEvent(evt));
     }
     const confirmValue = (evt: { target: HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement }|undefined, val: string) => {
         if (readOnly) return;
@@ -140,7 +157,7 @@ export function T2M(props: T2M_AllProps, child?: any) {
 
 
     return <label className={'input-container t2m ' + (props.className || '')} {...otherprops} style={style}>
-        <Editor options={{readOnly:!!props.readOnly}} />
+        <Editor options={{readOnly:!!props.readOnly}} value={value} />
     </label>;
 }
 
@@ -161,6 +178,9 @@ export interface T2M_OwnProps {
     readOnly?: boolean;
     key?: React.Key | null;
     placeholder?: string;
+    onChange?: (e: Event)=>void;
+    onBlur?: (e: Event)=>void;
+    onKeyPress?: (e: Event)=>void;
     children?: ReactNode;
 }
 export interface M2T_OwnProps extends T2M_OwnProps{
