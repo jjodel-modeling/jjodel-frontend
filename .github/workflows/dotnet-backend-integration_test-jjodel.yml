@@ -28,11 +28,13 @@ jobs:
         working-directory: ./frontend
         run: |
           node -v
-          webpack -v | echo
-          npm -v
-          tsc -v
           rm -rf node_modules
+          npm install -g npm@11.3.0
+          npm -v
           npm install
+          tsc -v
+          webpack -v
+          webpack -v | echo
           echo "test"
           npm run build-ssl --if-present
 
