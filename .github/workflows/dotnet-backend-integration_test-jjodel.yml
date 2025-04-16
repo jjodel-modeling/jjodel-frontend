@@ -27,8 +27,14 @@ jobs:
       - name: npm install, build, and test
         working-directory: ./frontend
         run: |
+          webpack -v
+          node -v
+          npm -v
+          tsc -v
+          npm ls source-map
           rm -rf node_modules
           npm install
+          echo "test"
           npm run build-ssl --if-present
 
       - name: Zip artifact for deployment

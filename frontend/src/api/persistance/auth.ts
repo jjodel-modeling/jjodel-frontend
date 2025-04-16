@@ -7,7 +7,7 @@ import { LoginRequest } from "../DTO/LoginRequest";
 import { JwtClaims } from "../DTO/JwtClaims";
 import { JwtPayloadKey } from "../memorec/types";
 import {ResetPasswordRequest} from "../DTO/ResetPasswordRequest";
-import {ConfirmAccountRequest} from "../DTO/ConfirmAccountRequest";
+import {ConfirmAccountRequest} from "../DTO/ConfirmAccountRequest"; //
 
 class AuthApi {
 
