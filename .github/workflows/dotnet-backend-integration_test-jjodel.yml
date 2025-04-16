@@ -31,7 +31,6 @@ jobs:
           webpack -v | echo
           npm -v
           tsc -v
-          npm ls source-map
           rm -rf node_modules
           npm install
           echo "test"
