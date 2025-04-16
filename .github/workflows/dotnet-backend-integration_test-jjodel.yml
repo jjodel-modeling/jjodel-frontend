@@ -21,7 +21,7 @@ jobs:
       - name: Set up Node.js version
         uses: actions/setup-node@v3
         with:
-          node-version: '22.8.0'
+          node-version: '23.11.0'
 
 
       - name: npm install, build, and test
