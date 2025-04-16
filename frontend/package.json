@@ -31,6 +31,7 @@
     "jsx-recast": "^0.1.1",
     "jsx-runtime": "^1.2.0",
     "jsx-transform": "^2.4.1",
+    "jwt-decode": "^4.0.0",
     "lodash": "^4.17.21",
     "path": "^0.12.7",
     "path-data-polyfill": "^1.0.9",
@@ -127,8 +128,8 @@
     "gh-pages": "^6.3.0",
     "js-beautify": "^1.15.4",
     "react-app-rewired": "^2.2.1",
-    "ts-node": "^10.9.2",
-    "react-error-overlay": "6.0.9"
+    "react-error-overlay": "6.0.9",
+    "ts-node": "^10.9.2"
   },
   "erasable_comments": {
     "commentoldversions": "node: 16.15.0, npm:10.9.2 react 16?",

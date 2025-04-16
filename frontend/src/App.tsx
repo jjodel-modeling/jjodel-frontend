@@ -6,7 +6,6 @@ import {DState, DUser, Log, LUser, Pointer, R, SetRootFieldAction, statehistory,
 import {connect} from "react-redux";
 import Loader from "./components/loader/Loader";
 import {FakeStateProps} from "./joiner/types";
-import {useEffectOnce} from "usehooks-ts";
 import {HashRouter, Route, Routes} from 'react-router-dom';
 import PathChecker from "./components/pathChecker/PathChecker";
 
