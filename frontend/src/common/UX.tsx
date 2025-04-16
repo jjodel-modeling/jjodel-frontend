@@ -1,10 +1,9 @@
-import ReactJson from 'react-json-view' // npm i react-json-view
-import React, {ReactElement, ReactNode} from "react";
+// import ReactJson from 'react-json-view' // npm i react-json-view
+import React, {JSX, ReactElement, ReactNode} from "react";
 import withReactContent from "sweetalert2-react-content";
 import Swal from "sweetalert2";
 import {GraphElementOwnProps, GObject, Dictionary, DocString, Pointer, LGraph, MultiSelectOptGroup} from "../joiner";
 import type { InputOwnProps, SelectOwnProps } from '../components/forEndUser/Input';
-import type {  } from '../components/forEndUser/Select';
 import {
     LPointerTargetable,
     U,
@@ -30,7 +29,8 @@ export class UX{
     static recursiveMap<T extends ReactNode | ReactNode[] | null | undefined>(children: T, fn: (rn: T, i: number, depthIndices: number[])=>T, depthIndices: number[] = []): T {
         // NB: depthIndices is correct but if there is an expression children evaluated to false like {false && <jsx>},
         // it counts as children iterated regardless. so html indices might be apparently off, but like this is even safer as indices won't change when conditions are changed.
-        const innermap = (child: ReactNode, i1: number, depthIndices: number[]): T => {
+        const innermap = (child0: ReactNode, i1: number, depthIndices: number[]): T => {
+            let child: GObject = child0 as any;
             if (!React.isValidElement(child)) {
                 if (Array.isArray(child)) return React.Children.map(child as T, (c: T, i3: number)=>innermap(c, i3, [...depthIndices,i3])) as T;
                 if (child && typeof child === "object") {
@@ -39,7 +39,7 @@ export class UX{
                     return "<! Objects cannot be rendered in jsx : " + (child as any)?.name + ">" as T;
                 }
                 return child as T; }
-            if (child.props.children) {
+            if ((child.props as GObject)?.children) {
                 // let deeperDepthIndices = [...depthIndices, i1];  // depthIndices; //
                 // should probably change deeperDepthIndices in [...deeperDepthIndices, i] in next uncommented line.
                 // Giordano: add ignore for webpack
@@ -90,6 +90,8 @@ export class UX{
         // const windoww = window as any;
         // console.log('ux.injectingProp pre ', {type: (re.type as any).WrappedComponent?.name || re.type}, {mycomponents: windoww.mycomponents, re, props:re.props});
         // add "view" (view id) prop as default to sub-elements of any depth to inherit the view of the parent unless the user forced another view to apply
+        let rprops: GObject = re.props as any;
+
         switch (type) {
             default:
                 // console.count('ux.injectingProp case default: ' + type);
@@ -116,7 +118,7 @@ export class UX{
                 // todo: can i do a injector that if the user provides a ModelElement list raw <div>{this.children}</div> it wraps them in DefaultNode?
                 const injectProps2: InputOwnProps | SelectOwnProps = {} as any;
                 const parentnodeid = parentComponent.props.node?.id;
-                injectProps2.data = re.props.data || (typeof parentComponent.props.data === "string" ? parentComponent.props.data : parentComponent.props.data?.id);
+                injectProps2.data = rprops.data || (typeof parentComponent.props.data === "string" ? parentComponent.props.data : parentComponent.props.data?.id);
                 // !IMPORTANT! this key does not remove the responsability of adding keys to <GraphElement>s. this is assigning the key to the first returned element by component A,
                 // but react needs to distinguish component A from other components, and he still doesn't have a key. in fact this is useless as this component can only have 1 child
                 injectProps2.key = UX.getKey(re) || (parentnodeid + "_input_"+index);
@@ -140,13 +142,12 @@ export class UX{
                 // const gvidmap = vidmap[injectProps.graphid];
                 // const validVertexIdCondition = (id: string): boolean => gvidmap_useless[id];
                 // todo: come butto dei sotto-vertici dentro un vertice contenitore? o dentro un sotto-grafo? senza modificare il jsx ma solo draggando? React-portals?
-                const dataid = (typeof re.props.data === "string" ? re.props.data : re.props.data?.id) || "shapeless";
+                const dataid = (typeof rprops.data === "string" ? rprops.data : rprops.data?.id) || "shapeless";
                 let idbasename: string;
 
-                //console.log('injecting props ' + type, {re, pc: parentComponent, injectProps, ownProps: re.props});
-                if (re.props.initialSize?.id) { idbasename = re.props.initialSize?.id; } else
-                if (re.props.nodeid) { idbasename = re.props.nodeid; } else
-                if (re.props.id) { idbasename = re.props.id; } else
+                if (rprops.initialSize?.id) { idbasename = rprops.initialSize?.id; } else
+                if (rprops.nodeid) { idbasename = rprops.nodeid; } else
+                if (rprops.id) { idbasename = rprops.id; } else
                 if (UX.getKey(re)) {
                     idbasename = injectProps.parentnodeid + "_" +UX.getKey(re);
                     // console.log("keyid: ", {idbasename});
@@ -156,29 +157,29 @@ export class UX{
                         idbasename = injectProps.parentnodeid + "_" + dataid + "N";
                         break;
                     case windoww.Components.EdgePoint.cname:
-                        idbasename = injectProps.parentnodeid + "_" + (dataid || re.props.startingSize?.id || indices.join("_")) + "EP";
+                        idbasename = injectProps.parentnodeid + "_" + (dataid || rprops.startingSize?.id || indices.join("_")) + "EP";
                         break;
                     case EdgeComponent.cname: case "Edge":
-                        //console.log('injecting props ' + type + " without key", {re, pc: parentComponent, injectProps, ownProps: re.props});
-                        let edgeProps:EdgeOwnProps = re.props;
+                        //console.log('injecting props ' + type + " without key", {re, pc: parentComponent, injectProps, ownProps: rprops});
+                        let edgeProps: EdgeOwnProps = rprops as any;
                         let edgestart_id: Pointer<DGraphElement> | Pointer<DModelElement> = (edgeProps.start as any).id || edgeProps.start;
                         let edgeend_id: Pointer<DGraphElement> | Pointer<DModelElement> = (edgeProps.end as any).id || edgeProps.end;
                         idbasename = injectProps.parentnodeid + "_" + edgestart_id + "-" + edgeend_id;
                 }
                 // (injectProps.parentnodeid)+"_"+(dataid)+indices.join("_");//injectProps.graphid + '_' + dataid;
-                // console.log("setting nodeid", {injectProps, props:re.props, re});
-                // Log.exDev(!injectProps.graphid || !dataid, 'vertex is missing mandatory props.', {graphid: injectProps.graphid, dataid, props: re.props});
-                Log.exDev(!injectProps.graphid, 'vertex is missing mandatory props (graphid).', {graphid: injectProps.graphid, dataid, props: re.props});
+                // console.log("setting nodeid", {injectProps, props:rprops, re});
+                // Log.exDev(!injectProps.graphid || !dataid, 'vertex is missing mandatory props.', {graphid: injectProps.graphid, dataid, props: rprops});
+                Log.exDev(!injectProps.graphid, 'vertex is missing mandatory props (graphid).', {graphid: injectProps.graphid, dataid, props: rprops});
                 if (false && indices.length === 2) {
                     // if first component child, of a component? like (DefaultNode -> Vertex)?
                     console.log('injecting to first child (B):', {re, pc: parentComponent, injectProps});
                     if (parentComponent?.props.style?.clipPath) injectProps.style = {...(injectProps.style || {}), clipPath: parentComponent?.props.style?.clipPath||''}
                 }
                 injectProps.nodeid = idbasename; // U.increaseEndingNumber(idbasename, false, false, validVertexIdCondition);
-                injectProps.htmlindex = indices[indices.length - 1]; // re.props.node ? re.props.node.htmlindex : indices[indices.length - 1];
+                injectProps.htmlindex = indices[indices.length - 1]; // rprops.node ? rprops.node.htmlindex : indices[indices.length - 1];
                 injectProps.key = UX.getKey(re) || injectProps.nodeid;
                 // console.log("cloning jsx:", re, injectProps);
-                Log.ex((injectProps.nodeid === injectProps.graphid||injectProps.nodeid === injectProps.parentnodeid) && type !== "GraphComponent", "User manually assigned a invalid node id. please remove or change prop \"nodeid\"", {type: (re.type as any).WrappedComponent?.cname || re.type}, {mycomponents: windoww.mycomponents, re, props:re.props});
+                Log.ex((injectProps.nodeid === injectProps.graphid||injectProps.nodeid === injectProps.parentnodeid) && type !== "GraphComponent", "User manually assigned a invalid node id. please remove or change prop \"nodeid\"", {type: (re.type as any).WrappedComponent?.cname || re.type}, {mycomponents: windoww.mycomponents, re, props:rprops});
         }
         //console.log('injecting props ' + type, {id: injectProps.nodeid, re, pc: parentComponent, injectProps});
         return React.cloneElement(re, injectProps);

@@ -1,7 +1,9 @@
 import React, {PureComponent, ReactNode} from "react";
-import ReactJson from 'react-json-view' // npm i react-json-view
+// import ReactJson from 'react-json-view' // npm i react-json-view
 import './logger.scss'
 import {GObject} from "../../joiner";
+
+function ReactJson(p:any){ return 'reactjson to do'; }
 
 // private
 interface ThisState { }
@@ -90,6 +92,7 @@ export class DataOutputComponent extends PureComponent<AllProps, ThisState>{
 interface OwnProps {
     data: GObject;
     rootName?: string;
+    children?: ReactNode;
 }
 // private
 type AllProps = OwnProps;

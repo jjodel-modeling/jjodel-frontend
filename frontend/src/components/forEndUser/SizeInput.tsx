@@ -1,4 +1,4 @@
-import React, {Dispatch, PureComponent, ReactNode} from "react";
+import React, {Dispatch, JSX, PureComponent, ReactNode} from "react";
 import { connect } from "react-redux";
 import toast from "react-hot-toast";
 import type {GObject, Pointer, Info} from "../../joiner";
@@ -18,18 +18,11 @@ export let useless=1;
 interface ThisState {
 }
 
-class SizeInputComponent extends PureComponent<AllProps, ThisState>{
-    static cname: string;
-
-    constructor(props: AllProps, context: any) {
-        super(props, context);
-    }
-
-    render(): ReactNode {
-        let l: LPointerTargetable = this.props.data;
+function SizeInputComponent(props: AllProps): ReactNode {
+        let l: LPointerTargetable = props.data;
         let ll: GObject = l;
-        let field: keyof LPointerTargetable = this.props.field as any;
-        let otherProps: GObject = {...this.props};
+        let field: keyof LPointerTargetable = props.field as any;
+        let otherProps: GObject = {...props};
         delete otherProps.xgetter;
         delete otherProps.xsetter;
         delete otherProps.ygetter;
@@ -45,8 +38,8 @@ class SizeInputComponent extends PureComponent<AllProps, ThisState>{
         delete otherProps.key;
 
         let tooltip: JSX.Element;
-        if (this.props.tooltip === true) { tooltip = (ll["__info_of__" + field])?.txt || ''; }
-        else { tooltip = (this.props.tooltip || '') as any; }
+        if (props.tooltip === true) { tooltip = (ll["__info_of__" + field])?.txt || ''; }
+        else { tooltip = (props.tooltip || '') as any; }
 
         const notify = () => toast((t: GObject) => (
             <div onClick={() => toast.dismiss(t.id)}>
@@ -61,9 +54,9 @@ class SizeInputComponent extends PureComponent<AllProps, ThisState>{
         const inputStyle = {justifyContent: "right", width: "auto", marginRight:"5px"};
         let labelStyle = {height: '100%', display: 'inline-block', marginRight:"5px"}
         return (<>
-            <label className={this.props.rootClassName} style={{fontFamily:'Inter Tight', ...(this.props.rootStyle||{})}}>
-                {(this.props.label) && <label className={'my-auto'} style={{fontFamily:'-webkit-body'}} onClick={() => { if (tooltip) notify() }}>
-                    {this.props.label}
+            <label className={props.rootClassName} style={{fontFamily:'Inter Tight', ...(props.rootStyle||{})}}>
+                {(props.label) && <label className={'my-auto'} style={{fontFamily:'-webkit-body'}} onClick={() => { if (tooltip) notify() }}>
+                    {props.label}
                 </label>}
                 <label className={"d-flex my-auto ms-auto"} style={{flexWrap: "wrap"}}>
                     {"x" in size && <Input {...otherProps} className={""} data={l} label={<span style={labelStyle}>x</span>} field={field} type={"number"}
@@ -91,7 +84,7 @@ class SizeInputComponent extends PureComponent<AllProps, ThisState>{
                     />}
                 </label>
             </label>
-        </>); }
+        </>);
 }
 
 // private

@@ -1,4 +1,14 @@
-import React, {ChangeEvent, MouseEventHandler, Component, Dispatch, ReactElement, useState, useRef } from 'react';
+import React, {
+    ChangeEvent,
+    MouseEventHandler,
+    Component,
+    Dispatch,
+    ReactElement,
+    useState,
+    useRef,
+    JSX,
+    ReactNode
+} from 'react';
 import {connect} from 'react-redux';
 import {DProject, DState, LProject, Try, U} from '../joiner';
 import {FakeStateProps} from '../joiner/types';
@@ -293,7 +303,8 @@ const AllProjectsConnected = connect<StateProps, DispatchProps, OwnProps, DState
     mapDispatchToProps
 )(AllProjectsComponent);
 
-const NotesPage = (props: OwnProps, children: (string | Component)[] = []): ReactElement => {
+const NotesPage = (props: OwnProps, children: ReactNode = []): ReactElement => {
+    // @ts-ignore children
     return <AllProjectsConnected {...{...props, children}} />;
 }
 

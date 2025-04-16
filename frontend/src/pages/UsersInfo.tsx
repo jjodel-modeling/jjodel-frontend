@@ -1,19 +1,18 @@
 import {DUser, SetRootFieldAction, Try} from '../joiner';
 import {Dashboard} from './components';
-import {useState} from "react";
+import {useEffect, useState} from "react";
 import {AdminApi} from "../api/persistance";
-import {useEffectOnce} from "usehooks-ts";
 
 type Props = {};
 function UsersInfoPage(props: Props) {
     const [users, setUsers] = useState<DUser[]>([]);
-    useEffectOnce(() => {
+    useEffect(() => {
         (async function() {
             SetRootFieldAction.new('isLoading', true);
             setUsers(await AdminApi.users());
             SetRootFieldAction.new('isLoading', false);
         })();
-    });
+    }, []);
 
     return(<Try>
         <Dashboard active={'UsersInfo'} version={{n: 0, date:'fake-date'}}>

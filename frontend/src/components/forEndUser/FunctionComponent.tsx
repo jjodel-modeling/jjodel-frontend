@@ -1,4 +1,4 @@
-import React, {Dispatch, ReactElement, ReactNode, useEffect, useState} from 'react';
+import React, {Dispatch, JSX, ReactElement, ReactNode, useEffect, useState} from 'react';
 import {connect} from "react-redux";
 import type {Dictionary, DocString, GObject, DState, LViewElement, Pointer, Info} from "../../joiner";
 import {Log, LPointerTargetable, U} from "../../joiner";
@@ -350,7 +350,10 @@ export const FunctionConnected = connect<StateProps, DispatchProps, OwnProps, DS
 )(FunctionComponent);
 */
 // export const Function = (props: OwnProps, children: (string | React.Component)[] = []): ReactElement => (<FunctionConnected {...{...props, children}} />);
-export const Function = (props: OwnProps, children: (string | React.Component)[] = []): ReactElement => (<FunctionComponent {...{...props, children}} tooltip={true} />);
+export const Function = (props: OwnProps, children:ReactNode = []): ReactElement => {
+    // @ts-ignore children
+    return (<FunctionComponent {...{...props, children}} tooltip={true} />);
+}
 
 Function.cname = "FunctionComponent";
 // FunctionConnected.cname = "FunctionComponent_Connected";

@@ -1,6 +1,6 @@
 import {DState, DViewElement, Input, LPointerTargetable, LViewElement, Overlap, Pointer} from "../../../../joiner";
 import {FakeStateProps} from "../../../../joiner/types";
-import {Dispatch} from "react";
+import {Dispatch, JSX} from "react";
 import {connect} from "react-redux";
 import './permissions.scss';
 

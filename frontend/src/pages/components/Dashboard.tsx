@@ -18,7 +18,7 @@ import {
 import {LeftBar, Navbar} from './';
 
 import '../dashboard.scss'
-import {ReactElement, useRef} from "react";
+import {JSX, ReactElement, useRef} from "react";
 import {Btn, CommandBar, Sep} from '../../components/commandbar/CommandBar';
 
 import colors from '../../static/img/colors.png';
@@ -74,8 +74,8 @@ const Title = (props: TitleProps) => {
     //if (!editTitle && title !== props.title) setTitle(props.title);
     //if (!editDes && description !== props.description) setDescription(props.description);
 
-    const titleRef = useRef();
-    const desRef = useRef();
+    const titleRef = useRef<HTMLElement>(null);
+    const desRef = useRef<HTMLElement>(null);
 
     const ProjectProperties = () => {
 

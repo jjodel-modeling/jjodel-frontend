@@ -62,7 +62,7 @@ export class Debug {
         let callbacks: any = {checkCompletionFunction, checkDelayMin, additionalDelayMax: diff, times, disableConsole};
         callbacks.startTime = new Date();
         if(disableConsole) windoww.Log.disableConsole();
-        let lmodel = (LPointerTargetable.wrap(state.idlookup[ state.models[0] ]) as LModel);
+        let lmodel = (LPointerTargetable.wrap(state.idlookup[ state.models[0] ]) as any as LModel);
         for (let i = 0; i < times; i++){
             lmodel.addChild("Class");
         }
@@ -81,8 +81,8 @@ export class Debug {
         if(disableConsole) windoww.Log.disableConsole();
 
         let state = windoww.s();
-        let lmodel = (LPointerTargetable.wrap(state.idlookup[ state.models[1] ]) as LModel);
-        let lclass = LPointerTargetable.wrap(state.classs.map((cid: string)=>state.idlookup[cid]).filter((c:DClass) => c.name === metaclassName)[0]) as LClass;
+        let lmodel = (LPointerTargetable.wrap(state.idlookup[ state.models[1] ]) as any as LModel);
+        let lclass = LPointerTargetable.wrap(state.classs.map((cid: string)=>state.idlookup[cid]).filter((c:DClass) => c.name === metaclassName)[0]) as any as LClass;
         for (let i = 0; i < times; i++) {
             lmodel.addObject(lclass?.id);
         }

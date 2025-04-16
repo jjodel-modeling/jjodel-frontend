@@ -1,4 +1,4 @@
-import React, {Component, CSSProperties, PureComponent, ReactChild, ReactElement, ReactNode} from "react";
+import React, {Component, CSSProperties, PureComponent, ReactElement, ReactNode} from "react";
 import {DGraphElement, Dictionary, GObject, GraphSize, LGraph, Log, RuntimeAccessible, Size, TRANSACTION, U} from "../../joiner";
 import $ from "jquery";
 /// <reference path="../../common/libraries/jqui-types.ts" />
@@ -391,7 +391,7 @@ export class MeasurableComponent extends Component<MeasurableAllProps, Measurabl
             Log.ee("Measurable can have only 1 subelement and it cannot be an array or a <>React.fragment</>", child, this.props);
             return child; }
 
-        let oldProps = child.props;
+        let oldProps: GObject = child.props as any;
         let newProps = {
             ref: (html: Element | null)=>{
                 if (html && !U.isHtmlNode(html)) {
@@ -451,13 +451,13 @@ export class ScrollableComponent extends Component<ScrollOwnProps, ScrollState>{
 
 // private
 interface ScrollOwnProps {
-    children: ReactChild[] | ReactChild;
+    children: ReactNode;
     className?: string;
     graph: LGraph;
 }
 interface MeasurableOwnProps {
     isPanning?: LGraph;
-    children: ReactChild[] | ReactChild;
+    children: ReactNode[] | ReactNode;
     //dragOptions?: Options;
     //drag?: Options;
     draggable?: JQueryUI.DraggableOptions | boolean;
@@ -553,7 +553,7 @@ export function Scrollable(props: MeasurableAllProps, children?: any): ReactElem
     // @ts-ignore
     return <ScrollableComponent {...{...props}}>{props.children||children}</ScrollableComponent>;
 }/*
-export function InfiniteScroll(props: MeasurableAllProps, children: ReactChild[] = []): ReactElement {
+export function InfiniteScroll(props: MeasurableAllProps, children: ReactNode = []): ReactElement {
     return <InfiniteScrollComponent {...{...props, children}}>{children}</InfiniteScrollComponent>;
 }*/
 

@@ -30,7 +30,7 @@ export class SaveManager {
     private static tmpsave: DState;
 
     static save(): void {
-        let project = LUser.fromPointer(DUser.current)?.project;
+        let project = (LUser.fromPointer(DUser.current) as LUser).project;
         if (project) ProjectsApi.save(project);
         U.isProjectModified = false;
         /*SaveManager.tmpsave = store.getState();

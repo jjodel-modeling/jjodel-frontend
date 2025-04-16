@@ -1,7 +1,7 @@
 import {DState, DUser, LUser, Try} from '../joiner';
 import {Dashboard} from './components';
 import {FakeStateProps, windoww} from '../joiner/types';
-import React, {Component, Dispatch, ReactElement} from "react";
+import React, {Component, Dispatch, JSX, ReactElement, ReactNode} from "react";
 import {connect} from "react-redux";
 import { Edit, EditCountry } from './components/Edit/Edit';
 import { UsersApi } from '../api/persistance';
@@ -264,7 +264,8 @@ const AllProjectsConnected = connect<StateProps, DispatchProps, OwnProps, DState
     mapDispatchToProps
 )(AccountComponent);
 
-const AccountPage = (props: OwnProps, children: (string | Component)[] = []): ReactElement => {
+const AccountPage = (props: OwnProps, children: ReactNode = []): ReactElement => {
+    // @ts-ignore children
     return <AllProjectsConnected {...{...props, children}} />;
 }
 

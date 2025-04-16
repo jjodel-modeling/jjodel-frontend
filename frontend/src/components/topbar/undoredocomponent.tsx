@@ -1,4 +1,4 @@
-import React, {Dispatch, PureComponent, ReactNode} from 'react';
+import React, {Dispatch, JSX, PureComponent, ReactNode} from 'react';
 import {
     Dictionary, DUser,
     GObject, DState,
@@ -231,8 +231,8 @@ export class SaveManagerComponent extends PureComponent<AllProps, ThisState>{
     undoleave = ()=>{ this.setState({undo: {...this.state.undo, hover: false}}); }
     redoleave = ()=>{ this.setState({redo: {...this.state.redo, hover: false}}); }
 
-    constructor(props: AllProps, context: any) {
-        super(props, context);
+    constructor(props: AllProps, context?: any) {
+        super(props);
         let undo = new UndoRedoState(<div>undo list example</div>);
         let redo = new UndoRedoState(<div>redo list example</div>);
         this.state = {undo, redo, user: DUser.current};

@@ -16,7 +16,7 @@ import {
     windoww
 } from '../../joiner';
 import {FakeStateProps} from '../../joiner/types';
-import React, {Component, Dispatch, PureComponent, ReactElement, ReactNode} from 'react';
+import React, {Component, Dispatch, JSX, PureComponent, ReactElement, ReactNode} from 'react';
 import {connect} from 'react-redux';
 
 import './style.scss'; // <-- tenuto per retro-compatibilità ma dovrebbe sparire
@@ -26,6 +26,7 @@ import ReactDOM from "react-dom";
 import {Empty} from "./Empty";
 import {Tooltip} from "../forEndUser/Tooltip";
 
+import { createRoot } from "react-dom/client";
 const Convert = require('ansi-to-html');
 
 let ansiConvert = (window as any).ansiConvert;
@@ -162,7 +163,7 @@ class ConsoleComponent extends PureComponent<AllProps, ThisState>{
     // textarea: HTMLTextAreaElement | null = null;
     getClickableEntry(jsxComments: Dictionary<string, ReactNode>, strcomments: Dictionary<string, Info>, expression: string, k: string, arr?: any): JSX.Element{
         let isReactNode = !!jsxComments[k];
-        let infoof_tooltip: string | ReactNode;
+        let infoof_tooltip: ReactNode;
         if (isReactNode){
             infoof_tooltip = <span id={'console_output_comment_key_' + k} className='my-tooltip output-comment tooltip-msg'/>;//jsxComments[k];
         } else {
@@ -371,10 +372,10 @@ class ConsoleComponent extends PureComponent<AllProps, ThisState>{
                 if (hiddenkeys.includes(key)) continue;
                 let commentNode: HTMLElement | null = document.getElementById("console_output_comment_"+key);
                 Log.eDev(!commentNode, "failed to find comment placeholder", {key, v:jsxComments[key], jsxComments});
-                if (commentNode) ReactDOM.render(jsxComments[key], commentNode);
+                if (commentNode) createRoot(commentNode).render(jsxComments[key]);
                 // for shortcut or context keys, this can fail without warning as some shortcuts are missing
                 commentNode = document.getElementById("console_output_comment_key_"+key);
-                if (commentNode) ReactDOM.render(jsxComments[key], commentNode);
+                if (commentNode) createRoot(commentNode).render(jsxComments[key]);
             } }
             catch (e) { console.error("failed to inject console output comment:", e)}
         }
@@ -444,11 +445,11 @@ class ConsoleComponent extends PureComponent<AllProps, ThisState>{
             {/*<label>Query {(this.state.expression)}</label>*/}
             <hr className={'mt-1 mb-1'}/>
             {this.state.expression && ashtml && <div className={"console-output-container console-msg"}
-                                                     ref={(e) => this.outputhtml = e}
+                                                     ref={(e) => { this.outputhtml = e; }}
                                                      dangerouslySetInnerHTML={ashtml ? {__html: outstr as string} : undefined}/>}
 
             {this.state.expression && !ashtml && <div className={"console-output-container console-msg"}
-                                                      ref={(e) => this.outputhtml = e}
+                                                      ref={(e) => { this.outputhtml = e; }}
                                                       style={{whiteSpace: "pre"}}>{outstr}</div>}
 
 
@@ -508,7 +509,8 @@ export const ConsoleConnected = connect<StateProps, DispatchProps, OwnProps, DSt
     mapDispatchToProps
 )(ConsoleComponent);
 
-export const Console = (props: OwnProps, children: (string | Component)[] = []): ReactElement => {
+export const Console = (props: OwnProps, children: ReactNode = []): ReactElement => {
+    // @ts-ignore children
     return <ConsoleConnected {...{...props, children}} />;
 }
 export default Console;

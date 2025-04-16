@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, MouseEventHandler, ReactNode, ReactHTML } from "react";
+import React, { useState, useRef, useEffect, MouseEventHandler, ReactNode} from "react";
 import "./modal.scss";
 
 function useClickOutside(ref: any, onClickOutside: any) {

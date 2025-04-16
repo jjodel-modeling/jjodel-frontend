@@ -16,11 +16,11 @@ import {Btn, CommandBar} from '../../commandbar/CommandBar';
 
 function JavascriptEditorComponent(props: AllProps) {
     let {placeHolder, height, title, jsxLabel, data, field} = props;
-    let getter = ((): string => data && field && (data as any)[field]) || props.getter;
-    let setter = ((val: string) => {
-        data && field && ((data as any)[field] = val)
+    let getter = props.getter || ((): string => data as any && field as any && (data as any)[field as string]);
+    let setter = props.setter || ((val: string) => {
+        if (data && field) (data as any)[field] = val;
         return;
-    }) || props.setter;
+    });
     const [js, setJs] = useStateIfMounted(getter());
     const [show, setShow] = useStateIfMounted(props.hide === false ? false : true);
 
@@ -142,7 +142,8 @@ export const JavascriptEditorConnected = connect<StateProps, DispatchProps, OwnP
     mapDispatchToProps
 )(JavascriptEditorComponent);
 
-export const JavascriptEditor = (props: OwnProps, children: (string | React.Component)[] = []): ReactElement => {
+export const JavascriptEditor = (props: OwnProps, children: ReactNode = []): ReactElement => {
+    // @ts-ignore children
     return <JavascriptEditorConnected {...{...props, children}} />;
 }
 

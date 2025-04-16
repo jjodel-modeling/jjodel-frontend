@@ -1,4 +1,4 @@
-import React, {Dispatch, ReactElement} from "react";
+import React, {Dispatch, ReactElement, ReactNode} from "react";
 import {connect} from "react-redux";
 import {DModel, Pointer, Try, U} from "../../../joiner";
 import {
@@ -88,7 +88,8 @@ export const MetamodelTabConnected = connect<StateProps, DispatchProps, OwnProps
     mapDispatchToProps
 )(MetamodelTabComponent);
 
-export const MetamodelTab = (props: OwnProps, children: (string | React.Component)[] = []): ReactElement => {
+export const MetamodelTab = (props: OwnProps, children: ReactNode[] = []): ReactElement => {
+    // @ts-ignore children
     return <MetamodelTabConnected {...{...props, children}} />;
 }
 export default MetamodelTab;

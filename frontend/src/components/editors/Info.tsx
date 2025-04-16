@@ -12,7 +12,7 @@ import {
     Selectors, SetFieldAction, store, TRANSACTION, U, ValueDetail
 } from '../../joiner';
 import {FakeStateProps} from '../../joiner/types';
-import React, {Component, Dispatch, ReactElement, ReactNode} from 'react';
+import React, {Component, Dispatch, JSX, ReactElement, ReactNode} from 'react';
 import {connect} from 'react-redux';
 import './editors.scss';
 import './info.scss';
@@ -512,7 +512,8 @@ export const InfoConnected = connect<StateProps, DispatchProps, OwnProps, DState
     mapDispatchToProps
 )(InfoComponent);
 
-export const Info = (props: OwnProps, children: (string | Component)[] = []): ReactElement => {
+export const Info = (props: OwnProps, children: ReactNode = []): ReactElement => {
+    // @ts-ignore children
     return <InfoConnected {...{...props, children}} />;
 }
 export default Info;

@@ -9,16 +9,10 @@ interface ThisState {
     listAllStateVariables: boolean,
 }
 
-class ExampleComponent_disconnected extends PureComponent<AllProps, ThisState>{
-    static cname: string;
-    constructor(props: AllProps, context: any) {
-        super(props, context);
-    }
-
-    render(): ReactNode {
+function ExampleComponent_disconnected(props: AllProps): ReactNode {
         return (<>
                 <div/>
-            </>); }
+            </>);
     }
 
 // private

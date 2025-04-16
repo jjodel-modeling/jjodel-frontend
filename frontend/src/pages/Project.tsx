@@ -1,4 +1,4 @@
-import React, {Dispatch, ReactElement, useEffect,  useState} from 'react';
+import React, {Dispatch, JSX, ReactElement, ReactNode, useEffect, useState} from 'react';
 import {connect} from 'react-redux';
 import {
     CreateElementAction,
@@ -26,7 +26,6 @@ import Storage from "../data/storage";
 import Loader from '../components/loader/Loader';
 import {Navbar} from "./components";
 import {CSS_Units} from "../view/viewElement/view";
-import {useEffectOnce} from "usehooks-ts";
 
 function ProjectComponent(props: AllProps): JSX.Element {
     const {user} = props;
@@ -152,7 +151,8 @@ export const ProjectConnected = connect<StateProps, DispatchProps, OwnProps, DSt
     mapDispatchToProps
 )(ProjectComponent);
 
-const ProjectPage = (props: OwnProps, children: (string | React.Component)[] = []): ReactElement => {
+const ProjectPage = (props: OwnProps, children: ReactNode = []): ReactElement => {
+    // @ts-ignore children
     return <ProjectConnected {...{...props, children}} />;
 }
 

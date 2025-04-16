@@ -406,7 +406,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
 
     countRenders: number;
     _isMounted: boolean;
-    html: React.RefObject<HTMLElement | undefined>;
+    html: React.RefObject<HTMLElement | null>;
     lastViewChanges: {t: number, vid: Pointer<DViewElement>, v: LViewElement, key?: string}[];
     lastOnUpdateChanges: {t: number}[];
     stopUpdateEvents?: number; // undefined or view.clonedCounter;
@@ -581,8 +581,8 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         })
     }
 
-    constructor(props: AllProps, context: any) {
-        super(props, context);
+    constructor(props: AllProps, context?: any) {
+        super(props);
         this.lastViewChanges = [];
         this.lastOnUpdateChanges = []
         this.stopUpdateEvents = undefined;
@@ -591,7 +591,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         this.id = GraphElementComponent.maxid++;
         GraphElementComponent.all[this.id] = this;
         GraphElementComponent.map[props.nodeid as Pointer<DGraphElement>] = this; // props might change at runtime, setting in constructor is not enough
-        this.html = React.createRef();
+        this.html = React.createRef<HTMLElement>();
         let functionsToBind = [this.onClick,
             this.onLeave, this.onEnter,
             this.doContextMenu, this.onContextMenu,
@@ -1318,7 +1318,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
                 // rawRElement = React.cloneElement(rawRElement, {children: [...makeItArray(rawRElement.props.children), ...makeItArray(injectProps.children)]});
                 // console.log('rendering view stack fixing doubles', {v0:rnode, v1:rawRElement, fixed:rawRElement.props.children})
                 fixdoubleroot = false; // need to set the props to new root in that case.
-                if (fixdoubleroot) rawRElement = rawRElement.props.children;
+                if (fixdoubleroot) rawRElement = (rawRElement.props as any).children;
                 // debug.rawRElementPostfixdoubleroot = {node:rawRElement, text: getNodeText(rawRElement)};
                 // console.log("probem", {rawRElement, children:(rawRElement as any)?.children, pchildren:(rawRElement as any)?.props?.children});
             } catch (e: any) {
@@ -1372,7 +1372,8 @@ const GraphElementConnected = connect<GraphElementReduxStateProps, GraphElementD
     GraphElementComponent.mapDispatchToProps
 )(GraphElementComponent as any);
 
-export const GraphElement = (props: GraphElementOwnProps, children: (string | React.Component)[] = []): ReactElement => {
+export const GraphElement = (props: GraphElementOwnProps, children: ReactNode = []): ReactElement => {
+    // @ts-ignore children
     return <GraphElementConnected {...{...props, children}} />; }
 // console.info('graphElement loaded');
 

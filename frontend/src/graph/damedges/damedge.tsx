@@ -41,7 +41,7 @@ export class EdgeComponent<AllProps extends AllPropss = AllPropss, ThisState ext
     public static cname: string = "EdgeComponent";
     static defaultProps: Partial<EdgeOwnProps> = EdgeOwnProps.new();
 
-    constructor(props: AllProps, context: any) {
+    constructor(props: AllProps, context?: any) {
         super(props, context);
     }
 /*
@@ -122,7 +122,8 @@ export const EdgeConnected = connect<EdgeStateProps, DispatchProps, EdgeOwnProps
     mapDispatchToProps
 )(EdgeComponent as any);
 
-export const Edge = (props: EdgeOwnProps, children: (string | React.Component)[] = []): ReactElement => {
+export const Edge = (props: EdgeOwnProps, children: ReactNode = []): ReactElement => {
+    // @ts-ignore children
     return <EdgeConnected {...{...props, children}}
                           isGraph={false} isGraphVertex={false} isVertex={false} isEdgePoint={false} isField={false} isEdge={true} isVoid={false} />;
 }

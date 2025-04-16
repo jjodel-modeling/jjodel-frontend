@@ -1,6 +1,6 @@
 /* Viewpoints */
 
-import React, {Dispatch, ReactElement, useState} from 'react';
+import React, {Dispatch, JSX, ReactElement, ReactNode, useState} from 'react';
 import {connect} from 'react-redux';
 import {
     DPointerTargetable,
@@ -258,6 +258,7 @@ export const NestedViewConnected = connect<StateProps, DispatchProps, OwnProps, 
     mapDispatchToProps
 )(NestedViewComponent);
 
-export const NestedView = (props: OwnProps, children: (string | React.Component)[] = []): ReactElement => {
+export const NestedView = (props: OwnProps, children: ReactNode = []): ReactElement => {
+    // @ts-ignore children
     return <NestedViewConnected {...{...props, children}} />;
 }

@@ -1,6 +1,6 @@
 import {DPointerTargetable, LClass, LModel, Defaults, U, Input} from '../../joiner';
 import {DState, GObject, LEnumerator, LPointerTargetable, Overlap, Pointer} from '../../joiner';
-import React, {Dispatch, LegacyRef, ReactElement, ReactNode} from 'react';
+import React, {Dispatch, JSX, LegacyRef, ReactElement, ReactNode} from 'react';
 import {connect} from 'react-redux';
 import {useStateIfMounted} from 'use-state-if-mounted';
 import './inputselect.scss';
@@ -126,7 +126,7 @@ function SelectorComponent(props: AllProps) {
 
     let get_options = getOptions();
 
-    let select = (<select {...otherprops} className={className + ' model-select'} disabled={readOnly} placeholder={'-----'}
+    let select = (<select {...otherprops} className={className + ' model-select'} disabled={readOnly}
             style={props.inputStyle}
             value={value}
             onChange={SelectorChange}>
@@ -192,7 +192,8 @@ export const SelectorConnected = connect<StateProps, DispatchProps, SelectorOwnP
     mapDispatchToProps
 )(SelectorComponent);
 
-export const Selector = (props: SelectorOwnProps, children: (string | React.Component)[] = []): ReactElement => {
+export const Selector = (props: SelectorOwnProps, children: ReactNode = []): ReactElement => {
+    // @ts-ignore children
     return <SelectorConnected {...{...props, children}} />;
 }
 

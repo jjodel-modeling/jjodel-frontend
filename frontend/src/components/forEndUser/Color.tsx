@@ -138,7 +138,8 @@ export const ColorConnected =
     connect<StateProps, DispatchProps, InputOwnProps, DState>(mapStateToProps, mapDispatchToProps)(ColorComponent);
 
 
-export function Color(props: InputOwnProps, children: (string | React.Component)[] = []): ReactElement {
+export function Color(props: InputOwnProps, children: ReactNode = []): ReactElement {
+    // @ts-ignore children
     return <ColorConnected {...{...props, children}} />;
 }
 

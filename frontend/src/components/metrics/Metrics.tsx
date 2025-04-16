@@ -23,7 +23,7 @@ import { CommandBar, Btn } from "../commandbar/CommandBar";
 import { SetRootFieldAction } from "../../joiner";
 import './metrics.scss';
 import { int } from "../../joiner/types";
-import ReactDOM from "react-dom";
+import {createRoot} from "react-dom/client";
 
 type MetricsProps = {
     data: LModelElement;
@@ -70,7 +70,7 @@ class MetricsPanelManager {
         if (!document) return;
         
         const metricsElement = document.createElement('div');
-        ReactDOM.render(React.createElement(MetricsPanel, {data: model}), metricsElement);
+        createRoot(metricsElement).render(React.createElement(MetricsPanel, {data: model}));
         document.body.append(metricsElement);
     }
 }

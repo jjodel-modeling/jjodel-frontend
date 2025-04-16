@@ -1,5 +1,5 @@
 import {Action, CompositeAction, DState, DUser, GObject, LUser, SetRootFieldAction, store, U} from '../../joiner';
-import {Component, Dispatch, ReactElement, useState} from 'react';
+import {Component, Dispatch, ReactElement, ReactNode, useState} from 'react';
 import {connect} from 'react-redux';
 import {FakeStateProps} from "../../joiner/types";
 import WebSockets from "../../webSockets/WebSockets";
@@ -77,7 +77,8 @@ export const MqttEditorConnected = connect<StateProps, DispatchProps, OwnProps, 
     mapDispatchToProps
 )(MqttEditorComponent);
 
-export const Mqtt = (props: OwnProps, children: (string | Component)[] = []): ReactElement => {
+export const Mqtt = (props: OwnProps, children: ReactNode = []): ReactElement => {
+    // @ts-ignore children
     return <MqttEditorConnected {...{...props, children}} />;
 }
 

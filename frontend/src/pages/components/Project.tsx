@@ -1,5 +1,5 @@
 import {DProject, LProject, R, U} from '../../joiner';
-import React from "react";
+import React, {JSX} from "react";
 
 import {ProjectsApi} from '../../api/persistance';
 import {Divisor, Item, Menu} from './menu/Menu';

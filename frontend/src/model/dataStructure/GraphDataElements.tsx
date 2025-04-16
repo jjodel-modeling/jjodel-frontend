@@ -46,7 +46,7 @@ import {
     windoww
 } from "../../joiner";
 import type {Tooltip} from "../../components/forEndUser/Tooltip";
-import type {RefObject} from "react";
+import {JSX, RefObject} from "react";
 import type {SVGPathElementt, SVGPathSegment} from '../../common/libraries/pathdata';
 import {EdgeGapMode, InitialVertexSize} from "../../joiner/types";
 import {Geom, ISize} from "../../common/Geom";
@@ -336,7 +336,7 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
     }
 
     get_innerGraph(context: Context): LGraph {
-        let dcurrent = DPointerTargetable.fromPointer(context.data.father);
+        let dcurrent: DGraphElement = DPointerTargetable.fromPointer(context.data.father);
 
         // if no parent, but it's a graph, return itself.
         if (!dcurrent) {
@@ -524,7 +524,7 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
     }
     get_html(c: Context): this["html"] {
         let component = this.get_component(c);
-        let html = component?.html.current;
+        let html: HTMLElement | null | undefined = component?.html.current;
         if (html) return html;
         html = document.getElementById(c.data.id);//$('[nodeid="' + c.data.id + '"]')[0];
         if (!html) return undefined;
@@ -569,7 +569,7 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
     * */
     get_zIndex(context: Context): this["zIndex"] { return (+context.data.zIndex || 0); }
     set_zIndex(val: this["zIndex"], c: Context): boolean {
-        val = +val ?? 0;
+        val = Number.isNaN(+val) ? 0 : +val;
         if (val === c.data.zIndex) return true;
         TRANSACTION(this.get_name(c)+'.zIndex', ()=> {
             SetFieldAction.new(c.data.id, "zIndex", val, undefined, false);
@@ -754,7 +754,7 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
         TRANSACTION(this.get_name(c)+'.father', ()=> {
             SetFieldAction.new(c.data, 'father', ptr, undefined, true);
             if (ptr) SetFieldAction.new(ptr as any, 'subElements+=', c.data.id);
-        }, this.get_father(c).name, L.fromPointer(ptr).name)
+        }, this.get_father(c).name, (L.fromPointer(ptr) as LGraphElement)?.name||'')
         return true; }
 
     __info_of__isselected: Info = {type: "Dictionary<Pointer<User>, true>",

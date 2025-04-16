@@ -33,7 +33,7 @@ type BtnProps = {
         | "settings"
         | "download";
 
-    tip?: string | ReactNode;
+    tip?: ReactNode;
     label?: string;
     theme?: "dark" | "light",
     action?: MouseEventHandler,

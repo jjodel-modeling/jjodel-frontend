@@ -1,4 +1,4 @@
-import React, {Dispatch, ReactElement} from "react";
+import React, {Dispatch, ReactElement, ReactNode} from "react";
 import {connect} from "react-redux";
 import {DModel, DPointerTargetable, Pointer, Try} from "../../../joiner";
 import {CreateElementAction, DGraph, DModelElement, DState, LGraph, LModel, LModelElement} from "../../../joiner";
@@ -63,7 +63,8 @@ export const ModelTabConnected = connect<StateProps, DispatchProps, OwnProps, DS
     mapDispatchToProps
 )(ModelTabComponent);
 
-export const ModelTab = (props: OwnProps, children: (string | React.Component)[] = []): ReactElement => {
+export const ModelTab = (props: OwnProps, children: ReactNode[] = []): ReactElement => {
+    // @ts-ignore children
     return <ModelTabConnected {...{...props, children}} />;
 }
 export default ModelTab;

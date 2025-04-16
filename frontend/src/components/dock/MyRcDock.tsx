@@ -142,7 +142,7 @@ export class TabHeader extends React.Component<TabHeaderProps, TabHeaderState>{
         function preventFocusOnOriginDock(e: any): void{
             e.stopPropagation(); // otherwise the pinned tab will focus the hidden-tab on original dock
         }
-        content = <div className={"active-on-mouseenter"} ref={(e) => this.html = e} onMouseDown={preventFocusOnOriginDock} onClick={preventFocusOnOriginDock} onMouseEnter={()=>this.onMouseHoverExpand()} onMouseLeave={()=>this.onMouseLeaveExpand()}>{content}</div>
+        content = <div className={"active-on-mouseenter"} ref={(e) => {this.html = e}} onMouseDown={preventFocusOnOriginDock} onClick={preventFocusOnOriginDock} onMouseEnter={()=>this.onMouseHoverExpand()} onMouseLeave={()=>this.onMouseLeaveExpand()}>{content}</div>
         return <><MyPortal container={html}>{content}</MyPortal><div className={"moved-content"}>moved</div></>;
     }
 }
@@ -284,10 +284,10 @@ export class PinnableStrip extends PureComponent<PinnableStripProps, PinnableStr
         const layout = this.layout;
         const groups = this.groups;
         return <div className={(Object.keys(this.tabs).length ? '' : 'empty') +" pinnable-strip pinnable-strip-" + this.props.side + (this.state.pinned ? ' pinned' : '')}
-                    ref={(curr)=>this.html = curr}>
+                    ref={(curr)=>{this.html = curr}}>
             <i className={"side-pin-btn bi bi-pin-angle" + (this.state.pinned ? '-fill' : '')} onClick={()=>this.setState({pinned: !this.state.pinned})} />
             {/* loadTab={(d)=>tabdict[d.id as string]} */}
-            <DockLayout key="thestripdock" ref={(e)=>this.dockLayout = e} defaultLayout={layout} groups={groups} style={{width: '100%', height: '100%'}} />
+            <DockLayout key="thestripdock" ref={(e)=>{this.dockLayout = e}} defaultLayout={layout} groups={groups} style={{width: '100%', height: '100%'}} />
             {/*<div className={"tab-row"} ref={(curr)=>this.headerHtml = curr}></div>
             <div className={"content-row"} ref={(curr)=>this.contentHtml = curr}></div>*/}
         </div>;
@@ -341,8 +341,8 @@ windoww.confirmSetAnchor = function(side: AnchorTypes){
         id,
         group: 'pinned',
         closable: false,
-        title: <div ref={(curr)=>tabdict_title[id] = curr}></div>,
-        content: <div ref={(curr)=>tabdict_content[id] = curr}></div>,
+        title: <div ref={(curr)=>{tabdict_title[id] = curr}}></div>,
+        content: <div ref={(curr)=>{tabdict_content[id] = curr}}></div>,
         //title: <TabHeader tid={tid()}>Structure</TabHeader>, content: <TabContent tid={tid()}><StructureEditor /></TabContent>
     };
     strip.setAfterUpdateCallback(()=>{
@@ -469,6 +469,7 @@ export class PinnableDock extends DockLayout{
     }
     getSiblings(tid: string): TabData[]{
         let tabdata = this.find(tid);
+        if (!tabdata) return [];
         let panel: PanelData = tabdata.parent as PanelData;
         return panel.tabs;
     }

@@ -173,14 +173,11 @@ function useClickOutside(ref: any, onClickOutside: any) {
     }, [ref, onClickOutside]);
 }
 
-function ToolBarComponent(props: AllProps, state: ThisState) {
+function ToolBarComponent(props: AllProps) {
 
     const node = props.node;
     let [pinned, setPinned] = useState(true);
     let [collapsed, setCollapsed] = useState(false);
-    let [position, setPosition] = useState([20, 50]);
-
-    const menuRef = useRef();
 
     /*useClickOutside(menuRef, () => {
         setCollapsed(true);
@@ -418,7 +415,8 @@ export const ToolBarConnected = connect<StateProps, DispatchProps, OwnProps, DSt
     mapDispatchToProps
 )(ToolBarComponent);
 
-export const ToolBar = (props: OwnProps, children: (string | React.Component)[] = []): ReactElement => {
+export const ToolBar = (props: OwnProps, children: ReactNode = []): ReactElement => {
+    // @ts-ignore children
     return <ToolBarConnected {...{...props, children}} />;
 }
 export default ToolBar;

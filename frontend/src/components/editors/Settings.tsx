@@ -1,6 +1,6 @@
 import {DState, Select} from '../../joiner';
 import {FakeStateProps} from '../../joiner/types';
-import React, {Component, Dispatch, ReactElement} from 'react';
+import React, {Component, Dispatch, ReactElement, ReactNode} from 'react';
 import {connect} from 'react-redux';
 import './style.scss';
 
@@ -46,7 +46,8 @@ export const SettingsConnected = connect<StateProps, DispatchProps, OwnProps, DS
     mapDispatchToProps
 )(SettingsComponent);
 
-export const Settings = (props: OwnProps, children: (string | Component)[] = []): ReactElement => {
+export const Settings = (props: OwnProps, children: ReactNode = []): ReactElement => {
+    // @ts-ignore children
     return <SettingsConnected {...{...props, children}} />;
 }
 export default Settings;

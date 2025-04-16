@@ -2,7 +2,7 @@ import {DModel, Input, LGraph, LModel, LPackage, LProject, Selectors, U} from '.
 import TabDataMaker from '../../../components/abstract/tabs/TabDataMaker';
 import DockManager from '../../../components/abstract/DockManager';
 import './style.scss';
-import React, {Dispatch, SetStateAction, useState} from 'react';
+import React, {Dispatch, JSX, SetStateAction, useState} from 'react';
 
 type Props = {project: LProject, setClicked: Dispatch<SetStateAction<string>>};
 function MetamodelPopup(props: Props): JSX.Element {

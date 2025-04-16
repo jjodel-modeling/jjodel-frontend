@@ -235,8 +235,8 @@ export class U {
     static async compressedState(id: Pointer<DProject>): Promise<string> {
         const state = store.getState();
         const idlookup: Record<Pointer<DPointerTargetable>, DPointerTargetable> = {};
-        for(const [pointer, object] of Object.entries(state.idlookup)) {
-            if(object.className === DProject.name && pointer !== id) continue;
+        for(const [pointer, object] of Object.entries(state.idlookup) as [Pointer, DPointerTargetable][]) {
+            if (object.className === DProject.name && pointer !== id) continue;
             idlookup[pointer] = object;
         }
         (state.idlookup[id] as DProject).state = '';
@@ -1435,7 +1435,7 @@ export class U {
         const wsexp = / *(.*) +\n/g;
         const contexp = /(<.+>)(.+\n)/g;
         xml = xml.replace(reg, '$1\n$2$3').replace(wsexp, '$1\n').replace(contexp, '$1\n$2');
-        const pad: string = '' || '\t';
+        const pad: string = '\t';
         let formatted = '';
         const lines = xml.split('\n');
         let indent = 0;
@@ -2478,7 +2478,8 @@ export class myFileReader {
                     }
                 });
             }
-        } || myFileReader.onchange;
+        }
+        // || myFileReader.onchange;
     }
     private static reset(): void {
         myFileReader.fileTypes = undefined as any;

@@ -328,7 +328,7 @@ export class DViewElement extends DPointerTargetable {
                 query = `context ${forData.className} inv: self.id = '${forData.id}'`;
                 break;
         }
-        const user = LUser.fromPointer(DUser.current);
+        const user = LUser.fromPointer(DUser.current) as LUser;
         // const project = user?.project; if(!project) return this;
         let name: string;
         const vp: LViewPoint = user?.project?.activeViewpoint || LPointerTargetable.fromPointer(Defaults.viewpoints[0]);

@@ -1,4 +1,4 @@
-import React, {Dispatch, ReactElement} from 'react';
+import React, {Dispatch, ReactElement, ReactNode} from 'react';
 import {connect} from 'react-redux';
 import {DState} from '../../redux/store';
 import type {
@@ -286,7 +286,8 @@ export const NodeEditorConnected = connect<StateProps, DispatchProps, OwnProps, 
     mapDispatchToProps
 )(NodeEditorComponent);
 
-export const NodeEditor = (props: OwnProps, children: (string | React.Component)[] = []): ReactElement => {
+export const NodeEditor = (props: OwnProps, children: ReactNode = []): ReactElement => {
+    // @ts-ignore children
     return <NodeEditorConnected {...{...props, children}} />;
 }
 export default NodeEditor;

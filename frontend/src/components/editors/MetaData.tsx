@@ -1,5 +1,5 @@
 import {DNamedElement, DState, GObject, LModelElement, LPointerTargetable, Overlap} from "../../joiner";
-import React, {Dispatch, ReactElement} from "react";
+import React, {Dispatch, ReactElement, ReactNode} from "react";
 import {connect} from "react-redux";
 
 type AllProps = Overlap<OwnProps, Overlap<StateProps, DispatchProps>>;
@@ -48,6 +48,7 @@ function mapDispatchToProps(dispatch: Dispatch<any>): DispatchProps {
 
 export const MetaDataConnected = connect<StateProps, DispatchProps, OwnProps, DState>(mapStateToProps, mapDispatchToProps)(MetaDataComponent);
 
-export function MetaData(props: OwnProps, children: (string | React.Component)[] = []): ReactElement {
+export function MetaData(props: OwnProps, children: ReactNode = []): ReactElement {
+    // @ts-ignore children
     return <MetaDataConnected {...{...props, children}} />;
 }

@@ -1,4 +1,4 @@
-import React, {Dispatch, PureComponent, ReactNode} from "react";
+import React, {Dispatch, JSX, PureComponent, ReactNode} from "react";
 import { connect } from "react-redux";
 import './example.scss';
 import {GObject, LModelElement, Log, Overlap} from "../../joiner";

@@ -234,8 +234,8 @@ export class Tooltip extends React.Component<AllProps, State> {
         const onMouseEnter = Tooltip.mergeEvents(c, 'onMouseEnter', this.onMouseEnter);
         const onMouseLeave = Tooltip.mergeEvents(c, 'onMouseLeave', this.onMouseLeave);
         let ref: Ref<Element> | undefined = undefined;
-        if (c.props.ref) {
-            const pref = c.props.ref;
+        if ((c.props as any).ref) {
+            const pref = (c.props as any).ref;
             switch(typeof pref){
                 case "object": this.childhtml = (pref as RefObject<Element>).current; break;
                 case "function": ref = (e: Element, ...a:any)=> { pref(e, a); this.childhtml = e;}; break;

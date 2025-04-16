@@ -72,7 +72,7 @@ export class MessageVisualizer extends React.Component<{}, MessageVisualizerStat
     private renderMessage(msg: MessageData, i: number){
         if (!msg) return null;
         if (msg.requireInteraction) this.requireInteraction = true;
-        let wrapper = <div key={msg.id} className={"splash-message " + msg.type} onClick={(e)=>this.onClick(e, i)}>{this.state.msg}</div>
+        let wrapper = <div key={msg.id} className={"splash-message " + msg.type} onClick={(e)=>this.onClick(e, i)}>{this.state.msg as any}</div>
         return wrapper;
     }
 
@@ -104,7 +104,7 @@ export class Message extends RuntimeAccessibleClass {
             return;
         }
         let msgs = [...MessageVisualizer.component.state.msg];
-        U.arrayRemoveAll(msgs, msg);
+        U.arrayRemoveAll(msgs, msg as any);
         if (msgs.length === MessageVisualizer.component.state.msg.length) return;
         MessageVisualizer.component.setState({msg:msgs});
     }

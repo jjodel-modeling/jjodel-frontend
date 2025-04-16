@@ -1,20 +1,19 @@
 import {Try} from "../components/forEndUser/Try";
 import {Dashboard} from "./components";
-import {useState} from "react";
+import {useEffect, useState} from "react";
 import {DProject, DUser, SetRootFieldAction} from "../joiner";
-import {useEffectOnce} from "usehooks-ts";
 import {AdminApi} from "../api/persistance";
 
 type Props = {};
 function ProjectsInfoPage(props: Props) {
     const [projects, setProjects] = useState<DProject[]>([]);
-    useEffectOnce(() => {
+    useEffect(() => {
         (async function() {
             SetRootFieldAction.new('isLoading', true);
             setProjects(await AdminApi.projects());
             SetRootFieldAction.new('isLoading', false);
         })();
-    });
+    }, []);
 
     return(<Try>
         <Dashboard active={'UsersInfo'} version={{n: 0, date:'fake-date'}}>

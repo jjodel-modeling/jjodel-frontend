@@ -1,4 +1,4 @@
-import React, {Dispatch, ReactElement} from "react";
+import React, {Dispatch, ReactElement, ReactNode} from "react";
 import {connect} from "react-redux";
 import {DProject, DState, DUser} from "../../../joiner";
 import {FakeStateProps} from "../../../joiner/types";
@@ -34,7 +34,8 @@ const TestTabConnected = connect<StateProps, DispatchProps, OwnProps, DState>(
     mapDispatchToProps
 )(TestTabComponent);
 
-const TestTab = (props: OwnProps, children: (string | React.Component)[] = []): ReactElement => {
+const TestTab = (props: OwnProps, children: ReactNode[] = []): ReactElement => {
+    // @ts-ignore children
     return <TestTabConnected {...{...props, children}} />;
 }
 export default TestTab;

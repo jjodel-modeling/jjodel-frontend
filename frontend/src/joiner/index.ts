@@ -1,7 +1,13 @@
+/*
+var mock = require('mock-require');
+mock('fs', { request: function(...args: any):any {
+        console.error('require fs result used', {args});
+    }});
+*/
 import * as jsxtt from 'jsx-transform/lib/jsx.js';
 import $$ from 'jquery';
 import {ReactNode} from "react";
-import Select from 'react-select'
+import MSelect from 'react-select'
 import * as _pr_json2xml from '../common/libraries/prj_json2xml.js';
 import * as _pr_xml2json from '../common/libraries/prj_xml2json.js';
 
@@ -11,9 +17,21 @@ import type {U as UType} from "../common/U";
 import type {Log as LogType} from "../common/Log";
 
 var pathDataPolyfill = require("path-data-polyfill") // needs to be required (and automatically executed) before the creation of any svg element
+
+
+/*
+let oldRequire = pathDataPolyfill.prototype.require;
+function newRequire(...args: any): any {
+    console.log('require', {args, arguments});
+    if (args[0] === 'fs') return {'fake_fs': true};
+    return oldRequire(...args);
+}
+pathDataPolyfill.prototype.require = newRequire;
+*/
+
 var windoww = (window as any);
 windoww.windoww = windoww;
-export const MultiSelect = Select;
+export const MultiSelect = MSelect;
 
 windoww.$ = $$;
 export const $: JQueryStatic = $$;

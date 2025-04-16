@@ -1,5 +1,5 @@
-import React, { useState, useRef, useEffect, MouseEventHandler, ReactNode, ReactHTML } from "react";
-import parse from 'html-react-parser';
+import React, { useState, useRef, useEffect, MouseEventHandler, ReactNode} from "react";
+
 import "./menu.scss";
 
 type MenuProps = {
@@ -79,7 +79,7 @@ export const Item = (props: ItemType) => {
                     : 
                     <i className="bi bi-app hidden"></i>
                 } 
-                {props.children} <span>{parse(props.keystroke)}</span>
+                {props.children} <span>{(props.keystroke)}</span>
             </div>
         } 
         {props.action && !props.keystroke &&  

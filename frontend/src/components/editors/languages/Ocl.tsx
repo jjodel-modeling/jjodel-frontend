@@ -1,4 +1,4 @@
-import React, {CSSProperties, Dispatch, ReactElement} from 'react';
+import React, {CSSProperties, Dispatch, ReactElement, ReactNode} from 'react';
 import {connect} from 'react-redux';
 import Editor from '@monaco-editor/react';
 import {DState, DViewElement, LViewElement, Pointer, Defaults} from '../../../joiner';
@@ -78,7 +78,8 @@ export const OclEditorConnected = connect<StateProps, DispatchProps, OwnProps, D
     mapDispatchToProps
 )(OclEditorComponent);
 
-export const OclEditor = (props: OwnProps, children: (string | React.Component)[] = []): ReactElement => {
+export const OclEditor = (props: OwnProps, children: ReactNode = []): ReactElement => {
+    // @ts-ignore children
     return <OclEditorConnected {...{...props, children}} />;
 }
 

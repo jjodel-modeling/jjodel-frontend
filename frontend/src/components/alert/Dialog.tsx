@@ -1,6 +1,6 @@
 import {DState, SetRootFieldAction} from '../../joiner';
 import {FakeStateProps, windoww} from '../../joiner/types';
-import React, {Component, Dispatch, ReactElement} from 'react';
+import React, {Component, Dispatch, ReactElement, ReactNode} from 'react';
 import {connect} from 'react-redux';
 import './style.scss';
 
@@ -86,7 +86,8 @@ export const DialogConnected = connect<StateProps, DispatchProps, OwnProps, DSta
     mapDispatchToProps
 )(DialogComponent);
 
-export const DialogVisualizer = (props: OwnProps, children: (string | Component)[] = []): ReactElement => {
+export const DialogVisualizer = (props: OwnProps, children: ReactNode = []): ReactElement => {
+    // @ts-ignore children
     return <DialogConnected {...{...props, children}} />;
 }
 export default DialogVisualizer;

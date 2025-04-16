@@ -126,7 +126,8 @@ export const JsEditorConnected = connect<StateProps, DispatchProps, OwnProps, DS
     mapDispatchToProps
 )(JsEditorComponent);
 
-export const JsEditor = (props: OwnProps, children: (string | React.Component)[] = []): ReactElement => {
+export const JsEditor = (props: OwnProps, children: ReactNode = []): ReactElement => {
+    // @ts-ignore children
     return <JsEditorConnected {...{...props, children}} />;
 }
 

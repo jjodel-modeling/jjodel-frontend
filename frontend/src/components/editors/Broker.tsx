@@ -100,7 +100,8 @@ export const BrokerEditorConnected = connect<StateProps, DispatchProps, OwnProps
     mapDispatchToProps
 )(BrokerEditorComponent);
 
-export const BrokerEditor = (props: OwnProps, children: (string | React.Component)[] = []): ReactElement => {
+export const BrokerEditor = (props: OwnProps, children: ReactNode = []): ReactElement => {
+    // @ts-ignore children
     return <BrokerEditorConnected {...{...props, children}} />;
 }
 

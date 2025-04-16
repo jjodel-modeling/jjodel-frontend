@@ -1,6 +1,6 @@
 import {DState, LProject, windoww} from '../../../joiner';
 import {DUser, LModel, LUser} from '../../../joiner';
-import React, {Dispatch, ReactElement} from 'react';
+import React, {Dispatch, ReactElement, ReactNode} from 'react';
 import {connect} from 'react-redux';
 import type {Dictionary, FakeStateProps} from '../../../joiner/types';
 import DockManager from "../DockManager";
@@ -82,7 +82,7 @@ type AllProps = OwnProps & StateProps & DispatchProps;
 
 function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     const ret: StateProps = {} as FakeStateProps;
-    const luser = LUser.fromPointer(DUser.current, state);
+    const luser = LUser.fromPointer(DUser.current, state) as any as LUser;
     ret.project = luser.project as LProject;
     return ret;
 }
@@ -98,7 +98,8 @@ export const InfoTabConnected = connect<StateProps, DispatchProps, OwnProps, DSt
     mapDispatchToProps
 )(InfoTabComponent);
 
-export const InfoTab = (props: OwnProps, children: (string | React.Component)[] = []): ReactElement => {
+export const InfoTab = (props: OwnProps, children: ReactNode[] = []): ReactElement => {
+    // @ts-ignore children
     return <InfoTabConnected {...{...props, children}} />;
 }
 export default InfoTab;

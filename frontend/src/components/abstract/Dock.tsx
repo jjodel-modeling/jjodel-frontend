@@ -1,5 +1,5 @@
 import './style.scss';
-import {Dispatch, ReactElement} from 'react';
+import {Dispatch, ReactElement, ReactNode} from 'react';
 import {connect} from 'react-redux';
 import {DState, DUser, LProject, LUser} from '../../joiner';
 import {FakeStateProps, windoww} from '../../joiner/types';
@@ -84,7 +84,7 @@ function DockComponent(props: AllProps) {
     if (false && user?.project?.type === 'collaborative') tabs.push(permissions);
     layout.dockbox.children.push({tabs});
 
-    return (<PinnableDock key={''+advanced} ref={dock => DockManager.dock = dock} defaultLayout={layout} groups={groups} />);
+    return (<PinnableDock key={''+advanced} ref={dock => { DockManager.dock = dock }} defaultLayout={layout} groups={groups} />);
 }
 interface OwnProps {}
 interface StateProps {
@@ -113,7 +113,8 @@ export const DockConnected = connect<StateProps, DispatchProps, OwnProps, DState
     mapDispatchToProps
 )(DockComponent);
 
-const Dock = (props: OwnProps, children: (string | React.Component)[] = []): ReactElement => {
+const Dock = (props: OwnProps, children: ReactNode = []): ReactElement => {
+    // @ts-ignore children
     return <DockConnected {...{...props, children}} />;
 }
 

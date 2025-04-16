@@ -5,7 +5,7 @@ import "./control.scss";
 import { useStateIfMounted } from "use-state-if-mounted";
 import { Tooltip } from "./Tooltip";
 import { VertexOwnProps } from "../../graph/graphElement/sharedTypes/sharedTypes";
-import { useEffectOnce } from "usehooks-ts";
+
 
 
 /* Notification */
@@ -169,11 +169,11 @@ const SliderComponent = (props: SliderProps) => {
     const defaultValue = props.defaultValue ? props.defaultValue : max;
     const name = props.name;
 
-    useEffectOnce(
+    useEffect(
         () => {
-            {/* @ts-ignore */}
+            // @ts-ignore
             props.node.state = {[name] : defaultValue};
-        }
+        }, [/*name, defaultValue*/]
     );
 
     function updateValue(value: number) {
@@ -234,11 +234,11 @@ const ToggleComponent = (props: ToggleProps) => {
 
     const labels = props.labels ? props.labels : {true: 'On', false: 'Off'};
 
-    useEffectOnce(
+    useEffect(
         () => {
-            {/* @ts-ignore */}
+            // @ts-ignore
             props.node.state = {[props.name] : defaultValue};
-        }
+        }, [/*props.name, defaultValue*/]
     );
 
     function updateValue(value: boolean) {

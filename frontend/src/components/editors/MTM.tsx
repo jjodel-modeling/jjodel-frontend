@@ -1,7 +1,7 @@
 import type * as monaco from "monaco-editor";
 import {DState, Input, LPointerTargetable, Overlap, Pointer} from "../../joiner";
 import {FakeStateProps} from "../../joiner/types";
-import React, {Dispatch, useState} from "react";
+import React, {Dispatch, JSX, useState} from "react";
 import {connect} from "react-redux";
 import {DModelElement, LModelElement} from "../../model/logicWrapper";
 import './mtm.scss';

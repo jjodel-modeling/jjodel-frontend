@@ -3,7 +3,7 @@ import {Dashboard} from './components';
 
 import {Cards, Card} from './components/cards/Cards';
 import {Catalog} from './components/catalog/Catalog';
-import {ReactNode, useState} from "react";
+import {JSX, ReactNode, useState} from "react";
 import "./DashStyles/updates.scss"
 
 type keys = 'fix' | 'newbug' | 'opt' | 'feat' | 'info';

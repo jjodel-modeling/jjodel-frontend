@@ -1,6 +1,6 @@
 import {DState, SetRootFieldAction} from '../../joiner';
 import {FakeStateProps} from '../../joiner/types';
-import React, {Component, Dispatch, ReactElement} from 'react';
+import React, {Component, Dispatch, ReactElement, ReactNode} from 'react';
 import {connect} from 'react-redux';
 import './style.scss';
 
@@ -75,7 +75,8 @@ export const AlertConnected = connect<StateProps, DispatchProps, OwnProps, DStat
     mapDispatchToProps
 )(AlertComponent);
 
-export const AlertVisualizer = (props: OwnProps, children: (string | Component)[] = []): ReactElement => {
+export const AlertVisualizer = (props: OwnProps, children: ReactNode[] = []): ReactElement => {
+    // @ts-ignore children
     return <AlertConnected {...{...props, children}} />;
 }
 export default AlertVisualizer;

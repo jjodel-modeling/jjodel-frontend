@@ -7,6 +7,13 @@ module.exports = (env) => {
     const dotenvFilename = isProduction ? '.env.production' : '.env.development';
 
     return {
+        resolve: {
+            fallback: {
+                //path: require.resolve("path-browserify"),
+                fs: require.resolve('browserify-fs'),
+            }
+
+        },
         stats: {// disables console.warn with eslint-like messages in browser
             logging: 'none'//'error',
         },

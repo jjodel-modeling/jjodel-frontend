@@ -1,4 +1,4 @@
-import React, {Dispatch, KeyboardEvent, LegacyRef, ReactElement, ReactNode, useRef} from 'react';
+import React, {Dispatch, JSX, KeyboardEvent, LegacyRef, ReactElement, ReactNode, useRef} from 'react';
 import {connect} from 'react-redux';
 import {DState} from '../../redux/store';
 import {
@@ -447,8 +447,8 @@ export interface InputOwnProps {
     // DANGER: use the data provided in parameters instead of using js closure, as the proxy accessed from using closure won't be updated in rerenders.
     getter?: (data: any/*LPointerTargetable*/, field: string) => string | boolean | undefined;
     setter?: (value: string|boolean, data: any, field: string) => void;
-    label?: string | ReactNode;
-    postlabel?: string | ReactNode;
+    label?: ReactNode;
+    postlabel?: ReactNode;
     jsxLabel?: ReactNode; // @deprecated, use label
     type?: 'checkbox'|'color'|'date'|'datetime-local'|'email'|'file'|'image'|'month'|'number'|'password'
         |'radio'|'range'|'tel'|'text'|'time'|'url'|'week'
@@ -510,12 +510,12 @@ export function Input(props: InputOwnProps): ReactElement {
 }
 
 // export function TextArea(props: InputOwnProps, children: (string | React.Component)[] = []): ReactElement { return 'textarea' as any; }
-export function TextArea(props: InputOwnProps, c: any): ReactElement {
+export function TextArea(props: InputOwnProps, c?: ReactNode): ReactElement {
     // @ts-ignore
     return <InputConnected {...{...props, tag:"textarea"} as any}>{props.children||c}</InputConnected>;
 }
 //export function Select(props: SelectOwnProps, children: (string | React.Component)[] = []): ReactElement { return 'select' as any; }
-export function Select(props: SelectOwnProps, c: any): ReactElement {
+export function Select(props: SelectOwnProps, c?: ReactNode): ReactElement {
     // @ts-ignore
     return <InputConnected {...{...props, tag:"select"} as any}>{props.children||c}</InputConnected>;
 }

@@ -55,8 +55,8 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
     resizableOptions: GObject | undefined;
     rotableOptions: GObject | undefined;
 
-    constructor(props: AllProps, context: any) {
-        super(props, context);
+    constructor(props: AllProps, context?: any) {
+        super(props);
         this.getSize = this.getSize.bind(this);
         this.setSize = this.setSize.bind(this);
         // this.state={forceupdate:1};
@@ -491,7 +491,7 @@ export const VertexConnected = connect<VertexStateProps, DispatchProps, VertexOw
     mapDispatchToProps
 )(VertexComponent as any);
 
-export const Vertex = (props: VertexOwnProps, children: ReactNode | undefined = []): ReactElement => { //  children: (string | React.Component)[]
+export const Vertex = (props: VertexOwnProps, children: ReactNode | undefined = []): ReactElement => {
     return <VertexConnected {...{...props, children}}
         isGraph={false} isGraphVertex={false} isVertex={true} isEdgePoint={false} isField={false} isEdge={false} isVoid={false}/>;
 }

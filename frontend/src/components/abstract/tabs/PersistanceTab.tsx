@@ -1,4 +1,4 @@
-import React, {Dispatch, ReactElement} from "react";
+import React, {Dispatch, ReactElement, ReactNode} from "react";
 import {connect} from "react-redux";
 import {DState, DModel} from "../../../joiner";
 //import {Firebase} from "../../../firebase";
@@ -31,7 +31,8 @@ export const PersistanceTabConnected = connect<StateProps, DispatchProps, OwnPro
     mapDispatchToProps
 )(PersistanceTabComponent);
 
-export const PersistanceTab = (props: OwnProps, childrens: (string | React.Component)[] = []): ReactElement => {
+export const PersistanceTab = (props: OwnProps, childrens: ReactNode[] = []): ReactElement => {
+    // @ts-ignore children
     return <PersistanceTabConnected {...{...props, childrens}} />;
 }
 export default PersistanceTab;

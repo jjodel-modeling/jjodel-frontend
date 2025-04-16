@@ -124,7 +124,7 @@ class TryComponent extends React.Component<AllProps, State> {
             "" + error?.message + "\n\n" +
             (reportstr ? 'logger report'+(this.state.lz ? ' (lz-base64)' : '')+':\n' + encodeURIComponent(reportstr) +'\n\n' : '') +
             "_stack:\n" + U.cropStr(error.stack || '', 30, 0, 35, 15) + '\n\n'+
-            "_component_stack:\n" + (info ? U.cropStr(info.componentStack, 10, 0, 35, 5) : '');
+            "_component_stack:\n" + (info ? U.cropStr(info.componentStack||'', 10, 0, 35, 5) : '');
 
         let {mailto, gitissue} = U.mailerror(TryComponent.mailRecipients, title, msgbody_notencoded, this.state.canUseClipboard,
             undefined, ()=>{this.setState({canUseClipboard: false})});

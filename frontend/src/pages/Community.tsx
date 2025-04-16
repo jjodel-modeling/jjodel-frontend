@@ -1,5 +1,6 @@
 import {Try} from '../joiner';
 import {Dashboard} from './components';
+import {JSX} from "react";
 
 function CommunityPage(): JSX.Element {
     return(<Try>

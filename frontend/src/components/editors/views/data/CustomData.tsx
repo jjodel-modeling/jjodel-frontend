@@ -1,6 +1,6 @@
 /* Viewpoints > Events */
 
-import React, {Dispatch, EventHandler, MouseEventHandler, ReactElement} from 'react';
+import React, {Dispatch, EventHandler, MouseEventHandler, ReactElement, ReactNode} from 'react';
 import {DState, DViewElement, GObject, LViewElement, Pointer, TextArea, U} from '../../../../joiner';
 import {connect} from "react-redux";
 import {JsEditor} from "../../languages";
@@ -91,7 +91,7 @@ type AllProps = OwnProps & StateProps & DispatchProps;
 
 
 function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
-    const view = LViewElement.fromPointer(ownProps.viewID);
+    const view = LViewElement.fromPointer(ownProps.viewID) as LViewElement;
     return {view};
 }
 
@@ -106,7 +106,8 @@ export const ViewEventsConnected = connect<StateProps, DispatchProps, OwnProps, 
     mapDispatchToProps
 )(ViewEventsComponent);
 
-export const ViewEvents = (props: OwnProps, children: (string | React.Component)[] = []): ReactElement => {
+export const ViewEvents = (props: OwnProps, children: ReactNode = []): ReactElement => {
+    // @ts-ignore children
     return <ViewEventsConnected {...{...props, children}} />;
 }
 export default ViewEvents;

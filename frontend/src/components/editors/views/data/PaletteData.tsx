@@ -319,7 +319,7 @@ function PaletteDataComponent(props: AllProps) {
 
     const cssIsGlobal = view.cssIsGlobal;
     let a: DropDownButton;
-    let dropDownButton: RefObject<DropDownButton> = {current: null};
+    // let dropDownButton: RefObject<DropDownButton> = {current: null as any};
     function addcss(color: Instance): GObject {
         let ret: GObject = {};
         ret.background = color.toRgbString();
@@ -719,7 +719,7 @@ type AllProps = OwnProps & StateProps & DispatchProps;
 
 
 function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
-    const view = LViewElement.fromPointer(ownProps.viewID);
+    const view = LViewElement.fromPointer(ownProps.viewID) as LViewElement;
     return {view};
 }
 
@@ -734,7 +734,8 @@ export const PaletteDataConnected = connect<StateProps, DispatchProps, OwnProps,
     mapDispatchToProps
 )(PaletteDataComponent);
 
-export const PaletteData = (props: OwnProps, children: (string | React.Component)[] = []): ReactElement => {
+export const PaletteData = (props: OwnProps, children: ReactNode = []): ReactElement => {
+    // @ts-ignore children
     return <PaletteDataConnected {...{...props, children}} />;
 }
 export default PaletteData;

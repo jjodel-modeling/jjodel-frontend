@@ -11,11 +11,13 @@ import App from './App';
 import * as serviceWorkerRegistration from './serviceWorkerRegistration';
 import reportWebVitals from './reportWebVitals';*/
 
-ReactDOM.render(
+import { createRoot } from "react-dom/client";
+
+let root = document.getElementById('root') as HTMLElement;
+createRoot(root).render(
     <Provider store={store}>
         <App />
     </Provider>,
-    document.getElementById('root')
 );
 /*
 // enable offline PWA and 1-time loading

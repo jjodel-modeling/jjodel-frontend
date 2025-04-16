@@ -75,7 +75,7 @@ import {
 import {ValuePointers} from "./PointerDefinitions";
 import {ShortDefaultEClasses} from "../../common/U";
 import {transientProperties} from "../../joiner/classes";
-import React, {ReactNode} from "react";
+import React, {JSX, ReactNode} from "react";
 import {UpdatingTimer} from "../../redux/reducer/reducer";
 
 type outactions = {clear:(()=>void)[], set:(()=>void)[], immediatefire?: boolean};
@@ -1151,7 +1151,7 @@ export class LTypedElement<Context extends LogicContext<DTypedElement> = any> ex
     }
 
     protected get_type(c: Context): this["type"] {
-        let type = LPointerTargetable.from(c.data.type);
+        let type = LPointerTargetable.from(c.data.type) as LClassifier;
         if (type) return type;
         if (c.data.className === 'DReference') return LPointerTargetable.from(c.data.father);
         else return LPointerTargetable.fromPointer('Pointer_ESTRING');
@@ -5288,6 +5288,7 @@ export class LObject<Context extends LogicContext<DObject> = any, C extends Cont
                     default: Log.ee('L'+c.data.className.substring(1)+'.t2m() todo, still unsupported.'); return this;
                     case 'DObject': isPartial = (this as any as LObject).get_partial(c); break;
                 }
+                console.log(c.data.className+'.t2m()  called.', {d: c.data, json});
                 let fout : {featureCreated: LValue[], featureRemoved: Pointer<DValue>[]} = {featureCreated: [], featureRemoved: []};
                 let newFeatures: Dictionary< Pointer | DocString<'feature.name'>, LValue> = {};
                 // START: check if it's necessary to change type
@@ -5295,6 +5296,8 @@ export class LObject<Context extends LogicContext<DObject> = any, C extends Cont
                 let validMatches: SchemaMatchingScore[] = (parent as LValue|LModel).instantiableClasses(json, true, undefined, undefined, false) as any;
                 /*LValue.getInstantiableClasses(this, c maybe real problem here, json, true, undefined, undefined, false) as any;*/
                 let bestmatch = validMatches[0];
+
+                console.log('L'+c.data.className.substring(1)+'.t2m() change type', {bestmatch, validMatches, d: c.data, json});
                 if ((c.data as DObject | DValue).instanceof !== bestmatch.id) {
                     if (bestmatch.instantiable) {
                         /* problema
@@ -5331,7 +5334,9 @@ export class LObject<Context extends LogicContext<DObject> = any, C extends Cont
                         if (!(k in c.data) && k in childNames) isChildKey = true;
                         if (!(k in c.data) && k in newFeatures) isChildKey = true;
                     }
+
                     if (!isChildKey) {
+                        console.log(c.data.className+'.t2m() set key', {k, k0: prefixed_k, isChildKey, json});
                         (l as any)[k] = v;
                     } else {
                         let isPointer = Pointers.isPointer(k);
@@ -5340,6 +5345,8 @@ export class LObject<Context extends LogicContext<DObject> = any, C extends Cont
                             let pointers: GObject = {father: c.data.id};
                             if (v.id) pointers.id = v.id;
                             child = (this as any as LObject).get_addValue(c, true)();//DValue.new3(pointers, ()=>{}, true);
+
+                            console.log(c.data.className+'.t2m() add child value', {k, v});
                             // todo: support to create with correct pointer if the specified key is a pointer.
                         }
                         if (isPointer && (s.idlookup[k] as DValue)?.father !== c.data.id && s.idlookup[k].className === 'DValue') { // !!! NB: keep idloookup here, don't do D.from !!!
@@ -5347,6 +5354,8 @@ export class LObject<Context extends LogicContext<DObject> = any, C extends Cont
                             // here child === L.from(s.idlookup[k]);
                             child.father = c.data.id as any; // SetFieldAction.new(k as Pointer, 'father', c.data.id, '', true);
                         }
+                        console.log(c.data.className+'.t2m() child_value.t2m()', {child, v});
+
                         child.t2m(v, out_global_useless);
                     }
                     break;
@@ -5757,7 +5766,8 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
     public get_t2m(c: Context): LValue['t2m'] {
         return (json: GObject, out: {objectCreated: LObject[]} = {objectCreated: []}): this => {
             TRANSACTION(this.get_name(c) + '.t2m()', ()=>{
-                let l = c.proxyObject;
+                console.log('L'+c.data.className.substring(1)+'.t2m() called.', {d:c.data, j:json});
+
                 let json_4val!: GObject[];
                 if (!json) { json = []; Log.eDevv('t2m deletion still unsupported'); return this; }
                 switch (c.data.className) {
@@ -5798,6 +5808,8 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
                 const validSubTypesMap: Dictionary<Pointer, LClassifier> = {};
                 for (let l of validSubTypes) validSubTypesMap[l.id] = l;
 
+                console.log('L'+c.data.className.substring(1)+'.t2m() types found.', {d:c.data, j:json, validSubTypesMap, includeEnum, type});
+
                 // START: actually set the values
                 for (let v of json_4val) {
                     let child2: LObject | undefined = undefined;
@@ -5809,7 +5821,9 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
                     // if (typeof v === 'string') { set by $name but cannot happen in array? }
                     if (typeof v === 'object' && !Array.isArray(v)) {
                         // create a subelement or update an existing one
-                        let d = DObject.new3({father: c.data.id as Pointer<DValue>, 'instanceof': undefined}, ()=>{}, DValue);
+                        let d = DObject.new3({/*father: c.data.id as Pointer<DValue>,*/ 'instanceof': undefined}, ()=>{}, DValue);
+
+                        console.log('L'+c.data.className.substring(1)+'.t2m() sub-object NEW', {d, v});
                         child2 = L.from(d); // (this as LValue).get_addObject(c)({});
                         if (!child2) continue;
                         out.objectCreated.push(child2);
@@ -5824,7 +5838,12 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
                         */
                     }
                     else { uniformedValues.push(v as any as PrimitiveType); }
-                    if (child2) child2.t2m(v);
+                    console.log('L'+c.data.className.substring(1)+'.t2m() sub-object t2m', {child2, v});
+
+                    if (child2) {
+                        if (child2.__raw.father !== c.data.id) child2.father = c.data.id as any;
+                        child2.t2m(v);
+                    }
                 }
                 (this).set_values(uniformedValues, c);
 
@@ -6087,7 +6106,7 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
                 // phase 3: create object according to schema (or shapeless) and update parent container collection.
                 console.log("Object.new3", {constructorPointers});
                 if (!constructorPointers.name && constructorPointers.instanceof){
-                    let meta = L.from(constructorPointers.instanceof);
+                    let meta = L.from(constructorPointers.instanceof) as LClass;
                     if (meta.isSingleton){ constructorPointers.name = meta.name; }
                 }
                 let dobj = DObject.new3(constructorPointers, () => { }, isDModel?DModel:DValue, true);
@@ -6150,7 +6169,7 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
 
 
     protected get_edges(context: Context): this["edges"] { return LPointerTargetable.fromPointer(context.data.edges) || []; }
-    protected get_fromlfeature<C, T extends keyof (NonNullable<C>)>(meta: C, key: T): NonNullable<C>[T] { return meta ? (meta as any)[key] : undefined; }
+    protected get_fromlfeature<C, T extends keyof (NonNullable<C>)>(meta: C, key: T): NonNullable<C>[T] { return meta ? (meta as any)[key] : undefined as any; }
     protected get_opposite(context: Context): LReference["opposite"] { return this.get_fromlfeature(context.proxyObject.instanceof as LReference, "opposite"); }
     protected get_container(context: Context): LReference["container"] { return this.get_fromlfeature(context.proxyObject.instanceof as LReference, "container"); }
     protected get_isContainment(c: Context): LReference["containment"] { return this.get_containment(c); }

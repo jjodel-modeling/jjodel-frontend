@@ -7,57 +7,53 @@ import {DGraph, DModel, DPointerTargetable, DState, LGraph, LModel, LPointerTarg
 // private
 interface ThisState { }
 
-export class GraphsContainerComponent extends PureComponent<AllProps, ThisState>{
-    public static cname: string = "GraphsContainerComponent";
-    constructor(props: AllProps, context: any) {
-        super(props, context);
-    }
 
-    // todo: per ogni vista crea un set di opzioni {enableAutocorrect: "boolean(true)", displayEdges: "boolean(true)", maximumGraphWidth: "number(2000)"} specificate dall\'utente che deve specificare sia il tipo (Come se osse una funzione) che il valore predefinito
-    // il grafo deve leggere l'oggetto di opzioni e creare un menù che consente di cambiarle (una checkbox al posto dell'enableAutocorrect (bool), uno spinner per maximumGraphWidth (number...)
+// todo: per ogni vista crea un set di opzioni {enableAutocorrect: "boolean(true)", displayEdges: "boolean(true)", maximumGraphWidth: "number(2000)"} specificate dall\'utente che deve specificare sia il tipo (Come se osse una funzione) che il valore predefinito
+// il grafo deve leggere l'oggetto di opzioni e creare un menù che consente di cambiarle (una checkbox al posto dell'enableAutocorrect (bool), uno spinner per maximumGraphWidth (number...)
 
-    render(): ReactNode {
-        // const editinput = "<input onChange={(e) => this.data.name = e.target.value } value={this.data.name} />";
-        // const editinput = "";
-        // todo: rendi opzionale obj = this.data.id se non è specificato.
-        // const editinput = "<Input obj={this.data.id} field={'name'} getter={val => val.toUpperCase()} setter={(val) => val.toLowerCase()} />";
-        // "<Input obj={this.data} field={'name'} getter={val => val.toUpperCase()} setter={(val) => val.toLowerCase()} />";
-        return (<>
-            {
-                this.props.graphs.map( (m: LGraph) => (
-                    <>
-                        {/*<svg style={{backgroundColor: 'red'}}>
-                        <Overlap style={{width: '100px'}}>
-                            success, now i can test resize handler overlayed to content and dragndrop dnd
-                            <foreignObject className={"rectangle"} />
-                            <foreignObject className={"ellipse"} />
+// const editinput = "<input onChange={(e) => this.data.name = e.target.value } value={this.data.name} />";
+// const editinput = "";
+// todo: rendi opzionale obj = this.data.id se non è specificato.
+// const editinput = "<Input obj={this.data.id} field={'name'} getter={val => val.toUpperCase()} setter={(val) => val.toLowerCase()} />";
+// "<Input obj={this.data} field={'name'} getter={val => val.toUpperCase()} setter={(val) => val.toLowerCase()} />";
+export function GraphsContainerComponent(props: AllProps): ReactNode {
+    return (<>
+        {
+            props.graphs.map( (m: LGraph) => (
+                <>
+                    {/*<svg style={{backgroundColor: 'red'}}>
+                    <Overlap style={{width: '100px'}}>
+                        success, now i can test resize handler overlayed to content and dragndrop dnd
+                        <foreignObject className={"rectangle"} />
+                        <foreignObject className={"ellipse"} />
+                        <foreignObject className={"point"} />
+                    </Overlap>
+                    </svg><svg style={{backgroundColor: 'red'}}>
+                        <Overlap>
+                            <foreignObject className={"rectangle"} style={{width: '100px'}}/>
+                            <foreignObject className={"ellipse"} style={{width: '300px'}}/>
                             <foreignObject className={"point"} />
                         </Overlap>
-                        </svg><svg style={{backgroundColor: 'red'}}>
-                            <Overlap>
-                                <foreignObject className={"rectangle"} style={{width: '100px'}}/>
-                                <foreignObject className={"ellipse"} style={{width: '300px'}}/>
-                                <foreignObject className={"point"} />
-                            </Overlap>
-                        </svg>* /}
-                        <GraphElement data={m} />*/}
-                        {/*
-                            Giordano comment this problem with model's children
-                            <Graph graphid={m.id} data={m.model} view={undefined}>
-                                <Vertex data={m.model}/>
-                            </Graph>
+                    </svg>* /}
+                    <GraphElement data={m} />*/}
+                    {/*
+                        Giordano comment this problem with model's children
+                        <Graph graphid={m.id} data={m.model} view={undefined}>
+                            <Vertex data={m.model}/>
+                        </Graph>
 
-                        */}
-                        {this.props.children/*<QA />*/}
-                    </>)
-                )
-            }
-        </>); }
+                    */}
+                    {props.children/*<QA />*/}
+                </>)
+            )
+        }
+    </>);
 }
 
 // private
 interface OwnProps {
     // propsRequestedFromHtmlAsAttributes: string;
+    children?: ReactNode;
 }
 // private
 interface StateProps {
@@ -96,7 +92,8 @@ const GraphsContainerConnected = connect<StateProps, DispatchProps, OwnProps, DS
     mapDispatchToProps
 )(GraphsContainerComponent);
 
-export const GraphsContainer = (props: OwnProps, children: (string | React.Component)[] = []): ReactElement => {
+export const GraphsContainer = (props: OwnProps, children: ReactNode = []): ReactElement => {
+    // @ts-ignore children
     return <GraphsContainerConnected {...{...props, children}} />; }
 
 

@@ -1,7 +1,7 @@
 import './style.scss';
 import {DState, DUser, LGraphElement, LModelElement, LUser, U} from "../../joiner";
 import {FakeStateProps} from "../../joiner/types";
-import React, {Dispatch, ReactElement, useState} from "react";
+import React, {Dispatch, JSX, ReactElement, ReactNode, useState} from "react";
 import {connect} from "react-redux";
 
 
@@ -109,7 +109,8 @@ export const BottomBarConnected = connect<StateProps, DispatchProps, OwnProps, D
     mapDispatchToProps
 )(BottomBarComponent);
 
-const BottomBar = (props: OwnProps, children: (string | React.Component)[] = []): ReactElement => {
+const BottomBar = (props: OwnProps, children: ReactNode = []): ReactElement => {
+    // @ts-ignore children
     return <BottomBarConnected {...{...props, children}} />;
 }
 

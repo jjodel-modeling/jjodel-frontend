@@ -1,5 +1,4 @@
-import { useState, MouseEventHandler } from 'react';
-import { IconTheme } from 'react-hot-toast';
+import {useState, MouseEventHandler, JSX} from 'react';
 import {DProject, DUser, L, LProject, LUser, R, SetRootFieldAction, U, windoww} from '../../joiner';
 
 import { icon } from './icons/Icons';

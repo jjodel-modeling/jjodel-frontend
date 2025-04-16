@@ -1,4 +1,4 @@
-import React, {Dispatch, ReactElement} from 'react';
+import React, {Dispatch, ReactElement, ReactNode} from 'react';
 import {connect} from 'react-redux';
 import {DState} from '../joiner';
 import {FakeStateProps} from '../joiner/types';
@@ -27,7 +27,8 @@ export const NameConnected = connect<StateProps, DispatchProps, OwnProps, DState
     mapDispatchToProps
 )(NameComponent);
 
-const Name = (props: OwnProps, children: (string | React.Component)[] = []): ReactElement => {
+const Name = (props: OwnProps, children: ReactNode = []): ReactElement => {
+    // @ts-ignore children
     return <NameConnected {...{...props, children}} />;
 }
 

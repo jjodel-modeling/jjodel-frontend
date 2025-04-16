@@ -66,7 +66,7 @@ export class Selectors{
         let state: DState & GObject = store.getState();
         const selected = state._lastSelected?.modelElement;
         if(selected) {
-            const me = LPointerTargetable.fromPointer(selected)
+            const me = LPointerTargetable.fromPointer(selected) as LModelElement
             metamodel = (me) ? me.model : null;
         } else metamodel = null;
         return metamodel;
@@ -524,7 +524,7 @@ export class Selectors{
         if (!state) state = store.getState();
         const allViews: DViewElement[] = Selectors.getAllViewElements(state);
 
-        const user = LUser.fromPointer(DUser.current);
+        const user = LUser.fromPointer(DUser.current) as LUser;
         const project = user.project as LProject;
         let activevpid: Pointer<DViewElement> = project.activeViewpoint.id;
         // check if scores needs to be updated

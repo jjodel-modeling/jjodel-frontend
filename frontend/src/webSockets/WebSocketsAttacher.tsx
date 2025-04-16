@@ -1,18 +1,18 @@
 import {Action, DProject, Pointer, SetRootFieldAction, store} from '../joiner';
 import type {CompositeAction, GObject, LProject} from '../joiner';
-import {useEffectOnce} from 'usehooks-ts';
 import WebSockets from './WebSockets';
+import {useEffect} from "react";
 
 /* OLD Component for collaborative, todo: replace it */
 interface Props {projectID: Pointer<DProject, 1, 1, LProject>}
 function WebSocketsAttacher(props: Props) {
     const {projectID} = props;
 
-    useEffectOnce(() => {
+    useEffect(() => {
         // SetRootFieldAction.new('collaborativeSession', true);
         WebSockets.iot.io.opts.query = {'project': projectID};
         WebSockets.iot.connect();
-    });
+    }, []);
 
     WebSockets.iot.on('pullAction', (receivedAction: GObject<Action & CompositeAction>) => {
         const action = Action.fromJson(receivedAction);

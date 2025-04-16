@@ -43,7 +43,8 @@ export const SkeletonConnected = connect<StateProps, DispatchProps, OwnProps, DS
     mapDispatchToProps
 )(SkeletonComponent);
 
-export const Skeleton = (props: OwnProps, children: (string | Component)[] = []): ReactElement => {
+export const Skeleton = (props: OwnProps, children: ReactNode = []): ReactElement => {
+    // @ts-ignore children
     return <SkeletonConnected {...{...props, children}} />;
 }
 export default Skeleton;

@@ -1,11 +1,10 @@
-import {Dispatch, ReactElement, useEffect, useState} from 'react';
+import {Dispatch, ReactElement, ReactNode, useEffect, useState} from 'react';
 import {connect} from 'react-redux';
 import type {DState, LProject} from '../../joiner';
 import {DUser, GObject, LUser, U} from '../../joiner';
 import {FakeStateProps} from '../../joiner/types';
 import {UsersApi} from "../../api/persistance";
 import {Btn, CommandBar} from '../commandbar/CommandBar';
-import {useEffectOnce} from "usehooks-ts";
 
 function CollaborativeComponent(props: AllProps) {
     const {project, users} = props;
@@ -13,11 +12,11 @@ function CollaborativeComponent(props: AllProps) {
     const [filteredEmails, setFilteredEmails] = useState<string[]>([]);
     const [email, setEmail] = useState<string>('');
 
-    useEffectOnce(() => {
+    useEffect(() => {
         (async function() {
             setEmails(await UsersApi.getAllEmails());
         })();
-    });
+    }, []);
 
     useEffect(() => {
         if(!email) setFilteredEmails([]);
@@ -73,7 +72,7 @@ type AllProps = OwnProps & StateProps & DispatchProps;
 
 function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     const ret: StateProps = {} as FakeStateProps;
-    const user = LUser.fromPointer(DUser.current);
+    const user = LUser.fromPointer(DUser.current) as LUser;
     ret.project = user.project as LProject;
     ret.users = LUser.fromPointer(state.users);
     return ret;
@@ -89,6 +88,7 @@ export const CollaborativeConnected = connect<StateProps, DispatchProps, OwnProp
     mapDispatchToProps
 )(CollaborativeComponent);
 
-export const Collaborative = (props: OwnProps, children: (string | React.Component)[] = []): ReactElement => {
+export const Collaborative = (props: OwnProps, children: ReactNode = []): ReactElement => {
+    // @ts-ignore children
     return <CollaborativeConnected {...{...props, children}} />;
 }

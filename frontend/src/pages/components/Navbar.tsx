@@ -26,7 +26,7 @@ import {icon} from '../components/icons/Icons';
 
 import {useNavigate} from 'react-router-dom';
 
-import React, {Component, Dispatch, ReactElement, useState} from 'react';
+import React, {Component, Dispatch, ReactElement, ReactNode, useState} from 'react';
 import {FakeStateProps} from '../../joiner/types';
 import {connect} from 'react-redux';
 import {MetamodelPopup, ModelPopup} from './popups';
@@ -704,7 +704,8 @@ const NavbarConnected = connect<StateProps, DispatchProps, OwnProps, DState>(
     mapDispatchToProps
 )(NavbarComponent);
 
-const Navbar = (props: OwnProps, children: (string | Component)[] = []): ReactElement => {
+const Navbar = (props: OwnProps, children: ReactNode = []): ReactElement => {
+    // @ts-ignore children
     return <NavbarConnected {...{...props, children}} />;
 }
 

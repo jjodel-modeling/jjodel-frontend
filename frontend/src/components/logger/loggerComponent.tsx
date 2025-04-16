@@ -1,4 +1,4 @@
-import React, {PureComponent, ReactNode} from "react";
+import React, {JSX, PureComponent, ReactNode} from "react";
 import './logger.scss';
 import {DataOutputComponent, Log, U} from "../../joiner";
 import type {Dictionary, GObject, LoggerType, LoggerCategoryState} from "../../joiner";
@@ -54,8 +54,8 @@ export class LoggerComponent extends PureComponent<AllProps, ThisState>{
         for (let logger of LoggerComponent.loggers) { logger.log(category, key, data); }
     }*/
 
-    constructor(props: AllProps, context: any) {
-        super(props, context);
+    constructor(props: AllProps, context?: any) {
+        super(props);
         this.id =  LoggerComponent.max_id++;
         this.state = new ThisState();
             // minDate: DDate.addYear(new Date(), -1, true).getTime(),

@@ -1,7 +1,17 @@
 /* DASHBOARD */
 /* ALLPROJECTS */
 
-import React, {ChangeEvent, MouseEventHandler, Component, Dispatch, ReactElement, useState, useRef } from 'react';
+import React, {
+    ChangeEvent,
+    MouseEventHandler,
+    Component,
+    Dispatch,
+    ReactElement,
+    useState,
+    useRef,
+    JSX,
+    ReactNode
+} from 'react';
 import {connect} from 'react-redux';
 import {DProject, DState, Log, LProject, SetRootFieldAction, Try, U} from '../joiner';
 import {Dictionary, FakeStateProps} from '../joiner/types';
@@ -125,7 +135,8 @@ const AllProjectsConnected = connect<StateProps, DispatchProps, OwnProps, DState
     mapDispatchToProps
 )(AllProjectsComponent);
 
-const AllProjectsPage = (props: OwnProps, children: (string | Component)[] = []): ReactElement => {
+const AllProjectsPage = (props: OwnProps, children: ReactNode = []): ReactElement => {
+    // @ts-ignore children
     return <AllProjectsConnected {...{...props, children}} />;
 }
 

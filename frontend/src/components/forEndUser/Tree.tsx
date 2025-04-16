@@ -1,4 +1,4 @@
-import React, {ReactNode, MouseEventHandler} from "react";
+import React, {ReactNode, MouseEventHandler, useEffect, JSX} from "react";
 import {
     DClass,
     Dictionary,
@@ -14,7 +14,6 @@ import {
 } from '../../joiner';
 import {useStateIfMounted} from 'use-state-if-mounted';
 import './tree.scss';
-import {useEffectOnce} from "usehooks-ts";
 
 import { MyTooltip } from "../tooltip/MyTooltip";
 import { CommandBar, Btn } from "../commandbar/CommandBar";
@@ -60,9 +59,9 @@ function Tree(props: TreeProps) {
     const [filter, applyFilter] = useStateIfMounted('');
     const hide = depth.includes(filter);
 
-    useEffectOnce(() => {
+    useEffect(() => { // questionable choice, the whole id, setId and effect seem removable.
         setId((data && data.id) ? data.id : U.getRandomString(5));
-    })
+    }, [data?.id])
 
     const setFilter = (): void => {
         if(filter === id) applyFilter('');
@@ -97,7 +96,7 @@ interface DataTreeProps {data: LModelElement, hide: boolean, depth: string[], se
 function DataTree(props: DataTreeProps): JSX.Element {
     const hide = props.hide;
     const data: LNamedElement = LNamedElement.fromPointer(props.data.id);
-    if(!data) return(<div>Error Data is <b>undefined</b></div>);
+    if (!data) return(<div>Error Data is <b>undefined</b></div>);
     const depth = props.depth;
     const setFilter = props.setFilter;
 
@@ -171,9 +170,11 @@ function HtmlTree(props: HtmlTreeProps) {
     const setFilter = props.setFilter;
 
     return(<div>
-        {data.map((element: string|ReactNode) => {
-            if(!React.isValidElement(element)) return(<></>);
-            const children: (string|ReactNode)[] = (Array.isArray(element.props.children)) ? element.props.children: [element.props.children];
+        {data.map((element: ReactNode) => {
+            if (!React.isValidElement(element)) return(<></>);
+            let eprops: GObject = element?.props as GObject;
+            const children: ReactNode[] = eprops && typeof eprops === 'object' ? (Array.isArray(eprops.children)) ? eprops.children: [eprops.children] : [];
+
             return(<>
                 <div className={'d-flex'}>
                     {(children.length > 0 && hide) ?
@@ -181,7 +182,7 @@ function HtmlTree(props: HtmlTreeProps) {
                         <i className={'bi bi-chevron-down cursor-pointer d-block my-auto'} onClick={setFilter} />
                     }
                     <label className={'ms-1 my-auto'}>
-                        {element.props['label'] ? element.props['label'] : 'unnamed'}
+                        {eprops['label'] ? eprops['label'] : 'unnamed'}
                     </label>
                 </div>
                 {!hide && children.map((child) => {

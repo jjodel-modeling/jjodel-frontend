@@ -1,6 +1,6 @@
 import {DataOutputComponent, Dictionary, DState, GObject, Log, LoggerCategoryState, LoggerType, U} from '../../joiner';
 import {FakeStateProps} from '../../joiner/types';
-import React, {Component, Dispatch, PureComponent, ReactElement, ReactNode} from 'react';
+import React, {Component, Dispatch, JSX, PureComponent, ReactElement, ReactNode} from 'react';
 import {connect} from 'react-redux';
 import './style.scss';
 import {Empty} from "./Empty";
@@ -46,8 +46,8 @@ class LoggerComponent extends PureComponent<AllProps, ThisState> {
     public id: number;
     public categoryAliases: Partial<Dictionary<LoggerType, LoggerType>>;
 
-    constructor(props: AllProps, context: any) {
-        super(props, context);
+    constructor(props: AllProps, context?: any) {
+        super(props);
         this.id =  LoggerComponent.max_id++;
         this.state = new ThisState();
         // minDate: DDate.addYear(new Date(), -1, true).getTime(),
@@ -283,7 +283,8 @@ export const LoggerConnected = connect<StateProps, DispatchProps, OwnProps, DSta
     mapDispatchToProps
 )(LoggerComponent);
 
-export const Logger = (props: OwnProps, children: (string | Component)[] = []): ReactElement => {
+export const Logger = (props: OwnProps, children: ReactNode = []): ReactElement => {
+    // @ts-ignore children
     return <LoggerConnected {...{...props, children}} />;
 }
 export default Logger;

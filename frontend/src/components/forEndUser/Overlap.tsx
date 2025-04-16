@@ -1,4 +1,4 @@
-import React, {CSSProperties, PureComponent, ReactChild, ReactNode} from "react";
+import React, {CSSProperties, PureComponent, ReactNode} from "react";
 // import { connect } from "react-redux";
 // import {DState} from "../../redux/store";
 //import './overlap.scss';
@@ -26,7 +26,7 @@ export class Overlap extends PureComponent<AllProps, ThisState>{
 
 // private
 interface OwnProps {
-    children: ReactChild[] | ReactChild;
+    children: ReactNode;
     // sizefollows: "parent" | "child";
     autosizex?: boolean;
     autosizey?: boolean;

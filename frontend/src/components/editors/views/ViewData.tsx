@@ -1,4 +1,4 @@
-import React, {Dispatch, ReactElement} from 'react';
+import React, {Dispatch, ReactElement, ReactNode} from 'react';
 import {
     Defaults,
     DState,
@@ -122,6 +122,7 @@ export const ViewDataConnected = connect<StateProps, DispatchProps, OwnProps, DS
     mapDispatchToProps
 )(ViewDataComponent);
 
-export const ViewData = (props: OwnProps, children: (string | React.Component)[] = []): ReactElement => {
+export const ViewData = (props: OwnProps, children: ReactNode = []): ReactElement => {
+    // @ts-ignore children
     return <ViewDataConnected {...{...props, children}} />;
 }

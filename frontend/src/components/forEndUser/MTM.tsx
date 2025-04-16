@@ -26,7 +26,6 @@ import {on} from "events";
 
 function doT2M(data: LPointerTargetable | Pointer, language: string, text: string): void{
     let ldata = LPointerTargetable.from(data);
-    console.log('doT2M called', {ldata, data, language, text, arguments});
     if (!ldata) return;
     let json = JSON.parse(text);
     console.log('doT2M json', {ldata, text, json});
@@ -66,7 +65,6 @@ export function T2M_WithEditor(props: T2M_AllProps, child?: any) {
     let [value, setValue] = useStateIfMounted<string>(oldValue);
     const [isTouched, setIsTouched] = useStateIfMounted(false);
 
-    console.log('T2M called', {props, arguments});
     // @ts-ignore
     if (!(typeof props === 'object' && !(props as any).__isProxy)) return T2M_Direct(...arguments as any);
 

@@ -78,7 +78,7 @@ export class DefaultNodeComponent<AllProps extends AllPropss = AllPropss, NodeSt
         ret.nodeid = ownProps.nodeid as Pointer<DGraphElement>; // but nodeid exists, passed from the parent along graphid and parentview
 */
         // try{
-        ret.data = LPointerTargetable.wrap(ownProps.data);
+        ret.data = LPointerTargetable.wrap(ownProps.data) as LModelElement;
         ret.dataid = ownProps.data ? (typeof ownProps.data === "string" ? ownProps.data : ownProps.data.id) : undefined;
         // if node does not exist yet it's fine, don't create it. let Vertex or Graph or Edge make it with appropriate constructor according fo first matching view on model.
         // problem: what kind of node to make / initial view assign on shapeless objects? they have both data and node undefined at first render.
@@ -103,7 +103,7 @@ export class DefaultNodeComponent<AllProps extends AllPropss = AllPropss, NodeSt
         //}
         return ret; }
 
-    constructor(props: AllProps, context: any) { super(props, context); }
+    constructor(props: AllProps, context?: any) { super(props, context); }
 
     shouldComponentUpdate(nextProps: Readonly<AllProps>, nextState: Readonly<NodeState>, nextContext: any): boolean {
         // i want to avoid double check on this and Vertex or graph.
@@ -121,7 +121,7 @@ export class DefaultNodeComponent<AllProps extends AllPropss = AllPropss, NodeSt
         if (!view) { Log.exx("cannot find view in DefaultNode", {props: this.props, thiss:this}); }
         // if (!view) { SetRootFieldAction.new("uselessrefresh_afterload", new Date().getTime()); return <div>Loading...</div>; }
 
-        let componentMap: Dictionary<string, (props: GObject, children?: (string | React.Component)[]) => ReactElement> = windoww.components;
+        let componentMap: Dictionary<string, (props: GObject, children?: ReactNode) => ReactElement> = windoww.components;
         let dmodelMap: Dictionary<string, typeof DModelElement> = RuntimeAccessibleClass.classes as any;
 
         let serializableProps = {...this.props};
@@ -180,7 +180,7 @@ const DefaultNodeConnected = connect<DefaultNodeReduxStateProps, DefaultNodeDisp
 // export const Vertex = VertexConnected;
 
 
-export const DefaultNode = (props: DefaultNodeOwnProps, children: (string | React.Component)[] = []): ReactElement => {
+export const DefaultNode = (props: DefaultNodeOwnProps, children: ReactNode = []): ReactElement => {
     return <DefaultNodeConnected {...{...props, children}} />; }
 
 

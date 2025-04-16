@@ -1,4 +1,4 @@
-import React, {Dispatch, InputHTMLAttributes, PureComponent, ReactNode} from 'react';
+import React, {Dispatch, InputHTMLAttributes, JSX, PureComponent, ReactNode} from 'react';
 import {connect} from 'react-redux';
 import './GenericInput.scss';
 import {
@@ -27,23 +27,18 @@ interface ThisState {
 }
 type Dic<K extends string|number, V> = Dictionary<K, V>;
 type String<T> = DocString<T>;
-class GenericInputComponent extends PureComponent<AllProps, ThisState/*undefined*/>{
-    constructor(props: AllProps, context: any) {
-        super(props, context);
-    }
-
-    render(): ReactNode {
-        let d: DViewElement = ((this.props.data as LPointerTargetable).__raw || this.props.data) as any;
-        let l: LViewElement = LPointerTargetable.wrap(this.props.data) as LViewElement;
-        let field: keyof LViewElement = this.props.field as any;
+function GenericInputComponent(props: AllProps): ReactNode {
+        let d: DViewElement = ((props.data as LPointerTargetable).__raw || props.data) as any;
+        let l: LViewElement = LPointerTargetable.wrap(props.data) as LViewElement;
+        let field: keyof LViewElement = props.field as any;
         let info: GObject<Info>;
-        if (!this.props.info){
+        if (!props.info){
             let DConstructor: typeof DPointerTargetable = RuntimeAccessibleClass.get(d.className);
             let singleton: GObject<LPointerTargetable> = DConstructor.singleton;
-            info = singleton['__info_of__' + this.props.field] ;
-        } else info = this.props.info;
+            info = singleton['__info_of__' + props.field] ;
+        } else info = props.info;
         if (!info) {
-            Log.eDevv("<GenericInput/> could not find info of " + this.props.field, {props:this.props});
+            Log.eDevv("<GenericInput/> could not find info of " + props.field, {props:props});
             return <></>;
         }
 
@@ -86,7 +81,7 @@ class GenericInputComponent extends PureComponent<AllProps, ThisState/*undefined
                 else type = info.type as any;
             }
             else {
-                if (!info.type) { Log.exDevv('missing __info_of__ type for ' + d.className + '.' + this.props.field, {d, info, props: this.props}); return <></>}
+                if (!info.type) { Log.exDevv('missing __info_of__ type for ' + d.className + '.' + props.field, {d, info, props: props}); return <></>}
                 let infoType: GObject = info.type;
                 type = infoType.cname || infoType.className || infoType.name;
                 Log.exDev(!type, 'missing type:', {type, info});
@@ -103,8 +98,8 @@ class GenericInputComponent extends PureComponent<AllProps, ThisState/*undefined
             }
         }*/
 
-        // const otherProps: {[inputattribute:HTMLInputTypeAttribute]: any} = {...this.props};
-        const otherProps: InputHTMLAttributes<Event> = {...this.props} as any;
+        // const otherProps: {[inputattribute:HTMLInputTypeAttribute]: any} = {...props};
+        const otherProps: InputHTMLAttributes<Event> = {...props} as any;
         function setMinMax(max: number): void {
             if (info.min !== undefined) otherProps.min = info.min;
             else otherProps.min = info.positive === true ? 0 : -max / 2; // assume false if non specified
@@ -113,33 +108,33 @@ class GenericInputComponent extends PureComponent<AllProps, ThisState/*undefined
             else otherProps.max = info.positive === false ? max/2 - 1 : max-1; // assume true if non specified
         }
 
-        let label: ReactNode = info.label || this.props.field;
-        if (typeof label === "string") label = U.uppercaseFirstLetter(info.label || this.props.field);
+        let label: ReactNode = info.label || props.field;
+        if (typeof label === "string") label = U.uppercaseFirstLetter(label);
 
         if (type.toLowerCase().indexOf("function(") >=0 || type.indexOf("()=>") >=0) type = "Function";
         switch (type.toLowerCase()) {
             default:
-                Log.ee('invalid type in GenericInput', {type, props:this.props, info, d});
+                Log.ee('invalid type in GenericInput', {type, props:props, info, d});
                 return <div {...otherProps as any} className={'danger'} style={{color: 'red', border: '1px solid red'}}>Invalid GInput type: '{type}'</div>;
             case 'point': case 'graphpoint': case 'size': case 'graphSsize':
-                return <SizeInput {...otherProps} data={l} field={this.props.field} label={label} />;
+                return <SizeInput {...otherProps} data={l} field={props.field} label={label} />;
             case 'text':
-                return <TextArea inputClassName={'input my-auto ms-auto '} {...otherProps as any} className={(this.props.rootClassName||'')+' '+(this.props.className||'')}
-                                 data={this.props.data} field={this.props.field}
-                                 jsxLabel={label} tooltip={this.props.tooltip} />;
+                return <TextArea inputClassName={'input my-auto ms-auto '} {...otherProps as any} className={(props.rootClassName||'')+' '+(props.className||'')}
+                                 data={props.data} field={props.field}
+                                 jsxLabel={label} tooltip={props.tooltip} />;
             case 'function':
-                return <JavascriptEditor className={(this.props.rootClassName||'')+' '+(this.props.className||'')} placeHolder={this.props.placeholder}
-                                         jsxLabel={this.props.label}
-                                         data={this.props.data} field={this.props.field} tooltip={this.props.tooltip}
-                                         hide={this.props.hide} style={this.props.style} title={this.props.title}
-                                         getter={this.props.getter} setter={this.props.setter} key={this.props.key}
-                                         readOnly={this.props.readOnly}
-                                         height={this.props.height}
+                return <JavascriptEditor className={(props.rootClassName||'')+' '+(props.className||'')} placeHolder={props.placeholder}
+                                         jsxLabel={props.label}
+                                         data={props.data} field={props.field} tooltip={props.tooltip}
+                                         hide={props.hide} style={props.style} title={props.title}
+                                         getter={props.getter} setter={props.setter} key={props.key}
+                                         readOnly={props.readOnly}
+                                         height={props.height}
                                          {...otherProps as any /*not working? i had to list them all*/}  />;
             case 'eenum':
-                return <Select inputClassName={'my-auto ms-auto select'} {...otherProps as any} className={this.props.rootClassName}
-                               data={this.props.data} field={this.props.field} options={enumOptionsJSX}
-                               jsxLabel={label} tooltip={this.props.tooltip} />;
+                return <Select inputClassName={'my-auto ms-auto select'} {...otherProps as any} className={props.rootClassName}
+                               data={props.data} field={props.field} options={enumOptionsJSX}
+                               jsxLabel={label} tooltip={props.tooltip} />;
                 // <input> natives
             case 'radio':
                 // problem: this would need to return a <form> and multiple inputs generated by a single element.
@@ -190,12 +185,11 @@ class GenericInputComponent extends PureComponent<AllProps, ThisState/*undefined
                 break;
             case ShortAttribETypes.EDate.toLowerCase(): type = 'datetime-local'; break;
         }
-        let className = (this.props.className || '') + ' ' + ( this.props.rootClassName||'');
+        let className = (props.className || '') + ' ' + ( props.rootClassName||'');
         // delete otherProps.field; delete otherProps.data; delete otherProps.infoof;
         return <Input {...otherProps} className={className}
-                      data={this.props.data} field={this.props.field}
-                      jsxLabel={label} tooltip={this.props.tooltip} type={type as any}/>;
-    }
+                      data={props.data} field={props.field}
+                      jsxLabel={label} tooltip={props.tooltip} type={type as any}/>;
 }
 
 // private
