@@ -3,14 +3,15 @@ import {Dashboard} from './components';
 import {FakeStateProps, windoww} from '../joiner/types';
 import React, {Component, Dispatch, ReactElement} from "react";
 import {connect} from "react-redux";
-import { Edit, EditCountry } from './components/Edit/Edit';
-import {AuthApi, UsersApi} from '../api/persistance';
+import { Edit } from './components/Edit/Edit';
+import { UsersApi} from '../api/persistance';
 import { useStateIfMounted } from 'use-state-if-mounted';
 import Storage from '../data/storage';
-import { ResetPasswordRequest } from '../api/DTO/ResetPasswordRequest';
 import {UpdateUserRequest} from "../api/DTO/UpdateUserRequest";
 import {ChangePasswordRequest} from "../api/DTO/ChangePasswordRequest";
-import {LoginRequest} from "../api/DTO/LoginRequest";
+
+import { U} from '../joiner';
+
 
 
 function AccountComponent(props: AllProps): JSX.Element {
@@ -28,80 +29,36 @@ function AccountComponent(props: AllProps): JSX.Element {
     const [new_password, setNewPassword] = useStateIfMounted('12345678');
     const [check_password, setCheckPassword] = useStateIfMounted('23456789');
 
-    async function update_password(old_password: string, new_password:string, check_password:string) {
+    async function update_password(old_password: string, new_password:string, check_password:string) : Promise<void> {
 
         const U = windoww.U;
-
-        /*
-        if(response.code !== 200) {
-            U.alert('e', 'Your password does not match our records.','');
-            return;
-        }
-        */
 
         if (new_password !== check_password) {
             U.alert('e', 'Paswords do not match.','');
             return;
         }
 
-        const changePasswordRequest :ChangePasswordRequest = new ChangePasswordRequest();
-        changePasswordRequest.UserName = nickname;
-        changePasswordRequest.OldPassword = old_password;
-        changePasswordRequest.Password= new_password;
-        changePasswordRequest.PasswordConfirm = check_password;
+        try {
+            const changePasswordRequest :ChangePasswordRequest = new ChangePasswordRequest();
+            changePasswordRequest.UserName = nickname;
+            changePasswordRequest.OldPassword = old_password;
+            changePasswordRequest.Password= new_password;
+            changePasswordRequest.PasswordConfirm = check_password;
 
-        const response_password = await UsersApi.updatePassword(changePasswordRequest);
+            const response_password = await UsersApi.updatePassword(changePasswordRequest);
 
-        if(response_password === null) {
+            if(response_password === null) {
+                U.alert('e', 'Something went wrong.','');
+                return;
+            }
+
+            U.alert('i', 'Your password has been successfully updated!','');
+
+        } catch (error) {
             U.alert('e', 'Something went wrong.','');
-            return;
         }
-
-        U.alert('i', 'Your password has been successfully updated!','');
-    }
-
-
-    /*
-
-    async function update_password(old_password: string, new_password:string, check_password:string) {
-
-        const U = windoww.U;
-        
-        //const response = await AuthApi.login(email, old_password);
-
-
-        if (response.code !== 200) {
-            U.alert('e', 'Your password does not match our records.','');
-            return;
-        } 
-
-        if (new_password !== check_password) {
-            U.alert('e', 'Paswords do not match.','');
-            return;
-        }
-
-        const response_password = await UsersApi.updatePasswordById(user.id, new_password);
-
-        if (response_password === null) {
-            U.alert('e', 'Something went wrong.','');
-            return;
-        }
-
-        
-        U.alert('i', 'Your password has been successfully updated!','');
-        
-        
-        
-        
-        setNewPassword('01234567');
-        setCheckPassword('12345678');
-
 
     }
-    */
-
-
-
    
     function update_newsletter(check_value: boolean): boolean {
 
@@ -115,15 +72,12 @@ function AccountComponent(props: AllProps): JSX.Element {
     }
 
 
+    async function  update_profile (id: string,  name: string,  surname: string,  nickname: string, email :string, country: string, affiliation: string, newsletter: boolean) :Promise<void> {
 
-    function update_profile (id: string,  name: string,  surname: string,  nickname: string, email :string, country: string, affiliation: string, newsletter: boolean) {
-
-        const U = windoww.U;
         const readUser = Storage.read<DUser>('user');
 
         const updateUserRequest :UpdateUserRequest = new UpdateUserRequest();
         updateUserRequest.id = readUser.id;
-        console.log(updateUserRequest.id);
         updateUserRequest.name = name;
         updateUserRequest.surname = surname;
         updateUserRequest.nickname = nickname;
@@ -132,49 +86,28 @@ function AccountComponent(props: AllProps): JSX.Element {
         updateUserRequest.affiliation = affiliation;
         updateUserRequest.newsletter = update_newsletter(newsletter);
 
-        console.log(updateUserRequest);
-
-        const response = UsersApi.updateUserById(updateUserRequest);
 
 
-        if (response === null) {
+        try {
+            const response = await UsersApi.updateUserById(updateUserRequest);
+
+            if (!response) {
+                U.alert('e', 'Could not update your profile.', 'Something went wrong ...');
+                return;
+            }
+
+            const updated_user = DUser.new(
+                name, surname, nickname, affiliation, country, newsletter, email, readUser.token, updateUserRequest.id
+            );
+            Storage.write('user', updated_user);
+            U.resetState();
+            U.alert('i', 'Your profile has been updated!', '');
+
+        } catch (error) {
             U.alert('e', 'Could not update your profile.', 'Something went wrong ...');
-            return;
         }
 
-        const updated_user = DUser.new(name, surname, nickname, affiliation, country, newsletter, email, user.token, updateUserRequest.id);
-        console.log("NUOVO UTENTE", updated_user);
-        Storage.write('user', updated_user);
-        U.resetState();
-
-        U.alert('i', 'Your profile has been updated!','');
-
     }
-
-    /*
-
-    function update_profile (id: string,  name: string,  surname: string,  nickname: string, country: string, affiliation: string, newsletter: boolean) {
-
-        alert("sono nella funzione update_profile")
-        const U = windoww.U;
-
-        const response = UsersApi.updateUserById(user.id, name, surname, nickname, country, affiliation, newsletter);
-
-
-        if (response === null) {
-            U.alert('e', 'Could not update your profile.', 'Something went wrong ...');
-            return;
-        } 
-
-        const updated_user = DUser.new(name, surname, nickname, affiliation, country, newsletter, user.email, user.token, user.id);
-        Storage.write('user', updated_user);
-        U.resetState();
-        
-        U.alert('i', 'Your profile has been updated!','');
-        
-    }
-
-     */
 
 
     return(<Try>
@@ -260,15 +193,17 @@ function AccountComponent(props: AllProps): JSX.Element {
 
                 <button 
                     className="btn alert-btn my-2 px-4 space-above" 
-                    onClick={(e) => {update_profile(
-                        user.id, 
-                        name, 
-                        surname, 
-                        nickname,
-                        email,
-                        country,
-                        affiliation,
-                        newsletter)}}>save</button>
+                    onClick={(e) => {
+                         update_profile(
+                            user.id,
+                            name,
+                            surname,
+                            nickname,
+                            email,
+                            country,
+                            affiliation,
+                            newsletter)
+                    }}>save</button>
 
 
             </div>
@@ -309,7 +244,6 @@ function AccountComponent(props: AllProps): JSX.Element {
                     <button 
                         className="btn alert-btn my-2  px-4 space-above"
                         onClick={(e) => update_password(old_password, new_password, check_password)}
-                        //onClick={(e) => update_password(old_password, new_password, check_password)}
                         >change password</button>
                 </div>
 

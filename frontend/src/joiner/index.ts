@@ -130,27 +130,12 @@ export {
     DFactory_useless_, LFactory_useless_, DMap, LMap
 } from "../model/logicWrapper/LModelElement";
 
-/*
-export {
-    LModelElement,
-    LAnnotation,
-    LAttribute,
-    LClass,
-    LClassifier,
-    LEnumerator,
-    LEnumLiteral, LModel,
-    LObject, LOperation,
-    LPackage, LParameter, LReference,
-    LStructuralFeature, LDataType, LTypedElement, LNamedElement, // DMap, LMap,
-    LValue,
-} from "../model/logicWrapper/LModelElement";*/
+
 export {
     DExtEdge, DRefEdge, DVoidEdge, LGraphVertex, LRefEdge, LEdgePoint, DVoidVertex, DGraphVertex, DEdgePoint, DVertex,
     DEdge, LVertex, LGraph, DGraph, LVoidVertex, LVoidEdge, LEdge, LGraphElement, LExtEdge, DGraphElement} from "../model/dataStructure/GraphDataElements";
 
 
-
-// export {GraphDragHandler} from "../graph/vertex/GraphDragHandler";
 
 export type {WViewElement, WViewTransientProperties} from "../view/viewElement/view";
 export {DViewTransientProperties, LViewTransientProperties, LViewElement, DViewElement} from "../view/viewElement/view";

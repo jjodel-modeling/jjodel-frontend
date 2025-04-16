@@ -18,9 +18,9 @@ function AllProjectsComponent(props: AllProps): JSX.Element {
     const [isDropping, setDropping] = useState(false);
   
     const createProject = async(type: DProject['type']) => {
-        console.log("sono nella classe AllProjects, metodo createProject");
 
         await ProjectsApi.create(type, undefined, undefined, undefined, projects);
+        window.location.href = "/allProjects";
     }
 
     function dropConfirm(e: React.DragEvent<HTMLElement>){
@@ -58,6 +58,7 @@ function AllProjectsComponent(props: AllProps): JSX.Element {
         setDropping(true);
         e.dataTransfer.dropEffect = 'copy';
     }
+
     return(<Try>
         <>
         <Dashboard active={'All'} version={props.version}>

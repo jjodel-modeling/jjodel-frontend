@@ -64,6 +64,7 @@ class Api {
     static async post(path: string, obj: Json, allowAnonymous:boolean = false): Promise<Response> {
         try {
             if(allowAnonymous || await Api.checkToken()) {
+
                 const response = await Axios.post(path, obj, {headers: this.headers()});
                 return {code: response.status, data: response.data};
             }
@@ -75,6 +76,7 @@ class Api {
 
     static async put(path: string, obj: Json, allowAnonymous:boolean = false): Promise<Response> {
         try {
+
             if(allowAnonymous || await Api.checkToken()) {
                 const response = await Axios.put(path, obj, {headers: this.headers()});
                 return {code: response.status, data: response.data};
@@ -86,7 +88,7 @@ class Api {
         }
     }
 
-
+/*
     static async patch(path: string, obj: Json, allowAnonymous:boolean = false): Promise<Response> {
         try {
             if(allowAnonymous || await Api.checkToken()) {
@@ -99,6 +101,8 @@ class Api {
             return {code: 400, data: null};
         }
     }
+    */
+
 
     static async delete(path: string, allowAnonymous:boolean = false): Promise<Response> {
         try {

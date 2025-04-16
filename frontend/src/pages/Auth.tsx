@@ -33,16 +33,21 @@ function AuthPage(): JSX.Element {
         switch (action) {
             case 'login':
                 await login();
+                SetRootFieldAction.new('isLoading', false);
+
                 break;
             case 'register':
                 await register();
+                SetRootFieldAction.new('isLoading', false);
+
                 break;
             case 'retrieve-password':
                 await reset_password();
+                SetRootFieldAction.new('isLoading', false);
+
                 break;
         }
 
-        SetRootFieldAction.new('isLoading', false);
     }
 
 

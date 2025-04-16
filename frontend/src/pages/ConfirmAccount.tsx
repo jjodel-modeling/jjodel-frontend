@@ -22,7 +22,7 @@ function ConfirmAccount() {
                 }, 2000);
             }).catch(() => {
                 setLoading(false)
-                alert("Errore nella conferma dell'account!");
+
             });
         } catch (e) {
             console.log("Errore nella conferma account:", e);

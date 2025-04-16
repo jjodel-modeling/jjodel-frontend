@@ -1,3 +1,6 @@
+import {DProject} from "../../joiner";
+import {UpdateProjectRequest} from "./UpdateProjectRequest";
+
 export class UpdateUserRequest {
 
     id?: string
@@ -9,4 +12,6 @@ export class UpdateUserRequest {
     affiliation?: string
     newsletter?: boolean
 
+
 }
+

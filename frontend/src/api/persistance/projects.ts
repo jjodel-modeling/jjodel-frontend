@@ -3,7 +3,7 @@ import {
     DModel,
     DProject,
     LProject,
-    Pointer,
+    Pointer, R,
     SetFieldAction,
     TRANSACTION,
     U
@@ -12,17 +12,32 @@ import Storage from "../../data/storage";
 import Api from "../api";
 import {Project} from "../DTO/Project";
 
+import {UpdateProjectRequest} from "../DTO/UpdateProjectRequest";
+import {CreateProjectRequest} from "../DTO/CreateProjectRequest";
+
 class ProjectsApi {
 
-    static async create(type: DProject['type'], name?: DProject['name'], m2: Pointer<DModel>[] = [], m1: Pointer<DModel>[] = [], otherProjects?: LProject[]): Promise<DProject> {
-        console.log("ora vado all'online nel ProjectsApi");
+
+    static async create(type: DProject['type'], name?: DProject['name'], m2: Pointer<DModel>[] = [], m1: Pointer<DModel>[] = [], otherProjects?: LProject[]): Promise<void> {
+
         const project = DProject.new(type, name, undefined, m2, m1, undefined, otherProjects);
         console.log(project);
+       
+        if(U.isOffline()) {
+            Offline.create(project);
+            // return project;
+        }
+        else {
+            await Online.create(project);
 
-        if(U.isOffline()) Offline.create(project);
-    else await Online.create(project);
-        return project;
+            R.navigate('/allProjects');
+
+
+        }
+
+
     }
+
 
     static async getAll(): Promise<void> {
         let isOffline = U.isOffline();
@@ -31,11 +46,14 @@ class ProjectsApi {
         else await Online.getAll();
     }
 
-
-
     static async delete(project: LProject): Promise<void> {
-        if(U.isOffline()) Offline.delete(project.__raw as DProject);
-        else await Online.delete(project.__raw as DProject);
+        if(U.isOffline()) {
+            Offline.delete(project.__raw as DProject);
+        }
+        else {
+            await Online.delete(project.id);
+
+        }
         project.delete();
     }
 
@@ -45,7 +63,6 @@ class ProjectsApi {
         if(U.isOffline()) return Offline.getOne(id);
         else return await Online.getOne(id);
     }
-
 
 
     static async save(project: LProject): Promise<void> {
@@ -61,10 +78,13 @@ class ProjectsApi {
         else await Online.save(dProject);
         U.isProjectModified = false;
     }
+
     static async favorite(project: DProject): Promise<void> {
         if(U.isOffline()) return Offline.favorite(project);
         else return await Online.favorite(project);
     }
+
+
     static async importFromText(content: string, name: string = '', date: number = Date.now()) {
         const project = JSON.parse(content) as DProject;
         project.isFavorite = false;
@@ -72,13 +92,16 @@ class ProjectsApi {
         else await Online.import(project);
         CreateElementAction.new(project);
     }
+
     static import() {
         const reader = new FileReader();
         reader.onload = async e => {
             const content = String(e.target?.result);
             try {
                 await ProjectsApi.importFromText(content);
-            } catch (e) { U.alert('e', 'Invalid File.', 'Something went wrong ...'); }
+            } catch (e) {
+                U.alert('e', 'Invalid File.', 'Something went wrong ...');
+            }
         }
 
         let extensions = ['*.jjodel'];
@@ -89,6 +112,9 @@ class ProjectsApi {
         }, extensions, true);
         U.resetState();
     }
+
+
+
 }
 
 class Offline {
@@ -112,29 +138,34 @@ class Offline {
             }
         });
     }
+
     static delete(project: DProject): void {
         const projects = Storage.read<DProject[]>('projects') || [];
         const filteredProjects = projects.filter(p => p.id !== project.id);
         Storage.write('projects', filteredProjects);
     }
+
     static getOne(id: string): DProject|null {
         const projects = Storage.read<DProject[]>('projects') || [];
         let filtered: DProject|DProject[] = projects.filter(p => p.id === id);
         if(filtered.length <= 0) return null;
         return filtered[0];
     }
+
     static async save(project: DProject): Promise<void> {
         const projects = Storage.read<DProject[]>('projects') || [];
         const filtered = projects.filter(p => p.id !== project.id);
         Storage.write('projects', [...filtered, project]);
         U.alert('i', 'Project Saved!', '');
     }
+
     static async favorite(project: DProject): Promise<void> {
         const projects = Storage.read<DProject[]>('projects') || [];
         const filtered = projects.filter(p => p.id !== project.id);
         Storage.write('projects', [...filtered, {...project, isFavorite: !project.isFavorite}]);
         SetFieldAction.new(project.id, 'isFavorite', !project.isFavorite);
     }
+
     static import(project: DProject): void {
         const projects = Storage.read<DProject[]>('projects') || [];
         const filtered = projects.filter(p => p.id !== project.id);
@@ -143,42 +174,23 @@ class Offline {
     }
 }
 
+
 class Online {
 
-    static async create (project: Project): Promise<void> {
-        console.log("entro nella create online di projects");
-        await Api.post(`${Api.persistance}/project`, {
-            id: project.id,
-            creation: project.creation || Date.now(),
-            description: project.description,
-            name: project.name,
-            type: project.type
-        });
-    }
-    /*
-    static async create (project: Project): Promise<void> {
-        console.log("entro nella create online di projects");
-        await Api.post(`${Api.persistance}/project`, {
-            id: project.id,
-            creation: project.creation || Date.now(),
-            description: project.description,
-            name: project.name,
-            type: project.type
-        });
-    }
-    /*
+
     static async create (project: DProject): Promise<void> {
-        console.log("entro nella create online di projects");
-        await Api.post(`${Api.persistance}/project`, {
-            id: project.id,
-            creation: project.creation || Date.now(),
-            description: project.description,
-            name: project.name,
-            type: project.type
-        });
+        const creationProjectRequest : CreateProjectRequest = new Project();
+        creationProjectRequest.description = project.description;
+        creationProjectRequest.name = project.name;
+        creationProjectRequest.type = project.type;
+
+
+        await Api.post(`${Api.persistance}/project`, {...creationProjectRequest});
+
+
     }
 
-     */
+
     static async getAll(): Promise<void> {
 
         const response = await Api.get(`${Api.persistance}/project/`);
@@ -194,7 +206,7 @@ class Online {
 
         // Check if the received data is a valid array
         if (!Array.isArray(response.data)) {
-            console.log("La risposta non è un array.");
+
         }
 
         // Cast the raw data to an array, bypassing type safety
@@ -235,34 +247,79 @@ class Online {
     }
 
 
-
-    static async delete(project: DProject): Promise<void> {
-        await Api.delete(`${Api.persistance}/project/${project.id}`);
+    static async delete(id :string): Promise<void> {
+        console.log(id);
+        await Api.delete(`${Api.persistance}/project/${id}`);
     }
+
+
     static async getOne(id: string): Promise<DProject|null> {
-        console.log("sono online entro qui");
+
+
         const response = await Api.get(`${Api.persistance}/project/${id}`);
-        if(response.code !== 200) return null;
+        if(response.code !== 200) {
+            return null;
+        }
         return U.wrapper<DProject>(response.data);
     }
+
     static async save(project: DProject): Promise<void> {
 
-        const response = await Api.patch(`${Api.persistance}/projec/${project.id}`, {...project});
-        if(response.code !== 200) U.alert('e', 'Cannot Save','Something went wrong ...');
-        else U.alert('i', 'Project Saved!', '');
+        console.log(project);
+        const updateProjectRequest = UpdateProjectRequest.convertDprojectToUpdateProject(project);
+        console.log(updateProjectRequest);
+        const response = await Api.put(`${Api.persistance}/project/`, {...updateProjectRequest});
+        console.log(response);
+        if(response.code !== 200) {
+            U.alert('e', 'Cannot Save','Something went wrong ...');
+        }
+        else {
+            U.alert('i', 'Project Saved!', '');
+        }
     }
+
+
+
     static async favorite(project: DProject): Promise<void> {
-        const response = await Api.patch(`${Api.persistance}/project/${project.id}`, {
-            isFavorite: !project.isFavorite
-        });
-        if(response.code !== 200) U.alert('e', 'Cannot set this property!', 'Something went wrong ...');
+
+
+        const updateProjectRequest :UpdateProjectRequest = UpdateProjectRequest.convertDprojectToUpdateProject(project);
+        const response = await Api.put(`${Api.persistance}/project/`, {...updateProjectRequest});
+
+
+        if(response.code !== 200) {
+            U.alert('e', 'Cannot set this property!', 'Something went wrong ...');
+        }
         SetFieldAction.new(project.id, 'isFavorite', !project.isFavorite);
     }
+
+
+
+
     static async import(project: DProject): Promise<void> {
-        await Online.create(project);
-        await Api.patch(`${Api.persistance}/projects/${project.id}`, {...project});
+
+        console.log(project.id)
+        const response = await Api.get(`${Api.persistance}/project/${project.id}`);
+
+        if(response.code === 200) {
+
+            const updateProjectRequest :UpdateProjectRequest = UpdateProjectRequest.convertDprojectToUpdateProject(project);
+            const response = await Api.put(`${Api.persistance}/project/`, {...updateProjectRequest});
+
+            if(response.code !== 200) {
+                U.alert('e', 'Cannot import project!', 'Something went wrong ...');
+            }
+        } else {
+
+            await Online.create(project);
+        }
+
+
     }
+
+
 }
+
 let windoww = window as any;
 windoww.ProjectsApi = ProjectsApi;
 windoww.Api = Api;

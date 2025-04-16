@@ -19,7 +19,6 @@ class AuthApi {
     }
   
     static async register(request: RegisterRequest): Promise<Response> {
-        alert("TEST")
         Storage.write('offline', false);
         return await Api.post(`${Api.persistance}/account/register`, {...request}, true);
     

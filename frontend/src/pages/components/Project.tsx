@@ -71,12 +71,14 @@ function Project(props: Props): JSX.Element {
 
     const toggleFavorite = async(project: LProject) => {
         await ProjectsApi.favorite(project.__raw as DProject);
-
     };
+
     const selectProject = () => {
         R.navigate(`/project?id=${data.id}`, true);
         //U.resetState();
     }
+
+
     const exportProject = async() => {
         // await ProjectsApi.save(data);
         U.download(`${data.name}.jjodel`, JSON.stringify(data.__raw));

@@ -58,7 +58,8 @@ function App(props: AllProps): JSX.Element {
     if (firstLoading) {
         firstLoading = false;
         console.log("entro in app.tsx nel costrutto per verificare se è il firstLoading");
-        stateInitializer().then(()=> {console.log('forceupdate trigger', {'#':window.location.hash, o:{pu:props.user, u:DUser.current}});
+        stateInitializer().then(()=> {
+            console.log('forceupdate trigger', {'#':window.location.hash, o:{pu:props.user, u:DUser.current}});
             updateUser(DUser.current);
             forceUpdate(1);
 

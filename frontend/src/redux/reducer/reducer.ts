@@ -1205,7 +1205,7 @@ export async function stateInitializer() {
 
     } catch (error) {
         // U.alert('e','Failed to fetch projects','');
-        AuthApi.logout();
+        await AuthApi.logout();
         console.error('Failed to fetch projects', {error});
         DUser.current = '';
         // R.navigate('/auth');

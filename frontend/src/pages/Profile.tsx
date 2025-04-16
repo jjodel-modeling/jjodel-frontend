@@ -1,8 +1,7 @@
 import {Try} from '../joiner';
 import {Dashboard} from './components';
 
-import {Cards, Card} from './components/cards/Cards';
-import { Catalog } from './components/catalog/Catalog';
+import {Cards} from './components/cards/Cards';
 
 function ProfilePage(): JSX.Element {
     // NB: this works only in production if you put subfolders with past builds in the new build root.
