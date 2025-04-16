@@ -1,8 +1,7 @@
 import {Try} from '../joiner';
 import {Dashboard} from './components';
 
-import {Cards, Card} from './components/cards/Cards';
-import { Catalog } from './components/catalog/Catalog';
+import {Cards} from './components/cards/Cards';
 import {JSX} from "react";
 
 function ProfilePage(): JSX.Element {
@@ -18,7 +17,8 @@ function ProfilePage(): JSX.Element {
                     icon={'gettingstarted'} 
                     style={'rainbow'}   
                 />
-                {true && <Cards.Item icon={'question'} style={'clear'} title={'Ehy!'} subtitle={'What do you want to do today?'}/>}
+                {<Cards.Item icon={'question'} style={'clear'} title={'Ehy!'}
+                             subtitle={'What do you want to do today?'}/>}
             </Cards>
 
             <ul>

@@ -1,5 +1,5 @@
 import {DProject, DUser, U} from "../../joiner";
-import Api from "../../data/api";
+import Api from "../api";
 import Axios from "axios";
 
 class AdminApi {

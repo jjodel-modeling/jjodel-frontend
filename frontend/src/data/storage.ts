@@ -1,4 +1,3 @@
-import {GObject} from "../joiner";
 
 export class Storage {
     static read<T>(key: string): T {

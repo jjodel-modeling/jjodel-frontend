@@ -1,6 +1,6 @@
 import {GObject, Json, LModelElement, LNamedElement, U} from '../../joiner';
 import {MemoRecModel, MemoRecNamed, MemoRecObject} from './types';
-import Api from '../../data/api';
+import Api from '../api';
 
 export default class MemoRec {
     static async structuralFeature(me: LModelElement): Promise<{data: GObject[], type:'class'|'package'}> {

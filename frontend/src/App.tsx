@@ -2,13 +2,13 @@ import React, {Dispatch, JSX, useState} from 'react';
 import './App.scss';
 import './styles/view.scss';
 import './styles/style.scss';
-import {DState, DUser, Log, LUser, Pointer, SetRootFieldAction, statehistory, stateInitializer, Try, U} from "./joiner";
+import {DState, DUser, Log, LUser, Pointer, R, SetRootFieldAction, statehistory, stateInitializer, Try, U} from "./joiner";
 import {connect} from "react-redux";
 import Loader from "./components/loader/Loader";
 import {FakeStateProps} from "./joiner/types";
+import {useEffectOnce} from "usehooks-ts";
 import {HashRouter, Route, Routes} from 'react-router-dom';
 import PathChecker from "./components/pathChecker/PathChecker";
-import {AuthApi} from "./api/persistance";
 
 import {
     AccountPage,
@@ -22,7 +22,8 @@ import {
     RecentPage,
     SettingsPage,
     TemplatePage,
-    UpdatesPage, UsersInfoPage
+    UpdatesPage, UsersInfoPage,
+    ConfirmAccount
 } from "./pages";
 
 import {ExternalLibraries} from "./components/forEndUser/ExternalLibraries";
@@ -30,12 +31,12 @@ import {TooltipVisualizer} from "./components/forEndUser/Tooltip";
 import {BottomBar} from "./pages/components";
 import AlertVisualizer from "./components/alert/Alert";
 import DialogVisualizer from './components/alert/Dialog';
-import Storage from "./data/storage";
-import {Console} from "./components/editors";
 
 let firstLoading = true;
 let browserData = U.getOSBrowserData();
 Log.filterMessages();
+
+
 function App(props: AllProps): JSX.Element {
     //const debug = props.debug;
     const isLoading = props.isLoading;
@@ -50,14 +51,15 @@ function App(props: AllProps): JSX.Element {
     //let user = LUser.fromPointer(DUser.current);
     if (firstLoading) {
         firstLoading = false;
+        console.log("entro in app.tsx nel costrutto per verificare se è il firstLoading");
         stateInitializer().then(()=> {
             updateUser(DUser.current);
             forceUpdate(1);
+
         });
         return <Loader/>;
     }
     if (U.navigating) return <Loader/>;
-    let debugx = <span style={{position: 'absolute', zIndex: 9999, border: '1px solid red', background: 'white'}}>{props.user}</span>;
 
     if (DUser.current !== user) updateUser(DUser.current);
     if (browserData.browser === 'Firefox') U.alert('e', 'Unsupported browser',
@@ -74,6 +76,7 @@ function App(props: AllProps): JSX.Element {
             <HashRouter>
                 <Try><PathChecker/></Try>
                 <Try><Routes>
+
                     {user ? <>
                         <Route path={'allProjects'} element={<AllProjectsPage/>}/>
                         {/*<Route path={'dock'} element={<MyDock />} />*/}
@@ -91,10 +94,17 @@ function App(props: AllProps): JSX.Element {
                         <Route path={'projectsInfo'} element={<ProjectsInfoPage/>}/>
                         <Route path={'news'} element={<NewsPage/>}/>
                         <Route path={'auth'} element={<AuthPage/>}/>
+
                         <Route path={'*'} element={<AllProjectsPage/>}/>
                         {window.location.hostname !== 'localhost' && false &&
                             <Route path={'*'} element={<AllProjectsPage/>}/>}
-                    </> : <Route path={'*'} element={<AuthPage/>}/>}
+                    </> :
+                        <>
+                            <Route path={'confirm/:id/:token'} element={<ConfirmAccount />}/>
+                            <Route path={'*'} element={<AuthPage/>}/>
+                            </>
+
+                    }
                 </Routes></Try>
             </HashRouter>
             {user && <Try><BottomBar/></Try>}
