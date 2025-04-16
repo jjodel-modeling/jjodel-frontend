@@ -27,11 +27,11 @@ jobs:
       - name: npm install, build, and test
         working-directory: ./frontend
         run: |
-          chmod +x node_modules/.bin/react-app-rewired
-          chmod +x -R node_modules
-          rm -rf node_modules package-lock.json
+          rm -rf node_modules
           npm cache clean --force
           npm install
+          chmod +x -R node_modules
+          chmod +x node_modules/.bin/react-app-rewired
           npm run build-ssl --if-present
 
       - name: Zip artifact for deployment
