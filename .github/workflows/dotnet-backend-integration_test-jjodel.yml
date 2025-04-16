@@ -21,17 +21,14 @@ jobs:
       - name: Set up Node.js version
         uses: actions/setup-node@v3
         with:
-          node-version: '20.x'
+          node-version: '22.8.0'
 
 
       - name: npm install, build, and test
         working-directory: ./frontend
         run: |
           rm -rf node_modules
-          npm cache clean --force
           npm install
-          chmod +x -R node_modules
-          chmod +x node_modules/.bin/react-app-rewired
           npm run build-ssl --if-present
 
       - name: Zip artifact for deployment

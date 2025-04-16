@@ -1,7 +1,7 @@
 import Api, {Response} from "../api";
 import Storage from "../../data/storage";
 import {DUser, U} from "../../joiner";
-import {jwtDecode, JwtPayload} from "jwt-decode";
+import {jwtDecode} from "jwt-decode";
 import { RegisterRequest } from "../DTO/RegisterRequest";
 import { LoginRequest } from "../DTO/LoginRequest";
 import { JwtClaims } from "../DTO/JwtClaims";
