@@ -27,8 +27,8 @@ jobs:
       - name: npm install, build, and test
         working-directory: ./frontend
         run: |
-          webpack -v
           node -v
+          webpack -v | echo
           npm -v
           tsc -v
           npm ls source-map
