@@ -27,8 +27,8 @@ jobs:
       - name: npm install, build, and test
         working-directory: ./frontend
         run: |
-          webpack -v
           node -v
+          webpack -v
           npm -v
           tsc -v
           rm -rf node_modules
