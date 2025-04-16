@@ -3206,7 +3206,7 @@ export function MixOnlyFuncs<A1 extends any[], I1, S1, A2 extends any[], I2, S2>
     let ret = Mixin(c1noconstructor, c2noconstructor);
     let c1name = (c1.cname || c1.name) === 'classnameFixedConstructorDoNotRenameWithoutSearchStrings' ? c1.prototype.className : c1.cname || c1.name;
     let c2name = (c2.cname || c2.name) === 'classnameFixedConstructorDoNotRenameWithoutSearchStrings' ? c2.prototype.className : c2.cname || c2.name;
-    //ret.prototype['superclass'] = {};
+    // ret.prototype['superclass'] = {};
     // ret.prototype['superclass'][c1name] = c1.prototype.init_constructor || invalidSuperClassError(c1name, c1);
     // ret.prototype['superclass'][c2name] = c2.init_constructor || invalidSuperClassError(c2name, c2);
     ret.prototype['superclass1'] = {};

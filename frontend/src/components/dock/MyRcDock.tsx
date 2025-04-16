@@ -13,10 +13,9 @@ import {
     windoww
 } from "../../joiner";
 import $ from "jquery";
-import {BoxData, DockLayout, LayoutProps, PanelData, TabData, TabGroup} from "rc-dock";
+import {BoxData, LayoutData, DockLayout, LayoutProps, PanelData, TabData, TabGroup} from "rc-dock";
 import {MyPortal} from "./MyDock";
 import "./DockManagerStyles.scss";
-import {LayoutData} from "rc-dock/src/DockData";
 
 // needs to be class component because needs setState() to be called externally
 interface TabHeaderProps{

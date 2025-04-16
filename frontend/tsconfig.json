@@ -13,6 +13,7 @@
     "noImplicitAny": true,
     "downlevelIteration": true,
     "skipLibCheck": true,
+    "skipDefaultLibCheck": true,
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "strict": true,
@@ -25,11 +26,15 @@
     "noEmit": true,
     "jsx": "react-jsx"
   },
+  "types": [],
   "include": [
     "src"
   ],
   "exclude": [
-    "common/libraries/*"
+    "common/libraries/*",
+    "node_modules",
+    "./node_modules",
+    "./node_modules/*",
   ]
   // "noImplicitUseStrict": true = "use strict" of js
 }

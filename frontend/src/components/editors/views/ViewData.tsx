@@ -15,7 +15,7 @@ import {
 import InfoData from './data/InfoData';
 import TemplateData from './data/TemplateData';
 import {DockLayout} from 'rc-dock';
-import {LayoutData} from 'rc-dock/lib/DockData';
+import {LayoutData} from 'rc-dock';
 import EventsData from './data/CustomData';
 import {FakeStateProps, Overlap} from "../../../joiner/types";
 import {connect} from "react-redux";
