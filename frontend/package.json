@@ -44,7 +44,7 @@
     "react-portal": "^4.3.0",
     "react-redux": "^9.2.0",
     "react-router-dom": "^6.30.0",
-    "react-scripts": "^5.0.1",
+    "react-scripts": "4.0.3",
     "react-select": "^5.10.1",
     "redux": "^5.0.1",
     "sass": "^1.86.3",
