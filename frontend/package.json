@@ -66,7 +66,7 @@
   },
   "scripts": {
     "____________________________________production______________________________": "",
-    "start": "react-app-rewired start",
+    "start": "set NODE_OPTIONS=--openssl-legacy-provider && react-app-rewired start",
     "poststart": "echo to debug http://localhost:3000/ click this using CTRL+SFHIT",
     "test": "react-app-rewired test",
     "serve": "serve -s build",
