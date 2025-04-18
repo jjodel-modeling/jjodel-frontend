@@ -72,5 +72,5 @@ jobs:
         with:
           app-name: 'test-jjodel'
           slot-name: 'Production'
-          package: frontend/build/
+          package: .
           
