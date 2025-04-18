@@ -18,6 +18,7 @@ export class Storage {
         localStorage.setItem(key, str);
     }
 
+
     static reset(): void { localStorage.clear(); } /* NO! never fully reset the state or offline mode breaks completely with lost data. */
 }
 
