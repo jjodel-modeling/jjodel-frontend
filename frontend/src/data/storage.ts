@@ -7,6 +7,7 @@ export class Storage {
             return JSON.parse(val) as unknown as T;
         } catch (e) { }
         return val as unknown as T;
+
     }
 
     static write(key: string, obj: unknown): void {
