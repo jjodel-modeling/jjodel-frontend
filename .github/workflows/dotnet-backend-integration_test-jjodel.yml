@@ -29,7 +29,7 @@ jobs:
         run: |
           node -v
           npm ci 
-          npm run build-ssl --if-present
+          npm run build
 
       - name: Zip artifact for deployment
         run: zip release.zip ./* -r
