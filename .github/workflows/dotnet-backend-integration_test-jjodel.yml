@@ -28,6 +28,7 @@ jobs:
         working-directory: ./frontend
         run: |
           npm i
+          export NODE_OPTIONS=--openssl-legacy-provider
           CI='' npm run build
 
       - name: Zip artifact for deployment
