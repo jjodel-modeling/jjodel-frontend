@@ -27,8 +27,7 @@ jobs:
       - name: npm install, build, and test
         working-directory: ./frontend
         run: |
-          npm ci 
-          
+          npm i
           npm run build
 
       - name: Zip artifact for deployment
