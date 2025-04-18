@@ -21,14 +21,14 @@ jobs:
       - name: Set up Node.js version
         uses: actions/setup-node@v3
         with:
-          node-version: '23.11.0'
+          node-version: '22'
 
 
       - name: npm install, build, and test
         working-directory: ./frontend
         run: |
-          node -v
           npm ci 
+          export NODE_OPTIONS=--openssl-legacy-provider
           npm run build
 
       - name: Zip artifact for deployment
