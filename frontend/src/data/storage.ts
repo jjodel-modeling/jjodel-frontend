@@ -7,6 +7,7 @@ export class Storage {
             return JSON.parse(val) as unknown as T;
         } catch (e) { }
         return val as unknown as T;
+
     }
 
     static write(key: string, obj: unknown): void {
@@ -18,8 +19,10 @@ export class Storage {
         localStorage.setItem(key, str);
     }
 
+
     static reset(): void { localStorage.clear(); } /* NO! never fully reset the state or offline mode breaks completely with lost data. */
 }
 
 export default Storage;
 (window as any).JStorage = Storage;
+

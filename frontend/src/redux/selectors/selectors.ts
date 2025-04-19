@@ -345,12 +345,6 @@ export class Selectors{
     static getViewIDs(condition?: (m: DModel) => boolean): Pointer<DViewElement>[] { return Selectors.getAll(DViewElement); }
 
 
-
-    private static queryJS(model: LModel, query: string): LPointerTargetable[] {
-        try {
-            return eval(query);
-        } catch (e) { return []; }
-    }
     /*static getCurrentView(data: LModelElement): DViewElement {
         Log.exDevv('todo');
         return undefined as any;
