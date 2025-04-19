@@ -14,7 +14,6 @@ import {Project} from "../DTO/Project";
 import {UpdateProjectRequest} from "../DTO/UpdateProjectRequest";
 import {CreateProjectRequest} from "../DTO/CreateProjectRequest";
 import Api from "../api";
-// import Api from "../../data/api";
 
 class ProjectsApi {
 
