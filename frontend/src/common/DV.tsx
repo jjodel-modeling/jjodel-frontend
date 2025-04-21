@@ -284,7 +284,7 @@ export class DV {
             "// ret.data = data\n" +
             "ret.edgeview = edge.view.id\n" +
             "ret.view = view\n" +
-            "// data, edge, view are dependencies by default. delete them above if you want to remove them.\n" +
+            "// data, edge, view are dependencies by default. delete the line(s) above if you want to remove them.\n" +
             "// add preparation code here (like for loops to count something), then list the dependencies below.\n" +
             "// ** declarations here ** //\n" +
             "ret.start = edge.start\n"+

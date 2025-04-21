@@ -23,7 +23,7 @@ import {
     LReference,
     LVoidEdge,
     LValue,
-    DataTransientProperties
+    DataTransientProperties, L
 } from "../../joiner";
 import {DefaultUsageDeclarations} from "./sharedTypes/sharedTypes";
 
@@ -410,12 +410,11 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
     lastViewChanges: {t: number, vid: Pointer<DViewElement>, v: LViewElement, key?: string}[];
     lastOnUpdateChanges: {t: number}[];
     stopUpdateEvents?: number; // undefined or view.clonedCounter;
-    dataOldClonedCounter?: number; // undefined or data.clonedCounter;
 
     public shouldComponentUpdate(nextProps: Readonly<AllProps>, nextState: Readonly<GraphElementState>, nextContext: any, oldProps?: Readonly<AllProps>): boolean {
         if (!oldProps) oldProps = this.props;//for subviewcomponent
         if (nextProps.__skipRender) return false;
-        let debug = false;
+        let debug = windoww.debugg || true;
         // return GraphElementComponent.defaultShouldComponentUpdate(this, nextProps, nextState, nextContext);
         let data = nextProps.data?.__raw as DNamedElement | undefined;
 
@@ -545,16 +544,19 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
     }
 
     protected doMeasurableEvent(type: EMeasurableEvents, vid: Pointer<DViewElement>): boolean {
+        console.log('x4 measurable event', {vid})
         if (Debug.lightMode) return false;
         let measurableFunc: undefined | ((context:GObject)=>void) = (transientProperties.view[vid] as any)[type];
+        console.log('x4 measurable event 1', {vid})
         if (!measurableFunc) return false;
+        console.log('x4 measurable event 2', {vid})
         let context: GObject = this.getJSXContext(vid); // context + usagedeclarations of main view only
         // console.log("render debug measurable " + type + " view: " + vid, {context, type, lm: Debug.lightMode, vid});
         try {
             measurableFunc.call(context, context);
             console.log("measurable executed", {type, measurableFunc, vid, transient:transientProperties.view[vid]});
         }
-        catch (e: any) { Log.ee('Error in measurable "'+type+'" ' + e.message, {e, measurableFunc, context}); }
+        catch (e: any) { Log.ee('Error in measurable "'+L.from(vid).name+'".'+type+' ' + e.message, {e, measurableFunc, context}); }
         // it has executed at least partially.
         // i just need to know if he had the chance to do side-effects and the answer is yes regardless of exceptions
         return true;
@@ -1014,6 +1016,8 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
     }
 
     onDataUpdateMeasurable(v: LViewElement, vid: Pointer<DViewElement>, index: number): void{
+        console.log('x4 measurable event', {index, vid})
+
         if (index > 0) { this.doMeasurableEvent(EMeasurableEvents.onDataUpdate, vid); return; }
         // only on first of a sequence of onDataUpdate events for all stackviews (the mainview),
         // sets time of current stack of updates, to check if they are generating a loop
@@ -1022,14 +1026,17 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         // EMeasurableEvents.onDataUpdate -> handling and checking for loops
         if (!this.stopUpdateEvents || this.stopUpdateEvents !== this.props.view.clonedCounter) {
             this.stopUpdateEvents = undefined;
-            if (this.props.data && (this.dataOldClonedCounter !== this.props.data.clonedCounter) && this.doMeasurableEvent(EMeasurableEvents.onDataUpdate, vid)) {
-                this.dataOldClonedCounter = this.props.data.clonedCounter;
+            // earlier it was triggering only on .data changes + ud check. now it is only UD check.
+            // to re-allow data changed requirement: this.props.data && (this.dataOldClonedCounter !== this.props.data.clonedCounter) &&
+            if (this.doMeasurableEvent(EMeasurableEvents.onDataUpdate, vid)) {
+                // this.dataOldClonedCounter = this.props.data.clonedCounter
                 let thischange = {t: Date.now()};
                 this.lastOnUpdateChanges.push(thischange);
                 if (thischange.t - this.lastOnUpdateChanges[this.lastOnUpdateChanges.length - 10]?.t < 300) {
                     // if N updates in <= 0.2 sec
                     this.stopUpdateEvents = this.props.view.clonedCounter;
-                    Log.eDevv("loop in node.render() likely due to MeasurableEvent onDataUpdate. It has been disabled until the view changes.",{
+                    Log.eDevv("loop in node.render() likely due to MeasurableEvent onDataUpdate." +
+                        " It has been disabled until the view changes.",{
                         change_log: this.lastOnUpdateChanges,
                         component: this,
                         timediff: (thischange.t - this.lastOnUpdateChanges[this.lastOnUpdateChanges.length - 10]?.t)
@@ -1156,6 +1163,16 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
             dbg:allviews.map(v=>({v:v.id, shouldup:tn.viewScores[v.id].shouldUpdate})),
             scores:tn.viewScores,
             tnv:tn.viewScores[this.props.viewid], ud:tn.viewScores[this.props.viewid].usageDeclarations});*/
+
+        // do ondataupdate measurables
+        for (let i = 0 ; i < allviews.length; i++){
+            let v = allviews[i];
+            let vid = v.id;
+            let viewnodescore = tn.viewScores[vid];
+            if (!viewnodescore.shouldUpdate && !!viewnodescore.jsxOutput) continue;
+            this.onDataUpdateMeasurable(v, vid, i);
+        }
+        // compute jsx
         for (let v of allviews) { // main view is the last
             let viewnodescore = tn.viewScores[v.id];
             jsxOutput = viewnodescore.shouldUpdate ? undefined : viewnodescore.jsxOutput;
@@ -1163,18 +1180,13 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
             if (!jsxOutput) viewnodescore.jsxOutput = jsxOutput =
                 this.renderView(this.props, v, nodeType, classes, styleoverride,
                     isMain && decoratorViewsOutput, mainView.id, isMain && otherViews.map(v=>v.id));
-            if (!isMain) decoratorViewsOutput.push(jsxOutput);
-        }
-
-        // do ondataupdate measurables
-        for (let i = 0 ; i < allviews.length; i++){
-            let v = allviews[i];
-            let vid = v.id;
-            let viewnodescore = tn.viewScores[vid];
-            if (!viewnodescore.shouldUpdate) continue;
-            this.onDataUpdateMeasurable(v, vid, i);
+            if (!isMain) {
+                (decoratorViewsOutput as GObject)[v.name] = jsxOutput;
+                decoratorViewsOutput.push(jsxOutput);
+            }
             if (viewnodescore.shouldUpdate) viewnodescore.shouldUpdate = false; // this needs to stay placed after this.renderView() call
         }
+
         let mainViewOutput: ReactNode = jsxOutput;
         return mainViewOutput;
         // console.log('rendering view stack', {mainView, otherViews, mainViewOutput, decoratorsJSX:decoratorViewsOutput});

@@ -105,15 +105,20 @@ export class R{
         console.warn('R.navigate()', {path, refresh});
         //if (path.indexOf('allProject') >= 0) return;
         let debug: false = true as any;
+        if (path.indexOf('//') >= 0) { window.location.href = path; return; }
         if (debug || refresh === true ) {
-            if (path[0] !== '/') path = '/'+path;
-            path = '/#' + path;
-            console.log('navigating: ', {path, url:window.location.origin + path, currHash:window.location.hash});
-            if ('/'+window.location.hash === path) return;
+            let hash: string;
+            if (path[0] !== '/') hash = '#/'+path;
+            else hash = '#'+path;
+            // console.log('navigating: ', {path, url:window.location.origin + path, currHash:window.location.hash});
+            if (window.location.hash === hash) return;
             U.navigating = true;
-            window.location.href = window.location.origin + path;
-
-           // window.location.reload(); // i think this is causing a firefox bug, it refreshes old url
+            window.location.hash = hash;
+            window.location.reload();
+            // let counter = +(U.getSearchParam('p') as string) || 0;
+            // U.setSearchParam('p', counter+1);
+            //window.location.href = window.location.origin + '/'+hash;
+            // window.location.reload(); // i think this is causing a firefox bug, it refreshes old url. so i'm using location.search
         }
         else refresh(path); // useNavigator()(path);
     }
@@ -2428,6 +2433,33 @@ export class U {
         let _index = search.indexOf('?');
         if (_index >= 0) search = search.substring(_index+1);
         return new URLSearchParams(search).get(arg_name);
+    }
+
+    public static setHashParam(arg_name: string, val: number|string): string {
+        let search = window.location.hash;
+        let _index = search.indexOf('?');
+        let prefix: string = '';
+        if (_index >= 0) {
+            prefix = search.substring(0, _index+1);
+            search = search.substring(_index + 1);
+        }
+        let url = new URLSearchParams(search);
+        url.set(arg_name, val+'');
+        let hash = prefix + url.toString();
+        window.location.hash = hash;
+        return hash; }
+
+    public static getSearchParam(arg_name: string): string | null {
+        let search = window.location.search;
+        return new URLSearchParams(search).get(arg_name);
+    }
+    public static setSearchParam(arg_name: string, val: number|string): string {
+        let search = window.location.search;
+        let url = new URLSearchParams(search);
+        url.set(arg_name, ''+val);
+        search = url.toString();
+        window.location.search = search;
+        return search;
     }
 }
 export class DDate{

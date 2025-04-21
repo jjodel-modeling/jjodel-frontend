@@ -517,7 +517,7 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
             "ret.data = data\n" +
             "ret.node = node\n" +
             "ret.view = view\n" +
-            "// data, node, view are dependencies by default. delete them above if you want to remove them.\n" +
+            "// data, node, view are dependencies by default. delete the line(s) above if you want to remove them.\n" +
             // if you want your node re-rendered every time, add a dependency to ret.state = state; or ret.update = Math.random();
             "// add preparation code here (like for loops to count something), then list the dependencies below.\n" +
             "// ** declarations here ** //\n" +

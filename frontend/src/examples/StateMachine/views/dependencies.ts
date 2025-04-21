@@ -9,7 +9,7 @@ export class Dependencies {
         ret.node = node
         ret.view = view
         console.log('inside ud default func post', {ret:{...ret}, data, node, view})
-        // data, node, view are dependencies by default. delete them above if you want to remove them.
+        // data, node, view are dependencies by default. delete the line(s) above if you want to remove them.
         // add preparation code here (like for loops to count something), then list the dependencies below.
       
         // ** declarations here ** //
@@ -23,7 +23,7 @@ export class Dependencies {
         ret.node = node
         ret.view = view
         console.log('inside ud default func post', {ret:{...ret}, data, node, view})
-        // data, node, view are dependencies by default. delete them above if you want to remove them.
+        // data, node, view are dependencies by default. delete the line(s) above if you want to remove them.
         // add preparation code here (like for loops to count something), then list the dependencies below.
       
         // ** declarations here ** //
@@ -37,7 +37,7 @@ export class Dependencies {
         ret.node = node
         ret.view = view
         console.log('inside ud default func post', {ret:{...ret}, data, node, view})
-        // data, node, view are dependencies by default. delete them above if you want to remove them.
+        // data, node, view are dependencies by default. delete the line(s) above if you want to remove them.
         // add preparation code here (like for loops to count something), then list the dependencies below.
         
         // ** declarations here ** //
@@ -51,7 +51,7 @@ export class Dependencies {
         ret.node = node
         ret.view = view
         console.log('inside ud default func post', {ret:{...ret}, data, node, view})
-        // data, node, view are dependencies by default. delete them above if you want to remove them.
+        // data, node, view are dependencies by default. delete the line(s) above if you want to remove them.
         // add preparation code here (like for loops to count something), then list the dependencies below.
       
         // ** declarations here ** //
@@ -65,7 +65,7 @@ export class Dependencies {
         ret.node = node
         ret.view = view
         console.log('inside ud default func post', {ret:{...ret}, data, node, view})
-        // data, node, view are dependencies by default. delete them above if you want to remove them.
+        // data, node, view are dependencies by default. delete the line(s) above if you want to remove them.
         // add preparation code here (like for loops to count something), then list the dependencies below.
       
         // ** declarations here ** //

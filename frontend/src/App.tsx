@@ -61,7 +61,7 @@ function App(props: AllProps): JSX.Element {
     if (U.navigating) return <Loader/>;
 
     if (DUser.current !== user) updateUser(DUser.current);
-    if (browserData.browser === 'Firefox') U.alert('e', 'Unsupported browser',
+    if (/*window.location.hash === '' && */browserData.browser === 'Firefox') U.alert('e', 'Unsupported browser',
         'Firefox is not supported yet and have known issues.\nplease open this website on another browser.');
     return (<>
         <div className={"router-wrapper"}>

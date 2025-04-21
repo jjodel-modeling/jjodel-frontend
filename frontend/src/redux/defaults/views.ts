@@ -139,7 +139,7 @@ class DefaultViews {
             '// custom preparations:\n' +
             'let packages = data && data.isMetamodel ? data.packages : [];\n' +
             'let suggestedEdges = data?.suggestedEdges || {};\n' +
-            '// data, node, view are dependencies by default. delete them above if you want to remove them.\n' +
+            '// data, node, view are dependencies by default. delete the line(s) above if you want to remove them.\n' +
             '// add preparation code here (like for loops to count something), then list the dependencies below.\n' +
             // ¡ The element will update only if one of the listed dependencies has changed !
             '// ** declarations here ** //\n' +
@@ -180,7 +180,7 @@ class DefaultViews {
                 'ret.node = node\n' +
                 'ret.view = view\n' +
                 '// custom preparations:\n' +
-                '// data, node, view are dependencies by default. delete them above if you want to remove them.\n' +
+                '// data, node, view are dependencies by default. delete the line(s) above if you want to remove them.\n' +
                 '// add preparation code here (like for loops to count something), then list the dependencies below.\n' +
                 // ¡ The element will update only if one of the listed dependencies has changed !
                 '// ** declarations here ** //\n' +
@@ -246,7 +246,7 @@ border-color: silver!important;
     ret.node = node
     ret.view = view
     // custom preparations:
-    // data, node, view are dependencies by default. delete them above if you want to remove them.
+    // data, node, view are dependencies by default. delete the line(s) above if you want to remove them.
     // add preparation code here (like for loops to count something), then list the dependencies below.
     // ¡ The element will update only if one of the listed dependencies has changed !
     // ** declarations here ** //
@@ -328,7 +328,7 @@ border-color: silver!important;
     ret.node = node
     ret.view = view
     // custom preparations:
-    // data, node, view are dependencies by default. delete them above if you want to remove them.
+    // data, node, view are dependencies by default. delete the line(s) above if you want to remove them.
     // add preparation code here (like for loops to count something), then list the dependencies below.
     // ¡ The element will update only if one of the listed dependencies has changed !
     // ** declarations here ** //
@@ -394,7 +394,7 @@ border-color: silver!important;
     ret.node = node
     ret.view = view
     // custom preparations:
-    // data, node, view are dependencies by default. delete them above if you want to remove them.
+    // data, node, view are dependencies by default. delete the line(s) above if you want to remove them.
     // add preparation code here (like for loops to count something), then list the dependencies below.
     // ¡ The element will update only if one of the listed dependencies has changed !
     // ** declarations here ** //
@@ -477,7 +477,7 @@ border-color: silver!important;
                 'ret.data = data\n' +
                 'ret.node = node\n' +
                 'ret.view = view\n' +
-                '// data, node, view are dependencies by default. delete them above if you want to remove them.\n' +
+                '// data, node, view are dependencies by default. delete the line(s) above if you want to remove them.\n' +
                 '// add preparation code here (like for loops to count something), then list the dependencies below.\n' +
                 // ¡ The element will update only if one of the listed dependencies has changed !
                 '// ** declarations here ** //\n' +
@@ -511,7 +511,7 @@ border-color: silver!important;
                 'ret.data = data\n' +
                 'ret.node = node\n' +
                 'ret.view = view\n' +
-                '// data, node, view are dependencies by default. delete them above if you want to remove them.\n' +
+                '// data, node, view are dependencies by default. delete the line(s) above if you want to remove them.\n' +
                 '// add preparation code here (like for loops to count something), then list the dependencies below.\n' +
                 // ¡ The element will update only if one of the listed dependencies has changed !
                 '// ** declarations here ** //\n' +
@@ -547,7 +547,7 @@ border-color: silver!important;
                 '// ** preparations and default behaviour here ** //\n' +
                 'ret.node = node\n' +
                 'ret.view = view\n' +
-                '// data, node, view are dependencies by default. delete them above if you want to remove them.\n' +
+                '// data, node, view are dependencies by default. delete the line(s) above if you want to remove them.\n' +
                 '// add preparation code here (like for loops to count something), then list the dependencies below.\n' +
                 // ¡ The element will update only if one of the listed dependencies has changed !
                 '// ** declarations here ** //\n' +
@@ -584,7 +584,7 @@ border-color: silver!important;
             "ret.data = data\n" +
             "ret.node = node\n" +
             "ret.view = view\n" +
-            "// data, node, view are dependencies by default. delete them above if you want to remove them.\n" +
+            "// data, node, view are dependencies by default. delete the line(s) above if you want to remove them.\n" +
             "// add preparation code here (like for loops to count something), then list the dependencies below.\n\n" +
             // ¡ The element will update only if one of the listed dependencies has changed !
             "// ** declarations here ** //\n" +
