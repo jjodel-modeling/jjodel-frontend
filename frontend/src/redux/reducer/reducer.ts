@@ -1199,7 +1199,7 @@ function setDocumentEvents(){
             })
         , 1);
     // document.body.addEventListener("mousedown", fixResizables, false);
-    setInterval(()=>{ END(); BEGIN(); }, UpdatingTimer);
+    setInterval(()=>{ COMMIT(undefined, false) }, UpdatingTimer);
 }
 function fixResizables(e: MouseEvent){
     /*let parents = U.ancestorArray(e.target as HTMLElement);

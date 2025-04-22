@@ -42,6 +42,8 @@ import { AboutModal } from './about/About';
 import { MetricsPanelManager } from '../../components/metrics/Metrics';
 
 import {Undoredocomponent} from "../../components/topbar/undoredocomponent";
+import {BEGIN, COMMIT, END} from "../../redux/action/action";
+import {Tooltip} from "../../components/forEndUser/Tooltip";
 
 
 let windoww = window as any;
@@ -148,10 +150,46 @@ type MenuEntry = {
     disabled?: boolean;
 } | null;
 
+type DProps = {}
+
+windoww.updateDebuggerComponent = () => {};
+function DebuggerComponent(props: DProps) {
+    let [depth, setDepth] = useState(0);
+    // depth = windoww.transactionStatus.transactionDepthLevel;
+    windoww.updateDebuggerComponent = () => {
+        let d = windoww.transactionStatus.transactionDepthLevel;
+        if (d !== depth) {
+            console.log('update depth', {depth, d})
+            setDepth(d);
+        }
+    }
+
+    console.log('update debugger component', {depth, adepth: windoww.transactionStatus.transactionDepthLevel})
+    return <section className={'debugger'}>
+        <Tooltip tooltip={'Step-By-Step'} inline={true} position={'bottom'}>
+            <label onClick={()=> {
+                if (depth <= 1) BEGIN(); // pause before triggering step-by-step
+                else COMMIT();
+            }} style={{position: 'relative'}}>
+                    <span className={'debug-icon me-1'}>
+                        {icon.stepcircle}
+                    </span>
+            </label>
+        </Tooltip>
+        <Tooltip tooltip={'Pause actions'} inline={true} position={'bottom'}>
+            <label className={'debug-icon me-1' + (depth > 1 ? ' disabled' : '')} onClick={() => BEGIN()}>{icon.pausecircle}</label>
+        </Tooltip>
+        <Tooltip tooltip={'Resume actions (depth: ' + (depth-1) + ')'} inline={true} position={'bottom'}>
+            <label className={'debug-icon me-1' + (depth <= 1 ? ' disabled' : '')} onClick={() => END()}>{icon.playcircle}</label>
+        </Tooltip>
+    </section>
+}
+
 function NavbarComponent(props: AllProps) {
     const {version, metamodels, advanced, debug, project} = props;
     const [focussed, setFocussed] = useState('');
     const [clicked, setClicked] = useState('');
+    const [debuggerr, setDebugger] = useState(false);
     const navigate = useNavigate();
     globalProject = project;
 
@@ -508,8 +546,8 @@ function NavbarComponent(props: AllProps) {
                 {name: 'Live Validation',function: () => {},icon: icon['validation'], disabled: true}, // TODO
                 {name: 'Validate',function: () => {}, icon: icon['validate'], disabled: true}, // TODO
                 {name: 'divisor'},
-                {name: 'Analytics', function: () => {}, icon: icon['metrics'], disabled: true} // TODO
-
+                {name: 'Analytics', function: () => {}, icon: icon['metrics'], disabled: true}, // TODO
+                {name: debuggerr ? 'Hide debugger' : 'Debug loops', function: () => setDebugger(!debuggerr), icon: icon[debuggerr ? 'eyeslash' : 'eye']}
             ]
         },
 
@@ -606,6 +644,7 @@ function NavbarComponent(props: AllProps) {
     const Commands = () => {
         return (<label className='text-end nav-commands d-flex'>
             {project && <>
+                {debuggerr ? <DebuggerComponent /> : null}
                 <span className={"my-auto me-1"}>{props.advanced ? "advanced" : "base"}</span>
                 <Input type="toggle"
                        className={"my-auto"}

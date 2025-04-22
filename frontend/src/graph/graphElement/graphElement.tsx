@@ -133,7 +133,7 @@ function htmlValidProps_static(props: GObject): GObject {
 }
 function computeUsageDeclarations(component: GraphElementComponent, allProps: AllPropss, state: GraphElementStatee, lview: LViewElement): GObject {
     // compute usageDeclarations
-    let udret: GObject = {__notInitialized: true};
+    let udret: GObject = {};
     const view: DViewElement = lview.__raw;
     const vid: Pointer<DViewElement> = view.id;
     const constants = transientProperties.view[vid].constants;
@@ -544,12 +544,9 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
     }
 
     protected doMeasurableEvent(type: EMeasurableEvents, vid: Pointer<DViewElement>): boolean {
-        console.log('x4 measurable event', {vid})
         if (Debug.lightMode) return false;
         let measurableFunc: undefined | ((context:GObject)=>void) = (transientProperties.view[vid] as any)[type];
-        console.log('x4 measurable event 1', {vid})
         if (!measurableFunc) return false;
-        console.log('x4 measurable event 2', {vid})
         let context: GObject = this.getJSXContext(vid); // context + usagedeclarations of main view only
         // console.log("render debug measurable " + type + " view: " + vid, {context, type, lm: Debug.lightMode, vid});
         try {
@@ -1016,7 +1013,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
     }
 
     onDataUpdateMeasurable(v: LViewElement, vid: Pointer<DViewElement>, index: number): void{
-        console.log('x4 measurable event', {index, vid})
+        console.log('x4 measurable event', {index, vid, nid: this.props.nodeid})
 
         if (index > 0) { this.doMeasurableEvent(EMeasurableEvents.onDataUpdate, vid); return; }
         // only on first of a sequence of onDataUpdate events for all stackviews (the mainview),
@@ -1122,6 +1119,8 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
             const vid = v.id;
             let viewnodescore = transientProperties.node[nid].viewScores[v.id];
             if (!viewnodescore.shouldUpdate) continue;
+            console.log('should trigger event.updated', {su: viewnodescore.shouldUpdate, jsx:viewnodescore.jsxOutput, fullcond: !(!viewnodescore.shouldUpdate && !!viewnodescore.jsxOutput)})
+            if (!viewnodescore.shouldUpdate && !!viewnodescore.jsxOutput) continue;
             viewnodescore.evalContext = undefined as any; // force rebuild jsx context, needs to be done before renderView and measurable events
             // only if this exact view had UD changed, instead of being forced to rended by other in viewstack)
             this.onDataUpdateMeasurable(v, vid, i);
@@ -1164,14 +1163,6 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
             scores:tn.viewScores,
             tnv:tn.viewScores[this.props.viewid], ud:tn.viewScores[this.props.viewid].usageDeclarations});*/
 
-        // do ondataupdate measurables
-        for (let i = 0 ; i < allviews.length; i++){
-            let v = allviews[i];
-            let vid = v.id;
-            let viewnodescore = tn.viewScores[vid];
-            if (!viewnodescore.shouldUpdate && !!viewnodescore.jsxOutput) continue;
-            this.onDataUpdateMeasurable(v, vid, i);
-        }
         // compute jsx
         for (let v of allviews) { // main view is the last
             let viewnodescore = tn.viewScores[v.id];

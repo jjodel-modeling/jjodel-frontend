@@ -46,7 +46,6 @@ function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     const ret: StateProps = {} as any;
     ret.model = LModel.fromPointer(ownProps.modelid);
     const graphs: DGraph[] = DGraph.fromPointer(state.graphs);
-    console.log('create m1 graph map', {pc:{...DPointerTargetable.pendingCreation}});
     const pointers = graphs.filter((graph) => { return graph.model === ownProps.modelid });
     if (pointers.length > 0) ret.graph = LGraph.fromPointer(pointers[0].id);
     return ret;
