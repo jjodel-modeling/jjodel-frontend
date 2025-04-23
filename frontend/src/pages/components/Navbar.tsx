@@ -19,7 +19,8 @@ import {
     TRANSACTION,
     store,
     U,
-    R
+    R,
+    Pointer
 } from '../../joiner';
 
 import {icon} from '../components/icons/Icons';
@@ -29,7 +30,6 @@ import {useNavigate} from 'react-router-dom';
 import React, {Component, Dispatch, ReactElement, ReactNode, useState} from 'react';
 import {FakeStateProps} from '../../joiner/types';
 import {connect} from 'react-redux';
-import {MetamodelPopup, ModelPopup} from './popups';
 import {AuthApi, ProjectsApi} from '../../api/persistance';
 import TabDataMaker from "../../../src/components/abstract/tabs/TabDataMaker";
 import DockManager from "../../../src/components/abstract/DockManager";
@@ -154,14 +154,12 @@ type DProps = {}
 
 windoww.updateDebuggerComponent = () => {};
 function DebuggerComponent(props: DProps) {
-    let [depth, setDepth] = useState(0);
-    // depth = windoww.transactionStatus.transactionDepthLevel;
+    let [depth, setDepth] = useState(windoww.transactionStatus.transactionDepthLevel);
+    // let depth = windoww.transactionStatus.transactionDepthLevel;
     windoww.updateDebuggerComponent = () => {
         let d = windoww.transactionStatus.transactionDepthLevel;
-        if (d !== depth) {
-            console.log('update depth', {depth, d})
-            setDepth(d);
-        }
+        // removed if bc during a transaction setState gets called twice going back. so the set going back is not executed.
+        /*if (d !== oldDepth) */setDepth(d);
     }
 
     console.log('update debugger component', {depth, adepth: windoww.transactionStatus.transactionDepthLevel})
@@ -170,11 +168,7 @@ function DebuggerComponent(props: DProps) {
             <label onClick={()=> {
                 if (depth <= 1) BEGIN(); // pause before triggering step-by-step
                 else COMMIT();
-            }} style={{position: 'relative'}}>
-                    <span className={'debug-icon me-1'}>
-                        {icon.stepcircle}
-                    </span>
-            </label>
+            }} className={'debug-icon me-1'}>{icon.stepcircle}</label>
         </Tooltip>
         <Tooltip tooltip={'Pause actions'} inline={true} position={'bottom'}>
             <label className={'debug-icon me-1' + (depth > 1 ? ' disabled' : '')} onClick={() => BEGIN()}>{icon.pausecircle}</label>
@@ -186,174 +180,29 @@ function DebuggerComponent(props: DProps) {
 }
 
 function NavbarComponent(props: AllProps) {
-    const {version, metamodels, advanced, debug, project} = props;
-    const [focussed, setFocussed] = useState('');
-    const [clicked, setClicked] = useState('');
     const [debuggerr, setDebugger] = useState(false);
     const navigate = useNavigate();
+    let user: LUser = L.fromPointer(DUser.current);
+    let project: LProject | undefined = user?.project || undefined;
+    let metamodels: LModel[] = L.fromArr(props.metamodels);
     globalProject = project;
 
     const open = (url: string) => { window.open(url, '_blank'); }
 
     const Key = Keystrokes;
-    let projectItems2: MenuEntry[] = [];
-
-    if (project){
-        projectItems2 = [
-
-            /* New Metamodel */
-
-            {name: 'New metamodel', icon: icon['new'], function: () => createM2(project), keystroke: [Key.alt, Key.cmd, 'M']},
-
-            /* New Model */
-            {
-                name: 'New model',
-                icon: icon['new'],
-                subItems: project.metamodels.filter(m2=>!!m2).map((m2, i)=>({
-                    name: m2.name, function: () => createM1(project, m2), keystroke: []
-                })),
-                disabled: project.metamodels.length == 0
-            },
-
-            /* ----- */
-
-            {name: 'divisor', function: () => {}, keystroke: []},
-
-            /* Close */
-
-            {name: 'Close', icon: icon['close'], function: () => {
-                if (isProjectModified()) {
-                    U.dialog('Close the project without saving?', 'close project', ()=>{
-                        R.navigate('/allProjects');
-                        Collaborative.client.off('pullAction');
-                        Collaborative.client.disconnect();
-                        SetRootFieldAction.new('collaborativeSession', false);
-                        U.resetState();
-                    });
-                } else {
-                    R.navigate('/allProjects');
-                    Collaborative.client.off('pullAction');
-                    Collaborative.client.disconnect();
-                    SetRootFieldAction.new('collaborativeSession', false);
-                    U.resetState();
-                }
-            }, keystroke: [Key.cmd, 'W']},
-
-            /* ----- */
-
-            {name: 'divisor', function: () => {}, keystroke: []},
-
-            /* Save & Close */
-
-            {name: 'Save & Close', icon: icon['close'], function: async () => {
-                if (isProjectModified()) {
-                    await ProjectsApi.save(project);
-                }
-
-                R.navigate('/allProjects');
-                Collaborative.client.off('pullAction');
-                Collaborative.client.disconnect();
-                SetRootFieldAction.new('collaborativeSession', false);
-                U.resetState();
-            }, keystroke: []},
-
-            /* Save */
-
-            {name: 'Save', icon: icon['save'], function: async() => {
-                await ProjectsApi.save(project);
-            }, keystroke: [Key.cmd, 'S']},
-
-
-
-            /* Download */
-
-            {name: 'Download', icon: icon['download'], function: async() => {
-                await ProjectsApi.save(project);
-                U.download(`${project.name}.jjodel`, JSON.stringify(project.__raw));
-            }, keystroke: []},
-
-
-
-            /* ----- */
-
-            {name: 'divisor', function: () => {}, keystroke: []},
-
-            /* Help */
-
-            {name: 'Help', icon: icon['help'], subItems: [
-                {name: 'What\'s new', icon: icon['whats-new'], function: async() => {R.navigate("https://www.jjodel.io/whats-new/")}, keystroke: []},
-                {name: 'divisor', function: async() => {}, keystroke: []},
-                {name: 'Homepage', icon: icon['home'], function: async() => {R.navigate("https://www.jjodel.io/")}, keystroke: []},
-                {name: 'Getting started', icon: icon['getting-started'], function: async() => {R.navigate("https://www.jjodel.io/getting-started/")}, keystroke: []},
-                {name: 'User guide', icon: icon['manual'], function: async() => {R.navigate("https://www.jjodel.io/manual/")}, keystroke: []},
-                {name: 'divisor', function: async() => {}, keystroke: []},
-                {name: 'Legal terms', icon: icon['legal'], function: async() => {R.navigate("https://www.jjodel.io/terms-conditions-page/")}, keystroke: []}
-            ],
-            keystroke: []}
-        ];
-    }
-
-    const dashboardItems2: MenuEntry[] = [
-
-        {name: 'New project', icon: <i className="bi bi-plus-square"></i>, function:
-            async()=>{
-                R.navigate('/allProjects');
-                await ProjectsApi.create('public', undefined, undefined, undefined, props.user?.projects);
-                /*
-                SetRootFieldAction.new('isLoading', true);
-                await U.sleep(1);
-                await ProjectsApi.create('public', 'Unnamed Project');
-                SetRootFieldAction.new('isLoading', false);*/
-            },
-            keystroke: [Key.cmd, 'M']},
-            {name: 'divisor', function: () => {}, keystroke: []},
-
-        {name: 'Import...', icon: <i className="bi bi-arrow-bar-left"></i>, function: ProjectsApi.import, keystroke: []},
-        {name: 'divisor', function: () => {}, keystroke: []},
-        {name: 'Help', icon: <i className="bi bi-question-square"></i>, subItems: [
-            {name: 'What\'s new', icon: <i className="bi bi-clock"></i>, function: () => {R.navigate("https://www.jjodel.io/whats-new/", navigate)}, keystroke: []},
-            {name: 'divisor', function: () => {}, keystroke: []},
-            {name: 'Homepage', icon: <i className="bi bi-house"></i>, function: () => {R.navigate("https://www.jjodel.io/", navigate)}, keystroke: []},
-            {name: 'Getting started', icon: <i className="bi bi-airplane"></i>, function: () => {R.navigate("https://www.jjodel.io/getting-started/", navigate)}, keystroke: []},
-            {name: 'User guide', icon: <i className="bi bi-journals"></i>, function: () => {R.navigate("https://www.jjodel.io/manual/", navigate)}, keystroke: []},
-            {name: 'divisor', function: () => {}, keystroke: []},
-            {name: 'Legal terms', icon: <i className="bi bi-mortarboard"></i>, function: () => {R.navigate("https://www.jjodel.io/terms-conditions-page/", navigate)}, keystroke: []}
-        ],
-        keystroke: []},
-
-        {name: 'About jjodel', icon: <i className="bi bi-info-square"></i>, function: () => {}, keystroke: []},
-        {name: 'divisor', function: () => {}, keystroke: []},
-        {name: 'Logout', icon: <i className="bi bi-box-arrow-right"></i>, function: async() => {
-                await AuthApi.logout();
-                R.navigate('/auth', true);
-            }, keystroke: [Key.cmd, 'Q']}
-    ];
-
-
-
-    /* -- */
-
     const recentProjects: MenuEntry[] = [];
     const recentProjectsDisabled: MenuEntry[] = [];
-    let user: LUser = L.fromPointer(DUser.current); // props.user || L.fromPointer(DUser.current);
-
-
 
     /*
 
         The following is used for toggling fullscreen mode from the View menu
 
     */
+    const [isFullscreen, setFullscreen] = useState(false);
 
-    const [fullscreen, setFullscreen] = useState(false);
-
-    function isFullscreen() {
-        return fullscreen;
-    }
 
     function toggleFullScreen() {
-        const elem = document.body;
-        setFullscreen(U.toggleFullscreen(elem));
+        setFullscreen(U.toggleFullscreen(document.body));
     }
 
     /*
@@ -361,18 +210,6 @@ function NavbarComponent(props: AllProps) {
         An error occurs in 'Recent projects' when a project is selected, then is saved - at this points all projects in user.projects are lost
 
     */
-
-    /* retrieve all projects */
-
-    // if (user.projects[0]) {
-    //     localStorage.setItem('projects', JSON.stringify(user.projects));
-    //     let projects = user.projects;
-    // } else {
-    //     let projects = JSON.parse(localStorage.getItem('projects') || '[]');
-    // }
-
-
-    /* -- */
 
     if (user?.projects) {
 
@@ -535,7 +372,7 @@ function NavbarComponent(props: AllProps) {
                 {name: 'Show/Hide Sidebar', function: ()=>{}, icon: icon['sidebar'], disabled: true}, // TODO
                 {name: 'Show/Hide Toolbar', function: ()=>{}, icon: icon['toolbar2'], disabled: true}, // TODO
 
-                {name: `${isFullscreen() ? 'Exit Fullscreen Mode' : 'Fullscreen Mode'}`, function: ()=>{toggleFullScreen()}, icon: icon['fullscreen']},
+                {name: `${isFullscreen ? 'Exit Fullscreen Mode' : 'Fullscreen Mode'}`, function: toggleFullScreen, icon: icon['fullscreen']},
                 {name: 'Reset Layout', function: ()=>{}, icon: icon['reset-layout'], disabled: true} // TODO
             ]
         },
@@ -642,9 +479,10 @@ function NavbarComponent(props: AllProps) {
     }
 
     const Commands = () => {
-        return (<label className='text-end nav-commands d-flex'>
+        return (<section className='nav-commands d-flex'>
             {project && <>
                 {debuggerr ? <DebuggerComponent /> : null}
+                <label className='text-end d-flex'>
                 <span className={"my-auto me-1"}>{props.advanced ? "advanced" : "base"}</span>
                 <Input type="toggle"
                        className={"my-auto"}
@@ -654,9 +492,10 @@ function NavbarComponent(props: AllProps) {
                            windoww.advanced = v;
                        }}
                        getter={() => props.advanced}/>
+                </label>
             </>
             }
-        </label>);
+        </section>);
     };
 
     const UserMenu = () => {
@@ -704,17 +543,13 @@ function NavbarComponent(props: AllProps) {
             <Commands />
             <User />
         </nav>
-
-        {project && clicked === 'new.metamodel' && <MetamodelPopup {...{project, setClicked}} />}
-        {project && clicked === 'new.model' && <ModelPopup {...{metamodels, project, setClicked}} />}
     </>);
 }
 
 interface OwnProps {}
 interface StateProps {
-    user: LUser;
-    project?: LProject;
-    metamodels: LModel[];
+    user: Pointer<DUser>;
+    metamodels: Pointer<DModel>[];
     version: DState['version'];
     advanced: boolean;
     debug: boolean;
@@ -725,9 +560,12 @@ type AllProps = OwnProps & StateProps & DispatchProps;
 
 function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     const ret: StateProps = {} as FakeStateProps;
-    ret.user = LUser.fromPointer(DUser.current);
-    ret.project = ret.user?.project || undefined;
-    ret.metamodels = LModel.fromArr(state.m2models);
+    // important: use only pointers here, do not set L elements in props.
+    // otherwise navbar will update at EVERY state change.
+    // other than performance, this would make "Analyze / Debug loops" impossible to click in case of loops.
+    // because the dropdown is constantly re-created and disappears.
+    ret.user = DUser.current;
+    ret.metamodels = state.m2models;
     ret.version = state.version;
     ret.advanced = state.advanced;
     ret.debug = state.debug;

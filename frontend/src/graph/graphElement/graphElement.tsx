@@ -65,6 +65,7 @@ import {EdgeStateProps, LGraphElement, store, VertexComponent,
     windoww, transientProperties
 } from "../../joiner";
 import {NodeTransientProperties, Pack1} from "../../joiner/classes";
+import {UpdatingTimer} from "../../redux/reducer/reducer";
 
 // const Selectors: typeof Selectors_ = windoww.Selectors;
 /*
@@ -407,9 +408,6 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
     countRenders: number;
     _isMounted: boolean;
     html: React.RefObject<HTMLElement | null>;
-    lastViewChanges: {t: number, vid: Pointer<DViewElement>, v: LViewElement, key?: string}[];
-    lastOnUpdateChanges: {t: number}[];
-    stopUpdateEvents?: number; // undefined or view.clonedCounter;
 
     public shouldComponentUpdate(nextProps: Readonly<AllProps>, nextState: Readonly<GraphElementState>, nextContext: any, oldProps?: Readonly<AllProps>): boolean {
         if (!oldProps) oldProps = this.props;//for subviewcomponent
@@ -550,10 +548,12 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         let context: GObject = this.getJSXContext(vid); // context + usagedeclarations of main view only
         // console.log("render debug measurable " + type + " view: " + vid, {context, type, lm: Debug.lightMode, vid});
         try {
-            measurableFunc.call(context, context);
+            TRANSACTION((this.props.data?.name || 'Shapeless')+'.'+type+'()', ()=>measurableFunc.call(context, context));
             console.log("measurable executed", {type, measurableFunc, vid, transient:transientProperties.view[vid]});
         }
-        catch (e: any) { Log.ee('Error in measurable "'+L.from(vid).name+'".'+type+' ' + e.message, {e, measurableFunc, context}); }
+        catch (e: any) {
+            Log.ee('Error in measurable "'+L.from(vid).name+'".'+type+' ' + e.message, {e, measurableFunc, context});
+        }
         // it has executed at least partially.
         // i just need to know if he had the chance to do side-effects and the answer is yes regardless of exceptions
         return true;
@@ -582,9 +582,6 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
 
     constructor(props: AllProps, context?: any) {
         super(props);
-        this.lastViewChanges = [];
-        this.lastOnUpdateChanges = []
-        this.stopUpdateEvents = undefined;
         this._isMounted = false;
         this.countRenders = 0;
         this.id = GraphElementComponent.maxid++;
@@ -1012,35 +1009,51 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
 
     }
 
-    onDataUpdateMeasurable(v: LViewElement, vid: Pointer<DViewElement>, index: number): void{
-        console.log('x4 measurable event', {index, vid, nid: this.props.nodeid})
+    loopcheck: Dictionary<Pointer, {stopUpdateEvents?: number, calls: number[/*timestamps*/]}> = {};
+    onDataUpdateMeasurable(v: LViewElement, vid: Pointer<DViewElement>, index_useless: number): void{
+        console.log('x4 measurable event', {vid, nid: this.props.nodeid})
 
-        if (index > 0) { this.doMeasurableEvent(EMeasurableEvents.onDataUpdate, vid); return; }
+        // if (index > 0) { this.doMeasurableEvent(EMeasurableEvents.onDataUpdate, vid); return; }
         // only on first of a sequence of onDataUpdate events for all stackviews (the mainview),
         // sets time of current stack of updates, to check if they are generating a loop
 
 
         // EMeasurableEvents.onDataUpdate -> handling and checking for loops
-        if (!this.stopUpdateEvents || this.stopUpdateEvents !== this.props.view.clonedCounter) {
-            this.stopUpdateEvents = undefined;
+        let loopcheck = this.loopcheck[vid];
+        if (!loopcheck) this.loopcheck[vid] = loopcheck = {calls: []};
+        if (!loopcheck.stopUpdateEvents || loopcheck.stopUpdateEvents !== v.clonedCounter) {
+            loopcheck.stopUpdateEvents = undefined;
             // earlier it was triggering only on .data changes + ud check. now it is only UD check.
             // to re-allow data changed requirement: this.props.data && (this.dataOldClonedCounter !== this.props.data.clonedCounter) &&
             if (this.doMeasurableEvent(EMeasurableEvents.onDataUpdate, vid)) {
                 // this.dataOldClonedCounter = this.props.data.clonedCounter
-                let thischange = {t: Date.now()};
-                this.lastOnUpdateChanges.push(thischange);
-                if (thischange.t - this.lastOnUpdateChanges[this.lastOnUpdateChanges.length - 10]?.t < 300) {
-                    // if N updates in <= 0.2 sec
-                    this.stopUpdateEvents = this.props.view.clonedCounter;
-                    Log.eDevv("loop in node.render() likely due to MeasurableEvent onDataUpdate." +
-                        " It has been disabled until the view changes.",{
-                        change_log: this.lastOnUpdateChanges,
+                let thischange = Date.now();
+                loopcheck.calls.push(thischange);
+                let loopDetectionSize = 3;
+                let observationRange = 10;
+                let safety = 1.2;
+                console.log('loop check', {diff: thischange - loopcheck.calls[loopcheck.calls.length - observationRange],
+                    UpdatingTimer,
+                    lessthan:safety*loopDetectionSize*observationRange*UpdatingTimer})
+                if (thischange - loopcheck.calls[loopcheck.calls.length - observationRange] < safety*loopDetectionSize*observationRange*UpdatingTimer) {
+                    // if N updates in <= 1.2 * 3 * N time units
+                    // 20% of safety range
+                    // 3x to detect loops like : a->b->c  -> a (does not detect 4-loops)
+                    // 10 units of range checked for 3-loops = 10*3*1.2 = 36 units * 300ms = 10.8sec.   9U = 9.72sec
+                    let deltas = loopcheck.calls.map((e, i, a) => i === a.length-1 ? thischange - e : a[i+1] - a[i]);
+                    loopcheck.stopUpdateEvents = v.clonedCounter;
+                    Log.eDevv("loop in \""+v.name+"\".onDataUpdate." +
+                        " The event has been disabled until the view changes.", {
+                        change_log: loopcheck.calls,
                         component: this,
-                        timediff: (thischange.t - this.lastOnUpdateChanges[this.lastOnUpdateChanges.length - 10]?.t)
+                        loopcheck,
+                        deltas,
+                        UpdatingTimer,
+                        timediff: (thischange - loopcheck.calls[loopcheck.calls.length - observationRange])
                     } as any);
                 }
             }
-    }
+        }
     }
 
 
