@@ -24,6 +24,7 @@ export let icon: { [name: string]: any} = {
     faq: <i className="bi bi-chat-left-dots menuitem"></i>,
     'user-guide': <i className="bi bi-journal-text menuitem"></i>,
     glossary: <i className="bi bi-book menuitem"></i>,
+    tools: <i className="bi bi-tools" />,
 
     'import': <i className="bi bi-cloud-upload menuitem"></i>,
     'export': <i className="bi bi-arrow-bar-right menuitem"></i>,

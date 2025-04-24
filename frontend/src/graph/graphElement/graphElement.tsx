@@ -412,7 +412,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
     public shouldComponentUpdate(nextProps: Readonly<AllProps>, nextState: Readonly<GraphElementState>, nextContext: any, oldProps?: Readonly<AllProps>): boolean {
         if (!oldProps) oldProps = this.props;//for subviewcomponent
         if (nextProps.__skipRender) return false;
-        let debug = windoww.debugg || true;
+        let debug = windoww.debugg || false;
         // return GraphElementComponent.defaultShouldComponentUpdate(this, nextProps, nextState, nextContext);
         let data = nextProps.data?.__raw as DNamedElement | undefined;
 
@@ -1032,9 +1032,9 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
                 let loopDetectionSize = 3;
                 let observationRange = 10;
                 let safety = 1.2;
-                console.log('loop check', {diff: thischange - loopcheck.calls[loopcheck.calls.length - observationRange],
+                /*console.log('loop check', {diff: thischange - loopcheck.calls[loopcheck.calls.length - observationRange],
                     UpdatingTimer,
-                    lessthan:safety*loopDetectionSize*observationRange*UpdatingTimer})
+                    lessthan:safety*loopDetectionSize*observationRange*UpdatingTimer})*/
                 if (thischange - loopcheck.calls[loopcheck.calls.length - observationRange] < safety*loopDetectionSize*observationRange*UpdatingTimer) {
                     // if N updates in <= 1.2 * 3 * N time units
                     // 20% of safety range

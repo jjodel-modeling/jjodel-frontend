@@ -163,7 +163,7 @@ everytime you put hands into a D-Object shape or valid values, you should docume
         return s;
     }
 
-    public static autocorrect(s0?: DState): void {
+    public static autocorrect(s0?: DState, popupIfCorrect: boolean = false): void {
         let s: DState;
         if (s0) s = s0;
         else s = store.getState();
@@ -257,13 +257,14 @@ everytime you put hands into a D-Object shape or valid values, you should docume
             output.push('removed ' + removedDObjects + ' invalid values.'); // undef in ptr collection
         }
         if (output.length > 1) {
-            Tooltip.show(<>{(output as any).separator(<br/>)}</>, undefined, undefined, 3);
+            Tooltip.show(<>{(output as any).separator(<br/>)}</>, undefined, undefined, 10);
             Log.ii('project repair report', {removedPointers,
                 removedObjects_num: removedDObjects, removedObjects: diff.removed.map(e=>oldIDlookup[e]),
-                removedValues: out.counter, output})
+                removedValues: out.counter, output});
         }
         else {
-            Log.ii('project repair report:\tall good, nothing to repair!')
+            if (popupIfCorrect) Tooltip.show('project repair report:\tall good, no anomalies detected!', undefined, undefined, 3);
+            Log.ii('project repair report:\tall good, no anomalies detected!');
         }
 
     }

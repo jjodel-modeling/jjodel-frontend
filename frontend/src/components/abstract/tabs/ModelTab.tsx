@@ -1,6 +1,6 @@
 import React, {Dispatch, ReactElement, ReactNode} from "react";
 import {connect} from "react-redux";
-import {DModel, DPointerTargetable, Pointer, Try} from "../../../joiner";
+import {DModel, DPointerTargetable, Pointer, Try, U} from "../../../joiner";
 import {CreateElementAction, DGraph, DModelElement, DState, LGraph, LModel, LModelElement} from "../../../joiner";
 import {DefaultNode} from "../../../joiner/components";
 import ToolBar from "../../toolbar/ToolBar";
@@ -23,7 +23,7 @@ function ModelTabComponent(props: AllProps) {
 
     return(<div className={'w-100 h-100'}>
         <ContextMenu />
-        <div className={'d-flex h-100'}>
+        <div className={'d-flex h-100'} onClick={e => { if (!U.isProjectModified) U.isProjectModified = U.userHasInteracted = true; }}>
             <ToolBar model={model.id} isMetamodel={model.isMetamodel} metamodelId={props.metamodelid} />
             <Try>
                 <div className={"GraphContainer h-100 w-100"} style={{position:"relative"}}>

@@ -44,6 +44,7 @@ import { MetricsPanelManager } from '../../components/metrics/Metrics';
 import {Undoredocomponent} from "../../components/topbar/undoredocomponent";
 import {BEGIN, COMMIT, END} from "../../redux/action/action";
 import {Tooltip} from "../../components/forEndUser/Tooltip";
+import {VersionFixer} from "../../redux/VersionFixer";
 
 
 let windoww = window as any;
@@ -162,7 +163,6 @@ function DebuggerComponent(props: DProps) {
         /*if (d !== oldDepth) */setDepth(d);
     }
 
-    console.log('update debugger component', {depth, adepth: windoww.transactionStatus.transactionDepthLevel})
     return <section className={'debugger'}>
         <Tooltip tooltip={'Step-By-Step'} inline={true} position={'bottom'}>
             <label onClick={()=> {
@@ -384,7 +384,8 @@ function NavbarComponent(props: AllProps) {
                 {name: 'Validate',function: () => {}, icon: icon['validate'], disabled: true}, // TODO
                 {name: 'divisor'},
                 {name: 'Analytics', function: () => {}, icon: icon['metrics'], disabled: true}, // TODO
-                {name: debuggerr ? 'Hide debugger' : 'Debug loops', function: () => setDebugger(!debuggerr), icon: icon[debuggerr ? 'eyeslash' : 'eye']}
+                {name: debuggerr ? 'Hide debugger' : 'Debug loops', function: () => setDebugger(!debuggerr), icon: icon[debuggerr ? 'eyeslash' : 'eye']},
+                {name: 'Check integrity', function: () => VersionFixer.autocorrect(undefined, true), icon: icon['tools']},
             ]
         },
 
@@ -483,7 +484,7 @@ function NavbarComponent(props: AllProps) {
             {project && <>
                 {debuggerr ? <DebuggerComponent /> : null}
                 <label className='text-end d-flex'>
-                <span className={"my-auto me-1"}>{props.advanced ? "advanced" : "base"}</span>
+                <span className={"my-auto me-1"}>{props.advanced ? "advanced mode" : "basic mode"}</span>
                 <Input type="toggle"
                        className={"my-auto"}
                        style={{fontSize:'1.25em'}}

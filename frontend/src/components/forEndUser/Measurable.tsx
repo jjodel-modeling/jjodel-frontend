@@ -25,7 +25,6 @@ export class MeasurableComponent extends Component<MeasurableAllProps, Measurabl
     static cname: string = "MeasurableComponent";
     static childmodekeys: (keyof CSSStyleDeclaration)[] = ['left', 'top', 'transform', 'position'];
 
-
     private html: Element | null = null;
     private $html!:  JQuery<Element>;
     dragOptionsChanged: boolean = true;
@@ -171,7 +170,7 @@ export class MeasurableComponent extends Component<MeasurableAllProps, Measurabl
             Log.ee('not oc', {evt, oc, e, p: this.props}); return;
         }
         let child: HTMLElement;
-        console.log('cchild', {e, evt,  evtkind, ui});
+
         if (typeof oc === 'function') child = oc(e);
         else child = e.children[0] as HTMLElement;
         if (!child) {
