@@ -55,7 +55,7 @@ function ColorComponent(props: AllProps) {
                        type={'color'} value={getter(props.data, props.field)} onChange={blur} onBlur={blur}
     />
 
-    console.log("color component", {label, jsxLabel, tooltip, c:props.children})
+    // console.log("color component", {label, jsxLabel, tooltip, c:props.children})
     
     return(<label className={(props.className ? props.className : 'color-picker-root') + ' hoverable'} {...otherprops}
                   style={{display: (jsxLabel || label) ? 'flex' : 'block', cursor: tooltip ? 'help' : 'auto', ...((props as any).style || {})}}>

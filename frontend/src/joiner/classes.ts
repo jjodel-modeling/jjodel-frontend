@@ -1234,16 +1234,16 @@ export class DPointerTargetable extends RuntimeAccessibleClass {
         if (father) {
             if (typeof father === "string" || (father as any).className) { // Pointer or D
                 lfather = LPointerTargetable.wrap(father as DModelElement) as LModelElement;
-                if (!lfather) return (typeof startingPrefix === "string" ? startingPrefix : "unnamed_elem"); // can happen during parse when father ptr exist but it's not in store yet. not a prob
+                if (!lfather) return (typeof startingPrefix === "string" ? startingPrefix : "unnamed_elem");
                 if (typeof startingPrefix !== "string") {
                     let meta = LPointerTargetable.from(metaptr as Pointer);
                     startingPrefix = startingPrefix(meta as L);
                 }
-                const childrenNames: (string)[] = lfather.children.map(c => (c as LNamedElement)?.name);
+                const childrenNames: (string)[] = lfather.childNames; // lfather.children.map(c => (c as LNamedElement)?.name);
                 return U.increaseEndingNumber(startingPrefix + '0', false, false, (newname) => childrenNames.indexOf(newname) >= 0);
             }
-            else {
-                let condition: (a:string)=>boolean = father as any;
+            else if (typeof father === 'function') {
+                let condition = father as any as ((a:string)=>boolean);
                 return U.increaseEndingNumber(startingPrefix + '0', false, false, condition);
             }
         }
@@ -1367,6 +1367,7 @@ type Pack<D extends DPointerTargetable, L extends LPointerTargetable = DtoL<D>, 
 
 @RuntimeAccessible('Pointers')
 export class Pointers{
+    public static prefix = 'Pointer_';
     public static ESTRING = 'Pointer_ESTRING';
 
     static filterValid<P extends (Pointer | Pointer[]) = any, RET = P extends Pointer[] ? P : P | null>

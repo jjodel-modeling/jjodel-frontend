@@ -2780,6 +2780,10 @@ export class Keystrokes {
             // skip events happened in graph
             let curr = e.target;
             console.log('keydown', {selector, e, curr, ct:e.currentTarget});
+            switch(e.key){
+                // if those are the last key pressed is not an event, it is still typing.
+                case 'Control': case 'Shift': case 'Alt': return;
+            }
             while (curr) {
                 if (curr.classList.contains('Graph')) return;
                 curr = curr.parentElement;
@@ -2791,7 +2795,8 @@ export class Keystrokes {
             if (e.ctrlKey) { root = root[Keystrokes.control] || {}; $elems.addClass('key-ctrl'); }
             let f = root[e.key];
             console.log("execute keystrokes", {e, root, optimizedKeyPaths, up:{$elems, keydown, optimizedKeyPaths, arr}});
-            Log.exDev(f && typeof f !== 'function','found keystroke with invalid func', {f, root, e})
+            Log.exDev(f && typeof f !== 'function','found keystroke with invalid func',
+                {key: e.key, shift:e.shiftKey, alt: e.altKey, ctrl: e.ctrlKey, f, root, e})
             f?.();
         };
         /// todo: for graph can attack evt to graph root and use selector in on() lieke $graphcontainer.on('keydown', '.Class', classkeystrokehandler...)

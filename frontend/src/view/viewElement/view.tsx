@@ -415,14 +415,13 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
         let subviews = U.objectFromArray(subviewsarr, (sv)=>sv.id);
         let allviewsarr: LViewElement[] = Selectors.getAll(DViewElement, undefined, undefined, true, true);
         let allviews = U.objectFromArray(allviewsarr, (sv)=>sv.id);
-        console.log('allPossibleParentViews', {subviews, subviewsarr, allviews:{...allviews}, allviewsarr});
+        //console.log('allPossibleParentViews', {subviews, subviewsarr, allviews:{...allviews}, allviewsarr});
         for (let k in subviews) {
             delete allviews[k];
         }
         delete allviews[c.data.id];
         let vp = this.get_viewpoint(c);
-        allviews[vp.id] = vp; 
-        console.log('allPossibleParentViews ret', {allviews});
+        allviews[vp.id] = vp;
         return Object.values(allviews);
     }
 
