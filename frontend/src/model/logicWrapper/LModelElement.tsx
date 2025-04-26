@@ -4770,6 +4770,7 @@ instanceof === undefined or missing  --> auto-detect and assign the type
 
     protected set_name(val: this['name'], c: Context): boolean {
         const models: LModel[] = LModel.fromPointer(store.getState()['models']);
+
         if (models.filter((model) => { return model.name === val }).length > 0) {
             U.alert('e', 'Cannot rename the selected model, this name is already taken.');
         } else {
@@ -4777,6 +4778,8 @@ instanceof === undefined or missing  --> auto-detect and assign the type
             TRANSACTION(this.get_name(c)+'.name', ()=>{
                 SetFieldAction.new(c.data, 'name', val, '', false);
             }, undefined, val)
+            let tab = document.querySelector('#rc-tabs-2-tab-'+c.data.id+' > .drag-initiator > .active-on-mouseenter');
+            if (tab) tab.innerHTML = val;
         }
         return true;
     }

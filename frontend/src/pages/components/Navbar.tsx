@@ -230,12 +230,12 @@ function NavbarComponent(props: AllProps) {
 
     let newModel: MenuEntry[] = [];
 
-    if (project && project.metamodels.length > 0) {
+    if (project && props.metamodels.length > 0) {
         newModel.push({
             name: 'Model',
             icon: icon['model'],
-            subItems: project.metamodels.filter(m2=>!!m2).map((m2, i)=>({
-                name: m2.name, function: () => createM1(project, m2), keystroke: []
+            subItems: props.metamodels.map((m2, i)=>({
+                name: props.mmNames[i], function: () => createM1(project, L.from(m2)), keystroke: []
             }))
         });
     } else {
@@ -551,6 +551,7 @@ interface OwnProps {}
 interface StateProps {
     user: Pointer<DUser>;
     metamodels: Pointer<DModel>[];
+    mmNames: string[];
     version: DState['version'];
     advanced: boolean;
     debug: boolean;
@@ -567,6 +568,7 @@ function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     // because the dropdown is constantly re-created and disappears.
     ret.user = DUser.current;
     ret.metamodels = state.m2models;
+    ret.mmNames = L.fromArr(ret.metamodels).map((mm: any) => mm?.name); // just to force update in case of renaming
     ret.version = state.version;
     ret.advanced = state.advanced;
     ret.debug = state.debug;
