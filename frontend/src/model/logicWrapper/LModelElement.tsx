@@ -5868,7 +5868,7 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
                     console.log('L'+c.data.className.substring(1)+'.t2m() sub-object t2m', {child2, v});
 
                     if (child2) {
-                        if (child2.__raw.father !== c.data.id) child2.father = c.data.id as any;
+                        // done in setvalues if (this.get_isContainment(c) && child2.__raw.father !== c.data.id) child2.father = c.data.id as any;
                         child2.t2m(v);
                     }
                 }

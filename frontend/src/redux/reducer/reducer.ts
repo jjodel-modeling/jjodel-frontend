@@ -443,11 +443,12 @@ export function reducer(oldState: DState = initialState, action: Action): DState
     if (U.navigating) return oldState;
     if (!windoww.jjactions) windoww.jjactions = [];
     windoww.jjactions.push(action);
-    try{ return unsafereducer(oldState, action); }
+    try { let ret = unsafereducer(oldState, action); console.log('reducer done'); return ret; }
     catch(e) {
         console.error('unhandled error in reducer', {e, oldState, action});
         return oldState;
     }
+
 }
 
 function unsafereducer(oldState: DState = initialState, action: Action): DState {
