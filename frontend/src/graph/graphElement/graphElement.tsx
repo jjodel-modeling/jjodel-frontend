@@ -23,7 +23,7 @@ import {
     LReference,
     LVoidEdge,
     LValue,
-    DataTransientProperties, L, GraphVertex, Graph, Vertex, Uobj
+    DataTransientProperties, L, GraphVertex, Graph, Vertex, Uobj, DEdgePoint, DVertex, DGraphVertex
 } from "../../joiner";
 import {DefaultUsageDeclarations} from "./sharedTypes/sharedTypes";
 
@@ -1073,6 +1073,76 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         if (!props.node) return false;
         let node = props.node;
         let dnode = node.__raw;
+
+        if (props.isGraph) {
+            if (props.isVertex) {
+                if (dnode.className !== 'DGraphVertex') {
+                    // switch to gv
+                    let o = DGraphVertex.new(0, '', '', '', undefined);
+                    let d: GObject = {...dnode};
+                    d.className = 'DGraphVertex';
+                    for (let k in o) {
+                        if (!(k in d)) d[k] = (o as GObject)[k];
+                    }
+                    SetRootFieldAction.new('idlookup.'+d.id, d, '', false);
+                }
+            }
+            else if (dnode.className !== 'DGraph') {
+                // switch to g
+                let o = DGraph.new(0, '', '', '', undefined);
+                let d: GObject = {...dnode};
+                d.className = 'DGraph';
+                for (let k in o) {
+                    if (!(k in d)) d[k] = (o as GObject)[k];
+                }
+                SetRootFieldAction.new('idlookup.'+d.id, d, '', false);
+            }
+        }
+        else if (props.isVertex) {
+            if (dnode.className.indexOf('Vertex') === -1) {
+                // switch to v
+                let o = DVertex.new(0, undefined, '', '', undefined);
+                let d: GObject = {...dnode};
+                d.className = 'DVertex';
+                for (let k in o) {
+                    if (!(k in d)) d[k] = (o as GObject)[k];
+                }
+                SetRootFieldAction.new('idlookup.'+d.id, d, '', false);
+            }
+        }
+        else if (props.isEdgePoint) {
+            if (dnode.className !== 'DEdgePoint') {
+                // switch to ep
+                let o = DEdgePoint.new(0, undefined, '', '', undefined);
+                let d: GObject = {...dnode};
+                d.className = 'DEdgePoint';
+                for (let k in o) {
+                    if (!(k in d)) d[k] = (o as GObject)[k];
+                }
+                SetRootFieldAction.new('idlookup.'+d.id, d, '', false);
+            }
+        }
+        else if (props.isEdge) {
+            if (dnode.className !== 'DEdge') {
+                // switch to edge
+                let o = DEdge.new2(null, '', '', undefined, dnode.id, dnode.id, ()=>{});
+                let d: GObject = {...dnode};
+                d.className = 'DEdge';
+                for (let k in o) {
+                    if (!(k in d)) d[k] = (o as GObject)[k];
+                }
+                SetRootFieldAction.new('idlookup.'+d.id, d, '', false);
+            }
+        }
+        else if (props.isField) {
+            if (dnode.className !== 'DGraphElement') {
+                // switch to field
+                SetFieldAction.new(dnode, 'className', 'DGraphElement', '', false);
+                // always ok, everything is also subclass of a field (field == graphElement)
+            }
+        }
+
+
         let edge: LVoidEdge = props.node as any;
         let dedge: DVoidEdge = dnode as any;
         // if edge.label props is func, do not set in the dedge, just in transientproperties. totally override the "text" system.
@@ -1108,59 +1178,6 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         if (typeof props.h === 'number') { let old = dnode.h; let n = +props.h; if (old !== n) { node.h = n; ret = true;} }
         if (typeof props.width  === 'number') { let old = dnode.w; let n = +props.width;  if (old !== n) { node.w = n; ret = true;} }
         if (typeof props.height === 'number') { let old = dnode.h; let n = +props.height; if (old !== n) { node.h = n; ret = true;} }
-        let type = {isVertex: props.isVertex, isGraph: props.isGraph}
-        let typestr = + (props.isGraph ? 'G' : '') + (props.isVertex ? 'V' : '') + (props.isEdgePoint ? '€' : '') + (props.isVertex ? 'E' : '')
-        if (props.isGraph) {
-            if (props.isVertex) {
-                if (dnode.className !== 'DGraphVertex') {
-                    // switch to gv
-                }
-            }
-            else if (dnode.className !== 'DGraph') {
-                // switch to g
-            }
-        }
-        else if (props.isVertex) {
-            if (dnode.className !== 'DVertex') {
-                // switch to v
-            }
-        }
-        else if (props.isEdgePoint) {
-            if (dnode.className !== 'DEdgePoint') {
-                // switch to ep
-            }
-        }
-        else if (props.isEdge) {
-            if (dnode.className !== 'DEdge') {
-                let o = DEdge.new2(null, '', '', undefined, dnode.id, dnode.id, ()=>{});
-                let d: GObject = {...dnode};
-                d.className = 'DEdge';
-                for (let k in o) {
-                    if (!(k in d)) d[k] = (o as GObject)[k];
-                }
-                SetRootFieldAction.new('idlookup.'+d.id, d, '', false);
-                // switch to ep
-            }
-        }
-        else if (props.isField) {
-            if (dnode.className !== 'DGraphElement') {
-                // switch to field
-                SetFieldAction.new(dnode, 'className', 'DGraphElement', '', false);
-                // always ok, everything is also subclass of a field (field == graphElement)
-            }
-        }
-
-        switch ( dnode.className ) {
-            default: console.error('unrecognized node type: ' + dnode.className, {dnode}); ret = true; break;
-            case 'GraphVertex':
-            case 'Graph':
-            case 'Vertex':
-            case 'VoidVertex':
-            case 'EdgePoint':
-            case 'GraphElement':
-            case 'Field':
-            case 'Edge':
-        }
 
         return ret;
     }

@@ -1256,7 +1256,7 @@ export class DEdgePoint extends DVoidVertex { // DVoidVertex
     public static new(htmlindex: number, model: DEdgePoint["model"] | undefined, parentNodeID: DEdgePoint["father"], graphID?: DEdgePoint["graph"], nodeID?: DGraphElement["id"],
                       size?: InitialVertexSize): DEdgePoint {
         return new Constructors(new DEdgePoint('dwc'), parentNodeID, true, undefined, nodeID)
-            .DGraphElement(undefined, graphID, htmlindex)
+            .DGraphElement(model, graphID, htmlindex)
             .DVoidVertex(size || defaultEdgePointSize).DEdgePoint().end();
     }
 
