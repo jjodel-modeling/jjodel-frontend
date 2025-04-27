@@ -86,14 +86,7 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
     }
 
     setVertexProperties(){
-        if (!this.props.node || !this.html.current) return;
-        switch (this.nodeType){
-            case 'GraphVertex':
-            case 'Vertex':
-            case 'VoidVertex':
-            case 'EdgePoint': break;
-            default: return;
-        }
+        if (!this.props.node || !this.html.current || !this.props.isVertex) return;
 
         let html = this.html.current;
         const $measurable: GObject<'JQuery + ui plugin'> = $(html); // todo: install typings
@@ -352,7 +345,7 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
     }
 
     oldHtml?: Element | null = null;
-    nodeType!: string;
+    // nodeType!: string;
     render(): ReactNode {
         if (Debug.lightMode && (!this.props.data || !(lightModeAllowedElements.includes(this.props.data.className)))){
             return this.props.data ? <div>{" " + ((this.props.data as any).name)}:{this.props.data.className}</div> : undefined;
@@ -361,68 +354,15 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
 
         if (this.html.current !== this.oldHtml){ this.onHtmlNodeChange(); }
 
-        const cssOverride: string[] = [];
-        // const selected = this.props.selected;
-        // if (selected && selected.id === this.props.nodeid) cssOverride.push('selected-by-me');
+        let nodeType = 'NODE_TYPE_ERROR';
+        if ( this.props.isEdgePoint) nodeType = 'EdgePoint'; else
+        if ( this.props.isGraph &&  this.props.isVertex) nodeType = 'GraphVertex'; else
+        if ( this.props.isGraph && !this.props.isVertex) nodeType = 'Graph'; else
+        if (!this.props.isGraph &&  this.props.isVertex && (this.props.isVoid || !this.props.data)) nodeType = 'VoidVertex'; else
+        if (!this.props.isGraph &&  this.props.isVertex) nodeType = 'Vertex'; else
+        if (!this.props.isGraph && !this.props.isVertex) nodeType = 'Field';
 
-        // if(!windoww.cpts) windoww.cpts = {};
-        // windoww.cpts[this.props.nodeid]=this;
-        // console.log('updated');
-        //return this.r || <div>loading...</div>;
-
-        // set classes
-        this.nodeType = 'NODE_TYPE_ERROR';
-        if ( this.props.isEdgePoint) this.nodeType = 'EdgePoint'; else
-        if ( this.props.isGraph &&  this.props.isVertex) this.nodeType = 'GraphVertex'; else
-        if ( this.props.isGraph && !this.props.isVertex) this.nodeType = 'Graph'; else
-        if (!this.props.isGraph &&  this.props.isVertex && (this.props.isVoid || !this.props.data)) this.nodeType = 'VoidVertex'; else
-        if (!this.props.isGraph &&  this.props.isVertex) this.nodeType = 'Vertex'; else
-        if (!this.props.isGraph && !this.props.isVertex) this.nodeType = 'Field';
-
-        // const named: LNamedElement = this.props.data as LNamedElement; // LNamedElement.fromPointer(this.props.dataid);
-        const classesOverride = [this.nodeType, ...cssOverride]; // , (named?.name === 'default') ? 'default' : ''];
-        const styleOverride: React.CSSProperties = {};
-        // set classes end
-        const size: Readonly<GraphSize> = this.getSize();
-
-        let isVertex: boolean= false, isEdge: boolean= false, isGraph: boolean = false;
-        switch (this.nodeType) {
-            case 'Graph': isGraph = true; break;
-            case 'GraphVertex': isGraph = isVertex = true; break;
-            case 'Vertex':
-            case 'VoidVertex':
-            case 'EdgePoint':
-                isVertex = true;
-                break;
-            default: break;
-        }
-
-        if (isGraph){
-            let offset = (this.props.node as any as LGraph).offset;
-            let zoom = (this.props.node as any as LGraph).zoom;
-            // @ts-ignore
-            styleOverride['--offset-x'] = offset.x + 'px';
-            // @ts-ignore
-            styleOverride['--offset-y'] = offset.y + 'px';
-            // @ts-ignore
-            styleOverride['--zoom-x'] = zoom.x;
-            // @ts-ignore
-            styleOverride['--zoom-y'] = zoom.y;
-        }
-        if (isVertex){
-            // @ts-ignore
-            styleOverride['--top'] = size.y + 'px';
-            // @ts-ignore
-            styleOverride['--left'] = size.x + 'px';
-            let isResized = this.props.node.isResized;
-            if (isResized || !this.props.view.adaptWidth) styleOverride.width = size.w+'px';
-            else styleOverride.width = undefined;
-            if (isResized || !this.props.view.adaptHeight) styleOverride.height = size.h+'px';
-            else styleOverride.height = undefined; // todo: the goal is to reset jqui inline style, but not override user-defined inline style
-        }
-
-
-        return super.render(this.nodeType, styleOverride, classesOverride);
+        return super.render(nodeType);
         // return <RootVertex props={this.props} render={super.render()} super={this} key={this.props.nodeid+'.'+this.state?.forceupdate} />;
     }
 

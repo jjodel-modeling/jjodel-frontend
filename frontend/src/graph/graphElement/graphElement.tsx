@@ -23,7 +23,8 @@ import {
     LReference,
     LVoidEdge,
     LValue,
-    DataTransientProperties, L, GraphVertex, Graph, Vertex, Uobj, DEdgePoint, DVertex, DGraphVertex
+    DataTransientProperties, L, GraphVertex, Graph, Vertex, Uobj, DEdgePoint, DVertex, DGraphVertex,
+    LVertex
 } from "../../joiner";
 import {DefaultUsageDeclarations} from "./sharedTypes/sharedTypes";
 
@@ -1073,10 +1074,14 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         if (!props.node) return false;
         let node = props.node;
         let dnode = node.__raw;
+        console.log('change node 0', {props: {...props}, g: props.isGraph, v: props.isVertex});
 
         if (props.isGraph) {
             if (props.isVertex) {
                 if (dnode.className !== 'DGraphVertex') {
+                    console.log('change node set gv', {props: {...props}, g: props.isGraph, v: props.isVertex});
+
+                    ret = true;
                     // switch to gv
                     let o = DGraphVertex.new(0, '', '', '', undefined);
                     let d: GObject = {...dnode};
@@ -1088,6 +1093,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
                 }
             }
             else if (dnode.className !== 'DGraph') {
+                ret = true;
                 // switch to g
                 let o = DGraph.new(0, '', '', '', undefined);
                 let d: GObject = {...dnode};
@@ -1100,6 +1106,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         }
         else if (props.isVertex) {
             if (dnode.className.indexOf('Vertex') === -1) {
+                ret = true;
                 // switch to v
                 let o = DVertex.new(0, undefined, '', '', undefined);
                 let d: GObject = {...dnode};
@@ -1112,6 +1119,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         }
         else if (props.isEdgePoint) {
             if (dnode.className !== 'DEdgePoint') {
+                ret = true;
                 // switch to ep
                 let o = DEdgePoint.new(0, undefined, '', '', undefined);
                 let d: GObject = {...dnode};
@@ -1124,6 +1132,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         }
         else if (props.isEdge) {
             if (dnode.className !== 'DEdge') {
+                ret = true;
                 // switch to edge
                 let o = DEdge.new2(null, '', '', undefined, dnode.id, dnode.id, ()=>{});
                 let d: GObject = {...dnode};
@@ -1136,6 +1145,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         }
         else if (props.isField) {
             if (dnode.className !== 'DGraphElement') {
+                ret = true;
                 // switch to field
                 SetFieldAction.new(dnode, 'className', 'DGraphElement', '', false);
                 // always ok, everything is also subclass of a field (field == graphElement)
@@ -1143,7 +1153,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         }
 
 
-        let edge: LVoidEdge = props.node as any;
+        let edge: LVoidEdge = node as any;
         let dedge: DVoidEdge = dnode as any;
         // if edge.label props is func, do not set in the dedge, just in transientproperties. totally override the "text" system.
         // it does not need collab sync:
@@ -1182,7 +1192,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         return ret;
     }
 
-    public render(nodeType:string = '', styleoverride:React.CSSProperties={}, classes: string[]=[]): ReactNode {
+    public render(nodeType:string = '', styleoverride:GObject<React.CSSProperties>={}, classes: string[]=[]): ReactNode {
         GraphElementComponent.map[this.props.nodeid as Pointer<DGraphElement>] = this; // props might change at runtime, setting in constructor is not enough
         if (Debug.lightMode && (!this.props.data || !(lightModeAllowedElements.includes(this.props.data.className)))){
             return this.props.data ? <div>{" " + ((this.props.data as any).name)}:{this.props.data.className}</div> : undefined;
@@ -1193,6 +1203,37 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
             return "Updating view...";
         }*/
         if (this.updateNodeFromProps(this.props as GObject<any>)) return 'Updating...';
+
+        classes.push(nodeType)
+
+        if (this.props.isGraph){
+            let offset = (this.props.node as any as LGraph).offset;
+            let zoom = (this.props.node as any as LGraph).zoom;
+            styleoverride['--offset-x'] = offset.x + 'px';
+            styleoverride['--offset-y'] = offset.y + 'px';
+            styleoverride['--zoom-x'] = zoom.x;
+            styleoverride['--zoom-y'] = zoom.y;
+        }
+        if (this.props.isVertex){
+            let vertex: LVertex = this.props.node as any;
+            let size = vertex.size;
+            styleoverride['--top'] = size.y + 'px';
+            styleoverride['--left'] = size.x + 'px';
+
+            let isResized = vertex.isResized;
+            if (isResized || !this.props.view.adaptWidth) {
+                styleoverride.width = size.w + 'px';
+                styleoverride['--width'] = size.w + 'px';
+            }
+            else styleoverride.width = undefined;
+            if (isResized || !this.props.view.adaptHeight) {
+                styleoverride.height = size.h + 'px';
+                styleoverride['--height'] = size.h + 'px';
+            }
+            else styleoverride.height = undefined; // todo: the goal is to reset jqui inline style, but not override user-defined inline style
+        }
+
+
         let nid = this.props.nodeid;
         let allviews = [...this.props.views, this.props.view]; // main view must be last, for renderView ordering
 
