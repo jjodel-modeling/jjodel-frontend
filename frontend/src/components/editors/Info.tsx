@@ -82,10 +82,12 @@ class builder {
 
     static class(data: LModelElement, advanced: boolean): JSX.Element {
         let lclass: LClass = data as any;
-        // let extendOptions: {value: string, label: string}[] lclass.extends.map(lsubclass=> ({value: lsubclass.id, label: lsubclass.name}));
-        let m2: LModel = lclass.model;
-        let pkgs = m2.allSubPackages;
         let dclass = lclass.__raw;
+        /*
+        let extendOptions: {value: string, label: string}[] lclass.extends.map(lsubclass=> ({value: lsubclass.id, label: lsubclass.name}));
+        let m2: LModel = lclass.model;
+        // let pkgs = lclass.allowCrossReference ? m2.allCrossSubPackages : m2.allSubPackages;
+        let pkgs = lclass.validTargets;
         let extendsarr = dclass.extends;
         let extendValue: {value: string, label: string}[] = [];
         let extendOptions: {label: string, options: {value: string, label: string}[]}[] = pkgs.map(p => (
@@ -95,20 +97,30 @@ class builder {
                 if (!extendsarr.includes(opt.value)) return opt;
                 extendValue.push(opt);
                 return undefined;
-            }).filter(e=>!!e) as {value: string, label: string}[]}));
+            }).filter(e=>!!e) as {value: string, label: string}[]}));*/
         //let extendOptions = pkgs.map(p => ({label: p.fullname, options: p.classes.map(c=> ({value:c.id as string, label:c.name}))}));
 
+        let extendValue: {value: string, label: string}[] = lclass.extends.map(c=>({value:c.id, label:c.name}));
+        let extendOptions = lclass.validTargetOptions;
 
         return (<section className={'properties-tab'}>
             {this.named(data, advanced)}
             <label className={'input-container'}>
                 <b className={'me-2'}>Abstract:</b>
-                <Input data={data} field={'abstract'} type={'checkbox'}/>
+                <Input data={lclass} field={'abstract'} type={'checkbox'}/>
             </label>
             <label className={'input-container'}>
                 <b className={'me-2'}>Interface:</b>
-                <Input data={data} field={'interface'} type={'checkbox'}/>
+                <Input data={lclass} field={'interface'} type={'checkbox'}/>
             </label>
+
+            <Tooltip tooltip={"Defines if the class can extend from other linked metamodels."}>
+                <label className={'input-container right'}>
+                    <b className={'me-2'}>Allow Cross-extend:</b>
+                    <Input data={lclass} field={'allowCrossReference'} type={'checkbox'}/>
+                </label>
+            </Tooltip>
+
             <label className={'input-container'}>
                 <b className={'me-2'}>Extends:</b>
                 <MultiSelect isMulti={true} options={extendOptions as any} value={extendValue} onChange={(v) => {
@@ -116,19 +128,19 @@ class builder {
                     lclass.extends = v.map(e => e.value) as Any<string[]>;
                 }} />
             </label>
-            <label className={'input-container'}>
-                <b className={'me-2'}>Final:</b>
-                <Tooltip tooltip={"Defines if the class can be extended."}>
-                    <Input data={data} field={'final'} type={'checkbox'}/>
-                </Tooltip>
-            </label>
-            {false &&
+            <Tooltip tooltip={"Defines if the class can be extended."}>
                 <label className={'input-container'}>
-                    <b className={'me-2'}>Rootable:</b>
-                    <Tooltip tooltip={"Whether the element can be a m1 root (present in toolbar)."}>
-                        <Input data={data} field={'rootable'} type={'checkbox3' }/>
-                    </Tooltip>
-                </label>}
+                    <b className={'me-2'}>Final:</b>
+                        <Input data={lclass} field={'final'} type={'checkbox'}/>
+                </label>
+            </Tooltip>
+            {false &&
+                <Tooltip tooltip={"Whether the element can be a m1 root (present in toolbar)."}>
+                    <label className={'input-container'}>
+                        <b className={'me-2'}>Rootable:</b>
+                            <Input data={data} field={'rootable'} type={'checkbox3' }/>
+                    </label>
+                </Tooltip>}
             <label className={'input-container'}>
                 <b className={'me-2'}>Singleton:</b>
                 <Tooltip tooltip={'A singleton element is always present exactly 1 time in every model.' +

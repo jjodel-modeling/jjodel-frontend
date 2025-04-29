@@ -17,6 +17,8 @@
 
 */
 // input[type="checkbox"].checkbox3::after{ display:none; }
+
+
 input.undetermined{
   outline: 2px solid red;
 }
@@ -63,3 +65,14 @@ select.model-select {
   height: var(--input-height)!important;
   border-radius: var(--radius);
 }
+
+
+/******************************              Multiselect START              ******************************/
+.input-container.right .css-1nmdiq5-menu{
+  right: 0;
+}
+.input-container.center .css-1nmdiq5-menu{
+  margin-left: 50%;
+  transform: translateX(-50%);
+}
+/******************************              Multiselect END              ******************************/
