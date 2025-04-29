@@ -4456,8 +4456,8 @@ export class LModel<Context extends LogicContext<DModel> = any, C extends Contex
                 let key1 = key.substring(0, key.length - 1);
                 m2item = (m2 as GObject)[key1];
                 if (m2item) {
-                    if (m2item.className === "DClass") (m2item as LClass).instances; // return this.get_instancesOf(c)(m2item as LClass);
-                    else return Log.ee("Could not get instances of " + key1 + ".", {c, key, m2});
+                    if (m2item.className === "DClass") return (m2item as LClass).instances; // return this.get_instancesOf(c)(m2item as LClass);
+                    else return Log.ee("Could not get instances of " + key1 + ".", {c, key, m2, className:m2item.className});
                 }
             }
             if (!m2) return Log.ee("Could not find any subelement with name " + key + " on M1 or M2 Models", {c, key, m1: c.data, m2});
