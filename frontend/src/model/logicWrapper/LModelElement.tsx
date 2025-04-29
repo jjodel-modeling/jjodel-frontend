@@ -301,7 +301,7 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
     instantiable!: boolean;
     __info_of__isInstantiable: Info = {type:'boolean', txt:<div>Whether the element type (DClass, DAttribute...) can produce an instance in the model.</div>}
     get_isInstantiable(c: Context): boolean { return this.get_instantiable(c); }
-     get_instantiable(c: Context): boolean { return LModelElement.M2InstantiableClasses.includes(c.data.className); }
+    get_instantiable(c: Context): boolean { return LModelElement.M2InstantiableClasses.includes(c.data.className); }
 
     childNames!: string[];
     __info_of__childNames: Info = {type: "(json: object, instanceof?: LClass) => LObject", txt: "Array containing the names of all children subelements."};

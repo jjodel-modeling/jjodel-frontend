@@ -261,7 +261,8 @@ export abstract class RuntimeAccessibleClass extends AbstractMixedClass {
         switch (typeof v){
             case "string": s = store.getState(); ret = LPointerTargetable.fromPointer(v, s); break
             case "object":
-                if(v.__isProxy) return v;
+                if (!v) return v; // null
+                if (v.__isProxy) return v;
                 if (v.className) {
                     if (!RuntimeAccessibleClass.get(v?.className)?.logic?.singleton) break;
                     ret = LPointerTargetable.fromD(v);
@@ -2002,6 +2003,7 @@ WARNING! do not set proxies in the state, set pointers instead.<br/>
 
         // i choose 3)
         let newState: GObject;
+        let removedState: GObject = {};
         let oldState = c.data._state ? {...c.data._state} : {};
         let changed: boolean = false;
         if (val === undefined) {
@@ -2011,12 +2013,16 @@ WARNING! do not set proxies in the state, set pointers instead.<br/>
         }
         else if (typeof val !== "object") { Log.ee("state can only be assigned with an object or undefined"); return true; }
         else {
-            val = this.__sanitizeValue(val);
+            val = this.__sanitizeValue(val || {}); // ||{} to handle null which is typed as object in js
             newState = {}; // {...oldState};
             for (let k in val) {
                 if (val[k] === undefined) {
-                    if (oldState[k] === undefined) continue;
-                    delete newState[k];
+                    if (!(k in oldState)) {
+                        // newState[k] = undefined; reducer is ignoring undefined anyway, so i would need to set the whole obj instead of a delta or changing reducer.
+                        continue;
+                    }
+                    // delete newState[k];
+                    removedState[k] = true; // will be deleted by reducer
                     changed = true;
                     continue;
                 }
@@ -2030,7 +2036,8 @@ WARNING! do not set proxies in the state, set pointers instead.<br/>
         if (!changed) return true;
 
         TRANSACTION(this.get_name(c)+'.state', ()=>{
-            SetFieldAction.new(c.data, "_state", newState, '+=', false);
+            if (Object.keys(newState)) SetFieldAction.new(c.data, "_state", newState, '+=', false);
+            if (Object.keys(removedState)) SetFieldAction.new(c.data, "_state", removedState, '-=', false);
         })
         return true;
     }
