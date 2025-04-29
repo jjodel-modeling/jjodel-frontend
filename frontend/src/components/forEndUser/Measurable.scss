@@ -11,8 +11,12 @@
     border: none;
   }
 }
-.panning-handle
 
+.DGraphVertex:focus-within .panning-handle.ui-draggable{
+  overflow: visible;
+  // problema: senza of:visible un graphVertex con panning non mostra il contenuto in overflow, mai.
+  // con of: visible cliccando sull'overflow in un punto "vuoto" (panning handle va in overflow) seleziono il graphvertex invece del grafo
+}
 .scrollable, .panning-handle, .panning-content{
   width: 100%;
   height: 100%;

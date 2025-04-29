@@ -3497,27 +3497,28 @@ export class LReference<Context extends LogicContext<DReference> = any, C extend
             let containedObjects: Dictionary<Pointer, LObject> = {};
             let removedValues: Pointer[] = [];
             let parentChanges: LObject[] = [];
+            console.log('containment set', {instances: this.get_instances(c)});
             for (let lval of this.get_instances(c) as LValue[]) {
                 // todo: in set_values crop the arr to max upperbound
                 let dval = lval.__raw
                 let values = dval.values;
                 let lmodel = lval.model;
                 let dmodel = lmodel.__raw;
+                console.log('containment set vals', {lval, values});
                 for (let ptr of values) {
                     if (!Pointers.isPointer(ptr)) continue;
-                    if (containedObjects[ptr]) {
+                    if (val && containedObjects[ptr]) { // check if element is found twice in the same collection --> one needs to be removed
                         // Log.ee('Cannot activate ' + mainkey+ ' on this reference because some objects are referenced twice in the model')
                         // todo: ask for confirmation if want to abort or delete those values.
-                        if (val) {
-                            SetFieldAction.new(dval, 'values', ptr as any, '-=', true); // if is containment=true prevent the targets from being contained twice}
-                            removedValues.push(ptr);
-                            continue;
-                        }
+                        SetFieldAction.new(dval, 'values', ptr as any, '-=', true); // if is containment=true prevent the targets from being contained twice}
+                        removedValues.push(ptr);
+                        continue;
                     }
                     // update parent
                     let pointedobj = containedObjects[ptr] = LPointerTargetable.fromPointer(ptr);
                     let newid = (val ? dval.id : dmodel.id) as any;
                     let oldparent = pointedobj.father;
+                    console.log('containment set val update', {ptr, oldparent:oldparent.id, newid, modelid:dmodel.id, valid: dval.id, pointedobj});
                     if (oldparent?.id === newid) continue;
                     pointedobj.father = newid;
                     parentChanges.push(pointedobj);
@@ -4436,7 +4437,7 @@ export class LModel<Context extends LogicContext<DModel> = any, C extends Contex
                 let n = subobject.name;
                 if (!n || n.toLowerCase() !== k) continue;
                 // A0) perfect match with direct child object
-                if (directSubObjects[subobject.id]) return subobject; // actually cannot do direct match, because proxy get function will solve it directly before calling _defaultGetter
+                if (directSubObjects[subobject.id]) return subobject;
                 else if (!deepmatch) deepmatch = subobject;
             }
             // A1) match with deep sub-object
@@ -4455,7 +4456,7 @@ export class LModel<Context extends LogicContext<DModel> = any, C extends Contex
                 let key1 = key.substring(0, key.length - 1);
                 m2item = (m2 as GObject)[key1];
                 if (m2item) {
-                    if (m2item.className === "DClass") return this.get_instancesOf(c)(m2item as LClass);
+                    if (m2item.className === "DClass") (m2item as LClass).instances; // return this.get_instancesOf(c)(m2item as LClass);
                     else return Log.ee("Could not get instances of " + key1 + ".", {c, key, m2});
                 }
             }
@@ -4530,6 +4531,7 @@ export class LModel<Context extends LogicContext<DModel> = any, C extends Contex
             <br/>The second parameter tells if instances of his subclasses needs to be retreieved as well.</div>
     }
     // M1
+    /// DANGER: after each usage need to call .otherInstances() or the data is cached and not updated.
     public get_instancesOf(c:Context): (this["instancesOf"]){
         if (c.data.isMetamodel) { return (...a:any) => { Log.ww("cannot call instancesOf() on a metamodel"); return []; } }
         return (instancetypes0: orArr<(string | LClass | Pointer)>, includeSubclasses: boolean = false): LObject[] => {
@@ -4545,9 +4547,10 @@ export class LModel<Context extends LogicContext<DModel> = any, C extends Contex
                 for (let c of arr) dinstancetypes.push(...(c.allSubClasses.map(l => l.__raw) || []));
                 dinstancetypes = [...new Set(dinstancetypes)];
             }
-            let ret: LObject[] = []
+            let ret: LObject[] = [];
             for (let c of dinstancetypes) {
-                let arr: LObject[] = LModel.otherObjectsTemp[c.name]
+                let arr: LObject[] = LModel.otherObjectsTemp[c.name]; // ?.r; // force update.
+                // update with .r is pointless because the array itself would need updating. elements might be removed/inserted if a call to .otherObjects() was skipped
                 if (!arr || !arr.length) continue;
                 ret.push(...arr);
                 LModel.otherObectsAccessedKeys.push(c.name);
@@ -5895,6 +5898,8 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
     get_add(c: Context): (...val: any[] | this["values"])=>void{
         return (...val: any[] | this["values"]) => { this.set_values([...c.data.values, ...val.map(v => v?.id || v)], c); }
     }
+
+    // if an element is contained twice and removed once, only 1 is removed. [1, 2, 2, 2, 3] - [2, 2] = [1, 2, 3]
     remove(...val: any[]): void{ return this.cannotCall("LValue.remove"); }
     __info_of__remove: Info = {type: "(...val: any) => void", txt: "Deletes a value in the current value collection, or none if the element is not found."}
     get_remove(c: Context): (...val: this["values"])=>void {
@@ -6618,6 +6623,7 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
                         if (info.instanceof && info.type && (lvale.father.id !== info.type.id)) return {success: false, reason: "target is not of correct literal type"};
                         // no need to do checks / other sideeffects other than pointedBy i think.
                     }
+                    console.log('set_value_' + index, {isContainment: info.isContainment, isRef: lval.className === DObject.cname, val})
                     // is ref
                     if (lval.className === DObject.cname){
 
@@ -6724,7 +6730,7 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
                 modified = out.success || modified;
                 // console.log('set_values', {val, i, modifiedreason:out});
             }
-            let excess = c.data.values.length - val.length;
+            let excess = c.data.values.length - val.length; // add - outactions.set.length + outactions.set.length ??
             while (excess-- > 0) {
                 SetFieldAction.new(c.data.id, 'values', undefined as any, '-=', true);
             }

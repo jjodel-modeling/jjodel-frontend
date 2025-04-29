@@ -294,26 +294,25 @@ export class DViewElement extends DPointerTargetable {
             "background-": {type:"color", value: [{r:238, g:242, b:243, a:1}]},
             "color-": {type:"color", value: [{r:3, g:54, b:86, a:1}]},
         }
-            const css = `.root {
+            const css = `&>.root {
     border: 1px solid var(--border-color-1);
     border-radius: 4px;
     background-color: var(--background-1);
     color: var(--color-1);
-}
- 
-.root div.header {
-    text-align: center;
-    border-bottom: 1px solid var(--border-color-1);
-    padding: 0px;
-    margin: 0px;
-}
- 
-.root div.body {
-    text-align: center;
-    font-weight: normal;  
-    height: auto;
-    padding: 5px;
-}
+    
+    &>.header {
+        text-align: center;
+        border-bottom: 1px solid var(--border-color-1);
+        padding: 0px;
+        margin: 0px;
+    }
+    &>.body {
+        text-align: center;
+        font-weight: normal;  
+        height: auto;
+        padding: 5px;
+    }
+} 
  `;
         let query = '';
         if (forData) switch(forData.className) {

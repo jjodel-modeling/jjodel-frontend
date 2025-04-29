@@ -2461,6 +2461,12 @@ export class U {
         window.location.search = search;
         return search;
     }
+
+    static jsonSanitize_dangerous(text: string): string {
+        // replace trailing comma, but risk of replacing string literals. better not use it
+        text = text.replaceAll(/,(\s*[}\]])/, ',$1');
+        return text;
+    }
 }
 export class DDate{
     static cname: string = "DDate";

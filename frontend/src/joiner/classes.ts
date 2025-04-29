@@ -1964,9 +1964,24 @@ export class LPointerTargetable<Context extends LogicContext<DPointerTargetable>
         return LPointerTargetable.from(data[key]);
     }
 
+    __info_of___clearState = {type:"()=>void", txt: `<div>Clears the whole content of this.state</div>`}
+    clearState(): void { return this.wrongAccessMessage('clearState'); }
+    get_clearState(c: Context): ()=>void {
+        return () => {
+            TRANSACTION(this.get_name(c) + '.clearState()', ()=>{
+                SetFieldAction.new(c.data, "_state", {}, undefined, false);
+            }, Object.keys(3)+ 'keys removed');
+        }
+    }
+
     _state!: GObject;
     __info_of___state = {type:"GObject", txt: `<div>A space where the user can store informations for their operations/views.<br/>
-Example: The Validation viewpoint uses it to store validation messages.<br/>
+Example: The Validation viewpoint uses it to store validation messages through onDataUpdate events, check them for live examples.<br/>
+values are set in a http patch approach, <code>this.state = {varname: "value"}<br/>
+will set this.state.varname without changing other pre-existing values.<br/>
+as such <code>this.state = {}</code> does nothing. to remove a single entry use<br/>
+To remove a single entry, use <code>this.state = {varname: undefined}</code>.<br/>
+To empty the whole state, use <code>this.clearState()</code>.<br/>
 WARNING! do not set proxies in the state, set pointers instead.<br/>
 <a href='https://github.com/MDEGroup/jjodel/wiki/L%E2%80%90Object-state'>Learn more on the wiki</a></div>`};
 
@@ -1992,12 +2007,12 @@ WARNING! do not set proxies in the state, set pointers instead.<br/>
         if (val === undefined) {
             if (!oldState || !Object.keys(oldState).length) return true;
             newState = {};
-            changed = true;
+            changed = false;
         }
         else if (typeof val !== "object") { Log.ee("state can only be assigned with an object or undefined"); return true; }
         else {
             val = this.__sanitizeValue(val);
-            newState = {...oldState};
+            newState = {}; // {...oldState};
             for (let k in val) {
                 if (val[k] === undefined) {
                     if (oldState[k] === undefined) continue;
@@ -2015,7 +2030,7 @@ WARNING! do not set proxies in the state, set pointers instead.<br/>
         if (!changed) return true;
 
         TRANSACTION(this.get_name(c)+'.state', ()=>{
-            SetFieldAction.new(c.data, "_state", newState, undefined, false);
+            SetFieldAction.new(c.data, "_state", newState, '+=', false);
         })
         return true;
     }
