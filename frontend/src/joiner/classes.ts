@@ -2037,7 +2037,7 @@ WARNING! do not set proxies in the state, set pointers instead.<br/>
 
         TRANSACTION(this.get_name(c)+'.state', ()=>{
             if (Object.keys(newState)) SetFieldAction.new(c.data, "_state", newState, '+=', false);
-            if (Object.keys(removedState)) SetFieldAction.new(c.data, "_state", removedState, '-=', false);
+            if (Object.keys(removedState)) SetFieldAction.new(c.data, "_state", removedState as any, '-=', false);
         })
         return true;
     }
