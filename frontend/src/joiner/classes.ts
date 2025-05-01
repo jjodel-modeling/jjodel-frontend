@@ -675,13 +675,14 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         todo: build a Tree<DClass> of all superclasses tree nested by level.
             only then instantiate DValues by depth level, if same level from right to left (last extend on right takes priority) and erase this stuff below.*/
         // let superClassesByLevel: Dictionary<Pointer, DClass> = ;
-        while(targets.length) { // gather superclasses in map "alreadyParsed"
-            let nextTargets = [];
+        while (targets.length) { // gather superclasses in map "alreadyParsed"
+            let nextTargets: DClass[] = [];
             for (let target of targets) {
                 if (!target) { Log.ww("Invalid father pointer in DStructuralFeature", {feature: thiss, father:target, superclasses: alreadyParsed}); continue; }
                 if (alreadyParsed[target.id]) continue;
                 alreadyParsed[target.id] = target;
-                for(let ext of target.extendedBy) nextTargets.push((_DClass as typeof DPointerTargetable).from(ext));
+                let ltarget = L.from(target) as LClass;
+                for (let ext of ltarget.extendedBy) nextTargets.push(D.from(ext));
             }
             targets = nextTargets;
         }
@@ -1563,8 +1564,8 @@ export class PendingPointedByPaths{
     private constructor(
         public from: DocString<"full Path in store including field key">,
         public holder: Pointer,
-        public casee: "+=" | "-=" | undefined = undefined){
-        this.stackTrace = U.getStackTrace();
+        public casee: "+=" | "-=" | undefined = undefined) {
+            this.stackTrace = U.getStackTrace();
     }
     static attemptimplementationdelete(pb: PointedBy) {
         let state: DState = store.getState();
@@ -1620,7 +1621,7 @@ export class PendingPointedByPaths{
 
 @RuntimeAccessible('PointedBy')
 export class PointedBy {
-    static list: string[] = ["father", "parent", "annotations", "packages", "type", "subpackages", "classifiers", "exceptions", "parameters", "defaultValue", "instances", "operations", "features", "attributes", "references", "extends", "extendedBy", "implements", "implementedBy", "instanceof", "edges", "target", "opposite", "parameters", "exceptions", "literals", "values"];
+    static list: string[] = ["father", "parent", "annotations", "packages", "type", "subpackages", "classifiers", "exceptions", "parameters", "defaultValue", "instances", "operations", "features", "attributes", "references", "extends", "implements", "implementedBy", "instanceof", "edges", "target", "opposite", "parameters", "exceptions", "literals", "values"];
     source: string; // elemento da cui parte il puntatore
     // field: keyof DPointerTargetable;
     // il bersaglio non c'è qui, perchè è l'oggetto che contiene questo dentro l'array pointedBy
@@ -1643,7 +1644,7 @@ export class PointedBy {
     static new(source: DocString<"full path in store including key. like \'idlookup.id.extends+=\'">, modifier: "-=" | "+=" | undefined = undefined, action?: ParsedAction): PointedBy {
         // let source: DocString<"full path in store including key"> = action.path;
         // if (source.includes("true")) { console.error(this, action); throw new Error("mixed a bool"); }
-        if (modifier) source = source.substring(0, source.length - (modifier?.length || 0));
+        if (modifier && U.endsWith(source, modifier)) source = source.substring(0, source.length - (modifier?.length || 0));
         return new PointedBy(source);
     }
     // static new0<D extends DPointerTargetable> (source: D, field: keyof D): PointedBy { return new PointedBy(source, field); }

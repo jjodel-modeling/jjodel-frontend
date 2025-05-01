@@ -182,8 +182,8 @@ export class Dummy {
 
         }
         let replacementClasses: Pointer<DClass>[] = dDeleted.extends;
-        for (let p of dDeleted.extendedBy){
-            let l = L.fromPointer(p) as LClass;
+        for (let p of lDeleted.extendedBy){
+            let l = p; // L.from(p) as LClass;
             if (!l) continue;
             let newValues = l.__raw.extends;
             for (let r of replacementClasses) U.ArrayAdd(newValues, r);

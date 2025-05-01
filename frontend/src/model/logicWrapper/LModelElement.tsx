@@ -2242,7 +2242,7 @@ export class ClassReferences{
     attributes?: Pointer<DAttribute, 0, 'N', LAttribute> = [];
     referencedBy?: Pointer<DReference, 0, 'N', LReference> = [];
     extends?: Pointer<DClass, 0, 'N', LClass> = [];
-    extendedBy?: Pointer<DClass, 0, 'N', LClass> = [];
+    //extendedBy?: Pointer<DClass, 0, 'N', LClass> = [];
     implements?: Pointer<DClass, 0, 'N', LClass> = [];
     implementedBy?: Pointer<DClass, 0, 'N', LClass> = [];
 }
@@ -2280,7 +2280,7 @@ export class DClass extends DPointerTargetable { // extends DClassifier
     attributes: Pointer<DAttribute, 0, 'N', LAttribute> = [];
     referencedBy: Pointer<DReference, 0, 'N', LReference> = [];
     extends: Pointer<DClass, 0, 'N', LClass> = [];
-    extendedBy: Pointer<DClass, 0, 'N', LClass> = [];
+    // extendedBy: Pointer<DClass, 0, 'N', LClass> = [];
 
     // mia aggiunta:
     isPrimitive!: boolean;
@@ -2492,7 +2492,7 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
     set_final(val: boolean, c: Context): boolean{
         val = !!val;
         if (val === c.data.final) return true;
-        if (c.data.extendedBy.length > 0) { U.alert('e', 'Class cannot become final as it is currently extended.', 'Remove the subclasses before.'); return true; }
+        if (this.get_extendedBy(c).length > 0) { U.alert('e', 'Class cannot become final as it is currently extended.', 'Remove the subclasses before.'); return true; }
         TRANSACTION(this.get_name(c)+'.final', ()=>{
             SetFieldAction.new(c.data, 'final', val);
             SetFieldAction.new(c.data, 'sealed', [], '', true);
@@ -2501,12 +2501,12 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
         return true;
     }
     get_isSingleton(c: Context): LClass['isSingleton'] { return this.get_singleton(c); }
-    get_singleton(c: Context): LClass['isSingleton']{ return c.data.isSingleton; }
-    set_isSingleton(val: boolean, c: Context): boolean{ return this.set_singleton(val, c); }
-    set_singleton(val: boolean, c: Context): boolean{
+    get_singleton(c: Context): LClass['isSingleton'] { return c.data.isSingleton; }
+    set_isSingleton(val: boolean, c: Context): boolean { return this.set_singleton(val, c); }
+    set_singleton(val: boolean, c: Context): boolean {
         val = !!val;
         if (c.data.instances.length > 1) { U.alert('e', 'Class cannot become a singleton since there are multiple instances already.','Delete some and retry.'); return true; }
-        if (c.data.extendedBy.length > 0) { U.alert('e', 'Class cannot become a singleton unless is also final, and is currently extended.', 'Remove the subclasses before.'); return true; }
+        if (this.get_extendedBy(c).length > 0) { U.alert('e', 'Class cannot become a singleton unless is also final, and is currently extended.', 'Remove the subclasses before.'); return true; }
         TRANSACTION(this.get_name(c)+'.singleton', ()=>{
             SetFieldAction.new(c.data, 'isSingleton', val);
             if (val) {
@@ -2520,7 +2520,7 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
                 }
             }
         }, c.data.isSingleton, val);
-        return c.data.final;
+        return true;
     }
     get_instantiable(c: Context): LClass['instantiable']{ return !(c.data.abstract || c.data.interface || c.data.isSingleton); }
     get_isInstantiable(c: Context): LClass['instantiable'] { return this.get_instantiable(c); }
@@ -2570,22 +2570,7 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
             this.get_ownOperations(context));
     }
 
-    allExtends!: this['extendsChain'];
-    get_allExtends(c:Context): this['extendsChain']{ return this.get_extendsChain(c); }
-    private get_extendsChain(context: Context): this['extendsChain'] {
-        let targets: LClass[] = LClass.fromArr(context.data.extends);
-        let alreadyParsed: Dictionary<Pointer, LClass> = {};
-        while (targets.length) {
-            let nextTargets = [];
-            for (let target of targets){
-                if (alreadyParsed[target.id]) continue;
-                alreadyParsed[target.id] = target;
-                for (let next of target.extends) nextTargets.push(next);
-            }
-            targets = nextTargets;
-        }
-        return Object.values(alreadyParsed);
-    }
+
 
     public isSubClassOf(superClass?: LClass, returnIfSameClass: boolean = true): boolean { return this.cannotCall("isSubClassOf"); }
     public isSuperClassOf(subClass?: LClass, returnIfSameClass: boolean = true): boolean { return this.cannotCall("isSuperClassOf"); }
@@ -2931,7 +2916,7 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
     protected set_extends(val: PackArr<this["extends"]>, c: Context): boolean {
         if (!val) val = [];
         else if (!Array.isArray(val)) val = [val];
-        let ptrs: Pointer[] = [...new Set(val.map((val) => { return val && Pointers.from(val) }).filter(e=>!!e))];
+        let ptrs: Pointer<DClass>[] = [...new Set(val.map((val) => { return val && Pointers.from(val) }).filter(e=>!!e))];
         let diff = Uarr.arrayDifference(c.data.extends, ptrs);
         let invalid: GObject[] = [];
         let invalidPtrs: Pointer[] = [];
@@ -2948,141 +2933,13 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
         if (diff.removed.length === 0 && diff.added.length === invalid.length) return true;
 
         TRANSACTION(this.get_name(c)+'.extends', ()=>{
+            // adapt instances
+            this._fixExtendInstances(c, ptrs);
+            // finalize
             SetFieldAction.new(c.data, 'extends', ptrs, "", true);
         }, undefined, ('+'+diff.added.length+', -'+diff.removed.length))
         return true;
     }
-
-    add_extends(val: PackArr<this["extends"]>): void { this.cannotCall('add_extends'); }
-    get_add_extends(val: PackArr<this["extends"]>, context: Context): this['add_extends'] {
-        return ((val: string[])=>this.impl_add_extends(val as any, context)) as any;
-    }
-    impl_add_extends(val: PackArr<this["extends"]>, c: Context): void {
-        if (!val) val = [];
-        else if (!Array.isArray(val)) val = [val];
-        if (!val.length) return;
-        let ptrs = [...new Set(val.map((val) => { return val && Pointers.from(val) }).filter(e=>!!e && !c.data.extends.includes(e)))];
-
-        ptrs = ptrs.filter(ptr => this.get_canExtend(c)(ptr as any, {} as any));
-        if (!ptrs.length) return;
-        // todo: extendedby? or make it derived from pointedby
-
-        TRANSACTION(this.get_name(c)+'.extends+=', ()=>{
-            SetFieldAction.new(c.data, 'extends', [...c.data.extends, ...ptrs], '', true);
-        }, undefined, ptrs.length)
-    }
-
-    protected remove_extends(val: PackArr<this["extends"]> | number | number[], c: Context): void {
-        if (!val) val = [];
-        else if (!Array.isArray(val)) val = [val];
-        if (!val.length) return;
-        let finalVal: D["extends"];
-        if (typeof val[0] === "number") { finalVal = c.data.extends.filter((elem,index,arr)=> { return (val as any[]).includes(index); }); }
-        else {
-            finalVal = [...c.data.extends];
-            let ptrs: Pointer<DClass> = Pointers.from(val as PackArr<this["extends"]>) as any;
-            for (let v of ptrs) { U.arrayRemoveAll(finalVal, v); }
-        }
-
-        TRANSACTION(this.get_name(c)+'.extends-=', ()=>{
-            SetFieldAction.new(c.data, 'extends', finalVal, '', true);
-        }, undefined, c.data.extends.length - finalVal.length)
-    }
-
-    protected get_extendedBy(c: Context): this["extendedBy"] {
-        return c.data.extendedBy.map((pointer) => {
-            return LPointerTargetable.from(pointer)
-        });
-    }
-    protected set_extendedBy(val: PackArr<this["extendedBy"]>, c: Context): boolean {
-        if (!val) val = [];
-        else if (!Array.isArray(val)) val = [val];
-        const ptrs = [...new Set(val.map((val) => { return val && Pointers.from(val) }).filter(e=>!!e))];
-        TRANSACTION(this.get_name(c)+'.extendedBy', ()=>{
-            SetFieldAction.new(c.data, 'extendedBy', ptrs, "", true);
-        })
-        return true;
-    }
-
-    protected get_implements(context: Context): this["implements"] { return context.data.implements; }
-    protected set_implements(val: this["implements"], c: Context): boolean {
-        TRANSACTION(this.get_name(c)+'.implements', ()=>{
-            SetFieldAction.new(c.data, 'implements', val, "", true);
-        })
-        return true;
-    }
-
-    protected get_implementedBy(context: Context): this["implementedBy"] { return context.data.implementedBy; }
-    protected set_implementedBy(val: this["implementedBy"], c: Context): boolean {
-        TRANSACTION(this.get_name(c)+'.implementedBy', ()=>{
-            SetFieldAction.new(c.data, 'implementedBy', val, "", true);
-        })
-        return true;
-    }
-
-
-    public canExtend(superclass: LClass, output: {reason: string, allTargetSuperClasses: LClass[]} = {reason: '', allTargetSuperClasses: []}): boolean {
-        this.cannotCall("canExtend"); return false;
-    }
-
-    private get_canExtend(context: Context): (superclass: LClass, output: {reason: string, allTargetSuperClasses: LClass[]}) => boolean {
-        return (superclass: LClass, output: {reason: string, allTargetSuperClasses: LClass[]} =
-            {reason: '', allTargetSuperClasses: []}) => this._canExtend(context, superclass, output);
-    }
-
-    public isExtending(superclass: Pack1<LClass>, directly: boolean = false): boolean { return this.cannotCall("isExtending"); }
-    public isSubclassOf(superclass: Pack1<LClass>, directly: boolean = false): boolean { return this.cannotCall("isSubclassOf"); }
-    __info_of__isSubclassOf: Info = {type: "(superclass: Pointer | LClass, directly: boolean = false) => boolean", txt: "Alias for isExtending"};
-    __info_of__isExtending: Info = {type: "(superclass: Pointer | LClass, directly: boolean = false) => boolean",
-        txt:<div>Tells if "this" is a subclass of the "superclass" parameter.
-            <br/>- If "directly" is set to true, it will only include direct subclassing as in "class A extends C" not considering chains.
-            <br/>    If "directly" is set to true: "class A extends B" & "Class B extends C". In that case A.isExtending(C, true) will return false.</div>};
-
-    private get_isSubclassOf(c: Context, plusThis: boolean = true): this["isExtending"] { return this.get_isExtending(c, plusThis); }
-    private get_isExtending(c: Context, plusThis: boolean = true): this["isExtending"] {
-        return (superclass: Pack1<LClass>, directly: boolean = false): boolean => {
-            let ptr = Pointers.from(superclass);
-            if (directly) return c.data.extends.includes(ptr);
-            return this.get_superclasses(c, plusThis).map(classe=>classe.id).includes(ptr);
-        }
-    }
-
-    private get_allSubClasses(c: Context, plusThis: boolean = false): LClass[] {return this.get_subclasses(c, true); }
-    private get_allSuperClasses(c: Context, plusThis: boolean = false): LClass[] {return this.get_subclasses(c, true); }
-    private get_allSubclasses(c: Context, plusThis: boolean = false): LClass[] {return this.get_subclasses(c, true); }
-    private get_allSuperclasses(c: Context, plusThis: boolean = false): LClass[] {return this.get_subclasses(c, true); }
-    __info_of__allSubclasses: Info = {type: 'Class[]', txt:'Same as this.subclasses, plus the current class.'}
-    __info_of__allSuperclasses: Info = {type: 'Class[]', txt:'Same as this.superclasses, plus the current class.'}
-
-    private get_subclasses(c: Context, plusThis: boolean = false): LClass[] {
-        const visited: Dictionary<Pointer, LClass> = {};
-        let queue: LClass[] = c.proxyObject.extendedBy;
-        if (plusThis) queue.push(c.proxyObject);
-        const ret: LClass[] = [];
-        for (let i = 0; i < queue.length; i++) {
-            let elem: LClass = queue[i];
-            if (visited[elem.id]) continue;
-            visited[elem.id] = elem;
-            ret.push(elem);
-            queue.push(...elem.extendedBy);
-        }
-        return ret;
-    }
-    private get_superclasses(c: Context, plusThis: boolean = false): LClass[] {
-        const visited: Dictionary<Pointer, LClass> = {};
-        let queue: LClass[] = c.proxyObject.extends;
-        if (plusThis) queue.push(c.proxyObject);
-        const ret: LClass[] = [];
-        for (let i = 0; i < queue.length; i++) {
-            let elem: LClass = queue[i];
-            if (visited[elem.id]) continue;
-            visited[elem.id] = elem;
-            ret.push(elem);
-            queue.push(...elem.extends);
-        }
-        return ret;
-    }
-
 
     private _canExtend(c: Context, superclass: LClass, output: {reason: string, allTargetSuperClasses: LClass[]} = {reason: '', allTargetSuperClasses: []}): boolean {
         if (!output) output = {allTargetSuperClasses:[]} as any;
@@ -3134,7 +2991,47 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
         if (!superclass) return false;
         return this.get_superclasses(context, orEqual).includes(superclass); }
 
-    private add_Extends(c: Context, superclass: LClass, force: boolean = false): boolean {
+
+    // adapt m1 instances after updating the extends in m2.
+    private _fixExtendInstances(c: Context, neww: Pointer<DClass>[]): void{
+        for (let thiss of this.get_allSubclasses(c, true)) {
+            let ptrs = neww;
+            //put everything below in the loop, and replace this.get_something(c) with subclass.something
+            let c2 = new LogicContext(thiss, thiss.__raw) as Context;
+            let idmap: Dictionary<Pointer, LClass> = {};
+            let newDeepExtends: Pointer<DClass>[] = this.get_superclasses(c2, true, ptrs).map(e=> {let id = e.id; idmap[id] = e; return id; });
+            let oldDeepExtends: Pointer<DClass>[] = this.get_superclasses(c2, true).map(e=> {let id = e.id; if(!idmap[id]) idmap[id] = e; return id; });
+            let deepDiff = U.arrayDifference(oldDeepExtends, newDeepExtends);
+            let deepAdded = deepDiff.added;
+            let deepRemoved = deepDiff.removed;
+            let deepFeatureAdded = deepAdded.map(ptr=>[idmap[ptr].attributes, idmap[ptr].references]).flat(2);
+            let deepFeatureRemoved = deepRemoved.map(ptr=>[idmap[ptr].attributes, idmap[ptr].references]).flat(2);
+            let deepFeatureAddedID = deepFeatureAdded.map(l=>l.id);
+            let deepFeatureRemovedID = deepFeatureRemoved.map(l=>l.id);
+
+            for (let o of c2.proxyObject.instances) {
+                if (!o) continue;
+                let allChildren: (LValue | LAnnotation)[] = o.allChildren;
+                let allChildTypesId: (Pointer<DAttribute> | Pointer<DReference> | undefined)[] = allChildren.map(c=>((c as LValue)?.instanceof?.id));
+                for (let added of deepFeatureAddedID) {
+                    if (allChildTypesId.includes(added)) continue;
+                    o.addValue(undefined, added, [], true);
+                }
+                for (let removed of deepFeatureRemovedID) {
+                    let i = allChildTypesId.indexOf(removed);
+                    if (i === -1) continue;
+                    let lval: LValue = allChildren[i] as LValue;
+                    if (!lval.isMirage) continue;
+                    lval.delete();
+                }
+            }
+        }
+    }
+    add_extends(val: PackArr<this["extends"]>): void { this.cannotCall('add_extends'); }
+    get_add_extends(val: PackArr<this["extends"]>, context: Context): this['add_extends'] {
+        return ((val: string[])=>this.impl_add_extends(val as any, context)) as any;
+    }
+    private add_Extends_unused(c: Context, superclass: LClass, force: boolean = false): boolean {
         let out: {reason: string, allTargetSuperClasses: LClass[]} = {reason: '', allTargetSuperClasses: []};
         const thiss: LClass = c.proxyObject;
         superclass = LPointerTargetable.wrap(superclass) as any;
@@ -3143,15 +3040,47 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
 
         TRANSACTION(this.get_name(c)+'.extends+=', ()=>{
             SetFieldAction.new(thiss.__raw, 'extends', [superclass.id], '+=', true);
-            SetFieldAction.new(superclass.__raw, 'extendedBy', [thiss.id], '+=', true);
+            //SetFieldAction.new(superclass.__raw, 'extendedBy', [thiss.id], '+=', true);
         }, undefined, superclass.fullname)
         // const extendChildren: LClass[] =  [thiss, ...thiss.superclasses];
         // console.log('calculateViolationsExtend children:'  + extendChildren, this);
         // for (let extChild of extendChildren) { extChild._checkViolations(false); } // after instances have their meta-class changed, they might need to change shape or values.
         return true; }
 
+    impl_add_extends(val: PackArr<this["extends"]>, c: Context): void {
+        if (!val) val = [];
+        else if (!Array.isArray(val)) val = [val];
+        if (!val.length) return;
+        let ptrs: Pointer<DClass>[] = [...new Set(val.map((val) => { return val && Pointers.from(val) }).filter(e=>!!e && !c.data.extends.includes(e)))] as Pointer<DClass>[];
+
+        let out0 = {reason: '', allTargetSuperClasses: []};
+        let outArr: {reason: string, allTargetSuperClasses: LClass[]}[] = ptrs.map(p=>({...out0}));
+
+
+        ptrs = ptrs.filter((ptr, i) => this._canExtend(c, ptr as any, outArr[i]));
+        for (let i = 0; i < outArr.length; i++) {
+            let out = outArr[i];
+            Log.w(!!out.reason, "cannot add extend " + this.get_name(c) + " -> " + (L.fromPointer(ptrs[i]) as LClass)?.name + ".\n reason: " + out.reason);
+        }
+
+        if (!ptrs.length) {
+            return;
+        }
+        // ptrs = [...c.data.extends, ...ptrs];
+        // todo: extendedby? or make it derived from pointedby
+
+        TRANSACTION(this.get_name(c)+'.extends+=', ()=>{
+            // adapt instances
+            this._fixExtendInstances(c, ptrs);
+            // finalize
+            SetFieldAction.new(c.data, 'extends', ptrs, '+=', true);
+        }, undefined, ptrs.length)
+    }
+
+    removeExtends(superclass: LClass): void { return this.cannotCall('removeExtends'); }
     unsetExtends(superclass: LClass): void { return this.cannotCall('unsetExtends'); }
-    get_unsetExtends(c: Context, superclass: LClass): (superclass: LClass)=>void {
+    get_removeExtend(c: Context): (superclass: LClass)=>void { return this.get_unsetExtends(c); }
+    get_unsetExtends(c: Context): (superclass: LClass)=>void {
         return (superclass: LClass)=>{
             superclass = LPointerTargetable.wrap(superclass) as any;
             if (!superclass) return;
@@ -3169,7 +3098,7 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
                 // @ts-ignore
                 SetFieldAction.new(thiss, 'extends', superclass.id, '-=', true);
                 // @ts-ignore
-                SetFieldAction.new(superclass, 'extendedBy', thiss.id, '-=', true);
+                // SetFieldAction.new(superclass, 'extendedBy', thiss.id, '-=', true);
             }, undefined, superclass.fullname)
             // todo: update instances for (i = 0; i < thiss.instances.length; i++) { thiss.instances[i].unsetExtends(superclass); }
             // todo: check violations
@@ -3177,6 +3106,135 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
             // for (i = 0; i < extendedby.length; i++) { extendedby[i].checkViolations(true); }
         }
     }
+
+    protected remove_extends_unused(val: PackArr<this["extends"]> | number | number[], c: Context): void {
+        if (!val) val = [];
+        else if (!Array.isArray(val)) val = [val];
+        if (!val.length) return;
+        let finalVal: D["extends"];
+        if (typeof val[0] === "number") { finalVal = c.data.extends.filter((elem,index,arr)=> { return (val as any[]).includes(index); }); }
+        else {
+            finalVal = [...c.data.extends];
+            let ptrs: Pointer<DClass> = Pointers.from(val as PackArr<this["extends"]>) as any;
+            for (let v of ptrs) { U.arrayRemoveAll(finalVal, v); }
+        }
+
+        TRANSACTION(this.get_name(c)+'.extends-=', ()=>{
+            SetFieldAction.new(c.data, 'extends', finalVal, '', true);
+        }, undefined, c.data.extends.length - finalVal.length)
+    }
+
+    protected get_extendedBy(c: Context): this["extendedBy"] {
+        let ret: LClass[] = [];
+        for (let pby of c.data.pointedBy){
+            if (!U.endsWith(pby.source, "extends")) continue;
+            let arr = pby.source.split('.');
+            if (arr.length === 3 && arr[0] === 'idlookup') {
+                let l = L.from(arr[1]) as LClass;
+                if (l) ret.push(l);
+            }
+        }
+        return ret;
+
+        /*return c.data.extendedBy.map((pointer) => {
+            return LPointerTargetable.from(pointer)
+        });*/
+    }
+    protected set_extendedBy(val: PackArr<this["extendedBy"]>, c: Context): boolean {
+        return this.cannotSet('extendedBy');
+        /*
+        if (!val) val = [];
+        else if (!Array.isArray(val)) val = [val];
+        const ptrs = [...new Set(val.map((val) => { return val && Pointers.from(val) }).filter(e=>!!e))];
+        TRANSACTION(this.get_name(c)+'.extendedBy', ()=>{
+            SetFieldAction.new(c.data, 'extendedBy', ptrs, "", true);
+        })
+        return true;*/
+    }
+
+    protected get_implements(context: Context): this["implements"] { return context.data.implements; }
+    protected set_implements(val: this["implements"], c: Context): boolean {
+        TRANSACTION(this.get_name(c)+'.implements', ()=>{
+            SetFieldAction.new(c.data, 'implements', val, "", true);
+        })
+        return true;
+    }
+
+    protected get_implementedBy(context: Context): this["implementedBy"] { return context.data.implementedBy; }
+    protected set_implementedBy(val: this["implementedBy"], c: Context): boolean {
+        TRANSACTION(this.get_name(c)+'.implementedBy', ()=>{
+            SetFieldAction.new(c.data, 'implementedBy', val, "", true);
+        })
+        return true;
+    }
+
+
+    public canExtend(superclass: LClass, output: {reason: string, allTargetSuperClasses: LClass[]} = {reason: '', allTargetSuperClasses: []}): boolean {
+        this.cannotCall("canExtend"); return false;
+    }
+
+    private get_canExtend(context: Context): (superclass: LClass, output: {reason: string, allTargetSuperClasses: LClass[]}) => boolean {
+        return (superclass: LClass, output: {reason: string, allTargetSuperClasses: LClass[]} =
+            {reason: '', allTargetSuperClasses: []}) => this._canExtend(context, superclass, output);
+    }
+
+    public isExtending(superclass: Pack1<LClass>, directly: boolean = false): boolean { return this.cannotCall("isExtending"); }
+    public isSubclassOf(superclass: Pack1<LClass>, directly: boolean = false): boolean { return this.cannotCall("isSubclassOf"); }
+    __info_of__isSubclassOf: Info = {type: "(superclass: Pointer | LClass, directly: boolean = false) => boolean", txt: "Alias for isExtending"};
+    __info_of__isExtending: Info = {type: "(superclass: Pointer | LClass, directly: boolean = false) => boolean",
+        txt:<div>Tells if "this" is a subclass of the "superclass" parameter.
+            <br/>- If "directly" is set to true, it will only include direct subclassing as in "class A extends C" not considering chains.
+            <br/>    If "directly" is set to true: "class A extends B" & "Class B extends C". In that case A.isExtending(C, true) will return false.</div>};
+
+    private get_isSubclassOf(c: Context, plusThis: boolean = true): this["isExtending"] { return this.get_isExtending(c, plusThis); }
+    private get_isExtending(c: Context, plusThis: boolean = true): this["isExtending"] {
+        return (superclass: Pack1<LClass>, directly: boolean = false): boolean => {
+            let ptr = Pointers.from(superclass);
+            if (directly) return c.data.extends.includes(ptr);
+            return this.get_superclasses(c, plusThis).map(classe=>classe.id).includes(ptr);
+        }
+    }
+
+    private get_allSubClasses(c: Context, plusThis: boolean = false): LClass[] {return this.get_subclasses(c, true); }
+    private get_allSuperClasses(c: Context, plusThis: boolean = false, initialExtends?: Pointer<DClass>[]): LClass[] {return this.get_superclasses(c, true, initialExtends); }
+    private get_allSubclasses(c: Context, plusThis: boolean = false): LClass[] {return this.get_subclasses(c, true); }
+    private get_allSuperclasses(c: Context, plusThis: boolean = false, initialExtends?: Pointer<DClass>[]): LClass[] {return this.get_superclasses(c, true, initialExtends); }
+    __info_of__allSubclasses: Info = {type: 'Class[]', txt:'Same as this.subclasses, plus the current class.'}
+    __info_of__allSuperclasses: Info = {type: 'Class[]', txt:'Same as this.superclasses, plus the current class.'}
+
+    private get_subclasses(c: Context, plusThis: boolean = false): LClass[] {
+        const visited: Dictionary<Pointer, LClass> = {};
+        let queue: LClass[] = this.get_extendedBy(c);
+        if (plusThis) queue.push(c.proxyObject);
+        const ret: LClass[] = [];
+        for (let i = 0; i < queue.length; i++) {
+            let elem: LClass = queue[i];
+            if (visited[elem.id]) continue;
+            visited[elem.id] = elem;
+            ret.push(elem);
+            queue.push(...elem.extendedBy);
+        }
+        return ret;
+    }
+    private get_superclasses(c: Context, plusThis: boolean = false, initialExtends?: Pointer<DClass>[]): LClass[] {
+        const visited: Dictionary<Pointer, LClass> = {};
+        let queue: LClass[] = (initialExtends ? (L.fromArr(initialExtends) as LClass[]).filter((e)=>!!e) : this.get_extends(c));
+        if (plusThis) queue.push(c.proxyObject);
+
+        const ret: LClass[] = [];
+        for (let i = 0; i < queue.length; i++) {
+            let elem: LClass = queue[i];
+            if (visited[elem.id]) continue;
+            visited[elem.id] = elem;
+            ret.push(elem);
+            queue.push(...elem.extends);
+        }
+        return ret;
+    }
+
+    allExtends!: this['extendsChain'];
+    get_allExtends(c:Context): this['extendsChain']{ return this.get_superclasses(c); }
+    private get_extendsChain(c: Context): this['extendsChain'] { return this.get_superclasses(c); }
 
     public instance(): DObject { return this.cannotCall('instance'); }
     /*private get_instance_old(context: Context): () => DObject {
@@ -5546,7 +5604,7 @@ export class LObject<Context extends LogicContext<DObject> = any, C extends Cont
         if (!lmeta) return;
         let attrs = lmeta.allAttributes;
         let refs = lmeta.allReferences;
-        let values = context.proxyObject.allChildren;
+        let values: LValue[] = context.proxyObject.allChildren;
         let idmap: Dictionary<string, LAttribute | LReference> = {};
         for (let a of attrs) { idmap[a.id] = a; }
         for (let a of refs) { idmap[a.id] = a; }

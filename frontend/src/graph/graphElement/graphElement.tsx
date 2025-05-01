@@ -978,7 +978,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
                 const lClass: LClass = LPointerTargetable.from(this.props.data.id);
                 // SetFieldAction.new(lClass.id, "extendedBy", source.id, "", true); // todo: this should throw a error for wrong type.
                 // todo: use source.addExtends(lClass); or something (source is LClass)
-                SetFieldAction.new(lClass.id, "extendedBy", edgePendingSource.id, "+=", true);
+                // SetFieldAction.new(lClass.id, "extendedBy", edgePendingSource.id, "+=", true);
                 SetFieldAction.new(edgePendingSource.id, "extends", lClass.id, "+=", true);
             }
             SetRootFieldAction.new('isEdgePending', { user: '',  source: '' });

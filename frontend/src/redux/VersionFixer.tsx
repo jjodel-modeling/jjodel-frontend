@@ -159,6 +159,12 @@ everytime you put hands into a D-Object shape or valid values, you should docume
             c.derived_write = undefined; // c.derived ? '' : undefined;
             c.derived_read = undefined; // c.derived ? '' : undefined;
         }
+        for (let id in s.idlookup){
+            let c = s.idlookup[id] as DPointerTargetable;
+            if (!c || !c.className || !c.pointedBy) continue;
+            for (let p of c.pointedBy) { p.source = U.replaceAll(U.replaceAll(U.replaceAll(p.source||'', '+=', ''), '-=', ''), '[]', ''); }
+        }
+
 
         return s;
     }

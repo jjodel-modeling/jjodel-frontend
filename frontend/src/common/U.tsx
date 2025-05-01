@@ -1202,6 +1202,7 @@ export class U {
             }
             return false;
         }
+        // todo: improve performance, do a loop starting from lastindex of both, return early on mismatches. goes from O(string) to O(Min(suffix, string)) often returning after 1 check
         return str.length >= suffix.length && str.lastIndexOf(suffix) === str.length - suffix.length;
     }
 
