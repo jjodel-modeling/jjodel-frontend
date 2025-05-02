@@ -110,6 +110,9 @@ class DefaultViews {
   justify-content: center;
   align-items: center;
 }
+.model-1 {}
+.model-2 {}
+.model-3 {}
 
 .metamodel {
   position: absolute;
@@ -119,11 +122,6 @@ class DefaultViews {
   border: 1px solid var(--secondary)!important;
   border-radius: var(--radius);
 }
-
-.model-1 {}
-.model-2 {}
-.model-3 {}
-
 .grid {
     background-image: radial-gradient(silver 1px, transparent 0);
     background-size: 15px 15px;
@@ -160,7 +158,8 @@ class DefaultViews {
             view.appliableTo = 'GraphVertex';
             view.palette = {'color-':  U.hexToPalette('#028012'), 'background-':  U.hexToPalette('#fff')};
             view.css = `
-.package { background-color: var(--background-0); border-radius: 0.2em; border-left: 0.25em solid var(--color-1); }
+border-radius: var(--radius);
+.package { background-color: var(--background-0); border-left: 0.25em solid var(--color-1); }
 .package-children { height: -webkit-fill-available; width: -webkit-fill-available; }
 .summary { padding: 0.25rem; text-align: center; }
 .detail-level {
@@ -202,9 +201,8 @@ class DefaultViews {
 
 
 /* class */
-
+border-radius: var(--radius);
 .class {
-    border-radius: var(--model-radius);
     background: var(--model-background);
     color:var(--model-color);
 
@@ -296,8 +294,8 @@ border-color: silver!important;
 // `
 
             view.css = `
+border-radius: var(--radius);
 .enumerator {
-    border-radius: var(--radius);
     background: white;
     color:var(--model-color);
     &>.header{
@@ -461,11 +459,7 @@ border-color: silver!important;
             view.oclCondition = 'context DObject inv: true';
             view.palette = {'color-':  U.hexToPalette('#f00', '#000', '#fff'), 'background-': U.hexToPalette('#fff', '#eee', '#f00')};
 
-            // view.css = '.object {border-radius: 0.2em; border-left: 0.25em solid var(--color-1); background: var(--background-1); color: var(--color-2);}\n';
-            // view.css += '.object-name {font-weight: bold; color: var(--color-1);}\n';
-            // view.css += '.object-children {background-color: var(--background-2); height: fit-content; width: -webkit-fill-available;}';
-
-            view.css = '.object {border-radius: var(--radius); background: white; color: var(--accent);}\n';
+            view.css = 'border-radius: var(--radius);\n.object {background: white; color: var(--accent);}\n';
             view.css +='.object-name {padding: 10px; font-weight: 600; color: var(--accent);}\n';
             view.css += '.object-children {padding: 10px;background-color: white; height: fit-content; width: -webkit-fill-available;}';
 
@@ -501,7 +495,7 @@ border-color: silver!important;
 
             //view.palette = {'color-':  U.hexToPalette('#f00', '#000', '#fff'), 'background-': U.hexToPalette('#fff', '#eee', '#f00')};
 
-            view.css = '.singleton {text-align: center; border: none; background-color: var(--accent); color: white; padding: 4px 30px; width: fit-content; border-radius: var(--radius);}\n';
+            view.css = 'border-radius: var(--radius); \n.singleton {text-align: center; border: none; background-color: var(--accent); color: white; padding: 4px 30px; width: fit-content;}\n';
             view.css += '.singleton::before {position: absolute; left: 10px; font-family: bootstrap-icons; content: "\\F799";}\n';
 
             view.defaultVSize = defaultVertexSize;

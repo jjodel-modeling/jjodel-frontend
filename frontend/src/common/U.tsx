@@ -2786,8 +2786,11 @@ export class Keystrokes {
         let keydown = (e: KeyDownEvent) => {
             // skip events happened in graph
             let curr = e.target;
-            console.log('keydown', {selector, e, curr, ct:e.currentTarget});
-            switch(e.key){
+            console.log('keydown', {key: e.key, selector, e, curr, ct:e.currentTarget});
+            switch (e.key) {
+                case Keystrokes.escape:
+                    if (store.getState()?.isEdgePending?.source) SetRootFieldAction.new('isEdgePending', { user: '',  source: '' });
+                    break;
                 // if those are the last key pressed is not an event, it is still typing.
                 case 'Control': case 'Shift': case 'Alt': return;
             }

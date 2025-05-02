@@ -775,6 +775,9 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
     onMouseMove(e: React.MouseEvent): void {
         //this.onMouseUp(e);
     }
+    stopPendingEdge(){
+        SetRootFieldAction.new('isEdgePending', { user: '',  source: '' });
+    }
     onMouseUp(e: React.MouseEvent, frommousemove: boolean = false): void {
         e.stopPropagation();
         TRANSACTION('Vertex click-events', ()=>{
@@ -784,7 +787,8 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         })
     }
     onKeyDown(e: React.KeyboardEvent){
-        console.log('keydown', e.key, {e, m:this.props.data?.name});
+        //NB: triggers only if element has :focus-within, otherwuse use U->register->keydown
+        console.log('GraphElement.keydown', e.key, {e, m:this.props.data?.name});
         let target: HTMLElement = e.target as any;
         switch (target?.tagName.toLowerCase()) {
             case 'input':
@@ -793,13 +797,13 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
             default: if (target?.getAttribute('contenteditable') === 'true') { e.stopPropagation(); return; }
         }
         if (!(this.props.isGraph && !this.props.isVertex)) e.stopPropagation();
-        if (e.key === Keystrokes.escape) {
+        /* if (e.key === Keystrokes.escape) { // cannot happen. triggered through U->register->keydown
             this.props.node.deselect();
-            if (this.props.isEdgePending) { 
-                // this.stopPendingEdge(); todo
+            if (this.props.isEdgePending?.source) {
+                this.stopPendingEdge();
                 return;
             }
-        }
+        }*/
         let isDelete: boolean = false;
         if (e.key === Keystrokes.delete){ isDelete = true; }
         if (e.shiftKey) {
@@ -885,7 +889,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
                 edgePendingSource.addExtend(dclass.id);
 
             }
-            SetRootFieldAction.new('isEdgePending', { user: '',  source: '' });
+            this.stopPendingEdge();
             return;
         }
         //console.log('mousedown select() check:', {e, isSelected: this.props.node.isSelected(), 'nodeIsSelectedMapProxy': this.props.node?.isSelected, nodeIsSelectedRaw:this.props.node?.__raw.isSelected});
@@ -901,11 +905,17 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
                 });
             }
 
+            console.log('ToggleSelect()', {shift: e.shiftKey, ctrl:e.ctrlKey, meta:e.metaKey})
             if (e.shiftKey || e.ctrlKey) { }
             else {
-                let allNodes: LGraphElement[] | undefined = this.props.node?.graph.allSubNodes;
+                let allNodes: LGraphElement[] | undefined = this.props.node?.graph.allSubElements;
                 let nid = this.props.node.id;
-                if (allNodes) for (let node of allNodes) if (node.id !== nid) node.deselect(DUser.current);
+
+                if (allNodes) for (let node of allNodes) {
+                    if (node.id === nid) continue;
+                    console.log('ToggleSelect() pt2 deselectAll', {node, html: node.html});
+                    node.deselect(DUser.current);
+                }
             }
         })
     }
