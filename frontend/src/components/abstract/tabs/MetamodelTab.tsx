@@ -36,9 +36,9 @@ function MetamodelTabComponent(props: AllProps) {
         <ContextMenu />
         {/*<PendingEdge />*/}
         {/* Temporary Edge Pending Manager */}
-        {isEdgePending.source && <div style={{position: 'absolute', top: 15, right: 15, zIndex: 999}}
+        {isEdgePending.source && <div key={'extend-msg-outer'} style={{position: 'absolute', top: 15, right: 15, zIndex: 999}}
              className={'w-fit bg-white rounded border p-2'}>
-            <label className={'d-block text-center'}>Pending Edge...</label>
+            <label id="pending-extend-message" key={'extend-msg-inner'} className={'d-block text-center'}>Pending Edge...</label>
             <label tabIndex={-1} onClick={e => SetRootFieldAction.new('isEdgePending', {user: '', source: ''})}
                className={'cursor-pointer text-decoration-none d-block text-danger text-center'}>close</label>
         </div>}

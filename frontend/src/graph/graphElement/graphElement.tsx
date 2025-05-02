@@ -68,55 +68,15 @@ import {EdgeStateProps, LGraphElement, store, VertexComponent,
 import {NodeTransientProperties, Pack1} from "../../joiner/classes";
 import {UpdatingTimer} from "../../redux/reducer/reducer";
 
-// const Selectors: typeof Selectors_ = windoww.Selectors;
-/*
-export function makeEvalContext(view: LViewElement, state: DState, ownProps: GraphElementOwnProps, stateProps: GraphElementReduxStateProps): GObject {
-    let component = GraphElementComponent.map[ownProps.nodeid as Pointer<DGraphElement>];
-    let allProps = {...ownProps, ...stateProps};
-    let parsedConstants = stateProps.view._parsedConstants;
-    let evalContext: GObject = {
-        model: stateProps.data,
-        ...ownProps,
-        ...stateProps,
-        edge: (RuntimeAccessibleClass.extends(stateProps.node?.className, "DVoidEdge") ? stateProps.node : undefined),
-        state,
-        ownProps,
-        stateProps,
-        props: allProps,
-        component,
-        constants: parsedConstants,
-        // getSize:vcomponent?.getSize, setSize: vcomponent?.setSize,
-        ...parsedConstants,
-        // ...stateProps.usageDeclarations, NOT because they are not evaluated yet. i need a basic eval context to evaluate them
-    };
-    evalContext.__proto__ = windoww.defaultContext;
-    transientProperties.node[ownProps.nodeid as string].evalContext = evalContext;
-    return evalContext;
-}
-
-function setTemplateString(stateProps: InOutParam<GraphElementReduxStateProps>, ownProps: Readonly<GraphElementOwnProps>, state: DState): void {
-    //if (!jsxString) { this.setState({template: this.getDefaultTemplate()}); return; }
-    // sintassi: '||' + anything + (opzionale: '|' + anything)*N_Volte + '||' + jsx oppure direttamente: jsx
-    const view: LViewElement = stateProps.view; //data._transient.currentView;
-    // eslint-disable-next-line no-mixed-operators
-    const evalContext = makeEvalContext(view, state, ownProps, stateProps);
-    // Log.exDev(!evalContext.data, "missing data", {evalContext, ownProps, stateProps});
-
-    // const evalContextOld = U.evalInContext(this, constants);
-    // this.setState({evalContext});
-
-}*/
-
-function htmlValidProps_dynamic(props: GObject): GObject {
-    return props;
-    //let ret = {...props};
-}
+const ext_on = "class-can-be-extended";
+const ext_off = "class-cannot-be-extended";
+let pendingExtendMessage: HTMLElement = null as any;
 
 // NB: i was thinking of sanitizing root vertex props before render to avoid react's warning of unknown prop in html.
 // BUT gave up because props are passed to the root element of the jsx (which is duplicated), before his .render()
 // so if it needs some props for render logic it cannot be serialized and react warning is unavoidable.
 // at this point if the root is a native html tag, props will trigger the warning,
-// if it isn't it really needs it and a serialized prop will cause an error.
+// if it isn't, it's a component which really needs that props, and serializing it will cause an error.
 function htmlValidProps_static(props: GObject): GObject {
     let ret = {...props};
     /*delete ret.skiparenderforloading;
@@ -133,6 +93,8 @@ function htmlValidProps_static(props: GObject): GObject {
     }*/
     return ret;
 }
+
+
 function computeUsageDeclarations(component: GraphElementComponent, allProps: AllPropss, state: GraphElementStatee, lview: LViewElement): GObject {
     // compute usageDeclarations
     let udret: GObject = {};
@@ -699,46 +661,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         if (asString) return DV.errorView_string('<div>'+errormsg+'</div>', {where:"in "+where+"()", e, template: view.jsxString, view: view}, where, data, node, view);
         return DV.errorView(<div>{errormsg}</div>, {where:"in "+where+"()", e, template: view.jsxString, view: view, ...(printData || {})}, where, data, node, view);
     }
-/*
-    protected getTemplate(): ReactNode {
-        /*if (!this.state.template) {
-            this.setTemplateString('{c1: 118}', '()=>{this.setState({c1: this.state.c1+1})}',
-                '<div><input value="{name}" onInput="{setName}"></input><p>c1:{this.state.c1}</p><Attribute prop1={daa} prop2={1 + 1.5} stringPropdaa=\"daa\" /><ul>{colors.map( color => <li>color: {color}</li>)}</ul></div>');
-        }* /
-        // console.log('getTemplate:', {props: this.props, template: this.props.template, ctx: this.props.evalContext});
 
-        // Log.exDev(debug && maxRenderCounter-- < 0, "loop involving render");
-        if (this.props.invalidUsageDeclarations) {
-            return this.displayError(this.props.invalidUsageDeclarations, "Usage Declaration");
-        }
-        let context: GObject = this.getContext();
-        // abababababab
-        // todo: invece di fare un mapping ricorsivo dei figli per inserirgli delle prop, forse posso farlo passando una mia factory che wrappa React.createElement
-
-        try {
-            let preRenderFuncStr: string | undefined = this.props.view.preRenderFunc;
-            if (preRenderFuncStr) {
-                // eval prerender
-                let obj: GObject = {};
-                let tempContext: GObject = {__param: obj};
-                tempContext.__proto__ = context;
-                U.evalInContextAndScopeNew("("+preRenderFuncStr+")(this.__param)", tempContext, true, false);
-                U.objectMergeInPlace(context, obj);
-            }
-        }
-        catch(e: any) { return this.displayError(e, "Pre-Render");  }
-
-        let ret;
-        // eval template
-        let jsxCodeString: DocString<ReactNode>;
-
-        try { jsxCodeString = JSXT.fromString(this.props.view.jsxString, {factory: 'React.createElement'}); }
-        catch (e: any) { return this.displayError(e, "JSX Syntax"); }
-
-        try { ret = U.evalInContextAndScope<() => ReactNode>('(()=>{ return ' + jsxCodeString + '})()', context); }
-        catch (e: any) { return this.displayError(e, "JSX Semantic"); }
-        return ret;
-    }*/
     protected getTemplate3(vid: Pointer<DViewElement>, v: LViewElement, context: GObject): ReactNode {
         // let tnv = transientProperties.node[this.props.nodeid].viewScores[vid];
         // let tv = transientProperties.view[vid];
@@ -767,41 +690,6 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         return ret;
     }
 
-    protected getTemplate2(v: LViewElement, udContext: GObject): ReactNode {
-        // todo: invece di fare un mapping ricorsivo dei figli per inserirgli delle prop, forse posso farlo passando una mia factory che wrappa React.createElement
-
-        /*
-        let thisContext: GObject = {};
-        try {
-            let preRenderFuncStr: string | undefined = v.preRenderFunc;
-            if (preRenderFuncStr) {
-                // eval prerender
-                let tempContext: GObject = {__param: thisContext};
-                this.addToContext(udContext, {__param: thisContext});
-                tempContext.__proto__ = sharedContext;
-                U.evalInContextAndScopeNew("("+preRenderFuncStr+")(this.__param)", tempContext, true, false);
-                U.objectMergeInPlace(thisContext, udContext);
-                // thisContext.__proto__ = sharedContext;
-            } else thisContext = udContext;
-        }
-        catch(e: any) { return this.displayError(e, "Pre-Render", v);  }*/
-
-        let ret;
-        // eval template
-        let jsxCodeString: DocString<ReactNode>;
-
-        try { jsxCodeString = JSXT.fromString(v.jsxString, {factory: 'React.createElement'}); }
-        catch (e: any) { return GraphElementComponent.displayError(e, "JSX Syntax", v.__raw, this.props.data?.__raw, this.props.node?.__raw); }
-
-        // console.log('context for ' + (this.props.data?.name), {udContext});
-        try {
-            let parsedFunc = U.parseFunctionWithContextAndScope('()=>{ return ' + jsxCodeString + '}', udContext, udContext);
-            ret = parsedFunc(udContext) as ReactNode;
-            /// ret = U.evalInContextAndScope<() => ReactNode>('(()=>{ return ' + jsxCodeString + '})()', udContext);
-        }
-        catch (e: any) { return GraphElementComponent.displayError(e, "JSX Semantic", v.__raw, this.props.data?.__raw, this.props.node?.__raw, false, {udContext}); }
-        return ret;
-    }
 
     onContextMenu(e: React.MouseEvent<Element>) {
         e.preventDefault();
@@ -831,14 +719,25 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         const extendError: {reason: string, allTargetSuperClasses: LClass[]} = {reason: '', allTargetSuperClasses: []}
         const canBeExtend = isEdgePending.canExtend(this.props.data as any as LClass, extendError);
 
-        if (canBeExtend) this.setState({classes:[...this.state.classes, "class-can-be-extended"]});
-        else this.setState({classes:[...this.state.classes, "class-cannot-be-extended"]});
+        if (this.html.current) {
+            this.html.current.classList.add(canBeExtend ? ext_on : ext_off);
+            if (!pendingExtendMessage?.parentElement?.parentElement) {
+                pendingExtendMessage = document.getElementById('pending-extend-message') as any;
+            }
+            // not sure why but sometimes is null??
+            if (pendingExtendMessage) pendingExtendMessage.innerText = canBeExtend ? "Valid target" : extendError.reason;
+        }
+        // this.setState({classes:[...this.state.classes, canBeExtend ? ext_on : ext_off]});
     }
     onLeave(e: React.MouseEvent<Element>) {
-        if (this.props.data?.className !== "DClass") return;
-        this.setState({classes: this.state.classes.filter((classname) => {
-            return classname !== "class-can-be-extended" && classname !== "class-cannot-be-extended"
-        })});
+        if (!this.props.isEdgePending?.source || this.props.data?.className !== "DClass") return;
+        if (this.html.current) {
+            this.html.current.classList.remove(ext_on, ext_off);
+            if (!pendingExtendMessage?.parentElement?.parentElement) {
+                pendingExtendMessage = document.getElementById('pending-extend-message') as any;
+            }
+            if (pendingExtendMessage) pendingExtendMessage.innerText = "Hover a class"; // not sure why but sometimes is null??
+        }
     }
 
     static mousedownComponent: GraphElementComponent | undefined;
@@ -966,20 +865,25 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         e.stopPropagation();
         let state: DState = store.getState();
         if (e.button !== Keystrokes.clickRight && state.contextMenu?.display) SetRootFieldAction.new("contextMenu", {display: false, x: 0, y: 0}); // todo: need to move it on document or <App>
-        const edgePendingSource = this.props.isEdgePending?.source;
+        const edgePendingSource: LClass | undefined = this.props.isEdgePending?.source;
         //console.log('mousedown select() check PRE:', {e, name: this.props.data?.name, isSelected: this.props.node.isSelected(), 'nodeIsSelectedMapProxy': this.props.node?.isSelected, nodeIsSelectedRaw:this.props.node?.__raw.isSelected});
 
         if (edgePendingSource) {
-            if (this.props.data?.className !== "DClass") return;
+            let lclass: LClass = (this.props.data) as LClass;
+            let dclass = lclass.__raw;
+            if (dclass?.className !== "DClass") return;
+            if (this.props.isEdgePending.source && this.html.current) this.html.current.classList.remove(ext_on, ext_off);
             // const user = this.props.isEdgePending.user;
             const extendError: {reason: string, allTargetSuperClasses: LClass[]} = {reason: '', allTargetSuperClasses: []}
-            const canBeExtend = this.props.data && edgePendingSource.canExtend(this.props.data as any as LClass, extendError);
-            if (canBeExtend && this.props.data) {
-                const lClass: LClass = LPointerTargetable.from(this.props.data.id);
+            const canBeExtend = this.props.data && edgePendingSource.canExtend(dclass, extendError);
+
+            if (canBeExtend && dclass) {
+                // const lClass: LClass = LPointerTargetable.from(dclass);
                 // SetFieldAction.new(lClass.id, "extendedBy", source.id, "", true); // todo: this should throw a error for wrong type.
                 // todo: use source.addExtends(lClass); or something (source is LClass)
                 // SetFieldAction.new(lClass.id, "extendedBy", edgePendingSource.id, "+=", true);
-                SetFieldAction.new(edgePendingSource.id, "extends", lClass.id, "+=", true);
+                edgePendingSource.addExtend(dclass.id);
+
             }
             SetRootFieldAction.new('isEdgePending', { user: '',  source: '' });
             return;

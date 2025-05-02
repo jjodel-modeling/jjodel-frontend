@@ -2941,9 +2941,11 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
         return true;
     }
 
-    private _canExtend(c: Context, superclass: LClass, output: {reason: string, allTargetSuperClasses: LClass[]} = {reason: '', allTargetSuperClasses: []}): boolean {
+    private _canExtend(c: Context, superclass0: LClass | DClass | Pointer<DClass>, output: {reason: string, allTargetSuperClasses: LClass[]} = {reason: '', allTargetSuperClasses: []}): boolean {
+        console.log('_canExtends', {c, superclass0, output});
         if (!output) output = {allTargetSuperClasses:[]} as any;
-        superclass = superclass && LPointerTargetable.wrap(superclass) as any;
+        let superclass: LClass = superclass0 && LPointerTargetable.wrap(superclass0) as any;
+        let dsuperclass = superclass?.__raw;
         if (!superclass) { output.reason = 'Invalid extend target: ' + superclass; return false; }
         let sealed = superclass.sealed || [];
         if (sealed.length) {
@@ -2959,11 +2961,11 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
             return false;
         }
         const thiss: LClass = c.proxyObject;
-        if (superclass.id === thiss.id) { output.reason = 'Classes cannot extend themselves.'; return false; }
+        if (dsuperclass.id === thiss.id) { output.reason = 'Classes cannot extend themselves.'; return false; }
         // todo: se diversi proxy dello stesso oggetto sono considerati diversi questo fallisce, in tal caso fai thiss.extends.map( l => l.id).indexof(superclass.id)
-        if (thiss.extends.map(sc=>sc.id).indexOf(superclass.id) >= 0) { output.reason = 'Target class is already directly extended.'; return false; }
+        if (thiss.extends.map(sc=>sc.id).indexOf(dsuperclass.id) >= 0) { output.reason = 'Target class is already directly extended.'; return false; }
         output.allTargetSuperClasses = superclass.superclasses;
-        if (thiss.superclasses.map(sc=> sc.id).indexOf(superclass.id) >= 0) { output.reason = 'Target class is already indirectly extended.'; return false; }
+        if (thiss.superclasses.map(sc=> sc.id).indexOf(dsuperclass.id) >= 0) { output.reason = 'Target class is already indirectly extended.'; return false; }
         if (output.allTargetSuperClasses.map(sc=>sc.id).indexOf(thiss.id) >= 0) { output.reason = 'Cannot set this extend, it would cause a inheritance loop.'; return false; }
         if (thiss.interface && !superclass.interface) { output.reason = 'An interface cannot extend a class.'; return false; }
         // ora verifico se causa delle violazioni di override (attibuti omonimi string e boolean non possono overridarsi)
@@ -2994,7 +2996,7 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
 
     // adapt m1 instances after updating the extends in m2.
     private _fixExtendInstances(c: Context, neww: Pointer<DClass>[]): void{
-        for (let thiss of this.get_allSubclasses(c, true)) {
+        for (let thiss of this.get_allSubClasses(c, true)) {
             let ptrs = neww;
             //put everything below in the loop, and replace this.get_something(c) with subclass.something
             let c2 = new LogicContext(thiss, thiss.__raw) as Context;
@@ -3027,37 +3029,23 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
             }
         }
     }
-    add_extends(val: PackArr<this["extends"]>): void { this.cannotCall('add_extends'); }
-    get_add_extends(val: PackArr<this["extends"]>, context: Context): this['add_extends'] {
-        return ((val: string[])=>this.impl_add_extends(val as any, context)) as any;
+    addExtend(val: Pack<this["extends"]>): void { this.cannotCall('addExtend'); }
+    get_addExtend(context: Context): this['addExtend'] {
+        return ((val: Pack<this["extends"]>)=>this.impl_addExtend(context, val as any));
     }
-    private add_Extends_unused(c: Context, superclass: LClass, force: boolean = false): boolean {
-        let out: {reason: string, allTargetSuperClasses: LClass[]} = {reason: '', allTargetSuperClasses: []};
-        const thiss: LClass = c.proxyObject;
-        superclass = LPointerTargetable.wrap(superclass) as any;
-        if (!superclass) return true;
-        if (!force && !this._canExtend(c, superclass, out)) {  return false; }
 
-        TRANSACTION(this.get_name(c)+'.extends+=', ()=>{
-            SetFieldAction.new(thiss.__raw, 'extends', [superclass.id], '+=', true);
-            //SetFieldAction.new(superclass.__raw, 'extendedBy', [thiss.id], '+=', true);
-        }, undefined, superclass.fullname)
-        // const extendChildren: LClass[] =  [thiss, ...thiss.superclasses];
-        // console.log('calculateViolationsExtend children:'  + extendChildren, this);
-        // for (let extChild of extendChildren) { extChild._checkViolations(false); } // after instances have their meta-class changed, they might need to change shape or values.
-        return true; }
-
-    impl_add_extends(val: PackArr<this["extends"]>, c: Context): void {
+    impl_addExtend(c: Context, val: PackArr<this["extends"]>): void {
         if (!val) val = [];
         else if (!Array.isArray(val)) val = [val];
         if (!val.length) return;
         let ptrs: Pointer<DClass>[] = [...new Set(val.map((val) => { return val && Pointers.from(val) }).filter(e=>!!e && !c.data.extends.includes(e)))] as Pointer<DClass>[];
 
+        console.log('addExtend', {n:this.get_name(c), ptrs, val});
         let out0 = {reason: '', allTargetSuperClasses: []};
         let outArr: {reason: string, allTargetSuperClasses: LClass[]}[] = ptrs.map(p=>({...out0}));
 
 
-        ptrs = ptrs.filter((ptr, i) => this._canExtend(c, ptr as any, outArr[i]));
+        ptrs = ptrs.filter((ptr, i) => this._canExtend(c, ptr, outArr[i]));
         for (let i = 0; i < outArr.length; i++) {
             let out = outArr[i];
             Log.w(!!out.reason, "cannot add extend " + this.get_name(c) + " -> " + (L.fromPointer(ptrs[i]) as LClass)?.name + ".\n reason: " + out.reason);
@@ -3073,7 +3061,7 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
             // adapt instances
             this._fixExtendInstances(c, ptrs);
             // finalize
-            SetFieldAction.new(c.data, 'extends', ptrs, '+=', true);
+            for (let ptr of ptrs) SetFieldAction.new(c.data, 'extends', ptr, '+=', true);
         }, undefined, ptrs.length)
     }
 
@@ -3126,6 +3114,10 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
 
     protected get_extendedBy(c: Context): this["extendedBy"] {
         let ret: LClass[] = [];
+        // to find triangles:
+        // let e0 = this;
+        // let e1Map = Dictionary.from(e0.extends)
+        // for each(let e1 of newextends) for each (let e2 of e1.extends) if (e1Map[e2.id]) e0, e1, e2 are forming a loop, e2 can be removed
         for (let pby of c.data.pointedBy){
             if (!U.endsWith(pby.source, "extends")) continue;
             let arr = pby.source.split('.');
@@ -3169,12 +3161,12 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
     }
 
 
-    public canExtend(superclass: LClass, output: {reason: string, allTargetSuperClasses: LClass[]} = {reason: '', allTargetSuperClasses: []}): boolean {
+    public canExtend(superclass: LClass | DClass | Pointer<DClass>, output: {reason: string, allTargetSuperClasses: LClass[]} = {reason: '', allTargetSuperClasses: []}): boolean {
         this.cannotCall("canExtend"); return false;
     }
 
-    private get_canExtend(context: Context): (superclass: LClass, output: {reason: string, allTargetSuperClasses: LClass[]}) => boolean {
-        return (superclass: LClass, output: {reason: string, allTargetSuperClasses: LClass[]} =
+    private get_canExtend(context: Context): (superclass: LClass | DClass | Pointer<DClass>, output: {reason: string, allTargetSuperClasses: LClass[]}) => boolean {
+        return (superclass: LClass | DClass | Pointer<DClass>, output: {reason: string, allTargetSuperClasses: LClass[]} =
             {reason: '', allTargetSuperClasses: []}) => this._canExtend(context, superclass, output);
     }
 
