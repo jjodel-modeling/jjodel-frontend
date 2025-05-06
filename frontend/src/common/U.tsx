@@ -1861,9 +1861,13 @@ export class U {
 
     static debugcounter = 0;
     static deepReplace_rec(obj: any, avoidloop: WeakMap<any, true>, replacer?: ((key: undefined | string | number, o: any, fullpath: string[], depth: number) => any),
-                           circularReferenceValue?: any | ((obj_alreadymet: GObject)=>any), key?: number | string, fullpath:string[]=[], curdept:number=0, eagerLoopReturn: boolean = false): any {
+                           circularReferenceValue?: any | ((obj_alreadymet: GObject)=>any), key?: number | string, fullpath:string[]=[], curdept:number=0,
+                           eagerLoopReturn: boolean = false, ignoreProto = true): any {
 
-        if (U.debugcounter % 100) console.warn('possible loop in deepreplace', {fullpath, obj})
+        if (++U.debugcounter % 10000 === 0) {
+            Log.eDevv('possible loop in deepreplace', {fullpath, obj});
+            return obj;
+        }
         switch (typeof obj) {
             case "symbol": // don't know what really do with symbols and funcs
             case "function":
@@ -1894,6 +1898,7 @@ export class U {
         switch (typeof obj){
             default: break; // obj = obj; return obj; // for any leaf type
             case "object":
+                if (obj === null) return null;
                 if (U.isHtmlNode(obj)) return obj;
                 if (isValidElement(obj)) return obj;
                 if (U.isError(obj)) return obj;
@@ -1903,6 +1908,7 @@ export class U {
                 }
                 let o: GObject = {};
                 for (let k in obj) {
+                    if (ignoreProto && obj.hasOwnProperty(k)) continue;
                     o[k] = U.deepReplace_rec(obj[k], avoidloop, replacer, circularReferenceValue, k, [...fullpath, k], curdept+1);
                 }
                 obj = o;

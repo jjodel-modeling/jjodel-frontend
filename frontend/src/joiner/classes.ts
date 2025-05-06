@@ -1511,7 +1511,7 @@ export class Pointers{
         // might cause endless loop if there are subarrays in a containment loop.
         if (doArrayCheck && Array.isArray(val)) return (val as any[]).some((v) => Pointers.isPointer(val, state, true));
         if (state) return DPointerTargetable.from(val, state);
-        return typeof val === "string" ? val.includes("Pointer") : false;
+        return typeof val === "string" ? val.indexOf("Pointer") === 0 : false;
     }
 }
 

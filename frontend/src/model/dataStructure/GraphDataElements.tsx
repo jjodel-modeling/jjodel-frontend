@@ -23,7 +23,7 @@ import {
     LModelElement,
     Log,
     LogicContext,
-    LPointerTargetable,
+    LPointerTargetable, LUser,
     LViewElement,
     MixOnlyFuncs,
     Node, orArr,
@@ -611,6 +611,7 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
     get_allSubGraphs(c: Context): this['allSubGraphs'] { return this.get_allSubElements(c).filter(c => c && c.className.indexOf('Graph') >= 0) as any; }
     set_allSubGraphs(val: never, c: Context): boolean { return this.cannotSet('allSubGraphs'); }
 
+    get_children(c: Context): this["children"] { return this.get_subElements(c); }
     subElements!: LGraphElement[]; // shallow, direct subelements
     __info_of__subElements: Info = {type: 'LGraphElement[]',
         txt: "all direct subelements (nodes, edges, edgepoints, subgraphs...). not including deep subelements (subelements of subelements)"}
