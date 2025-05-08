@@ -10,7 +10,7 @@ class TabDataMaker {
             title: <div className={"active-on-mouseenter"}>{model.name}</div>,
             group: 'models',
             closable: true,
-            content: <MetamodelTab modelid={model.id} />
+            content: <MetamodelTab modelid={model.id} key={model.id} />
         };
     }
     static model(model: DModel|LModel): TabData {

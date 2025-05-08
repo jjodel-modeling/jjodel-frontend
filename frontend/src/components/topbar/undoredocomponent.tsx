@@ -266,7 +266,7 @@ export class SaveManagerComponent extends PureComponent<AllProps, ThisState>{
         let undo: GObject<"delta">[] = history?.undoable || [];
         let redo: GObject<"delta">[] = history?.redoable || [];
 
-        let contextmenustyle =(undoStr: 'Undo'|'Redo', undoarr: GObject<"delta">[]): JSX.Element => {
+        let contextmenustyle = (undoStr: 'Undo'|'Redo', undoarr: GObject<"delta">[]): JSX.Element => {
             let undostr = undoStr.toLowerCase() as 'undo'|'redo';
             let isUndo = undoarr === undo;
             return (
@@ -277,7 +277,7 @@ export class SaveManagerComponent extends PureComponent<AllProps, ThisState>{
                 <label className="highlight undefined" onClick={(e) => {
                     isUndo ? this.do_undo(0) : this.do_redo(0)
                 }}>
-                    <span>{icon[undoStr.toLowerCase()]} <span>{undoStr + ' ' + ((undoarr).length || '')}</span></span>
+                    <span>{icon[undostr]} <span>{undoStr + ' ' + ((undoarr).length || '')}</span></span>
                     {<div className="keystrokes">
                         <i className="text-icon ctrl" title="Control" data-val="ctrl" data-content="Control"/>
                         <span>{isUndo ? 'Z' : 'Y'}</span>
@@ -285,7 +285,7 @@ export class SaveManagerComponent extends PureComponent<AllProps, ThisState>{
                     {undoarr.length ? <i className="bi bi-chevron-right icon-expand-submenu"/> : null}
                 </label>
                 <div className="content right">
-                    {undoarr.length ? <ul className="context-menu right">{this.state[undoStr.toLowerCase() as 'undo'|'redo'].jsx}</ul> : null}
+                    {undoarr.length ? <ul className="context-menu right">{this.state[undostr].jsx}</ul> : null}
                 </div>
             </li>)
         }

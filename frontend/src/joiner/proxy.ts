@@ -180,7 +180,6 @@ class GetPathHandler<T extends GObject> extends MyProxyHandler<T>{
 RuntimeAccessibleClass.set_extend(MyProxyHandler, GetPathHandler);
 @RuntimeAccessible('TargetableProxyHandler')
 export class TargetableProxyHandler<ME extends GObject = DModelElement, LE extends LPointerTargetable = LModelElement> extends MyProxyHandler<ME> {
-// permette di fare cose tipo: user.name_surname che ritorna la concatenazione di nome e cognome anche se il campo name_surname non esiste.
     lg: LE & GObject; // to disable type check easily and access 'set_' + varname dynamically
     l: LE;
     d: ME;
@@ -203,7 +202,8 @@ export class TargetableProxyHandler<ME extends GObject = DModelElement, LE exten
         this.className = (this.constructor as typeof RuntimeAccessibleClass).cname || this.constructor.name;
     }
 
-    // damiano todo: this does not work
+
+    // permette di fare cose tipo: user.name_surname che ritorna la concatenazione di nome e cognome anche se il campo name_surname non esiste.
     private concatenableHandler(targetObj: ME, propKey: number | string | symbol, proxyitself: Proxyfied<ME>): NotAConcatenation | any[] | string {
         //console.log("concatenableHandler 1", {targetObj, propKey, proxyitself});
         if (propKey in targetObj)  return null as NotAConcatenation;
@@ -238,7 +238,7 @@ export class TargetableProxyHandler<ME extends GObject = DModelElement, LE exten
         // console.log('proxy keysearch', {propKey, targetObj, l: this.l, proxyitself, d: this.d});
         let canThrowErrors = true;
 
-        switch(typeof propKey) {
+        switch (typeof propKey) {
             case "symbol":
                 propKey = String(propKey);
                 // console.log('get symbol', {propKey});

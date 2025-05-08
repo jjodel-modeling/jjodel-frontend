@@ -102,6 +102,7 @@ export function BEGIN() {
     if (t.transactionDepthLevel === 0) t.hasAborted = false;
     t.hasBegun = true; // redundant but actions are reading this, minimize changes
     t.transactionDepthLevel++;
+    if (!inCommit) windoww.updateDebuggerComponent();
     // console.warn('TRANSACTION BEGIN', {depth: t.transactionDepthLevel});
 
 }
@@ -111,24 +112,28 @@ export function ABORT(): boolean {
     //END(); // abort cannot call end, otherwise if i do a TRANSACTION (() => if(x) ABORT()) it risks calling END() twice.
     return ret;
 }
+let inCommit = false;
 // if without parameter: commits the current pending stuff, with parameter: fires the action ignoring transaction block while keeping te transaction active
-export function COMMIT(action?:Action): boolean {
+export function COMMIT(action?:Action, deep: boolean = true): boolean {
     let olddepth = t.transactionDepthLevel;
-    if (olddepth<=0) {
-        END(); //just safety to restore has begun state, should be necessary.
+    if (deep && olddepth<=0) { // not deep, but must not be triggered during setInterval buffer aggregator
+        END(); //just safety to restore has begun state.
         action?.fire();
         return false;
     }
-    t.transactionDepthLevel = 1;
+    inCommit = true;
+    if (deep) t.transactionDepthLevel = 1;
     END(); // triggers FINAL_END
     action?.fire();
-    t.transactionDepthLevel = olddepth-1;
+    if (deep) t.transactionDepthLevel = olddepth-1;
     BEGIN();
+    inCommit = false;
     return true;
 }
 
 export function END(actionstoPrepend: Action[] = [], path?: string, oldval?: any, newval?: any, desc?:string): boolean {
     t.transactionDepthLevel--;
+    if (!inCommit) windoww.updateDebuggerComponent();
     // console.warn('TRANSACTION END', {depth: t.transactionDepthLevel});
     if (actionstoPrepend.length) t.pendingActions = [...actionstoPrepend, ...t.pendingActions];
 
@@ -202,6 +207,7 @@ export function TRANSACTION(name:string, func: ()=> void, oldval?: any, newval?:
 (window as any).TRANSACTION = TRANSACTION;
 (window as any).BEGIN = BEGIN;
 (window as any).ABORT = ABORT;
+(window as any).COMMIT = COMMIT;
 (window as any).END = END;
 (window as any).FINAL_END = FINAL_END;
 (window as any).maxActionFiring = 0;

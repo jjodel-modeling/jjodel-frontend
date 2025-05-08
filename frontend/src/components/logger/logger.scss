@@ -37,7 +37,7 @@
   flex-flow: column-reverse;
   top: 50%; left: 50%;
   transform: translate(-50%, -50%);
-  outline: 2px solid black;
+  // outline: 2px solid black;
   min-width: 10px;
   min-height: 10px;
   z-index: 999;
@@ -47,6 +47,9 @@
     animation: linear 1.0s forwards;
     animation-delay: attr(data-duration ms);
     animation-name: sudden-remove;
+    background: white;
+    color: black;
+    margin: 0 auto;
   }
   .jjtoast.outer{
     margin: 0 auto;
@@ -180,10 +183,17 @@
   }
 }
 .cat{
+  min-height: 30.5px;
+  width: 100%;
+  display: flex;
+  flex-flow: column;
   --bs-btn-color: var(--cat-color);
   --bs-btn-border-color: var(--cat-color);
   --bs-btn-hover-color: var(--cat-color); // #fff;
   --bs-btn-hover-bg: transparent; // var(--cat-color);
+  >*.text{
+    margin: auto;
+  }
   &.active{
     --bs-btn-hover-bg: var(--cat-color);
     --bs-btn-hover-color: #fff;

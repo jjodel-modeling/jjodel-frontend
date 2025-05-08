@@ -105,15 +105,20 @@ export class R{
         console.warn('R.navigate()', {path, refresh});
         //if (path.indexOf('allProject') >= 0) return;
         let debug: false = true as any;
+        if (path.indexOf('//') >= 0) { window.location.href = path; return; }
         if (debug || refresh === true ) {
-            if (path[0] !== '/') path = '/'+path;
-            path = '/#' + path;
-            console.log('navigating: ', {path, url:window.location.origin + path, currHash:window.location.hash});
-            if ('/'+window.location.hash === path) return;
+            let hash: string;
+            if (path[0] !== '/') hash = '#/'+path;
+            else hash = '#'+path;
+            // console.log('navigating: ', {path, url:window.location.origin + path, currHash:window.location.hash});
+            if (window.location.hash === hash) return;
             U.navigating = true;
-            window.location.href = window.location.origin + path;
-
-           // window.location.reload(); // i think this is causing a firefox bug, it refreshes old url
+            window.location.hash = hash;
+            window.location.reload();
+            // let counter = +(U.getSearchParam('p') as string) || 0;
+            // U.setSearchParam('p', counter+1);
+            //window.location.href = window.location.origin + '/'+hash;
+            // window.location.reload(); // i think this is causing a firefox bug, it refreshes old url. so i'm using location.search
         }
         else refresh(path); // useNavigator()(path);
     }
@@ -1197,6 +1202,7 @@ export class U {
             }
             return false;
         }
+        // todo: improve performance, do a loop starting from lastindex of both, return early on mismatches. goes from O(string) to O(Min(suffix, string)) often returning after 1 check
         return str.length >= suffix.length && str.lastIndexOf(suffix) === str.length - suffix.length;
     }
 
@@ -1855,9 +1861,13 @@ export class U {
 
     static debugcounter = 0;
     static deepReplace_rec(obj: any, avoidloop: WeakMap<any, true>, replacer?: ((key: undefined | string | number, o: any, fullpath: string[], depth: number) => any),
-                           circularReferenceValue?: any | ((obj_alreadymet: GObject)=>any), key?: number | string, fullpath:string[]=[], curdept:number=0, eagerLoopReturn: boolean = false): any {
+                           circularReferenceValue?: any | ((obj_alreadymet: GObject)=>any), key?: number | string, fullpath:string[]=[], curdept:number=0,
+                           eagerLoopReturn: boolean = false, ignoreProto = true): any {
 
-        if (U.debugcounter % 100) console.warn('possible loop in deepreplace', {fullpath, obj})
+        if (++U.debugcounter % 10000 === 0) {
+            Log.eDevv('possible loop in deepreplace', {fullpath, obj});
+            return obj;
+        }
         switch (typeof obj) {
             case "symbol": // don't know what really do with symbols and funcs
             case "function":
@@ -1888,6 +1898,7 @@ export class U {
         switch (typeof obj){
             default: break; // obj = obj; return obj; // for any leaf type
             case "object":
+                if (obj === null) return null;
                 if (U.isHtmlNode(obj)) return obj;
                 if (isValidElement(obj)) return obj;
                 if (U.isError(obj)) return obj;
@@ -1897,6 +1908,7 @@ export class U {
                 }
                 let o: GObject = {};
                 for (let k in obj) {
+                    if (ignoreProto && obj.hasOwnProperty(k)) continue;
                     o[k] = U.deepReplace_rec(obj[k], avoidloop, replacer, circularReferenceValue, k, [...fullpath, k], curdept+1);
                 }
                 obj = o;
@@ -2429,6 +2441,39 @@ export class U {
         if (_index >= 0) search = search.substring(_index+1);
         return new URLSearchParams(search).get(arg_name);
     }
+
+    public static setHashParam(arg_name: string, val: number|string): string {
+        let search = window.location.hash;
+        let _index = search.indexOf('?');
+        let prefix: string = '';
+        if (_index >= 0) {
+            prefix = search.substring(0, _index+1);
+            search = search.substring(_index + 1);
+        }
+        let url = new URLSearchParams(search);
+        url.set(arg_name, val+'');
+        let hash = prefix + url.toString();
+        window.location.hash = hash;
+        return hash; }
+
+    public static getSearchParam(arg_name: string): string | null {
+        let search = window.location.search;
+        return new URLSearchParams(search).get(arg_name);
+    }
+    public static setSearchParam(arg_name: string, val: number|string): string {
+        let search = window.location.search;
+        let url = new URLSearchParams(search);
+        url.set(arg_name, ''+val);
+        search = url.toString();
+        window.location.search = search;
+        return search;
+    }
+
+    static jsonSanitize_dangerous(text: string): string {
+        // replace trailing comma, but risk of replacing string literals. better not use it
+        text = text.replaceAll(/,(\s*[}\]])/, ',$1');
+        return text;
+    }
 }
 export class DDate{
     static cname: string = "DDate";
@@ -2747,7 +2792,14 @@ export class Keystrokes {
         let keydown = (e: KeyDownEvent) => {
             // skip events happened in graph
             let curr = e.target;
-            console.log('keydown', {selector, e, curr, ct:e.currentTarget});
+            console.log('keydown', {key: e.key, selector, e, curr, ct:e.currentTarget});
+            switch (e.key) {
+                case Keystrokes.escape:
+                    if (store.getState()?.isEdgePending?.source) SetRootFieldAction.new('isEdgePending', { user: '',  source: '' });
+                    break;
+                // if those are the last key pressed is not an event, it is still typing.
+                case 'Control': case 'Shift': case 'Alt': return;
+            }
             while (curr) {
                 if (curr.classList.contains('Graph')) return;
                 curr = curr.parentElement;
@@ -2759,7 +2811,8 @@ export class Keystrokes {
             if (e.ctrlKey) { root = root[Keystrokes.control] || {}; $elems.addClass('key-ctrl'); }
             let f = root[e.key];
             console.log("execute keystrokes", {e, root, optimizedKeyPaths, up:{$elems, keydown, optimizedKeyPaths, arr}});
-            Log.exDev(f && typeof f !== 'function','found keystroke with invalid func', {f, root, e})
+            Log.exDev(f && typeof f !== 'function','found keystroke with invalid func',
+                {key: e.key, shift:e.shiftKey, alt: e.altKey, ctrl: e.ctrlKey, f, root, e})
             f?.();
         };
         /// todo: for graph can attack evt to graph root and use selector in on() lieke $graphcontainer.on('keydown', '.Class', classkeystrokehandler...)

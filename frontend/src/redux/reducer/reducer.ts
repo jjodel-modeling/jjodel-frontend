@@ -60,6 +60,9 @@ import DSL from "../../DSL/DSL";
 let windoww = window as any;
 let U: typeof UType = windoww.U;
 
+export let UpdatingTimer = 300;
+const mergeTolerance = UpdatingTimer*1.5;
+
 
 function deepCopyButOnlyFollowingPath(oldStateDoNotModify: DState, action: ParsedAction, prevAction: ParsedAction, newVal: any): DState | false{
     let newRoot: DState = {...oldStateDoNotModify} as DState;
@@ -440,11 +443,12 @@ export function reducer(oldState: DState = initialState, action: Action): DState
     if (U.navigating) return oldState;
     if (!windoww.jjactions) windoww.jjactions = [];
     windoww.jjactions.push(action);
-    try{ return unsafereducer(oldState, action); }
+    try { let ret = unsafereducer(oldState, action); console.log('reducer done'); return ret; }
     catch(e) {
         console.error('unhandled error in reducer', {e, oldState, action});
         return oldState;
     }
+
 }
 
 function unsafereducer(oldState: DState = initialState, action: Action): DState {
@@ -933,7 +937,7 @@ function unsafereducer(oldState: DState = initialState, action: Action): DState 
     return ret;
 
 }
-const mergeTolerance = 500;
+
 function doUndoRedo(oldState: DState, action: Action, isUndo:'undo'|'redo'): DState {
     let state: DState = oldState;
     let times: number = action.value;
@@ -1007,6 +1011,7 @@ export function _reducer/*<S extends StateNoFunc, A extends Action>*/(oldState: 
 
             // update state history
             let delta = Uobj.objectDelta(ret, oldState, true, false);
+            console.log('deltra', {start:oldState, end: ret, delta});
             let debug = Uobj.applyObjectDelta(ret, delta, false, oldState);
             delta.timestamp = ret.timestamp;
             delta.timestampdiff = ret.timestampdiff = ret.timestamp - (oldState?.timestamp || 0);
@@ -1020,11 +1025,12 @@ export function _reducer/*<S extends StateNoFunc, A extends Action>*/(oldState: 
             if (!shouldMerge && (delta.vertexs || delta.graphvertexs || delta.graphelements || delta.edgepoints || delta.edges || delta.graphs)) shouldMerge = true;
             if (!pastDelta) shouldMerge = false;
 
-            if(pastDelta)console.log("merge deltas", {forVertex:delta.vertexs || delta.graphvertexs || delta.graphelements || delta.edgepoints || delta.edges || delta.graphs,
+            if (pastDelta) console.log("merge deltas", {forVertex:delta.vertexs || delta.graphvertexs || delta.graphelements || delta.edgepoints || delta.edges || delta.graphs,
                 isRelevantChange,
                 shouldMerge, irl: pastDelta && delta.timestamp - pastDelta.timestamp < mergeTolerance,
                  dt: delta.timestamp, pdt: pastDelta.timestamp, diff: delta.timestamp - pastDelta.timestamp,
                 oldState, delta});
+
             //todo: for cooperative prevent merge from different authors, store user in delta from action.sender when you set timestamp.
             if (shouldMerge && allowMerge) {
                 // pastDelta = Uobj.applyObjectDelta(pastDelta, delta); no because special handling
@@ -1188,7 +1194,7 @@ function buildLSingletons(alld: Dictionary<string, typeof DPointerTargetable>, a
         // for (let sc of d.subclasses) { if (!sc["_extends"]) sc["_extends"] = [];  sc["_extends"].push(d); }
     }
 }
-export const UpdatingTimer = 300;
+
 function setDocumentEvents(){
     // do not use typings or class constructors here or it will change import order
     setTimeout(
@@ -1199,7 +1205,7 @@ function setDocumentEvents(){
             })
         , 1);
     // document.body.addEventListener("mousedown", fixResizables, false);
-    setInterval(()=>{ END(); BEGIN(); }, UpdatingTimer);
+    setInterval(()=>{ COMMIT(undefined, false) }, UpdatingTimer);
 }
 function fixResizables(e: MouseEvent){
     /*let parents = U.ancestorArray(e.target as HTMLElement);

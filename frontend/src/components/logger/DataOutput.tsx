@@ -1,9 +1,9 @@
 import React, {PureComponent, ReactNode} from "react";
-// import ReactJson from 'react-json-view' // npm i react-json-view
+import ReactJson from 'react-json-view' // npm i react-json-view --force
 import './logger.scss'
 import {GObject} from "../../joiner";
 
-function ReactJson(p:any){ return 'reactjson to do'; }
+// function ReactJson(p:any){ return 'reactjson to do'; }
 
 // private
 interface ThisState { }
@@ -70,6 +70,7 @@ export class DataOutputComponent extends PureComponent<AllProps, ThisState>{
                                               | 'tomorrow'
                                               | 'tube'
                                               | 'twilight'; */}
+        {/* @ts-ignore */}
         return <ReactJson src={this.props.data}
                           collapsed={1}
                           collapseStringsAfterLength={20}

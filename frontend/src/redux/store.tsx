@@ -330,16 +330,16 @@ function makeDefaultGraphViews(vp: DViewPoint, validationVP: DViewPoint): DViewE
             "// add preparation code here (like for loops to count something), then list the dependencies below.\n" +
             "// ** declarations here ** //\n" +
             "ret.name = data && data.name || '';\n"+
-            "ret.type = data && data.className.substring(1) || 'shapeless';\n"+
+            "ret.type = data && data.className.substring(1) || 'shapeless object';\n"+
             "}";
         v.onDataUpdate = `
 let err = undefined;
 //if (name.indexOf(" ") >= 0) err = type + " names cannot contain white spaces."; else
-if (name.length === 0 && type !== "shapeless") err = type + " must be named.";
+if (name.length === 0) err = type + " must be named.";
 else if (!name[0].match(/[A-Za-z_$]/)) err = type + " names must begin with an alphabet letter or $_ symbols.";
 else if (!name.match(/^[A-Za-z_$]+[A-Za-z0-9$_\\s]*$/)) err = type + " names can only contain an alphanumeric chars or or $_ symbols";
 if (node.state.error_naming !== err) node.state = {error_naming: err};
-`;}, false, 'Pointer_ViewCheckName' );
+`.trim();}, false, 'Pointer_ViewCheckName' );
 
 let errorCheckLowerbound: DViewElement = DViewElement.new2('Lowerbound error view', DV.invisibleJsx(), validationVP, (v) => {
             // v.jsCondition = '(data, node)=> {\nnode.state.errors?.length>0';
@@ -349,7 +349,7 @@ let errorCheckLowerbound: DViewElement = DViewElement.new2('Lowerbound error vie
                 "// ** preparations and default behaviour here ** //\n" +
                 "// add preparation code here (like for loops to count something), then list the dependencies below.\n" +
                 "// ** declarations here ** //\n" +
-                "ret.valuesLength = data.values.filter(v=>(v!==undefined && v!=='')).length;\n"+
+                "ret.valuesLength = data.values.filter(v=>v!==undefined).length;\n"+
                 "ret.missingLowerbound = Math.max(0, data.lowerBound - ret.valuesLength);\n" +
                 "}";
             v.onDataUpdate = `
@@ -357,7 +357,7 @@ let err = undefined;\n
 if (missingLowerbound > 0) err = (data.className.substring(1))\n
  \t\t+ ' Lowerbound violation, missing ' + missingLowerbound + ' values.';\n
 node.state = {error_lowerbound: err};\n
-`;
+`.trim();
     }, false, 'Pointer_ViewLowerbound' );
     // errorOverlayView.oclCondition = 'context DValue inv: self.value < 0';
 

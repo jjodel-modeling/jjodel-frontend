@@ -7,7 +7,7 @@ export class Uobj {
     static cname: string = 'Uobj';
 
     // difference react-style. lazy check by === equality field by field. parameters are readonly
-    public static objdiff<T extends GObject>(old:T, neww: T, includeProto: boolean = true): {removed: Partial<T>, added: Partial<T>, changed: Partial<T>, unchanged: Partial<T>} {
+    public static objdiff<T extends GObject>(old:T, neww: T, includeProto: boolean = true, emptyObjectsCheck: boolean = true): {removed: Partial<T>, added: Partial<T>, changed: Partial<T>, unchanged: Partial<T>} {
         // let ret: GObject = {removed:{}, added:{}, changed:{}};
         let ret: {removed: Partial<T>, added: Partial<T>, changed: Partial<T>, unchanged: Partial<T>}  = {removed:{}, added:{}, changed:{}, unchanged: {}};
         if (!neww && !old) { return ret; }
@@ -32,13 +32,17 @@ export class Uobj {
             if (!includeProto && !old.hasOwnProperty(key)) continue;
             // if (neww[key] === undefined){
             // if neww have a key with undefined value, it counts (and should) as having that property key defined
-            if (!(key in neww)){ (ret.removed as GObject)[key] = old[key]; }
-            else if (neww[key] === old[key]) { (ret.unchanged as GObject)[key] = old[key] }
+            if (!includeProto ? !neww.hasOwnProperty(key) : !(key in neww)){ (ret.removed as GObject)[key] = old[key]; }
+            else if (neww[key] === old[key] ||
+                (emptyObjectsCheck &&
+                    (typeof old[key] === 'object' && typeof neww[key] === 'object') &&
+                    (Object.keys(neww[key]).length === 0 && Object.keys(old[key]).length === 0)
+                )) { (ret.unchanged as GObject)[key] = old[key] }
             else (ret.changed as GObject)[key] = old[key];
         }
         for (let key in neww) {
             if (!includeProto && !neww.hasOwnProperty(key)) continue;
-            if (!(key in old)){ (ret.added as GObject)[key] = neww[key]; }
+            if (!includeProto ? !old.hasOwnProperty(key) : !(key in old)){ (ret.added as GObject)[key] = neww[key]; }
         }
         if (Array.isArray(neww)) {
             if (neww.length === old.length) { (ret.unchanged as GObject).length = neww.length; }
@@ -82,8 +86,16 @@ export class Uobj {
             let subold = oldobj[key];
             let subnew = newwobj[key];
             if (typeof subold === typeof subnew && typeof subold === "object") {
+                if (subold === null && subnew === null) continue;
+                if (subold === null && subnew !== null) { ret[key] = {...subnew}; continue; }
+                if (subold !== null && subnew === null) { ret[key] = null; continue; }
                 if (deep) {
-                    ret[key] = Uobj.objectDelta(subold, subnew, true, includeProto)
+                    let tmp = Uobj.objectDelta(subold, subnew, true, includeProto);
+                    let keys = Object.keys(tmp).length;
+                    if (keys === 0 /*|| keys === 1 && tmp.__jjObjDiffIsArr*/) continue;
+                    // todo: check if {a: undefined} --> {a:{}} is captured correctly
+                    // todo: check if {a: {b:1}} --> {a:{}} is captured correctly (erase b property, delta should be ? {a:{b:  ((undefined or {}??))  }} ?)
+                    ret[key] = tmp;
                 }
                 else {
                     ret[key] = subnew;
@@ -106,10 +118,13 @@ export class Uobj {
             else ret[removedprefix + key] = '__jjObjDiffEmptyElem';
         } //newwobj[key]; }
         // console.log("objdiff", {old, neww, diff, ret});
+        const unchanged = {} // Symbol.mysymboltodefine
         if (isArr) {
-            ret.length = (neww as GObject).length;
-            ret.__jjObjDiffIsArr = true;
+            if ((neww as GObject)?.length !== (old as GObject)?.length) ret.length = (neww as GObject).length;
+            if (Object.keys(ret).length > 0) ret.__jjObjDiffIsArr = true;
+            else return unchanged;
         }
+        if (tn === 'object' && to === 'object' && Object.keys(ret).length === 0) return unchanged;
         return ret as Partial<T>;
     }
 
@@ -172,10 +187,11 @@ export class Uobj {
         }
 
         if (asserteq) {
-            let as = stringify(asserteq);
-            let rs = stringify(statelevel);
-            Log.eDev(as !== rs, 'deltas: error in Uobj.diff, UObj.delta or UObj.patch, assertion failed',
-                {oldState, deltalevel, ret:statelevel, asserteq, rs, as, old, targetIsArr});
+            let _as = stringify(asserteq);
+            let _rs = stringify(statelevel);
+            Log.eDev(_as !== _rs, 'deltas: error in Uobj.diff, UObj.delta or UObj.patch, assertion failed',
+                {begin: asserteq, end:oldState, delta: deltalevel, restoration:statelevel},
+                {oldState, deltalevel, ret:statelevel, asserteq, _rs, _as, old, targetIsArr});
         }
         return statelevel;
     }

@@ -315,7 +315,7 @@ function ToolBarComponent(props: AllProps) {
                 <div key={"RawObject"} className={'toolbar-item'} tabIndex={ti}
                       onClick={() => select(model.addObject({}, null))}>
                     <ModellingIcon name={'object'}/>
-                    <span className={'ms-1 my-auto text-capitalize'}>Object</span>
+                    <span className={'ms-1 my-auto text-capitalize'}>Untyped Object</span>
                     {/*@ts-ignore*/}
                 </div>
             </>);
@@ -341,7 +341,7 @@ function ToolBarComponent(props: AllProps) {
         // @ts-ignore
         // console.error('toolbar', {ct:[...contentarr], ctm:contentarr.map(e=>e?.key), carr:contentarr.separator(separator).flat().flat()})
         // @ts-ignore
-        content = contentarr.separator(separator).flat().flat() as any;
+        content = contentarr.separator(separator).flat(2) as any;
 
         toolbarContent = (
             <div className="toolbar-draggable"
@@ -361,7 +361,7 @@ function ToolBarComponent(props: AllProps) {
                 <div className={"toolbar hoverable" + (pinned ? " pinned" : '')} tabIndex={0}>
                     <i style={{marginTop: '8px'}} className={"content pin bi bi-x-lg"} onClick={() => minimize(htmlref)}/>
                     <section className={"content inline w-100"}>
-                        {content}
+                        {(content as any )?.length ? content : "Select a node."}
                     </section>
                 </div>
             </div>);
