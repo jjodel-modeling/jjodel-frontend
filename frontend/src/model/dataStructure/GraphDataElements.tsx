@@ -611,6 +611,8 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
     get_allSubGraphs(c: Context): this['allSubGraphs'] { return this.get_allSubElements(c).filter(c => c && c.className.indexOf('Graph') >= 0) as any; }
     set_allSubGraphs(val: never, c: Context): boolean { return this.cannotSet('allSubGraphs'); }
 
+
+    children!: LGraphElement[];
     get_children(c: Context): this["children"] { return this.get_subElements(c); }
     subElements!: LGraphElement[]; // shallow, direct subelements
     __info_of__subElements: Info = {type: 'LGraphElement[]',
@@ -770,7 +772,7 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
     isSelected(forUser?: Pointer<DUser>|DUser|LUser): boolean { return this.wrongAccessMessage("node.isSelected()"); }
     get_select(c: Context): (forUser?: Pointer<DUser>|DUser|LUser)=>void {
         return (forUser0?: Pointer<DUser>|DUser|LUser)=>{
-            let forUser: Pointer<DUser> = Pointers.from(forUser0);
+            let forUser: Pointer<DUser> = Pointers.from(forUser0) as any as Pointer<DUser>;
             if (!forUser) forUser = DUser.current;
             Log.exDev(typeof forUser !== 'string', 'unexpected parameter in select()', {forUser});
             if (c.data.isSelected[forUser]) return; // no-op
@@ -785,7 +787,7 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
     }
     get_deselect(c: Context): (forUser?: Pointer<DUser>|DUser|LUser)=>void {
         return (forUser0?: Pointer<DUser>|DUser|LUser)=>{
-            let forUser: Pointer<DUser> = Pointers.from(forUser0);
+            let forUser: Pointer<DUser> = Pointers.from(forUser0) as any as Pointer<DUser>;
             if (!forUser) forUser = DUser.current;
             Log.exDev(typeof forUser !== 'string', 'unexpected parameter in deselect()', {forUser});
             if (!c.data.isSelected[forUser]) return; // no-op
@@ -801,7 +803,7 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
     }
     get_toggleSelected(context: Context): ((forUser0?: Pointer<DUser>|DUser|LUser) => boolean) {
         return (forUser0?: Pointer<DUser>|DUser|LUser): boolean => {
-            let forUser: Pointer<DUser> = Pointers.from(forUser0);
+            let forUser: Pointer<DUser> = Pointers.from(forUser0) as any as Pointer<DUser>;
             if (!forUser) forUser = DUser.current;
             if (this.get_isSelected(context)(forUser)) {
                 this.get_deselect(context)(forUser);
@@ -814,7 +816,7 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
     }
     get_isSelected(context: Context): ((forUser?: Pointer<DUser>|DUser|LUser) => boolean) {
         return (forUser0?: Pointer<DUser>|DUser|LUser): boolean => {
-            let forUser: Pointer<DUser> = Pointers.from(forUser0);
+            let forUser: Pointer<DUser> = Pointers.from(forUser0) as any as Pointer<DUser>;
             if (!forUser) forUser = DUser.current;
             return !!context.data.isSelected[forUser];
         }
