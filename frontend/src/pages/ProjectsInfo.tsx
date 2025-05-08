@@ -2,7 +2,7 @@ import {Try} from "../components/forEndUser/Try";
 import {Dashboard} from "./components";
 import {useEffect, useState} from "react";
 import {DProject, DUser, SetRootFieldAction} from "../joiner";
-import {AdminApi} from "../api/persistance";
+
 
 type Props = {};
 function ProjectsInfoPage(props: Props) {
@@ -10,7 +10,7 @@ function ProjectsInfoPage(props: Props) {
     useEffect(() => {
         (async function() {
             SetRootFieldAction.new('isLoading', true);
-            setProjects(await AdminApi.projects());
+            null
             SetRootFieldAction.new('isLoading', false);
         })();
     }, []);

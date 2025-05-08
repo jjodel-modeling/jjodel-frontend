@@ -1,7 +1,7 @@
 import {DUser, SetRootFieldAction, Try} from '../joiner';
 import {Dashboard} from './components';
 import {useEffect, useState} from "react";
-import {AdminApi} from "../api/persistance";
+
 
 type Props = {};
 function UsersInfoPage(props: Props) {
@@ -9,7 +9,7 @@ function UsersInfoPage(props: Props) {
     useEffect(() => {
         (async function() {
             SetRootFieldAction.new('isLoading', true);
-            setUsers(await AdminApi.users());
+            null
             SetRootFieldAction.new('isLoading', false);
         })();
     }, []);
