@@ -9,7 +9,6 @@ function UsersInfoPage(props: Props) {
     useEffect(() => {
         (async function() {
             SetRootFieldAction.new('isLoading', true);
-            null
             SetRootFieldAction.new('isLoading', false);
         })();
     }, []);
