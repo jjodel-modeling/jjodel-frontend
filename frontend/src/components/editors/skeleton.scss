@@ -1,3 +1,9 @@
+.dock-style-editors .dock-tabpane section .input-container{
+  & input {
+    margin: auto 0;
+  }
+}
+
 .dock-style-editors .dock-tabpane section,
 .collaborative-tab .input-container {
 

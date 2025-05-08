@@ -42,7 +42,6 @@ export {Try} from "../components/forEndUser/Try";
 
 
 export {DataOutputComponent} from "../components/logger/DataOutput";
-export {LoggerComponent} from "../components/logger/loggerComponent";
 
 /// import components that must save themselves to global variable to be accessible for user
 

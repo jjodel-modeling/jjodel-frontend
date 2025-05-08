@@ -12,8 +12,22 @@ body {
 .round { border-radius: $radius; }
 .circle { border-radius: 999px !important; }
 .bg-smoke { background-color: whitesmoke; }
-.class-can-be-extended { border: 2px solid $true !important; border-radius: $radius; }
-.class-cannot-be-extended { border: 2px solid $false !important; border-radius: $radius; }
+[data-nodetype] {
+  --ext_on: #0b0;
+  --ext_off: #b00;
+  &:not(.Edge){
+    &.class-can-be-extended { outline: 3px solid var(--ext_on); border-radius: $radius; outline-offset: 3px; }
+    &.class-cannot-be-extended { outline: 3px solid var(--ext_off); border-radius: $radius; outline-offset: 3px; }
+  }
+  &.Edge{
+    &.class-can-be-extended path { stroke: var(--ext_on); }
+    &.class-cannot-be-extended path { stroke: var(--ext_off); }
+    /*
+    &.class-can-be-extended path.full { outline: 3px solid var(--ext_on); border-radius: $radius; outline-offset: 3px; }
+    &.class-cannot-be-extended path.full{ outline: 3px solid var(--ext_off); border-radius: $radius; outline-offset: 3px; }
+    */
+  }
+}
 .ui-icon, .ui-widget-content .ui-icon { background-image: none !important; }
 .dock-content .dock-tabpane { background-color: var(--dockpane-bg); }
 .btn-white { background-color: whitesmoke; color: #2e2f34; }
@@ -435,7 +449,6 @@ i.bi {
     }
   }
 }
-
 // LOGIN
 
 .login {

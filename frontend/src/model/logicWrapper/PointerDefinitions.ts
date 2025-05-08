@@ -108,7 +108,7 @@ export class ClassPointers extends CommonStuff{
     attributes?: Pointer<DAttribute>[];
     referencedBy?: Pointer<DReference>[];
     extends?: Pointer<DClass>[];
-    extendedBy?: Pointer<DClass>[];
+    // extendedBy?: Pointer<DClass>[];
     implements?: Pointer<DClass>[];
     implementedBy?: Pointer<DClass>[];
 }

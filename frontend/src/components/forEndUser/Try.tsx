@@ -12,7 +12,7 @@ import {
     LPointerTargetable,
     Overlap,
     Pointer, store,
-    U, LoggerCategoryState
+    U, LoggerCategoryState, transientProperties
 } from '../../joiner';
 import { DefaultView } from '../../common/DV';
 /*
@@ -116,8 +116,33 @@ class TryComponent extends React.Component<AllProps, State> {
         let title = "Jodel assisted error report V"+state?.version?.n;
         (window as any).tryerror = error;
         let reportstr = this.state.lz || this.stringreport(Log.getByError(error));
-        let mongoreport = {state: state, when: new Date()+'', e:{'stack':error.stack, 'msg':error.message}, compostack: info?.componentStack};
-        // todo giordano: salva report su mongodb
+        let mongoreport = {
+            title: 'unforeseen error',
+            state: state,
+            when: new Date()+'',
+            e:{'stack':error.stack, 'msg':error.message},
+            compostack: info?.componentStack,
+            context: null as any,
+            transient: transientProperties,
+        };
+        /*
+        {// errori lato dev (azioni corrette utente causano errori)
+            title: string,
+            version: string,
+            state: DState,
+            when: String, // (date stringified),
+            e:{'stack': string[], 'msg': string},
+            compostack: string[],
+            context: any,
+            transient: {node: serializedObj, data: serializedObj, view: serializedObj},
+        };
+        { // errori lato utente (azioni sbagliate utente causano errori)
+            title: string,
+            version: string,
+            when: String, // (date stringified),
+            e:{'stack': string[], 'msg': string},
+        };
+        */
 
         const msgbody_notencoded: string = "This mail is auto-generated, it might contain data of your views or model.\n" +
             "If your project have sensitive personal information please do a manual report instead."+// check the report below to omit them.\n\n" +

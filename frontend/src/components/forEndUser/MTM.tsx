@@ -27,6 +27,7 @@ import {on} from "events";
 function doT2M(data: LPointerTargetable | Pointer, language: string, text: string): void{
     let ldata = LPointerTargetable.from(data);
     if (!ldata) return;
+    // text = U.jsonSanitize_dangerous(text);
     let json = JSON.parse(text);
     console.log('doT2M json', {ldata, text, json});
     (ldata as LObject).t2m(json);

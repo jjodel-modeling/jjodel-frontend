@@ -109,6 +109,7 @@ class LoggerComponent extends PureComponent<AllProps, ThisState> {
         if (!Array.isArray(args)) args = [args];
         let objs: GObject[] = [];
         let primitives: any[] = [];
+
         for (let a of args){
             switch(typeof a){
                 case "object": case "function": objs.push(a); primitives.push("["+(typeof a)+"_"+(objs.length)+"]"); break;
@@ -158,20 +159,21 @@ class LoggerComponent extends PureComponent<AllProps, ThisState> {
     private generateToasts(allMessages: LoggerCategoryState[], categories: LoggerType[]): JSX.Element {
         let now = Date.now();
         let old = allMessages;
-        allMessages = allMessages.filter(msg => !msg.toastHidden && (msg.expireTime === undefined || msg.expireTime > now));
+        allMessages = allMessages.filter(msg => !msg.toastHidden && (msg.expireTime === undefined || msg.expireTime <= now));
 
         console.log('generateToasts', {allMessages, old})
         let out = {maxDuration:0};
         return <div className={'jjtoast-holder text-selectable'}>
             {allMessages.map(msg => this.toast(msg, out))}
-            {allMessages.length > 2 ?
-                <button key={'closebtn'} className={'close-all'} data-count={count++} data-duration={out.maxDuration} onClick={(e) => {
+            {allMessages.length >= 2 ?
+                <button key={'closebtn'} className={'close-all btn btn-outline-danger'} data-count={count++} data-duration={out.maxDuration} onClick={(e) => {
                     let target: HTMLElement = (e.target as any).parentNode as HTMLElement;
                     // todo: should manual trigger animation instead
                     for (let c of target.children) this.hide(c as HTMLElement);
-                    allMessages.map(m => m.toastHidden = true);
+                    allMessages.forEach(m => m.toastHidden = true);
                     }}>
-                    <i className={'bi bi-x-lg closebtn'}/>
+                    Close all
+                    {/*<i className={'bi bi-x-lg closebtn'}/>*/}
                 </button>
                 : null}
         </div>
@@ -187,7 +189,11 @@ class LoggerComponent extends PureComponent<AllProps, ThisState> {
         return <div className={'jjtoast outer cat_' + msg.category}
                     key={msg.time + (msg as any).primitiveStringified[0]}
                     data-duration={(msg.expireTime - msg.time)+''}
-                    onClick={() => { U.clipboardCopy(msg.long_string); (msg.expireTime as number) += getDuration(msg); }}>
+                    onClick={() => {
+                        U.clipboardCopy(msg.long_string);
+                        // (msg.expireTime as number) += getDuration(msg);
+                        (msg.expireTime as number) = Number.POSITIVE_INFINITY; //getDuration(msg);
+                    }}>
             <div className={'jjtoast inner'} tabIndex={-1}>
                 <div className={'msg'}>{(msg as any).primitiveStringified}</div>
                 <i className={'bi bi-x-lg closebtn'} onClick={(e) => {
@@ -268,6 +274,9 @@ interface DispatchProps {}
 
 type AllProps = OwnProps & StateProps & DispatchProps;
 
+export const Logger = LoggerComponent;
+
+/*
 function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     const ret: StateProps = {} as FakeStateProps;
     return ret;
@@ -275,6 +284,7 @@ function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
 
 function mapDispatchToProps(dispatch: Dispatch<any>): DispatchProps {
     const ret: DispatchProps = {} as any;
+    //ret.msgcount = Log.msgCount;
     return ret;
 }
 
@@ -288,3 +298,4 @@ export const Logger = (props: OwnProps, children: ReactNode = []): ReactElement 
     return <LoggerConnected {...{...props, children}} />;
 }
 export default Logger;
+*/

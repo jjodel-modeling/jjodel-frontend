@@ -91,7 +91,7 @@ function InfoDataComponent(props: AllProps) {
             <OclEditor viewID={view.id} readOnly={readOnly} />
             <JsEditor
                 data={view} field={'jsCondition'}
-                placeHolder={'/* Last line must return a boolean */'}
+                placeHolder={'/* Last line must return a score (number) or boolean*/'}
             />
         </>}
     </section>);

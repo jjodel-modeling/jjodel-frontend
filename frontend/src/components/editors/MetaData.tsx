@@ -10,7 +10,7 @@ function MetaDataComponent(props:AllProps): ReactElement{
             {
     !props.data ? "Select a Node." : <>
         <h2>{props.data.name}</h2>
-    {ddata.className !== 'DModel' && props.data.isInstantiable() &&
+    {ddata.className !== 'DModel' && props.data?.isInstantiable &&
     <label className={"d-flex"}>
     <span className={"my-auto"}>Icon</span>
         <input className={"ms-1 my-auto"} type={"url"} placeholder={"icon url or base64 string"} value={props.data.state.icon}

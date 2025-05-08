@@ -294,7 +294,7 @@ export class EcoreParser{
                     if (replacekey === "extends") {
                         if (!target) continue;
                         Log.ex(target.className !== DClass.cname, "found a class attempting to extend an object that is not a class", {target, dobj, replacePrimitiveMap, nameMap, idMap});
-                        (target as DClass).extendedBy.push((dobj as DClass).id);
+                        // (target as DClass).extendedBy.push((dobj as DClass).id);
                     }
                     Log.ex(!target, "LinkAllNames() can't find type target:", {value, nameMap, replacePrimitiveMap, dobj, replacekey});
                     if (isArray) dobj[replacekey].push(target.id);

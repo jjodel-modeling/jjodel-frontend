@@ -261,7 +261,8 @@ export abstract class RuntimeAccessibleClass extends AbstractMixedClass {
         switch (typeof v){
             case "string": s = store.getState(); ret = LPointerTargetable.fromPointer(v, s); break
             case "object":
-                if(v.__isProxy) return v;
+                if (!v) return v; // null
+                if (v.__isProxy) return v;
                 if (v.className) {
                     if (!RuntimeAccessibleClass.get(v?.className)?.logic?.singleton) break;
                     ret = LPointerTargetable.fromD(v);
@@ -674,13 +675,14 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         todo: build a Tree<DClass> of all superclasses tree nested by level.
             only then instantiate DValues by depth level, if same level from right to left (last extend on right takes priority) and erase this stuff below.*/
         // let superClassesByLevel: Dictionary<Pointer, DClass> = ;
-        while(targets.length) { // gather superclasses in map "alreadyParsed"
-            let nextTargets = [];
+        while (targets.length) { // gather superclasses in map "alreadyParsed"
+            let nextTargets: DClass[] = [];
             for (let target of targets) {
                 if (!target) { Log.ww("Invalid father pointer in DStructuralFeature", {feature: thiss, father:target, superclasses: alreadyParsed}); continue; }
                 if (alreadyParsed[target.id]) continue;
                 alreadyParsed[target.id] = target;
-                for(let ext of target.extendedBy) nextTargets.push((_DClass as typeof DPointerTargetable).from(ext));
+                let ltarget = L.from(target) as LClass;
+                for (let ext of ltarget.extendedBy) nextTargets.push(D.from(ext));
             }
             targets = nextTargets;
         }
@@ -1234,16 +1236,16 @@ export class DPointerTargetable extends RuntimeAccessibleClass {
         if (father) {
             if (typeof father === "string" || (father as any).className) { // Pointer or D
                 lfather = LPointerTargetable.wrap(father as DModelElement) as LModelElement;
-                if (!lfather) return (typeof startingPrefix === "string" ? startingPrefix : "unnamed_elem"); // can happen during parse when father ptr exist but it's not in store yet. not a prob
+                if (!lfather) return (typeof startingPrefix === "string" ? startingPrefix : "unnamed_elem");
                 if (typeof startingPrefix !== "string") {
                     let meta = LPointerTargetable.from(metaptr as Pointer);
                     startingPrefix = startingPrefix(meta as L);
                 }
-                const childrenNames: (string)[] = lfather.children.map(c => (c as LNamedElement)?.name);
+                const childrenNames: (string)[] = lfather.childNames; // lfather.children.map(c => (c as LNamedElement)?.name);
                 return U.increaseEndingNumber(startingPrefix + '0', false, false, (newname) => childrenNames.indexOf(newname) >= 0);
             }
-            else {
-                let condition: (a:string)=>boolean = father as any;
+            else if (typeof father === 'function') {
+                let condition = father as any as ((a:string)=>boolean);
                 return U.increaseEndingNumber(startingPrefix + '0', false, false, condition);
             }
         }
@@ -1367,6 +1369,7 @@ type Pack<D extends DPointerTargetable, L extends LPointerTargetable = DtoL<D>, 
 
 @RuntimeAccessible('Pointers')
 export class Pointers{
+    public static prefix = 'Pointer_';
     public static ESTRING = 'Pointer_ESTRING';
 
     static filterValid<P extends (Pointer | Pointer[]) = any, RET = P extends Pointer[] ? P : P | null>
@@ -1508,7 +1511,7 @@ export class Pointers{
         // might cause endless loop if there are subarrays in a containment loop.
         if (doArrayCheck && Array.isArray(val)) return (val as any[]).some((v) => Pointers.isPointer(val, state, true));
         if (state) return DPointerTargetable.from(val, state);
-        return typeof val === "string" ? val.includes("Pointer") : false;
+        return typeof val === "string" ? val.indexOf("Pointer") === 0 : false;
     }
 }
 
@@ -1561,8 +1564,8 @@ export class PendingPointedByPaths{
     private constructor(
         public from: DocString<"full Path in store including field key">,
         public holder: Pointer,
-        public casee: "+=" | "-=" | undefined = undefined){
-        this.stackTrace = U.getStackTrace();
+        public casee: "+=" | "-=" | undefined = undefined) {
+            this.stackTrace = U.getStackTrace();
     }
     static attemptimplementationdelete(pb: PointedBy) {
         let state: DState = store.getState();
@@ -1618,7 +1621,7 @@ export class PendingPointedByPaths{
 
 @RuntimeAccessible('PointedBy')
 export class PointedBy {
-    static list: string[] = ["father", "parent", "annotations", "packages", "type", "subpackages", "classifiers", "exceptions", "parameters", "defaultValue", "instances", "operations", "features", "attributes", "references", "extends", "extendedBy", "implements", "implementedBy", "instanceof", "edges", "target", "opposite", "parameters", "exceptions", "literals", "values"];
+    static list: string[] = ["father", "parent", "annotations", "packages", "type", "subpackages", "classifiers", "exceptions", "parameters", "defaultValue", "instances", "operations", "features", "attributes", "references", "extends", "implements", "implementedBy", "instanceof", "edges", "target", "opposite", "parameters", "exceptions", "literals", "values"];
     source: string; // elemento da cui parte il puntatore
     // field: keyof DPointerTargetable;
     // il bersaglio non c'è qui, perchè è l'oggetto che contiene questo dentro l'array pointedBy
@@ -1641,7 +1644,7 @@ export class PointedBy {
     static new(source: DocString<"full path in store including key. like \'idlookup.id.extends+=\'">, modifier: "-=" | "+=" | undefined = undefined, action?: ParsedAction): PointedBy {
         // let source: DocString<"full path in store including key"> = action.path;
         // if (source.includes("true")) { console.error(this, action); throw new Error("mixed a bool"); }
-        if (modifier) source = source.substring(0, source.length - (modifier?.length || 0));
+        if (modifier && U.endsWith(source, modifier)) source = source.substring(0, source.length - (modifier?.length || 0));
         return new PointedBy(source);
     }
     // static new0<D extends DPointerTargetable> (source: D, field: keyof D): PointedBy { return new PointedBy(source, field); }
@@ -1963,9 +1966,24 @@ export class LPointerTargetable<Context extends LogicContext<DPointerTargetable>
         return LPointerTargetable.from(data[key]);
     }
 
+    __info_of___clearState = {type:"()=>void", txt: `<div>Clears the whole content of this.state</div>`}
+    clearState(): void { return this.wrongAccessMessage('clearState'); }
+    get_clearState(c: Context): ()=>void {
+        return () => {
+            TRANSACTION(this.get_name(c) + '.clearState()', ()=>{
+                SetFieldAction.new(c.data, "_state", {}, undefined, false);
+            }, Object.keys(3)+ 'keys removed');
+        }
+    }
+
     _state!: GObject;
     __info_of___state = {type:"GObject", txt: `<div>A space where the user can store informations for their operations/views.<br/>
-Example: The Validation viewpoint uses it to store validation messages.<br/>
+Example: The Validation viewpoint uses it to store validation messages through onDataUpdate events, check them for live examples.<br/>
+values are set in a http patch approach, <code>this.state = {varname: "value"}<br/>
+will set this.state.varname without changing other pre-existing values.<br/>
+as such <code>this.state = {}</code> does nothing. to remove a single entry use<br/>
+To remove a single entry, use <code>this.state = {varname: undefined}</code>.<br/>
+To empty the whole state, use <code>this.clearState()</code>.<br/>
 WARNING! do not set proxies in the state, set pointers instead.<br/>
 <a href='https://github.com/MDEGroup/jjodel/wiki/L%E2%80%90Object-state'>Learn more on the wiki</a></div>`};
 
@@ -1986,21 +2004,26 @@ WARNING! do not set proxies in the state, set pointers instead.<br/>
 
         // i choose 3)
         let newState: GObject;
+        let removedState: GObject = {};
         let oldState = c.data._state ? {...c.data._state} : {};
         let changed: boolean = false;
         if (val === undefined) {
             if (!oldState || !Object.keys(oldState).length) return true;
             newState = {};
-            changed = true;
+            changed = false;
         }
         else if (typeof val !== "object") { Log.ee("state can only be assigned with an object or undefined"); return true; }
         else {
-            val = this.__sanitizeValue(val);
-            newState = {...oldState};
+            val = this.__sanitizeValue(val || {}); // ||{} to handle null which is typed as object in js
+            newState = {}; // {...oldState};
             for (let k in val) {
                 if (val[k] === undefined) {
-                    if (oldState[k] === undefined) continue;
-                    delete newState[k];
+                    if (!(k in oldState)) {
+                        // newState[k] = undefined; reducer is ignoring undefined anyway, so i would need to set the whole obj instead of a delta or changing reducer.
+                        continue;
+                    }
+                    // delete newState[k];
+                    removedState[k] = true; // will be deleted by reducer
                     changed = true;
                     continue;
                 }
@@ -2014,7 +2037,8 @@ WARNING! do not set proxies in the state, set pointers instead.<br/>
         if (!changed) return true;
 
         TRANSACTION(this.get_name(c)+'.state', ()=>{
-            SetFieldAction.new(c.data, "_state", newState, undefined, false);
+            if (Object.keys(newState)) SetFieldAction.new(c.data, "_state", newState, '+=', false);
+            if (Object.keys(removedState)) SetFieldAction.new(c.data, "_state", removedState as any, '-=', false);
         })
         return true;
     }

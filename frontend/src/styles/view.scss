@@ -10,11 +10,11 @@
 }
 
 .selected-by-me {
-  outline: 1px dashed rgba(0, 0, 0, 0.3);
+  outline: 2px dashed black;
 }
 
 .selected-by-others {
-  outline: 1px dashed indigo;
+  outline: 2px dashed indigo;
 }
 .Edge.selected-by-me, .Edge.selected-by-others{
   outline: none;

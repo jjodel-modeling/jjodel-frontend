@@ -4,7 +4,6 @@ import {
     DocString,
     GObject,
     Log,
-    LoggerComponent,
     Point,
     RuntimeAccessible,
     Size,

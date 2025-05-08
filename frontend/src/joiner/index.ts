@@ -280,7 +280,7 @@ export {
     // DockLayoutComponent,
     //ColorScheme,
     EdgeComponent,
-    DataOutputComponent, LoggerComponent, GenericInput,
+    DataOutputComponent, GenericInput,
     Polygon, Circle, Cross, Decagon,
     Asterisk, Ellipse, Enneagon, Hexagon, Nonagon,
     Octagon, Heptagon, Pentagon, Rectangle, Septagon,

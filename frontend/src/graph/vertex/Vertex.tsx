@@ -86,14 +86,7 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
     }
 
     setVertexProperties(){
-        if (!this.props.node || !this.html.current) return;
-        switch (this.nodeType){
-            case 'GraphVertex':
-            case 'Vertex':
-            case 'VoidVertex':
-            case 'EdgePoint': break;
-            default: return;
-        }
+        if (!this.props.node || !this.html.current || !this.props.isVertex) return;
 
         let html = this.html.current;
         const $measurable: GObject<'JQuery + ui plugin'> = $(html); // todo: install typings
@@ -165,110 +158,110 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
         }
 
         try{
-        if (!isResizable) {
-            if ($measurable.data("uiResizable")) $measurable.resizable('disable');
-        }
-        else if (this.resizableOptions) {
-            if ($measurable.data("uiResizable")) $measurable.resizable('enable');
-        }
-        if (!this.resizableOptions) {
-            this.resizableOptions = {
-                helper: 'selected-by-me',
-                start: (event: GObject, obj: GObject) => {
-                    TRANSACTION('onResizeStart events ' + this.props.node.name, ()=>{
-                        if (!this.props.node.isResized) this.props.node.isResized = true; // set only on manual resize, so here and not on setSize()
-                        for (let vid of allviews) this.doMeasurableEvent(EMeasurableEvents.onResizeStart, vid);
-                    })
-                },
-                resize: (event: GObject, obj: GObject) => {
-                    TRANSACTION('resizing events ' + this.props.node.name, ()=>{
-                        if (!this.props.view.lazySizeUpdate) this.setSize({w:obj.position.width, h:obj.position.height});
-                        for (let vid of allviews) this.doMeasurableEvent(EMeasurableEvents.whileResizing, vid);
-                    })
-                },
-                stop: (event: GObject, obj: GObject) => {
-                    if (!this.state.classes.includes('resized')) this.setState({classes:[...this.state.classes, 'resized']});
-                    // if (!withSetSize) { node.width = obj.size.width; node.height = obj.size.height; } else {
-                    let absolutemode = true; // this one is less tested and safe, but should work even if html container is sized 0. best if made to work
-                    let newSize: Partial<GraphSize>;
-                    if (absolutemode) {
-                        let nativeevt: MouseEvent = event.originalEvent.originalEvent;
-                        let htmlSize = Size.of(event.target, false);
-                        newSize = this.props.node.graph.translateHtmlSize(htmlSize);
-                        /*n
-                        this is some pixels off, i think because inner coords are post the border of the container element,
-                         and the innermost graph size have coords before his borders, so the translation is off by the amount
-                          of border width of the innermost graph (and package default view does have a border)
-                           so in graph coord translate function should add: outersize.add( x: innergraph.html.getFinalComputedCSS('border-width-left'), y: ...border-width-top
-
-                    let cursorSize = new GraphSize(0, 0, nativeevt.clientX, nativeevt.clientY);//
-                    newSize = htmlSize.duplicate() as any; // .subtract( {w:cursorSize.x, h:cursorSize.y}, true);
-                    let handleClasses: string[] = [...event.originalEvent.target.classList];
-                    let handleKeyLength = 14; // equal to 'ui-resizable-'.length + 1;
-                    let handleClassName = handleClasses.find( // i check both length and indexOf, because i must match 'ui-resizable-se' but not 'ui-resizable-handle'
-                        (e) => (e.length === handleKeyLength || e.length === handleKeyLength + 1) && e.indexOf('ui-resizable-')===0);
-
-                        let handleType = handleClassName ? handleClassName.substring(13) : '';
-                        switch (handleType) {
-                            default: case '': case 'se':
-                                delete newSize.x;
-                                delete newSize.y;
-                                newSize.w = cursorSize.w - htmlSize.x;
-                                newSize.h = cursorSize.h - htmlSize.y;
-                                break;
-                            case 'n': case 's':
-                                delete newSize.x;
-                                delete newSize.y;
-                                delete newSize.w;
-                                newSize.h = cursorSize.h - htmlSize.y;
-                                break;
-                            case 'e': case 'W':
-                                delete newSize.x;
-                                delete newSize.y;
-                                newSize.w = cursorSize.w - htmlSize.x;
-                                delete newSize.h;
-                                break;
-                            case 'nw':
-                                let br = htmlSize.br();
-                                newSize.x = cursorSize.x;
-                                newSize.y = cursorSize.y;
-                                newSize.w = br.x - cursorSize.w;
-                                newSize.h = br.y - cursorSize.h;
-                                break;
-                            case 'ne':
-                                delete newSize.x;
-                                newSize.y = cursorSize.y;
-                                delete newSize.w;
-                                delete newSize.h;
-                            case '?':
-                                delete newSize.x;
-                                delete newSize.y;
-                                delete newSize.w;
-                                delete newSize.h;
-                                break;
-                        }*/
-                        // n, e, s, w, ne, se, sw, nw
-                        console.log('resizing', {newSize, htmlSize, event, nativeevt, sizeof_with_transforms: Size.of(event.target, true)});
-                        // NB: size.x and size.y are going crazy if the element have an edge, no idea why, i just deleted x & y before setSize()
-                    }
-                    else newSize = {w:obj.size.width, h:obj.size.height};
-                    // evt coordinates: clientX, layerX, offsetX, pageX, screenX
-                    TRANSACTION('onResizeEnd events ' + this.props.node.name, ()=>{/*
-                        delete newSize.x;
-                        delete newSize.y;*/
-                        this.setSize(newSize);
-                        // console.log('resize setsize:', obj, {w:obj.size.width, h:obj.size.height});
-                        for (let vid of allviews) this.doMeasurableEvent(EMeasurableEvents.onResizeEnd, vid);
-                    })
-
-                }
+            if (!isResizable) {
+                if ($measurable.data("uiResizable")) $measurable.resizable('disable');
             }
-            $measurable.resizable(this.resizableOptions);
-        }
+            else if (this.resizableOptions) {
+                if ($measurable.data("uiResizable")) $measurable.resizable('enable');
+            }
+            if (!this.resizableOptions) {
+                this.resizableOptions = {
+                    helper: 'selected-by-me',
+                    start: (event: GObject, obj: GObject) => {
+                        TRANSACTION('onResizeStart events ' + this.props.node.name, ()=>{
+                            if (!this.props.node.isResized) this.props.node.isResized = true; // set only on manual resize, so here and not on setSize()
+                            for (let vid of allviews) this.doMeasurableEvent(EMeasurableEvents.onResizeStart, vid);
+                        })
+                    },
+                    resize: (event: GObject, obj: GObject) => {
+                        TRANSACTION('resizing events ' + this.props.node.name, ()=>{
+                            if (!this.props.view.lazySizeUpdate) this.setSize({w:obj.position.width, h:obj.position.height});
+                            for (let vid of allviews) this.doMeasurableEvent(EMeasurableEvents.whileResizing, vid);
+                        })
+                    },
+                    stop: (event: GObject, obj: GObject) => {
+                        if (!this.state.classes.includes('resized')) this.setState({classes:[...this.state.classes, 'resized']});
+                        // if (!withSetSize) { node.width = obj.size.width; node.height = obj.size.height; } else {
+                        let absolutemode = true; // this one is less tested and safe, but should work even if html container is sized 0. best if made to work
+                        let newSize: Partial<GraphSize>;
+                        if (absolutemode) {
+                            let nativeevt: MouseEvent = event.originalEvent.originalEvent;
+                            let htmlSize = Size.of(event.target, false);
+                            newSize = this.props.node.graph.translateHtmlSize(htmlSize);
+                            /*n
+                            this is some pixels off, i think because inner coords are post the border of the container element,
+                             and the innermost graph size have coords before his borders, so the translation is off by the amount
+                              of border width of the innermost graph (and package default view does have a border)
+                               so in graph coord translate function should add: outersize.add( x: innergraph.html.getFinalComputedCSS('border-width-left'), y: ...border-width-top
+
+                        let cursorSize = new GraphSize(0, 0, nativeevt.clientX, nativeevt.clientY);//
+                        newSize = htmlSize.duplicate() as any; // .subtract( {w:cursorSize.x, h:cursorSize.y}, true);
+                        let handleClasses: string[] = [...event.originalEvent.target.classList];
+                        let handleKeyLength = 14; // equal to 'ui-resizable-'.length + 1;
+                        let handleClassName = handleClasses.find( // i check both length and indexOf, because i must match 'ui-resizable-se' but not 'ui-resizable-handle'
+                            (e) => (e.length === handleKeyLength || e.length === handleKeyLength + 1) && e.indexOf('ui-resizable-')===0);
+
+                            let handleType = handleClassName ? handleClassName.substring(13) : '';
+                            switch (handleType) {
+                                default: case '': case 'se':
+                                    delete newSize.x;
+                                    delete newSize.y;
+                                    newSize.w = cursorSize.w - htmlSize.x;
+                                    newSize.h = cursorSize.h - htmlSize.y;
+                                    break;
+                                case 'n': case 's':
+                                    delete newSize.x;
+                                    delete newSize.y;
+                                    delete newSize.w;
+                                    newSize.h = cursorSize.h - htmlSize.y;
+                                    break;
+                                case 'e': case 'W':
+                                    delete newSize.x;
+                                    delete newSize.y;
+                                    newSize.w = cursorSize.w - htmlSize.x;
+                                    delete newSize.h;
+                                    break;
+                                case 'nw':
+                                    let br = htmlSize.br();
+                                    newSize.x = cursorSize.x;
+                                    newSize.y = cursorSize.y;
+                                    newSize.w = br.x - cursorSize.w;
+                                    newSize.h = br.y - cursorSize.h;
+                                    break;
+                                case 'ne':
+                                    delete newSize.x;
+                                    newSize.y = cursorSize.y;
+                                    delete newSize.w;
+                                    delete newSize.h;
+                                case '?':
+                                    delete newSize.x;
+                                    delete newSize.y;
+                                    delete newSize.w;
+                                    delete newSize.h;
+                                    break;
+                            }*/
+                            // n, e, s, w, ne, se, sw, nw
+                            console.log('resizing', {newSize, htmlSize, event, nativeevt, sizeof_with_transforms: Size.of(event.target, true)});
+                            // NB: size.x and size.y are going crazy if the element have an edge, no idea why, i just deleted x & y before setSize()
+                        }
+                        else newSize = {w:obj.size.width, h:obj.size.height};
+                        // evt coordinates: clientX, layerX, offsetX, pageX, screenX
+                        TRANSACTION('onResizeEnd events ' + this.props.node.name, ()=>{/*
+                            delete newSize.x;
+                            delete newSize.y;*/
+                            this.setSize(newSize);
+                            // console.log('resize setsize:', obj, {w:obj.size.width, h:obj.size.height});
+                            for (let vid of allviews) this.doMeasurableEvent(EMeasurableEvents.onResizeEnd, vid);
+                        })
+
+                    }
+                }
+                $measurable.resizable(this.resizableOptions);
+            }
         } catch(e){
             // check draggable catch comment
             this.resizableOptions = undefined;
-            Log.ee("failed to setup / update resizable uptions", e, this, this.props.node, this.props.data);
+            Log.ee("failed to enable / disable resizable options", e, this, this.props.node, this.props.data);
             return;
         }
 
@@ -352,7 +345,7 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
     }
 
     oldHtml?: Element | null = null;
-    nodeType!: string;
+    // nodeType!: string;
     render(): ReactNode {
         if (Debug.lightMode && (!this.props.data || !(lightModeAllowedElements.includes(this.props.data.className)))){
             return this.props.data ? <div>{" " + ((this.props.data as any).name)}:{this.props.data.className}</div> : undefined;
@@ -361,68 +354,15 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
 
         if (this.html.current !== this.oldHtml){ this.onHtmlNodeChange(); }
 
-        const cssOverride: string[] = [];
-        // const selected = this.props.selected;
-        // if (selected && selected.id === this.props.nodeid) cssOverride.push('selected-by-me');
+        let nodeType = 'NODE_TYPE_ERROR';
+        if ( this.props.isEdgePoint) nodeType = 'EdgePoint'; else
+        if ( this.props.isGraph &&  this.props.isVertex) nodeType = 'GraphVertex'; else
+        if ( this.props.isGraph && !this.props.isVertex) nodeType = 'Graph'; else
+        if (!this.props.isGraph &&  this.props.isVertex && (this.props.isVoid || !this.props.data)) nodeType = 'VoidVertex'; else
+        if (!this.props.isGraph &&  this.props.isVertex) nodeType = 'Vertex'; else
+        if (!this.props.isGraph && !this.props.isVertex) nodeType = 'Field';
 
-        // if(!windoww.cpts) windoww.cpts = {};
-        // windoww.cpts[this.props.nodeid]=this;
-        // console.log('updated');
-        //return this.r || <div>loading...</div>;
-
-        // set classes
-        this.nodeType = 'NODE_TYPE_ERROR';
-        if ( this.props.isEdgePoint) this.nodeType = 'EdgePoint'; else
-        if ( this.props.isGraph &&  this.props.isVertex) this.nodeType = 'GraphVertex'; else
-        if ( this.props.isGraph && !this.props.isVertex) this.nodeType = 'Graph'; else
-        if (!this.props.isGraph &&  this.props.isVertex && (this.props.isVoid || !this.props.data)) this.nodeType = 'VoidVertex'; else
-        if (!this.props.isGraph &&  this.props.isVertex) this.nodeType = 'Vertex'; else
-        if (!this.props.isGraph && !this.props.isVertex) this.nodeType = 'Field';
-
-        // const named: LNamedElement = this.props.data as LNamedElement; // LNamedElement.fromPointer(this.props.dataid);
-        const classesOverride = [this.nodeType, ...cssOverride]; // , (named?.name === 'default') ? 'default' : ''];
-        const styleOverride: React.CSSProperties = {};
-        // set classes end
-        const size: Readonly<GraphSize> = this.getSize();
-
-        let isVertex: boolean= false, isEdge: boolean= false, isGraph: boolean = false;
-        switch (this.nodeType) {
-            case 'Graph': isGraph = true; break;
-            case 'GraphVertex': isGraph = isVertex = true; break;
-            case 'Vertex':
-            case 'VoidVertex':
-            case 'EdgePoint':
-                isVertex = true;
-                break;
-            default: break;
-        }
-
-        if (isGraph){
-            let offset = (this.props.node as any as LGraph).offset;
-            let zoom = (this.props.node as any as LGraph).zoom;
-            // @ts-ignore
-            styleOverride['--offset-x'] = offset.x + 'px';
-            // @ts-ignore
-            styleOverride['--offset-y'] = offset.y + 'px';
-            // @ts-ignore
-            styleOverride['--zoom-x'] = zoom.x;
-            // @ts-ignore
-            styleOverride['--zoom-y'] = zoom.y;
-        }
-        if (isVertex){
-            // @ts-ignore
-            styleOverride['--top'] = size.y + 'px';
-            // @ts-ignore
-            styleOverride['--left'] = size.x + 'px';
-            let isResized = this.props.node.isResized;
-            if (isResized || !this.props.view.adaptWidth) styleOverride.width = size.w+'px';
-            else styleOverride.width = undefined;
-            if (isResized || !this.props.view.adaptHeight) styleOverride.height = size.h+'px';
-            else styleOverride.height = undefined; // todo: the goal is to reset jqui inline style, but not override user-defined inline style
-        }
-
-
-        return super.render(this.nodeType, styleOverride, classesOverride);
+        return super.render(nodeType);
         // return <RootVertex props={this.props} render={super.render()} super={this} key={this.props.nodeid+'.'+this.state?.forceupdate} />;
     }
 
