@@ -27,8 +27,8 @@ jobs:
       - name: npm install, build, and test
         working-directory: ./frontend
         run: |
-          npm i
           npm i react-json-view --force
+          npm i
           export NODE_OPTIONS=--openssl-legacy-provider
           CI='' npm run build
 
