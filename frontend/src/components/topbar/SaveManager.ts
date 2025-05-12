@@ -45,13 +45,13 @@ export class SaveManager {
         let save: GObject<DState> = SaveManager.tmpsave = typeof state0 === 'string' ? JSON.parse(state0) : state0;
         for (let vid of [...save.viewelements, ...save.viewpoints]) {
             for (let key of DViewElement.RecompileKeys) {
-                if(!transientProperties.view[vid]) transientProperties.view[vid] = {name: (save.idlookup[vid] as any)?.name || 'Unnamed'} as any;
+                if (!transientProperties.view[vid]) transientProperties.view[vid] = {name: (save.idlookup[vid] as any)?.name || 'Unnamed'} as any;
                 key = 'VIEWS_RECOMPILE_' + key;
                 if (!save[key]) save[key] = [];
                 save[key].push(vid);
             }
         }
-        VersionFixer.update(save);
+        save = VersionFixer.update(save);
         LoadAction.new(save);
     }
 

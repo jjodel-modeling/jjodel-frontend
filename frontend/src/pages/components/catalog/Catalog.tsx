@@ -1,5 +1,5 @@
 import React, {useState} from "react";
-import { LProject } from "../../../joiner";
+import {type Dictionary, LProject} from "../../../joiner";
 import { Menu, Item } from "../menu/Menu";
 import { Project } from "../Project";
 
@@ -112,6 +112,13 @@ const Catalog = (props: ChildrenType) => {
         var sorted = items;
         var iteratees: ((obj: LProject) => any) | string = 'created';
 
+
+        let projectNames: Dictionary<string, LProject> = {};
+        for (let p of props.projects) {
+            if (!p) continue;
+            projectNames[p.name] = p;
+        }
+
         switch(sortingMode) {
             case "alphabetical":
                 sorted = _.sortBy(items, 'name');
@@ -139,7 +146,7 @@ const Catalog = (props: ChildrenType) => {
                     </span></div>}
 
                     {
-                        sorted.map((p,i) => <Project key={i} data={p} mode={mode} />)
+                        sorted.map((p,i) => <Project key={i} data={p} mode={mode} pnames={projectNames} />)
                     }
 
                 </div>
@@ -157,10 +164,10 @@ const Catalog = (props: ChildrenType) => {
                     </div>
                     {
                         sorted.map(p => <>
-                            {filters[0] && p.type === "public" && <Project key={p.id} data={p} mode={mode} />}
-                            {filters[1] && p.type === "private" && <Project key={p.id} data={p} mode={mode} />}
-                            {filters[2] && p.type === "collaborative" && <Project key={p.id} data={p} mode={mode} />}
-                            {!filters[0] && !filters[1] && !filters[2] && <Project key={p.id} data={p} mode={mode} />}
+                            {filters[0] && p.type === "public" && <Project key={p.id} data={p} mode={mode} pnames={projectNames} />}
+                            {filters[1] && p.type === "private" && <Project key={p.id} data={p} mode={mode} pnames={projectNames} />}
+                            {filters[2] && p.type === "collaborative" && <Project key={p.id} data={p} mode={mode} pnames={projectNames} />}
+                            {!filters[0] && !filters[1] && !filters[2] && <Project key={p.id} data={p} mode={mode} pnames={projectNames} />}
                         </>)
                     }
                 </div>

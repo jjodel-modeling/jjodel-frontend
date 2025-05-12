@@ -110,7 +110,7 @@ everytime you put hands into a D-Object shape or valid values, you should docume
         let currVer = prevVer;
         let singleton = new VersionFixer();
         let canAutocorrect = U.getHashParam('repair') === '1';
-        if (canAutocorrect) VersionFixer.autocorrect(s);
+        if (canAutocorrect) s = VersionFixer.autocorrect(s, false, false);
         while (currVer !== VersionFixer.highestVersion) {
             Log.exDev(!VersionFixer.versionAdapters[currVer], "missing version adapter from \""+ currVer+"\", please notify the developers.",
                 {adapers: VersionFixer.versionAdapters, curr: VersionFixer.versionAdapters[currVer]});
@@ -124,7 +124,7 @@ everytime you put hands into a D-Object shape or valid values, you should docume
             Log.exDev(currVer <= prevVer, "version updater found loop at version \""+currVer+"\", please notify the developers.");
             prevVer = currVer;
         }
-        if (canAutocorrect) VersionFixer.autocorrect(s);
+        if (canAutocorrect) s = VersionFixer.autocorrect(s, false, false);
         return s;
     }
 
@@ -169,12 +169,12 @@ everytime you put hands into a D-Object shape or valid values, you should docume
         return s;
     }
 
-    public static autocorrect(s0?: DState, popupIfCorrect: boolean = false): DState {
+    public static autocorrect(s0?: DState, popupIfCorrect: boolean = false, canLoadAction: boolean = false): DState {
         let s: DState;
         if (s0) s = {...s0} as any;
         else s = {...store.getState()} as any;
+        if (!s0) s0 = {...s};
 
-        console.log('idlookup keys 1', {n: Object.keys(s.idlookup).length, look: {...s.idlookup}});
         let validPtrs: typeof s.idlookup = {};
         let oldIDlookup = {...s.idlookup};
 
@@ -195,22 +195,23 @@ everytime you put hands into a D-Object shape or valid values, you should docume
 
         // remove invalid pointers (with values but pointing to nothing).
         let removedPointers: {final_id:any, fullpath:string[], d_id?:Pointer, key?:string, d?: any}[] = [];
+        let removedElements: {final_id:any, fullpath:string[], d_id?:Pointer, key?:string, d?: any}[] = [];
         let hasDeleted: boolean;
         delete (s as any).id;
         let maxLoop = 100;
-        console.log('idlookup keys 3', {n: Object.keys(s.idlookup).length, look: {...s.idlookup}});
         do {
+            hasDeleted = false;
             if (maxLoop-- <= 0) {
                 console.error({removedPointers});
                 Log.eDevv('version autocorrect exceeded maximum number of corrections', s0);
+                return s0 as any;
                 break;
             }
-            hasDeleted = false;
 
-            console.log('idlookup keys 3.5', {n: Object.keys(s.idlookup).length, look: {...s.idlookup}});
-            U.deepReplace(s, (key:string|number|undefined, obj: any, fullpath:string[]) => {
+            s = U.deepReplace(s, (key:string|number|undefined, obj: any, fullpath:string[]) => {
                 let isPointer = Pointers.isPointer(obj);
                 let isValidPointer = isPointer && s.idlookup[obj]?.id === obj;
+                let id: Pointer<any> = fullpath?.[1];
                 if (isPointer && isValidPointer) return obj;
                 // if: undef or invalid pointer implicates full object removal
                 if ((
@@ -219,15 +220,11 @@ everytime you put hands into a D-Object shape or valid values, you should docume
                     || (key === 'start' && fullpath.length === 3))
                     //|| key === 'viewpoint' && fullpath.length === 3
                 ) {
-                    let id: Pointer<any> = fullpath[1];
                     if (!Pointers.isPointer(id)) { Log.eDevv('found mandatory key in an unexpected position', {fullpath, final_id:obj, s}); return obj; }
                     let d: GObject = s.idlookup[id];
-                    if (key === 'father' && (d?.className === 'DObject' || d?.className === 'DViewElement' || d?.isPrimitive)) return obj; // dobj can have missing father
-                    removedPointers.push({d, d_id: id, final_id:obj, key: key as any, fullpath});
+                    if (key === 'father' && (d?.className === 'DObject' || d?.className === 'DViewElement' || d?.isPrimitive)) return obj; // dobj can have missing father  todo: ?????? really?
+                    removedElements.push({d, d_id: id, final_id:obj, key: key as any, fullpath});
                     if (!(id in s.idlookup)) return undefined;
-                    console.log('autocorrect: removed for missing mandatory pointer '+key, {final_id:obj, key, d, d_id: id, fullpath})
-
-                    delete s.idlookup[id]; // NB: in theory this might be replaced during deepReplace causing a conflict, but in practice it shouldn't.
                     hasDeleted = true;
                     return undefined;
                 }
@@ -242,8 +239,15 @@ everytime you put hands into a D-Object shape or valid values, you should docume
                 // valid obj or pointer
                 return obj;
             })
-            console.log('idlookup keys 3.6', {n: Object.keys(s.idlookup).length, look: {...s.idlookup}});
-            for (let del of removedPointers) if (del.d_id) delete s.idlookup[del.d_id];
+            for (let del of removedElements) {
+
+                if (del.d_id && (del.d_id in s.idlookup)) {
+                    delete s.idlookup[del.d_id];
+                    //@ts-ignore
+                    s.delCount = (s.delCount || 0) + 1;
+                }
+            }
+
         } while (hasDeleted);
 
         for (let k in s.idlookup) {
@@ -251,8 +255,6 @@ everytime you put hands into a D-Object shape or valid values, you should docume
             if (!v) delete s.idlookup[k];
         }
 
-        let adiff = U.arrayDifference(Object.keys(oldIDlookup), Object.keys(s.idlookup));
-        console.log('idlookup keys 4', {n: Object.keys(s.idlookup).length, look: {...s.idlookup}, adiff, iddiff: Object.keys(adiff.added).map(k=>s.idlookup[k])});
         let lookup: Dictionary<DocString<'className', DPointerTargetable[]>> = {};
         for (let k in s.idlookup) {
             let v = s.idlookup[k];
@@ -260,9 +262,9 @@ everytime you put hands into a D-Object shape or valid values, you should docume
             if (!lookup[v.className]) lookup[v.className] = [];
             lookup[v.className].push(v);
         }
-        let common = ['father', 'instances', 'instanceof', 'node', 'model', 'annotations', 'graph'];
+        let common = ['instances', 'instanceof', 'node', 'model', 'annotations', 'graph'];
         let out = {counter: 0, list: [] as {path: string, val: string[]}[]};
-        console.log('idlookup keys 5', {n: Object.keys(s.idlookup).length, look: {...s.idlookup}});
+
         {
             VersionFixer.removeNullPtrs(out, s, lookup, 'DModel', [...common, 'packages'])
             VersionFixer.removeNullPtrs(out, s, lookup, 'DPackage', [...common, 'classifiers', 'subpackages'])
@@ -318,27 +320,30 @@ everytime you put hands into a D-Object shape or valid values, you should docume
             VersionFixer.removeNullPtrs(out, s, lookup, 'rootPointers', rootPointers)
         }
 
-
-        console.log('idlookup keys 6', {n: Object.keys(s.idlookup).length, look: {...s.idlookup}});
         let output: string[] = ['Project repair'];
         let removedDObjects = Object.keys(oldIDlookup).length - Object.keys(s.idlookup).length;
         let diff = U.arrayDifference(Object.keys(oldIDlookup), Object.keys(s.idlookup));
         if (removedDObjects) {
             output.push('removed ' + removedDObjects + ' invalid objects.'); // dobjects
         }
+        let tot_removedPtrs = out.counter + removedPointers.length;
+
+        if (tot_removedPtrs) output.push('removed ' + tot_removedPtrs + ' invalid pointers.');
+        /*
         if (removedPointers.length) output.push('removed ' + removedPointers.length+' invalid pointers.'); // ptr to non-existing elem
         if (out.counter) {
             output.push('removed ' + out.counter + ' invalid pointers.'); // undef in ptr collection
         }
+        */
         if (output.length > 1) {
-            Tooltip.show(<>{(output as any).separator(<br/>)}</>, undefined, undefined, 10);
+            Tooltip.show(<div className={'m-auto text-center'}>{(output as any).separator(<br/>)}</div>, undefined, undefined, 10);
             Log.ii('project repair report', {removedPointers,
                 removedObjects_num: removedDObjects,
                 lookupDiff: U.arrayDifference(Object.keys(oldIDlookup), Object.keys(s.idlookup)),
                 removedObjects: diff.removed.map(e=>oldIDlookup[e]),
                 removedValues: out.counter, output, out});
                 TRANSACTION('project repair', () => {
-                   // LoadAction.new(s);
+                   if (canLoadAction) LoadAction.new(s);
                 })
         }
         else {
@@ -346,9 +351,7 @@ everytime you put hands into a D-Object shape or valid values, you should docume
             Log.ii('project repair report:\tall good, no anomalies detected!');
         }
 
-        console.log('idlookup keys 7', {n: Object.keys(s.idlookup).length, oldn: Object.keys(oldIDlookup).length, look: {...s.idlookup}});
         return s;
-
     }
 
     public static mandatoryKeys = ['father'];
@@ -377,7 +380,7 @@ everytime you put hands into a D-Object shape or valid values, you should docume
                     });
                     if (out && removed.length) {
                         out.counter += v.length - (d as GObject)[k].length;
-                        out.list.push({path:d.id+'.'+k, val: removed})
+                        out.list.push({path:d.id+'.'+k, val: removed});
                     }
                 }
             }

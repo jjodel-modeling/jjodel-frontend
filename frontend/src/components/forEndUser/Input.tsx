@@ -390,6 +390,7 @@ export function InputComponent(props: AllProps) {
             }
             else {
                 let options = getSelectOptions(data, field, props.options, props.children);
+                console.log('select options ret', {options, data, field, opts:props.options, childs:props.children});
                 input = <select {...inputProps}>{options}</select>;
             }
             break;

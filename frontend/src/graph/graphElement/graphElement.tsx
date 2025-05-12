@@ -905,7 +905,6 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
                 });
             }
 
-            console.log('ToggleSelect()', {shift: e.shiftKey, ctrl:e.ctrlKey, meta:e.metaKey})
             if (e.shiftKey || e.ctrlKey) { }
             else {
                 let allNodes: LGraphElement[] | undefined = this.props.node?.graph.allSubElements;
@@ -913,7 +912,6 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
 
                 if (allNodes) for (let node of allNodes) {
                     if (node.id === nid) continue;
-                    console.log('ToggleSelect() pt2 deselectAll', {node, html: node.html});
                     node.deselect(DUser.current);
                 }
             }

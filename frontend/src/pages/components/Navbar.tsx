@@ -385,7 +385,7 @@ function NavbarComponent(props: AllProps) {
                 {name: 'divisor'},
                 {name: 'Analytics', function: () => {}, icon: icon['metrics'], disabled: true}, // TODO
                 {name: debuggerr ? 'Hide debugger' : 'Debug loops', function: () => setDebugger(!debuggerr), icon: icon[debuggerr ? 'eyeslash' : 'eye']},
-                {name: 'Check integrity', function: () => VersionFixer.autocorrect(undefined, true), icon: icon['tools']},
+                {name: 'Check integrity', function: () => VersionFixer.autocorrect(undefined, true, true), icon: icon['tools']},
             ]
         },
 

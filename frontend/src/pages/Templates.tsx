@@ -1,3 +1,4 @@
+import type {Dictionary, Pointer, GObject} from '../joiner';
 import React, {
     ChangeEvent,
     MouseEventHandler,
@@ -173,6 +174,13 @@ const Catalog = (props: ChildrenType) => {
         var items = props.projects.filter(p =>
             (filters[0] && p.type ==="public" || filters[1] && p.type ==="private" || filters[2] && p.type ==="collaborative" || !filters[0] && !filters[1] && !filters[2]));
 
+
+        let projectNames: Dictionary<string, LProject> = {};
+        for (let p of props.projects) {
+            if (!p) continue;
+            projectNames[p.name] = p;
+        }
+
         return (
 
             mode == "cards" ?
@@ -183,10 +191,10 @@ const Catalog = (props: ChildrenType) => {
 
                 {
                     props.projects.map(p => <>
-                        {filters[0] && p.type === "public" && <Project key={p.id} data={p} mode={mode} />}
-                        {filters[1] && p.type === "private" && <Project key={p.id} data={p} mode={mode} />}
-                        {filters[2] && p.type === "collaborative" && <Project key={p.id} data={p} mode={mode} />}
-                        {!filters[0] && !filters[1] && !filters[2] && <Project key={p.id} data={p} mode={mode} />}
+                        {filters[0] && p.type === "public" && <Project key={p.id} data={p} mode={mode} pnames={projectNames} />}
+                        {filters[1] && p.type === "private" && <Project key={p.id} data={p} mode={mode} pnames={projectNames} />}
+                        {filters[2] && p.type === "collaborative" && <Project key={p.id} data={p} mode={mode} pnames={projectNames} />}
+                        {!filters[0] && !filters[1] && !filters[2] && <Project key={p.id} data={p} mode={mode} pnames={projectNames} />}
                     </>)
                 }
 
@@ -199,10 +207,10 @@ const Catalog = (props: ChildrenType) => {
                 </div>
                 {
                     props.projects.map(p => <>
-                        {filters[0] && p.type === "public" && <Project key={p.id} data={p} mode={mode} />}
-                        {filters[1] && p.type === "private" && <Project key={p.id} data={p} mode={mode} />}
-                        {filters[2] && p.type === "collaborative" && <Project key={p.id} data={p} mode={mode} />}
-                        {!filters[0] && !filters[1] && !filters[2] && <Project key={p.id} data={p} mode={mode} />}
+                        {filters[0] && p.type === "public" && <Project key={p.id} data={p} mode={mode} pnames={projectNames} />}
+                        {filters[1] && p.type === "private" && <Project key={p.id} data={p} mode={mode} pnames={projectNames} />}
+                        {filters[2] && p.type === "collaborative" && <Project key={p.id} data={p} mode={mode} pnames={projectNames} />}
+                        {!filters[0] && !filters[1] && !filters[2] && <Project key={p.id} data={p} mode={mode} pnames={projectNames} />}
                     </>)
                 }
             </div>

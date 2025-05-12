@@ -131,6 +131,8 @@
   width: 100%;
   height: 70px;
   margin: auto;
+  display: flex;
+  justify-content: space-evenly;
   background-color: var(--bg-2-5);
   border-bottom-left-radius: calc(var(--radius) * 3);
   border-bottom-right-radius: calc(var(--radius) * 3);

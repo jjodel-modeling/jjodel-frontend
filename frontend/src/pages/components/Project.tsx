@@ -1,4 +1,5 @@
-import {DProject, LProject, R, U} from '../../joiner';
+import {Dictionary, Pointer, store} from '../../joiner';
+import {Constructors, DProject, LProject, R, U} from '../../joiner';
 import React, {JSX} from "react";
 
 import {ProjectsApi} from '../../api/persistance';
@@ -7,7 +8,6 @@ import {Divisor, Item, Menu} from './menu/Menu';
 import card from '../../static/img/card.png';
 import {icon} from './icons/Icons';
 import {Btn, CommandBar, Sep} from '../../components/commandbar/CommandBar';
-import { int } from '../../joiner/types';
 
 import { 
     VscLock as Lock,
@@ -19,6 +19,7 @@ import { SlShare as Share2 } from "react-icons/sl";
 import { Tooltip } from '../../components/forEndUser/Tooltip';
 import { time } from 'console';
 import { Logo } from '../../components/logo';
+import {compressToUTF16} from "async-lz-string";
 
 
 function formatDate(lastModified: number){
@@ -49,7 +50,19 @@ type Props = {
     data: LProject;
     mode?: string;
     key: any;
-    index?: number; // a che serve? si può togliere?
+    pnames: Dictionary<string, LProject>;
+};
+type PropsCard = {
+    data: LProject;
+    mode?: string;
+    key: any;
+    pnames: Dictionary<string, LProject>;
+};
+type PropsList = {
+    data: LProject;
+    mode?: string;
+    key: any;
+    pnames: Dictionary<string, LProject>;
 };
 
 type ProjectTypeType = {
@@ -64,6 +77,52 @@ function ProjectType(props: ProjectTypeType){
     </>);
 }
 
+export async function downloadDuplicate(project: DProject, pnames: Dictionary<string, any>): Promise<void> {
+    project = await duplicateProject(project, pnames);
+    U.download(`${project.name}.jjodel`, JSON.stringify(project));
+}
+
+export async function duplicateProject(project: DProject, pnames?: Dictionary<string, any>): Promise<DProject> {
+    console.log('duplicateProject 0');
+
+    let oldID = project.id;
+    project.id = Constructors.makeID();
+    if (project.name.indexOf('copy') === -1) project.name += ' copy';
+    console.log('duplicateProject 1');
+
+    let projectNames: Dictionary<string, any>;
+    if (pnames) projectNames = pnames;
+    else {
+        let state = store.getState();
+        projectNames = {};
+        for (let ptr of state.projects) {
+            let p = state.idlookup[ptr];
+            if (!p) continue;
+            projectNames[p.name||''] = ptr;
+        }
+    }
+    console.log('duplicateProject 3', {name: project.name, projectNames});
+    project.name = U.increaseEndingNumber(project.name, false, false, (str)=> {
+        console.log('duplicateProject naming', {str, name: project.name, projectNames});
+        return projectNames[str]
+    })
+
+    console.log('await decompression');
+    const state = JSON.parse(await U.decompressState(project.state));
+    console.log('await decompression done');
+
+    state.idlookup[oldID].id = project.id;
+    state.idlookup[oldID].name = project.name;
+    state.idlookup[project.id] = state.idlookup[oldID];
+    delete state.idlookup[oldID];
+    let str = JSON.stringify(state);
+    str = U.replaceAll(str, oldID, project.id);
+    project.state = await compressToUTF16(str);
+    state.idlookup[project.id] = {...project, state: ''} as any;
+    console.log('duplicateProject 6');
+    return project;
+}
+
 function Project(props: Props): JSX.Element {
     const {data} = props;
 
@@ -73,11 +132,10 @@ function Project(props: Props): JSX.Element {
         await ProjectsApi.favorite(project.__raw as DProject);
     };
 
-    const selectProject = () => {
-        R.navigate(`/project?id=${data.id}`, true);
+    const selectProject = (repair: boolean = false) => {
+        R.navigate(`/project?id=${data.id}`+(repair ? '&repair=1' : ''), true);
         //U.resetState();
     }
-
 
     const exportProject = async() => {
         // await ProjectsApi.save(data);
@@ -129,60 +187,60 @@ function Project(props: Props): JSX.Element {
         </>);
     }
 
-    function ProjectCard(props: Props): JSX.Element {
+    function ProjectCard(props: PropsCard): JSX.Element {
 
 
-        function multiplicity(n: int, none: string, one: string, many: string){
+        function multiplicity(n: number, none: string, one: string, many: string){
             if (n <= 0) return none;
             if (n === 1) return n + ' ' + one;
             if (n > 1) return n + ' ' + many;
         }
 
         function getClickedElement(e: any){
-
-            if(e.target.className === 'bi bi-star-fill' || e.target.className === 'bi bi-star' || e.target.className === 'bi bi-chevron-down' || e.target.className === 'item') {
+            if (e.target.className === 'bi bi-star-fill' || e.target.className === 'bi bi-star' || e.target.className === 'bi bi-chevron-down' || e.target.className === 'item') {
                 return;
             } else {
-                selectProject(); 
+                selectProject(false);
             }
         }
 
         return (
             <Tooltip tooltip={`${props.data.type} project with ${multiplicity(props.data.metamodelsNumber,'no metamodels', 'metamodel', 'metamodels')}, 
                 ${multiplicity(props.data.modelsNumber,'no models', 'model', 'models')}, 
-                ${multiplicity(props.data.viewpointsNumber -2, 'no (custom) viewpoints', '(custom) viewpoint', '(custom) viewpoints')}` } position={'top'} offsetY={10} theme={'dark'} inline><div className={`project-card-v2 ${data.type}`} 
+                ${multiplicity(props.data.viewpointsNumber -2, 'no (custom) viewpoints', '(custom) viewpoint', '(custom) viewpoints')}` } position={'top'} offsetY={10} theme={'dark'} inline><div className={`project-card-v2 ${data.type}`}
                 onClick={e => getClickedElement(e)}>
                 <div className="project-actions d-flex" style={{position: 'absolute', top: 10, right: 5}}>
                     {data.isFavorite ? <i onClick={(e) => toggleFavorite(data)} className="bi bi-star-fill" />
                         :
                         <i onClick={(e) => toggleFavorite(data)} className="bi bi-star" />
                     }
-                    
+
                     <Menu>
-                            <Item icon={icon['new']} keystroke={'<i class="bi bi-command"></i>'} action={e => {selectProject()}}>Open</Item>
-                            <Item icon={icon['duplicate']}>Duplicate</Item>
-                            <Item icon={icon['download']} action={e => exportProject()}>Download</Item>
-                            <Divisor />
-                            <Item icon={icon['favorite']} action={(e => toggleFavorite(data))}>{!data.isFavorite ? 'Add to favorites' : 'Remove from favorites'}</Item>
-                            <Divisor />
-                            <Item icon={icon['delete']} action={async e => await deleteProject()}>Delete</Item>
+                        <Item icon={icon['new']} action={e => {selectProject()}}>Open</Item>
+                        <Item icon={icon['download']} action={e => exportProject()}>Download</Item>
+                        <Item icon={icon['duplicate']} action={e => downloadDuplicate(data.__raw as DProject, props.pnames)}>Duplicate</Item>
+                        <Item icon={icon['tools']} action={e => selectProject(true)}>Repair & open</Item>
+                        <Divisor />
+                        <Item icon={icon['favorite']} action={(e => toggleFavorite(data))}>{!data.isFavorite ? 'Add to favorites' : 'Remove from favorites'}</Item>
+                        <Divisor />
+                        <Item icon={icon['delete']} action={async e => await deleteProject()}>Delete</Item>
                     </Menu>
                 </div>
                 <div className='header'>
                     <Logo style={{fontSize: '2em', float: 'left', marginTop: '0px', marginBottom: '20px', marginRight: '10px'}}/>
-                    <h5 className={'d-block'} style={{cursor: 'pointer'}} onClick={e => selectProject()}>
+                    <h5 className={'d-block'} style={{cursor: 'pointer'}} onClick={e => selectProject(false)}>
                         {data.name}
                     </h5>
                     <p className={'description'}>{data.description}</p>
                     <div className={'last-updated'}>
                         <div className='date'><i className="bi bi-clock-history"></i> Last updated {formatDate(data.lastModified)}</div>
-                        
+
                         <div className={'type'}>
                             {data.type === 'public' && <UnLock className={'type-icon'} style={{fontSize: '1.2em', color: 'var(--bg-4)'}}/>}
-                            {data.type === 'private' && <Lock  className={'type-icon'} style={{fontSize: '1.2em', color: 'var(--bg-4)'}}/>} 
-                            {data.type === 'collaborative' && <Share2 className={'type-icon'} style={{fontSize: '1.2em', color: 'var(--bg-4)'}}/>} 
+                            {data.type === 'private' && <Lock  className={'type-icon'} style={{fontSize: '1.2em', color: 'var(--bg-4)'}}/>}
+                            {data.type === 'collaborative' && <Share2 className={'type-icon'} style={{fontSize: '1.2em', color: 'var(--bg-4)'}}/>}
                         </div>
-                    </div>                   
+                    </div>
                 </div>
             </div></Tooltip>);
         }
@@ -190,7 +248,7 @@ function Project(props: Props): JSX.Element {
 
     /* LIST */
 
-    function ProjectList(props: Props): JSX.Element {
+    function ProjectList(props: PropsList): JSX.Element {
 
         let timeago = Date.now() - data.lastModified;
         let timeunit: string;
@@ -211,9 +269,9 @@ function Project(props: Props): JSX.Element {
         else { timeago/= min; timeunit = 'years'; }
 
 
-        function timeConverter(UNIX_timestamp: int){
+        function timeConverter(UNIX_timestamp: number){
             var a = new Date(UNIX_timestamp);
-            
+
             const formattedDate2 = a.toISOString();
 
             const formattedDate = new Intl.DateTimeFormat('en-US', {
@@ -232,7 +290,7 @@ function Project(props: Props): JSX.Element {
 
         return (<>
             <div className="row data">
-                
+
                 <div style={{paddingLeft: '15px'}} className={'col-4'} onClick={()=> {selectProject()}}>{data.name}</div>
                 <div className={'col-1'} onClick={()=> {selectProject()}}>{typeIcon(data.type)}</div>
                 <div className={'col-3'} onClick={()=> {selectProject()}}>{timeConverter(data.creation+0)}</div>
@@ -241,9 +299,10 @@ function Project(props: Props): JSX.Element {
                     <CommandBar noBorder={true} style={{marginBottom: '0'}}>
                         <Btn icon={'favorite'} action={(e => toggleFavorite(data))} tip={!data.isFavorite ? 'Add to favorites' : 'Remove from favorites'} />
                         <Btn icon={'minispace'} />
-                        <Btn icon={'copy'} action={e => props.data.duplicate()} tip={'Duplicate project'}/>
+                        <Btn icon={'bi-tools'} action={e => selectProject(true)} tip={'Repair & open'}/>
                         <Btn icon={'minispace'} />
                         <Btn icon={'download'} action={e => exportProject()} tip={'Download project'}/>
+                        <Btn icon={'copy'} action={e => downloadDuplicate(data.__raw as DProject, props.pnames)} tip={'Download a duplicate'}/>
                         <Sep />
                         <Btn icon={'delete'} action={async e => await deleteProject()} tip={'Delete project'}/>
                     </CommandBar>
@@ -255,8 +314,8 @@ function Project(props: Props): JSX.Element {
 
     return(<>
         {props.mode === "cards" ?
-            <ProjectCard index={props.index} key={props.key} data={props.data} /> :
-            <ProjectList index={props.index}  key={props.key} data={props.data} />
+            <ProjectCard key={props.key} data={props.data} pnames={props.pnames} /> :
+            <ProjectList key={props.key} data={props.data} pnames={props.pnames} />
         }
     </>);
 }

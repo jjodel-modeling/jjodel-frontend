@@ -42,6 +42,7 @@ function ProjectComponent(props: AllProps): JSX.Element {
             }
             if (project.state) {
                 const state = JSON.parse(await U.decompressState(project.state));
+                console.log('loading state: ', {state, project, ps: project.state});
                 state['idlookup'][DUser.current] = user.__raw;
                 if (!state['users'].includes(DUser.current)) state['users'].push(DUser.current);
                 SaveManager.load(state);

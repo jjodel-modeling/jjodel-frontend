@@ -201,8 +201,8 @@ function LeftBar(props: LeftBarProps): JSX.Element {
                     </Menu>
                 }
 
-                {props.projects && props.projects.filter(p => p.isFavorite).length > 0 &&
-                    <Menu title={"Recent"} mode={'collapsable'}>
+                {props.projects /*&& props.projects.filter(p => p.isFavorite).length > 0 */&&
+                    <Menu title={"Recently modified"} mode={'collapsable'}>
                         {props.projects
                             .sort((a,b) => (b.lastModified > a.lastModified) ?  1 : -1)
                             .slice(0,5)

@@ -227,7 +227,11 @@ export class TargetableProxyHandler<ME extends GObject = DModelElement, LE exten
         let ret;
         let isError = false;
         // console.error('_proxy get PRE:', {targetObj, propKey, proxyitself, arguments});
-        try { ret = this.get0(targetObj, propKey, proxyitself); } catch(e) { ret = e; isError = true;}
+        try { ret = this.get0(targetObj, propKey, proxyitself); } catch(e) {
+            Log.eDevv('failed to get property', {targetObj, propKey, e});
+            ret = e;
+            isError = true;
+        }
 
         // if (isError) throw ret;
         // console.error('_proxy get POST:', {targetObj, propKey, ret, isError});
@@ -351,7 +355,11 @@ export class TargetableProxyHandler<ME extends GObject = DModelElement, LE exten
         if (propKey in this.l || propKey in this.d || (this.l as GObject)[this.s + (propKey as string)]) {
             // todo: il LogicContext passato come parametro risulta nell'autocompletion editor automaticamente generato, come passo un parametro senza passargli il parametro? uso arguments senza dichiararlo?
             if (typeof propKey !== 'symbol' && this.s + propKey in this.lg) {
-                this.lg[this.s + propKey](value, new LogicContext(proxyitself as any, targetObj));
+                try {
+                    this.lg[this.s + propKey](value, new LogicContext(proxyitself as any, targetObj));
+                } catch (e) {
+                    Log.eDevv('failed to set property', {targetObj, propKey, e});
+                }
                 return true;
             }
 

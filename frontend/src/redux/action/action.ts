@@ -187,14 +187,14 @@ let lastDescription: {name: string, oldval: any, newval: any, desc?: string} | u
 // NB: cannot be async, it changes execution order and break many codes where return value is determined in a transaction.
 // also because BEGIN() becomes stuck and actions cannot fire until the server replies or times out.
 // export function TRANSACTION<F extends (...args: any)=>any>(func: NoAsyncFn<F>, ...params: Parameters<F>): boolean | DState {
-export function TRANSACTION(name:string, func: ()=> void, oldval?: any, newval?: any, desc?:string): boolean {
+export async function TRANSACTION(name:string, func: ()=> void, oldval?: any, newval?: any, desc?:string): Promise<boolean> {
 //export function TRANSACTION<F extends NoAsyncFn)>(func: F, ...params: Parameters<F>): boolean | DState {
     BEGIN();
     if (!lastDescription) lastDescription = {name, oldval, newval, desc};
     let e: Error = null as any;
     try {
         let lenient = false as boolean;
-        if (lenient || !t.hasAborted) func();
+        if (lenient || !t.hasAborted) await func();
     } catch (err: any) { e = err; ABORT(); }
     if (t.hasAborted) {
         if (e) Log.ee('Transaction failed:', e, {depth:t.transactionDepthLevel});

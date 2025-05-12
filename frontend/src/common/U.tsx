@@ -124,6 +124,19 @@ export class R{
     }
 }
 
+
+
+export type DialogButton = {txt:string, action?: ()=>{}};
+export type DialogOptions = {
+    title: string,
+    question: string,
+    options: DialogButton[],
+    promise: Promise<string>,
+    resolve: (val: string | PromiseLike<string>) => void,
+    reject: (val: string | PromiseLike<string>) => void
+};
+
+
 @RuntimeAccessible('U')
 export class U {
     private static clickedOutsideMap: WeakMap<Element, (e: Element, evt: JQuery.ClickEvent)=>void> = null as any;
@@ -232,20 +245,33 @@ export class U {
 
     static dialog(message: string, label: string, action: () => any): void {
         windoww.dialog_action = action;
-        SetRootFieldAction.new('dialog', `${message}:${label}`, '');
+        SetRootFieldAction.new('dialog', `${message}:${label}`, '', false);
+    }
+
+    static dialogOptions?: DialogOptions = undefined;
+
+    static async dialog2(title: string, question: string, options: {txt:string, acton?: ()=>{}}[]): Promise<string> {
+        let resolve: ((str: string | PromiseLike<string>) => void) = null as any;
+        let reject: ((str: string | PromiseLike<string>) => void) = null as any;
+        let promise = new Promise<string>(
+            (doResolve, doReject) => { resolve = doResolve; reject = doReject; });
+        U.dialogOptions = {title, question, options, promise, resolve, reject};
+        SetRootFieldAction.new('dialog', 'dialog2_on', '', false);
+        return promise;
     }
 
     static async decompressState(state: string): Promise<string> {
         return await decompressFromUTF16(state);
     }
-    static async compressedState(id: Pointer<DProject>): Promise<string> {
+    static async compressedState(dproject: DProject): Promise<string> {
+        let id: Pointer<DProject> = dproject.id;
         const state = store.getState();
         const idlookup: Record<Pointer<DPointerTargetable>, DPointerTargetable> = {};
-        for(const [pointer, object] of Object.entries(state.idlookup) as [Pointer, DPointerTargetable][]) {
+        for (const [pointer, object] of Object.entries(state.idlookup) as [Pointer, DPointerTargetable][]) {
             if (object.className === DProject.name && pointer !== id) continue;
             idlookup[pointer] = object;
         }
-        (state.idlookup[id] as DProject).state = '';
+        state.idlookup[id] = {...dproject, state: ''} as any;
         state.projects = [id];
         state.idlookup = idlookup;
         return await compressToUTF16(JSON.stringify(state));
@@ -1815,7 +1841,7 @@ export class U {
     // does make a deep copy too.
     static deepReplace(obj: any, replacer?: ((key: undefined | string | number, o: any, fullpath:string[], depth: number) => any),
                        circularReferenceValue: any | ((obj_alreadymet: GObject)=>any) = (o: GObject)=>((o.__raw || o).id || '_circular_ref_')): any {
-
+        U.debugcounter = 0;
         const avoidloop: WeakMap<any, true> = new WeakMap();
         return U.deepReplace_rec(obj, avoidloop, replacer, circularReferenceValue);
     }
@@ -1861,17 +1887,18 @@ export class U {
 
     static debugcounter = 0;
     static deepReplace_rec(obj: any, avoidloop: WeakMap<any, true>, replacer?: ((key: undefined | string | number, o: any, fullpath: string[], depth: number) => any),
-                           circularReferenceValue?: any | ((obj_alreadymet: GObject)=>any), key?: number | string, fullpath:string[]=[], curdept:number=0,
+                           circularReferenceValue?: any | ((obj_alreadymet: GObject)=>any), key?: number | string, fullpath:string[]=[], curdepth:number=0,
                            eagerLoopReturn: boolean = false, ignoreProto = true): any {
 
-        if (++U.debugcounter % 10000 === 0) {
+        // console.log('deepreplacer pre', {obj, fullpath, key, curdepth});
+        if (++U.debugcounter % 100000 === 0) {
             Log.eDevv('possible loop in deepreplace', {fullpath, obj});
             return obj;
         }
         switch (typeof obj) {
             case "symbol": // don't know what really do with symbols and funcs
             case "function":
-                return replacer ? replacer(key, obj, fullpath, curdept) : obj;
+                return replacer ? replacer(key, obj, fullpath, curdepth) : obj;
             default: // because primitive types cannot be used as WeakMap.set(key), but can as Object keys
                 /*if (obj in avoidloop) return U.weakmapGet(avoidloop, obj);
                 else U.weakmapSet(avoidloop, obj, obj); */
@@ -1894,7 +1921,9 @@ export class U {
         }
 
         let old_obj = obj;
-        if (replacer) obj = replacer(key, obj, fullpath, curdept);
+
+        if (replacer) obj = replacer(key, obj, fullpath, curdepth);
+        // console.log('deepreplacer replaced', {obj, old_obj, fullpath, key, curdepth, changed: obj === old_obj});
         switch (typeof obj){
             default: break; // obj = obj; return obj; // for any leaf type
             case "object":
@@ -1903,13 +1932,13 @@ export class U {
                 if (isValidElement(obj)) return obj;
                 if (U.isError(obj)) return obj;
                 if (Array.isArray(obj)) {
-                    obj = obj.map((o, i) => U.deepReplace_rec(o, avoidloop, replacer, circularReferenceValue, i, [...fullpath, ''+i], curdept+1));
+                    obj = obj.map((o, i) => U.deepReplace_rec(o, avoidloop, replacer, circularReferenceValue, i, [...fullpath, ''+i], curdepth+1));
                     break;
                 }
                 let o: GObject = {};
                 for (let k in obj) {
-                    if (ignoreProto && obj.hasOwnProperty(k)) continue;
-                    o[k] = U.deepReplace_rec(obj[k], avoidloop, replacer, circularReferenceValue, k, [...fullpath, k], curdept+1);
+                    if (ignoreProto && !obj.hasOwnProperty(k)) continue;
+                    o[k] = U.deepReplace_rec(obj[k], avoidloop, replacer, circularReferenceValue, k, [...fullpath, k], curdepth+1);
                 }
                 obj = o;
                 break;

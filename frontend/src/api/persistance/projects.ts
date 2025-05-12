@@ -1,10 +1,10 @@
 import {
     CreateElementAction,
     DModel,
-    DProject,
+    DProject, L,
     LProject,
     Pointer, R,
-    SetFieldAction,
+    SetFieldAction, store,
     TRANSACTION,
     U
 } from '../../joiner';
@@ -14,6 +14,8 @@ import {Project} from "../DTO/Project";
 import {UpdateProjectRequest} from "../DTO/UpdateProjectRequest";
 import {CreateProjectRequest} from "../DTO/CreateProjectRequest";
 import Api from "../api";
+import {duplicateProject} from "../../pages/components/Project";
+import {COMMIT} from "../../redux/action/action";
 
 class ProjectsApi {
 
@@ -69,7 +71,7 @@ class ProjectsApi {
         project.viewpointsNumber = project.viewpoints.length;
         project.metamodelsNumber = project.metamodels.length;
         project.modelsNumber = project.models.length;
-        const state = await U.compressedState(project.id);
+        const state = await U.compressedState(project.__raw as DProject);
         project.state = state;
         const dProject = project.__raw as DProject;
         dProject.state = state;
@@ -85,12 +87,41 @@ class ProjectsApi {
 
 
     static async importFromText(content: string, name: string = '', date: number = Date.now()) {
-        const project = JSON.parse(content) as DProject;
+        let project = JSON.parse(content) as DProject;
         project.isFavorite = false;
-        if (U.isOffline()) Offline.import(project);
-        else await Online.import(project);
-        CreateElementAction.new(project);
-    }
+        let state = store.getState();
+        let response: string = '';
+        let resp_replace = 'Replace';
+        let resp_dup = 'Duplicate';
+        TRANSACTION('import project', async ()=>{
+            console.log('importing project:', {id:project.id, project, projects: state.projects, included: state.projects.includes(project.id)});
+            if (state.projects.includes(project.id)) {
+                console.log('awaiting...')
+                let promise = U.dialog2('Project already imported', '', [{txt:resp_replace}, {txt:resp_dup}]);
+                COMMIT();
+                response = await promise;
+                console.log('awaiting... COMPLETED ', response)
+            }
+            console.log('awaiting... skipped? ', response)
+            if (response === resp_dup) {
+                let ret = duplicateProject(project);
+                console.log('awaiting... duplicate ', {ret, rett: typeof ret === 'object' && ret ? {...ret} : ret, project})
+                project = await ret;
+                console.log('awaiting... duplicate COMPLETED ', project)
+            }
+            if (response === resp_replace){
+                let old = L.from(project.id);
+                if (old) {
+                    old.delete();
+                    COMMIT();
+                }
+            }
+            if (U.isOffline()) Offline.import(project);
+            else await Online.import(project);
+            CreateElementAction.new(project);
+            })
+        }
+
 
     static import() {
         const reader = new FileReader();

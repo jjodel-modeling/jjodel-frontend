@@ -7,31 +7,7 @@ import { U } from "../../joiner";
 type BtnProps = {
     disabled?: boolean;
     active?: boolean;
-    icon: "up"
-        | "down"
-        | "back"
-        | "fwd"
-        | "add"
-        | "add2"
-        | "delete"
-        | "delete2"
-        | "open"
-        | "edit"
-        | "favorite"
-        | "shrink"
-        | "expand"
-        | "space"
-        | "minispace"
-        | "sep"
-        | "check"
-        | "copy"
-        | "close"
-        | "info"
-        | "show"
-        | "open-down"
-        | "close-up"
-        | "settings"
-        | "download";
+    icon: string;
 
     tip?: ReactNode;
     label?: string;
@@ -46,10 +22,9 @@ type BtnProps = {
 
 
 export const Btn = (props: BtnProps) => {
-
     const [askingConfirm, setConfirm] = useState(false);
     const mode = (props.mode ? props.mode : 'normal');
-    let needConfirm = props.needConfirm || props.icon === 'delete' && !props.disabled;
+    let needConfirm = props.needConfirm || (props.icon === 'delete' && !props.disabled);
     let i_classes = (props.className||'') + ` bi tab-btn commandbar-btn ${askingConfirm ? 'bi-question-square-fill question': props.icon} ${props.theme ? props.theme : 'light'} ${props.size||''} ${mode} ${props.disabled ? 'disabled ' : ''}`
     let action = (e: React.MouseEvent<any,any>) => {
         console.log('commandbar action', {disabled: props.disabled, action:props.action, askingConfirm, needConfirm});
