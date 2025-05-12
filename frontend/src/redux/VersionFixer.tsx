@@ -173,7 +173,7 @@ everytime you put hands into a D-Object shape or valid values, you should docume
         let s: DState;
         if (s0) s = {...s0} as any;
         else s = {...store.getState()} as any;
-        if (!s0) s0 = {...s};
+        if (!s0) s0 = {...s} as any;
 
         let validPtrs: typeof s.idlookup = {};
         let oldIDlookup = {...s.idlookup};
