@@ -99,9 +99,6 @@ export class Dummy {
                         break;
 
                     case 'subElements':
-                        // could change parent to them, but if parent node is removed, childnodes won't exist anymore either.
-                        // low prio todo: delete subnodes to save memory
-                        break;
                     case 'values':
                     case 'packages':
                     case 'subpackages':

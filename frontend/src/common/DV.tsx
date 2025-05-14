@@ -17,7 +17,7 @@ import React, {ReactNode, useState} from "react";
 import {PaletteType} from "../view/viewElement/view";
 import "./error.scss";
 
-const notificationType: 'classic'|'alert'|'notification' = 'notification';
+const notificationType: 'classic'|'alert'|'notification' = 'classic';
 
 // const beautify = require('js-beautify').html; // BEWARE: this adds some newline that might be breaking and introduce syntax errors in our JSX parser
 const beautify = (s: string) => s;
@@ -648,9 +648,12 @@ public static object(): string { return (
 
         switch (notificationType) {
             case 'classic':
-                return (<Measurable draggable={true} resizable={true}><div className={'error-notification'}>
+                return (<Measurable draggable={true} resizable={false}><div className='hoverable error-root' tabIndex={0}>
+                    <i className="bi bi-exclamation-diamond-fill" style={{color: "red"}} />
+                    <div className='content fixed error-notification'>
                         <h1>Something Went Wrong...</h1>
-                        {v && <h2>Error in "{v?.name}" syntax view definition{viewpointname? ' in viewpoint ' + viewpointname : ''}.</h2>}
+                        {v && <h2>Error in "{v?.name}" syntax view
+                            definition{viewpointname ? ' in viewpoint ' + viewpointname : ''}.</h2>}
                         <div className={'error-type'}>
                             <b data-dname={dname} data-nodename={nodename} data-str={false}>
                                 {errortype} Error {on}
@@ -658,6 +661,7 @@ public static object(): string { return (
                             </b>
                         </div>
                         <div className={'error-details'}>{msg}</div>
+                    </div>
                     </div></Measurable>);
                 break;
             case 'alert':

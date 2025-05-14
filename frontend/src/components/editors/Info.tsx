@@ -12,6 +12,8 @@ import {
     Selectors, SetFieldAction, store, TRANSACTION, U, ValueDetail
 } from '../../joiner';
 import {FakeStateProps} from '../../joiner/types';
+
+import ReactJson from 'react-json-view' // npm i react-json-view --force
 import React, {Component, Dispatch, JSX, ReactElement, ReactNode} from 'react';
 import {connect} from 'react-redux';
 import './editors.scss';
@@ -52,7 +54,7 @@ class builder {
         }).filter(e=>!!e) as {value: string, label: string}[];
         // <Select data={data} isMulti={true} field={'dependencies'}/>
 
-        return (<section className={'properties-tab'}>
+        return (<>
             {this.named(data, advanced)}
 
             <label className={'input-container'}>
@@ -62,11 +64,11 @@ class builder {
                     l.dependencies = v.map(e => e.value) as Any<string[]>;
                 }} />
             </label>
-        </section>);
+        </>);
     }
 
     static package(data: LModelElement, advanced: boolean): JSX.Element {
-        return (<section className={'properties-tab'}>
+        return (<>
             <h1>{data.name}</h1>
             {this.named(data, advanced)}
             <label className={'input-container'}>
@@ -77,7 +79,7 @@ class builder {
                 <b className={'me-2'}>Prefix:</b>
                 <Input data={data} field={'prefix'} type={'text'}/>
             </label>
-        </section>);
+        </>);
     }
 
     static class(data: LModelElement, advanced: boolean): JSX.Element {
@@ -103,7 +105,7 @@ class builder {
         let extendValue: {value: string, label: string}[] = lclass.extends.map(c=>({value:c.id, label:c.name}));
         let extendOptions = lclass.validTargetOptions;
 
-        return (<section className={'properties-tab'}>
+        return (<>
             {this.named(data, advanced)}
             <label className={'input-container'}>
                 <b className={'me-2'}>Abstract:</b>
@@ -161,17 +163,17 @@ class builder {
                     }}/>
                 </Tooltip>
             </label>
-        </section>);
+        </>);
     }
 
     static enum(data: LModelElement, advanced: boolean): JSX.Element {
-        return (<section className={'properties-tab'}>
+        return (<>
             {this.named(data, advanced)}
             {advanced && <label className={'input-container'}>
                 <b className={'me-2'}>Serializable:</b>
                 <Input data={data} field={'serializable'} type={'checkbox'}/>
             </label>}
-        </section>);
+        </>);
     }
 
     static feature(data: LModelElement, advanced: boolean): JSX.Element {
@@ -227,7 +229,7 @@ class builder {
     }
 
     static attribute(data: LModelElement, advanced: boolean): JSX.Element {
-        return (<section className={'properties-tab'}>
+        return (<>
             {this.feature(data, advanced)}
             {advanced && <>
                 <label className={'input-container'}>
@@ -239,10 +241,10 @@ class builder {
                     <Input data={data} field={'isIoT'} type={'checkbox'} />
                 </label>
             </>}
-        </section>);
+        </>);
     }
     static reference(data: LModelElement, advanced: boolean): JSX.Element {
-        return (<section className={'properties-tab'}>
+        return (<>
             {this.feature(data, advanced)}
             <label className={'input-container'}>
                 <b className={'me-2'}>Composition:</b>
@@ -256,25 +258,25 @@ class builder {
                 <b className={'me-2'}>Container:</b>
                 <Input data={data} field={'container'} type={'checkbox'} />
             </label>
-        </section>);
+        </>);
     }
     static operation(data: LModelElement, advanced: boolean): JSX.Element {
-        return (<section className={'properties-tab'}>
+        return (<>
             {this.named(data, advanced)}
             <label className={'input-container'}>
                 <b className={'me-2'}>Return:</b>
                 <Select data={data} field={'type'} />
             </label>
-        </section>);
+        </>);
     }
     static literal(data: LModelElement, advanced: boolean): JSX.Element {
-        return (<section className={'properties-tab'}>
+        return (<>
             {this.named(data, advanced)}
             <label className={'input-container'}>
                 <b className={'me-2'}>Ordinal:</b>
                 <Input data={data} field={'ordinal'} type={'number'} />
             </label>
-        </section>);
+        </>);
     }
     static object(data: LModelElement, topics: Dictionary<string, unknown>, advanced: boolean): JSX.Element {
         const object: LObject = LObject.fromPointer(data.id);
@@ -286,30 +288,33 @@ class builder {
             const value = feature.values;
             conform = (value.length >= lowerBound && value.length <= upperBound);
         }
-        return(<section className={'properties-tab'}>
+        let instanceoff = object.instanceof;
+        return(<>
             <h1>{data.name}</h1>
-            {object.instanceof && conform && <label className={'d-block text-center'}>
-                The instance <b className={'text-success'}>CONFORMS</b> to {object.instanceof.name}
+            {instanceoff && conform && <label className={'d-block text-center'}>
+                The instance <b className={'text-success'}>CONFORMS</b> to {instanceoff.name}
             </label>}
-            {object.instanceof && !conform && <label className={'d-block text-center'}>
-                The instance <b className={'text-danger'}>NOT CONFORMS</b> to {object.instanceof.name}
+            {instanceoff && !conform && <label className={'d-block text-center'}>
+                The instance <b className={'text-danger'}>NOT CONFORMS</b> to {instanceoff.name}
             </label>}
-            {!object.instanceof && <label className={'d-block text-center'}>
+            {!instanceoff && <label className={'d-block text-center'}>
                 The instance is <b className={'text-warning'}>SHAPELESS</b>
             </label>}
-            {!object.partial ? null :
+            {instanceoff && !object.partial ? null :
                 <label className={'input-container'}>
                     <b className={'me-2'}>Features:</b>
-                    <button className={'btn btn-primary ms-auto'} onClick={e => object.addValue()}>
-                        <i className={'p-1 bi bi-plus'} />
-                    </button>
+
+                    <CommandBar style={{marginLeft: 'auto', marginTop: '6px'}}>
+                        <Btn icon={'add'} action={()=> object.addValue()} tip={`Add a feature`} className={'add-feature'} />
+                    </CommandBar>
+
                 </label>
             }
             {this.forceConform(object)}
             {object.features.map(f => <div id={`Object-${f.id}`}>
                 {this.value(f, topics, advanced)}
             </div>)}
-        </section>);
+        </>);
     }
     static forceConform(me: LObject) {
         let mm: LModel = Selectors.getLastSelectedModel().m2 as LModel;
@@ -432,7 +437,7 @@ class builder {
                     </button>*/}
                 </label>);
 
-        return(<section className={'properties-tab'}>
+        return(<>
             <h1>{data.name}</h1>
             <label className={'d-flex'}>
                 <label className={'ms-1 my-auto'}>Values</label>
@@ -453,50 +458,80 @@ class builder {
                     </optgroup>
                 </select>
             </label>}
-        </section>)
+        </>)
     }
 }
 
 function InfoComponent(props: AllProps) {
     const {data, node, view, topics, advanced} = props;
 
-    switch (data?.className) {
+    let ddata = data?.__raw || data;
+    let jsx: ReactNode = null;
+    if (data) switch (ddata?.className) {
         case 'DModel':
-            return builder.model(data, advanced);
+            jsx = builder.model(data, advanced); break;
         case 'DPackage':
-            return builder.package(data, advanced);
+            jsx = builder.package(data, advanced); break;
         case 'DClass':
-            return builder.class(data, advanced);
+            jsx = builder.class(data, advanced); break;
         case 'DEnumerator':
-            return builder.enum(data, advanced);
+            jsx = builder.enum(data, advanced); break;
         case 'DAttribute':
-            return builder.attribute(data, advanced);
+            jsx = builder.attribute(data, advanced); break;
         case 'DReference':
-            return builder.reference(data, advanced);
+            jsx = builder.reference(data, advanced); break;
         case 'DOperation':
-            return builder.operation(data, advanced);
+            jsx = builder.operation(data, advanced); break;
         case 'DParameter':
-            return builder.operation(data.father, advanced);
+            jsx = builder.operation(data.father, advanced); break;
         case 'DEnumLiteral':
-            return builder.literal(data, advanced);
+            jsx = builder.literal(data, advanced); break;
         case 'DObject':
-            return builder.object(data, topics, advanced);
+            jsx = builder.object(data, topics, advanced); break;
         case 'DValue':
-            return builder.value(data, topics, advanced);
-    }
-    return <Empty />;
+            jsx = builder.value(data, topics, advanced); break;
+        default: jsx = <Empty />; break;
+    } else jsx = <Empty />;
+    
+    return <section className={'properties-tab'}>
+        {jsx}
+        <h6>State</h6>
+        <div className={'object-state'}>
+            {!ddata || Object.keys(ddata._state).length === 0 ? <pre> Empty</pre> :
+                <ReactJson src={ddata._state}
+                           collapsed={1}
+                           collapseStringsAfterLength={20}
+                           displayDataTypes={true}
+                           displayObjectSize={true}
+                           enableClipboard={true}
+                           groupArraysAfterLength={100}
+                           indentWidth={4}
+                           name={"state"}
+                           iconStyle={"triangle"}
+                           quotesOnKeys={true}
+                           shouldCollapse={false /*((field: CollapsedFieldProps) => { return Object.keys(field.src).length > 3;*/}
+                           sortKeys={false}
+                           theme={"rjv-default"}
+                />}
+            {/*<pre>{Object.keys(dnode._state).length ? JSON.stringify(dnode._state, null, '\t') : undefined}</pre>*/}
+        </div>
+    </section>
 
-}
+        }
 
-interface OwnProps {}
-interface StateProps {
+        interface OwnProps {
+        }
+
+        interface StateProps {
     node?: LGraphElement
     view?: LViewElement
     data?: LModelElement
     topics: Dictionary<string, unknown>
     advanced: boolean
 }
-interface DispatchProps {}
+
+interface DispatchProps {
+}
 
 type AllProps = OwnProps & StateProps & DispatchProps;
 
@@ -505,9 +540,9 @@ function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     const nodeID = state._lastSelected?.node;
     const viewID = state._lastSelected?.view;
     const dataID = state._lastSelected?.modelElement;
-    if(nodeID) ret.node = LGraphElement.fromPointer(nodeID);
-    if(viewID) ret.view = LViewElement.fromPointer(viewID);
-    if(dataID) ret.data = LModelElement.fromPointer(dataID);
+    if (nodeID) ret.node = LGraphElement.fromPointer(nodeID);
+    if (viewID) ret.view = LViewElement.fromPointer(viewID);
+    if (dataID) ret.data = LModelElement.fromPointer(dataID);
     ret.topics = state.topics;
     ret.advanced = state.advanced;
     return ret;

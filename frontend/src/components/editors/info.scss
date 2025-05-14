@@ -5,7 +5,17 @@
 .console {
 
 }
+.properties-tab{
+  .input-container>b.me-2{
+    margin: auto 0;
+  }
 
+  .command-bar .tab-btn.add.add-feature::before{
+    outline: 1.5px solid black;
+    border-radius: 100%;
+    font-size: 1em;
+  }
+}
 .properties-tab,
 .collaborative-tab,
 .tree-view,
@@ -26,10 +36,6 @@
   & section {
 
   }
-}
-
-.properties-tab {
-  overflow: hidden!important;
 }
 
 .no-data-to-display {

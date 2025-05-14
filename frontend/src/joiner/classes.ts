@@ -768,7 +768,7 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         // this.className = thiss.className;
         return this; }
 
-    DUser(name: string, surname: string, nickname: string, affiliation: string, country: string, newsletter: boolean, email: string, token: string): this {
+    DUser(name: string, surname: string, nickname: string, affiliation: string, country: string, newsletter: boolean, email: string, token: string, autoReport?:boolean): this {
         const _this: DUser = this.thiss as unknown as DUser;
         _this.name = name;
         _this.surname = surname;
@@ -778,6 +778,7 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         _this.newsletter = newsletter;
         _this.email = email;
         _this.token = token;
+        _this.autoReport = !!autoReport;
         // statehistory[_this.id] = new UserHistory();
         // todo: make it able to combine last 2 changes with a keystroke.
         //  reapeat N times to combine N actions.
@@ -2383,11 +2384,14 @@ export class DUser extends DPointerTargetable {
     token!: string;
     projects: Pointer<DProject, 0, 'N', LProject> = [];
     project: Pointer<DProject, 0, 1, LProject> = '';
+    autoReport!: boolean;
     __isDUser: true = true; // necessary to trick duck typing to think this is NOT the superclass of anything that extends PointerTargetable.
     /*public static new(id?: DUser["id"], triggerActions: boolean = true): DUser {
         return new Constructors(new DUser('dwc'), undefined, false, undefined, id, true).DPointerTargetable().DUser().end(); }*/
-    public static new(name: string, surname: string, nickname: string, affiliation: string, country: string, newsletter: boolean, email: string, token: string, id?: DUser['id'], persist: boolean = true): DUser {
-        return new Constructors(new DUser('dwc'), undefined, persist, undefined, id).DPointerTargetable().DUser(name, surname, nickname, affiliation, country, newsletter, email, token).end();
+    public static new(name: string, surname: string, nickname: string, affiliation: string, country: string, newsletter: boolean, email: string,
+                      token: string, id?: DUser['id'], persist: boolean = true, autoReport?:boolean): DUser {
+        return new Constructors(new DUser('dwc'), undefined, persist, undefined, id).DPointerTargetable()
+            .DUser(name, surname, nickname, affiliation, country, newsletter, email, token, autoReport).end();
     }
 
     /*
@@ -2473,6 +2477,7 @@ export class LUser<Context extends LogicContext<DUser> = any, D extends DUser = 
     token!: string;
     projects!: LProject[];
     project!: LProject|null;
+    autoReport!: boolean;
     __isLUser!: true;
 
     // public static fromPointer(ptr: Pointer<any>): LUser { return L.fromPointer(ptr) as LUser; }

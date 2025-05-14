@@ -1,4 +1,5 @@
 import React, {Dispatch, ReactElement, ReactNode} from 'react';
+import ReactJson from 'react-json-view' // npm i react-json-view --force
 import {connect} from 'react-redux';
 import {DState} from '../../redux/store';
 import type {
@@ -21,6 +22,7 @@ import './editors.scss';
 import './node-editor.scss';
 import {Empty} from "./Empty";
 import { CommandBar, Btn } from '../commandbar/CommandBar';
+
 
 function NodeEditorComponent(props: AllProps) {
     const selected = props.selected;
@@ -238,8 +240,22 @@ function NodeEditorComponent(props: AllProps) {
 
         <h6>Node state</h6>
         <div className={'object-state'}>
-            {Object.keys(dnode._state).length === 0 && <pre> Empty</pre>}
-            <pre>{Object.keys(dnode._state).length ? JSON.stringify(dnode._state, null, '\t') : undefined}</pre>
+            {Object.keys(dnode._state).length === 0 ? <pre> Empty</pre> :
+                <ReactJson src={dnode._state}
+                           collapsed={1}
+                           collapseStringsAfterLength={20}
+                           displayDataTypes={true}
+                           displayObjectSize={true}
+                           enableClipboard={true}
+                           groupArraysAfterLength={100}
+                           indentWidth={4}
+                           name={"state"}
+                           iconStyle={"triangle"}
+                           quotesOnKeys={true} shouldCollapse={ false /*((field: CollapsedFieldProps) => { return Object.keys(field.src).length > 3;*/ }
+                           sortKeys={false}
+                           theme={"rjv-default"}
+                />}
+            {/*<pre>{Object.keys(dnode._state).length ? JSON.stringify(dnode._state, null, '\t') : undefined}</pre>*/}
         </div>
 
     </div>);

@@ -65,6 +65,9 @@ font-weight: 900 !important;
     z-index:1;
     position: absolute;
     box-shadow: var(--smart-elevation-8);
+    &.fixed{
+      position: fixed;
+    }
   }
 
   &>.content.inline, &>svg>.content.inline{

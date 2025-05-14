@@ -1,6 +1,6 @@
 import React, {Dispatch, ErrorInfo, KeyboardEvent, ReactElement, ReactNode} from 'react';
 import {connect} from 'react-redux';
-import {DState} from '../../redux/store';
+import {DState, statehistory} from '../../redux/store';
 import {compressToBase64, compressToUTF16, decompressFromBase64, decompressFromUTF16} from "async-lz-string";
 import {
     Defaults,
@@ -12,9 +12,11 @@ import {
     LPointerTargetable,
     Overlap,
     Pointer, store,
-    U, LoggerCategoryState, transientProperties
+    U, LoggerCategoryState, transientProperties, ClickEvent, Constructors, D,
+    DUser, UserHistory
 } from '../../joiner';
 import { DefaultView } from '../../common/DV';
+import {VersionFixer} from "../../redux/VersionFixer";
 /*
 *   What's uncatched:
 *   - reducer
@@ -25,11 +27,60 @@ import { DefaultView } from '../../common/DV';
 *
 *
 * */
+class Report{
+    id: string; // new
+    // title?: string;
+    url: string; // new
+    version: string;
+    state: DState;
+    when: number; // changed from string to int
+    e:{'stack': string, 'message': string}; // changed from {'stack': string[], 'msg': string};
+    compostack?: string; // changed from string[]
+    reactMsg?: string; // new
+    // context: any;
+    transient?: {node: GObject, modelElement: GObject, view: GObject};// changed from: transient: {node: serializedObj, data: serializedObj, view: serializedObj};
+    recentMessages: LoggerCategoryState[]; // new
+    history?: UserHistory; // new
+    // maybe add username & projectname, but they are in state
 
-// todo: after we have a server, instead of this, make an automatic error report with POST requests to the server without having the uri char limit
+    constructor(e: Error, info?: React.ErrorInfo, msg?:LoggerCategoryState) {
+        this.id = (e as any).id || Constructors.makeID();
+        this.e = {message:e.message, stack: (e.stack||'')}//.split('\n')};
+        this.state = store.getState();
+        this.version = ""+this.state.version.n;
+        this.url = window.location.href;
+        this.history = statehistory.all;
+        this.transient = transientProperties;
+        this.compostack = info?.componentStack || '';
+        this.reactMsg = info?.digest || '';
+        if (msg){
+            this.when = msg.time;
+            this.recentMessages = [msg];
+        } else {
+            this.when = Date.now();
+            this.recentMessages = Log.allMessages.filter(e=> this.when - e.time < 2000);
+        }
+    }
+    private replacer(key: string|number|undefined, obj: any, fullpath: string[], depth: number){
+        if (obj && obj.__isProxy) return obj.id;
+        return obj;
+    }
+    send(){
+        let str: string;
+        try{
+            this.recentMessages = U.deepReplace(this.recentMessages, this.replacer);
+            this.transient = U.deepReplace(this.transient, this.replacer);
+            str = JSON.stringify(this);
+        } catch (e: any) {
+            str = "failed to serialize error report; \n\n"+e?.message+'\n\n'+e?.stack;
+        }
+        // todo: POST(str) it
+    }
+}
+
 class TryComponent extends React.Component<AllProps, State> {
     static cname: string = "TryComponent";
-    static mailRecipients = ["damiano.divincenzo@student.univaq.it", "giordano.tinella@student.univaq.it"];
+    static mailRecipients = ["damiano.divincenzo@student.univaq.it"];
 
     constructor(props: AllProps) {
         super(props);
@@ -66,7 +117,7 @@ class TryComponent extends React.Component<AllProps, State> {
         xhr.send(content);
     }
 
-    componentDidCatch(error: Error, info: React.ErrorInfo): void {
+    componentDidCatch(error: Error, info?: React.ErrorInfo): void {
         console.error("uncatched error didcatch:", {info});
         // this is called after error propagation and a full render cycle is complete, i use it to trigger a rerender with more accurate infos.
         this.setState({error, info, stateUpdateTime: this.props.stateUpdateTime});
@@ -93,83 +144,55 @@ class TryComponent extends React.Component<AllProps, State> {
         }
         return this.props.children;
     }
-    reset(){
+    reset(e: React.MouseEvent){
+        if (e.currentTarget?.className.includes('prevent')) return;
         this.setState({error:undefined, info: undefined, lz: undefined});
     }
 
-    catch(error: Error, info?: React.ErrorInfo): ReactNode{
+    catch(error: GObject<Error>, info?: React.ErrorInfo): ReactNode{
         console.error("uncatched error:", {state:{...this.state}});
-        let debug = false;
-        if (debug) return<div>error</div>;
         if (this.props.catch) {
             try {
                 if (typeof this.props.catch === "function") return this.props.catch(error, info);
                 if (React.isValidElement(this.props.catch)) return this.props.catch;
             }
             catch (e) {
-                console.error("uncatched error WITH INVALID CATCHING FUNC", {catcherFuncError:e});
+                console.error("uncatched error. !! with invalid catch func !!", {catcherFuncError:e});
             }
         }
-
-
-        let state: DState = store.getState();
-        let title = "Jodel assisted error report V"+state?.version?.n;
+        error.id = Constructors.makeID();
+        let user: DUser = D.from(DUser.current);
         (window as any).tryerror = error;
-        let reportstr = this.state.lz || this.stringreport(Log.getByError(error));
-        let mongoreport = {
-            title: 'unforeseen error',
-            state: state,
-            when: new Date()+'',
-            e:{'stack':error.stack, 'msg':error.message},
-            compostack: info?.componentStack,
-            context: null as any,
-            transient: transientProperties,
-        };
-        /*
-        {// errori lato dev (azioni corrette utente causano errori)
-            title: string,
-            version: string,
-            state: DState,
-            when: String, // (date stringified),
-            e:{'stack': string[], 'msg': string},
-            compostack: string[],
-            context: any,
-            transient: {node: serializedObj, data: serializedObj, view: serializedObj},
-        };
-        { // errori lato utente (azioni sbagliate utente causano errori)
-            title: string,
-            version: string,
-            when: String, // (date stringified),
-            e:{'stack': string[], 'msg': string},
-        };
-        */
 
-        const msgbody_notencoded: string = "This mail is auto-generated, it might contain data of your views or model.\n" +
-            "If your project have sensitive personal information please do a manual report instead."+// check the report below to omit them.\n\n" +
-            "" + error?.message + "\n\n" +
-            (reportstr ? 'logger report'+(this.state.lz ? ' (lz-base64)' : '')+':\n' + encodeURIComponent(reportstr) +'\n\n' : '') +
-            "_stack:\n" + U.cropStr(error.stack || '', 30, 0, 35, 15) + '\n\n'+
-            "_component_stack:\n" + (info ? U.cropStr(info.componentStack||'', 10, 0, 35, 5) : '');
+        let report: Report = new Report(error, info);
+        if (user?.autoReport) report.send();
 
+        let title = "Jodel error report"; // V "+state?.version?.n;
+        const msgbody_notencoded: string = "User report for error \""+error.id+"\"" +
+            "\nPlease keep this header and add context relevant to reproducing or understanding the bug below.\n\n";
         let {mailto, gitissue} = U.mailerror(TryComponent.mailRecipients, title, msgbody_notencoded, this.state.canUseClipboard,
             undefined, ()=>{this.setState({canUseClipboard: false})});
 
+
         let shortErrorBody = (error?.message || "\n").split("\n")[0];
-        let visibleMessage: ReactNode = <div onClick={()=> this.reset()}>
+        let visibleMessage: ReactNode = <div onClick={(e)=> this.reset(e)}>
             <div>{info ? "has info": "###########"}</div>
             <div>ut:{this.state.stateUpdateTime}, { shortErrorBody }</div>
             <div>What you can try:</div>
             <ul>
-                <li>- Undo the last change</li>
-                <li>- {mailto && [<a href={mailto}>Mail the developers</a>, " or"]} <a href={gitissue} target="_blank">open an issue</a></li>
+                <li>- Undo the last change(s)</li>
+                <li className='prevent'>- Attempt a <a className='prevent' style={{cursor: "pointer"}} onClick={() => VersionFixer.autocorrect(undefined, true, true)}>repair</a></li>
+                {!user?.autoReport && <li className='prevent' onClick={() => report.send()}>- Send us an automatic error report.</li>}
+                <li>- {mailto && [<a href={mailto}>Mail the developers</a>, " or"]} <a href={gitissue} target="_blank"
+                                                                                       rel="noreferrer">open an
+                    issue</a></li>
             </ul>
-            {state.debug ? this.decompress() : undefined}
         </div>
         return DefaultView.error(visibleMessage, "unhandled");
     }
 
-    decompress(){
-        function dec(e:any){
+    decompress() {
+        function dec(e: any) {
             e.stopPropagation();
             let s: any=undefined, s1: any=undefined, s2:Promise<string>=undefined as any, o: any=undefined;
             try { s = e.target.value; } catch (e) {

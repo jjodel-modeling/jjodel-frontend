@@ -52,6 +52,9 @@ function ModellingIcon(props: Props) {
     switch (name) {
         case 'package': return(<Icon letter={'P'} />);
         case 'object':
+            return(<Icon letter={'O'} />);
+        case 'feature':
+            return(<Icon letter={'F'} />);
         case 'class':
             return(<Icon letter={'C'} />);
         case 'reference': return(<Icon letter={'R'} />)

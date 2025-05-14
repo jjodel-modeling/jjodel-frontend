@@ -277,11 +277,15 @@ function ToolBarComponent(props: AllProps) {
             const lfeat: LValue | undefined = data.className === "DValue" ? data as LValue : undefined;
 
             let subleveloptions = [];
-            if (lobj && (!lobj.instanceof || lobj.partial)) subleveloptions.push( //@ts-ignore
+            if (lobj && (!lobj.instanceof/* || lobj.partial*/)) subleveloptions.push( //@ts-ignore
                 <div key={"Feature"} className={"toolbar-item feature"} tabIndex={ti} onClick={() => {
                     lobj.addValue();
-                }}>+Feature</div>
-            );
+                }}>
+                    <ModellingIcon name={'feature'}/>
+                    <span className={'ms-1 my-auto text-capitalize'}>Feature</span>
+                </div>
+        )
+            ;
             if (lfeat && lfeat.values.length < lfeat.upperBound) subleveloptions.push( //@ts-ignore
                 <div key={"Value"} className={"toolbar-item value"} tabIndex={ti} onClick={() => {
                     SetFieldAction.new(lfeat.id, 'value' as any, undefined, '+=', false);

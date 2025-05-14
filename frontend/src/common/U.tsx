@@ -1740,7 +1740,7 @@ export class U {
 
     static clearSelection() {}
 
-    static isError(obj: unknown): obj is Error{
+    static isError(obj: unknown): obj is Error {
         // obj istanceof Error // this is not iframe-safe, Errors from different iframes are considered different instances
         // this is iframe-safe and catches all error types
         return Object.prototype.toString.call(obj) === "[object Error]";

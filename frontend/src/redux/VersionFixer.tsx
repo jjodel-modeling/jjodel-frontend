@@ -185,11 +185,26 @@ everytime you put hands into a D-Object shape or valid values, you should docume
                 Log.eDevv('invalid key in idlookup', {ptr, s});
                 continue;
             }
-            let v = s.idlookup[ptr];
+            let v: GObject<DPointerTargetable> = s.idlookup[ptr];
+
 
             if (v.id !== ptr || Object.keys(v).length < 5 || deleteDState && v.className === 'DState') { // totally euristic lowerbound to detect semi-deleted objects or ill-created
                 console.log('autocorrect: removed incomplete object ', {d:s.idlookup[ptr], cn:s.idlookup[ptr]?.className, ptr})
                 delete s.idlookup[ptr];
+            }
+            // for nulls and undefined is handled below, handled also in do loop but it won't detect missing "in" properties. while this does.
+            if (!v.className || (v.className.includes('Edge') && (!v.end || !v.start))) delete s.idlookup[ptr];
+            if (!('father' in v)) {
+                switch (v.className){
+                    case "DClass": if (v.isPrimitive) continue;
+                    /// todo: in versionfixer just add .father to everyone, then declare it in DPointerTargetable
+                    case "DViewPoint":
+                    case "DUser":
+                    case "DProject":
+                    case "DModel":
+                    case "DGraph": continue;
+                    default: delete s.idlookup[ptr];
+                }
             }
         }
 
@@ -205,27 +220,32 @@ everytime you put hands into a D-Object shape or valid values, you should docume
                 console.error({removedPointers});
                 Log.eDevv('version autocorrect exceeded maximum number of corrections', s0);
                 return s0 as any;
-                break;
             }
 
             s = U.deepReplace(s, (key:string|number|undefined, obj: any, fullpath:string[]) => {
                 let isPointer = Pointers.isPointer(obj);
                 let isValidPointer = isPointer && s.idlookup[obj]?.id === obj;
                 let id: Pointer<any> = fullpath?.[1];
+                if (id === 'Pointer1745981301328_USER_504') console.log('deepreplace 0', {isPointer, isValidPointer, key, obj, fullpath, removedPointers, removedElements});
                 if (isPointer && isValidPointer) return obj;
                 // if: undef or invalid pointer implicates full object removal
+                // NB: critical pointers missing are also handled above, but the above part is including also missing properties ("in") while this part doesn't
+                // both are necessary because this part ensures a critical pointer does not become null INSIDE the loop because of ptr removal.
                 if ((
                     (key === 'father' && fullpath.length === 3) // idlookup.someid.father = 3 keys
                     || (key === 'end' && fullpath.length === 3)
                     || (key === 'start' && fullpath.length === 3))
                     //|| key === 'viewpoint' && fullpath.length === 3
                 ) {
+                    if (key === 'father' && id === 'Pointer1745981301328_USER_504') console.log('deepreplace 1', {});
+
                     if (!Pointers.isPointer(id)) { Log.eDevv('found mandatory key in an unexpected position', {fullpath, final_id:obj, s}); return obj; }
                     let d: GObject = s.idlookup[id];
-                    if (key === 'father' && (d?.className === 'DObject' || d?.className === 'DViewElement' || d?.isPrimitive)) return obj; // dobj can have missing father  todo: ?????? really?
+                    if (key === 'father' && (/*d?.className === 'DObject' ||*/ d?.className === 'DViewElement' || d?.isPrimitive)) return obj; // dobj can have missing father  todo: ?????? really?
                     removedElements.push({d, d_id: id, final_id:obj, key: key as any, fullpath});
                     if (!(id in s.idlookup)) return undefined;
                     hasDeleted = true;
+                    if (key === 'father' && id === 'Pointer1745981301328_USER_504') console.log('deepreplace 2', {hasDeleted});
                     return undefined;
                 }
 
