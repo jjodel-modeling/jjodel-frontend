@@ -196,7 +196,7 @@ everytime you put hands into a D-Object shape or valid values, you should docume
             if (!v.className || (v.className.includes('Edge') && (!v.end || !v.start))) delete s.idlookup[ptr];
             if (!('father' in v)) {
                 switch (v.className){
-                    case "DClass": if (v.isPrimitive) continue;
+                    case "DClass": if (v.isPrimitive) continue; break;
                     /// todo: in versionfixer just add .father to everyone, then declare it in DPointerTargetable
                     case "DViewPoint":
                     case "DUser":
