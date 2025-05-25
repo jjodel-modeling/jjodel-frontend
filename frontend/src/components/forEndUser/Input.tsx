@@ -121,7 +121,7 @@ export function InputComponent(props: AllProps) {
         evt.preventDefault();
         evt.stopPropagation();
         console.warn('input dblclick', {t:evt.target, evt}); //, ets:(evt.target as HTMLInputElement).select()};
-        (evt.target as HTMLInputElement).select();
+        (evt.target as HTMLInputElement).select?.();
     }
     const onChange = (evt: React.ChangeEvent<HTMLInputElement>) => {
         (props as any).onChange?.(evt);

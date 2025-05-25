@@ -1,6 +1,14 @@
 import axios from 'axios';
+import type {Dictionary, GObject} from "../joiner";
+import type {LayoutData} from "rc-dock";
 
 export default class Persistance {
+    static setUserAutosaveLayout(val: boolean) {
+        throw new Error("Method not implemented.");
+    }
+    static setActiveLayout(val: string) { // Dictionary<string, LayoutData>
+        throw new Error("Method not implemented.");
+    }
     static url(path: string): string {
         return 'http://localhost:8000/api/v1/' + path + '/';
     }
@@ -43,5 +51,9 @@ export default class Persistance {
             .catch(function (error) {
                 console.log(error);
             });
+    }
+
+    static setUserLayout(persistance_val: Dictionary<string, LayoutData>) {
+
     }
 }

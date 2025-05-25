@@ -134,12 +134,15 @@ import {
     TRANSACTION,
     U
 } from "./index";
+import {LayoutData} from "rc-dock";
 import {OclEngine} from "@stekoe/ocl.js";
 import React, {ReactNode} from "react";
 import {ProjectsApi} from "../api/persistance";
 import {labelfunc} from "../model/dataStructure/GraphDataElements";
 import {Dummy} from "../common/Dummy";
 import Storage from "../data/storage";
+import Persistance from "../persistance/api";
+import {PinnableDock} from "../components/dock/MyRcDock";
 
 var windoww = window as any;
 // qui dichiarazioni di tipi che non sono importabili con "import type", ma che devono essere davvero importate a run-time (eg. per fare un "extend", chiamare un costruttore o usare un metodo statico)
@@ -779,6 +782,9 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         _this.email = email;
         _this.token = token;
         _this.autoReport = !!autoReport;
+        _this.layout = {}; // {'1': PinnableDock.defaultLayout};
+        _this.autosaveLayout = true;
+        _this.activeLayout = '1';
         // statehistory[_this.id] = new UserHistory();
         // todo: make it able to combine last 2 changes with a keystroke.
         //  reapeat N times to combine N actions.
@@ -1121,6 +1127,10 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         if(id) _this.id = id;
         _this.favorite = {};
         _this.description = 'A new Project. Created by ' + (DPointerTargetable.from(DUser.current) as DUser).nickname + ' @' + new Date().toLocaleString();
+        _this.layout = {};
+        _this.autosaveLayout = true;
+        _this.activeLayout = undefined;
+
         this.setExternalPtr(DUser.current, 'projects', '+=');
         return this;
     }
@@ -2385,6 +2395,10 @@ export class DUser extends DPointerTargetable {
     projects: Pointer<DProject, 0, 'N', LProject> = [];
     project: Pointer<DProject, 0, 1, LProject> = '';
     autoReport!: boolean;
+    layout!: Dictionary<string, LayoutData>;
+    autosaveLayout!: boolean;
+    activeLayout!: string;
+
     __isDUser: true = true; // necessary to trick duck typing to think this is NOT the superclass of anything that extends PointerTargetable.
     /*public static new(id?: DUser["id"], triggerActions: boolean = true): DUser {
         return new Constructors(new DUser('dwc'), undefined, false, undefined, id, true).DPointerTargetable().DUser().end(); }*/
@@ -2481,6 +2495,50 @@ export class LUser<Context extends LogicContext<DUser> = any, D extends DUser = 
     __isLUser!: true;
 
     // public static fromPointer(ptr: Pointer<any>): LUser { return L.fromPointer(ptr) as LUser; }
+    layout!: Dictionary<string, LayoutData>;
+    autosaveLayout!: boolean;
+    activeLayout!: string;
+
+    get_activeLayout(c: Context): this['activeLayout'] { return c.data.activeLayout; }
+    set_activeLayout(val: this['activeLayout'], c: Context): true {
+        TRANSACTION('save user layout', ()=> {
+            SetFieldAction.new(c.data.id, 'activeLayout', val, '', false);
+            Persistance.setActiveLayout(val);
+        })
+        return true;
+    }
+    get_layout(c: Context): this['layout'] { return c.data.layout; }
+    set_layout(val: this['layout'], c: Context): true {
+        if (!val) val = {};
+        // else val = {...val};
+        TRANSACTION('save user layout', ()=> {
+            let removeKeys: Dictionary<string, any> = {};
+            let persistance_val = {...c.data.layout};
+            for (let k in val) {
+                persistance_val[k] = val[k];
+                if (!val[k] || typeof val[k] !== 'object') {
+                    delete val[k];
+                    delete persistance_val[k];
+                    removeKeys[k] = true;
+                }
+            }
+            SetFieldAction.new(c.data.id, 'layout', val, '+=', false);
+            SetFieldAction.new(c.data.id, 'layout', removeKeys as any, '-=', false);
+            Persistance.setUserLayout(persistance_val);
+        })
+        return true;
+    }
+    get_autosaveLayout(c: Context): this['autosaveLayout'] {
+        return c.data.autosaveLayout;
+    }
+    set_autosaveLayout(val: this['autosaveLayout'], c: Context): true {
+        val = !!val;
+        TRANSACTION('autosave user layout', ()=> {
+            SetFieldAction.new(c.data.id, 'autosaveLayout', val, '', false);
+            Persistance.setUserAutosaveLayout(val);
+        })
+        return true;
+    }
 
     protected get_name(context: Context): this['name'] {
         return context.data.name;
@@ -2621,8 +2679,9 @@ export class DProject extends DPointerTargetable {
     metamodelsNumber: number = 0;
     modelsNumber: number = 0;
     isFavorite: boolean = false;
-
-    // collaborators dict user: priority
+    layout!: Dictionary<string, LayoutData>;
+    autosaveLayout!: boolean;
+    activeLayout?: string;
 
     state!: string;
 
@@ -2703,6 +2762,48 @@ export class LProject<Context extends LogicContext<DProject> = any, D extends DP
     readonly children!: LPointerTargetable[];
     readonly views!: LViewElement[]; // derived from viewpoints.subView
 
+
+    layout!: Dictionary<string, LayoutData>;
+    autosaveLayout!: boolean;
+    activeLayout?: string;
+
+    get_activeLayout(c: Context): this['activeLayout'] { return c.data.activeLayout; }
+    set_activeLayout(val: this['activeLayout'], c: Context): true {
+        TRANSACTION('save user layout', ()=> {
+            SetFieldAction.new(c.data.id, 'activeLayout', val, '', false);
+        })
+        return true;
+    }
+
+    get_layout(c: Context): this['layout'] { return c.data.layout; }
+    set_layout(val: this['layout'], c: Context): true {
+        if (!val) val = {};
+        // else val = {...val};
+        TRANSACTION('save user layout', ()=> {
+            let removeKeys: Dictionary<string, any> = {};
+            let persistance_val = {...c.data.layout};
+            for (let k in val) {
+                persistance_val[k] = val[k];
+                if (!val[k] || typeof val[k] !== 'object') {
+                    delete val[k];
+                    delete persistance_val[k];
+                    removeKeys[k] = true;
+                }
+            }
+            SetFieldAction.new(c.data.id, 'layout', val, '+=', false);
+            SetFieldAction.new(c.data.id, 'layout', removeKeys as any, '-=', false);
+        })
+        return true;
+    }
+    get_autosaveLayout(c: Context): this['autosaveLayout'] { return c.data.autosaveLayout; }
+    set_autosaveLayout(val: this['autosaveLayout'], c: Context): true {
+        val = !!val;
+        TRANSACTION('autosave user layout', ()=> {
+            SetFieldAction.new(c.data.id, 'autosaveLayout', val, '', false);
+            Persistance.setUserAutosaveLayout(val);
+        })
+        return true;
+    }
     /* Functions */
 
     protected get_description(context: Context): this['description'] {

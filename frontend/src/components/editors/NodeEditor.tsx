@@ -22,6 +22,7 @@ import './editors.scss';
 import './node-editor.scss';
 import {Empty} from "./Empty";
 import { CommandBar, Btn } from '../commandbar/CommandBar';
+import {SizeInput} from "../forEndUser/SizeInput";
 
 
 function NodeEditorComponent(props: AllProps) {
@@ -95,6 +96,12 @@ function NodeEditorComponent(props: AllProps) {
         {asGraph && <><h3>Graph</h3>
             <GenericInput data={asGraph} field={'zoom'} />
             <GenericInput data={asGraph} field={'offset'} />
+            <SizeInput data={asGraph} field={'size'} label={'size'}
+                       xsetter={(x)=> asGraph.x = +x}
+                       ysetter={(y)=> asGraph.y = +y}
+                       wsetter={(w)=> asGraph.w = +w}
+                       hsetter={(h)=> asGraph.h = +h}
+            />
 
             {/*graphSize readonly on LGraph but not on DGraph, = internal graph size. put it for info.*/ }
         </>}

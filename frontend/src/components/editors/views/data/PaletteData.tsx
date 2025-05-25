@@ -5,7 +5,6 @@ import {connect} from "react-redux";
 import {useStateIfMounted} from "use-state-if-mounted";
 import tinycolor, {Instance} from "tinycolor2";
 import Editor from "@monaco-editor/react";
-import DropDownButton from "smart-webcomponents-react/dropdownbutton";
 import 'smart-webcomponents-react/source/styles/smart.default.css';
 import type {Dictionary, GObject, Pointer,} from '../../../../joiner';
 import {DState, DViewElement, EdgeHead, Input, Keystrokes, Log, LViewElement, U,} from '../../../../joiner';
@@ -318,14 +317,7 @@ function PaletteDataComponent(props: AllProps) {
     }
 
     const cssIsGlobal = view.cssIsGlobal;
-    let a: DropDownButton;
-    // let dropDownButton: RefObject<DropDownButton> = {current: null as any};
-    function addcss(color: Instance): GObject {
-        let ret: GObject = {};
-        ret.background = color.toRgbString();
-        // ret.opacity = color.getAlpha();
-        return ret;
-    }
+
     function invert(color: Instance, transformGrays: number = 0.2): string {
         transformGrays = transformGrays * 128;
         let {r, g, b, a} = color.toRgb();

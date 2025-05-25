@@ -36,15 +36,7 @@ const Catalog = (props: ChildrenType) => {
     const [filters, setFilters] = useState([true,true,true]);
     const [mode, setMode] = useState<string>("cards");
 
-    const [sortingMode, setSortingMode] = useState<string>("alphabetical");
-
-    const Header = (props: ChildrenType) => {
-        return (
-            <div className='row catalog-header' style={{maxWidth: '1250px'}}>
-                {props.children}
-            </div>
-        );
-    }
+    const [sortingMode, setSortingMode] = useState<string>("modified")///("alphabetical");
 
     const CatalogFilters = () => {
 
@@ -88,13 +80,6 @@ const Catalog = (props: ChildrenType) => {
         </>);
     }
 
-    const CatalogSide = (props: ChildrenType) => {
-        return (
-            <div className={'catalog'}>
-                {props.children}
-            </div>
-        );
-    }
 
 
 
@@ -177,14 +162,14 @@ const Catalog = (props: ChildrenType) => {
 
     return (
         <>
-            <Header>
-                <CatalogFilters />
-                <CatalogMode />
-            </Header>
-            <CatalogSide>
+            <div className='row catalog-header' style={{maxWidth: '1250px'}}>
+                <CatalogFilters/>
+                <CatalogMode/>
+            </div>
+            <div className={'catalog'}>
                 <CatalogInfoCard projects={props.projects}/>
                 <CatalogReport projects={props.projects}/>
-            </CatalogSide>
+            </div>
         </>
     );
 }

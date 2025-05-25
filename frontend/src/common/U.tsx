@@ -289,7 +289,7 @@ export class U {
         object = object?.__raw || object;
         if (Array.isArray(object)) object = object.map(o => o?.__raw || o);
         // todo: use lodash "clonedeepwith" to clean proxies
-        console.error("inspect", {o0, object});
+        // console.error("inspect", {o0, object});
         return util.inspect(object, showHidden, depth, color);
     }
 
@@ -454,11 +454,12 @@ export class U {
                 return false;
 
             case "object":
-                let o1Raw = obj1.__raw;
-                let o2Raw = obj2.__raw;
-                if (o1Raw) {
+                let tmpcheck = obj1.__raw;
+                if (tmpcheck) {
+                    let o1Raw = tmpcheck; // those should be kept local just to replace obj1 && obj2 if both are proxies.
+                    let o2Raw = obj2.__raw;
                     if (!o2Raw) {
-                        if (out) out.reason = o1Raw.className + 'replaced by another object type:' + o2Raw?.className;
+                        if (out) out.reason = o1Raw.className + 'replaced by: ' + (typeof o2Raw);
                         return false;
                     }
                     obj1 = o1Raw as GObject;
@@ -466,10 +467,15 @@ export class U {
                 }
                 // for proxies and DObjects
                 if (obj1.clonedCounter !== undefined && obj2.clonedCounter !== obj1.clonedCounter) {
-                    if (out) out.reason = 'clonedCounter difference ' + obj1.clonedCounter+ ' != ' + obj2.clonedCounter;
+                    if (out) out.reason = 'clonedCounter difference ' + obj1.clonedCounter + ' != ' + obj2.clonedCounter;
                     return false;
-                }/*
-                if (obj1.className !== obj2.className) {
+                }
+                /* should be detected by clonedCounter
+                if (obj1.className !== undefined && obj1.className !== obj2.className) {
+                    if (out) out.reason = obj1.className + 'replaced by another object type:' + obj2?.className;
+                    return false;
+                }*/
+                /*if (obj1.className !== obj2.className) {
                  removed: too unlikely to happen that a DObject is raplaced in the same path with another type of DObject with same clonedCounter
                  nd it's checked anyway in for(let key in obj1)
                     if (out) out.reason = o1Raw.className + 'replaced by another object type:' + o2Raw?.className;
@@ -485,12 +491,7 @@ export class U {
                         return false;
                     }
                 }
-
-                if (obj1.className !== obj2.className) {
-                    if (out) out.reason = o1Raw.className + 'replaced by another object type:' + o2Raw?.className;
-                    return false;
-                }
-                switch(obj1.className) {
+                switch (obj1.className) {
                     default: break;
                     case "ISize": case "IPoint": case "GraphPoint": case "Point": case "Size":
                         skipKeys.id = true;

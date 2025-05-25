@@ -334,6 +334,7 @@ function makeDefaultGraphViews(vp: DViewPoint, validationVP: DViewPoint): DViewE
             "}";
         v.onDataUpdate = `
 let err = undefined;
+if (!data) return;
 //if (name.indexOf(" ") >= 0) err = type + " names cannot contain white spaces."; else
 if (name.length === 0) err = type + " must be named.";
 else if (!name[0].match(/[A-Za-z_$]/)) err = type + " names must begin with an alphabet letter or $_ symbols.";

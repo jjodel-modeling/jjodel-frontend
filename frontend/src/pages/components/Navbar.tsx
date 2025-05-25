@@ -45,6 +45,7 @@ import {Undoredocomponent} from "../../components/topbar/undoredocomponent";
 import {BEGIN, COMMIT, END} from "../../redux/action/action";
 import {Tooltip} from "../../components/forEndUser/Tooltip";
 import {VersionFixer} from "../../redux/VersionFixer";
+import {PinnableDock} from "../../components/dock/MyRcDock";
 
 
 let windoww = window as any;
@@ -250,6 +251,16 @@ function NavbarComponent(props: AllProps) {
     const isDashboard = !project;
     const isProject = !!project;
 
+    const saveLayoutItems: MenuEntry[] = [
+    ] as any;
+    if (props.autosaveLayout) {
+        saveLayoutItems.push({name: 'Turn off auto-save', function: () => PinnableDock.toggleAutosave(false), icon: <i className="bi bi-lightning-charge-fill"/>});
+    } else {
+        saveLayoutItems.push({name: 'Turn on auto-save', function: ()=>PinnableDock.toggleAutosave(true), icon: <i className="bi bi-lightning-charge"/>});
+        saveLayoutItems.push({name: 'Save manually', function: () => PinnableDock.save(), icon: icon['save']});
+    }
+
+    let lay = props.lay;
     const items: MenuEntry[] = [
 
         // Jjodel OK
@@ -365,15 +376,42 @@ function NavbarComponent(props: AllProps) {
                 {name: 'Zoom-out', function: ()=>{}, icon: icon['zoom-out'], disabled: true}, // TODO
 
                 {name: 'divisor'},
-                {name: 'Toggle Grid', function: ()=>{}, icon: icon['toggle-grid'], disabled: true}, // TODO
-                {name: 'Toggle Snap-to-Grid', function: ()=>{}, icon: icon['toggle-snap'], disabled: true}, // TODO
+                {name: 'Save layout',
+                    icon: <i className="bi bi-columns-gap"/>,
+                    subItems: saveLayoutItems
+                },
+                {name: 'Load layout',
+                    icon: <i className="bi bi-columns-gap"/>,
+                    subItems: [
+                        {name: 'Default', function: ()=>PinnableDock.load('Default'), icon: icon['loadl']},
+                        {name: 'Project layouts',
+                            subItems: [
+                                {name: '1', function: ()=>PinnableDock.load('1', 'project'), icon: lay==='p1' ? icon['loadl'] : icon['check']},
+                                {name: '2', function: ()=>PinnableDock.load('2', 'project'), icon: lay==='p2' ? icon['loadl'] : icon['check']},
+                                {name: '3', function: ()=>PinnableDock.load('3', 'project'), icon: lay==='p3' ? icon['loadl'] : icon['check']},
+                            ]
+                        },
+                        {name: 'User layouts', // todo: dove li memorizzo?
+                            /*
+                            sul progetto = stessi layout per tutti gli utenti con quel progetto.
+                            su user = global = sempre lo stesso layout per ogni progetto
+                            mix progetto-utente per fare in modo che ogni combinazione possa avere un layout diverso?
+                            collego 1+ layout ad ogni viewpoint?
+                            */
+                            subItems: [
+                                {name: '1', function: ()=>PinnableDock.load('1', 'user'), icon: lay==='u1' ? icon['loadl'] : icon['check']},
+                                {name: '2', function: ()=>PinnableDock.load('2', 'user'), icon: lay==='u2' ? icon['loadl'] : icon['check']},
+                                {name: '3', function: ()=>PinnableDock.load('3', 'user'), icon: lay==='u3' ? icon['loadl'] : icon['check']},
+                            ]
+                        }
+                    ]
+                },
 
                 {name: 'divisor'},
                 {name: 'Show/Hide Sidebar', function: ()=>{}, icon: icon['sidebar'], disabled: true}, // TODO
                 {name: 'Show/Hide Toolbar', function: ()=>{}, icon: icon['toolbar2'], disabled: true}, // TODO
 
                 {name: `${isFullscreen ? 'Exit Fullscreen Mode' : 'Fullscreen Mode'}`, function: toggleFullScreen, icon: icon['fullscreen']},
-                {name: 'Reset Layout', function: ()=>{}, icon: icon['reset-layout'], disabled: true} // TODO
             ]
         },
         /* ANALYZE - da fare */
@@ -555,6 +593,8 @@ interface StateProps {
     version: DState['version'];
     advanced: boolean;
     debug: boolean;
+    lay: string; // layout selected shortened, first char is category, second is index. like u1 = user 1, p2 = project 2
+    autosaveLayout: boolean;
 }
 interface DispatchProps {}
 type AllProps = OwnProps & StateProps & DispatchProps;
@@ -572,6 +612,8 @@ function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     ret.version = state.version;
     ret.advanced = state.advanced;
     ret.debug = state.debug;
+    ret.lay = PinnableDock.saveSlotCategory[0] + PinnableDock.saveSlotName[0];
+    ret.autosaveLayout = PinnableDock.isAutosave();
     return ret;
 }
 
