@@ -49,6 +49,8 @@ class DefaultViews {
             }, false, 'Pointer_ViewModel');
 
         view.css = `
+transform: scale(var(--zoom-x), var(--zoom-y));
+transform-origin: top left;
 &, .Graph{
   background-color: var(--background-1);
   height: 100%;
@@ -158,6 +160,8 @@ class DefaultViews {
             view.appliableTo = 'GraphVertex';
             view.palette = {'color-':  U.hexToPalette('#028012'), 'background-':  U.hexToPalette('#fff')};
             view.css = `
+transform: scale(var(--zoom-x), var(--zoom-y));
+transform-origin: top left;
 border-radius: var(--radius);
 .package { background-color: var(--background-0); border-left: 0.25em solid var(--color-1); }
 .package-children { height: -webkit-fill-available; width: -webkit-fill-available; }
