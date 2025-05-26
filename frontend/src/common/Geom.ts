@@ -350,8 +350,11 @@ export abstract class ISize<PT extends IPoint = IPoint> extends RuntimeAccessibl
         if (typeof pt2 === "number") { thiss.x *= pt2; thiss.y *= pt2; thiss.w *= pt2; thiss.h *= pt2; return thiss; }
         if (pt2.x !== undefined) thiss.x *= pt2.x;
         if (pt2.y !== undefined) thiss.y *= pt2.y;
+        // w and h gets multiplied by pt2.w if present, otherwise by pt2.x
         if (pt2.w !== undefined) thiss.w *= pt2.w;
+        else if (pt2.x !== undefined) thiss.w *= pt2.x;
         if (pt2.h !== undefined) thiss.h *= pt2.h;
+        else if (pt2.y !== undefined) thiss.h *= pt2.y;
         return thiss; }
 
     public divide(pt2: number | {x?:number, y?:number, w?:number, h?:number}, newInstance?: boolean): this {

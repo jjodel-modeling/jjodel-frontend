@@ -422,8 +422,7 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
     protected get_innerSize_impl(context: Context, canTriggerSet: boolean = true, outerSize: boolean = false): Readonly<GraphSize> {
         canTriggerSet = canTriggerSet && !Debug.lightMode;
         let cname = context.data.className;
-        // cname = DGraphElement.cname;
-        switch (cname){
+        switch (cname) {
             default: return Log.exDevv("unexpected classname in get_size switch: " + context.data.className);
             case DEdge.cname:
             case DVoidEdge.cname:
@@ -445,6 +444,7 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
         // (window as any).retry = ()=>view.getSize(context.data.id);
         let ret: EPSize = view.getSize(context.data.id) as any; // (this.props.dataid || this.props.nodeid as string)
 
+        console.log('size 2:', {n: this.get_name(context), x: ret?.x, y: ret?.y, h: ret?.h, w: ret?.w});
         if (!ret) {
             ret = new GraphSize() as EPSize;
             ret.x = context.data.x;
@@ -452,10 +452,10 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
             ret.w = context.data.w;
             ret.h = context.data.h;
             let def: GraphSize | undefined;
-            if (undefined===(ret.x)) { if (!def) def = view.defaultVSize; ret.x = def.x || 0;}
-            if (undefined===(ret.y)) { if (!def) def = view.defaultVSize; ret.y = def.y || 0;}
-            if (undefined===(ret.w)) { if (!def) def = view.defaultVSize; ret.w = def.w || 10;}
-            if (undefined===(ret.h)) { if (!def) def = view.defaultVSize; ret.h = def.h | 10;}
+            if (undefined===(ret.x)) { if (!def) def = view.defaultVSize; ret.x = def.x || 0;  }
+            if (undefined===(ret.y)) { if (!def) def = view.defaultVSize; ret.y = def.y || 0;  }
+            if (undefined===(ret.w)) { if (!def) def = view.defaultVSize; ret.w = def.w || 10; }
+            if (undefined===(ret.h)) { if (!def) def = view.defaultVSize; ret.h = def.h || 10; }
             ret.currentCoordType = (context.data as DEdgePoint).currentCoordType as any;
         }
         if (context.data.className === DEdgePoint.cname) {
@@ -466,17 +466,20 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
                 if ((context.data as DVoidVertex).isResized) {
                     return ret;
                 }*/
+        canTriggerSet = false; // todo: reenable after fixing zoom
         if (!canTriggerSet) {
+            console.log('size 6 ret:', {n: this.get_name(context), x: ret.x, y: ret.y, h: ret.h, w: ret.w, outer: outerSize && this.get_outerGraph(context).translateSize(ret, this.get_innerGraph(context))});
             if (outerSize) ret = this.get_outerGraph(context).translateSize(ret, this.get_innerGraph(context));
             return ret;
         }
         let html: HTMLElement | undefined | null = this.get_component(context)?.html?.current;
         let actualSize: Partial<Size> & {w:number, h:number} = html ? Size.of(html) : {w:0, h:0};
         let isOldElement = (context.data.clonedCounter as number) > 3;
-        // if w = 0 i don't auto-set it as in first render it has w:0 because is not reredered and not resized.
+        // if w = 0 i don't auto-set it as in first render it has w:0 because is not re-rendered and not resized.
         // console.log("getSize() cantriggerset html size", {ret: ret ? {...ret} : ret, html, actualSize, hcc:html?.dataset?.clonedcounter, ncc: context.data.clonedCounter});
         if (!html || +(html.dataset.clonedcounter as string) !== context.data.clonedCounter) canTriggerSet = false;
         let updateSize: boolean = false;
+        console.log('size 8:', {n: this.get_name(context), x: ret.x, y: ret.y, h: ret.h, w: ret.w, outer: outerSize && this.get_outerGraph(context).translateSize(ret, this.get_innerGraph(context))});
         if (view.adaptWidth && ret.w !== actualSize.w) {
             if (canTriggerSet && (isOldElement || actualSize.w !== 0)) {
                 ret.w = actualSize.w;
@@ -492,6 +495,7 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
         // console.log("getSize() from node merged with actualSize", {ret: {...ret}});
 
         if (updateSize) this.set_size(ret, context);
+        console.log('size 9 ret:', {n: this.get_name(context), x: ret.x, y: ret.y, h: ret.h, w: ret.w, outer: outerSize && this.get_outerGraph(context).translateSize(ret, this.get_innerGraph(context))});
         if (outerSize) ret = this.get_outerGraph(context).translateSize(ret, this.get_innerGraph(context));
         return ret;
     }
@@ -1091,9 +1095,10 @@ export class LGraph<Context extends LogicContext<DGraph> = any, D extends DGraph
                 {currGraph, targetGraph});
             let i: number = 1;
             while (currAncestorsPtr[i] === targetAncestorsPtr[i]) { i++; }
+            console.log('ancestorCalc', {currGraph, targetGraph, currAncestors:[...currAncestors], targetAncestors:[...targetAncestors], i})
             let commonAncestor: Pointer<DGraph> = targetAncestorsPtr[i-1];
-            currAncestors = currAncestors.slice(0, currAncestors.length - i).filter(e=>!!e);
-            targetAncestors = targetAncestors.slice(0, currAncestors.length - i).filter(e=>!!e);
+            currAncestors = currAncestors.slice(0, currAncestors.length - i);
+            targetAncestors = targetAncestors.slice(0, targetAncestors.length - i);
             // d, c, b, a           currAncestors
             // d, c, x, y           targetAncestors
             // undo a,b, redo x,y        i = [2]
@@ -1102,18 +1107,22 @@ export class LGraph<Context extends LogicContext<DGraph> = any, D extends DGraph
                 {currGraph, targetGraph, currAncestors, targetAncestors});
             // @ts-ignore
             let ret: T = 'w' in size ? new GraphSize(size.x, size.y, size.w, size.h) : new GraphPoint(size.x, size.y, size.w, size.h);
-            console.log("translateSizee pre", (this.get_model(c) as any).name, size.x, size.y, {size, ret, currAncestors, targetAncestors} )
+            let currDebug = currAncestors.map(g=>({offset:g.offset, zoom:g.zoom, ad:g.size.tl()}))
+            let targetDebug = targetAncestors.map(g=>({offset:g.offset, zoom:g.zoom, ad:g.size.tl()}))
+            console.log("translateSizee pre", this.get_name(c), ret.x, ret.y, {size, ret, currAncestors, targetAncestors, currDebug, targetDebug} )
             for (let g of currAncestors){
-                ret.subtract(g.offset, false);
-                ret.divide(g.cumulativeZoom, false);
+                ret.add(g.offset, false);
+                ret.multiply(g.zoom, false);
                 ret.add(g.size.tl(), false);
             }
+            console.log("translateSizee mid", this.get_name(c), ret.x, ret.y, {size, ret, currAncestors, targetAncestors, currDebug, targetDebug} )
+
             for (let g of targetAncestors){
                 ret.subtract(g.size.tl(), false);
-                ret.multiply(g.cumulativeZoom, false);
-                ret.add(g.offset, false);
+                ret.divide(g.zoom, false);
+                ret.subtract(g.offset, false);
             }
-            console.log("translateSizee ret", (this.get_model(c) as any).name, size.x, size.y, {size, ret, currAncestors, targetAncestors} )
+            console.log("translateSizee ret", this.get_name(c), ret.x, ret.y, {size, ret, currAncestors, targetAncestors} )
 
             return ret; }
         //todo: check how many passes you need to go down or up, and make the up version too
