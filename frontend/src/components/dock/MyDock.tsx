@@ -1,21 +1,9 @@
 
 import React, {PureComponent, ReactElement, ReactNode} from "react";
 import ReactDOM from "react-dom";
-/*import "./jqx.base.css"
-import "./jqx.darkblue.css"*/
-import "./jqx.custom-styling.scss"
-import "./smartdock.custom-styling.scss"/*
-import 'jqwidgets-scripts/jqwidgets/styles/jqx.base.css';
-import 'jqwidgets-scripts/jqwidgets/styles/jqx.material-purple.css';*/
+
 import $ from "jquery";
 import {Dictionary, DocString, GObject, Log} from "../../joiner";
-import { DockingLayout } from 'smart-webcomponents-react/dockinglayout';
-
-import {DockLayout, LayoutData} from 'rc-dock';
-import { Slider } from 'smart-webcomponents-react/slider';
-import { MultilineTextBox } from 'smart-webcomponents-react/multilinetextbox';
-
-import { createRoot } from "react-dom/client";
 
 class PortalOwnProps{
     children!: ReactNode;
@@ -57,10 +45,6 @@ when hover on a sidebar title, set display: block on the hovering tab.
 to unpin: set display: block on the hovering tab and remove the sidebar fake tab
 to pin: set tab on float mode, position it near the pin fake sidebar, make a fake sidebar entry, then hide the float tab
 
-bonus: add pin buttons at the 4 edges near the current position of the 4
- .jqx-docking-layout-overlay-square.jqx-docking-layout-overlay-square-edge
-
-*/
 // export class MyDock extends JQDock{}
 
 

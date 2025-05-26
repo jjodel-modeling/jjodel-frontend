@@ -5,7 +5,6 @@ import {connect} from "react-redux";
 import {useStateIfMounted} from "use-state-if-mounted";
 import tinycolor, {Instance} from "tinycolor2";
 import Editor from "@monaco-editor/react";
-import 'smart-webcomponents-react/source/styles/smart.default.css';
 import type {Dictionary, GObject, Pointer,} from '../../../../joiner';
 import {DState, DViewElement, EdgeHead, Input, Keystrokes, Log, LViewElement, U,} from '../../../../joiner';
 import type {
