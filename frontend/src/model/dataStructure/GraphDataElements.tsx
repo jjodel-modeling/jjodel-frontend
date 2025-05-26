@@ -466,7 +466,7 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
                 if ((context.data as DVoidVertex).isResized) {
                     return ret;
                 }*/
-        canTriggerSet = false; // todo: reenable after fixing zoom
+        // canTriggerSet = false;
         if (!canTriggerSet) {
             console.log('size 6 ret:', {n: this.get_name(context), x: ret.x, y: ret.y, h: ret.h, w: ret.w, outer: outerSize && this.get_outerGraph(context).translateSize(ret, this.get_innerGraph(context))});
             if (outerSize) ret = this.get_outerGraph(context).translateSize(ret, this.get_innerGraph(context));
