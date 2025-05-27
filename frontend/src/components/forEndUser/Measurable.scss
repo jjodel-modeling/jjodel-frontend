@@ -31,6 +31,7 @@
 .localized-panning-root{ // unused for now
   width: 100%;
   height: 100%;
+  overflow: visible;
   .panning-handle{
     width: 20px;
     height: 20px;
@@ -38,5 +39,6 @@
     background: wheat;
     position: absolute;
     cursor: grab;
+    overflow: visible;
   }
 }
