@@ -265,15 +265,16 @@ export class U {
     }
     static async compressedState(dproject: DProject): Promise<string> {
         let id: Pointer<DProject> = dproject.id;
-        const state = store.getState();
-        const idlookup: Record<Pointer<DPointerTargetable>, DPointerTargetable> = {};
+        const state = {...store.getState()};
+        const idlookup: Record<Pointer, DPointerTargetable> = {};
         for (const [pointer, object] of Object.entries(state.idlookup) as [Pointer, DPointerTargetable][]) {
             if (object.className === DProject.name && pointer !== id) continue;
             idlookup[pointer] = object;
         }
+        state.idlookup = idlookup;
         state.idlookup[id] = {...dproject, state: ''} as any;
         state.projects = [id];
-        state.idlookup = idlookup;
+        console.log('saving', {state, str_state: JSON.stringify(state)});
         return await compressToUTF16(JSON.stringify(state));
     }
     static isOffline(): boolean {

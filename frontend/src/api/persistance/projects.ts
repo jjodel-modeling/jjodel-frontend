@@ -71,9 +71,8 @@ class ProjectsApi {
         project.viewpointsNumber = project.viewpoints.length;
         project.metamodelsNumber = project.metamodels.length;
         project.modelsNumber = project.models.length;
-        const state = await U.compressedState(project.__raw as DProject);
-        project.state = state;
-        const dProject = project.__raw as DProject;
+        const dProject = {...project.__raw} as DProject;
+        const state = await U.compressedState(dProject);
         dProject.state = state;
         if(U.isOffline()) await Offline.save(dProject);
         else await Online.save(dProject);

@@ -431,8 +431,24 @@ export class ScrollableComponent extends Component<ScrollOwnProps, ScrollState>{
         }
         return (
             <div {...this.props} className={(this.props.className || '' ) + " scrollable"} >
-                <Measurable draggable={{create}}
-                            isPanning={graph}
+                {(this.props as any).test ?
+                    <Measurable draggable={{create}}
+                                isPanning={graph}
+                                onDragEnd={graph ? (coords, ...args: any) => {
+                                    if (!graph) return; // just for ts-lint
+                                    console.log("drag odee", {coords, graph, args});
+                                    let offset = graph.offset;
+                                    if (!offset.equals(coords)) graph.offset = coords as any;
+                                } : undefined}
+                                onChildren={true}>
+                        <div className={"pan-root"}>
+                            <div className="panning-handle"></div>
+                            <div className="panning-content">{this.props.children}</div>
+                        </div>
+                    </Measurable>
+                    :
+                    <Measurable draggable={{create}}
+                                isPanning={graph}
                             onDragEnd={graph ? (coords, ...args: any)=>{
                                 if (!graph) return; // just for ts-lint
                                 console.log("drag odee", {coords, graph, args});
@@ -440,10 +456,11 @@ export class ScrollableComponent extends Component<ScrollOwnProps, ScrollState>{
                                 if (!offset.equals(coords)) graph.offset = coords as any;
                             } : undefined}
                             onChildren={true}>
-                    <div className="panning-handle">
-                        <div className="panning-content">{ this.props.children }</div>
-                    </div>
+                        <div className="panning-handle">
+                            <div className="panning-content">{this.props.children}</div>
+                        </div>
                 </Measurable>
+                }
             </div>);
     }
 }
@@ -454,6 +471,7 @@ interface ScrollOwnProps {
     className?: string;
     graph: LGraph;
 }
+
 interface MeasurableOwnProps {
     isPanning?: LGraph;
     children: ReactNode[] | ReactNode;
