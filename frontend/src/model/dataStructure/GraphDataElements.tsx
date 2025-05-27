@@ -465,6 +465,7 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
                 if ((context.data as DVoidVertex).isResized) {
                     return ret;
                 }*/
+        canTriggerSet = false;
         if (!canTriggerSet) {
             if (outerSize) ret = this.get_outerGraph(context).translateSize(ret, this.get_innerGraph(context));
             return ret;

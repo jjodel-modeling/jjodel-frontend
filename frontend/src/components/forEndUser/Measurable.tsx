@@ -176,7 +176,6 @@ export class MeasurableComponent extends Component<MeasurableAllProps, Measurabl
         if (!child) {
             Log.ee('child not found', {child, evt, oc, e}); return;
         }
-        console.log('measurable default event child ' + evtkind, {ui, e, oc, oldpos: this.oldPos});
         //if (evtkind === 'e') { positionMap.set(e, ui.position); }
 
         /*if (evtkind === 's') {
@@ -192,7 +191,7 @@ export class MeasurableComponent extends Component<MeasurableAllProps, Measurabl
                 let oldpos = this.oldPos; // positionMap.get(e); {x:-1000, y:-3000};//
                 if (oldpos && (oldpos as any)[key] !== undefined) {
                     let newpos = (oldpos as any)[key] + ui.position[key];
-                    if (key ==='left') console.log('measurable fixpos ' + newpos + 'px', (oldpos as any)[key], {oldpos, uipos:ui.position, newpos});
+                    // if (key ==='left') console.log('measurable fixpos ' + newpos + 'px', (oldpos as any)[key], {oldpos, uipos:ui.position, newpos});
                     child.style[key] = (newpos) + 'px';
                     if (evtkind === 'e') this.oldPos[key] = newpos;
                 }
@@ -202,7 +201,6 @@ export class MeasurableComponent extends Component<MeasurableAllProps, Measurabl
             if (evtkind === 's') {
                 let graph = this.props.isPanning;
                 if (this.oldPos.left === undefined && graph) {
-                    console.log('measurable fixposss ',{oldpos:{...this.oldPos}});
                     this.oldPos.left = ui.position.left = graph.offset.x;
                     this.oldPos.top = ui.position.top = graph.offset.y;
                 }
@@ -235,7 +233,6 @@ export class MeasurableComponent extends Component<MeasurableAllProps, Measurabl
                 'e': (e, ui)=>{ }},*/
         };
         return (e: any, ui: any) => {
-            console.log('measurable default event', {type, evtkind, translateeevents, e, t: e.target});
             if (this.props.transformMode === true) translateeevents[type]?.[evtkind]?.(e, ui);
             this.childmode(e.target, e, evtkind, ui);
         }

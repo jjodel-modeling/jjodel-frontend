@@ -328,7 +328,6 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
         if (size.w !== undefined && size.w < 0) size.w = 0;
         if (size.h !== undefined && size.h < 0) size.h = 0;
 
-        console.log('L.setsize', size, size0);
         return this.props.node.size = size as any;
         // console.log('setSize('+(this.props?.data as any).name+') thisss', this);
         if (this.props.view.storeSize) {

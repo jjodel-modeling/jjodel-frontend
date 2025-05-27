@@ -66,7 +66,7 @@ class ProjectsApi {
     }
 
 
-    static async save(project: LProject): Promise<void> {
+    static async save(project: LProject): Promise<DProject> {
         project.lastModified = Date.now();
         project.viewpointsNumber = project.viewpoints.length;
         project.metamodelsNumber = project.metamodels.length;
@@ -77,6 +77,7 @@ class ProjectsApi {
         if(U.isOffline()) await Offline.save(dProject);
         else await Online.save(dProject);
         U.isProjectModified = false;
+        return dProject;
     }
 
     static async favorite(project: DProject): Promise<void> {

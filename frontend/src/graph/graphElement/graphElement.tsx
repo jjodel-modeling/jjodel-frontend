@@ -215,7 +215,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
 
     static mapLModelStuff(state: DState, ownProps: GraphElementOwnProps, ret: GraphElementReduxStateProps): void {
         // NB: Edge constructor might have set it from props.start, so keep the check before overwriting.
-        if (typeof ownProps.data === "object") { ret.dataid = (ownProps.data as any).id; }
+        if (ownProps.data && typeof ownProps.data === "object") { ret.dataid = (ownProps.data as any).id; }
         else ret.dataid = ownProps.data as string | undefined;
         ret.data = LPointerTargetable.wrap(ret.dataid) // forcing re-wrapping even if props was a dobject or lobject, because i want to get the latest version of it.
 
@@ -924,7 +924,6 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
 
     loopcheck: Dictionary<Pointer, {stopUpdateEvents?: number, calls: number[/*timestamps*/]}> = {};
     onDataUpdateMeasurable(v: LViewElement, vid: Pointer<DViewElement>, index_useless: number): void{
-        console.log('x4 measurable event', {vid, nid: this.props.nodeid})
 
         // if (index > 0) { this.doMeasurableEvent(EMeasurableEvents.onDataUpdate, vid); return; }
         // only on first of a sequence of onDataUpdate events for all stackviews (the mainview),
@@ -986,13 +985,10 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         if (!props.node) return false;
         let node = props.node;
         let dnode = node.__raw;
-        console.log('change node 0', {props: {...props}, g: props.isGraph, v: props.isVertex});
 
         if (props.isGraph) {
             if (props.isVertex) {
                 if (dnode.className !== 'DGraphVertex') {
-                    console.log('change node set gv', {props: {...props}, g: props.isGraph, v: props.isVertex});
-
                     ret = true;
                     // switch to gv
                     let o = DGraphVertex.new(0, '', '', '', undefined);
@@ -1155,7 +1151,6 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
             const vid = v.id;
             let viewnodescore = transientProperties.node[nid].viewScores[v.id];
             if (!viewnodescore.shouldUpdate) continue;
-            console.log('should trigger event.updated', {su: viewnodescore.shouldUpdate, jsx:viewnodescore.jsxOutput, fullcond: !(!viewnodescore.shouldUpdate && !!viewnodescore.jsxOutput)})
             if (!viewnodescore.shouldUpdate && !!viewnodescore.jsxOutput) continue;
             viewnodescore.evalContext = undefined as any; // force rebuild jsx context, needs to be done before renderView and measurable events
             // only if this exact view had UD changed, instead of being forced to rended by other in viewstack)

@@ -345,8 +345,8 @@ function NavbarComponent(props: AllProps) {
 
                 isDashboard ? null : {name: 'Download Project', function: async() => {
                         if (project) {
-                            await ProjectsApi.save(project);
-                            U.download(`${project.name}.jjodel`, JSON.stringify(project.__raw));
+                            let dproject = await ProjectsApi.save(project);
+                            U.download(`${project.name}.jjodel`, JSON.stringify(dproject));
                         }
                     }, icon: icon['download']}
             ]},

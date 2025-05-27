@@ -275,7 +275,6 @@ export function InputComponent(props: AllProps) {
                 if (U.isError(options)) throw errorUpdate("Error on <Multiselect> options getter", options);
 
                 let multiOptions = options as MultiSelectOptGroup[];
-                console.log('setting multiselect pre', {multiOptions, value, ivalue: inputProps.value, options, data, df:data[field], field});
                 let valuesMap = U.objectFromArrayValues((inputProps.value||[]));
                 delete valuesMap[undefined as any];
                 inputProps.value = [];
@@ -292,14 +291,12 @@ export function InputComponent(props: AllProps) {
                     onChange={((v0: MultiSelectOption[]) => {
                         let v = v0.map(v => v.value);
                         confirmValue(undefined, v);
-                        console.log('setting multiselect onchange', {v, v0, value, ivalue: inputProps.value, options});
                     }) as any}
                 />;
             }
             else {
                 let options = getSelectOptions(data, field, props.options, props.children);
                 if (U.isError(options)) throw errorUpdate("Error on <Select> options getter", options);
-                console.log('select options ret', {options, data, field, opts:props.options, childs:props.children});
                 input = <select {...inputProps}>{options}</select>;
             }
             break;
