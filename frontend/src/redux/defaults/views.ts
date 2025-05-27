@@ -166,8 +166,16 @@ border-radius: var(--radius);
 .package { background-color: var(--background-0); border-left: 0.25em solid var(--color-1); }
 .package-children { height: -webkit-fill-available; width: -webkit-fill-available; }
 .summary { padding: 0.25rem; text-align: center; }
+.drag-handle {
+    position: absolute;
+    cursor: grab;
+    z-index: 1;
+    width: 25px;
+    height: 18px;
+}
 .detail-level {
     position: absolute;
+    z-index: 1;
     right: -50px;
     top: 50px;
     display: flex;

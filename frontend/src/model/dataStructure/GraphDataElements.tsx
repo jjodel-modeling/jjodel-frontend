@@ -444,7 +444,6 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
         // (window as any).retry = ()=>view.getSize(context.data.id);
         let ret: EPSize = view.getSize(context.data.id) as any; // (this.props.dataid || this.props.nodeid as string)
 
-        console.log('size 2:', {n: this.get_name(context), x: ret?.x, y: ret?.y, h: ret?.h, w: ret?.w});
         if (!ret) {
             ret = new GraphSize() as EPSize;
             ret.x = context.data.x;
@@ -466,20 +465,22 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
                 if ((context.data as DVoidVertex).isResized) {
                     return ret;
                 }*/
-        // canTriggerSet = false;
         if (!canTriggerSet) {
-            console.log('size 6 ret:', {n: this.get_name(context), x: ret.x, y: ret.y, h: ret.h, w: ret.w, outer: outerSize && this.get_outerGraph(context).translateSize(ret, this.get_innerGraph(context))});
             if (outerSize) ret = this.get_outerGraph(context).translateSize(ret, this.get_innerGraph(context));
             return ret;
         }
         let html: HTMLElement | undefined | null = this.get_component(context)?.html?.current;
         let actualSize: Partial<Size> & {w:number, h:number} = html ? Size.of(html) : {w:0, h:0};
+        let cumulativeZoom = this.get_graph(context).cumulativeZoom;
+        // console.log('size 7 ret:', {w:actualSize.w, h:actualSize.h, nw:actualSize.w/cumulativeZoom.x, nh:actualSize.h/cumulativeZoom.y, zx:cumulativeZoom.x, zy:cumulativeZoom.y})
+        actualSize.w /= cumulativeZoom.x;
+        actualSize.h /= cumulativeZoom.y;
         let isOldElement = (context.data.clonedCounter as number) > 3;
         // if w = 0 i don't auto-set it as in first render it has w:0 because is not re-rendered and not resized.
         // console.log("getSize() cantriggerset html size", {ret: ret ? {...ret} : ret, html, actualSize, hcc:html?.dataset?.clonedcounter, ncc: context.data.clonedCounter});
         if (!html || +(html.dataset.clonedcounter as string) !== context.data.clonedCounter) canTriggerSet = false;
         let updateSize: boolean = false;
-        console.log('size 8:', {n: this.get_name(context), x: ret.x, y: ret.y, h: ret.h, w: ret.w, outer: outerSize && this.get_outerGraph(context).translateSize(ret, this.get_innerGraph(context))});
+
         if (view.adaptWidth && ret.w !== actualSize.w) {
             if (canTriggerSet && (isOldElement || actualSize.w !== 0)) {
                 ret.w = actualSize.w;
@@ -495,7 +496,6 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
         // console.log("getSize() from node merged with actualSize", {ret: {...ret}});
 
         if (updateSize) this.set_size(ret, context);
-        console.log('size 9 ret:', {n: this.get_name(context), x: ret.x, y: ret.y, h: ret.h, w: ret.w, outer: outerSize && this.get_outerGraph(context).translateSize(ret, this.get_innerGraph(context))});
         if (outerSize) ret = this.get_outerGraph(context).translateSize(ret, this.get_innerGraph(context));
         return ret;
     }
@@ -1111,7 +1111,7 @@ export class LGraph<Context extends LogicContext<DGraph> = any, D extends DGraph
             let targetDebug = targetAncestors.map(g=>({offset:g.offset, zoom:g.zoom, ad:g.size.tl()}))
             console.log("translateSizee pre", this.get_name(c), ret.x, ret.y, {size, ret, currAncestors, targetAncestors, currDebug, targetDebug} )
             for (let g of currAncestors){
-                ret.add(g.offset, false);
+                ret.add(g.offset.tl(), false);
                 ret.multiply(g.zoom, false);
                 ret.add(g.size.tl(), false);
             }
@@ -1120,7 +1120,7 @@ export class LGraph<Context extends LogicContext<DGraph> = any, D extends DGraph
             for (let g of targetAncestors){
                 ret.subtract(g.size.tl(), false);
                 ret.divide(g.zoom, false);
-                ret.subtract(g.offset, false);
+                ret.subtract(g.offset.tl(), false);
             }
             console.log("translateSizee ret", this.get_name(c), ret.x, ret.y, {size, ret, currAncestors, targetAncestors} )
 

@@ -27,3 +27,16 @@
   left: var(--offset-x);
   top: var(--offset-y);
 }
+
+.localized-panning-root{ // unused for now
+  width: 100%;
+  height: 100%;
+  .panning-handle{
+    width: 20px;
+    height: 20px;
+    outline: 1px solid red;
+    background: wheat;
+    position: absolute;
+    cursor: grab;
+  }
+}

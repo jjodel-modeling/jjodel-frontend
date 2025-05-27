@@ -431,7 +431,7 @@ export class ScrollableComponent extends Component<ScrollOwnProps, ScrollState>{
         }
         return (
             <div {...this.props} className={(this.props.className || '' ) + " scrollable"} >
-                {(this.props as any).test ?
+                {/*(this.props as any).test ? works only apparently, it takes the event from root and not from handle, need to put hands on Measurable to make it work this way
                     <Measurable draggable={{create}}
                                 isPanning={graph}
                                 onDragEnd={graph ? (coords, ...args: any) => {
@@ -441,12 +441,12 @@ export class ScrollableComponent extends Component<ScrollOwnProps, ScrollState>{
                                     if (!offset.equals(coords)) graph.offset = coords as any;
                                 } : undefined}
                                 onChildren={true}>
-                        <div className={"pan-root"}>
-                            <div className="panning-handle"></div>
+                        <div className={"localized-panning-root"}>
+                            <div className="panning-handle" />
                             <div className="panning-content">{this.props.children}</div>
                         </div>
                     </Measurable>
-                    :
+                    :*/
                     <Measurable draggable={{create}}
                                 isPanning={graph}
                             onDragEnd={graph ? (coords, ...args: any)=>{

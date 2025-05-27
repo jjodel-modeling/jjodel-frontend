@@ -72,7 +72,8 @@ export class EdgeComponent<AllProps extends AllPropss = AllPropss, ThisState ext
         let nodeType = "Edge";
         let classesoverride = [nodeType];
         // set classes end
-        let styleoverride: React.CSSProperties = {}
+        let styleoverride: React.CSSProperties = {};
+        if (!this.props.node?.end?.html || !this.props.node?.start?.html) return null;
         return super.render(nodeType, styleoverride, classesoverride);
     }
 

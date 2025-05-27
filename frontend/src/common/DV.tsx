@@ -381,7 +381,7 @@ export class DefaultView {
 <Scrollable graph={node}>
     {!data && "Model data missing."}
     <div className={'edges'}>
-        {[
+        {level > 0 && [
             refEdges.map(se => <Edge data={se.start} start={se.startVertex} end={se.endVertex} anchorStart={0} anchorEnd={0} key={se.id} isReference={true} 
             view={'Edge' + (se.start.composition ? 'Composition' : (se.start.aggregation ? 'Aggregation' : 'Association'))} />),
             extendEdges.map(se => <Edge data={se.start} start={se.startVertex} end={se.endVertex} view={'EdgeInheritance'} isExtend={true} key={se.id} />)
@@ -419,14 +419,17 @@ export class DefaultView {
 
     public static package(): string { return (
 `<View className={'root package'}>
-    <Measurable draggable={true} resizable={true}><div>draggable resizable</div></Measurable>
-    <Measurable draggable={true}><div>draggable</div></Measurable>
-    <div className={'package-children'}>
-        {upperLevel >= 1 ? [
+<div className={'drag-handle'} />
+{
+    upperLevel >= 1 &&
             <label className={"detail-level"}>
                 <input onChange={(e)=>{node.state = {level:+e.target.value}}} min="0" max="3" type="range" step="1" value={level}/>
                 <div>Detail level:{level}</div>
-            </label>,
+            </label>
+}
+<Scrollable graph={node}>
+    <div className={'package-children'}>
+        {upperLevel >= 1 ? [
             data.children.map(c => <DefaultNode key={c.id} data={c} />)
         ] :
         [
@@ -438,6 +441,11 @@ export class DefaultView {
         ]}
     </div>
     {decorators}
+</Scrollable>
+{/* examples
+    <Measurable draggable={true} resizable={true}><div>draggable resizable</div></Measurable>
+    <Measurable draggable={true}><div>draggable</div></Measurable>*/
+}
 </View>`
 );}
 
