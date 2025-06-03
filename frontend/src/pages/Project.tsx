@@ -47,7 +47,8 @@ function ProjectComponent(props: AllProps): JSX.Element {
                 if (!state['users'].includes(DUser.current)) state['users'].push(DUser.current);
                 SaveManager.load(state);
             }
-
+            console.log("**************** 2 ",project)
+            console.log("**************** 3 ",project.id)
             user.project = LProject.fromPointer(project.id);
         })();
     }, [id]);

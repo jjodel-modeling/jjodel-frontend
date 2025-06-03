@@ -126,8 +126,6 @@ export async function duplicateProject(project: DProject, pnames?: Dictionary<st
 function Project(props: Props): JSX.Element {
     const {data} = props;
 
-    // const [favorite, setFavorite] = useState(false);
-
     const toggleFavorite = async(project: LProject) => {
         await ProjectsApi.favorite(project.__raw as DProject);
     };
