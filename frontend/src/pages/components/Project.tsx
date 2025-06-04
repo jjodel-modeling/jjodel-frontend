@@ -17,7 +17,6 @@ import {
 
 import { SlShare as Share2 } from "react-icons/sl";
 import { Tooltip } from '../../components/forEndUser/Tooltip';
-import { time } from 'console';
 import { Logo } from '../../components/logo';
 import {compressToUTF16} from "async-lz-string";
 
@@ -83,12 +82,10 @@ export async function downloadDuplicate(project: DProject, pnames: Dictionary<st
 }
 
 export async function duplicateProject(project: DProject, pnames?: Dictionary<string, any>): Promise<DProject> {
-    console.log('duplicateProject 0');
 
     let oldID = project.id;
     project.id = Constructors.makeID();
     if (project.name.indexOf('copy') === -1) project.name += ' copy';
-    console.log('duplicateProject 1');
 
     let projectNames: Dictionary<string, any>;
     if (pnames) projectNames = pnames;
@@ -101,9 +98,7 @@ export async function duplicateProject(project: DProject, pnames?: Dictionary<st
             projectNames[p.name||''] = ptr;
         }
     }
-    console.log('duplicateProject 3', {name: project.name, projectNames});
     project.name = U.increaseEndingNumber(project.name, false, false, (str)=> {
-        console.log('duplicateProject naming', {str, name: project.name, projectNames});
         return projectNames[str]
     })
 
@@ -119,7 +114,6 @@ export async function duplicateProject(project: DProject, pnames?: Dictionary<st
     str = U.replaceAll(str, oldID, project.id);
     project.state = await compressToUTF16(str);
     state.idlookup[project.id] = {...project, state: ''} as any;
-    console.log('duplicateProject 6');
     return project;
 }
 
@@ -131,12 +125,10 @@ function Project(props: Props): JSX.Element {
     };
 
     const selectProject = (repair: boolean = false) => {
-        R.navigate(`/project?id=${data.id}`+(repair ? '&repair=1' : ''), true);
-        //U.resetState();
+        R.navigate(`/project?id=${data._id}`+(repair ? '&repair=1' : ''), true);
     }
 
     const exportProject = async() => {
-        // await ProjectsApi.save(data);
         U.download(`${data.name}.jjodel`, JSON.stringify(data.__raw));
     }
     const deleteProject = async() => {

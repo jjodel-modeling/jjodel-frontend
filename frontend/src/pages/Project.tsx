@@ -22,9 +22,6 @@ import {SaveManager} from '../components/topbar/SaveManager';
 import {Dashboard} from "./components";
 import CollaborativeAttacher from "../components/collaborative/CollaborativeAttacher";
 import {Cards} from './components/cards/Cards';
-import Storage from "../data/storage";
-import Loader from '../components/loader/Loader';
-import {Navbar} from "./components";
 import {CSS_Units} from "../view/viewElement/view";
 
 function ProjectComponent(props: AllProps): JSX.Element {
@@ -47,8 +44,7 @@ function ProjectComponent(props: AllProps): JSX.Element {
                 if (!state['users'].includes(DUser.current)) state['users'].push(DUser.current);
                 SaveManager.load(state);
             }
-            console.log("**************** 2 ",project)
-            console.log("**************** 3 ",project.id)
+
             user.project = LProject.fromPointer(project.id);
         })();
     }, [id]);

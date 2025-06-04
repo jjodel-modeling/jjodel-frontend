@@ -36,18 +36,14 @@ class Api {
 
             if (exp && exp > Math.floor(Date.now() / 1000)) {
 
-
                 return true;
             }
-
         }
-        console.log("token scaduto o non valido");
         return false;
     }
 
     static async get(path: string, allowAnonymous:boolean = false): Promise<Response> {
         try {
-
             if(allowAnonymous || await Api.checkToken()) {
                 const response = await Axios.get(path, {headers: this.headers()});
                 return {code: response.status, data: response.data};
@@ -55,7 +51,8 @@ class Api {
             return {code: 401, data: null};
 
 
-        } catch (e) {
+        }
+        catch (e) {
             return {code: 400, data: null};
         }
 
@@ -69,7 +66,8 @@ class Api {
                 return {code: response.status, data: response.data};
             }
             return {code: 401, data: null};
-        } catch (e) {
+        }
+        catch (e) {
             return {code: 400, data: null};
         }
     }
@@ -83,25 +81,11 @@ class Api {
             }
             return {code: 401, data: null};
 
-        } catch (e) {
+        }
+        catch (e) {
             return {code: 400, data: null};
         }
     }
-
-    /*
-        static async patch(path: string, obj: Json, allowAnonymous:boolean = false): Promise<Response> {
-            try {
-                if(allowAnonymous || await Api.checkToken()) {
-                    const response = await Axios.patch(path, obj, {headers: this.headers()});
-                    return {code: response.status, data: response.data};
-                }
-                return {code: 401, data: null};
-
-            } catch (e) {
-                return {code: 400, data: null};
-            }
-        }
-        */
 
 
     static async delete(path: string, allowAnonymous:boolean = false): Promise<Response> {

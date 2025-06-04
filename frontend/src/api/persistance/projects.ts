@@ -26,7 +26,6 @@ class ProjectsApi {
 
         if(U.isOffline()) {
             Offline.create(project);
-            // return project;
         }
         else {
             await Online.create(project);
@@ -46,14 +45,13 @@ class ProjectsApi {
             Offline.delete(project.__raw as DProject);
         }
         else {
-            await Online.delete(project.id);
+            // swap ids
+            await Online.delete(project.__raw._id!);
         }
-        project.delete();
     }
 
 
     static async getOne(id: DProject['id']): Promise<null|DProject> {
-
         if(U.isOffline()) return Offline.getOne(id);
         else return await Online.getOne(id);
     }
@@ -115,7 +113,6 @@ class ProjectsApi {
             })
         }
 
-
     static import() {
         const reader = new FileReader();
         reader.onload = async e => {
@@ -135,8 +132,6 @@ class ProjectsApi {
         }, extensions, true);
         U.resetState();
     }
-
-
 
 }
 
@@ -200,26 +195,25 @@ class Offline {
 
 class Online {
 
-
-    static async create (project: DProject): Promise<void> {
-        const creationProjectRequest : CreateProjectRequest = new Project();
+    static async create (project: DProject, imported: boolean = false): Promise<void> {
+        const creationProjectRequest : CreateProjectRequest = new CreateProjectRequest();
         creationProjectRequest.description = project.description;
         creationProjectRequest.name = project.name;
         creationProjectRequest.type = project.type;
         creationProjectRequest._id = project.id;
-
+        creationProjectRequest.imported = imported;
+        creationProjectRequest.state = project.state;
         await Api.post(`${Api.persistance}/project`, {...creationProjectRequest});
     }
 
 
     static async getAll(): Promise<void> {
         const response = await Api.get(`${Api.persistance}/project/`);
-        console.log('loading projects getall', {response});
+
         if (response.code !== 200) {
             /* 401: Unauthorized -> Invalid Token (Local Storage)  */
             return Promise.reject('Invalid Token');
         }
-    
 
         // Check if the received data is a valid array
         if (!Array.isArray(response.data)) {
@@ -234,8 +228,10 @@ class Online {
         TRANSACTION('loading projects', () => {
             for (const raw of rawProjects) {
                 // Populate the DTO with raw backend data and necessary conversions
+                //todo: this is needed?
                 const projectDto = new Project();
-                projectDto.id = raw.id;
+                projectDto._id = raw.id;
+                projectDto.id = raw._Id;
                 projectDto.name = raw.name;
                 projectDto.description = raw.description;
                 projectDto.state = raw.state;
@@ -247,8 +243,8 @@ class Online {
                 projectDto.lastModified = new Date(raw.lastModified).getTime();
                 projectDto.type = ['public', 'private', 'collaborative'].includes(raw.type) ? raw.type : 'private';
 
-
                 const dproject = DProject.new(projectDto.type as 'public' |'private' | 'collaborative', projectDto.name , projectDto.state, [], [], projectDto.id);
+                dproject._id = raw.id;
 
                 // Dynamically set each field of the domain object using SetFieldAction
                 SetFieldAction.new(dproject.id, 'creation', projectDto.creation, '', false);
@@ -260,19 +256,16 @@ class Online {
                 SetFieldAction.new(dproject.id, 'isFavorite', projectDto.isFavorite, '', false);
             }
         });
-
         return Promise.resolve();
     }
 
 
     static async delete(id :string): Promise<void> {
-        console.log(id);
         await Api.delete(`${Api.persistance}/project/${id}`);
     }
 
 
     static async getOne(id: string): Promise<DProject|null> {
-
 
         const response = await Api.get(`${Api.persistance}/project/${id}`);
         if(response.code !== 200) {
@@ -283,7 +276,6 @@ class Online {
         response.data!['_Id'] = response.data!['id'];
         response.data!['id'] = swap;
 
-        console.log("*************** 1", response.data as unknown as DProject)
         return response.data as unknown as DProject;
     }
 
@@ -317,7 +309,6 @@ class Online {
 
 
     static async import(project: DProject): Promise<void> {
-
         const response = await Api.get(`${Api.persistance}/project/${project.id}`);
 
         if(response.code === 200) {
@@ -328,9 +319,9 @@ class Online {
             if(response.code !== 200) {
                 U.alert('e', 'Cannot import project!', 'Something went wrong ...');
             }
-        } else {
-
-            await Online.create(project);
+        }
+        else {
+            await Online.create(project, true);
         }
     }
 

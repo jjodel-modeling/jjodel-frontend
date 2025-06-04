@@ -42,15 +42,8 @@ function App(props: AllProps): JSX.Element {
     let [user, updateUser] = useState(DUser.current);
     let [useless, forceUpdate] = useState(0);
 
-    /*
-    const tooltip = props.tooltip;
-    let user: LUser = LPointerTargetable.wrap(user);
-    useEffect(() => {
-    */
-    //let user = LUser.fromPointer(DUser.current);
     if (firstLoading) {
         firstLoading = false;
-        console.log("entro in app.tsx nel costrutto per verificare se è il firstLoading");
         stateInitializer().then(()=> {
             updateUser(DUser.current);
             forceUpdate(1);
