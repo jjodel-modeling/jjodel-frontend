@@ -5,5 +5,7 @@ export class CreateProjectRequest {
     description? :string;
     type? :string;
     imported: boolean = false;
+    version: string = ""; // jjodel version
     state? : string; // present only if imported.
+
 }

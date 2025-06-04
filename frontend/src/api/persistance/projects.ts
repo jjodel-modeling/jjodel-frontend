@@ -62,6 +62,7 @@ class ProjectsApi {
         project.viewpointsNumber = project.viewpoints.length;
         project.metamodelsNumber = project.metamodels.length;
         project.modelsNumber = project.models.length;
+
         const dProject = {...project.__raw} as DProject;
         const state = await U.compressedState(dProject);
         dProject.state = state;
@@ -203,6 +204,7 @@ class Online {
         creationProjectRequest._id = project.id;
         creationProjectRequest.imported = imported;
         creationProjectRequest.state = project.state;
+        creationProjectRequest.version = ""; //todo
         await Api.post(`${Api.persistance}/project`, {...creationProjectRequest});
     }
 
@@ -254,6 +256,7 @@ class Online {
                 SetFieldAction.new(dproject.id, 'metamodelsNumber', projectDto.metamodelsNumber, '', false);
                 SetFieldAction.new(dproject.id, 'modelsNumber', projectDto.modelsNumber, '', false);
                 SetFieldAction.new(dproject.id, 'isFavorite', projectDto.isFavorite, '', false);
+                SetFieldAction.new(dproject.id, '_id', projectDto._id, '', false);
             }
         });
         return Promise.resolve();

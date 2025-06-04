@@ -2768,6 +2768,7 @@ export class LProject<Context extends LogicContext<DProject> = any, D extends DP
     layout!: Dictionary<string, LayoutData>;
     autosaveLayout!: boolean;
     activeLayout?: string;
+    version: any;
 
     get_activeLayout(c: Context): this['activeLayout'] { return c.data.activeLayout; }
     set_activeLayout(val: this['activeLayout'], c: Context): true {
