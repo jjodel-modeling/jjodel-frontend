@@ -3,7 +3,7 @@ import {
     DModel,
     DProject, L,
     LProject,
-    Pointer, R,
+    Pointer, R, RuntimeAccessible,
     SetFieldAction, store,
     TRANSACTION,
     U
@@ -17,6 +17,7 @@ import Api from "../api";
 import {duplicateProject} from "../../pages/components/Project";
 import {COMMIT} from "../../redux/action/action";
 
+@RuntimeAccessible('ProjectsApi')
 class ProjectsApi {
 
 

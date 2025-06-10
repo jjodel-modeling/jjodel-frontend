@@ -92,7 +92,6 @@ export {Uobj} from "../common/UObj";
 export {Log} from "../common/Log";
 export {DV} from '../common/DV';
 export {Defaults} from '../common/Defaults';
-export {Size, GraphSize, GraphPoint, IPoint, ISize, Point} from "../common/Geom";
 export { CSSRuleSorted, CSSParser, TagNames } from "../common/Uhtml";
 // export {Log as Logg, Size, GraphSize, GraphPoint, IPoint, ISize, Point} from "../common/Log";
 // export const Log = (windoww.Log) as typeof LogType;
@@ -154,6 +153,7 @@ export {
     DExtEdge, DRefEdge, DVoidEdge, LGraphVertex, LRefEdge, LEdgePoint, DVoidVertex, DGraphVertex, DEdgePoint, DVertex,
     DEdge, LVertex, LGraph, DGraph, LVoidVertex, LVoidEdge, LEdge, LGraphElement, LExtEdge, DGraphElement} from "../model/dataStructure/GraphDataElements";
 
+export {Size, GraphSize, GraphPoint, IPoint, ISize, Point} from "../common/Geom";
 
 
 export type {WViewElement} from "../view/viewElement/view";

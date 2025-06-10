@@ -1,10 +1,10 @@
-import {type Dictionary, DUser, LUser, U} from '../../joiner';
+import {type Dictionary, DUser, LUser, RuntimeAccessible, U} from '../../joiner';
 import Api from '../api';
 import {UpdateUserRequest} from "../DTO/UpdateUserRequest";
 import {ChangePasswordRequest} from "../DTO/ChangePasswordRequest";
 import type {LayoutData} from "rc-dock";
 
-
+@RuntimeAccessible('UsersApi')
 class UsersApi {
 
     static async getUserByEmail(email: string): Promise<LUser|null> {

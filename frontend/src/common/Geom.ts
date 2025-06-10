@@ -3,6 +3,8 @@ import {DPointerTargetable, RuntimeAccessible, windoww, Log, RuntimeAccessibleCl
 import React from "react";
 import {radian} from "../joiner/types";
 
+//@ts-ignore
+console.log('Geom', RuntimeAccessible, {RuntimeAccessible}, RuntimeAccessibleClass);
 @RuntimeAccessible('IPoint')
 export abstract class IPoint extends RuntimeAccessibleClass {
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
