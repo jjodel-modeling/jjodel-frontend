@@ -49,7 +49,7 @@ class Api {
     static swapID<T extends any>(data: T, toJodel: boolean = true): T {
         // if is primitive, return as is
         if (!data || typeof data !== 'object') return data;
-        if (Array.isArray(data)) return data.map(e=>Api.swapID(e)) as T;
+        if (Array.isArray(data)) return data.map(e=>Api.swapID(e, toJodel)) as T;
         let d: GObject<DPointerTargetable|any> = data as any;
 
         // if is an object but not jodel object, return it as is
