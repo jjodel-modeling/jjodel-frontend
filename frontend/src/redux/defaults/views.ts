@@ -49,14 +49,11 @@ class DefaultViews {
             }, false, 'Pointer_ViewModel');
 
         view.css = `
-transform: scale(var(--zoom-x), var(--zoom-y));
-transform-origin: top left;
 &, .Graph{
   background-color: var(--background-1);
   height: 100%;
   width: -webkit-fill-available;
 }
-.edges {z-index: 101; position: absolute; top: 0; left: 0; height: 0; width: 0; overflow: visible; }
 .detail-level {
     position: absolute;
     right: -50px;
@@ -66,63 +63,6 @@ transform-origin: top left;
     &>div{
         transform: rotate(90deg) translate(0, 100%);
     }
-}
-
-/* stuff for subelements */
-[data-nodetype="GraphVertex"] {
-  width: 50%;
-  height: 50%;
-}
-&,[data-nodetype]{
-  select, input{
-    background: inherit;
-    color: inherit;
-    &:empty{
-      font-style: italic;
-    }
-  }
-}
-[data-nodetype="Field"] {
-  white-space: nowrap;
-}
-[data-nodetype="VoidVertex"],
-[data-nodetype="Vertex"],
-[data-nodetype="GraphVertex"] {
-  &>*{ border: 0.1em solid #a3a3a3; }
-  &>.ui-resizable-handle{ border: none; }
-}
-&,[data-nodetype], [data-nodetype]>*{
-  /* for some reason focus does not work?? so this is a fallback but needs to be properly fixed */
-  overflow: hidden;
-  &.selected-by-me, &:has(.selected-by-me, .Edge), &:hover, &:active, &:focus-within, &:focus{
-    overflow: visible;
-    z-index: 100 !important;
-  }
-}
-.Edge{
-    overflow: visible;
-}
-
-/* level-specific rules */
-
-.model-0 {
-  height: 100%!important;
-  width: 100%!important;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-.model-1 {}
-.model-2 {}
-.model-3 {}
-
-.metamodel {
-  position: absolute;
-  width: max-content;
-  height: max-content;
-  padding: 10px;
-  border: 1px solid var(--secondary)!important;
-  border-radius: var(--radius);
 }
 .grid {
     background-image: radial-gradient(silver 1px, transparent 0);
@@ -160,8 +100,6 @@ transform-origin: top left;
             view.appliableTo = 'GraphVertex';
             view.palette = {'color-':  U.hexToPalette('#028012'), 'background-':  U.hexToPalette('#fff')};
             view.css = `
-transform: scale(var(--zoom-x), var(--zoom-y));
-transform-origin: top left;
 border-radius: var(--radius);
 .package { background-color: var(--background-0); border-left: 0.25em solid var(--color-1); }
 .package-children { height: -webkit-fill-available; width: -webkit-fill-available; }

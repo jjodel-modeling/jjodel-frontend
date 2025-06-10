@@ -1,6 +1,6 @@
 import {
     CoordinateMode,
-    Defaults,
+    Defaults, DGraphElement,
     Dictionary, DocString, DPointerTargetable, DReference,
     DState, DStructuralFeature,
     DViewElement,
@@ -140,6 +140,7 @@ everytime you put hands into a D-Object shape or valid values, you should docume
     private ['2.1 -> 2.2'](s: DState): void {
 
     }
+
     private ['2.2 -> 2.201'](s: DState): DState {
         // let ls: LState = LPointerTargetable.from(s); nope, avoid L-objects. actions would fire in present state instead of in parameter state
         for (let c of (s.classs).map(p=> this.d(p, s))) {
@@ -148,7 +149,10 @@ everytime you put hands into a D-Object shape or valid values, you should docume
             c.final = false;
             c.rootable = undefined;
         }
-        for (let c of Object.values(s.idlookup) as any[]) { if (c?.className && c.id && c.isCrossReference === undefined) c.isCrossReference = false; }
+        for (let c of Object.values(s.idlookup) as any[]) {
+            if (!c || typeof c !== 'object' || !c.className || !c.id) continue;
+            if (c.isCrossReference === undefined) c.isCrossReference = false;
+        }
         for (let c of (s.viewelements).map(p=> this.d(p, s))) { c.father = c.viewpoint; }
         for (let c of (s.viewpoints).map(p=> this.d(p, s))) { c.cssIsGlobal = true; }
         for (let c of (s.projects).map(p=> this.d(p, s))) { c.favorite = {}; c.description = ''; }
@@ -168,7 +172,16 @@ everytime you put hands into a D-Object shape or valid values, you should docume
 
         return s;
     }
-
+    private ['2.201 -> 2.202'](s: DState): DState {
+        for (let c of Object.values(s.idlookup) as any[]) {
+            if (!c || typeof c !== 'object' || !c.className || !c.id) continue;
+            if (c.isCrossReference === undefined) c.isCrossReference = false;
+            if (!c.zoom && RuntimeAccessibleClass.extends(c.className, DGraphElement)){
+                c.zoom = {x:1, y:1};
+            }
+        }
+        return s;
+    }
     public static autocorrect(s0?: DState, popupIfCorrect: boolean = false, canLoadAction: boolean = false): DState {
         let s: DState;
         if (s0) s = {...s0} as any;
@@ -182,7 +195,8 @@ everytime you put hands into a D-Object shape or valid values, you should docume
         for (let ptr in s.idlookup) {
             if (ptr === 'clonedCounter') continue;
             if (!Pointers.isPointer(ptr)) {
-                Log.eDevv('invalid key in idlookup', {ptr, s});
+                Log.eDevv('invalid key in idlookup', {ptr, s, v:s.idlookup[ptr]});
+                delete s.idlookup[ptr];
                 continue;
             }
             let v: GObject<DPointerTargetable> = s.idlookup[ptr];

@@ -257,6 +257,45 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
         });
         return true; }
 
+    public cumulativeZoom!: GraphPoint;
+    public __info_of__cumulativeZoom: Info = {type: GraphPoint.cname, txt: "the product of all the ownZoom of containing ancestor graphs."};
+    get_cumulativeZoom(c:Context): this['cumulativeZoom']{
+        let ancestors = [c.proxyObject, ...this.get_graphAncestors(c)];
+        let zoom: GraphPoint = new GraphPoint(1,1);
+        for (let g of ancestors) zoom.multiply(g.ownZoom, false);
+        return zoom;
+    }
+
+    get_zoom(c: Context): GraphPoint { return this.get_ownZoom(c); }
+    public ownZoom!: GraphPoint;
+    __info_of__ownZoom: Info = {type:GraphPoint.cname, label:"zoom", txt:"The individual zoom applied to this graph."};
+    __info_of__zoom: Info = {type:GraphPoint.cname, label:"zoom", txt:"Scales the graph and all subelements by a factor."};
+    get_ownZoom(c: Context): GraphPoint {
+        let zoom: GraphPoint;
+        let isGraph = (true as any) || c.data.className.indexOf('Graph');
+        if (isGraph) { zoom = (c.data as DGraph).zoom; }
+        else { return this.get_graph(c)?.ownZoom || new GraphPoint(1, 1); }
+        return new GraphPoint(zoom?.x||1, zoom?.y||1); // NB: do not use (??1), zero is not a valid value for zoom.
+        // (zoom as any).debug = {rawgraph: context.data.__raw, zoomx: context.data.zoom.x, zoomy: context.data.zoom.y}
+    }
+    // set_zoom(val: Partial<GraphPoint>, c: Context): boolean { return this.cannotSet('zoom'); }
+    set_zoom(val: Partial<GraphPoint>, c: Context): boolean{
+        if (!val) val = {x:1, y:1};
+        //if (val.x === undefined && val.y === undefined) return true;
+        let zoom: Partial<GraphSize> = (c.data.zoom || new GraphSize()) as any;
+        if (val.x === 0) val.x = 1; // zoom.x; // remember zero is not allowed value
+        if (val.y === 0) val.y = 1; // zoom.y;
+        let hasx = ('x' in val);
+        let hasy = ('y' in val);
+        // if (!('x' in val) && !('y' in val)) return true;
+        if ((!hasx || zoom.x === val.x) && (!hasy || zoom.y === val.y)) return true;
+
+        TRANSACTION(this.get_name(c)+'.zoom', ()=>{
+            SetFieldAction.new(c.data, 'zoom', val as any, '+=', false);
+        }, IPoint.stringify(zoom), IPoint.stringify(val))
+        return true;
+    }
+
     edgesIn!: LVoidEdge[];
     edgesOut!: LVoidEdge[];
     __info_of__edgesIn: Info = {type:"LEdge[]", txt:<div>Edges incoming into this element. <code>this.edgesOut[i].end</code> always equals to <code>this</code>.</div>}
@@ -287,7 +326,7 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
     protected _defaultGetter(c: Context, k: keyof Context["data"]): any {
         if (k in c.data) return this.__defaultGetter(c, k);
         // if value not found in node, check in view.
-        return (this.get_view(c) as any)[k];
+        return (this.get_view(c) as any)?.[k];
         /*let ret: any;
         let view = this.get_view(c);
         try { ret = (view as any)[k] } catch (e) { Log.ee("Could not find get_ property \"" + k + "\" in node or view.", {c, view, k}); return undefined; }
@@ -501,17 +540,17 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
         return ret;
     }
     // set_size(size: Partial<this["size"]>, context: Context): boolean {
-    set_size(size0: Partial<GraphSize>, c: Context): boolean {
-        // console.log("setSize("+(this.props?.data as any).name+") thisss", this);
+    set_size(size0: Partial<EPSize>, c: Context): boolean {
+        console.log("setSize("+")", c, size0);
         if (!size0) return false;
-        let size = size0 as Partial<EPSize>;
+        let size = new GraphSize().clone(size0 as EPSize, true) as any as Partial<EPSize>;
+        size.currentCoordType = (size0).currentCoordType;
         let view = this.get_view(c);
-        let testmode: boolean = false;
+
         if (c.data.className === DEdgePoint.cname && size.currentCoordType !== CoordinateMode.absolute) size = (this as any as LEdgePoint).encodePosCoords(c as any, size, view);
 
-        if (view.updateSize(c.data.id, size)) return true;
-
         TRANSACTION('resize '+this.get_name(c), ()=>{
+            if (view.updateSize(c.data.id, size)) return true;
             if (size.x !== c.data.x && size.x !== undefined) SetFieldAction.new(c.data.id, "x", size.x, undefined, false);
             if (size.y !== c.data.y && size.y !== undefined) SetFieldAction.new(c.data.id, "y", size.y, undefined, false);
             if (size.w !== c.data.w && size.w !== undefined) SetFieldAction.new(c.data.id, "w", size.w, undefined, false);
@@ -960,39 +999,6 @@ export class LGraph<Context extends LogicContext<DGraph> = any, D extends DGraph
         return true;
     }
 
-    public cumulativeZoom!: GraphPoint;
-    public __info_of__cumulativeZoom: Info = {type: GraphPoint.cname, txt: "the product of all the ownZoom of containing ancestor graphs."};
-    private get_cumulativeZoom(c:Context): this['cumulativeZoom']{
-        let ancestors = [c.proxyObject, ...this.get_graphAncestors(c)];
-        let zoom: GraphPoint = new GraphPoint(1,1);
-        for (let g of ancestors) zoom.multiply(g.ownZoom, false);
-        return zoom;
-    }
-
-    get_zoom(c: Context): GraphPoint {
-        return this.get_cumulativeZoom(c);
-    }
-    public ownZoom!: GraphPoint;
-    __info_of__ownZoom: Info = {type:GraphPoint.cname, label:"zoom", txt:"The individual zoom applied to this graph."};
-    __info_of__zoom: Info = {type:GraphPoint.cname, label:"zoom", txt:"Scales the graph and all subelements by a factor."};
-    get_ownZoom(context: Context): GraphPoint {
-        const zoom: GraphPoint = context.data.zoom;
-        let ret = new GraphPoint(zoom.x||1, zoom.y||1); // NB: do not use (??1), zero is not a valid value for zoom.
-        // (zoom as any).debug = {rawgraph: context.data.__raw, zoomx: context.data.zoom.x, zoomy: context.data.zoom.y}
-        return ret; }
-    set_zoom(val: Partial<GraphPoint>, c: Context): boolean{
-        if (!val) val = {x:1, y:1};
-        //if (val.x === undefined && val.y === undefined) return true;
-        let zoom: Partial<GraphSize> = (c.data.zoom || new GraphSize()) as any;
-        if (!val.x) val.x = zoom.x; // remember zero is not allowed value
-        if (!val.y) val.y = zoom.y;
-        if (zoom.x === val.x && zoom.y === val.y) return true;
-
-        TRANSACTION(this.get_name(c)+'.zoom', ()=>{
-            SetFieldAction.new(c.data, 'zoom', val as any, '+=', false);
-        }, IPoint.stringify(zoom), IPoint.stringify(val))
-        return true;
-    }
 
     toGraphSize(...a:Parameters<this["coord"]>): ReturnType<this["coord"]>{ return this.wrongAccessMessage("toGraphSize"); }
     coord(htmlSize: Size): GraphSize { return this.wrongAccessMessage("toGraphSize"); }
@@ -1659,8 +1665,8 @@ export class DVoidEdge extends DGraphElement {
 
     longestLabel?: DocString<"function">;
     labels?: DocString<"function">;
-    anchorStart?: string;
-    anchorEnd?: string;
+    anchorStart?: string | GObject<{x: number, y: number}>;
+    anchorEnd?: string | GObject<{x: number, y: number}>;
 
     isExtend!: boolean;
     isReference!: boolean;
@@ -1983,6 +1989,7 @@ replaced by startPoint
 
     start!: LGraphElement;
     __info_of__start: Info = {type: "LVertex", txt:"the source point of the edge."}
+
     get_start(c: Context): this['start'] { return LPointerTargetable.fromPointer(c.data.start); }
     set_start(val: Pack1<LGraphElement>, c: Context): boolean {
         let ptr = Pointers.from(val);
@@ -2267,8 +2274,10 @@ replaced by startPoint
             let rete: segmentmaker | undefined;// = {...base} as any;
             let debug = true;
             if (debug) {
-                (base as any).anchor_e = dge.anchors[c.data.anchorEnd || 0] || dge.anchors[Object.keys(dge.anchors)[0]];
-                (base as any).anchor_s = dge.anchors[c.data.anchorStart || 0] || dge.anchors[Object.keys(dge.anchors)[0]];
+                (base as any).anchor_e = typeof c.data.anchorEnd === 'object'? c.data.anchorEnd
+                    : (dge.anchors[c.data.anchorEnd || 0] || dge.anchors[Object.keys(dge.anchors)[0]]);
+                (base as any).anchor_s = typeof c.data.anchorStart === 'object'? c.data.anchorStart
+                    : (dge.anchors[c.data.anchorStart || 0] || dge.anchors[Object.keys(dge.anchors)[0]]);
             }
 
             // get endpoint, then startpoint (land on midnode, then depart from it)
@@ -2276,8 +2285,16 @@ replaced by startPoint
                 rete = {rete:true, ...base} as any as segmentmaker;
                 if (i === allNodes.length - 1) {
                     // get end anchor from node
-                    let anchor = dge.anchors[c.data.anchorEnd || 0];
-                    if (!anchor) anchor = dge.anchors[Object.keys(dge.anchors)[0]];
+                    let anchor: GraphPoint | undefined;
+                    if (!c.data.anchorEnd || typeof c.data.anchorEnd === 'string') {
+                        anchor = dge.anchors[c.data.anchorEnd || 0];
+                        Log.w(!anchor, 'Specified anchorEnd name does not exist on target: '+c.data.anchorEnd, {anchor: c.data.anchorEnd||0, node: dge});
+                    }
+                    else if (typeof c.data.anchorEnd === 'object') {
+                        if ('x' in c.data.anchorEnd && 'y' in c.data.anchorEnd) anchor = c.data.anchorEnd as any as GraphPoint;
+                        Log.w(!anchor, 'Specified anchorEnd object is invalid: '+c.data.anchorEnd, {anchor: c.data.anchorEnd, node: dge});
+                    }
+                    if (!anchor) anchor = dge.anchors[0] || dge.anchors[Object.keys(dge.anchors)[0]];
                     if (anchor) rete.pt = getAnchorOffset(rete.size, anchor, true, 1);
                 }
                 // if no anchor, treat the node as a midpoint
@@ -2292,7 +2309,15 @@ replaced by startPoint
                 rets = {rets: true, ...base} as any as segmentmaker;
                 if (i === 0) {
                     // get start anchor from node
-                    let anchor = dge.anchors[c.data.anchorStart || 0];
+                    let anchor: GraphPoint | undefined;
+                    if (!c.data.anchorStart || typeof c.data.anchorStart === 'string') {
+                        anchor = dge.anchors[c.data.anchorStart || 0];
+                        Log.w(!anchor, 'Specified anchorStart name does not exist on target: '+c.data.anchorStart, {anchor: c.data.anchorStart||0, node: dge});
+                    }
+                    else if (typeof c.data.anchorStart === 'object') {
+                        if ('x' in c.data.anchorStart && 'y' in c.data.anchorStart) anchor = c.data.anchorStart as any as GraphPoint;
+                        Log.w(!anchor, 'Specified anchorStart object is invalid: '+c.data.anchorStart, {anchor: c.data.anchorStart, node: dge});
+                    }
                     if (!anchor) anchor = dge.anchors[Object.keys(dge.anchors)[0]];
                     if (anchor) rets.pt = getAnchorOffset(rets.size, anchor, true, 1);
                 }
@@ -2567,8 +2592,8 @@ replaced by startPoint
     }
 
 
-    anchorStart?: string;
-    anchorEnd?: string;
+    anchorStart?: string | GObject<{x: number, y: number}>;
+    anchorEnd?: string | GObject<{x: number, y: number}>;
     __info_of__anchorStart: Info = {writeType:"string | undefined", type:"string", isEdge: true,
         txt:"The name of a node anchor where the edge should originate from."};
     __info_of__anchorEnd: Info = {writeType:"string | undefined", type:"string", isEdge: true,
@@ -2652,14 +2677,15 @@ replaced by startPoint
         if (!c || (!LVoidEdge.startFollow && !LVoidEdge.endFollow)) return;
         let isStart = LVoidEdge.startFollow ? true : false;
         let nodeid: Pointer<DGraphElement> = isStart ? c.data.start : c.data.end;
-        let activeAnchor: string | number = (isStart ? c.data.anchorStart : c.data.anchorEnd) || 0;
+        let tmp = (isStart ? c.data.anchorStart : c.data.anchorEnd);
+        let activeAnchor: string | number | undefined = typeof tmp === 'object' ? undefined : tmp || 0;
 
         const $base = $(document.getElementById(nodeid) || []);
         if (!$base.length) return;
         const $deepAnchors = $base.find("[nodeid] .anchor");
         const $anchors = $base.find(".anchor").not($deepAnchors);
         $anchors.addClass("valid-anchor");
-        $anchors.filter('[data-anchorname="'+activeAnchor+'"]').addClass("active-anchor");
+        if (activeAnchor) $anchors.filter('[data-anchorname="'+activeAnchor+'"]').addClass("active-anchor");
         $base[0].style.overflow = "visible";
 
     }

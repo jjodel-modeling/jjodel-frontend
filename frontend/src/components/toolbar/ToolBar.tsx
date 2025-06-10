@@ -31,11 +31,12 @@ import {
     WVoidEdge,
     Log,
     LEdgePoint, DUser,
-    U, LPointerTargetable, SetRootFieldAction, GObject, EMeasurableEvents, TRANSACTION
+    U, LPointerTargetable, SetRootFieldAction, GObject, EMeasurableEvents, TRANSACTION, LClass
 } from "../../joiner";
 
 import {InitialVertexSizeObj} from "../../joiner/types";
 import ModellingIcon from "../forEndUser/ModellingIcon";
+import {Tooltip} from "../forEndUser/Tooltip";
 
 interface ThisState {}
 
@@ -98,13 +99,15 @@ let n_agonSides = 10; //this shuld be in react.setState(), but the function hand
 function getItems(data: LModelElement|undefined, myDictValidator: Dictionary<DocString<"DClassName">, DocString<"hisChildren">[]>, items: DocString<"D-ClassNames">[], node?:LGraphElement): ReactNode[] {
     const reactNodes: ReactNode[] = [];
     // todo: does myDictValidator have any reason to exist? if something is invalid it should not make it on toolbar jsx generated list
-    for (let item_dname of items) {
-        if (item_dname[0]=="_") {
+    for (let i = 0; i < items.length; i++) {
+        let item_dname = items[i];
+        if (item_dname === "_pDPackage") {
             item_dname = item_dname.substring(2);
             data = data?.father || data;
         }
         let item = item_dname.substring(1).toLowerCase();
-        reactNodes.push(<div className={'toolbar-item'} tabIndex={ti} style={{cursor:"pointer"}} key={item_dname} onClick={()=>toolbarClick(item_dname, data, myDictValidator, node)}>
+        let key = item_dname === 'DPackage' ? 'DPackage_'+i : item_dname
+        reactNodes.push(<div className={'toolbar-item'} tabIndex={i} style={{cursor:"pointer"}} key={key} onClick={()=>toolbarClick(item_dname, data, myDictValidator, node)}>
             <ModellingIcon name={item} />
             <span className={'ms-1 my-auto text-capitalize'}>{item}</span>
             {/*
@@ -259,68 +262,67 @@ function ToolBarComponent(props: AllProps) {
             let siblings = data ? addChildren(upward[data.className]) : [];
             if (node) siblings.push(...addChildren(upward[node.className]));
             let subelements = data ? addChildren(downward[data.className]) : [];
-
-
             if (siblings.length > 0) {
                 contentarr.push([<span className={'toolbar-section-label'} key={'str'}>Structure</span>,
-                    <hr className={'my-1'} key={'h_str'}/>, siblings]);
+                    <hr className={'my-1'} key={'h_str'}/>,
+                        <div key={'sib'} className={'sib'}>{siblings}</div>
+                    ]);
             }
             if (subelements.length > 0) {
                 contentarr.push([<span className={'toolbar-section-label'} key={'ftr'}>Features</span>,
-                    <hr className={'my-1'} key={'h_ftr'}/>, subelements]);
+                    <hr className={'my-1'} key={'h_ftr'}/>,
+                    <div key={'se'} className={'se'}>{subelements}</div>]);
             }
-
         } else {
-            const classes = metamodel?.classes;
+            const classes = metamodel?.classes || [];
             const model: LModel = LModel.fromPointer(props.model);
             const lobj: LObject | undefined = data.className === "DObject" ? data as LObject : undefined;
             const lfeat: LValue | undefined = data.className === "DValue" ? data as LValue : undefined;
 
             let subleveloptions = [];
-            if (lobj && (!lobj.instanceof/* || lobj.partial*/)) subleveloptions.push( //@ts-ignore
-                <div key={"Feature"} className={"toolbar-item feature"} tabIndex={ti} onClick={() => {
-                    lobj.addValue();
-                }}>
+            if (lobj && (!lobj.instanceof/* || lobj.partial*/)) subleveloptions.push(
+                <div key={"Feature"} className={"toolbar-item feature"} tabIndex={ti} onClick={() => { lobj.addValue(); }}>
                     <ModellingIcon name={'feature'}/>
                     <span className={'ms-1 my-auto text-capitalize'}>Feature</span>
                 </div>
-        )
-            ;
-            if (lfeat && lfeat.values.length < lfeat.upperBound) subleveloptions.push( //@ts-ignore
-                <div key={"Value"} className={"toolbar-item value"} tabIndex={ti} onClick={() => {
-                    SetFieldAction.new(lfeat.id, 'value' as any, undefined, '+=', false);
-                    alert(280);
-                }}>
+            );
+            /*if (lfeat && lfeat.values.length < lfeat.upperBound) subleveloptions.push(
+                <div key={"Value"} className={"toolbar-item value"} tabIndex={ti} onClick={() => { SetFieldAction.new(lfeat.id, 'value' as any, undefined, '+=', false); }}>
                     <ModellingIcon name={'value'}/>
                     <span className={'ms-1 my-auto text-capitalize'}>value</span>
-                    {/*@ts-ignore*/}
                 </div>
-            );
+            );*/
             if (node) subleveloptions.push(...addChildren(downward[node.className]));
-            let rootobjs = classes?.filter((lClass) => lClass.rootable).map((lClass, index) => {
+            //let m1entries: Dictionary<string, LClass> = {};
+            let m1entries = classes.filter((lClass) => lClass.rootable);
+            /*for (let lc of classes){
+                let n = lc.name;
+                if (!m1entries[n]) { m1entries[n] = lc; continue; }
+                let omonimo = m1entries[n]; // can happen with multiple packages and classes with same name
+                delete m1entries[n];
+                todo: maybe toltip instead?
+                m1entries[omonimo.fullname] = omonimo;
+                m1entries[lc.fullname] = lc;
+            }*/
+            let rootobjs = m1entries.map(lClass => {
                 let dclass = lClass.__raw;
-                return ( //@ts-ignore
+                return (
                     <div key={"LObject_" + dclass.id}
-                          onMouseEnter={() => SetRootFieldAction.new('tooltip', lClass.annotations.map(a => a.source).join(' '))}
-                          onMouseLeave={() => SetRootFieldAction.new('tooltip', '')}
+                          onMouseEnter={() => Tooltip.show(lClass.fullname)}
+                          onMouseLeave={() => Tooltip.hide()}
                           className={"toolbar-item LObject"} tabIndex={ti}
                           onClick={() => select(model.addObject({}, lClass))}>
                         {dclass._state.icon ? <ModellingIcon src={dclass._state.icon}/> : <ModellingIcon name={'object'}/>}
                         <span className={'ms-1 my-auto text-capitalize'}>{U.stringMiddleCut(dclass.name, 14)}</span>
-                        {/*@ts-ignore*/}
                     </div>)
             }) || [];
 
-            // @ts-ignore TS2339
-            //
             rootobjs.push(<>
                 <hr className={'my-1 toolbar-hr'} key={'h_robj'}/>
-                {/*@ts-ignore*/}
                 <div key={"RawObject"} className={'toolbar-item'} tabIndex={ti}
                       onClick={() => select(model.addObject({}, null))}>
                     <ModellingIcon name={'object'}/>
                     <span className={'ms-1 my-auto text-capitalize'}>Untyped Object</span>
-                    {/*@ts-ignore*/}
                 </div>
             </>);
 
@@ -330,7 +332,12 @@ function ToolBarComponent(props: AllProps) {
                                     style={{marginRight: "1.5em"/*to avoid overlap with pin*/}}>Root level</b>, rootobjs]);
             }
             if (subleveloptions.length > 0) {
-                contentarr.push([<b key='slo' className={'toolbar-section-label'}>Sublevel</b>, subleveloptions]);
+                contentarr.push(
+                    [<div key={'slobj'} className={'slobj'}>
+                        <b className={'toolbar-section-label'}>Sublevel</b>
+                        {subleveloptions}
+                    </div>]
+                );
             }
         }
 

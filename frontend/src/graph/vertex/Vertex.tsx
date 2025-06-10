@@ -175,14 +175,14 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
                     },
                     resize: (event: GObject, obj: GObject) => {
                         TRANSACTION('resizing events ' + this.props.node.name, ()=>{
-                            if (!this.props.view.lazySizeUpdate) this.setSize({w:obj.position.width, h:obj.position.height});
+                            if (!this.props.view.lazySizeUpdate) this.setSize({w:obj.size.width, h:obj.size.height});
                             for (let vid of allviews) this.doMeasurableEvent(EMeasurableEvents.whileResizing, vid);
                         })
                     },
                     stop: (event: GObject, obj: GObject) => {
                         if (!this.state.classes.includes('resized')) this.setState({classes:[...this.state.classes, 'resized']});
                         // if (!withSetSize) { node.width = obj.size.width; node.height = obj.size.height; } else {
-                        let absolutemode = true; // this one is less tested and safe, but should work even if html container is sized 0. best if made to work
+                        let absolutemode = false; // this one is less tested and safe, but should work even if html container is sized 0. best if made to work
                         let newSize: Partial<GraphSize>;
                         if (absolutemode) {
                             let nativeevt: MouseEvent = event.originalEvent.originalEvent;
@@ -325,7 +325,7 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
     // setSize(x_or_size_or_point: number | GraphSize | GraphPoint, y?: number, w?:number, h?:number): void;
     setSize(size0: Partial<GraphSize> | Partial<GraphPoint>): void {
         let size: {x?:number, y?: number, w?:number, h?:number} = size0;
-        if (size.w !== undefined && size.w < 0) size.w = 0;
+        /*if (size.w !== undefined && size.w < 0) size.w = 0;
         if (size.h !== undefined && size.h < 0) size.h = 0;
 
         return this.props.node.size = size as any;
@@ -338,8 +338,8 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
         let olds = this.props.node.size;
         size.x = size.x === undefined ? olds?.x : size.x;
         size.y = size.y === undefined ? olds?.y : size.y;
-        size.w = size.w === undefined ? olds?.w : size.w;
-        size.h = size.h === undefined ? olds?.h : size.h;
+        // size.w = size.w === undefined ? olds?.w : size.w;
+        // size.h = size.h === undefined ? olds?.h : size.h;*/
         this.props.node.size = size as GraphSize;
     }
 

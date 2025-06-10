@@ -370,10 +370,11 @@ class builder {
             let result = value.setValueAtPosition(index, undefined, {isPtr: isPointer});
             console.log('clearing containment DValue', {result, index, value});
         }
-        function changeDValue(event: React.ChangeEvent<HTMLInputElement|HTMLSelectElement>, index: number, isPointer: boolean | undefined) {
+        function changeDValue(evt: React.ChangeEvent<HTMLInputElement|HTMLSelectElement>, index: number, isPointer: boolean | undefined) {
             TRANSACTION('change value (sidebar)', ()=>{
                 value = value.r;
-                let inputValue: string | boolean = field === 'checkbox' ? (event.target as HTMLInputElement).checked : event.target.value;
+                let target = evt.target as HTMLInputElement;
+                let inputValue: string | boolean = field === 'checkbox' ? target.checked : target.value;
                 if (inputValue === 'undefined') inputValue = undefined as any;
                 let raw_values = value.__raw.values;
                 isPointer = isPointer || Pointers.isPointer(raw_values[index]) || Pointers.isPointer(inputValue);
@@ -388,12 +389,12 @@ class builder {
                     }
                 }
                 let result = value.setValueAtPosition(index, inputValue, {isPtr: isPointer});
-                console.log('setting DValue', {inputValue, result, value, index, oldvi});
+                console.log('setting DValue', {inputValue, result, value, index, oldvi, evt, target, field});
             })
         }
         const featureType: LClassifier = feature?.type;
         let isAttribute = false, isEnumerator = false, isReference = false, isShapeless = false;
-        switch(feature?.className){
+        switch (feature?.className){
             case DAttribute.cname:
                 if (featureType.className === DClass.cname) isAttribute = true; else
                 if (featureType.className === DEnumerator.cname) isEnumerator = true;
@@ -408,7 +409,7 @@ class builder {
             val.hidden ? null :
                 <label className={'mt-1 d-flex ms-4'} key={index}>
                     <div className={'border border-dark'}></div>
-                    {isAttribute && <Input key={'a'+index} setter={(val: any) => { changeDValue({target:{value:val}} as any, index, false) }}
+                    {isAttribute && <Input key={'a'+index} setter={(val: any) => { changeDValue({target:{value:val, checked:!!val}} as any, index, false) }}
                                            className={'input m-auto ms-1' /*@ts-ignore*/}
                                            getter={()=>val.value as any} min={min} max={max} type={field as any} step={stepSize}
                                            maxLength={maxLength} placeholder={'empty'}/> }
@@ -421,7 +422,7 @@ class builder {
                         {selectOptions}
                     </select>}
                     {isShapeless && <>
-                        {<Input key={'raw' + index} setter={(val: any) => {changeDValue({target:{value:val}} as any, index, false)}}
+                        {<Input key={'raw' + index} setter={(val: any) => {changeDValue({target:{value:val, checked:!!val}} as any, index, false)}}
                                 className={'input m-auto ms-1' /*@ts-ignore*/}
                                 getter={()=>val.rawValue} list={'objectdatalist'} type={'text'} placeholder={'empty'}/>}
                         <span className={'ms-1 my-auto'}>→</span>

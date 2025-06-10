@@ -148,9 +148,9 @@ export class TooltipVisualizer extends React.Component<TooltipProps, TooltipVisu
     }
 }
 
-@RuntimeAccessible('Tooltip')
-export class Tooltip extends React.Component<AllProps, State> {
-    static cname: string = "Tooltip";
+@RuntimeAccessible('TooltipClass')
+export class TooltipClass extends React.Component<AllProps, State> {
+    static cname: string = "TooltipClass";
     tooltip!: ReactNode;
 
     constructor(props: AllProps) {
@@ -163,7 +163,7 @@ export class Tooltip extends React.Component<AllProps, State> {
     public static show(tooltip: ReactNode, pos?: PositionStrTypes, baseElement?: Element, seconds: number = -1, offset?: IPoint, theme?: ThemeType): void{
         tooltip = Tooltip.fixTooltip(tooltip);
         const statepatch: Partial<TooltipVisualizerState> = {tooltip, baseElement, offsetX: offset?.x ?? 0, offsetY: offset?.y ?? 0, theme};
-         statepatch.position = pos ?? 'b';
+        statepatch.position = pos ?? 'b';
         TooltipVisualizer.component.setState(statepatch);
         if (seconds>0) setTimeout( () => {
             if (TooltipVisualizer.component.state.tooltip !== tooltip) return;
@@ -217,12 +217,17 @@ export class Tooltip extends React.Component<AllProps, State> {
 
     render() {
         if (!this.props.tooltip) return this.props.children;
-        if (Array.isArray(this.props.children)) return <span>
-            &lt;Tooltip /&gt; component requires exactly 1 element as children. Wrap the subelements in a container element.
-        </span>
-        if (!this.props.children || !isValidElement(this.props.children)) return <span>
+        let child = this.props.children;
+        if (Array.isArray(child)) {
+            if (child.length !== 1) {
+                console.log('Tooltip component requires exactly 1 element as children', {c:this.props.children});
+                return <span>&lt;Tooltip /&gt; component requires exactly 1 element as children. Wrap the subelements in a container element.</span>
+            }
+            else child = child[0];
+        }
+        if (!child || !isValidElement(child)) return <span>
             &lt;Tooltip /&gt; component requires a html or react node as children.
-        </span>
+        </span>;
         for (let k of Object.keys(this.props)) switch (k){
             //default: Log.ww('<Tooltip /> component cannot accept props other than "key", "position", and "tooltip".'); break;
             case 'children': case 'key': case 'tooltip': case 'position': break;
@@ -230,26 +235,41 @@ export class Tooltip extends React.Component<AllProps, State> {
         }
         this.tooltip = Tooltip.fixTooltip(this.props.tooltip);
 
-        let c = this.props.children;
-        const onMouseEnter = Tooltip.mergeEvents(c, 'onMouseEnter', this.onMouseEnter);
-        const onMouseLeave = Tooltip.mergeEvents(c, 'onMouseLeave', this.onMouseLeave);
+        const onMouseEnter = Tooltip.mergeEvents(child, 'onMouseEnter', this.onMouseEnter);
+        const onMouseLeave = Tooltip.mergeEvents(child, 'onMouseLeave', this.onMouseLeave);
         let ref: Ref<Element> | undefined = undefined;
-        if ((c.props as any).ref) {
-            const pref = (c.props as any).ref;
-            switch(typeof pref){
+        if ((child.props as any).ref) {
+            const pref = (child.props as any).ref;
+            switch (typeof pref){
                 case "object": this.childhtml = (pref as RefObject<Element>).current; break;
-                case "function": ref = (e: Element, ...a:any)=> { pref(e, a); this.childhtml = e;}; break;
+                case "function": ref = (e: Element, ...a:any)=> { pref(e, a); this.childhtml = e; }; break;
                 case "string": Log.ee("Found React-ref of type string in Tooltip children which is unsupported. Use object or funcional refs."); break;
             }
         } else ref = ((ref: Element | null) => { this.childhtml = ref; } );
 
         const injectProps: GObject = {onMouseEnter, onMouseLeave};
         if (ref) injectProps.ref = ref;
-        let ret = React.cloneElement(c, injectProps);
+        let ret = React.cloneElement(child, injectProps);
         return ret;
     }
 
 }
+let ClassTooltip = TooltipClass;
+
+// because class components are not allowed in jsx-transform (used in views)
+export function TooltipFunc(props: AllProps, children: ReactNode): ReactNode {
+    return <TooltipClass {...props}>{props.children || children}</TooltipClass>
+}
+let ttf: GObject = TooltipFunc;
+ttf.cname = 'Tooltip'; //@ts-ignore
+window.Tooltip = TooltipFunc; //@ts-ignore
+ttf.show = (...a: any) => ClassTooltip.show(...a); //@ts-ignore
+ttf.hide = (...a: any) => ClassTooltip.hide(...a); //@ts-ignore
+ttf.fixTooltip = (...a: any) => ClassTooltip.fixTooltip(...a); //@ts-ignore
+ttf.mergeEvents = (...a: any) => ClassTooltip.mergeEvents(...a); //@ts-ignore
+
+export let Tooltip = TooltipClass;
+
 interface State{
 }
 

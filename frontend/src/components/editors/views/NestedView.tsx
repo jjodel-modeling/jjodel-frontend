@@ -74,9 +74,11 @@ function NestedViewComponent(props: AllProps) {
 
     let [collapseAll, setCollapseAll] = useState<boolean | undefined>( undefined );
 
-    function renderEntry(e: DViewElement, childrens: Dictionary<Pointer, number>, isExpanded: boolean, toggleExpansion: ()=>any, depth: number, path: number[], metadata: Metadata): JSX.Element{
+    function renderEntry(e: DViewElement, childrens: Dictionary<Pointer, number>, isExpanded: boolean,
+                         toggleExpansion: ()=>any, depth: number, path: number[], metadata: Metadata): ReactNode {
         let d = e;
         let appliableTo: string;
+        if (!d) return null;
 
         if (collapseAll !== undefined && collapseAll === isExpanded) toggleExpansion();
         let expandClick = () => {

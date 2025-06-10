@@ -983,12 +983,19 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         thiss.edgesIn = [];
         thiss.edgesOut = [];
         thiss.subElements = [];
+        thiss.zoom = {x:1, y:1} as any;
         // thiss.state = {id: thiss.id+".state", className: thiss.className};
         // 5-way anchors thiss.anchors = {'0':{x:0.5, y:0.5}, '1':{x:0.5, y:0}, '2':{x:1, y:0.5}, '3':{x:0.5, y:1}, '4':{x:0, y:0.5}} as any;
-        thiss.anchors = {'0':{x:0.5, y:0.5}, 't':{x:0.5, y:0},
-            'tr':{x:1, y:0}, 'r':{x:1, y:0.5}, 'br':{x:1, y:1},
-            'b':{x:0.5, y:1},
-            'bl':{x:0, y:1}, 'l':{x:0, y:0.5}, 'tl':{x:0, y:0},
+
+        thiss.anchors = {'0':{x:0.5, y:0.5},
+            'tl':{x:0, y:0}, 't':{x:0.5, y:0}, 'tr':{x:1, y:0},
+            'r':{x:1, y:0.5},
+            'br':{x:1, y:1}, 'b':{x:0.5, y:1}, 'bl':{x:0, y:1},
+            'l':{x:0, y:0.5},
+            'ttl':{x:1/4, y:0}, 'ttr':{x:3/4, y:0},
+            'bbl':{x:1/4, y:1}, 'bbr':{x:3/4, y:1},
+            'tll':{x:0, y:1/4}, 'bll':{x:0, y:3/4},
+            'trr':{x:1, y:1/4}, 'brr':{x:1, y:3/4},
         } as any;
         for (let k in (thiss.anchors as GObject)) {
             let a: GObject = thiss.anchors[k];
@@ -1240,6 +1247,7 @@ export class DPointerTargetable extends RuntimeAccessibleClass {
     _state: GObject = {};
     name?:string;
     parent?: any;
+    zoom!: GraphPoint;
 
     static defaultname<L extends LModelElement = LModelElement>(startingPrefix: string | ((meta:L)=>string), father?: Pointer | DPointerTargetable | ((a:string)=>boolean), metaptr?: Pointer | null): string {
         let lfather: LModelElement;

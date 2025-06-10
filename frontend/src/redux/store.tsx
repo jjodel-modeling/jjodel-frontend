@@ -236,7 +236,59 @@ export class DState extends DPointerTargetable{
     static init_editor(store?: DState): void {
         this.fixcolors();
         TRANSACTION('init jodel state', ()=>{
-            const viewpoint = DViewPoint.newVP('Default', undefined, true, 'Pointer_ViewPointDefault');
+            const viewpoint = DViewPoint.newVP('Default', (vp)=>{
+                vp.palette = {
+                    'border-': U.hexToPalette('#a3a3a3')
+                }
+                vp.css = `
+/* stuff for subelements */
+[data-nodetype="GraphVertex"] {
+  width: 50%;
+  height: 50%;
+}
+
+
+[data-nodetype="Field"] { white-space: nowrap; }
+[data-nodetype="VoidVertex"],
+[data-nodetype="Vertex"],
+[data-nodetype="GraphVertex"] {
+  left: var(--left) !important;
+  top: var(--top) !important;
+  >*{ border: 0.1em solid var(--border-1); }
+  &>.ui-resizable-handle{ border: none; }
+}
+
+[data-nodetype]{
+  /* setup zoom */
+  transform: scale(var(--zoom-x), var(--zoom-y));
+  transform-origin: top left;
+
+  /* style inputs */
+  select, input{
+    background: inherit;
+    color: inherit;
+    &:empty{
+      font-style: italic;
+    }
+  }
+}
+
+/* normally hide overflow on all nodes */
+&,[data-nodetype], [data-nodetype]>*{
+  overflow: hidden;
+  /* but allow it on selected nodes */
+  &.selected-by-me, &:has(.selected-by-me, .Edge), &:hover, &:active, &:focus-within, &:focus{
+    overflow: visible;
+    z-index: 100 !important;
+  }
+}
+/* edge overflow is always visible (or lines would be cropped)*/
+.Edge{ overflow: visible; }
+/* this class is for edge container, must be positioned at top-left with no size but in overflow.
+otherwise you would click the edge container instead of the graph-elements beneath it. */
+.edges { z-index: 101; position: absolute; top: 0; left: 0; height: 0; width: 0; overflow: visible; }
+`
+            }, true, 'Pointer_ViewPointDefault');
             const validationViewpoint = DViewPoint.newVP('Validation default',
                 (vp)=>{ vp.isExclusiveView = false; vp.isValidation = true;}, true, 'Pointer_ViewPointValidation');
 
@@ -342,7 +394,7 @@ else if (!name.match(/^[A-Za-z_$]+[A-Za-z0-9$_\\s]*$/)) err = type + " names can
 if (node.state.error_naming !== err) node.state = {error_naming: err};
 `.trim();}, false, 'Pointer_ViewCheckName' );
 
-let errorCheckLowerbound: DViewElement = DViewElement.new2('Lowerbound error view', DV.invisibleJsx(), validationVP, (v) => {
+    let errorCheckLowerbound: DViewElement = DViewElement.new2('Lowerbound error view', DV.invisibleJsx(), validationVP, (v) => {
             // v.jsCondition = '(data, node)=> {\nnode.state.errors?.length>0';
             v.appliableToClasses = ['DValue'];
             v.isExclusiveView = false;

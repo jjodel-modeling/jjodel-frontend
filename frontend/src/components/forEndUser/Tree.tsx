@@ -202,14 +202,14 @@ interface GenericTreeProps<T extends any = any> {
     data: any,
     getSubElements: (o: any)=>(GObject[] | Dictionary<any, any>),
     //getKey: (o:any) => string,
-    renderEntry: (e: any, childrens: any, isExpanded: boolean, toggleExpansion: () => any, depth: number, path: number[], metadata?:any)=>JSX.Element,
+    renderEntry: (e: any, childrens: any, isExpanded: boolean, toggleExpansion: () => any, depth: number, path: number[], metadata?:any)=>ReactNode,
     initialHidingState?: boolean,
     depth?: number,
     path?: number[],
     metadata?: any,
 }
 
-export function GenericTree(props: GenericTreeProps): JSX.Element {
+export function GenericTree(props: GenericTreeProps): ReactNode {
     let [isExpanded, setExpanded] = useStateIfMounted(props.initialHidingState || false);
     const data: GObject = props.data;
     const childrens = props.getSubElements(data) || [];

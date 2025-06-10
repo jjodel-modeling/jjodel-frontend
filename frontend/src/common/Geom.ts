@@ -324,8 +324,22 @@ export abstract class ISize<PT extends IPoint = IPoint> extends RuntimeAccessibl
 
     protected abstract makePoint(x: number, y: number): PT;
     protected abstract new(...args:any): this;
-    public clone(json: this): this { this.x = json.x; this.y = json.y; this.w = json.w; this.h = json.h; return this; }
-    public duplicate(): this { return this.new().clone(this); }
+    public clone(json: GObject<ISize>, partial: boolean = false, onlyNumbers: boolean = false): this {
+        if (partial) {
+            if ('x' in json) this.x = (onlyNumbers ? +json.x||0 : json.x); else delete (this as any).x;
+            if ('y' in json) this.y = (onlyNumbers ? +json.y||0 : json.y); else delete (this as any).y;
+            if ('w' in json) this.w = (onlyNumbers ? +json.w||0 : json.w); else delete (this as any).w;
+            if ('h' in json) this.h = (onlyNumbers ? +json.h||0 : json.h); else delete (this as any).h;
+        } else {
+            this.x = 'x' in json ? (onlyNumbers ? +json.x||0 : json.x) : 0;
+            this.y = 'y' in json ? (onlyNumbers ? +json.y||0 : json.y) : 0;
+            this.w = 'w' in json ? (onlyNumbers ? +json.w||0 : json.w) : 0;
+            this.h = 'h' in json ? (onlyNumbers ? +json.h||0 : json.h) : 0;
+        }
+        // @ts-ignore
+        if ('currentCoordType' in json) this.currentCoordType = json.currentCoordType;
+        return this; }
+    public duplicate(): this { return this.new().clone(this as ISize); }
 
     public add(pt2: number | {x?:number, y?:number, w?:number, h?:number}, newInstance?: boolean): this {
         let thiss = newInstance ? this.duplicate() : this;

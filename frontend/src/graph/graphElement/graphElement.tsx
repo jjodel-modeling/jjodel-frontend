@@ -1071,8 +1071,30 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         if (props.onDelete) { tn.onDelete = props.onDelete; }
         if (props.longestLabel) { tn.longestLabel = props.longestLabel; }
         if (props.labels) { tn.labels = props.labels; }
-        if (props.anchorStart && props.isEdge) { edge.anchorStart = props.anchorStart; }
-        if (props.anchorEnd && props.isEdge) { edge.anchorEnd = props.anchorEnd; }
+        if (props.anchorStart && props.isEdge) {
+            let old = edge.anchorStart;
+            let updated = (typeof old !== typeof props.anchorStart) || (!!old !== !!props.anchorStart);
+            if (old && !updated) switch (typeof old){
+                case 'object':
+                    updated = old.x !== props.anchorStart.x || old.y !== props.anchorStart.y;
+                    break;
+                case 'string': default:
+                    updated = old !== props.anchorStart;
+            }
+            if (updated) { edge.anchorStart = props.anchorStart; ret = true; }
+        }
+        if (props.anchorEnd && props.isEdge) {
+            let old = edge.anchorEnd;
+            let updated = (typeof old !== typeof props.anchorEnd) || (!!old !== !!props.anchorEnd);
+            if (old && !updated) switch (typeof old){
+                case 'object':
+                    updated = old.x !== props.anchorEnd.x || old.y !== props.anchorEnd.y;
+                    break;
+                case 'string': default:
+                    updated = old !== props.anchorEnd;
+            }
+            if (updated) { edge.anchorEnd = props.anchorEnd; ret = true; }
+        }
         if (props.start && props.isEdge) {
             ptr = Pointers.from(props.start);
             if (dedge.id !== ptr) edge.start = ptr as any;
@@ -1082,7 +1104,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
             ptr = Pointers.from(props.end);
             if (dedge.id !== ptr) edge.end = ptr as any;
         }
-        if (props.anchorEnd) { tn.labels = props.labels; }
+        if (props.labels) { tn.labels = props.labels; }
         let todoremovethis = false;
         // if (typeof props.viewid === 'string') { let old = props.viewid; if (old !== props.node.view.id) { this.forceUpdate(); ret = true;} }
         if (todoremovethis || props.isReference !== undefined) { let old = dedge.isReference; let n = !!props.isReference; if (old !== n) { edge.isReference = n; ret = true;} }
@@ -1112,15 +1134,16 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         }*/
         if (this.updateNodeFromProps(this.props as GObject<any>)) return 'Updating...';
 
-        classes.push(nodeType)
+        classes.push(nodeType);
+
+        let zoom = (this.props.node).zoom;
+        styleoverride['--zoom-x'] = zoom.x;
+        styleoverride['--zoom-y'] = zoom.y;
 
         if (this.props.isGraph){
             let offset = (this.props.node as any as LGraph).offset;
-            let zoom = (this.props.node as any as LGraph).zoom;
             styleoverride['--offset-x'] = offset.x + 'px';
             styleoverride['--offset-y'] = offset.y + 'px';
-            styleoverride['--zoom-x'] = zoom.x;
-            styleoverride['--zoom-y'] = zoom.y;
         }
         if (this.props.isVertex){
             let vertex: LVertex = this.props.node as any;
@@ -1129,6 +1152,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
             styleoverride['--left'] = size.x + 'px';
 
             let isResized = vertex.isResized;
+            classes.push(isResized ? 'isResized' : 'notResized');
             if (isResized || !this.props.view.adaptWidth) {
                 styleoverride.width = size.w + 'px';
                 styleoverride['--width'] = size.w + 'px';

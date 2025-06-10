@@ -1,182 +1,210 @@
-.color-picker-root{
-  position: relative;
-}
+.palette-row-container {
 
-
-.color-container{
-  outline: 1px solid var(--palette-g);
-  border-radius: var(--radius);
-}
-.color-container, .suggestion-container, .value.hoverable, .value.hoverable>div{
-  // background: white;
-  height: 32px;
   display: flex;
+
+  & > .prefix{
+    flex-basis:0;
+    flex-grow:2;
+    min-width: 0;
+  }
+
+  margin-bottom: 0.3em;
+
+  input, select, button {
+    border-radius: var(--radius);
+    padding-left: 10px;
+    border: 1px solid var(--palette-g);
+    & :invalid {
+      border-color: var(--palette-r);
+      outline-color: var(--palette-r);
+    }
+  }
 }
-.value.hoverable{
-  flex-wrap: wrap;
-  overflow: hidden;
+.palette-row-container:hover, .palette-row-container:focus-within {
+  position: relative;
+  z-index: 1;
 }
 
-.btn-danger {
-  border: 1px solid white !important;
-}
+.palette-row {
 
-// palette decoration 
+  .color-picker-root{
+    position: relative;
+  }
 
-.palette-row-container:has(.color-container)::before {
-  font-family: bootstrap-icons;
-  content: '\F4B1';
-  font-size: 1.3em;
-  color: var(--neutral);
-  width: 24px;
-}
-.palette-row-container:has(.numeric)::before {
-  font-family: bootstrap-icons;
-  content: '\F67F';
-  font-size: 1.3em;
-  color: var(--neutral);
-  width: 24px;
-}
-.palette-row-container:has(.textual)::before {
-  font-family: bootstrap-icons;
-  content: '\F5F7';
-  font-size: 1.3em;
-  color: var(--neutral);
-  width: 24px;
-}
-.palette-row-container:has(.path)::before {
-  font-family: bootstrap-icons;
-  content: '\F604';
-  font-size: 1.3em;
-  color: var(--neutral);
-  width: 24px;
-}
-div.controls div.palette-row-container div.palette-row.path select {
-  border-radius: var(--radius);
-}
 
-input:focus, select:focus {
+  .color-container{
+    outline: 1px solid var(--palette-g);
+    border-radius: var(--radius);
+  }
+  .color-container, .suggestion-container, .value.hoverable, .value.hoverable>div{
+    // background: white;
+    height: 32px;
+    display: flex;
+  }
+  .value.hoverable{
+    flex-wrap: wrap;
+    overflow: hidden;
+  }
+
+  .btn-danger {
+    border: 1px solid white !important;
+  }
+
+  // palette decoration
+
+  .palette-row-container:has(.color-container)::before {
+    font-family: bootstrap-icons;
+    content: '\F4B1';
+    font-size: 1.3em;
+    color: var(--neutral);
+    width: 24px;
+  }
+  .palette-row-container:has(.numeric)::before {
+    font-family: bootstrap-icons;
+    content: '\F67F';
+    font-size: 1.3em;
+    color: var(--neutral);
+    width: 24px;
+  }
+  .palette-row-container:has(.textual)::before {
+    font-family: bootstrap-icons;
+    content: '\F5F7';
+    font-size: 1.3em;
+    color: var(--neutral);
+    width: 24px;
+  }
+  .palette-row-container:has(.path)::before {
+    font-family: bootstrap-icons;
+    content: '\F604';
+    font-size: 1.3em;
+    color: var(--neutral);
+    width: 24px;
+  }
+  div.controls div.palette-row-container div.palette-row.path select {
+    border-radius: var(--radius);
+  }
+
+  input:focus, select:focus {
     outline-color: var(--accent);
     border-radius: var(--radius);
     height: var(--input-height);
     padding-left: 10px;
     padding-right: 10px;
 
-}
-
-textarea:focus {
-  outline-color: var(--accent);
-}
-
-
-button.btn-success.my-btn {
-  background-color: var(--neutral);
-  border: none;
-  font-size: 1em;
-  font-weight: 300;
-  padding: 2px 10px;
-  height: var(--input-height);
-  margin-left: 24px;
-  border-radius: var(--radius);
-  margin-bottom: 10px;
-}
-
-div:has(>.btn-color) {
-  padding-left: 24px;
-}
-// color
-button.btn-success.my-btn.btn-color {
-  background-color: var(--accent);
-  margin: 10px 0 20px 0;
-  border-radius: 0;
-  border-left: 1px solid white;
-
-}
-button.btn-success.my-btn.btn-color::before {
-  content: "\F4B1";
-}
-// number 
-button.btn-success.my-btn.btn-number {
-  background-color: var(--accent);
-  margin: 10px 0 20px 0;
-  border-radius: 0;
-  border-left: 1px solid white;
-}
-button.btn-success.my-btn.btn-number::before {
-  content: "\F67F";
-}
-// textual
-button.btn-success.my-btn.btn-textual {
-  background-color: var(--accent);
-  margin: 10px 0 20px 0;
-  border-radius: 0;
-  border-left: 1px solid white;
-}
-button.btn-success.my-btn.btn-textual::before {
-  content: "\F5F7";
-}
-// path
-button.btn-success.my-btn.btn-path {
-  background-color: var(--accent);
-  margin: 10px 0 20px 0;
-  border-radius: 0;
-  border-top-right-radius: var(--radius);
-  border-bottom-right-radius: var(--radius);
-  border-left: 1px solid white;
-}
-button.btn-success.my-btn.btn-path::before {
-  content: "\F604";
-}
-
-
-button.btn-success.my-btn::before {
-  font-family: bootstrap-icons;
-  content: "\F64D";
-  font-size: 0.8em;
-  padding-right: 10px;
-
-  & .bi {
-    margin-top: 2px!important;
   }
-}
 
-button.btn-success.my-btn:hover {
-  cursor: pointer;
-  background-color: var(--success);
-}
+  textarea:focus {
+    outline-color: var(--accent);
+  }
 
-div.controls div.palette-row-container div.palette-row.path div.value.hoverable input.value{
+
+  button.btn-success.my-btn {
+    background-color: var(--neutral);
+    border: none;
+    font-size: 1em;
+    font-weight: 300;
+    padding: 2px 10px;
+    height: var(--input-height);
+    margin-left: 24px;
+    border-radius: var(--radius);
+    margin-bottom: 10px;
+  }
+
+  div:has(>.btn-color) {
+    padding-left: 24px;
+  }
+  // color
+  button.btn-success.my-btn.btn-color {
+    background-color: var(--accent);
+    margin: 10px 0 20px 0;
+    border-radius: 0;
+    border-left: 1px solid white;
+
+  }
+  button.btn-success.my-btn.btn-color::before {
+    content: "\F4B1";
+  }
+  // number
+  button.btn-success.my-btn.btn-number {
+    background-color: var(--accent);
+    margin: 10px 0 20px 0;
+    border-radius: 0;
+    border-left: 1px solid white;
+  }
+  button.btn-success.my-btn.btn-number::before {
+    content: "\F67F";
+  }
+  // textual
+  button.btn-success.my-btn.btn-textual {
+    background-color: var(--accent);
+    margin: 10px 0 20px 0;
+    border-radius: 0;
+    border-left: 1px solid white;
+  }
+  button.btn-success.my-btn.btn-textual::before {
+    content: "\F5F7";
+  }
+  // path
+  button.btn-success.my-btn.btn-path {
+    background-color: var(--accent);
+    margin: 10px 0 20px 0;
+    border-radius: 0;
+    border-top-right-radius: var(--radius);
+    border-bottom-right-radius: var(--radius);
+    border-left: 1px solid white;
+  }
+  button.btn-success.my-btn.btn-path::before {
+    content: "\F604";
+  }
+
+
+  button.btn-success.my-btn::before {
+    font-family: bootstrap-icons;
+    content: "\F64D";
+    font-size: 0.8em;
+    padding-right: 10px;
+
+    & .bi {
+      margin-top: 2px!important;
+    }
+  }
+
+  button.btn-success.my-btn:hover {
+    cursor: pointer;
+    background-color: var(--success);
+  }
+
+  div.controls div.palette-row-container div.palette-row.path div.value.hoverable input.value{
     margin-top: 0px!important;
     top: -10px!important;
     padding-top: 0!important;
     height: var(--input-height);
     border-radius: var(--radius);
-}
-
-div.controls div.palette-row-container div.palette-row.path div.value.hoverable div.content {
-  height: 60px;
-  margin: 0px!important;
-  padding: 0px!important;
-  bottom: 0px;
-  left: 0px;
-  
-
-  & input {
-    border-radius: var(--radius);
   }
-}
 
-div.controls div.palette-row-container div.palette-row.textual input.value {
-  margin-top: 0;
-  height: var(--input-height);
-}
-div.controls div.palette-row-container div.palette-row.numeric input.value {
-  margin-top: 0;
-  // margin-left: 10%!important;
-  height: var(--input-height);
-}
+  div.controls div.palette-row-container div.palette-row.path div.value.hoverable div.content {
+    height: 60px;
+    margin: 0px!important;
+    padding: 0px!important;
+    bottom: 0px;
+    left: 0px;
 
-.palette-row {
+
+    & input {
+      border-radius: var(--radius);
+    }
+  }
+
+  div.controls div.palette-row-container div.palette-row.textual input.value {
+    margin-top: 0;
+    height: var(--input-height);
+  }
+  div.controls div.palette-row-container div.palette-row.numeric input.value {
+    margin-top: 0;
+    // margin-left: 10%!important;
+    height: var(--input-height);
+  }
+
 
   & .color-container {
 
@@ -314,107 +342,98 @@ div.controls div.palette-row-container div.palette-row.numeric input.value {
 
   }
 }
+.palette-row {
+  .value.hoverable:hover, .value.hoverable:focus-within{
+    overflow: visible;
+    z-index: 0;
+    &>*{
 
-
-
-.palette-row-container:hover, .palette-row-container:focus-within{
-
-  position: relative;
-  z-index: 1;
-}
-.value.hoverable:hover, .value.hoverable:focus-within{
-  overflow: visible;
-  z-index: 0;
-  &>*{
-
-    //padding-left: 1em;
-    //padding-right: 1em;
-  }
-  &>.content{
-    display: flex;
-    flex-wrap: wrap;
-    z-index: -1;
-    border-radius: 0.4em;
-    top: -0em;
-    height: calc(64px + 1em);
-    width: calc(100% + .5em);
-    left: -.25em;
-    &>.spacer{
-      opacity: 0;
+      //padding-left: 1em;
+      //padding-right: 1em;
+    }
+    &>.content{
+      display: flex;
+      flex-wrap: wrap;
+      z-index: -1;
+      border-radius: 0.4em;
+      top: -0em;
+      height: calc(64px + 1em);
+      width: calc(100% + .5em);
+      left: -.25em;
+      &>.spacer{
+        opacity: 0;
+      }
+    }
+    input.x, input.y{
+      width: auto;
     }
   }
-  input.x, input.y{
-    width: auto;
-  }
-}
-.hoverable:hover, .hoverable:focus-within, .hoverable:active, .hoverable.pinned{
-  .content.suggestions{
-  display:flex;
-  flex-flow: column;
-  position: absolute;
-  z-index: 99999;
-    h6{
+  .hoverable:hover, .hoverable:focus-within, .hoverable:active, .hoverable.pinned{
+    .content.suggestions{
       display:flex;
-      margin-bottom: 0.5rem;
-      margin-left: 1em;
-      // margin-left: 1rem;
-      &>.command-bar{
-        margin: auto 0;
-        margin-left: 4px;
-        .tab-btn.add{
-          &::before{
-            font-size: 1em;
-          }
-          &:hover::before{
+      flex-flow: column;
+      position: absolute;
+      z-index: 99999;
+      h6{
+        display:flex;
+        margin-bottom: 0.5rem;
+        margin-left: 1em;
+        // margin-left: 1rem;
+        &>.command-bar{
+          margin: auto 0;
+          margin-left: 4px;
+          .tab-btn.add{
+            &::before{
+              font-size: 1em;
+            }
+            &:hover::before{
               color: black;
+            }
           }
         }
-      }
-      &>span{
-        margin: auto 0;
+        &>span{
+          margin: auto 0;
+        }
       }
     }
   }
-}
-.color-picker-root {
-  border-radius: 0.4em;
-}
-.color-picker-root.hoverable>input:focus + .content.suggestions {
-  // display: none !important;
-}
-
-.controls:not(:focus-within) .color-picker-root:hover, .color-picker-root:focus-within{
-  // padding: 5px !important;
-  background: #dedede;
-  outline: 1px solid var(--palette-g);
-  border-radius: 20%;
-  overflow: visible;
-  // height: 200%;
-  z-index:1; // otherwise when hovering the overflow delete button on bottom, it counts as if i'm hovering next line and button disappears. weird bug
-}
-.controls:focus-within .content.suggestions:not(:focus-within){
-  display: none !important;
-}
-
-.suggestions{
-  width: max-content;
-  // min-width: 500px;
-  transform: translate3d( calc(-50% + 24px / 2), 0px, 6600px);
-  >*{margin-left: 1em; margin-right: 1em;}
-  
-  h6{
-    margin-top: .5em;
-    margin-bottom: 0.25em;
-    cursor: pointer;
-    &:hover, &:focus-within{
-      font-weight: 700;
-    }
+  .color-picker-root {
+    border-radius: 0.4em;
+  }
+  .color-picker-root.hoverable>input:focus + .content.suggestions {
+    // display: none !important;
   }
 
-}
-.palette-row{
-  // position: relative;
-  // z-index: 2;
+  .controls:not(:focus-within) .color-picker-root:hover, .color-picker-root:focus-within{
+    // padding: 5px !important;
+    background: #dedede;
+    outline: 1px solid var(--palette-g);
+    border-radius: 20%;
+    overflow: visible;
+    // height: 200%;
+    z-index:1; // otherwise when hovering the overflow delete button on bottom, it counts as if i'm hovering next line and button disappears. weird bug
+  }
+  .controls:focus-within .content.suggestions:not(:focus-within){
+    display: none !important;
+  }
+
+  .suggestions{
+    width: max-content;
+    // min-width: 500px;
+    transform: translate3d( calc(-50% + 24px / 2), 0px, 6600px);
+    >*{margin-left: 1em; margin-right: 1em;}
+
+    h6{
+      margin-top: .5em;
+      margin-bottom: 0.25em;
+      cursor: pointer;
+      &:hover, &:focus-within{
+        font-weight: 700;
+      }
+    }
+
+  }
+
   .roww .color-suggestion{
     margin-left: 0.5em;
     margin-right: 0.5em;
@@ -450,121 +469,99 @@ div.controls div.palette-row-container div.palette-row.numeric input.value {
       margin-right: auto;
     }
   }
-}
 
-.color-suggestion{
-  border: 2px solid white;
-  outline: 1px solid gray;
-  line-height: 0;
-}
-
-.palette-row-container {
-
-  display: flex;
-  
-  & > .prefix{ 
-    flex-basis:0; 
-    flex-grow:2; 
-    min-width: 0; 
+  .color-suggestion{
+    border: 2px solid white;
+    outline: 1px solid gray;
+    line-height: 0;
   }
-  
-  margin-bottom: 0.3em;
 
-  input, select, button {
-    border-radius: var(--radius);
-    padding-left: 10px;
-    border: 1px solid var(--palette-g);
-    & :invalid {
-      border-color: var(--palette-r);
-      outline-color: var(--palette-r);
+  & {
+    flex-grow: 9;
+    margin-left: 0.5em;
+    flex-basis: 0;
+
+    display: grid;
+    grid-template-columns: repeat(9, 1fr);
+    column-gap: 0.5em;
+    height: 32px;
+
+    &> .value {
+      flex-basis:0;
+      flex-grow:5;
+      min-width: 0;
+      margin-left: 0em;
     }
-  }
-}
-
-.palette-row { 
-  flex-grow: 9;
-  margin-left: 0.5em;
-  flex-basis: 0;
-
-  display: grid;
-  grid-template-columns: repeat(9, 1fr);
-  column-gap: 0.5em;
-  height: 32px;
-
-  &> .value { 
-    flex-basis:0; 
-    flex-grow:5; 
-    min-width: 0; 
-    margin-left: 0em; 
-  }
-  &> select { 
-    flex-basis:50px; 
-    flex-grow:2; 
-    min-width:0px; 
-    margin-left: 0em; 
-  }
-  &> .unit { 
-    flex-basis:35px; 
-    flex-grow:1; 
-    min-width:0px; 
-    margin-left: 0em; 
-  }
-  &> .command-bar { 
-    flex-basis: 35px; 
-    flex-grow:1; 
-    min-width:0px; 
-    margin-left: 0em;
-  }
-
-  &.textual{
-    
-    &>.value{ 
-      grid-column: 1/9; 
+    &> select {
+      flex-basis:50px;
+      flex-grow:2;
+      min-width:0px;
+      margin-left: 0em;
     }
-    
-    &.command-bar {
-      grid-column: 9/9; 
+    &> .unit {
+      flex-basis:35px;
+      flex-grow:1;
+      min-width:0px;
+      margin-left: 0em;
     }
-  }
-  
-  &.path{
-    & >.value{ 
-      grid-column: 1/7; 
+    &> .command-bar {
+      flex-basis: 35px;
+      flex-grow:1;
+      min-width:0px;
+      margin-left: 0em;
     }
-    & > select { 
-      grid-column: 7/9; 
-    }
-  }
-  
-  &.numeric {
-    
-    &>.value { grid-column:1/7; }
-    &>input.spinner { grid-column:7/7; }
-    &>.unit { grid-column:8/8; }
-  }
 
-  & > .color-container{ 
-    grid-column:1/8;  
-    & .command-bar {
+    &.textual{
+
+      &>.value{
+        grid-column: 1/9;
+      }
+
+      &.command-bar {
+        grid-column: 9/9;
+      }
+    }
+
+    &.path{
+      & >.value{
+        grid-column: 1/7;
+      }
+      & > select {
+        grid-column: 7/9;
+      }
+    }
+
+    &.numeric {
+
+      &>.value { grid-column:1/7; }
+      &>input.spinner { grid-column:7/7; }
+      &>.unit { grid-column:8/8; }
+    }
+
+    & > .color-container{
+      grid-column:1/8;
+      & .command-bar {
+        grid-column: 9/9;
+      }
+    }
+
+
+
+
+
+
+
+
+
+
+    &>.suggestion-container{
       grid-column: 9/9;
+      >*{margin:auto; width: 100%;}
+      button{width:100%;}
     }
   }
-
-  
-
-  
-
-
-  
-
-
-  
-  &>.suggestion-container{
-    grid-column: 9/9;
-    >*{margin:auto; width: 100%;}
-    button{width:100%;}
-  }
 }
+
 
 .view-editor-root {
 
@@ -585,41 +582,37 @@ div.controls div.palette-row-container div.palette-row.numeric input.value {
     padding-left: 10px; 
   }
 
+  // Add new palette item
+
+  div.add-palette-item  {
+    padding: 2px 20px 2px 10px;
+    font-size: 1em!important;
+    color: white;
+    background-color: var(--neutral);
+    margin: 14px 0 20px 24px;
+    margin-left: 24px;
+    border-radius: var(--radius);
+    width: fit-content!important;
+    height: calc(var(--input-height) * 1);
+    cursor: pointer;
+  }
+
+  div.add-palette-item:hover {
+    background-color: var(--success);
+  }
+
+  div.add-palette-item.active {
+    background-color: var(--success);
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0px;
+    margin: 10px 0 20px 24px;
+    padding-right: 0px;
+    float:left;
+  }
+
+  div.add-palette-item .bi {
+    color: white;
+    margin-right: 10px;
+  }
+
 }
-
-
-// Add new palette item
-
-div.add-palette-item  {
-  padding: 2px 20px 2px 10px; 
-  font-size: 1em!important; 
-  color: white; 
-  background-color: var(--neutral);
-  margin: 14px 0 20px 24px;
-  margin-left: 24px; 
-  border-radius: var(--radius);  
-  width: fit-content!important;
-  height: calc(var(--input-height) * 1);
-  cursor: pointer;
-}
-
-
-
-div.add-palette-item:hover {
-  background-color: var(--success);
-}
-
-div.add-palette-item.active {
-  background-color: var(--success);
-  border-top-right-radius: 0;
-  border-bottom-right-radius: 0px;
-  margin: 10px 0 20px 24px;
-  padding-right: 0px;
-  float:left;
-}
-
-div.add-palette-item .bi {
-  color: white;
-  margin-right: 10px;
-}
-

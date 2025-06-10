@@ -137,17 +137,15 @@
 
 
 .element-icon {
-  font-size: 0.9em;
   display: block;
-  width: 23px!important;
-  height: 20px!important;
-  border: 1px solid white;
-  border-radius: 24px;
+  min-width: 1lh;
+  min-height: 1lh;
+  outline: 1px solid white;
+  border-radius: 100%;
   text-align: center;
   margin-left: 2px;
   margin-top: auto;
   margin-bottom: auto;
-
 }
 
 

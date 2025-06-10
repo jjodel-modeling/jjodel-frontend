@@ -3425,20 +3425,39 @@ export class LReference<Context extends LogicContext<DReference> = any, C extend
     name!: string;
     namespace!: string;
     type!: LClass;
+    __info_of__type: Info = {type: "boolean", txt: "The type which the values must conform tp."}
     ordered!: boolean;
+    __info_of__ordered: Info = {type: "boolean", txt: "Defines if the values are kept in a sorted fashion."}
     unique!: boolean;
+    __info_of__unique: Info = {type: "boolean", txt: "The type which the values allow duplicates."}
     lowerBound!: number;
+    __info_of__lowerBound: Info = {type: "boolean", txt: "The minimum number of values expected to have."}
     upperBound!: number;
+    __info_of__upperBound: Info = {type: "boolean", txt: "The maximum number of values expected to have."}
     many!: boolean;
+    __info_of__many: Info = {type: "boolean", txt: "A derived attribute, equivalent to data.upperBound !== 0."}
     required!: boolean;
+    __info_of__required: Info = {type: "boolean", txt: "A derived attribute, equivalent to data.lowerBound > 0."}
     changeable!: boolean;
+    __info_of__changeable: Info = {type: "boolean", txt: "If after the initial setup, the value is alllowed to change. similar to \"const\" in many languages. Not supported yet by jjodel."}
     volatile!: boolean;
+    __info_of__volatile: Info = {type: "boolean", txt: "Indicates the value can be modified in a multi-threading scenario, and the compiler needs to avoid some optimizations to ensure different threads don't have unsynchronized cached copies."}
     transient!: boolean;
+    __info_of__transient: Info = {type: "boolean", txt: "A transient feature is not persistently stored. His value can be lost between sessions."}
     unsettable!: boolean;
+    __info_of__unsettable: Info = {type: "boolean", txt: "Not supported yet by jjodel, it is kept for compatibility with ecore. This is ecore's description."+
+            "An unsettable feature explicitly models the state of being set verses being unset and so provides a direct implementation for the reflective eIsSet." +
+            " It is only applicable single-valued features. One effect of this setting is that, in addition to generating the methods getXyz and setXyz (if the feature is changeable), a reflective generator will generate the methods isSetXyz and unsetXyz."}
+
     allowCrossReference!:boolean;
     public derived!: boolean;
+    __info_of__derived: Info = {type: "boolean", txt: "A derived feature has is value computed by an expression on other values. This is not yet supported by jjodel."}
+
     /*protected */derived_read?: string;
     /*protected */derived_write?: string;
+
+    get_many(c: Context): boolean{ return this.get_upperBound(c) !== 0; }
+    get_required(c: Context): boolean{ return this.get_lowerBound(c) > 0; }
 
     defaultValueLiteral!: string;
     parent!: LClass[];
@@ -3448,20 +3467,28 @@ export class LReference<Context extends LogicContext<DReference> = any, C extend
 
     // personal
     composition!: boolean; // aggregation || containment
+    __info_of__composition: Info = {type: "boolean", txt: "A composed value is either an aggregation or a containment.\n In jjodel when a feature is a composition, the contained objects have their parents mapped to the containing features."}
     aggregation!: boolean;
     containment!: boolean;
     container!: boolean;
 
     rootable?:boolean;
     __info_of__rootable: Info = {type:"boolean | undefined",
-        txt: "if missing, only classes not contained, not abstract and not interface can be a model root. if present this dictates it."};
-    __info_of__composition: Info = {type:"boolean",
-        txt: "Defines a \"part of\" relationship where the target cannot exist without the source. Building -> Room \"A Room cannot exist without a Building\""};
+        txt: "if missing, only classes not contained, not abstract and not interface can be a model root." +
+            "\nWhen read it tells you if the object is rootable by those criteria. If set, the criteria are overriden by your choice."};
+    __info_of__containment: Info = {type:"boolean",
+        txt: "Defines a \"part of\" relationship where the target cannot exist without the source. Building -> Room \"A Room cannot exist without a Building\"." +
+            "Containment implies composition.\n"};
     __info_of__aggregation: Info = {type:"boolean",
-        txt: "Defines a \"part of\" relationship where the target can exist without the source. Building -> Student \"A Student can exist outside a Building\""};
+        txt: "Defines a \"part of\" relationship where the target can exist without the source. Building -> Student \"A Student can exist outside a Building\"." +
+            "Aggregation implies composition. "};
     opposite?: LReference;
+    __info_of__opposite: Info = {type:"boolean",
+        txt: "This reference is a back-link of another reference stored by the values. It means the values are bidirectionally linked to the object containing this feature." +
+            "Aggregation implies composition. Not implemented in jjodel."};
     // target!: LClass[]; replaced by type
     edges!: LEdge[];
+    __info_of__edges: Info = {type:"boolean", txt: "The list of edges from the layouting model which are originating from this modelling element."};
 
 
 
@@ -4017,7 +4044,7 @@ export class DEnumerator extends DPointerTargetable { // DDataType
     }
 }
 
-@Node
+@Leaf
 @RuntimeAccessible('LEnumerator')
 export class LEnumerator<Context extends LogicContext<DEnumerator> = any, C extends Context = Context, D extends DEnumerator = DEnumerator> extends LDataType { // DDataType
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];

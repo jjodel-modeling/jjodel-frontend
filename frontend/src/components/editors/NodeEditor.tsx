@@ -1,14 +1,19 @@
+/*
+******************************* this is for pbar/node. instead GenericNodeData is for view->node. *******************************
+*/
+
 import React, {Dispatch, ReactElement, ReactNode} from 'react';
 import ReactJson from 'react-json-view' // npm i react-json-view --force
 import {connect} from 'react-redux';
 import {DState} from '../../redux/store';
-import type {
+import {
     LModelElement,
     LViewElement,
     LGraphElement,
     LVoidVertex,
-    LVoidEdge, LGraph,Pointer, DGraphElement,
-    DNamedElement, LNamedElement} from '../../joiner';
+    LVoidEdge, LGraph, Pointer, DGraphElement,
+    DNamedElement, LNamedElement, SetFieldAction
+} from '../../joiner';
 import {
     LPointerTargetable,
     L,
@@ -33,9 +38,10 @@ function NodeEditorComponent(props: AllProps) {
     const dnode = (node.__raw || node) as DGraphElement
     let cname = dnode.className;
     let isGraph = ['DGraph', 'DGraphVertex'].includes(cname); // RuntimeAccessibleClass.extends(cname, 'DGraph');
-    let isVertex = ['DVoidVertex', 'DVertex', 'DEdgePoint'].includes(cname); // RuntimeAccessibleClass.extends(cname, 'DVoidVertex');
+    let isVertex = ['DVoidVertex', 'DVertex', 'DEdgePoint', 'DGraphVertex'].includes(cname); // RuntimeAccessibleClass.extends(cname, 'DVoidVertex');
     let isEdge = ['DVoidEdge', 'DEdge'].includes(cname); // RuntimeAccessibleClass.extends(cname, 'DVoidEdge');
     let isField = (!isGraph && !isVertex && !isEdge);
+    let isGraphVertex = isVertex && isGraph;
     let asGraph: LGraph | undefined = isGraph && node as any;
     let asVertex: LVoidVertex | undefined  = isVertex && node as any;
     let asEdge: LVoidEdge | undefined = isEdge && node as any;
@@ -87,14 +93,32 @@ function NodeEditorComponent(props: AllProps) {
             </div>
         );
     };
-
-    let stackingOrder = <InputRow label={'Stacking order'} as={node} field={'zIndex'} type={'number'} />
+// todo: zoom entry not working
+    let commonEntries: JSX.Element[] = [];
+    if (!isGraph || isGraphVertex) commonEntries.push(<InputRow label={'Stacking order'} as={node} field={'zIndex'} type={'number'} />);
+    /*
+    let commonEntries: JSX.Element[] = [];
+    if (!isGraph || isGraphVertex) commonEntries.push(<InputRow label={'Stacking order'} as={node} field={'zIndex'} type={'number'} />);
+    function setZoom(val, key){
+        if (!dnode.zoom) {
+            let newzoom = {x:1, y:1};
+            newzoom[key] = val;
+            if (!dnode.zoom) SetFieldAction.new(dnode.id, 'zoom', newzoom, '', false);
+        }
+        else {
+            SetFieldAction.new(dnode.id, 'zoom.'+key, val, '', false);
+        }
+    }
+    commonEntries.push(<SizeInput data={node} field={'ownZoom'} xsetter={(val)=>{
+        if (!dnode.zoom) SetFieldAction(dnode.id, 'zoom', {x: val, y: val});
+    }}/>); // <GenericInput */
+    commonEntries.push(<GenericInput data={node} field={'zoom'} />);
 
     return(<div className={'p-3 node-editor'}>
         {/*<Input obj={selected.node} field={'id'} label={'ID'} type={'text'} readonly={true}/>*/}
 
-        {asGraph && <><h3>Graph</h3>
-            <GenericInput data={asGraph} field={'zoom'} />
+        {asGraph && <><h3>{isGraphVertex ? 'GraphVertex' : 'Graph'}</h3>
+            {commonEntries}
             <GenericInput data={asGraph} field={'offset'} />
             <SizeInput data={asGraph} field={'size'} label={'size'}
                        xsetter={(x)=> asGraph.x = +x}
@@ -106,18 +130,20 @@ function NodeEditorComponent(props: AllProps) {
             {/*graphSize readonly on LGraph but not on DGraph, = internal graph size. put it for info.*/ }
         </>}
 
-        {asVertex && <><h3>Vertex</h3>
-            {stackingOrder}
-
+        {asVertex && <>
+            {!isGraphVertex && <>
+                <h3>Vertex</h3>
+                {commonEntries}
+                <InputRow label={'X Position'} as={asVertex} field={'x'} type={'number'}/>
+                <InputRow label={'Y Position'} as={asVertex} field={'y'} type={'number'}/>
+                <InputRow label={'Width'} as={asVertex} field={'width'} type={'number'}/>
+                <InputRow label={'Height'} as={asVertex} field={'height'} type={'number'}/>
+            </>}
             <InputRow label={'isResized'} as={asVertex} field={'isResized'} type={'checkbox'} />
-            <InputRow label={'X Position'} as={asVertex} field={'x'} type={'number'} />
-            <InputRow label={'Y Position'} as={asVertex} field={'y'} type={'number'} />
-            <InputRow label={'Width'} as={asVertex} field={'width'} type={'number'} />
-            <InputRow label={'Height'} as={asVertex} field={'height'} type={'number'} />
         </>}
 
         {asEdge && <><h3>Edge</h3>
-            {stackingOrder}
+            {commonEntries}
 
             {
             //  <>
@@ -135,28 +161,19 @@ function NodeEditorComponent(props: AllProps) {
             // </>
             }
 
-            <GenericInput className='input-container' data={asEdge} field={"anchorStart"}/>
-            <GenericInput className='input-container' data={asEdge} field={"anchorEnd"}/>
+            {asEdge.anchorStart && typeof asEdge.anchorStart == 'object' ?
+                <SizeInput data={asEdge} field={'anchorStart'}/> :
+                <GenericInput className='input-container' data={asEdge} field={"anchorStart"}/>}
+            {asEdge.anchorEnd && typeof asEdge.anchorEnd == 'object' ?
+                <SizeInput data={asEdge} field={'anchorEnd'}/> :
+                <GenericInput className='input-container' data={asEdge} field={"anchorEnd"}/>}
         </>}
 
         {asField && <><h3>Field</h3>
-            {stackingOrder}
+            {commonEntries}
         </>}
 
         <div style={{marginTop:'1em', marginBottom:'1em', borderBottom:'1px solid gray'}}/>
-
-        {/* <div>
-            <h6 className={'super'}>
-                Super element:
-                {node.father?.className ?
-                    <span onClick={(e)=> dnode.father && openNode(dnode.father)} style={clickableStyle}>
-                        {[node.father?.className, <i style={{paddingLeft: '8px'}} className="bi bi-chevron-up"></i>]}
-                    </span>
-                :
-                    <span style={notFoundStyle}>Not contained</span>
-                }
-            </h6>
-            </div>*/}
 
         {node.father?.className && <div>
             <h6 style={{display: 'flex'}}>
@@ -187,32 +204,17 @@ function NodeEditorComponent(props: AllProps) {
             }</h6></div>
         ]}
 
-        {/* <div>
-            <h6 style={headerStyle} className='sub'>
-                Sub elements
-                {subElements.length ?
-                    <i style={{paddingLeft: '8px'}}className="bi bi-chevron-down"></i>
-                :
-                    [': ', <span style={notFoundStyle}>None</span>]
-                }
-            </h6>
-            {subElements.map(
-                n => <div className={'w-100 ms-2'} onClick={(e)=> openNode(n.id)} style={clickableStyle}>{getNodeLabel(n)}</div>
-            )}
-            </div>*/}
-
-            {subElements.length > 0 && <div>
+        {subElements.length > 0 && <div>
             <h6 style={{display: 'flex'}}>
                 Sub elements
                 <CommandBar style={{paddingLeft: 'var(--tab-sep)', bottom: '3px'}}>
                     <Btn icon={'down'} action={(e)=> {}} tip={'Go down'}/>
                 </CommandBar>
             </h6>
-
             {subElements.map(
                 n => <div key={n.id} className={'w-100 ms-2 sub-element'} onClick={(e)=> openNode(n.id)} style={clickableStyle}>{getNodeLabel(n)}</div>
             )}
-            </div>}
+        </div>}
 
         {!asEdge && <>
             {edgesOut.length > 0 && <div>

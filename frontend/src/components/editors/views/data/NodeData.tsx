@@ -1,3 +1,7 @@
+/*
+******************************* this is for view->node.  instead NodeEditor is for node *******************************
+*/
+
 import React, {Dispatch} from 'react';
 import {DState, DViewElement, Input, LPointerTargetable, LViewElement, Pointer} from '../../../../joiner';
 import {FakeStateProps} from "../../../../joiner/types";
