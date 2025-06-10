@@ -137,11 +137,10 @@ import {
 import {LayoutData} from "rc-dock";
 import {OclEngine} from "@stekoe/ocl.js";
 import React, {ReactNode} from "react";
-import {ProjectsApi} from "../api/persistance";
+import {ProjectsApi, UsersApi} from "../api/persistance";
 import {labelfunc} from "../model/dataStructure/GraphDataElements";
 import {Dummy} from "../common/Dummy";
 import Storage from "../data/storage";
-import Persistance from "../persistance/api";
 import {PinnableDock} from "../components/dock/MyRcDock";
 
 var windoww = window as any;
@@ -2513,7 +2512,7 @@ export class LUser<Context extends LogicContext<DUser> = any, D extends DUser = 
     set_activeLayout(val: this['activeLayout'], c: Context): true {
         TRANSACTION('save user layout', ()=> {
             SetFieldAction.new(c.data.id, 'activeLayout', val, '', false);
-            Persistance.setActiveLayout(val);
+            UsersApi.setActiveLayout(val);
         })
         return true;
     }
@@ -2534,7 +2533,7 @@ export class LUser<Context extends LogicContext<DUser> = any, D extends DUser = 
             }
             SetFieldAction.new(c.data.id, 'layout', val, '+=', false);
             SetFieldAction.new(c.data.id, 'layout', removeKeys as any, '-=', false);
-            Persistance.setUserLayout(persistance_val);
+            UsersApi.setUserLayout(persistance_val);
         })
         return true;
     }
@@ -2545,7 +2544,7 @@ export class LUser<Context extends LogicContext<DUser> = any, D extends DUser = 
         val = !!val;
         TRANSACTION('autosave user layout', ()=> {
             SetFieldAction.new(c.data.id, 'autosaveLayout', val, '', false);
-            Persistance.setUserAutosaveLayout(val);
+            UsersApi.setUserAutosaveLayout(val);
         })
         return true;
     }
@@ -2810,7 +2809,7 @@ export class LProject<Context extends LogicContext<DProject> = any, D extends DP
         val = !!val;
         TRANSACTION('autosave user layout', ()=> {
             SetFieldAction.new(c.data.id, 'autosaveLayout', val, '', false);
-            Persistance.setUserAutosaveLayout(val);
+            UsersApi.setUserAutosaveLayout(val);
         })
         return true;
     }

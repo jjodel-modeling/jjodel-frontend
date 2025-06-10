@@ -1,7 +1,8 @@
-import {DUser, LUser, U} from '../../joiner';
+import {type Dictionary, DUser, LUser, U} from '../../joiner';
 import Api from '../api';
 import {UpdateUserRequest} from "../DTO/UpdateUserRequest";
 import {ChangePasswordRequest} from "../DTO/ChangePasswordRequest";
+import type {LayoutData} from "rc-dock";
 
 
 class UsersApi {
@@ -49,6 +50,17 @@ class UsersApi {
     }
 
 
+    // todo: implement and move them to appropriate place?
+    static setUserAutosaveLayout(val: boolean) {
+        throw new Error("Method not implemented.");
+    }
+    static setActiveLayout(val: string) { // Dictionary<string, LayoutData>
+        throw new Error("Method not implemented.");
+    }
+
+    static setUserLayout(persistance_val: Dictionary<string, LayoutData>) {
+
+    }
 
 }
 export {UsersApi};

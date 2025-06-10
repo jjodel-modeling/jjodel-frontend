@@ -1,8 +1,9 @@
 import Axios from "axios";
-import {Json, R} from "../joiner";
+import {type Dictionary, DPointerTargetable, GObject, Json, Log, R} from "../joiner";
 import Storage from "../data/storage";
 import { AuthApi } from "./persistance";
 import { JwtClaims } from "./DTO/JwtClaims";
+import type {LayoutData} from "rc-dock";
 
 export type Response = {code: number, data: Json|null}
 class Api {
@@ -23,8 +24,6 @@ class Api {
 
             console.log("error headers");
         }
-
-
     }
 
 
@@ -45,17 +44,38 @@ class Api {
         return false;
     }
 
+    static swapToJodelID<T extends any>(data: T): T { return Api.swapID(data, true); }
+    static swapToGUID<T extends any>(data: T): T { return Api.swapID(data, false); }
+    static swapID<T extends any>(data: T, toJodel: boolean = true): T {
+        // if is primitive, return as is
+        if (!data || typeof data !== 'object') return data;
+        if (Array.isArray(data)) return data.map(e=>Api.swapID(e)) as T;
+        let d: GObject<DPointerTargetable|any> = data as any;
+
+        // if is an object but not jodel object, return it as is
+        if (!(d._id && d.id && d.className)) return data;
+
+        d = {...data} as any;
+        // check if it is already been swapped to desired state
+        if (toJodel && d.id.indexOf('Pointer') === 0) return data;
+        if (!toJodel && d._id.indexOf('Pointer') === 0) return data;
+        let tmp = d._id;
+        d._id = d.id;
+        d.id = tmp;
+        return d as any;
+    }
+
     static async get(path: string, allowAnonymous:boolean = false): Promise<Response> {
         try {
-
-            if(allowAnonymous || await Api.checkToken()) {
+            if (allowAnonymous || await Api.checkToken()) {
                 const response = await Axios.get(path, {headers: this.headers()});
-                return {code: response.status, data: response.data};
+                return {code: response.status, data: Api.swapToJodelID(response.data)};
             }
             return {code: 401, data: null};
 
 
         } catch (e) {
+            Log.eDevv('get API failed:', {e, path});
             return {code: 400, data: null};
         }
 
@@ -64,57 +84,43 @@ class Api {
     static async post(path: string, obj: Json, allowAnonymous:boolean = false): Promise<Response> {
         try {
             if(allowAnonymous || await Api.checkToken()) {
-
-                const response = await Axios.post(path, obj, {headers: this.headers()});
-                return {code: response.status, data: response.data};
+                const response = await Axios.post(path, Api.swapToGUID(obj), {headers: this.headers()});
+                return {code: response.status, data: Api.swapToJodelID(response.data)};
             }
             return {code: 401, data: null};
         } catch (e) {
+            Log.eDevv('post API failed:', {e, path, obj});
             return {code: 400, data: null};
         }
     }
 
     static async put(path: string, obj: Json, allowAnonymous:boolean = false): Promise<Response> {
         try {
-
             if(allowAnonymous || await Api.checkToken()) {
-                const response = await Axios.put(path, obj, {headers: this.headers()});
-                return {code: response.status, data: response.data};
+                const response = await Axios.put(path, Api.swapToGUID(obj), {headers: this.headers()});
+                return {code: response.status, data: Api.swapToJodelID(response.data)};
             }
             return {code: 401, data: null};
 
         } catch (e) {
+            Log.eDevv('put API failed:', {e, path, obj});
             return {code: 400, data: null};
         }
     }
-
-    /*
-        static async patch(path: string, obj: Json, allowAnonymous:boolean = false): Promise<Response> {
-            try {
-                if(allowAnonymous || await Api.checkToken()) {
-                    const response = await Axios.patch(path, obj, {headers: this.headers()});
-                    return {code: response.status, data: response.data};
-                }
-                return {code: 401, data: null};
-
-            } catch (e) {
-                return {code: 400, data: null};
-            }
-        }
-        */
-
 
     static async delete(path: string, allowAnonymous:boolean = false): Promise<Response> {
         try {
             if(allowAnonymous || await Api.checkToken()) {
                 const response = await Axios.delete(path, {headers: this.headers()});
-                return {code: response.status, data: response.data};
+                return {code: response.status, data: Api.swapToJodelID(response.data)};
             }
             return {code: 401, data: null};
         } catch (e) {
+            Log.eDevv('delete API failed:', {e, path});
             return {code: 400, data: null};
         }
     }
+
 }
 
 export default Api;
