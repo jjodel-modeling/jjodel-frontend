@@ -23,21 +23,15 @@ class ProjectsApi {
     static async create(type: DProject['type'], name?: DProject['name'], m2: Pointer<DModel>[] = [], m1: Pointer<DModel>[] = [], otherProjects?: LProject[]): Promise<void> {
 
         const project = DProject.new(type, name, undefined, m2, m1, undefined, otherProjects);
-        console.log(project);
-       
+
         if(U.isOffline()) {
             Offline.create(project);
             // return project;
         }
         else {
             await Online.create(project);
-
             R.navigate('/allProjects');
-
-
         }
-
-
     }
 
 
@@ -53,7 +47,6 @@ class ProjectsApi {
         }
         else {
             await Online.delete(project.id);
-
         }
         project.delete();
     }
@@ -213,11 +206,9 @@ class Online {
         creationProjectRequest.description = project.description;
         creationProjectRequest.name = project.name;
         creationProjectRequest.type = project.type;
-
+        creationProjectRequest._id = project.id;
 
         await Api.post(`${Api.persistance}/project`, {...creationProjectRequest});
-
-
     }
 
 
@@ -226,7 +217,6 @@ class Online {
         console.log('loading projects getall', {response});
         if (response.code !== 200) {
             /* 401: Unauthorized -> Invalid Token (Local Storage)  */
-            // U.resetState();
             return Promise.reject('Invalid Token');
         }
     
@@ -286,16 +276,21 @@ class Online {
         if(response.code !== 200) {
             return null;
         }
-        return U.wrapper<DProject>(response.data);
+        // swap ids.
+        let swap = response.data!["_Id"];
+        response.data!['_Id'] = response.data!['id'];
+        response.data!['id'] = swap;
+
+        console.log("*************** 1", response.data as unknown as DProject)
+        return response.data as unknown as DProject;
     }
 
     static async save(project: DProject): Promise<void> {
 
-        console.log(project);
         const updateProjectRequest = UpdateProjectRequest.convertDprojectToUpdateProject(project);
-        console.log(updateProjectRequest);
+
         const response = await Api.put(`${Api.persistance}/project/`, {...updateProjectRequest});
-        console.log(response);
+
         if(response.code !== 200) {
             U.alert('e', 'Cannot Save','Something went wrong ...');
         }
@@ -307,14 +302,11 @@ class Online {
 
 
     static async favorite(project: DProject): Promise<void> {
-
-
         const updateProjectRequest :UpdateProjectRequest = UpdateProjectRequest.convertDprojectToUpdateProject(project);
         const response = await Api.put(`${Api.persistance}/project/`, {...updateProjectRequest});
 
-
         if(response.code !== 200) {
-            U.alert('e', 'Cannot set this property!', 'Something went wrong ...');
+            U.alert('e', 'Cannot set the project as favorite!', 'Something went wrong ...');
         }
         SetFieldAction.new(project.id, 'isFavorite', !project.isFavorite);
     }
@@ -324,7 +316,6 @@ class Online {
 
     static async import(project: DProject): Promise<void> {
 
-        console.log(project.id)
         const response = await Api.get(`${Api.persistance}/project/${project.id}`);
 
         if(response.code === 200) {
@@ -339,8 +330,6 @@ class Online {
 
             await Online.create(project);
         }
-
-
     }
 
 

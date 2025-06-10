@@ -1246,7 +1246,6 @@ export async function stateInitializer() {
         let c = await ProjectsApi.getAll();
 
     } catch (error) {
-        // U.alert('e','Failed to fetch projects','');
         await AuthApi.logout();
         console.error('Failed to fetch projects', {error});
         DUser.current = '';

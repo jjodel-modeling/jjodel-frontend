@@ -1,5 +1,6 @@
 export class Project {
     id!: string;
+    _id?: string;
     name!: string;
     type!: string;
     state!: string;

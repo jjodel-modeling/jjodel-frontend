@@ -3,14 +3,15 @@ import {UpdateProjectRequest} from "./UpdateProjectRequest";
 
 export class UpdateUserRequest {
 
-    id?: string
-    name?: string
-    surname?: string
-    nickname?: string
-    country?: string
+    id?: string;
+    _id?: string;
+    name?: string;
+    surname?: string;
+    nickname?: string;
+    country?: string;
     email?: string
-    affiliation?: string
-    newsletter?: boolean
+    affiliation?: string;
+    newsletter?: boolean;
 
 
 }

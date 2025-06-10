@@ -768,6 +768,7 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
     DPointerTargetable(): this {
         const thiss: DPointerTargetable = this.thiss as any;
         thiss.className = (thiss.constructor as typeof RuntimeAccessibleClass).cname;
+
         // this.className = thiss.className;
         return this; }
 
@@ -1238,6 +1239,7 @@ export class DPointerTargetable extends RuntimeAccessibleClass {
     _storePath?: string[];
     _subMaps?: Dictionary<string, boolean>;
     id!: Pointer<DPointerTargetable, 1, 1, LPointerTargetable>;
+    _id?: string // db GUID
     // pointedBy: DocString<'path in store'>[] = []; // NB: potrebbe contenere puntatori invalidi.
     // se viene cancellato un intero oggetto A che contiene una lista di puntatori, gli oggetti che puntano ad A rimuovono A dai loro "poitnedBy",
     // ma gli oggetti puntati da A tramite sotto-oggetti o attributi (subviews...) non vengono aggiornati in "pointedby"

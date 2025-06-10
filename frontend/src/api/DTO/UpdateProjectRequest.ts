@@ -3,6 +3,7 @@ import {DProject} from "../../joiner";
 export class UpdateProjectRequest {
 
     id?: string;
+    _id?: string;
     name?: string;
     description?: string;
     type?: string;
@@ -18,7 +19,9 @@ export class UpdateProjectRequest {
 
         const updateProjectRequest :UpdateProjectRequest = new UpdateProjectRequest();
 
-        updateProjectRequest.id = project.id;
+        updateProjectRequest.id = project._id;
+        updateProjectRequest._id = project.id;
+
         updateProjectRequest.name = project.name;
         updateProjectRequest.description = project.description;
         updateProjectRequest.type = project.type;
@@ -31,8 +34,10 @@ export class UpdateProjectRequest {
         updateProjectRequest.isFavorite = !project.isFavorite;
         updateProjectRequest.collaborators = project.collaborators || [""];
 
-        return updateProjectRequest;
+        console.log("***************", project);
+        console.log("*************** - updateProjectRequest", updateProjectRequest);
 
+        return updateProjectRequest;
     }
 
 }
