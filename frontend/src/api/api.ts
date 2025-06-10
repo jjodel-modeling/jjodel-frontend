@@ -69,6 +69,7 @@ class Api {
         try {
             if (allowAnonymous || await Api.checkToken()) {
                 const response = await Axios.get(path, {headers: this.headers()});
+                console.log('Api response', {path, response});
                 return {code: response.status, data: Api.swapToJodelID(response.data)};
             }
             return {code: 401, data: null};
@@ -85,6 +86,7 @@ class Api {
         try {
             if(allowAnonymous || await Api.checkToken()) {
                 const response = await Axios.post(path, Api.swapToGUID(obj), {headers: this.headers()});
+                console.log('Api response', {path, response});
                 return {code: response.status, data: Api.swapToJodelID(response.data)};
             }
             return {code: 401, data: null};

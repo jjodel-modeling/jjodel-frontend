@@ -22,9 +22,7 @@ class ProjectsApi {
 
 
     static async create(type: DProject['type'], name?: DProject['name'], m2: Pointer<DModel>[] = [], m1: Pointer<DModel>[] = [], otherProjects?: LProject[]): Promise<void> {
-
         const project = DProject.new(type, name, undefined, m2, m1, undefined, otherProjects);
-
         if(U.isOffline()) {
             Offline.create(project);
             // return project;
@@ -207,7 +205,6 @@ class Online {
         creationProjectRequest.description = project.description;
         creationProjectRequest.name = project.name;
         creationProjectRequest.type = project.type;
-        creationProjectRequest._id = project.id;
 
         await Api.post(`${Api.persistance}/project`, {...creationProjectRequest});
     }
@@ -276,11 +273,11 @@ class Online {
         const response = await Api.get(`${Api.persistance}/project/${id}`);
         if(response.code !== 200) {
             return null;
-        }
+        }/*
         // swap ids.
         let swap = response.data!["_Id"];
         response.data!['_Id'] = response.data!['id'];
-        response.data!['id'] = swap;
+        response.data!['id'] = swap;*/
 
         console.log("*************** 1", response.data as unknown as DProject)
         return response.data as unknown as DProject;
