@@ -104,17 +104,17 @@ export class R{
         // window.location.assign = window.location = window.location.href = window.open(url, '_self')
         console.warn('R.navigate()', {path, refresh});
         //if (path.indexOf('allProject') >= 0) return;
-        let debug: false = true as any;
+        if (windoww.preventNavigation) return;
         if (path.indexOf('//') >= 0) { window.location.href = path; return; }
-        if (debug || refresh === true ) {
+        if (true as any || refresh === true) {
             let hash: string;
             if (path[0] !== '/') hash = '#/'+path;
             else hash = '#'+path;
             // console.log('navigating: ', {path, url:window.location.origin + path, currHash:window.location.hash});
             if (window.location.hash === hash) return;
-            // U.navigating = true;
-            // window.location.hash = hash;
-            // window.location.reload();
+            U.navigating = true;
+            window.location.hash = hash;
+            window.location.reload();
             // let counter = +(U.getSearchParam('p') as string) || 0;
             // U.setSearchParam('p', counter+1);
             //window.location.href = window.location.origin + '/'+hash;
