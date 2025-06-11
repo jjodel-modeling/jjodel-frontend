@@ -227,6 +227,7 @@ export class DState extends DPointerTargetable{
         }
     }
     static init(store?: DState): void {
+        windoww.preventNavigation = false;
         if (windoww.location.hash.indexOf('#/project') === 0) this.init_editor(store);
         else this.init_dashboard(store);
     }

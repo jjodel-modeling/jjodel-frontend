@@ -3,7 +3,7 @@
 import React, {Component, Dispatch, ReactElement, ReactNode, useState} from 'react';
 
 import {connect} from 'react-redux';
-import {DProject, DState, Log, LProject, SetRootFieldAction, Try, U} from '../joiner';
+import {DProject, DState, Log, LProject, R, SetRootFieldAction, Try, U} from '../joiner';
 import {FakeStateProps} from '../joiner/types';
 import {Dashboard, Project} from './components';
 
@@ -18,9 +18,8 @@ function AllProjectsComponent(props: AllProps): JSX.Element {
     const [isDropping, setDropping] = useState(false);
   
     const createProject = async(type: DProject['type']) => {
-
         await ProjectsApi.create(type, undefined, undefined, undefined, projects);
-        window.location.href = "/allProjects";
+        R.navigate("/allProjects");
     }
 
     function dropConfirm(e: React.DragEvent<HTMLElement>){
