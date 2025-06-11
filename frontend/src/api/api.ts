@@ -48,19 +48,28 @@ class Api {
     static swapToGUID<T extends any>(data: T): T { return Api.swapID(data, false); }
     static swapID<T extends any>(data: T, toJodel: boolean = true): T {
         // if is primitive, return as is
+        console.log('swap 1', {toJodel, data});
+
         if (!data || typeof data !== 'object') return data;
+        console.log('swap 2', {toJodel, data});
+
         if (Array.isArray(data)) return data.map(e=>Api.swapID(e, toJodel)) as T;
         let d: GObject<DPointerTargetable|any> = data as any;
 
         // if is an object but not jodel object, return it as is
-        if (!(d._id && d.id && d.className)) return data;
+        console.log('swap 3', {toJodel, id:d.id, _Id:d._Id});
+
+        if (!(d._Id && d.id)) return data;
 
         d = {...data} as any;
         // check if it is already been swapped to desired state
+        console.log('swap 4', {toJodel, id:d.id, _Id:d._Id});
         if (toJodel && d.id.indexOf('Pointer') === 0) return data;
-        if (!toJodel && d._id.indexOf('Pointer') === 0) return data;
-        let tmp = d._id;
-        d._id = d.id;
+        console.log('swap 5', {toJodel, id:d.id, _Id:d._Id});
+        if (!toJodel && d._Id.indexOf('Pointer') === 0) return data;
+        console.log('swap 6', {toJodel, id:d.id, _Id:d._Id});
+        let tmp = d._Id;
+        d._Id = d.id;
         d.id = tmp;
         return d as any;
     }
