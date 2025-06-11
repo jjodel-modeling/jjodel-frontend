@@ -91,7 +91,7 @@ class Api {
 
     }
 
-    static async post(path: string, obj: Json, allowAnonymous:boolean = false): Promise<Response> {
+    static async post(path: string, obj: GObject, allowAnonymous:boolean = false): Promise<Response> {
         try {
             if(allowAnonymous || await Api.checkToken()) {
                 const response = await Axios.post(path, Api.swapToGUID(obj), {headers: this.headers()});
@@ -99,13 +99,13 @@ class Api {
                 return {code: response.status, data: Api.swapToJodelID(response.data)};
             }
             return {code: 401, data: null};
-        } catch (e) {
-            Log.eDevv('post API failed:', {e, path, obj});
+        } catch (e: any) {
+            Log.eDevv('post API failed:', {e, path, obj}, e?.message);
             return {code: 400, data: null};
         }
     }
 
-    static async put(path: string, obj: Json, allowAnonymous:boolean = false): Promise<Response> {
+    static async put(path: string, obj: GObject, allowAnonymous:boolean = false): Promise<Response> {
         try {
             if(allowAnonymous || await Api.checkToken()) {
                 const response = await Axios.put(path, Api.swapToGUID(obj), {headers: this.headers()});
