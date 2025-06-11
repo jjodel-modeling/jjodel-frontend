@@ -205,6 +205,7 @@ class Online {
         creationProjectRequest.description = project.description;
         creationProjectRequest.name = project.name;
         creationProjectRequest.type = project.type;
+
         await Api.post(`${Api.persistance}/project`, project); //{...creationProjectRequest});
     }
 

@@ -51,20 +51,19 @@ class AuthApi {
             const decoded = jwtDecode<any>(token);
             
             const claims : JwtClaims = new JwtClaims();
+            console.log('claims debug', {decoded, JwtPayloadKey, claims})
 
             claims.id = decoded[JwtPayloadKey.Id];
             claims.nickname = decoded[JwtPayloadKey.Nickname];
-            console.log("readJwtToken per nickname", claims.nickname);
             claims.email = decoded[JwtPayloadKey.Email];
             claims.role = decoded[JwtPayloadKey.Roles];
             claims.exp = decoded[JwtPayloadKey.Exp];
             claims.iss = decoded[JwtPayloadKey.Iss];
             claims.aud = decoded[JwtPayloadKey.Aud];
+            claims._Id = decoded[JwtPayloadKey._Id];
 
-           return claims;
-
+            return claims;
         } catch (error) {
-            
             console.error("Errore durante la decodifica del token:", error);
             return null;
         }

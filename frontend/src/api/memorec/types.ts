@@ -22,6 +22,7 @@ export enum JwtPayloadKey {
     Name  = "name",
     Nickname = "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name",
     Id = "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier",
+    _Id = "_Id",
     Exp = "exp",
     Iss = "iss",
     Aud = "aud"

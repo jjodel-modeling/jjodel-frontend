@@ -2400,15 +2400,16 @@ export class DUser extends DPointerTargetable {
     affiliation!: string;
     newsletter!: boolean;
     email!: string;
-    token!: string;
-    projects: Pointer<DProject, 0, 'N', LProject> = [];
-    project: Pointer<DProject, 0, 1, LProject> = '';
+    /*no in dto */token!: string;
+    /*no in dto */projects: Pointer<DProject, 0, 'N', LProject> = [];
+    /*no in dto */project: Pointer<DProject, 0, 1, LProject> = '';
     autoReport!: boolean;
     layout!: Dictionary<string, LayoutData>;
     autosaveLayout!: boolean;
     activeLayout!: string;
+    /*no in dto */__isDUser: true = true; // necessary to trick duck typing to think this is NOT the superclass of anything that extends PointerTargetable.
 
-    __isDUser: true = true; // necessary to trick duck typing to think this is NOT the superclass of anything that extends PointerTargetable.
+
     /*public static new(id?: DUser["id"], triggerActions: boolean = true): DUser {
         return new Constructors(new DUser('dwc'), undefined, false, undefined, id, true).DPointerTargetable().DUser().end(); }*/
     public static new(name: string, surname: string, nickname: string, affiliation: string, country: string, newsletter: boolean, email: string,
@@ -2669,29 +2670,26 @@ export class DProject extends DPointerTargetable {
     id!: Pointer<DProject, 1, 1, LProject>;
     type: 'public'|'private'|'collaborative' = 'public';
     name!: string;
-    author: Pointer<DUser> = DUser.current;
-    collaborators: Pointer<DUser, 0, 'N'> = [];
-    onlineUsers : number = 0;
+    /* no in dto */author: Pointer<DUser> = DUser.current;
+    /* da vedere */collaborators: Pointer<DUser, 0, 'N'> = [];
+    /* no */onlineUsers : number = 0;
     metamodels: Pointer<DModel, 0, 'N'> = [];
     models: Pointer<DModel, 0, 'N'> = [];
     graphs: Pointer<DGraph, 0, 'N'> = [];
-    // views: Pointer<DViewElement, 0, 'N'> = []; // can be retrieved from viewpoints.subviews
-    // stackViews: Pointer<DViewPoint, 0, 'N'> = []; // ??
     viewpoints: Pointer<DViewPoint, 0, 'N'> = [];
     activeViewpoint: Pointer<DViewPoint, 1, 1> = Defaults.viewpoints[0];
-    favorite!: Dictionary<Pointer<DUser>, true | undefined>;
+    /* come collaborators */favorite!: Dictionary<Pointer<DUser>, true | undefined>;
 
     description!: string;
-    creation: number = Date.now();
-    lastModified: number = Date.now();
+    /* no */creation: number = Date.now();
+    /* no */lastModified: number = Date.now();
     viewpointsNumber: number = 0;
     metamodelsNumber: number = 0;
     modelsNumber: number = 0;
-    isFavorite: boolean = false;
+    isFavorite: boolean = false; // o questo o favorite è obsoleto, todo
     layout!: Dictionary<string, LayoutData>;
     autosaveLayout!: boolean;
     activeLayout?: string;
-
     state!: string;
 
     public static new(type: DProject['type'], name?: string, state?: DProject['state'],

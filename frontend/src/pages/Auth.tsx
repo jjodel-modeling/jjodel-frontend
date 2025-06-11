@@ -93,8 +93,8 @@ function AuthPage(): JSX.Element {
             return;
           }
 
-          const user : DUser = DUser.new(claims.name, '', claims.nickname, '',  '', false, claims.email,  raw.token, claims.id,  true);
-
+          const user : DUser = DUser.new(claims.name, '', claims.nickname, '',  '', false, claims.email,  raw.token, claims._Id,  true);
+          (user as any)._Id = claims.id;
           AuthApi.storeSessionData(raw.token, !claims.exp ? 0 : claims.exp, user);
           U.resetState();
           R.navigate('/allProjects');
