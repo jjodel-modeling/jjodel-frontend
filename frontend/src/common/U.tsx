@@ -112,9 +112,9 @@ export class R{
             else hash = '#'+path;
             // console.log('navigating: ', {path, url:window.location.origin + path, currHash:window.location.hash});
             if (window.location.hash === hash) return;
-            U.navigating = true;
-            window.location.hash = hash;
-            window.location.reload();
+            // U.navigating = true;
+            // window.location.hash = hash;
+            // window.location.reload();
             // let counter = +(U.getSearchParam('p') as string) || 0;
             // U.setSearchParam('p', counter+1);
             //window.location.href = window.location.origin + '/'+hash;
