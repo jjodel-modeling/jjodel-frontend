@@ -161,12 +161,16 @@ function NodeEditorComponent(props: AllProps) {
             // </>
             }
 
-            {asEdge.anchorStart && typeof asEdge.anchorStart == 'object' ?
+            <label>{asEdge.anchorStart && typeof asEdge.anchorStart == 'object' ?
                 <SizeInput data={asEdge} field={'anchorStart'}/> :
                 <GenericInput className='input-container' data={asEdge} field={"anchorStart"}/>}
-            {asEdge.anchorEnd && typeof asEdge.anchorEnd == 'object' ?
+                <CommandBar style={{}}><Btn icon={'delete'} tip={'Delete'} action={()=>asEdge.anchorStart = undefined as any} /></CommandBar>
+            </label>
+            <label>{asEdge.anchorEnd && typeof asEdge.anchorEnd == 'object' ?
                 <SizeInput data={asEdge} field={'anchorEnd'}/> :
                 <GenericInput className='input-container' data={asEdge} field={"anchorEnd"}/>}
+                <CommandBar style={{}}><Btn icon={'delete'} tip={'Delete'} action={()=>asEdge.anchorEnd = undefined as any} /></CommandBar>
+            </label>
         </>}
 
         {asField && <><h3>Field</h3>
