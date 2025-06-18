@@ -6,7 +6,7 @@
     section {
       margin: 1rem 0.5rem;
     }
-  
+
     .node-editor {
         margin: 0.5rem;
         border-radius: var(--radius);
@@ -48,6 +48,37 @@
 
         input[type=number] {
             padding-right: 0;
+        }
+        .anchor-editor{
+            width: 100%;
+            height: 200px;
+            padding: 20px;
+            max-width: 200px;
+            margin: 0 auto;
+            overflow: hidden;
+            &:hover, &:focus, &:focus-within{
+                overflow: visible;
+            }
+            .anchor-holder{
+                height: 100%;
+                position: relative;
+                outline: 1px solid black;
+                .editor-anchor{
+                    transform: translate(-50%, -50%);
+                    height: 20px;
+                    width: 20px;
+                    border-radius: 100%;
+                    background-color: var(--bg-2);
+                    p {
+                      transform: translateX(-50%);
+                      margin-left: 50% !important;
+                    }
+                    &:hover, &.selected {
+                        background-color: #7f7;
+                        overflow: visible;
+                    }
+                }
+            }
         }
     }
   }

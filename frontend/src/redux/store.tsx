@@ -263,6 +263,14 @@ export class DState extends DPointerTargetable{
   /* setup zoom */
   transform: scale(var(--zoom-x), var(--zoom-y));
   transform-origin: top left;
+  &.Graph{ /* for graph, transform only dynamic elements that can be panned */
+    transform: none !important;
+    .panning-content{
+      transform: scale(var(--zoom-x), var(--zoom-y));
+      transform-origin: top left;
+    }
+  }
+  
 
   /* style inputs */
   select, input{

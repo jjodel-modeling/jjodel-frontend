@@ -269,7 +269,10 @@ export class MeasurableComponent extends Component<MeasurableAllProps, Measurabl
         if (allevents.length) options[jqkey] = ((evt, ui)=>{
             for (let e of allevents) {
                 propsevent = props[eventmap[evtkey][type]]; // if i don't redeclare it here, closure makes a mess taking always the last jodelevt for all iterations.
-                if (e === propsevent) { e(this.getCoords(evt, ui, this.props.isPanning), evt, ui); }
+                if (e === propsevent) {
+                    console.log('measurable event', {evtkey, type, evt, ui, coords:this.getCoords(evt, ui, this.props.isPanning)});
+                    e(this.getCoords(evt, ui, this.props.isPanning), evt, ui);
+                }
                 else e(evt, ui);
             }
         }) as DraggableEvent;

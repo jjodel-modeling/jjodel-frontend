@@ -48,38 +48,49 @@ function SizeInputComponent(props: AllProps): ReactNode {
         ));
 
 
-        let size: Partial<ISize> = (l[field] || {}) as GObject;
+        let size: Partial<ISize> = (l?.[field] || {}) as GObject;
 
         const inputStyle = {justifyContent: "right", width: "auto", marginRight:"5px"};
         let labelStyle = {height: '100%', display: 'inline-block', marginRight:"5px"}
+        let allowx = ("x" in size || props.xgetter && props.xsetter);
+        let allowy = ("y" in size || props.ygetter && props.ysetter);
+        let alloww = ("w" in size || props.wgetter && props.wsetter);
+        let allowh = ("h" in size || props.hgetter && props.hsetter);
+        let getter = (ll: LPointerTargetable, propkey: 'x'|'y'|'w'|'h', f: typeof props.xgetter)=> {
+            if (!ll) ll = l;
+            if (f) return f(ll, propkey)+'';
+            else return (ll[field] as any as ISize)?.[propkey]+'';
+        }
+        let setter = (val: string|boolean, ll: any, propkey: 'x'|'y'|'w'|'h', f: typeof props.xsetter)=> {
+            if (!ll) ll = l;
+            if (f) return f(val, ll, propkey);
+            else return (ll[field] as any as Partial<ISize>) = {[propkey]: +val};
+        }
         return (<>
             <label className={props.rootClassName} style={{fontFamily:'Inter Tight', ...(props.rootStyle||{})}}>
                 {(props.label) && <label className={'my-auto'} style={{fontFamily:'-webkit-body'}} onClick={() => { if (tooltip) notify() }}>
                     {props.label}
                 </label>}
                 <label className={"d-flex my-auto ms-auto"} style={{flexWrap: "wrap"}}>
-                    {"x" in size && <Input {...otherProps} className={""} data={l} label={<span style={labelStyle}>x</span>} field={field} type={"number"}
-                        getter={(ll)=>(l[field] as any as ISize).x+''}
-                        setter={(val)=>{
-                            // SetFieldAction.new(l.id, field as string, {x: +val}, '+=', false)
-                            (l[field] as any as Partial<ISize>) = {x: +val}; // {y:? x: +val, w:?, h:?}}
-                    }}
+                    {allowx && <Input {...otherProps} className={""} data={l} label={<span style={labelStyle}>x</span>} field={field} type={"number"}
+                        getter={(ll)=>getter(ll, 'x', props.xgetter)}
+                        setter={(val, ll: any)=>setter(val, ll, 'x', props.xsetter)}
                         inputStyle={inputStyle}
                     />}
-                    {"y" in size && <Input {...otherProps} className={""} data={l} label={<span style={labelStyle}>y</span>} field={field} type={"number"}
-                       getter={(ll)=>(l[field] as any as ISize).y+''}
-                       setter={(val)=>{(l[field] as any as Partial<ISize>) = {y: +val}}}
-                       inputStyle={inputStyle}
-                    />}
-                    {"w" in size && <Input {...otherProps} className={""} data={l} label={<span style={labelStyle}>w</span>} field={field} type={"number"}
-                        getter={(ll)=>(l[field] as any as ISize).w+''}
-                        setter={(val)=>{(l[field] as any as Partial<ISize>) = {w: +val}}}
+                    {allowy && <Input {...otherProps} className={""} data={l} label={<span style={labelStyle}>y</span>} field={field} type={"number"}
+                        getter={(ll)=>getter(ll, 'y', props.ygetter)}
+                        setter={(val, ll: any)=>setter(val, ll, 'y', props.ysetter)}
                         inputStyle={inputStyle}
                     />}
-                    {"h" in size && <Input {...otherProps} className={""} data={l} label={<span style={labelStyle}>h</span>} field={field} type={"number"}
-                       getter={(ll)=>(l[field] as any as ISize).h+''}
-                       setter={(val)=>{(l[field] as any as Partial<ISize>) = {h: +val}}}
-                       inputStyle={inputStyle}
+                    {alloww && <Input {...otherProps} className={""} data={l} label={<span style={labelStyle}>w</span>} field={field} type={"number"}
+                        getter={(ll)=>getter(ll, 'w', props.wgetter)}
+                        setter={(val, ll: any)=>setter(val, ll, 'w', props.wsetter)}
+                        inputStyle={inputStyle}
+                    />}
+                    {allowh && <Input {...otherProps} className={""} data={l} label={<span style={labelStyle}>h</span>} field={field} type={"number"}
+                        getter={(ll)=>getter(ll, 'h', props.hgetter)}
+                        setter={(val, ll: any)=>setter(val, ll, 'h', props.hsetter)}
+                        inputStyle={inputStyle}
                     />}
                 </label>
             </label>
@@ -90,14 +101,14 @@ function SizeInputComponent(props: AllProps): ReactNode {
 interface OwnProps {
     data: LPointerTargetable;
     field: string;
-    xgetter?: (data: LPointerTargetable) => string;
-    xsetter?: (value: string|boolean) => void;
-    ygetter?: (data: LPointerTargetable) => string;
-    ysetter?: (value: string|boolean) => void;
-    wgetter?: (data: LPointerTargetable) => string;
-    wsetter?: (value: string|boolean) => void;
-    hgetter?: (data: LPointerTargetable) => string;
-    hsetter?: (value: string|boolean) => void;
+    xgetter?: (data: LPointerTargetable, field: string) => string;
+    xsetter?: (value: string|boolean, l: any, field: string) => void;
+    ygetter?: (data: LPointerTargetable, field: string) => string;
+    ysetter?: (value: string|boolean, l: any, field: string) => void;
+    wgetter?: (data: LPointerTargetable, field: string) => string;
+    wsetter?: (value: string|boolean, l: any, field: string) => void;
+    hgetter?: (data: LPointerTargetable, field: string) => string;
+    hsetter?: (value: string|boolean, l: any, field: string) => void;
     label?: ReactNode;
     tooltip?: ReactNode | true; // if true picks it up from __info_of__
     readonly?: boolean;

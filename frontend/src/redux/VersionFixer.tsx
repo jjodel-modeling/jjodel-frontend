@@ -1,14 +1,16 @@
 import {
+    GraphSize, IPoint, DocString, Dictionary,
+    GObject,
+    GraphPoint,
+} from "../joiner";
+import {
     CoordinateMode,
     Defaults, DGraphElement,
-    Dictionary, DocString, DPointerTargetable, DReference,
+    DPointerTargetable, DReference,
     DState, DStructuralFeature,
     DViewElement,
     EdgeBendingMode,
-    EdgeGapMode,
-    GObject,
-    GraphPoint,
-    GraphSize, LClass, LoadAction,
+    EdgeGapMode, LClass, LoadAction,
     Log, LPointerTargetable, LState, Pointer, Pointers, RuntimeAccessible, RuntimeAccessibleClass, store, TRANSACTION,
     U
 } from "../joiner";
@@ -168,7 +170,11 @@ everytime you put hands into a D-Object shape or valid values, you should docume
             if (!c || !c.className || !c.pointedBy) continue;
             for (let p of c.pointedBy) { p.source = U.replaceAll(U.replaceAll(U.replaceAll(p.source||'', '+=', ''), '-=', ''), '[]', ''); }
         }
-
+        for (let id in s.idlookup){
+            let c = s.idlookup[id] as DPointerTargetable;
+            if (!c || !c.className || !c.zoom) continue;
+            c.zoom = {x:1, y:1} as any as GraphPoint; // for old projects, reset zoom because it was bugged. scrollbar was zooming but without graphical feedback, some projects might have zoom >1000x
+        }
 
         return s;
     }

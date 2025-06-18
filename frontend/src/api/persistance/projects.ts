@@ -52,7 +52,6 @@ class ProjectsApi {
 
 
     static async getOne(id: DProject['id']): Promise<null|DProject> {
-
         if(U.isOffline()) return Offline.getOne(id);
         else return await Online.getOne(id);
     }
@@ -270,8 +269,8 @@ class Online {
 
 
     static async getOne(id: string): Promise<DProject|null> {
-        const response = await Api.get(`${Api.persistance}/project/${id}`);
-        if(response.code !== 200) {
+        const response = await Api.get(`${Api.persistance}/project/jjodel/${id}`);
+        if (response.code !== 200) {
             return null;
         }/*
         // swap ids.

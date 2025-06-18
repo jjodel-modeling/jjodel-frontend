@@ -299,69 +299,6 @@
       border-radius: var(--radius);
     }
 
-    // add
-
-    & .tab-btn.add {
-      margin: auto;
-      color: var(--btn-back)!important;
-      margin-right: 2px!important;
-      transition: background-color 0.3s;
-    }
-
-    & .tab-btn.add:hover {
-
-    }
-    & .tab-btn.add::before {
-
-      border: 1px solid var(--bg-2);
-      border-radius: var(--radius);
-      display: block;
-      padding: 3px 3px;
-      text-align: center;
-      font-size: 0.7em;
-      margin-right: 2px;
-      content: "\F64D";
-    }
-
-    & .tab-btn.add:hover::before {
-      border: 1px solid var(--btn-bg);
-      background-color: var(--btn-bg);
-      border-radius: var(--radius);
-    }
-
-
-
-    // delete
-
-    & .tab-btn.delete {
-      margin: auto;
-      color: var(--btn-back)!important;
-      margin-right: 2px!important;
-      transition: background-color 0.3s;
-    }
-
-    & .tab-btn.delete:hover {
-
-    }
-    & .tab-btn.delete::before {
-
-      border: 1px solid var(--bg-2);
-      border-radius: var(--radius);
-      display: block;
-      padding: 3px 3px;
-      text-align: center;
-      font-size: 0.7em;
-      margin-right: 2px;
-      content: "\F78B";
-    }
-
-    & .tab-btn.delete:hover::before {
-      border: 1px solid var(--btn-bg);
-      background-color: var(--btn-bg);
-      border-radius: var(--radius);
-    }
-
-
     // delete 2
 
     & div.delete2 {
@@ -838,3 +775,57 @@
     background-color: var(--failure)!important;
     cursor: pointer;
   }
+
+// add
+
+.tab-btn.add {
+  margin: auto;
+  color: var(--btn-back)!important;
+  margin-right: 2px!important;
+  transition: background-color 0.3s;
+
+  &::before {
+    border: 1px solid var(--bg-2);
+    border-radius: var(--radius);
+    display: block;
+    padding: 3px 3px;
+    text-align: center;
+    font-size: 0.7em;
+    margin-right: 2px;
+    content: "\F64D";
+  }
+
+  &:hover::before {
+    border: 1px solid var(--btn-bg);
+    background-color: var(--btn-bg);
+    border-radius: var(--radius);
+  }
+}
+
+
+
+// delete
+
+.tab-btn.delete {
+  margin: auto;
+  color: var(--btn-back)!important;
+  margin-right: 2px!important;
+  transition: background-color 0.3s;
+
+  &::before {
+    border: 1px solid var(--bg-2);
+    border-radius: var(--radius);
+    display: block;
+    padding: 3px 3px;
+    text-align: center;
+    font-size: 0.7em;
+    margin-right: 2px;
+    content: "\F78B";
+  }
+
+  &:hover::before {
+    border: 1px solid var(--btn-bg);
+    background-color: var(--btn-bg);
+    border-radius: var(--radius);
+  }
+}
