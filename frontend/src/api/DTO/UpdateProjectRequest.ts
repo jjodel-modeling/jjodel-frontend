@@ -1,21 +1,25 @@
-import {DProject} from "../../joiner";
+import {Dictionary, DProject, DUser, GObject} from "../../joiner";
+import {DTO} from "./DTO";
+import {VersionFixer} from "../../redux/VersionFixer";
 
-export class UpdateProjectRequest {
-
+export class UpdateProjectRequest extends DTO<DProject>{
     id?: string;
-    _id?: string;
-    name?: string;
-    description?: string;
-    type?: string;
-    state?: string;
-    viewpointsNumber?: number;
-    metamodelsNumber? :number;
-    modelsNumber? :number;
-    lastModified? :string;
-    isFavorite? :boolean;
-    collaborators?: string[];
-
-    public static  convertDprojectToUpdateProject(project: DProject): UpdateProjectRequest{
+    _id!: string;
+    name!: string;
+    description!: string;
+    type!: string;
+    state!: string;
+    viewpointsNumber!: number;
+    metamodelsNumber!: number;
+    modelsNumber!: number;
+    creation!: string;
+    lastModified!: string;
+    isFavorite!: boolean;
+    collaborators!: string[];
+    imported!: boolean;
+    version!: string;
+    /*
+    public static convertDprojectToUpdateProject(project: DProject): UpdateProjectRequest{
 
         const updateProjectRequest :UpdateProjectRequest = new UpdateProjectRequest();
 
@@ -34,13 +38,32 @@ export class UpdateProjectRequest {
         updateProjectRequest.isFavorite = !project.isFavorite;
         updateProjectRequest.collaborators = project.collaborators || [""];
 
-        console.log("***************", project);
         console.log("*************** - updateProjectRequest", updateProjectRequest);
 
         return updateProjectRequest;
+    }*/
+    _dto_convert(src: Partial<DProject>, setFields: Dictionary<string, boolean>): void {
+        this.version = src.version || 'unknown'; //VersionFixer.get_highestversion()+'';
+        // todo: fix bug date (??)
+        this._dto_set('lastModified', (src.lastModified ? new Date(src.lastModified) : new Date()).toISOString(), setFields);
+        this.creation = (src.creation ? new Date(src.creation) : new Date()).toISOString();
+        setFields['creation'] = true;
+        missing.imported = !!src.state;
+        /*excess.favorite
+        excess.className;
+        excess.author;
+        excess.layout;*/
     }
-
+    static toProject(dto: GObject<UpdateProjectRequest>): DProject{
+        let ret = {...dto} as any as GObject<DProject>;
+        ret.className = DProject.cname;
+        ret.favorite = {[DUser.current]: ret.isFavorite} as Dictionary;
+        return ret;
+    }
 }
+type Missing = Omit<UpdateProjectRequest, keyof DProject>;
+type Excess = Omit<DProject, keyof UpdateProjectRequest>;
 
-
+let missing: Missing = null as any;
+let excess: Excess = null as any;
 

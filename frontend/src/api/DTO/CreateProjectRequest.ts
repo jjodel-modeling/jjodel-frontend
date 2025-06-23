@@ -1,4 +1,4 @@
-export class CreateProjectRequest {
+export class CreateProjectRequest_old {
 
     _id?: string;
     name? :string;

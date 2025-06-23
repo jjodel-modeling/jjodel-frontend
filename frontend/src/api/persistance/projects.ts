@@ -1,7 +1,7 @@
 import {
     CreateElementAction,
     DModel,
-    DProject, L,
+    DProject, GObject, L, Log,
     LProject,
     Pointer, R, RuntimeAccessible,
     SetFieldAction, store,
@@ -9,17 +9,16 @@ import {
     U
 } from '../../joiner';
 import Storage from "../../data/storage";
-import {Project} from "../DTO/Project";
 
 import {UpdateProjectRequest} from "../DTO/UpdateProjectRequest";
-import {CreateProjectRequest} from "../DTO/CreateProjectRequest";
 import Api from "../api";
 import {duplicateProject} from "../../pages/components/Project";
 import {COMMIT} from "../../redux/action/action";
+import {ProjectPointers} from "../../joiner/classes";
+import {DTOProjectGetAll} from "../DTO/GetAllProjects";
 
 @RuntimeAccessible('ProjectsApi')
 class ProjectsApi {
-
 
     static async create(type: DProject['type'], name?: DProject['name'], m2: Pointer<DModel>[] = [], m1: Pointer<DModel>[] = [], otherProjects?: LProject[]): Promise<void> {
         const project = DProject.new(type, name, undefined, m2, m1, undefined, otherProjects);
@@ -200,12 +199,9 @@ class Online {
 
 
     static async create (project: DProject): Promise<void> {
-        const creationProjectRequest : CreateProjectRequest = new Project();
-        creationProjectRequest.description = project.description;
-        creationProjectRequest.name = project.name;
-        creationProjectRequest.type = project.type;
+        const creationProjectRequest : UpdateProjectRequest = new UpdateProjectRequest(project);
 
-        await Api.post(`${Api.persistance}/project`, project); //{...creationProjectRequest});
+        await Api.post(`${Api.persistance}/project`, creationProjectRequest);
     }
 
 
@@ -213,6 +209,7 @@ class Online {
         const response = await Api.get(`${Api.persistance}/project/`);
         console.log('loading projects getall', {response});
         if (response.code !== 200) {
+            Log.ee('Project.getAll() invalid token', {response});
             /* 401: Unauthorized -> Invalid Token (Local Storage)  */
             return Promise.reject('Invalid Token');
         }
@@ -220,45 +217,36 @@ class Online {
 
         // Check if the received data is a valid array
         if (!Array.isArray(response.data)) {
-
+            Log.ee('Project.getAll() invalid response format', {response});
         }
 
         // Cast the raw data to an array, bypassing type safety
-        const rawProjects = response.data as unknown as any[];
+        const rawProjects = response.data as unknown as DTOProjectGetAll[];
 
         // Wrap all operations in a transaction to ensure atomic updates
-
         TRANSACTION('loading projects', () => {
-            for (const raw of rawProjects) {
-                // Populate the DTO with raw backend data and necessary conversions
-                const projectDto = new Project();
-                projectDto.id = raw.id;
-                projectDto.name = raw.name;
-                projectDto.description = raw.description;
-                projectDto.state = raw.state;
-                projectDto.viewpointsNumber = raw.viewpointsNumber;
-                projectDto.metamodelsNumber = raw.metamodelsNumber;
-                projectDto.modelsNumber = raw.modelsNumber;
-                projectDto.isFavorite = raw.isFavorite;
-                projectDto.creation = new Date(raw.creation).getTime();
-                projectDto.lastModified = new Date(raw.lastModified).getTime();
-                projectDto.type = ['public', 'private', 'collaborative'].includes(raw.type) ? raw.type : 'private';
+            for (const raw of rawProjects as GObject<DTOProjectGetAll>[]) {
+                raw.creation = new Date(raw.creation).getTime();
+                raw.lastModified = new Date(raw.lastModified).getTime();
+                raw.type = ['public', 'private', 'collaborative'].includes(raw.type) ? raw.type : 'private';
+                let pointers: ProjectPointers = {} as any;
+                pointers.id = raw.id;
+                pointers.favorite = raw.favorite;
+                pointers.models = raw.models;
+                pointers.metamodels = raw.metamodels;
+                pointers.graphs = raw.graphs;
+                pointers.viewpoints = raw.viewpoints;
+                pointers.activeViewpoint = raw.activeViewpoint;
 
-
-                const dproject = DProject.new(projectDto.type as 'public' |'private' | 'collaborative', projectDto.name , projectDto.state, [], [], projectDto.id);
-
-                // Dynamically set each field of the domain object using SetFieldAction
-                SetFieldAction.new(dproject.id, 'creation', projectDto.creation, '', false);
-                SetFieldAction.new(dproject.id, 'lastModified', projectDto.lastModified, '', false);
-                SetFieldAction.new(dproject.id, 'description', projectDto.description, '', false);
-                SetFieldAction.new(dproject.id, 'viewpointsNumber', projectDto.viewpointsNumber, '', false);
-                SetFieldAction.new(dproject.id, 'metamodelsNumber', projectDto.metamodelsNumber, '', false);
-                SetFieldAction.new(dproject.id, 'modelsNumber', projectDto.modelsNumber, '', false);
-                SetFieldAction.new(dproject.id, 'isFavorite', projectDto.isFavorite, '', false);
+                //const dproject = DProject.new(raw.type as 'public' |'private' | 'collaborative', raw.name , raw.state, [], [], raw.id);
+                const dproject = DProject.new2(pointers, (d: GObject<DProject>)=>{
+                    for (let k in raw) {
+                        if (k in pointers) continue;
+                        d[k] = raw[k];
+                    }
+                }, rawProjects as any, true);
             }
         });
-
-        return Promise.resolve();
     }
 
 
@@ -284,9 +272,9 @@ class Online {
 
     static async save(project: DProject): Promise<void> {
 
-        const updateProjectRequest = UpdateProjectRequest.convertDprojectToUpdateProject(project);
+        const updateProjectRequest = new UpdateProjectRequest(project);
 
-        const response = await Api.put(`${Api.persistance}/project/`, {...updateProjectRequest});
+        const response = await Api.put(`${Api.persistance}/project/`, updateProjectRequest);
 
         if(response.code !== 200) {
             U.alert('e', 'Cannot Save','Something went wrong ...');
@@ -299,8 +287,8 @@ class Online {
 
 
     static async favorite(project: DProject): Promise<void> {
-        const updateProjectRequest :UpdateProjectRequest = UpdateProjectRequest.convertDprojectToUpdateProject(project);
-        const response = await Api.put(`${Api.persistance}/project/`, {...updateProjectRequest});
+        const updateProjectRequest = new UpdateProjectRequest(project);
+        const response = await Api.put(`${Api.persistance}/project/`, updateProjectRequest);
 
         if(response.code !== 200) {
             U.alert('e', 'Cannot set the project as favorite!', 'Something went wrong ...');
@@ -315,17 +303,13 @@ class Online {
 
         const response = await Api.get(`${Api.persistance}/project/${project.id}`);
 
-        if(response.code === 200) {
-
-            const updateProjectRequest :UpdateProjectRequest = UpdateProjectRequest.convertDprojectToUpdateProject(project);
-            const response = await Api.put(`${Api.persistance}/project/`, {...updateProjectRequest});
-
-            if(response.code !== 200) {
-                U.alert('e', 'Cannot import project!', 'Something went wrong ...');
-            }
+        if (response.code === 200) {
+            const updateProjectRequest = new UpdateProjectRequest(project);
+            const response = await Api.put(`${Api.persistance}/project/`, updateProjectRequest);
         } else {
-
-            await Online.create(project);
+            U.alert('e', 'Cannot import project!', 'Something went wrong ...');
+            Log.ee('failed to import project', {response, project});
+            //await Online.create(project);
         }
     }
 

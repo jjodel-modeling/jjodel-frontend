@@ -124,7 +124,7 @@ import {
     LLog,
     LModel,
     Log,
-    LViewPoint,
+    LViewPoint, ModelPointers,
     ParsedAction, Selectors,
     SetFieldAction,
     SetRootFieldAction,
@@ -142,6 +142,7 @@ import {labelfunc} from "../model/dataStructure/GraphDataElements";
 import {Dummy} from "../common/Dummy";
 import Storage from "../data/storage";
 import {PinnableDock} from "../components/dock/MyRcDock";
+import {VersionFixer} from "../redux/VersionFixer";
 
 var windoww = window as any;
 // qui dichiarazioni di tipi che non sono importabili con "import type", ma che devono essere davvero importate a run-time (eg. per fare un "extend", chiamare un costruttore o usare un metodo statico)
@@ -1131,6 +1132,7 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         _this.type = type;
         _this.name = name;
         _this.state = state || '';
+        _this.version = state ? 'unknown' : VersionFixer.get_highestversion()+'';
         if(id) _this.id = id;
         _this.favorite = {};
         _this.description = 'A new Project. Created by ' + (DPointerTargetable.from(DUser.current) as DUser).nickname + ' @' + new Date().toLocaleString();
@@ -2661,6 +2663,15 @@ RuntimeAccessibleClass.set_extend(DPointerTargetable, DUser);
 RuntimeAccessibleClass.set_extend(LPointerTargetable, LUser);
 export type WUser = getWParams<LUser, DUser>;
 
+export class ProjectPointers{
+    id!: Pointer<DProject, 1, 1, LProject>;
+    metamodels: Pointer<DModel, 0, 'N'> = [];
+    models: Pointer<DModel, 0, 'N'> = [];
+    graphs: Pointer<DGraph, 0, 'N'> = [];
+    viewpoints: Pointer<DViewPoint, 0, 'N'> = [];
+    activeViewpoint: Pointer<DViewPoint, 1, 1> = Defaults.viewpoints[0];
+    favorite!: Dictionary<Pointer<DUser>, true | undefined>;
+}
 @Leaf
 @RuntimeAccessible('DProject')
 export class DProject extends DPointerTargetable {
@@ -2691,6 +2702,7 @@ export class DProject extends DPointerTargetable {
     autosaveLayout!: boolean;
     activeLayout?: string;
     state!: string;
+    version!: string;
 
     public static new(type: DProject['type'], name?: string, state?: DProject['state'],
                       m2?: DProject['metamodels'], m1?: DProject['models'], id?: DProject['id'], otherProjects?:LProject[]): DProject {
@@ -2712,6 +2724,21 @@ export class DProject extends DPointerTargetable {
 
         return new Constructors(new DProject('dwc'), undefined, true, undefined)
             .DPointerTargetable().DProject(type, name, state || '', m2 || [], m1 || [], id).end(); }
+
+    static new2(pointers: Partial<ProjectPointers>, callback: undefined | ((d: DProject, c: Constructors) => void), otherProjects?:LProject[], persist: boolean = true): DProject {
+        let name = '';
+        // fix name
+        if (!otherProjects) otherProjects = (LUser.fromPointer(DUser.current) as LUser).projects;
+        if (!name) {
+            // autofix default name
+            let regexp = /Project (\d+)/;
+            const matches = otherProjects.map(p=>(+(regexp.exec(p.name)?.[1] as any) || 0));
+            let maxnum = Math.max(...matches, 0);
+            name = 'Project ' + (1 + maxnum);
+        }
+
+        return new Constructors(new DProject('dwc'), undefined, true, undefined)
+            .DPointerTargetable().DProject('private', name, '', [], [], pointers.id).end(callback); }
 }
 
 @RuntimeAccessible('LProject')
@@ -2743,6 +2770,7 @@ export class LProject<Context extends LogicContext<DProject> = any, D extends DP
 
     // stringify state
     state!: string;
+    version!: string;
 
     /* DATA */
     readonly packages!: LPackage[];
