@@ -4,7 +4,6 @@ import './style.scss';
 
 interface Props {}
 function Loader(props: Props) {
-    console.log("sono nella function loader");
     const prevent = (e: MouseEvent) => {
         e.preventDefault();
         e.stopPropagation();

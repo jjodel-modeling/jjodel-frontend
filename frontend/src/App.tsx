@@ -50,7 +50,6 @@ function App(props: AllProps): JSX.Element {
     //let user = LUser.fromPointer(DUser.current);
     if (firstLoading) {
         firstLoading = false;
-        console.log("entro in app.tsx nel costrutto per verificare se è il firstLoading");
         stateInitializer().then(()=> {
             updateUser(DUser.current);
             forceUpdate(1);

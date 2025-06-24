@@ -443,7 +443,7 @@ export function reducer(oldState: DState = initialState, action: Action): DState
     if (U.navigating) return oldState;
     if (!windoww.jjactions) windoww.jjactions = [];
     windoww.jjactions.push(action);
-    try { let ret = unsafereducer(oldState, action); console.log('reducer done'); return ret; }
+    try { let ret = unsafereducer(oldState, action); return ret; }
     catch(e) {
         console.error('unhandled error in reducer', {e, oldState, action});
         return oldState;
@@ -1011,7 +1011,7 @@ export function _reducer/*<S extends StateNoFunc, A extends Action>*/(oldState: 
 
             // update state history
             let delta = Uobj.objectDelta(ret, oldState, true, false);
-            console.log('deltra', {start:oldState, end: ret, delta});
+            // console.log('deltra', {start:oldState, end: ret, delta});
             let debug = Uobj.applyObjectDelta(ret, delta, false, oldState);
             delta.timestamp = ret.timestamp;
             delta.timestampdiff = ret.timestampdiff = ret.timestamp - (oldState?.timestamp || 0);

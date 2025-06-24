@@ -68,4 +68,5 @@ type Excess = Omit<DProject, keyof UpdateProjectRequest>;
 
 let missing: Missing = null as any;
 let excess: Excess = null as any;
+(window as any).UpdateProjectRequest = UpdateProjectRequest;
 
