@@ -43,12 +43,14 @@ export class UpdateProjectRequest extends DTO<DProject>{
         return updateProjectRequest;
     }*/
     _dto_convert(src: Partial<DProject>, setFields: Dictionary<string, boolean>): void {
+        let missing: Missing = this as any;
         this.version = src.version || 'unknown'; //VersionFixer.get_highestversion()+'';
         // todo: fix bug date (??)
         this._dto_set('lastModified', (src.lastModified ? new Date(src.lastModified) : new Date()).toISOString(), setFields);
         this.creation = (src.creation ? new Date(src.creation) : new Date()).toISOString();
         setFields['creation'] = true;
         missing.imported = !!src.state;
+        console.log('dto convert: ', {src, thiss:this, setFields});
         /*excess.favorite
         excess.className;
         excess.author;
