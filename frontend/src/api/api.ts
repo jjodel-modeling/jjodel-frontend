@@ -53,7 +53,7 @@ class Api {
 
         // if is an object but not jodel object, return it as is
 
-        if (!(d._Id && d.id)) return data;
+        if (!(d._Id || d.id)) return data;
 
         d = {...data} as any;
         // check if it is already been swapped to desired state
