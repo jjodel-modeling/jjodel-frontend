@@ -18,6 +18,10 @@ export class UpdateProjectRequest extends DTO<DProject>{
     collaborators!: string[];
     imported!: boolean;
     version!: string;
+    constructor(src: DProject) {
+        super();
+        this._dto_init(src);
+    }
     /*
     public static convertDprojectToUpdateProject(project: DProject): UpdateProjectRequest{
 
@@ -49,7 +53,7 @@ export class UpdateProjectRequest extends DTO<DProject>{
         this._dto_set('lastModified', (src.lastModified ? new Date(src.lastModified) : new Date()).toISOString(), setFields);
         this.creation = (src.creation ? new Date(src.creation) : new Date()).toISOString();
         setFields['creation'] = true;
-        missing.imported = !!src.state;
+        this._dto_set('imported', !!src.state, setFields);
         console.log('dto convert: ', {src, thiss:this, setFields});
         /*excess.favorite
         excess.className;
