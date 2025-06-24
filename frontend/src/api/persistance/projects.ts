@@ -296,11 +296,10 @@ class Online {
 
     static async import(project: DProject): Promise<void> {
 
-        const response = await Api.get(`${Api.persistance}/project/${project.id}`);
-
+        const updateProjectRequest = new UpdateProjectRequest(project);
+        const response = await Api.put(`${Api.persistance}/project/`, updateProjectRequest);
         if (response.code === 200) {
-            const updateProjectRequest = new UpdateProjectRequest(project);
-            const response = await Api.put(`${Api.persistance}/project/`, updateProjectRequest);
+            console.log('import', {project, updateProjectRequest, response});
         } else {
             U.alert('e', 'Cannot import project!', 'Something went wrong ...');
             Log.ee('failed to import project', {response, project});
