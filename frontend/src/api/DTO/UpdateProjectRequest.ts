@@ -4,7 +4,7 @@ import {VersionFixer} from "../../redux/VersionFixer";
 
 export class UpdateProjectRequest extends DTO<DProject>{
     id?: string;
-    _id!: string;
+    _Id!: string;
     name!: string;
     description!: string;
     type!: string;
@@ -27,8 +27,8 @@ export class UpdateProjectRequest extends DTO<DProject>{
 
         const updateProjectRequest :UpdateProjectRequest = new UpdateProjectRequest();
 
-        updateProjectRequest.id = project._id;
-        updateProjectRequest._id = project.id;
+        updateProjectRequest.id = project._Id;
+        updateProjectRequest._Id = project.id;
 
         updateProjectRequest.name = project.name;
         updateProjectRequest.description = project.description;

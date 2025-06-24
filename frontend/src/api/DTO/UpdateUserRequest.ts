@@ -4,7 +4,7 @@ import {UpdateProjectRequest} from "./UpdateProjectRequest";
 export class UpdateUserRequest {
 
     id?: string;
-    _id?: string;
+    _Id?: string;
     name?: string;
     surname?: string;
     nickname?: string;

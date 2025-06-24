@@ -53,19 +53,19 @@ class Api {
 
         // if is an object but not jodel object, return it as is
 
-        if (!(d._Id || d.id)) return data;
+        if (!d._Id && !d.id) return data;
 
         d = {...data} as any;
         // check if it is already been swapped to desired state
-        console.log('swap pre', {id:d.id, _id:d._id, toJodel, data});
+        console.log('swap pre', {id:d.id, _Id:d._Id, toJodel, data});
         if (toJodel && d.id && Pointers.isPointer(d.id)) return data;
-        console.log('swap 1', {id:d.id, _id:d._id, toJodel, data});
-        if (!toJodel && d._Id && Pointers.isPointer(d._id)) return data;
-        console.log('swap 2', {id:d.id, _id:d._id, toJodel, data});
+        console.log('swap 1', {id:d.id, _Id:d._Id, toJodel, data});
+        if (!toJodel && d._Id && Pointers.isPointer(d._Id)) return data;
+        console.log('swap 2', {id:d.id, _Id:d._Id, toJodel, data});
         let tmp = d._Id;
         d._Id = d.id;
         d.id = tmp;
-        console.log('swap 3', {id:d.id, _id:d._id, toJodel, data});
+        console.log('swap 3', {id:d.id, _Id:d._Id, toJodel, data});
         return d as any;
     }
 

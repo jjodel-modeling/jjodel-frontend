@@ -1,6 +1,5 @@
 export class CreateProjectRequest_old {
-
-    _id?: string;
+    _Id?: string;
     name? :string;
     description? :string;
     type? :string;

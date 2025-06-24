@@ -57,11 +57,11 @@ class ProjectsApi {
 
 
     static async save(project: LProject): Promise<DProject> {
-        project.lastModified = Date.now();
-        project.viewpointsNumber = project.viewpoints.length;
-        project.metamodelsNumber = project.metamodels.length;
-        project.modelsNumber = project.models.length;
         const dProject = {...project.__raw} as DProject;
+        dProject.lastModified = Date.now();
+        dProject.viewpointsNumber = project.viewpoints.length;
+        dProject.metamodelsNumber = project.metamodels.length;
+        dProject.modelsNumber = project.models.length;
         const state = await U.compressedState(dProject);
         dProject.state = state;
         if(U.isOffline()) await Offline.save(dProject);
@@ -260,24 +260,19 @@ class Online {
         const response = await Api.get(`${Api.persistance}/project/jjodel/${id}`);
         if (response.code !== 200) {
             return null;
-        }/*
-        // swap ids.
-        let swap = response.data!["_Id"];
-        response.data!['_Id'] = response.data!['id'];
-        response.data!['id'] = swap;*/
-
-        console.log("*************** 1", response.data as unknown as DProject)
+        }
         return response.data as unknown as DProject;
     }
 
     static async save(project: DProject): Promise<void> {
 
         const updateProjectRequest = new UpdateProjectRequest(project);
-
+        console.log('online saving: ', {updateProjectRequest});
         const response = await Api.put(`${Api.persistance}/project/`, updateProjectRequest);
 
-        if(response.code !== 200) {
+        if (response.code !== 200) {
             U.alert('e', 'Cannot Save','Something went wrong ...');
+            Log.ee('Failed to save', {response, updateProjectRequest, project});
         }
         else {
             U.alert('i', 'Project Saved!', '');
