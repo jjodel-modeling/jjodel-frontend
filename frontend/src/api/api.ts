@@ -1,5 +1,5 @@
 import Axios from "axios";
-import {type Dictionary, DPointerTargetable, GObject, Json, Log, R} from "../joiner";
+import {type Dictionary, DPointerTargetable, GObject, Json, Log, Pointers, R} from "../joiner";
 import Storage from "../data/storage";
 
 export type Response = {code: number, data: Json|null}
@@ -57,11 +57,15 @@ class Api {
 
         d = {...data} as any;
         // check if it is already been swapped to desired state
-        if (toJodel && d.id?.indexOf('Pointer') === 0) return data;
-        if (!toJodel && d._Id?.indexOf('Pointer') === 0) return data;
+        console.log('swap pre', {id:d.id, _id:d._id, toJodel, data});
+        if (toJodel && d.id && Pointers.isPointer(d.id)) return data;
+        console.log('swap 1', {id:d.id, _id:d._id, toJodel, data});
+        if (!toJodel && d._Id && Pointers.isPointer(d._id)) return data;
+        console.log('swap 2', {id:d.id, _id:d._id, toJodel, data});
         let tmp = d._Id;
         d._Id = d.id;
         d.id = tmp;
+        console.log('swap 3', {id:d.id, _id:d._id, toJodel, data});
         return d as any;
     }
 
