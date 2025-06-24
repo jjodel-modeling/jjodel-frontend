@@ -1,5 +1,6 @@
 // import {Mixin} from "ts-mixer";
 import {isDeepStrictEqual} from "util";
+import type {GObject} from "../../joiner"
 import {
     Constructors,
     CoordinateMode, D,
@@ -14,7 +15,6 @@ import {
     EdgeBendingMode,
     EPSize,
     getWParams,
-    GObject,
     GraphElementComponent,
     GraphPoint,
     GraphSize,
@@ -43,13 +43,13 @@ import {
     transientProperties,
     U,
     Uarr, UX,
-    windoww
+    windoww, Geom, ISize
 } from "../../joiner";
 import type {Tooltip} from "../../components/forEndUser/Tooltip";
 import {JSX, RefObject} from "react";
 import type {SVGPathElementt, SVGPathSegment} from '../../common/libraries/pathdata';
 import {EdgeGapMode, InitialVertexSize} from "../../joiner/types";
-import {Geom, ISize} from "../../common/Geom";
+
 
 
 //console.warn('ts loading graphDataElement');

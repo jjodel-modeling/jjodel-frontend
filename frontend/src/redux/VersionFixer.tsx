@@ -1,20 +1,16 @@
-import {
-    GraphSize, IPoint, DocString, Dictionary,
+import type {
+    GraphSize, IPoint, DocString, Dictionary, Pointer,
     GObject,
     GraphPoint,
 } from "../joiner";
 import {
-    CoordinateMode,
     Defaults, DGraphElement,
     DPointerTargetable, DReference,
-    DState, DStructuralFeature,
-    DViewElement,
-    EdgeBendingMode,
-    EdgeGapMode, LClass, LoadAction,
-    Log, LPointerTargetable, LState, Pointer, Pointers, RuntimeAccessible, RuntimeAccessibleClass, store, TRANSACTION,
+    DState,
+    LoadAction,
+    Log, LPointerTargetable, Pointers, RuntimeAccessible, RuntimeAccessibleClass, store, TRANSACTION,
     U
 } from "../joiner";
-import {NumberControl, PaletteControl, PathControl, StringControl} from "../view/viewElement/view";
 import {Tooltip} from "../components/forEndUser/Tooltip";
 
 /*

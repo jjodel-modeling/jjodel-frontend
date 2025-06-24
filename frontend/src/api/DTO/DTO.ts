@@ -1,4 +1,5 @@
-import {Dictionary, DProject, GObject, Log, U} from "../../joiner";
+import type {Dictionary, DProject, GObject} from "../../joiner";
+import {Log, U} from "../../joiner";
 import {UpdateProjectRequest} from "./UpdateProjectRequest";
 
 export abstract class DTO<S extends GObject = GObject>{

@@ -153,7 +153,7 @@ export {
     DExtEdge, DRefEdge, DVoidEdge, LGraphVertex, LRefEdge, LEdgePoint, DVoidVertex, DGraphVertex, DEdgePoint, DVertex,
     DEdge, LVertex, LGraph, DGraph, LVoidVertex, LVoidEdge, LEdge, LGraphElement, LExtEdge, DGraphElement} from "../model/dataStructure/GraphDataElements";
 
-export {Size, GraphSize, GraphPoint, IPoint, ISize, Point} from "../common/Geom";
+export {Size, GraphSize, GraphPoint, IPoint, ISize, Point, Geom} from "../common/Geom";
 
 
 export type {WViewElement} from "../view/viewElement/view";

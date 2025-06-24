@@ -1,9 +1,8 @@
 import type { VertexOwnProps } from "../graphElement/sharedTypes/sharedTypes";
+import type {radian} from "../../joiner/types";
 import React, {ReactElement, ReactNode} from "react";
-import {GObject, Point, U} from "../../joiner";
-import { Geom } from "../../common/Geom";
+import {GObject, Point, U, Geom} from "../../joiner";
 import {VertexConnected} from "./Vertex";
-import {radian} from "../../joiner/types";
 
 
 function polygonSideLength(sides: number, radius: number = 1){

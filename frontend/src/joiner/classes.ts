@@ -142,7 +142,7 @@ import {labelfunc} from "../model/dataStructure/GraphDataElements";
 import {Dummy} from "../common/Dummy";
 import Storage from "../data/storage";
 import {PinnableDock} from "../components/dock/MyRcDock";
-import {VersionFixer} from "../redux/VersionFixer";
+import type {VersionFixer as TypeVersionFixer} from "../redux/VersionFixer";
 
 var windoww = window as any;
 // qui dichiarazioni di tipi che non sono importabili con "import type", ma che devono essere davvero importate a run-time (eg. per fare un "extend", chiamare un costruttore o usare un metodo statico)
@@ -1127,6 +1127,7 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
 
     DProject(type: DProject['type'], name: string, state: DProject['state'], m2: DProject['metamodels'], m1: DProject['models'], id?: DProject['id']): this {
         const _this: DProject = U.wrapper<DProject>(this.thiss);
+        let VersionFixer: typeof TypeVersionFixer = windoww.VersionFixer;
         _this.metamodels = m2;
         _this.models = m1;
         _this.type = type;
