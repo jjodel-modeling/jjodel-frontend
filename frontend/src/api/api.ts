@@ -57,8 +57,8 @@ class Api {
 
         d = {...data} as any;
         // check if it is already been swapped to desired state
-        if (toJodel && d.id.indexOf('Pointer') === 0) return data;
-        if (!toJodel && d._Id.indexOf('Pointer') === 0) return data;
+        if (toJodel && d.id?.indexOf('Pointer') === 0) return data;
+        if (!toJodel && d._Id?.indexOf('Pointer') === 0) return data;
         let tmp = d._Id;
         d._Id = d.id;
         d.id = tmp;
@@ -85,6 +85,7 @@ class Api {
     static async post(path: string, obj: GObject, allowAnonymous:boolean = false): Promise<Response> {
         try {
             if(allowAnonymous || await Api.checkToken()) {
+                console.log('post', {obj, swap:Api.swapToGUID(obj)})
                 const response = await Axios.post(path, Api.swapToGUID(obj), {headers: this.headers()});
                 console.log('Api response', {path, response});
                 return {code: response.status, data: Api.swapToJodelID(response.data)};
