@@ -1,4 +1,4 @@
-import {Dictionary, Pointer, store} from '../../joiner';
+import {Dictionary, DocString, Pointer, Pointers, store} from '../../joiner';
 import {Constructors, DProject, LProject, R, U} from '../../joiner';
 import React, {JSX} from "react";
 
@@ -83,14 +83,11 @@ export async function downloadDuplicate(project: DProject, pnames: Dictionary<st
 }
 
 export async function duplicateProject(project: DProject, pnames?: Dictionary<string, any>): Promise<DProject> {
-    console.log('duplicateProject 0');
-
     let oldID = project.id;
     project.id = Constructors.makeID();
     if (project.name.indexOf('copy') === -1) project.name += ' copy';
-    console.log('duplicateProject 1');
 
-    let projectNames: Dictionary<string, any>;
+    let projectNames: Dictionary<DocString<'name'>, Pointer>;
     if (pnames) projectNames = pnames;
     else {
         let state = store.getState();
@@ -101,25 +98,26 @@ export async function duplicateProject(project: DProject, pnames?: Dictionary<st
             projectNames[p.name||''] = ptr;
         }
     }
-    console.log('duplicateProject 3', {name: project.name, projectNames});
-    project.name = U.increaseEndingNumber(project.name, false, false, (str)=> {
-        console.log('duplicateProject naming', {str, name: project.name, projectNames});
-        return projectNames[str]
-    })
+    project.name = U.increaseEndingNumber(project.name, false, false, (str)=> { return !!projectNames[str]; })
 
-    console.log('await decompression');
+
     const state = JSON.parse(await U.decompressState(project.state));
-    console.log('await decompression done');
-
     state.idlookup[oldID].id = project.id;
     state.idlookup[oldID].name = project.name;
     state.idlookup[project.id] = state.idlookup[oldID];
     delete state.idlookup[oldID];
     let str = JSON.stringify(state);
     str = U.replaceAll(str, oldID, project.id);
+
+    let renewAllIDs = true;
+    if (renewAllIDs) {
+        for (let id in state.idlookup){
+            if (id === project.id || !Pointers.isPointer(id)) continue;
+            str = U.replaceAll(str, id, Constructors.makeID());
+        }
+    }
     project.state = await compressToUTF16(str);
     state.idlookup[project.id] = {...project, state: ''} as any;
-    console.log('duplicateProject 6');
     return project;
 }
 

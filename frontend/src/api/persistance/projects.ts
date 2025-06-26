@@ -80,24 +80,22 @@ class ProjectsApi {
         let project = JSON.parse(content) as DProject;
         project.isFavorite = false;
         let state = store.getState();
-        let response: string = '';
         let resp_replace = 'Replace';
         let resp_dup = 'Duplicate';
+        let response: string = resp_replace;
         TRANSACTION('import project', async ()=>{
             console.log('importing project:', {id:project.id, project, projects: state.projects, included: state.projects.includes(project.id)});
-            if (state.projects.includes(project.id)) {
+            let dialogDuplicate: boolean = false;
+            if (dialogDuplicate && state.projects.includes(project.id)) {
                 console.log('awaiting...')
                 let promise = U.dialog2('Project already imported', '', [{txt:resp_replace}, {txt:resp_dup}]);
                 COMMIT();
                 response = await promise;
                 console.log('awaiting... COMPLETED ', response)
             }
-            console.log('awaiting... skipped? ', response)
             if (response === resp_dup) {
                 let ret = duplicateProject(project);
-                console.log('awaiting... duplicate ', {ret, rett: typeof ret === 'object' && ret ? {...ret} : ret, project})
                 project = await ret;
-                console.log('awaiting... duplicate COMPLETED ', project)
             }
             if (response === resp_replace){
                 let old = L.from(project.id);
@@ -295,9 +293,8 @@ class Online {
 
 
     static async import(project: DProject): Promise<void> {
-
         const updateProjectRequest = new UpdateProjectRequest(project);
-        const response = await Api.put(`${Api.persistance}/project/`, updateProjectRequest);
+        const response = await Api.post(`${Api.persistance}/project/`, updateProjectRequest);
         if (response.code === 200) {
             console.log('import', {project, updateProjectRequest, response});
         } else {
