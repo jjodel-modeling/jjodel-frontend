@@ -294,6 +294,7 @@ class Online {
 
     static async import(project: DProject): Promise<void> {
         const updateProjectRequest = new UpdateProjectRequest(project);
+        delete updateProjectRequest._Id;
         const response = await Api.post(`${Api.persistance}/project/`, updateProjectRequest);
         if (response.code === 200) {
             console.log('import', {project, updateProjectRequest, response});

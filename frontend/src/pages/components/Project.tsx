@@ -83,8 +83,10 @@ export async function downloadDuplicate(project: DProject, pnames: Dictionary<st
 }
 
 export async function duplicateProject(project: DProject, pnames?: Dictionary<string, any>): Promise<DProject> {
+    project = {...project} as any;
     let oldID = project.id;
     project.id = Constructors.makeID();
+
     if (project.name.indexOf('copy') === -1) project.name += ' copy';
 
     let projectNames: Dictionary<DocString<'name'>, Pointer>;
@@ -108,6 +110,11 @@ export async function duplicateProject(project: DProject, pnames?: Dictionary<st
     delete state.idlookup[oldID];
     let str = JSON.stringify(state);
     str = U.replaceAll(str, oldID, project.id);
+    let oldGUID = (project as any)._Id;
+    if (oldGUID) {
+        project._id = '';
+        str = U.replaceAll(str, oldGUID, '');
+    }
 
     let renewAllIDs = true;
     if (renewAllIDs) {
@@ -214,7 +221,7 @@ function Project(props: Props): JSX.Element {
                     <Menu>
                         <Item icon={icon['new']} action={e => {selectProject()}}>Open</Item>
                         <Item icon={icon['download']} action={e => exportProject()}>Download</Item>
-                        <Item icon={icon['duplicate']} action={e => downloadDuplicate(data.__raw as DProject, props.pnames)}>Duplicate</Item>
+                        {/*<Item icon={icon['duplicate']} action={e => downloadDuplicate(data.__raw as DProject, props.pnames)}>Duplicate</Item>*/}
                         <Item icon={icon['tools']} action={e => selectProject(true)}>Repair & open</Item>
                         <Divisor />
                         <Item icon={icon['favorite']} action={(e => toggleFavorite(data))}>{!data.isFavorite ? 'Add to favorites' : 'Remove from favorites'}</Item>
