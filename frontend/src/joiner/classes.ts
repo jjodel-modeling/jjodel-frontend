@@ -137,14 +137,15 @@ import {
 import {LayoutData} from "rc-dock";
 import {OclEngine} from "@stekoe/ocl.js";
 import React, {ReactNode} from "react";
-import {ProjectsApi, UsersApi} from "../api/persistance";
 import {labelfunc} from "../model/dataStructure/GraphDataElements";
 import {Dummy} from "../common/Dummy";
 import Storage from "../data/storage";
 import {PinnableDock} from "../components/dock/MyRcDock";
 import type {VersionFixer as TypeVersionFixer} from "../redux/VersionFixer";
-
+import type {ProjectsApi as TypeProjectsAPI, UsersApi} from "../api/persistance";
 var windoww = window as any;
+let ProjectsApi: typeof TypeProjectsAPI = windoww.ProjectsApi;
+
 // qui dichiarazioni di tipi che non sono importabili con "import type", ma che devono essere davvero importate a run-time (eg. per fare un "extend", chiamare un costruttore o usare un metodo statico)
 
 
