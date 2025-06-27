@@ -46,7 +46,6 @@ class ProjectsApi {
         else {
             await Online.delete((project as any)._Id || project.id);
         }
-        project.delete();
     }
 
 
