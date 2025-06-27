@@ -137,7 +137,7 @@ import {
 import {LayoutData} from "rc-dock";
 import {OclEngine} from "@stekoe/ocl.js";
 import React, {ReactNode} from "react";
-import type {UsersApi} from "../api/persistance";
+import {ProjectsApi, UsersApi} from "../api/persistance";
 import {labelfunc} from "../model/dataStructure/GraphDataElements";
 import {Dummy} from "../common/Dummy";
 import Storage from "../data/storage";
@@ -3210,6 +3210,7 @@ export class LProject<Context extends LogicContext<DProject> = any, D extends DP
                 // project can only be deleted in homepage, project list is not even present in editor state.
                 // if (windoww.location.hasg.includes('project') windoww.location.href = windoww.location.origin; use R.navigate
             });
+            /* await */ProjectsApi.delete(data);
         }
     }
 

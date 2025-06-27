@@ -145,7 +145,7 @@ function Project(props: Props): JSX.Element {
         U.download(`${data.name}.jjodel`, JSON.stringify(data.__raw));
     }
     const deleteProject = async() => {
-        await ProjectsApi.delete(data);
+        data.delete();
     }
 
     const typeIcon = (type: string) => {

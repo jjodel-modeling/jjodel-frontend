@@ -82,7 +82,7 @@ class ProjectsApi {
         let state = store.getState();
         let resp_replace = 'Replace';
         let resp_dup = 'Duplicate';
-        let response: string = resp_replace;
+        let response: string = resp_dup;
         TRANSACTION('import project', async ()=>{
             console.log('importing project:', {id:project.id, project, projects: state.projects, included: state.projects.includes(project.id)});
             let dialogDuplicate: boolean = false;

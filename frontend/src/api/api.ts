@@ -57,15 +57,11 @@ class Api {
 
         d = {...data} as any;
         // check if it is already been swapped to desired state
-        console.log('swap pre', {id:d.id, _Id:d._Id, toJodel, data});
         if (toJodel && d.id && Pointers.isPointer(d.id)) return data;
-        console.log('swap 1', {id:d.id, _Id:d._Id, toJodel, data});
         if (!toJodel && d._Id && Pointers.isPointer(d._Id)) return data;
-        console.log('swap 2', {id:d.id, _Id:d._Id, toJodel, data});
         let tmp = d._Id;
         d._Id = d.id;
         d.id = tmp;
-        console.log('swap 3', {id:d.id, _Id:d._Id, toJodel, data});
         return d as any;
     }
 
@@ -89,7 +85,7 @@ class Api {
     static async post(path: string, obj: GObject, allowAnonymous:boolean = false): Promise<Response> {
         try {
             if(allowAnonymous || await Api.checkToken()) {
-                console.log('post', {obj, swap:Api.swapToGUID(obj)})
+                console.log('post api call:', {obj, swap:Api.swapToGUID(obj)})
                 const response = await Axios.post(path, Api.swapToGUID(obj), {headers: this.headers()});
                 console.log('Api response', {path, response});
                 return {code: response.status, data: Api.swapToJodelID(response.data)};
