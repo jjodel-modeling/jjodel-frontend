@@ -1,5 +1,5 @@
 import {
-    CreateElementAction,
+    CreateElementAction, Dictionary,
     DModel,
     DProject, GObject, L, Log,
     LProject,
@@ -223,7 +223,13 @@ class Online {
 
         // Wrap all operations in a transaction to ensure atomic updates
         TRANSACTION('loading projects', () => {
+            let debugidmap: Dictionary = {};
             for (const raw of rawProjects as GObject<DTOProjectGetAll>[]) {
+                if (debugidmap[raw.id]) {
+                    Log.eDevv('duplicate project id', {raw});
+                    continue;
+                }
+                debugidmap[raw.id] = raw;
                 raw.creation = new Date(raw.creation).getTime();
                 raw.lastModified = new Date(raw.lastModified).getTime();
                 raw.type = ['public', 'private', 'collaborative'].includes(raw.type) ? raw.type : 'private';
