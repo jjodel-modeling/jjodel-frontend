@@ -268,7 +268,9 @@ class Online {
     }
 
     static async save(project: DProject): Promise<void> {
-
+        project = {...project} as any;
+        if (!project.version) project.version = store.getState().version.n;
+        if (!('_Id' in project)) (project as any)._Id = undefined;
         const updateProjectRequest = new UpdateProjectRequest(project);
         console.log('online saving: ', {updateProjectRequest});
         const response = await Api.put(`${Api.persistance}/project/`, updateProjectRequest);
