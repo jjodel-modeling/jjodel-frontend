@@ -297,9 +297,9 @@ export class DState extends DPointerTargetable{
 otherwise you would click the edge container instead of the graph-elements beneath it. */
 .edges { z-index: 101; position: absolute; top: 0; left: 0; height: 0; width: 0; overflow: visible; }
 `
-            }, true, 'Pointer_ViewPointDefault');
+            }, true, Defaults.Pointer_ViewPointDefault);
             const validationViewpoint = DViewPoint.newVP('Validation default',
-                (vp)=>{ vp.isExclusiveView = false; vp.isValidation = true;}, true, 'Pointer_ViewPointValidation');
+                (vp)=>{ vp.isExclusiveView = false; vp.isValidation = true;}, true, Defaults.Pointer_ViewPointValidation);
 
             Log.exDev(viewpoint.id !== Defaults.viewpoints[0], "wrong vp id initialization", {viewpoint, def:Defaults.viewpoints});
             const views: DViewElement[] = makeDefaultGraphViews(viewpoint, validationViewpoint);
@@ -315,7 +315,7 @@ otherwise you would click the edge container instead of the graph-elements benea
 
             /// creating m3 "Object" metaclass
             let dObject = DClass.new(ShortDefaultEClasses.EObject, false, false, false, false,
-                '', undefined, true, 'Pointer_' + ShortDefaultEClasses.EObject.toUpperCase());
+                '', undefined, true, Defaults.Pointer_EOBJECT);
 
             SetRootFieldAction.new('ecoreClasses', dObject.id, '+=', true);
             for (let defaultEcoreClass of Object.values(DefaultEClasses)) {
@@ -382,7 +382,7 @@ function makeDefaultGraphViews(vp: DViewPoint, validationVP: DViewPoint): DViewE
     }
 }
 `
-    }, false, 'Pointer_ViewOverlay' );
+    }, false, Defaults.Pointer_ViewOverlay );
 
     let errorCheckName: DViewElement = DViewElement.new2('Naming error view', DV.invisibleJsx(), validationVP, (v) => {
         v.isExclusiveView = false;
@@ -401,7 +401,7 @@ if (name.length === 0) err = type + " must be named.";
 else if (!name[0].match(/[A-Za-z_$]/)) err = type + " names must begin with an alphabet letter or $_ symbols.";
 else if (!name.match(/^[A-Za-z_$]+[A-Za-z0-9$_\\s]*$/)) err = type + " names can only contain an alphanumeric chars or or $_ symbols";
 if (node.state.error_naming !== err) node.state = {error_naming: err};
-`.trim();}, false, 'Pointer_ViewCheckName' );
+`.trim();}, false, Defaults.Pointer_ViewCheckName );
 
     let errorCheckLowerbound: DViewElement = DViewElement.new2('Lowerbound error view', DV.invisibleJsx(), validationVP, (v) => {
             // v.jsCondition = '(data, node)=> {\nnode.state.errors?.length>0';
@@ -420,7 +420,7 @@ if (missingLowerbound > 0) err = (data.className.substring(1))\n
  \t\t+ ' Lowerbound violation, missing ' + missingLowerbound + ' values.';\n
 node.state = {error_lowerbound: err};\n
 `.trim();
-    }, false, 'Pointer_ViewLowerbound' );
+    }, false, Defaults.Pointer_ViewLowerbound );
     // errorOverlayView.oclCondition = 'context DValue inv: self.value < 0';
 
     let valuecolormap: GObject = {};
@@ -437,7 +437,7 @@ node.state = {error_lowerbound: err};\n
     valuecolormap[ShortAttribETypes.EVoid] = "gray";
 
 
-    let voidView: DViewElement = DViewElement.new2('Fallback', DV.fallbackView(), vp, undefined, false, 'Pointer_fallback');
+    let voidView: DViewElement = DViewElement.new2('Fallback', DV.fallbackView(), vp, undefined, false, Defaults.Pointer_ViewFallback);
 
 
     let edgeViews: DViewElement[] = [];

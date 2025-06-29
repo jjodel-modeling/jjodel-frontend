@@ -1,4 +1,4 @@
-import {Dictionary, DocString, Pointer, Pointers, store} from '../../joiner';
+import {Defaults, Dictionary, DocString, Pointer, Pointers, store} from '../../joiner';
 import {Constructors, DProject, LProject, R, U} from '../../joiner';
 import React, {JSX} from "react";
 
@@ -119,7 +119,7 @@ export async function duplicateProject(project: DProject, pnames?: Dictionary<st
     let renewAllIDs = true;
     if (renewAllIDs) {
         for (let id in state.idlookup){
-            if (id === project.id || !Pointers.isPointer(id)) continue;
+            if (id === project.id || !Pointers.isPointer(id) || Defaults.check(id)) continue;
             str = U.replaceAll(str, id, Constructors.makeID());
         }
     }

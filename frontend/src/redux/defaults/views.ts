@@ -16,7 +16,8 @@ import {
     DParameter,
     GraphSize,
     CoordinateMode,
-    U
+    U,
+    Defaults
 } from '../../joiner';
 import DSL from "../../DSL/DSL";
 
@@ -46,7 +47,7 @@ class DefaultViews {
                     'background-': U.hexToPalette('#fff'),
                     'color-': U.hexToPalette('#123cd0', '#4b0082', '#ff0000', '#3191bb', '#3191bb')
                 };
-            }, false, 'Pointer_ViewModel');
+            }, false, Defaults.Pointer_ViewModel);
 
         view.css = `
 &, .Graph{
@@ -135,7 +136,7 @@ border-radius: var(--radius);
                 '// ** declarations here ** //\n' +
                 udLevelPkg +
                 '}';
-        }, false, 'Pointer_ViewPackage');
+        }, false, Defaults.Pointer_ViewPackage);
         // view.onDataUpdate = "if (grid) {\n   node.x = node.x - (node.x % 15);\n   node.y = node.y - (node.y % 15);\n}";
         return view
     }
@@ -207,7 +208,7 @@ border-color: silver!important;
     ${udGrid}
 }`;
             // view.events = {e1:"(num) => {\n\tdata.name = num;\n}"}
-        }, false, 'Pointer_ViewClass');
+        }, false, Defaults.Pointer_ViewClass);
         // view.onDataUpdate = "if (grid) {\n   node.x = node.x - (node.x % 15);\n   node.y = node.y - (node.y % 15);\n}";
 
         return view;
@@ -283,7 +284,7 @@ border-radius: var(--radius);
     ret.literals = data.literals
     ${udLevel}
 }`;
-        }, false, 'Pointer_ViewEnum');
+        }, false, Defaults.Pointer_ViewEnum);
         // view.onDataUpdate = "if (grid) {\n   node.x = node.x - (node.x % 15);\n   node.y = node.y - (node.y % 15);\n}";
 
         return view;
@@ -305,7 +306,7 @@ border-radius: var(--radius);
         width: max(33%, 75px);
     }
 }`;
-        }, false, 'Pointer_ViewAttribute');
+        }, false, Defaults.Pointer_ViewAttribute);
         return view;
     }
 
@@ -325,7 +326,7 @@ border-radius: var(--radius);
         width: max(33%, 75px);
     }
 }`;
-        }, false, 'Pointer_ViewReference');
+        }, false, Defaults.Pointer_ViewReference);
         return view;
     }
 
@@ -363,7 +364,7 @@ border-radius: var(--radius);
         width: 100%;
     }
 }`;
-        }, false, 'Pointer_ViewOperation');
+        }, false, Defaults.Pointer_ViewOperation);
         return view;
     }
 
@@ -373,7 +374,7 @@ border-radius: var(--radius);
         const view = DViewElement.new2('Parameter', DV.parameterView(), vp, (view)=>{
             view.appliableToClasses = [DParameter.cname];
             view.appliableTo = 'Field';
-        }, false, 'Pointer_ViewParameter');
+        }, false, Defaults.Pointer_ViewParameter);
         view.css = `
 .parameter{
     display: flex;
@@ -396,7 +397,7 @@ border-radius: var(--radius);
             view.appliableTo = 'Field';
             view.palette = {};
             view.css = "display: block;";
-        }, false, 'Pointer_ViewLiteral');
+        }, false, Defaults.Pointer_ViewLiteral);
         return view;
     }
 
@@ -428,7 +429,7 @@ border-radius: var(--radius);
                 'ret.metaclassName = data.instanceof?.name || \'Object\'\n' +
                 udLevel +
                 '}';
-        }, false, 'Pointer_ViewObject');
+        }, false, Defaults.Pointer_ViewObject);
         // view.onDataUpdate = "if (grid) {\n   node.x = node.x - (node.x % 15);\n   node.y = node.y - (node.y % 15);\n}";
 
         return view;
@@ -463,7 +464,7 @@ border-radius: var(--radius);
                 'ret.isSingleton = data.instanceof?.isSingleton || false\n' +
                 udLevel +
                 '}';
-        }, false, 'Pointer_ViewSingleton');
+        }, false, Defaults.Pointer_ViewSingleton);
         // view.onDataUpdate = "if (grid) {\n   node.x = node.x - (node.x % 15);\n   node.y = node.y - (node.y % 15);\n}";
 
         return view;
@@ -499,7 +500,7 @@ border-radius: var(--radius);
                 'ret.valuesString = data.valuesString()\n' +
                 'ret.typeString = data.typeString\n' +
                 '}';
-        }, false, 'Pointer_ViewValue');
+        }, false, Defaults.Pointer_ViewValue);
         return view;
     }
     static edgepoint(vp: DViewElement): DViewElement{
@@ -545,7 +546,7 @@ border-radius: var(--radius);
             d.edgePointCoordMode = CoordinateMode.absolute;
             d.defaultVSize = defaultEdgePointSize;
             // d.defaultVSize = new GraphSize(0, 0, 25, 25);
-        }, false, 'Pointer_ViewEdgePoint');
+        }, false, Defaults.Pointer_ViewEdgePoint);
         return view;
     }
 
@@ -584,7 +585,6 @@ border-radius: var(--radius);
     transform: translate(-50%, -50%);
     pointer-events: all;
     cursor: crosshair;
-    
     &:hover{
         background-color: var(--anchor-hover-1);
         outline: 2px solid var(--anchor-hover-3);
@@ -595,9 +595,10 @@ border-radius: var(--radius);
             background-color: var(--anchor-hover-2);
         }
     }
+    &>div{ pointer-events: none; }
 }
 `
-        }, false, 'Pointer_ViewAnchors' );
+        }, false, Defaults.Pointer_ViewAnchors );
         return ret;
     }
 }

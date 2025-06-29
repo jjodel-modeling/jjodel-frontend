@@ -2662,6 +2662,8 @@ export enum ShortDefaultEClasses{
     EPackage = "EPackage",
     ENamedElement = "ENamedElement",
 }
+
+//NB: if add, remove, modify a attribute type, need also to add/remove/modify a static entry in class Defaults
 export enum ShortAttribETypes {
     EVoid = 'EVoid',
     EChar  = 'EChar',
