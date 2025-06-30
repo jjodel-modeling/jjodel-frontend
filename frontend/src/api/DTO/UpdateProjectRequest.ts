@@ -46,9 +46,10 @@ export class UpdateProjectRequest extends DTO<DProject>{
 
         return updateProjectRequest;
     }*/
-    _dto_convert(src: Partial<DProject>, setFields: Dictionary<string, boolean>): void {
+    _dto_convert(src: Partial<DProject>, setFields: Dictionary<string, any>): void {
         let missing: Missing = this as any;
-        this.version = src.version || -1; //VersionFixer.get_highestversion()+'';
+        if (!src.version) this._dto_set('version', -1, setFields); //VersionFixer.get_highestversion()+'';
+        if (!src._Id) this._dto_set('_Id', '', setFields);
         // todo: fix bug date (??)
         this._dto_set('lastModified', (src.lastModified ? new Date(src.lastModified) : new Date()).toISOString(), setFields);
         this.creation = (src.creation ? new Date(src.creation) : new Date()).toISOString();
