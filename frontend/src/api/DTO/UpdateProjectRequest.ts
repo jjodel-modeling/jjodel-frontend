@@ -17,7 +17,7 @@ export class UpdateProjectRequest extends DTO<DProject>{
     isFavorite!: boolean;
     collaborators!: string[];
     imported!: boolean;
-    version!: string;
+    version!: number;
     constructor(src: DProject) {
         super();
         this._dto_init(src);
@@ -48,7 +48,7 @@ export class UpdateProjectRequest extends DTO<DProject>{
     }*/
     _dto_convert(src: Partial<DProject>, setFields: Dictionary<string, boolean>): void {
         let missing: Missing = this as any;
-        this.version = src.version || 'unknown'; //VersionFixer.get_highestversion()+'';
+        this.version = src.version || -1; //VersionFixer.get_highestversion()+'';
         // todo: fix bug date (??)
         this._dto_set('lastModified', (src.lastModified ? new Date(src.lastModified) : new Date()).toISOString(), setFields);
         this.creation = (src.creation ? new Date(src.creation) : new Date()).toISOString();
