@@ -1241,7 +1241,6 @@ export class DPointerTargetable extends RuntimeAccessibleClass {
     _storePath?: string[];
     _subMaps?: Dictionary<string, boolean>;
     id!: Pointer<DPointerTargetable, 1, 1, LPointerTargetable>;
-    _id?: string // db GUID
     // pointedBy: DocString<'path in store'>[] = []; // NB: potrebbe contenere puntatori invalidi.
     // se viene cancellato un intero oggetto A che contiene una lista di puntatori, gli oggetti che puntano ad A rimuovono A dai loro "poitnedBy",
     // ma gli oggetti puntati da A tramite sotto-oggetti o attributi (subviews...) non vengono aggiornati in "pointedby"
@@ -2396,6 +2395,7 @@ export class DUser extends DPointerTargetable {
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
     id!: Pointer<DUser>;
+    _Id?: string // db GUID
     name!: string;
     surname!: string;
     nickname!: string;
@@ -2494,6 +2494,7 @@ export class LUser<Context extends LogicContext<DUser> = any, D extends DUser = 
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
     public __raw!: DUser;
     id!: Pointer<DUser>;
+    _Id?: string // db GUID
     name!: string;
     surname!: string;
     nickname!: string;
@@ -2680,6 +2681,7 @@ export class DProject extends DPointerTargetable {
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
 
     id!: Pointer<DProject, 1, 1, LProject>;
+    _Id?: string // db GUID
     type: 'public'|'private'|'collaborative' = 'public';
     name!: string;
     /* no in dto */author: Pointer<DUser> = DUser.current;
@@ -2746,8 +2748,8 @@ export class DProject extends DPointerTargetable {
 export class LProject<Context extends LogicContext<DProject> = any, D extends DProject = DProject> extends LPointerTargetable {
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
-
     readonly id!: Pointer<DProject>;
+    _Id?: string // db GUID
     type!: 'public'|'private'|'collaborative';
     author!: LUser;
     collaborators!: LUser[];

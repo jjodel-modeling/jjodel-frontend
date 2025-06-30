@@ -45,7 +45,7 @@ function ProjectComponent(props: AllProps): JSX.Element {
                 console.log('loading state: ', {state, project, ps: project.state});
                 state['idlookup'][DUser.current] = user.__raw;
                 if (!state['users'].includes(DUser.current)) state['users'].push(DUser.current);
-                SaveManager.load(state);
+                SaveManager.load(state, project);
             }
             console.log("**************** 2 ",project)
             console.log("**************** 3 ",project.id)

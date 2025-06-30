@@ -20,7 +20,7 @@ import {
     Debug,
     DViewElement,
     transientProperties,
-    LUser
+    LUser, DProject
 } from '../../joiner';
 import {ProjectsApi} from "../../api/persistance";
 import {VersionFixer} from "../../redux/VersionFixer";
@@ -39,7 +39,7 @@ export class SaveManager {
         console.log(JSON.stringify(SaveManager.tmpsave))*/
     }
 
-    static load(state0?: string | GObject<DState>): void {
+    static load(state0: string | GObject<DState>, project: DProject): void {
         if (!state0 && SaveManager.tmpsave) { LoadAction.new(SaveManager.tmpsave); return; }
         state0 = state0 || localStorage.getItem('tmpsave') || 'null'; // priorities: 1) argument from file 2) state variable cached 3) localstorage 4) null prevent crash
         let save: GObject<DState> = SaveManager.tmpsave = typeof state0 === 'string' ? JSON.parse(state0) : state0;
@@ -49,6 +49,8 @@ export class SaveManager {
                 key = 'VIEWS_RECOMPILE_' + key;
                 if (!save[key]) save[key] = [];
                 save[key].push(vid);
+                let lookupproject = save.idlookup[project.id] as DProject;
+                lookupproject._Id = project._Id;
             }
         }
         save = VersionFixer.update(save);

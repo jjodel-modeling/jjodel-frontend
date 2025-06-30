@@ -112,7 +112,7 @@ export async function duplicateProject(project: DProject, pnames?: Dictionary<st
     str = U.replaceAll(str, oldID, project.id);
     let oldGUID = (project as any)._Id;
     if (oldGUID) {
-        project._id = '';
+        project._Id = '';
         str = U.replaceAll(str, oldGUID, '');
     }
 
