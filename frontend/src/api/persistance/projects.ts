@@ -271,8 +271,9 @@ class Online {
         project = {...project} as any;
         if (!project.version) project.version = store.getState().version.n;
         if (!('_Id' in project)) (project as any)._Id = undefined;
+        console.log('online saving 1: ', {project, id: project.id, _id: (project as any)._Id, v:project.version});
         const updateProjectRequest = new UpdateProjectRequest(project);
-        console.log('online saving: ', {updateProjectRequest});
+        console.log('online saving 2: ', {updateProjectRequest});
         const response = await Api.put(`${Api.persistance}/project/`, updateProjectRequest);
 
         if (response.code !== 200) {

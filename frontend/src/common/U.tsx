@@ -274,7 +274,6 @@ export class U {
         state.idlookup = idlookup;
         state.idlookup[id] = {...dproject, state: ''} as any;
         state.projects = [id];
-        console.log('saving', {state, str_state: JSON.stringify(state)});
         return await compressToUTF16(JSON.stringify(state));
     }
     static isOffline(): boolean {
