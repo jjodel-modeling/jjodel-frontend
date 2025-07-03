@@ -1244,7 +1244,6 @@ export async function stateInitializer() {
     DUser.current = duser.id;
     try {
         let c = await ProjectsApi.getAll();
-
     } catch (error) {
         await AuthApi.logout();
         console.error('Failed to fetch projects', {error});
@@ -1252,6 +1251,7 @@ export async function stateInitializer() {
         // R.navigate('/auth');
     }
     setDocumentEvents();
+    console.log('state initializer end');
     /*type RecentEntry = {id: Pointer<DProject>[], name: string};
     let recent: RecentEntry[] = JSON.parse(localStorage.getItem('_jjRecent') || '[]') as any[];
     if (window.location.hash.indexOf('#/project') === 0) { use R.navigate
