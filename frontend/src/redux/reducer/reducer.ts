@@ -1025,10 +1025,10 @@ export function _reducer/*<S extends StateNoFunc, A extends Action>*/(oldState: 
             if (!shouldMerge && (delta.vertexs || delta.graphvertexs || delta.graphelements || delta.edgepoints || delta.edges || delta.graphs)) shouldMerge = true;
             if (!pastDelta) shouldMerge = false;
 
-            if (pastDelta) console.log("merge deltas", {forVertex:delta.vertexs || delta.graphvertexs || delta.graphelements || delta.edgepoints || delta.edges || delta.graphs,
+            if (false && pastDelta) console.log("merge deltas", {forVertex:delta.vertexs || delta.graphvertexs || delta.graphelements || delta.edgepoints || delta.edges || delta.graphs,
                 isRelevantChange,
-                shouldMerge, irl: pastDelta && delta.timestamp - pastDelta.timestamp < mergeTolerance,
-                 dt: delta.timestamp, pdt: pastDelta.timestamp, diff: delta.timestamp - pastDelta.timestamp,
+                shouldMerge, irl: pastDelta && (delta?.timestamp||0) - pastDelta.timestamp < mergeTolerance,
+                 dt: delta.timestamp, pdt: pastDelta.timestamp, diff: (delta?.timestamp||0) - pastDelta.timestamp,
                 oldState, delta});
 
             //todo: for cooperative prevent merge from different authors, store user in delta from action.sender when you set timestamp.

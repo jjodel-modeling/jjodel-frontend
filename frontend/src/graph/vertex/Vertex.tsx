@@ -29,7 +29,7 @@ import {
     SetRootFieldAction,
     Size,
     TRANSACTION,
-    U,
+    U, windoww,
 } from '../../joiner';
 import $ from 'jquery';
 import 'jqueryui';
@@ -46,6 +46,13 @@ dragHelper.style.backgroundColor = 'transparent';
 dragHelper.style.outline = '1px dashed black'; // '4px dashed #333';
 dragHelper.style.zIndex = '9999';
 
+type JQUIPosition = {left: number, top: number};
+type JQUIDragging = {
+    helper: JQuery<HTMLElement>,
+    position: JQUIPosition,
+    offset: JQUIPosition,
+    originalPosition: JQUIPosition,
+}
 
 export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState extends ThisStatee = ThisStatee>
     extends superclassGraphElementComponent<AllProps, ThisState> {
@@ -95,6 +102,9 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
         let isDraggable: boolean = view.draggable;
         let isResizable: boolean = view.resizable;
         let allviews: Pointer<DViewElement>[] = [view, ...this.props.views].map(v=>v.id);
+
+        let dragCacheZoom: GraphPoint | null = null;
+
         // $element = $(html).find('.measurable').addBack();
         try {
         if (!isDraggable) {
@@ -120,6 +130,8 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
                     let size = this.getSize();
                     // let actualSize = Size.of(html);
                     // if (size.w !== actualSize.w || size.h !== actualSize.h) this.setSize({w:actualSize.w, h:actualSize.h});
+                    /*dragHelper.setAttribute('xx', size.x+'');
+                    dragHelper.setAttribute('yy', size.y+'');*/
                     dragHelper.style.width = size.w + 'px';
                     dragHelper.style.height = size.h + 'px';
                     dragHelper.style.opacity = '1'; // this.props.view.constraints.length ? '1' : '0.5';
@@ -128,21 +140,43 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
                     return dragHelper;
                 },
                 // disabled: !(view.draggable),
-                start: (event: GObject, obj: GObject) => {
+                start: (evt: GObject, ui: JQUIDragging) => {
+                    // dragCacheZoom = this.props.node.graph.zoom;
+                    dragCacheZoom = this.props.node.graph.cumulativeZoom; // NB: cumulative zoom only of parent graphs, excluding zoom of direct vertex
+                    ui.originalPosition.left /= dragCacheZoom.x;
+                    ui.originalPosition.top /= dragCacheZoom.y;
+                    ui.offset.left = (ui.position.left /= dragCacheZoom.x);
+                    ui.offset.top = (ui.position.top /= dragCacheZoom.y);
+
                     TRANSACTION('Vertex dragStart ' + this.props.node.name, ()=> {
                         for (let vid of allviews) this.doMeasurableEvent(EMeasurableEvents.onDragStart, vid);
+                        windoww.dragging_vertex_size_tmp = this.getSize();
                     })
                 },
-                drag: (event: GObject, obj: GObject) => {
+                drag: (evt: GObject<'mousemoveevent'>, ui: JQUIDragging) => {
+                    if (dragCacheZoom) {
+                        ui.offset.left = (ui.position.left /= dragCacheZoom.x);
+                        ui.offset.top = (ui.position.top /= dragCacheZoom.y);
+                        // NB: ui.originalPosition is set once by jqueryui, and then never updated. any change is permanent.
+                        // offset and position are both calculated each time independently from past values or modifications,
+                        //    as such any edit is not permanent unless reiterated at every start, ing, end event.
+                        // about offset: don't know why but in jqui offset seems always === position, so i'm keeping them consistent.
+                    }
                     TRANSACTION('Vertex dragging ' + this.props.node.name, ()=>{
                         // console.log('Vertex.setsize', obj);
-                        if (!this.props.view.lazySizeUpdate) this.setSize({x:obj.position.left, y:obj.position.top});
+                        if (!this.props.view.lazySizeUpdate) this.setSize({x:ui.position.left, y:ui.position.top});
                         for (let vid of allviews) this.doMeasurableEvent(EMeasurableEvents.whileDragging, vid);
                     })
                 },
-                stop: (event: GObject, obj: GObject) => {
+                stop: (evt: GObject, ui: JQUIDragging) => {
+                    if (dragCacheZoom){
+                        /*ui.offset.left = (ui.position.left /= dragCacheZoom.x);
+                        ui.offset.top = (ui.position.top /= dragCacheZoom.y);*/
+                        dragCacheZoom = null;
+                    }
+
                     TRANSACTION('Vertex dragEnd ' + this.props.node.name, ()=>{
-                        this.setSize({x:obj.position.left, y:obj.position.top});
+                        this.setSize({x:ui.position.left, y:ui.position.top});
                         for (let vid of allviews) this.doMeasurableEvent(EMeasurableEvents.onDragEnd, vid);
                     })
                 }
@@ -369,9 +403,11 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
         super.select(forUser);
     }
     componentDidMount(){
+        super.componentDidMount();
         this.setVertexProperties();
     }
-    componentDidUpdate(prevProps: Readonly<AllProps>, prevState: Readonly<ThisState>, snapshot?: any) {
+    componentDidUpdate(prevProps?: Readonly<AllProps>, prevState?: Readonly<ThisState>, snapshot?: any) {
+        super.componentDidUpdate(prevProps);
         this.setVertexProperties();
     }
 }

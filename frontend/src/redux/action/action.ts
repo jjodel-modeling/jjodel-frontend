@@ -149,17 +149,26 @@ function FINAL_END(path?: string, oldval?: any, newval?: any, desc?:string): boo
         t.hasAborted = false;
         return false;
     }
-    const ca: CompositeAction = new CompositeAction(t.pendingActions, false);
-    if (lastDescription) {
-        path = lastDescription.name;
-        oldval = lastDescription.oldval;
-        newval = lastDescription.newval;
-        desc = lastDescription.desc;
-        lastDescription = undefined;
+    let ret: boolean = false;
+    if (t.pendingActions.length) {
+        const ca: CompositeAction = new CompositeAction(t.pendingActions, false);
+        if (lastDescription) {
+            path = lastDescription.name;
+            oldval = lastDescription.oldval;
+            newval = lastDescription.newval;
+            desc = lastDescription.desc;
+            lastDescription = undefined;
+        }
+        if (path) ca.descriptor = new ActionDescriptor(path, oldval, newval, desc);
+        t.pendingActions = [];
+        ret = ca.fire();
+        let callback: (...argss:any)=>void = null as any;
+        if (ret) try {
+            for (callback of at_transaction) callback?.();
+            at_transaction = [];
+        } catch (e) { Log.eDevv('error in AT_TRANSACTION callback', {e, callback}); }
     }
-    if (path) ca.descriptor = new ActionDescriptor(path, oldval, newval, desc);
-    t.pendingActions = [];
-    return ca.fire();
+    return ret;
 }
 export class ActionDescriptor{
     path?: string;
@@ -204,7 +213,12 @@ export async function TRANSACTION(name:string, func: ()=> void, oldval?: any, ne
     }
     return END([]);
 }
+let at_transaction: ((...a:any)=>void)[] = [];
+export async function AT_TRANSACTION(a:(...argss:any)=>void) {
+    at_transaction.push(a);
+}
 (window as any).TRANSACTION = TRANSACTION;
+(window as any).AT_TRANSACTION = AT_TRANSACTION;
 (window as any).BEGIN = BEGIN;
 (window as any).ABORT = ABORT;
 (window as any).COMMIT = COMMIT;

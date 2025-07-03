@@ -4,6 +4,7 @@ import $ from "jquery";
 /// <reference path="../../common/libraries/jqui-types.ts" />
 import {JQueryUI} from "../../common/libraries/jqui-types"
 import "./Measurable.scss";
+import { AT_TRANSACTION } from "../../redux/action/action";
 
 type ResizableEvent = JQueryUI.ResizableEvent;
 type DraggableEvent = JQueryUI.DraggableEvent;
@@ -186,26 +187,42 @@ export class MeasurableComponent extends Component<MeasurableAllProps, Measurabl
         }*/
 
         let key: any;
+        if (evtkind === 's') {
+            let graph = this.props.isPanning;
+            if (this.oldPos.left === undefined && graph) {
+                this.oldPos.left = ui.position.left = graph.offset.x;
+                this.oldPos.top = ui.position.top = graph.offset.y;
+            }
+            if (!e.classList.contains('draggable-child-mode')) e.classList.add('draggable-child-mode');
+        }
         for (key of MeasurableComponent.childmodekeys) {
             let fixpos = () => {
+                // rationale: the item actually dragged is e === parent.
+                // the parent is fixed at 0,0 the element visually dragged is "child" whose style is updated here.
+                // at dragend i reset the position of child to avoid overriding --offset variables while is not being dragged.
+                if (!(key === 'left' || key === 'top')) return;
                 let oldpos = this.oldPos; // positionMap.get(e); {x:-1000, y:-3000};//
                 if (oldpos && (oldpos as any)[key] !== undefined) {
                     let newpos = (oldpos as any)[key] + ui.position[key];
                     // if (key ==='left') console.log('measurable fixpos ' + newpos + 'px', (oldpos as any)[key], {oldpos, uipos:ui.position, newpos});
                     child.style[key] = (newpos) + 'px';
-                    if (evtkind === 'e') this.oldPos[key] = newpos;
+                    if (evtkind === 'e') {
+                        this.oldPos[key] = newpos;
+                        AT_TRANSACTION(()=> setTimeout(()=>{
+                            child.classList.remove('dragging');
+                            child.classList.add('idle');
+                            child.style.removeProperty('left');
+                            child.style.removeProperty('top');
+                        }, 1));
+                    } else {
+                        child.classList.remove('idle');
+                        child.classList.add('dragging');
+                    }
+
                 }
-                else child.style[key] = e.style[key];
+               else child.style[key] = e.style[key];
             }
-            if (evtkind === 'e') setTimeout(fixpos, 1000);
-            if (evtkind === 's') {
-                let graph = this.props.isPanning;
-                if (this.oldPos.left === undefined && graph) {
-                    this.oldPos.left = ui.position.left = graph.offset.x;
-                    this.oldPos.top = ui.position.top = graph.offset.y;
-                }
-                if (!e.classList.contains('draggable-child-mode')) e.classList.add('draggable-child-mode');
-            }
+            if (evtkind === 'e') setTimeout(fixpos, 1/*000*/);
             fixpos();
             // delete e.style[key]
         }
@@ -270,7 +287,7 @@ export class MeasurableComponent extends Component<MeasurableAllProps, Measurabl
             for (let e of allevents) {
                 propsevent = props[eventmap[evtkey][type]]; // if i don't redeclare it here, closure makes a mess taking always the last jodelevt for all iterations.
                 if (e === propsevent) {
-                    console.log('measurable event', {evtkey, type, evt, ui, coords:this.getCoords(evt, ui, this.props.isPanning)});
+                    // console.log('measurable event', {evtkey, type, evt, ui, coords:this.getCoords(evt, ui, this.props.isPanning)});
                     e(this.getCoords(evt, ui, this.props.isPanning), evt, ui);
                 }
                 else e(evt, ui);
@@ -394,12 +411,14 @@ export class MeasurableComponent extends Component<MeasurableAllProps, Measurabl
         let newProps = {
             ref: (html: Element | null)=>{
                 if (html && !U.isHtmlNode(html)) {
-                    Log.ee('ref tring to set non-html element', html);
+                    Log.ee('measurable ref tring to set non-html element', html);
                     return;
                 }
                 this.html = html;
+
             }
         };
+
         U.objectMergeInPlace(newProps, oldProps);
         let clonedChild = React.cloneElement(child, newProps);
         return clonedChild;
@@ -449,9 +468,8 @@ export class ScrollableComponent extends Component<ScrollOwnProps, ScrollState>{
                     :*/
                     <Measurable draggable={{create}}
                                 isPanning={graph}
-                            onDragEnd={graph ? (coords, ...args: any)=>{
+                                onDragEnd={graph ? (coords, ...args: any)=>{
                                 if (!graph) return; // just for ts-lint
-                                console.log("drag odee", {coords, graph, args});
                                 let offset = graph.offset;
                                 if (!offset.equals(coords)) graph.offset = coords as any;
                             } : undefined}

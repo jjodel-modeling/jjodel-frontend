@@ -35,6 +35,7 @@ function ProjectComponent(props: AllProps): JSX.Element {
     useEffect(() => {
         (async function() {
             const project = await ProjectsApi.getOne(id);
+            console.log('useEffect response', {project});
             if (!project) {
                 // U.resetState();
                 // R.navigate('/allProject');

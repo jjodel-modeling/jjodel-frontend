@@ -261,14 +261,14 @@ export class DState extends DPointerTargetable{
 
 [data-nodetype]{
   /* setup zoom */
-  transform: scale(var(--zoom-x), var(--zoom-y));
   transform-origin: top left;
-  &.Graph{ /* for graph, transform only dynamic elements that can be panned */
-    transform: none !important;
-    .panning-content{
+  
+  /* for graph, transform only dynamic elements that can be panned */
+  &.Graph.mainView{ transform: none !important; }
+  /* for nested nodes, apply zoom only on roots that don't have a panning (otherwise is applied to pan instead) */
+  .mainView.not-scrollable, .scrollable{
       transform: scale(var(--zoom-x), var(--zoom-y));
       transform-origin: top left;
-    }
   }
   
 

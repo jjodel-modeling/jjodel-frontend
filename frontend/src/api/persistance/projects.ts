@@ -261,6 +261,7 @@ class Online {
 
     static async getOne(id: string): Promise<DProject|null> {
         const response = await Api.get(`${Api.persistance}/project/jjodel/${id}`);
+        console.log('API getOne response', {response});
         if (response.code !== 200) {
             return null;
         }

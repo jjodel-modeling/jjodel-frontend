@@ -576,6 +576,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
     componentDidMount(): void {
         // after first render
         this._isMounted = true;
+        this.componentDidUpdate();
     }
 
     componentWillUnmount(): void {
@@ -584,13 +585,34 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         //  LOW PRIORITY perchè funziona anche senza, pur sprecando memoria che potrebbe essere liberata.
         // if (view_is_still_active_but_got_modified_and_vertex_is_deleted) new DeleteElementAction(this.getId());
     }
-    /*
-        componentDidUpdate(oldProps: Readonly<AllProps {/*
-            const newProps = this.props
-            if (oldProps.view !== newProps.view) { this.setTemplateString(newProps.view); }
-    }*/
 
+    componentDidUpdate(oldProps?: Readonly<AllProps>) {
+        if (this.html?.current) {
+            let scrollables = this.props.isGraph ? this.html.current.querySelectorAll('.scrollable') : [];
+            console.log('componentdidupdate pre', {scrollables, id: this.props.nodeid, name: this.props.node.name, html: this.html?.current});
+            for (let scrollable of scrollables) {
+                let parent: Element | null = scrollable;
+                while (parent) {
+                    console.log('componentdidupdate loop', {parent, isMV: parent.classList.contains('mainView')});
+                    if (parent.classList.contains('mainView')) {
+                        if (parent === this.html.current) {
+                            this.html.current.classList.add('has-scrollable');
+                            this.html.current.classList.remove('not-scrollable');
+                            console.log('componentdidupdate loop add', {parent, cl: [...parent.classList]});
+                        }
+                        else {
+                            this.html.current.classList.add('not-scrollable');
+                            this.html.current.classList.remove('has-scrollable');
+                            console.log('componentdidupdate loop remove', {parent, cl: [...parent.classList]});
+                        }
+                        break;
+                    }
+                    parent = parent.parentElement;
+                }
+            }
+        }
 
+    }
 
     protected getJSXContext(vid: Pointer<DViewElement>): GObject{
         let context: GObject = transientProperties.node[this.props.nodeid].viewScores[vid].evalContext;
@@ -1136,9 +1158,18 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
 
         classes.push(nodeType);
 
-        let zoom = (this.props.node).zoom;
-        styleoverride['--zoom-x'] = zoom.x;
-        styleoverride['--zoom-y'] = zoom.y;
+        let ownZoom = (this.props.node).zoom;
+        let totalZoom = (this.props.node).cumulativeZoom;
+        let transformZoom = ownZoom; // this.props.node.graph.zoom; //.divide(totalZoom, true);
+        //   0.5 / 2
+        //  0.5, 2,
+        styleoverride['--zoom-x'] = transformZoom.x;
+        styleoverride['--zoom-y'] = transformZoom.y;
+
+        styleoverride['--total-zoom-x'] = totalZoom.x;
+        styleoverride['--total-zoom-y'] = totalZoom.y;
+        styleoverride['--own-zoom-x'] = ownZoom.x;
+        styleoverride['--own-zoom-y'] = ownZoom.y;
 
         if (this.props.isGraph){
             let offset = (this.props.node as any as LGraph).offset;

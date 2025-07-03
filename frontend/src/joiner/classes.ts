@@ -561,7 +561,9 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         }
     }
 
-    static makeID(isUser:boolean=false): Pointer<any> { return "Pointer" + new Date().getTime() + "_" + (isUser ? DUser.current : 'USER') + "_" + (DPointerTargetable.maxID++) }
+    static makeID(isUser:boolean=false): Pointer<any> {
+        return "Pointer" + new Date().getTime() + "_" + (isUser ? DUser.current : 'USER') + "_" + (DPointerTargetable.maxID++);
+    }
     private setID(id?: string, isUser:boolean = false){
         this.thiss.id = id || Constructors.makeID(isUser);
     }

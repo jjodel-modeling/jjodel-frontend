@@ -181,9 +181,9 @@ export class DV {
         "\n\tpointer-events: all;" +
         "\n}" +
         "\n.fullscreen{" +
-        "\n\toverflow: visible;" +
-        "\n\twidth: 100vw;" +
-        "\n\theight: 100vh;" +
+        "\n\toverflow: visible !important;" +
+        "\n\twidth: calc(100vw / var(--total-zoom-x));" +
+        "\n\theight: calc(100vh / var(--total-zoom-y));" +
         "\n}" +
         "\npath{" +
         "\n\tfill: none;" +

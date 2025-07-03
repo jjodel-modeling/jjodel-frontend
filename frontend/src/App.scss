@@ -95,10 +95,7 @@ font-weight: 900 !important;
   position: absolute;
   min-width:2px;
   min-height:2px;
-}
-
-.scrollable{
-  height: 100%;
+  // .lazySizeUpdate{ transform: translate(var(--offset-x), var(--offset-y)); }
 }
 
 .REACT-ROOT.debug{

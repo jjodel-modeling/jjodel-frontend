@@ -1102,7 +1102,7 @@ export class LGraph<Context extends LogicContext<DGraph> = any, D extends DGraph
                 {currGraph, targetGraph});
             let i: number = 1;
             while (currAncestorsPtr[i] === targetAncestorsPtr[i]) { i++; }
-            console.log('ancestorCalc', {currGraph, targetGraph, currAncestors:[...currAncestors], targetAncestors:[...targetAncestors], i})
+            // console.log('ancestorCalc', {currGraph, targetGraph, currAncestors:[...currAncestors], targetAncestors:[...targetAncestors], i})
             let commonAncestor: Pointer<DGraph> = targetAncestorsPtr[i-1];
             currAncestors = currAncestors.slice(0, currAncestors.length - i);
             targetAncestors = targetAncestors.slice(0, targetAncestors.length - i);
