@@ -43,12 +43,12 @@ function ProjectComponent(props: AllProps): JSX.Element {
             }
             if (project.state) {
                 const state = JSON.parse(await U.decompressState(project.state));
-                console.log('loading state: ', {state, project, ps: project.state});
+                console.log('project page loading state: ', {state, project, ps: project.state});
                 state['idlookup'][DUser.current] = user.__raw;
                 if (!state['users'].includes(DUser.current)) state['users'].push(DUser.current);
                 SaveManager.load(state, project);
             }
-            console.log("project page  2 ", {project, pid:project.id, id, user, up:user.project})
+            console.log("project page 2 ", {project, pid:project.id, id, user, up:user.project})
             user.project = LProject.fromPointer(project.id);
         })();
     }, [id]);
@@ -59,7 +59,7 @@ function ProjectComponent(props: AllProps): JSX.Element {
     allViews = allViews.filter(v => v);
     const viewsDeDuplicator: Dictionary<Pointer<DViewElement>, LViewElement> = {};
     for (let v of allViews) viewsDeDuplicator[v.id] = v;
-    console.log("project page 3", {id, user});
+    console.log("project page 3", {id, user, up:user?.project});
     if (!user?.project) {
         return (
             <div className={'w-100 h-100 d-flex'}>
