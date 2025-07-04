@@ -31,11 +31,11 @@ function ProjectComponent(props: AllProps): JSX.Element {
     const {user} = props;
     const query = useQuery();
     const id = query.get('id') || '';
-
+    console.log("project page 0", {id, user});
     useEffect(() => {
         (async function() {
             const project = await ProjectsApi.getOne(id);
-            console.log('useEffect response', {project});
+            console.log('project page useEffect response', {project});
             if (!project) {
                 // U.resetState();
                 // R.navigate('/allProject');
@@ -48,8 +48,7 @@ function ProjectComponent(props: AllProps): JSX.Element {
                 if (!state['users'].includes(DUser.current)) state['users'].push(DUser.current);
                 SaveManager.load(state, project);
             }
-            console.log("**************** 2 ",project)
-            console.log("**************** 3 ",project.id)
+            console.log("project page  2 ", {project, pid:project.id, id, user, up:user.project})
             user.project = LProject.fromPointer(project.id);
         })();
     }, [id]);
@@ -60,6 +59,7 @@ function ProjectComponent(props: AllProps): JSX.Element {
     allViews = allViews.filter(v => v);
     const viewsDeDuplicator: Dictionary<Pointer<DViewElement>, LViewElement> = {};
     for (let v of allViews) viewsDeDuplicator[v.id] = v;
+    console.log("project page 3", {id, user});
     if (!user?.project) {
         return (
             <div className={'w-100 h-100 d-flex'}>
@@ -70,6 +70,7 @@ function ProjectComponent(props: AllProps): JSX.Element {
             </div>
         );
     }
+    console.log("project page 4", {id, user});
 
     return (<>
         <Try>
