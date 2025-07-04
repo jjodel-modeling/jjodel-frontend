@@ -48,6 +48,7 @@ function App(props: AllProps): JSX.Element {
     useEffect(() => {
     */
     //let user = LUser.fromPointer(DUser.current);
+    console.log('app render 0', {firstLoading, navigating:U.navigating, propLoading: props.isLoading, useless, user});
     if (firstLoading) {
         firstLoading = false;
         stateInitializer().then(()=> {
@@ -60,11 +61,15 @@ function App(props: AllProps): JSX.Element {
         });
         return <Loader/>;
     }
+    console.log('app render 1', {firstLoading, navigating:U.navigating, propLoading: props.isLoading, useless, user});
+
     if (U.navigating) return <Loader/>;
 
     if (DUser.current !== user) updateUser(DUser.current);
     if (/*window.location.hash === '' && */browserData.browser === 'Firefox') U.alert('e', 'Unsupported browser',
         'Firefox is not supported yet and have known issues.\nplease open this website on another browser.');
+    console.log('app render 2', {firstLoading, navigating:U.navigating, propLoading: props.isLoading, useless, user});
+
     return (<>
         <div className={"router-wrapper"}>
             {isLoading && <Loader/>}
@@ -148,7 +153,7 @@ function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     //ret.debug = state.debug;
     ret.isLoading = state.isLoading;
     ret.user = DUser.current;
-    console.log('app mapstatetoprops', {isLoading: state.isLoading});
+    console.log('app mapstatetoprops', {isLoading: state.isLoading, isNavigating: U.navigating});
     // ret.user = LUser.fromPointer(DUser.current);
     // needed here as props, because apparently functional components are memoized by default.
     //ret.offlineMode = DUser.offlineMode;

@@ -7,12 +7,12 @@ import {DProject, DUser, SetRootFieldAction} from "../joiner";
 type Props = {};
 function ProjectsInfoPage(props: Props) {
     const [projects, setProjects] = useState<DProject[]>([]);
-    useEffect(() => {
+    /*useEffect(() => {
         (async function() {
             SetRootFieldAction.new('isLoading', true);
             SetRootFieldAction.new('isLoading', false);
         })();
-    }, []);
+    }, []);*/
 
     return(<Try>
         <Dashboard active={'UsersInfo'} version={{n: 0, date:'fake-date'}}>
