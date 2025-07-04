@@ -1,8 +1,8 @@
 import {Dictionary, DProject, DUser, GObject} from "../../joiner";
-import {DTO} from "./DTO";
+import {Request_DTO} from "./DTO";
 import {VersionFixer} from "../../redux/VersionFixer";
 
-export class UpdateProjectRequest extends DTO<DProject>{
+export class UpdateProjectRequest extends Request_DTO<DProject>{
     id?: string;
     _Id!: string;
     name!: string;
@@ -74,5 +74,3 @@ type Excess = Omit<DProject, keyof UpdateProjectRequest>;
 
 let missing: Missing = null as any;
 let excess: Excess = null as any;
-(window as any).UpdateProjectRequest = UpdateProjectRequest;
-

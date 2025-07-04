@@ -2652,7 +2652,7 @@ export class LUser<Context extends LogicContext<DUser> = any, D extends DUser = 
         return project && LProject.fromPointer(project) || null;
     }
     protected set_project(val: Pack<Exclude<this['project'], null>>|null, c: Context): boolean {
-        let ptr: Pointer<LProject> = Pointers.from(val as any);
+        let ptr: Pointer<DProject> = Pointers.from(val as any);
         if (!ptr) ptr = '';
         if (ptr === c.data.project) return true;
 
@@ -2675,6 +2675,7 @@ export class ProjectPointers{
     viewpoints: Pointer<DViewPoint, 0, 'N'> = [];
     activeViewpoint: Pointer<DViewPoint, 1, 1> = Defaults.viewpoints[0];
     favorite!: Dictionary<Pointer<DUser>, true | undefined>;
+    author!: Pointer<DUser>;
 }
 @Leaf
 @RuntimeAccessible('DProject')
@@ -2686,9 +2687,9 @@ export class DProject extends DPointerTargetable {
     _Id?: string // db GUID
     type: 'public'|'private'|'collaborative' = 'public';
     name!: string;
-    /* no in dto */author: Pointer<DUser> = DUser.current;
-    /* da vedere */collaborators: Pointer<DUser, 0, 'N'> = [];
-    /* no */onlineUsers : number = 0;
+    author: Pointer<DUser> = DUser.current;
+    collaborators: Pointer<DUser, 0, 'N'> = [];
+    onlineUsers : number = 0;
     metamodels: Pointer<DModel, 0, 'N'> = [];
     models: Pointer<DModel, 0, 'N'> = [];
     graphs: Pointer<DGraph, 0, 'N'> = [];
