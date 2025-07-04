@@ -152,7 +152,6 @@ function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     //ret.debug = state.debug;
     ret.isLoading = state.isLoading;
     ret.user = DUser.current;
-    console.log('app mapstatetoprops', {isLoading: state.isLoading, isNavigating: U.navigating});
     // ret.user = LUser.fromPointer(DUser.current);
     // needed here as props, because apparently functional components are memoized by default.
     //ret.offlineMode = DUser.offlineMode;

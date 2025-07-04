@@ -341,7 +341,10 @@ export class LoadAction extends Action {
     constructor(state: DState | GObject, fire: boolean = true) {
         super('', state, '');
         this.className = (this.constructor as typeof RuntimeAccessibleClass).cname || this.constructor.name;
-        if (fire) this.fire();
+        if (fire) {
+            console.log('load action firing', {thiss:this, list: t.pendingActions, t});
+            this.fire();
+        }
     }
 }
 
