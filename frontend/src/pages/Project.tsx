@@ -35,7 +35,7 @@ function ProjectComponent(props: AllProps): JSX.Element {
     useEffect(() => {
         (async function() {
             const project = await ProjectsApi.getOne(id);
-            console.log('project page useEffect response', {project});
+            console.log('project page useEffect response', {project, isOff:U.isOffline()});
             if (!project) {
                 // U.resetState();
                 // R.navigate('/allProject');
