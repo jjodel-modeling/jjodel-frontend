@@ -21,7 +21,8 @@ import {
     RecentPage,
     SettingsPage,
     TemplatePage,
-    UpdatesPage, UsersInfoPage,
+    UpdatesPage,
+    UsersInfoPage,
     ConfirmAccount
 } from "./pages";
 
