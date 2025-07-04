@@ -16,6 +16,7 @@ import {duplicateProject} from "../../pages/components/Project";
 import {COMMIT} from "../../redux/action/action";
 import {ProjectPointers} from "../../joiner/classes";
 import {DTOProjectGetAll} from "../DTO/GetAllProjects";
+import {ProjectResponseDTO} from "../DTO/ProjectResponseDTO";
 
 @RuntimeAccessible('ProjectsApi')
 class ProjectsApi {
@@ -49,7 +50,9 @@ class ProjectsApi {
     }
 
 
+    // NB: returned value is not yet persistent, and is a dto in case of online getone
     static async getOne(id: DProject['id']): Promise<null|DProject> {
+        console.log('getOne', {of: U.isOffline()})
         if(U.isOffline()) return Offline.getOne(id);
         else return await Online.getOne(id);
     }
@@ -127,7 +130,7 @@ class ProjectsApi {
             const file = files[0];
             reader.readAsText(file);
         }, extensions, true);
-        U.resetState();
+        // U.resetState();
     }
 
 
@@ -163,6 +166,7 @@ class Offline {
     }
 
     static getOne(id: string): DProject|null {
+        console.log('getOne offline', {of: U.isOffline()})
         const projects = Storage.read<DProject[]>('projects') || [];
         let filtered: DProject|DProject[] = projects.filter(p => p.id === id);
         if(filtered.length <= 0) return null;
@@ -260,12 +264,16 @@ class Online {
 
 
     static async getOne(id: string): Promise<DProject|null> {
+        console.log('getOne online', {of: U.isOffline()})
         const response = await Api.get(`${Api.persistance}/project/jjodel/${id}`);
         console.log('API getOne response', {response});
         if (response.code !== 200) {
             return null;
         }
-        return response.data as unknown as DProject;
+        let dto = response.data as unknown as ProjectResponseDTO;
+        let ret = new ProjectResponseDTO(dto).toJodelClass();
+        console.log('Project.getone online', ret);
+        return ret;
     }
 
     static async save(project: DProject): Promise<void> {
