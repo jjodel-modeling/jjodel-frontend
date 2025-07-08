@@ -63,7 +63,7 @@ function AllProjectsComponent(props: AllProps): JSX.Element {
         <Dashboard active={'All'} version={props.version}>
             <div className={'droparea'} onDrop={dropConfirm} onDragOver={dropPreview} onMouseLeave={mouseleave}>
                 <div style={{opacity: isDropping ? 0.5 : 1}}>
-                <Cards>
+                <Cards className={'project-create-cards'}>
                     <Cards.Item
                         title={'New Jjodel'}
                         subtitle={'Create a new Jjodel project.'}

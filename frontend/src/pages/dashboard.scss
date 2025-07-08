@@ -4,15 +4,30 @@
   &:hover{ background: #eee; }
 
 }
-
+.project-create-cards{
+  display:flex;
+  justify-content: space-between;
+}
 
 .dashboard-container {
   width: 100%!important;
+  height: calc(100% - 60px);
   display: flex;
-  justify-content: center;
   container-type: inline-size;
+  flex-flow: row wrap;
+  background-color: var(--bg-1-5);
 
   .dash-content {
+    flex-grow: 1;
+    flex-basis: 0;
+    // height: 0;
+    overflow-y: auto;
+    &.user{
+      justify-content: unset;
+      margin: auto 20px;
+      max-height: calc(100% - 40px);
+      width: auto;
+    }
     background-color: white;
 
     display: flex;
@@ -21,7 +36,6 @@
 
     // border: 1px solid red;
     border-radius: 10px;
-    max-width: 1330px;
     max-height: fit-content;
     padding: 40px;
 
@@ -45,13 +59,17 @@
       }
       .details{
         height: min-content;
-        position: absolute; // because contextmenu must go above it
-        right: 30px; // 42.5px;
-
       }
       .card-holder{
         overflow-y: auto;
-        max-width: 1300px;
+        justify-content: flex-start;
+        display: flex;
+        grid-column-gap: 0;
+        margin-left: -1em;
+        >*{
+          margin-left: 1em;
+          margin-right: 1em;
+        }
       }
       .row.project-list{ // list visualization of projects
         // overflow-y: auto;
@@ -79,12 +97,6 @@
 }
 
 @container (width < 1850px) {
-  .dashboard-container .dash-content {
-    position: absolute;
-    left: 250px!important;
-    top: 40px;
-  }
-
   .dashboard-container .user .name {
     position: absolute;
     left: 250px!important;
@@ -315,16 +327,13 @@ project-card .tip {
 }
 
 .leftbar {
-
-    position: absolute;
-    left: 0;
-
     background-color: white;
     max-width: 250px!important;
     min-width: 220px!important;
     flex-basis: 155px;
-    flex-grow: 0.15;
+    flex-grow: 0;
     flex-shrink: 0;
+    overflow-y: auto;
 
     height: 100%!important;
     color: var(--color);
@@ -515,17 +524,6 @@ project-card .tip {
   color: #eee;
 }
 
-.dashboard-container{ 
-  background-color: var(--bg-1-5) ;
-
-    // background-image: url('../static/img/delete.jpg');
-    // background-repeat: no-repeat;
-    // background-size: cover;
-
-
-  height: 100%;
-}
-
 .project-list div.row.header {
   color: var(--color);
   font-weight: 600;
@@ -608,13 +606,6 @@ project-card .tip {
     max-height: fit-content;
     padding: 40px;
     border-radius: 10px;
-
-
-    .details {
-      position: absolute;
-      right: 30px;
-    }
-
   }
 
   .project-list {

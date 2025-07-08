@@ -197,7 +197,7 @@
   }
   .card-holder{
     overflow-y: auto;
-    padding-right: 253px; // space for details image
+    // padding-right: 253px; // space for details image
     // justify-content: space-between;
     padding-bottom: 9px; // prevent the margin-bottom of contents to cause overflow.
     &:has(.menu-button>.dropdown){

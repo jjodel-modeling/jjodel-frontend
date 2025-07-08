@@ -162,7 +162,7 @@ const Catalog = (props: ChildrenType) => {
 
     return (
         <>
-            <div className='row catalog-header' style={{maxWidth: '1250px'}}>
+            <div className='row catalog-header'>
                 <CatalogFilters/>
                 <CatalogMode/>
             </div>

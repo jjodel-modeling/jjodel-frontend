@@ -52,7 +52,6 @@ class ProjectsApi {
 
     // NB: returned value is not yet persistent, and is a dto in case of online getone
     static async getOne(id: DProject['id']): Promise<null|DProject> {
-        console.log('getOne', {of: U.isOffline()})
         if(U.isOffline()) return Offline.getOne(id);
         else return await Online.getOne(id);
     }
@@ -166,7 +165,6 @@ class Offline {
     }
 
     static getOne(id: string): DProject|null {
-        console.log('getOne offline', {of: U.isOffline()})
         const projects = Storage.read<DProject[]>('projects') || [];
         let filtered: DProject|DProject[] = projects.filter(p => p.id === id);
         if(filtered.length <= 0) return null;
@@ -264,15 +262,12 @@ class Online {
 
 
     static async getOne(id: string): Promise<DProject|null> {
-        console.log('getOne online', {of: U.isOffline()})
         const response = await Api.get(`${Api.persistance}/project/jjodel/${id}`);
-        console.log('API getOne response', {response});
         if (response.code !== 200) {
             return null;
         }
         let dto = response.data as unknown as ProjectResponseDTO;
         let ret = new ProjectResponseDTO(dto).toJodelClass();
-        console.log('Project.getone online', ret);
         return ret;
     }
 
@@ -280,9 +275,8 @@ class Online {
         project = {...project} as any;
         if (!project.version) project.version = store.getState().version.n;
         if (!('_Id' in project)) (project as any)._Id = undefined;
-        console.log('online saving 1: ', {project, id: project.id, _id: (project as any)._Id, v:project.version});
         const updateProjectRequest = new UpdateProjectRequest(project);
-        console.log('online saving 2: ', {updateProjectRequest});
+        console.log('online save request: ', {updateProjectRequest});
         const response = await Api.put(`${Api.persistance}/project/`, updateProjectRequest);
 
         if (response.code !== 200) {

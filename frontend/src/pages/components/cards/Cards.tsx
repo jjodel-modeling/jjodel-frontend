@@ -1,6 +1,7 @@
 import React, {MouseEventHandler, ReactNode} from 'react';
 import "./cards.scss";
 import { Tooltip } from '../../../components/forEndUser/Tooltip';
+import {GObject} from "../../../joiner";
 
 type CardsType = {
     children: any;
@@ -9,7 +10,7 @@ type CardsType = {
 export const Cards = (props: CardsProps): any => {
     return (
         <React.Fragment>
-            <div className='mb-5 commandbar'>
+            <div className={'mb-5 commandbar ' + (props.className || '')} style={props.style||{}}>
                 {props.children}
             </div>
         </React.Fragment>
@@ -26,6 +27,8 @@ type CardProps = {
 };
 type CardsProps = {
     children: ReactNode;
+    className?: string;
+    style?: GObject;
 };
 
 export const Card = (props: CardProps) => {
