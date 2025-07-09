@@ -23,16 +23,16 @@ class UsersApi {
     }
 
 
-    static async updateUserById(updateUserRequest :UpdateUserRequest): Promise<LUser|null> {
+    static async updateUserById(updateUserRequest :UpdateUserRequest): Promise<boolean> {
         const response = await Api.put(`${Api.persistance}/account/`, {...updateUserRequest});
         console.log(response.code, response.data);
 
-        if(response.code !== 200) {
-            return null
+        if ((response.code+'')[0] !== '2') { // if response code starts with 2 (200, 204) i know it is a terrible check but it's legacy.
+            return false;
         }
-        const user = U.wrapper<DUser>(response.data);
+        //const user = U.wrapper<DUser>(response.data);
 
-        return LUser.fromD(user);
+        return true; //LUser.fromD(user);
     }
 
 
