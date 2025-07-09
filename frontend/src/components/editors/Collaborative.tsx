@@ -1,6 +1,6 @@
 import {Dispatch, ReactElement, ReactNode, useEffect, useState} from 'react';
 import {connect} from 'react-redux';
-import type {DState, LProject} from '../../joiner';
+import {DProject, DState, LProject} from '../../joiner';
 import {DUser, GObject, LUser, U} from '../../joiner';
 import {FakeStateProps} from '../../joiner/types';
 import {UsersApi} from "../../api/persistance";
@@ -30,9 +30,9 @@ function CollaborativeComponent(props: AllProps) {
             return;
         }
         if(!users.map(u => u.id).includes(user.id))
-            DUser.new(user.name, user.surname, user.nickname, user.affiliation, user.country, user.newsletter, user.email, '', user.id);
+            DUser.new(user.name, user.surname, user.nickname, user.affiliation, user.country, user.newsletter, user.email, '', user.id, user._Id);
         if(project.collaborators.map(c => c.id).includes(user.id)) return;
-        project.collaborators = [...project.collaborators, user];
+        project.collaborators = [...((project.__raw||project) as DProject).collaborators, user.id] as any;
     }
 
     return(<section className={'page-root collaborative-tab'}>

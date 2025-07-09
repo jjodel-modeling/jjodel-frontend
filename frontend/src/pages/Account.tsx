@@ -98,7 +98,7 @@ function AccountComponent(props: AllProps): JSX.Element {
             }
 
             const updated_user = DUser.new(
-                name, surname, nickname, affiliation, country, newsletter, email, readUser.token, updateUserRequest.id
+                name, surname, nickname, affiliation, country, newsletter, email, readUser.token, readUser.id, readUser._Id
             );
             Storage.write('user', updated_user);
             U.resetState();

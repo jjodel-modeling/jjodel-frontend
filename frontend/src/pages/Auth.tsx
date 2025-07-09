@@ -93,8 +93,8 @@ function AuthPage(): JSX.Element {
             return;
           }
 
-          const user : DUser = DUser.new(claims.name, '', claims.nickname, '',  '', false, claims.email,  raw.token, claims._Id,  true);
-          (user as any)._Id = claims.id;
+          const user : DUser = DUser.new(claims.name, '', claims.nickname, '',  '', false, claims.email,  raw.token, claims._Id, claims.id, true);
+          // (user as any)._Id = claims.id;
           AuthApi.storeSessionData(raw.token, !claims.exp ? 0 : claims.exp, user);
           U.resetState();
           R.navigate('/allProjects');
@@ -130,7 +130,7 @@ function AuthPage(): JSX.Element {
         }
         const data = U.wrapper<DUser>(response.data);
         Storage.write('token', data.token);
-        const user = DUser.new(data.name, data.surname, data.nickname, data.affiliation, data.country, data.newsletter || false, data.email, data.token, data.id);
+        const user = DUser.new(data.name, data.surname, data.nickname, data.affiliation, data.country, data.newsletter || false, data.email, data.token, data.id, data._Id);
         Storage.write('user', user);
         Storage.write('offline', false);
         R.navigate('/allProjects');

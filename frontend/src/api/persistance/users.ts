@@ -10,8 +10,8 @@ class UsersApi {
     static async getUserByEmail(email: string): Promise<LUser|null> {
         const response = await Api.get(`${Api.persistance}/users?email=${email}`);
         if(response.code !== 200) return null;
-        const user = U.wrapper<DUser>(response.data);
-        const rawUser = DUser.new(user.name, user.surname, user.nickname, user.affiliation, user.country, user.newsletter, user.email, '', user.id);
+        const user = response.data as any as DUser;
+        const rawUser = DUser.new(user.name, user.surname, user.nickname, user.affiliation, user.country, user.newsletter, user.email, '', user.id, user._Id);
         return LUser.fromD(rawUser);
     }
 

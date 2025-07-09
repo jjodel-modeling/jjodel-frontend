@@ -774,9 +774,11 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         // this.className = thiss.className;
         return this; }
 
-    DUser(name: string, surname: string, nickname: string, affiliation: string, country: string, newsletter: boolean, email: string, token: string, autoReport?:boolean): this {
+    DUser(name: string, surname: string, nickname: string, affiliation: string, country: string, newsletter: boolean,
+          email: string, token: string, autoReport?:boolean, guid?:string): this {
         const _this: DUser = this.thiss as unknown as DUser;
         _this.name = name;
+        _this._Id = guid;
         _this.surname = surname;
         _this.nickname = nickname;
         _this.affiliation = affiliation;
@@ -2418,9 +2420,9 @@ export class DUser extends DPointerTargetable {
     /*public static new(id?: DUser["id"], triggerActions: boolean = true): DUser {
         return new Constructors(new DUser('dwc'), undefined, false, undefined, id, true).DPointerTargetable().DUser().end(); }*/
     public static new(name: string, surname: string, nickname: string, affiliation: string, country: string, newsletter: boolean, email: string,
-                      token: string, id?: DUser['id'], persist: boolean = true, autoReport?:boolean): DUser {
+                      token: string, id: DUser['id'], guid: string|undefined, persist: boolean = true, autoReport?:boolean): DUser {
         return new Constructors(new DUser('dwc'), undefined, persist, undefined, id).DPointerTargetable()
-            .DUser(name, surname, nickname, affiliation, country, newsletter, email, token, autoReport).end();
+            .DUser(name, surname, nickname, affiliation, country, newsletter, email, token, autoReport, guid).end();
     }
 
     /*
@@ -2473,7 +2475,7 @@ export class DUser extends DPointerTargetable {
         }
 
         if (!allowOffline) return null; // load offline user only if in offline mode
-        d = DUser.new('Offline', 'User', 'Unknown', 'Unknown', 'Unknown', false, 'Unknown', 'Unknown', ptr);//`Pointer${Date.now()}_OfflineUser`);
+        d = DUser.new('Offline', 'User', 'Unknown', 'Unknown', 'Unknown', false, 'Unknown', 'Unknown', ptr, undefined);//`Pointer${Date.now()}_OfflineUser`);
 
         if (d && isValid(d)){
             Storage.write('user', d);
