@@ -24,8 +24,6 @@ class UsersApi {
 
 
     static async updateUserById(updateUserRequest :UpdateUserRequest): Promise<LUser|null> {
-
-
         const response = await Api.put(`${Api.persistance}/account/`, {...updateUserRequest});
         console.log(response.code, response.data);
 

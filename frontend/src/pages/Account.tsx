@@ -77,7 +77,7 @@ function AccountComponent(props: AllProps): JSX.Element {
         const readUser = Storage.read<DUser>('user');
 
         const updateUserRequest :UpdateUserRequest = new UpdateUserRequest();
-        updateUserRequest.id = readUser.id;
+        updateUserRequest.id = readUser._Id;
         updateUserRequest.name = name;
         updateUserRequest.surname = surname;
         updateUserRequest.nickname = nickname;
