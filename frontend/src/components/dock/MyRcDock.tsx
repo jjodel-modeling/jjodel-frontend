@@ -596,7 +596,11 @@ export class PinnableDock extends DockLayout{
     // }
 
     render(): React.ReactNode {
-        return <div className={"pinnable-dock-root white-style"} ref={(ref)=> { if (ref) this._ref = ref; }}>
+        let maximized = this.getLayout()?.maxbox?.children;
+        return <div className={"pinnable-dock-root white-style " + (maximized?.length ? " fullscreen" : "")}
+                    data-maximized={(maximized?.[0] as PanelData)?.group/*.id*/}
+                    ref={(ref)=> { if (ref) this._ref = ref; }}
+        >
             <PinnableStrip side={"t"} />
             <div className={"pinnable-dock-middle-strip"}>
                 <PinnableStrip side={"l"} />

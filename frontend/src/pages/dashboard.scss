@@ -16,6 +16,11 @@
   container-type: inline-size;
   flex-flow: row wrap;
   background-color: var(--bg-1-5);
+  &.project-summary{
+    flex-flow: row;
+    height: 100%;
+    outline: none;
+  }
 
   .dash-content {
     flex-grow: 1;

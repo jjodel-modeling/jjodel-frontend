@@ -28,7 +28,8 @@ import {VersionFixer} from "../../redux/VersionFixer";
 *
 * */
 class Report{
-    id: string; // new
+    level!: "log"| "info" | "warning" | "error" | "exception" | "DevError" | "DevException" //  "l"| "i" | "w" | "e" | "ex" | "exDev" | "eDev"
+    _id?: string; // new
     // title?: string;
     url: string; // new
     version: string;
@@ -43,8 +44,10 @@ class Report{
     history?: UserHistory; // new
     // maybe add username & projectname, but they are in state
 
+
+
     constructor(e: Error, info?: React.ErrorInfo, msg?:LoggerCategoryState) {
-        this.id = (e as any).id || Constructors.makeID();
+        this._id = (e as any).id || Constructors.makeID();
         this.e = {message:e.message, stack: (e.stack||'')}//.split('\n')};
         this.state = store.getState();
         this.version = ""+this.state.version.n;

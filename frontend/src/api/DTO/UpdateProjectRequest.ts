@@ -18,10 +18,12 @@ export class UpdateProjectRequest extends Request_DTO<DProject>{
     collaborators!: string[];
     imported!: boolean;
     version!: number;
+
     constructor(src: DProject) {
         super();
         this._dto_init(src);
     }
+
     /*
     public static convertDprojectToUpdateProject(project: DProject): UpdateProjectRequest{
 
@@ -51,7 +53,6 @@ export class UpdateProjectRequest extends Request_DTO<DProject>{
         if (!src.version) this._dto_set('version', -1, setFields); //VersionFixer.get_highestversion()+'';
         if (!src._Id) this._dto_set('_Id', '', setFields);
         (this as any).version = this.version+'';// version stringified
-        // todo: fix bug date (??)
         this._dto_set('lastModified', (src.lastModified ? new Date(src.lastModified) : new Date()).toISOString(), setFields);
         this.creation = (src.creation ? new Date(src.creation) : new Date()).toISOString();
         setFields['creation'] = true;

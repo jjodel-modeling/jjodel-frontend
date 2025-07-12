@@ -10,7 +10,7 @@ abstract class DTO<S extends GObject = GObject>{
             this._dto_copyInterections(src, setFields)
             this._dto_convert(src, setFields);
             let diff = U.arrayDifference(Object.keys(this), Object.keys(setFields));
-            Log.eDev(diff.added.length+diff.removed.length>0, 'incomplete conversion to DTO', {dto: {...this}, setFields, diff, src});
+            Log.eDev(diff.added.length+diff.removed.length > 0, 'incomplete conversion to DTO', {dto: {...this}, setFields, diff, src});
         }
         catch(e) {
             Log.eDevv('failed to convert to DTO', {dto: {...this}, src, e});
@@ -29,6 +29,8 @@ abstract class DTO<S extends GObject = GObject>{
     }
     protected abstract _dto_convert(src: Partial<S>, setFields: Dictionary<string, boolean>): void;
 }
+
+
 
 export abstract class Request_DTO<S extends GObject = GObject> extends DTO {
     constructor() { super(); }

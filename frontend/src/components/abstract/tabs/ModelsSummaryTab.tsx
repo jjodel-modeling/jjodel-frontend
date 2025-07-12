@@ -22,7 +22,7 @@ const Project = (props: Props) => {
 
     return (
         <React.Fragment>
-            <div className={"dashboard-container"} tabIndex={-1}>
+            <div className={"dashboard-container project-summary"} tabIndex={-1}>
                 <LeftBar active={'Project'} project={project} />
                 <div className={'user'}>
                     <div className={'name'}>

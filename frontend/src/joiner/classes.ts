@@ -2699,6 +2699,7 @@ export class DProject extends DPointerTargetable {
     activeViewpoint: Pointer<DViewPoint, 1, 1> = Defaults.viewpoints[0];
     /* come collaborators */favorite!: Dictionary<Pointer<DUser>, true | undefined>;
 
+
     description!: string;
     /* no */creation: number = Date.now();
     /* no */lastModified: number = Date.now();

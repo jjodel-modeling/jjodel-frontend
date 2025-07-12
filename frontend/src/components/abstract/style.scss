@@ -212,7 +212,11 @@ body > .dragging-layer > div:last-child {
   bottom: 0px;
   left: 0;
 }
-
+.pinnable-dock-root.fullscreen{
+  .dock-tab-close-btn {
+    display: none !important;
+  }
+}
 .dock-tab-close-btn {
   position: absolute;
   cursor: pointer;
@@ -705,29 +709,28 @@ body.dock-dragging iframe {
   font-family: bootstrap-icons;
   font-size: 1.1em;
   color: var(--color);
-  content: "\F3DF"; // max
+  content: "\F3DF";
   cursor: pointer;
 
+}
+.dock-panel-min-btn::before {
+  display: block;
+  position: relative;
+  height: 20px;
+  width: 20px;
+  font-family: bootstrap-icons;
+  font-size: 1.1em;
+  color: var(--color);
+  content: "\F3DE";
+  cursor: pointer;
 }
 
 
 .dock-panel-max-btn:hover,
-.dock-panel-max-btn:focus {
+.dock-panel-max-btn:focus,
+.dock-panel-min-btn:hover,
+.dock-panel-min-btn:focus {
   color: var(--accent);
-}
-.dock-panel-max-btn:hover:before,
-.dock-panel-max-btn:focus:before {
-
-}
-.dock-panel-max-btn:hover {
-
-}
-
-.dock-mbox .dock-panel-max-btn {
-  /* background-image: url('/static/img/btn-min.png');
-  background-repeat: no-repeat;
-  background-position: center;
-  background-size: 17px 17px;*/
 }
 
 .dock-mbox .dock-panel-max-btn:before {
