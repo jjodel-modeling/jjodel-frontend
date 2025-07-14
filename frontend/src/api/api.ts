@@ -59,12 +59,11 @@ class Api {
         // check if it is already been swapped to desired state
         if (toJodel && d.id && Pointers.isPointer(d.id)) return data;
         if (!toJodel && (!d._Id || Pointers.isPointer(d._Id))) return data;
-        if (!d._Id) {
-            Log.eDevv('API: cannot swap id and guid, one is missing', {data, id:d.id, guid:d._Id});
-            return data; // cannot swap
-        }
+        
         let tmp = d._Id;
         d._Id = d.id;
+        Log.eDev(toJodel && !Pointers.isPointer(d.id), 'API: cannot swap id and guid, one is missing', {data, id:d.id, guid:d._Id, toJodel});
+        Log.eDev(!toJodel && !Pointers.isPointer(d._Id), 'API: cannot swap id and guid, one is missing', {data, id:d.id, guid:d._Id, toJodel});
         d.id = tmp;
         return d as any;
     }
