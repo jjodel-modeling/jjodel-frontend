@@ -30,15 +30,16 @@ const About = (props: Props) => {
         return(
             <>
                 <div className='modal' style={{'position': 'fixed'}}>
-                    <div><img src={logo} /></div>
-                    <div>v{props.ver} {props.name}</div>
+                    <div><img alt="Jjodel logo" src={logo}/></div>
+                    <div className={"d-flex"}>v{props.ver} {props.name}
+                        <a className={"ms-auto"} href={"https://www.jjodel.io/whats-new/"} target="_blank">changelog</a>
+                    </div>
                     <div>
                         {message}
                     </div>
-                    <div><img src={manatee} /></div>
-                    
+                    <div className={"m-auto"}><img alt="a Manatee swimming" src={manatee}/></div>
                     <button className={'close'} onClick={() => setOpen(!open)}>close</button>
-                    {open ? <About ver={'1.0'} name={'Jjodel'} type={'menu'} value={true}/> : null}
+                    {false && open ? <About ver={props.ver} name={'Jjodel'} type={'menu'} value={true}/> : null}
                 </div>
             </>
         );

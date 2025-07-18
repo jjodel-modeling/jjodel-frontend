@@ -48,9 +48,6 @@
       padding-left: 1.5rem;
     }
   }
-  ul.entry-list{
-    // padding-left: 2rem;
-  }
 
   .filter-container{
     &>button{
@@ -65,6 +62,7 @@
 
 
   ul.entry-list{
+    list-style: none;
     padding-left: 0;
     --bug-fill: "\F1DB";
     --buginsect: "\F1DC"; //
@@ -93,6 +91,7 @@
         font-weight: 700;
         position: absolute;
         left: -0.25em;
+        padding-top: 0.05em;
         // transform: translateX(-25px);
         transform: translateX(calc(-100% - 5px));
         font-family: 'bootstrap-icons';

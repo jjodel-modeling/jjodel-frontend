@@ -285,8 +285,8 @@ export class DState extends DPointerTargetable{
 /* normally hide overflow on all nodes */
 &,[data-nodetype], [data-nodetype]>*{
   overflow: hidden;
-  /* but allow it on selected nodes */
-  &.selected-by-me, &:has(.selected-by-me, .Edge), &:hover, &:active, &:focus-within, &:focus{
+  /* but allow it on selected nodes or nodes containing edges */
+  &.selected-by-me, &:has(.selected-by-me, .Edge, .edge, .edges), &:hover, &:active, &:focus-within, &:focus{
     overflow: visible;
     z-index: 100 !important;
   }

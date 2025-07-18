@@ -1161,6 +1161,9 @@ export class LTypedElement<Context extends LogicContext<DTypedElement> = any> ex
         // let instances: LValue[] = this.get_instances(c);
         let ptr = Pointers.from(val);
         if (c.data.type === ptr) return true;
+        if (c.data.type === c.data.father && (c.data as DReference).composition) {
+            Log.ww('Changing '+this.get_fullname(c)+' type is generating a composition loop. This class cannot be instantiated anymore.\nConsider switching to aggregation.');
+        }
         TRANSACTION(this.get_name(c)+'.type', ()=>{
             SetFieldAction.new(c.data, 'type', ptr, "", true);
         }, this.get_type(c)?.fullname, LPointerTargetable.wrap(val)?.fullname);
@@ -2538,12 +2541,25 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
         return false;
     }
     get_composed(c: Context): LClass['composed']{
+        let checkSelfComposition: boolean = false; // made it impossible in 2.0 t2m version
+        if (checkSelfComposition){
+            let refs = this.get_isComposedBy(c);
+            // if it's composed by itself, i ignore it.
+            return refs.filter((r)=>(r?.__raw||r as any).father === c.data.id).length > 1;
+        }
         let refs = this.get_referencedBy(c);
         for (let r of refs) if (r&&r.composition) return true;
         return false;
     }
+    get_isComposedBy(c: Context): LReference[]{
+        let refs = this.get_referencedBy(c);
+        let ret: LReference[] = [];
+        for (let r of refs) if (r&&r.composition) ret.push(r);
+        return ret;
+    }
     get_isRootable(c: Context): LClass['rootable'] { return this.get_rootable(c); }
     protected get_rootable(c: Context): this["rootable"] {
+        console.log('isRootable', {rootable: c.data.rootable, instantiable:this.get_instantiable(c), composed:this.get_isComposed(c)})
         if (c.data.rootable !== undefined) return c.data.rootable;
         else return this.get_instantiable(c) && !this.get_isComposed(c);
     }
@@ -3566,6 +3582,12 @@ export class LReference<Context extends LogicContext<DReference> = any, C extend
     set_containment(val: this["containment"], c: Context, mainkey:'composition'|'aggregation' = 'composition', altkey:'composition'|'aggregation' = 'aggregation'): boolean {
         // return this.cannotSet('containment', 'set aggregation or composition instead');
         val = !!val;
+        if (val && mainkey === 'composition' && c.data.father === c.data.type) {
+            // todo: discovere non-trivial loops
+            Log.ww('setting ' + this.get_fullname(c) + ' as composition is generating a composition loop, the class has become not instantiable.\nConsider switching to aggregation.');
+            return true;
+        }
+
         if (!!c.data[mainkey] === val) return true;
         TRANSACTION(this.get_name(c)+'.'+mainkey, ()=>{
             // set composition and unset aggregation or viceversa

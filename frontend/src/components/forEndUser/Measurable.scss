@@ -1,22 +1,18 @@
 
 .ui-draggable, .ui-resizable, .ui-rotatable{
   position: absolute !important; // because jqui sets the html style attr to relative
-  &:not([nodeid]){
-    border: 1px solid var(--palette-g);
-  }
   width: fit-content;
   height: fit-content;
   overflow: hidden;
-  &.panning-handle{
-    border: none;
+  &:not([nodeid]){
+    border: 1px solid var(--palette-g);
   }
 }
-
-.DGraphVertex:focus-within .panning-handle.ui-draggable{
+.ui-draggable.panning-handle{
   overflow: visible;
-  // problema: senza of:visible un graphVertex con panning non mostra il contenuto in overflow, mai.
-  // con of: visible cliccando sull'overflow in un punto "vuoto" (panning handle va in overflow) seleziono il graphvertex invece del grafo
+  border: none;
 }
+
 .panning-handle, .panning-content{
   width: 100%;
   height: 100%;

@@ -17,7 +17,7 @@ const LatestUpdates = (props: UpdatesProps) => {
         </div>
         <div className='updates-item'>
             <h2>(16-sept-2024) Release 0.9b is out</h2>
-            <p>jjodel announces the launch of the new release jjodel v0.9b. A new release is already scheduled for the next days.</p>
+            <p>Jjodel announces the launch of the new release jjodel v0.9b. A new release is already scheduled for the next days.</p>
         </div>
     </div>);
 }

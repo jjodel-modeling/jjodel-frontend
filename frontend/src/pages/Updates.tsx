@@ -84,26 +84,33 @@ let warnicon = <i className="bi bi-exclamation-triangle-fill"/>
 
 function versionsetup() {
     localStorage.setItem('_jj_update_date', '' + Math.min(Date.now(), new Date('2024-11-19').getTime()));
-    new Version('2.2', 'manatee', '19/nov/2024')
-        .newbug(<>{warnicon} Edges</>, <>Some update were made on edge's internal behaviour, old saves might have side effects.
-            If edges are not behaving properly create a new project, copy the default model's JSX and paste it in the old project.
+    {new Version('1.6', 'manatee', '19/nov/2024')
+        .newbug(<>{warnicon} Edges</>, <>Some update were made on edge's internal behaviour, old saves might have
+            side effects.
+            If edges are not behaving properly create a new project, copy the default model's JSX and paste it in
+            the old project.
             <br/>To enable edits on default views right-click on the jjodel logo at the top-center of the page.
-            <br/>On custom views try to make start and end point to vertexes (draggable items) instead of fields (inline items).</>)
+            <br/>On custom views try to make start and end point to vertexes (draggable items) instead of fields
+            (inline items).</>)
         .feat('console tips', 'When hovering a console output or suggested keys a tooltip will show documentation.')
         .fix('delete viewpoints', 'But cannot delete the active viewpoint.') // what if i delete a non-exclusive vp?
         .fix('delete models')
         .fix('containment & parent', 'Containment references were inconsistently updating the .parent property of contained elements.')
-        .feat('model dependencies', <>Models can now "depend" on other models in a extend-like style. if A depends on B
+        .feat('model dependencies', <>Models can now "depend" on other models in a extend-like style. if A depends
+            on B
             (A→B), A can use concepts from B.
             <br/>Dependency chains (A→B→C) and loops (A→B, B→A) are also supported
             <br/>Cross-reference activation is required too.</>)
-        .feat('cross-Reference', <>Cross-reference can be activated for: classes (inheritance), features (type).<br/>
+        .feat('cross-Reference', <>Cross-reference can be activated for: classes (inheritance), features
+            (type).<br/>
             To reduce cluttering in the options, normally you can only reference concepts in the same model.<br/>
             If Cross-Reference is enabled you can reference valid concepts from all model dependencies.
         </>)
-        .feat('context-menu containment', <>The option to add containment objects has been expanded, it is now available
+        .feat('context-menu containment', <>The option to add containment objects has been expanded, it is now
+            available
             to individual features too.</>)
-        .engine('data.validTargets (JDL Engine)', <>Can be used to create custom DSL and filtered to restrict model transformations, it
+        .engine('data.validTargets (JDL Engine)', <>Can be used to create custom DSL and filtered to restrict model
+            transformations, it
             provides a list of valid targets for:
             <ul>
                 <li>class extension</li>
@@ -114,17 +121,21 @@ function versionsetup() {
         </>)
         .minor()
         .feat('U.clickedOutside()',
-            <>Utility for interactive graphs: When a click is detected outside the first parameter (HTMLElement or Event), it triggers a callback function in the first parameter.
+            <>Utility for interactive graphs: When a click is detected outside the first parameter (HTMLElement or
+                Event), it triggers a callback function in the first parameter.
                 <br/>
                 Example: {"<div onClick={(evt)=>{data.$active=true; U.clickedOutside(evt, ()=>data.$active=false)}} ></div>"} where
                 data is a m1-object holding a boolean feature "active"
-                {warnicon} To ensure the node is properly updated, remember to add "Listed dependencies" accordingly to
+                {warnicon} To ensure the node is properly updated, remember to add "Listed dependencies" accordingly
+                to
                 the value edited in the view.
                 <br/>In this example you need the dependency "active = data.$active" or equivalent ones.
-                <br/>Without it the value would update immediately but the graphical representation would always be 1 state behind.
+                <br/>Without it the value would update immediately but the graphical representation would always be
+                1 state behind.
             </>)
         .fix('structure editor', 'The layout was occasionally breaking')
         .feat('changelog', 'Yes, this one. It deserved a mention.')
+    }
 }
 
 function UpdatesPage(): JSX.Element {
@@ -157,9 +168,13 @@ function UpdatesPage(): JSX.Element {
                 <h2>Past versions
                     <select className={'ms-2'}
                             onChange={(e) => R.navigate(e.target.value)}>
-                        <option value='/jjodel/2.2' title={'13/nov/2024'}>2.2</option>
-                        <option value='/jjodel/2.1' disabled>2.1</option>
-                        <option value='/jjodel/2.0' disabled>2.0</option>
+                        {
+                            Version.all.map(v=><option value={"jjodel/"+v.number} title={v.date}>{v.number + (v.name ? " - "+v.name : "")}</option>)
+                        }
+                        {/*
+                            <option value='/jjodel/2.2' title={'13/nov/2024'}>2.2</option>
+                            <option value='/jjodel/2.1' disabled>2.1</option>
+                            <option value='/jjodel/2.0' disabled>2.0</option>*/}
                     </select>
                 </h2>
                 <div className={'filter-container'}>

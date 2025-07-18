@@ -55,7 +55,7 @@ const Upload = () => {
     return(
         <div className={'upload'}>
             <i className="bi bi-arrow-up-circle"></i>
-            <p>Drop your jjodel project archive here to import it.</p>
+            <p>Drop your Jjodel project archive here to import it.</p>
         </div>
     );
 };

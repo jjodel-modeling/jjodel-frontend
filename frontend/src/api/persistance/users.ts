@@ -23,7 +23,7 @@ class UsersApi {
     }
 
 
-    static async updateUserById(updateUserRequest :UpdateUserRequest): Promise<boolean> {
+    static async updateUserById(updateUserRequest: UpdateUserRequest): Promise<boolean> {
         const response = await Api.put(`${Api.persistance}/account/`, {...updateUserRequest});
         console.log(response.code, response.data);
 
@@ -36,15 +36,10 @@ class UsersApi {
     }
 
 
-    static async updatePassword(changePasswordRequest :ChangePasswordRequest): Promise<LUser|null> {
-
-        const response = await Api.post(`${Api.persistance}/account/change-password`, {...changePasswordRequest});
-        if(response.code !== 200) {
-            return null;
-        }
-        const user = U.wrapper<DUser>(response.data);
-
-        return LUser.fromD(user);
+    static async updatePassword(changePasswordRequest: ChangePasswordRequest): Promise<number> {
+        const response = await Api.post(`${Api.persistance}/account/change-password`, changePasswordRequest);
+        return response.code;
+        // return U.wrapper<DUser>(response.data);
     }
 
 

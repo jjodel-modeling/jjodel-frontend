@@ -8,11 +8,12 @@ type EditProps = {
     name: string;
     label: string;
     type: 'text' | 'email' | 'password' | 'checkbox' | 'country';
+    placeholder?: string;
     value: string;
     required?: boolean;
     disabled?: boolean;
     tooltip?:string;
-    className?:string;
+    className?: string;
     onChange?: (e: any)=>void; // MouseEvent
 }
 
@@ -349,14 +350,10 @@ const EditPassword = (props: EditProps) => {
     let className = props.className ? props.className : '';
 
     function focus_in(e: any) {
-        if (e.target.value === props.value) {
-            e.target.value = '';
-        } 
+        if (e.target.value === props.value) { e.target.value = ''; }
     }
     function focus_out(e: any) {
-        if (e.target.value === '') {
-            e.target.value = props.value;
-        } 
+        if (e.target.value === '') { e.target.value = props.value; }
     }
 
     return (<>
@@ -373,8 +370,9 @@ const EditPassword = (props: EditProps) => {
                         required={required}
                         disabled = {disabled}
                         onChange={props.onChange}
-                        onFocus={(e) => focus_in(e)}
-                        onBlur={(e) => focus_out(e)}
+                        // placeholder={props.placeholder}
+                        // onFocus={(e) => focus_in(e)}
+                        // onBlur={(e) => focus_out(e)}
                     />
                     
                 </label>

@@ -5,13 +5,13 @@ import {
     Dictionary,
     DState,
     DUser,
-    DViewElement, GObject,
+    DViewElement, DViewPoint, GObject,
     LProject,
     LUser,
     LViewElement,
     LViewPoint,
     Pointer,
-    R,
+    R, store,
     Try,
     U
 } from '../joiner';

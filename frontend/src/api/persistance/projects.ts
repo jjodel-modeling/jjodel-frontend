@@ -146,6 +146,11 @@ class Offline {
         const projects = Storage.read<DProject[]>('projects') || [];
         TRANSACTION('loading projects (offline)', () => {
             for (const project of projects) {
+                /*if (!project._Id || !project.id && project.state) {
+                   let decompressed = U.decompressState(project.state);
+                   decompressed it is pointless, the db does not have the jid anyway and cannot single get it.
+
+                }*/
                 DProject.new(project.type, project.name, project.state, [], [], project.id);
                 SetFieldAction.new(project.id, 'creation', project.creation, '', false);
                 SetFieldAction.new(project.id, 'lastModified', project.lastModified, '', false);

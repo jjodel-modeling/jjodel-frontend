@@ -1,7 +1,7 @@
-import type {
+import {
     GraphSize, IPoint, DocString, Dictionary, Pointer,
     GObject,
-    GraphPoint,
+    GraphPoint, DViewPoint, DViewElement, PointedBy,
 } from "../joiner";
 import {
     Defaults, DGraphElement,
@@ -122,6 +122,29 @@ everytime you put hands into a D-Object shape or valid values, you should docume
             Log.exDev(currVer <= prevVer, "version updater found loop at version \""+currVer+"\", please notify the developers.");
             prevVer = currVer;
         }
+
+        // update default views
+        for (let k in s.idlookup) {
+            let e = s.idlookup[k];
+            if (!e || typeof e !== 'object') continue;
+            let v: DViewElement|DViewPoint = e as any;
+            if (v.version !== VersionFixer.highestVersion && !v.clonedCounter){ // NB: for untouched views clonedCounter is undefined, not 0.
+                let newView: DViewElement | DViewPoint = Defaults.defaultViewPointsMap[v.id]||Defaults.defaultViewsMap[v.id];
+                if (!newView) continue; // not a default view
+                newView = {...newView} as any;
+                newView.pointedBy = PointedBy.merge(newView, v);
+                newView.subViews = {...newView.subViews, ...v.subViews};
+                s.idlookup[k] = newView;
+            }
+        }
+        // add new default views
+        for (let k in Defaults.defaultViewsMap) {
+            if (!s.idlookup[k]) s.idlookup[k] = Defaults.defaultViewsMap[k];
+        }
+        for (let k in Defaults.defaultViewPointsMap) {
+            if (!s.idlookup[k]) s.idlookup[k] = Defaults.defaultViewPointsMap[k];
+        }
+
         if (canAutocorrect) s = VersionFixer.autocorrect(s, false, false);
         return s;
     }
@@ -184,6 +207,19 @@ everytime you put hands into a D-Object shape or valid values, you should docume
         }
         return s;
     }
+
+    private ['2.202 -> 2.203'](s: DState): DState {
+        for (let id in s.idlookup){
+            let c = s.idlookup[id] as DPointerTargetable;
+            if (!c || typeof c !== 'object') continue;
+            if ((c as DGraphElement).isSelected) (c as DGraphElement).isSelected = {};
+            if (c?.className?.toLowerCase().includes('view')){
+                (c as DViewPoint|DViewElement).version = 1.0;
+            }
+        }
+        return s;
+    }
+
     public static autocorrect(s0?: DState, popupIfCorrect: boolean = false, canLoadAction: boolean = false): DState {
         let s: DState;
         if (s0) s = {...s0} as any;

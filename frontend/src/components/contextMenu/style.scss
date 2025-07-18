@@ -17,6 +17,14 @@
     color: #8a8a8a;
     width: 100%;
   }
+  .submenu-holder.hoverable>.content{
+    box-shadow: none;
+    left: calc(100% - 15px);
+    top: -8px; // offset the contextmenu padding to align first sub-menu item to hovered item.
+    &>.context-menu{
+      box-shadow: var(--smart-elevation-8);
+    }
+  }
 
   .item{
     cursor: pointer;

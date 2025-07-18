@@ -1026,8 +1026,10 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         const thiss: DViewElement = this.thiss as any;
         const vid = thiss.id;
         let tv = transientProperties.view[vid];
-        if (!tv) transientProperties.view[vid] = tv = {} as any;
+        if (!tv) transientProperties.view[vid] = tv = new ViewTransientProperties();
+        let VersionFixer: typeof TypeVersionFixer = windoww.VersionFixer;
 
+        thiss.version = VersionFixer.get_highestversion();
         thiss.name = name;
         thiss.appliableToClasses = appliableToClasses;
         thiss.appliableTo = 'Any';
@@ -1040,7 +1042,6 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         thiss.onRotationEnd = thiss.onRotationStart = thiss.whileRotating = '';
         thiss.onDataUpdate = '';
         thiss.events = {};
-        // thiss.__transient = new DViewTransientProperties();
         thiss.subViews = {};
         thiss.oclCondition = oclCondition || '';
         thiss.jsCondition = '';
@@ -1539,6 +1540,7 @@ export class Pointers{
         if (state) return DPointerTargetable.from(val, state);
         return typeof val === "string" ? val.indexOf("Pointer") === 0 : false;
     }
+
 }
 
 /*
@@ -1656,6 +1658,14 @@ export class PointedBy {
         this.source = source;
         this.field = field;
     }*/
+
+    static merge(d1: DPointerTargetable, d2: DPointerTargetable,): PointedBy[] {
+        let deduplicator: Dictionary<string, PointedBy> = {};
+        console.log('pby merge', {d1, d2});
+        for (let p of d2.pointedBy) deduplicator[p.source] = p;
+        for (let p of d1.pointedBy) deduplicator[p.source] = p;
+        return Object.values(deduplicator);
+    }
 
     static getPath(p: PointedBy) : string { return p.source.substring(0, p.source.lastIndexOf(".")); }
     static getLastKey(p: PointedBy) : string { return p.source.substring(p.source.lastIndexOf(".")); }

@@ -1,6 +1,6 @@
 // import * as detectzoooom from 'detect-zoom'; alternative: https://www.npmjs.com/package/zoom-level
 // import {Mixin} from "ts-mixer";
-import {Any, DGraphElement, LGraphElement} from "../joiner";
+import {Any, DClass, DGraphElement, LClass, LGraphElement} from "../joiner";
 import {
     AbstractConstructor,
     Constructor,
@@ -64,28 +64,33 @@ export class Color {
         this.b = b;
     }
 
-    static fromHex(hex:string): Color {
+    static fromHex(hex: string): Color {
         return undefined as any;
     }
-    static fromHLS({h, l, s}:{h: number, l:number, s: number}): Color {
+
+    static fromHLS({h, l, s}: { h: number, l: number, s: number }): Color {
         return undefined as any;
     }
+
     getHex(): string {
         return undefined as any;
     }
+
     mixWith(c: Color): void {
 
     }
-    getHLS(): {h: number, l:number, s: number} {
+
+    getHLS(): { h: number, l: number, s: number } {
         return undefined as any;
     }
+
     duplicate(): Color {
         return undefined as any;
     }
 }
 
 @RuntimeAccessible('R')
-export class R{
+export class R {
     public static cname: string = 'R';
 
     // from: 1.com/2/3
@@ -96,20 +101,26 @@ export class R{
     public static open_new_page(url: string): void {
         window.open(url, '_blank');
     }
+
     public static replace(path: string): void {
         window.location.replace(path);
     }
 
-    public static navigate(path: string, refresh: (true|NavigateFunction) = true): void {
+    public static navigate(path: string, refresh: (true | NavigateFunction) = true): void {
         // window.location.assign = window.location = window.location.href = window.open(url, '_self')
         console.warn('R.navigate()', {path, refresh});
+
         //if (path.indexOf('allProject') >= 0) return;
         if (windoww.preventNavigation) return;
-        if (path.indexOf('//') >= 0) { window.location.href = path; return; }
+        if (path.indexOf('//') >= 0) {
+            window.location.href = path;
+            return;
+        }
+        console.warn('R.navigate() 2');
         if (true as any || refresh === true) {
             let hash: string;
-            if (path[0] !== '/') hash = '#/'+path;
-            else hash = '#'+path;
+            if (path[0] !== '/') hash = '#/' + path;
+            else hash = '#' + path;
             // console.log('navigating: ', {path, url:window.location.origin + path, currHash:window.location.hash});
             if (window.location.hash === hash) return;
             U.navigating = true;
@@ -119,14 +130,12 @@ export class R{
             // U.setSearchParam('p', counter+1);
             //window.location.href = window.location.origin + '/'+hash;
             // window.location.reload(); // i think this is causing a firefox bug, it refreshes old url. so i'm using location.search
-        }
-        else refresh(path); // useNavigator()(path);
+        } else refresh(path); // useNavigator()(path);
     }
 }
 
 
-
-export type DialogButton = {txt:string, action?: ()=>{}};
+export type DialogButton = { txt: string, action?: () => {} };
 export type DialogOptions = {
     title: string,
     question: string,
@@ -239,6 +248,17 @@ export class U {
         );
     }
 
+    static proxyDeduplicator<T extends LPointerTargetable|DPointerTargetable|Pointer>(arr: T[]): T[] {
+        let map: Dictionary<Pointer, T> = {};
+        if (!arr || !Array.isArray(arr)) return arr as any;
+        for (let v of arr) {
+            let id = windoww.Pointers.from(v);
+            if (map[id]) continue;
+            map[id] = v;
+        }
+        return Object.values(map);
+    }
+
     static alert(type: 'i'|'w'|'e', title: string, message: string = ''): void {
         SetRootFieldAction.new('alert', `${type}:${title}:${message}`, '');
     }
@@ -268,8 +288,10 @@ export class U {
         const state = {...store.getState()};
         const idlookup: Record<Pointer, DPointerTargetable> = {};
         for (const [pointer, object] of Object.entries(state.idlookup) as [Pointer, DPointerTargetable][]) {
+            if ((object as DGraphElement).isSelected) (object as DGraphElement).isSelected = {};
             if (object.className === DProject.name && pointer !== id) continue;
             idlookup[pointer] = object;
+
         }
         state.idlookup = idlookup;
         state.idlookup[id] = {...dproject, state: ''} as any;

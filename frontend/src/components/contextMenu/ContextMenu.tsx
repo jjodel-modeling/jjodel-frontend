@@ -13,7 +13,7 @@ import {
     LClass,
     LGraphElement, LModel,
     LNamedElement,
-    LObject,
+    LObject, Log,
     LPackage,
     LProject, LReference,
     LUser,
@@ -27,8 +27,26 @@ import ModellingIcon from "../forEndUser/ModellingIcon";
 import {FakeStateProps} from "../../joiner/types";
 import {toggleMetrics} from '../metrics/Metrics';
 import {icon} from '../../pages/components/icons/Icons';
+import {Tooltip} from "../forEndUser/Tooltip";
 
 function ContextMenuComponent(props: AllProps) {
+    let a = 0;
+    if (true as boolean) return ContextMenuComponentInner(props);
+
+    try { return ContextMenuComponentInner(props); }
+    catch (e) {
+        Log.eDevv('context menu crash', {e});
+    }
+
+    const position = props.position || {x:0, y:0};
+    return <div className={'context-menu round'} style={{top: position.y - 100, left: position.x - 10}}
+         onContextMenu={(e) => e.preventDefault()}>
+        Contextmenu crashed.
+        <br/>The error has been reported.
+    </div>
+}
+
+function ContextMenuComponentInner(props: AllProps) {
     const user = props.user;
     // const project = user.project as LProject;
     const display = props.display;
@@ -94,12 +112,18 @@ function ContextMenuComponent(props: AllProps) {
         if (dref.upperBound !== -1 && values.filter(o=>!!o).length >= dref.upperBound) return [];
         let type = lref.type;
         out = [type, ...type.allSubClasses].filter(e=>!!e);
+        out = U.proxyDeduplicator(out);
         let jsxret: ReactNode;
+        console.log('contextmenu add options', {out, sc: type.allSubClasses, type});
         if (out.length === 1) {
             let name = out[0].name;
-            jsxret = <div key={'single_'+l.id} onClick={() => { close(); l.addObject({}, out[0]); }} className={'col item'}>{icon['add']} Add {name}</div>
-        }
-        else jsxret = <div key={'multi'+l.id} onClick={(e) => { setChildrenMenu(!childrenMenu)}} className={'col item submenu-holder hoverable'}>
+            jsxret =
+                <Tooltip tooltip={'add to "' + lref.name + '" reference'}><div key={'single_' + l.id} onClick={() => { close(); l.addObject({}, out[0]); }}
+                         className={'col item'} tabIndex={0}>{icon['add']} Add {name}</div></Tooltip>
+        } else jsxret = <div key={'multi' + l.id} onClick={(e) => {
+            setChildrenMenu(!childrenMenu)
+        }}
+                             tabIndex={0} className={'col item submenu-holder hoverable'}>
             {icon['add']} Add <div style={{position: 'absolute', right: '0'}}>{icon['submenu']}</div>
             {childrenMenu && <section className={'round content right'} style={{/*top: position.y - 216, left: position.x - 333*/}} onContextMenu={(e)=>e.preventDefault()}>
                 <ul className={'right context-menu'}>
@@ -109,8 +133,8 @@ function ContextMenuComponent(props: AllProps) {
                             setChildrenMenu(false);
                             const child = l.addObject({}, lc);
                             l.values = [...(l.values as LObject[]), child];
-                        }} className={'col item'}>
-                            {lcname}
+                        }} className={'col item'} tabIndex={0}>
+                            <Tooltip tooltip={'add to "'+ lref.name+'" reference'}><span>{lcname}</span></Tooltip>
                         </li>)}
                     )}
                 </ul>
@@ -168,13 +192,13 @@ function ContextMenuComponent(props: AllProps) {
         /* Memorec */
         if(ddata && !U.isOffline()) {
             if(ddata.className === 'DClass') {
-                jsxList.push(<div key='ai-c' onClick={structuralFeature} className={'col item'}>{icon['ai']} AI Suggest
+                jsxList.push(<div key='ai-c' onClick={structuralFeature} className={'col item'} tabIndex={0}>{icon['ai']} AI Suggest
                     <div><i className='bi bi-chevron-right' style={{fontSize: '0.75em', float: 'right', paddingTop: '2px', fontWeight: '800'}} /></div>
                     </div>);
                 jsxList.push(<hr key={hri++} className={'my-1'} />);
             }
             if(ddata.className === 'DPackage') {
-                jsxList.push(<div key='ai-p' onClick={classifier} className={'col item'}>{icon['ai']} AI Suggest
+                jsxList.push(<div key='ai-p' onClick={classifier} className={'col item'} tabIndex={0}>{icon['ai']} AI Suggest
                     <div><i className={'ms-1 bi bi-chevron-right'} style={{fontSize: '0.75em', float: 'right', paddingTop: '2px', fontWeight: '800'}} /></div>
                 </div>);
                 jsxList.push(<hr key={hri++} className={'my-1'} />);
@@ -191,18 +215,18 @@ function ContextMenuComponent(props: AllProps) {
                 jsxList.push(<div key='ext' onClick={() => {
                     close();
                     SetRootFieldAction.new('isEdgePending', {user: user.id, source: (ddata as any).id});
-                }} className={'col item'}>{icon['extend']} Extend
+                }} className={'col item'} tabIndex={0}>{icon['extend']} Extend
                     <div><i className='bi bi-command'></i> E</div></div>);
                 jsxList.push(<hr key={hri++} className={'my-1'} />);
                 break;
         }
 
         /* Deselect */
-
+        /*
         jsxList.push(<div key='-select' onClick={() => {
             close();
             SetRootFieldAction.new(`selected.${DUser.current}`, '', '', false);
-        }} className={'col item'}>{icon['deselect']} Deselect</div>);
+        }} className={'col item'} tabIndex={0}>{icon['deselect']} Deselect</div>);*/
         //jsxList.push(<hr key={hri++} className={'my-1'} />);
 
         
@@ -215,7 +239,7 @@ function ContextMenuComponent(props: AllProps) {
                 if (ldata) ldata.delete();
                 else node.delete();
                 // if there is data, then the node is indirectly deleted, no need to call it too.
-            }} className={'col item'} data-cannotdelete={cannotDelete+''}>
+            }} className={'col item'} data-cannotdelete={cannotDelete+''} tabIndex={0}>
                 {icon['delete']}
                 Delete
                 <div><i className='bi bi-backspace' style={{fontSize: '1em', float: 'right', paddingTop: '2px', fontWeight: '800'}} /></div>
@@ -225,42 +249,46 @@ function ContextMenuComponent(props: AllProps) {
         
         /* Refresh */
 
-        // jsxList.push(<div onClick={() => {alert('refresh')}} className={'col item'}>{icon['refresh']} Refresh</div>);
+        // jsxList.push(<div onClick={() => {alert('refresh')}} className={'col item'} tabIndex={0}>{icon['refresh']} Refresh</div>);
         // jsxList.push(<hr key={hri++} className={'my-1'} />);
 
         /* Up / Down */
-        jsxList.push(<div key='up' onClick={() => {close(); node.zIndex += 1;}} className={'col item'}>{icon['up']} Up
-            <div><i className='bi bi-command' /><i className="bi bi-arrow-up" /></div></div>);
-        jsxList.push(<div key='down' onClick={() => {close(); node.zIndex -= 1;}} className={'col item'}>{icon['down']} Down
-            <div><i className='bi bi-command' /><i className="bi bi-arrow-down" /></div></div>);
+        jsxList.push(<div key='up' onClick={() => {close(); node.zIndex += 1;}} className={'col item'} tabIndex={0}>
+            {icon['up']} Up<div><i className='bi bi-command' /><i className="bi bi-arrow-up" /></div>
+        </div>);
+        jsxList.push(<div key='down' onClick={() => {close(); node.zIndex -= 1;}} className={'col item'} tabIndex={0}>
+            {icon['down']} Down<div><i className='bi bi-command' /><i className="bi bi-arrow-down" /></div>
+        </div>);
         let gn = node as GObject;
         jsxList.push(<hr key={hri++} className={'my-1'} />);
         
         /* AUTO-SIZING */
-        if (gn.isResized) jsxList.push(<div key='asize' onClick={() => {close(); gn.isResized = false; }} className={'col item'}>{icon['contract']} Restore auto-sizing
-            <div> <i className='bi bi-command'></i> T</div></div>);
+        if (gn.isResized) jsxList.push(<div key='asize' onClick={() => {close(); gn.isResized = false; }} className={'col item'} tabIndex={0}>
+            {icon['contract']} Restore auto-sizing<div> <i className='bi bi-command'></i> T</div>
+        </div>);
         else jsxList.push(<div key='nasize' onClick={() => {close(); gn.isResized = true; }} className={'col item'}>{icon['expand']} Disable auto-sizing
             <div> <i className='bi bi-command'></i> T</div></div>);
         
         // /* LOCK-UNLOCK */
-        // jsxList.push(<div onClick={() => {close(); ldata.delete(); /*node.delete();*/}} className={'col item'}>{icon['lock']} Lock/Unlock<div> <i
+        // jsxList.push(<div onClick={() => {close(); ldata.delete(); /*node.delete();*/}} className={'col item'} tabIndex={0}>{icon['lock']} Lock/Unlock<div> <i
         //     className='bi bi-command'></i> L</div></div>);
         // /* UNLOCK ALL ELEMENTS */
-        // jsxList.push(<div onClick={() => {close(); ldata.delete(); /* node.delete();*/}} className={'col item'}>{icon['unlock']} Unlock all<div><i className="bi bi-alt"></i> <i
-        //     className='bi bi-command'></i> L</div></div>);
+        // jsxList.push(<div onClick={() => {close(); ldata.delete(); /* node.delete();*/}} className={'col item'} tabIndex={0}>
+        //     {icon['unlock']} Unlock all<div><i className="bi bi-alt"></i> <i className='bi bi-command'></i> L</div>
+        // </div>);
 
         jsxList.push(<hr key={hri++} className={'my-1'} />);
         
         /* METRICS */
         if (ldata && model?.isMetamodel) {
-            jsxList.push(<div key='analytic' onClick={() => {close(); toggleMetrics();}} className={'col item'}>{icon['metrics']} Analytics
+            jsxList.push(<div key='analytic' onClick={() => {close(); toggleMetrics();}} className={'col item'} tabIndex={0}>{icon['metrics']} Analytics
                 <div><i className='bi bi-command' /> A</div></div>);
             jsxList.push(<hr key={hri++} className={'my-1'} />);
         }
 
 
         /* ADD VIEW */
-        jsxList.push(<div key='view+' onClick={async () => {close(); addView();}} className={'col item'}>{icon['view']} Add View
+        jsxList.push(<div key='view+' onClick={async () => {close(); addView();}} className={'col item'} tabIndex={0}>{icon['view']} Add View
             <div><i className='bi bi-alt' /> <i className='bi bi-command' /> A</div>
         </div>);
     }
@@ -274,7 +302,7 @@ function ContextMenuComponent(props: AllProps) {
         {(data && memorec?.data) && <div className={'context-menu round'} style={{overflow: 'auto', maxHeight: '12em', top: position.y - 100, left: position.x + 130}}>
             {(memorec.data.map((obj, index) => {
                 return (<div key={index}>
-                    <div className={'col item d-block'} onClick={e => setSuggestedName(obj.recommendedItem)}>
+                    <div className={'col item d-block'} onClick={e => setSuggestedName(obj.recommendedItem)} tabIndex={0}>
                         {obj.recommendedItem} :
                         <span className={'ms-1 text-primary'}>{Math.round(obj.score * 100) / 100}</span>
                     </div>

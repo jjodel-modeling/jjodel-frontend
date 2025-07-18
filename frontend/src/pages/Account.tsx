@@ -24,35 +24,37 @@ function AccountComponent(props: AllProps): JSX.Element {
     const [affiliation, setAffiliation] = useStateIfMounted(user.affiliation);
     const [newsletter, setNewsletter] = useStateIfMounted(user.newsletter);
     const [email, setEmail] = useStateIfMounted(user.email);
-
-    const [old_password, setOldPassword] = useStateIfMounted('01234567');
-    const [new_password, setNewPassword] = useStateIfMounted('12345678');
-    const [check_password, setCheckPassword] = useStateIfMounted('23456789');
+    const [old_password, setOldPassword] = useStateIfMounted('');
+    const [new_password, setNewPassword] = useStateIfMounted('');
+    const [check_password, setCheckPassword] = useStateIfMounted('');
 
     async function update_password(old_password: string, new_password:string, check_password:string) : Promise<void> {
-
         const U = windoww.U;
 
         if (new_password !== check_password) {
-            U.alert('e', 'Paswords do not match.','');
+            U.alert('e', 'Passwords do not match.', '');
             return;
         }
 
         try {
-            const changePasswordRequest :ChangePasswordRequest = new ChangePasswordRequest();
+            const changePasswordRequest: ChangePasswordRequest = new ChangePasswordRequest();
             changePasswordRequest.UserName = nickname;
             changePasswordRequest.OldPassword = old_password;
-            changePasswordRequest.Password= new_password;
+            changePasswordRequest.Password = new_password;
             changePasswordRequest.PasswordConfirm = check_password;
 
-            const response_password = await UsersApi.updatePassword(changePasswordRequest);
+            const response_code = await UsersApi.updatePassword(changePasswordRequest);
 
-            if(response_password === null) {
-                U.alert('e', 'Something went wrong.','');
-                return;
+            switch (response_code) {
+                case 200:
+                    U.alert('i', 'Your password has been successfully updated!','');
+                    break;
+                default:
+                case 400:
+                    U.alert('e', 'Something went wrong. re-check your old password.','');
+                    break;
             }
 
-            U.alert('i', 'Your password has been successfully updated!','');
 
         } catch (error) {
             U.alert('e', 'Something went wrong.','');
@@ -214,33 +216,36 @@ function AccountComponent(props: AllProps): JSX.Element {
 
                     <Edit 
                         id={user.id}
-                        name={'old_password'} 
+                        name={'old_password'}
+                        placeholder={'old password'}
                         label={'Password'} 
-                        type={'password'} 
-                        value={old_password}
+                        type={'password'}
+                        value={''}
                         required={true}
-                        onChange={(e) => setOldPassword(e.target.value)}              
+                        onChange={(e) => setOldPassword(e.target.value)}
                     />
 
 
                     <Edit 
                         id={user.id}
-                        name={'new_password'} 
+                        name={'new_password'}
+                        placeholder={'new password'}
                         label={'New Password'} 
-                        type={'password'} 
+                        type={'password'}
                         value={new_password}
                         required={true}
-                        onChange={(e) => setNewPassword(e.target.value)} 
+                        onChange={(e) => setNewPassword(e.target.value)}
                         className={'space-above'}                 
                     />
                     <Edit 
                         id={user.id}
-                        name={'check_password'} 
-                        label={'Confirm Password'} 
+                        name={'check_password'}
+                        placeholder={'repeat new password'}
+                        label={'Confirm Password'}
                         type={'password'} 
                         required={true}
                         value={check_password}
-                        onChange={(e) => setCheckPassword(e.target.value)}              
+                        onChange={(e) => setCheckPassword(e.target.value)}
                     />
                     <button 
                         className="btn alert-btn my-2  px-4 space-above"

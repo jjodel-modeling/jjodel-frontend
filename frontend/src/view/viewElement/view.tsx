@@ -258,6 +258,7 @@ export class DViewElement extends DPointerTargetable {
     /* private */ compiled_css!: string;
     /* private */ css_MUST_RECOMPILE!: boolean;
     father?: Pointer<DViewElement>;
+    version!: number; // only meaningful for default views, required to check if view needs to be updated.
 /*
     public static new(name: string, jsxString: string, father?: DViewElement, defaultVSize?: GraphSize, usageDeclarations: string = '', constants: string = '',
                       preRenderFunc: string = '', appliableToClasses: string[] = [], oclCondition: string = '',

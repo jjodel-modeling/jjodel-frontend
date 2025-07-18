@@ -189,6 +189,7 @@ export class TooltipClass extends React.Component<AllProps, State> {
     }
     onMouseLeave(e?: MouseEvent): void{
         if (this.props.seconds) return;
+        // todo: only hide if content did not change, if i hide old and show new, hide should not hide.
         Tooltip.hide();
     }
 

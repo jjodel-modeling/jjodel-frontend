@@ -14,7 +14,6 @@ export class Defaults { /// TODO: this really needs to become dynamically genera
         "Pointer_ViewLiteral",
         "Pointer_ViewObject",
         "Pointer_ViewValue",
-        "Pointer_ViewVoid",
         "Pointer_ViewEdgeAssociation",
         "Pointer_ViewEdgeDependency",
         "Pointer_ViewEdgeInheritance",
@@ -24,7 +23,6 @@ export class Defaults { /// TODO: this really needs to become dynamically genera
         "Pointer_ViewAnchors",
         "Pointer_ViewSingleton",
         "Pointer_ViewFallback",
-        "Pointer_fallback",
         // validation
         "Pointer_ViewCheckName",
         "Pointer_ViewOverlay",
@@ -58,7 +56,6 @@ export class Defaults { /// TODO: this really needs to become dynamically genera
     static Pointer_ViewLiteral = 'Pointer_ViewLiteral';
     static Pointer_ViewObject = 'Pointer_ViewObject';
     static Pointer_ViewValue = 'Pointer_ViewValue';
-    static Pointer_ViewVoid = 'Pointer_ViewVoid';
     static Pointer_ViewEdgeAssociation = 'Pointer_ViewEdgeAssociation';
     static Pointer_ViewEdgeDependency = 'Pointer_ViewEdgeDependency';
     static Pointer_ViewEdgeInheritance = 'Pointer_ViewEdgeInheritance';
@@ -68,7 +65,7 @@ export class Defaults { /// TODO: this really needs to become dynamically genera
     static Pointer_ViewAnchors = 'Pointer_ViewAnchors';
     static Pointer_ViewSingleton = 'Pointer_ViewSingleton';
     static Pointer_ViewFallback = 'Pointer_ViewFallback';
-    static Pointer_fallback = 'Pointer_fallback'; // legacy
+    // static Pointer_fallback = 'Pointer_fallback'; // legacy
     // validation vp
     static Pointer_ViewPointValidation = 'Pointer_ViewPointValidation';
     static Pointer_ViewCheckName = 'Pointer_ViewCheckName';
@@ -89,13 +86,13 @@ export class Defaults { /// TODO: this really needs to become dynamically genera
     static Pointer_EOBJECT = 'Pointer_EOBJECT';
 
     // @ts-ignore reduce is not well-typed in ts
-    static defaultViewsMap: Dictionary<Pointer, boolean> = Defaults.views.reduce((acc, val) => { acc[val] = true; return acc; }, {}); // U.objectFromArrayValues(Defaults.views);
+    static defaultViewsMap: Dictionary<Pointer, DViewElement> = Defaults.views.reduce((acc, val) => { acc[val] = true; return acc; }, {}); // U.objectFromArrayValues(Defaults.views);
     // @ts-ignore reduce is not well-typed in ts
-    static defaultViewPointsMap: Dictionary<Pointer, boolean> = Defaults.viewpoints.reduce((acc, val) => { acc[val] = true; return acc; }, {});
+    static defaultViewPointsMap: Dictionary<Pointer, DViewPoint> = Defaults.viewpoints.reduce((acc, val) => { acc[val] = true; return acc; }, {});
     // @ts-ignore reduce is not well-typed in ts
     static defaultTypesMap: Dictionary<Pointer, boolean> = Defaults.types.reduce((acc, val) => { acc[val] = true; return acc; }, {});
 
     static check(id: string): boolean {
-        return Defaults.defaultViewsMap[id] || Defaults.defaultViewPointsMap[id] || Defaults.defaultTypesMap[id]; // id.indexOf('Pointer_View') !== -1
+        return !!(Defaults.defaultViewsMap[id] || Defaults.defaultViewPointsMap[id] || Defaults.defaultTypesMap[id]); // id.indexOf('Pointer_View') !== -1
     }
 }

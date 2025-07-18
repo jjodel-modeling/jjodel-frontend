@@ -1,8 +1,15 @@
+import type {
+    DViewPoint,
+    orArr,
+    bool,
+    Dictionary,
+    DocString,
+    Pointer,
+    MouseUpEvent,
+} from '../../joiner';
 import {
     U as UType,
     GraphDragManager,
-    MouseUpEvent,
-    orArr,
     DModelElement,
     DViewElement,
     DClass,
@@ -12,7 +19,6 @@ import {
     EdgeStateProps,
     GraphElementComponent,
     ViewEClassMatch,
-    bool,
     NodeTransientProperties,
     ViewTransientProperties,
     DGraphElement, Uarr,
@@ -20,17 +26,14 @@ import {
     LProject,
     DProject,
     LUser, UserHistory, R, DataTransientProperties,
-} from '../../joiner';
-import {
     Action,
     CompositeAction,
     CreateElementAction,
     DeleteElementAction,
-    Dictionary,
-    DocString,
     DPointerTargetable,
     DState,
     DUser,
+    Defaults,
     getPath,
     GObject,
     Log,
@@ -39,7 +42,6 @@ import {
     ParsedAction,
     PendingPointedByPaths,
     PointedBy,
-    Pointer,
     Pointers,
     RuntimeAccessibleClass,
     SetFieldAction,
@@ -933,6 +935,18 @@ function unsafereducer(oldState: DState = initialState, action: Action): DState 
         // and it's useful to keep the old ocl condition valid with past names until manually edited.
     }
     ret.ClassNameChanged = {};
+
+
+    // initialize default views map
+    if (typeof Defaults.defaultViewsMap[Defaults.Pointer_ViewPointDefault] !== 'object') {
+        for (let k in ret.idlookup) {
+            let e = ret.idlookup[k];
+            if (!e || typeof e !== 'object') continue;
+            let v: DViewElement|DViewPoint = e as any;
+            if (v.className.includes('DViewPoint')) Defaults.defaultViewPointsMap[k] = v;
+            if (v.className.includes('DViewElement')) Defaults.defaultViewsMap[k] = v;
+        }
+    }
 
     return ret;
 
