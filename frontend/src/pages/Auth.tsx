@@ -97,7 +97,7 @@ function AuthPage(): JSX.Element {
           // (user as any)._Id = claims.id;
           AuthApi.storeSessionData(raw.token, !claims.exp ? 0 : claims.exp, user);
           //U.resetState();
-          //R.navigate('/allProjects');
+          R.navigate('/allProjects');
 
         } catch (e) {
           console.error("Login error:");
