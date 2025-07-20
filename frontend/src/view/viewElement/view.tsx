@@ -25,7 +25,7 @@ import {
     LPointerTargetable, LProject, LUser,
     LViewPoint,
     LVoidEdge,
-    MyProxyHandler,
+    MyProxyHandler, PointedBy,
     Pointer,
     Pointers, PrimitiveType,
     RuntimeAccessible,
@@ -35,7 +35,7 @@ import {
     ShortAttribETypes,
     store,
     TRANSACTION,
-    U, Uobj, ViewEClassMatch,
+    U, Uobj, ViewEClassMatch, ViewTransientProperties,
     windoww
 } from "../../joiner";
 import {DUser, EPSize, Pack1, transientProperties } from "../../joiner/classes";
@@ -1525,6 +1525,19 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
             })
             return lview;
         }
+    }
+
+    static updateDefaultView(v: DViewElement | DViewPoint, state?: DState): void {
+        let s = state || store.getState();
+        let newView: DViewElement | DViewPoint = Defaults.defaultViewPointsMap[v.id]||Defaults.defaultViewsMap[v.id];
+        if (!newView) return; // not a default view
+        newView = {...newView} as any;
+        newView.css_MUST_RECOMPILE = true;
+        newView.pointedBy = PointedBy.merge(newView, v);
+        newView.subViews = {...newView.subViews, ...v.subViews};
+        s.idlookup[v.id] = newView;
+        transientProperties.view[v.id] = new ViewTransientProperties();
+        SetRootFieldAction.new('VIEWS_RECOMPILE_all', v.id, '+=', false);
     }
 }
 RuntimeAccessibleClass.set_extend(DPointerTargetable, DViewElement);

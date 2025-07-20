@@ -1661,7 +1661,6 @@ export class PointedBy {
 
     static merge(d1: DPointerTargetable, d2: DPointerTargetable,): PointedBy[] {
         let deduplicator: Dictionary<string, PointedBy> = {};
-        console.log('pby merge', {d1, d2});
         for (let p of d2.pointedBy) deduplicator[p.source] = p;
         for (let p of d1.pointedBy) deduplicator[p.source] = p;
         return Object.values(deduplicator);

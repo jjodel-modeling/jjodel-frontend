@@ -1,9 +1,11 @@
-.commandbar-btn::before {
-    display: block;
-    padding: 0;
-    text-align: center;
-    font-size: 0.9em;
+.tab-btn.commandbar-btn{
     margin-right: 2px;
+    font-size: 1.26em !important; // it is combined 1.5 old in <i> and * 0.9 in ::before
+    &::before {
+        display: block;
+        padding: 0;
+        text-align: center;
+    }
 }
 .commandbar {
     margin-left: 0px;

@@ -21,7 +21,7 @@ function ModelTabComponent(props: AllProps) {
         </div>);
     }
 
-    return(<div className={'w-100 h-100'}>
+    return(<div className={'w-100 h-100'} style={{overflow: 'hidden'}}>
         <ContextMenu />
         <div className={'d-flex h-100'} onClick={e => { if (!U.isProjectModified) U.isProjectModified = U.userHasInteracted = true; }}>
             <ToolBar model={model.id} isMetamodel={model.isMetamodel} metamodelId={props.metamodelid} />

@@ -2487,6 +2487,7 @@ export class U {
         for (let [key, entry] of new URLSearchParams(search).entries()) ret[key] = entry;
         return ret;
     }
+    public static getProjectID_URL(): string | null { return U.getHashParam('id'); }
     public static getHashParam(arg_name: string): string | null {
         let search = window.location.hash;
         let _index = search.indexOf('?');

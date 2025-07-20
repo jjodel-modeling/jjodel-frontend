@@ -92,7 +92,7 @@ export class Defaults { /// TODO: this really needs to become dynamically genera
     // @ts-ignore reduce is not well-typed in ts
     static defaultTypesMap: Dictionary<Pointer, boolean> = Defaults.types.reduce((acc, val) => { acc[val] = true; return acc; }, {});
 
-    static check(id: string): boolean {
+    static check(id: Pointer): boolean {
         return !!(Defaults.defaultViewsMap[id] || Defaults.defaultViewPointsMap[id] || Defaults.defaultTypesMap[id]); // id.indexOf('Pointer_View') !== -1
     }
 }

@@ -327,11 +327,11 @@
   }
 
   & label.disabled {
-    color: var(--bg-4)!important;
+    color: var(--bg-3-1)!important;
   }
 
   & label.disabled .bi {
-    color: var(--bg-4)!important;
+    color: var(--bg-3-1)!important;
   }
 
   & label.disabled:hover {
@@ -401,7 +401,7 @@
         background-color: var(--accent);
         &.disabled {
           background-color: var(--color-lighter) !important;
-          color: var(--bg-3-1) !important;
+          color: var(--bg-1) !important;
         }
       }
     }

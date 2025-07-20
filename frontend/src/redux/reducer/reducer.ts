@@ -938,7 +938,7 @@ function unsafereducer(oldState: DState = initialState, action: Action): DState 
 
 
     // initialize default views map
-    if (typeof Defaults.defaultViewsMap[Defaults.Pointer_ViewPointDefault] !== 'object') {
+    if (typeof Defaults.defaultViewPointsMap[Defaults.Pointer_ViewPointDefault] !== 'object') {
         for (let k in ret.idlookup) {
             let e = ret.idlookup[k];
             if (!e || typeof e !== 'object') continue;
@@ -996,7 +996,7 @@ export function _reducer/*<S extends StateNoFunc, A extends Action>*/(oldState: 
         // todo: se al posto di "annullare l'undo" memorizzo l'azione e la rieseguo, posso ripetere l'ultimo passo N volte e questa azione diventa utile per combinare passi e ripetere blocchi di azioni assieme
         default:
             if (action.type?.indexOf('@@redux/') === 0) {
-                console.log('redux init', {action, oldState, initialState});
+                // console.log('redux init', {action, oldState, initialState});
                 return oldState;
             }
             if (!(action?.className)) { Log.exDevv('unexpected action type:', action.type); return oldState; }
@@ -1265,7 +1265,6 @@ export async function stateInitializer() {
         // R.navigate('/auth');
     }
     setDocumentEvents();
-    console.log('state initializer end');
     /*type RecentEntry = {id: Pointer<DProject>[], name: string};
     let recent: RecentEntry[] = JSON.parse(localStorage.getItem('_jjRecent') || '[]') as any[];
     if (window.location.hash.indexOf('#/project') === 0) { use R.navigate

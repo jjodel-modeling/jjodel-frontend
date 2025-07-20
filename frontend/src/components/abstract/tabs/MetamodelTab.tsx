@@ -31,7 +31,7 @@ function MetamodelTabComponent(props: AllProps) {
         </div>);
     }
 
-    return(<div className={'w-100 h-100'}>
+    return(<div className={'w-100 h-100'} style={{overflow: 'hidden'}}>
         <MetricsPanel data={model}/>
         <ContextMenu />
         {/*<PendingEdge />*/}

@@ -53,7 +53,6 @@ function App(props: AllProps): JSX.Element {
     if (firstLoading) {
         firstLoading = false;
         stateInitializer().then(()=> {
-            console.log('state initializer post await');
             (window as any).appcompo2 = {updateUser, forceUpdate};
             // @ts-ignore
             (window as any).appcompo = {thiss: this, updateUser, forceUpdate};

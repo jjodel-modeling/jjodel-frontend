@@ -2,6 +2,7 @@ import {
     GraphSize, IPoint, DocString, Dictionary, Pointer,
     GObject,
     GraphPoint, DViewPoint, DViewElement, PointedBy,
+    DProject, LViewElement,
 } from "../joiner";
 import {
     Defaults, DGraphElement,
@@ -122,6 +123,9 @@ everytime you put hands into a D-Object shape or valid values, you should docume
             Log.exDev(currVer <= prevVer, "version updater found loop at version \""+currVer+"\", please notify the developers.");
             prevVer = currVer;
         }
+        let pid = U.getProjectID_URL() as Pointer;
+        let project = s.idlookup[pid] as DProject;
+        if (project) project.version = s.version.n;
 
         // update default views
         for (let k in s.idlookup) {
@@ -129,12 +133,7 @@ everytime you put hands into a D-Object shape or valid values, you should docume
             if (!e || typeof e !== 'object') continue;
             let v: DViewElement|DViewPoint = e as any;
             if (v.version !== VersionFixer.highestVersion && !v.clonedCounter){ // NB: for untouched views clonedCounter is undefined, not 0.
-                let newView: DViewElement | DViewPoint = Defaults.defaultViewPointsMap[v.id]||Defaults.defaultViewsMap[v.id];
-                if (!newView) continue; // not a default view
-                newView = {...newView} as any;
-                newView.pointedBy = PointedBy.merge(newView, v);
-                newView.subViews = {...newView.subViews, ...v.subViews};
-                s.idlookup[k] = newView;
+                LViewElement.updateDefaultView(v, s);
             }
         }
         // add new default views
@@ -214,7 +213,7 @@ everytime you put hands into a D-Object shape or valid values, you should docume
             if (!c || typeof c !== 'object') continue;
             if ((c as DGraphElement).isSelected) (c as DGraphElement).isSelected = {};
             if (c?.className?.toLowerCase().includes('view')){
-                (c as DViewPoint|DViewElement).version = 1.0;
+                (c as DViewPoint|DViewElement).version = 2.202; // it is effectively v1 of views
             }
         }
         return s;

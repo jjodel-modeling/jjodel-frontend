@@ -3,6 +3,7 @@
 import React, {Dispatch, JSX, ReactElement, ReactNode, useState} from 'react';
 import {connect} from 'react-redux';
 import {
+    Defaults,
     DPointerTargetable,
     DState,
     DUser,
@@ -27,9 +28,11 @@ import {ViewData} from './ViewData';
 import {Tooltip} from "../../forEndUser/Tooltip";
 import {Btn, CommandBar, Sep} from '../../commandbar/CommandBar';
 import {InternalToggle} from '../../widgets/Widgets';
+import {VersionFixer} from "../../../redux/VersionFixer";
 
 type Metadata = {setView: (p: Pointer)=>any, scoreBoost: number}
 function NestedViewComponent(props: AllProps) {
+    let [forceUpdate, setForceUpdate] = useState(0);
     const project = props.project;
     const viewpoints = props.viewpoints;
     const active = props.active;
@@ -126,7 +129,7 @@ function NestedViewComponent(props: AllProps) {
                 </div>
                 <div className={"hover-stuff vertical-centering d-flex "}>
                     <div className={"ms-auto d-flex"} onClick={preventClick}>
-                        {isVP &&
+                        {isVP && !d.isExclusiveView &&
                             <CommandBar style={{transition: '1s 0.3s', marginTop: '2px'}}>
                                 <Btn icon={'check'} action={() => {select(d.id)}} tip={'Activate'}/>
                             </CommandBar>
@@ -139,6 +142,17 @@ function NestedViewComponent(props: AllProps) {
 
 
                         <CommandBar style={{transition: '1s 0.3s', marginTop: '2px'}}>
+                            {Defaults.check(d.id) && d.version !== VersionFixer.get_highestversion() ?
+                                <Btn icon={'bi-arrow-up-square-fill'/*bi-arrow-repeat*/} action={(e)=> {
+                                    preventClick(e);
+                                    LViewElement.updateDefaultView(d);
+                                    // setForceUpdate(forceUpdate+1);
+                                }}
+                                     tip={
+                                    'This view has been edited by the user, but a new version made from the developers is available.' +
+                                    '\nIt is suggested to update it and reapply your changes.'} style={{background:'black', color:'gold'}}/>
+                                : null
+                            }
                             <Btn icon={'delete'} action={(e)=> { l.delete(); preventClick(e);}} disabled={!canDelete} tip={
                                 isActive ? 'Cannot delete active viewpoint' : (isDefault ? 'Cannot delete default views' : 'Delete' )} />
                             <Tooltip tooltip={'Duplicate'} inline={true} position={'top'} offsetY={10} >
