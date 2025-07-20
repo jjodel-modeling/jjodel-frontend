@@ -21,8 +21,9 @@ import {
     RuntimeAccessibleClass,
     U,
     EdgeOwnProps, EdgeStateProps,
-    LViewPoint, DModelElement, SetFieldAction, LVertex
+    LViewPoint, DModelElement, SetFieldAction, LVertex, Log
 } from "../../joiner";
+import {Tooltip} from "../../components/forEndUser/Tooltip";
 
 let groupingsize: Dictionary<EdgeBendingMode, number> = {} as any;
 groupingsize[EdgeBendingMode.Line] = 1;
@@ -65,15 +66,48 @@ export class EdgeComponent<AllProps extends AllPropss = AllPropss, ThisState ext
     pathSegments(): GraphPoint[][]{
         return U.pairArrayElements(this.pathCoords(), true); }
 */
+
     render(): ReactNode {
-        if (this.props.__skipRender) return null;
-        if (!this.props.node) return "loading";
+        let failure: false | null | typeof React.Fragment = null;
+        console.log('render edge', {props: this.props, node:this.props.node, start:this.props.start});
+        let errorMsg = (msg: string)=> {
+            return <Tooltip tooltip={'Check the logs for more info'}>
+                <div className="edge-error graph-centered p-2" onClick={() => { this.forceUpdate(); }}>
+                    <i className="bi bi-exclamation-diamond-fill" />&nbsp;&nbsp;&nbsp;
+                    {msg}
+                </div>
+            </Tooltip>
+        }
+
+
+        // if (this.props.__skipRender) return failure;
+        // for some reason countRenders is always reset to 0 even if i set it differently here
+        // unless it manages to call .super() after which counts correctly.
+        if ((false as any) && this.countRenders <= 1 && (!this.props.node || this.props.__skipRender)) {
+            // first time does not have node. (but does no create component either and does not count render?)
+            // second time does not have start and end
+            // third time can render
+            return errorMsg('Loading Edge...');
+        }
+        if (!this.props.start?.html) {
+            Log.ee('Missing edge start', {view: (this.props.view||this.props.node?.view||this.props.viewid), node: this.props.node, start: this.props.start, end: this.props.end, data: this.props.data});
+            return errorMsg('Missing edge start');
+        }
+        if (!this.props.end?.html) {
+            Log.ee('Missing edge end', {view: (this.props.view||this.props.node?.view||this.props.viewid), node: this.props.node, start: this.props.start, end: this.props.end, data: this.props.data});
+            return errorMsg('Missing edge end');
+        }
+
+        if (!this.props.node) {
+            Log.eDevv('Missing edge node', {view: (this.props.view||(this.props.node as any)?.view||this.props.viewid), node: this.props.node, start: this.props.start, end: this.props.end, data: this.props.data});
+            return errorMsg("Missing edge node");
+        }
         // set classes
         let nodeType = "Edge";
         let classesoverride = [nodeType];
         // set classes end
         let styleoverride: React.CSSProperties = {};
-        if (!this.props.node?.end?.html || !this.props.node?.start?.html) return null;
+
         return super.render(nodeType, styleoverride, classesoverride);
     }
 
@@ -88,7 +122,7 @@ type AllPropss = Overlap<Overlap<EdgeOwnProps, EdgeStateProps>, DispatchProps>;
 
 function mapStateToProps(state: DState, ownProps: EdgeOwnProps): EdgeStateProps {
     let ret: EdgeStateProps = EdgeStateProps.new();
-    if (!ownProps.data && !ownProps.start || !ownProps.end) return {__skipRender: true} as any;
+    if (!ownProps.data && (!ownProps.start || !ownProps.end)) return {__skipRender: true} as any;
     if (!ownProps.data) {
         let lstart = LPointerTargetable.from(ownProps.start);
         if (RuntimeAccessibleClass.extends(lstart.className, DModelElement.cname)) ret.data = lstart as any;

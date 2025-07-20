@@ -1,0 +1,15 @@
+.graph-centered{
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate3d(-100%, -100%, 109px);
+  z-index: 999999;
+  box-shadow: var(--smart-elevation-8);
+  background-color: white;
+  color: black;
+  .bi::before{
+    color: red;
+    transform: scale(1.5);
+    float: left;
+  }
+}

@@ -374,7 +374,11 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
 
     public shouldComponentUpdate(nextProps: Readonly<AllProps>, nextState: Readonly<GraphElementState>, nextContext: any, oldProps?: Readonly<AllProps>): boolean {
         if (!oldProps) oldProps = this.props;//for subviewcomponent
-        if (nextProps.__skipRender) return false;
+        if (nextProps.__skipRender){
+            // if (nextProps.__skipRender) return false; instead i'm returning null to cleanup the old html
+            if ((oldProps?.node||nextProps.node)?.html) return true;
+            return true;
+        }
         let debug = windoww.debugg || false;
         // return GraphElementComponent.defaultShouldComponentUpdate(this, nextProps, nextState, nextContext);
         let data = nextProps.data?.__raw as DNamedElement | undefined;

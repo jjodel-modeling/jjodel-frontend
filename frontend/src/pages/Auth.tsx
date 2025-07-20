@@ -81,7 +81,7 @@ function AuthPage(): JSX.Element {
           const response = await AuthApi.login(loginRequest);
           const raw: TokenResponse | null = response.data;
 
-
+          console.log('login debug', {loginRequest, response, raw});
           if (response.code !== 200 || !raw?.token || typeof raw.token !== 'string') {
             U.alert('e', 'Login failed or invalid token.', '');
             return;
