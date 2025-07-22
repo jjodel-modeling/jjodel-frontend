@@ -129,7 +129,7 @@ function NestedViewComponent(props: AllProps) {
                 </div>
                 <div className={"hover-stuff vertical-centering d-flex "}>
                     <div className={"ms-auto d-flex"} onClick={preventClick}>
-                        {isVP && !d.isExclusiveView &&
+                        {isVP && d.isExclusiveView &&
                             <CommandBar style={{transition: '1s 0.3s', marginTop: '2px'}}>
                                 <Btn icon={'check'} action={() => {select(d.id)}} tip={'Activate'}/>
                             </CommandBar>
