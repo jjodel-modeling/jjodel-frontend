@@ -408,7 +408,7 @@ export class Selectors{
         return [...state.graphs, ...state.graphvertexs, ...state.graphelements, ...state.vertexs, ...state.edgepoints, ...state.edges];
     }
 
-    private static getFinalScore(entry: ViewScore, vid: Pointer<DViewElement>, parentView: DViewElement | undefined, dview: DViewElement): number {
+    static getFinalScore(entry: ViewScore, vid: Pointer<DViewElement>, parentView: DViewElement | undefined, dview: DViewElement): number {
         if (entry.metaclassScore === ViewEClassMatch.MISMATCH_PRECONDITIONS) return ViewEClassMatch.MISMATCH;
         if (entry.viewPointMatch === ViewEClassMatch.VP_MISMATCH) return ViewEClassMatch.MISMATCH;
         if (entry.jsScore === ViewEClassMatch.MISMATCH_JS || entry.OCLScore === ViewEClassMatch.MISMATCH_JS) return ViewEClassMatch.MISMATCH;
@@ -612,27 +612,9 @@ export class Selectors{
 
 
 
-        type ViewScoreEntry = {element: Pointer<DViewElement>, score: number, view: LViewElement};
+
         if (needsorting || !tn.stackViews) {
-            let mainViews: ViewScoreEntry[] = [];
-            let decorativeViews: ViewScoreEntry[] = [];
-            for (let vid of Object.keys(tn.viewScores)) {
-                let tnv = tn.viewScores[vid];
-                const dview: DViewElement = DPointerTargetable.fromPointer(vid, state);
-                if (!dview) console.error('missing view, is it an old save with less default views?', {dview, vid, state});
-                if (!dview) continue;
-
-                const score = tnv.finalScore = Selectors.getFinalScore(tnv, vid, pv, dview);
-                if (!(score > 0)) continue; // do not flip to <=, because undefined and NEGATIVE_INFINITY always compute to false.
-                (dview.isExclusiveView ? mainViews : decorativeViews).push( {element:vid, score, view: LPointerTargetable.fromD(dview)} );
-            }
-            decorativeViews.sort((s1, s2)=> s2.score - s1.score); // sorted from biggest to smallest
-            mainViews.sort((s1, s2)=> s2.score - s1.score); // sorted from biggest to smallest
-
-            // Log.exDev(!mainViews[0], 'cannot find a matching main view', {mainViews, decorativeViews, data0, scores: tn.viewScores})
-            tn.mainView = mainViews[0]?.view;
-            tn.validMainViews = mainViews.map((s)=> s.view); // this have duplicates of newly created elements
-            tn.stackViews = decorativeViews.map((s)=> s.view);
+            NodeTransientProperties.sort(tn, pv, state)
         }
         // chamges to view or ocl comditiom are mot hamdled here, ut om multple mp/modes a omce
         //nb{}[]

@@ -437,7 +437,14 @@ node.state = {error_lowerbound: err};\n
     valuecolormap[ShortAttribETypes.EVoid] = "gray";
 
 
-    let voidView: DViewElement = DViewElement.new2('Fallback', DV.fallbackView(), vp, undefined, false, Defaults.Pointer_ViewFallback);
+    let voidView: DViewElement = DViewElement.new2('Fallback', DV.fallbackView(), vp, (d)=>{
+        d.css =
+`&.mainView > .void{
+    flex-wrap: wrap;
+    display: flex;
+    border: none;
+}`
+    }, false, Defaults.Pointer_ViewFallback);
 
 
     let edgeViews: DViewElement[] = [];

@@ -181,7 +181,10 @@ const DefaultNodeConnected = connect<DefaultNodeReduxStateProps, DefaultNodeDisp
 
 
 export const DefaultNode = (props: DefaultNodeOwnProps, children: ReactNode = []): ReactElement => {
-    return <DefaultNodeConnected {...{...props, children}} />; }
+    let props2 = {...props, children};
+    // @ts-ignore
+    delete props2.key;
+    return <DefaultNodeConnected {...props2} />; }
 
 
 DefaultNodeComponent.cname = "DefaultNodeComponent";

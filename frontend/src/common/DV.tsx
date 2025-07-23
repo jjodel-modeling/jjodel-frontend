@@ -408,10 +408,11 @@ export class DefaultView {
 
 
     public static void(): string { return (
-`<div className={'root void model-less round bg-white p-1'}>
-    <div>{data ? data.name : "Shapeless"} element</div>
-    <div>This element didn't match any primary view.</div>
-    {decorators}
+`<div className="void model-less">
+    <i className="bi bi-exclamation-diamond-fill" />
+    <div className={"m-auto text-center"}>{data ? data.name : "Shapeless element"}</div>
+    <div className={"m-auto text-center"}>&nbsp;didn't match any primary view</div>
+    {/*decorators*/}
 </div>`
 );}
 

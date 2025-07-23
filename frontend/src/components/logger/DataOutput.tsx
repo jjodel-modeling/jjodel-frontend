@@ -1,7 +1,7 @@
 import React, {PureComponent, ReactNode} from "react";
 import ReactJson from 'react-json-view' // npm i react-json-view --force
 import './logger.scss'
-import {GObject} from "../../joiner";
+import {GObject, U} from "../../joiner";
 
 // function ReactJson(p:any){ return 'reactjson to do'; }
 
@@ -70,21 +70,41 @@ export class DataOutputComponent extends PureComponent<AllProps, ThisState>{
                                               | 'tomorrow'
                                               | 'tube'
                                               | 'twilight'; */}
+        let data: any = this.props.data;
+        // if (data && typeof data === 'object') try { JSON.stringify(data); }
+        // catch (e) { data = JSON.parse(U.circularStringify(data)); /* {'circular reference': true}; */}
+        try {
+            return <ReactJson src={data}
+                              collapsed={1}
+                              collapseStringsAfterLength={20}
+                              displayDataTypes={true}
+                              displayObjectSize={true}
+                              enableClipboard={true}
+                              groupArraysAfterLength={100}
+                              indentWidth={4}
+                              iconStyle={"triangle"}
+                              name={this.props.rootName}
+                              quotesOnKeys={true} shouldCollapse={ false /*((field: CollapsedFieldProps) => { return Object.keys(field.src).length > 3;*/ }
+                              sortKeys={false}
+                              theme={"rjv-default"}
+            />;
+        } catch (e){
+            return <ReactJson src={{'circular reference': true}}
+                              collapsed={1}
+                              collapseStringsAfterLength={20}
+                              displayDataTypes={true}
+                              displayObjectSize={true}
+                              enableClipboard={true}
+                              groupArraysAfterLength={100}
+                              indentWidth={4}
+                              iconStyle={"triangle"}
+                              name={this.props.rootName}
+                              quotesOnKeys={true} shouldCollapse={ false /*((field: CollapsedFieldProps) => { return Object.keys(field.src).length > 3;*/ }
+                              sortKeys={false}
+                              theme={"rjv-default"}
+            />;
+        }
 
-        return <ReactJson src={this.props.data}
-                          collapsed={1}
-                          collapseStringsAfterLength={20}
-                          displayDataTypes={true}
-                          displayObjectSize={true}
-                          enableClipboard={true}
-                          groupArraysAfterLength={100}
-                          indentWidth={4}
-                          iconStyle={"triangle"}
-                          name={this.props.rootName}
-                          quotesOnKeys={true} shouldCollapse={ false /*((field: CollapsedFieldProps) => { return Object.keys(field.src).length > 3;*/ }
-                          sortKeys={false}
-                          theme={"rjv-default"}
-        />;
     };
 
 }

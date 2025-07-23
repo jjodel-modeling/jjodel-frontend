@@ -76,7 +76,6 @@ import {ValuePointers} from "./PointerDefinitions";
 import {ShortDefaultEClasses} from "../../common/U";
 import {transientProperties} from "../../joiner/classes";
 import React, {JSX, ReactNode} from "react";
-import {UpdatingTimer} from "../../redux/reducer/reducer";
 
 type outactions = {clear:(()=>void)[], set:(()=>void)[], immediatefire?: boolean};
 export type SchemaMatchingScore = {
@@ -6295,7 +6294,7 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
                             continue;
                         }
                     }
-                }), UpdatingTimer * 2);
+                }), U.UpdatingTimer * 2);
             });
             return lobj;
         }

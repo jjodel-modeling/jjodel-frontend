@@ -24,7 +24,7 @@ import {
     LVoidEdge,
     LValue,
     DataTransientProperties, L, GraphVertex, Graph, Vertex, Uobj, DEdgePoint, DVertex, DGraphVertex,
-    LVertex
+    LVertex, Defaults
 } from "../../joiner";
 import {DefaultUsageDeclarations} from "./sharedTypes/sharedTypes";
 
@@ -66,7 +66,7 @@ import {EdgeStateProps, LGraphElement, store, VertexComponent,
     windoww, transientProperties
 } from "../../joiner";
 import {NodeTransientProperties, Pack1} from "../../joiner/classes";
-import {UpdatingTimer} from "../../redux/reducer/reducer";
+import {AT_TRANSACTION} from "../../redux/action/action";
 
 const ext_on = "class-can-be-extended";
 const ext_off = "class-cannot-be-extended";
@@ -157,7 +157,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
     // requires data and node wrapping first
     static mapViewStuff(state: DState, ret: GraphElementReduxStateProps, ownProps: GraphElementOwnProps) {
             // let dnode: DGraphElement | undefined = ownProps?.nodeid && DPointerTargetable.from(ownProps.nodeid, state) as any;
-        // console.log("viewsss mapstate 3 " + ret.node?.className + " " + ret.data?.name, {views:ret.views, vv:ret.view, ownProps, stateProps:{...ret}, thiss:this});
+        //console.log("viewsss mapstate 3 " + ret.node?.className + " " + ret.data?.name, {views:ret.views, vv:ret.view, ownProps:{...ownProps}, stateProps:{...ret}, thiss:this});
         ret.parentviewid = ownProps.parentViewId;
 
         const explicitView: Pack1<LViewElement> | string | undefined = ret.view || ownProps.view;
@@ -166,24 +166,43 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         let scores: NodeTransientProperties = undefined as any;
         let tn = transientProperties.node[ownProps.nodeid as string]; // tn === scores if getScore is called (getScore have a sideeffect)
         if (!tn) transientProperties.node[ownProps.nodeid as string] = tn = new NodeTransientProperties();
+        // if i removed manual view assignment, need to re-create valid view list (removing forceed match) and sort them.
+        if (tn.explicitView && !ownProps.view) { // this A03 is made to undo B03
+            // transientProperties.node[ret.nodeid].needSorting = true;
+            NodeTransientProperties.sort(tn, ownProps.parentViewId && DPointerTargetable.from(ownProps.parentViewId, state));
+        }
+
         if (explicitView) {
             let idorname: string = Pointers.from(explicitView) || explicitView as any as string;
-            ret.view = tn.mainView = LPointerTargetable.fromD(Selectors.getViewByIDOrNameD(idorname, state) as DViewElement);
+            let view: LViewElement = LPointerTargetable.fromD(Selectors.getViewByIDOrNameD(idorname, state) as DViewElement);
+            tn.explicitView = view;
+            ret.view = tn.mainView = view ? view : LPointerTargetable.fromPointer(Defaults.Pointer_ViewFallback) as LViewElement;
+        } else {
+            tn.explicitView = undefined;
         }
         if (!ret.view) { // if view is not explicitly set or the assigned view is not found, match a new one.
             if (!scores) scores = getScores(ret, ownProps);
             ret.view = scores.mainView = LPointerTargetable.fromPointer((scores.mainView as any)?.id, state);
+            console.log("viewsss mapstate 4 " + ret.node?.className + " " + ret.data?.name, {views:ret.views, vv:ret.view, ownProps:{...ownProps}, stateProps:{...ret}, thiss:this, scores});
             Log.w(!!explicitView, "Requested main view "+ownProps.view+" not found. Another view got assigned: " + ret.view?.__raw.name, {requested: ownProps.view, props: ownProps, state: ret});
         }
-        if (!tn.validMainViews?.[0] || tn.validMainViews[0].id !== tn.mainView?.id) tn.validMainViews = [tn.mainView, ...(tn.validMainViews || [])];
+
+        if (tn.mainView?.id && (!tn.validMainViews?.[0] || tn.validMainViews[0].id !== tn.mainView?.id)) { // this B03 is undone by A03
+            // NodeTransientProperties.sort(tn, ownProps.parentViewId && DPointerTargetable.from(ownProps.parentViewId, state));
+            tn.validMainViews = [tn.mainView, ...(tn.validMainViews || [])];
+        }
         // @ts-ignore
         let vname: string = !ret.view && ownProps.view ? ' Check the manual assignment of props view={"'+(ownProps.view?.name || ownProps.view) +'"}' : '';
         let pview: LViewElement|undefined = !ret.view ?  ret.node?.father?.view : undefined;
-        Log.ex(!ret.view, "Could not find any view applicable to element." + vname + (pview ? ' in view "'+pview.name+'"' : ''),
+        let logger: typeof Log.e = (ownProps.view) ? Log.e : Log.ex;
+        logger(!ret.view, "Could not find any view applicable to element." + vname + (pview ? ' in view "'+pview.name+'"' : ''),
             {data:ret.data, props: ownProps, state: ret, scores: (ret as any).viewScores,
                 nid: ownProps.nodeid, tn:transientProperties.node[ownProps.nodeid as any], ret, explicitView});
+        if (!ret.view) {
+            ret.view = LPointerTargetable.from(Defaults.Pointer_ViewFallback);
+        }
 
-        if (explicitViews){
+        if (explicitViews) {
             // ret.views = tn.stackViews = LPointerTargetable.fromArr(explicitView);
             let views: LViewElement[] = [];
             for (let v of explicitViews) {
@@ -344,20 +363,14 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         if (Debug.lightMode && (!ret.data || !(lightModeAllowedElements.includes(ret.data.className)))){
             return ret;
         }
-        // console.log("map ge", {ownProps, ret, state});
         GraphElementComponent.mapLGraphElementStuff(state, ownProps, ret, dGraphDataClass);
-        // console.log("viewsss mapstate 2 " + ret.node?.className + " " + ret.data?.name, {views:ret.views, ownProps, stateProps:{...ret}, thiss:this});
 
         GraphElementComponent.mapViewStuff(state, ret, ownProps);
-        // console.log("viewsss mapstate 5 " + ret.node?.className + " " + ret.data?.name, {views:ret.views, ownProps, stateProps:{...ret}, thiss:this});
 
-        Log.exDev(!ret.view || !ret.views, 'failed to assign view:', {state, ownProps, reduxProps: ret});
-        // @ts-ignore
-        ret.key = ret.key || ownProps.key;
+        // Log.exDev(!ret.view || !ret.views, 'failed to assign view:', {state, ownProps, reduxProps: ret});
         // @ts-ignore
         ret.forceupdate = state.forceupdate;
 
-        // Log.l((ret.data as any)?.name === "concept 1", "mapstatetoprops concept 1", {newnode: ret.node});
         U.removeEmptyObjectKeys(ret);
         return ret;
     }
@@ -392,7 +405,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
 
         let subViewUpdated = false;
         let newViews: Dictionary<Pointer, LViewElement> = U.objectFromArray(nextProps.views, 'id');
-        let oldViews: Dictionary<Pointer, LViewElement> = U.objectFromArray(this.props?.views||[], 'id');;
+        let oldViews: Dictionary<Pointer, LViewElement> = U.objectFromArray(this.props?.views, 'id');
         for (let vid in newViews) {
             let nodeviewentry = transientProperties.node[nid].viewScores[vid];
             if (false as any && !(vid in oldViews)) { // newly inserted view
@@ -593,21 +606,21 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
     componentDidUpdate(oldProps?: Readonly<AllProps>) {
         if (this.html?.current) {
             let scrollables = this.props.isGraph ? this.html.current.querySelectorAll('.scrollable') : [];
-            console.log('componentdidupdate pre', {scrollables, id: this.props.nodeid, name: this.props.node.name, html: this.html?.current});
+            //console.log('componentdidupdate pre', {scrollables, id: this.props.nodeid, name: this.props.node.name, html: this.html?.current});
             for (let scrollable of scrollables) {
                 let parent: Element | null = scrollable;
                 while (parent) {
-                    console.log('componentdidupdate loop', {parent, isMV: parent.classList.contains('mainView')});
+                    //console.log('componentdidupdate loop', {parent, isMV: parent.classList.contains('mainView')});
                     if (parent.classList.contains('mainView')) {
                         if (parent === this.html.current) {
                             this.html.current.classList.add('has-scrollable');
                             this.html.current.classList.remove('not-scrollable');
-                            console.log('componentdidupdate loop add', {parent, cl: [...parent.classList]});
+                            //console.log('componentdidupdate loop add', {parent, cl: [...parent.classList]});
                         }
                         else {
                             this.html.current.classList.add('not-scrollable');
                             this.html.current.classList.remove('has-scrollable');
-                            console.log('componentdidupdate loop remove', {parent, cl: [...parent.classList]});
+                            //console.log('componentdidupdate loop remove', {parent, cl: [...parent.classList]});
                         }
                         break;
                     }
@@ -973,7 +986,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
                 /*console.log('loop check', {diff: thischange - loopcheck.calls[loopcheck.calls.length - observationRange],
                     UpdatingTimer,
                     lessthan:safety*loopDetectionSize*observationRange*UpdatingTimer})*/
-                if (thischange - loopcheck.calls[loopcheck.calls.length - observationRange] < safety*loopDetectionSize*observationRange*UpdatingTimer) {
+                if (thischange - loopcheck.calls[loopcheck.calls.length - observationRange] < safety*loopDetectionSize*observationRange*U.UpdatingTimer) {
                     // if N updates in <= 1.2 * 3 * N time units
                     // 20% of safety range
                     // 3x to detect loops like : a->b->c  -> a (does not detect 4-loops)
@@ -986,7 +999,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
                         component: this,
                         loopcheck,
                         deltas,
-                        UpdatingTimer,
+                        updatingTimer:U.UpdatingTimer,
                         timediff: (thischange - loopcheck.calls[loopcheck.calls.length - observationRange])
                     } as any);
                 }
@@ -1188,6 +1201,8 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
 
             let isResized = vertex.isResized;
             classes.push(isResized ? 'isResized' : 'notResized');
+            let adaptWidth = this.props.view.adaptWidth;
+            let adaptHeight = this.props.view.adaptHeight;
             if (isResized || !this.props.view.adaptWidth) {
                 styleoverride.width = size.w + 'px';
                 styleoverride['--width'] = size.w + 'px';
@@ -1198,6 +1213,11 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
                 styleoverride['--height'] = size.h + 'px';
             }
             else styleoverride.height = undefined; // todo: the goal is to reset jqui inline style, but not override user-defined inline style
+
+            if (this.props.isVertex && !Debug.lightMode && !isResized && (adaptWidth || adaptHeight) && this.countRenders >= 0) AT_TRANSACTION(()=>{
+                this.props.node.adaptSize(size, this.props.view, {w: adaptWidth, h: adaptHeight});
+            });
+
         }
 
 
@@ -1349,6 +1369,9 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
                     }                /// let excludeProps = ['data', 'node', 'view', 'children', ]
                     classes.push("mainView", dv.id);
                     classes.push(...subViewsID);
+                    if (this.props.viewid === Defaults.Pointer_ViewFallback) {
+                        classes.push('graph-centered');
+                    }
                     injectProps = {
                         ref: this.html,
                         // damiano: ref html viene settato correttamente a tutti tranne ad attribute, ref, operation (è perchè iniziano con <Select/> as root?)
@@ -1466,8 +1489,10 @@ const GraphElementConnected = connect<GraphElementReduxStateProps, GraphElementD
 )(GraphElementComponent as any);
 
 export const GraphElement = (props: GraphElementOwnProps, children: ReactNode = []): ReactElement => {
-    // @ts-ignore children
-    return <GraphElementConnected {...{...props, children}} />; }
+    let props2 = {...props, children: children||props.children};
+    // @ts-ignore
+    delete props2.key;
+    return <GraphElementConnected {...props2} />; }
 // console.info('graphElement loaded');
 
 

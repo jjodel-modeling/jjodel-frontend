@@ -1,6 +1,6 @@
 // import {Mixin} from "ts-mixer";
 import {isDeepStrictEqual} from "util";
-import type {GObject} from "../../joiner"
+import {GObject, NodeTransientProperties} from "../../joiner"
 import {
     Constructors,
     CoordinateMode, D,
@@ -446,20 +446,19 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
     __info_of__size: Info = {type:"GraphSize", txt: "same as innerSize."};
 
 
-    getSize(outer: boolean = false, canTriggerSet: boolean = true): Readonly<GraphSize> { return this.wrongAccessMessage("getSize()"); }
-    get_getSize(c: Context): ((outer?: boolean, canTriggerSet?: boolean) => Readonly<GraphSize>) {
-        return (outer: boolean = true, canTriggerSet: boolean = true) => this.get_innerSize(c, canTriggerSet, outer); }
+    getSize(outer: boolean = false, canTriggerSet: {w: boolean, h:boolean } = {w:true, h:true}): Readonly<GraphSize> { return this.wrongAccessMessage("getSize()"); }
+    get_getSize(c: Context): (typeof this['getSize']) {
+        return (outer: boolean = true, canTriggerSet: {w: boolean, h:boolean } = {w:true, h:true}) => this.get_innerSize(c, canTriggerSet, outer); }
 
-    get_outerSize(context: Context, canTriggerSet: boolean = true): Readonly<GraphSize> {
+    get_outerSize(context: Context, canTriggerSet: {w: boolean, h:boolean } = {w:true, h:true}): Readonly<GraphSize> {
         return this.get_innerSize(context, canTriggerSet, true);
     }
-    get_size(context: Context, canTriggerSet: boolean = true): Readonly<GraphSize> { return this.get_innerSize(context, canTriggerSet, false); }
-    get_innerSize(context: Context, canTriggerSet: boolean = true, outerSize: boolean = false): Readonly<GraphSize> {
+    get_size(context: Context, canTriggerSet: {w: boolean, h:boolean } = {w:true, h:true}): Readonly<GraphSize> { return this.get_innerSize(context, canTriggerSet, false); }
+    get_innerSize(context: Context, canTriggerSet: {w: boolean, h:boolean } = {w:true, h:true}, outerSize: boolean = false): Readonly<GraphSize> {
         let r = this.get_innerSize_impl(context, canTriggerSet, outerSize);
         return new GraphSize(r.x, r.y, r.w, r.h);
     }
-    protected get_innerSize_impl(context: Context, canTriggerSet: boolean = true, outerSize: boolean = false): Readonly<GraphSize> {
-        canTriggerSet = canTriggerSet && !Debug.lightMode;
+    protected get_innerSize_impl(context: Context, canTriggerSet: {w: boolean, h:boolean } = {w:true, h:true}, outerSize: boolean = false): Readonly<GraphSize> {
         let cname = context.data.className;
         switch (cname) {
             default: return Log.exDevv("unexpected classname in get_size switch: " + context.data.className);
@@ -500,45 +499,93 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
             ret = (this as any as LEdgePoint).decodePosCoords(context, ret, view);
         }
 
-        /*
-                if ((context.data as DVoidVertex).isResized) {
-                    return ret;
-                }*/
-        canTriggerSet = false;
-        if (!canTriggerSet) {
-            if (outerSize) ret = this.get_outerGraph(context).translateSize(ret, this.get_innerGraph(context));
-            return ret;
-        }
-        let html: HTMLElement | undefined | null = this.get_component(context)?.html?.current;
-        let actualSize: Partial<Size> & {w:number, h:number} = html ? Size.of(html) : {w:0, h:0};
-        let cumulativeZoom = this.get_graph(context).cumulativeZoom;
-        // console.log('size 7 ret:', {w:actualSize.w, h:actualSize.h, nw:actualSize.w/cumulativeZoom.x, nh:actualSize.h/cumulativeZoom.y, zx:cumulativeZoom.x, zy:cumulativeZoom.y})
-        actualSize.w /= cumulativeZoom.x;
-        actualSize.h /= cumulativeZoom.y;
-        let isOldElement = (context.data.clonedCounter as number) > 3;
-        // if w = 0 i don't auto-set it as in first render it has w:0 because is not re-rendered and not resized.
-        // console.log("getSize() cantriggerset html size", {ret: ret ? {...ret} : ret, html, actualSize, hcc:html?.dataset?.clonedcounter, ncc: context.data.clonedCounter});
-        if (!html || +(html.dataset.clonedcounter as string) !== context.data.clonedCounter) canTriggerSet = false;
-        let updateSize: boolean = false;
-
-        if (view.adaptWidth && ret.w !== actualSize.w) {
-            if (canTriggerSet && (isOldElement || actualSize.w !== 0)) {
-                ret.w = actualSize.w;
-                updateSize = true;
-            }
-        }
-        if (view.adaptHeight && ret.h !== actualSize.h) {
-            if (canTriggerSet && (isOldElement || actualSize.h !== 0)) {
-                ret.h = actualSize.h;
-                updateSize = true;
-            }
-        }
-        // console.log("getSize() from node merged with actualSize", {ret: {...ret}});
-
-        if (updateSize) this.set_size(ret, context);
         if (outerSize) ret = this.get_outerGraph(context).translateSize(ret, this.get_innerGraph(context));
         return ret;
     }
+    adaptSize(size: GraphSize|EPSize, view: LViewElement, canTriggerSet: {w: boolean, h: boolean} = {w: true, h: true}): void {
+        return this.wrongAccessMessage('adaptSize'); }
+
+    get_adaptSize(c: Context): (typeof this['adaptSize']) {
+        return (size: EPSize, view: LViewElement, canTriggerSet: {w: boolean, h: boolean} = {w: true, h: true})=> {
+            if (Debug.lightMode) return; // canTriggerSet = {w: false, h: false};
+            if (!canTriggerSet.w && !canTriggerSet.h) return;
+            let ret0 = size;
+            let ret = {...ret0};
+            // let viewAdaptWidth = canTriggerSet.w; // view.adaptWidth;
+            // let viewAdaptHeight = canTriggerSet.h; // view.adaptHeight;
+
+            let html: HTMLElement | undefined | null = this.get_component(c)?.html?.current;
+            let actualSize: Partial<Size> & {w:number, h:number} = html ? Size.of(html) : {w:0, h:0};
+            let cumulativeZoom = this.get_graph(c).cumulativeZoom;
+            // console.log('size 7 ret:', {w:actualSize.w, h:actualSize.h, nw:actualSize.w/cumulativeZoom.x, nh:actualSize.h/cumulativeZoom.y, zx:cumulativeZoom.x, zy:cumulativeZoom.y})
+            actualSize.w /= cumulativeZoom.x;
+            actualSize.h /= cumulativeZoom.y;
+            let isOldElement = true; //(c.data.clonedCounter as number) > 3;
+            // console.log("getSize() cantriggerset html size", {ret: ret ? {...ret} : ret, html, actualSize, hcc:html?.dataset?.clonedcounter, ncc: context.data.clonedCounter});
+            // if w = 0 i don't auto-set it, because in first render it has w:0 because is not re-rendered and not resized.
+            if (!html || (c.data.clonedCounter && (c.data.clonedCounter || -1) !== +(html.dataset.clonedcounter as string))) {
+                // canTriggerSet = {w: false, h: false};
+                console.warn('adaptSize mismatching clonedcounter', {cc:c.data.clonedCounter, htmlcc:html?.dataset?.clonedcounter,
+                    cw: canTriggerSet.w, ch: canTriggerSet.h, ret:{...ret}, actualSize, cumulativeZoom});
+                return;
+            }
+
+            console.log('adaptSize', {cc:c.data.clonedCounter, htmlcc:html?.dataset?.clonedcounter,
+                cw: canTriggerSet.w, ch: canTriggerSet.h, ret:{...ret}, actualSize, cumulativeZoom});
+            let updateSize: boolean = false;
+
+            if (ret.w !== actualSize.w) { // viewAdaptWidth &&
+                if (canTriggerSet.w && (isOldElement || actualSize.w !== 0)) {
+                    ret.w = actualSize.w;
+                    updateSize = true;
+                }
+            }
+            if (ret.h !== actualSize.h) { // viewAdaptHeight &&
+                if (canTriggerSet.h && (isOldElement || actualSize.h !== 0)) {
+                    ret.h = actualSize.h;
+                    updateSize = true;
+                }
+            }
+            // console.log("getSize() from node merged with actualSize", {ret: {...ret}});
+
+            // check for resize loops
+            if (updateSize) {
+                let tn = transientProperties.node[c.data.id];
+                let now = Date.now();
+                let historyUpdated = false;
+                let timediff = now - (tn.sizeHistory[tn.sizeHistory.length - 1]?.time || now);
+                if (tn.sizeHistory.length === 0 || timediff >= U.UpdatingTimer) {
+                    tn.sizeHistory.push({h:ret0.h, hh:actualSize.h, diff: timediff, size: {...ret}, ret0, time:now, htmlsize: actualSize, w:ret0.w} as any);
+                    historyUpdated = true;
+                }
+                const ObservationRange = 3; // min 2, it includes current size. so need at least one prev value to check if it has changed.
+                const MaxChangesInRange = 2;
+                const ObservationTime = ObservationRange * 1.2 * U.UpdatingTimer;
+                if (historyUpdated && tn.sizeHistory.length >= ObservationRange && now - tn.sizeHistory[tn.sizeHistory.length - ObservationRange].time <= ObservationTime) {
+                    let changes: number = 0;
+                    for (let i = tn.sizeHistory.length - 2; i >= tn.sizeHistory.length - ObservationRange; i--) {
+                        let prev = tn.sizeHistory[i+1];
+                        let curr = tn.sizeHistory[i];
+                        if (prev.size.w !== curr.size.w || prev.size.h !== curr.size.h) changes++;
+                        if (changes >= MaxChangesInRange) break;
+                    }
+                    if (changes >= MaxChangesInRange) {
+                        TRANSACTION('disabling autosize for view ' + view.name, ()=>{
+                            view.adaptWidth = false;
+                            view.adaptHeight = false;
+                        })
+                        Log.ww(view.name + ' is set automatically adjust size, but some css (padding?, border?, width?) is causing it to grow or shrink at every update.' +
+                            '\nAutosize has been disabled for said view, check the correctness of jsx and css before re-enabling it.');
+                        updateSize = false;
+                    }
+                }
+            }
+            if (updateSize) this.set_size(ret, c);
+            // if (outerSize) ret = this.get_outerGraph(context).translateSize(ret, this.get_innerGraph(c));
+            return ret;
+        }
+    }
+
     // set_size(size: Partial<this["size"]>, context: Context): boolean {
     set_size(size0: Partial<EPSize>, c: Context): boolean {
         console.log("setSize("+")", c, size0);

@@ -552,7 +552,10 @@ function mapDispatchToProps(dispatch: Dispatch<any>): DispatchProps {
 
 
 export function Measurable(props: MeasurableAllProps, children?: any): ReactElement {
-    return <MeasurableComponent {...{...props}}>{props.children||children}</MeasurableComponent>;
+    let props2 = {...props};
+    // @ts-ignore
+    delete props2.key;
+    return <MeasurableComponent {...props2}>{props.children||children}</MeasurableComponent>;
 }
 // shortcuts for Draggable Resizable Rotatable with whileDragging onDragStart props simplified to start, while, end
 export function Draggable(props: GObject<MeasurableAllProps>, children?: any): ReactElement {
@@ -585,8 +588,11 @@ export function Rotatable(props: GObject<MeasurableAllProps>, children?: any): R
 
 
 export function Scrollable(props: MeasurableAllProps, children?: any): ReactElement {
+    let props2 = {...props};
     // @ts-ignore
-    return <ScrollableComponent {...{...props}}>{props.children||children}</ScrollableComponent>;
+    delete props2.key;
+    // @ts-ignore
+    return <ScrollableComponent {...props2}>{props.children||children}</ScrollableComponent>;
 }/*
 export function InfiniteScroll(props: MeasurableAllProps, children: ReactNode = []): ReactElement {
     return <InfiniteScrollComponent {...{...props, children}}>{children}</InfiniteScrollComponent>;

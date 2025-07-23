@@ -170,6 +170,7 @@ function FINAL_END(path?: string, oldval?: any, newval?: any, desc?:string): boo
     }
     return ret;
 }
+
 export class ActionDescriptor{
     path?: string;
     desc?: string;
@@ -214,11 +215,24 @@ export async function TRANSACTION(name:string, func: ()=> void, oldval?: any, ne
     return END([]);
 }
 let at_transaction: ((...a:any)=>void)[] = [];
-export async function AT_TRANSACTION(a:(...argss:any)=>void) {
-    at_transaction.push(a);
+let after_transaction: ((...a:any)=>void)[] = [];
+export async function AT_TRANSACTION(a:(...argss:any)=>void) { at_transaction.push(a); }
+export async function AFTER_TRANSACTION(a:(...argss:any)=>void) { after_transaction.push(a); }
+
+export async function DO_AFTER_TRANSACTION() { // called after reducer
+    if (after_transaction.length) {
+        setTimeout(()=> {
+            let callback: (...argss:any)=>void = null as any;
+            for (callback of after_transaction) callback?.();
+            after_transaction = [];
+        }, 0);
+    }
 }
+
 (window as any).TRANSACTION = TRANSACTION;
 (window as any).AT_TRANSACTION = AT_TRANSACTION;
+(window as any).AFTER_TRANSACTION = AFTER_TRANSACTION;
+(window as any).DO_AFTER_TRANSACTION = DO_AFTER_TRANSACTION;
 (window as any).BEGIN = BEGIN;
 (window as any).ABORT = ABORT;
 (window as any).COMMIT = COMMIT;

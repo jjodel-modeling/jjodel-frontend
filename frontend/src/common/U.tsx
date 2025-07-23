@@ -150,6 +150,7 @@ export type DialogOptions = {
 export class U {
     private static clickedOutsideMap: WeakMap<Element, (e: Element, evt: JQuery.ClickEvent)=>void> = null as any;
     private static clickedOutsideMapEntries: Element[] = null as any; // because weak maps are not iterable and cannot get a list of keys
+    static UpdatingTimer: number = 300;
 
 
     // to register call with both parameters. to remove a listener call with callback=undefined
@@ -189,7 +190,7 @@ export class U {
 
         // when i click on something containined in a label+input, the event fires twice:
         // once for actually clicked element and 1 emulating a click on input/select
-        if ((Date.now() - U.lastClickedTime < 300)){
+        if ((Date.now() - U.lastClickedTime < U.UpdatingTimer)){
             let labelAncestors = clickedAncestors.filter((e, i) => i>0 && e.tagName === 'LABEL');
             if (U.lastClickedAncestors.filter(e=>labelAncestors.includes(e))) return;
             //if (labelAncestors.includes(U.lastClicked)) return;
@@ -1353,6 +1354,7 @@ export class U {
         return typeof v === 'object'; }
 
     static objectFromArray<V extends any>(arr: V[], getKey: keyof V|((entry:V) => string)): Dictionary<string, V>{
+        if (!arr || !Array.isArray(arr)) return {};
         // @ts-ignore
         return arr.reduce((acc, val) => {
             // @ts-ignore
@@ -1552,8 +1554,10 @@ export class U {
     // https://stackoverflow.com/questions/13861254/json-stringify-deep-objects  implementation with depth
     static circularStringify(obj: GObject, replacer?: null | ((key: string, value: any) => any), space?: string | number, maxDepth_unsupported: number = 100): string {
         const cache: any[] = [];
+        if (obj.__raw) obj = obj.__raw;
         return JSON.stringify(obj, (key, value: any) => {
             if (typeof value === 'object' && value !== null) {
+                if (value.__raw) value = value.__raw;
                 // Duplicate reference found, discard key
                 if (cache.includes(value)) return "[Circular Reference]"; // might happen both before and after the replacer func
                 if (replacer){

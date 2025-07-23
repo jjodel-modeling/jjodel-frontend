@@ -352,7 +352,7 @@ function ToolBarComponent(props: AllProps) {
         // @ts-ignore
         // console.error('toolbar', {ct:[...contentarr], ctm:contentarr.map(e=>e?.key), carr:contentarr.separator(separator).flat().flat()})
         // @ts-ignore
-        content = contentarr.separator(separator).flat(2) as any;
+        content = contentarr.separator((i) => <hr className={'my-1'} key={i}/>).flat(2) as any;
 
         toolbarContent = (
             <div className="toolbar-draggable"

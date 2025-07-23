@@ -188,17 +188,26 @@ export abstract class RuntimeAccessibleClass extends AbstractMixedClass {
         Array.prototype.first = function(){ return this[0]; }
         // @ts-ignore
         eval("Array.prototype.last = function(){ return this[this.length-1]; }");// without eval it still gives typescript error even with tsignore
-        // @ts-ignore
+
+        /* parameter can be element, array or function(index)=>element.
+        *  if the function returns an array it is flattened.
+        *  if you don't want it flattened, make the function return a nested array like ()=>[[1,2,3]]
+        *  @ts-ignore */
         (Array.prototype as any).separator = function(...separators: any[]/*: orArr<(PrimitiveType | null | undefined | JSX.Element)[]>*/): (string|JSX.Element)[]{
             if (Array.isArray(separators[0])) separators = separators[0]; // case .join([1,2,3])  --> .join(1, 2, 3)
             // console.log("separators debug", this, separators, this[0], typeof this[0]);
             // if (typeof this[0] !== "object") return (this as any).joinOriginal(separators);
             // if JSX
             // it handles empty cells like it handles '', but this is how native .join() handles them too: [emptyx5, "a", emptyx1, "b"].join(",") ->  ,,,,,a,,b
-            let ret/*:JSX.Element[]*/ = [];
+            let func: ((i: number)=>any)|null = typeof separators === 'function' ? separators : (typeof separators[0] === 'function' ? separators[0] : null);
+            let ret: any[] = [];
             for (let i = 0; i < this.length; i++){
-                if (i === 0) {ret.push(this[i]); continue;}
-                ret.push(...separators);
+                if (i === 0) { ret.push(this[i]); continue; }
+                if (func) {
+                    let funcret = func(i);
+                    if (Array.isArray(funcret)) ret.push(...funcret);
+                    else ret.push(funcret);
+                } else ret.push(...separators);
                 ret.push(this[i]);
             }
             return ret;
@@ -3689,6 +3698,7 @@ export class ViewScore {
     // oldNode: DGraphElement; moved to viewSorted_nodeused // ref to the actual node, not pointer. so even if it's modified through redux,
     // it is still possible to compare old version and new version to check if view.oclUpdateCondition should trigger
 }
+export type ViewScoreEntry = {element: Pointer<DViewElement>, score: number, view: LViewElement};
 
 export class NodeTransientProperties{
     viewSorted_modelused?: LModelElement; // L-version because it is used in oclUpdate function
@@ -3705,10 +3715,37 @@ export class NodeTransientProperties{
     src: any;
     //force1Update!: boolean;
     onDelete?: (node: LGraphElement)=>boolean; // return false to prevent deletion
+    explicitView?: LViewElement;
+    sizeHistory: { size: Partial<GraphSize>, time: number }[];
     constructor(){
         // this.stackViews = []; this.validMainViews = [];
         this.viewScores = {};
         this.src = U.getStackTrace();
+        this.sizeHistory = [];
+    }
+
+    static sort(tn: NodeTransientProperties, pv: DViewElement | undefined, state0?: DState) {
+        let state: DState = state0 || store.getState();
+        let mainViews: ViewScoreEntry[] = [];
+        let decorativeViews: ViewScoreEntry[] = [];
+        for (let vid of Object.keys(tn.viewScores)) {
+            let tnv = tn.viewScores[vid];
+            const dview: DViewElement = DPointerTargetable.fromPointer(vid, state);
+            if (!dview) console.error('missing view, is it an old save with less default views?', {dview, vid, state});
+            if (!dview) continue;
+
+            const score = tnv.finalScore = Selectors.getFinalScore(tnv, vid, pv, dview);
+            if (!(score > 0)) continue; // do not flip to <=, because undefined and NEGATIVE_INFINITY always compute to false.
+            (dview.isExclusiveView ? mainViews : decorativeViews).push( {element:vid, score, view: LPointerTargetable.fromD(dview)} );
+        }
+        decorativeViews.sort((s1, s2)=> s2.score - s1.score); // sorted from biggest to smallest
+        mainViews.sort((s1, s2)=> s2.score - s1.score); // sorted from biggest to smallest
+
+        // Log.exDev(!mainViews[0], 'cannot find a matching main view', {mainViews, decorativeViews, data0, scores: tn.viewScores})
+        tn.mainView = mainViews[0]?.view;
+        tn.validMainViews = mainViews.map((s)=> s.view); // this have duplicates of newly created elements
+        tn.stackViews = decorativeViews.map((s)=> s.view);
+        tn.needSorting = false;
     }
 }
 export class ViewTransientProperties {

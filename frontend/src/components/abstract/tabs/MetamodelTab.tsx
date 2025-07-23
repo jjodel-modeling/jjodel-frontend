@@ -44,7 +44,7 @@ function MetamodelTabComponent(props: AllProps) {
         </div>}
 
 
-        <div className={'d-flex h-100'} onClick={e => { if (!U.isProjectModified) U.isProjectModified = U.userHasInteracted = true; }}>
+        <div className={'d-flex h-100'} style={{overflow:'hidden'}} onClick={e => { if (!U.isProjectModified) U.isProjectModified = U.userHasInteracted = true; }}>
             <ToolBar model={model.id} isMetamodel={model.isMetamodel}/>
             <Try>
                 <div className={"GraphContainer h-100 w-100"} style={{position: "relative"}}>

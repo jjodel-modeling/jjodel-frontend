@@ -425,7 +425,14 @@ i.bi {
 
 
 .GraphContainer{ // multi-select popup fix in graph
-
+  overflow: hidden !important;
+  .Graph, .Graph>.root{ overflow: hidden !important; }
+  .scrollable[graph='DGraph']{
+    overflow: hidden;
+    >.panning-handle{
+      overflow: hidden;
+    }
+  }
   [data-nodetype], [data-nodetype] > * {
     &:has(.css-1nmdiq5-menu) {
       min-height: min-content !important;

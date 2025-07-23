@@ -6,9 +6,10 @@ import type {
     DocString,
     Pointer,
     MouseUpEvent,
+    GObject,
+    U as UType,
 } from '../../joiner';
 import {
-    U as UType,
     GraphDragManager,
     DModelElement,
     DViewElement,
@@ -35,7 +36,6 @@ import {
     DUser,
     Defaults,
     getPath,
-    GObject,
     Log,
     LPointerTargetable,
     MyError,
@@ -49,7 +49,7 @@ import {
     statehistory
 } from "../../joiner";
 import React from "react";
-import {BEGIN, COMMIT, END, LoadAction, RedoAction, UndoAction} from "../action/action";
+import {BEGIN, COMMIT, DO_AFTER_TRANSACTION, END, LoadAction, RedoAction, UndoAction} from "../action/action";
 import Collaborative from "../../components/collaborative/Collaborative";
 import {SimpleTree} from "../../common/SimpleTree";
 import {transientProperties, Selectors} from "../../joiner";
@@ -62,8 +62,6 @@ import DSL from "../../DSL/DSL";
 let windoww = window as any;
 let U: typeof UType = windoww.U;
 
-export let UpdatingTimer = 300;
-const mergeTolerance = UpdatingTimer*1.5;
 
 
 function deepCopyButOnlyFollowingPath(oldStateDoNotModify: DState, action: ParsedAction, prevAction: ParsedAction, newVal: any): DState | false{
@@ -445,12 +443,15 @@ export function reducer(oldState: DState = initialState, action: Action): DState
     if (U.navigating) return oldState;
     if (!windoww.jjactions) windoww.jjactions = [];
     windoww.jjactions.push(action);
-    try { let ret = unsafereducer(oldState, action); return ret; }
-    catch(e) {
+    try {
+        let ret = unsafereducer(oldState, action);
+        DO_AFTER_TRANSACTION();
+        return ret;
+    }
+    catch (e) {
         console.error('unhandled error in reducer', {e, oldState, action});
         return oldState;
     }
-
 }
 
 function unsafereducer(oldState: DState = initialState, action: Action): DState {
@@ -988,6 +989,7 @@ function doUndoRedo(oldState: DState, action: Action, isUndo:'undo'|'redo'): DSt
 
 const allowFixingNullArr: boolean = false;
 export function _reducer/*<S extends StateNoFunc, A extends Action>*/(oldState: DState = initialState, action: Action): DState{
+    const mergeTolerance = U.UpdatingTimer*1.5;
 
     switch (action.type) {
         case UndoAction.type: return doUndoRedo(oldState, action, 'undo');
@@ -1099,6 +1101,8 @@ export function _reducer/*<S extends StateNoFunc, A extends Action>*/(oldState: 
 }
 
 function isRelevantChangeCheck(delta: GObject<DState>, pastDelta?: GObject<DState>): boolean {
+    const mergeTolerance = U.UpdatingTimer*1.5;
+
     if (!U.userHasInteracted) return false;
     if (pastDelta && delta.timestamp - pastDelta.timestamp < mergeTolerance) return false;
     if (!statehistory.globalcanundostate) return false;
@@ -1209,8 +1213,18 @@ function buildLSingletons(alld: Dictionary<string, typeof DPointerTargetable>, a
     }
 }
 
+const originalFocus = HTMLElement.prototype.focus;
 function setDocumentEvents(){
-    // do not use typings or class constructors here or it will change import order
+    // do not use types (imported as classes) here or it will change import order
+
+    // https://developer.mozilla.org/en-US/docs/Web/API/HTMLElement/focus
+    HTMLElement.prototype.focus = function (options?: GObject) {
+        if (options === undefined || options === null) { options = {}; }
+        // Always prevent scroll by default
+        if (typeof options === "object") { options.preventScroll = true; }
+        return originalFocus.call(this, options);
+    };
+
     setTimeout(
         ()=> $(document).on("mouseup",
             (e: MouseUpEvent) => {
@@ -1219,7 +1233,7 @@ function setDocumentEvents(){
             })
         , 1);
     // document.body.addEventListener("mousedown", fixResizables, false);
-    setInterval(()=>{ COMMIT(undefined, false) }, UpdatingTimer);
+    setInterval(()=>{ COMMIT(undefined, false) }, windoww.U.UpdatingTimer);
 }
 function fixResizables(e: MouseEvent){
     /*let parents = U.ancestorArray(e.target as HTMLElement);
@@ -1277,5 +1291,4 @@ export async function stateInitializer() {
         recent.push(current);
         localStorage.setItem('_jjRecent', JSON.stringify(recent));
     }*/
-
 }

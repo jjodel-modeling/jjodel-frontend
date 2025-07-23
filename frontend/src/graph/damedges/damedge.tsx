@@ -21,7 +21,7 @@ import {
     RuntimeAccessibleClass,
     U,
     EdgeOwnProps, EdgeStateProps,
-    LViewPoint, DModelElement, SetFieldAction, LVertex, Log
+    LViewPoint, DModelElement, SetFieldAction, LVertex, Log, Measurable
 } from "../../joiner";
 import {Tooltip} from "../../components/forEndUser/Tooltip";
 
@@ -71,12 +71,14 @@ export class EdgeComponent<AllProps extends AllPropss = AllPropss, ThisState ext
         let failure: false | null | typeof React.Fragment = null;
         console.log('render edge', {props: this.props, node:this.props.node, start:this.props.start});
         let errorMsg = (msg: string)=> {
-            return <Tooltip tooltip={'Check the logs for more info'}>
-                <div className="edge-error graph-centered p-2" onClick={() => { this.forceUpdate(); }}>
-                    <i className="bi bi-exclamation-diamond-fill" />&nbsp;&nbsp;&nbsp;
-                    {msg}
+            return (/*<Measurable draggable={true} resizable={false}><div className="edge-error graph-centered">*/
+                <Tooltip tooltip={'Check the logs for more info'}>
+                <div className="edge-error graph-centered" onClick={() => { this.forceUpdate(); }}>
+                    <i className="bi bi-exclamation-diamond-fill" />
+                    <span className={"m-auto"}>{msg}</span>
                 </div>
-            </Tooltip>
+                </Tooltip>
+            /*</div></Measurable>*/);
         }
 
 

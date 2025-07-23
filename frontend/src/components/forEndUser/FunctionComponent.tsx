@@ -212,7 +212,6 @@ function FunctionComponent(props: AllProps) {
         </label>);
     }
 
-    let transitionTime = 300;
 
     return <div className={"function-editor-root"} data-mode={advancedMode ? "detailedMode" : "simpleMode"} style={{fontSize: "0.9rem"}}>
         <div className={"d-flex w-100 function-editor-header"}>

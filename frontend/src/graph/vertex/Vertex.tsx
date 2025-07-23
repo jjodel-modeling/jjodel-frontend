@@ -127,7 +127,7 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
                 distance: 5,
                 helper: () => { // or 'clone'
                     // dragHelper.style.display='block';
-                    let size = this.getSize();
+                    let size = this.props.node.size; // this.getSize();
                     // let actualSize = Size.of(html);
                     // if (size.w !== actualSize.w || size.h !== actualSize.h) this.setSize({w:actualSize.w, h:actualSize.h});
                     /*dragHelper.setAttribute('xx', size.x+'');
@@ -150,7 +150,7 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
 
                     TRANSACTION('Vertex dragStart ' + this.props.node.name, ()=> {
                         for (let vid of allviews) this.doMeasurableEvent(EMeasurableEvents.onDragStart, vid);
-                        windoww.dragging_vertex_size_tmp = this.getSize();
+                        windoww.dragging_vertex_size_tmp = this.props.node.size; // this.getSize();
                     })
                 },
                 drag: (evt: GObject<'mousemoveevent'>, ui: JQUIDragging) => {
@@ -333,11 +333,14 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
 
 
     getSize(): Readonly<GraphSize> {
-        return this.props.node.getSize(false, !this.props.node.isResized && this.props.view.adaptWidth);
+        throw new Error('Vertex.getSize is obsolete');
+        return null as any;
+        // return this.props.node.getSize(false, !this.props.node.isResized && this.props.view.adaptWidth);
+        // below is handled in get_size
         /*console.log('get_size('+(this.props?.data as any).name+')', {
             view:this.props.view.getSize(this.props.dataid || this.props.nodeid as string),
             node:this.props.node?.size,
-            default: this.props.view.defaultVSize});*/
+            default: this.props.view.defaultVSize});* /
         let ret = this.props.view.getSize(this.props.data?.id || this.props.nodeid as string)
             || this.props.node?.size
             || this.props.view.defaultVSize;
@@ -351,7 +354,7 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
             this.setSize({h:actualSize.h});
             ret.h = actualSize.h;
         }
-        return ret;
+        return ret;*/
     }
     // setSize(x_or_size_or_point: number, y?: number, w?:number, h?:number): void;
     setSize(x_or_size_or_point: Partial<GraphPoint>): void;
@@ -467,31 +470,49 @@ export const VertexConnected = connect<VertexStateProps, DispatchProps, VertexOw
 )(VertexComponent as any);
 
 export const Vertex = (props: VertexOwnProps, children: ReactNode | undefined = []): ReactElement => {
-    return <VertexConnected {...{...props, children}}
+    let props2 = {...props, children: props.children||children};
+    // @ts-ignore
+    delete props2.key;
+    return <VertexConnected {...props2}
         isGraph={false} isGraphVertex={false} isVertex={true} isEdgePoint={false} isField={false} isEdge={false} isVoid={false}/>;
 }
 export const VoidVertex = (props: VertexOwnProps, children: ReactNode | undefined = []): ReactElement => {
-    return <VertexConnected {...{...props, children}}
+    let props2 = {...props, children: props.children||children};
+    // @ts-ignore
+    delete props2.key;
+    return <VertexConnected {...props2}
                             isGraph={false} isGraphVertex={false} isVertex={true} isEdgePoint={false} isField={false} isEdge={false} isVoid={true}/>;
 }
 export const EdgePoint = function EdgePoint (props: VertexOwnProps, children: ReactNode | undefined = []): ReactElement {
-    return <VertexConnected {...{...props, children}}
+    let props2 = {...props, children: props.children||children};
+    // @ts-ignore
+    delete props2.key;
+    return <VertexConnected {...props2}
                             isGraph={false} isGraphVertex={false} isVertex={true} isEdgePoint={true} isField={false} isEdge={false} isVoid={false}/>;
 }
 // todo: name them all or verify the name is still usable.
 
 export const Graph = (props: VertexOwnProps, children: ReactNode | undefined = []): ReactElement => {
-    return <VertexConnected {...{...props, children}}
+    let props2 = {...props, children: props.children||children};
+    // @ts-ignore
+    delete props2.key;
+    return <VertexConnected {...props2}
                             isGraph={true} isGraphVertex={false} isVertex={false} isEdgePoint={false} isField={false} isEdge={false} isVoid={false} />;
 }
 
 export const GraphVertex = (props: VertexOwnProps, children: ReactNode | undefined = []): ReactElement => {
-    return <VertexConnected {...{...props, children}}
+    let props2 = {...props, children: props.children||children};
+    // @ts-ignore
+    delete props2.key;
+    return <VertexConnected {...props2}
                             isGraph={true} isGraphVertex={true} isVertex={true} isEdgePoint={false} isField={false} isEdge={false} isVoid={false}/>;
 }
 
 export const Field = (props: VertexOwnProps, children: ReactNode | undefined = []): ReactElement => {
-    return <VertexConnected {...{...props, children}}
+    let props2 = {...props, children: props.children||children};
+    // @ts-ignore
+    delete props2.key;
+    return <VertexConnected {...props2}
                             isGraph={false} isGraphVertex={false} isVertex={false} isEdgePoint={false} isField={true} isEdge={false} isVoid={false} />;
 }
 (window as any).componentdebug = {Graph, GraphVertex, Field, Vertex, VoidVertex, EdgePoint, VertexConnected, VertexComponent};
