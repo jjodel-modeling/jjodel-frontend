@@ -74,7 +74,7 @@ function DockComponent(props: AllProps) {
     tabs.push(tree);
     tabs.push(views);
     // if (advanced) tabs.push(metadata);
-    if (advanced) tabs.push(broker);
+    // if (advanced) tabs.push(broker);
     tabs.push(node);
     tabs.push(console);
     // if (advanced) tabs.push(mtm);
