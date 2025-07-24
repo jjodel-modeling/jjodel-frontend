@@ -59,26 +59,31 @@ function BottomBarComponent(props: AllProps): JSX.Element {
         }
     }
 
-    return(<footer className={'footer'}>
-        <label className={'me-3'}>
-            Made with <i className="bi bi-heart-fill" /> in the swen group
-        </label>
-        <div style={{width: '100px'}}></div>
-        <div className={'coordinates'} hidden={!node}>
-            {data?.name}&nbsp;
-            {nodepos}
-        </div>
-        {swenOpen && 
+    return (
+        <footer className={'footer'}>
+            <label className={'me-3'}>
+                Made with <i className="bi bi-heart-fill" /> in the swen group
+            </label>
+            <div style={{width: '100px'}}></div>
+            <div className={'coordinates'} hidden={!node}>
+                {data?.name}&nbsp;
+                {nodepos}
+            </div>
+            {swenOpen && 
                 <>
                     <div className='modal-container'></div>
                     <div className='swen'>
                         <img src={swen} onClick={(e) => setSwen(false)} />
                     </div>
                 </>
-        }
-        <JjodelName />
-
-    </footer>)
+            }
+            <JjodelName />
+            <div className="license me-3">
+                Open source under the &nbsp; <a href="https://opensource.org/licenses/MIT" target="_blank" rel="noopener noreferrer">
+                MIT License</a> 
+            </div>
+        </footer>
+    )
 }
 
 interface OwnProps {}
