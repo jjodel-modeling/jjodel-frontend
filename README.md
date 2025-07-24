@@ -12,12 +12,15 @@ The application is publicly accessible at [this link.](https://mdegroup.github.i
 If you want to run it locally, clone this repository, [install node.js and npm](https://nodejs.org/it/download), then run the following commands with a terminal opened at project's ./frontend folder, just after the repository root.
 
 `npm install`
+
 `npm i react-json-view --force`
 
 then
+
 `npm run start`
 
 or
+
 `npm run build`
 
 # Links
