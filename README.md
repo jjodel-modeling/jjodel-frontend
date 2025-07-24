@@ -22,6 +22,7 @@ then
 or
 
 `npm run build`
+`npm run serve`
 
 # Links
 [MDEGroup jodel repository](https://github.com/MDEGroup/jjodel): This is where stable, production-ready versions are released.
