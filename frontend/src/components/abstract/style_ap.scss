@@ -139,7 +139,7 @@ body > .dragging-layer > div:last-child {
 }
 .dock-tab-active,
 .dock-tab-active:hover {
-  border-top: 3px solid var(--accent);
+  border-top: 3px solid red; //var(--accent);
   color: var(--accent);
   cursor: default;
   transform: translateZ(0);
