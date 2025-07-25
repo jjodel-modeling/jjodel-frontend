@@ -164,7 +164,7 @@ function DebuggerComponent(props: DProps) {
         /*if (d !== oldDepth) */setDepth(d);
     }
 
-    return <section className={'debugger'}>
+    return <section className={'debugger'}><>
         <Tooltip tooltip={'Step-By-Step'} inline={true} position={'bottom'}>
             <label onClick={()=> {
                 if (depth <= 1) BEGIN(); // pause before triggering step-by-step
@@ -176,7 +176,7 @@ function DebuggerComponent(props: DProps) {
         </Tooltip>
         <Tooltip tooltip={'Resume actions (depth: ' + (depth-1) + ')'} inline={true} position={'bottom'}>
             <label className={'debug-icon me-1' + (depth <= 1 ? ' disabled' : '')} onClick={() => END()}>{icon.playsquare}</label>
-        </Tooltip>
+        </Tooltip></>
     </section>
 }
 
