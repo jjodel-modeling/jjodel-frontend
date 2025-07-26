@@ -298,7 +298,7 @@ const EditCheckbox = (props: EditProps) => {
         <div className={'form-group edit checkbox'}>
             <Tooltip tooltip={tooltip}>
                 <label>
-                    <input className={'input text-start d-block mt-2 '+className}
+                    <input className={'input text-start d-block mt-2 ' + className}
                         type={"checkbox"} 
                         required={required}
                         disabled={disabled}

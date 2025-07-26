@@ -1167,10 +1167,6 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
             return this.props.data ? <div>{" " + ((this.props.data as any).name)}:{this.props.data.className}</div> : undefined;
         }
         if (!this.props.node) return "Loading...";
-        /*if (this.props.node.__raw.view !== this.props.view.id) {
-            this.onViewChange();
-            return "Updating view...";
-        }*/
         if (this.updateNodeFromProps(this.props as GObject<any>)) return 'Updating...';
 
         classes.push(nodeType);

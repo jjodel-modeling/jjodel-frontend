@@ -69,6 +69,7 @@
     "poststart": "echo to debug http://localhost:3000/ click this using CTRL+SFHIT",
     "test": "react-app-rewired test",
     "serve": "serve -s build",
+    "ii": "npm i && npm i react-json-view --force",
     "______________________________________deploy________________________________": "",
     "build": "react-app-rewired build",
     "postbuild": "",

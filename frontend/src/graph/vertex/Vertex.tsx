@@ -54,6 +54,16 @@ type JQUIDragging = {
     originalPosition: JQUIPosition,
 }
 
+type ResizableUI = {
+    element: JQuery<HTMLElement>,
+    helper: JQuery<HTMLElement>,
+    originalElement: JQuery<HTMLElement>, // same as element?
+    originalPosition: {left: number, top: number},
+    originalSize: {width: number, height: number},
+    position: {left: number, top: number},
+    size: {width: number, height: number},
+}
+
 export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState extends ThisStatee = ThisStatee>
     extends superclassGraphElementComponent<AllProps, ThisState> {
     public static cname: string = 'VertexComponent';
@@ -104,6 +114,7 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
         let allviews: Pointer<DViewElement>[] = [view, ...this.props.views].map(v=>v.id);
 
         let dragCacheZoom: GraphPoint | null = null;
+        let resizeCacheZoom: GraphPoint | null = null;
 
         // $element = $(html).find('.measurable').addBack();
         try {
@@ -154,6 +165,7 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
                     })
                 },
                 drag: (evt: GObject<'mousemoveevent'>, ui: JQUIDragging) => {
+
                     if (dragCacheZoom) {
                         ui.offset.left = (ui.position.left /= dragCacheZoom.x);
                         ui.offset.top = (ui.position.top /= dragCacheZoom.y);
@@ -200,27 +212,47 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
             }
             if (!this.resizableOptions) {
                 this.resizableOptions = {
-                    helper: 'selected-by-me',
-                    start: (event: GObject, obj: GObject) => {
+                    helper: 'resize-shadow selected-by-me', // does not accept functions or html elements, just classes...
+                    start: (evt: GObject, ui: ResizableUI) => {
                         TRANSACTION('onResizeStart events ' + this.props.node.name, ()=>{
+                            console.log('resize  start cache', {evt, ui}, $('.resize-shadow'))
+                            resizeCacheZoom = this.props.node.graph.cumulativeZoom; // NB: cumulative zoom only of parent graphs, excluding zoom of direct vertex
+                            if (ui.helper[0]) ui.helper[0].style.transform = 'scale(' + resizeCacheZoom.x*100+'%, '+resizeCacheZoom.y*100+'%)';
+                            if (ui.helper[0]) ui.helper[0].style.transformOrigin = 'top left';
+                            resizeCacheZoom = {x:1, y:1} as any; // transform is enough and better
+                            ui.originalSize.width = (ui.originalSize.width /= resizeCacheZoom!.x);
+                            ui.originalSize.height = (ui.originalSize.height /= resizeCacheZoom!.y);
+                            ui.size.width = (ui.size.width /= resizeCacheZoom!.x);
+                            ui.size.height = (ui.size.height /= resizeCacheZoom!.y);
                             if (!this.props.node.isResized) this.props.node.isResized = true; // set only on manual resize, so here and not on setSize()
                             for (let vid of allviews) this.doMeasurableEvent(EMeasurableEvents.onResizeStart, vid);
+                            // ;
                         })
                     },
-                    resize: (event: GObject, obj: GObject) => {
+                    resize: (event: GObject, ui: ResizableUI) => {
                         TRANSACTION('resizing events ' + this.props.node.name, ()=>{
-                            if (!this.props.view.lazySizeUpdate) this.setSize({w:obj.size.width, h:obj.size.height});
+                            if (resizeCacheZoom) {
+                                ui.size.width = (ui.size.width /= resizeCacheZoom.x);
+                                ui.size.height = (ui.size.height /= resizeCacheZoom.y);
+                            }
+                            if (!this.props.view.lazySizeUpdate) this.setSize({w:ui.size.width, h:ui.size.height});
                             for (let vid of allviews) this.doMeasurableEvent(EMeasurableEvents.whileResizing, vid);
                         })
                     },
-                    stop: (event: GObject, obj: GObject) => {
+                    stop: (event: GObject, ui: ResizableUI) => {
                         if (!this.state.classes.includes('resized')) this.setState({classes:[...this.state.classes, 'resized']});
                         // if (!withSetSize) { node.width = obj.size.width; node.height = obj.size.height; } else {
                         let absolutemode = false; // this one is less tested and safe, but should work even if html container is sized 0. best if made to work
                         let newSize: Partial<GraphSize>;
+                        if (resizeCacheZoom){
+                            ui.size.width = (ui.size.width /= resizeCacheZoom.x);
+                            ui.size.height = (ui.size.height /= resizeCacheZoom.y);
+                            resizeCacheZoom = null;
+                        }
                         if (absolutemode) {
                             let nativeevt: MouseEvent = event.originalEvent.originalEvent;
-                            let htmlSize = Size.of(event.target, false);
+                            // let htmlSize = Size.of(event.target, false);
+                            let htmlSize = Size.of(ui.helper[0], false);
                             newSize = this.props.node.graph.translateHtmlSize(htmlSize);
                             /*n
                             this is some pixels off, i think because inner coords are post the border of the container element,
@@ -278,7 +310,7 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
                             console.log('resizing', {newSize, htmlSize, event, nativeevt, sizeof_with_transforms: Size.of(event.target, true)});
                             // NB: size.x and size.y are going crazy if the element have an edge, no idea why, i just deleted x & y before setSize()
                         }
-                        else newSize = {w:obj.size.width, h:obj.size.height};
+                        else newSize = {w:ui.size.width, h:ui.size.height};
                         // evt coordinates: clientX, layerX, offsetX, pageX, screenX
                         TRANSACTION('onResizeEnd events ' + this.props.node.name, ()=>{/*
                             delete newSize.x;

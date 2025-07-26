@@ -9,14 +9,16 @@
   & > .root { border: none; }
 }
 
+.resize-shadow{
+  outline: 2px dashed black;
+}
 .selected-by-me {
   outline: 2px dashed black;
 }
-
 .selected-by-others {
   outline: 2px dashed indigo;
 }
 .Edge.selected-by-me, .Edge.selected-by-others{
-  outline: none;
+  outline: none !important;
 }
 

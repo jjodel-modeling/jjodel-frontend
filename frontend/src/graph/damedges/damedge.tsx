@@ -44,6 +44,7 @@ export class EdgeComponent<AllProps extends AllPropss = AllPropss, ThisState ext
 
     constructor(props: AllProps, context?: any) {
         super(props, context);
+        console.log('constructor render edge', {props: this.props, node:this.props.node, start:this.props.start});
     }
 /*
     path(): string {
@@ -113,6 +114,11 @@ export class EdgeComponent<AllProps extends AllPropss = AllPropss, ThisState ext
         return super.render(nodeType, styleoverride, classesoverride);
     }
 
+    shouldComponentUpdate(nextProps: Readonly<AllProps>, nextState: Readonly<ThisState>, nextContext: any, oldProps?: Readonly<AllProps>): boolean {
+
+        console.log('shouldComponentUpdate render edge', {props: this.props, node:this.props.node, start:this.props.start});
+        return super.shouldComponentUpdate(nextProps, nextState, nextContext, oldProps);
+    }
 }
 
 
@@ -124,12 +130,18 @@ type AllPropss = Overlap<Overlap<EdgeOwnProps, EdgeStateProps>, DispatchProps>;
 
 function mapStateToProps(state: DState, ownProps: EdgeOwnProps): EdgeStateProps {
     let ret: EdgeStateProps = EdgeStateProps.new();
+
+    console.log('mapstate render edge 1', {ownProps, node:ownProps.nodeid, start:ownProps.start});
     if (!ownProps.data && (!ownProps.start || !ownProps.end)) return {__skipRender: true} as any;
     if (!ownProps.data) {
         let lstart = LPointerTargetable.from(ownProps.start);
         if (RuntimeAccessibleClass.extends(lstart.className, DModelElement.cname)) ret.data = lstart as any;
     }
+    console.log('mapstate render edge 2', {ownProps, node:ownProps.nodeid, start:ownProps.start});
+
     ret = GraphElementComponent.mapStateToProps(state, ownProps, DEdge, ret) as EdgeStateProps;
+
+    console.log('mapstate render edge 3', {ownProps, node:ret.node, start:ret.start});
     // superret.lastSelected = state._lastSelected ? LPointerTargetable.from(state._lastSelected.modelElement) : null;
     ret.isEdgePending = {
         user: LPointerTargetable.from(state.isEdgePending.user),
@@ -160,8 +172,11 @@ export const EdgeConnected = connect<EdgeStateProps, DispatchProps, EdgeOwnProps
 )(EdgeComponent as any);
 
 export const Edge = (props: EdgeOwnProps, children: ReactNode = []): ReactElement => {
-    // @ts-ignore children
-    return <EdgeConnected {...{...props, children}}
+
+    console.log('constructor 00 render edge', {props, node:props.nodeid, start:props.start});
+    let props2 = {...props, children};
+    delete props2.key;
+    return <EdgeConnected {...props2}
                           isGraph={false} isGraphVertex={false} isVertex={false} isEdgePoint={false} isField={false} isEdge={true} isVoid={false} />;
 }
 

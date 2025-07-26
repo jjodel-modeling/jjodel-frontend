@@ -289,6 +289,7 @@ export class DState extends DPointerTargetable{
   &.selected-by-me, &:has(.selected-by-me, .Edge, .edge, .edges), &:hover, &:active, &:focus-within, &:focus{
     overflow: visible;
     z-index: 100 !important;
+    outline: 2px dashed black;
   }
 }
 /* edge overflow is always visible (or lines would be cropped)*/
@@ -437,8 +438,15 @@ node.state = {error_lowerbound: err};\n
     valuecolormap[ShortAttribETypes.EVoid] = "gray";
 
 
-    let voidView: DViewElement = DViewElement.new2('Fallback', DV.fallbackView(), vp, (d)=>{
-        d.css =
+    let voidView: DViewElement = DViewElement.new2('Fallback', DV.fallbackView(), vp, (v)=>{
+        v.usageDeclarations = "";
+        v.usageDeclarations = `(ret)=>{ // scope: data, node, view, state,
+// ** preparations and default behaviour here ** //
+// add preparation code here (like for loops to count something), then list the dependencies below.
+// ** declarations here ** //
+ret.parentView = L.from(component.props.parentviewid);
+}`
+        v.css =
 `&.mainView > .void{
     flex-wrap: wrap;
     display: flex;
