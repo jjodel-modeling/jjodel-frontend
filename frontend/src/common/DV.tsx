@@ -386,7 +386,7 @@ export class DefaultView {
     <div className={'edges'}>
         {level > 0 && [
             refEdges.map(se => <Edge data={se.start} start={se.startVertex} end={se.endVertex} anchorStart={0} anchorEnd={0} key={se.id} isReference={true} 
-            view={'Edge' + (se.start.composition ? 'Composition' : (se.start.aggregation ? 'Aggregation' : 'Association'))} />),
+            view={'Edge' + (se.start.composition ? 'Composition' : (se.start.aggregation ? 'Aggregation' : 'Association'))} label={se.start.name}/>),
             extendEdges.map(se => <Edge data={se.start} start={se.startVertex} end={se.endVertex} view={'EdgeInheritance'} isExtend={true} key={se.id} />)
         ]}
     </div>
