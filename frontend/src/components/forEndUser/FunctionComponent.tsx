@@ -7,6 +7,7 @@ import {stringify} from "querystring";
 import "./FunctionComponent.scss";
 import { CommandBar, Btn, Sep } from '../commandbar/CommandBar';
 import { Tooltip } from './Tooltip';
+import Editor from '@monaco-editor/react';
 
 /*
  Rationale behind this:
@@ -130,8 +131,8 @@ function identifierChange(e: React.FormEvent<HTMLInputElement>, i: number, v: Fu
     set(v);
 }
 
-function textAreaChange(e: React.FormEvent<HTMLTextAreaElement>, v: FunctionComponentState, set: SetState): void {
-    set({...v, ta: {v:e.currentTarget.value, isDirty: true} });
+function textAreaChange(value: string | undefined, v: FunctionComponentState, set: SetState): void {
+    set({...v, ta: {v: value ?? '', isDirty: true} });
 }
 /*
 function ChangeAndBlur(e: React.FormEvent<HTMLTextAreaElement>, v: FunctionComponentState, set: SetState, props: AllProps): void {
@@ -161,6 +162,8 @@ function onBlur(v: FunctionComponentState, set: SetState, props: AllProps, i?: n
     }
     updateFunctionValue(props, v.ta.v, v.arr);
 }
+
+
 
 function updateFunctionValue(props: AllProps, textAreaContent: string, stateArrayValues: RowData[]){
     let declarations: string[] = stateArrayValues.map( o => o.id.value && o.exp.value ? o.id.prefix + "." + o.id.value + " = " + o.exp.value : '');
@@ -299,11 +302,48 @@ function FunctionComponent(props: AllProps) {
                 overflow:"hidden"*/
             }}>
 
-            <textarea className={"detailedMode input w-100"} disabled={readOnly} rows={Math.min(10, state.ta.v.split("\n").length)}
+
+
+            {/* <textarea className={"detailedMode input w-100"} disabled={readOnly} rows={Math.min(10, state.ta.v.split("\n").length)}
                   onInput={(e)=>textAreaChange(e, state, setState)}
                   onBlur={(e)=> !readOnly && onBlur(state, setState, props)}
                   data-txtcontent={state.ta.v}
-                  value={state.ta.v} />
+                  value={state.ta.v} />*/}
+
+
+            <div className={'monaco-editor-wrapper detailedMode'}
+                    style={{padding: '5px',marginBottom: '10px', minHeight: '20px', transition: 'height 0.3s', height: '200px', resize: 'vertical', overflow:'hidden'}}
+                    tabIndex={-1} >
+
+            
+
+                <Editor
+                width="100%"
+                defaultLanguage="plaintext"
+                value={state.ta.v}
+                options={{
+                    readOnly: readOnly,
+                    minimap: { enabled: false },
+                    scrollBeyondLastLine: false,
+                    wordWrap: "on",
+                    lineNumbers: "on",
+                    fontSize: 12,
+                    padding: { top: 4, bottom: 4 },
+                    "semanticHighlighting.enabled": true,
+                    scrollbar: { vertical: 'hidden', horizontalScrollbarSize: 5 },
+                    autoIndent: "full"
+                }}
+                onChange={(value) => {
+                    if (!readOnly) {
+                        textAreaChange(value, state, setState);
+                        onBlur(state, setState, props);
+                    }
+                }}
+                
+                />
+
+
+            </div>
             {inputs}
             {false && <div style={{whiteSpace:"pre"}}>{(props.data as any)[props.field]}</div>}
         </div>}

@@ -116,6 +116,7 @@ function JsxEditorComponent(props: AllProps) {
                     onFocus={() => setExpand(true)}
                     onBlur={(e) => {setExpand(false); blur(e);}}
                     tabIndex={-1} >
+
             <Editor className={'mx-1'} onChange={change} language={"typescript"}
                     options={{fontSize: 12, scrollbar: {vertical: 'hidden', horizontalScrollbarSize: 5}, minimap: {enabled: false}, readOnly: readOnly}}
                     defaultLanguage={'typescript'} value={dview.jsxString} />

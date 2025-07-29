@@ -31,7 +31,7 @@ function TemplateData(props: AllProps) {
             <Function
                 data={view}
                 field={"usageDeclarations"}
-                jsxLabel={<label className={"d-block jj-editor-title"}>Observed Properties</label>}
+                jsxLabel={<label className={"d-block jj-editor-title"}>Observed properties</label>}
                 readOnly={readOnly}
             />
 

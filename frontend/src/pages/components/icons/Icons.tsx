@@ -5,7 +5,7 @@ import { Tooltip } from '../../../components/forEndUser/Tooltip';
 import { Logo, MetamodelIcon, ModelIcon } from '../../../components/logo';
 
 import { LuPackage2 } from "react-icons/lu";
-import { CgToolbarTop as Toolbar } from "react-icons/cg";
+import { CgPlayButtonR, CgPlayPauseR, CgPlayTrackNextR, CgToolbarTop as Toolbar } from "react-icons/cg";
 
 export let icon: { [name: string]: any} = {
     'new': <i className="bi bi-plus-circle-dotted menuitem"></i>,
@@ -49,6 +49,9 @@ export let icon: { [name: string]: any} = {
     pausecircle: <i className="bi bi-pause-circle"/>,
     playcircle: <i className="bi bi-play-circle"/>,
     stepcircle: <i className="bi bi-step-circle"/>,
+    pausesquare: <CgPlayPauseR />,
+    playsquare: <CgPlayButtonR />,
+    stepsquare:<CgPlayTrackNextR />,
     eye: <i className="bi bi-eye" />,
     eyeslash: <i className="bi bi-eye-slash" />,
     'fullscreen-exit': <i className="bi bi-fullscreen-exit"></i>,
