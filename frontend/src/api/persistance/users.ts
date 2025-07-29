@@ -28,6 +28,7 @@ class UsersApi {
 
     static async getUserByGUID(guid: string, raw: TokenResponse, claims?: JwtClaims|null): Promise<DUser|null> {
         let response = await Api.get(`${Api.persistance}/account/by-id/${guid}`);
+        console.log('getUserByGUID', {guid, raw, claims, response, code:response.code, data:response.data});
         if ((response.code+'')[0] !== '2' || !response.data) { // if response code starts with 2 (200, 204) i know it is a terrible check but it's legacy.
             return null;
         }
@@ -36,7 +37,7 @@ class UsersApi {
 
     static async updateUserById(updateUserRequest: UpdateUserRequest): Promise<boolean> {
         const response = await Api.put(`${Api.persistance}/account/`, {...updateUserRequest});
-        console.log(response.code, response.data);
+        console.log('UpdateUserById', {updateUserRequest, code:response.code, data:response.data, response});
 
         if ((response.code+'')[0] !== '2') { // if response code starts with 2 (200, 204) i know it is a terrible check but it's legacy.
             return false;
