@@ -212,6 +212,9 @@ export class DV {
         "\n}" +
         "\n.label-text{" +
         "\n\tcolor: var(--stroke-color);" +
+        "\n\tbackground-color: white;" +
+        "\n\tpadding: 0 10px!important;" +
+        "\n\tborder-radius: 3px;" +
         "\n}" +
         "\nforeignObject.label{" +
         "\n\toverflow: visible;" +
@@ -245,7 +248,7 @@ export class DV {
                     <path key={i} tabIndex="-1" className={"clickable content segment"} d={s.dpart} />,
                     s.label && <foreignObject key={'label'} className="label" x={(s.start.pt.x + s.end.pt.x)/2+"px"} y={(s.start.pt.y + s.end.pt.y)/2+"px"}>
                     <div className={"label-text"}
-                     style={{transform: "translate(-50%, 0%) rotate("+s.radLabels+"rad) translate(0%, -"+(1-0.5*Math.abs(Math.abs(s.radLabels)%Math.PI)/(Math.PI/2))*100+"%)"+
+                     style={{transform: "translate(-50%, 0%) translate(0%, -"+(1-0.5*Math.abs(Math.abs(s.radLabels)%Math.PI)/(Math.PI/2))*100+"%)"+
                      " translate(0%, -5px"}}>{s.label}</div>
                     </foreignObject>
                 ])}
@@ -383,7 +386,7 @@ export class DefaultView {
     <div className={'edges'}>
         {level > 0 && [
             refEdges.map(se => <Edge data={se.start} start={se.startVertex} end={se.endVertex} anchorStart={0} anchorEnd={0} key={se.id} isReference={true} 
-            view={'Edge' + (se.start.composition ? 'Composition' : (se.start.aggregation ? 'Aggregation' : 'Association'))} />),
+            view={'Edge' + (se.start.composition ? 'Composition' : (se.start.aggregation ? 'Aggregation' : 'Association'))} label={se.start.name}/>),
             extendEdges.map(se => <Edge data={se.start} start={se.startVertex} end={se.endVertex} view={'EdgeInheritance'} isExtend={true} key={se.id} />)
         ]}
     </div>

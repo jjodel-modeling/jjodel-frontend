@@ -211,16 +211,29 @@ function NestedViewComponent(props: AllProps) {
 
 
     let [view, setView] = useStateIfMounted(undefined as (undefined | Pointer<DViewElement>));
+    let [vp_expanded, setVpExpanded] = useStateIfMounted<Boolean>(false);
+
     let vieweditor = view && <div className={"single-view-content"}><ViewData key={view} viewid={view} viewpoints={viewpoints.map(v=>v.id)} setSelectedView={setView} /></div>;
     return(<div className={"view-editor-root"}>
         <section className={'viewpoint-tab'}>
             <div className={"view-editor-fullsize-content"}>
                 <div className={'d-flexd-flex'}>
-                    <h1>
+                    <h1 onClick={() => setVpExpanded(!vp_expanded)}>
                         Viewpoints
                         <CommandBar style={{float: 'right'}}>
-                            <Btn icon={'shrink'} active={collapseAll}         action={() => {setCollapseAll(true)}}  tip={'Collapse all'} />
-                            <Btn icon={'expand'} active={collapseAll===false} action={() => {setCollapseAll(false)}} tip={'Expand all'}   />
+                            {vp_expanded ? 
+                                <Btn icon={'shrink'} 
+                                    active={collapseAll} 
+                                    action={() => {setVpExpanded(!vp_expanded);setCollapseAll(true)}}  
+                                    tip={'Collapse all'} 
+
+                                /> :
+                                <Btn icon={'expand'} 
+                                    active={collapseAll===false} 
+                                    action={() => {setVpExpanded(!vp_expanded);setCollapseAll(false)}} 
+                                    tip={'Expand all'}   
+                                />
+                    }
                             <Sep />
                             <Btn icon={'add'} action={addVP} tip={'Create a new viewpoint'} />
                         </CommandBar>

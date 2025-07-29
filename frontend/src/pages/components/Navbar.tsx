@@ -164,19 +164,19 @@ function DebuggerComponent(props: DProps) {
         /*if (d !== oldDepth) */setDepth(d);
     }
 
-    return <section className={'debugger'}>
+    return <section className={'debugger'}><>
         <Tooltip tooltip={'Step-By-Step'} inline={true} position={'bottom'}>
             <label onClick={()=> {
                 if (depth <= 1) BEGIN(); // pause before triggering step-by-step
                 else COMMIT();
-            }} className={'debug-icon me-1'}>{icon.stepcircle}</label>
+            }} className={'debug-icon me-1'}>{icon.stepsquare}</label>
         </Tooltip>
         <Tooltip tooltip={'Pause actions'} inline={true} position={'bottom'}>
-            <label className={'debug-icon me-1' + (depth > 1 ? ' disabled' : '')} onClick={() => BEGIN()}>{icon.pausecircle}</label>
+            <label className={'debug-icon me-1' + (depth > 1 ? ' disabled' : '')} onClick={() => BEGIN()}>{icon.pausesquare}</label>
         </Tooltip>
         <Tooltip tooltip={'Resume actions (depth: ' + (depth-1) + ')'} inline={true} position={'bottom'}>
-            <label className={'debug-icon me-1' + (depth <= 1 ? ' disabled' : '')} onClick={() => END()}>{icon.playcircle}</label>
-        </Tooltip>
+            <label className={'debug-icon me-1' + (depth <= 1 ? ' disabled' : '')} onClick={() => END()}>{icon.playsquare}</label>
+        </Tooltip></>
     </section>
 }
 
