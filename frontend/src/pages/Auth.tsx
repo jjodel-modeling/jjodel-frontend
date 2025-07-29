@@ -34,17 +34,14 @@ function AuthPage(): JSX.Element {
             case 'login':
                 await login();
                 SetRootFieldAction.new('isLoading', false);
-
                 break;
             case 'register':
                 await register();
                 SetRootFieldAction.new('isLoading', false);
-
                 break;
             case 'retrieve-password':
                 await reset_password();
                 SetRootFieldAction.new('isLoading', false);
-
                 break;
         }
 
@@ -88,6 +85,7 @@ function AuthPage(): JSX.Element {
           }
 
           const claims = AuthApi.readJwtToken(raw.token);
+          console.log('login claims', {response, raw, claims});
           if (!claims) {
             U.alert('e', 'Invalid token.', '');
             return;

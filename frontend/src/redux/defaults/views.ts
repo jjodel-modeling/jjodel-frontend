@@ -82,7 +82,7 @@ class DefaultViews {
             'let suggestedEdges = data?.suggestedEdges || {};\n' +
             '// data, node, view are dependencies by default. delete the line(s) above if you want to remove them.\n' +
             '// add preparation code here (like for loops to count something), then list the dependencies below.\n' +
-            // ¡ The element will update only if one of the listed dependencies has changed !
+            // ¡ The element will update only if one of the Observed Properties has changed !
             '// ** declarations here ** //\n' +
             'ret.firstPackage = packages[0]\n'+
             'ret.otherPackages = packages.slice(1)\n'+
@@ -132,7 +132,7 @@ border-radius: var(--radius);
                 '// custom preparations:\n' +
                 '// data, node, view are dependencies by default. delete the line(s) above if you want to remove them.\n' +
                 '// add preparation code here (like for loops to count something), then list the dependencies below.\n' +
-                // ¡ The element will update only if one of the listed dependencies has changed !
+                // ¡ The element will update only if one of the Observed Properties has changed !
                 '// ** declarations here ** //\n' +
                 udLevelPkg +
                 '}';
@@ -197,7 +197,7 @@ border-color: silver!important;
     // custom preparations:
     // data, node, view are dependencies by default. delete the line(s) above if you want to remove them.
     // add preparation code here (like for loops to count something), then list the dependencies below.
-    // ¡ The element will update only if one of the listed dependencies has changed !
+    // ¡ The element will update only if one of the Observed Properties has changed !
     // ** declarations here ** //
     ret.attributes = data.attributes
     ret.references = data.references
@@ -279,7 +279,7 @@ border-radius: var(--radius);
     // custom preparations:
     // data, node, view are dependencies by default. delete the line(s) above if you want to remove them.
     // add preparation code here (like for loops to count something), then list the dependencies below.
-    // ¡ The element will update only if one of the listed dependencies has changed !
+    // ¡ The element will update only if one of the Observed Properties has changed !
     // ** declarations here ** //
     ret.literals = data.literals
     ${udLevel}
@@ -345,7 +345,7 @@ border-radius: var(--radius);
     // custom preparations:
     // data, node, view are dependencies by default. delete the line(s) above if you want to remove them.
     // add preparation code here (like for loops to count something), then list the dependencies below.
-    // ¡ The element will update only if one of the listed dependencies has changed !
+    // ¡ The element will update only if one of the Observed Properties has changed !
     // ** declarations here ** //
     ${udLevel}
 }`;
@@ -424,7 +424,7 @@ border-radius: var(--radius);
                 'ret.view = view\n' +
                 '// data, node, view are dependencies by default. delete the line(s) above if you want to remove them.\n' +
                 '// add preparation code here (like for loops to count something), then list the dependencies below.\n' +
-                // ¡ The element will update only if one of the listed dependencies has changed !
+                // ¡ The element will update only if one of the Observed Properties has changed !
                 '// ** declarations here ** //\n' +
                 'ret.metaclassName = data.instanceof?.name || \'Object\'\n' +
                 udLevel +
@@ -458,7 +458,7 @@ border-radius: var(--radius);
                 'ret.view = view\n' +
                 '// data, node, view are dependencies by default. delete the line(s) above if you want to remove them.\n' +
                 '// add preparation code here (like for loops to count something), then list the dependencies below.\n' +
-                // ¡ The element will update only if one of the listed dependencies has changed !
+                // ¡ The element will update only if one of the Observed Properties has changed !
                 '// ** declarations here ** //\n' +
                 'ret.metaclassName = data.instanceof?.name || \'Object\'\n' +
                 'ret.isSingleton = data.instanceof?.isSingleton || false\n' +
@@ -494,7 +494,7 @@ border-radius: var(--radius);
                 'ret.view = view\n' +
                 '// data, node, view are dependencies by default. delete the line(s) above if you want to remove them.\n' +
                 '// add preparation code here (like for loops to count something), then list the dependencies below.\n' +
-                // ¡ The element will update only if one of the listed dependencies has changed !
+                // ¡ The element will update only if one of the Observed Properties has changed !
                 '// ** declarations here ** //\n' +
                 'ret.instanceofname = data.instanceof?.name\n' +
                 'ret.valuesString = data.valuesString()\n' +
@@ -531,7 +531,7 @@ border-radius: var(--radius);
             "ret.view = view\n" +
             "// data, node, view are dependencies by default. delete the line(s) above if you want to remove them.\n" +
             "// add preparation code here (like for loops to count something), then list the dependencies below.\n\n" +
-            // ¡ The element will update only if one of the listed dependencies has changed !
+            // ¡ The element will update only if one of the Observed Properties has changed !
             "// ** declarations here ** //\n" +
             "ret.edgestart = node.edge.start?.size+''\n" +
             "ret.edgeend = node.edge.end?.size+''\n" +

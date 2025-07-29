@@ -530,8 +530,8 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
                 return;
             }
 
-            console.log('adaptSize', {cc:c.data.clonedCounter, htmlcc:html?.dataset?.clonedcounter,
-                cw: canTriggerSet.w, ch: canTriggerSet.h, ret:{...ret}, actualSize, cumulativeZoom});
+            // console.log('adaptSize', {cc:c.data.clonedCounter, htmlcc:html?.dataset?.clonedcounter,
+            //     cw: canTriggerSet.w, ch: canTriggerSet.h, ret:{...ret}, actualSize, cumulativeZoom});
             let updateSize: boolean = false;
 
             if (ret.w !== actualSize.w) { // viewAdaptWidth &&
@@ -588,7 +588,6 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
 
     // set_size(size: Partial<this["size"]>, context: Context): boolean {
     set_size(size0: Partial<EPSize>, c: Context): boolean {
-        console.log("setSize("+")", c, size0);
         if (!size0) return false;
         let size = new GraphSize().clone(size0 as EPSize, true) as any as Partial<EPSize>;
         size.currentCoordType = (size0).currentCoordType;
@@ -721,6 +720,7 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
         Log.eDev([...new Set(val)].length !== val.length, "subelemnts setter have duplicates", {val, context});
         // if (isDeepStrictEqual(context.data.subElements, val)) return true;
         let pointers: Pointer<DGraphElement, 0, 'N', LGraphElement> = Pointers.from(val) || [];
+        pointers = U.arrayUnique(pointers);
         if (Uarr.equals(pointers, context.data.subElements, false)) return true;
 
         TRANSACTION(this.get_name(context as any)+'.subElements', ()=> {
@@ -1163,20 +1163,20 @@ export class LGraph<Context extends LogicContext<DGraph> = any, D extends DGraph
             let ret: T = 'w' in size ? new GraphSize(size.x, size.y, size.w, size.h) : new GraphPoint(size.x, size.y, size.w, size.h);
             let currDebug = currAncestors.map(g=>({offset:g.offset, zoom:g.zoom, ad:g.size.tl()}))
             let targetDebug = targetAncestors.map(g=>({offset:g.offset, zoom:g.zoom, ad:g.size.tl()}))
-            console.log("translateSizee pre", this.get_name(c), ret.x, ret.y, {size, ret, currAncestors, targetAncestors, currDebug, targetDebug} )
+            // console.log("translateSizee pre", this.get_name(c), ret.x, ret.y, {size, ret, currAncestors, targetAncestors, currDebug, targetDebug} )
             for (let g of currAncestors){
                 ret.add(g.offset.tl(), false);
                 ret.multiply(g.zoom, false);
                 ret.add(g.size.tl(), false);
             }
-            console.log("translateSizee mid", this.get_name(c), ret.x, ret.y, {size, ret, currAncestors, targetAncestors, currDebug, targetDebug} )
+            // console.log("translateSizee mid", this.get_name(c), ret.x, ret.y, {size, ret, currAncestors, targetAncestors, currDebug, targetDebug} )
 
             for (let g of targetAncestors){
                 ret.subtract(g.size.tl(), false);
                 ret.divide(g.zoom, false);
                 ret.subtract(g.offset.tl(), false);
             }
-            console.log("translateSizee ret", this.get_name(c), ret.x, ret.y, {size, ret, currAncestors, targetAncestors} )
+            // console.log("translateSizee ret", this.get_name(c), ret.x, ret.y, {size, ret, currAncestors, targetAncestors} )
 
             return ret; }
         //todo: check how many passes you need to go down or up, and make the up version too

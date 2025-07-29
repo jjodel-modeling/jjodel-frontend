@@ -658,7 +658,7 @@ public static object(): string { return (
 
         switch (notificationType) {
             case 'classic':
-                return (<Measurable draggable={true} resizable={false}><div className='hoverable error-root' tabIndex={0}>
+                return (<Measurable draggable={true} resizable={false}><div className='hoverable error-root graph-centered' tabIndex={0}>
                     <i className="bi bi-exclamation-diamond-fill" style={{color: "red"}} />
                     <div className='content fixed error-notification'>
                         <h1>Something Went Wrong...</h1>

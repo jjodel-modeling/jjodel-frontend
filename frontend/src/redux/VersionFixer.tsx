@@ -427,7 +427,7 @@ everytime you put hands into a D-Object shape or valid values, you should docume
 
     public static mandatoryKeys = ['father'];
     public static removeNullPtrs(out:{counter: number, list:{path: string, val: string[]}[]}, s: DState, lookup: Dictionary<DocString<'className'>, DPointerTargetable[]>,
-                                 cn: DocString<'ClassName'>, keys: string[]): void {
+                                 cn: DocString<'ClassName'>, keys: string[], removeDuplicates: boolean = true): void {
         for (let d of (lookup[cn]||[])) {
             for (let k of keys) {
                 if (!(k in d)) continue;
@@ -444,8 +444,13 @@ everytime you put hands into a D-Object shape or valid values, you should docume
                 */
                 if (Array.isArray(v)) {
                     let removed: any[] = [];
+                    let duplicateChecker: Dictionary = {};
                     (d as GObject)[k] = (v as any[]).filter(e => {
-                        if (e && Pointers.isPointer(e) && s.idlookup[e]) return true;
+                        if (e && Pointers.isPointer(e) && s.idlookup[e]) {
+                            if (removeDuplicates && duplicateChecker[e]) return false; // duplicate
+                            duplicateChecker[e] = e;
+                            return true;
+                        }
                         removed.push(e);
                         return false;
                     });

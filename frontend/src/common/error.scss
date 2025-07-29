@@ -73,11 +73,10 @@
 
 .error-root.ui-draggable.hoverable{
     overflow: visible;
-    width: 1lh;
-    height: 1lh;
     text-align: center;
     border-color: crimson;
     margin: 10px;
+    pointer-events: all;
 }
 
 .error-notification {

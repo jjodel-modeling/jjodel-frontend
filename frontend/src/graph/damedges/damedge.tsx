@@ -44,7 +44,7 @@ export class EdgeComponent<AllProps extends AllPropss = AllPropss, ThisState ext
 
     constructor(props: AllProps, context?: any) {
         super(props, context);
-        console.log('constructor render edge', {props: this.props, node:this.props.node, start:this.props.start});
+        // console.log('constructor render edge', {props: this.props, node:this.props.node, start:this.props.start});
     }
 /*
     path(): string {
@@ -70,7 +70,7 @@ export class EdgeComponent<AllProps extends AllPropss = AllPropss, ThisState ext
 
     render(): ReactNode {
         let failure: false | null | typeof React.Fragment = null;
-        console.log('render edge', {props: this.props, node:this.props.node, start:this.props.start});
+        // console.log('render edge', {props: this.props, node:this.props.node, start:this.props.start});
         let errorMsg = (msg: string)=> {
             return (/*<Measurable draggable={true} resizable={false}><div className="edge-error graph-centered">*/
                 <Tooltip tooltip={'Check the logs for more info'}>
@@ -115,8 +115,7 @@ export class EdgeComponent<AllProps extends AllPropss = AllPropss, ThisState ext
     }
 
     shouldComponentUpdate(nextProps: Readonly<AllProps>, nextState: Readonly<ThisState>, nextContext: any, oldProps?: Readonly<AllProps>): boolean {
-
-        console.log('shouldComponentUpdate render edge', {props: this.props, node:this.props.node, start:this.props.start});
+        // console.log('shouldComponentUpdate render edge', {props: this.props, node:this.props.node, start:this.props.start});
         return super.shouldComponentUpdate(nextProps, nextState, nextContext, oldProps);
     }
 }
@@ -131,17 +130,15 @@ type AllPropss = Overlap<Overlap<EdgeOwnProps, EdgeStateProps>, DispatchProps>;
 function mapStateToProps(state: DState, ownProps: EdgeOwnProps): EdgeStateProps {
     let ret: EdgeStateProps = EdgeStateProps.new();
 
-    console.log('mapstate render edge 1', {ownProps, node:ownProps.nodeid, start:ownProps.start});
+    // console.log('mapstate render edge 1', {ownProps, node:ownProps.nodeid, start:ownProps.start});
     if (!ownProps.data && (!ownProps.start || !ownProps.end)) return {__skipRender: true} as any;
     if (!ownProps.data) {
         let lstart = LPointerTargetable.from(ownProps.start);
         if (RuntimeAccessibleClass.extends(lstart.className, DModelElement.cname)) ret.data = lstart as any;
     }
-    console.log('mapstate render edge 2', {ownProps, node:ownProps.nodeid, start:ownProps.start});
 
     ret = GraphElementComponent.mapStateToProps(state, ownProps, DEdge, ret) as EdgeStateProps;
 
-    console.log('mapstate render edge 3', {ownProps, node:ret.node, start:ret.start});
     // superret.lastSelected = state._lastSelected ? LPointerTargetable.from(state._lastSelected.modelElement) : null;
     ret.isEdgePending = {
         user: LPointerTargetable.from(state.isEdgePending.user),
@@ -172,8 +169,7 @@ export const EdgeConnected = connect<EdgeStateProps, DispatchProps, EdgeOwnProps
 )(EdgeComponent as any);
 
 export const Edge = (props: EdgeOwnProps, children: ReactNode = []): ReactElement => {
-
-    console.log('constructor 00 render edge', {props, node:props.nodeid, start:props.start});
+    // console.log('constructor 00 render edge', {props, node:props.nodeid, start:props.start});
     let props2 = {...props, children};
     delete props2.key;
     return <EdgeConnected {...props2}

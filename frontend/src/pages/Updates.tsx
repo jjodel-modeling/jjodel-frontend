@@ -126,7 +126,7 @@ function versionsetup() {
                 <br/>
                 Example: {"<div onClick={(evt)=>{data.$active=true; U.clickedOutside(evt, ()=>data.$active=false)}} ></div>"} where
                 data is a m1-object holding a boolean feature "active"
-                {warnicon} To ensure the node is properly updated, remember to add "Listed dependencies" accordingly
+                {warnicon} To ensure the node is properly updated, remember to add "Observed Properties" accordingly
                 to
                 the value edited in the view.
                 <br/>In this example you need the dependency "active = data.$active" or equivalent ones.

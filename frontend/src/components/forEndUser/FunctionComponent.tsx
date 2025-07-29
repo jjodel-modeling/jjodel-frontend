@@ -133,6 +133,12 @@ function identifierChange(e: React.FormEvent<HTMLInputElement>, i: number, v: Fu
 function textAreaChange(e: React.FormEvent<HTMLTextAreaElement>, v: FunctionComponentState, set: SetState): void {
     set({...v, ta: {v:e.currentTarget.value, isDirty: true} });
 }
+/*
+function ChangeAndBlur(e: React.FormEvent<HTMLTextAreaElement>, v: FunctionComponentState, set: SetState, props: AllProps): void {
+    let newState = {...v, ta: {v:e.currentTarget.value, isDirty: true} };
+    set(newState);
+    onBlur(newState, set, props);
+}*/
 
 function onBlur(v: FunctionComponentState, set: SetState, props: AllProps, i?: number, isDelete?: boolean) {
     if (isDelete) {

@@ -183,7 +183,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         if (!ret.view) { // if view is not explicitly set or the assigned view is not found, match a new one.
             if (!scores) scores = getScores(ret, ownProps);
             ret.view = scores.mainView = LPointerTargetable.fromPointer((scores.mainView as any)?.id, state);
-            console.log("viewsss mapstate 4 " + ret.node?.className + " " + ret.data?.name, {views:ret.views, vv:ret.view, ownProps:{...ownProps}, stateProps:{...ret}, thiss:this, scores});
+            // console.log("viewsss mapstate 4 " + ret.node?.className + " " + ret.data?.name, {views:ret.views, vv:ret.view, ownProps:{...ownProps}, stateProps:{...ret}, thiss:this, scores});
             Log.w(!!explicitView, "Requested main view "+ownProps.view+" not found. Another view got assigned: " + ret.view?.__raw.name, {requested: ownProps.view, props: ownProps, state: ret});
         }
 
@@ -529,7 +529,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         // console.log("render debug measurable " + type + " view: " + vid, {context, type, lm: Debug.lightMode, vid});
         try {
             TRANSACTION((this.props.data?.name || 'Shapeless')+'.'+type+'()', ()=>measurableFunc.call(context, context));
-            console.log("measurable executed", {type, measurableFunc, vid, transient:transientProperties.view[vid]});
+            // console.log("measurable executed", {type, measurableFunc, vid, transient:transientProperties.view[vid]});
         }
         catch (e: any) {
             Log.ee('Error in measurable "'+L.from(vid).name+'".'+type+' ' + e.message, {e, measurableFunc, context});
@@ -1051,19 +1051,6 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
                 SetRootFieldAction.new('idlookup.'+d.id, d, '', false);
             }
         }
-        else if (props.isVertex) {
-            if (dnode.className.indexOf('Vertex') === -1) {
-                ret = true;
-                // switch to v
-                let o = DVertex.new(0, undefined, '', '', undefined);
-                let d: GObject = {...dnode};
-                d.className = 'DVertex';
-                for (let k in o) {
-                    if (!(k in d)) d[k] = (o as GObject)[k];
-                }
-                SetRootFieldAction.new('idlookup.'+d.id, d, '', false);
-            }
-        }
         else if (props.isEdgePoint) {
             if (dnode.className !== 'DEdgePoint') {
                 ret = true;
@@ -1071,6 +1058,19 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
                 let o = DEdgePoint.new(0, undefined, '', '', undefined);
                 let d: GObject = {...dnode};
                 d.className = 'DEdgePoint';
+                for (let k in o) {
+                    if (!(k in d)) d[k] = (o as GObject)[k];
+                }
+                SetRootFieldAction.new('idlookup.'+d.id, d, '', false);
+            }
+        }
+        else if (props.isVertex) {
+            if (dnode.className.indexOf('Vertex') === -1) {
+                ret = true;
+                // switch to v
+                let o = DVertex.new(0, undefined, '', '', undefined);
+                let d: GObject = {...dnode};
+                d.className = 'DVertex';
                 for (let k in o) {
                     if (!(k in d)) d[k] = (o as GObject)[k];
                 }

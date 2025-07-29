@@ -343,14 +343,13 @@
     .hover-stuff{
       height: 26px;
       &>*{ height: 26px; }
-      .bg, .bx{
+      .bg, .bx, .jj{
         height: 26px;
-        font-size: 15px;
       }
 
-      .bx{
+      .bx, .jj{
         display: flex;
-        font-size: 16px;
+        font-size: 18px;
         &:before{
           line-height: 1;
           margin: auto;

@@ -215,7 +215,6 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
                     helper: 'resize-shadow selected-by-me', // does not accept functions or html elements, just classes...
                     start: (evt: GObject, ui: ResizableUI) => {
                         TRANSACTION('onResizeStart events ' + this.props.node.name, ()=>{
-                            console.log('resize  start cache', {evt, ui}, $('.resize-shadow'))
                             resizeCacheZoom = this.props.node.graph.cumulativeZoom; // NB: cumulative zoom only of parent graphs, excluding zoom of direct vertex
                             if (ui.helper[0]) ui.helper[0].style.transform = 'scale(' + resizeCacheZoom.x*100+'%, '+resizeCacheZoom.y*100+'%)';
                             if (ui.helper[0]) ui.helper[0].style.transformOrigin = 'top left';
