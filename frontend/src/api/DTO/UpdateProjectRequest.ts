@@ -1,4 +1,4 @@
-import {Dictionary, DProject, DUser, GObject} from "../../joiner";
+import {Dictionary, DProject, DUser, GObject, Json, RawObject} from "../../joiner";
 import {Request_DTO} from "./DTO";
 import {VersionFixer} from "../../redux/VersionFixer";
 
@@ -19,9 +19,9 @@ export class UpdateProjectRequest extends Request_DTO<DProject>{
     imported!: boolean;
     version!: number;
 
-    constructor(src: DProject) {
+    constructor(src: Json<RawObject> | DProject) {
         super();
-        this._dto_init(src);
+        this._dto_init(src as any);
     }
 
     /*

@@ -1,10 +1,11 @@
-import type {Dictionary, DProject, GObject} from "../../joiner";
+import type {Dictionary, DProject, GObject, Json, RawObject} from "../../joiner";
 import {Log, U} from "../../joiner";
 import {UpdateProjectRequest} from "./UpdateProjectRequest";
 
 abstract class DTO<S extends GObject = GObject>{
     constructor() {}
-    protected _dto_init(src: S){
+    protected _dto_init(src0: Json<RawObject>){
+        let src: S = src0 as any;
         let setFields: Dictionary<string, boolean> = {};
         try {
             this._dto_copyInterections(src, setFields)
@@ -48,6 +49,6 @@ export abstract class Response_DTO<S extends GObject = GObject, T extends GObjec
         // meant to stay empty and hidde, subclasses should not need to override it.
     }
 
-    public abstract toJodelClass(): T;
+    public abstract toJodelClass(...args: any): T;
 
 }

@@ -1,4 +1,4 @@
-import type {Dictionary, DocString, Pointer} from "../../joiner";
+import type {Dictionary, DocString, Json, Pointer, RawObject} from "../../joiner";
 import {DProject, DUser, Log} from "../../joiner";
 import {Response_DTO} from "./DTO";
 import {ProjectPointers} from "../../joiner/classes";
@@ -20,7 +20,7 @@ export class ProjectResponseDTO extends Response_DTO<ProjectResponseDTO, DProjec
     isFavorite?: boolean;
     author?: Pointer<DUser>;
     collaborators?: Pointer<DUser>[];
-    constructor(data: ProjectResponseDTO) {
+    constructor(data: Json<RawObject>) {
         super();
         this._dto_init(data);
     }

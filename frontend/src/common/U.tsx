@@ -112,17 +112,20 @@ export class R {
 
         //if (path.indexOf('allProject') >= 0) return;
         if (windoww.preventNavigation) return;
-        if (path.indexOf('//') >= 0) {
+        let absPathIndex = path.indexOf('//');
+        if (absPathIndex >= 0 && absPathIndex <= 'https:'.length) { // other protocols are not supported
             window.location.href = path;
             return;
         }
-        console.warn('R.navigate() 2');
         if (true as any || refresh === true) {
             let hash: string;
             if (path[0] !== '/') hash = '#/' + path;
             else hash = '#' + path;
-            // console.log('navigating: ', {path, url:window.location.origin + path, currHash:window.location.hash});
-            if (window.location.hash === hash) return;
+            console.warn('navigating: ', {path, url:window.location.origin + path, currHash:window.location.hash});
+            if (window.location.hash === hash) {
+                console.error('R.navigate() called twice');
+                // return;
+            }
             U.navigating = true;
             window.location.hash = hash;
             window.location.reload();

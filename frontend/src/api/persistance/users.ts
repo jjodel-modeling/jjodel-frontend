@@ -3,6 +3,9 @@ import Api from '../api';
 import {UpdateUserRequest} from "../DTO/UpdateUserRequest";
 import {ChangePasswordRequest} from "../DTO/ChangePasswordRequest";
 import type {LayoutData} from "rc-dock";
+import {UserResponseDTO} from "../DTO/UserRequestDTO";
+import {TokenResponse} from "../DTO/TokenResponse";
+import {JwtClaims} from "../DTO/JwtClaims";
 
 @RuntimeAccessible('UsersApi')
 class UsersApi {
@@ -22,6 +25,14 @@ class UsersApi {
         return users.filter(u => u.id !== DUser.current).map(u => u.email);
     }
 
+
+    static async getUserByGUID(guid: string, raw: TokenResponse, claims?: JwtClaims|null): Promise<DUser|null> {
+        let response = await Api.get(`${Api.persistance}/account/by-id/${guid}`);
+        if ((response.code+'')[0] !== '2' || !response.data) { // if response code starts with 2 (200, 204) i know it is a terrible check but it's legacy.
+            return null;
+        }
+        return new UserResponseDTO(response.data).toJodelClass(raw, claims);
+    }
 
     static async updateUserById(updateUserRequest: UpdateUserRequest): Promise<boolean> {
         const response = await Api.put(`${Api.persistance}/account/`, {...updateUserRequest});

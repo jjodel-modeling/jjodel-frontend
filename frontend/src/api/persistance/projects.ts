@@ -201,13 +201,10 @@ class Offline {
 
 class Online {
 
-
     static async create (project: DProject): Promise<void> {
         const creationProjectRequest : UpdateProjectRequest = new UpdateProjectRequest(project);
-
         await Api.post(`${Api.persistance}/project`, creationProjectRequest);
     }
-
 
     static async getAll(): Promise<void> {
         const response = await Api.get(`${Api.persistance}/project/`);
@@ -268,11 +265,11 @@ class Online {
 
     static async getOne(id: string): Promise<DProject|null> {
         const response = await Api.get(`${Api.persistance}/project/jjodel/${id}`);
-        if (response.code !== 200) {
+        if (response.code !== 200 || !response.data) {
             return null;
         }
-        let dto = response.data as unknown as ProjectResponseDTO;
-        let ret = new ProjectResponseDTO(dto).toJodelClass();
+
+        let ret = new ProjectResponseDTO(response.data).toJodelClass();
         return ret;
     }
 

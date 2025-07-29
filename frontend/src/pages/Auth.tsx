@@ -2,7 +2,7 @@ import {FormEvent, JSX} from 'react';
 import {useStateIfMounted} from 'use-state-if-mounted';
 import {DUser, R, SetRootFieldAction, U} from '../joiner';
 import Storage from '../data/storage';
-import {AuthApi} from "../api/persistance";
+import {AuthApi, UsersApi} from "../api/persistance";
 import logo from '../static/img/jjodel.jpg';
 import {Tooltip} from '../components/forEndUser/Tooltip';
 import { RegisterRequest } from '../api/DTO/RegisterRequest';
@@ -71,35 +71,29 @@ function AuthPage(): JSX.Element {
 
     const login   = async () => {
         try {
-          const loginRequest   = new LoginRequest();
-          loginRequest.email = email;
-          loginRequest.password = password;
+            const loginRequest   = new LoginRequest();
+            loginRequest.email = email;
+            loginRequest.password = password;
 
-          const response = await AuthApi.login(loginRequest);
-          const raw: TokenResponse | null = response.data;
+            const response = await AuthApi.login(loginRequest);
+            const raw: TokenResponse | null = response.data;
 
-          console.log('login debug', {loginRequest, response, raw});
-          if (response.code !== 200 || !raw?.token || typeof raw.token !== 'string') {
-            U.alert('e', 'Login failed or invalid token.', '');
-            return;
-          }
+            console.log('login debug', {loginRequest, response, raw});
+            if (response.code !== 200 || !raw?.token || typeof raw.token !== 'string') { U.alert('e', 'Login failed or invalid token.', ''); return; }
 
-          const claims = AuthApi.readJwtToken(raw.token);
-          console.log('login claims', {response, raw, claims});
-          if (!claims) {
-            U.alert('e', 'Invalid token.', '');
-            return;
-          }
+            const claims = AuthApi.readJwtToken(raw.token);
+            console.log('login claims', {response, raw, claims});
+            if (!claims) { U.alert('e', 'Invalid token.', ''); return; }
 
-          const user : DUser = DUser.new(claims.name, '', claims.nickname, '',  '', false, claims.email,  raw.token, claims._Id, claims.id, true);
-          // (user as any)._Id = claims.id;
-          AuthApi.storeSessionData(raw.token, !claims.exp ? 0 : claims.exp, user);
-          //U.resetState();
-          R.navigate('/allProjects');
-
+            // const user: DUser = DUser.new(claims.name, '', claims.nickname, '',  '', false, claims.email,  raw.token, claims._Id, claims.id, true);
+            const user: DUser|null = await UsersApi.getUserByGUID(claims._Id, raw, claims);
+            if (!user) return;
+            AuthApi.storeSessionData(raw.token, claims.exp || 0, user);
+            //U.resetState();
+            R.navigate('/allProjects');
         } catch (e) {
-          console.error("Login error:");
-          U.alert('e', 'Unexpected error during login.', '');
+            console.error("Login error:");
+            U.alert('e', 'Unexpected error during login.', '');
         }
       };
 

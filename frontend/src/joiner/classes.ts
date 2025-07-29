@@ -783,18 +783,18 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         // this.className = thiss.className;
         return this; }
 
-    DUser(name: string, surname: string, nickname: string, affiliation: string, country: string, newsletter: boolean,
-          email: string, token: string, autoReport?:boolean, guid?:string): this {
+    DUser(name?: string, surname?: string, nickname?: string, affiliation?: string, country?: string, newsletter?: boolean,
+          email?: string, token?: string, autoReport?:boolean, guid?:string): this {
         const _this: DUser = this.thiss as unknown as DUser;
-        _this.name = name;
+        _this.name = name || '';
         _this._Id = guid;
-        _this.surname = surname;
-        _this.nickname = nickname;
-        _this.affiliation = affiliation;
-        _this.country = country;
-        _this.newsletter = newsletter;
-        _this.email = email;
-        _this.token = token;
+        _this.surname = surname || '';
+        _this.nickname = nickname || '';
+        _this.affiliation = affiliation || '';
+        _this.country = country || '';
+        _this.newsletter = !!newsletter;
+        _this.email = email || '';
+        _this.token = token || '';
         _this.autoReport = !!autoReport;
         _this.layout = {}; // {'1': PinnableDock.defaultLayout};
         _this.autosaveLayout = true;
@@ -2407,6 +2407,12 @@ let a: DGraphElement = null as any;
 let bbb = LPointerTargetable.from(a);
 let bb2 = fffff(a);
 
+export class UserPointers {
+    id!: Pointer<DUser>;
+    projects!: Pointer<DProject, 0, 'N', LProject>;
+    project!: Pointer<DProject, 0, 1, LProject>;
+}
+
 @Leaf
 @RuntimeAccessible('DUser')
 export class DUser extends DPointerTargetable {
@@ -2425,14 +2431,14 @@ export class DUser extends DPointerTargetable {
     affiliation!: string;
     newsletter!: boolean;
     email!: string;
-    /*no in dto */token!: string;
-    /*no in dto */projects: Pointer<DProject, 0, 'N', LProject> = [];
-    /*no in dto */project: Pointer<DProject, 0, 1, LProject> = '';
+    token!: string;
+    projects: Pointer<DProject, 0, 'N', LProject> = [];
+    project: Pointer<DProject, 0, 1, LProject> = '';
     autoReport!: boolean;
     layout!: Dictionary<string, LayoutData>;
     autosaveLayout!: boolean;
     activeLayout!: string;
-    /*no in dto */__isDUser: true = true; // necessary to trick duck typing to think this is NOT the superclass of anything that extends PointerTargetable.
+    __isDUser: true = true; // necessary to trick duck typing to think this is NOT the superclass of anything that extends PointerTargetable.
 
 
     /*public static new(id?: DUser["id"], triggerActions: boolean = true): DUser {
@@ -2443,6 +2449,10 @@ export class DUser extends DPointerTargetable {
             .DUser(name, surname, nickname, affiliation, country, newsletter, email, token, autoReport, guid).end();
     }
 
+    static new2(pointers: Partial<UserPointers>, callback: undefined | ((d: DUser, c: Constructors) => void), persist: boolean = true): DUser {
+        return new Constructors(new DUser('dwc'), undefined, persist, undefined, pointers.id).DPointerTargetable()
+            .DUser().end(callback);
+    }
     /*
     static async loadOffline(): Promise<void> {
         if (DUser.current) return;
