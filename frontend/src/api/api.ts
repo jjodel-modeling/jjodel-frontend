@@ -25,19 +25,13 @@ class Api {
 
 
     static async checkToken(): Promise<boolean> {
-
-        if(Api.token || Storage.read('token')) {
-
+        if (Api.token || Storage.read('token')) {
             const exp :number = Storage.read('tokenExp');
-
             if (exp && exp > Math.floor(Date.now() / 1000)) {
-
-
                 return true;
-            }
-
+            } else console.error("expired token", {exp});
         }
-        console.log("token scaduto o non valido");
+        console.error("invalid token");
         return false;
     }
 
