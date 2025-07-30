@@ -1147,7 +1147,7 @@ export class U {
 
     static fileRead(onChange: (e: Event, files: FileList | null, contents?: string[]) => void, extensions: string[] | FileReadTypeEnum[], readContent: boolean): void {
         // $(document).on('change', (e) => console.log(e));
-        console.log("importEcore: pre file reader");
+        // console.log("importEcore: pre file reader");
         myFileReader.show(onChange, extensions, readContent);
     }
 
@@ -2593,8 +2593,8 @@ export class myFileReader {
         myFileReader.input = undefined as any;
     }
     public static show(onChange: (e: Event, files: FileList | null, contents?: string[]) => void, extensions: undefined | string[] | FileReadTypeEnum[] = undefined, readContent: boolean): void {
-        console.log("importEcore: pre file reader", myFileReader.input);
         myFileReader.setinfos(extensions, onChange, readContent);
+        // console.log("importEcore: pre file reader", myFileReader.input, {types:myFileReader.fileTypes, extensions});
         //if (!myFileReader.input) return;
         myFileReader.input.setAttribute('type', 'file');
         if (myFileReader.fileTypes) {
