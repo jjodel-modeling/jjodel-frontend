@@ -88,6 +88,7 @@ function AuthPage(): JSX.Element {
 
             // const user: DUser = DUser.new(claims.name, '', claims.nickname, '',  '', false, claims.email,  raw.token, claims._Id, claims.id, true);
             const user: DUser|null = await UsersApi.getUserByGUID(claims.id, raw, claims);
+            // name-surname error is on server-side get or set. not on client side.
             /*if ((window as any).debug1 && user && user.surname === user.name) {
                 console.log('error name debug', {user});
                 return;
