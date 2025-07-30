@@ -87,7 +87,7 @@ function AuthPage(): JSX.Element {
             AuthApi.storeSessionData(raw.token, claims.exp || 0, undefined);
 
             // const user: DUser = DUser.new(claims.name, '', claims.nickname, '',  '', false, claims.email,  raw.token, claims._Id, claims.id, true);
-            const user: DUser|null = await UsersApi.getUserByGUID(claims._Id, raw, claims);
+            const user: DUser|null = await UsersApi.getUserByGUID(claims.id, raw, claims);
             if (!user) return;
             Storage.write('user', user);
             //U.resetState();
