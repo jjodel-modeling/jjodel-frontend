@@ -70,10 +70,10 @@ class AuthApi {
     }
 
     // write storage
-    static storeSessionData(token: string, tokenExp: number, user :DUser): void {
+    static storeSessionData(token: string, tokenExp: number, user?: DUser): void {
         Storage.write('token', token);
         Storage.write('tokenExp', tokenExp);
-        Storage.write('user', user);
+        if (user) Storage.write('user', user);
         Storage.write('offline', false);
     }
 }

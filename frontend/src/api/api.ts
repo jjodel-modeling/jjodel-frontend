@@ -26,12 +26,12 @@ class Api {
 
     static async checkToken(): Promise<boolean> {
         if (Api.token || Storage.read('token')) {
-            const exp :number = Storage.read('tokenExp');
+            const exp: number = Storage.read('tokenExp');
             if (exp && exp > Math.floor(Date.now() / 1000)) {
                 return true;
-            } else console.error("expired token", {exp});
+            } else console.error("expired token", {exp, at: Api.token, st: Storage.read('token')});
         }
-        console.error("invalid token");
+        console.error("invalid token", {at: Api.token, st: Storage.read('token')});
         return false;
     }
 
