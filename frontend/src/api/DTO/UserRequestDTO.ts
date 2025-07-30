@@ -28,7 +28,7 @@ export class UserResponseDTO extends Response_DTO<UserResponseDTO, DUser>{
         // Log.eDevv("called projectResponseDTO.toJodel(), this is just a boilerplate, projects need to be loaded")
         let pointers: Partial<UserPointers> = {} as any;
         pointers.id = this.id;
-
+        console.log('name debug', {raw, claims, dto: this});
         // let user: DUser = DUser.new(this.name, '', this.nickname, '',  '', false, this.email, raw.token, this._Id, this.id, true);
         let user: DUser = DUser.new2(pointers, (d)=>{
             for (let key in this) {
