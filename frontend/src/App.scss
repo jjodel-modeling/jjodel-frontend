@@ -1,0 +1,368 @@
+@keyframes animationoffset {
+  0% {
+    offset-distance: 0%;
+    opacity: 0%;
+  }
+  1% {
+    offset-distance: 1%;
+    opacity: 100%;
+  }
+  99% {
+    offset-distance: 99%;
+    opacity: 99%;
+  }
+  100% {
+    offset-distance: 100%;
+    opacity: 0%;
+  }
+}
+view{
+  display: block;
+}
+.SaveManager {
+  position: absolute;
+  left: 5%;
+  top: 5%;
+  border: 1px solid black;
+  display: inline-block;
+}
+.monospace{
+  font-family: Lekton, "Courier New", monospace;
+}
+.toolbar-item>span{
+  white-space: nowrap;
+  font-family: Lekton, "Courier New", monospace;
+}
+label{
+  cursor: inherit;
+}
+.dd-flex{
+  display: flex; // without !important that bootstrap have
+}
+.bi-chevron-down::before{
+content: "\f282";
+transform: inherit;
+transition: inherit;
+font-weight: 900 !important;
+}
+.capitalize-first-letter:first-letter {
+  // works only on "block" elements? not even flex?
+  text-transform: uppercase;
+}
+.hoverable{
+  position: relative;
+  &>.content, &>svg>.content{
+    display: none;
+  }
+}
+.hoverable:hover, .hoverable:focus, .hoverable:focus-within, .hoverable:active, .hoverable.pinned{
+  &>.preview, &>svg>.preview{
+    display: none;
+  }
+
+  &>.content, &>svg>.content{
+    display: block;
+    z-index:1;
+    position: absolute;
+    box-shadow: var(--smart-elevation-8);
+    &.fixed{
+      position: fixed;
+    }
+  }
+
+  &>.content.inline, &>svg>.content.inline{
+    display: inline-block;
+    position: unset;
+    box-shadow: none;
+  }
+
+}
+
+
+/*
+*:hover:has(>.forceForeground), *:hover:has([data-nodetype]){
+  transform-style: preserve-3d;
+}
+.forceForeground:hover, [data-nodetype]:hover{
+  // transform:translateZ(1px);
+  z-index: 1000 !important;
+}*/
+
+.GraphVertex[data-nodetype="GraphVertex"],
+.Vertex[data-nodetype="Vertex"],
+.VoidVertex[data-nodetype="VoidVertex"],
+.EdgePoint[data-nodetype="EdgePoint"]{
+  position: absolute;
+  min-width:2px;
+  min-height:2px;
+  // .lazySizeUpdate{ transform: translate(var(--offset-x), var(--offset-y)); }
+}
+
+.REACT-ROOT.debug{
+  [data-nodetype]{
+    &:hover::after{
+      content: attr(data-nodetype);
+      position: absolute;
+      top: -23px;
+      left: 0;
+      background: red;
+      background-color: var(--background-3);
+      color: var(--color-3);
+      padding: 0 4px;
+      // color: white;
+      z-index: 100000;
+    }
+  }
+  [data-nodetype]:has(>.overlap) {
+    width: 100%;
+    height: 100%;
+    position: absolute
+
+  }
+  [data-nodetype="Field"]:hover::after {
+      top: unset !important;
+      left: -45px;
+      float: left;
+      // margin-top: -23px;
+    }
+
+  [data-countrenders]{
+    &::before{
+      content: attr(data-countrenders);
+      background-color: var(--background-3);
+      color: var(--color-3);
+      display: inline-block;
+      position: absolute;
+      z-index: 999;
+      bottom: calc(-35% + 15px);
+      right: -20px;
+      width: min-content;
+      height: min-content;
+    }
+  }
+}
+.overlap{
+  background: transparent;
+  position: absolute;
+  top: 0;
+  bottom:0;
+  left:0;
+  right:0;
+  pointer-events: none;
+  z-index: 1000;
+}
+/*
+
+.ui-draggable-dragging{ visibility: hidden; }
+
+.lazySizeUpdate.ui-draggable-dragging,
+.REACT-ROOT.debug,
+.ui-draggable-dragging,
+.REACT_ROOT { visibility: visible; } ?? */
+
+body .ui-icon{ // override jqueryui fixed resizable handles at 16px, making drag for small elements impossible.
+  max-width: 33%;
+  max-height: 33%;
+}
+
+
+
+
+[data-nodetype="Graph"]::after {
+  top: 0px;
+  left: 0px;
+}
+
+//////////// edge paths
+path{
+  pointer-events: stroke;
+  &:focus{
+    outline: none;
+  }
+}
+body.no-transition-following{
+  path, .edge-anchor{
+    pointer-events: none;
+  }
+}
+
+/*
+.hoverable>.preview, .hoverable>svg>.preview{
+  pointer-events: stroke;
+}*/
+/*
+svg.hoverable {
+
+  path{
+    pointer-events: visiblestroke;
+  }
+  &:has(path.clickable) {
+    &>.preview { visibility: visible; }
+    &>.content { visibility: hidden; }
+  }
+
+  &:hover:has(path.clickable),
+  &:focus-within:has(path.clickable) {
+    &>.preview { visibility: hidden; }
+    &>.content { visibility: visible; }
+  }
+}*/
+// .EdgePoint[data-nodetype="EdgePoint"]>
+// [data-nodetype]:has(>[hoverscale]){ overflow: visible !important; }
+
+
+.no-transition-following, .no-transition{
+  path{
+    transition: none !important;
+    pointer-events: none !important;
+  }
+}
+[data-nodetype="Edge"]{
+  path {
+    //transition: d 400ms, transform 400ms, transform-origin 400ms;
+    transition: all 400ms;
+  }
+}
+[data-nodetype="Edge"]>.hide-ep [data-nodetype="EdgePoint"]{
+  // display: none !important;
+  visibility: hidden;
+  opacity: 0;
+  // important! when you enlarge it with resize without transition,
+  // the moment you release the resize it is immediately hidden and the js event goes crazy with coordinates
+  // transition: all 300ms;
+  transition: opacity 200ms, display 200ms, visibility 200ms;
+}
+
+[data-nodetype="Edge"]:hover,
+[data-nodetype="Edge"]:active,
+[data-nodetype="Edge"]:focus-within{
+
+  &>.hide-ep [data-nodetype="EdgePoint"]{
+    // display: block !important;
+    opacity:1;
+    visibility: visible; // this prevents pointer-events and is animatable i think? unlike pointer-events or display
+    &>.ui-resizable-handle{ border: none;
+    }
+  }
+}
+.draggable-child-mode{
+  left: 0 !important;
+  top: 0 !important;
+  transform: none !important;
+  position: relative !important;
+}
+//.EdgePoint{ transform: translate(-50%, -50%); }
+
+/*
+.animate-on-update-even{
+  animation: fade 1s forwards;
+}
+.animate-on-update-odd{
+  animation: fade 1s forwards;
+}*/
+
+@keyframes fade {
+  0%   { opacity:0; }
+  100% { opacity:1; }
+}
+
+.smart-drop-down-button .smart-scroll-viewer .smart-scroll-viewer-content-container{
+  width: 100%;
+}
+.smart-drop-down-button > .smart-container > .smart-content > .smart-drop-down-container{
+  margin: 0;
+  transform: translate3d(0px, 0px, 0px);
+  width: 100% !important;
+  max-width: unset;
+}
+
+
+
+body{
+  --smart-elevation-24: 0 24px 38px 3px rgba(0, 0, 0, .14), 0 9px 46px 8px rgba(0, 0, 0, .12), 0 11px 15px 0 rgba(0, 0, 0, .2);
+  --smart-elevation-16: 0 16px 24px 2px rgba(0, 0, 0, .14), 0 6px 30px 5px rgba(0, 0, 0, .12), 0 8px 10px 0 rgba(0, 0, 0, .2);
+  --smart-elevation-12: 0 12px 17px 2px rgba(0, 0, 0, .14), 0 5px 22px 4px rgba(0, 0, 0, .12), 0 7px 8px 0 rgba(0, 0, 0, .2);
+  --smart-elevation-8-notop: 0 9px 8px 1px rgba(0, 0, 0, .14), 0 17px 14px 3px rgba(0, 0, 0, .12), 0 4px 15px 0 rgba(0, 0, 0, .2);
+  --smart-elevation-8: 0 8px 10px 1px rgba(0, 0, 0, .14), 0 3px 14px 3px rgba(0, 0, 0, .12), 0 4px 15px 0 rgba(0, 0, 0, .2);
+  --smart-elevation-6: 0 6px 10px 0 rgba(0, 0, 0, .14), 0 1px 18px 0 rgba(0, 0, 0, .12), 0 3px 5px 0 rgba(0, 0, 0, .2);
+  --smart-elevation-4: 0 2px 4px 0 rgba(0, 0, 0, .14), 0 4px 5px 0 rgba(0, 0, 0, .12), 0 1px 10px 0 rgba(0, 0, 0, .2);
+  --smart-elevation-2: 0 3px 1px -2px rgba(0, 0, 0, .2), 0 2px 2px 0 rgba(0, 0, 0, .14), 0 1px 5px 0 rgba(0, 0, 0, .12);
+  --smart-elevation-1: 0 0 2px 0 rgba(0, 0, 0, .14), 0 2px 2px 0 rgba(0, 0, 0, .12), 0 1px 3px 0 rgba(0, 0, 0, .2);
+  --smart-elevation-0: none;
+}
+
+
+body, .my-tooltip, .unselectable{
+  -webkit-touch-callout: none; /* iOS Safari */
+  -webkit-user-select: none; /* Safari */
+  -khtml-user-select: none; /* Konqueror HTML */
+  -moz-user-select: none; /* Firefox */
+  -ms-user-select: none; /* Internet Explorer/Edge */
+  -o-user-select: none; /*?*/
+  user-select: none; /* Non-prefixed version, currently supported by Chrome and Opera */
+  /* css variables */
+}
+a[id]{
+  z-index: -1 !important;
+}
+input, textarea, [contenteditable], pre, .console-output-container, .selectable{
+  -webkit-touch-callout: default;
+  -webkit-user-select: text;
+  -khtml-user-select: default;
+  -khtml-user-select: text;
+  -o-user-select: default;
+  -o-user-select: text; /*not sure wich works on -khtml and -o*/
+  -moz-user-select: text;
+  -ms-user-select: text;
+  user-select: text;
+  &:invalid{
+    border-color: var(--palette-r);
+    outline-color: var(--palette-r);
+  }
+  // border-radius: 7.5px;
+}
+.bx:before {
+  line-height: 1;
+  vertical-align: -.125em;
+}
+.dock-content .dock-tabpane:has(.GraphContainer){
+  overflow-y: hidden;
+}
+.text-icon{
+  &::before{
+    content: attr(data-val);
+    text-transform: capitalize;
+    font-variant: normal;
+    // font-weight: normal;
+    font-style: normal; // removes italic
+  }
+}
+
+//.Vertex, .GraphVertex, .EdgePoint, .VoidVertex,
+[data-nodetype] {
+  --zoom-x: 1; // fallback for missing zoom
+  --zoom-y: 1;
+  left: var(--left) !important;
+  top: var(--top) !important;
+}
+.Edge, .VoidEdge{
+  left: calc( -1 * var(--left)) !important;
+  top: calc( -1 * var(--top)) !important;
+}
+.debug-mark{
+  ::before{
+    content: attr(data-key);
+    float: top;
+  }
+  ::after{
+    content: attr(data-label); // todo: concat coordinates?
+    float: bottom;
+  }
+}
+
+.router-wrapper{
+  flex-grow: 1;
+  min-height: 0;
+  display: flex;
+  flex-flow: column;
+}

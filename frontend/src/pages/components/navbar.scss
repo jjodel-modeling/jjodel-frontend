@@ -1,0 +1,554 @@
+
+/* NEW NAVBAR */
+
+.new-navbar {
+  list-style-type: none;
+  background-color: var(--fg-1);
+  padding: 0 0.25em 0 1em;
+  overflow: hidden;
+  display: flex;
+  > li {
+    position: relative;
+    cursor: pointer;
+  }
+  /* Navbar links styling */
+  label {
+    display: block;
+    color: var(--color);
+    font-weight: 500;
+    text-align: center;
+    text-decoration: none;
+    padding-left: 1em;
+    padding-right: 2em;
+    font-size: 1.1em;
+    margin: 10px 0px 10px 0px;
+    padding-top: 2px;
+    height: 25px;
+
+    &:hover{
+      /* background-color: #f5f5f5;
+      border-radius: 4px;*/
+      text-decoration: underline;
+      text-decoration-thickness: 4px;
+      text-decoration-color: var(--accent);
+    }
+  }
+
+
+  .bi.list {
+    display: block;
+    color: var(--color);
+    font-size: 1.3em;
+    transition: color 0.2s;
+    &:hover {
+      color: var(--accent);
+      transition: color 0.2s;
+    }
+  }
+
+}
+
+/* Debugger */
+.debugger{
+  position:absolute;
+  right: 400px;
+  top: 0px;
+  height: 100%;
+
+  padding-right: 6px;
+  padding-bottom: 10px!important;
+  .debug-icon{
+    cursor: pointer;
+    font-size: 1.4rem;
+    &.disabled{
+      cursor: not-allowed;
+      opacity: 0.5;
+      pointer-events: none;
+    }
+  }
+  i.bi-grip-vertical{
+    font-size: 1.2rem;
+    margin-right: 0.5rem;
+
+  }
+  .debug-icon {position: relative;bottom: 3px;
+    margin-right: 0.5rem;
+
+    transition: color 0.2s;
+  }
+  .debug-icon:hover {
+    color: var(--accent);
+  }
+}
+.bi.bi-step-circle{
+  position: relative;
+  &::before, &::after{
+    font-style: normal;
+  }
+  &::before{
+    // content: '|';
+    content: "\f4c2";
+  }
+  &::after{
+    position: absolute;
+    content: "\F4F4";
+    left: 33%;
+    top: 24%;
+    font-size: 0.725em;
+    /* outline: 1px solid red; */
+    transform: scale(0.75, 0.9);
+    width: 0.75em;
+    background: linear-gradient(90deg, transparent 30%, white 0%);
+    border-radius: 100%;
+
+
+    display: inline-block;
+    font-family: bootstrap-icons !important;
+    font-style: normal;
+    font-weight: normal !important;
+    font-variant: normal;
+    text-transform: none;
+    line-height: 1;
+    vertical-align: -.125em;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+}
+
+/* Dropdown content */
+.new-dropdown-content {
+  border-radius: 8px;
+  border-style: solid;
+  border-width: 1px;
+  margin-top: 0em;
+  display: none;
+  position:fixed;
+  background-color: var(--color);
+  min-width: 200px;
+  list-style-type: none;
+  box-shadow:0px 10px 20px rgba(000,000,000,0.3),inset 0px 0px 1px rgba(255,255,255,0.8);
+  padding: 3px;
+  padding-left: 15px;
+
+  li label {
+    text-decoration: none;
+    display: block;
+    text-align: left;
+    cursor: pointer;
+    color: var(--fg-1);
+    font-weight: 200;
+    font-size: 12px;
+    margin: 0 4px 0 4px;
+    padding: 3px 8px 3px 8px;
+    height: 25px;
+    &:hover {
+      text-decoration: none;
+      background-color: var(--accent);
+      border-radius: 4px;
+    }
+  }
+}
+
+/* Show the dropdown menu on hover */
+.new-dropdown:hover .new-dropdown-content {
+  display: block; 
+}
+
+
+.nav-container {
+  position: relative;
+  display: flex;
+  border-bottom: 1px solid var(--bg-3);
+  background-color: var(--bg-1);
+  height: 32px;
+  padding: 0px var(--side-padding);
+  font-weight: 200;
+  --palette-1-hover: var(--accent);
+
+
+  .nav-logo {
+    // margin: auto;
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    pointer-events: none;
+    display: flex;
+
+    &> .aligner{
+      margin: auto;
+      pointer-events: all;
+    }
+
+    &  div.logo{
+      position: relative;
+      background-image: url(/static/img/jjodel.jpg);
+      height: 24px;
+      width: 70px;
+      top: 0;
+      background-repeat: no-repeat;
+      background-size: 57px 25px;
+      transition: all 0.3s ease-in-out;
+      z-index:200;
+    }
+
+    & div.logo:hover {
+      background-image: url(/static/img/logo-on.png);
+      height: 24px;
+      width: 70px;
+      z-index:2;
+    }
+
+    &  div.logo-on {
+
+      position: relative;
+      background-image: url(/static/img/logo-on.png);
+      height: 24px;
+      width: 70px;
+      top: 0;
+      background-repeat: no-repeat;
+      background-size: 57px 25px;
+      transition: all 0.3s ease-in-out;
+      z-index:200;
+    }
+
+
+
+    & .bi {
+      position: absolute;
+      color: var(--accent);
+      padding-left: 70px;
+      top: 0;
+      font-size: 1.6em;
+      margin: auto;
+      z-index: 1;
+    }
+
+
+  }
+
+  .nav-commands{
+    margin-right: 3rem;
+    margin-left: auto; 
+  }
+
+  .nav-hamburger { 
+    margin-right: auto;
+    color: var(--color);
+    font-size: 1.5em;
+    padding-right: 0;
+    display: block;
+    margin-top: auto;
+    margin-bottom: auto;
+
+
+    
+    >.bi::before{
+      transform: rotate(0deg);
+      transform-origin: center;
+      transition: 0.3s linear transform; // ease-in-out
+    }
+
+    >.bi:hover::before{
+      transform: rotate(180deg);
+    }
+
+    label div {
+      float: right; 
+    }
+  }
+
+  & span.menu-title {
+    cursor: pointer;
+    font-size: 0.80em;
+    font-weight: 500;
+    margin-right: 0px;
+    padding: 4px 16px;
+    border-radius: 4px;;
+  }
+
+
+}
+
+
+.nav-container .nav-hamburger label div .bi {
+  color: white;
+  font-size: 0.75em;
+  font-weight: 800;
+}
+
+.nav-container .nav-hamburger.inline {
+  margin-right: 10px;
+}
+.nav-hamburger:hover {
+  span.menu-title {
+    background-color: var(--bg-2-5);
+  }
+}
+
+.nav-commands {
+
+  width: fit-content;
+  margin-top: auto;
+  margin-bottom: auto;
+}
+
+.nav-container .content {
+  &>ul{
+    background-color: var(--color);
+    box-shadow: var(--smart-elevation-8);
+    border: inherit;
+    border-color: #233d4d;
+    border-radius: 6px;
+
+    padding-right: 0;
+    padding-left: 0;
+    list-style: none;
+  }
+  background-color: transparent;
+  border-radius: 0;
+  border: none;
+
+  min-width: 200px;
+  top: 100%;
+  font-size: 12px;
+  left: -20px;
+  box-shadow: none !important;
+  height: fit-content;
+
+
+  & ul li {
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  ul li.divisor {
+    padding: 3px 0;
+  }
+
+  ul li hr {
+    position: relative;
+    color: #8a8a8a;
+    width: calc(100% - 10px);
+    left: 5px;
+  }
+
+  & label {
+    color: var(--bg-1);
+    cursor: pointer;
+    display: block;
+    font-size: 12px;
+    font-weight: 200;
+    width: calc(100% - 8px);
+    margin: 0 4px 0 4px;
+    padding: 3px 10px 3px 8px;
+  }
+
+  & label.disabled {
+    color: var(--bg-3-1)!important;
+  }
+
+  & label.disabled .bi {
+    color: var(--bg-3-1)!important;
+  }
+
+  & label.disabled:hover {
+    background-color: transparent!important;
+    cursor: not-allowed;
+  }
+
+  & label:hover {
+    background-color: var(--accent);
+    border-radius: 4px;
+
+  }
+
+  & .keystroke .bi {
+    font-size: 0.9em;
+    font-kerning: none;
+  }
+
+}
+// ho riunito i miei cambiamenti in un solo posto per distinguere le mie aggiunte ed eventualmente annullarne parti.
+
+
+
+.nav-container .content.context-menu {
+  width: auto; 
+  padding-left: 20px;
+  padding-top: 10px;
+
+  padding-right: 10px;
+  padding-bottom: 10px;
+
+}
+.nav-container .content.context-menu ul {
+  --palette-1-hover: white;
+  width: max-content;
+  min-width: 100%;
+  padding: 4px 0px;
+  --font-color-1: white;
+  .highlight{
+    height: 30px;
+    &>span {
+      margin-top: auto;
+      margin-bottom: auto;
+      // display: flex; makes problems in undoredo component
+      >*{
+        margin-top:auto;
+        margin-bottom:auto;
+      }
+      .menuitem{
+        min-width: 1ric;
+        max-width: 1ric;
+      }
+      svg.menuitem{
+        scale: 1.2;
+      }
+    }
+  }
+  .context-menu{
+    margin-top: -5px; // undo the padding (4) and border (1) to align the nested submenu
+  }
+  >li{
+    display: flex;
+    width: 100%;
+    &:hover, &:focus-within{
+      >label{
+        border-radius: 4px;
+        background-color: var(--accent);
+        &.disabled {
+          background-color: var(--color-lighter) !important;
+          color: var(--bg-1) !important;
+        }
+      }
+    }
+    >label{
+      display: flex;
+      padding: 3px 8px;
+      width: 100%;
+
+      >*:first-child{
+        flex-grow: 1;
+      }
+      .keystrokes{
+        height: 18px;
+        display: flex;
+        justify-content: end;
+        margin: auto;
+        margin-left: 1rem;
+
+        >*{
+          font-size: 12px;
+          width: 1.1ic;
+          // border: 1px solid red;
+          text-align:center;
+          order: 1;
+          //vertical-align: middle;
+          margin-top: -0.5px;
+          height: 100%;
+          &::before{
+            // vertical-align: middle;
+            height: 100%;
+          }
+        }
+        i.bi{
+          font-size: inherit;
+          &:hover{
+            color: var(--color-1);
+          }
+        }
+        .bi-shift{
+          order: -1;
+        }
+        >.text-icon{
+          width: 2ic;
+          order: 0;
+        }
+
+      }
+    }
+  }
+}
+.win{
+  .keystrokes{
+    line-height: 1.7;
+  }
+}
+
+.nav-container .user {
+  padding-right: 25px;
+  margin-left: 20px!important;
+  margin-top: auto;
+  margin-bottom: auto;
+
+    .initials{
+      font-size: inherit;
+      display: inline-block;
+      padding-top: 3px; 
+      padding-right: 4px;
+      height: 26px;
+      width: 26px;
+      border-radius: 50%;
+      background-color: var(--bg);
+      color: white!important;
+    }
+  >*{
+    margin: auto 0;
+  }
+}
+
+
+
+.user-initials {
+  width: 28px;
+  height: 28px;
+  border-radius: 22px;
+  color: white;
+  font-weight: 400;
+  text-align: center;
+  padding-right: 1px;
+  background-color: var(--secondary);
+  font-size: 1rem;
+  padding-top: 1px;
+  transition: 0.3s;
+}
+
+.user-initials:hover {
+  background-color: var(--accent);
+  transition: 0.3s;
+}
+
+.nav-side {
+  position: absolute;
+  width: fit-content;
+  right: calc(var(--side-padding) - 12px);
+  padding-right:0;
+  float: right;
+  top: 4px;
+  margin-top: auto;
+  margin-bottom: auto;
+}
+
+
+
+/*.nav-container */.content.right {
+   min-height: 100%;
+   left: calc(100% - 20px);
+   padding-left: 30px;
+   background-color: transparent;
+   top: 0px;
+   box-shadow: none;
+   ul {
+     position: relative;
+   }
+   box-shadow: none;
+
+   & .keystroke {
+     float: right;
+     margin-right: 10px;
+
+   }
+}

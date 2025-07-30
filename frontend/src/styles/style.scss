@@ -1,0 +1,595 @@
+@import "./variables";
+
+.REACT-ROOT:not(.debug) .debug{
+  display: none;
+}
+
+body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+/* classes */
+.round { border-radius: $radius; }
+.circle { border-radius: 999px !important; }
+.bg-smoke { background-color: whitesmoke; }
+[data-nodetype] {
+  --ext_on: #0b0;
+  --ext_off: #b00;
+  &:not(.Edge){
+    &.class-can-be-extended { outline: 3px solid var(--ext_on); border-radius: $radius; outline-offset: 3px; }
+    &.class-cannot-be-extended { outline: 3px solid var(--ext_off); border-radius: $radius; outline-offset: 3px; }
+  }
+  &.Edge{
+    &.class-can-be-extended path { stroke: var(--ext_on); }
+    &.class-cannot-be-extended path { stroke: var(--ext_off); }
+    /*
+    &.class-can-be-extended path.full { outline: 3px solid var(--ext_on); border-radius: $radius; outline-offset: 3px; }
+    &.class-cannot-be-extended path.full{ outline: 3px solid var(--ext_off); border-radius: $radius; outline-offset: 3px; }
+    */
+  }
+}
+.ui-icon, .ui-widget-content .ui-icon { background-image: none !important; }
+.dock-content .dock-tabpane { background-color: var(--dockpane-bg); }
+.btn-white { background-color: whitesmoke; color: #2e2f34; }
+.input { width: 70%; outline: none; font-size: 0.9rem; appearance: none; height: min-content;
+  border-radius: $radius; border: 1px solid $border-color; }
+.input:focus { border: 1px dashed $border-color; }
+.input[type="checkbox"]:focus, .input[type="radio"]:focus { border: none; }
+.autosize-input { flex-grow: 1; flex-basis: 10px; }
+.hidden-input { border: 1px solid transparent; background-color: transparent; }
+.hidden-input:focus { border: 1px dashed $border-color; }
+.w-fill { width: $fill; }
+.h-fill { height: $fill; }
+.t2m{
+  white-space: pre-wrap;
+  padding-left: 1ic;
+  padding-top:1ic;
+}
+
+.autosize-input{
+  // opacity:0;
+  background: transparent;
+  color: transparent;
+  caret-color: black;
+  position: absolute;
+  width: 100%;
+  border-color: transparent !important;
+  &:focus{ border: 1px solid transparent; }
+  outline: none;
+
+}
+.autosize-input-container.labelstyle{
+
+  &>input,
+  &::after{
+    margin: 0 !important;
+    padding: 0 !important;
+    font-weight: lighter;
+    height: 21.61px;
+  }
+  &::after{
+    display: block;
+    left: -0.91px;
+  }
+}
+
+[disabled], .disabled{
+  cursor: not-allowed !important;
+}
+
+.autosize-input-container {
+  position: relative;
+  &:focus-within{
+    border: 1px dashed #0000005c;
+    //padding: 0 2.5px; /* input have some margin and border that cannot be erased? always 5?*/
+    margin: 0 5px; /* input have some margin and border that cannot be erased? always 5?*/
+  }
+  &>input,
+  &::after{ // input and fake element must have same sizes
+    // todo: maybe they can be css variables injected with jsx, so can change ::after css rendering from jsx
+    color: transparent !important;
+    font-size: 1em !important;
+    /*border-width: 1px !important;
+    padding: 0px 2px !important;
+    margin: 0 4px !important;
+    border-radius: 0.2em !important;
+    line-height: 100% !important;*/
+  }
+  &::after {
+    content: attr(data-value) ' ';
+    color: inherit !important;
+    border: 1px solid transparent;
+    white-space: pre;
+    // text-wrap: nowrap; white-space-collapse: pre;
+
+    // below are only necessary for max width
+    display: inline-flex;
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+
+  }
+}
+
+.autosize-input-container > input, .autosize-input-container::after{
+  display: flex;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: none !important;
+  height: 1lh;
+  max-height: 1lh !important;
+  min-height: 1lh !important;
+  font-style: inherit !important;
+}
+input[type="color"] {
+  cursor: pointer;
+  width: 24px;
+  height: 24px;
+  margin: 0;
+  margin-right: 5px;
+  vertical-align: middle;
+}
+
+input[type="color"] {
+  padding: 0;
+  vertical-align: middle;
+  /*border: none;*/
+}
+
+input[type="color"]::-webkit-color-swatch-wrapper {
+  /*il "bordo"?*/
+  padding: 2px;
+}
+
+input[type="color"]::-webkit-color-swatch {
+  /*il centro*/
+  /*border-radius: 100%;*/
+  border: none;
+}
+input[type='checkbox'] { // was .input as class
+  background-image: url("../static/svg/toggle-off.svg");
+  background-repeat: no-repeat; background-size: cover;
+  cursor: pointer;
+  height: 1lh;
+  width: 1lh;
+
+
+  /* this works only on native checkbos (no background-image)
+  padding: 0.5lh; // half line-height, not well-know unit but works
+  scale: 1.35; // padding makes it correctly a full-line height, but visually it looks less, this fixes it without making container bigger or overflowing.
+  */
+  background-color: transparent;
+  border: none;
+}
+input[type='checkbox']:checked { // was .input as class
+  background-image: url("../static/svg/toggle-on.svg");
+}
+
+.switch {
+  background-image: url("../static/svg/switch-off.svg") !important;
+}
+.switch:checked {
+  background-image: url("../static/svg/switch-on.svg") !important;
+}
+
+.select {
+  width: 50%;
+  outline: none;
+  font-size: 0.9rem;
+  height: min-content;
+  border-radius: $radius;
+  border: 1px solid $border-color;
+}
+.select:focus { border: 1px dashed $border-color; }
+
+.btn {
+  padding: 0.3em;
+  height: min-content;
+  width: fit-content;
+  margin-top: auto; margin-bottom: auto;
+  line-height: normal;
+  border-radius: 0.4em;
+}
+
+[data-nodetype="EdgePoint"]{
+  pointer-events: all; // fix because edge root have pointerEvents none, and this is contained in edge
+}
+[data-nodetype="Edge"]{
+  position: absolute;
+  overflow: visible;
+  height: 0;
+}
+
+/* tags */
+
+hr { margin: 0; opacity: 1;}
+/*
+label {
+  height: min-content;
+  //font-weight: lighter;
+  margin-top: auto; margin-bottom: auto;
+}
+b {
+  height: min-content;
+  font-size: 0.9rem;
+  font-weight: bolder;
+  margin-top: auto; margin-bottom: auto;
+}
+
+[rad]{
+  transform-origin: center;
+  transform: rotate(attr(rad)); // not working properly
+}*/
+/*
+button:hover{// experimental, doesn't go well because it applies to N parent elements before applying to last node, so it is applied a ton of times.
+  filter: hue-rotate(5deg);
+}
+*/
+.button-add{
+  background: var(--background-color-add);
+  border-color: var(--border-color-1);
+  color: var(--palette-w);
+
+  // override bootstrap hover
+  // --bs-btn-hover-bg: var(--background-color-add);
+  --bs-btn-hover-bg: var(--palette-1);
+  --bs-btn-hover-color: var(--palette-w);
+  &:hover{
+    color: var(--palette-w-hover);
+    background: var(--palette-1);
+    // filter: hue-rotate(45deg);
+  }
+
+}
+
+.monaco-editor-wrapper {
+  border-radius: var(--radius);
+  max-height: 75%;
+}
+
+.monaco-editor-wrapper textarea {
+  height: 10px!important;
+}
+
+.template-item:first-of-type {
+    margin-top: 0!important;
+
+
+    & input {
+      margin-top: 0!important;
+    }
+    & .simpleMode {
+      margin-top: 0!important;
+    }
+    & div:has(.delete) {
+      padding-top: 0!important;
+    }
+    & div:has(.question) {
+
+    }
+    & div.command-bar:has(.question) {
+      position: relative;
+      margin-top: 0px!important;
+      padding-top: 0px!important;
+    }
+    & div.command-bar .question {
+      position: relative;
+      bottom: 2px!important;
+
+      margin-top: 0px!important;
+      padding-top: 0px!important;
+
+    }
+}
+.template-item:not(:first-of-type) .question::before {
+  position: relative;
+  bottom: 3px!important;
+}
+
+
+
+.simpleMode {
+
+}
+.template-item:has(.detailedMode) > input  {
+  padding-bottom: 0!important;
+}
+
+.template-item:has(.detailedMode):first-of-type > span {
+  margin-top: 1px!important;
+}
+
+.template-item:last-of-type {
+
+  margin-bottom: 10px;
+}
+
+.delete.command-bar{
+
+}
+
+
+label.jj-editor-title {
+  display: inline-block;
+  color: var(--accent);
+
+  width: fit-content;
+  margin-top: 20px;
+
+  font-weight: 500;
+  font-size: 1em;
+
+}
+
+i.bi {
+  color: var(--font-color-1);
+  &:hover{
+    color: var(--palette-1-hover);
+  }
+}
+.btn i.bi, .bg i.bi{
+  color: var(--palette-w);
+}
+/*
+.jj-btn-info, .jj-btn-view, .jj-btn-up, .jj-btn-back {
+  font-size: 24px;
+  color: var(--font-color-1);
+}
+
+.jj-btn-view {
+  margin-right: 10px!important;
+}
+
+.jj-btn-add {
+  margin: 0px !important;
+  margin-top: 3px!important;
+  margin-right: -9px!important;
+  border: none;
+  font-size: 24px;
+  color: #00A896;
+}
+
+.jj-btn-delete {
+  margin: 0px !important;
+  margin-top: 0px!important;
+  font-size: 24px;
+  color: #db504a;
+  border: none;
+  background-color:none;
+}*/
+
+
+.btn-back{
+  color: var(--palette-w);
+  background: var(--palette-1);
+  &:hover{
+    color: var(--palette-w-hover);
+    background: var(--palette-1-hover);
+  }
+  i::before{
+    scale: 1.4;
+  }
+  border: none;
+  padding: 0;
+  width: 1.9em;
+  height: 1.9em;
+  border-radius: 0.4rem;
+  font-size: 1rem;
+  line-height: 1.9em;
+}
+
+.btn-delete, .btn-clipboard{
+  color: var(--palette-w);
+  background: var(--palette-g);
+  &.btn-delete:hover{
+   color: var(--palette-w-hover);
+   background: var(--palette-r);
+  }
+  &.btn-clipboard:hover{
+   color: var(--palette-w-hover);
+   background: var(--palette-gg);
+  }
+
+  border: none;
+  padding: 0;
+  width: 1.9em;
+  height: 1.9em;
+  border-radius: 0.4rem;
+  font-size: 1rem;
+  line-height: 1.9em;
+
+  i::before{
+    scale: 1.5;
+    line-height: 1.5;
+  }
+
+ }
+
+
+
+.jj-conf-area {
+  border: none;
+  border-radius: 4px;
+  padding-left: 10px;
+}
+.clearfix{
+  display: inline-block;
+  display: flow-root;
+  &::after{
+    content: "";
+    display: table;
+    clear: both;
+  }
+}
+
+
+
+.GraphContainer{ // multi-select popup fix in graph
+  overflow: hidden !important;
+  .Graph, .Graph>.root{ overflow: hidden !important; }
+  .scrollable[graph='DGraph']{
+    overflow: hidden;
+    >.panning-handle{
+      overflow: hidden;
+    }
+  }
+  [data-nodetype], [data-nodetype] > * {
+    &:has(.css-1nmdiq5-menu) {
+      min-height: min-content !important;
+    }
+  }
+  .css-b62m3t-container{
+    min-height: fit-content;
+  }
+  .css-1nmdiq5-menu{
+    margin: -10px 0px;
+    padding: 18px 0px;
+    background-color: transparent;
+    box-shadow: none;
+    //position: unset;
+    position: relative;
+    z-index: 1;
+    &>*{
+      background-color: rgb(255, 255, 255);
+      border-radius: 4px;
+      box-shadow: rgba(0, 0, 0, 0.1) 0px 0px 0px 1px, rgba(0, 0, 0, 0.1) 0px 4px 11px;
+    }
+  }
+}
+// LOGIN
+
+.login {
+  overflow: scroll;
+  position: absolute;
+
+  & label {
+    width: 100%;
+    & input {
+      margin-top: 0!important;
+      margin-bottom: 6px;
+    }
+  }
+
+  & form {
+    position: relative;
+    top: 20%!important;
+
+    width: 500px;
+    min-height: 350px;
+  }
+  & .login-header {
+    color: var(--secondary)!important;
+    font-weight: 800;
+    font-family: var(--default-font-family)
+
+  }
+
+  & input {
+    outline: 1px solid var(--secondary);
+    padding: 2px 8px;
+    border: none;
+    height: var(--input-height);
+  }
+
+  & input:focus {
+    outline: 2px solid var(--secondary);
+    border: none;
+  }
+
+  & input::placeholder {
+    color: var(--bg-2-5);
+    font-style: italic;
+  }
+
+  & select {
+    border: none;
+    border-radius: var(--radius);
+    padding: 0;
+    padding-left: 6px;
+    height: var(--input-height);
+    outline: 1px solid var(--secondary);
+    margin-top: 0!important;
+    margin-bottom: 6px;
+  }
+
+  & select:focus {
+    border: none;
+    padding-left: 6px;
+    outline: 2px solid var(--secondary);
+  }
+
+  & .login-button {
+    background-color: var(--secondary);
+    padding: 10px 20px!important;
+    border: none;
+  }
+
+  & .login-button:hover {
+    background-color: var(--accent);
+  }
+
+  & .login-link {
+    color: var(--secondary)!important;
+  }
+
+  & .login-logo {
+    width: fit-content;
+    margin: 0px auto;
+    padding-bottom: 10px;
+    padding-top: 30px;
+
+  }
+}
+
+.login.bg {
+  justify-content: center;
+  background-image: url('../static/img/101.jpg'); // 2.* (5), 1.* (101)
+  background-size: cover;
+  background-repeat: no-repeat;
+  
+  & form {
+    opacity: 0.9;
+    margin-left: auto;
+    margin-right: auto;
+  }
+}
+
+
+.login.register { 
+
+  & form { 
+    margin: auto;
+    padding-left: 100px!important;
+    padding-right: 100px!important;
+    width: 800px!important;
+    top: 0%!important;
+
+    & label {
+      width: 100%;
+      & input {
+        margin-top: 0!important;
+        margin-bottom: 6px;
+      }
+    }
+  }
+}
+
+.login.retrieve {
+
+  & form { 
+    margin: auto;
+    padding-left: 100px!important;
+    padding-right: 100px!important;
+    width: 800px!important;
+
+    & label {
+      width: 100%;
+      & input {
+        margin-top: 0!important;
+        margin-bottom: 6px;
+      }
+    }
+  }
+
+
+}

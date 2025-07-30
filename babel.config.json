@@ -1,9 +1,0 @@
-{
-  "comments": true,
-  "presets": ["@babel/preset-env"],
-  "env":
-  {
-    "development": { "presets": [[{"builtIns": false }]] },
-    "production": { "presets": [["minify", { "builtIns": false }]] }
-  }
-}

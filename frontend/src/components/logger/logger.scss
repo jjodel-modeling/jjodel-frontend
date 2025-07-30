@@ -1,0 +1,247 @@
+
+@keyframes fade-remove {
+  from {
+    transform: scale(1, 1);
+    opacity: 1;
+  }
+  to {
+    transform: scale(0.9, 0.9);
+    opacity: 0;
+  }
+  100% {
+    visibility: hidden;
+  }
+}
+@keyframes resize-remove {
+  from {
+    max-height: 400px;
+    padding: 0.5em 1em;
+    overflow: hidden;
+    transform: scale(1, 1);
+    //opacity: 1;
+  }
+  to {
+    max-height: 0;
+    padding: 0 0;
+    overflow: hidden;
+    transform: scale(0.5, 1);
+    visibility: hidden;
+    //opacity: 0;
+  }
+}
+
+.jjtoast-holder{
+  overflow-y: visible;
+  position: fixed;
+  display: flex;
+  flex-flow: column-reverse;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  // outline: 2px solid black;
+  min-width: 10px;
+  min-height: 10px;
+  z-index: 999;
+  //pointer-events: none;
+
+  .close-all{
+    animation: linear 1.0s forwards;
+    animation-delay: attr(data-duration ms);
+    animation-name: sudden-remove;
+    background: white;
+    color: black;
+    margin: 0 auto;
+  }
+  .jjtoast.outer{
+    margin: 0 auto;
+    padding: 4.5px 0;
+    //width: 25vw;
+    animation: ease-in 1.0s forwards;
+    animation-delay: attr(data-duration ms);
+    animation-name: resize-remove;
+    &:hover, &:focus-within{
+      animation-play-state: paused !important;
+    }
+
+    --font: #fff;
+    &.cat_l{
+      --cat-color: #0bf;
+      --border: #09f;
+    }
+    &.cat_i{
+      --cat-color: #09f;
+      --border: #047;
+    }
+    &.cat_w{
+      --cat-color: #ca0;
+      --border: #b70;
+    }
+    &.cat_e, &.cat_ex{
+      --cat-color: #f00;
+      --border: #700;
+    }
+    &.cat_eDev, &.cat_exDev{
+      --cat-color: #900;
+      --border: #f00;
+    }
+
+  }
+  .jjtoast.inner{
+    display: flex;
+    flex-wrap: nowrap;
+    //width: 25vw;
+    max-width: 33vw;
+    max-height: 25vh;
+    border-radius: 8px;
+    pointer-events: all;
+    padding: 0.5em 1em;
+
+    color: var(--font);
+    outline: 2px solid var(--border);
+    background-color: var(--cat-color);
+    &:hover{
+      background-color: var(--border);
+      outline: 2px solid var(--font);
+    }
+
+    .msg{
+      flex-grow:1;
+      margin-right: 0.5rem;
+      // css animation to hide after delay, no need to update refresh on jsx
+    }
+
+    i.closebtn{
+      margin: auto 0;
+      border-radius: 100%;
+      width: 1lh;
+      height: 1lh;
+      display: flex;
+      &:before{
+        margin: auto;
+        color: var(--font)
+      }
+      // background-color: var(--cat-color);
+      // background-color: var(--border);
+      outline: 1px solid var(--border);
+      &:hover{
+        // background-color: var(--border);
+        outline: 1px solid var(--font);
+      }
+    }
+  }
+}
+.text-selectable{
+  user-select: auto !important;
+}
+
+
+
+.copy-to-clipboard-container{
+  display: none !important; // default copy button from JSON JSX library is bugged, cannot handle recursive objects.
+}
+
+.search-row{
+  display: flex;
+  flex-wrap: nowrap;
+
+  .search{
+    flex-basis: 100px;
+    flex-grow: 1;
+    margin-right: 0.25rem;
+    text-align: center;
+    font-size: 1.25em;
+    max-height: 35px;
+    margin-bottom: 0.25rem;
+    &.invalid{
+      border-color: red;
+      text-decoration: grammar-error;
+      &::after{
+        content: 'this is not a valid regular expression';
+      }
+    }
+  }
+  label.checkbox{
+    margin: auto;
+    display: flex;
+    >*{margin: auto;}
+    input{
+      // padding: 5px;
+      margin-left: 0.5rem;
+      margin-right: 2px;
+    }
+  }
+}
+
+.categories{
+  display: grid;
+  //grid-template-columns: repeat(7, 1fr);
+  grid-auto-flow: column;
+  column-gap: 0.5rem;
+  padding: 0.25rem;
+
+  button.cat{
+    width: 100%;
+  }
+}
+.cat{
+  min-height: 30.5px;
+  width: 100%;
+  display: flex;
+  flex-flow: column;
+  --bs-btn-color: var(--cat-color);
+  --bs-btn-border-color: var(--cat-color);
+  --bs-btn-hover-color: var(--cat-color); // #fff;
+  --bs-btn-hover-bg: transparent; // var(--cat-color);
+  >*.text{
+    margin: auto;
+  }
+  &.active{
+    --bs-btn-hover-bg: var(--cat-color);
+    --bs-btn-hover-color: #fff;
+  }
+  --bs-btn-hover-border-color: var(--cat-color);
+  // --bs-btn-focus-shadow-rgb: 220, 53, 69;
+  --bs-btn-active-color: #fff;
+  --bs-btn-active-bg: var(--cat-color);
+  --bs-btn-active-border-color: var(--cat-color);
+  --bs-btn-active-shadow: inset 0 3px 5px rgba(0, 0, 0, 0.125);
+  --bs-btn-disabled-color: var(--cat-color);
+  --bs-btn-disabled-bg: transparent;
+  --bs-btn-disabled-border-color:  var(--cat-color);
+  --bs-gradient: none;
+  // &.inactive{ color: var(--cat-color); }
+
+  &.cat_l{
+    --cat-color: #0bf;
+  }
+  &.cat_i{
+    --cat-color: #09f;
+    content: "I";
+  }
+  &.cat_w{
+    --cat-color: #ca0;
+    // &.active{ color: black; }
+  }
+  &.cat_e, &.cat_ex{
+    --cat-color: #f00;
+  }
+  &.cat_eDev, &.cat_exDev{
+    --cat-color: #900;
+  }
+}
+li.cat {
+  border: 1px solid var(--cat-color);
+  padding: 0.25rem;
+  margin-top: 0.25rem;
+
+  &:hover{
+    background-color: 1px solid var(--cat-color);
+  }
+  //&.cat_e, &.cat_ex,
+  /*&.cat_eDev, &.cat_exDev{
+    .content{ color: white; } // same as &:hover
+  }*/
+}
+ul.entries{
+  list-style-type: none;
+  padding-left: 0rem;
+}

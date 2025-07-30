@@ -1,0 +1,31 @@
+.graph-centered{
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 999999;
+  box-shadow: var(--smart-elevation-8);
+  background-color: white;
+  color: black;
+  padding: 0.25rem 0.5rem;
+  display: flex;
+  i.bi{
+    font-size: 1.5em;
+    margin-right: 0.25rem;
+  }
+  .bi::before{
+    color: red;
+    // transform: scale(1.5); float: left;
+  }
+  &.Edge{
+    position: fixed !important;
+    top: 50% !important;
+    left: 50% !important;
+    height: auto;
+    width: max-content;
+  }
+  // &.mainView{ overflow: visible !important; }
+  &.Vertex, &.GraphVertex, &.Graph, &.EdgePoint{
+    transform: none;
+  }
+}

@@ -1,0 +1,40 @@
+{
+
+  "outDir": "./src/static/tsc_output",
+  "compilerOptions": {
+    "target": "es5",
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "esnext"
+    ],
+    "experimentalDecorators": true,
+    "allowJs": true,
+    "noImplicitAny": true,
+    "downlevelIteration": true,
+    "skipLibCheck": true,
+    "skipDefaultLibCheck": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "strict": true,
+    "forceConsistentCasingInFileNames": true,
+    "noFallthroughCasesInSwitch": true,
+    "module": "esnext",
+    "moduleResolution": "node",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "jsx": "react-jsx"
+  },
+  "types": [],
+  "include": [
+    "src"
+  ],
+  "exclude": [
+    "common/libraries/*",
+    "node_modules",
+    "./node_modules",
+    "./node_modules/*",
+  ]
+  // "noImplicitUseStrict": true = "use strict" of js
+}

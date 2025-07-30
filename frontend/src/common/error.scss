@@ -1,0 +1,186 @@
+// .error-notification {
+//     border-radius: var(--radius);
+//     max-width: 700px;
+//     margin: 12px auto;
+//     background-color: var(--failure); // crimson;
+//     color: white;
+
+//     padding: 20px;
+    
+
+//     & h1 {
+//         padding-left: 100px;
+//         font-size: 2em;
+//     }
+//     & h2 {
+//         padding-left: 100px;
+//         font-size: 1.4em;
+//         padding-bottom: 40px;
+//     }
+
+//     & .error-type {
+//         padding-left: 100px;
+//         padding-bottom: 40px;
+//         font-weight: 200;
+
+//         & b {
+//             font-size: 1.3em;
+//             padding-bottom: 20px;
+//         }
+//     }
+
+//     & .error-details {
+//         font-family: Lekton, monospace;
+//         font-size: 1.3em;
+//         padding: 10px;
+//         padding-left: 100px;
+//         padding-bottom: 20px;
+//         border: 1px dotted white;
+//         border-radius: var(--radius);
+    
+//         & div    {
+//             font-family: Lekton, monospace;
+
+
+        
+//             & b {
+//                 color: yellow!important;
+//             }
+
+//             & div div:first-of-type {
+//                 padding-top: 20px;
+               
+//             }
+//             & div div {
+//                 color: white;
+//             }
+//         }
+//     }
+
+    
+// }
+
+
+
+// .error-notification::before {
+//     position: absolute;
+//     margin: auto 20px;
+//     font-size: 3em;
+//     font-family: bootstrap-icons;
+//     content: "\F333";
+//     float: left;
+// }
+
+.error-root.ui-draggable.hoverable{
+    overflow: visible;
+    text-align: center;
+    border-color: crimson;
+    margin: 10px;
+    pointer-events: all;
+}
+
+.error-notification {
+    border-radius: var(--radius);
+    max-width: 700px;
+    margin: 12px auto;
+    margin-top: 0;
+    background-color: whitesmoke; // crimson;
+    color:crimson;
+    outline: 4px solid crimson;
+
+    padding: 20px;
+    
+
+    & h1 {
+        font-size: 2em;
+    }
+    & h2 {
+        font-size: 1.4em;
+        padding: 10px;
+    }
+
+    & .error-type {
+        padding-bottom: 10px;
+        font-weight: 200;
+
+        & b {
+            font-size: 1.3em;
+            padding-bottom: 20px;
+        }
+    }
+
+    & .error-details {
+        font-family: Lekton, monospace;
+        font-size: 1.3em;
+        padding: 10px;
+        text-align: left;
+        // border: 1px dotted crimson;
+        border-radius: var(--radius);
+        background-color: var(--neutral);
+        color: white;
+        a {
+            color: lightgray;
+        }
+    
+        & div    {
+            font-family: Lekton, monospace;
+
+
+        
+            & b {
+                color: crimson!important;
+            }
+
+            & div div:first-of-type {
+                padding-top: 20px;
+               
+            }
+            & div div {
+                color: white;
+            }
+        }
+    }
+
+    
+}
+
+
+
+.error-notification::before {
+    position: absolute; left: 0;
+    display: inline-block;
+    margin: auto 20px;
+    font-size: 3em;
+    font-family: bootstrap-icons;
+    content: "\F333";
+}
+
+.notification-icon {
+    position: absolute;
+    display:block;
+    top: 2px;
+    right: 5px;
+    cursor: pointer;
+}
+
+.notification-icon::before {
+    position: relative;
+    font-family: 'bootstrap-icons';
+    color: red;
+    text-align: center;
+    padding-left: 5px;
+    display: block;
+
+    content: '\F332';
+} 
+
+.notification-icon.opened::before {
+    position: relative;
+    font-family: 'bootstrap-icons';
+    color: var(--accent);
+    text-align: center;
+    padding-left: 5px;
+    display: block;
+
+    content: '\F332';
+} 

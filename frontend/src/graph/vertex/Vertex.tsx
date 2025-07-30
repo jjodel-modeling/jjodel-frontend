@@ -1,0 +1,571 @@
+import React, {Dispatch, ReactElement, ReactNode} from 'react';
+import {connect} from 'react-redux';
+import {
+    Debug,
+    DEdgePoint,
+    DGraph,
+    DGraphElement,
+    DGraphVertex,
+    DState, DUser,
+    DVertex, DViewElement,
+    DVoidVertex,
+    EMeasurableEvents,
+    GObject,
+    GraphElementComponent,
+    GraphElementDispatchProps,
+    GraphElementOwnProps,
+    GraphElementReduxStateProps,
+    GraphElementStatee,
+    GraphPoint,
+    GraphSize,
+    LClass, LGraph, LGraphElement,
+    LModelElement, LNamedElement,
+    Log,
+    LPointerTargetable,
+    LUser, LViewElement,
+    LViewPoint,
+    LVoidVertex, Pointer,
+    RuntimeAccessibleClass,
+    SetRootFieldAction,
+    Size,
+    TRANSACTION,
+    U, windoww,
+} from '../../joiner';
+import $ from 'jquery';
+import 'jqueryui';
+import 'jqueryui/jquery-ui.css';
+import { lightModeAllowedElements } from '../graphElement/graphElement';
+import ContextMenu from "../../components/contextMenu/ContextMenu";
+import {VertexOwnProps, VertexStateProps} from '../graphElement/sharedTypes/sharedTypes';
+
+const superclassGraphElementComponent: typeof GraphElementComponent = RuntimeAccessibleClass.classes.GraphElementComponent as any as typeof GraphElementComponent;
+class ThisStatee extends GraphElementStatee { forceupdate?: number }
+
+const dragHelper = document.createElement('div');
+dragHelper.style.backgroundColor = 'transparent';
+dragHelper.style.outline = '1px dashed black'; // '4px dashed #333';
+dragHelper.style.zIndex = '9999';
+
+type JQUIPosition = {left: number, top: number};
+type JQUIDragging = {
+    helper: JQuery<HTMLElement>,
+    position: JQUIPosition,
+    offset: JQUIPosition,
+    originalPosition: JQUIPosition,
+}
+
+type ResizableUI = {
+    element: JQuery<HTMLElement>,
+    helper: JQuery<HTMLElement>,
+    originalElement: JQuery<HTMLElement>, // same as element?
+    originalPosition: {left: number, top: number},
+    originalSize: {width: number, height: number},
+    position: {left: number, top: number},
+    size: {width: number, height: number},
+}
+
+export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState extends ThisStatee = ThisStatee>
+    extends superclassGraphElementComponent<AllProps, ThisState> {
+    public static cname: string = 'VertexComponent';
+    static defaultProps: Partial<VertexOwnProps> = VertexOwnProps.new();
+    draggableOptions: GObject | undefined;
+    resizableOptions: GObject | undefined;
+    rotableOptions: GObject | undefined;
+
+    constructor(props: AllProps, context?: any) {
+        super(props);
+        this.getSize = this.getSize.bind(this);
+        this.setSize = this.setSize.bind(this);
+        // this.state={forceupdate:1};
+        /*// remove this?
+        setTimeout(()=>{
+            this.getSize = this.getSize.bind(this);
+            this.setSize = this.setSize.bind(this);
+            // this.get_size = console.error as any;
+            // this.r = (<RootVertex props={this.props} render={super.render()} super={this} />);
+            this.forceUpdate();
+            this.setState({forceupdate:2});
+        },1)*/
+    }
+/*
+    onViewChangeOld(): void {
+        super.onViewChangeOld();
+        this.draggableOptions = undefined;
+        this.resizableOptions = undefined;
+        this.rotableOptions = undefined;
+    }*/
+
+    onHtmlNodeChange(){
+        this.draggableOptions = undefined;
+        this.resizableOptions = undefined;
+        this.rotableOptions = undefined;
+        this.oldHtml = this.html.current;
+    }
+
+    setVertexProperties(){
+        if (!this.props.node || !this.html.current || !this.props.isVertex) return;
+
+        let html = this.html.current;
+        const $measurable: GObject<'JQuery + ui plugin'> = $(html); // todo: install typings
+
+        let view: LViewElement = this.props.view;
+        let isDraggable: boolean = view.draggable;
+        let isResizable: boolean = view.resizable;
+        let allviews: Pointer<DViewElement>[] = [view, ...this.props.views].map(v=>v.id);
+
+        let dragCacheZoom: GraphPoint | null = null;
+        let resizeCacheZoom: GraphPoint | null = null;
+
+        // $element = $(html).find('.measurable').addBack();
+        try {
+        if (!isDraggable) {
+            if ($measurable.data("uiDraggable")) $measurable.draggable('disable');
+        }
+        else if (this.draggableOptions) {
+            if ($measurable.data("uiDraggable")) $measurable.draggable('enable');
+            // NB: this check is to see if draggable has been setup. i think if 2 refreshes happens to fast it can
+            // happen that this.draggableOptions i set, but jqui didn't set up the draggable infos and throws warnings.
+        }
+        else {
+            // first setup only
+            this.draggableOptions = {
+                cursor: 'grabbing',
+                cancel: '.no-drag,[contenteditable="true"],input,textarea,button,select,option',
+                // cancel: '.no-drag,input,textarea,button,select,option',
+                containment: 'parent',
+                opacity: 0.0,
+                disabled: !(isDraggable), // this does not work, i think because once set the first time the whole declaration is not re-applied. would need to undo draggable
+                distance: 5,
+                helper: () => { // or 'clone'
+                    // dragHelper.style.display='block';
+                    let size = this.props.node.size; // this.getSize();
+                    // let actualSize = Size.of(html);
+                    // if (size.w !== actualSize.w || size.h !== actualSize.h) this.setSize({w:actualSize.w, h:actualSize.h});
+                    /*dragHelper.setAttribute('xx', size.x+'');
+                    dragHelper.setAttribute('yy', size.y+'');*/
+                    dragHelper.style.width = size.w + 'px';
+                    dragHelper.style.height = size.h + 'px';
+                    dragHelper.style.opacity = '1'; // this.props.view.constraints.length ? '1' : '0.5';
+                    if (this.props.view.lazySizeUpdate) dragHelper.classList.add('lazySizeUpdate');
+                    else dragHelper.classList.remove('lazySizeUpdate');
+                    return dragHelper;
+                },
+                // disabled: !(view.draggable),
+                start: (evt: GObject, ui: JQUIDragging) => {
+                    // dragCacheZoom = this.props.node.graph.zoom;
+                    dragCacheZoom = this.props.node.graph.cumulativeZoom; // NB: cumulative zoom only of parent graphs, excluding zoom of direct vertex
+                    ui.originalPosition.left /= dragCacheZoom.x;
+                    ui.originalPosition.top /= dragCacheZoom.y;
+                    ui.offset.left = (ui.position.left /= dragCacheZoom.x);
+                    ui.offset.top = (ui.position.top /= dragCacheZoom.y);
+
+                    TRANSACTION('Vertex dragStart ' + this.props.node.name, ()=> {
+                        for (let vid of allviews) this.doMeasurableEvent(EMeasurableEvents.onDragStart, vid);
+                        windoww.dragging_vertex_size_tmp = this.props.node.size; // this.getSize();
+                    })
+                },
+                drag: (evt: GObject<'mousemoveevent'>, ui: JQUIDragging) => {
+
+                    if (dragCacheZoom) {
+                        ui.offset.left = (ui.position.left /= dragCacheZoom.x);
+                        ui.offset.top = (ui.position.top /= dragCacheZoom.y);
+                        // NB: ui.originalPosition is set once by jqueryui, and then never updated. any change is permanent.
+                        // offset and position are both calculated each time independently from past values or modifications,
+                        //    as such any edit is not permanent unless reiterated at every start, ing, end event.
+                        // about offset: don't know why but in jqui offset seems always === position, so i'm keeping them consistent.
+                    }
+                    TRANSACTION('Vertex dragging ' + this.props.node.name, ()=>{
+                        // console.log('Vertex.setsize', obj);
+                        if (!this.props.view.lazySizeUpdate) this.setSize({x:ui.position.left, y:ui.position.top});
+                        for (let vid of allviews) this.doMeasurableEvent(EMeasurableEvents.whileDragging, vid);
+                    })
+                },
+                stop: (evt: GObject, ui: JQUIDragging) => {
+                    if (dragCacheZoom){
+                        /*ui.offset.left = (ui.position.left /= dragCacheZoom.x);
+                        ui.offset.top = (ui.position.top /= dragCacheZoom.y);*/
+                        dragCacheZoom = null;
+                    }
+
+                    TRANSACTION('Vertex dragEnd ' + this.props.node.name, ()=>{
+                        this.setSize({x:ui.position.left, y:ui.position.top});
+                        for (let vid of allviews) this.doMeasurableEvent(EMeasurableEvents.onDragEnd, vid);
+                    })
+                }
+            };
+            $measurable.draggable(this.draggableOptions);
+        }
+        } catch(e) {
+            this.draggableOptions = undefined;
+            Log.ee("failed to setup / update draggable uptions", e, this, this.props.node, this.props.data);
+            return;
+            // might throw error if element is not visible or in the dom or similar, but i won't care in that case.
+            // but i reset draggableOptions so it can retry later if element enters the DOM instead of thinking it is already finished setup
+        }
+
+        try{
+            if (!isResizable) {
+                if ($measurable.data("uiResizable")) $measurable.resizable('disable');
+            }
+            else if (this.resizableOptions) {
+                if ($measurable.data("uiResizable")) $measurable.resizable('enable');
+            }
+            if (!this.resizableOptions) {
+                this.resizableOptions = {
+                    helper: 'resize-shadow selected-by-me', // does not accept functions or html elements, just classes...
+                    start: (evt: GObject, ui: ResizableUI) => {
+                        TRANSACTION('onResizeStart events ' + this.props.node.name, ()=>{
+                            resizeCacheZoom = this.props.node.graph.cumulativeZoom; // NB: cumulative zoom only of parent graphs, excluding zoom of direct vertex
+                            if (ui.helper[0]) ui.helper[0].style.transform = 'scale(' + resizeCacheZoom.x*100+'%, '+resizeCacheZoom.y*100+'%)';
+                            if (ui.helper[0]) ui.helper[0].style.transformOrigin = 'top left';
+                            resizeCacheZoom = {x:1, y:1} as any; // transform is enough and better
+                            ui.originalSize.width = (ui.originalSize.width /= resizeCacheZoom!.x);
+                            ui.originalSize.height = (ui.originalSize.height /= resizeCacheZoom!.y);
+                            ui.size.width = (ui.size.width /= resizeCacheZoom!.x);
+                            ui.size.height = (ui.size.height /= resizeCacheZoom!.y);
+                            if (!this.props.node.isResized) this.props.node.isResized = true; // set only on manual resize, so here and not on setSize()
+                            for (let vid of allviews) this.doMeasurableEvent(EMeasurableEvents.onResizeStart, vid);
+                            // ;
+                        })
+                    },
+                    resize: (event: GObject, ui: ResizableUI) => {
+                        TRANSACTION('resizing events ' + this.props.node.name, ()=>{
+                            if (resizeCacheZoom) {
+                                ui.size.width = (ui.size.width /= resizeCacheZoom.x);
+                                ui.size.height = (ui.size.height /= resizeCacheZoom.y);
+                            }
+                            if (!this.props.view.lazySizeUpdate) this.setSize({w:ui.size.width, h:ui.size.height});
+                            for (let vid of allviews) this.doMeasurableEvent(EMeasurableEvents.whileResizing, vid);
+                        })
+                    },
+                    stop: (event: GObject, ui: ResizableUI) => {
+                        if (!this.state.classes.includes('resized')) this.setState({classes:[...this.state.classes, 'resized']});
+                        // if (!withSetSize) { node.width = obj.size.width; node.height = obj.size.height; } else {
+                        let absolutemode = false; // this one is less tested and safe, but should work even if html container is sized 0. best if made to work
+                        let newSize: Partial<GraphSize>;
+                        if (resizeCacheZoom){
+                            ui.size.width = (ui.size.width /= resizeCacheZoom.x);
+                            ui.size.height = (ui.size.height /= resizeCacheZoom.y);
+                            resizeCacheZoom = null;
+                        }
+                        if (absolutemode) {
+                            let nativeevt: MouseEvent = event.originalEvent.originalEvent;
+                            // let htmlSize = Size.of(event.target, false);
+                            let htmlSize = Size.of(ui.helper[0], false);
+                            newSize = this.props.node.graph.translateHtmlSize(htmlSize);
+                            /*n
+                            this is some pixels off, i think because inner coords are post the border of the container element,
+                             and the innermost graph size have coords before his borders, so the translation is off by the amount
+                              of border width of the innermost graph (and package default view does have a border)
+                               so in graph coord translate function should add: outersize.add( x: innergraph.html.getFinalComputedCSS('border-width-left'), y: ...border-width-top
+
+                        let cursorSize = new GraphSize(0, 0, nativeevt.clientX, nativeevt.clientY);//
+                        newSize = htmlSize.duplicate() as any; // .subtract( {w:cursorSize.x, h:cursorSize.y}, true);
+                        let handleClasses: string[] = [...event.originalEvent.target.classList];
+                        let handleKeyLength = 14; // equal to 'ui-resizable-'.length + 1;
+                        let handleClassName = handleClasses.find( // i check both length and indexOf, because i must match 'ui-resizable-se' but not 'ui-resizable-handle'
+                            (e) => (e.length === handleKeyLength || e.length === handleKeyLength + 1) && e.indexOf('ui-resizable-')===0);
+
+                            let handleType = handleClassName ? handleClassName.substring(13) : '';
+                            switch (handleType) {
+                                default: case '': case 'se':
+                                    delete newSize.x;
+                                    delete newSize.y;
+                                    newSize.w = cursorSize.w - htmlSize.x;
+                                    newSize.h = cursorSize.h - htmlSize.y;
+                                    break;
+                                case 'n': case 's':
+                                    delete newSize.x;
+                                    delete newSize.y;
+                                    delete newSize.w;
+                                    newSize.h = cursorSize.h - htmlSize.y;
+                                    break;
+                                case 'e': case 'W':
+                                    delete newSize.x;
+                                    delete newSize.y;
+                                    newSize.w = cursorSize.w - htmlSize.x;
+                                    delete newSize.h;
+                                    break;
+                                case 'nw':
+                                    let br = htmlSize.br();
+                                    newSize.x = cursorSize.x;
+                                    newSize.y = cursorSize.y;
+                                    newSize.w = br.x - cursorSize.w;
+                                    newSize.h = br.y - cursorSize.h;
+                                    break;
+                                case 'ne':
+                                    delete newSize.x;
+                                    newSize.y = cursorSize.y;
+                                    delete newSize.w;
+                                    delete newSize.h;
+                                case '?':
+                                    delete newSize.x;
+                                    delete newSize.y;
+                                    delete newSize.w;
+                                    delete newSize.h;
+                                    break;
+                            }*/
+                            // n, e, s, w, ne, se, sw, nw
+                            console.log('resizing', {newSize, htmlSize, event, nativeevt, sizeof_with_transforms: Size.of(event.target, true)});
+                            // NB: size.x and size.y are going crazy if the element have an edge, no idea why, i just deleted x & y before setSize()
+                        }
+                        else newSize = {w:ui.size.width, h:ui.size.height};
+                        // evt coordinates: clientX, layerX, offsetX, pageX, screenX
+                        TRANSACTION('onResizeEnd events ' + this.props.node.name, ()=>{/*
+                            delete newSize.x;
+                            delete newSize.y;*/
+                            this.setSize(newSize);
+                            // console.log('resize setsize:', obj, {w:obj.size.width, h:obj.size.height});
+                            for (let vid of allviews) this.doMeasurableEvent(EMeasurableEvents.onResizeEnd, vid);
+                        })
+
+                    }
+                }
+                $measurable.resizable(this.resizableOptions);
+            }
+        } catch(e){
+            // check draggable catch comment
+            this.resizableOptions = undefined;
+            Log.ee("failed to enable / disable resizable options", e, this, this.props.node, this.props.data);
+            return;
+        }
+
+        try{
+            // edit dynamic draggable options post-setup
+            if (this.draggableOptions) {
+                // none so far?
+            }
+            // edit dynamic resizable options post-setup
+            if (this.resizableOptions) {
+                let lazySizeUpdate = view.lazySizeUpdate;
+                let containment = lazySizeUpdate ? false : 'parent';
+                let helper = lazySizeUpdate ? 'resizable-helper-bad' : 'original';
+                // helper does not accept a func or htmlElem, but only a classname...
+                // and makes his own empty proxy element to resize in his place. inchoherent.
+                if (this.resizableOptions?.containment !== containment){
+                    this.resizableOptions.containment = containment;
+                    $measurable.draggable( 'option', 'containment', containment);
+                }
+                if (this.resizableOptions?.helper !== helper){
+                    this.resizableOptions.helper = helper;
+                    $measurable.resizable( 'option', 'helper', helper);
+                }
+            }
+        } catch(e) {
+            // check draggable catch comment
+            this.draggableOptions = undefined;
+            this.resizableOptions = undefined;
+            this.rotableOptions = undefined;
+            Log.ee("failed to update measurable uptions", e, this, this.props.node, this.props.data);
+            return;
+        }
+    }
+
+
+
+    getSize(): Readonly<GraphSize> {
+        throw new Error('Vertex.getSize is obsolete');
+        return null as any;
+        // return this.props.node.getSize(false, !this.props.node.isResized && this.props.view.adaptWidth);
+        // below is handled in get_size
+        /*console.log('get_size('+(this.props?.data as any).name+')', {
+            view:this.props.view.getSize(this.props.dataid || this.props.nodeid as string),
+            node:this.props.node?.size,
+            default: this.props.view.defaultVSize});* /
+        let ret = this.props.view.getSize(this.props.data?.id || this.props.nodeid as string)
+            || this.props.node?.size
+            || this.props.view.defaultVSize;
+        if (this.props.node.isResized) return ret;
+        let actualSize: Partial<Size>&{w:number, h:number} = this.html.current ? Size.of(this.html.current as Element) : {w:0, h:0};
+        if (this.props.view.adaptWidth && ret.w !== actualSize.w) {
+            this.setSize({w:actualSize.w});
+            ret.w = actualSize.w;
+        }
+        if (this.props.view.adaptHeight && ret.h !== actualSize.h) {
+            this.setSize({h:actualSize.h});
+            ret.h = actualSize.h;
+        }
+        return ret;*/
+    }
+    // setSize(x_or_size_or_point: number, y?: number, w?:number, h?:number): void;
+    setSize(x_or_size_or_point: Partial<GraphPoint>): void;
+    setSize(x_or_size_or_point: Partial<GraphSize>): void;
+    // setSize(x_or_size_or_point: number | GraphSize | GraphPoint, y?: number, w?:number, h?:number): void;
+    setSize(size0: Partial<GraphSize> | Partial<GraphPoint>): void {
+        let size: {x?:number, y?: number, w?:number, h?:number} = size0;
+        /*if (size.w !== undefined && size.w < 0) size.w = 0;
+        if (size.h !== undefined && size.h < 0) size.h = 0;
+
+        return this.props.node.size = size as any;
+        // console.log('setSize('+(this.props?.data as any).name+') thisss', this);
+        if (this.props.view.storeSize) {
+            let id = (this.props.data?.id || this.props.nodeid) as string;
+            this.props.view.updateSize(id, size);
+            return;
+        }
+        let olds = this.props.node.size;
+        size.x = size.x === undefined ? olds?.x : size.x;
+        size.y = size.y === undefined ? olds?.y : size.y;
+        // size.w = size.w === undefined ? olds?.w : size.w;
+        // size.h = size.h === undefined ? olds?.h : size.h;*/
+        this.props.node.size = size as GraphSize;
+    }
+
+    oldHtml?: Element | null = null;
+    // nodeType!: string;
+    render(): ReactNode {
+        if (Debug.lightMode && (!this.props.data || !(lightModeAllowedElements.includes(this.props.data.className)))){
+            return this.props.data ? <div>{" " + ((this.props.data as any).name)}:{this.props.data.className}</div> : undefined;
+        }
+        if (!this.props.node) return 'Loading Node...';
+
+        if (this.html.current !== this.oldHtml){ this.onHtmlNodeChange(); }
+
+        let nodeType = 'NODE_TYPE_ERROR';
+        if ( this.props.isEdgePoint) nodeType = 'EdgePoint'; else
+        if ( this.props.isGraph &&  this.props.isVertex) nodeType = 'GraphVertex'; else
+        if ( this.props.isGraph && !this.props.isVertex) nodeType = 'Graph'; else
+        if (!this.props.isGraph &&  this.props.isVertex && (this.props.isVoid || !this.props.data)) nodeType = 'VoidVertex'; else
+        if (!this.props.isGraph &&  this.props.isVertex) nodeType = 'Vertex'; else
+        if (!this.props.isGraph && !this.props.isVertex) nodeType = 'Field';
+
+        return super.render(nodeType);
+        // return <RootVertex props={this.props} render={super.render()} super={this} key={this.props.nodeid+'.'+this.state?.forceupdate} />;
+    }
+
+    select(forUser?: Pointer<DUser>): void{
+        super.select(forUser);
+    }
+    componentDidMount(){
+        super.componentDidMount();
+        this.setVertexProperties();
+    }
+    componentDidUpdate(prevProps?: Readonly<AllProps>, prevState?: Readonly<ThisState>, snapshot?: any) {
+        super.componentDidUpdate(prevProps);
+        this.setVertexProperties();
+    }
+}
+
+
+class DispatchProps extends GraphElementDispatchProps {
+}
+
+export type AllPropss = VertexOwnProps & VertexStateProps & DispatchProps;
+
+function mapStateToProps(state: DState, ownProps: VertexOwnProps): VertexStateProps {
+    let DGraphElementClass: typeof DGraphElement;
+    if (ownProps.isEdgePoint) DGraphElementClass = DEdgePoint; else
+    if (ownProps.isVertex && ownProps.isGraph) DGraphElementClass = DGraphVertex; else
+    if (ownProps.isVertex && !ownProps.isGraph) DGraphElementClass = DVertex; else
+    if (!ownProps.isVertex && ownProps.isGraph) DGraphElementClass = DGraph;
+    else DGraphElementClass = DGraphElement; // DField;
+
+    if (DGraphElementClass === DVertex && ownProps.isVoid) DGraphElementClass = DVoidVertex;
+    const superret: VertexStateProps = GraphElementComponent.mapStateToProps(state, ownProps, DGraphElementClass, VertexStateProps.new()) as VertexStateProps;
+    // superret.lastSelected = state._lastSelected?.modelElement;
+    // superret.lastSelected = state._lastSelected ? LPointerTargetable.from(state._lastSelected.modelElement) : null;
+
+    // change current to correct user ID when authentication is implemented.
+    // const selected = state.selected[DUser.current];
+    // uperret.selected = (selected) ? LGraphElement.fromPointer(selected) : null;
+    /*  Uncomment this when we have user authentication.
+    superret.selected = {};
+    for(let user of Object.keys(selected)) {
+        const pointer = selected[user];
+        if (pointer) superret.selected[user] = LModelElement.fromPointer(pointer);
+        else superret.selected[user] = null;
+    }
+    */
+
+    superret.isEdgePending = {
+        user: LPointerTargetable.from(state.isEdgePending.user),
+        source: LPointerTargetable.from(state.isEdgePending.source)
+    };
+    // superret.viewpoint = LViewPoint.fromPointer(state.viewpoint);
+    /*const ret: VertexStateProps = VertexStateProps.new();
+    U.objectMergeInPlace(superret, ret);*/
+    U.removeEmptyObjectKeys(superret);
+    return superret;
+}
+
+function mapDispatchToProps(dispatch: Dispatch<any>): DispatchProps {
+    const superret: GraphElementDispatchProps = GraphElementComponent.mapDispatchToProps(dispatch);
+    const ret: GraphElementDispatchProps = new GraphElementDispatchProps();
+    U.objectMergeInPlace(superret, ret);
+    U.removeEmptyObjectKeys(superret);
+    return superret;
+}
+export const VertexConnected = connect<VertexStateProps, DispatchProps, VertexOwnProps, DState>(
+    mapStateToProps,
+    mapDispatchToProps
+)(VertexComponent as any);
+
+export const Vertex = (props: VertexOwnProps, children: ReactNode | undefined = []): ReactElement => {
+    let props2 = {...props, children: props.children||children};
+    // @ts-ignore
+    delete props2.key;
+    return <VertexConnected {...props2}
+        isGraph={false} isGraphVertex={false} isVertex={true} isEdgePoint={false} isField={false} isEdge={false} isVoid={false}/>;
+}
+export const VoidVertex = (props: VertexOwnProps, children: ReactNode | undefined = []): ReactElement => {
+    let props2 = {...props, children: props.children||children};
+    // @ts-ignore
+    delete props2.key;
+    return <VertexConnected {...props2}
+                            isGraph={false} isGraphVertex={false} isVertex={true} isEdgePoint={false} isField={false} isEdge={false} isVoid={true}/>;
+}
+export const EdgePoint = function EdgePoint (props: VertexOwnProps, children: ReactNode | undefined = []): ReactElement {
+    let props2 = {...props, children: props.children||children};
+    // @ts-ignore
+    delete props2.key;
+    return <VertexConnected {...props2}
+                            isGraph={false} isGraphVertex={false} isVertex={true} isEdgePoint={true} isField={false} isEdge={false} isVoid={false}/>;
+}
+// todo: name them all or verify the name is still usable.
+
+export const Graph = (props: VertexOwnProps, children: ReactNode | undefined = []): ReactElement => {
+    let props2 = {...props, children: props.children||children};
+    // @ts-ignore
+    delete props2.key;
+    return <VertexConnected {...props2}
+                            isGraph={true} isGraphVertex={false} isVertex={false} isEdgePoint={false} isField={false} isEdge={false} isVoid={false} />;
+}
+
+export const GraphVertex = (props: VertexOwnProps, children: ReactNode | undefined = []): ReactElement => {
+    let props2 = {...props, children: props.children||children};
+    // @ts-ignore
+    delete props2.key;
+    return <VertexConnected {...props2}
+                            isGraph={true} isGraphVertex={true} isVertex={true} isEdgePoint={false} isField={false} isEdge={false} isVoid={false}/>;
+}
+
+export const Field = (props: VertexOwnProps, children: ReactNode | undefined = []): ReactElement => {
+    let props2 = {...props, children: props.children||children};
+    // @ts-ignore
+    delete props2.key;
+    return <VertexConnected {...props2}
+                            isGraph={false} isGraphVertex={false} isVertex={false} isEdgePoint={false} isField={true} isEdge={false} isVoid={false} />;
+}
+(window as any).componentdebug = {Graph, GraphVertex, Field, Vertex, VoidVertex, EdgePoint, VertexConnected, VertexComponent};
+
+
+Graph.cname = 'Graph';
+GraphVertex.cname = 'GraphVertex';
+Field.cname = 'Field';
+Vertex.cname = 'Vertex';
+VoidVertex.cname = 'VoidVertex';
+EdgePoint.cname = 'EdgePoint';
+
+// GraphConnected.cname = 'GraphConnected';
+// GraphVertexConnected.cname = 'GraphVertexConnected';
+// FieldConnected.cname = 'FieldConnected';
+VertexConnected.cname = 'VertexConnected';
+// VoidVertexConnected.cname = 'VoidVertexConnected';
+// EdgePointConnected.cname = 'EdgePointConnected';
+
+// GraphComponent.cname = 'GraphComponent';
+// GraphVertexComponent.cname = 'GraphVertexComponent';
+// FieldComponent.cname = 'FieldComponent';
+VertexComponent.cname = 'VertexComponent';
+// VoidVertexComponent.cname = 'VoidVertexComponent';
+// EdgePointComponent.cname = 'EdgePointComponent';
