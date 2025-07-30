@@ -1,16 +1,16 @@
 @font-face {
   font-family: 'icomoon';
-  src:  url('fonts/icomoon.eot?ex538p');
-  src:  url('fonts/icomoon.eot?ex538p#iefix') format('embedded-opentype'),
-    url('fonts/icomoon.ttf?ex538p') format('truetype'),
-    url('fonts/icomoon.woff?ex538p') format('woff'),
-    url('fonts/icomoon.svg?ex538p#icomoon') format('svg');
+  src:  url('fonts/icomoon.eot?wdlx3e');
+  src:  url('fonts/icomoon.eot?wdlx3e#iefix') format('embedded-opentype'),
+    url('fonts/icomoon.ttf?wdlx3e') format('truetype'),
+    url('fonts/icomoon.woff?wdlx3e') format('woff'),
+    url('fonts/icomoon.svg?wdlx3e#icomoon') format('svg');
   font-weight: normal;
   font-style: normal;
   font-display: block;
 }
 
-i.jj {
+i {
   /* use !important to prevent issues with browser extensions that change fonts */
   font-family: 'icomoon' !important;
   speak: never;
@@ -19,19 +19,32 @@ i.jj {
   font-variant: normal;
   text-transform: none;
   line-height: 1;
-  display: flex;
-  &:before{
-    margin: auto;
-  }
 
   /* Better Font Rendering =========== */
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-.jj-copy:before {
+.jj {
+  margin-right: 0.2em;
+}
+
+.jj:last-child {
+  margin-right: 0
+}
+
+.jj-delete:before {
   content: "\e900";
 }
-.jj-deep-copy:before {
+.jj-plus:before {
   content: "\e901";
+}
+.jj-copy:before {
+  content: "\e902";
+}
+.jj-deep-copy:before {
+  content: "\e903";
+}
+.jj-square:before {
+  content: "\e904";
 }

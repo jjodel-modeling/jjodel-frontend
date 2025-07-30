@@ -153,19 +153,17 @@ function NestedViewComponent(props: AllProps) {
                                     '\nIt is suggested to update it and reapply your changes.'} style={{background:'black', color:'gold'}}/>
                                 : null
                             }
-                            <Btn icon={'delete'} action={(e)=> { l.delete(); preventClick(e);}} disabled={!canDelete} tip={
-                                isActive ? 'Cannot delete active viewpoint' : (isDefault ? 'Cannot delete default views' : 'Delete' )} />
+                            
+                            
+                            <Tooltip tooltip={isActive ? 'Cannot delete active viewpoint' : (isDefault ? 'Cannot delete default views' : 'Delete' )} inline={true} position={'top'} offsetY={10}>
+                                <i onClick={(e)=> { l.duplicate(); preventClick(e); }} className={'jj jj-delete'}/>
+                            </Tooltip>
+
                             <Tooltip tooltip={'Duplicate'} inline={true} position={'top'} offsetY={10}>
                                 <i onClick={(e)=> { l.duplicate(); preventClick(e); }} className={'jj jj-copy'}/>
                             </Tooltip>
                             <Tooltip tooltip={'Deep duplication'} inline={true} position={'top'} offsetY={10}>
                                 <i onClick={(e)=> { l.duplicate(true); preventClick(e); }} className={'jj jj-deep-copy'}/>
-                            </Tooltip>
-                            <Tooltip tooltip={'Duplicate'} inline={true} position={'top'} offsetY={10}>
-                                <i onClick={(e)=> { l.duplicate(); preventClick(e); }} className={'bx bx-copy'}/>
-                            </Tooltip>
-                            <Tooltip tooltip={'Deep duplication'} inline={true} position={'top'} offsetY={10}>
-                                <i onClick={(e)=> { l.duplicate(true); preventClick(e); }} className={'bx bx-duplicate'}/>
                             </Tooltip>
                         </CommandBar>
 
