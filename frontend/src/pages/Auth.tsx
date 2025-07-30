@@ -534,7 +534,7 @@ function AuthPage(): JSX.Element {
                 <button className={'d-block btn btn-primary p-1 mx-auto mt-3 login-button'} type={'submit'}>
                     Login
                 </button>
-                {(true || window.location.host.includes('localhost')) &&
+                {(window.location.host.includes('localhost')) &&
                     <button className={'d-block btn btn-primary p-1 mx-auto mt-3 login-button'} onClick={(e) => offline()}>Offline mode</button>
                 }
             </>}
