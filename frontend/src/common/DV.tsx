@@ -504,10 +504,10 @@ public static class(): string { return (`<View className={"root class"} onClick=
 public static enum(): string { return (
 `<View className={'root enumerator'}>
     <div className={'header'}>
-        {level > 1 && <b className={'enumerator-name'}>Enum:</b>}
+        {level > 1 && <b className={'enumerator-name'}>Enum: </b>}
         {level == 1 && <i className="bi bi-explicit-fill"></i>}<Input data={data} field={'name'} hidden={true} autosize={true} />
     </div>
-    {level > 1 && <hr />}
+    {level > 1 && literals.length > 0 && <hr />}
     <div className={'enumerator-children'}>
         {level >= 2 && literals.map(c => <DefaultNode key={c.id} data={c}/>)}
     </div>

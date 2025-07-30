@@ -152,7 +152,7 @@ border-radius: var(--radius);
 
 
 /* class */
-
+border-radius: 3px;
 .class {
     background: var(--model-background);
     color:var(--model-color);
@@ -246,8 +246,9 @@ border-color: silver!important;
 // `
 
             view.css = `
-border-radius: var(--radius);
+border-radius: 3px;
 .enumerator {
+    border-radius: 3px;
     background: white;
     color:var(--model-color);
     &>.header{
