@@ -50,5 +50,5 @@ frontend/src/sandbox2.tsx
 /frontend/node_modules
 docker-compose.dev.yml
 docker-compose.yml
-
+/build
 frontend/build.rar
