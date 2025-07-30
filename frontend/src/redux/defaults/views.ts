@@ -152,10 +152,11 @@ border-radius: var(--radius);
 
 
 /* class */
-border-radius: var(--radius);
+
 .class {
     background: var(--model-background);
     color:var(--model-color);
+    border-radius: 3px;
 
     &>.header{
         padding: 3px 6px;
@@ -581,13 +582,15 @@ border-radius: var(--radius);
     display:none;
     position: absolute;
     background-color: var(--anchor-1);
-    outline: 2px solid var(--anchor-3);
+    outline: 0px solid var(--anchor-3);
     transform: translate(-50%, -50%);
     pointer-events: all;
     cursor: crosshair;
+    border-radius: 100%;
+
     &:hover{
         background-color: var(--anchor-hover-1);
-        outline: 2px solid var(--anchor-hover-3);
+        outline: 0px solid var(--anchor-hover-3);
     }
     &.active-anchor{
         background-color: var(--anchor-2);
