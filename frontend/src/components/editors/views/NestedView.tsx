@@ -156,7 +156,7 @@ function NestedViewComponent(props: AllProps) {
                             
                             
                             <Tooltip tooltip={isActive ? 'Cannot delete active viewpoint' : (isDefault ? 'Cannot delete default views' : 'Delete' )} inline={true} position={'top'} offsetY={10}>
-                                <i onClick={(e)=> { l.duplicate(); preventClick(e); }} className={'jj jj-delete'}/>
+                                <i onClick={(e)=> { l.delete(); preventClick(e); }} className={'jj jj-delete'} style={{marginRight: '16px'}}/>
                             </Tooltip>
 
                             <Tooltip tooltip={'Duplicate'} inline={true} position={'top'} offsetY={10}>

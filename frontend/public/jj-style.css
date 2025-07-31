@@ -1,10 +1,10 @@
 @font-face {
   font-family: 'icomoon';
-  src:  url('fonts/icomoon.eot?wdlx3e');
-  src:  url('fonts/icomoon.eot?wdlx3e#iefix') format('embedded-opentype'),
-    url('fonts/icomoon.ttf?wdlx3e') format('truetype'),
-    url('fonts/icomoon.woff?wdlx3e') format('woff'),
-    url('fonts/icomoon.svg?wdlx3e#icomoon') format('svg');
+  src:  url('fonts/icomoon.eot?1a82oa');
+  src:  url('fonts/icomoon.eot?1a82oa#iefix') format('embedded-opentype'),
+    url('fonts/icomoon.ttf?1a82oa') format('truetype'),
+    url('fonts/icomoon.woff?1a82oa') format('woff'),
+    url('fonts/icomoon.svg?1a82oa#icomoon') format('svg');
   font-weight: normal;
   font-style: normal;
   font-display: block;
@@ -25,16 +25,20 @@ i {
   -moz-osx-font-smoothing: grayscale;
 }
 
-.jj {
-  margin-right: 0.2em;
-}
-
-.jj:last-child {
-  margin-right: 0
-}
-
 .jj-delete:before {
   content: "\e900";
+}
+.jj-attribute:before {
+  content: "\e906";
+}
+.jj-reference:before {
+  content: "\e908";
+}
+.jj-class:before {
+  content: "\e905";
+}
+.jj-package:before {
+  content: "\e907";
 }
 .jj-plus:before {
   content: "\e901";
@@ -47,4 +51,15 @@ i {
 }
 .jj-square:before {
   content: "\e904";
+}
+
+.jj {
+  margin-right: 0.2em;
+  color: var(--bg-4);
+
+} 
+
+.jj:hover {
+  color: var(--bg-5);
+  cursor: pointer;
 }
