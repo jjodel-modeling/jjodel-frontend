@@ -260,6 +260,8 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
         }
     }
 
+    public t2m(json: GObject): this { this.cannotCall('LModelElement.t2m'); return this; }
+
     fullname!:string;
     protected get_fullName(context: Context): this["fullname"] { return this.get_fullname(context); }
     protected get_fullname(context: Context): this["fullname"] {
@@ -5375,7 +5377,7 @@ export class LObject<Context extends LogicContext<DObject> = any, C extends Cont
     __info_of__t2m: Info = this.__info_of__apply;
 
     public apply(json: GObject): this { this.cannotCall('LModelElement.apply'); return this; }
-    public t2m(json: GObject): this { this.cannotCall('LModelElement.t2m'); return this; }
+    public t2m(json: GObject): this { this.cannotCall('LObject.t2m'); return this; }
 
     public get_apply(c: Context): LObject['apply'] { return this.get_t2m(c); }
     // NB: only usable if this is LObject or LValue, make a fallback if this is model to create/recover a new root object
@@ -5404,7 +5406,7 @@ export class LObject<Context extends LogicContext<DObject> = any, C extends Cont
                 let bestmatch = validMatches[0];
 
                 console.log('L'+c.data.className.substring(1)+'.t2m() change type', {bestmatch, validMatches, d: c.data, json});
-                if ((c.data as DObject | DValue).instanceof !== bestmatch.id) {
+                if ((c.data as DObject | DValue).instanceof !== bestmatch?.id) {
                     if (bestmatch.instantiable) {
                         /* problema
                         ok, qui settare instanceof in lobject causa la creazione delle feature, ma solo al prossimo rerender.
@@ -5422,15 +5424,20 @@ export class LObject<Context extends LogicContext<DObject> = any, C extends Cont
                     }
                 }
                 //let lostFeatures: Dictionary< Pointer | DocString<'feature.name'>, LValue> = {}; should not be needed
+                let newFeaturesIDNameMap: Dictionary<Pointer, string> = {};
                 for (let lval of fout.featureCreated) {
                     let d = lval.__raw as DValue;
+                    let name = lval.instanceof?.name;
                     newFeatures[d.id] = lval;
-                    newFeatures[d.name as string] = lval;
+                    if (name) newFeatures[name] = lval;
+                    newFeaturesIDNameMap[d.id] = name || 'untyped';
                 }
                 // END: check if it's necessary to change type
 
                 // START: actually set the values
+                let i = 0;
                 for (let prefixed_k in json) {
+                    i++;
                     let v = json[prefixed_k];
                     let isChildKey = TargetableProxyHandler.childKeys[prefixed_k[0]];
                     let k: string; // without $ or @ prefix
@@ -5462,7 +5469,10 @@ export class LObject<Context extends LogicContext<DObject> = any, C extends Cont
                             child.father = c.data.id as any; // SetFieldAction.new(k as Pointer, 'father', c.data.id, '', true);
                         }
                         //console.log(c.data.className+'.t2m() child_value.t2m()', {child, v});
-
+                        if (!v.name || !v.$name) {
+                            v.name = isPointer ? newFeaturesIDNameMap[k] : k;
+                            if (v.name === 'untyped') v.name += '_' + i;
+                        }
                         child.t2m(v, out_global_useless);
                     }
                 }
@@ -5874,13 +5884,13 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
     __info_of__t2m: Info = this.__info_of__apply;
 
     public apply(json: GObject): this { this.cannotCall('LModelElement.apply'); return this; }
-    public t2m(json: GObject, out: {objectCreated: LObject[]} = {objectCreated: []}): this { this.cannotCall('LModelElement.t2m'); return this; }
+    public t2m(json: GObject, out: {objectCreated: LObject[]} = {objectCreated: []}): this { this.cannotCall('LValue.t2m'); return this; }
 
     public get_apply(c: Context): LValue['apply'] { return this.get_t2m(c); }
     // NB: only usable if this is LObject or LValue, make a fallback if this is model to create/recover a new root object
     public get_t2m(c: Context): LValue['t2m'] {
         return (json: GObject, out: {objectCreated: LObject[]} = {objectCreated: []}): this => {
-            TRANSACTION(this.get_name(c) + '.t2m()', ()=>{
+            TRANSACTION(this.get_name(c) + '.t2m()', ()=> {
                 console.log('L'+c.data.className.substring(1)+'.t2m() called.', {d:c.data, j:json});
 
                 let json_4val!: GObject[];
