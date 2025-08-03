@@ -5468,8 +5468,8 @@ export class LObject<Context extends LogicContext<DObject> = any, C extends Cont
                             // here child === L.from(s.idlookup[k]);
                             child.father = c.data.id as any; // SetFieldAction.new(k as Pointer, 'father', c.data.id, '', true);
                         }
-                        //console.log(c.data.className+'.t2m() child_value.t2m()', {child, v});
-                        if (!v.name || !v.$name) {
+                        // console.log(c.data.className+'.t2m() child_value.t2m()', {k, bestmatch, l, child, v});
+                        if ((!v.name || !v.$name) && typeof v === 'object') {
                             v.name = isPointer ? newFeaturesIDNameMap[k] : k;
                             if (v.name === 'untyped') v.name += '_' + i;
                         }

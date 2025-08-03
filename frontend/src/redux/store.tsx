@@ -289,9 +289,15 @@ export class DState extends DPointerTargetable{
   &.selected-by-me, &:has(.selected-by-me, .Edge, .edge, .edges), &:hover, &:active, &:focus-within, &:focus{
     overflow: visible;
     z-index: 100 !important;
-    outline: 2px dashed black;
   }
 }
+
+&,[data-nodetype] {
+  &.selected-by-me, &:has(.selected-by-me, .Edge, .edge, .edges), &:hover, &:active, &:focus-within, &:focus{
+   outline: 2px dashed black
+  }
+}
+
 /* edge overflow is always visible (or lines would be cropped)*/
 .Edge{ overflow: visible; }
 /* this class is for edge container, must be positioned at top-left with no size but in overflow.

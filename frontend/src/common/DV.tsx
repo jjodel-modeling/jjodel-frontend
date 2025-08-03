@@ -676,13 +676,13 @@ public static object(): string { return (
                         <div className={'error-details'}>{msg}</div>
                     </div>
                     </div></Measurable>);
-                break;
+
             case 'alert':
                 U.alert('e', 'Error in ' + v?.name + (viewpointname ? 'of '+viewpointname : ''), dname);
-                break;
+                return null;
+
             case 'notification':
                 return (<div className='notification-icon' onClick={(e) => openNotification(e)}/>);
-                break;
         }
     }
 

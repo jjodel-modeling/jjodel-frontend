@@ -20,7 +20,7 @@ import {
     store,
     U,
     R,
-    Pointer
+    Pointer, Pointers, Log
 } from '../../joiner';
 
 import {icon} from '../components/icons/Icons';
@@ -39,7 +39,7 @@ import {Divisor, Item, Menu} from '../components/menu/Menu';
 import Collaborative from "../../components/collaborative/Collaborative";
 import { isProjectModified } from '../../common/libraries/projectModified';
 import { AboutModal } from './about/About';
-import { MetricsPanelManager } from '../../components/metrics/Metrics';
+import {MetricsPanelManager, showMetrics, toggleMetrics} from '../../components/metrics/Metrics';
 
 import {Undoredocomponent} from "../../components/topbar/undoredocomponent";
 import {BEGIN, COMMIT, END} from "../../redux/action/action";
@@ -50,7 +50,7 @@ import {PinnableDock} from "../../components/dock/MyRcDock";
 
 let windoww = window as any;
 
-function createM2(project: LProject) {
+export function createM2(project: LProject) {
     let name = 'metamodel_' + 1;
     let names: string[] = Selectors.getAllMetamodels().map(m => m.name);
     name = U.increaseEndingNumber(name, false, false, newName => names.indexOf(newName) >= 0);
@@ -84,8 +84,14 @@ function getKeyStrokes(keys?: string[]){
 }
 
 let globalProject: LProject|undefined = undefined as any;
-function makeEntry(i: MenuEntry, index: number) {
-    if (!i) return;
+function makeEntry(i: MenuEntry|null|undefined, index: number) {
+    if (!i) return null;
+    let wasdis = i.disabled;
+    if (i.function === placeholder) {
+        if (!allowPlaceholders) return null;
+        else i.disabled = true;
+    }
+
     let isUndo = (i.name === "Undo" || i.name === "Redo");
     // if (true as any) return <li >{i.name}</li>;
 
@@ -107,9 +113,9 @@ function makeEntry(i: MenuEntry, index: number) {
         let hasSubItems = (!i.disabled && slength > 0) || isUndo;
 
         return (
-            <li className={hasSubItems ? "hoverable" : ""} key={i.name} tabIndex={0} onClick={()=>i.function?.()}>
+            <li className={hasSubItems ? "hoverable" : ""} key={i.id||i.name} tabIndex={0} onClick={()=>i.function?.()} id={i.id ? 'navbar_'+i.id : undefined}>
                 <label className={`highlight ${i.disabled ? 'disabled' : ''}`}>
-                    <span>{i.icon || <i className="bi bi-app hidden"/>} <span>{i.name}</span></span>
+                    <span>{i.icon || <i className="bi bi-app hidden"/>} {i.jsx || <span>{i.name}</span>}</span>
                     {!i.disabled && slength > 0 ?
                         <i className='bi bi-chevron-right icon-expand-submenu'/> :
                         getKeyStrokes(i.keystroke)
@@ -118,7 +124,10 @@ function makeEntry(i: MenuEntry, index: number) {
             {hasSubItems &&
                 <div className='content right'>
                     <ul className='context-menu right'>
-                        {i.subItems && i.subItems.map((si, index) => makeEntry(si, index))}
+                        {i.subItems && i.subItems.map((si, index) => {
+                            if (i.disabled && si) si.disabled = true; // if parent is disabled, so are childrens
+                            return makeEntry(si, index)
+                        })}
                     </ul>
                 </div>
             }
@@ -144,11 +153,13 @@ const User = (props: UserProps) => {
 };
 
 type MenuEntry = {
+    id?: string,
     name: string,
+    jsx?: ReactNode,
     icon?: any,
     function?: ()=>any,
     keystroke?: string[],
-    subItems?:MenuEntry[],
+    subItems?: (MenuEntry|undefined|null)[],
     disabled?: boolean;
 } | null;
 
@@ -172,84 +183,77 @@ function DebuggerComponent(props: DProps) {
             }} className={'debug-icon me-1'}>{icon.stepsquare}</label>
         </Tooltip>
         <Tooltip tooltip={'Pause actions'} inline={true} position={'bottom'}>
-            <label className={'debug-icon me-1' + (depth > 1 ? ' disabled' : '')} onClick={() => BEGIN()}>{icon.pausesquare}</label>
+            <label className={'debug-icon me-1' + (depth > 1 ? ' disabled' : '')} onClick={()=> BEGIN()}>{icon.pausesquare}</label>
         </Tooltip>
         <Tooltip tooltip={'Resume actions (depth: ' + (depth-1) + ')'} inline={true} position={'bottom'}>
-            <label className={'debug-icon me-1' + (depth <= 1 ? ' disabled' : '')} onClick={() => END()}>{icon.playsquare}</label>
+            <label className={'debug-icon me-1' + (depth <= 1 ? ' disabled' : '')} onClick={()=> END()}>{icon.playsquare}</label>
         </Tooltip></>
     </section>
 }
+
+const CloseProject = async()=> {
+    Collaborative.client.off('pullAction');
+    await Collaborative.client.disconnect();
+    SetRootFieldAction.new('collaborativeSession', false);
+    U.resetState();
+    R.navigate('/allProjects', true);
+};
+
+function placeholder(){}
+const allowPlaceholders = true;
+function open (url: string) { window.open(url, '_blank'); }
+
 
 function NavbarComponent(props: AllProps) {
     const [debuggerr, setDebugger] = useState(false);
     const navigate = useNavigate();
     let user: LUser = L.fromPointer(DUser.current);
     let project: LProject | undefined = user?.project || undefined;
+    let projectid = U.getProjectID_URL();
+    Log.eDev(projectid !== project?.id, 'wrong project setup in navbar', {projectid, project});
     let metamodels: LModel[] = L.fromArr(props.metamodels);
     globalProject = project;
-
-    const open = (url: string) => { window.open(url, '_blank'); }
-
     const Key = Keystrokes;
     const recentProjects: MenuEntry[] = [];
-    const recentProjectsDisabled: MenuEntry[] = [];
-
-    /*
-
-        The following is used for toggling fullscreen mode from the View menu
-
-    */
     const [isFullscreen, setFullscreen] = useState(false);
-
-
-    function toggleFullScreen() {
-        setFullscreen(U.toggleFullscreen(document.body));
-    }
-
-    /*
-
-        An error occurs in 'Recent projects' when a project is selected, then is saved - at this points all projects in user.projects are lost
-
-    */
+    const toggleFullScreen = () => setFullscreen(U.toggleFullscreen(document.body));
 
     if (user?.projects) {
-
         user.projects
-            .sort((a,b) => (b.lastModified > a.lastModified) ?  1 : -1)
+            .sort((a, b) => (b.lastModified > a.lastModified) ?  1 : -1)
             .slice(0,20)
-            .map(p =>
-                recentProjects.push({name: p.name, function: ()=>{alert(p.name)}, icon: icon['project']})
-            );
-
-        user.projects
-            .sort((a,b) => (b.lastModified > a.lastModified) ?  1 : -1)
-            .slice(0,20)
-            .map(p =>
-                recentProjectsDisabled.push({name: p.name, function: ()=>{alert(p.name)}, icon: icon['project'], disabled: true})
+            .forEach(p => {
+                    let pid = Pointers.from(p);
+                    recentProjects.push({
+                        icon: icon['project'], name: p.name, disabled: pid === projectid,
+                        function: ()=> R.navigate('/project?id=' + pid)
+                    })
+                }
             );
     }
 
-    let newModel: MenuEntry[] = [];
-
-    if (project && props.metamodels.length > 0) {
-        newModel.push({
+    let newModel: MenuEntry;
+    if (project && metamodels.length > 0) {
+        newModel = {
+            id: 'new_model',
             name: 'Model',
             icon: icon['model'],
-            subItems: props.metamodels.map((m2, i)=>({
-                name: props.mmNames[i], function: () => createM1(project, L.from(m2)), keystroke: []
+            subItems: metamodels.map((m2, i)=>({
+                name: props.mmNames[i], function: () => createM1(project, m2), keystroke: [], id: 'mmid_'+ props.metamodels[i],
             }))
-        });
+        };
     } else {
-        newModel.push({
+        newModel = {
+            id: 'new_model',
             name: 'Model',
             icon: icon['model'],
             disabled: true
-        });
+        }
     }
-
 
     const isDashboard = !project;
     const isProject = !!project;
+    const isFavorite = project?.isFavorite;
 
     const saveLayoutItems: MenuEntry[] = [
     ] as any;
@@ -267,11 +271,11 @@ function NavbarComponent(props: AllProps) {
 
         {name: 'Jjodel',
             subItems: [
-                {name: 'About Jjodel',function: () => {AboutModal.open();}, icon: icon['jjodel']},
+                {name: 'About', jsx: <span style={{height: '16px'}}>About Jjodel</span>, function: () => {AboutModal.open();}, icon: icon['jjodel']},
                 {name: 'Roadmap',function: () => open('https://www.jjodel.io/roadmap/'), icon: icon['roadmap']},
-                {name: 'divisor'},
+                // {name: 'divisor'},
 
-                {name: 'Settings', function: ()=> alert(), icon: icon['settings'], disabled: true}, // TO-DO
+                {name: 'Project Settings', function: placeholder, icon: icon['settings'], disabled: true},
                 {name: 'divisor'},
                 {name: 'Logout', function: async() => {
                         if (isProjectModified()) {
@@ -290,19 +294,19 @@ function NavbarComponent(props: AllProps) {
 
         {name: 'File',
             subItems: [
-                {name: 'New',function: () => {}, icon: icon['new'],
+                isDashboard ? null :
+                {name: 'New', icon: icon['new'],
                     subItems: [
-                        {name: 'Project', function: () => {}, icon: icon['project'], disabled: true},
-                        isDashboard ? null : {name: 'Metamodel', icon: icon['metamodel'], function: ()=>{ project && createM2(project); }, keystroke: [Key.alt, Key.cmd, 'M']},
-                        isDashboard ? null : newModel[0]
+                        {name: 'Project', function: placeholder, icon: icon['project'], disabled: true},
+                        {name: 'Metamodel', icon: icon['metamodel'], function: ()=> { project && createM2(project); }, keystroke: [Key.alt, Key.cmd, 'M']},
+                        newModel
                     ]
                 },
-                /* Recent Projects OK - va sistemato il refersh dei progetti */
-                {name: 'Recent Projects',function: () => {}, icon: icon['recent'], subItems: recentProjects},
+                {name: 'Recent Projects', icon: icon['recent'], subItems: recentProjects},
 
                 /* Import Project OK */
                 isProject ? null : {name: 'Import Project', function: ProjectsApi.import, icon: icon['import']},
-                {name: 'divisor'},
+                !isProject || !isDashboard ? {name: 'divisor'} : null,
 
                 /* Save Project OK */
 
@@ -318,77 +322,61 @@ function NavbarComponent(props: AllProps) {
                     }
                     , icon: icon['save'], keystroke: [Key.cmd, 'S']},
 
-                /* Close Project OK */
-
-                isDashboard ? null : {name: 'Close Project',function: async() => {
-                        if (isProjectModified()) {
-                            U.dialog('Close the project without saving?', 'close project', async()=>{
-                                Collaborative.client.off('pullAction');
-                                await Collaborative.client.disconnect();
-                                SetRootFieldAction.new('collaborativeSession', false);
-                                U.resetState();
-                                R.navigate('/allProjects', true);
-                            });
-                        } else {
-                            Collaborative.client.off('pullAction');
-                            await Collaborative.client.disconnect();
-                            SetRootFieldAction.new('collaborativeSession', false);
-                            U.resetState();
-                            R.navigate('/allProjects', true);
-                        }
-                    }, icon: icon['close'], keystroke: [Key.cmd, 'E']},
-
-                /* Delete Project - vedere come fare  TEMPORARLY DISABLED */
-                true as any ? null : {name: 'Delete Project', function: ()=>{}, icon: icon['delete'], disabled: true},
-
-                /* Download Project OK */
-
-                isDashboard ? null : {name: 'Download Project', function: async() => {
+                isDashboard ? null : {name: 'Download Project', function: async()=> {
                         if (project) {
                             let dproject = await ProjectsApi.save(project);
                             U.download(`${project.name}.jjodel`, JSON.stringify(dproject));
                         }
-                    }, icon: icon['download']}
+                    }, icon: icon['download']},
+
+                isDashboard ? null : {name: 'Close Project', function: async() => {
+                        if (isProjectModified()) U.dialog('Close the project without saving?', 'close project', CloseProject);
+                        else CloseProject();
+                    }, icon: icon['close'], keystroke: [Key.cmd, 'E']},
+
+                /* Delete Project - vedere come fare  TEMPORARLY DISABLED */
+                {name: 'Delete Project', function: placeholder, icon: icon['delete'], disabled: true},
+
             ]},
 
-        /* Edit: Damiano aggiungere funzioni undo/redo */
 
         isDashboard ? null : {name: 'Edit',
             subItems: [
-                {name: 'Undo',function: () => {}, icon: icon['undo'], keystroke: [Key.cmd, 'Z']},
-                {name: 'Redo',function: () => {}, icon: icon['redo'], keystroke: [Key.cmd, 'Y'], subItems:[{name:"i"}]},
+                {name: 'Undo', icon: icon['undo'], keystroke: [Key.cmd, 'Z']},
+                {name: 'Redo', icon: icon['redo'], keystroke: [Key.cmd, 'Y'], subItems:[{name:"i"}]},
                 /*
                 {name: 'Undo',function:()=>{undo(1)}, disabled:disabledUndo, icon: icon['undo'],
                     keystroke: [Key.cmd, 'Z'], subItems:hoverUndo},
                 {name: 'Redo',function:()=>{redo(1)}, disabled:disabledRedo, icon: icon['redo'],
                     keystroke: [Key.shift, Key.cmd, 'Z'], subItems:hoverRedo},
                 */
-                {name: 'divisor'},
-                {name: 'Add to Favorites', function: () => {}, icon: icon['favorite']}, // vedere in leftbar // TODO
-                {name: 'Copy Public Link', function: () =>{}, icon: icon['link'], keystroke: [Key.cmd, Key.shift, 'S']} // vedere in scheda progetto // TODO
+                {name: 'divisor', function: placeholder},
+                {name: (isFavorite ? 'Remove from' : 'Add to') +' Favorites', function: ()=> ProjectsApi.favorite(project?.__raw as DProject),
+                    icon: icon[isFavorite ? 'favoriteFill' : 'favorite']},
+                {name: 'Copy Public Link', function: placeholder, icon: icon['link'], keystroke: [Key.cmd, Key.shift, 'S']} // vedere in scheda progetto // TODO
             ]
         },
 
         /* View - da fare */
         isDashboard ? null : {name: 'View',
             subItems: [
-                {name: 'Zoom-in', function: ()=>{}, icon: icon['zoom-in'], disabled: true}, // TODO
-                {name: 'Zoom-out', function: ()=>{}, icon: icon['zoom-out'], disabled: true}, // TODO
-
-                {name: 'divisor'},
-                {name: 'Save layout',
+                {name: 'Zoom-in', function: placeholder, icon: icon['zoom-in'], disabled: true},
+                {name: 'Zoom-out', function: placeholder, icon: icon['zoom-out'], disabled: true},
+                {name: 'divisor', function: placeholder},
+                // todo: layout needs persistence support. then on versionfixer correct user.layout == undefined and project.layout same
+                {name: 'Save layout', disabled: true,
                     icon: <i className="bi bi-columns-gap"/>,
                     subItems: saveLayoutItems
                 },
-                {name: 'Load layout',
+                {name: 'Load layout', disabled: true,
                     icon: <i className="bi bi-columns-gap"/>,
                     subItems: [
-                        {name: 'Default', function: ()=>PinnableDock.load('Default'), icon: icon['loadl']},
+                        {name: 'Default', function: ()=> PinnableDock.load('Default'), icon: icon['loadl']},
                         {name: 'Project layouts',
                             subItems: [
-                                {name: '1', function: ()=>PinnableDock.load('1', 'project'), icon: lay==='p1' ? icon['loadl'] : icon['check']},
-                                {name: '2', function: ()=>PinnableDock.load('2', 'project'), icon: lay==='p2' ? icon['loadl'] : icon['check']},
-                                {name: '3', function: ()=>PinnableDock.load('3', 'project'), icon: lay==='p3' ? icon['loadl'] : icon['check']},
+                                {name: '1', function: ()=> PinnableDock.load('1', 'project'), icon: lay==='p1' ? icon['loadl'] : icon['check']},
+                                {name: '2', function: ()=> PinnableDock.load('2', 'project'), icon: lay==='p2' ? icon['loadl'] : icon['check']},
+                                {name: '3', function: ()=> PinnableDock.load('3', 'project'), icon: lay==='p3' ? icon['loadl'] : icon['check']},
                             ]
                         },
                         {name: 'User layouts', // todo: dove li memorizzo?
@@ -399,31 +387,30 @@ function NavbarComponent(props: AllProps) {
                             collego 1+ layout ad ogni viewpoint?
                             */
                             subItems: [
-                                {name: '1', function: ()=>PinnableDock.load('1', 'user'), icon: lay==='u1' ? icon['loadl'] : icon['check']},
-                                {name: '2', function: ()=>PinnableDock.load('2', 'user'), icon: lay==='u2' ? icon['loadl'] : icon['check']},
-                                {name: '3', function: ()=>PinnableDock.load('3', 'user'), icon: lay==='u3' ? icon['loadl'] : icon['check']},
+                                {name: '1', function: ()=> PinnableDock.load('1', 'user'), icon: lay==='u1' ? icon['loadl'] : icon['check']},
+                                {name: '2', function: ()=> PinnableDock.load('2', 'user'), icon: lay==='u2' ? icon['loadl'] : icon['check']},
+                                {name: '3', function: ()=> PinnableDock.load('3', 'user'), icon: lay==='u3' ? icon['loadl'] : icon['check']},
                             ]
                         }
                     ]
                 },
 
-                {name: 'divisor'},
-                {name: 'Show/Hide Sidebar', function: ()=>{}, icon: icon['sidebar'], disabled: true}, // TODO
-                {name: 'Show/Hide Toolbar', function: ()=>{}, icon: icon['toolbar2'], disabled: true}, // TODO
-
-                {name: `${isFullscreen ? 'Exit Fullscreen Mode' : 'Fullscreen Mode'}`, function: toggleFullScreen, icon: icon['fullscreen']},
+                {name: 'divisor', function: placeholder},
+                {name: 'Show/Hide Sidebar', function: placeholder, icon: icon['sidebar'], disabled: true},
+                {name: 'Show/Hide Toolbar', function: placeholder, icon: icon['toolbar2'], disabled: true},
+                {name: `${isFullscreen ? 'Exit Fullscreen Mode' : 'Fullscreen Mode [F11]'}`, function: toggleFullScreen, icon: icon['fullscreen']},
             ]
         },
         /* ANALYZE - da fare */
 
         isDashboard ? null : {name: 'Analyze',
             subItems: [
-                {name: 'Live Validation',function: () => {},icon: icon['validation'], disabled: true}, // TODO
-                {name: 'Validate',function: () => {}, icon: icon['validate'], disabled: true}, // TODO
-                {name: 'divisor'},
-                {name: 'Analytics', function: () => {}, icon: icon['metrics'], disabled: true}, // TODO
-                {name: debuggerr ? 'Hide debugger' : 'Debug loops', function: () => setDebugger(!debuggerr), icon: icon[debuggerr ? 'eyeslash' : 'eye']},
-                {name: 'Check integrity', function: () => VersionFixer.autocorrect(undefined, true, true), icon: icon['tools']},
+                {name: 'Live Validation', function: placeholder, icon: icon['validation'], disabled: true},
+                {name: 'Validate', function: placeholder, icon: icon['validate'], disabled: true},
+                {name: 'divisor', function: placeholder},
+                {name: 'M2 Analytics', function: ()=> toggleMetrics(), icon: icon['metrics']},
+                {name: debuggerr ? 'Hide debugger' : 'Debug loops', function: ()=> setDebugger(!debuggerr), icon: icon[debuggerr ? 'eyeslash' : 'eye']},
+                {name: 'Check integrity', function: ()=> VersionFixer.autocorrect(undefined, true, true), icon: icon['tools']},
             ]
         },
 
@@ -431,22 +418,22 @@ function NavbarComponent(props: AllProps) {
 
         {name: 'Help',
             subItems: [
-                {name: 'What\'s New in Jjodel',function: () => open("https://www.jjodel.io/whats-new/"),icon: <i className="bi bi-bell" />},
+                {name: 'What\'s New in Jjodel',function: ()=> open("https://www.jjodel.io/whats-new/"),icon: <i className="bi bi-bell" />},
                 {name: 'divisor'},
-                {name: 'Homepage',function: () => open("https://www.jjodel.io"), icon: <i className="bi bi-house" />},
+                {name: 'Homepage',function: ()=> open("https://www.jjodel.io"), icon: <i className="bi bi-house" />},
                 {name: 'divisor'},
-                {name: 'Learn Jjodel', function: () => open("https://www.jjodel.io/learn-jjodel/"), icon: icon['learn']},
+                {name: 'Learn Jjodel', function: ()=> open("https://www.jjodel.io/learn-jjodel/"), icon: icon['learn']},
                 {name: 'Getting Started', function: ()=> open("https://www.jjodel.io/getting-started/"), icon: icon['getting-started']},
                 {name: 'Video Tutorials', function: ()=> open("https://www.jjodel.io/video-tutorials/"), icon: icon['video']},
                 {name: 'User Guide', function: ()=> open('https://www.jjodel.io/getting-started/'), icon: <i className="bi bi-journal-text" />},
                 {name: 'Glossary', function: ()=> open('https://www.jjodel.io/glossary/'), icon: <i className="bi bi-book" />},
-                {name: 'FAQ',function: () => {}, icon: icon['faq'], disabled: true},
+                {name: 'FAQ', function: placeholder, icon: icon['faq'], disabled: true},
                 {name: 'divisor'},
-                {name: 'Support', function: ()=>{}, icon: icon['support'],
+                {name: 'Support', icon: icon['support'],
                     subItems: [
-                        {name: 'Report a Bug', function: ()=>{}, icon: icon['report-bug'], disabled: true}, // TODO
-                        {name: 'Request a Feature', function: ()=>{}, icon: icon['feature-request'], disabled: true}, // TODO
-                        {name: 'Contact', function: ()=>{}, icon: icon['contact'], disabled: true} // TODO
+                        {name: 'Report a Bug', function: placeholder, icon: icon['report-bug'], disabled: true}, // TODO
+                        {name: 'Request a Feature', function: placeholder, icon: icon['feature-request'], disabled: true}, // TODO
+                        {name: 'Contact', function: placeholder, icon: icon['contact'], disabled: true} // TODO
                     ]}
             ]}
 
@@ -460,7 +447,7 @@ function NavbarComponent(props: AllProps) {
 
     type MenuProps = {
         title?: string;
-        items: MenuEntry[];
+        items: (MenuEntry|null|undefined)[];
     }
 
     const MainMenu = (props: MenuProps) => {
@@ -475,27 +462,13 @@ function NavbarComponent(props: AllProps) {
             {props.title && <span className={'menu-title'} key={'title'}>{props.title}</span>}
             <div className={'content context-menu'} key={'content'}>
                 <ul>
-                    {props.items && props.items.map((i, index) => makeEntry(i, index))}
+                    {props.items && props.items.map((i, index) => i ? makeEntry(i, index) : null)}
                 </ul>
             </div>
         </div>
     )}
 
-    const MainMenu2 = (props: MenuProps) => {
-
-        return(
-            <div className='nav-hamburger hoverable' tabIndex={0}>
-                <i className="bi bi-grid-3x3-gap-fill list"></i>
-                <div className={'content context-menu'}>
-                    <ul>
-                        { props.items.map((i, index) => makeEntry(i, index)) }
-                    </ul>
-                </div>
-            </div>
-        );
-    };
-
-    const MainLogo = () => {
+    const MainLogo = ()=> {
         let toggleDebug = (e: any)=>{
             e.preventDefault();
             TRANSACTION('debug', ()=>SetRootFieldAction.new('debug', !props.debug), props.debug, !props.debug);
@@ -517,7 +490,7 @@ function NavbarComponent(props: AllProps) {
         );
     }
 
-    const Commands = () => {
+    const Commands = ()=> {
         return (<section className='nav-commands d-flex'>
             {project && <>
                 {debuggerr ? <DebuggerComponent /> : null}
@@ -530,19 +503,19 @@ function NavbarComponent(props: AllProps) {
                            SetRootFieldAction.new('advanced', v);
                            windoww.advanced = v;
                        }}
-                       getter={() => props.advanced}/>
+                       getter={()=> props.advanced}/>
                 </label>
             </>
             }
         </section>);
     };
 
-    const UserMenu = () => {
+    const UserMenu = ()=> {
         return (<>
-        <div className='text-end nav-side'>
+        <div className='text-end nav-side' id={'navusermenu'}>
                 <div style={{float: 'right', left: '300px!important', marginTop: '2px'}}>
                     <Menu position={'left'}>
-                        <Item icon={icon['dashboard']} action={async() => {
+                        <Item icon={icon['dashboard']} action={async()=> {
                             Collaborative.client.off('pullAction');
                             await Collaborative.client.disconnect();
                             SetRootFieldAction.new('collaborativeSession', false);
@@ -554,9 +527,10 @@ function NavbarComponent(props: AllProps) {
                             R.navigate('/account');
                             U.resetState();
                         }}>Profile</Item>
-                        <Item icon={icon['settings']} action={(e)=> {alert('')}}>Settings</Item>
+                        {/*makeEntry({icon: icon['settings'], function: placeholder, disabled: true, name: 'User Settings'}, 999)*/}
+                        {<Item icon={icon['settings']} action={placeholder} disabled={true}>User Settings</Item>}
                         <Divisor />
-                        <Item icon={icon['logout']} action={async () => {
+                        <Item icon={icon['logout']} action={async ()=> {
                             if (isProjectModified()) {
                                 U.dialog('You are about to log out without saving your project. Do you want to proceed?', 'logout', async ()=>{
                                     await AuthApi.logout();
@@ -575,7 +549,7 @@ function NavbarComponent(props: AllProps) {
     }
 
     return(<>
-        <nav className={'w-100 nav-container d-flex'} style={{zIndex: 99}}>
+        <nav id={'navbar'} className={'w-100 nav-container d-flex'} style={{zIndex: 99}}>
             <MainMenu items={items} />
             <MainLogo />
             <UserMenu />

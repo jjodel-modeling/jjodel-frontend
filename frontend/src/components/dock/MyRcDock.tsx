@@ -630,6 +630,10 @@ export class PinnableDock extends DockLayout{
                 break;
         }
         if (!layout) layout = PinnableDock.defaultLayout;
+
+        /*console.log('loadLayout', {layout, slot, category,
+            layouts:(category === 'user' ? D.from(DUser.current) : (L.from(DUser.current) as LUser).project)?.layout,
+            def: PinnableDock.defaultLayout, isdef: layout === PinnableDock.defaultLayout})*/
         PinnableDock.instance.loadLayout(layout);
     }
 

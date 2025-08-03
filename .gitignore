@@ -52,3 +52,4 @@ docker-compose.dev.yml
 docker-compose.yml
 /build
 frontend/build.rar
+frontend/src/todo_others

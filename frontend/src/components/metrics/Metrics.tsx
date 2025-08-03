@@ -17,7 +17,7 @@ import {
     LValue, Pointer, U,
     windoww,
     LModelElement,
-    DModelElement
+    DModelElement, TRANSACTION
 } from '../../joiner';
 import { CommandBar, Btn } from "../commandbar/CommandBar";
 import { SetRootFieldAction } from "../../joiner";
@@ -52,17 +52,16 @@ function getReferences(c: LClass): number {
 
 export const showMetrics = () => {
     windoww.MetricsPanelVisible = true;
+    TRANSACTION('hide metrics', ()=> SetRootFieldAction.new('metrics-panel', {display: true}))
 }
+
 export const hideMetrics = () => {
     windoww.MetricsPanelVisible = false;
-    SetRootFieldAction.new('metrics-panel', {display: false});
+    TRANSACTION('hide metrics', ()=> SetRootFieldAction.new('metrics-panel', {display: false}))
 }
 export const toggleMetrics = () => {
-    if (!windoww.MetricsPanelVisible) {
-        windoww.MetricsPanelVisible = true;
-    } else {
-        windoww.MetricsPanelVisible = !windoww.MetricsPanelVisible;
-    }
+    if (!windoww.MetricsPanelVisible) showMetrics();
+    else hideMetrics();
 }
 
 class MetricsPanelManager {
@@ -76,7 +75,6 @@ class MetricsPanelManager {
 }
 
 export const MetricsPanel = (props: MetricsProps) => {
-
     const [mode,setMode] = useState<string>('EMF');
 
     const getWidth = (value:int, scale: int) => {
@@ -97,7 +95,7 @@ export const MetricsPanel = (props: MetricsProps) => {
                 <div className={'category'}>
                     <label>
                         <CommandBar style={{float: 'left'}}>
-                            <Btn icon={"info"} action={(e) => {alert('information page')}} theme={'dark'}/>
+                            <Btn icon={"info"} action={(e) => {/*alert('information page')*/}} theme={'dark'}/>
                         </CommandBar>
                         Metamodel classification as
                     </label>
