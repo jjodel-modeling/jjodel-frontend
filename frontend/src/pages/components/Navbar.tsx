@@ -335,7 +335,7 @@ function NavbarComponent(props: AllProps) {
                     }, icon: icon['close'], keystroke: [Key.cmd, 'E']},
 
                 /* Delete Project - vedere come fare  TEMPORARLY DISABLED */
-                {name: 'Delete Project', function: placeholder, icon: icon['delete'], disabled: true},
+                isDashboard ? null : {name: 'Delete Project', function: placeholder, icon: icon['delete'], disabled: true},
 
             ]},
 
