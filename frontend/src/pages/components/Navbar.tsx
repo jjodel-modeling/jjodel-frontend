@@ -306,7 +306,7 @@ function NavbarComponent(props: AllProps) {
 
                 /* Import Project OK */
                 isProject ? null : {name: 'Import Project', function: ProjectsApi.import, icon: icon['import']},
-                !isProject || !isDashboard ? {name: 'divisor'} : null,
+                isDashboard ? null : {name: 'divisor'},
 
                 /* Save Project OK */
 
