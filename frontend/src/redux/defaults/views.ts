@@ -151,12 +151,16 @@ border-radius: var(--radius);
             view.css = `
 
 
+
+
+
 /* class */
+
 border-radius: 3px;
 .class {
+    border-radius: 3px;
     background: var(--model-background);
     color:var(--model-color);
-    border-radius: 3px;
 
     &>.header{
         padding: 3px 6px;
@@ -179,6 +183,9 @@ border-radius: 3px;
     .abstract { font-style: italic; }
     .summary { padding: 0.25rem; text-align: center; }
 }
+.highlight {
+    border: 2px solid red!important;
+}
 .abstract {
 border-style: dotted!important;
 border-color: silver!important;
@@ -187,6 +194,31 @@ border-color: silver!important;
 .class:hover {
     box-shadow: var(--model-shadow);
 }
+
+div.header:has(.open:hover) {
+
+
+    &>div.help {
+        display: visible!important;
+    }
+}
+
+.help {
+    display: none;
+    z-index: 10000;
+    position: absolute;
+    top: 0px;
+    left: 0px;
+    border: 1px solid var(--accent);
+    margin-top: -40px;
+    min-height: 30px;
+    min-width: 120px;
+    border-radius: 4px;
+    background-color: var(--bg-2);
+}
+
+            
+
             
 `;
             view.defaultVSize = defaultVertexSize;
