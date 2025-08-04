@@ -13,10 +13,10 @@
   outline: 1px dashed black;
 }
 .selected-by-me {
-  outline: 1px dashed var(--accent);
+  outline: 1px dashed red;
 }
 .selected-by-others {
-  outline: 1px dashed indigo;
+  outline: 1px dashed red;
 }
 .Edge.selected-by-me, .Edge.selected-by-others{
   outline: none !important;
