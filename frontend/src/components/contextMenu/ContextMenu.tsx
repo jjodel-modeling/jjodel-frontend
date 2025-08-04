@@ -143,6 +143,11 @@ function ContextMenuComponentInner(props: AllProps) {
         return jsxret;
     }
 
+    
+    const edit = (data: LNamedElement, node: LGraphElement | null) => {
+        return 
+            
+    }
 
     if (display) {
 
@@ -229,7 +234,35 @@ function ContextMenuComponentInner(props: AllProps) {
         }} className={'col item'} tabIndex={0}>{icon['deselect']} Deselect</div>);*/
         //jsxList.push(<hr key={hri++} className={'my-1'} />);
 
-        
+        /* Edit: only on models */
+
+        // if (!model?.isMetamodel) {
+        //     jsxList.push( // @ts-ignore: disabled
+        //         <>
+        //         <div key='edit' onClick={() => {
+
+        //         }} className={'col item'} tabIndex={0}>
+        //             {icon['edit']}
+        //             Edit
+        //         </div>
+
+        //         <div className={'edit-panel'} draggable style={{border: '1px solid black', width: '200px', height: '100px', position: 'absolute', top: '0px', left: '215px'}}>
+        //             <div className={'edit-panel-header'}>
+        //                 {icon['edit']} <span className={'title'}>Edit {data?.name}</span>
+        //             </div>
+        //             <hr/>
+        //             <div className={'edit-panel-body'}>
+                        
+        //                 {
+        //                 // @ts-ignore
+        //                 data?.features && data?.features.map((feat, index) => {<p>feat.name</p>})}
+        //             </div>
+        //     </div></>
+        //     );
+        //     jsxList.push(<hr key={hri++} className={'my-1'}/>);
+        // }
+
+
         /* Delete */
         let cannotDelete = ddata?.className === 'DValue' && (ddata as any as DValue).instanceof;
         jsxList.push( // @ts-ignore: disabled

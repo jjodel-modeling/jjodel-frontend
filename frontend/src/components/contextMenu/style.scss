@@ -1,3 +1,22 @@
+.edit-panel {
+  border-radius: var(--radius);
+  color: var(--color);
+  background: var(--bg-2-5);
+  min-width: 400px;
+  min-height: 200px;
+  position: absolute;
+  width: fit-content;
+  height: fit-content;
+  padding: 5px;
+  border: none!important;
+  box-shadow: var(--smart-elevation-8);
+
+  & hr {
+    color: var(--bg-3-1);
+  }
+}
+
+
 .context-menu {
   position: absolute;
   z-index: 1001;

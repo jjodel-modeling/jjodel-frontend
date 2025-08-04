@@ -444,8 +444,9 @@ border-radius: 3px;
             view.oclCondition = 'context DObject inv: true';
             view.palette = {'color-':  U.hexToPalette('#f00', '#000', '#fff'), 'background-': U.hexToPalette('#fff', '#eee', '#f00')};
 
-            view.css = 'border-radius: var(--radius);\n.object {background: white; color: var(--accent);}\n';
-            view.css +='.object-name {padding: 10px; font-weight: 600; color: var(--accent);}\n';
+            view.css = 'border-radius: 3px;\n.object {border-radius: 3px;\n';
+            view.css += 'background: white; color: var(--accent);}\n';
+            view.css += '.object-name {padding: 10px; font-weight: 600; color: var(--accent);}\n';
             view.css += '.object-children {padding: 10px;background-color: white; height: fit-content; width: -webkit-fill-available;}';
 
 
