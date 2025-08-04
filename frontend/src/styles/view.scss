@@ -10,13 +10,13 @@
 }
 
 .resize-shadow{
-  outline: 1px dashed black;
+  outline: 1px dotted black;
 }
 .selected-by-me {
-  outline: 1px dashed red;
+  outline: 1px dashed black;
 }
 .selected-by-others {
-  outline: 1px dashed red;
+  outline: 1px dashed black;
 }
 .Edge.selected-by-me, .Edge.selected-by-others{
   outline: none !important;
