@@ -65,43 +65,18 @@ type ItemType = {
     icon?: any;
     children: any;
     action?: MouseEventHandler;
-    keystroke?: string; 
+    keystroke?: string;
+    disabled?: boolean;
     
 }
 
 export const Item = (props: ItemType) => {
-
-    return(<>
-        {props.action && props.keystroke &&  
-            <div onClick={props.action} className={'item'}>
-                {props.icon ? 
-                    props.icon 
-                    : 
-                    <i className="bi bi-app hidden"></i>
-                } 
-                {props.children} <span>{(props.keystroke)}</span>
-            </div>
-        } 
-        {props.action && !props.keystroke &&  
-            <div onClick={props.action} className={'item'}>
-                {props.icon ? 
-                    props.icon 
-                : 
-                    <i className="bi bi-app hidden"></i>
-                } 
-                {props.children}
-            </div>
-        } 
-        {!props.action && 
-            <div className={'item disabled'}>
-                {props.icon ? 
-                    props.icon
-                : 
-                    <i className="bi bi-app hidden"></i>
-                } 
-                {props.children}
-            </div>
-        } 
-    </>);
+    return(
+        <div onClick={props.action} className={'item' + (props.disabled ? ' disabled' : '')}
+             style={props.disabled ? {'--accent-disabled':'var(--color-lighter)', color: 'var(--bg-3-1) !important'} as any : {}}>
+            {props.icon ? props.icon : <i className="bi bi-app hidden"/>}
+            {props.children}
+            {props.keystroke ? <>{" "}<span>{(props.keystroke)}</span></> : null}
+        </div>)
 }
 

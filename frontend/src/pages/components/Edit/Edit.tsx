@@ -9,7 +9,7 @@ type EditProps = {
     label: string;
     type: 'text' | 'email' | 'password' | 'checkbox' | 'country';
     placeholder?: string;
-    value: string;
+    value?: string;
     required?: boolean;
     disabled?: boolean;
     tooltip?:string;
@@ -302,7 +302,7 @@ const EditCheckbox = (props: EditProps) => {
                         type={"checkbox"} 
                         required={required}
                         disabled={disabled}
-                        checked={props.value === 'true'? true: false}
+                        checked={props.value === 'true' ? true : false}
                         onChange={props.onChange}
                     />
                     <span>{props.label}{props.required && <> (*)</>}</span>

@@ -25,49 +25,21 @@ import colors from '../static/img/colors.png';
 function AllProjectsComponent(props: AllProps): JSX.Element {
     const {projects} = props;
 
-    const reader = new FileReader();
-    reader.onload = async e => {
-        /* Import Project File */
-        const content = String(e.target?.result);
-        if(!content) return;
-        try {
-            const project = JSON.parse(content) as DProject;
-            const projects = Storage.read<DProject[]>('projects') || [];
-            const filtered = projects.filter(p => p.id !== project.id);
-            filtered.push(project);
-            Storage.write('projects', filtered);
-            U.resetState();
-        } catch (e) {alert('Invalid File.')}
-    }
-    
-    const importProject = async(e: ChangeEvent<HTMLInputElement>) => {
-        const files = e.target.files || [];
-        if(!files.length) return;
-        const file = files[0];
-        reader.readAsText(file);
-    }
-
-
-
 
     return(<Try>
         <Dashboard active={'Recent'} version={props.version}>
-            
-            <React.Fragment>                
-
+            <>
                 <Cards>
                     <Cards.Item
-                        title={'Need help?'} 
+                        title={'Need help?'}
                         subtitle={'Don\' ask Alexa, click here instead.'}
-                        icon={'alexa'} 
-                        style={'red-orange'}   
+                        icon={'alexa'}
+                        style={'red-orange'}
                     />
                     {false && <Cards.Item icon={'question'} style={'clear'} title={'Ehy!'} subtitle={'What do you want to do today?'}/>}
                 </Cards>
-
                 <Catalog projects={projects} />
-            </React.Fragment>
-            
+            </>
         </Dashboard>
     </Try>);
 }
@@ -99,10 +71,10 @@ const AllProjectsConnected = connect<StateProps, DispatchProps, OwnProps, DState
     mapDispatchToProps
 )(AllProjectsComponent);
 
-const RecentPage = (props: OwnProps, children: ReactNode = []): ReactElement => {
+const RecentPage_Obsolete = (props: OwnProps, children: ReactNode = []): ReactElement => {
     // @ts-ignore children
     return <AllProjectsConnected {...{...props, children}} />;
 }
 
-export {RecentPage};
+export {RecentPage_Obsolete};
 

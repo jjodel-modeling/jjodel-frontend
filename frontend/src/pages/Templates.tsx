@@ -250,16 +250,6 @@ function AllProjectsComponent(props: AllProps): JSX.Element {
         } catch (e) {alert('Invalid File.')}
     }
 
-    const importProject = async(e: ChangeEvent<HTMLInputElement>) => {
-        const files = e.target.files || [];
-        if(!files.length) return;
-        const file = files[0];
-        reader.readAsText(file);
-    }
-
-
-
-
     return(<Try>
         <Dashboard active={'Templates'} version={props.version}>
 

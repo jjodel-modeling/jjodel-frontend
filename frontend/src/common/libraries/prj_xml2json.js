@@ -63,7 +63,7 @@ var X = {
       else if (xml.nodeType==9) { // document.node
          o = X.toObj(xml.documentElement);
       }
-      else alert("unhandled node type: " + xml.nodeType);
+      else alert("unhandled xml node type: " + xml.nodeType);
       return o;
    },
    toJson: function(o, name, ind) {

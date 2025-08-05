@@ -48,7 +48,8 @@ function SelectorComponent(props: AllProps) {
 
 
         {/*@ts-ignore*/}
-        switch (l[field].type.className) {
+        let type: string = l[field].type.className;
+        switch (type) {
             case 'DClass':
                 return (<>
 
@@ -97,7 +98,7 @@ function SelectorComponent(props: AllProps) {
                 </>);
             break;
             default:
-                return (U.alert('e', 'Unsupported type','Selector Component'));
+                return (U.alert('e', 'Unsupported type: ' + type, 'Selector Component'));
             break;
 
         }

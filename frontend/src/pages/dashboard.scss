@@ -603,7 +603,7 @@ project-card .tip {
   }
 
   .name {
-    width: 1340px;
+    max-width: 1340px;
     padding:40px;
     margin-bottom: 50px;
     overflow: auto;

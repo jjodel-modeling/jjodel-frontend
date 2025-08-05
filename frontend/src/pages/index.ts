@@ -6,13 +6,13 @@ export {CommunityPage} from './Community';
 export {NotesPage} from './Notes';
 export {ProfilePage} from './Profile';
 export {ProjectPage} from './Project';
-export {RecentPage} from './Recent';
+export {RecentPage_Obsolete} from './Recent';
 export {SettingsPage} from './Settings';
 export {TemplatePage} from './Templates';
 export {UpdatesPage} from './Updates';
 export {ErrorPage} from './Error';
 export {UsersInfoPage} from './UsersInfo';
-export {ProjectsInfoPage} from './ProjectsInfo';
+export {ProjectsInfoPage_Obsolete} from './ProjectsInfo';
 export {NewsPage} from './News';
 export {ConfirmAccount} from './ConfirmAccount';
 

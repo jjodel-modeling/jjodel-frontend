@@ -123,7 +123,7 @@ class ProjectsApi {
             }
         }
 
-        let extensions = ['*.jjodel'];
+        let extensions = ['.jjodel'];
         U.fileRead((e: unknown, files?: FileList | null, fileContents?: string[]) => {
             if (!files?.length) return;
             const file = files[0];
