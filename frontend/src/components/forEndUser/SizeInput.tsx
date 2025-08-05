@@ -67,7 +67,7 @@ function SizeInputComponent(props: AllProps): ReactNode {
             else return (ll[field] as any as Partial<ISize>) = {[propkey]: +val};
         }
         return (<>
-            <label className={props.rootClassName} style={{fontFamily:'Inter Tight', ...(props.rootStyle||{})}}>
+            <label className={props.rootClassName} style={{fontFamily:'Inter Variable', ...(props.rootStyle||{})}}>
                 {(props.label) && <label className={'my-auto'} style={{fontFamily:'-webkit-body'}} onClick={() => { if (tooltip) notify() }}>
                     {props.label}
                 </label>}
