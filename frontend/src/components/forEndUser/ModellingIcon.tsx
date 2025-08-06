@@ -33,13 +33,14 @@ interface Props {name?: string, className?: string, src?:string}
     }
 }*/
 
+{/* 
 type IconProps = {
     letter: string
 }
 function Icon(props: IconProps) {
 
     return (
-        <label className={'element-icon'}>{props.letter}</label>
+       <label className={'element-icon'}>{props.letter}</label>
     );
 
 };
@@ -66,6 +67,76 @@ function ModellingIcon(props: Props) {
             return(<Icon letter={'A'} />)
         default:
             return(<Icon letter={'U'} />)
+    }
+}
+*/}
+
+type IconProps2 = {
+    letter: string
+}
+function Icon2(props: IconProps2) {
+
+    return (
+       <label className={'element-icon'}>{props.letter}</label>
+    );
+
+};
+
+type IconProps = {
+    element: string
+}
+
+function Icon(props: IconProps) {
+
+    return (
+       <i className={'jj jj-'+props.element+' palette'}/>
+    );
+
+};
+
+function ModellingIcon(props: Props) {
+    const name = props.name;
+    const className = props.className ? props.className : '';
+    const pprops = {width:20, height:20, className:`my-auto ${className||''} ` + (name || '')}
+    if (props.src) return <img {...pprops} src={props.src} />;
+    switch (name) {
+        case 'package': 
+        case 'class':
+        case 'reference':
+            return(<Icon element={name} />);
+            break;
+        case 'attribute':
+            return(<Icon element={'attribute2'} />);
+            break;
+        case 'operation': 
+            return(<Icon element={'operation'} />);
+            break;
+        case 'enumerator': 
+            return(<Icon element={'enumerator'} />);
+            break
+        break;
+         case 'literal': 
+            return(<Icon element={'literal'} />);
+        break;
+        case 'object':
+            return(<Icon element={'object'} />);
+            break;
+
+        
+        case 'feature':
+            return(<Icon element={name} />);
+        case 'class':
+            return(<Icon element={'C'} />);
+
+        
+       
+
+        case 'value':
+            return(<Icon2 letter={'L'} />);
+        break
+        default:
+            return(<Icon2 letter={'U'} />);
+        break;
     }
 }
 

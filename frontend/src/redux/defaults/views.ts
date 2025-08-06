@@ -151,9 +151,14 @@ border-radius: var(--radius);
             view.css = `
 
 
+
+
+
 /* class */
-border-radius: var(--radius);
+
+border-radius: 3px;
 .class {
+    border-radius: 3px;
     background: var(--model-background);
     color:var(--model-color);
 
@@ -178,6 +183,9 @@ border-radius: var(--radius);
     .abstract { font-style: italic; }
     .summary { padding: 0.25rem; text-align: center; }
 }
+.highlight {
+    border: 2px solid red!important;
+}
 .abstract {
 border-style: dotted!important;
 border-color: silver!important;
@@ -186,6 +194,31 @@ border-color: silver!important;
 .class:hover {
     box-shadow: var(--model-shadow);
 }
+
+div.header:has(.open:hover) {
+
+
+    &>div.help {
+        display: visible!important;
+    }
+}
+
+.help {
+    display: none;
+    z-index: 10000;
+    position: absolute;
+    top: 0px;
+    left: 0px;
+    border: 1px solid var(--accent);
+    margin-top: -40px;
+    min-height: 30px;
+    min-width: 120px;
+    border-radius: 4px;
+    background-color: var(--bg-2);
+}
+
+            
+
             
 `;
             view.defaultVSize = defaultVertexSize;
@@ -245,8 +278,9 @@ border-color: silver!important;
 // `
 
             view.css = `
-border-radius: var(--radius);
+border-radius: 3px;
 .enumerator {
+    border-radius: 3px;
     background: white;
     color:var(--model-color);
     &>.header{
@@ -410,8 +444,9 @@ border-radius: var(--radius);
             view.oclCondition = 'context DObject inv: true';
             view.palette = {'color-':  U.hexToPalette('#f00', '#000', '#fff'), 'background-': U.hexToPalette('#fff', '#eee', '#f00')};
 
-            view.css = 'border-radius: var(--radius);\n.object {background: white; color: var(--accent);}\n';
-            view.css +='.object-name {padding: 10px; font-weight: 600; color: var(--accent);}\n';
+            view.css = 'border-radius: 3px;\n.object {border-radius: 3px;\n';
+            view.css += 'background: white; color: var(--accent);}\n';
+            view.css += '.object-name {padding: 10px; font-weight: 600; color: var(--accent);}\n';
             view.css += '.object-children {padding: 10px;background-color: white; height: fit-content; width: -webkit-fill-available;}';
 
 
@@ -581,13 +616,15 @@ border-radius: var(--radius);
     display:none;
     position: absolute;
     background-color: var(--anchor-1);
-    outline: 2px solid var(--anchor-3);
+    outline: 0px solid var(--anchor-3);
     transform: translate(-50%, -50%);
     pointer-events: all;
     cursor: crosshair;
+    border-radius: 100%;
+
     &:hover{
         background-color: var(--anchor-hover-1);
-        outline: 2px solid var(--anchor-hover-3);
+        outline: 0px solid var(--anchor-hover-3);
     }
     &.active-anchor{
         background-color: var(--anchor-2);

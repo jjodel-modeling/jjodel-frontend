@@ -783,15 +783,18 @@
   color: var(--btn-back)!important;
   margin-right: 2px!important;
   transition: background-color 0.3s;
+  font-size: 1em!important;
+
 
   &::before {
     border: 1px solid var(--bg-2);
     border-radius: var(--radius);
     display: block;
-    padding: 3px 3px;
-    text-align: center;
-    font-size: 0.7em;
     margin-right: 2px;
+    border: 1px solid var(--bg-2);
+    padding: 2px 2px!important;
+    text-align: center;
+    font-size: 0.89em;
     content: "\F64D";
   }
 
