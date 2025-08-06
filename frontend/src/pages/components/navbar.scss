@@ -1,6 +1,6 @@
 
 /* NEW NAVBAR */
-
+// obsolete? nav-container seems a replacement
 .new-navbar {
   list-style-type: none;
   background-color: var(--fg-1);
@@ -165,6 +165,25 @@
   padding: 0px var(--side-padding);
   font-weight: 200;
   --palette-1-hover: var(--accent);
+
+  .context-menu>ul>li{
+    .bi:before{
+      width: 1lh;
+      display: inline-block;
+    }
+    svg{
+      min-width: 14.39px !important;
+      min-height: 14.39px !important;
+      max-width: 14.39px !important;
+      max-height: 14.39px !important;
+      margin-right: 8px;
+      scale: 1.5 !important;
+    }
+    svg.bi.bi-layout-sidebar{
+      scale: 2.4 !important;
+      transform-origin: left center;
+    }
+  }
 
 
   .nav-logo {

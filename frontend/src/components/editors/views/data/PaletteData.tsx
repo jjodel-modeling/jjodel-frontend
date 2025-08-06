@@ -124,23 +124,28 @@ function PaletteDataComponent(props: AllProps) {
                 <button onClick={() => setOpen(!open)} className='btn btn-success my-btn'>Add new</button>
             }*/}
 
-            {!open ?
-                <div className={'add-palette-item'} onClick={() => {setOpen(true)}}>
-                    <i style={{color: 'white'}} className="bi bi-plus"></i>
-                    <span>Add new</span>
-                </div>
-                :
-                <>
-                    <div className={'add-palette-item active'} onClick={() => {setOpen(false)}}>
-                        <i style={{color: 'white'}} className="bi bi-plus"></i>
-                    </div>
-                    <button onClick={()=>addControl('palette')} className='btn btn-success my-btn btn-color'>Palette</button>
-                    <button onClick={()=> addControl('number')} className='btn btn-success my-btn btn-number'>Number</button>
-                    <button onClick={()=>addControl('text')} className='btn btn-success my-btn btn-textual'>Text</button>
-                    <button onClick={()=>addControl('path')}className='btn btn-success my-btn btn-path'>Path</button>
-
-                </>
-            }
+            <div className={'add-palette-item active hoverable'} tabIndex={-1}>
+                <button onClick={() => addControl('palette')} className='btn btn-success my-btn btn-color'>
+                    <i style={{color: 'white'}} className="bi bi-plus"/>
+                    <span className={'preview'}>Add new</span>
+                </button>
+                <button onClick={() => addControl('palette')} className='btn btn-success my-btn btn-color content inline'>
+                    <i className={'bi bi-circle'}/>
+                    <span>Palette</span>
+                </button>
+                <button onClick={() => addControl('number')} className='btn btn-success my-btn btn-number content inline'>
+                    <i className={'bi bi-circle'}/>
+                    <span>Number</span>
+                </button>
+                <button onClick={() => addControl('text')} className='btn btn-success my-btn btn-textual content inline'>
+                    <i className={'bi bi-circle'}/>
+                    <span>Text</span>
+                </button>
+                <button onClick={() => addControl('path')} className='btn btn-success my-btn btn-path content inline'>
+                    <i className={'bi bi-circle'}/>
+                    <span>Path</span>
+                </button>
+            </div>
 
         </>);
     };
@@ -148,15 +153,11 @@ function PaletteDataComponent(props: AllProps) {
     /* *** */
 
 
-
-
-
-
     const addControl = (type: 'palette' | 'number' | 'text' | 'path') => {
         if (readOnly) return;
         let i: number;
         let prefix0: string;//= 'palette_' + i + '-';
-        switch (type){
+        switch (type) {
             default: Log.exDevv("unexpected case in addControl:" + type); return;
             case 'path':
                 i = Object.values(palette).filter( o => (o as PathControl).type === "path").length + 1;

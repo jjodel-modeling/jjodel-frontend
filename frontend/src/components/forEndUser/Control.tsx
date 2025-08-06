@@ -228,7 +228,7 @@ type ToggleProps = {
     title?: string;
 };
 
-const ToggleComponent = (props: ToggleProps) => {
+const ToggleComponent_Obsolete = (props: ToggleProps) => {
     const [value, setValue] = useState<boolean>(false);
     const defaultValue = false;
 
@@ -275,9 +275,9 @@ const ToggleComponent = (props: ToggleProps) => {
     );
 }
 
-const Toggle = (props: ToggleProps, children: ReactNode = []): ReactElement => {
-    return <ToggleComponent {...props} />;
+const Toggle_Obsolete = (props: ToggleProps, children: ReactNode = []): ReactElement => {
+    return <ToggleComponent_Obsolete {...props} />;
 }
 
-export {Control, Slider, Toggle};
+export {Control, Slider, Toggle_Obsolete};
 

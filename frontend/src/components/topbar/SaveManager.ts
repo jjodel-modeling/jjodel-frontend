@@ -88,7 +88,7 @@ export class SaveManager {
     public static importEcore_click0(fromXML: boolean = false, fromfile: boolean = true): void {
         const extensions: string[] = [(fromXML ? "*.xml.*" : "*.json.*")]; // [".ecore"]; // Selectors.getActiveModel().isM1() ? '.' + Selectors.getActiveModel().metamodel.fullname() : '.ecore';
         let filestring: string, jsonstring: string, jsonobj: GObject = undefined as any;
-        console.log("importEcore: prefromfile");
+        // console.log("importEcore: prefromfile");
         if (!fromfile) {
             filestring = localStorage.getItem("import") || 'null';
             if (fromXML) {
@@ -99,7 +99,7 @@ export class SaveManager {
             SaveManager.importEcore(jsonobj || filestring, true, undefined, true); // todo: trova il modo di determinare se è m1 o m2 senza filename
             return; }
 
-        console.log("importEcore: pre file read", {fromXML, fromfile});
+        // console.log("importEcore: pre file read", {fromXML, fromfile});
         let filename;
         U.fileRead((e: Event, files?: FileList | null, fileContents?: string[]) => {
             Log.ex(!fileContents || !files || fileContents.length !== files.length, 'Failed to get file contents:', files, fileContents);

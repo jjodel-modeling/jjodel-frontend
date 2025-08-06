@@ -25,7 +25,7 @@ const Project = (props: Props) => {
             <div className={"dashboard-container project-summary"} tabIndex={-1}>
                 <LeftBar active={'Project'} project={project} />
                 <div className={'user'}>
-                    <div className={'name'}>
+                    <div className={'name'} style={{right: '25px'}}>
                         <Title key={'title'} projectID={project.id} active={'Project'} title={project.name} icon={<Logo className={project.type} style={{paddingLeft: '4px', fontSize: '2em'}}/>} description={project.description} type={project.type}/>
                         <ProjectCatalog key={'catalog'} project={project} />
                     </div>

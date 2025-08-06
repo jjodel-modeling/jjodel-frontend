@@ -142,8 +142,8 @@ function LeftBar(props: LeftBarProps): JSX.Element {
         {active === 'Project' ?
             <div className={'leftbar border-end border-light-subtle '}>
 
-                <i className="bi bi-search"></i>
-                <input placeholder={'Search for anything'} type={'text'} name='search-text' />
+                {/*<i className="bi bi-search"/>
+                <input placeholder={'Search for anything'} type={'text'} name='search-text' />*/}
                 {/* @ts-ignore */}
                 <Menu title={props.project.name ? props.project.name : 'Unnamed Project'} project>
                     {/*<Item icon={icon['edit']}>Edit </Item>*/}
@@ -177,8 +177,8 @@ function LeftBar(props: LeftBarProps): JSX.Element {
             :
             <div className={'leftbar border-end border-light-subtle '}>
 
-                <i className="bi bi-search"></i>
-                <input placeholder={'Search for anything'} type={'text'} name='search-text' />
+                {/*<i className="bi bi-search"></i>
+                <input placeholder={'Search for anything'} type={'text'} name='search-text' />*/}
 
 
                 {user && user.email === 'admin@gmail.it' && <Menu title={'Administration'} mode={'collapsable'}>

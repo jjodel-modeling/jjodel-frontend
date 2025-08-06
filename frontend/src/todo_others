@@ -1,0 +1,4 @@
+professore:
+metrics.tsx  -->     <Btn icon={"info"} action={(e) => {alert('information page')}} theme={'dark'}/>
+
+analytics largely placeholders

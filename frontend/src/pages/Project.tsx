@@ -69,55 +69,7 @@ function ProjectComponent(props: AllProps): JSX.Element {
     }
 
     return (<>
-        <Try>
-        <Dashboard active={'Project'} version={props.version} project={user.project}>
-            <React.Fragment>
-                <style id={"views-css-injector-p"}>
-                    {Object.values(viewsDeDuplicator).map(v => v.compiled_css).join('\n\n')}
-                </style>
-                {CSS_Units.jsx}
-
-                <Cards className={'project-create-cards'}>
-                    {user.project.metamodels.length === 0 ?
-                        <Cards.Item
-                            title={'Your first metamodel ?'}
-                            subtitle={'Create a new metamodel.'}
-                            icon={'add'}
-                            style={'red'}
-                            action={() => {
-                                alert('new metamodel')
-                            }}
-                        />
-                        :
-                        <React.Fragment>
-                            <Cards.Item
-                                title={'Create another metamodel ?'}
-                                subtitle={'Create a new metamodel.'}
-                                icon={'add'}
-                                style={'red'}
-                                action={() => {
-                                    alert('another metamodel')
-                                }}
-                            />
-                            <Cards.Item
-                                title={'Create a model ?'}
-                                subtitle={'Create a new model.'}
-                                icon={'add'}
-                                style={'red'}
-                                action={() => {
-                                    alert('new model')
-                                }}
-                            />
-                        </React.Fragment>
-                    }
-                    <Cards.Item icon={'question'} style={'clear'} title={'Ehy!'}
-                                subtitle={'What do you want to do today?'}/>
-                </Cards>
-
-            </React.Fragment>
-        </Dashboard>
-        </Try>
-
+        <Dashboard active={'Project'} version={props.version} project={user.project} />
         {/*<Try><Dock /></Try>*/}
         {user.project.type === 'collaborative' && <CollaborativeAttacher project={user.project}/>}
     </>);

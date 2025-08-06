@@ -63,14 +63,8 @@ function AccountComponent(props: AllProps): JSX.Element {
     }
    
     function update_newsletter(check_value: boolean): boolean {
-
-        if(!check_value) {
-            return false;
-        }
         setNewsletter(check_value);
-        return true;
-
-
+        return check_value;
     }
 
 
@@ -87,7 +81,7 @@ function AccountComponent(props: AllProps): JSX.Element {
         updateUserRequest.country = country;
         updateUserRequest.email = email;
         updateUserRequest.affiliation = affiliation;
-        updateUserRequest.newsletter = update_newsletter(newsletter);
+        updateUserRequest.newsletter = newsletter; //update_newsletter(newsletter);
 
 
 
@@ -220,7 +214,6 @@ function AccountComponent(props: AllProps): JSX.Element {
                         placeholder={'old password'}
                         label={'Password'} 
                         type={'password'}
-                        value={''}
                         required={true}
                         onChange={(e) => setOldPassword(e.target.value)}
                     />
@@ -232,7 +225,6 @@ function AccountComponent(props: AllProps): JSX.Element {
                         placeholder={'new password'}
                         label={'New Password'} 
                         type={'password'}
-                        value={new_password}
                         required={true}
                         onChange={(e) => setNewPassword(e.target.value)}
                         className={'space-above'}                 
@@ -244,7 +236,6 @@ function AccountComponent(props: AllProps): JSX.Element {
                         label={'Confirm Password'}
                         type={'password'} 
                         required={true}
-                        value={check_password}
                         onChange={(e) => setCheckPassword(e.target.value)}
                     />
                     <button 

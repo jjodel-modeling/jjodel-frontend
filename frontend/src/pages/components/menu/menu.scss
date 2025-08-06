@@ -99,7 +99,7 @@
     border-radius: 4px;
   }
 
-.dropdown > div.item.disabled:hover {
+.dropdown > div.item.disabled:hover { // todo: obsolete rules? it was in navbar user menù (top-right corner)
   background-color: var(--accent-disabled);
   color: white;
 }

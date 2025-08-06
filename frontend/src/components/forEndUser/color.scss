@@ -584,35 +584,40 @@
 
   // Add new palette item
 
-  div.add-palette-item  {
+  div.add-palette-item{
     padding: 2px 20px 2px 10px;
-    font-size: 1em!important;
-    color: white;
-    background-color: var(--neutral);
-    margin: 14px 0 20px 24px;
-    margin-left: 24px;
-    border-radius: var(--radius);
-    width: fit-content!important;
-    height: calc(var(--input-height) * 1);
-    cursor: pointer;
+    width: fit-content;
+    display: flex;
+    >button{
+      margin: auto 1em;
+      padding: 0.4em 0.8em;
+      &:first-of-type{
+        margin-left: -0.5em;
+      }
+      &:hover{
+        background-color: var(--success);
+      }
+      >span, >.bi{
+        margin: auto;
+      }
+      >span{
+        margin-left: 0.8em;
+      }
+
+      >.bi {
+         color: white;
+       }
+    }
   }
 
-  div.add-palette-item:hover {
-    background-color: var(--success);
+  div.add-palette-item{
+    &:hover, &:focus, &:focus-within, &:active{
+      >.content{
+        display: flex;
+      }
+      >button>.preview{
+        display: none;
+      }
+    }
   }
-
-  div.add-palette-item.active {
-    background-color: var(--success);
-    border-top-right-radius: 0;
-    border-bottom-right-radius: 0px;
-    margin: 10px 0 20px 24px;
-    padding-right: 0px;
-    float:left;
-  }
-
-  div.add-palette-item .bi {
-    color: white;
-    margin-right: 10px;
-  }
-
 }

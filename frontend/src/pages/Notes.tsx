@@ -248,7 +248,7 @@ function AllProjectsComponent(props: AllProps): JSX.Element {
             filtered.push(project);
             Storage.write('projects', filtered);
             U.resetState();
-        } catch (e) {alert('Invalid File.')}
+        } catch (e) { U.alert('e', 'Invalid project File.') }
     }
 
     const importProject = async(e: ChangeEvent<HTMLInputElement>) => {

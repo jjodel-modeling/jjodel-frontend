@@ -18,7 +18,7 @@ import {
 import {LeftBar, Navbar} from './';
 
 import '../dashboard.scss'
-import {JSX, ReactElement, useRef} from "react";
+import React, {JSX, ReactElement, useRef} from "react";
 import {Btn, CommandBar, Sep} from '../../components/commandbar/CommandBar';
 
 import colors from '../../static/img/colors.png';
@@ -37,6 +37,8 @@ import {CSS_Units} from "../../view/viewElement/view";
 import {useStateIfMounted} from 'use-state-if-mounted';
 import { Tooltip } from '../../components/forEndUser/Tooltip';
 import { ProjectsApi } from '../../api/persistance';
+import {Cards} from "./cards/Cards";
+import {createM2} from "./Navbar";
 
 
 type UserProps = {
@@ -337,6 +339,8 @@ function ProjectCatalog(props: ProjectProps) {
 
     const {project} = props;
 
+    let metamodels = project.metamodels;
+    let hasmm = !!metamodels.length;
     return (<>
         <ProjectInfoCard project={project} key={'info'} />
         <div className={'row project-list'} key={'list'}>
@@ -346,7 +350,7 @@ function ProjectCatalog(props: ProjectProps) {
                 <div className={'col-1'}>Operation</div>
             </div>
 
-            {project.metamodels.map((mm) =>{
+            {metamodels.map((mm) =>{
                 let name = mm.name
                 return (
                 <div className="row data" key={mm.id}>
@@ -429,13 +433,38 @@ function ProjectCatalog(props: ProjectProps) {
                     </div>
                 </div>
             </div>
+
+            <Cards className={'project-create-cards'} style={{
+                    margin: '1rem auto',
+                    flexWrap: 'wrap',
+                    justifyContent: 'space-around'}
+            }>
+                <Cards.Item
+                    title={hasmm ? 'Create another metamodel ?' : 'Your first metamodel ?'}
+                    subtitle={'Create a new metamodel.'}
+                    icon={'add'}
+                    style={'red my-3'}
+                    action={() => createM2(project) }
+                />
+                {hasmm ? <Cards.Item
+                    title={'Create a model ?'}
+                    subtitle={'Pick a metamodel schema.'}
+                    icon={'add'}
+                    style={'red my-3'}
+                    action={() => {
+                        let html = document.getElementById('navbar_mmid_'+metamodels[0]?.id) || document.getElementById('navbar_new_model');
+                        console.log('create m1 dash', {html, query: "document.getElementById('navbar_mmid_"+metamodels[0]?.id+"')"})
+                        // nb: timeout because click interferes with .focus() undoing it.
+                        setTimeout(()=>U.ancestorArray(html).reverse().forEach(e=>e.focus?.()), 0);
+                    }}/> : null
+                }
+                <Cards.Item icon={'question'} style={'clear my-3'} title={'Ehy!'} subtitle={'What do you want to do today?'}/>
+            </Cards>
         </div>
     </>)}
 
 
 function ProjectDashboard(props: DashProps): any {
-
-    const {children, active} = props;
     const user: LUser = LPointerTargetable.fromPointer(DUser.current);
     const query = useQuery();
     const id = query.get('id') || '';
@@ -457,7 +486,7 @@ function ProjectDashboard(props: DashProps): any {
                 {CSS_Units.jsx}
             </>
         </Try>
-        <Navbar />
+        <Try><Navbar /></Try>
         <Try><Dock /></Try>
     </>);
 }

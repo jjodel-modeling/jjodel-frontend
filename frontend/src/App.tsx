@@ -17,8 +17,9 @@ import {
     CommunityPage, NewsPage,
     NotesPage,
     ProfilePage,
-    ProjectPage, ProjectsInfoPage,
-    RecentPage,
+    ProjectPage,
+    ProjectsInfoPage_Obsolete,
+    RecentPage_Obsolete,
     SettingsPage,
     TemplatePage,
     UpdatesPage,
@@ -84,25 +85,26 @@ function App(props: AllProps): JSX.Element {
                 <Try><Routes>
                     {user ? <>
                         <Route path={'allProjects'} element={<AllProjectsPage/>}/>
-                        {/*<Route path={'dock'} element={<MyDock />} />*/}
-                        <Route path={'account'} element={<AccountPage/>}/>
-                        <Route path={'settings'} element={<SettingsPage/>}/>
+                        <Route path={'project'} element={<ProjectPage/>}/>
                         <Route path={'updates'} element={<UpdatesPage/>}/>
-                        <Route path={'community'} element={<CommunityPage/>}/>
-                        <Route path={'templates'} element={<TemplatePage/>}/>
-                        <Route path={'notes'} element={<NotesPage/>}/>
-                        <Route path={'archive'} element={<ArchivePage/>}/>
-                        <Route path={'project'} element={<><ProjectPage/></>}/>
-                        <Route path={'recent'} element={<RecentPage/>}/>
-                        <Route path={'profile'} element={<ProfilePage/>}/>
-                        <Route path={'usersInfo'} element={<UsersInfoPage/>}/>
-                        <Route path={'projectsInfo'} element={<ProjectsInfoPage/>}/>
-                        <Route path={'news'} element={<NewsPage/>}/>
+                        <Route path={'account'} element={<AccountPage/>}/>
                         <Route path={'auth'} element={<AuthPage/>}/>
+                        {/* non functioning stuff */}
+                        <Route path={'settings'} element={<SettingsPage/>}/>
+                        <Route path={'projectsInfo'} element={<ProjectsInfoPage_Obsolete/>}/>
+                        <Route path={'news'} element={<NewsPage/>}/>
+                        <Route path={'usersInfo'} element={<UsersInfoPage/>}/>
+                        <Route path={'profile'} element={<ProfilePage/>}/>
+                        <Route path={'archive'} element={<ArchivePage/>}/>
+                        <Route path={'notes'} element={<NotesPage/>}/>
+                        <Route path={'templates'} element={<TemplatePage/>}/>
+                        <Route path={'recent'} element={<RecentPage_Obsolete/>}/>
+                        <Route path={'community'} element={<CommunityPage/>}/>
+                        { /* working fallback, keep it last */}
                         <Route path={'*'} element={<AllProjectsPage/>}/>
                     </> :
                     <>
-                        <Route path={'confirm/:id/:token'} element={<ConfirmAccount />}/>
+                        <Route path={'confirm/:id/:token'} element={<ConfirmAccount/>}/>
                         <Route path={'*'} element={<AuthPage/>}/>
                     </>
                     }

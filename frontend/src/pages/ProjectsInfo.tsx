@@ -5,7 +5,7 @@ import {DProject, DUser, SetRootFieldAction} from "../joiner";
 
 
 type Props = {};
-function ProjectsInfoPage(props: Props) {
+function ProjectsInfoPage_Obsolete(props: Props) {
     const [projects, setProjects] = useState<DProject[]>([]);
     /*useEffect(() => {
         (async function() {
@@ -26,4 +26,4 @@ function ProjectsInfoPage(props: Props) {
     </Try>);
 }
 
-export {ProjectsInfoPage};
+export {ProjectsInfoPage_Obsolete};
