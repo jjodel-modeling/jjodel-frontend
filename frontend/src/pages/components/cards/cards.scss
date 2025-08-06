@@ -11,6 +11,7 @@
     margin-left: 0px;
     padding-left: 0px;
     display: flex;
+    width: 950px;
 }
 
 .commandbar .ottanio {
@@ -171,7 +172,14 @@
 
 .commandbar .card {
     width: 23em;
-    margin-right: 15px;
+    margin-right: 26px;
+    margin-left: 0px;
+    padding: 1.2em;
+}
+
+.commandbar .card:last-child {
+    width: 23em;
+    margin-right: 0px;
     margin-left: 0px;
     padding: 1.2em;
 }

@@ -443,14 +443,14 @@ function ProjectCatalog(props: ProjectProps) {
                     title={hasmm ? 'Create another metamodel ?' : 'Your first metamodel ?'}
                     subtitle={'Create a new metamodel.'}
                     icon={'add'}
-                    style={'red my-3'}
+                    style={'azure my-3'}
                     action={() => createM2(project) }
                 />
                 {hasmm ? <Cards.Item
                     title={'Create a model ?'}
                     subtitle={'Pick a metamodel schema.'}
                     icon={'add'}
-                    style={'red my-3'}
+                    style={'dark-blue my-3'}
                     action={() => {
                         let html = document.getElementById('navbar_mmid_'+metamodels[0]?.id) || document.getElementById('navbar_new_model');
                         console.log('create m1 dash', {html, query: "document.getElementById('navbar_mmid_"+metamodels[0]?.id+"')"})
@@ -458,7 +458,7 @@ function ProjectCatalog(props: ProjectProps) {
                         setTimeout(()=>U.ancestorArray(html).reverse().forEach(e=>e.focus?.()), 0);
                     }}/> : null
                 }
-                <Cards.Item icon={'question'} style={'clear my-3'} title={'Ehy!'} subtitle={'What do you want to do today?'}/>
+                <Cards.Item icon={'question'} style={'red-orange my-3'} title={'Ehy!'} subtitle={'What do you want to do today?'}/>
             </Cards>
         </div>
     </>)}
