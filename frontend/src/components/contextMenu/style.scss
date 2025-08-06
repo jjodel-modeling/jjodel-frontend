@@ -1,19 +1,103 @@
 .edit-panel {
-  border-radius: var(--radius);
-  color: var(--color);
+  position: absolute;
+  top: 0px!important;
+  left: 210px!important;
+  border-radius: 6px;
+  border: 1px solid red;
+
   background: var(--bg-2-5);
-  min-width: 400px;
+  min-width: 350px;
   min-height: 200px;
   position: absolute;
   width: fit-content;
   height: fit-content;
   padding: 5px;
   border: none!important;
-  box-shadow: var(--smart-elevation-8);
+  color: var(--color)!important;
+  padding: 0 2px;
 
   & hr {
-    color: var(--bg-3-1);
+    color: var(--bg-4);
   }
+
+  & .properties-tab {
+
+    background: var(--bg-2-5);
+    padding: 0!important;
+    
+    & > h1:before {
+      content: '\F4CA'!important;
+    }
+    & h1::before {
+      content: '';
+    }
+    & .ms-4 {
+      margin-left: 0!important;
+      padding-left: 0!important;
+    }
+    & .border {
+      border: none!important;
+    }
+
+    & label.d-flex {
+      padding: 0!important;
+      margin: 0!important;
+
+      & > label.my-auto {
+        margin: 0!important;
+        padding: 0!important;
+      }
+    }
+
+    & div.command-bar {
+      margin-bottom: 0!important;
+    }
+
+    & select {
+      height: var(--height)!important;
+      padding: 2px!important;
+      margin: 0!important;
+    }
+
+    & input {
+      margin-left: 0!important;
+      margin-bottom: 10px!important;
+      margin-top: -5px!important;
+    }
+    
+  }
+
+  & > .close {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+    background: var(--bg-2-5);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    &:hover {
+
+      color: var(--accent)!important;
+    }
+
+    &::before {
+      content: '\F62A';
+      font-family: 'bootstrap-icons';
+      font-size: 1.6em;
+      color: var(--color);
+    }
+  }
+
+}
+
+.edit-panel.dark {
+  background: var(--color);
+  color: white!important;
 }
 
 

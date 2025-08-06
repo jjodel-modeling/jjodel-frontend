@@ -28,6 +28,9 @@ import {FakeStateProps} from "../../joiner/types";
 import {toggleMetrics} from '../metrics/Metrics';
 import {icon} from '../../pages/components/icons/Icons';
 import {Tooltip} from "../forEndUser/Tooltip";
+import { Info } from '../editors';
+import { Btn, CommandBar } from '../commandbar/CommandBar';
+import { createPortal } from 'react-dom';
 
 function ContextMenuComponent(props: AllProps) {
     let a = 0;
@@ -55,10 +58,12 @@ function ContextMenuComponentInner(props: AllProps) {
     const [memorec, setMemorec] = useStateIfMounted<{data:GObject[], type:'class'|'package'}|null>(null);
     const [suggestedName, setSuggestedName] = useStateIfMounted('');
     const [childrenMenu, setChildrenMenu] = useStateIfMounted(false);
+    const [editPanel, setEditPanel] = useStateIfMounted(false);
     if (!node || !display) return(<></>);
     const data: LNamedElement | undefined = LNamedElement.fromPointer(node?.model?.id);
     let jsxList: ReactNode[] = [];
     let hri: number = 0;
+    
 
     // let ldata: LNamedElement = data as LNamedElement;
     // let ddata: DNamedElement = ldata?.__raw as DNamedElement;
@@ -73,7 +78,9 @@ function ContextMenuComponentInner(props: AllProps) {
         setMemorec(null);
         SetRootFieldAction.new('contextMenu', {display: false, x: 0, y: 0});
         setChildrenMenu(false);
+        setEditPanel(false);
     }
+
 
     const addView = async() => {
         DViewElement.newDefault(ddata as DNamedElement || undefined);
@@ -236,31 +243,25 @@ function ContextMenuComponentInner(props: AllProps) {
 
         /* Edit: only on models */
 
-        // if (!model?.isMetamodel) {
-        //     jsxList.push( // @ts-ignore: disabled
-        //         <>
-        //         <div key='edit' onClick={() => {
+        if (!model?.isMetamodel && data?.className !== 'DModel') {
+            jsxList.push( // @ts-ignore: disabled
+                <>
+                    <div key='edit' onClick={() => {
+                        setEditPanel(true);
 
-        //         }} className={'col item'} tabIndex={0}>
-        //             {icon['edit']}
-        //             Edit
-        //         </div>
+                    }} className={'col item'} tabIndex={0}>
+                        {icon['edit']}
+                        Edit
+                    </div>
 
-        //         <div className={'edit-panel'} draggable style={{border: '1px solid black', width: '200px', height: '100px', position: 'absolute', top: '0px', left: '215px'}}>
-        //             <div className={'edit-panel-header'}>
-        //                 {icon['edit']} <span className={'title'}>Edit {data?.name}</span>
-        //             </div>
-        //             <hr/>
-        //             <div className={'edit-panel-body'}>
-                        
-        //                 {
-        //                 // @ts-ignore
-        //                 data?.features && data?.features.map((feat, index) => {<p>feat.name</p>})}
-        //             </div>
-        //     </div></>
-        //     );
-        //     jsxList.push(<hr key={hri++} className={'my-1'}/>);
-        // }
+                    {editPanel && <div className={'edit-panel'}>
+                        <div className={'close'} onClick={() => {setEditPanel(false); close();}}/>
+                            <Info mode={'popup'}/>
+                        </div>}
+                </>
+            );
+            jsxList.push(<hr key={hri++} className={'my-1'}/>);
+        }
 
 
         /* Delete */
@@ -327,6 +328,7 @@ function ContextMenuComponentInner(props: AllProps) {
     }
 
     return(<>
+        
         <div className={'context-menu round'} style={{top: position.y - 100, left: position.x - 10}} onContextMenu={(e)=>e.preventDefault()}>
             {jsxList/*.map((jsx, index) => {return <li key={index}>{jsx}</li>})*/}
         </div>
@@ -363,8 +365,6 @@ function ContextMenuComponentInner(props: AllProps) {
                 </div>
             </div>
         </div>}
-
-
 
 
     </>);
