@@ -613,8 +613,10 @@ public static parameter(): string { return (
 
 public static object(): string { return (
 `<View className={'root object'}>
-    <b className={'object-name'}>{data.instanceof ? data.instanceof.name : 'Object'}:</b>
-    <Input data={data} field={'name'} hidden={true} autosize={true} />
+    <div className={'header'}>
+        <b className={'object-name'}>{data.instanceof ? data.instanceof.name : 'Object'}:</b>
+        <Input data={data} field={'name'} hidden={true} autosize={true} />
+    </div>
     <hr/>
     <div className={'object-children'}>
         {level >= 2 && data.features.map(f => <DefaultNode key={f.id} data={f} />)}
