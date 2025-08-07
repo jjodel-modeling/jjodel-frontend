@@ -161,10 +161,12 @@ border-radius: 3px;
     border-radius: 3px;
     background: var(--model-background);
     color:var(--model-color);
+    min-width: 160px;
 
     &>.header{
         padding: 3px 6px;
         white-space: pre;
+        text-align: center;
     }
     .class-name{ 
         font-weight: bold; 
@@ -177,6 +179,7 @@ border-radius: 3px;
     .class-children {
         background-color: var(--model-background);
         height: fit-content;
+        min-height: 6px;
         width: -webkit-fill-available;
         &>*:last-child { padding-bottom: 0.125em; }
     }
@@ -283,9 +286,12 @@ border-radius: 3px;
     border-radius: 3px;
     background: white;
     color:var(--model-color);
+    min-width: 140px;
+
     &>.header{
         padding: 3px 6px;
         white-space: pre;
+        text-align: center;
     }
     .enumerator-name { font-weight: bold; color: var(--accent-secondary); }
     .bi {
@@ -293,6 +299,7 @@ border-radius: 3px;
     }
     .enumerator-children {
         background-color: white; 
+        min-height: 6px;
         height: fit-content;
         width: -webkit-fill-available;
         &>*:last-child { padding-bottom: 0.125em; }

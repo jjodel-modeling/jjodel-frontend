@@ -257,6 +257,8 @@ export class DState extends DPointerTargetable{
   top: var(--top) !important;
   >*{ border: 0.1em solid var(--border-1); }
   &>.ui-resizable-handle{ border: none; }
+  & hr {color: var(--border-1); }
+
 }
 
 [data-nodetype]{

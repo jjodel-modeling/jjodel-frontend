@@ -474,7 +474,7 @@ public static class2(): string { return (`<View className={"root class"} onClick
     {level === 1 && <i className="bi bi-c-square-fill"></i>}<Input data={data} field={'name'} hidden={true} autosize={true} />
 </div>
 
-{level > 2 && data.children.length > 0 && <hr/>}
+{level > 2 && <hr/>}
 
 {level > 2 && 
     <div className={'class-children'}>
