@@ -293,14 +293,15 @@ export class DState extends DPointerTargetable{
     z-index: 100 !important;
     outline-width: 4px;
     outline-style: solid;
-    outline-color: var(--selected);
-
+    outline-color: var(--selected)!important;
   }
 }
 
 &,[data-nodetype] {
   &.selected-by-me, &:has(.selected-by-me, .Edge, .edge, .edges), &:hover, &:active, &:focus-within, &:focus{
-   outline: 2px dashed black
+    outline-width: 4px;
+    outline-style: solid;
+    outline-color: var(--selected)!important;
   }
 }
 
