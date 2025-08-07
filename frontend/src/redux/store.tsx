@@ -554,7 +554,6 @@ export class LState<Context extends LogicContext<DState> = any, C extends Contex
     public static singleton: LPointerTargetable;
     // return type is wrong, but have to extend the static method of RuntimeAccessibleClass which is completely different and returns a class constructor.
     static get<T2 extends typeof RuntimeAccessibleClass & { logic?: typeof LPointerTargetable | undefined; }>(): T2 & LState { return LState.wrap(store.getState() as any) as any; }
-    contextMenu!: {display: boolean, x: number, y: number};
     user!: LUser;
     debug!: boolean;
     room!: string;

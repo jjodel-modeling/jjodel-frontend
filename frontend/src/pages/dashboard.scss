@@ -1,9 +1,11 @@
 .cards-in-project {
-  width: 1150px;
+  // max-width: 1150px;
+  // width: 1150px;
+  width: 100% !important;
   display: flex;
   justify-content: space-between;
-
   padding-left: 0;
+  padding-right: 0;
 }
 .dashboard-row {
   background: #fff;
@@ -11,9 +13,15 @@
   &:hover{ background: #eee; }
 
 }
-.project-create-cards{
+.project-create-cards.commandbar {
   display:flex;
   justify-content: space-between;
+  grid-column-gap: 24px; // minimum gap between cards, over 24px it goes on 2 rows on 1460px monitors
+  width: 100%;
+  >.card{
+    margin: 0;
+  }
+  // >.card:last-child{ margin: auto; }
 }
 
 .dashboard-container {
@@ -586,13 +594,19 @@ project-card .tip {
   }
   
 }
-
+#DockComponent_rightbar_1:has(>.dashboard-container){
+  overflow: hidden;
+}
 .dashboard-container .user {
   margin-top: 50px;
   width: 100%;
-
   display: flex;
   justify-content: center;
+  overflow-y: auto;
+
+  >.name{
+    position: static !important;
+  }
 
   .header {
     margin-bottom: 100px;
