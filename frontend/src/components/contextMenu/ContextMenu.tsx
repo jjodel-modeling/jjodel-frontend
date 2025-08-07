@@ -262,11 +262,6 @@ function ContextMenuComponentInner(props: AllProps) {
                         {icon['edit']}
                         Edit
                     </div>
-
-                    {editPanel && <div className={'edit-panel'}>
-                        <div className={'close'} onClick={() => {setEditPanel(false);}}/>
-                            <Info mode={'popup'}/>
-                        </div>}
                 </>
             );
             jsxList.push(<hr key={hri++} className={'my-1'}/>);
@@ -337,7 +332,7 @@ function ContextMenuComponentInner(props: AllProps) {
     }
 
     return(
-        <div className={'context-menu round' + (editPanel?' edit' : '')} style={{top: display.y - 100, left: display.x - 10}} onContextMenu={(e)=>e.preventDefault()} ref={updateRef}>
+        <div className={'round' + (editPanel?' edit-panel' : ' context-menu')} style={{top: display.y - 100, left: display.x - 10}} onContextMenu={(e)=>e.preventDefault()} ref={updateRef}>
 
             {editPanel ? <Info mode={'popup'}/> : <>
 

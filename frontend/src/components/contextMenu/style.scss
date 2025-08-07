@@ -1,7 +1,8 @@
 .edit-panel {
   position: absolute;
-  top: 0px!important;
-  left: 210px!important;
+  z-index: 9999;
+  // top: 0px!important;
+  // left: 210px!important;
   border-radius: 6px;
   border: 1px solid red;
 
