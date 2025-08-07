@@ -451,7 +451,7 @@ border-radius: 3px;
             view.oclCondition = 'context DObject inv: true';
             view.palette = {'color-':  U.hexToPalette('#f00', '#000', '#fff'), 'background-': U.hexToPalette('#fff', '#eee', '#f00')};
 
-            view.css = 'border-radius: 3px;\n.object {border-radius: 3px;\n';
+            view.css = 'border-radius: 3px;\n.object {border-radius: 3px; min-width: 160px;\n';
             view.css += 'background: white; color: var(--accent);}\n';
             view.css += '.object-name {padding: 10px; font-weight: 600; color: var(--accent);}\n';
             view.css += '.object-children {padding: 10px;background-color: white; height: fit-content; width: -webkit-fill-available;}';
@@ -595,8 +595,8 @@ border-radius: 3px;
     static anchor(vp: DViewElement): DViewElement {
         let ret = DViewElement.new2('Anchors', DV.anchorJSX(), vp, (v) => {
             v.isExclusiveView = false;
-            v.palette={'anchor-': U.hexToPalette('#77f', '#f77', '#007'),
-                'anchor-hover-': U.hexToPalette('#7f7', '#a44', '#070')};
+            v.palette={'anchor-': U.hexToPalette('#9CC4CA', '#CA948E', '#7E7EB8'),
+                'anchor-hover-': U.hexToPalette('#0A7E8B', '#891307', '#070')};
             v.usageDeclarations = "(ret)=>{ // scope: data, node, view, state, \n" +
                 "// ** preparations and default behaviour here ** //\n" +
                 "// add preparation code here (like for loops to count something), then list the dependencies below.\n" +
