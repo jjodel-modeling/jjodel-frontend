@@ -443,7 +443,7 @@ function ProjectCatalog(props: ProjectProps) {
                 }>
                     <Cards.Item
                         title={hasmm ? 'Create another metamodel ?' : 'Your first metamodel ?'}
-                        subtitle={'Create a new metamodel.'}
+                        subtitle={'Explore multi-view modeling.'}
                         icon={'add'}
                         style={'azure my-3'}
                         action={() => createM2(project) }
