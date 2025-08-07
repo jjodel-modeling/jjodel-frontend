@@ -467,37 +467,6 @@ export class DefaultView {
 
 // <View className={"root class " + (level === 1 && abstract ? "abstract")} + onClick={()=>{/*node.events.e1(Math.random().toFixed(3))*/}}>
 
-public static class2(): string { return (`<View className={"root class"} onClick={()=>{/*node.events.e1(Math.random().toFixed(3))*/}}>
-<div className={'header'}>
-    {data.isSingleton && <i className='bi bi-1-square'>&nbsp;</i>}
-    {level > 1 && <b className={'class-name'}>{interface ? 'Interface' : abstract ? 'Abstract Class' : 'Class'}: </b>}    
-    {level === 1 && <i className="bi bi-c-square-fill"></i>}<Input data={data} field={'name'} hidden={true} autosize={true} />
-</div>
-
-{level > 2 && <hr/>}
-
-{level > 2 && 
-    <div className={'class-children'}>
-        {level >= 2 && [
-            attributes.map(c => <DefaultNode key={c.id} data={c} />),
-            references.map(c => <DefaultNode key={c.id} data={c} />),
-            operations.map(c => <DefaultNode key={c.id} data={c} />)
-        ]
-        || [
-        <div className={"summary"}>{[
-            attributes.length ? attributes.length + " attributes" : '',
-            references.length ? references.length + " references" : '',
-            operations.length ? operations.length + " operations" : '',
-            !(attributes.length + references.length + operations.length) ? '- empty -' : ''
-            ].filter(v=>!!v).join(',')}</div>
-        ]
-        }
-    </div>
-}
-
-{decorators}
-</View>`);}
-
 public static class(): string { return (`<View className={"root class"} onDoubleClick={()=>{node.state = {highlight: !node.state.highlight}}}>
 <div className={'header'}>
     {data.isSingleton && <i className='bi bi-1-square'>&nbsp;</i>}
@@ -511,7 +480,7 @@ public static class(): string { return (`<View className={"root class"} onDouble
 
 </div>
 
-{level > 2 && data.children.length > 0 && <hr/>}
+{level > 2 && <hr/>}
 
 {level > 2 && 
     <div className={'class-children'}>
