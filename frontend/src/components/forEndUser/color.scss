@@ -588,14 +588,19 @@
     padding: 2px 20px 2px 10px;
     width: fit-content;
     display: flex;
+    
     >button{
-      margin: auto 1em;
+      font-size: 1em;
+      margin: auto;
       padding: 0.4em 0.8em;
+      background-color: var(--color);
+      border: none;
+
       &:first-of-type{
         margin-left: -0.5em;
       }
       &:hover{
-        background-color: var(--success);
+        background-color: var(--color);
       }
       >span, >.bi{
         margin: auto;
@@ -608,6 +613,40 @@
          color: white;
        }
     }
+
+    > .btn-color{
+        border-left: 0.5px solid #ddd;
+
+    }
+    > .btn {
+        border-right: 0.5px solid #ddd;
+    }
+    > .btn, .btn:hover .bi {
+        color: #ddd;
+        
+    }
+    > .btn:hover, .btn:hover .bi {
+        color: white;
+        
+    }
+    > .btn-plus:hover {
+        border-top-right-radius: 0;
+        border-bottom-right-radius: 0;
+       }
+
+    > .btn-color, .btn-number, .btn-textual, .btn-path {
+        border-radius: 0!important;
+       }
+    > .btn-color {
+        
+        margin-left: -4px;
+      }
+
+    > .btn-path {
+        border-bottom-right-radius: var(--radius)!important;
+        border-top-right-radius: var(--radius)!important;
+
+       }
   }
 
   div.add-palette-item{

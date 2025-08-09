@@ -113,37 +113,37 @@ function PaletteDataComponent(props: AllProps) {
 
 
         return (<>
-            {/* {open ?
+            {/* open ?
                 <div className='palette-buttons'>
-                    <button onClick={()=>addControl('palette')} className='btn btn-success my-btn btn-color'>Add palette</button>
+                    <button onClick={()=>addControl('palette')} className='add-palette-item btn btn-success my-btn btn-color'>Add palette</button>
                     <button onClick={()=> addControl('number')} className='btn btn-success my-btn btn-number'>Add number</button>
                     <button onClick={()=>addControl('text')} className='btn btn-success my-btn btn-textual'>Add text</button>
                     <button onClick={()=>addControl('path')}className='btn btn-success my-btn btn-path'>Add path</button>
                 </div>
             :
                 <button onClick={() => setOpen(!open)} className='btn btn-success my-btn'>Add new</button>
-            }*/}
+            */}
 
             <div className={'add-palette-item active hoverable'} tabIndex={-1}>
-                <button onClick={() => addControl('palette')} className='btn btn-success my-btn btn-color'>
+                <button onClick={() => addControl('palette')} className='btn btn-success my-btn btn-plus'>
                     <i style={{color: 'white'}} className="bi bi-plus"/>
                     <span className={'preview'}>Add new</span>
                 </button>
                 <button onClick={() => addControl('palette')} className='btn btn-success my-btn btn-color content inline'>
-                    <i className={'bi bi-circle'}/>
+                    <i className="bi bi-palette"></i>
                     <span>Palette</span>
                 </button>
                 <button onClick={() => addControl('number')} className='btn btn-success my-btn btn-number content inline'>
-                    <i className={'bi bi-circle'}/>
+                    <i className="bi bi-123"></i>
                     <span>Number</span>
                 </button>
                 <button onClick={() => addControl('text')} className='btn btn-success my-btn btn-textual content inline'>
-                    <i className={'bi bi-circle'}/>
+                    <i className="bi bi-type"></i>
                     <span>Text</span>
                 </button>
                 <button onClick={() => addControl('path')} className='btn btn-success my-btn btn-path content inline'>
-                    <i className={'bi bi-circle'}/>
-                    <span>Path</span>
+                <i className="bi bi-bezier"></i>                    
+                <span>Path</span>
                 </button>
             </div>
 
