@@ -111,10 +111,22 @@ function JsxEditorComponent(props: AllProps) {
                 Please replace it with explicit null and undefined checks, or a ||.
             </label>}
         </div>}
-        {show && <div className={'monaco-editor-wrapper'}
+        {show && /* <div className={'monaco-editor-wrapper'}
                     style={{padding: '5px', minHeight: '20px', transition: 'height 0.3s', height:`${expand ? 'calc('+(lines-1)+' * 16px)' : (5*16)+'px'}`, resize: 'vertical', overflow:'hidden'}}
                     onFocus={() => setExpand(true)}
                     onBlur={(e) => {setExpand(false); blur(e);}}
+                    tabIndex={-1} >*/
+                    <div className={'monaco-editor-wrapper'}
+                    style={{
+                        padding: '5px', 
+                        transition: 'height 0.3s', 
+                        height: '40%', 
+                        maxHeight: '500px',
+                        resize: 'vertical', 
+                        overflow:'hidden'
+                    }}
+                    onFocus={() => {}}
+                    onBlur={(e) => {blur(e);}}
                     tabIndex={-1} >
 
             <Editor className={'mx-1'} onChange={change} language={"typescript"}

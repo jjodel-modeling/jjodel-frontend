@@ -78,7 +78,7 @@ function JsEditorComponent(props: AllProps) {
         </div>
         {show && <div className={'monaco-editor-wrapper'}
                 /* style={{padding: '5px', minHeight: '20px', height: height ? `${height}px` : '100px', resize: 'vertical', overflow:'hidden'}}*/
-                style={{padding: '5px', minHeight: '20px', height:`${expand ? lines+'lvh' : '5lvh'}`, transition: 'height 0.3s', resize: 'vertical', overflow:'hidden'}}
+                style={{padding: '5px', height:`${lines+'lvh'}`, transition: 'height 0.3s', resize: 'vertical', overflow:'hidden'}}
                 tabIndex={-1}
                 onFocus={() => setExpand(true)}
                 onBlur={() => {setExpand(false);blur()}}>

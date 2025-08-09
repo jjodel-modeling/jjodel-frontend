@@ -672,7 +672,7 @@ function PaletteDataComponent(props: AllProps) {
         {vcss.indexOf('//') >= 0 && <b><span style={{color:'red'}}>Warning:</span> Inline comments // are not supported by our compiler.<br/>
             Please replace them with /* block comments */</b>}
 
-            <div className={"monaco-editor-wrapper"} style={{
+            {/* <div className={"monaco-editor-wrapper"} style={{
                 minHeight: '20px',
                 height:`${expand ? '30lvh' : '10lvh'}`,
                 transition: 'height 0.3s',
@@ -681,9 +681,37 @@ function PaletteDataComponent(props: AllProps) {
                 flexDirection: 'column'
             }}
             onFocus={() => setExpand(true)}
-            onBlur={() => {setExpand(false);blur()}}>
+            onBlur={() => {setExpand(false);blur()}}> */}
+                
+            <div
+                className="monaco-editor-wrapper"
+                style={{
+                    height: '40%',   // use dvh for dynamic viewport on mobile, better than lvh
+                    maxHeight: '40%',                   // cannot exceed the section’s height
+                    transition: 'height 0.3s',
+                    resize: 'vertical',
+                    overflow: 'auto',                     // scroll instead of overflowing past bottom
+                    display: 'flex',
+                    flexDirection: 'column',
+                    flex: '1 1 auto'
+                }}
+                onFocus={() => setExpand(true)}
+                onBlur={() => { setExpand(false); blur(); }}
+            >
+
+
+
             <Editor className={'mx-1'}
-                    options={{fontSize: 12, scrollbar: {vertical: 'hidden', horizontalScrollbarSize: 5}, minimap: {enabled: false}, readOnly: readOnly}}
+                    options={{
+                        theme: 'vs',
+                        fontSize: 12, 
+                        scrollbar: {
+                            vertical: 'hidden', 
+                            horizontalScrollbarSize: 5
+                        }, 
+                        minimap: {enabled: false}, 
+                        readOnly: readOnly
+                    }}
                     defaultLanguage={'less'} value={vcss} onChange={change}/>
         </div>
         {false && <div className={"debug"}><div style={{whiteSpace:'pre'}}>{view.compiled_css}</div></div>}
