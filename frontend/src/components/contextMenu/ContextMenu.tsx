@@ -1,15 +1,15 @@
 import React, {Dispatch, ReactElement, ReactNode} from 'react';
 import {connect} from 'react-redux';
 import './style.scss';
-import {SetRootFieldAction} from '../../redux/action/action';
+import {SetRootFieldAction, TRANSACTION} from '../../redux/action/action';
 import {
-    DClass,
+    DClass, DGraphElement,
     DNamedElement,
     DState,
     DUser, DV,
     DValue,
     DViewElement,
-    GObject,
+    GObject, L,
     LClass,
     LGraphElement, LModel,
     LNamedElement,
@@ -18,6 +18,7 @@ import {
     LProject, LReference,
     LUser,
     LValue,
+    Pointer,
     U,
     windoww,
 } from '../../joiner';
@@ -28,11 +29,14 @@ import {FakeStateProps} from "../../joiner/types";
 import {toggleMetrics} from '../metrics/Metrics';
 import {icon} from '../../pages/components/icons/Icons';
 import {Tooltip} from "../forEndUser/Tooltip";
+import { Info } from '../editors';
+import { Btn, CommandBar } from '../commandbar/CommandBar';
+import { createPortal } from 'react-dom';
 
 function ContextMenuComponent(props: AllProps) {
-    let a = 0;
-    if (true as boolean) return ContextMenuComponentInner(props);
+    return ContextMenuComponentInner(props);
 
+    /* crash handling moved to <Try> component
     try { return ContextMenuComponentInner(props); }
     catch (e) {
         Log.eDevv('context menu crash', {e});
@@ -43,39 +47,61 @@ function ContextMenuComponent(props: AllProps) {
          onContextMenu={(e) => e.preventDefault()}>
         Contextmenu crashed.
         <br/>The error has been reported.
-    </div>
+    </div>*/
 }
+let oldRef: Element | null = null;
+
+export let ShowContextMenu: (nodeID: Pointer<DGraphElement>, x: number, y: number)=>void = null as any
 
 function ContextMenuComponentInner(props: AllProps) {
-    const user = props.user;
     // const project = user.project as LProject;
-    const display = props.display;
-    const position = props.position;
-    const node = props.node;
+    // const display = props.display;
+    // const position = props.position;
     const [memorec, setMemorec] = useStateIfMounted<{data:GObject[], type:'class'|'package'}|null>(null);
+    const [display, setDisplay] = useStateIfMounted<null|{nodeid: Pointer<DGraphElement>, x: number, y: number}>(null);
     const [suggestedName, setSuggestedName] = useStateIfMounted('');
     const [childrenMenu, setChildrenMenu] = useStateIfMounted(false);
-    if (!node || !display) return(<></>);
-    const data: LNamedElement | undefined = LNamedElement.fromPointer(node?.model?.id);
+    const [editPanel, setEditPanel] = useStateIfMounted(false);
+    // NB: do not cache/initialize only once, otherwise closure will not update nodeid, x and y
+    ShowContextMenu = (nodeid: Pointer<DGraphElement>, x: number, y: number)=>{
+        console.log('ShowContextMenu', {nodeid, x, y, display} )
+        if (display && (nodeid === display.nodeid && x === display.x && y === display.y)) return;
+        setDisplay({nodeid, x, y});
+    }
+    windoww.ShowContextMenu = ShowContextMenu;
+
+    if (!display) return null;
+    const nodeid = display.nodeid;
+    const node: LGraphElement = L.fromPointer(nodeid);
+    if (!node) return null;
+    const data: LNamedElement | undefined = node.model as LNamedElement;
     let jsxList: ReactNode[] = [];
     let hri: number = 0;
-
     // let ldata: LNamedElement = data as LNamedElement;
     // let ddata: DNamedElement = ldata?.__raw as DNamedElement;
     let ldata = data
     let ddata = ldata?.__raw;
     let model = ldata?.model;
 
-    const close = () => {
-        // if (!windoww.ContextMenuVisible) return;
-        windoww.ContextMenuVisible = false;
+    const close = (panelClick?: boolean) => {
+        if (!display) return;
         setSuggestedName('');
         setMemorec(null);
-        SetRootFieldAction.new('contextMenu', {display: false, x: 0, y: 0});
+        // SetRootFieldAction.new('contextMenu', {display: false, x: 0, y: 0});
+        setDisplay(null)
         setChildrenMenu(false);
+        if (!panelClick) setEditPanel(false);
+        // TRANSACTION('close context menu', ()=>{ })
     }
 
-    const addView = async() => {
+    function updateRef(ref: Element | null) {
+        if (!ref || oldRef === ref) return;
+        if (oldRef) U.clickedOutside(oldRef, undefined); // remove old callback
+        U.clickedOutside(ref, ()=>close()); // register new
+        oldRef = ref;
+    }
+
+    const addView = async () => {
         DViewElement.newDefault(ddata as DNamedElement || undefined);
         close();
     }
@@ -99,8 +125,6 @@ function ContextMenuComponentInner(props: AllProps) {
     const suggestOnPackage = () => { ldata && (ldata as LPackage).addClass(suggestedName); close(); }
 
     /* Handling the add of composition children to specific M1 Object */
-
-
     const getAddChildren = (l:LValue | undefined, model: LModel, out: LClass[] = []): ReactNode => {
         if (!l) return [];
         const lref = l.instanceof as LReference;
@@ -117,12 +141,9 @@ function ContextMenuComponentInner(props: AllProps) {
         console.log('contextmenu add options', {out, sc: type.allSubClasses, type});
         if (out.length === 1) {
             let name = out[0].name;
-            jsxret =
-                <Tooltip tooltip={'add to "' + lref.name + '" reference'}><div key={'single_' + l.id} onClick={() => { close(); l.addObject({}, out[0]); }}
+            jsxret = <Tooltip tooltip={'add to "' + lref.name + '" reference'}><div key={'single_' + l.id} onClick={() => { close(); l.addObject({}, out[0]); }}
                          className={'col item'} tabIndex={0}>{icon['add']} Add {name}</div></Tooltip>
-        } else jsxret = <div key={'multi' + l.id} onClick={(e) => {
-            setChildrenMenu(!childrenMenu)
-        }}
+        } else jsxret = <div key={'multi' + l.id} onClick={() => setChildrenMenu(!childrenMenu) }
                              tabIndex={0} className={'col item submenu-holder hoverable'}>
             {icon['add']} Add <div style={{position: 'absolute', right: '0'}}>{icon['submenu']}</div>
             {childrenMenu && <section className={'round content right'} style={{/*top: position.y - 216, left: position.x - 333*/}} onContextMenu={(e)=>e.preventDefault()}>
@@ -143,11 +164,6 @@ function ContextMenuComponentInner(props: AllProps) {
         return jsxret;
     }
 
-    
-    const edit = (data: LNamedElement, node: LGraphElement | null) => {
-        return 
-            
-    }
 
     if (display) {
 
@@ -219,7 +235,7 @@ function ContextMenuComponentInner(props: AllProps) {
             case 'DClass':
                 jsxList.push(<div key='ext' onClick={() => {
                     close();
-                    SetRootFieldAction.new('isEdgePending', {user: user.id, source: (ddata as any).id});
+                    SetRootFieldAction.new('isEdgePending', {user: DUser.current, source: (ddata as any).id});
                 }} className={'col item'} tabIndex={0}>{icon['extend']} Extend
                     <div><i className='bi bi-command'></i> E</div></div>);
                 jsxList.push(<hr key={hri++} className={'my-1'} />);
@@ -236,31 +252,20 @@ function ContextMenuComponentInner(props: AllProps) {
 
         /* Edit: only on models */
 
-        // if (!model?.isMetamodel) {
-        //     jsxList.push( // @ts-ignore: disabled
-        //         <>
-        //         <div key='edit' onClick={() => {
-
-        //         }} className={'col item'} tabIndex={0}>
-        //             {icon['edit']}
-        //             Edit
-        //         </div>
-
-        //         <div className={'edit-panel'} draggable style={{border: '1px solid black', width: '200px', height: '100px', position: 'absolute', top: '0px', left: '215px'}}>
-        //             <div className={'edit-panel-header'}>
-        //                 {icon['edit']} <span className={'title'}>Edit {data?.name}</span>
-        //             </div>
-        //             <hr/>
-        //             <div className={'edit-panel-body'}>
-                        
-        //                 {
-        //                 // @ts-ignore
-        //                 data?.features && data?.features.map((feat, index) => {<p>feat.name</p>})}
-        //             </div>
-        //     </div></>
-        //     );
-        //     jsxList.push(<hr key={hri++} className={'my-1'}/>);
-        // }
+        if (!model?.isMetamodel && data?.className !== 'DModel') {
+            jsxList.push( // @ts-ignore: disabled
+                <>
+                    <div key='edit' onClick={(e) => {
+                        e.stopPropagation();
+                        setEditPanel(true);
+                    }} className={'col item'} tabIndex={0}>
+                        {icon['edit']}
+                        Edit
+                    </div>
+                </>
+            );
+            jsxList.push(<hr key={hri++} className={'my-1'}/>);
+        }
 
 
         /* Delete */
@@ -326,66 +331,67 @@ function ContextMenuComponentInner(props: AllProps) {
         </div>);
     }
 
-    return(<>
-        <div className={'context-menu round'} style={{top: position.y - 100, left: position.x - 10}} onContextMenu={(e)=>e.preventDefault()}>
-            {jsxList/*.map((jsx, index) => {return <li key={index}>{jsx}</li>})*/}
-        </div>
+    return(
+        <div className={'round' + (editPanel?' edit-panel' : ' context-menu')} style={{top: display.y - 100, left: display.x - 10}} onContextMenu={(e)=>e.preventDefault()} ref={updateRef}>
 
+            {editPanel ? <Info mode={'popup'}/> : <>
 
-        {(data && memorec?.data) && <div className={'context-menu round'} style={{overflow: 'auto', maxHeight: '12em', top: position.y - 100, left: position.x + 130}}>
-            {(memorec.data.map((obj, index) => {
-                return (<div key={index}>
-                    <div className={'col item d-block'} onClick={e => setSuggestedName(obj.recommendedItem)} tabIndex={0}>
-                        {obj.recommendedItem} :
-                        <span className={'ms-1 text-primary'}>{Math.round(obj.score * 100) / 100}</span>
-                    </div>
-                </div>)
-            }))}
-        </div>}
+                {jsxList/*.map((jsx, index) => {return <li key={index}>{jsx}</li>})*/}
 
-        {(memorec && suggestedName) && <div className={'memorec-overlay'}>
-            <div tabIndex={-1} onBlur={e => close()} className={'memorec-popup'}>
-                <div className={'d-block text-center mb-1'}>Add <b>{suggestedName}</b> as:</div>
-                {(memorec.type === 'class') ? <>
-                        <div tabIndex={-1} onClick={e =>suggestOnClass(true)} className={'d-flex memorec-button'}>
-                            <ModellingIcon className={'my-auto'} name={'attribute'} /> Attribute
+                {(data && memorec?.data) && <div className={'context-menu round'} style={{overflow: 'auto', maxHeight: '12em', top: display.y - 100, left: display.x + 130}}>
+                    {(memorec.data.map((obj, index) => {
+                        return (<div key={index}>
+                            <div className={'col item d-block'} onClick={e => setSuggestedName(obj.recommendedItem)} tabIndex={0}>
+                                {obj.recommendedItem} :
+                                <span className={'ms-1 text-primary'}>{Math.round(obj.score * 100) / 100}</span>
+                            </div>
+                        </div>)
+                    }))}
+                </div>}
+
+                {(memorec && suggestedName) && <div className={'memorec-overlay'}>
+                    <div tabIndex={-1} onBlur={e => close()} className={'memorec-popup'}>
+                        <div className={'d-block text-center mb-1'}>Add <b>{suggestedName}</b> as:</div>
+                        {(memorec.type === 'class') ? <>
+                                <div tabIndex={-1} onClick={e =>suggestOnClass(true)} className={'d-flex memorec-button'}>
+                                    <ModellingIcon className={'my-auto'} name={'attribute'} /> Attribute
+                                </div>
+                                <div tabIndex={-1} onClick={e =>suggestOnClass(false)} className={'d-flex memorec-button mt-1'}>
+                                    <ModellingIcon className={'my-auto'} name={'reference'} /> Reference
+                                </div>
+                            </> :
+                            <div tabIndex={-1} onClick={e =>suggestOnPackage()} className={'d-flex memorec-button mt-1'}>
+                                <ModellingIcon className={'my-auto'} name={'class'} /> Class
+                            </div>
+                        }
+                        <div className={'d-flex memorec-button mt-3'} tabIndex={-1} onClick={e => close()}>
+                            <span className={'mx-auto text-danger'}>Close</span>
                         </div>
-                        <div tabIndex={-1} onClick={e =>suggestOnClass(false)} className={'d-flex memorec-button mt-1'}>
-                            <ModellingIcon className={'my-auto'} name={'reference'} /> Reference
-                        </div>
-                    </> :
-                    <div tabIndex={-1} onClick={e =>suggestOnPackage()} className={'d-flex memorec-button mt-1'}>
-                        <ModellingIcon className={'my-auto'} name={'class'} /> Class
                     </div>
-                }
-                <div className={'d-flex memorec-button mt-3'} tabIndex={-1} onClick={e => close()}>
-                    <span className={'mx-auto text-danger'}>Close</span>
-                </div>
-            </div>
-        </div>}
+                </div>}
 
+            </>}
 
-
-
-    </>);
+        </div>);
 }
 interface OwnProps {}
 interface StateProps {
-    user: LUser,
+    /*user: LUser,
     display: boolean,
     position: {x: number, y: number},
-    node: LGraphElement|null
+    node: LGraphElement|null*/
 }
 
 interface DispatchProps {}
 type AllProps = OwnProps & StateProps & DispatchProps;
 
 
+/*
 function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     const ret: StateProps = {} as FakeStateProps;
     ret.user = LUser.fromPointer(DUser.current);
-    ret.display = state.contextMenu.display;
-    ret.position = {x: state.contextMenu.x, y: state.contextMenu.y};
+    // ret.display = state.contextMenu.display;
+    // ret.position = {x: state.contextMenu.x, y: state.contextMenu.y};
 
     const nodeid = state.contextMenu.nodeid; //state._lastSelected?.node;
     if (nodeid) ret.node = LGraphElement.fromPointer(nodeid);
@@ -398,7 +404,6 @@ function mapDispatchToProps(dispatch: Dispatch<any>): DispatchProps {
     return ret;
 }
 
-
 export const ContextMenuConnected = connect<StateProps, DispatchProps, OwnProps, DState>(
     mapStateToProps,
     mapDispatchToProps
@@ -407,5 +412,6 @@ export const ContextMenuConnected = connect<StateProps, DispatchProps, OwnProps,
 export const ContextMenu = (props: OwnProps, childrens: ReactNode = []): ReactElement => {
     // @ts-ignore children
     return <ContextMenuConnected {...{...props, childrens}} />;
-}
+}*/
+export const ContextMenu = ContextMenuComponent;
 export default ContextMenu;

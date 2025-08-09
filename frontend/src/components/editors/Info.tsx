@@ -22,6 +22,7 @@ import './style.scss';
 import {Empty} from "./Empty";
 import { CommandBar, Btn } from '../commandbar/CommandBar';
 import { Tooltip } from '../forEndUser/Tooltip';
+import { icon } from '../../pages/components/icons/Icons';
 
 class builder {
     static named(data: LModelElement, advanced: boolean): ReactNode {
@@ -278,7 +279,9 @@ class builder {
             </label>
         </>);
     }
-    static object(data: LModelElement, topics: Dictionary<string, unknown>, advanced: boolean): JSX.Element {
+    static object(data: LModelElement, topics: Dictionary<string, unknown>, advanced: boolean, mode: 'popup'|'tab'): JSX.Element {
+
+        const popup = mode === 'popup';
         const object: LObject = LObject.fromPointer(data.id);
         let conform = true;
         for(const feature of object.features) {
@@ -290,18 +293,21 @@ class builder {
         }
         let instanceoff = object.instanceof;
         return(<>
-            <h1>{data.name}</h1>
-            {instanceoff && conform && <label className={'d-block text-center'}>
+            <h1>{data.name}: {instanceoff && conform && instanceoff.name}</h1>
+
+            {!popup && instanceoff && conform && <label className={'d-block text-center'}>
                 The instance <b className={'text-success'}>CONFORMS</b> to {instanceoff.name}
             </label>}
-            {instanceoff && !conform && <label className={'d-block text-center'}>
+
+            {!popup && instanceoff && !conform && <label className={'d-block text-center'}>
                 The instance <b className={'text-danger'}>NOT CONFORMS</b> to {instanceoff.name}
             </label>}
-            {!instanceoff && <label className={'d-block text-center'}>
+            {!popup && !instanceoff && <label className={'d-block text-center'}>
                 The instance is <b className={'text-warning'}>SHAPELESS</b>
             </label>}
+
             {instanceoff && !object.partial ? null :
-                <label className={'input-container'}>
+                !popup && <label className={'input-container'}>
                     <b className={'me-2'}>Features:</b>
 
                     <CommandBar style={{marginLeft: 'auto', marginTop: '6px'}}>
@@ -310,12 +316,13 @@ class builder {
 
                 </label>
             }
-            {this.forceConform(object)}
+            {!popup && this.forceConform(object)}
             {object.features.map(f => <div id={`Object-${f.id}`}>
-                {this.value(f, topics, advanced)}
+                {this.value(f, topics, advanced, mode)}
             </div>)}
         </>);
     }
+
     static forceConform(me: LObject) {
         let mm: LModel = Selectors.getLastSelectedModel().m2 as LModel;
         if (!mm) return <></>
@@ -335,7 +342,9 @@ class builder {
             </select>
         </label>);
     }
-    static value(data: LModelElement, topics: Dictionary<string, unknown>, advanced: boolean): JSX.Element {
+
+    static value(data: LModelElement, topics: Dictionary<string, unknown>, advanced: boolean, mode: 'popup'|'tab'): JSX.Element {
+        const popup = mode === 'popup';
         let value: LValue = LValue.fromPointer(data.id);
         const feature: LStructuralFeature = LStructuralFeature.fromPointer(value.instanceof?.id);
         let field = 'text'; let stepSize = 1; let maxLength = 524288;
@@ -439,16 +448,38 @@ class builder {
                 </label>);
 
         return(<>
-            <h1>{data.name}</h1>
-            <label className={'d-flex'}>
-                <label className={'ms-1 my-auto'}>Values</label>
-                <CommandBar style={{marginLeft: 'auto', marginTop: '6px'}}>
-                    <Btn icon={'add'} action={add} tip={`Add a ${data.name} value`} disabled={filteredValues.length >= upperBound}/>
-                </CommandBar>
-                {/* <button className={'btn btn-primary ms-auto me-1'} disabled={filteredValues.length >= upperBound} onClick={add}>
-                    <i className={'p-1 bi bi-plus'}></i>
-                </button>*/}
-            </label>
+            {!popup ? 
+                <>
+                    <h1>{data.name}</h1> 
+                    <label className={'d-flex'}>
+                    <label className={'ms-1 my-auto'}>Values</label>
+                    <CommandBar style={{marginLeft: 'auto', marginTop: '6px'}}>
+                        <Btn icon={'add'} action={add} tip={`Add a ${data.name} value`} disabled={filteredValues.length >= upperBound}/>
+                    </CommandBar>
+                    {/* <button className={'btn btn-primary ms-auto me-1'} disabled={filteredValues.length >= upperBound} onClick={add}>
+                        <i className={'p-1 bi bi-plus'}></i>
+                    </button>*/}
+                    </label>
+                </>
+            : 
+                <>
+                    <label className={'d-flex'}>
+                    <label className={'ms-1 my-auto'}>{data.name}</label>
+                    <CommandBar style={{marginLeft: 'auto', marginTop: '0px'}}>
+                        <Btn icon={'add'} 
+                            action={add} 
+                            tip={`Add a ${data.name} value`} 
+                            disabled={filteredValues.length >= upperBound} 
+                            style={{color: 'black'}}
+                        />
+                    </CommandBar>
+                    {/* <button className={'btn ms-auto me-1'} disabled={filteredValues.length >= upperBound} onClick={add}>
+                        <i className={'p-1 bi bi-plus'}></i>
+                    </button>*/}
+                    </label>
+                </>
+            }
+           
             {valueslist}
             {value.instanceof?.className === 'DAttribute' && (value.instanceof as LAttribute).isIoT && <label className={'mt-2 input-container'}>
                 <b className={'me-2'}>Topic:</b>
@@ -464,7 +495,8 @@ class builder {
 }
 
 function InfoComponent(props: AllProps) {
-    const {data, node, view, topics, advanced} = props;
+    const {data, node, view, topics, advanced, mode} = props;
+    const popup = mode === 'popup';
 
     let ddata = data?.__raw || data;
     let jsx: ReactNode = null;
@@ -488,39 +520,41 @@ function InfoComponent(props: AllProps) {
         case 'DEnumLiteral':
             jsx = builder.literal(data, advanced); break;
         case 'DObject':
-            jsx = builder.object(data, topics, advanced); break;
+            jsx = builder.object(data, topics, advanced, mode); break;
         case 'DValue':
-            jsx = builder.value(data, topics, advanced); break;
+            jsx = builder.value(data, topics, advanced, mode); break;
         default: jsx = <Empty />; break;
     } else jsx = <Empty />;
     
     return <section className={'properties-tab'}>
         {jsx}
-        <h6>State</h6>
-        <div className={'object-state'}>
-            {!ddata || Object.keys(ddata._state).length === 0 ? <pre> Empty</pre> :
-                <ReactJson src={ddata._state}
-                           collapsed={1}
-                           collapseStringsAfterLength={20}
-                           displayDataTypes={true}
-                           displayObjectSize={true}
-                           enableClipboard={true}
-                           groupArraysAfterLength={100}
-                           indentWidth={4}
-                           name={"state"}
-                           iconStyle={"triangle"}
-                           quotesOnKeys={true}
-                           shouldCollapse={false /*((field: CollapsedFieldProps) => { return Object.keys(field.src).length > 3;*/}
-                           sortKeys={false}
-                           theme={"rjv-default"}
-                />}
-            {/*<pre>{Object.keys(dnode._state).length ? JSON.stringify(dnode._state, null, '\t') : undefined}</pre>*/}
-        </div>
-    </section>
+        
+        {!popup && <><h6>State</h6>
+            <div className={'object-state'}>
+                {!ddata || Object.keys(ddata._state).length === 0 ? <pre> Empty</pre> :
+                    <ReactJson src={ddata._state}
+                            collapsed={1}
+                            collapseStringsAfterLength={20}
+                            displayDataTypes={true}
+                            displayObjectSize={true}
+                            enableClipboard={true}
+                            groupArraysAfterLength={100}
+                            indentWidth={4}
+                            name={"state"}
+                            iconStyle={"triangle"}
+                            quotesOnKeys={true}
+                            shouldCollapse={false /*((field: CollapsedFieldProps) => { return Object.keys(field.src).length > 3;*/}
+                            sortKeys={false}
+                            theme={"rjv-default"}
+                    />}
+                {/*<pre>{Object.keys(dnode._state).length ? JSON.stringify(dnode._state, null, '\t') : undefined}</pre>*/}
+            </div> </>}  
+        </section>
 
         }
 
         interface OwnProps {
+            mode: 'popup' | 'tab' // popup: used in context menu, tab: used in sidebar
         }
 
         interface StateProps {

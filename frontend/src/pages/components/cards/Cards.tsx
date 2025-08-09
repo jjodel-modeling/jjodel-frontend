@@ -18,8 +18,27 @@ export const Cards = (props: CardsProps): any => {
 }
 
 type CardProps = {
-    icon: "add" | "import" | "question" | "gettingstarted" | "alexa";
-    style: string | "ottanio" | "red" | "dark" | "blue" | "clear" | "rainbow" | "red-orange" | "yellow" | "green" | "gray" | "light-green" | "azure" | "orange-yellow" | "dark-blue" | "default";
+    icon: "add" 
+        | "import" 
+        | "question" 
+        | "gettingstarted" 
+        | "alexa";
+    style: string 
+        | "ottanio" 
+        | "red" 
+        | "dark" 
+        | "blue" 
+        | "clear" 
+        | "rainbow" 
+        | "red-orange" 
+        | "yellow" 
+        | "green" 
+        | "gray" 
+        | "light-green" 
+        | "azure" 
+        | "orange-yellow" 
+        | "dark-blue" 
+        | "default";
     title: string;
     subtitle?: string;
     action?: MouseEventHandler;
