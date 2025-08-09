@@ -293,8 +293,8 @@ class builder {
         }
         let instanceoff = object.instanceof;
         return(<>
-            <h1>{data.name}: {instanceoff && conform && instanceoff.name}</h1>
-
+            <h1>{popup && 'Edit'} {data.name}: {instanceoff && conform && instanceoff.name}</h1>
+            {popup && <b>Properties</b>}
             {!popup && instanceoff && conform && <label className={'d-block text-center'}>
                 The instance <b className={'text-success'}>CONFORMS</b> to {instanceoff.name}
             </label>}
@@ -308,7 +308,6 @@ class builder {
 
             {instanceoff && !object.partial ? null :
                 !popup && <label className={'input-container'}>
-                    <b className={'me-2'}>Features:</b>
 
                     <CommandBar style={{marginLeft: 'auto', marginTop: '6px'}}>
                         <Btn icon={'add'} action={()=> object.addValue()} tip={`Add a feature`} className={'add-feature'} />
@@ -316,7 +315,9 @@ class builder {
 
                 </label>
             }
+
             {!popup && this.forceConform(object)}
+
             {object.features.map(f => <div id={`Object-${f.id}`}>
                 {this.value(f, topics, advanced, mode)}
             </div>)}
@@ -440,10 +441,10 @@ class builder {
                         </select>}
                     </>}
                     <CommandBar>
-                        <Btn icon={'delete'} tip={'Remove value'} action={(evt) => {remove(index, isPtr)}} />
+                        <Btn icon={'delete'} tip={'Remove value'} action={(evt) => {remove(index, isPtr)}} style={{fontSize: '2em'}}/>
                     </CommandBar>
-                    {/*<button className={'btn btn-danger m-auto ms-2'} onClick={(evt) => {remove(index, isPtr)}}>
-                        <i className={'p-1 bi bi-trash3'}></i>
+                    {/* <button className={'btn m-auto ms-2'} onClick={(evt) => {remove(index, isPtr)}}>
+                        <i className={'p-1 bi bi-trash3'} style={{color: 'var(--color)'}}></i>
                     </button>*/}
                 </label>);
 
@@ -554,7 +555,8 @@ function InfoComponent(props: AllProps) {
         }
 
         interface OwnProps {
-            mode: 'popup' | 'tab' // popup: used in context menu, tab: used in sidebar
+            mode: 'popup' | 'tab'; // popup: used in context menu, tab: used in sidebar
+            style?: React.CSSProperties;
         }
 
         interface StateProps {

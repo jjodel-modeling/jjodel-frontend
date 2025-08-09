@@ -559,6 +559,8 @@ border-radius: 3px;
     height: 100%;
     min-height: 15px;
     min-width: 5px;
+    border-radius: 100%;
+
     &:hover, &:focus-within, &:focus{
         transform-origin: center;
         transform: scale(1.3);

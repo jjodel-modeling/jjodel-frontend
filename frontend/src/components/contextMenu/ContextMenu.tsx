@@ -331,11 +331,22 @@ function ContextMenuComponentInner(props: AllProps) {
         </div>);
     }
 
+    const edit_x = data.node?.x || 0;
+    const edit_y = data.node?.y || 0;
+    const edit_w = data.node?.w || 0;
+
+
     return(
-        <div className={'round' + (editPanel?' edit-panel' : ' context-menu')} style={{top: display.y - 100, left: display.x - 10}} onContextMenu={(e)=>e.preventDefault()} ref={updateRef}>
-
-            {editPanel ? <Info mode={'popup'}/> : <>
-
+        <div className={'round' + (editPanel?' edit-panel-container' : ' context-menu')} style={{top: editPanel? edit_y - 2: display.y - 100, left: editPanel? edit_x + edit_w + 10 : display.x - 10}} onContextMenu={(e)=>e.preventDefault()} ref={updateRef}>
+            
+            {editPanel ? <><div className={'edit-panel'}>
+                    <Info mode={'popup'}/> 
+                </div>
+                <div className={'dialog-footer'}><button onClick={() => close()}>Close</button></div>
+                </>
+                : 
+                
+                <>
                 {jsxList/*.map((jsx, index) => {return <li key={index}>{jsx}</li>})*/}
 
                 {(data && memorec?.data) && <div className={'context-menu round'} style={{overflow: 'auto', maxHeight: '12em', top: display.y - 100, left: display.x + 130}}>
