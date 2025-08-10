@@ -187,7 +187,7 @@ function ContextMenuComponentInner(props: AllProps) {
         if (ddata?.className === 'DObject') {
             let out: any[] = [];
             let children = (ldata as LObject).features.map(feat=>getAddChildren(feat, model as any, out)).filter(e => !(Array.isArray(e) && e.length === 0));
-            console.log('ctxmenu obj', {out, data, children});
+            //console.log('ctxmenu obj', {out, data, children});
 
             if (!Array.isArray(children) || children.length > 0) {
                 jsxList.push(...children);

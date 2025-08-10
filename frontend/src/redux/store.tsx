@@ -499,6 +499,8 @@ ret.parentView = L.from(component.props.parentviewid);
     makeEdgeView("Aggregation", EdgeHead.aggregation,   undefined,      size2,      false);
     makeEdgeView("Composition", EdgeHead.composition,   undefined,      size2,      false);
 
+
+
     // edgeView.forceNodeType="Edge"
 
     /*

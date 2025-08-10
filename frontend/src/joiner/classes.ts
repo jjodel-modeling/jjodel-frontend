@@ -519,7 +519,13 @@ export enum EdgeHead {
     composition = "Composition",
     aggregation = "Aggregation",
     reference   = "Association",
-    extend      = "Extension"
+    extend      = "Extension",
+    zero = "0",
+    one = "1",
+    many = "*",
+    zeroOrOne = "0..1",
+    zeroOrMany = "0..*",
+    oneOrMany = "1..*",
 }
 
 
