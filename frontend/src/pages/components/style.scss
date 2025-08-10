@@ -45,6 +45,7 @@
 }
 
 /* FOOTER */
+
 .footer {
 
     width: 100%;
@@ -76,28 +77,24 @@
     padding-top: 0.3em;
     width: 400px!important;
     border-right: 1px solid var(--bg-5);
-    padding-right: 20px;
-    font-weight: 200;
+    padding-right: 0px;
+    font-weight: 400;
 }
 
 .footer .license {
     position: absolute;
     bottom: 0;
-    right: 200px;
+    right: 195px;
     color: var(--bg-3-1);
 
     display: flex;
     align-items: center;
-    justify-content: center;
-    padding: 0.3em 0.5em;
+    justify-content: right;
+    padding: 0.3em 0em;
     font-family: Anton;
-
-
     font-weight:400;
-    
     &:hover {color: white}
     transition: 0.3s;
-
 
     & a {
         color: var(--bg-3-1);
@@ -107,8 +104,6 @@
     & a:hover {
         color: var(--accent);
     }
-
-
 }
 
 .footer .bi {

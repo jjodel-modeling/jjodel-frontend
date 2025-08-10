@@ -20,6 +20,32 @@
     }
   }
 }
+
+.palette-row-container:has(.palette-row > .color-container):before {
+  font-family: bootstrap-icons;
+  content: '\F4B1';
+  font-size: 1.2em;
+  margin-right: 6px;;
+}
+.palette-row-container:has(.palette-row.numeric):before {
+  font-family: bootstrap-icons;
+  content: '\F67F';
+  font-size: 1.2em;
+  margin-right: 6px;;
+}
+.palette-row-container:has(.palette-row.textual):before {
+  font-family: bootstrap-icons;
+  content: '\F5F7';
+  font-size: 1.2em;
+  margin-right: 6px;;
+}
+.palette-row-container:has(.palette-row.path):before {
+  font-family: bootstrap-icons;
+  content: '\F18B';
+  font-size: 1.2em;
+  margin-right: 6px;;
+}
+
 .palette-row-container:hover, .palette-row-container:focus-within {
   position: relative;
   z-index: 1;
