@@ -257,7 +257,7 @@ const ToggleComponent_Obsolete = (props: ToggleProps) => {
 
     return (<>
         
-        <div className={'toggle'} onClick={(e) => {toggleValue()}}>
+        <div className={'toggle'} onClick={(e) => {toggleValue()}} style={{paddingLeft: '0px!important'}}>
             <input type={'checkbox'} className={'toggle-input'} id={props.name} checked={value} onChange={(e)=>{alert(e.target.value)}}  onClick={(e) => alert('input, click')} /> 
 
             <label onClick={() => alert()} className={'toggle-label'}></label>

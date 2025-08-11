@@ -28,9 +28,12 @@ var defaultPackageSize = new GraphSize(0, 0, 400, 500);
 
 const udLevel = 'ret.level = node.graph.state.level ?? 3\n';
 const udGrid = 'ret.grid = node.graph.state.grid ?? false\n'
+const udSnap = 'ret.snap = node.graph.state.snap ?? true\n'
 
 const udLevelG = 'ret.level = node.state.level ?? 3\n';
 const udGridG = 'ret.grid = node.state.grid ?? false\n';
+const udSnapG = 'ret.snap = node.state.snap ?? true\n';
+
 
 const udLevelPkg = udLevelG + 'ret.upperLevel = node.graph.state.level ?? 3\n';
 
@@ -89,7 +92,7 @@ class DefaultViews {
             'ret.m1Objects = data && !data.isMetamodel ? data.allSubObjects : []\n'+
             'ret.refEdges = (suggestedEdges.reference || []).filter(e => !e.vertexOverlaps && e.sameGraph)\n'+
             'ret.extendEdges = (suggestedEdges.extend || []).filter(e => !e.vertexOverlaps && e.sameGraph)\n'+
-            udLevelG + udGridG +
+            udLevelG + udGridG + udSnapG +
             '}';
         return view;
     }
@@ -149,10 +152,6 @@ border-radius: var(--radius);
             view.oclCondition = 'context DClass inv: true';
             view.palette = {'color-': U.hexToPalette('#f00', '#000', '#fff'), 'background-':  U.hexToPalette('#fff', '#eee', '#f00')};
             view.css = `
-
-
-
-
 
 /* class */
 
@@ -222,7 +221,6 @@ div.header:has(.open:hover) {
 
             
 
-            
 `;
             view.defaultVSize = defaultVertexSize;
             view.usageDeclarations = `(ret) => {
@@ -242,10 +240,16 @@ div.header:has(.open:hover) {
     ret.interface = data.interface
     ${udLevel}
     ${udGrid}
+    ${udSnap}
 }`;
             // view.events = {e1:"(num) => {\n\tdata.name = num;\n}"}
         }, false, Defaults.Pointer_ViewClass);
-        // view.onDataUpdate = "if (grid) {\n   node.x = node.x - (node.x % 15);\n   node.y = node.y - (node.y % 15);\n}";
+        view.onDataUpdate =  "if (snap) {\n";
+        view.onDataUpdate += "   if (node.x !== 0 || node.y !== 0) {\n";
+        view.onDataUpdate += "      node.x = node.x - ((node.x + node.w/2) % 30);\n";
+        view.onDataUpdate += "      node.y = node.y - ((node.y + node.h/2) % 15);\n";
+        view.onDataUpdate += "   }\n";
+        view.onDataUpdate += "}\n";
 
         return view;
     }
@@ -324,10 +328,17 @@ border-radius: 3px;
     // ** declarations here ** //
     ret.literals = data.literals
     ${udLevel}
+    ${udSnap}
+
 }`;
         }, false, Defaults.Pointer_ViewEnum);
-        // view.onDataUpdate = "if (grid) {\n   node.x = node.x - (node.x % 15);\n   node.y = node.y - (node.y % 15);\n}";
-
+        view.onDataUpdate =  "if (snap) {\n";
+        view.onDataUpdate += "   if (node.x !== 0 || node.y !== 0) {\n";
+        view.onDataUpdate += "      node.x = node.x - ((node.x + node.w/2) % 30);\n";
+        view.onDataUpdate += "      node.y = node.y - ((node.y + node.h/2) % 15);\n";
+        view.onDataUpdate += "   }\n";
+        view.onDataUpdate += "}\n";        
+        
         return view;
     }
 
@@ -474,10 +485,39 @@ border-radius: 3px;
                 // ¡ The element will update only if one of the Observed Properties has changed !
                 '// ** declarations here ** //\n' +
                 'ret.metaclassName = data.instanceof?.name || \'Object\'\n' +
-                udLevel +
+                udLevel + udSnap +
+
                 '}';
         }, false, Defaults.Pointer_ViewObject);
-        // view.onDataUpdate = "if (grid) {\n   node.x = node.x - (node.x % 15);\n   node.y = node.y - (node.y % 15);\n}";
+        view.onDataUpdate = "";
+        view.onDataUpdate += "if (snap) {\n";
+        view.onDataUpdate += "  if (node.x !== 0 || node.y !== 0) {\n";
+        view.onDataUpdate += "    node.x = node.x - ((node.x + node.w/2) % 30);\n";
+        view.onDataUpdate += "    node.y = node.y - ((node.y + node.h/2) % 30);\n";
+        view.onDataUpdate += "\n";
+        view.onDataUpdate += "    setInterval(() => {\n";
+        view.onDataUpdate += "      node.edgesOut\n";
+        view.onDataUpdate += "        .filter(edge => edge.midnodes.length > 0 && (edge.midnodes.first().y + 7 !== edge.start.y + edge.start.h/2))\n";
+        view.onDataUpdate += "        .map(edge => edge.midnodes.first().y = edge.start.y + edge.start.h/2 - 7);\n";
+        view.onDataUpdate += "      node.edgesOut\n";
+        view.onDataUpdate += "        .filter(edge => edge.midnodes.length > 0 && (edge.midnodes.first().x + 7 !== edge.end.x + edge.end.w/2))\n";
+        view.onDataUpdate += "        .map(edge => edge.midnodes.first().x = edge.end.x + edge.end.w/2 - 7);\n";
+        view.onDataUpdate += "\n";
+        view.onDataUpdate += "      node.edgesIn\n";
+        view.onDataUpdate += "        .filter(edge => edge.midnodes.length > 0 && (edge.midnodes.first().x + 7 !== edge.end.x + edge.end.w/2))\n";
+        view.onDataUpdate += "        .map(edge => edge.midnodes.first().x = edge.end.x + edge.end.w/2 - 7);\n";
+        view.onDataUpdate += "      node.edgesIn\n";
+        view.onDataUpdate += "        .filter(edge => edge.midnodes.length > 0 && (edge.midnodes.first().y + 7 !== edge.start.y + edge.start.h/2))\n";
+        view.onDataUpdate += "        .map(edge => edge.midnodes.first().y = edge.start.y + edge.start.h/2 - 7);\n";
+        view.onDataUpdate += "    }, 150);\n";
+        view.onDataUpdate += "  } else {\n";
+        view.onDataUpdate += "    if (data.parent.className === 'DValue') {\n";
+        view.onDataUpdate += "      node.x = 50;\n";
+        view.onDataUpdate += "      node.y = data.parent.parent.node.y + data.parent.parent.node.h + 150;\n";
+        view.onDataUpdate += "    }\n";
+        view.onDataUpdate += "  }\n";
+        view.onDataUpdate += "}\n";
+    
 
         return view;
     }
@@ -509,7 +549,7 @@ border-radius: 3px;
                 '// ** declarations here ** //\n' +
                 'ret.metaclassName = data.instanceof?.name || \'Object\'\n' +
                 'ret.isSingleton = data.instanceof?.isSingleton || false\n' +
-                udLevel +
+                udLevel + udSnap +
                 '}';
         }, false, Defaults.Pointer_ViewSingleton);
         // view.onDataUpdate = "if (grid) {\n   node.x = node.x - (node.x % 15);\n   node.y = node.y - (node.y % 15);\n}";
@@ -584,6 +624,7 @@ border-radius: 3px;
             "// ** declarations here ** //\n" +
             "ret.edgestart = node.edge.start?.size+''\n" +
             "ret.edgeend = node.edge.end?.size+''\n" +
+            udSnap +
             "}"
         // edgePointView.edgePointCoordMode = CoordinateMode.relativePercent;
         let view: DViewElement = DViewElement.new2('EdgePoint', DV.edgePointView(), vp, (d)=>{
@@ -596,6 +637,13 @@ border-radius: 3px;
             d.defaultVSize = defaultEdgePointSize;
             // d.defaultVSize = new GraphSize(0, 0, 25, 25);
         }, false, Defaults.Pointer_ViewEdgePoint);
+        view.onDataUpdate =  "if (snap) {\n";
+        view.onDataUpdate += "   if (node.x !== 0 || node.y !== 0) {\n";
+        view.onDataUpdate += "      node.x = node.x - ((node.x + node.w/2) % 30);\n";
+        view.onDataUpdate += "      node.y = node.y - ((node.y + node.h/2) % 15);\n";
+        view.onDataUpdate += "   }\n";
+        view.onDataUpdate += "}\n";
+
         return view;
     }
 
