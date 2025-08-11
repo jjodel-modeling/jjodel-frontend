@@ -520,12 +520,12 @@ export enum EdgeHead {
     aggregation = "Aggregation",
     reference   = "Association",
     extend      = "Extension",
-    zero = "0",
-    one = "1",
-    many = "*",
-    zeroOrOne = "0..1",
-    zeroOrMany = "0..*",
-    oneOrMany = "1..*",
+    zero = "exactly zero / not present",
+    one = "exactly one, required",
+    many = "zero or many, optional, unbounded",
+    zeroOrOne = "zero or one, optional",
+    zeroOrMany = "zero or many, optional, unbounded",
+    oneOrMany = "one or many, at least one"
 }
 
 

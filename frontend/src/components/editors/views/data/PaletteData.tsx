@@ -191,8 +191,8 @@ function PaletteDataComponent(props: AllProps) {
                     const asslabel = "Λ "+EdgeHead.reference;
                 const e1 = "--- 1";
                 const cardinality       = "-- Multiplicity";
-                    const zerolabel         = "[0] | exactly zero / not present";
-                    const onelabel          = "[1] | exactly one, required";
+                    const zerolabel         = "[0]    exactly zero / not present";
+                    const onelabel          = "[1]    exactly one, required";
                     const manylabel         = "[0..*] zero or many, optional, unbounded";
                     const zeroOrOneLabel    = "[0..1] zero or one, optional";
                     const zeroOrManyLabel   = "[0..*] zero or many, optional, unbounded "; // was "[0..*] "
@@ -204,7 +204,7 @@ function PaletteDataComponent(props: AllProps) {
                     [uml]: 'UML Relationships',
                         [asslabel]: 'M11.354 5.646a.5.5 90 010 .708l-6.035 6.089a.5.5 90 01-.156-.116L11.375 5.999l-6.406-6.211a.5.5 90 01.208-.115z',
                         [extendlabel]: 'M 0 0   L x y/2   L 0 y   Z',
-                        [agglabel]: 'M 0 y/2   L x/2 0   L x y/2   L x/2 y   Z',
+                        [agglabel]: 'M9.155-.9085c.522-.522 1.368-.522 1.89 0l5.8635 5.8644c.522.522.522 1.3671 0 1.8882L11.045 12.7085c-.522.522-1.3671.522-1.8882 0L3.2915 6.845a1.332 1.332 90 010-1.8882z',
                     [e1]: '--- 1',
                     [cardinality]: 'Multiplicity',
                         [zerolabel]: 'M-11.985 5.981A1 1 0 000 6 1 1 0 00-12 6',

@@ -179,12 +179,12 @@ export class DV {
 
         const cardinality = "-- Cardinality";
 
-            const zerolabel = "[0] Cardinality" + EdgeHead.reference;
-            const onelabel = "[1] Cardinality" + EdgeHead.reference;
-            const manylabel = "[*] Cardinality" + EdgeHead.reference;
-            const zeroOrOneLabel = "[0..1] Cardinality" + EdgeHead.reference;
-            const zeroOrManyLabel = "[0..*] Cardinality" + EdgeHead.reference;
-            const oneOrManyLabel = "[1..*] Cardinality" + EdgeHead.reference;
+            const zerolabel = "[0] " + EdgeHead.zero;
+            const onelabel = "[1] " + EdgeHead.one;
+            const manylabel = "[*] " + EdgeHead.many;
+            const zeroOrOneLabel = "[0..1] " + EdgeHead.zeroOrOne;
+            const zeroOrManyLabel = "[0..*] " + EdgeHead.zeroOrMany;
+            const oneOrManyLabel = "[1..*] " + EdgeHead.oneOrMany;
 
         const e2 = "--- 2";
 
@@ -192,7 +192,7 @@ export class DV {
             [uml]: 'UML Relationships',
                 [asslabel]: 'M11.354 5.646a.5.5 90 010 .708l-6.035 6.089a.5.5 90 01-.156-.116L11.375 5.999l-6.406-6.211a.5.5 90 01.208-.115z',
                 [extendlabel]: 'M 0 0   L x y/2   L 0 y   Z',
-                [agglabel]: 'M 0 y/2   L x/2 0   L x y/2   L x/2 y   Z',
+                [agglabel]: 'M9.155-.9085c.522-.522 1.368-.522 1.89 0l5.8635 5.8644c.522.522.522 1.3671 0 1.8882L11.045 12.7085c-.522.522-1.3671.522-1.8882 0L3.2915 6.845a1.332 1.332 90 010-1.8882z',
             [e1]: '--',
 
             [cardinality]: 'Cardinality',
