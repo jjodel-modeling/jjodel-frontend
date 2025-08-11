@@ -81,7 +81,7 @@ export {Constructors, JsType, RuntimeAccessibleClass, DPointerTargetable,
     LUser, DUser, DProject, LProject, Pointers, PointedBy, PendingPointedByPaths, CoordinateMode, EdgeHead, EGraphElements, EModelElements, transientProperties, ViewEClassMatch} from "./classes";
 
 // export type {Pointer} from './typeconverter';
-export {getPath, TargetableProxyHandler, MyProxyHandler, MapProxyHandler, LogicContext, MapLogicContext} from './proxy';
+export {getPath, TargetableProxyHandler, MyProxyHandler, MapProxyHandler, LogicContext, LogicContext2} from './proxy';
 // import independent generic modules (only dependent from types and RuntimeAccessible
 
 export {Uarr, DDate, ParseNumberOrBooleanOptions, myFileReader,

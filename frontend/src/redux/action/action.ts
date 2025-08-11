@@ -476,8 +476,8 @@ export class SetFieldAction extends SetRootFieldAction {
         AM extends AccessModifier | undefined = undefined,
         // T extends arrayFieldNameTypes<D> = any
         >(me: D | Pointer<D>, field: T, val: VAL, accessModifier: AM | undefined = undefined, isPointer?: ISPOINTER): SetFieldAction {
-        if (accessModifier) (field as any) += accessModifier;
-        return new SetFieldAction(me, field, val, false, isPointer as boolean);
+        // if (accessModifier) (field as any) += accessModifier;
+        return new SetFieldAction(me, field, accessModifier, val, false, isPointer as boolean);
     }
 
 
@@ -520,20 +520,24 @@ export class SetFieldAction extends SetRootFieldAction {
         AM extends AccessModifier | undefined = undefined,
         // T extends arrayFieldNameTypes<D> = any
         >(me: D | Pointer<D>, field: T, val: VAL, accessModifier: AM | undefined = undefined, isPointer?: ISPOINTER): boolean {
-        if (accessModifier) (field as any) += accessModifier;
-        return new SetFieldAction(me, field, val, false, isPointer as boolean).fire();
+        //if (accessModifier) (field as any) += accessModifier;
+        return new SetFieldAction(me, field, accessModifier, val, false, isPointer as boolean).fire();
     }
 
 
 
     me: Pointer | DPointerTargetable;
     me_field: string;
+    accessModifier: AccessModifier;
+
     // field can end with "+=", "[]", or "-1" if it's array
-    protected constructor(me: DPointerTargetable | Pointer, field: string, val: any, fire: boolean = true, isPointer: boolean = false) {
+    protected constructor(me: DPointerTargetable | Pointer, field: string, accessModifier: AccessModifier, val: any, fire: boolean = true, isPointer: boolean = false) {
         Log.exDev(!me, 'BaseObject missing in SetFieldAction', {me, field, val});
-        super('idlookup.' + ((me as DPointerTargetable).id || me) + ( field ? '.' + field : ''), val, false, isPointer);
+        let fullpath = 'idlookup.' + ((me as DPointerTargetable).id || me) + (field ? '.'+field : '') + (accessModifier || '');
+        super(fullpath, val, false, isPointer);
         this.me = me;
         this.me_field = field;
+        this.accessModifier = accessModifier;
         this.className = (this.constructor as typeof RuntimeAccessibleClass).cname || this.constructor.name;
         if (fire) this.fire();
     }
@@ -679,7 +683,7 @@ export class DeleteElementAction extends SetFieldAction {
     public static new(me: Pack1<LPointerTargetable>): boolean { return new DeleteElementAction(me as any).fire(); }
 
     constructor(me: Pack1<LPointerTargetable>) {
-        super(Pointers.from(me), '', undefined);
+        super(Pointers.from(me), '', undefined, undefined);
         this.className = (this.constructor as typeof RuntimeAccessibleClass).cname || this.constructor.name;
     }
 }

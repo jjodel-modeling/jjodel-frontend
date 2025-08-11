@@ -108,7 +108,7 @@ import type {
     LViewElement,
     WViewElement,
 } from "../view/viewElement/view";
-import type {LogicContext} from "./proxy";
+import {LogicContext, LogicContext2, type TargetableProxyHandler as TypeTargetableProxyHandler} from "./proxy";
 import {
     Action,
     CreateElementAction,
@@ -234,7 +234,7 @@ export abstract class RuntimeAccessibleClass extends AbstractMixedClass {
 
     static wrapAll<D extends RuntimeAccessibleClass, L extends LPointerTargetable = LPointerTargetable, CAN_THROW extends boolean = false,
         RET extends CAN_THROW extends true ? L[] : L[] = CAN_THROW extends true ? L[] : L[] >
-    (data: D[] | Pointer<DPointerTargetable, 0, 'N'>, baseObjInLookup?: DPointerTargetable, path: string = '', canThrow: CAN_THROW = false as CAN_THROW, state?: DState, filter:boolean=true): CAN_THROW extends true ? L[] : L[] {
+    (data: D[] | Pointer<DPointerTargetable, 0, 'N'>, baseObjInLookup?: undefined, path: '' = '', canThrow: CAN_THROW = false as CAN_THROW, state?: DState, filter:boolean=true): CAN_THROW extends true ? L[] : L[] {
         if (!Array.isArray(data)) return [];
         if (!data.length) return [];
         if (!state) state = windoww.store.getState() as DState;
@@ -246,7 +246,7 @@ export abstract class RuntimeAccessibleClass extends AbstractMixedClass {
 
     static wrap<D extends RuntimeAccessibleClass, L extends LPointerTargetable = LPointerTargetable, CAN_THROW extends boolean = false,
         RET extends CAN_THROW extends true ? L : L | undefined = CAN_THROW extends true ? L : L | undefined>
-    (data: D | Pointer | undefined | null, baseObjInLookup?: DPointerTargetable, path: string = '', canThrow: CAN_THROW = false as CAN_THROW, state?: DState): CAN_THROW extends true ? L : L | undefined{
+    (data: D | Pointer | undefined | null, baseObjInLookup?: undefined, path: '' = '', canThrow: CAN_THROW = false as CAN_THROW, state?: DState): CAN_THROW extends true ? L : L | undefined{
         if (!data || (data as any).__isProxy) return data as any;
         if (typeof data === 'string') {
             data = DPointerTargetable.from(data, state) as D;
@@ -264,7 +264,8 @@ export abstract class RuntimeAccessibleClass extends AbstractMixedClass {
         // @ts-ignore
         if (!data.className) return undefined;
         // console.log('ProxyWrapping:', {data, baseObjInLookup, path});
-        return new Proxy(data, new windoww.TargetableProxyHandler(data, baseObjInLookup, path)) as L;
+        let TargetableProxyHandler = windoww.TargetableProxyHandler as typeof TypeTargetableProxyHandler;
+        return new Proxy(data, new TargetableProxyHandler(data, baseObjInLookup, path)) as L;
     }
 
     // if v can be wrapped, wrap it. otherwise return the parameter v.
@@ -2179,14 +2180,16 @@ WARNING! do not set proxies in the state, set pointers instead.<br/>
                 if (v > max) v = max;
                 else if (v < min) v = min;
             }
-            console.log("default Setter["+k.toString()+"] = " + v , {type, v, v0, oldv:(c.data as any)[k], isPointer});
+            console.log("default Setter["+k.toString()+"] = " + v , {type, v, v0, oldv:(c.data as any)[k], isPointer, c});
 
             let oldv = c.data[k as keyof DPointerTargetable];
             let newv = v;
             if (!U.isPrimitive(oldv)) oldv = undefined;
             if (!U.isPrimitive(newv)) newv = undefined;
             TRANSACTION(this.get_name(c)+'.'+(k.toString()), ()=>{
-                SetFieldAction.new(c.data, k as any, v, '', isPointer);
+                let c2 = c as unknown as LogicContext2;
+                if (c2.base) return SetFieldAction.new(c2.base, (c2.path ? c2.path+'.' : '') + (k as string) as any, v, '', isPointer);
+                else SetFieldAction.new(c.data, k as any, v, '', isPointer);
             }, oldv, newv)
             return true;
         }

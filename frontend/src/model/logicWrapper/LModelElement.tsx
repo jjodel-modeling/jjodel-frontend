@@ -6707,7 +6707,7 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
             if (tmpval_id !== undefined && oldval === tmpval_id) return { success: false, reason: "identical object assignment" };
             let state = store.getState();
             if (tmpval_id && (val as any)?.className) {
-                lval = LPointerTargetable.wrap<DObject>(val, state) as LObject | LEnumLiteral;
+                lval = LPointerTargetable.from(val, state) as LObject | LEnumLiteral;
                 isPtr = !!(lval || Pointers.isPointer(oldval));//LPointerTargetable.wrap(oldval, state));
                 val = tmpval_id;
             }

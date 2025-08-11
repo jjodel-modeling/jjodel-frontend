@@ -331,14 +331,18 @@ export class DViewElement extends DPointerTargetable {
         const user = LUser.fromPointer(DUser.current) as LUser;
         // const project = user?.project; if(!project) return this;
         let name: string;
-        const vp: LViewPoint = user?.project?.activeViewpoint || LPointerTargetable.fromPointer(Defaults.viewpoints[0]);
-        if (forData?.name) {
-            name = forData.name + 'View';
-        } else {
-            let names: string[] = vp.subViews.map(v => v && v.name);
+        let parentView: LViewElement;
+        let activeVP: LViewPoint | undefined = user?.project?.activeViewpoint;
+        if (activeVP && activeVP?.id !== Defaults.Pointer_ViewPointDefault) parentView = activeVP;
+        else parentView = LPointerTargetable.fromPointer(Defaults.Pointer_ViewModel);
+
+        if (forData?.name) name = 'View for ' + forData.name;
+        else {
+            let names: string[] = parentView.subViews.map(v => v && v.name);
             name = U.increaseEndingNumber( 'view_' + 0, false, false, newName => names.indexOf(newName) >= 0);
         }
-        return DViewElement.new2(name, jsx, vp.__raw,(d)=>{
+
+        return DViewElement.new2(name, jsx, parentView.__raw, (d)=>{
             d.css = css;
             d.palette = palettes;
             d.css_MUST_RECOMPILE = true;
