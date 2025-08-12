@@ -224,7 +224,7 @@ export class DV {
         tailPath = headdict[tailPath] || '';
 
         let palette: PaletteType = {
-            'anchorSize': {type: 'number', value:20, unit:'px'},
+            'anchorSize': {type: 'number', value:15, unit:'px'},
             'dashing': {value:dashing || '', type: "text"},
             'stroke-color': U.hexToPalette('#777'),
             'stroke-width': {value:1, type: 'number', unit: 'px'},
