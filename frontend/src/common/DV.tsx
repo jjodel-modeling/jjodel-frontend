@@ -272,6 +272,10 @@ export class DV {
         "\npath.tail, path.head{" +
         "\n\tfill:var(--fill);" +
         "\n}" +
+        "\npath.edge.full.outline{" +
+	    "\nstroke-width: var(--edge-outline-width);" +
+    	"\nstroke: white;" + 
+        "\n}" +
         "\npath.edge.full.hover-activator{" +
         "\n\tstroke-width: var(--stroke-width-hover);" +
         "\n\tstroke: none;" +
@@ -311,6 +315,8 @@ export class DV {
                  second is to enlarge the hover area of path.preview to the same as path.content, so i avoid hover loop enter-leave and graphical flashing
                 
                 */ }
+
+                <path className={"preview edge full outline"} d={this.edge.d} />
                 <path className={"preview edge full` + (dashing ? ' dashed' : '') + `"} d={this.edge.d} />
                 <path className={"preview edge full hover-activator"} d={this.edge.d} />
                 { /* edge separate segments */ }
@@ -481,7 +487,7 @@ export class DefaultView {
 
 {/* editor zoom controls */}
 
-<Zoomer node={node}/>
+<Zoom node={node}/>
 </View>`
 );}
 
