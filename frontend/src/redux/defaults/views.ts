@@ -22,7 +22,7 @@ import {
 import DSL from "../../DSL/DSL";
 
 var nosize: GraphSize = {x:0, y:0, w:0, h:0, nosize:true} as any;
-var defaultEdgePointSize: GraphSize = {x:0, y:0, w:5, h:5} as any;
+var defaultEdgePointSize: GraphSize = {x:0, y:0, w:15, h:5} as any;
 var defaultVertexSize: GraphSize = {x:0, y:0, w:140.6818084716797, h:32.52840805053711} as any;
 var defaultPackageSize = new GraphSize(0, 0, 400, 500);
 
@@ -595,10 +595,8 @@ border-radius: 3px;
     border: 2px solid var(--border-1);
     background: var(--background-1);
     color: var(--color-1);
-    width: 100%;
-    height: 100%;
-    min-height: 15px;
-    min-width: 5px;
+    width: 15px;
+    height: 15px;
     border-radius: 100%;
 
     &:hover, &:focus-within, &:focus{
@@ -626,7 +624,7 @@ border-radius: 3px;
             "ret.edgeend = node.edge.end?.size+''\n" +
             udSnap +
             "}"
-        // edgePointView.edgePointCoordMode = CoordinateMode.relativePercent;
+        // edgePointView.edgePointCoordMode = CoordinateMode.relativePercent; 
         let view: DViewElement = DViewElement.new2('EdgePoint', DV.edgePointView(), vp, (d)=>{
             d.appliableTo = 'EdgePoint';
             d.resizable = false;
@@ -637,6 +635,7 @@ border-radius: 3px;
             d.defaultVSize = defaultEdgePointSize;
             // d.defaultVSize = new GraphSize(0, 0, 25, 25);
         }, false, Defaults.Pointer_ViewEdgePoint);
+        view.adaptWidth = true; view.adaptHeight = true;
         view.onDataUpdate =  "if (snap) {\n";
         view.onDataUpdate += "   if (node.x !== 0 || node.y !== 0) {\n";
         view.onDataUpdate += "      node.x = node.x - ((node.x + node.w/2) % 30);\n";

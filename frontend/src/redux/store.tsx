@@ -291,9 +291,16 @@ export class DState extends DPointerTargetable{
   &.selected-by-me, &:has(.selected-by-me, .Edge, .edge, .edges), &:hover, &:active, &:focus-within, &:focus{
     overflow: visible;
     z-index: 100 !important;
-    outline-width: 4px;
+    outline-width: 0px!important;
     outline-style: solid;
     outline-color: var(--selected)!important;
+  }
+  .Vertex, .Field {
+    &.selected-by-me, &:hover, &:active, &:focus-within, &:focus {
+      outline-width: 4px!important;
+      outline-style: solid!important;
+      outline-color: var(--selected)!important;
+    }
   }
 }
 

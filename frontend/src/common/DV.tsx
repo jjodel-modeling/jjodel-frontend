@@ -303,7 +303,7 @@ export class DV {
         let tail = DV.svgHeadTail("tail", modename) || '';
         let jsx = beautify(
         `<div className={"edge hoverable hide-ep clickthrough fullscreen ` + modename + `"}>
-            <svg className={"clickthrough fullscreen"}>
+            <svg className={"clickthrough fullscreen"} onDoubleClick={() => edge.addMidPoint(edge.start.size.tl().add(edge.end.size.tl()).divide(2))}>
                 { /* edge full paths
                
                  first is preview path, normally seen
