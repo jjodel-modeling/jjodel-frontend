@@ -472,11 +472,16 @@ export class DefaultView {
 </Scrollable>
 
 {/* language designer defined controls */}
+
 <Control title={'Workbench'} payoff={'Options'}>
     <Slider name={'level'} title={'Detail level '} node={node} max={3} />
     <Toggle name={'grid'} title={'Grid'} node={node} />
     <Toggle name={'snap'} title={'Snap'} node={node} />
 </Control>
+
+{/* editor zoom controls */}
+
+<Zoomer node={node}/>
 </View>`
 );}
 
