@@ -305,14 +305,16 @@ const Toggle_Obsolete = (props: ToggleProps, children: ReactNode = []): ReactEle
             <Tooltip tooltip={'Zoom in'} inline position={'left'} offsetX={10}>
                 <div className={'zoom-in'} onClick={() => zoomIn()}></div>
             </Tooltip>
+            
+            <Tooltip tooltip={'Zoom out'} inline position={'left'} offsetX={10}>
+                <div className={'zoom-out'} onClick={() => zoomOut()}></div>
+            </Tooltip>
+
             {//@ts-ignore 
                 props.node.zoom.x !== 1 && <Tooltip tooltip={'Zoom reset'} inline position={'left'} offsetX={10}>
                     <div className={'zoom-reset'} onClick={() => zoomReset()}></div>
                 </Tooltip>
             }
-            <Tooltip tooltip={'Zoom out'} inline position={'left'} offsetX={10}>
-                <div className={'zoom-out'} onClick={() => zoomOut()}></div>
-            </Tooltip>
         </div>
     );
 }
