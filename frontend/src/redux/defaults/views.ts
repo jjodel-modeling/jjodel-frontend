@@ -68,10 +68,25 @@ class DefaultViews {
         transform: rotate(90deg) translate(0, 100%);
     }
 }
-.grid {
+.grid-classic {
     background-image: radial-gradient(silver 1px, transparent 0);
     background-size: 15px 15px;
     background-position: 10px 10px;
+}
+.grid-paper {
+  background-color: white;
+  background-image:
+    /* thick dark blue lines */
+    linear-gradient(to right, #047dc83a 0.5px, transparent 0px),
+    linear-gradient(to bottom, #047dc83a 0.5px, transparent 0px),
+    /* thin light blue lines */
+    linear-gradient(to right, #a4c8042e 0.5px, transparent 0px),
+    linear-gradient(to bottom, #a4c8042e 0.5px, transparent 0px);
+  background-size:
+    90px 90px, /* dark vertical */
+    90px 90px, /* dark horizontal */
+    9px 9px,   /* light vertical */
+    9px 9px;   /* light horizontal */
 }
 
 `;
@@ -96,6 +111,8 @@ class DefaultViews {
             '}';
         return view;
     }
+
+    /* Package */
 
     static package(vp: DViewElement): DViewElement {
         const view = DViewElement.new2('Package', DV.packageView(), vp, (view)=>{
@@ -143,6 +160,8 @@ border-radius: var(--radius);
         // view.onDataUpdate = "if (grid) {\n   node.x = node.x - (node.x % 15);\n   node.y = node.y - (node.y % 15);\n}";
         return view
     }
+
+    /* Class */ 
 
     static class(vp: DViewElement): DViewElement {
         const view = DViewElement.new2('Class', DV.classView(), vp, (view)=>{
@@ -244,11 +263,23 @@ div.header:has(.open:hover) {
 }`;
             // view.events = {e1:"(num) => {\n\tdata.name = num;\n}"}
         }, false, Defaults.Pointer_ViewClass);
-        view.onDataUpdate =  "if (snap) {\n";
-        view.onDataUpdate += "   if (node.x !== 0 || node.y !== 0) {\n";
-        view.onDataUpdate += "      node.x = node.x - ((node.x + node.w/2) % 30);\n";
-        view.onDataUpdate += "      node.y = node.y - ((node.y + node.h/2) % 15);\n";
-        view.onDataUpdate += "   }\n";
+        
+        view.onDataUpdate = "if (snap) {\n";
+        view.onDataUpdate += "  const x = node.x, y = node.y;\n";
+        view.onDataUpdate += "  if (x !== 0 || y !== 0) {\n";
+        view.onDataUpdate += "    const zx = (node.zoom && node.zoom.x) || 1;\n";
+        view.onDataUpdate += "    const zy = (node.zoom && node.zoom.y) || 1;\n";
+        view.onDataUpdate += "    const w2 = node.w * 0.5;\n";
+        view.onDataUpdate += "    const h2 = node.h * 0.5;\n";
+        view.onDataUpdate += "    const gx = 30 * zx;\n";
+        view.onDataUpdate += "    const gy = 30 * zy;\n";
+        view.onDataUpdate += "    const cx = x + w2;\n";
+        view.onDataUpdate += "    const cy = y + h2;\n";
+        view.onDataUpdate += "    const nx = Math.round(cx / gx) * gx - w2;\n";
+        view.onDataUpdate += "    const ny = Math.round(cy / gy) * gy - h2;\n";
+        view.onDataUpdate += "    if (nx !== x) node.x = nx;\n";
+        view.onDataUpdate += "    if (ny !== y) node.y = ny;\n";
+        view.onDataUpdate += "  }\n";
         view.onDataUpdate += "}\n";
 
         return view;
@@ -332,12 +363,24 @@ border-radius: 3px;
 
 }`;
         }, false, Defaults.Pointer_ViewEnum);
-        view.onDataUpdate =  "if (snap) {\n";
-        view.onDataUpdate += "   if (node.x !== 0 || node.y !== 0) {\n";
-        view.onDataUpdate += "      node.x = node.x - ((node.x + node.w/2) % 30);\n";
-        view.onDataUpdate += "      node.y = node.y - ((node.y + node.h/2) % 15);\n";
-        view.onDataUpdate += "   }\n";
-        view.onDataUpdate += "}\n";        
+        
+        view.onDataUpdate = "if (snap) {\n";
+        view.onDataUpdate += "  const x = node.x, y = node.y;\n";
+        view.onDataUpdate += "  if (x !== 0 || y !== 0) {\n";
+        view.onDataUpdate += "    const zx = (node.zoom && node.zoom.x) || 1;\n";
+        view.onDataUpdate += "    const zy = (node.zoom && node.zoom.y) || 1;\n";
+        view.onDataUpdate += "    const w2 = node.w * 0.5;\n";
+        view.onDataUpdate += "    const h2 = node.h * 0.5;\n";
+        view.onDataUpdate += "    const gx = 30 * zx;\n";
+        view.onDataUpdate += "    const gy = 30 * zy;\n";
+        view.onDataUpdate += "    const cx = x + w2;\n";
+        view.onDataUpdate += "    const cy = y + h2;\n";
+        view.onDataUpdate += "    const nx = Math.round(cx / gx) * gx - w2;\n";
+        view.onDataUpdate += "    const ny = Math.round(cy / gy) * gy - h2;\n";
+        view.onDataUpdate += "    if (nx !== x) node.x = nx;\n";
+        view.onDataUpdate += "    if (ny !== y) node.y = ny;\n";
+        view.onDataUpdate += "  }\n";
+        view.onDataUpdate += "}\n";       
         
         return view;
     }

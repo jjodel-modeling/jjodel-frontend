@@ -462,7 +462,7 @@ export class DefaultView {
 
 
 
-<View className={"root model"}>
+<View className={"root model" + (grid ? " grid-paper" : "")}> {/* alternatively use .grid-classic */}
 <Scrollable graph={node}>
     {!data && "Model data missing."}
     <div className={'edges'}>
@@ -559,7 +559,6 @@ export class DefaultView {
 
     /* CLASS */
 
-// <View className={"root class " + (level === 1 && abstract ? "abstract")} + onClick={()=>{/*node.events.e1(Math.random().toFixed(3))*/}}>
 
 public static class(): string { return (`
 /* -- Jjodel Abstract Syntax Specification v2.0 -- */
@@ -568,17 +567,15 @@ public static class(): string { return (`
 
 
 <View className={"root class"} onDoubleClick={()=>{node.state = {highlight: !node.state.highlight}}}>
-    <div className={'header'}>
-        {data.isSingleton && <i className='bi bi-1-square'>&nbsp;</i>}
-        {level > 1 && <b className={'class-name'}>{interface ? 'Interface' : abstract ? 'Abstract Class' : 'Class'}: </b>}    
-        {level === 1 && <i className="bi bi-c-square-fill"></i>}
-        {data.$name ? 
-            <Input data={data.$name} field={'value'} hidden={true} autosize={true} placeholder={'Enter name'}/> :
-            <Input data={data} field={'name'} hidden={true} autosize={true} placeholder={'Enter name'}/>
-        }
-        {data.extends.some(a => a.model.id !== data.model.id) && <i className="bi bi-arrow-up open"></i>}
-        {data.extendedBy.some(a => a.model.id !== data.model.id) && <i className="bi bi-arrow-down open"></i>}
-        {data.referencedBy.filter(a => typeof a !== 'undefined').some(a => a.model.id !== data.model.id) && <i className="bi bi-arrow-left open"></i>}
+   <div className={'header'}>
+    {data.isSingleton && <i className='bi bi-1-square'>&nbsp;</i>}
+    { level > 1 && <b className={'class-name'}>{interface ? 'Interface' : 'Class'}: </b>}    
+
+    {level === 1 && <i className="bi bi-c-square-fill"></i>}
+    <span className={(data.abstract ? "abstract": "")}><Input data={data} field={'name'} hidden={true} autosize={true} /></span>
+    {data.extends.some(a => a.model.id !== data.model.id) && <i className="bi bi-arrow-up open"></i>}
+    {data.extendedBy.some(a => a.model.id !== data.model.id) && <i className="bi bi-arrow-down open"></i>}
+    {data.referencedBy.filter(a => typeof a !== 'undefined').some(a => a.model.id !== data.model.id) && <i className="bi bi-arrow-left open"></i>}
 
 
     </div>
