@@ -32,7 +32,7 @@
       margin-left: 0 !important;
       margin-right: 0 !important;
       font-size: 0.8rem;
-      border: 0px solid transparent;
+      border: 2px solid transparent;
       color: white;
       background-color: var(--color);
       padding: 1px 5px;
@@ -41,8 +41,8 @@
     }
     
     &>button:hover {
-      border: 0px solid var;
-      background-color: white;
+      border: 2px solid var(--color);
+      background-color: transparent;
       color: var(--color);
     }
   }
