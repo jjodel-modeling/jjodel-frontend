@@ -456,7 +456,13 @@ export class DefaultView {
     /* MODEL */
 
     public static model(): string { return (
-`<View className={"root model"}>
+`
+/* -- Jjodel Abstract Syntax Specification v2.0 -- */
+
+
+
+
+<View className={"root model"}>
 <Scrollable graph={node}>
     {!data && "Model data missing."}
     <div className={'edges'}>
@@ -505,7 +511,13 @@ export class DefaultView {
     /* PACKAGE */
 
     public static package(): string { return (
-`<View className={'root package'}>
+`
+/* -- Jjodel Abstract Syntax Specification v2.0 -- */
+
+
+
+
+<View className={'root package'} version={'2.0'}>
 <div className={'drag-handle'} />
 {
     upperLevel >= 1 &&
@@ -549,51 +561,63 @@ export class DefaultView {
 
 // <View className={"root class " + (level === 1 && abstract ? "abstract")} + onClick={()=>{/*node.events.e1(Math.random().toFixed(3))*/}}>
 
-public static class(): string { return (`<View className={"root class"} onDoubleClick={()=>{node.state = {highlight: !node.state.highlight}}}>
-<div className={'header'}>
-    {data.isSingleton && <i className='bi bi-1-square'>&nbsp;</i>}
-    {level > 1 && <b className={'class-name'}>{interface ? 'Interface' : abstract ? 'Abstract Class' : 'Class'}: </b>}    
-    {level === 1 && <i className="bi bi-c-square-fill"></i>}
-    {data.$name ? 
-        <Input data={data.$name} field={'value'} hidden={true} autosize={true} placeholder={'Enter name'}/>} :
-        <Input data={data} field={'name'} hidden={true} autosize={true} placeholder={'Enter name'}/>
-    }
-    {data.extends.some(a => a.model.id !== data.model.id) && <i className="bi bi-arrow-up open"></i>}
-    {data.extendedBy.some(a => a.model.id !== data.model.id) && <i className="bi bi-arrow-down open"></i>}
-    {data.referencedBy.filter(a => typeof a !== 'undefined').some(a => a.model.id !== data.model.id) && <i className="bi bi-arrow-left open"></i>}
+public static class(): string { return (`
+/* -- Jjodel Abstract Syntax Specification v2.0 -- */
 
 
-</div>
 
-{level > 2 && <hr/>}
 
-{level > 2 && 
-    <div className={'class-children'}>
-        {level >= 2 && [
-            attributes.map(c => <DefaultNode key={c.id} data={c} />),
-            references.map(c => <DefaultNode key={c.id} data={c} />),
-            operations.map(c => <DefaultNode key={c.id} data={c} />)
-        ]
-        || [
-        <div className={"summary"}>{[
-            attributes.length ? attributes.length + " attributes" : '',
-            references.length ? references.length + " references" : '',
-            operations.length ? operations.length + " operations" : '',
-            !(attributes.length + references.length + operations.length) ? '- empty -' : ''
-            ].filter(v=>!!v).join(',')}</div>
-        ]
+<View className={"root class"} onDoubleClick={()=>{node.state = {highlight: !node.state.highlight}}}>
+    <div className={'header'}>
+        {data.isSingleton && <i className='bi bi-1-square'>&nbsp;</i>}
+        {level > 1 && <b className={'class-name'}>{interface ? 'Interface' : abstract ? 'Abstract Class' : 'Class'}: </b>}    
+        {level === 1 && <i className="bi bi-c-square-fill"></i>}
+        {data.$name ? 
+            <Input data={data.$name} field={'value'} hidden={true} autosize={true} placeholder={'Enter name'}/> :
+            <Input data={data} field={'name'} hidden={true} autosize={true} placeholder={'Enter name'}/>
         }
-    </div>
-}
+        {data.extends.some(a => a.model.id !== data.model.id) && <i className="bi bi-arrow-up open"></i>}
+        {data.extendedBy.some(a => a.model.id !== data.model.id) && <i className="bi bi-arrow-down open"></i>}
+        {data.referencedBy.filter(a => typeof a !== 'undefined').some(a => a.model.id !== data.model.id) && <i className="bi bi-arrow-left open"></i>}
 
-{decorators}
+
+    </div>
+
+    {level > 2 && <hr/>}
+
+    {level > 2 && 
+        <div className={'class-children'}>
+            {level >= 2 && [
+                attributes.map(c => <DefaultNode key={c.id} data={c} />),
+                references.map(c => <DefaultNode key={c.id} data={c} />),
+                operations.map(c => <DefaultNode key={c.id} data={c} />)
+            ]
+            || [
+            <div className={"summary"}>{[
+                attributes.length ? attributes.length + " attributes" : '',
+                references.length ? references.length + " references" : '',
+                operations.length ? operations.length + " operations" : '',
+                !(attributes.length + references.length + operations.length) ? '- empty -' : ''
+                ].filter(v=>!!v).join(',')}</div>
+            ]
+            }
+        </div>
+    }
+
+    {decorators}
 </View>`);}
 
 
     /* ENUM */
 
 public static enum(): string { return (
-`<View className={'root enumerator'}>
+`
+/* -- Jjodel Abstract Syntax Specification v2.0 -- */
+
+
+
+
+<View className={'root enumerator'}>
     <div className={'header'}>
         {level > 1 && <b className={'enumerator-name'}>Enum: </b>}
         {level == 1 && <i className="bi bi-explicit-fill"></i>}<Input data={data} field={'name'} hidden={true} autosize={true} />
@@ -609,7 +633,13 @@ public static enum(): string { return (
     /* FEATURE */
 
     public static feature(): string { return (
-`<View className={'root feature w-100'}>
+`
+/* -- Jjodel Abstract Syntax Specification v2.0 -- */
+
+
+
+
+<View className={'root feature w-100'}>
     <span className={'feature-name'}>{data.name}:</span>
     <Select data={data} field={'type'} />
     {decorators}
@@ -619,7 +649,13 @@ public static enum(): string { return (
     /* LITERAL */
 
     public static literal(): string { return (
-`<label className={'root literal d-block text-center'}>
+`
+/* -- Jjodel Abstract Syntax Specification v2.0 -- */
+
+
+
+
+<label className={'root literal d-block text-center'}>
     {data.name}
     {decorators}
 </label>`
@@ -628,7 +664,13 @@ public static enum(): string { return (
     /* OPERATION */
 
     public static operation(): string { return (
-`<View className={'root operation w-100 hoverable'}>
+`
+/* -- Jjodel Abstract Syntax Specification v2.0 -- */
+
+
+
+
+<View className={'root operation w-100 hoverable'}>
         <span className={'feature-name'}>{data.name + ' =>'}</span>
         <Select data={data} field={'type'} />
     <div className={"parameters content"}>
@@ -643,7 +685,13 @@ public static enum(): string { return (
     /* PARAMETER */
 
 public static parameter(): string { return (
-`<View className={'root parameter w-100'}>
+`
+/* -- Jjodel Abstract Syntax Specification v2.0 -- */
+
+
+
+
+<View className={'root parameter w-100'}>
     <span className={'feature-name'}>
         {data.name + '' + (data.lowerBound === 0 ? '?:' : ':' )}
     </span>
@@ -668,36 +716,16 @@ public static parameter(): string { return (
 </div>`
 );}
 
-    public static objectOld(): string { return (
-`<div className={'round bg-white root class'}>
-    <label className={'ms-1'}>
-        <Input jsxLabel={<b className={'object-name'}>{data.instanceof ? data.instanceof.name : "Object"}:</b>} 
-           data={data} field={'name'} hidden={true} autosize={true}/>
-    </label>
-    <hr />
-    <div className={'object-children'}>
-        { features.map(c => <DefaultNode key={c.id} data={c} />) }
-    </div>
-    {decorators}
-</div>`);
-}
-
-//     public static object(): string { return (
-// `<View className={'root object'}>
-//     <b className={'object-name'}>{data.instanceof ? data.instanceof.name : 'Object'}:</b>
-//     <Input data={data} field={'name'} hidden={true} autosize={true} />
-//     <hr/>
-//     <div className={'object-children'}>
-//         {level >= 2 && data.features.map(f => <DefaultNode key={f.id} data={f} />)}
-//     </div>
-//     {decorators}
-// </View>`
-// );}
-
 /* OBJECT */
 
 public static object(): string { return (
-`<View className={'root object'}>
+`
+/* -- Jjodel Abstract Syntax Specification v2.0 -- */
+
+
+
+
+<View className={'root object'}>
     <div className={'header'}>
         <b className={'object-name'}>{data.instanceof ? data.instanceof.name : 'Object'}:</b>
         {data.$name ?
@@ -716,7 +744,13 @@ public static object(): string { return (
     /* VALUE */
 
     public static value() { return (
-`<View className={'root value d-flex'}>
+`
+/* -- Jjodel Abstract Syntax Specification v2.0 -- */
+
+
+
+
+<View className={'root value d-flex'}>
     {instanceofname && <label className={'d-block ms-1 name'}>{instanceofname}</label>}
     {!instanceofname && <Input className='name' data={data} field={'name'} hidden={true} autosize={true} />}
     <label className={'d-block m-auto values_str'} style={{color: constants[typeString] || 'gray'}}>
@@ -729,11 +763,18 @@ public static object(): string { return (
     /* SINGLETON OBJECT */
 
     public static singleton(): string { return (
-    `<div className={'singleton'}>
-        <div className={'header'}>
-            {data.name}        
-        </div>
-    </div>`);}
+    `
+/* -- Jjodel Abstract Syntax Specification v2.0 -- */
+
+
+
+
+
+<View className={'singleton'}>
+    <div className={'header'}>
+        {data.name}        
+    </div>
+</View>`);}
 
     /* ERROR */
 

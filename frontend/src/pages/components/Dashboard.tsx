@@ -435,7 +435,6 @@ function ProjectCatalog(props: ProjectProps) {
             </div>
             <div className={'cards-in-project'} style={{width: '1150px', display: 'flex', justifyContent: 'space-between', paddingLeft: 0}}>
                 <Cards className={'project-create-cards'} style={{
-                        
                         flexWrap: 'wrap',
                         marginLeft: '0px',
                         marginRight: '26px'

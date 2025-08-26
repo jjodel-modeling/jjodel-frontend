@@ -242,6 +242,10 @@ export class DState extends DPointerTargetable{
                     'border-': U.hexToPalette('#a3a3a3')
                 }
                 vp.css = `
+/* -- Jjodel Abstract Syntax Specification v2.0 -- */
+
+
+
 /* stuff for subelements */
 [data-nodetype="GraphVertex"] {
   width: 50%;
