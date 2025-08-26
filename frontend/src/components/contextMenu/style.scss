@@ -190,6 +190,7 @@
   color: white;
   background: #233d4d;
   padding: 8px;
+
   .name{
     font-size: 0.9rem;
     font-weight: bold;
@@ -197,13 +198,18 @@
   }
 
 .name::before {
+    position: absolute;
+    top: 5px;
+    right: 208px;
+
     content: '\F3FE' !important;
     font-family: 'bootstrap-icons';
     font-size: 1.2em;
     color: white;
     padding-right: 0;
     margin-right: 0px;
-    margin-left: -12px;
+    padding-left: 0px!important;
+    margin-left: -20px!important;
 
   }
 

@@ -181,7 +181,7 @@ function ContextMenuComponentInner(props: AllProps) {
                 jsxList.push(<div key={lname} className={'col name'} style={{fontSize: '0.9rem', paddingLeft: '12px', fontWeight: '400'}}>
                     {lname}</div>);
             } else {
-                jsxList.push(<div key={lname} className={'col name'} style={{fontSize: '0.9rem', paddingLeft: '6px', fontWeight: '400', display: 'flex', alignItems: 'center'}}>
+                jsxList.push(<div key={lname} className={'col name'} style={{fontSize: '0.9rem', paddingLeft: '0px', fontWeight: '400', display: 'flex', alignItems: 'center'}}>
                         {/* @ts-ignore */}
                     {data.instanceof?.name}: {lname}</div>);
             }
