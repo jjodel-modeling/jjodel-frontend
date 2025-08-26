@@ -127,6 +127,22 @@
 
         }
 
+        & .item {
+          width: 100%;
+          border: 1px solid var(--bg-2-5) !important;
+          padding: 0.5rem  !important;
+          margin-bottom: 0.5rem !important;
+          border-radius: var(--radius);
+          
+          & .inline {
+            background-color: var(--bg-2);
+            clear: both;
+            padding: 0.5rem;
+            border-radius: var(--radius);
+            margin-bottom: 0.5rem;
+            margin-top: 0.5rem;
+          }
+        }
       }
 
       &>.close {
@@ -166,8 +182,8 @@
 .context-menu {
   position: absolute;
   z-index: 1001;
-  width: 200px;
-  border-radius: 6px;
+  width: 230px;
+  border-radius: 6px!important;
   border-style: solid;
   border-width: 1px;
   border-color: #233d4d;
@@ -177,7 +193,20 @@
   .name{
     font-size: 0.9rem;
     font-weight: bold;
+
   }
+
+.name::before {
+    content: '\F3FE' !important;
+    font-family: 'bootstrap-icons';
+    font-size: 1.2em;
+    color: white;
+    padding-right: 0;
+    margin-right: 0px;
+    margin-left: -12px;
+
+  }
+
   hr.my-1{
     color: #8a8a8a;
     width: 100%;

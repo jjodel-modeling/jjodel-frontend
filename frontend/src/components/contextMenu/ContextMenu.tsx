@@ -32,6 +32,7 @@ import {Tooltip} from "../forEndUser/Tooltip";
 import { Info } from '../editors';
 import { Btn, CommandBar } from '../commandbar/CommandBar';
 import { createPortal } from 'react-dom';
+import { Logo } from '../logo';
 
 function ContextMenuComponent(props: AllProps) {
     return ContextMenuComponentInner(props);
@@ -169,12 +170,20 @@ function ContextMenuComponentInner(props: AllProps) {
 
         if (ddata?.name) {
             let lname = (ldata as LNamedElement).name;
-            if (ldata && model?.isMetamodel) {
+            {/* if (ldata && model?.isMetamodel) {
                 jsxList.push(<div key={lname} className={'col name'} style={{fontSize: '0.9rem', paddingLeft: '12px', fontWeight: '300'}}>
                     {ddata.className.substring(1)}: <i>{lname}</i></div>);
             } else {
                 jsxList.push(<div key={lname} className={'col name'} style={{fontSize: '0.9rem', paddingLeft: '12px', fontWeight: '300'}}>
-                    {ddata.className.substring(1)}: <i>{[ldata?.father?.name, lname].join('.')}</i></div>);
+                    <i>{[ldata?.father?.name, lname].join('.')}</i></div>);
+            }*/}
+            if (ldata && model?.isMetamodel) {
+                jsxList.push(<div key={lname} className={'col name'} style={{fontSize: '0.9rem', paddingLeft: '12px', fontWeight: '400'}}>
+                    {lname}</div>);
+            } else {
+                jsxList.push(<div key={lname} className={'col name'} style={{fontSize: '0.9rem', paddingLeft: '6px', fontWeight: '400', display: 'flex', alignItems: 'center'}}>
+                        {/* @ts-ignore */}
+                    {data.instanceof?.name}: {lname}</div>);
             }
             jsxList.push(<hr key={hri++} className={'my-1'} />);
         }
@@ -183,6 +192,24 @@ function ContextMenuComponentInner(props: AllProps) {
         //     jsxList.push(...(ldata as LObject).features.map(feat=>getAddChildren(feat, model, [])));
         //     jsxList.push(<hr key={hri++} className={'my-1'} />);
         // }
+        /* Edit: only on models */
+
+        if (!model?.isMetamodel && data?.className !== 'DModel') {
+            jsxList.push( // @ts-ignore: disabled
+                <>
+                    <div key='edit' onClick={(e) => {
+                        e.stopPropagation();
+                        setEditPanel(true);
+                    }} className={'col item'} tabIndex={0}>
+                        {icon['edit']}
+                        Edit
+                    </div>
+                </>
+            );
+            jsxList.push(<hr key={hri++} className={'my-1'}/>);
+        }
+
+        /* Add children for Object */
 
         if (ddata?.className === 'DObject') {
             let out: any[] = [];
@@ -205,12 +232,10 @@ function ContextMenuComponentInner(props: AllProps) {
                 jsxList.push(children);
                 jsxList.push(<hr key={hri++} className={'my-1'} />);
             }
-        }
-
-        
-
+        }    
 
         /* Memorec */
+
         if(ddata && !U.isOffline()) {
             if(ddata.className === 'DClass') {
                 jsxList.push(<div key='ai-c' onClick={structuralFeature} className={'col item'} tabIndex={0}>{icon['ai']} AI Suggest
@@ -250,22 +275,7 @@ function ContextMenuComponentInner(props: AllProps) {
         }} className={'col item'} tabIndex={0}>{icon['deselect']} Deselect</div>);*/
         //jsxList.push(<hr key={hri++} className={'my-1'} />);
 
-        /* Edit: only on models */
-
-        if (!model?.isMetamodel && data?.className !== 'DModel') {
-            jsxList.push( // @ts-ignore: disabled
-                <>
-                    <div key='edit' onClick={(e) => {
-                        e.stopPropagation();
-                        setEditPanel(true);
-                    }} className={'col item'} tabIndex={0}>
-                        {icon['edit']}
-                        Edit
-                    </div>
-                </>
-            );
-            jsxList.push(<hr key={hri++} className={'my-1'}/>);
-        }
+        
 
 
         /* Delete */
@@ -317,7 +327,7 @@ function ContextMenuComponentInner(props: AllProps) {
 
         jsxList.push(<hr key={hri++} className={'my-1'} />);
         
-        /* METRICS */
+        /* Analytics */
         if (ldata && model?.isMetamodel) {
             jsxList.push(<div key='analytic' onClick={() => {close(); toggleMetrics();}} className={'col item'} tabIndex={0}>{icon['metrics']} Analytics
                 <div><i className='bi bi-command' /> A</div></div>);
@@ -348,6 +358,8 @@ function ContextMenuComponentInner(props: AllProps) {
                 
                 <>
                 {jsxList/*.map((jsx, index) => {return <li key={index}>{jsx}</li>})*/}
+
+                {/* Memorec */}
 
                 {(data && memorec?.data) && <div className={'context-menu round'} style={{overflow: 'auto', maxHeight: '12em', top: display.y - 100, left: display.x + 130}}>
                     {(memorec.data.map((obj, index) => {

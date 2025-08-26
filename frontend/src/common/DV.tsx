@@ -554,7 +554,10 @@ public static class(): string { return (`<View className={"root class"} onDouble
     {data.isSingleton && <i className='bi bi-1-square'>&nbsp;</i>}
     {level > 1 && <b className={'class-name'}>{interface ? 'Interface' : abstract ? 'Abstract Class' : 'Class'}: </b>}    
     {level === 1 && <i className="bi bi-c-square-fill"></i>}
-    <Input data={data} field={'name'} hidden={true} autosize={true} />
+    {data.$name ? 
+        <Input data={data.$name} field={'value'} hidden={true} autosize={true} placeholder={'Enter name'}/>} :
+        <Input data={data} field={'name'} hidden={true} autosize={true} placeholder={'Enter name'}/>
+    }
     {data.extends.some(a => a.model.id !== data.model.id) && <i className="bi bi-arrow-up open"></i>}
     {data.extendedBy.some(a => a.model.id !== data.model.id) && <i className="bi bi-arrow-down open"></i>}
     {data.referencedBy.filter(a => typeof a !== 'undefined').some(a => a.model.id !== data.model.id) && <i className="bi bi-arrow-left open"></i>}
@@ -697,7 +700,10 @@ public static object(): string { return (
 `<View className={'root object'}>
     <div className={'header'}>
         <b className={'object-name'}>{data.instanceof ? data.instanceof.name : 'Object'}:</b>
-        <Input data={data} field={'name'} hidden={true} autosize={true} />
+        {data.$name ?
+            <Input data={data$name} field={'value'} hidden={true} autosize={true} placeholder={'enter name'} /> :
+            <Input data={data} field={'name'} hidden={true} autosize={true} placeholder={'enter name'} />
+        }
     </div>
     <hr/>
     <div className={'object-children'}>
