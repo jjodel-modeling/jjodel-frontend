@@ -300,7 +300,7 @@ class builder {
                 <h1>{data.name}: {instanceoff && conform && instanceoff.name}</h1>
             }
             {popup && <>
-                    <h1> Edit {data.name}: {instanceoff && conform && instanceoff.name}</h1>
+                    <h1>Edit {data.name}: {instanceoff && conform && instanceoff.name}</h1>
                     <b>Properties</b>
                 </>
             }

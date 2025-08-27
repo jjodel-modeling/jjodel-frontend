@@ -48,6 +48,7 @@
       background-color: transparent;
       color: var(--color);
     }
+    
   }
 
   &>.edit-panel {
@@ -126,9 +127,10 @@
           margin-left: 0 !important;
           margin-bottom: 10px !important;
           margin-top: -5px !important;
-                    height: var(--height) !important;
+          height: var(--height) !important;
 
         }
+        
 
         & .item {
           width: 100%;
