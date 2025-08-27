@@ -363,7 +363,7 @@ border-radius: 3px;
 
 }`;
         }, false, Defaults.Pointer_ViewEnum);
-        
+
         view.onDataUpdate = "if (snap) {\n";
         view.onDataUpdate += "  const x = node.x, y = node.y;\n";
         view.onDataUpdate += "  if (x !== 0 || y !== 0) {\n";
@@ -509,13 +509,19 @@ border-radius: 3px;
             view.css += '   border-radius: 3px; \n';
             view.css += '   min-width: 160px;\n';
             view.css += '   & .header {\n';
-            view.css += '       text-align: center;\n';
+            view.css += '        text-align: center;  \n';
+            view.css += '        &> div {\n';
+            view.css += '            & input:placeholder-shown {\n';
+            view.css += '                display: inline-block!important;\n';
+            view.css += '                margin-left: 30px!important;\n';
+            view.css += '            }\n';
+            view.css += '        }\n';
             view.css += '   }\n';
-            view.css += 'background: white; color: var(--accent);}\n';
-            view.css += '.object-name {padding: 10px; font-weight: 600; color: var(--accent);}\n';
-            view.css += '.object-children {padding: 10px;background-color: white; height: fit-content; width: -webkit-fill-available;}';
-
-
+            view.css += '   background: transparent; \n';
+            view.css += '   color: var(--accent);\n';
+            view.css += '}\n';
+            view.css += '.object-name {padding: 10px; font-weight: 600; color: var(--accent);}';
+            view.css += '\n.object-children {padding: 10px;background-color: white; height: fit-content; width: -webkit-fill-available;}';
             view.defaultVSize = defaultVertexSize;
             view.appliableTo = 'Vertex';
             view.usageDeclarations = '(ret) => {\n' +

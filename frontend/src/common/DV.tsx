@@ -706,11 +706,13 @@ public static object(): string { return (
 
 <View className={'root object'}>
     <div className={'header'}>
-        <b className={'object-name'}>{data.instanceof ? data.instanceof.name : 'Object'}:</b>
-        {data.$name ?
-            <Input data={data.$name} field={'value'} hidden={true} autosize={true} placeholder={'enter name'} /> :
-            <Input data={data} field={'name'} hidden={true} autosize={true} placeholder={'enter name'} />
-        }
+        <div>
+            <b className={'object-name'}>{data.instanceof ? data.instanceof.name : 'Object'}:</b>
+            {data.$name ?
+                <Input data={data.$name} field={'value'} hidden={true} autosize={true} placeholder={'name'} /> :
+                <Input data={data} field={'name'} hidden={true} autosize={true} placeholder={'name'} />
+            }
+        </div>
     </div>
     <hr/>
     <div className={'object-children'}>
