@@ -194,25 +194,29 @@
   background: #233d4d;
   padding: 8px;
 
-  .name{
+  .name {
     font-size: 0.9rem;
     font-weight: bold;
-
   }
 
-.name::before {
-    position: absolute;
-    top: 5px;
-    right: 208px;
+  .name.model {
+      padding-left: 28px!important;
+  }
+  .name.metamodel {
+    padding-left: 28px!important;
+  }
 
-    content: '\F3FE' !important;
-    font-family: 'bootstrap-icons';
-    font-size: 1.2em;
-    color: white;
-    padding-right: 0;
-    margin-right: 0px;
-    padding-left: 0px!important;
-    margin-left: -20px!important;
+  .name::before {
+      position: absolute;
+      top: 5px;
+      right: 208px;
+      content: '\F3FE' !important;
+      font-family: 'bootstrap-icons';
+      font-size: 1.2em;
+      color: white;
+      padding-right: 0;
+      margin-right: 0px;
+      padding-left: 10px!important;
 
   }
 
@@ -220,6 +224,7 @@
     color: #8a8a8a;
     width: 100%;
   }
+  
   .submenu-holder.hoverable>.content{
     box-shadow: none;
     left: calc(100% - 15px);
