@@ -460,8 +460,6 @@ export class DefaultView {
 /* -- Jjodel Abstract Syntax Specification v2.0 -- */
 
 
-
-
 <View className={"root model" + (grid ? " grid-paper" : "")}> {/* alternatively use .grid-classic */}
 <Scrollable graph={node}>
     {!data && "Model data missing."}
@@ -515,8 +513,6 @@ export class DefaultView {
 /* -- Jjodel Abstract Syntax Specification v2.0 -- */
 
 
-
-
 <View className={'root package'} version={'2.0'}>
 <div className={'drag-handle'} />
 {
@@ -562,8 +558,6 @@ export class DefaultView {
 
 public static class(): string { return (`
 /* -- Jjodel Abstract Syntax Specification v2.0 -- */
-
-
 
 
 <View className={"root class"} onDoubleClick={()=>{node.state = {highlight: !node.state.highlight}}}>
@@ -612,8 +606,6 @@ public static enum(): string { return (
 /* -- Jjodel Abstract Syntax Specification v2.0 -- */
 
 
-
-
 <View className={'root enumerator'}>
     <div className={'header'}>
         {level > 1 && <b className={'enumerator-name'}>Enum: </b>}
@@ -634,8 +626,6 @@ public static enum(): string { return (
 /* -- Jjodel Abstract Syntax Specification v2.0 -- */
 
 
-
-
 <View className={'root feature w-100'}>
     <span className={'feature-name'}>{data.name}:</span>
     <Select data={data} field={'type'} />
@@ -650,8 +640,6 @@ public static enum(): string { return (
 /* -- Jjodel Abstract Syntax Specification v2.0 -- */
 
 
-
-
 <label className={'root literal d-block text-center'}>
     {data.name}
     {decorators}
@@ -663,8 +651,6 @@ public static enum(): string { return (
     public static operation(): string { return (
 `
 /* -- Jjodel Abstract Syntax Specification v2.0 -- */
-
-
 
 
 <View className={'root operation w-100 hoverable'}>
@@ -684,8 +670,6 @@ public static enum(): string { return (
 public static parameter(): string { return (
 `
 /* -- Jjodel Abstract Syntax Specification v2.0 -- */
-
-
 
 
 <View className={'root parameter w-100'}>
@@ -720,13 +704,11 @@ public static object(): string { return (
 /* -- Jjodel Abstract Syntax Specification v2.0 -- */
 
 
-
-
 <View className={'root object'}>
     <div className={'header'}>
         <b className={'object-name'}>{data.instanceof ? data.instanceof.name : 'Object'}:</b>
         {data.$name ?
-            <Input data={data$name} field={'value'} hidden={true} autosize={true} placeholder={'enter name'} /> :
+            <Input data={data.$name} field={'value'} hidden={true} autosize={true} placeholder={'enter name'} /> :
             <Input data={data} field={'name'} hidden={true} autosize={true} placeholder={'enter name'} />
         }
     </div>
@@ -745,8 +727,6 @@ public static object(): string { return (
 /* -- Jjodel Abstract Syntax Specification v2.0 -- */
 
 
-
-
 <View className={'root value d-flex'}>
     {instanceofname && <label className={'d-block ms-1 name'}>{instanceofname}</label>}
     {!instanceofname && <Input className='name' data={data} field={'name'} hidden={true} autosize={true} />}
@@ -762,8 +742,6 @@ public static object(): string { return (
     public static singleton(): string { return (
     `
 /* -- Jjodel Abstract Syntax Specification v2.0 -- */
-
-
 
 
 
