@@ -437,6 +437,7 @@ class builder {
             default: isShapeless = true; 
                 break;
         }
+
         let selectOptions: JSX.Element | JSX.Element[] | null = value.validTargetsJSX;
 
         let isPtr = isAttribute ? false : (isEnumerator || isReference ? true : undefined);
@@ -524,12 +525,12 @@ class builder {
                     <label className={'d-flex'}>
                     <label className={'ms-1 my-auto'}>{data.name}</label>
                     <CommandBar style={{marginLeft: 'auto', marginTop: '0px'}}>
-                        <Btn icon={'add'} 
+                        {!isComposition && <Btn icon={'add'} 
                             action={add} 
                             tip={`Add a ${data.name} value`} 
                             disabled={filteredValues.length >= upperBound} 
                             style={{color: 'black'}}
-                        />
+                        />}
                     </CommandBar>
                     {/* <button className={'btn ms-auto me-1'} disabled={filteredValues.length >= upperBound} onClick={add}>
                         <i className={'p-1 bi bi-plus'}></i>
