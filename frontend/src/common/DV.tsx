@@ -166,7 +166,7 @@ export class DV {
         switch (modename){
             case EdgeHead.reference:
             default: fill = '#fff0'; break;
-            case EdgeHead.composition: fill = '#000'; break;
+            case EdgeHead.composition: fill = '#6A6A6A'; break;
             case EdgeHead.aggregation:
             case EdgeHead.extend: fill = '#fff'; break;
         }
