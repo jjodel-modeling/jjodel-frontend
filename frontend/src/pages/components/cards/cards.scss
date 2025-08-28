@@ -11,104 +11,142 @@
     margin-left: 0px;
     padding-left: 0px;
     display: flex;
+    justify-content: flex-start!important;
+    width: 950px;
 }
 
 .commandbar .ottanio {
-    background: var(--gr-1); // linear-gradient(90deg, hsla(173, 89%, 70%, 1) 0%, hsla(196, 68%, 38%, 1) 100%);
+    background: var(--gr-1); // linear-gradient(90deg, hsla(208, 33%, 21%, 1) 0%, hsla(186, 89%, 29%, 1) 100%);
     color: white;
     & .bi {
         color: white;
+    }
+    & .bi:hover {
+        color: hsla(186, 89%, 29%, 1)!important;
     }
     border: none;
 }
 
 .commandbar .green {
-    background: var(--gr-2); // linear-gradient(90deg, hsla(173, 89%, 70%, 1) 0%, hsla(196, 68%, 38%, 1) 100%);
+    background: var(--gr-2); // linear-gradient(90deg, hsla(186, 89%, 29%, 1) 0%, hsla(154, 69%, 55%, 1) 100%);
     color: white;
     & .bi {
         color: white;
+    }
+    & .bi:hover {
+        color: hsla(154, 69%, 55%, 1)!important;
     }
     border: none;
 }
 
 .commandbar .dark-red {
-    background: var(--gr-3); // linear-gradient(90deg, hsla(173, 89%, 70%, 1) 0%, hsla(196, 68%, 38%, 1) 100%);
+    background: var(--gr-3); // linear-gradient(90deg, hsla(323, 73%, 22%, 1) 0%, hsla(359, 82%, 60%, 1) 100%);
     color: white;
     & .bi {
         color: white;
+    }
+    & .bi:hover {
+        color: hsla(359, 82%, 60%, 1)!important;
     }
     border: none;
 }
 
 .commandbar .orange-yellow {
-    background: var(--gr-4); // linear-gradient(90deg, hsla(173, 89%, 70%, 1) 0%, hsla(196, 68%, 38%, 1) 100%);
+    background: var(--gr-4); // linear-gradient(90deg, hsla(359, 82%, 60%, 1) 0%, hsla(45, 100%, 48%, 1) 100%);
     color: white;
     & .bi {
         color: white;
+    }
+    & .bi:hover {
+        color: hsla(45, 100%, 48%, 1) !important;
     }
     border: none;
 }
 .commandbar .gray {
-    background: var(--gr-5); // linear-gradient(90deg, hsla(173, 89%, 70%, 1) 0%, hsla(196, 68%, 38%, 1) 100%);
+    background: var(--gr-5); // linear-gradient(90deg, hsla(60, 1%, 32%, 1) 0%, hsla(90, 1%, 56%, 1) 100%);
     color: white;
     & .bi {
         color: white;
+    }
+    & .bi:hover {
+        color: hsla(90, 1%, 56%, 1)!important;
     }
     border: none;
 }
 .commandbar .light-green  {
-    background: var(--gr-6); // linear-gradient(90deg, hsla(173, 89%, 70%, 1) 0%, hsla(196, 68%, 38%, 1) 100%);
+    background: var(--gr-6); // linear-gradient(90deg, hsla(154, 69%, 55%, 1) 0%, hsla(154, 69%, 72%, 1) 100%);
     color: white;
     & .bi {
         color: white;
+    }
+    & .bi:hover {
+        color: hsla(154, 69%, 72%, 1)!important;
     }
     border: none;
 }
 .commandbar .light-red {
-    background: var(--gr-7); // linear-gradient(90deg, hsla(173, 89%, 70%, 1) 0%, hsla(196, 68%, 38%, 1) 100%);
+    background: var(--gr-7); // linear-gradient(90deg, hsla(359, 82%, 60%, 1) 0%, hsla(359, 82%, 76%, 1) 100%);
     color: white;
     & .bi {
         color: white;
+    }
+    & .bi:hover {
+        color: hsla(359, 82%, 76%, 1)!important;
     }
     border: none;
 }
 .commandbar .dark-blue {
-    background: var(--gr-8); // linear-gradient(90deg, hsla(173, 89%, 70%, 1) 0%, hsla(196, 68%, 38%, 1) 100%);
+    background: var(--gr-8); // linear-gradient(90deg, hsla(203, 37%, 22%, 1) 0%, hsla(203, 37%, 52%, 1) 100%);
     color: white;
     & .bi {
         color: white;
+    }
+    & .bi:hover {
+        color: hsla(203, 37%, 52%, 1)!important;
     }
     border: none;
 }
 .commandbar .azure {
-    background: var(--gr-9); // linear-gradient(90deg, hsla(173, 89%, 70%, 1) 0%, hsla(196, 68%, 38%, 1) 100%);
+    background: var(--gr-9); // linear-gradient(90deg, hsla(186, 89%, 29%, 1) 0%, hsla(186, 89%, 48%, 1) 100%);
     color: white;
     & .bi {
         color: white;
+    }
+    & .bi:hover {
+        color: hsla(186, 89%, 48%, 1)!important;
     }
     border: none;
 }
 .commandbar .yellow {
-    background: var(--gr-10); // linear-gradient(90deg, hsla(173, 89%, 70%, 1) 0%, hsla(196, 68%, 38%, 1) 100%);
+    background: var(--gr-10); // linear-gradient(90deg, hsla(45, 100%, 48%, 1) 0%, hsla(45, 100%, 80%, 1) 100%);
     color: white;
     & .bi {
         color: white;
+    }
+    & .bi:hover {
+        color: hsla(45, 100%, 80%, 1)!important;
     }
     border: none;
 }
 .commandbar .purple {
-    background: var(--gr-11); // linear-gradient(90deg, hsla(173, 89%, 70%, 1) 0%, hsla(196, 68%, 38%, 1) 100%);
+    background: var(--gr-11); // linear-gradient(90deg, hsla(323, 73%, 22%, 1) 0%, hsla(323, 73%, 64%, 1) 100%);
     color: white;
     & .bi {
         color: white;
     }
+    & .bi:hover {
+        color: hsla(323, 73%, 64%, 1)!important;
+    }
     border: none;
 }
 .commandbar .blue {
-    background: var(--gr-12); // linear-gradient(90deg, hsla(173, 89%, 70%, 1) 0%, hsla(196, 68%, 38%, 1) 100%);
+    background: var(--gr-12); // linear-gradient(90deg, hsla(186, 33%, 94%, 1) 0%, hsla(216, 41%, 79%, 1) 100%);
     color: var(--color);
     & .bi {
-        color: var(--color);
+        color: white;
+    }
+    & .bi:hover {
+        color: hsla(216, 41%, 79%, 1)!important;
     }
     border: none;
 }
@@ -116,6 +154,12 @@
 .commandbar .red {
     background: linear-gradient(90deg, hsla(14, 90%, 73%, 1) 0%, hsla(331, 54%, 44%, 1) 100%);
     color: white;
+    & .bi {
+        color: white;
+    }
+    & .bi:hover {
+        color: hsla(331, 54%, 44%, 1)!important;
+    }
     border: none;
 }
 
@@ -126,6 +170,9 @@
 
     & .bi {
         color: white;
+    }
+    & .bi:hover {
+        color: hsla(211, 36%, 46%, 1)!important;
     }
 }
 
@@ -138,6 +185,9 @@
     & .bi {
         color: white;
     }
+    & .bi:hover {
+        color: hsla(323, 100%, 47%, 1)!important;
+    }
 }
 
 .commandbar .red-orange {
@@ -147,6 +197,9 @@
 
     & .bi {
         color: white;
+    }
+    & .bi:hover {
+        color: hsla(33, 94%, 57%, 1)!important;
     }
 }
 
@@ -160,6 +213,9 @@
     & .bi {
         color: var(--secondary);
     }
+    & .bi:hover {
+        color: var(--color)!important;
+    }
 }
 
 .commandbar .default {
@@ -171,7 +227,14 @@
 
 .commandbar .card {
     width: 23em;
-    margin-right: 15px;
+    margin-right: 26px;
+    margin-left: 0px;
+    padding: 1.2em;
+}
+
+.commandbar .card:last-child {
+    width: 23em;
+    margin-right: 0px;
     margin-left: 0px;
     padding: 1.2em;
 }

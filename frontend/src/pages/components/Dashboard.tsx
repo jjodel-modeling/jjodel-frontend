@@ -433,33 +433,35 @@ function ProjectCatalog(props: ProjectProps) {
                     </div>
                 </div>
             </div>
-
-            <Cards className={'project-create-cards'} style={{
-                    margin: '1rem auto',
-                    flexWrap: 'wrap',
-                    justifyContent: 'space-around'}
-            }>
-                <Cards.Item
-                    title={hasmm ? 'Create another metamodel ?' : 'Your first metamodel ?'}
-                    subtitle={'Create a new metamodel.'}
-                    icon={'add'}
-                    style={'red my-3'}
-                    action={() => createM2(project) }
-                />
-                {hasmm ? <Cards.Item
-                    title={'Create a model ?'}
-                    subtitle={'Pick a metamodel schema.'}
-                    icon={'add'}
-                    style={'red my-3'}
-                    action={() => {
-                        let html = document.getElementById('navbar_mmid_'+metamodels[0]?.id) || document.getElementById('navbar_new_model');
-                        console.log('create m1 dash', {html, query: "document.getElementById('navbar_mmid_"+metamodels[0]?.id+"')"})
-                        // nb: timeout because click interferes with .focus() undoing it.
-                        setTimeout(()=>U.ancestorArray(html).reverse().forEach(e=>e.focus?.()), 0);
-                    }}/> : null
-                }
-                <Cards.Item icon={'question'} style={'clear my-3'} title={'Ehy!'} subtitle={'What do you want to do today?'}/>
-            </Cards>
+            <div className={'cards-in-project'} style={{width: '1150px', display: 'flex', justifyContent: 'space-between', paddingLeft: 0}}>
+                <Cards className={'project-create-cards'} style={{
+                        flexWrap: 'wrap',
+                        marginLeft: '0px',
+                        marginRight: '26px'
+                        }
+                }>
+                    <Cards.Item
+                        title={hasmm ? 'Create another metamodel ?' : 'Your first metamodel ?'}
+                        subtitle={'Explore multi-view modeling.'}
+                        icon={'add'}
+                        style={'azure my-3'}
+                        action={() => createM2(project) }
+                    />
+                    {hasmm ? <Cards.Item
+                        title={'Create a model ?'}
+                        subtitle={'Pick a metamodel schema.'}
+                        icon={'add'}
+                        style={'dark-blue my-3'}
+                        action={() => {
+                            let html = document.getElementById('navbar_mmid_'+metamodels[0]?.id) || document.getElementById('navbar_new_model');
+                            console.log('create m1 dash', {html, query: "document.getElementById('navbar_mmid_"+metamodels[0]?.id+"')"})
+                            // nb: timeout because click interferes with .focus() undoing it.
+                            setTimeout(()=>U.ancestorArray(html).reverse().forEach(e=>e.focus?.()), 0);
+                        }}/> : null
+                    }
+                    <Cards.Item icon={'question'} style={'red-orange my-3'} title={'Ehy!'} subtitle={'What do you want to do today?'}/>
+                </Cards>
+            </div>
         </div>
     </>)}
 

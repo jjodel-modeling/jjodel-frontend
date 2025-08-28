@@ -519,7 +519,13 @@ export enum EdgeHead {
     composition = "Composition",
     aggregation = "Aggregation",
     reference   = "Association",
-    extend      = "Extension"
+    extend      = "Extension",
+    zero = "exactly zero / not present",
+    one = "exactly one, required",
+    many = "zero or many, optional, unbounded",
+    zeroOrOne = "zero or one, optional",
+    zeroOrMany = "zero or many, optional, unbounded",
+    oneOrMany = "one or many, at least one"
 }
 
 
@@ -1067,7 +1073,50 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
             'color-': U.hexToPalette(), //['#ffffff', '#ff0000', '#00ff00', '#0000ff','#aaaaaa', '#ffaaaa', '#aaffaa', '#aaaaff'],
             'background-': U.hexToPalette() // ['#000000', '#33333', '#777777']};
         };
-        thiss.css = '';
+        thiss.css = "\n/* placeholder justification, add .center, .left, .start, .right, or .end in the <Input /> container */\n\n";
+
+        thiss.css += "input:placeholder-shown {\n" +
+        "  width: 120px !important;\n" +
+        "  font-style: italic !important;\n" +
+        "  text-align: right;\n" +
+        "  left: -120px !important;\n" +
+        "}\n\n";
+
+        thiss.css += ".center {\n" +
+        "  & input:placeholder-shown {\n" +
+        "    width: 120px !important;\n" +
+        "    font-style: italic !important;\n" +
+        "    text-align: center;\n" +
+        "    left: -60px !important;\n" +
+        "  }\n" +
+        "}\n\n";
+
+        thiss.css += ".left, .start {\n" +
+        "  & input:placeholder-shown {\n" +
+        "    width: 120px !important;\n" +
+        "    font-style: italic !important;\n" +
+        "    text-align: left;\n" +
+        "    left: 0 !important;\n" +
+        "  }\n" +
+        "}\n\n";
+
+        thiss.css += ".right, .end {\n" +
+        "  & input:placeholder-shown {\n" +
+        "    width: 120px !important;\n" +
+        "    font-style: italic !important;\n" +
+        "    text-align: right;\n" +
+        "    left: -120px !important;\n" +
+        "  }\n" +
+        "}\n\n";
+
+        thiss.css += ".input-container {\n" +
+        "   & select {\n" +
+        "        border: none;\n" +
+        "        text-align: right;\n" +  
+        "     }\n" +
+        "}";
+
+
         thiss.compiled_css = '';
         thiss.css_MUST_RECOMPILE = true;
         thiss.cssIsGlobal = false;

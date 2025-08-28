@@ -42,12 +42,20 @@ function OclEditorComponent(props: AllProps) {
         </div>
 
         {show && <div className={"monaco-editor-wrapper"}
-                style={{padding: '5px', minHeight: '20px', height:`${expand ? lines+'lvh' : '5lvh'}`, transition: 'height 0.3s', resize: 'vertical', overflow:'hidden'}}
+                style={{padding: '5px', height:`${lines+'lvh'}`, transition: 'height 0.3s', resize: 'vertical', overflow:'hidden'}}
                       tabIndex={-1}
                       onFocus={() => setExpand(true)}
                     onBlur={() => {setExpand(false); blur();}}>
             <Editor className={'mx-1'} onChange={change}
-                    options={{fontSize: 12, scrollbar: {vertical: 'hidden', horizontalScrollbarSize: 5}, minimap: {enabled: false}, readOnly: readOnly}}
+                    options={{
+                        fontSize: 12, 
+                        scrollbar: {
+                            vertical: 'hidden', 
+                            horizontalScrollbarSize: 5
+                        }, 
+                        minimap: {enabled: false}, 
+                        readOnly: readOnly,
+                }}
                     defaultLanguage={'js'} value={view.oclCondition} />
         </div>}
     </>);

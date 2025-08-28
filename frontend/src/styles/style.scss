@@ -146,12 +146,16 @@ input[type="color"]::-webkit-color-swatch {
   /*border-radius: 100%;*/
   border: none;
 }
-input[type='checkbox'] { // was .input as class
+
+.input[type='checkbox'] { // was .input as class
   background-image: url("../static/svg/toggle-off.svg");
-  background-repeat: no-repeat; background-size: cover;
+  background-repeat: no-repeat; 
+  background-size: cover;
   cursor: pointer;
-  height: 1lh;
   width: 1lh;
+  height: 1lh;
+
+
 
 
   /* this works only on native checkbos (no background-image)
@@ -160,6 +164,13 @@ input[type='checkbox'] { // was .input as class
   */
   background-color: transparent;
   border: none;
+}
+
+
+.edit-panel .input[type='checkbox'] { // was .input as class
+
+  width: 0.95lh;
+
 }
 input[type='checkbox']:checked { // was .input as class
   background-image: url("../static/svg/toggle-on.svg");

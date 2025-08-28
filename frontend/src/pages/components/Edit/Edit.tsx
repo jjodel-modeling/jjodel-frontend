@@ -204,7 +204,6 @@ const EditCountry = (props: EditProps) => {
                         <option value="Oman">Oman</option>
                         <option value="Pakistan">Pakistan</option>
                         <option value="Palau">Palau</option>
-                        <option value="Palestinian Territory, Occupied">Palestinian Territory, Occupied</option>
                         <option value="Panama">Panama</option>
                         <option value="Papua New Guinea">Papua New Guinea</option>
                         <option value="Paraguay">Paraguay</option>
@@ -241,6 +240,7 @@ const EditCountry = (props: EditProps) => {
                         <option value="South Georgia and The South Sandwich Islands">South Georgia and The South Sandwich Islands</option>
                         <option value="Spain">Spain</option>
                         <option value="Sri Lanka">Sri Lanka</option>
+                        <option value="State of Palestine">State of Palestine</option>
                         <option value="Sudan">Sudan</option>
                         <option value="Suriname">Suriname</option>
                         <option value="Svalbard and Jan Mayen">Svalbard and Jan Mayen</option>

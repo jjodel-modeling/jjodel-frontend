@@ -94,7 +94,8 @@ export class DV {
                 break;
             case EdgeHead.reference:
                 //if (head === "tail") return undefined;
-                d = `M 0 0   L x y/2   L 0 y`;
+                //d = `M 0 0   L x y/2   L 0 y`;
+                d = `M11.354 5.646a.5.5 90 010 .708l-6.035 6.089a.5.5 90 01-.156-.116L11.375 5.999l-6.406-6.211a.5.5 90 01.208-.115z`;
                 path = `<path  `;
                 ret = path + attrs + "\n\t\t\t\t" + path + hoverAttrs;
                 break;
@@ -110,6 +111,44 @@ export class DV {
                 path = `<path  `;
                 ret = path + attrs + "\n\t\t\t\t" + path + hoverAttrs;
                 break;
+            case EdgeHead.zero:
+                //if (head === "head") return undefined;
+                d = `M 0 y/2   L x/2 0   L x y/2   L x/2 y   Z`;
+                path = `<path  `;
+                ret = path + attrs + "\n\t\t\t\t" + path + hoverAttrs;
+                break;
+            case EdgeHead.one:
+                //if (head === "head") return undefined;
+                d = `M 0 y/2   L x/2 0   L x y/2   L x/2 y   Z`;
+                path = `<path  `;
+                ret = path + attrs + "\n\t\t\t\t" + path + hoverAttrs;
+                break;
+            case EdgeHead.many:
+                //if (head === "head") return undefined;
+                d = `M 0 y/2   L x/2 0   L x y/2   L x/2 y   Z`;
+                path = `<path  `;
+                ret = path + attrs + "\n\t\t\t\t" + path + hoverAttrs;
+                break;
+            case EdgeHead.zeroOrOne:
+                //if (head === "head") return undefined;
+                d = `M 0 y/2   L x/2 0   L x y/2   L x/2 y   Z`;
+                path = `<path  `;
+                ret = path + attrs + "\n\t\t\t\t" + path + hoverAttrs;
+                break;
+            case EdgeHead.zeroOrMany:
+                //if (head === "head") return undefined;
+                d = `M 0 y/2   L x/2 0   L x y/2   L x/2 y   Z`;
+                path = `<path  `;
+                ret = path + attrs + "\n\t\t\t\t" + path + hoverAttrs;
+                break;
+            case EdgeHead.oneOrMany:
+                //if (head === "head") return undefined;
+                d = `M 0 y/2   L x/2 0   L x y/2   L x/2 y   Z`;
+                path = `<path  `;
+                ret = path + attrs + "\n\t\t\t\t" + path + hoverAttrs;
+                break;
+            
+            
                 /* `<svg width="20" height="20" viewBox="0 0 20 20" style={overflow: "visible"}>
                                             <path d={"M 10 0 L 0 20 L 20 20 Z"} fill="#ffffff" stroke="#808080" strokeWidth="1"></path>
                                          </svg>`;*/
@@ -127,18 +166,43 @@ export class DV {
         switch (modename){
             case EdgeHead.reference:
             default: fill = '#fff0'; break;
-            case EdgeHead.composition: fill = '#000'; break;
+            case EdgeHead.composition: fill = '#6A6A6A'; break;
             case EdgeHead.aggregation:
             case EdgeHead.extend: fill = '#fff'; break;
         }
 
-        const agglabel = "◇ Aggregation / Composition";
-        const extendlabel = "△ "+EdgeHead.extend;
-        const asslabel = "Λ "+EdgeHead.reference;
+        const uml = "-- UML relationships";
+            const agglabel = "◇ Aggregation / Composition";
+            const extendlabel = "△ "+EdgeHead.extend;
+            const asslabel = "Λ "+EdgeHead.reference;
+        const e1 = "--- 1";
+
+        const cardinality = "-- Cardinality";
+
+            const zerolabel = "[0] " + EdgeHead.zero;
+            const onelabel = "[1] " + EdgeHead.one;
+            const manylabel = "[*] " + EdgeHead.many;
+            const zeroOrOneLabel = "[0..1] " + EdgeHead.zeroOrOne;
+            const zeroOrManyLabel = "[0..*] " + EdgeHead.zeroOrMany;
+            const oneOrManyLabel = "[1..*] " + EdgeHead.oneOrMany;
+
+        const e2 = "--- 2";
+
         let headdict: Dictionary<string, string> = {
-            [asslabel]: 'M 0 0   L x y/2   L 0 y',
-            [extendlabel]: 'M 0 0   L x y/2   L 0 y   Z',
-            [agglabel]: 'M 0 y/2   L x/2 0   L x y/2   L x/2 y   Z',
+            [uml]: 'UML Relationships',
+                [asslabel]: 'M11.354 5.646a.5.5 90 010 .708l-6.035 6.089a.5.5 90 01-.156-.116L11.375 5.999l-6.406-6.211a.5.5 90 01.208-.115z',
+                [extendlabel]: 'M 0 0   L x y/2   L 0 y   Z',
+                [agglabel]: 'M8.5776-.9085c.6316-.522 1.6553-.522 2.2869 0l7.0948 5.8644c.6316.522.6316 1.3671 0 1.8882L10.8645 12.7085c-.6316.522-1.6542.522-2.2847 0L1.4827 6.845a1.6117 1.332 0 010-1.8882z',
+            [e1]: '--',
+
+            [cardinality]: 'Cardinality',
+                [zerolabel]: 'M-11.985 5.981A1 1 0 000 6 1 1 0 00-12 6',
+                [onelabel]: 'M0 0V12',
+                [manylabel]: 'M12 1 0 6 12 11H12M12 6H0',
+                [zeroOrOneLabel]: 'M-11.985 5.981A1 1 0 000 6 1 1 0 00-12 6M6 0V12',
+                [zeroOrManyLabel]: 'M-11.985 5.981A1 1 0 000 6 1 1 0 00-12 6M6 0M12 1 0 6 12 11H12M12 6H0',
+                [oneOrManyLabel]: 'M0 0V12M12 1 0 6 12 11H12M12 6H0',
+            [e2]: '--'
         };
         let predefinedPaths: {k:string, v:string}[] = Object.entries(headdict).map((e)=>({k:e[0], v:e[1]}));
 
@@ -149,12 +213,18 @@ export class DV {
             case EdgeHead.reference: headPath = asslabel; break;
             case EdgeHead.aggregation: tailPath = agglabel; break;
             case EdgeHead.composition: tailPath = agglabel; break;
+            case EdgeHead.zero: headPath = zerolabel; break;
+            case EdgeHead.one: headPath = onelabel; break;
+            case EdgeHead.many: headPath = manylabel; break;
+            case EdgeHead.zeroOrOne: headPath = zeroOrOneLabel; break;
+            case EdgeHead.zeroOrMany: headPath = zeroOrManyLabel; break;
+            case EdgeHead.oneOrMany: headPath = oneOrManyLabel; break;
         }
         headPath = headdict[headPath] || '';
         tailPath = headdict[tailPath] || '';
 
         let palette: PaletteType = {
-            'anchorSize': {type: 'number', value:20, unit:'px'},
+            'anchorSize': {type: 'number', value:15, unit:'px'},
             'dashing': {value:dashing || '', type: "text"},
             'stroke-color': U.hexToPalette('#777'),
             'stroke-width': {value:1, type: 'number', unit: 'px'},
@@ -202,6 +272,10 @@ export class DV {
         "\npath.tail, path.head{" +
         "\n\tfill:var(--fill);" +
         "\n}" +
+        "\npath.edge.full.outline{" +
+	    "\nstroke-width: var(--edge-outline-width);" +
+    	"\nstroke: white;" + 
+        "\n}" +
         "\npath.edge.full.hover-activator{" +
         "\n\tstroke-width: var(--stroke-width-hover);" +
         "\n\tstroke: none;" +
@@ -233,7 +307,7 @@ export class DV {
         let tail = DV.svgHeadTail("tail", modename) || '';
         let jsx = beautify(
         `<div className={"edge hoverable hide-ep clickthrough fullscreen ` + modename + `"}>
-            <svg className={"clickthrough fullscreen"}>
+            <svg className={"clickthrough fullscreen"} onDoubleClick={() => edge.addMidPoint(edge.start.size.tl().add(edge.end.size.tl()).divide(2))}>
                 { /* edge full paths
                
                  first is preview path, normally seen
@@ -241,6 +315,8 @@ export class DV {
                  second is to enlarge the hover area of path.preview to the same as path.content, so i avoid hover loop enter-leave and graphical flashing
                 
                 */ }
+
+                <path className={"preview edge full outline"} d={this.edge.d} />
                 <path className={"preview edge full` + (dashing ? ' dashed' : '') + `"} d={this.edge.d} />
                 <path className={"preview edge full hover-activator"} d={this.edge.d} />
                 { /* edge separate segments */ }
@@ -380,7 +456,11 @@ export class DefaultView {
     /* MODEL */
 
     public static model(): string { return (
-`<View className={"root model"}>
+`
+/* -- Jjodel Abstract Syntax Specification v2.0 -- */
+
+
+<View className={"root model" + (grid ? " grid-paper" : "")}> {/* alternatively use .grid-classic */}
 <Scrollable graph={node}>
     {!data && "Model data missing."}
     <div className={'edges'}>
@@ -402,10 +482,16 @@ export class DefaultView {
 </Scrollable>
 
 {/* language designer defined controls */}
+
 <Control title={'Workbench'} payoff={'Options'}>
     <Slider name={'level'} title={'Detail level '} node={node} max={3} />
     <Toggle name={'grid'} title={'Grid'} node={node} />
+    <Toggle name={'snap'} title={'Snap'} node={node} />
 </Control>
+
+{/* editor zoom controls */}
+
+<Zoom node={node}/>
 </View>`
 );}
 
@@ -423,7 +509,11 @@ export class DefaultView {
     /* PACKAGE */
 
     public static package(): string { return (
-`<View className={'root package'}>
+`
+/* -- Jjodel Abstract Syntax Specification v2.0 -- */
+
+
+<View className={'root package'} version={'2.0'}>
 <div className={'drag-handle'} />
 {
     upperLevel >= 1 &&
@@ -465,86 +555,63 @@ export class DefaultView {
 
     /* CLASS */
 
-// <View className={"root class " + (level === 1 && abstract ? "abstract")} + onClick={()=>{/*node.events.e1(Math.random().toFixed(3))*/}}>
 
-public static class2(): string { return (`<View className={"root class"} onClick={()=>{/*node.events.e1(Math.random().toFixed(3))*/}}>
-<div className={'header'}>
+public static class(): string { return (`
+/* -- Jjodel Abstract Syntax Specification v2.0 -- */
+
+
+<View className={"root class"} onDoubleClick={()=>{node.state = {highlight: !node.state.highlight}}}>
+   <div className={'header'}>
     {data.isSingleton && <i className='bi bi-1-square'>&nbsp;</i>}
-    {level > 1 && <b className={'class-name'}>{interface ? 'Interface' : abstract ? 'Abstract Class' : 'Class'}: </b>}    
-    {level === 1 && <i className="bi bi-c-square-fill"></i>}<Input data={data} field={'name'} hidden={true} autosize={true} />
-</div>
+    { level > 1 && <b className={'class-name'}>{interface ? 'Interface' : 'Class'}: </b>}    
 
-{level > 2 && data.children.length > 0 && <hr/>}
-
-{level > 2 && 
-    <div className={'class-children'}>
-        {level >= 2 && [
-            attributes.map(c => <DefaultNode key={c.id} data={c} />),
-            references.map(c => <DefaultNode key={c.id} data={c} />),
-            operations.map(c => <DefaultNode key={c.id} data={c} />)
-        ]
-        || [
-        <div className={"summary"}>{[
-            attributes.length ? attributes.length + " attributes" : '',
-            references.length ? references.length + " references" : '',
-            operations.length ? operations.length + " operations" : '',
-            !(attributes.length + references.length + operations.length) ? '- empty -' : ''
-            ].filter(v=>!!v).join(',')}</div>
-        ]
-        }
-    </div>
-}
-
-{decorators}
-</View>`);}
-
-public static class(): string { return (`<View className={"root class"} onDoubleClick={()=>{node.state = {highlight: !node.state.highlight}}}>
-<div className={'header'}>
-    {data.isSingleton && <i className='bi bi-1-square'>&nbsp;</i>}
-    {level > 1 && <b className={'class-name'}>{interface ? 'Interface' : abstract ? 'Abstract Class' : 'Class'}: </b>}    
     {level === 1 && <i className="bi bi-c-square-fill"></i>}
-    <Input data={data} field={'name'} hidden={true} autosize={true} />
+    <span className={(data.abstract ? "abstract": "")}><Input data={data} field={'name'} hidden={true} autosize={true} /></span>
     {data.extends.some(a => a.model.id !== data.model.id) && <i className="bi bi-arrow-up open"></i>}
     {data.extendedBy.some(a => a.model.id !== data.model.id) && <i className="bi bi-arrow-down open"></i>}
     {data.referencedBy.filter(a => typeof a !== 'undefined').some(a => a.model.id !== data.model.id) && <i className="bi bi-arrow-left open"></i>}
 
 
-</div>
-
-{level > 2 && data.children.length > 0 && <hr/>}
-
-{level > 2 && 
-    <div className={'class-children'}>
-        {level >= 2 && [
-            attributes.map(c => <DefaultNode key={c.id} data={c} />),
-            references.map(c => <DefaultNode key={c.id} data={c} />),
-            operations.map(c => <DefaultNode key={c.id} data={c} />)
-        ]
-        || [
-        <div className={"summary"}>{[
-            attributes.length ? attributes.length + " attributes" : '',
-            references.length ? references.length + " references" : '',
-            operations.length ? operations.length + " operations" : '',
-            !(attributes.length + references.length + operations.length) ? '- empty -' : ''
-            ].filter(v=>!!v).join(',')}</div>
-        ]
-        }
     </div>
-}
 
-{decorators}
+    {level > 2 && <hr/>}
+
+    {level > 2 && 
+        <div className={'class-children'}>
+            {level >= 2 && [
+                attributes.map(c => <DefaultNode key={c.id} data={c} />),
+                references.map(c => <DefaultNode key={c.id} data={c} />),
+                operations.map(c => <DefaultNode key={c.id} data={c} />)
+            ]
+            || [
+            <div className={"summary"}>{[
+                attributes.length ? attributes.length + " attributes" : '',
+                references.length ? references.length + " references" : '',
+                operations.length ? operations.length + " operations" : '',
+                !(attributes.length + references.length + operations.length) ? '- empty -' : ''
+                ].filter(v=>!!v).join(',')}</div>
+            ]
+            }
+        </div>
+    }
+
+    {decorators}
 </View>`);}
 
 
     /* ENUM */
 
 public static enum(): string { return (
-`<View className={'root enumerator'}>
+`
+/* -- Jjodel Abstract Syntax Specification v2.0 -- */
+
+
+<View className={'root enumerator'}>
     <div className={'header'}>
         {level > 1 && <b className={'enumerator-name'}>Enum: </b>}
         {level == 1 && <i className="bi bi-explicit-fill"></i>}<Input data={data} field={'name'} hidden={true} autosize={true} />
     </div>
-    {level > 1 && literals.length > 0 && <hr />}
+    {level > 1 && <hr />}
     <div className={'enumerator-children'}>
         {level >= 2 && literals.map(c => <DefaultNode key={c.id} data={c}/>)}
     </div>
@@ -555,7 +622,11 @@ public static enum(): string { return (
     /* FEATURE */
 
     public static feature(): string { return (
-`<View className={'root feature w-100'}>
+`
+/* -- Jjodel Abstract Syntax Specification v2.0 -- */
+
+
+<View className={'root feature w-100'}>
     <span className={'feature-name'}>{data.name}:</span>
     <Select data={data} field={'type'} />
     {decorators}
@@ -565,7 +636,11 @@ public static enum(): string { return (
     /* LITERAL */
 
     public static literal(): string { return (
-`<label className={'root literal d-block text-center'}>
+`
+/* -- Jjodel Abstract Syntax Specification v2.0 -- */
+
+
+<label className={'root literal d-block text-center'}>
     {data.name}
     {decorators}
 </label>`
@@ -574,7 +649,11 @@ public static enum(): string { return (
     /* OPERATION */
 
     public static operation(): string { return (
-`<View className={'root operation w-100 hoverable'}>
+`
+/* -- Jjodel Abstract Syntax Specification v2.0 -- */
+
+
+<View className={'root operation w-100 hoverable'}>
         <span className={'feature-name'}>{data.name + ' =>'}</span>
         <Select data={data} field={'type'} />
     <div className={"parameters content"}>
@@ -589,7 +668,11 @@ public static enum(): string { return (
     /* PARAMETER */
 
 public static parameter(): string { return (
-`<View className={'root parameter w-100'}>
+`
+/* -- Jjodel Abstract Syntax Specification v2.0 -- */
+
+
+<View className={'root parameter w-100'}>
     <span className={'feature-name'}>
         {data.name + '' + (data.lowerBound === 0 ? '?:' : ':' )}
     </span>
@@ -614,38 +697,23 @@ public static parameter(): string { return (
 </div>`
 );}
 
-    public static objectOld(): string { return (
-`<div className={'round bg-white root class'}>
-    <label className={'ms-1'}>
-        <Input jsxLabel={<b className={'object-name'}>{data.instanceof ? data.instanceof.name : "Object"}:</b>} 
-           data={data} field={'name'} hidden={true} autosize={true}/>
-    </label>
-    <hr />
-    <div className={'object-children'}>
-        { features.map(c => <DefaultNode key={c.id} data={c} />) }
-    </div>
-    {decorators}
-</div>`);
-}
-
-//     public static object(): string { return (
-// `<View className={'root object'}>
-//     <b className={'object-name'}>{data.instanceof ? data.instanceof.name : 'Object'}:</b>
-//     <Input data={data} field={'name'} hidden={true} autosize={true} />
-//     <hr/>
-//     <div className={'object-children'}>
-//         {level >= 2 && data.features.map(f => <DefaultNode key={f.id} data={f} />)}
-//     </div>
-//     {decorators}
-// </View>`
-// );}
-
 /* OBJECT */
 
 public static object(): string { return (
-`<View className={'root object'}>
-    <b className={'object-name'}>{data.instanceof ? data.instanceof.name : 'Object'}:</b>
-    <Input data={data} field={'name'} hidden={true} autosize={true} />
+`
+/* -- Jjodel Abstract Syntax Specification v2.0 -- */
+
+
+<View className={'root object'}>
+    <div className={'header'}>
+        <div>
+            <b className={'object-name'}>{data.instanceof ? data.instanceof.name : 'Object'}:</b>
+            {data.$name ?
+                <Input data={data.$name} field={'value'} hidden={true} autosize={true} placeholder={'name'} /> :
+                <Input data={data} field={'name'} hidden={true} autosize={true} placeholder={'name'} />
+            }
+        </div>
+    </div>
     <hr/>
     <div className={'object-children'}>
         {level >= 2 && data.features.map(f => <DefaultNode key={f.id} data={f} />)}
@@ -657,7 +725,11 @@ public static object(): string { return (
     /* VALUE */
 
     public static value() { return (
-`<View className={'root value d-flex'}>
+`
+/* -- Jjodel Abstract Syntax Specification v2.0 -- */
+
+
+<View className={'root value d-flex'}>
     {instanceofname && <label className={'d-block ms-1 name'}>{instanceofname}</label>}
     {!instanceofname && <Input className='name' data={data} field={'name'} hidden={true} autosize={true} />}
     <label className={'d-block m-auto values_str'} style={{color: constants[typeString] || 'gray'}}>
@@ -670,11 +742,16 @@ public static object(): string { return (
     /* SINGLETON OBJECT */
 
     public static singleton(): string { return (
-    `<div className={'singleton'}>
-        <div className={'header'}>
-            {data.name}        
-        </div>
-    </div>`);}
+    `
+/* -- Jjodel Abstract Syntax Specification v2.0 -- */
+
+
+
+<View className={'singleton'}>
+    <div className={'header'}>
+        {data.name}        
+    </div>
+</View>`);}
 
     /* ERROR */
 

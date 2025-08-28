@@ -22,15 +22,18 @@ import {
 import DSL from "../../DSL/DSL";
 
 var nosize: GraphSize = {x:0, y:0, w:0, h:0, nosize:true} as any;
-var defaultEdgePointSize: GraphSize = {x:0, y:0, w:5, h:5} as any;
+var defaultEdgePointSize: GraphSize = {x:0, y:0, w:15, h:5} as any;
 var defaultVertexSize: GraphSize = {x:0, y:0, w:140.6818084716797, h:32.52840805053711} as any;
 var defaultPackageSize = new GraphSize(0, 0, 400, 500);
 
 const udLevel = 'ret.level = node.graph.state.level ?? 3\n';
 const udGrid = 'ret.grid = node.graph.state.grid ?? false\n'
+const udSnap = 'ret.snap = node.graph.state.snap ?? true\n'
 
 const udLevelG = 'ret.level = node.state.level ?? 3\n';
 const udGridG = 'ret.grid = node.state.grid ?? false\n';
+const udSnapG = 'ret.snap = node.state.snap ?? true\n';
+
 
 const udLevelPkg = udLevelG + 'ret.upperLevel = node.graph.state.level ?? 3\n';
 
@@ -65,10 +68,25 @@ class DefaultViews {
         transform: rotate(90deg) translate(0, 100%);
     }
 }
-.grid {
+.grid-classic {
     background-image: radial-gradient(silver 1px, transparent 0);
     background-size: 15px 15px;
     background-position: 10px 10px;
+}
+.grid-paper {
+  background-color: white;
+  background-image:
+    /* thick dark blue lines */
+    linear-gradient(to right, #047dc83a 0.5px, transparent 0px),
+    linear-gradient(to bottom, #047dc83a 0.5px, transparent 0px),
+    /* thin light blue lines */
+    linear-gradient(to right, #a4c8042e 0.5px, transparent 0px),
+    linear-gradient(to bottom, #a4c8042e 0.5px, transparent 0px);
+  background-size:
+    90px 90px, /* dark vertical */
+    90px 90px, /* dark horizontal */
+    9px 9px,   /* light vertical */
+    9px 9px;   /* light horizontal */
 }
 
 `;
@@ -89,10 +107,12 @@ class DefaultViews {
             'ret.m1Objects = data && !data.isMetamodel ? data.allSubObjects : []\n'+
             'ret.refEdges = (suggestedEdges.reference || []).filter(e => !e.vertexOverlaps && e.sameGraph)\n'+
             'ret.extendEdges = (suggestedEdges.extend || []).filter(e => !e.vertexOverlaps && e.sameGraph)\n'+
-            udLevelG + udGridG +
+            udLevelG + udGridG + udSnapG +
             '}';
         return view;
     }
+
+    /* Package */
 
     static package(vp: DViewElement): DViewElement {
         const view = DViewElement.new2('Package', DV.packageView(), vp, (view)=>{
@@ -141,6 +161,8 @@ border-radius: var(--radius);
         return view
     }
 
+    /* Class */ 
+
     static class(vp: DViewElement): DViewElement {
         const view = DViewElement.new2('Class', DV.classView(), vp, (view)=>{
             view.appliableToClasses = [DClass.cname];
@@ -150,10 +172,6 @@ border-radius: var(--radius);
             view.palette = {'color-': U.hexToPalette('#f00', '#000', '#fff'), 'background-':  U.hexToPalette('#fff', '#eee', '#f00')};
             view.css = `
 
-
-
-
-
 /* class */
 
 border-radius: 3px;
@@ -161,10 +179,12 @@ border-radius: 3px;
     border-radius: 3px;
     background: var(--model-background);
     color:var(--model-color);
+    min-width: 160px;
 
     &>.header{
         padding: 3px 6px;
         white-space: pre;
+        text-align: center;
     }
     .class-name{ 
         font-weight: bold; 
@@ -177,6 +197,7 @@ border-radius: 3px;
     .class-children {
         background-color: var(--model-background);
         height: fit-content;
+        min-height: 6px;
         width: -webkit-fill-available;
         &>*:last-child { padding-bottom: 0.125em; }
     }
@@ -219,7 +240,6 @@ div.header:has(.open:hover) {
 
             
 
-            
 `;
             view.defaultVSize = defaultVertexSize;
             view.usageDeclarations = `(ret) => {
@@ -239,10 +259,28 @@ div.header:has(.open:hover) {
     ret.interface = data.interface
     ${udLevel}
     ${udGrid}
+    ${udSnap}
 }`;
             // view.events = {e1:"(num) => {\n\tdata.name = num;\n}"}
         }, false, Defaults.Pointer_ViewClass);
-        // view.onDataUpdate = "if (grid) {\n   node.x = node.x - (node.x % 15);\n   node.y = node.y - (node.y % 15);\n}";
+        
+        view.onDataUpdate = "if (snap) {\n";
+        view.onDataUpdate += "  const x = node.x, y = node.y;\n";
+        view.onDataUpdate += "  if (x !== 0 || y !== 0) {\n";
+        view.onDataUpdate += "    const zx = (node.zoom && node.zoom.x) || 1;\n";
+        view.onDataUpdate += "    const zy = (node.zoom && node.zoom.y) || 1;\n";
+        view.onDataUpdate += "    const w2 = node.w * 0.5;\n";
+        view.onDataUpdate += "    const h2 = node.h * 0.5;\n";
+        view.onDataUpdate += "    const gx = 30 * zx;\n";
+        view.onDataUpdate += "    const gy = 30 * zy;\n";
+        view.onDataUpdate += "    const cx = x + w2;\n";
+        view.onDataUpdate += "    const cy = y + h2;\n";
+        view.onDataUpdate += "    const nx = Math.round(cx / gx) * gx - w2;\n";
+        view.onDataUpdate += "    const ny = Math.round(cy / gy) * gy - h2;\n";
+        view.onDataUpdate += "    if (nx !== x) node.x = nx;\n";
+        view.onDataUpdate += "    if (ny !== y) node.y = ny;\n";
+        view.onDataUpdate += "  }\n";
+        view.onDataUpdate += "}\n";
 
         return view;
     }
@@ -283,9 +321,12 @@ border-radius: 3px;
     border-radius: 3px;
     background: white;
     color:var(--model-color);
+    min-width: 140px;
+
     &>.header{
         padding: 3px 6px;
         white-space: pre;
+        text-align: center;
     }
     .enumerator-name { font-weight: bold; color: var(--accent-secondary); }
     .bi {
@@ -293,6 +334,7 @@ border-radius: 3px;
     }
     .enumerator-children {
         background-color: white; 
+        min-height: 6px;
         height: fit-content;
         width: -webkit-fill-available;
         &>*:last-child { padding-bottom: 0.125em; }
@@ -317,10 +359,29 @@ border-radius: 3px;
     // ** declarations here ** //
     ret.literals = data.literals
     ${udLevel}
+    ${udSnap}
+
 }`;
         }, false, Defaults.Pointer_ViewEnum);
-        // view.onDataUpdate = "if (grid) {\n   node.x = node.x - (node.x % 15);\n   node.y = node.y - (node.y % 15);\n}";
 
+        view.onDataUpdate = "if (snap) {\n";
+        view.onDataUpdate += "  const x = node.x, y = node.y;\n";
+        view.onDataUpdate += "  if (x !== 0 || y !== 0) {\n";
+        view.onDataUpdate += "    const zx = (node.zoom && node.zoom.x) || 1;\n";
+        view.onDataUpdate += "    const zy = (node.zoom && node.zoom.y) || 1;\n";
+        view.onDataUpdate += "    const w2 = node.w * 0.5;\n";
+        view.onDataUpdate += "    const h2 = node.h * 0.5;\n";
+        view.onDataUpdate += "    const gx = 30 * zx;\n";
+        view.onDataUpdate += "    const gy = 30 * zy;\n";
+        view.onDataUpdate += "    const cx = x + w2;\n";
+        view.onDataUpdate += "    const cy = y + h2;\n";
+        view.onDataUpdate += "    const nx = Math.round(cx / gx) * gx - w2;\n";
+        view.onDataUpdate += "    const ny = Math.round(cy / gy) * gy - h2;\n";
+        view.onDataUpdate += "    if (nx !== x) node.x = nx;\n";
+        view.onDataUpdate += "    if (ny !== y) node.y = ny;\n";
+        view.onDataUpdate += "  }\n";
+        view.onDataUpdate += "}\n";       
+        
         return view;
     }
 
@@ -444,12 +505,23 @@ border-radius: 3px;
             view.oclCondition = 'context DObject inv: true';
             view.palette = {'color-':  U.hexToPalette('#f00', '#000', '#fff'), 'background-': U.hexToPalette('#fff', '#eee', '#f00')};
 
-            view.css = 'border-radius: 3px;\n.object {border-radius: 3px;\n';
-            view.css += 'background: white; color: var(--accent);}\n';
-            view.css += '.object-name {padding: 10px; font-weight: 600; color: var(--accent);}\n';
-            view.css += '.object-children {padding: 10px;background-color: white; height: fit-content; width: -webkit-fill-available;}';
-
-
+            view.css = 'border-radius: 3px;\n.object {\n';
+            view.css += '   border-radius: 3px; \n';
+            view.css += '   min-width: 160px;\n';
+            view.css += '   & .header {\n';
+            view.css += '        text-align: center;  \n';
+            view.css += '        &> div {\n';
+            view.css += '            & input:placeholder-shown {\n';
+            view.css += '                display: inline-block!important;\n';
+            view.css += '                margin-left: 30px!important;\n';
+            view.css += '            }\n';
+            view.css += '        }\n';
+            view.css += '   }\n';
+            view.css += '   background: transparent; \n';
+            view.css += '   color: var(--accent);\n';
+            view.css += '}\n';
+            view.css += '.object-name {padding: 10px; font-weight: 600; color: var(--accent);}';
+            view.css += '\n.object-children {padding: 10px;background-color: white; height: fit-content; width: -webkit-fill-available;}';
             view.defaultVSize = defaultVertexSize;
             view.appliableTo = 'Vertex';
             view.usageDeclarations = '(ret) => {\n' +
@@ -462,10 +534,39 @@ border-radius: 3px;
                 // ¡ The element will update only if one of the Observed Properties has changed !
                 '// ** declarations here ** //\n' +
                 'ret.metaclassName = data.instanceof?.name || \'Object\'\n' +
-                udLevel +
+                udLevel + udSnap +
+
                 '}';
         }, false, Defaults.Pointer_ViewObject);
-        // view.onDataUpdate = "if (grid) {\n   node.x = node.x - (node.x % 15);\n   node.y = node.y - (node.y % 15);\n}";
+        view.onDataUpdate = "";
+        view.onDataUpdate += "if (snap) {\n";
+        view.onDataUpdate += "  if (node.x !== 0 || node.y !== 0) {\n";
+        view.onDataUpdate += "    node.x = node.x - ((node.x + node.w/2) % 30);\n";
+        view.onDataUpdate += "    node.y = node.y - ((node.y + node.h/2) % 30);\n";
+        view.onDataUpdate += "\n";
+        view.onDataUpdate += "    setInterval(() => {\n";
+        view.onDataUpdate += "      node.edgesOut\n";
+        view.onDataUpdate += "        .filter(edge => edge.midnodes.length > 0 && (edge.midnodes.first().y + 7 !== edge.start.y + edge.start.h/2))\n";
+        view.onDataUpdate += "        .map(edge => edge.midnodes.first().y = edge.start.y + edge.start.h/2 - 7);\n";
+        view.onDataUpdate += "      node.edgesOut\n";
+        view.onDataUpdate += "        .filter(edge => edge.midnodes.length > 0 && (edge.midnodes.first().x + 7 !== edge.end.x + edge.end.w/2))\n";
+        view.onDataUpdate += "        .map(edge => edge.midnodes.first().x = edge.end.x + edge.end.w/2 - 7);\n";
+        view.onDataUpdate += "\n";
+        view.onDataUpdate += "      node.edgesIn\n";
+        view.onDataUpdate += "        .filter(edge => edge.midnodes.length > 0 && (edge.midnodes.first().x + 7 !== edge.end.x + edge.end.w/2))\n";
+        view.onDataUpdate += "        .map(edge => edge.midnodes.first().x = edge.end.x + edge.end.w/2 - 7);\n";
+        view.onDataUpdate += "      node.edgesIn\n";
+        view.onDataUpdate += "        .filter(edge => edge.midnodes.length > 0 && (edge.midnodes.first().y + 7 !== edge.start.y + edge.start.h/2))\n";
+        view.onDataUpdate += "        .map(edge => edge.midnodes.first().y = edge.start.y + edge.start.h/2 - 7);\n";
+        view.onDataUpdate += "    }, 150);\n";
+        view.onDataUpdate += "  } else {\n";
+        view.onDataUpdate += "    if (data.parent.className === 'DValue') {\n";
+        view.onDataUpdate += "      node.x = 50;\n";
+        view.onDataUpdate += "      node.y = data.parent.parent.node.y + data.parent.parent.node.h + 150;\n";
+        view.onDataUpdate += "    }\n";
+        view.onDataUpdate += "  }\n";
+        view.onDataUpdate += "}\n";
+    
 
         return view;
     }
@@ -497,7 +598,7 @@ border-radius: 3px;
                 '// ** declarations here ** //\n' +
                 'ret.metaclassName = data.instanceof?.name || \'Object\'\n' +
                 'ret.isSingleton = data.instanceof?.isSingleton || false\n' +
-                udLevel +
+                udLevel + udSnap +
                 '}';
         }, false, Defaults.Pointer_ViewSingleton);
         // view.onDataUpdate = "if (grid) {\n   node.x = node.x - (node.x % 15);\n   node.y = node.y - (node.y % 15);\n}";
@@ -543,10 +644,10 @@ border-radius: 3px;
     border: 2px solid var(--border-1);
     background: var(--background-1);
     color: var(--color-1);
-    width: 100%;
-    height: 100%;
-    min-height: 15px;
-    min-width: 5px;
+    width: 15px;
+    height: 15px;
+    border-radius: 100%;
+
     &:hover, &:focus-within, &:focus{
         transform-origin: center;
         transform: scale(1.3);
@@ -570,8 +671,9 @@ border-radius: 3px;
             "// ** declarations here ** //\n" +
             "ret.edgestart = node.edge.start?.size+''\n" +
             "ret.edgeend = node.edge.end?.size+''\n" +
+            udSnap +
             "}"
-        // edgePointView.edgePointCoordMode = CoordinateMode.relativePercent;
+        // edgePointView.edgePointCoordMode = CoordinateMode.relativePercent; 
         let view: DViewElement = DViewElement.new2('EdgePoint', DV.edgePointView(), vp, (d)=>{
             d.appliableTo = 'EdgePoint';
             d.resizable = false;
@@ -582,14 +684,22 @@ border-radius: 3px;
             d.defaultVSize = defaultEdgePointSize;
             // d.defaultVSize = new GraphSize(0, 0, 25, 25);
         }, false, Defaults.Pointer_ViewEdgePoint);
+        view.adaptWidth = true; view.adaptHeight = true;
+        view.onDataUpdate =  "if (snap) {\n";
+        view.onDataUpdate += "   if (node.x !== 0 || node.y !== 0) {\n";
+        view.onDataUpdate += "      node.x = node.x - ((node.x + node.w/2) % 30);\n";
+        view.onDataUpdate += "      node.y = node.y - ((node.y + node.h/2) % 15);\n";
+        view.onDataUpdate += "   }\n";
+        view.onDataUpdate += "}\n";
+
         return view;
     }
 
     static anchor(vp: DViewElement): DViewElement {
         let ret = DViewElement.new2('Anchors', DV.anchorJSX(), vp, (v) => {
             v.isExclusiveView = false;
-            v.palette={'anchor-': U.hexToPalette('#77f', '#f77', '#007'),
-                'anchor-hover-': U.hexToPalette('#7f7', '#a44', '#070')};
+            v.palette={'anchor-': U.hexToPalette('#9CC4CA', '#CA948E', '#7E7EB8'),
+                'anchor-hover-': U.hexToPalette('#0A7E8B', '#891307', '#070')};
             v.usageDeclarations = "(ret)=>{ // scope: data, node, view, state, \n" +
                 "// ** preparations and default behaviour here ** //\n" +
                 "// add preparation code here (like for loops to count something), then list the dependencies below.\n" +

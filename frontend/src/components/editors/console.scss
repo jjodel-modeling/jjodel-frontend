@@ -1,6 +1,6 @@
 
 .suggestion-keys ul {
-  font-family: Lekton, monospace;
+  font-family: 'JetBrains Mono', Lekton, monospace;
   padding-left: 3px;
   display: flex;
   flex-flow: wrap;
@@ -69,7 +69,7 @@
 
   .console-terminal::before {
     position: absolute;
-    font-family: Lekton, monospace;
+    font-family: 'JetBrains Mono', Lekton, monospace;
     font-size: 1.3em;
     content: ">";
     top: calc(1.25rem - 1px);
@@ -194,7 +194,7 @@
 
   & textarea {
 
-    font-family: Lekton, monospace;
+    font-family: 'JetBrains Mono', Lekton, monospace;
     font-size: 1em;
     color: var(--color);
     padding: 0.5rem 1.5rem !important;
@@ -283,7 +283,7 @@
 
   span.console-error-msg {
     display: flex;
-    font-family: Lekton, monospace;
+    font-family: 'JetBrains Mono', Lekton, monospace;
     color: var(--bg-5);
     padding-left: 0px;
     margin-top: auto;
@@ -303,7 +303,7 @@
   }
 
   .console-msg {
-    font-family: Lekton, monospace;
+    font-family: 'JetBrains Mono', Lekton, monospace;
     color: var(--bg-5);
     color: var(--keyword-color);
     font-weight: var(--keyword-weight);

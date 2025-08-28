@@ -113,37 +113,37 @@ function PaletteDataComponent(props: AllProps) {
 
 
         return (<>
-            {/* {open ?
+            {/* open ?
                 <div className='palette-buttons'>
-                    <button onClick={()=>addControl('palette')} className='btn btn-success my-btn btn-color'>Add palette</button>
+                    <button onClick={()=>addControl('palette')} className='add-palette-item btn btn-success my-btn btn-color'>Add palette</button>
                     <button onClick={()=> addControl('number')} className='btn btn-success my-btn btn-number'>Add number</button>
                     <button onClick={()=>addControl('text')} className='btn btn-success my-btn btn-textual'>Add text</button>
                     <button onClick={()=>addControl('path')}className='btn btn-success my-btn btn-path'>Add path</button>
                 </div>
             :
                 <button onClick={() => setOpen(!open)} className='btn btn-success my-btn'>Add new</button>
-            }*/}
+            */}
 
             <div className={'add-palette-item active hoverable'} tabIndex={-1}>
-                <button onClick={() => addControl('palette')} className='btn btn-success my-btn btn-color'>
+                <button onClick={() => addControl('palette')} className='btn btn-success my-btn btn-plus'>
                     <i style={{color: 'white'}} className="bi bi-plus"/>
                     <span className={'preview'}>Add new</span>
                 </button>
                 <button onClick={() => addControl('palette')} className='btn btn-success my-btn btn-color content inline'>
-                    <i className={'bi bi-circle'}/>
+                    <i className="bi bi-palette"></i>
                     <span>Palette</span>
                 </button>
                 <button onClick={() => addControl('number')} className='btn btn-success my-btn btn-number content inline'>
-                    <i className={'bi bi-circle'}/>
+                    <i className="bi bi-123"></i>
                     <span>Number</span>
                 </button>
                 <button onClick={() => addControl('text')} className='btn btn-success my-btn btn-textual content inline'>
-                    <i className={'bi bi-circle'}/>
+                    <i className="bi bi-type"></i>
                     <span>Text</span>
                 </button>
                 <button onClick={() => addControl('path')} className='btn btn-success my-btn btn-path content inline'>
-                    <i className={'bi bi-circle'}/>
-                    <span>Path</span>
+                <i className="bi bi-bezier"></i>                    
+                <span>Path</span>
                 </button>
             </div>
 
@@ -185,13 +185,35 @@ function PaletteDataComponent(props: AllProps) {
         switch (type){
             default: Log.exDevv("unexpected case in addControl:" + type); return;
             case 'path':
-                const agglabel = "◇ Aggregation / Composition";
-                const extendlabel = "△ "+EdgeHead.extend;
-                const asslabel = "Λ "+EdgeHead.reference;
+                const uml = "-- UML relationships";
+                    const agglabel = "◇ Aggregation / Composition";
+                    const extendlabel = "△ "+EdgeHead.extend;
+                    const asslabel = "Λ "+EdgeHead.reference;
+                const e1 = "--- 1";
+                const cardinality       = "-- Multiplicity";
+                    const zerolabel         = "[0]    exactly zero / not present";
+                    const onelabel          = "[1]    exactly one, required";
+                    const manylabel         = "[0..*] zero or many, optional, unbounded";
+                    const zeroOrOneLabel    = "[0..1] zero or one, optional";
+                    const zeroOrManyLabel   = "[0..*] zero or many, optional, unbounded "; // was "[0..*] "
+                    const oneOrManyLabel    = "[1..*] one or many, at least one";
+                const e2 = "--- 2";
+
+
                 let headdict: Dictionary<string, string> = {
-                    [asslabel]: 'M 0 0   L x y/2   L 0 y',
-                    [extendlabel]: 'M 0 0   L x y/2   L 0 y   Z',
-                    [agglabel]: 'M 0 y/2   L x/2 0   L x y/2   L x/2 y   Z',
+                    [uml]: 'UML Relationships',
+                        [asslabel]: 'M11.354 5.646a.5.5 90 010 .708l-6.035 6.089a.5.5 90 01-.156-.116L11.375 5.999l-6.406-6.211a.5.5 90 01.208-.115z',
+                        [extendlabel]: 'M 0 0   L x y/2   L 0 y   Z',
+                        [agglabel]: 'M8.5776-.9085c.6316-.522 1.6553-.522 2.2869 0l7.0948 5.8644c.6316.522.6316 1.3671 0 1.8882L10.8645 12.7085c-.6316.522-1.6542.522-2.2847 0L1.4827 6.845a1.6117 1.332 0 010-1.8882z',
+                    [e1]: '--- 1',
+                    [cardinality]: 'Multiplicity',
+                        [zerolabel]: 'M-11.985 5.981A1 1 0 000 6 1 1 0 00-12 6',
+                        [onelabel]: 'M0 0V12',
+                        [manylabel]: 'M12 1 0 6 12 11H12M12 6H0',
+                        [zeroOrOneLabel]: 'M-11.985 5.981A1 1 0 000 6 1 1 0 00-12 6M6 0V12',
+                        [zeroOrManyLabel]: 'M-11.985 5.981A1 1 0 000 6 1 1 0 00-12 6M6 0M12 1 0 6 12 11H12M12 6H0',
+                        [oneOrManyLabel]: 'M0 0V12M12 1 0 6 12 11H12M12 6H0',
+                    [e2]: '--- 2'
                 };
                 let predefinedPaths: {k:string, v:string}[] = Object.entries(headdict).map((e)=>({k:e[0], v:e[1]}));
 
@@ -574,12 +596,54 @@ function PaletteDataComponent(props: AllProps) {
                                     <label className={"mx-auto"}>y:&nbsp;<input className="y" placeholder={"y"} defaultValue={path.y} disabled={readOnly} onChange={(e)=>setGeneric(e, prefix, "y")}/></label>
                                 </div>
                             </div>
-                            <select className={'d-flex'} style={{width: '100px!important'}} value={path.value} disabled={readOnly} onChange={(e)=>setText(e as any, prefix)}>
+                            {/* <select className={'d-flex'} style={{width: '100px!important'}} value={path.value} disabled={readOnly} onChange={(e)=>setText(e as any, prefix)}>
+
                                 {[<option style={{fontStyle:'italic', color:'gray'}} value={""}>Custom</option>, path.options.map((e)=>{
-                                let k = e.k;
-                                let v = e.v;
-                                return <option value={v}>{k}</option>
-                            })]}</select>
+                                    
+                                    
+                                    return <option value={e.v}>{e.k}</option>
+                            
+                            })]}
+                            </select>*/}
+                            <select className={'d-flex'} style={{width: '100px!important'}} value={path.value} disabled={readOnly} onChange={(e)=>setText(e as any, prefix)}>
+                                <option style={{fontStyle:'italic', color:'gray'}} value={""}>Custom</option>
+                                {(() => {
+                                    const groups: {label: string, options: {k: string, v: string}[]}[] = [];
+                                    let currentGroup: {label: string, options: {k: string, v: string}[]} | null = null;
+                                    path.options.forEach(e => {
+                                        if (e.k.startsWith('-- ')) {
+                                            if (currentGroup) groups.push(currentGroup);
+                                            currentGroup = {label: e.k.replace('-- ', ''), options: []};
+                                        } else if (e.k.startsWith('--- ')) {
+                                            // End current group
+                                            if (currentGroup) {
+                                                groups.push(currentGroup);
+                                                currentGroup = null;
+                                            }
+                                        } else {
+                                            if (currentGroup) {
+                                                currentGroup.options.push(e);
+                                            } else {
+                                                groups.push({label: '', options: [e]});
+                                            }
+                                        }
+                                    });
+                                    if (currentGroup) groups.push(currentGroup);
+
+                                    return groups.map((group, idx) =>
+                                        group.label ?
+                                            <optgroup key={group.label + idx} label={group.label}>
+                                                {group.options.map(opt =>
+                                                    <option key={opt.k} value={opt.v}>{opt.k}</option>
+                                                )}
+                                            </optgroup>
+                                            :
+                                            group.options.map(opt =>
+                                                <option key={opt.k} value={opt.v}>{opt.k}</option>
+                                            )
+                                    );
+                                })()}
+                            </select>
 
                             {/* Path */}
                             <CommandBar  style={{paddingRight: '4px', marginLeft: 'auto'}}>
@@ -672,7 +736,7 @@ function PaletteDataComponent(props: AllProps) {
         {vcss.indexOf('//') >= 0 && <b><span style={{color:'red'}}>Warning:</span> Inline comments // are not supported by our compiler.<br/>
             Please replace them with /* block comments */</b>}
 
-            <div className={"monaco-editor-wrapper"} style={{
+            {/* <div className={"monaco-editor-wrapper"} style={{
                 minHeight: '20px',
                 height:`${expand ? '30lvh' : '10lvh'}`,
                 transition: 'height 0.3s',
@@ -681,9 +745,37 @@ function PaletteDataComponent(props: AllProps) {
                 flexDirection: 'column'
             }}
             onFocus={() => setExpand(true)}
-            onBlur={() => {setExpand(false);blur()}}>
+            onBlur={() => {setExpand(false);blur()}}> */}
+                
+            <div
+                className="monaco-editor-wrapper"
+                style={{
+                    height: '40%',   // use dvh for dynamic viewport on mobile, better than lvh
+                    maxHeight: '40%',                   // cannot exceed the section’s height
+                    transition: 'height 0.3s',
+                    resize: 'vertical',
+                    overflow: 'auto',                     // scroll instead of overflowing past bottom
+                    display: 'flex',
+                    flexDirection: 'column',
+                    flex: '1 1 auto'
+                }}
+                onFocus={() => setExpand(true)}
+                onBlur={() => { setExpand(false); blur(); }}
+            >
+
+
+
             <Editor className={'mx-1'}
-                    options={{fontSize: 12, scrollbar: {vertical: 'hidden', horizontalScrollbarSize: 5}, minimap: {enabled: false}, readOnly: readOnly}}
+                    options={{
+                        theme: 'vs',
+                        fontSize: 12, 
+                        scrollbar: {
+                            vertical: 'hidden', 
+                            horizontalScrollbarSize: 5
+                        }, 
+                        minimap: {enabled: false}, 
+                        readOnly: readOnly
+                    }}
                     defaultLanguage={'less'} value={vcss} onChange={change}/>
         </div>
         {false && <div className={"debug"}><div style={{whiteSpace:'pre'}}>{view.compiled_css}</div></div>}

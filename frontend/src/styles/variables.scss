@@ -1,4 +1,9 @@
 body{
+
+  // dimension outline edges
+  --edge-outline-width: 7px;
+
+
   // fallbacks
   --border-color: #333;
   --border-width: 1px;
@@ -227,6 +232,7 @@ body{
   --background-color-2: var(--background-color-warn);
   --background-color-3: var(--background-color-danger);
 }
+
 
 
 .drag-handle, .drag-handle.light{

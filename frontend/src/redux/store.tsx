@@ -242,6 +242,10 @@ export class DState extends DPointerTargetable{
                     'border-': U.hexToPalette('#a3a3a3')
                 }
                 vp.css = `
+/* -- Jjodel Abstract Syntax Specification v2.0 -- */
+
+
+
 /* stuff for subelements */
 [data-nodetype="GraphVertex"] {
   width: 50%;
@@ -257,6 +261,8 @@ export class DState extends DPointerTargetable{
   top: var(--top) !important;
   >*{ border: 0.1em solid var(--border-1); }
   &>.ui-resizable-handle{ border: none; }
+  & hr {color: var(--border-1); }
+
 }
 
 [data-nodetype]{
@@ -289,16 +295,24 @@ export class DState extends DPointerTargetable{
   &.selected-by-me, &:has(.selected-by-me, .Edge, .edge, .edges), &:hover, &:active, &:focus-within, &:focus{
     overflow: visible;
     z-index: 100 !important;
-    outline-width: 4px;
+    outline-width: 0px!important;
     outline-style: solid;
-    outline-color: var(--selected);
-
+    outline-color: var(--selected)!important;
+  }
+  .Vertex, .Field {
+    &.selected-by-me, &:hover, &:active, &:focus-within, &:focus {
+      outline-width: 4px!important;
+      outline-style: solid!important;
+      outline-color: var(--selected)!important;
+    }
   }
 }
 
 &,[data-nodetype] {
-  &.selected-by-me, &:hover, &:active, &:focus-within, &:focus{
-   outline: 2px dashed black
+  &.selected-by-me, &:has(.selected-by-me, .Edge, .edge, .edges), &:hover, &:active, &:focus-within, &:focus{
+    outline-width: 4px;
+    outline-style: solid;
+    outline-color: var(--selected)!important;
   }
 }
 
@@ -496,6 +510,8 @@ ret.parentView = L.from(component.props.parentviewid);
     makeEdgeView("Aggregation", EdgeHead.aggregation,   undefined,      size2,      false);
     makeEdgeView("Composition", EdgeHead.composition,   undefined,      size2,      false);
 
+
+
     // edgeView.forceNodeType="Edge"
 
     /*
@@ -554,7 +570,6 @@ export class LState<Context extends LogicContext<DState> = any, C extends Contex
     public static singleton: LPointerTargetable;
     // return type is wrong, but have to extend the static method of RuntimeAccessibleClass which is completely different and returns a class constructor.
     static get<T2 extends typeof RuntimeAccessibleClass & { logic?: typeof LPointerTargetable | undefined; }>(): T2 & LState { return LState.wrap(store.getState() as any) as any; }
-    contextMenu!: {display: boolean, x: number, y: number};
     user!: LUser;
     debug!: boolean;
     room!: string;

@@ -107,7 +107,7 @@ function getItems(data: LModelElement|undefined, myDictValidator: Dictionary<Doc
         }
         let item = item_dname.substring(1).toLowerCase();
         let key = item_dname === 'DPackage' ? 'DPackage_'+i : item_dname
-        reactNodes.push(<div className={'toolbar-item'} tabIndex={i} style={{cursor:"pointer"}} key={key} onClick={()=>toolbarClick(item_dname, data, myDictValidator, node)}>
+        reactNodes.push(<div className={'toolbar-item'} tabIndex={i} style={{cursor:"pointer"}} key={key} onClick={()=>{toolbarClick(item_dname, data, myDictValidator, node)}}>
             <ModellingIcon name={item} />
             <span className={'ms-1 my-auto text-capitalize'}>{item}</span>
             {/*

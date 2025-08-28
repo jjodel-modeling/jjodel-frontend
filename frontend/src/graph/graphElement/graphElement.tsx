@@ -67,6 +67,7 @@ import {EdgeStateProps, LGraphElement, store, VertexComponent,
 } from "../../joiner";
 import {NodeTransientProperties, Pack1} from "../../joiner/classes";
 import {AT_TRANSACTION} from "../../redux/action/action";
+import {ShowContextMenu} from "../../components/contextMenu/ContextMenu";
 
 const ext_on = "class-can-be-extended";
 const ext_off = "class-cannot-be-extended";
@@ -740,15 +741,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         TRANSACTION('contextmenu', ()=>{
             this.props.node.select();
             if (this.html.current) this.html.current.focus();
-            let state: DState = store.getState();
-            if (state.contextMenu?.x !== e.clientX) {
-                SetRootFieldAction.new("contextMenu", {
-                    display: true,
-                    x: e.clientX,
-                    y: e.clientY,
-                    nodeid: this.props.node?.id
-                });
-            }
+            ShowContextMenu(this.props.node?.id, e.clientX, e.clientY);
         }, true, false)
     }
 
@@ -907,7 +900,6 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         // (e.target as any).focus();
         e.stopPropagation();
         let state: DState = store.getState();
-        if (e.button !== Keystrokes.clickRight && state.contextMenu?.display) SetRootFieldAction.new("contextMenu", {display: false, x: 0, y: 0}); // todo: need to move it on document or <App>
         const edgePendingSource: LClass | undefined = this.props.isEdgePending?.source;
         //console.log('mousedown select() check PRE:', {e, name: this.props.data?.name, isSelected: this.props.node.isSelected(), 'nodeIsSelectedMapProxy': this.props.node?.isSelected, nodeIsSelectedRaw:this.props.node?.__raw.isSelected});
 
