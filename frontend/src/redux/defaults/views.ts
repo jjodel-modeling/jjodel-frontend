@@ -166,7 +166,8 @@ border-radius: var(--radius);
     static class(vp: DViewElement): DViewElement {
         const view = DViewElement.new2('Class', DV.classView(), vp, (view)=>{
             view.appliableToClasses = [DClass.cname];
-            view.adaptWidth = true; view.adaptHeight = true;
+            view.adaptWidth = true; 
+            view.adaptHeight = true;
             view.appliableTo = 'Vertex';
             view.oclCondition = 'context DClass inv: true';
             view.palette = {'color-': U.hexToPalette('#f00', '#000', '#fff'), 'background-':  U.hexToPalette('#fff', '#eee', '#f00')};
@@ -685,12 +686,25 @@ border-radius: 3px;
             // d.defaultVSize = new GraphSize(0, 0, 25, 25);
         }, false, Defaults.Pointer_ViewEdgePoint);
         view.adaptWidth = true; view.adaptHeight = true;
-        view.onDataUpdate =  "if (snap) {\n";
-        view.onDataUpdate += "   if (node.x !== 0 || node.y !== 0) {\n";
-        view.onDataUpdate += "      node.x = node.x - ((node.x + node.w/2) % 30);\n";
-        view.onDataUpdate += "      node.y = node.y - ((node.y + node.h/2) % 15);\n";
-        view.onDataUpdate += "   }\n";
+
+        view.onDataUpdate = "if (snap) {\n";
+        view.onDataUpdate += "  const x = node.x, y = node.y;\n";
+        view.onDataUpdate += "  if (x !== 0 || y !== 0) {\n";
+        view.onDataUpdate += "    const zx = (node.zoom && node.zoom.x) || 1;\n";
+        view.onDataUpdate += "    const zy = (node.zoom && node.zoom.y) || 1;\n";
+        view.onDataUpdate += "    const w2 = node.w * 0.5;\n";
+        view.onDataUpdate += "    const h2 = node.h * 0.5;\n";
+        view.onDataUpdate += "    const gx = 15 * zx;\n"; // half size of the grif
+        view.onDataUpdate += "    const gy = 15 * zy;\n";
+        view.onDataUpdate += "    const cx = x + w2;\n";
+        view.onDataUpdate += "    const cy = y + h2;\n";
+        view.onDataUpdate += "    const nx = Math.round(cx / gx) * gx - w2;\n";
+        view.onDataUpdate += "    const ny = Math.round(cy / gy) * gy - h2;\n";
+        view.onDataUpdate += "    if (nx !== x) node.x = nx;\n";
+        view.onDataUpdate += "    if (ny !== y) node.y = ny;\n";
+        view.onDataUpdate += "  }\n";
         view.onDataUpdate += "}\n";
+
 
         return view;
     }
