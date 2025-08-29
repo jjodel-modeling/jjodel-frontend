@@ -156,8 +156,6 @@ input[type="color"]::-webkit-color-swatch {
   height: 1lh;
 
 
-
-
   /* this works only on native checkbos (no background-image)
   padding: 0.5lh; // half line-height, not well-know unit but works
   scale: 1.35; // padding makes it correctly a full-line height, but visually it looks less, this fixes it without making container bigger or overflowing.
@@ -166,16 +164,17 @@ input[type="color"]::-webkit-color-swatch {
   border: none;
 }
 
-
-.edit-panel .input[type='checkbox'] { // was .input as class
-
+.edit-panel .properties-tab .input[type='checkbox'] { // was .input as class
   width: 0.95lh;
-
 }
+
 input[type='checkbox']:checked { // was .input as class
   background-image: url("../static/svg/toggle-on.svg");
 }
 
+.edit-panel .properties-tab .border {
+
+}
 .switch {
   background-image: url("../static/svg/switch-off.svg") !important;
 }
