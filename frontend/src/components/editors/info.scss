@@ -68,7 +68,7 @@
   padding-bottom: 0.5em!important;
   border-bottom: 1px solid var(--bg-2-5)!important;
   margin-bottom: 1em!important;
-  padding-top: 0!important;
+  padding-top: 0!important; 
 
 
   &::before {
@@ -144,6 +144,7 @@
 .console h1::before {
   content: "\F5C3";
 }
+
 
 
 
@@ -276,9 +277,11 @@
     position: relative;
     font-size: 1.1em;
     color: var(--accent)!important;
+
     margin-bottom: 0;
     padding-bottom: 0;
     height: 2em;
+
   }
 
   .sub-element {
@@ -293,7 +296,27 @@
     background-color: var(--bg-1-1);
     border-radius: var(--radius);
     padding: 0.5em;
-    font-family: 'JetBrains Mono', Lekton;
+    font-family: Lekton, monospace;
+    margin-bottom: 1em;
+
+
+    & .react-json-view {
+      border: 1px solid var(--bg-3);
+      background-color: var(--bg-1-1);
+      border-radius: var(--radius);
+      padding: 0.5em;
+      font-family: Lekton, monospace!important;
+      font-size: 1.15em!important;
+      font-weight: 500!important;
+      line-height: 1em;
+
+      & .data-type-label {
+        font-family: Lekton, monospace!important;
+        font-size: 1em!important;
+        color: cadetblue;
+
+      }
+    }
   }
 
 }

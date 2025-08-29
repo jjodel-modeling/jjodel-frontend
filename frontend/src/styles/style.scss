@@ -172,9 +172,42 @@ input[type='checkbox']:checked { // was .input as class
   background-image: url("../static/svg/toggle-on.svg");
 }
 
-.edit-panel .properties-tab .border {
+
+.properties-tab h6 {
+  margin-top: 1em;
+}
+
+.properties-tab > .object-state {
+    border: 1px solid var(--bg-3);
+    background-color: var(--bg-1-1);
+    border-radius: var(--radius);
+    padding: 0.5em;
+    font-family: Lekton, monospace;
+    margin-bottom: 1em;
+
+    & .react-json-view  {
+
+      background-color: var(--bg-1-1);
+      border-radius: var(--radius);
+      padding: 0.5em;
+      font-family: Lekton, monospace!important;
+      font-size: 1.15em!important;
+      font-weight: 500!important;
+      line-height: 1.1em;
+      
+      & .data-type-label {
+        font-family: Lekton, monospace!important;
+        font-size: 1.15em!important;
+        color: cadetblue;
+
+      }
+
+    }
+
+
 
 }
+
 .switch {
   background-image: url("../static/svg/switch-off.svg") !important;
 }
