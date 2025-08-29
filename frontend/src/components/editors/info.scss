@@ -259,7 +259,7 @@
 }
 
 .options-tab .section .node h5 {
-  padding-left: 0!important; color: red!important;
+  padding-left: 0!important; 
 }
 
 .node-editor {
@@ -292,7 +292,7 @@
   }
 
   .object-state {
-    border: 1px solid var(--bg-3);
+    border: 1px solid var(--color)!important;
     background-color: var(--bg-1-1);
     border-radius: var(--radius);
     padding: 0.5em;
@@ -301,7 +301,6 @@
 
 
     & .react-json-view {
-      border: 1px solid var(--bg-3);
       background-color: var(--bg-1-1);
       border-radius: var(--radius);
       padding: 0.5em;

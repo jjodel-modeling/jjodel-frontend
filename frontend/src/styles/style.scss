@@ -178,7 +178,7 @@ input[type='checkbox']:checked { // was .input as class
 }
 
 .properties-tab > .object-state {
-    border: 1px solid var(--bg-3);
+    border: 1px solid var(--color)!important;
     background-color: var(--bg-1-1);
     border-radius: var(--radius);
     padding: 0.5em;
@@ -187,8 +187,7 @@ input[type='checkbox']:checked { // was .input as class
 
     & .react-json-view  {
 
-      background-color: var(--bg-1-1);
-      border-radius: var(--radius);
+      background-color: var(--colors);
       padding: 0.5em;
       font-family: Lekton, monospace!important;
       font-size: 1.15em!important;
@@ -197,7 +196,7 @@ input[type='checkbox']:checked { // was .input as class
       
       & .data-type-label {
         font-family: Lekton, monospace!important;
-        font-size: 1.15em!important;
+        font-size: 1em!important;
         color: cadetblue;
 
       }
