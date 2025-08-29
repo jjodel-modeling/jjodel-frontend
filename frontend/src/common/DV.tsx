@@ -235,74 +235,179 @@ export class DV {
             'fill': U.hexToPalette(fill),
         };
 
-        let css = ".edge-anchor{" +
-        "\n\tcursor: crosshair;" +
-        "\n\tstroke: transparent;" +
-        "\n\tfill: none;" +
-        "\n\tr:var(--anchorSize);" +
-        "\n\toutline: var(--stroke-width) solid var(--stroke-color);"+
-        "\n\toutline-offset: calc(var(--stroke-width) * -1);" +
-        "\n\tborder-radius: 100%;" +
-        "\n}" +
-        "\n.clickthrough, .unclickable{" +
-        "\n\tpointer-events: none;" +
-        "\n}" +
-        "\n.clickable{" +
-        "\n\tpointer-events: all;" +
-        "\n}" +
-        "\n.fullscreen{" +
-        "\n\toverflow: visible !important;" +
-        "\n\twidth: calc(100vw / var(--total-zoom-x));" +
-        "\n\theight: calc(100vh / var(--total-zoom-y));" +
-        "\n}" +
-        "\npath{" +
-        "\n\tfill: none;" +
-        "\n\tstroke-dasharray: var(--dashing);" +
-        "\n\t&.head{" +
-        "\n\t\td: path(var(--head));" +
-        "\n\t}" +
-        "\n\t&.tail{" +
-        "\n\t\td: path(var(--tail));" +
-        "\n\t}" +
-        "\n}" +
-        "\npath.edge.full, path.tail, path.head{" +
-        "\n\tstroke: var(--stroke-color);" +
-        "\n\tstroke-width: var(--stroke-width);" +
-        "\n}" +
-        "\npath.tail, path.head{" +
-        "\n\tfill:var(--fill);" +
-        "\n}" +
-        "\npath.edge.full.outline{" +
-	    "\nstroke-width: var(--edge-outline-width);" +
-    	"\nstroke: white;" + 
-        "\n}" +
-        "\npath.edge.full.hover-activator{" +
-        "\n\tstroke-width: var(--stroke-width-hover);" +
-        "\n\tstroke: none;" +
-        "\n}" +
-        "\npath.content{" +
-        "\n\tstroke: var(--stroke-color-hover);" +
-        "\n\tstroke-width: var(--stroke-width-hover);" +
-        "\n}" +
-        "\n.label-text{" +
-        "\n\tcolor: var(--stroke-color);" +
-        "\n\tbackground-color: white;" +
-        "\n\tpadding: 0 10px!important;" +
-        "\n\tborder-radius: 3px;" +
-        "\n}" +
-        "\nforeignObject.label{" +
-        "\n\toverflow: visible;" +
-        "\n\tcolor: var(--stroke-color);" +
-        "\n\twidth: 0;" +
-        "\n\theight: 0;" +
-        "\n\twhite-space: pre;" +
-        "\n\t> div{" +
-        "\n\t\twidth: fit-content;" +
-        "\n\t}" +
-        "\n}" +
-        "\n\t" +
-        "\n\t" +
-        "";
+        // let css = ".edge-anchor{" +
+        // "\n\tcursor: crosshair;" +
+        // "\n\tstroke: transparent;" +
+        // "\n\tfill: none;" +
+        // "\n\tr:var(--anchorSize);" +
+        // "\n\toutline: var(--stroke-width) solid var(--stroke-color);"+
+        // "\n\toutline-offset: calc(var(--stroke-width) * -1);" +
+        // "\n\tborder-radius: 100%;" +
+        // "\n}" +
+        // "\n.clickthrough, .unclickable{" +
+        // "\n\tpointer-events: none;" +
+        // "\n}" +
+        // "\n.clickable{" +
+        // "\n\tpointer-events: all;" +
+        // "\n}" +
+        // "\n.fullscreen{" +
+        // "\n\toverflow: visible !important;" +
+        // "\n\twidth: calc(100vw / var(--total-zoom-x));" +
+        // "\n\theight: calc(100vh / var(--total-zoom-y));" +
+        // "\n}" +
+        // "\npath{" +
+        // "\n\tfill: none;" +
+        // "\n\tstroke-dasharray: var(--dashing);" +
+        // "\n\t&.head{" +
+        // "\n\t\td: path(var(--head));" +
+        // "\n\t}" +
+        // "\n\t&.tail{" +
+        // "\n\t\td: path(var(--tail));" +
+        // "\n\t}" +
+        // "\n}" +
+        // "\npath.edge.full, path.tail, path.head{" +
+        // "\n\tstroke: var(--stroke-color);" +
+        // "\n\tstroke-width: var(--stroke-width);" +
+        // "\n}" +
+        // "\npath.tail, path.head{" +
+        // "\n\tfill:var(--fill);" +
+        // "\n}" +
+        // "\npath.edge.full.outline{" +
+	    // "\nstroke-width: var(--edge-outline-width);" +
+    	// "\nstroke: white;" + 
+        // "\n}" +
+        // "\npath.edge.full.hover-activator{" +
+        // "\n\tstroke-width: var(--stroke-width-hover);" +
+        // "\n\tstroke: none;" +
+        // "\n}" +
+        // "\npath.content{" +
+        // "\n\tstroke: var(--stroke-color-hover);" +
+        // "\n\tstroke-width: var(--stroke-width-hover);" +
+        // "\n}" +
+        // "\n.label-text{" +
+        // "\n\tcolor: var(--stroke-color);" +
+        // "\n\tbackground-color: white;" +
+        // "\n\tpadding: 0 10px!important;" +
+        // "\n\tborder-radius: 3px;" +
+        // "\n}" +
+        // "\nforeignObject.label{" +
+        // "\n\toverflow: visible;" +
+        // "\n\tcolor: var(--stroke-color);" +
+        // "\n\twidth: 0;" +
+        // "\n\theight: 0;" +
+        // "\n\twhite-space: pre;" +
+        // "\n\t> div{" +
+        // "\n\t\twidth: fit-content;" +
+        // "\n\t}" +
+        // "\n}" +
+        // "\n\t" +
+        // "\n\t" +
+        // "";
+
+    let css = `
+.edge-anchor {
+	cursor: crosshair;
+	stroke: transparent;
+	fill: none;
+	r:var(--anchorSize);
+	outline: var(--stroke-width) solid var(--stroke-color);
+	outline-offset: calc(var(--stroke-width) * -1);
+	border-radius: 100%;
+}
+.clickthrough, .unclickable{
+	pointer-events: none;
+}
+.clickable{
+	pointer-events: all;
+}
+.fullscreen{
+	overflow: visible !important;
+	width: calc(100vw / var(--total-zoom-x));
+	height: calc(100vh / var(--total-zoom-y));
+}
+path{
+	fill: none;
+	stroke-dasharray: var(--dashing);
+	&.head{
+		d: path(var(--head));
+	}
+	&.tail{
+		d: path(var(--tail));
+	}
+}
+path.edge.full, path.tail, path.head{
+	stroke: var(--stroke-color);
+	stroke-width: var(--stroke-width);
+}
+path.tail, path.head{
+	fill:var(--fill);
+}
+path.edge.full.outline{
+stroke-width: var(--edge-outline-width);
+stroke: white;
+}
+path.edge.full.hover-activator{
+	stroke-width: var(--stroke-width-hover);
+	stroke: none;
+}
+path.content{
+	stroke: var(--stroke-color-hover);
+	stroke-width: var(--stroke-width-hover);
+}
+.label-text{
+	color: var(--stroke-color);
+	background-color: white;
+	padding: 0 10px!important;
+	border-radius: 3px;
+}
+
+.label-end > foreignObject.label{
+	overflow: visible;
+	color: var(--stroke-color);
+	width: 0;
+	height: 0;
+	white-space: pre;
+	> div{
+		width: fit-content;
+	}
+}
+foreignObject.label{
+	overflow: visible;
+	color: var(--stroke-color);
+	width: 0;
+	height: 0;
+	white-space: pre;
+	> div{
+		width: fit-content;
+	}
+}
+
+foreignObject.label-end, foreignObject.label-start {
+	overflow: visible;
+	color: var(--stroke-color);
+	width: 0;
+	height: 0;
+	white-space: pre;
+
+	> div{
+		width: fit-content;
+		background-color: transparent;
+		padding: 0!important;
+	
+	}
+	& .left {
+		display: flex;
+		justify-content: flex-start!important;
+		width: 0px;
+	}
+	& .right {
+		display: flex;
+		justify-content: flex-end!important;
+		width: 0px;
+	}
+}
+
+        `;
         let head = DV.svgHeadTail("head", modename) || '';
         let tail = DV.svgHeadTail("tail", modename) || '';
         let jsx = beautify(
@@ -319,6 +424,21 @@ export class DV {
                 <path className={"preview edge full outline"} d={this.edge.d} />
                 <path className={"preview edge full` + (dashing ? ' dashed' : '') + `"} d={this.edge.d} />
                 <path className={"preview edge full hover-activator"} d={this.edge.d} />
+
+                {/* start label */}
+
+                <foreignObject key={'label-start'} className="label-start" 
+                            x={\`\${sPos.x}px\`} y={\`\${sPos.y}px\`}>
+                    <div className={\`label-text \${sPos.align}\`}>{props.slabel||''}</div>
+                </foreignObject>
+
+                {/* end label */}
+                
+                <foreignObject key={'label-end'} className="label-end" 
+                            x={\`\${ePos.x}px\`} y={\`\${ePos.y}px\`}>
+                    <div className={\`label-text \${ePos.align}\`}>{props.elabel||''}</div>
+                </foreignObject>
+
                 { /* edge separate segments */ }
                 {segments && segments.all && segments.all.flatMap((s, i) => [
                     <path key={i} tabIndex="-1" className={"clickable content segment"} d={s.dpart} />,
@@ -358,18 +478,123 @@ export class DV {
             "\n"+
             "}";
 
+        // let edgeUsageDeclarations = "(ret)=>{\n" +
+        //     "// ** preparations and default behaviour here ** //\n" +
+        //     "// ret.data = data\n" +
+        //     "ret.edgeview = edge.view.id\n" +
+        //     "ret.view = view\n" +
+        //     "// data, edge, view are dependencies by default. delete the line(s) above if you want to remove them.\n" +
+        //     "// add preparation code here (like for loops to count something), then list the dependencies below.\n" +
+        //     "// ** declarations here ** //\n" +
+        //     "ret.start = edge.start\n"+
+        //     "ret.end = edge.end\n"+
+        //     "ret.segments = edge.segments\n"+
+        //     "}";
+
         let edgeUsageDeclarations = "(ret)=>{\n" +
             "// ** preparations and default behaviour here ** //\n" +
             "// ret.data = data\n" +
             "ret.edgeview = edge.view.id\n" +
             "ret.view = view\n" +
             "// data, edge, view are dependencies by default. delete the line(s) above if you want to remove them.\n" +
-            "// add preparation code here (like for loops to count something), then list the dependencies below.\n" +
-            "// ** declarations here ** //\n" +
+            "// add preparation code here (like for loops to count something), then list the dependencies below.\n\n" +
+            
+           
+            "ret.getPosition = () => {\n" +
+            "  if (!ret.segments || !ret.segments.all || !ret.segments.all.length) return null;\n\n" +
+            "  const all = ret.segments.all;\n\n" +
+
+            "  const getSector = (p1 = { x: 0, y: 0 }, p2 = { x: 0, y: 0 }) => {\n" +
+            "    const dx = p2.x - p1.x;\n" +
+            "    const dy = p2.y - p1.y;\n" +
+            "    if (dx === 0 && dy === 0) return null;\n\n" +
+            "    let a = Math.atan2(dy, dx);\n" +
+            "    if (a < 0) a += 2 * Math.PI;\n\n" +
+            "    // 64 sectors (π/32 each), with half-step offset\n" +
+            "    return Math.floor(((a + Math.PI / 64) % (2 * Math.PI)) / (Math.PI / 32)) + 1;\n" +
+            "  };\n\n" +
+            "  const findRule = (rules, s) => {\n" +
+            "    for (let i = 0; i < rules.length; i++) {\n" +
+            "      const r = rules[i];\n" +
+            "      if (s >= r.min && s <= r.max) return r;\n" +
+            "    }\n" +
+            "    return null;\n" +
+            "  };\n\n" +
+
+            "  // START: sectors → (dx, dy, align)\n" +
+            "  const startRules = [\n" +
+            "    { min: 1,  max: 3,  dx:  +5, dy: -25, align: 'left'  },\n" +
+            "    { min: 4,  max: 5,  dx:  +5, dy: -20, align: 'left'  },\n" +
+            "    { min: 6,  max: 6,  dx: +15, dy: -20, align: 'left'  },\n" +
+            "    { min: 7,  max: 17, dx:  -5, dy:  +5, align: 'right' },\n" +
+            "    { min: 18, max: 20, dx:  +5, dy:  +5, align: 'left'  },\n" +
+            "    { min: 21, max: 25, dx:   0, dy:  +5, align: 'left'  },\n" +
+            "    { min: 26, max: 28, dx:  -5, dy:  +5, align: 'left'  },\n" +
+            "    { min: 29, max: 29, dx:  -5, dy: -25, align: 'left'  },\n" +
+            "    { min: 30, max: 32, dx:  -5, dy: -20, align: 'right' },\n" +
+            "    { min: 33, max: 35, dx:  -5, dy:  +5, align: 'right' },\n" +
+            "    { min: 36, max: 37, dx:  -5, dy:  +2, align: 'right' },\n" +
+            "    { min: 38, max: 38, dx:  -5, dy:   0, align: 'right' },\n" +
+            "    { min: 39, max: 49, dx:  +5, dy: -25, align: 'left'  },\n" +
+            "    { min: 50, max: 60, dx:  -5, dy: -25, align: 'right' },\n" +
+            "    { min: 61, max: 64, dx:  +5, dy:  +5, align: 'left'  },\n" +
+            "  ];\n\n" +
+            "  const getStart = (p1 = { x: 0, y: 0 }, sector) => {\n" +
+            "    const r = findRule(startRules, sector);\n" +
+            "    if (!r) return null;\n" +
+            "    return { x: p1.x + r.dx, y: p1.y + r.dy, align: r.align, section: sector };\n" +
+            "  };\n" +
+            "  // END: sectors → (dx, dy, align)\n" +
+            "  const endRules = [\n" +
+            "    { min: 1,  max: 1,  dx:  -5, dy: -25, align: 'right' },\n" +
+            "    { min: 2,  max: 5,  dx:  -5, dy:  +5, align: 'right' },\n" +
+            "    { min: 6,  max: 17, dx:  +5, dy: -25, align: 'left'  },\n" +
+            "    { min: 18, max: 25, dx:  -5, dy: -25, align: 'right' },\n" +
+            "    { min: 26, max: 28, dx:  -3, dy: -25, align: 'right' },\n" +
+            "    { min: 29, max: 29, dx:  +5, dy: -25, align: 'right' },\n" +
+            "    { min: 30, max: 32, dx:  +5, dy:  +5, align: 'left'  },\n" +
+            "    { min: 33, max: 37, dx:  +5, dy: -25, align: 'left'  },\n" +
+            "    { min: 38, max: 38, dx: +10, dy: -25, align: 'left'  },\n" +
+            "    { min: 39, max: 48, dx:  -5, dy:  +5, align: 'right' },\n" +
+            "    { min: 49, max: 49, dx: -10, dy:  +5, align: 'right' },\n" +
+            "    { min: 50, max: 60, dx: +10, dy:  +5, align: 'left'  },\n" +
+            "    { min: 61, max: 64, dx: -10, dy: -25, align: 'right' },\n" +
+            "  ];\n\n" +
+            "  const getEnd = (p2 = { x: 0, y: 0 }, sector) => {\n" +
+            "    const r = findRule(endRules, sector);\n" +
+            "    if (!r) return null;\n" +
+            "    return { x: p2.x + r.dx, y: p2.y + r.dy, align: r.align, section: sector };\n" +
+            "  };\n\n" +
+            "  const first = all[0];\n" +
+            "  const last  = all[all.length - 1];\n" +
+            "  const p1 = first.start.pt;\n" +
+            "  const p2 = last.end.pt;\n" +
+            "  let sector, start, end;\n" +
+            "  if (all.length === 1) {\n" +
+            "    sector = getSector(p1, p2);\n" +
+            "    start = getStart(p1, sector);\n" +
+            "    end   = getEnd(p2, sector);\n" +
+            "  } else {\n" +
+            "    // choose an internal reference point consistently\n" +
+            "    const pA = all[1].start?.pt ?? all[1].pt ?? p1;\n" +
+            "    sector = getSector(p1, pA);\n" +
+            "    start = getStart(p1, sector);\n\n" +
+            "    const pB = all[all.length - 1].start?.pt ?? all[all.length - 1].pt ?? p2;\n" +
+            "    sector = getSector(pB, p2);\n" +
+            "    end = getEnd(p2, sector);\n" +
+            "  }\n\n" +
+            "  return { start, end };\n" +
+            "};\n\n" +
+            "// ** declarations here ** //\n\n" +
             "ret.start = edge.start\n"+
             "ret.end = edge.end\n"+
-            "ret.segments = edge.segments\n"+
+            "ret.segments = edge.segments\n\n"+
+            "ret.position = ret.getPosition()\n"+
+            "ret.sPos = ret.position.start\n"+
+            "ret.ePos = ret.position.end\n" + 
             "}";
+
+        
         let ev = DViewElement.new2("Edge"+name, jsx, vp,
             (v: DViewElement) => {
                 // v.appliableToClasses = [DVoidEdge.cname];
@@ -465,9 +690,27 @@ export class DefaultView {
     {!data && "Model data missing."}
     <div className={'edges'}>
         {level > 0 && [
-            refEdges.map(se => <Edge data={se.start} start={se.startVertex} end={se.endVertex} anchorStart={0} anchorEnd={0} key={se.id} isReference={true} 
-            view={'Edge' + (se.start.composition ? 'Composition' : (se.start.aggregation ? 'Aggregation' : 'Association'))} label={se.start.name}/>),
-            extendEdges.map(se => <Edge data={se.start} start={se.startVertex} end={se.endVertex} view={'EdgeInheritance'} isExtend={true} key={se.id} />)
+            refEdges.map(se => <Edge 
+                data={se.start} 
+                start={se.startVertex} 
+                end={se.endVertex} 
+                anchorStart={0} 
+                anchorEnd={0} 
+                key={se.id} 
+                isReference={true} 
+                view={'Edge' + (se.start.composition ? 'Composition' : (se.start.aggregation ? 'Aggregation' : 'Association'))} 
+                label={se.start.name}
+                elabel={se.start.lowerBound === se.start.upperBound ? se.start.lowerBound : se.start.upperBound === -1 ? se.start.lowerBound + '..*' : se.start.lowerBound + '..' + se.start.upperBound}
+                slabel={''}
+            />),
+            extendEdges.map(se => <Edge 
+                data={se.start} s
+                tart={se.startVertex} 
+                end={se.endVertex} 
+                view={'EdgeInheritance'} 
+                isExtend={true} 
+                key={se.id} 
+            />)
         ]}
     </div>
     {/* metamodel only */}
