@@ -37,6 +37,48 @@
   }
 }
 
+
+
+.properties-tab {
+
+  
+
+  & .css-b62m3t-container {
+  }
+  & .css-13cymwt-control {
+    border: 1px solid var(--bg-4-1);
+    
+  }
+
+  & .css-9jq23d {
+    background-color: var(--accent);
+    color: white;
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+    border-top-left-radius: 3px;
+    border-bottom-left-radius: 3px;
+  }
+
+  & .css-v7duua {
+    background-color: var(--accent);
+    color: white;
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+    border-top-right-radius: 3px;
+    border-bottom-right-radius: 3px;
+    margin: 0!important;
+  }
+  & .css-v7duua:hover {
+    background-color: var(--color);
+    color: white;
+  }
+  & .css-1dyz3mf {
+    padding: 0 0 0 0.5em;
+  }
+
+
+}
+
 .no-data-to-display {
   background-color: var(--bg-2-5);
   margin: 0.5rem;

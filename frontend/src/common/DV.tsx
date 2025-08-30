@@ -704,8 +704,8 @@ export class DefaultView {
                 slabel={''}
             />),
             extendEdges.map(se => <Edge 
-                data={se.start} s
-                tart={se.startVertex} 
+                data={se.start} 
+                start={se.startVertex} 
                 end={se.endVertex} 
                 view={'EdgeInheritance'} 
                 isExtend={true} 
