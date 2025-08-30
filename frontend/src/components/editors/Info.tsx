@@ -606,7 +606,8 @@ function InfoComponent(props: AllProps) {
         {jsx}
 
         
-        {tab && <><h6>State</h6>
+        {tab && <><hr/>
+            <h6>State</h6>
             <div className={'object-state'}>
                 {!ddata || Object.keys(ddata._state).length === 0 ? <pre> Empty</pre> :
                     <ReactJson src={ddata._state}

@@ -23,7 +23,6 @@
     border-top-left-radius: var(--radius);
     border-top-right-radius: var(--radius);
     padding: 0.5em 0 0 0.5em ;
-    background-color: var(--bg-1)!important;
   
   }
 
@@ -31,7 +30,7 @@
     border-left: 1px solid var(--bg-4);
     border-right: 1px solid var(--bg-4);
     padding: 0em 1.5em;
-    background-color: var(--bg-1)!important;
+    background-color: var(--bg-1-3)!important;
   }
 
   .output-row:last-child {
