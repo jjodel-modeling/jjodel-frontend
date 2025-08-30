@@ -16,6 +16,7 @@
     font-size: 1em;
   }
 }
+
 .properties-tab,
 .collaborative-tab,
 .tree-view,
@@ -40,8 +41,6 @@
 
 
 .properties-tab {
-
-  
 
   & .css-b62m3t-container {
   }
@@ -74,6 +73,11 @@
   }
   & .css-1dyz3mf {
     padding: 0 0 0 0.5em;
+  }
+
+  & select {
+    min-width: 200px;
+    height: var(--input-height);
   }
 
 

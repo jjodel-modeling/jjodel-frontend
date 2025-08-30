@@ -25,6 +25,10 @@ i {
   -moz-osx-font-smoothing: grayscale;
 }
 
+.jj {
+    
+}
+
 .jj-object:before {
   content: "\e90a";
 }
@@ -57,9 +61,14 @@ i {
 }
 .jj-copy:before {
   content: "\e902";
+  margin-right: 2px!important;
+  margin-left: 2px!important;
+
 }
 .jj-deep-copy:before {
   content: "\e903";
+  margin-right: 2px!important;
+  margin-left: 2px!important;
 }
 .jj-square:before {
   content: "\e904";
