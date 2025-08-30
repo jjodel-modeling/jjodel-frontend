@@ -443,7 +443,7 @@ class ConsoleComponent extends PureComponent<AllProps, ThisState>{
                     }}>{(i) + ') ' + s}</div>
                 </>)}</div>}
             {/*<label>Query {(this.state.expression)}</label>*/}
-            <hr className={'mt-1 mb-1'}/>
+            <hr className={'mt-1 mb-1'} style={{width: 'calc(100% - 8px)', color: 'var(--bg-3)'}}/>
             {this.state.expression && ashtml && <div className={"console-output-container console-msg"}
                                                      ref={(e) => { this.outputhtml = e; }}
                                                      dangerouslySetInnerHTML={ashtml ? {__html: outstr as string} : undefined}/>}
