@@ -186,6 +186,10 @@ function ToolBarComponent(props: AllProps) {
         setCollapsed(true);
     });*/
 
+    const isRootable = (c: LClass) => {
+        return !(c.referencedBy.filter(a => a !== undefined).some(a => a.composition) || c.extendsChain.map(a => a.referencedBy.filter(b => b !== undefined)).flat().some(a => a.composition)) && !c.abstract;
+    }
+
     const htmlref: React.MutableRefObject<null | HTMLDivElement> = useRef(null);
     useEffect(() => {
         if (!htmlref.current) return;
@@ -294,7 +298,17 @@ function ToolBarComponent(props: AllProps) {
             );*/
             if (node) subleveloptions.push(...addChildren(downward[node.className]));
             //let m1entries: Dictionary<string, LClass> = {};
-            let m1entries = classes.filter((lClass) => lClass.rootable);
+            
+            //let m1entries = classes.filter((lClass) => lClass.rootable);
+            let m1entries = classes.filter((lClass) => isRootable(lClass));
+
+
+            
+            
+
+
+
+
             /*for (let lc of classes){
                 let n = lc.name;
                 if (!m1entries[n]) { m1entries[n] = lc; continue; }
