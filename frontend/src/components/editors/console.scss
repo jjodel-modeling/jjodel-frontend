@@ -261,6 +261,7 @@
     background-color: var(--bg-2);
     //padding: 1rem;
     padding: 0rem 2ch;
+    height: fit-content;
   }
   .output-row:first-of-type {/*
     border-top: 2px solid var(--bg-3);
@@ -329,6 +330,7 @@
     >*{
       margin: auto 0.25rem;
     }
+    padding-bottom: 8px;
   }
 
   span.console-error-msg .bi {
