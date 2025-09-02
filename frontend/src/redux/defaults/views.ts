@@ -202,8 +202,14 @@ border-radius: 3px;
         width: -webkit-fill-available;
         &>*:last-child { padding-bottom: 0.125em; }
     }
-    .abstract { font-style: italic; }
-    .summary { padding: 0.25rem; text-align: center; }
+    .abstract { 
+        font-style: italic; 
+        border: none!important;
+    }
+    .summary { 
+        padding: 0.25rem; 
+        text-align: center; 
+    }
 }
 .highlight {
     border: 2px solid red!important;

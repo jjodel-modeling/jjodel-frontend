@@ -156,8 +156,6 @@ input[type="color"]::-webkit-color-swatch {
   height: 1lh;
 
 
-
-
   /* this works only on native checkbos (no background-image)
   padding: 0.5lh; // half line-height, not well-know unit but works
   scale: 1.35; // padding makes it correctly a full-line height, but visually it looks less, this fixes it without making container bigger or overflowing.
@@ -166,14 +164,47 @@ input[type="color"]::-webkit-color-swatch {
   border: none;
 }
 
-
-.edit-panel .input[type='checkbox'] { // was .input as class
-
+.edit-panel .properties-tab .input[type='checkbox'] { // was .input as class
   width: 0.95lh;
-
 }
+
 input[type='checkbox']:checked { // was .input as class
   background-image: url("../static/svg/toggle-on.svg");
+}
+
+
+.properties-tab h6 {
+  margin-top: 1em;
+}
+
+.properties-tab > .object-state {
+    border: 1px solid var(--bg-4)!important;
+    background-color: var(--bg-1-3);
+    border-radius: var(--radius);
+    padding: 0.5em;
+    font-family: Lekton, monospace;
+    margin-bottom: 1em;
+
+    & .react-json-view  {
+
+      background-color: var(--colors);
+      padding: 0.5em;
+      font-family: Lekton, monospace!important;
+      font-size: 1.15em!important;
+      font-weight: 500!important;
+      line-height: 1.1em;
+      
+      & .data-type-label {
+        font-family: Lekton, monospace!important;
+        font-size: 1em!important;
+        color: cadetblue;
+
+      }
+
+    }
+
+
+
 }
 
 .switch {
@@ -452,6 +483,7 @@ i.bi {
   .css-b62m3t-container{
     min-height: fit-content;
   }
+
   .css-1nmdiq5-menu{
     margin: -10px 0px;
     padding: 18px 0px;

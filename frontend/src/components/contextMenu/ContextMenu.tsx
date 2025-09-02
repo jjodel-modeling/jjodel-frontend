@@ -149,8 +149,8 @@ function ContextMenuComponentInner(props: AllProps) {
             {icon['add']} Add <div style={{position: 'absolute', right: '0'}}>{icon['submenu']}</div>
             {childrenMenu && <section className={'round content right'} style={{/*top: position.y - 216, left: position.x - 333*/}} onContextMenu={(e)=>e.preventDefault()}>
                 <ul className={'right context-menu'}>
-                    {out.map(lc => { let lcname = lc.name; return (
-                        <li key={lcname} onClick={() => {
+                    {out.map(lc => { let lcname = lc.name;  return (
+                        !lc.abstract && <li key={lcname} onClick={() => {
                             close();
                             setChildrenMenu(false);
                             const child = l.addObject({}, lc);

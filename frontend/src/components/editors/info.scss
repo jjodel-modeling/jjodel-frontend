@@ -16,6 +16,7 @@
     font-size: 1em;
   }
 }
+
 .properties-tab,
 .collaborative-tab,
 .tree-view,
@@ -35,6 +36,51 @@
   & section {
 
   }
+}
+
+
+
+.properties-tab {
+
+  & .css-b62m3t-container {
+  }
+  & .css-13cymwt-control {
+    border: 1px solid var(--bg-4-1);
+    
+  }
+
+  & .css-9jq23d {
+    background-color: var(--accent);
+    color: white;
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+    border-top-left-radius: 3px;
+    border-bottom-left-radius: 3px;
+  }
+
+  & .css-v7duua {
+    background-color: var(--accent);
+    color: white;
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+    border-top-right-radius: 3px;
+    border-bottom-right-radius: 3px;
+    margin: 0!important;
+  }
+  & .css-v7duua:hover {
+    background-color: var(--color);
+    color: white;
+  }
+  & .css-1dyz3mf {
+    padding: 0 0 0 0.5em;
+  }
+
+  & select {
+    min-width: 200px;
+    height: var(--input-height);
+  }
+
+
 }
 
 .no-data-to-display {
@@ -68,7 +114,7 @@
   padding-bottom: 0.5em!important;
   border-bottom: 1px solid var(--bg-2-5)!important;
   margin-bottom: 1em!important;
-  padding-top: 0!important;
+  padding-top: 0!important; 
 
 
   &::before {
@@ -79,6 +125,11 @@
     font-family: bootstrap-icons;
     content: "\F789";
   }
+}
+
+.properties-tab hr {
+  margin-top: 0.5em;
+  color: var(--bg-2-5)!important;
 }
 
 .collaborative-tab h1::before {
@@ -144,6 +195,7 @@
 .console h1::before {
   content: "\F5C3";
 }
+
 
 
 
@@ -258,7 +310,7 @@
 }
 
 .options-tab .section .node h5 {
-  padding-left: 0!important; color: red!important;
+  padding-left: 0!important; 
 }
 
 .node-editor {
@@ -276,9 +328,11 @@
     position: relative;
     font-size: 1.1em;
     color: var(--accent)!important;
+
     margin-bottom: 0;
     padding-bottom: 0;
     height: 2em;
+
   }
 
   .sub-element {
@@ -289,11 +343,30 @@
   }
 
   .object-state {
-    border: 1px solid var(--bg-3);
-    background-color: var(--bg-1-1);
+    border: 1px solid var(--bg-4)!important;
+    background-color: var(--bg-1-3);
     border-radius: var(--radius);
     padding: 0.5em;
-    font-family: 'JetBrains Mono', Lekton;
+    font-family: Lekton, monospace;
+    margin-bottom: 1em;
+
+
+    & .react-json-view {
+      background-color: var(--bg-1-1);
+      border-radius: var(--radius);
+      padding: 0.5em;
+      font-family: Lekton, monospace!important;
+      font-size: 1.15em!important;
+      font-weight: 500!important;
+      line-height: 1em;
+
+      & .data-type-label {
+        font-family: Lekton, monospace!important;
+        font-size: 1em!important;
+        color: cadetblue;
+
+      }
+    }
   }
 
 }

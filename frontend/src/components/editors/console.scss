@@ -12,14 +12,52 @@
 
 .group.result-container {
 
+    width: calc(100% - 8px);
+    font-size: 1em!important;
+    
   & .output-row:first-child {
-    border-top: 2px solid var(--bg-3);
+
+    border-top: 1px solid var(--bg-4);
+    border-left: 1px solid var(--bg-4);
+    border-right: 1px solid var(--bg-4);
+    border-top-left-radius: var(--radius);
+    border-top-right-radius: var(--radius);
+    padding: 0.5em 0 0 0.5em ;
+  
+  }
+
+  .output-row {
+    border-left: 1px solid var(--bg-4);
+    border-right: 1px solid var(--bg-4);
+    padding: 0em 1.5em;
+    background-color: var(--bg-1-3)!important;
+  }
+
+  .output-row:last-child {
+    border-left: 1px solid var(--bg-4);
+    border-right: 1px solid var(--bg-4);
+    border-bottom: 1px solid var(--bg-4);
+  }
+
+  code {
+    font-size: 0.7rem;
+    &>span {
+      font-size: 0.7rem;
+      &>span.console-msg {
+        font-size: 0.8rem;
+      }
+    }
+
+    &>span.console-msg {
+      font-size: 0.8rem;
+    }
   }
 
 }
 
 .output-row, .suggestion-keys ul {
   position: relative;
+  
 }
 .output-row, .suggestion-keys ul li {
   &:hover .output-comment,
@@ -223,6 +261,7 @@
     background-color: var(--bg-2);
     //padding: 1rem;
     padding: 0rem 2ch;
+    height: fit-content;
   }
   .output-row:first-of-type {/*
     border-top: 2px solid var(--bg-3);
@@ -291,6 +330,7 @@
     >*{
       margin: auto 0.25rem;
     }
+    padding-bottom: 8px;
   }
 
   span.console-error-msg .bi {

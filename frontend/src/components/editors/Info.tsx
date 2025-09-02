@@ -499,7 +499,7 @@ class builder {
                     </>}
 
                     <CommandBar>
-                        <Btn icon={'delete'} tip={'Remove value'} action={(evt) => {remove(index, isPtr)}} style={{fontSize: '2em'}}/>
+                        <Btn icon={'delete'} tip={'Remove value'} action={(evt) => {remove(index, isPtr)}} />
                     </CommandBar>
                     {/* <button className={'btn m-auto ms-2'} onClick={(evt) => {remove(index, isPtr)}}>
                         <i className={'p-1 bi bi-trash3'} style={{color: 'var(--color)'}}></i>
@@ -606,7 +606,8 @@ function InfoComponent(props: AllProps) {
         {jsx}
 
         
-        {tab && <><h6>State</h6>
+        {tab && <><hr/>
+            <h6>State</h6>
             <div className={'object-state'}>
                 {!ddata || Object.keys(ddata._state).length === 0 ? <pre> Empty</pre> :
                     <ReactJson src={ddata._state}
