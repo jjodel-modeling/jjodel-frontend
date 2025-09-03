@@ -57,6 +57,7 @@ const User = (props: UserProps) => {
 
 type TitleProps = {
     projectID?: Pointer<DProject>;
+    version?: string;
     active: string;
     title: string;
     icon: ReactElement;
@@ -125,32 +126,7 @@ const Title = (props: TitleProps) => {
             );
         };
 
-        // <h2 onBlur={() => setEditTitle(!editTitle)} >
-
-        // function setTitle(e: any) {
-        //     if (title === '') {
-        //         U.alert('e', 'Title cannot be empty', 'Please enter a title for the project.');
-        //         e.target.focus();
-        //         return;
-        //     }
-        //     setProjectModified();
-        //     setEditTitle(!editTitle);
-        // }
-
-        // function setDescription(e: any) {
-
-        //     if (description === '') {
-        //         U.alert('e', 'Description cannot be empty', 'Please enter a description for the project.');
-        //         e.target.focus();
-        //         return;
-        //     }
-        //     setProjectModified();
-        //     setEditDes(!editDes);
-        // }
-
-        // function setPrivacy(e: any) {
-        //     setProjectModified();
-        // }
+        
 
 
 
@@ -183,11 +159,11 @@ const Title = (props: TitleProps) => {
                             </div>
                         </h2> :
                         <>
-                        <Tooltip tooltip={'DoubleClick to edit'} inline={true} position={'left'} offsetX={10}>
-                            <h2 onDoubleClick={() => {setEditTitle(true)}}>
-                            {props.icon} {props.title}
-                        </h2></Tooltip>
-                         </>
+                            <Tooltip tooltip={'DoubleClick to edit'} inline={true} position={'left'} offsetX={10}>
+                                <h2 onDoubleClick={() => {setEditTitle(true)}}>
+                                {props.icon} {props.title}
+                            </h2></Tooltip>
+                        </>
                     }
                     <h6><ProjectProperties/></h6>
                     
@@ -222,6 +198,7 @@ const Title = (props: TitleProps) => {
                             {props.description && <Tooltip tooltip={'DoubleClick to edit'} inline={true} position={'left'} offsetX={10}>
                                 <h3 onDoubleClick={() => setEditDes(!editDes)}>{props.description}</h3>
                             </Tooltip>}
+                            <span className="project-version">v{props.version}</span>
                         </>
                     }
                     
@@ -232,6 +209,7 @@ const Title = (props: TitleProps) => {
                     {props.description && <h3>{props.description}</h3>}
                 </div>
             }
+            
         </div>
     </>);
 };
