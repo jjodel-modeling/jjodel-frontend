@@ -3,7 +3,7 @@ import {useStateIfMounted} from 'use-state-if-mounted';
 import {DUser, R, SetRootFieldAction, U} from '../joiner';
 import Storage from '../data/storage';
 import {AuthApi, UsersApi} from "../api/persistance";
-import logo from '../static/img/jjodel.jpg';
+import logo from '../static/img/jjodel-124.png';
 import {Tooltip} from '../components/forEndUser/Tooltip';
 import { RegisterRequest } from '../api/DTO/RegisterRequest';
 import { LoginRequest } from '../api/DTO/LoginRequest';
