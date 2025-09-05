@@ -700,8 +700,8 @@ border-radius: 3px;
         view.onDataUpdate += "    const zy = (node.zoom && node.zoom.y) || 1;\n";
         view.onDataUpdate += "    const w2 = node.w * 0.5;\n";
         view.onDataUpdate += "    const h2 = node.h * 0.5;\n";
-        view.onDataUpdate += "    const gx = 15 * zx;\n"; // half size of the grif
-        view.onDataUpdate += "    const gy = 15 * zy;\n";
+        view.onDataUpdate += "    const gx = 30 * zx;\n"; // half size of the grif
+        view.onDataUpdate += "    const gy = 30 * zy;\n";
         view.onDataUpdate += "    const cx = x + w2;\n";
         view.onDataUpdate += "    const cy = y + h2;\n";
         view.onDataUpdate += "    const nx = Math.round(cx / gx) * gx - w2;\n";

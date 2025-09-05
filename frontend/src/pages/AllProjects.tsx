@@ -51,7 +51,13 @@ function AllProjectsComponent(props: AllProps): JSX.Element {
         setDropping(false);
     }
 
-    function dropPreview(e: React.DragEvent<any>){
+    function dropPreviewContainer(e: React.DragEvent<any>){
+        e.stopPropagation();
+        e.preventDefault();
+
+        e.dataTransfer.dropEffect = 'none';
+    }
+    function dropPreview(e: any){
         e.stopPropagation();
         e.preventDefault();
         setDropping(true);
@@ -60,45 +66,59 @@ function AllProjectsComponent(props: AllProps): JSX.Element {
 
     return(<Try>
         <>
+        {isDropping ? 
+            <div className={'project-dropping-container'} onClick={mouseleave} onDragOver={dropPreviewContainer}>
+                <div className={'project-dropping-area droparea'} onDrop={dropConfirm} onDragOver={dropPreview}>
+                    <div className={'icon'}><i className="bi bi-cloud-upload"></i></div>
+                    <div className={'body'}>Drop the file to import a .Jjodel project</div>   
+                    <div className={'or'}>or</div>  
+                    <button className={'dark'} onClick={ProjectsApi.import}>select project</button>
+                    <div className={'select-file'}>
+                        <button className={'light'} onClick={mouseleave}>cancel</button>
+                    </div>  
+                </div> 
+            </div>
+            : null
+        }
+
         <Dashboard active={'All'} version={props.version}>
-            <div className={'droparea'} onDrop={dropConfirm} onDragOver={dropPreview} onMouseLeave={mouseleave}>
-                <div style={{opacity: isDropping ? 0.5 : 1}}>
-                <Cards className={'project-create-cards'}>
-                    <Cards.Item
-                        title={'New Jjodel'}
-                        subtitle={'Create a new Jjodel project.'}
-                        icon={'add'}
-                        style={'green'}
-                        action={() => createProject('private')}
-                    />
-                    {!(U.isOffline()) && <Cards.Item
-                        title={'New Jjodel (Collaborative)'}
-                        subtitle={'Create a new Jjodel project.'}
-                        icon={'add'}
-                        style={'yellow'}
-                        action={() => createProject('collaborative')}
-                    />}
-                    <Cards.Item
-                        title={'Import Jjodel'}
-                        subtitle={'Import an existing Jjodel project.'}
-                        icon={'import'}
-                        style={'dark'}
-                        action={ProjectsApi.import}
-                    />
-                    {<Cards.Item icon={'gettingstarted'} url={'https://www.jjodel.io/getting-started/'} style={'red-orange'} title={'Getting Started'} subtitle={'New to Jjodel? No worries'}/>}
-                </Cards>
-                <Catalog projects={projects} />
+            <div>
+                 
+                <div>
+                    <Cards className={'project-create-cards'}>
+                        <Cards.Item
+                            title={'New Jjodel'}
+                            subtitle={'Create a new Jjodel project.'}
+                            icon={'add'}
+                            style={'green'}
+                            action={() => createProject('private')}
+                        />
+                        {!(U.isOffline()) && <Cards.Item
+                            title={'New Jjodel (Collaborative)'}
+                            subtitle={'Create a new Jjodel project.'}
+                            icon={'add'}
+                            style={'yellow'}
+                            action={() => createProject('collaborative')}
+                        />}
+                        <Cards.Item
+                            title={'Import Jjodel'}
+                            subtitle={'Import an existing Jjodel project.'}
+                            icon={'import'}
+                            style={'dark'}
+                            action={() => setDropping(true)}
+                        />
+                        {<Cards.Item icon={'gettingstarted'} url={'https://www.jjodel.io/getting-started/'} style={'red-orange'} title={'Getting Started'} subtitle={'New to Jjodel? No worries'}/>}
+                    </Cards>
+                    <Catalog projects={projects} />
+                </div>
             </div>
-                {isDropping ? <div style={{
-                    position: 'absolute',
-                    left: '50%',
-                    marginLeft: '-50px',
-                    top: '50%',
-                    marginTop: '-50px',}}>Drop the file to import a .jJodel project</div> : null}
-            </div>
+            
         </Dashboard>
+        
         <LatestUpdates page={'AllProjects'}/>
+        
         </>
+
 
     </Try>);
 }

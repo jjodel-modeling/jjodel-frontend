@@ -23,6 +23,108 @@
   // >.card:last-child{ margin: auto; }
 }
 
+.project-version {
+    display: inline-block;
+    background-color: var(--bg-5);
+    color: white;
+    padding: 2px 6px;
+    border-radius: 4px;
+}
+
+.project-dropping-container {
+    background-color: rgba($color: #000000, $alpha: 0.3);
+    position: absolute!important;
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    width: 100%;
+    height: 100%;
+    z-index: 10;
+
+    box-sizing: border-box;
+    
+
+  .project-dropping-area {
+    position: absolute;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    background-color: var(--bg-1-3)!important;
+    border-radius: 10px;
+    width: 800px;
+    height: 350px;
+    box-shadow: rgb(128, 128, 128) 0px 0px 10px 0px;
+
+    & .bi {
+      font-size: 4em;
+    }
+    & .icon {
+      margin-top: 35px;
+      width: 80px;
+      height: 80px;
+      border-radius: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background-color: white;
+    }
+
+    & .body {
+      font-size: large;
+      margin-top: 20px;
+    }
+    & .or {
+      margin: 10px;
+      font-size: large;
+    }
+    & button {
+        margin-top: auto;
+        margin-bottom: auto;
+        border: 2px solid var(--color);
+        padding: 2px 25px;
+        font-size: 1.25em;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: all 300ms;
+        height: fit-content;
+        
+        &.light {
+          color: var(--color);
+          background-color: transparent;
+        }
+        &.dark {
+          background-color: var(--color);
+          color: white;
+        }
+
+      }
+      & button:hover {
+        &.light {
+          background-color: var(--color);
+          color: white;
+        }
+        &.dark {
+          color: var(--color);
+          background-color: transparent;
+        }
+      }
+    & .select-file {
+      margin-top: auto;
+      display: flex!important;
+      justify-content: center;
+      align-self: center!important;
+      background-color: var(--bg-2);
+      width:100%;
+      height: 70px;
+      border-bottom-left-radius: 10px;
+      border-bottom-right-radius: 10px;
+
+      
+    }
+  }
+}
+
 .dashboard-container {
   width: 100%!important;
   height: calc(100% - 60px);
@@ -35,6 +137,8 @@
     height: 100%;
     outline: none;
   }
+
+  
 
   .dash-content {
     flex-grow: 1;

@@ -35,6 +35,80 @@ export abstract class IPoint extends RuntimeAccessibleClass {
         thiss.className = this.cname;
     }
 
+    /* alfonso begin */
+    public static getRelativeDirection(
+        start?: { x?: number; y?: number } | null,
+        end?:   { x?: number; y?: number } | null
+    ): "N" | "NE" | "E" | "SE" | "S" | "SW" | "W" | "NW" {
+        try {
+            const sx = Number(start?.x ?? 0);
+            const sy = Number(start?.y ?? 0);
+            const ex = Number(end?.x ?? 0);
+            const ey = Number(end?.y ?? 0);
+
+            const dx = ex - sx;
+            const dy = ey - sy;
+
+            if (dx === 0 && dy === 0) return "N";
+
+            // angle in radians (0 = E, π/2 = S, -π/2 = N) for screen coords
+            const a = Math.atan2(dy, dx);
+
+            // 8 sectors of 45° each. Order chosen to match sectoring after 22.5° shift.
+            const dirs = ["E","SE","S","SW","W","NW","N","NE"] as const;
+
+            // shift by 22.5° to align sector centers with the primary directions
+            const shifted = (a + Math.PI / 8 + 2 * Math.PI) % (2 * Math.PI);
+            const idx = Math.floor(shifted / (Math.PI / 4));
+
+            return dirs[idx] ?? "N";
+        } catch (e) {
+            // Do not propagate: callers may be on hot input paths.
+            // eslint-disable-next-line no-console
+            console.error("IPoint.getRelativeDirection error:", e);
+            return "N";
+        }
+    }
+
+    /**
+     * Return an offset vector for a given compass direction.
+     * `amount` is the magnitude in pixels (or any unit); diagonals are normalized (amount / √2).
+     * Example: getRelativeOffset("NE", 12) -> { x: +8.485..., y: -8.485... }  (screen coords)
+     */
+    public static getRelativeOffset(
+        dir: "N" | "NE" | "E" | "SE" | "S" | "SW" | "W" | "NW",
+        amount: number = 0
+    ): { x: number; y: number } {
+        // Normalize diagonals so that the vector length ≈ amount.
+        const diag = amount * Math.SQRT1_2; // amount / √2
+
+        switch (dir) {
+            case "N":  return { x:  0,      y: -amount };
+            case "NE": return { x:  diag,   y: -diag   };
+            case "E":  return { x:  amount, y:  0      };
+            case "SE": return { x:  diag,   y:  diag   };
+            case "S":  return { x:  0,      y:  amount };
+            case "SW": return { x: -diag,   y:  diag   };
+            case "W":  return { x: -amount, y:  0      };
+            case "NW": return { x: -diag,   y: -diag   };
+            default:   return { x: 0,       y:  0      };
+        }
+    }
+
+    // Optional instance-friendly wrappers (useful in chaining):
+    public directionTo(other: { x?: number; y?: number } | null | undefined) {
+        return IPoint.getRelativeDirection(this, other);
+    }
+    
+    public offsetToward(
+        dir: "N" | "NE" | "E" | "SE" | "S" | "SW" | "W" | "NW",
+        amount: number = 0
+    ) {
+        const o = IPoint.getRelativeOffset(dir, amount);
+        return this.add(o, true);
+    }
+
+    /* alfonso end */
 
     static printDiff(s1: SizeLike, s2: SizeLike) {
         return ISize.printDiff(s1, s2, true);
