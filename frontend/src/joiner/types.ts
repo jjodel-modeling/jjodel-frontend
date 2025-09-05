@@ -205,7 +205,7 @@ export type InitialVertexSizeObj = Partial<{
     id?: DocString<"Just something to be used as a react key. doesn't need to be a proper Pointer id">,
     index?: number, // where the EdgePoint should be inserted
     w: InitialSizeField, h: InitialSizeField, x: InitialSizeField, y: InitialSizeField}>;
-export type InitialVertexSizeFunc = ((parent: LVoidEdge|LGraphElement, thiss: LVoidVertex|LEdgePoint)=>InitialVertexSizeObj);
+export type InitialVertexSizeFunc = ((parent: LVoidEdge|LGraphElement)=>InitialVertexSizeObj);
 export type InitialVertexSize =  undefined | InitialVertexSizeObj | InitialVertexSizeFunc; // | ((segment: EdgeSegment) => privateTempIVS);
 export type Dependency = {
     firstKey: keyof DState,

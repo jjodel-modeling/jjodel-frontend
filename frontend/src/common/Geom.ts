@@ -208,7 +208,7 @@ export class GraphPoint extends IPoint{
         throw new Error("todo: const g: IGraph = Status.status.getActiveModel().graph;");
         return g.toGraphCoord(p); }
 
-    protected new(): this { return new GraphPoint() as this;}
+    protected new(x?: number, y?:number): this { return new GraphPoint(x,y) as this;}
     public toSize(w: number, h?: number): GraphSize {
         return new GraphSize(this.x, this.y, w, (h === undefined) ? w : h);
     }
@@ -381,11 +381,30 @@ export abstract class ISize<PT extends IPoint = IPoint> extends RuntimeAccessibl
         return thiss; }
 
 
-    public tl(): PT {     return this.makePoint(   this.x,                 this.y             ); }
-    public tr(): PT {     return this.makePoint(this.x + this.w,        this.y             ); }
-    public bl(): PT {     return this.makePoint(   this.x,              this.y + this.h    ); }
-    public br(): PT {     return this.makePoint(this.x + this.w,     this.y + this.h    ); }
-    public center(): PT { return this.makePoint(this.x + this.w / 2, this.y + this.h / 2); }
+    public tl(): PT { return this.makePoint(this.x,              this.y             ); }
+    public tr(): PT { return this.makePoint(this.x + this.w,     this.y             ); }
+    public bl(): PT { return this.makePoint(this.x,              this.y + this.h    ); }
+    public br(): PT { return this.makePoint(this.x + this.w,     this.y + this.h    ); }
+    public cl(): PT { return this.makePoint(this.x,              this.y + this.h / 2); } // todo: test them
+    public cr(): PT { return this.makePoint(this.x + this.w,     this.y + this.h / 2); }
+    public ct(): PT { return this.makePoint(this.x + this.w / 2, this.y             ); }
+    public cb(): PT { return this.makePoint(this.x + this.w / 2, this.y + this.h    ); }
+    public cc(): PT { return this.makePoint(this.x + this.w / 2, this.y + this.h /2 ); }
+    public offset(): PT { return this.makePoint(this.w, this.h); }
+    public center(): PT { return this.cc(); }
+    public l(): PT { return this.cl(); }
+    public r(): PT { return this.cr(); }
+    public t(): PT { return this.ct(); }
+    public b(): PT { return this.cb(); }
+
+    public lt(): PT { return this.tl(); }
+    public rt(): PT { return this.tr(); }
+    public lb(): PT { return this.bl(); }
+    public rb(): PT { return this.br(); }
+    public lc(): PT { return this.cl(); }
+    public rc(): PT { return this.cr(); }
+    public tc(): PT { return this.ct(); }
+    public bc(): PT { return this.cb(); }
     public relativePoint(xPercent: number, yPercent: number): PT { return this.makePoint(this.x + this.w * xPercent, this.y + this.h * yPercent); }
     public equals(size: this): boolean { return this.x === size.x && this.y === size.y && this.w === size.w && this.h === size.h; }
 

@@ -1207,7 +1207,7 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         if (typeof defaultVSize !== "function") { defaultVSizeObj = defaultVSize; }
         else {
             defaultVSizeFunc = defaultVSize;
-            try { defaultVSizeObj = defaultVSizeFunc(lvertex.father, lvertex); }
+            try { defaultVSizeObj = defaultVSizeFunc(lvertex.father); }
             catch (e) { Log.exx("Error in user DefaultVSize function:", {e, defaultVSizeFunc, txt:defaultVSizeFunc.toString()}); }
         }
         if (defaultVSizeObj) {

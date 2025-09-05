@@ -1248,7 +1248,8 @@ export class U {
 
     static stringCompare(s1: string, s2: string): -1 | 0 | 1 { return (s1 < s2) ? -1 : (s1 > s2) ? 1 : 0; }
 
-    static endsWith(str: string, suffix: string | string[]): boolean {
+    static endsWith(str: string|undefined|null, suffix: string | string[]): boolean {
+        if (!str) return false;
         if (Array.isArray(suffix)) {
             for (let suf of suffix) {
                 if (U.endsWith(str, suf)) return true;
@@ -2670,6 +2671,193 @@ export class Uarr{
     static equalsUnsorted(a1: any[], a2: any[]): boolean {
         let diff = Uarr.arrayDifference(a1, a2);
         return (diff.removed.length === 0 && diff.added.length === 0);
+    }
+
+    // NB: arrays give values in this order: positive indexes, negative indexes (in descending order, -1, -2...), string-based keys (in insertion order)
+    static shiftIndexes<T extends any[]>(srcArr0: T[], indexes: number[], moveOffset: number, allowNegativeIndexes: boolean = false, allowArrayOutOfBound: boolean = false): T[] {
+        // rationale: put object reference (weak_mapped) on values to delete and object with arr[i] = {oldItem: arr[i]} <--- weak_mapped object
+        // move all elements and if new location is occupied, put a weak_mapped array with [original, inserted1, inserted2...] <--- weak_mapped array
+        // then iterate array, erase oldItem placeholders, and expand weak_mapped arrays
+        // NB: always use array.forEach to preserve index holes
+        // computational cost: N to replace items, N to expand or remove weak_mapped stuff.
+        type FakeItem = any[] & {__oldItem: T, __isAlsoRemoved?: boolean};
+        type OldItem = { __oldItem: T };
+        let srcArr: (T|FakeItem|OldItem)[] = [...srcArr0] as any;
+        let moveDirection: number = 1;
+        let originalIndexes = indexes;
+        let totalOffset = moveOffset;
+        let originalIndexesMap = U.objectFromArrayValues(originalIndexes, true);
+        if (moveOffset < 0) { moveDirection = -1; moveOffset = -moveOffset; }
+
+
+        let fakeItems: WeakMap<FakeItem, true> = new WeakMap<FakeItem, true>();
+        let toDeleteItems: WeakMap<OldItem, true> = new WeakMap<OldItem, true>();
+        // pretend to move each element, mark old position as removed and create a stack on target new index, remove and expand afterwards
+        originalIndexes.forEach((e, i_donotuse_isconfusing) => {
+            let oldIndex = e;
+            let movingElement = srcArr[oldIndex];
+            let movingElementRaw = srcArr[oldIndex];
+            if (fakeItems.has(movingElement as FakeItem)) movingElement = (movingElement as any).__oldItem;
+            else if (toDeleteItems.has(movingElement as OldItem)) movingElement = (movingElement as any).__oldItem;
+            else toDeleteItems.set(srcArr[oldIndex] = {__oldItem: movingElement} as OldItem, true);
+            Log.eDev(srcArr[oldIndex] !== movingElement, 'shiftIndexes error mismatching positions', {srcArr, e, oldIndex, originalIndexes});
+
+            // if (!originalIndexesMap[i]) return;
+            let newi = oldIndex+totalOffset;
+            if (!allowNegativeIndexes) newi = Math.max(newi, 0);
+            if (!allowArrayOutOfBound) newi = Math.min(newi, srcArr.length - 1);
+            // if (newi === oldIndex) return;
+            // todo: this below should not happen, when newi === oldi should keep oldItem empty? or what? do not need to duplicate
+            //       but need to know it's moved or not because it depends on prepend or append 6
+            // [6, __oldItem: 6, __isAlsoRemoved: true]
+            if (newi >= 0) {
+                console.log('shiftIndexes: debug 44', {srcArr:[...srcArr], oldITarget:movingElement, oldIndex, newi, totalOffset});
+                console.log('shiftIndexes: debug 55', {srcArr:[...srcArr], srcArr0, oldIndex, oldITarget:movingElement, newi, newiTarget: srcArr[newi], isFake: fakeItems.has(srcArr[newi] as any), isDelete: toDeleteItems.has(srcArr[newi] as any), "in": newi in srcArr});
+            }
+            // moved element fell on empty slot
+            if (!(newi in srcArr)) { srcArr[newi] = movingElement; return; } // fakeItems.set(srcArr[newi] = [srcArr[i]] as any, true);
+
+            /*
+
+            *                   deleted | stacked | pre-existing | empty |
+            * deleted              -    |    -    |      -       |   -   | // it doesn't move, not appliable
+            * stacked              -    |    -    |      -       |   -   | // pick original element to move, leave the rest of the stack todo: remove old item from subarray list or it duplicates
+            * pre-existing              |         |              |       | // pre-existing -> create stack, stacked -> stack again  OR deleted->stack&deleted->stack&deleted Again
+            * empty                     |         |              |       | // todo: what to do if asked to move an empty entry? delete target entry or remove from orginalIndexes list? and what if empty entry is stacked with other entries?
+            *
+            * handled?             y         y
+            * */
+
+            if (newi >= 5) {
+                //console.log('shiftIndexes: debug 5', {srcArr:[...srcArr], srcArr0, newi, target: srcArr[newi], isFake: fakeItems.has(srcArr[newi] as any), isDelete: toDeleteItems.has(srcArr[newi] as any), "in": newi in srcArr});
+            }
+            // deleted: element fell on a new cell where other moved elements fell
+            if (fakeItems.has(srcArr[newi] as FakeItem)) {
+                // can only happen if:
+                // 1) if different items can have different offsets which is not supported yet
+                //    in that case maybe should prepend for direction === -1, run some tests if you enable different offsets.
+                // 2) there is allowArrayOutOfBound = false or negative indexes and newi === 0 or newi === array.length
+                (srcArr[newi] as FakeItem).push(movingElement);
+                // Log.eDevv('shiftIndexes impossible case', {srcArr, newi, i, fakeItems, originalIndexes, originalIndexesMap});
+                return;
+            }
+            // stacked: item fell on a cell that was moved      -->      it becomes both marked as deleted and with a new subarray to expand (required to count holes correctly later)
+            if (toDeleteItems.has(srcArr[newi] as OldItem) ) {
+                let isDeletedIndex = srcArr[newi];
+                // a moved item fell on a cell that was about to be deleted
+                let oldElement = srcArr[newi];
+                fakeItems.set(srcArr[newi] = [movingElement] as FakeItem, true);
+                (srcArr[newi] as FakeItem).__oldItem = (oldElement as OldItem).__oldItem;
+                (srcArr[newi] as FakeItem).__isAlsoRemoved = true;
+                // toDeleteItems.set(srcArr[newi], true);
+                return;
+            }
+            // pre-existing: fell on normal element
+            if (newi in srcArr) {
+                // fakeItems.set(srcArr[newi] = (moveDirection === 1 ? [srcArr[newi], srcArr[i]] : [srcArr[i], srcArr[newi]]) as any, true);
+                let oldElement = srcArr[newi];
+                fakeItems.set(srcArr[newi] = [movingElement] as FakeItem, true);
+                (srcArr[newi] as OldItem).__oldItem = (oldElement as any);
+                return;
+            }
+            // empty: fell on empty,
+            srcArr[newi] = movingElement;
+        })
+        let newArr: T[] = [];
+        let holeCount = 0;
+        let holecount_debug: { holeCount: number, j?: number, k?: number, i: number, e: any}[] = [];
+        console.log('shiftIndexes: pre expansion', {srcArr:[...srcArr], srcArr0, originalIndexes, moveOffset, moveDirection, totalOffset, allowNegativeIndexes, allowArrayOutOfBound});
+        srcArr.forEach((e, i) => {
+            console.log('shiftIndexes: expansion', {e, srcArr:[...srcArr], isFake: fakeItems.has(e as any), isDelete: toDeleteItems.has(e as any)});
+            if (toDeleteItems.has(e as OldItem)) { holeCount--; return; }
+            if (fakeItems.has(e as FakeItem)) {
+                console.log('shiftIndexes: expansion 2', {e, srcArr:[...srcArr], isRemoveToo: !!(e as any).__isAlsoRemoved});
+
+                let subarr = e as any as T[];
+                if (moveDirection === 1) { // if direction is >, i prepend old element
+                    let newIndex = i + holeCount;
+                    let k = 0;
+                    while ((newIndex + k) in newArr) k++;
+                    newArr[newIndex + k] = (e as FakeItem).__oldItem;
+                }
+                let k = 0;
+                for (let j = 0; j < subarr.length; j++, k--) {
+                    let newIndex = i + holeCount + j;
+                    while ((newIndex + k) in newArr) k++;
+                    newArr[newIndex + k] = subarr[j];
+                    holecount_debug[newIndex + k] = {e, i, holeCount, j, k};
+                }
+                if (moveDirection === -1) { // if direction is <, i append old element
+                    let newIndex = i + holeCount;
+                    let k = 0;
+                    while ((newIndex + k) in newArr) k++;
+                    newArr[newIndex + k] = (e as FakeItem).__oldItem;
+                }
+                if (!(e as FakeItem).__isAlsoRemoved) holeCount++;
+                return;
+            }
+            let k = 0;
+            while ((i + holeCount + k) in newArr) k++;
+            newArr[i + holeCount + k] = e as T;
+            holecount_debug[i + holeCount] = {e, i, k, holeCount};
+        })
+        console.log('shiftIndexes: ret', {srcArr:[...srcArr], srcArr0, holeCount, holecount_debug, fakeItems, toDeleteItems});
+
+        return newArr;
+    }
+    static shiftIndexes_old<T extends any[]>(srcArr: T[], indexes: number[], moveOffset: number): T[] {
+        // untested and more verbose version
+        let moveDirection: number = 1;
+        let originalIndexes = indexes;
+        if (moveOffset < 0) { moveDirection = -1; moveOffset = -moveOffset; }
+
+        //todo: problem of moving N elements inside an array
+        let additionalOffsets: (number|undefined)[] = [];
+        // this is all for direction ->  need to do for <-   the core is: everything gets moved by X minus n°of elements in the same set encountered within X
+        if (moveDirection === 1 ){
+            for (let i = 0; i < originalIndexes.length; i++) {
+                let additionalOffset = 0;
+                for (let j = i+1; originalIndexes[i]+moveOffset < originalIndexes[j] && j < originalIndexes.length; j++) additionalOffset--;
+                if (additionalOffset) additionalOffsets[i] = additionalOffset;
+            }
+        } else {
+            for (let i = originalIndexes.length-1; i >= 0; i--) {
+                let additionalOffset = 0;
+                for (let j = i-1; Math.max(0, originalIndexes[i]+moveOffset) <= originalIndexes[j] && j >= 0; j--) additionalOffset++;
+                if (additionalOffset) additionalOffsets[i] = additionalOffset;
+            }
+        }
+        let currentHolesNumber: number = 0;
+        let newArr: any[] = [];
+        let oIndex: number = moveDirection === 1 ? 0 : originalIndexes.length - 1;
+
+        if (moveDirection === 1) {
+            for (let i = 0; i < srcArr.length; i++) {
+                if (i === originalIndexes[oIndex]) { // move elements that have to move.
+                    oIndex++;
+                    currentHolesNumber++;
+                    newArr[(+i + moveOffset + (additionalOffsets[i] || 0))] = srcArr[i];
+                    continue;
+                }
+                // move other elements behind filling empty spaces left behind.
+                while (newArr[i-currentHolesNumber]) currentHolesNumber++;
+                newArr[i-currentHolesNumber] = srcArr[i];
+            }
+        } else {
+            for (let i = srcArr.length; i >= 0; i--) {
+                if (i === originalIndexes[oIndex]) { // move elements that have to move.
+                    oIndex--;
+                    currentHolesNumber++;
+                    newArr[(+i + moveOffset + (additionalOffsets[i] || 0))] = srcArr[i];
+                    continue;
+                }
+                // move other elements behind filling empty spaces left behind.
+                while (newArr[i+currentHolesNumber]) currentHolesNumber--;
+                newArr[i+currentHolesNumber] = srcArr[i];
+            }
+        }
+        console.log('Array shift debug', {srcArr, newArr, additionalOffsets, moveOffset, moveDirection});
+        return newArr;
     }
 }
 
