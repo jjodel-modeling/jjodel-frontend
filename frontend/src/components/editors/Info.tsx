@@ -475,6 +475,7 @@ class builder {
                         const element = LModelElement.fromPointer(val.rawValue+'');
                         if (!inline) {
                             return <div className={`item ${inline && 'inline'}`}>
+                                {/*@ts-ignore*/}
                                 {popup && element && <b>{element.instanceof.name}</b>}
                                 {!popup && <select key={'r'+index} onChange={(evt) => {changeDValue(evt, index, true)}} className={'m-auto ms-1 select'} value={val.rawValue+''} data-valuedebug={val.rawValue}>
                                     <option value={'undefined'}>-----</option>
