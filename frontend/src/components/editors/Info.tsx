@@ -9,9 +9,9 @@ import {
     LObject, LPointerTargetable, LReference, LStructuralFeature, LValue,
     LViewElement, MultiSelect, Pointer, Pointers,
     Select,
-    Selectors, SetFieldAction, store, TRANSACTION, U, ValueDetail
+    Selectors, SetFieldAction, SetRootFieldAction, store, TRANSACTION, U, ValueDetail
 } from '../../joiner';
-import {FakeStateProps} from '../../joiner/types';
+import {FakeStateProps, windoww} from '../../joiner/types';
 
 import ReactJson from 'react-json-view' // npm i react-json-view --force
 import React, {Component, Dispatch, JSX, ReactElement, ReactNode} from 'react';
@@ -23,6 +23,7 @@ import {Empty} from "./Empty";
 import { CommandBar, Btn } from '../commandbar/CommandBar';
 import { Tooltip } from '../forEndUser/Tooltip';
 import { icon } from '../../pages/components/icons/Icons';
+import { Toggle } from '../../joiner/components';
 
 class builder {
     static named(data: LModelElement, advanced: boolean): ReactNode {
@@ -444,7 +445,7 @@ class builder {
         const valueslist = (filteredValues).map((val, index) =>
             val.hidden ? null :
                 <label className={'mt-1 d-flex ms-4'} key={index}>
-                    <div className={'border border-dark'}></div>
+                    {/* <div className={'border border-dark'}></div>*/}
 
                     {/* Attribute */}
                     
@@ -474,10 +475,11 @@ class builder {
                         const element = LModelElement.fromPointer(val.rawValue+'');
                         if (!inline) {
                             return <div className={`item ${inline && 'inline'}`}>
-                                <select key={'r'+index} onChange={(evt) => {changeDValue(evt, index, true)}} className={'m-auto ms-1 select'} value={val.rawValue+''} data-valuedebug={val.rawValue}>
+                                {popup && element && <b>{element.instanceof.name}</b>}
+                                {!popup && <select key={'r'+index} onChange={(evt) => {changeDValue(evt, index, true)}} className={'m-auto ms-1 select'} value={val.rawValue+''} data-valuedebug={val.rawValue}>
                                     <option value={'undefined'}>-----</option>
                                     {selectOptions}
-                                </select>
+                                </select>}
                                 {popup && 
                                     <div className={'inline'}>
                                         <Info mode={'inline'} localData={element} />
