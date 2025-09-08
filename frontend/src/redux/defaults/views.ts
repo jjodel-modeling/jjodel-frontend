@@ -297,7 +297,8 @@ div.header:has(.open:hover) {
     static enum(vp: DViewElement): DViewElement {
         const view = DViewElement.new2('Enum', DV.enumeratorView(), vp, (view)=>{
             view.appliableToClasses = [DEnumerator.cname];
-            view.adaptWidth = true; view.adaptHeight = true;
+            view.adaptWidth = true; 
+            view.adaptHeight = true;
             view.appliableTo = 'Vertex';
             view.oclCondition = 'context DEnumerator inv: true';
             view.palette = {'color-':  U.hexToPalette('#ffa500', '#000', '#fff'), 'background-':  U.hexToPalette('#fff', '#eee', '#f00')};
@@ -508,7 +509,8 @@ border-radius: 3px;
     static object(vp: DViewElement): DViewElement {
         const view = DViewElement.new2('Object', DV.objectView(), vp, (view)=>{
             view.appliableToClasses = [DObject.cname];
-            view.adaptWidth = true; view.adaptHeight = true;
+            view.adaptWidth = true; 
+            view.adaptHeight = true;
             view.oclCondition = 'context DObject inv: true';
             view.palette = {'color-':  U.hexToPalette('#f00', '#000', '#fff'), 'background-': U.hexToPalette('#fff', '#eee', '#f00')};
 
@@ -589,11 +591,26 @@ border-radius: 3px;
 
             //view.palette = {'color-':  U.hexToPalette('#f00', '#000', '#fff'), 'background-': U.hexToPalette('#fff', '#eee', '#f00')};
 
-            view.css = 'border-radius: var(--radius); \n.singleton {text-align: center; border: none; background-color: var(--accent); color: white; padding: 4px 30px; width: fit-content;}\n';
+            //view.css = 'border-radius: var(--radius); \n.singleton {text-align: center; border: none; background-color: var(--accent); color: white; padding: 4px 30px; width: fit-content;}\n';
+            //view.css += '.singleton::before {position: absolute; left: 10px; font-family: bootstrap-icons; content: "\\F799";}\n';
+
+            view.css += 'border-radius: var(--radius);\n';
+            view.css += '.singleton {\n';
+            view.css += '    border: none!important;\n';
+            view.css += '    text-align: center;\n';
+            view.css += '    background-color: var(--accent);\n';
+            view.css += '    color: white;\n';
+            view.css += '    padding: 4px 30px;\n';
+            view.css += '    width: fit-content;\n';
+            view.css += '    & .header {\n';
+            view.css += '        white-space: pre;\n';
+            view.css += '    }\n';
+            view.css += '}\n';
             view.css += '.singleton::before {position: absolute; left: 10px; font-family: bootstrap-icons; content: "\\F799";}\n';
 
             view.defaultVSize = defaultVertexSize;
             view.appliableTo = 'Vertex';
+            view.adaptWidth = true; view.adaptHeight = true;
             view.usageDeclarations = '(ret) => {\n' +
                 '// ** preparations and default behaviour here ** //\n' +
                 'ret.data = data\n' +
