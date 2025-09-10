@@ -2560,7 +2560,7 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
     }
     get_isRootable(c: Context): LClass['rootable'] { return this.get_rootable(c); }
     protected get_rootable(c: Context): this["rootable"] {
-        console.log('isRootable', {rootable: c.data.rootable, instantiable:this.get_instantiable(c), composed:this.get_isComposed(c)})
+        // console.log('isRootable', {rootable: c.data.rootable, instantiable:this.get_instantiable(c), composed:this.get_isComposed(c)})
         if (c.data.rootable !== undefined) return c.data.rootable;
         else return this.get_instantiable(c) && !this.get_isComposed(c);
     }

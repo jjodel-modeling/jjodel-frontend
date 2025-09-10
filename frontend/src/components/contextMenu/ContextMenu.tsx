@@ -1,15 +1,15 @@
-import React, {Dispatch, ReactElement, ReactNode} from 'react';
+import React, {Dispatch, ReactElement, ReactNode, useRef} from 'react';
 import {connect} from 'react-redux';
 import './style.scss';
 import {SetRootFieldAction, TRANSACTION} from '../../redux/action/action';
 import {
-    DClass, DGraphElement,
+    DClass, DGraph, DGraphElement, Dictionary,
     DNamedElement,
     DState,
     DUser, DV,
     DValue,
     DViewElement,
-    GObject, L,
+    GObject, GraphElementComponent, L,
     LClass,
     LGraphElement, LModel,
     LNamedElement,
@@ -51,8 +51,23 @@ function ContextMenuComponent(props: AllProps) {
 }
 let oldRef: Element | null = null;
 
-export let ShowContextMenu: (nodeID: Pointer<DGraphElement>, x: number, y: number)=>void = null as any
+// export let ShowContextMenu: (nodeID: Pointer<DGraphElement>, x: number, y: number)=>void = null as any
 
+export function ShowContextMenu(nodeid: Pointer<DGraphElement>, x: number, y: number): void {
+    let html = document.querySelector('#'+nodeid);
+    let graph_html: HTMLElement | null = html as HTMLElement;
+    let graphid: Pointer<DGraph> | undefined = undefined;
+    while (graph_html) {
+        if (graph_html.dataset?.nodetype === 'Graph') { graphid = graph_html.dataset.nodeid; break; }
+        graph_html = graph_html.parentElement;
+    }
+    // console.log('ShowContextMenu', {nodeid, x, y, html, graphid} );
+    if (!graphid) { Log.eDevv('contextmenu graph not found', {nodeid, graphid}); return; }
+    contextMenuMap[graphid]?.(nodeid, x, y);
+}
+windoww.ShowContextMenu = ShowContextMenu;
+let contextMenuMap: Dictionary<Pointer<DGraph>, (nodeid: Pointer<DGraphElement>, x: number, y: number)=>void> = {};
+windoww.contextMenuMap = contextMenuMap;
 function ContextMenuComponentInner(props: AllProps) {
     // const project = user.project as LProject;
     // const display = props.display;
@@ -62,13 +77,13 @@ function ContextMenuComponentInner(props: AllProps) {
     const [suggestedName, setSuggestedName] = useStateIfMounted('');
     const [childrenMenu, setChildrenMenu] = useStateIfMounted(false);
     const [editPanel, setEditPanel] = useStateIfMounted(false);
-    // NB: do not cache/initialize only once, otherwise closure will not update nodeid, x and y
-    ShowContextMenu = (nodeid: Pointer<DGraphElement>, x: number, y: number)=>{
-        console.log('ShowContextMenu', {nodeid, x, y, display} )
+    //if (!contextMenuMap[props.graph]) {// NB: do not cache/initialize only once, otherwise closure will not update nodeid, x and y
+    contextMenuMap[props.graph] = (nodeid: Pointer<DGraphElement>, x: number, y: number)=> {
+        // console.log('ShowContextMenu', {graph:props.graph, nodeid, x, y, display} );
         if (display && (nodeid === display.nodeid && x === display.x && y === display.y)) return;
         setDisplay({nodeid, x, y});
-    }
-    windoww.ShowContextMenu = ShowContextMenu;
+    };
+
 
     if (!display) return null;
     const nodeid = display.nodeid;
@@ -84,11 +99,12 @@ function ContextMenuComponentInner(props: AllProps) {
     let model = ldata?.model;
 
     const close = (panelClick?: boolean) => {
+        // console.log('HideContextMenu', {graph:props.graph, display, panelClick} );
         if (!display) return;
         setSuggestedName('');
         setMemorec(null);
         // SetRootFieldAction.new('contextMenu', {display: false, x: 0, y: 0});
-        setDisplay(null)
+        setDisplay(null);
         setChildrenMenu(false);
         if (!panelClick) setEditPanel(false);
         // TRANSACTION('close context menu', ()=>{ })
@@ -187,7 +203,6 @@ function ContextMenuComponentInner(props: AllProps) {
         if (ddata?.className === 'DObject') {
             let out: any[] = [];
             let children = (ldata as LObject).features.map(feat=>getAddChildren(feat, model as any, out)).filter(e => !(Array.isArray(e) && e.length === 0));
-            console.log('ctxmenu obj', {out, data, children});
 
             if (!Array.isArray(children) || children.length > 0) {
                 jsxList.push(...children);
@@ -200,7 +215,6 @@ function ContextMenuComponentInner(props: AllProps) {
         if (ddata?.className === 'DValue') {
             let out: any[] = [];
             let children = getAddChildren(ldata as any as LValue, model as any, out);
-            console.log('ctxmenu val', {out, data, children});
             if (!Array.isArray(children) || children.length > 0) {
                 jsxList.push(children);
                 jsxList.push(<hr key={hri++} className={'my-1'} />);
@@ -374,7 +388,9 @@ function ContextMenuComponentInner(props: AllProps) {
 
         </div>);
 }
-interface OwnProps {}
+interface OwnProps {
+    graph: Pointer<DGraph>
+}
 interface StateProps {
     /*user: LUser,
     display: boolean,

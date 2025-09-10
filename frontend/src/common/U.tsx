@@ -171,7 +171,7 @@ export class U {
            document.addEventListener('click', U.clickedOutsideCallback, true); // bubbling event! called before normal events.
            // $(document).on('click', U.clickedOutsideCallback);
         }
-        console.log('clickedOutside registering', {currentTarget, callback, map, arr});
+        // console.log('clickedOutside registering', {currentTarget, callback, map, arr});
         if (callback) {
             map.set(currentTarget, callback);
             if (!arr.includes(currentTarget)) arr.push(currentTarget);

@@ -308,7 +308,6 @@ export class Selectors{
         return dobject.name;
     }
     static getByName2(name?: string | DPointerTargetable | LPointerTargetable, dtype?: typeof DPointerTargetable | undefined | string, caseSensitive: boolean = false, s?:DState): DPointerTargetable | null {
-        console.log('getByName2', {name, dtype, caseSensitive});
         if (!name) { return null; }
         if (typeof name === 'object') { return name as DPointerTargetable; }
         if (!s) s = store.getState();
@@ -321,7 +320,6 @@ export class Selectors{
         for (let id in s.idlookup) {
             let d = s.idlookup[id];
             if (!d || typeof d !== 'object') continue;
-            console.log('getByName2 crash2', {d, name, dtype, caseSensitive});
             if (classname !== (caseSensitive ? d.className : d.className.toLowerCase())) continue;
             let dname = Selectors.getName(d, s);
             if (!caseSensitive) dname = dname?.toLowerCase();

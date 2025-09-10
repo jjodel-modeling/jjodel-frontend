@@ -142,6 +142,7 @@ function deepCopyButOnlyFollowingPath(oldStateDoNotModify: DState, action: Parse
             }
             switch (modifier.substring(0, 2)) {
                 case '[]':
+                    // +=...5 and all less complex variations tested
                 case '+=':// +=...5    --> add at position 5 N elements (value must be array that will be flattened and inserted)
                     oldValue = current[key]; // todo check all oldvalue assignment to prevent double set
                     if (modifier.substring(2, 5) === '...') isMultiAddRemove = true;
@@ -183,11 +184,11 @@ function deepCopyButOnlyFollowingPath(oldStateDoNotModify: DState, action: Parse
                     }
                     break;
             }
-
             if (index === undefined) index = -1;
-            if (index < 0) index = oldValue.lenght - index + 1;
-            // if (index > oldValue.length) index = oldValue.lenght % index; nevermind, i want to allow to add empty spaces, like [1,2, emptyx8, 11]
+            if (index < 0) index = (oldValue?.length !== undefined) ? oldValue.length + index + 1 : 0;
+            if (index === undefined) return false; // just to force typescript correcting his typecheck on index
 
+            // if (index > oldValue.length) index = oldValue.length % index; nevermind, i want to allow to add empty spaces, like [1,2, emptyx8, 11]
             // let unpointedElement: DPointerTargetable | undefined;
             // perform final assignment
             if (action.type === CreateElementAction.type && current[key]) {
@@ -540,6 +541,13 @@ export function reducer(oldState: DState = initialState, action: Action): DState
     if (U.navigating) return oldState;
     if (!windoww.jjactions) windoww.jjactions = [];
     windoww.jjactions.push(action);
+    let safeMode = false;
+    if (!safeMode) {
+        let ret = unsafereducer(oldState, action);
+        DO_AFTER_TRANSACTION();
+        return ret;
+    }
+
     try {
         let ret = unsafereducer(oldState, action);
         DO_AFTER_TRANSACTION();
