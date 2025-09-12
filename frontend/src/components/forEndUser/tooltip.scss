@@ -78,8 +78,8 @@
   &> .dark * {
     pointer-events: all;
     margin: auto;
-    background: var(--palette-w);
-    border: 1px solid var(--palette-g);
+    background: var(--bg-4);
+    border: 1px solid var(--bg-4);
     color: white;
     padding: 0.4em;
     border-radius: var(--radius); //.5em;
