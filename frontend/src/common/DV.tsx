@@ -813,7 +813,8 @@ public static class(): string { return (`
     {data.extends.some(a => a.model.id !== data.model.id) && <i className="bi bi-arrow-up open"></i>}
     {data.extendedBy.some(a => a.model.id !== data.model.id) && <i className="bi bi-arrow-down open"></i>}
     {/* data.referencedBy.filter(a => typeof a !== 'undefined').some(a => a.model.id !== data.model.id) && <i className="bi bi-arrow-left open"></i>*/}
-        {refs.some(b => b.model.id !== data.model.id) && <Tooltip inline position={'top'} offsetX={20} tooltip={refNames.join(',  ')}><i className="bi bi-arrow-left open"></i></Tooltip>}
+        
+    {refs.some(b => b.model.id !== data.model.id) && <Tooltip inline position={'top'} offsetX={20} tooltip={refNames.join(',  ')}><i className="bi bi-arrow-left open"></i></Tooltip>}
 
 
     </div>

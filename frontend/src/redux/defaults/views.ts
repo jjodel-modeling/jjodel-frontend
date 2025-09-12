@@ -264,11 +264,11 @@ div.header:has(.open:hover) {
     ret.operations = data.operations
     ret.abstract = data.abstract
     ret.interface = data.interface
-    ret.refs = data.referencedBy.filter(a => typeof a !== 'undefined')
-    ret.refNames = ret.refs.filter(a => typeof a !== 'undefined').filter(a => a.model.id !== data.model.id).map(a => a.model.name + '::'  + a.parent.name + '.' + a.name)
     ${udLevel}
     ${udGrid}
     ${udSnap}
+    ret.refs = data.referencedBy.filter(a => typeof a !== 'undefined')
+    ret.refNames = ret.refs.filter(a => typeof a !== 'undefined').filter(a => a.model.id !== data.model.id).map(a => a.model.name + '::'  + a.parent.name + '.' + a.name)
 
 }`;
             // view.events = {e1:"(num) => {\n\tdata.name = num;\n}"}
