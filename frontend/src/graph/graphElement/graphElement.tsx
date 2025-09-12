@@ -308,6 +308,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
                 let labels = edgeOwnProps.labels;
                 // dge = DEdge.new(ownProps.htmlindex as number, ret.data?.id, parentnodeid, graphid, nodeid, startnodeid, endnodeid, longestLabel, labels);
                 let ddata = ret.data?.__raw;
+                // NB: nodeid should always be already present in OwnProps due to jsx injection.
                 dge = DEdge.new2(ddata?.id, parentnodeid, graphid, nodeid, startnodeid, endnodeid, (d: DEdge)=>{
                     //d.longestLabel = longestLabel;
                     //d.labels = labels;

@@ -164,7 +164,7 @@ export class UX{
                         let edgeProps: EdgeOwnProps = rprops as any;
                         let edgestart_id: Pointer<DGraphElement> | Pointer<DModelElement> = (edgeProps.start as any).id || edgeProps.start;
                         let edgeend_id: Pointer<DGraphElement> | Pointer<DModelElement> = (edgeProps.end as any).id || edgeProps.end;
-                        idbasename = injectProps.parentnodeid + "_" + edgestart_id + "-" + edgeend_id;
+                        idbasename = injectProps.parentnodeid + "_" + edgestart_id + "-" + edgeend_id + (edgeProps.isReference ? 'R' : (edgeProps.isExtend ? 'X' : 'E'));
                 }
                 // (injectProps.parentnodeid)+"_"+(dataid)+indices.join("_");//injectProps.graphid + '_' + dataid;
                 // console.log("setting nodeid", {injectProps, props:rprops, re});
