@@ -1036,9 +1036,20 @@ export class LTypedElement<Context extends LogicContext<DTypedElement> = any> ex
     many!: boolean;
     required!: boolean;
     allowCrossReference!: boolean;
+    hasCrossReference!: boolean;
+    crossReferences!: [LClass] | []; // array of [0, 1] classes
 
 
 
+    set_crossReferences(v: never, c: Context) { return this.cannotSet('crossReferences'); }
+    set_hasCrossReference(v: never, c: Context) { return this.cannotSet('hasCrossReference'); }
+    get_hasCrossReference(c: Context): this['hasCrossReference'] { return this.get_crossReferences(c).length > 0; }
+    get_crossReferences(c: Context): this['crossReferences'] {
+        if (!this.get_allowCrossReference(c)) return [];
+        let refs = [this.get_type(c)];
+        let mid = this.get_model(c).id;
+        return refs.filter(r => r?.model?.id !== mid) as [LClass];
+    }
     get_crossReference(c: Context): this['allowCrossReference'] { return this.get_allowCrossReference(c); }
     get_isCrossReference(c: Context): this['allowCrossReference'] { return this.get_allowCrossReference(c); }
     set_crossReference(v: this['allowCrossReference'], c: Context): boolean { return this.set_allowCrossReference(v, c); }
@@ -4434,6 +4445,12 @@ export class LModel<Context extends LogicContext<DModel> = any, C extends Contex
         }
     }
 
+    package!: LPackage;
+    public get_package(c: Context): LPackage { return this.get_packages(c)[0]; }
+    public set_package(c: Context): LPackage { return this.cannotSet('package, set packages instead.'); }
+    public get_addClass(c: Context): LPackage['addClass'] { return this.get_package(c).addClass; }
+    public get_addEnum(c: Context): LPackage['addEnum'] { return this.get_package(c).addEnum; }
+
     public get_dependencies(c: Context): this['dependencies']{
         return LPointerTargetable.fromPointer(c.data.dependencies);
     }
@@ -4918,6 +4935,7 @@ instanceof === undefined or missing  --> auto-detect and assign the type
         if (!context.data.isMetamodel) { return context.data.instanceof ? (this.get_instanceof(context) as LModel).packages : []; }
         let ret: LPackage[] = context.data.packages.map((pointer) => LPointerTargetable.from(pointer));
         if (includeCrossReferences) U.arrayMergeInPlace(ret, context.proxyObject.allDependencies.flatMap(dep=>dep.packages));
+        ret = ret.filter(e=>!!e);
         return ret;
     }
 
@@ -5933,7 +5951,7 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
                 const validSubTypesMap: Dictionary<Pointer, LClassifier> = {};
                 for (let l of validSubTypes) validSubTypesMap[l.id] = l;
 
-                console.log('L'+c.data.className.substring(1)+'.t2m() types found.', {d:c.data, j:json, validSubTypesMap, includeEnum, type});
+                console.log('L'+c.data.className.substring(1)+'.t2m() types found.', {d:c.data, json, json_4val, validSubTypesMap, includeEnum, type});
 
                 // START: actually set the values
                 let i: number = -1;
@@ -5986,6 +6004,7 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
                         child2.t2m(v);
                     }
                 }
+                if (this.get_instanceof(c)?.name === 'expression') console.error('set val', {uniformedValues, json, validSubTypesMap, out, oldValues})
                 this.set_values(uniformedValues, c);
 
             })
@@ -6897,6 +6916,18 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
         return r.success;
     }
 
+    hasCrossReference!: boolean;
+    crossReferences!: LObject[];
+
+    set_crossReferences(v: never, c: Context) { return this.cannotSet('crossReferences'); }
+    set_hasCrossReference(v: never, c: Context) { return this.cannotSet('hasCrossReference'); }
+    get_hasCrossReference(c: Context): this['hasCrossReference'] { return this.get_crossReferences(c).length > 0; }
+    get_crossReferences(c: Context): this['crossReferences'] {
+        if (!this.get_allowCrossReference(c)) return [];
+        let refs = this.get_values(c);
+        let mid = this.get_model(c).id;
+        return refs.filter(r => (r as LObject)?.model?.id !== mid) as LObject[];
+    }
     get_crossReference(c: Context): this['allowCrossReference'] { return this.get_allowCrossReference(c); }
     get_isCrossReference(c: Context): this['allowCrossReference'] { return this.get_allowCrossReference(c); }
     set_crossReference(v: this['allowCrossReference'], c: Context): boolean { return this.set_allowCrossReference(v, c); }
