@@ -668,6 +668,7 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
     DState(): this {
         let thiss: DState = this.thiss as any;
         thiss.debug = !!localStorage.getItem('debug');
+        thiss.languages = windoww.DV.defaultLanguages();
         return this;
     }
 
@@ -3721,6 +3722,23 @@ export enum EModelElements{
     "(m1) Object" = "DObject",
     "(m1) Value" = "DValue",
 }
+
+export class Language {
+    m2t: string;
+    t2m: string;
+    edited: boolean;
+    v: number;
+    test_text: string;
+    constructor(m2t: string = '', t2m: string='', test_text: string = '') {
+        this.t2m = t2m || '';// || m2t ? 'Not implemented, the m2t transformation will be unidirectional' : "Not implemented";
+        this.m2t = m2t || '';
+        this.edited = false;
+        this.test_text = test_text || '';
+        this.v = windoww.VersionFixer.get_highestversion();
+    }
+}
+
+
 export class ViewEClassMatch {
     static NOT_EVALUATED_YET = undefined;
     static MISMATCH = Number.NEGATIVE_INFINITY;

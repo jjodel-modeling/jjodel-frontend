@@ -1,3 +1,4 @@
+import { type Language } from '../joiner';
 import {
     Asterisk,
     Circle,
@@ -63,7 +64,6 @@ import {
     store, TRANSACTION, Trapezoid, Triangle, U, UserHistory, Vertex, VoidVertex,
 } from '../joiner';
 import {DV} from "../common/DV";
-//import {Selected} from "../joiner/types";
 import {DefaultEClasses, ShortDefaultEClasses} from "../common/U";
 import { GraphElements, Graphs, Vertexes, Edges, Fields } from '../joiner';
 import DefaultViews from "./defaults/views";
@@ -214,6 +214,7 @@ export class DState extends DPointerTargetable{
     dialog_response: string = '';
     action_description: string = '';
     action_title: string = '';
+    languages!: Dictionary<string, Language>;
 
 
     static fixcolors(){
@@ -313,6 +314,8 @@ export class DState extends DPointerTargetable{
     outline-width: 4px;
     outline-style: solid;
     outline-color: var(--selected)!important;
+    overflow: hidden!important;
+
   }
 }
 

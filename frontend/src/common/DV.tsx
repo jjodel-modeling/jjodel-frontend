@@ -11,7 +11,8 @@ import {
     Pointer,
     RuntimeAccessible,
     ShortAttribETypes as SAType,
-    U, Draggable, Measurable
+    U, Draggable, Measurable,
+    Language
 } from '../joiner';
 import React, {ReactNode, useState} from "react";
 import {PaletteType} from "../view/viewElement/view";
@@ -25,6 +26,65 @@ let ShortAttribETypes: typeof SAType = (window as any).ShortAttribETypes;
 
 @RuntimeAccessible('DV')
 export class DV {
+    static defaultLanguages(): Dictionary<string, Language> {
+
+        let m2t: string = 'function(model) {\n\treturn "Not implemented, this is a placeholder.";\n}';
+        let t2m: string | undefined = undefined;
+        let ret: Dictionary<string, Language> = {
+            JSON: new Language('function(modelData) {\n\treturn JSON.stringify(modelData, null, 4);\n}', "function(text) {\n\treturn JSON.parse(text);\n}"),
+            'eCore/JSON': new Language(m2t, t2m),
+            'Emfatic'/* (m2 only) */: new Language(m2t, t2m),
+            'flexmi/YAML': new Language(m2t, t2m),
+            'flexmi/XMI': new Language(m2t, t2m),
+            'eCore/XMI': new Language(m2t, t2m),
+        }
+
+        ret.testLanguage = new Language(`function (model, node){
+    let text: string = '' model.className + ':' + model.id;
+    for (let child of model.attributes) text += '\\n\\t'+child.name+':'+JSON.stringify(child.values);
+    for (let child of model.references) text += '\\n\\t'+child.name+':'+JSON.stringify(child.values.map(v=>v.id));
+    text+='\\n\\tnode.x' = node.initialX;
+    text+='\\n\\tnode.initialX' = node.x;
+    return text;
+}`,
+            `function (text) {
+    let lines = text.split('\\n');
+    lines = lines.map(line=>{ // uncomment
+        let comment_index = line.indexOf('//'); return (comment_index==-1) ? line : line.substr(0,comment_index);
+    }
+    let parsed = {};
+    for (let line of lines) {
+        let split = Indexline.indexOf(':');
+        let key = parsed.className = line.substring(0,splitIndex).trim();
+        let val = line.substring(splitIndex+1).trim();
+        if (line[0] !== ' ') { // first line contains the type and identifier
+            parsed.className = key;
+            parsed.id = val;
+        }
+        else {
+            splitIndex = key.indexOf('.');
+            if (splitIndex === -1) parsed.id = parsed[key] = val; // set simple value
+            else { // set nested value
+                let current = parsed;
+                let paths = key.split('.');
+                for (let i = 0; i < paths.length; i++) {
+                    let k = paths[i];
+                    if (i === paths.length -1) current[k] = val; // perform assignment at the final index
+                    else { // else navigate inside the sub-object
+                        if (!current[k]) current[k] = {};
+                        current = current[k];
+                    }
+                }
+            }
+        }
+        
+    }
+    return parsed;
+    
+}`);
+        // delete ret.testLanguage;
+        return ret;
+    };
     public static invisibleJsx(): string { return ''; }
     public static modelView(): string { return beautify(DefaultView.model()); }
     public static packageView(): string { return beautify(DefaultView.package()); }
@@ -412,7 +472,7 @@ foreignObject.label-end, foreignObject.label-start {
         let tail = DV.svgHeadTail("tail", modename) || '';
         let jsx = beautify(
         `<div className={"edge hoverable hide-ep clickthrough fullscreen ` + modename + `"}>
-            <svg className={"clickthrough fullscreen"} onDoubleClick={() => edge.addMidPoint(edge.start.size.tl().add(edge.end.size.tl()).divide(2))}>
+            <svg className={"clickthrough fullscreen"} onDoubleClick={() => setTimeout(edge.addMidPoint(edge.start.size.tl().add(edge.end.size.tl()).divide(2)), 150)}>
                 { /* edge full paths
                
                  first is preview path, normally seen
@@ -812,7 +872,9 @@ public static class(): string { return (`
     <span className={(data.abstract ? "abstract": "")}><Input data={data} field={'name'} hidden={true} autosize={true} /></span>
     {data.extends.some(a => a.model.id !== data.model.id) && <i className="bi bi-arrow-up open"></i>}
     {data.extendedBy.some(a => a.model.id !== data.model.id) && <i className="bi bi-arrow-down open"></i>}
-    {data.referencedBy.filter(a => typeof a !== 'undefined').some(a => a.model.id !== data.model.id) && <i className="bi bi-arrow-left open"></i>}
+    {/* data.referencedBy.filter(a => typeof a !== 'undefined').some(a => a.model.id !== data.model.id) && <i className="bi bi-arrow-left open"></i>*/}
+        
+    {refs.some(b => b.model.id !== data.model.id) && <Tooltip inline position={'top'} offsetX={20} tooltip={refNames.join(',  ')}><i className="bi bi-arrow-left open"></i></Tooltip>}
 
 
     </div>
@@ -866,11 +928,11 @@ public static enum(): string { return (
 
     public static feature(): string { return (
 `
-/* -- Jjodel Abstract Syntax Specification v2.0 -- */
+/* -- Jjodel Abstract Syntax Specification v2.11 -- */
 
 
 <View className={'root feature w-100'}>
-    <span className={'feature-name'}>{data.name}:</span>
+    {(data.type.model && data.type.model.id !== data.model.id) && <i style={{marginTop: '2.5px'}} className="bi bi-arrow-left"></i>}<span className={'feature-name'}>{data.name}:</span>    
     <Select data={data} field={'type'} />
     {decorators}
 </View>`

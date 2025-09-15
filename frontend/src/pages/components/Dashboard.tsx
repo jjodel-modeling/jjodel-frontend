@@ -21,7 +21,12 @@ import '../dashboard.scss'
 import React, {JSX, ReactElement, useRef} from "react";
 import {Btn, CommandBar, Sep} from '../../components/commandbar/CommandBar';
 
-import colors from '../../static/img/colors.png';
+import colors000 from '../../static/img/colors-000.png';
+import colors100 from '../../static/img/colors-100.png';
+import colors101 from '../../static/img/colors-101.png';
+import colors110 from '../../static/img/colors-110.png';
+import colors111 from '../../static/img/colors-111.png';
+
 import useQuery from '../../hooks/useQuery';
 
 import {
@@ -284,7 +289,14 @@ const ProjectInfoCard = (props: ProjectProps) => {
             <>
                 <h5>{project.name ? project.name : 'Unnamed Project'}</h5>
                 {project.description && <p>{project.description}</p>}
-                <img src={colors} width={220} style={{paddingBottom: '10px'}}/>
+                {project.metamodels.length === 0 && <img src={colors000} width={220} style={{paddingBottom: '10px'}}/>}
+                {project.metamodels.length > 0 && project.models.length === 0 && project.viewpoints.length <= 2 && <img src={colors100} width={220} style={{paddingBottom: '10px'}}/>}
+                {project.metamodels.length > 0 && project.models.length === 0 && project.viewpoints.length > 2 && <img src={colors101} width={220} style={{paddingBottom: '10px'}}/>}
+                {project.metamodels.length > 0 && project.models.length > 0 && project.viewpoints.length <= 2 && <img src={colors110} width={220} style={{paddingBottom: '10px'}}/>}
+                {project.metamodels.length > 0 && project.models.length > 0 && project.viewpoints.length > 2 && <img src={colors111} width={220} style={{paddingBottom: '10px'}}/>}
+
+
+
 
                 {project.metamodels.length === 0 ?
                     <p>This project does not contain any metamodel and consequently no models yet; it only contains the default viewpoints.</p>
