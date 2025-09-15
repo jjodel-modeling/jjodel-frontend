@@ -100,7 +100,19 @@ export function doM2T(data0: LPointerTargetable | Pointer | null | undefined, la
     return ret;
 }
 
-export function T2M(props: T2M_AllProps, child?: any) {
+export function T2M(data: LModelElement, language: string, text: string) {
+    if (!data) return null;
+    // @ts-ignore
+    if (typeof data === 'object' && !(data as any).__isProxy) return T2M_Component(...arguments as any);
+    // @ts-ignore
+    else return T2M_API(...arguments as any);
+
+}
+export function T2M_API(data: LModelElement, language: string, text: string): void{
+    console.error('T2M_API todo');
+}
+
+export function T2M_Component(props: T2M_AllProps, child?: any): ReactNode {
     const data: LPointerTargetable = L.from(props.data as any);
     const language = props.language || 'JSON';
     console.log('T2M render called', {data, language, arguments});
@@ -222,12 +234,24 @@ export function T2M_WithEditor(props: T2M_AllProps, child?: any) {
     </label>;
 }
 
-export function M2T(props: M2T_AllProps){
+export function M2T(data: LModelElement, language: string){
+    if (!data) return null;
     // @ts-ignore
     if (typeof data === 'object' && !(data as any).__isProxy) return M2T_Component(...arguments as any);
-
-    return 'M2T todo'
+    // @ts-ignore
+    else return M2T_API(...arguments as any);
 }
+
+export function M2T_Component(props: M2T_AllProps): ReactNode{
+    return 'M2T_Component todo'
+}
+export function M2T_API(data: LModelElement, language: string): string{
+    return 'M2T_API todo'
+}
+
+(window as any).M2T = M2T;
+(window as any).T2M = T2M;
+
 export interface T2M_OwnProps {
     data?: LPointerTargetable | DPointerTargetable | Pointer<DPointerTargetable, 1, 1, LPointerTargetable>;
     language: string;
