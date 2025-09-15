@@ -36,6 +36,16 @@ body {
 .input:focus { border: 1px dashed $border-color; }
 .input[type="checkbox"]:focus, .input[type="radio"]:focus { border: none; }
 .autosize-input { flex-grow: 1; flex-basis: 10px; }
+/*
+textarea.autosize{ not possible in pure css, need to add a :after element mimicking text, updated with js.
+    display: grid;
+    grid: stack;
+    > *, &::after {
+      grid-area: stack;
+    }
+}
+*/
+
 .hidden-input { border: 1px solid transparent; background-color: transparent; }
 .hidden-input:focus { border: 1px dashed $border-color; }
 .w-fill { width: $fill; }
