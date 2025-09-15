@@ -89,20 +89,10 @@ type CommandProps = {
 
 export const CommandBar = (props: CommandProps) => {
 
-    let style = props.style;
-
     let noBorder = (props.noBorder ? props.noBorder: false);
 
-    return(<>
-        {props.style ?
-            <div className={`command-bar ${props.className && props.className} ${noBorder && 'no-border'}`} style={props.style}>
-                {props.children}
-            </div>
-            :
-            <div className={`command-bar ${props.className && props.className} ${noBorder && 'no-border'}`} >
-                {props.children}
-            </div>
-        }
-
-    </>);
+    return (
+        <div className={`command-bar ${props.className || ''} ${noBorder ? 'no-border' : ''}`} style={props.style} >
+            {props.children}
+        </div>)
 };
