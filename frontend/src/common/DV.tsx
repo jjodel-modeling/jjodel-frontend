@@ -928,11 +928,11 @@ public static enum(): string { return (
 
     public static feature(): string { return (
 `
-/* -- Jjodel Abstract Syntax Specification v2.1 -- */
+/* -- Jjodel Abstract Syntax Specification v2.11 -- */
 
 
 <View className={'root feature w-100'}>
-    {data.type.model.id !== data.model.id && <i style={{marginTop: '2.5px'}} className="bi bi-arrow-left"></i>}<span className={'feature-name'}>{data.name}:</span>    
+    {(data.type.model && data.type.model.id !== data.model.id) && <i style={{marginTop: '2.5px'}} className="bi bi-arrow-left"></i>}<span className={'feature-name'}>{data.name}:</span>    
     <Select data={data} field={'type'} />
     {decorators}
 </View>`
