@@ -313,6 +313,8 @@ export class DState extends DPointerTargetable{
     outline-width: 4px;
     outline-style: solid;
     outline-color: var(--selected)!important;
+    overflow: hidden!important;
+
   }
 }
 
