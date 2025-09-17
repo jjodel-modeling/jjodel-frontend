@@ -4547,12 +4547,13 @@ export class LModel<Context extends LogicContext<DModel> = any, C extends Contex
         if (TargetableProxyHandler.childKeys[key[0]]){
             // look for m1 matches
             let deepmatch: LObject | undefined;
-            let k = key.substring(1).toLowerCase();
+            let k = key.toLowerCase();
 
             const directSubObjects: Dictionary<Pointer, boolean> = U.objectFromArrayValues(c.data.objects);
             for (let subobject of this.get_allSubObjects(c)){
                 let n = subobject.name;
-                if (!n || n.toLowerCase() !== k) continue;
+                // if (!n || n.toLowerCase() !== k) continue;
+                if (!n || n !== key) continue;
                 // A0) perfect match with direct child object
                 if (directSubObjects[subobject.id]) return subobject;
                 else if (!deepmatch) deepmatch = subobject;
@@ -4573,11 +4574,12 @@ export class LModel<Context extends LogicContext<DModel> = any, C extends Contex
                 let key1 = key.substring(0, key.length - 1);
                 m2item = (m2 as GObject)[key1];
                 if (m2item) {
-                    if (m2item.className === "DClass") return (m2item as LClass).instances; // return this.get_instancesOf(c)(m2item as LClass);
+                    // return this.get_instancesOf(c)(m2item as LClass);
+                    if (m2item.className === "DClass") return (m2item as LClass).instances.filter(o=>o.model.id === c.data.id);
                     else return Log.ee("Could not get instances of " + key1 + ".", {c, key, m2, className:m2item.className});
                 }
             }
-            if (!m2) return Log.ee("Could not find any subelement with name " + key + " on M1 or M2 Models", {c, key, m1: c.data, m2});
+            if (!m2) return Log.ee("Could not find any sub-element with name " + key + " on M1 or M2 Models", {c, key, m1: c.data, m2});
         }
 
         return this.__defaultGetter(c, key);

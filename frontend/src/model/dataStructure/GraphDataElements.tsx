@@ -2146,7 +2146,7 @@ replaced by startPoint
         }
         secondIntersection = GraphSize.closestIntersection(x4headsize, start, end, undefined, m, undefined);
         if (!secondIntersection) {
-           return Log.exDevv("failed to intersect edge head", {x4headsize, segment, headPos, c, start, end, useBezierPoints, m});
+           return Log.exDevv("failed to intersect edge head", {x4headsize, segment, headPos, c, start, end, useBezierPoints, m, edge: c.data.id});
         }
         tmp = secondIntersection.add(start, false).divide(2); // center of edgehead
         headPos.x = tmp.x - headPos.w / 2; // tl corner

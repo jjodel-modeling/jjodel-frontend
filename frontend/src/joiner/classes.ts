@@ -2017,7 +2017,7 @@ export class LPointerTargetable<Context extends LogicContext<DPointerTargetable>
         return () => {
             TRANSACTION(this.get_name(c) + '.clearState()', ()=>{
                 SetFieldAction.new(c.data, "_state", {}, undefined, false);
-            }, Object.keys(3)+ 'keys removed');
+            }, Object.keys(c.data._state)+ 'keys removed');
         }
     }
 
