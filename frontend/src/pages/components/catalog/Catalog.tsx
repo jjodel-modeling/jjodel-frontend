@@ -3,7 +3,8 @@ import {type Dictionary, LProject} from "../../../joiner";
 import { Menu, Item } from "../menu/Menu";
 import { Project } from "../Project";
 
-import colors from '../../../static/img/colors.png';
+import colors111 from '../../../static/img/colors-111.png';
+
 import { icon } from "../icons/Icons";
 import "./catalog.scss"
 import _ from "lodash";
@@ -15,12 +16,12 @@ export const CatalogInfoCard = (props: any) => {
                 <>
                     <h5>Your projects</h5>
                     <p>You developed <strong>{props.projects.length}</strong> projects{false && ' with an overall number of 12 artifacts'}.</p>
-                    <img src={colors} width={220} />
+                    <img src={colors111} width={220} />
                 </>
                 :
                 <>
                     <h5>No projects so far. Are you new to Jjodel? why not exploring the Getting Started section?</h5>
-                    <img src={colors} width={220} />
+                    <img src={colors111} width={220} />
                 </>
             }
         </div>

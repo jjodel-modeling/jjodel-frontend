@@ -213,6 +213,7 @@ div.jjodel-control .control-slider  {
     background-color: var(--bg-2-5);
     border-radius: 4px;
     height: 31px;
+
     
     display: flex;
     justify-content: center;
@@ -296,4 +297,49 @@ div.jjodel-control .control-slider  {
     }
 
  }
+
+ /* Zoom */
+.zoom {
+    position: absolute;
+    right: 10px;
+    top: 20px;
+    width: 30px;
+    height: fit-content;
+    opacity: 0.85;
+
+    
+
+
+    & > .zoom-in, .zoom-out, .zoom-reset {
+        width: 30px;
+        height:30px;
+        background-color: var(--bg-2-5);
+        border-radius: 2px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+
+    }
+    & > .zoom-in, .zoom-out {
+        margin-bottom: 5px;
+    }
+    & > .zoom-in:hover, .zoom-out:hover, .zoom-reset:hover {
+        background-color: var(--bg-3-1);
+    }
+    & > .zoom-in:before{
+        font-family: bootstrap-icons;
+        content: '\F64D';
+    }
+    & > .zoom-out:before {
+        font-family: bootstrap-icons;
+        content: '\F63B';
+    }
+    & > .zoom-reset:before {
+        font-family: bootstrap-icons;
+        content: '\F116';
+    }
+
+    
+}
 

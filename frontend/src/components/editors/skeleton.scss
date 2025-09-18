@@ -485,7 +485,7 @@ input[type="number"]::-webkit-outer-spin-button {
 
     & span.console-error-msg {
       display: flex;
-      font-family: Lekton, monospace;
+      font-family: 'JetBrains Mono', Lekton, monospace;
       color: var(--bg-5);
       padding-left: 0px;
       margin-top: auto;
@@ -506,11 +506,11 @@ input[type="number"]::-webkit-outer-spin-button {
     }
 
     & .context-keys-list {
-      font-family: Lekton, monospace;
+      font-family: 'JetBrains Mono', Lekton, monospace;
     }
 
     & .console-msg {
-      font-family: Lekton, monospace;
+      font-family: 'JetBrains Mono', Lekton, monospace;
       color: var(--bg-5); color: red!important;
     }
 

@@ -3,7 +3,7 @@ import {useStateIfMounted} from 'use-state-if-mounted';
 import {DUser, R, SetRootFieldAction, U} from '../joiner';
 import Storage from '../data/storage';
 import {AuthApi, UsersApi} from "../api/persistance";
-import logo from '../static/img/jjodel.jpg';
+import logo from '../static/img/jjodel-124.png';
 import {Tooltip} from '../components/forEndUser/Tooltip';
 import { RegisterRequest } from '../api/DTO/RegisterRequest';
 import { LoginRequest } from '../api/DTO/LoginRequest';
@@ -565,6 +565,9 @@ function AuthPage(): JSX.Element {
                     <>
                         Don't have an account? <span tabIndex={-1} onClick={e => {setAction('register')}} className={'ms-1 text-primary text-decoration-none cursor-pointer login-link'}>Register</span><br/>
                         <span tabIndex={-1} onClick={e => {setAction('retrieve-password')}} className={'ms-1 text-primary text-decoration-none cursor-pointer login-link'}>Forgot your password?</span>
+                        <div className="alert alert-primary" role="alert" style={{marginTop: '12px'}}>
+                            <b>Action required</b><br/> Please reset your password to continue using Jjodel 2.0.
+                        </div>
                     </>
                 }
                 {action === 'retrieve-password' &&

@@ -49,7 +49,7 @@ export {Overlap} from "../components/forEndUser/Overlap";
 
 export {ControlPanel} from '../components/forEndUser/ControlPanel';
 
-export {Control, Slider, Toggle_Obsolete, Toggle_Obsolete as Toggle} from '../components/forEndUser/Control';
+export {Control, Slider, Toggle_Obsolete, Toggle_Obsolete as Toggle, Zoom} from '../components/forEndUser/Control';
 
 type dict = Dictionary<string, typeof GraphElement | typeof Edge>;
 

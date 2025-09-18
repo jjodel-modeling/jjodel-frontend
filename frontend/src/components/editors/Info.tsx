@@ -9,9 +9,9 @@ import {
     LObject, LPointerTargetable, LReference, LStructuralFeature, LValue,
     LViewElement, MultiSelect, Pointer, Pointers,
     Select,
-    Selectors, SetFieldAction, store, TRANSACTION, U, ValueDetail
+    Selectors, SetFieldAction, SetRootFieldAction, store, TRANSACTION, U, ValueDetail
 } from '../../joiner';
-import {FakeStateProps} from '../../joiner/types';
+import {FakeStateProps, windoww} from '../../joiner/types';
 
 import ReactJson from 'react-json-view' // npm i react-json-view --force
 import React, {Component, Dispatch, JSX, ReactElement, ReactNode} from 'react';
@@ -23,6 +23,7 @@ import {Empty} from "./Empty";
 import { CommandBar, Btn } from '../commandbar/CommandBar';
 import { Tooltip } from '../forEndUser/Tooltip';
 import { icon } from '../../pages/components/icons/Icons';
+import { Toggle } from '../../joiner/components';
 
 class builder {
     static named(data: LModelElement, advanced: boolean): ReactNode {
@@ -279,9 +280,12 @@ class builder {
             </label>
         </>);
     }
-    static object(data: LModelElement, topics: Dictionary<string, unknown>, advanced: boolean, mode: 'popup'|'tab'): JSX.Element {
+    static object(data: LModelElement, topics: Dictionary<string, unknown>, advanced: boolean, mode: 'popup'|'tab'|'inline'): JSX.Element {
 
         const popup = mode === 'popup';
+        const inline = mode === 'inline';
+        const tab = mode === 'tab';
+
         const object: LObject = LObject.fromPointer(data.id);
         let conform = true;
         for(const feature of object.features) {
@@ -293,22 +297,28 @@ class builder {
         }
         let instanceoff = object.instanceof;
         return(<>
-            <h1>{data.name}: {instanceoff && conform && instanceoff.name}</h1>
-
-            {!popup && instanceoff && conform && <label className={'d-block text-center'}>
+            {tab && 
+                <h1>{data.name}: {instanceoff && conform && instanceoff.name}</h1>
+            }
+            {popup && <>
+                    <h1>Edit {data.name}: {instanceoff && conform && instanceoff.name}</h1>
+                    <b>Properties</b>
+                </>
+            }
+           
+            {tab && instanceoff && conform && <label className={'d-block text-center'}>
                 The instance <b className={'text-success'}>CONFORMS</b> to {instanceoff.name}
             </label>}
 
-            {!popup && instanceoff && !conform && <label className={'d-block text-center'}>
+            {tab && instanceoff && !conform && <label className={'d-block text-center'}>
                 The instance <b className={'text-danger'}>NOT CONFORMS</b> to {instanceoff.name}
             </label>}
-            {!popup && !instanceoff && <label className={'d-block text-center'}>
+            {tab && !instanceoff && <label className={'d-block text-center'}>
                 The instance is <b className={'text-warning'}>SHAPELESS</b>
             </label>}
 
             {instanceoff && !object.partial ? null :
-                !popup && <label className={'input-container'}>
-                    <b className={'me-2'}>Features:</b>
+                tab && <label className={'input-container'}>
 
                     <CommandBar style={{marginLeft: 'auto', marginTop: '6px'}}>
                         <Btn icon={'add'} action={()=> object.addValue()} tip={`Add a feature`} className={'add-feature'} />
@@ -316,7 +326,9 @@ class builder {
 
                 </label>
             }
-            {!popup && this.forceConform(object)}
+
+            {tab && this.forceConform(object)}
+
             {object.features.map(f => <div id={`Object-${f.id}`}>
                 {this.value(f, topics, advanced, mode)}
             </div>)}
@@ -343,8 +355,11 @@ class builder {
         </label>);
     }
 
-    static value(data: LModelElement, topics: Dictionary<string, unknown>, advanced: boolean, mode: 'popup'|'tab'): JSX.Element {
+    static value(data: LModelElement, topics: Dictionary<string, unknown>, advanced: boolean, mode: 'popup'|'tab'|'inline'): JSX.Element {
         const popup = mode === 'popup';
+        const inline = mode === 'inline';
+        const tab = mode === 'tab';
+
         let value: LValue = LValue.fromPointer(data.id);
         const feature: LStructuralFeature = LStructuralFeature.fromPointer(value.instanceof?.id);
         let field = 'text'; let stepSize = 1; let maxLength = 524288;
@@ -402,34 +417,80 @@ class builder {
             })
         }
         const featureType: LClassifier = feature?.type;
-        let isAttribute = false, isEnumerator = false, isReference = false, isShapeless = false;
+        let isAttribute = false, isEnumerator = false, isReference = false, isShapeless = false, isComposition = false;
+        
+        // Detect if a reference is also a composition
         switch (feature?.className){
+            case DReference.cname:
+                isReference = true;
+                // Check if the reference is a composition
+                isComposition = (feature as LReference)?.composition === true;
+                if (isComposition) {
+                    isReference = false; // 
+                }
+            break;
             case DAttribute.cname:
                 if (featureType.className === DClass.cname) isAttribute = true; else
                 if (featureType.className === DEnumerator.cname) isEnumerator = true;
                 break;
-            case DReference.cname: isReference = true; break;
-            default: isShapeless = true; break;
+            case DReference.cname: isReference = true; 
+                break;
+            default: isShapeless = true; 
+                break;
         }
+
         let selectOptions: JSX.Element | JSX.Element[] | null = value.validTargetsJSX;
 
         let isPtr = isAttribute ? false : (isEnumerator || isReference ? true : undefined);
         const valueslist = (filteredValues).map((val, index) =>
             val.hidden ? null :
                 <label className={'mt-1 d-flex ms-4'} key={index}>
-                    <div className={'border border-dark'}></div>
+                    {/* <div className={'border border-dark'}></div>*/}
+
+                    {/* Attribute */}
+                    
                     {isAttribute && <Input key={'a'+index} setter={(val: any) => { changeDValue({target:{value:val, checked:!!val}} as any, index, false) }}
                                            className={'input m-auto ms-1' /*@ts-ignore*/}
                                            getter={()=>val.value as any} min={min} max={max} type={field as any} step={stepSize}
                                            maxLength={maxLength} placeholder={'empty'}/> }
+                   
+                    {/* Enumerator */}
+                    
                     {isEnumerator && <select key={'e'+index} onChange={(evt) => {changeDValue(evt, index, true)}} className={'m-auto ms-1 select'} value={val.rawValue+''} data-valuedebug={val.rawValue}>
-                        {<option key='undefined' value={'undefined'}>-----</option>}
-                        {selectOptions}
+                            {<option key='undefined' value={'undefined'}>-----</option>}
+                            {selectOptions}
                     </select>}
+                    
+                    {/* Reference */}
+                    
                     {isReference && <select key={'r'+index} onChange={(evt) => {changeDValue(evt, index, true)}} className={'m-auto ms-1 select'} value={val.rawValue+''} data-valuedebug={val.rawValue}>
-                        <option value={'undefined'}>-----</option>
-                        {selectOptions}
-                    </select>}
+                            <option value={'undefined'}>-----</option>
+                            {selectOptions}
+                        </select>
+                    }
+                    
+                    {/* Composition - to finalize */}
+                    
+                    {isComposition && (() => {
+                        const element = LModelElement.fromPointer(val.rawValue+'');
+                        if (!inline) {
+                            return <div className={`item ${inline && 'inline'}`}>
+                                {/*@ts-ignore*/}
+                                {popup && element && <b>{element.instanceof.name}</b>}
+                                {!popup && <select key={'r'+index} onChange={(evt) => {changeDValue(evt, index, true)}} className={'m-auto ms-1 select'} value={val.rawValue+''} data-valuedebug={val.rawValue}>
+                                    <option value={'undefined'}>-----</option>
+                                    {selectOptions}
+                                </select>}
+                                {popup && 
+                                    <div className={'inline'}>
+                                        <Info mode={'inline'} localData={element} />
+                                    </div>}
+                            </div>;
+                        } 
+                    })()}
+
+                    {/* Shapeless */}
+
                     {isShapeless && <>
                         {<Input key={'raw' + index} setter={(val: any) => {changeDValue({target:{value:val, checked:!!val}} as any, index, false)}}
                                 className={'input m-auto ms-1' /*@ts-ignore*/}
@@ -439,16 +500,17 @@ class builder {
                             {selectOptions}
                         </select>}
                     </>}
+
                     <CommandBar>
                         <Btn icon={'delete'} tip={'Remove value'} action={(evt) => {remove(index, isPtr)}} />
                     </CommandBar>
-                    {/*<button className={'btn btn-danger m-auto ms-2'} onClick={(evt) => {remove(index, isPtr)}}>
-                        <i className={'p-1 bi bi-trash3'}></i>
+                    {/* <button className={'btn m-auto ms-2'} onClick={(evt) => {remove(index, isPtr)}}>
+                        <i className={'p-1 bi bi-trash3'} style={{color: 'var(--color)'}}></i>
                     </button>*/}
                 </label>);
 
         return(<>
-            {!popup ? 
+            {tab ? 
                 <>
                     <h1>{data.name}</h1> 
                     <label className={'d-flex'}>
@@ -466,12 +528,12 @@ class builder {
                     <label className={'d-flex'}>
                     <label className={'ms-1 my-auto'}>{data.name}</label>
                     <CommandBar style={{marginLeft: 'auto', marginTop: '0px'}}>
-                        <Btn icon={'add'} 
+                        {!isComposition && <Btn icon={'add'} 
                             action={add} 
                             tip={`Add a ${data.name} value`} 
                             disabled={filteredValues.length >= upperBound} 
                             style={{color: 'black'}}
-                        />
+                        />}
                     </CommandBar>
                     {/* <button className={'btn ms-auto me-1'} disabled={filteredValues.length >= upperBound} onClick={add}>
                         <i className={'p-1 bi bi-plus'}></i>
@@ -495,11 +557,27 @@ class builder {
 }
 
 function InfoComponent(props: AllProps) {
-    const {data, node, view, topics, advanced, mode} = props;
+
+    const {node, view, topics, advanced, mode} = props;
+
     const popup = mode === 'popup';
+    const inline = mode === 'inline';
+    const tab = mode === 'tab';
+
+    var data = props.data;
+
+    if (inline) {
+        // If inline mode, use localData
+        if (!props.localData) return <Empty />;
+        else {
+            // @ts-ignore
+            data = props.localData;
+        }
+    } 
 
     let ddata = data?.__raw || data;
     let jsx: ReactNode = null;
+    
     if (data) switch (ddata?.className) {
         case 'DModel':
             jsx = builder.model(data, advanced); break;
@@ -527,9 +605,12 @@ function InfoComponent(props: AllProps) {
     } else jsx = <Empty />;
     
     return <section className={'properties-tab'}>
+
         {jsx}
+
         
-        {!popup && <><h6>State</h6>
+        {tab && <><hr/>
+            <h6>State</h6>
             <div className={'object-state'}>
                 {!ddata || Object.keys(ddata._state).length === 0 ? <pre> Empty</pre> :
                     <ReactJson src={ddata._state}
@@ -553,11 +634,13 @@ function InfoComponent(props: AllProps) {
 
         }
 
-        interface OwnProps {
-            mode: 'popup' | 'tab' // popup: used in context menu, tab: used in sidebar
-        }
+interface OwnProps {
+    mode: 'popup' | 'tab' | 'inline'; // popup: used in context menu, tab: used in sidebar
+    style?: React.CSSProperties;
+    localData?: LModelElement; // used in inline mode
+}
 
-        interface StateProps {
+interface StateProps {
     node?: LGraphElement
     view?: LViewElement
     data?: LModelElement

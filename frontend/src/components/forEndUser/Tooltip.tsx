@@ -86,6 +86,7 @@ export class TooltipVisualizer extends React.Component<TooltipProps, TooltipVisu
         position = positions[windoww.ii || 0];//Math.floor(Math.random()*positions.length)];
         offsetX = windoww.xx || 0;
         offsetY = windoww.yy || 0;*/
+
         if (this.state.baseElement){
             //style.position = 'absolute';
             let size = Size.of(this.state.baseElement);
@@ -301,4 +302,5 @@ type AllProps = Overlap<OwnProps, Overlap<StateProps, DispatchProps>>;
 
 //TooltipComponent.cname = 'TooltipComponent';
 //TooltipConnected.cname = 'TooltipConnected';
+
 Tooltip.cname = 'Tooltip';

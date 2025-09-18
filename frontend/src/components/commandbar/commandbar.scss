@@ -1,9 +1,24 @@
 // the paramenters are defined in src/styles/variables.scss
 
 
+section .properties-tab label:has(select) {
+      width: 100%!important;
+
+      display: flex;
+      justify-content: space-between!important;
+}
+section .properties-tab label input {
+      width: 77%!important;
+
+}
+
 .command-bar {
     position: relative;
     display: flex;
+    
+    flex-direction: row;
+    justify-content: space-between!important;
+    
     left: 0!important;
     margin-bottom: 10px;
     height: 24px;
@@ -18,9 +33,15 @@
     cursor: not-allowed;
   }
 
+
+
   .btn-component{
+
     i.question{
+      float: right;
       display: flex;
+      margin-left: 6px!important;
+      font-size: 1.45em!important;
     }
     // min-height:fit-content;
     >div {
@@ -810,20 +831,26 @@
 // delete
 
 .tab-btn.delete {
-  margin: auto;
+  margin: auto!important;
   color: var(--btn-back)!important;
   margin-right: 2px!important;
+  margin-left: 4px;
   transition: background-color 0.3s;
+  font-size: 1em!important;
+
 
   &::before {
     border: 1px solid var(--bg-2);
     border-radius: var(--radius);
     display: block;
-    padding: 3px 3px;
-    text-align: center;
-    font-size: 0.7em;
     margin-right: 2px;
+    border: 1px solid var(--bg-2);
+    padding: 2px 2px!important;
+    text-align: center;
+    font-size: 0.89em;
     content: "\F78B";
+    margin-left: 4px;
+
   }
 
   &:hover::before {
@@ -832,3 +859,5 @@
     border-radius: var(--radius);
   }
 }
+
+

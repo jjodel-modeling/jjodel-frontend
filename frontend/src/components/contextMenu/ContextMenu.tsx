@@ -15,7 +15,7 @@ import {
     LNamedElement,
     LObject, Log,
     LPackage,
-    LProject, LReference,
+    LProject, LReference, LStructuralFeature,
     LUser,
     LValue,
     Pointer,
@@ -32,6 +32,7 @@ import {Tooltip} from "../forEndUser/Tooltip";
 import { Info } from '../editors';
 import { Btn, CommandBar } from '../commandbar/CommandBar';
 import { createPortal } from 'react-dom';
+import { Logo } from '../logo';
 
 function ContextMenuComponent(props: AllProps) {
     return ContextMenuComponentInner(props);
@@ -99,7 +100,6 @@ function ContextMenuComponentInner(props: AllProps) {
     let model = ldata?.model;
 
     const close = (panelClick?: boolean) => {
-        // console.log('HideContextMenu', {graph:props.graph, display, panelClick} );
         if (!display) return;
         setSuggestedName('');
         setMemorec(null);
@@ -164,8 +164,8 @@ function ContextMenuComponentInner(props: AllProps) {
             {icon['add']} Add <div style={{position: 'absolute', right: '0'}}>{icon['submenu']}</div>
             {childrenMenu && <section className={'round content right'} style={{/*top: position.y - 216, left: position.x - 333*/}} onContextMenu={(e)=>e.preventDefault()}>
                 <ul className={'right context-menu'}>
-                    {out.map(lc => { let lcname = lc.name; return (
-                        <li key={lcname} onClick={() => {
+                    {out.map(lc => { let lcname = lc.name;  return (
+                        lc.instantiable && <li key={lcname} onClick={() => {
                             close();
                             setChildrenMenu(false);
                             const child = l.addObject({}, lc);
@@ -185,12 +185,20 @@ function ContextMenuComponentInner(props: AllProps) {
 
         if (ddata?.name) {
             let lname = (ldata as LNamedElement).name;
-            if (ldata && model?.isMetamodel) {
+            {/* if (ldata && model?.isMetamodel) {
                 jsxList.push(<div key={lname} className={'col name'} style={{fontSize: '0.9rem', paddingLeft: '12px', fontWeight: '300'}}>
                     {ddata.className.substring(1)}: <i>{lname}</i></div>);
             } else {
                 jsxList.push(<div key={lname} className={'col name'} style={{fontSize: '0.9rem', paddingLeft: '12px', fontWeight: '300'}}>
-                    {ddata.className.substring(1)}: <i>{[ldata?.father?.name, lname].join('.')}</i></div>);
+                    <i>{[ldata?.father?.name, lname].join('.')}</i></div>);
+            }*/}
+
+            if (ldata) {
+                let isM2: boolean = model.isMetamodel;
+                let meta = (ldata as LObject|LValue).instanceof;
+                jsxList.push(<div key={lname} className={'col name '+(isM2 ? 'meta' : '')+'model'}
+                                  style={{fontSize: '0.9rem', paddingLeft: '0px', fontWeight: '400', display: 'flex', alignItems: 'center'}}>
+                    {(isM2 ? (meta?.name || 'Shapeless') + ': ' : '') + lname}</div>);
             }
             jsxList.push(<hr key={hri++} className={'my-1'} />);
         }
@@ -199,6 +207,24 @@ function ContextMenuComponentInner(props: AllProps) {
         //     jsxList.push(...(ldata as LObject).features.map(feat=>getAddChildren(feat, model, [])));
         //     jsxList.push(<hr key={hri++} className={'my-1'} />);
         // }
+        /* Edit: only on models */
+
+        if (!model?.isMetamodel && data?.className !== 'DModel') {
+            jsxList.push( // @ts-ignore: disabled
+                <>
+                    <div key='edit' onClick={(e) => {
+                        e.stopPropagation();
+                        setEditPanel(true);
+                    }} className={'col item'} tabIndex={0}>
+                        {icon['edit']}
+                        Edit
+                    </div>
+                </>
+            );
+            jsxList.push(<hr key={hri++} className={'my-1'}/>);
+        }
+
+        /* Add children for Object */
 
         if (ddata?.className === 'DObject') {
             let out: any[] = [];
@@ -221,10 +247,8 @@ function ContextMenuComponentInner(props: AllProps) {
             }
         }
 
-        
-
-
         /* Memorec */
+
         if(ddata && !U.isOffline()) {
             if(ddata.className === 'DClass') {
                 jsxList.push(<div key='ai-c' onClick={structuralFeature} className={'col item'} tabIndex={0}>{icon['ai']} AI Suggest
@@ -264,22 +288,7 @@ function ContextMenuComponentInner(props: AllProps) {
         }} className={'col item'} tabIndex={0}>{icon['deselect']} Deselect</div>);*/
         //jsxList.push(<hr key={hri++} className={'my-1'} />);
 
-        /* Edit: only on models */
 
-        if (!model?.isMetamodel && data?.className !== 'DModel') {
-            jsxList.push( // @ts-ignore: disabled
-                <>
-                    <div key='edit' onClick={(e) => {
-                        e.stopPropagation();
-                        setEditPanel(true);
-                    }} className={'col item'} tabIndex={0}>
-                        {icon['edit']}
-                        Edit
-                    </div>
-                </>
-            );
-            jsxList.push(<hr key={hri++} className={'my-1'}/>);
-        }
 
 
         /* Delete */
@@ -331,7 +340,7 @@ function ContextMenuComponentInner(props: AllProps) {
 
         jsxList.push(<hr key={hri++} className={'my-1'} />);
         
-        /* METRICS */
+        /* Analytics */
         if (ldata && model?.isMetamodel) {
             jsxList.push(<div key='analytic' onClick={() => {close(); toggleMetrics();}} className={'col item'} tabIndex={0}>{icon['metrics']} Analytics
                 <div><i className='bi bi-command' /> A</div></div>);
@@ -345,12 +354,25 @@ function ContextMenuComponentInner(props: AllProps) {
         </div>);
     }
 
+    const edit_x = data.node?.x || 0;
+    const edit_y = data.node?.y || 0;
+    const edit_w = data.node?.w || 0;
+
+
     return(
-        <div className={'round' + (editPanel?' edit-panel' : ' context-menu')} style={{top: display.y - 100, left: display.x - 10}} onContextMenu={(e)=>e.preventDefault()} ref={updateRef}>
+        <div className={'round' + (editPanel?' edit-panel-container' : ' context-menu')} style={{top: editPanel? edit_y - 2: display.y - 100, left: editPanel? edit_x + edit_w + 10 : display.x - 10}} onContextMenu={(e)=>e.preventDefault()} ref={updateRef}>
 
-            {editPanel ? <Info mode={'popup'}/> : <>
+            {editPanel ? <><div className={'edit-panel'}>
+                    <Info mode={'popup'}/>
+                </div>
+                <div className={'dialog-footer'}><button onClick={() => close()}>Close</button></div>
+                </>
+                :
 
+                <>
                 {jsxList/*.map((jsx, index) => {return <li key={index}>{jsx}</li>})*/}
+
+                {/* Memorec */}
 
                 {(data && memorec?.data) && <div className={'context-menu round'} style={{overflow: 'auto', maxHeight: '12em', top: display.y - 100, left: display.x + 130}}>
                     {(memorec.data.map((obj, index) => {

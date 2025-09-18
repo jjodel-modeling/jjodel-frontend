@@ -8,7 +8,7 @@ import {
     DPointerTargetable,
     GObject,
     Keystrokes, L, LAttribute,
-    LClass, LEnumerator, LEnumLiteral, LModel, LModelElement, LObject,
+    LClass, LEnumerator, LEnumLiteral, LModel, LModelElement, LObject, Log,
     LPointerTargetable, LReference, LStructuralFeature, LValue, MultiSelect, MultiSelectOptGroup,
     MultiSelectOption,
     Overlap,
@@ -24,21 +24,95 @@ import Editor from "@monaco-editor/react";
 import {on} from "events";
 
 
-function doT2M(data: LPointerTargetable | Pointer, language: string, text: string): void{
-    let ldata = LPointerTargetable.from(data);
-    if (!ldata) return;
+export function doT2M(data0: LPointerTargetable | Pointer | null | undefined, language: string, text0: string): void{
+    let data: LModelElement = LPointerTargetable.from(data0 as any);
+    let text: string = text0 = text0.trim();
+    if (!data || !text0) return;
     // text = U.jsonSanitize_dangerous(text);
-    let json = JSON.parse(text);
-    console.log('doT2M json', {ldata, text, json});
-    (ldata as LObject).t2m(json);
-}
-function doM2T(data: LPointerTargetable | Pointer, language: string): string{
-    let ldata = LPointerTargetable.from(data);
-    if (!ldata) return '';
-    return 'M2T todo';
+    let json: GObject = null as any;
+    if (language) {
+        let languageObj = store.getState().languages[language];
+        if (languageObj) {
+            if (!languageObj.t2m) {
+                Log.ee("T2M transformation is missing on language \"" + language + "\".");
+                return;
+            }
+
+            let t2m = "("+languageObj.t2m+")"; // because "function(text){return "a"}" is invalid without a function name unless i wrap it in parenthesis and turn into expression.
+            let func = eval(t2m);
+            if (typeof func !== 'function') {
+                Log.ee('The T2M transformation of "'+language+'" must be a parser function, please change the language definition.');
+                return;
+            }
+            json = func(text);
+            let type: string = typeof json;
+            if (!json && type === 'object') type = 'null';
+            if (type !== 'object') {
+                Log.ee('The T2M transformation of "'+language+'" must be a parser function returning a plain object, but returned "'+(type)+'" instead.' +
+                    '\nPlease change the language definition.');
+                return;
+            }
+        }
+    }
+    if (!json) {
+        try { json = JSON.parse(text); } catch (e) {
+            Log.ee('The default T2M transformation can only be applied to text in JSON format.', {e, text, data});
+        }
+    }
+    console.log('doT2M json', {data, text, json});
+    let className = data.className;
+    if (!(data as LObject).t2m) {
+        Log.ee("The T2M transformation cannot be applied yet to " + className + " elements.", {className, json, data, language});
+        return;
+    }
+    (data as LObject).t2m(json);
 }
 
-export function T2M(props: T2M_AllProps, child?: any) {
+
+export function doM2T(data0: LPointerTargetable | Pointer | null | undefined, language: string): string{
+    let data = LPointerTargetable.from(data0 as any);
+    if (!data) return "M2T transformation to "+language+" is missing the model (data) parameter.";
+    // text = U.jsonSanitize_dangerous(text);
+    let ret: string = '';
+    if (language) {
+        let languageObj = store.getState().languages[language];
+        if (languageObj) {
+            if (!languageObj.m2t) return "M2T transformation is missing on language \""+language+"\".";
+            let m2t = "("+languageObj.m2t+")"; // because "function(text){return "a"}" is invalid without a function name unless i wrap it in parenthesis and turn into expression.
+            try { let func = eval(m2t);} catch(e) { console.error("m2t error", {e, m2t, languageObj}); }
+            let func = eval(m2t);
+            if (typeof func !== 'function') {
+                let msg = 'The M2T transformation of "'+language+'" must be a parser function, please change the language definition.';
+                Log.ee(msg);
+                return msg;
+            }
+            ret = func(data);
+            let type: string = typeof ret;
+            if (type !== 'string') {
+                let msg = 'The M2T transformation of "'+language+'" must be a parser function returning a plain object, but returned "'+(type)+'" instead.' +
+                    '\nPlease change the language definition.';
+                Log.ee(msg);
+                return msg;
+            }
+        }
+    }
+    if (!ret) ret = (data as any).__serialize;
+    return ret;
+}
+
+export function T2M(data: LModelElement, language: string, text: string) {
+    if (!data) return null;
+    // @ts-ignore
+    if (typeof data === 'object' && !(data as any).__isProxy) return T2M_Component(...arguments as any);
+    // @ts-ignore
+    else return T2M_API(...arguments as any);
+
+}
+export function T2M_API(data: LModelElement, language: string, text: string): void{
+    console.error('T2M_API todo');
+}
+
+export function T2M_Component(props: T2M_AllProps, child?: any): ReactNode {
     const data: LPointerTargetable = L.from(props.data as any);
     const language = props.language || 'JSON';
     console.log('T2M render called', {data, language, arguments});
@@ -160,12 +234,24 @@ export function T2M_WithEditor(props: T2M_AllProps, child?: any) {
     </label>;
 }
 
-export function M2T(props: M2T_AllProps){
+export function M2T(data: LModelElement, language: string){
+    if (!data) return null;
     // @ts-ignore
     if (typeof data === 'object' && !(data as any).__isProxy) return M2T_Component(...arguments as any);
-
-    return 'M2T todo'
+    // @ts-ignore
+    else return M2T_API(...arguments as any);
 }
+
+export function M2T_Component(props: M2T_AllProps): ReactNode{
+    return 'M2T_Component todo'
+}
+export function M2T_API(data: LModelElement, language: string): string{
+    return 'M2T_API todo'
+}
+
+(window as any).M2T = M2T;
+(window as any).T2M = T2M;
+
 export interface T2M_OwnProps {
     data?: LPointerTargetable | DPointerTargetable | Pointer<DPointerTargetable, 1, 1, LPointerTargetable>;
     language: string;

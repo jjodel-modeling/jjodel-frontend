@@ -284,19 +284,37 @@ export class DViewElement extends DPointerTargetable {
     <div className={'header'}>
         <div className={'input-container mx-2'}>
             <b className={'object-name'}>Name:</b>
-            <Input data={data} field={'name'} hidden={true} autosize={true} />
+            {data.$name ?
+                <Input data={data.$name} field={'value'} hidden={true} autosize={true} placeholder={'enter name'}/> :
+                <Input data={data} field={'name'} hidden={true} autosize={true}  placeholder={'enter name'}/>
+            }
         </div>
     </div>
     <div className={'body'}>To add information here,<br/> edit the view<br/><i>"{view.name}"</i></div>
     {decorators}
 </div>`;
         const palettes: PaletteType = {
-            "border-color-": {type:"color", value: [{r:187, g:187, b:187, a:1}]},
-            "background-": {type:"color", value: [{r:238, g:242, b:243, a:1}]},
-            "color-": {type:"color", value: [{r:3, g:54, b:86, a:1}]},
+            "background-": {type:"color", value: [
+                { "r": 253, "g": 249, "b": 191, "a": 1 },
+                { "r": 231, "g": 241, "b": 228, "a": 1 }, 
+                { "r": 229, "g": 240, "b": 241, "a": 1 }, 
+                { "r": 230, "g": 228, "b": 241, "a": 1 },
+                { "r": 248, "g": 241, "b": 248, "a": 1 }]},
+            "border-color-": {type:"color", value: [
+                { "r": 240, "g": 224, "b": 5, "a": 1 },
+                { "r": 94, "g": 141, "b": 73, "a": 1 }, 
+                { "r": 78, "g": 133, "b": 138, "a": 1 }, 
+                { "r": 84, "g": 73, "b": 141, "a": 1 }, 
+                { "r": 156, "g": 78, "b": 156, "a": 1 }]},
+            "color-": {type:"color", value: [
+                { "r": 79, "g": 74, "b": 7, "a": 1 },
+                { "r": 38, "g": 58, "b": 30, "a": 1 }, 
+                { "r": 78, "g": 133, "b": 138, "a": 1 }, 
+                { "r": 84, "g": 74, "b": 141, "a": 1 }, 
+                { "r": 97, "g": 78, "b": 156, "a": 1 }]},
         }
             const css = `&>.root {
-    border: 1px solid var(--border-color-1);
+    border: 2px solid var(--border-color-1)!important;
     border-radius: 4px;
     background-color: var(--background-1);
     color: var(--color-1);
