@@ -269,7 +269,7 @@ export function InputComponent(props: AllProps) {
 
     switch (props.tag){
         case "textarea": input = <textarea {...inputProps}>{inputProps.value}</textarea>; break;
-        case "select":
+        case "select": /* test */
             if (props.isMultiSelect){
                 let options = props.options as any || getSelectOptions_raw(data, field);
                 if (U.isError(options)) throw errorUpdate("Error on <Multiselect> options getter", options);
