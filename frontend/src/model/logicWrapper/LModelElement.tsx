@@ -4547,13 +4547,15 @@ export class LModel<Context extends LogicContext<DModel> = any, C extends Contex
         if (TargetableProxyHandler.childKeys[key[0]]){
             // look for m1 matches
             let deepmatch: LObject | undefined;
-            let k = key.toLowerCase();
+            const caseSensitive = true;
+            let k = key.substring(1);
+            if (!caseSensitive) k = k.toLowerCase();
 
             const directSubObjects: Dictionary<Pointer, boolean> = U.objectFromArrayValues(c.data.objects);
             for (let subobject of this.get_allSubObjects(c)){
                 let n = subobject.name;
-                // if (!n || n.toLowerCase() !== k) continue;
-                if (!n || n !== key) continue;
+                if (!caseSensitive) n = n.toLowerCase();
+                if (!n || n !== k) continue;
                 // A0) perfect match with direct child object
                 if (directSubObjects[subobject.id]) return subobject;
                 else if (!deepmatch) deepmatch = subobject;

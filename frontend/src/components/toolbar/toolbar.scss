@@ -8,8 +8,10 @@
 
     // --bg: #233d4d;
     --fg: white;
+    --global-padding: 0.5rem;
+    --item-indentation: 0.2rem;
 
-    padding: 0.5rem;
+    padding: var(--global-padding);
     margin: 0;
     z-index: 12000;
     cursor: move;
@@ -35,11 +37,11 @@
       margin-bottom: 0.25em;
 
     }
-
     .toolbar-section-label{
-        margin-left: 0.3rem;
+      // 0.5 padding of container, 0.2 padding of list-item, this is to make it indented twice as much as a normal item
+        margin-left: calc(var(--global-padding) + var(--item-indentation));
         display: block;
-      font-family: var(--default-font-family);
+        font-family: var(--default-font-family);
         font-size: 1.1em;
         font-weight: 300;
     }
@@ -49,16 +51,23 @@
       content: "";
       padding-right: 0px;
     }
+    .jj.palette{
+      margin: auto 0;
+      top: -1px;
+      height: unset;
+    }
 
     .bi.pin{
       color: var(--fg);
       cursor: pointer;
       position: absolute;
-      top: 0.25rem;
-      right: 0.25rem;
-      z-index: 2 !important;
-      box-shadow: none !important;
-      padding: 0 4px;
+      z-index: 2;
+      box-shadow: none;
+      background: inherit;
+      border-radius: inherit;
+      top: 0rem;
+      right: 0rem;
+      padding: 0.66em;
 
       & :hover{
         color: var(--fg);
@@ -69,16 +78,15 @@
     }
 
     .toolbar-item {
-      width: 100%;
+      flex-grow: 1;
       border-radius: 4px;
-      margin-right: 0!important;
-      padding-left: 2px;
+      margin-right: 0;
+      padding-left: var(--item-indentation);
       display: flex;
       cursor: pointer;
 
       > span{
         width: 100%;
-        display: inline-block;
         overflow: hidden;
         white-space: nowrap;
         text-overflow: ellipsis;
@@ -88,7 +96,8 @@
   }
 
   .toolbar-hr {
-    padding-bottom: 4px!important;
+    padding-bottom: 2px;
+    margin-top: 15px !important;
   }
 
   .w-100 {

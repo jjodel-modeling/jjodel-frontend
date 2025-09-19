@@ -141,6 +141,22 @@ function deepCopyButOnlyFollowingPath(oldStateDoNotModify: DState, action: Parse
                     break;
             }
             switch (modifier.substring(0, 2)) {
+                case '*=':
+                    oldValue = current[key];
+                    if (typeof oldValue !== 'number') {
+                        Log.ee('called multiplication action *= on a non-numeric value', {action, oldValue, type: typeof oldValue});
+                        return false;
+                    }
+                    newVal = oldValue *= newVal;
+                    break;
+                case '/=':
+                    oldValue = current[key];
+                    if (typeof oldValue !== 'number') {
+                        Log.ee('called division action /= on a non-numeric value', {action, oldValue, type: typeof oldValue});
+                        return false;
+                    }
+                    newVal = oldValue /= newVal;
+                    break;
                 case '[]':
                     // +=...5 and all less complex variations tested
                 case '+=':// +=...5    --> add at position 5 N elements (value must be array that will be flattened and inserted)
@@ -339,6 +355,7 @@ function deepCopyButOnlyFollowingPath(oldStateDoNotModify: DState, action: Parse
             else {
                 // value changed
                 oldValue = current[key];
+                if (oldValue === newVal) { return false; }
                 gotChanged = true;
                 // unpointedElement = newRoot.idlookup[oldValue];
                 // NB: se elimino un oggetto che contiene array di puntatori, o resetto l'array di puntatori kinda like store.arr= [ptr1, ptr2, ...]; store.arr = [];
