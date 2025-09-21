@@ -2535,6 +2535,11 @@ export class U {
         text = text.replaceAll(/,(\s*[}\]])/, ',$1');
         return text;
     }
+
+    static checkScrollDirectionIsUp(e: React.MouseEvent | any): boolean {
+        if ('wheelDelta' in e) { return e.wheelDelta > 0; }
+        return e.deltaY < 0;
+    }
 }
 export class DDate{
     static cname: string = "DDate";

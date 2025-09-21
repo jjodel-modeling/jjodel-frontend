@@ -66,9 +66,11 @@ export function ShowContextMenu(nodeid: Pointer<DGraphElement>, x: number, y: nu
     if (!graphid) { Log.eDevv('contextmenu graph not found', {nodeid, graphid}); return; }
     contextMenuMap[graphid]?.(nodeid, x, y);
 }
-windoww.ShowContextMenu = ShowContextMenu;
+
 let contextMenuMap: Dictionary<Pointer<DGraph>, (nodeid: Pointer<DGraphElement>, x: number, y: number)=>void> = {};
+windoww.ShowContextMenu = ShowContextMenu;
 windoww.contextMenuMap = contextMenuMap;
+
 function ContextMenuComponentInner(props: AllProps) {
     // const project = user.project as LProject;
     // const display = props.display;
@@ -196,9 +198,8 @@ function ContextMenuComponentInner(props: AllProps) {
             if (ldata) {
                 let isM2: boolean = model.isMetamodel;
                 let meta = (ldata as LObject|LValue).instanceof;
-                jsxList.push(<div key={lname} className={'col name '+(isM2 ? 'meta' : '')+'model'}
-                                  style={{fontSize: '0.9rem', paddingLeft: '0px', fontWeight: '400', display: 'flex', alignItems: 'center'}}>
-                    {(isM2 ? (meta?.name || 'Shapeless') + ': ' : '') + lname}</div>);
+                jsxList.push(<div key={lname} className={'col name '+(isM2 ? 'meta' : '')+'model'}>
+                    {((isM2 ? data.className.substring(1) : (meta?.name || 'Shapeless')) + ': ') + lname}</div>);
             }
             jsxList.push(<hr key={hri++} className={'my-1'} />);
         }
@@ -209,17 +210,11 @@ function ContextMenuComponentInner(props: AllProps) {
         // }
         /* Edit: only on models */
 
-        if (!model?.isMetamodel && data?.className !== 'DModel') {
-            jsxList.push( // @ts-ignore: disabled
-                <>
-                    <div key='edit' onClick={(e) => {
-                        e.stopPropagation();
-                        setEditPanel(true);
-                    }} className={'col item'} tabIndex={0}>
-                        {icon['edit']}
-                        Edit
-                    </div>
-                </>
+        if (true as any || !model?.isMetamodel && data?.className !== 'DModel') {
+            jsxList.push(
+                <div key='edit' onClick={() => {setEditPanel(true);}} className={'col item'} tabIndex={0}>
+                    {icon['edit']} Edit
+                </div>
             );
             jsxList.push(<hr key={hri++} className={'my-1'}/>);
         }
@@ -354,13 +349,16 @@ function ContextMenuComponentInner(props: AllProps) {
         </div>);
     }
 
-    const edit_x = data.node?.x || 0;
+    /*const edit_x = data.node?.x || 0;
     const edit_y = data.node?.y || 0;
-    const edit_w = data.node?.w || 0;
+    const edit_w = data.node?.w || 0;*/
 
-
+    let rootStyle: GObject = {top: display.y - 100, left: display.x - 10};
+    // let rootStyle = {top: editPanel? edit_y - 2: display.y - 100, left: editPanel? edit_x + edit_w + 10 : display.x - 10};
     return(
-        <div className={'round' + (editPanel?' edit-panel-container' : ' context-menu')} style={{top: editPanel? edit_y - 2: display.y - 100, left: editPanel? edit_x + edit_w + 10 : display.x - 10}} onContextMenu={(e)=>e.preventDefault()} ref={updateRef}>
+        <div className={'round' + (editPanel?' edit-panel-container' : ' context-menu')}
+             style={rootStyle}
+             onContextMenu={(e)=>e.preventDefault()} ref={updateRef}>
 
             {editPanel ? <><div className={'edit-panel'}>
                     <Info mode={'popup'}/>

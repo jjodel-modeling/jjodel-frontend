@@ -103,7 +103,9 @@ interface OwnProps {
 }
 interface StateProps {
     data?: LPointerTargetable;
-    debugmode: boolean;}
+    debugmode: boolean;
+}
+
 interface DispatchProps {}
 type AllProps = Overlap<Overlap<OwnProps, StateProps>, DispatchProps>;
 

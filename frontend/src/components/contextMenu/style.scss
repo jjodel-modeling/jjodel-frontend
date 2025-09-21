@@ -208,11 +208,14 @@
     font-weight: bold;
   }
 
-  .name.model {
-      padding-left: 28px!important;
-  }
-  .name.metamodel {
-    padding-left: 28px!important;
+  .name.model, .name.metamodel {
+      padding-left: 28px;
+      overflow: hidden;
+      height: 1lh;
+      white-space: nowrap;
+      font-size: 0.9rem;
+      font-weight: 400;
+      align-items: center;
   }
 
   .name::before {

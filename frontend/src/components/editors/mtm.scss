@@ -1,0 +1,20 @@
+.MTM-tab{
+  display: flex;
+  flex-flow: column;
+  .monaco-editor-wrapper{
+    flex-basis: 0;
+    height: 0;
+    flex-grow: 1;
+  }
+  .export-row{
+    display: flex;
+    flex-wrap: wrap;
+    button{
+      min-width: 100px;
+      width: 45%;
+      margin: auto;
+      margin-top: 0.5em;
+      grid-gap: 0.5em;
+    }
+  }
+}

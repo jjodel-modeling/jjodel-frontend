@@ -1902,6 +1902,45 @@ export class LStructuralFeature<Context extends LogicContext<DStructuralFeature>
             SetFieldAction.new(context.data, 'defaultValueLiteral', val, "", false);
             return true;
         }*/
+    public get_t2m(c: Context): LStructuralFeature['t2m'] {
+        return (json: GObject): this => {
+            if (!json || typeof json !== 'object') return c.proxyObject as this;
+            TRANSACTION(this.get_name(c) + '.t2m()', ()=> {
+                console.log('L'+c.data.className.substring(1)+'.t2m() called.', {d:c.data, j:json});
+                for (let k in json) {
+                    let v = json[k];
+                    let oldV = (c.data as any)[k];
+                    switch (typeof v){
+                        default:
+                            if (v === oldV) continue;
+                            break;
+                        case 'object':
+                            // if (Array.isArray(v)) { U.arrayDifference() }
+                            let diff = Uobj.objdiff(v, oldV, false, false);
+                            if (diff.added.length + diff.changed.length + diff.removed.length === 0) continue;
+                            break;
+                        case 'function': if (v.toString() === oldV.toString()) continue;
+                    }
+
+                    switch (k) {
+                        case 'id':
+                        case 'pointedBy':
+                        case 'className': continue;
+                        case '_state': this.set_state(v, c); continue;
+                        case 'annotations':
+                            // todo
+                            continue;
+                        default:
+                            // @ts-ignore
+                            c.proxyObject[k] = v;
+                            continue;
+                    }
+                }
+            })
+            return c.proxyObject as this;
+        }
+    }
+
 }
 RuntimeAccessibleClass.set_extend(DTypedElement, DStructuralFeature);
 RuntimeAccessibleClass.set_extend(LTypedElement, LStructuralFeature);

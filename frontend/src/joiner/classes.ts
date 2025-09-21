@@ -3726,17 +3726,20 @@ export enum EModelElements{
     "(m1) Value" = "DValue",
 }
 
+type ParserName = string;
+export type LanguageObject = Dictionary<ParserName, {str:DocString<'parser code'>, test_text?: string}> & {engine: ParserName};
+
 export class Language {
-    m2t: string;
-    t2m: string;
+    m2t: LanguageObject;
+    t2m: LanguageObject;
     edited: boolean;
     v: number;
-    test_text: string;
-    constructor(m2t: string = '', t2m: string='', test_text: string = '') {
-        this.t2m = t2m || '';// || m2t ? 'Not implemented, the m2t transformation will be unidirectional' : "Not implemented";
-        this.m2t = m2t || '';
+    constructor(m2t: Partial<Language['m2t']> = {}, t2m: Partial<Language['t2m']> = {}) {
+        this.t2m = t2m as any || {};// || m2t ? 'Not implemented, the m2t transformation will be unidirectional' : "Not implemented";
+        this.m2t = m2t as any || {};
+        if (!this.t2m.engine) this.t2m.engine = Object.keys(this.t2m)[0] || undefined as any;
+        if (!this.m2t.engine) this.m2t.engine = Object.keys(this.m2t)[0] || undefined as any;
         this.edited = false;
-        this.test_text = test_text || '';
         this.v = windoww.VersionFixer.get_highestversion();
     }
 }

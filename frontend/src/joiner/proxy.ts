@@ -204,6 +204,10 @@ class GetPathHandler<T extends GObject> extends MyProxyHandler<T>{
 }
 RuntimeAccessibleClass.set_extend(MyProxyHandler, GetPathHandler);
 
+
+
+export let hiddenkeys = ["jsxString", "pointedBy", "clonedCounter", "parent", "_subMaps", "inspect", "__random", '__serialize'];
+
 @RuntimeAccessible('TargetableProxyHandler')
 export class TargetableProxyHandler<ME extends GObject = DModelElement, LE extends LPointerTargetable = LModelElement> extends MyProxyHandler<ME> {
     lg: LE & GObject; // to disable type check easily and access 'set_' + varname dynamically
@@ -291,7 +295,12 @@ export class TargetableProxyHandler<ME extends GObject = DModelElement, LE exten
             case "_reload": return LPointerTargetable.wrap(targetObj.id);
             case '__Raw':
             case '__raw': return targetObj;
-            case '__serialize': return JSON.stringify(targetObj);
+            case 'json':
+            case '__json':
+                let ret = {...targetObj};
+                for (let k of hiddenkeys) { delete ret[k]; }
+                return ret;
+            case '__serialize': return JSON.stringify(targetObj, null, 4);
             case '__isproxy':
             case '__isProxy': return true;
             case '__random': return Math.random();
