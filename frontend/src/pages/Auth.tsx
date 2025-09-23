@@ -121,7 +121,7 @@ function AuthPage(): JSX.Element {
     const register = async() => {
 
         if (password !== passwordCheck) {
-            U.alert('e', 'The two passwords are different','');
+            U.alert('e', 'The two passwords are different', '');
             return;
         }
         const registerRequest : RegisterRequest = new RegisterRequest();
