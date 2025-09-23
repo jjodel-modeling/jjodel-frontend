@@ -1,4 +1,4 @@
-import {ClickEvent, ControlPanel, LGraphElement, SetRootFieldAction, U} from "../../joiner";
+import {ClickEvent, ControlPanel, DGraphElement, LGraphElement, SetRootFieldAction, U} from "../../joiner";
 import { ReactElement, ReactNode, useEffect, useRef, useState } from "react";
 
 import "./control.scss";
@@ -147,7 +147,6 @@ const Control = (props: VertexOwnProps, children: ReactNode = []): ReactElement 
     return <ControlComponent {...props}>{children || props.children}</ControlComponent>;
 }
 
-
 /* Slider */
 
 type SliderProps = {
@@ -257,7 +256,7 @@ const ToggleComponent_Obsolete = (props: ToggleProps) => {
 
     return (<>
         
-        <div className={'toggle'} onClick={(e) => {toggleValue()}}>
+        <div className={'toggle'} onClick={(e) => {toggleValue()}} style={{paddingLeft: '0px!important'}}>
             <input type={'checkbox'} className={'toggle-input'} id={props.name} checked={value} onChange={(e)=>{alert(e.target.value)}}  onClick={(e) => alert('input, click')} /> 
 
             <label onClick={() => alert()} className={'toggle-label'}></label>
@@ -279,5 +278,51 @@ const Toggle_Obsolete = (props: ToggleProps, children: ReactNode = []): ReactEle
     return <ToggleComponent_Obsolete {...props} />;
 }
 
-export {Control, Slider, Toggle_Obsolete};
+
+/* Zoom */
+    type ZoomProps = {
+        node: DGraphElement;   
+        children?:ReactNode;
+    }
+
+    const ZoomComponent = (props: ZoomProps) => {
+   
+    const zoomIn = () => {
+        // @ts-ignore
+        props.node.zoom = {x: props.node.zoom.x + 0.1, y: props.node.zoom.y + 0.1} 
+    }
+    const zoomOut = () => {
+        // @ts-ignore
+        props.node.zoom = {x: props.node.zoom.x - 0.1, y: props.node.zoom.y - 0.1} 
+    };
+    const zoomReset = () => {
+        // @ts-ignore
+        props.node.zoom = {x: 1, y: 1};
+    };
+
+    return (
+        <div className={'zoom'}>
+            <Tooltip tooltip={'Zoom in'} inline position={'left'} offsetX={10}>
+                <div className={'zoom-in'} onClick={() => zoomIn()}></div>
+            </Tooltip>
+            
+            <Tooltip tooltip={'Zoom out'} inline position={'left'} offsetX={10}>
+                <div className={'zoom-out'} onClick={() => zoomOut()}></div>
+            </Tooltip>
+
+            {//@ts-ignore 
+                props.node.zoom.x !== 1 && <Tooltip tooltip={'Zoom reset'} inline position={'left'} offsetX={10}>
+                    <div className={'zoom-reset'} onClick={() => zoomReset()}></div>
+                </Tooltip>
+            }
+        </div>
+    );
+}
+
+const Zoom = (props: ZoomProps): ReactElement => {
+    return ZoomComponent(props);
+}
+
+
+export {Control, Slider, Toggle_Obsolete, Zoom};
 

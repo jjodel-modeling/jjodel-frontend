@@ -78,6 +78,7 @@ export {Constructors, JsType, RuntimeAccessibleClass, DPointerTargetable,
     NodeTransientProperties, ViewTransientProperties, DataTransientProperties,
     ViewScore,
     UserHistory,
+    Language,
     LUser, DUser, DProject, LProject, Pointers, PointedBy, PendingPointedByPaths, CoordinateMode, EdgeHead, EGraphElements, EModelElements, transientProperties, ViewEClassMatch} from "./classes";
 
 // export type {Pointer} from './typeconverter';

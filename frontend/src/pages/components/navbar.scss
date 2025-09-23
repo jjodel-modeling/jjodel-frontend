@@ -203,10 +203,10 @@
 
     &  div.logo{
       position: relative;
-      background-image: url(/static/img/jjodel.jpg);
-      height: 24px;
+      background-image: url(/static/img/jjodel-70.png);
+      height: 28px;
       width: 70px;
-      top: 0;
+      top: 2px;
       background-repeat: no-repeat;
       background-size: 57px 25px;
       transition: all 0.3s ease-in-out;
@@ -214,8 +214,8 @@
     }
 
     & div.logo:hover {
-      background-image: url(/static/img/logo-on.png);
-      height: 24px;
+      background-image: url(/static/img/jjodel-hover-70.png);
+      height: 28px;
       width: 70px;
       z-index:2;
     }
@@ -223,10 +223,10 @@
     &  div.logo-on {
 
       position: relative;
-      background-image: url(/static/img/logo-on.png);
-      height: 24px;
+      background-image: url(/static/img/jjodel-hover-70.png);
+      height: 28px;
       width: 70px;
-      top: 0;
+      top: 2px;
       background-repeat: no-repeat;
       background-size: 57px 25px;
       transition: all 0.3s ease-in-out;
@@ -239,7 +239,7 @@
       position: absolute;
       color: var(--accent);
       padding-left: 70px;
-      top: 0;
+      top: 4px;
       font-size: 1.6em;
       margin: auto;
       z-index: 1;
@@ -281,7 +281,7 @@
 
   & span.menu-title {
     cursor: pointer;
-    font-size: 0.80em;
+    font-size: 0.70em;
     font-weight: 500;
     margin-right: 0px;
     padding: 4px 16px;

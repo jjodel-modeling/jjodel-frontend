@@ -520,7 +520,13 @@ export enum EdgeHead {
     composition = "Composition",
     aggregation = "Aggregation",
     reference   = "Association",
-    extend      = "Extension"
+    extend      = "Extension",
+    zero = "exactly zero / not present",
+    one = "exactly one, required",
+    many = "zero or many, optional, unbounded",
+    zeroOrOne = "zero or one, optional",
+    zeroOrMany = "zero or many, optional, unbounded",
+    oneOrMany = "one or many, at least one"
 }
 
 
@@ -663,6 +669,7 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
     DState(): this {
         let thiss: DState = this.thiss as any;
         thiss.debug = !!localStorage.getItem('debug');
+        thiss.languages = windoww.DV.defaultLanguages();
         return this;
     }
 
@@ -1068,7 +1075,50 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
             'color-': U.hexToPalette(), //['#ffffff', '#ff0000', '#00ff00', '#0000ff','#aaaaaa', '#ffaaaa', '#aaffaa', '#aaaaff'],
             'background-': U.hexToPalette() // ['#000000', '#33333', '#777777']};
         };
-        thiss.css = '';
+        thiss.css = "\n/* placeholder justification, add .center, .left, .start, .right, or .end in the <Input /> container */\n\n";
+
+        thiss.css += "input:placeholder-shown {\n" +
+        "  width: 120px !important;\n" +
+        "  font-style: italic !important;\n" +
+        "  text-align: right;\n" +
+        "  left: -120px !important;\n" +
+        "}\n\n";
+
+        thiss.css += ".center {\n" +
+        "  & input:placeholder-shown {\n" +
+        "    width: 120px !important;\n" +
+        "    font-style: italic !important;\n" +
+        "    text-align: center;\n" +
+        "    left: -60px !important;\n" +
+        "  }\n" +
+        "}\n\n";
+
+        thiss.css += ".left, .start {\n" +
+        "  & input:placeholder-shown {\n" +
+        "    width: 120px !important;\n" +
+        "    font-style: italic !important;\n" +
+        "    text-align: left;\n" +
+        "    left: 0 !important;\n" +
+        "  }\n" +
+        "}\n\n";
+
+        thiss.css += ".right, .end {\n" +
+        "  & input:placeholder-shown {\n" +
+        "    width: 120px !important;\n" +
+        "    font-style: italic !important;\n" +
+        "    text-align: right;\n" +
+        "    left: -120px !important;\n" +
+        "  }\n" +
+        "}\n\n";
+
+        thiss.css += ".input-container {\n" +
+        "   & select {\n" +
+        "        border: none;\n" +
+        "        text-align: right;\n" +  
+        "     }\n" +
+        "}";
+
+
         thiss.compiled_css = '';
         thiss.css_MUST_RECOMPILE = true;
         thiss.cssIsGlobal = false;
@@ -3675,6 +3725,23 @@ export enum EModelElements{
     "(m1) Object" = "DObject",
     "(m1) Value" = "DValue",
 }
+
+export class Language {
+    m2t: string;
+    t2m: string;
+    edited: boolean;
+    v: number;
+    test_text: string;
+    constructor(m2t: string = '', t2m: string='', test_text: string = '') {
+        this.t2m = t2m || '';// || m2t ? 'Not implemented, the m2t transformation will be unidirectional' : "Not implemented";
+        this.m2t = m2t || '';
+        this.edited = false;
+        this.test_text = test_text || '';
+        this.v = windoww.VersionFixer.get_highestversion();
+    }
+}
+
+
 export class ViewEClassMatch {
     static NOT_EVALUATED_YET = undefined;
     static MISMATCH = Number.NEGATIVE_INFINITY;

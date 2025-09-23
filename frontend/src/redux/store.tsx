@@ -1,3 +1,4 @@
+import { type Language } from '../joiner';
 import {
     Asterisk,
     Circle,
@@ -63,7 +64,6 @@ import {
     store, TRANSACTION, Trapezoid, Triangle, U, UserHistory, Vertex, VoidVertex,
 } from '../joiner';
 import {DV} from "../common/DV";
-//import {Selected} from "../joiner/types";
 import {DefaultEClasses, ShortDefaultEClasses} from "../common/U";
 import { GraphElements, Graphs, Vertexes, Edges, Fields } from '../joiner';
 import DefaultViews from "./defaults/views";
@@ -214,6 +214,7 @@ export class DState extends DPointerTargetable{
     dialog_response: string = '';
     action_description: string = '';
     action_title: string = '';
+    languages!: Dictionary<string, Language>;
 
 
     static fixcolors(){
@@ -242,6 +243,10 @@ export class DState extends DPointerTargetable{
                     'border-': U.hexToPalette('#a3a3a3')
                 }
                 vp.css = `
+/* -- Jjodel Abstract Syntax Specification v2.0 -- */
+
+
+
 /* stuff for subelements */
 [data-nodetype="GraphVertex"] {
   width: 50%;
@@ -291,9 +296,16 @@ export class DState extends DPointerTargetable{
   &.selected-by-me, &:has(.selected-by-me, .Edge, .edge, .edges), &:hover, &:active, &:focus-within, &:focus{
     overflow: visible;
     z-index: 100 !important;
-    outline-width: 4px;
+    outline-width: 0px!important;
     outline-style: solid;
     outline-color: var(--selected)!important;
+  }
+  .Vertex, .Field {
+    &.selected-by-me, &:hover, &:active, &:focus-within, &:focus {
+      outline-width: 4px!important;
+      outline-style: solid!important;
+      outline-color: var(--selected)!important;
+    }
   }
 }
 
@@ -498,6 +510,8 @@ ret.parentView = L.from(component.props.parentviewid);
     makeEdgeView("Inheritance", EdgeHead.extend,                size1,   undefined,  false);
     makeEdgeView("Aggregation", EdgeHead.aggregation,   undefined,      size2,      false);
     makeEdgeView("Composition", EdgeHead.composition,   undefined,      size2,      false);
+
+
 
     // edgeView.forceNodeType="Edge"
 

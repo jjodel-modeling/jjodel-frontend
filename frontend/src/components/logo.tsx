@@ -1,14 +1,10 @@
 import { TbHexagonLetterJ as Logo1} from "react-icons/tb";
-import { IoLogoWebComponent as Logo2} from "react-icons/io5";
+
 import {
     TbSquareRoundedLetterM,
-    TbSquareRoundedLetterMFilled,
-    TbSquareRoundedLetterV,
-    TbSquareRoundedLetterVFilled,
-    TbSquareRoundedLetterE
+    TbSquareRoundedLetterMFilled
 } from "react-icons/tb";
 
-import { int } from "../joiner/types";
 
 type LogoProps = {
     style?: any;
@@ -26,3 +22,4 @@ export const MetamodelIcon = (props: LogoProps) => {
 export const ModelIcon = (props: LogoProps) => {
     return (<TbSquareRoundedLetterM style={props.style && props.style} className={`logo ${props.className && props.className}`} />);
 }
+

@@ -77,7 +77,7 @@ function DockComponent(props: AllProps) {
     // if (advanced) tabs.push(broker);
     tabs.push(node);
     tabs.push(console);
-    // if (advanced) tabs.push(mtm);
+    if (advanced) tabs.push(mtm);
     if (advanced) tabs.push(logger);
 
     if (user?.project?.type === 'collaborative') tabs.push(collaborative);

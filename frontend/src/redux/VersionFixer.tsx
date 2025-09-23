@@ -3,6 +3,7 @@ import {
     GObject,
     GraphPoint, DViewPoint, DViewElement, PointedBy,
     DProject, LViewElement,
+    DV,
 } from "../joiner";
 import {
     Defaults, DGraphElement,
@@ -214,6 +215,23 @@ everytime you put hands into a D-Object shape or valid values, you should docume
             if ((c as DGraphElement).isSelected) (c as DGraphElement).isSelected = {};
             if (c?.className?.toLowerCase().includes('view')){
                 (c as DViewPoint|DViewElement).version = 2.202; // it is effectively v1 of views
+            }
+        }
+        return s;
+    }
+    private ['2.203 -> 2.204'](s: DState): DState {
+        let newLanguages = DV.defaultLanguages();
+        if (!s.languages) s.languages = newLanguages;
+        else {
+            for (let key in s.languages) {
+                // erase old languages that got renamed/retired and are not customized.
+                if (!(key in newLanguages) && !s.languages[key].edited) delete s.languages[key];
+            }
+
+            for (let key in newLanguages) {
+                let newLanguage = newLanguages[key];
+                let oldLanguage = s.languages[key];
+                if (!oldLanguage || !oldLanguage.edited) s.languages[key] = newLanguage; // update single obsolete language
             }
         }
         return s;
