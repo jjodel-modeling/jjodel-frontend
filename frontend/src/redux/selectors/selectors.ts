@@ -674,9 +674,9 @@ export class Selectors{
             lPackage = LPointerTargetable.wrap(lClass.father);
         }
         if (lPackage) {
-            for(let classifier of lPackage.classifiers) {
+            for(let classifier of lPackage.classes) {
                 const lClassifier: LClass | LEnumerator = LPointerTargetable.from(classifier);
-                if(lClassifier.className === "DClass") classes.push(lClassifier as LClass);
+                /*if(lClassifier.className === "DClass") */classes.push(lClassifier as LClass);
             }
         }
         return classes;
@@ -699,9 +699,9 @@ export class Selectors{
             lPackage = LPointerTargetable.from(lClass.father);
         }
         if(lPackage) {
-            for(let classifier of lPackage.classifiers) {
+            for(let classifier of lPackage.enumerators) {
                 const lClassifier: LClass | LEnumerator = LPointerTargetable.from(classifier);
-                if(lClassifier.className === "DEnumerator") enumerators.push(lClassifier as LEnumerator);
+                /*if(lClassifier.className === "DEnumerator")*/ enumerators.push(lClassifier as LEnumerator);
             }
         }
         return enumerators;

@@ -197,7 +197,8 @@ type pureStringsNoPointers<T> = {
 };
 export type ObjectWithoutPointers<T> = Omit<ObjectWithoutStrings<T> & pureStringsNoPointers<T>, 'pointedBy' | '_storePath'>
 
-type refkeys = "parent" | "father" | "classifiers" | "children" | "classes" | "packages" | "subpackages" | "annotations" | ""
+type refkeys = "parent" | "father" | "classes" | "enumerators" // | "classifiers"
+    | "children" | "packages" | "subpackages" | "annotations" | ""
     | "type" | "attributes" | "references" | "operations" | "parameters" | "..... much more"
 
 export type InitialSizeField = number ;// | ((segment: EdgeSegment) => number);

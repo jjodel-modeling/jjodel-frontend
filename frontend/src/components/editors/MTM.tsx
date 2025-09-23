@@ -33,9 +33,15 @@ const monacooptions: monaco.editor.IStandaloneEditorConstructionOptions = {
 let lastID: Pointer | undefined = undefined;
 export function T2MEditor(props: EditorProps & {onBlur?: (value: string|undefined, evt: Event) => void}){
     let [value, setValue] = useState(props.value);
+    let [oldValue, setOldValue] = useState(value);
+    function onBlur(evt: any){
+        if (oldValue === value) return;
+        props.onChange?.(value, evt);
+        props.onBlur?.(value, evt);
+        setOldValue(value);
+    }
     return (
-        <div tabIndex={-1} className={'monaco-editor-wrapper'} style={{overflow:'hidden'}}
-             onBlur={(evt: any)=>{ props.onChange?.(value, evt); props.onBlur?.(value, evt); }}>
+        <div tabIndex={-1} className={'monaco-editor-wrapper'} style={{overflow:'hidden'}} onBlur={onBlur}>
             <Editor {...props} className={props.className} options={{...monacooptions, ...(props.options||{})}} value={props.value}
                 defaultLanguage={undefined /*'javascript'*/}
                 beforeMount={(editor)=>{

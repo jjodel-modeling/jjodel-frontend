@@ -929,7 +929,7 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         thiss.sealed = [];
         thiss.final = false;
         thiss.allowCrossReference = false;
-        this.setExternalPtr(thiss.father, "classifiers", "+=");
+        this.setExternalPtr(thiss.father, "classes", "+=");
         this.setExternalRootProperty('ClassNameChanged.'+thiss.id, thiss.name, '', false);
 
         // thiss.isClass = !isPrimitive;
@@ -945,7 +945,7 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
 
     DEnumerator(literals: DEnumerator["literals"] = []): this {
         const thiss: DEnumerator = this.thiss as any;
-        this.setExternalPtr(thiss.father, "classifiers", "+=");
+        this.setExternalPtr(thiss.father, "enumerators", "+=");
         this.setPtr("literals", literals);
         // thiss.literals = literals;
         // thiss.isClass = false;
@@ -1709,7 +1709,10 @@ export class PendingPointedByPaths{
 
 @RuntimeAccessible('PointedBy')
 export class PointedBy {
-    static list: string[] = ["father", "parent", "annotations", "packages", "type", "subpackages", "classifiers", "exceptions", "parameters", "defaultValue", "instances", "operations", "features", "attributes", "references", "extends", "implements", "implementedBy", "instanceof", "edges", "target", "opposite", "parameters", "exceptions", "literals", "values"];
+    static list: string[] = ["father", "parent", "annotations", "packages", "type", "subpackages",
+        "classes", "enumerators", // "classifiers",
+        "exceptions", "parameters", "defaultValue", "instances", "operations", "features", "attributes", "references", "extends",
+        "implements", "implementedBy", "instanceof", "edges", "target", "opposite", "parameters", "exceptions", "literals", "values"];
     source: string; // elemento da cui parte il puntatore
     // field: keyof DPointerTargetable;
     // il bersaglio non c'è qui, perchè è l'oggetto che contiene questo dentro l'array pointedBy

@@ -148,6 +148,17 @@ export type DialogOptions = {
     reject: (val: string | PromiseLike<string>) => void
 };
 
+export type BrowserInfo =  {
+    screen: string,
+    browser: string,
+    browserVersion: string,
+    browserMajorVersion: number,
+    mobile: boolean,
+    os: string,
+    osVersion: string,
+    cookies: boolean,
+    userAgent: string,
+};
 
 @RuntimeAccessible('U')
 export class U {
@@ -617,8 +628,9 @@ export class U {
             case 'DModel|DPackage': field = 'packages'; break;
             case 'DPackage|DPackage': field = 'subpackages'; break;
             // DEnumerator and DClass
-            case 'DPackage|DEnumerator':
-            case 'DPackage|DClass': field = 'classifiers'; break;
+            // case 'DPackage|DEnumerator': case 'DPackage|DClass': field = 'classifiers'; break;
+            case 'DPackage|DEnumerator': field = 'enumerators'; break;
+            case 'DPackage|DClass': field = 'classes'; break;
             // DAttribute
             case 'DClass|DAttribute': field = 'attributes'; break;
             // DReference
@@ -2169,8 +2181,7 @@ export class U {
         return true;
     }
 */
-
-    static getOSBrowserData(){
+    static getOSBrowserData(): BrowserInfo{
         /**
          * JavaScript Client Detection
          * (C) viazenetti GmbH (Christian Ludwig)
