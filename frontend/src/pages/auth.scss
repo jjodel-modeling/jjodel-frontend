@@ -5,7 +5,7 @@
   }
 }
 .login.dirty {
-  label:has(>input:required, >select:required)::before {
+  label:has(>input:required:invalid, >select:required:invalid)::before {
     color: red;
     content: '*';
     display: inline-block;
@@ -17,7 +17,7 @@
     height: 0.75em;
   }
   input, select{
-    & :invalid {
+    &:invalid {
       border-color: var(--palette-r);
       outline-color: var(--palette-r);
     }

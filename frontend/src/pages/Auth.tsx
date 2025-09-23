@@ -512,8 +512,8 @@ function AuthPage(): JSX.Element {
                     <input className={'w-100 input w-fit d-block mx-auto mt-2'}
                         placeholder={'password'}
                         value={password}
-                        onClick={dirty}
                         pattern={'^[^\\s].{10,}[^\\s]$'}
+                        onClick={dirty}
                         onChange={e => setPassword(e.target.value)}
                         type={'password'} required={true}
                     />
@@ -525,6 +525,7 @@ function AuthPage(): JSX.Element {
                     <input className={'w-100 input w-fit d-block mx-auto mt-2'}
                         placeholder={'confirm password'}
                         value={passwordCheck}
+                        pattern={'^[^\\s].{10,}[^\\s]$'}
                         onClick={dirty}
                         onChange={e => setPasswordCheck(e.target.value)}
                         type={'password'} required={true}
@@ -574,6 +575,7 @@ function AuthPage(): JSX.Element {
                     <input className={'w-100 input w-fit d-block mx-auto  mt-2'}
                         placeholder={'password'}
                         value={password}
+                        pattern={'^[^\\s].{10,}[^\\s]$'}
                         onClick={dirty}
                         onChange={e => setPassword(e.target.value)}
                         type={'password'}
