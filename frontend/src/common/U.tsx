@@ -263,7 +263,16 @@ export class U {
         return Object.values(map);
     }
 
-    static alert(type: 'i'|'w'|'e', title: string, message: string = ''): void {
+    static alert(type: 'i'|'w'|'e', title: React.ReactNode, message: React.ReactNode = ''): void {
+        if (typeof title !== 'string') {
+            windoww.__jjAlertTitle = title;
+            title = '';
+        } else windoww.__jjAlertTitle = null;
+        if (typeof message !== 'string') {
+            windoww.__jjAlertMessage = message;
+            message = '';
+        } else windoww.__jjAlertMessage = null;
+
         SetRootFieldAction.new('alert', `${type}:${title}:${message}`, '');
     }
 

@@ -29,7 +29,6 @@ function AuthPage(): JSX.Element {
     const onSubmit = async(e: FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         SetRootFieldAction.new('isLoading', true);
-
         switch (action) {
             case 'login':
                 await login();
@@ -54,24 +53,30 @@ function AuthPage(): JSX.Element {
 
         try {
             const resetPasswordRequest = new ResetPasswordRequest();
-
             resetPasswordRequest.email = email;
             const response = await AuthApi.reset_password(resetPasswordRequest);
 
-            if (response.code === 200) {
-                console.log("Ti abbiamo inviato una mail per il reset della password.");
+            let category = +(response.code+'')[0];
+            switch (category) {
+                case 2: U.alert('i', <>Request completed, check your email for a reset link (might be in spam).</>, ''); break;
+                case 4: U.alert('e', 'Incorrect request, is your email correct?', ''); return;
+                case 5: U.alert('e', 'Request failed for a server error. Retry later while we are fixing our issue.', ''); return;
+                default:
+                    U.alert('e', 'Request failed.', '');
+                    return;
             }
 
         } catch (e) {
             console.error("Errore nella richiesta:", e);
-            alert("Errore imprevisto.");
+            U.alert('e', 'Request failed, please describe and report the issue at info@jjodel.io', ''); //The error has already been reported.', '');
+            // todo: we need to make auto-error report, then attach it here
 
         }
     }
 
     const login   = async () => {
         try {
-            const loginRequest   = new LoginRequest();
+            const loginRequest = new LoginRequest();
             loginRequest.email = email;
             loginRequest.password = password;
 
@@ -79,7 +84,17 @@ function AuthPage(): JSX.Element {
             const raw: TokenResponse | null = response.data;
 
             console.log('login debug', {loginRequest, response, raw});
-            if (response.code !== 200 || !raw?.token || typeof raw.token !== 'string') { U.alert('e', 'Login failed or invalid token.', ''); return; }
+            let category = +(response.code+'')[0];
+
+            switch (category) {
+                case 2: U.alert('i', <>Login successful you are being redirected to your <a href={'//#/allProjects'}>dashboard</a>.</>, ''); break;
+                case 4: U.alert('e', 'Username or password incorrect.', ''); return;
+                case 5: U.alert('e', 'Login failed due to a server error. Retry later while we are fixing our issue.', ''); return; // or try offline mode
+                default:
+                    U.alert('e', 'Login failed.', '');
+                    return;
+            }
+            if (!raw?.token || typeof raw.token !== 'string') { U.alert('e', 'Login failed or invalid token.', ''); return; }
 
             const claims = AuthApi.readJwtToken(raw.token);
             console.log('login claims', {response, raw, claims});
@@ -104,7 +119,6 @@ function AuthPage(): JSX.Element {
       };
 
     const register = async() => {
-   
 
         if (password !== passwordCheck) {
             U.alert('e', 'The two passwords are different','');
@@ -121,11 +135,16 @@ function AuthPage(): JSX.Element {
         registerRequest.Password = password;
         console.log(registerRequest);
         const response = await AuthApi.register(registerRequest);
-
-        if (response.code !== 200) {
-            U.alert('e', 'Registration failed.', '');
-            return;
+        let category = +(response.code+'')[0];
+        switch (category) {
+            case 2: U.alert('i', <>Request completed, check your email for an activation link (might be in spam).</>, ''); break;
+            case 4: U.alert('e', 'Incorrect request, are you missing fields?', ''); return;
+            case 5: U.alert('e', 'Registration failed due to a server error. Retry later while we are fixing our issue.', ''); return;
+            default:
+                U.alert('e', 'Registration failed.', '');
+                return;
         }
+
         const data = U.wrapper<DUser>(response.data);
         Storage.write('token', data.token);
         const user = DUser.new(data.name, data.surname, data.nickname, data.affiliation, data.country, data.newsletter || false, data.email, data.token, data.id, data._Id);
