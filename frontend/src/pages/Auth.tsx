@@ -560,7 +560,7 @@ function AuthPage(): JSX.Element {
             <>
                 {/* LOGIN */}
                 <label>
-                    @Email
+                    Email
                     <input className={'w-100 input w-fit d-block mx-auto mt-3'}
                         placeholder={'e-mail'}
                         value={email}
