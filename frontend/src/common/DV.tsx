@@ -207,20 +207,12 @@ export class DV {
                 path = `<path  `;
                 ret = path + attrs + "\n\t\t\t\t" + path + hoverAttrs;
                 break;
-            
-            
-                /* `<svg width="20" height="20" viewBox="0 0 20 20" style={overflow: "visible"}>
-                                            <path d={"M 10 0 L 0 20 L 20 20 Z"} fill="#ffffff" stroke="#808080" strokeWidth="1"></path>
-                                         </svg>`;*/
-                //  style={transform: "rotate3d(xcenter, ycenter, zcenter??, 90deg)"}
         }
-        //  transform={"rotate("+`+headstr+`.rad+"rad "+ segments.all[0].start.pt.toString(false, " ")}
+
         return ret; // no wrap because of .hoverable > .preview  on root & subelements must be consecutive
-        // return `<g className="edge`+head + ` ` + type +`" style={` + styleTranslate + `}>\n`+ ret +`</g>`
+
     }
 
-    // about label rotation in .edge > foreignObect > div (label)
-    // first transform is h-center. second is rotate, third adds [0, 50%] of 50% vertical offset AFTER rotation to take label out of edge. fourth is to add a margin.
     static edgeView(modename: EdgeHead, headSize: GraphPoint, tailSize: GraphPoint, dashing: string | undefined, vp: DViewElement, name: string): DViewElement {
         let fill: string;
         switch (modename){
@@ -487,17 +479,17 @@ foreignObject.label-end, foreignObject.label-start {
 
                 {/* start label */}
 
-                <foreignObject key={'label-start'} className="label-start" 
+                {props.slabel && <foreignObject key={'label-start'} className="label-start" 
                             x={\`\${sPos.x}px\`} y={\`\${sPos.y}px\`}>
                     <div className={\`label-text \${sPos.align}\`}>{props.slabel||''}</div>
-                </foreignObject>
+                </foreignObject>}
 
                 {/* end label */}
                 
-                <foreignObject key={'label-end'} className="label-end" 
+                {props.elabel && <foreignObject key={'label-end'} className="label-end" 
                             x={\`\${ePos.x}px\`} y={\`\${ePos.y}px\`}>
                     <div className={\`label-text \${ePos.align}\`}>{props.elabel||''}</div>
-                </foreignObject>
+                </foreignObject>}
 
                 { /* edge separate segments */ }
                 {segments && segments.all && segments.all.flatMap((s, i) => [
@@ -1136,6 +1128,4 @@ public static object(): string { return (
             <div className={'error-details'}>${msg}</div>
         </div></Measurable>)`;
     }
-
-
 }
