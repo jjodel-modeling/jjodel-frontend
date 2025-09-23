@@ -12,9 +12,8 @@ import { TokenResponse } from '../api/DTO/TokenResponse';
 import {ResetPasswordRequest} from "../api/DTO/ResetPasswordRequest";
 import "./auth.scss"
 
-
+const passPattern = '^.{8,}$'; //'^[^\\s].{10,}[^\\s]$';
 function AuthPage(): JSX.Element {
-
     const [action, setAction] = useStateIfMounted<'login'|'register'|'retrieve-password'>('login');
     const [nickname, setNickname] = useStateIfMounted('');
     const [name, setName] = useStateIfMounted('');
@@ -512,7 +511,7 @@ function AuthPage(): JSX.Element {
                     <input className={'w-100 input w-fit d-block mx-auto mt-2'}
                         placeholder={'password'}
                         value={password}
-                        pattern={'^[^\\s].{10,}[^\\s]$'}
+                        pattern={passPattern}
                         onClick={dirty}
                         onChange={e => setPassword(e.target.value)}
                         type={'password'} required={true}
@@ -525,7 +524,7 @@ function AuthPage(): JSX.Element {
                     <input className={'w-100 input w-fit d-block mx-auto mt-2'}
                         placeholder={'confirm password'}
                         value={passwordCheck}
-                        pattern={'^[^\\s].{10,}[^\\s]$'}
+                        pattern={passPattern}
                         onClick={dirty}
                         onChange={e => setPasswordCheck(e.target.value)}
                         type={'password'} required={true}
@@ -561,7 +560,7 @@ function AuthPage(): JSX.Element {
             <>
                 {/* LOGIN */}
                 <label>
-                    Email
+                    @Email
                     <input className={'w-100 input w-fit d-block mx-auto mt-3'}
                         placeholder={'e-mail'}
                         value={email}
@@ -575,7 +574,7 @@ function AuthPage(): JSX.Element {
                     <input className={'w-100 input w-fit d-block mx-auto  mt-2'}
                         placeholder={'password'}
                         value={password}
-                        pattern={'^[^\\s].{10,}[^\\s]$'}
+                        pattern={passPattern}
                         onClick={dirty}
                         onChange={e => setPassword(e.target.value)}
                         type={'password'}
