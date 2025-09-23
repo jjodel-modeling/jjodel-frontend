@@ -513,7 +513,7 @@ function AuthPage(): JSX.Element {
                         placeholder={'password'}
                         value={password}
                         onClick={dirty}
-                        pattern={'[A-Za-z0-9_\\$\\-]{12}'}
+                        pattern={'^[^\\s].{10,}[^\\s]$'}
                         onChange={e => setPassword(e.target.value)}
                         type={'password'} required={true}
                     />
