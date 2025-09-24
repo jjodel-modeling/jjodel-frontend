@@ -206,7 +206,11 @@ RuntimeAccessibleClass.set_extend(MyProxyHandler, GetPathHandler);
 
 
 
-export let hiddenkeys = ["jsxString", "pointedBy", "clonedCounter", "parent", "_subMaps", "inspect", "__random", '__serialize'];
+export let hiddenkeys = [
+    "jsxString", "pointedBy", "referencedBy",
+    "clonedCounter", "parent", "_subMaps",
+    "partialdefaultname", "isMirage",
+    "inspect", "__random", '__serialize'];
 
 @RuntimeAccessible('TargetableProxyHandler')
 export class TargetableProxyHandler<ME extends GObject = DModelElement, LE extends LPointerTargetable = LModelElement> extends MyProxyHandler<ME> {
@@ -297,8 +301,14 @@ export class TargetableProxyHandler<ME extends GObject = DModelElement, LE exten
             case '__raw': return targetObj;
             case 'json':
             case '__json':
-                let ret = {...targetObj};
+                let ret: GObject = {...targetObj};
+                if (ret._state) ret.state = ret._state;
                 for (let k of hiddenkeys) { delete ret[k]; }
+                for (let k of Object.keys(ret)) {
+                    let v = ret[k];
+                    if ((Array.isArray(v) && v.length === 0) || U.isEmptyObject(v)) delete ret[k];
+                    if (v === '') delete ret[k];
+                }
                 return ret;
             case '__serialize': return JSON.stringify(targetObj, null, 4);
             case '__isproxy':

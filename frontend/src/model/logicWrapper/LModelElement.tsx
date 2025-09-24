@@ -5335,10 +5335,6 @@ export class DObject extends DPointerTargetable { // extends DNamedElement, m1 c
     features: Pointer<DValue>[] = [];
 
     partial!: boolean | undefined;
-    __info_of__partial: Info = {type:'boolean | undefined', txt: 'whether the object is allowed to have extra features other than the ones specified by the metamodel.\n' +
-            'shapeless objects are always partial.\n' +
-            'undefined means the property is inherited by his metamodel class, a boolean value means it overrides it.'}
-
     public static new(instanceoff?: DObject["instanceof"], father?: DObject["father"], fatherType?: typeof DModel | typeof DValue, name?: DNamedElement["name"], persist: boolean = true): DObject {
         // if (!name) name = this.defaultname(((meta: LNamedElement) => meta.name + " "), father);
         if (!name) name = this.defaultname(((meta: LNamedElement) => (meta?.name || "obj") + "_"), father, instanceoff);
@@ -5396,6 +5392,10 @@ export class LObject<Context extends LogicContext<DObject> = any, C extends Cont
     features!: LValue[];
     isRoot!: boolean;
     readonly partial!: boolean;
+    __info_of__partial: Info = {type:'boolean | undefined', txt: 'whether the object is allowed to have extra features other than the ones specified by the metamodel.\n' +
+            'shapeless objects are always partial.\n' +
+            'undefined means the property is inherited by his metamodel class, a boolean value means it overrides it.'}
+
 
     protected get_name(context: Context): this['name'] {
         return (context.proxyObject as GObject)['$name']?.value || context.data.name || context.proxyObject.instanceof?.name;
