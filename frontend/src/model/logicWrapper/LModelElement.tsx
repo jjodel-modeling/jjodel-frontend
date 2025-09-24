@@ -1702,7 +1702,7 @@ export class LPackage<Context extends LogicContext<DPackage> = any, C extends Co
     protected get_classes(context: Context, state?: DState, setNameKeys: boolean = true): LClass[] & Dictionary<DocString<"$name">, LClass> {
         if (!context.data.classes.length) return [] as any;
         if (!state) state = store.getState();
-        let dclasses = DPointerTargetable.fromPointer(context.data.classes, state);
+        let dclasses = DPointerTargetable.fromPointer(context.data.classes, state).filter(e=>!!e);
         let lclasses: LClass[] & Dictionary<DocString<"$name">, LClass> = LPointerTargetable.fromD(dclasses) as any;
         if (setNameKeys) for (let i = 0; i < dclasses.length; i++) lclasses["$"+dclasses[i].name] = lclasses[i];
         return lclasses;
@@ -1711,7 +1711,7 @@ export class LPackage<Context extends LogicContext<DPackage> = any, C extends Co
     protected get_enumerators(context: Context, state?: DState, setNameKeys: boolean = true): (LEnumerator[] & Dictionary<DocString<"$name">, LEnumerator>) {
         if (!context.data.enumerators.length) return [] as any;
         if (!state) state = store.getState();
-        let denums = DPointerTargetable.fromPointer(context.data.enumerators, state);
+        let denums = DPointerTargetable.fromPointer(context.data.enumerators, state).filter(e=>!!e);
         let lenums: LEnumerator[] & Dictionary<DocString<"$name">, LEnumerator> = LPointerTargetable.fromD(denums) as any;
         if (setNameKeys) for (let i = 0; i < denums.length; i++) (lenums as GObject)["$"+denums[i].name] = lenums[i];
         return lenums;
@@ -1770,9 +1770,9 @@ export class LPackage<Context extends LogicContext<DPackage> = any, C extends Co
 
     protected get_classifiers(context: Context): this["classifiers"] {
         return U.arrayMergeInPlace(
-            context.data.classes.map(pointer => LPointerTargetable.from(pointer)),
-            context.data.enumerators.map(pointer => LPointerTargetable.from(pointer))
-        );
+            context.data.classes.map(pointer => LPointerTargetable.from(pointer)).filter(e=>!!e),
+            context.data.enumerators.map(pointer => LPointerTargetable.from(pointer)).filter(e=>!!e)
+        ) as any[];
     }
     protected set_enumerators(val: PackArr<this["enumerators"]>, c: Context): boolean { return this._set_classifiers(val, c, 'enumerators'); }
     protected set_classes(val: PackArr<this["classes"]>, c: Context): boolean { return this._set_classifiers(val, c, 'classes'); }
@@ -1800,7 +1800,7 @@ export class LPackage<Context extends LogicContext<DPackage> = any, C extends Co
     protected get_subpackages(context: Context): this["subpackages"] {
         return context.data.subpackages.map((pointer) => {
             return LPointerTargetable.from(pointer)
-        });
+        }).filter(e=>!!e) as any[];
     }
     protected set_subpackages(val: PackArr<this["subpackages"]>, c: Context): boolean {
         const list = val.map((lItem) => { return Pointers.from(lItem) });
@@ -2204,7 +2204,7 @@ export class LOperation<Context extends LogicContext<DOperation, LOperation> = a
     protected get_parameters(context: Context): this["parameters"] {
         return context.data.parameters.map((pointer) => {
             return LPointerTargetable.from(pointer)
-        });
+        }).filter(e=>!!e) as any[];
     }
     protected set_parameters(val: PackArr<this["parameters"]>, c: Context): boolean {
         const list = val.map((lItem) => { return Pointers.from(lItem) });
@@ -2915,7 +2915,7 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
     protected get_operations(context: Context): this["operations"] {
         return context.data.operations.map((pointer) => {
             return LPointerTargetable.from(pointer)
-        });
+        }).filter(e=>!!e) as any;
     }
     protected set_operations(val: PackArr<this["operations"]>, context: Context): boolean {
         const list: Pointer<DOperation>[] = val.map((lItem) => { return Pointers.from(lItem) })
@@ -2965,7 +2965,7 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
     protected get_references(context: Context): this["references"] {
         return context.data.references.map((pointer) => {
             return LPointerTargetable.from(pointer)
-        });
+        }).filter(e=>!!e) as any;
     }
     protected set_references(val: PackArr<this["references"]>, context: Context): boolean {
         const list = val.map((lItem) => { return Pointers.from(lItem) });
@@ -2990,7 +2990,7 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
     protected get_attributes(context: Context): this["attributes"] {
         return context.data.attributes.map((pointer) => {
             return LPointerTargetable.from(pointer)
-        });
+        }).filter(e=>!!e) as any[];
     }
     protected set_attributes(val: PackArr<this["attributes"]>, context: Context): boolean {
         const list = val.map((lItem) => { return Pointers.from(lItem) });
@@ -4258,7 +4258,7 @@ export class LEnumerator<Context extends LogicContext<DEnumerator> = any, C exte
     protected get_literals(context: Context): this["literals"] {
         return context.data.literals.map((pointer) => {
             return LPointerTargetable.from(pointer)
-        }); }
+        }).filter(e=>!!e) as any; }
 
     protected set_literals(val: PackArr<this["literals"]>, context: Context): boolean {
         const list = val.map((lItem) => { return Pointers.from(lItem) });

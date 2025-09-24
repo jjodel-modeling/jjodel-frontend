@@ -776,7 +776,7 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
             tocheck = newtocheck;
         }
         delete checked[context.data.id];
-        return LPointerTargetable.from(Object.keys(checked), state);
+        return LPointerTargetable.fromArr(Object.keys(checked), state).filter((e: any)=>!!e);
     }
 
     set_allSubElements(val: never, c: Context): boolean {
