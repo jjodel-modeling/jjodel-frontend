@@ -162,8 +162,8 @@ export class UX{
                     case EdgeComponent.cname: case "Edge":
                         //console.log('injecting props ' + type + " without key", {re, pc: parentComponent, injectProps, ownProps: rprops});
                         let edgeProps: EdgeOwnProps = rprops as any;
-                        let edgestart_id: Pointer<DGraphElement> | Pointer<DModelElement> = (edgeProps.start as any).id || edgeProps.start;
-                        let edgeend_id: Pointer<DGraphElement> | Pointer<DModelElement> = (edgeProps.end as any).id || edgeProps.end;
+                        let edgestart_id: Pointer<DGraphElement> | Pointer<DModelElement> = (edgeProps.start as any)?.id || edgeProps.start;
+                        let edgeend_id: Pointer<DGraphElement> | Pointer<DModelElement> = (edgeProps.end as any)?.id || edgeProps.end;
                         idbasename = injectProps.parentnodeid + "_" + edgestart_id + "-" + edgeend_id + (edgeProps.isReference ? 'R' : (edgeProps.isExtend ? 'X' : 'E'));
                 }
                 // (injectProps.parentnodeid)+"_"+(dataid)+indices.join("_");//injectProps.graphid + '_' + dataid;

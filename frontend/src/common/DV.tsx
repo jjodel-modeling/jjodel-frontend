@@ -1084,7 +1084,7 @@ public static object(): string { return (
             case 'classic':
                 return (<Measurable draggable={true} resizable={false}><div className='hoverable error-root graph-centered' tabIndex={0}>
                     <i className="bi bi-exclamation-diamond-fill" style={{color: "red"}} />
-                    <div className='content fixed error-notification'>
+                    <div className='content fixed error-notification' tabIndex={-1}>
                         <h1>Something Went Wrong...</h1>
                         {v && <h2>Error in "{v?.name}" syntax view
                             definition{viewpointname ? ' in viewpoint ' + viewpointname : ''}.</h2>}
