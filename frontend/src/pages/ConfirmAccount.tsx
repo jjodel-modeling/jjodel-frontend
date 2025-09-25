@@ -55,7 +55,7 @@ function ConfirmAccount() {
                         onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#2563eb'}
                         style={styles.button}
                     >
-                        Conferma Account
+                        Confirm Account
                     </button>
                 )}
             </div>
