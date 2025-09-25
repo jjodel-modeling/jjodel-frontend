@@ -638,7 +638,7 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
 
     protected get_children(context: Context): this["children"] {
         // return this.get_children_idlist(context).map(e => LPointerTargetable.from(e));
-        return LPointerTargetable.from(this.get_children_idlist(context));
+        return LPointerTargetable.fromArr(this.get_children_idlist(context)).filter((e: any)=>!!e);
     }
 
     protected set_children(a: never, context: Context): boolean {
@@ -694,7 +694,7 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
     }
 
     protected get_annotations(context: Context): this["annotations"] {
-        return LPointerTargetable.fromPointer(context.data.annotations);
+        return LPointerTargetable.fromArr(context.data.annotations).filter((e: LAnnotation)=>!!e);
     }
 
     protected set_annotations(val: Pack<LAnnotation>, c: Context): boolean {
@@ -2694,17 +2694,17 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
     }
 
     protected get_ownAttributes(context: Context): this['ownAttributes'] {
-        return LAttribute.fromPointer(context.data.attributes);
+        return LAttribute.fromArr(context.data.attributes).filter((c: LAttribute)=>!!c);
     }
     protected get_ownReferences(context: Context): this['ownReferences'] {
-        return LReference.fromPointer(context.data.references);
+        return LReference.fromArr(context.data.references).filter((c: LReference)=>!!c);
     }
     protected get_ownOperations(context: Context): this['ownOperations'] {
-        return LOperation.fromPointer(context.data.operations);
+        return LOperation.fromArr(context.data.operations).filter((c: LOperation)=>!!c);
     }
     protected get_ownChildren(context: Context): this['ownChildren'] {
         return U.arrayMergeInPlace<any>(this.get_ownAttributes(context), this.get_ownReferences(context),
-            this.get_ownOperations(context));
+            this.get_ownOperations(context)).filter(c=>!!c);
     }
 
 

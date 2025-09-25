@@ -274,6 +274,7 @@ export class U {
         return Object.values(map);
     }
 
+    static alertSeparator: string = '£';
     static alert(type: 'i'|'w'|'e', title: React.ReactNode, message: React.ReactNode = ''): void {
         if (typeof title !== 'string') {
             windoww.__jjAlertTitle = title;
@@ -284,7 +285,7 @@ export class U {
             message = '';
         } else windoww.__jjAlertMessage = null;
 
-        SetRootFieldAction.new('alert', `${type}:${title}:${message}`, '');
+        SetRootFieldAction.new('alert', `${type}£${title}£${message}`, '');
     }
 
     static dialog(message: string, label: string, action: () => any): void {

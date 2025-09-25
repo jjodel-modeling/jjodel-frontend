@@ -1,4 +1,4 @@
-import {DState, SetRootFieldAction, windoww} from '../../joiner';
+import {DState, SetRootFieldAction, U, windoww} from '../../joiner';
 import {FakeStateProps} from '../../joiner/types';
 import React, {Component, Dispatch, ReactElement, ReactNode} from 'react';
 import {connect} from 'react-redux';
@@ -56,7 +56,7 @@ function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     let alert = state.alert;
     if (!alert) return ret;
     alert = alert + ' ';
-    let pieces = alert.split(':');
+    let pieces = alert.split(U.alertSeparator);
     ret.type = pieces[0];
     ret.title = windoww.__jjAlertTitle || pieces[1] || '';
     ret.message = windoww.__jjAlertMessage || pieces[2] || '';

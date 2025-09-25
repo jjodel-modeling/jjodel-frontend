@@ -106,7 +106,7 @@ function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     let dialog = state.dialog;
     if(!dialog) return ret;
     dialog = dialog + ' ';
-    let pieces = dialog.split(':');
+    let pieces = dialog.split(U.alertSeparator);
     ret.message = pieces[0];
     ret.label = pieces[1];
 
