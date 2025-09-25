@@ -1,0 +1,25 @@
+
+.login{
+  input::placeholder{
+    color: #999;
+  }
+}
+.login.dirty {
+  label:has(>input:required:invalid, >select:required:invalid)::before {
+    color: red;
+    content: '*';
+    display: inline-block;
+    scale: 2;
+    margin-right: .5em;
+    float: left;
+    /* position: absolute; */
+    left: 10%;
+    height: 0.75em;
+  }
+  input, select{
+    &:invalid {
+      border-color: var(--palette-r);
+      outline-color: var(--palette-r);
+    }
+  }
+}

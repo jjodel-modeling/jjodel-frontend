@@ -12,6 +12,7 @@ export class Storage {
 
     static write(key: string, obj: unknown): void {
         let str: string;
+        console.trace('store.write('+key+', '+obj+')', {key, obj});
         switch (typeof obj){
             case 'object': str = JSON.stringify(obj); break;
             default: str = ''+obj; break;

@@ -20,14 +20,14 @@ function ModelTabComponent(props: AllProps) {
             <span style={{margin: "auto"}}>Building the Graph...</span>
         </div>);
     }
-
+    let graphid = graph.id;
     return(<div className={'w-100 h-100'} style={{overflow: 'hidden'}}>
-        <ContextMenu />
+        <ContextMenu graph={graphid}/>
         <div className={'d-flex h-100'} style={{overflow:'hidden'}} onClick={e => { if (!U.isProjectModified) U.isProjectModified = U.userHasInteracted = true; }}>
             <ToolBar model={model.id} isMetamodel={model.isMetamodel} metamodelId={props.metamodelid} />
             <Try>
                 <div className={"GraphContainer h-100 w-100"} style={{position:"relative"}}>
-                    {graph && <DefaultNode data={model} nodeid={graph.id} graphid={graph.id} />}
+                    {graph && <DefaultNode data={model} nodeid={graphid} graphid={graphid} />}
                 </div>
             </Try>
         </div>

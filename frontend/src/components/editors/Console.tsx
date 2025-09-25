@@ -27,6 +27,7 @@ import {Empty} from "./Empty";
 import {Tooltip} from "../forEndUser/Tooltip";
 
 import { createRoot } from "react-dom/client";
+import {hiddenkeys} from "../../joiner/proxy";
 const Convert = require('ansi-to-html');
 
 let ansiConvert = (window as any).ansiConvert;
@@ -43,9 +44,8 @@ class ThisState{
 
 // trasformato in class component così puoi usare il this nella console. e non usa accidentalmente window come contesto
 
-let hiddenkeys = ["jsxString", "pointedBy", "clonedCounter", "parent", "_subMaps", "inspect", "__random", '__serialize'];
 function fixproxy(output: any/*but not array*/, addDKeys: boolean = true, addLKeys: boolean = true):
-    { output: any, shortcuts?: GObject<'L singleton'>, comments?: Dictionary<string, string | {type:string, txt:string}>, hiddenkeys?: GObject} {
+    { output: any, shortcuts?: GObject<'L singleton'>, comments?: Dictionary<string, string | {type:string, txt:string}>} {
 
     let ret: ReturnType<typeof fixproxy> = {output};
     if (!output) return ret;
@@ -53,7 +53,7 @@ function fixproxy(output: any/*but not array*/, addDKeys: boolean = true, addLKe
     let proxy: LPointerTargetable | undefined;
     if (output?.__isProxy) {
         proxy = output;
-        output = output.__raw; //Object.fromEntries(Object.getOwnPropertyNames(p).map(k => [k, p[k]]));
+        output = output.json; //.__raw; Object.fromEntries(Object.getOwnPropertyNames(p).map(k => [k, p[k]]));
     } else proxy = undefined;
 
     console.log('console short in 1', {output, proxy, ret, addLKeys, iff:addLKeys && proxy});
@@ -103,19 +103,8 @@ function fixproxy(output: any/*but not array*/, addDKeys: boolean = true, addLKe
                 console.log('console short in 3', {ret});
 
             }
-            if (hiddenkeys) {
-                ret.hiddenkeys = {};
-                for (let key of hiddenkeys) {
-                    ret.hiddenkeys[key] = output[key];
-                    delete output[key];
-                    if (ret.shortcuts) delete ret.shortcuts[key];
-                }
-            }
             break;
     }
-
-    //@ts-ignore
-    //ret ={...ret, shortcuts: undefined, comments: undefined, hiddenkeys: undefined};
 
     return ret;
 }
@@ -249,7 +238,6 @@ class ConsoleComponent extends PureComponent<AllProps, ThisState>{
         let output: any = this.state.output;
         let shortcuts: GObject<'L singleton'> | undefined = undefined;
         let comments: Dictionary<string, string | {type:string, txt:string}> | undefined = undefined;
-        let hidden: Dictionary<string, string> | undefined = undefined;
         let jsxComments: Dictionary<string, JSX.Element[]> = {};
         let shortcutsjsx: ReactNode = undefined;
         try {
@@ -266,7 +254,6 @@ class ConsoleComponent extends PureComponent<AllProps, ThisState>{
                 comments = ret.comments;
                 shortcuts = ret.shortcuts;
                 console.log('console short', {shortcuts, ret, output});
-                hidden = ret.hiddenkeys;
             }
             // todo: as i fix the displaying of a LViewElement without replacing it with __raw,
             //  i will fix window, component and props displaying too i think they crash for props.data, props.view...
@@ -310,7 +297,6 @@ class ConsoleComponent extends PureComponent<AllProps, ThisState>{
                     "<h4>Shortcuts</h4><section class='group shortcuts-container'><div class=\"output-row\" tabindex=\"984\">" + U.objectInspect(shortcuts)+"</section>";
                 */
 
-                // if (hidden) outstr +="</div><br><br><h4>Other less useful properties</h4><div class=\"output-row\" tabindex=\"984\">" + format(hidden);
                 // warning: unicode char but should not make a problem.
                 // outstr = U.replaceAll( outstr, '𐀹,\n', '],</span>\n</div><div class="output-row" tabindex="984"><span style="color:#000">');
                 windoww.outstr = outstr.substring(0, 500);

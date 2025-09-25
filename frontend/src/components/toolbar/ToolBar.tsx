@@ -278,7 +278,7 @@ function ToolBarComponent(props: AllProps) {
                     <div key={'se'} className={'se'}>{subelements}</div>]);
             }
         } else {
-            const classes = metamodel?.classes || [];
+            const classes = metamodel?.crossClasses || [];
             const model: LModel = LModel.fromPointer(props.model);
             const lobj: LObject | undefined = data.className === "DObject" ? data as LObject : undefined;
             const lfeat: LValue | undefined = data.className === "DValue" ? data as LValue : undefined;
@@ -384,8 +384,9 @@ function ToolBarComponent(props: AllProps) {
                      }, 1)
                  }}>
                 <div className={"toolbar hoverable" + (pinned ? " pinned" : '')} tabIndex={0}>
-                    <i style={{marginTop: '8px'}} className={"content pin bi bi-x-lg"} onClick={() => minimize(htmlref)}/>
-                    <section className={"content inline w-100"}>
+                    <i className={"content pin bi bi-x-lg"} onClick={() => minimize(htmlref)}/>
+                    {/* margins calc: 120 height of graph, 35 margin from graph top, repeated for bottom. */}
+                    <section className={"content inline w-100"} style={{maxHeight: 'calc(100vh - 120px - 35px - 35px)', overflowY: 'auto'}}>
                         {(content as any )?.length ? content : "Select a node."}
                     </section>
                 </div>

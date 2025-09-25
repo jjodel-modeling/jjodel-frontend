@@ -159,7 +159,7 @@ export class StateMachine {
     }
     static load7(name: string, save?: boolean) {
         this.load6(name);
-        SetFieldAction.new(this.pkg.id, 'classifiers', this.reset.id as any, '-=', true);
+        SetFieldAction.new(this.pkg.id, 'classes', this.reset.id as any, '-=', true);
         SetFieldAction.new(this.resetInstance.id, 'instanceof', undefined as any, '', false);
         this.reset.delete();
         this.textView.jsxString = TextView.zero;

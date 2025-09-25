@@ -1,14 +1,22 @@
-import type {DocString, DtoL, DtoW, GObject, Proxyfied, WPointerTargetable,} from "../joiner";
 import {
-    ABORT,
+    DocString,
+    DtoL, DtoW,
+    GObject,
+    Proxyfied,
+    DPointerTargetable,
+    LModelElement,
+    Pointer,
     Dictionary,
     DModelElement,
-    DPointerTargetable,
+} from "../joiner";
+import {
+    windoww,
+    L,
+    Pointers,
+    ABORT,
     JsType,
-    LModelElement,
     Log,
     LPointerTargetable,
-    Pointer,
     RuntimeAccessible,
     RuntimeAccessibleClass,
     SetFieldAction,
@@ -52,8 +60,24 @@ export class LogicContext<
         }*/
 }
 
+@RuntimeAccessible('LogicContext')
+export class LogicContext2<D extends GObject = GObject, L extends any = any, W extends any = any> extends LogicContext<D, L, W>{
+    path!: string;
+    base!: DPointerTargetable;
+    data!: D;
+
+
+    constructor(proxyObject: L, data: D, base: DPointerTargetable, path: string) {
+        super(proxyObject, data);
+        this.className = (this.constructor as typeof RuntimeAccessibleClass).cname || this.constructor.name;
+        this.base = base;
+        this.path = path;
+
+    }
+}
 RuntimeAccessibleClass.set_extend(RuntimeAccessibleClass, LogicContext);
-@RuntimeAccessible('MapLogicContext')
+
+/*@RuntimeAccessible('MapLogicContext')
 export class MapLogicContext extends LogicContext<GObject, LPointerTargetable, WPointerTargetable> {
     data: GObject;
     path: string;
@@ -69,6 +93,7 @@ export class MapLogicContext extends LogicContext<GObject, LPointerTargetable, W
     }
 }
 RuntimeAccessibleClass.set_extend(LogicContext, MapLogicContext);
+*/
 
 @RuntimeAccessible('MyProxyHandler')
 export abstract class MyProxyHandler<T extends GObject> extends RuntimeAccessibleClass implements ProxyHandler<T>{
@@ -103,11 +128,11 @@ export abstract class MyProxyHandler<T extends GObject> extends RuntimeAccessibl
 
     static wrap<D extends RuntimeAccessibleClass, L extends LPointerTargetable = LPointerTargetable, CAN_THROW extends boolean = false,
         RET extends CAN_THROW extends true ? L : L | undefined  = CAN_THROW extends true ? L : L>
-    (data: D | Pointer | undefined | null, baseObjInLookup?: DPointerTargetable, path: string = '', canThrow: CAN_THROW = false as CAN_THROW): RET{
+    (data: D | Pointer | undefined | null, baseObjInLookup?: undefined, path: '' = '', canThrow: CAN_THROW = false as CAN_THROW): RET{
 
 //    static wrap<D extends RuntimeAccessibleClass, L extends LPointerTargetable, RET extends boolean = false>
 //        (data: D | Pointer<DViewElement>, baseObjInLookup?: DPointerTargetable, path: string = '', canthrow: RET = false as RET): RET {
-        return DPointerTargetable.wrap(data, baseObjInLookup, path) as RET; }
+        return (windoww.DPointerTargetable as typeof DPointerTargetable).wrap(data, baseObjInLookup, path) as RET; }
 
     static isProxy(data: GObject): boolean { return data?.__isProxy || false; }
 }
@@ -178,6 +203,15 @@ class GetPathHandler<T extends GObject> extends MyProxyHandler<T>{
     }
 }
 RuntimeAccessibleClass.set_extend(MyProxyHandler, GetPathHandler);
+
+
+
+export let hiddenkeys = [
+    "jsxString", "pointedBy", "referencedBy",
+    "clonedCounter", "parent", "_subMaps",
+    "partialdefaultname", "isMirage",
+    "inspect", "__random", '__serialize'];
+
 @RuntimeAccessible('TargetableProxyHandler')
 export class TargetableProxyHandler<ME extends GObject = DModelElement, LE extends LPointerTargetable = LModelElement> extends MyProxyHandler<ME> {
     lg: LE & GObject; // to disable type check easily and access 'set_' + varname dynamically
@@ -258,13 +292,25 @@ export class TargetableProxyHandler<ME extends GObject = DModelElement, LE exten
         switch (propKey) {
             case '__l': return this.l;
             case '__d': return this.d;
+            case '__t': return this;
             case 'inspect': // node.js util
             case "r":
             case "_refresh":
             case "_reload": return LPointerTargetable.wrap(targetObj.id);
             case '__Raw':
             case '__raw': return targetObj;
-            case '__serialize': return JSON.stringify(targetObj);
+            case 'json':
+            case '__json':
+                let ret: GObject = {...targetObj};
+                if (ret._state) ret.state = ret._state;
+                for (let k of hiddenkeys) { delete ret[k]; }
+                for (let k of Object.keys(ret)) {
+                    let v = ret[k];
+                    if ((Array.isArray(v) && v.length === 0) || U.isEmptyObject(v)) delete ret[k];
+                    if (v === '') delete ret[k];
+                }
+                return ret;
+            case '__serialize': return JSON.stringify(targetObj, null, 4);
             case '__isproxy':
             case '__isProxy': return true;
             case '__random': return Math.random();
@@ -281,11 +327,13 @@ export class TargetableProxyHandler<ME extends GObject = DModelElement, LE exten
             return (this.l as GObject)[propKey];
         }
 
-
+        let logicContext = this.additionalPath
+            ? new LogicContext2(proxyitself, targetObj, this.baseObjInLookup, this.additionalPath)
+            : new LogicContext(proxyitself as any, targetObj);
         // check if exist directly in D.key, L.key or through a get_key
         if (propKey in this.l || propKey in this.d || (this.l as GObject)[this.g + (propKey as string)]) {
             // todo: il LogicContext passato come parametro risulta nell'autocompletion editor automaticamente generato, come passo un parametro senza passargli il parametro? uso arguments senza dichiararlo?
-            if (typeof propKey !== 'symbol' && this.g + propKey in this.lg) return this.lg[this.g + propKey](new LogicContext(proxyitself as any, targetObj));
+            if (typeof propKey !== 'symbol' && this.g + propKey in this.lg) return this.lg[this.g + propKey](logicContext);
 
 
 
@@ -293,7 +341,7 @@ export class TargetableProxyHandler<ME extends GObject = DModelElement, LE exten
             if (typeof propKey !== 'symbol' && this.g + propKey in this.lg) {
                 let getterMethod: Function = this.lg[this.g + propKey]; // || this.defaultGetter;
                 // console.log("gets method", {getterMethod, lg:this.lg, thiss: this});
-                if (getterMethod) return getterMethod(new LogicContext(proxyitself as any, targetObj));
+                if (getterMethod) return getterMethod(logicContext);
             }
 
         }
@@ -303,7 +351,7 @@ export class TargetableProxyHandler<ME extends GObject = DModelElement, LE exten
 
         // if custom generic getter exist
         // @ts-ignore
-        if (this.lg._defaultGetter) return this.lg._defaultGetter(new LogicContext(proxyitself as any, targetObj), propKey);
+        if (this.lg._defaultGetter) return this.lg._defaultGetter(logicContext, propKey);
 
         // if property do not exist, try a concatenation
         /*let concatenationTentative = null;
@@ -317,11 +365,17 @@ export class TargetableProxyHandler<ME extends GObject = DModelElement, LE exten
 
     public defaultGetter(targetObj: ME, key: string, proxyitself: Proxyfied<ME>): any {
         if (!targetObj) return targetObj;
-        if (!targetObj._subMaps || !targetObj._subMaps[key]) return (targetObj as Dictionary)[key];
+        let autoWrapObjects = false;
+        let v = (targetObj as GObject)[key];
+        if (!autoWrapObjects || typeof v !== 'object') return v;
+
+        if (v.className) return L.from(v);
+        return LGObject.wrapObject(targetObj as any, key, v);
+        /*if (!targetObj._subMaps || !targetObj._subMaps[key]) return (targetObj as Dictionary)[key];
         // if is a nexted subobject
         let context: MapLogicContext = new MapLogicContext(proxyitself as any, targetObj, key, []);
         let retRaw: Dictionary = this.lg[this.s + key]
-        return MapProxyHandler.mapWrap((targetObj as Dictionary)[key], targetObj as any, this.additionalPath + '.' + key)
+        return MapProxyHandler.mapWrap((targetObj as Dictionary)[key], targetObj as any, this.additionalPath + '.' + key)*/
     }
 
     public defaultSetter(targetObj: DPointerTargetable, propKey: string, value: any, proxyitself?: Proxyfied<ME>): boolean {
@@ -352,11 +406,15 @@ export class TargetableProxyHandler<ME extends GObject = DModelElement, LE exten
             case 'parent': propKey = 'father'; break;
         }
 
+        let logicContext = this.additionalPath
+            ? new LogicContext2(proxyitself, targetObj, this.baseObjInLookup, this.additionalPath)
+            : new LogicContext(proxyitself as any, targetObj);
+
         if (propKey in this.l || propKey in this.d || (this.l as GObject)[this.s + (propKey as string)]) {
             // todo: il LogicContext passato come parametro risulta nell'autocompletion editor automaticamente generato, come passo un parametro senza passargli il parametro? uso arguments senza dichiararlo?
             if (typeof propKey !== 'symbol' && this.s + propKey in this.lg) {
                 try {
-                    this.lg[this.s + propKey](value, new LogicContext(proxyitself as any, targetObj));
+                    this.lg[this.s + propKey](value, logicContext);
                 } catch (e) {
                     Log.eDevv('failed to set property', {targetObj, propKey, e});
                 }
@@ -373,7 +431,7 @@ export class TargetableProxyHandler<ME extends GObject = DModelElement, LE exten
         // if custom generic setter exist
         // @ts-ignore private property
         if (this.lg._defaultSetter) { // @ts-ignore private property
-            this.lg._defaultSetter(value, new LogicContext(proxyitself as any, targetObj), propKey);
+            this.lg._defaultSetter(value, logicContext, propKey);
             return true;
         }
         /*if (enableFallbackSetter && typeof (propKey === "string") && ((propKey as string)[0] === '_' || (propKey as string).indexOf('tmp') > 0)) {
@@ -417,6 +475,71 @@ export class TargetableProxyHandler<ME extends GObject = DModelElement, LE exten
     }*/
 }
 RuntimeAccessibleClass.set_extend(MyProxyHandler, TargetableProxyHandler);
+
+type LGObjectContext<D extends GObject = GObject> = LogicContext2<D, LGObject, LGObject>;
+@RuntimeAccessible('DGObject')
+export class DGObject extends DPointerTargetable {
+    static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
+    static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
+}
+@RuntimeAccessible('DArray')
+export class DArray extends DGObject {
+    static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
+    static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
+}
+
+
+@RuntimeAccessible('LGObject')
+export class LGObject<D extends GObject = GObject, Context extends LGObjectContext<D> = LogicContext2<D, any, any>> extends LPointerTargetable{
+    static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
+    static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
+    public __raw!: DGObject & GObject;
+    // use wrapObject instead, or L.wrap for D-objects & pointers
+    static wrap(val: never): any { return null as any; }
+    static from(val: never): any { return null as any; }
+
+    static wrapObject(base: DPointerTargetable, path: string, val: GObject): LGObject {
+        if (!val || typeof val !== 'object') return val as any;
+        let singleton: LGObject|LArray = (Array.isArray(val) ? LArray : LGObject).singleton as LGObject;
+
+        //let c = new LogicContext2<GObject, LGObject, LGObject>(singleton, val, base, path);
+        return new Proxy(val, new TargetableProxyHandler(val, base, path, singleton)) as LGObject;
+    }
+
+    protected _defaultGetter(c: Context, k: keyof D): any {
+        let val = c.data[k];
+        if (typeof k === 'symbol') { return val; }
+        let path = (c.path ? c.path+'.' : '') + (k as string);
+        LGObject.wrapObject(c.base, path, val);
+        return val;
+    }
+}
+
+export class LArrayMock extends Array<any>{
+    pop(): any {
+    }
+}
+
+@RuntimeAccessible('LArray')
+export class LArray<D extends Array<any> & GObject = Array<any> & GObject, Context extends LogicContext2<D, LArray, LArray> = LogicContext2<D, any, any>> extends LGObject{
+    static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
+    static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
+    public __raw!: DArray & Array<any>;
+
+    static wrap(val: never): any { return null as any; }
+    static from(val: never): any { return null as any; }
+
+    get_push(c: Context): this['push']{ return (...i: D[])=>{
+        for (let e of i) {
+            e = Pointers.from(e) as any || e;
+            SetFieldAction.new(c.path, '' as any, e, '+=', Pointers.isPointer(e));
+        }
+        return c.data.length + i.length;
+    }}
+
+    push(...items: D[]): number { return this.wrongAccessMessage('push'); }
+}
+
 @RuntimeAccessible('MapProxyHandler')
 export class MapProxyHandler extends TargetableProxyHandler<Dictionary, LPointerTargetable> {
     // todo: sposta alcune funzioni da TargetableProxy a MyProxy e fai estendere direttamente MyProxy a questa classe

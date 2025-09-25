@@ -3,7 +3,7 @@ import {
     GObject,
     GraphPoint, DViewPoint, DViewElement, PointedBy,
     DProject, LViewElement,
-    DV,
+    DV, DPackage,
 } from "../joiner";
 import {
     Defaults, DGraphElement,
@@ -237,6 +237,26 @@ everytime you put hands into a D-Object shape or valid values, you should docume
         return s;
     }
 
+    private ['2.204 -> 2.205'](s: DState): DState {
+        for (let c of Object.values(s.idlookup) as any[]) {
+            if (!c || typeof c !== 'object' || !c.className || !c.id) continue;
+            if (c.className === 'DPackage') {
+                let p: DPackage = c;
+                let classifiers: Pointer<any>[] = (p as any).classifiers;
+                if (!p.classes) p.classes = [];
+                if (!p.enumerators) p.enumerators = [];
+                if (!classifiers) continue;
+                for (let ptr of classifiers.filter(c=>!!c)){
+                    let d = this.d(ptr, s);
+                    if (!d) continue;
+                    if (d.className === 'DClass') p.classes.push(ptr);
+                    else if (d.className === 'DEnumerators') p.enumerators.push(ptr);
+                }
+            }
+        }
+        return s;
+    }
+
     public static autocorrect(s0?: DState, popupIfCorrect: boolean = false, canLoadAction: boolean = false): DState {
         let s: DState;
         if (s0) s = {...s0} as any;
@@ -356,7 +376,7 @@ everytime you put hands into a D-Object shape or valid values, you should docume
 
         {
             VersionFixer.removeNullPtrs(out, s, lookup, 'DModel', [...common, 'packages'])
-            VersionFixer.removeNullPtrs(out, s, lookup, 'DPackage', [...common, 'classifiers', 'subpackages'])
+            VersionFixer.removeNullPtrs(out, s, lookup, 'DPackage', [...common, 'classifiers', 'classes', 'enumerators', 'subpackages'])
             VersionFixer.removeNullPtrs(out, s, lookup, 'DClass', [...common, 'references', 'attributes', 'operations', 'extends', 'extendedBy'])
             VersionFixer.removeNullPtrs(out, s, lookup, 'DAttribute', [...common, 'type'])
             VersionFixer.removeNullPtrs(out, s, lookup, 'DReference', [...common, 'type'])

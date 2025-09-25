@@ -310,11 +310,10 @@ export class DState extends DPointerTargetable{
 }
 
 &,[data-nodetype] {
-  &.selected-by-me, &:has(.selected-by-me, .Edge, .edge, .edges), &:hover, &:active, &:focus-within, &:focus{
+  &.selected-by-me, &:hover, &:active, &:focus-within, &:focus{
     outline-width: 4px;
     outline-style: solid;
     outline-color: var(--selected)!important;
-
   }
 }
 

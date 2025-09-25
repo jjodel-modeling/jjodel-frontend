@@ -308,6 +308,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
                 let labels = edgeOwnProps.labels;
                 // dge = DEdge.new(ownProps.htmlindex as number, ret.data?.id, parentnodeid, graphid, nodeid, startnodeid, endnodeid, longestLabel, labels);
                 let ddata = ret.data?.__raw;
+                // NB: nodeid should always be already present in OwnProps due to jsx injection.
                 dge = DEdge.new2(ddata?.id, parentnodeid, graphid, nodeid, startnodeid, endnodeid, (d: DEdge)=>{
                     //d.longestLabel = longestLabel;
                     //d.labels = labels;
@@ -741,7 +742,10 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         TRANSACTION('contextmenu', ()=>{
             this.props.node.select();
             if (this.html.current) this.html.current.focus();
-            ShowContextMenu(this.props.node?.id, e.clientX, e.clientY);
+            let offset = {x:9, y:23}; // x:9,y:23 sets it at exact top-left corner, don't know why, when it should be x:0, y:0
+            offset.y-=50;
+            offset.x-=25;
+            ShowContextMenu(this.props.node?.id, e.clientX + (offset.x), e.clientY + (offset.y));
         }, true, false)
     }
 
@@ -787,19 +791,20 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
 
 
     onScroll(e: React.MouseEvent): void {
-        console.log("onScroll");
-        e.preventDefault()
-        let scroll: Point = new Point(e.currentTarget.scrollLeft, e.currentTarget.scrollTop);
+        // let scroll: Point = new Point(e.currentTarget.scrollLeft, e.currentTarget.scrollTop);
         let scrollOrigin: Point = new Point(e.nativeEvent.offsetX, e.nativeEvent.offsetY);
         let g: LGraph = this.props.node.graph;
         let oldZoom: GraphPoint = g.zoom;
-        let newZoom: GraphPoint = new GraphPoint(oldZoom.x+0.1, oldZoom.y+0.1);
+        let direction: number = U.checkScrollDirectionIsUp(e) ? 1.1 : 1/1.1;
+        let newZoom: GraphPoint = new GraphPoint(oldZoom.x*direction, oldZoom.y*direction);
         let oldOffset = g.offset;
         let gscrollOrigin = oldOffset.add(scrollOrigin.multiply(oldZoom, true), true);
         let newscrollOrigin = oldOffset.add(scrollOrigin.multiply(newZoom, true), true);
         let newOffset = oldOffset.add( gscrollOrigin.subtract(newscrollOrigin, true), true);
         TRANSACTION('scroll graph', ()=>{
             g.offset = newOffset;
+            //SetFieldAction.new(g.id, 'zoom.x' as any, 1.1, direction ? '*=' : '/=');
+            //SetFieldAction.new(g.id, 'zoom.y' as any, 1.1, direction ? '*=' : '/=');
             g.zoom = newZoom;
         })
         e.stopPropagation();
