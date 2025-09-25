@@ -314,7 +314,16 @@ function NavbarComponent(props: AllProps) {
                     function: async () => {
                         if (project) {
                             try {
+                                SetRootFieldAction.new('isLoading', true);
+                                const maxWait = 10 * 1000;
+                                let timeout = setTimeout(()=> {
+                                    SetRootFieldAction.new('isLoading', false);
+                                    U.alert('e', 'Request timed out', <>Verify your connection or&nbsp;
+                                        <a href="mailto:info@jjodel.io?subject=Save%20timeout&body=Describe%20your%20actions%20prior%20the%20error%2C%20and%20attach%20your%20latest%20savefile%20if%20possible.">contact our support</a></>);
+                                }, maxWait);
                                 await ProjectsApi.save(project);
+                                clearTimeout(timeout);
+                                SetRootFieldAction.new('isLoading', false);
                             } catch (error: any) {
                                 U.alert('e', 'Error while Saving Project', error.message);
                             }

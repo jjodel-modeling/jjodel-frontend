@@ -82,16 +82,16 @@ class Api {
 
     static async post(path: string, obj: GObject, allowAnonymous:boolean = false): Promise<Response> {
         try {
-            if(allowAnonymous || await Api.checkToken()) {
+            if (allowAnonymous || await Api.checkToken()) {
                 console.log('post api call:', {obj, swap:Api.swapToGUID(obj)})
                 const response = await Axios.post(path, Api.swapToGUID(obj), {headers: this.headers()});
-                console.log('Api response', {path, response});
+                console.log('Api response', {path, r:response});
                 return {code: response.status, data: Api.swapToJodelID(response.data)};
             }
-            return {code: 401, data: null};
+            return {code: 401, data: 'Login session expired.' as any};
         } catch (e: any) {
-            Log.eDevv('post API failed:', {e, path, obj}, e?.message);
-            return {code: 400, data: null};
+            Log.ee('post API failed:', {e, path, obj}, e?.message);
+            return {code: e?.response?.status || 400, data: e?.response?.data || ''};
         }
     }
 

@@ -1,6 +1,6 @@
 import {FormEvent, JSX} from 'react';
 import {useStateIfMounted} from 'use-state-if-mounted';
-import type { Dictionary} from '../joiner';
+import type {Dictionary, GObject} from '../joiner';
 import { DUser, R, SetRootFieldAction, U} from '../joiner';
 import Storage from '../data/storage';
 import {AuthApi, UsersApi} from "../api/persistance";
@@ -61,20 +61,21 @@ function AuthPage(): JSX.Element {
         try {
             const resetPasswordRequest = new ResetPasswordRequest();
             resetPasswordRequest.email = email;
-            const response = await AuthApi.reset_password(resetPasswordRequest);
+            const response: GObject = await AuthApi.reset_password(resetPasswordRequest);
 
-            let category = +(response.code+'')[0];
-            switch (category) {
-                case 2: U.alert('i', <>Request completed, check your email for a reset link (might be in spam).</>, ''); break;
-                case 4: U.alert('e', 'Incorrect request, is your email correct?', ''); return false;
-                case 5: U.alert('e', 'Request failed for a server error. Retry later while we are fixing our issue.', ''); return false;
-                default:
-                    U.alert('e', 'Request failed.', '');
-                    return false;
+            if ((response.code+'')[0] !== '2') {
+                let title: string = response.data?.title;
+                let msg: string = response.data?.message;
+                U.alert('e', title || (response.data as any as string), msg);
+                return false;
+            }
+            else {
+                U.alert('i', <>Password reset link sent</>, <>Check your <a href={'//'+(email.split('@')?.[1])}>inbox</a> for
+                    the reset link.<br/>If it’s not there, look in Spam/Junk.</>);
             }
 
         } catch (e) {
-            console.error("Errore nella richiesta:", e);
+            console.error("Error in reset password request:", e);
             U.alert('e', 'Request failed, please describe and report the issue at info@jjodel.io', ''); //The error has already been reported.', '');
             // todo: we need to make auto-error report, then attach it here
             return false;
@@ -88,20 +89,21 @@ function AuthPage(): JSX.Element {
             loginRequest.email = email;
             loginRequest.password = password;
 
-            const response = await AuthApi.login(loginRequest);
+            const response: GObject = await AuthApi.login(loginRequest);
             const raw: TokenResponse | null = response.data;
 
             console.log('login debug', {loginRequest, response, raw});
-            let category = +(response.code+'')[0];
 
-            switch (category) {
-                case 2: U.alert('i', <>Login successful you are being redirected to your <a href={'//#/allProjects'}>dashboard</a>.</>, ''); break;
-                case 4: U.alert('e', 'Username or password incorrect.', ''); return false;
-                case 5: U.alert('e', 'Login failed due to a server error. Retry later while we are fixing our issue.', ''); return false; // or try offline mode
-                default:
-                    U.alert('e', 'Login failed.', '');
-                    return false;
+            if ((response.code+'')[0] !== '2') {
+                let title: string = response.data?.title;
+                let msg: string = response.data?.message;
+                U.alert('e', title || (response.data as any as string), msg);
+                return false;
             }
+            else {
+                // U.alert('i', <>Login successful</>, <>You are being redirected to your <a href={'//#/allProjects'}>dashboard</a></>);
+            }
+
             if (!raw?.token || typeof raw.token !== 'string') { U.alert('e', 'Login failed or invalid token.', ''); return false; }
 
             const claims = AuthApi.readJwtToken(raw.token);
@@ -149,15 +151,16 @@ function AuthPage(): JSX.Element {
         registerRequest.Email = email;
         registerRequest.Password = password;
         console.log(registerRequest);
-        const response = await AuthApi.register(registerRequest);
-        let category = +(response.code+'')[0];
-        switch (category) {
-            case 2: U.alert('i', <>Request completed, check your email for an activation link (might be in spam).</>, ''); break;
-            case 4: U.alert('e', 'Incorrect request, are you missing fields?', ''); return false;
-            case 5: U.alert('e', 'Registration failed due to a server error. Retry later while we are fixing our issue.', ''); return false;
-            default:
-                U.alert('e', 'Registration failed.', '');
-                return false;
+        const response: GObject = await AuthApi.register(registerRequest);
+
+        if ((response.code+'')[0] !== '2') {
+            let title: string = response.data?.title;
+            let msg: string = response.data?.message;
+            U.alert('e', title || (response.data as any as string), msg);
+            return false;
+        }
+        else {
+            U.alert('w', <>Welcome to Jjodel!</>, <>Check your <a href={'//'+(email.split('@')?.[1])}>inbox</a> for the activation link.<br/>If it’s not there, look in Spam/Junk.<br/>You can close this tab.</>);
         }
 
         const data = U.wrapper<DUser>(response.data);
@@ -165,32 +168,32 @@ function AuthPage(): JSX.Element {
         const user = DUser.new(data.name, data.surname, data.nickname, data.affiliation, data.country, data.newsletter || false, data.email, data.token, data.id, data._Id);
         Storage.write('user', user);
         Storage.write('offline', false);
-        R.navigate('/allProjects');
+        // R.navigate('/allProjects');
         U.resetState();
         return true;
     }
 
-    const offline = () => {
-        AuthApi.offline();
-        R.navigate('/allProjects');
-        // U.resetState();
-    }
+const offline = () => {
+    AuthApi.offline();
+    R.navigate('/allProjects');
+    // U.resetState();
+}
 
-    return(<section className={`w-100 h-100 login bg ${action === 'register' ? 'register' : action === 'retrieve-password' ? 'retrieve' : ''} `+(isDirty?' dirty':'')}>
+return(<section className={`w-100 h-100 login bg ${action === 'register' ? 'register' : action === 'retrieve-password' ? 'retrieve' : ''} `+(isDirty?' dirty':'')}>
 
-        <form className={'d-block bg-white rounded border mx-auto w-fit px-5 py-4 mt-5'} onSubmit={onSubmit}>
-            <label className={'fs-1 d-block text-center text-primary login-header'}>
+    <form className={'d-block bg-white rounded border mx-auto w-fit px-5 py-4 mt-5'} onSubmit={onSubmit}>
+        <label className={'fs-1 d-block text-center text-primary login-header'}>
 
-                {action === 'register' && 'Create an Account'}
-                {action === 'login' && 'Sign In'}
-                {action === 'retrieve-password' && 'Retrieve your Password'}
+            {action === 'register' && 'Create an Account'}
+            {action === 'login' && 'Sign In'}
+            {action === 'retrieve-password' && 'Retrieve your Password'}
 
 
-            </label>
+        </label>
 
-            {action === 'register' && <>
+        {action === 'register' && <>
 
-                {/* REGISTRATION */}
+            {/* REGISTRATION */}
 
                 <Tooltip tooltip={<div style={{padding: '10px', maxWidth: '600px'}}><h6>First Name</h6>Your first name will be visible to others whenever you interact with them, such as during collaboration on shared projects.</div>} >
                     <label>
@@ -200,7 +203,7 @@ function AuthPage(): JSX.Element {
                             value={name}
                             onClick={dirty}
                             onChange={e => setName(e.target.value)}
-                            type={'text'} required={true}
+                            type={'text'} required={true} title={'required'}
                         />
                     </label>
                 </Tooltip>
@@ -213,7 +216,7 @@ function AuthPage(): JSX.Element {
                                value={surname}
                                onClick={dirty}
                                onChange={e => setSurname(e.target.value)}
-                               type={'text'} required={true}
+                               type={'text'} required={true} title={'required'}
                         />
                     </label>
                 </Tooltip>
@@ -226,7 +229,7 @@ function AuthPage(): JSX.Element {
                                    value={nickname}
                                    onClick={dirty}
                                    onChange={e => setNickname(e.target.value)}
-                                   type={'text'} required={true}
+                                   type={'text'} required={true} title={'required'}
                             />
                         </label>
                     </Tooltip>
@@ -501,7 +504,7 @@ function AuthPage(): JSX.Element {
                             value={email}
                             onClick={dirty}
                             onChange={e => setEmail(e.target.value)}
-                            type={'email'} name='email' autoComplete={'on'} required={true}
+                            type={'email'} name='email' autoComplete={'on'} required={true} title={'required'}
                         />
                     </label>
                 </Tooltip>
@@ -514,7 +517,7 @@ function AuthPage(): JSX.Element {
                         pattern={passPattern}
                         onClick={dirty}
                         onChange={e => setPassword(e.target.value)}
-                        type={'password'} required={true}
+                        type={'password'} required={true} title={'At least 8 characters'}
                     />
                 </label>
 
@@ -527,7 +530,7 @@ function AuthPage(): JSX.Element {
                         pattern={passPattern}
                         onClick={dirty}
                         onChange={e => setPasswordCheck(e.target.value)}
-                        type={'password'} required={true}
+                        type={'password'} required={true} title={'At least 8 characters'}
                     />
                 </label>
 
@@ -566,7 +569,7 @@ function AuthPage(): JSX.Element {
                         value={email}
                         onClick={dirty}
                         onChange={e => setEmail(e.target.value)} type={'email'}
-                        required={true}
+                        required={true} title={'required'}
                     />
                 </label>
                 <label>
@@ -578,7 +581,7 @@ function AuthPage(): JSX.Element {
                         onClick={dirty}
                         onChange={e => setPassword(e.target.value)}
                         type={'password'}
-                        required={true}
+                        required={true} title={'At least 8 characters'}
                 />
                 </label>
                 <button className={'d-block btn btn-primary p-1 mx-auto mt-3 login-button'} type={'submit'} onClick={()=>setDirty(true)}>
@@ -600,7 +603,7 @@ function AuthPage(): JSX.Element {
                         value={email}
                         onClick={dirty}
                         onChange={e => setEmail(e.target.value)} type={'email'}
-                        required={true}
+                        required={true} title={'required'}
                     />
                 </label>
 
