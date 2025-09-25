@@ -43,7 +43,7 @@ function ConfirmAccount() {
                     Confirm your Account ✉️
                 </h1>
                 <p style={styles.paragraph}>
-                    Click the button below to confirm your email and start using the platform.
+                   Please confirm your email address to activate your account and start using the platform.
                 </p>
 
                 {loading ? (
