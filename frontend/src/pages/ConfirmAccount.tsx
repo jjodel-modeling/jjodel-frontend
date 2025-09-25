@@ -40,10 +40,10 @@ function ConfirmAccount() {
                     style={styles.logo}
                 />
                 <h1 style={styles.title}>
-                    Conferma il tuo account ✉️
+                    Confirm your Account ✉️
                 </h1>
                 <p style={styles.paragraph}>
-                    Clicca sul bottone qui sotto per confermare l'email e iniziare a utilizzare la piattaforma.
+                    Click the button below to confirm your email and start using the platform.
                 </p>
 
                 {loading ? (
