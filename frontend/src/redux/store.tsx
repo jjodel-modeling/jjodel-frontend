@@ -324,7 +324,7 @@ otherwise you would click the edge container instead of the graph-elements benea
 .edges { z-index: 101; position: absolute; top: 0; left: 0; height: 0; width: 0; overflow: visible; }
 `
             }, true, Defaults.Pointer_ViewPointDefault);
-            const validationViewpoint = DViewPoint.newVP('Validation default',
+            const validationViewpoint = DViewPoint.newVP('Default Validation',
                 (vp)=>{ vp.isExclusiveView = false; vp.isValidation = true;}, true, Defaults.Pointer_ViewPointValidation);
 
             Log.exDev(viewpoint.id !== Defaults.viewpoints[0], "wrong vp id initialization", {viewpoint, def:Defaults.viewpoints});
@@ -481,7 +481,7 @@ ret.parentView = L.from(component.props.parentviewid);
 
 
     let edgeViews: DViewElement[] = [];
-    let size0: GraphPoint = new GraphPoint(0, 0), size1: GraphPoint = new GraphPoint(12, 12), size2: GraphPoint = new GraphPoint(18, 12);
+    let size0: GraphPoint = new GraphPoint(12, 12), size1: GraphPoint = new GraphPoint(12, 12), size2: GraphPoint = new GraphPoint(18, 12);
 
 
     let model = DefaultViews.model(vp);
@@ -494,7 +494,7 @@ ret.parentView = L.from(component.props.parentviewid);
     let par = DefaultViews.parameter(op);
     let lit = DefaultViews.literal(enumm);
     let obj = DefaultViews.object(model);
-    /* ALFONSO */
+
     let single = DefaultViews.singleton(model);
     let val = DefaultViews.value(obj);
     let anchorView = DefaultViews.anchor(model);
