@@ -1,6 +1,6 @@
 // import {Mixin} from "ts-mixer";
 import {isDeepStrictEqual} from "util";
-import {GObject, NodeTransientProperties} from "../../joiner"
+import {ClickEvent, GObject, NodeTransientProperties} from "../../joiner"
 import {
     Constructors,
     CoordinateMode, D,
@@ -48,7 +48,7 @@ import {
 import type {Tooltip} from "../../components/forEndUser/Tooltip";
 import {JSX, RefObject} from "react";
 import type {SVGPathElementt, SVGPathSegment} from '../../common/libraries/pathdata';
-import {EdgeGapMode, InitialVertexSize} from "../../joiner/types";
+import {EdgeGapMode, InitialVertexSize, InitialVertexSizeFunc} from "../../joiner/types";
 
 
 
@@ -776,7 +776,7 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
             tocheck = newtocheck;
         }
         delete checked[context.data.id];
-        return LPointerTargetable.from(Object.keys(checked), state);
+        return LPointerTargetable.fromArr(Object.keys(checked), state).filter((e: any)=>!!e);
     }
 
     set_allSubElements(val: never, c: Context): boolean {
@@ -2146,7 +2146,7 @@ replaced by startPoint
         }
         secondIntersection = GraphSize.closestIntersection(x4headsize, start, end, undefined, m, undefined);
         if (!secondIntersection) {
-           return Log.exDevv("failed to intersect edge head", {x4headsize, segment, headPos, c, start, end, useBezierPoints, m});
+           return Log.exDevv("failed to intersect edge head", {x4headsize, segment, headPos, c, start, end, useBezierPoints, m, edge: c.data.id});
         }
         tmp = secondIntersection.add(start, false).divide(2); // center of edgehead
         headPos.x = tmp.x - headPos.w / 2; // tl corner
@@ -2179,18 +2179,28 @@ replaced by startPoint
     protected set_edge(v: any, c: Context): false { return this.cannotSet("edge field, on an edge element"); }
     protected get_midPoints(c: Context):this["midPoints"] { return c.data.midPoints; }
     public addMidPoint(v: this["midPoints"][0]): boolean { return this.wrongAccessMessage("addMidPoint"); }
-    protected get_addMidPoint(c: Context): (v: this["midPoints"][0]) => boolean { return (v:this["midPoints"][0]) => this.impl_addMidPoints(v, c); }
+    public addEdgePoint(v: this["midPoints"][0]): boolean { return this.wrongAccessMessage("addEdgePoint"); }
     protected set_midPoints(val: this["midPoints"], c: Context): boolean {
         let name = this.get_name(c)||'';
         TRANSACTION((name.toLowerCase().indexOf('edge')>=0 ? name : 'Edge: '+name)+'.midpoints', ()=>{
+            if (typeof val === 'function') val = (val as InitialVertexSizeFunc)(c.proxyObject) as InitialVertexSize as this["midPoints"]
+            if (!val) val = [];
+            else if (!Array.isArray(val)) val = [val];
+            val = val.map(e => {
+                if (typeof val === 'function') return (e as InitialVertexSizeFunc)(c.proxyObject) as InitialVertexSize as this["midPoints"]
+                return e;
+            }) as this["midPoints"];
             SetFieldAction.new(c.data.id, "midPoints", val, undefined, false);
         });
         return true;
     }
-    protected impl_addMidPoints(val: this["midPoints"][0], c: Context): boolean {
+    get_addEdgePoint(c: Context): (v: this["midPoints"][0] | ClickEvent, index?: number) => boolean {
+        return (v: this["midPoints"][0] | ClickEvent, index?: number) => this.impl_addMidPoints(v, index, c); }
+    protected get_addMidPoint(c: Context): ReturnType<this['get_addEdgePoint']> { return this.get_addEdgePoint(c) as ReturnType<this['get_addEdgePoint']>; }
+    protected impl_addMidPoints(val: this["midPoints"][0] | ClickEvent, index: number|undefined, c: Context): boolean {
         let name = this.get_name(c)||'';
         TRANSACTION((name.toLowerCase().indexOf('edge')>=0 ? name : 'Edge: '+name)+' add midpoints', ()=>{
-           SetFieldAction.new(c.data.id, "midPoints", val, '+=', false);
+           SetFieldAction.new(c.data.id, "midPoints", val, '+='+(index !== undefined ? index : ''), false);
         });
         return true;
     }

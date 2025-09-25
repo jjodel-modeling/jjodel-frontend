@@ -106,34 +106,105 @@ function deepCopyButOnlyFollowingPath(oldStateDoNotModify: DState, action: Parse
                 return false;
             }
             let oldValue: any;
-            if (U.endsWith(key, ['+=', '[]'])) {
-                key = key.substr(0, key.length - 2).trim();
-                oldValue = current[key];
-                switch (typeof oldValue){
-                    case 'object':
-                    if (Array.isArray(oldValue)) isArrayAppend = true;
-                    else isObjectMerge = true;
-                    break;
-                    default: newVal += oldValue; break;
-                }
-            }
-            if (U.endsWith(key, ['-='])) {
-                key = key.substring(0, key.length - 2).trim();
-                oldValue = current[key];
-                switch (typeof oldValue){
-                    case 'object':
-                        if (Array.isArray(oldValue)) isArrayRemove = true;
-                        else isObjectDifference = true;
-                        break;
-                    case "string":
-                        newVal = U.replaceAll(oldValue, newVal, '');
-                        break;
-                    case 'number': newVal = oldValue - newVal; break;
-                    default: isArrayRemove = true; break;
-                }
-                // isArrayRemove = true;
-            }
+            let keyLastChars = key.substring(0, key.length - 2);
+            let index: number | undefined = undefined; // if negative, adds from the end. -1 = append
+            let moveOffset: number = 0;
+            let indexEnd: number | undefined = undefined; // for arraymove
+            let isMultiAddRemove: boolean = false;
+            let isArrayMove: boolean = false;
+            let modifier = action.accessModifier||'';
+            let moveDirection: 1 | -1 = 1;
+            switch (modifier[0]) {
+                case 'v':
+                case '^':
+                case '<':
+                case '>':
+                    // da indice X, muovi Y elementi indietro di Z posizioni. Z è nel value; X, Y sono nell'access modifier? opzionalmente Y sono elementi e non n° posizioni
+                    isArrayMove = true;
+                    oldValue = current[key];
+                    let index_str: string = modifier.substring(isMultiAddRemove ? 5 : 2);
+                    let indexes: number[] = index_str.split(',').map(s=>+(s.trim()||'something to avoid empty str being cast to 0 instead of NaN')).filter(n=>!isNaN(n))
+                    if (indexes.length === 0) indexes.push(-1);
 
+                    Log.e(indexes.length > 2, 'action with modifier '+modifier[0]+' cannot have more than 2 indexes, they are treated as shift begin index and end, not as a list.', {action});
+                    if (indexes.length >= 2) {
+                        index = indexes[0];
+                        indexEnd = indexes[1] - indexes[0];
+                    } else {
+                        index = indexes[0];
+                        indexEnd = undefined;
+                    }
+                    if (indexEnd === undefined) indexEnd = 1;
+                    else if (indexEnd <= 0) indexEnd = 1;
+                    moveDirection = modifier[0] === '^' || modifier[0] === '>' ? 1 : -1;
+                    moveOffset = (action.value || 1) * moveDirection;
+                    break;
+            }
+            switch (modifier.substring(0, 2)) {
+                case '*=':
+                    oldValue = current[key];
+                    if (typeof oldValue !== 'number') {
+                        Log.ee('called multiplication action *= on a non-numeric value', {action, oldValue, type: typeof oldValue});
+                        return false;
+                    }
+                    newVal = oldValue *= newVal;
+                    break;
+                case '/=':
+                    oldValue = current[key];
+                    if (typeof oldValue !== 'number') {
+                        Log.ee('called division action /= on a non-numeric value', {action, oldValue, type: typeof oldValue});
+                        return false;
+                    }
+                    newVal = oldValue /= newVal;
+                    break;
+                case '[]':
+                    // +=...5 and all less complex variations tested
+                case '+=':// +=...5    --> add at position 5 N elements (value must be array that will be flattened and inserted)
+                    oldValue = current[key]; // todo check all oldvalue assignment to prevent double set
+                    if (modifier.substring(2, 5) === '...') isMultiAddRemove = true;
+                    if (isMultiAddRemove) index = +(modifier.substring(5)) || undefined;
+                    else index = +(modifier.substring(2)) || undefined;
+                    switch (typeof oldValue){
+                        case 'object':
+                            if (Array.isArray(oldValue)) isArrayAppend = true;
+                            else isObjectMerge = true;
+                            break;
+                        default: newVal += oldValue; break;
+                    }
+                    break;
+                case '-=':
+                    oldValue = current[key];
+                    if (modifier.substring(2, 5) === '...') isMultiAddRemove = true;
+                    let index_str: string = modifier.substring(isMultiAddRemove ? 5 : 2);
+                    let indexes: number[] = index_str.split(',').map(s=>+(s.trim()||'something to avoid empty str being cast to 0 instead of NaN')).filter(n=>!isNaN(n))
+                    if (indexes.length === 0) indexes.push(-1);
+                    Log.e(indexes.length > 2, 'action with modifier -= cannot have more than 2 indexes, they are treated as removal begin index and end, not as a list.', {action});
+                    if (indexes.length >= 2) {
+                        index = indexes[0];
+                        indexEnd = indexes[1] - indexes[0];
+                        if (indexEnd <= 0) indexEnd = 1;
+                    } else {
+                        index = indexes[0];
+                        indexEnd = 1;
+                    }
+                    switch (typeof oldValue){
+                        case 'object':
+                            if (Array.isArray(oldValue)) isArrayRemove = true;
+                            else isObjectDifference = true;
+                            break;
+                        case "string":
+                            newVal = U.replaceAll(oldValue, newVal, '');
+                            break;
+                        case 'number': newVal = oldValue - newVal; break;
+                        default: isArrayRemove = true; break;
+                    }
+                    break;
+            }
+            if (index === undefined) index = -1;
+            if (index < 0) index = (oldValue?.length !== undefined) ? oldValue.length + index + 1 : 0;
+            if (index === undefined) return false; // just to force typescript correcting his typecheck on index
+
+            // if (index > oldValue.length) index = oldValue.length % index; nevermind, i want to allow to add empty spaces, like [1,2, emptyx8, 11]
             // let unpointedElement: DPointerTargetable | undefined;
             // perform final assignment
             if (action.type === CreateElementAction.type && current[key]) {
@@ -159,7 +230,7 @@ function deepCopyButOnlyFollowingPath(oldStateDoNotModify: DState, action: Parse
                 if (action.isPointer && Pointers.isPointer(key)) newRoot = PointedBy.add(key as Pointer, action, newRoot, "+=");
             } else
             if (isObjectDifference) {
-                if (typeof newVal === 'string') { let tmp: any = {}; tmp[newVal] = true; newVal = tmp; }
+                if (typeof newVal === 'string') newVal = {[newVal]: true};
                 oldValue = {...current[key]};
                 current[key] = {...current[key]};
                 for (let subkey in newVal) {
@@ -171,40 +242,65 @@ function deepCopyButOnlyFollowingPath(oldStateDoNotModify: DState, action: Parse
                     if (action.isPointer && Pointers.isPointer(subval)) newRoot = PointedBy.add(subval as Pointer, action, newRoot, "-=");
                 }
                 if (action.isPointer && Pointers.isPointer(key)) newRoot = PointedBy.add(key as Pointer, action, newRoot, "-=");
-            } else
-            if (isArrayAppend) {
+            }
+            else if (isArrayAppend) {
                 gotChanged = true;
                 if (allowFixingNullArr && !Array.isArray(current[key])) { current[key] = []; }
-                if (Array.isArray(current[key])) {
-                    oldValue = [...current[key]];
-                    current[key] = [...current[key]];
-                    current[key].push(newVal);
-                    // unpointedElement = undefined;
-                    if (action.isPointer) { newRoot = PointedBy.add(newVal as Pointer, action, newRoot, "+="); }
+                if (!Array.isArray(current[key])) break;
+                current[key] = [...current[key]];
+                if (index === current[key].length) {
+                    if (isMultiAddRemove && Array.isArray(newVal)) current[key].push(...newVal);
+                    else current[key].push(newVal);
                 }
-            } else
-            if (isArrayRemove) {
+                else {
+                    if (index <= current[key].length) {
+                        if (isMultiAddRemove && Array.isArray(newVal)) (current[key]).splice(index, 0, ...newVal);
+                        else (current[key]).splice(index, 0, newVal);
+                    }
+                    else { // splice with excessive index does append, but i'm trying to allow empty array slots and add at specific index with an empty jump
+                        if (isMultiAddRemove && Array.isArray(newVal)) {
+                            for (let i = 0; i < newVal.length; i++) { current[key][index+i] = newVal[i]; }
+                        } else {
+                            current[key][index] = newVal;
+                        }
+                    }
+                }
+                if (action.isPointer) { // todo: update all action.ispointer with additional Pointers.isPointer check, and default it as true
+                    if (isMultiAddRemove && Array.isArray(newVal)) for(let v of newVal){
+                        if (Pointers.isPointer(v)) newRoot = PointedBy.add(v as Pointer, action, newRoot, "+=");
+                    } else if (Pointers.isPointer(newVal)) newRoot = PointedBy.add(newVal as Pointer, action, newRoot, "+=");
+                }
+            }
+            else if (isArrayRemove) {
                 if (allowFixingNullArr && !Array.isArray(current[key])) { current[key] = []; }
                 if (!Array.isArray(current[key])) break;
-                oldValue = [...current[key]];
+                current[key] = [...current[key]];
                 let indexes: number[] = [];
-                if (U.isNumber(newVal)) { // delete by index
-                    let index = newVal;
-                    if (index < 0) index = oldValue.length + index; // if index is -2, i remove the penultimate element
-                    if (index >= 0 && index <= oldValue.length) indexes = [index];
-                } else
+                let tmparr = current[key];
                 if (newVal === undefined) {
-                    let index = oldValue.length - 1;
-                    if (index >= 0 && index <= oldValue.length) indexes = [index];
-                }
-                else { // remove by value (auto-find index)
-                    let removeAllMode = true;
-                    if (!removeAllMode) { // mode remove single
-                        let index = oldValue.indexOf(newVal);
-                        if (index >= 0 && index <= oldValue.length) indexes = [index];
-                    }
-                    else {
-                        indexes = Uarr.findAllIndexes(current[key] as any[], newVal);
+                    /*let index = oldValue.length - 1;
+                    if (index >= 0 && index <= oldValue.length) indexes = [index]; */
+                    // default indexes calculated by accessModifier parser logic
+                    if (index >= tmparr.length) index = tmparr.length - 1;
+                    (current[key] as any[]).splice(index, indexEnd);
+                } else {
+                    if (!Array.isArray(newVal)) { newVal = [newVal]; }
+                    for (let toremove of newVal) {
+                        // now i only accept indexes from  accessmodifier
+                        if (false as any && U.isNumber(newVal)) { // delete by index
+                            let index = newVal;
+                            if (index < 0) index = oldValue.length + index; // if index is -2, i remove the penultimate element
+                            if (index >= 0 && index <= oldValue.length) indexes = [index];
+                        } else { // remove by value (auto-find index)
+                            let removeAllMode = true;
+                            if (!removeAllMode) { // mode remove single
+                                let index = oldValue.indexOf(newVal);
+                                if (index >= 0 && index <= oldValue.length) indexes = [index];
+                            }
+                            else {
+                                indexes = Uarr.findAllIndexes(current[key] as any[], newVal);
+                            }
+                        }
                     }
                 }
                 // if it's negatively or positively out of boundary, i skip it
@@ -233,14 +329,33 @@ function deepCopyButOnlyFollowingPath(oldStateDoNotModify: DState, action: Parse
                         */
                     }
                 }
-            } else
-            if ((action.type === DeleteElementAction.type && !(key in current)) || current[key] === newVal) {
+            }
+            else if (isArrayMove) {
+                if (allowFixingNullArr && !Array.isArray(current[key])) { current[key] = []; }
+                if (!Array.isArray(current[key])) break;
+                current[key] = [...current[key]];
+                if (isMultiAddRemove && Array.isArray(newVal)) {
+                    let tmparr = current[key] as any[];
+                    let originalIndexes = newVal.map(e => tmparr.findIndex(v => (v === e)))
+                    originalIndexes.sort((i, j) => originalIndexes[i] - originalIndexes[j]);
+                    /*let mySymbol = Symbol.for('_jjLDP_tomove');
+                    for (let i of originalIndexes) newVal[i] = mySymbol;
+                    let sortedIndexes = [...originalIndexes.keys()];
+                    sortedIndexes.sort((i, j) => originalIndexes[i] - originalIndexes[j]);
+                    // order both with same criteria, which is the order they are found in original arr.
+                    originalIndexes = sortedIndexes.map(i => originalIndexes[i]);
+                    newVal = sortedIndexes.map(i => newVal[i]);*/
+                    current[key] = Uarr.shiftIndexes(tmparr, originalIndexes, moveOffset * moveDirection);
+                }
+            }
+            else if ((action.type === DeleteElementAction.type && !(key in current)) || current[key] === newVal) {
                 // value not changed
                 gotChanged = false;
             }
             else {
                 // value changed
                 oldValue = current[key];
+                if (oldValue === newVal) { return false; }
                 gotChanged = true;
                 // unpointedElement = newRoot.idlookup[oldValue];
                 // NB: se elimino un oggetto che contiene array di puntatori, o resetto l'array di puntatori kinda like store.arr= [ptr1, ptr2, ...]; store.arr = [];
@@ -443,6 +558,13 @@ export function reducer(oldState: DState = initialState, action: Action): DState
     if (U.navigating) return oldState;
     if (!windoww.jjactions) windoww.jjactions = [];
     windoww.jjactions.push(action);
+    let safeMode = false;
+    if (!safeMode) {
+        let ret = unsafereducer(oldState, action);
+        DO_AFTER_TRANSACTION();
+        return ret;
+    }
+
     try {
         let ret = unsafereducer(oldState, action);
         DO_AFTER_TRANSACTION();

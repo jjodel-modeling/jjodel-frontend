@@ -32,6 +32,7 @@ type ChildrenType = {
     children?: any;
 };
 
+
 const Catalog = (props: ChildrenType) => {
 
     const [filters, setFilters] = useState([true,true,true]);

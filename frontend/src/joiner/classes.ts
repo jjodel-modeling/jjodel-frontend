@@ -929,7 +929,7 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         thiss.sealed = [];
         thiss.final = false;
         thiss.allowCrossReference = false;
-        this.setExternalPtr(thiss.father, "classifiers", "+=");
+        this.setExternalPtr(thiss.father, "classes", "+=");
         this.setExternalRootProperty('ClassNameChanged.'+thiss.id, thiss.name, '', false);
 
         // thiss.isClass = !isPrimitive;
@@ -945,7 +945,7 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
 
     DEnumerator(literals: DEnumerator["literals"] = []): this {
         const thiss: DEnumerator = this.thiss as any;
-        this.setExternalPtr(thiss.father, "classifiers", "+=");
+        this.setExternalPtr(thiss.father, "enumerators", "+=");
         this.setPtr("literals", literals);
         // thiss.literals = literals;
         // thiss.isClass = false;
@@ -1257,7 +1257,7 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         if (typeof defaultVSize !== "function") { defaultVSizeObj = defaultVSize; }
         else {
             defaultVSizeFunc = defaultVSize;
-            try { defaultVSizeObj = defaultVSizeFunc(lvertex.father, lvertex); }
+            try { defaultVSizeObj = defaultVSizeFunc(lvertex.father); }
             catch (e) { Log.exx("Error in user DefaultVSize function:", {e, defaultVSizeFunc, txt:defaultVSizeFunc.toString()}); }
         }
         if (defaultVSizeObj) {
@@ -1709,7 +1709,10 @@ export class PendingPointedByPaths{
 
 @RuntimeAccessible('PointedBy')
 export class PointedBy {
-    static list: string[] = ["father", "parent", "annotations", "packages", "type", "subpackages", "classifiers", "exceptions", "parameters", "defaultValue", "instances", "operations", "features", "attributes", "references", "extends", "implements", "implementedBy", "instanceof", "edges", "target", "opposite", "parameters", "exceptions", "literals", "values"];
+    static list: string[] = ["father", "parent", "annotations", "packages", "type", "subpackages",
+        "classes", "enumerators", // "classifiers",
+        "exceptions", "parameters", "defaultValue", "instances", "operations", "features", "attributes", "references", "extends",
+        "implements", "implementedBy", "instanceof", "edges", "target", "opposite", "parameters", "exceptions", "literals", "values"];
     source: string; // elemento da cui parte il puntatore
     // field: keyof DPointerTargetable;
     // il bersaglio non c'è qui, perchè è l'oggetto che contiene questo dentro l'array pointedBy
@@ -2067,7 +2070,7 @@ export class LPointerTargetable<Context extends LogicContext<DPointerTargetable>
         return () => {
             TRANSACTION(this.get_name(c) + '.clearState()', ()=>{
                 SetFieldAction.new(c.data, "_state", {}, undefined, false);
-            }, Object.keys(3)+ 'keys removed');
+            }, Object.keys(c.data._state)+ 'keys removed');
         }
     }
 
@@ -3726,17 +3729,20 @@ export enum EModelElements{
     "(m1) Value" = "DValue",
 }
 
+type ParserName = string;
+export type LanguageObject = Dictionary<ParserName, {str:DocString<'parser code'>, test_text?: string}> & {engine: ParserName};
+
 export class Language {
-    m2t: string;
-    t2m: string;
+    m2t: LanguageObject;
+    t2m: LanguageObject;
     edited: boolean;
     v: number;
-    test_text: string;
-    constructor(m2t: string = '', t2m: string='', test_text: string = '') {
-        this.t2m = t2m || '';// || m2t ? 'Not implemented, the m2t transformation will be unidirectional' : "Not implemented";
-        this.m2t = m2t || '';
+    constructor(m2t: Partial<Language['m2t']> = {}, t2m: Partial<Language['t2m']> = {}) {
+        this.t2m = t2m as any || {};// || m2t ? 'Not implemented, the m2t transformation will be unidirectional' : "Not implemented";
+        this.m2t = m2t as any || {};
+        if (!this.t2m.engine) this.t2m.engine = Object.keys(this.t2m)[0] || undefined as any;
+        if (!this.m2t.engine) this.m2t.engine = Object.keys(this.m2t)[0] || undefined as any;
         this.edited = false;
-        this.test_text = test_text || '';
         this.v = windoww.VersionFixer.get_highestversion();
     }
 }

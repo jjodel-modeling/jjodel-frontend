@@ -30,10 +30,10 @@ function MetamodelTabComponent(props: AllProps) {
             <span style={{margin: "auto"}}>Building the Graph...</span>
         </div>);
     }
-
+    let graphid = graph.id;
     return(<div className={'w-100 h-100'} style={{overflow: 'hidden'}}>
         <MetricsPanel data={model}/>
-        <ContextMenu />
+        <ContextMenu graph={graphid}/>
         {/*<PendingEdge />*/}
         {/* Temporary Edge Pending Manager */}
         {isEdgePending.source && <div key={'extend-msg-outer'} style={{position: 'absolute', top: 15, right: 15, zIndex: 999}}
@@ -48,7 +48,7 @@ function MetamodelTabComponent(props: AllProps) {
             <ToolBar model={model.id} isMetamodel={model.isMetamodel}/>
             <Try>
                 <div className={"GraphContainer h-100 w-100"} style={{position: "relative"}}>
-                    {graph && <DefaultNode data={model} nodeid={graph.id} graphid={graph.id}/> ||
+                    {graph && <DefaultNode data={model} nodeid={graphid} graphid={graphid}/> ||
                         <div>Error: missing DGraph prop</div>}
                 </div>
             </Try>

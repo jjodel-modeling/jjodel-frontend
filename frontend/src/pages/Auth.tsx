@@ -173,7 +173,7 @@ function AuthPage(): JSX.Element {
     const offline = () => {
         AuthApi.offline();
         R.navigate('/allProjects');
-        U.resetState();
+        // U.resetState();
     }
 
     return(<section className={`w-100 h-100 login bg ${action === 'register' ? 'register' : action === 'retrieve-password' ? 'retrieve' : ''} `+(isDirty?' dirty':'')}>
@@ -585,7 +585,7 @@ function AuthPage(): JSX.Element {
                     Login
                 </button>
                 {(window.location.host.includes('localhost')) &&
-                    <button className={'d-block btn btn-primary p-1 mx-auto mt-3 login-button'} onClick={(e) => offline()}>Offline mode</button>
+                    <button className={'d-block btn btn-primary p-1 mx-auto mt-3 login-button'} type='button' onClick={(e) => offline()}>Offline mode</button>
                 }
             </>}
 

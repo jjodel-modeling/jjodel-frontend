@@ -17,6 +17,7 @@ import {
 import React, {ReactNode, useState} from "react";
 import {PaletteType} from "../view/viewElement/view";
 import "./error.scss";
+import {LanguageObject} from "../joiner/classes";
 
 const notificationType: 'classic'|'alert'|'notification' = 'classic';
 
@@ -28,10 +29,11 @@ let ShortAttribETypes: typeof SAType = (window as any).ShortAttribETypes;
 export class DV {
     static defaultLanguages(): Dictionary<string, Language> {
 
-        let m2t: string = 'function(model) {\n\treturn "Not implemented, this is a placeholder.";\n}';
-        let t2m: string | undefined = undefined;
+        let m2t = {javascript:{str:'function(model) {\n\treturn "Not implemented, this is a placeholder.";\n}'}};
+        let t2m = undefined;
         let ret: Dictionary<string, Language> = {
-            JSON: new Language('function(modelData) {\n\treturn JSON.stringify(modelData, null, 4);\n}', "function(text) {\n\treturn JSON.parse(text);\n}"),
+            JSON: new Language({javascript:{str:'function(modelData) {\n\treturn JSON.stringify(modelData.json, null, 4);\n}'}},
+                {javascript:{str:"function(text) {\n\treturn JSON.parse(text);\n}"}}),
             'eCore/JSON': new Language(m2t, t2m),
             'Emfatic'/* (m2 only) */: new Language(m2t, t2m),
             'flexmi/YAML': new Language(m2t, t2m),
@@ -39,15 +41,15 @@ export class DV {
             'eCore/XMI': new Language(m2t, t2m),
         }
 
-        ret.testLanguage = new Language(`function (model, node){
+        ret.testLanguage = new Language({javascript:{str:`function (model, node){
     let text: string = '' model.className + ':' + model.id;
     for (let child of model.attributes) text += '\\n\\t'+child.name+':'+JSON.stringify(child.values);
     for (let child of model.references) text += '\\n\\t'+child.name+':'+JSON.stringify(child.values.map(v=>v.id));
     text+='\\n\\tnode.x' = node.initialX;
     text+='\\n\\tnode.initialX' = node.x;
     return text;
-}`,
-            `function (text) {
+}`}},
+    {javascript:{str:`function (text) {
     let lines = text.split('\\n');
     lines = lines.map(line=>{ // uncomment
         let comment_index = line.indexOf('//'); return (comment_index==-1) ? line : line.substr(0,comment_index);
@@ -81,7 +83,7 @@ export class DV {
     }
     return parsed;
     
-}`);
+}`}});
         // delete ret.testLanguage;
         return ret;
     };

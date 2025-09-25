@@ -1,4 +1,13 @@
-import {ClickEvent, ControlPanel, DGraphElement, LGraphElement, SetRootFieldAction, U} from "../../joiner";
+import {
+    ClickEvent,
+    ControlPanel,
+    DGraphElement, GraphPoint,
+    LGraphElement,
+    SetFieldAction,
+    SetRootFieldAction,
+    TRANSACTION,
+    U
+} from "../../joiner";
 import { ReactElement, ReactNode, useEffect, useRef, useState } from "react";
 
 import "./control.scss";
@@ -288,16 +297,26 @@ const Toggle_Obsolete = (props: ToggleProps, children: ReactNode = []): ReactEle
     const ZoomComponent = (props: ZoomProps) => {
    
     const zoomIn = () => {
+        TRANSACTION('Zoom in', () => {
+            SetFieldAction.new(props.node, 'zoom.x' as any, 1.1, '*=');
+            SetFieldAction.new(props.node, 'zoom.y' as any, 1.1, '*=');
+        })
         // @ts-ignore
-        props.node.zoom = {x: props.node.zoom.x + 0.1, y: props.node.zoom.y + 0.1} 
+        // props.node.zoom = {x: props.node.zoom.x + 0.1, y: props.node.zoom.y + 0.1}
     }
     const zoomOut = () => {
+        TRANSACTION('Zoom out', () => {
+            SetFieldAction.new(props.node, 'zoom.x' as any, 1.1, '/=');
+            SetFieldAction.new(props.node, 'zoom.y' as any, 1.1, '/=');
+        })
         // @ts-ignore
-        props.node.zoom = {x: props.node.zoom.x - 0.1, y: props.node.zoom.y - 0.1} 
+        // props.node.zoom = {x: props.node.zoom.x - 0.1, y: props.node.zoom.y - 0.1}
     };
     const zoomReset = () => {
-        // @ts-ignore
-        props.node.zoom = {x: 1, y: 1};
+        TRANSACTION('Zoom reset', () => {
+            // @ts-ignore
+            props.node.zoom = {x: 1, y: 1};
+        })
     };
 
     return (

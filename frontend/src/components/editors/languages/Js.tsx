@@ -19,6 +19,7 @@ function JsEditorComponent(props: AllProps) {
     let data: LPointerTargetable = LPointerTargetable.wrap(props.data) as any;
     let value = getter ? getter(data, field) : ((data|| {}) as any)[field as any];
     const [js, setJs] = useStateIfMounted(value);
+    const [oldJs, setOldJs] = useStateIfMounted(js);
     const [show, setShow] = useStateIfMounted(props.initialExpand ? props.initialExpand(data, field) : false);
     const [expand, setExpand] = useStateIfMounted(false);
     const monaco = useMonaco();
@@ -31,8 +32,10 @@ function JsEditorComponent(props: AllProps) {
     }
     const blur = () => {
         /* confirm in redux state for final state */
+        if (oldJs === js) return;
         if (js && setter) setter(js, data, field);
         else if(field) (data as any)[field] = js;
+        setOldJs(value);
     }
 
     useEffect(() => {
@@ -103,7 +106,9 @@ interface OwnProps {
 }
 interface StateProps {
     data?: LPointerTargetable;
-    debugmode: boolean;}
+    debugmode: boolean;
+}
+
 interface DispatchProps {}
 type AllProps = Overlap<Overlap<OwnProps, StateProps>, DispatchProps>;
 

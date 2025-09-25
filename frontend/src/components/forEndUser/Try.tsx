@@ -13,41 +13,44 @@ import {
     Overlap,
     Pointer, store,
     U, LoggerCategoryState, transientProperties, ClickEvent, Constructors, D,
-    DUser, UserHistory
+    DUser, UserHistory, NodeTransientProperties, DataTransientProperties, ViewTransientProperties, Dictionary
 } from '../../joiner';
 import { DefaultView } from '../../common/DV';
 import {VersionFixer} from "../../redux/VersionFixer";
+import {BrowserInfo} from "../../common/U";
 /*
 *   What's uncatched:
 *   - reducer
 *   - mapstatetoprops, if reducer doesn't do his job
 *
-*
-*
-*
-*
 * */
+
 class Report{
+    _id?: string; // new  identificatore univoco, può essere usato per evitare errori duplicati da diversi utenti.
     level!: "log"| "info" | "warning" | "error" | "exception" | "DevError" | "DevException" //  "l"| "i" | "w" | "e" | "ex" | "exDev" | "eDev"
-    _id?: string; // new
-    // title?: string;
-    url: string; // new
-    version: string;
+    url: string; // new, perchè ho introdotto alcune opzioni tramite hash url, potrebbero arrivarne altre.
+    version: string; // è una ridondanza perchè è anche in state, ma se vuoi puoi tenere state come strnga JSON e tenere questo fuori per farci query.
     state: DState;
-    when: number; // changed from string to int
+    when: number; // changed from string to int (unix timestamp)
     e:{'stack': string, 'message': string}; // changed from {'stack': string[], 'msg': string};
     compostack?: string; // changed from string[]
     reactMsg?: string; // new
     // context: any;
-    transient?: {node: GObject, modelElement: GObject, view: GObject};// changed from: transient: {node: serializedObj, data: serializedObj, view: serializedObj};
+    transient?: { // new, miglior candidato alla rimozione se serve spazio
+        node: Dictionary<Pointer, NodeTransientProperties>,
+        modelElement: Dictionary<Pointer, DataTransientProperties>,
+        view: Dictionary<Pointer, ViewTransientProperties>
+    };
     recentMessages: LoggerCategoryState[]; // new
-    history?: UserHistory; // new
+    history?: UserHistory; // new, storico delle azioni utente
+    browser: BrowserInfo; // new, informazioni sul client (os, browser, screen size...) potrebbe richiedere consenso?
+
     // maybe add username & projectname, but they are in state
 
 
 
     constructor(e: Error, info?: React.ErrorInfo, msg?:LoggerCategoryState) {
-        this._id = (e as any).id || Constructors.makeID();
+        this._id = (e as any).id;
         this.e = {message:e.message, stack: (e.stack||'')}//.split('\n')};
         this.state = store.getState();
         this.version = ""+this.state.version.n;
@@ -56,7 +59,8 @@ class Report{
         this.transient = transientProperties;
         this.compostack = info?.componentStack || '';
         this.reactMsg = info?.digest || '';
-        if (msg){
+        this.browser = U.getOSBrowserData();
+        if (msg) {
             this.when = msg.time;
             this.recentMessages = [msg];
         } else {

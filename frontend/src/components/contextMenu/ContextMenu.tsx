@@ -1,21 +1,21 @@
-import React, {Dispatch, ReactElement, ReactNode} from 'react';
+import React, {Dispatch, ReactElement, ReactNode, useRef} from 'react';
 import {connect} from 'react-redux';
 import './style.scss';
 import {SetRootFieldAction, TRANSACTION} from '../../redux/action/action';
 import {
-    DClass, DGraphElement,
+    DClass, DGraph, DGraphElement, Dictionary,
     DNamedElement,
     DState,
     DUser, DV,
     DValue,
     DViewElement,
-    GObject, L,
+    GObject, GraphElementComponent, L,
     LClass,
     LGraphElement, LModel,
     LNamedElement,
     LObject, Log,
     LPackage,
-    LProject, LReference,
+    LProject, LReference, LStructuralFeature,
     LUser,
     LValue,
     Pointer,
@@ -52,7 +52,24 @@ function ContextMenuComponent(props: AllProps) {
 }
 let oldRef: Element | null = null;
 
-export let ShowContextMenu: (nodeID: Pointer<DGraphElement>, x: number, y: number)=>void = null as any
+// export let ShowContextMenu: (nodeID: Pointer<DGraphElement>, x: number, y: number)=>void = null as any
+
+export function ShowContextMenu(nodeid: Pointer<DGraphElement>, x: number, y: number): void {
+    let html = document.querySelector('#'+nodeid);
+    let graph_html: HTMLElement | null = html as HTMLElement;
+    let graphid: Pointer<DGraph> | undefined = undefined;
+    while (graph_html) {
+        if (graph_html.dataset?.nodetype === 'Graph') { graphid = graph_html.dataset.nodeid; break; }
+        graph_html = graph_html.parentElement;
+    }
+    // console.log('ShowContextMenu', {nodeid, x, y, html, graphid} );
+    if (!graphid) { Log.eDevv('contextmenu graph not found', {nodeid, graphid}); return; }
+    contextMenuMap[graphid]?.(nodeid, x, y);
+}
+
+let contextMenuMap: Dictionary<Pointer<DGraph>, (nodeid: Pointer<DGraphElement>, x: number, y: number)=>void> = {};
+windoww.ShowContextMenu = ShowContextMenu;
+windoww.contextMenuMap = contextMenuMap;
 
 function ContextMenuComponentInner(props: AllProps) {
     // const project = user.project as LProject;
@@ -63,13 +80,13 @@ function ContextMenuComponentInner(props: AllProps) {
     const [suggestedName, setSuggestedName] = useStateIfMounted('');
     const [childrenMenu, setChildrenMenu] = useStateIfMounted(false);
     const [editPanel, setEditPanel] = useStateIfMounted(false);
-    // NB: do not cache/initialize only once, otherwise closure will not update nodeid, x and y
-    ShowContextMenu = (nodeid: Pointer<DGraphElement>, x: number, y: number)=>{
-        console.log('ShowContextMenu', {nodeid, x, y, display} )
+    //if (!contextMenuMap[props.graph]) {// NB: do not cache/initialize only once, otherwise closure will not update nodeid, x and y
+    contextMenuMap[props.graph] = (nodeid: Pointer<DGraphElement>, x: number, y: number)=> {
+        // console.log('ShowContextMenu', {graph:props.graph, nodeid, x, y, display} );
         if (display && (nodeid === display.nodeid && x === display.x && y === display.y)) return;
         setDisplay({nodeid, x, y});
-    }
-    windoww.ShowContextMenu = ShowContextMenu;
+    };
+
 
     if (!display) return null;
     const nodeid = display.nodeid;
@@ -89,7 +106,7 @@ function ContextMenuComponentInner(props: AllProps) {
         setSuggestedName('');
         setMemorec(null);
         // SetRootFieldAction.new('contextMenu', {display: false, x: 0, y: 0});
-        setDisplay(null)
+        setDisplay(null);
         setChildrenMenu(false);
         if (!panelClick) setEditPanel(false);
         // TRANSACTION('close context menu', ()=>{ })
@@ -150,7 +167,7 @@ function ContextMenuComponentInner(props: AllProps) {
             {childrenMenu && <section className={'round content right'} style={{/*top: position.y - 216, left: position.x - 333*/}} onContextMenu={(e)=>e.preventDefault()}>
                 <ul className={'right context-menu'}>
                     {out.map(lc => { let lcname = lc.name;  return (
-                        !lc.abstract && <li key={lcname} onClick={() => {
+                        lc.instantiable && <li key={lcname} onClick={() => {
                             close();
                             setChildrenMenu(false);
                             const child = l.addObject({}, lc);
@@ -178,13 +195,11 @@ function ContextMenuComponentInner(props: AllProps) {
                     <i>{[ldata?.father?.name, lname].join('.')}</i></div>);
             }*/}
 
-            if (ldata && model?.isMetamodel) {
-                jsxList.push(<div key={lname} className={'col name metamodel'} style={{fontSize: '0.9rem', paddingLeft: '0px', fontWeight: '400', display: 'flex', alignItems: 'center'}}>
-                    {lname}</div>);
-            } else {
-                jsxList.push(<div key={lname} className={'col name model'} style={{fontSize: '0.9rem', paddingLeft: '0px', fontWeight: '400', display: 'flex', alignItems: 'center'}}>
-                        {/* @ts-ignore */}
-                    {data.instanceof?.name}: {lname}</div>);
+            if (ldata) {
+                let isM2: boolean = model.isMetamodel;
+                let meta = (ldata as LObject|LValue).instanceof;
+                jsxList.push(<div key={lname} className={'col name '+(isM2 ? 'meta' : '')+'model'}>
+                    {((isM2 ? data.className.substring(1) : (meta?.name || 'Shapeless')) + ': ') + lname}</div>);
             }
             jsxList.push(<hr key={hri++} className={'my-1'} />);
         }
@@ -195,17 +210,11 @@ function ContextMenuComponentInner(props: AllProps) {
         // }
         /* Edit: only on models */
 
-        if (!model?.isMetamodel && data?.className !== 'DModel') {
-            jsxList.push( // @ts-ignore: disabled
-                <>
-                    <div key='edit' onClick={(e) => {
-                        e.stopPropagation();
-                        setEditPanel(true);
-                    }} className={'col item'} tabIndex={0}>
-                        {icon['edit']}
-                        Edit
-                    </div>
-                </>
+        if (true as any || !model?.isMetamodel && data?.className !== 'DModel') {
+            jsxList.push(
+                <div key='edit' onClick={() => {setEditPanel(true);}} className={'col item'} tabIndex={0}>
+                    {icon['edit']} Edit
+                </div>
             );
             jsxList.push(<hr key={hri++} className={'my-1'}/>);
         }
@@ -215,7 +224,6 @@ function ContextMenuComponentInner(props: AllProps) {
         if (ddata?.className === 'DObject') {
             let out: any[] = [];
             let children = (ldata as LObject).features.map(feat=>getAddChildren(feat, model as any, out)).filter(e => !(Array.isArray(e) && e.length === 0));
-            //console.log('ctxmenu obj', {out, data, children});
 
             if (!Array.isArray(children) || children.length > 0) {
                 jsxList.push(...children);
@@ -228,12 +236,11 @@ function ContextMenuComponentInner(props: AllProps) {
         if (ddata?.className === 'DValue') {
             let out: any[] = [];
             let children = getAddChildren(ldata as any as LValue, model as any, out);
-            console.log('ctxmenu val', {out, data, children});
             if (!Array.isArray(children) || children.length > 0) {
                 jsxList.push(children);
                 jsxList.push(<hr key={hri++} className={'my-1'} />);
             }
-        }    
+        }
 
         /* Memorec */
 
@@ -276,7 +283,7 @@ function ContextMenuComponentInner(props: AllProps) {
         }} className={'col item'} tabIndex={0}>{icon['deselect']} Deselect</div>);*/
         //jsxList.push(<hr key={hri++} className={'my-1'} />);
 
-        
+
 
 
         /* Delete */
@@ -342,21 +349,24 @@ function ContextMenuComponentInner(props: AllProps) {
         </div>);
     }
 
-    const edit_x = data.node?.x || 0;
+    /*const edit_x = data.node?.x || 0;
     const edit_y = data.node?.y || 0;
-    const edit_w = data.node?.w || 0;
+    const edit_w = data.node?.w || 0;*/
 
-
+    let rootStyle: GObject = {top: display.y - 100, left: display.x - 10};
+    // let rootStyle = {top: editPanel? edit_y - 2: display.y - 100, left: editPanel? edit_x + edit_w + 10 : display.x - 10};
     return(
-        <div className={'round' + (editPanel?' edit-panel-container' : ' context-menu')} style={{top: editPanel? edit_y - 2: display.y - 100, left: editPanel? edit_x + edit_w + 10 : display.x - 10}} onContextMenu={(e)=>e.preventDefault()} ref={updateRef}>
-            
+        <div className={'round' + (editPanel?' edit-panel-container' : ' context-menu')}
+             style={rootStyle}
+             onContextMenu={(e)=>e.preventDefault()} ref={updateRef}>
+
             {editPanel ? <><div className={'edit-panel'}>
-                    <Info mode={'popup'}/> 
+                    <Info mode={'popup'}/>
                 </div>
                 <div className={'dialog-footer'}><button onClick={() => close()}>Close</button></div>
                 </>
-                : 
-                
+                :
+
                 <>
                 {jsxList/*.map((jsx, index) => {return <li key={index}>{jsx}</li>})*/}
 
@@ -398,7 +408,9 @@ function ContextMenuComponentInner(props: AllProps) {
 
         </div>);
 }
-interface OwnProps {}
+interface OwnProps {
+    graph: Pointer<DGraph>
+}
 interface StateProps {
     /*user: LUser,
     display: boolean,

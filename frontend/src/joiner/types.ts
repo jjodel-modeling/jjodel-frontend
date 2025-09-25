@@ -197,7 +197,8 @@ type pureStringsNoPointers<T> = {
 };
 export type ObjectWithoutPointers<T> = Omit<ObjectWithoutStrings<T> & pureStringsNoPointers<T>, 'pointedBy' | '_storePath'>
 
-type refkeys = "parent" | "father" | "classifiers" | "children" | "classes" | "packages" | "subpackages" | "annotations" | ""
+type refkeys = "parent" | "father" | "classes" | "enumerators" // | "classifiers"
+    | "children" | "packages" | "subpackages" | "annotations" | ""
     | "type" | "attributes" | "references" | "operations" | "parameters" | "..... much more"
 
 export type InitialSizeField = number ;// | ((segment: EdgeSegment) => number);
@@ -205,7 +206,7 @@ export type InitialVertexSizeObj = Partial<{
     id?: DocString<"Just something to be used as a react key. doesn't need to be a proper Pointer id">,
     index?: number, // where the EdgePoint should be inserted
     w: InitialSizeField, h: InitialSizeField, x: InitialSizeField, y: InitialSizeField}>;
-export type InitialVertexSizeFunc = ((parent: LVoidEdge|LGraphElement, thiss: LVoidVertex|LEdgePoint)=>InitialVertexSizeObj);
+export type InitialVertexSizeFunc = ((parent: LVoidEdge|LGraphElement)=>InitialVertexSizeObj);
 export type InitialVertexSize =  undefined | InitialVertexSizeObj | InitialVertexSizeFunc; // | ((segment: EdgeSegment) => privateTempIVS);
 export type Dependency = {
     firstKey: keyof DState,

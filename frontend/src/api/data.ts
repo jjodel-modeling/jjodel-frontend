@@ -683,7 +683,6 @@ export class EcoreParser{
             undefined as any, undefined as any, undefined as any, undefined as any, undefined, parent.id,
         );
         generated.push(dObject);// dObject.father = parent.id;
-        //if (parent) parent.classifiers.push(dObject.id);
         //dObject.name = this.read(json, ECoreNamed.namee, 'Class_1');
         (dObject as GObject).__fullname = fullnamePrefix + dObject.name;
         const annotations: Json[] = this.getAnnotations(json);
@@ -729,7 +728,7 @@ export class EcoreParser{
         const childs = this.getChildren(json);
         let dObject: DEnumerator = DEnumerator.new();
         generated.push(dObject); dObject.father = parent.id;
-        if (parent) parent.classifiers.push(dObject.id);
+        if (parent) parent.enumerators.push(dObject.id);
         dObject.name = this.read(json, ECoreNamed.namee, 'Enum_1');
         (dObject as GObject).__fullname = fullnamePrefix + dObject.name;
         const annotations: Json[] = this.getAnnotations(json);

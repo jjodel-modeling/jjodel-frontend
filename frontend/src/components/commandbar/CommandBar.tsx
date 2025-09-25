@@ -32,7 +32,7 @@ export const Btn = (props: BtnProps) => {
         if (!askingConfirm && needConfirm) {
             setConfirm(true);
             U.clickedOutside(e, ()=> {
-                console.log('clicked outside remove confirm');
+                // console.log('clicked outside remove confirm');
                 setConfirm(false)
             });
             return;
