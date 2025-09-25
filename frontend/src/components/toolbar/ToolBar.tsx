@@ -278,7 +278,7 @@ function ToolBarComponent(props: AllProps) {
                     <div key={'se'} className={'se'}>{subelements}</div>]);
             }
         } else {
-            const classes = metamodel?.classes || [];
+            const classes = metamodel?.crossClasses || [];
             const model: LModel = LModel.fromPointer(props.model);
             const lobj: LObject | undefined = data.className === "DObject" ? data as LObject : undefined;
             const lfeat: LValue | undefined = data.className === "DValue" ? data as LValue : undefined;
