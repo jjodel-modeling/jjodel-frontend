@@ -199,6 +199,7 @@ function deepCopyButOnlyFollowingPath(oldStateDoNotModify: DState, action: Parse
                         default: isArrayRemove = true; break;
                     }
                     break;
+                    console.log('reducer -=', {isArrayRemove, isObjectDifference, oldValue, index, indexes, indexEnd});
             }
             if (index === undefined) index = -1;
             if (index < 0) index = (oldValue?.length !== undefined) ? oldValue.length + index + 1 : 0;
@@ -273,6 +274,7 @@ function deepCopyButOnlyFollowingPath(oldStateDoNotModify: DState, action: Parse
             }
             else if (isArrayRemove) {
                 if (allowFixingNullArr && !Array.isArray(current[key])) { current[key] = []; }
+                console.log('reducer -= arr', {current, key, ck: current[key]});
                 if (!Array.isArray(current[key])) break;
                 current[key] = [...current[key]];
                 let indexes: number[] = [];
@@ -285,23 +287,24 @@ function deepCopyButOnlyFollowingPath(oldStateDoNotModify: DState, action: Parse
                     (current[key] as any[]).splice(index, indexEnd);
                 } else {
                     if (!Array.isArray(newVal)) { newVal = [newVal]; }
-                    for (let toremove of newVal) {
+                    for (let toremove of newVal as any[]) {
                         // now i only accept indexes from  accessmodifier
-                        if (false as any && U.isNumber(newVal)) { // delete by index
-                            let index = newVal;
+                        if (false as any && U.isNumber(toremove)) { // delete by index
+                            let index = toremove;
                             if (index < 0) index = oldValue.length + index; // if index is -2, i remove the penultimate element
                             if (index >= 0 && index <= oldValue.length) indexes = [index];
                         } else { // remove by value (auto-find index)
                             let removeAllMode = true;
                             if (!removeAllMode) { // mode remove single
-                                let index = oldValue.indexOf(newVal);
+                                let index = oldValue.indexOf(toremove);
                                 if (index >= 0 && index <= oldValue.length) indexes = [index];
                             }
                             else {
-                                indexes = Uarr.findAllIndexes(current[key] as any[], newVal);
+                                indexes = Uarr.findAllIndexes(current[key] as any[], toremove);
                             }
                         }
                     }
+                    console.log('reducer -= arr indexes', {indexes, newVal});
                 }
                 // if it's negatively or positively out of boundary, i skip it
                 gotChanged = !!indexes.length;
@@ -1149,7 +1152,7 @@ export function _reducer/*<S extends StateNoFunc, A extends Action>*/(oldState: 
 
             // update state history
             let delta = Uobj.objectDelta(ret, oldState, true, false);
-            // console.log('deltra', {start:oldState, end: ret, delta});
+            console.log('reducer delta', {start:oldState, end: ret, delta});
             let debug = Uobj.applyObjectDelta(ret, delta, false, oldState);
             delta.timestamp = ret.timestamp;
             delta.timestampdiff = ret.timestampdiff = ret.timestamp - (oldState?.timestamp || 0);

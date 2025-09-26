@@ -285,12 +285,12 @@ export class U {
             message = '';
         } else windoww.__jjAlertMessage = null;
 
-        SetRootFieldAction.new('alert', `${type}£${title}£${message}`, '');
+        SetRootFieldAction.new('alert', type + U.alertSeparator + title + U.alertSeparator + message, '');
     }
 
     static dialog(message: string, label: string, action: () => any): void {
         windoww.dialog_action = action;
-        SetRootFieldAction.new('dialog', `${message}:${label}`, '', false);
+        SetRootFieldAction.new('dialog', message + U.alertSeparator + label + U.alertSeparator + message, '', false);
     }
 
     static dialogOptions?: DialogOptions = undefined;

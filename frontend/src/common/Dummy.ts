@@ -62,7 +62,7 @@ export class Dummy {
                 const lObj: any = LPointerTargetable.wrap(pointer); // the object pointing to the deleted element
                 if (!lObj) continue; // already deleted?
                 const dObj: any = lObj.__raw;
-                console.log('3 get_delete() '+(dObj as any)?.name + '.' + field, {field, dData: dDeleted, cn:dDeleted?.className});
+                //console.log('3 get_delete() '+(dObj as any)?.name + '.' + field, {field, dData: dDeleted, cn:dDeleted?.className});
 
 
                 switch (field as string) {
@@ -153,13 +153,13 @@ export class Dummy {
                 */
             }
 
-            console.log('4 get_delete() '+(dDeleted as any)?.name, {dData: dDeleted, cn:dDeleted?.className});
+            //console.log('4 get_delete() '+(dDeleted as any)?.name, {dData: dDeleted, cn:dDeleted?.className});
             if (lDeleted.nodes) lDeleted.nodes.map((node: any) => node.delete());
-            console.log('5 get_delete() '+(dDeleted as any)?.name, {dData: dDeleted, cn:dDeleted?.className});
+            //console.log('5 get_delete() '+(dDeleted as any)?.name, {dData: dDeleted, cn:dDeleted?.className});
             SetRootFieldAction.new('ELEMENT_DELETED', deletedID, '+=', false); // here no need to IsPointer because it only affects Transient stuff
             //U.sleep(1).then(() => SetRootFieldAction.new(`idlookup.${deletedID}`, undefined, '', false));
             //SetRootFieldAction.new(`idlookup.${deletedID}`, undefined, '', false);
-            console.log('6 get_delete() '+(dDeleted as any)?.name, {dData: dDeleted, cn:dDeleted?.className});
+            //console.log('6 get_delete() '+(dDeleted as any)?.name, {dData: dDeleted, cn:dDeleted?.className});
             DeleteElementAction.new(dDeleted.id);
         };
         //console.log('00 get_delete '+(dDeleted as any)?.name, {dData: dDeleted, cn:dDeleted?.className});

@@ -313,6 +313,7 @@ export class Action extends RuntimeAccessibleClass {
             }
             printobj['this'] = this;
             printobj['stack'] = this.stack;
+            printobj['list'] = (this as any).actions;
             console.log('firing action:', printobj);
             storee.dispatch({...this});
         }
@@ -369,7 +370,7 @@ export class SetRootFieldAction extends Action {
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
     static type = 'SET_ROOT_FIELD';
     isPointer: boolean;
-    accessModifier: AccessModifier;
+    accessModifier: AccessModifier='';
 
     static create(fullpath: string, val: string | string[], accessModifier: AccessModifier | undefined, isPointer: boolean): SetRootFieldAction;
     static create<
@@ -399,9 +400,9 @@ export class SetRootFieldAction extends Action {
 
     protected constructor(fullpath: string, value: any = undefined, accessModifier?: AccessModifier, fire: boolean = true, isPointer: boolean = false) {
         super(fullpath, value, undefined);
-        this.className = (this.constructor as typeof RuntimeAccessibleClass).cname || this.constructor.name;
-        this.isPointer = isPointer;
         this.accessModifier = accessModifier;
+        this.isPointer = isPointer;
+        this.className = (this.constructor as typeof RuntimeAccessibleClass).cname || this.constructor.name;
         if (fire) this.fire();
     }
 
