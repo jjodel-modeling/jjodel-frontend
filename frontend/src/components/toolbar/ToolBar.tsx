@@ -378,7 +378,6 @@ function ToolBarComponent(props: AllProps) {
                      backgroundColor: 'red !important'
                  }} // refuses to focus without event...
                  onClick={(e) => {
-                     console.log("click focus", {htmlref});
                      setTimeout(() => {
                          if (htmlref.current) (htmlref.current as any).children[0].focus();
                      }, 1)

@@ -199,7 +199,6 @@ function deepCopyButOnlyFollowingPath(oldStateDoNotModify: DState, action: Parse
                         default: isArrayRemove = true; break;
                     }
                     break;
-                    console.log('reducer -=', {isArrayRemove, isObjectDifference, oldValue, index, indexes, indexEnd});
             }
             if (index === undefined) index = -1;
             if (index < 0) index = (oldValue?.length !== undefined) ? oldValue.length + index + 1 : 0;
@@ -274,7 +273,6 @@ function deepCopyButOnlyFollowingPath(oldStateDoNotModify: DState, action: Parse
             }
             else if (isArrayRemove) {
                 if (allowFixingNullArr && !Array.isArray(current[key])) { current[key] = []; }
-                console.log('reducer -= arr', {current, key, ck: current[key]});
                 if (!Array.isArray(current[key])) break;
                 current[key] = [...current[key]];
                 let indexes: number[] = [];
@@ -304,13 +302,10 @@ function deepCopyButOnlyFollowingPath(oldStateDoNotModify: DState, action: Parse
                             }
                         }
                     }
-                    console.log('reducer -= arr indexes', {indexes, newVal});
                 }
                 // if it's negatively or positively out of boundary, i skip it
                 gotChanged = !!indexes.length;
                 if (gotChanged) {
-                    console.log('reducer array delete '+(current?.name||current?.className)+'.'+key,
-                        {gotChanged, indexes, newVal, current, cn: current?.name, key, v:current[key], path:action.pathArray, action})
                     current[key] = [...current[key]];
                     for (let index of indexes) {
                         let removedval = current[key].splice(index, 1); // in-place edit
@@ -1152,7 +1147,7 @@ export function _reducer/*<S extends StateNoFunc, A extends Action>*/(oldState: 
 
             // update state history
             let delta = Uobj.objectDelta(ret, oldState, true, false);
-            console.log('reducer delta', {start:oldState, end: ret, delta});
+            if (U.debug) console.log('reducer delta', {start:oldState, end: ret, delta});
             let debug = Uobj.applyObjectDelta(ret, delta, false, oldState);
             delta.timestamp = ret.timestamp;
             delta.timestampdiff = ret.timestampdiff = ret.timestamp - (oldState?.timestamp || 0);
