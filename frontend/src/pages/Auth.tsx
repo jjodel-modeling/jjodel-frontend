@@ -65,7 +65,7 @@ function AuthPage(): JSX.Element {
 
             if ((response.code+'')[0] !== '2') {
                 let title: string = response.data?.title;
-                let msg: string = response.data?.message;
+                let msg: string = response.data?.description;
                 U.alert('e', title || (response.data as any as string), msg);
                 return false;
             }
@@ -96,7 +96,7 @@ function AuthPage(): JSX.Element {
 
             if ((response.code+'')[0] !== '2') {
                 let title: string = response.data?.title;
-                let msg: string = response.data?.message;
+                let msg: string = response.data?.description;
                 U.alert('e', title || (response.data as any as string), msg);
                 return false;
             }
@@ -155,7 +155,7 @@ function AuthPage(): JSX.Element {
 
         if ((response.code+'')[0] !== '2') {
             let title: string = response.data?.title;
-            let msg: string = response.data?.message;
+            let msg: string = response.data?.description;
             U.alert('e', title || (response.data as any as string), msg);
             return false;
         }
