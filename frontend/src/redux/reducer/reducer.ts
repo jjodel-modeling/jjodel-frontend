@@ -285,20 +285,20 @@ function deepCopyButOnlyFollowingPath(oldStateDoNotModify: DState, action: Parse
                     (current[key] as any[]).splice(index, indexEnd);
                 } else {
                     if (!Array.isArray(newVal)) { newVal = [newVal]; }
-                    for (let toremove of newVal) {
+                    for (let toremove of newVal as any[]) {
                         // now i only accept indexes from  accessmodifier
-                        if (false as any && U.isNumber(newVal)) { // delete by index
-                            let index = newVal;
+                        if (false as any && U.isNumber(toremove)) { // delete by index
+                            let index = toremove;
                             if (index < 0) index = oldValue.length + index; // if index is -2, i remove the penultimate element
                             if (index >= 0 && index <= oldValue.length) indexes = [index];
                         } else { // remove by value (auto-find index)
                             let removeAllMode = true;
                             if (!removeAllMode) { // mode remove single
-                                let index = oldValue.indexOf(newVal);
+                                let index = oldValue.indexOf(toremove);
                                 if (index >= 0 && index <= oldValue.length) indexes = [index];
                             }
                             else {
-                                indexes = Uarr.findAllIndexes(current[key] as any[], newVal);
+                                indexes = Uarr.findAllIndexes(current[key] as any[], toremove);
                             }
                         }
                     }
@@ -306,8 +306,6 @@ function deepCopyButOnlyFollowingPath(oldStateDoNotModify: DState, action: Parse
                 // if it's negatively or positively out of boundary, i skip it
                 gotChanged = !!indexes.length;
                 if (gotChanged) {
-                    console.log('reducer array delete '+(current?.name||current?.className)+'.'+key,
-                        {gotChanged, indexes, newVal, current, cn: current?.name, key, v:current[key], path:action.pathArray, action})
                     current[key] = [...current[key]];
                     for (let index of indexes) {
                         let removedval = current[key].splice(index, 1); // in-place edit
@@ -1149,7 +1147,7 @@ export function _reducer/*<S extends StateNoFunc, A extends Action>*/(oldState: 
 
             // update state history
             let delta = Uobj.objectDelta(ret, oldState, true, false);
-            // console.log('deltra', {start:oldState, end: ret, delta});
+            if (U.debug) console.log('reducer delta', {start:oldState, end: ret, delta});
             let debug = Uobj.applyObjectDelta(ret, delta, false, oldState);
             delta.timestamp = ret.timestamp;
             delta.timestampdiff = ret.timestampdiff = ret.timestamp - (oldState?.timestamp || 0);

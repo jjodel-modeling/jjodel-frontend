@@ -43,18 +43,7 @@ function AccountComponent(props: AllProps): JSX.Element {
             changePasswordRequest.Password = new_password;
             changePasswordRequest.PasswordConfirm = check_password;
 
-            const response_code = await UsersApi.updatePassword(changePasswordRequest);
-
-            switch (response_code) {
-                case 200:
-                    U.alert('i', 'Your password has been successfully updated!','');
-                    break;
-                default:
-                case 400:
-                    U.alert('e', 'Something went wrong. re-check your old password.','');
-                    break;
-            }
-
+            await UsersApi.updatePassword(changePasswordRequest);
 
         } catch (error) {
             U.alert('e', 'Something went wrong.','');

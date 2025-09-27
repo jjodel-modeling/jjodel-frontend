@@ -82,6 +82,7 @@
 .error-notification {
     border-radius: var(--radius);
     max-width: 700px;
+    &.content{ min-width: 400px; }
     margin: 12px auto;
     margin-top: 0;
     background-color: whitesmoke; // crimson;
@@ -141,19 +142,20 @@
         }
     }
 
-    
+
+    &::before {
+        // position: absolute; top: 0; left: -10px;
+        display: inline-block;
+        margin: auto 20px;
+        font-size: 3em;
+        font-family: bootstrap-icons;
+        content: "\F333";
+    }
+    h1{ display: inline-block; }
+
 }
 
 
-
-.error-notification::before {
-    position: absolute; left: 0;
-    display: inline-block;
-    margin: auto 20px;
-    font-size: 3em;
-    font-family: bootstrap-icons;
-    content: "\F333";
-}
 
 .notification-icon {
     position: absolute;

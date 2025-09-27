@@ -15,7 +15,6 @@ export class Dummy {
         const lDeleted: LPointerTargetable & GObject = context.proxyObject;
         const dDeleted = context.data;
         const dependencies = thiss.get__jjdependencies(context);
-        console.log('get_delete '+(dDeleted as any).name, {dData: dDeleted, dependencies});
 
         const ret = () => {
             //console.log('0 get_delete() '+(dDeleted as any)?.name, {dData: dDeleted, cn:dDeleted?.className, dependencies});
@@ -24,13 +23,12 @@ export class Dummy {
             if (deletedID.indexOf('Pointer_View') !== -1 ) return; // cannot delete default views/viewpoints
             SetRootFieldAction.new('_lastSelected', undefined, '');
 
-            console.log('1 get_delete() '+(dDeleted as any)?.name, {carr: lDeleted.children, dData: dDeleted, cn:dDeleted?.className, dependencies});
+            // console.log('1 get_delete() '+(dDeleted as any)?.name, {carr: lDeleted.children, dData: dDeleted, cn:dDeleted?.className, dependencies});
             for (let child of lDeleted.children) {
                 child?.delete();
                 // if a m1-dvalue which conforms to a m2-reference with "containment" is deleted, the target is also deleted because is a "children" of it.
             }
 
-            console.log('2 get_delete() '+(dDeleted as any)?.name, {dData: dDeleted, cn:dDeleted?.className, dependencies});
             // those 2 are exceptions because the pointer is a key in an object instead of a normal value as a field or array member.
             switch (dDeleted.className) {
                 case 'DViewElement':
@@ -47,7 +45,6 @@ export class Dummy {
             }
 
             for (let dependency of dependencies) {
-                console.log('loop get_delete() '+(dDeleted as any)?.name, {dependency, dData: dDeleted, cn:dDeleted?.className, dependencies});
 
                 const root: keyof DState = dependency.firstKey;
                 if (root !== 'idlookup') {
@@ -62,7 +59,7 @@ export class Dummy {
                 const lObj: any = LPointerTargetable.wrap(pointer); // the object pointing to the deleted element
                 if (!lObj) continue; // already deleted?
                 const dObj: any = lObj.__raw;
-                console.log('3 get_delete() '+(dObj as any)?.name + '.' + field, {field, dData: dDeleted, cn:dDeleted?.className});
+                //console.log('3 get_delete() '+(dObj as any)?.name + '.' + field, {field, dData: dDeleted, cn:dDeleted?.className});
 
 
                 switch (field as string) {
@@ -120,7 +117,7 @@ export class Dummy {
                     case 'dependencies':
                         /* obj.annotations -> removed element, just remove the entry from the list*/
                         // NB: "models" etc are not from DState.models but from idlookup[someid].models or so, the root arrays are handled above.
-                        console.log('delete() update subcollection '+ field, {dObj:{...dObj}, dDeleted:{...dDeleted}, field});
+                        // console.log('delete() update subcollection '+ field, {dObj:{...dObj}, dDeleted:{...dDeleted}, field});
                         SetFieldAction.new(dObj.id, field, deletedID, '-=', true);
                         /*let oldList = [...dObj[field]];
                         let newList = dObj[field].filter((id: Pointer) => id && id !== deletedID);
@@ -153,13 +150,13 @@ export class Dummy {
                 */
             }
 
-            console.log('4 get_delete() '+(dDeleted as any)?.name, {dData: dDeleted, cn:dDeleted?.className});
+            //console.log('4 get_delete() '+(dDeleted as any)?.name, {dData: dDeleted, cn:dDeleted?.className});
             if (lDeleted.nodes) lDeleted.nodes.map((node: any) => node.delete());
-            console.log('5 get_delete() '+(dDeleted as any)?.name, {dData: dDeleted, cn:dDeleted?.className});
+            //console.log('5 get_delete() '+(dDeleted as any)?.name, {dData: dDeleted, cn:dDeleted?.className});
             SetRootFieldAction.new('ELEMENT_DELETED', deletedID, '+=', false); // here no need to IsPointer because it only affects Transient stuff
             //U.sleep(1).then(() => SetRootFieldAction.new(`idlookup.${deletedID}`, undefined, '', false));
             //SetRootFieldAction.new(`idlookup.${deletedID}`, undefined, '', false);
-            console.log('6 get_delete() '+(dDeleted as any)?.name, {dData: dDeleted, cn:dDeleted?.className});
+            //console.log('6 get_delete() '+(dDeleted as any)?.name, {dData: dDeleted, cn:dDeleted?.className});
             DeleteElementAction.new(dDeleted.id);
         };
         //console.log('00 get_delete '+(dDeleted as any)?.name, {dData: dDeleted, cn:dDeleted?.className});
