@@ -23,8 +23,9 @@
     width: 205px;
     margin-right: 100px;
     border-radius: 8px;
-    box-shadow:0px 10px 20px rgba(000,000,000,0.3),inset 0px 0px 1px rgba(255,255,255,0.8);
+    box-shadow: none!important; // 0px 10px 20px rgba(000,000,000,0.3),inset 0px 0px 1px rgba(255,255,255,0.8);
     left: 20px;
+    scrollbar-width: 0;
 
     .drag-handle{
       flex-grow: 0;
@@ -37,20 +38,46 @@
       margin-bottom: 0.25em;
 
     }
+    
+
+  hr.my-1{
+    color: #8a8a8a;
+    width: 100%;
+  }
+  
+
     .toolbar-section-label{
-      // 0.5 padding of container, 0.2 padding of list-item, this is to make it indented twice as much as a normal item
-        margin-left: calc(var(--global-padding) + var(--item-indentation));
-        display: block;
-        font-family: var(--default-font-family);
-        font-size: 1.1em;
-        font-weight: 300;
+      
+      /* cloned from .name in style.css because identical to contextmenu */
+      
+      padding-left: 30px;
+      overflow: hidden;
+      height: 1lh;
+      white-space: nowrap;
+      font-size: 0.9rem;
+      font-weight: 400;
+      align-items: center;
+    }
+    .toolbar-section-label.features {
+        padding-left: 30px;  
+      & hr.my-1 {
+          color: #8a8a8a!important;
+        }
     }
 
     .toolbar-section-label::before {
-      font-family: bootstrap-icons;
-      content: "";
-      padding-right: 0px;
+      position: absolute;
+      top: 5px;
+      right: 185px;
+      content: '\F3FE' !important;
+      font-family: 'bootstrap-icons';
+      font-size: 1.2em;
+      color: white;
+      padding-right: 0;
+      margin-right: 0px;
+      padding-left: 0px!important;
     }
+
     .jj.palette{
       margin: auto 0;
       top: -1px;
@@ -95,9 +122,12 @@
       }
   }
 
-  .toolbar-hr {
-    padding-bottom: 2px;
-    margin-top: 15px !important;
+  .my-1.toolbar-hr {
+    margin-right: -10px;   
+    padding-right: -10px; 
+    color: #8a8a8a;
+    left: 5px;
+    width: calc(100% - 0px);
   }
 
   .w-100 {
@@ -136,11 +166,7 @@
     margin: 5px 10px 5px 10px!important;
   }
 
-  hr.my-1{
-    color: #8a8a8a;
-    left: 5px;
-    width: calc(100% - 10px);
-  }
+
 }
 
 

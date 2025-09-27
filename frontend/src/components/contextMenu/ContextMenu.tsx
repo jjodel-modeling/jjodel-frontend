@@ -208,6 +208,7 @@ function ContextMenuComponentInner(props: AllProps) {
         //     jsxList.push(...(ldata as LObject).features.map(feat=>getAddChildren(feat, model, [])));
         //     jsxList.push(<hr key={hri++} className={'my-1'} />);
         // }
+        
         /* Edit: only on models */
 
         if (true as any || !model?.isMetamodel && data?.className !== 'DModel') {

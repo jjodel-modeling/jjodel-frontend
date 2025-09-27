@@ -273,7 +273,7 @@ function ToolBarComponent(props: AllProps) {
                     ]);
             }
             if (subelements.length > 0) {
-                contentarr.push([<span className={'toolbar-section-label'} key={'ftr'}>Features</span>,
+                contentarr.push([<span className={'toolbar-section-label features'} key={'ftr'}>Features</span>,
                     <hr className={'my-1'} key={'h_ftr'}/>,
                     <div key={'se'} className={'se'}>{subelements}</div>]);
             }
@@ -318,7 +318,7 @@ function ToolBarComponent(props: AllProps) {
                 m1entries[omonimo.fullname] = omonimo;
                 m1entries[lc.fullname] = lc;
             }*/
-            let rootobjs = m1entries.map(lClass => {
+            let rootobjs = m1entries.filter(lClass => !lClass.isSingleton).map(lClass => {
                 let dclass = lClass.__raw;
                 return (
                     <div key={"LObject_" + dclass.id}
@@ -327,7 +327,7 @@ function ToolBarComponent(props: AllProps) {
                           className={"toolbar-item LObject"} tabIndex={ti}
                           onClick={() => select(model.addObject({}, lClass))}>
                         {dclass._state.icon ? <ModellingIcon src={dclass._state.icon}/> : <ModellingIcon name={'object'}/>}
-                        <span className={'ms-1 my-auto text-capitalize'}>{U.stringMiddleCut(dclass.name, 14)}</span>
+                        <span className={'ms-1 my-auto text-capitalize'}>{U.stringMiddleCut(dclass.name, 14)} </span>
                     </div>)
             }) || [];
 
@@ -343,7 +343,7 @@ function ToolBarComponent(props: AllProps) {
 
             if (rootobjs.length > 0) {
                 contentarr.push([<b key={'rlvl'} className={'toolbar-section-label'}
-                                    style={{marginRight: "1.5em"/*to avoid overlap with pin*/}}>Root level</b>, rootobjs]);
+                                    style={{marginRight: ""/*to avoid overlap with pin*/}}>Root level</b>,<hr className={'my-1 toolbar-hr'}/>, rootobjs]);
             }
             if (subleveloptions.length > 0) {
                 contentarr.push(
