@@ -46,8 +46,8 @@ div.toggle{
     width: var(--width);
     transition: all 0.3s ease-in;
     border-radius: var(--dimension);
-    background-color: var(--bg-3-1);
-    border: var(--border) solid var(--bg-3-1); // 2px
+    background-color: var(--bg-4);
+    border: var(--border) solid var(--bg-4); // 2px
 
     &::after {
       content: '';
