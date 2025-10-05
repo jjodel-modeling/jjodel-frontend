@@ -42,7 +42,8 @@ class Report{
         view: Dictionary<Pointer, ViewTransientProperties>
     };
     recentMessages: LoggerCategoryState[]; // new
-    history?: UserHistory; // new, storico delle azioni utente
+    history?: Dictionary<Pointer<DUser>, UserHistory>; //{ [userpointer: Pointer<DUser>]: UserHistory };
+    // history?: UserHistory; // new, storico delle azioni utente
     browser: BrowserInfo; // new, informazioni sul client (os, browser, screen size...) potrebbe richiedere consenso?
 
     // maybe add username & projectname, but they are in state

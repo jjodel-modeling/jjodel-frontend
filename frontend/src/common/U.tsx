@@ -2490,15 +2490,21 @@ export class U {
         return Promise.reject('unsupported');
     }
 
-    static flattenObjectByKey<T extends GObject>(arr: (T|null|undefined)[], childKey: string):T[] {
+    // removeMidElements: remove flattened objects that are not leaves in the nested tree.
+    static flattenObjectByKey<T extends GObject>(arr: (T|null|undefined)[], childKey: string, removeMidElements: boolean = false):T[] {
         let isArray = Array.isArray(arr);
         if (!isArray) arr = [arr] as any;
         let ret: T[] = [...arr as any];
-        for (let e of ret) {
+
+        let toremove: T = Symbol('arrayFlattenToRemove') as any;
+        for (let i = 0; i < ret.length; i++) {
+            let e = ret[i];
             let children = (e as any)?.[childKey];
-            if (!children || children.length === 0) continue;
+            if (!children || children.length === 0 || !Array.isArray(children)) continue;
+            if (removeMidElements) { ret[i] = toremove; }
             U.arrayMergeInPlace(ret, U.flattenObjectByKey(children, childKey));
         }
+        if (removeMidElements) return ret.filter(e=> e !== toremove);
         return ret;
     }
 

@@ -533,8 +533,11 @@ export enum EdgeHead {
 @RuntimeAccessible('UserHistory')
 export class UserHistory{
     static cnamne: string = 'UserHistory';
-    constructor(public undoable:GObject<"delta">[] = [], public redoable: GObject<"delta">[] = []){
-
+    public undoable: GObject<"delta">[] = [];
+    public redoable: GObject<"delta">[] = [];
+    constructor(undoable:GObject<"delta">[] = [], redoable: GObject<"delta">[] = []) {
+        this.undoable = undoable;
+        this.redoable = redoable;
     }
 }
 
@@ -1677,11 +1680,12 @@ export class PendingPointedByPaths{
     private resolveDirectly(state: DState, oldState: DState): DState {
         U.arrayRemoveAll(PendingPointedByPaths.all, this);
         if (state === oldState) state = {...state} as any;
-        if (state.idlookup === oldState.idlookup) state.idlookup = {...state.idlookup};
-        if (state.idlookup[this.holder] === oldState.idlookup[this.holder]) state.idlookup[this.holder] = {...state.idlookup[this.holder]} as any;
         let dobj = state.idlookup[this.holder];
-        let oldobj = state.idlookup[this.holder];
-        if (dobj.pointedBy === oldobj.pointedBy) dobj.pointedBy = [...dobj.pointedBy]
+        let oldobj = oldState.idlookup[this.holder];
+        if (state.idlookup === oldState.idlookup) state.idlookup = {...state.idlookup};
+        if (oldobj && dobj === oldobj) state.idlookup[this.holder] = dobj = {...dobj} as any;
+        if (oldobj && dobj.pointedBy === oldobj.pointedBy) dobj.pointedBy = [...dobj.pointedBy]
+
         dobj.pointedBy.push(PointedBy.new(this.action.path, this.casee));
 
         //Action.parse(SetRootFieldAction.create("idlookup." + this.holder + '.pointedBy', '+=', false));

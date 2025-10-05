@@ -31,7 +31,7 @@ function CollaborativeComponent(props: AllProps) {
         }
         if(!users.map(u => u.id).includes(user.id))
             DUser.new(user.name, user.surname, user.nickname, user.affiliation, user.country, user.newsletter, user.email, '', user.id, user._Id);
-        if(project.collaborators.map(c => c.id).includes(user.id)) return;
+        if (project.collaborators.map(c => c.id).includes(user.id)) return;
         project.collaborators = [...((project.__raw||project) as DProject).collaborators, user.id] as any;
     }
 
