@@ -71,7 +71,7 @@ function ProjectComponent(props: AllProps): JSX.Element {
     return (<>
         <Dashboard active={'Project'} version={props.version} project={user.project} />
         {/*<Try><Dock /></Try>*/}
-        {user.project.type === 'collaborative' && <CollaborativeAttacher project={user.project}/>}
+        {user.project.type === 'collaborative' && <CollaborativeAttacher project={user.project?.id}/>}
     </>);
 
 }

@@ -192,9 +192,7 @@ function DebuggerComponent(props: DProps) {
 }
 
 const CloseProject = async()=> {
-    Collaborative.client.off('pullAction');
-    await Collaborative.client.disconnect();
-    SetRootFieldAction.new('collaborativeSession', false);
+    await Collaborative.disconnect();
     U.resetState();
     R.navigate('/allProjects', true);
 };
@@ -527,7 +525,6 @@ function NavbarComponent(props: AllProps) {
                         <Item icon={icon['dashboard']} action={async()=> {
                             Collaborative.client.off('pullAction');
                             await Collaborative.client.disconnect();
-                            SetRootFieldAction.new('collaborativeSession', false);
                             U.resetState();
                             R.navigate('/allProjects');
                         }}>Dashboard</Item>

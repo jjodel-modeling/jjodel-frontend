@@ -113,7 +113,6 @@ export class DState extends DPointerTargetable{
 
 
     viewelements: Pointer<DViewElement, 0, 'N'> = [];
-    stackViews: Pointer<DViewElement, 0, 'N'> = [];
 
     // users: Dictionary<DocString<Pointer<DUser>>, UserState> = {};
     // collaborators: UserState[];
@@ -165,7 +164,6 @@ export class DState extends DPointerTargetable{
     isLoading: boolean = false;
 
     projects: Pointer<DProject, 0, 'N'> = [];
-    collaborativeSession: boolean = false;
     ////////////////     flags shared, but handled locally      /////////////////////////////
 
     /* RECOMPILES MODULE */

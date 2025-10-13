@@ -42,7 +42,8 @@ class Report{
         view: Dictionary<Pointer, ViewTransientProperties>
     };
     recentMessages: LoggerCategoryState[]; // new
-    history?: UserHistory; // new, storico delle azioni utente
+    history?: Dictionary<Pointer<DUser>, UserHistory>; //{ [userpointer: Pointer<DUser>]: UserHistory };
+    // history?: UserHistory; // new, storico delle azioni utente
     browser: BrowserInfo; // new, informazioni sul client (os, browser, screen size...) potrebbe richiedere consenso?
 
     // maybe add username & projectname, but they are in state
@@ -55,11 +56,12 @@ class Report{
         this.state = store.getState();
         this.version = ""+this.state.version.n;
         this.url = window.location.href;
-        this.history = statehistory.all;
+        this.history = statehistory;
         this.transient = transientProperties;
         this.compostack = info?.componentStack || '';
         this.reactMsg = info?.digest || '';
         this.browser = U.getOSBrowserData();
+
         if (msg) {
             this.when = msg.time;
             this.recentMessages = [msg];
@@ -74,12 +76,17 @@ class Report{
     }
     send(){
         let str: string;
-        try{
+        try {
             this.recentMessages = U.deepReplace(this.recentMessages, this.replacer);
             this.transient = U.deepReplace(this.transient, this.replacer);
+            this.recentMessages = [];
+            this.transient = {} as any;
             str = JSON.stringify(this);
+            (window as any).lastErrorReport = str;
         } catch (e: any) {
             str = "failed to serialize error report; \n\n"+e?.message+'\n\n'+e?.stack;
+            console.error(e);
+            (window as any).lastErrorReport = str;
         }
         // todo: POST(str) it
     }
@@ -169,9 +176,9 @@ class TryComponent extends React.Component<AllProps, State> {
         }
         error.id = Constructors.makeID();
         let user: DUser = D.from(DUser.current);
-        (window as any).tryerror = error;
 
         let report: Report = new Report(error, info);
+        (window as any).tryreport = report;
         if (user?.autoReport) report.send();
 
         let title = "Jodel error report"; // V "+state?.version?.n;

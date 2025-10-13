@@ -80,7 +80,7 @@ function DockComponent(props: AllProps) {
     if (advanced) tabs.push(mtm);
     if (advanced) tabs.push(logger);
 
-    if (user?.project?.type === 'collaborative') tabs.push(collaborative);
+    // if (user?.project?.type === 'collaborative') tabs.push(collaborative);
     if (false && user?.project?.type === 'collaborative') tabs.push(permissions);
     layout.dockbox.children.push({tabs});
 

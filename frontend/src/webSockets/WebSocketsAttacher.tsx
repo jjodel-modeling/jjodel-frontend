@@ -9,7 +9,6 @@ function WebSocketsAttacher(props: Props) {
     const {projectID} = props;
 
     useEffect(() => {
-        // SetRootFieldAction.new('collaborativeSession', true);
         WebSockets.iot.io.opts.query = {'project': projectID};
         WebSockets.iot.connect();
     }, []);
