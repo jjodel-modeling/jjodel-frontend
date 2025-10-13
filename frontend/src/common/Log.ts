@@ -56,6 +56,10 @@ export class LoggerCategoryState{
             this.long_string += s;
         }*/
     }
+
+    report(): void {
+
+    }
 }
 
 @RuntimeAccessible('Log')

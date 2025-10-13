@@ -111,9 +111,7 @@ function LeftBar(props: LeftBarProps): JSX.Element {
     const closeProject = () => {
         function doclose(){
             R.navigate('/allProjects', true);
-            Collaborative.client.off('pullAction');
-            Collaborative.client.disconnect();
-            SetRootFieldAction.new('collaborativeSession', false);
+            Collaborative.disconnect();
             U.resetState();
         }
         /*

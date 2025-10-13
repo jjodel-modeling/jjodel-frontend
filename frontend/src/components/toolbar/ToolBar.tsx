@@ -43,6 +43,7 @@ interface ThisState {}
 let ti = 0; // tabindex counter
 
 function toolbarClick(item_dname: string, data: LModelElement|undefined, myDictValidator: Dictionary<DocString<"DClassName">, DocString<"hisChildren">[]>, node?:LGraphElement) {
+
     switch(item_dname){
         case DVoidEdge.cname:
         case DEdge.cname:
@@ -181,7 +182,6 @@ function ToolBarComponent(props: AllProps) {
     const node = props.node;
     let [pinned, setPinned] = useState(true);
     let [collapsed, setCollapsed] = useState(false);
-
     /*useClickOutside(menuRef, () => {
         setCollapsed(true);
     });*/

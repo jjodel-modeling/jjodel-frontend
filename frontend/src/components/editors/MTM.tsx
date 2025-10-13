@@ -22,6 +22,7 @@ import {AT_TRANSACTION} from "../../redux/action/action";
 import {doM2T, doT2M} from "../forEndUser/MTM";
 import {Btn, CommandBar} from "../commandbar/CommandBar";
 import {hideMetrics} from "../metrics/Metrics";
+import {Nearley} from "../../DSL/nearley/nearley";
 
 const monacooptions: monaco.editor.IStandaloneEditorConstructionOptions = {
     fontSize: 12,

@@ -53,7 +53,7 @@ class NestedTransactionManager{
 
 
     /*
-    todo: to debug missing END paired with a begin, seve stack trace of begins and ends
+    todo: to debug missing END paired with a begin, save stack trace of begins and ends
     * every level must have his own array?
     * Begin0, Begin1, Begin2, End2, End1, Begin1.1 Begin 1.2....
     it's a tree!
@@ -102,6 +102,7 @@ export function BEGIN() {
     if (t.transactionDepthLevel === 0) t.hasAborted = false;
     t.hasBegun = true; // redundant but actions are reading this, minimize changes
     t.transactionDepthLevel++;
+    // if (inCommit) console.warn('begin', {transactionDepthLevel: t.transactionDepthLevel});
     if (!inCommit) windoww.updateDebuggerComponent();
     // console.warn('TRANSACTION BEGIN', {depth: t.transactionDepthLevel});
 
@@ -122,8 +123,13 @@ export function COMMIT(action?:Action, deep: boolean = true): boolean {
         return false;
     }
     inCommit = true;
-    if (deep) t.transactionDepthLevel = 1;
-    END(); // triggers FINAL_END
+    // if (action) console.log('commit 0', action, t.pendingActions,{lv:+t.transactionDepthLevel, begun: t.hasBegun, deep});
+
+    if (deep) while (t.hasBegun && t.transactionDepthLevel > 0){
+        t.transactionDepthLevel = 1;
+        END(); // triggers FINAL_END, while loop required because AtTransaction callback might have started a new transaction.
+    } else END();
+    // if (action) console.log('commit 1', action, t.pendingActions,{lv:+t.transactionDepthLevel, begun: t.hasBegun, deep});
     action?.fire();
     if (deep) t.transactionDepthLevel = olddepth-1;
     BEGIN();
@@ -133,6 +139,7 @@ export function COMMIT(action?:Action, deep: boolean = true): boolean {
 
 export function END(actionstoPrepend: Action[] = [], path?: string, oldval?: any, newval?: any, desc?:string): boolean {
     t.transactionDepthLevel--;
+    // if (inCommit) console.log('commit end', {lv: +t.transactionDepthLevel});
     if (!inCommit) windoww.updateDebuggerComponent();
     // console.warn('TRANSACTION END', {depth: t.transactionDepthLevel});
     if (actionstoPrepend.length) t.pendingActions = [...actionstoPrepend, ...t.pendingActions];
@@ -271,7 +278,8 @@ export class Action extends RuntimeAccessibleClass {
     // private src?: string[];
     subType?: string; //?
     private stack?: string[];
-    protected constructor(field: string, value: any, subType?: string) {
+    skipCollaborative?: boolean;
+    protected constructor(field: string, value: any, subType?: string, skipCollaborative: boolean = false) {
         super();
         this.id = 'Action_' + Date.now() + "_" + Action.maxCounter++; // NB: the prefix must be the same for all actions because it must not affect order
         this.timestamp = Date.now();
@@ -281,6 +289,7 @@ export class Action extends RuntimeAccessibleClass {
         this.type = (this.constructor as any).type;
         this.stack = new Error().stack?.split('\n').splice( 4);
         this.subType = subType;
+        this.skipCollaborative = skipCollaborative;
         this.className = (this.constructor as typeof RuntimeAccessibleClass).cname || this.constructor.name;
     }
 
@@ -397,9 +406,13 @@ export class SetRootFieldAction extends Action {
         return new SetRootFieldAction(fullpath, val, accessModifier, false, isPointer);
     }
     static new(...a:Parameters<(typeof SetRootFieldAction)["create"]>): boolean{ return SetRootFieldAction.create(...a).fire();}
-
-    protected constructor(fullpath: string, value: any = undefined, accessModifier?: AccessModifier, fire: boolean = true, isPointer: boolean = false) {
-        super(fullpath, value, undefined);
+    protected constructor(fullpath: string,
+                          value: any = undefined,
+                          accessModifier?: AccessModifier,
+                          fire: boolean = true,
+                          isPointer: boolean = false,
+                          skipCollaborative?: boolean) {
+        super(fullpath, value, undefined, skipCollaborative);
         this.accessModifier = accessModifier;
         this.isPointer = isPointer;
         this.className = (this.constructor as typeof RuntimeAccessibleClass).cname || this.constructor.name;
@@ -503,7 +516,7 @@ export class SetFieldAction extends SetRootFieldAction {
           field: T,
           val: VAL,
           accessModifier?: AM | undefined,
-          isPointer?: ISPOINTER): boolean;
+          isPointer?: ISPOINTER, skipCollaborative?: boolean): boolean;
     static new<
         D extends DPointerTargetable,
         T extends (keyof D),
@@ -514,7 +527,7 @@ export class SetFieldAction extends SetRootFieldAction {
         >(me: D | Pointer<D>, field: T,
           val: VAL,
           accessModifier: AM,
-          isPointer: boolean): boolean;
+          isPointer: boolean, skipCollaborative?: boolean): boolean;
     static new<
         D extends DPointerTargetable,
         T extends string & (keyof D),
@@ -522,9 +535,9 @@ export class SetFieldAction extends SetRootFieldAction {
         ISPOINTER extends boolean | "todo: ISPOINTER type = boolean but required only if val is UnArr< string > = string | string[], maybe do with override",
         AM extends AccessModifier | undefined = undefined,
         // T extends arrayFieldNameTypes<D> = any
-        >(me: D | Pointer<D>, field: T, val: VAL, accessModifier: AM | undefined = undefined, isPointer?: ISPOINTER): boolean {
+        >(me: D | Pointer<D>, field: T, val: VAL, accessModifier: AM | undefined = undefined, isPointer?: ISPOINTER, skipCollaborative?: boolean): boolean {
         //if (accessModifier) (field as any) += accessModifier;
-        return new SetFieldAction(me, field, accessModifier, val, false, isPointer as boolean).fire();
+        return new SetFieldAction(me, field, accessModifier, val, false, isPointer as boolean, skipCollaborative).fire();
     }
 
 
@@ -533,10 +546,15 @@ export class SetFieldAction extends SetRootFieldAction {
     me_field: string;
 
     // field can end with "+=", "[]", or "-1" if it's array
-    protected constructor(me: DPointerTargetable | Pointer, field: string, accessModifier: AccessModifier, val: any, fire: boolean = true, isPointer: boolean = false) {
+    protected constructor(me: DPointerTargetable | Pointer,
+                          field: string,
+                          accessModifier: AccessModifier,
+                          val: any, fire: boolean = true,
+                          isPointer: boolean = false,
+                          skipCollaborative?: boolean) {
         Log.exDev(!me, 'BaseObject missing in SetFieldAction', {me, field, val});
         let fullpath = 'idlookup.' + ((me as DPointerTargetable).id || me) + (field ? '.'+field : '');// + (accessModifier || '');
-        super(fullpath, val, accessModifier, false, isPointer);
+        super(fullpath, val, accessModifier, false, isPointer, skipCollaborative);
         this.me = me;
         this.me_field = field;
         this.className = (this.constructor as typeof RuntimeAccessibleClass).cname || this.constructor.name;
@@ -705,12 +723,14 @@ export class CompositeAction extends Action {
     static type: string = 'COMPOSITE_ACTION';
     actions: Action[] = [];
     descriptor?: ActionDescriptor;
+    fromCollaborative: boolean;
 
     public static new(actions: Action[], launch: boolean = true): CompositeAction { return new CompositeAction(actions, launch); }
     constructor(actions: Action[], launch: boolean = false) {
         super('', '');
         this.actions = actions;
         this.className = (this.constructor as typeof RuntimeAccessibleClass).cname || this.constructor.name;
+        this.fromCollaborative = false;
         if (launch) this.fire();
     }
     fire(forceRelanch?: boolean): boolean{

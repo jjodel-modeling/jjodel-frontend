@@ -1187,7 +1187,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
             styleoverride['--offset-y'] = offset.y + 'px';
         }
         if (this.props.isVertex){
-            let vertex: LVertex = this.props.node as any;
+            let vertex: LVertex = this.props.node.r as any;
             let size = vertex.size;
             styleoverride['--top'] = size.y + 'px';
             styleoverride['--left'] = size.x + 'px';

@@ -1,4 +1,14 @@
-import {DataOutputComponent, Dictionary, DState, GObject, Log, LoggerCategoryState, LoggerType, U} from '../../joiner';
+import {
+    DataOutputComponent,
+    Dictionary,
+    DState,
+    GObject,
+    Log,
+    LoggerCategoryState,
+    LoggerType,
+    LUser,
+    U
+} from '../../joiner';
 import {FakeStateProps} from '../../joiner/types';
 import React, {Component, Dispatch, JSX, PureComponent, ReactElement, ReactNode} from 'react';
 import {connect} from 'react-redux';
@@ -120,24 +130,25 @@ class LoggerComponent extends PureComponent<AllProps, ThisState> {
         (msg as any).primitiveStringified = primitives.join(' ');
         let date = new Date(msg.time);
 
+        let reportable: boolean = false;
+        switch (category) {
+            case 'ex': case 'exDev': case 'eDev': reportable = true;
+        }
+
         return <div className={"cat hoverable cat_"+category}>
             <div className={"text"}>{(msg as any).primitiveStringified}</div>
             <div className={"text content"} style={{right: 0, top: 0, boxShadow: 'none', background: 'inherit'}}>
                 {date.getDate() +'/'+ date.toLocaleTimeString()}
                 <button title={"copy to clipboard"} className={"bg btn-clipboard my-auto ms-2"}
-                        onClick={(e)=> {
+                        onClick={()=> {
                             (window as any).lastmsg = msg;
                             console.log(msg);
                             U.clipboardCopy(msg.long_string)
                         }}
                 ><i className={"copy bi bi-clipboard"} /></button>
-                <button title={"report error"} className={"bg btn-clipboard my-auto ms-2"}
-                        onClick={(e)=> {
-                            (window as any).lastmsg = msg;
-                            console.log(msg);
-                            U.clipboardCopy(msg.long_string)
-                        }}
-                ><i className={"copy bi bi-clipboard"} /></button>
+                {reportable && !this.autoReport && <button title={"report error"} className={"bg btn-clipboard my-auto ms-2"}
+                         onClick={() => { msg.report(); }}
+                ><i className={"copy bi bi-bug"}/></button>}
             </div>
             { objs.map((o,i) => <DataOutputComponent key={i} data={o} rootName={""+(typeof o)+"_"+(i+1)+""} />) }
         </div>;
@@ -212,12 +223,18 @@ class LoggerComponent extends PureComponent<AllProps, ThisState> {
         </div>
     }
 
+    private user!: LUser;
+    private autoReport!: boolean;
+
     render(): ReactNode {
         let key: LoggerType;
         const categoryAliases = this.categoryAliases;
         const labelAliases: Dictionary<string, string> = {i: "Info", w: "Warning", e: "Errors", eDev:"Exceptions"};
         const categories: LoggerType[] = (Object.keys(Log.messageMapping) as LoggerType[]).filter(c => categoryAliases[c] !== null);
         let allMessages: LoggerCategoryState[] = [];
+        this.user = LUser.getUser();
+        this.autoReport = this.user.autoReport;
+        
         for (key of categories) {
             if (!this.isCatActive(key)) continue; // U.arrayMergeInPlace(allMessages, Log.messageMapping[key])
             let msg: LoggerCategoryState;

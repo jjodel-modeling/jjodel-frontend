@@ -580,14 +580,14 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
                     }
                 }
             }
-            if (updateSize) this.set_size(ret, c);
+            if (updateSize) this.set_size(ret, c, true);
             // if (outerSize) ret = this.get_outerGraph(context).translateSize(ret, this.get_innerGraph(c));
             return ret;
         }
     }
 
     // set_size(size: Partial<this["size"]>, context: Context): boolean {
-    set_size(size0: Partial<EPSize>, c: Context): boolean {
+    set_size(size0: Partial<EPSize>, c: Context, isAutosize: boolean = false): boolean {
         if (!size0) return false;
         let size = new GraphSize().clone(size0 as EPSize, true) as any as Partial<EPSize>;
         size.currentCoordType = (size0).currentCoordType;
@@ -595,12 +595,12 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
 
         if (c.data.className === DEdgePoint.cname && size.currentCoordType !== CoordinateMode.absolute) size = (this as any as LEdgePoint).encodePosCoords(c as any, size, view);
 
-        TRANSACTION('resize '+this.get_name(c), ()=>{
+        TRANSACTION((isAutosize?'autosize ': 'resize ')+this.get_name(c), ()=>{
             if (view.updateSize(c.data.id, size)) return true;
-            if (size.x !== c.data.x && size.x !== undefined) SetFieldAction.new(c.data.id, "x", size.x, undefined, false);
-            if (size.y !== c.data.y && size.y !== undefined) SetFieldAction.new(c.data.id, "y", size.y, undefined, false);
-            if (size.w !== c.data.w && size.w !== undefined) SetFieldAction.new(c.data.id, "w", size.w, undefined, false);
-            if (size.h !== c.data.h && size.h !== undefined) SetFieldAction.new(c.data.id, "h", size.h, undefined, false);
+            if (size.x !== c.data.x && size.x !== undefined) SetFieldAction.new(c.data.id, "x", size.x, undefined, false, isAutosize);
+            if (size.y !== c.data.y && size.y !== undefined) SetFieldAction.new(c.data.id, "y", size.y, undefined, false, isAutosize);
+            if (size.w !== c.data.w && size.w !== undefined) SetFieldAction.new(c.data.id, "w", size.w, undefined, false, isAutosize);
+            if (size.h !== c.data.h && size.h !== undefined) SetFieldAction.new(c.data.id, "h", size.h, undefined, false, isAutosize);
             let epdata: DEdgePoint = c.data as DEdgePoint;
             if (size.currentCoordType !== epdata.currentCoordType && size.currentCoordType !== undefined) SetFieldAction.new(epdata.id, "currentCoordType", size.currentCoordType, undefined, false);
         }, undefined, ISize.printDiff(c.data, size))

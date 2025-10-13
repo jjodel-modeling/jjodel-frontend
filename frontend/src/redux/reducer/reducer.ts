@@ -210,9 +210,14 @@ function deepCopyButOnlyFollowingPath(oldStateDoNotModify: DState, action: Parse
             if (action.type === CreateElementAction.type && current[key]) {
                 oldValue = current[key];
                 gotChanged = false;
-                Log.ee("rejected CreateElementAction, rollback occurring:", {action,
-                    preexistingValue: current[key], isShallowEqual: current[key] === action.value });
-                return false; // warning: use return only when you want to abort and skip subsequent CompositeAction sub-actions like now.
+                let LOG: typeof Log['ee'] = Log.ee;
+                let inCollabNode = Collaborative.online && action.value.className.toLowerCase().includes('graph');
+                if (inCollabNode) LOG = Log.ii;
+                let diff = Uobj.objdiff(current[key], action.value);
+                LOG("rejected CreateElementAction"+(inCollabNode ? " (collab node)" : ", rollback occurring:")+"", {action,
+                    preexistingValue: current[key], diff});
+                if (inCollabNode) return false; // warning: use return only when you want to abort and skip subsequent CompositeAction sub-actions like now.
+                else continue;
             }
             if (isObjectMerge) {
                 if (typeof newVal === 'string') { let tmp: any = {}; tmp[newVal] = true; newVal = tmp; }
@@ -485,7 +490,7 @@ function CompositeActionReducer(oldState: DState, actionBatch: CompositeAction):
             case '@@redux/INIT' + randomstr:... etc*/
             default:
                 if (action.type.indexOf('@@redux/') === 0) break;
-                return Log.exDevv('unexpected action type:', action.type);
+                return Log.exDevv('unexpected action type:', action.type, action);
             case LoadAction.type:
                 newState = action.value;
                 U.debug = newState.debug;
@@ -557,6 +562,7 @@ export function reducer(oldState: DState = initialState, action: Action): DState
     if (!windoww.jjactions) windoww.jjactions = [];
     windoww.jjactions.push(action);
     let safeMode = false;
+    console.log('execute action', action);
     if (!safeMode) {
         let ret = unsafereducer(oldState, action);
         DO_AFTER_TRANSACTION();
@@ -582,53 +588,7 @@ function unsafereducer(oldState: DState = initialState, action: Action): DState 
     if (ret === oldState) return oldState;
     ret.idlookup.__proto__ = DPointerTargetable.pendingCreation as any;
     // client synchronization stuff
-    if (oldState?.collaborativeSession) {
-        const ignoredFields: (keyof DState)[]  = [
-            'version',
-            'env',
-            'debug',
-            'isEdgePending',
-            'contextMenu',
-            '_lastSelected',
-            'isLoading',
-            'collaborativeSession',
-            'VIEWS_RECOMPILE_onDataUpdate',
-            'VIEWS_RECOMPILE_onDragStart',
-            'VIEWS_RECOMPILE_onDragEnd',
-            'VIEWS_RECOMPILE_whileDragging',
-            'VIEWS_RECOMPILE_onResizeStart',
-            'VIEWS_RECOMPILE_onResizeEnd',
-            'VIEWS_RECOMPILE_whileResizing',
-            'VIEWS_RECOMPILE_onRotationStart',
-            'VIEWS_RECOMPILE_onRotationEnd',
-            'VIEWS_RECOMPILE_whileRotating',
-            'VIEWS_RECOMPILE_constants',
-            'VIEWS_RECOMPILE_usageDeclarations',
-            'VIEWS_RECOMPILE_jsxString',
-            'VIEWS_RECOMPILE_preconditions',
-            'VIEWS_RECOMPILE_jsCondition',
-            'VIEWS_RECOMPILE_ocl',
-            'VIEWS_RECOMPILE_events',
-            'VIEWS_RECOMPILE_all',
-            'ClassNameChanged',
-            'tooltip',
-            'advanced',
-            'alert'
-        ];
-        /* Checking if CompositeAction has some actions that MUST be ignored */
-        let compositeAction: CompositeAction|null = null;
-        if(action.type === CompositeAction.type) {
-            compositeAction = action as CompositeAction;
-            const subActions = compositeAction.actions || [];
-            compositeAction.actions = subActions.filter(a => !ignoredFields.includes(a.field as keyof DState));
-        }
-        if(compositeAction && !compositeAction.actions.length) return ret;
-        action = (compositeAction) ? compositeAction : action;
-        if(action.sender === DUser.current && !ignoredFields.includes(action.field as keyof DState)) {
-            const parsedAction: JSON & GObject = JSON.parse(JSON.stringify(action));
-            Collaborative.client.emit('pushAction', parsedAction);
-        }
-    }
+    if (Collaborative.online) Collaborative.send(action);
 
     function filterSet<T extends any>(r: T[]): Set<T>{
         if (!Array.isArray(r)) r = [];

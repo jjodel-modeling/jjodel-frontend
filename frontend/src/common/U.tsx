@@ -2567,7 +2567,93 @@ export class U {
         if ('wheelDelta' in e) { return e.wheelDelta > 0; }
         return e.deltaY < 0;
     }
+    private static throttleState: Dictionary<string, ThrottleState> = {};
+    private static throttleState2: WeakMap<Function|GObject, ThrottleState> = new WeakMap();
+
+    // @cumulative true:  if called 3 times before timer, @f is executed 3 times after the timer
+    // @cumulative false (default): if called 3 times before timer, @f is executed once times after the timer
+    // @decay: at each timer renovation, the starting timer is reduced by timer*decay (can increase too if decay >1)
+    // for a given id, parameters are set to default values, subsequent calls without undefined as params, update the values.
+    static throttle(id: any, f: Function, cumulative?: boolean, timer?: number, decay?: number, minDelay?: number) {
+        if (id !== (window as any).dd && (window as any).dd !== 'all') {
+            f(); return;
+        }
+        let isWeakMap = typeof id === 'function' || typeof id === 'object';
+        let state: ThrottleState = (isWeakMap ? U.throttleState2.get(id as Function|GObject) : U.throttleState[id]) as ThrottleState;
+        if (!state) {
+            state = {timerID: null, initialDelay: timer || 300*1.1, decay:decay||1/1.1, minDelay:minDelay||0, currentDelay: timer || 300*1.1,
+                pending: [], cumulative: cumulative === undefined ? false : !!cumulative};
+            if (isWeakMap) U.throttleState2.set(id as Function|GObject, state);
+            else U.throttleState[id] = state;
+        }
+
+        if (state.timerID) clearTimeout(state.timerID);
+
+        // update options if required
+        if (timer !== undefined) state.initialDelay = timer;
+        if (decay !== undefined) state.decay = decay;
+        if (minDelay !== undefined) state.minDelay = minDelay;
+        if (cumulative !== undefined) state.cumulative = cumulative;
+
+        if (state.cumulative) state.pending.push(f);
+        // shorten delay each reattempt
+        state.currentDelay = Math.max(state.minDelay, state.currentDelay * state.decay);
+
+        state.timerID = setTimeout(() => {
+            if (!state.cumulative) f();
+            else {
+                for (let ff of state.pending) ff();
+                state.pending = [];
+            }
+            // reset delay after execution
+            state.currentDelay = state.initialDelay;
+            state.timerID = null;
+        }, state.currentDelay) as any as number;
+    }
+
+    // @cumulative true:  if called 3 times before timer, @f is executed 3 times after the timer
+    // @cumulative false: if called 3 times before timer, @f is executed once times after the timer
+    // @decay: at each timer renovation, the starting timer is reduced by timer*decay (can increase too if decay >1)
+    static throttleGenerator_old(f: Function, cumulative: boolean = false, timer: number = 300*1.1, decay: number = 1/1.1, minDelay: number = 0) {
+        let initialDelay = timer;
+        let timerId: number | null = null;
+        let currentDelay = initialDelay;
+        let pending: Function[] = [];
+
+        return function attempt() {
+            // reset pending call
+            if (timerId) {
+                clearTimeout(timerId);
+                // reduce delay each time
+                currentDelay = Math.max(minDelay, currentDelay * decay);
+            }
+            if (cumulative) pending.push(f);
+
+            timerId = setTimeout(() => {
+                if (cumulative) {
+                    for (let ff of pending) ff();
+                    pending = [];
+                }
+                else f();
+                timerId = null;
+                currentDelay = initialDelay; // reset after firing
+            }, currentDelay) as any as number;
+        };
+
+
+    /* Example usage:
+        const sendMessage = () => console.log("sendMessage fired at", new Date().toISOString());
+        const trigger = U.throttle(sendMessage, 300);
+        trigger(); // prints
+        setTimeout(trigger, 100);  // NOT prints...
+        setTimeout(trigger, 100+150);
+        setTimeout(trigger, 100+150+300/1.4);  // ...prints again!
+        */
+    }
 }
+export type ThrottleState = {timerID: null|number, decay: number, initialDelay:number, currentDelay:number, minDelay: number,
+    pending:Function[], cumulative: boolean};
+
 export class DDate{
     static cname: string = "DDate";
 

@@ -143,6 +143,7 @@ import Storage from "../data/storage";
 import {PinnableDock} from "../components/dock/MyRcDock";
 import type {VersionFixer as TypeVersionFixer} from "../redux/VersionFixer";
 import type {ProjectsApi as TypeProjectsAPI, UsersApi} from "../api/persistance";
+import type {Collaborative as CollaborativeT} from "../components/collaborative/Collaborative";
 var windoww = window as any;
 
 // qui dichiarazioni di tipi che non sono importabili con "import type", ma che devono essere davvero importate a run-time (eg. per fare un "extend", chiamare un costruttore o usare un metodo statico)
@@ -629,6 +630,7 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         return this;
     }
 
+    static pending: Dictionary<Pointer, DPointerTargetable> = {};
     //static pause(): void { canFireActions = false; }
     //static resume(): void { canFireActions = true; }
     static persist(d: DPointerTargetable, fromCreateAction?: boolean): void;
@@ -639,6 +641,14 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
             if (!Array.isArray(d)) d = [d];
             // first create "this"
             for (let e of d) {
+                console.log('check pending', {e, p:Constructors.pending[e.id], dict:{...Constructors.pending}});
+                if (Constructors.pending[e.id]) {
+                    let LOG: typeof Log['ee'] = Log.ee;
+                    let inCollabNode = (windoww.Collaborative as typeof CollaborativeT).online; // && e.className.toLowerCase().includes('graph');
+                    if (inCollabNode) LOG = Log.ii;
+                    LOG('Element attempted to be created twice with same id', {new:d, old: Constructors.pending[e.id]});
+                    return;
+                }
                 let subElements = e._derivedSubElements;
                 let callbacks = e._persistCallbacks;
                 delete (e as Partial<DPointerTargetable>)._derivedSubElements;
@@ -1204,7 +1214,18 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         _this.version = state ? -1 : VersionFixer.get_highestversion();
         if(id) _this.id = id;
         _this.favorite = {};
-        _this.description = 'A new Project. Created by ' + (DPointerTargetable.from(DUser.current) as DUser).nickname + ' @' + new Date().toLocaleString();
+        let user: DUser = (DPointerTargetable.from(DUser.current) as DUser)
+        /*if (!user as any) {
+            let str = localStorage.getItem('user');
+            let state = store.getState();
+            let idlookup = state.idlookup;
+            if (str) user = JSON.parse(str) as any as DUser;
+            else user = idlookup[DUser.current || state.users[0]] as DUser;
+            DUser.current = user.id;
+            if (!(DUser.current in idlookup)) idlookup[DUser.current] = user;
+            console.error('user not loaded', {user, DUser, curr: DUser.current});
+        }*/
+        _this.description = 'A new Project. Created by ' + user.nickname + ' @' + new Date().toLocaleString();
         _this.layout = {};
         _this.autosaveLayout = true;
         _this.activeLayout = undefined;
@@ -2604,6 +2625,8 @@ export class LUser<Context extends LogicContext<DUser> = any, D extends DUser = 
     layout!: Dictionary<string, LayoutData>;
     autosaveLayout!: boolean;
     activeLayout!: string;
+
+    public static getUser(): LUser{ return LUser.wrap(DUser.current); }
 
     get_activeLayout(c: Context): this['activeLayout'] { return c.data.activeLayout; }
     set_activeLayout(val: this['activeLayout'], c: Context): true {
