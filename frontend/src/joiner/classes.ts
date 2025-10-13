@@ -2626,7 +2626,7 @@ export class LUser<Context extends LogicContext<DUser> = any, D extends DUser = 
     autosaveLayout!: boolean;
     activeLayout!: string;
 
-    public static getUser(): LUser{ return LUser.wrap(DUser.current); }
+    public static getUser(): LUser{ return LUser.wrap(DUser.current) as LUser; }
 
     get_activeLayout(c: Context): this['activeLayout'] { return c.data.activeLayout; }
     set_activeLayout(val: this['activeLayout'], c: Context): true {
