@@ -49,7 +49,16 @@ import {
     statehistory
 } from "../../joiner";
 import React from "react";
-import {BEGIN, COMMIT, DO_AFTER_TRANSACTION, END, LoadAction, RedoAction, UndoAction} from "../action/action";
+import {
+    BEGIN,
+    CollabClearHistoryAction, CollabRefreshAction,
+    COMMIT,
+    DO_AFTER_TRANSACTION,
+    END,
+    LoadAction,
+    RedoAction,
+    UndoAction
+} from "../action/action";
 import Collaborative from "../../components/collaborative/Collaborative";
 import {SimpleTree} from "../../common/SimpleTree";
 import {transientProperties, Selectors} from "../../joiner";
@@ -422,6 +431,10 @@ function CompositeActionReducer(oldState: DState, actionBatch: CompositeAction):
     for (let action of actions) {
         switch (action.type){
             default: break;
+            case CollabRefreshAction.type:
+                if (action.sender === DUser.current) return oldState; // if (Collaborative.online)
+                window.location.reload();
+                return oldState;
             case CreateElementAction.type:
                 const elem: DPointerTargetable = action.value;
                 delete DPointerTargetable.pendingCreation[elem.id];
@@ -491,6 +504,8 @@ function CompositeActionReducer(oldState: DState, actionBatch: CompositeAction):
             default:
                 if (action.type.indexOf('@@redux/') === 0) break;
                 return Log.exDevv('unexpected action type:', action.type, action);
+
+            case CollabClearHistoryAction.type: break;
             case LoadAction.type:
                 newState = action.value;
                 U.debug = newState.debug;

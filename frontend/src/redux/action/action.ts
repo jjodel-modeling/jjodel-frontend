@@ -588,6 +588,36 @@ export class SetFieldAction extends SetRootFieldAction {
     }
 }
 
+@RuntimeAccessible('CollabRefreshAction')
+export class CollabRefreshAction extends Action {
+    static type = 'COLLAB_REFRESH';
+    static create(): CollabRefreshAction { return new CollabRefreshAction(); }
+    static new(): boolean { return CollabRefreshAction.create().fire(); }
+
+    protected constructor() {
+        super('', '', '', false);
+        this.className = (this.constructor as typeof RuntimeAccessibleClass).cname || this.constructor.name;
+    }
+
+    fire(forceRelaunch: boolean = false): boolean {
+        return super.fire(forceRelaunch);
+    }
+}
+@RuntimeAccessible('CollabClearHistoryAction')
+export class CollabClearHistoryAction extends Action {
+    static type = 'COLLAB_CLEAR';
+    static create(): CollabClearHistoryAction { return new CollabClearHistoryAction(); }
+    static new(): boolean { return CollabClearHistoryAction.create().fire(); }
+
+    protected constructor() {
+        super('', '', '', false);
+        this.className = (this.constructor as typeof RuntimeAccessibleClass).cname || this.constructor.name;
+    }
+
+    fire(forceRelaunch: boolean = false): boolean {
+        return super.fire(forceRelaunch);
+    }
+}
 
 
 

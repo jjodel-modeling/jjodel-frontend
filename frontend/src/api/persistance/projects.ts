@@ -13,7 +13,7 @@ import Storage from "../../data/storage";
 import {UpdateProjectRequest} from "../DTO/UpdateProjectRequest";
 import Api from "../api";
 import {duplicateProject} from "../../pages/components/Project";
-import {COMMIT} from "../../redux/action/action";
+import {CollabClearHistoryAction, CollabRefreshAction, COMMIT} from "../../redux/action/action";
 import {ProjectPointers} from "../../joiner/classes";
 import {DTOProjectGetAll} from "../DTO/GetAllProjects";
 import {ProjectResponseDTO} from "../DTO/ProjectResponseDTO";
@@ -208,7 +208,7 @@ class Online {
 
     static async getAll(): Promise<void> {
         const response = await Api.get(`${Api.persistance}/project/`);
-        console.log('loading projects getall', {response});
+        console.log('loading projects getall', {response, user: windoww.DUser.current, DUser:windoww});
         if (response.code !== 200) {
             Log.ee('Project.getAll() invalid token', {response});
             /* 401: Unauthorized -> Invalid Token (Local Storage)  */
@@ -287,6 +287,10 @@ class Online {
         }
         else {
             U.alert('i', 'Project Saved!', '');
+            if ((windoww as any).Collaborative?.online) {
+                CollabClearHistoryAction.new();
+                // CollabRefreshAction.new();
+            }
         }
     }
 

@@ -42,7 +42,7 @@ import { AboutModal } from './about/About';
 import {MetricsPanelManager, showMetrics, toggleMetrics} from '../../components/metrics/Metrics';
 
 import {Undoredocomponent} from "../../components/topbar/undoredocomponent";
-import {BEGIN, COMMIT, END} from "../../redux/action/action";
+import {BEGIN, CollabRefreshAction, COMMIT, END} from "../../redux/action/action";
 import {Tooltip} from "../../components/forEndUser/Tooltip";
 import {VersionFixer} from "../../redux/VersionFixer";
 import {PinnableDock} from "../../components/dock/MyRcDock";
@@ -490,8 +490,7 @@ function NavbarComponent(props: AllProps) {
                     :
                     <div className='logo' onContextMenu={toggleDebug}></div>
                 }
-                {props.debug && <i className="bi bi-bug-fill"></i>}
-
+                {props.debug && <i className="bi bi-bug-fill" onContextMenu={()=>{CollabRefreshAction.new();}}></i>}
             </div>
         </div>
         );
