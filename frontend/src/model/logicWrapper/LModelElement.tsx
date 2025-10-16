@@ -5048,7 +5048,8 @@ instanceof === undefined or missing  --> auto-detect and assign the type
         if (!context.data.isMetamodel) { return context.data.instanceof ? (this.get_instanceof(context) as LModel).packages : []; }
         let ret: LPackage[] = context.data.packages.map((pointer) => LPointerTargetable.from(pointer));
         if (includeCrossReferences) U.arrayMergeInPlace(ret, context.proxyObject.allDependencies.flatMap(dep=>dep.packages));
-        ret = ret.filter(e=>!!e);
+        ret = U.arrayUnique(ret.filter(e=>!!e).map(e=>e.id))
+            .map(e=>LPointerTargetable.fromPointer(e));
         return ret;
     }
 

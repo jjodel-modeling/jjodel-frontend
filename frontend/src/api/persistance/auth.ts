@@ -1,6 +1,6 @@
 import Api, {Response} from "../api";
 import Storage from "../../data/storage";
-import {DUser, U} from "../../joiner";
+import {DUser, GObject, Log, U} from "../../joiner";
 import {jwtDecode} from "jwt-decode";
 import { RegisterRequest } from "../DTO/RegisterRequest";
 import { LoginRequest } from "../DTO/LoginRequest";
@@ -13,15 +13,12 @@ class AuthApi {
 
     static async login(loginRequest: LoginRequest): Promise<Response> {
         Storage.write('offline', false);
-
         return await Api.post(`${Api.persistance}/account/login`, {...loginRequest}, true);
-
     }
   
     static async register(request: RegisterRequest): Promise<Response> {
         Storage.write('offline', false);
         return await Api.post(`${Api.persistance}/account/register`, {...request}, true);
-    
     }
 
     static async reset_password(request: ResetPasswordRequest): Promise<Response> {
@@ -47,10 +44,11 @@ class AuthApi {
 
     // decode jwt
     static readJwtToken(token: string): JwtClaims | null {
+        let claims : JwtClaims = undefined as any;
+        let decoded: GObject = undefined as any;
         try {
             const decoded = jwtDecode<any>(token);
-            
-            const claims : JwtClaims = new JwtClaims();
+            claims = new JwtClaims();
             console.log('claims debug', {decoded, JwtPayloadKey, claims})
 
             claims.id = decoded[JwtPayloadKey.Id];
@@ -61,18 +59,20 @@ class AuthApi {
             claims.iss = decoded[JwtPayloadKey.Iss];
             claims.aud = decoded[JwtPayloadKey.Aud];
             claims._Id = decoded[JwtPayloadKey._Id];
-
+            claims._decoded = decoded;
             return claims;
         } catch (error) {
-            console.error("Errore durante la decodifica del token:", error);
+            Log.eDevv("token decode error:", {error, claims, token, decoded});
             return null;
         }
     }
 
     // write storage
-    static storeSessionData(token: string, tokenExp: number, user?: DUser): void {
+    static storeSessionData(token: string, tokenExp: number, refreshT: string, RTExp: number, user?: DUser): void {
         Storage.write('token', token);
         Storage.write('tokenExp', tokenExp);
+        Storage.write('refreshToken', refreshT);
+        Storage.write('refreshTokenExp', RTExp);
         if (user) Storage.write('user', user);
         Storage.write('offline', false);
     }
