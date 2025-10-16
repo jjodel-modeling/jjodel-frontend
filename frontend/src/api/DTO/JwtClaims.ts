@@ -8,6 +8,9 @@ export class JwtClaims {
   exp?: number;
   iss?: string;
   aud?: string;
+  _decoded: any;
+  /*refreshToken?: number;
+  refreshTokenExpiryTime?: number;*/
 
    
 }
