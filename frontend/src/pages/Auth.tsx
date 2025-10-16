@@ -109,7 +109,8 @@ function AuthPage(): JSX.Element {
             const claims = AuthApi.readJwtToken(raw.token);
             console.log('login claims', {response, raw, claims});
             if (!claims) { U.alert('e', 'Invalid token.', ''); return false; }
-            AuthApi.storeSessionData(raw.token, claims.exp || 0, undefined);
+
+            AuthApi.storeSessionData(raw.token, claims.exp || 0, undefined); //
 
             // const user: DUser = DUser.new(claims.name, '', claims.nickname, '',  '', false, claims.email,  raw.token, claims._Id, claims.id, true);
             const user: DUser|null = await UsersApi.getUserByGUID(claims.id, raw, claims);
