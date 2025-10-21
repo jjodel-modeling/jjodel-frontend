@@ -54,27 +54,86 @@ export class DV {
         // NB: check nearley postprocessors for json to jom object
         // https://nearley.js.org/docs/grammar#postprocessors
     nearley:{str:`
-main         -> comment classlist
-ws           -> null       | " ":*
-comment      -> null       | "#" [^\\n]:* | "#" [^\\n]:* "\\n"
-eol          -> ws "\\n"   | ws comment
-identifier   -> [a-zA-Z_$] [a-zA-Z_$0-9]:*
-features     -> null       | feature | feature eol features
-feature      -> ws (attribute | reference)
-attribute    -> identifier ":" ws type eol
-reference    -> identifier ws "->" ws classtype eol
-type         -> identifier | identifier multiplicity
-multiplicity -> "[*]"
-classtype    -> identifier | identifier ws multiplicity
-classs       -> identifier ":" eol features eol
-classlist    -> null       | classs | classs eol classlist
-    `, test_text:`
-     # Q133244 - A factor or agent responsible for causing a disease or condition.
+main         -> classs:* "end:"
+comment      -> "#" [^\\n]:* "\\n"          {% (d)=> { return d.flat().join("") }%}
+eol          -> (ws "\\n")                  {% (d)=> { return null }%}
+ws           -> " ":*                       {% (d)=> { return null }%}
+identifier   -> [a-zA-Z_$] [a-zA-Z_$0-9]:*  {% (d)=> d.flat().join("") %}
+features     -> feature:*
+feature      -> ws identifier ws (":" ws type | "->" ws classtype) ws mult:? eol {% (d)=> { let isRef = d[3][0] !== ':'; return {name: d[1], isRef, type: d[3][2], multiplicity:d[5] === '[*]' ? -1 : 1}} %}
+type         -> identifier                  {% id %}
+mult         -> "[*]"                       {% id %}
+classtype    -> identifier                  {% id %}
+classs       -> ws comment:? ws identifier ":" eol features {% (d)=> { let feats = d[d.length-1].flat(); return {name: d[3], attributes: feats.filter(f=>!f.isRef), references: feats.filter(f=>f.isRef)}} %}
+    `, test_text:`# Q12136 - A disorder of structure or function in a living organism that produces specific symptoms or affects a specific location, not simply a direct result of physical injury.
+ Disease:
+   name: String
+   symptoms -> Symptom [*]
+   causes -> Cause [*]
+   affects -> AnatomicalStructure [*]
+   diagnosedBy -> DiagnosticProcedure [*]
+   treatedBy -> Treatment [*]
+   associatedWith -> Gene [*]
+   possibleComplication -> Complication [*]
+   riskFactors -> RiskFactor [*]
+   preventionMethods -> PreventionMethod [*]
+ # Q169872 - A particular sign or feature of a disease.
+ Symptom:
+   name: String
+   description: String
+   observedIn -> Disease
+ # Q133244 - A factor or agent responsible for causing a disease or condition.
  Cause:
    description: String
    agent -> Pathogen
    exposureType: String
-    `
+ # Q4936952 - Any structure in an organism that performs a specific function.
+ AnatomicalStructure:
+   name: String
+   locatedIn: String
+   function: String
+ # Q329439 - Medical test to determine presence or nature of disease.
+ DiagnosticProcedure:
+   name: String
+   technique: String
+   usedFor -> Disease
+ # Q179661 - Medical intervention designed to cure or alleviate disease.
+ Treatment:
+   name: String
+   type: String
+   administeredBy -> MedicalPractitioner
+   targets -> Disease [*]
+ # Q7187 - Gene is a hereditary unit of DNA.
+ Gene:
+   symbol: String
+   locus: String
+   associatedDiseases -> Disease [*]
+ # Q1931388 - Secondary disease or condition resulting from an initial one.
+ Complication:
+   name: String
+   arisesFrom -> Disease
+   description: String
+ # Q154430 - Factor that increases the likelihood of disease.
+ RiskFactor:
+   name: String
+   category: String
+   increasesRiskOf -> Disease [*]
+ # Q736753 - Measures taken to prevent disease occurrence.
+ PreventionMethod:
+   name: String
+   description: String
+   prevents -> Disease [*]
+ # Q21191270 - A microorganism that causes disease.
+ Pathogen:
+   name: String
+   type: String
+   infects -> AnatomicalStructure [*]
+ # Q39631 - A healthcare professional qualified to practice medicine.
+ MedicalPractitioner:
+   name: String
+   specialization: String
+   performs -> Treatment [*]
+end:`
     },
     javascript:{str:`function (text) {
     let lines = text.split('\\n');
