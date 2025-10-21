@@ -1,3 +1,4 @@
+
 import {Mixin} from "ts-mixer";
 import type {
     DEdge,
@@ -134,6 +135,8 @@ import {
     TRANSACTION,
     U
 } from "./index";
+import type {Grammar, ParserOptions, Parser} from "nearley";
+import type nearley from "nearley";
 import {LayoutData} from "rc-dock";
 import {OclEngine} from "@stekoe/ocl.js";
 import React, {ReactNode} from "react";
@@ -3757,7 +3760,11 @@ export enum EModelElements{
 }
 
 type ParserName = string;
-export type LanguageObject = Dictionary<ParserName, {str:DocString<'parser code'>, test_text?: string}> & {engine: ParserName};
+export class ParserData{
+    str!: DocString<'parser code'>;
+    test_text?: string;
+}
+export type LanguageObject = Dictionary<ParserName, ParserData> & {engine: ParserName};
 
 export class Language {
     m2t: LanguageObject;
@@ -3918,10 +3925,15 @@ type TransientPropertiesByGraphTab = Dictionary<Pointer<DViewElement, number>> &
     4) node stuff never? or maybe entire nodes?
     other data or view properties?*/
 };
+
+export class LanguageCache{
+    grammar!: nearley.Grammar;
+}
 export const transientProperties = {
     node: {} as Dictionary<Pointer<DGraphElement>, NodeTransientProperties>,
     view: {} as Dictionary<Pointer<DViewElement>, ViewTransientProperties>,
     modelElement: {} as Dictionary<Pointer<DModelElement>, DataTransientProperties>,
+    language: {} as Dictionary<DocString<'Language like ecore'>, Dictionary<DocString<'Engine like nearley, js'>, LanguageCache>>
 };
 (window as any).transient = (window as any).transientProperties = transientProperties;
 // transientProperties.nodes[nid].viewScores[vid]?.[pvid as string];

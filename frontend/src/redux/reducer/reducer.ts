@@ -641,6 +641,16 @@ function unsafereducer(oldState: DState = initialState, action: Action): DState 
     ret.ELEMENT_DELETED = [];
 
     if (ret.VIEWS_RECOMPILE_all === true) ret.VIEWS_RECOMPILE_all = Object.keys(ret.idlookup);
+    if (ret.RECOMPILE_LANGUAGE.length) {
+        for (let {engine, language} of ret.RECOMPILE_LANGUAGE) {
+            switch (engine) {
+                case 'nearley':
+                default:
+                    let transient = transientProperties.language[language]?.[engine];
+                    if (transient) delete transientProperties.language[language][engine];
+            }
+        }
+    }
     if ((ret.VIEWS_RECOMPILE_all as Pointer[])?.length) {
         let resetAllNodes: boolean = false;
         let sk: keyof DState;

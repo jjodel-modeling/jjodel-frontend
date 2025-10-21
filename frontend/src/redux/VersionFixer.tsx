@@ -256,6 +256,10 @@ everytime you put hands into a D-Object shape or valid values, you should docume
         }
         return s;
     }
+    private ['2.205 -> 2.206'](s: DState): DState {
+        if (!s.RECOMPILE_LANGUAGE) s.RECOMPILE_LANGUAGE = [];
+        return s;
+    }
 
     public static autocorrect(s0?: DState, popupIfCorrect: boolean = false, canLoadAction: boolean = false): DState {
         let s: DState;

@@ -9,7 +9,7 @@ import {
     Pointer,
     SetRootFieldAction,
     store,
-    TRANSACTION, U
+    TRANSACTION, transientProperties, U
 } from "../../joiner";
 import {Dictionary, FakeStateProps, windoww} from "../../joiner/types";
 import React, {Dispatch, JSX, useState} from "react";
@@ -23,6 +23,7 @@ import {doM2T, doT2M} from "../forEndUser/MTM";
 import {Btn, CommandBar} from "../commandbar/CommandBar";
 import {hideMetrics} from "../metrics/Metrics";
 import {Nearley} from "../../DSL/nearley/nearley";
+import {ParserData} from "../../joiner/classes";
 
 const monacooptions: monaco.editor.IStandaloneEditorConstructionOptions = {
     fontSize: 12,
@@ -129,7 +130,7 @@ export const parsers = {
     'xtext': false,
     'acceleo': false,
     'langium': false,
-    'nearley': false,
+    'nearley': true,
     'monarch': false,
 };
 const parsersArr = Object.keys(parsers);
@@ -139,13 +140,30 @@ function M2TEditor(props: AllProps, language: string, setEditor: (v:boolean)=>vo
     if (!langObj) return <div className="w-100 h-100 d-flex" style={{cursor: "pointer"}} onClick={()=>setEditor(false)}>
         <div className={"m-auto"}>Language "{language}" not found.</div>
     </div>;
-    let m2tobj = langObj.m2t[langObj.m2t.engine||'javascript'];
-    let t2mobj = langObj.t2m[langObj.t2m.engine||'javascript'];
+    let m2tobj: ParserData = langObj.m2t[langObj.m2t.engine||'javascript'];
+    let t2mobj: ParserData = langObj.t2m[langObj.t2m.engine||'javascript'];
 
     let m2t_func = m2tobj.str;
     let t2m_func = t2mobj.str;
-    let t2m_placeholder: string = 'function (text) {\t/*Not implemented */\n\treturn {};\n}';
-    let m2t_placeholder: string = "function (text) {\n\t return \"Not implemented"+(m2t_func ? ", the m2t transformation will be unidirectional." : ".")+"\"\n}";
+    let m2tengine = langObj.m2t.engine;
+    let t2mengine = langObj.t2m.engine;
+    let t2m_placeholder: string;
+    let m2t_placeholder: string;
+    switch (t2mengine) {
+        default:
+        case 'javascript':
+            t2m_placeholder = 'function (text) {\t/*Not implemented */\n\treturn {};\n}';
+            break;
+        case 'nearley':
+            t2m_placeholder = 'main -> foo | bar';
+            break;
+    }
+    switch (m2tengine) {
+        default:
+        case 'javascript':
+            m2t_placeholder = "function (text) {\n\t return \"Not implemented"+(m2t_func ? ", the m2t transformation will be unidirectional." : ".")+"\"\n}";
+            break;
+    }
     if (!m2t_func) m2t_func = m2t_placeholder;
     if (!t2m_func) t2m_func = t2m_placeholder;
 
@@ -188,25 +206,37 @@ function M2TEditor(props: AllProps, language: string, setEditor: (v:boolean)=>vo
         </> : null}
         <div className={'d-flex'} style={{flexFlow: 'row'}}>
             <div className={'d-flex'} style={{flexGrow: 1, flexWrap:'wrap'}}>
-                <h3 className={'w-100'}>M2T
-                <select value={langObj.m2t.engine}> {parsersArr.map(p=><option value={p}>{p}</option>)}</select></h3>
-                <Editor className={'mx-1'} options={monacooptions} defaultLanguage={'javascript'} value={m2t_func}
+                <h3 className={'w-100'}>T2M
+                <select value={t2mengine} onChange={(e)=>{
+                    let v = e.target.value.toLowerCase();
+                    if (v === t2mengine) return;
+                    TRANSACTION('Change t2m engine "'+language+'"', ()=> {
+                        if (!props.languages[language].t2m[v]) SetRootFieldAction.new('languages.'+language+".t2m."+v, new ParserData(), '', false);
+                        SetRootFieldAction.new('languages.'+language+".t2m.engine", v, '', false);
+                    }, t2mengine, v)
+                }}> {parsersArr.map(p=><option value={p} disabled={!(parsers as GObject)[p]}>{p}</option>)}</select>
+                </h3>
+                <Editor className={'mx-1'} options={monacooptions} defaultLanguage={'javascript'} value={t2m_func}
                         onChange={(value) => {
-                            TRANSACTION('edit m2t language "'+language+'"', ()=> {
-                                if (value === m2t_placeholder) value = '';
-                                SetRootFieldAction.new('languages.'+language+".m2t", value, '', false)
+                            if (langObj.t2m[t2mengine].str === value) return;
+                            TRANSACTION('edit t2m language "'+language+'"', ()=> {
+                                if (value === t2m_placeholder) value = '';
+                                SetRootFieldAction.new('languages.'+language+".t2m."+t2mengine+'.str', value, '', false);
+                                SetRootFieldAction.new('RECOMPILE_LANGUAGE', {engine: t2mengine, language}, '+=', false);
                             })
                         }} />
             </div>
             <div className={'d-flex'} style={{flexGrow: 1, flexWrap:'wrap'}}>
-                <h3 className={'w-100'}>T2M</h3>
-                <Editor className={'mx-1'} options={monacooptions} defaultLanguage={'javascript'} value={t2m_func}
+                <h3 className={'w-100'}>M2T</h3>
+                <Editor className={'mx-1'} options={monacooptions} defaultLanguage={'javascript'} value={m2t_func}
                         onChange={(value) => {
-                            TRANSACTION('edit t2m language "'+language+'"', ()=> {
-                                if (value === t2m_placeholder) value = '';
-                                SetRootFieldAction.new('languages.'+language+".t2m", value, '', false)
+                            if (langObj.m2t[m2tengine].str === value) return;
+                            TRANSACTION('edit m2t language "'+language+'"', ()=> {
+                                if (value === m2t_placeholder) value = '';
+                                SetRootFieldAction.new('RECOMPILE_LANGUAGE', {engine: t2mengine, language}, '+=', false);
+                                SetRootFieldAction.new('languages.'+language+".m2t."+m2tengine+'.str', value, '', false);
                             })
-                        }} />
+                        }}/>
             </div>
         </div>
     </section>;

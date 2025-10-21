@@ -195,7 +195,9 @@ export class DState extends DPointerTargetable{
     VIEWS_RECOMPILE_jsCondition: Pointer<DViewElement>[] = [];
     VIEWS_RECOMPILE_ocl: Pointer<DViewElement>[] = [];
     VIEWS_RECOMPILE_events: (Pointer<DViewElement> | {vid: Pointer<DViewElement>, keys: string[] | undefined})[] = [];
+    RECOMPILE_LANGUAGE: {engine: string, language: string}[] = [];
     VIEWS_RECOMPILE_all?: boolean | Pointer<any>[];
+
     ELEMENT_CREATED: Pointer[] = [];
     ELEMENT_DELETED: Pointer[] = [];
 

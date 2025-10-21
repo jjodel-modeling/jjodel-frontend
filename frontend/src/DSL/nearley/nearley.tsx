@@ -1,13 +1,15 @@
-import {DModelElement, windoww} from "../../joiner";
+import {DModelElement, RuntimeAccessible, windoww} from "../../joiner";
 
 import nearley, {Grammar, ParserOptions, Parser} from "nearley";
 const compile = require("nearley/lib/compile");
 const generate = require("nearley/lib/generate");
 const nearleyGrammar = require("nearley/lib/nearley-language-bootstrapped");
 
+windoww.nnearley = nearley;
 // type Parser = nearley.Parser;
-
+@RuntimeAccessible('Nearley')
 export class Nearley{
+    static cname: string = 'Nearley';
     static compileGrammar(sourceCode: string): Grammar {
         // Parse the grammar source into an AST
         const grammarParser = new nearley.Parser(nearleyGrammar);
@@ -30,6 +32,7 @@ export class Nearley{
         options.keepHistory = false;
         const parser: Parser = new nearley.Parser(grammar, options);
         let result: Parser = parser.feed(text);
+        console.log('parsing', {parser, result, ret:result.results});
         return result.results;
     }
 

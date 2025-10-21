@@ -41,7 +41,8 @@ export class DV {
             'eCore/XMI': new Language(m2t, t2m),
         }
 
-        ret.testLanguage = new Language({javascript:{str:`function (model, node){
+        ret.testLanguage = new Language({
+                javascript:{str:`function (model, node){
     let text: string = '' model.className + ':' + model.id;
     for (let child of model.attributes) text += '\\n\\t'+child.name+':'+JSON.stringify(child.values);
     for (let child of model.references) text += '\\n\\t'+child.name+':'+JSON.stringify(child.values.map(v=>v.id));
@@ -49,7 +50,33 @@ export class DV {
     text+='\\n\\tnode.initialX' = node.x;
     return text;
 }`}},
-    {javascript:{str:`function (text) {
+    {
+        // NB: check nearley postprocessors for json to jom object
+        // https://nearley.js.org/docs/grammar#postprocessors
+    nearley:{str:`
+main         -> comment classlist
+ws           -> null       | " ":*
+comment      -> null       | "#" [^\\n]:* | "#" [^\\n]:* "\\n"
+eol          -> ws "\\n"   | ws comment
+identifier   -> [a-zA-Z_$] [a-zA-Z_$0-9]:*
+features     -> null       | feature | feature eol features
+feature      -> ws (attribute | reference)
+attribute    -> identifier ":" ws type eol
+reference    -> identifier ws "->" ws classtype eol
+type         -> identifier | identifier multiplicity
+multiplicity -> "[*]"
+classtype    -> identifier | identifier ws multiplicity
+classs       -> identifier ":" eol features eol
+classlist    -> null       | classs | classs eol classlist
+    `, test_text:`
+     # Q133244 - A factor or agent responsible for causing a disease or condition.
+ Cause:
+   description: String
+   agent -> Pathogen
+   exposureType: String
+    `
+    },
+    javascript:{str:`function (text) {
     let lines = text.split('\\n');
     lines = lines.map(line=>{ // uncomment
         let comment_index = line.indexOf('//'); return (comment_index==-1) ? line : line.substr(0,comment_index);

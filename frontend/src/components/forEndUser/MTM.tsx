@@ -13,7 +13,7 @@ import {
     MultiSelectOption,
     Overlap,
     Pointer, PrimitiveType, Selectors,
-    store,
+    store, transientProperties,
     U,
     UX
 } from '../../joiner';
@@ -22,6 +22,8 @@ import './inputselect.scss';
 import { Tooltip } from './Tooltip';
 import Editor from "@monaco-editor/react";
 import {on} from "events";
+import {Nearley} from "../../DSL/nearley/nearley";
+import {LanguageCache} from "../../joiner/classes";
 
 
 export function doT2M(data0: LPointerTargetable | Pointer | null | undefined, language: string, text0: string): void{
@@ -32,6 +34,7 @@ export function doT2M(data0: LPointerTargetable | Pointer | null | undefined, la
     let ret: GObject = null as any;
     if (!language) { language = 'javascript'; }
     let languageObj = store.getState().languages[language].t2m;
+    let engine = languageObj.engine.toLowerCase();
 
     let func_str = languageObj[languageObj.engine]?.str;
     if (!func_str) {
@@ -40,10 +43,19 @@ export function doT2M(data0: LPointerTargetable | Pointer | null | undefined, la
         return;
     }
 
-    switch (languageObj.engine) {
+    switch (engine) {
         default:
             Log.ee('T2M transformation failed, unsupported parser: ' + languageObj.engine, {language, parser:languageObj.engine, languageObj, data0});
             return;
+        case 'nearley':
+            let tl = transientProperties.language[language];
+            if (!tl) transientProperties.language[language] = tl = {};
+            let te = transientProperties.language[language][engine];
+            if (!te) transientProperties.language[language][engine] = te = new LanguageCache();
+            let grammar = te.grammar;
+            if (!grammar) { te.grammar = grammar = Nearley.compileGrammar(languageObj[engine].str); }
+            ret = Nearley.parse(grammar, text0);
+            break;
         case undefined:
         case 'javascript':
             let t2m = "("+func_str+")";  // because "function(text){return "a"}" is invalid without a function name unless i wrap it in parenthesis and turn into expression.
