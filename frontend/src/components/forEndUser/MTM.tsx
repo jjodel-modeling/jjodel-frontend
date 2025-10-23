@@ -26,27 +26,26 @@ import {Nearley} from "../../DSL/nearley/nearley";
 import {LanguageCache} from "../../joiner/classes";
 
 
-export function doT2M(data0: LPointerTargetable | Pointer | null | undefined, language: string, text0: string): void{
-    let data: LModelElement = LPointerTargetable.from(data0 as any);
-    let text: string = text0 = text0.trim();
-    if (!data || !text0) return;
+export function parseT2M(language: string, text0: string, canThrow: boolean = false): GObject | null{
+    let text: string = text0 = text0?.trim();
+    let LOG = canThrow ? Log.exx : Log.ee;
+    if (!text) { LOG('doT2M: missing text'); return null; }
+    if (!language) language = 'javascript';
     // text = U.jsonSanitize_dangerous(text);
     let ret: GObject = null as any;
-    if (!language) { language = 'javascript'; }
     let languageObj = store.getState().languages[language].t2m;
     let engine = languageObj.engine.toLowerCase();
 
     let func_str = languageObj[languageObj.engine]?.str;
     if (!func_str) {
-        let msg = "T2M transformation is missing on language \""+language+"\" for the engine \""+languageObj.engine+"\".";
-        Log.ee(msg);
-        return;
+        LOG("T2M transformation is missing on language \""+language+"\" for the engine \""+languageObj.engine+"\".", {languageObj});
+        return null;
     }
 
     switch (engine) {
         default:
-            Log.ee('T2M transformation failed, unsupported parser: ' + languageObj.engine, {language, parser:languageObj.engine, languageObj, data0});
-            return;
+            LOG('T2M transformation failed, unsupported parser: ' + languageObj.engine, {language, parser:languageObj.engine, languageObj});
+            return null;
         case 'nearley':
             let tl = transientProperties.language[language];
             if (!tl) transientProperties.language[language] = tl = {};
@@ -61,15 +60,15 @@ export function doT2M(data0: LPointerTargetable | Pointer | null | undefined, la
             let t2m = "("+func_str+")";  // because "function(text){return "a"}" is invalid without a function name unless i wrap it in parenthesis and turn into expression.
             let func = eval(t2m);
             if (typeof func !== 'function') {
-                Log.ee('The T2M transformation of "'+language+'" must be a parser function, please change the language definition.');
-                return;
+                LOG('The T2M transformation of "'+language+'" must be a parser function, please change the language definition.');
+                return null;
             }
             ret = func(text);
 
             if (typeof ret !== 'object') {
-                Log.ee('222 The T2M transformation of "'+language+'" must be a parser function returning a plain object.' +
+                LOG('The T2M transformation of "'+language+'" must be a parser function returning a plain object.' +
                     '\nPlease change the language definition.', {ret, language, languageObj, func_str, text, text0});
-                return;
+                return null;
             }
             break;
     }
@@ -77,15 +76,22 @@ export function doT2M(data0: LPointerTargetable | Pointer | null | undefined, la
     let type: string = typeof ret;
     if (!ret && type === 'object') type = 'null';
     if (type !== 'object') {
-        Log.ee('The T2M transformation of "'+language+'" must be a parser function returning a plain object, but returned "'+(type)+'" instead.' +
+        LOG('The T2M transformation of "'+language+'" must be a parser function returning a plain object, but returned "'+(type)+'" instead.' +
             '\nPlease change the language definition.', {ret, type, language, languageObj, func_str});
-        return;
+        return null;
     }
     if (!ret) {
-        try { ret = JSON.parse(text); } catch (e) {
-            Log.ee('The default T2M transformation can only be applied to text in JSON format.', {e, text, data});
-        }
+        try { ret = JSON.parse(text); }
+        catch (e) { LOG('The default T2M transformation can only be applied to text in JSON format.', {e, text}); return null; }
     }
+    return ret;
+}
+
+export function doT2M(data0: LPointerTargetable | Pointer | null | undefined, language: string, text: string): void{
+    if (!data0 || !text) return;
+    let ret: GObject = parseT2M(language, text) as any;
+    if (!ret) return;
+    let data: LModelElement = LPointerTargetable.from(data0 as any);
     console.log('doT2M json', {data, text, ret});
     let className = data.className;
     if (!(data as LObject).t2m) {

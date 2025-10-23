@@ -17,4 +17,33 @@
       grid-gap: 0.5em;
     }
   }
+
+  .editors{
+    max-height: 75vh;
+    overflow: hidden;
+    .t2m, .m2t{
+      max-width: calc(50% - 0.5em);
+    }
+    .t2m{
+      //margin-right: .5em;
+    }
+    .separator{
+      width: 1em;
+      border-radius: 1em;
+      background-color: #ddd;
+      cursor: 'ew-resize';
+    }
+    .m2t{
+      //margin-left: .5em;
+    }
+  }
+  .command-bar.back-button{
+    height: fit-content;
+    .btn-component{
+      height: fit-content;
+      .bi.tab-btn.back{
+        display: block;
+      }
+    }
+  }
 }

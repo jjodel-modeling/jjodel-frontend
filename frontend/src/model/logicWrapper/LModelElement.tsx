@@ -1,3 +1,4 @@
+import type {Defaults as TDefaults} from "../../joiner";
 import {
     LVoidVertex,
     PackagePointers,
@@ -329,9 +330,10 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
                                 }
                                 // if does not exist, create subelement
                                 if (!child) {
-                                    let ptrs = {id: gv.id || gv||undefined, father: c.data.id as Pointer<any>, 'instanceof': undefined};
+                                    let ptrs = {id: Pointers.from(gv) as any as Pointer<any>, father: c.data.id as Pointer<any>, 'instanceof': undefined};
                                     let callback: (d: any) => void = (d: DModelElement) => {};
                                     let d: DModelElement;
+                                    console.log('m2t create subelement', {ptrs, gv, thisData:c.data});
                                     switch (k) {
                                         case 'packages': d = DPackage.new3(ptrs, callback, DModel, true); break;
                                         case 'subpackages': d = DPackage.new3(ptrs, callback, DPackage, true); break;
@@ -1264,22 +1266,91 @@ export class LTypedElement<Context extends LogicContext<DTypedElement> = any> ex
     }
 
     protected get_type(c: Context): this["type"] {
-        let type = LPointerTargetable.from(c.data.type) as LClassifier;
+        let type: LClassifier = LPointerTargetable.from(c.data.type) as LClassifier;
+        // 1) actual type if present
         if (type) return type;
-        if (c.data.className === 'DReference') return LPointerTargetable.from(c.data.father);
-        else return LPointerTargetable.fromPointer('Pointer_ESTRING');
+        // 2) translate "Human" string to object reference, or "Boolean" to primitive reference
+        let rawType = c.data.type;
+        if (typeof rawType === 'string') {
+            // if classref was set by name, and wasn't existing at set time, resolve it at runtime and update state.
+            let model: LModel = null as any;
+            // resolve for enumerators (primitives and void are resolved at set time)
+            if (c.data.className !== 'DReference') {
+                if (!model) this.get_model(c);
+                // NB: in newly created elements, model is still null
+                if (model) type = model.getEnumByName(rawType) as LEnumerator;
+                else type = Selectors.getByName(DEnumerator, rawType, false, true) as LEnumerator;
+            }
+            // resolve for classes
+            if (!type && c.data.className !== 'DAttribute') {
+                if (!model) this.get_model(c);
+                // NB: in newly created elements, model is still null
+                if (model) type = model.getClassByName(rawType) as LClass;
+                else type = Selectors.getByName(DClass, rawType, false, true) as LClass;
+            }
+            let ptr: Pointer<DClassifier> | undefined = type?.id;
+            if (ptr) {
+                console.error('autocorrected type get: ', {rawType, tn:type?.name, ptr, type, });
+                this.set_type(ptr as any, c);
+                return type;
+            }
+        }
+        // 3) fallback values.
+        return LPointerTargetable.fromPointer(c.data.className === 'DReference' ? c.data.father : 'Pointer_ESTRING');
     }
 
     protected set_type(val: Pack1<this["type"]>, c: Context): boolean {
         // let instances: LValue[] = this.get_instances(c);
-        let ptr = Pointers.from(val);
-        if (c.data.type === ptr) return true;
-        if (c.data.type === c.data.father && (c.data as DReference).composition) {
-            Log.ww('Changing '+this.get_fullname(c)+' type is generating a composition loop. This class cannot be instantiated anymore.\nConsider switching to aggregation.');
+        let ptr: Pointer<any> = Pointers.from(val);
+        if (ptr === c.data.type) return true;
+        let model: LModel = null as any;
+        if (ptr && typeof ptr === 'string' && !Pointers.isPointer(ptr)) {
+            let old = ptr;
+            if (c.data.className !== 'DReference') {
+                // if Operation, Parameter or Attribute (anything but Reference), allow setting primitive types by name.
+                let Defaults: typeof TDefaults = windoww.Defaults;
+                switch (ptr?.trim().toLowerCase()) {
+                    case 'bool': case 'boolean': ptr = Defaults.Pointer_EBOOLEAN; break;
+                    case 'char': ptr = Defaults.Pointer_ECHAR; break;
+                    case 'string': ptr = Defaults.Pointer_ESTRING; break;
+                    case 'date': ptr = Defaults.Pointer_EDATE; break;
+                    case 'byte': ptr = Defaults.Pointer_EBYTE; break;
+                    case 'short': ptr = Defaults.Pointer_ESHORT; break;
+                    case 'int': case 'integer': ptr = Defaults.Pointer_EINT; break;
+                    case 'long': ptr = Defaults.Pointer_ELONG; break;
+                    case 'float': ptr = Defaults.Pointer_EFLOAT; break;
+                    case 'double': case 'number': case 'real': ptr = Defaults.Pointer_EDOUBLE; break;
+                    case 'void': if (c.data.className !== 'DAttribute') ptr = Defaults.Pointer_EVOID; break;
+                    default:
+                    // if not primitive, check enumerators
+                    if (!model) this.get_model(c);
+                    // NB: in newly created elements, model is still null
+                    if (model) ptr = (model.getEnumByName(ptr)?.id || ptr);
+                    else ptr = Selectors.getByName(DEnumerator, ptr, false, false)?.id as Pointer<DEnumerator>;
+                    break;
+                }
+            }
+            // if Operation, Parameter or Reference (anything but Attribute), allow setting class types by name.
+            if (c.data.className !== 'DAttribute') {
+                if (!model) this.get_model(c);
+                // NB: in newly created elements, model is still null
+                if (model) ptr = (model.getClassByName(ptr)?.id || ptr);
+                else ptr = Selectors.getByName(DClass, ptr, false, false)?.id as Pointer<DClass>;
+                // if (!ptr) { for( DPointerTargetable.pendingCreation no point, they are not named yet, need to wait action to finish in t2m}
+            }
+            if (!ptr) ptr = old;
+            if (old !== ptr) console.error('autocorrected type set: ', {old, ptr, tn:LPointerTargetable.from(ptr)?.name});
+        }
+
+        if (ptr === c.data.father && (c.data as DReference).composition) {
+            Log.ee('Cannot change '+this.get_fullname(c)+' type  to '+ LPointerTargetable.from(ptr)?.name+ ', it would generate a composition loop. \nConsider switching to aggregation.');
+            // Log.ww('Changing '+this.get_fullname(c)+' type is generating a composition loop. This class cannot be instantiated anymore.\nConsider switching to aggregation.');
+            return true;
         }
         TRANSACTION(this.get_name(c)+'.type', ()=>{
+            console.error('not autocorrected setting type: ', {old:val, ptr, tn:LPointerTargetable.from(ptr)?.name});
             SetFieldAction.new(c.data, 'type', ptr, "", true);
-        }, this.get_type(c)?.fullname, LPointerTargetable.wrap(val)?.fullname);
+        }, LPointerTargetable.from(c.data.type)?.fullname || c.data.type, LPointerTargetable.wrap(ptr)?.fullname);
         return true;
     }
 
@@ -3678,10 +3749,7 @@ export class LReference<Context extends LogicContext<DReference> = any, C extend
             return ret; }
     }
 
-    protected set_type(val: Pack1<this["type"]>, context: Context): boolean {
-        super.set_type(val, context);
-        return true;
-    }
+    protected set_type(val: Pack1<this["type"]>, context: Context): boolean { return super.set_type(val, context); }
 
     public addClass(name?: DClass["name"], isInterface?: DClass["interface"], isAbstract?: DClass["abstract"], isPrimitive?: DClass["isPrimitive"],
                     isPartial?: DClass["partial"], partialDefaultName?: DClass["partialdefaultname"]): LClass {
@@ -5194,18 +5262,6 @@ instanceof === undefined or missing  --> auto-detect and assign the type
         return larr;
     }
 
-    public getClassByNameSpace(namespacedclass: string): LClass | undefined { return this.cannotCall("getClassByNameSpace"); }
-    protected get_getClassByNameSpace(context: Context): this["getClassByNameSpace"] {
-        if (!context.data.isMetamodel) { return context.data.instanceof ? (this.get_instanceof(context) as LModel).getClassByNameSpace : undefined as any; }
-        return (namespacedclass: string): LClass | undefined => {
-            let pos = namespacedclass.lastIndexOf(":");
-            let pkguri = namespacedclass.substring(0, pos);
-            let classname = namespacedclass.substring(pos+1);
-            let pkg: LPackage | undefined = this.get_getPackageByUri(context)(pkguri);
-            if (!pkg) return undefined;
-            // return pkg["@" + classname];
-            return pkg.classes.filter((c) => c.name === classname)[0];
-        }; }
     public getPackageByUri(uri: string): LPackage | undefined { return this.cannotCall("getPackageByUri"); }
     protected get_getPackageByUri(context: Context): this["getPackageByUri"] {
         return (uri: string)=>context.proxyObject.allSubPackages.filter((p)=>p.uri === uri)[0]; }
@@ -5226,6 +5282,41 @@ instanceof === undefined or missing  --> auto-detect and assign the type
     protected get_values(context: Context): this['values'] {
         return context.proxyObject.objects.flatMap(o => o.features);
     }
+
+    public getClassByNameSpace(namespacedclass: string): LClass | undefined { return this.cannotCall("getClassByNameSpace"); }
+    protected get_getClassByNameSpace(context: Context): this["getClassByNameSpace"] {
+        if (!context.data.isMetamodel) { return context.data.instanceof ? (this.get_instanceof(context) as LModel).getClassByNameSpace : undefined as any; }
+        return (namespacedclass: string): LClass | undefined => {
+            let pos = namespacedclass.lastIndexOf(":");
+            let pkguri = namespacedclass.substring(0, pos);
+            let classname = namespacedclass.substring(pos+1);
+            let pkg: LPackage | undefined = this.get_getPackageByUri(context)(pkguri);
+            if (!pkg) return undefined;
+            // return pkg["@" + classname];
+            return pkg.classes.filter((c) => c.name === classname)[0];
+        };
+    }
+
+    getClassByName(name: string): LClass | null { return this.cannotCall('getClassByName'); }
+    getEnumByName(name: string): LEnumerator | null { return this.cannotCall('getEnumByName'); }
+    get_getEnumByName(c: Context): (name: string) => LEnumerator | null {
+        return (name: string) => { return this._impl_getByName(this.get_enumerators(c), name) as LEnumerator; }
+    }
+    get_getClassByName(c: Context): (name: string) => LClass | null {
+        return (name: string) => { return this._impl_getByName(this.get_classes(c), name) as LClass; }
+    }
+    _impl_getByName(collection: Dictionary<string, LModelElement> & any[], name: string, caseSensitive: boolean = false): LModelElement | null {
+        name = name.trim();
+        if (collection[name]) return collection[name];
+        if (caseSensitive) return null;
+
+        let initialKeys: string[] = Object.keys(collection);
+        for (let k of initialKeys ) {
+            collection[(k + '').toLowerCase()] = collection[k];
+        }
+        return collection[name.toLowerCase()] || null;
+    }
+
 }
 RuntimeAccessibleClass.set_extend(DNamedElement, DModel);
 RuntimeAccessibleClass.set_extend(LNamedElement, LModel);

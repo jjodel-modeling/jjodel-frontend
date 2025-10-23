@@ -278,12 +278,13 @@ export class Selectors{
         if (resolvePointers || wrap) {
             allDByClassName = allIdByClassName.map( (e) => (state as DState).idlookup[e] ) as D[];
             if (wrap) {
-                allLByClassName = allDByClassName.map( e => DPointerTargetable.wrap(e)) as any as L[];
+                let s: DState = store.getState();
+                allLByClassName = allDByClassName.map(e => LPointerTargetable.from(e, s)) as any as L[];
             }
         }
         let ret: RET[] = (resolvePointers || wrap ? (wrap ? allLByClassName : allDByClassName) : allIdByClassName) as any[] as RET[];
         if (!Array.isArray(ret)) ret = Object.values(ret).filter(e => e instanceof Object) as RET[];
-        if (condition) return ret.filter( e => condition(e));
+        if (condition) return ret.filter(e => condition(e));
         return ret;
     }
 
@@ -328,16 +329,20 @@ export class Selectors{
         return null;
     }
     static getByName(classe: typeof DPointerTargetable, name: string, caseSensitive: boolean = false, wrap: boolean = false): DPointerTargetable | LPointerTargetable | null {
-        return Selectors.getByField(classe, 'name', name, caseSensitive, wrap); }
+        let r = Selectors.getByField(classe, 'name', name, caseSensitive);
+        if (r && wrap) return LPointerTargetable.wrap(r) || null;
+        return r;
+    }
 
-    static getByField(classe: typeof DPointerTargetable | undefined, field: string, value: string, caseSensitive: boolean = false, wrap: boolean = false): DPointerTargetable | LPointerTargetable | null {
+    static getByField(classe: typeof DPointerTargetable | undefined, field: string, value: string, caseSensitive: boolean = false): DPointerTargetable | LPointerTargetable | null {
         if (!caseSensitive) value = value.toLowerCase();
         let condition = (d: any) => {
+            if (typeof d === 'string') d = DPointerTargetable.fromPointer(d);
             let ret = (caseSensitive ? d[field] : d[field]?.toLowerCase()) === value;
-            console.log('filtering getall by field:', {d, dfield:d[field], value, ret});
+            // console.log('filtering getall by field:', {d, dfield:d[field], value, ret});
             return ret;
         }
-        let ret = Selectors.getAll(classe, condition, undefined, true, wrap as any)[0];
+        let ret = Selectors.getAll(classe, condition, undefined, true, false)[0];
         return ret; }
 
     static getViewIDs(condition?: (m: DModel) => boolean): Pointer<DViewElement>[] { return Selectors.getAll(DViewElement); }

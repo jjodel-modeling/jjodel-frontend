@@ -54,7 +54,7 @@ export class DV {
         // NB: check nearley postprocessors for json to jom object
         // https://nearley.js.org/docs/grammar#postprocessors
     nearley:{str:`
-main         -> classs:* "end:"
+main         -> classs:* "end:"             {% (d)=> { return {packages: [{name: "default", classes: d[0]}]}} %}
 comment      -> "#" [^\\n]:* "\\n"          {% (d)=> { return d.flat().join("") }%}
 eol          -> (ws "\\n")                  {% (d)=> { return null }%}
 ws           -> " ":*                       {% (d)=> { return null }%}
@@ -65,7 +65,8 @@ type         -> identifier                  {% id %}
 mult         -> "[*]"                       {% id %}
 classtype    -> identifier                  {% id %}
 classs       -> ws comment:? ws identifier ":" eol features {% (d)=> { let feats = d[d.length-1].flat(); return {name: d[3], attributes: feats.filter(f=>!f.isRef), references: feats.filter(f=>f.isRef)}} %}
-    `, test_text:`# Q12136 - A disorder of structure or function in a living organism that produces specific symptoms or affects a specific location, not simply a direct result of physical injury.
+`,
+test_text:`# Q12136 - A disorder of structure or function in a living organism that produces specific symptoms or affects a specific location, not simply a direct result of physical injury.
  Disease:
    name: String
    symptoms -> Symptom [*]

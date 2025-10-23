@@ -19,7 +19,7 @@ import './mtm.scss';
 import {JsEditor} from "./languages";
 import Editor, {EditorProps} from "@monaco-editor/react";
 import {AT_TRANSACTION} from "../../redux/action/action";
-import {doM2T, doT2M} from "../forEndUser/MTM";
+import {doM2T, doT2M, parseT2M} from "../forEndUser/MTM";
 import {Btn, CommandBar} from "../commandbar/CommandBar";
 import {hideMetrics} from "../metrics/Metrics";
 import {Nearley} from "../../DSL/nearley/nearley";
@@ -167,78 +167,84 @@ function M2TEditor(props: AllProps, language: string, setEditor: (v:boolean)=>vo
     if (!m2t_func) m2t_func = m2t_placeholder;
     if (!t2m_func) t2m_func = t2m_placeholder;
 
-    let output_tmp = {};
+    let output_tmp: GObject = {};
     let default_text = "[Optional] Write here a DLS snippet to test the parser.";
     let test_text = t2mobj.test_text?.trim() || default_text;
     if (test_text !== default_text) {
-        try { output_tmp = eval("("+t2m_func+")")(test_text); windoww.dd = output_tmp; } catch (e: any) { output_tmp = {msg: e.message, stack: e.stack, e}; }
+        try {
+            output_tmp = parseT2M(language, test_text, true) || {msg:'Parsing error, check the logs.'};
+            // output_tmp = eval("("+t2m_func+")")(test_text);
+        } catch (e: any) { output_tmp = {msg: e.message, stack: e.stack, e}; }
+        console.log('t2m', {output_tmp, t2m_func, test_text});
     }
 
-    return <section className={'M2T-Editor p-1'}>
-        <div className={'d-flex'} style={{flexFlow: 'column'}}>
-            <h2 className={'d-flex w-100'} style={{flexGrow: 1, margin: 'auto', flexWrap:'nowrap'}}>
-                <CommandBar className="my-auto ms-0 me-auto h-100">
-                    <Btn icon={'back'} action={() => setEditor(false)} tip={'Back'}/>
-                </CommandBar>
-                <label className="m-auto me-0" onClick={()=>setEditor(Date.now() as any)}>Editing:</label>
-                <Input className="m-auto ms-0 h-100" hidden={true} getter={() => language} setter={(v0) => {
-                    let value = v0 as string;
-                    TRANSACTION('rename language "'+language+'"', ()=> {
-                        SetRootFieldAction.new('languages.'+value, langObj, '', false);
-                        SetRootFieldAction.new('languages', {language:undefined}, '-=', false);
-                        AT_TRANSACTION(()=>setLanguage(value));
-                    }, language, value)
-                }} style={{overflow: 'visible'}}/>
-            </h2>
-            <CommandBar style={{float: 'right', height: '20px'}}>
-                <Btn icon={'close'} action={() => setEditor(false)} theme={'light'} tip={'Close'}/>
-            </CommandBar>
-        </div>
-        <pre className={"w-100 autosize"} contentEditable={true} onBlur={(e)=>{
-            TRANSACTION('update DSL test snipped for language "'+language+'"', ()=>{
-                let value = e.target.innerText;
-                SetRootFieldAction.new('languages.'+language+'.test_text', value, '', false);
-            })
-        }}>{test_text}</pre>
-        {test_text && test_text !== default_text ? <>
-            <h5>Result</h5>
-            <DataOutputComponent data={output_tmp} />
-        </> : null}
-        <div className={'d-flex'} style={{flexFlow: 'row'}}>
-            <div className={'d-flex'} style={{flexGrow: 1, flexWrap:'wrap'}}>
-                <h3 className={'w-100'}>T2M
-                <select value={t2mengine} onChange={(e)=>{
-                    let v = e.target.value.toLowerCase();
-                    if (v === t2mengine) return;
-                    TRANSACTION('Change t2m engine "'+language+'"', ()=> {
-                        if (!props.languages[language].t2m[v]) SetRootFieldAction.new('languages.'+language+".t2m."+v, new ParserData(), '', false);
-                        SetRootFieldAction.new('languages.'+language+".t2m.engine", v, '', false);
-                    }, t2mengine, v)
-                }}> {parsersArr.map(p=><option value={p} disabled={!(parsers as GObject)[p]}>{p}</option>)}</select>
-                </h3>
-                <Editor className={'mx-1'} options={monacooptions} defaultLanguage={'javascript'} value={t2m_func}
-                        onChange={(value) => {
-                            if (langObj.t2m[t2mengine].str === value) return;
-                            TRANSACTION('edit t2m language "'+language+'"', ()=> {
-                                if (value === t2m_placeholder) value = '';
-                                SetRootFieldAction.new('languages.'+language+".t2m."+t2mengine+'.str', value, '', false);
-                                SetRootFieldAction.new('RECOMPILE_LANGUAGE', {engine: t2mengine, language}, '+=', false);
-                            })
-                        }} />
+    return <section className={'MTM-tab p-1'}>
+        <section data-comment={'just to make it scrollable'}>
+            <div className={'d-flex'} style={{flexFlow: 'column'}}>
+                <h2 className={'d-flex w-100 my-2'} style={{flexGrow: 1, margin: 'auto', flexWrap:'nowrap'}}>
+                    <CommandBar className="my-auto ms-0 me-auto back-button">
+                        <Btn icon={'back'} action={() => setEditor(false)} tip={'Back'}/>
+                    </CommandBar>
+                    <label className="m-auto me-0" onClick={()=>setEditor(Date.now() as any)}>Editing:</label>
+                    <label className="m-auto me-0">{Math.random().toFixed(2)}</label>
+                    <Input className="m-auto ms-0 h-100 italic" hidden={true} getter={() => language} setter={(v0) => {
+                        let value = v0 as string;
+                        TRANSACTION('rename language "'+language+'"', ()=> {
+                            SetRootFieldAction.new('languages.'+value, langObj, '', false);
+                            SetRootFieldAction.new('languages', {language:undefined}, '-=', false);
+                            AT_TRANSACTION(()=>setLanguage(value));
+                        }, language, value)
+                    }} style={{overflow: 'visible'}}/>
+                </h2>
             </div>
-            <div className={'d-flex'} style={{flexGrow: 1, flexWrap:'wrap'}}>
-                <h3 className={'w-100'}>M2T</h3>
-                <Editor className={'mx-1'} options={monacooptions} defaultLanguage={'javascript'} value={m2t_func}
-                        onChange={(value) => {
-                            if (langObj.m2t[m2tengine].str === value) return;
-                            TRANSACTION('edit m2t language "'+language+'"', ()=> {
-                                if (value === m2t_placeholder) value = '';
-                                SetRootFieldAction.new('RECOMPILE_LANGUAGE', {engine: t2mengine, language}, '+=', false);
-                                SetRootFieldAction.new('languages.'+language+".m2t."+m2tengine+'.str', value, '', false);
-                            })
-                        }}/>
+            <div className={'d-flex editors'} style={{flexFlow: 'row'}}>
+                <div className={'d-flex t2m'} style={{flexGrow: 1, flexWrap:'wrap'}}>
+                    <h3 className={'w-100'}>T2M
+                        <select value={t2mengine} onChange={(e)=>{
+                            let v = e.target.value.toLowerCase();
+                            if (v === t2mengine) return;
+                            TRANSACTION('Change t2m engine "'+language+'"', ()=> {
+                                if (!props.languages[language].t2m[v]) SetRootFieldAction.new('languages.'+language+".t2m."+v, new ParserData(), '', false);
+                                SetRootFieldAction.new('languages.'+language+".t2m.engine", v, '', false);
+                            }, t2mengine, v)
+                        }}> {parsersArr.map(p=><option value={p} disabled={!(parsers as GObject)[p]}>{p}</option>)}</select>
+                    </h3>
+                    <Editor className={'mx-1'} options={monacooptions} defaultLanguage={'javascript'} value={t2m_func}
+                            onChange={(value) => {
+                                if (langObj.t2m[t2mengine].str === value) return;
+                                TRANSACTION('edit t2m language "'+language+'"', ()=> {
+                                    if (value === t2m_placeholder) value = '';
+                                    SetRootFieldAction.new('languages.'+language+".t2m."+t2mengine+'.str', value, '', false);
+                                    SetRootFieldAction.new('RECOMPILE_LANGUAGE', {engine: t2mengine, language}, '+=', false);
+                                })
+                            }} />
+                </div>
+                <div className={'separator'}/>
+                <div className={'d-flex m2t'} style={{flexGrow: 1, flexWrap:'wrap'}}>
+                    <h3 className={'w-100'}>M2T</h3>
+                    <Editor className={'mx-1'} options={monacooptions} defaultLanguage={'javascript'} value={m2t_func}
+                            onChange={(value) => {
+                                if (langObj.m2t[m2tengine].str === value) return;
+                                TRANSACTION('edit m2t language "'+language+'"', ()=> {
+                                    if (value === m2t_placeholder) value = '';
+                                    SetRootFieldAction.new('RECOMPILE_LANGUAGE', {engine: t2mengine, language}, '+=', false);
+                                    SetRootFieldAction.new('languages.'+language+".m2t."+m2tengine+'.str', value, '', false);
+                                })
+                            }}/>
+                </div>
             </div>
-        </div>
+            <h5>Test Sample</h5>
+            <pre className={"w-100 autosize"} contentEditable={true} onBlur={(e)=>{
+                TRANSACTION('update DSL test snipped for language "'+language+'"', ()=>{
+                    let value = e.target.innerText;
+                    SetRootFieldAction.new('languages.'+language+'.test_text', value, '', false);
+                })
+            }}>{test_text}</pre>
+            {test_text && test_text !== default_text ? <>
+                <h5>Result</h5>
+                <DataOutputComponent data={output_tmp} />
+            </> : null}
+        </section>
     </section>;
 }
 

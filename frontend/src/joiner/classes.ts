@@ -1328,7 +1328,7 @@ export class DPointerTargetable extends RuntimeAccessibleClass {
     public static logic: typeof LPointerTargetable;
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
-    static pendingCreation: Record<Pointer<DPointerTargetable, 1, 1>, DPointerTargetable> = {};
+    static pendingCreation: Dictionary<Pointer, DPointerTargetable> = {};
     clonedCounter?: number;
     _storePath?: string[];
     _subMaps?: Dictionary<string, boolean>;
