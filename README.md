@@ -26,9 +26,9 @@ or
 `npm run serve`
 
 # Links
-[MDEGroup jodel repository](https://github.com/jjodel-modeling/jjodel-frontend/): This is where stable, production-ready versions are released.
+[Github](https://github.com/jjodel-modeling/jjodel-frontend/): This is where stable, production-ready versions are released.
 
-[News & documentation Website](https://www.jjodel.io/)
+[Main Website](https://www.jjodel.io/) For news & documentation
 
 # Contacts
 [Mail](mailto:info@jjodel.io)
