@@ -26,9 +26,10 @@ or
 `npm run serve`
 
 # Links
+[Main Website](https://www.jjodel.io/) For news & documentation
+
 [Github](https://github.com/jjodel-modeling/jjodel-frontend/): This is where stable, production-ready versions are released.
 
-[Main Website](https://www.jjodel.io/) For news & documentation
 
 # Contacts
 [Mail](mailto:info@jjodel.io)
