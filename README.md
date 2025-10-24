@@ -27,6 +27,7 @@ or
 
 # Links
 [MDEGroup jodel repository](https://github.com/jjodel-modeling/jjodel-frontend/): This is where stable, production-ready versions are released.
+
 [News & documentation Website](https://www.jjodel.io/)
 
 # Contacts
