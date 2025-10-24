@@ -7,7 +7,7 @@ This version includes memorec model suggestions and collaborative live editing r
 
 
 # Core functionalities version
-The application is publicly accessible at [this link.](https://mdegroup.github.io/jjodel/build)
+The application is publicly accessible at [this link.](https://app.jjodel.io/)
 
 If you want to run it locally, clone this repository, [install node.js and npm](https://nodejs.org/it/download), then run the following commands with a terminal opened at project's ./frontend folder, just after the repository root.
 
@@ -26,6 +26,8 @@ or
 `npm run serve`
 
 # Links
-[MDEGroup jodel repository](https://github.com/MDEGroup/jjodel): This is where stable, production-ready versions are released.
-[old repository](https://github.com/DamianoNaraku/jodel-react)
-[old git](https://github.com/DamianoNaraku/jodel-react.git)
+[MDEGroup jodel repository](https://github.com/jjodel-modeling/jjodel-frontend/): This is where stable, production-ready versions are released.
+[News & documentation Website](https://www.jjodel.io/)
+
+# Contacts
+[Mail](mailto:info@jjodel.io)
