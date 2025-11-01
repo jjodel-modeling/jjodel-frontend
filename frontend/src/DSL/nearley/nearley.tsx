@@ -1,4 +1,4 @@
-import {DModelElement, RuntimeAccessible, windoww} from "../../joiner";
+import {DModelElement, Log, RuntimeAccessible, windoww} from "../../joiner";
 
 import nearley, {Grammar, ParserOptions, Parser} from "nearley";
 const compile = require("nearley/lib/compile");
@@ -10,7 +10,7 @@ windoww.nnearley = nearley;
 @RuntimeAccessible('Nearley')
 export class Nearley{
     static cname: string = 'Nearley';
-    static compileGrammar(sourceCode: string): Grammar {
+    static compileGrammar(sourceCode: string): Grammar | null {
         // Parse the grammar source into an AST
         const grammarParser = new nearley.Parser(nearleyGrammar);
         grammarParser.feed(sourceCode);
@@ -23,7 +23,10 @@ export class Nearley{
 
         // Pretend this is a CommonJS environment to catch exports from the grammar.
         const module = { exports: {} };
-        eval(grammarJs);
+        try { eval(grammarJs); } catch(e: any) {
+            Log.ee('Error in nearly grammar postprocessing, check js code inside {% tags %}: ' + e.message, e);
+            return null;
+        }
         return nearley.Grammar.fromCompiled(module.exports as any);
     }
     static parse(grammar: Grammar, text: string): DModelElement[] {

@@ -29,17 +29,137 @@ let ShortAttribETypes: typeof SAType = (window as any).ShortAttribETypes;
 export class DV {
     static defaultLanguages(): Dictionary<string, Language> {
 
-        let m2t = {javascript:{str:'function(model) {\n\treturn "Not implemented, this is a placeholder.";\n}'}};
+        let m2t = undefined; //  {javascript:{str:'function(model) {\n\treturn "Not implemented, this is a placeholder.";\n}'}};
         let t2m = undefined;
-        let ret: Dictionary<string, Language> = {
-            JSON: new Language({javascript:{str:'function(modelData) {\n\treturn JSON.stringify(modelData.json, null, 4);\n}'}},
-                {javascript:{str:"function(text) {\n\treturn JSON.parse(text);\n}"}}),
-            'eCore/JSON': new Language(m2t, t2m),
-            'Emfatic'/* (m2 only) */: new Language(m2t, t2m),
-            'flexmi/YAML': new Language(m2t, t2m),
-            'flexmi/XMI': new Language(m2t, t2m),
-            'eCore/XMI': new Language(m2t, t2m),
-        }
+        let ret: Dictionary<string, Language> = {};
+        ret.JSON = new Language(
+            {javascript:{str:'function(modelData) {\n\treturn JSON.stringify(modelData.json, null, 4);\n}'}},
+            {javascript:{str:"function(text) {\n\treturn JSON.parse(text);\n}"}}
+        );
+        ret['Emfatic'] = new Language(
+            {engine:'nearley' as any, nearley:{str: `main -> header classdef:* {% (d) => ({uri: d[0].uri, prefix: d[0].prefix, classifiers:d[1]}) %}
+
+# --------------------------------------------------------------------
+# HEADER
+# --------------------------------------------------------------------
+header -> "@namespace(uri=\\"" namespace "\\"," ws
+           "prefix=\\"" prefix:? "\\"" ")" eol
+           "package" ws identifier ";" eol:*
+           {% function(d) {return {uri: d[1][0], prefix: d[5]||''};} %}
+
+namespace -> identifier ("." identifier):*
+prefix -> identifier
+
+# --------------------------------------------------------------------
+# CLASS DEFINITIONS
+# --------------------------------------------------------------------
+classdef -> "class" ws identifier ws "{" eol
+            (feature | eol):*
+            "}" eol:*
+            {% function(d) {return {className: "Class", name: d[2], features:d[6].flat(2).filter(e=>!!e)};} %}
+            
+feature -> attr | ref | annotation
+attr -> "attr" ws att_type ws identifier ws ("=" ws value):? ";" eol
+            {% (d) => ({className: 'attribute',
+                type: d[2]?.[0], upperbound: d[2]?.[1] === '[*]' ? -1 : 1,
+                name: d[4]}) %}
+ref -> ("ref" | "val") ws ref_type ws identifier ws ("=" ws value):? ";" eol
+            {% (d) => ({className: 'reference',
+                type: d[2]?.[0], upperbound: d[2]?.[1]?.[1] === '[*]' ? -1 : 1,
+                name: d[4],
+                containment: d[0] === 'val'}) %}
+
+att_type -> identifier multiplicity:?
+ref_type -> identifier multiplicity:?
+multiplicity -> ws "[*]"
+value -> decimal | dqstring
+annotation -> "@" identifier "(" identifier ws "=" ws "\\"" identifier "\\"" ")" {% (d) => null %}
+
+# --------------------------------------------------------------------
+# TERMINALS AND WHITESPACE
+# --------------------------------------------------------------------
+identifier -> [A-Za-z_] [A-Za-z0-9_\\$]:* {% (d) => d[0]+d[1].join("") %}
+
+ws -> ([ \\t\\v\\f]):* {% d => null %}
+eol -> ws "\\r":? "\\n" ws {% d => null %}
+decimal -> "-":? [0-9]:+ ("." [0-9]:+):? {%
+    function(d) {
+        return parseFloat(
+            (d[0] || "") +
+            d[1].join("") +
+            (d[2] ? "."+d[2][1].join("") : "")
+        );
+    }
+%}
+# Double-quoted string
+dqstring -> "\\"" dstrchar:* "\\"" {% function(d) {return d[1].join(""); } %}
+sqstring -> "'"  sstrchar:* "'"  {% function(d) {return d[1].join(""); } %}
+btstring -> "\`"  [^\`]:*    "\`"  {% function(d) {return d[1].join(""); } %}
+
+dstrchar -> [^\\\\"\\n] {% id %}
+    | "\\\\" strescape {%
+    function(d) {
+        return JSON.parse("\\""+d.join("")+"\\"");
+    }
+%}
+
+sstrchar -> [^\\\\'\\n] {% id %}
+    | "\\\\" strescape
+        {% function(d) { return JSON.parse("\\""+d.join("")+"\\""); } %}
+    | "\\\\'"
+        {% function(d) {return "'"; } %}
+
+strescape -> ["\\\\/bfnrt] {% id %}
+    | "u" [a-fA-F0-9] [a-fA-F0-9] [a-fA-F0-9] [a-fA-F0-9] {%
+    function(d) {
+        return d.join("");
+    }
+%}`}},
+            {javascript:{str: `function(model, node){
+    // finds and applies the appropriate serializer, empty string for missing ones.
+    let serialize = (d, deep, indent) => map[d.className]?.(d, deep, indent) || '';
+    
+    // defining a serializer for every model element type
+    let DModel = (d, deep = true) => serialize(d.packages[0], deep)
+    let DPackage = (d, deep) => \`@namespace(uri="$\{d.uri}", prefix="$\{d.prefix}")\\npackage \${d.name};\\n\${deep ? d.classifiers.map(e=>serialize(e, deep)).join('') : ''}\`
+    let DClass = (d, deep) => \`\nclass \${d.name} {\\n\${deep ? d.children.map(a=>serialize(a, deep, '\\t')).join('') : ''}}\`
+    // let DEnumerator = (d, deep) => \`enumerator todo\`
+    let DAttribute = (d, deep, indent='') => indent + 'attr ' + feature(d);
+    let DReference = (d, deep, indent='') => indent + (d.containment ? 'val ' : 'ref ') + feature(d);
+    let feature = (d) => d.type.name + printMultiplicity(d.lowerBound, d.upperBound) + " " + d.name + ";\\n"
+    let printMultiplicity = (lb, ub) => {
+        if (lb === 0 && ub === 1) return "";
+        return "["+(lb === 0 ? "" : lb + "..") + (ub === -1 ? "*" : ub) + "]"; 
+    }  
+    let map = {DModel, DPackage, DClass, DAttribute, DReference}
+    
+    return serialize(model);
+}`}});
+        ret['flexmi/YAML'] = new Language(m2t, t2m);
+        ret['flexmi/XMI'] = new Language(m2t, t2m);
+
+        ret['eCore/JSON'] = new Language(
+            {javascript:{str: `function(modelData) {
+    let ecore = modelData.ecore;
+    let skipKeys = ['eStructuralFeatures', 'eParameters', 'eClassifiers', 'eOperations', 'eSubpackages', 'eLiterals'];
+    // remove sub-element collections to keep the scope limited to current element.
+    for (let key of skipKeys) { delete ecore[key]; }
+    return JSON.stringify(ecore, null, 4);
+}`}},
+            {javascript:{str:`function(text) {
+    let ecore = JSON.parse(text);
+    // remove xmi inline prefixs (@)
+    for (let key of Object.keys(ecore)) {
+        if (key[0] !== '@') continue;
+        ecore[key.substring(1)] = ecore[key];
+        delete ecore[key];
+    }
+    // ecore is natively supported
+    return ecore;
+}`}});
+        ret['eCore/XMI'] = new Language(
+            {javascript:{str: `function(modelData) { return XMI.fromJSON(M2T(modelData, 'eCore/JSON')) }`}},
+            {javascript:{str: `function(text) { return parseT2M('eCore/JSON', JSON.parse(XMI.toJSON(text))); }`}});
 
         ret.testLanguage = new Language({
                 javascript:{str:`function (model, node){
@@ -54,16 +174,16 @@ export class DV {
         // NB: check nearley postprocessors for json to jom object
         // https://nearley.js.org/docs/grammar#postprocessors
     nearley:{str:`
-main         -> classs:* "end:"             {% (d)=> { return {packages: [{name: "default", classes: d[0]}]}} %}
-comment      -> "#" [^\\n]:* "\\n"          {% (d)=> { return d.flat().join("") }%}
-eol          -> (ws "\\n")                  {% (d)=> { return null }%}
-ws           -> " ":*                       {% (d)=> { return null }%}
-identifier   -> [a-zA-Z_$] [a-zA-Z_$0-9]:*  {% (d)=> d.flat().join("") %}
+main         -> classs:* "end:"               {% (d)=> { return {packages: [{name: "default", classes: d[0]}]}} %}
+comment      -> "#" [^\\n\\r]:* "\\r":? "\\n"     {% (d)=> { return d.flat().join("") }%}
+eol          -> (ws "\\r":? "\\n")              {% (d)=> { return null }%}
+ws           -> " ":*                         {% (d)=> { return null }%}
+identifier   -> [a-zA-Z_$] [a-zA-Z_$0-9]:*    {% (d)=> d.flat().join("") %}
 features     -> feature:*
 feature      -> ws identifier ws (":" ws type | "->" ws classtype) ws mult:? eol {% (d)=> { let isRef = d[3][0] !== ':'; return {name: d[1], isRef, type: d[3][2], multiplicity:d[5] === '[*]' ? -1 : 1}} %}
-type         -> identifier                  {% id %}
-mult         -> "[*]"                       {% id %}
-classtype    -> identifier                  {% id %}
+type         -> identifier                    {% id %}
+mult         -> "[*]"                         {% id %}
+classtype    -> identifier                    {% id %}
 classs       -> ws comment:? ws identifier ":" eol features {% (d)=> { let feats = d[d.length-1].flat(); return {name: d[3], attributes: feats.filter(f=>!f.isRef), references: feats.filter(f=>f.isRef)}} %}
 `,
 test_text:`# Q12136 - A disorder of structure or function in a living organism that produces specific symptoms or affects a specific location, not simply a direct result of physical injury.

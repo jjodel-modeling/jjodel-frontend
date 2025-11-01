@@ -5,13 +5,14 @@
 	Author:  Stefan Goessner/2006
 	Web:     http://goessner.net/
 */
+export const inlineAttributePrefix = '@';
 var X = {
    toObj: function(xml) {
       var o = {};
       if (xml.nodeType==1) {   // element node ..
          if (xml.attributes.length)   // element with attributes  ..
             for (var i=0; i<xml.attributes.length; i++)
-               o["@"+xml.attributes[i].nodeName] = (xml.attributes[i].nodeValue||"").toString(); // dam: qua parsa attribs
+               o[inlineAttributePrefix+xml.attributes[i].nodeName] = (xml.attributes[i].nodeValue||"").toString(); // dam: qua parsa attribs
          if (xml.firstChild) { // element has child nodes ..
             var textChild=0, cdataChild=0, hasElementChild=false;
             for (var n=xml.firstChild; n; n=n.nextSibling) {
@@ -63,7 +64,7 @@ var X = {
       else if (xml.nodeType==9) { // document.node
          o = X.toObj(xml.documentElement);
       }
-      else alert("unhandled xml node type: " + xml.nodeType);
+      else console.error("unhandled xml node type: " + xml.nodeType, {xml, nodetype:xml.nodeType});
       return o;
    },
    toJson: function(o, name, ind) {
@@ -146,13 +147,88 @@ var X = {
       return e;
    }
 };
-export function xml2json(xml, tab = '    '/*XML_DOM, string*/) {
-   if (xml.nodeType == 9) // document node
-      xml = xml.documentElement;
-   var json = X.toJson(X.toObj(X.removeWhite(xml)), xml.nodeName, "\t");
+
+function parseXml(xml/*:string*/) {
+   var dom = null;
+   if (window.DOMParser) {
+      try {
+         dom = (new DOMParser()).parseFromString(xml, "text/xml");
+      }
+      catch (e) { dom = null; }
+   }
+   else if (window.ActiveXObject) {
+      try {
+         // eslint-disable-next-line no-undef
+         dom = new ActiveXObject('Microsoft.XMLDOM');
+         dom.async = false;
+         if (!dom.loadXML(xml)) // parse error ..
+
+            window.alert(dom.parseError.reason + dom.parseError.srcText);
+      }
+      catch (e) { dom = null; }
+   }
+   else
+      alert("cannot parse xml string!");
+   return dom;
+}
+
+export function xml2json(xml/*document|string*/, tab = '    '/*XML_DOM, string*/, asString = false) {
+   if (typeof xml === 'string') xml = parseXml(xml);
+   // document node
+   if (xml.nodeType == 9) xml = xml.documentElement;
+   let obj = X.toObj(X.removeWhite(xml));
+   if (!asString) return obj;
+   var json = X.toJson(obj, xml.nodeName, "\t");
    return "{\n" + tab + (tab ? json.replace(/\t/g, tab) : json.replace(/\t|\n/g, "")) + "\n}";
 }
 export function xml2jsonobj(xml, tab= '    '){
    return X.toObj(X.removeWhite(xml));
 }
-// damiano: i needX.toObj(X.removeWhite(xml))
+
+
+export function json2xml(o, tab/*obj, string*/) {
+   var toXml = function(v, name, ind) {
+      var xml = "";
+      if (v instanceof Array) {
+         for (var i=0, n=v.length; i<n; i++)
+            xml += ind + toXml(v[i], name, ind+"\t") + "\n";
+      }
+      else if (typeof(v) == "object") {
+         var hasChild = false;
+         xml += ind + "<" + name;
+         for (var m in v) {
+            if (m.charAt(0) == "@")
+               xml += " " + m.substr(1) + "=\"" + v[m].toString() + "\"";
+            else
+               hasChild = true;
+         }
+         xml += (hasChild ? ">" : "/>") + '\n'+ind; // damiano aggiunta: + '\n'+ind;
+         if (hasChild) {
+            for (var m in v) {
+               if (m == "#text")
+                  xml += v[m];
+               else if (m == "#cdata")
+                  xml += "<![CDATA[" + v[m] + "]]>";
+               else if (m.charAt(0) != "@")
+                  xml += toXml(v[m], m, ind+"\t");
+            }
+            xml += (xml.charAt(xml.length-1)=="\n"?ind:"") + "</" + name + ">" + '\n'+ind; // damiano aggiunta: + '\n'+ind;
+         }
+      }
+      else {
+         xml += ind + "<" + name + ">" + v.toString() +  "</" + name + ">" + '\n'+ind; // damiano aggiunta: + '\n'+ind;
+      }
+      return xml;
+   }, xml="";
+   if (typeof o === 'string') {
+      try {o = JSON.parse(o); } catch(e) { o = {error: "XML.fromJSON parameter is not a valid JSON object or string"}; }
+   }
+   for (var m in o)
+      xml += toXml(o[m], m, "");
+   return xml;
+   // return tab ? xml.replace(/\t/g, tab) : xml.replace(/\t|\n/g, "");
+}
+
+export const XML = {parse: parseXml, toJson:xml2json, toJsonObject: xml2jsonobj, fromJSON:json2xml};
+export const XMI = XML;
+// damiano: i need X.toObj(X.removeWhite(xml))

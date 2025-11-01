@@ -164,7 +164,8 @@ export type BrowserInfo =  {
 export class U {
     private static clickedOutsideMap: WeakMap<Element, (e: Element, evt: JQuery.ClickEvent)=>void> = null as any;
     private static clickedOutsideMapEntries: Element[] = null as any; // because weak maps are not iterable and cannot get a list of keys
-    static UpdatingTimer: number = 300;
+    public static UpdatingTimer: number = 300;
+    public static liveStateChanges:boolean = true;
 
 
     // to register call with both parameters. to remove a listener call with callback=undefined
@@ -274,6 +275,23 @@ export class U {
         return Object.values(map);
     }
 
+    static solveEcoreType(v: string): string{
+        if (v.indexOf('#//') === 0) v = v.substring(3);
+        switch (v) {
+            case ShortAttribETypes.EVoid:     v = 'Void';    break;
+            case ShortAttribETypes.EChar:     v = 'Char';    break;
+            case ShortAttribETypes.EString:   v = 'String';  break;
+            case ShortAttribETypes.EDate:     v = 'Date';    break;
+            case ShortAttribETypes.EBoolean:  v = 'Boolean'; break;
+            case ShortAttribETypes.EByte:     v = 'Byte';    break;
+            case ShortAttribETypes.EShort:    v = 'Short';   break;
+            case ShortAttribETypes.EInt:      v = 'Int';     break;
+            case ShortAttribETypes.ELong:     v = 'Long';    break;
+            case ShortAttribETypes.EFloat:    v = 'Float';   break;
+            case ShortAttribETypes.EDouble:   v = 'Double';  break;
+        }
+        return v;
+    }
     static alertSeparator: string = '£';
     static alert(type: 'i'|'w'|'e', title: React.ReactNode, message: React.ReactNode = ''): void {
         if (typeof title !== 'string') {
@@ -1404,6 +1422,8 @@ export class U {
     static fromBoolString<T extends any>(str: string | boolean, defaultVal?: T): boolean | T;
     static fromBoolString<T extends any>(str: string | boolean, defaultVal?: T, allowNull?: boolean): boolean | null | T;
     static fromBoolString<T extends any>(str: string | boolean, defaultVal: T = false as any, allowNull: boolean = false, allowUndefined: boolean = false): boolean | null | undefined | T {
+        if (str === false) return false;
+        if (str === true) return true;
         str = ('' + str).toLowerCase();
         if (allowNull && (str === 'null')) return null;
         if (allowUndefined && (str === 'undefined')) return undefined;

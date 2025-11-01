@@ -130,10 +130,10 @@ export class Uobj {
     }
 
 
-    public static applyObjectDelta(statelevel: GObject, deltalevel: GObject, inplace: boolean = false, asserteq?: GObject): GObject {
-        if (!statelevel) statelevel = {};
+    public static applyObjectDelta<T extends GObject>(statelevel: T, deltalevel: GObject, inplace: boolean = false, asserteq?: GObject): T {
+        if (!statelevel) statelevel = {} as any;
         // todo: if delta = ObjectDelta('str', {0:'s', 1:'t', 2:'X'}); applydelta('str', delta); what happes?
-        if (statelevel === null || typeof statelevel !== 'object') statelevel = {}; // return statelevel;
+        if (statelevel === null || typeof statelevel !== 'object') statelevel = {} as any; // return statelevel;
         if (deltalevel === null || typeof deltalevel !== 'object') return deltalevel as any;
         let oldState = {...statelevel}; // just for debug
         let targetIsArr = deltalevel.__jjObjDiffIsArr || Array.isArray(deltalevel);
@@ -156,13 +156,14 @@ export class Uobj {
                 // if (Uobj.isObject(delta, false, false, true)) {
                 // if (!inplace) statelevel[key] = Array.isArray(delta) ? Uarr.arrayShallowCopy(statelevel[key]) : {...statelevel[key]};
                 // console.log('handling ', {key});
-                statelevel[key] = Uobj.applyObjectDelta(statelevel[key], delta, inplace, asserteq?.[key]); }
-            else { statelevel[key] = delta; }
+                (statelevel as any)[key] = Uobj.applyObjectDelta(statelevel[key], delta, inplace, asserteq?.[key]);
+            }
+            else { (statelevel as any)[key] = delta as any; }
         }
         let old = statelevel;
 
         if (targetIsArr) {
-            statelevel = [];
+            statelevel = [] as any;
             for (let k in old) {
                 if (!old.hasOwnProperty(k)) continue;
                 statelevel[k] = old[k]; // it takes array custom keys
@@ -177,13 +178,13 @@ export class Uobj {
                 console.error('invalid array length set', {old, statelevel, deltalevel, asserteq});
             }
             else {
-                try { statelevel.length = len; } catch(e){
+                try { (statelevel as any[]).length = len; }
+                catch(e) {
                     console.error('invalid array length set err', {e, old,
                         len, linold:'length' in old, 'lindelta': 'length' in deltalevel,
                         statelevel, deltalevel, asserteq});
                     throw e;
                 }
-
             }
         }
 

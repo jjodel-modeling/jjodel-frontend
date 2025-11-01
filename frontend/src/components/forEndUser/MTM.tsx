@@ -15,7 +15,8 @@ import {
     Pointer, PrimitiveType, Selectors,
     store, transientProperties,
     U,
-    UX
+    UX,
+    windoww
 } from '../../joiner';
 import {useStateIfMounted} from 'use-state-if-mounted';
 import './inputselect.scss';
@@ -30,15 +31,27 @@ export function parseT2M(language: string, text0: string, canThrow: boolean = fa
     let text: string = text0 = text0?.trim();
     let LOG = canThrow ? Log.exx : Log.ee;
     if (!text) { LOG('doT2M: missing text'); return null; }
-    if (!language) language = 'javascript';
+    if (!language) language = 'eCore/JSON';
     // text = U.jsonSanitize_dangerous(text);
     let ret: GObject = null as any;
-    let languageObj = store.getState().languages[language].t2m;
-    let engine = languageObj.engine.toLowerCase();
 
-    let func_str = languageObj[languageObj.engine]?.str;
+    let s = store.getState();
+    if (!(language in s.languages)) {
+        let msg = 'M2T error, language "'+language+'" does not exist.';
+        LOG(msg);
+        return null;
+    }
+    let languageObj = s.languages[language].t2m;
+    if (!languageObj) {
+        let msg = 'M2T error, language "'+language+'" does not have a T2M transformation.';
+        LOG(msg);
+        return null;
+    }
+    let engine = languageObj.engine || 'javascript';
+
+    let func_str = languageObj[engine]?.str;
     if (!func_str) {
-        LOG("T2M transformation is missing on language \""+language+"\" for the engine \""+languageObj.engine+"\".", {languageObj});
+        LOG("T2M transformation is missing on language \""+language+"\" for the engine \""+engine+"\".", {languageObj});
         return null;
     }
 
@@ -52,22 +65,24 @@ export function parseT2M(language: string, text0: string, canThrow: boolean = fa
             let te = transientProperties.language[language][engine];
             if (!te) transientProperties.language[language][engine] = te = new LanguageCache();
             let grammar = te.grammar;
-            if (!grammar) { te.grammar = grammar = Nearley.compileGrammar(languageObj[engine].str); }
+            if (!grammar) { te.grammar = grammar = Nearley.compileGrammar(languageObj[engine].str) as any; }
+            if (!grammar) return null;
             ret = Nearley.parse(grammar, text0);
+            if (ret) ret = ret[0];
             break;
         case undefined:
         case 'javascript':
             let t2m = "("+func_str+")";  // because "function(text){return "a"}" is invalid without a function name unless i wrap it in parenthesis and turn into expression.
             let func = eval(t2m);
             if (typeof func !== 'function') {
-                LOG('The T2M transformation of "'+language+'" must be a parser function, please change the language definition.');
+                LOG('The T2M transformation of "'+language+'" must be a parser function, please change the language definition. found instead:'+(typeof func), {ret:func});
                 return null;
             }
             ret = func(text);
 
             if (typeof ret !== 'object') {
                 LOG('The T2M transformation of "'+language+'" must be a parser function returning a plain object.' +
-                    '\nPlease change the language definition.', {ret, language, languageObj, func_str, text, text0});
+                    '\nPlease change the language definition.', {ret, language, languageObj, func_str, func, text, text0});
                 return null;
             }
             break;
@@ -86,29 +101,26 @@ export function parseT2M(language: string, text0: string, canThrow: boolean = fa
     }
     return ret;
 }
-
-export function doT2M(data0: LPointerTargetable | Pointer | null | undefined, language: string, text: string): void{
-    if (!data0 || !text) return;
-    let ret: GObject = parseT2M(language, text) as any;
-    if (!ret) return;
-    let data: LModelElement = LPointerTargetable.from(data0 as any);
-    console.log('doT2M json', {data, text, ret});
-    let className = data.className;
-    if (!(data as LObject).t2m) {
-        Log.ee("The T2M transformation cannot be applied yet to " + className + " elements.", {className, ret, data, language});
-        return;
-    }
-    (data as LObject).t2m(ret);
-}
-
+windoww.parseT2M = parseT2M;
 
 export function doM2T(data0: LPointerTargetable | Pointer | null | undefined, language: string): string{
     let data: LModelElement = LPointerTargetable.from(data0 as any);
     if (!data) return "M2T transformation to "+language+" is missing the model (data) parameter.";
     // text = U.jsonSanitize_dangerous(text);
     let ret: string = '';
-    if (!language) { language = 'javascript'; }
-    let languageObj = store.getState().languages[language].m2t;
+    if (!language) { language = 'eCore/JSON'; }
+    let s = store.getState();
+    if (!(language in s.languages)) {
+        let msg = 'M2T error, language "'+language+'" does not exist.';
+        Log.ee(msg);
+        return msg;
+    }
+    let languageObj = s.languages[language].m2t;
+    if (!languageObj) {
+        let msg = 'M2T error, language "'+language+'" does not have a m2t transformation.';
+        Log.ee(msg);
+        return msg;
+    }
 
     let func_str = languageObj[languageObj.engine]?.str;
     if (!func_str) {
@@ -118,7 +130,7 @@ export function doM2T(data0: LPointerTargetable | Pointer | null | undefined, la
     }
     let func: (model: LModelElement)=>string = ()=> '';
 
-    switch (languageObj.engine) {
+    switch (languageObj.engine || 'javascript') {
         default:
             let msg = 'M2T transformation failed, unsupported parser: ' + languageObj.engine;
             Log.ee(msg, {language, parser:languageObj.engine, languageObj, data0});
@@ -151,13 +163,28 @@ export function T2M(data: LModelElement, language: string, text: string) {
     if (!data) return null;
     // @ts-ignore
     if (typeof data === 'object' && !(data as any).__isProxy) return T2M_Component(...arguments as any);
-    // @ts-ignore
-    else return T2M_API(...arguments as any);
+    else return T2M_API(data, language, text);
 
 }
-export function T2M_API(data: LModelElement, language: string, text: string): void{
-    console.error('T2M_API todo');
+export function T2M_API(data: LModelElement, language: string, text: string): void{ return doT2M(data, language, text); }
+
+export function doT2M(data0: LPointerTargetable | Pointer | null | undefined, language: string, text: string): void {
+    console.log('doT2M', {data0, language, text});
+    if (!text) return;
+    if (typeof (text as unknown) !== 'string') { Log.ee('T2M transformation called with an object instead of text', {text, data:data0, language}); return; }
+    if (!DPointerTargetable.isD(data0)) { Log.ee('T2M transformation must be called on a modelling element, found instead: ' + typeof data0, {element:data0, text, language}); return; }
+    let ret: GObject = parseT2M(language, text) as any;
+    if (!ret) return;
+    let data: LModelElement = LPointerTargetable.from(data0 as any);
+    console.log('doT2M json', {data, text, ret});
+    let className = data.className;
+    if (!(data as LObject).t2m) {
+        Log.ee("The T2M transformation cannot be applied yet to " + className + " elements.", {className, ret, data, language});
+        return;
+    }
+    (data as LObject).t2m(ret);
 }
+
 
 export function T2M_Component(props: T2M_AllProps, child?: any): ReactNode {
     const data: LPointerTargetable = L.from(props.data as any);
@@ -293,7 +320,7 @@ export function M2T_Component(props: M2T_AllProps): ReactNode{
     return 'M2T_Component todo'
 }
 export function M2T_API(data: LModelElement, language: string): string{
-    return 'M2T_API todo'
+    return doM2T(data, language);
 }
 
 (window as any).M2T = M2T;

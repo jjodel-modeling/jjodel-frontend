@@ -97,7 +97,7 @@ export function MTMComponent(props: AllProps): JSX.Element{
             <span className={'my-auto'}>Language&nbsp;</span>
             <select className={'my-auto'} onChange={(e) => setLanguage(e.target.value)} value={language}>
                 <optgroup label={"languages"}>{
-                    Object.keys(languages).map(k=><option value={k}>{k}</option>)
+                    Object.keys(languages).map(k=> k === 'clonedCounter' ? null : <option value={k}>{k}</option>)
                 }</optgroup>
             </select>
             <label onClick={() => setEditor(true)} className='my-auto d-flex ms-3' style={{cursor: 'pointer'}}>
@@ -140,9 +140,18 @@ function M2TEditor(props: AllProps, language: string, setEditor: (v:boolean)=>vo
     if (!langObj) return <div className="w-100 h-100 d-flex" style={{cursor: "pointer"}} onClick={()=>setEditor(false)}>
         <div className={"m-auto"}>Language "{language}" not found.</div>
     </div>;
-    let m2tobj: ParserData = langObj.m2t[langObj.m2t.engine||'javascript'];
-    let t2mobj: ParserData = langObj.t2m[langObj.t2m.engine||'javascript'];
+    let defaultEnginet2m = 'nearley';
+    let defaultEnginem2t = 'nearley';
+    let m2tobj: ParserData = langObj.m2t[langObj.m2t.engine||defaultEnginem2t];
+    let t2mobj: ParserData = langObj.t2m[langObj.t2m.engine||defaultEnginet2m];
 
+    if (!m2tobj || !t2mobj) {
+        TRANSACTION('setup DSL languages', ()=>{
+            if (!m2tobj) SetRootFieldAction.new('languages.'+language+'.m2t.'+(langObj.m2t.engine||defaultEnginem2t), {}, '')
+            if (!t2mobj) SetRootFieldAction.new('languages.'+language+'.t2m.'+(langObj.t2m.engine||defaultEnginet2m), {}, '')
+        })
+        return <>Loading...</>;
+    }
     let m2t_func = m2tobj.str;
     let t2m_func = t2mobj.str;
     let m2tengine = langObj.m2t.engine;
@@ -155,7 +164,7 @@ function M2TEditor(props: AllProps, language: string, setEditor: (v:boolean)=>vo
             t2m_placeholder = 'function (text) {\t/*Not implemented */\n\treturn {};\n}';
             break;
         case 'nearley':
-            t2m_placeholder = 'main -> foo | bar';
+            t2m_placeholder = 'main -> foo | bar\nfoo -> "f" "o":*\nbar -> "bar"';
             break;
     }
     switch (m2tengine) {
@@ -199,7 +208,7 @@ function M2TEditor(props: AllProps, language: string, setEditor: (v:boolean)=>vo
             </div>
             <div className={'d-flex editors'} style={{flexFlow: 'row'}}>
                 <div className={'d-flex t2m'} style={{flexGrow: 1, flexWrap:'wrap'}}>
-                    <h3 className={'w-100'}>T2M
+                    <h3 className={'w-100'}>T2M&nbsp;
                         <select value={t2mengine} onChange={(e)=>{
                             let v = e.target.value.toLowerCase();
                             if (v === t2mengine) return;
@@ -209,7 +218,7 @@ function M2TEditor(props: AllProps, language: string, setEditor: (v:boolean)=>vo
                             }, t2mengine, v)
                         }}> {parsersArr.map(p=><option value={p} disabled={!(parsers as GObject)[p]}>{p}</option>)}</select>
                     </h3>
-                    <Editor className={'mx-1'} options={monacooptions} defaultLanguage={'javascript'} value={t2m_func}
+                    <Editor className={'mx-1'} options={monacooptions} defaultLanguage={'plaintext'} value={t2m_func}
                             onChange={(value) => {
                                 if (langObj.t2m[t2mengine].str === value) return;
                                 TRANSACTION('edit t2m language "'+language+'"', ()=> {
@@ -234,10 +243,11 @@ function M2TEditor(props: AllProps, language: string, setEditor: (v:boolean)=>vo
                 </div>
             </div>
             <h5>Test Sample</h5>
-            <pre className={"w-100 autosize"} contentEditable={true} onBlur={(e)=>{
+            <pre className={"w-100 autosize"} contentEditable={true} tabIndex={-1} onBlur={(e)=>{
+                console.log('text onblur', {e, target:e.target, txt:e.target.innerText});
                 TRANSACTION('update DSL test snipped for language "'+language+'"', ()=>{
                     let value = e.target.innerText;
-                    SetRootFieldAction.new('languages.'+language+'.test_text', value, '', false);
+                    SetRootFieldAction.new('languages.'+language+'.t2m.'+t2mengine+'.test_text', value, '', false);
                 })
             }}>{test_text}</pre>
             {test_text && test_text !== default_text ? <>

@@ -764,8 +764,8 @@ export class EcoreParser{
         const annotations: Json[] = this.getAnnotations(json);
         for (let child of annotations) EcoreParser.parseDAnnotation(dObject, child, generated, (dObject as GObject).__fullname + "/");
         /// *** specific start *** ///
-        dObject.value = +this.read(json, EcoreLiteral.value, Number.NEGATIVE_INFINITY);//vv4
-        dObject.literal = this.read(json, EcoreLiteral.literal, '');
+        dObject.value = +this.read(json, ECoreLiteral.value, Number.NEGATIVE_INFINITY);//vv4
+        dObject.literal = this.read(json, ECoreLiteral.literal, '');
         dObject.name = this.read(json, ECoreNamed.namee,  dObject.literal || 'literal_1');
         (dObject as GObject).__fullname = fullnamePrefix + dObject.name;
         /// *** specific end *** ///
@@ -971,15 +971,16 @@ export class ECoreNamed {
 
 export class ECoreDetail {
     static key: string;
-    static value: string; }
+    static value: string;
+}
 
 export class ECoreSubPackage { // <eSubpackages
-    static eSubpackages: string;
     static eAnnotations: string;
     static eClassifiers: string;
     static nsURI: string;
     static nsPrefix: string;
     static namee: string;
+    static eSubpackages: string;
 }
 
 export class ECorePackage extends ECoreSubPackage {
@@ -1019,7 +1020,7 @@ export class ECoreEnum {
     static eLiterals: string;
 }
 
-export class EcoreLiteral {
+export class ECoreLiteral {
     static eAnnotations: string;
     static namee: string;
     static value: string;
@@ -1031,40 +1032,46 @@ export class ECoreReference {
     static eAnnotations: string;
     static xsitype: string;
     static eType: string;
-    static containment: string;
-    static container: string;
+    static namee: string;
+    static unique: string;
+    static ordered: string;
     static upperbound: string;
     static lowerbound: string;
-    static namee: string; }
+    static containment: string;
+    static container: string;
+}
 
 export class ECoreAttribute {
     static eAnnotations: string;
     static xsitype: string;
-    static eType: string;
     static namee: string;
+    static eType: string;
+    static unique: string;
+    static ordered: string;
     static lowerbound: string;
     static upperbound: string;
 }
 
 export class ECoreOperation {
     static eAnnotations: string;
+    static namee: string;
     static eType: string;
-    static eexceptions: string;
     static upperBound: string;
     static lowerBound: string;
     static unique: string;
     static ordered: string;
-    static namee: string;
-    static eParameters: string; }
+    static eexceptions: string;
+    static eParameters: string;
+}
 
 export class ECoreParameter {
     static eAnnotations: string;
     static namee: string;
-    static ordered: string;
-    static unique: string;
+    static eType: string;
     static lowerBound: string;
     static upperBound: string;
-    static eType: string;
+    static ordered: string;
+    static unique: string;
 }
 
 export class ECoreObject{
@@ -1074,7 +1081,8 @@ export class ECoreObject{
 }
 export class XMIModel {
     static type: string;
-    static namee: string; }
+    static namee: string;
+}
 
 
 ///////////////
@@ -1083,7 +1091,7 @@ ECoreRoot.ecoreEPackage = 'ecore:EPackage'; // this is root tag but not in xml->
 ECoreNamed.namee = EcoreParser.XMLinlineMarker + 'name';
 
 ECorePackage.eAnnotations = ECoreSubPackage.eAnnotations = ECoreClass.eAnnotations =
-    ECoreEnum.eAnnotations = EcoreLiteral.eAnnotations =  ECoreReference.eAnnotations =
+    ECoreEnum.eAnnotations = ECoreLiteral.eAnnotations =  ECoreReference.eAnnotations =
         ECoreAttribute.eAnnotations = ECoreOperation.eAnnotations = ECoreParameter.eAnnotations = 'eAnnotations';
 
 ECoreAnnotation.source = EcoreParser.XMLinlineMarker + 'source';
@@ -1097,6 +1105,7 @@ ECorePackage.eClassifiers = 'eClassifiers';
 ECorePackage.xmlnsxmi = EcoreParser.XMLinlineMarker + 'xmlns:xmi'; // typical value: http://www.omg.org/XMI
 ECorePackage.xmlnsxsi = EcoreParser.XMLinlineMarker + 'xmlns:xsi'; // typical value: http://www.w3.org/2001/XMLSchema-instance
 ECorePackage.xmiversion = EcoreParser.XMLinlineMarker + 'xmi:version'; // typical value: "2.0"
+ECoreObject.xmi_version = EcoreParser.XMLinlineMarker + 'xmi:version'; // "2.0"
 ECorePackage.xmlnsecore = EcoreParser.XMLinlineMarker + 'xmlns:ecore';
 ECorePackage.nsURI = EcoreParser.XMLinlineMarker + 'nsURI'; // typical value: "http://org/eclipse/example/modelname"
 ECorePackage.nsPrefix = EcoreParser.XMLinlineMarker + 'nsPrefix'; // typical value: org.eclipse.example.modelname
@@ -1125,22 +1134,28 @@ ECoreEnum.xsitype = ECoreClass.xsitype; // "ecore:EEnum"
 ECoreEnum.eLiterals = 'eLiterals';
 ECoreEnum.namee = ECorePackage.namee;
 
-EcoreLiteral.literal = 'literal';
-EcoreLiteral.namee = ECorePackage.namee;
-EcoreLiteral.value = 'value'; // any integer (-inf, +inf), not null. limiti = a type int 32 bit? vv4
+ECoreLiteral.literal = 'literal';
+ECoreLiteral.namee = ECorePackage.namee;
+ECoreLiteral.value = 'value'; // any integer (-inf, +inf), not null. limiti = a type int 32 bit? vv4
 
 ECoreReference.xsitype = EcoreParser.XMLinlineMarker + 'xsi:type'; // "ecore:EReference"
 ECoreReference.eType = EcoreParser.XMLinlineMarker + 'eType'; // "#//Player"
 ECoreReference.containment = EcoreParser.XMLinlineMarker + 'containment'; // "true"
+ECoreReference.container = EcoreParser.XMLinlineMarker + 'container'; // "true" todo: not sure if it's really like this.
 ECoreReference.upperbound = EcoreParser.XMLinlineMarker + 'upperBound'; // "@1"
 ECoreReference.lowerbound = EcoreParser.XMLinlineMarker + 'lowerBound'; // does even exists?
 ECoreReference.namee = EcoreParser.XMLinlineMarker + 'name';
+ECoreReference.unique = EcoreParser.XMLinlineMarker + 'unique'; // "false",
+ECoreReference.ordered = EcoreParser.XMLinlineMarker + 'unique'; // "false",
+
 
 ECoreAttribute.xsitype = EcoreParser.XMLinlineMarker + 'xsi:type'; // "ecore:EAttribute",
 ECoreAttribute.eType = EcoreParser.XMLinlineMarker + 'eType'; // "ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"
 ECoreAttribute.namee = EcoreParser.XMLinlineMarker + 'name';
 ECoreAttribute.lowerbound = EcoreParser.XMLinlineMarker + 'lowerBound';
 ECoreAttribute.upperbound = EcoreParser.XMLinlineMarker + 'upperBound';
+ECoreAttribute.unique = EcoreParser.XMLinlineMarker + 'unique'; // "false",
+ECoreAttribute.ordered = EcoreParser.XMLinlineMarker + 'unique'; // "false",
 
 
 ECoreOperation.eParameters = 'eParameters';
@@ -1162,7 +1177,6 @@ ECoreParameter.eType = EcoreParser.XMLinlineMarker + 'eType'; // "ecore:EDataTyp
 
 ECoreObject.xmlns_xmi = EcoreParser.XMLinlineMarker + 'xmlns:xmi'; // "http://www.omg.org/XMI"
 // ECoreObject.xmlns_uri = EcoreParser.XMLinlineMarker + 'xmlns:org.eclipse.example.modelname'; // "https://org/eclipse/example/modelname"
-ECoreObject.xmi_version = EcoreParser.XMLinlineMarker + 'xmi:version'; // "2.0"
 
 XMIModel.type = EcoreParser.XMLinlineMarker + 'type';
 XMIModel.namee = EcoreParser.XMLinlineMarker + 'name';

@@ -572,7 +572,7 @@ ret .b = 3
 
 // then add to it: content of props, constants, usageDeclarations
 
-export function reducer(oldState: DState = initialState, action: Action): DState {
+export function reducer(oldState: DState = initialState, action: Action, liveChange: boolean = false): DState {
     if (U.navigating) return oldState;
     if (!windoww.jjactions) windoww.jjactions = [];
     windoww.jjactions.push(action);

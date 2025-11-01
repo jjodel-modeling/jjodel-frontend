@@ -54,8 +54,6 @@ function AuthPage(): JSX.Element {
         setDirty(!success);
     }
 
-
-
     const reset_password = async (): Promise<boolean> => {
 
         try {
@@ -136,7 +134,6 @@ function AuthPage(): JSX.Element {
       };
 
     const register = async(): Promise<boolean> => {
-
         if (password !== passwordCheck) {
             U.alert('e', 'The two passwords are different', '');
             return false;
@@ -559,7 +556,6 @@ return(<section className={`w-100 h-100 login bg ${action === 'register' ? 'regi
             </>}
 
             {action === 'login' &&
-
             <>
                 {/* LOGIN */}
                 <label>
@@ -593,7 +589,6 @@ return(<section className={`w-100 h-100 login bg ${action === 'register' ? 'regi
             </>}
 
             {action === 'retrieve-password' &&
-
             <>
                 {/* RETRIEVE PASSWORD */}
                 <label>

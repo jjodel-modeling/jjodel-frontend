@@ -698,7 +698,9 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         let thiss: DParameter = this.thiss as any;
         thiss.defaultValue = defaultValue;
         this.setExternalPtr(thiss.father, "parameters", "+=");
-        return this; }
+        return this;
+    }
+
     DStructuralFeature(): this {
         if (this.thiss.className === 'DOperation') return this;
         // if (!this.persist) return this;
@@ -877,11 +879,14 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
                     type = this.fatherPtr as Pointer<DClass> || undefined;
                     break;
                 case 'DOperation':
+                    type = this.fatherPtr as Pointer<DClass>;
+                    break;
                 case 'DParameter':
-                    type = this.fatherPtr as Pointer<DClass> || Pointers.ESTRING;
+                    // type = DPointerTargetable.fromPointer(this.fatherPtr).father as Pointer<DClass>
+                    type = Pointers.ESTRING;
                     break;
                 case 'DAttribute':
-                type = Pointers.ESTRING; break;
+                    type = Pointers.ESTRING; break;
             }
         }
         this.setPtr("type", type);
@@ -1463,6 +1468,10 @@ export class DPointerTargetable extends RuntimeAccessibleClass {
 
 
     /*protected */derivedMap!: Dictionary<string, DerivedD>;
+
+    static isD(data: any): data is DPointerTargetable {
+        return (data && data.className && data.id);
+    }
 }
 
 RuntimeAccessibleClass.set_extend(RuntimeAccessibleClass, DPointerTargetable);
@@ -3766,7 +3775,9 @@ export class ParserData{
 }
 export type LanguageObject = Dictionary<ParserName, ParserData> & {engine: ParserName};
 
+@RuntimeAccessible('Language')
 export class Language {
+    static cname = 'Language';
     m2t: LanguageObject;
     t2m: LanguageObject;
     edited: boolean;
@@ -3933,7 +3944,8 @@ export const transientProperties = {
     node: {} as Dictionary<Pointer<DGraphElement>, NodeTransientProperties>,
     view: {} as Dictionary<Pointer<DViewElement>, ViewTransientProperties>,
     modelElement: {} as Dictionary<Pointer<DModelElement>, DataTransientProperties>,
-    language: {} as Dictionary<DocString<'Language like ecore'>, Dictionary<DocString<'Engine like nearley, js'>, LanguageCache>>
+    language: {} as Dictionary<DocString<'Language like ecore'>, Dictionary<DocString<'Engine like nearley, js'>, LanguageCache>>,
+    livePatches: {} as DState, //Partial<DState>,
 };
 (window as any).transient = (window as any).transientProperties = transientProperties;
 // transientProperties.nodes[nid].viewScores[vid]?.[pvid as string];

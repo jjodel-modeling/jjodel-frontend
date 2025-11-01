@@ -1,4 +1,4 @@
-import { type Language } from '../joiner';
+import {type Language, transientProperties, Uobj} from '../joiner';
 import {
     Asterisk,
     Circle,
@@ -97,6 +97,12 @@ export class DState extends DPointerTargetable{
             .DPointerTargetable().DState();
         // .end();
         return ds; // do not trigger persist and CreateElement for state, or it will be stored in idlookup making a loop
+    }
+
+    static getState(patched: boolean = true): DState {
+        if (!patched) return store.getState();
+        else return transientProperties.livePatches || store.getState();
+        // else return Uobj.applyObjectDelta(store.getState(), transientProperties.livePatches, false)
     }
 
     // no need to manually update for each update
