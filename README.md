@@ -1,3 +1,5 @@
+🌐 The application is publicly accessible at [this link.](https://app.jjodel.io/)
+
 # Installation Guide - JJodel
 
 This guide provides complete instructions for installing and running JJodel in different modes.
@@ -50,10 +52,10 @@ cd jjodel/frontend
 ### 2. Install dependencies
 ```bash
 # Install main dependencies
-npm i --legacy-peer-deps
+npm i
 
 # Install react-json-view (requires --force)
-npm i react-json-view --force --legacy-peer-deps
+npm i react-json-view --force --no-save
 ```
 
 ### 3. Configure environment
@@ -112,7 +114,7 @@ rm -rf node_modules package-lock.json
 
 # Reinstall with correct options
 npm i --legacy-peer-deps
-npm i react-json-view --force --legacy-peer-deps
+npm i react-json-view --force --legacy-peer-deps --no-save
 ```
 
 ### Build errors
@@ -147,30 +149,33 @@ In the `package.json` file, these scripts are available:
 npm run start          # Start in development mode
 npm run build          # Build for production
 npm run serve          # Serve production build
-npm run test           # Run tests
 
 # Utilities
-npm run ii             # Install dependencies (includes react-json-view)
+npm run ii             # Install dependencies (including react-json-view)
 npm run dev            # Docker compose for development
 ```
 
 ## 🌐 Automated Deployment
 
 ### GitHub Actions
+
 The project includes automatic workflows for:
 - **Docker build and push** on push to `master` branch
 - **Azure deploy** on push to `dotnet-backend-integration` branch
 
 ### Secrets Configuration
+
 For automatic deployment, configure these secrets in GitHub:
 - `DOCKER_HUB_USERNAME`
 - `DOCKER_HUB_PASSWORD`
 
 ## 🔗 Access URLs
 
+- **Main website** https://www.jjodel.io/
+- **Public deployment**: https://app.jjodel.io
 - **Local development**: http://localhost:3000
 - **Local Docker**: http://localhost:3000 (or configured port)
-- **Public deployment**: https://mdegroup.github.io/jjodel/build
+
 
 ## 📖 Additional Documentation
 
@@ -193,6 +198,8 @@ If you encounter issues:
 3. Review error logs
 4. Open an issue in the GitHub repository
 
+## ✉️Contact us
+[Mail](mailto:info@jjodel.io)
 ---
 
 **Document version**: 1.0  
