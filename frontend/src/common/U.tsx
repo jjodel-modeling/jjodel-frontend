@@ -165,7 +165,7 @@ export class U {
     private static clickedOutsideMap: WeakMap<Element, (e: Element, evt: JQuery.ClickEvent)=>void> = null as any;
     private static clickedOutsideMapEntries: Element[] = null as any; // because weak maps are not iterable and cannot get a list of keys
     public static UpdatingTimer: number = 300;
-    public static liveStateChanges:boolean = true;
+    public static liveStateChanges: boolean = false;
 
 
     // to register call with both parameters. to remove a listener call with callback=undefined
@@ -225,6 +225,42 @@ export class U {
             callback(target, e);
         }
     }
+
+    static parseXml(xmlString : string, retryNSPrefix: boolean = true): Document {
+        let parser = new DOMParser();
+        // attempt to parse the passed-in xml
+        let dom = parser.parseFromString(xmlString, 'application/xml');
+        let err = U.getParseError(dom)
+        if (err) {
+            // let xsimsg = "This page contains the following errors:error on line 1 at column 90: Namespace prefix xsi for type on eClassifiers is not defined\nBelow is a rendering of the page up to the first error.";
+            if (retryNSPrefix && err.includes('Namespace prefix xsi for ')) {
+                return U.parseXml(xmlString.split('xsi:type').join('xsitype'), false);
+            }
+            console.error('xml parse error', {xmlString, err});
+            throw new Error(err);
+        }
+        return dom;
+    }
+
+    static parsererrorNS: string | null = -111 as any; // means not initialized
+    static getParseError(parsedDocument: Document): false | string {
+        if (U.parsererrorNS === -111 as any) {
+            let parser = new DOMParser();
+            let errorneousParse = parser.parseFromString('<', 'application/xml');
+            U.parsererrorNS = errorneousParse?.getElementsByTagName("parsererror")?.[0]?.namespaceURI;
+        }
+
+        if (U.parsererrorNS === 'http://www.w3.org/1999/xhtml') {
+            let tag = parsedDocument.getElementsByTagName("parsererror");
+            // In PhantomJS the parseerror element doesn't seem to have a special namespace, so we are just guessing here :(
+            if (tag.length === 0) return false; // not an error
+            return (tag[0] as HTMLElement)?.innerText || 'Unexpected xmi error';
+        }
+
+        let tag = parsedDocument.getElementsByTagNameNS(U.parsererrorNS, "parsererror");
+        if (tag.length === 0) return false; // not an error
+        return (tag[0] as HTMLElement)?.innerText || 'Unexpected xmi error';
+    };
 
     static publish(topic: string, value: unknown) {
         if(!IoT.client.connected) {

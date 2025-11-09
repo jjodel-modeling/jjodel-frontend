@@ -178,7 +178,7 @@ export class Uobj {
                 console.error('invalid array length set', {old, statelevel, deltalevel, asserteq});
             }
             else {
-                try { (statelevel as any[]).length = len; }
+                try { (statelevel as any).length = len; }
                 catch(e) {
                     console.error('invalid array length set err', {e, old,
                         len, linold:'length' in old, 'lindelta': 'length' in deltalevel,

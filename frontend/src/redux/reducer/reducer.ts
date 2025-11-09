@@ -601,6 +601,7 @@ function unsafereducer(oldState: DState = initialState, action: Action): DState 
 
     const ret = _reducer(oldState, action);
     if (ret === oldState) return oldState;
+    if (!ret) return ret;
     ret.idlookup.__proto__ = DPointerTargetable.pendingCreation as any;
     // client synchronization stuff
     if (Collaborative.online) Collaborative.send(action);

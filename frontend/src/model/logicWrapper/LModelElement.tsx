@@ -295,18 +295,20 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
         function del(k: string) { delete ecore[k] }
         for (let k of ogKeys) {
             let v = ecore[k];
+            // if (typeof v === 'string') v = ecore[k] = v.trim(); // because from xmi indentation gives problems indenting names
+            // at very least need to do so on literal from xml nope solved on xmi
             switch (k) {
                 default: break;
                 case '@xmlns:ecore': delete ecore[k]; break;
                 // common properties
-                case ECoreClass.xsitype:
+                case ECoreClass.xsitype: case 'xsitype': case 'xsi:type':
                     if (v.indexOf('ecore:E') !== 0) Log.exDevv('unexpected XSI type: ' + v, {ecore});
                     delete ecore[k];
                     ecore.className = v.substring('ecore:E'.length);
                     break;
                 case ECorePackage.eAnnotations: todo(k); break;
                 // common to all features
-                case ECoreAttribute.eType:      delete ecore[k]; if (v) ecore.type = U.solveEcoreType(v);   break;
+                case ECoreAttribute.eType: case 'eType':      delete ecore[k]; if (v) ecore.type = U.solveEcoreType(v);   break;
                 case ECorePackage.namee:        delete ecore[k]; if (v) ecore.name = v;                     break;
                 case ECoreAttribute.lowerbound: delete ecore[k]; if (v !== '') ecore.lowerBound = v;        break;
                 case ECoreAttribute.upperbound: delete ecore[k]; if (v !== '') ecore.upperBound = v;        break;
@@ -330,7 +332,7 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
                 case ECoreClass.eSuperTypes:         delete ecore[k]; if (v && v.length) ecore.extends = v; break;
                 case ECoreEnum.eLiterals:            delete ecore[k]; if (v && v.length) ecore.literals = v; break;
                 case ECoreClass.eOperations:         delete ecore[k]; if (v && v.length) ecore.operations = v; break;
-                case ECoreLiteral.literal:           delete ecore[k]; if (v && v.length) ecore.literal = v; break;
+                case ECoreLiteral.literal:           delete ecore[k]; ecore.literal = v; break;
                 case ECoreOperation.eexceptions:     delete ecore[k]; if (v && v.length) ecore.exceptions = v; break;
                 case ECoreOperation.eParameters:     delete ecore[k]; if (v && v.length) ecore.parameters = v; break;
                 case ECoreReference.containment:     delete ecore[k]; if (v && v.length) ecore.containment = v; break;
@@ -465,9 +467,9 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
                                                             collection = 'references';
                                                             break;
                                                         }
-                                                        if ('type' in childEcore) {
-                                                            let type = childEcore.type;
-                                                            if (Pointers.isPointer(type)){
+                                                        if ('type' in childEcore) {// || ECoreAttribute.eType in childEcore || 'eType' in childEcore) {
+                                                            let type = childEcore.type; // || childEcore[ECoreAttribute.eType] || childEcore.eType;
+                                                            if (Pointers.isPointer(type)) {
                                                                 let pointedType = DPointerTargetable.from(childEcore.type as Pointer<DClassifier>);
                                                                 if (pointedType) {
                                                                     if (pointedType.className === DClass.cname) collection = 'references'; break;
@@ -1543,8 +1545,8 @@ export class LTypedElement<Context extends LogicContext<DTypedElement> = any> ex
             return true;
         }
         if (ptr === c.data.type) return true;
-        TRANSACTION(this.get_name(c)+'.type', ()=>{
-            console.error('not autocorrected setting type: ', {old:val, ptr, tn:LPointerTargetable.from(ptr)?.name});
+        TRANSACTION(this.get_name(c)+'.type', ()=> {
+            Log.w(ptr !== val, 'autocorrected setting type: ', {old:val, ptr, tn:LPointerTargetable.from(ptr)?.name});
             SetFieldAction.new(c.data, 'type', ptr, "", true);
         }, LPointerTargetable.from(c.data.type)?.fullname || c.data.type, LPointerTargetable.wrap(ptr)?.fullname);
         return true;
@@ -4311,12 +4313,12 @@ export class DEnumLiteral extends DModelElement { // DNamedElement
     literal!: string;
 
     public static new(name?: DNamedElement["name"], value?: DEnumLiteral["value"], father?: Pointer, persist: boolean = true): DEnumLiteral { //vv4
-        if (!name) name = this.defaultname("literal ", father);
+        if (!name) name = this.defaultname("literal_", father);
         return new Constructors(new DEnumLiteral('dwc'), father, persist, undefined).DPointerTargetable().DModelElement()
             .DNamedElement(name).DEnumLiteral(value).end();
     }
     static new2(setter: Partial<ObjectWithoutPointers<DEnumLiteral>>, father: DEnumLiteral["father"], name?: DEnumLiteral["name"]): DEnumLiteral {
-        if (!name) name = this.defaultname("literal ", father);
+        if (!name) name = this.defaultname("literal_", father);
         return new Constructors(new DEnumLiteral('dwc'), father, true, undefined).DPointerTargetable().DModelElement()
             .DNamedElement(name).DEnumLiteral()
             .end((d) => { Object.assign(d, setter); });
@@ -4348,8 +4350,8 @@ export class LEnumLiteral<Context extends LogicContext<DEnumLiteral> = any, C ex
     name!: string;
     namespace!: string;
     // personal
-    value!: this["ordinal"];
-    ordinal!: number;
+    value!: number;
+    ordinal!: this["value"];
     literal!: string;
 
     protected generateEcoreJson_impl(c: Context, loopDetectionObj: Dictionary<Pointer, DModelElement> = {}): Json {
@@ -4402,23 +4404,31 @@ export class LEnumLiteral<Context extends LogicContext<DEnumLiteral> = any, C ex
         let ordinals = (this.get_father(c) as LEnumerator).ordinals;
         if (ordinals[val]) {
             Log.e(true, "that ordinal place is already taken by " + ordinals[val].name, {sameOrdinalLit:ordinals[val], ordinals, thiss:c.data});
-            return true; }
+            return true;
+        }
+        // @ts-ignore
+        if (val === 'undefined' || val === 'null' || val === '' || val === null) val = undefined;
+        if (val === c.data.value) return true;
 
         TRANSACTION(this.get_name(c)+'.value', ()=>{
             SetFieldAction.new(c.data, 'value', val);
         }, c.data.value, val)
         return true;
     }
-    /*
-        protected get_literal(context: Context): this["literal"] { return context.data.literal; }
-        protected set_literal(val: this["literal"], context: Context): boolean {
-            return SetFieldAction.new(context.data, 'literal', val, '', false); }*/
-    protected get_literal(context: Context): this["literal"] { return context.data.name; }
+
+    protected get_literal(c: Context): this["literal"] { return c.data.literal || (c.data.name||'').split('_').join(' '); }
     protected set_literal(val: this["literal"], c: Context): boolean {
-        if (val === c.data.name) return true;
-        TRANSACTION(this.get_name(c)+'.name', ()=>{
-            return SetFieldAction.new(c.data, 'name', val, '', false);
-        }, c.data.name, val)
+        let defaultVal = (c.data.name||'').split('_').join(' ');
+        if (val === c.data.literal) return true;
+        if (val === defaultVal) {
+            if (!c.data.literal) return true;
+            else val = undefined as any;
+        }
+        if (val as any === null || val === '') val = undefined as any;
+
+        TRANSACTION(this.get_name(c)+'.literal', ()=> {
+            return SetFieldAction.new(c.data, 'literal', val, '', false);
+        }, c.data.literal, val)
         return true;
     }
 

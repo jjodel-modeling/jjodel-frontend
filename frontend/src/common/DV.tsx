@@ -33,11 +33,42 @@ export class DV {
         let t2m = undefined;
         let ret: Dictionary<string, Language> = {};
         ret.JSON = new Language(
-            {javascript:{str:'function(modelData) {\n\treturn JSON.stringify(modelData.json, null, 4);\n}'}},
-            {javascript:{str:"function(text) {\n\treturn JSON.parse(text);\n}"}}
+            {javascript:{allowPartials: true, str:'function(modelData) {\n\treturn JSON.stringify(modelData.json, null, 4);\n}'}},
+            {javascript:{allowPartials: true, str:"function(text) {\n\treturn JSON.parse(text);\n}"}}
         );
         ret['Emfatic'] = new Language(
-            {engine:'nearley' as any, nearley:{str: `main -> header classdef:* {% (d) => ({uri: d[0].uri, prefix: d[0].prefix, classifiers:d[1]}) %}
+            {javascript:{allowPartials: true, str: `function(model, node){
+    // finds and applies the appropriate serializer, empty string for missing ones.
+    let serialize = (d, deep, indent) => map[d.className]?.(d, deep, indent) || '';
+    
+    // defining a serializer for every model element type
+    let DModel = (d, deep = true) => serialize(d.packages[0], deep)
+    let DPackage = (d, deep) => \`@namespace(uri="$\{d.uri}", prefix="$\{d.prefix}")\\npackage \${d.name};\\n\${deep ? d.classifiers.map(e=>serialize(e, deep)).join('') : ''}\`
+    let DClass = (d, deep) => \`\nclass \${d.name} {\\n\${deep ? d.children.map(a=>serialize(a, deep, '\\t')).join('') : ''}}\`
+    // let DEnumerator = (d, deep) => \`enumerator todo\`
+    let DAttribute = (d, deep, indent='') => indent + 'attr ' + feature(d);
+    let DReference = (d, deep, indent='') => indent + (d.containment ? 'val ' : 'ref ') + feature(d);
+    let feature = (d) => d.type.name + printMultiplicity(d.lowerBound, d.upperBound) + " " + d.name + ";\\n"
+    let printMultiplicity = (lb, ub) => {
+        if (lb === 0 && ub === 1) return "";
+        return "["+(lb === 0 ? "" : lb + "..") + (ub === -1 ? "*" : ub) + "]"; 
+    }  
+    let map = {DModel, DPackage, DClass, DAttribute, DReference}
+    
+    return serialize(model);
+}`},
+        handlebars: {allowPartials: false, str:`@namespace(uri="{{uri}}") prefix="{{prefix}}")
+package {{name}};
+
+{{#each classes}}
+class {{name}} {
+    {{#each attributes}}attr {{type.name}} {{name}};{{/each}}
+    {{#each references}}{{#if isContainment}}val{{else}}ref{{/if}} {{type.name}} {{name}};{{/each}}
+    {{#ifcond isReference '&&' isContainment}}val {{type.name}} {{name}};{{/ifcond}}
+    {{#ifcond isReference '&&' isContainment}}ref {{type.name}} {{name}};{{/ifcond}}
+}
+{{/each}}
+`}}, {engine:'nearley' as any, nearley:{allowPartials: false, str: `main -> header classdef:* {% (d) => ({uri: d[0].uri, prefix: d[0].prefix, classifiers:d[1]}) %}
 
 # --------------------------------------------------------------------
 # HEADER
@@ -115,38 +146,19 @@ strescape -> ["\\\\/bfnrt] {% id %}
         return d.join("");
     }
 %}`}},
-            {javascript:{str: `function(model, node){
-    // finds and applies the appropriate serializer, empty string for missing ones.
-    let serialize = (d, deep, indent) => map[d.className]?.(d, deep, indent) || '';
-    
-    // defining a serializer for every model element type
-    let DModel = (d, deep = true) => serialize(d.packages[0], deep)
-    let DPackage = (d, deep) => \`@namespace(uri="$\{d.uri}", prefix="$\{d.prefix}")\\npackage \${d.name};\\n\${deep ? d.classifiers.map(e=>serialize(e, deep)).join('') : ''}\`
-    let DClass = (d, deep) => \`\nclass \${d.name} {\\n\${deep ? d.children.map(a=>serialize(a, deep, '\\t')).join('') : ''}}\`
-    // let DEnumerator = (d, deep) => \`enumerator todo\`
-    let DAttribute = (d, deep, indent='') => indent + 'attr ' + feature(d);
-    let DReference = (d, deep, indent='') => indent + (d.containment ? 'val ' : 'ref ') + feature(d);
-    let feature = (d) => d.type.name + printMultiplicity(d.lowerBound, d.upperBound) + " " + d.name + ";\\n"
-    let printMultiplicity = (lb, ub) => {
-        if (lb === 0 && ub === 1) return "";
-        return "["+(lb === 0 ? "" : lb + "..") + (ub === -1 ? "*" : ub) + "]"; 
-    }  
-    let map = {DModel, DPackage, DClass, DAttribute, DReference}
-    
-    return serialize(model);
-}`}});
+);
         ret['flexmi/YAML'] = new Language(m2t, t2m);
         ret['flexmi/XMI'] = new Language(m2t, t2m);
 
         ret['eCore/JSON'] = new Language(
-            {javascript:{str: `function(modelData) {
+            {javascript:{allowPartials: true, str: `function(modelData) {
     let ecore = modelData.ecore;
     let skipKeys = ['eStructuralFeatures', 'eParameters', 'eClassifiers', 'eOperations', 'eSubpackages', 'eLiterals'];
     // remove sub-element collections to keep the scope limited to current element.
     for (let key of skipKeys) { delete ecore[key]; }
     return JSON.stringify(ecore, null, 4);
 }`}},
-            {javascript:{str:`function(text) {
+            {javascript:{allowPartials: true, str:`function(text) {
     let ecore = JSON.parse(text);
     // remove xmi inline prefixs (@)
     for (let key of Object.keys(ecore)) {
@@ -158,11 +170,11 @@ strescape -> ["\\\\/bfnrt] {% id %}
     return ecore;
 }`}});
         ret['eCore/XMI'] = new Language(
-            {javascript:{str: `function(modelData) { return XMI.fromJSON(M2T(modelData, 'eCore/JSON')) }`}},
-            {javascript:{str: `function(text) { return parseT2M('eCore/JSON', JSON.parse(XMI.toJSON(text))); }`}});
+            {javascript:{allowPartials: true, str: `function(modelData) { return XMI.fromJSON(M2T(modelData, 'eCore/JSON')) }`}},
+            {javascript:{allowPartials: true, str: `function(text) { return parseT2M('eCore/JSON', JSON.stringify(XMI.toJSON(text))); }`}});
 
         ret.testLanguage = new Language({
-                javascript:{str:`function (model, node){
+                javascript:{allowPartials: false, str:`function (model, node){
     let text: string = '' model.className + ':' + model.id;
     for (let child of model.attributes) text += '\\n\\t'+child.name+':'+JSON.stringify(child.values);
     for (let child of model.references) text += '\\n\\t'+child.name+':'+JSON.stringify(child.values.map(v=>v.id));
@@ -173,7 +185,7 @@ strescape -> ["\\\\/bfnrt] {% id %}
     {
         // NB: check nearley postprocessors for json to jom object
         // https://nearley.js.org/docs/grammar#postprocessors
-    nearley:{str:`
+    nearley:{allowPartials: false, str:`
 main         -> classs:* "end:"               {% (d)=> { return {packages: [{name: "default", classes: d[0]}]}} %}
 comment      -> "#" [^\\n\\r]:* "\\r":? "\\n"     {% (d)=> { return d.flat().join("") }%}
 eol          -> (ws "\\r":? "\\n")              {% (d)=> { return null }%}
@@ -256,7 +268,7 @@ test_text:`# Q12136 - A disorder of structure or function in a living organism t
    performs -> Treatment [*]
 end:`
     },
-    javascript:{str:`function (text) {
+    javascript:{allowPartials: false, str:`function (text) {
     let lines = text.split('\\n');
     lines = lines.map(line=>{ // uncomment
         let comment_index = line.indexOf('//'); return (comment_index==-1) ? line : line.substr(0,comment_index);

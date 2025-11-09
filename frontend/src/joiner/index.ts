@@ -12,11 +12,13 @@ import * as _pr_xml2json from '../common/libraries/prj_xml2json.js';
 // true imports for this file (should all be import type)
 import type {DocString} from './types';
 import type {U as UType} from "../common/U";
+import Handlebars from 'handlebars';
+
 import type {Log as LogType} from "../common/Log";
 
 var windoww = (window as any);
 windoww.windoww = windoww;
-
+windoww.Handlebars = Handlebars;
 export const XML = _pr_xml2json.XML;
 export const XMI = _pr_xml2json.XMI;
 windoww.XML = XML;

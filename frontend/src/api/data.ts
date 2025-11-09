@@ -1,9 +1,10 @@
-import type {
+import {
     Json,
     Pointer,
     GObject,
     Dictionary,
-    DocString} from "../joiner";
+    DocString, RuntimeAccessible
+} from "../joiner";
 import {
     Log,
     DModelElement,
@@ -43,9 +44,8 @@ import {
     DPointerTargetable, ShortAttribETypes, toLongEType, DState, Debug
 } from "../joiner";
 import {DefaultEClasses, ShortDefaultEClasses, toLongEClass} from "../common/U";
-
 type RET<T = boolean> = T | Promise<T>;
-type Ret = RET;
+/*
 
 class SavePack{
     model: string;
@@ -56,9 +56,8 @@ class SavePack{
         this.vertexpos = vertexpos;
         this.view = view;
     }
-}
+}*/
 
-type JsonSavePack = {[key in keyof SavePack]: Json | null }
 
 
 export abstract class IStorage{
@@ -75,7 +74,7 @@ export abstract class IStorage{
         let isOverwrite = this.get(key) !== null;
         this.set(key, '');
         return isOverwrite; }
-    public abstract set(key: string | number, val: string | any): RET;
+    public abstract set(key: string | number, val: string | any): RET<boolean>;
     get<T extends boolean>(key: string | number, parse: T = false as any): T extends false ? null | string : null | any{ return Log.exx("IStorage.get should be overridden"); }
 
     protected serialize(val: any): string { // serialize
@@ -108,7 +107,7 @@ export class LocalStorage extends IStorage{
         return true;
     }
 
-
+/*
     public getLastOpened(modelNumber: 1 | 2): SavePack {
         let modelname = "m" + modelNumber + "_";
         const ret: SavePack = new SavePack();
@@ -128,12 +127,14 @@ export class LocalStorage extends IStorage{
         if (vertex) this.set(modelname + LocalStorage.KeyList.lastOpenedPosition, vertex);
         else this.del(modelname +  LocalStorage.KeyList.lastOpenedPosition); }
 
-
+*/
 }
 
+@RuntimeAccessible('ECoreParser')
 export class EcoreParser{
     static supportedEcoreVersions = ["http://www.eclipse.org/emf/2002/Ecore"];
     static prefix:string = '@';
+    static cname = 'ECoreParser';
 
     static parse(ecorejson: GObject | string | null, isMetamodel: boolean, filename: string | undefined, persist: boolean = true): DModelElement[]{
         if (!ecorejson) return [];
@@ -957,24 +958,36 @@ export enum AccessModifier {
     protectedinternal = 'protected internal',
     protectedprivate = 'protected private', }
 
+@RuntimeAccessible('ECoreRoot')
 export class ECoreRoot {
+    static cname = 'ECoreRoot';
     static ecoreEPackage: string;
 }
 
+@RuntimeAccessible('ECoreAnnotation')
 export class ECoreAnnotation {
+    static cname = 'ECoreAnnotation';
     static source: string;
     static references: string;
-    static details: string;}
+    static details: string;
+}
 
+@RuntimeAccessible('ECoreNamed')
 export class ECoreNamed {
-    static namee: string; }
+    static cname = 'ECoreNamed';
+    static namee: string;
+}
 
+@RuntimeAccessible('ECoreDetail')
 export class ECoreDetail {
+    static cname = 'ECoreDetail';
     static key: string;
     static value: string;
 }
 
+@RuntimeAccessible('ECoreSubPackage')
 export class ECoreSubPackage { // <eSubpackages
+    static cname = 'ECoreSubPackage';
     static eAnnotations: string;
     static eClassifiers: string;
     static nsURI: string;
@@ -983,7 +996,9 @@ export class ECoreSubPackage { // <eSubpackages
     static eSubpackages: string;
 }
 
+@RuntimeAccessible('ECorePackage')
 export class ECorePackage extends ECoreSubPackage {
+    static cname = 'ECorePackage';
     static eAnnotations: string;
     static eSubpackages: string;
     static eClassifiers: string;
@@ -996,7 +1011,9 @@ export class ECorePackage extends ECoreSubPackage {
     static namee: string;
 }
 
+@RuntimeAccessible('ECoreClass')
 export class ECoreClass {
+    static cname = 'ECoreClass';
     static eAnnotations: string;
     static eStructuralFeatures: string;
     static xsitype: string;
@@ -1011,7 +1028,9 @@ export class ECoreClass {
     // nelle classi, assume il valore di "[name] = [NumericValue]" senza le [] negli enum.
 }
 
+@RuntimeAccessible('ECoreEnum')
 export class ECoreEnum {
+    static cname = 'ECoreEnum';
     static eAnnotations: string;
     static xsitype: string;
     static namee: string;
@@ -1020,7 +1039,9 @@ export class ECoreEnum {
     static eLiterals: string;
 }
 
+@RuntimeAccessible('ECoreLiteral')
 export class ECoreLiteral {
+    static cname = 'ECoreLiteral';
     static eAnnotations: string;
     static namee: string;
     static value: string;
@@ -1028,7 +1049,9 @@ export class ECoreLiteral {
 }
 
 
+@RuntimeAccessible('ECoreReference')
 export class ECoreReference {
+    static cname = 'ECoreReference';
     static eAnnotations: string;
     static xsitype: string;
     static eType: string;
@@ -1041,7 +1064,9 @@ export class ECoreReference {
     static container: string;
 }
 
+@RuntimeAccessible('ECoreAttribute')
 export class ECoreAttribute {
+    static cname = 'ECoreAttribute';
     static eAnnotations: string;
     static xsitype: string;
     static namee: string;
@@ -1052,7 +1077,9 @@ export class ECoreAttribute {
     static upperbound: string;
 }
 
+@RuntimeAccessible('ECoreOperation')
 export class ECoreOperation {
+    static cname = 'ECoreOperation';
     static eAnnotations: string;
     static namee: string;
     static eType: string;
@@ -1064,7 +1091,9 @@ export class ECoreOperation {
     static eParameters: string;
 }
 
+@RuntimeAccessible('ECoreParameter')
 export class ECoreParameter {
+    static cname = 'ECoreParameter';
     static eAnnotations: string;
     static namee: string;
     static eType: string;
@@ -1074,12 +1103,17 @@ export class ECoreParameter {
     static unique: string;
 }
 
-export class ECoreObject{
+@RuntimeAccessible('ECoreObject')
+export class ECoreObject {
+    static cname = 'ECoreObject';
     static xmlns_xmi: string;
     static xmlns_uri: never; // "-xmlns:org.eclipse.example.modelname": "https://org/eclipse/example/modelname", <b>key is dynamic</b>
     static xmi_version: string;
 }
+
+@RuntimeAccessible('XMIModel')
 export class XMIModel {
+    static cname = 'XMIModel';
     static type: string;
     static namee: string;
 }

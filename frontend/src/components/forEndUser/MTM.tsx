@@ -25,6 +25,7 @@ import Editor from "@monaco-editor/react";
 import {on} from "events";
 import {Nearley} from "../../DSL/nearley/nearley";
 import {LanguageCache} from "../../joiner/classes";
+import Handlebars from "handlebars";
 
 
 export function parseT2M(language: string, text0: string, canThrow: boolean = false): GObject | null{
@@ -128,14 +129,49 @@ export function doM2T(data0: LPointerTargetable | Pointer | null | undefined, la
         Log.ee(msg);
         return msg;
     }
+
+    if (data.className !== 'DModel') {
+        let langObj = s.languages[language];
+        let allowPartial = langObj.m2t[langObj.m2t.engine].allowPartials;
+        if (!allowPartial) {
+            let msg = 'The language ' + language+' with engine ' + langObj.m2t.engine + ' does not allow partial serializations.\n' +
+                'Call the serialization from the root model.';
+            Log.ee(msg);
+            return msg;
+        }
+    }
+
     let func: (model: LModelElement)=>string = ()=> '';
 
+    console.log('dom2t', {data0, language, languageObj});
     switch (languageObj.engine || 'javascript') {
         default:
             let msg = 'M2T transformation failed, unsupported parser: ' + languageObj.engine;
             Log.ee(msg, {language, parser:languageObj.engine, languageObj, data0});
             return msg;
         case undefined:
+        case 'handlebars':
+            console.log('handlebars 1', {func_str});
+            let template: (obj: GObject) => string = ()=>'missing handlebars template';
+            try { template = Handlebars.compile(func_str); }
+            catch (e: any) {
+                console.error(e);
+                let msg = e?.message+'';
+                if (msg.includes('doesn\'t match ')) msg+='\ntip: did you forget a # sign before commands such as {{#if}}?'
+                template = () => msg;
+            }
+            console.log('handlebars 2', {func_str, template});
+            try { ret = template(data); }
+            catch (e: any) {
+                let msg = (e?.message||'')+'';
+                if (msg.indexOf('Error: Parse error')<=2) {
+                    if (msg.includes('ifcond')) msg+='\ntip: ifcond usage example: {{#ifCond var1 \'==\' var2}}...{{/ifcond}}'
+                }
+                ret = msg;
+            }
+            console.log('handlebars 3', {func_str, template, ret});
+            return ret;
+
         case 'javascript':
             let m2t = "("+func_str+")"; // because "function(text){return "a"}" is invalid without a function name unless i wrap it in parenthesis and turn into expression.
             try { func = eval(m2t); } catch (e) { Log.ee("M2T error", {e, m2t, language, engine: languageObj.engine, func_str, languageObj}); return "M2T transformation failed, check the logger for more info."; }
@@ -173,11 +209,20 @@ export function doT2M(data0: LPointerTargetable | Pointer | null | undefined, la
     if (!text) return;
     if (typeof (text as unknown) !== 'string') { Log.ee('T2M transformation called with an object instead of text', {text, data:data0, language}); return; }
     if (!DPointerTargetable.isD(data0)) { Log.ee('T2M transformation must be called on a modelling element, found instead: ' + typeof data0, {element:data0, text, language}); return; }
+    let data: LModelElement = LPointerTargetable.from(data0 as any);
+    let className = data.className;
+    if (className !== 'DModel') {
+        let langObj = store.getState().languages[language];
+        let allowPartial = langObj.t2m[langObj.t2m.engine].allowPartials;
+        if (!allowPartial) {
+            Log.ee('The language ' + language+' with engine ' + langObj.t2m.engine + ' does not allow partial transformations.\n' +
+                'Apply the transformation at the root model instead.');
+            return;
+        }
+    }
     let ret: GObject = parseT2M(language, text) as any;
     if (!ret) return;
-    let data: LModelElement = LPointerTargetable.from(data0 as any);
     console.log('doT2M json', {data, text, ret});
-    let className = data.className;
     if (!(data as LObject).t2m) {
         Log.ee("The T2M transformation cannot be applied yet to " + className + " elements.", {className, ret, data, language});
         return;

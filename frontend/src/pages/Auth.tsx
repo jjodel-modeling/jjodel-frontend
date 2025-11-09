@@ -123,7 +123,8 @@ function AuthPage(): JSX.Element {
             }
             Storage.write('user', user);
             //U.resetState();
-            R.navigate('/allProjects');
+            if (window.location.hash.indexOf('#/auth') !== 0) window.location.reload()
+            else R.navigate('/allProjects');
         } catch (e) {
             console.error("Login error:");
             U.alert('e', 'Unexpected error during login.', '');

@@ -957,10 +957,10 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         // thiss.isEnum = false;
         return this; }
 
-    DEnumLiteral(value?: DEnumLiteral["value"]): this { // vv4
+    DEnumLiteral(value?: DEnumLiteral["value"], literal?: DEnumLiteral['literal']): this { // vv4
         const thiss: DEnumLiteral = this.thiss as any;
         thiss.value = value as any; // undef is ok, handled in getter as automatic ordinal index
-        thiss.literal = thiss.name;
+        thiss.literal = literal ? literal : undefined as any;// (thiss.name||'').split('_').join(' ');
         this.setExternalPtr(thiss.father, "literals", "+=");
         return this; }
 
@@ -3772,6 +3772,7 @@ type ParserName = string;
 export class ParserData{
     str!: DocString<'parser code'>;
     test_text?: string;
+    allowPartials!: boolean;
 }
 export type LanguageObject = Dictionary<ParserName, ParserData> & {engine: ParserName};
 

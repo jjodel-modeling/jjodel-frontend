@@ -1,5 +1,5 @@
 {
-  "name": "Jjodel",
+  "name": "jjodel",
   "version": "2.0",
   "private": false,
   "homepage": ".",
@@ -26,6 +26,7 @@
     "bootstrap": "^5.3.5",
     "bootstrap-icons": "^1.11.3",
     "buffer": "^6.0.3",
+    "handlebars": "^4.7.8",
     "http-proxy-middleware": "^3.0.5",
     "jquery": "^3.7.1",
     "jqueryui": "^1.11.1",
@@ -62,7 +63,8 @@
     "use-state-if-mounted": "^1.0.7",
     "util": "^0.12.5",
     "web-vitals": "^4.2.4",
-    "webpack-cli": "4.9.1"
+    "webpack-cli": "4.9.1",
+    "xml-formatter": "^3.6.7"
   },
   "overrides": {
     "typescript": "^5.8.3"
