@@ -1,5 +1,5 @@
 {
-  "name": "Jjodel",
+  "name": "jjodel",
   "version": "2.0",
   "private": false,
   "homepage": ".",
@@ -26,6 +26,7 @@
     "bootstrap": "^5.3.5",
     "bootstrap-icons": "^1.11.3",
     "buffer": "^6.0.3",
+    "handlebars": "^4.7.8",
     "http-proxy-middleware": "^3.0.5",
     "jquery": "^3.7.1",
     "jqueryui": "^1.11.1",
@@ -62,7 +63,8 @@
     "use-state-if-mounted": "^1.0.7",
     "util": "^0.12.5",
     "web-vitals": "^4.2.4",
-    "webpack-cli": "4.9.1"
+    "webpack-cli": "4.9.1",
+    "xml-formatter": "^3.6.7"
   },
   "overrides": {
     "typescript": "^5.8.3"
@@ -73,7 +75,7 @@
     "poststart": "echo to debug http://localhost:3000/ click this using CTRL+SFHIT",
     "test": "react-app-rewired test",
     "serve": "serve -s build",
-    "postinstall": "npm i react-json-view --force --no-save",
+    "posti": "npm i react-json-view --force --no-save",
     "______________________________________deploy________________________________": "",
     "build": "react-app-rewired build",
     "postbuild": "",
@@ -136,15 +138,14 @@
     "ts-node": "^10.9.2"
   },
   "erasable_comments": {
-    "commentoldversions": "node: 16.15.0, npm:10.9.2 react 16?",
-    "commentnewversions": "node: 23.11.0, npm:10.9.2 react 18",
+    "current_tested_versions": "node: 23.11.0, npm:10.9.2 react 18",
     "upgrading": [
       "check new node version, use nvm install <nodeversion>",
       "nvm use <nodeversion>",
       "npm i -g npm@latest",
       "npm outdated",
       "for the outdateds do npm update <pkg>@latest",
-      "if you do just 'npm update', it will update only non breaking version numbers (the second one?)",
+      "if you do just 'npm update', it will update only non breaking version numbers",
       "npm install -g npm-check-updates",
       "ncu --upgrade",
       "downgrade webpack-cli to < 5 (missing node polyfills) or replace jsx-transform",

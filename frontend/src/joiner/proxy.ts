@@ -7,7 +7,7 @@ import {
     LModelElement,
     Pointer,
     Dictionary,
-    DModelElement,
+    DModelElement, transientProperties, Uobj,
 } from "../joiner";
 import {
     windoww,
@@ -50,6 +50,13 @@ export class LogicContext<
         this.data = data;
         this.proxyObject = proxyObject;
         this.write = proxyObject as any;
+        if (U.liveStateChanges && data) {
+            let id = data.id;
+            let newd = transientProperties.livePatches?.idlookup?.[id];
+            // if (newd) this.data = U.objectMergeInPlace({...data}, newd);
+            // if (newd) this.data = Uobj.applyObjectDelta(this.data, newd, false);
+            if (newd) this.data = newd as any;
+        }
     }
     /*
         saveToRedux(propkey: "keyof data" | string, val: "typeof data[path]" | any): void { // todo: ask non stackoverflow

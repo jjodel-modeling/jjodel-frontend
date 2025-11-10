@@ -122,22 +122,14 @@ function useClickOutside(ref: any, onClickOutside: any) {
 /*  Control */
 
 const ControlComponent = (props: ControlProps, children?:ReactNode) => {
-    
     const [controlOpen, setControlOpen] = useStateIfMounted(false);
-
-    const toggleValue = () => {
-        setControlOpen(!controlOpen);
-
-    }
+    const toggleValue = () => setControlOpen(!controlOpen);
 
 
     function onClick(e: any){
-        console.log('setup hide control');
-        U.clickedOutside(e, ()=> {
-            console.log('hide control');
-            setControlOpen(false)
-        });
+        U.clickedOutside(e, ()=> setControlOpen(false));
     }
+
     return (<div className={`jjodel-control-root`} onClick={onClick}>
         <div className={`jjodel-control d-flex flex-row ${controlOpen ? 'opened' : 'closed'}`}>
             <div className={'control-header'}>
@@ -147,7 +139,7 @@ const ControlComponent = (props: ControlProps, children?:ReactNode) => {
             {props.children || children}
         </div>
         <div className={'jjodel-control-icon'}>
-            <i onClick={(e) => {toggleValue()}} className="bi bi-toggles"/>
+            <i onClick={toggleValue} className="bi bi-toggles"/>
         </div>
     </div>);
 }
@@ -170,23 +162,20 @@ type SliderProps = {
 }
 
 const SliderComponent = (props: SliderProps) => {
-
-    const min = props.min ? props.min : 0;
-    const max = props.max ? props.max : 10;
-    const step = props.step ? props.step : 1;
+    const min = props.min ?? 0;
+    const max = props.max ?? 10;
+    const step = props.step || 1;
     const defaultValue = props.defaultValue ? props.defaultValue : max;
-    const name = props.name;
+    const name = props.name || '';
 
     useEffect(
         () => {
-            // @ts-ignore
-            props.node.state = {[name] : defaultValue};
-        }, [/*name, defaultValue*/]
+            if (props.node) props.node.state = {[name] : defaultValue};
+        }, [props.node?.id, name]
     );
 
     function updateValue(value: number) {
-        // @ts-ignore
-        props.node.state = {[name]: value};
+        if (props.node) props.node.state = {[name]: value};
     }
 
 
@@ -196,10 +185,8 @@ const SliderComponent = (props: SliderProps) => {
 
                 <div className={'track'}
                     style={{transition: 'width 0.3s', position: 'relative', left: '10px',
-                        width: `calc(((100%/${max} - 8px) * ${props.node.state[name as string]}))`}}
-                >
-
-                </div>
+                        width: `calc(((100%/${max} - 8px) * ${props.node?.state[name] || 0}))`}}
+                />
 
                 <input
                     type={'range'}
@@ -209,7 +196,7 @@ const SliderComponent = (props: SliderProps) => {
                     onChange={(e)=>{updateValue(+e.target.value)}} />
 
                 {/* @ts-ignore */}
-                {props.title && <div className={'tip'}>{props.title} <label>{props.node.state[name]}</label></div>}
+                {props.title && <div className={'tip'}>{props.title} <label>{props.node?.state[name]}</label></div>}
                 </div>
             }
         </>);
@@ -234,6 +221,7 @@ type ToggleProps = {
     size?: string;
     style?: React.CSSProperties;
     title?: string;
+    node?: LGraphElement;
 };
 
 const ToggleComponent_Obsolete = (props: ToggleProps) => {
@@ -244,22 +232,19 @@ const ToggleComponent_Obsolete = (props: ToggleProps) => {
 
     useEffect(
         () => {
-            // @ts-ignore
-            props.node.state = {[props.name] : defaultValue};
-        }, [/*props.name, defaultValue*/]
+            if (!props.node) return;
+            if (!(props.name in props.node.state)) props.node.state = {[props.name] : defaultValue};
+        }, [props.node?.id, props.name]
     );
 
     function updateValue(value: boolean) {
-        // @ts-ignore
-        props.node.state = {[props.name]: value};
+        if (props.node) props.node.state = {[props.name]: value};
     }
 
     function toggleValue() {
         const newValue = !value;
         setValue(newValue);
-
-        // @ts-ignore
-        props.node.state = {[props.name]: newValue};
+        if (props.node) props.node.state = {[props.name]: newValue};
     }
     // // updateValue(+e.target.value) 
 
@@ -289,15 +274,17 @@ const Toggle_Obsolete = (props: ToggleProps, children: ReactNode = []): ReactEle
 
 
 /* Zoom */
-    type ZoomProps = {
-        node: DGraphElement;   
-        children?:ReactNode;
-    }
+type ZoomProps = {
+    node?: DGraphElement;
+    children?: ReactNode;
+}
 
-    const ZoomComponent = (props: ZoomProps) => {
-   
+const ZoomComponent = (props: ZoomProps) => {
+
     const zoomIn = () => {
+        if (!props.node) return;
         TRANSACTION('Zoom in', () => {
+            if (!props.node) return;
             SetFieldAction.new(props.node, 'zoom.x' as any, 1.1, '*=');
             SetFieldAction.new(props.node, 'zoom.y' as any, 1.1, '*=');
         })
@@ -305,17 +292,18 @@ const Toggle_Obsolete = (props: ToggleProps, children: ReactNode = []): ReactEle
         // props.node.zoom = {x: props.node.zoom.x + 0.1, y: props.node.zoom.y + 0.1}
     }
     const zoomOut = () => {
+        if (!props.node) return;
         TRANSACTION('Zoom out', () => {
+            if (!props.node) return;
             SetFieldAction.new(props.node, 'zoom.x' as any, 1.1, '/=');
             SetFieldAction.new(props.node, 'zoom.y' as any, 1.1, '/=');
         })
-        // @ts-ignore
-        // props.node.zoom = {x: props.node.zoom.x - 0.1, y: props.node.zoom.y - 0.1}
     };
     const zoomReset = () => {
+        if (!props.node) return;
         TRANSACTION('Zoom reset', () => {
-            // @ts-ignore
-            props.node.zoom = {x: 1, y: 1};
+            if (!props.node) return;
+            props.node.zoom = new GraphPoint(1, 1);
         })
     };
 
@@ -329,8 +317,8 @@ const Toggle_Obsolete = (props: ToggleProps, children: ReactNode = []): ReactEle
                 <div className={'zoom-out'} onClick={() => zoomOut()}></div>
             </Tooltip>
 
-            {//@ts-ignore 
-                props.node.zoom.x !== 1 && <Tooltip tooltip={'Zoom reset'} inline position={'left'} offsetX={10}>
+            {
+                props.node?.zoom.x !== 1 && <Tooltip tooltip={'Zoom reset'} inline position={'left'} offsetX={10}>
                     <div className={'zoom-reset'} onClick={() => zoomReset()}></div>
                 </Tooltip>
             }

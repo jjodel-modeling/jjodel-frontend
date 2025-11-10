@@ -1,4 +1,4 @@
-import { type Language } from '../joiner';
+import {type Language, transientProperties, Uobj} from '../joiner';
 import {
     Asterisk,
     Circle,
@@ -99,6 +99,12 @@ export class DState extends DPointerTargetable{
         return ds; // do not trigger persist and CreateElement for state, or it will be stored in idlookup making a loop
     }
 
+    static getState(patched: boolean = true): DState {
+        if (!patched) return store.getState();
+        else return transientProperties.livePatches || store.getState();
+        // else return Uobj.applyObjectDelta(store.getState(), transientProperties.livePatches, false)
+    }
+
     // no need to manually update for each update
     version:{n:number, date:string, conversionList: number[]} = {n:VersionFixer.get_highestversion(), date: new Date().toString(), conversionList: []};
     timestamp!: number;
@@ -195,7 +201,9 @@ export class DState extends DPointerTargetable{
     VIEWS_RECOMPILE_jsCondition: Pointer<DViewElement>[] = [];
     VIEWS_RECOMPILE_ocl: Pointer<DViewElement>[] = [];
     VIEWS_RECOMPILE_events: (Pointer<DViewElement> | {vid: Pointer<DViewElement>, keys: string[] | undefined})[] = [];
+    RECOMPILE_LANGUAGE: {engine: string, language: string}[] = [];
     VIEWS_RECOMPILE_all?: boolean | Pointer<any>[];
+
     ELEMENT_CREATED: Pointer[] = [];
     ELEMENT_DELETED: Pointer[] = [];
 

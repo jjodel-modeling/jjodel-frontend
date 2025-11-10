@@ -3,7 +3,7 @@ import {
     GObject,
     GraphPoint, DViewPoint, DViewElement, PointedBy,
     DProject, LViewElement,
-    DV, DPackage,
+    DV, DPackage, DObject,
 } from "../joiner";
 import {
     Defaults, DGraphElement,
@@ -252,6 +252,24 @@ everytime you put hands into a D-Object shape or valid values, you should docume
                     if (d.className === 'DClass') p.classes.push(ptr);
                     else if (d.className === 'DEnumerators') p.enumerators.push(ptr);
                 }
+            }
+        }
+        return s;
+    }
+    private ['2.205 -> 2.206'](s: DState): DState {
+        if (!s.RECOMPILE_LANGUAGE) s.RECOMPILE_LANGUAGE = [];
+        for (let e of Object.values(s.idlookup) as any[]) {
+            if (!e || typeof e !== 'object' || !e.className || !e.id) continue;
+            if (!e.__childrenToSort) e.__childrenToSort = [];
+            // fix parameter having default type "operation"
+            if (e.className === 'DParameter' && e.type) {
+                let type = this.d(e.type, s);
+                if (type && type.className === 'DOperation') e.type = Pointers.ESTRING;
+            }
+
+            if (e.className === 'DValue' && e.name?.toLowerCase() === 'name' && e.values[0]) {
+                let o: DObject = this.d(e.father, s);
+                if (o) o.name = e.values[0];
             }
         }
         return s;

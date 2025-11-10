@@ -12,10 +12,10 @@ import {
     orArr,
     Pack1,
     Pointer,
-    Pointers,
+    Pointers, reducer,
     RuntimeAccessible,
     RuntimeAccessibleClass,
-    store,
+    store, transientProperties,
     U,
     unArr,
     windoww
@@ -154,6 +154,7 @@ function FINAL_END(path?: string, oldval?: any, newval?: any, desc?:string): boo
     if (t.hasAborted) {
         t.pendingActions = [];
         t.hasAborted = false;
+        transientProperties.livePatches = store.getState();
         return false;
     }
     let ret: boolean = false;
@@ -304,6 +305,9 @@ export class Action extends RuntimeAccessibleClass {
             return false;
         }
         this.hasFired++;
+        if (U.liveStateChanges) {
+            transientProperties.livePatches = reducer(transientProperties.livePatches || store.getState(), this, true);
+        }
         if (t.hasBegun) {
             t.pendingActions.push(this);
         } else {

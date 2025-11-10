@@ -5,13 +5,15 @@
 	Author:  Stefan Goessner/2006
 	Web:     http://goessner.net/
 */
+import xmlFormat from 'xml-formatter';
+
 var X = {
    toObj: function(xml) {
       var o = {};
       if (xml.nodeType==1) {   // element node ..
          if (xml.attributes.length)   // element with attributes  ..
             for (var i=0; i<xml.attributes.length; i++)
-               o["@"+xml.attributes[i].nodeName] = (xml.attributes[i].nodeValue||"").toString(); // dam: qua parsa attribs
+               o[window.ECoreParser.prefix+xml.attributes[i].nodeName] = (xml.attributes[i].nodeValue||"").toString(); // dam: qua parsa attribs
          if (xml.firstChild) { // element has child nodes ..
             var textChild=0, cdataChild=0, hasElementChild=false;
             for (var n=xml.firstChild; n; n=n.nextSibling) {
@@ -24,7 +26,7 @@ var X = {
                   X.removeWhite(xml);
                   for (var n=xml.firstChild; n; n=n.nextSibling) {
                      if (n.nodeType == 3)  // text node
-                        o["#text"] = X.escape(n.nodeValue);
+                        o["#text"] = X.escape(n.nodeValue, true);
                      else if (n.nodeType == 4)  // cdata node
                         o["#cdata"] = X.escape(n.nodeValue);
                      else if (o[n.nodeName]) {  // multiple occurence of element ..
@@ -41,14 +43,14 @@ var X = {
                   if (!xml.attributes.length)
                      o = X.escape(X.innerXml(xml));
                   else
-                     o["#text"] = X.escape(X.innerXml(xml));
+                     o["#text"] = X.escape(X.innerXml(xml), true);
                }
             }
             else if (textChild) { // pure text
                if (!xml.attributes.length)
-                  o = X.escape(X.innerXml(xml));
+                  o = X.escape(X.innerXml(xml), true);
                else
-                  o["#text"] = X.escape(X.innerXml(xml));
+                  o["#text"] = X.escape(X.innerXml(xml), true);
             }
             else if (cdataChild) { // cdata
                if (cdataChild > 1)
@@ -63,7 +65,7 @@ var X = {
       else if (xml.nodeType==9) { // document.node
          o = X.toObj(xml.documentElement);
       }
-      else alert("unhandled xml node type: " + xml.nodeType);
+      else console.error("unhandled xml node type: " + xml.nodeType, {xml, nodetype:xml.nodeType});
       return o;
    },
    toJson: function(o, name, ind) {
@@ -118,11 +120,15 @@ var X = {
       }
       return s;
    },
-   escape: function(txt) {
-      return txt.replace(/[\\]/g, "\\\\")
+   escape: function(txt, trimText = true) {
+      if (trimText) txt = txt.trim();
+      else console.warn('trim text', {txt});
+      txt = txt.replace(/[\\]/g, "\\\\")
           .replace(/[\"]/g, '\\"')
           .replace(/[\n]/g, '\\n')
           .replace(/[\r]/g, '\\r');
+      return txt;
+      // /[^ \f\n\r\t\v]/
    },
    removeWhite: function(e) {
       e.normalize();
@@ -146,13 +152,121 @@ var X = {
       return e;
    }
 };
-export function xml2json(xml, tab = '    '/*XML_DOM, string*/) {
-   if (xml.nodeType == 9) // document node
-      xml = xml.documentElement;
-   var json = X.toJson(X.toObj(X.removeWhite(xml)), xml.nodeName, "\t");
+
+function parseXml(xml/*:string*/, depth=0) {
+   var dom = null;
+   if (window.DOMParser) {
+      // try {
+         dom = window.U.parseXml(xml); // new DOMParser()).parseFromString(xml, "text/xml");
+      // } catch (e) { dom = null;  if (!depth) return parseXml('<error>'+e.message+'</error>', depth+1); }
+
+   }
+   else if (window.ActiveXObject) {
+      try {
+         // eslint-disable-next-line no-undef
+         dom = new ActiveXObject('Microsoft.XMLDOM');
+         dom.async = false;
+         // parse error ..
+         if (!dom.loadXML(xml)) window.Log.ee('Unknown error in XMI', dom.parseError);
+      }
+      catch (e) { dom = null; }
+   }
+   else window.Log.ee('Your browser cannot parse xml strings!');
+   return dom;
+}
+
+export function xml2json(xml/*document|string*/, tab = '    '/*XML_DOM, string*/, asString = false) {
+   if (typeof xml === 'string') try {
+     xml = parseXml(xml);
+   } catch (e) {
+      return JSON.stringify({error: e.message});
+      //if (e.contains('StartTag: invalid element name')) return 'XMI error: invalid tag or '
+   }
+   // document node
+   if (xml.nodeType == 9) xml = xml.documentElement;
+   let obj = X.toObj(X.removeWhite(xml));
+   console.log('xml2json xsi', {obj, xml});
+   for (let k in obj) if (k === 'xsitype' || k === window.ECoreParser.prefix+'xsitype') { obj[window.ECoreClass.xsitype] = obj[k]; delete obj[k];}
+   if (!asString) return obj;
+   var json = X.toJson(obj, xml.nodeName, "\t");
    return "{\n" + tab + (tab ? json.replace(/\t/g, tab) : json.replace(/\t|\n/g, "")) + "\n}";
 }
-export function xml2jsonobj(xml, tab= '    '){
-   return X.toObj(X.removeWhite(xml));
+
+export function xml2jsonobj(xml, tab= '    '){ return X.xml2json(xml, tab, false); }
+export function xml2jsonstr(xml, tab= '    '){ return X.xml2json(xml, tab, true); }
+
+
+export function json2xml(o, tab/*obj, string*/) {
+   if (typeof o === 'string') {
+      try { o = JSON.parse(o); } catch(e) { o = {error: "XML.fromJSON parameter is not a valid JSON object or string"}; }
+   }
+   if (typeof o === 'object') {
+      let rootkey = '';
+      if (o[window.ECoreClass.xsitype]) {
+         switch (o[window.ECoreClass.xsitype].substring('ecore:E'.length)) {
+             // 'eStructuralFeatures', 'eParameters', 'eClassifiers', 'eOperations', 'eSubpackages', 'eLiterals'
+            case 'subPackages': rootkey = window.ECorePackage.eSubpackages; break;
+            case 'Package': rootkey = window.ECoreModel.packages; break;
+            case 'Enum':
+            case 'Class': rootkey = window.ECorePackage.eClassifiers; break;
+            // case 'Operations': rootkey = window.ECoreClass.eOperations; break; doesn't have xsi:type
+            // case 'Parameters': rootkey = window.ECoreOperation.eParameters; break; doesn't have xsi:type
+            case 'Attribute':
+            case 'Reference': rootkey = window.ECoreClass.eStructuralFeatures; break;
+            case 'Literals': rootkey = window.ECoreEnum.eLiterals; break;
+         }
+      } else if (window.ECoreOperation.eType in o) {
+         if (window.ECoreOperation.eexceptions in o) rootkey = window.ECoreClass.eOperations;
+         else rootkey = window.ECoreOperation.eParameters;
+      } else if (window.ECorePackage.nsURI in o || window.ECorePackage.nsPrefix in o) rootkey = window.ECorePackage.eSubpackages;
+      else if (window.ECoreLiteral.literal in o || window.ECoreLiteral.value in o) rootkey = window.ECoreEnum.eLiterals;
+      else if (Object.keys(o).length === 1 && window.ECoreLiteral.namee in o) rootkey = window.ECoreEnum.eLiterals;
+
+      if (rootkey) o = {[rootkey]:o};
+   }
+   var toXml = function(v, name, ind) {
+      var xml = "";
+      if (v instanceof Array) {
+         for (var i=0, n=v.length; i<n; i++)
+            xml += ind + toXml(v[i], name, ind+"\t") + "\n";
+      }
+      else if (typeof(v) == "object") {
+         var hasChild = false;
+         xml += ind + "<" + name;
+         for (var m in v) {
+            if (m.charAt(0) == "@")
+               xml += " " + m.substr(1) + "=\"" + v[m].toString() + "\"";
+            else
+               hasChild = true;
+         }
+         xml += (hasChild ? ">" : "/>") + '\n'+ind; // damiano aggiunta: + '\n'+ind;
+         if (hasChild) {
+            for (var m in v) {
+               if (m == "#text")
+                  xml += v[m];
+               else if (m == "#cdata")
+                  xml += "<![CDATA[" + v[m] + "]]>";
+               else if (m.charAt(0) != "@")
+                  xml += toXml(v[m], m, ind+"\t");
+            }
+            xml += (xml.charAt(xml.length-1)=="\n"?ind:"") + "</" + name + ">" + '\n'+ind; // damiano aggiunta: + '\n'+ind;
+         }
+      }
+      else {
+         xml += ind + "<" + name + ">" + v.toString() +  "</" + name + ">" + '\n'+ind; // damiano aggiunta: + '\n'+ind;
+      }
+      return xml;
+   }, xml="";
+   for (var m in o) xml += toXml(o[m], m, "");
+
+   console.log('json2xml pre formatting', {xml});
+   return xmlFormat(xml);
+   // return xml;
+   // let doc = XML.parse(xml);
+   // return new XMLSerializer().serializeToString(doc);
+   // return tab ? xml.replace(/\t/g, tab) : xml.replace(/\t|\n/g, "");*/
 }
-// damiano: i needX.toObj(X.removeWhite(xml))
+
+export const XML = {parse: parseXml, toJson:xml2json, toJSON:xml2json, toJsonObject: xml2jsonobj, toJsonString: xml2jsonstr, fromJSON:json2xml};
+export const XMI = XML;
+// damiano: i need X.toObj(X.removeWhite(xml))

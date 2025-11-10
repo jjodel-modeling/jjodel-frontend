@@ -54,8 +54,6 @@ function AuthPage(): JSX.Element {
         setDirty(!success);
     }
 
-
-
     const reset_password = async (): Promise<boolean> => {
 
         try {
@@ -109,8 +107,7 @@ function AuthPage(): JSX.Element {
             const claims = AuthApi.readJwtToken(raw.token);
             console.log('login claims', {response, raw, claims});
             if (!claims) { U.alert('e', 'Invalid token.', ''); return false; }
-            AuthApi.storeSessionData(raw.token, claims.exp || 0, undefined);
-            AuthApi.storeSessionData(raw.refreshToken, claims.refreshTokenExpiryTime || 0, undefined);
+            AuthApi.storeSessionData(raw.token, claims.exp || 0, raw.refreshToken||'', raw.refreshTokenExpiryTime || 0, undefined);
 
             // const user: DUser = DUser.new(claims.name, '', claims.nickname, '',  '', false, claims.email,  raw.token, claims._Id, claims.id, true);
             const user: DUser|null = await UsersApi.getUserByGUID(claims.id, raw, claims);
@@ -126,7 +123,8 @@ function AuthPage(): JSX.Element {
             }
             Storage.write('user', user);
             //U.resetState();
-            R.navigate('/allProjects');
+            if (window.location.hash.indexOf('#/auth') !== 0) window.location.reload()
+            else R.navigate('/allProjects');
         } catch (e) {
             console.error("Login error:");
             U.alert('e', 'Unexpected error during login.', '');
@@ -137,7 +135,6 @@ function AuthPage(): JSX.Element {
       };
 
     const register = async(): Promise<boolean> => {
-
         if (password !== passwordCheck) {
             U.alert('e', 'The two passwords are different', '');
             return false;
@@ -560,7 +557,6 @@ return(<section className={`w-100 h-100 login bg ${action === 'register' ? 'regi
             </>}
 
             {action === 'login' &&
-
             <>
                 {/* LOGIN */}
                 <label>
@@ -594,7 +590,6 @@ return(<section className={`w-100 h-100 login bg ${action === 'register' ? 'regi
             </>}
 
             {action === 'retrieve-password' &&
-
             <>
                 {/* RETRIEVE PASSWORD */}
                 <label>

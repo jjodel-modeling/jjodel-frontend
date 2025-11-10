@@ -59,10 +59,10 @@ class AuthApi {
             claims.iss = decoded[JwtPayloadKey.Iss];
             claims.aud = decoded[JwtPayloadKey.Aud];
             claims._Id = decoded[JwtPayloadKey._Id];
-            claims._decoded = decoded;
+           //  claims._decoded = decoded;
             return claims;
         } catch (error) {
-            Log.eDevv("token decode error:", {error, claims, token, decoded});
+            console.error("token decode error:", {error, claims, token, decoded});
             return null;
         }
     }

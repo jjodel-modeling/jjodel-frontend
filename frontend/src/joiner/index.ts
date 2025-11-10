@@ -8,13 +8,24 @@ import * as jsxtt from 'jsx-transform/lib/jsx.js';
 import $$ from 'jquery';
 import {ReactNode} from "react";
 import MSelect from 'react-select'
-import * as _pr_json2xml from '../common/libraries/prj_json2xml.js';
 import * as _pr_xml2json from '../common/libraries/prj_xml2json.js';
-
-// true imports for this file (should all be import type
+// true imports for this file (should all be import type)
 import type {DocString} from './types';
 import type {U as UType} from "../common/U";
+import Handlebars from 'handlebars';
+
 import type {Log as LogType} from "../common/Log";
+
+var windoww = (window as any);
+windoww.windoww = windoww;
+windoww.Handlebars = Handlebars;
+export const XML = _pr_xml2json.XML;
+export const XMI = _pr_xml2json.XMI;
+windoww.XML = XML;
+windoww.XMI = XMI;
+export const prxml2json = _pr_xml2json;
+windoww.prxml2json = prxml2json;
+
 
 var pathDataPolyfill = require("path-data-polyfill") // needs to be required (and automatically executed) before the creation of any svg element
 
@@ -29,16 +40,10 @@ function newRequire(...args: any): any {
 pathDataPolyfill.prototype.require = newRequire;
 */
 
-var windoww = (window as any);
-windoww.windoww = windoww;
 export const MultiSelect = MSelect;
 
 windoww.$ = $$;
 export const $: JQueryStatic = $$;
-export const prjson2xml = _pr_json2xml;
-export const prxml2json = _pr_xml2json;
-windoww.prjson2xml = prjson2xml;
-windoww.prxml2json = prxml2json;
 
 // import types
 //import {$s, GraphPoint, GraphSize, IPoint, ISize, Log, Point, Size, U} from "../common/U";
@@ -117,7 +122,7 @@ export {
     ECoreEnum,
     ECoreAttribute,
     ECoreReference,
-    EcoreLiteral,
+    ECoreLiteral,
     ECoreOperation,
     ECoreParameter,
     ECoreObject,

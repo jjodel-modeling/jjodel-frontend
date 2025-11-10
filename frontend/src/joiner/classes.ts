@@ -1,3 +1,4 @@
+
 import {Mixin} from "ts-mixer";
 import type {
     DEdge,
@@ -134,6 +135,8 @@ import {
     TRANSACTION,
     U
 } from "./index";
+import type {Grammar, ParserOptions, Parser} from "nearley";
+import type nearley from "nearley";
 import {LayoutData} from "rc-dock";
 import {OclEngine} from "@stekoe/ocl.js";
 import React, {ReactNode} from "react";
@@ -695,7 +698,9 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         let thiss: DParameter = this.thiss as any;
         thiss.defaultValue = defaultValue;
         this.setExternalPtr(thiss.father, "parameters", "+=");
-        return this; }
+        return this;
+    }
+
     DStructuralFeature(): this {
         if (this.thiss.className === 'DOperation') return this;
         // if (!this.persist) return this;
@@ -874,11 +879,14 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
                     type = this.fatherPtr as Pointer<DClass> || undefined;
                     break;
                 case 'DOperation':
+                    type = this.fatherPtr as Pointer<DClass>;
+                    break;
                 case 'DParameter':
-                    type = this.fatherPtr as Pointer<DClass> || Pointers.ESTRING;
+                    // type = DPointerTargetable.fromPointer(this.fatherPtr).father as Pointer<DClass>
+                    type = Pointers.ESTRING;
                     break;
                 case 'DAttribute':
-                type = Pointers.ESTRING; break;
+                    type = Pointers.ESTRING; break;
             }
         }
         this.setPtr("type", type);
@@ -949,10 +957,10 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         // thiss.isEnum = false;
         return this; }
 
-    DEnumLiteral(value?: DEnumLiteral["value"]): this { // vv4
+    DEnumLiteral(value?: DEnumLiteral["value"], literal?: DEnumLiteral['literal']): this { // vv4
         const thiss: DEnumLiteral = this.thiss as any;
         thiss.value = value as any; // undef is ok, handled in getter as automatic ordinal index
-        thiss.literal = thiss.name;
+        thiss.literal = literal ? literal : undefined as any;// (thiss.name||'').split('_').join(' ');
         this.setExternalPtr(thiss.father, "literals", "+=");
         return this; }
 
@@ -1325,7 +1333,7 @@ export class DPointerTargetable extends RuntimeAccessibleClass {
     public static logic: typeof LPointerTargetable;
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
-    static pendingCreation: Record<Pointer<DPointerTargetable, 1, 1>, DPointerTargetable> = {};
+    static pendingCreation: Dictionary<Pointer, DPointerTargetable> = {};
     clonedCounter?: number;
     _storePath?: string[];
     _subMaps?: Dictionary<string, boolean>;
@@ -1460,6 +1468,10 @@ export class DPointerTargetable extends RuntimeAccessibleClass {
 
 
     /*protected */derivedMap!: Dictionary<string, DerivedD>;
+
+    static isD(data: any): data is DPointerTargetable {
+        return (data && data.className && data.id);
+    }
 }
 
 RuntimeAccessibleClass.set_extend(RuntimeAccessibleClass, DPointerTargetable);
@@ -3757,9 +3769,16 @@ export enum EModelElements{
 }
 
 type ParserName = string;
-export type LanguageObject = Dictionary<ParserName, {str:DocString<'parser code'>, test_text?: string}> & {engine: ParserName};
+export class ParserData{
+    str!: DocString<'parser code'>;
+    test_text?: string;
+    allowPartials!: boolean;
+}
+export type LanguageObject = Dictionary<ParserName, ParserData> & {engine: ParserName};
 
+@RuntimeAccessible('Language')
 export class Language {
+    static cname = 'Language';
     m2t: LanguageObject;
     t2m: LanguageObject;
     edited: boolean;
@@ -3918,10 +3937,16 @@ type TransientPropertiesByGraphTab = Dictionary<Pointer<DViewElement, number>> &
     4) node stuff never? or maybe entire nodes?
     other data or view properties?*/
 };
+
+export class LanguageCache{
+    grammar!: nearley.Grammar;
+}
 export const transientProperties = {
     node: {} as Dictionary<Pointer<DGraphElement>, NodeTransientProperties>,
     view: {} as Dictionary<Pointer<DViewElement>, ViewTransientProperties>,
     modelElement: {} as Dictionary<Pointer<DModelElement>, DataTransientProperties>,
+    language: {} as Dictionary<DocString<'Language like ecore'>, Dictionary<DocString<'Engine like nearley, js'>, LanguageCache>>,
+    livePatches: {} as DState, //Partial<DState>,
 };
 (window as any).transient = (window as any).transientProperties = transientProperties;
 // transientProperties.nodes[nid].viewScores[vid]?.[pvid as string];

@@ -572,7 +572,7 @@ ret .b = 3
 
 // then add to it: content of props, constants, usageDeclarations
 
-export function reducer(oldState: DState = initialState, action: Action): DState {
+export function reducer(oldState: DState = initialState, action: Action, liveChange: boolean = false): DState {
     if (U.navigating) return oldState;
     if (!windoww.jjactions) windoww.jjactions = [];
     windoww.jjactions.push(action);
@@ -601,6 +601,7 @@ function unsafereducer(oldState: DState = initialState, action: Action): DState 
 
     const ret = _reducer(oldState, action);
     if (ret === oldState) return oldState;
+    if (!ret) return ret;
     ret.idlookup.__proto__ = DPointerTargetable.pendingCreation as any;
     // client synchronization stuff
     if (Collaborative.online) Collaborative.send(action);
@@ -641,6 +642,16 @@ function unsafereducer(oldState: DState = initialState, action: Action): DState 
     ret.ELEMENT_DELETED = [];
 
     if (ret.VIEWS_RECOMPILE_all === true) ret.VIEWS_RECOMPILE_all = Object.keys(ret.idlookup);
+    if (ret.RECOMPILE_LANGUAGE.length) {
+        for (let {engine, language} of ret.RECOMPILE_LANGUAGE) {
+            switch (engine) {
+                case 'nearley':
+                default:
+                    let transient = transientProperties.language[language]?.[engine];
+                    if (transient) delete transientProperties.language[language][engine];
+            }
+        }
+    }
     if ((ret.VIEWS_RECOMPILE_all as Pointer[])?.length) {
         let resetAllNodes: boolean = false;
         let sk: keyof DState;

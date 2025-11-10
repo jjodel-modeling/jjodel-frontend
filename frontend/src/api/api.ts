@@ -32,6 +32,7 @@ class Api {
             } else console.error("expired token", {exp, at: Api.token, st: Storage.read('token')});
         }
         console.error("invalid token", {at: Api.token, st: Storage.read('token')});
+        Api.token = null as any; // todo: in refreshtoken set new token both here and in localstorage, for revoke delete it from both
         return false;
     }
 

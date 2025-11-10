@@ -1,3 +1,4 @@
+import Handlebars from "handlebars";
 import {
     AttribETypes,
     CoordinateMode,
@@ -119,6 +120,40 @@ for (let k in wComponents) {
 }
 
 windoww.enumerators = {};
+// @ts-ignore
+function handlebarsIfCond(v1, operator, v2, options) {
+    // @ts-ignore
+    console.log('handlebars helper ifCond', {thiss:this as any, arguments, v1, operator, v2, options});
+    switch (operator) {
+        case '==': // @ts-ignore
+            return (v1 == v2) ? options.fn(this) : options.inverse(this);
+        case '===': // @ts-ignore
+            return (v1 === v2) ? options.fn(this) : options.inverse(this);
+        case '!=': // @ts-ignore
+            return (v1 != v2) ? options.fn(this) : options.inverse(this);
+        case '!==': // @ts-ignore
+            return (v1 !== v2) ? options.fn(this) : options.inverse(this);
+        case '<': // @ts-ignore
+            return (v1 < v2) ? options.fn(this) : options.inverse(this);
+        case '<=': // @ts-ignore
+            return (v1 <= v2) ? options.fn(this) : options.inverse(this);
+        case '>': // @ts-ignore
+            return (v1 > v2) ? options.fn(this) : options.inverse(this);
+        case '>=': // @ts-ignore
+            return (v1 >= v2) ? options.fn(this) : options.inverse(this);
+        case '&&': // @ts-ignore
+            return (v1 && v2) ? options.fn(this) : options.inverse(this);
+        case '||': // @ts-ignore
+            return (v1 || v2) ? options.fn(this) : options.inverse(this);
+        default: // @ts-ignore
+            return options.inverse(this);
+    }
+}
+Handlebars.registerHelper('ifCond', handlebarsIfCond);
+Handlebars.registerHelper('ifcond', handlebarsIfCond);
+Handlebars.registerHelper('ifc', handlebarsIfCond);
+Handlebars.registerHelper('ifC', handlebarsIfCond);
+Handlebars.registerHelper('iff', handlebarsIfCond);
 
 
 (window as any).ShortAttribETypes = ShortAttribETypes;

@@ -10,7 +10,6 @@ import {
     Log,
     U,
     LPointerTargetable,
-    prjson2xml,
     prxml2json,
     store,
     RuntimeAccessible,
@@ -20,7 +19,7 @@ import {
     Debug,
     DViewElement,
     transientProperties,
-    LUser, DProject
+    LUser, DProject, XML
 } from '../../joiner';
 import {ProjectsApi} from "../../api/persistance";
 import {VersionFixer} from "../../redux/VersionFixer";
@@ -63,7 +62,7 @@ export class SaveManager {
         let json = SaveManager.exportEcore(lmodel);
         let str = JSON.stringify(json, null, "\t");
         if (toXML) {
-            str = prjson2xml.json2xml(json, '\t');
+            str = XML.fromJSON(json, '\t');
             str = U.formatXml(str);
         }
 
@@ -147,10 +146,11 @@ export class SaveManager {
     }
 
     public static exportEcore(model: LModel): Json {
-        let loopobj = {};
-        try { return model.generateEcoreJson(loopobj); }
-        catch(e) { Log.exx("possible loop in model:\t\n" + (e as Error).message, {loopobj, e}); }
-        return {"error": true, loopobj};
+        try { return model.crossEcore; }
+        catch (e: any) {
+            Log.exx("possible loop in model:\t\n" + (e as Error)?.message, {e});
+            return {"error": e?.message};
+        }
     }
     public static importEcore(jsonstr: GObject | string | null, isMetamodel: boolean, filename: string | undefined, persist: boolean = true): DModelElement[] {
         return EcoreParser.parse(jsonstr, isMetamodel, filename, persist);
