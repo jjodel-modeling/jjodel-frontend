@@ -299,7 +299,7 @@ button:hover{// experimental, doesn't go well because it applies to N parent ele
     & div:has(.delete) {
       padding-top: 0!important;
     }
-    & div:has(.question) { /* yesy */ 
+    & div:has(.question) { 
       margin-top: 0px!important;
       padding-top: 0px!important;
 
