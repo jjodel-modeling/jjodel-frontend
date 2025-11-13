@@ -291,7 +291,7 @@ export {
     Asterisk, Ellipse, Enneagon, Hexagon, Nonagon,
     Octagon, Heptagon, Pentagon, Rectangle, Septagon,
     Square, Star, SimpleStar, DecoratedStar, Trapezoid, Triangle,
-    View, Try, ControlPanel,
+    View, Try, ControlPanel, CountryPicker,
     GraphElements, Graphs, Vertexes, Edges, Fields,
     MeasurableComponent, Measurable, Draggable, Rotatable, Resizable
 } from './components'

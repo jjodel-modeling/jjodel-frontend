@@ -1137,7 +1137,11 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         "        border: none;\n" +
         "        text-align: right;\n" +  
         "     }\n" +
-        "}";
+        "}\n\n";
+
+        thiss.css += "&,[data-nodetype], [data-nodetype]>.visible{ /* corresponds to \"overflow: visible\" */   \n" +
+        "   overflow: visible;\n" +
+        "}\n\n";
 
 
         thiss.compiled_css = '';
