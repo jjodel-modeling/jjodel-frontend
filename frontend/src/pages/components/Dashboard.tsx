@@ -54,7 +54,9 @@ type UserProps = {
 const User = (props: UserProps) => {
     return (<>
         <div className={'user'}>
-            <div className={'initials'}>{props.initials}</div>
+            <div className={'initials'}>
+                <div>{props.initials}</div>
+            </div>
             <div className={'name'}><h2>{props.name}'s projects</h2></div>
         </div>
     </>);
