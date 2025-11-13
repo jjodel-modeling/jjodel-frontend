@@ -324,9 +324,10 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
                 case ECoreEnum.instanceTypeName:     todo(k); break;
                 case ECoreEnum.serializable:         delete ecore[k]; ecore.serializable = v; break;
                 case ECoreLiteral.value:             delete ecore[k]; ecore.value = v; break;
-                case ECoreSubPackage.eSubpackages:
-                case ECorePackage.eClassifiers:
-                case ECoreClass.eStructuralFeatures: delete ecore[k]; if (v && v.length) ecore.__childrenToSort = v; break;
+                case ECoreSubPackage.eSubpackages: case 'subpackages': case 'subPackages':
+                case ECorePackage.eClassifiers: case 'classifiers':
+                case ECoreClass.eStructuralFeatures: case 'features': case 'structuralFeatures':
+                    delete ecore[k]; if (v && v.length) ecore.__childrenToSort = v; break;
                 case ECorePackage.eSubpackages:      delete ecore[k]; if (v && v.length) ecore.subpackages = v; break;
                 case ECoreRoot.ecoreEPackage:        delete ecore[k]; if (v && v.length) ecore.packages = v; break;
                 case ECoreClass.eSuperTypes:         delete ecore[k]; if (v && v.length) ecore.extends = v; break;
@@ -359,7 +360,7 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
             let old = json;
             json = this._convertEcoreToJom_m2(json);
 
-            TRANSACTION(this.get_name(c) + '.t2m()', ()=> {
+            TRANSACTION(this.get_name(c) + '.t2m()', () => {
                 console.log('L'+c.data.className.substring(1)+'.t2m() called.', {d:c.data, j:json, old});
                 for (let k in json) {
                     let v = json[k];
@@ -396,7 +397,6 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
                             }
                             let arr: (Pointer|D|L)[] = Array.isArray(v) ? v : [v];
                             let i: number = -1;
-                            let oldValues = (c.data as GObject)[k] || [];
                             for (let v of arr) {
                                 ++i;
                                 if (!v) continue;
@@ -429,76 +429,66 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
                                 if (!child && gv.name) { // match priority (2) by name
                                     child = (c.proxyObject as GObject<LValue>)['$'+gv.name];
                                 }
-                                if (!child) { // match priority (3) by index
-                                    if (Pointers.isPointer(oldValues[i])) {
-                                        child = L.fromPointer(oldValues[i]);
-                                    }
-                                }
-                                // if does not exist, create subelement
-                                if (!child) {
-                                    let ptrs = {id: Pointers.from(gv) as any as Pointer<any>, father: c.data.id as Pointer<any>, 'instanceof': undefined};
-                                    let callback: (d: any) => void = (d: DModelElement) => {};
-                                    let d: DModelElement = null as any;
-                                    console.log('m2t create subelement', {ptrs, gv, thisData:c.data});
-                                    // try to automatically determine the holding collection (class, enumerator or attrib, reference
-                                    if (k === '__childrenToSort') {
-                                        // from ecore, it can be determined by ecoredatatype mapped to classname
-                                        //let arr = gv[k];
-                                        /*for (let childEcore of arr) */{
-                                            let childEcore = gv;
-                                            // (1) solve xsi types, it help assigning the right collection
-                                            /*
-                                            if (!childEcore.className && ECoreClass.xsitype in childEcore) {
-                                                let xsi = childEcore[ECoreClass.xsitype];
-                                                if (xsi.indexOf('ecore:E') !== 0) Log.exDevv('unexpected XSI type: ' + xsi, {ecore:gv, childEcore, xsi});
-                                                delete childEcore[ECoreClass.xsitype];
-                                                childEcore.className = xsi.substring('ecore:E'.length);
-                                            }
-                                            if (ECoreAttribute.eType in childEcore) childEcore.type = U.solveEcoreType(childEcore[ECoreAttribute.eType]);
-                                            */
-                                            // (2) try to sort the element in a collection (classes, enumerators...)
-                                            let collection: string = '';
-                                            switch (c.data.className) {
+
+                                // if unsorted, assign collection
+                                if (!child && k === '__childrenToSort') {
+                                    // from ecore, it can be determined by ecoredatatype mapped to classname
+                                    //let arr = gv[k];
+                                    /*for (let childEcore of arr) */{
+                                        let childEcore = gv;
+                                        // (1) solve xsi types, it help assigning the right collection
+                                        /*
+                                        if (!childEcore.className && ECoreClass.xsitype in childEcore) {
+                                            let xsi = childEcore[ECoreClass.xsitype];
+                                            if (xsi.indexOf('ecore:E') !== 0) Log.exDevv('unexpected XSI type: ' + xsi, {ecore:gv, childEcore, xsi});
+                                            delete childEcore[ECoreClass.xsitype];
+                                            childEcore.className = xsi.substring('ecore:E'.length);
+                                        }
+                                        if (ECoreAttribute.eType in childEcore) childEcore.type = U.solveEcoreType(childEcore[ECoreAttribute.eType]);
+                                        */
+                                        // (2) try to sort the element in a collection (classes, enumerators...)
+                                        let collection: string = '';
+                                        switch (c.data.className) {
                                             case 'DClass':
                                                 assignCollection:
-                                                switch (childEcore.className?.toLowerCase()) {
-                                                    case null: case undefined:
-                                                        if ('containment' in childEcore || 'container' in childEcore || 'aggregation' in childEcore || 'composition' in childEcore){
-                                                            collection = 'references';
-                                                            break;
-                                                        }
-                                                        if ('type' in childEcore) {// || ECoreAttribute.eType in childEcore || 'eType' in childEcore) {
-                                                            let type = childEcore.type; // || childEcore[ECoreAttribute.eType] || childEcore.eType;
-                                                            if (Pointers.isPointer(type)) {
-                                                                let pointedType = DPointerTargetable.from(childEcore.type as Pointer<DClassifier>);
-                                                                if (pointedType) {
-                                                                    if (pointedType.className === DClass.cname) collection = 'references'; break;
-                                                                    if (pointedType.className === DEnumerator.cname) collection = 'attributes'; break;
-                                                                    Log.eDevv('eCore unexpected child element type', {json, childEcore, parent:c, pointedType});
-                                                                    break;
+                                                    switch (childEcore.className?.toLowerCase()) {
+                                                        case null: case undefined:
+                                                            if ('containment' in childEcore || 'container' in childEcore || 'aggregation' in childEcore || 'composition' in childEcore){
+                                                                collection = 'references';
+                                                                break;
+                                                            }
+                                                            if ('type' in childEcore) {// || ECoreAttribute.eType in childEcore || 'eType' in childEcore) {
+                                                                let type = childEcore.type; // || childEcore[ECoreAttribute.eType] || childEcore.eType;
+                                                                if (Pointers.isPointer(type)) {
+                                                                    let pointedType = DPointerTargetable.from(childEcore.type as Pointer<DClassifier>);
+                                                                    if (pointedType) {
+                                                                        if (pointedType.className === DClass.cname) collection = 'references'; break;
+                                                                        if (pointedType.className === DEnumerator.cname) collection = 'attributes'; break;
+                                                                        Log.eDevv('eCore unexpected child element type', {json, childEcore, parent:c, pointedType});
+                                                                        break;
+                                                                    }
+                                                                }
+                                                                switch (type) {
+                                                                    case ShortAttribETypes.EVoid:
+                                                                    case ShortAttribETypes.EChar:
+                                                                    case ShortAttribETypes.EString:
+                                                                    case ShortAttribETypes.EDate:
+                                                                    case ShortAttribETypes.EBoolean:
+                                                                    case ShortAttribETypes.EByte:
+                                                                    case ShortAttribETypes.EShort:
+                                                                    case ShortAttribETypes.EInt:
+                                                                    case ShortAttribETypes.ELong:
+                                                                    case ShortAttribETypes.EFloat:
+                                                                    case ShortAttribETypes.EDouble: collection = 'attributes'; break assignCollection;
+                                                                    default: collection = 'references'; break assignCollection;
                                                                 }
                                                             }
-                                                            switch (type) {
-                                                                case ShortAttribETypes.EVoid:
-                                                                case ShortAttribETypes.EChar:
-                                                                case ShortAttribETypes.EString:
-                                                                case ShortAttribETypes.EDate:
-                                                                case ShortAttribETypes.EBoolean:
-                                                                case ShortAttribETypes.EByte:
-                                                                case ShortAttribETypes.EShort:
-                                                                case ShortAttribETypes.EInt:
-                                                                case ShortAttribETypes.ELong:
-                                                                case ShortAttribETypes.EFloat:
-                                                                case ShortAttribETypes.EDouble: collection = 'attributes'; break assignCollection;
-                                                                default: collection = 'references'; break assignCollection;
-                                                            }
-                                                        }
-                                                        Log.ee('Skipped invalid eCore subElement, the feature type cannot be determined.\nIt is required to put a type, classname or xsi:type', {childJson:json, k, v, parent:c});
-                                                        break;
-                                                    case 'DAttribute': case 'attribute': collection = 'attributes'; break;
-                                                    case 'DReference': case 'reference': collection = 'references'; break;
-                                                    default: Log.eDevv('eCore unexpected child element type', {childEcore, json, gv, parent:c});
-                                                }
+                                                            Log.ee('Skipped invalid eCore subElement, the feature type cannot be determined.\nIt is required to put a type, classname or xsi:type', {childJson:json, k, v, parent:c});
+                                                            break;
+                                                        case 'DAttribute': case 'attribute': collection = 'attributes'; break;
+                                                        case 'DReference': case 'reference': collection = 'references'; break;
+                                                        default: Log.eDevv('eCore unexpected child element type', {childEcore, json, gv, parent:c});
+                                                    }
                                                 break;
                                             case 'DPackage':
                                                 switch (childEcore.className?.toLowerCase()) {
@@ -514,16 +504,31 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
                                             default:
                                                 Log.eDevv('eCore ambiguous child collection found outside package and classes', {childJson:json, k, v, parent:c});
                                                 continue;
-                                            }
-                                            if (collection) {
-                                                // if (!Array.isArray(json[collection])) json[collection] = [];
-                                                // json[collection].push(childEcore);
-                                                k = collection;
-                                            }
                                         }
-                                        delete gv.__childrenToSort;
-                                        // continue;
+                                        if (collection) {
+                                            // if (!Array.isArray(json[collection])) json[collection] = [];
+                                            // json[collection].push(childEcore);
+                                            k = collection;
+                                        }
                                     }
+                                    delete gv.__childrenToSort;
+                                    // continue;
+                                }
+
+                                let oldValues = (c.data as GObject)[k] || [];
+                                if (!child) { // match priority (3) by index
+                                    if (Pointers.isPointer(oldValues[i])) {
+                                        child = L.fromPointer(oldValues[i]);
+                                    }
+                                }
+                                // if does not exist, create subelement
+                                if (!child) {
+                                    let ptrs = {id: Pointers.from(gv) as any as Pointer<any>, father: c.data.id as Pointer<any>, 'instanceof': undefined};
+                                    let callback: (d: any) => void = (d: DModelElement) => {};
+                                    let d: DModelElement = null as any;
+                                    console.log('m2t create subelement', {ptrs, gv, thisData:c.data});
+                                    // try to automatically determine the holding collection (class, enumerator or attrib, reference
+
                                     switch (k) {
                                         default: Log.ee('eCore unexpectd child collection found', {k, c, json}); break;
                                         case 'packages': d = DPackage.new3(ptrs, callback, DModel, true); break;
@@ -2106,7 +2111,7 @@ export class LPackage<Context extends LogicContext<DPackage> = any, C extends Co
 
     protected get_uri(context: Context): this["uri"] {
         if (context.data.uri) return context.data.uri + "." + context.data.name;
-        return ('org.jodel-react.') + (context.proxyObject.model?.name || "username") + "." + context.data.name;
+        return ('org.jjodelreact.') + (context.proxyObject.model?.name || "username") + "." + context.data.name;
     }
     protected set_uri(val: this["uri"], c: Context): boolean {
         val = val || '';
@@ -2236,6 +2241,28 @@ export class LStructuralFeature<Context extends LogicContext<DStructuralFeature>
         })
         return true;
     }
+
+
+    protected get_isUnique(c: Context): boolean { return this.get_unique(c); }
+    protected get_isRequired(c: Context): boolean { return this.get_required(c); }
+    protected get_isTransient(c: Context): boolean { return this.get_transient(c); }
+    protected get_isDerived(c: Context): boolean { return this.get_derived(c); }
+    protected get_isMany(c: Context): boolean { return this.get_many(c); }
+    protected get_isOrdered(c: Context): boolean { return this.get_ordered(c); }
+    protected get_isUnsettable(c: Context): boolean { return this.get_unsettable(c); }
+    protected get_isChangeable(c: Context): boolean { return this.get_changeable(c); }
+    protected get_isVolatile(c: Context): boolean { return this.get_volatile(c); }
+
+
+    protected set_isUnique(v: boolean, c: Context): boolean { return this.set_unique(v, c); }
+    protected set_isRequired(v: boolean, c: Context): boolean { return this.set_required(v, c); }
+    protected set_isTransient(v: boolean, c: Context): boolean { return this.set_transient(v, c); }
+    protected set_isDerived(v: boolean, c: Context): boolean { return this.set_derived(v, c); }
+    protected set_isMany(v: boolean, c: Context): boolean { return this.set_many(v, c); }
+    protected set_isOrdered(v: boolean, c: Context): boolean { return this.set_ordered(v, c); }
+    protected set_isUnsettable(v: boolean, c: Context): boolean { return this.set_unsettable(v, c); }
+    protected set_isChangeable(v: boolean, c: Context): boolean { return this.set_changeable(v, c); }
+    protected set_isVolatile(v: boolean, c: Context): boolean { return this.set_volatile(v, c); }
 
     protected get_changeable(context: Context): this["changeable"] { return context.data.changeable; }
     protected set_changeable(val: this["changeable"], c: Context): boolean {
@@ -3883,6 +3910,17 @@ export class LReference<Context extends LogicContext<DReference> = any, C extend
     get_many(c: Context): boolean{ return this.get_upperBound(c) !== 0; }
     get_required(c: Context): boolean{ return this.get_lowerBound(c) > 0; }
 
+
+    protected get_isContainment(c: Context): LReference["containment"] { return this.get_containment(c); }
+    protected get_isComposition(c: Context): LReference["composition"] { return this.get_composition(c); }
+    protected get_isAggregation(c: Context): boolean { return this.get_aggregation(c); }
+
+    protected set_isContainment(v: boolean, c: Context): boolean { return this.set_containment(v, c); }
+    protected set_isComposition(v: boolean, c: Context): boolean { return this.set_composition(v, c); }
+    protected set_isAggregation(v: boolean, c: Context): boolean { return this.set_aggregation(v, c); }
+
+
+
     defaultValueLiteral!: string;
     parent!: LClass[];
     father!: LClass;
@@ -4052,6 +4090,8 @@ export class LReference<Context extends LogicContext<DReference> = any, C extend
     protected set_aggregation(val: this["aggregation"], c: Context): boolean { return this.set_containment(val, c, 'aggregation', 'composition'); }
     protected set_composition(val: this["composition"], c: Context): boolean { return this.set_containment(val, c, 'composition', 'aggregation'); }
 
+    protected get_isOpposite(c: Context): boolean { return !!this.get_opposite(c); }
+    protected set_isOpposite(v: boolean, c: Context): boolean { return this.cannotSet('isOpposite'); }
     protected get_opposite(context: Context): this["opposite"] { return context.data.opposite && LPointerTargetable.from(context.data.opposite); }
     protected set_opposite(val: Pack<LReference | undefined>, c: Context): boolean {
         let ptr = Pointers.from(val) as any as LAnnotation["id"];
@@ -5763,7 +5803,7 @@ export class LObject<Context extends LogicContext<DObject> = any, C extends Cont
     }
 
 
-    __info_of__isKindOf: Info = {type:  '(Class | fullpath) => bool', txt: 'checks wether the object\'s type is a subclass or equals the target class.' +
+    __info_of__isKindOf: Info = {type:  '(Class | fullpath) => bool', txt: 'Checks whether the object\'s type is a subclass or equals the target class.' +
             '\nIf an array is provided, it checks if it\'s "kindOf" at least one of them.' +
             '\nShapeless objects, or invalid parameter always returns false'}
     isKindOf(c: LClass | DClass | Pointer<DClass> | DocString<"class.name or fullname">): boolean { return this.cannotCall('isKindOf'); }

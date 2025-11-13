@@ -2706,6 +2706,11 @@ export class U {
         setTimeout(trigger, 100+150+300/1.4);  // ...prints again!
         */
     }
+
+    public static camelCase(s: string): string {
+        if (!s) return s;
+        return s[0].toUpperCase() + s.substring(1);
+    }
 }
 export type ThrottleState = {timerID: null|number, decay: number, initialDelay:number, currentDelay:number, minDelay: number,
     pending:Function[], cumulative: boolean};

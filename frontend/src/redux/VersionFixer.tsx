@@ -271,6 +271,9 @@ everytime you put hands into a D-Object shape or valid values, you should docume
                 let o: DObject = this.d(e.father, s);
                 if (o) o.name = e.values[0];
             }
+            if (e.uri) {
+                e.uri.split('jodel-react').join('jjodelreact');
+            }
         }
         return s;
     }

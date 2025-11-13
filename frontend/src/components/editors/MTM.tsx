@@ -158,6 +158,8 @@ export const serializers = {
 };
 const parsersArr = Object.keys(parsers);
 const serializersArr = Object.keys(serializers);
+
+let notFragments: ParserData = null as any;
 function MTMEditor(props: EditorAllProps): JSX.Element{
     let {language, setLanguage, setEditor} = props;
     let langObj = props.languages[language];
@@ -171,6 +173,11 @@ function MTMEditor(props: EditorAllProps): JSX.Element{
 
     let t2m_placeholder: string;
     let m2t_placeholder: string;
+    let m2tpartials: boolean = m2tobj.allowPartials;
+    let t2mpartials: boolean = t2mobj.allowPartials;
+    if (!notFragments) notFragments = new ParserData();
+    const fragmentsm2t = Object.keys(m2tobj).filter(k => !(k in notFragments));
+    const fragmentst2m = Object.keys(t2mobj).filter(k => !(k in notFragments));
     switch (t2mengine) {
         default:
         case 'javascript':
@@ -187,19 +194,22 @@ function MTMEditor(props: EditorAllProps): JSX.Element{
             break;
     }
 
+    let [t2mfragment, sett2mFragment] = useState('duniversal' as keyof ParserData);
+    let [m2tfragment, setm2tFragment] = useState('duniversal' as keyof ParserData);
+
     let [oldm2tEngine, set_oldm2tEngine] = useState(m2tengine);
     let [oldt2mEngine, set_oldt2mEngine] = useState(t2mengine);
-    let [m2t_func, set_m2tfunc] = useState(m2tobj?.str || m2t_placeholder);
-    let [t2m_func, set_t2mfunc] = useState(t2mobj?.str || t2m_placeholder);
+    let [m2t_func, set_m2tfunc] = useState((!m2tpartials ? m2tobj?.str : m2tobj[m2tfragment] as string) || m2t_placeholder);
+    let [t2m_func, set_t2mfunc] = useState((!t2mpartials ? t2mobj?.str : t2mobj[t2mfragment] as string) || t2m_placeholder);
     // __jj_needs_reset__: if engine changed, the old m2tfunc is cached in react state,
     //      but the engine object changed, so i need to reinitialize at default val.
-    if (oldm2tEngine !== m2tengine) {
+    if (oldm2tEngine !== m2tengine || oldm2tEngine === '__jj_needs_reset__') {
         set_oldm2tEngine(m2tengine);
-        set_m2tfunc(m2tobj?.str || m2t_placeholder);
+        set_m2tfunc((!m2tpartials ? m2tobj?.str : m2tobj[m2tfragment] as string) || m2t_placeholder);
     }
-    if (oldt2mEngine !== t2mengine) {
+    if (oldt2mEngine !== t2mengine || oldt2mEngine === '__jj_needs_reset__') {
         set_oldt2mEngine(t2mengine);
-        set_t2mfunc(t2mobj?.str || t2m_placeholder);
+        set_t2mfunc((!t2mpartials ? t2mobj?.str : t2mobj[t2mfragment] as string) || t2m_placeholder);
     }
     // if (m2t_func === '__jj_needs_reset__') set_m2tfunc(m2tobj?.str || m2t_placeholder);
     // if (t2m_func === '__jj_needs_reset__') set_t2mfunc(t2mobj?.str || t2m_placeholder);
@@ -270,12 +280,13 @@ function MTMEditor(props: EditorAllProps): JSX.Element{
                     </Tooltip>
                     <div className={'editor-wrapper w-100 h-100 t2m'} tabIndex={-1} onBlur={() => {
                         let value = (t2m_func === t2m_placeholder) ? '' : t2m_func;
-                        console.log('onBlur t2m', {value, old:langObj.t2m[t2mengine].str || ''});
-                        if ((langObj.t2m[t2mengine].str || '') === value) return;
+                        let old = (t2mpartials ? t2mobj.str : t2mobj[t2mfragment]) || '';
+                        console.log('onBlur t2m', {value, old});
+                        if (old === value) return;
                         console.log('onBlur t2m pass');
 
                         TRANSACTION('edit t2m language "'+language+'"', ()=> {
-                            SetRootFieldAction.new('languages.'+language+".t2m."+t2mengine+'.str', value, '', false);
+                            SetRootFieldAction.new('languages.'+language+".t2m."+t2mengine+'.' + (t2mpartials ? t2mfragment : 'str'), value, '', false);
                             SetRootFieldAction.new('RECOMPILE_LANGUAGE', {engine: t2mengine, language}, '+=', false);
                         })
                     }}>
@@ -308,21 +319,26 @@ function MTMEditor(props: EditorAllProps): JSX.Element{
                                 langObj.m2t[m2tengine].allowPartials, val)}
                         /><span className={'my-auto'}> Allow partial serializations</span></label>
                     </Tooltip>
+                    {m2tpartials ? <div className={'fragments d-flex'}><div className={'fill'}>{
+                        fragmentsm2t.map(f=><div className={'fragment-btn btn ' +(f === m2tfragment ? 'selected btn-secondary' : 'btn-outline-secondary')}
+                                              onClick={() => {setm2tFragment(f); set_oldm2tEngine('__jj_needs_reset__')}}>{f}</div>
+                        )}</div></div> : <div></div>}
                     <div className={'editor-wrapper w-100 h-100 m2t'} tabIndex={-1} onBlur={() => {
                         let value = (m2t_func === m2t_placeholder) ? '' : m2t_func;
-                        console.log('onBlur m2t', {value, old:langObj.m2t[m2tengine].str || ''});
-                        if ((langObj.m2t[m2tengine].str || '') === value) return;
+                        let old = (m2tpartials ? m2tobj.str : m2tobj[m2tfragment]) || '';
+                        console.log('onBlur m2t', {value, old});
+                        if (old === value) return;
                         console.log('onBlur m2t pass');
-                        TRANSACTION('edit m2t language "' + language + '"', () => {
+
+                        TRANSACTION('edit m2t language "'+language+'"', ()=> {
+                            SetRootFieldAction.new('languages.'+language+".m2t."+m2tengine+'.' + (m2tpartials ? m2tfragment : 'str'), value, '', false);
                             SetRootFieldAction.new('RECOMPILE_LANGUAGE', {engine: m2tengine, language}, '+=', false);
-                            SetRootFieldAction.new('languages.' + language + ".m2t." + m2tengine + '.str', value, '', false);
                         })
                     }}>
                         <Editor className={'mx-1'} options={monacooptions} defaultLanguage={'plaintext'} value={m2t_func}
                                 key={m2tengine}
                                 onChange={(value) => set_m2tfunc(value || '') } />
                     </div>
-
                 </div>
             </div>
             <h5>Test Sample</h5>

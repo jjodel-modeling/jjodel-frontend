@@ -57,18 +57,66 @@ export class DV {
     
     return serialize(model);
 }`},
-        handlebars: {allowPartials: false, str:`@namespace(uri="{{uri}}") prefix="{{prefix}}")
+        handlebars: {allowPartials: false, 'Model':`{{#with packages.[0]~}}
+@namespace(uri="{{uri}}") prefix="{{prefix}}")
+{{>Annotations}}
+package {{name}};
+
+{{#each classes}}
+    {{~>Class~}}
+{{/each}}
+{{#each package}}
+    {{~>Package~}}
+{{/each}}
+`,
+'Package':`{{>Annotations}}package {{name}} {
+{{#each subPackage}}
+    {{>Package}}
+{{/each}}
+{{#each subPackage}}
+    {{>Class}}
+{{/each}}
+}`,
+'Class':`{{>Annotations}}{{#if isAbstract}}abstract {{/if}}{{#if isInterface}}interface {{/if~}}
+class {{name}} {{#ifCond extends.length '||' implements.length~}}extends {{js implements extends "(a, b)=> [...a, ...b].join(', ')"}} {
+    {{#each attributes}}{{>Attribute}}{{/each}}
+    {{#each references}}{{>Reference}}{{/each}}
+    {{#each operations}}{{>Operation}}{{/each}}
+}`,
+'Modifiers': `{{>Annotations}}{{#unless changeable}}readonly {{/unless~}}
+{{#if volatile}}volatile {{/if~}}
+{{#if transient}}transient {{/if~}}
+{{#if unsettable}}unsettable {{/if~}}
+{{#if derived}}derived {{/if~}}
+{{#if unique}}unique {{/if~}}
+{{#if ordered}}ordered {{/if~}}
+{{#if resolveProxies}}resolve {{/if~}}
+{{#if isID}}id {{/if~}}
+`,
+'Operation': `{{>Modifiers}}op {{type.name}}{{>Multiplicity}} {{name~}}
+    ({{#each parameters}}{{>Parameter}}{{#unless @last}}, {{/unless}}{{/each}})\n`,
+'Parameter': `{{>Modifiers}}{{type.name}}{{>Multiplicity}} {{name}}`,
+'Multiplicity': `{{#js lowerBound upperBound "(l, u)=>{let s = l+''+u; switch(s){case '01': return ''; case '0-1': return'[*]'; case '1-1': return'[+]';} if (l==u) return '['+l+']'; if (u==-1) return '['+l+'...]'; return '['+l+'...'+u+']'}"}};\n`,
+'Attribute': '{{>Modifiers}}attr {{type.name}} {{name}}{{>Multiplicity}}{{#if defaultValue includeZero}}= {{defaultValue}}{{/if}};\n',
+'Reference': '{{>Modifiers}}{{#if isContainment}}val{{else}}ref{{/if}} {{type.name}} {{name}}{{>Multiplicity}};\n',
+'Annotations': `{{#each annotations}}@{{source}}({{#js entries "args => args.map(e => e.key + ' = ' + e.value).join(', ')"}}{{/js}})\n{{/each}}`,
+// {{#each}}{{}}{{/each}}`
+'str':`@namespace(uri="{{package.uri}}", prefix="{{prefix}}")
 package {{name}};
 
 {{#each classes}}
 class {{name}} {
-    {{#each attributes}}attr {{type.name}} {{name}};{{/each}}
-    {{#each references}}{{#if isContainment}}val{{else}}ref{{/if}} {{type.name}} {{name}};{{/each}}
-    {{#ifcond isReference '&&' isContainment}}val {{type.name}} {{name}};{{/ifcond}}
-    {{#ifcond isReference '&&' isContainment}}ref {{type.name}} {{name}};{{/ifcond}}
-}
+{{#each attributes}}
+    attr {{type.name}} {{name}};
 {{/each}}
-`}}, {engine:'nearley' as any, nearley:{allowPartials: false, str: `main -> header classdef:* {% (d) => ({uri: d[0].uri, prefix: d[0].prefix, classifiers:d[1]}) %}
+{{#each references}}
+    {{#if isContainment}}val{{else}}ref{{/if}} {{type.name}} {{name}};
+{{/each}}
+}
+
+{{/each}}
+`}}, {engine:'nearley' as any, nearley:{allowPartials: false, str:
+`main -> header classdef:* {% (d) => ({packages:[{uri: d[0].uri, prefix: d[0].prefix, classifiers:d[1]}]}) %}
 
 # --------------------------------------------------------------------
 # HEADER

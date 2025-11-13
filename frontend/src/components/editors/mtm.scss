@@ -6,6 +6,27 @@
     height: 0;
     flex-grow: 1;
   }
+  .fragments{
+    height: 38px;
+    overflow: hidden;
+    &:hover{
+      overflow: visible;
+      z-index: 10000;
+    }
+
+    >.fill{
+      width: 100%;
+      height: max-content;
+      background-color: white;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .fragment-btn {
+      margin: auto;
+      margin-top: .3em;
+    }
+  }
   .export-row{
     display: flex;
     flex-wrap: wrap;

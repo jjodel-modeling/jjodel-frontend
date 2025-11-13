@@ -3770,9 +3770,10 @@ export enum EModelElements{
 
 type ParserName = string;
 export class ParserData{
-    str!: DocString<'parser code'>;
+    str!: DocString<'parser code'>; // joined fragments
     test_text?: string;
     allowPartials!: boolean;
+    [key: string]: any; // fragments
 }
 export type LanguageObject = Dictionary<ParserName, ParserData> & {engine: ParserName};
 

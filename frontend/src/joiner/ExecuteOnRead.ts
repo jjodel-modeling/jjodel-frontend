@@ -14,6 +14,7 @@ import {
 } from "../joiner";
 import * as Componentss from '../joiner/components';
 import React from "react";
+import any = jasmine.any;
 
 
 /*
@@ -121,7 +122,7 @@ for (let k in wComponents) {
 
 windoww.enumerators = {};
 // @ts-ignore
-function handlebarsIfCond(v1, operator, v2, options) {
+function handlebarsIfCond_original(v1, operator, v2, options) {
     // @ts-ignore
     console.log('handlebars helper ifCond', {thiss:this as any, arguments, v1, operator, v2, options});
     switch (operator) {
@@ -149,6 +150,83 @@ function handlebarsIfCond(v1, operator, v2, options) {
             return options.inverse(this);
     }
 }
+
+// @ts-ignore
+function handlebarsIfCond(useless: any) {
+    let rawArguments = [...arguments].slice(0, arguments.length-1);
+    // @ts-ignore
+    console.log('handlebars helper ifCond', {thiss:this as any, arguments, rawArguments});
+    let arr = rawArguments.map((a, i) => {
+        if (a === null) return 'null';
+        if (a === undefined) return 'undefined';
+        switch (typeof a) {
+            default: case 'symbol': case 'object': case 'function':
+                (window as any).Log.exx("M2T/Handlebars #ifCond helper error, "+(typeof a)+" cannot be compared in an expression", {
+                    expressionRaw: [...rawArguments].join(''), wrongParameterIndex: i
+                });
+                return NaN; // because nan always fails every comparison
+            case 'string': return '"'+(window as any).U.replaceAll(a, '"', '\\"')+'"';
+            case 'number': case 'boolean': return a;
+        }
+    });
+    let str = arr.join('');
+    try { return eval('('+str+')'); }
+    catch (e: any) {
+        (window as any).Log.exx("M2T/Handlebars #ifCond evaluation error, "+e?.message+" cannot be compared in an expression", {str, rawArguments, e});
+    }
+    return false;
+}
+
+function handlebarsJs(useless: any) {
+    let rawArguments = [...arguments].slice(0, arguments.length-2);
+    let str = rawArguments[rawArguments.length - 2];
+    // @ts-ignore
+    console.log('handlebars helper js', {thiss:this as any, arguments, rawArguments, str});
+    let msg: string = '';
+    if (rawArguments.length < 3) {
+        msg = "Error in {{#js}} tag, at least 2 parameters are required. an argument list followed by a string containing a js function to be applied to the arguments";
+        Log.ee(msg, rawArguments);
+        return msg;
+    }
+    let f = (...a:any)=>any = null as any;
+    try {
+        f = eval('('+str+')');
+        if (typeof f !== 'function') {
+            msg = "Error in {{#js}} tag, the last argument must be a string containing a js function";
+            Log.ee(msg, {rawArguments, js:str});
+            return msg;
+        }
+    } catch (e) {
+        msg = "Syntax Error in {{#js}} tag: " + e.message;
+        Log.ee(msg, {e, rawArguments, js:str});
+        return msg;
+    }
+    let a: any;
+    try {
+        a = f(...rawArguments);
+    } catch (e) {
+        msg = "Runtime Error in {{#js}} tag: " + e.message;
+        Log.ee(msg, {e, rawArguments, js:str});
+        return msg;
+    }
+    return a;
+    /*if (a === null) return 'null';
+    if (a === undefined) return 'undefined';
+    switch (typeof a) {
+        default: case 'symbol': case 'object': case 'function':
+            (window as any).Log.exx("M2T/Handlebars #ifCond helper error, "+(typeof a)+" cannot be compared in an expression", {
+                expressionRaw: [...rawArguments].join(''), wrongParameterIndex: i
+            });
+            return NaN; // because nan always fails every comparison
+        case 'string': return '"'+(window as any).U.replaceAll(a, '"', '\\"')+'"';
+        case 'number': case 'boolean': return a;
+    }
+    */
+}
+
+Handlebars.registerHelper('js', handlebarsJs);
+Handlebars.registerHelper('JS', handlebarsJs);
+Handlebars.registerHelper('Js', handlebarsJs);
 Handlebars.registerHelper('ifCond', handlebarsIfCond);
 Handlebars.registerHelper('ifcond', handlebarsIfCond);
 Handlebars.registerHelper('ifc', handlebarsIfCond);

@@ -152,7 +152,7 @@ export function doM2T(data0: LPointerTargetable | Pointer | null | undefined, la
         case undefined:
         case 'handlebars':
             console.log('handlebars 1', {func_str});
-            let template: (obj: GObject) => string = ()=>'missing handlebars template';
+            let template: (obj: GObject, options?: RuntimeOptions) => string = ()=>'missing handlebars template';
             try { template = Handlebars.compile(func_str); }
             catch (e: any) {
                 console.error(e);
@@ -161,7 +161,7 @@ export function doM2T(data0: LPointerTargetable | Pointer | null | undefined, la
                 template = () => msg;
             }
             console.log('handlebars 2', {func_str, template});
-            try { ret = template(data); }
+            try { ret = template(data, {allowProtoMethodsByDefault: true, allowProtoPropertiesByDefault: true, allowedProtoProperties: {__proto__:true}}); }
             catch (e: any) {
                 let msg = (e?.message||'')+'';
                 if (msg.indexOf('Error: Parse error')<=2) {
