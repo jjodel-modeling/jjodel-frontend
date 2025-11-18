@@ -24,18 +24,18 @@ export class UserResponseDTO extends Response_DTO<UserResponseDTO, DUser>{
         this._dto_init(data);
     }
 
-    toJodelClass(raw: TokenResponse, claims?: JwtClaims|null): DUser {
+    toJodelClass(): DUser {
         // Log.eDevv("called projectResponseDTO.toJodel(), this is just a boilerplate, projects need to be loaded")
         let pointers: Partial<UserPointers> = {} as any;
         pointers.id = this.id;
-        console.log('name debug', {raw, claims, dto: this});
+        console.log('name debug', { dto: this});
         // let user: DUser = DUser.new(this.name, '', this.nickname, '',  '', false, this.email, raw.token, this._Id, this.id, true);
         let user: DUser = DUser.new2(pointers, (d)=>{
             for (let key in this) {
                 if (key in pointers) continue;
                 if (key in d) { (d as any)[key] = this[key]; }
             }
-            d.token = raw.token as string;
+            // d.token = raw.token as string;
             (d as any).convertedFromDto = true;
         });
        return user;

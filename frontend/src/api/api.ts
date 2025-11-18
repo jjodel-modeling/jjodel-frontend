@@ -23,34 +23,40 @@ export class Api {
     private static token: string | null = null;
     private static _refreshToken: string | null = null;
     private static refreshTokenTimer: number = -1;
+    private static tokenExp: number = 0;
+    private static _refreshTokenExp: number = 0;
 
     private static headers() {
         if (!Api.token) Api.token = Storage.read('token');
-        if (!Api.token) { Log.eDevv("error headers, token not found"); }
+        if (!Api.token) { return undefined; }
         return {'Authorization': "Bearer " + Api.token};
     }
 
 
-    static async checkToken(): Promise<boolean> {
+    static checkToken(refreshTimer: boolean = true): boolean {
         if (!Api.token) Api.token = Storage.read('token');
+        if (!Api._refreshToken) Api._refreshToken = Storage.read('refreshToken');
+        if (!Api.tokenExp) Api.tokenExp = Storage.read('tokenExp');
+        if (!Api.refreshTokenTimer) Api.refreshTokenTimer = Storage.read('refreshTokenTimer');
         if (!Api.token) return false;
 
-        const exp: number = Storage.read('tokenExp');
-        let ret: boolean = exp ? exp < Math.floor(Date.now() / 1000) : false;
-        if (!ret) {
+        const exp: number = Api.tokenExp;
+        let valid: boolean = exp ? exp > Date.now() : false;
+        if (!valid) {
             Log.ee("expired token", {exp, at: Api.token, st: Storage.read('token')});
             return false;
         }
 
+        if (!refreshTimer) return true;
         // setup timer to renew refresh token
         let safetyMargin = 0.2; // 0.2 = 20% of time before it expires.
         let maxNetworkDelay = 5 * 60; // 5min? (tentatively, depends on browser). PS: units are seconds, not ms.
         let diff = (exp - Date.now() / 1000);
         let refreshTokenTimeout = diff - Math.max(maxNetworkDelay, safetyMargin * (1 - diff));
         clearTimeout(Api.refreshTokenTimer);
-        if (refreshTokenTimeout <= 0) Api.refreshToken();
-        else Api.refreshTokenTimer = setTimeout(()=> Api.refreshToken(), refreshTokenTimeout*1000) as unknown as number;
-        return false;
+        if (refreshTokenTimeout <= 0) Api.refreshToken(true);
+        else Api.refreshTokenTimer = setTimeout(()=> Api.refreshToken(false), refreshTokenTimeout*1000) as unknown as number;
+        return true;
     }
 
     static swapToJodelID<T extends any>(data: T): T { return Api.swapID(data, true); }
@@ -74,18 +80,19 @@ export class Api {
         let tmp = d._Id;
         d._Id = d.id;
         d.id = tmp;
-        Log.eDev(toJodel && !Pointers.isPointer(d.id), 'API: cannot swap id and guid, one is missing', {data, id:d.id, guid:d._Id, toJodel});
-        Log.eDev(!toJodel && !Pointers.isPointer(d._Id), 'API: cannot swap guid and uid, one is missing', {data, id:d.id, guid:d._Id, toJodel});
+        Log.eDev(toJodel && !Pointers.isPointer(d.id), 'API: cannot swap id and guid, id is missing', {data, id:d.id, guid:d._Id, toJodel});
+        Log.eDev(!toJodel && !Pointers.isPointer(d._Id), 'API: cannot swap guid and uid, guid is missing', {data, id:d.id, guid:d._Id, toJodel});
         return d as any;
     }
 
     static async get(path: string, allowAnonymous:boolean = false): Promise<Response> {
         try {
-            if (allowAnonymous || await Api.checkToken()) {
+            if (allowAnonymous || Api.checkToken()) {
                 const response = await Axios.get(path, {headers: this.headers()});
                 console.log('Api response', {path, response});
                 return {code: response.status, data: Api.swapToJodelID(response.data)};
             }
+            // means invalid token
             return {code: 401, data: null};
 
         } catch (e) {
@@ -95,24 +102,24 @@ export class Api {
 
     }
 
-    static async post(path: string, obj: GObject, allowAnonymous:boolean = false): Promise<Response> {
+    static async post(path: string, obj: GObject, allowAnonymous:boolean = false, isRefreshToken: boolean = false): Promise<Response> {
         try {
-            if (allowAnonymous || await Api.checkToken()) {
-                console.log('post api call:', {obj, swap:Api.swapToGUID(obj)})
-                const response = await Axios.post(path, Api.swapToGUID(obj), {headers: this.headers()});
+            if (isRefreshToken || allowAnonymous || Api.checkToken()) {
+                console.log('post api call:', {obj, swap:Api.swapToGUID(obj)});
+                const response = await Axios.post(path, Api.swapToGUID(obj), isRefreshToken ? undefined : {headers: this.headers()});
                 console.log('Api response', {path, r:response});
                 return {code: response.status, data: Api.swapToJodelID(response.data)};
             }
             return {code: 401, data: 'Login session expired.' as any};
         } catch (e: any) {
             Log.ee('post API failed:', {e, path, obj}, e?.message);
-            return {code: e?.response?.status || 400, data: e?.response?.data || ''};
+            return {code: e?.response?.status || 400, data: e?.response?.data || e.message || ''};
         }
     }
 
     static async put(path: string, obj: GObject, allowAnonymous:boolean = false): Promise<Response> {
         try {
-            if(allowAnonymous || await Api.checkToken()) {
+            if (allowAnonymous || Api.checkToken()) {
                 const response = await Axios.put(path, Api.swapToGUID(obj), {headers: this.headers()});
                 return {code: response.status, data: Api.swapToJodelID(response.data)};
             }
@@ -126,7 +133,7 @@ export class Api {
 
     static async delete(path: string, allowAnonymous:boolean = false): Promise<Response> {
         try {
-            if (allowAnonymous || await Api.checkToken()) {
+            if (allowAnonymous || Api.checkToken()) {
                 const response = await Axios.delete(path, {headers: this.headers()});
                 return {code: response.status, data: Api.swapToJodelID(response.data)};
             }
@@ -138,27 +145,64 @@ export class Api {
     }
 
 
-    private static async refreshToken(): Promise<boolean> {
+    // public static maxx=20;
+    private static throttle_refreshToken: number = 0;
+    private static async refreshToken(skipCheckToken: boolean = false): Promise<boolean> {
         // NB: checkToken() required because hybernation/sleep would cause this to trigger exception.
         // if the timeout was scheduled for 2 min, but pc sleeps for 8h, after 8h it will try to refresh an expired token
-        if (!Api.checkToken()) return false;
+        // if (Api.maxx--<=0) return false;
+        // if (Api.maxx--<=0) return false;
+        // console.warn('refreshtoken');
+        if (!skipCheckToken && !Api.checkToken(false)) return false;
+
+        if (Date.now() - Api.throttle_refreshToken < 2*60*1000) { return false; } // at most every 2 min
+
+        Api.throttle_refreshToken = Date.now();
         try {
-            const response = await Api.post('/account/refresh-token', {token: Api.token, refreshToken: Api._refreshToken}, false);
-            console.log('refreshed', {response});
-            // tood: ??? Api._refreshToken = response.data; ???
-            return response && (response.code+'')[0] === '2';
+            const response: GObject = await Api.post(Api.persistance+'/account/refresh-token', {token: Api.token, refreshToken: Api._refreshToken}, true, true);
+            if (!response || (response.code+'')[0] !== '2') {
+                Log.ee('Failed to refresh token, session might expire soon.', {response});
+                return false;
+            }
+            let r = {...response.data};
+            if (isNaN(+r.expires)) { r.expires = new Date(r.expires).getTime(); }
+            if (isNaN(+r.refreshTokenExpiryTime)) { r.refreshTokenExpiryTime = new Date(r.refreshTokenExpiryTime).getTime(); }
+            r.expires = +r.expires;
+            r.refreshTokenExpiryTime = +r.refreshTokenExpiryTime;
+            if (isNaN(r.expires) || isNaN(r.refreshTokenExpiryTime)) { Log.eDevv('invalid expiration dates', {r}); }
+            Api.storeSessionData(r.token, r.expires, r.refreshToken, r.refreshTokenExpiryTime);
+            return true;
         } catch (e) { Log.eDevv('refresh token error', e); return false; }
     }
 
     public static async revokeToken(): Promise<boolean> {
         if (!Api.checkToken()) return true;
+        let user = DUser.getUser();
+        if (!user) return false;
         try {
-            const response = await Api.post('/account/revoke', {username: D.fromPointer(DUser.current).nickname}, true);
+            const response = await Api.post(Api.persistance+'/account/revoke', {username: user.nickname}, true);
             if (response && (response.code+'')[0] !== '2') return false;
-            Api._refreshToken = Api.token = null;
+            Api.storeSessionData();
             return true;
         } catch (e) { Log.eDevv('refresh token error', e); return false; }
     }
+
+
+    // write storage
+    static storeSessionData(token?: string, tokenExp?: number, refreshT?: string, RTExp?: number, user?: DUser): void {
+        Api.token = token || '';
+        Api.tokenExp = tokenExp || 0;
+        Api._refreshToken = refreshT || '';
+        Api._refreshTokenExp = RTExp || 0;
+
+        Storage.write('token', token);
+        Storage.write('tokenExp', tokenExp);
+        Storage.write('refreshToken', refreshT);
+        Storage.write('refreshTokenExp', RTExp);
+        if (user) Storage.write('user', user);
+        Storage.write('offline', false);
+    }
+
 }
 
 export default Api;

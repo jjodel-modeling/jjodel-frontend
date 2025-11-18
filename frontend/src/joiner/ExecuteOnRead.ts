@@ -14,7 +14,6 @@ import {
 } from "../joiner";
 import * as Componentss from '../joiner/components';
 import React from "react";
-import any = jasmine.any;
 
 
 /*
@@ -180,6 +179,7 @@ function handlebarsIfCond(useless: any) {
 function handlebarsJs(useless: any) {
     let rawArguments = [...arguments].slice(0, arguments.length-2);
     let str = rawArguments[rawArguments.length - 2];
+    let Log = (window as any).Log;
     // @ts-ignore
     console.log('handlebars helper js', {thiss:this as any, arguments, rawArguments, str});
     let msg: string = '';
@@ -188,7 +188,7 @@ function handlebarsJs(useless: any) {
         Log.ee(msg, rawArguments);
         return msg;
     }
-    let f = (...a:any)=>any = null as any;
+    let f: ((...a:any) => any) = null as any;
     try {
         f = eval('('+str+')');
         if (typeof f !== 'function') {
@@ -196,7 +196,7 @@ function handlebarsJs(useless: any) {
             Log.ee(msg, {rawArguments, js:str});
             return msg;
         }
-    } catch (e) {
+    } catch (e: any) {
         msg = "Syntax Error in {{#js}} tag: " + e.message;
         Log.ee(msg, {e, rawArguments, js:str});
         return msg;
@@ -204,7 +204,7 @@ function handlebarsJs(useless: any) {
     let a: any;
     try {
         a = f(...rawArguments);
-    } catch (e) {
+    } catch (e: any) {
         msg = "Runtime Error in {{#js}} tag: " + e.message;
         Log.ee(msg, {e, rawArguments, js:str});
         return msg;

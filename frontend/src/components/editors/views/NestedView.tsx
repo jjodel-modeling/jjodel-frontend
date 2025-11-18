@@ -272,8 +272,8 @@ type AllProps = OwnProps & StateProps & DispatchProps;
 
 function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     const ret: StateProps = {} as FakeStateProps;
-    const user: LUser = LUser.fromPointer(DUser.current, state);
-    ret.project = user.project as LProject;
+    //const user: LUser = LUser.fromPointer(DUser.current, state);
+    ret.project = LProject.getProject();
     ret.viewpoints = ret.project.viewpoints.filter( (vp) => !!vp/* && vp.isValidation === ownProps.validation*/);
     ret.active = ret.project.activeViewpoint;
     ret.isAdvanced = state.advanced;

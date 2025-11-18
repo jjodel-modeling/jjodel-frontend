@@ -3,7 +3,7 @@ import {
     DataOutputComponent,
     DState, GObject,
     Input, L,
-    Language,
+    Language, Log,
     LPointerTargetable,
     Overlap,
     Pointer,
@@ -175,7 +175,7 @@ function MTMEditor(props: EditorAllProps): JSX.Element{
     let m2t_placeholder: string;
     let m2tpartials: boolean = m2tobj.allowPartials;
     let t2mpartials: boolean = t2mobj.allowPartials;
-    if (!notFragments) notFragments = new ParserData();
+    if (!notFragments) notFragments = {...new ParserData(), 'clonedCounter':0};
     const fragmentsm2t = Object.keys(m2tobj).filter(k => !(k in notFragments));
     const fragmentst2m = Object.keys(t2mobj).filter(k => !(k in notFragments));
     switch (t2mengine) {
@@ -320,8 +320,22 @@ function MTMEditor(props: EditorAllProps): JSX.Element{
                         /><span className={'my-auto'}> Allow partial serializations</span></label>
                     </Tooltip>
                     {m2tpartials ? <div className={'fragments d-flex'}><div className={'fill'}>{
-                        fragmentsm2t.map(f=><div className={'fragment-btn btn ' +(f === m2tfragment ? 'selected btn-secondary' : 'btn-outline-secondary')}
-                                              onClick={() => {setm2tFragment(f); set_oldm2tEngine('__jj_needs_reset__')}}>{f}</div>
+                        ['+', ...fragmentsm2t].reverse().map(f=><div className={'fragment-btn btn ' +(f === m2tfragment ? 'selected btn-secondary' : 'btn-outline-secondary')}
+                                              onClick={() => {setm2tFragment(f); set_oldm2tEngine('__jj_needs_reset__')}}>
+                            <Input placeholder={'Confirm to delete'} key={f} getter={()=>f} tooltip={'double click to '+(f==='+'?'add':'rename')+' fragment'} setter={(v)=>{
+                                console.warn('input setter', v, f);
+                                if (!v) {
+                                    TRANSACTION('language "' + language + '/' + m2tengine + '" remove partial', ()=>{
+                                        if (f !== '+') SetRootFieldAction.new('languages.' + language + '.m2t.' + m2tengine + '.'+f, undefined, '', false);
+                                    }, f, v);
+                                    return;
+                                }
+                                if ((v as string) in m2tobj || v === '+') { Log.ww('M2T partial name already taken'); return; }
+                                TRANSACTION('language "' + language + '/' + m2tengine + '" '+(f === '+'?'add':'rename')+' partial', ()=>{
+                                    SetRootFieldAction.new('languages.' + language + '.m2t.' + m2tengine + '.'+v, ' ', '', false);
+                                    if (f !== '+') SetRootFieldAction.new('languages.' + language + '.m2t.' + m2tengine + '.'+f, undefined, '', false);
+                                }, f, v)
+                                }} clickHidden={true}/></div>
                         )}</div></div> : <div></div>}
                     <div className={'editor-wrapper w-100 h-100 m2t'} tabIndex={-1} onBlur={() => {
                         let value = (m2t_func === m2t_placeholder) ? '' : m2t_func;

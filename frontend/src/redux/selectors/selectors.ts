@@ -521,8 +521,8 @@ export class Selectors{
         if (!state) state = store.getState();
         const allViews: DViewElement[] = Selectors.getAllViewElements(state);
 
-        const user = LUser.fromPointer(DUser.current) as LUser;
-        const project = user.project as LProject;
+        //const user = LUser.getUser();
+        const project = LProject.getProject();
         let activevpid: Pointer<DViewElement> = project.activeViewpoint.id;
         // check if scores needs to be updated
         for (const dview of allViews) {

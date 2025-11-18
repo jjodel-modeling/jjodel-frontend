@@ -13,7 +13,7 @@ function MqttEditorComponent(props: AllProps) {
         // U.writeLog('create', 'MQTT', 'Connection');
         //SetRootFieldAction.new('isLoading', true);
         WebSockets.iot.io.opts.query = {
-            'project': user.project?.id,
+            'project': U.getProjectID_URL(),
             'brokerUrl': `${ip}:${port}`
         };
         WebSockets.iot.off('pull-action');
@@ -62,7 +62,7 @@ type AllProps = OwnProps & StateProps & DispatchProps;
 
 function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     const ret: StateProps = {} as FakeStateProps;
-    ret.user = LUser.fromPointer(DUser.current);
+    ret.user = LUser.getUser();
     return ret;
 }
 

@@ -58,6 +58,7 @@ export function InputComponent(props: AllProps) {
     const field: string = props.field as string;
     const oldValue: PrimitiveType | PrimitiveType[] | LPointerTargetable = (getter) ? getter(data, field) : (data ? data[field] : undefined); // !== undefined); ? data[field] : 'undefined'
     let [value, setValue] = useStateIfMounted<PrimitiveType | PrimitiveType[] | LPointerTargetable>(oldValue);
+    let [visible, setVisible] = useStateIfMounted<boolean>(props.clickHidden ? false : true);
 
     if (U.isError(value)) throw errorUpdate("Error on <" + (U.uppercaseFirstLetter(props.tag || "Input"))+"> value getter", value);
     const [isTouched, setIsTouched] = useStateIfMounted(false);
@@ -109,11 +110,12 @@ export function InputComponent(props: AllProps) {
     let postlabel: ReactNode | undefined = props.postlabel;
     let tooltip: ReactNode|string|undefined = ((props.tooltip === true) ? data?.['__info_of__' + field]?.txt : props.tooltip) || '';
 
-    let css = '';//'my-auto input ';
-    //css += (jsxLabel) ? 'ms-1' : (label) ? 'ms-auto' : '';
-    css += (props.hidden) ? ' hidden-input' : '';
+    let classes = '';//'my-auto input ';
+    //classes += (jsxLabel) ? 'ms-1' : (label) ? 'ms-auto' : '';
+    classes += (props.hidden) ? ' hidden-input' : '';
+    classes += (props.clickHidden) ? ' click-hidden-input' : '';
     let autosize: boolean = props.autosize === undefined ? false : props.autosize; // props.type==='text'
-    css += autosize ? ' autosize-input' : '';
+    classes += autosize ? ' autosize-input' : '';
     const isBoolean = (['checkbox', 'radio'].includes(type));
 
 
@@ -216,7 +218,7 @@ export function InputComponent(props: AllProps) {
     else cursor = 'auto';
 
     let inputProps: GObject = {...otherprops,
-        className: [props.inputClassName||'', css].join(' '),
+        className: [props.inputClassName||'', classes].join(' '),
         style: (props.inputStyle || {}),
         spellCheck: (props as any).spellCkeck || false, readOnly, disabled: readOnly, type,
         value: serializeValue(value),
@@ -244,8 +246,8 @@ export function InputComponent(props: AllProps) {
     }
     if (props.autosize) rootprops['data-value'] = inputProps.value;
 
-    if (tooltip) {
-        rootprops.onMouseEnter = () => Tooltip.show(tooltip, 'b', (rootprops.ref?.current) || rootprops.ref);
+    if (tooltip || props.clickHidden) {
+        rootprops.onMouseEnter = () => Tooltip.show(tooltip || 'Double click to edit', 'b', (rootprops.ref?.current) || rootprops.ref);
         rootprops.onMouseLeave = () => Tooltip.hide();
     }
     /*let rootkeys = new Set(...Object.keys(rootprops));
@@ -308,6 +310,17 @@ export function InputComponent(props: AllProps) {
             inputProps.contentEditable = inputProps.contentEditable !== false;
             input = React.createElement(props.tag, inputProps, props.children); break;
     }
+    if (!visible) {
+        let valueStr: string = value as any;
+        switch (subtype) {
+            case 'checkbox': valueStr = value ? 'true' : 'false'; break;
+            case 'checkbox3': valueStr = value === false ? 'false' : (value ? 'true' : 'undetermined'); break;
+        }
+        console.error('hidden input', {ref: rootprops.ref, rootprops});
+        let html: Element | null = !rootprops.ref ? null : typeof rootprops.ref === 'function' ? rootprops.ref() : rootprops.ref.current;
+        U.clickedOutside(html?.parentElement, ()=>setVisible(false));
+        return <span {...rootprops} onDoubleClick={(e)=>{rootprops.onDoubleClick?.(e); setVisible(true)}}>{valueStr}</span>;
+    }
     if (!wrap) return input;
 
     if (typeof label === "string") label = <span>{label}</span>;
@@ -368,6 +381,7 @@ export interface InputOwnProps {
     readOnly?: boolean;
     tooltip?: boolean | ReactNode;
     hidden?: boolean;
+    clickHidden?: boolean;
     autosize?: boolean;
     inputClassName?: string;
     inputStyle?: GObject;

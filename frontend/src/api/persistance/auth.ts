@@ -1,6 +1,6 @@
 import Api, {Response} from "../api";
 import Storage from "../../data/storage";
-import {DUser, GObject, Log, U} from "../../joiner";
+import {DUser, GObject, Log, R, U} from "../../joiner";
 import {jwtDecode} from "jwt-decode";
 import { RegisterRequest } from "../DTO/RegisterRequest";
 import { LoginRequest } from "../DTO/LoginRequest";
@@ -27,10 +27,10 @@ class AuthApi {
 
 
     static async logout(): Promise<void> {
-        Api.token = null;
-
-        U.resetState();
-        Storage.reset();
+        await Api.revokeToken();
+        Storage.resetLogin();
+        // U.resetState();
+        R.navigate('/auth');
     }
     static async confirmAccount(request: ConfirmAccountRequest): Promise<Response> {
         return await Api.post(`${Api.persistance}/account/confirm`, {...request}, true);
@@ -65,16 +65,6 @@ class AuthApi {
             console.error("token decode error:", {error, claims, token, decoded});
             return null;
         }
-    }
-
-    // write storage
-    static storeSessionData(token: string, tokenExp: number, refreshT: string, RTExp: number, user?: DUser): void {
-        Storage.write('token', token);
-        Storage.write('tokenExp', tokenExp);
-        Storage.write('refreshToken', refreshT);
-        Storage.write('refreshTokenExp', RTExp);
-        if (user) Storage.write('user', user);
-        Storage.write('offline', false);
     }
 }
 

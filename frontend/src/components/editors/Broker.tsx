@@ -32,7 +32,7 @@ function BrokerEditorComponent(props: AllProps) {
 
     const connect = async() => {
         //SetRootFieldAction.new('isLoading', true);
-        IoT.client.io.opts.query = {'project': user.project?.id, 'brokerUrl': `${url}:${port}`};
+        IoT.client.io.opts.query = {'project': U.getProjectID_URL(), 'brokerUrl': `${url}:${port}`};
         IoT.client.connect();
         // IoT.client.off('pull-action');
         IoT.client.on('pull-action', (receivedAction: GObject<Action & CompositeAction>) => {
@@ -85,7 +85,7 @@ type AllProps = OwnProps & StateProps & DispatchProps;
 
 function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     const ret: StateProps = {} as FakeStateProps;
-    ret.user = LUser.fromPointer(DUser.current);
+    ret.user = LUser.getUser();
     return ret;
 }
 

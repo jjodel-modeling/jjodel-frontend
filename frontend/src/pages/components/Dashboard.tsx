@@ -251,7 +251,7 @@ type ProjectDashboardProps = {
 
 function GenericDashboard(props: DashProps): any {
     const {children, active} = props;
-    const user: LUser = LPointerTargetable.fromPointer(DUser.current);
+    const user: LUser = LUser.getUser();
 
     return (<>
         <Navbar />
@@ -457,7 +457,6 @@ function ProjectCatalog(props: ProjectProps) {
 
 
 function ProjectDashboard(props: DashProps): any {
-    const user: LUser = LPointerTargetable.fromPointer(DUser.current);
     const query = useQuery();
     const id = query.get('id') || '';
     const project: LProject = LProject.fromPointer(id);

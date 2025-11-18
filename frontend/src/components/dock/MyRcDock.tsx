@@ -5,7 +5,7 @@ import {
     DocString,
     DUser,
     GObject, L,
-    Log,
+    Log, LProject,
     LUser,
     Point,
     RuntimeAccessible,
@@ -620,12 +620,12 @@ export class PinnableDock extends DockLayout{
         switch (category) {
             default: layout = null as any; break;
             case 'user':
-                let duser = D.from(DUser.current) as DUser;
+                let duser = DUser.getUser();
                 layout = duser.layout[slot];
                 break;
             case 'project':
-                let luser = L.from(DUser.current) as LUser;
-                let project = luser?.project;
+                let luser = LUser.getUser();
+                let project = LProject.getProject();
                 layout = project ? project.layout[slot] : null as any;
                 break;
         }
@@ -641,25 +641,25 @@ export class PinnableDock extends DockLayout{
         switch (PinnableDock.saveSlotCategory) {
             default: return false;
             case 'user':
-                let duser = D.from(DUser.current) as DUser;
+                let duser = DUser.getUser();
                 return duser.autosaveLayout;
             case 'project':
-                let luser = L.from(DUser.current) as LUser;
-                let project = luser?.project;
+                let luser = LUser.getUser();
+                let project = LProject.getProject();
                 return project ? project.autosaveLayout : false;
         }
     }
 
     static toggleAutosave(b?: boolean) {
         let setAutosave = b === undefined ? !PinnableDock.isAutosave() : b;
-        let luser: LUser = L.from(DUser.current) as LUser;
+        let luser: LUser = LUser.getUser();
         switch (PinnableDock.saveSlotCategory) {
             default: return false;
             case 'user':
                 luser.autosaveLayout = setAutosave;
                 break;
             case 'project':
-                let project = luser?.project;
+                let project = LProject.getProject();
                 if (project) project.autosaveLayout = setAutosave;
                 break;
         }
@@ -668,14 +668,14 @@ export class PinnableDock extends DockLayout{
     static save() {
         let category = PinnableDock.saveSlotCategory;
         let name = PinnableDock.saveSlotName;
-        let luser = L.from(DUser.current) as LUser;
+        let luser = LUser.getUser();
         switch (category){
             default: break;
             case 'user':
                 luser.layout = {[name]: PinnableDock.instance.getLayout()};
                 break;
             case 'project':
-                let lproject = luser.project;
+                let lproject = LProject.getProject();
                 if (!lproject) return;
                 lproject.layout = {[name]: PinnableDock.instance.getLayout()};
                 break;

@@ -46,7 +46,7 @@ export class ProjectResponseDTO extends Response_DTO<ProjectResponseDTO, DProjec
             d.creation = (this.creation ? new Date(this.creation) : new Date()).getTime();
             d.lastModified = (this.lastModified ? new Date(this.lastModified) : new Date()).getTime();
             (d as any).convertedFromDto = true;
-        }, [], true);
+        }, [], false); // it is already persisted in ProjectComponent -> useEffect -> load
     }
 }
 type Missing = Omit<ProjectResponseDTO, keyof DProject>;

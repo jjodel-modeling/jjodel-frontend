@@ -92,6 +92,7 @@ export class Color {
 @RuntimeAccessible('R')
 export class R {
     public static cname: string = 'R';
+    public static preventNavigation = false;
 
     // from: 1.com/2/3
     // /5       --> 1.com/5/
@@ -103,7 +104,13 @@ export class R {
     }
 
     public static replace(path: string): void {
+        if (windoww.preventNavigation || R.preventNavigation) return;
         window.location.replace(path);
+    }
+
+    public static refresh(): void {
+        if (windoww.preventNavigation || R.preventNavigation) return;
+        window.location.reload();
     }
 
     public static navigate(path: string, refresh: (true | NavigateFunction) = true): void {
@@ -111,7 +118,7 @@ export class R {
         console.warn('R.navigate()', {path, refresh});
 
         //if (path.indexOf('allProject') >= 0) return;
-        if (windoww.preventNavigation) return;
+        if (windoww.preventNavigation || R.preventNavigation) return;
         let absPathIndex = path.indexOf('//');
         if (absPathIndex >= 0 && absPathIndex <= 'https:'.length) { // other protocols are not supported
             window.location.href = path;

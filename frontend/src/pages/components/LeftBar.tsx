@@ -101,7 +101,7 @@ function LeftBar(props: LeftBarProps): JSX.Element {
     // };
 
     const {active, project} = props;
-    let user: LUser = props.user || L.fromPointer(DUser.current);
+    let user: LUser = props.user || LUser.getUser();
 
     const selectProject= (project: LProject) => {
         R.navigate(`/project?id=${project.id}`, true);

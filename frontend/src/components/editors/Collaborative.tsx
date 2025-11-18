@@ -72,8 +72,8 @@ type AllProps = OwnProps & StateProps & DispatchProps;
 
 function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     const ret: StateProps = {} as FakeStateProps;
-    const user = LUser.fromPointer(DUser.current) as LUser;
-    ret.project = user.project as LProject;
+    const user = LUser.getUser();
+    ret.project = LProject.getProject();
     ret.users = LUser.fromPointer(state.users);
     return ret;
 }

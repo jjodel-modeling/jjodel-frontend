@@ -49,7 +49,7 @@ export class StateMachine {
     private static start: LClass;
 
     private static loadM2(name: string) {
-        this.user = LUser.fromPointer(DUser.current);
+        this.user = LUser.getUser();
         /* Metamodel */
         TRANSACTION('load metamodel', ()=>{
             const dProject = DProject.new('private', name);

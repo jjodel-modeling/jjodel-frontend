@@ -1,7 +1,7 @@
 import './style.scss';
 import {Dispatch, ReactElement, ReactNode} from 'react';
 import {connect} from 'react-redux';
-import {DState, DUser, LProject, LUser} from '../../joiner';
+import {DProject, DState, DUser, LProject, LUser} from '../../joiner';
 import {FakeStateProps, windoww} from '../../joiner/types';
 import {LayoutData} from 'rc-dock';
 import {Collaborative, Console, Info, Logger, Skeleton, MetaData, NestedView} from "../editors";
@@ -49,7 +49,7 @@ function DockComponent(props: AllProps) {
     /* Editors */
 
 
-    const ModelsSummary = {id: id(), title: <TabHeader tid={tid()}><Logo style={{marginLeft: '-10px', fontSize: '1.5rem', paddingRight: '6px'}}/> {user?.project?.name}</TabHeader>, group: 'models', closable: false, content: <TabContent tid={tid()}><ModelsSummaryTab /></TabContent>};
+    const ModelsSummary = {id: id(), title: <TabHeader tid={tid()}><Logo style={{marginLeft: '-10px', fontSize: '1.5rem', paddingRight: '6px'}}/> {DProject.getProject()?.name}</TabHeader>, group: 'models', closable: false, content: <TabContent tid={tid()}><ModelsSummaryTab /></TabContent>};
     //const test = {id: id(), title: 'Test', group: 'editors', closable: false, content: <TestTab />};
     const structure = {id: id(), title: <TabHeader tid={tid()}>Properties</TabHeader>, group: 'editors', closable: false, content: <TabContent tid={tid()}><Info mode={'tab'}/></TabContent>};
     const metadata = {id: id(), title: <TabHeader tid={tid()}>Metadata</TabHeader>, group: 'editors', closable: false, content: <TabContent tid={tid()}><MetaData /></TabContent>};
@@ -80,8 +80,8 @@ function DockComponent(props: AllProps) {
     if (advanced) tabs.push(mtm);
     if (advanced) tabs.push(logger);
 
-    // if (user?.project?.type === 'collaborative') tabs.push(collaborative);
-    if (false && user?.project?.type === 'collaborative') tabs.push(permissions);
+    // if (?.type === 'collaborative') tabs.push(collaborative);
+    if (false && LProject.getProject()?.type === 'collaborative') tabs.push(permissions);
     layout.dockbox.children.push({tabs});
 
     return (<PinnableDock key={''+advanced} ref={dock => { DockManager.dock = dock }} defaultLayout={layout} groups={groups} />);
@@ -97,8 +97,7 @@ type AllProps = OwnProps & StateProps & DispatchProps;
 
 function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     const ret: StateProps = {} as FakeStateProps;
-    if(DUser.current) ret.user = LUser.fromPointer(DUser.current);
-    else ret.user = null;
+    ret.user = LUser.getUser();
     ret.advanced = state.advanced;
     return ret;
 }

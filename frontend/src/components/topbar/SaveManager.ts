@@ -19,7 +19,7 @@ import {
     Debug,
     DViewElement,
     transientProperties,
-    LUser, DProject, XML
+    LUser, DProject, XML, LProject
 } from '../../joiner';
 import {ProjectsApi} from "../../api/persistance";
 import {VersionFixer} from "../../redux/VersionFixer";
@@ -29,7 +29,7 @@ export class SaveManager {
     private static tmpsave: DState;
 
     static save(): void {
-        let project = (LUser.fromPointer(DUser.current) as LUser).project;
+        let project = LProject.getProject();
         if (project) ProjectsApi.save(project);
         U.isProjectModified = false;
         /*SaveManager.tmpsave = store.getState();

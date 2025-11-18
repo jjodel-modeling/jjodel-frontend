@@ -1,7 +1,7 @@
 import {FormEvent, JSX} from 'react';
 import {useStateIfMounted} from 'use-state-if-mounted';
-import type {Dictionary, GObject} from '../joiner';
-import { DUser, R, SetRootFieldAction, U} from '../joiner';
+import type {Dictionary, DocString, GObject, Pointer} from '../joiner';
+import {Log, DUser, R, SetRootFieldAction, U} from '../joiner';
 import Storage from '../data/storage';
 import {AuthApi, UsersApi} from "../api/persistance";
 import logo from '../static/img/jjodel-124.png';
@@ -11,7 +11,8 @@ import { LoginRequest } from '../api/DTO/LoginRequest';
 import { TokenResponse } from '../api/DTO/TokenResponse';
 import {ResetPasswordRequest} from "../api/DTO/ResetPasswordRequest";
 import "./auth.scss"
-
+import Api from "../api/api";
+import {JwtClaims} from "../api/DTO/JwtClaims";
 const passPattern = '^.{8,}$'; //'^[^\\s].{10,}[^\\s]$';
 function AuthPage(): JSX.Element {
     const [action, setAction] = useStateIfMounted<'login'|'register'|'retrieve-password'>('login');
@@ -33,25 +34,30 @@ function AuthPage(): JSX.Element {
          */
     }
 
-    const onSubmit = async(e: FormEvent<HTMLFormElement>) => {
+    const onSubmit = (e: FormEvent<HTMLFormElement>) => {
         e.preventDefault();
-        SetRootFieldAction.new('isLoading', true);
-        let success: boolean = false;
-        switch (action) {
-            case 'login':
-                success = await login();
-                SetRootFieldAction.new('isLoading', false);
-                break;
-            case 'register':
-                success = await register();
-                SetRootFieldAction.new('isLoading', false);
-                break;
-            case 'retrieve-password':
-                success = await reset_password();
-                SetRootFieldAction.new('isLoading', false);
-                break;
+        let dosubmit = async () => { // main function needs to stay not async or prevent default won't work (it doubles navigation and API calls triggered)
+            SetRootFieldAction.new('isLoading', true);
+            let success: boolean = false;
+            switch (action) {
+                case 'login':
+                    success = await login();
+                    SetRootFieldAction.new('isLoading', false);
+                    break;
+                case 'register':
+                    success = await register();
+                    SetRootFieldAction.new('isLoading', false);
+                    break;
+                case 'retrieve-password':
+                    success = await reset_password();
+                    SetRootFieldAction.new('isLoading', false);
+                    break;
+            }
+            setDirty(!success);
         }
-        setDirty(!success);
+        // try { dosubmit(); } catch (error) { Log.eDevv('Submit error', error) } should never catch an error on async
+        dosubmit();
+        return false;
     }
 
     const reset_password = async (): Promise<boolean> => {
@@ -102,31 +108,39 @@ function AuthPage(): JSX.Element {
                 // U.alert('i', <>Login successful</>, <>You are being redirected to your <a href={'//#/allProjects'}>dashboard</a></>);
             }
 
-            if (!raw?.token || typeof raw.token !== 'string') { U.alert('e', 'Login failed or invalid token.', ''); return false; }
+            if (!raw?.token || typeof raw.token !== 'string') {
+                console.error('lf', {raw});
+                U.alert('e', 'Login failed or invalid token.', '');
+                return false; }
 
             const claims = AuthApi.readJwtToken(raw.token);
             console.log('login claims', {response, raw, claims});
             if (!claims) { U.alert('e', 'Invalid token.', ''); return false; }
-            AuthApi.storeSessionData(raw.token, claims.exp || 0, raw.refreshToken||'', raw.refreshTokenExpiryTime || 0, undefined);
+            let te = new Date(raw.expires as unknown as string).getTime();
+            let rte = new Date(raw.refreshTokenExpiryTime as unknown as string).getTime();
+
+            Api.storeSessionData(raw.token, te, raw.refreshToken||'', rte, undefined);
+            if (isNaN(new Date(raw.refreshTokenExpiryTime as any as string).getTime())) console.error('invalid refresh token expiry date:'+raw.refreshTokenExpiryTime, raw);
 
             // const user: DUser = DUser.new(claims.name, '', claims.nickname, '',  '', false, claims.email,  raw.token, claims._Id, claims.id, true);
-            const user: DUser|null = await UsersApi.getUserByGUID(claims.id, raw, claims);
+            const user: DUser|null = await UsersApi.getUserByGUID(claims.id);
             // name-surname error is on server-side get or set. not on client side.
             /*if ((window as any).debug1 && user && user.surname === user.name) {
                 console.log('error name debug', {user});
                 return;
             }*/
             if (!user) {
-                U.alert('e', 'Login failed or invalid token.', '');
+                Log.ee('Login failed, cannot load user data.', {user, raw});
+                U.alert('e', 'Login failed, cannot load user data.', '');
                 // todo: report error
                 return false;
             }
             Storage.write('user', user);
             //U.resetState();
-            if (window.location.hash.indexOf('#/auth') !== 0) window.location.reload()
+            if (window.location.hash.indexOf('#/auth') !== 0) R.refresh()
             else R.navigate('/allProjects');
         } catch (e) {
-            console.error("Login error:");
+            Log.ee('Unexpected error during login.', {e});
             U.alert('e', 'Unexpected error during login.', '');
             // todo: report error
             return false;
@@ -179,7 +193,7 @@ const offline = () => {
 
 return(<section className={`w-100 h-100 login bg ${action === 'register' ? 'register' : action === 'retrieve-password' ? 'retrieve' : ''} `+(isDirty?' dirty':'')}>
 
-    <form className={'d-block bg-white rounded border mx-auto w-fit px-5 py-4 mt-5'} onSubmit={onSubmit}>
+    <form className={'d-block bg-white rounded border mx-auto w-fit px-5 py-4 mt-5'} onSubmit={onSubmit} action="form?submit=1">
         <label className={'fs-1 d-block text-center text-primary login-header'}>
 
             {action === 'register' && 'Create an Account'}

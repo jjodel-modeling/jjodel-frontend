@@ -24,7 +24,7 @@ import { Tooltip } from './Tooltip';
 import Editor from "@monaco-editor/react";
 import {on} from "events";
 import {Nearley} from "../../DSL/nearley/nearley";
-import {LanguageCache} from "../../joiner/classes";
+import {LanguageCache, ParserData} from "../../joiner/classes";
 import Handlebars from "handlebars";
 
 
@@ -103,6 +103,7 @@ export function parseT2M(language: string, text0: string, canThrow: boolean = fa
     return ret;
 }
 windoww.parseT2M = parseT2M;
+let notFragments: ParserData = null as any;
 
 export function doM2T(data0: LPointerTargetable | Pointer | null | undefined, language: string): string{
     let data: LModelElement = LPointerTargetable.from(data0 as any);
@@ -123,18 +124,23 @@ export function doM2T(data0: LPointerTargetable | Pointer | null | undefined, la
         return msg;
     }
 
-    let func_str = languageObj[languageObj.engine]?.str;
+    let engine = languageObj.engine || 'javascript';
+
+    let m2tobj = languageObj[engine];
+    let allowPartials = m2tobj.allowPartials;
+    let func_str: string = m2tobj[allowPartials ? data.className.substring(1) : '__str'];
+
     if (!func_str) {
-        let msg = "M2T transformation is missing on language \""+language+"\" for the engine \""+languageObj.engine+"\".";
+        let msg = "M2T transformation"+(allowPartials ? ' for ' + data.className.substring(1) : '')+" is missing on language \""+language+"\" for the engine \""+engine+"\".";
         Log.ee(msg);
         return msg;
     }
 
     if (data.className !== 'DModel') {
         let langObj = s.languages[language];
-        let allowPartial = langObj.m2t[langObj.m2t.engine].allowPartials;
+        let allowPartial = langObj.m2t[engine].allowPartials;
         if (!allowPartial) {
-            let msg = 'The language ' + language+' with engine ' + langObj.m2t.engine + ' does not allow partial serializations.\n' +
+            let msg = 'The language ' + language+' with engine ' + engine + ' does not allow partial serializations.\n' +
                 'Call the serialization from the root model.';
             Log.ee(msg);
             return msg;
@@ -144,14 +150,18 @@ export function doM2T(data0: LPointerTargetable | Pointer | null | undefined, la
     let func: (model: LModelElement)=>string = ()=> '';
 
     console.log('dom2t', {data0, language, languageObj});
-    switch (languageObj.engine || 'javascript') {
+    switch (engine) {
         default:
-            let msg = 'M2T transformation failed, unsupported parser: ' + languageObj.engine;
-            Log.ee(msg, {language, parser:languageObj.engine, languageObj, data0});
+            let msg = 'M2T transformation failed, unsupported parser: ' + engine;
+            Log.ee(msg, {language, engine, languageObj, data0});
             return msg;
         case undefined:
         case 'handlebars':
-            console.log('handlebars 1', {func_str});
+            for (let name in m2tobj) {
+                if (!notFragments) notFragments = {...new ParserData(), 'clonedCounter':0};
+                if (name in notFragments) continue;
+                Handlebars.registerPartial(name, m2tobj[name]);
+            }
             let template: (obj: GObject, options?: RuntimeOptions) => string = ()=>'missing handlebars template';
             try { template = Handlebars.compile(func_str); }
             catch (e: any) {
@@ -169,12 +179,18 @@ export function doM2T(data0: LPointerTargetable | Pointer | null | undefined, la
                 }
                 ret = msg;
             }
+            // cleanup
+            for (let name in m2tobj) {
+                if (name in notFragments) continue;
+                Handlebars.unregisterPartial(name);
+            }
+            // Handlebars.partials = {}; // unofficial fallback to make sure i erase all partials
             console.log('handlebars 3', {func_str, template, ret});
             return ret;
 
         case 'javascript':
             let m2t = "("+func_str+")"; // because "function(text){return "a"}" is invalid without a function name unless i wrap it in parenthesis and turn into expression.
-            try { func = eval(m2t); } catch (e) { Log.ee("M2T error", {e, m2t, language, engine: languageObj.engine, func_str, languageObj}); return "M2T transformation failed, check the logger for more info."; }
+            try { func = eval(m2t); } catch (e) { Log.ee("M2T error", {e, m2t, language, engine, func_str, languageObj}); return "M2T transformation failed, check the logger for more info."; }
             if (typeof func !== 'function') {
                 let msg = 'The M2T transformation of "'+language+'" must be a serializer function, please change the language definition.';
                 Log.ee(msg);

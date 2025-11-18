@@ -140,7 +140,7 @@ function makeEntry(i: MenuEntry|null|undefined, index: number) {
 
 type UserProps = {}
 const User = (props: UserProps) => {
-    const user: LUser = LUser.fromPointer(DUser.current);
+    const user: LUser = LUser.getUser();
     const name = `${user?.name} ${user?.surname}`;
     const initials = name.split(' ').map(n=>n[0]).join('');
     return (<div className={'user text-end'}>
@@ -205,7 +205,7 @@ function open (url: string) { window.open(url, '_blank'); }
 function NavbarComponent(props: AllProps) {
     const [debuggerr, setDebugger] = useState(false);
     const navigate = useNavigate();
-    let user: LUser = L.fromPointer(DUser.current);
+    let user: LUser = LUser.getUser();
     let project: LProject | undefined = user?.project || undefined;
     let projectid = U.getProjectID_URL();
     Log.eDev(projectid !== project?.id, 'wrong project setup in navbar', {projectid, project});
@@ -279,11 +279,9 @@ function NavbarComponent(props: AllProps) {
                         if (isProjectModified()) {
                             U.dialog('You are about to log out without saving your project. Do you want to proceed?', 'logout', async ()=>{
                                 await AuthApi.logout();
-                                R.navigate('/auth');
                             });
                         } else {
                             await AuthApi.logout();
-                            R.navigate('/auth');
                         }},
                     icon: icon['logout']}
             ]},
@@ -539,12 +537,9 @@ function NavbarComponent(props: AllProps) {
                             if (isProjectModified()) {
                                 U.dialog('You are about to log out without saving your project. Do you want to proceed?', 'logout', async ()=>{
                                     await AuthApi.logout();
-                                    R.navigate('/auth');
                                 });
                             } else {
                                 await AuthApi.logout();
-                                R.navigate('/auth');
-
                             }
                         }}>Logout</Item>
                     </Menu>

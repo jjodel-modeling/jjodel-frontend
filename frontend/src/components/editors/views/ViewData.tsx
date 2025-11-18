@@ -104,7 +104,7 @@ type AllProps = Overlap<OwnProps, StateProps> & DispatchProps;
 function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     const ret: StateProps = {} as FakeStateProps;
     // const user = LUser.fromPointer(DUser.current, state);
-    // ret.project = user.project as LProject;
+    // ret.project = LProject.getProject();
     ret.viewpoints = LPointerTargetable.fromArr(ownProps.viewpoints); // ret.project.viewpoints;
     ret.debug = state.debug;
     ret.view = LPointerTargetable.fromPointer(ownProps.viewid, state);

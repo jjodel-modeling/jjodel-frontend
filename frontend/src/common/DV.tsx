@@ -29,15 +29,15 @@ let ShortAttribETypes: typeof SAType = (window as any).ShortAttribETypes;
 export class DV {
     static defaultLanguages(): Dictionary<string, Language> {
 
-        let m2t = undefined; //  {javascript:{str:'function(model) {\n\treturn "Not implemented, this is a placeholder.";\n}'}};
+        let m2t = undefined; //  {javascript:{__str:'function(model) {\n\treturn "Not implemented, this is a placeholder.";\n}'}};
         let t2m = undefined;
         let ret: Dictionary<string, Language> = {};
         ret.JSON = new Language(
-            {javascript:{allowPartials: true, str:'function(modelData) {\n\treturn JSON.stringify(modelData.json, null, 4);\n}'}},
-            {javascript:{allowPartials: true, str:"function(text) {\n\treturn JSON.parse(text);\n}"}}
+            {javascript:{allowPartials: true, __str:'function(modelData) {\n\treturn JSON.stringify(modelData.json, null, 4);\n}'}},
+            {javascript:{allowPartials: true, __str:"function(text) {\n\treturn JSON.parse(text);\n}"}}
         );
         ret['Emfatic'] = new Language(
-            {javascript:{allowPartials: true, str: `function(model, node){
+            {javascript:{allowPartials: true, __str: `function(model, node){
     // finds and applies the appropriate serializer, empty string for missing ones.
     let serialize = (d, deep, indent) => map[d.className]?.(d, deep, indent) || '';
     
@@ -115,7 +115,7 @@ class {{name}} {
 }
 
 {{/each}}
-`}}, {engine:'nearley' as any, nearley:{allowPartials: false, str:
+`}}, {engine:'nearley' as any, nearley:{allowPartials: false, __str:
 `main -> header classdef:* {% (d) => ({packages:[{uri: d[0].uri, prefix: d[0].prefix, classifiers:d[1]}]}) %}
 
 # --------------------------------------------------------------------
@@ -199,14 +199,14 @@ strescape -> ["\\\\/bfnrt] {% id %}
         ret['flexmi/XMI'] = new Language(m2t, t2m);
 
         ret['eCore/JSON'] = new Language(
-            {javascript:{allowPartials: true, str: `function(modelData) {
+            {javascript:{allowPartials: true, __str: `function(modelData) {
     let ecore = modelData.ecore;
     let skipKeys = ['eStructuralFeatures', 'eParameters', 'eClassifiers', 'eOperations', 'eSubpackages', 'eLiterals'];
     // remove sub-element collections to keep the scope limited to current element.
     for (let key of skipKeys) { delete ecore[key]; }
     return JSON.stringify(ecore, null, 4);
 }`}},
-            {javascript:{allowPartials: true, str:`function(text) {
+            {javascript:{allowPartials: true, __str:`function(text) {
     let ecore = JSON.parse(text);
     // remove xmi inline prefixs (@)
     for (let key of Object.keys(ecore)) {
@@ -218,11 +218,11 @@ strescape -> ["\\\\/bfnrt] {% id %}
     return ecore;
 }`}});
         ret['eCore/XMI'] = new Language(
-            {javascript:{allowPartials: true, str: `function(modelData) { return XMI.fromJSON(M2T(modelData, 'eCore/JSON')) }`}},
-            {javascript:{allowPartials: true, str: `function(text) { return parseT2M('eCore/JSON', JSON.stringify(XMI.toJSON(text))); }`}});
+            {javascript:{allowPartials: true, __str: `function(modelData) { return XMI.fromJSON(M2T(modelData, 'eCore/JSON')) }`}},
+            {javascript:{allowPartials: true, __str: `function(text) { return parseT2M('eCore/JSON', JSON.stringify(XMI.toJSON(text))); }`}});
 
         ret.testLanguage = new Language({
-                javascript:{allowPartials: false, str:`function (model, node){
+                javascript:{allowPartials: false, __str:`function (model, node){
     let text: string = '' model.className + ':' + model.id;
     for (let child of model.attributes) text += '\\n\\t'+child.name+':'+JSON.stringify(child.values);
     for (let child of model.references) text += '\\n\\t'+child.name+':'+JSON.stringify(child.values.map(v=>v.id));
@@ -233,7 +233,7 @@ strescape -> ["\\\\/bfnrt] {% id %}
     {
         // NB: check nearley postprocessors for json to jom object
         // https://nearley.js.org/docs/grammar#postprocessors
-    nearley:{allowPartials: false, str:`
+    nearley:{allowPartials: false, __str:`
 main         -> classs:* "end:"               {% (d)=> { return {packages: [{name: "default", classes: d[0]}]}} %}
 comment      -> "#" [^\\n\\r]:* "\\r":? "\\n"     {% (d)=> { return d.flat().join("") }%}
 eol          -> (ws "\\r":? "\\n")              {% (d)=> { return null }%}
@@ -316,7 +316,7 @@ test_text:`# Q12136 - A disorder of structure or function in a living organism t
    performs -> Treatment [*]
 end:`
     },
-    javascript:{allowPartials: false, str:`function (text) {
+    javascript:{allowPartials: false, __str:`function (text) {
     let lines = text.split('\\n');
     lines = lines.map(line=>{ // uncomment
         let comment_index = line.indexOf('//'); return (comment_index==-1) ? line : line.substr(0,comment_index);

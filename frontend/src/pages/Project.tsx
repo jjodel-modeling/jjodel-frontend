@@ -2,7 +2,7 @@ import React, {Dispatch, JSX, ReactElement, ReactNode, useEffect, useState} from
 import {connect} from 'react-redux';
 import {
     CreateElementAction,
-    Dictionary,
+    Dictionary, DProject,
     DState,
     DUser,
     DViewElement, DViewPoint, GObject,
@@ -28,12 +28,10 @@ import {Navbar} from "./components";
 import {CSS_Units} from "../view/viewElement/view";
 
 function ProjectComponent(props: AllProps): JSX.Element {
-    const {user} = props;
-    const query = useQuery();
-    const id = query.get('id') || '';
-
-    useEffect(() => {
+/*
+    useEffect(() => { moved in stateinitializer
         (async function() {
+            console.error('init_project');
             const project = await ProjectsApi.getOne(id);
             console.log('project load api response', {project, isOff:U.isOffline()});
             if (!project) {
@@ -49,15 +47,10 @@ function ProjectComponent(props: AllProps): JSX.Element {
             }
             user.project = LProject.fromPointer(project.id);
         })();
-    }, [id]);
+    }, [id]);*/
 
-    let vparr = user?.project?.viewpoints || [];
-    let allViews = vparr.flatMap((vp: LViewPoint) => vp && vp.allSubViews);
-    allViews.push(...vparr as LViewElement[]);
-    allViews = allViews.filter(v => v);
-    const viewsDeDuplicator: Dictionary<Pointer<DViewElement>, LViewElement> = {};
-    for (let v of allViews) viewsDeDuplicator[v.id] = v;
-    if (!user?.project) {
+
+    if (props.isLoading) {
         return (
             <div className={'w-100 h-100 d-flex'}>
                 <div className={'m-auto d-flex p-5'} style={{flexFlow: 'column', cursor:'pointer'}}onClick={(e) => R.navigate('/allProjects')}>
@@ -67,11 +60,18 @@ function ProjectComponent(props: AllProps): JSX.Element {
             </div>
         );
     }
+    let project = LProject.getProject();
+    let vparr = project?.viewpoints || [];
+    let allViews = vparr.flatMap((vp: LViewPoint) => vp && vp.allSubViews);
+    allViews.push(...vparr as LViewElement[]);
+    allViews = allViews.filter(v => v);
+    const viewsDeDuplicator: Dictionary<Pointer<DViewElement>, LViewElement> = {};
+    for (let v of allViews) viewsDeDuplicator[v.id] = v;
 
     return (<>
-        <Dashboard active={'Project'} version={props.version} project={user.project} />
+        <Dashboard active={'Project'} version={props.version} project={project} />
         {/*<Try><Dock /></Try>*/}
-        {user.project.type === 'collaborative' && <CollaborativeAttacher project={user.project?.id}/>}
+        {project.type === 'collaborative' && <CollaborativeAttacher project={props.projectid as string}/>}
     </>);
 
 }
@@ -80,8 +80,10 @@ interface OwnProps {
 }
 
 interface StateProps {
-    user: LUser,
+    projectid?: Pointer<DProject>,
+    // project?: LProject,
     version: DState["version"],
+    isLoading: boolean,
 }
 interface DispatchProps {}
 type AllProps = OwnProps & StateProps & DispatchProps;
@@ -89,7 +91,8 @@ type AllProps = OwnProps & StateProps & DispatchProps;
 
 function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     const ret: StateProps = {} as FakeStateProps;
-    ret.user = LUser.fromPointer(DUser.current);
+    ret.projectid = DProject.current; // = LProject.getProject(); // problem: this need a componentshouldupdate. if i use just id it won't work too because id is present at start, but project is loaded from backend
+    ret.isLoading = ProjectsApi.isLoading;
     return ret;
 }
 

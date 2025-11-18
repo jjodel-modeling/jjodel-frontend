@@ -346,11 +346,11 @@ export class DViewElement extends DPointerTargetable {
                 query = `context ${forData.className} inv: self.id = '${forData.id}'`;
                 break;
         }
-        const user = LUser.fromPointer(DUser.current) as LUser;
-        // const project = user?.project; if(!project) return this;
+        const user = LUser.getUser();
+        // const project = LProject.getProject(); if(!project) return this;
         let name: string;
         let parentView: LViewElement;
-        let activeVP: LViewPoint | undefined = user?.project?.activeViewpoint;
+        let activeVP: LViewPoint | undefined = LProject.getProject()?.activeViewpoint;
         if (activeVP && activeVP?.id !== Defaults.Pointer_ViewPointDefault) parentView = activeVP;
         else parentView = LPointerTargetable.fromPointer(Defaults.Pointer_ViewModel);
 

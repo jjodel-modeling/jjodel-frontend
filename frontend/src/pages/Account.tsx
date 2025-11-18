@@ -250,7 +250,7 @@ type AllProps = OwnProps & StateProps & DispatchProps;
 
 function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     const ret: StateProps = {} as FakeStateProps;
-    ret.user = LUser.fromPointer(DUser.current);
+    ret.user = LUser.getUser();
     ret.version = state.version;
     return ret;
 }

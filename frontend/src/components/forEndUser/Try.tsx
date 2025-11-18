@@ -175,7 +175,7 @@ class TryComponent extends React.Component<AllProps, State> {
             }
         }
         error.id = Constructors.makeID();
-        let user: DUser = D.from(DUser.current);
+        let user: DUser = DUser.getUser();
 
         let report: Report = new Report(error, info);
         (window as any).tryreport = report;

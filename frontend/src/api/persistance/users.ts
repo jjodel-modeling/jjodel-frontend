@@ -26,9 +26,9 @@ class UsersApi {
     }
 
 
-    static async getUserByGUID(guid: string, raw: TokenResponse, claims?: JwtClaims|null): Promise<DUser|null> {
+    static async getUserByGUID(guid: string): Promise<DUser|null> {
         let response: GObject = await Api.get(`${Api.persistance}/account/by-id/${guid}`);
-        console.log('getUserByGUID', {guid, raw, claims, response, code:response.code, data:response.data});
+        console.log('getUserByGUID', {guid, response, code:response.code, data:response.data});
 
         if ((response.code+'')[0] !== '2') {
             let title: string = response.data?.title;
@@ -37,7 +37,7 @@ class UsersApi {
             return null;
         }
 
-        return new UserResponseDTO(response.data).toJodelClass(raw, claims);
+        return new UserResponseDTO(response.data).toJodelClass();
     }
 
     static async updateUserById(updateUserRequest: UpdateUserRequest): Promise<boolean> {

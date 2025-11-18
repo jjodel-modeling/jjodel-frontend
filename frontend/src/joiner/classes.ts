@@ -644,7 +644,7 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
             if (!Array.isArray(d)) d = [d];
             // first create "this"
             for (let e of d) {
-                console.log('check pending', {e, p:Constructors.pending[e.id], dict:{...Constructors.pending}});
+                // console.log('check pending', {e, p:Constructors.pending[e.id], dict:{...Constructors.pending}});
                 if (Constructors.pending[e.id]) {
                     let LOG: typeof Log['ee'] = Log.ee;
                     let inCollabNode = (windoww.Collaborative as typeof CollaborativeT).online; // && e.className.toLowerCase().includes('graph');
@@ -1173,9 +1173,9 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         thiss.edgeHeadSize = new GraphPoint(20, 20);
         thiss.edgeTailSize = new GraphPoint(20, 20);
         if (thiss.className !== 'DViewElement') return this;
-        const user: LUser = LUser.fromPointer(DUser.current);
+        const user: LUser = LUser.getUser();;
         // const project = user?.project; if(!project) return this;
-        if (!vp) vp = user?.project?.activeViewpoint.id || Defaults.viewpoints[0];
+        if (!vp) vp = LProject.getProject()?.activeViewpoint.id || Defaults.viewpoints[0];
         if (vp !== 'skip') {
             // let dvp = DPointerTargetable.fromPointer(vp);
             // let subviews = {...dvp.subViews}; subviews[thiss.id] = 1.5;
@@ -1202,8 +1202,8 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
 
     DViewPoint(): this {
         const thiss: DViewPoint = (this.thiss) as any;
-        const user: LUser = LUser.fromPointer(DUser.current);
-        const project = user?.project;
+        const user: LUser = LUser.getUser();
+        const project = LProject.getProject();
         if (!project) return this;
         this.setExternalPtr(project.id, 'viewpoints', '+=');
         // thiss.cssIsGlobal = true;
@@ -1222,7 +1222,7 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         _this.version = state ? -1 : VersionFixer.get_highestversion();
         if(id) _this.id = id;
         _this.favorite = {};
-        let user: DUser = (DPointerTargetable.from(DUser.current) as DUser)
+        let user: DUser = DUser.getUser();
         /*if (!user as any) {
             let str = localStorage.getItem('user');
             let state = store.getState();
@@ -1254,9 +1254,10 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         thiss.offset = new GraphSize(0, 0);  // GraphSize.apply(this, [0, 0, 0 ,0]);
         thiss._subMaps = {zoom: true, graphSize: true}
 
-        const user: LUser = LUser.fromPointer(DUser.current);
+        const user: LUser = LUser.getUser();
+        const project = LProject.getProject();
         if (thiss.className === 'DGraph') { // to exclude GraphVertex
-            user.project && this.setExternalPtr(user.project.id, 'graphs', "+=");
+            project && this.setExternalPtr(project.id, 'graphs', "+=");
             thiss.x = 0;
             thiss.y = 0;
             thiss.w = 0;
@@ -1904,7 +1905,7 @@ export class LPointerTargetable<Context extends LogicContext<DPointerTargetable>
     private __info_of____readonly = {type:"boolean", txt:"prevent any change to the current object."};
     project!: LProject|null;
     protected get_project(c: GObject<Context>): LProject | null {
-        return (LPointerTargetable.fromPointer(DUser.current) as LUser)?.project || null;
+        return LProject.getProject() || null;
     }
 
 
@@ -1924,8 +1925,23 @@ export class LPointerTargetable<Context extends LogicContext<DPointerTargetable>
             return curr.getByFullPath(arr);
         }
     }
+    __info_of__readonly: Info = {type: ShortAttribETypes.EBoolean, txt: "Set this element to become readOnly.\n" +
+            "All attempts for changes will result in a transactional abortion, which will undo other concurrent (or closely timed) changes on other elements as well.\n" +
+            "Indirect changes, such as editing or adding a subElement, are still allowed."}
+    protected get_readOnly(c: Context): boolean { return c.data.__readonly; }
+    protected get_readonly(c: Context): boolean { return this.get_readOnly(c); }
+    protected get___readOnly(c: Context): boolean { return this.get_readOnly(c); }
+    protected get___readonly(c: Context): boolean { return this.get_readOnly(c); }
+    protected get_isReadOnly(c: Context): boolean { return this.get_readOnly(c); }
+    protected get_isReadonly(c: Context): boolean { return this.get_readOnly(c); }
 
-    protected set___readonly(val: any, c: Context): boolean {
+    protected set_readonly(v: boolean, c: Context): boolean { return this.set_readOnly(v, c); }
+    protected set___readOnly(v: boolean, c: Context): boolean { return this.set_readOnly(v, c); }
+    protected set___readonly(v: boolean, c: Context): boolean { return this.set_readOnly(v, c); }
+    protected set_isReadOnly(v: boolean, c: Context): boolean { return this.set_readOnly(v, c); }
+    protected set_isReadonly(v: boolean, c: Context): boolean { return this.set_readOnly(v, c); }
+
+    protected set_readOnly(val: any, c: Context): boolean {
         val = !!val;
         let thiss: GObject = this;
         let childrens = (thiss.get_children && thiss.get_children(c)) || [];
@@ -2570,7 +2586,7 @@ export class DUser extends DPointerTargetable {
             return true;
         }
 
-        let d: DUser = D.from(DUser.current);
+        let d: DUser = DUser.getUser();
         if (d && isValid(d)) return d;
         let state = store.getState();
         let timer: any = -1;
@@ -2606,6 +2622,9 @@ export class DUser extends DPointerTargetable {
         return null;
     }
 
+    static getUser(): DUser {
+        return DPointerTargetable.from(DUser.current) || Storage.read('user');
+    }
     static load(): DUser | null {
         return DUser.offline(true, true);
     }
@@ -2638,7 +2657,12 @@ export class LUser<Context extends LogicContext<DUser> = any, D extends DUser = 
     autosaveLayout!: boolean;
     activeLayout!: string;
 
-    public static getUser(): LUser{ return LUser.wrap(DUser.current) as LUser; }
+    public static getUser(): LUser{ return LUser.wrap(DUser.getUser()) as LUser; }
+    public static replace(user: DUser) {
+        DUser.current = user.id;
+        let state = store.getState();
+        if (state) state.idlookup[user.id] = user;
+    }
 
     get_activeLayout(c: Context): this['activeLayout'] { return c.data.activeLayout; }
     set_activeLayout(val: this['activeLayout'], c: Context): true {
@@ -2752,12 +2776,15 @@ export class LUser<Context extends LogicContext<DUser> = any, D extends DUser = 
     }
 
     protected get_token(context: Context): this['token'] {
-        return context.data.token;
+        return Log.eDevv('getToken method is obsolete');
+        // return context.data.token;
     }
     protected set_token(val: this['token'], c: Context): boolean {
+        Log.eDevv('setToken method is obsolete');
+        /*
         TRANSACTION(this.get_name(c)+'.token', ()=>{
             SetFieldAction.new(c.data.id, 'token', val, '', false);
-        }, c.data.token, val)
+        }, c.data.token, val)*/
         return true;
     }
 
@@ -2772,18 +2799,21 @@ export class LUser<Context extends LogicContext<DUser> = any, D extends DUser = 
         return true;
     }
 
-    protected get_project(context: Context): this['project'] {
-        const project = context.data.project;
-        return project && LProject.fromPointer(project) || null;
+    protected get_project(c: Context): this['project'] {
+        return LProject.fromPointer(windoww.U.getProjectID_URL()) || null;
+        /*const project = context.data.project;
+        return project && LProject.fromPointer(project) || null;*/
     }
     protected set_project(val: Pack<Exclude<this['project'], null>>|null, c: Context): boolean {
+        Log.eDevv('User.setProject method is obsolete');
+        /*
         let ptr: Pointer<DProject> = Pointers.from(val as any);
         if (!ptr) ptr = '';
         if (ptr === c.data.project) return true;
 
         TRANSACTION(this.get_name(c)+'.project', ()=>{
             SetFieldAction.new(c.data.id, 'project', ptr, '', true);
-        })
+        })*/
         return true;
     }
 }
@@ -2807,7 +2837,11 @@ export class ProjectPointers{
 export class DProject extends DPointerTargetable {
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
+    static current: Pointer<DProject> = '';
 
+    static getProject(): DProject{
+        return DProject.from(U.getProjectID_URL() as string) as DProject;
+    }
     id!: Pointer<DProject, 1, 1, LProject>;
     _Id?: string // db GUID
     type: 'public'|'private'|'collaborative' = 'public';
@@ -2840,7 +2874,7 @@ export class DProject extends DPointerTargetable {
                       m2?: DProject['metamodels'], m1?: DProject['models'], id?: DProject['id'], otherProjects?:LProject[]): DProject {
 
         // fix name
-        if (!otherProjects) otherProjects = (LUser.fromPointer(DUser.current) as LUser).projects;
+        if (!otherProjects) otherProjects = LUser.getUser().projects;
         if (!name) {
             // autofix default name
             let regexp = /Project (\d+)/;
@@ -2860,7 +2894,7 @@ export class DProject extends DPointerTargetable {
     static new2(pointers: Partial<ProjectPointers>, callback: undefined | ((d: DProject, c: Constructors) => void), otherProjects?:LProject[], persist: boolean = true): DProject {
         let name = '';
         // fix name
-        if (!otherProjects) otherProjects = (LUser.fromPointer(DUser.current) as LUser).projects;
+        if (!otherProjects) otherProjects = LUser.getUser().projects;
         if (!name) {
             // autofix default name
             let regexp = /Project (\d+)/;
@@ -2869,7 +2903,7 @@ export class DProject extends DPointerTargetable {
             name = 'Project ' + (1 + maxnum);
         }
 
-        return new Constructors(new DProject('dwc'), undefined, true, undefined)
+        return new Constructors(new DProject('dwc'), undefined, persist, undefined)
             .DPointerTargetable().DProject('private', name, '', [], [], pointers.id).end(callback); }
 }
 
@@ -2877,6 +2911,11 @@ export class DProject extends DPointerTargetable {
 export class LProject<Context extends LogicContext<DProject> = any, D extends DProject = DProject> extends LPointerTargetable {
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
+
+    static getProject(): LProject {
+        return LProject.wrap(U.getProjectID_URL()) as LProject;
+    }
+
     readonly id!: Pointer<DProject>;
     _Id?: string // db GUID
     type!: 'public'|'private'|'collaborative';
@@ -3770,7 +3809,7 @@ export enum EModelElements{
 
 type ParserName = string;
 export class ParserData{
-    str!: DocString<'parser code'>; // joined fragments
+    __str?: DocString<'parser code'>; // joined fragments
     test_text?: string;
     allowPartials!: boolean;
     [key: string]: any; // fragments

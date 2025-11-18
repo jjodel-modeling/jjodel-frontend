@@ -67,6 +67,8 @@ import { contextFixedKeys } from '../../graph/graphElement/sharedTypes/sharedTyp
 import Storage from "../../data/storage";
 import {AuthApi, ProjectsApi} from "../../api/persistance";
 import DSL from "../../DSL/DSL";
+import {SaveManager} from "../../components/topbar/SaveManager";
+import Api from "../../api/api";
 
 let windoww = window as any;
 let U: typeof UType = windoww.U;
@@ -1369,22 +1371,68 @@ export async function stateInitializer() {
 
     DState.init();
     // let duser = DUser.offline(); // if it's online mode this is a no-op and user should be already loaded
-    let duser = DUser.load();
-    if (!duser?.id) {
-        DUser.current = '';
+    let duser = Storage.read('user') as DUser; // DUser.load();
+    DUser.current = duser?.id || '';
+    if (!DUser.current) {
         console.warn('user not logged, redirecting to #/auth');
         return;
     }
-    DUser.current = duser.id;
+    // do init for specific pages
+
+    setDocumentEvents();
+
+    let isProjectPage = windoww.location.hash.indexOf('#/project') === 0;
+    let isDashboardPage = windoww.location.hash.indexOf('#/allProjects') === 0;
+
+    if ((isProjectPage || isDashboardPage) && !Api.checkToken()) {
+        DUser.current = ''; // forces redirect routing to auth
+        console.error('invalid token, redirect to auth');
+        // R.navigate('/auth');
+        return;
+    }
     try {
-        let c = await ProjectsApi.getAll();
+        if (isProjectPage) {
+            let pid: Pointer<DProject> = U.getProjectID_URL() as string;
+            const project = await ProjectsApi.getOne(pid);
+            console.log('project load api response', {project, isOff:U.isOffline(), userid:DUser.current, user:DUser.getUser()});
+            if (!project) {
+                // todo: maybe add a retry counter in hash params and reload?
+                console.error('failed to get project', {project});
+                return;
+            } else {
+                DProject.current = pid;
+                clearTimeout(windoww.__tmp_init_timer);
+                let checkLoaded = () => {
+                    console.log('check loaded', {user:DUser.getUser()});
+                    if (!DUser.getUser()) return;
+                    ProjectsApi.isLoading = false;  // quits loading screen on project page
+                    clearTimeout(windoww.__tmp_init_timer);
+                }
+                checkLoaded();
+                if (ProjectsApi.isLoading) {
+                    setInterval(checkLoaded, 100);
+                }
+            }
+
+            if (project.state) {
+                const state = JSON.parse(await U.decompressState(project.state));
+                /*state['idlookup'][DUser.current] = user.__raw;
+                if (!state['users'].includes(DUser.current)) state['users'].push(DUser.current);*/
+                SaveManager.load(state, project);
+            }
+            // user.project = LProject.fromPointer(project.id);
+        }
+        else if (isDashboardPage) {
+            await ProjectsApi.getAll();
+        }
     } catch (error) {
-        await AuthApi.logout();
         console.error('Failed to fetch projects', {error});
-        DUser.current = '';
+        // await AuthApi.logout();
+        // DUser.current = ''; // forces redirect routing to auth
+        // console.error('init error, redirect to auth');
+
         // R.navigate('/auth');
     }
-    setDocumentEvents();
     /*type RecentEntry = {id: Pointer<DProject>[], name: string};
     let recent: RecentEntry[] = JSON.parse(localStorage.getItem('_jjRecent') || '[]') as any[];
     if (window.location.hash.indexOf('#/project') === 0) { use R.navigate

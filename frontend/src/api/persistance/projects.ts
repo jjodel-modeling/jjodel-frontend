@@ -20,6 +20,7 @@ import {ProjectResponseDTO} from "../DTO/ProjectResponseDTO";
 
 @RuntimeAccessible('ProjectsApi')
 class ProjectsApi {
+    static isLoading: boolean = true;
 
     static async create(type: DProject['type'], name?: DProject['name'], m2: Pointer<DModel>[] = [], m1: Pointer<DModel>[] = [], otherProjects?: LProject[]): Promise<void> {
         const project = DProject.new(type, name, undefined, m2, m1, undefined, otherProjects);
