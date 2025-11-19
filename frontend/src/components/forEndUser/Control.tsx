@@ -148,6 +148,46 @@ const Control = (props: VertexOwnProps, children: ReactNode = []): ReactElement 
     return <ControlComponent {...props}>{children || props.children}</ControlComponent>;
 }
 
+/*  Panel */
+
+const PanelComponent = (props: ControlProps, children?:ReactNode) => {
+    const [panelOpen, setPanelOpen] = useStateIfMounted(false);
+    const toggleValue = () => setPanelOpen(!panelOpen);
+
+
+    function onClick(e: any){
+        U.clickedOutside(e, ()=> setPanelOpen(false));
+    }
+
+    return (<div className={`jjodel-panel-root`} >
+        
+        <div className={`jjodel-panel d-flex flex-row ${panelOpen ? 'opened' : 'closed'}`}>
+            
+            {panelOpen ? <><div className={'panel-header'}>
+                <div>
+                    <h1>{props.title ? props.title : 'Control'}</h1>
+                    {props.payoff && <h2>{props.payoff}</h2>}
+                    
+                </div>
+                <i onClick={toggleValue}className="bi bi-chevron-right"></i>
+            </div>
+            {props.children || children}
+
+            </>
+            :
+            <div className={'panel-header'}>
+                <i onClick={toggleValue}className="bi bi-chevron-left"></i>
+            </div>
+            }
+        
+        </div>
+    </div>);
+}
+
+const Panel = (props: VertexOwnProps, children: ReactNode = []): ReactElement => {
+    return <PanelComponent {...props}>{children || props.children}</PanelComponent>;
+}
+
 /* Slider */
 
 type SliderProps = {
@@ -332,5 +372,5 @@ const Zoom = (props: ZoomProps): ReactElement => {
 }
 
 
-export {Control, Slider, Toggle_Obsolete, Zoom};
+export {Control, Slider, Toggle_Obsolete, Zoom, Panel};
 
