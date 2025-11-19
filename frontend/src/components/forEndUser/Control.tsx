@@ -163,17 +163,18 @@ const PanelComponent = (props: ControlProps, children?:ReactNode) => {
         
         <div className={`jjodel-panel d-flex flex-row ${panelOpen ? 'opened' : 'closed'}`}>
             
-            {panelOpen ? <><div className={'panel-header'}>
-                <div>
-                    <h1>{props.title ? props.title : 'Control'}</h1>
-                    {props.payoff && <h2>{props.payoff}</h2>}
-                    
+            {panelOpen ? <>
+                
+                <div className={'panel-header'}>
+                    <div>
+                        <h1>{props.title ? props.title : 'Control'}</h1>
+                        {props.payoff && <h2>{props.payoff}</h2>}
+                    </div>
+                    <i onClick={toggleValue}className="bi bi-chevron-right"></i>
                 </div>
-                <i onClick={toggleValue}className="bi bi-chevron-right"></i>
-            </div>
-            {props.children || children}
-
+                {props.children || children}
             </>
+                
             :
             <div className={'panel-header'}>
                 <i onClick={toggleValue}className="bi bi-chevron-left"></i>

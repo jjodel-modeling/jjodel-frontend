@@ -353,22 +353,28 @@ div.jjodel-control .control-slider  {
     overflow: hidden;
     transition: all 0.3s;
 
+    & hr {
+        margin-top: 8px;
+        color: var(--bg-3-1);
+        width: 103%
+    }
+
     & h1, h2 {
         font-size: 1.1em;
         font-weight: 500;
         margin: 0;
-        padding-left: 20px;
+        //padding-left: 20px;
         width: 100%;
     }
 
-    & h1::before {
+    & h1::before {/*
         font-family: bootstrap-icons;
         content: "\F3FE";
         margin-right: 8px;
         font-size: 1.2em;
         position: absolute;
         top: 8px;
-        left: 3px;
+        left: 3px;*/
     }
 
     & h2 {
@@ -380,7 +386,9 @@ div.jjodel-control .control-slider  {
         width: 100%;
         display: flex;
         justify-content: space-between;
+        height: fit-content;
 
+        &>div {width: 100%}
         & .bi bi-chevron-right{
             font-size: 13px;
             cursor: pointer;
