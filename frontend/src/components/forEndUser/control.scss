@@ -339,7 +339,85 @@ div.jjodel-control .control-slider  {
         font-family: bootstrap-icons;
         content: '\F116';
     }
-
-    
 }
 
+.jjodel-panel {
+    width: 300px;
+    height: fit-content;
+    top: 125px;
+    right: 10px;
+    position: absolute;
+    background-color: var(--bg-2-5);
+    border-radius: 2px;
+    padding: 10px;
+    overflow: hidden;
+    transition: all 0.3s;
+
+    & hr {
+        margin-top: 8px;
+        color: var(--bg-3-1);
+        width: 103%
+    }
+
+    & h1, h2 {
+        font-size: 1.1em;
+        font-weight: 500;
+        margin: 0;
+        //padding-left: 20px;
+        width: 100%;
+    }
+
+    & h1::before {/*
+        font-family: bootstrap-icons;
+        content: "\F3FE";
+        margin-right: 8px;
+        font-size: 1.2em;
+        position: absolute;
+        top: 8px;
+        left: 3px;*/
+    }
+
+    & h2 {
+        font-size: 1em;
+        font-weight: 300;
+    }
+
+    & .panel-header {
+        width: 100%;
+        display: flex;
+        justify-content: space-between;
+        height: fit-content;
+
+        &>div {width: 100%}
+        & .bi bi-chevron-right{
+            font-size: 13px;
+            cursor: pointer;
+
+        }
+    }
+
+    & .bi-chevron-right, .bi-chevron-left {
+        cursor: pointer;
+    }
+
+    &.opened {
+        width: 300px!important;
+        height: fit-content!important;
+        min-height: 200px;
+        border-radius: 8px;
+    }
+
+    &.closed {
+
+        width: 30px;
+        height: 30px!important;
+        display: flexbox;
+        align-items: center;
+
+        padding: 8px!important;
+        
+        &:hover {
+            background-color: var(--bg-3-1);
+        }
+    }
+}
