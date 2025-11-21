@@ -3809,7 +3809,7 @@ export enum EModelElements{
 
 type ParserName = string;
 export class ParserData{
-    __str?: DocString<'parser code'>; // joined fragments
+    __str!: DocString<'parser code'>; // joined fragments
     test_text?: string;
     allowPartials!: boolean;
     [key: string]: any; // fragments
@@ -3828,6 +3828,14 @@ export class Language {
         this.m2t = m2t as any || {};
         if (!this.t2m.engine) this.t2m.engine = Object.keys(this.t2m)[0] || undefined as any;
         if (!this.m2t.engine) this.m2t.engine = Object.keys(this.m2t)[0] || undefined as any;
+        for (let k in m2t) {
+            if (typeof m2t[k] !== 'object') continue;
+            if (m2t[k].allowPartials && m2t[k].__str && !m2t[k].Default) m2t[k].Default = m2t.__str;
+        }
+        for (let k in t2m) {
+            if (typeof t2m[k] !== 'object') continue;
+            if (t2m[k].allowPartials && t2m[k].__str && !t2m[k].Default) t2m[k].Default = t2m.__str;
+        }
         this.edited = false;
         this.v = windoww.VersionFixer.get_highestversion();
     }

@@ -37,7 +37,8 @@ export class DV {
             {javascript:{allowPartials: true, __str:"function(text) {\n\treturn JSON.parse(text);\n}"}}
         );
         ret['Emfatic'] = new Language(
-            {javascript:{allowPartials: true, __str: `function(model, node){
+            {javascript:
+                    {allowPartials: true, __str: `function(model, node){
     // finds and applies the appropriate serializer, empty string for missing ones.
     let serialize = (d, deep, indent) => map[d.className]?.(d, deep, indent) || '';
     
@@ -57,31 +58,42 @@ export class DV {
     
     return serialize(model);
 }`},
-        handlebars: {allowPartials: false, 'Model':`{{#with packages.[0]~}}
-@namespace(uri="{{uri}}") prefix="{{prefix}}")
+        handlebars: {allowPartials: false,
+'Model':`{{#with packages.[0]}}
+@namespace(uri="{{uri}}", prefix="{{prefix}}")
 {{>Annotations}}
 package {{name}};
 
 {{#each classes}}
-    {{~>Class~}}
+    {{~>Class}}
+
+
 {{/each}}
-{{#each package}}
+{{#each packages}}
     {{~>Package~}}
 {{/each}}
+{{/with}}
 `,
 'Package':`{{>Annotations}}package {{name}} {
-{{#each subPackage}}
+{{#each subPackages}}
     {{>Package}}
 {{/each}}
-{{#each subPackage}}
+{{#each classes}}
     {{>Class}}
 {{/each}}
 }`,
 'Class':`{{>Annotations}}{{#if isAbstract}}abstract {{/if}}{{#if isInterface}}interface {{/if~}}
-class {{name}} {{#ifCond extends.length '||' implements.length~}}extends {{js implements extends "(a, b)=> [...a, ...b].join(', ')"}} {
-    {{#each attributes}}{{>Attribute}}{{/each}}
-    {{#each references}}{{>Reference}}{{/each}}
-    {{#each operations}}{{>Operation}}{{/each}}
+class {{name}} {{#ifCond extends.length '||' implements.length~}}
+extends {{#js implements extends "(a, b)=> [...a, ...b].join(', ')"}}{{/js}}{{/ifCond}} {
+{{#each attributes}}
+    {{>Attribute}}
+{{/each}}
+{{#each references}}
+    {{>Reference}}
+{{/each}}
+{{#each operations}}
+    {{>Operation}}
+{{/each}}
 }`,
 'Modifiers': `{{>Annotations}}{{#unless changeable}}readonly {{/unless~}}
 {{#if volatile}}volatile {{/if~}}
@@ -97,11 +109,12 @@ class {{name}} {{#ifCond extends.length '||' implements.length~}}extends {{js im
     ({{#each parameters}}{{>Parameter}}{{#unless @last}}, {{/unless}}{{/each}})\n`,
 'Parameter': `{{>Modifiers}}{{type.name}}{{>Multiplicity}} {{name}}`,
 'Multiplicity': `{{#js lowerBound upperBound "(l, u)=>{let s = l+''+u; switch(s){case '01': return ''; case '0-1': return'[*]'; case '1-1': return'[+]';} if (l==u) return '['+l+']'; if (u==-1) return '['+l+'...]'; return '['+l+'...'+u+']'}"}};\n`,
-'Attribute': '{{>Modifiers}}attr {{type.name}} {{name}}{{>Multiplicity}}{{#if defaultValue includeZero}}= {{defaultValue}}{{/if}};\n',
+'Attribute': '{{>Modifiers}}attr {{type.name}} {{name}}{{>Multiplicity}}{{#if defaultValue}}= {{defaultValue}}{{/if}}{{/js}}\n',
 'Reference': '{{>Modifiers}}{{#if isContainment}}val{{else}}ref{{/if}} {{type.name}} {{name}}{{>Multiplicity}};\n',
 'Annotations': `{{#each annotations}}@{{source}}({{#js entries "args => args.map(e => e.key + ' = ' + e.value).join(', ')"}}{{/js}})\n{{/each}}`,
+'Default': ``,
 // {{#each}}{{}}{{/each}}`
-'str':`@namespace(uri="{{package.uri}}", prefix="{{prefix}}")
+'__str':`@namespace(uri="{{package.uri}}", prefix="{{prefix}}")
 package {{name}};
 
 {{#each classes}}
@@ -115,7 +128,8 @@ class {{name}} {
 }
 
 {{/each}}
-`}}, {engine:'nearley' as any, nearley:{allowPartials: false, __str:
+`}},
+        {engine:'nearley' as any, nearley:{allowPartials: false, __str:
 `main -> header classdef:* {% (d) => ({packages:[{uri: d[0].uri, prefix: d[0].prefix, classifiers:d[1]}]}) %}
 
 # --------------------------------------------------------------------

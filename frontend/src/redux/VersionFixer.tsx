@@ -277,6 +277,26 @@ everytime you put hands into a D-Object shape or valid values, you should docume
         }
         return s;
     }
+    private ['2.206 -> 2.207'](s: DState): DState {
+        let old = {...s};
+        for (let lang of Object.values(s.languages)){
+            if (typeof lang !== 'object') continue;
+            for (let k in lang.m2t) {
+                let pd = lang.m2t[k];
+                if (typeof pd !== 'object') continue;
+                pd.__str = pd.str;
+                delete pd.str;
+            }
+            for (let k in lang.t2m) {
+                let pd = lang.t2m[k];
+                if (typeof pd !== 'object') continue;
+                pd.__str = pd.str;
+                delete pd.str;
+            }
+        }
+        console.error('versionfixer', {old, s});
+        return s;
+    }
 
     public static autocorrect(s0?: DState, popupIfCorrect: boolean = false, canLoadAction: boolean = false): DState {
         let s: DState;

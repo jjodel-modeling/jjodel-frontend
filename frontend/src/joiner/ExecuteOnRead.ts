@@ -161,10 +161,21 @@ function handlebarsIfCond(useless: any) {
         switch (typeof a) {
             default: case 'symbol': case 'object': case 'function':
                 (window as any).Log.exx("M2T/Handlebars #ifCond helper error, "+(typeof a)+" cannot be compared in an expression", {
-                    expressionRaw: [...rawArguments].join(''), wrongParameterIndex: i
+                    expressionRaw: [...rawArguments].join(''), wrongParameterIndex: i, a, ta:typeof a
                 });
                 return NaN; // because nan always fails every comparison
-            case 'string': return '"'+(window as any).U.replaceAll(a, '"', '\\"')+'"';
+            case 'string':
+                switch (a) {
+                    // operators are not quoted, everything else yes.
+                    // because a value evaluated from an {{expression}} returning a string,
+                    // is an unquoted string and indistinguishable from constant strings like the operators.
+                    case '==':
+                    case '===': case '>=': case '<=': case '>': case '<':
+                    case '%': case '/': case '*': case '**':
+                    case '+': case '-': case '!': case '!!':
+                    case '||': case '&&': case '^': case '&': case '|': return a;
+                }
+                return '"'+(window as any).U.replaceAll(a, '"', '\\"')+'"';
             case 'number': case 'boolean': return a;
         }
     });
@@ -177,8 +188,8 @@ function handlebarsIfCond(useless: any) {
 }
 
 function handlebarsJs(useless: any) {
-    let rawArguments = [...arguments].slice(0, arguments.length-2);
-    let str = rawArguments[rawArguments.length - 2];
+    let rawArguments = [...arguments].slice(0, arguments.length-1);
+    let str = rawArguments[rawArguments.length - 1];
     let Log = (window as any).Log;
     // @ts-ignore
     console.log('handlebars helper js', {thiss:this as any, arguments, rawArguments, str});

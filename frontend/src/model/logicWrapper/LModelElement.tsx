@@ -1477,7 +1477,7 @@ export class LTypedElement<Context extends LogicContext<DTypedElement> = any> ex
             // resolve for enumerators (primitives and void are resolved at set time)
             if (c.data.className !== 'DReference') {
                 if (!model) this.get_model(c);
-                // NB: in newly created elements, model is still nullù
+                // NB: in newly created elements, model is still null
                 console.log('getType', {rawType, model, m: model && model.getEnumByName(rawType), s: Selectors.getByName(DEnumerator, rawType, false, true)})
                 if (model) type = model.getEnumByName(rawType) as LEnumerator;
                 else type = Selectors.getByName(DEnumerator, rawType, false, true) as LEnumerator;
@@ -1510,18 +1510,26 @@ export class LTypedElement<Context extends LogicContext<DTypedElement> = any> ex
             if (c.data.className !== 'DReference') {
                 // if Operation, Parameter or Attribute (anything but Reference), allow setting primitive types by name.
                 let Defaults: typeof TDefaults = windoww.Defaults;
-                switch (ptr?.trim().toLowerCase()) {
-                    case 'bool': case 'boolean': ptr = Defaults.Pointer_EBOOLEAN; break;
-                    case 'char': ptr = Defaults.Pointer_ECHAR; break;
-                    case 'string': ptr = Defaults.Pointer_ESTRING; break;
-                    case 'date': ptr = Defaults.Pointer_EDATE; break;
-                    case 'byte': ptr = Defaults.Pointer_EBYTE; break;
-                    case 'short': ptr = Defaults.Pointer_ESHORT; break;
-                    case 'int': case 'integer': ptr = Defaults.Pointer_EINT; break;
-                    case 'long': ptr = Defaults.Pointer_ELONG; break;
-                    case 'float': ptr = Defaults.Pointer_EFLOAT; break;
-                    case 'double': case 'number': case 'real': ptr = Defaults.Pointer_EDOUBLE; break;
-                    case 'void': if (c.data.className !== 'DAttribute') ptr = Defaults.Pointer_EVOID; break;
+                let lc = ptr?.trim().toLowerCase();
+                let prefixes = ["http://www.eclipse.org/emf/2002/Ecore#//", "#//", "ecore:", "ecore:#//", "ecore#//"]; // not sure which are actually valid, some are.
+                for (let p of prefixes) {
+                    if (lc.indexOf(p) === 0) lc = lc.substring(p.length);
+                }
+                switch (lc) {
+                    case 'boolean':  case 'eboolean': case 'dboolean':
+                    case 'dbool':    case 'ebool':    case 'bool':    ptr = Defaults.Pointer_EBOOLEAN; break;
+                    case 'dchar':    case 'echar':    case 'char':    ptr = Defaults.Pointer_ECHAR; break;
+                    case 'dstring':  case 'estring':  case 'string':  ptr = Defaults.Pointer_ESTRING; break;
+                    case 'ddate':    case 'edate':    case 'date':    ptr = Defaults.Pointer_EDATE; break;
+                    case 'dbyte':    case 'ebyte':    case 'byte':    ptr = Defaults.Pointer_EBYTE; break;
+                    case 'dshort':   case 'eshort':   case 'short':   ptr = Defaults.Pointer_ESHORT; break;
+                    case 'integer':  case 'einteger': case 'dinteger':
+                    case 'dint':     case 'eint':     case 'int':     ptr = Defaults.Pointer_EINT; break;
+                    case 'dlong':    case 'elong':    case 'long':    ptr = Defaults.Pointer_ELONG; break;
+                    case 'dfloat':   case 'efloat':   case 'float':   ptr = Defaults.Pointer_EFLOAT; break;
+                    case 'number':   case 'real':
+                    case 'ddouble':  case 'edouble':  case 'double':  ptr = Defaults.Pointer_EDOUBLE; break;
+                    case 'dvoid':    case 'evoid':    case 'void':    if (c.data.className !== 'DAttribute') ptr = Defaults.Pointer_EVOID; break;
                     default:
                     // if not primitive, check enumerators
                     if (!model) this.get_model(c);
@@ -2164,7 +2172,7 @@ export class DStructuralFeature extends DModelElement { // DTypedElement
     // personal
     instances: Pointer<DValue, 0, 'N', LValue> = [];
     changeable: boolean = true;
-    volatile: boolean = true;
+    volatile: boolean = false;
     transient: boolean = false;
     unsettable: boolean = false;// if the feature can be "unsetted" aka undefined/deleted ?
     allowCrossReference!:boolean;
@@ -2355,7 +2363,7 @@ export class DOperation extends DModelElement { // extends DTypedElement
     implementation!: string;
 
     changeable: boolean = true;
-    volatile: boolean = true;
+    volatile: boolean = false;
     transient: boolean = false;
     unsettable: boolean = false;// if the feature can be "unsetted" aka undefined/deleted ?
     allowCrossReference!:boolean;
@@ -3812,7 +3820,7 @@ export class DReference extends DModelElement { // DStructuralFeature
     many!: boolean;
     required!: boolean;
     changeable: boolean = true;
-    volatile: boolean = true;
+    volatile: boolean = false;
     transient: boolean = false;
     unsettable: boolean = false;
     defaultValueLiteral: string = '';
@@ -3890,9 +3898,11 @@ export class LReference<Context extends LogicContext<DReference> = any, C extend
     required!: boolean;
     __info_of__required: Info = {type: "boolean", txt: "A derived attribute, equivalent to data.lowerBound > 0."}
     changeable!: boolean;
-    __info_of__changeable: Info = {type: "boolean", txt: "If after the initial setup, the value is alllowed to change. similar to \"const\" in many languages. Not supported yet by jjodel."}
+    __info_of__changeable: Info = {type: "boolean", txt: "If after the initial setup, the value is allowed to change. similar to \"const\" in many languages. The behaviour is not yet supported by jjodel, consider \"readonly\" instead."}
     volatile!: boolean;
-    __info_of__volatile: Info = {type: "boolean", txt: "Indicates the value can be modified in a multi-threading scenario, and the compiler needs to avoid some optimizations to ensure different threads don't have unsynchronized cached copies."}
+    __info_of__volatile: Info = {type: "boolean", txt: "This feature is meant to be not stored in memory. It be missing in code generations and runtime executions, but will produce a getter and setter. Similar to a \"derived\", but it is not able to cache the value in memory."}
+
+    __info_of__treadVolatileTodo: Info = {type: "boolean", txt: "Indicates the value can be modified in a multi-threading scenario, and the compiler needs to avoid some optimizations to ensure different threads don't have unsynchronized cached copies."}
     transient!: boolean;
     __info_of__transient: Info = {type: "boolean", txt: "A transient feature is not persistently stored. His value can be lost between sessions."}
     unsettable!: boolean;
@@ -3992,7 +4002,7 @@ export class LReference<Context extends LogicContext<DReference> = any, C extend
                 de.derived = context.data.derived;
                 de.transient = context.data.transient;
                 de.unsettable = context.data.unsettable;
-                de.volatile = context.data.unsettable;
+                de.volatile = context.data.volatile;
                 let we: WReference = le as any;
                 we.opposite = context.data.opposite || undefined;
                 we.defaultValue = context.data.defaultValue;
@@ -4164,7 +4174,7 @@ export class DAttribute extends DModelElement { // DStructuralFeature
     many!: boolean;
     required!: boolean;
     changeable: boolean = true;
-    volatile: boolean = true;
+    volatile: boolean = false;
     transient: boolean = false;
     unsettable: boolean = false;
     defaultValueLiteral: string = '';

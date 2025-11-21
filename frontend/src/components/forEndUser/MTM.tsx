@@ -50,7 +50,7 @@ export function parseT2M(language: string, text0: string, canThrow: boolean = fa
     }
     let engine = languageObj.engine || 'javascript';
 
-    let func_str = languageObj[engine]?.str;
+    let func_str = languageObj[engine]?.__str;
     if (!func_str) {
         LOG("T2M transformation is missing on language \""+language+"\" for the engine \""+engine+"\".", {languageObj});
         return null;
@@ -66,7 +66,7 @@ export function parseT2M(language: string, text0: string, canThrow: boolean = fa
             let te = transientProperties.language[language][engine];
             if (!te) transientProperties.language[language][engine] = te = new LanguageCache();
             let grammar = te.grammar;
-            if (!grammar) { te.grammar = grammar = Nearley.compileGrammar(languageObj[engine].str) as any; }
+            if (!grammar) { te.grammar = grammar = Nearley.compileGrammar(languageObj[engine].__str) as any; }
             if (!grammar) return null;
             ret = Nearley.parse(grammar, text0);
             if (ret) ret = ret[0];
@@ -128,7 +128,12 @@ export function doM2T(data0: LPointerTargetable | Pointer | null | undefined, la
 
     let m2tobj = languageObj[engine];
     let allowPartials = m2tobj.allowPartials;
-    let func_str: string = m2tobj[allowPartials ? data.className.substring(1) : '__str'];
+    let func_str: string;
+    if (allowPartials) {
+        func_str = m2tobj[data.className.substring(1)];
+        if (!func_str) func_str = m2tobj.Default;
+    } else func_str = m2tobj.__str;
+
 
     if (!func_str) {
         let msg = "M2T transformation"+(allowPartials ? ' for ' + data.className.substring(1) : '')+" is missing on language \""+language+"\" for the engine \""+engine+"\".";
