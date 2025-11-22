@@ -40,7 +40,7 @@ export class SaveManager {
 
     static load(state0: string | GObject<DState>, project: DProject): void {
         if (!state0 && SaveManager.tmpsave) { LoadAction.new(SaveManager.tmpsave); return; }
-        state0 = state0 || localStorage.getItem('tmpsave') || 'null'; // priorities: 1) argument from file 2) state variable cached 3) localstorage 4) null prevent crash
+        state0 = state0 || 'null'; // priorities: 1) argument from file 2) state variable cached 3) localstorage 4) null prevent crash
         let save: GObject<DState> = SaveManager.tmpsave = typeof state0 === 'string' ? JSON.parse(state0) : state0;
         for (let vid of [...save.viewelements, ...save.viewpoints]) {
             for (let key of DViewElement.RecompileKeys) {
@@ -49,6 +49,7 @@ export class SaveManager {
                 if (!save[key]) save[key] = [];
                 save[key].push(vid);
                 let lookupproject = save.idlookup[project.id] as DProject;
+                if (!lookupproject) lookupproject = save.idlookup[project.id] = {...project, state:''} as DProject; // only for newly created projects, never saved
                 lookupproject._Id = project._Id;
             }
         }

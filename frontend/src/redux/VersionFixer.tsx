@@ -492,9 +492,7 @@ everytime you put hands into a D-Object shape or valid values, you should docume
                 lookupDiff: U.arrayDifference(Object.keys(oldIDlookup), Object.keys(s.idlookup)),
                 removedObjects: diff.removed.map(e=>oldIDlookup[e]),
                 removedValues: out.counter, output, out});
-                TRANSACTION('project repair', () => {
-                   if (canLoadAction) LoadAction.new(s);
-                })
+            if (canLoadAction) TRANSACTION('project repair', () => { LoadAction.new(s); });
         }
         else {
             if (popupIfCorrect) Tooltip.show('project repair report:\tall good, no anomalies detected!', undefined, undefined, 3);

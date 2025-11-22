@@ -7,12 +7,12 @@ import {
     DObject,
     DPointerTargetable,
     GObject,
-    Keystrokes, LAttribute,
+    Keystrokes, L, LAttribute,
     LClass, LEnumerator, LEnumLiteral, LModel, LObject,
     LPointerTargetable, LReference, LStructuralFeature, LValue, MultiSelect, MultiSelectOptGroup,
     MultiSelectOption,
     Overlap,
-    Pointer, PrimitiveType, Selectors,
+    Pointer, Pointers, PrimitiveType, Selectors,
     store,
     U,
     UX
@@ -37,9 +37,21 @@ function errorUpdate(msg: string, e: Error){
 }
 
 export function getSelectOptions(data: LPointerTargetable, field: string, options: ReactNode, children?: ReactNode): ReactNode {
-    if (options) return options;
+    if (!options && Array.isArray(children) && children.length > 0) options = children;
+    if (options) {
+        if (Array.isArray(options)) {
+            return options.map(d => {
+                if (DPointerTargetable.isD(d)) return <option value={d.id}>d.name</option>;
+                if (Pointers.isPointer(d)) {
+                    let d2 = L.fromPointer(d) as DPointerTargetable;
+                    return d2 ? <option value={d2.id}>d2.name</option> : null;
+                }
+                return d;
+            });
+        }
+        return options;
+    }
     // children is auto-filled to empty array even if it is not set explicitly in jsx
-    if (Array.isArray(children) && children.length > 0) return children;
     let ret: ReactNode | undefined;
     switch (field) {
         default:

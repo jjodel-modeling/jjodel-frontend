@@ -48,11 +48,14 @@
     }
     >.t2m{
       padding-left: 1ic;
+      order: 3;
     }
     >.m2t{
       padding-right: 1ic;
+      order: 1;
     }
     >.separator{
+      order: 2;
       width: 1ic;
       border-radius: 1em;
       background-color: #ddd;

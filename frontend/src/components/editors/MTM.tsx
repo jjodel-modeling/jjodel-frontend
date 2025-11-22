@@ -252,8 +252,44 @@ function MTMEditor(props: EditorAllProps): JSX.Element{
         } catch (e: any) { output_tmp = {msg: e.message, stack: e.stack, e}; }
         console.log('t2m', {output_tmp, t2m_func, test_text});
     }
-    let m2t = {label:'M2T', partials:m2tpartials, func:m2t_func, obj:m2tobj, fragment:m2tfragment, engine:m2tengine, placeholder:m2t_placeholder, setfunc:set_m2tfunc, fragments:fragmentsm2t};
-    let t2m = {label:'T2M', partials:t2mpartials, func:t2m_func, obj:t2mobj, fragment:t2mfragment, engine:t2mengine, placeholder:t2m_placeholder, setfunc:set_t2mfunc, fragments:fragmentst2m};
+    let m2t = {
+        label: 'm2t',
+        LABEL: 'M2T',
+        //partials: m2tpartials,
+        func: m2t_func,
+        obj: m2tobj,
+        fragment: m2tfragment,
+        engine: m2tengine,
+        placeholder: m2t_placeholder,
+        setfunc: set_m2tfunc,
+        fragments: fragmentsm2t,
+        allowPartials: m2tpartials,
+        setFragment: setm2tFragment,
+        set_oldEngine: set_oldm2tEngine,
+        enginesArr: serializersArr,
+        engines: serializers,
+        operation: 'serialization',
+        tooltip: <div>Partial serializations can represent localized elements (a sub-tree).<br/>Global serializations involve the entire model.</div>
+    };
+    let t2m = {
+        label: 't2m',
+        LABEL: 'T2M',
+        //partials: t2mpartials,
+        func: t2m_func,
+        obj: t2mobj,
+        fragment: t2mfragment,
+        engine: t2mengine,
+        placeholder: t2m_placeholder,
+        setfunc: set_t2mfunc,
+        fragments: fragmentst2m,
+        allowPartials: t2mpartials,
+        setFragment: sett2mFragment,
+        set_oldEngine: set_oldt2mEngine,
+        enginesArr: parsersArr,
+        engines: parsers,
+        operation:'transformation',
+        tooltip: <div>Partial transformations can edit localized elements.<br/>Global transformations involve the entire model.</div>
+    };
 
     let arr = [m2t, t2m];
     return <section className={'MTM-tab p-1'}>
@@ -276,125 +312,76 @@ function MTMEditor(props: EditorAllProps): JSX.Element{
                 </h2>
             </div>
             <div className={'d-flex editors'} style={{flexFlow: 'row'}}>
-                <div className={'d-flex t2m'} style={{flexGrow: 1, flexWrap:'wrap'}}>
-                    <h3 className={'w-100'}>T2M&nbsp;
-                        <select value={t2mengine} onChange={(e)=>{
-                            let v = e.target.value.toLowerCase();
-                            if (v === t2mengine) return;
-                            // set_t2mfunc('__jj_needs_reset__');
-                            TRANSACTION('Change t2m engine "'+language+'"', ()=> {
-                                if (!props.languages[language].t2m[v]) SetRootFieldAction.new('languages.'+language+".t2m."+v, new ParserData(), '', false);
-                                SetRootFieldAction.new('languages.'+language+".t2m.engine", v, '', false);
-                            }, t2mengine, v)
-                        }}> {parsersArr.map(p=><option value={p} disabled={!(parsers as GObject)[p]}>{p}</option>)}</select>
-                    </h3>
-                    <Tooltip tooltip={<div>Partial transformations can edit localized elements.<br/>Global transformations involve the entire model.</div>} inline={true}>
-                        <label className={'d-flex'}><Input
-                            className={'my-auto'}
-                            type={"checkbox"}
-                            getter={() => m2tpartials}
-                            setter={(val) => TRANSACTION('language "' + language + '/' + t2mengine + '" allow partials',
-                                () => {
-                                    SetRootFieldAction.new('languages.' + language + '.t2m.' + t2mengine + '.allowPartials', val, '', false);
-                                    if (val && fragmentsm2t.length === 0) for (let k in defaultpartials) {
-                                        if (!(k in t2mobj)) SetRootFieldAction.new('languages.' + language + '.t2m.' + t2mengine + '.'+k, t2m_func, '', false);
-                                    }
-                                    if (val) setm2tFragment('Default');
-                                    set_oldm2tEngine('__jj_needs_reset__');
-
-                                    if (t2m_func !== t2m_placeholder) SetRootFieldAction.new('languages.' + language + '.t2m.' + t2mengine + '.Default', t2m_func, '', false);
-                                },
-                                langObj.t2m[t2mengine].allowPartials, val)}
-                        /><span className={'my-auto'}> Allow partial transformations</span></label>
-                    </Tooltip>
-                    <div className={'editor-wrapper w-100 h-100 t2m'} tabIndex={-1} onBlur={() => {
-                        let value = (t2m_func === t2m_placeholder) ? '' : t2m_func;
-                        let old = (t2mpartials ? t2mobj.__str : t2mobj[t2mfragment]) || '';
-                        console.log('onBlur t2m', {value, old});
-                        if (old === value) return;
-                        console.log('onBlur t2m pass');
-
-                        TRANSACTION('edit t2m language "'+language+'"', ()=> {
-                            SetRootFieldAction.new('languages.'+language+".t2m."+t2mengine+'.' + (t2mpartials ? t2mfragment : '__str'), value, '', false);
-                            SetRootFieldAction.new('RECOMPILE_LANGUAGE', {engine: t2mengine, language}, '+=', false);
-                        })
-                    }}>
-                        <Editor className={'mx-1'} options={monacooptions} defaultLanguage={'plaintext'} value={t2m_func}
-                                onChange={(value) => set_t2mfunc(value || '') } />
-                    </div>
-                </div>
                 <div className={'separator'}/>
-                <div className={'d-flex m2t'} style={{flexGrow: 1, flexWrap: 'wrap'}}>
-                    <h3 className={'w-100'}>M2T&nbsp;
-                        <select value={m2tengine} onChange={(e) => {
+                {arr.map(a=><div className={'d-flex '+a.label} style={{flexGrow: 1, flexWrap: 'wrap'}}>
+                    <h3 className={'w-100'}>{a.LABEL}&nbsp;
+                        <select value={a.engine} onChange={(e) => {//ok
                             let v = e.target.value.toLowerCase();
-                            if (v === m2tengine) return;
-                            // set_m2tfunc('__jj_needs_reset__');
-                            TRANSACTION('Change m2t engine "' + language + '"', () => {
-                                if (!props.languages[language].m2t[v]) SetRootFieldAction.new('languages.' + language + ".m2t." + v, new ParserData(), '', false);
-                                SetRootFieldAction.new('languages.' + language + ".m2t.engine", v, '', false);
-                            }, m2tengine, v)
-                        }}> {serializersArr.map(p => (
-                            <option value={p} disabled={!(serializers as GObject)[p]}>{p}</option>))}
+                            if (v === a.engine) return;
+                            TRANSACTION('Change '+a.LABEL+' engine "' + language + '"', () => {
+                                if (!a.obj[v]) SetRootFieldAction.new('languages.' + language + "."+a.label+"." + v, new ParserData(), '', false);
+                                SetRootFieldAction.new('languages.' + language + "."+a.label+".engine", v, '', false);
+                            }, a.engine, v)
+                        }}> {a.enginesArr.map(p => (
+                            <option value={p} disabled={!(a.engines as GObject)[p]}>{p}</option>))}
                         </select>
                     </h3>
-                    <Tooltip tooltip={<div>Partial serializations can represent localized elements (a sub-tree).<br/>Global serializations involve the entire model.</div>} inline={true}>
+                    <Tooltip tooltip={a.tooltip} inline={true}>
                         <label className={'d-flex'}><Input
                             className={'my-auto'}
                             type={"checkbox"}
-                            getter={() => m2tpartials}
-                            setter={(val) => TRANSACTION('language "' + language + '/' + m2tengine + '" allow partials',
+                            getter={() => a.allowPartials}
+                            setter={(val) => TRANSACTION('language "' + language + '/' + a.engine + '" allow partials',
                                 () => {
-                                    SetRootFieldAction.new('languages.' + language + '.m2t.' + m2tengine + '.allowPartials', val, '', false);
+                                    SetRootFieldAction.new('languages.' + language + '.'+a.label+'.' + a.engine + '.allowPartials', val, '', false);
                                     if (val && fragmentsm2t.length === 0) for (let k in defaultpartials) {
-                                        if (!(k in m2tobj)) SetRootFieldAction.new('languages.' + language + '.m2t.' + m2tengine + '.'+k, m2t_func, '', false);
+                                        if (!(k in a.obj)) SetRootFieldAction.new('languages.' + language + '.'+a.label+'.' + a.engine + '.'+k, a.func, '', false);
                                     }
-                                    if (val) setm2tFragment('Default');
-                                    set_oldm2tEngine('__jj_needs_reset__');
-                                    if (m2t_func !== m2t_placeholder) SetRootFieldAction.new('languages.' + language + '.m2t.' + m2tengine + '.Default', m2t_func, '', false);
+                                    if (val) a.setFragment('Default');
+                                    a.set_oldEngine('__jj_needs_reset__');
+                                    if (a.func !== a.placeholder) SetRootFieldAction.new('languages.' + language + '.'+a.label+'.' + a.engine + '.Default', a.func, '', false);
                                 },
-                                m2tpartials, val)}
-                        /><span className={'my-auto'}> Allow partial serializations</span></label>
+                                a.allowPartials, val)}
+                        /><span className={'my-auto'}> Allow partial {a.operation}s</span></label>
                     </Tooltip>
-                    {m2tpartials ? <div className={'fragments d-flex'}><div className={'fill'}>{
-                        ['+', ...fragmentsm2t].reverse().map(f=><div className={'fragment-btn btn ' +(f === m2tfragment ? 'selected btn-secondary' : 'btn-outline-secondary')}
-                                              onClick={() => {setm2tFragment(f); set_oldm2tEngine('__jj_needs_reset__')}}>
+                    {a.allowPartials ? <div className={'fragments d-flex'}><div className={'fill'}>{
+                        ['+', ...a.fragments].reverse().map(f=><div className={'fragment-btn btn ' +(f === a.fragment ? 'selected btn-secondary' : 'btn-outline-secondary')}
+                                              onClick={() => {a.setFragment(f); a.set_oldEngine('__jj_needs_reset__')}}>
                             {f === 'Default'? <span>Default</span> : <Input placeholder={'Confirm to delete'} key={f} getter={()=>f} tooltip={'double click to '+(f==='+'?'add':'rename')+' fragment'} setter={(v)=>{
                                 console.warn('input setter', v, f);
                                 if (!v) {
-                                    TRANSACTION('language "' + language + '/' + m2tengine + '" remove partial', ()=>{
-                                        if (f !== '+') SetRootFieldAction.new('languages.' + language + '.m2t.' + m2tengine + '.'+f, undefined, '', false);
+                                    TRANSACTION('language "' + language + '/' + a.engine + '" remove partial', ()=>{
+                                        if (f !== '+') SetRootFieldAction.new('languages.' + language + '.'+a.label+'.' + a.engine + '.'+f, undefined, '', false);
                                     }, f, v);
-                                    setm2tFragment('Default');
-                                    set_oldm2tEngine('__jj_needs_reset__');
+                                    a.setFragment('Default');
+                                    a.set_oldEngine('__jj_needs_reset__');
                                     return;
                                 }
-                                if ((v as string) in m2tobj || v === '+') { Log.ww('M2T partial name already taken'); return; }
-                                TRANSACTION('language "' + language + '/' + m2tengine + '" '+(f === '+'?'add':'rename')+' partial', ()=>{
-                                    SetRootFieldAction.new('languages.' + language + '.m2t.' + m2tengine + '.'+v, ' ', '', false);
-                                    setm2tFragment(v as string);
-                                    if (f !== '+') SetRootFieldAction.new('languages.' + language + '.m2t.' + m2tengine + '.'+f, undefined, '', false);
+                                if ((v as string) in a.obj || v === '+') { Log.ww(a.LABEL+' partial name already taken'); return; }
+                                TRANSACTION('language "' + language + '/' + a.engine + '" '+(f === '+'?'add':'rename')+' partial', ()=>{
+                                    SetRootFieldAction.new('languages.' + language + '.'+a.label+'.' + a.engine + '.'+v, ' ', '', false);
+                                    a.setFragment(v as string);
+                                    if (f !== '+') SetRootFieldAction.new('languages.' + language + '.'+a.label+'.' + a.engine + '.'+f, undefined, '', false);
                                 }, f, v)
                                 }} clickHidden={true}/>
                             }</div>
                         )}</div></div> : <div></div>}
-                    <div className={'editor-wrapper w-100 h-100 m2t'} tabIndex={-1} onBlur={() => {
-                        let value = (m2t_func === m2t_placeholder) ? '' : m2t_func;
-                        let old = (m2tpartials ? m2tobj.__str : m2tobj[m2tfragment]) || '';
-                        console.log('onBlur m2t', {value, old});
+                    <div className={'editor-wrapper w-100 h-100 '+a.label} tabIndex={-1} onBlur={() => {
+                        let value = (a.func === a.placeholder) ? '' : a.func;
+                        let old = (a.allowPartials ? a.obj.__str : a.obj[a.fragment]) || '';
+                        console.log('onBlur '+a.label, {value, old});
                         if (old === value) return;
-                        console.log('onBlur m2t pass');
+                        console.log('onBlur '+a.label+' pass');
 
-                        TRANSACTION('edit m2t language "'+language+'"', ()=> {
-                            SetRootFieldAction.new('languages.'+language+".m2t."+m2tengine+'.' + (m2tpartials ? m2tfragment : '__str'), value, '', false);
-                            SetRootFieldAction.new('RECOMPILE_LANGUAGE', {engine: m2tengine, language}, '+=', false);
+                        TRANSACTION('Edit '+a.LABEL+' language "'+language+'"', ()=> {
+                            SetRootFieldAction.new('languages.'+language+"."+a.LABEL+"."+a.engine+'.' + (a.allowPartials ? a.fragment : '__str'), value, '', false);
+                            SetRootFieldAction.new('RECOMPILE_LANGUAGE', {engine: a.engine, language}, '+=', false);
                         })
                     }}>
-                        <Editor className={'mx-1'} options={monacooptions} defaultLanguage={'plaintext'} value={m2t_func}
-                                key={m2tengine}
-                                onChange={(value) => set_m2tfunc(value || '') } />
+                        <Editor className={'mx-1'} options={monacooptions} defaultLanguage={'plaintext'} value={a.func}
+                                key={a.engine} onChange={(value) => a.setfunc(value || '') } />
                     </div>
-                </div>
+                </div>)}
             </div>
             <h5>Test Sample</h5>
             <pre className={"w-100 autosize"} contentEditable={true} tabIndex={-1} onBlur={(e) => {

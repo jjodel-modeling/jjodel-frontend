@@ -1,4 +1,4 @@
-import type {
+import {
     DViewPoint,
     orArr,
     bool,
@@ -7,7 +7,7 @@ import type {
     Pointer,
     MouseUpEvent,
     GObject,
-    U as UType,
+    U as UType, store,
 } from '../../joiner';
 import {
     GraphDragManager,
@@ -50,6 +50,7 @@ import {
 } from "../../joiner";
 import React from "react";
 import {
+    AFTER_TRANSACTION,
     BEGIN,
     CollabClearHistoryAction, CollabRefreshAction,
     COMMIT,
@@ -1394,32 +1395,32 @@ export async function stateInitializer() {
         if (isProjectPage) {
             let pid: Pointer<DProject> = U.getProjectID_URL() as string;
             const project = await ProjectsApi.getOne(pid);
-            console.log('project load api response', {project, isOff:U.isOffline(), userid:DUser.current, user:DUser.getUser()});
+            console.log('11 project load api response', {project, isOff:U.isOffline(), userid:DUser.current, user:DUser.getUser()});
             if (!project) {
                 // todo: maybe add a retry counter in hash params and reload?
                 console.error('failed to get project', {project});
                 return;
-            } else {
-                DProject.current = pid;
-                clearTimeout(windoww.__tmp_init_timer);
-                let checkLoaded = () => {
-                    console.log('check loaded', {user:DUser.getUser()});
-                    if (!DUser.getUser()) return;
-                    ProjectsApi.isLoading = false;  // quits loading screen on project page
-                    clearTimeout(windoww.__tmp_init_timer);
-                }
+            }
+            let checkLoaded = () => {
+                console.log('check loaded', {user:DUser.getUser()});
+                // if (!DUser.getUser()) return;
+                ProjectsApi.isLoading = false; // quits loading screen on project page
+                // clearTimeout(windoww.__tmp_init_timer);
+            }
+            let state: DState;
+            if (!project.state) state = store.getState(); // new project just created, never saved
+            else state = JSON.parse(await U.decompressState(project.state));
+            /*state['idlookup'][DUser.current] = user.__raw;
+            if (!state['users'].includes(DUser.current)) state['users'].push(DUser.current);*/
+            console.log('project load', state);
+            SaveManager.load(state, project);
+            AT_TRANSACTION(()=>{
                 checkLoaded();
-                if (ProjectsApi.isLoading) {
-                    setInterval(checkLoaded, 100);
-                }
-            }
-
-            if (project.state) {
-                const state = JSON.parse(await U.decompressState(project.state));
-                /*state['idlookup'][DUser.current] = user.__raw;
-                if (!state['users'].includes(DUser.current)) state['users'].push(DUser.current);*/
-                SaveManager.load(state, project);
-            }
+                DProject.current = pid;
+                /*clearTimeout(windoww.__tmp_init_timer);
+                if (ProjectsApi.isLoading) { setInterval(checkLoaded, 100); }*/
+            })
+            console.error('init completed');
             // user.project = LProject.fromPointer(project.id);
         }
         else if (isDashboardPage) {

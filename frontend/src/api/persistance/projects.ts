@@ -271,6 +271,7 @@ class Online {
         }
 
         let ret = new ProjectResponseDTO(response.data).toJodelClass();
+        console.log('project getone', ret);
         return ret;
     }
 
