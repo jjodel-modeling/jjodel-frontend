@@ -32,7 +32,7 @@ div.jjodel-control {
     opacity: 0.85;
     width: fit-content;
 
-    background-color: var(--control-background-light);;
+    background-color: var(--control-background-light);
     padding: 10px 20px;
     color: var(color);
     border-radius: var(--radius);
@@ -343,8 +343,8 @@ div.jjodel-control .control-slider  {
 
 .jjodel-panel {
     width: 300px;
-    height: fit-content;
     top: 125px;
+
     right: 10px;
     position: absolute;
     background-color: var(--bg-2-5);
@@ -352,6 +352,18 @@ div.jjodel-control .control-slider  {
     padding: 10px;
     overflow: hidden;
     transition: all 0.3s;
+    flex-direction: column;
+
+    &.debug {
+        padding: 0;
+        border: none;
+        height: 30px; 
+    }
+
+    & button {
+        padding: 6px 12px;
+        border-radius: 4px;
+    }
 
     & hr {
         margin-top: 8px;
@@ -361,26 +373,24 @@ div.jjodel-control .control-slider  {
 
     & h1, h2 {
         font-size: 1.1em;
-        font-weight: 500;
+        font-weight: 600;
         margin: 0;
-        //padding-left: 20px;
         width: 100%;
     }
 
-    & h1::before {/*
-        font-family: bootstrap-icons;
-        content: "\F3FE";
-        margin-right: 8px;
+    & h1 {
         font-size: 1.2em;
-        position: absolute;
-        top: 8px;
-        left: 3px;*/
     }
 
     & h2 {
-        font-size: 1em;
-        font-weight: 300;
+        font-size: 1.1em;
+        margin-top: 24px;
+        margin-bottom: 10px;
+        font-weight: 600;
+
     }
+    
+    
 
     & .panel-header {
         width: 100%;
@@ -396,15 +406,102 @@ div.jjodel-control .control-slider  {
         }
     }
 
+    & .panel-content {
+        margin-top: 10px;
+        width: 100%;
+
+
+        overflow-y: auto;
+
+        &.debug {
+            display: flex;
+            align-items: center; // center;
+            justify-content: start;
+            border: none;
+            background-color: var(--bg-2-5);
+            border-radius: 2px;
+            width: fit-content;
+            margin: 0;
+
+        }
+
+        &.debug::before {
+            font-family: bootstrap-icons;
+            content: '\F3FE';
+            color: var(--bg-3-1)!important;
+            font-size: 1.6em;
+            margin-left: 3px;
+        }
+
+        & button {
+            border: none;
+            white-space: pre;
+            margin-top: 5px;
+            margin-bottom: 5px;
+            width: fit-content;
+            font-size: 0.8em;
+            padding: 0!important;
+            width: 30px;
+            height: 30px;
+            background-color: var(--bg-2-5);
+            cursor: pointer;
+            margin: 0px;
+            
+        }
+
+        & button:hover {
+            background-color: var(--bg-3);
+            color: white
+        }
+
+        & label {
+            white-space: pre;
+            margin-right: 10px;
+            padding-top: 5px;
+        }
+    
+        & .icon, .restart, .stop, .step {
+            font-size: 1.8em;
+        }
+
+        & .restart{
+            color: var(--bg-5); //green;
+        }
+
+        & .stop {
+            color: var(--bg-5); //red;
+        }
+
+        & .step {
+            color: var(--bg-5); //rgb(81, 180, 213);
+        }
+    }
+
     & .bi-chevron-right, .bi-chevron-left {
         cursor: pointer;
     }
+    & .bi-chevron-right {
+        width: 30px;
+        height: 30px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
 
-    &.opened {
-        width: 300px!important;
+    &.metamodel.opened {
+        width: 400px!important;
         height: fit-content!important;
-        min-height: 200px;
+        min-height: 100px;
         border-radius: 8px;
+    }
+     &.model.opened {
+        width: fit-content!important;
+        border-radius: 8px;
+    }
+
+    &.model.debug.opened {
+        width: fit-content!important;
+        border-radius: 2px;
     }
 
     &.closed {
