@@ -1478,7 +1478,7 @@ export class LTypedElement<Context extends LogicContext<DTypedElement> = any> ex
             if (c.data.className !== 'DReference') {
                 if (!model) this.get_model(c);
                 // NB: in newly created elements, model is still null
-                console.log('getType', {rawType, model, m: model && model.getEnumByName(rawType), s: Selectors.getByName(DEnumerator, rawType, false, true)})
+                // console.log('getType', {rawType, model, m: model && model.getEnumByName(rawType), s: Selectors.getByName(DEnumerator, rawType, false, true)})
                 if (model) type = model.getEnumByName(rawType) as LEnumerator;
                 else type = Selectors.getByName(DEnumerator, rawType, false, true) as LEnumerator;
             }
@@ -2742,7 +2742,7 @@ export class DClass extends DModelElement { // extends DClassifier
 
     public static new(name?: DNamedElement["name"], isInterface: DClass["interface"] = false, isAbstract: DClass["abstract"] = false, isPrimitive: DClass["isPrimitive"] = false, partial?: DClass["partial"],
                       partialDefaultName?: DClass["partialdefaultname"], father?: Pointer, persist: boolean = true, id?: string): DClass {
-        if (!name) name = this.defaultname("Concept ", father);
+        if (!name) name = this.defaultname("Concept_", father);
 
         // console.log('x6 addchild() new class', {father, arguments, name});
         return new Constructors(new DClass('dwc'), father, persist, undefined, id).DPointerTargetable().DModelElement()
@@ -2750,13 +2750,13 @@ export class DClass extends DModelElement { // extends DClassifier
     }
 
     static new2(setter: Partial<ObjectWithoutPointers<DClass>>, father: DClass["father"], name?: DClass["name"]): DClass {
-        if (!name) name = this.defaultname((name || "Concept "), father);
+        if (!name) name = this.defaultname((name || "Concept_"), father);
         return new Constructors(new DClass('dwc'), father, true, undefined).DPointerTargetable().DModelElement()
             .DNamedElement(name).DClassifier().DClass().end((d) => { Object.assign(d, setter); });
     }
 
     static new3(a: Partial<ClassPointers>, callback: undefined | ((d: DClass, c: Constructors) => void), persist: boolean = true): DClass {
-        if (!a.name) a.name = this.defaultname("Concept ", a.father);
+        if (!a.name) a.name = this.defaultname("Concept_", a.father);
         return new Constructors(new DClass('dwc'), a.father, persist, undefined, a.id).DPointerTargetable().DModelElement()
             .DNamedElement(a.name).DClassifier().DClass().end(callback);
     }

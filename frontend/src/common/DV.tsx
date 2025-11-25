@@ -37,7 +37,7 @@ export class DV {
             {javascript:{allowPartials: true, __str:"function(text) {\n\treturn JSON.parse(text);\n}"}}
         );
         ret['Emfatic'] = new Language(
-            {javascript:
+            {engine: 'handlebars' as any, javascript:
                     {allowPartials: true, __str: `function(model, node){
     // finds and applies the appropriate serializer, empty string for missing ones.
     let serialize = (d, deep, indent) => map[d.className]?.(d, deep, indent) || '';
@@ -58,41 +58,39 @@ export class DV {
     
     return serialize(model);
 }`},
-        handlebars: {allowPartials: false,
+        handlebars: {allowPartials: true,
 'Model':`{{#with packages.[0]}}
 @namespace(uri="{{uri}}", prefix="{{prefix}}")
 {{>Annotations}}
 package {{name}};
 
 {{#each classes}}
-    {{~>Class}}
-
-
+    {{>Class}}\n
 {{/each}}
 {{#each packages}}
-    {{~>Package~}}
+    {{>Package}}\n
 {{/each}}
 {{/with}}
 `,
 'Package':`{{>Annotations}}package {{name}} {
 {{#each subPackages}}
-    {{>Package}}
+    {{>Package}}\n
 {{/each}}
 {{#each classes}}
-    {{>Class}}
+    {{>Class}}\n
 {{/each}}
 }`,
 'Class':`{{>Annotations}}{{#if isAbstract}}abstract {{/if}}{{#if isInterface}}interface {{/if~}}
 class {{name}} {{#ifCond extends.length '||' implements.length~}}
 extends {{#js implements extends "(a, b)=> [...a, ...b].join(', ')"}}{{/js}}{{/ifCond}} {
 {{#each attributes}}
-    {{>Attribute}}
+    {{>Attribute}}\n
 {{/each}}
 {{#each references}}
-    {{>Reference}}
+    {{>Reference}}\n
 {{/each}}
 {{#each operations}}
-    {{>Operation}}
+    {{>Operation}}\n
 {{/each}}
 }`,
 'Modifiers': `{{>Annotations}}{{#unless changeable}}readonly {{/unless~}}
@@ -108,8 +106,8 @@ extends {{#js implements extends "(a, b)=> [...a, ...b].join(', ')"}}{{/js}}{{/i
 'Operation': `{{>Modifiers}}op {{type.name}}{{>Multiplicity}} {{name~}}
     ({{#each parameters}}{{>Parameter}}{{#unless @last}}, {{/unless}}{{/each}})\n`,
 'Parameter': `{{>Modifiers}}{{type.name}}{{>Multiplicity}} {{name}}`,
-'Multiplicity': `{{#js lowerBound upperBound "(l, u)=>{let s = l+''+u; switch(s){case '01': return ''; case '0-1': return'[*]'; case '1-1': return'[+]';} if (l==u) return '['+l+']'; if (u==-1) return '['+l+'...]'; return '['+l+'...'+u+']'}"}};\n`,
-'Attribute': '{{>Modifiers}}attr {{type.name}} {{name}}{{>Multiplicity}}{{#if defaultValue}}= {{defaultValue}}{{/if}}{{/js}}\n',
+'Multiplicity': `{{#js lowerBound upperBound "(l, u)=>{let s = l+''+u; switch(s){case '01': return ''; case '0-1': return'[*]'; case '1-1': return'[+]';} if (l==u) return '['+l+']'; if (u==-1) return '['+l+'...]'; return '['+l+'...'+u+']'}"}}{{/js}}`,
+'Attribute': '{{>Modifiers}}attr {{type.name}} {{name}}{{>Multiplicity}}{{#if defaultValue}}= {{defaultValue}}{{/if}};\n',
 'Reference': '{{>Modifiers}}{{#if isContainment}}val{{else}}ref{{/if}} {{type.name}} {{name}}{{>Multiplicity}};\n',
 'Annotations': `{{#each annotations}}@{{source}}({{#js entries "args => args.map(e => e.key + ' = ' + e.value).join(', ')"}}{{/js}})\n{{/each}}`,
 'Default': ``,
@@ -129,8 +127,9 @@ class {{name}} {
 
 {{/each}}
 `}},
-        {engine:'nearley' as any, nearley:{allowPartials: false, __str:
-`main -> header classdef:* {% (d) => ({packages:[{uri: d[0].uri, prefix: d[0].prefix, classifiers:d[1]}]}) %}
+        {engine:'nearley' as any, nearley:{allowPartials: true, __str:
+`main -> header (classdef | package):* {% (d) => ({packages:[{uri: d[0].uri, prefix: d[0].prefix, classifiers:d[1]}]}) %}
+package -> ws "package" ws identifier ws "{" (classdef | package):* "}"
 
 # --------------------------------------------------------------------
 # HEADER
@@ -207,7 +206,118 @@ strescape -> ["\\\\/bfnrt] {% id %}
     function(d) {
         return d.join("");
     }
-%}`}},
+%}`,
+Model:
+`main -> header import:* (classifier | package):* {% (d) => ({packages:[{uri: d[0].uri, prefix: d[0].prefix, classifiers:d[1]}]}) %}
+
+header -> "@namespace(uri=\\"" namespace "\\"," ws
+           "prefix=\\"" prefix:? "\\"" ")" eol
+           "package" ws identifier ";" eol:*
+           {% function(d) {return {uri: d[1][0], prefix: d[5]||''};} %}
+import -> "import" ws dqstring ";" eol
+namespace -> identifier ("." identifier):*
+prefix -> identifier`,
+Package:`
+main -> package
+package -> ws "package" ws identifier ws "{" (classifier | package):* "}"`,
+Class:`
+main -> class
+class -> ("abstract" ws):? ("class" | "interface") ws identifier ws extends (java_classname ws):? "{" eol
+            (annotation | attr | ref | operation | eol):*
+            "}" eol:*
+            {% function(d) {return {className: "Class", name: d[2], features:d[6].flat(2).filter(e=>!!e)};} %}
+extends -> null | "extends" ws (identifier | (identifier ws "," ws):+)
+java_classname -> ":" ws namespace
+`,
+Enumerator:`
+main -> enumerator
+enumerator -> "enum" ws identifier ws "{" literal:* "}" eol:*
+`,
+Literal:`
+main -> literal
+literal -> identifier ws ("=" ws number ws):* ";"
+`,
+Operation:`
+main -> operation
+operation -> modifiers "op" ws return_type ws identifier ws "(" (parameter | (parameter "," ws):*) ")" ("throws" (parameter | (parameter "," ws):*) ";" eol:*
+
+# missing support for @before annotations
+`,
+Parameter:`
+main -> parameter
+parameter -> modifiers type ws identifier
+`,/*
+todo:`
+main -> todo
+todo -> "enum" ws identifier ws "{" literal:* "}" eol:*
+`,*/
+'Default':`
+# syntax guide: https://eclipse.dev/emfatic/
+classifier -> class | enumerator | datatype | mapentry
+modifiers -> ("!":? modifier ws):*
+modifier -> "readonly" | "volatile" | "transient" | "unsettable" | "derived" | "unique" | "ordered" | "resolve" | "id"
+datatype -> ("transient" ws):? "datatype" ws (identifier | dqstring) ws ":"
+mapentry -> "mapentry" ws identifier ws ":" ws att_type "->" ws att_type ws ";" 
+multiplicity -> ws ("[?]" | "[]" | "[*]" | "[+]" | "[n]" | "[m..n]" | "[" number "]" | "[" number ".." (number | "?" | "*") "]")
+value -> decimal | dqstring
+annotation -> "@" (identifier | dqstring) ("(" (identifier | dqstring) ws "=" ws dqstring ")"):? {% (d) => null %}
+type -> namespace multiplicity:?
+return_type -> namespace multiplicity:?
+ref_type -> namespace multiplicity:?
+att_type -> namespace multiplicity:?
+
+identifier -> "~":? [A-Za-z_] [A-Za-z0-9_\\$]:* {% (d) => d[1]+d[2].join("") %}
+
+ws -> ([ \\t\\v\\f]):* {% d => null %}
+eol -> annotation ws "\\r":? "\\n" ws {% d => null %}
+decimal -> "-":? [0-9]:+ ("." [0-9]:+):? {%
+    function(d) {
+        return parseFloat(
+            (d[0] || "") +
+            d[1].join("") +
+            (d[2] ? "."+d[2][1].join("") : "")
+        );
+    }
+%}
+# Double-quoted string
+dqstring -> "\\"" dstrchar:* "\\"" {% function(d) {return d[1].join(""); } %}
+sqstring -> "'"  sstrchar:* "'"  {% function(d) {return d[1].join(""); } %}
+btstring -> "\`"  [^\`]:*    "\`"  {% function(d) {return d[1].join(""); } %}
+
+dstrchar -> [^\\\\"\\n] {% id %}
+    | "\\\\" strescape {%
+    function(d) {
+        return JSON.parse("\\""+d.join("")+"\\"");
+    }
+%}
+
+sstrchar -> [^\\\\'\\n] {% id %}
+    | "\\\\" strescape
+        {% function(d) { return JSON.parse("\\""+d.join("")+"\\""); } %}
+    | "\\\\'"
+        {% function(d) {return "'"; } %}
+
+strescape -> ["\\\\/bfnrt] {% id %}
+    | "u" [a-fA-F0-9] [a-fA-F0-9] [a-fA-F0-9] [a-fA-F0-9] {%
+    function(d) {
+        return d.join("");
+    }
+%}
+`,
+Attribute:`
+main -> attr
+attr -> modifiers "attr" ws att_type ws identifier ws ("=" ws value):? ";" eol
+            {% (d) => ({className: 'attribute',
+                type: d[2]?.[0], upperbound: d[2]?.[1] === '[*]' ? -1 : 1,
+                name: d[4]}) %}`,
+Reference:`
+main -> ref
+ref -> modifiers ("ref" | "val") ws ref_type ("#" identifier):? ws identifier ws ("=" ws value):? ";" eol
+            {% (d) => ({className: 'reference',
+                type: d[2]?.[0], upperbound: d[2]?.[1]?.[1] === '[*]' ? -1 : 1,
+                name: d[4],
+                containment: d[0] === 'val'}) %}`,
+}},
 );
         ret['flexmi/YAML'] = new Language(m2t, t2m);
         ret['flexmi/XMI'] = new Language(m2t, t2m);

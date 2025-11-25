@@ -223,24 +223,41 @@ export async function TRANSACTION(name:string, func: ()=> void, oldval?: any, ne
     return END([]);
 }
 let at_transaction: ((...a:any)=>void)[] = [];
-let after_transaction: ((...a:any)=>void)[] = [];
-export async function AT_TRANSACTION(a:(...argss:any)=>void) { at_transaction.push(a); }
-export async function AFTER_TRANSACTION(a:(...argss:any)=>void) { after_transaction.push(a); }
+let after_transaction: ((newState: DState)=>void)[] = [];
 
-export async function DO_AFTER_TRANSACTION() { // called after reducer
+// called before reducer, before map and react updates, always, also if the transaction is unsuccessful. Not if it's aborted before launch.
+export async function AT_TRANSACTION(a:(...argss:any)=>void) { at_transaction.push(a); }
+
+// called after reducer, before map and react updates, only if the transaction is successful.
+// NB: cannot call store.getState while inside.
+export async function AFTER_TRANSACTION(a:(newState: DState)=>void) { after_transaction.push(a); }
+
+// after react's update of components
+// NB: can call store.getState while inside.
+export async function AFTER_UPDATE(a:(newState: DState)=>void) { after_transaction.push((s)=>setTimeout(()=>a(s), 1)); }
+
+// to be executed in reducer, for internal jjodel usage, users should never call it.
+export async function DO_AFTER_TRANSACTION_NOT_FOR_USERS(newState: DState) {
+
+    console.log('DO_AFTER_TRANSACTION_NOT_FOR_USERS len:', after_transaction.length);
     if (after_transaction.length) {
-        setTimeout(()=> {
-            let callback: (...argss:any)=>void = null as any;
-            for (callback of after_transaction) callback?.();
-            after_transaction = [];
-        }, 0);
+        let callback: (...argss:any)=>void = null as any;
+        let arr = [...after_transaction]; // to prevent pushing while executing
+        after_transaction = [];
+        for (callback of arr) {
+            try { callback?.(newState); } catch (e) { Log.ee('Reducer, error in AFTER_TRANSACTION action', e); }
+        }
+        console.log('DO_AFTER_TRANSACTION_NOT_FOR_USERS end', [...after_transaction]);
     }
 }
 
+(window as any)._jj_at_transaction = at_transaction;
+(window as any)._jj_after_transaction = after_transaction;
 (window as any).TRANSACTION = TRANSACTION;
 (window as any).AT_TRANSACTION = AT_TRANSACTION;
+(window as any).AFTER_UPDATE = AFTER_UPDATE;
 (window as any).AFTER_TRANSACTION = AFTER_TRANSACTION;
-(window as any).DO_AFTER_TRANSACTION = DO_AFTER_TRANSACTION;
+(window as any).DO_AFTER_TRANSACTION_NOT_FOR_USERS = DO_AFTER_TRANSACTION_NOT_FOR_USERS;
 (window as any).BEGIN = BEGIN;
 (window as any).ABORT = ABORT;
 (window as any).COMMIT = COMMIT;
@@ -328,7 +345,7 @@ export class Action extends RuntimeAccessibleClass {
             printobj['stack'] = this.stack;
             printobj['list'] = (this as any).actions;
             console.log('firing action:', printobj);
-            storee.dispatch({...this});
+            setTimeout(()=>storee.dispatch({...this}), 0); // force action execution to be async, so i can add callbacks like AFTER_TRANSACTION
         }
         return true;
     }

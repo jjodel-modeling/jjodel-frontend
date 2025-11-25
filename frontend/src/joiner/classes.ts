@@ -1442,11 +1442,12 @@ export class DPointerTargetable extends RuntimeAccessibleClass {
         INFERRED = {ret: RET, RETPTR:RETPTR, upp: UPP, low:LOW, ddd: DDD, dddARR: DDDARR, lowARR: LOWARR, uppARR: UPPARR, LX:LX, DX:DX}>(ptr: PTR | LX, s?: DState)
         : RET {
         if (!ptr) return ptr as any;
+        if (!s) s = store.getState();
         if (Array.isArray(ptr)) return DPointerTargetable.fromArr(ptr, true, s) as any;
         if ((ptr as LX).__isProxy) return (ptr as LX).__raw as any;
         if (typeof ptr === "string") {
             if (s && s.idlookup[ptr as string]) return s.idlookup[ptr as string] as any;
-            return (DPointerTargetable.pendingCreation[ptr as string] || store.getState().idlookup[ptr as string]) as any;
+            return (DPointerTargetable.pendingCreation[ptr as string] || s.idlookup[ptr as string]) as any;
         }
         else if ((ptr as any as GObject<DX>).className) return ptr as any;
         else return undefined as any;
@@ -2622,8 +2623,8 @@ export class DUser extends DPointerTargetable {
         return null;
     }
 
-    static getUser(): DUser {
-        return DPointerTargetable.from(DUser.current) || Storage.read('user');
+    static getUser(state?: DState): DUser {
+        return DPointerTargetable.from(DUser.current, state) || Storage.read('user');
     }
     static load(): DUser | null {
         return DUser.offline(true, true);
@@ -2837,10 +2838,9 @@ export class ProjectPointers{
 export class DProject extends DPointerTargetable {
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
-    static current: Pointer<DProject> = '';
 
-    static getProject(): DProject{
-        return DProject.from(U.getProjectID_URL() as string) as DProject;
+    static getProject(state?: DState): DProject{
+        return DProject.from(U.getProjectID_URL() as string, state) as DProject;
     }
     id!: Pointer<DProject, 1, 1, LProject>;
     _Id?: string // db GUID
@@ -3808,13 +3808,22 @@ export enum EModelElements{
 }
 
 type ParserName = string;
+@RuntimeAccessible('ParserData')
 export class ParserData{
+    static cname: string = 'ParserData';
     __str!: DocString<'parser code'>; // joined fragments
     test_text?: string;
     allowPartials!: boolean;
     [key: string]: any; // fragments
 }
-export type LanguageObject = Dictionary<ParserName, ParserData> & {engine: ParserName};
+
+// none of this works, they all treat engine as ParserDAta
+export type LanguageObject = {engine: ParserName} & Dictionary<ParserName, ParserData>;
+// export type LanguageObject = {engine: ParserName, [key: ParserName]: ParserData};
+// export type LanguageObject = { engine: ParserName; } & Omit<Record<ParserName, ParserData>, "engine">;
+
+export let notLanguageFragments: ParserData = {...new ParserData(), 'clonedCounter':0};
+windoww.notLanguageFragments = notLanguageFragments;
 
 @RuntimeAccessible('Language')
 export class Language {
@@ -3986,9 +3995,12 @@ type TransientPropertiesByGraphTab = Dictionary<Pointer<DViewElement, number>> &
     other data or view properties?*/
 };
 
+@RuntimeAccessible('LanguageCache')
 export class LanguageCache{
-    grammar!: nearley.Grammar;
+    static cname: string = 'LanguageCache';
+    negrammar!: nearley.Grammar;
 }
+
 export const transientProperties = {
     node: {} as Dictionary<Pointer<DGraphElement>, NodeTransientProperties>,
     view: {} as Dictionary<Pointer<DViewElement>, ViewTransientProperties>,

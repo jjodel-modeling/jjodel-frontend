@@ -180,11 +180,15 @@ function handlebarsIfCond(useless: any) {
         }
     });
     let str = arr.join('');
-    try { return eval('('+str+')'); }
+    let ret: any;
+    try { ret = eval('('+str+')'); }
     catch (e: any) {
         (window as any).Log.exx("M2T/Handlebars #ifCond evaluation error, "+e?.message+" cannot be compared in an expression", {str, rawArguments, e});
+        ret = false;
     }
-    return false;
+    let options = arguments[arguments.length-1];
+    // @ts-ignore this
+    return ret ? options.fn(this) : options.inverse(this);
 }
 
 function handlebarsJs(useless: any) {

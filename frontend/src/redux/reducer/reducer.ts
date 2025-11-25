@@ -50,12 +50,12 @@ import {
 } from "../../joiner";
 import React from "react";
 import {
-    AFTER_TRANSACTION,
     BEGIN,
-    CollabClearHistoryAction, CollabRefreshAction,
     COMMIT,
-    DO_AFTER_TRANSACTION,
     END,
+    AFTER_TRANSACTION,
+    DO_AFTER_TRANSACTION_NOT_FOR_USERS,
+    CollabClearHistoryAction, CollabRefreshAction,
     LoadAction,
     RedoAction,
     UndoAction
@@ -511,6 +511,15 @@ function CompositeActionReducer(oldState: DState, actionBatch: CompositeAction):
             case CollabClearHistoryAction.type: break;
             case LoadAction.type:
                 newState = action.value;
+                let u = DUser.getUser(newState);
+                let p = DProject.getProject(newState);
+                if (!newState.idlookup[u.id]) {
+                    DUser.current = u.id;
+                    newState.idlookup[u.id] = u;
+                }
+                if (!newState.idlookup[p.id]) {
+                    newState.idlookup[p.id] = u;
+                }
                 U.debug = newState.debug;
                 break;
             case CreateElementAction.type:
@@ -583,13 +592,13 @@ export function reducer(oldState: DState = initialState, action: Action, liveCha
     console.log('execute action', action);
     if (!safeMode) {
         let ret = unsafereducer(oldState, action);
-        DO_AFTER_TRANSACTION();
+        DO_AFTER_TRANSACTION_NOT_FOR_USERS(ret);
         return ret;
     }
 
     try {
         let ret = unsafereducer(oldState, action);
-        DO_AFTER_TRANSACTION();
+        DO_AFTER_TRANSACTION_NOT_FOR_USERS(ret);
         return ret;
     }
     catch (e) {
@@ -1112,7 +1121,7 @@ export function _reducer/*<S extends StateNoFunc, A extends Action>*/(oldState: 
             }
             if (!(action?.className)) { Log.exDevv('unexpected action type:', action.type); return oldState; }
             let ret = doreducer(oldState, action);
-            if (ret === oldState) return ret;
+            if (ret === oldState) { return ret; }
             ret.timestamp = Date.now();
             ret.action_title = '';
             ret.action_description = '';
@@ -1401,25 +1410,40 @@ export async function stateInitializer() {
                 console.error('failed to get project', {project});
                 return;
             }
-            let checkLoaded = () => {
-                console.log('check loaded', {user:DUser.getUser()});
-                // if (!DUser.getUser()) return;
+            let checkLoaded = (state: DState): boolean => {
+                console.log('check loaded', state.idlookup.clonedCounter, state);
+                if (!state.idlookup[DUser.current]) {
+                    console.error('init failed, user not found', DUser.current);
+                    return false;
+                }
+                if (!state.idlookup[pid]) {
+                    console.error('init failed, project not found', pid);
+                    return false;
+                }
                 ProjectsApi.isLoading = false; // quits loading screen on project page
-                // clearTimeout(windoww.__tmp_init_timer);
+                return true;
+                /*
+                clearTimeout(windoww.__tmp_init_timer);
+                if (ProjectsApi.isLoading) { windoww.__tmp_init_timer = setInterval(()=>checkLoaded, 100); }
+                */
             }
+
             let state: DState;
-            if (!project.state) state = store.getState(); // new project just created, never saved
+            if (!project.state) state = {...store.getState()} as DState; // NEEDS TO BE SHALLOW COPIED or the state won't update. new project just created, never saved.
             else state = JSON.parse(await U.decompressState(project.state));
             /*state['idlookup'][DUser.current] = user.__raw;
             if (!state['users'].includes(DUser.current)) state['users'].push(DUser.current);*/
             console.log('project load', state);
+            let recursiveCheck = ()=>{
+                AFTER_TRANSACTION((state)=>{
+                    if (checkLoaded(state)) return;
+                    recursiveCheck();
+                    // setTimeout(recursiveCheck, 0);
+                });
+            }
+            recursiveCheck();
+            // needs to stay before load for some reason? seems like action firing can be done synchronously some times?
             SaveManager.load(state, project);
-            AT_TRANSACTION(()=>{
-                checkLoaded();
-                DProject.current = pid;
-                /*clearTimeout(windoww.__tmp_init_timer);
-                if (ProjectsApi.isLoading) { setInterval(checkLoaded, 100); }*/
-            })
             console.error('init completed');
             // user.project = LProject.fromPointer(project.id);
         }

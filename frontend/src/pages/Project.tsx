@@ -91,7 +91,8 @@ type AllProps = OwnProps & StateProps & DispatchProps;
 
 function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     const ret: StateProps = {} as FakeStateProps;
-    ret.projectid = DProject.current; // = LProject.getProject(); // problem: this need a componentshouldupdate. if i use just id it won't work too because id is present at start, but project is loaded from backend
+    console.log('Project mapstatetoprops', ProjectsApi.isLoading);
+    ret.projectid = U.getProjectID_URL() || '';
     ret.isLoading = ProjectsApi.isLoading;
     return ret;
 }

@@ -72,7 +72,7 @@ export class Debug {
         return callbacks;
     }
     // 4s 10 istanze con 5 attributi
-    static benchmarkCreateInstance(metaclassName: string="Concept 1", times: number = 100, disableConsole: boolean = true): BenchmarkOptions{
+    static benchmarkCreateInstance(metaclassName: string="Concept_1", times: number = 100, disableConsole: boolean = true): BenchmarkOptions{
         let checkDelayMax = 300;
         let checkDelayMin = 50;
         let diff = checkDelayMax - checkDelayMin;

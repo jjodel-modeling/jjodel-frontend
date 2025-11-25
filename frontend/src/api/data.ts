@@ -680,7 +680,7 @@ export class EcoreParser{
         if (!generated) generated = [];
         if (!json) { json = {}; }
         let dObject: DClass = DClass.new(
-            this.read(json, ECoreNamed.namee, 'Concept 1'),
+            this.read(json, ECoreNamed.namee, 'Concept_1'),
             undefined as any, undefined as any, undefined as any, undefined as any, undefined, parent.id,
         );
         generated.push(dObject);// dObject.father = parent.id;

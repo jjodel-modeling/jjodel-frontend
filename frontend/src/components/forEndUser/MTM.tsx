@@ -26,6 +26,7 @@ import {on} from "events";
 import {Nearley} from "../../DSL/nearley/nearley";
 import {LanguageCache, ParserData} from "../../joiner/classes";
 import Handlebars from "handlebars";
+import {getLanguageCache} from "../editors/MTM";
 
 
 export function parseT2M(language: string, text0: string, canThrow: boolean = false): GObject | null{
@@ -61,12 +62,17 @@ export function parseT2M(language: string, text0: string, canThrow: boolean = fa
             LOG('T2M transformation failed, unsupported parser: ' + languageObj.engine, {language, parser:languageObj.engine, languageObj});
             return null;
         case 'nearley':
-            let tl = transientProperties.language[language];
-            if (!tl) transientProperties.language[language] = tl = {};
-            let te = transientProperties.language[language][engine];
-            if (!te) transientProperties.language[language][engine] = te = new LanguageCache();
-            let grammar = te.grammar;
-            if (!grammar) { te.grammar = grammar = Nearley.compileGrammar(languageObj[engine].__str) as any; }
+            let te = getLanguageCache(language, engine);
+            let grammar = te.negrammar;
+            if (!grammar) {
+                let fragments: string[] = [];
+                for (let k in languageObj[engine]) {
+                    if (k in notFragments || k === '+') continue;
+                    let v = languageObj[engine][k]?.trim();
+                    if (v) fragments.push(v);
+                }
+                te.negrammar = grammar = Nearley.compileGrammar(fragments) as any;
+            }
             if (!grammar) return null;
             ret = Nearley.parse(grammar, text0);
             if (ret) ret = ret[0];
@@ -128,30 +134,38 @@ export function doM2T(data0: LPointerTargetable | Pointer | null | undefined, la
 
     let m2tobj = languageObj[engine];
     let allowPartials = m2tobj.allowPartials;
-    let func_str: string;
-    if (allowPartials) {
-        func_str = m2tobj[data.className.substring(1)];
-        if (!func_str) func_str = m2tobj.Default;
-    } else func_str = m2tobj.__str;
+    let langObj = s.languages[language];
+    let allowPartial = langObj.m2t[engine].allowPartials;
 
+    if (data.className !== 'DModel' && !allowPartial) {
+        let msg = 'The language ' + language+' with engine ' + engine + ' does not allow partial serializations.\n' +
+            'Call the serialization from the root model.';
+        Log.ee(msg);
+        return msg;
+    }
+
+    let func_str: string;
+    let fragmentName: string = '';
+    if (allowPartials) {
+        func_str = m2tobj[fragmentName = data.className.substring(1)];
+        if (!func_str) {
+            func_str = m2tobj[fragmentName = fragmentName.toLowerCase()];
+        }
+        if (!func_str) {
+            func_str = m2tobj[fragmentName = 'Default'];
+        }
+        if (!func_str) {
+            func_str = m2tobj[fragmentName = 'default'];
+        }
+    } else {
+        func_str = m2tobj.__str;
+    }
 
     if (!func_str) {
         let msg = "M2T transformation"+(allowPartials ? ' for ' + data.className.substring(1) : '')+" is missing on language \""+language+"\" for the engine \""+engine+"\".";
         Log.ee(msg);
         return msg;
     }
-
-    if (data.className !== 'DModel') {
-        let langObj = s.languages[language];
-        let allowPartial = langObj.m2t[engine].allowPartials;
-        if (!allowPartial) {
-            let msg = 'The language ' + language+' with engine ' + engine + ' does not allow partial serializations.\n' +
-                'Call the serialization from the root model.';
-            Log.ee(msg);
-            return msg;
-        }
-    }
-
     let func: (model: LModelElement)=>string = ()=> '';
 
     console.log('dom2t', {data0, language, languageObj});
@@ -162,10 +176,11 @@ export function doM2T(data0: LPointerTargetable | Pointer | null | undefined, la
             return msg;
         case undefined:
         case 'handlebars':
-            for (let name in m2tobj) {
+            if (allowPartials) for (let name in m2tobj) {
                 if (!notFragments) notFragments = {...new ParserData(), 'clonedCounter':0};
                 if (name in notFragments) continue;
-                Handlebars.registerPartial(name, m2tobj[name]);
+                let v = m2tobj[name]?.trim();
+                if (v) Handlebars.registerPartial(name, v);
             }
             let template: (obj: GObject, options?: RuntimeOptions) => string = ()=>'missing handlebars template';
             try { template = Handlebars.compile(func_str); }
@@ -178,17 +193,22 @@ export function doM2T(data0: LPointerTargetable | Pointer | null | undefined, la
             console.log('handlebars 2', {func_str, template});
             try { ret = template(data, {allowProtoMethodsByDefault: true, allowProtoPropertiesByDefault: true, allowedProtoProperties: {__proto__:true}}); }
             catch (e: any) {
+                let errorFragment: string = e.stack.split('\n')
+                    .map((e: string) => (e.indexOf('[as ') < 0 ? '' : e.match(/\[as (.*)\]/)?.[1]))
+                    .filter((e: string)=>!!e)[0]; // topmost result is deepest stack entry (most recent call), other are ancestors of errored fragment calling it.
+                console.error('m2t error', {e, fragmentName, errorFragment});
                 let msg = (e?.message||'')+'';
                 if (msg.indexOf('Error: Parse error')<=2) {
-                    if (msg.includes('ifcond')) msg+='\ntip: ifcond usage example: {{#ifCond var1 \'==\' var2}}...{{/ifcond}}'
+                    if (msg.includes('ifcond')) msg+='\ntip: ifcond usage example: {{#ifCond var1 \'==\' var2}}...{{/ifcond}}';
+                    msg = 'Fragment "'+errorFragment+'" ' + msg;
                 }
                 ret = msg;
             }
             // cleanup
-            for (let name in m2tobj) {
+            /*for (let name in m2tobj) {
                 if (name in notFragments) continue;
                 Handlebars.unregisterPartial(name);
-            }
+            }*/
             // Handlebars.partials = {}; // unofficial fallback to make sure i erase all partials
             console.log('handlebars 3', {func_str, template, ret});
             return ret;

@@ -1,4 +1,5 @@
 import type * as monaco from "monaco-editor";
+import {LanguageCache, notLanguageFragments, ParserData} from "../../joiner/classes";
 import {
     DataOutputComponent,
     DState, GObject,
@@ -18,12 +19,11 @@ import {DModelElement, LModelElement} from "../../model/logicWrapper";
 import './mtm.scss';
 import {JsEditor} from "./languages";
 import Editor, {EditorProps} from "@monaco-editor/react";
-import {AT_TRANSACTION} from "../../redux/action/action";
+import {AFTER_TRANSACTION, AT_TRANSACTION} from "../../redux/action/action";
 import {doM2T, doT2M, parseT2M} from "../forEndUser/MTM";
 import {Btn, CommandBar} from "../commandbar/CommandBar";
 import {hideMetrics} from "../metrics/Metrics";
 import {Nearley} from "../../DSL/nearley/nearley";
-import {ParserData} from "../../joiner/classes";
 import {Tooltip} from "../forEndUser/Tooltip";
 
 const monacooptions: monaco.editor.IStandaloneEditorConstructionOptions = {
@@ -159,21 +159,34 @@ export const serializers = {
 const parsersArr = Object.keys(parsers);
 const serializersArr = Object.keys(serializers);
 
-let notFragments: ParserData = null as any;
-const defaultpartials: Dictionary<string, string> = U.objectFromArrayValues([
-    'Model',
-    'Package',
-    'Enumerator',
-    'Literal',
-    'Class',
-    'Attribute',
-    'Reference',
-    'Operation',
-    'Parameter',
-    'Annotation',
-    'Object',
-    'Value',
-]);
+
+export function clearCache(language: string, engine: string): void{
+    delete transientProperties.language[language][engine];
+}
+
+export function getLanguageCache(language: string, engine: string): LanguageCache{
+    let tl = transientProperties.language[language];
+    if (!tl) transientProperties.language[language] = tl = {};
+    let te = tl[engine];
+    if (!te) tl[engine] = te = new windoww.LanguageCache();
+    return te;
+}
+
+const defaultpartials: Dictionary<string, boolean> = {
+    'Model': true,
+    'Package': true,
+    'Enumerator': true,
+    'Literal': true,
+    'Class': true,
+    'Attribute': true,
+    'Reference': true,
+    'Operation': true,
+    'Parameter': true,
+    'Annotation': true,
+    'Object': true,
+    'Value': true,
+};
+
 function MTMEditor(props: EditorAllProps): JSX.Element{
     let {language, setLanguage, setEditor} = props;
     let langObj = props.languages[language];
@@ -191,9 +204,9 @@ function MTMEditor(props: EditorAllProps): JSX.Element{
     let m2t_placeholder: string;
     let m2tpartials: boolean = m2tobj.allowPartials;
     let t2mpartials: boolean = t2mobj.allowPartials;
-    if (!notFragments) notFragments = {...new ParserData(), 'clonedCounter':0};
-    const fragmentsm2t = Object.keys(m2tobj).filter(k => !(k in notFragments));
-    const fragmentst2m = Object.keys(t2mobj).filter(k => !(k in notFragments));
+    let notLanguageFragments = windoww.notLanguageFragments;
+    const fragmentsm2t = Object.keys(m2tobj).filter(k => !(k in notLanguageFragments));
+    const fragmentst2m = Object.keys(t2mobj).filter(k => !(k in notLanguageFragments));
 
     if (t2mpartials) t2m_placeholder = 'Partial transformation for '+t2mfragment+'\nmissing, "default" transformation\nwill be used.\nTo delete this partial,\nrename it and give an empty name.' as any;
     else switch (t2mengine) {
@@ -306,7 +319,11 @@ function MTMEditor(props: EditorAllProps): JSX.Element{
                         TRANSACTION('rename language "'+language+'"', ()=> {
                             SetRootFieldAction.new('languages.'+value, langObj, '', false);
                             SetRootFieldAction.new('languages', {[language]:undefined}, '-=', false);
-                            AT_TRANSACTION(()=>setLanguage(value));
+                            AT_TRANSACTION(()=>{
+                                transientProperties.language[value] = transientProperties.language[language];
+                                delete transientProperties.language[language];
+                                setLanguage(value);
+                            })
                         }, language, value)
                     }} style={{overflow: 'visible'}}/>
                 </h2>
@@ -319,7 +336,7 @@ function MTMEditor(props: EditorAllProps): JSX.Element{
                             let v = e.target.value.toLowerCase();
                             if (v === a.engine) return;
                             TRANSACTION('Change '+a.LABEL+' engine "' + language + '"', () => {
-                                if (!a.obj[v]) SetRootFieldAction.new('languages.' + language + "."+a.label+"." + v, new ParserData(), '', false);
+                                if (!langObj[a.label as "m2t" | "t2m"][v]) SetRootFieldAction.new('languages.' + language + "."+a.label+"." + v, new ParserData(), '', false);
                                 SetRootFieldAction.new('languages.' + language + "."+a.label+".engine", v, '', false);
                             }, a.engine, v)
                         }}> {a.enginesArr.map(p => (
@@ -339,7 +356,9 @@ function MTMEditor(props: EditorAllProps): JSX.Element{
                                     }
                                     if (val) a.setFragment('Default');
                                     a.set_oldEngine('__jj_needs_reset__');
+
                                     if (a.func !== a.placeholder) SetRootFieldAction.new('languages.' + language + '.'+a.label+'.' + a.engine + '.Default', a.func, '', false);
+                                    AT_TRANSACTION(()=>{ clearCache(language, a.engine); })
                                 },
                                 a.allowPartials, val)}
                         /><span className={'my-auto'}> Allow partial {a.operation}s</span></label>
@@ -348,20 +367,21 @@ function MTMEditor(props: EditorAllProps): JSX.Element{
                         ['+', ...a.fragments].reverse().map(f=><div className={'fragment-btn btn ' +(f === a.fragment ? 'selected btn-secondary' : 'btn-outline-secondary')}
                                               onClick={() => {a.setFragment(f); a.set_oldEngine('__jj_needs_reset__')}}>
                             {f === 'Default'? <span>Default</span> : <Input placeholder={'Confirm to delete'} key={f} getter={()=>f} tooltip={'double click to '+(f==='+'?'add':'rename')+' fragment'} setter={(v)=>{
-                                console.warn('input setter', v, f);
                                 if (!v) {
                                     TRANSACTION('language "' + language + '/' + a.engine + '" remove partial', ()=>{
                                         if (f !== '+') SetRootFieldAction.new('languages.' + language + '.'+a.label+'.' + a.engine + '.'+f, undefined, '', false);
                                     }, f, v);
                                     a.setFragment('Default');
                                     a.set_oldEngine('__jj_needs_reset__');
+                                    AT_TRANSACTION(()=>clearCache(language, a.engine));
                                     return;
                                 }
-                                if ((v as string) in a.obj || v === '+') { Log.ww(a.LABEL+' partial name already taken'); return; }
+                                if ((v as string) in a.obj || v === '+' || ((v as string) in notLanguageFragments)) { Log.ww(a.LABEL+' partial name already taken'); return; }
                                 TRANSACTION('language "' + language + '/' + a.engine + '" '+(f === '+'?'add':'rename')+' partial', ()=>{
                                     SetRootFieldAction.new('languages.' + language + '.'+a.label+'.' + a.engine + '.'+v, ' ', '', false);
                                     a.setFragment(v as string);
                                     if (f !== '+') SetRootFieldAction.new('languages.' + language + '.'+a.label+'.' + a.engine + '.'+f, undefined, '', false);
+                                    AT_TRANSACTION(()=>clearCache(language, a.engine));
                                 }, f, v)
                                 }} clickHidden={true}/>
                             }</div>
@@ -375,7 +395,8 @@ function MTMEditor(props: EditorAllProps): JSX.Element{
 
                         TRANSACTION('Edit '+a.LABEL+' language "'+language+'"', ()=> {
                             SetRootFieldAction.new('languages.'+language+"."+a.LABEL+"."+a.engine+'.' + (a.allowPartials ? a.fragment : '__str'), value, '', false);
-                            SetRootFieldAction.new('RECOMPILE_LANGUAGE', {engine: a.engine, language}, '+=', false);
+                            // SetRootFieldAction.new('RECOMPILE_LANGUAGE', {engine: a.engine, language}, '+=', false);
+                            AT_TRANSACTION(()=>clearCache(language, a.engine));
                         })
                     }}>
                         <Editor className={'mx-1'} options={monacooptions} defaultLanguage={'plaintext'} value={a.func}
