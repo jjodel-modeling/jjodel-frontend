@@ -3,7 +3,7 @@ import {connect} from 'react-redux';
 import {DState} from '../../redux/store';
 import {
     Any,
-    Defaults,
+    Defaults, Dictionary,
     DObject,
     DPointerTargetable,
     GObject,
@@ -24,72 +24,101 @@ import { Tooltip } from './Tooltip';
 import Editor from "@monaco-editor/react";
 import {on} from "events";
 import {Nearley} from "../../DSL/nearley/nearley";
-import {LanguageCache, ParserData} from "../../joiner/classes";
+import {LanguageCache, notLanguageFragments, ParserData} from "../../joiner/classes";
 import Handlebars from "handlebars";
 import {getLanguageCache} from "../editors/MTM";
 
 
-export function parseT2M(language: string, text0: string, canThrow: boolean = false): GObject | null{
+export function parseT2M(language: string, text0: string, canThrow: boolean = false, errOutput?: {msg?:string, e?: GObject}, s?: DState): GObject | null{
     let text: string = text0 = text0?.trim();
     let LOG = canThrow ? Log.exx : Log.ee;
     if (!text) { LOG('doT2M: missing text'); return null; }
     if (!language) language = 'eCore/JSON';
     // text = U.jsonSanitize_dangerous(text);
     let ret: GObject = null as any;
+    let msg: string; // error message
 
-    let s = store.getState();
+    if (!s) s = store.getState();
     if (!(language in s.languages)) {
-        let msg = 'M2T error, language "'+language+'" does not exist.';
-        LOG(msg);
+        LOG(msg = 'M2T error, language "'+language+'" does not exist.');
+        if (errOutput) errOutput.msg = msg;
         return null;
     }
     let languageObj = s.languages[language].t2m;
     if (!languageObj) {
-        let msg = 'M2T error, language "'+language+'" does not have a T2M transformation.';
-        LOG(msg);
+        LOG(msg = 'M2T error, language "'+language+'" does not have a T2M transformation.');
+        if (errOutput) errOutput.msg = msg;
         return null;
     }
     let engine = languageObj.engine || 'javascript';
-
-    let func_str = languageObj[engine]?.__str;
-    if (!func_str) {
-        LOG("T2M transformation is missing on language \""+language+"\" for the engine \""+engine+"\".", {languageObj});
+    let allowPartials =  languageObj[engine].allowPartials;
+    let func_str: string;
+    if (!allowPartials){
+        func_str = languageObj[engine]?.__str;
+        if (!func_str) {
+            LOG(msg = "T2M transformation is missing on language \""+language+"\" for the engine \""+engine+"\".", {languageObj});
+            if (errOutput) errOutput.msg = msg;
+            return null;
+        }
+    }
+    function getMonoliticGlobalFunc(): string | null {
+        func_str = languageObj[engine]?.__str;
+        if (func_str) return func_str;
+        if (func_str) LOG(msg = "T2M transformation is missing on language \""+language+"\" for the engine \""+engine+"\".", {languageObj});
+        if (errOutput) errOutput.msg = msg;
         return null;
     }
 
     switch (engine) {
         default:
-            LOG('T2M transformation failed, unsupported parser: ' + languageObj.engine, {language, parser:languageObj.engine, languageObj});
+            LOG(msg = 'T2M transformation failed, unsupported parser: ' + languageObj.engine, {language, parser:languageObj.engine, languageObj});
+            if (errOutput) errOutput.msg = msg;
             return null;
         case 'nearley':
             let te = getLanguageCache(language, engine);
             let grammar = te.negrammar;
             if (!grammar) {
-                let fragments: string[] = [];
-                for (let k in languageObj[engine]) {
-                    if (k in notFragments || k === '+') continue;
-                    let v = languageObj[engine][k]?.trim();
-                    if (v) fragments.push(v);
+                if (allowPartials) {
+                    let fragments: Dictionary<string, string> = {};
+                    for (let k in languageObj[engine]) {
+                        if (k in notLanguageFragments || k === '+' || k === '__str') continue;
+                        let v = languageObj[engine][k]?.trim();
+                        if (v) fragments[k] = v;
+                    }
+                    te.negrammar = grammar = Nearley.compileGrammar(fragments) as any;
                 }
-                te.negrammar = grammar = Nearley.compileGrammar(fragments) as any;
+                else {
+                    func_str = getMonoliticGlobalFunc() as any;
+                    if (!func_str) return null;
+                    te.negrammar = grammar = Nearley.compileGrammar(func_str) as any;
+                }
             }
             if (!grammar) return null;
             ret = Nearley.parse(grammar, text0);
+            Log.w(ret.length > 1, "Nearley grammar for "+language+" is ambiguous, it returned "+ret.length+" distinct valid parsings.", {ret, text0});
             if (ret) ret = ret[0];
             break;
         case undefined:
         case 'javascript':
+            if (allowPartials) {
+                Log.eDevv(language+' T2M with partials is not supported yet, please disable the checkbox.');
+                return null;
+            }
+            func_str = getMonoliticGlobalFunc() as any;
+            if (!func_str) return null;
             let t2m = "("+func_str+")";  // because "function(text){return "a"}" is invalid without a function name unless i wrap it in parenthesis and turn into expression.
             let func = eval(t2m);
             if (typeof func !== 'function') {
-                LOG('The T2M transformation of "'+language+'" must be a parser function, please change the language definition. found instead:'+(typeof func), {ret:func});
+                LOG(msg = 'The T2M transformation of "'+language+'" must be a parser function, please change the language definition. found instead:'+(typeof func), {ret:func});
+                if (errOutput) errOutput.msg = msg;
                 return null;
             }
             ret = func(text);
 
             if (typeof ret !== 'object') {
-                LOG('The T2M transformation of "'+language+'" must be a parser function returning a plain object.' +
+                LOG(msg = 'The T2M transformation of "'+language+'" must be a parser function returning a plain object.' +
                     '\nPlease change the language definition.', {ret, language, languageObj, func_str, func, text, text0});
+                if (errOutput) errOutput.msg = msg;
                 return null;
             }
             break;
@@ -98,18 +127,21 @@ export function parseT2M(language: string, text0: string, canThrow: boolean = fa
     let type: string = typeof ret;
     if (!ret && type === 'object') type = 'null';
     if (type !== 'object') {
-        LOG('The T2M transformation of "'+language+'" must be a parser function returning a plain object, but returned "'+(type)+'" instead.' +
-            '\nPlease change the language definition.', {ret, type, language, languageObj, func_str});
+        LOG(msg = 'The T2M transformation of "'+language+'" must be a parser function returning a plain object, but returned "'+(type)+'" instead.' +
+            '\nPlease change the language definition.', {ret, type, language, languageObj});
+        if (errOutput) errOutput.msg = msg;
         return null;
     }
     if (!ret) {
         try { ret = JSON.parse(text); }
-        catch (e) { LOG('The default T2M transformation can only be applied to text in JSON format.', {e, text}); return null; }
+        catch (e: any) {
+            LOG( msg = 'The default T2M transformation can only be applied to text in JSON format.', {e, text});
+            if (errOutput) { errOutput.msg = msg; errOutput.e = e; }
+            return null; }
     }
     return ret;
 }
 windoww.parseT2M = parseT2M;
-let notFragments: ParserData = null as any;
 
 export function doM2T(data0: LPointerTargetable | Pointer | null | undefined, language: string): string{
     let data: LModelElement = LPointerTargetable.from(data0 as any);
@@ -177,8 +209,7 @@ export function doM2T(data0: LPointerTargetable | Pointer | null | undefined, la
         case undefined:
         case 'handlebars':
             if (allowPartials) for (let name in m2tobj) {
-                if (!notFragments) notFragments = {...new ParserData(), 'clonedCounter':0};
-                if (name in notFragments) continue;
+                if (name in notLanguageFragments) continue;
                 let v = m2tobj[name]?.trim();
                 if (v) Handlebars.registerPartial(name, v);
             }
@@ -252,8 +283,9 @@ export function doT2M(data0: LPointerTargetable | Pointer | null | undefined, la
     if (!DPointerTargetable.isD(data0)) { Log.ee('T2M transformation must be called on a modelling element, found instead: ' + typeof data0, {element:data0, text, language}); return; }
     let data: LModelElement = LPointerTargetable.from(data0 as any);
     let className = data.className;
+    let s: DState = store.getState();
+    let langObj = s.languages[language];
     if (className !== 'DModel') {
-        let langObj = store.getState().languages[language];
         let allowPartial = langObj.t2m[langObj.t2m.engine].allowPartials;
         if (!allowPartial) {
             Log.ee('The language ' + language+' with engine ' + langObj.t2m.engine + ' does not allow partial transformations.\n' +
@@ -261,9 +293,13 @@ export function doT2M(data0: LPointerTargetable | Pointer | null | undefined, la
             return;
         }
     }
-    let ret: GObject = parseT2M(language, text) as any;
+    let ret: GObject = parseT2M(language, text, false, undefined, s) as any;
     if (!ret) return;
-    console.log('doT2M json', {data, text, ret});
+    if (Array.isArray(ret)) {
+        if (ret.length === 1) ret = ret[0];
+        else Log.ee('T2M returned an array instead of an object', {ret, data, language});
+    }
+    console.log('doT2M json pre', {data, text, ret:JSON.parse(JSON.stringify(ret))});
     if (!(data as LObject).t2m) {
         Log.ee("The T2M transformation cannot be applied yet to " + className + " elements.", {className, ret, data, language});
         return;

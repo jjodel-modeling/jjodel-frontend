@@ -1,4 +1,4 @@
-import {DModelElement, GObject, Log, RuntimeAccessible, windoww} from "../../joiner";
+import {Dictionary, DModelElement, GObject, Log, RuntimeAccessible, windoww} from "../../joiner";
 
 import nearley, {Grammar, ParserOptions, Parser, Rule} from "nearley";
 const compile = require("nearley/lib/compile");
@@ -20,21 +20,42 @@ class GrammarInfoObject{
 @RuntimeAccessible('Nearley')
 export class Nearley{
     static cname: string = 'Nearley';
-    static compileGrammars(sourceCodes: string[]): Grammar | null {
-        if (!sourceCodes.length) return null;
-        let fragments: GrammarInfoObject[] = [];
+    static compileGrammars(fragments: Dictionary<string, string>): Grammar | null {
+        if (!fragments) return null;
+        if (!Object.values(fragments).length) return null;
+        let grammarFragments: Dictionary<string, GrammarInfoObject> = {};
         let joined: GrammarInfoObject = null as any;
-        for (let sourceCode of sourceCodes) {
+        for (let fragmentName in fragments) {
+            let sourceCode = fragments[fragmentName];
             // Parse the grammar source into an AST
             const grammarParser = new nearley.Parser(nearleyGrammar);
-            grammarParser.feed(sourceCode);
-            const grammarAst = grammarParser.results[0]; // TODO check for errors
+            try { grammarParser.feed(sourceCode); }
+            catch (e: any) {
+                Log.ee('Syntax error in Nearley fragment "'+fragmentName+'" check parenthesis and syntax validity. https://omrelli.ug/nearley-playground/\n'+e.message, {sourceCode, e});
+                return null;
+            }
+            const grammarAst = grammarParser.results[0];
 
+            if (!grammarAst) {
+                Log.ee('Failed to parse Nearley fragment "'+fragmentName+'" check parenthesis and syntax validity. https://omrelli.ug/nearley-playground/', {sourceCode});
+                return null;
+            }
+            console.log('compiled fragment ' + fragmentName, {grammarAst, sourceCode, grammarParser});
             // Compile the AST into a set of rules
             const grammarInfoObject: GrammarInfoObject = compile(grammarAst, {});
-            fragments.push(grammarInfoObject);
+            grammarFragments[fragmentName] = grammarInfoObject;
             if (!joined) joined = grammarInfoObject;
             else { Nearley.import(joined, grammarInfoObject); }
+            //// only for debug and find errored fragments
+
+            // Generate JavaScript code from the rules
+            const grammarJs = generate(grammarInfoObject, "grammar");
+            // Pretend this is a CommonJS environment to catch exports from the grammar.
+            const module = { exports: {} };
+            try { eval(grammarJs); } catch(e: any) {
+                Log.ee('Error in nearly fragment "'+fragmentName+'" postprocessing, check js code inside {% tags %}: ' + e.message, e);
+                return null;
+            }
         }
 
         // Generate JavaScript code from the rules
@@ -47,7 +68,7 @@ export class Nearley{
             return null;
         }
         let ret =  nearley.Grammar.fromCompiled(module.exports as any);
-        console.log('nearley compile', {ret, module, grammarJs, joined, fragments});
+        console.log('nearley compile', {ret, module, grammarJs, joined, fragments, grammarFragments});
         return ret;
     }
 
@@ -78,8 +99,8 @@ export class Nearley{
         console.log('nearley compile', {ret, module, grammarJs, grammarInfoObject, grammarAst});
         return ret;
     }
-    static compileGrammar(sourceCode: string | string[]): Grammar | null{
-        return Nearley.compileGrammars(Array.isArray(sourceCode) ? sourceCode : [sourceCode]);
+    static compileGrammar(sourceCode: string | Dictionary<string, string>): Grammar | null{
+        return Nearley.compileGrammars(typeof sourceCode === 'object' ? sourceCode : {"Default":sourceCode});
     }
 
     static import(g1: GrammarInfoObject, g2: GrammarInfoObject): void {
@@ -101,9 +122,19 @@ export class Nearley{
         let options: ParserOptions = {};
         options.keepHistory = false;
         const parser: Parser = new nearley.Parser(grammar, options);
-        let result: Parser = parser.feed(text);
-        console.log('parsing', {parser, result, ret:result.results});
-        return result.results;
+        console.log('pre parsing', {parser, grammar, options, text});
+        try{
+            let result: Parser = parser.feed(text);
+            console.log('post parsing', {parser, result, ret:result.results});
+            return result.results;
+        }
+        catch(e: any) {
+            let msg: string = '';
+            if (e.stack.includes('Rule.postprocess')) msg = 'Nearley runtime error, a postprocess rule generated an error: ' + e.message+'\nHint: you can use Log.ii or console.log inside postprocess blocks.';
+            else msg = 'Nearley runtime error: ' + e.message;
+            Log.ee(msg, {parser, grammar, text, options, e});
+            return [];
+        }
     }
 
 }

@@ -94,7 +94,7 @@ export function MTMComponent(props: AllProps): JSX.Element{
     } catch (e) {
         console.error(e);
         m2t_result = "M2T transformation failed, check the language definition.";
-    } else m2t_result = 'Cannot perform a language transformation on the current selection.\nPlease select a Model Element.'
+    } else m2t_result = /*'Cannot perform a language transformation on the current selection.\n*/'Please select a Modelling Element.'
 
     function New(){
         let name = U.increaseEndingNumber('My Language', false, false, (n)=> !!languages[n]);
@@ -260,7 +260,8 @@ function MTMEditor(props: EditorAllProps): JSX.Element{
     let test_text = t2mobj.test_text?.trim() || default_text;
     if (test_text !== default_text) {
         try {
-            output_tmp = parseT2M(language, test_text, true) || {msg:'Parsing error, check the logs.'};
+            let errOutput: {msg: string, e: GObject} = {} as any;
+            output_tmp = parseT2M(language, test_text, true, errOutput) || errOutput;
             // output_tmp = eval("("+t2m_func+")")(test_text);
         } catch (e: any) { output_tmp = {msg: e.message, stack: e.stack, e}; }
         console.log('t2m', {output_tmp, t2m_func, test_text});

@@ -238,7 +238,7 @@ function handlebarsJs(useless: any) {
     }
     */
 }
-
+windoww.log = console.log;
 Handlebars.registerHelper('js', handlebarsJs);
 Handlebars.registerHelper('JS', handlebarsJs);
 Handlebars.registerHelper('Js', handlebarsJs);

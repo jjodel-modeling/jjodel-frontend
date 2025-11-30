@@ -290,6 +290,7 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
     }
     protected _convertEcoreToJom_m2(ecore: GObject): GObject{
         let ogKeys = Object.keys(ecore || {});
+        console.log('pre convert ecore', JSON.parse(JSON.stringify(ecore||{})));
         // remove xmi inline prefixs (@)
         function todo(key: string) { Log.exDevv('ecoreParser found unsupported key, this is dev\'s fault.', {key, val:ecore[key]}); }
         function del(k: string) { delete ecore[k] }
@@ -324,11 +325,12 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
                 case ECoreEnum.instanceTypeName:     todo(k); break;
                 case ECoreEnum.serializable:         delete ecore[k]; ecore.serializable = v; break;
                 case ECoreLiteral.value:             delete ecore[k]; ecore.value = v; break;
-                case ECoreSubPackage.eSubpackages: case 'subpackages': case 'subPackages':
                 case ECorePackage.eClassifiers: case 'classifiers':
                 case ECoreClass.eStructuralFeatures: case 'features': case 'structuralFeatures':
+                case 'children': case 'childrens':
                     delete ecore[k]; if (v && v.length) ecore.__childrenToSort = v; break;
-                case ECorePackage.eSubpackages:      delete ecore[k]; if (v && v.length) ecore.subpackages = v; break;
+                case ECoreSubPackage.eSubpackages: case 'subpackages': case 'subPackages':
+                                                     delete ecore[k]; if (v && v.length) ecore.subpackages = v; break;
                 case ECoreRoot.ecoreEPackage:        delete ecore[k]; if (v && v.length) ecore.packages = v; break;
                 case ECoreClass.eSuperTypes:         delete ecore[k]; if (v && v.length) ecore.extends = v; break;
                 case ECoreEnum.eLiterals:            delete ecore[k]; if (v && v.length) ecore.literals = v; break;
@@ -349,6 +351,7 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
             // ecore[k.substring(1)] = ecore[k];
             // delete ecore[k];
         }
+        console.log('post convert ecore', JSON.parse(JSON.stringify(ecore||{})));
         return ecore || {};
     }
 
@@ -361,7 +364,7 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
             json = this._convertEcoreToJom_m2(json);
 
             TRANSACTION(this.get_name(c) + '.t2m()', () => {
-                console.log('L'+c.data.className.substring(1)+'.t2m() called.', {d:c.data, j:json, old});
+                console.log('L'+c.data.className.substring(1)+'.t2m() called.', {d:c.data, j: JSON.parse(JSON.stringify(json)), old});
                 for (let k in json) {
                     let v = json[k];
                     switch (k) {
@@ -413,14 +416,13 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
                                 // let isD: boolean = !!(isL || gv.className && gv.id);
                                 // let isEcorePointer: boolean = Pointers.isEcorePointer(gv); cannot happen, ecore pointers should only exist in m1
                                 let child: LModelElement = null as any;
+
                                 if (isPointer) { // untested
                                     child = L.fromPointer(v as any as Pointer<DModelElement>); // || L.fromPointer(Pointers.prefix + v);
-                                    if (child) child.father = c.data.id as any;
                                     continue; // no need to proceed with t2m, adding ptr is enough;
                                 }
                                 else if (isL) { // untested
                                     child = v as any;
-                                    (child as any as LModelElement).father = c.data.id as any;
                                     continue; // no need to proceed with t2m, a L-object is already updated,m i'm just moving it
                                 }
                                 if (gv.id) { // match priority (1) by id
@@ -459,15 +461,6 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
                                                             }
                                                             if ('type' in childEcore) {// || ECoreAttribute.eType in childEcore || 'eType' in childEcore) {
                                                                 let type = childEcore.type; // || childEcore[ECoreAttribute.eType] || childEcore.eType;
-                                                                if (Pointers.isPointer(type)) {
-                                                                    let pointedType = DPointerTargetable.from(childEcore.type as Pointer<DClassifier>);
-                                                                    if (pointedType) {
-                                                                        if (pointedType.className === DClass.cname) collection = 'references'; break;
-                                                                        if (pointedType.className === DEnumerator.cname) collection = 'attributes'; break;
-                                                                        Log.eDevv('eCore unexpected child element type', {json, childEcore, parent:c, pointedType});
-                                                                        break;
-                                                                    }
-                                                                }
                                                                 switch (type) {
                                                                     case ShortAttribETypes.EVoid:
                                                                     case ShortAttribETypes.EChar:
@@ -482,6 +475,15 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
                                                                     case ShortAttribETypes.EDouble: collection = 'attributes'; break assignCollection;
                                                                     default: collection = 'references'; break assignCollection;
                                                                 }
+                                                                if (!collection && Pointers.isPointer(type)) {
+                                                                    let pointedType = DPointerTargetable.from(childEcore.type as Pointer<DClassifier>);
+                                                                    if (pointedType) {
+                                                                        if (pointedType.className === DClass.cname) collection = 'references'; break;
+                                                                        if (pointedType.className === DEnumerator.cname) collection = 'attributes'; break;
+                                                                        Log.eDevv('eCore unexpected child element type', {json, childEcore, parent:c.data, pointedType});
+                                                                        break;
+                                                                    }
+                                                                }
                                                             }
                                                             Log.ee('Skipped invalid eCore subElement, the feature type cannot be determined.\nIt is required to put a type, classname or xsi:type', {childJson:json, k, v, parent:c});
                                                             break;
@@ -490,19 +492,35 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
                                                         default: Log.eDevv('eCore unexpected child element type', {childEcore, json, gv, parent:c});
                                                     }
                                                 break;
-                                            case 'DPackage':
-                                                switch (childEcore.className?.toLowerCase()) {
+                                            case 'DPackage': case 'DModel':
+                                                let cname = childEcore.className?.toLowerCase();
+                                                switch (cname) {
                                                     case null: case undefined:
+                                                        if ('subpackages' in childEcore || 'uri' in childEcore || 'prefix' in childEcore || 'classes' in childEcore || 'enumerators' in childEcore)
+                                                            collection = (c.data.className === 'DModel') ? 'packages' : 'subpackages';
                                                         if ('literals' in childEcore) collection = 'enumerators';
                                                         else collection = 'classes';
                                                         break;
-                                                    case 'dclass': case 'class': collection = 'classes'; break;
-                                                    case 'denumerator': case 'enumerator': case 'enum': collection = 'enumerators'; break;
-                                                    default: Log.eDevv('eCore unexpected child element type', {childEcore, json, gv, parent:c});
+                                                    case 'dpackages': case 'dpackage': case 'package': case 'dsubpackages': case 'dsubpackage': case 'subpackage':
+                                                        collection = (c.data.className === 'DModel') ? 'packages' : 'subpackages';
+                                                        break;
+                                                    case 'dclasses': case 'dclass': case 'class': collection = 'classes'; break;
+                                                    case 'denumerators': case 'denumerator': case 'enumerator': case 'enum': case 'denum': collection = 'enumerators'; break;
+                                                    default:/*
+                                                        if (c.data.className !== 'DModel') {
+                                                            Log.eDevv('eCore unexpected child element type', {childEcore, json, gv, parent:c});
+                                                            break;
+                                                        }
+                                                        let e = childEcore as DPackage;
+                                                        if (cname.indexOf('package')>=0 || e.uri || e.prefix || e.classes || e.enumerators) collection = 'packages';
+                                                        else */
+                                                        Log.exx('T2M Unexpected classname "'+childEcore.className+'"found as children of "'+c.data.className+'"', {childEcore, json, data:c.data});
+                                                        return null;
+                                                        break;
                                                 }
                                                 break;
                                             default:
-                                                Log.eDevv('eCore ambiguous child collection found outside package and classes', {childJson:json, k, v, parent:c});
+                                                Log.eDevv('eCore ambiguous child collection found outside package and classes', {childJson:json, k, v, parent:c.data});
                                                 continue;
                                         }
                                         if (collection) {
@@ -511,22 +529,50 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
                                             k = collection;
                                         }
                                     }
+                                    wrong deletion before elements got created
+                                    console.log('convert delete children', JSON.parse(JSON.stringify(gv)));
                                     delete gv.__childrenToSort;
                                     // continue;
                                 }
 
-                                let oldValues = (c.data as GObject)[k] || [];
+                                let dparent: DModelElement;
+                                let lparent: LModelElement;
+                                if (c.data.className !== 'DModel') { dparent = c.data; lparent = c.proxyObject; }
+                                else switch(k) { // model.t2m only collections available in models
+                                    case 'classes': case 'enumerators': case 'subpackages': case 'annotations':
+                                        lparent = this.get_package(c);
+                                        if (lparent) { dparent = lparent.__raw; }
+                                        else {
+                                            dparent = DPackage.new3({father: c.data.id as Pointer<DModel>}, () => {}, DModel, true);
+                                            lparent = L.from(dparent);
+                                        }
+                                        break;
+                                    case 'packages':
+                                        dparent = c.data;
+                                        lparent = c.proxyObject;
+                                        break;
+                                    default: Log.exx('Unexpected collection found inside model in T2M', {k, c, ecore_object:gv});
+                                    dparent = null as any;
+                                    lparent = null as any;
+                                }
+                                if (!dparent || !lparent) {
+                                    Log.exDevv('cannot find container element for a collection in the m2t transformation', {dparent, lparent, k, c, ecore_object:gv});
+                                    return;
+                                }
+                                let oldValues = (dparent as GObject)[k] || [];
                                 if (!child) { // match priority (3) by index
                                     if (Pointers.isPointer(oldValues[i])) {
                                         child = L.fromPointer(oldValues[i]);
                                     }
                                 }
+                                // if exist in another container, change parent.
+                                if (child && Pointers.from((child as any as LModelElement).father) !== dparent.id) (child as any as LModelElement).father = dparent.id as any;
                                 // if does not exist, create subelement
                                 if (!child) {
-                                    let ptrs = {id: Pointers.from(gv) as any as Pointer<any>, father: c.data.id as Pointer<any>, 'instanceof': undefined};
+                                    let ptrs = {id: Pointers.from(gv) as any as Pointer<any>, father: dparent.id as Pointer<any>, 'instanceof': undefined};
                                     let callback: (d: any) => void = (d: DModelElement) => {};
                                     let d: DModelElement = null as any;
-                                    console.log('m2t create subelement', {ptrs, gv, thisData:c.data});
+                                    console.log('m2t create subelement', {ptrs, gv, thisData:c.data, dparent});
                                     // try to automatically determine the holding collection (class, enumerator or attrib, reference
 
                                     switch (k) {
@@ -541,7 +587,7 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
                                         case 'operations': d = DOperation.new3(ptrs, callback, true); break;
                                         case 'parameters': d = DParameter.new3(ptrs, callback, true); break;
                                     }
-                                    console.log('M2 L'+c.data.className.substring(1)+'.t2m()', {d, v});
+                                    console.log('M2 L'+c.data.className.substring(1)+'.t2m()', {d, v: JSON.parse(JSON.stringify(v))});
                                     child = L.from(d); // (this as LValue).get_addObject(c)({});
                                 }
                                 if (!child) continue;
@@ -4513,18 +4559,18 @@ export class DEnumerator extends DModelElement { // DDataType
     literals: Pointer<DEnumLiteral, 0, 'N', LEnumLiteral> = [];
 
     public static new(name?: DNamedElement["name"], father?: DEnumerator["father"], persist: boolean = true): DEnumerator {
-        if (!name) name = this.defaultname("enum ", father);
+        if (!name) name = this.defaultname("enum_", father);
         return new Constructors(new DEnumerator('dwc'), father, persist, undefined).DPointerTargetable().DModelElement()
             .DNamedElement(name).DEnumerator().end();
     }
     static new2(setter: Partial<ObjectWithoutPointers<DEnumerator>>, father: DEnumerator["father"], name?: DEnumerator["name"]): DEnumerator {
-        if (!name) name = this.defaultname("enum ", father);
+        if (!name) name = this.defaultname("enum_", father);
         return new Constructors(new DEnumerator('dwc'), father, true, undefined).DPointerTargetable().DModelElement()
             .DNamedElement(name).DEnumerator().end((d) => { Object.assign(d, setter); });
     }
 
     static new3(a: Partial<EnumPointers>, callback: undefined | ((d: DEnumerator, c: Constructors) => void), persist: boolean = true): DEnumerator {
-        if (!a.name) a.name = this.defaultname("enum ", a.father);
+        if (!a.name) a.name = this.defaultname("enum_", a.father);
         return new Constructors(new DEnumerator('dwc'), a.father, persist, undefined, a.id)
             .DPointerTargetable().DModelElement().DNamedElement(a.name)
             .DEnumerator()

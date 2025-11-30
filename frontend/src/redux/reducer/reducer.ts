@@ -58,7 +58,7 @@ import {
     CollabClearHistoryAction, CollabRefreshAction,
     LoadAction,
     RedoAction,
-    UndoAction
+    UndoAction, AT_TRANSACTION
 } from "../action/action";
 import Collaborative from "../../components/collaborative/Collaborative";
 import {SimpleTree} from "../../common/SimpleTree";
@@ -70,6 +70,7 @@ import {AuthApi, ProjectsApi} from "../../api/persistance";
 import DSL from "../../DSL/DSL";
 import {SaveManager} from "../../components/topbar/SaveManager";
 import Api from "../../api/api";
+import {doM2T, parseT2M} from "../../components/forEndUser/MTM";
 
 let windoww = window as any;
 let U: typeof UType = windoww.U;
@@ -1362,6 +1363,19 @@ function fixResizables(e: MouseEvent){
     }*/
 }
 
+function test(){
+    console.clear();
+    let s = ''+
+    '@namespace(uri="org.jjodelreact.metamodel_1.default", prefix="")\n' +
+        'package metamodel_1;\n' +
+        '\n' +
+        'class Concept_0 {\n' +
+        '    unique ordered attr EString attr_0;\n' +
+        '    unique ordered ref Concept_0 ref_0;\n' +
+        '}';
+    console.log('t2m test', parseT2M('Emfatic', s, true));
+}
+
 export async function stateInitializer() {
     console.warn('stateinitializer');
     RuntimeAccessibleClass.fixStatics();
@@ -1374,6 +1388,7 @@ export async function stateInitializer() {
             default: break;
         }
     }
+    AT_TRANSACTION(()=>setTimeout(test, 1500));
 
     buildLSingletons(dClassesMap, lClassesMap);
     setSubclasses(RuntimeAccessibleClass.get('DPointerTargetable'));

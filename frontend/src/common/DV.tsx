@@ -128,7 +128,7 @@ class {{name}} {
 {{/each}}
 `}},
         {engine:'nearley' as any, nearley:{allowPartials: true, __str:
-`main -> header (classdef | package):* {% (d) => ({packages:[{uri: d[0].uri, prefix: d[0].prefix, classifiers:d[1]}]}) %}
+`main -> header (classdef | package):* {% (d) => ({packages:[{globalold:true, uri: d[0].uri, prefix: d[0].prefix, classifiers:d[1]}]}) %}
 package -> ws "package" ws identifier ws "{" (classdef | package):* "}"
 
 # --------------------------------------------------------------------
@@ -137,7 +137,7 @@ package -> ws "package" ws identifier ws "{" (classdef | package):* "}"
 header -> "@namespace(uri=\\"" namespace "\\"," ws
            "prefix=\\"" prefix:? "\\"" ")" eol
            "package" ws identifier ";" eol:*
-           {% function(d) {return {uri: d[1][0], prefix: d[5]||''};} %}
+           {% function(d) {return {globaloldheader:true, uri: d[1][0], prefix: d[5]||''};} %}
 
 namespace -> identifier ("." identifier):*
 prefix -> identifier
@@ -203,49 +203,82 @@ sstrchar -> [^\\\\'\\n] {% id %}
 
 strescape -> ["\\\\/bfnrt] {% id %}
     | "u" [a-fA-F0-9] [a-fA-F0-9] [a-fA-F0-9] [a-fA-F0-9] {%
-    function(d) {
-        return d.join("");
-    }
+    (d) => { return d.join(""); }
 %}`,
 Model:
-`main -> header import:* (classifier | package):* {% (d) => ({packages:[{uri: d[0].uri, prefix: d[0].prefix, classifiers:d[1]}]}) %}
+`main -> header import:* (classifier | package):* {% (d) => (log('mdl', d) || {packages:[{...d[0], className:'package', children:d[2].flat(3)}]}) %}
 
 header -> "@namespace(uri=\\"" namespace "\\"," ws
-           "prefix=\\"" prefix:? "\\"" ")" eol
+           "prefix=\\"" prefix:? "\\")" eol
            "package" ws identifier ";" eol:*
-           {% function(d) {return {uri: d[1][0], prefix: d[5]||''};} %}
+           {% function(d) {log('mdl header', d); return {name: d[10], uri: d[1].flat(3).join(''), prefix: d[5]?.flat(3).join('')||''}} %}
 import -> "import" ws dqstring ";" eol
 namespace -> identifier ("." identifier):*
 prefix -> identifier`,
 Package:`
 main -> package
-package -> ws "package" ws identifier ws "{" (classifier | package):* "}"`,
+package -> ws "package" ws identifier ws "{" (classifier | package):* "}"
+             {% (d) => log('pkg', d) || ({
+                className:"Package", 
+                name: d[4],
+                children: d[7][0]}) %}`,
 Class:`
 main -> class
 class -> ("abstract" ws):? ("class" | "interface") ws identifier ws extends (java_classname ws):? "{" eol
             (annotation | attr | ref | operation | eol):*
             "}" eol:*
-            {% function(d) {return {className: "Class", name: d[2], features:d[6].flat(2).filter(e=>!!e)};} %}
+            {% function(d) {log('class', d); return {className: "Class", dc:true,
+               abstract:!!d[0]?.[0], interface: d[1]?.[0]==='interface', name: d[3],
+               extends:  d[5]?.[2]?.flat(3).join('').split(',').filter(e=>!!e),
+               features: d[9]?.flat(3)};} %}
 extends -> null | "extends" ws (identifier | (identifier ws "," ws):+)
 java_classname -> ":" ws namespace
+`,
+Attribute:`
+main -> attr
+attr -> modifiers "attr" ws att_type ws identifier ws ("=" ws value):? ";" eol
+            {% (d) => log('attr', d) || ({...d[0], className: 'attribute',
+                type: d[3]?.[0]?.[0],
+                ...(d[3]?.[1] || {}),
+                name: d[5]}) %}`,
+Reference:`
+main -> ref
+ref -> modifiers ("ref" | "val") ws ref_type ("#" identifier):? ws identifier ws ("=" ws value):? ";" eol
+            {% (d) => log('ref', d) || ({...d[0], className: 'reference',
+                type: d[3]?.[0]?.[0],
+                ...(d[3]?.[1] || {}),
+                name: d[6],
+                containment: d[1] === 'val'}) %}`,
+Operation:`
+main -> operation
+operation -> modifiers "op" ws return_type ws identifier ws "(" (parameter | (parameter "," ws):*) ")" ("throws" (identifier | (identifier "," ws):*)):? ";" eol:*
+            {% (d) => log('op todo', d) || ({
+                type: d[2]?.[0], upperbound: d[2]?.[1]?.[1] === '[*]' ? -1 : 1,
+                name: d[4],
+                parameters: d[7]}) %}
+
+# missing support for @before annotations
 `,
 Enumerator:`
 main -> enumerator
 enumerator -> "enum" ws identifier ws "{" literal:* "}" eol:*
+             {% (d) => log('enum', d) || ({
+                name: d[2],
+                literals: d[5]}) %}
 `,
 Literal:`
 main -> literal
-literal -> identifier ws ("=" ws number ws):* ";"
-`,
-Operation:`
-main -> operation
-operation -> modifiers "op" ws return_type ws identifier ws "(" (parameter | (parameter "," ws):*) ")" ("throws" (parameter | (parameter "," ws):*) ";" eol:*
-
-# missing support for @before annotations
+literal -> identifier ws ("=" ws number ws):? ";"
+            {% (d) => log('lit', d) || ({
+                name: d[0],
+                value: d[2]?.[2]}) %}
 `,
 Parameter:`
-main -> parameter
+# main -> parameter
 parameter -> modifiers type ws identifier
+            {% (d) => log('param', d) || ({
+                type: d[1],
+                name: d[4]}) %}
 `,/*
 todo:`
 main -> todo
@@ -254,11 +287,32 @@ todo -> "enum" ws identifier ws "{" literal:* "}" eol:*
 'Default':`
 # syntax guide: https://eclipse.dev/emfatic/
 classifier -> class | enumerator | datatype | mapentry
-modifiers -> ("!":? modifier ws):*
+modifiers -> ("!":? modifier ws):* 
+            {% (d) => log('mod', d) || d[0].map(e=> e && {[e[1]]:e[0]!='!'}).reduce((e, acc)=>({...acc, ...e}), {}) %}
 modifier -> "readonly" | "volatile" | "transient" | "unsettable" | "derived" | "unique" | "ordered" | "resolve" | "id"
 datatype -> ("transient" ws):? "datatype" ws (identifier | dqstring) ws ":"
 mapentry -> "mapentry" ws identifier ws ":" ws att_type "->" ws att_type ws ";" 
-multiplicity -> ws ("[?]" | "[]" | "[*]" | "[+]" | "[n]" | "[m..n]" | "[" number "]" | "[" number ".." (number | "?" | "*") "]")
+multiplicity_old -> ws ("[?]" | "[]" | "[*]" | "[+]" | "[" number "]" | "[" number ".." (number | "?" | "*") "]")
+multiplicity -> ws "[" ("*" | "+" | "n" | "m" | number):? (".." ("n" | "?" | "*" | number)):? "]"
+            {% (d) => {
+                let str = d.join('');
+                str = str.substring(1, str.length - 2);
+                let lb = d[2]?.[0] || '';
+                let ub = d[3]?.[1];
+                switch (lb) {
+                    case '': case '*': lb = 0; if (!ub) ub = -1; break;
+                    case '?': lb = 0; ub = 1; break;
+                    case '+': lb = 1; ub = -1; break;
+                    default: lb = +lb; if (!ub) ub = lb; break;
+                }
+                switch (ub) {
+                    case '*': ub = -1; break;
+                    case '?': ub = -2; break;
+                    default: if (ub) ub = +ub; break;
+                }
+                log('multiplicity', d, {lb, ub, str});
+                return {lowerBound: lb, upperBound: ub}}
+            %}
 value -> decimal | dqstring
 annotation -> "@" (identifier | dqstring) ("(" (identifier | dqstring) ws "=" ws dqstring ")"):? {% (d) => null %}
 type -> namespace multiplicity:?
@@ -269,7 +323,8 @@ att_type -> namespace multiplicity:?
 identifier -> "~":? [A-Za-z_] [A-Za-z0-9_\\$]:* {% (d) => d[1]+d[2].join("") %}
 
 ws -> ([ \\t\\v\\f]):* {% d => null %}
-eol -> annotation ws "\\r":? "\\n" ws {% d => null %}
+eol -> annotation:? ws "\\r":? "\\n" ws {% d => null %}
+number -> decimal {% id %}
 decimal -> "-":? [0-9]:+ ("." [0-9]:+):? {%
     function(d) {
         return parseFloat(
@@ -280,9 +335,9 @@ decimal -> "-":? [0-9]:+ ("." [0-9]:+):? {%
     }
 %}
 # Double-quoted string
-dqstring -> "\\"" dstrchar:* "\\"" {% function(d) {return d[1].join(""); } %}
-sqstring -> "'"  sstrchar:* "'"  {% function(d) {return d[1].join(""); } %}
-btstring -> "\`"  [^\`]:*    "\`"  {% function(d) {return d[1].join(""); } %}
+dqstring -> "\\"" dstrchar:* "\\"" {% function(d) { return d[1].join(""); } %}
+sqstring -> "'"  sstrchar:* "'"  {% function(d) { return d[1].join(""); } %}
+btstring -> "\`"  [^\`]:*    "\`"  {% function(d) { return d[1].join(""); } %}
 
 dstrchar -> [^\\\\"\\n] {% id %}
     | "\\\\" strescape {%
@@ -299,24 +354,9 @@ sstrchar -> [^\\\\'\\n] {% id %}
 
 strescape -> ["\\\\/bfnrt] {% id %}
     | "u" [a-fA-F0-9] [a-fA-F0-9] [a-fA-F0-9] [a-fA-F0-9] {%
-    function(d) {
-        return d.join("");
-    }
+    function(d) { return d.join(""); }
 %}
-`,
-Attribute:`
-main -> attr
-attr -> modifiers "attr" ws att_type ws identifier ws ("=" ws value):? ";" eol
-            {% (d) => ({className: 'attribute',
-                type: d[2]?.[0], upperbound: d[2]?.[1] === '[*]' ? -1 : 1,
-                name: d[4]}) %}`,
-Reference:`
-main -> ref
-ref -> modifiers ("ref" | "val") ws ref_type ("#" identifier):? ws identifier ws ("=" ws value):? ";" eol
-            {% (d) => ({className: 'reference',
-                type: d[2]?.[0], upperbound: d[2]?.[1]?.[1] === '[*]' ? -1 : 1,
-                name: d[4],
-                containment: d[0] === 'val'}) %}`,
+`
 }},
 );
         ret['flexmi/YAML'] = new Language(m2t, t2m);
