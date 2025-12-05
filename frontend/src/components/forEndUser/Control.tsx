@@ -330,25 +330,25 @@ const MetaElementPicker = (props: PickerProps) => {
     switch (props.meta) {
         case 'class':
             {/* @ts-ignore */}
-            options = props.data.classes.filter((c: any) => !c.abstract).map((c: any) => <option value={c.id}>{c.name}</option>);
+            options = props.data.model.classes.filter((c: any) => !c.abstract).map((c: any) => <option value={c.id}>{c.name}</option>);
             placeholder = "Select a metaclass";
         break;
         case 'reference':
             {/* @ts-ignore */}
-            options = props.data.references.filter((r: any) => !r.composition && !r.aggregation).map((r: any) => <option value={r.id}>{r.name}</option>);
+            options = props.data.model.references.filter((r: any) => !r.composition && !r.aggregation).map((r: any) => <option value={r.id}>{r.name}</option>);
             placeholder = "Select a reference";
 
         break;
         case 'containment':
         case 'composition':
             {/* @ts-ignore */}
-            options = props.data.references.filter((r: any) => r.composition).map((r: any) => <option value={r.id}>{r.name}</option>);   
+            options = props.data.model.references.filter((r: any) => r.composition).map((r: any) => <option value={r.id}>{r.name}</option>);   
             placeholder = "Select a composition";
 
         break;
         case 'aggregation':
             {/* @ts-ignore */}
-            options = props.data.references.filter((r: any) => r.aggregation).map((r: any) => <option value={r.id}>{r.name}</option>);
+            options = props.data.model.references.filter((r: any) => r.aggregation).map((r: any) => <option value={r.id}>{r.name}</option>);
             placeholder = "Select an aggregation";
         break;
     } 
@@ -571,5 +571,5 @@ const Zoom = (props: ZoomProps): ReactElement => {
 }
 
 
-export {Control, Slider, Toggle_Obsolete, Zoom, Panel};
+export {Control, Slider, Toggle_Obsolete, Zoom, Panel, MetaElementPicker};
 

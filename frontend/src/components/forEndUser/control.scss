@@ -352,7 +352,7 @@ div.jjodel-control .control-slider  {
     padding: 10px;
     overflow: hidden;
     transition: all 0.3s;
-    flex-direction: column;
+    flex-direction: column!important;
 
     &.debug {
         padding: 0;
