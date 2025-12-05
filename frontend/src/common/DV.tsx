@@ -1073,15 +1073,18 @@ export class DefaultView {
 
 
 public static class(): string { return (`
-/* -- Jjodel Abstract Syntax Specification v2.0 -- */
+/* -- Jjodel Abstract Syntax Specification v2.1 -- */
 
-
-<View className={"root class"} onDoubleClick={()=>{node.state = {highlight: !node.state.highlight}}}>
+<View 
+    className={'root class highlight' + ' level-' + level} 
+    onDoubleClick={()=>{node.state = {colorIndex: ((node.state.colorIndex||0) + 1) % (view.palette['outline-'].value.length + 1)}}} 
+    style={{'--outlineColor': colorIndex !== 0 ? 'var(--outline-'+colorIndex+')': 'transparent', '--borderColor': colorIndex !== 0 ? 'var(--outline-'+colorIndex+')': 'gray'}}    
+>
    <div className={'header'}>
     {data.isSingleton && <i className='bi bi-1-square'>&nbsp;</i>}
     { level > 1 && <b className={'class-name'}>{interface ? 'Interface' : 'Class'}: </b>}    
 
-    {level === 1 && <i className="bi bi-c-square-fill"></i>}
+
     <span className={(data.abstract ? "abstract": "")}><Input data={data} field={'name'} hidden={true} autosize={true} /></span>
     {data.extends.some(a => a.model.id !== data.model.id) && <i className="bi bi-arrow-up open"></i>}
     {data.extendedBy.some(a => a.model.id !== data.model.id) && <i className="bi bi-arrow-down open"></i>}
@@ -1114,6 +1117,20 @@ public static class(): string { return (`
     }
 
     {decorators}
+
+    <ContextualEntry 
+        title={'Highlight Class'} 
+        icon={"bi-paint-bucket"} 
+        action={()=>{node.state = {colorIndex: ((node.state.colorIndex||0) + 1) % (view.palette['outline-'].value.length + 1)}}} 
+        node={node}
+    />
+    <ContextualEntry 
+        title={'Reset Highlight'} 
+        icon={"bi-x"} 
+        action={() => {node.state = {colorIndex : 0}}} 
+        node={node}
+    />
+
 </View>`);}
 
 
