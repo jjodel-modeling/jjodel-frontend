@@ -360,7 +360,7 @@ const MetaElementPicker = (props: PickerProps) => {
             getter={()=>props.data.state[props.name]}
             setter={(value) => props.data.state={[props.name]: value}}
             placeholder={placeholder}
-            options={options}>
+            options={<>{options}</>}>
         </Select>
     </div>
     );
@@ -391,11 +391,11 @@ type ContextualProps = {
 
 const ContextualEntry = (props: ContextualProps) => {
 
-    if (props.node.view.state.contextualEntries === undefined) {
-        props.node.view.state.contextualEntries = {};
+    if (!props.node.view.state.contextualEntries) {
+        props.node.view.state = {contextualEntries : {}};
     } 
     
-    props.node.view.state.contextualEntries && (props.node.view.state.contextualEntries[props.title] = {title: props.title, action: props.action, icon: props.icon ? props.icon : ''});
+    props.node.view.state.contextualEntries[props.title] = {title: props.title, action: props.action, icon: props.icon ? props.icon : ''};
 
     return (<></>);
 }
