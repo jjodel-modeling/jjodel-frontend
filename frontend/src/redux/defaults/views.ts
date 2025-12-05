@@ -292,6 +292,7 @@ div.header:has(.open:hover) {
     ${udSnap}
     ret.refs = data.referencedBy.filter(a => typeof a !== 'undefined')
     ret.refNames = ret.refs.filter(a => typeof a !== 'undefined').filter(a => a.model.id !== data.model.id).map(a => a.model.name + '::'  + a.parent.name + '.' + a.name)
+    ret.colorIndex = node.state.colorIndex ?? 0
 
 }`;
             // view.events = {e1:"(num) => {\n\tdata.name = num;\n}"}
