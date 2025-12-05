@@ -11,10 +11,10 @@ import {
     Select,
     Selectors, SetFieldAction, SetRootFieldAction, store, TRANSACTION, U, ValueDetail
 } from '../../joiner';
-import {FakeStateProps, windoww} from '../../joiner/types';
+import {FakeStateProps, int, windoww} from '../../joiner/types';
 
 import ReactJson from 'react-json-view' // npm i react-json-view --force
-import React, {Component, Dispatch, JSX, ReactElement, ReactNode} from 'react';
+import React, {Component, Dispatch, JSX, ReactElement, ReactNode, useState} from 'react';
 import {connect} from 'react-redux';
 import './editors.scss';
 import './info.scss';
@@ -25,9 +25,11 @@ import { Tooltip } from '../forEndUser/Tooltip';
 import { icon } from '../../pages/components/icons/Icons';
 import { Toggle } from '../../joiner/components';
 
+
 class builder {
     static named(data: LModelElement, advanced: boolean): ReactNode {
         return (<><h1>{data.name}</h1>
+            {data.state.description && <><h2>{data.state.description}</h2></>}
             <label className={'input-container'}>
                 <b className={'me-2'}>Name:</b>
                 <Input data={data} field={'name'} type={'text'}/>
@@ -83,6 +85,7 @@ class builder {
             </label>
         </>);
     }
+    
 
     static class(data: LModelElement, advanced: boolean): JSX.Element {
         let lclass: LClass = data as any;
@@ -107,8 +110,98 @@ class builder {
         let extendValue: {value: string, label: string}[] = lclass.extends.map(c=>({value:c.id, label:c.name}));
         let extendOptions = lclass.validTargetOptions;
 
+        type WikidataSearchItem = {
+            [x: string]: any;
+            id: string;
+            label: string;
+            description?: string;
+        };
+
+        type WikidataSearchResponse = {
+            search?: WikidataSearchItem[];
+        };
+        
+
+        async function lookupWikidataTerm(term: string, language: string = "en"): Promise<WikidataSearchItem | null> {
+            const params = new URLSearchParams({
+                action: "wbsearchentities",
+                search: term,
+                language,
+                format: "json",
+                origin: "*" // <<< THIS IS CRITICAL FOR BROWSER CALLS
+            });  
+
+            lclass.state = {count: lclass.state.count||0};
+
+            const incrementCount = (length: int) => {
+                if (lclass.state.count||0 + 1 === length) {
+                    lclass.state = {count: 0}      
+                } else {
+                    lclass.state = {count: lclass.state.count||0+1}
+                }
+            }
+
+            const url = "https://www.wikidata.org/w/api.php?" + params.toString();
+
+            try {
+                const response = await fetch(url, {
+                    method: "GET",
+                    headers: { Accept: "application/json" }
+                    // no need to set mode explicitly; default is fine
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error ${response.status}`);
+                }
+
+                const data: WikidataSearchResponse = await response.json();
+
+                if (!data.search || data.search.length === 0) {
+                    return null;
+                }
+
+                const results = data.search.filter(
+                    r => r.label.toLowerCase() === term.toLowerCase() && r.description !== 'family name'
+                ).sort();
+
+                if (!results || results.length === 0) {
+                    return null;
+                }
+
+                const best = results[lclass.state.count||0];
+                lclass.state = {description: best.description};
+                // lclass.state = {label: best.label};
+                lclass.state = {wikidataId: best.id};
+                incrementCount(results.length);
+
+                
+            } catch (error) {
+                console.error("Error calling Wikidata:", error);
+                return null;
+            }
+        }
+
+      
+
         return (<>
             {this.named(data, advanced)}
+            <label className={'input-container'}>
+                <b className={'me-2'}>Class Description:</b>
+
+                
+                <Input 
+	                type="text"
+                    getter={() => lclass.state.description||''}
+                    setter={(value) => (lclass.state = { description: value })}
+                />
+                
+            </label>
+            <label className={'input-container'}>
+                <b className={'me-2'}></b>
+
+                <button onClick={() => lookupWikidataTerm(lclass.name)}>Self description</button>
+            </label>
+
             <label className={'input-container'}>
                 <b className={'me-2'}>Abstract:</b>
                 <Input data={lclass} field={'abstract'} type={'checkbox'}/>
@@ -164,6 +257,7 @@ class builder {
                         console.log('setter', val);
                     }}/>
                 </Tooltip>
+
             </label>
         </>);
     }
@@ -607,7 +701,6 @@ function InfoComponent(props: AllProps) {
     return <section className={'properties-tab'}>
 
         {jsx}
-
         
         {tab && <><hr/>
             <h6>State</h6>

@@ -298,7 +298,7 @@ export function InputComponent(props: AllProps) {
                 let options = getSelectOptions(data, field, props.options, props.children);
                 if (U.isError(options)) throw errorUpdate("Error on <Select> options getter", options);
                 input = <select {...inputProps}>
-                    <option value="" disabled selected>Select your option</option>
+                    <option value="" disabled selected>{props.placeholder ? props.placeholder : 'Select your option'}</option>
                     {options}
                 </select>;
             }
@@ -381,6 +381,7 @@ export interface SelectOwnProps extends Omit<InputOwnProps, 'setter'> {
     options?: JSX.Element;
     setter?: (value: string/*|PrimitiveType[]*/, data: any, field: string) => void; // parent select has value: string | boolean
     isMultiSelect?: boolean;
+    placeholder?: string;
 }
 interface RealOwnProps extends Omit<SelectOwnProps, 'setter'>{
     setter: InputOwnProps['setter'];

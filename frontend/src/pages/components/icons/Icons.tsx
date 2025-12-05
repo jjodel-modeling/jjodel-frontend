@@ -5,7 +5,20 @@ import { Tooltip } from '../../../components/forEndUser/Tooltip';
 import { Logo, MetamodelIcon, ModelIcon } from '../../../components/logo';
 
 import { LuPackage2 } from "react-icons/lu";
-import { CgPlayButtonR, CgPlayPauseR, CgPlayTrackNextR, CgToolbarTop as Toolbar } from "react-icons/cg";
+
+import { 
+    CgPlayButtonR, 
+    CgPlayPauseR, 
+    CgPlayTrackNextR, CgToolbarTop as Toolbar 
+} from "react-icons/cg";
+
+import { 
+    VscDebugRestart,
+    VscDebugStop,
+    VscDebugStepInto
+} from "react-icons/vsc";
+
+
 
 export let icon: { [name: string]: any} = {
     'new': <i className="bi bi-plus-circle-dotted"/>,
