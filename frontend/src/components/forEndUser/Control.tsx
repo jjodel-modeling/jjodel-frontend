@@ -10,7 +10,7 @@ import {
     TRANSACTION,
     U
 } from "../../joiner";
-import { JSXElementConstructor, ReactElement, ReactNode, ReactPortal, useEffect, useRef, useState } from "react";
+import { JSXElementConstructor, MouseEventHandler, ReactElement, ReactNode, ReactPortal, useEffect, useRef, useState } from "react";
 
 import "./control.scss";
 import { useStateIfMounted } from "use-state-if-mounted";
@@ -360,7 +360,7 @@ const MetaElementPicker = (props: PickerProps) => {
             getter={()=>props.data.state[props.name]}
             setter={(value) => props.data.state={[props.name]: value}}
             placeholder={placeholder}
-            options={options}>
+            options={<>{options}</>}>
         </Select>
     </div>
     );
@@ -380,7 +380,27 @@ const Section = (props: SectionProps) => {
 
 
 
-/* ************************************************************************************ */
+/* ContextualEntry */
+
+type ContextualProps = {
+    title: string;
+    action: MouseEventHandler | undefined;
+    node: LGraphElement;
+    icon?: string;
+}
+
+const ContextualEntry = (props: ContextualProps) => {
+
+    if (!props.node.view.state.contextualEntries) {
+        props.node.view.state = {contextualEntries : {}};
+    } 
+    
+    props.node.view.state.contextualEntries[props.title] = {title: props.title, action: props.action, icon: props.icon ? props.icon : ''};
+
+    return (<></>);
+}
+
+
 
 
 /* Slider */
@@ -571,5 +591,5 @@ const Zoom = (props: ZoomProps): ReactElement => {
 }
 
 
-export {Control, Slider, Toggle_Obsolete, Zoom, Panel, MetaElementPicker};
+export {Control, Slider, Toggle_Obsolete, Zoom, Panel, MetaElementPicker, ContextualEntry};
 

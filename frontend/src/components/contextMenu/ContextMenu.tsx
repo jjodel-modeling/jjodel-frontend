@@ -33,6 +33,7 @@ import { Info } from '../editors';
 import { Btn, CommandBar } from '../commandbar/CommandBar';
 import { createPortal } from 'react-dom';
 import { Logo } from '../logo';
+import { forEach } from 'lodash';
 
 function ContextMenuComponent(props: AllProps) {
     return ContextMenuComponentInner(props);
@@ -276,6 +277,26 @@ function ContextMenuComponentInner(props: AllProps) {
                 break;
         }
 
+
+        /* View-specific menu entry */
+
+        if (node.view.state.contextualEntries) {
+
+
+            for (const key in node.view.state.contextualEntries){
+            
+                jsxList.push(
+                    <div key={key} onClick={() => node.view.state.contextualEntries[key].action()} className={'col item'} tabIndex={0}>
+                        {node.view.state.contextualEntries[key].icon ? <i className={'bi '+node.view.state.contextualEntries[key].icon}></i> : <span className={'empty'}/>} {key}
+                    </div>
+                )
+            };
+
+            
+            jsxList.push(<hr key={hri++} className={'my-1'}/>);
+        }
+
+
         /* Deselect */
         /*
         jsxList.push(<div key='-select' onClick={() => {
@@ -298,7 +319,7 @@ function ContextMenuComponentInner(props: AllProps) {
                 // if there is data, then the node is indirectly deleted, no need to call it too.
             }} className={'col item'} data-cannotdelete={cannotDelete+''} tabIndex={0}>
                 {icon['delete']}
-                Delete
+                Delete 
                 <div><i className='bi bi-backspace' style={{fontSize: '1em', float: 'right', paddingTop: '2px', fontWeight: '800'}} /></div>
             </div>
         );
