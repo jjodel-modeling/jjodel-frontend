@@ -286,7 +286,7 @@ function ContextMenuComponentInner(props: AllProps) {
             for (const key in node.view.state.contextualEntries){
             
                 jsxList.push(
-                    <div key={key} onClick={() => node.view.state.contextualEntries[key].action()} className={'col item'} tabIndex={0}>
+                    <div key={key} onClick={() => node.view.state.contextualEntries[key].action(data, node)} className={'col item'} tabIndex={0}>
                         {node.view.state.contextualEntries[key].icon ? <i className={'bi '+node.view.state.contextualEntries[key].icon}></i> : <span className={'empty'}/>} {key}
                     </div>
                 )
