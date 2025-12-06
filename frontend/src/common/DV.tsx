@@ -962,17 +962,42 @@ export class DefaultView {
 <Scrollable graph={node}>
     {!data && "Model data missing."}
     <div className={'edges'}>
-        {level > 0 && [
+        {level > 1 && [
             refEdges.map(se => <Edge 
                 data={se.start} 
                 start={se.startVertex} 
                 end={se.endVertex} 
                 anchorStart={0} 
                 anchorEnd={0} 
-                key={se.id} 
+                key={se.id + '_with_label'} 
+                id={se.id + '_with_label'} 
                 isReference={true} 
                 view={'Edge' + (se.start.composition ? 'Composition' : (se.start.aggregation ? 'Aggregation' : 'Association'))} 
                 label={se.start.name}
+                elabel={se.start.lowerBound === se.start.upperBound ? se.start.lowerBound : se.start.upperBound === -1 ? se.start.lowerBound + '..*' : se.start.lowerBound + '..' + se.start.upperBound}
+                slabel={''}
+            />),
+            extendEdges.map(se => <Edge 
+                data={se.start} 
+                start={se.startVertex} 
+                end={se.endVertex} 
+                view={'EdgeInheritance'} 
+                isExtend={true} 
+                key={se.id} 
+            />)
+        ]}
+        {level === 1 && [
+            refEdges.map(se => <Edge 
+                data={se.start} 
+                start={se.startVertex} 
+                end={se.endVertex} 
+                anchorStart={0} 
+                anchorEnd={0} 
+                key={se.id + '_without_label'} 
+                id={se.id + '_without_label'} 
+                isReference={true} 
+                label={''}
+                view={'Edge' + (se.start.composition ? 'Composition' : (se.start.aggregation ? 'Aggregation' : 'Association'))} 
                 elabel={se.start.lowerBound === se.start.upperBound ? se.start.lowerBound : se.start.upperBound === -1 ? se.start.lowerBound + '..*' : se.start.lowerBound + '..' + se.start.upperBound}
                 slabel={''}
             />),
@@ -1132,7 +1157,6 @@ public static class(): string { return (`
     />
 
 </View>`);}
-
 
     /* ENUM */
 
