@@ -1364,7 +1364,7 @@ function fixResizables(e: MouseEvent){
 }
 
 function test(){
-    console.clear();
+    // console.clear();
     let s = ''+
     '@namespace(uri="org.jjodelreact.metamodel_1.default", prefix="")\n' +
         'package metamodel_1;\n' +

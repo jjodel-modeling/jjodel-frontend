@@ -178,6 +178,7 @@ export class U {
     // to register call with both parameters. to remove a listener call with callback=undefined
     public static navigating: boolean = false; // if i'm changing page, i stop rendering to prevent meaningless errors.
     static debug: boolean = false;
+    static uniqueNames: boolean = true;
     static clickedOutside(currentTarget0: Element|Any<Event>, callback: undefined | ((e: Element, evt: JQuery.ClickEvent) => void)) {
         if (!currentTarget0) return;
         let currentTarget: Element = (currentTarget0 as any)?.currentTarget || currentTarget0 as any;
@@ -2473,19 +2474,14 @@ export class U {
         return true;
     }
 
-    static findInChildProperties<T extends D|L>(initialArr: (T)[], getChildrens: ((e:T) => (T)[]),
+    static findInChildProperties<T extends D|L>(initialArr: (T)[], getChildren: ((e:T) => (T)[]),
                                                 getID:((e:T)=>PrimitiveType)|undefined, returnWhenFound:((e:T)=>boolean), filter?:((e:T)=>boolean)): (T) {
-        return U.iterateChildProperties(initialArr, getChildrens, getID, returnWhenFound, filter)[0];
+        return U.iterateChildProperties(initialArr, getChildren, getID, returnWhenFound, filter)[0];
     }
-    static iterateChildProperties<T extends D|L>(initialArr: (T)[], getChildrens: ((e:T) => (T)[]),
+    static iterateChildProperties<T extends D|L>(initialArr: (T)[], getChildren: ((e:T) => (T)[]),
                                                  getID?:((e:T)=>PrimitiveType), returnWhenFound?:((e:T)=>boolean), filter?:((e:T)=>boolean)): (T)[] {
         let targets = initialArr;
         let alreadyParsed: Dictionary<string|number, (T)> = {};
-        /*if (includeSelf) {
-            for (let t of targets) {
-                includeSelf
-            }
-        }*/
         while (targets.length) {
             let nextTargets: (T)[] = [];
             for (let target of targets) {
@@ -2495,7 +2491,7 @@ export class U {
                 if (filter && !filter(target)) continue;
                 alreadyParsed[tid] = target;
                 if (returnWhenFound && returnWhenFound(target)) return [target];
-                U.arrayMergeInPlace(nextTargets, getChildrens(target));
+                U.arrayMergeInPlace(nextTargets, getChildren(target));
             }
             targets = nextTargets;
         }

@@ -656,19 +656,24 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
                 val = U.replaceAll(val, '-', ' -'); // important: cannot add space post-dash or it's harder to distinguish unary and binary -
                 val = U.replaceAll(val, '/', ' / ');
                 val = U.replaceAll(val, '*', ' * ');
+                val = U.replaceAll(val, '.', ' .');// for comma separators (.5.5.5) is short for (0.5, 0.5 0.5) and data.variable.pathing
                 let valarr: (string | number)[] = val.split(/[,\s]/);
                 // [] not allowed
                 valarr = (valarr as string[]).map(val => {
-                    if (!isNaN(+val)) return val;
+                    if (!isNaN(+val)) return val; // it's a number
+                    // token that it's not a number, svg letter or data.state.something variable
                     let patharr: string[] = val.split('.');
                     let curr: GObject = c.data;
+                    // check and resolve for JOM.navigational.variables.
                     for (let pathseg of patharr) {
                         curr = curr[pathseg];
                         Log.e(!curr && (val.length > 1 || patharr.length > 1), "invalid variable path in css path control", {token:val, view:c.data.name});
                         if (!curr) break;
                     }
-                    if (typeof curr === "object" || (typeof curr === "undefined" && (val.length > 1 || patharr.length > 1)))
-                        Log.ee( "invalid variable path in css path control", {token:val, view:c.data.name});
+                    if (typeof curr === "object" || (typeof curr === "undefined" && (val.length > 1 || patharr.length > 1))) {
+                        Log.ee("invalid variable path in css path control", {token: val, view: c.data.name});
+                        return '';
+                    }
                     else val = curr || val;
                     return val;
                 }).filter(p=>!!p);
