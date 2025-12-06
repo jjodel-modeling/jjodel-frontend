@@ -970,6 +970,7 @@ export class DefaultView {
                 anchorStart={0} 
                 anchorEnd={0} 
                 key={se.id} 
+                id={se.id} 
                 isReference={true} 
                 view={'Edge' + (se.start.composition ? 'Composition' : (se.start.aggregation ? 'Aggregation' : 'Association'))} 
                 label={se.start.name}
@@ -983,6 +984,7 @@ export class DefaultView {
                 view={'EdgeInheritance'} 
                 isExtend={true} 
                 key={se.id} 
+                id={se.id} 
             />)
         ]}
     </div>
