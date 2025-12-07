@@ -1496,7 +1496,7 @@ type Pack<D extends DPointerTargetable, L extends LPointerTargetable = DtoL<D>, 
 
 @RuntimeAccessible('Pointers')
 export class Pointers{
-    public static prefix = 'Pointer_';
+    public static prefix = 'Pointer'; // only for some "static" stuff like primitive types it is "Pointer_" instead of "Pointer"
     public static ESTRING = 'Pointer_ESTRING';
 
     static filterValid<P extends (Pointer | Pointer[]) = any, RET = P extends Pointer[] ? P : P | null>

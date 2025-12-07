@@ -17,6 +17,7 @@ import {CollabClearHistoryAction, CollabRefreshAction, COMMIT} from "../../redux
 import {ProjectPointers} from "../../joiner/classes";
 import {DTOProjectGetAll} from "../DTO/GetAllProjects";
 import {ProjectResponseDTO} from "../DTO/ProjectResponseDTO";
+import {VersionFixer} from "../../redux/VersionFixer";
 
 @RuntimeAccessible('ProjectsApi')
 class ProjectsApi {

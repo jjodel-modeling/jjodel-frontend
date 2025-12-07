@@ -184,7 +184,6 @@ function ContextMenuComponentInner(props: AllProps) {
 
 
     if (display) {
-
         if (ddata?.name) {
             let lname = (ldata as LNamedElement).name;
             {/* if (ldata && model?.isMetamodel) {

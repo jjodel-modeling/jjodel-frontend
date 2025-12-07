@@ -134,7 +134,7 @@ class builder {
             lclass.state = {count: lclass.state.count||0};
 
             const incrementCount = (length: int) => {
-                if (lclass.state.count||0 + 1 === length) {
+                if (lclass.state.count || 0 + 1 === length) {
                     lclass.state = {count: 0}      
                 } else {
                     lclass.state = {count: lclass.state.count||0+1}
@@ -173,8 +173,7 @@ class builder {
                 // lclass.state = {label: best.label};
                 lclass.state = {wikidataId: best.id};
                 incrementCount(results.length);
-
-                
+                return best;
             } catch (error) {
                 console.error("Error calling Wikidata:", error);
                 return null;

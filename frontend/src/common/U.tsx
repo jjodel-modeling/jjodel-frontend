@@ -370,13 +370,14 @@ export class U {
             if ((object as DGraphElement).isSelected) (object as DGraphElement).isSelected = {};
             if (object.className === DProject.name && pointer !== id) continue;
             idlookup[pointer] = object;
-
         }
         state.idlookup = idlookup;
         state.idlookup[id] = {...dproject, state: ''} as any;
         state.projects = [id];
-        return await compressToUTF16(JSON.stringify(state));
+        let str = JSON.stringify(state);
+        return await compressToUTF16(str);
     }
+
     static isOffline(): boolean {
         return Storage.read('offline') === true;
     }
