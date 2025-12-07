@@ -134,7 +134,7 @@ class builder {
             lclass.state = {count: lclass.state.count||0};
 
             const incrementCount = (length: int) => {
-                if (lclass.state.count||0 + 1 === length) {
+                if (lclass.state.count || 0 + 1 === length) {
                     lclass.state = {count: 0}      
                 } else {
                     lclass.state = {count: lclass.state.count||0+1}

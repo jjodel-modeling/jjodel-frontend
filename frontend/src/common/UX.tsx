@@ -166,6 +166,11 @@ export class UX{
                         let edgeend_id: Pointer<DGraphElement> | Pointer<DModelElement> = (edgeProps.end as any)?.id || edgeProps.end;
                         idbasename = injectProps.parentnodeid + "_" + edgestart_id + "-" + edgeend_id + (edgeProps.isReference ? 'R' : (edgeProps.isExtend ? 'X' : 'E'));
                 }
+                if (idbasename.indexOf(windoww.Pointers.prefix) !== 0) idbasename = 'Pointer'+idbasename;
+                if (!windoww.Pointers.isPointer(idbasename)) {
+                    Log.eDevv('generated invalid id in inject props', {type, idbasename, is: rprops.initialSize, rprops});
+                }
+
                 // (injectProps.parentnodeid)+"_"+(dataid)+indices.join("_");//injectProps.graphid + '_' + dataid;
                 // console.log("setting nodeid", {injectProps, props:rprops, re});
                 // Log.exDev(!injectProps.graphid || !dataid, 'vertex is missing mandatory props.', {graphid: injectProps.graphid, dataid, props: rprops});

@@ -324,30 +324,26 @@ type PickerProps = {
 const MetaElementPicker = (props: PickerProps) => {
 
     {/* @ts-ignore */}
-    var options = null;
+    var options: JSX.Element[] | null = null;
     var placeholder = ""    
     
     switch (props.meta) {
         case 'class':
-            {/* @ts-ignore */}
             options = props.data.model.classes.filter((c: any) => !c.abstract).map((c: any) => <option value={c.id}>{c.name}</option>);
             placeholder = "Select a metaclass";
         break;
         case 'reference':
-            {/* @ts-ignore */}
             options = props.data.model.references.filter((r: any) => !r.composition && !r.aggregation).map((r: any) => <option value={r.id}>{r.name}</option>);
             placeholder = "Select a reference";
 
         break;
         case 'containment':
         case 'composition':
-            {/* @ts-ignore */}
             options = props.data.model.references.filter((r: any) => r.composition).map((r: any) => <option value={r.id}>{r.name}</option>);   
             placeholder = "Select a composition";
 
         break;
         case 'aggregation':
-            {/* @ts-ignore */}
             options = props.data.model.references.filter((r: any) => r.aggregation).map((r: any) => <option value={r.id}>{r.name}</option>);
             placeholder = "Select an aggregation";
         break;

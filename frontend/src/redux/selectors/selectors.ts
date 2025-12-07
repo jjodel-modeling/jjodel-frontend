@@ -720,8 +720,9 @@ export class Selectors{
         // tnv.jsScore = ViewEClassMatch.NOT_EVALUATED_YET as any as number;
         let printstuff = {name: data?.name, jsc:tv.jsCondition, tv:{...tv}, data:data&&data.__raw, node:node&&{...node.__raw}, nerr: (node as any)?.errors}
         if (tv.jsCondition) {
+            let view = LPointerTargetable.fromD(dview);
             try {
-                tnv.jsScore = tv.jsCondition({data, node, view: LPointerTargetable.fromD(dview), constants: tv.constants});
+                tnv.jsScore = tv.jsCondition({data, node, view, constants: tv.constants});
                 // if (tnv.jsScore === true) tnv.jsScore = dview.jsCondition.length;
                 switch (typeof tnv.jsScore) {
                     case "boolean": // bool is fine if true
@@ -736,7 +737,7 @@ export class Selectors{
                 }
             }
             catch (e:any) { // crash = mismatch
-                Log.ee("failed to evaluate jsCondition: " + e.message?.split("\n")[0], {e, data, node, tnv, jsc:tv.jsCondition+''});
+                Log.ee("failed to evaluate jsCondition: " + e.message?.split("\n")[0]+"\n For view \""+view?.name+"\"", {e, data, node, tnv, jsc:tv.jsCondition+''});
                 tnv.jsScore = ViewEClassMatch.MISMATCH_JS;
             }
         } else tnv.jsScore = true; // missing condition = match
