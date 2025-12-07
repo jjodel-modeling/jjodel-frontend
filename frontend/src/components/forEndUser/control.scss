@@ -342,7 +342,8 @@ div.jjodel-control .control-slider  {
 }
 
 .jjodel-panel {
-    width: 300px;
+    width: 300px!important;
+  
     top: 125px;
 
     right: 10px;
@@ -353,6 +354,10 @@ div.jjodel-control .control-slider  {
     overflow: hidden;
     transition: all 0.3s;
     flex-direction: column!important;
+
+    &.normal {
+        height: fit-content!important;
+    }
 
     &.debug {
         padding: 0;
@@ -399,7 +404,7 @@ div.jjodel-control .control-slider  {
         height: fit-content;
 
         &>div {width: 100%}
-        & .bi bi-chevron-right{
+        & .bi bi-chevron-right{ 
             font-size: 13px;
             cursor: pointer;
 
@@ -481,8 +486,8 @@ div.jjodel-control .control-slider  {
         cursor: pointer;
     }
     & .bi-chevron-right {
-        width: 30px;
-        height: 30px;
+        width: 30px!important;
+        height: 30px!important;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -506,7 +511,7 @@ div.jjodel-control .control-slider  {
 
     &.closed {
 
-        width: 30px;
+        width: 30px!important;
         height: 30px!important;
         display: flexbox;
         align-items: center;
