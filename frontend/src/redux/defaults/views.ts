@@ -170,8 +170,14 @@ border-radius: var(--radius);
             view.adaptHeight = true;
             view.appliableTo = 'Vertex';
             view.oclCondition = 'context DClass inv: true';
-            view.palette = {'color-': U.hexToPalette('#f00', '#000', '#fff'), 'background-':  U.hexToPalette('#fff', '#eee', '#f00')};
+            view.palette = {
+                'color-': U.hexToPalette('#f00', '#000', '#fff'), 
+                'background-':  U.hexToPalette('#fff', '#eee', '#f00'), 
+                'outline-': U.hexToPalette('#263d91', '#8390fa', '#fac748', '#06bcc1', '#49a078', '#1dd3b0', '#53dd6c', '#d81159', '#9798aa')
+            };
             view.css = `
+
+/
 
 /* class */
 
@@ -181,11 +187,14 @@ border-radius: 3px;
     background: var(--model-background);
     color:var(--model-color);
     min-width: 160px;
-
+    border: 1px solid var(--borderColor)!important;
+    
     &>.header{
         padding: 3px 6px;
         white-space: pre;
         text-align: center;
+        border: none;
+        
     }
     .class-name{ 
         font-weight: bold; 
@@ -211,13 +220,11 @@ border-radius: 3px;
         text-align: center; 
     }
 }
-.highlight {
-    border: 2px solid red!important;
+
+.abstract { 
+    border-style: dotted!important;
+    border-color: silver!important;
 }
-.abstract {
-border-style: dotted!important;
-border-color: silver!important;
-    }
 
 .class:hover {
     box-shadow: var(--model-shadow);
@@ -245,6 +252,22 @@ div.header:has(.open:hover) {
     background-color: var(--bg-2);
 }
 
+.highlight {
+    outline: 2px solid var(--outlineColor)!important;
+}
+
+
+.level-2, .level-1 {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 40px;
+    width: fit-content;
+    padding: 10px 5px;
+    height: fit-content;
+    outline-width: 1px!important;
+}
+
             
 
 `;
@@ -269,6 +292,7 @@ div.header:has(.open:hover) {
     ${udSnap}
     ret.refs = data.referencedBy.filter(a => typeof a !== 'undefined')
     ret.refNames = ret.refs.filter(a => typeof a !== 'undefined').filter(a => a.model.id !== data.model.id).map(a => a.model.name + '::'  + a.parent.name + '.' + a.name)
+    ret.colorIndex = node.state.colorIndex ?? 0
 
 }`;
             // view.events = {e1:"(num) => {\n\tdata.name = num;\n}"}

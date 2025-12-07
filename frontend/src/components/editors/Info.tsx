@@ -173,6 +173,7 @@ class builder {
                 // lclass.state = {label: best.label};
                 lclass.state = {wikidataId: best.id};
                 incrementCount(results.length);
+
                 return best;
             } catch (error) {
                 console.error("Error calling Wikidata:", error);

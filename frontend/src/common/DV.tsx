@@ -962,17 +962,42 @@ export class DefaultView {
 <Scrollable graph={node}>
     {!data && "Model data missing."}
     <div className={'edges'}>
-        {level > 0 && [
+        {level > 1 && [
             refEdges.map(se => <Edge 
                 data={se.start} 
                 start={se.startVertex} 
                 end={se.endVertex} 
                 anchorStart={0} 
                 anchorEnd={0} 
-                key={se.id} 
+                key={se.id + '_with_label'} 
+                id={se.id + '_with_label'} 
                 isReference={true} 
                 view={'Edge' + (se.start.composition ? 'Composition' : (se.start.aggregation ? 'Aggregation' : 'Association'))} 
                 label={se.start.name}
+                elabel={se.start.lowerBound === se.start.upperBound ? se.start.lowerBound : se.start.upperBound === -1 ? se.start.lowerBound + '..*' : se.start.lowerBound + '..' + se.start.upperBound}
+                slabel={''}
+            />),
+            extendEdges.map(se => <Edge 
+                data={se.start} 
+                start={se.startVertex} 
+                end={se.endVertex} 
+                view={'EdgeInheritance'} 
+                isExtend={true} 
+                key={se.id} 
+            />)
+        ]}
+        {level === 1 && [
+            refEdges.map(se => <Edge 
+                data={se.start} 
+                start={se.startVertex} 
+                end={se.endVertex} 
+                anchorStart={0} 
+                anchorEnd={0} 
+                key={se.id + '_without_label'} 
+                id={se.id + '_without_label'} 
+                isReference={true} 
+                label={''}
+                view={'Edge' + (se.start.composition ? 'Composition' : (se.start.aggregation ? 'Aggregation' : 'Association'))} 
                 elabel={se.start.lowerBound === se.start.upperBound ? se.start.lowerBound : se.start.upperBound === -1 ? se.start.lowerBound + '..*' : se.start.lowerBound + '..' + se.start.upperBound}
                 slabel={''}
             />),
@@ -1073,15 +1098,18 @@ export class DefaultView {
 
 
 public static class(): string { return (`
-/* -- Jjodel Abstract Syntax Specification v2.0 -- */
+/* -- Jjodel Abstract Syntax Specification v2.1 -- */
 
-
-<View className={"root class"} onDoubleClick={()=>{node.state = {highlight: !node.state.highlight}}}>
+<View 
+    className={'root class highlight' + ' level-' + level} 
+    onDoubleClick={()=>{node.state = {colorIndex: ((node.state.colorIndex||0) + 1) % (view.palette['outline-'].value.length + 1)}}} 
+    style={{'--outlineColor': colorIndex !== 0 ? 'var(--outline-'+colorIndex+')': 'transparent', '--borderColor': colorIndex !== 0 ? 'var(--outline-'+colorIndex+')': 'gray'}}    
+>
    <div className={'header'}>
     {data.isSingleton && <i className='bi bi-1-square'>&nbsp;</i>}
     { level > 1 && <b className={'class-name'}>{interface ? 'Interface' : 'Class'}: </b>}    
 
-    {level === 1 && <i className="bi bi-c-square-fill"></i>}
+
     <span className={(data.abstract ? "abstract": "")}><Input data={data} field={'name'} hidden={true} autosize={true} /></span>
     {data.extends.some(a => a.model.id !== data.model.id) && <i className="bi bi-arrow-up open"></i>}
     {data.extendedBy.some(a => a.model.id !== data.model.id) && <i className="bi bi-arrow-down open"></i>}
@@ -1114,8 +1142,21 @@ public static class(): string { return (`
     }
 
     {decorators}
-</View>`);}
 
+    <ContextualEntry 
+        title={'Highlight Class'} 
+        icon={"bi-paint-bucket"} 
+        action={()=>{node.state = {colorIndex: ((node.state.colorIndex||0) + 1) % (view.palette['outline-'].value.length + 1)}}} 
+        node={node}
+    />
+    <ContextualEntry 
+        title={'Reset Highlight'} 
+        icon={"bi-x"} 
+        action={() => {node.state = {colorIndex : 0}}} 
+        node={node}
+    />
+
+</View>`);}
 
     /* ENUM */
 
