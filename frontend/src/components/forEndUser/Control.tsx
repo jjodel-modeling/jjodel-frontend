@@ -153,6 +153,69 @@ const Control = (props: VertexOwnProps, children: ReactNode = []): ReactElement 
 
 
 /* ************************************************************************************ */
+/* PANEL.                                                                               */
+/* ************************************************************************************ */
+
+
+/*  Panel */
+
+type PanellProps = {
+    children: any;
+    title?: string;
+    data: any;
+}
+
+
+  
+const PanellComponent = (props: PanellProps, children?:ReactNode) => {
+
+    const [panellOpen, setPanellOpen] = useStateIfMounted(false);
+    const toggleValue = () => setPanellOpen(!panellOpen);
+
+
+   
+    return (<>
+       {/* ts-ignore */}
+        {!props.data.isMetamodel &&
+
+                <div className={`jjodel-panel-root`} >
+                
+                    <div className={`jjodel-panel normal ${panellOpen ? 'opened' : 'closed'}`}>
+                        {panellOpen ? <>
+                            <div className={'panel-header'}>
+                                <div>
+                                    <h1>{props.title ? props.title : 'Control'}</h1>
+
+                                </div> 
+                                <i onClick={toggleValue}className="bi bi-chevron-right"></i>
+                                
+                            </div>
+                            <div className={'panel-content'}>
+                                    {props.children || children}
+                                </div>
+                        </>
+                            
+                        :
+
+                        <div className={'panel-header'}>
+                            <Tooltip tooltip={props.title || 'Control'} inline position={'left'} offsetX={20}>
+                                <i onClick={toggleValue}className="bi bi-chevron-left"></i>
+                            </Tooltip>
+                        </div>
+                        }
+                    
+                    </div>
+                </div>
+        }
+    </>);
+}
+
+const Panell = (props: VertexOwnProps, children: ReactNode = []): ReactElement => {
+    return <PanellComponent {...props} data={props.data}>{children || props.children}</PanellComponent>;
+}
+
+
+/* ************************************************************************************ */
 /* SIMULATOR                                                                            */
 /* ************************************************************************************ */
 
@@ -165,7 +228,7 @@ type PanelProps = {
     payoff?: string;
     icon?: boolean;
 
-    data?: any;
+    data: any;
 }
 
 
@@ -310,7 +373,7 @@ const PanelComponent = (props: PanelProps, children?:ReactNode) => {
 }
 
 const Panel = (props: VertexOwnProps, children: ReactNode = []): ReactElement => {
-    return <PanelComponent {...props}>{children || props.children}</PanelComponent>;
+    return <PanelComponent {...props} data={props.data}>{children || props.children}</PanelComponent>;
 }
 
 type PickerProps = {
@@ -587,5 +650,5 @@ const Zoom = (props: ZoomProps): ReactElement => {
 }
 
 
-export {Control, Slider, Toggle_Obsolete, Zoom, Panel, MetaElementPicker, ContextualEntry};
+export {Control, Slider, Toggle_Obsolete, Zoom, Panel, Panell, MetaElementPicker, ContextualEntry};
 
