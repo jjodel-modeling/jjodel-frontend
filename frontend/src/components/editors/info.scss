@@ -188,10 +188,51 @@
 }
 
 
+.loader {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: block;
+  margin:7px auto;
+  position: relative;
+  background: var(--bg-2);
+  box-shadow: -12px 0 var(--bg-2), 12px 0 var(--bg-2);
+  box-sizing: border-box;
+  animation: shadowPulse 2s linear infinite;
+}
+
+@keyframes shadowPulse {
+  33% {
+    background: var(--bg-2);
+    box-shadow: -12px 0 var(--accent), 12px 0 var(--bg-2);
+  }
+  66% {
+    background: var(--accent);
+    box-shadow: -12px 0 var(--bg-2), 12px 0 var(--bg-2);
+  }
+  100% {
+    background: var(--bg-2);
+    box-shadow: -12px 0 var(--bg-2), 12px 0 var(--accent);
+  }
+}
+      
+
 
 
 
 .properties-tab h1 {padding-top: 0px!important;}
+.properties-tab h2 {
+  font-size: 1.1em;
+  margin-bottom: 20px;
+  font-style: italic;
+  color: var(--color);
+  font-weight: 300;
+}
+
+.properties-tab h2:first-letter {
+    text-transform: uppercase;
+}
+
 .console h1::before {
   content: "\F5C3";
 }

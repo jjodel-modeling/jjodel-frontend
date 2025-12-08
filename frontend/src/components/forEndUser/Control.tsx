@@ -3,17 +3,20 @@ import {
     ControlPanel,
     DGraphElement, GraphPoint,
     LGraphElement,
+    LModelElement,
+    Select,
     SetFieldAction,
     SetRootFieldAction,
     TRANSACTION,
     U
 } from "../../joiner";
-import { ReactElement, ReactNode, useEffect, useRef, useState } from "react";
+import { JSXElementConstructor, MouseEventHandler, ReactElement, ReactNode, ReactPortal, useEffect, useRef, useState } from "react";
 
 import "./control.scss";
 import { useStateIfMounted } from "use-state-if-mounted";
 import { Tooltip } from "./Tooltip";
 import { VertexOwnProps } from "../../graph/graphElement/sharedTypes/sharedTypes";
+import { VscDebugRestart, VscDebugStepInto, VscDebugStop } from "react-icons/vsc";
 
 
 
@@ -148,6 +151,254 @@ const Control = (props: VertexOwnProps, children: ReactNode = []): ReactElement 
     return <ControlComponent {...props}>{children || props.children}</ControlComponent>;
 }
 
+
+/* ************************************************************************************ */
+/* SIMULATOR                                                                            */
+/* ************************************************************************************ */
+
+
+/*  Panel */
+
+type PanelProps = {
+    children: any;
+    title?: string;
+    payoff?: string;
+    icon?: boolean;
+
+    data?: any;
+}
+
+
+  
+const PanelComponent = (props: PanelProps, children?:ReactNode) => {
+
+    const [panelOpen, setPanelOpen] = useStateIfMounted(false);
+    const toggleValue = () => setPanelOpen(!panelOpen);
+
+    /* laguage fragment metadata */
+
+    const meta = {
+        initial : props.data.instanceof && props.data.instanceof.state['initial']?.name || false,
+        terminal : props.data.instanceof && props.data.instanceof.state['terminal']?.name || false,
+        node : props.data.instanceof && props.data.instanceof.state['node']?.name || false,
+        ownedTransition : props.data.instanceof && props.data.instanceof.state['ownedTransitions']?.name || false,
+        nextState : props.data.instanceof && props.data.instanceof.state['nextState']?.name || false
+    }
+    const {initial, terminal, node, ownedTransition, nextState} = meta;
+
+    const activeFieldName = 'active';
+
+    function onClick(e: any){
+        U.clickedOutside(e, ()=> setPanelOpen(false));
+    }
+
+
+    function resetSimulation() {
+
+        props.data.model.allSubObjects
+            .filter((o: any) => o.instanceof.name === node 
+                || o.instanceof.name === initial 
+                || o.instanceof.name === terminal)
+            .forEach((o: any) => {o.state = {[activeFieldName]: false}})
+        
+        
+        props.data.model.allSubObjects
+            .filter((o: any) => o.instanceof.name === initial)
+            .forEach((o: any) => {o.state = {[activeFieldName]: true}})
+        
+        U.alert('i', 'Resetting simulation...');
+    }
+
+    function stop() {
+        props.data.model.allSubObjects
+            .filter((o: any) => o.instanceof.name === node 
+                || o.instanceof.name === initial 
+                || o.instanceof.name === terminal)
+            .forEach((o: any) => {o.state = {[activeFieldName]: false}})
+        
+        U.alert('i', 'Simulation stopped.');
+    }
+
+    function step() {
+
+        if (props.data.model.allSubObjects.filter((o: any) => o.instanceof.name === terminal && o.state[activeFieldName]).length === 0) {
+            props.data.model.allSubObjects.filter((o: any) => o.state[activeFieldName]).forEach((o: any) => {
+                o['$' + ownedTransition] && o['$' + ownedTransition].values.forEach((t: any) => {
+                    if (t['$' + nextState] && t['$' + nextState].value) {
+                        t['$' + nextState].value.state = {[activeFieldName]: true};
+                    }
+                    o.state = {[activeFieldName]: false};
+                })
+            })
+        } else {
+            U.alert('i', 'Execution terminated.');
+        }
+    }
+
+   
+    return (<>
+       {/* ts-ignore */}
+        {!props.data.isMetamodel ?
+            !Object.values(meta).some(v => !v) &&
+                <div className={`jjodel-panel-root`} >
+                
+                    <div className={`jjodel-panel debug model ${panelOpen ? 'opened' : 'closed'}`}>
+                        {panelOpen ? <>
+                            <div className={'panel-header'}>
+                                {/* <div>
+                                    <h1>{props.title ? props.title : 'Control'}</h1>
+                                    {props.payoff && <h2>{props.payoff}</h2>}
+                                </div> */}
+                                <div className={'panel-content debug'}>
+                                    {props.children || children}
+                                    <Tooltip inline offsetY={10} position={'bottom'} tooltip={'Restart'}><div><button onClick={resetSimulation}><VscDebugRestart className={'restart'}/></button></div></Tooltip>
+                                    <Tooltip inline offsetY={10} position={'bottom'} tooltip={'Step into'}><div><button onClick={step}><VscDebugStepInto className={'step'}/></button></div></Tooltip>
+                                    <Tooltip inline offsetY={10} position={'bottom'} tooltip={'Stop'}><div><button onClick={stop}><VscDebugStop className={'stop'}/></button></div></Tooltip>
+                                </div>
+                                <i onClick={toggleValue}className="bi bi-chevron-right"></i>
+                            </div>
+                            
+                        </>
+                            
+                        :
+                        <div className={'panel-header'}>
+                            <Tooltip tooltip={props.title || 'Control'} inline position={'left'} offsetX={20}>
+                                <i onClick={toggleValue}className="bi bi-chevron-left"></i>
+                            </Tooltip>
+                        </div>
+                        }
+                    
+                    </div>
+                </div>
+        :
+        <div className={`jjodel-panel-root`} >
+        
+            <div className={`jjodel-panel metamodel ${panelOpen ? 'opened' : 'closed'}`}>
+                {panelOpen ? <>
+                    <div className={'panel-header'}>
+                        <div>
+                            <h1>Control Flow Aspect</h1>
+                        </div>
+                        <i onClick={toggleValue}className="bi bi-chevron-right"></i>
+                    </div>
+                    <div className={'panel-content'}>
+                        <p>Configure the metamodel parameters.</p>
+                        <Section name={'Control Flow Node Types'}/>
+                        <p>Select the metaclasses that define the nodes of the control-flow structure.</p>
+                        <MetaElementPicker name={'node'} meta={'class'} label={'Control Flow Node'} data={props.data} />
+                        <MetaElementPicker name={'initial'} meta={'class'} label={'Initial Class'} data={props.data} />
+                        <MetaElementPicker name={'terminal'} meta={'class'} label={'Terminal Class'} data={props.data} />
+                        <Section name={'Transition Configuration'}/>
+                        <p>Configure how transitions connect nodes within the control-flow.</p>
+                        <MetaElementPicker name={'transition'} meta={'class'} label={'Transition Class'} data={props.data} />
+                        <MetaElementPicker name={'ownedTransitions'} meta={'containment'} label={'Transition Containment'} data={props.data} />
+                        <MetaElementPicker name={'nextState'} meta={'reference'} label={'Next Node Reference'} data={props.data} />
+                    </div>
+                </>
+                    
+                :
+                <div className={'panel-header'}>
+                    <Tooltip tooltip={props.title || 'Control'} inline position={'left'} offsetX={20}>
+                        <i onClick={toggleValue}className="bi bi-chevron-left"></i>
+                    </Tooltip>
+                </div>
+                }
+            
+            </div>
+        </div>}
+    </>);
+}
+
+const Panel = (props: VertexOwnProps, children: ReactNode = []): ReactElement => {
+    return <PanelComponent {...props}>{children || props.children}</PanelComponent>;
+}
+
+type PickerProps = {
+    name: string;
+    meta: 'class'|'reference'|'containment'|'composition'|'aggregation';
+    label?: string;
+    data: LModelElement;
+    indent?: number;
+}
+
+const MetaElementPicker = (props: PickerProps) => {
+
+    {/* @ts-ignore */}
+    var options: JSX.Element[] | null = null;
+    var placeholder = ""    
+    
+    switch (props.meta) {
+        case 'class':
+            options = props.data.model.classes.filter((c: any) => !c.abstract).map((c: any) => <option value={c.id}>{c.name}</option>);
+            placeholder = "Select a metaclass";
+        break;
+        case 'reference':
+            options = props.data.model.references.filter((r: any) => !r.composition && !r.aggregation).map((r: any) => <option value={r.id}>{r.name}</option>);
+            placeholder = "Select a reference";
+
+        break;
+        case 'containment':
+        case 'composition':
+            options = props.data.model.references.filter((r: any) => r.composition).map((r: any) => <option value={r.id}>{r.name}</option>);   
+            placeholder = "Select a composition";
+
+        break;
+        case 'aggregation':
+            options = props.data.model.references.filter((r: any) => r.aggregation).map((r: any) => <option value={r.id}>{r.name}</option>);
+            placeholder = "Select an aggregation";
+        break;
+    } 
+
+    return (<div className={'input-container'}>
+        <label style={{marginLeft: props.indent ? props.indent*20 + 'px' : '0px' }}>{props.label || 'Select a ' + props.meta}</label>
+       
+        <Select
+            getter={()=>props.data.state[props.name]}
+            setter={(value) => props.data.state={[props.name]: value}}
+            placeholder={placeholder}
+            options={<>{options}</>}>
+        </Select>
+    </div>
+    );
+}
+
+
+/* Section */
+
+type SectionProps = {
+    name: string;
+}
+
+const Section = (props: SectionProps) => {
+    return (<h2>{props.name}</h2>
+    );
+}
+
+
+
+/* ContextualEntry */
+
+type ContextualProps = {
+    title: string;
+    action: MouseEventHandler | undefined;
+    node: LGraphElement;
+    icon?: string;
+}
+
+const ContextualEntry = (props: ContextualProps) => {
+
+    if (!props.node.view.state.contextualEntries) {
+        props.node.view.state = {contextualEntries : {}};
+    } 
+    
+    props.node.view.state.contextualEntries[props.title] = {title: props.title, action: props.action, icon: props.icon ? props.icon : ''};
+
+    return (<></>);
+}
+
+
+
+
 /* Slider */
 
 type SliderProps = {
@@ -205,6 +456,10 @@ const SliderComponent = (props: SliderProps) => {
 const Slider = (props: SliderProps, children: ReactNode = []): ReactElement => {
     return <SliderComponent {...props} />;
 }
+
+
+
+
 
 
 /* Toggle */
@@ -274,6 +529,7 @@ const Toggle_Obsolete = (props: ToggleProps, children: ReactNode = []): ReactEle
 
 
 /* Zoom */
+
 type ZoomProps = {
     node?: DGraphElement;
     children?: ReactNode;
@@ -331,5 +587,5 @@ const Zoom = (props: ZoomProps): ReactElement => {
 }
 
 
-export {Control, Slider, Toggle_Obsolete, Zoom};
+export {Control, Slider, Toggle_Obsolete, Zoom, Panel, MetaElementPicker, ContextualEntry};
 

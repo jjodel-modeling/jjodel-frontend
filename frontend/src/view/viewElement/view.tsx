@@ -280,7 +280,11 @@ export class DViewElement extends DPointerTargetable {
     }
 
     static newDefault(forData?: DNamedElement): DViewElement{
-        const jsx = `<div className={'root'}>
+        const jsx = `
+
+/* Jjodel Default View 2.1 */ 
+
+<View className={'root'}>
     <div className={'header'}>
         <div className={'input-container mx-2'}>
             <b className={'object-name'}>Name:</b>
@@ -290,48 +294,36 @@ export class DViewElement extends DPointerTargetable {
             }
         </div>
     </div>
-    <div className={'body'}>To add information here,<br/> edit the view<br/><i>"{view.name}"</i></div>
+    <div className={'body'}>To add information here,<br/> edit the view<br/>"{view.name}"</div>
     {decorators}
-</div>`;
+</View>`;
         const palettes: PaletteType = {
             "background-": {type:"color", value: [
-                { "r": 253, "g": 249, "b": 191, "a": 1 },
-                { "r": 231, "g": 241, "b": 228, "a": 1 }, 
-                { "r": 229, "g": 240, "b": 241, "a": 1 }, 
-                { "r": 230, "g": 228, "b": 241, "a": 1 },
-                { "r": 248, "g": 241, "b": 248, "a": 1 }]},
+                { "r": 255, "g": 255, "b": 255, "a": 1 },
+                { "r": 250, "g": 250, "b": 250, "a": 1 }]},
             "border-color-": {type:"color", value: [
-                { "r": 240, "g": 224, "b": 5, "a": 1 },
-                { "r": 94, "g": 141, "b": 73, "a": 1 }, 
-                { "r": 78, "g": 133, "b": 138, "a": 1 }, 
-                { "r": 84, "g": 73, "b": 141, "a": 1 }, 
-                { "r": 156, "g": 78, "b": 156, "a": 1 }]},
+                { "r": 12, "g": 67, "b": 110, "a": 1 }]},
             "color-": {type:"color", value: [
-                { "r": 79, "g": 74, "b": 7, "a": 1 },
-                { "r": 38, "g": 58, "b": 30, "a": 1 }, 
-                { "r": 78, "g": 133, "b": 138, "a": 1 }, 
-                { "r": 84, "g": 74, "b": 141, "a": 1 }, 
-                { "r": 97, "g": 78, "b": 156, "a": 1 }]},
+                { "r": 12, "g": 67, "b": 110, "a": 1 }]},
         }
             const css = `&>.root {
     border: 2px solid var(--border-color-1)!important;
     border-radius: 4px;
-    background-color: var(--background-1);
+    background: linear-gradient(-45deg, var(--background-1) 0%, var(--background-2) 100%);
     color: var(--color-1);
+    min-width: 180px;
     
     &>.header {
-        text-align: center;
         border-bottom: 1px solid var(--border-color-1);
-        padding: 0px;
-        margin: 0px;
     }
+
     &>.body {
         text-align: center;
-        font-weight: normal;  
         height: auto;
         padding: 5px;
     }
 } 
+
  `;
         let query = '';
         if (forData) switch(forData.className) {

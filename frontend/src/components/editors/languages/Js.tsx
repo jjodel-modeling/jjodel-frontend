@@ -13,29 +13,34 @@ import {
 import {useStateIfMounted} from 'use-state-if-mounted';
 import {FakeStateProps} from '../../../joiner/types';
 import { CommandBar, Btn } from '../../commandbar/CommandBar';
+import {AFTER_TRANSACTION} from "../../../redux/action/action";
 
 function JsEditorComponent(props: AllProps) {
     const {placeHolder, height, title, getter, setter, jsxLabel, field} = props;
     let data: LPointerTargetable = LPointerTargetable.wrap(props.data) as any;
-    let value = getter ? getter(data, field) : ((data|| {}) as any)[field as any];
-    const [js, setJs] = useStateIfMounted(value);
+    let value_original: string = getter ? getter(data, field) : ((data|| {}) as any)[field as any];
+    let [js, setJs] = useStateIfMounted<string>(value_original);
     const [oldJs, setOldJs] = useStateIfMounted(js);
+    const [pristine, setPristine] = useStateIfMounted(true);
     const [show, setShow] = useStateIfMounted(props.initialExpand ? props.initialExpand(data, field) : false);
     const [expand, setExpand] = useStateIfMounted(false);
     const monaco = useMonaco();
     (window as any).monaco = monaco;
-
+    if (js === undefined) js = value_original as string; // + '_updated_debug(works!)';
     const readOnly = props.readOnly !== undefined ? props.readOnly : !props.debugmode && Defaults.check(data.id);
     const change = (value: string|undefined) => {
         /* save in local state for frequent changes */
-        if (value !== undefined) setJs(value);
+        setJs(value || '');
     }
+
     const blur = () => {
         /* confirm in redux state for final state */
         if (oldJs === js) return;
-        if (js && setter) setter(js, data, field);
+        if (setter) setter(js, data, field);
         else if(field) (data as any)[field] = js;
-        setOldJs(value);
+        setOldJs(js);
+        AFTER_TRANSACTION(()=>setJs(undefined as any)); // force it to regenerate from getter
+        if (pristine) setPristine(false);
     }
 
     useEffect(() => {
@@ -56,10 +61,9 @@ function JsEditorComponent(props: AllProps) {
         monaco.languages.typescript.typescriptDefaults.addExtraLib(`declare var data: 'datatype';`);
     }, [monaco]);
     if (!((data && field) || (getter && setter))) return(<>Either props.data & field or both getter & setter are required.</>);
-
-    if (placeHolder && !js) value = placeHolder;
-    if (!value) value = '';
-    const lines = (Math.round(value.split(/\r|\r\n|\n/).length*1.8) < 5 ? 10 : Math.round(value.split(/\r|\r\n|\n/).length*1.8));
+    if (placeHolder && !js && pristine) js = placeHolder;
+    if (!js) js = '';
+    const lines = (Math.round(js.split(/\r|\r\n|\n/).length*1.8) < 5 ? 10 : Math.round(js.split(/\r|\r\n|\n/).length*1.8));
 
     return <>
         <div style={{...(props.style || {})}} className={'cursor-pointer d-flex'} onClick={e => setShow(!show)}>
@@ -87,7 +91,7 @@ function JsEditorComponent(props: AllProps) {
                 onBlur={() => {setExpand(false);blur()}}>
             <Editor className={'mx-1'} onChange={change}
                     options={{fontSize: 12, scrollbar: {vertical: 'hidden', horizontalScrollbarSize: 5}, minimap: {enabled: false}, readOnly: readOnly}}
-                    defaultLanguage={'typescript'} value={value} />
+                    defaultLanguage={'typescript'} value={js} />
         </div>}
     </>;
 }

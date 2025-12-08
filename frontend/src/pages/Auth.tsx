@@ -629,9 +629,9 @@ return(<section className={`w-100 h-100 login bg ${action === 'register' ? 'regi
                     <>
                         Don't have an account? <span tabIndex={-1} onClick={e => {setAction('register')}} className={'ms-1 text-primary text-decoration-none cursor-pointer login-link'}>Register</span><br/>
                         <span tabIndex={-1} onClick={e => {setAction('retrieve-password')}} className={'ms-1 text-primary text-decoration-none cursor-pointer login-link'}>Forgot your password?</span>
-                        <div className="alert alert-primary" role="alert" style={{marginTop: '12px'}}>
+                        {/* <div className="alert alert-primary" role="alert" style={{marginTop: '12px'}}>
                             <b>Action required</b><br/> Please reset your password to continue using Jjodel 2.0.
-                        </div>
+                        </div>*/}
                     </>
                 }
                 {action === 'retrieve-password' &&

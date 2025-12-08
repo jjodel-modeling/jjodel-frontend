@@ -40,6 +40,8 @@ export {Try} from "../components/forEndUser/Try";
 
 // export {Image} from "../components/forEndUser/Image";
 
+export {CountryPicker} from "../components/forEndUser/CountryPicker";
+
 
 export {DataOutputComponent} from "../components/logger/DataOutput";
 
@@ -48,8 +50,7 @@ export {DataOutputComponent} from "../components/logger/DataOutput";
 export {Overlap} from "../components/forEndUser/Overlap";
 
 export {ControlPanel} from '../components/forEndUser/ControlPanel';
-
-export {Control, Slider, Toggle_Obsolete, Toggle_Obsolete as Toggle, Zoom} from '../components/forEndUser/Control';
+export {Control, Slider, Toggle_Obsolete, Toggle_Obsolete as Toggle, Zoom, Panel, MetaElementPicker, ContextualEntry} from '../components/forEndUser/Control';
 
 type dict = Dictionary<string, typeof GraphElement | typeof Edge>;
 

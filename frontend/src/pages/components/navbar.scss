@@ -498,21 +498,28 @@
 }
 
 .nav-container .user {
+  min-width: 150px;
+  display: flex;
+  align-items: center;
   padding-right: 25px;
   margin-left: 20px!important;
   margin-top: auto;
   margin-bottom: auto;
 
-    .initials{
+    & .initials{
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-weight: 500;
       font-size: inherit;
-      display: inline-block;
-      padding-top: 3px; 
-      padding-right: 4px;
       height: 26px;
       width: 26px;
       border-radius: 50%;
       background-color: var(--bg);
+      // background: linear-gradient(45deg, #00c6ff, #0072ff);
       color: white!important;
+      font-size: 0.8em;
+
     }
   >*{
     margin: auto 0;

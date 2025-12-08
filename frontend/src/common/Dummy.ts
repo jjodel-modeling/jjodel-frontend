@@ -78,8 +78,10 @@ export class Dummy {
                     continue;
                 }
                 const pointer: Pointer|undefined = dependency.obj; // the object pointing to the deleted element
-                Log.exDev(!pointer, 'unexpected pointedBy found in delete', {pointer, dependency, dependencies});
-                if (!pointer) continue;
+                if (!pointer) {
+                    Log.eDevv('unexpected pointedBy found in delete', {pointer, dependency, dependencies});
+                    continue;
+                }
                 const field = dependency.lastKey;
                 const lObj: any = L.wrap(pointer); // the object pointing to the deleted element
                 if (!lObj) continue; // already deleted?

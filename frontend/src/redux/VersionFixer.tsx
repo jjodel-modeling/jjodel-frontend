@@ -26,6 +26,7 @@ export class VersionFixer {
     private static versionAdapters: Dictionary<number/*version*/, {n: number, f:(s: DState)=>DState}> = VersionFixer.setup();
     private static highestVersion: number = 0; // automatically updated from updater function names
     private static prefix: string = '__jodel_versioning_';
+    // public static UpdateOnSave: Dictionary<string, string> = {}; // stuff to be fixed with string replacement instead of save object manipulation
     public static help(){
         console.clear();
         let i: number  = 1;
@@ -35,25 +36,22 @@ Before deploying a new version you should:
 
 ${i++}) Update changelog
 
-${i++}) make a separate build subfolder (so you can switch versions)
-
 ${i++}) build a new empty versioning function with signature like: private ['2.1 -> 2.3'](s: DState): DState
         fill this function in a way that translates from the state shape of the old version, to the state shape of the new one
-   
-        `);
+
+`);
 
 
 
         // DEPRECATED stuff
         false && console.log(`
-Before deploying a new version you should:
+Before deploying a new version you should: // obsolete version
 
 ${i++}?) ONLY IF IT'S FIRST TIME;
    run DState.registerFirstTimeOnly() in the deploy version and export the localStorage variables starting with ${VersionFixer.prefix} to the dev version.
    or call it in dev version after having temporarly undone the pending updates if possible, otherwise next steps might fail.
    
 ${i++}?) ONLY IF there are entirely new kinds of D-objects or optional new sub-structures in D-objects (like View.palette), update buildVersionSignature() method
- 
 
 ${i++}) build a new empty versioning function with signature: private ['2.1 -> 2.3'](s: DState): DState
 
@@ -271,13 +269,32 @@ everytime you put hands into a D-Object shape or valid values, you should docume
                 let o: DObject = this.d(e.father, s);
                 if (o) o.name = e.values[0];
             }
-            if (e.uri) {
-                e.uri.split('jodel-react').join('jjodelreact');
-            }
         }
         return s;
     }
     private ['2.206 -> 2.207'](s: DState): DState {
+        let ptrsToReplace: Pointer[] = [];
+        for (let k in s.idlookup) {
+            if (k.indexOf('POINT_')!==0) continue;
+            // let newid = 'Pointer'+k;
+            ptrsToReplace.push(k);
+        }
+        for (let i = 0; i < (s.edgepoints||[]).length; i++) {
+            let v = s.edgepoints[i];
+            if (!v || v.indexOf('POINT_')!==0) continue;
+            if (ptrsToReplace.indexOf(v) === -1) ptrsToReplace.push(v);
+        }
+        if (ptrsToReplace.length) {
+            let str = JSON.stringify(s);
+            for (let ptr of ptrsToReplace){ str = str.split(ptr).join('Pointer'+ptr) }
+            s = JSON.parse(str);
+        }
+        for (let e of Object.values(s.idlookup) as any[]) {
+            if (!e || typeof e !== 'object' || !e.className || !e.id) continue;
+        }
+        return s;
+    }
+    private ['2.207 -> 2.208'](s: DState): DState {
         let old = {...s};
         for (let lang of Object.values(s.languages)){
             if (typeof lang !== 'object') continue;
@@ -294,7 +311,13 @@ everytime you put hands into a D-Object shape or valid values, you should docume
                 delete pd.str;
             }
         }
-        console.error('versionfixer', {old, s});
+
+        for (let k in s.idlookup) {
+            let e = s.idlookup[k] as GObject;
+            if (e?.uri) {
+                e.uri.split('jodel-react').join('jjodelreact');
+            }
+        }
         return s;
     }
 
