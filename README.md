@@ -18,12 +18,14 @@ This guide provides complete instructions for installing and running JJodel in d
 ## 🚀 Quick Installation with Docker
 
 ### Option 1: Pre-built image
+Mac
 ```bash
-# Download and run the image from Docker Hub
-docker pull md2manoppello/jjodel:latest
-docker run -p 3000:80 md2manoppello/jjodel:latest
-
-# Open browser at http://localhost:3000
+docker run --platform=linux/amd64 --rm -p 80:80 --name jjodel \
+  md2manoppello/jjodel-standalone:dotnet-backend-integration-970935f
+```
+Linux
+```bash
+docker pull md2manoppello/jjodel-standalone:dotnet-backend-integration-366d4f5
 ```
 
 ### Option 2: Local build
