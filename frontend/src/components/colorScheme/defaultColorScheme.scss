@@ -872,8 +872,8 @@
   .viewpointShell * {
     color: #FFFFFF;
     text-shadow: 2px 2px 3px #4074b5, 2px -2px 3px #4074b5, -2px 2px 3px #4074b5, -2px -2px 3px #4074b5, 2px 0px 3px #4074b5, 0px 2px 3px #4074b5, -2px 0px 3px #4074b5, 0px -2px 3px #4074b5;
-    text-shadow: 2px 2px 3px #000000, 2px -2px 3px #000000, -2px 2px 3px #000000, -2px -2px 3px #000000, 2px 0px 3px #000000, 0px 2px 3px #000000, -2px 0px 3px #000000, 0px -2px 3px #000000;
-    text-shadow: 1px 1px 0px #777777, 1px -1px 0px #777777, -1px 1px 0px #777777, -1px -1px 0px #777777, 1px 0px 0px #777777, 0px 1px 0px #777777, -1px 0px 0px #777777, 0px -1px 0px #777777
+    text-shadow: var(--text-shadow-b);
+    text-shadow: var(--text-shadow-g1)
   }
 
   .viewpointShell h6 {

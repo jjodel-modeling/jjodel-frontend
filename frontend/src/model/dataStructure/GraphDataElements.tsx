@@ -1,11 +1,12 @@
 // import {Mixin} from "ts-mixer";
 import {isDeepStrictEqual} from "util";
-import {ClickEvent, GObject, NodeTransientProperties} from "../../joiner"
 import {
+    ClickEvent,
     Constructors,
-    CoordinateMode, D,
+    CoordinateMode,
+    D,
     Debug,
-    Dictionary, type DModel,
+    Dictionary,
     DModelElement,
     DocString,
     DPointerTargetable,
@@ -14,19 +15,27 @@ import {
     DViewElement,
     EdgeBendingMode,
     EPSize,
+    Geom,
     getWParams,
+    GObject,
     GraphElementComponent,
     GraphPoint,
     GraphSize,
-    Info, IPoint, Keystrokes, L,
+    Info,
+    IPoint,
+    ISize,
+    Keystrokes,
+    L,
     Leaf,
     LModelElement,
     Log,
     LogicContext,
-    LPointerTargetable, LUser,
+    LPointerTargetable,
+    LUser,
     LViewElement,
     MixOnlyFuncs,
-    Node, orArr,
+    Node,
+    orArr,
     Pack1,
     PackArr,
     Point,
@@ -34,22 +43,25 @@ import {
     Pointers,
     PrimitiveType,
     RuntimeAccessible,
-    RuntimeAccessibleClass, Selectors,
-    SetFieldAction, SetRootFieldAction,
+    RuntimeAccessibleClass,
+    Selectors,
+    SetFieldAction,
+    SetRootFieldAction,
     ShortAttribETypes,
     Size,
     store,
-    TargetableProxyHandler, TRANSACTION,
+    TargetableProxyHandler, TLCoord,
+    TRANSACTION,
     transientProperties,
     U,
-    Uarr, UX,
-    windoww, Geom, ISize
-} from "../../joiner";
+    Uarr,
+    UX,
+    windoww
+} from "../../joiner"
 import type {Tooltip} from "../../components/forEndUser/Tooltip";
-import {JSX, RefObject} from "react";
+import {JSX} from "react";
 import type {SVGPathElementt, SVGPathSegment} from '../../common/libraries/pathdata';
 import {EdgeGapMode, InitialVertexSize, InitialVertexSizeFunc} from "../../joiner/types";
-
 
 
 //console.warn('ts loading graphDataElement');
@@ -137,7 +149,7 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
     x!: number;
     y!: number;
     width!: number;
-    height!: number
+    height!: number;
 
     z!:number;
     zIndex!: number;
@@ -447,16 +459,52 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
 
 
     getSize(outer: boolean = false, canTriggerSet: {w: boolean, h:boolean } = {w:true, h:true}): Readonly<GraphSize> { return this.wrongAccessMessage("getSize()"); }
-    get_getSize(c: Context): (typeof this['getSize']) {
-        return (outer: boolean = true, canTriggerSet: {w: boolean, h:boolean } = {w:true, h:true}) => this.get_innerSize(c, canTriggerSet, outer); }
+    get_getSize(c: Context): (LGraphElement['getSize']) {
+        return (outer: boolean = false, canTriggerSet: {w: boolean, h:boolean } = {w:true, h:true}) => this.get_size(c, canTriggerSet, outer);
+    }
 
     get_outerSize(context: Context, canTriggerSet: {w: boolean, h:boolean } = {w:true, h:true}): Readonly<GraphSize> {
-        return this.get_innerSize(context, canTriggerSet, true);
+        return this.get_innerSize_impl(context, canTriggerSet, true);
     }
-    get_size(context: Context, canTriggerSet: {w: boolean, h:boolean } = {w:true, h:true}): Readonly<GraphSize> { return this.get_innerSize(context, canTriggerSet, false); }
-    get_innerSize(context: Context, canTriggerSet: {w: boolean, h:boolean } = {w:true, h:true}, outerSize: boolean = false): Readonly<GraphSize> {
-        let r = this.get_innerSize_impl(context, canTriggerSet, outerSize);
-        return new GraphSize(r.x, r.y, r.w, r.h);
+    get_size(c: Context, canTriggerSet: {w: boolean, h:boolean } = {w:true, h:true}, outer: boolean = false): Readonly<GraphSize> {
+        return outer ? this.get_outerSize(c, canTriggerSet) : this.get_innerSize(c, canTriggerSet);
+    }
+
+    get_innerSize(c: Context, canTriggerSet: {w: boolean, h:boolean } = {w:true, h:true}): Readonly<GraphSize> {
+        let r = this.get_innerSize_impl(c, canTriggerSet, false);
+        let snap: GraphPoint = (c.data as any).snap || {};
+        let ret = new GraphSize(r.x, r.y, r.w, r.h);
+
+        // snap to grid;
+        if (!snap.x && ! snap.y) return ret
+        let grid = this.get_graph(c).grid;
+        if (!grid.x && !grid.y) return ret;
+        let pt = ret[grid.center as 'cc' | 'tl'/*|etc*/]();
+        let offset: GraphPoint = new GraphPoint(0, 0);
+        switch (grid.type) {
+            default: case 'cartesian':
+                console.log('snap cartesian', {ret0:{...ret}, pt, offset, grid, snap, finalRet:ret});
+                if (grid.x && snap.x) ret.x = Math.round(pt.x / (grid.x * snap.x)) * (grid.x * snap.x) + (ret.x - pt.x);
+                if (grid.y && snap.y) ret.y = Math.round(pt.y / (grid.y * snap.y)) * (grid.y * snap.y) + (ret.y - pt.y);
+                /*if (grid.x && snap.x) offset.x = -(pt.x % grid.x) * snap.x;
+                if (grid.y && snap.y) offset.y = -(pt.y % grid.y) * snap.y; // - Math.round(=
+                ret.add(offset, false);*/
+                break;
+            case 'polar':
+                let rpt = Geom.toRadians(pt);
+                let newRadian = {modulo: 0, angle: 0}
+                console.log('snap polar', {ret0:{...ret}, pt, rpt, offset, grid, snap, finalRet:ret, newRadian});
+                let moduloStep = grid.x * snap.x;
+                if (grid.x && snap.x) newRadian.modulo = Math.round(rpt.modulo / moduloStep) * moduloStep;
+                let circleNumber= Math.round(rpt.modulo / moduloStep);
+                let angle = rpt.angle = Math.pow(rpt.angle, 1/circleNumber);
+                if (grid.y && snap.y) newRadian.angle = Math.round(angle  / (grid.y * snap.y)) * (grid.y * snap.y);
+                let tmp = Geom.fromRadians(newRadian) as GraphPoint;
+                ret.x = tmp.x + (ret.x - pt.x);
+                ret.y = tmp.y + (ret.y - pt.y);
+                break;
+        }
+        return ret;
     }
     protected get_innerSize_impl(context: Context, canTriggerSet: {w: boolean, h:boolean } = {w:true, h:true}, outerSize: boolean = false): Readonly<GraphSize> {
         let cname = context.data.className;
@@ -783,10 +831,10 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
         return this.cannotSet('allSubElements');
     }
 
-    get_isResized(context: LogicContext<DVoidVertex>): DVoidVertex["isResized"] { return (context.data as DVertex).isResized; }
+    get_isResized(context: LogicContext<DVoidVertex>): DVoidVertex["isResized"] { return context.data.isResized; }
     set_isResized(val: DVoidVertex["isResized"], c: LogicContext<DVoidVertex>): DVoidVertex["isResized"] {
         val = !!val;
-        if (!!c.data.isResized === val) return true;
+        if ((!!c.data.isResized) === val) return true;
         TRANSACTION(this.get_name(c as any as Context)+'.isResized', ()=> {
             SetFieldAction.new(c.data.id, "isResized", val);
         }, c.data.isResized, val)
@@ -969,6 +1017,7 @@ export class DGraph extends DGraphElement {
     // personal attributes
     zoom!: GraphPoint;
     offset!: GraphSize; // in-graph scrolling offset
+    grid!: {x?: number, y?: number, type?: "polar" | "cartesian", "center"?: TLCoord};
 
     public static new(htmlindex: number, model: DGraph["model"],
                       parentNodeID?: DGraphElement["father"], // immediate parent
@@ -1025,8 +1074,56 @@ export class LGraph<Context extends LogicContext<DGraph> = any, D extends DGraph
     graphSize!: GraphSize; // derived attribute: bounding rect containing all subnodes, while "size" is instead external size of the vertex holding the graph in GraphVertexes
     offset!: GraphSize; // Scrolling position inside the graph
 
+    grid!: GraphPoint & {type?: "polar" | "cartesian", "center"?: TLCoord};
+    __info_of__grid: Info = Info.grid;
+
+    get_grid(c: LogicContext<DGraph>): this['grid'] {
+        let grid: GObject = new GraphPoint(c.data.grid?.x||0, c.data.grid?.y||0);
+        grid.type = c.data.grid?.type || 'cartesian';
+        grid.center = c.data.grid.center || "cc";
+        return grid as this['grid'];
+    }
+    set_grid(val: GObject/*<GraphPoint & {type:string}>*/ | number | string | boolean, c: Context): boolean {
+        if (!val) val = 0;
+        if (typeof val === 'boolean') val = val ? 1 : 0;
+        if (typeof val === 'string') val = +val;
+        if (typeof val === 'number') val = {x: val, y:val};
+        // now it's always transformed to obj, discard original val for gval
+        let gval: GObject = typeof val !== 'object' ? {} : val;
+        if ('x' in gval) {
+            gval.x = +gval.x;
+            if (isNaN(gval.x) || gval.x < 0) gval.x = 0;
+        }
+        if ('y' in gval) {
+            gval.y = +gval.y;
+            if (isNaN(gval.y) || gval.y < 0) gval.y = 0;
+        }
+        if ('type' in gval) {
+            let type = gval.type = gval.type.toLowerCase();
+            if (!['cartesian', 'polar'].includes(type)) gval.type = c.data.grid?.type || 'cartesian';
+        }
+        if ('center' in gval) {
+            gval.center = typeof c.data.grid.center === 'string' ? Geom.serialize_TL_Object(Geom.parse_TL_string(gval.center)) : 'cc';
+        }
+        let xChanged = 'x' in gval && gval.x !== c.data.grid?.x;
+        let yChanged = 'y' in gval && gval.y !== c.data.grid?.y;
+        let typeChanged = 'type' in gval && gval.type !== c.data.grid?.type;
+        let centerChanged = 'center' in gval && gval.center !== c.data.grid?.center;
+        if (!xChanged && !yChanged && !typeChanged && !centerChanged) return true;
+
+        let diff_old: string = '(' + [
+            (xChanged ? c.data.grid?.x : ''), (yChanged ? c.data.grid?.type : ''), (typeChanged ? c.data.grid?.type : ''), (centerChanged ? c.data.grid?.center : '')
+        ].filter(e=>!!e).join(', ') + ')';
+        let diff_new: string = '(' + [
+            (xChanged ? gval.x : ''), (yChanged ? gval.y : ''), (typeChanged ? gval.type : ''), (centerChanged ? gval.center : '')
+        ].filter(e=>!!e).join(', ') + ')';
+
+        TRANSACTION('Update grid', ()=> { SetFieldAction.new(c.data, 'grid', gval as any, '+=', false); }, diff_old, diff_new);
+        return true;
+    }
+
     // get_graphSize(context: LogicContext<DGraph>):  Readonly<GraphSize> { return todo: get bounding rect containing all subnodes.; }
-    get_offset(context: LogicContext<DGraph>):  Readonly<GraphSize> {
+    get_offset(context: LogicContext<DGraph>): Readonly<GraphSize> {
         let offset: Partial<GraphSize> = (context.data.offset || new GraphSize()) as any;
         return new GraphSize(offset.x, offset.y, offset.w, offset.h);
     }
@@ -1240,6 +1337,7 @@ export class DVoidVertex extends DGraphElement {
     w!: number;
     h!: number;
     isResized!: boolean;
+    snap!: GraphPoint;
     // size?: GraphSize; // virtual, gets extracted from this. x and y are stored directly here as it extends GraphSize
 
     public static new(htmlindex: number, model: DGraphElement["model"], parentNodeID: DGraphElement["father"], graphID: DGraphElement["graph"], nodeID?: DGraphElement["id"],
@@ -1279,13 +1377,41 @@ export class LVoidVertex<Context extends LogicContext<DVoidVertex> = any, C exte
     size!: GraphSize; // virtual, gets extracted from this. x and y are stored directly here as it extends GraphSize
     __info_of__size = {type: "?GraphSize", txt: "Size of the vertex, if null it means is utilizing the defaultSize from view. recommended to read component.getSize() instead of this."};
 
-    get_isResized(context: LogicContext<DVoidVertex>): DVoidVertex["isResized"] { return context.data.isResized; }
-    set_isResized(val: DVoidVertex["isResized"], context: LogicContext<DVoidVertex>): DVoidVertex["isResized"] {
+    snap!: GraphPoint;
+    __info_of__snap: Info = Info.snap;
+
+    get_snap(c: LogicContext<DVoidVertex>): DVoidVertex["snap"] { return c.data.snap; }
+    set_snap(val: Partial<GraphPoint> | number | string | boolean, c: LogicContext<DVoidVertex>): boolean {
+        if (!val) val = 0;
+        if (typeof val === 'boolean') val = val ? 1 : 0;
+        if (typeof val === 'string') val = +val;
+        if (typeof val === 'number') val = {x: val, y: val};
+        let gval: GObject = typeof val !== 'object' ? {} : val;
+        if ('x' in gval) {
+            gval.x = +gval.x;
+            if (isNaN(gval.x)) gval.x = 0;
+        }
+        if ('y' in gval) {
+            gval.y = +gval.y;
+            if (isNaN(gval.y)) gval.y = 0;
+        }
+
+        let xChanged = 'x' in gval && gval.x !== c.data.snap?.x;
+        let yChanged = 'y' in gval && gval.y !== c.data.snap?.y;
+        if (!xChanged && !yChanged) return true;
+        let diff_old: string = '('+ [(xChanged ? c.data.snap?.x : ''), (yChanged ? c.data.snap?.y : '')].filter(e=>!!e).join(', ') + ')';
+        let diff_new: string = '('+ [(xChanged ? gval.x : ''), (yChanged ? gval.y : '')].filter(e=>!!e).join(', ') + ')';
+        TRANSACTION('Update snap', ()=> { SetFieldAction.new(c.data, 'snap', gval as any, '+=', false); },
+            diff_old, diff_new);
+        return true;
+    }
+    get_isResized(c: LogicContext<DVoidVertex>): DVoidVertex["isResized"] { return c.data.isResized; }
+    set_isResized(val: DVoidVertex["isResized"], c: LogicContext<DVoidVertex>): boolean {
         val = !!val;
-        if (!!context.data.isResized === val) return true;
-        TRANSACTION(this.get_name(context)+'.isResized', ()=>{
-            SetFieldAction.new(context.data.id, "isResized", val);
-        }, context.data.isResized, val)
+        if (!!c.data.isResized === val) return true;
+        TRANSACTION(this.get_name(c)+'.isResized', ()=>{
+            SetFieldAction.new(c.data.id, "isResized", val);
+        }, c.data.isResized, val)
         return true;
     }
 
@@ -1547,6 +1673,7 @@ export class DVertex extends DGraphElement { // DVoidVertex
     w!: number;
     h!: number;
     isResized!: boolean;
+    snap!: GraphPoint;
     // size!: GraphSize; // virtual, gets extracted from this. x and y are stored directly here as it extends GraphSize
     // personal attributes
     __isDVertex!: true;
@@ -1582,6 +1709,8 @@ export class LVertex<Context extends LogicContext<any> = any, D = DVertex> exten
     h!: number;
     size!: GraphSize; // virtual, gets extracted from this. x and y are stored directly here as it extends GraphSize
     isResized!: boolean;
+    snap!: GraphPoint;
+
     // personal attributes
     __isLVertex!: true;
 }
@@ -1617,6 +1746,7 @@ export class DGraphVertex extends DGraphElement { // MixOnlyFuncs(DGraph, DVerte
     w!: number;
     h!: number;
     isResized!: boolean;
+    grid!: {x?: number, y?: number, type?: "polar" | "cartesian", "center"?: TLCoord};
     // size!: GraphSize; // virtual
     // from graph
 
@@ -1673,7 +1803,8 @@ export class LGraphVertex<Context extends LogicContext<any> = any, D extends DGr
     h!: number;
     isResized!: boolean;
     size!: GraphSize; // virtual
-
+    grid!: GraphPoint & {type?: "polar" | "cartesian", "center"?: TLCoord};
+    __info_of__grid: Info = Info.grid;
 
     // personal attributes
     __isLVertex!: true;

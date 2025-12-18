@@ -6,7 +6,7 @@ import React, {Dispatch, ReactElement, ReactNode, useRef, useState} from 'react'
 import ReactJson from 'react-json-view' // npm i react-json-view --force
 import {connect} from 'react-redux';
 import {DState} from '../../redux/store';
-import type {
+import {
     LModelElement,
     LViewElement,
     LGraphElement,
@@ -14,7 +14,8 @@ import type {
     LVoidEdge, LGraph, DGraphElement,
     DNamedElement,
     IPoint, GraphPoint,
-    Pointer} from '../../joiner'
+    Pointer, Select, GObject, Info
+} from '../../joiner'
 import {Draggable, U
 } from '../../joiner';
 import {
@@ -29,6 +30,7 @@ import './node-editor.scss';
 import {Empty} from "./Empty";
 import { CommandBar, Btn } from '../commandbar/CommandBar';
 import {SizeInput} from "../forEndUser/SizeInput";
+import {Tooltip} from "../forEndUser/Tooltip";
 
 function anchorinput(k: string, a: Partial<IPoint>, node: LGraphElement, anchors: DGraphElement['anchors'],
                      anchorEntries: [string, GraphPoint][], setAnchor: (v: string)=>void, stateanchor: string) {
@@ -155,26 +157,72 @@ function NodeEditorComponent(props: AllProps) {
     }}/>); // <GenericInput */
     commonEntries.push(<GenericInput data={node} field={'zoom'} />);
 
+    let grid = asGraph?.grid;
 
-    return(<div className={'p-3 node-editor'}>
+    return(<div className={'p-3 node-editor'}><div className={'d-flex fields'} style={{ display: 'flex', flexFlow: 'row', flexWrap: 'wrap', justifyContent: 'space-between'}}>
         {/*<Input obj={selected.node} field={'id'} label={'ID'} type={'text'} readonly={true}/>*/}
-
-        {asGraph && <><h3>{isGraphVertex ? 'GraphVertex' : 'Graph'}</h3>
+        {asGraph && <>
+            <h3 className='w-100'>{isGraphVertex ? 'GraphVertex' : 'Graph'}</h3>
             {commonEntries}
             <GenericInput data={asGraph} field={'offset'}/>
             <SizeInput data={asGraph} field={'size'} label={'size'}
+                       xlabel={grid!.type === 'polar' ? 'modulo' : 'X'}
+                       ylabel={grid!.type === 'polar' ? 'angle' : 'Y'}
                        xsetter={(x) => asGraph.x = +x}
                        ysetter={(y) => asGraph.y = +y}
                        wsetter={(w) => asGraph.w = +w}
                        hsetter={(h) => asGraph.h = +h}
             />
 
+            <SizeInput data={asGraph} label={'Grid'}
+                       xgetter={(l) => '' + ((l as LGraph).grid.x || 0)}
+                       xsetter={(val, l) => l.grid = {x: +val || 0} as any}
+                       ygetter={(l) => '' + ((l as LGraph).grid.y || 0)}
+                       ysetter={(val, l) => l.grid = {y: +val || 0} as any}
+            />
+            <div className={'input-container'}>
+                <b className={'me-2'}>Grid coordinates:</b>
+                <Tooltip tooltip={Info.grid.txt}><Select data={asGraph}
+                            getter={l => l.grid?.type || "cartesian"}
+                            setter={(v, l) => {
+                                console.log('setter coordinate mode', {l, v, old:{...l.grid}})
+                                l.grid = {type: v}
+                            }}>
+                        <optgroup label={"Coordinate type"}></optgroup>
+                        <option value="cartesian">Cartesian</option>
+                        <option value="polar">Polar</option>
+                    </Select>
+                </Tooltip>
+            </div>
+            <div className={'input-container'}>
+                <b className={'me-2'}>Grid snaps to:</b>
+                <Select data={asGraph} getter={(l) => l.grid?.center || "cc"}
+                        id='grid'
+                        setter={( //@ts-ignore
+                        (val, l, b, c,d,e) => {
+                            console.log('select setter grid', {val, l, b, c, d, e})
+                            l.grid = {center: val} as any
+                            return 'useless';
+                        }) as any}>
+                    <optgroup label={"Coordinate type"}>
+                        <option value={'cc'}>center</option>
+                        <option value={'tt'}>top</option>
+                        <option value={'ll'}>left</option>
+                        <option value={'bb'}>bottom</option>
+                        <option value={'rr'}>right</option>
+                        <option value={'tl'}>top left</option>
+                        <option value={'tr'}>top right</option>
+                        <option value={'bl'}>bottom left</option>
+                        <option value={'br'}>bottom right</option>
+                    </optgroup>
+                </Select>
+            </div>
             {/*graphSize readonly on LGraph but not on DGraph, = internal graph size. put it for info.*/}
         </>}
 
         {asVertex && <>
             {!isGraphVertex && <>
-                <h3>Vertex</h3>
+                <h3 className='w-100'>Vertex</h3>
                 {commonEntries}
                 <InputRow label={'X Position'} as={asVertex} field={'x'} type={'number'}/>
                 <InputRow label={'Y Position'} as={asVertex} field={'y'} type={'number'}/>
@@ -182,9 +230,19 @@ function NodeEditorComponent(props: AllProps) {
                 <InputRow label={'Height'} as={asVertex} field={'height'} type={'number'}/>
             </>}
             <InputRow label={'isResized'} as={asVertex} field={'isResized'} type={'checkbox'}/>
+
+            <div className={'input-container'}>
+                <b className={'me-2'}>Snap:</b>
+                <SizeInput data={asVertex}
+                           xgetter={(l) => '' + ((l as LVoidVertex).snap.x || 0)}
+                           xsetter={(val, l) => l.snap = {x: +val || 0} as any}
+                           ygetter={(l) => '' + ((l as LVoidVertex).snap.y || 0)}
+                           ysetter={(val, l) => l.snap = {y: +val || 0} as any}
+                />
+            </div>
         </>}
 
-        {asEdge && <><h3>Edge</h3>
+        {asEdge && <><h3 className='w-100'>Edge</h3>
             {commonEntries}
 
             {
@@ -210,14 +268,14 @@ function NodeEditorComponent(props: AllProps) {
                                             action={() => asEdge.anchorStart = undefined as any}/></CommandBar>
             </label>
             <label>{asEdge.anchorEnd && typeof asEdge.anchorEnd == 'object' ?
-                <SizeInput data={asEdge} field={'anchorEnd'}/> :
-                <GenericInput className='input-container' data={asEdge} field={"anchorEnd"}/>}
-                <CommandBar style={{}}><Btn icon={'delete'} tip={'Delete'}
-                                            action={() => asEdge.anchorEnd = undefined as any}/></CommandBar>
-            </label>
-        </>}
+            <SizeInput data={asEdge} field={'anchorEnd'}/> :
+            <GenericInput className='input-container' data={asEdge} field={"anchorEnd"}/>}
+            <CommandBar style={{}}><Btn icon={'delete'} tip={'Delete'}
+                                        action={() => asEdge.anchorEnd = undefined as any}/></CommandBar>
+        </label>
+    </>}
 
-        {asField && <><h3>Field</h3>
+        {asField && <><h3 className='w-100'>Field</h3>
             {commonEntries}
         </>}
 
@@ -251,7 +309,7 @@ function NodeEditorComponent(props: AllProps) {
                     : <span style={notFoundStyle}>Missing</span>
             }</h6></div>
         ]}
-
+        </div>
         {subElements.length > 0 && <div>
             <h6 style={{display: 'flex'}}>
                 Sub elements

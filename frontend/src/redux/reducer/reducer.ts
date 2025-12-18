@@ -1409,7 +1409,7 @@ export async function stateInitializer() {
     let isProjectPage = windoww.location.hash.indexOf('#/project') === 0;
     let isDashboardPage = windoww.location.hash.indexOf('#/allProjects') === 0;
 
-    if ((isProjectPage || isDashboardPage) && !Api.checkToken()) {
+    if ((isProjectPage || isDashboardPage) && (!U.isOffline() && !Api.checkToken())) {
         DUser.current = ''; // forces redirect routing to auth
         console.error('invalid token, redirect to auth');
         // R.navigate('/auth');

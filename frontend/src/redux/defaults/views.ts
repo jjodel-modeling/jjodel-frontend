@@ -176,9 +176,6 @@ border-radius: var(--radius);
                 'outline-': U.hexToPalette('#263d91', '#8390fa', '#fac748', '#06bcc1', '#49a078', '#1dd3b0', '#53dd6c', '#d81159', '#9798aa')
             };
             view.css = `
-
-/
-
 /* class */
 
 border-radius: 3px;
@@ -298,23 +295,13 @@ div.header:has(.open:hover) {
             // view.events = {e1:"(num) => {\n\tdata.name = num;\n}"}
         }, false, Defaults.Pointer_ViewClass);
         
-        view.onDataUpdate = "if (snap) {\n";
-        view.onDataUpdate += "  const x = node.x, y = node.y;\n";
-        view.onDataUpdate += "  if (x !== 0 || y !== 0) {\n";
-        view.onDataUpdate += "    const zx = (node.zoom && node.zoom.x) || 1;\n";
-        view.onDataUpdate += "    const zy = (node.zoom && node.zoom.y) || 1;\n";
-        view.onDataUpdate += "    const w2 = node.w * 0.5;\n";
-        view.onDataUpdate += "    const h2 = node.h * 0.5;\n";
-        view.onDataUpdate += "    const gx = 30 * zx;\n";
-        view.onDataUpdate += "    const gy = 30 * zy;\n";
-        view.onDataUpdate += "    const cx = x + w2;\n";
-        view.onDataUpdate += "    const cy = y + h2;\n";
-        view.onDataUpdate += "    const nx = Math.round(cx / gx) * gx - w2;\n";
-        view.onDataUpdate += "    const ny = Math.round(cy / gy) * gy - h2;\n";
-        view.onDataUpdate += "    if (nx !== x) node.x = nx;\n";
-        view.onDataUpdate += "    if (ny !== y) node.y = ny;\n";
-        view.onDataUpdate += "  }\n";
-        view.onDataUpdate += "}\n";
+        view.onDataUpdate = "if (snap) {\n" +
+        + "\n  const size = node.size"
+        + "\n  if ((size.x || size.y) && (snap.x && snap.y)) {"
+        + "\n    const snapped = size.center().modulo(snap)"
+        + "\n    if (snapped.x !== size.x || snapped.y !== size.y) node.size = snapped;"
+        + "\n  }"
+        + "\n}"
 
         return view;
     }

@@ -3,9 +3,19 @@
 */
 
 import React, {Dispatch} from 'react';
-import {DState, DViewElement, Input, LPointerTargetable, LViewElement, Pointer} from '../../../../joiner';
+import {
+    DState,
+    DViewElement,
+    GenericInput,
+    Input,
+    LPointerTargetable,
+    LViewElement, LVoidVertex,
+    Pointer,
+    Select
+} from '../../../../joiner';
 import {FakeStateProps} from "../../../../joiner/types";
 import {connect} from "react-redux"
+import {SizeInput} from "../../../forEndUser/SizeInput";
 function NodeDataComponent(props: AllProps) {
     const view = props.view;
     let dview = (view.__raw || view) as DViewElement;
@@ -36,13 +46,14 @@ function NodeDataComponent(props: AllProps) {
             <div className={'input-container'}>
                 <b className={'me-2'}>Store Size in View:</b>
                 {<Input data={view} field={"storeSize"} readOnly={readOnly} tooltip={
-                    <div>On - The node position depends from the view currently displayed.<br/>Off - It depends from the graph.</div>} type={"checkbox"} />
+                    <div>On - The node position depends from the view currently displayed.<br/>Off - It depends from the
+                        graph.</div>} type={"checkbox"}/>
                     /* on = EuseSizeFrom.nv,   off = EuseSizeFrom.n */
                 }
             </div>
             <div className={'input-container'}>
                 <b className={'me-2'}>Lazy Update:</b>
-                <Input data={view} field={"lazySizeUpdate"} type={"checkbox"} tooltip={true} readOnly={readOnly} />
+                <Input data={view} field={"lazySizeUpdate"} type={"checkbox"} tooltip={true} readOnly={readOnly}/>
             </div>
 
             <div className={'input-container'}>
@@ -52,29 +63,39 @@ function NodeDataComponent(props: AllProps) {
 
             <div className={'input-container'}>
                 <b className={'me-2'}>Adapt Height:</b>
-                <Input data={view} field={"adaptHeight"} type={"checkbox"} readOnly={readOnly} />
+                <Input data={view} field={"adaptHeight"} type={"checkbox"} readOnly={readOnly}/>
             </div>
 
             <div className={'input-container'}>
                 <b className={'me-2'}>Draggable:</b>
-                <Input data={view} field={"draggable"} type={"checkbox"} readOnly={readOnly} />
+                <Input data={view} field={"draggable"} type={"checkbox"} readOnly={readOnly}/>
             </div>
 
             <div className={'input-container'}>
                 <b className={'me-2'}>Resizable:</b>
-                <Input data={view} field={"resizable"} type={"checkbox"} readOnly={readOnly} />
+                <Input data={view} field={"resizable"} type={"checkbox"} readOnly={readOnly}/>
             </div>
 
-            <div className={'input-container'} hidden={dview.adaptWidth}>
+            <div className={'input-container'}>
+                <b className={'me-2'}>Snap:</b>
+                <SizeInput data={view}
+                           xgetter={(l) => '' + ((l as LVoidVertex).snap.x || 0)}
+                           xsetter={(val, l) => l.snap = {x: +val || 0} as any}
+                           ygetter={(l) => '' + ((l as LVoidVertex).snap.y || 0)}
+                           ysetter={(val, l) => l.snap = {y: +val || 0} as any}
+                />
+            </div>
+
+            <div className={'input-container'} data-hidden={dview.defaultVSize?.w}>
                 <b className={'me-2'}>Default Width:</b>
                 <Input data={view} type={"number"} readOnly={readOnly}
                        getter={() => '' + view.defaultVSize.w} setter={(val) => view.defaultVSize = {w: +val} as any}/>
             </div>
 
-            <div className={'input-container'} hidden={dview.adaptHeight}>
+            <div className={'input-container'} data-hidden={dview.defaultVSize?.h}>
                 <b className={'me-2'}>Default Height:</b>
                 <Input data={view} type={"number"} readOnly={readOnly}
-                       getter={() => '' + view.defaultVSize.h} setter={(val) => view.defaultVSize = {h: +val} as any} />
+                       getter={() => '' + view.defaultVSize.h} setter={(val) => view.defaultVSize = {h: +val} as any}/>
             </div>
         </div>
     </section>);
@@ -82,14 +103,16 @@ function NodeDataComponent(props: AllProps) {
 
 interface OwnProps {
     viewID: Pointer<DViewElement>;
-    readonly : boolean;
+    readonly: boolean;
 }
 
 interface StateProps {
     view: LViewElement;
 }
 
-interface DispatchProps {}
+interface DispatchProps {
+}
+
 type AllProps = OwnProps & StateProps & DispatchProps;
 
 function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {

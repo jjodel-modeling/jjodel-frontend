@@ -19,6 +19,7 @@ import {Color} from '../../../forEndUser/Color';
 
 import {Btn, CommandBar} from '../../../commandbar/CommandBar';
 import {HRule} from '../../../widgets/Widgets';
+import {Info} from "../../../forEndUser/Info";
 
 
 function makeNumericInput(prefix: string, number: NumberControl,
@@ -373,7 +374,7 @@ function PaletteDataComponent(props: AllProps) {
     let colors = Object.keys(palettes.color).sort();
     const lines = (Math.round(vcss.split(/\r|\r\n|\n/).length*1.8) < 5 ? 10 : Math.round(vcss.split(/\r|\r\n|\n/).length*1.8));
 
-    return(<section className={'p-3 style-tab'}>
+    return(<section className={'p-3 style-tab '+ (readOnly ? "disabled" : "")}>
         <h1 className={'view'}>View: {props.view.name}</h1>
         <div className={"controls"} style={{position:'relative', zIndex:2}}>
 
@@ -383,8 +384,7 @@ function PaletteDataComponent(props: AllProps) {
                 let colors: Instance[] = paletteobj.value.map(v=> tinycolor(v));
                 let suggestions = [tinycolor('#ffaaaa')]; // todo: compute according to current row "colors"
                 return palettewrap(prefix, <>
-                    <div className="palette-row">
-
+                    <div className={"palette-row "}>
                         <div className="color-container" style={{maxHeight: 'var(--input-height)', borderRadius: 'var(--radius)'}}>{
                             colors.map((color, i) => <Color key={prefix+i} readOnly={readOnly}
                                                             data={view} field={'palette'} canDelete={!readOnly}
@@ -581,7 +581,7 @@ function PaletteDataComponent(props: AllProps) {
                     let prefix = entry[0];
                     let path: PathControl = entry[1] as any;
                     return palettewrap(prefix,
-                        <div className="palette-row path" title={"todo: proper tooltip.\nedgeHeadSize is in the \"Options\" tab and determines the position of the head.\nBasic math operators are allowed, but the minus and plus must have spaces around them or they will be traated as unary operators.\nx and y are variables local to this path used to scale his shape."}>
+                        <div className="palette-row path">
                             <div className={"value hoverable"} >
                                 <div className={"d-flex w-100"}>
                                     <input className={"value w-100 my-auto"} placeholder={"svg path [d]"} defaultValue={path.value} key={path.value} onBlur={e => {setText(e as any, prefix)}} disabled={readOnly}
@@ -590,10 +590,30 @@ function PaletteDataComponent(props: AllProps) {
                                                if (e.key === Keystrokes.escape) (e.target as any).value = path.value; }}
                                     />
                                 </div>
-                                <div className={"content d-flex w-100"} style={{position: 'relative', backgroundColor: 'whitesmoke'}}>
-                                    <input className={"spacer w-100"}/>
-                                    <label className={"mx-auto"}>x:&nbsp;<input className="x" placeholder={"x"} defaultValue={path.x} disabled={readOnly} onChange={(e)=>setGeneric(e, prefix, "x")}/></label>
-                                    <label className={"mx-auto"}>y:&nbsp;<input className="y" placeholder={"y"} defaultValue={path.y} disabled={readOnly} onChange={(e)=>setGeneric(e, prefix, "y")}/></label>
+                                <div className={"content d-flex w-100 px-2"} style={{position: 'relative', backgroundColor: 'whitesmoke'}}>
+                                    <div className={'d-flex w-100'} style={{flexFlow:'column'}}>
+                                        <Info className={'m-auto'}>{'edgeHeadSize determines the position of the head.' +
+                                            '\nBasic math operators, expressions and view constants are allowed (no dynamic variables),' +
+                                            '\nbut they must be wrapped in parenthesis.' +
+                                            '\nEG: (x * Math.sin(view.constants.pi / 3)).' +
+                                            '\nx and y are variables local to this path used to scale his shape.' +
+                                            '\nThe result of expressions must be a number or a string concatenated to the path.'
+                                        }</Info>
+                                    </div>
+                                    <div className={'d-flex w-100'} style={{position:'relative'}}>
+                                        <label className={"mx-auto d-flex"} style={{flexGrow: '1', minWidth:'0'}}>
+                                            <span className={'my-auto mx-1'}>X:</span>
+                                            <input className="x" placeholder={"x"} defaultValue={path.x}
+                                                   disabled={readOnly} onChange={e => setGeneric(e, prefix, "x")}
+                                                   style={{flexBasis: '0', flexGrow: '1', minWidth:'0'}}/>
+                                        </label>
+                                        <label className={"mx-auto d-flex"} style={{flexGrow: '1', minWidth:'0'}}>
+                                            <span className={'my-auto mx-1'}>Y:</span>
+                                            <input className="y" placeholder={"y"} defaultValue={path.y}
+                                                   disabled={readOnly} onChange={e => setGeneric(e, prefix, "y")}
+                                                   style={{flexBasis: '0', flexGrow: '1', minWidth:'0'}}/>
+                                        </label>
+                                    </div>
                                 </div>
                             </div>
                             {/* <select className={'d-flex'} style={{width: '100px!important'}} value={path.value} disabled={readOnly} onChange={(e)=>setText(e as any, prefix)}>
@@ -605,8 +625,9 @@ function PaletteDataComponent(props: AllProps) {
                             
                             })]}
                             </select>*/}
-                            <select className={'d-flex'} style={{width: '100px!important'}} value={path.value} disabled={readOnly} onChange={(e)=>setText(e as any, prefix)}>
-                                <option style={{fontStyle:'italic', color:'gray'}} value={""}>Custom</option>
+                            <select className={'d-flex'} style={{width: '100px!important'}} value={path.value}
+                                    disabled={readOnly} onChange={(e) => setText(e as any, prefix)}>
+                                <option style={{fontStyle: 'italic', color:'gray'}} value={""}>Custom</option>
                                 {(() => {
                                     const groups: {label: string, options: {k: string, v: string}[]}[] = [];
                                     let currentGroup: {label: string, options: {k: string, v: string}[]} | null = null;

@@ -1,4 +1,4 @@
-import {GObject, Temporary, TODO, U} from "../joiner";
+import {GObject, Temporary, TLCoord, TLObject, TODO, U} from "../joiner";
 import {DPointerTargetable, RuntimeAccessible, windoww, Log, RuntimeAccessibleClass, Dictionary} from "../joiner";
 import React from "react";
 import {radian} from "../joiner/types";
@@ -184,6 +184,16 @@ export abstract class IPoint extends RuntimeAccessibleClass {
             ret.y /= pt.y as number;
         }
         return ret; }
+
+    public modulo(pt2: number | {x?:number, y?:number}, newInstance?: boolean): this {
+        let thiss = newInstance ? this.duplicate() : this;
+        if (typeof pt2 === "number") { thiss.x %= pt2; thiss.y %= pt2; return thiss; }
+        if (pt2.x !== undefined) thiss.x %= pt2.x;
+        if (pt2.y !== undefined) thiss.y %= pt2.y;
+        return thiss; }
+    public remainder(pt2: number | {x?:number, y?:number, w?:number, h?:number}, newInstance?: boolean): this { return this.modulo(pt2, newInstance); }
+    public modulus(pt2: number | {x?:number, y?:number, w?:number, h?:number}, newInstance?: boolean): this { return this.modulo(pt2, newInstance); }
+    public mod(pt2: number | {x?:number, y?:number, w?:number, h?:number}, newInstance?: boolean): this { return this.modulo(pt2, newInstance); }
 
     public multiplyScalar(scalar: number, newInstance: boolean): this {
         Log.e(isNaN(+scalar), 'IPoint.multiply()', 'scalar argument must be a valid number: ', scalar);
@@ -453,6 +463,18 @@ export abstract class ISize<PT extends IPoint = IPoint> extends RuntimeAccessibl
         if (pt2.w !== undefined) thiss.w /= pt2.w;
         if (pt2.h !== undefined) thiss.h /= pt2.h;
         return thiss; }
+
+    public modulo(pt2: number | {x?:number, y?:number, w?:number, h?:number}, newInstance?: boolean): this {
+        let thiss = newInstance ? this.duplicate() : this;
+        if (typeof pt2 === "number") { thiss.x %= pt2; thiss.y %= pt2; thiss.w %= pt2; thiss.h %= pt2; return thiss; }
+        if (pt2.x !== undefined) thiss.x %= pt2.x;
+        if (pt2.y !== undefined) thiss.y %= pt2.y;
+        if (pt2.w !== undefined) thiss.w %= pt2.w;
+        if (pt2.h !== undefined) thiss.h %= pt2.h;
+        return thiss; }
+    public remainder(pt2: number | {x?:number, y?:number, w?:number, h?:number}, newInstance?: boolean): this { return this.modulo(pt2, newInstance); }
+    public modulus(pt2: number | {x?:number, y?:number, w?:number, h?:number}, newInstance?: boolean): this { return this.modulo(pt2, newInstance); }
+    public mod(pt2: number | {x?:number, y?:number, w?:number, h?:number}, newInstance?: boolean): this { return this.modulo(pt2, newInstance); }
 
 
     public tl(): PT { return this.makePoint(this.x,              this.y             ); }
@@ -1183,6 +1205,54 @@ export class Geom extends RuntimeAccessibleClass {
     static lineToSizeIntersection_TODO(size: GraphSize, m: number, startLine: GraphPoint, endIfSegment?: GraphPoint): [] | [GraphPoint] | [GraphPoint, GraphPoint] {
          // todo: use GraphSize.closestIntersection which is close. it is size-segment returning only the closest intersection
         return [];
+    }
+
+    // input like: tl | top left | top-l | center center
+    static parse_TL_string(str0: string): TLObject {
+        let str: string = U.replaceAll(str0, 'center', 'c');
+        str = U.replaceAll(str, 'left', 'l');
+        str = U.replaceAll(str, 'right', 'r');
+        str = U.replaceAll(str, 'top', 't');
+        str = U.replaceAll(str, 'bottom', 'b');
+        str = U.replaceAll(str, '-', '');
+        str = U.replaceAll(str, ' ', '');
+        if (str.length > 2) {
+            Log.ee('Invalid string describing a position. Expected something like "top right", found instead: "' + str0 + '"')
+            return {t: true, l: true}
+        }
+        let ret: GObject = {};
+        for (let i = 0; i < str.length; i++) ret[str[i]] = true;
+        if (ret.b && ret.t) delete ret.b;
+        if (ret.r && ret.l) delete ret.r;
+        return ret;
+    }
+    static serialize_TL_Object(obj: TLObject): TLCoord {
+        if (!obj || typeof obj !== 'object') return "" as any;
+        let ret: string = '';
+        for (let key in obj){
+            if ((obj as GObject)[key] && key.length === 1) ret += key;
+        }
+        if (ret.length === 1) ret += ret;
+        return ret as any;
+    }
+
+    static toRadians(pt: {x?: number, y?: number}): {modulo: number, angle: number} {
+        if (!pt) return {modulo: 0, angle: 0};
+        const x = pt.x || 0;
+        const y = pt.y || 0;
+        return {modulo: Math.hypot(x, y), angle: Math.atan2(y, x)}; // atan2(0,0) === 0 (JS spec)
+    }
+    static fromRadians(polar: { modulo: number; angle: number }): IPoint {
+        if (!polar) return new Point(0, 0);
+        const modulo = polar.modulo || 0;
+        const angle  = polar.angle || 0;
+
+        if (modulo < 0) {
+            Log.ee("Geom.fromRadians(): Modulo cannot be negative", polar);
+            return new Point(0, 0);
+        }
+
+        return new Point(modulo * Math.cos(angle), modulo * Math.sin(angle));
     }
 }
 

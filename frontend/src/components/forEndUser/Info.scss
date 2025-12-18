@@ -1,0 +1,21 @@
+.info-component{
+  font-size: 1.1rem;
+  text-align: center;
+
+  .content{
+    font-size: 0.85rem;
+    background: whitesmoke;
+    white-space: pre;
+    transform: translateX(-50%);
+    color: black;
+    top: 100%;
+  }
+}
+
+.palette-row{
+  .info-component{
+    .content{
+      // transform: translateX(max(-50%, -150px));
+    }
+  }
+}

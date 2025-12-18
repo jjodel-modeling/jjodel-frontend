@@ -50,13 +50,30 @@
   position: relative;
   z-index: 1;
 }
+.style-tab.disabled{
+  input, .bi-plus-lg, .commandbar-btn, .add-palette-item>.btn {
+    cursor: not-allowed !important;
+  }
+  .add-palette-item, .palette-row .color-picker-root{
+    &:hover::after {
+      width: max-content;
+      text-shadow: var(--text-shadow-e);
+      position: absolute;
+      content: '⚠️This element is read only⚠️';
+      top: -1lh;
+      display: inline-block;
+      left: 0;
+      font-size: 1.25em;
+      font-weight: bold;
+      z-index: 1111;
+    }
+  }
+}
 
-.palette-row {
-
+.palette-row{
   .color-picker-root{
     position: relative;
   }
-
 
   .color-container{
     outline: 1px solid var(--palette-g);

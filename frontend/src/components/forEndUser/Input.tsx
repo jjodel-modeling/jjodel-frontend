@@ -20,6 +20,7 @@ import {
 import {useStateIfMounted} from 'use-state-if-mounted';
 import './inputselect.scss';
 import { Tooltip } from './Tooltip';
+import {GenericProps} from "../../joiner/types";
 
 export function getSelectOptions_raw(data: LPointerTargetable, field: string): MultiSelectOptGroup[] {
     if (!data) return [];
@@ -36,8 +37,12 @@ function errorUpdate(msg: string, e: Error){
     return e;
 }
 
-export function getSelectOptions(data: LPointerTargetable, field: string, options: ReactNode, children?: ReactNode): ReactNode {
-    if (!options && Array.isArray(children) && children.length > 0) options = children;
+export function getSelectOptions(data: LPointerTargetable, field: string, options: ReactNode, children?: ReactNode, id_debug?:string): ReactNode {
+    if (!options && children && typeof children === 'object') {
+        if (!Array.isArray(children) || children.length > 0) {
+            options = children;
+        }
+    }
     if (options) {
         if (Array.isArray(options)) {
             return options.map(d => {
@@ -72,6 +77,7 @@ export function InputComponent(props: AllProps) {
     let [value, setValue] = useStateIfMounted<PrimitiveType | PrimitiveType[] | LPointerTargetable>(oldValue);
     let [visible, setVisible] = useStateIfMounted<boolean>(props.clickHidden ? false : true);
 
+    if (U.isError(data) || data && typeof data !== 'object') throw errorUpdate("Error on <" + (U.uppercaseFirstLetter(props.tag || "Input"))+"> data props invalid", data);
     if (U.isError(value)) throw errorUpdate("Error on <" + (U.uppercaseFirstLetter(props.tag || "Input"))+"> value getter", value);
     const [isTouched, setIsTouched] = useStateIfMounted(false);
     const inputRef = useRef<Element | null>(null);
@@ -280,7 +286,7 @@ export function InputComponent(props: AllProps) {
         inputProps = {...rootprops, ...inputProps};
         wrap = false;
     }
-
+    if ((props as any).id === 'grid') console.log('select get options', {data, field, props});
     switch (props.tag){
         case "textarea": input = <textarea {...inputProps}>{inputProps.value}</textarea>; break;
         case "select": /* test */
@@ -309,7 +315,8 @@ export function InputComponent(props: AllProps) {
                 />;
             }
             else {
-                let options = getSelectOptions(data, field, props.options, props.children);
+                let options = getSelectOptions(data, field, props.options, props.children, props.id);
+                if ((props as any).id === 'grid') console.log('select get options 2', {data, field, props, options});
                 if (U.isError(options)) throw errorUpdate("Error on <Select> options getter", options);
                 input = <select {...inputProps}>
                     <option value="" disabled selected>{props.placeholder ? props.placeholder : 'Select your option'}</option>
@@ -375,8 +382,7 @@ export function InputComponent(props: AllProps) {
     </label>);
     */
 }
-
-export interface InputOwnProps {
+export interface InputOwnProps extends GenericProps {
     data?: LPointerTargetable | DPointerTargetable | Pointer<DPointerTargetable, 1, 1, LPointerTargetable>;
     field?: string;
     // DANGER: use the data provided in parameters instead of using js closure, as the proxy accessed from using closure won't be updated in rerenders.
@@ -388,8 +394,6 @@ export interface InputOwnProps {
     type?: 'checkbox'|'color'|'date'|'datetime-local'|'email'|'file'|'image'|'month'|'number'|'password'
         |'radio'|'range'|'tel'|'text'|'time'|'url'|'week'
         |'checkbox3'|'toggle'|'switch'|'slider';
-    className?: string;
-    style?: GObject;
     readOnly?: boolean;
     tooltip?: boolean | ReactNode;
     hidden?: boolean;
@@ -397,10 +401,8 @@ export interface InputOwnProps {
     autosize?: boolean;
     inputClassName?: string;
     inputStyle?: GObject;
-    key?: React.Key | null;
     placeholder?: string;
     tag?: string;
-    children?: ReactNode;
 }
 
 export interface SelectOwnProps extends Omit<InputOwnProps, 'setter'> {

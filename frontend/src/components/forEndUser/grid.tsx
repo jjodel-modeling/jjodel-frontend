@@ -1,0 +1,153 @@
+
+import React, {ReactNode} from "react";
+import {ISize, L, LGraph, Pointers} from "../../joiner";
+
+type radians = number;
+
+type InfiniteSvgGridProps = {
+    node: LGraph;
+    offset?: {x: number, y: number};
+    grid?: {x: number, y: number | radians, type: string};
+    zoom?: {x: number, y: number};
+};
+
+
+export const Grid: React.FC<InfiniteSvgGridProps> = (props) => {
+    let node = props.node;
+    //@ts-ignore
+    if (Pointers.isPointer(node)) node = L.from(node);
+    const offset = props.offset || node.offset;
+    const grid = props.grid || node.grid;
+    if (!grid.x) grid.x = 0;
+    if (!grid.y) grid.y = 0;
+    const zoom = props.zoom || node.zoom;
+    let {x, y} = grid || {x:0, y:0};
+    // if graph size is unknown, i use 8k monitors fullscreen (7680 × 4320)
+    if (grid.type === 'polar') return PolarGrid(grid as LGraph['grid'], offset, zoom, ('h' in offset ? offset as any : {...offset, w:7680, h:4320}));
+    // let size = node.size; NO! it is 0,0,0,0; use offset instead
+    /*if (x < 0) { x = 0; }
+    if (y < 0) { y = 0; }
+    if (zoom.x <= 0) { zoom.x = 1; }
+    if (zoom.y <= 0) { zoom.y = 1; }*/
+
+    const transform = `translate(${-offset.x}, ${-offset.y}) scale(${zoom.x}, ${zoom.y})`;
+
+    return (
+        <svg width="100%" height="100%" style={{ position: "absolute", inset: 0 }}>
+            <defs>
+                {/* Minor grid */}
+                <pattern
+                    id="minor-grid"
+                    width={x}
+                    height={y}
+                    patternUnits="userSpaceOnUse"
+                    patternTransform={transform}
+                >
+                    <path
+                        d={`M ${x} 0 L 0 0 0 ${y}`}
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth={1}
+                        vectorEffect="non-scaling-stroke"
+                    />
+                </pattern>
+
+                {/* Major grid */}
+                <pattern
+                    id="major-grid"
+                    width={x * 10}
+                    height={y * 10}
+                    patternUnits="userSpaceOnUse"
+                    patternTransform={transform}
+                >
+                    <path
+                        d={`M ${x * 10} 0 L 0 0 0 ${y * 10}`}
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth={2}
+                        vectorEffect="non-scaling-stroke"
+                    />
+                </pattern>
+            </defs>
+
+            <rect width="100%" height="100%" fill="url(#minor-grid)" />
+            <rect width="100%" height="100%" fill="url(#major-grid)" />
+        </svg>
+    );
+};
+
+function PolarGrid(grid: LGraph['grid'], offset: { x: number; y: number }, zoom: { x: number; y: number}, size: ISize){
+    let angleStep = grid.y;
+    let rStep = grid.x;
+
+    let safetyMargin = 1.414 * 1.1;// sqrt(2) for diagonals (with offset i measure circles at straight axis, but angles can hold more distant circles), with 1.1 extra margin.
+    const maxRadius = Math.max((offset.x + size.w), (offset.y + size.h)) * safetyMargin; //rStep * 100;
+    const minRadius = Math.min((offset.x), (offset.y)) / safetyMargin; //rStep * 100;
+
+    const transform = `translate(${offset.x}, ${offset.y}) scale(${zoom.x}, ${zoom.y})`;
+
+    console.log('radial grid',{minRadius, maxRadius, offset, size, })
+    const radialLines = (thick: boolean) => {
+        const step = thick ? angleStep * 10 : angleStep;
+        const strokeWidth = thick ? 2 : 1;
+        return Array.from(
+            { length: Math.ceil(Math.PI * 2 / step) },
+            (_, i) => {
+                const a = i * step;
+                const x = Math.cos(a) * maxRadius;
+                const y = Math.sin(a) * maxRadius;
+                if (y < step*0.0001) return null; // skip near overlapping last line due to rounding errors.
+
+                console.log('radial grid line ' + i, {a, x, y, step, maxRadius});
+                return (
+                    <line
+                        key={`${thick}-${i}`}
+                        x1={0}
+                        y1={0}
+                        x2={x}
+                        y2={y}
+                        stroke="currentColor"
+                        strokeWidth={strokeWidth}
+                        vectorEffect="non-scaling-stroke"
+                    />
+                );
+            }
+        );
+    };
+
+    const circles = (thick: boolean) => {
+        const step = thick ? rStep * 10 : rStep;
+        const strokeWidth = thick ? 2 : 1;
+        let arr: ReactNode[] = [];
+        let i: number = 0;
+        for (let radius = minRadius/* || step*/; radius <= maxRadius; radius+=step) {
+            console.log('radial grid circle ' + i, {radius, minRadius, step, maxRadius});
+            if (!thick && i++%10 === 0) return null; // skip thin lines where a thick lines should be
+            arr.push(<circle
+                key={`${thick}-${i}`}
+                cx={0}//-offset.x}
+                cy={0}//-offset.y}
+                r={radius}
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={strokeWidth}
+                vectorEffect="non-scaling-stroke"
+            />)
+        }
+        return arr;
+    };
+
+    return (
+        <svg width="100%" height="100%" style={{ position: "absolute", inset: 0 }}>
+            <g transform={transform}>
+                {/* Minor grid */}
+                {circles(false)}
+                {radialLines(false)}
+
+                {/* Major grid */}
+                {circles(true)}
+                {radialLines(true)}
+            </g>
+        </svg>
+    );
+}

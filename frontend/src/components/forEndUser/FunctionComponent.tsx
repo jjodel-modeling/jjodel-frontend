@@ -52,6 +52,11 @@ function parseFunction(props: AllProps): FunctionComponentState {
     Log.exDev(!props.data, "FunctionComponent: missing data props", {props});
     let getter = props.getter || ((a: GObject) => a[props.field]); // ((lobj: GObject<LPointerTargetable>, key: string) => U.wrapUserFunction(lobj[key]));
     let val: string = getter(props.data);
+    if (val && typeof val !== 'string') {
+        let msg = "FunctionComponent error:\nval "+(props.getter ? " from getter " : '')+"is not a string"
+        Log.exDevv(msg, {val, props, getter:props.getter, data:props.data, field:props.field});
+        val = msg;
+    }
     if (!val || val.length <= 2) val = "(ret)=>{\n    // ** declarations here ** //\n\n}"; // fallback for empty string and {}
     else val = val.trim();
     let txtparts = val.split("// ** declarations here ** //");

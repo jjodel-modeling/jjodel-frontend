@@ -1,5 +1,5 @@
 import React, {Dispatch} from 'react';
-import {DState, DViewElement, LPointerTargetable, LViewElement, Pointer} from '../../../../joiner';
+import {DState, DViewElement, LPointerTargetable, LViewElement, Pointer, Select} from '../../../../joiner';
 import {FakeStateProps} from "../../../../joiner/types";
 import {connect} from "react-redux";
 
@@ -12,7 +12,29 @@ function GraphDataComponent(props: AllProps) {
         <h5>Graph</h5>
         <div className={'px-2 no-padding-left'}>
             <div className={'input-container'}>
-                <b className={'me-2'}>No options for Graph so far...</b>
+                <b className={'me-2'}>Grid coordinates:</b>
+                <Select data={view} getter={l => l.grid?.type || "cartesian"} setter={(v, l) => l.grid = {type: v}}>
+                    <optgroup label={"Coordinate type"}></optgroup>
+                    <option value={'cartesian'}>Cartesian</option>
+                    <option value={'polar'}>Polar</option>
+                </Select>
+            </div>
+            <div className={'input-container'}>
+                <b className={'me-2'}>Grid snaps to:</b>
+                <Select data={view} getter={(l) => l.grid?.center || "cc"}
+                        setter={(val, l) => l.grid = {center: val} as any}>
+                    <optgroup label={"Coordinate type"}>
+                        <option value={'cc'}>center</option>
+                        <option value={'tt'}>top</option>
+                        <option value={'ll'}>left</option>
+                        <option value={'bb'}>bottom</option>
+                        <option value={'rr'}>right</option>
+                        <option value={'tl'}>top left</option>
+                        <option value={'tr'}>top right</option>
+                        <option value={'bl'}>bottom left</option>
+                        <option value={'br'}>bottom right</option>
+                    </optgroup>
+                </Select>
             </div>
         </div>
     </section>);
@@ -20,14 +42,16 @@ function GraphDataComponent(props: AllProps) {
 
 interface OwnProps {
     viewID: Pointer<DViewElement>;
-    readonly : boolean;
+    readonly: boolean;
 }
 
 interface StateProps {
     view: LViewElement;
 }
 
-interface DispatchProps {}
+interface DispatchProps {
+}
+
 type AllProps = OwnProps & StateProps & DispatchProps;
 
 function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {

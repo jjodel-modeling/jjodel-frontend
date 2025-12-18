@@ -22,8 +22,8 @@ function TemplateData(props: AllProps) {
             <Function
                 data={view}
                 field={"constants"}
-                jsxLabel={<label
-                className={"d-block jj-editor-title"}>Constants</label>}
+                getter={(l)=> (l as LViewElement).__raw.constants || ''}
+                jsxLabel={<label className={"d-block jj-editor-title"}>Constants</label>}
                 payoff={'Evaluated once'}
                 readOnly={readOnly}
             />

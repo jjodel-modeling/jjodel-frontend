@@ -8,6 +8,7 @@
   "homepage-local-deploy": "https://mdegroup.github.io/",
   "homepage-gitpages-deploy": "https://mdegroup.github.io/jjodel/",
   "dependencies": {
+    "@floating-ui/react": "^0.27.16",
     "@fontsource-variable/inter": "^5.2.6",
     "@monaco-editor/react": "4.4.6",
     "@popperjs/core": "^2.11.8",
@@ -77,7 +78,7 @@
     "serve": "serve -s build",
     "posti": "npm i react-json-view --force --no-save",
     "______________________________________deploy________________________________": "",
-    "build": "react-app-rewired build",
+    "build": "set NODE_OPTIONS=--openssl-legacy-provider && react-app-rewired build",
     "postbuild": "",
     "dev": "docker-compose -f docker-compose.dev.yml up",
     "________________________________other_build_modes___________________________": "",

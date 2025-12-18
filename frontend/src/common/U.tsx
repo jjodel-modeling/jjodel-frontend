@@ -1,5 +1,6 @@
 // import * as detectzoooom from 'detect-zoom'; alternative: https://www.npmjs.com/package/zoom-level
 // import {Mixin} from "ts-mixer";
+import type {NestedArray} from "../joiner";
 import {Any, DClass, DGraphElement, LClass, LGraphElement} from "../joiner";
 import {
     AbstractConstructor,
@@ -1401,6 +1402,46 @@ export class U {
         return true;
     }
 
+    static parseParenthesis(str: string, opening: string = '(', closing: string = ')', includeParenthesis: boolean = false): NestedArray<string>{
+        const root: NestedArray<string> = [];
+        const stack: NestedArray<string> = [root];
+        let start = 0; // start index of next text fragment
+
+        const pushFragment = (endIndex: number) => {
+            if (endIndex > start) {
+                // Only push non-empty fragment
+                const frag = str.substring(start, includeParenthesis ? endIndex + 1 : endIndex);
+                newArr.push(frag);
+            }
+        };
+        let newArr: NestedArray<string> = [];
+        for (let i = 0; i < str.length; i++) {
+            const ch = str[i];
+
+            if (ch === opening) {
+                pushFragment(i);         // push text before "("
+                start = includeParenthesis ? i : i + 1;           // next text starts right after "("
+                stack.push(newArr = []);
+            } else if (ch === closing) {
+                pushFragment(i);         // push text before ")"
+                start = includeParenthesis ? i : i + 1;           // next fragment begins after ")"
+
+                // NB: stack only has NestedArray until the leaves, but we never reach the leaves here, we are at level -2 from leaves.
+                // (typeof stack[i] = at least string[] or more nested)
+                const completed = stack.pop() as NestedArray<string>;
+                (stack[stack.length - 1] as NestedArray<string>).push(completed);
+            }
+        }
+
+        // Remaining text after the last parenthesis
+        pushFragment(str.length);
+
+        return root;
+        // Example:
+        // console.log(parseNested("aa b ( dd e (f g)) h (i)"));
+    }
+
+    static isNumericString(o: any): boolean { return !isNaN(o); }
     // returns true only if parameter is already a number by type. UU.isNumber('3') will return false
     static isNumber(o: any): o is number { return typeof o === "number" && !isNaN(o); }
     static isPrimitive(o: any, returnIfNull=true, returnIfUndefined=true, returnIfSymbol = false): o is PrimitiveType {

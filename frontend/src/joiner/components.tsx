@@ -24,6 +24,7 @@ export { Polygon, Circle, Cross, Decagon,
     Octagon, Heptagon, Pentagon, Rectangle, Septagon,
     Square, Star, SimpleStar, DecoratedStar, Trapezoid, Triangle
 } from  "../graph/vertex/Shapes";
+
 export {DefaultNode, DefaultNodeComponent} from "../graph/defaultNode/DefaultNode"; // require graphelement
 export {GraphsContainer, GraphsContainerComponent} from "../graph/graph/graphContainer"; // require vertex, graph
 export {Edge, EdgeComponent,} from "../graph/damedges/damedge";
@@ -37,6 +38,8 @@ export {T2M, M2T} from "../components/forEndUser/MTM";
 export {Selector} from "../components/forEndUser/Selector";
 export {View} from "../components/forEndUser/Aliases";
 export {Try} from "../components/forEndUser/Try";
+export {Grid} from "../components/forEndUser/grid";
+
 
 // export {Image} from "../components/forEndUser/Image";
 

@@ -1,4 +1,3 @@
-
 import {Mixin} from "ts-mixer";
 import type {
     DEdge,
@@ -90,27 +89,28 @@ import type {
     WTypedElement,
     WValue
 } from "../model/logicWrapper";
-import {
+import type {
     CClass,
     Constructor, Dependency,
     Dictionary,
     DocString,
-    GObject, type Info,
+    GObject,
     InitialVertexSize,
     InitialVertexSizeFunc,
     InitialVertexSizeObj,
     orArr,
-    Proxyfied,
+    Proxyfied, TLCoord,
     unArr
 } from "./types";
-import {EdgeBendingMode, EdgeGapMode, NodeTypes, PrimitiveType} from "./types";
 import type {
     DViewElement,
     LViewElement,
     WViewElement,
 } from "../view/viewElement/view";
+import {EdgeBendingMode, EdgeGapMode, NodeTypes, PrimitiveType} from "./types";
 import {LogicContext, LogicContext2, type TargetableProxyHandler as TypeTargetableProxyHandler} from "./proxy";
 import {
+    Info,
     Action,
     CreateElementAction,
     Defaults,
@@ -545,6 +545,16 @@ export class UserHistory{
     }
 }
 
+@RuntimeAccessible('TLObject')
+export class TLObject{
+    static cname = 'TLObject';
+    l?: boolean;
+    r?: boolean;
+    b?: boolean;
+    t?: boolean;
+    c?: boolean;
+}
+
 let canFireActions: boolean = true;
 @RuntimeAccessible('Constructors')
 export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
@@ -976,7 +986,11 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
     DEdge(): this {
         let thiss: DVoidEdge = this.thiss as any;
         return this; }
-    DVertex(): this { return this; }
+    DVertex(): this {
+        let thiss: DVoidVertex & DVertex = this.thiss as any;
+        thiss.snap = new GraphPoint(1, 1);
+        return this;
+    }
     DVoidEdge(start: DGraphElement["id"] | DGraphElement | LGraphElement | DModelElement["id"] | DModelElement | LModelElement,
               end: DGraphElement["id"] | DGraphElement | LGraphElement | DModelElement["id"] | DModelElement | LModelElement,
               longestLabel?: DEdge["longestLabel"], labels?: DEdge["labels"]): this {
@@ -1068,6 +1082,8 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         let VersionFixer: typeof TypeVersionFixer = windoww.VersionFixer;
 
         thiss.version = VersionFixer.get_highestversion();
+        thiss.snap = new GraphPoint(1, 1);
+        thiss.grid = {x: 0, y: 0, type: "cartesian", "center": "cc"};
         thiss.name = name;
         thiss.appliableToClasses = appliableToClasses;
         thiss.appliableTo = 'Any';
@@ -1257,6 +1273,7 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         thiss.zoom = new GraphPoint(1, 1);
         thiss.offset = new GraphSize(0, 0);  // GraphSize.apply(this, [0, 0, 0 ,0]);
         thiss._subMaps = {zoom: true, graphSize: true}
+        thiss.grid = {x: 0, y: 0, type: 'cartesian', center: 'cc'};
 
         const user: LUser = LUser.getUser();
         const project = LProject.getProject();

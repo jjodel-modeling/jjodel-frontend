@@ -15,7 +15,6 @@ import type {U as UType} from "../common/U";
 import Handlebars from 'handlebars';
 
 import type {Log as LogType} from "../common/Log";
-
 var windoww = (window as any);
 windoww.windoww = windoww;
 windoww.Handlebars = Handlebars;
@@ -28,6 +27,7 @@ windoww.prxml2json = prxml2json;
 
 
 var pathDataPolyfill = require("path-data-polyfill") // needs to be required (and automatically executed) before the creation of any svg element
+let useless = pathDataPolyfill; // just to force compiler to not ignore the import for not being used
 
 
 /*
@@ -54,11 +54,13 @@ export type {GetPath} from './proxy';
 export type {Subtract, Class, Empty, Json, GObject, bool, Dictionary, Proxyfied, Temporary, RawObject, NotFoundv,
     NotFound, DocString, nbool, nnumber, nstring, Nullable, TODO, UnixTimestamp, UObject, IsActually,
     Function, Function2, InOutParam,
-    unArr, orArr, PrimitiveType, CClass, NonEmptyString, Overlap, Info,
-    Constructor, AbstractConstructor, ApiResponse, Any, MultiSelectOptGroup, MultiSelectOption
+    unArr, orArr, PrimitiveType, CClass, NonEmptyString, Overlap,
+    Constructor, AbstractConstructor, ApiResponse, Any, MultiSelectOptGroup, MultiSelectOption, NestedArray, TLCoord, TLCoordExtended,
+    ObjectWithoutPointers
 } from "./types";
 
 export type {Pointer, PtrString, getWParams, WUser, WProject, WtoD, WtoL, DtoW, LtoW, LtoD, DtoL, PackArr, Pack, Pack1, EPSize,
+    TLObject,
 } from "./classes";
 export type { WAnnotation, WNamedElement, WFactory_useless_, WClass, WAttribute, WClassifier, WDataType, WMap, WModel,
     WModelElement, WEnumerator, WObject, WPackage, WOperation, WValue, WParameter, WReference, WTypedElement, WEnumLiteral, WStructuralFeature,
@@ -84,7 +86,11 @@ export {Constructors, JsType, RuntimeAccessibleClass, DPointerTargetable,
     ViewScore,
     UserHistory,
     Language,
-    LUser, DUser, DProject, LProject, Pointers, PointedBy, PendingPointedByPaths, CoordinateMode, EdgeHead, EGraphElements, EModelElements, transientProperties, ViewEClassMatch} from "./classes";
+    LUser, DUser, DProject, LProject, Pointers, PointedBy, PendingPointedByPaths, CoordinateMode, EdgeHead, EGraphElements, EModelElements, transientProperties,
+    ViewEClassMatch
+} from "./classes";
+
+export {Info} from '../model/Info';
 
 // export type {Pointer} from './typeconverter';
 export {getPath, TargetableProxyHandler, MyProxyHandler, MapProxyHandler, LogicContext, LogicContext2} from './proxy';

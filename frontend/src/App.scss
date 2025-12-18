@@ -293,11 +293,21 @@ body{
   --text-outline-offset: 2px;
   --text-outline-blur: 0;
   --text-outline-color: #000;
+  // nb: text-outline would be better, but it cannot override inner variables, it takes always the variables here.
+  // would need to re-copy the definition of text-outline in target element (other than redefining locally the variables)
   --text-outline:
           calc(var(--text-outline-offset) * +1) calc(var(--text-outline-offset) * +1) var(--text-outline-blur) var(--text-outline-color),
           calc(var(--text-outline-offset) * -1) calc(var(--text-outline-offset) * -1) var(--text-outline-blur) var(--text-outline-color),
           calc(var(--text-outline-offset) * +1) calc(var(--text-outline-offset) * -1) var(--text-outline-blur) var(--text-outline-color),
           calc(var(--text-outline-offset) * -1) calc(var(--text-outline-offset) * +1) var(--text-outline-blur) var(--text-outline-color);
+
+  --text-shadow: var(--text-shadow-b);
+  --text-shadow-b: 2px 2px 3px #000000, 2px -2px 3px #000000, -2px 2px 3px #000000, -2px -2px 3px #000000, 2px 0px 3px #000000, 0px 2px 3px #000000, -2px 0px 3px #000000, 0px -2px 3px #000000;
+  --text-shadow-d: 2px 2px 3px #ddd, 2px -2px 3px #ddd, -2px 2px 3px #ddd, -2px -2px 3px #ddd, 2px 0px 3px #ddd, 0px 2px 3px #ddd, -2px 0px 3px #ddd, 0px -2px 3px #ddd;
+  --text-shadow-e: 2px 2px 3px #eee, 2px -2px 3px #eee, -2px 2px 3px #eee, -2px -2px 3px #eee, 2px 0px 3px #eee, 0px 2px 3px #eee, -2px 0px 3px #eee, 0px -2px 3px #eee;
+  --text-shadow-f: 2px 2px 3px #fff, 2px -2px 3px #fff, -2px 2px 3px #fff, -2px -2px 3px #fff, 2px 0px 3px #fff, 0px 2px 3px #fff, -2px 0px 3px #fff, 0px -2px 3px #fff;
+  --text-shadow-w: var(--text-shadow-f);
+  --text-shadow-g1: 1px 1px 0px #777777, 1px -1px 0px #777777, -1px 1px 0px #777777, -1px -1px 0px #777777, 1px 0px 0px #777777, 0px 1px 0px #777777, -1px 0px 0px #777777, 0px -1px 0px #777777;
 }
 
 

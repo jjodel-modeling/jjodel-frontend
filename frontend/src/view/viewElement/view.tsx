@@ -33,7 +33,7 @@ import {
     Selectors,
     SetFieldAction, SetRootFieldAction,
     ShortAttribETypes,
-    store,
+    store, TLCoord,
     TRANSACTION,
     U, Uobj, ViewEClassMatch, ViewTransientProperties,
     windoww
@@ -258,6 +258,8 @@ export class DViewElement extends DPointerTargetable {
     /* private */ compiled_css!: string;
     /* private */ css_MUST_RECOMPILE!: boolean;
     father?: Pointer<DViewElement>;
+    snap!: GraphPoint;
+    grid!: {x?: number, y?: number, type?: "radial" | "cartesian", "center"?: TLCoord};
     version!: number; // only meaningful for default views, required to check if view needs to be updated.
 /*
     public static new(name: string, jsxString: string, father?: DViewElement, defaultVSize?: GraphSize, usageDeclarations: string = '', constants: string = '',
@@ -387,6 +389,9 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
     get_isOverlay(c: Context): this["isOverlay"] { return this.get_isExclusiveView(c); }
     set_isOverlay(val: this["isOverlay"], c: Context): boolean { return this.set_isExclusiveView(val, c); }
 
+    snap!: GraphPoint;
+    grid!: {x?: number, y?: number, type?: "radial" | "cartesian", "center"?: TLCoord};
+
     label!: this["longestLabel"];  // should never be read change their documentation in write only. their values is "read" in this.segments
     longestLabel!: labeltype; // (e:LVoidEdge, segment: EdgeSegment, allNodes: LEdge["allNodes"], allSegments: EdgeSegment[]) => PrimitiveType;
     labels!: labeltype; // (e:LVoidEdge, segment: EdgeSegment, allNodes: LEdge["allNodes"], allSegments: EdgeSegment[]) => PrimitiveType;
@@ -470,7 +475,7 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
         return SetFieldAction.new(c.data, "isExclusiveView", !!val, '', false);
     }
 
-    constants?: string;
+    constants!: GObject;
     __info_of__constants: Info = {todo:true, isGlobal: true, type: "Function():Object", label:"constants declaration",
         txt:<div>Data used in the visual representation, meant to be static values evaluated only once when the view is first applied.<br/>
         Check default value view for an example.<br/>
@@ -639,51 +644,37 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
                     s += "\t--" + paletteName + (i+1) + ": " + rgba + ';\n';
                 }
             } else if (palette0.type === 'path'){
-                let palette: PathControl = palette0;
-                let val = U.replaceAll(palette.value, 'view.', '');
-                val = U.replaceAll(val, 'this.', '');
-                val = U.replaceAll(val, 'x', palette.x);
-                val = U.replaceAll(val, 'y', palette.y);
-                val = U.replaceAll(val, '+', ' +');
-                val = U.replaceAll(val, '-', ' -'); // important: cannot add space post-dash or it's harder to distinguish unary and binary -
-                val = U.replaceAll(val, '/', ' / ');
-                val = U.replaceAll(val, '*', ' * ');
-                val = U.replaceAll(val, '.', ' .');// for comma separators (.5.5.5) is short for (0.5, 0.5 0.5) and data.variable.pathing
-                let valarr: (string | number)[] = val.split(/[,\s]/);
-                // [] not allowed
-                valarr = (valarr as string[]).map(val => {
-                    if (!isNaN(+val)) return val; // it's a number
-                    // token that it's not a number, svg letter or data.state.something variable
-                    let patharr: string[] = val.split('.');
-                    let curr: GObject = c.data;
-                    // check and resolve for JOM.navigational.variables.
-                    for (let pathseg of patharr) {
-                        curr = curr[pathseg];
-                        Log.e(!curr && (val.length > 1 || patharr.length > 1), "invalid variable path in css path control", {token:val, view:c.data.name});
-                        if (!curr) break;
-                    }
-                    if (typeof curr === "object" || (typeof curr === "undefined" && (val.length > 1 || patharr.length > 1))) {
-                        Log.ee("invalid variable path in css path control", {token: val, view: c.data.name});
-                        return '';
-                    }
-                    else val = curr || val;
-                    return val;
-                }).filter(p=>!!p);
+                // check and resolve for JOM.navigational.variables.
+                try {
+                    let palette: PathControl = palette0;
+                    let val = palette.value;
+                    // val = U.replaceAll(val, 'view.', '');
+                    // val = U.replaceAll(val, 'this.', '');
+                    // val = U.replaceAll(val, 'x', palette.x);
+                    // val = U.replaceAll(val, 'y', palette.y);
+                    let pathArr = U.parseParenthesis(val, '(', ')', true);
+                    console.log('evaluating path variables pre:', {val, pre: [...pathArr], post:pathArr});
+                    pathArr.map(e=> {
+                        e = Array.isArray(e) ? e.join('') : e;
+                        if (e[0] !== '(') { // outside of parenthesis, i only replace x, y
+                            e = U.replaceAll(e, 'x', palette.x);
+                            e = U.replaceAll(e, 'y', palette.y);
+                            return e;
+                        }
 
-                for (let i = 0 ; i < valarr.length; i++) {
-                    let val = valarr[i];
-                    switch (val) { // i avoid subtracting L 1 -1 with spaces. it's unary if doesn't have a postfix space.
-                        default: continue;
-                        case '*': valarr[i] = +valarr[i-1] * +valarr[i+1]; valarr[i-1] = valarr[i+1] = ''; break;
-                        case '/': valarr[i] = +valarr[i-1] / +valarr[i+1]; valarr[i-1] = valarr[i+1] = ''; break;
-                        case '+': valarr[i] = +valarr[i-1] + +valarr[i+1]; valarr[i-1] = valarr[i+1] = ''; break;
-                        case '-': valarr[i] = +valarr[i-1] - +valarr[i+1]; valarr[i-1] = valarr[i+1] = ''; break;
-                    }
+                        // inside parenthesis, i eval
+                        let constants: GObject = this.get_constants(c);
+                        let context: GObject =  {...constants, constants, 'this': c.proxyObject, view: c.proxyObject, x: palette.x, y: palette.y};
+                        return U.evalInContextAndScope(e, context);
+                    })
+                    val = pathArr.join('');
+                    val = "'"+val+"'";
+                    if (allowLESS) s += "\t@" + paletteName + ": " + val + ';\n';
+                    s += "\t--" + paletteName + ': ' + val + ';\n';
+                } catch (e) {
+                    Log.exx('Error evaluating View "'+c.data.name+'" paths', e);
                 }
-                val = valarr.filter(p=>!!p).join(' ');
-                val = "'"+val+"'";
-                if (allowLESS) s += "\t@" + paletteName + ": " + val + ';\n';
-                s += "\t--" + paletteName + ': ' + val + ';\n';
+
             }
             else {
                 // number or text
@@ -1145,10 +1136,10 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
     // public get__parsedConstants(c: Context): this['_parsedConstants'] { return c.data._parsedConstants || {}; }
 
     public get_constants(c: Context): this['constants'] {
-        return c.data.constants;
+        return transientProperties.view[c.data.id]?.constants || {}
     }
 
-
+    /*
     public static parseConstants(funcCode?: string): GObject | undefined {
         if (!funcCode) return {};
         let parsedConstants: GObject = {};
@@ -1163,12 +1154,14 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
             return undefined;
         }
         return parsedConstants;
-    }
+    }*/
 
-    public set_constants(value: this['constants'], c: Context): boolean {
-        if (value === c.data.constants) return true;
+    public set_constants(value: string | this['constants'], c: Context): boolean {
+        if (!value) value = '';
+        if (typeof value === 'object') value = JSON.stringify(value);
+        if (value === c.data.constants as any) return true;
         TRANSACTION('change '+this.get_name(c)+'.constants', ()=> {
-            SetFieldAction.new(c.data.id, 'constants', value, '', false);
+            SetFieldAction.new(c.data.id, 'constants', value as string, '', false);
             SetRootFieldAction.new('VIEWS_RECOMPILE_constants', c.data.id, '+=', false);
             SetFieldAction.new(c.data.id, "css_MUST_RECOMPILE", true, '', false);
         })

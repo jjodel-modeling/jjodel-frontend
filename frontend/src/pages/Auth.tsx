@@ -598,7 +598,7 @@ return(<section className={`w-100 h-100 login bg ${action === 'register' ? 'regi
                 <button className={'d-block btn btn-primary p-1 mx-auto mt-3 login-button'} type={'submit'} onClick={()=>setDirty(true)}>
                     Login
                 </button>
-                {(window.location.host.includes('localhost')) &&
+                {(window.location.host.includes('localhost') || window.location.href.indexOf('http')!==0) &&
                     <button className={'d-block btn btn-primary p-1 mx-auto mt-3 login-button'} type='button' onClick={(e) => offline()}>Offline mode</button>
                 }
             </>}
