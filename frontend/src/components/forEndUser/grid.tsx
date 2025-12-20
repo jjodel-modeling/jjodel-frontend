@@ -30,7 +30,7 @@ export const Grid: React.FC<InfiniteSvgGridProps> = (props) => {
     if (zoom.x <= 0) { zoom.x = 1; }
     if (zoom.y <= 0) { zoom.y = 1; }*/
 
-    const transform = `translate(${-offset.x}, ${-offset.y}) scale(${zoom.x}, ${zoom.y})`;
+    const transform = `scale(${zoom.x}, ${zoom.y}) translate(${offset.x}, ${offset.y})`; // scale(${zoom.x}, ${zoom.y});
 
     return (
         <svg width="100%" height="100%" style={{ position: "absolute", inset: 0 }}>
@@ -44,7 +44,9 @@ export const Grid: React.FC<InfiniteSvgGridProps> = (props) => {
                     patternTransform={transform}
                 >
                     <path
-                        d={`M ${x} 0 L 0 0 0 ${y}`}
+                        d={x ? `M 0 0 L ` + (x ? x+' 0 ' : '') + (y ? '0 '+y : '') : ('')}
+                        // @ts-ignore
+                        dataD={x ? `M 0 0 L ` + (x ? x+' 0 ' : '') + (y ? '0 '+y : '') : ('')}
                         fill="none"
                         stroke="currentColor"
                         strokeWidth={1}
@@ -61,7 +63,7 @@ export const Grid: React.FC<InfiniteSvgGridProps> = (props) => {
                     patternTransform={transform}
                 >
                     <path
-                        d={`M ${x * 10} 0 L 0 0 0 ${y * 10}`}
+                        d={x ? `M ${x*10} 0 L ` + (x ? '0 0 ' : '') + (y*10 ? '0 '+y*10 : '') : ('')}
                         fill="none"
                         stroke="currentColor"
                         strokeWidth={2}
@@ -81,33 +83,34 @@ function PolarGrid(grid: LGraph['grid'], offset: { x: number; y: number }, zoom:
     let rStep = grid.x;
 
     let safetyMargin = 1.414 * 1.1;// sqrt(2) for diagonals (with offset i measure circles at straight axis, but angles can hold more distant circles), with 1.1 extra margin.
-    const maxRadius = Math.max((offset.x + size.w), (offset.y + size.h)) * safetyMargin; //rStep * 100;
-    const minRadius = Math.min((offset.x), (offset.y)) / safetyMargin; //rStep * 100;
+    const maxRadius = Math.max((offset.x + size.w) / zoom.x, (offset.y + size.h) / zoom.y) * safetyMargin; //rStep * 100;
+    const minRadius = Math.min(0, (offset.x - size.w) / zoom.x, (offset.y - size.h) / zoom.x) / safetyMargin; //rStep * 100;
 
-    const transform = `translate(${offset.x}, ${offset.y}) scale(${zoom.x}, ${zoom.y})`;
+    const transform = `scale(${zoom.x}, ${zoom.y}) translate(${offset.x}, ${offset.y})`; // scale(${zoom.x}, ${zoom.y});
 
     console.log('radial grid',{minRadius, maxRadius, offset, size, })
-    const radialLines = (thick: boolean) => {
-        const step = thick ? angleStep * 10 : angleStep;
-        const strokeWidth = thick ? 2 : 1;
+    const radialLines = () => {
+        const step = angleStep;
+        let length = Math.ceil(Math.PI * 2 / step);
         return Array.from(
-            { length: Math.ceil(Math.PI * 2 / step) },
+            { length },
             (_, i) => {
                 const a = i * step;
                 const x = Math.cos(a) * maxRadius;
                 const y = Math.sin(a) * maxRadius;
-                if (y < step*0.0001) return null; // skip near overlapping last line due to rounding errors.
-
+                if (i == length - 1 && y < step*0.0001) return null; // skip near overlapping last line due to rounding errors.
+                const isThick = i % 10;
                 console.log('radial grid line ' + i, {a, x, y, step, maxRadius});
                 return (
                     <line
-                        key={`${thick}-${i}`}
+                        key={`polar-line-${i}`}
                         x1={0}
                         y1={0}
                         x2={x}
                         y2={y}
+                        className={isThick ? 'thick' : ''}
                         stroke="currentColor"
-                        strokeWidth={strokeWidth}
+                        strokeWidth={isThick === 0 ? 2 : 1}
                         vectorEffect="non-scaling-stroke"
                     />
                 );
@@ -115,22 +118,24 @@ function PolarGrid(grid: LGraph['grid'], offset: { x: number; y: number }, zoom:
         );
     };
 
-    const circles = (thick: boolean) => {
-        const step = thick ? rStep * 10 : rStep;
-        const strokeWidth = thick ? 2 : 1;
+    const circles = () => {
+        const step = rStep;
         let arr: ReactNode[] = [];
-        let i: number = 0;
-        for (let radius = minRadius/* || step*/; radius <= maxRadius; radius+=step) {
+        let i: number = -1;
+        for (let radius = Math.floor(minRadius / step) * step/* || step*/; radius <= maxRadius; radius+=step) {
             console.log('radial grid circle ' + i, {radius, minRadius, step, maxRadius});
-            if (!thick && i++%10 === 0) return null; // skip thin lines where a thick lines should be
+            if (++i === 0 && angleStep) continue; // skip first circle if there are already radial lines (invisible anyway)
+            if (radius < minRadius) continue; // maybe impossible, maybe for rounding?
+            let isThick = i%10 === 0;
             arr.push(<circle
-                key={`${thick}-${i}`}
+                key={`polar-circle-${i}`}
+                className={isThick ? 'thick' : ''}
                 cx={0}//-offset.x}
                 cy={0}//-offset.y}
                 r={radius}
                 fill="none"
                 stroke="currentColor"
-                strokeWidth={strokeWidth}
+                strokeWidth={isThick ? 2 : 1}
                 vectorEffect="non-scaling-stroke"
             />)
         }
@@ -140,13 +145,8 @@ function PolarGrid(grid: LGraph['grid'], offset: { x: number; y: number }, zoom:
     return (
         <svg width="100%" height="100%" style={{ position: "absolute", inset: 0 }}>
             <g transform={transform}>
-                {/* Minor grid */}
-                {circles(false)}
-                {radialLines(false)}
-
-                {/* Major grid */}
-                {circles(true)}
-                {radialLines(true)}
+                {circles()}
+                {radialLines()}
             </g>
         </svg>
     );

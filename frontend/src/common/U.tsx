@@ -1504,6 +1504,11 @@ export class U {
     }
 
     static toBoolString(bool: boolean, ifNotBoolean: boolean = false): string { return bool === true ? 'true' : (bool === false ? 'false' : '' + ifNotBoolean); }
+    static toBool<T extends any>(v: any): boolean {
+     if (typeof v === 'string') return U.fromBoolString(v);
+     return !!v;
+    }
+
     static fromBoolString<T extends any>(str: string | boolean): boolean;
     static fromBoolString<T extends any>(str: string | boolean, defaultVal?: T): boolean | T;
     static fromBoolString<T extends any>(str: string | boolean, defaultVal?: T, allowNull?: boolean): boolean | null | T;

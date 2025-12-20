@@ -184,10 +184,7 @@ function NodeEditorComponent(props: AllProps) {
                 <b className={'me-2'}>Grid coordinates:</b>
                 <Tooltip tooltip={Info.grid.txt}><Select data={asGraph}
                             getter={l => l.grid?.type || "cartesian"}
-                            setter={(v, l) => {
-                                console.log('setter coordinate mode', {l, v, old:{...l.grid}})
-                                l.grid = {type: v}
-                            }}>
+                            setter={(v, l) => { l.grid = {type: v}; }}>
                         <optgroup label={"Coordinate type"}></optgroup>
                         <option value="cartesian">Cartesian</option>
                         <option value="polar">Polar</option>

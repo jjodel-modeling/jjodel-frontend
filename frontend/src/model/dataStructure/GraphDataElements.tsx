@@ -1017,7 +1017,7 @@ export class DGraph extends DGraphElement {
     // personal attributes
     zoom!: GraphPoint;
     offset!: GraphSize; // in-graph scrolling offset
-    grid!: {x?: number, y?: number, type?: "polar" | "cartesian", "center"?: TLCoord};
+    grid?: {x?: number, y?: number, type?: "polar" | "cartesian", "center"?: TLCoord, visible?: boolean};
 
     public static new(htmlindex: number, model: DGraph["model"],
                       parentNodeID?: DGraphElement["father"], // immediate parent
@@ -1074,52 +1074,18 @@ export class LGraph<Context extends LogicContext<DGraph> = any, D extends DGraph
     graphSize!: GraphSize; // derived attribute: bounding rect containing all subnodes, while "size" is instead external size of the vertex holding the graph in GraphVertexes
     offset!: GraphSize; // Scrolling position inside the graph
 
-    grid!: GraphPoint & {type?: "polar" | "cartesian", "center"?: TLCoord};
+    grid!: GraphPoint & {type: "polar" | "cartesian", "center": TLCoord, visible: boolean};
     __info_of__grid: Info = Info.grid;
 
     get_grid(c: LogicContext<DGraph>): this['grid'] {
-        let grid: GObject = new GraphPoint(c.data.grid?.x||0, c.data.grid?.y||0);
-        grid.type = c.data.grid?.type || 'cartesian';
-        grid.center = c.data.grid.center || "cc";
-        return grid as this['grid'];
+        if (c.data.grid) return LViewElement.GetGrid_impl(c);
+        else return this.get_view(c).grid;
     }
-    set_grid(val: GObject/*<GraphPoint & {type:string}>*/ | number | string | boolean, c: Context): boolean {
-        if (!val) val = 0;
-        if (typeof val === 'boolean') val = val ? 1 : 0;
-        if (typeof val === 'string') val = +val;
-        if (typeof val === 'number') val = {x: val, y:val};
-        // now it's always transformed to obj, discard original val for gval
-        let gval: GObject = typeof val !== 'object' ? {} : val;
-        if ('x' in gval) {
-            gval.x = +gval.x;
-            if (isNaN(gval.x) || gval.x < 0) gval.x = 0;
-        }
-        if ('y' in gval) {
-            gval.y = +gval.y;
-            if (isNaN(gval.y) || gval.y < 0) gval.y = 0;
-        }
-        if ('type' in gval) {
-            let type = gval.type = gval.type.toLowerCase();
-            if (!['cartesian', 'polar'].includes(type)) gval.type = c.data.grid?.type || 'cartesian';
-        }
-        if ('center' in gval) {
-            gval.center = typeof c.data.grid.center === 'string' ? Geom.serialize_TL_Object(Geom.parse_TL_string(gval.center)) : 'cc';
-        }
-        let xChanged = 'x' in gval && gval.x !== c.data.grid?.x;
-        let yChanged = 'y' in gval && gval.y !== c.data.grid?.y;
-        let typeChanged = 'type' in gval && gval.type !== c.data.grid?.type;
-        let centerChanged = 'center' in gval && gval.center !== c.data.grid?.center;
-        if (!xChanged && !yChanged && !typeChanged && !centerChanged) return true;
 
-        let diff_old: string = '(' + [
-            (xChanged ? c.data.grid?.x : ''), (yChanged ? c.data.grid?.type : ''), (typeChanged ? c.data.grid?.type : ''), (centerChanged ? c.data.grid?.center : '')
-        ].filter(e=>!!e).join(', ') + ')';
-        let diff_new: string = '(' + [
-            (xChanged ? gval.x : ''), (yChanged ? gval.y : ''), (typeChanged ? gval.type : ''), (centerChanged ? gval.center : '')
-        ].filter(e=>!!e).join(', ') + ')';
-
-        TRANSACTION('Update grid', ()=> { SetFieldAction.new(c.data, 'grid', gval as any, '+=', false); }, diff_old, diff_new);
-        return true;
+    set_grid(val: GObject/*<GraphPoint & {type:string}>*/ | number | string | boolean, c: LogicContext<LGraph>): boolean {
+        return LViewElement.SetGrid_impl(val, c);
+        /*if (c.data.grid) return LViewElement.SetGrid_impl(val, c);
+        else return this.get_view(c).grid = val as any;*/
     }
 
     // get_graphSize(context: LogicContext<DGraph>):  Readonly<GraphSize> { return todo: get bounding rect containing all subnodes.; }
@@ -1337,7 +1303,7 @@ export class DVoidVertex extends DGraphElement {
     w!: number;
     h!: number;
     isResized!: boolean;
-    snap!: GraphPoint;
+    snap?: GraphPoint;
     // size?: GraphSize; // virtual, gets extracted from this. x and y are stored directly here as it extends GraphSize
 
     public static new(htmlindex: number, model: DGraphElement["model"], parentNodeID: DGraphElement["father"], graphID: DGraphElement["graph"], nodeID?: DGraphElement["id"],
@@ -1380,31 +1346,9 @@ export class LVoidVertex<Context extends LogicContext<DVoidVertex> = any, C exte
     snap!: GraphPoint;
     __info_of__snap: Info = Info.snap;
 
-    get_snap(c: LogicContext<DVoidVertex>): DVoidVertex["snap"] { return c.data.snap; }
-    set_snap(val: Partial<GraphPoint> | number | string | boolean, c: LogicContext<DVoidVertex>): boolean {
-        if (!val) val = 0;
-        if (typeof val === 'boolean') val = val ? 1 : 0;
-        if (typeof val === 'string') val = +val;
-        if (typeof val === 'number') val = {x: val, y: val};
-        let gval: GObject = typeof val !== 'object' ? {} : val;
-        if ('x' in gval) {
-            gval.x = +gval.x;
-            if (isNaN(gval.x)) gval.x = 0;
-        }
-        if ('y' in gval) {
-            gval.y = +gval.y;
-            if (isNaN(gval.y)) gval.y = 0;
-        }
+    get_snap(c: LogicContext<DVoidVertex>): DVoidVertex["snap"] { return c.data.snap ? LViewElement.GetSnap(c) : this.get_view(c).snap; }
 
-        let xChanged = 'x' in gval && gval.x !== c.data.snap?.x;
-        let yChanged = 'y' in gval && gval.y !== c.data.snap?.y;
-        if (!xChanged && !yChanged) return true;
-        let diff_old: string = '('+ [(xChanged ? c.data.snap?.x : ''), (yChanged ? c.data.snap?.y : '')].filter(e=>!!e).join(', ') + ')';
-        let diff_new: string = '('+ [(xChanged ? gval.x : ''), (yChanged ? gval.y : '')].filter(e=>!!e).join(', ') + ')';
-        TRANSACTION('Update snap', ()=> { SetFieldAction.new(c.data, 'snap', gval as any, '+=', false); },
-            diff_old, diff_new);
-        return true;
-    }
+    set_snap(val: Partial<GraphPoint> | number | string | boolean, c: LogicContext<DVoidVertex>): boolean { return LViewElement.SetSnap(val, c); }
     get_isResized(c: LogicContext<DVoidVertex>): DVoidVertex["isResized"] { return c.data.isResized; }
     set_isResized(val: DVoidVertex["isResized"], c: LogicContext<DVoidVertex>): boolean {
         val = !!val;
@@ -1673,7 +1617,7 @@ export class DVertex extends DGraphElement { // DVoidVertex
     w!: number;
     h!: number;
     isResized!: boolean;
-    snap!: GraphPoint;
+    snap?: GraphPoint;
     // size!: GraphSize; // virtual, gets extracted from this. x and y are stored directly here as it extends GraphSize
     // personal attributes
     __isDVertex!: true;
@@ -1746,8 +1690,8 @@ export class DGraphVertex extends DGraphElement { // MixOnlyFuncs(DGraph, DVerte
     w!: number;
     h!: number;
     isResized!: boolean;
-    grid!: {x?: number, y?: number, type?: "polar" | "cartesian", "center"?: TLCoord};
-    // size!: GraphSize; // virtual
+    grid?: {x?: number, y?: number, type?: "polar" | "cartesian", "center"?: TLCoord, visible?: boolean};
+// size!: GraphSize; // virtual
     // from graph
 
     // personal attributes
@@ -1803,7 +1747,7 @@ export class LGraphVertex<Context extends LogicContext<any> = any, D extends DGr
     h!: number;
     isResized!: boolean;
     size!: GraphSize; // virtual
-    grid!: GraphPoint & {type?: "polar" | "cartesian", "center"?: TLCoord};
+    grid!: GraphPoint & {type: "polar" | "cartesian", "center": TLCoord, visible: boolean};
     __info_of__grid: Info = Info.grid;
 
     // personal attributes

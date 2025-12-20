@@ -2,7 +2,7 @@ import {
     Constructors,
     CoordinateMode, D,
     Debug, DEdgePoint,
-    Defaults,
+    Defaults, DGraph,
     DGraphElement,
     Dictionary, type DModel,
     DModelElement,
@@ -10,16 +10,16 @@ import {
     DocString,
     DPointerTargetable, DProject,
     DState,
-    DViewPoint, DVoidEdge,
+    DViewPoint, DVoidEdge, DVoidVertex,
     EdgeBendingMode,
     EdgeGapMode, EdgeSegment,
     EGraphElements,
-    EModelElements,
+    EModelElements, Geom,
     getWParams,
     GObject,
     GraphPoint,
     GraphSize,
-    Info, L, LEdge, LEdgePoint, LGraphElement, LModelElement,
+    Info, L, LEdge, LEdgePoint, LGraph, LGraphElement, LModelElement,
     Log,
     LogicContext,
     LPointerTargetable, LProject, LUser,
@@ -259,7 +259,7 @@ export class DViewElement extends DPointerTargetable {
     /* private */ css_MUST_RECOMPILE!: boolean;
     father?: Pointer<DViewElement>;
     snap!: GraphPoint;
-    grid!: {x?: number, y?: number, type?: "radial" | "cartesian", "center"?: TLCoord};
+    grid!: {x?: number, y?: number, type?: "polar" | "cartesian", "center"?: TLCoord, visible?: boolean};
     version!: number; // only meaningful for default views, required to check if view needs to be updated.
 /*
     public static new(name: string, jsxString: string, father?: DViewElement, defaultVSize?: GraphSize, usageDeclarations: string = '', constants: string = '',
@@ -389,8 +389,6 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
     get_isOverlay(c: Context): this["isOverlay"] { return this.get_isExclusiveView(c); }
     set_isOverlay(val: this["isOverlay"], c: Context): boolean { return this.set_isExclusiveView(val, c); }
 
-    snap!: GraphPoint;
-    grid!: {x?: number, y?: number, type?: "radial" | "cartesian", "center"?: TLCoord};
 
     label!: this["longestLabel"];  // should never be read change their documentation in write only. their values is "read" in this.segments
     longestLabel!: labeltype; // (e:LVoidEdge, segment: EdgeSegment, allNodes: LEdge["allNodes"], allSegments: EdgeSegment[]) => PrimitiveType;
@@ -502,6 +500,88 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
             patharr.splice(0, 1);
             return root.getByPath(patharr);
         }
+    }
+    snap!: GraphPoint;
+    get_snap(c: LogicContext<DVoidVertex>): DVoidVertex["snap"] { return LViewElement.GetSnap(c); }
+    public static GetSnap(c: LogicContext<DVoidVertex> | LogicContext<DViewElement>): DVoidVertex["snap"] { return new GraphPoint(c.data.snap!.x, c.data.snap!.y); }
+    public static SetSnap(val: Partial<GraphPoint> | number | string | boolean, c:  LogicContext<DVoidVertex> | LogicContext<DViewElement>): boolean {
+        if (!val) val = 0;
+        if (typeof val === 'boolean') val = val ? 1 : 0;
+        if (typeof val === 'string') val = +val;
+        if (typeof val === 'number') val = {x: val, y: val};
+        let gval: GObject = typeof val !== 'object' ? {} : val;
+        if ('x' in gval) {
+            gval.x = +gval.x;
+            if (isNaN(gval.x)) gval.x = 0;
+        }
+        if ('y' in gval) {
+            gval.y = +gval.y;
+            if (isNaN(gval.y)) gval.y = 0;
+        }
+
+        let xChanged = 'x' in gval && gval.x !== c.data.snap?.x;
+        let yChanged = 'y' in gval && gval.y !== c.data.snap?.y;
+        if (!xChanged && !yChanged) return true;
+        let diff_old: string = '('+ [(xChanged ? c.data.snap?.x : ''), (yChanged ? c.data.snap?.y : '')].filter(e=>!!e).join(', ') + ')';
+        let diff_new: string = '('+ [(xChanged ? gval.x : ''), (yChanged ? gval.y : '')].filter(e=>!!e).join(', ') + ')';
+        TRANSACTION('Update snap', ()=> { SetFieldAction.new(c.data, 'snap', gval as any, '+=', false); },
+            diff_old, diff_new);
+        return true;
+    }
+    grid!: GraphPoint & {type: "polar" | "cartesian", "center": TLCoord, visible: boolean};
+    __info_of__grid: Info = Info.grid;
+    public get_grid(c: Context): LViewElement['grid'] { return LViewElement.GetGrid_impl(c); }
+    set_grid(val: GObject/*<GraphPoint & {type:string}>*/ | number | string | boolean, c: LogicContext<LViewElement>): boolean { return LViewElement.SetGrid_impl(val, c); }
+
+    public static GetGrid_impl(c: LogicContext<DGraph> | LogicContext<DViewElement>): LViewElement['grid'] {
+        let grid: GObject = new GraphPoint(c.data.grid?.x||0, c.data.grid?.y||0);
+        grid.type = c.data.grid!.type || 'cartesian';
+        grid.center = c.data.grid!.center || "cc";
+        return grid as LViewElement['grid'];
+    }
+    public static SetGrid_impl(val: GObject/*<GraphPoint & {type:string}>*/ | number | string | boolean, c: LogicContext<LViewElement> | LogicContext<LGraph>): boolean {
+        if (!val) val = 0;
+        if (typeof val === 'boolean') val = val ? 1 : 0;
+        if (typeof val === 'string') val = +val;
+        if (typeof val === 'number') val = {x: val, y:val};
+        // now it's always transformed to obj, discard original val for gval
+        let gval: GObject = typeof val !== 'object' ? {} : val;
+        if ('x' in gval) {
+            gval.x = +gval.x;
+            if (isNaN(gval.x) || gval.x < 0) gval.x = 0;
+        }
+        if ('y' in gval) {
+            gval.y = +gval.y;
+            if (isNaN(gval.y) || gval.y < 0) gval.y = 0;
+        }
+        if ('type' in gval) {
+            let type = gval.type = gval.type.toLowerCase();
+            if (!['cartesian', 'polar'].includes(type)) gval.type = c.data.grid?.type || 'cartesian';
+        }
+        if ('center' in gval) {
+            gval.center = typeof gval.center === 'string' ? Geom.serialize_TL_Object(Geom.parse_TL_string(gval.center)) : 'cc';
+        }
+        if ('visible' in gval) {
+            gval.visible = U.toBool(gval.visible);
+        }
+        let xChanged = 'x' in gval && gval.x !== c.data.grid?.x;
+        let yChanged = 'y' in gval && gval.y !== c.data.grid?.y;
+        let typeChanged = 'type' in gval && gval.type !== c.data.grid?.type;
+        let centerChanged = 'center' in gval && gval.center !== c.data.grid?.center;
+        let visibleChanged = 'center' in gval && gval.center !== c.data.grid?.visible;
+        if (!xChanged && !yChanged && !typeChanged && !centerChanged && !visibleChanged) return true;
+
+        let diff_old: string = '(' + [
+            (xChanged ? c.data.grid?.x : ''), (yChanged ? c.data.grid?.type : ''), (typeChanged ? c.data.grid?.type : ''),
+            (centerChanged ? c.data.grid?.center : ''), (visibleChanged ? c.data.grid?.visible : '')
+        ].filter(e=>!!e).join(', ') + ')';
+        let diff_new: string = '(' + [
+            (xChanged ? gval.x : ''), (yChanged ? gval.y : ''), (typeChanged ? gval.type : ''),
+            (centerChanged ? gval.center : ''), (visibleChanged ? gval.visible : '')
+        ].filter(e=>!!e).join(', ') + ')';
+
+        TRANSACTION('Update grid', ()=> { SetFieldAction.new(c.data, 'grid', gval as any, '+=', false); }, diff_old, diff_new);
+        return true;
     }
 
     jsxString!: string;
