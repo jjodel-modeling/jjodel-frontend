@@ -412,7 +412,7 @@ const MetaElementPicker = (props: PickerProps) => {
         break;
     } 
 
-    return (<div className={'input-container'}>
+    return (<label className={'input-container'}>
         <label style={{marginLeft: props.indent ? props.indent*20 + 'px' : '0px' }}>{props.label || 'Select a ' + props.meta}</label>
        
         <Select
@@ -421,7 +421,7 @@ const MetaElementPicker = (props: PickerProps) => {
             placeholder={placeholder}
             options={<>{options}</>}>
         </Select>
-    </div>
+    </label>
     );
 }
 

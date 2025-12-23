@@ -6718,7 +6718,7 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
     protected get_getValue(context: Context): this["getValue"] {
         return function (namedPointers: boolean = false, ecorePointers: boolean = false, shapeless: boolean = false,
                          keepempties: boolean = true, withmetainfo: boolean = false) {
-            return LValue.prototype.get_value(context, namedPointers, ecorePointers, shapeless, keepempties, withmetainfo) as any;
+            return LValue.prototype.get_value.apply(LValue.singleton, [context, namedPointers, ecorePointers, shapeless, keepempties, withmetainfo]) as any;
         }
     }
 
@@ -6957,7 +6957,7 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
     protected get_getValues(context: Context): this["getValues"] {
         return function (fitSize: boolean = true, namedPointers: boolean = true, ecorePointers: boolean = false,
                          shapeless: boolean = false, keepempties: boolean = false, withmetainfo: any = false, limit?: number) {
-            return LValue.prototype.get_values(context, fitSize, namedPointers, ecorePointers, shapeless, keepempties, withmetainfo, limit) as any;
+            return LValue.prototype.get_values.apply(LValue.singleton, [context, fitSize, namedPointers, ecorePointers, shapeless, keepempties, withmetainfo, limit]) as any;
         }
     }
     // stringified value getters

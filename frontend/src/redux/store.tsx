@@ -202,6 +202,10 @@ export class DState extends DPointerTargetable{
     VIEWS_RECOMPILE_ocl: Pointer<DViewElement>[] = [];
     VIEWS_RECOMPILE_events: (Pointer<DViewElement> | {vid: Pointer<DViewElement>, keys: string[] | undefined})[] = [];
     RECOMPILE_LANGUAGE: {engine: string, language: string}[] = [];
+    VIEWS_RECOMPILE_snap: Pointer<DViewElement>[] = [];  // those 2 are not really needed as 1-depth sub-objects in D, are still "deeply" checked for differences in shouldComponentUpdate.
+    NODES_RECOMPILE_snap: Pointer<DGraphElement>[] = []; // those 2 are not really needed as 1-depth sub-objects in D, are still "deeply" checked for differences in shouldComponentUpdate.
+    VIEWS_RECOMPILE_grid: Pointer<DViewElement>[] = [];  // deprecated already, because i cannot query the state from reducer, so i need to query ahead of time and populate NODES_RECOMPILE_grid instead.
+    NODES_RECOMPILE_grid: Pointer<DGraphElement>[] = [];
     VIEWS_RECOMPILE_all?: boolean | Pointer<any>[];
 
     ELEMENT_CREATED: Pointer[] = [];

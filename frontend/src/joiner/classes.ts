@@ -133,7 +133,7 @@ import {
     statehistory,
     store,
     TRANSACTION,
-    U
+    U, GraphElementComponent
 } from "./index";
 import type {Grammar, ParserOptions, Parser} from "nearley";
 import type nearley from "nearley";
@@ -1083,7 +1083,7 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
 
         thiss.version = VersionFixer.get_highestversion();
         thiss.snap = new GraphPoint(1, 1);
-        thiss.grid = {x: 0, y: 0, type: "cartesian", "center": "cc"};
+        thiss.grid = {x: 0, y: 0, type: "cartesian", "center": "cc", visible: true};
         thiss.name = name;
         thiss.appliableToClasses = appliableToClasses;
         thiss.appliableTo = 'Any';
@@ -1273,7 +1273,7 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         thiss.zoom = new GraphPoint(1, 1);
         thiss.offset = new GraphSize(0, 0);  // GraphSize.apply(this, [0, 0, 0 ,0]);
         thiss._subMaps = {zoom: true, graphSize: true}
-        thiss.grid = {x: 0, y: 0, type: 'cartesian', center: 'cc'};
+        thiss.grid = undefined; // {x: 0, y: 0, type: 'cartesian', center: 'cc', visible: true};
 
         const user: LUser = LUser.getUser();
         const project = LProject.getProject();
@@ -4028,6 +4028,36 @@ export const transientProperties = {
     modelElement: {} as Dictionary<Pointer<DModelElement>, DataTransientProperties>,
     language: {} as Dictionary<DocString<'Language like ecore'>, Dictionary<DocString<'Engine like nearley, js'>, LanguageCache>>,
     livePatches: {} as DState, //Partial<DState>,
+
+    /*
+        updates all elements with a certain view..
+        @param: force_deleteCache:  if false, it just triggers react's .forceUpdate, which might refuse to update if UsageDeclaration did not change. if true it deletes JSX cache, forcing it to re-render.
+        guideline: use force_deleteCache = false in most cases to ignore UD update policy.
+        use true when the state changed manually (no actions/reducer) and the UD are already enough for it to update, but this SHOULD ONLY HAPPEN IN DEBUG
+     */
+    updateData(mid: Pointer<DModelElement>, force_deleteCache: boolean = true): void {
+        let nodes = transientProperties.modelElement[mid].nodes;
+        for (let nid in nodes) { transientProperties.updateNode(nid); }
+    },
+
+    updateView(vid: Pointer<DViewElement>, force_deleteCache: boolean = true): void {
+        let nodes = transientProperties.node;
+        for (let nid in nodes) { transientProperties.updateNodeViewCombinationOnly(nid, vid); }
+    },
+
+    updateNode(nid: Pointer<DGraphElement>, force_deleteCache: boolean = true): void {
+        let tn = transientProperties.node[nid];
+        if (force_deleteCache && tn) {
+            for (let vid in tn.viewScores) {
+                if (tn.viewScores[vid]?.jsxOutput) delete tn.viewScores[vid]?.jsxOutput;
+            }
+        }
+        GraphElementComponent.map[nid]?.forceUpdate();
+    },
+    updateNodeViewCombinationOnly(nid: Pointer<DGraphElement>, vid: Pointer<DViewElement>, force_deleteCache: boolean = true): void {
+        if (force_deleteCache && transientProperties.node[nid]?.viewScores[vid]?.jsxOutput) delete transientProperties.node[nid]?.viewScores[vid]?.jsxOutput;
+        GraphElementComponent.map[nid]?.forceUpdate();
+    }
 };
 (window as any).transient = (window as any).transientProperties = transientProperties;
 // transientProperties.nodes[nid].viewScores[vid]?.[pvid as string];

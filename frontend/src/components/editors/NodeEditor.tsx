@@ -14,7 +14,7 @@ import {
     LVoidEdge, LGraph, DGraphElement,
     DNamedElement,
     IPoint, GraphPoint,
-    Pointer, Select, GObject, Info
+    Pointer, Select, GObject, Info, DGraph
 } from '../../joiner'
 import {Draggable, U
 } from '../../joiner';
@@ -130,10 +130,10 @@ function NodeEditorComponent(props: AllProps) {
     }
     const InputRow = (props: any) => {
         return (
-            <div className='input-container'>
-                <b className={'me-2'}>{props.label}</b>
+            <label className='input-container'>
+                <b className={'me-2 my-auto'}>{props.label}</b>
                 <Input data={props.as} field={props.field} type={props.type} readOnly={!editable} />
-            </div>
+            </label>
         );
     };
 // todo: zoom entry not working
@@ -165,42 +165,53 @@ function NodeEditorComponent(props: AllProps) {
             <h3 className='w-100'>{isGraphVertex ? 'GraphVertex' : 'Graph'}</h3>
             {commonEntries}
             <GenericInput data={asGraph} field={'offset'}/>
-            <SizeInput data={asGraph} field={'size'} label={'size'}
-                       xlabel={grid!.type === 'polar' ? 'modulo' : 'X'}
-                       ylabel={grid!.type === 'polar' ? 'angle' : 'Y'}
+            <SizeInput data={asGraph} field={'size'} label={'Size'}
                        xsetter={(x) => asGraph.x = +x}
                        ysetter={(y) => asGraph.y = +y}
                        wsetter={(w) => asGraph.w = +w}
                        hsetter={(h) => asGraph.h = +h}
             />
 
-            <SizeInput data={asGraph} label={'Grid'}
+            <SizeInput data={asGraph} label={
+                <span className={'d-flex w-100'}><span className={'my-auto'}>Grid</span>{(dnode as DGraph).grid ?
+                    <Tooltip tooltip={'Erases node\'s grid to inherit it from the view instead.'}><i
+                        className={'bi bi-trash my-auto ms-1'} style={{color: 'red'}} onClick={() => {
+                        asGraph.grid = null as any;
+                    }}/></Tooltip> :
+                    <span className={'my-auto'} style={{color: 'orange'}}>&nbsp;(inherited from view)</span>}
+                </span>}
+                       xlabel={grid!.type === 'polar' ? 'modulo' : 'x'}
+                       ylabel={grid!.type === 'polar' ? 'angle' : 'y'}
                        xgetter={(l) => '' + ((l as LGraph).grid.x || 0)}
                        xsetter={(val, l) => l.grid = {x: +val || 0} as any}
                        ygetter={(l) => '' + ((l as LGraph).grid.y || 0)}
                        ysetter={(val, l) => l.grid = {y: +val || 0} as any}
             />
-            <div className={'input-container'}>
-                <b className={'me-2'}>Grid coordinates:</b>
+            {/*
+            <label className={'input-container'}>
+                <b className={'me-2  my-auto'}>Grid coordinates:</b>
                 <Tooltip tooltip={Info.grid.txt}><Select data={asGraph}
-                            getter={l => l.grid?.type || "cartesian"}
-                            setter={(v, l) => { l.grid = {type: v}; }}>
-                        <optgroup label={"Coordinate type"}></optgroup>
-                        <option value="cartesian">Cartesian</option>
-                        <option value="polar">Polar</option>
-                    </Select>
+                                                         getter={l => l.grid?.type || "cartesian"}
+                                                         setter={(v, l) => {
+                                                             l.grid = {type: v};
+                                                         }}>
+                    <optgroup label={"Coordinate type"}></optgroup>
+                    <option value="cartesian">Cartesian</option>
+                    <option value="polar">Polar</option>
+                </Select>
                 </Tooltip>
-            </div>
-            <div className={'input-container'}>
-                <b className={'me-2'}>Grid snaps to:</b>
+            </label>
+            */}
+            <label className={'input-container'}>
+                <b className={'me-2 my-auto'}>Grid snaps to:</b>
                 <Select data={asGraph} getter={(l) => l.grid?.center || "cc"}
                         id='grid'
                         setter={( //@ts-ignore
-                        (val, l, b, c,d,e) => {
-                            console.log('select setter grid', {val, l, b, c, d, e})
-                            l.grid = {center: val} as any
-                            return 'useless';
-                        }) as any}>
+                            (val, l, b, c, d, e) => {
+                                console.log('select setter grid', {val, l, b, c, d, e})
+                                l.grid = {center: val} as any
+                                return 'useless';
+                            }) as any}>
                     <optgroup label={"Coordinate type"}>
                         <option value={'cc'}>center</option>
                         <option value={'tt'}>top</option>
@@ -213,30 +224,38 @@ function NodeEditorComponent(props: AllProps) {
                         <option value={'br'}>bottom right</option>
                     </optgroup>
                 </Select>
-            </div>
+            </label>
+            <label className={'input-container'}>
+                <b className={'me-2 my-auto h-auto'}>Grid visible:</b>
+                <Input type={'checkbox'}
+                       data={asGraph}
+                       getter={(l) => l.grid?.visible}
+                       setter={((val: boolean, l: LGraph) => l.grid = {visible: !!val} as any) as any}
+                />
+            </label>
             {/*graphSize readonly on LGraph but not on DGraph, = internal graph size. put it for info.*/}
         </>}
 
-        {asVertex && <>
-            {!isGraphVertex && <>
-                <h3 className='w-100'>Vertex</h3>
-                {commonEntries}
-                <InputRow label={'X Position'} as={asVertex} field={'x'} type={'number'}/>
-                <InputRow label={'Y Position'} as={asVertex} field={'y'} type={'number'}/>
-                <InputRow label={'Width'} as={asVertex} field={'width'} type={'number'}/>
-                <InputRow label={'Height'} as={asVertex} field={'height'} type={'number'}/>
-            </>}
-            <InputRow label={'isResized'} as={asVertex} field={'isResized'} type={'checkbox'}/>
+            {asVertex && <>
+                {!isGraphVertex && <>
+                    <h3 className='w-100'>Vertex</h3>
+                    {commonEntries}
+                    <InputRow label={'X Position'} as={asVertex} field={'x'} type={'number'}/>
+                    <InputRow label={'Y Position'} as={asVertex} field={'y'} type={'number'}/>
+                    <InputRow label={'Width'} as={asVertex} field={'width'} type={'number'}/>
+                    <InputRow label={'Height'} as={asVertex} field={'height'} type={'number'}/>
+                </>}
+                <InputRow label={'isResized'} as={asVertex} field={'isResized'} type={'checkbox'}/>
 
-            <div className={'input-container'}>
-                <b className={'me-2'}>Snap:</b>
+            <label className={'input-container'}>
+                <b className={'me-2 my-auto'}>Snap:</b>
                 <SizeInput data={asVertex}
                            xgetter={(l) => '' + ((l as LVoidVertex).snap.x || 0)}
                            xsetter={(val, l) => l.snap = {x: +val || 0} as any}
                            ygetter={(l) => '' + ((l as LVoidVertex).snap.y || 0)}
                            ysetter={(val, l) => l.snap = {y: +val || 0} as any}
                 />
-            </div>
+            </label>
         </>}
 
         {asEdge && <><h3 className='w-100'>Edge</h3>

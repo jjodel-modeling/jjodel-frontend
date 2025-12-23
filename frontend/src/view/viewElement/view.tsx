@@ -288,13 +288,13 @@ export class DViewElement extends DPointerTargetable {
 
 <View className={'root'}>
     <div className={'header'}>
-        <div className={'input-container mx-2'}>
+        <label className={'input-container mx-2'}>
             <b className={'object-name'}>Name:</b>
             {data.$name ?
                 <Input data={data.$name} field={'value'} hidden={true} autosize={true} placeholder={'enter name'}/> :
                 <Input data={data} field={'name'} hidden={true} autosize={true}  placeholder={'enter name'}/>
             }
-        </div>
+        </label>
     </div>
     <div className={'body'}>To add information here,<br/> edit the view<br/>"{view.name}"</div>
     {decorators}
@@ -501,6 +501,29 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
             return root.getByPath(patharr);
         }
     }
+
+    nodes!: LGraphElement[];
+    __info_of__nodes: Info = {type: 'LGraphElement[]', txt: 'A collection of nodes currently using this view'}
+    public get_nodes(c: Context): LViewElement['nodes'] {
+        let isExclusive = this.get_isExclusiveView(c);
+        let ret: LGraphElement[] = [];
+        for (let nid in transientProperties.node) {
+            let tn = transientProperties.node[nid];
+            if (!tn) continue;
+            if (isExclusive) {
+                if (tn.mainView?.id === c.data.id) ret.push(L.from(nid));
+                else continue;
+            }
+            if (!isExclusive) {
+                for (let v of tn.stackViews) {
+                    if (v?.id === c.data.id) { ret.push(L.from(nid)); break; }
+                }
+            }
+        }
+        return ret;
+    }
+    set_nodes(val: GObject/*<GraphPoint & {type:string}>*/ | number | string | boolean, c: LogicContext<LViewElement>): boolean { return this.cannotSet('nodes'); }
+
     snap!: GraphPoint;
     get_snap(c: LogicContext<DVoidVertex>): DVoidVertex["snap"] { return LViewElement.GetSnap(c); }
     public static GetSnap(c: LogicContext<DVoidVertex> | LogicContext<DViewElement>): DVoidVertex["snap"] { return new GraphPoint(c.data.snap!.x, c.data.snap!.y); }
@@ -524,7 +547,11 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
         if (!xChanged && !yChanged) return true;
         let diff_old: string = '('+ [(xChanged ? c.data.snap?.x : ''), (yChanged ? c.data.snap?.y : '')].filter(e=>!!e).join(', ') + ')';
         let diff_new: string = '('+ [(xChanged ? gval.x : ''), (yChanged ? gval.y : '')].filter(e=>!!e).join(', ') + ')';
-        TRANSACTION('Update snap', ()=> { SetFieldAction.new(c.data, 'snap', gval as any, '+=', false); },
+        TRANSACTION('Update snap',
+            ()=> {
+                SetFieldAction.new(c.data, 'snap', gval as any, '+=', false);
+                SetRootFieldAction.new(c.data.className.includes('View') ? "VIEWS_RECOMPILE_snap" : "NODES_RECOMPILE_snap", c.data.id, '+=');
+            },
             diff_old, diff_new);
         return true;
     }
@@ -534,13 +561,31 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
     set_grid(val: GObject/*<GraphPoint & {type:string}>*/ | number | string | boolean, c: LogicContext<LViewElement>): boolean { return LViewElement.SetGrid_impl(val, c); }
 
     public static GetGrid_impl(c: LogicContext<DGraph> | LogicContext<DViewElement>): LViewElement['grid'] {
-        let grid: GObject = new GraphPoint(c.data.grid?.x||0, c.data.grid?.y||0);
+        let grid: GObject = new GraphPoint(c.data.grid!.x || 0, c.data.grid!.y || 0);
+        if (c.data.grid) {
+            for (let k in c.data.grid) { if (c.data.grid.hasOwnProperty(k)) grid[k] = (c.data.grid as any)[k]; }
+        }
         grid.type = c.data.grid!.type || 'cartesian';
         grid.center = c.data.grid!.center || "cc";
+        grid.visible = !!c.data.grid!.visible;
         return grid as LViewElement['grid'];
     }
     public static SetGrid_impl(val: GObject/*<GraphPoint & {type:string}>*/ | number | string | boolean, c: LogicContext<LViewElement> | LogicContext<LGraph>): boolean {
-        if (!val) val = 0;
+        let isNode = !c.data.className.includes('View');
+        if (!val && val !== 0) {
+            if (isNode) {
+                TRANSACTION('delete node.grid', ()=>{
+                    SetFieldAction.new(c.data, 'grid', undefined, '', false);
+                    let arr = store.getState().NODES_RECOMPILE_grid;
+                    arr = [...arr];
+                    for (let l of (c.proxyObject as LGraph).allSubVertexes) arr.push(l?.id)
+                    // NB: direct assignment instead of += if faulty but more efficient. but is not so important if some grid updates are skipped/overwritten
+                    SetRootFieldAction.new("NODES_RECOMPILE_grid", arr, '');
+                })
+                return true;
+            }
+            val = 0;
+        }
         if (typeof val === 'boolean') val = val ? 1 : 0;
         if (typeof val === 'string') val = +val;
         if (typeof val === 'number') val = {x: val, y:val};
@@ -568,7 +613,7 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
         let yChanged = 'y' in gval && gval.y !== c.data.grid?.y;
         let typeChanged = 'type' in gval && gval.type !== c.data.grid?.type;
         let centerChanged = 'center' in gval && gval.center !== c.data.grid?.center;
-        let visibleChanged = 'center' in gval && gval.center !== c.data.grid?.visible;
+        let visibleChanged = 'visible' in gval && gval.visible !== c.data.grid?.visible;
         if (!xChanged && !yChanged && !typeChanged && !centerChanged && !visibleChanged) return true;
 
         let diff_old: string = '(' + [
@@ -580,7 +625,27 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
             (centerChanged ? gval.center : ''), (visibleChanged ? gval.visible : '')
         ].filter(e=>!!e).join(', ') + ')';
 
-        TRANSACTION('Update grid', ()=> { SetFieldAction.new(c.data, 'grid', gval as any, '+=', false); }, diff_old, diff_new);
+        TRANSACTION('Update grid', ()=> {
+            SetFieldAction.new(c.data, 'grid', gval as any, '+=', false);
+            if (isNode) {
+                let arr = store.getState().NODES_RECOMPILE_grid;
+                arr = [...arr];
+                for (let l of (c.proxyObject as LGraph).allSubVertexes) arr.push(l?.id)
+                // NB: direct assignment instead of += if faulty but more efficient. but is not so important if some grid updates are skipped/overwritten
+                SetRootFieldAction.new("NODES_RECOMPILE_grid", arr, '');
+            } else {
+                // NB: VIEWS_RECOMPILE_grid was deprecated on birth because from view in reducer i cannot query the state to get nodes. so i need to do it here.
+                let arr = store.getState().NODES_RECOMPILE_grid;
+                arr = [...arr];
+                let graphs = LViewElement.prototype.get_nodes.apply(LViewElement.singleton, [c]);
+                for (let l of graphs) {
+                    if (!l || !l.className.includes('Graph')) continue;
+                    for (let v of l.allSubVertexes) arr.push(v?.id);
+                }
+                // NB: direct assignment instead of += if faulty but more efficient. but is not so important if some grid updates are skipped/overwritten
+                SetRootFieldAction.new("NODES_RECOMPILE_grid", arr, '');
+            }
+        }, diff_old, diff_new);
         return true;
     }
 

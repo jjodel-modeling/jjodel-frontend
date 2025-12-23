@@ -1168,9 +1168,8 @@ export class DefaultView {
     public static model(): string { return (
 `
 /* -- Jjodel Abstract Syntax Specification v2.0 -- */
-
-
-<View className={"root model" + (grid ? " grid-paper" : "")}> {/* alternatively use .grid-classic */}
+<View className={"root model"}>
+<Grid node={node}/>
 <Scrollable graph={node}>
     {!data && "Model data missing."}
     <div className={'edges'}>
@@ -1267,6 +1266,7 @@ export class DefaultView {
 
 
 <View className={'root package'} version={'2.0'}>
+<Grid node={node} />
 <div className={'drag-handle'} />
 {
     upperLevel >= 1 &&

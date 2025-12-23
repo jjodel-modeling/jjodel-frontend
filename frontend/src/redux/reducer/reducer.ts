@@ -8,6 +8,7 @@ import {
     MouseUpEvent,
     GObject,
     U as UType, store,
+    LGraph, L,
 } from '../../joiner';
 import {
     GraphDragManager,
@@ -182,7 +183,15 @@ function deepCopyButOnlyFollowingPath(oldStateDoNotModify: DState, action: Parse
                             if (Array.isArray(oldValue)) isArrayAppend = true;
                             else isObjectMerge = true;
                             break;
-                        default: newVal += oldValue; break;
+                        default:
+                            if (oldValue === undefined || oldValue === null) break; // keep newVal unchanged, act as '='
+                            // 0, '', {}, [] are fine with +=, null and undefined are not. and will generate different output if you do {}+undefined vs a={}; a+undefined (string or NaN both unwanted.)
+                            // this is still a problem if type changed and it tries to mix strings and objects or such.
+                            if (typeof newVal === 'object') {
+                                if (Array.isArray(newVal)) newVal.push(oldValue);
+                                else { newVal[oldValue] = true; }
+                            }
+                            else newVal += oldValue; break; // 2 primitives just get default operator merger
                     }
                     break;
                 case '-=':
@@ -1008,7 +1017,27 @@ function unsafereducer(oldState: DState = initialState, action: Action): DState 
     }
     ret.VIEWS_RECOMPILE_jsxString = [];
 
+    /* deprecated: i would not need to update graphs with this view, but nodes within that graph, so i used NODES_RECOMPILE instead
+    if (ret.VIEWS_RECOMPILE_grid?.length)
+        for (const id of filterSet(ret.VIEWS_RECOMPILE_grid)){ transientProperties.updateView(id, true); }
+    ret.VIEWS_RECOMPILE_grid = [];*/
+    if (ret.NODES_RECOMPILE_grid?.length)
+    for (const id of filterSet(ret.NODES_RECOMPILE_grid)){
+        try {/* problem: cannot use getState in reducer, i had to pass all subnodes directly instead of just passing graphs.
+            let graph = L.from(id) as LGraph;
+            let arr = graph?.allSubVertexes || [];
+            for (let e of arr) transientProperties.updateNode(e?.id, true);*/
+            transientProperties.updateNode(id, true);
+        } catch (e) { Log.exDevv('failed to update nodes after grid change', {NODES_RECOMPILE_grid: [...ret.NODES_RECOMPILE_grid], e}); }
+    }
+    ret.NODES_RECOMPILE_grid = [];
 
+    if (ret.VIEWS_RECOMPILE_snap?.length)
+        for (const id of filterSet(ret.VIEWS_RECOMPILE_snap)){ transientProperties.updateView(id, true); }
+    ret.VIEWS_RECOMPILE_snap = [];
+    if (ret.NODES_RECOMPILE_snap?.length)
+        for (const id of filterSet(ret.NODES_RECOMPILE_snap)){ transientProperties.updateNode(id, true); }
+    ret.NODES_RECOMPILE_snap = [];
 
     for (const key of DViewElement.MeasurableKeys) {
         if ((ret as any)['VIEWS_RECOMPILE_'+key]?.length)

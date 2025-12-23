@@ -34,13 +34,13 @@ function FieldDataComponent(props: AllProps) {
     return(<section className={'options-field'}>
         <h5>Field</h5>
         <div>
-            <div className={'input-container'}>
+            <label className={'input-container'}>
                 <p>Appliable to:</p>
                 <Select data={view} field={'appliableTo'}
                         options={graphElementOptions}
                         getter={() => dview.appliableTo || 'Any'}
                         setter={(v: string, data: DViewElement, field: string, )=>view.appliableTo = v as any} />
-            </div>
+            </label>
         </div>
     </section>);
 }

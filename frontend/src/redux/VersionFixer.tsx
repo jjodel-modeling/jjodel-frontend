@@ -321,13 +321,17 @@ everytime you put hands into a D-Object shape or valid values, you should docume
         return s;
     }
     private ['2.208 -> 2.209'](s: DState): DState {
+        if (!s.NODES_RECOMPILE_grid) s.NODES_RECOMPILE_grid = [];
+        if (!s.VIEWS_RECOMPILE_grid) s.VIEWS_RECOMPILE_grid = [];
+        if (!s.NODES_RECOMPILE_snap) s.NODES_RECOMPILE_snap = [];
+        if (!s.VIEWS_RECOMPILE_snap) s.VIEWS_RECOMPILE_snap = [];
         for (let k in s.idlookup) {
             let e = s.idlookup[k] as GObject;
             if ((e?.className.includes('Vertex') || e?.className.includes('EdgePoint') || e?.className.includes('View')) && !('snap' in e)) {
                 e.snap = {x:1, y:1};
             }
-            if ((e?.className.includes('Graph') || e?.className.includes('View')) && !('grid' in e)) {
-                e.grid = {x: 0, y:0, type:'cartesian', center: 'cc'};
+            if ((/*e?.className.includes('Graph') ||*/ e?.className.includes('View')) && !('grid' in e)) {
+                e.grid = {x: 0, y:0, type:'cartesian', center: 'cc', visible: true};
             }
         }
         return s;

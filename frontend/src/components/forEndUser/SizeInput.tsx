@@ -25,12 +25,18 @@ function SizeInputComponent(props: AllProps): ReactNode {
         let otherProps: GObject = {...props};
         delete otherProps.xgetter;
         delete otherProps.xsetter;
+        delete otherProps.xlabel;
         delete otherProps.ygetter;
         delete otherProps.ysetter;
+        delete otherProps.ylabel;
         delete otherProps.wgetter;
         delete otherProps.wsetter;
+        delete otherProps.wlabel;
         delete otherProps.hgetter;
         delete otherProps.hsetter;
+        delete otherProps.hlabel;
+        delete otherProps.rootClassName;
+        delete otherProps.rootStyle;
         delete otherProps.data;
         delete otherProps.field;
         delete otherProps.label;
@@ -67,10 +73,11 @@ function SizeInputComponent(props: AllProps): ReactNode {
             else return (ll[field] as any as Partial<ISize>) = {[propkey]: +val};
         }
         return (<>
-            <label className={props.rootClassName} style={{fontFamily:'Inter Variable', ...(props.rootStyle||{})}}>
-                {(props.label) && <label className={'my-auto'} style={{fontFamily:'-webkit-body'}} onClick={() => { if (tooltip) notify() }}>
+            <label {...otherProps} className={props.rootClassName} style={{fontFamily:'Inter Variable', ...(props.rootStyle||{})}} onClick={(e) => { if (tooltip) notify(); (props as any).onClick?.(e); }}>
+                {/*(!!props.label) && <label className={'my-auto'} style={{fontFamily:'-webkit-body'}} >
                     {props.label}
-                </label>}
+                </label>*/
+                props.label}
                 <label className={"d-flex my-auto ms-auto"} style={{flexWrap: "wrap"}}>
                     {allowx && <Input {...otherProps} className={""} data={l} label={<span style={labelStyle}>{props.xlabel||'x'}</span>} field={field} type={"number"}
                         getter={(ll)=>getter(ll, 'x', props.xgetter)}

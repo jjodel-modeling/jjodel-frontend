@@ -1,13 +1,13 @@
 
 import React, {ReactNode} from "react";
-import {ISize, L, LGraph, Pointers} from "../../joiner";
+import {ISize, L, LGraph, LViewElement, Pointers} from "../../joiner";
 
 type radians = number;
 
 type InfiniteSvgGridProps = {
     node: LGraph;
     offset?: {x: number, y: number};
-    grid?: {x: number, y: number | radians, type: string};
+    grid?: LViewElement['grid'];
     zoom?: {x: number, y: number};
 };
 
@@ -18,10 +18,13 @@ export const Grid: React.FC<InfiniteSvgGridProps> = (props) => {
     if (Pointers.isPointer(node)) node = L.from(node);
     const offset = props.offset || node.offset;
     const grid = props.grid || node.grid;
+    if (!grid.visible) return null;
     if (!grid.x) grid.x = 0;
     if (!grid.y) grid.y = 0;
+
     const zoom = props.zoom || node.zoom;
     let {x, y} = grid || {x:0, y:0};
+    if (x <= 0 && y <= 0) return null;
     // if graph size is unknown, i use 8k monitors fullscreen (7680 × 4320)
     if (grid.type === 'polar') return PolarGrid(grid as LGraph['grid'], offset, zoom, ('h' in offset ? offset as any : {...offset, w:7680, h:4320}));
     // let size = node.size; NO! it is 0,0,0,0; use offset instead
@@ -32,21 +35,36 @@ export const Grid: React.FC<InfiniteSvgGridProps> = (props) => {
 
     const transform = `scale(${zoom.x}, ${zoom.y}) translate(${offset.x}, ${offset.y})`; // scale(${zoom.x}, ${zoom.y});
 
+    let hideX = false;
+    let hideY = false;
+    if (x <= 0) {
+        x = 999;
+        hideY = true;
+    }
+    if (y <= 0) {
+        y = 999;
+        hideX = true;
+    }
+    let id = node.id;
     return (
         <svg width="100%" height="100%" style={{ position: "absolute", inset: 0 }}>
             <defs>
-                {/* Minor grid */}
+                {/* Minor grid
+                x=0  -> horizontal rows spaced by y -> y any, c = min(stroke-width) max(
+                y=0  -> vertical columns spaced by x
+
+                */}
                 <pattern
-                    id="minor-grid"
+                    id={id+"_minor-grid"}
                     width={x}
                     height={y}
                     patternUnits="userSpaceOnUse"
                     patternTransform={transform}
                 >
                     <path
-                        d={x ? `M 0 0 L ` + (x ? x+' 0 ' : '') + (y ? '0 '+y : '') : ('')}
+                        d={`M 0 0 L ` + (hideX ? '0 ' + y : x + ' 0 ') + (hideY ? '' : x + ' ' + y)}
                         // @ts-ignore
-                        dataD={x ? `M 0 0 L ` + (x ? x+' 0 ' : '') + (y ? '0 '+y : '') : ('')}
+                        dataD={`M 0 0 L ` + (hideX ? '0 ' + y : x + ' 0 ') + (hideY ? '' : x + ' ' + y)}
                         fill="none"
                         stroke="currentColor"
                         strokeWidth={1}
@@ -56,14 +74,15 @@ export const Grid: React.FC<InfiniteSvgGridProps> = (props) => {
 
                 {/* Major grid */}
                 <pattern
-                    id="major-grid"
+                    id={id+"_major-grid"}
                     width={x * 10}
                     height={y * 10}
                     patternUnits="userSpaceOnUse"
                     patternTransform={transform}
                 >
                     <path
-                        d={x ? `M ${x*10} 0 L ` + (x ? '0 0 ' : '') + (y*10 ? '0 '+y*10 : '') : ('')}
+                        d={`M 0 0 L ` + (hideX ? '0 ' + y*10 : x*10 + ' 0 ') + (hideY ? '' : x*10 + ' ' + y*10)}
+                        // d={`M 0 0 L ` + (x ? x*10+' 0 ' : '') + (y ? x*10+' '+y*10 : '')}
                         fill="none"
                         stroke="currentColor"
                         strokeWidth={2}
@@ -72,8 +91,8 @@ export const Grid: React.FC<InfiniteSvgGridProps> = (props) => {
                 </pattern>
             </defs>
 
-            <rect width="100%" height="100%" fill="url(#minor-grid)" />
-            <rect width="100%" height="100%" fill="url(#major-grid)" />
+            <rect width="100%" height="100%" fill={"url(#" + id + "_minor-grid)"} />
+            <rect width="100%" height="100%" fill={"url(#" + id + "_major-grid)"} />
         </svg>
     );
 };
@@ -91,6 +110,7 @@ function PolarGrid(grid: LGraph['grid'], offset: { x: number; y: number }, zoom:
     console.log('radial grid',{minRadius, maxRadius, offset, size, })
     const radialLines = () => {
         const step = angleStep;
+        if (step === 0) return null;
         let length = Math.ceil(Math.PI * 2 / step);
         return Array.from(
             { length },
@@ -122,6 +142,7 @@ function PolarGrid(grid: LGraph['grid'], offset: { x: number; y: number }, zoom:
         const step = rStep;
         let arr: ReactNode[] = [];
         let i: number = -1;
+        if (step === 0) return null;
         for (let radius = Math.floor(minRadius / step) * step/* || step*/; radius <= maxRadius; radius+=step) {
             console.log('radial grid circle ' + i, {radius, minRadius, step, maxRadius});
             if (++i === 0 && angleStep) continue; // skip first circle if there are already radial lines (invisible anyway)

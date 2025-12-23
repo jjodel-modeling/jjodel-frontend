@@ -488,10 +488,15 @@ export abstract class ISize<PT extends IPoint = IPoint> extends RuntimeAccessibl
     public cc(): PT { return this.makePoint(this.x + this.w / 2, this.y + this.h /2 ); }
     public offset(): PT { return this.makePoint(this.w, this.h); }
     public center(): PT { return this.cc(); }
+    public c(): PT { return this.cc(); }
     public l(): PT { return this.cl(); }
     public r(): PT { return this.cr(); }
     public t(): PT { return this.ct(); }
     public b(): PT { return this.cb(); }
+    public ll(): PT { return this.l(); }
+    public rr(): PT { return this.r(); }
+    public tt(): PT { return this.t(); }
+    public bb(): PT { return this.b(); }
 
     public lt(): PT { return this.tl(); }
     public rt(): PT { return this.tr(); }

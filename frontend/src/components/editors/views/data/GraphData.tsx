@@ -1,28 +1,62 @@
 import React, {Dispatch} from 'react';
-import {DState, DViewElement, LPointerTargetable, LViewElement, Pointer, Select} from '../../../../joiner';
+import {
+    DState,
+    DViewElement,
+    Info,
+    Input,
+    LGraph,
+    LPointerTargetable,
+    LViewElement,
+    Pointer,
+    Select
+} from '../../../../joiner';
 import {FakeStateProps} from "../../../../joiner/types";
 import {connect} from "react-redux";
+import {SizeInput} from "../../../forEndUser/SizeInput";
+import {Tooltip} from "../../../forEndUser/Tooltip";
 
 function GraphDataComponent(props: AllProps) {
     const view = props.view;
     const readOnly = props.readonly;
     let empty = true;
     // if (empty) return null;
+    let grid = view.grid;
     return(<section>
         <h5>Graph</h5>
         <div className={'px-2 no-padding-left'}>
-            <div className={'input-container'}>
-                <b className={'me-2'}>Grid coordinates:</b>
-                <Select data={view} getter={l => l.grid?.type || "cartesian"} setter={(v, l) => l.grid = {type: v}}>
-                    <optgroup label={"Coordinate type"}></optgroup>
-                    <option value={'cartesian'}>Cartesian</option>
-                    <option value={'polar'}>Polar</option>
-                </Select>
-            </div>
-            <div className={'input-container'}>
-                <b className={'me-2'}>Grid snaps to:</b>
-                <Select data={view} getter={(l) => l.grid?.center || "cc"}
-                        setter={(val, l) => l.grid = {center: val} as any}>
+            <SizeInput data={view} label={'Grid'}
+                       xlabel={grid!.type === 'polar' ? 'modulo' : 'x'}
+                       ylabel={grid!.type === 'polar' ? 'angle' : 'y'}
+                       xgetter={(l) => '' + ((l as LGraph).grid.x || 0)}
+                       xsetter={(val, l) => l.grid = {x: +val || 0} as any}
+                       ygetter={(l) => '' + ((l as LGraph).grid.y || 0)}
+                       ysetter={(val, l) => l.grid = {y: +val || 0} as any}
+                       readOnly={readOnly}
+            />
+            {/*
+            <label className={'input-container'}>
+                <b className={'me-2 my-auto'}>Grid coordinates:</b>
+                <Tooltip tooltip={Info.grid.txt}>
+                    <Select data={view}
+                            readOnly={readOnly}
+                            getter={l => l.grid?.type || "cartesian"}
+                            setter={(v, l) => {
+                                l.grid = {type: v};
+                            }}>
+                        <optgroup label={"Coordinate type"}></optgroup>
+                        <option value="cartesian">Cartesian</option>
+                        <option value="polar">Polar</option>
+                    </Select>
+                </Tooltip>
+            </label>*/}
+            <label className={'input-container'}>
+                <b className={'me-2 my-auto'}>Grid snaps to:</b>
+                <Select data={view}
+                        id='grid'
+                        readOnly={readOnly}
+                        getter={(l) => l.grid?.center || "cc"}
+                        setter={( //@ts-ignore
+                            (val, l: LViewElement) => l.grid = {center: val} as any ) as any}>
                     <optgroup label={"Coordinate type"}>
                         <option value={'cc'}>center</option>
                         <option value={'tt'}>top</option>
@@ -35,9 +69,19 @@ function GraphDataComponent(props: AllProps) {
                         <option value={'br'}>bottom right</option>
                     </optgroup>
                 </Select>
-            </div>
+            </label>
+
+            <label className={'input-container'}>
+                <b className={'me-2 my-auto  h-auto'}>Grid visible:</b>
+                <Input type={'checkbox'}
+                       data={view}
+                       getter={(l) => l.grid?.visible}
+                       setter={((val: boolean, l: LViewElement) => l.grid = {visible: !!val} as any) as any}
+                />
+            </label>
         </div>
-    </section>);
+    </section>
+);
 }
 
 interface OwnProps {

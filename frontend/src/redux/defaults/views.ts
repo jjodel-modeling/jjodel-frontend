@@ -67,7 +67,8 @@ class DefaultViews {
     &>div{
         transform: rotate(90deg) translate(0, 100%);
     }
-}
+}`;
+let gridsObsolete = `
 .grid-classic {
     background-image: radial-gradient(silver 1px, transparent 0);
     background-size: 15px 15px;
@@ -294,14 +295,14 @@ div.header:has(.open:hover) {
 }`;
             // view.events = {e1:"(num) => {\n\tdata.name = num;\n}"}
         }, false, Defaults.Pointer_ViewClass);
-        
+        /*
         view.onDataUpdate = "if (snap) {\n" +
         + "\n  const size = node.size"
         + "\n  if ((size.x || size.y) && (snap.x && snap.y)) {"
         + "\n    const snapped = size.center().modulo(snap)"
         + "\n    if (snapped.x !== size.x || snapped.y !== size.y) node.size = snapped;"
         + "\n  }"
-        + "\n}"
+        + "\n}"*/
 
         return view;
     }

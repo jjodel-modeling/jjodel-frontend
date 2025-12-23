@@ -43,40 +43,40 @@ function NodeDataComponent(props: AllProps) {
 
         <h5>Vertex</h5>
         <div className={'px-2'}>
-            <div className={'input-container'}>
+            <label className={'input-container'}>
                 <b className={'me-2'}>Store Size in View:</b>
                 {<Input data={view} field={"storeSize"} readOnly={readOnly} tooltip={
                     <div>On - The node position depends from the view currently displayed.<br/>Off - It depends from the
                         graph.</div>} type={"checkbox"}/>
                     /* on = EuseSizeFrom.nv,   off = EuseSizeFrom.n */
                 }
-            </div>
-            <div className={'input-container'}>
+            </label>
+            <label className={'input-container'}>
                 <b className={'me-2'}>Lazy Update:</b>
                 <Input data={view} field={"lazySizeUpdate"} type={"checkbox"} tooltip={true} readOnly={readOnly}/>
-            </div>
+            </label>
 
-            <div className={'input-container'}>
+            <label className={'input-container'}>
                 <b className={'me-2'}>Adapt Width:</b>
                 <Input data={view} field={"adaptWidth"} type={"checkbox"} readOnly={readOnly} tooltip={true}/>
-            </div>
+            </label>
 
-            <div className={'input-container'}>
+            <label className={'input-container'}>
                 <b className={'me-2'}>Adapt Height:</b>
                 <Input data={view} field={"adaptHeight"} type={"checkbox"} readOnly={readOnly}/>
-            </div>
+            </label>
 
-            <div className={'input-container'}>
+            <label className={'input-container'}>
                 <b className={'me-2'}>Draggable:</b>
                 <Input data={view} field={"draggable"} type={"checkbox"} readOnly={readOnly}/>
-            </div>
+            </label>
 
-            <div className={'input-container'}>
+            <label className={'input-container'}>
                 <b className={'me-2'}>Resizable:</b>
                 <Input data={view} field={"resizable"} type={"checkbox"} readOnly={readOnly}/>
-            </div>
+            </label>
 
-            <div className={'input-container'}>
+            <label className={'input-container'}>
                 <b className={'me-2'}>Snap:</b>
                 <SizeInput data={view}
                            xgetter={(l) => '' + ((l as LVoidVertex).snap.x || 0)}
@@ -84,19 +84,19 @@ function NodeDataComponent(props: AllProps) {
                            ygetter={(l) => '' + ((l as LVoidVertex).snap.y || 0)}
                            ysetter={(val, l) => l.snap = {y: +val || 0} as any}
                 />
-            </div>
+            </label>
 
-            <div className={'input-container'} data-hidden={dview.defaultVSize?.w}>
+            <label className={'input-container'} data-hidden={dview.defaultVSize?.w}>
                 <b className={'me-2'}>Default Width:</b>
                 <Input data={view} type={"number"} readOnly={readOnly}
                        getter={() => '' + view.defaultVSize.w} setter={(val) => view.defaultVSize = {w: +val} as any}/>
-            </div>
+            </label>
 
-            <div className={'input-container'} data-hidden={dview.defaultVSize?.h}>
+            <label className={'input-container'} data-hidden={dview.defaultVSize?.h}>
                 <b className={'me-2'}>Default Height:</b>
                 <Input data={view} type={"number"} readOnly={readOnly}
                        getter={() => '' + view.defaultVSize.h} setter={(val) => view.defaultVSize = {h: +val} as any}/>
-            </div>
+            </label>
         </div>
     </section>);
 }

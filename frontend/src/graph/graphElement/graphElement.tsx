@@ -529,13 +529,13 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         if (!measurableFunc) return false;
         let context: GObject = this.getJSXContext(vid); // context + usagedeclarations of main view only
         // console.log("render debug measurable " + type + " view: " + vid, {context, type, lm: Debug.lightMode, vid});
-        try {
-            TRANSACTION((this.props.data?.name || 'Shapeless')+'.'+type+'()', ()=>measurableFunc.call(context, context));
+        TRANSACTION((this.props.data?.name || 'Shapeless')+'.'+type+'()', ()=> {
+            try { measurableFunc.call(context, context) }
+            catch (e: any) {
+                Log.ee('Error in measurable "'+L.from(vid).name+'".'+type+' ' + e.message, {e, measurableFunc, context});
+            }
+        });
             // console.log("measurable executed", {type, measurableFunc, vid, transient:transientProperties.view[vid]});
-        }
-        catch (e: any) {
-            Log.ee('Error in measurable "'+L.from(vid).name+'".'+type+' ' + e.message, {e, measurableFunc, context});
-        }
         // it has executed at least partially.
         // i just need to know if he had the chance to do side-effects and the answer is yes regardless of exceptions
         return true;
