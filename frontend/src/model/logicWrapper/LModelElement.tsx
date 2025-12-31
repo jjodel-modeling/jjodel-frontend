@@ -454,7 +454,7 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
         return "";
     }
 
-    protected get_subNodes(context: LogicContext<LClass>, includingthis: boolean = false): LGraphElement[] {
+    protected get_subNodes(context: LogicContext<DClass>, includingthis: boolean = false): LGraphElement[] {
         const lclass: LClass = context.proxyObject as any;
         let $class = $('[data-dataid="' + context.data.id + '"]');
         let $subnodes = $class.find('[data-nodeid]');

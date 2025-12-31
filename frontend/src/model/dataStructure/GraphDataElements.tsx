@@ -65,7 +65,9 @@ import {EdgeGapMode, InitialVertexSize, InitialVertexSizeFunc} from "../../joine
 
 
 //console.warn('ts loading graphDataElement');
-
+type ContextMenuFunc = ((data: LModelElement, node: LGraphElement, view: LViewElement)=>void);
+type ContextMenu = Dictionary<string, ContextMenuFunc | Dictionary<string, ContextMenuFunc>>;
+type ContextMenuRec = Dictionary<string, ContextMenu | ((data: LModelElement, node: LGraphElement, view: LViewElement)=>void)>;
 @Node
 @RuntimeAccessible('DGraphElement')
 export class DGraphElement extends DPointerTargetable {
@@ -95,6 +97,7 @@ export class DGraphElement extends DPointerTargetable {
     edgesIn!: Pointer<DEdge>[];
     edgesOut!: Pointer<DEdge>[];
     anchors!: Dictionary<string, GraphPoint/* as % of node size.*/>;
+    contextMenu:any;
 
 
     public static new(htmlindex: number, model: DGraphElement["model"]|null|undefined, parentNodeID: DGraphElement["father"],
@@ -1086,7 +1089,7 @@ export class LGraph<Context extends LogicContext<DGraph> = any, D extends DGraph
         else return this.get_view(c).grid;
     }
 
-    set_grid(val: GObject/*<GraphPoint & {type:string}>*/ | number | string | boolean, c: LogicContext<LGraph>): boolean {
+    set_grid(val: GObject/*<GraphPoint & {type:string}>*/ | number | string | boolean, c: LogicContext<DGraph>): boolean {
         return LViewElement.SetGrid_impl(val, c);
         /*if (c.data.grid) return LViewElement.SetGrid_impl(val, c);
         else return this.get_view(c).grid = val as any;*/

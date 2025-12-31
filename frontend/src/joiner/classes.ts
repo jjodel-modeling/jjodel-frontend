@@ -988,7 +988,7 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         return this; }
     DVertex(): this {
         let thiss: DVoidVertex & DVertex = this.thiss as any;
-        thiss.snap = new GraphPoint(1, 1);
+        thiss.snap = undefined;
         return this;
     }
     DVoidEdge(start: DGraphElement["id"] | DGraphElement | LGraphElement | DModelElement["id"] | DModelElement | LModelElement,

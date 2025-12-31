@@ -1172,6 +1172,9 @@ export class DefaultView {
 <Grid node={node}/>
 <Scrollable graph={node}>
     {!data && "Model data missing."}
+    <ContextMenu label={"snapTo (just a ctxmenu test)"} >
+        <ContextMenu label={"left"} />
+    </ContextMenu>
     <div className={'edges'}>
         {level > 1 && [
             refEdges.map(se => <Edge 

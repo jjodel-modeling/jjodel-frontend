@@ -9,10 +9,11 @@ type InfiniteSvgGridProps = {
     offset?: {x: number, y: number};
     grid?: LViewElement['grid'];
     zoom?: {x: number, y: number};
+    mode?: "lines" | "points";
 };
 
 
-export const Grid: React.FC<InfiniteSvgGridProps> = (props) => {
+export const Grid: React.FC<InfiniteSvgGridProps> = (props: InfiniteSvgGridProps) => {
     let node = props.node;
     //@ts-ignore
     if (Pointers.isPointer(node)) node = L.from(node);
@@ -61,33 +62,44 @@ export const Grid: React.FC<InfiniteSvgGridProps> = (props) => {
                     patternUnits="userSpaceOnUse"
                     patternTransform={transform}
                 >
-                    <path
-                        d={`M 0 0 L ` + (hideX ? '0 ' + y : x + ' 0 ') + (hideY ? '' : x + ' ' + y)}
-                        // @ts-ignore
-                        dataD={`M 0 0 L ` + (hideX ? '0 ' + y : x + ' 0 ') + (hideY ? '' : x + ' ' + y)}
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth={1}
-                        vectorEffect="non-scaling-stroke"
-                    />
+                    {props.mode === 'points' ?
+                        <>
+                            <circle r={1} cx={0} cy={0} />
+                            {hideX ? <circle r={1} cx={0} cy={y} /> : <circle r={1} cx={x} cy={0} />}
+                            {hideY ? null : <circle r={1} cx={x} cy={y} />}
+                        </>
+                        : <path d={`M 0 0 L ` + (hideX ? '0 ' + y : x + ' 0 ') + (hideY ? '' : x + ' ' + y)}
+                            // @ts-ignore
+                                dataD={`M 0 0 L ` + (hideX ? '0 ' + y : x + ' 0 ') + (hideY ? '' : x + ' ' + y)}
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth={1}
+                                vectorEffect="non-scaling-stroke"
+                        />}
                 </pattern>
 
                 {/* Major grid */}
                 <pattern
-                    id={id+"_major-grid"}
+                    id={id + "_major-grid"}
                     width={x * 10}
                     height={y * 10}
                     patternUnits="userSpaceOnUse"
                     patternTransform={transform}
                 >
-                    <path
-                        d={`M 0 0 L ` + (hideX ? '0 ' + y*10 : x*10 + ' 0 ') + (hideY ? '' : x*10 + ' ' + y*10)}
+                    {props.mode === 'points' ?
+                        <>
+                            <circle r={5} cx={0} cy={0} />
+                            {hideX ? <circle r={5} cx={0} cy={y*10} /> : <circle r={1} cx={x*10} cy={0} />}
+                            {hideY ? null : <circle r={5} cx={x} cy={y*10} />}
+                        </>
+                        : <path
+                        d={`M 0 0 L ` + (hideX ? '0 ' + y * 10 : x * 10 + ' 0 ') + (hideY ? '' : x * 10 + ' ' + y * 10)}
                         // d={`M 0 0 L ` + (x ? x*10+' 0 ' : '') + (y ? x*10+' '+y*10 : '')}
                         fill="none"
                         stroke="currentColor"
                         strokeWidth={2}
                         vectorEffect="non-scaling-stroke"
-                    />
+                    />}
                 </pattern>
             </defs>
 

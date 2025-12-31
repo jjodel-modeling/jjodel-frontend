@@ -522,10 +522,12 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
         }
         return ret;
     }
-    set_nodes(val: GObject/*<GraphPoint & {type:string}>*/ | number | string | boolean, c: LogicContext<LViewElement>): boolean { return this.cannotSet('nodes'); }
+    set_nodes(val: GObject/*<GraphPoint & {type:string}>*/ | number | string | boolean, c: LogicContext<DViewElement>): boolean { return this.cannotSet('nodes'); }
 
     snap!: GraphPoint;
     get_snap(c: LogicContext<DVoidVertex>): DVoidVertex["snap"] { return LViewElement.GetSnap(c); }
+    set_snap(val: GraphPoint, c: LogicContext<DViewElement>): boolean { return LViewElement.SetSnap(val, c); }
+
     public static GetSnap(c: LogicContext<DVoidVertex> | LogicContext<DViewElement>): DVoidVertex["snap"] { return new GraphPoint(c.data.snap!.x, c.data.snap!.y); }
     public static SetSnap(val: Partial<GraphPoint> | number | string | boolean, c:  LogicContext<DVoidVertex> | LogicContext<DViewElement>): boolean {
         if (!val) val = 0;
@@ -558,7 +560,7 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
     grid!: GraphPoint & {type: "polar" | "cartesian", "center": TLCoord, visible: boolean};
     __info_of__grid: Info = Info.grid;
     public get_grid(c: Context): LViewElement['grid'] { return LViewElement.GetGrid_impl(c); }
-    set_grid(val: GObject/*<GraphPoint & {type:string}>*/ | number | string | boolean, c: LogicContext<LViewElement>): boolean { return LViewElement.SetGrid_impl(val, c); }
+    set_grid(val: GObject/*<GraphPoint & {type:string}>*/ | number | string | boolean, c: LogicContext<DViewElement>): boolean { return LViewElement.SetGrid_impl(val, c); }
 
     public static GetGrid_impl(c: LogicContext<DGraph> | LogicContext<DViewElement>): LViewElement['grid'] {
         let grid: GObject = new GraphPoint(c.data.grid!.x || 0, c.data.grid!.y || 0);
@@ -570,7 +572,7 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
         grid.visible = !!c.data.grid!.visible;
         return grid as LViewElement['grid'];
     }
-    public static SetGrid_impl(val: GObject/*<GraphPoint & {type:string}>*/ | number | string | boolean, c: LogicContext<LViewElement> | LogicContext<LGraph>): boolean {
+    public static SetGrid_impl(val: GObject/*<GraphPoint & {type:string}>*/ | number | string | boolean, c: LogicContext<DViewElement> | LogicContext<DGraph>): boolean {
         let isNode = !c.data.className.includes('View');
         if (!val && val !== 0) {
             if (isNode) {

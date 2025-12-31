@@ -1327,7 +1327,11 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
 
         // \console.log('GE render', {thiss: this, data:me, rnode, rawRElement, props:this.props, name: (me as any)?.name});
 
-        function makeItArray(val?: any) { return val ? [] : (Array.isArray(val) ? val : [val]); }
+        function makeItArray(val?: any) {
+            return []; // probably the function is bugged & pointless, checking to remove it.
+            // this should be wrong, but it worked until now?? checking if removable
+            return val ? [] : (Array.isArray(val) ? val : [val]);
+        }
         function getNodeText(node?: any | ReactNode): string | undefined {
             if (['string', 'number'].includes(typeof node)) return node;
             if (node instanceof Array) return node.map(getNodeText).join('');

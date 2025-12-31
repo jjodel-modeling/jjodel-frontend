@@ -14,7 +14,8 @@ import {
     LVoidEdge, LGraph, DGraphElement,
     DNamedElement,
     IPoint, GraphPoint,
-    Pointer, Select, GObject, Info, DGraph
+    Pointer, Select, GObject, Info, DGraph,
+    DVertex
 } from '../../joiner'
 import {Draggable, U
 } from '../../joiner';
@@ -236,19 +237,25 @@ function NodeEditorComponent(props: AllProps) {
             {/*graphSize readonly on LGraph but not on DGraph, = internal graph size. put it for info.*/}
         </>}
 
-            {asVertex && <>
-                {!isGraphVertex && <>
-                    <h3 className='w-100'>Vertex</h3>
-                    {commonEntries}
-                    <InputRow label={'X Position'} as={asVertex} field={'x'} type={'number'}/>
-                    <InputRow label={'Y Position'} as={asVertex} field={'y'} type={'number'}/>
-                    <InputRow label={'Width'} as={asVertex} field={'width'} type={'number'}/>
-                    <InputRow label={'Height'} as={asVertex} field={'height'} type={'number'}/>
-                </>}
-                <InputRow label={'isResized'} as={asVertex} field={'isResized'} type={'checkbox'}/>
+        {asVertex && <>
+            {!isGraphVertex && <>
+                <h3 className='w-100'>Vertex</h3>
+                {commonEntries}
+                <InputRow label={'X Position'} as={asVertex} field={'x'} type={'number'}/>
+                <InputRow label={'Y Position'} as={asVertex} field={'y'} type={'number'}/>
+                <InputRow label={'Width'} as={asVertex} field={'width'} type={'number'}/>
+                <InputRow label={'Height'} as={asVertex} field={'height'} type={'number'}/>
+            </>}
+            <InputRow label={'isResized'} as={asVertex} field={'isResized'} type={'checkbox'}/>
 
             <label className={'input-container'}>
-                <b className={'me-2 my-auto'}>Snap:</b>
+                <span className={'d-flex w-100'}><span className={'my-auto'}>Snap</span>{(dnode as DVertex).snap ?
+                    <Tooltip tooltip={'Erases node\'s snap to inherit it from the view instead.'}><i
+                        className={'bi bi-trash my-auto ms-1'} style={{color: 'red'}} onClick={() => {
+                        asVertex.snap = null as any;
+                    }}/></Tooltip> :
+                    <span className={'my-auto'} style={{color: 'orange'}}>&nbsp;(inherited from view)</span>}
+                </span>
                 <SizeInput data={asVertex}
                            xgetter={(l) => '' + ((l as LVoidVertex).snap.x || 0)}
                            xsetter={(val, l) => l.snap = {x: +val || 0} as any}
@@ -258,16 +265,16 @@ function NodeEditorComponent(props: AllProps) {
             </label>
         </>}
 
-        {asEdge && <><h3 className='w-100'>Edge</h3>
-            {commonEntries}
+            {asEdge && <><h3 className='w-100'>Edge</h3>
+                {commonEntries}
 
-            {
-                //  <>
-                //     moved to props & transient properties
-                //     <GenericInput data={asEdge} field={'longestLabel'}
-                //         placeholder={'(edge/*LEdge*/, segment/*EdgeSegment*/, subNodes/*LGraphElement[]*/, allSegments/*EdgeSegment[]*/) => {' +
-                //         '\n\t// a complex example. The label can be either a function like this or a simple string.' +
-                //         '\n\t return (edge.start.model)?.name + \' ~ \' + (e.end.model)?.name + \'(\' + segment.length.toFixed(1) + \')\';' +
+                {
+                    //  <>
+                    //     moved to props & transient properties
+                    //     <GenericInput data={asEdge} field={'longestLabel'}
+                    //         placeholder={'(edge/*LEdge*/, segment/*EdgeSegment*/, subNodes/*LGraphElement[]*/, allSegments/*EdgeSegment[]*/) => {' +
+                    //         '\n\t// a complex example. The label can be either a function like this or a simple string.' +
+                    //         '\n\t return (edge.start.model)?.name + \' ~ \' + (e.end.model)?.name + \'(\' + segment.length.toFixed(1) + \')\';' +
                 //         '\n}'}/>
                 //     <GenericInput data={asEdge} field={'labels'}
                 //         placeholder={'(edge/*LEdge*/, segment/*EdgeSegment*/, subNodes/*LGraphElement[]*/, allSegments/*EdgeSegment[]*/) => {' +
