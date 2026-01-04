@@ -1267,6 +1267,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
             tnv:tn.viewScores[this.props.viewid], ud:tn.viewScores[this.props.viewid].usageDeclarations});*/
 
         // compute jsx
+        tn.contextMenu = []; // reset old entries, new ones are computed now.
         for (let v of allviews) { // main view is the last
             let viewnodescore = tn.viewScores[v.id];
             jsxOutput = viewnodescore.shouldUpdate ? undefined : viewnodescore.jsxOutput;
@@ -1425,7 +1426,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
                 // injectProps.children = [...makeItArray(rawRElement.props.children), ...makeItArray(injectProps.children)];
                 // let children = makeItArray(injectProps.children); // [...makeItArray(rawRElement.props.children), ...makeItArray(injectProps.children)]; rawRElement.child are already in injectprops
                 // injectProps.children = [<div>{children}</div>];//[]; making any change at injectprops.children breaks it?
-                rawRElement = React.cloneElement(rawRElement, injectProps);//, ...children); // adding chioldrens after injectprops seems pointless
+                rawRElement = React.cloneElement(rawRElement, injectProps);//, ...children); // adding childrens after injectprops seems pointless
 
                 // debug.rawRElementPostInjection = {node:rawRElement, text: getNodeText(rawRElement)};
                 // rawRElement = React.cloneElement(rawRElement, {children: [...makeItArray(rawRElement.props.children), ...makeItArray(injectProps.children)]});

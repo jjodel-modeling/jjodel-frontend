@@ -137,6 +137,7 @@ import {
 } from "./index";
 import type {Grammar, ParserOptions, Parser} from "nearley";
 import type nearley from "nearley";
+import type {CtxMenuAllProps} from "../components/forEndUser/ContextMenu";
 import {LayoutData} from "rc-dock";
 import {OclEngine} from "@stekoe/ocl.js";
 import React, {ReactNode} from "react";
@@ -3927,11 +3928,13 @@ export class NodeTransientProperties{
     onDelete?: (node: LGraphElement)=>boolean; // return false to prevent deletion
     explicitView?: LViewElement;
     sizeHistory: { size: Partial<GraphSize>, time: number }[];
+    contextMenu: CtxMenuAllProps[];
     constructor(){
         // this.stackViews = []; this.validMainViews = [];
         this.viewScores = {};
         this.src = U.getStackTrace();
         this.sizeHistory = [];
+        this.contextMenu = [];
     }
 
     static sort(tn: NodeTransientProperties, pv: DViewElement | undefined, state0?: DState) {

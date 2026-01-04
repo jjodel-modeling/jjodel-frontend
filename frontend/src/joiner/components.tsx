@@ -39,6 +39,7 @@ export {Selector} from "../components/forEndUser/Selector";
 export {View} from "../components/forEndUser/Aliases";
 export {Try} from "../components/forEndUser/Try";
 export {Grid} from "../components/forEndUser/grid";
+export {ContextMenu} from "../components/forEndUser/ContextMenu";
 
 
 // export {Image} from "../components/forEndUser/Image";

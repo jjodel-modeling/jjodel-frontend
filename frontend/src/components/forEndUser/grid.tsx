@@ -47,6 +47,7 @@ export const Grid: React.FC<InfiniteSvgGridProps> = (props: InfiniteSvgGridProps
         hideX = true;
     }
     let id = node.id;
+    let modeDots = props.mode === 'points' && !hideX && !hideY;
     return (
         <svg width="100%" height="100%" style={{ position: "absolute", inset: 0 }}>
             <defs>
@@ -62,20 +63,22 @@ export const Grid: React.FC<InfiniteSvgGridProps> = (props: InfiniteSvgGridProps
                     patternUnits="userSpaceOnUse"
                     patternTransform={transform}
                 >
-                    {props.mode === 'points' ?
+                    {modeDots && // if x or y are missing, it collapses to infinite dots close, so it's just a line again
                         <>
                             <circle r={1} cx={0} cy={0} />
-                            {hideX ? <circle r={1} cx={0} cy={y} /> : <circle r={1} cx={x} cy={0} />}
-                            {hideY ? null : <circle r={1} cx={x} cy={y} />}
+                            <circle r={1} cx={0} cy={y} />
+                            <circle r={1} cx={x} cy={0} />
+                            <circle r={1} cx={x} cy={y} />
                         </>
-                        : <path d={`M 0 0 L ` + (hideX ? '0 ' + y : x + ' 0 ') + (hideY ? '' : x + ' ' + y)}
-                            // @ts-ignore
-                                dataD={`M 0 0 L ` + (hideX ? '0 ' + y : x + ' 0 ') + (hideY ? '' : x + ' ' + y)}
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth={1}
-                                vectorEffect="non-scaling-stroke"
-                        />}
+                    }
+                    <path d={`M 0 0 L `  + (hideX ? '0 ' + y + ' ' : x + ' 0 ') +        (hideY ? '' : x + ' ' + y)}
+                        // @ts-ignore
+                        dataD={`M 0 0 L `+ (hideX ? '0 ' + y + ' ' : x + ' 0 ') + " _ " +(hideY ? '' : x + ' ' + y)}
+                        fill="none"
+                        stroke={modeDots ? 'transparent' : 'currentColor'}
+                        strokeWidth={1}
+                        vectorEffect="non-scaling-stroke"
+                    />
                 </pattern>
 
                 {/* Major grid */}
@@ -86,20 +89,22 @@ export const Grid: React.FC<InfiniteSvgGridProps> = (props: InfiniteSvgGridProps
                     patternUnits="userSpaceOnUse"
                     patternTransform={transform}
                 >
-                    {props.mode === 'points' ?
+                    {modeDots && // if x or y are missing, it collapses to infinite dots close, so it's just a line again
                         <>
-                            <circle r={5} cx={0} cy={0} />
-                            {hideX ? <circle r={5} cx={0} cy={y*10} /> : <circle r={1} cx={x*10} cy={0} />}
-                            {hideY ? null : <circle r={5} cx={x} cy={y*10} />}
+                            <circle r={2} cx={0}    cy={0}    />
+                            <circle r={2} cx={0}    cy={y*10} />
+                            <circle r={2} cx={x*10} cy={0}    />
+                            <circle r={2} cx={x*10} cy={y*10} />
                         </>
-                        : <path
-                        d={`M 0 0 L ` + (hideX ? '0 ' + y * 10 : x * 10 + ' 0 ') + (hideY ? '' : x * 10 + ' ' + y * 10)}
+                    }
+                    <path
+                        d={`M 0 0 L ` + (hideX ? '0 ' + y * 10 + ' ' : x * 10 + ' 0 ') + (hideY ? '' : x * 10 + ' ' + y * 10)}
                         // d={`M 0 0 L ` + (x ? x*10+' 0 ' : '') + (y ? x*10+' '+y*10 : '')}
                         fill="none"
-                        stroke="currentColor"
+                        stroke={modeDots ? 'transparent' : 'currentColor'}
                         strokeWidth={2}
                         vectorEffect="non-scaling-stroke"
-                    />}
+                    />
                 </pattern>
             </defs>
 

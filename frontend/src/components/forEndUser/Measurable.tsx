@@ -1,5 +1,17 @@
 import React, {Component, CSSProperties, PureComponent, ReactElement, ReactNode} from "react";
-import {DGraphElement, Dictionary, GObject, GraphSize, LGraph, Log, RuntimeAccessible, Size, TRANSACTION, U} from "../../joiner";
+import {
+    DGraphElement,
+    Dictionary,
+    GObject,
+    GraphSize, L,
+    LGraph,
+    Log,
+    Pointer,
+    RuntimeAccessible,
+    Size,
+    TRANSACTION,
+    U
+} from "../../joiner";
 import $ from "jquery";
 /// <reference path="../../common/libraries/jqui-types.ts" />
 import {JQueryUI} from "../../common/libraries/jqui-types"
@@ -441,7 +453,8 @@ export class MeasurableComponent extends Component<MeasurableAllProps, Measurabl
 export class ScrollableComponent extends Component<ScrollOwnProps, ScrollState>{
     static cname: string = "ScrollableComponent";
     render(){
-        let graph = this.props.graph;
+        let graph = (this.props.graph || L.fromPointer(this.props.graphid)) as any as LGraph;
+        if (!graph) return <div>&lt;Scrollable/&gt; requires a valid graph attribute</div>;
         let create = (e: JQueryEventObject) => {/*
             let target: HTMLElement = e.target.children[0] as HTMLElement;
             target.style.left = graph.offset.x+'px';
@@ -487,7 +500,8 @@ export class ScrollableComponent extends Component<ScrollOwnProps, ScrollState>{
 interface ScrollOwnProps {
     children: ReactNode;
     className?: string;
-    graph: LGraph;
+    graph?: LGraph;
+    graphid?: Pointer<LGraph>;
 }
 
 interface MeasurableOwnProps {

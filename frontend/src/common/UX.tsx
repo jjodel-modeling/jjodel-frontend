@@ -19,6 +19,7 @@ import {
     transientProperties, JSXT, DViewElement
 } from "../joiner";
 import {AllPropss} from "../graph/vertex/Vertex";
+import {ScrollableComponent} from "../components/forEndUser/Measurable";
 
 var Convert = require('ansi-to-html');
 
@@ -112,6 +113,12 @@ export class UX{
                 //    {'re.props.obj.id': re.props.obj?.id, 're.props.obj': re.props.obj, 'thiss.props.data.id': thiss.props.data.id, thiss, re, objid, ret, 'ret.props': ret.props});
                 return ret;*/
             // case windoww.Components.GraphElement.name:
+            case windoww.Components.ContextMenu.cname:
+                injectProps.nodeid = parentComponent.props.nodeid;
+                break;
+            case windoww.Components.ScrollableComponent:
+                injectProps.graphid = parentComponent.props.graphid;
+                break;
             case windoww.Components.Input.cname+"Component":
             case windoww.Components.Select.cname+"Component":
             case windoww.Components.TextArea.cname+"Component":
@@ -187,7 +194,7 @@ export class UX{
                 Log.ex((injectProps.nodeid === injectProps.graphid||injectProps.nodeid === injectProps.parentnodeid) && type !== "GraphComponent", "User manually assigned a invalid node id. please remove or change prop \"nodeid\"", {type: (re.type as any).WrappedComponent?.cname || re.type}, {mycomponents: windoww.mycomponents, re, props:rprops});
         }
         //console.log('injecting props ' + type, {id: injectProps.nodeid, re, pc: parentComponent, injectProps});
-        return React.cloneElement(re, injectProps);
+        return React.cloneElement(re, injectProps); //, injectProps.children||[]);
     }
 
     static ReactNodeAsElement(e: React.ReactNode): React.ReactElement | null {

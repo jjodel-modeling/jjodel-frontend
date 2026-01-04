@@ -299,7 +299,7 @@ export {
     Square, Star, SimpleStar, DecoratedStar, Trapezoid, Triangle,
     View, Try, ControlPanel, CountryPicker,
     GraphElements, Graphs, Vertexes, Edges, Fields,
-    MeasurableComponent, Measurable, Draggable, Rotatable, Resizable
+    MeasurableComponent, Measurable, Draggable, Rotatable, Resizable, ContextMenu
 } from './components'
 //export {createOrOpenModelTab} from "../components/abstract/DockLayoutComponent"; // needs to be after docklayoutcomponent or to split the file
 export {fakeExport} from './ExecuteOnRead';
