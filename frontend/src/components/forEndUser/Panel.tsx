@@ -330,6 +330,14 @@ const ZoomComponent = (props: ZoomProps) => {
 const Zoom = (props: ZoomProps): ReactElement => {
     return ZoomComponent(props);
 }
+Toggle_Obsolete.cname = 'Toggle_Obsolete';
+Control.cname = 'Control';
+Slider.cname = 'Slider';
+Zoom.cname = 'Zoom';
+ZoomComponent.cname = 'ZoomComponent';
+ToggleComponent_Obsolete.cname = 'ToggleComponent_Obsolete';
+ControlComponent.cname = 'ControlComponent';
+SliderComponent.cname = 'SliderComponent';
 
 
 export {Control, Slider, Toggle_Obsolete, Zoom};

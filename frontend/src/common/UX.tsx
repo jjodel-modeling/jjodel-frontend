@@ -20,8 +20,28 @@ import {
 } from "../joiner";
 import {AllPropss} from "../graph/vertex/Vertex";
 import {ScrollableComponent} from "../components/forEndUser/Measurable";
+import {
+    ContextualEntry,
+    Control,
+    MetaElementPicker,
+    Panel,
+    Panell,
+    Slider,
+    Toggle_Obsolete,
+    Zoom
+} from "../components/forEndUser/Control";
 
 var Convert = require('ansi-to-html');
+/*
+public static draggable_eventmap = {
+    's':    {'draggable': 'onDragStart',    'rotatable': 'onRotateStart',   'resizable': 'onResizeStart'},
+    'ing':  {'draggable': 'whileDragging',  'rotatable': 'whileRotating',   'resizable': 'whileResizing'},
+    'e':    {'draggable': 'onDragEnd',      'rotatable': 'onRotateEnd',     'resizable': 'onResizeEnd'  },
+};
+public static draggable_eventprops= UX.initMeasurable();
+static initMeasurable(): Dictionary<string, boolean>{
+    return U.objectFromArrayValues(Object.values(UX.draggable_eventmap).flatMap(v=>Object.values(v)), true);
+}*/
 
 // U-functions that require jsx
 @RuntimeAccessible('UX')
@@ -32,8 +52,14 @@ export class UX{
         // it counts as children iterated regardless. so html indices might be apparently off, but like this is even safer as indices won't change when conditions are changed.
         const innermap = (child0: ReactNode, i1: number, depthIndices: number[]): T => {
             let child: GObject = child0 as any;
+
+            console.log('UX recursive map', {child, isRE: React.isValidElement(child)});
+            if (child?.props?.mode){
+                console.error('UX recursive map', {child, isRE: React.isValidElement(child)});
+
+            }
             if (!React.isValidElement(child)) {
-                if (Array.isArray(child)) return React.Children.map(child as T, (c: T, i3: number)=>innermap(c, i3, [...depthIndices,i3])) as T;
+                if (Array.isArray(child)) return React.Children.map(child as T, (c: T, i3: number)=>innermap(c, i3, [...depthIndices, i3])) as T;
                 if (child && typeof child === "object") {
                     if (!windoww.invalidObjsReact) windoww.invalidObjsReact = [];
                     windoww.invalidObjsReact.push(child);
@@ -51,30 +77,28 @@ export class UX{
             }
             return fn(child as T, i1, depthIndices);
         };
+        console.warn('UX recursive map STRT', children);
+
         if (!Array.isArray(children)) return innermap(children as ReactNode, 0, [...depthIndices, 0]) as T;
         // if (typeof children[0] === "object") return (children).map( (c: T, i3: number)=>innermap(c, i3, [...depthIndices,i3])) as any as T;
-        return React.Children.map(children, (c: T, i3: number)=>innermap(c, i3, [...depthIndices,i3])) as T;
+        let ret = React.Children.map(children, (c: T, i3: number)=>innermap(c, i3, [...depthIndices,i3])) as T;
+
+        console.warn('UX recursive map END', children);
+        return ret;
     }
-    /*
-    public static draggable_eventmap = {
-        's':    {'draggable': 'onDragStart',    'rotatable': 'onRotateStart',   'resizable': 'onResizeStart'},
-        'ing':  {'draggable': 'whileDragging',  'rotatable': 'whileRotating',   'resizable': 'whileResizing'},
-        'e':    {'draggable': 'onDragEnd',      'rotatable': 'onRotateEnd',     'resizable': 'onResizeEnd'  },
-    };
-    public static draggable_eventprops= UX.initMeasurable();
-    static initMeasurable(): Dictionary<string, boolean>{
-        return U.objectFromArrayValues(Object.values(UX.draggable_eventmap).flatMap(v=>Object.values(v)), true);
-    }*/
 
     static injectProp(parentComponent: GraphElementComponent, e: ReactNode, gvidmap_useless: Dictionary<DocString<'VertexID'>, boolean>,
                       parentnodeid: string, index: number, indices: number[], injectOffset?: LGraph): ReactNode {
         let re: ReactElement | null = UX.ReactNodeAsElement(e);
 
+        console.log('UX inject type', {type: (re?.type as any).WrappedComponent?.name || re?.type, parentComponent, type0:re?.type, e});
         // injectOffset&&console.log("inject offset props 1:", {e, re, injectOffset});
         if (!re) return e;
         // @ts-ignore this
         // const parentComponent = this;
-        const type = (re.type as any).WrappedComponent?.name || re.type;
+        let type = (re.type as any).WrappedComponent?.name || re.type;
+        if (type && (typeof type == "object" || typeof type == "function")) type = (type as any).cname;
+
         let injectProps: GraphElementOwnProps = {} as any;
         /* if (false && injectOffset) {
             const style = {...(re.props?.style || {})};
@@ -113,10 +137,35 @@ export class UX{
                 //    {'re.props.obj.id': re.props.obj?.id, 're.props.obj': re.props.obj, 'thiss.props.data.id': thiss.props.data.id, thiss, re, objid, ret, 'ret.props': ret.props});
                 return ret;*/
             // case windoww.Components.GraphElement.name:
+            case 'Control':
+            case 'Slider':
+            case 'Toggle':
+            case 'Zoom':
+            case 'Panel':
+            case 'Panell':
+            case 'MetaElementPicker':
+            case 'ContextualEntry':
+            case 'ControlComponent':
+            case 'ZoomComponent':
+            case 'MetaElementPickerComponent':
+            case 'ContextualEntryComponent':
+            case 'PanelComponent':
+            case 'PanellComponent':
+            case 'SliderComponent':
+            case 'Toggle_Obsolete':
+            case 'ToggleComponent_Obsolete':
+                injectProps.nodeid = parentComponent.props.nodeid;
+                injectProps.graphid = parentComponent.props.graphid;
+                (injectProps as any).dataid = parentComponent.props.dataid;
+                break;
+            case 'Grid':
+                injectProps.nodeid = parentComponent.props.nodeid;
+                injectProps.graphid = parentComponent.props.graphid;
+                break;
             case windoww.Components.ContextMenu.cname:
                 injectProps.nodeid = parentComponent.props.nodeid;
                 break;
-            case windoww.Components.ScrollableComponent:
+            case windoww.Components.ScrollableComponent.cname:
                 injectProps.graphid = parentComponent.props.graphid;
                 break;
             case windoww.Components.Input.cname+"Component":

@@ -11,14 +11,14 @@ import {
     DViewElement,
     GObject, GraphElementComponent, L,
     LClass,
-    LGraphElement, LModel,
+    LGraphElement, LModel, LModelElement,
     LNamedElement,
     LObject, Log,
     LPackage,
     LProject, LReference, LStructuralFeature,
     LUser,
     LValue,
-    Pointer,
+    Pointer, transientProperties,
     U,
     windoww,
 } from '../../joiner';
@@ -71,6 +71,48 @@ export function ShowContextMenu(nodeid: Pointer<DGraphElement>, x: number, y: nu
 let contextMenuMap: Dictionary<Pointer<DGraph>, (nodeid: Pointer<DGraphElement>, x: number, y: number)=>void> = {};
 windoww.ShowContextMenu = ShowContextMenu;
 windoww.contextMenuMap = contextMenuMap;
+function addDynamicEntries(jsxList: ReactNode[], nodeid: Pointer<DGraphElement>, data: LModelElement | undefined, node: LGraphElement){
+    let tn = transientProperties.node[nodeid];
+    if (!tn.contextMenu?.length) return;
+    let i = -1;
+    let labelsMap: Dictionary<string, true> = {}
+    // aad custom user entries
+    for (let ctx of tn.contextMenu) {
+        i++;
+        let ico = ctx.ico;
+        if (!ico) ico = 'bi bi-person-gear';
+        else if (typeof ico === 'string') {
+            ico = ' ' + ico + ' '; // to simplify code in next line " bi " so i allow it at string end, but not as beginning of another string like "bisect"
+            if ((ico as string).includes(' bi-') && !(ico as string).includes(" bi ")) ico = "bi " + ico;
+            ico = (ico as string).trim();
+        } else {
+            if (!React.isValidElement(ico)) ico = 'bi bi-user';
+        }
+        let label = ctx.label;
+        let labelJSX = ctx.labelJSX;
+        if (!label || typeof "label" !== "string") { label = ctx.path || 'Unnamed user action' + (tn.contextMenu.length > 1 ? ' '+i : ''); }
+        if (!labelJSX || !React.isValidElement(labelJSX)) { labelJSX = null; }
+
+        let action = () => {
+            if (!ctx.action || typeof ctx.action !== 'function') return null;
+            try { ctx.action(data || null, node); }
+            catch (e) {
+                Log.ee("Error during user-defined contextmenu action", {e, label, ctx})
+            }
+        }
+        let hasSubTree = true;
+        jsxList.push(
+            <div key={label} onClick={action} className={'col item'} tabIndex={0}>
+                {typeof (ico as unknown) !== 'string' ? ico : <i className={ico as string} />}
+                {labelJSX || label}
+                {hasSubTree && <div>
+                    <i className={'bi bi-chevron-right'} style={{fontSize: '0.75em', float: 'right', paddingTop: '2px', fontWeight: '800'}}/>
+                </div>}
+            </div>
+        );
+    }
+    jsxList.push(<hr key={'user-actions-separator'} className={'my-1'} />);
+}
 
 function ContextMenuComponentInner(props: AllProps) {
     // const project = user.project as LProject;
@@ -203,6 +245,7 @@ function ContextMenuComponentInner(props: AllProps) {
             }
             jsxList.push(<hr key={hri++} className={'my-1'} />);
         }
+        addDynamicEntries(jsxList, nodeid, data, node);
 
         // if (ddata?.className === 'DObject') {
         //     jsxList.push(...(ldata as LObject).features.map(feat=>getAddChildren(feat, model, [])));
@@ -376,6 +419,7 @@ function ContextMenuComponentInner(props: AllProps) {
 
     let rootStyle: GObject = {top: display.y - 100, left: display.x - 10};
     // let rootStyle = {top: editPanel? edit_y - 2: display.y - 100, left: editPanel? edit_x + edit_w + 10 : display.x - 10};
+
     return(
         <div className={'round' + (editPanel?' edit-panel-container' : ' context-menu')}
              style={rootStyle}

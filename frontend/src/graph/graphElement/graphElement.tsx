@@ -719,7 +719,9 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         //console.log("render debug view template 1: " + v.name,);
 
         let tv = transientProperties.view[vid];
+        console.log('gt3', tv.JSXFunction, context);
         let ret = tnv.jsxOutput = (tv.JSXFunction ? tv.JSXFunction.call(context, context) : null);
+        console.log('gt33', ret);
         if (typeof ret === "object" && ret !== null && !React.isValidElement(ret)) {
             // plain objects cannot be react nodes, but react nodes are objects. so i try serializing
             // this only happens if someone puts an object in jsx
@@ -1268,6 +1270,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
 
         // compute jsx
         tn.contextMenu = []; // reset old entries, new ones are computed now.
+        allviews = [mainView]; // todo: remove
         for (let v of allviews) { // main view is the last
             let viewnodescore = tn.viewScores[v.id];
             jsxOutput = viewnodescore.shouldUpdate ? undefined : viewnodescore.jsxOutput;
