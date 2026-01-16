@@ -1,22 +1,22 @@
-/*section {
-  padding: .5rem; // p-2 too generic selector
-}*/
+/* ============================================
+   RIGHT PANEL TABS - INSPECTOR
+   Design tokens applied
+   ============================================ */
 
-.console {
-
-}
-.properties-tab{
-  .input-container>b.me-2{
+/* Properties tab feature button */
+.properties-tab {
+  .input-container > b.me-2 {
     margin: auto 0;
   }
 
-  .command-bar .tab-btn.add.add-feature::before{
-    outline: 1.5px solid black;
-    border-radius: 100%;
+  .command-bar .tab-btn.add.add-feature::before {
+    outline: 1.5px solid var(--color-text-primary);
+    border-radius: var(--radius-full);
     font-size: 1em;
   }
 }
 
+/* Common tab container styles */
 .properties-tab,
 .collaborative-tab,
 .tree-view,
@@ -28,77 +28,76 @@
 .node-editor,
 .permission-tab,
 .console {
-  margin: 0.5rem !important;
-  padding: 0.5rem !important;
-  background-color: var(--bg-2);
-  // padding-left: 1.5rem !important;
-  // padding-right: 0.5rem!important;
-  & section {
+  margin: var(--space-2) !important;
+  padding: var(--space-2) !important;
+  background-color: var(--color-bg-secondary);
 
+  & section {
   }
 }
 
-
-
+/* Properties tab React Select overrides */
 .properties-tab {
-
   & .css-b62m3t-container {
   }
+
   & .css-13cymwt-control {
-    border: 1px solid var(--bg-4-1);
-    
+    border: 1px solid var(--color-border-primary);
   }
 
   & .css-9jq23d {
-    background-color: var(--accent);
+    background-color: var(--color-accent);
     color: white;
     border-top-right-radius: 0;
     border-bottom-right-radius: 0;
-    border-top-left-radius: 3px;
-    border-bottom-left-radius: 3px;
+    border-top-left-radius: var(--radius-sm);
+    border-bottom-left-radius: var(--radius-sm);
   }
 
   & .css-v7duua {
-    background-color: var(--accent);
+    background-color: var(--color-accent);
     color: white;
     border-top-left-radius: 0;
     border-bottom-left-radius: 0;
-    border-top-right-radius: 3px;
-    border-bottom-right-radius: 3px;
-    margin: 0!important;
+    border-top-right-radius: var(--radius-sm);
+    border-bottom-right-radius: var(--radius-sm);
+    margin: 0 !important;
   }
+
   & .css-v7duua:hover {
-    background-color: var(--color);
+    background-color: var(--color-text-primary);
     color: white;
   }
+
   & .css-1dyz3mf {
-    padding: 0 0 0 0.5em;
+    padding: 0 0 0 var(--space-2);
   }
 
   & select {
     min-width: 200px;
     height: var(--input-height);
   }
-
-
 }
 
+/* No data placeholder */
 .no-data-to-display {
-  background-color: var(--bg-2-5);
-  margin: 0.5rem;
+  background-color: var(--color-bg-tertiary);
+  margin: var(--space-2);
   display: flex;
   height: 100%;
   width: 100%;
-  >*{
+
+  > * {
     margin: auto;
-    font-size: 0.8rem;
-    padding: 1rem;
-    border: 1px solid var(--color);
-    border-radius: var(--radius);
-    background-color: var(--bg-2);
+    font-size: var(--text-sm);
+    padding: var(--space-4);
+    border: 1px solid var(--color-text-primary);
+    border-radius: var(--radius-md);
+    background-color: var(--color-bg-secondary);
   }
 }
 
+/* Tab titles */
 .rightbar-title,
 .collaborative-tab h1,
 .properties-tab h1,
@@ -109,196 +108,193 @@
 .options-tab h1.view,
 .node-editor h3,
 .console h1 {
-  font-size: 1.1em!important;
-  color: var(--accent);
-  padding-bottom: 0.5em!important;
-  border-bottom: 1px solid var(--bg-2-5)!important;
-  margin-bottom: 1em!important;
-  padding-top: 0!important; 
-
+  font-size: 1.1em !important;
+  color: var(--color-accent);
+  padding-bottom: var(--space-2) !important;
+  border-bottom: 1px solid var(--color-border-primary) !important;
+  margin-bottom: var(--space-4) !important;
+  padding-top: 0 !important;
 
   &::before {
     position: relative;
     top: 2px;
     font-size: 1.15em;
-    margin-right: var(--tab-sep);
+    margin-right: var(--space-2);
     font-family: bootstrap-icons;
     content: "\F789";
   }
 }
 
 .properties-tab hr {
-  margin-top: 0.5em;
-  color: var(--bg-2-5)!important;
+  margin-top: var(--space-2);
+  color: var(--color-border-primary) !important;
 }
 
+/* Collaborative tab */
 .collaborative-tab h1::before {
   position: relative;
   top: 2px;
   font-size: 1.15em;
-  margin-right: var(--tab-sep);
+  margin-right: var(--space-2);
   font-family: bootstrap-icons;
   content: "\F2EE";
 }
+
 .collaborative-tab h5 {
-  font-size: 1.1em!important;
-  color: var(--accent);
+  font-size: 1.1em !important;
+  color: var(--color-accent);
 }
 
 .collaborative-tab input {
-  color: var(--color);
-  outline: 1px solid var(--accent);
+  color: var(--color-text-primary);
+  outline: 1px solid var(--color-accent);
   border: none;
-  // outline-color: var(--accent)!important;
-  // outline-width: 2px!important;
-  height: var(--input-height)!important;
-
-  padding: 1px 8px!important;
+  height: var(--input-height) !important;
+  padding: 1px var(--space-2) !important;
   min-width: 170px;
   transition: min-width 0.3s ease-in-out;
 }
 
 .collaborative-tab input::placeholder {
-  color: var(--bg-3);
+  color: var(--color-text-tertiary);
   font-style: italic;
 }
 
 .collaborative-tab input:focus {
-  padding: 2px 9px;
-  border-radius: var(--radius)!important;
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-md) !important;
   height: var(--input-height);
-  outline: 2px solid var(--accent);
-
+  outline: 2px solid var(--color-accent);
   min-width: 70%;
-  border-radius: var(--radius)!important;
   border: none;
 }
+
 .collaborative-tab .alert {
-  background-color: var(--accent);
+  background-color: var(--color-accent);
   color: white;
-  border: 1px dotted var(--accent);
-  padding: 6px 10px;
+  border: 1px dotted var(--color-accent);
+  padding: var(--space-2) var(--space-3);
   width: fit-content;
-  margin: 14px;
+  margin: var(--space-4);
+  border-radius: var(--radius-md);
 
   & i {
     color: white;
-    padding-right: 4px;
+    padding-right: var(--space-1);
   }
 }
 
-
+/* Loading animation */
 .loader {
   width: 8px;
   height: 8px;
-  border-radius: 50%;
+  border-radius: var(--radius-full);
   display: block;
-  margin:7px auto;
+  margin: 7px auto;
   position: relative;
-  background: var(--bg-2);
-  box-shadow: -12px 0 var(--bg-2), 12px 0 var(--bg-2);
+  background: var(--color-bg-secondary);
+  box-shadow: -12px 0 var(--color-bg-secondary), 12px 0 var(--color-bg-secondary);
   box-sizing: border-box;
   animation: shadowPulse 2s linear infinite;
 }
 
 @keyframes shadowPulse {
   33% {
-    background: var(--bg-2);
-    box-shadow: -12px 0 var(--accent), 12px 0 var(--bg-2);
+    background: var(--color-bg-secondary);
+    box-shadow: -12px 0 var(--color-accent), 12px 0 var(--color-bg-secondary);
   }
   66% {
-    background: var(--accent);
-    box-shadow: -12px 0 var(--bg-2), 12px 0 var(--bg-2);
+    background: var(--color-accent);
+    box-shadow: -12px 0 var(--color-bg-secondary), 12px 0 var(--color-bg-secondary);
   }
   100% {
-    background: var(--bg-2);
-    box-shadow: -12px 0 var(--bg-2), 12px 0 var(--accent);
+    background: var(--color-bg-secondary);
+    box-shadow: -12px 0 var(--color-bg-secondary), 12px 0 var(--color-accent);
   }
 }
-      
 
+/* Properties tab headings */
+.properties-tab h1 {
+  padding-top: 0px !important;
+}
 
-
-
-.properties-tab h1 {padding-top: 0px!important;}
 .properties-tab h2 {
   font-size: 1.1em;
-  margin-bottom: 20px;
+  margin-bottom: var(--space-5);
   font-style: italic;
-  color: var(--color);
+  color: var(--color-text-primary);
   font-weight: var(--font-light);
 }
 
 .properties-tab h2:first-letter {
-    text-transform: uppercase;
+  text-transform: uppercase;
 }
 
+/* Console icon */
 .console h1::before {
   content: "\F5C3";
 }
 
-
-
-
-
-
-
+/* Template tab */
 .template-tab h1::before {
   position: relative;
   top: 2px;
   font-size: 1.15em;
-  margin-right: var(--tab-sep);
+  margin-right: var(--space-2);
   font-family: bootstrap-icons;
   content: "\F2C7";
 }
 
-
+/* Style tab */
 .style-tab h1::before {
   position: relative;
   top: 2px;
   font-size: 1.15em;
-  margin-right: var(--tab-sep);
+  margin-right: var(--space-2);
   font-family: bootstrap-icons;
   content: "\F66D";
 }
 
+/* Events tab */
 .events-tab {
-
   & h2 {
     font-size: 1em;
-    color: var(--accent);
+    color: var(--color-accent);
   }
+
   & h1::before {
     position: relative;
     top: 2px;
     font-size: 1.15em;
-    margin-right: var(--tab-sep);
+    margin-right: var(--space-2);
     font-family: bootstrap-icons;
     content: "\F18A";
   }
 }
 
+/* Options tab */
 .options-tab {
   & p {
-    font-size: 1.1em!important;
+    font-size: 1.1em !important;
   }
 
   & h2 {
     font-size: 1em;
-    color: var(--accent);
+    color: var(--color-accent);
   }
+
   & h1::before {
     position: relative;
     top: 2px;
     font-size: 1.15em;
-    margin-right: var(--tab-sep);
+    margin-right: var(--space-2);
     font-family: bootstrap-icons;
     content: "\F5D9";
   }
 
   & h5 {
-    font-size: 1.1em!important;
-    color: var(--accent);
+    font-size: 1.1em !important;
+    color: var(--color-accent);
   }
 
   & section.node {
@@ -306,108 +302,93 @@
     padding-right: 0;
 
     & .px-2 {
-      padding-left: 0!important;
+      padding-left: 0 !important;
     }
   }
 
   & section {
-    padding-left: 0!important;
+    padding-left: 0 !important;
 
     & .px-2.no-padding-left {
-      padding-left: 0!important;
-      padding-right: 0!important;
+      padding-left: 0 !important;
+      padding-right: 0 !important;
 
       & .input-container {
-
-
-
-        &>label.mx-3 {
-          margin-right: 0!important;
-          margin-bottom: 10px;
+        & > label.mx-3 {
+          margin-right: 0 !important;
+          margin-bottom: var(--space-3);
         }
       }
     }
   }
 
-
-
-
   .options-field {
-
     padding-left: 0;
     font-size: 1em;
 
-
-
     & h5 {
-
-      color: var(--accent);
+      color: var(--color-accent);
       margin-left: 0;
-      padding-left: 0!important;
+      padding-left: 0 !important;
       font-size: 1.2em;
     }
-
   }
 }
 
 .options-tab .section .node h5 {
-  padding-left: 0!important; 
+  padding-left: 0 !important;
 }
 
+/* Node editor */
 .node-editor {
-
   & h3::before {
     position: relative;
     top: 2px;
     font-size: 1.15em;
-    margin-right: var(--tab-sep);
+    margin-right: var(--space-2);
     font-family: bootstrap-icons;
-    content: "\F2EC"!important; // geo-alt F3E8, capsule F7DF, code slash F2C6, diagram2 F2EC, disc F2FF, gear F3E3, hand index F403, window F620
+    content: "\F2EC" !important;
   }
 
   & h6 {
     position: relative;
     font-size: 1.1em;
-    color: var(--accent)!important;
-
+    color: var(--color-accent) !important;
     margin-bottom: 0;
     padding-bottom: 0;
     height: 2em;
-
   }
 
   .sub-element {
-    margin-left: 0px!important;
+    margin-left: 0px !important;
   }
+
   .sub-element:last-of-type {
-      padding-bottom: 10px;
+    padding-bottom: var(--space-3);
   }
 
   .object-state {
-    border: 1px solid var(--bg-4)!important;
-    background-color: var(--bg-1-3);
-    border-radius: var(--radius);
-    padding: 0.5em;
-    font-family: Lekton, monospace;
-    margin-bottom: 1em;
-
+    border: 1px solid var(--color-text-tertiary) !important;
+    background-color: var(--color-bg-tertiary);
+    border-radius: var(--radius-md);
+    padding: var(--space-2);
+    font-family: var(--font-mono);
+    margin-bottom: var(--space-4);
 
     & .react-json-view {
-      background-color: var(--bg-1-1);
-      border-radius: var(--radius);
-      padding: 0.5em;
-      font-family: Lekton, monospace!important;
-      font-size: 1.15em!important;
-      font-weight: var(--font-medium)!important;
+      background-color: var(--color-bg-primary);
+      border-radius: var(--radius-md);
+      padding: var(--space-2);
+      font-family: var(--font-mono) !important;
+      font-size: 1.15em !important;
+      font-weight: var(--font-medium) !important;
       line-height: 1em;
 
       & .data-type-label {
-        font-family: Lekton, monospace!important;
-        font-size: 1em!important;
-        color: cadetblue;
-
+        font-family: var(--font-mono) !important;
+        font-size: 1em !important;
+        color: var(--color-info);
       }
     }
   }
-
 }
