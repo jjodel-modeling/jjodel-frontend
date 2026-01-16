@@ -134,7 +134,7 @@ textarea.autosize{ not possible in pure css, need to add a :after element mimick
   &::after{
     margin: 0 !important;
     padding: 0 !important;
-    font-weight: lighter;
+    font-weight: var(--font-light);
     height: 21.61px;
   }
   &::after{
@@ -309,7 +309,7 @@ input[type='checkbox'] {
       padding: 0.5em;
       font-family: var(--font-mono)!important;
       font-size: 1.15em!important;
-      font-weight: 500!important;
+      font-weight: var(--font-medium)!important;
       line-height: 1.1em;
       
       & .data-type-label {
@@ -586,13 +586,13 @@ hr { margin: 0; opacity: 1;}
 /*
 label {
   height: min-content;
-  //font-weight: lighter;
+  //font-weight: var(--font-light);
   margin-top: auto; margin-bottom: auto;
 }
 b {
   height: min-content;
   font-size: 0.9rem;
-  font-weight: bolder;
+  font-weight: var(--font-extrabold);
   margin-top: auto; margin-bottom: auto;
 }
 
@@ -697,7 +697,7 @@ label.jj-editor-title {
   width: fit-content;
   margin-top: 20px;
 
-  font-weight: 500;
+  font-weight: var(--font-medium);
   font-size: 1em;
 
 }
@@ -861,7 +861,7 @@ i.bi {
   }
   & .login-header {
     color: var(--secondary)!important;
-    font-weight: 800;
+    font-weight: var(--font-extrabold);
     font-family: var(--default-font-family)
 
   }

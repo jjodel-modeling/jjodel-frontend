@@ -41,13 +41,13 @@
     text-align: center;
   }
   & input {
-    font-weight: 400;
+    font-weight: var(--font-normal);
     font-size: 1em;
     border-radius: 3px;
   }
 
   & > strong {
-    font-weight: 400;
+    font-weight: var(--font-normal);
   }
 
   & .bi-chevron-down {
@@ -74,7 +74,7 @@
     margin: 0 4px 0 4px;
     padding: 3px 8px 3px 8px;
     font-size: 12px;
-    font-weight: 200;
+    font-weight: var(--font-light);
     font-style: normal;
   }
 

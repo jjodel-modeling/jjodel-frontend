@@ -40,7 +40,7 @@
         }
 
         .my-auto {
-            font-weight: 400;
+            font-weight: var(--font-normal);
             font-family: var(--default-font-family);
             color: var(--color);
             font-size: 1em;

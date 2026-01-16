@@ -179,7 +179,7 @@
     padding-left: auto;
     padding-right: auto;
     padding-top: 2px;
-    font-weight: 600;
+    font-weight: var(--font-semibold);
     font-size: 0.85em;
 
     content: "OCL";
@@ -209,7 +209,7 @@
     padding-left: auto;
     padding-right: auto;
     margin: auto;
-    font-weight: 600;
+    font-weight: var(--font-semibold);
     font-size: 0.85em;
 
     content: "JS";
@@ -239,7 +239,7 @@
     padding-left: auto;
     padding-right: auto;
     padding-top: 2px;
-    font-weight: 600;
+    font-weight: var(--font-semibold);
     font-size: 0.85em;
 
     content: "EX";
@@ -272,7 +272,7 @@
     }
     .bi-chevron-down::before, .bi-chevron-right::before {
       scale: 1.25;
-      font-weight: 900 !important;
+      font-weight: var(--font-extrabold) !important;
     }
     width: 1.3ch;
   }
@@ -416,7 +416,7 @@
       color: var(--color);
       margin: 10px; // var(--tab-margin);
       padding: 8px;
-      font-weight: 400;
+      font-weight: var(--font-normal);
 
       border: 1px solid var(--bg-1-5);
       border-radius: var(--radius);
@@ -500,7 +500,7 @@
           cursor: pointer;
           margin: auto;
           &:hover{
-            //font-weight: 900;
+            //font-weight: var(--font-extrabold);
             text-decoration: underline;
           }
         }
@@ -540,7 +540,7 @@
   }
 
   .path-element:hover {
-    font-weight: 200;
+    font-weight: var(--font-light);
     font-style: normal;
     font-style: none!important;
   }

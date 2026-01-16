@@ -21,7 +21,7 @@
 //     & .error-type {
 //         padding-left: 100px;
 //         padding-bottom: 40px;
-//         font-weight: 200;
+//         font-weight: var(--font-light);
 
 //         & b {
 //             font-size: 1.3em;
@@ -102,7 +102,7 @@
 
     & .error-type {
         padding-bottom: 10px;
-        font-weight: 200;
+        font-weight: var(--font-light);
 
         & b {
             font-size: 1.3em;

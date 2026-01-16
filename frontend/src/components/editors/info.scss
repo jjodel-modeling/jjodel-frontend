@@ -226,7 +226,7 @@
   margin-bottom: 20px;
   font-style: italic;
   color: var(--color);
-  font-weight: 300;
+  font-weight: var(--font-light);
 }
 
 .properties-tab h2:first-letter {
@@ -398,7 +398,7 @@
       padding: 0.5em;
       font-family: Lekton, monospace!important;
       font-size: 1.15em!important;
-      font-weight: 500!important;
+      font-weight: var(--font-medium)!important;
       line-height: 1em;
 
       & .data-type-label {

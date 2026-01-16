@@ -87,7 +87,7 @@
 
         &>h1 {
           font-size: 1.2rem;
-          font-weight: 600;
+          font-weight: var(--font-semibold);
           color: var(--color);
           margin-top: 0 !important;
           margin-bottom: 0 !important;
@@ -107,7 +107,7 @@
 
         &>h2 {
           font-size: 0.9rem;
-          font-weight: 600;
+          font-weight: var(--font-semibold);
           color: var(--color);
           margin-top: 0 !important;
           margin-bottom: 0 !important;
@@ -350,9 +350,14 @@
 }
 
 .highlight .bi {
-  color: white;
+  color: var(--color-text-primary);
   font-size: 1.2em;
   padding-right: 8px!important;
+}
+
+/* White color on hover when background is accent color */
+.highlight:hover .bi {
+  color: white;
 }
 
 .highlight .hidden {

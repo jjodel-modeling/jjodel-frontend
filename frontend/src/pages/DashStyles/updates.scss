@@ -31,7 +31,7 @@
       position: absolute;
       transform: translateX(calc(-100% - 5px));
       font-size: 1.5rem;
-      font-weight: 700;
+      font-weight: var(--font-bold);
       &:before{
         // both to align and to prevent transform:inherit from other style.
         transform: translateY(12.5%);
@@ -88,7 +88,7 @@
         text-transform: uppercase;
       }
       &:before{
-        font-weight: 700;
+        font-weight: var(--font-bold);
         position: absolute;
         left: -0.25em;
         padding-top: 0.05em;
@@ -132,7 +132,7 @@
         --color: var(--opt-color);
       }
       .title{
-        font-weight: 700;
+        font-weight: var(--font-bold);
       }
       .content{
         display: block;

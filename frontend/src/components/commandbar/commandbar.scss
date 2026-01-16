@@ -788,7 +788,7 @@ section .properties-tab label input {
     background-color: transparent!important;
     margin-top: 20px!important;
     font-size: 1em;
-    font-weight: 300;
+    font-weight: var(--font-light);
   }
 
   button.jj-delete:hover {

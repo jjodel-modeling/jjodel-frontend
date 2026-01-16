@@ -109,7 +109,7 @@ div.toggle{
 
  .toggle span {
     color: var(--color);
-    font-weight: 400;
+    font-weight: var(--font-normal);
     position: relative;
     display: block;
     margin-right: calc(var(--dimension) + 20px);

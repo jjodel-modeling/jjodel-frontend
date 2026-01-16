@@ -24,7 +24,7 @@
 
 .tree-item  {
   float: left;
-  font-weight: bold;
+  font-weight: var(--font-bold);
   display: flex;
   margin: 1px  8px!important;
   width: fit-content;
@@ -32,22 +32,22 @@
   font-size: 1em;
   height: 1.5rem;
   white-space: pre;
-  font-family: 'Inter Variable', sans-serif;
+  font-family: var(--font-sans);
 
 }
 
 
 
 .tree-item .name {
-  
+
   padding: 2px 4px 2px 8px!important;
   margin-top: 0;
-  font-weight: normal;
+  font-weight: var(--font-normal);
   cursor: pointer;
 }
 
 .tree-item .extends {
-  font-family: 'Inter Variable', sans-serif;
+  font-family: var(--font-sans);
   display: none;
   opacity: 0;
   transition: opacity 0.3s ease-in-out;
@@ -58,7 +58,7 @@
   opacity: 1;
   transition: opacity 0.3s ease-in-out;
   & i {
-  font-family: "Inter Variable", sans-serif!important;}
+  font-family: var(--font-sans)!important;}
 
 }
 
@@ -70,8 +70,8 @@
   padding: 0 3px;
   color: white;
   text-align: center;
-  font-weight: 300;
-  
+  font-weight: var(--font-light);
+
 }
 
 .type .icon {
@@ -110,7 +110,7 @@ section.datatree-entry-root, div.d-flex tree{
 .tree-DClass, .tree-Class {
   background-color: #DF1619;
   padding-top: 0px;
-  font-weight: 400;
+  font-weight: var(--font-normal);
   //background-color: white;
   //border: 2px solid #DF1619;
   //color: var(--bg-5);
@@ -143,7 +143,7 @@ section.datatree-entry-root, div.d-flex tree{
 .tree-DEnumerator, .tree-Enumerator {
   background-color: #F3B700;
   padding-top: 0px;
-  font-weight: 400;
+  font-weight: var(--font-normal);
   //background-color: white;
   //border: 2px solid #F3B700;
   //color: var(--bg-5);
@@ -157,7 +157,7 @@ section.datatree-entry-root, div.d-flex tree{
 .tree-DObject, .tree-Object {
   background-color: #C2B2B4;
   padding-top: 0px;
-  font-weight: 400;
+  font-weight: var(--font-normal);
   //background-color: white;
   //border: 2px solid #C2B2B4;
   //color: var(--bg-5);
@@ -166,7 +166,7 @@ section.datatree-entry-root, div.d-flex tree{
   background-color: var(--accent);
   color: white;
   padding-top: 0px;
-  font-weight: 400;
+  font-weight: var(--font-normal);
   //background-color: white;
   //border: 2px solid #C2B2B4;
   //color: var(--bg-5);

@@ -61,7 +61,7 @@
   color: var(--bg-4);
   background-color: transparent;
   font-size: 1em;
-  font-weight: 400;
+  font-weight: var(--font-normal);
   padding: 4px 10px;
   border: none;
   border-radius: 3px;
@@ -174,7 +174,7 @@
       font-size: 1em;
     }
     & .item {
-      font-weight: 200;
+      font-weight: var(--font-light);
       white-space: pre;
     }
   }
@@ -183,7 +183,7 @@
 
 
 .project-list .name {
-  font-weight: 600;
+  font-weight: var(--font-semibold);
   float: right;
 }
 

@@ -53,7 +53,7 @@ label{
 content: "\f282";
 transform: inherit;
 transition: inherit;
-font-weight: 900 !important;
+font-weight: var(--font-extrabold) !important;
 }
 .capitalize-first-letter:first-letter {
   // works only on "block" elements? not even flex?
@@ -352,7 +352,7 @@ input, textarea, [contenteditable], pre, .console-output-container, .selectable{
     content: attr(data-val);
     text-transform: capitalize;
     font-variant: normal;
-    // font-weight: normal;
+    // font-weight: var(--font-normal);
     font-style: normal; // removes italic
   }
 }

@@ -1,29 +1,40 @@
 @import "../../styles/variables.scss";
 
+/* ============================================
+   TOOLBAR - REDESIGNED WITH DESIGN TOKENS
+   Floating toolbar using new token system
+   ============================================ */
+
 [data-nodetype], [data-nodetype] > * {
   overflow: visible;
 }
 
 .toolbar {
 
-    // --bg: #233d4d;
-    --fg: white;
-    --global-padding: 0.5rem;
-    --item-indentation: 0.2rem;
+    --global-padding: var(--space-2);
+    --item-indentation: 0;
 
+    /* Visual */
+    background-color: var(--color-bg-elevated);
+    color: var(--color-text-primary);
+    border: 1px solid var(--color-border-primary);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-dropdown);
+
+    /* Typography */
+    font-family: var(--font-sans);
+    font-size: var(--text-sm);
+    font-weight: var(--font-normal);
+
+    /* Layout */
     padding: var(--global-padding);
     margin: 0;
     z-index: 12000;
     cursor: move;
     display: flex;
-    font-size: 13px;
-    background-color: var(--bg);
-    color: var(--fg);
     white-space: pre;
     width: 205px;
     margin-right: 100px;
-    border-radius: 8px;
-    box-shadow: none!important; // 0px 10px 20px rgba(000,000,000,0.3),inset 0px 0px 1px rgba(255,255,255,0.8);
     left: 20px;
     scrollbar-width: 0;
 
@@ -41,27 +52,30 @@
     
 
   hr.my-1{
-    color: #8a8a8a;
+    border: none;
+    border-top: 1px solid var(--color-border-primary);
     width: 100%;
+    margin: var(--space-1) 0;
   }
-  
+
 
     .toolbar-section-label{
-      
-      /* cloned from .name in style.css because identical to contextmenu */
-      
+
+      /* Section label styling */
+
       padding-left: 30px;
       overflow: hidden;
       height: 1lh;
       white-space: nowrap;
-      font-size: 0.9rem;
-      font-weight: 400;
+      font-size: var(--text-sm);
+      font-weight: var(--font-semibold);
+      color: var(--color-text-primary);
       align-items: center;
     }
     .toolbar-section-label.features {
-        padding-left: 30px;  
+        padding-left: 30px;
       & hr.my-1 {
-          color: #8a8a8a!important;
+          border-top-color: var(--color-border-primary);
         }
     }
 
@@ -71,8 +85,8 @@
       right: 185px;
       content: '\F3FE' !important;
       font-family: 'bootstrap-icons';
-      font-size: 1.2em;
-      color: white;
+      font-size: var(--text-lg);
+      color: var(--color-text-secondary);
       padding-right: 0;
       margin-right: 0px;
       padding-left: 0px!important;
@@ -82,10 +96,12 @@
       margin: auto 0;
       top: -1px;
       height: unset;
+      color: var(--color-text-primary);
+      font-size: 1.2em;
     }
 
     .bi.pin{
-      color: var(--fg);
+      color: var(--color-text-secondary);
       cursor: pointer;
       position: absolute;
       z-index: 2;
@@ -95,22 +111,32 @@
       top: 0rem;
       right: 0rem;
       padding: 0.66em;
+      transition: var(--transition-fast);
 
       & :hover{
-        color: var(--fg);
-        background-color: var(--bg);
+        color: var(--color-accent);
+        background-color: var(--color-bg-hover);
         border-radius: 999px;
         scale: 1.15;
       }
     }
 
     .toolbar-item {
+      /* Use consistent height with navbar menus */
+      min-height: 30px;
+
       flex-grow: 1;
-      border-radius: 4px;
+      border-radius: var(--radius-md);
       margin-right: 0;
-      padding-left: var(--item-indentation);
+
+      /* Use consistent padding with navbar menus */
+      padding: var(--space-2) var(--space-3);
+
       display: flex;
+      align-items: center;
       cursor: pointer;
+      color: var(--color-text-primary);
+      transition: var(--transition-fast);
 
       > span{
         width: 100%;
@@ -118,14 +144,22 @@
         white-space: nowrap;
         text-overflow: ellipsis;
         max-width: 400px;
-        margin: auto;
+        margin: auto 0;
+      }
+
+      /* Icon styling - uniform with navbar menus */
+      .bi, svg {
+        font-size: var(--text-lg);
+        width: 1.5em;
+        margin-right: var(--space-2);
+        color: inherit;
       }
   }
 
   .my-1.toolbar-hr {
-    margin-right: -10px;   
-    padding-right: -10px; 
-    color: #8a8a8a;
+    margin-right: -10px;
+    padding-right: -10px;
+    border-top: 1px solid var(--color-border-primary);
     left: 5px;
     width: calc(100% - 0px);
   }
@@ -142,15 +176,15 @@
       width: 100%;
   }
   .toolbar-item:hover, .toolbar-item:focus{
-    background-color: var(--secondary);
-    color: var(--fg);
+    background-color: var(--color-accent);
+    color: white;
   }
+
+  /* Remove duplicate shadow - already defined at line 22 */
   z-index: 1200;
-  box-shadow: var(--smart-elevation-8); // 6px 0 4px -4px #999, -6px 0 4px -4px #999;
 
   b {
     font-size: 0.75rem;
-    // color: rgba(0, 0, 0, 0.75);
   }
   >.toolbar-item {
     display: flex;
@@ -162,7 +196,7 @@
 
   & .my-auto {
     font-family: var(--default-font-family);
-    font-weight: 200;
+    font-weight: var(--font-light);
     margin: 5px 10px 5px 10px!important;
   }
 
@@ -175,12 +209,14 @@
   display: block;
   min-width: 1lh;
   min-height: 1lh;
-  outline: 1px solid white;
+  outline: 1px solid var(--color-border-primary);
   border-radius: 100%;
   text-align: center;
   margin-left: 2px;
   margin-top: auto;
   margin-bottom: auto;
+  color: var(--color-text-primary);
+  background-color: var(--color-bg-secondary);
 }
 
 
@@ -192,19 +228,15 @@
   left: 20px;
   height: 40px;
   width: 40px;
-  border-radius: 40px;
+  border-radius: 50%;
   text-align: center;
   padding-top: 4px;
-  height: 40px;
-  width: 40px;
-  border-radius:50%;
   color: white;
   font-family: bootstrap-icons;
   content: "\F466"; // chat: "\F24D"; // list: "\F479";
   cursor: pointer;
   font-size: 1.7em;
-  transition: 0.3s;background-color: var(--color);
-  box-shadow: var(--smart-elevation-8);
-  transition: all 0.3s;
-  
+  background-color: var(--color-accent);
+  box-shadow: var(--shadow-dropdown);
+  transition: var(--transition-normal);
 }

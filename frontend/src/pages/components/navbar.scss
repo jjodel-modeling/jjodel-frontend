@@ -15,7 +15,7 @@
   label {
     display: block;
     color: var(--color);
-    font-weight: 500;
+    font-weight: var(--font-medium);
     text-align: center;
     text-decoration: none;
     padding-left: 1em;
@@ -105,7 +105,7 @@
     display: inline-block;
     font-family: bootstrap-icons !important;
     font-style: normal;
-    font-weight: normal !important;
+    font-weight: var(--font-normal) !important;
     font-variant: normal;
     text-transform: none;
     line-height: 1;
@@ -137,7 +137,7 @@
     text-align: left;
     cursor: pointer;
     color: var(--fg-1);
-    font-weight: 200;
+    font-weight: var(--font-light);
     font-size: 12px;
     margin: 0 4px 0 4px;
     padding: 3px 8px 3px 8px;
@@ -338,7 +338,7 @@
 .nav-container .nav-hamburger label div .bi {
   color: white;
   font-size: 0.75em;
-  font-weight: 800;
+  font-weight: var(--font-extrabold);
 }
 
 .nav-container .nav-hamburger.inline {
@@ -409,8 +409,8 @@
   }
 
   & label.disabled {
-    color: var(--color-text-tertiary) !important;
-    opacity: 0.5;
+    color: var(--color-text-secondary) !important;
+    opacity: 0.6;
   }
 
   & label.disabled .bi {
@@ -438,63 +438,97 @@
 
 
 .nav-container .content.context-menu {
-  width: auto; 
-  padding-left: 20px;
-  padding-top: 10px;
-
-  padding-right: 10px;
-  padding-bottom: 10px;
-
+  width: auto;
+  /* Remove custom padding - use same as other menus */
+  padding: 0;
 }
+
 .nav-container .content.context-menu ul {
   --palette-1-hover: white;
   width: max-content;
   min-width: 100%;
-  padding: 4px 0px;
+
+  /* Use consistent padding with design tokens */
+  padding: var(--space-2);
+
   --font-color-1: white;
+
   .highlight{
-    height: 30px;
+    /* Use consistent height */
+    min-height: 30px;
+    display: flex;
+    align-items: center;
+
     &>span {
-      margin-top: auto;
-      margin-bottom: auto;
-      // display: flex; makes problems in undoredo component
+      display: flex;
+      align-items: center;
+      width: 100%;
+
       >*{
-        margin-top:auto;
-        margin-bottom:auto;
+        margin: auto 0;
       }
       .menuitem{
         min-width: 1ric;
         max-width: 1ric;
+        margin-right: var(--space-2);
       }
       svg.menuitem{
         scale: 1.2;
       }
     }
   }
+
   .context-menu{
     margin-top: -5px; // undo the padding (4) and border (1) to align the nested submenu
   }
+
   >li{
     display: flex;
     width: 100%;
+
     &:hover, &:focus-within{
       >label{
-        border-radius: 4px;
-        background-color: var(--accent);
+        border-radius: var(--radius-md);
+        background-color: var(--color-accent);
+        color: white;
+
         &.disabled {
-          background-color: var(--color-lighter) !important;
-          color: var(--bg-1) !important;
+          background-color: transparent !important;
+          color: var(--color-text-tertiary) !important;
+          cursor: not-allowed;
         }
       }
     }
+
     >label{
       display: flex;
-      padding: 3px 8px;
+      align-items: center;
+
+      /* Use consistent padding with design tokens */
+      padding: var(--space-2) var(--space-3);
       width: 100%;
+
+      /* Typography */
+      font-family: var(--font-sans);
+      font-size: var(--text-sm);
+      font-weight: var(--font-normal);
+      color: var(--color-text-primary);
+
+      /* Transition */
+      transition: var(--transition-fast);
+
+      /* Icon styling - uniform across all menus */
+      .bi, svg {
+        font-size: var(--text-lg);
+        width: 1.5em;
+        margin-right: var(--space-2);
+        color: inherit;
+      }
 
       >*:first-child{
         flex-grow: 1;
       }
+
       .keystrokes{
         height: 18px;
         display: flex;
@@ -505,31 +539,31 @@
         >*{
           font-size: 12px;
           width: 1.1ic;
-          // border: 1px solid red;
           text-align:center;
           order: 1;
-          //vertical-align: middle;
           margin-top: -0.5px;
           height: 100%;
+
           &::before{
-            // vertical-align: middle;
             height: 100%;
           }
         }
+
         i.bi{
           font-size: inherit;
           &:hover{
             color: var(--color-1);
           }
         }
+
         .bi-shift{
           order: -1;
         }
+
         >.text-icon{
           width: 2ic;
           order: 0;
         }
-
       }
     }
   }

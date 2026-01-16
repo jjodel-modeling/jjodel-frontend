@@ -1,25 +1,414 @@
+/* ============================================
+   AUTH SCREENS - REDESIGNED WITH DESIGN TOKENS
+   Login, Register, Password Recovery pages
+   ============================================ */
 
-.login{
-  input::placeholder{
-    color: #999;
+/* ============================================
+   BASE CONTAINER
+   ============================================ */
+
+.login {
+  /* Full viewport with centered content */
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  min-height: 100vh;
+  width: 100%;
+  overflow-y: auto;
+  padding: var(--space-8) var(--space-4);
+
+  /* Solid background with subtle gradient - replaces busy image */
+  background: linear-gradient(
+    135deg,
+    var(--color-bg-primary) 0%,
+    var(--color-bg-secondary) 50%,
+    var(--color-bg-tertiary) 100%
+  );
+
+  /* Typography base */
+  font-family: var(--font-sans);
+  color: var(--color-text-primary);
+
+  /* Placeholder styling */
+  input::placeholder {
+    color: var(--color-text-tertiary);
+    font-style: normal;
   }
 }
+
+/* ============================================
+   FORM CARD
+   ============================================ */
+
+.login form {
+  /* Opaque card - no transparency */
+  background-color: var(--color-bg-elevated);
+  opacity: 1 !important;
+
+  /* Card styling */
+  border: 1px solid var(--color-border-primary);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-xl);
+
+  /* Sizing */
+  width: 100%;
+  max-width: 440px;
+  min-height: auto;
+
+  /* Spacing */
+  padding: var(--space-8) var(--space-6);
+  margin: 0 auto;
+
+  /* Reset positioning */
+  position: relative;
+  top: 0 !important;
+}
+
+/* Register form - wider */
+.login.register form {
+  max-width: 520px;
+  padding: var(--space-6) var(--space-8) !important;
+}
+
+/* Retrieve password form */
+.login.retrieve form {
+  max-width: 440px;
+  padding: var(--space-8) var(--space-6) !important;
+}
+
+/* ============================================
+   FORM HEADER
+   ============================================ */
+
+.login .login-header {
+  /* Typography */
+  font-family: var(--font-sans);
+  font-size: var(--text-xl);
+  font-weight: var(--font-semibold);
+  color: var(--color-text-primary) !important;
+  line-height: var(--leading-tight);
+
+  /* Spacing */
+  margin-bottom: var(--space-6);
+  padding-bottom: var(--space-4);
+
+  /* Subtle border under header */
+  border-bottom: 1px solid var(--color-border-primary);
+}
+
+/* ============================================
+   FORM LABELS
+   ============================================ */
+
+.login label {
+  display: block;
+  width: 100%;
+  margin-bottom: var(--space-4);
+
+  /* Label text styling */
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  color: var(--color-text-primary);
+}
+
+/* ============================================
+   INPUT FIELDS - 40px height as specified
+   ============================================ */
+
+.login input[type="text"],
+.login input[type="email"],
+.login input[type="password"] {
+  /* Sizing - 40px height as per action plan */
+  height: 40px;
+  width: 100%;
+
+  /* Spacing */
+  padding: 0 var(--space-3);
+  margin-top: var(--space-2) !important;
+  margin-bottom: var(--space-1);
+
+  /* Visual */
+  background-color: var(--color-bg-primary);
+  border: 1px solid var(--color-border-primary);
+  border-radius: var(--radius-md);
+  outline: none;
+
+  /* Typography */
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  color: var(--color-text-primary);
+
+  /* Transition */
+  transition: var(--transition-fast);
+}
+
+/* Focus state - accent color ring */
+.login input[type="text"]:focus,
+.login input[type="email"]:focus,
+.login input[type="password"]:focus {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px var(--color-accent-subtle);
+  outline: none;
+}
+
+/* Hover state */
+.login input[type="text"]:hover:not(:focus),
+.login input[type="email"]:hover:not(:focus),
+.login input[type="password"]:hover:not(:focus) {
+  border-color: var(--color-border-hover);
+}
+
+/* ============================================
+   SELECT DROPDOWN
+   ============================================ */
+
+.login select,
+.login .form-control {
+  /* Sizing - match input height */
+  height: 40px;
+  width: 100%;
+
+  /* Spacing */
+  padding: 0 var(--space-3);
+  padding-right: var(--space-8); /* Space for chevron */
+  margin-top: var(--space-2) !important;
+  margin-bottom: var(--space-1);
+
+  /* Visual */
+  background-color: var(--color-bg-primary);
+  border: 1px solid var(--color-border-primary);
+  border-radius: var(--radius-md);
+  outline: none;
+
+  /* Typography */
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  color: var(--color-text-primary);
+
+  /* Custom chevron */
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%236b7280' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right var(--space-3) center;
+  background-size: 12px;
+
+  /* Transition */
+  transition: var(--transition-fast);
+  cursor: pointer;
+}
+
+/* Focus state */
+.login select:focus,
+.login .form-control:focus {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px var(--color-accent-subtle);
+  outline: none;
+}
+
+/* ============================================
+   CHECKBOX
+   ============================================ */
+
+.login input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  margin-right: var(--space-2);
+  accent-color: var(--color-accent);
+  cursor: pointer;
+}
+
+/* ============================================
+   PRIMARY BUTTON (CTA) - Prominent as specified
+   ============================================ */
+
+.login .login-button,
+.login button[type="submit"] {
+  /* Sizing */
+  height: 44px;
+  width: 100%;
+  min-width: 120px;
+
+  /* Spacing */
+  padding: 0 var(--space-6) !important;
+  margin-top: var(--space-4);
+
+  /* Visual - prominent accent color */
+  background-color: var(--color-accent);
+  border: none;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+
+  /* Typography */
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  font-weight: var(--font-semibold);
+  color: white;
+
+  /* Interaction */
+  cursor: pointer;
+  transition: var(--transition-button);
+}
+
+/* Hover state */
+.login .login-button:hover,
+.login button[type="submit"]:hover {
+  background-color: var(--color-accent-hover);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+/* Active state */
+.login .login-button:active,
+.login button[type="submit"]:active {
+  transform: translateY(0);
+  box-shadow: var(--shadow-sm);
+}
+
+/* Focus state */
+.login .login-button:focus,
+.login button[type="submit"]:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--color-accent-subtle);
+}
+
+/* Secondary button (offline mode) */
+.login button[type="button"] {
+  background-color: var(--color-bg-secondary);
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-border-primary);
+}
+
+.login button[type="button"]:hover {
+  background-color: var(--color-bg-hover);
+  border-color: var(--color-border-hover);
+}
+
+/* ============================================
+   LINKS
+   ============================================ */
+
+.login .login-link {
+  color: var(--color-accent) !important;
+  font-weight: var(--font-medium);
+  text-decoration: none;
+  transition: var(--transition-fast);
+  cursor: pointer;
+}
+
+.login .login-link:hover {
+  color: var(--color-accent-hover) !important;
+  text-decoration: underline;
+}
+
+/* Link container text */
+.login label.mt-3 {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  text-align: center;
+  margin-top: var(--space-6) !important;
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--color-border-primary);
+}
+
+/* ============================================
+   LOGO - Centered at bottom
+   ============================================ */
+
+.login .login-logo {
+  width: fit-content;
+  margin: var(--space-6) auto 0 auto;
+  padding: 0;
+  text-align: center;
+
+  /* Subtle opacity for less prominence */
+  opacity: 0.7;
+  transition: var(--transition-fast);
+}
+
+.login .login-logo:hover {
+  opacity: 1;
+}
+
+.login .login-logo img {
+  height: 32px;
+  width: auto;
+  /* Grayscale filter for monochrome look */
+  filter: grayscale(30%);
+}
+
+/* ============================================
+   VALIDATION STATES
+   ============================================ */
+
 .login.dirty {
-  label:has(>input:required:invalid, >select:required:invalid)::before {
-    color: red;
+  /* Required field indicator */
+  label:has(> input:required:invalid, > select:required:invalid)::before {
     content: '*';
+    color: var(--color-error);
     display: inline-block;
-    scale: 2;
-    margin-right: .5em;
+    font-size: var(--text-lg);
+    font-weight: var(--font-bold);
+    margin-right: var(--space-1);
     float: left;
-    /* position: absolute; */
-    left: 10%;
     height: 0.75em;
   }
-  input, select{
-    &:invalid {
-      border-color: var(--palette-r);
-      outline-color: var(--palette-r);
-    }
+
+  /* Invalid input styling */
+  input:invalid,
+  select:invalid {
+    border-color: var(--color-error);
   }
+
+  input:invalid:focus,
+  select:invalid:focus {
+    border-color: var(--color-error);
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.2);
+  }
+}
+
+/* ============================================
+   RESPONSIVE ADJUSTMENTS
+   ============================================ */
+
+@media (max-width: 640px) {
+  .login {
+    padding: var(--space-4) var(--space-3);
+  }
+
+  .login form {
+    padding: var(--space-6) var(--space-4);
+    border-radius: var(--radius-lg);
+  }
+
+  .login.register form,
+  .login.retrieve form {
+    padding: var(--space-6) var(--space-4) !important;
+    max-width: 100%;
+  }
+
+  .login .login-header {
+    font-size: var(--text-lg);
+  }
+}
+
+/* ============================================
+   OVERRIDE LEGACY STYLES
+   Remove background image entirely
+   ============================================ */
+
+.login.bg {
+  background-image: none !important;
+
+  form {
+    opacity: 1 !important;
+  }
+}
+
+/* ============================================
+   TOOLTIP STYLING OVERRIDE
+   ============================================ */
+
+.login .tooltip-container {
+  width: 100%;
 }

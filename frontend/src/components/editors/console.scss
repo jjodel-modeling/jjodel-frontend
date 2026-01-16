@@ -77,7 +77,7 @@
   color: var(--color);
   margin: 1rem .5rem;
   padding: 1rem 1.65rem;
-  font-weight: 300;
+  font-weight: var(--font-light);
   max-height: 95%;
   border: 1px solid var(--bg-1-5);
   border-radius: var(--tab-radius);
@@ -241,7 +241,7 @@
   }
 
   label.on-element {
-    font-weight: 500;
+    font-weight: var(--font-medium);
   }
 
   h4 {
@@ -313,7 +313,7 @@
     color: white;
     border-radius: 3px;
     background-color: var(--failure);
-    font-weight: 400;
+    font-weight: var(--font-normal);
   }
 
   span.console-error .bi {
@@ -422,7 +422,7 @@
 
 .context-keys {
   display:block;
-  font-weight: 500;
+  font-weight: var(--font-medium);
   //clear: both;
   padding: 30px 0px 10px 0;
   margin-left: 8px;
