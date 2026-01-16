@@ -1,67 +1,80 @@
+/* ============================================
+   MENU/DROPDOWN - REDESIGNED WITH DESIGN TOKENS
+   User dropdown menu using new token system
+   ============================================ */
+
 .dropdown {
-    --color: #233d4d;
-    --accent: #087E8B;// #f3b700;
-    --accent-disabled: #8f908e;
-    --color-disabled: #8f908e;
-    --bg-1: white;
-    --bg-2: #f5f5f5;
-    --bg-3: #e2e2e1;
-    --bg-4: #8f908e;
-    --bg-5: #525251;
-    --danger: #ed474a;
-    --success: #3ddc97;
-    --side-padding: 2em;
-    --sep-padding: 4em;
-    --radius: 6px;
+    /* Use design tokens instead of hardcoded colors */
+    --color: var(--color-text-primary);
+    --accent: var(--color-accent);
+    --accent-disabled: var(--color-text-tertiary);
+    --color-disabled: var(--color-text-tertiary);
+    --bg-1: var(--color-bg-primary);
+    --bg-2: var(--color-bg-secondary);
+    --bg-3: var(--color-bg-hover);
+    --bg-4: var(--color-text-tertiary);
+    --bg-5: var(--color-text-secondary);
+    --danger: var(--color-error);
+    --success: var(--color-success);
+    --side-padding: var(--space-6);
+    --sep-padding: var(--space-12);
+    --radius: var(--radius-md);
 }
 
 .menu-button {
     position: relative;
-    color: var(--bg-5);
-    margin-right: 8px;
+    color: var(--color-text-secondary);
+    margin-right: var(--space-2);
     text-align: center;
     width: 20px;
     height: 20px;
-    border-radius: 4px;
-    transition: 0.3s;
+    border-radius: var(--radius-sm);
+    transition: var(--transition-fast);
     cursor: pointer;
-    font-size: 1rem;
+    font-size: var(--text-base);
   }
-
-
 
   .menu-button:hover {
-    background-color: var(--bg-3);
+    background-color: var(--color-bg-hover);
   }
 
-  
-
   .menu-button:hover .bi {
-    color: var(--accent);
-
+    color: var(--color-accent);
   }
 
   .dropdown {
     position: absolute;
     top: 30px;
-    z-index: 100;
+    z-index: var(--z-dropdown);
     min-width: 200px;
-    padding: 4px 4px;
     height: fit-content;
     text-align: left;
     font-style: normal;
-    background-color: var(--color);
-    color: white;
-    border-radius: var(--radius);
-    box-shadow:0px 2px 4px rgba(000,000,000,0.3),inset 0px 0px 1px rgba(255,255,255,0.1);
-    padding: 4px 0px;
+
+    /* Visual - use light theme colors */
+    background-color: var(--color-bg-elevated);
+    color: var(--color-text-primary);
+    border: 1px solid var(--color-border-primary);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-dropdown);
+
+    /* Typography */
+    font-family: var(--font-sans);
+    font-size: var(--text-sm);
+
+    /* Spacing */
+    padding: var(--space-2);
   }
 
   .dropdown > div.item {
-    margin: 0 4px 0 4px;
-    padding: 3px 8px 3px 8px;
-    font-size: 12px;
-    font-weight: 200;
+    margin: 0 var(--space-1);
+    padding: var(--space-2) var(--space-3);
+    font-size: var(--text-sm);
+    font-weight: var(--font-normal);
+    color: var(--color-text-primary);
+    border-radius: var(--radius-md);
+    transition: var(--transition-fast);
+    cursor: pointer;
   }
 
   .dropdown > div.item span {
@@ -70,43 +83,44 @@
   }
 
   .dropdown > div.item span .bi {
-    color: white;
+    color: inherit;
   }
 
   .dropdown > div.item .bi {
-    color: white;
-    font-size: 1.2em;
-    padding-right: 6px!important;
+    color: inherit;
+    font-size: var(--text-lg);
+    padding-right: var(--space-2);
   }
-  .dropdown > div.item >.bi{
-    margin-right: 8px !important;
-    width: 1ric;
+
+  .dropdown > div.item > .bi {
+    margin-right: var(--space-2);
+    width: 1.5em;
     display: inline-block;
   }
 
   .dropdown > div.item.disabled {
-    color: var(--color-disabled);
+    color: var(--color-text-tertiary);
+    opacity: 0.5;
+    cursor: not-allowed;
   }
 
   .dropdown > div.item.disabled .bi {
-    color: var(--color-disabled);
+    color: var(--color-text-tertiary);
   }
 
-
-
-  .dropdown > div.item:hover {
-    background-color: var(--accent);
-    border-radius: 4px;
+  .dropdown > div.item:hover:not(.disabled) {
+    background-color: var(--color-accent);
+    color: white;
   }
 
-.dropdown > div.item.disabled:hover { // todo: obsolete rules? it was in navbar user menù (top-right corner)
-  background-color: var(--accent-disabled);
-  color: white;
-}
+  .dropdown > div.item.disabled:hover {
+    background-color: transparent;
+    color: var(--color-text-tertiary);
+  }
 
-.dropdown > div.item.disabled:hover .bi {
-  color: white;
-}
+  .dropdown > div.item.disabled:hover .bi {
+    color: var(--color-text-tertiary);
+  }
 
 .dropdown.right {
   left: -12px;
@@ -117,15 +131,10 @@
 }
 
 hr.divisor {
-
-  height: 0px;
+  height: 0;
   background-color: transparent;
-  border-top:1px dotted silver;
-  margin-left: 10px;
-  margin-right: 10px;
-
-
-
-
+  border: none;
+  border-top: 1px solid var(--color-border-primary);
+  margin: var(--space-1) var(--space-2);
 }
 

@@ -156,15 +156,35 @@
 }
 
 
+/* ============================================
+   NAV CONTAINER - REDESIGNED WITH DESIGN TOKENS
+   Modern navbar using new token system
+   ============================================ */
+
 .nav-container {
   position: relative;
   display: flex;
-  border-bottom: 1px solid var(--bg-3);
-  background-color: var(--bg-1);
-  height: 32px;
-  padding: 0px var(--side-padding);
-  font-weight: 200;
-  --palette-1-hover: var(--accent);
+  align-items: center;
+
+  /* Visual */
+  background-color: var(--color-bg-elevated);
+  border-bottom: 1px solid var(--color-border-primary);
+  box-shadow: var(--shadow-sm);
+
+  /* Sizing */
+  height: 48px;  /* Increased from 32px for better touch targets */
+  padding: 0 var(--space-6);
+
+  /* Typography */
+  font-family: var(--font-sans);
+  font-weight: var(--font-normal);
+  font-size: var(--text-sm);
+
+  /* Z-index */
+  z-index: var(--z-navbar);
+
+  /* Legacy compat */
+  --palette-1-hover: var(--color-accent);
 
   .context-menu>ul>li{
     .bi:before{
@@ -250,24 +270,41 @@
 
   .nav-commands{
     margin-right: 3rem;
-    margin-left: auto; 
+    margin-left: auto;
+
+    /* Typography for mode labels */
+    label {
+      font-family: var(--font-sans);
+      font-size: var(--text-sm);
+      font-weight: var(--font-normal);
+      color: var(--color-text-secondary);
+    }
+
+    span {
+      font-family: var(--font-sans);
+      font-size: var(--text-sm);
+      color: var(--color-text-secondary);
+    }
   }
 
-  .nav-hamburger { 
+  .nav-hamburger {
     margin-right: auto;
-    color: var(--color);
-    font-size: 1.5em;
+    color: var(--color-text-primary);
+    font-size: var(--text-xl);
     padding-right: 0;
-    display: block;
-    margin-top: auto;
-    margin-bottom: auto;
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    transition: var(--transition-fast);
 
+    &:hover {
+      color: var(--color-accent);
+    }
 
-    
     >.bi::before{
       transform: rotate(0deg);
       transform-origin: center;
-      transition: 0.3s linear transform; // ease-in-out
+      transition: var(--duration-normal) linear transform;
     }
 
     >.bi:hover::before{
@@ -275,19 +312,25 @@
     }
 
     label div {
-      float: right; 
+      float: right;
     }
   }
 
   & span.menu-title {
     cursor: pointer;
-    font-size: 0.70em;
-    font-weight: 500;
-    margin-right: 0px;
-    padding: 4px 16px;
-    border-radius: 4px;;
-  }
+    font-size: var(--text-base);  /* Base font size for main menu items */
+    font-weight: var(--font-medium);
+    font-family: var(--font-sans);
+    margin-right: 0;
+    padding: var(--space-2) var(--space-4);
+    border-radius: var(--radius-md);
+    transition: var(--transition-fast);
+    line-height: var(--line-normal);
 
+    &:hover {
+      background-color: var(--color-bg-hover);
+    }
+  }
 
 }
 
@@ -316,27 +359,23 @@
 
 .nav-container .content {
   &>ul{
-    background-color: var(--color);
-    box-shadow: var(--smart-elevation-8);
-    border: inherit;
-    border-color: #233d4d;
-    border-radius: 6px;
-
-    padding-right: 0;
-    padding-left: 0;
+    background-color: var(--color-bg-elevated);
+    box-shadow: var(--shadow-dropdown);
+    border: 1px solid var(--color-border-primary);
+    border-radius: var(--radius-lg);
+    padding: var(--space-2);
     list-style: none;
   }
+
   background-color: transparent;
   border-radius: 0;
   border: none;
-
   min-width: 200px;
   top: 100%;
-  font-size: 12px;
-  left: -20px;
+  font-size: var(--text-sm);
+  left: calc(-1 * var(--space-5));
   box-shadow: none !important;
   height: fit-content;
-
 
   & ul li {
     padding-left: 0;
@@ -344,44 +383,48 @@
   }
 
   ul li.divisor {
-    padding: 3px 0;
+    padding: var(--space-1) 0;
   }
 
   ul li hr {
     position: relative;
-    color: #8a8a8a;
-    width: calc(100% - 10px);
-    left: 5px;
+    border: none;
+    border-top: 1px solid var(--color-border-primary);
+    width: calc(100% - var(--space-3));
+    left: calc(var(--space-1) + var(--space-half));
+    margin: var(--space-1) 0;
   }
 
   & label {
-    color: var(--bg-1);
+    color: var(--color-text-primary);
     cursor: pointer;
     display: block;
-    font-size: 12px;
-    font-weight: 200;
-    width: calc(100% - 8px);
-    margin: 0 4px 0 4px;
-    padding: 3px 10px 3px 8px;
+    font-size: var(--text-sm);
+    font-weight: var(--font-normal);
+    width: calc(100% - var(--space-2));
+    margin: 0 var(--space-1);
+    padding: var(--space-2) var(--space-3);
+    border-radius: var(--radius-md);
+    transition: var(--transition-fast);
   }
 
   & label.disabled {
-    color: var(--bg-3-1)!important;
+    color: var(--color-text-tertiary) !important;
+    opacity: 0.5;
   }
 
   & label.disabled .bi {
-    color: var(--bg-3-1)!important;
+    color: var(--color-text-tertiary) !important;
   }
 
   & label.disabled:hover {
-    background-color: transparent!important;
+    background-color: transparent !important;
     cursor: not-allowed;
   }
 
-  & label:hover {
-    background-color: var(--accent);
-    border-radius: 4px;
-
+  & label:hover:not(.disabled) {
+    background-color: var(--color-accent);
+    color: white;
   }
 
   & .keystroke .bi {
@@ -501,50 +544,61 @@
   min-width: 150px;
   display: flex;
   align-items: center;
-  padding-right: 25px;
-  margin-left: 20px!important;
-  margin-top: auto;
-  margin-bottom: auto;
+  gap: var(--space-2);
+  padding-right: var(--space-6);
+  margin-left: var(--space-5);
+  cursor: pointer;
 
-    & .initials{
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      font-weight: 500;
-      font-size: inherit;
-      height: 26px;
-      width: 26px;
-      border-radius: 50%;
-      background-color: var(--bg);
-      // background: linear-gradient(45deg, #00c6ff, #0072ff);
-      color: white!important;
-      font-size: 0.8em;
+  & .initials{
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-weight: var(--font-medium);
+    font-size: var(--text-sm);
+    height: 32px;
+    width: 32px;
+    border-radius: 50%;
+    background-color: var(--color-accent);
+    color: white;
+    transition: var(--transition-fast);
 
+    &:hover {
+      background-color: var(--color-accent-hover);
+      transform: scale(1.05);
     }
+  }
+
+  /* User name text */
+  & > span {
+    font-family: var(--font-sans);
+    font-size: var(--text-sm);
+    font-weight: var(--font-medium);
+    color: var(--color-text-primary);
+  }
+
   >*{
     margin: auto 0;
   }
 }
 
-
-
 .user-initials {
-  width: 28px;
-  height: 28px;
-  border-radius: 22px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
   color: white;
-  font-weight: 400;
+  font-weight: var(--font-medium);
+  font-size: var(--text-sm);
   text-align: center;
-  padding-right: 1px;
-  background-color: var(--secondary);
-  font-size: 1rem;
-  padding-top: 1px;
-  transition: 0.3s;
-}
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--color-accent);
+  transition: var(--transition-fast);
 
-.user-initials:hover {
-  background-color: var(--accent);
-  transition: 0.3s;
+  &:hover {
+    background-color: var(--color-accent-hover);
+    transform: scale(1.05);
+  }
 }
 
 .nav-side {

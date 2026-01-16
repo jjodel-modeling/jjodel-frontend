@@ -4,9 +4,31 @@
   display: none;
 }
 
+/* ============================================
+   GLOBAL BASE STYLES
+   ============================================ */
+
 body {
+  /* Typography - apply design system font globally */
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  font-weight: var(--font-normal);
+  line-height: var(--line-normal);
+  color: var(--color-text-primary);
+
+  /* Font rendering */
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+
+  /* Background */
+  background-color: var(--color-bg-primary);
+}
+
+/* Reset button, input, select, textarea fonts to inherit */
+button, input, select, textarea {
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
 }
 /* classes */
 .round { border-radius: $radius; }
@@ -278,20 +300,20 @@ input[type='checkbox'] {
     background-color: var(--bg-1-3);
     border-radius: var(--radius);
     padding: 0.5em;
-    font-family: Lekton, monospace;
+    font-family: var(--font-mono);
     margin-bottom: 1em;
 
     & .react-json-view  {
 
       background-color: var(--colors);
       padding: 0.5em;
-      font-family: Lekton, monospace!important;
+      font-family: var(--font-mono)!important;
       font-size: 1.15em!important;
       font-weight: 500!important;
       line-height: 1.1em;
       
       & .data-type-label {
-        font-family: Lekton, monospace!important;
+        font-family: var(--font-mono)!important;
         font-size: 1em!important;
         color: cadetblue;
 

@@ -461,6 +461,11 @@ project-card .tip {
     height: 100%!important;
     color: var(--color);
 
+    /* Typography */
+    font-family: var(--font-sans);
+    font-size: var(--text-base);
+    font-weight: var(--font-normal);
+
     .item{
       display: flex !important;
       >*{ margin: auto 0; }
