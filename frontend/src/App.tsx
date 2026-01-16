@@ -22,6 +22,7 @@ import {
     RecentPage_Obsolete,
     SettingsPage,
     TemplatePage,
+    TokenPreviewPage,
     UpdatesPage,
     UsersInfoPage,
     ConfirmAccount
@@ -89,6 +90,8 @@ function App(props: AllProps): JSX.Element {
                         <Route path={'updates'} element={<UpdatesPage/>}/>
                         <Route path={'account'} element={<AccountPage/>}/>
                         <Route path={'auth'} element={<AuthPage/>}/>
+                        {/* Design System - Token Preview */}
+                        <Route path={'test-tokens'} element={<TokenPreviewPage/>}/>
                         {/* non functioning stuff */}
                         <Route path={'settings'} element={<SettingsPage/>}/>
                         <Route path={'projectsInfo'} element={<ProjectsInfoPage_Obsolete/>}/>

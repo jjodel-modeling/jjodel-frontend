@@ -218,13 +218,109 @@ input[type='checkbox']:checked { // was .input as class
 }
 .select:focus { border: 1px dashed $border-color; }
 
+/* ============================================
+   BUTTON STYLES - REDESIGNED WITH DESIGN TOKENS
+   Modern button system using new token system
+   ============================================ */
+
+/* Base button - shared styles */
 .btn {
-  padding: 0.3em;
-  height: min-content;
+  /* Sizing */
+  height: 36px;
+  padding: 0 var(--button-padding-x);
   width: fit-content;
-  margin-top: auto; margin-bottom: auto;
-  line-height: normal;
-  border-radius: 0.4em;
+
+  /* Typography */
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  line-height: 1;
+
+  /* Layout */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+
+  /* Visual */
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  user-select: none;
+
+  /* Animation */
+  transition: var(--transition-button);
+
+  /* Default appearance (secondary style) */
+  background: var(--color-bg-elevated);
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-border-primary);
+
+  &:hover:not(:disabled) {
+    background: var(--color-bg-hover);
+    border-color: var(--color-border-hover);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-button-hover);
+  }
+
+  &:active:not(:disabled) {
+    transform: translateY(0);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+/* Primary button - accent color */
+.btn-primary {
+  background: var(--color-accent);
+  color: var(--color-text-inverse);
+  border: 1px solid var(--color-accent);
+
+  &:hover:not(:disabled) {
+    background: var(--color-accent-hover);
+    border-color: var(--color-accent-hover);
+  }
+}
+
+/* Danger button - for destructive actions */
+.btn-danger {
+  background: var(--color-error);
+  color: var(--color-text-inverse);
+  border: 1px solid var(--color-error);
+
+  &:hover:not(:disabled) {
+    background: var(--color-error-hover);
+    border-color: var(--color-error-hover);
+  }
+}
+
+/* Ghost button - transparent background */
+.btn-ghost {
+  background: transparent;
+  color: var(--color-accent);
+  border: 1px solid transparent;
+
+  &:hover:not(:disabled) {
+    background: var(--color-accent-subtle);
+    border-color: var(--color-accent);
+  }
+}
+
+/* Icon-only button */
+.btn-icon {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+
+  /* Make square */
+  min-width: 36px;
+
+  i, svg {
+    font-size: 1.2em;
+  }
 }
 
 [data-nodetype="EdgePoint"]{

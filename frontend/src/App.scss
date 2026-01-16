@@ -1,3 +1,13 @@
+/**
+ * JJODEL DESIGN TOKENS - Import first!
+ * This must be imported before any other styles to ensure
+ * design tokens are available throughout the application
+ */
+@import './styles/tokens/index';
+
+/**
+ * EXISTING ANIMATIONS & STYLES
+ */
 @keyframes animationoffset {
   0% {
     offset-distance: 0%;

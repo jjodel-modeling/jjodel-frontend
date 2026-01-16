@@ -1,0 +1,101 @@
+/**
+ * JJODEL DESIGN TOKENS - Z-INDEX
+ * Layering system for stacking contexts
+ * Ensures consistent depth ordering across the application
+ */
+
+:root {
+  /* ============================================
+     Z-INDEX SCALE
+     Organized by typical stacking order
+     ============================================ */
+
+  /* Base layer - canvas, background elements */
+  --z-base: 0;
+
+  /* Content layer - normal document flow */
+  --z-content: 1;
+
+  /* Elevated content - cards, panels */
+  --z-elevated: 10;
+
+  /* Sticky elements - headers, footers */
+  --z-sticky: 100;
+
+  /* Floating elements - tooltips, dropdowns */
+  --z-dropdown: 1000;
+  --z-tooltip: 1050;
+
+  /* Overlays - modals, dialogs */
+  --z-modal-backdrop: 9000;
+  --z-modal: 9999;
+
+  /* Top layer - alerts, notifications */
+  --z-alert: 10000;
+  --z-toast: 10100;
+
+  /* Critical layer - loading overlays, debugging */
+  --z-loading: 99999;
+  --z-debug: 999999;
+
+  /* ============================================
+     COMPONENT-SPECIFIC Z-INDEX
+     Semantic mapping for components
+     ============================================ */
+
+  /* Canvas & Graph */
+  --z-canvas: var(--z-base);
+  --z-canvas-node: var(--z-content);
+  --z-canvas-edge: calc(var(--z-content) - 1);  /* Edges below nodes */
+  --z-canvas-selection: calc(var(--z-content) + 1);  /* Selection above nodes */
+
+  /* Panels & Docks */
+  --z-dock-panel: var(--z-elevated);
+  --z-floating-panel: calc(var(--z-elevated) + 10);
+  --z-panel-header: calc(var(--z-elevated) + 1);
+
+  /* Navigation */
+  --z-navbar: var(--z-sticky);
+  --z-footer: var(--z-sticky);
+
+  /* Menus & Dropdowns */
+  --z-context-menu: var(--z-dropdown);
+  --z-dropdown-menu: var(--z-dropdown);
+
+  /* Modals & Dialogs */
+  --z-dialog-backdrop: var(--z-modal-backdrop);
+  --z-dialog: var(--z-modal);
+  --z-alert-dialog: var(--z-alert);
+
+  /* Notifications */
+  --z-notification: var(--z-toast);
+
+  /* ============================================
+     LEGACY COMPATIBILITY
+     Some components may use hardcoded z-index
+     Keep track of values to migrate
+     ============================================ */
+
+  /* Known legacy values from current codebase:
+     - .alert-container: 9999 → use --z-modal
+     - .context-menu: 1001 → use --z-context-menu
+     - .edit-panel-container: 9999 → use --z-modal
+     - .dock-drop-layer: 100, 300, 400 → needs review
+  */
+}
+
+/* ============================================
+   USAGE GUIDELINES
+
+   When to create a new stacking context:
+   - Use z-index only when necessary
+   - Prefer normal document flow when possible
+   - Group related elements in same z-index range
+   - Document why z-index is needed
+
+   Example:
+   .my-component {
+     position: relative;  // Creates stacking context
+     z-index: var(--z-elevated);  // Use token
+   }
+   ============================================ */

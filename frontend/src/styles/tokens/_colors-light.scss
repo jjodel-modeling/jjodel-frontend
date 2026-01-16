@@ -1,0 +1,95 @@
+/**
+ * JJODEL DESIGN TOKENS - LIGHT THEME
+ * Color palette for light mode
+ * Based on jjodel-ui-documentation.md Section 5.1
+ *
+ * Usage: These variables are applied when [data-theme="light"] is set on root element
+ */
+
+:root,
+:root[data-theme="light"] {
+  /* ============================================
+     BASE BACKGROUNDS
+     ============================================ */
+  --color-bg-primary: #f8f9fa;        /* Main app background */
+  --color-bg-secondary: #ffffff;      /* Cards, panels, elevated surfaces */
+  --color-bg-tertiary: #f0f1f2;       /* Subtle backgrounds, disabled states */
+  --color-bg-elevated: #ffffff;       /* Floating panels, dropdowns */
+  --color-bg-hover: #f0f1f2;          /* Hover state background */
+
+  /* ============================================
+     BORDERS
+     ============================================ */
+  --color-border-primary: #e2e4e8;    /* Main borders, dividers */
+  --color-border-secondary: #eceef0;  /* Subtle borders */
+  --color-border-hover: #d0d3d8;      /* Hover state borders */
+
+  /* ============================================
+     TEXT COLORS
+     ============================================ */
+  --color-text-primary: #111418;      /* Headings, primary text */
+  --color-text-secondary: #5c6370;    /* Body text, secondary info */
+  --color-text-tertiary: #9ca3af;     /* Placeholders, disabled text */
+  --color-text-inverse: #ffffff;      /* Text on dark backgrounds */
+
+  /* ============================================
+     ACCENT - Primary Brand Color (Teal)
+     Deeper teal for better contrast in light mode
+     ============================================ */
+  --color-accent: #0d9488;                      /* Primary accent - buttons, links */
+  --color-accent-hover: #0f766e;                /* Hover state - slightly darker */
+  --color-accent-active: #115e59;               /* Active/pressed state */
+  --color-accent-muted: rgba(13, 148, 136, 0.12);   /* Backgrounds, subtle highlights */
+  --color-accent-subtle: rgba(13, 148, 136, 0.06);  /* Very subtle backgrounds */
+
+  /* ============================================
+     SEMANTIC COLORS
+     ============================================ */
+
+  /* Success - Green */
+  --color-success: #10b981;
+  --color-success-hover: #059669;
+  --color-success-muted: rgba(16, 185, 129, 0.12);
+  --color-success-subtle: rgba(16, 185, 129, 0.06);
+
+  /* Warning - Amber */
+  --color-warning: #f59e0b;
+  --color-warning-hover: #d97706;
+  --color-warning-muted: rgba(245, 158, 11, 0.12);
+  --color-warning-subtle: rgba(245, 158, 11, 0.06);
+
+  /* Error/Danger - Red */
+  --color-error: #ef4444;
+  --color-error-hover: #dc2626;
+  --color-error-muted: rgba(239, 68, 68, 0.12);
+  --color-error-subtle: rgba(239, 68, 68, 0.06);
+
+  /* Info - Blue */
+  --color-info: #3b82f6;
+  --color-info-hover: #2563eb;
+  --color-info-muted: rgba(59, 130, 246, 0.12);
+  --color-info-subtle: rgba(59, 130, 246, 0.06);
+
+  /* ============================================
+     CANVAS & GRAPH COLORS
+     For metamodel/model nodes
+     ============================================ */
+  --color-canvas-bg: #ffffff;         /* Canvas background */
+  --color-canvas-grid: #e5e7eb;       /* Grid lines */
+  --color-node-bg: #ffffff;           /* Node background */
+  --color-node-border: #e2e4e8;       /* Node border */
+  --color-node-shadow: rgba(0, 0, 0, 0.08);  /* Node shadow */
+
+  /* ============================================
+     LEGACY COMPATIBILITY
+     Map old variable names to new tokens
+     TODO: Remove after full migration
+     ============================================ */
+  --color: #2D4E62;                   /* Legacy: primary dark color */
+  --accent: var(--color-accent);      /* Legacy: accent color */
+  --bg-1: var(--color-bg-secondary);  /* Legacy: white background */
+  --bg-2: var(--color-bg-tertiary);   /* Legacy: light gray */
+  --bg-3: var(--color-border-primary);/* Legacy: borders */
+  --danger: var(--color-error);       /* Legacy: error color */
+  --success: var(--color-success);    /* Legacy: success color */
+}
