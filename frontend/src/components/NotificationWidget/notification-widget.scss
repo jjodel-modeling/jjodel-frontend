@@ -1,0 +1,169 @@
+/* ============================================
+   NOTIFICATION WIDGET
+   Per notification-widget-spec.md
+   ============================================ */
+
+.notification-widget {
+  position: fixed;
+  bottom: 60px;
+  right: 24px;
+  width: 320px;
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.12);
+  border: 1px solid #e2e4e8;
+  overflow: hidden;
+  font-family: 'Inter Variable', -apple-system, sans-serif;
+  z-index: 1000;
+}
+
+.notification-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid #f1f5f9;
+  background: #fafbfc;
+}
+
+.notification-header-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  i {
+    font-size: 14px;
+  }
+
+  span {
+    font-size: 11px;
+    font-weight: 600;
+    color: #6B7280;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+}
+
+.notification-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #9CA3AF;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: color 150ms ease;
+
+  &:hover {
+    color: #374151;
+  }
+
+  i {
+    font-size: 14px;
+  }
+}
+
+.notification-content {
+  padding: 16px;
+}
+
+.notification-title {
+  margin: 0 0 6px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #111418;
+}
+
+.notification-message {
+  margin: 0;
+  font-size: 13px;
+  color: #6B7280;
+  line-height: 1.5;
+}
+
+/* ============================================
+   PRIORITY COLORS
+   ============================================ */
+
+.notification-widget.priority-warning .notification-header i {
+  color: #F59E0B;
+}
+
+.notification-widget.priority-info .notification-header i {
+  color: #6B7280;
+}
+
+.notification-widget.priority-success .notification-header i {
+  color: #10B981;
+}
+
+.notification-widget.priority-error .notification-header i {
+  color: #EF4444;
+}
+
+/* ============================================
+   TIP STYLE
+   ============================================ */
+
+.notification-widget.is-tip {
+  .notification-header {
+    border-bottom: none;
+    background: transparent;
+    padding: 16px 16px 12px;
+  }
+}
+
+.tip-icon-wrapper {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: #FEF3C7;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  i {
+    color: #F59E0B;
+    font-size: 16px;
+  }
+}
+
+.notification-footer {
+  padding: 12px 16px;
+  background: #fafbfc;
+  border-top: 1px solid #f1f5f9;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.tip-counter {
+  font-size: 11px;
+  color: #9CA3AF;
+}
+
+.tip-next-btn {
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #475569;
+  background: #ffffff;
+  border: 1px solid #e2e4e8;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 150ms ease;
+
+  &:hover {
+    background: #f1f5f9;
+    border-color: #d0d3d8;
+  }
+
+  i {
+    font-size: 12px;
+  }
+}

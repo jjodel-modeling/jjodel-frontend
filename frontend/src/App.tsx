@@ -33,6 +33,7 @@ import {TooltipVisualizer} from "./components/forEndUser/Tooltip";
 import {BottomBar} from "./pages/components";
 import AlertVisualizer from "./components/alert/Alert";
 import DialogVisualizer from './components/alert/Dialog';
+import { NotificationWidget } from './components/NotificationWidget/NotificationWidget';
 
 let firstLoading = true;
 let browserData = U.getOSBrowserData();
@@ -114,6 +115,8 @@ function App(props: AllProps): JSX.Element {
                 </Routes></Try>
             </HashRouter>
             {user && <Try><BottomBar/></Try>}
+            {user && <Try><NotificationWidget/></Try>}
+
         </div>
     </>);
 
