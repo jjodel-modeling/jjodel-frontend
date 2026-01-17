@@ -82,37 +82,31 @@ function AllProjectsComponent(props: AllProps): JSX.Element {
         }
 
         <Dashboard active={'All'} version={props.version}>
-            <div>
-                 
-                <div>
-                    <Cards className={'project-create-cards'}>
-                        <Cards.Item
-                            title={'New Jjodel'}
-                            subtitle={'Create a new Jjodel project.'}
-                            icon={'add'}
-                            style={'green'}
-                            action={() => createProject('private')}
-                        />
-                        {!(U.isOffline()) && <Cards.Item
-                            title={'New Jjodel (Collaborative)'}
-                            subtitle={'Create a new Jjodel project.'}
-                            icon={'add'}
-                            style={'yellow'}
-                            action={() => createProject('collaborative')}
-                        />}
-                        <Cards.Item
-                            title={'Import Jjodel'}
-                            subtitle={'Import an existing Jjodel project.'}
-                            icon={'import'}
-                            style={'dark'}
-                            action={() => setDropping(true)}
-                        />
-                        {<Cards.Item icon={'gettingstarted'} url={'https://www.jjodel.io/getting-started/'} style={'red-orange'} title={'Getting Started'} subtitle={'New to Jjodel? No worries'}/>}
-                    </Cards>
-                    <Catalog projects={projects} />
+            <div className="dashboard-main-content">
+                {/* CTA Buttons - Only 2: Import + New Project */}
+                <div className="dashboard-cta-row">
+                    <div className="dashboard-cta-left">
+                        <h1 className="dashboard-page-title">Projects</h1>
+                    </div>
+                    <div className="dashboard-cta-right">
+                        <button
+                            className="btn-secondary-outlined"
+                            onClick={() => setDropping(true)}
+                        >
+                            <i className="bi bi-download" />
+                            Import
+                        </button>
+                        <button
+                            className="btn-primary-solid"
+                            onClick={() => createProject('private')}
+                        >
+                            <i className="bi bi-plus-lg" />
+                            New Project
+                        </button>
+                    </div>
                 </div>
+                <Catalog projects={projects} />
             </div>
-            
         </Dashboard>
         
         <LatestUpdates page={'AllProjects'}/>

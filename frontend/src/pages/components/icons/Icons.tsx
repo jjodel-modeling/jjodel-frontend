@@ -123,10 +123,6 @@ export let icon: { [name: string]: any} = {
     </svg>,
     'reset-layout': <i className="bi bi-columns"/>,
     sidebar: <i className="bi bi-layout-sidebar"/>,
-    toolbar2: <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor"
-                   className="bi bi-layout-sidebar" viewBox="0 0 16 16">
-        <path
-            d="M0 3a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2z m2 -1 a1 1 0 0 0 -1 1v2h14v-2a1 1 0 0 0 -1 -1zm -1 4l 0 7a1 1 0 0 0 1 1h12a1 1 0 0 0 1 -1v-7z"/>
-    </svg>
+    toolbar2: <i className="bi bi-window-dock"/>
 }
 

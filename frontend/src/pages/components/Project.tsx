@@ -5,22 +5,27 @@ import React, {JSX} from "react";
 import {ProjectsApi} from '../../api/persistance';
 import {Divisor, Item, Menu} from './menu/Menu';
 
-import card from '../../static/img/card.png';
 import {icon} from './icons/Icons';
 import {Btn, CommandBar, Sep} from '../../components/commandbar/CommandBar';
-
-import { 
-    VscLock as Lock,
-    VscUnlock as UnLock,
-    VscBroadcast as Share
-} from "react-icons/vsc";
-
-import { SlShare as Share2 } from "react-icons/sl";
 import { Tooltip } from '../../components/forEndUser/Tooltip';
-import { time } from 'console';
-import { Logo } from '../../components/logo';
 import {compressToUTF16} from "async-lz-string";
 
+/**
+ * Generates a consistent color based on project name using a hash function
+ * @param name - Project name to hash
+ * @returns HSL color string with good saturation and lightness for preview area
+ */
+function getProjectColor(name: string): string {
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) {
+        const char = name.charCodeAt(i);
+        hash = ((hash << 5) - hash) + char;
+        hash = hash & hash; // Convert to 32bit integer
+    }
+    // Use hash to generate hue (0-360), with fixed saturation and lightness for pleasant colors
+    const hue = Math.abs(hash) % 360;
+    return `hsl(${hue}, 65%, 75%)`;
+}
 
 function formatDate(lastModified: number){
     
@@ -148,35 +153,21 @@ function Project(props: Props): JSX.Element {
         data.delete();
     }
 
+    // Type icon using Bootstrap Icons only
     const typeIcon = (type: string) => {
-    
-        var icon = <></>;
-
         switch(type){
             case 'public':
-                icon = <UnLock className={'type-icon'} style={{fontSize: '1.2em'}}/>;
-                break;
+                return <i className="bi bi-unlock type-icon" />;
             case 'private':
-                icon = <Lock className={'type-icon'} style={{fontSize: '1.2em'}}/>;
-                break;
+                return <i className="bi bi-lock type-icon" />;
             case 'collaborative':
-                icon = <Share2 className={'type-icon'} style={{fontSize: '1.2em'}}/>;
-                break;
+                return <i className="bi bi-people type-icon" />;
+            default:
+                return null;
         }
-
-        return(
-            icon
-        );
-    
-    
     }
 
     /* CARDS */
-
-    var sectionStyle = {
-        backgroundImage: `url(${card})`,
-        backgroundSize: 'contain'
-     }
 
     type ProjectProps = {
         project: LProject
@@ -207,45 +198,55 @@ function Project(props: Props): JSX.Element {
             }
         }
 
+        const previewColor = getProjectColor(data.name || 'Unnamed');
+
         return (
-            <Tooltip tooltip={`${props.data.type} project with ${multiplicity(props.data.metamodelsNumber,'no metamodels', 'metamodel', 'metamodels')}, 
-                ${multiplicity(props.data.modelsNumber,'no models', 'model', 'models')}, 
-                ${multiplicity(props.data.viewpointsNumber -2, 'no (custom) viewpoints', '(custom) viewpoint', '(custom) viewpoints')}` } position={'top'} offsetY={10} theme={'dark'} inline><div className={`project-card-v2 ${data.type}`}
-                onClick={e => getClickedElement(e)}>
-                <div className="project-actions d-flex" style={{position: 'absolute', top: 10, right: 5}}>
-                    {data.isFavorite ? <i onClick={(e) => toggleFavorite(data)} className="bi bi-star-fill" />
-                        :
-                        <i onClick={(e) => toggleFavorite(data)} className="bi bi-star" />
-                    }
+            <Tooltip tooltip={`${props.data.type} project with ${multiplicity(props.data.metamodelsNumber,'no metamodels', 'metamodel', 'metamodels')},
+                ${multiplicity(props.data.modelsNumber,'no models', 'model', 'models')},
+                ${multiplicity(props.data.viewpointsNumber -2, 'no (custom) viewpoints', '(custom) viewpoint', '(custom) viewpoints')}` } position={'top'} offsetY={10} theme={'dark'} inline>
+                <div className={`project-card-v2 ${data.type}`} onClick={e => getClickedElement(e)}>
+                    {/* Preview Area with dynamic color */}
+                    <div className="card-preview" style={{ backgroundColor: previewColor }}>
+                        <i className="bi bi-folder preview-icon" />
+                    </div>
 
-                    <Menu>
-                        <Item icon={icon['new']} action={e => {selectProject()}}>Open</Item>
-                        <Item icon={icon['download']} action={e => exportProject()}>Download</Item>
-                        {/*<Item icon={icon['duplicate']} action={e => downloadDuplicate(data.__raw as DProject, props.pnames)}>Duplicate</Item>*/}
-                        <Item icon={icon['tools']} action={e => selectProject(true)}>Repair & open</Item>
-                        <Divisor />
-                        <Item icon={icon['favorite']} action={(e => toggleFavorite(data))}>{!data.isFavorite ? 'Add to favorites' : 'Remove from favorites'}</Item>
-                        <Divisor />
-                        <Item icon={icon['delete']} action={async e => await deleteProject()}>Delete</Item>
-                    </Menu>
-                </div>
-                <div className='header'>
-                    <Logo style={{fontSize: '2em', float: 'left', marginTop: '0px', marginBottom: '20px', marginRight: '10px'}}/>
-                    <h5 className={'d-block'} style={{cursor: 'pointer'}} onClick={e => selectProject(false)}>
-                        {data.name}
-                    </h5>
-                    <p className={'description'}>{data.description}</p>
-                    <div className={'last-updated'}>
-                        <div className='date'><i className="bi bi-clock-history"></i> Last updated {formatDate(data.lastModified)}</div>
+                    {/* Card Actions - Favorite + Menu */}
+                    <div className="project-actions">
+                        {data.isFavorite ?
+                            <i onClick={(e) => toggleFavorite(data)} className="bi bi-star-fill" /> :
+                            <i onClick={(e) => toggleFavorite(data)} className="bi bi-star" />
+                        }
+                        <Menu>
+                            <Item icon={icon['new']} action={e => {selectProject()}}>Open</Item>
+                            <Item icon={icon['download']} action={e => exportProject()}>Download</Item>
+                            <Item icon={icon['tools']} action={e => selectProject(true)}>Repair & open</Item>
+                            <Divisor />
+                            <Item icon={icon['favorite']} action={(e => toggleFavorite(data))}>{!data.isFavorite ? 'Add to favorites' : 'Remove from favorites'}</Item>
+                            <Divisor />
+                            <Item icon={icon['delete']} action={async e => await deleteProject()}>Delete</Item>
+                        </Menu>
+                    </div>
 
+                    {/* Card Content */}
+                    <div className='card-content'>
+                        <h5 onClick={e => selectProject(false)}>{data.name}</h5>
+                        <p className={'description'}>{data.description}</p>
+                    </div>
+
+                    {/* Card Footer - Meta info */}
+                    <div className={'card-footer'}>
+                        <div className='date'>
+                            <i className="bi bi-clock-history" />
+                            {formatDate(data.lastModified)}
+                        </div>
                         <div className={'type'}>
-                            {data.type === 'public' && <UnLock className={'type-icon'} style={{fontSize: '1.2em', color: 'var(--bg-4)'}}/>}
-                            {data.type === 'private' && <Lock  className={'type-icon'} style={{fontSize: '1.2em', color: 'var(--bg-4)'}}/>}
-                            {data.type === 'collaborative' && <Share2 className={'type-icon'} style={{fontSize: '1.2em', color: 'var(--bg-4)'}}/>}
+                            {data.type === 'public' && <i className="bi bi-unlock type-icon" />}
+                            {data.type === 'private' && <i className="bi bi-lock type-icon" />}
+                            {data.type === 'collaborative' && <i className="bi bi-people type-icon" />}
                         </div>
                     </div>
                 </div>
-            </div></Tooltip>);
+            </Tooltip>);
         }
 
 

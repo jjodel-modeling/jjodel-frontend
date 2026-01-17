@@ -1,44 +1,102 @@
 import {DState, SetRootFieldAction, U, windoww} from '../../joiner';
 import {FakeStateProps} from '../../joiner/types';
-import React, {Component, Dispatch, ReactElement, ReactNode} from 'react';
+import React, {Dispatch, ReactElement, ReactNode} from 'react';
 import {connect} from 'react-redux';
 import './style.scss';
 
+/**
+ * Alert Component - Minimal Redesign
+ * Per dialogs-modals-spec.md
+ *
+ * Features:
+ * - Small 24px icon inline with title
+ * - Black title (not colored)
+ * - Gray secondary button for neutral actions (Done, Close)
+ */
 
 function AlertComponent(props: AllProps) {
     let {type, title, message} = props;
-    let typeLabel = <></>;
-    
+
+    // Normalize type
+    let normalizedType: 'success' | 'error' | 'warning' | 'info' = 'success';
     switch (type) {
-        case 'warning': type = 'w'; break;
-        case 'error': type= 'e'; break;
+        case 'warning':
+        case 'w':
+            normalizedType = 'warning';
+            break;
+        case 'error':
+        case 'e':
+            normalizedType = 'error';
+            break;
+        case 'info':
+            normalizedType = 'info';
+            break;
+        default:
+            normalizedType = 'success';
     }
-    switch (type) {
-        case 'w': typeLabel = <h1 className={'text-warning'}>{title ? title : 'Warning'}</h1>; break;
-        case 'e': typeLabel = <h1 className={'text-danger'}>{title ? title : 'Error'}</h1>; break;
-        default: typeLabel = <h1 className={'text-primary'}>{title ? title : 'Success'}</h1>;
-    }
+
+    // Get icon for type
+    const getIcon = () => {
+        switch (normalizedType) {
+            case 'success':
+                return <i className="bi bi-check-circle" />;
+            case 'error':
+                return <i className="bi bi-x-circle" />;
+            case 'warning':
+                return <i className="bi bi-exclamation-triangle" />;
+            case 'info':
+                return <i className="bi bi-info-circle" />;
+        }
+    };
+
+    // Get default title for type
+    const getDefaultTitle = () => {
+        switch (normalizedType) {
+            case 'success': return 'Success';
+            case 'error': return 'Something went wrong';
+            case 'warning': return 'Warning';
+            case 'info': return 'Information';
+        }
+    };
+
+    // Get button label for type
+    const getButtonLabel = () => {
+        switch (normalizedType) {
+            case 'success': return 'Done';
+            case 'error': return 'Close';
+            case 'warning': return 'OK';
+            case 'info': return 'Got it';
+        }
+    };
 
     if (!type || !message) return(<></>);
 
-    return(<div className={'alert-container'}>
-        <div className={`alert-card ${type === 'w' ? 'warning' : (type === 'e' ? 'error' : 'success')}`}>
-            <div className={'alert-header'}>
-                <div className={'alert-sign-outer'}>
-                    <div className={'alert-sign-inner'}>
+    return(
+        <div className={'alert-container'}>
+            <div className={`alert-card ${normalizedType}`}>
+                {/* Body with inline icon + title */}
+                <div className={'alert-body'}>
+                    <div className={'modal-icon-title'}>
+                        <div className={`modal-icon ${normalizedType}`}>
+                            {getIcon()}
+                        </div>
+                        <h1>{title || getDefaultTitle()}</h1>
                     </div>
+                    <div className={'alert-message'}>{message}</div>
+                </div>
+
+                {/* Footer with button */}
+                <div className={'alert-button-bar'}>
+                    <button
+                        className={'btn alert-btn'}
+                        onClick={e => SetRootFieldAction.new('alert', '', '')}
+                    >
+                        {getButtonLabel()}
+                    </button>
                 </div>
             </div>
-            {typeLabel}
-            <div className={'alert-message'}>{message}</div>
-            <div className={'alert-button-bar'}>
-                <button className={'btn alert-btn my-2  px-4'} onClick={e => SetRootFieldAction.new('alert', '', '')}>
-                    close
-                </button>
-            </div>
-
         </div>
-    </div>);
+    );
 }
 
 interface OwnProps {}

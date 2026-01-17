@@ -1,96 +1,201 @@
+/* ============================================
+   CATALOG - REDESIGNED WITH DESIGN TOKENS
+   ============================================ */
 
-.details {
-  float: right;
-  width: 253px;
-  border: 1px solid var(--bg-3);
-  border-radius: 8px;
-  padding: 1.2em;
-}
-.details h5 {
-  font-size: var(--h1-size);
-  font-weight: var(--h1-weight);
-}
+/* ============================================
+   EMPTY STATE - NEW DESIGN
+   ============================================ */
 
-
-.fallback-message{
-  grid-column: 1 / -1;
+.dashboard-empty-state {
   display: flex;
-  span { margin: auto; }
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+
+  /* White box - FULL WIDTH per mockup */
+  background-color: #ffffff;
+  border-radius: 16px;
+  border: 1px solid #e2e4e8;
+  padding: 80px 40px;
+  width: 100%;
+  /* No max-width - box should be full width of content area */
+
+  .empty-state-icon {
+    width: 80px;
+    height: 80px;
+    border-radius: var(--radius-lg);
+    background-color: rgba(6, 182, 212, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: var(--space-6);
+
+    .bi {
+      font-size: 36px;
+      color: #06B6D4;
+    }
+  }
+
+  .empty-state-title {
+    font-size: 22px;
+    font-weight: var(--font-semibold);
+    color: var(--color-text-primary);
+    margin: 0 0 var(--space-3) 0;
+  }
+
+  .empty-state-description {
+    font-size: 15px;
+    color: var(--color-text-secondary);
+    max-width: 400px;
+    margin: 0 0 var(--space-6) 0;
+    line-height: var(--line-relaxed);
+  }
+
+  .empty-state-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-3) var(--space-5);
+    font-family: var(--font-sans);
+    font-size: var(--text-base);
+    font-weight: var(--font-medium);
+    color: white;
+    background-color: #06B6D4;
+    border: none;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: var(--transition-fast);
+    margin-bottom: var(--space-4);
+
+    .bi {
+      font-size: var(--text-lg);
+    }
+
+    &:hover {
+      background-color: #0891B2;
+    }
+  }
+
+  .empty-state-link {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-size: var(--text-sm);
+    color: #06B6D4;
+    text-decoration: none;
+    transition: var(--transition-fast);
+
+    .bi {
+      font-size: var(--text-sm);
+    }
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
 }
+
+/* ============================================
+   CATALOG HEADER - FILTER TABS + VIEW TOGGLE
+   ============================================ */
 
 .catalog-header {
   display: flex;
-  flex-wrap: nowrap;
-  width: 100%;
-  margin-left: 0em;
-  margin-bottom: 2em;
-  // flex-flow: column;
-  &>.left{
-    margin: auto;
-    margin-left: 0;
-    flex: unset;
-    height: min-content;
-    padding: 0 1.2em;
-  }
-  &>.right{
-    padding: 0;
-    margin: auto;
-    margin-right: 0;
-    flex: unset;
-    display: flex;
-    text-align: right;
-    &>*{
-      margin: auto .5em;
-    }
-    span{
-      margin-left: auto;
-      margin-right: 0;
-    }
-    .menu-button{
-      margin-left: 1px;
-    }
-    .view-icons{
-      margin: auto 0;
-      display: flex;
-      .bi{ margin: auto .25em; }
-      .bi:last-child{ margin-right: 0; }
-    }
-  }
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-5);
 }
-.catalog-header button {
-  color: var(--bg-4);
+
+/* Filter Tabs Container */
+.catalog-filter-tabs {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  background-color: var(--color-bg-tertiary);
+  padding: 4px;
+  border-radius: var(--radius-lg);
+}
+
+.filter-tab {
+  padding: var(--space-2) var(--space-4);
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  color: var(--color-text-secondary);
   background-color: transparent;
-  font-size: 1em;
-  font-weight: var(--font-normal);
-  padding: 4px 10px;
   border: none;
-  border-radius: 3px;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: var(--transition-fast);
+
+  &:hover {
+    color: var(--color-text-primary);
+  }
+
+  &.active {
+    color: var(--color-text-primary);
+    background-color: var(--color-bg-primary);
+    box-shadow: var(--shadow-sm);
+  }
 }
 
-.catalog-header button:first-child {
-  margin-left: 8px;
+/* View Toggle */
+.catalog-view-controls {
+  display: flex;
+  align-items: center;
+}
+
+.view-toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  background-color: var(--color-bg-tertiary);
+  padding: 4px;
+  border-radius: var(--radius-md);
+}
+
+.view-btn {
+  padding: var(--space-2);
+  background-color: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  color: var(--color-text-secondary);
+  transition: var(--transition-fast);
+
+  .bi {
+    font-size: var(--text-base);
+  }
+
+  &:hover {
+    color: var(--color-text-primary);
+  }
+
+  &.active {
+    color: var(--color-text-primary);
+    background-color: var(--color-bg-primary);
+  }
 }
 
 
-.catalog-header button:hover {
-  background-color: var(--bg-2);
+/* ============================================
+   PROJECT CARDS GRID - NEW DESIGN
+   ============================================ */
+
+.project-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: var(--space-5);
 }
 
-
-
-.catalog-header button.active {
-  background-color: var(--bg-2);
-  color: var(--color);
+.catalog {
+  width: 100%;
 }
 
-.catalog-header button {
-  margin-right: 1em;
-}
-
-.catalog-header .right button:hover {
-
-}
-
+/* ============================================
+   PROJECT LIST VIEW
+   ============================================ */
 
 .dashboard-container .project-list {
   max-width: 1340px;

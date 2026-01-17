@@ -25,24 +25,45 @@ import { Tooltip } from '../forEndUser/Tooltip';
 import { icon } from '../../pages/components/icons/Icons';
 import { Toggle } from '../../joiner/components';
 
+// Custom toggle switch component (div-based to avoid global checkbox styles)
+function PropertiesToggle(props: { data: LModelElement; field: string }) {
+    const { data, field } = props;
+    const value = !!(data as any)[field];
+
+    const handleToggle = () => {
+        (data as any)[field] = !value;
+    };
+
+    return (
+        <div
+            className={`properties-toggle ${value ? 'active' : ''}`}
+            onClick={handleToggle}
+            role="switch"
+            aria-checked={value}
+        >
+            <div className="properties-toggle-thumb" />
+        </div>
+    );
+}
 
 class builder {
-    static named(data: LModelElement, advanced: boolean): ReactNode {
-        return (<><h1>{data.name}</h1>
-            {data.state.description && <><h2>{data.state.description}</h2></>}
+    static named(data: LModelElement, advanced: boolean, skipTitle: boolean = false): ReactNode {
+        return (<>
+            {!skipTitle && <h1>{data.name}</h1>}
+            {!skipTitle && data.state.description && <><h2>{data.state.description}</h2></>}
             <label className={'input-container'}>
                 <b className={'me-2'}>Name:</b>
                 <Input data={data} field={'name'} type={'text'}/>
             </label>
 
-            <label className={'input-container'}>
+            <div className={'input-container'}>
                 <b className={'me-2'}>Readonly:</b>
-                <Input data={data} field={'__readonly'} type={'checkbox'}/>
-            </label>
+                <PropertiesToggle data={data} field={'__readonly'} />
+            </div>
         </>);
     }
 
-    static model(data: LModelElement, advanced: boolean): JSX.Element {
+    static model(data: LModelElement, advanced: boolean, skipTitle: boolean = false): JSX.Element {
         let l = data as LModel;
         let d = l.__raw;
         let multiselectArr = d.dependencies;
@@ -59,7 +80,7 @@ class builder {
         // <Select data={data} isMulti={true} field={'dependencies'}/>
 
         return (<>
-            {this.named(data, advanced)}
+            {this.named(data, advanced, skipTitle)}
 
             <label className={'input-container'}>
                 <b className={'me-2'}>Dependends from models:</b>
@@ -71,10 +92,10 @@ class builder {
         </>);
     }
 
-    static package(data: LModelElement, advanced: boolean): JSX.Element {
+    static package(data: LModelElement, advanced: boolean, skipTitle: boolean = false): JSX.Element {
         return (<>
-            <h1>{data.name}</h1>
-            {this.named(data, advanced)}
+            {!skipTitle && <h1>{data.name}</h1>}
+            {this.named(data, advanced, skipTitle)}
             <label className={'input-container'}>
                 <b className={'me-2'}>Uri:</b>
                 <Input data={data} field={'uri'} type={'text'}/>
@@ -87,7 +108,7 @@ class builder {
     }
     
 
-    static class(data: LModelElement, advanced: boolean): JSX.Element {
+    static class(data: LModelElement, advanced: boolean, skipTitle: boolean = false): JSX.Element {
         let lclass: LClass = data as any;
         let dclass = lclass.__raw;
         /*
@@ -184,17 +205,17 @@ class builder {
       
 
         return (<>
-            {this.named(data, advanced)}
+            {this.named(data, advanced, skipTitle)}
             <label className={'input-container'}>
                 <b className={'me-2'}>Class Description:</b>
 
-                
-                <Input 
+
+                <Input
 	                type="text"
                     getter={() => lclass.state.description||''}
                     setter={(value) => (lclass.state = { description: value })}
                 />
-                
+
             </label>
             <label className={'input-container'}>
                 <b className={'me-2'}></b>
@@ -262,9 +283,9 @@ class builder {
         </>);
     }
 
-    static enum(data: LModelElement, advanced: boolean): JSX.Element {
+    static enum(data: LModelElement, advanced: boolean, skipTitle: boolean = false): JSX.Element {
         return (<>
-            {this.named(data, advanced)}
+            {this.named(data, advanced, skipTitle)}
             {advanced && <label className={'input-container'}>
                 <b className={'me-2'}>Serializable:</b>
                 <Input data={data} field={'serializable'} type={'checkbox'}/>
@@ -272,9 +293,9 @@ class builder {
         </>);
     }
 
-    static feature(data: LModelElement, advanced: boolean): JSX.Element {
+    static feature(data: LModelElement, advanced: boolean, skipTitle: boolean = false): JSX.Element {
         return (<>
-            {this.named(data, advanced)}
+            {this.named(data, advanced, skipTitle)}
             <label className={'input-container'}>
                 <b className={'me-2'}>Type:</b>
                 <Select data={data} field={'type'} />
@@ -324,9 +345,9 @@ class builder {
         </>);
     }
 
-    static attribute(data: LModelElement, advanced: boolean): JSX.Element {
+    static attribute(data: LModelElement, advanced: boolean, skipTitle: boolean = false): JSX.Element {
         return (<>
-            {this.feature(data, advanced)}
+            {this.feature(data, advanced, skipTitle)}
             {advanced && <>
                 <label className={'input-container'}>
                     <b className={'me-2'}>ID:</b>
@@ -339,9 +360,9 @@ class builder {
             </>}
         </>);
     }
-    static reference(data: LModelElement, advanced: boolean): JSX.Element {
+    static reference(data: LModelElement, advanced: boolean, skipTitle: boolean = false): JSX.Element {
         return (<>
-            {this.feature(data, advanced)}
+            {this.feature(data, advanced, skipTitle)}
             <label className={'input-container'}>
                 <b className={'me-2'}>Composition:</b>
                 <Input data={data} field={'composition'} type={'checkbox'} />
@@ -356,18 +377,18 @@ class builder {
             </label>
         </>);
     }
-    static operation(data: LModelElement, advanced: boolean): JSX.Element {
+    static operation(data: LModelElement, advanced: boolean, skipTitle: boolean = false): JSX.Element {
         return (<>
-            {this.named(data, advanced)}
+            {this.named(data, advanced, skipTitle)}
             <label className={'input-container'}>
                 <b className={'me-2'}>Return:</b>
                 <Select data={data} field={'type'} />
             </label>
         </>);
     }
-    static literal(data: LModelElement, advanced: boolean): JSX.Element {
+    static literal(data: LModelElement, advanced: boolean, skipTitle: boolean = false): JSX.Element {
         return (<>
-            {this.named(data, advanced)}
+            {this.named(data, advanced, skipTitle)}
             <label className={'input-container'}>
                 <b className={'me-2'}>Ordinal:</b>
                 <Input data={data} field={'ordinal'} type={'number'} />
@@ -650,6 +671,161 @@ class builder {
     }
 }
 
+// Helper to get element type info
+function getElementTypeInfo(className: string): { badge: string; badgeClass: string; icon: string } {
+    switch (className) {
+        case 'DModel':
+            return { badge: 'Metamodel', badgeClass: 'metamodel', icon: 'bi-diagram-3' };
+        case 'DPackage':
+            return { badge: 'Package', badgeClass: 'model', icon: 'bi-folder' };
+        case 'DClass':
+            return { badge: 'Class', badgeClass: 'class', icon: 'bi-box' };
+        case 'DEnumerator':
+            return { badge: 'Enum', badgeClass: 'class', icon: 'bi-list-ol' };
+        case 'DAttribute':
+            return { badge: 'Attribute', badgeClass: 'attribute', icon: 'bi-type' };
+        case 'DReference':
+            return { badge: 'Reference', badgeClass: 'reference', icon: 'bi-link-45deg' };
+        case 'DOperation':
+            return { badge: 'Operation', badgeClass: 'attribute', icon: 'bi-gear' };
+        case 'DParameter':
+            return { badge: 'Parameter', badgeClass: 'attribute', icon: 'bi-three-dots' };
+        case 'DEnumLiteral':
+            return { badge: 'Literal', badgeClass: 'attribute', icon: 'bi-hash' };
+        case 'DObject':
+            return { badge: 'Object', badgeClass: 'model', icon: 'bi-circle' };
+        case 'DValue':
+            return { badge: 'Value', badgeClass: 'attribute', icon: 'bi-pencil' };
+        default:
+            return { badge: 'Element', badgeClass: 'model', icon: 'bi-square' };
+    }
+}
+
+// Header component for the new design
+function PropertiesHeader(props: { data: LModelElement; className: string }) {
+    const { data, className } = props;
+    const typeInfo = getElementTypeInfo(className);
+    const description = data.state?.description || '';
+
+    return (
+        <div className="properties-header">
+            <div className="properties-header-icon">
+                <i className={`bi ${typeInfo.icon}`} />
+            </div>
+            <div className="properties-header-content">
+                <div className="properties-header-top">
+                    <h1 className="properties-header-name">{data.name || 'Unnamed'}</h1>
+                    <span className={`properties-header-badge ${typeInfo.badgeClass}`}>
+                        {typeInfo.badge}
+                    </span>
+                </div>
+                {description && (
+                    <p className="properties-header-description">{description}</p>
+                )}
+            </div>
+        </div>
+    );
+}
+
+// Overview stats for Model/Metamodel
+function PropertiesOverview(props: { data: LModel }) {
+    const { data } = props;
+    const classes = data.classes?.length || 0;
+    const attributes = data.classes?.reduce((sum, c) => sum + (c.attributes?.length || 0), 0) || 0;
+    const references = data.classes?.reduce((sum, c) => sum + (c.references?.length || 0), 0) || 0;
+    const operations = data.classes?.reduce((sum, c) => sum + (c.operations?.length || 0), 0) || 0;
+
+    return (
+        <div className="properties-section">
+            <div className="properties-section-title">
+                <i className="bi bi-bar-chart" />
+                Overview
+            </div>
+            <div className="properties-section-content">
+                <div className="properties-stats-grid">
+                    <div className="properties-stat-item">
+                        <div className="properties-stat-icon classes">
+                            <i className="bi bi-box" />
+                        </div>
+                        <div className="properties-stat-content">
+                            <div className="properties-stat-value">{classes}</div>
+                            <div className="properties-stat-label">Classes</div>
+                        </div>
+                    </div>
+                    <div className="properties-stat-item">
+                        <div className="properties-stat-icon attributes">
+                            <i className="bi bi-type" />
+                        </div>
+                        <div className="properties-stat-content">
+                            <div className="properties-stat-value">{attributes}</div>
+                            <div className="properties-stat-label">Attributes</div>
+                        </div>
+                    </div>
+                    <div className="properties-stat-item">
+                        <div className="properties-stat-icon references">
+                            <i className="bi bi-link-45deg" />
+                        </div>
+                        <div className="properties-stat-content">
+                            <div className="properties-stat-value">{references}</div>
+                            <div className="properties-stat-label">References</div>
+                        </div>
+                    </div>
+                    <div className="properties-stat-item">
+                        <div className="properties-stat-icon operations">
+                            <i className="bi bi-gear" />
+                        </div>
+                        <div className="properties-stat-content">
+                            <div className="properties-stat-value">{operations}</div>
+                            <div className="properties-stat-label">Operations</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+// Actions section
+function PropertiesActions(props: {
+    data: LModelElement;
+    onEdit?: () => void;
+    onDuplicate?: () => void;
+    onDelete?: () => void
+}) {
+    const { data, onEdit, onDuplicate, onDelete } = props;
+
+    return (
+        <div className="properties-section">
+            <div className="properties-section-title">
+                <i className="bi bi-lightning" />
+                Actions
+            </div>
+            <div className="properties-section-content">
+                <div className="properties-actions">
+                    {onEdit && (
+                        <button className="properties-btn primary" onClick={onEdit}>
+                            <i className="bi bi-pencil" />
+                            Edit
+                        </button>
+                    )}
+                    {onDuplicate && (
+                        <button className="properties-btn secondary" onClick={onDuplicate}>
+                            <i className="bi bi-copy" />
+                            Duplicate
+                        </button>
+                    )}
+                    {onDelete && (
+                        <button className="properties-btn danger" onClick={onDelete}>
+                            <i className="bi bi-trash" />
+                            Delete
+                        </button>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+}
+
 function InfoComponent(props: AllProps) {
 
     const {node, view, topics, advanced, mode} = props;
@@ -667,41 +843,115 @@ function InfoComponent(props: AllProps) {
             // @ts-ignore
             data = props.localData;
         }
-    } 
+    }
 
     let ddata = data?.__raw || data;
     let jsx: ReactNode = null;
-    
+
+    // Check if we should use the new panel design (tab mode with valid className)
+    const useNewDesign = !!(tab && data && ddata?.className && !['DObject', 'DValue'].includes(ddata.className));
+
+    // Build jsx with skipTitle for new design
     if (data) switch (ddata?.className) {
         case 'DModel':
-            jsx = builder.model(data, advanced); break;
+            jsx = builder.model(data, advanced, useNewDesign); break;
         case 'DPackage':
-            jsx = builder.package(data, advanced); break;
+            jsx = builder.package(data, advanced, useNewDesign); break;
         case 'DClass':
-            jsx = builder.class(data, advanced); break;
+            jsx = builder.class(data, advanced, useNewDesign); break;
         case 'DEnumerator':
-            jsx = builder.enum(data, advanced); break;
+            jsx = builder.enum(data, advanced, useNewDesign); break;
         case 'DAttribute':
-            jsx = builder.attribute(data, advanced); break;
+            jsx = builder.attribute(data, advanced, useNewDesign); break;
         case 'DReference':
-            jsx = builder.reference(data, advanced); break;
+            jsx = builder.reference(data, advanced, useNewDesign); break;
         case 'DOperation':
-            jsx = builder.operation(data, advanced); break;
+            jsx = builder.operation(data, advanced, useNewDesign); break;
         case 'DParameter':
-            jsx = builder.operation(data.father, advanced); break;
+            jsx = builder.operation(data.father, advanced, useNewDesign); break;
         case 'DEnumLiteral':
-            jsx = builder.literal(data, advanced); break;
+            jsx = builder.literal(data, advanced, useNewDesign); break;
         case 'DObject':
             jsx = builder.object(data, topics, advanced, mode); break;
         case 'DValue':
             jsx = builder.value(data, topics, advanced, mode); break;
         default: jsx = <Empty />; break;
     } else jsx = <Empty />;
-    
+
+    // Use new design for tab mode
+    if (tab && data && ddata?.className) {
+        const showOverview = ddata.className === 'DModel';
+        const showActions = ['DModel', 'DClass', 'DEnumerator', 'DAttribute', 'DReference', 'DOperation'].includes(ddata.className);
+
+        return (
+            <section className="properties-tab properties-panel">
+                {/* Header */}
+                <PropertiesHeader data={data} className={ddata.className} />
+
+                {/* Overview - only for Models */}
+                {showOverview && <PropertiesOverview data={data as LModel} />}
+
+                {/* Details Section */}
+                <div className="properties-section">
+                    <div className="properties-section-title">
+                        <i className="bi bi-sliders" />
+                        Details
+                    </div>
+                    <div className="properties-section-content">
+                        {jsx}
+                    </div>
+                </div>
+
+                {/* State Section */}
+                <div className="properties-section">
+                    <div className="properties-section-title">
+                        <i className="bi bi-braces" />
+                        State
+                    </div>
+                    <div className="properties-section-content">
+                        <div className="object-state" style={{ margin: 0, border: 'none' }}>
+                            {!ddata || Object.keys(ddata._state).length === 0 ? (
+                                <pre style={{ padding: '12px 16px', margin: 0, color: 'var(--color-text-secondary)' }}>Empty</pre>
+                            ) : (
+                                <ReactJson
+                                    src={ddata._state}
+                                    collapsed={1}
+                                    collapseStringsAfterLength={20}
+                                    displayDataTypes={true}
+                                    displayObjectSize={true}
+                                    enableClipboard={true}
+                                    groupArraysAfterLength={100}
+                                    indentWidth={4}
+                                    name={"state"}
+                                    iconStyle={"triangle"}
+                                    quotesOnKeys={true}
+                                    shouldCollapse={false}
+                                    sortKeys={false}
+                                    theme={"rjv-default"}
+                                />
+                            )}
+                        </div>
+                    </div>
+                </div>
+
+                {/* Actions */}
+                {showActions && (
+                    <PropertiesActions
+                        data={data}
+                        onEdit={node?.select ? () => node?.select() : undefined}
+                        onDuplicate={data?.duplicate ? () => data?.duplicate?.() : undefined}
+                        onDelete={data?.delete ? () => data?.delete?.() : undefined}
+                    />
+                )}
+            </section>
+        );
+    }
+
+    // Fallback to original design for popup/inline modes
     return <section className={'properties-tab'}>
 
         {jsx}
-        
+
         {tab && <><hr/>
             <h6>State</h6>
             <div className={'object-state'}>
@@ -722,7 +972,7 @@ function InfoComponent(props: AllProps) {
                             theme={"rjv-default"}
                     />}
                 {/*<pre>{Object.keys(dnode._state).length ? JSON.stringify(dnode._state, null, '\t') : undefined}</pre>*/}
-            </div> </>}  
+            </div> </>}
         </section>
 
         }

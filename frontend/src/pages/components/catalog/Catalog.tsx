@@ -1,32 +1,43 @@
 import React, {useState} from "react";
-import {type Dictionary, LProject} from "../../../joiner";
+import {type Dictionary, LProject, R} from "../../../joiner";
 import { Menu, Item } from "../menu/Menu";
 import { Project } from "../Project";
-
-import colors111 from '../../../static/img/colors-111.png';
+import { ProjectsApi } from "../../../api/persistance";
 
 import { icon } from "../icons/Icons";
 import "./catalog.scss"
 import _ from "lodash";
 
-export const CatalogInfoCard = (props: any) => {
+// Empty State Component - NEW DESIGN
+const EmptyState = (props: { onCreateProject: () => void }) => {
     return (
-        <div className={'details'}>
-            {props.projects ?
-                <>
-                    <h5>Your projects</h5>
-                    <p>You developed <strong>{props.projects.length}</strong> projects{false && ' with an overall number of 12 artifacts'}.</p>
-                    <img src={colors111} width={220} />
-                </>
-                :
-                <>
-                    <h5>No projects so far. Are you new to Jjodel? why not exploring the Getting Started section?</h5>
-                    <img src={colors111} width={220} />
-                </>
-            }
+        <div className="dashboard-empty-state">
+            <div className="empty-state-icon">
+                <i className="bi bi-rocket-takeoff" />
+            </div>
+            <h2 className="empty-state-title">Welcome to Jjodel!</h2>
+            <p className="empty-state-description">
+                Create your first project to start modeling. Jjodel makes metamodeling accessible for research and education.
+            </p>
+            <button className="empty-state-btn" onClick={props.onCreateProject}>
+                <i className="bi bi-plus-lg" />
+                Create your first project
+            </button>
+            <a
+                href="https://www.jjodel.io/getting-started/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="empty-state-link"
+            >
+                New to Jjodel? Check out the Getting Started guide
+                <i className="bi bi-arrow-right" />
+            </a>
         </div>
     );
 }
+
+// Hidden - using empty state instead
+export const CatalogInfoCard = (props: any) => null;
 type ChildrenType = {
     projects?: any;
     children?: any;
@@ -34,52 +45,61 @@ type ChildrenType = {
 
 
 const Catalog = (props: ChildrenType) => {
-
-    const [filters, setFilters] = useState([true,true,true]);
     const [mode, setMode] = useState<string>("cards");
-
-    const [sortingMode, setSortingMode] = useState<string>("modified")///("alphabetical");
+    const [activeTab, setActiveTab] = useState<'all' | 'public' | 'private' | 'collaborative'>('all');
 
     const CatalogFilters = () => {
-
-        function toggleFilters(el: 0|1|2) {
-            switch(el) {
-                case 0:
-                    setFilters([!filters[0], filters[1], filters[2]]);
-                    break;
-                case 1:
-                    setFilters([filters[0], !filters[1], filters[2]]);
-                    break;
-                case 2:
-                    setFilters([filters[0], filters[1], !filters[2]]);
-                    break;
-            }
-        };
-
         return (
-            <div className={'left'}>
-                {filters[0] ? <button onClick={(e) => toggleFilters(0)} className='active'>public</button> : <button onClick={(e) => toggleFilters(0)}>public</button>}
-                {filters[1] ? <button onClick={(e) => toggleFilters(1)} className='active'>private</button> : <button onClick={(e) => toggleFilters(1)}>private</button>}
-                {filters[2] ? <button onClick={(e) => toggleFilters(2)} className='active'>collaborative</button> : <button onClick={(e) => toggleFilters(2)} >collaborative</button>}
+            <div className="catalog-filter-tabs">
+                <button
+                    className={`filter-tab ${activeTab === 'all' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('all')}
+                >
+                    All
+                </button>
+                <button
+                    className={`filter-tab ${activeTab === 'public' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('public')}
+                >
+                    Public
+                </button>
+                <button
+                    className={`filter-tab ${activeTab === 'private' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('private')}
+                >
+                    Private
+                </button>
+                <button
+                    className={`filter-tab ${activeTab === 'collaborative' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('collaborative')}
+                >
+                    Collaborative
+                </button>
             </div>
         );
     }
 
     const CatalogMode = () => {
-        return (<>
-            <div className={'right'}>
-                <span>sorted by <span style={{paddingLeft: '6px'}}>{icon[sortingMode]} </span></span>
-                <Menu position={'left'}>
-                    <Item icon={icon['alphabetical']} action={(e)=> {setSortingMode('alphabetical')}}>Alphabetical {sortingMode === 'alphabetical' && <i style={{float: 'right'}} className="bi bi-check-lg"></i>}</Item>
-                    <Item icon={icon['created']} action={(e)=> {setSortingMode('created')}}>Date created {sortingMode === 'created' && <i style={{float: 'right'}} className="bi bi-check-lg"></i>}</Item>
-                    <Item icon={icon['modified']} action={(e)=> {setSortingMode('modified')}}>Last modified {sortingMode === 'modified' && <i style={{float: 'right'}} className="bi bi-check-lg"></i>}</Item>
-                </Menu>
-                <div className={'view-icons'}>
-                    <i onClick={(e) => setMode('cards')} className={`bi bi-grid ${mode === "cards" && 'selected'}`}></i>
-                    <i onClick={(e) => setMode('list')} className={`bi bi-list ${mode === "list" && 'selected'}`}></i>
+        return (
+            <div className="catalog-view-controls">
+                <div className="view-toggle">
+                    <button
+                        className={`view-btn ${mode === 'cards' ? 'active' : ''}`}
+                        onClick={() => setMode('cards')}
+                        title="Grid view"
+                    >
+                        <i className="bi bi-grid-3x3-gap" />
+                    </button>
+                    <button
+                        className={`view-btn ${mode === 'list' ? 'active' : ''}`}
+                        onClick={() => setMode('list')}
+                        title="List view"
+                    >
+                        <i className="bi bi-list" />
+                    </button>
                 </div>
             </div>
-        </>);
+        );
     }
 
 
@@ -87,18 +107,15 @@ const Catalog = (props: ChildrenType) => {
 
     type CatalogType = {
         projects: LProject[];
+        onCreateProject: () => void;
     }
 
     const CatalogReport = (props: CatalogType) => {
-
-
-        var items = props.projects
-            .filter(p =>
-                (filters[0] && p.type ==="public" || filters[1] && p.type ==="private" || filters[2] && p.type ==="collaborative" || !filters[0] && !filters[1] && !filters[2]));
-        
-        var sorted = items;
-        var iteratees: ((obj: LProject) => any) | string = 'created';
-
+        // Filter by active tab
+        var items = props.projects.filter(p => {
+            if (activeTab === 'all') return true;
+            return p.type === activeTab;
+        });
 
         let projectNames: Dictionary<string, LProject> = {};
         for (let p of props.projects) {
@@ -106,72 +123,54 @@ const Catalog = (props: ChildrenType) => {
             projectNames[p.name] = p;
         }
 
-        switch(sortingMode) {
-            case "alphabetical":
-                sorted = _.sortBy(items, 'name');
-                break;
-            case "created":
-                iteratees = (obj: LProject) => -new Date(obj.creation).getTime();
-                sorted = _.sortBy(items, iteratees);
-                break;
-            case "modified":
-                iteratees = (obj: LProject) => -new Date(obj.lastModified).getTime();
-                sorted = _.sortBy(items, iteratees);
-                break;
-        }
+        // Sort by last modified (default)
+        var sorted = _.sortBy(items, (obj: LProject) => -new Date(obj.lastModified).getTime());
 
         return (
-
-            mode == "cards" ?
-
-                /* cards mode */
-
-                <div className={'card-holder'}>
-
-                    {items.length === 0 && <div className={"fallback-message"}><span>
-                        Sorry, there are no results matching your search criteria. Please try again with different filters.
-                    </span></div>}
-
-                    {
-                        sorted.map((p,i) => <Project key={i} data={p} mode={mode} pnames={projectNames} />)
-                    }
-
+            mode === "cards" ?
+                <div className="project-cards-grid">
+                    {sorted.map((p, i) => <Project key={i} data={p} mode={mode} pnames={projectNames} />)}
                 </div>
-
             :
-                /* list mode */
-
-                <div className={'row project-list'}>
-                    <div className='row header'>
-                        <div className={'col-4'}>Name</div>
-                        <div className={'col-1'}>Type</div>
-                        <div className={'col-3'}>Created</div>
-                        <div className={'col-2'}>Last modified</div>
-                        <div className={'col-2'}>Operation</div>
+                <div className="row project-list">
+                    <div className="row header">
+                        <div className="col-4">Name</div>
+                        <div className="col-1">Type</div>
+                        <div className="col-3">Created</div>
+                        <div className="col-2">Last modified</div>
+                        <div className="col-2">Operation</div>
                     </div>
-                    {
-                        sorted.map(p => <>
-                            {filters[0] && p.type === "public" && <Project key={p.id} data={p} mode={mode} pnames={projectNames} />}
-                            {filters[1] && p.type === "private" && <Project key={p.id} data={p} mode={mode} pnames={projectNames} />}
-                            {filters[2] && p.type === "collaborative" && <Project key={p.id} data={p} mode={mode} pnames={projectNames} />}
-                            {!filters[0] && !filters[1] && !filters[2] && <Project key={p.id} data={p} mode={mode} pnames={projectNames} />}
-                        </>)
-                    }
+                    {sorted.map(p => (
+                        <Project key={p.id} data={p} mode={mode} pnames={projectNames} />
+                    ))}
                 </div>
-
         );
     };
 
+    // Handler for creating project
+    const handleCreateProject = async () => {
+        await ProjectsApi.create('private', undefined, undefined, undefined, props.projects);
+        R.navigate("/allProjects");
+    };
+
+    // Check if there are no projects at all
+    const hasNoProjects = !props.projects || props.projects.length === 0;
+
     return (
         <>
-            <div className='row catalog-header'>
-                <CatalogFilters/>
-                <CatalogMode/>
-            </div>
-            <div className={'catalog'}>
-                <CatalogInfoCard projects={props.projects}/>
-                <CatalogReport projects={props.projects}/>
-            </div>
+            {hasNoProjects ? (
+                <EmptyState onCreateProject={handleCreateProject} />
+            ) : (
+                <>
+                    <div className="catalog-header">
+                        <CatalogFilters />
+                        <CatalogMode />
+                    </div>
+                    <div className="catalog">
+                        <CatalogReport projects={props.projects} onCreateProject={handleCreateProject} />
+                    </div>
+                </>
+            )}
         </>
     );
 }

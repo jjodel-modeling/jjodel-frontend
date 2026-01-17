@@ -167,12 +167,12 @@
   align-items: center;
 
   /* Visual */
-  background-color: var(--color-bg-elevated);
+  background-color: var(--color-bg-primary);
   border-bottom: 1px solid var(--color-border-primary);
-  box-shadow: var(--shadow-sm);
+  box-shadow: none;
 
-  /* Sizing */
-  height: 48px;  /* Increased from 32px for better touch targets */
+  /* Sizing - 60px as per design spec */
+  height: 60px;
   padding: 0 var(--space-6);
 
   /* Typography */
@@ -207,19 +207,30 @@
   }
 
 
+  /* Logo - positioned LEFT per new design */
   .nav-logo {
-    // margin: auto;
-    position: absolute;
-    left: 0;
-    right: 0;
-    top: 0;
-    bottom: 0;
-    pointer-events: none;
+    position: relative;
     display: flex;
+    align-items: center;
+    margin-right: var(--space-8);
+    order: -1; /* Ensure logo is first */
+
+    .logo-text {
+      font-size: 22px;
+      font-weight: 700;
+      color: #374151; /* Brand color */
+      cursor: pointer;
+      text-decoration: none;
+      white-space: nowrap;
+
+      &:hover {
+        color: var(--color-accent);
+      }
+    }
 
     &> .aligner{
-      margin: auto;
-      pointer-events: all;
+      display: flex;
+      align-items: center;
     }
 
     &  div.logo{
@@ -227,7 +238,6 @@
       background-image: url(/static/img/jjodel-70.png);
       height: 28px;
       width: 70px;
-      top: 2px;
       background-repeat: no-repeat;
       background-size: 57px 25px;
       transition: all 0.3s ease-in-out;
@@ -242,19 +252,15 @@
     }
 
     &  div.logo-on {
-
       position: relative;
       background-image: url(/static/img/jjodel-hover-70.png);
       height: 28px;
       width: 70px;
-      top: 2px;
       background-repeat: no-repeat;
       background-size: 57px 25px;
       transition: all 0.3s ease-in-out;
       z-index:200;
     }
-
-
 
     & .bi {
       position: absolute;
@@ -265,13 +271,49 @@
       margin: auto;
       z-index: 1;
     }
+  }
 
+  /* Nav Tabs - Projects, Templates, Explore */
+  .nav-tabs-container {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+    margin-left: var(--space-4);
+    order: 0;
+  }
 
+  .nav-tab {
+    display: flex;
+    align-items: center;
+    padding: var(--space-2) var(--space-4);
+    font-size: var(--text-sm);
+    font-weight: var(--font-medium);
+    color: var(--color-text-secondary);
+    background-color: transparent;
+    border: none;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: var(--transition-fast);
+    text-decoration: none;
+    white-space: nowrap;
+
+    &:hover {
+      color: var(--color-text-primary);
+      background-color: var(--color-bg-secondary);
+    }
+
+    &.active {
+      color: var(--color-text-primary);
+      background-color: var(--color-bg-secondary);
+    }
   }
 
   .nav-commands{
-    margin-right: 3rem;
+    margin-right: var(--space-4);
     margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
 
     /* Typography for mode labels */
     label {
@@ -285,6 +327,53 @@
       font-family: var(--font-sans);
       font-size: var(--text-sm);
       color: var(--color-text-secondary);
+    }
+  }
+
+  /* Help Button */
+  .nav-help-btn {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-3);
+    font-size: var(--text-sm);
+    font-weight: var(--font-medium);
+    color: var(--color-text-secondary);
+    background-color: transparent;
+    border: 1px solid var(--color-border-primary);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: var(--transition-fast);
+
+    .bi {
+      font-size: var(--text-base);
+    }
+
+    &:hover {
+      color: var(--color-text-primary);
+      border-color: var(--color-accent);
+      background-color: var(--color-bg-secondary);
+    }
+  }
+
+  /* User Badge (Avatar) - Brand color, not cyan */
+  .user-badge {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background-color: #374151; // Brand color
+    color: white;
+    font-size: var(--text-sm);
+    font-weight: var(--font-semibold);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: var(--transition-fast);
+
+    &:hover {
+      background-color: #1f2937; // Darker brand
+      transform: scale(1.05);
     }
   }
 
@@ -593,12 +682,12 @@
     height: 32px;
     width: 32px;
     border-radius: 50%;
-    background-color: var(--color-accent);
+    background-color: #374151; // Brand color, not cyan
     color: white;
     transition: var(--transition-fast);
 
     &:hover {
-      background-color: var(--color-accent-hover);
+      background-color: #1f2937; // Darker brand
       transform: scale(1.05);
     }
   }
@@ -627,11 +716,11 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: var(--color-accent);
+  background-color: #374151; // Brand color, not cyan
   transition: var(--transition-fast);
 
   &:hover {
-    background-color: var(--color-accent-hover);
+    background-color: #1f2937; // Darker brand
     transform: scale(1.05);
   }
 }
@@ -666,4 +755,257 @@
      margin-right: 10px;
 
    }
+}
+
+/* ============================================
+   MENU BAR - NEW LIGHT THEME
+   Per jjodel-menu-spec.md
+   ============================================ */
+
+// Variables
+$menu-font: 'Inter Variable', -apple-system, sans-serif;
+$menu-bg: #ffffff;
+$menu-border: #e2e4e8;
+$menu-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+$menu-radius: 8px;
+$menu-item-radius: 6px;
+
+$color-text-menu: #374151;
+$color-text-menu-hover: #111418;
+$color-text-menu-disabled: #9CA3AF;
+$color-bg-menu-hover: #f1f5f9;
+$color-icon-menu: #6B7280;
+$color-icon-menu-disabled: #D1D5DB;
+
+$transition-menu: 150ms ease;
+
+// Menu Bar Container
+.menu-bar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 100%;
+}
+
+// Menu Trigger (top-level menu items)
+.menu-trigger {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 12px;
+  font-family: $menu-font;
+  font-size: 14px;
+  font-weight: 500;
+  color: $color-text-menu;
+  background: transparent;
+  border: none;
+  border-radius: $menu-item-radius;
+  cursor: pointer;
+  transition: all $transition-menu;
+
+  &:hover,
+  &.open {
+    background: $color-bg-menu-hover;
+    color: $color-text-menu-hover;
+  }
+
+  &:focus-visible {
+    outline: 2px solid #06B6D4;
+    outline-offset: 2px;
+  }
+}
+
+.menu-trigger-icon {
+  font-size: 16px;
+  color: $color-icon-menu;
+}
+
+.menu-trigger-chevron {
+  font-size: 10px;
+  color: #6B7280;
+  transition: transform $transition-menu;
+
+  .menu-trigger.open & {
+    transform: rotate(180deg);
+  }
+}
+
+// Dropdown Container
+.menu-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  min-width: 220px;
+  background: $menu-bg;
+  border: 1px solid $menu-border;
+  border-radius: $menu-radius;
+  box-shadow: $menu-shadow;
+  padding: 6px;
+  z-index: 1000;
+
+  // Animation
+  opacity: 0;
+  transform: translateY(-8px);
+  pointer-events: none;
+  transition: all $transition-menu;
+
+  &.open {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+  }
+}
+
+// Dropdown Item
+.menu-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  font-family: $menu-font;
+  font-size: 13px;
+  font-weight: 400;
+  color: $color-text-menu;
+  background: transparent;
+  border: none;
+  border-radius: $menu-item-radius;
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+  transition: all $transition-menu;
+
+  &:hover:not(.disabled) {
+    background: $color-bg-menu-hover;
+    color: $color-text-menu-hover;
+
+    .menu-item-icon {
+      color: $color-text-menu;
+    }
+  }
+
+  &.disabled {
+    color: $color-text-menu-disabled;
+    cursor: not-allowed;
+
+    .menu-item-icon {
+      color: $color-icon-menu-disabled;
+    }
+  }
+
+  &:focus-visible {
+    outline: 2px solid #06B6D4;
+    outline-offset: -2px;
+  }
+}
+
+.menu-item-content {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.menu-item-icon {
+  width: 16px;
+  font-size: 14px;
+  color: $color-icon-menu;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.menu-item-label {
+  flex: 1;
+}
+
+.menu-shortcut {
+  font-size: 12px;
+  color: #9CA3AF;
+  margin-left: 24px;
+
+  .menu-item.disabled & {
+    color: $color-icon-menu-disabled;
+  }
+}
+
+.menu-submenu-arrow {
+  font-size: 12px;
+  color: #9CA3AF;
+  margin-left: 8px;
+}
+
+// Separator
+.menu-separator {
+  height: 1px;
+  background: $menu-border;
+  margin: 6px 0;
+}
+
+// Submenu Container
+.menu-submenu-container {
+  position: relative;
+}
+
+.menu-submenu {
+  position: absolute;
+  left: calc(100% + 4px);
+  top: -6px;
+  min-width: 200px;
+  background: $menu-bg;
+  border: 1px solid $menu-border;
+  border-radius: $menu-radius;
+  box-shadow: $menu-shadow;
+  padding: 6px;
+  z-index: 1001;
+
+  // Animation
+  opacity: 0;
+  transform: translateX(-8px);
+  pointer-events: none;
+  transition: all $transition-menu;
+
+  &.open {
+    opacity: 1;
+    transform: translateX(0);
+    pointer-events: auto;
+  }
+}
+
+// Header Right Section
+.main-header-right {
+  display: flex;
+  align-items: center;
+  margin-left: auto;
+  gap: 8px;
+}
+
+// Help Button in Menu Bar
+.menu-help-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  font-family: $menu-font;
+  font-size: 14px;
+  font-weight: 500;
+  color: $color-text-menu;
+  background: transparent;
+  border: none;
+  border-radius: $menu-item-radius;
+  cursor: pointer;
+  transition: all $transition-menu;
+
+  .bi {
+    font-size: 16px;
+    color: $color-icon-menu;
+  }
+
+  &:hover {
+    background: $color-bg-menu-hover;
+    color: $color-text-menu-hover;
+
+    .bi {
+      color: $color-text-menu;
+    }
+  }
 }

@@ -44,6 +44,7 @@ import { Tooltip } from '../../components/forEndUser/Tooltip';
 import { ProjectsApi } from '../../api/persistance';
 import {Cards} from "./cards/Cards";
 import {createM2} from "./Navbar";
+import {BottomToolbar} from "./BottomToolbar";
 
 
 type UserProps = {
@@ -259,17 +260,17 @@ function GenericDashboard(props: DashProps): any {
         <Navbar />
         <div className={"dashboard-container"} tabIndex={-1}>
             <LeftBar active={active} projects={user?.projects}/>
-            <div className={`dash-content user ${props.style && props.style}`}>
-                <div>
-                    <>
-                        {active === "All" && <Title active={active} title={'Dashboard'} icon={<i className="bi bi-columns-gap"></i>} />}
+            <div className={`dash-content ${active === 'All' ? 'projects-view' : 'user'} ${props.style && props.style}`}>
+                {/* Title for non-All views only - All view title is in AllProjects.tsx CTA row */}
+                {active !== "All" && (
+                    <div>
                         {active === "Recent" && <Title  active={active} title={'Recent'} icon={<i className="bi bi-clock"></i>} />}
                         {active === "Templates" && <Title  active={active} title={'Templates'} icon={<i className="bi bi-lightbulb"></i>} />}
                         {active === "Notes" && <Title  active={active} title={'Project Notes'} icon={<i className="bi bi-pencil-square"></i>} />}
                         {active === "Updates" && <Title  active={active} title={'What\'s new'} icon={<i className="bi bi-clock-history"></i>} />}
                         {active === "Profile" && <Title  active={active} title={'Profile'} icon={<i className="bi bi-clock-history"></i>} />}
-                    </>
-                </div>
+                    </div>
+                )}
                 <Catalog children={children}/>
             </div>
         </div>
@@ -482,6 +483,7 @@ function ProjectDashboard(props: DashProps): any {
         </Try>
         <Try><Navbar /></Try>
         <Try><Dock /></Try>
+        <Try><BottomToolbar /></Try>
     </>);
 }
 

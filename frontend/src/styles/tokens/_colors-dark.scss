@@ -32,14 +32,30 @@
   --color-text-inverse: #08090a;      /* Text on light backgrounds */
 
   /* ============================================
-     ACCENT - Primary Brand Color (Charcoal)
-     Lighter gray for visibility on dark backgrounds
+     BRAND - Dark Slate (backgrounds, branding)
+     Adjusted for dark mode visibility
      ============================================ */
-  --color-accent: #9ca3af;                      /* Primary accent - lighter for dark bg */
-  --color-accent-hover: #d1d5db;                /* Hover state - even lighter */
-  --color-accent-active: #6b7280;               /* Active/pressed state */
-  --color-accent-muted: rgba(156, 163, 175, 0.15);   /* Backgrounds, subtle highlights */
-  --color-accent-subtle: rgba(156, 163, 175, 0.08);  /* Very subtle backgrounds */
+  --color-brand: #9ca3af;                       /* Brand color - lighter for dark bg */
+  --color-brand-hover: #d1d5db;                 /* Brand hover state */
+  --color-brand-active: #6b7280;                /* Brand active state */
+
+  /* ============================================
+     ACCENT - Cyan (interactive elements)
+     Brighter cyan for visibility on dark backgrounds
+     ============================================ */
+  --color-accent: #22D3EE;                      /* Primary accent - brighter cyan */
+  --color-accent-hover: #67E8F9;                /* Hover state - lighter cyan */
+  --color-accent-active: #06B6D4;               /* Active/pressed state */
+  --color-accent-light: rgba(34, 211, 238, 0.15); /* Subtle backgrounds */
+  --color-accent-lighter: rgba(34, 211, 238, 0.08); /* Very subtle backgrounds */
+  --color-accent-muted: rgba(34, 211, 238, 0.15);   /* Backgrounds, subtle highlights */
+  --color-accent-subtle: rgba(34, 211, 238, 0.08);  /* Very subtle backgrounds */
+
+  /* ============================================
+     SECONDARY
+     ============================================ */
+  --color-secondary: #9ca3af;                   /* Secondary elements */
+  --color-secondary-hover: #d1d5db;             /* Secondary hover */
 
   /* ============================================
      SEMANTIC COLORS

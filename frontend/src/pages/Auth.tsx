@@ -4,13 +4,18 @@ import type {Dictionary, GObject} from '../joiner';
 import { DUser, R, SetRootFieldAction, U} from '../joiner';
 import Storage from '../data/storage';
 import {AuthApi, UsersApi} from "../api/persistance";
-import logo from '../static/img/jjodel-124.png';
+import logo from '../static/img/jjodel.png';
 import {Tooltip} from '../components/forEndUser/Tooltip';
 import { RegisterRequest } from '../api/DTO/RegisterRequest';
 import { LoginRequest } from '../api/DTO/LoginRequest';
 import { TokenResponse } from '../api/DTO/TokenResponse';
 import {ResetPasswordRequest} from "../api/DTO/ResetPasswordRequest";
 import "./auth.scss"
+
+// Import partner logos
+import logoUnivaq from '../static/img/partners/univaq.png';
+import logoMdu from '../static/img/partners/mdu.svg';
+import logoFbk from '../static/img/partners/fbk.png';
 
 // Branding panel component for split-screen layout
 const BrandingPanel = () => (
@@ -21,25 +26,19 @@ const BrandingPanel = () => (
             </div>
             <h1 className="auth-branding-title">Welcome to Jjodel</h1>
             <p className="auth-branding-tagline">
-                The collaborative modeling platform for domain-specific languages
+                Open-source modeling<br />for research and education
             </p>
-            <div className="auth-branding-features">
-                <div className="auth-feature">
-                    <i className="bi bi-diagram-3" />
-                    <span>Visual Modeling</span>
-                </div>
-                <div className="auth-feature">
-                    <i className="bi bi-people" />
-                    <span>Real-time Collaboration</span>
-                </div>
-                <div className="auth-feature">
-                    <i className="bi bi-code-square" />
-                    <span>Code Generation</span>
-                </div>
+        </div>
+        <div className="auth-branding-partners">
+            <span className="auth-partners-label">Research partners</span>
+            <div className="auth-partners-logos">
+                <img src={logoUnivaq} alt="Università degli Studi dell'Aquila" />
+                <img src={logoMdu} alt="Mälardalens universitet" />
+                <img src={logoFbk} alt="Fondazione Bruno Kessler" />
             </div>
         </div>
         <div className="auth-branding-footer">
-            <span>jjodel.io</span>
+            <a href="https://jjodel.io" target="_blank" rel="noopener noreferrer" className="auth-branding-url">jjodel.io</a>
         </div>
     </div>
 );
@@ -540,7 +539,7 @@ return(<section className={`auth-split-screen ${action === 'register' ? 'registe
                         />
                     </label>
                 </Tooltip>
-                <br /><br /><br />
+                <div className="auth-section-divider" />
                 <label>
                     Password
                     <input className={'w-100 input w-fit d-block mx-auto mt-2'}
@@ -551,6 +550,7 @@ return(<section className={`auth-split-screen ${action === 'register' ? 'registe
                         onChange={e => setPassword(e.target.value)}
                         type={'password'} required={true} title={'At least 8 characters'}
                     />
+                    <span className="auth-field-hint">At least 8 characters</span>
                 </label>
 
 
@@ -566,25 +566,22 @@ return(<section className={`auth-split-screen ${action === 'register' ? 'registe
                     />
                 </label>
 
-                <br /><br /><br />
+                <div className="auth-section-divider" />
                 <Tooltip tooltip={<div style={{padding: '10px', maxWidth: '600px'}}><h6>Newsletter</h6>Select this option for remaining updated about Jjodel new releases, updates, and initiatives.</div>} >
-                    <label>
-                        <input className={'checkbox'}
-                            placeholder={'newsletter'}
-                            checked={newsletter}
-                            onClick={dirty}
-                            onChange={e => setNewsletter(e.target.checked)}
-                            type={'checkbox'}
-                            style={{outline: 'none', marginTop: '10px', float: 'left'}}
-                        />
-                        <div style={{display: 'block', width: '90%', float: 'left', marginBottom: '10px', paddingLeft: '10px'}}>Newsletter. Subscribe to the newsletter to receive updates and news. You can manage your registration preferences at any time. </div>
-                    </label>
-
+                    <div className="auth-custom-checkbox-row" onClick={() => { setDirty(true); setNewsletter(!newsletter); }}>
+                        <div className={`auth-custom-checkbox ${newsletter ? 'checked' : ''}`}>
+                            {newsletter && (
+                                <svg viewBox="0 0 12 12" fill="none" stroke="white" strokeWidth="2">
+                                    <path d="M2 6l3 3 5-5" strokeLinecap="round" strokeLinejoin="round" />
+                                </svg>
+                            )}
+                        </div>
+                        <span className="auth-custom-checkbox-label">Subscribe to the newsletter to receive updates and news about Jjodel.</span>
+                    </div>
                 </Tooltip>
-                <br />
-                <div style={{width: '100%', textAlign: 'center'}}>
-                    By proceeding you accept the terms and conditions.
-                </div>
+                <p className="auth-terms-text">
+                    By proceeding you accept the <a href="https://www.jjodel.io/terms-conditions-page/" target="_blank" rel="noopener noreferrer" className="auth-terms-link">terms and conditions</a>.
+                </p>
                 <button className={'d-block btn btn-primary p-1 mx-auto mt-3 login-button'} type={'submit'} onClick={()=>setDirty(true)}>
                     Create
                 </button>

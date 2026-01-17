@@ -33,14 +33,30 @@
   --color-text-inverse: #ffffff;      /* Text on dark backgrounds */
 
   /* ============================================
-     ACCENT - Primary Brand Color (Charcoal)
-     Professional dark gray for light mode
+     BRAND - Dark Slate (backgrounds, branding)
+     Used for Auth panel, branding elements
      ============================================ */
-  --color-accent: #374151;                      /* Primary accent - buttons, links */
-  --color-accent-hover: #1f2937;                /* Hover state - darker */
-  --color-accent-active: #111827;               /* Active/pressed state */
-  --color-accent-muted: rgba(55, 65, 81, 0.12);   /* Backgrounds, subtle highlights */
-  --color-accent-subtle: rgba(55, 65, 81, 0.06);  /* Very subtle backgrounds */
+  --color-brand: #374151;                       /* Brand color - Auth panel, logos */
+  --color-brand-hover: #1f2937;                 /* Brand hover state */
+  --color-brand-active: #111827;                /* Brand active state */
+
+  /* ============================================
+     ACCENT - Cyan (interactive elements)
+     Buttons, toggles, links, focus states
+     ============================================ */
+  --color-accent: #06B6D4;                      /* Primary accent - buttons, links */
+  --color-accent-hover: #0891B2;                /* Hover state - darker cyan */
+  --color-accent-active: #0E7490;               /* Active/pressed state */
+  --color-accent-light: rgba(6, 182, 212, 0.1); /* Subtle backgrounds */
+  --color-accent-lighter: rgba(6, 182, 212, 0.05); /* Very subtle backgrounds */
+  --color-accent-muted: rgba(6, 182, 212, 0.12);   /* Backgrounds, subtle highlights */
+  --color-accent-subtle: rgba(6, 182, 212, 0.06);  /* Very subtle backgrounds */
+
+  /* ============================================
+     SECONDARY
+     ============================================ */
+  --color-secondary: #6B7280;                   /* Secondary elements */
+  --color-secondary-hover: #4B5563;             /* Secondary hover */
 
   /* ============================================
      SEMANTIC COLORS

@@ -266,21 +266,6 @@ function NavbarComponent(props: AllProps) {
             subItems: [
                 {name: 'About Jjodel', function: () => {AboutModal.open();}, icon: icon['jjodel']},
                 {name: 'Roadmap',function: () => open('https://www.jjodel.io/roadmap/'), icon: icon['roadmap']},
-                // {name: 'divisor'},
-
-                {name: 'Project Settings', function: placeholder, icon: icon['settings'], disabled: true},
-                {name: 'divisor'},
-                {name: 'Sign out', function: async() => {
-                        if (isProjectModified()) {
-                            U.dialog('You are about to log out without saving your project. Do you want to proceed?', 'logout', async ()=>{
-                                await AuthApi.logout();
-                                R.navigate('/auth');
-                            });
-                        } else {
-                            await AuthApi.logout();
-                            R.navigate('/auth');
-                        }},
-                    icon: <i className="bi bi-box-arrow-left" />}
             ]},
 
         /* File */
@@ -342,35 +327,29 @@ function NavbarComponent(props: AllProps) {
             ]},
 
 
-        isDashboard ? null : {name: 'Edit',
+        /* Edit - always visible, items disabled on dashboard */
+        {name: 'Edit',
             subItems: [
-                {name: 'Undo', icon: icon['undo'], keystroke: [Key.cmd, 'Z']},
-                {name: 'Redo', icon: icon['redo'], keystroke: [Key.cmd, 'Y'], subItems:[{name:"i"}]},
-                /*
-                {name: 'Undo',function:()=>{undo(1)}, disabled:disabledUndo, icon: icon['undo'],
-                    keystroke: [Key.cmd, 'Z'], subItems:hoverUndo},
-                {name: 'Redo',function:()=>{redo(1)}, disabled:disabledRedo, icon: icon['redo'],
-                    keystroke: [Key.shift, Key.cmd, 'Z'], subItems:hoverRedo},
-                */
+                {name: 'Undo', icon: icon['undo'], keystroke: [Key.cmd, 'Z'], disabled: isDashboard},
+                {name: 'Redo', icon: icon['redo'], keystroke: [Key.cmd, 'Y'], subItems:[{name:"i"}], disabled: isDashboard},
                 {name: 'divisor', function: placeholder},
                 {name: (isFavorite ? 'Remove from' : 'Add to') +' Favorites', function: ()=> ProjectsApi.favorite(project?.__raw as DProject),
-                    icon: icon[isFavorite ? 'favoriteFill' : 'favorite']},
-                {name: 'Copy Public Link', function: placeholder, icon: icon['link'], keystroke: [Key.cmd, Key.shift, 'S']} // vedere in scheda progetto // TODO
+                    icon: icon[isFavorite ? 'favoriteFill' : 'favorite'], disabled: isDashboard},
+                {name: 'Copy Public Link', function: placeholder, icon: icon['link'], keystroke: [Key.cmd, Key.shift, 'S'], disabled: true}
             ]
         },
 
-        /* View - da fare */
-        isDashboard ? null : {name: 'View',
+        /* View - always visible, items disabled on dashboard */
+        {name: 'View',
             subItems: [
                 {name: 'Zoom-in', function: placeholder, icon: icon['zoom-in'], disabled: true},
                 {name: 'Zoom-out', function: placeholder, icon: icon['zoom-out'], disabled: true},
                 {name: 'divisor', function: placeholder},
-                // todo: layout needs persistence support. then on versionfixer correct user.layout == undefined and project.layout same
                 {name: 'Save layout', disabled: true,
                     icon: <i className="bi bi-columns-gap"/>,
                     subItems: saveLayoutItems
                 },
-                {name: 'Load layout', disabled: true,
+                {name: 'Load layout', disabled: isDashboard,
                     icon: <i className="bi bi-columns-gap"/>,
                     subItems: [
                         {name: 'Default', function: ()=> PinnableDock.load('Default'), icon: icon['loadl']},
@@ -381,13 +360,7 @@ function NavbarComponent(props: AllProps) {
                                 {name: '3', function: ()=> PinnableDock.load('3', 'project'), icon: lay==='p3' ? icon['loadl'] : icon['check']},
                             ]
                         },
-                        {name: 'User layouts', // todo: dove li memorizzo?
-                            /*
-                            sul progetto = stessi layout per tutti gli utenti con quel progetto.
-                            su user = global = sempre lo stesso layout per ogni progetto
-                            mix progetto-utente per fare in modo che ogni combinazione possa avere un layout diverso?
-                            collego 1+ layout ad ogni viewpoint?
-                            */
+                        {name: 'User layouts',
                             subItems: [
                                 {name: '1', function: ()=> PinnableDock.load('1', 'user'), icon: lay==='u1' ? icon['loadl'] : icon['check']},
                                 {name: '2', function: ()=> PinnableDock.load('2', 'user'), icon: lay==='u2' ? icon['loadl'] : icon['check']},
@@ -396,48 +369,45 @@ function NavbarComponent(props: AllProps) {
                         }
                     ]
                 },
-
                 {name: 'divisor', function: placeholder},
                 {name: 'Show/Hide Sidebar', function: placeholder, icon: icon['sidebar'], disabled: true},
                 {name: 'Show/Hide Toolbar', function: placeholder, icon: icon['toolbar2'], disabled: true},
                 {name: `${isFullscreen ? 'Exit Fullscreen Mode' : 'Fullscreen Mode [F11]'}`, function: toggleFullScreen, icon: icon['fullscreen']},
             ]
         },
-        /* ANALYZE - da fare */
 
-        isDashboard ? null : {name: 'Analyze',
+        /* Tools - disabled S1-S3, enabled S4+ (when metamodels exist) */
+        /* Dynamic content comes from metamodel - placeholder for now */
+        {name: 'Tools',
+            disabled: isDashboard || metamodels.length === 0,
+            subItems: isDashboard || metamodels.length === 0 ? [
+                {name: 'No tools available', disabled: true, icon: <i className="bi bi-tools" />}
+            ] : [
+                {name: 'Metamodel Tools', icon: <i className="bi bi-tools" />, disabled: true,
+                    subItems: metamodels.map((m2, i) => ({
+                        name: props.mmNames[i] || 'Unnamed',
+                        icon: icon['metamodel'],
+                        disabled: true
+                    }))
+                },
+                {name: 'divisor'},
+                {name: 'Custom Tools', icon: <i className="bi bi-gear" />, disabled: true}
+            ]
+        },
+
+        /* Analyze - always visible, items disabled on dashboard */
+        {name: 'Analyze',
             subItems: [
                 {name: 'Live Validation', function: placeholder, icon: icon['validation'], disabled: true},
                 {name: 'Validate', function: placeholder, icon: icon['validate'], disabled: true},
                 {name: 'divisor', function: placeholder},
-                {name: 'M2 Analytics', function: ()=> toggleMetrics(), icon: icon['metrics']},
-                {name: debuggerr ? 'Hide debugger' : 'Debug loops', function: ()=> setDebugger(!debuggerr), icon: icon[debuggerr ? 'eyeslash' : 'eye']},
-                {name: 'Check integrity', function: ()=> VersionFixer.autocorrect(undefined, true, true), icon: icon['tools']},
+                {name: 'M2 Analytics', function: ()=> toggleMetrics(), icon: icon['metrics'], disabled: isDashboard},
+                {name: debuggerr ? 'Hide debugger' : 'Debug loops', function: ()=> setDebugger(!debuggerr), icon: icon[debuggerr ? 'eyeslash' : 'eye'], disabled: isDashboard},
+                {name: 'Check integrity', function: ()=> VersionFixer.autocorrect(undefined, true, true), icon: icon['tools'], disabled: isDashboard},
             ]
         },
 
-        /* HELP ok */
-
-        {name: 'Help',
-            subItems: [
-                {name: 'What\'s New in Jjodel',function: ()=> open("https://www.jjodel.io/whats-new/"),icon: <i className="bi bi-bell" />},
-                {name: 'divisor'},
-                {name: 'Homepage',function: ()=> open("https://www.jjodel.io"), icon: <i className="bi bi-house" />},
-                {name: 'divisor'},
-                {name: 'Learn Jjodel', function: ()=> open("https://www.jjodel.io/learn-jjodel/"), icon: icon['learn']},
-                {name: 'Getting Started', function: ()=> open("https://www.jjodel.io/getting-started/"), icon: icon['getting-started']},
-                {name: 'Video Tutorials', function: ()=> open("https://www.jjodel.io/video-tutorials/"), icon: icon['video']},
-                {name: 'User Guide', function: ()=> open('https://www.jjodel.io/getting-started/'), icon: <i className="bi bi-journal-text" />},
-                {name: 'Glossary', function: ()=> open('https://www.jjodel.io/glossary/'), icon: <i className="bi bi-book" />},
-                {name: 'FAQ', function: placeholder, icon: icon['faq'], disabled: true},
-                {name: 'divisor'},
-                {name: 'Support', icon: icon['support'],
-                    subItems: [
-                        {name: 'Report a Bug', function: placeholder, icon: icon['report-bug'], disabled: true}, // TODO
-                        {name: 'Request a Feature', function: placeholder, icon: icon['feature-request'], disabled: true}, // TODO
-                        {name: 'Contact', function: placeholder, icon: icon['contact'], disabled: true} // TODO
-                    ]}
-            ]}
+        // Help is now a separate component (HelpMenu) on the right side
 
     ];
 
@@ -479,15 +449,48 @@ function NavbarComponent(props: AllProps) {
         return (
         <div className='nav-logo'>
             <div className={"aligner"}>
-
-                {props.debug ?
-                    <div className='logo-on' onContextMenu={toggleDebug}></div>
-                    :
-                    <div className='logo' onContextMenu={toggleDebug}></div>
-                }
+                <span className="logo-text" onClick={() => R.navigate('/allProjects')} onContextMenu={toggleDebug}>
+                    Jjodel.
+                </span>
                 {props.debug && <i className="bi bi-bug-fill" onContextMenu={()=>{CollabRefreshAction.new();}}></i>}
             </div>
         </div>
+        );
+    }
+
+    // Help dropdown menu - matches spec design
+    const HelpMenu = () => {
+        const helpItems: MenuEntry[] = [
+            {name: 'What\'s New in Jjodel', function: ()=> open("https://www.jjodel.io/whats-new/"), icon: <i className="bi bi-bell" />},
+            {name: 'Homepage', function: ()=> open("https://www.jjodel.io"), icon: <i className="bi bi-house" />},
+            {name: 'divisor'},
+            {name: 'Learn Jjodel', function: ()=> open("https://www.jjodel.io/learn-jjodel/"), icon: icon['learn']},
+            {name: 'Getting Started', function: ()=> open("https://www.jjodel.io/getting-started/"), icon: icon['getting-started']},
+            {name: 'Video Tutorials', function: ()=> open("https://www.jjodel.io/video-tutorials/"), icon: icon['video']},
+            {name: 'User Guide', function: ()=> open('https://www.jjodel.io/getting-started/'), icon: <i className="bi bi-journal-text" />},
+            {name: 'Glossary', function: ()=> open('https://www.jjodel.io/glossary/'), icon: <i className="bi bi-book" />},
+            {name: 'FAQ', function: placeholder, icon: icon['faq'], disabled: true},
+            {name: 'divisor'},
+            {name: 'Support', icon: icon['support'],
+                subItems: [
+                    {name: 'Report a Bug', function: placeholder, icon: icon['report-bug'], disabled: true},
+                    {name: 'Request a Feature', function: placeholder, icon: icon['feature-request'], disabled: true},
+                    {name: 'Contact', function: placeholder, icon: icon['contact'], disabled: true}
+                ]}
+        ];
+
+        return (
+            <div className='nav-hamburger hoverable inline help-menu' tabIndex={0}>
+                <span className={'menu-title'}>
+                    <i className="bi bi-question-circle" style={{marginRight: '6px'}} />
+                    Help
+                </span>
+                <div className={'content context-menu'}>
+                    <ul>
+                        {helpItems.map((i, index) => i ? makeEntry(i, index) : null)}
+                    </ul>
+                </div>
+            </div>
         );
     }
 
@@ -582,10 +585,13 @@ function NavbarComponent(props: AllProps) {
 
     return(<>
         <nav id={'navbar'} className={'w-100 nav-container d-flex'} style={{zIndex: 99}}>
-            <MainMenu items={items} />
             <MainLogo />
+            <MainMenu items={items} />
             <Commands />
-            <UserMenu />
+            <div className="main-header-right">
+                <HelpMenu />
+                <UserMenu />
+            </div>
         </nav>
     </>);
 }
