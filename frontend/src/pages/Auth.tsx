@@ -12,6 +12,38 @@ import { TokenResponse } from '../api/DTO/TokenResponse';
 import {ResetPasswordRequest} from "../api/DTO/ResetPasswordRequest";
 import "./auth.scss"
 
+// Branding panel component for split-screen layout
+const BrandingPanel = () => (
+    <div className="auth-branding">
+        <div className="auth-branding-content">
+            <div className="auth-branding-logo">
+                <img src={logo} alt="Jjodel" />
+            </div>
+            <h1 className="auth-branding-title">Welcome to Jjodel</h1>
+            <p className="auth-branding-tagline">
+                The collaborative modeling platform for domain-specific languages
+            </p>
+            <div className="auth-branding-features">
+                <div className="auth-feature">
+                    <i className="bi bi-diagram-3" />
+                    <span>Visual Modeling</span>
+                </div>
+                <div className="auth-feature">
+                    <i className="bi bi-people" />
+                    <span>Real-time Collaboration</span>
+                </div>
+                <div className="auth-feature">
+                    <i className="bi bi-code-square" />
+                    <span>Code Generation</span>
+                </div>
+            </div>
+        </div>
+        <div className="auth-branding-footer">
+            <span>jjodel.io</span>
+        </div>
+    </div>
+);
+
 const passPattern = '^.{8,}$'; //'^[^\\s].{10,}[^\\s]$';
 function AuthPage(): JSX.Element {
     const [action, setAction] = useStateIfMounted<'login'|'register'|'retrieve-password'>('login');
@@ -177,17 +209,19 @@ const offline = () => {
     // U.resetState();
 }
 
-return(<section className={`w-100 h-100 login bg ${action === 'register' ? 'register' : action === 'retrieve-password' ? 'retrieve' : ''} `+(isDirty?' dirty':'')}>
+return(<section className={`auth-split-screen ${action === 'register' ? 'register' : action === 'retrieve-password' ? 'retrieve' : ''} `+(isDirty?' dirty':'')}>
 
-    <form className={'d-block bg-white rounded border mx-auto w-fit px-5 py-4 mt-5'} onSubmit={onSubmit}>
-        <label className={'fs-1 d-block text-center text-primary login-header'}>
+    {/* Left: Branding Panel */}
+    <BrandingPanel />
 
-            {action === 'register' && 'Create an Account'}
-            {action === 'login' && 'Sign In'}
-            {action === 'retrieve-password' && 'Retrieve your Password'}
-
-
-        </label>
+    {/* Right: Form Panel */}
+    <div className="auth-form-panel">
+        <form className={'auth-form'} onSubmit={onSubmit}>
+            <label className={'auth-form-header'}>
+                {action === 'register' && 'Create an Account'}
+                {action === 'login' && 'Sign In'}
+                {action === 'retrieve-password' && 'Retrieve your Password'}
+            </label>
 
         {action === 'register' && <>
 
@@ -628,9 +662,9 @@ return(<section className={`w-100 h-100 login bg ${action === 'register' ? 'regi
                 }
 
             </label>
-            <div className='login-logo'><img src={logo}></img></div>
         </form>
-    </section>);
+    </div>
+</section>);
 }
 
 export {AuthPage};

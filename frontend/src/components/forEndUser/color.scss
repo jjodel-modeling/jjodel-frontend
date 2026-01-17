@@ -73,7 +73,7 @@
   }
 
   .btn-danger {
-    border: 1px solid white !important;
+    border: 1px solid var(--color-text-inverse, white) !important;
   }
 
   // palette decoration
@@ -247,7 +247,7 @@
         font-family: var(--default-font-family);
         font-weight: var(--font-light);
         font-size: 1em;
-        color: white;
+        color: var(--color-text-inverse, white);
         margin-top: 20px!important;
         margin-bottom: 0;
 
@@ -303,7 +303,7 @@
 
     & .color-picker-root {
       height: var(--input-height);
-      background-color: white; // transparent!important;
+      background-color: var(--color-bg-secondary, white); // transparent!important;
       padding: 0!important;
       margin: 0!important;
       height: var(--input-height);
@@ -413,7 +413,7 @@
               font-size: 1em;
             }
             &:hover::before{
-              color: black;
+              color: var(--color-text-primary, black);
             }
           }
         }
@@ -432,7 +432,7 @@
 
   .controls:not(:focus-within) .color-picker-root:hover, .color-picker-root:focus-within{
     // padding: 5px !important;
-    background: #dedede;
+    background: var(--color-bg-tertiary, #dedede);
     outline: 1px solid var(--palette-g);
     border-radius: 20%;
     overflow: visible;
@@ -497,8 +497,8 @@
   }
 
   .color-suggestion{
-    border: 2px solid white;
-    outline: 1px solid gray;
+    border: 2px solid var(--color-bg-secondary, white);
+    outline: 1px solid var(--color-text-tertiary, gray);
     line-height: 0;
   }
 
@@ -636,23 +636,23 @@
       }
 
       >.bi {
-         color: white;
+         color: var(--color-text-inverse, white);
        }
     }
 
     > .btn-color{
-        border-left: 0.5px solid #ddd;
+        border-left: 0.5px solid var(--color-border-secondary, #ddd);
 
     }
     > .btn {
-        border-right: 0.5px solid #ddd;
+        border-right: 0.5px solid var(--color-border-secondary, #ddd);
     }
     > .btn, .btn:hover .bi {
-        color: #ddd;
-        
+        color: var(--color-border-secondary, #ddd);
+
     }
     > .btn:hover, .btn:hover .bi {
-        color: white;
+        color: var(--color-text-inverse, white);
         
     }
     > .btn-plus:hover {

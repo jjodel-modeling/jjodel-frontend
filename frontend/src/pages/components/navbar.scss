@@ -187,17 +187,18 @@
   --palette-1-hover: var(--color-accent);
 
   .context-menu>ul>li{
-    .bi:before{
-      width: 1lh;
+    .bi {
       display: inline-block;
+      width: 20px;
+      text-align: center;
+      margin-right: var(--space-2);
     }
     svg{
-      min-width: 14.39px !important;
-      min-height: 14.39px !important;
-      max-width: 14.39px !important;
-      max-height: 14.39px !important;
-      margin-right: 8px;
-      scale: 1.5 !important;
+      min-width: 20px !important;
+      min-height: 16px !important;
+      max-width: 20px !important;
+      max-height: 16px !important;
+      margin-right: var(--space-2);
     }
     svg.bi.bi-layout-sidebar{
       scale: 2.4 !important;

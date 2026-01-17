@@ -33,8 +33,5 @@
   outline: 2px dashed var(--color-info);
 }
 
-.Edge.selected-by-me,
-.Edge.selected-by-others {
-  outline: none !important;
-}
+/* Edge selection states moved to diagram.scss */
 

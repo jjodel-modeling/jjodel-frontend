@@ -1,29 +1,17 @@
 /* ============================================
-   AUTH SCREENS - REDESIGNED WITH DESIGN TOKENS
+   AUTH SCREENS - SPLIT-SCREEN PROFESSIONAL DESIGN
    Login, Register, Password Recovery pages
    ============================================ */
 
 /* ============================================
-   BASE CONTAINER
+   SPLIT-SCREEN CONTAINER
    ============================================ */
 
-.login {
-  /* Full viewport with centered content */
+.auth-split-screen {
   display: flex;
-  justify-content: center;
-  align-items: flex-start;
   min-height: 100vh;
   width: 100%;
-  overflow-y: auto;
-  padding: var(--space-8) var(--space-4);
-
-  /* Solid background with subtle gradient - replaces busy image */
-  background: linear-gradient(
-    135deg,
-    var(--color-bg-primary) 0%,
-    var(--color-bg-secondary) 50%,
-    var(--color-bg-tertiary) 100%
-  );
+  overflow: hidden;
 
   /* Typography base */
   font-family: var(--font-sans);
@@ -37,70 +25,186 @@
 }
 
 /* ============================================
+   LEFT PANEL - BRANDING
+   ============================================ */
+
+.auth-branding {
+  /* Take up left half */
+  flex: 0 0 45%;
+  min-width: 400px;
+
+  /* Gradient background using accent color */
+  background: linear-gradient(
+    145deg,
+    var(--color-accent) 0%,
+    var(--color-accent-hover) 50%,
+    var(--color-accent-active) 100%
+  );
+
+  /* Layout */
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: var(--space-12);
+  position: relative;
+
+  /* Subtle pattern overlay */
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image:
+      radial-gradient(circle at 20% 50%, rgba(255,255,255,0.1) 0%, transparent 50%),
+      radial-gradient(circle at 80% 20%, rgba(255,255,255,0.08) 0%, transparent 40%),
+      radial-gradient(circle at 40% 80%, rgba(255,255,255,0.05) 0%, transparent 30%);
+    pointer-events: none;
+  }
+}
+
+.auth-branding-content {
+  position: relative;
+  z-index: 1;
+  text-align: center;
+  max-width: 380px;
+}
+
+.auth-branding-logo {
+  margin-bottom: var(--space-8);
+
+  img {
+    height: 64px;
+    width: auto;
+    filter: brightness(0) invert(1); /* Make logo white */
+    opacity: 0.95;
+  }
+}
+
+.auth-branding-title {
+  font-family: var(--font-sans);
+  font-size: 2.25rem;
+  font-weight: var(--font-bold);
+  color: white;
+  margin: 0 0 var(--space-4) 0;
+  line-height: 1.2;
+}
+
+.auth-branding-tagline {
+  font-size: var(--text-lg);
+  font-weight: var(--font-normal);
+  color: rgba(255, 255, 255, 0.85);
+  margin: 0 0 var(--space-10) 0;
+  line-height: 1.6;
+}
+
+.auth-branding-features {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  text-align: left;
+}
+
+.auth-feature {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  color: rgba(255, 255, 255, 0.9);
+  font-size: var(--text-base);
+  font-weight: var(--font-medium);
+
+  i {
+    font-size: 1.25rem;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: var(--radius-md);
+  }
+}
+
+.auth-branding-footer {
+  position: absolute;
+  bottom: var(--space-8);
+  left: 0;
+  right: 0;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+}
+
+/* ============================================
+   RIGHT PANEL - FORM
+   ============================================ */
+
+.auth-form-panel {
+  /* Take up remaining space */
+  flex: 1;
+  min-width: 400px;
+
+  /* Background */
+  background-color: var(--color-bg-primary);
+
+  /* Layout - center the form */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-8);
+  overflow-y: auto;
+}
+
+/* ============================================
    FORM CARD
    ============================================ */
 
-.login form {
-  /* Opaque card - no transparency */
-  background-color: var(--color-bg-elevated);
-  opacity: 1 !important;
-
+.auth-form {
   /* Card styling */
+  background-color: var(--color-bg-elevated);
   border: 1px solid var(--color-border-primary);
   border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-xl);
+  box-shadow: var(--shadow-lg);
 
   /* Sizing */
   width: 100%;
-  max-width: 440px;
-  min-height: auto;
+  max-width: 420px;
 
   /* Spacing */
-  padding: var(--space-8) var(--space-6);
-  margin: 0 auto;
-
-  /* Reset positioning */
-  position: relative;
-  top: 0 !important;
+  padding: var(--space-8) var(--space-8);
 }
 
 /* Register form - wider */
-.login.register form {
-  max-width: 520px;
-  padding: var(--space-6) var(--space-8) !important;
-}
-
-/* Retrieve password form */
-.login.retrieve form {
-  max-width: 440px;
-  padding: var(--space-8) var(--space-6) !important;
+.auth-split-screen.register .auth-form {
+  max-width: 480px;
 }
 
 /* ============================================
    FORM HEADER
    ============================================ */
 
-.login .login-header {
+.auth-form-header {
   /* Typography */
+  display: block;
   font-family: var(--font-sans);
-  font-size: var(--text-xl);
-  font-weight: var(--font-semibold);
+  font-size: 1.75rem;
+  font-weight: var(--font-bold);
   color: var(--color-text-primary) !important;
-  line-height: var(--leading-tight);
+  line-height: 1.2;
+  text-align: center;
 
   /* Spacing */
-  margin-bottom: var(--space-6);
-  padding-bottom: var(--space-4);
-
-  /* Subtle border under header */
-  border-bottom: 1px solid var(--color-border-primary);
+  margin-bottom: var(--space-8);
 }
 
 /* ============================================
    FORM LABELS
    ============================================ */
 
-.login label {
+.auth-split-screen label {
   display: block;
   width: 100%;
   margin-bottom: var(--space-4);
@@ -113,18 +217,18 @@
 }
 
 /* ============================================
-   INPUT FIELDS - 40px height as specified
+   INPUT FIELDS
    ============================================ */
 
-.login input[type="text"],
-.login input[type="email"],
-.login input[type="password"] {
-  /* Sizing - 40px height as per action plan */
-  height: 40px;
+.auth-split-screen input[type="text"],
+.auth-split-screen input[type="email"],
+.auth-split-screen input[type="password"] {
+  /* Sizing */
+  height: 44px;
   width: 100%;
 
   /* Spacing */
-  padding: 0 var(--space-3);
+  padding: 0 var(--space-4);
   margin-top: var(--space-2) !important;
   margin-bottom: var(--space-1);
 
@@ -136,26 +240,26 @@
 
   /* Typography */
   font-family: var(--font-sans);
-  font-size: var(--text-sm);
+  font-size: var(--text-base);
   color: var(--color-text-primary);
 
   /* Transition */
   transition: var(--transition-fast);
 }
 
-/* Focus state - accent color ring */
-.login input[type="text"]:focus,
-.login input[type="email"]:focus,
-.login input[type="password"]:focus {
+/* Focus state */
+.auth-split-screen input[type="text"]:focus,
+.auth-split-screen input[type="email"]:focus,
+.auth-split-screen input[type="password"]:focus {
   border-color: var(--color-accent);
   box-shadow: 0 0 0 3px var(--color-accent-subtle);
   outline: none;
 }
 
 /* Hover state */
-.login input[type="text"]:hover:not(:focus),
-.login input[type="email"]:hover:not(:focus),
-.login input[type="password"]:hover:not(:focus) {
+.auth-split-screen input[type="text"]:hover:not(:focus),
+.auth-split-screen input[type="email"]:hover:not(:focus),
+.auth-split-screen input[type="password"]:hover:not(:focus) {
   border-color: var(--color-border-hover);
 }
 
@@ -163,15 +267,15 @@
    SELECT DROPDOWN
    ============================================ */
 
-.login select,
-.login .form-control {
-  /* Sizing - match input height */
-  height: 40px;
+.auth-split-screen select,
+.auth-split-screen .form-control {
+  /* Sizing */
+  height: 44px;
   width: 100%;
 
   /* Spacing */
-  padding: 0 var(--space-3);
-  padding-right: var(--space-8); /* Space for chevron */
+  padding: 0 var(--space-4);
+  padding-right: var(--space-10);
   margin-top: var(--space-2) !important;
   margin-bottom: var(--space-1);
 
@@ -183,14 +287,14 @@
 
   /* Typography */
   font-family: var(--font-sans);
-  font-size: var(--text-sm);
+  font-size: var(--text-base);
   color: var(--color-text-primary);
 
   /* Custom chevron */
   appearance: none;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%236b7280' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
-  background-position: right var(--space-3) center;
+  background-position: right var(--space-4) center;
   background-size: 12px;
 
   /* Transition */
@@ -199,8 +303,8 @@
 }
 
 /* Focus state */
-.login select:focus,
-.login .form-control:focus {
+.auth-split-screen select:focus,
+.auth-split-screen .form-control:focus {
   border-color: var(--color-accent);
   box-shadow: 0 0 0 3px var(--color-accent-subtle);
   outline: none;
@@ -210,7 +314,7 @@
    CHECKBOX
    ============================================ */
 
-.login input[type="checkbox"] {
+.auth-split-screen input[type="checkbox"] {
   width: 18px;
   height: 18px;
   margin-right: var(--space-2);
@@ -219,21 +323,20 @@
 }
 
 /* ============================================
-   PRIMARY BUTTON (CTA) - Prominent as specified
+   PRIMARY BUTTON (CTA)
    ============================================ */
 
-.login .login-button,
-.login button[type="submit"] {
+.auth-split-screen .login-button,
+.auth-split-screen button[type="submit"] {
   /* Sizing */
-  height: 44px;
+  height: 48px;
   width: 100%;
-  min-width: 120px;
 
   /* Spacing */
   padding: 0 var(--space-6) !important;
-  margin-top: var(--space-4);
+  margin-top: var(--space-6);
 
-  /* Visual - prominent accent color */
+  /* Visual */
   background-color: var(--color-accent);
   border: none;
   border-radius: var(--radius-md);
@@ -247,39 +350,39 @@
 
   /* Interaction */
   cursor: pointer;
-  transition: var(--transition-button);
+  transition: all 150ms ease;
 }
 
 /* Hover state */
-.login .login-button:hover,
-.login button[type="submit"]:hover {
+.auth-split-screen .login-button:hover,
+.auth-split-screen button[type="submit"]:hover {
   background-color: var(--color-accent-hover);
   transform: translateY(-1px);
   box-shadow: var(--shadow-md);
 }
 
 /* Active state */
-.login .login-button:active,
-.login button[type="submit"]:active {
+.auth-split-screen .login-button:active,
+.auth-split-screen button[type="submit"]:active {
   transform: translateY(0);
   box-shadow: var(--shadow-sm);
 }
 
 /* Focus state */
-.login .login-button:focus,
-.login button[type="submit"]:focus {
+.auth-split-screen .login-button:focus,
+.auth-split-screen button[type="submit"]:focus {
   outline: none;
   box-shadow: 0 0 0 3px var(--color-accent-subtle);
 }
 
 /* Secondary button (offline mode) */
-.login button[type="button"] {
-  background-color: var(--color-bg-secondary);
+.auth-split-screen button[type="button"] {
+  background-color: transparent;
   color: var(--color-text-primary);
   border: 1px solid var(--color-border-primary);
 }
 
-.login button[type="button"]:hover {
+.auth-split-screen button[type="button"]:hover {
   background-color: var(--color-bg-hover);
   border-color: var(--color-border-hover);
 }
@@ -288,7 +391,7 @@
    LINKS
    ============================================ */
 
-.login .login-link {
+.auth-split-screen .login-link {
   color: var(--color-accent) !important;
   font-weight: var(--font-medium);
   text-decoration: none;
@@ -296,52 +399,26 @@
   cursor: pointer;
 }
 
-.login .login-link:hover {
+.auth-split-screen .login-link:hover {
   color: var(--color-accent-hover) !important;
   text-decoration: underline;
 }
 
 /* Link container text */
-.login label.mt-3 {
+.auth-split-screen label.mt-3 {
   font-size: var(--text-sm);
   color: var(--color-text-secondary);
   text-align: center;
   margin-top: var(--space-6) !important;
-  padding-top: var(--space-4);
+  padding-top: var(--space-6);
   border-top: 1px solid var(--color-border-primary);
-}
-
-/* ============================================
-   LOGO - Centered at bottom
-   ============================================ */
-
-.login .login-logo {
-  width: fit-content;
-  margin: var(--space-6) auto 0 auto;
-  padding: 0;
-  text-align: center;
-
-  /* Subtle opacity for less prominence */
-  opacity: 0.7;
-  transition: var(--transition-fast);
-}
-
-.login .login-logo:hover {
-  opacity: 1;
-}
-
-.login .login-logo img {
-  height: 32px;
-  width: auto;
-  /* Grayscale filter for monochrome look */
-  filter: grayscale(30%);
 }
 
 /* ============================================
    VALIDATION STATES
    ============================================ */
 
-.login.dirty {
+.auth-split-screen.dirty {
   /* Required field indicator */
   label:has(> input:required:invalid, > select:required:invalid)::before {
     content: '*';
@@ -368,47 +445,139 @@
 }
 
 /* ============================================
-   RESPONSIVE ADJUSTMENTS
+   TOOLTIP STYLING OVERRIDE
    ============================================ */
 
-@media (max-width: 640px) {
-  .login {
-    padding: var(--space-4) var(--space-3);
+.auth-split-screen .tooltip-container {
+  width: 100%;
+}
+
+/* ============================================
+   RESPONSIVE - TABLET & MOBILE
+   ============================================ */
+
+@media (max-width: 1024px) {
+  .auth-branding {
+    flex: 0 0 40%;
+    min-width: 320px;
+    padding: var(--space-8);
   }
 
-  .login form {
+  .auth-branding-title {
+    font-size: 1.75rem;
+  }
+
+  .auth-branding-tagline {
+    font-size: var(--text-base);
+  }
+
+  .auth-form-panel {
+    min-width: 320px;
+    padding: var(--space-6);
+  }
+
+  .auth-form {
+    padding: var(--space-6);
+  }
+
+  .auth-form-header {
+    font-size: 1.5rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .auth-split-screen {
+    flex-direction: column;
+  }
+
+  .auth-branding {
+    flex: none;
+    min-width: 100%;
+    padding: var(--space-8) var(--space-6);
+    min-height: auto;
+  }
+
+  .auth-branding-content {
+    max-width: 100%;
+  }
+
+  .auth-branding-title {
+    font-size: 1.5rem;
+    margin-bottom: var(--space-2);
+  }
+
+  .auth-branding-tagline {
+    font-size: var(--text-sm);
+    margin-bottom: var(--space-6);
+  }
+
+  .auth-branding-features {
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: var(--space-3);
+  }
+
+  .auth-feature {
+    font-size: var(--text-sm);
+    gap: var(--space-2);
+
+    i {
+      width: 28px;
+      height: 28px;
+      font-size: 1rem;
+    }
+  }
+
+  .auth-branding-footer {
+    display: none;
+  }
+
+  .auth-form-panel {
+    min-width: 100%;
+    padding: var(--space-6) var(--space-4);
+    align-items: flex-start;
+  }
+
+  .auth-form {
+    max-width: 100%;
     padding: var(--space-6) var(--space-4);
     border-radius: var(--radius-lg);
   }
 
-  .login.register form,
-  .login.retrieve form {
-    padding: var(--space-6) var(--space-4) !important;
+  .auth-split-screen.register .auth-form {
     max-width: 100%;
   }
 
-  .login .login-header {
-    font-size: var(--text-lg);
+  .auth-form-header {
+    font-size: 1.25rem;
+    margin-bottom: var(--space-6);
   }
 }
 
 /* ============================================
-   OVERRIDE LEGACY STYLES
-   Remove background image entirely
+   LEGACY CLASS SUPPORT
+   Keep old .login styles for backwards compat
    ============================================ */
+
+.login {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  min-height: 100vh;
+  width: 100%;
+  overflow-y: auto;
+  padding: var(--space-8) var(--space-4);
+  background: linear-gradient(
+    135deg,
+    var(--color-bg-primary) 0%,
+    var(--color-bg-secondary) 50%,
+    var(--color-bg-tertiary) 100%
+  );
+  font-family: var(--font-sans);
+  color: var(--color-text-primary);
+}
 
 .login.bg {
   background-image: none !important;
-
-  form {
-    opacity: 1 !important;
-  }
-}
-
-/* ============================================
-   TOOLTIP STYLING OVERRIDE
-   ============================================ */
-
-.login .tooltip-container {
-  width: 100%;
 }

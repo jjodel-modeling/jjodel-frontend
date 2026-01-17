@@ -8,6 +8,7 @@ type MenuProps = {
     style?: React.CSSProperties;
     theme?: "light"
     title?: string;
+    trigger?: ReactNode;
 };
 
 function getFragment(command: string): any {
@@ -43,7 +44,23 @@ export const Menu = (props: MenuProps) => {
         setOpen(false);
     });
 
-    // const my_style = (props.style ? props.style : {border: '1px solid blue'} );
+    // Custom trigger (like avatar badge) or default chevron
+    if (props.trigger) {
+        return (
+            <div className="menu-container" ref={menuRef} style={props.style}>
+                <div className="menu-trigger" onClick={() => setOpen(!open)}>
+                    {props.trigger}
+                </div>
+                {open && (
+                    <div className={`dropdown ${props.position || 'right'}`}>
+                        {props.children}
+                    </div>
+                )}
+            </div>
+        );
+    }
+
+    // Legacy mode with title or chevron
     return(<>
         {props.title && <span onClick={(e) => {e.preventDefault();setOpen(!open);}} className={"top-level"}>{props.title}</span>}
         <div className={`menu-button ${props.title && 'no-display'}`} ref={menuRef}  style={props.style}>
@@ -51,7 +68,7 @@ export const Menu = (props: MenuProps) => {
                 {props.children}
             </div>}
             {!props.title && <i onClick={() => setOpen(!open)} className="bi bi-chevron-down" style={{fontSize: '10px!important'}}></i>}
-        </div>      
+        </div>
     </>);
 };
 
@@ -76,7 +93,56 @@ export const Item = (props: ItemType) => {
              style={props.disabled ? {'--accent-disabled':'var(--color-lighter)', color: 'var(--bg-3-1) !important'} as any : {}}>
             {props.icon ? props.icon : <i className="bi bi-app hidden"/>}
             {props.children}
-            {props.keystroke ? <>{" "}<span>{(props.keystroke)}</span></> : null}
+            {props.keystroke ? <>{" "}<span className="keystroke">{(props.keystroke)}</span></> : null}
         </div>)
+}
+
+type UserHeaderType = {
+    name: string;
+    email?: string;
+}
+
+export const UserHeader = (props: UserHeaderType) => {
+    return (
+        <div className="user-header">
+            <div className="user-name">{props.name}</div>
+            {props.email && <div className="user-email">{props.email}</div>}
+        </div>
+    );
+}
+
+type SubMenuItemType = {
+    icon?: any;
+    children: any;
+    action?: () => void;
+    active?: boolean;
+}
+
+type SubMenuType = {
+    icon?: any;
+    label: string;
+    children: ReactNode;
+}
+
+export const SubMenuItem = (props: SubMenuItemType) => {
+    return (
+        <div onClick={props.action} className={'submenu-item' + (props.active ? ' active' : '')}>
+            {props.icon && props.icon}
+            <span>{props.children}</span>
+            {props.active && <i className="bi bi-check2 submenu-check" />}
+        </div>
+    );
+}
+
+export const SubMenu = (props: SubMenuType) => {
+    return (
+        <div className="item has-submenu">
+            {props.icon ? props.icon : <i className="bi bi-app hidden"/>}
+            <span>{props.label}</span>
+            <div className="submenu">
+                {props.children}
+            </div>
+        </div>
+    );
 }
 

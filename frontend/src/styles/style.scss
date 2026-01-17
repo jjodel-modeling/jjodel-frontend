@@ -33,26 +33,11 @@ button, input, select, textarea {
 /* classes */
 .round { border-radius: $radius; }
 .circle { border-radius: 999px !important; }
-.bg-smoke { background-color: whitesmoke; }
-[data-nodetype] {
-  --ext_on: #0b0;
-  --ext_off: #b00;
-  &:not(.Edge){
-    &.class-can-be-extended { outline: 3px solid var(--ext_on); border-radius: $radius; outline-offset: 3px; }
-    &.class-cannot-be-extended { outline: 3px solid var(--ext_off); border-radius: $radius; outline-offset: 3px; }
-  }
-  &.Edge{
-    &.class-can-be-extended path { stroke: var(--ext_on); }
-    &.class-cannot-be-extended path { stroke: var(--ext_off); }
-    /*
-    &.class-can-be-extended path.full { outline: 3px solid var(--ext_on); border-radius: $radius; outline-offset: 3px; }
-    &.class-cannot-be-extended path.full{ outline: 3px solid var(--ext_off); border-radius: $radius; outline-offset: 3px; }
-    */
-  }
-}
+.bg-smoke { background-color: var(--color-bg-tertiary); }
+/* Extension states moved to diagram.scss */
 .ui-icon, .ui-widget-content .ui-icon { background-image: none !important; }
 .dock-content .dock-tabpane { background-color: var(--dockpane-bg); }
-.btn-white { background-color: whitesmoke; color: #2e2f34; }
+.btn-white { background-color: var(--color-bg-tertiary); color: var(--color-text-primary); }
 /* ============================================
    INPUT FIELDS - REDESIGNED WITH DESIGN TOKENS
    Modern input system using new token system
@@ -120,7 +105,7 @@ textarea.autosize{ not possible in pure css, need to add a :after element mimick
   // opacity:0;
   background: transparent;
   color: transparent;
-  caret-color: black;
+  caret-color: var(--color-text-primary);
   position: absolute;
   width: 100%;
   border-color: transparent !important;
@@ -150,7 +135,7 @@ textarea.autosize{ not possible in pure css, need to add a :after element mimick
 .autosize-input-container {
   position: relative;
   &:focus-within{
-    border: 1px dashed #0000005c;
+    border: 1px dashed var(--color-border-hover);
     //padding: 0 2.5px; /* input have some margin and border that cannot be erased? always 5?*/
     margin: 0 5px; /* input have some margin and border that cannot be erased? always 5?*/
   }
@@ -260,7 +245,7 @@ input[type='checkbox'] {
       top: 2px;
       width: 6px;
       height: 10px;
-      border: solid white;
+      border: solid var(--color-text-inverse);
       border-width: 0 2px 2px 0;
       transform: rotate(45deg);
     }
@@ -315,7 +300,7 @@ input[type='checkbox'] {
       & .data-type-label {
         font-family: var(--font-mono)!important;
         font-size: 1em!important;
-        color: cadetblue;
+        color: var(--color-info);
 
       }
 
@@ -361,11 +346,11 @@ input[type='checkbox'].switch {
     left: 2px;
     width: 20px;
     height: 20px;
-    background: white;
+    background: var(--color-bg-secondary);
     border-radius: 50%;
     transition: transform var(--duration-normal) var(--ease-out),
                 box-shadow var(--duration-fast) var(--ease-out);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    box-shadow: var(--shadow-sm);
   }
 
   /* Hover state */
@@ -373,7 +358,7 @@ input[type='checkbox'].switch {
     background: var(--color-border-hover);
 
     &::before {
-      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+      box-shadow: var(--shadow-md);
     }
   }
 
@@ -571,14 +556,7 @@ select {
   }
 }
 
-[data-nodetype="EdgePoint"]{
-  pointer-events: all; // fix because edge root have pointerEvents none, and this is contained in edge
-}
-[data-nodetype="Edge"]{
-  position: absolute;
-  overflow: visible;
-  height: 0;
-}
+/* Edge/EdgePoint positioning moved to diagram.scss */
 
 /* tags */
 
@@ -805,39 +783,7 @@ i.bi {
 
 
 
-.GraphContainer{ // multi-select popup fix in graph
-  overflow: hidden !important;
-  .Graph, .Graph>.root{ overflow: hidden !important; }
-  .scrollable[graph='DGraph']{
-    overflow: hidden;
-    >.panning-handle{
-      overflow: hidden;
-    }
-  }
-  [data-nodetype], [data-nodetype] > * {
-    &:has(.css-1nmdiq5-menu) {
-      min-height: min-content !important;
-    }
-  }
-  .css-b62m3t-container{
-    min-height: fit-content;
-  }
-
-  .css-1nmdiq5-menu{
-    margin: -10px 0px;
-    padding: 18px 0px;
-    background-color: transparent;
-    box-shadow: none;
-    //position: unset;
-    position: relative;
-    z-index: 1;
-    &>*{
-      background-color: rgb(255, 255, 255);
-      border-radius: 4px;
-      box-shadow: rgba(0, 0, 0, 0.1) 0px 0px 0px 1px, rgba(0, 0, 0, 0.1) 0px 4px 11px;
-    }
-  }
-}
+/* GraphContainer styles moved to diagram.scss */
 // LOGIN
 
 .login {

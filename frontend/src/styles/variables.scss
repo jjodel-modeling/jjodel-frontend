@@ -4,8 +4,8 @@ body{
   --edge-outline-width: 7px;
 
 
-  // fallbacks
-  --border-color: #333;
+  // fallbacks - mapped to design tokens
+  --border-color: var(--color-border-primary, #333);
   --border-width: 1px;
 
   // console 
@@ -78,41 +78,42 @@ body{
 
 
 
-  // palette
+  // palette - mapped to design tokens
 
-    --color: #2D4E62; //#233d4d; // primary color
-    --accent: #2D4E62; // #087E8B; // #087E8B; //#f3b700; // accent color, I'm considering to define it as the primary color
-    --accent-secondary: #f3b700; // planned to be used, but it has been not - used for the enumerators in models
-    --neutral: #525251; // #5F0F40; // dark gray
-    --disabled: var(--bg-4);
+    --color: var(--color-accent, #5B8266); // primary color - now uses design token
+    --accent: var(--color-accent, #5B8266); // accent color - now uses design token
+    --accent-secondary: var(--color-warning, #f59e0b); // secondary accent - uses warning color
+    --neutral: var(--color-text-secondary, #525251); // neutral gray
+    --disabled: var(--color-bg-tertiary);
 
-// backgrounds
+// backgrounds - mapped to design tokens
 
-    --bg: #233d4d;
+    --bg: var(--color-accent-active, #233d4d);
 
-    --bg-1: white; // main background
-    --bg-1-1: #fefefe;
-    --bg-1-3: #fcfcfc;
-    --bg-1-5: #f8f8f8;
-    --bg-2: #f5f5f5;
-    --bg-3: #e2e2e1;
-    --bg-3-1: #c3c3c1;
-    --bg-4: #8f908e;
-    --bg-4-1: #777777;
-    --bg-5: #525251;
+    --bg-1: var(--color-bg-secondary, white); // main background
+    --bg-1-1: var(--color-bg-secondary, #fefefe);
+    --bg-1-3: var(--color-bg-secondary, #fcfcfc);
+    --bg-1-5: var(--color-bg-primary, #f8f8f8);
+    --bg-2: var(--color-bg-tertiary, #f5f5f5);
+    --bg-2-5: var(--color-text-tertiary, #c0c0c0); // placeholder color
+    --bg-3: var(--color-border-primary, #e2e2e1);
+    --bg-3-1: var(--color-border-hover, #c3c3c1);
+    --bg-4: var(--color-text-tertiary, #8f908e);
+    --bg-4-1: var(--color-text-tertiary, #777777);
+    --bg-5: var(--color-text-secondary, #525251);
 
 
-// success/failure
-    --danger: #ed474a;
-    --failure: #ed474a;
-    --delete: #ed474a;
-    --success: #3ddc97;
+// success/failure - mapped to design tokens
+    --danger: var(--color-error, #ed474a);
+    --failure: var(--color-error, #ed474a);
+    --delete: var(--color-error, #ed474a);
+    --success: var(--color-success, #3ddc97);
 
-// alerting
+// alerting - mapped to design tokens
 
-    --alert-color: #721c25;
-    --alert-border:#f5c6cc;
-    --alert-background: #f8d7db;
+    --alert-color: var(--color-error, #721c25);
+    --alert-border: var(--color-error-muted, #f5c6cc);
+    --alert-background: var(--color-error-subtle, #f8d7db);
 
 // control panel
 
@@ -139,14 +140,14 @@ body{
     --text-sm-size: 0.8em;
     --text-sm-weight: 300;
 
-  // model palette
+  // model palette - mapped to design tokens
 
-    --model-color: rgb(45, 78, 98)!important; //
-    --model-accent: #087E8B;
-    --model-accent-secondary: #f3b700;
-    --model-background: white;
+    --model-color: var(--color-accent, rgb(45, 78, 98))!important;
+    --model-accent: var(--color-accent, #087E8B);
+    --model-accent-secondary: var(--color-warning, #f3b700);
+    --model-background: var(--color-bg-secondary, white);
     --model-radius: var(--radius);
-    --model-shadow: 0 0 6px silver;
+    --model-shadow: var(--shadow-md, 0 0 6px silver);
 
 
     --knob: 16px;
@@ -160,8 +161,8 @@ body{
     --side-padding: 31px;
     --sep-padding: 4em;
 
-    --secondary: #087e8b;
-    --terziary: #EE4266; // #5F0F40;
+    --secondary: var(--color-accent, #087e8b);
+    --terziary: var(--color-error, #EE4266);
 
     --color-disabled: var(--bg-3-1);
     --bg-disabled: var(--bg-1-3);
@@ -207,20 +208,21 @@ body{
 
 
 
-    --dockpane-bg: white;
+    --dockpane-bg: var(--color-bg-secondary, white);
 
-  --palette-1: #084c61;
-  --palette-2: #db504a;
-  --palette-3: #e3b505;
-  --palette-4: #53b3cb;
-  --palette-5: #00A896;
+  // palette - mapped to design tokens where applicable
+  --palette-1: var(--color-accent-active, #084c61);
+  --palette-2: var(--color-error, #db504a);
+  --palette-3: var(--color-warning, #e3b505);
+  --palette-4: var(--color-info, #53b3cb);
+  --palette-5: var(--color-success, #00A896);
   --palette-b: var(--palette-1);
-  --palette-w: #fff;
-  --palette-r: #dc3545; // btn-danger in bootstrap #f00;
-  --palette-g: #6c757d; // btn-secondary in boostrap #777;
-  --palette-gg: var(--palette-5); // green
-  --palette-1-hover: var(--palette-4); // or #185f91; // invented
-  --palette-w-hover: #fff;
+  --palette-w: var(--color-text-inverse, #fff);
+  --palette-r: var(--color-error, #dc3545); // btn-danger
+  --palette-g: var(--color-text-secondary, #6c757d); // btn-secondary
+  --palette-gg: var(--color-success); // green
+  --palette-1-hover: var(--color-accent-hover, #185f91);
+  --palette-w-hover: var(--color-text-inverse, #fff);
 
   --background-color-add: var(--palette-5);
   --background-color-warn: var(--palette-3);
@@ -251,10 +253,10 @@ body{
 }
 
 $radius: .2em;
-$border-color: #0000005c;
-$background: white;
-$true: #28A745FF;
-$false: #DC3545FF;
+$border-color: var(--color-border-hover);
+$background: var(--color-bg-secondary);
+$true: var(--color-success);
+$false: var(--color-error);
 $fill: -webkit-fill-available;
 
 // damiano: i verified scss variables cannot be used at runtime in user jsx, so i'm making classic css variables below.

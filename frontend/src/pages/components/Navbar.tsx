@@ -34,7 +34,7 @@ import {AuthApi, ProjectsApi} from '../../api/persistance';
 import TabDataMaker from "../../../src/components/abstract/tabs/TabDataMaker";
 import DockManager from "../../../src/components/abstract/DockManager";
 
-import {Divisor, Item, Menu} from '../components/menu/Menu';
+import {Divisor, Item, Menu, UserHeader, SubMenu, SubMenuItem} from '../components/menu/Menu';
 
 import Collaborative from "../../components/collaborative/Collaborative";
 import { isProjectModified } from '../../common/libraries/projectModified';
@@ -138,18 +138,13 @@ function makeEntry(i: MenuEntry|null|undefined, index: number) {
 
 
 
-type UserProps = {}
-const User = (props: UserProps) => {
-    const user: LUser = LUser.fromPointer(DUser.current);
-    const name = `${user?.name} ${user?.surname}`;
-    const initials = name.split(' ').map(n=>n[0]).join('');
-    return (<div className={'user text-end'}>
-        <div className={'initials'}>
-            {initials.toUpperCase()}
+/* User badge component - now used as menu trigger */
+const UserBadge = (props: {name: string, initials: string}) => {
+    return (
+        <div className={'user-badge'} title={props.name}>
+            {props.initials.toUpperCase()}
         </div>
-        &nbsp;&nbsp;
-        <span>{name}</span>
-    </div>);
+    );
 };
 
 type MenuEntry = {
@@ -269,13 +264,13 @@ function NavbarComponent(props: AllProps) {
 
         {name: 'Jjodel',
             subItems: [
-                {name: 'About', jsx: <span style={{height: '16px'}}>About Jjodel</span>, function: () => {AboutModal.open();}, icon: icon['jjodel']},
+                {name: 'About Jjodel', function: () => {AboutModal.open();}, icon: icon['jjodel']},
                 {name: 'Roadmap',function: () => open('https://www.jjodel.io/roadmap/'), icon: icon['roadmap']},
                 // {name: 'divisor'},
 
                 {name: 'Project Settings', function: placeholder, icon: icon['settings'], disabled: true},
                 {name: 'divisor'},
-                {name: 'Logout', function: async() => {
+                {name: 'Sign out', function: async() => {
                         if (isProjectModified()) {
                             U.dialog('You are about to log out without saving your project. Do you want to proceed?', 'logout', async ()=>{
                                 await AuthApi.logout();
@@ -285,7 +280,7 @@ function NavbarComponent(props: AllProps) {
                             await AuthApi.logout();
                             R.navigate('/auth');
                         }},
-                    icon: icon['logout']}
+                    icon: <i className="bi bi-box-arrow-left" />}
             ]},
 
         /* File */
@@ -517,49 +512,80 @@ function NavbarComponent(props: AllProps) {
     };
 
     const UserMenu = ()=> {
-        return (<>
-        <div className='text-end nav-side' id={'navusermenu'}>
-                <div style={{float: 'right', left: '300px!important', marginTop: '2px'}}>
-                    <Menu position={'left'}>
-                        <Item icon={icon['dashboard']} action={async()=> {
-                            Collaborative.client.off('pullAction');
-                            await Collaborative.client.disconnect();
-                            U.resetState();
-                            R.navigate('/allProjects');
-                        }}>Dashboard</Item>
-                        <Divisor />
-                        <Item icon={icon['profile']} action={()=> {
-                            R.navigate('/account');
-                            U.resetState();
-                        }}>Profile</Item>
-                        {/*makeEntry({icon: icon['settings'], function: placeholder, disabled: true, name: 'User Settings'}, 999)*/}
-                        {<Item icon={icon['settings']} action={placeholder} disabled={true}>User Settings</Item>}
-                        <Divisor />
-                        <Item icon={icon['logout']} action={async ()=> {
-                            if (isProjectModified()) {
-                                U.dialog('You are about to log out without saving your project. Do you want to proceed?', 'logout', async ()=>{
-                                    await AuthApi.logout();
-                                    R.navigate('/auth');
-                                });
-                            } else {
+        const userName = `${user?.name || ''} ${user?.surname || ''}`.trim();
+        const userEmail = user?.email || '';
+        const initials = userName.split(' ').map(n => n[0] || '').join('');
+
+        // Theme state - read from document attribute
+        const [theme, setThemeState] = useState<'light' | 'dark'>(() => {
+            const stored = localStorage.getItem('theme');
+            if (stored === 'dark' || stored === 'light') return stored;
+            return document.documentElement.getAttribute('data-theme') as 'light' | 'dark' || 'light';
+        });
+
+        const setTheme = (newTheme: 'light' | 'dark') => {
+            document.documentElement.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            setThemeState(newTheme);
+        };
+
+        return (
+            <div className='user-menu-container' id={'navusermenu'}>
+                <Menu
+                    position={'left'}
+                    trigger={<UserBadge name={userName} initials={initials} />}
+                >
+                    <UserHeader name={userName} email={userEmail} />
+                    <Item icon={<i className="bi bi-grid" />} action={async()=> {
+                        Collaborative.client.off('pullAction');
+                        await Collaborative.client.disconnect();
+                        U.resetState();
+                        R.navigate('/allProjects');
+                    }}>Dashboard</Item>
+                    <Item icon={<i className="bi bi-person-circle" />} action={()=> {
+                        R.navigate('/account');
+                        U.resetState();
+                    }}>Profile</Item>
+                    <Item icon={<i className="bi bi-person-gear" />} action={placeholder} disabled={true}>Account</Item>
+                    <Item icon={<i className="bi bi-box-arrow-left" />} action={async ()=> {
+                        if (isProjectModified()) {
+                            U.dialog('You are about to log out without saving your project. Do you want to proceed?', 'logout', async ()=>{
                                 await AuthApi.logout();
                                 R.navigate('/auth');
-
-                            }
-                        }}>Logout</Item>
-                    </Menu>
-                </div>
+                            });
+                        } else {
+                            await AuthApi.logout();
+                            R.navigate('/auth');
+                        }
+                    }}>Sign out</Item>
+                    <Divisor />
+                    <SubMenu icon={<i className="bi bi-circle-half" />} label="Theme">
+                        <SubMenuItem
+                            icon={<i className="bi bi-sun" />}
+                            action={() => setTheme('light')}
+                            active={theme === 'light'}
+                        >
+                            Light
+                        </SubMenuItem>
+                        <SubMenuItem
+                            icon={<i className="bi bi-moon" />}
+                            action={() => setTheme('dark')}
+                            active={theme === 'dark'}
+                        >
+                            Dark
+                        </SubMenuItem>
+                    </SubMenu>
+                </Menu>
             </div>
-        </>);
+        );
     }
 
     return(<>
         <nav id={'navbar'} className={'w-100 nav-container d-flex'} style={{zIndex: 99}}>
             <MainMenu items={items} />
             <MainLogo />
-            <UserMenu />
             <Commands />
-            <User />
+            <UserMenu />
         </nav>
     </>);
 }

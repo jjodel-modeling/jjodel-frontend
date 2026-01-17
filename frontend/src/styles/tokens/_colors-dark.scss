@@ -32,14 +32,14 @@
   --color-text-inverse: #08090a;      /* Text on light backgrounds */
 
   /* ============================================
-     ACCENT - Primary Brand Color (Teal)
-     Desaturated, brighter teal for dark mode
+     ACCENT - Primary Brand Color (Charcoal)
+     Lighter gray for visibility on dark backgrounds
      ============================================ */
-  --color-accent: #4fd1c5;                      /* Primary accent - brighter for dark bg */
-  --color-accent-hover: #5dddd1;                /* Hover state - even brighter */
-  --color-accent-active: #38b2a3;               /* Active/pressed state - darker */
-  --color-accent-muted: rgba(79, 209, 197, 0.15);   /* Backgrounds, subtle highlights */
-  --color-accent-subtle: rgba(79, 209, 197, 0.08);  /* Very subtle backgrounds */
+  --color-accent: #9ca3af;                      /* Primary accent - lighter for dark bg */
+  --color-accent-hover: #d1d5db;                /* Hover state - even lighter */
+  --color-accent-active: #6b7280;               /* Active/pressed state */
+  --color-accent-muted: rgba(156, 163, 175, 0.15);   /* Backgrounds, subtle highlights */
+  --color-accent-subtle: rgba(156, 163, 175, 0.08);  /* Very subtle backgrounds */
 
   /* ============================================
      SEMANTIC COLORS
@@ -85,7 +85,7 @@
      Map old variable names to new tokens for dark mode
      TODO: Remove after full migration
      ============================================ */
-  --color: #4fd1c5;                   /* Legacy: primary color (now accent) */
+  --color: #7FA88A;                   /* Legacy: primary color (now accent) */
   --accent: var(--color-accent);      /* Legacy: accent color */
   --bg-1: var(--color-bg-secondary);  /* Legacy: main background */
   --bg-2: var(--color-bg-tertiary);   /* Legacy: secondary bg */
