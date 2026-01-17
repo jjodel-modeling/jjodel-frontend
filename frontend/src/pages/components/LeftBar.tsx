@@ -188,7 +188,7 @@ function LeftBar(props: LeftBarProps): JSX.Element {
 
                 {/* Footer - Version Only */}
                 <div className="leftbar-footer">
-                    <span className="version-text">Jjodel v2.0</span>
+                    <span className="version-text">Jjodel v2.0 · MIT</span>
                 </div>
 
             </div>

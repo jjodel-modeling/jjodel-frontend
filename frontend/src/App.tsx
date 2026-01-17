@@ -114,7 +114,7 @@ function App(props: AllProps): JSX.Element {
                     }
                 </Routes></Try>
             </HashRouter>
-            {user && <Try><BottomBar/></Try>}
+            {user && window.location.hash.includes('project') && <Try><BottomBar/></Try>}
             {user && <Try><NotificationWidget/></Try>}
 
         </div>
