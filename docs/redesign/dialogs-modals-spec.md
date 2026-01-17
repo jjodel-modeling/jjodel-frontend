@@ -307,7 +307,7 @@ Usato solo per dialog complessi (form, about). Alert semplici non hanno header.
 
 Per azioni che richiedono conferma (delete, logout, etc.)
 
-### Layout Standard
+### Layout Standard (Logout)
 
 ```
 ┌─────────────────────────────────────────────────────┐
@@ -323,6 +323,7 @@ Per azioni che richiedono conferma (delete, logout, etc.)
 ```
 
 **Nota:** Niente icona per i confirm semplici — il titolo è sufficiente.
+**Bottone "Log out":** stile Slate (`#475569`) — azione importante ma non distruttiva
 
 ### Confirm Destructive (Delete)
 
@@ -339,7 +340,7 @@ Per azioni che richiedono conferma (delete, logout, etc.)
 └─────────────────────────────────────────────────────┘
 ```
 
-**Bottone "Delete":** stile destructive (rosso)
+**Bottone "Delete":** stile Destructive (rosso `#EF4444`)
 
 ```scss
 .btn-destructive {
@@ -351,6 +352,16 @@ Per azioni che richiedono conferma (delete, logout, etc.)
   }
 }
 ```
+
+### Regola per i bottoni Confirm
+
+| Azione | Stile Bottone | Colore |
+|--------|---------------|--------|
+| Logout | Slate | `#475569` |
+| Proceed, Continue | Slate | `#475569` |
+| Delete, Remove | Destructive | `#EF4444` |
+| Discard changes | Destructive | `#EF4444` |
+| Save | Primary | `#06B6D4` |
 
 ---
 
@@ -500,7 +511,35 @@ Per creare/editare entità (New Project, Edit Metamodel, etc.)
 }
 ```
 
-**Uso:** Azioni pericolose (Delete, Remove, Discard)
+**Uso:** Azioni distruttive irreversibili (Delete, Remove permanently, Discard changes)
+
+### Slate (Azioni importanti non distruttive)
+
+```scss
+.btn-slate {
+  padding: 10px 20px;
+  font-family: 'Inter Variable', sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  color: #ffffff;
+  background: #475569;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 150ms ease;
+  
+  &:hover {
+    background: #334155;
+  }
+  
+  &:focus-visible {
+    outline: 2px solid #475569;
+    outline-offset: 2px;
+  }
+}
+```
+
+**Uso:** Azioni importanti ma non distruttive (Logout, Proceed, Continue)
 
 ### Ghost (per link in dialog)
 
@@ -525,6 +564,15 @@ Per creare/editare entità (New Project, Edit Metamodel, etc.)
 ```
 
 **Uso:** Link secondari in About dialog (Website, GitHub)
+
+### Quando usare quale bottone
+
+| Azione | Stile | Colore |
+|--------|-------|--------|
+| Save, Create, Submit | Primary | Cyan `#06B6D4` |
+| Cancel, Close, Done | Secondary | Grigio outline |
+| Delete, Remove, Discard | Destructive | Rosso `#EF4444` |
+| Logout, Proceed, Continue | Slate | Grigio-blu `#475569` |
 
 ---
 
@@ -852,6 +900,20 @@ $transition: 150ms ease;
   
   &:focus-visible {
     outline-color: #EF4444;
+  }
+}
+
+.btn-slate {
+  color: #ffffff;
+  background: #475569;
+  border: none;
+  
+  &:hover:not(:disabled) {
+    background: #334155;
+  }
+  
+  &:focus-visible {
+    outline-color: #475569;
   }
 }
 

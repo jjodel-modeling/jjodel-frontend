@@ -40,16 +40,17 @@
   --color-brand-active: #6b7280;                /* Brand active state */
 
   /* ============================================
-     ACCENT - Cyan (interactive elements)
-     Brighter cyan for visibility on dark backgrounds
+     ACCENT - Slate (interactive elements)
+     Lighter slate for visibility on dark backgrounds
+     Monochromatic, professional enterprise look
      ============================================ */
-  --color-accent: #22D3EE;                      /* Primary accent - brighter cyan */
-  --color-accent-hover: #67E8F9;                /* Hover state - lighter cyan */
-  --color-accent-active: #06B6D4;               /* Active/pressed state */
-  --color-accent-light: rgba(34, 211, 238, 0.15); /* Subtle backgrounds */
-  --color-accent-lighter: rgba(34, 211, 238, 0.08); /* Very subtle backgrounds */
-  --color-accent-muted: rgba(34, 211, 238, 0.15);   /* Backgrounds, subtle highlights */
-  --color-accent-subtle: rgba(34, 211, 238, 0.08);  /* Very subtle backgrounds */
+  --color-accent: #94a3b8;                      /* Primary accent - slate-400 */
+  --color-accent-hover: #cbd5e1;                /* Hover state - slate-300 */
+  --color-accent-active: #64748b;               /* Active/pressed state - slate-500 */
+  --color-accent-light: rgba(148, 163, 184, 0.15); /* Subtle backgrounds */
+  --color-accent-lighter: rgba(148, 163, 184, 0.08); /* Very subtle backgrounds */
+  --color-accent-muted: rgba(148, 163, 184, 0.15);   /* Backgrounds, subtle highlights */
+  --color-accent-subtle: rgba(148, 163, 184, 0.08);  /* Very subtle backgrounds */
 
   /* ============================================
      SECONDARY

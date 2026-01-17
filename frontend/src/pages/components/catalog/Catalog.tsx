@@ -44,8 +44,10 @@ type ChildrenType = {
 };
 
 
+type ViewMode = 'cards' | 'list' | 'compact';
+
 const Catalog = (props: ChildrenType) => {
-    const [mode, setMode] = useState<string>("cards");
+    const [mode, setMode] = useState<ViewMode>("cards");
     const [activeTab, setActiveTab] = useState<'all' | 'public' | 'private' | 'collaborative'>('all');
 
     const CatalogFilters = () => {
@@ -87,6 +89,7 @@ const Catalog = (props: ChildrenType) => {
                         className={`view-btn ${mode === 'cards' ? 'active' : ''}`}
                         onClick={() => setMode('cards')}
                         title="Grid view"
+                        aria-label="Grid view"
                     >
                         <i className="bi bi-grid-3x3-gap" />
                     </button>
@@ -94,8 +97,17 @@ const Catalog = (props: ChildrenType) => {
                         className={`view-btn ${mode === 'list' ? 'active' : ''}`}
                         onClick={() => setMode('list')}
                         title="List view"
+                        aria-label="List view"
                     >
                         <i className="bi bi-list" />
+                    </button>
+                    <button
+                        className={`view-btn ${mode === 'compact' ? 'active' : ''}`}
+                        onClick={() => setMode('compact')}
+                        title="Compact view (no images)"
+                        aria-label="Compact view"
+                    >
+                        <i className="bi bi-view-stacked" />
                     </button>
                 </div>
             </div>
@@ -126,24 +138,29 @@ const Catalog = (props: ChildrenType) => {
         // Sort by last modified (default)
         var sorted = _.sortBy(items, (obj: LProject) => -new Date(obj.lastModified).getTime());
 
-        return (
-            mode === "cards" ?
+        // Cards and Compact both use grid layout
+        if (mode === "cards" || mode === "compact") {
+            return (
                 <div className="project-cards-grid">
                     {sorted.map((p, i) => <Project key={i} data={p} mode={mode} pnames={projectNames} />)}
                 </div>
-            :
-                <div className="row project-list">
-                    <div className="row header">
-                        <div className="col-4">Name</div>
-                        <div className="col-1">Type</div>
-                        <div className="col-3">Created</div>
-                        <div className="col-2">Last modified</div>
-                        <div className="col-2">Operation</div>
-                    </div>
-                    {sorted.map(p => (
-                        <Project key={p.id} data={p} mode={mode} pnames={projectNames} />
-                    ))}
+            );
+        }
+
+        // List view
+        return (
+            <div className="row project-list">
+                <div className="row header">
+                    <div className="col-4">Name</div>
+                    <div className="col-1">Type</div>
+                    <div className="col-3">Created</div>
+                    <div className="col-2">Last modified</div>
+                    <div className="col-2">Operation</div>
                 </div>
+                {sorted.map(p => (
+                    <Project key={p.id} data={p} mode={mode} pnames={projectNames} />
+                ))}
+            </div>
         );
     };
 

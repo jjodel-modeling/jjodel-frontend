@@ -41,16 +41,17 @@
   --color-brand-active: #111827;                /* Brand active state */
 
   /* ============================================
-     ACCENT - Cyan (interactive elements)
+     ACCENT - Slate (interactive elements)
      Buttons, toggles, links, focus states
+     Monochromatic, professional enterprise look
      ============================================ */
-  --color-accent: #06B6D4;                      /* Primary accent - buttons, links */
-  --color-accent-hover: #0891B2;                /* Hover state - darker cyan */
-  --color-accent-active: #0E7490;               /* Active/pressed state */
-  --color-accent-light: rgba(6, 182, 212, 0.1); /* Subtle backgrounds */
-  --color-accent-lighter: rgba(6, 182, 212, 0.05); /* Very subtle backgrounds */
-  --color-accent-muted: rgba(6, 182, 212, 0.12);   /* Backgrounds, subtle highlights */
-  --color-accent-subtle: rgba(6, 182, 212, 0.06);  /* Very subtle backgrounds */
+  --color-accent: #475569;                      /* Primary accent - slate-600 */
+  --color-accent-hover: #334155;                /* Hover state - slate-700 */
+  --color-accent-active: #1e293b;               /* Active/pressed state - slate-800 */
+  --color-accent-light: rgba(71, 85, 105, 0.1); /* Subtle backgrounds */
+  --color-accent-lighter: rgba(71, 85, 105, 0.05); /* Very subtle backgrounds */
+  --color-accent-muted: rgba(71, 85, 105, 0.12);   /* Backgrounds, subtle highlights */
+  --color-accent-subtle: rgba(71, 85, 105, 0.06);  /* Very subtle backgrounds */
 
   /* ============================================
      SECONDARY

@@ -67,7 +67,7 @@
   }
 }
 
-/* Primary Button (solid cyan) - New Project */
+/* Primary Button (solid slate) - New Project */
 .btn-primary-solid {
   display: inline-flex;
   align-items: center;
@@ -77,8 +77,8 @@
   font-family: var(--font-sans);
   font-size: var(--text-sm);
   font-weight: var(--font-medium);
-  color: white;
-  background-color: #06B6D4; /* Cyan accent */
+  color: #ffffff;
+  background-color: #475569; /* Slate accent */
   border: none;
   border-radius: var(--radius-md);
   cursor: pointer;
@@ -86,10 +86,11 @@
 
   .bi {
     font-size: var(--text-base);
+    color: #ffffff; /* White icon */
   }
 
   &:hover {
-    background-color: #0891B2; /* Cyan hover */
+    background-color: #334155; /* Slate hover */
   }
 }
 
@@ -440,7 +441,7 @@ project-card .tip {
    - Background: #ffffff
    - Border-radius: 12px
    - Border: 1px solid #e2e4e8
-   - Hover: border-color #06B6D4
+   - Hover: border-color #475569
    - Preview area with dynamic color
    ============================================ */
 
@@ -629,7 +630,7 @@ project-card .tip {
 
 /* Project Card V2 Hover State */
 .project-card-v2:hover {
-  border-color: #06B6D4;
+  border-color: #475569;
   box-shadow: var(--shadow-md);
   transform: translateY(-2px);
 }

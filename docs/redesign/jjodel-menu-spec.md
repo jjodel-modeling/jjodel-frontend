@@ -1,6 +1,6 @@
 # JJODEL MENU REDESIGN - SPECIFICATION
 
-**Version:** 1.0  
+**Version:** 2.0  
 **Date:** January 2026  
 **Status:** Ready for Implementation
 
@@ -9,13 +9,16 @@
 ## 1. OVERVIEW
 
 ### Obiettivo
-Sostituire i tab di navigazione (`Projects | Templates | Explore`) con un menu principale a dropdown (`Jjodel | File | Edit | View | Analyze`) più un menu Help separato.
+Sostituire i tab di navigazione (`Projects | Templates | Explore`) con un menu principale a dropdown (`Jjodel | File | Edit | View | Tools | Analyze`) più un menu Help separato e una Bottom Toolbar per comandi rapidi.
 
 ### Cambiamenti principali
 1. **Header**: nuovo menu dropdown al posto dei tab
-2. **Sidebar**: aggiunta di `Templates` e `Explore`
-3. **Stile dropdown**: light theme (sfondo bianco)
-4. **Shortcuts**: visibili con detection piattaforma
+2. **Menu Tools**: nuovo menu dinamico per comandi metamodel-specific (S4+)
+3. **Bottom Toolbar**: toolbar orizzontale sopra il footer con Tools commands + Canvas controls
+4. **Sidebar**: aggiunta di `Templates` e `Explore`
+5. **Stile dropdown**: light theme (sfondo bianco)
+6. **Shortcuts**: visibili con detection piattaforma
+7. **Sign out**: rimosso da menu Jjodel, resta solo in Avatar menu
 
 ---
 
@@ -24,10 +27,10 @@ Sostituire i tab di navigazione (`Projects | Templates | Explore`) con un menu p
 ### Layout
 
 ```
-┌────────────────────────────────────────────────────────────────────────────┐
-│ [Logo]  [Jjodel ▾] [File ▾] [Edit ▾] [View ▾] [Analyze ▾]   [? Help ▾] [OU] │
-│ 48px    Menu items con dropdown                              Help    Avatar │
-└────────────────────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────────────────┐
+│ [Logo]  [Jjodel ▾] [File ▾] [Edit ▾] [View ▾] [Tools ▾] [Analyze ▾]  [?Help] [OU▾] │
+│ 48px    Menu items con dropdown                                       Help  Avatar │
+└──────────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ### Specifiche Header
@@ -190,8 +193,8 @@ Sostituire i tab di navigazione (`Projects | Templates | Explore`) con un menu p
 |------|-------|----------|------|
 | About Jjodel | `bi-info-circle` | — | Apre modal About |
 | Road Map | `bi-map` | — | Link esterno |
-| — | separator | | |
-| Sign out | `bi-box-arrow-right` | — | Logout |
+
+*Nota: Sign out è stato spostato nel menu Avatar*
 
 ### Menu: File
 | Voce | Icona | Shortcut | Note |
@@ -222,9 +225,30 @@ Sostituire i tab di navigazione (`Projects | Templates | Explore`) con un menu p
 | Load layout | `bi-layout-split` | — | |
 | — | separator | | |
 | Show/hide sidebar | `bi-layout-sidebar` | `⌘/Ctrl + B` | Toggle |
-| Show/hide toolbar | `bi-layout-text-sidebar` | `⌘/Ctrl + Shift + B` | Toggle |
+| Show/hide toolbar | `bi-window-dock` | `⌘/Ctrl + Shift + B` | Toggle |
 | — | separator | | |
 | Fullscreen Mode | `bi-fullscreen` | `F11` / `⌘+Ctrl+F` | Toggle |
+
+### Menu: Tools (DINAMICO)
+| Voce | Icona | Shortcut | Note |
+|------|-------|----------|------|
+| *(contenuto dinamico)* | — | — | Definito dal metamodello |
+
+**Comportamento:**
+- **Disabled** in S1, S2, S3 (nessun metamodello)
+- **Enabled** da S4+ (almeno un metamodello presente)
+- Il contenuto è popolato dinamicamente dal designer del metamodello
+- Ogni metamodello può registrare comandi custom con icona, label, shortcut e azione
+- Se nessun comando è definito, il menu mostra "No tools available"
+- Gli stessi comandi appaiono anche nella Bottom Toolbar
+
+**Esempio contenuto (metamodello UML):**
+| Voce | Icona | Shortcut | Note |
+|------|-------|----------|------|
+| Validate Model | `bi-check-circle` | `⌘/Ctrl + Shift + V` | |
+| Generate Code | `bi-code-slash` | — | |
+| — | separator | | |
+| Auto Layout | `bi-grid-3x3` | `⌘/Ctrl + L` | |
 
 ### Menu: Analyze
 | Voce | Icona | Shortcut | Note |
@@ -249,6 +273,160 @@ Sostituire i tab di navigazione (`Projects | Templates | Explore`) con un menu p
 | ↳ Report a Bug | `bi-bug` | |
 | ↳ Request a Feature | `bi-hand-index` | |
 | ↳ Contact | `bi-envelope` | |
+
+### Menu: Avatar (cliccando sull'avatar)
+| Voce | Icona | Note |
+|------|-------|------|
+| *[Nome Utente]* | — | Header, non cliccabile |
+| *[Affiliazione]* | — | Subtitle, non cliccabile |
+| — | separator | |
+| Dashboard | `bi-grid` | Torna alla dashboard |
+| Profile | `bi-person` | Apre profilo utente |
+| Account | `bi-person-gear` | Disabled (futuro) |
+| — | separator | |
+| Theme | `bi-circle-half` | → Submenu |
+| ↳ Light | `bi-sun` | Radio, checkmark se attivo |
+| ↳ Dark | `bi-moon` | Radio, checkmark se attivo |
+| — | separator | |
+| Sign out | `bi-box-arrow-right` | Logout |
+
+---
+
+## 4B. BOTTOM TOOLBAR
+
+### Overview
+Toolbar orizzontale posizionata sopra il footer, visibile solo quando l'editor è aperto (S6, S7).
+
+### Layout
+```
+┌────────────────────────────────────────────────────────────────────────────────┐
+│ [🔧 Cmd1] [⚙ Cmd2] [📦 Cmd3]  │  Grid [✓]  Snap [✓]  │  [−]  100%  [+]       │
+│ ← Tools commands (dinamici)    │  ← Canvas toggles     │  ← Zoom controls      │
+└────────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Specifiche
+- **Altezza:** 40px
+- **Background:** `#ffffff`
+- **Border-top:** `1px solid #e2e4e8`
+- **Padding:** `0 16px`
+- **Visibilità:** Solo in S6 e S7 (editor aperto)
+
+### Sezioni
+
+#### Tools Commands (sinistra)
+- Contenuto dinamico dal metamodello
+- Stesso contenuto del menu Tools ▾
+- Bottoni con icona + label (opzionale, solo icona se spazio limitato)
+- Tooltip con nome comando e shortcut
+
+```scss
+.toolbar-tool-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #374151;
+  background: transparent;
+  border: 1px solid #e2e4e8;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 150ms ease;
+  
+  &:hover {
+    background: #f1f5f9;
+    border-color: #d0d3d8;
+  }
+  
+  .icon {
+    font-size: 14px;
+    color: #6B7280;
+  }
+}
+```
+
+#### Canvas Toggles (centro)
+| Controllo | Icona ON | Icona OFF | Default |
+|-----------|----------|-----------|---------|
+| Grid | `bi-grid-3x3-gap` | `bi-grid-3x3-gap` (dimmed) | OFF |
+| Snap | `bi-magnet` | `bi-magnet` (dimmed) | OFF |
+
+```scss
+.toolbar-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  font-size: 12px;
+  color: #6B7280;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  
+  &.active {
+    color: #06B6D4;
+    background: #ecfeff;
+  }
+  
+  &:hover:not(.active) {
+    background: #f1f5f9;
+  }
+}
+```
+
+#### Zoom Controls (destra)
+- Bottone `−` (zoom out)
+- Display percentuale (es. "100%")
+- Bottone `+` (zoom in)
+- Click sulla percentuale → dropdown con preset (50%, 75%, 100%, 150%, 200%, Fit)
+
+```scss
+.toolbar-zoom {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  
+  .zoom-btn {
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    color: #6B7280;
+    background: transparent;
+    border: 1px solid #e2e4e8;
+    border-radius: 6px;
+    cursor: pointer;
+    
+    &:hover {
+      background: #f1f5f9;
+    }
+    
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+  }
+  
+  .zoom-value {
+    min-width: 50px;
+    padding: 4px 8px;
+    font-size: 12px;
+    font-weight: 500;
+    color: #374151;
+    text-align: center;
+    cursor: pointer;
+    border-radius: 4px;
+    
+    &:hover {
+      background: #f1f5f9;
+    }
+  }
+}
 
 ---
 
@@ -354,8 +532,21 @@ const determineAppState = (flags): AppState => {
 ```
 
 ### Enable/Disable Matrix (from menu-matrix.txt)
+
+**Stati del sistema (S0-S7):**
+- S0: Logged out (nessun menu)
+- S1: Dashboard vuota (0 progetti)
+- S2: Dashboard con progetti (≥1 progetto)
+- S3: Progetto aperto, vuoto (0 metamodels)
+- S4: Progetto aperto, con metamodel(s), 0 models
+- S5: Progetto aperto, con metamodel(s) e model(s)
+- S6: Progetto aperto, con metamodel Editor aperto
+- S7: Progetto aperto, con model aperto
+
 ```typescript
 // constants/menuMatrix.ts
+
+export type AppState = 'S1' | 'S2' | 'S3' | 'S4' | 'S5' | 'S6' | 'S7';
 
 export const MENU_MATRIX: Record<string, Record<AppState, boolean>> = {
   'file.new.project':     { S1: true,  S2: true,  S3: false, S4: false, S5: false, S6: false, S7: false },
@@ -370,8 +561,14 @@ export const MENU_MATRIX: Record<string, Record<AppState, boolean>> = {
   'view.zoomOut':         { S1: false, S2: false, S3: false, S4: false, S5: false, S6: true,  S7: true  },
   'view.sidebar':         { S1: false, S2: false, S3: false, S4: false, S5: false, S6: false, S7: false },
   'view.toolbar':         { S1: false, S2: false, S3: false, S4: false, S5: false, S6: false, S7: false },
+  'tools':                { S1: false, S2: false, S3: false, S4: true,  S5: true,  S6: true,  S7: true  },
   'analyze.debug':        { S1: false, S2: false, S3: false, S4: true,  S5: true,  S6: true,  S7: true  },
   'analyze.checkRepair':  { S1: false, S2: false, S3: false, S4: true,  S5: true,  S6: true,  S7: true  },
+};
+
+// Bottom Toolbar visibility
+export const BOTTOM_TOOLBAR_VISIBLE: Record<AppState, boolean> = {
+  S1: false, S2: false, S3: false, S4: false, S5: false, S6: true, S7: true
 };
 ```
 

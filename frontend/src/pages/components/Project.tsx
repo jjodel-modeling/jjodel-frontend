@@ -9,23 +9,7 @@ import {icon} from './icons/Icons';
 import {Btn, CommandBar, Sep} from '../../components/commandbar/CommandBar';
 import { Tooltip } from '../../components/forEndUser/Tooltip';
 import {compressToUTF16} from "async-lz-string";
-
-/**
- * Generates a consistent color based on project name using a hash function
- * @param name - Project name to hash
- * @returns HSL color string with good saturation and lightness for preview area
- */
-function getProjectColor(name: string): string {
-    let hash = 0;
-    for (let i = 0; i < name.length; i++) {
-        const char = name.charCodeAt(i);
-        hash = ((hash << 5) - hash) + char;
-        hash = hash & hash; // Convert to 32bit integer
-    }
-    // Use hash to generate hue (0-360), with fixed saturation and lightness for pleasant colors
-    const hue = Math.abs(hash) % 360;
-    return `hsl(${hue}, 65%, 75%)`;
-}
+import './project-card.scss';
 
 function formatDate(lastModified: number){
     
@@ -183,7 +167,6 @@ function Project(props: Props): JSX.Element {
 
     function ProjectCard(props: PropsCard): JSX.Element {
 
-
         function multiplicity(n: number, none: string, one: string, many: string){
             if (n <= 0) return none;
             if (n === 1) return n + ' ' + one;
@@ -191,63 +174,151 @@ function Project(props: Props): JSX.Element {
         }
 
         function getClickedElement(e: any){
-            if (e.target.className === 'bi bi-star-fill' || e.target.className === 'bi bi-star' || e.target.className === 'bi bi-chevron-down' || e.target.className === 'item') {
+            // Don't navigate if clicking on interactive elements
+            if (e.target.closest('.card-action-btn') ||
+                e.target.closest('.menu-button') ||
+                e.target.closest('.dropdown') ||
+                e.target.className.includes('bi-star')) {
                 return;
-            } else {
-                selectProject(false);
             }
+            selectProject(false);
         }
 
-        const previewColor = getProjectColor(data.name || 'Unnamed');
+        // Generate cover image URL from Unsplash with colorful query
+        // Using project ID hash for consistent images per project
+        const imageQueries = ['colorful,abstract', 'gradient,vibrant', 'nature,colorful', 'pattern,bright'];
+        const queryIndex = Math.abs(data.id.charCodeAt(0) || 0) % imageQueries.length;
+        const coverImageUrl = `https://source.unsplash.com/400x200/?${imageQueries[queryIndex]}`;
+
+        // Get privacy label and icon
+        const getPrivacyInfo = () => {
+            switch (data.type) {
+                case 'private':
+                    return { icon: 'bi-lock-fill', label: 'Private' };
+                case 'public':
+                    return { icon: 'bi-unlock-fill', label: 'Public' };
+                case 'collaborative':
+                    return { icon: 'bi-people-fill', label: 'Collaborative' };
+                default:
+                    return { icon: 'bi-file-earmark', label: 'Project' };
+            }
+        };
+
+        const privacyInfo = getPrivacyInfo();
+
+        // Get editor initial (use first letter of project name as fallback)
+        const editorInitial = (data.name || 'P').charAt(0).toUpperCase();
+
+        // Check if compact mode (passed via props.mode)
+        const isCompact = props.mode === 'compact';
 
         return (
             <Tooltip tooltip={`${props.data.type} project with ${multiplicity(props.data.metamodelsNumber,'no metamodels', 'metamodel', 'metamodels')},
                 ${multiplicity(props.data.modelsNumber,'no models', 'model', 'models')},
                 ${multiplicity(props.data.viewpointsNumber -2, 'no (custom) viewpoints', '(custom) viewpoint', '(custom) viewpoints')}` } position={'top'} offsetY={10} theme={'dark'} inline>
-                <div className={`project-card-v2 ${data.type}`} onClick={e => getClickedElement(e)}>
-                    {/* Preview Area with dynamic color */}
-                    <div className="card-preview" style={{ backgroundColor: previewColor }}>
-                        <i className="bi bi-folder preview-icon" />
-                    </div>
+                <article
+                    className={`project-card-new ${isCompact ? 'compact' : ''}`}
+                    onClick={e => getClickedElement(e)}
+                    tabIndex={0}
+                    role="button"
+                    aria-label={`Open project ${data.name}`}
+                >
+                    {/* Cover Image - hidden in compact mode */}
+                    {!isCompact && (
+                        <div
+                            className="card-cover"
+                            style={{ backgroundImage: `url(${coverImageUrl})` }}
+                        >
+                            {/* Privacy Badge (top-left) */}
+                            <span className="card-privacy-badge">
+                                <i className={`bi ${privacyInfo.icon}`} />
+                                {privacyInfo.label}
+                            </span>
 
-                    {/* Card Actions - Favorite + Menu */}
-                    <div className="project-actions">
-                        {data.isFavorite ?
-                            <i onClick={(e) => toggleFavorite(data)} className="bi bi-star-fill" /> :
-                            <i onClick={(e) => toggleFavorite(data)} className="bi bi-star" />
-                        }
-                        <Menu>
-                            <Item icon={icon['new']} action={e => {selectProject()}}>Open</Item>
-                            <Item icon={icon['download']} action={e => exportProject()}>Download</Item>
-                            <Item icon={icon['tools']} action={e => selectProject(true)}>Repair & open</Item>
-                            <Divisor />
-                            <Item icon={icon['favorite']} action={(e => toggleFavorite(data))}>{!data.isFavorite ? 'Add to favorites' : 'Remove from favorites'}</Item>
-                            <Divisor />
-                            <Item icon={icon['delete']} action={async e => await deleteProject()}>Delete</Item>
-                        </Menu>
-                    </div>
-
-                    {/* Card Content */}
-                    <div className='card-content'>
-                        <h5 onClick={e => selectProject(false)}>{data.name}</h5>
-                        <p className={'description'}>{data.description}</p>
-                    </div>
-
-                    {/* Card Footer - Meta info */}
-                    <div className={'card-footer'}>
-                        <div className='date'>
-                            <i className="bi bi-clock-history" />
-                            {formatDate(data.lastModified)}
+                            {/* Actions (top-right) */}
+                            <div className="card-actions">
+                                <button
+                                    className={`card-action-btn ${data.isFavorite ? 'is-favorite' : ''}`}
+                                    onClick={(e) => { e.stopPropagation(); toggleFavorite(data); }}
+                                    aria-label={data.isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+                                >
+                                    <i className={data.isFavorite ? 'bi bi-star-fill' : 'bi bi-star'} />
+                                </button>
+                                <div className="menu-button">
+                                    <Menu>
+                                        <Item icon={icon['new']} action={e => {selectProject()}}>Open</Item>
+                                        <Item icon={icon['download']} action={e => exportProject()}>Download</Item>
+                                        <Item icon={icon['tools']} action={e => selectProject(true)}>Repair & open</Item>
+                                        <Divisor />
+                                        <Item icon={icon['favorite']} action={(e => toggleFavorite(data))}>{!data.isFavorite ? 'Add to favorites' : 'Remove from favorites'}</Item>
+                                        <Divisor />
+                                        <Item icon={icon['delete']} action={async e => await deleteProject()}>Delete</Item>
+                                    </Menu>
+                                </div>
+                            </div>
                         </div>
-                        <div className={'type'}>
-                            {data.type === 'public' && <i className="bi bi-unlock type-icon" />}
-                            {data.type === 'private' && <i className="bi bi-lock type-icon" />}
-                            {data.type === 'collaborative' && <i className="bi bi-people type-icon" />}
+                    )}
+
+                    {/* Compact mode header - shows privacy and actions inline */}
+                    {isCompact && (
+                        <div className="card-compact-header">
+                            <span className="card-privacy-badge-inline">
+                                <i className={`bi ${privacyInfo.icon}`} />
+                                {privacyInfo.label}
+                            </span>
+                            <div className="card-actions-inline">
+                                <button
+                                    className={`card-action-btn-sm ${data.isFavorite ? 'is-favorite' : ''}`}
+                                    onClick={(e) => { e.stopPropagation(); toggleFavorite(data); }}
+                                    aria-label={data.isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+                                >
+                                    <i className={data.isFavorite ? 'bi bi-star-fill' : 'bi bi-star'} />
+                                </button>
+                                <div className="menu-button">
+                                    <Menu>
+                                        <Item icon={icon['new']} action={e => {selectProject()}}>Open</Item>
+                                        <Item icon={icon['download']} action={e => exportProject()}>Download</Item>
+                                        <Item icon={icon['tools']} action={e => selectProject(true)}>Repair & open</Item>
+                                        <Divisor />
+                                        <Item icon={icon['favorite']} action={(e => toggleFavorite(data))}>{!data.isFavorite ? 'Add to favorites' : 'Remove from favorites'}</Item>
+                                        <Divisor />
+                                        <Item icon={icon['delete']} action={async e => await deleteProject()}>Delete</Item>
+                                    </Menu>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Content */}
+                    <div className="card-body">
+                        <h3 className="card-title">{data.name}</h3>
+                        <p className="card-description">{data.description || 'No description'}</p>
+
+                        {/* Stats Row */}
+                        <div className="card-stats">
+                            <span className="card-stat">
+                                <i className="bi bi-diagram-3" />
+                                {data.metamodelsNumber} {data.metamodelsNumber === 1 ? 'metamodel' : 'metamodels'}
+                            </span>
+                            <span className="card-stat">
+                                <i className="bi bi-file-earmark" />
+                                {data.modelsNumber} {data.modelsNumber === 1 ? 'model' : 'models'}
+                            </span>
+                        </div>
+
+                        {/* Footer - Editor + Time */}
+                        <div className="card-meta">
+                            <div className="card-editor">
+                                <span className="card-avatar">{editorInitial}</span>
+                                <span>{data.name ? data.name.split(' ')[0] : 'Editor'}</span>
+                            </div>
+                            <span className="card-time">{formatDate(data.lastModified)}</span>
                         </div>
                     </div>
-                </div>
-            </Tooltip>);
-        }
+                </article>
+            </Tooltip>
+        );
+    }
 
 
     /* LIST */

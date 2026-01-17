@@ -25,7 +25,7 @@
     width: 80px;
     height: 80px;
     border-radius: var(--radius-lg);
-    background-color: rgba(6, 182, 212, 0.1);
+    background-color: rgba(107, 114, 128, 0.1); /* Gray background */
     display: flex;
     align-items: center;
     justify-content: center;
@@ -33,7 +33,7 @@
 
     .bi {
       font-size: 36px;
-      color: #06B6D4;
+      color: #6B7280; /* Gray icon */
     }
   }
 
@@ -60,8 +60,8 @@
     font-family: var(--font-sans);
     font-size: var(--text-base);
     font-weight: var(--font-medium);
-    color: white;
-    background-color: #06B6D4;
+    color: #ffffff;
+    background-color: #374151;
     border: none;
     border-radius: var(--radius-md);
     cursor: pointer;
@@ -70,10 +70,11 @@
 
     .bi {
       font-size: var(--text-lg);
+      color: #ffffff; /* White icon */
     }
 
     &:hover {
-      background-color: #0891B2;
+      background-color: #334155;
     }
   }
 
@@ -82,7 +83,7 @@
     align-items: center;
     gap: var(--space-2);
     font-size: var(--text-sm);
-    color: #06B6D4;
+    color: #374151;
     text-decoration: none;
     transition: var(--transition-fast);
 
@@ -181,12 +182,19 @@
 
 /* ============================================
    PROJECT CARDS GRID - NEW DESIGN
+   Per project-card-spec.md
    ============================================ */
 
 .project-cards-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: var(--space-5);
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 20px;
+
+  // Responsive - single column on mobile
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
 }
 
 .catalog {

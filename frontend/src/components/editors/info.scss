@@ -709,7 +709,7 @@
     color: white;
 
     &:hover {
-      background-color: var(--color-accent-hover, #0891B2);
+      background-color: var(--color-accent-hover, #334155);
     }
 
     &:active {
@@ -835,7 +835,7 @@
     }
 
     &:checked {
-      background-color: var(--color-accent, #06B6D4) !important;
+      background-color: var(--color-accent, #475569) !important;
 
       &::after {
         transform: translateX(18px) !important;
@@ -850,7 +850,7 @@
       background-color: #d0d3d8 !important;
 
       &:checked {
-        background-color: var(--color-accent-hover, #0891B2) !important;
+        background-color: var(--color-accent-hover, #334155) !important;
       }
     }
   }
@@ -873,12 +873,12 @@
     flex-shrink: 0;
 
     &:hover {
-      border-color: var(--color-accent, #06B6D4) !important;
+      border-color: var(--color-accent, #475569) !important;
     }
 
     &:checked {
       border: none !important;
-      background-color: var(--color-accent, #06B6D4) !important;
+      background-color: var(--color-accent, #475569) !important;
       background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 12 12' fill='none' stroke='white' stroke-width='2' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M2 6l3 3 5-5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") !important;
       background-position: center !important;
       background-repeat: no-repeat !important;
@@ -927,7 +927,7 @@
   background-color: var(--color-accent-light, rgba(6, 182, 212, 0.1)) !important;
 
   .bi {
-    color: var(--color-accent, #06B6D4) !important;
+    color: var(--color-accent, #475569) !important;
   }
 }
 
@@ -951,10 +951,10 @@
   }
 
   &.active {
-    background-color: var(--color-accent, #06B6D4);
+    background-color: var(--color-accent, #475569);
 
     &:hover {
-      background-color: var(--color-accent-hover, #0891B2);
+      background-color: var(--color-accent-hover, #334155);
     }
 
     .properties-toggle-thumb {

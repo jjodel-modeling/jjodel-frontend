@@ -6,7 +6,7 @@
    - Icon 24px inline with title (no large icon with halo)
    - Black title
    - Gray secondary buttons for neutral actions
-   - Cyan only for CTA primary buttons
+   - Slate for CTA primary buttons (monochromatic)
    ============================================ */
 
 // ============================================
@@ -165,7 +165,7 @@ $transition: 150ms ease;
   transition: all $transition;
 
   &:focus-visible {
-    outline: 2px solid #06B6D4;
+    outline: 2px solid #475569;
     outline-offset: 2px;
   }
 
@@ -192,22 +192,22 @@ $transition: 150ms ease;
 // Primary button (for CTA: Save, Create, Submit)
 .btn-primary {
   color: #ffffff;
-  background: #06B6D4;
+  background: #475569;
   border: none;
 
   &:hover:not(:disabled) {
-    background: #0891B2;
+    background: #334155;
   }
 }
 
 // Dialog confirm button - can be primary or secondary depending on action
 .dialog-btn {
   color: #ffffff;
-  background: #06B6D4;
+  background: #475569;
   border: none;
 
   &:hover:not(:disabled) {
-    background: #0891B2;
+    background: #334155;
     transform: none;
     box-shadow: none;
   }
