@@ -57,7 +57,7 @@ function ContextMenuC( props: CtxMenuAllProps): null | null[]{
     return injectedChildren as any as null[]; // returns children to trigger their render(). but leaf elements will return [], so the whole subtree collapses to empty.
 }
 export function ContextMenu(props: any, children:any) {return <ContextMenuC {...props}>{children || props.children}</ContextMenuC>; }
-(ContextMenuC as any).cname = 'ContextMenu';
+(ContextMenuC as any).cname = 'ContextMenuC';
 (ContextMenu as any).cname = 'ContextMenu';
 (window as any).CTXMENUDEBUG = ContextMenu;
 

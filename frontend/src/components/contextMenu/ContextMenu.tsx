@@ -111,15 +111,36 @@ function addDynamicEntries(jsxList: ReactNode[], nodeid: Pointer<DGraphElement>,
             </div>
         );
     }
-    jsxList.push(<hr key={'user-actions-separator'} className={'my-1'} />);
+    separator();
+}
+let jsxList: ReactNode[] = [];
+function ContextEntry(key:string, icon: ReactNode, label: ReactNode, action: null|undefined|(()=>boolean|undefined|Promise<any>),
+                        keycodes: ReactNode, disabled: boolean = false) {
+    // @ts-ignore
+    jsxList.push(<div key={key} disabled={disabled} className={'col item'} tabIndex={0} onClick={async() => {
+        let ret = action ? action() : false;
+        if (U.isPromise(ret)) ret = await ret;
+        if (ret !== false) close(); }}>
+        <span className={'my-auto'}>{icon}</span>
+        <span className={'my-auto'}>{label}</span>
+        <div>{keycodes}</div>
+    </div>);
+}
+let hri = 0;
+function separator(){
+    jsxList.push(<hr key={'sep'+hri++} className={'my-1'} />);
 }
 
 function ContextMenuComponentInner(props: AllProps) {
     // const project = user.project as LProject;
     // const display = props.display;
     // const position = props.position;
-    const [memorec, setMemorec] = useStateIfMounted<{data:GObject[], type:'class'|'package'}|null>(null);
-    const [display, setDisplay] = useStateIfMounted<null|{nodeid: Pointer<DGraphElement>, x: number, y: number}>(null);
+    const [memorec, setMemorec] = useStateIfMounted<{ data: GObject[], type: 'class' | 'package' } | null>(null);
+    const [display, setDisplay] = useStateIfMounted<null | {
+        nodeid: Pointer<DGraphElement>,
+        x: number,
+        y: number
+    }>(null);
     const [suggestedName, setSuggestedName] = useStateIfMounted('');
     const [childrenMenu, setChildrenMenu] = useStateIfMounted(false);
     const [editPanel, setEditPanel] = useStateIfMounted(false);
@@ -132,17 +153,20 @@ function ContextMenuComponentInner(props: AllProps) {
 
 
     if (!display) return null;
+    jsxList = [];
+
     const nodeid = display.nodeid;
     const node: LGraphElement = L.fromPointer(nodeid);
     if (!node) return null;
     const data: LNamedElement | undefined = node.model as LNamedElement;
-    let jsxList: ReactNode[] = [];
     let hri: number = 0;
     // let ldata: LNamedElement = data as LNamedElement;
     // let ddata: DNamedElement = ldata?.__raw as DNamedElement;
     let ldata = data
     let ddata = ldata?.__raw;
     let model = ldata?.model;
+    let isM2: boolean = model?.isMetamodel;
+    let cname = ddata?.className;
 
     const close = (panelClick?: boolean) => {
         if (!display) return;
@@ -162,8 +186,12 @@ function ContextMenuComponentInner(props: AllProps) {
         oldRef = ref;
     }
 
-    const addView = async () => {
-        DViewElement.newDefault(ddata as DNamedElement || undefined);
+    const addViewSelf = () => {
+        if (ddata) DViewElement.newDefault(ddata as DNamedElement || undefined);
+        close();
+    }
+    const addViewInstances = () => {
+        if (ddata) DViewElement.newDefault(ddata as DNamedElement || undefined);
         close();
     }
 
@@ -238,51 +266,42 @@ function ContextMenuComponentInner(props: AllProps) {
             }*/}
 
             if (ldata) {
-                let isM2: boolean = model.isMetamodel;
                 let meta = (ldata as LObject|LValue).instanceof;
+                // header is different, keep it isolated
                 jsxList.push(<div key={lname} className={'col name '+(isM2 ? 'meta' : '')+'model'}>
-                    {((isM2 ? data.className.substring(1) : (meta?.name || 'Shapeless')) + ': ') + lname}</div>);
+                    {((isM2 ? cname.substring(1) : (meta?.name || 'Shapeless')) + ': ') + lname}</div>);
             }
-            jsxList.push(<hr key={hri++} className={'my-1'} />);
+            separator();
         }
         addDynamicEntries(jsxList, nodeid, data, node);
 
-        // if (ddata?.className === 'DObject') {
-        //     jsxList.push(...(ldata as LObject).features.map(feat=>getAddChildren(feat, model, [])));
-        //     jsxList.push(<hr key={hri++} className={'my-1'} />);
-        // }
-        
-        /* Edit: only on models */
+        /* Edit button: only on models */
 
-        if (true as any || !model?.isMetamodel && data?.className !== 'DModel') {
-            jsxList.push(
-                <div key='edit' onClick={() => {setEditPanel(true);}} className={'col item'} tabIndex={0}>
-                    {icon['edit']} Edit
-                </div>
-            );
-            jsxList.push(<hr key={hri++} className={'my-1'}/>);
+        if (true as any || !isM2 && cname !== 'DModel') {
+            ContextEntry('edit', icon['edit'], 'Edit', () => setEditPanel(true) as undefined, null)
+            separator();
         }
 
         /* Add children for Object */
 
-        if (ddata?.className === 'DObject') {
+        if (cname === 'DObject') {
             let out: any[] = [];
             let children = (ldata as LObject).features.map(feat=>getAddChildren(feat, model as any, out)).filter(e => !(Array.isArray(e) && e.length === 0));
 
             if (!Array.isArray(children) || children.length > 0) {
                 jsxList.push(...children);
-                jsxList.push(<hr key={hri++} className={'my-1'} />);
+                separator();
             }
             /* @ts-ignore */
             // if (children[1]['$$typeof'] !== undefined) jsxList.push(<hr key={hri++} className={'my-1'}/>);
         }
 
-        if (ddata?.className === 'DValue') {
+        if (cname === 'DValue') {
             let out: any[] = [];
             let children = getAddChildren(ldata as any as LValue, model as any, out);
             if (!Array.isArray(children) || children.length > 0) {
                 jsxList.push(children);
-                jsxList.push(<hr key={hri++} className={'my-1'} />);
+                separator();
             }
         }
 
@@ -290,32 +309,44 @@ function ContextMenuComponentInner(props: AllProps) {
 
         if(ddata && !U.isOffline()) {
             if(ddata.className === 'DClass') {
-                jsxList.push(<div key='ai-c' onClick={structuralFeature} className={'col item'} tabIndex={0}>{icon['ai']} AI Suggest
-                    <div><i className='bi bi-chevron-right' style={{fontSize: '0.75em', float: 'right', paddingTop: '2px', fontWeight: '800'}} /></div>
-                    </div>);
-                jsxList.push(<hr key={hri++} className={'my-1'} />);
+                // ContextEntry('ai-c', icon['ai'], 'AI suggest', structuralFeature)
+                jsxList.push(<div key='ai-c' onClick={structuralFeature} className={'col item'} tabIndex={0}>
+                    <span className={'my-auto'}>{icon['ai']}</span>
+                    <span className={'my-auto'}>AI Suggest</span>
+                    <div className='d-flex'>
+                        <i className='ms-1 bi bi-chevron-right my-auto' style={{fontSize: '0.75em', float: 'right', paddingTop: '2px', fontWeight: '800'}} />
+                    </div>
+                </div>);
+                separator();
             }
             if(ddata.className === 'DPackage') {
-                jsxList.push(<div key='ai-p' onClick={classifier} className={'col item'} tabIndex={0}>{icon['ai']} AI Suggest
-                    <div><i className={'ms-1 bi bi-chevron-right'} style={{fontSize: '0.75em', float: 'right', paddingTop: '2px', fontWeight: '800'}} /></div>
+                jsxList.push(<div key='ai-p' onClick={classifier} className={'col item'} tabIndex={0}>
+                    <span className={'my-auto'}>{icon['ai']}</span>
+                    <span className={'my-auto'}>AI Suggest</span>
+                    <div className='d-flex'>
+                        <i className='ms-1 bi bi-chevron-right my-auto' style={{fontSize: '0.75em', float: 'right', paddingTop: '2px', fontWeight: '800'}} />
+                    </div>
                 </div>);
-                jsxList.push(<hr key={hri++} className={'my-1'} />);
+                separator();
             }
         }
 
-        /* Extend */
+            /* Extend */
 
-        switch (ddata?.className) {
-            default:
-            case undefined: break;
-            //case 'DValue': if ((ldata as any as LValue).instanceof) jsxList.pop(); ???? break;
+            switch (ddata?.className) {
+                default:
+                case undefined:
+                    break;
+                //case 'DValue': if ((ldata as any as LValue).instanceof) jsxList.pop(); ???? break;
             case 'DClass':
-                jsxList.push(<div key='ext' onClick={() => {
-                    close();
-                    SetRootFieldAction.new('isEdgePending', {user: DUser.current, source: (ddata as any).id});
-                }} className={'col item'} tabIndex={0}>{icon['extend']} Extend
-                    <div><i className='bi bi-command'></i> E</div></div>);
-                jsxList.push(<hr key={hri++} className={'my-1'} />);
+
+                ContextEntry('ext', icon['extend'], 'Extend',
+                    () => TRANSACTION('Extend class', () => SetRootFieldAction.new('isEdgePending', {
+                        user: DUser.current,
+                        source: (ddata as any).id
+                    })),
+                    <div><i className='bi bi-command'/> E</div>);
+                separator();
                 break;
         }
 
@@ -323,19 +354,12 @@ function ContextMenuComponentInner(props: AllProps) {
         /* View-specific menu entry */
 
         if (node.view.state.contextualEntries) {
-
-
-            for (const key in node.view.state.contextualEntries){
-            
-                jsxList.push(
-                    <div key={key} onClick={() => node.view.state.contextualEntries[key].action(data, node)} className={'col item'} tabIndex={0}>
-                        {node.view.state.contextualEntries[key].icon ? <i className={'bi '+node.view.state.contextualEntries[key].icon}></i> : <span className={'empty'}/>} {key}
-                    </div>
-                )
-            };
-
-            
-            jsxList.push(<hr key={hri++} className={'my-1'}/>);
+            for (const key in node.view.state.contextualEntries) {
+                ContextEntry(key,
+                    node.view.state.contextualEntries[key].icon ? <i className={'bi '+node.view.state.contextualEntries[key].icon} /> : <span className={'empty'}/>,
+                    key, () => node.view.state.contextualEntries[key].action(data, node), null)
+            }
+            separator();
         }
 
 
@@ -351,21 +375,19 @@ function ContextMenuComponentInner(props: AllProps) {
 
 
         /* Delete */
-        let cannotDelete = ddata?.className === 'DValue' && (ddata as any as DValue).instanceof;
-        jsxList.push( // @ts-ignore: disabled
-            <div key='delete' disabled={cannotDelete} onClick={() => {
-                if (cannotDelete) return;
-                close();
-                if (ldata) ldata.delete();
-                else node.delete();
-                // if there is data, then the node is indirectly deleted, no need to call it too.
-            }} className={'col item'} data-cannotdelete={cannotDelete+''} tabIndex={0}>
-                {icon['delete']}
-                Delete 
-                <div><i className='bi bi-backspace' style={{fontSize: '1em', float: 'right', paddingTop: '2px', fontWeight: '800'}} /></div>
-            </div>
-        );
-        jsxList.push(<hr key={hri++} className={'my-1'}/>);
+        let cannotDelete = !!(ddata?.className === 'DValue' && (ddata as any as DValue).instanceof);
+        ContextEntry('delete', icon['delete'], 'Delete', () => {
+                    if (cannotDelete) return false;
+                    close();
+                    if (ldata) ldata.delete();
+                    else node.delete();
+                    // if there is data, then the node is indirectly deleted, no need to call it too.
+                },
+            <div>
+                <i className='bi bi-backspace' style={{fontSize: '1em', float: 'right', paddingTop: '2px', fontWeight: '800'}}/>
+            </div>, cannotDelete
+            );
+        separator();
         
         /* Refresh */
 
@@ -373,21 +395,22 @@ function ContextMenuComponentInner(props: AllProps) {
         // jsxList.push(<hr key={hri++} className={'my-1'} />);
 
         /* Up / Down */
-        jsxList.push(<div key='up' onClick={() => {close(); node.zIndex += 1;}} className={'col item'} tabIndex={0}>
-            {icon['up']} Up<div><i className='bi bi-command' /><i className="bi bi-arrow-up" /></div>
-        </div>);
-        jsxList.push(<div key='down' onClick={() => {close(); node.zIndex -= 1;}} className={'col item'} tabIndex={0}>
-            {icon['down']} Down<div><i className='bi bi-command' /><i className="bi bi-arrow-down" /></div>
-        </div>);
-        let gn = node as GObject;
-        jsxList.push(<hr key={hri++} className={'my-1'} />);
+        ContextEntry('up', icon['up'], 'Up',
+            ()=> TRANSACTION('move node up (z-axis)', () => node.zIndex += 1),
+                <div><i className='bi bi-command'/><i className="bi bi-arrow-up"/></div>);
+        ContextEntry('down', icon['down'], 'Down',
+            ()=> TRANSACTION('move node down (z-axis)', () => node.zIndex -= 1),
+                <div><i className='bi bi-command'/><i className="bi bi-arrow-down"/></div>);
+        separator();
         
         /* AUTO-SIZING */
-        if (gn.isResized) jsxList.push(<div key='asize' onClick={() => {close(); gn.isResized = false; }} className={'col item'} tabIndex={0}>
-            {icon['contract']} Restore auto-sizing<div> <i className='bi bi-command'></i> T</div>
-        </div>);
-        else jsxList.push(<div key='nasize' onClick={() => {close(); gn.isResized = true; }} className={'col item'}>{icon['expand']} Disable auto-sizing
-            <div> <i className='bi bi-command'></i> T</div></div>);
+        let gn = node as GObject;
+        if (gn.isResized) ContextEntry('asize', icon['contract'], 'Restore auto-sizing',
+            () => gn.isResized = false,
+            <div><i className='bi bi-command'></i> T</div>)
+        else ContextEntry('nasize', icon['expand'], 'Disable auto-sizing',
+            () => gn.isResized = true,
+            <div><i className='bi bi-command'></i> T</div>)
         
         // /* LOCK-UNLOCK */
         // jsxList.push(<div onClick={() => {close(); ldata.delete(); /*node.delete();*/}} className={'col item'} tabIndex={0}>{icon['lock']} Lock/Unlock<div> <i
@@ -397,20 +420,41 @@ function ContextMenuComponentInner(props: AllProps) {
         //     {icon['unlock']} Unlock all<div><i className="bi bi-alt"></i> <i className='bi bi-command'></i> L</div>
         // </div>);
 
-        jsxList.push(<hr key={hri++} className={'my-1'} />);
+        separator();
         
         /* Analytics */
         if (ldata && model?.isMetamodel) {
-            jsxList.push(<div key='analytic' onClick={() => {close(); toggleMetrics();}} className={'col item'} tabIndex={0}>{icon['metrics']} Analytics
-                <div><i className='bi bi-command' /> A</div></div>);
-            jsxList.push(<hr key={hri++} className={'my-1'} />);
+            ContextEntry('analytic', icon['metrics'], 'Analytics', toggleMetrics as any, <div><i className='bi bi-command' /> A</div>);
+            separator();
         }
 
 
         /* ADD VIEW */
-        jsxList.push(<div key='view+' onClick={async () => {close(); addView();}} className={'col item'} tabIndex={0}>{icon['view']} Add View
-            <div><i className='bi bi-alt' /> <i className='bi bi-command' /> A</div>
-        </div>);
+        if (isM2 && cname !== 'DEnumerator' && cname !== 'DEnumLiteral' && cname !== 'DOperation' && cname !== 'DParameter' && cname !== 'DAnnotation') {
+            ContextEntry('view+m2', icon['add'], 'Add view', null, null, false, [
+                SubEntry('own', 'For this '+(data?.className || 'DElement').substring(1), addViewSelf),
+                SubEntry('instance', 'For his instances', addViewInstances, )]
+            )
+            jsxList.push(<div key={'view+ m2'} tabIndex={0} className={'col item submenu-holder hoverable'}>
+                {icon['add']} Add view <div style={{position: 'absolute', right: '0'}}>{icon['submenu']}</div>
+                <section className={'round content right'} onContextMenu={(e) => e.preventDefault()}>
+                    <ul className={'right context-menu'}>
+                        <li onClick={() => { close(); addViewSelf(); }} className={'col item'} tabIndex={0}>
+                            <span>For this {(data?.className || 'DElement').substring(1)}</span>
+                        </li>
+                        <li onClick={() => { close(); addViewInstances(); }} className={'col item'} tabIndex={0}>
+                            <span>For his instances</span>
+                        </li>
+                    </ul>
+                </section>
+            </div>);
+        } else jsxList.push(
+            <div key='view+' onClick={async () => {
+                close();
+                addViewInstances();
+            }} className={'col item'} tabIndex={0}>{icon['view']} Add View
+                <div><i className='bi bi-alt'/> <i className='bi bi-command'/> A</div>
+            </div>);
     }
 
     /*const edit_x = data.node?.x || 0;
@@ -420,20 +464,23 @@ function ContextMenuComponentInner(props: AllProps) {
     let rootStyle: GObject = {top: display.y - 100, left: display.x - 10};
     // let rootStyle = {top: editPanel? edit_y - 2: display.y - 100, left: editPanel? edit_x + edit_w + 10 : display.x - 10};
 
-    return(
-        <div className={'round' + (editPanel?' edit-panel-container' : ' context-menu')}
+    return (
+        <div className={'round' + (editPanel ? ' edit-panel-container' : ' context-menu')}
              style={rootStyle}
-             onContextMenu={(e)=>e.preventDefault()} ref={updateRef}>
+             onContextMenu={(e) => e.preventDefault()} ref={updateRef}>
 
-            {editPanel ? <><div className={'edit-panel'}>
-                    <Info mode={'popup'}/>
-                </div>
-                <div className={'dialog-footer'}><button onClick={() => close()}>Close</button></div>
+            {editPanel ? <>
+                    <div className={'edit-panel'}>
+                        <Info mode={'popup'}/>
+                    </div>
+                    <div className={'dialog-footer'}>
+                        <button onClick={() => close()}>Close</button>
+                    </div>
                 </>
                 :
 
                 <>
-                {jsxList/*.map((jsx, index) => {return <li key={index}>{jsx}</li>})*/}
+                    {jsxList/*.map((jsx, index) => {return <li key={index}>{jsx}</li>})*/}
 
                 {/* Memorec */}
 

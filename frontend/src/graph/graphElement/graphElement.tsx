@@ -1417,7 +1417,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
                         //injectOffset&&console.log("inject offset props0:", {injectOffset});
                         //console.log("inject offset props00:", {injectOffset, ig:(this.props as any).isGraph, props:this.props, depthIndexes, index});
                         return UX.injectProp(this, rn, subElements, this.props.parentnodeid as string, index, depthIndexes, injectOffset)
-                    });
+                    }, [], props);
 /*
                 debug.injectPropsOriginal = injectProps.children;
                 debug.recursivemap = injectProps.children;

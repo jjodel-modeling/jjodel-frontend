@@ -73,7 +73,6 @@ class builder {
 
     static package(data: LModelElement, advanced: boolean): JSX.Element {
         return (<>
-            <h1>{data.name}</h1>
             {this.named(data, advanced)}
             <label className={'input-container'}>
                 <b className={'me-2'}>Uri:</b>

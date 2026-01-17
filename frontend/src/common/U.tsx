@@ -1924,6 +1924,14 @@ export class U {
         }*/
         return larr as any;
     }
+    public static isPromise(value: any): value is Promise<any> {
+        return (
+            value &&
+            typeof value === "object" &&
+            typeof value.then === "function" &&
+            typeof value.catch === "function"
+        );
+    }
     public static isDPointerTargetable(e: any): e is (DPointerTargetable | LPointerTargetable){
         return e && (e.__isProxy || (e.className && e.id && e.pointedBy && e._state));
     }

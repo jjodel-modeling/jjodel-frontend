@@ -289,6 +289,8 @@ export class TargetableProxyHandler<ME extends GObject = DModelElement, LE exten
                 // console.log('get symbol', {propKey});
                 switch (propKey) {
                     default: Log.exDevv('unexpected symbol in proxy getter:', propKey); break;
+                    // for object returns undefined, for arrays returns a function returning an iterator: arr[Symbol.iterator] = ()=>new Iterator(...);
+                    case "Symbol(Symbol.iterator)": return undefined;
                     case 'Symbol(Symbol.toStringTag)': propKey = 'toString'; break; //return (()=>"[Proxy]");
                     case "Symbol(Symbol.toPrimitive)": propKey = 'toPrimitive'; break;
                 }

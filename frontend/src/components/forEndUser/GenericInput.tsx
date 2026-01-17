@@ -10,9 +10,11 @@ import {
     GObject,
     Info,
     Input,
+    L,
     Log,
     LPointerTargetable,
-    LViewElement,
+    LViewElement, Overlap,
+    Pointer,
     RuntimeAccessibleClass,
     Select,
     ShortAttribETypes,
@@ -21,6 +23,7 @@ import {
 } from '../../joiner';
 import {SizeInput} from './SizeInput';
 import {JavascriptEditor} from "../editors/languages";
+import {InputInjectProps} from "./Input";
 
 // private
 interface ThisState {
@@ -28,15 +31,15 @@ interface ThisState {
 type Dic<K extends string|number, V> = Dictionary<K, V>;
 type String<T> = DocString<T>;
 function GenericInputComponent(props: AllProps): ReactNode {
-        let d: DViewElement = ((props.data as LPointerTargetable).__raw || props.data) as any;
-        let l: LViewElement = LPointerTargetable.wrap(props.data) as LViewElement;
-        let field: keyof LViewElement = props.field as any;
+        let l: LViewElement = props.data as any;
+        let d: DViewElement = (l?.__raw) as any;
+        if (!d && !props.info) return null;
         let info: GObject<Info>;
-        if (!props.info){
+        if (d && !props.info){
             let DConstructor: typeof DPointerTargetable = RuntimeAccessibleClass.get(d.className);
             let singleton: GObject<LPointerTargetable> = DConstructor.singleton;
             info = singleton['__info_of__' + props.field] ;
-        } else info = props.info;
+        } else info = props.info as any;
         if (!info) {
             Log.eDevv("<GenericInput/> could not find info of " + props.field, {props:props});
             return <></>;
@@ -81,7 +84,7 @@ function GenericInputComponent(props: AllProps): ReactNode {
                 else type = info.type as any;
             }
             else {
-                if (!info.type) { Log.exDevv('missing __info_of__ type for ' + d.className + '.' + props.field, {d, info, props: props}); return <></>}
+                if (!info.type) { Log.exDevv('missing __info_of__ type for ' + d?.className + '.' + props.field, {d, info, props: props}); return <></>}
                 let infoType: GObject = info.type;
                 type = infoType.cname || infoType.className || infoType.name;
                 Log.exDev(!type, 'missing type:', {type, info});
@@ -231,6 +234,7 @@ interface _OwnProps {
 type OwnProps = _OwnProps & InputHTMLAttributes<Event>; // {[inputattribute:HTMLInputAttribute]: any};
 // private
 interface StateProps {
+    data: LPointerTargetable & GObject;
     // propsFromReduxStateOrOtherKindOfStateManagement: boolean; // flux or custom things too, unrelated to this.state of react.
 }
 
@@ -239,14 +243,18 @@ interface DispatchProps {
     // propsFromReduxActions: typeof funzioneTriggeraAzioneDaImportare;
 }
 
+interface InjectProps{
+    dataid: Pointer<LPointerTargetable>;
+}
 
 // private
-type AllProps = OwnProps & StateProps & DispatchProps;
+type AllProps = Overlap<StateProps, Overlap<OwnProps, Overlap<{/*InjectProps*/}, DispatchProps>>>;
 
 ////// mapper func
 
-function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
+function mapStateToProps(s: DState, ownProps: OwnProps): StateProps {
     const ret: StateProps = {} as any;
+    ret.data = L.from(ownProps.data as any, s) || L.from((ownProps as  any as InputInjectProps).dataid, s);
     /// to fill
     return ret; }
 
@@ -260,6 +268,8 @@ export const GenericInput = connect<StateProps, DispatchProps, OwnProps, DState>
     mapStateToProps,
     mapDispatchToProps
 )(GenericInputComponent);
+GenericInputComponent.cname = 'GenericInputComponent';
+GenericInput.cname = 'GenericInput';
 
 
 /*

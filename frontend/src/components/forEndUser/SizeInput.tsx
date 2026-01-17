@@ -1,7 +1,7 @@
 import React, {Dispatch, JSX, PureComponent, ReactNode} from "react";
 import { connect } from "react-redux";
 import toast from "react-hot-toast";
-import type {GObject, Pointer, Info} from "../../joiner";
+import {GObject, Pointer, Info, L, Overlap} from "../../joiner";
 import {
     DPointerTargetable,
     DState,
@@ -12,6 +12,7 @@ import {
     ISize,
     SetFieldAction
 } from "../../joiner";
+import {InputInjectProps} from "./Input";
 export let useless=1;
 
 // private
@@ -134,6 +135,7 @@ interface OwnProps<T extends LPointerTargetable = LPointerTargetable>{
 
 // private
 interface StateProps {
+    data: LPointerTargetable & GObject;
     // propsFromReduxStateOrOtherKindOfStateManagement: boolean; // flux or custom things too, unrelated to this.state of react.
 }
 
@@ -142,14 +144,18 @@ interface DispatchProps {
     // propsFromReduxActions: typeof funzioneTriggeraAzioneDaImportare;
 }
 
+interface InjectProps{
+    dataid?: Pointer<LPointerTargetable>;
+}
 
 // private
-type AllProps = OwnProps & StateProps & DispatchProps;
+type AllProps = Overlap<StateProps, Overlap<OwnProps, Overlap<InjectProps, DispatchProps>>>;
 
 ////// mapper func
 
-function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
+function mapStateToProps(s: DState, ownProps: OwnProps): StateProps {
     const ret: StateProps = {} as any;
+    (ret).data = L.from(ownProps.data as any, s) || L.from((ownProps as  any as InputInjectProps).dataid, s);
     /// to fill
     return ret; }
 

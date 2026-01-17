@@ -1,11 +1,13 @@
 import React, {Component, CSSProperties, PureComponent, ReactElement, ReactNode} from "react";
 import {
+    DGraph,
     DGraphElement,
     Dictionary,
     GObject,
     GraphSize, L,
     LGraph,
     Log,
+    Overlap,
     Pointer,
     RuntimeAccessible,
     Size,
@@ -450,7 +452,7 @@ export class MeasurableComponent extends Component<MeasurableAllProps, Measurabl
 }
 
 @RuntimeAccessible('ScrollableComponent')
-export class ScrollableComponent extends Component<ScrollOwnProps, ScrollState>{
+export class ScrollableComponent extends Component<ScrollOwnProps & MeasurableInjectProps, ScrollState>{
     static cname: string = "ScrollableComponent";
     render(){
         let graph = (this.props.graph || L.fromPointer(this.props.graphid)) as any as LGraph;
@@ -504,6 +506,10 @@ interface ScrollOwnProps {
     graphid?: Pointer<LGraph>;
 }
 
+interface MeasurableInjectProps {
+    nodeid: Pointer<DGraphElement>;
+    graphid: Pointer<DGraph>;
+}
 interface MeasurableOwnProps {
     isPanning?: LGraph;
     children: ReactNode[] | ReactNode;
@@ -542,7 +548,7 @@ interface DispatchProps {
 
 
 // private
-type MeasurableAllProps = MeasurableOwnProps & MeasurableStateProps & DispatchProps;
+type MeasurableAllProps = Overlap<MeasurableOwnProps, Overlap</*MeasurableInjectProps*/ {}, Overlap<MeasurableStateProps, DispatchProps>>>;
 
 ////// mapper func
 /*
@@ -569,7 +575,7 @@ export function Measurable(props: MeasurableAllProps, children?: any): ReactElem
     let props2 = {...props};
     // @ts-ignore
     delete props2.key;
-    return <MeasurableComponent {...props2}>{props.children||children}</MeasurableComponent>;
+    return <MeasurableComponent {...props2}>{props?.children||children}</MeasurableComponent>;
 }
 // shortcuts for Draggable Resizable Rotatable with whileDragging onDragStart props simplified to start, while, end
 export function Draggable(props: GObject<MeasurableAllProps>, children?: any): ReactElement {
@@ -579,7 +585,7 @@ export function Draggable(props: GObject<MeasurableAllProps>, children?: any): R
         onDragStart={props.start || props.begin || props.onDragStart}
         onDragEnd={props.end || props.stop || props.onDragEnd}
         whileDragging={props.drag || props.while || props.ing || props.whileDragging}
-    >{props.children||children}</MeasurableComponent>;
+    >{props?.children||children}</MeasurableComponent>;
 }
 export function Resizable(props: GObject<MeasurableAllProps>, children?: any): ReactElement {
     return <MeasurableComponent
@@ -588,7 +594,7 @@ export function Resizable(props: GObject<MeasurableAllProps>, children?: any): R
         onResizeStart={props.start || props.begin || props.onResizeStart}
         onResizeEnd={props.end || props.stop || props.onResizeEnd}
         whileResizing={props.resize || props.while || props.ing || props.whileResizing}
-    >{props.children||children}</MeasurableComponent>;
+    >{props?.children||children}</MeasurableComponent>;
 }
 export function Rotatable(props: GObject<MeasurableAllProps>, children?: any): ReactElement {
     return <MeasurableComponent
@@ -597,7 +603,7 @@ export function Rotatable(props: GObject<MeasurableAllProps>, children?: any): R
         onRotationStart={props.start || props.begin || props.onRotateStart|| props.onRotationStart}
         onRotationEnd={props.end || props.stop || props.onRotateEnd|| props.onRotationEnd}
         whileRotating={props.rotate || props.while || props.ing || props.whileRotate || props.whileRotating}
-    >{props.children||children}</MeasurableComponent>;
+    >{props?.children||children}</MeasurableComponent>;
 }
 
 
@@ -606,8 +612,31 @@ export function Scrollable(props: MeasurableAllProps, children?: any): ReactElem
     // @ts-ignore
     delete props2.key;
     // @ts-ignore
-    return <ScrollableComponent {...props2}>{props.children||children}</ScrollableComponent>;
-}/*
+    return <ScrollableComponent {...props2}>{props?.children||children}</ScrollableComponent>;
+}
+// aliases
+export function Viewport(props: MeasurableAllProps, children?: any): ReactElement { return Scrollable(props, children); }
+export function ViewPort(props: MeasurableAllProps, children?: any): ReactElement { return Scrollable(props, children); }
+export function Pan(props: MeasurableAllProps, children?: any): ReactElement { return Scrollable(props, children); }
+export function Scalable(props: MeasurableAllProps, children?: any): ReactElement { return Resizable(props, children); }
+export function Transformable(props: MeasurableAllProps, children?: any): ReactElement { return Measurable(props, children); }
+export function Interactive(props: MeasurableAllProps, children?: any): ReactElement { return Measurable(props, children); }
+(MeasurableComponent as any).cname = 'MeasurableComponent';
+(ScrollableComponent as any).cname = 'ScrollableComponent';
+(Measurable as any).cname = 'Measurable';
+(Draggable as any).cname = 'Draggable';
+(Resizable as any).cname = 'Resizable';
+(Rotatable as any).cname = 'Rotatable';
+(Scrollable as any).cname = 'Scrollable';
+(Viewport as any).cname = 'Viewport';
+(ViewPort as any).cname = 'ViewPort';
+(Pan as any).cname = 'Pan';
+(Scalable as any).cname = 'Scalable';
+(Transformable as any).cname = 'Transformable';
+(Interactive as any).cname = 'Interactive';
+// other names: Camera, Pan, World, Scene, Layer
+
+/*
 export function InfiniteScroll(props: MeasurableAllProps, children: ReactNode = []): ReactElement {
     return <InfiniteScrollComponent {...{...props, children}}>{children}</InfiniteScrollComponent>;
 }*/

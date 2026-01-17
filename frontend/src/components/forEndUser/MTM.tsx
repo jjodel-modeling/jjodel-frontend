@@ -12,11 +12,12 @@ import {
     LPointerTargetable, LReference, LStructuralFeature, LValue, MultiSelect, MultiSelectOptGroup,
     MultiSelectOption,
     Overlap,
-    Pointer, PrimitiveType, Selectors,
+    PrimitiveType, Selectors,
     store, transientProperties,
     U,
     UX,
-    windoww
+    windoww,
+    Pointer
 } from '../../joiner';
 import {useStateIfMounted} from 'use-state-if-mounted';
 import './inputselect.scss';
@@ -24,7 +25,7 @@ import { Tooltip } from './Tooltip';
 import Editor from "@monaco-editor/react";
 import {on} from "events";
 import {Nearley} from "../../DSL/nearley/nearley";
-import {LanguageCache, notLanguageFragments, ParserData} from "../../joiner/classes";
+import {LanguageCache, notLanguageFragments, ParserData,} from "../../joiner/classes";
 import Handlebars from "handlebars";
 import {getLanguageCache} from "../editors/MTM";
 
@@ -272,8 +273,8 @@ export function T2M(data: LModelElement, language: string, text: string) {
     // @ts-ignore
     if (typeof data === 'object' && !(data as any).__isProxy) return T2M_Component(...arguments as any);
     else return T2M_API(data, language, text);
-
 }
+
 export function T2M_API(data: LModelElement, language: string, text: string): void{ return doT2M(data, language, text); }
 
 export function doT2M(data0: LPointerTargetable | Pointer | null | undefined, language: string, text: string): void {
@@ -309,7 +310,7 @@ export function doT2M(data0: LPointerTargetable | Pointer | null | undefined, la
 
 
 export function T2M_Component(props: T2M_AllProps, child?: any): ReactNode {
-    const data: LPointerTargetable = L.from(props.data as any);
+    const data: LPointerTargetable = L.from(props.data as any) || L.fromPointer(props.dataid);
     const language = props.language || 'JSON';
     console.log('T2M render called', {data, language, arguments});
     let debug = true;
@@ -471,15 +472,20 @@ export interface M2T_OwnProps extends T2M_OwnProps{
 
 interface T2M_StateProps { }
 interface M2T_StateProps { }
+interface InjectProps {
+    dataid: Pointer<LModelElement>;
+}
 
 interface DispatchProps { }
-type T2M_AllProps = Overlap<T2M_OwnProps, Overlap<T2M_StateProps, DispatchProps>>;
-type M2T_AllProps = Overlap<M2T_OwnProps, Overlap<M2T_StateProps, DispatchProps>>;
+type T2M_AllProps = Overlap<InjectProps, Overlap<T2M_OwnProps, Overlap<T2M_StateProps, DispatchProps>>>;
+type M2T_AllProps = Overlap<InjectProps, Overlap<M2T_OwnProps, Overlap<M2T_StateProps, DispatchProps>>>;
 
 // @ts-ignore
 T2M.cname = 'T2M';
 // @ts-ignore
 M2T.cname = 'M2T';
+T2M_Component.cname = 'T2M_Component';
+M2T_Component.cname = 'M2T_Component';
 
 
 

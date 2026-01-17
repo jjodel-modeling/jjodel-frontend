@@ -92,7 +92,7 @@ export const GraphElements: dict = {...Graphs, ...Vertexes, ...Fields, ...Edges}
 for (let key in GraphElements) if (!(GraphElements as any)[key]) { console.log({GraphElements, v:(GraphElements as any)[key]}); throw new Error("wrong initialization fo components"); }
 // U.objectMergeInPlace(GraphElements, Graphs, Edges as any, Vertexes, Fields, {Graphs, Edges, Vertexes, Fields});
 // console.info('components loaded');
-export {Measurable, MeasurableComponent, ScrollableComponent, Scrollable, Draggable, Resizable, Rotatable} from "../components/forEndUser/Measurable";
+export {Measurable, MeasurableComponent, ScrollableComponent, Scrollable, Pan, Viewport, ViewPort, Draggable, Resizable, Rotatable, Scalable, Transformable, Interactive} from "../components/forEndUser/Measurable";
 
 // icons
 export * as Tb from 'react-icons/tb';

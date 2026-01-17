@@ -1,11 +1,13 @@
 
 import React, {ReactNode} from "react";
-import {ISize, L, LGraph, LViewElement, Pointers} from "../../joiner";
+import {DGraph, ISize, L, LGraph, LViewElement, Pointer, Pointers} from "../../joiner";
 
 type radians = number;
 
 type InfiniteSvgGridProps = {
-    node: LGraph;
+    node?: LGraph; // fallback
+    graph?: LGraph;
+    graphid?: Pointer<DGraph>; // injected
     offset?: {x: number, y: number};
     grid?: LViewElement['grid'];
     zoom?: {x: number, y: number};
@@ -13,10 +15,12 @@ type InfiniteSvgGridProps = {
 };
 
 
-export const Grid: React.FC<InfiniteSvgGridProps> = (props: InfiniteSvgGridProps) => {
-    let node = props.node;
+export const GridComponent: React.FC<InfiniteSvgGridProps> = (props: InfiniteSvgGridProps) => {
+    let node = props.graph || props.node;
     //@ts-ignore
     if (Pointers.isPointer(node)) node = L.from(node);
+    if (!node) node = L.fromPointer(props.graphid);
+    if (!node) return null;
     const offset = props.offset || node.offset;
     const grid = props.grid || node.grid;
     if (!grid.visible) return null;
@@ -189,3 +193,7 @@ function PolarGrid(grid: LGraph['grid'], offset: { x: number; y: number }, zoom:
         </svg>
     );
 }
+
+(GridComponent as any).cname = 'GridComponent';
+(Grid as any).cname = 'Grid';
+export function Grid(props:InfiniteSvgGridProps, children: ReactNode){ return <GridComponent {...props}>{children || (props as any).children}</GridComponent>; }

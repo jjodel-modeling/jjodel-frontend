@@ -404,6 +404,9 @@ export interface InputOwnProps extends GenericProps {
     placeholder?: string;
     tag?: string;
 }
+export interface InputInjectProps{
+    dataid: Pointer<LPointerTargetable>;
+}
 
 export interface SelectOwnProps extends Omit<InputOwnProps, 'setter'> {
     options?: JSX.Element | JSX.Element[];
@@ -421,14 +424,13 @@ interface StateProps {
     // selected: Dictionary<Pointer<DUser>, LModelElement | null>;
 }
 interface DispatchProps { }
-type AllProps = Overlap<RealOwnProps, Overlap<StateProps, DispatchProps>>;
+type AllProps = Overlap<InputInjectProps, Overlap<RealOwnProps, Overlap<StateProps, DispatchProps>>>;
 
 
-export function InputMapStateToProps(state: DState, ownProps: RealOwnProps): StateProps {
+export function InputMapStateToProps(s: DState, ownProps: RealOwnProps): StateProps {
     const ret: StateProps = {} as any;
-    const pointer: Pointer | undefined = typeof ownProps.data === 'string' ? ownProps.data : ownProps.data?.id;
-    ret.debugmodee = state.debug ? 'true' : 'false';
-    if (pointer) ret.data = LPointerTargetable.fromPointer(pointer);
+    ret.debugmodee = s.debug ? 'true' : 'false';
+    ret.data = L.from(ownProps.data as any, s) || L.from((ownProps as  any as InputInjectProps).dataid, s);
     return ret;
 }
 

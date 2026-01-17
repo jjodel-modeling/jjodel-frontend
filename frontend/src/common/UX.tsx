@@ -2,8 +2,17 @@
 import React, {JSX, ReactElement, ReactNode} from "react";
 import withReactContent from "sweetalert2-react-content";
 import Swal from "sweetalert2";
-import {GraphElementOwnProps, GObject, Dictionary, DocString, Pointer, LGraph, MultiSelectOptGroup} from "../joiner";
 import type { InputOwnProps, SelectOwnProps } from '../components/forEndUser/Input';
+import type {AllPropss} from "../graph/vertex/Vertex";
+import {
+    GraphElementOwnProps,
+    GObject,
+    Dictionary,
+    DocString,
+    Pointer,
+    LGraph,
+    MultiSelectOptGroup,
+} from "../joiner";
 import {
     LPointerTargetable,
     U,
@@ -18,7 +27,6 @@ import {
     DModelElement,
     transientProperties, JSXT, DViewElement
 } from "../joiner";
-import {AllPropss} from "../graph/vertex/Vertex";
 import {ScrollableComponent} from "../components/forEndUser/Measurable";
 import {
     ContextualEntry,
@@ -30,6 +38,7 @@ import {
     Toggle_Obsolete,
     Zoom
 } from "../components/forEndUser/Control";
+import {T2M_API} from "../components/forEndUser/MTM";
 
 var Convert = require('ansi-to-html');
 /*
@@ -47,7 +56,7 @@ static initMeasurable(): Dictionary<string, boolean>{
 @RuntimeAccessible('UX')
 export class UX{
 
-    static recursiveMap<T extends ReactNode | ReactNode[] | null | undefined>(children: T, fn: (rn: T, i: number, depthIndices: number[])=>T, depthIndices: number[] = []): T {
+    static recursiveMap<T extends ReactNode | ReactNode[] | null | undefined>(children: T, fn: (rn: T, i: number, depthIndices: number[])=>T, depthIndices: number[] = [], props?: GObject): T {
         // NB: depthIndices is correct but if there is an expression children evaluated to false like {false && <jsx>},
         // it counts as children iterated regardless. so html indices might be apparently off, but like this is even safer as indices won't change when conditions are changed.
         const innermap = (child0: ReactNode, i1: number, depthIndices: number[]): T => {
@@ -59,7 +68,9 @@ export class UX{
 
             }
             if (!React.isValidElement(child)) {
+                console.log('pre childmap error', {child});
                 if (Array.isArray(child)) return React.Children.map(child as T, (c: T, i3: number)=>innermap(c, i3, [...depthIndices, i3])) as T;
+                console.log('post childmap error', {child});
                 if (child && typeof child === "object") {
                     if (!windoww.invalidObjsReact) windoww.invalidObjsReact = [];
                     windoww.invalidObjsReact.push(child);
@@ -72,18 +83,37 @@ export class UX{
                 // Giordano: add ignore for webpack
                 //@ts-ignore
                 child = React.cloneElement(child, { children: UX.recursiveMap(child.props.children,
-                        (e: T, i2: number, ii) => fn(e, i2, ii), depthIndices) });
+                        (e: T, i2: number, ii) => fn(e, i2, ii), depthIndices, props) });
                 // this can be optimized, and i think i can avoid cloning here, as the nodes are already cloned in "fn" = ux.injectprops
             }
             return fn(child as T, i1, depthIndices);
         };
-        console.warn('UX recursive map STRT', children);
+        console.warn('UX recursive map STRT object re', children);
 
         if (!Array.isArray(children)) return innermap(children as ReactNode, 0, [...depthIndices, 0]) as T;
+        // replace {data} with {<DefaultNode data={data}/>
+        function mapLObjectsToJSX(c: any, index: number): any {
+            if (!c || typeof c !== 'object') return c;
+            if (React.isValidElement(c)) return c;
+            if (Array.isArray(c)) return c.map(mapLObjectsToJSX);
+            let cname = c.className;
+            console.log('object replacement', {c, cname});
+            if (!cname) return null; // object not translable to jsx -> ignored
+            if (!LPointerTargetable.extends(cname, 'DModelElement')) return null;
+            let id = c.id;
+            let key = id; // +index;
+            if (id === props?.dataid) return null; // to avoid loops, but does not check circular references not obvious ( a->b->a ) and same problem can happen with <Vertex> or <DefaultNode>
+            if (cname === 'DModel') return null; // windoww.Components.Vertex({data:c, key, isVertex:true, isGraph:false});
+            // return <div>obj!</div>;
+            return windoww.Components.DefaultNode({data:c, key});
+            // return <DefaultNode data={c} />;
+        }
+        children = children.map(mapLObjectsToJSX) as any;
+        console.warn('UX recursive map MIDD object re', children);
         // if (typeof children[0] === "object") return (children).map( (c: T, i3: number)=>innermap(c, i3, [...depthIndices,i3])) as any as T;
         let ret = React.Children.map(children, (c: T, i3: number)=>innermap(c, i3, [...depthIndices,i3])) as T;
 
-        console.warn('UX recursive map END', children);
+        console.warn('UX recursive map END object re', children);
         return ret;
     }
 
@@ -158,19 +188,31 @@ export class UX{
                 injectProps.graphid = parentComponent.props.graphid;
                 (injectProps as any).dataid = parentComponent.props.dataid;
                 break;
-            case 'Grid':
+            case 'T2M':
+            case 'T2M_API':
+            case 'T2M_Component':
+            case 'M2T':
+            case 'M2T_API':
+            case 'M2T_Component':
+                injectProps.nodeid = parentComponent.props.nodeid;
+                injectProps.graphid = parentComponent.props.graphid;
+                (injectProps as any).dataid = parentComponent.props.dataid;
+                break;
+            case 'Grid': case 'GridComponent':
                 injectProps.nodeid = parentComponent.props.nodeid;
                 injectProps.graphid = parentComponent.props.graphid;
                 break;
-            case windoww.Components.ContextMenu.cname:
+            case 'ContextMenuC':
+            case 'ContextMenu':
                 injectProps.nodeid = parentComponent.props.nodeid;
                 break;
-            case windoww.Components.ScrollableComponent.cname:
+            case 'Scrollable': case 'ScrollableComponent': case 'World': case 'Camera': case 'Pan': case 'Layer': case 'Viewport': case 'ViewPort': // all aliases of Scrollable
+            case 'Measurable': case 'MeasurableComponent': case 'Transformable': case 'Interactive': case 'Scalable': case 'Resizable': case 'Draggable': // all aliases of Measurable
+            case 'Rotatable':
+            // case windoww.Components.ScrollableComponent.cname:
                 injectProps.graphid = parentComponent.props.graphid;
                 break;
-            case windoww.Components.Input.cname+"Component":
-            case windoww.Components.Select.cname+"Component":
-            case windoww.Components.TextArea.cname+"Component":
+            case 'InputComponent': case 'InputConnected': case 'Input': case 'TextArea':
                 // todo: can i do a injector that if the user provides a ModelElement list raw <div>{this.children}</div> it wraps them in DefaultNode?
                 const injectProps2: InputOwnProps | SelectOwnProps = {} as any;
                 const parentnodeid = parentComponent.props.node?.id;
@@ -193,12 +235,13 @@ export class UX{
                 injectProps.parentViewId = parentComponent.props.view.id || (parentComponent.props.view as any); // re.props.view ||  thiss.props.view
                 injectProps.parentnodeid = parentComponent.props.node?.id;
                 injectProps.graphid = parentComponent.props.graphid;
+                const dataid = (typeof rprops.data === "string" ? rprops.data : rprops.data?.id) || "shapeless";
+                if (type.includes('Edge') && !type.includes('EdgePoint') && dataid !== 'shapeless' && !('data' in rprops) && !('dataid' in rprops)) (injectProps as any).dataid = dataid;
                 // const vidmap = GraphElementRaw.graphVertexID_counter;
                 // if (!vidmap[injectProps.graphid]) vidmap[injectProps.graphid] = {};
                 // const gvidmap = vidmap[injectProps.graphid];
                 // const validVertexIdCondition = (id: string): boolean => gvidmap_useless[id];
                 // todo: come butto dei sotto-vertici dentro un vertice contenitore? o dentro un sotto-grafo? senza modificare il jsx ma solo draggando? React-portals?
-                const dataid = (typeof rprops.data === "string" ? rprops.data : rprops.data?.id) || "shapeless";
                 let idbasename: string;
 
                 if (rprops.initialSize?.id) { idbasename = rprops.initialSize?.id; } else
