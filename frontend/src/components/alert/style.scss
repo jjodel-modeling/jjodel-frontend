@@ -240,7 +240,7 @@ $transition: 150ms ease;
   }
 }
 
-// Slate button (for Logout - neutral but actionable)
+// Slate button (for Logout, Save & Exit - neutral but actionable)
 .btn-slate {
   color: #ffffff;
   background: #475569; // Slate-600
@@ -248,10 +248,29 @@ $transition: 150ms ease;
 
   &:hover:not(:disabled) {
     background: #334155; // Slate-700
+    color: #ffffff; // Keep text white on hover
   }
 
   &:focus-visible {
     outline-color: #475569;
+  }
+}
+
+// Warning/discard button (for "Don't save" - secondary with warning hint)
+.btn-text-only {
+  color: #dc2626; // Red-600 - indicates discard/warning action
+  background: #ffffff;
+  border: 1px solid #fca5a5; // Red-300 - subtle red border
+  padding: 10px 16px;
+
+  &:hover:not(:disabled) {
+    color: #b91c1c; // Red-700
+    background: #fef2f2; // Red-50
+    border-color: #f87171; // Red-400
+  }
+
+  &:focus-visible {
+    outline-color: #dc2626;
   }
 }
 

@@ -107,13 +107,43 @@ function LeftBar(props: LeftBarProps): JSX.Element {
         U.resetState();
     };
 
-    const closeProject = () => {
+    const closeProject = async () => {
         function doclose(){
-            R.navigate('/allProjects', true);
-            Collaborative.disconnect();
-            U.resetState();
+            // Disable browser's beforeunload warning BEFORE navigating
+            U.disableUnsavedChangesWarning();
+            U.isProjectModified = false;
+            // Use setTimeout to ensure the bypass flag is set before navigation triggers beforeunload
+            setTimeout(() => {
+                R.navigate('/allProjects', true);
+                Collaborative.disconnect();
+                U.resetState();
+            }, 0);
         }
-        doclose();
+
+        async function saveAndClose() {
+            if (project) {
+                await ProjectsApi.save(project);
+                U.isProjectModified = false;
+            }
+            // Disable browser's beforeunload warning BEFORE navigating
+            U.disableUnsavedChangesWarning();
+            doclose();
+        }
+
+        // Check for unsaved changes before closing
+        if (isProjectModified()) {
+            U.dialog2(
+                'Unsaved changes',
+                'You have unsaved changes. What do you want to do?',
+                [
+                    { txt: 'Cancel' },
+                    { txt: "Don't save", action: doclose as any },
+                    { txt: 'Save & Exit', action: saveAndClose as any }
+                ]
+            );
+        } else {
+            doclose();
+        }
     }
     const toggleFavorite = async() => {
         await ProjectsApi.favorite(project?.__raw as DProject);

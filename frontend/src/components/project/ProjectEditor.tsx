@@ -1,9 +1,10 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { LModel, LProject, LViewPoint, U, store } from '../../joiner';
 import DockManager from '../abstract/DockManager';
 import { createM2 } from '../../pages/components/Navbar';
 import { formatVersionNumber } from '../../utils/versionUtils';
 import ShareProjectModal from './ShareProjectModal';
+import UnsavedChangesDialog from './UnsavedChangesDialog';
 import './project-editor.scss';
 
 /**
@@ -16,6 +17,7 @@ const getEngineVersion = (): string => {
 
 interface ProjectEditorProps {
     project: LProject;
+    onNavigateBack?: () => void;  // Optional callback when user wants to navigate back
 }
 
 /**
@@ -38,7 +40,7 @@ const formatDate = (date: Date | string | number | undefined): string => {
  * Project Editor - Clean minimal layout
  * Shows project header with badges, and sections for metamodels, models, viewpoints
  */
-const ProjectEditor: React.FC<ProjectEditorProps> = ({ project }) => {
+const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }) => {
     const metamodels = project.metamodels || [];
     const models = project.models || [];
     const viewpoints = project.viewpoints || [];
@@ -52,6 +54,12 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project }) => {
     const [newTag, setNewTag] = useState('');
     const [isAddingTag, setIsAddingTag] = useState(false);
     const [showShareModal, setShowShareModal] = useState(false);
+
+    // Unsaved changes tracking
+    const [isDirty, setIsDirty] = useState(false);
+    const [showUnsavedDialog, setShowUnsavedDialog] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
+    const pendingActionRef = useRef<(() => void) | null>(null);
 
     const nameInputRef = useRef<HTMLInputElement>(null);
     const descriptionInputRef = useRef<HTMLTextAreaElement>(null);
@@ -84,6 +92,85 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project }) => {
         setEditedDescription(project.description || '');
     }, [project.name, project.description]);
 
+    // Browser beforeunload handler - use global handler from U
+    // This allows LeftBar and other components to disable it before programmatic navigation
+    useEffect(() => {
+        // Enable the warning when component mounts
+        U.enableUnsavedChangesWarning();
+
+        // Disable when component unmounts
+        return () => U.disableUnsavedChangesWarning();
+    }, []);
+
+    // Mark project as dirty (unsaved changes)
+    // Sets both local state and global U.isProjectModified for consistency
+    const markDirty = useCallback(() => {
+        setIsDirty(true);
+        U.isProjectModified = true;
+    }, []);
+
+    // Clear dirty state (after save)
+    // Resets both local state and global U.isProjectModified
+    const clearDirty = useCallback(() => {
+        setIsDirty(false);
+        U.isProjectModified = false;
+    }, []);
+
+    // Handle navigation with unsaved changes check
+    const handleNavigateWithCheck = useCallback((action: () => void) => {
+        if (isDirty) {
+            pendingActionRef.current = action;
+            setShowUnsavedDialog(true);
+        } else {
+            action();
+        }
+    }, [isDirty]);
+
+    // Handle back navigation with unsaved changes check
+    const handleBackNavigation = useCallback(() => {
+        if (onNavigateBack) {
+            handleNavigateWithCheck(onNavigateBack);
+        }
+    }, [onNavigateBack, handleNavigateWithCheck]);
+
+    // Unsaved dialog handlers
+    const handleDontSave = useCallback(() => {
+        setShowUnsavedDialog(false);
+        clearDirty();
+        if (pendingActionRef.current) {
+            pendingActionRef.current();
+            pendingActionRef.current = null;
+        }
+    }, [clearDirty]);
+
+    const handleCancelDialog = useCallback(() => {
+        setShowUnsavedDialog(false);
+        pendingActionRef.current = null;
+    }, []);
+
+    const handleSaveAndContinue = useCallback(async () => {
+        setIsSaving(true);
+        try {
+            // Trigger project save - this depends on your save implementation
+            // For example: await project.save() or dispatch a save action
+            // For now, we'll simulate a brief delay for the save operation
+            await new Promise(resolve => setTimeout(resolve, 500));
+
+            clearDirty();
+            setShowUnsavedDialog(false);
+
+            if (pendingActionRef.current) {
+                pendingActionRef.current();
+                pendingActionRef.current = null;
+            }
+        } catch (error) {
+            console.error('Failed to save project:', error);
+            U.alert('e', 'Save failed', 'Could not save the project. Please try again.');
+        } finally {
+            setIsSaving(false);
+        }
+    }, [clearDirty]);
+
     // Name editing handlers
     const handleStartEditName = () => {
         setEditedName(project.name || '');
@@ -92,7 +179,11 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project }) => {
 
     const handleSaveName = () => {
         if (editedName.trim()) {
-            project.name = editedName.trim();
+            const newName = editedName.trim();
+            if (newName !== project.name) {
+                project.name = newName;
+                markDirty();
+            }
         } else {
             U.alert('e', 'Name required', 'Project name cannot be empty');
             setEditedName(project.name || '');
@@ -120,7 +211,11 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project }) => {
     };
 
     const handleSaveDescription = () => {
-        project.description = editedDescription.trim();
+        const newDescription = editedDescription.trim();
+        if (newDescription !== project.description) {
+            project.description = newDescription;
+            markDirty();
+        }
         setIsEditingDescription(false);
     };
 
@@ -146,6 +241,7 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project }) => {
 
             if (newTags.length > 0) {
                 project.tags = [...tags, ...newTags];
+                markDirty();
             }
             setNewTag('');
         }
@@ -154,6 +250,7 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project }) => {
 
     const handleRemoveTag = (tagToRemove: string) => {
         project.tags = tags.filter(t => t !== tagToRemove);
+        markDirty();
     };
 
     const handleTagKeyDown = (e: React.KeyboardEvent) => {
@@ -168,6 +265,7 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project }) => {
     // Type toggle handler - toggles between public/private
     const handleToggleType = () => {
         project.type = project.type === 'public' ? 'private' : 'public';
+        markDirty();
     };
 
     // Handle badge click - if public, open share modal; if private, toggle to public
@@ -511,6 +609,15 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project }) => {
                 project={project}
                 isOpen={showShareModal}
                 onClose={() => setShowShareModal(false)}
+            />
+
+            {/* Unsaved Changes Dialog */}
+            <UnsavedChangesDialog
+                isOpen={showUnsavedDialog}
+                onDontSave={handleDontSave}
+                onCancel={handleCancelDialog}
+                onSave={handleSaveAndContinue}
+                isSaving={isSaving}
             />
         </div>
     );

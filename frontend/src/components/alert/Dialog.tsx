@@ -101,6 +101,14 @@ function DialogQuestion(props: AllProps) {
         if (lower.includes('delete') || lower.includes('remove') || lower.includes('discard')) {
             return 'btn btn-destructive';
         }
+        // "Don't save" - text-only style (no background, just text)
+        if (lower === "don't save" || lower === 'dont save') {
+            return 'btn btn-text-only';
+        }
+        // "Save & Exit" - slate primary action
+        if (lower.includes('save') && lower.includes('exit')) {
+            return 'btn btn-slate';
+        }
         // Slate actions: logout, close project (may lose unsaved changes but not destructive)
         if (lower.includes('logout') || lower.includes('log out') ||
             lower.includes('close') || lower.includes('proceed')) {

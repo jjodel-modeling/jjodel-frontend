@@ -188,9 +188,43 @@ function DebuggerComponent(props: DProps) {
 }
 
 const CloseProject = async()=> {
+    // Disabilita il prompt del browser PRIMA di navigare
+    U.disableUnsavedChangesWarning();
+    U.isProjectModified = false;
+    
     await Collaborative.disconnect();
     U.resetState();
-    R.navigate('/allProjects', true);
+    
+    // Usa setTimeout per assicurarti che il flag sia impostato prima della navigazione
+    setTimeout(() => {
+        R.navigate('/allProjects', true);
+    }, 0);
+};
+
+const SaveAndCloseProject = async(project: LProject | undefined) => {
+    if (project) {
+        try {
+            SetRootFieldAction.new('isLoading', true);
+            const maxWait = 10 * 1000;
+            let timeout = setTimeout(()=> {
+                SetRootFieldAction.new('isLoading', false);
+                U.alert('e', 'Request timed out', <>Verify your connection or&nbsp;
+                    <a href="mailto:info@jjodel.io?subject=Save%20timeout&body=Describe%20your%20actions%20prior%20the%20error%2C%20and%20attach%20your%20latest%20savefile%20if%20possible.">contact our support</a></>);
+            }, maxWait);
+            await ProjectsApi.save(project);
+            clearTimeout(timeout);
+            U.isProjectModified = false;
+            SetRootFieldAction.new('isLoading', false);
+        } catch (error: any) {
+            U.alert('e', 'Error while Saving Project', error.message);
+            SetRootFieldAction.new('isLoading', false);
+            return; // Non chiudere se il salvataggio fallisce
+        }
+    }
+    
+    // Disabilita il prompt del browser e chiudi
+    U.disableUnsavedChangesWarning();
+    await CloseProject();
 };
 
 function placeholder(){}
@@ -318,9 +352,20 @@ function NavbarComponent(props: AllProps) {
                     }, icon: icon['download']},
 
                 isDashboard ? null : {name: 'Close Project', function: async() => {
-                        if (isProjectModified()) U.dialog('Close the project without saving?', 'close project', CloseProject);
-                        else CloseProject();
-                    }, icon: icon['close'], keystroke: [Key.cmd, 'E']},
+    if (isProjectModified()) {
+        U.dialog2(
+            'Unsaved changes',
+            'You have unsaved changes. What do you want to do?',
+            [
+                { txt: 'Cancel' },
+                { txt: "Don't save", action: CloseProject as any },
+                { txt: 'Save & Exit', action: (() => SaveAndCloseProject(project)) as any }
+            ]
+        );
+    } else {
+        CloseProject();
+    }
+}, icon: icon['close'], keystroke: [Key.cmd, 'E']},
 
                 /* Delete Project - vedere come fare  TEMPORARLY DISABLED */
                 isDashboard ? null : {name: 'Delete Project', function: placeholder, icon: icon['delete'], disabled: true},
