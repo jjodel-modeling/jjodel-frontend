@@ -151,8 +151,18 @@ function LeftBar(props: LeftBarProps): JSX.Element {
                 {/* Main Navigation - Workspace */}
                 <Menu>
                     <Item action={'allProjects'} icon={<i className="bi bi-folder" />}>All projects</Item>
-                    <Item action={'favorites'} icon={<i className="bi bi-star" />}>Favorites</Item>
                     <Item action={'trash'} icon={<i className="bi bi-trash" />}>Trash</Item>
+                </Menu>
+
+                {/* Favorites Section */}
+                <Menu title={'Favorites'} mode={'collapsable'}>
+                    {props.projects && props.projects.filter(p => p.isFavorite).length > 0 ? (
+                        props.projects
+                            .filter(p => p.isFavorite)
+                            .map(p => <Item key={p.id} icon={<i className="bi bi-file-earmark" />} action={e => selectProject(p)}>{p.name}</Item>)
+                    ) : (
+                        <div className="sidebar-empty-text">No favorites yet</div>
+                    )}
                 </Menu>
 
                 {/* Browse Section - Templates & Explore (moved from navbar tabs) */}
@@ -188,7 +198,16 @@ function LeftBar(props: LeftBarProps): JSX.Element {
 
                 {/* Footer - Version Only */}
                 <div className="leftbar-footer">
-                    <span className="version-text">Jjodel v2.0 · MIT</span>
+                    <span className="version-text">Jjodel v2.0</span>
+                    <a
+                        href="https://opensource.org/licenses/MIT"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="license-badge"
+                    >
+                        <span className="license-label">License</span>
+                        <span className="license-type">MIT</span>
+                    </a>
                 </div>
 
             </div>

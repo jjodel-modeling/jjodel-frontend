@@ -67,7 +67,7 @@ export const Menu = (props: MenuProps) => {
             {open && <div className={`dropdown ${props.position ? props.position : 'right' }`}>
                 {props.children}
             </div>}
-            {!props.title && <i onClick={() => setOpen(!open)} className="bi bi-chevron-down" style={{fontSize: '10px!important'}}></i>}
+            {!props.title && <i onClick={() => setOpen(!open)} className="bi bi-three-dots-vertical"></i>}
         </div>
     </>);
 };

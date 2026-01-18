@@ -44,125 +44,12 @@ type ChildrenType = {
 };
 
 
-type ViewMode = 'cards' | 'list' | 'compact';
+type ViewMode = 'cards' | 'compact';
 
 const Catalog = (props: ChildrenType) => {
-    const [mode, setMode] = useState<ViewMode>("cards");
+    const [searchQuery, setSearchQuery] = useState("");
+    const [viewMode, setViewMode] = useState<ViewMode>('cards');
     const [activeTab, setActiveTab] = useState<'all' | 'public' | 'private' | 'collaborative'>('all');
-
-    const CatalogFilters = () => {
-        return (
-            <div className="catalog-filter-tabs">
-                <button
-                    className={`filter-tab ${activeTab === 'all' ? 'active' : ''}`}
-                    onClick={() => setActiveTab('all')}
-                >
-                    All
-                </button>
-                <button
-                    className={`filter-tab ${activeTab === 'public' ? 'active' : ''}`}
-                    onClick={() => setActiveTab('public')}
-                >
-                    Public
-                </button>
-                <button
-                    className={`filter-tab ${activeTab === 'private' ? 'active' : ''}`}
-                    onClick={() => setActiveTab('private')}
-                >
-                    Private
-                </button>
-                <button
-                    className={`filter-tab ${activeTab === 'collaborative' ? 'active' : ''}`}
-                    onClick={() => setActiveTab('collaborative')}
-                >
-                    Collaborative
-                </button>
-            </div>
-        );
-    }
-
-    const CatalogMode = () => {
-        return (
-            <div className="catalog-view-controls">
-                <div className="view-toggle">
-                    <button
-                        className={`view-btn ${mode === 'cards' ? 'active' : ''}`}
-                        onClick={() => setMode('cards')}
-                        title="Grid view"
-                        aria-label="Grid view"
-                    >
-                        <i className="bi bi-grid-3x3-gap" />
-                    </button>
-                    <button
-                        className={`view-btn ${mode === 'list' ? 'active' : ''}`}
-                        onClick={() => setMode('list')}
-                        title="List view"
-                        aria-label="List view"
-                    >
-                        <i className="bi bi-list" />
-                    </button>
-                    <button
-                        className={`view-btn ${mode === 'compact' ? 'active' : ''}`}
-                        onClick={() => setMode('compact')}
-                        title="Compact view (no images)"
-                        aria-label="Compact view"
-                    >
-                        <i className="bi bi-view-stacked" />
-                    </button>
-                </div>
-            </div>
-        );
-    }
-
-
-
-
-    type CatalogType = {
-        projects: LProject[];
-        onCreateProject: () => void;
-    }
-
-    const CatalogReport = (props: CatalogType) => {
-        // Filter by active tab
-        var items = props.projects.filter(p => {
-            if (activeTab === 'all') return true;
-            return p.type === activeTab;
-        });
-
-        let projectNames: Dictionary<string, LProject> = {};
-        for (let p of props.projects) {
-            if (!p) continue;
-            projectNames[p.name] = p;
-        }
-
-        // Sort by last modified (default)
-        var sorted = _.sortBy(items, (obj: LProject) => -new Date(obj.lastModified).getTime());
-
-        // Cards and Compact both use grid layout
-        if (mode === "cards" || mode === "compact") {
-            return (
-                <div className="project-cards-grid">
-                    {sorted.map((p, i) => <Project key={i} data={p} mode={mode} pnames={projectNames} />)}
-                </div>
-            );
-        }
-
-        // List view
-        return (
-            <div className="row project-list">
-                <div className="row header">
-                    <div className="col-4">Name</div>
-                    <div className="col-1">Type</div>
-                    <div className="col-3">Created</div>
-                    <div className="col-2">Last modified</div>
-                    <div className="col-2">Operation</div>
-                </div>
-                {sorted.map(p => (
-                    <Project key={p.id} data={p} mode={mode} pnames={projectNames} />
-                ))}
-            </div>
-        );
-    };
 
     // Handler for creating project
     const handleCreateProject = async () => {
@@ -173,6 +60,67 @@ const Catalog = (props: ChildrenType) => {
     // Check if there are no projects at all
     const hasNoProjects = !props.projects || props.projects.length === 0;
 
+    // Filter and sort projects
+    const getFilteredProjects = () => {
+        if (!props.projects) return [];
+
+        // Filter by active tab
+        let items = props.projects.filter((p: LProject) => {
+            if (activeTab === 'all') return true;
+            return p.type === activeTab;
+        });
+
+        // Filter by search query
+        if (searchQuery.trim()) {
+            items = items.filter((p: LProject) =>
+                p.name.toLowerCase().includes(searchQuery.toLowerCase())
+            );
+        }
+
+        // Sort by last modified (default)
+        return _.sortBy(items, (obj: LProject) => -new Date(obj.lastModified).getTime());
+    };
+
+    const filteredProjects = getFilteredProjects();
+
+    // Build project names dictionary
+    const projectNames: Dictionary<string, LProject> = {};
+    if (props.projects) {
+        for (let p of props.projects) {
+            if (!p) continue;
+            projectNames[p.name] = p;
+        }
+    }
+
+    // Render projects based on view mode
+    const renderProjects = () => {
+        // No results message
+        if (filteredProjects.length === 0 && searchQuery.trim()) {
+            return (
+                <div className="no-results">
+                    <i className="bi bi-search" />
+                    <p>No projects found for "{searchQuery}"</p>
+                </div>
+            );
+        }
+
+        // Compact view - mini cards without cover
+        if (viewMode === 'compact') {
+            return (
+                <div className="projects-compact">
+                    {filteredProjects.map((p, i) => <Project key={p.id || i} data={p} mode="list" index={i} pnames={projectNames} />)}
+                </div>
+            );
+        }
+
+        // Grid layout with cards (default)
+        return (
+            <div className="project-cards-grid">
+                {filteredProjects.map((p, i) => <Project key={p.id || i} data={p} mode="cards" index={i} pnames={projectNames} />)}
+            </div>
+        );
+    };
+
     return (
         <>
             {hasNoProjects ? (
@@ -180,11 +128,77 @@ const Catalog = (props: ChildrenType) => {
             ) : (
                 <>
                     <div className="catalog-header">
-                        <CatalogFilters />
-                        <CatalogMode />
+                        {/* Filter Tabs */}
+                        <div className="catalog-filter-tabs">
+                            <button
+                                className={`filter-tab ${activeTab === 'all' ? 'active' : ''}`}
+                                onClick={() => setActiveTab('all')}
+                            >
+                                All
+                            </button>
+                            <button
+                                className={`filter-tab ${activeTab === 'public' ? 'active' : ''}`}
+                                onClick={() => setActiveTab('public')}
+                            >
+                                Public
+                            </button>
+                            <button
+                                className={`filter-tab ${activeTab === 'private' ? 'active' : ''}`}
+                                onClick={() => setActiveTab('private')}
+                            >
+                                Private
+                            </button>
+                            <button
+                                className={`filter-tab ${activeTab === 'collaborative' ? 'active' : ''}`}
+                                onClick={() => setActiveTab('collaborative')}
+                            >
+                                Collaborative
+                            </button>
+                        </div>
+
+                        {/* Controls: View Toggle + Search */}
+                        <div className="catalog-controls">
+                            <div className="view-toggle">
+                                <button
+                                    className={`view-btn ${viewMode === 'cards' ? 'active' : ''}`}
+                                    onClick={() => setViewMode('cards')}
+                                    title="Grid view"
+                                    aria-label="Grid view"
+                                >
+                                    <i className="bi bi-grid-3x3-gap" />
+                                </button>
+                                <button
+                                    className={`view-btn ${viewMode === 'compact' ? 'active' : ''}`}
+                                    onClick={() => setViewMode('compact')}
+                                    title="Compact view"
+                                    aria-label="Compact view"
+                                >
+                                    <i className="bi bi-list" />
+                                </button>
+                            </div>
+
+                            <div className="projects-search">
+                                <i className="bi bi-search" />
+                                <input
+                                    type="text"
+                                    placeholder="Search projects..."
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                />
+                                {searchQuery && (
+                                    <button
+                                        className="search-clear"
+                                        onClick={() => setSearchQuery("")}
+                                        aria-label="Clear search"
+                                    >
+                                        <i className="bi bi-x" />
+                                    </button>
+                                )}
+                            </div>
+                        </div>
                     </div>
                     <div className="catalog">
-                        <CatalogReport projects={props.projects} onCreateProject={handleCreateProject} />
+                        {renderProjects()}
                     </div>
                 </>
             )}

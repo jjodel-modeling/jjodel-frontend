@@ -179,6 +179,107 @@
   }
 }
 
+/* Catalog Controls - View Toggle + Search */
+.catalog-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* Projects Search Bar */
+.projects-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  width: 220px;
+  transition: all 150ms ease;
+
+  &:focus-within {
+    border-color: #d1d5db;
+    background: #ffffff;
+    box-shadow: 0 0 0 3px rgba(107, 114, 128, 0.1);
+  }
+
+  > i {
+    color: #9ca3af;
+    font-size: 14px;
+    flex-shrink: 0;
+  }
+
+  input {
+    border: none;
+    background: none;
+    outline: none;
+    font-family: 'Inter Variable', -apple-system, sans-serif;
+    font-size: 14px;
+    width: 100%;
+    color: #1f2937;
+
+    &::placeholder {
+      color: #9ca3af;
+    }
+  }
+
+  .search-clear {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    padding: 0;
+    background: #e5e7eb;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    flex-shrink: 0;
+
+    i {
+      font-size: 12px;
+      color: #6b7280;
+    }
+
+    &:hover {
+      background: #d1d5db;
+    }
+  }
+}
+
+/* No Results Message */
+.no-results {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  text-align: center;
+
+  i {
+    font-size: 32px;
+    color: #9ca3af;
+    margin-bottom: 12px;
+  }
+
+  p {
+    font-family: 'Inter Variable', -apple-system, sans-serif;
+    font-size: 15px;
+    color: #6b7280;
+    margin: 0;
+  }
+}
+
+/* Projects Compact View - List of mini cards */
+.projects-compact {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 24px;
+  width: 100%;
+}
+
 
 /* ============================================
    PROJECT CARDS GRID - NEW DESIGN
@@ -186,15 +287,24 @@
    ============================================ */
 
 .project-cards-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  display: grid !important;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)) !important;
   gap: 20px;
+  width: 100%;
+  overflow: visible !important; // Allow dropdown menus to overflow
 
   // Responsive - single column on mobile
   @media (max-width: 768px) {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr !important;
     gap: 16px;
   }
+}
+
+// Override within catalog container
+.catalog .project-cards-grid {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)) !important;
+  overflow: visible !important;
 }
 
 .catalog {
@@ -305,7 +415,8 @@
   width: 100%;
   padding: 0;
   display: flex;
-  .details{ 
+  overflow: visible !important; // Allow dropdown menus to overflow
+  .details{
     order: 2;
   }
   .card-holder{
