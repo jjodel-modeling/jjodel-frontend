@@ -98,10 +98,6 @@ const Catalog = (props: ChildrenType) => {
 
     // Slider pagination
     const totalPages = Math.ceil(filteredProjects.length / cardsPerPage);
-    const visibleProjects = filteredProjects.slice(
-        currentPage * cardsPerPage,
-        (currentPage + 1) * cardsPerPage
-    );
 
     const prevPage = () => setCurrentPage(p => Math.max(0, p - 1));
     const nextPage = () => setCurrentPage(p => Math.min(totalPages - 1, p + 1));
@@ -118,46 +114,66 @@ const Catalog = (props: ChildrenType) => {
             );
         }
 
-        // Slider view - 3x3 grid with pagination
+        // Slider view - 3x3 grid with pagination and smooth animation
         if (viewMode === 'slider') {
             return (
                 <div className="projects-slider">
                     <div className="slider-grid-container">
-                        <button
-                            className="slider-arrow slider-arrow-prev"
-                            onClick={prevPage}
-                            disabled={currentPage === 0}
-                            aria-label="Previous page"
+                        <div
+                            className="slider-track"
+                            style={{
+                                transform: `translateX(-${currentPage * 100}%)`,
+                                transition: 'transform 400ms ease-out'
+                            }}
                         >
-                            <i className="bi bi-chevron-left" />
-                        </button>
-
-                        <div className="slider-grid">
-                            {visibleProjects.map((p, i) => (
-                                <Project key={p.id || i} data={p} mode="cards" index={i} pnames={projectNames} />
+                            {Array.from({ length: totalPages }).map((_, pageIndex) => (
+                                <div className="slider-page" key={pageIndex}>
+                                    {filteredProjects
+                                        .slice(pageIndex * cardsPerPage, (pageIndex + 1) * cardsPerPage)
+                                        .map((p, i) => (
+                                            <Project
+                                                key={p.id || `${pageIndex}-${i}`}
+                                                data={p}
+                                                mode="cards"
+                                                index={pageIndex * cardsPerPage + i}
+                                                pnames={projectNames}
+                                            />
+                                        ))}
+                                </div>
                             ))}
                         </div>
-
-                        <button
-                            className="slider-arrow slider-arrow-next"
-                            onClick={nextPage}
-                            disabled={currentPage >= totalPages - 1}
-                            aria-label="Next page"
-                        >
-                            <i className="bi bi-chevron-right" />
-                        </button>
                     </div>
 
                     {totalPages > 1 && (
-                        <div className="slider-dots">
-                            {Array.from({ length: totalPages }).map((_, i) => (
-                                <button
-                                    key={i}
-                                    className={`slider-dot ${i === currentPage ? 'active' : ''}`}
-                                    onClick={() => setCurrentPage(i)}
-                                    aria-label={`Go to page ${i + 1}`}
-                                />
-                            ))}
+                        <div className="slider-navigation">
+                            <button
+                                className="slider-arrow prev"
+                                onClick={prevPage}
+                                disabled={currentPage === 0}
+                                aria-label="Previous page"
+                            >
+                                <i className="bi bi-chevron-left" />
+                            </button>
+
+                            <div className="slider-dots">
+                                {Array.from({ length: totalPages }).map((_, i) => (
+                                    <button
+                                        key={i}
+                                        className={`slider-dot ${i === currentPage ? 'active' : ''}`}
+                                        onClick={() => setCurrentPage(i)}
+                                        aria-label={`Go to page ${i + 1}`}
+                                    />
+                                ))}
+                            </div>
+
+                            <button
+                                className="slider-arrow next"
+                                onClick={nextPage}
+                                disabled={currentPage >= totalPages - 1}
+                                aria-label="Next page"
+                            >
+                                <i className="bi bi-chevron-right" />
+                            </button>
                         </div>
                     )}
                 </div>

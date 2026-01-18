@@ -304,21 +304,48 @@ export default {
 
 ---
 
-## 10. NEXT SESSION - PRIORITY TASKS
+## 10. LATEST SESSION UPDATES (January 19, 2026)
+
+### Completed
+- ✅ Slider 3x3 con navigazione (frecce + dots in basso)
+- ✅ Transizione fluida tra pagine slider
+- ✅ Vista compatta allineata
+- ✅ Barra filtri uniformata
+- ✅ Drag & drop globale per file .jjodel (in corso)
+
+### In Progress
+- ⏳ Project Card redesign → Stile "Accent Left" (barra slate a sinistra, no cover)
+- ⏳ Aggiunta info: versione engine + proprietario
+
+### Card Accent Left Layout
+```
+┌─────────────────────────────────┐
+█ Project 1              ☆  ⋮    │
+█ [Private] · alfonso · v2.2     │
+█ 0 metamodels · 0 models   5m   │
+└─────────────────────────────────┘
+```
+
+### Tags System (da implementare)
+- Approccio libero con autocomplete
+- Salvataggio in `project.state.tags`
+- Suggerimenti da tag esistenti durante digitazione
+- Filtro dashboard per tag
+
+## 11. NEXT SESSION - PRIORITY TASKS
 
 ### High Priority
-1. Fix menu overflow nelle card
-2. Fix allineamento vista compatta
-3. Stella/menu icone trasparenti
+1. Finire Card Accent Left (fix author: `data.author?.name || data.author?.surname`)
+2. Tags per progetti (UI + autocomplete + filtri)
+3. Fix menu overflow nelle card
 
 ### Medium Priority
-4. Implementare Slider view
-5. Tags per progetti (UI + filtri)
-6. About dialog redesign
+4. Pagina singolo progetto / Editor
+5. About dialog redesign
 
 ### Low Priority
-7. Form controls spec
-8. AI Assistant spec
+6. Form controls spec
+7. AI Assistant spec
 
 ---
 

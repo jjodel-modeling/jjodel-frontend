@@ -471,18 +471,23 @@
 }
 
 .slider-grid-container {
-  display: flex;
-  align-items: center;
-  gap: 16px;
+  position: relative;
   width: 100%;
+  overflow: hidden; // Hide pages outside viewport
 }
 
-.slider-grid {
+.slider-track {
+  display: flex;
+  will-change: transform;
+}
+
+.slider-page {
+  flex-shrink: 0;
+  width: 100%;
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 20px;
-  flex: 1;
-  overflow: visible !important;
+  overflow: visible;
 
   // Responsive - 2 columns on tablet
   @media (max-width: 1024px) {
@@ -495,9 +500,18 @@
   }
 }
 
+/* Bottom Navigation: [<] ● ● ● [>] */
+.slider-navigation {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin-top: 24px;
+}
+
 .slider-arrow {
-  width: 44px;
-  height: 44px;
+  width: 32px;
+  height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -506,29 +520,25 @@
   border-radius: 50%;
   cursor: pointer;
   color: #374151;
-  font-size: 18px;
   transition: all 150ms ease;
-  flex-shrink: 0;
 
   &:hover:not(:disabled) {
     background: #f9fafb;
     border-color: #d1d5db;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
   }
 
   &:disabled {
-    opacity: 0.4;
+    opacity: 0.3;
     cursor: not-allowed;
   }
 
   i {
-    font-size: 18px;
+    font-size: 14px;
   }
 }
 
 .slider-dots {
   display: flex;
-  justify-content: center;
   gap: 8px;
 }
 

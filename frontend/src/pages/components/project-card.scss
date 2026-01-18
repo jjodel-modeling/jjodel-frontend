@@ -1,25 +1,23 @@
 /* ============================================
-   PROJECT CARD - REDESIGNED
-   Per project-card-spec.md (Stile A - Cover Image)
+   PROJECT CARD - ACCENT LEFT STYLE (BEM)
+   White card with colored accent bar on left
    ============================================ */
 
 // ============================================
 // VARIABLES
 // ============================================
 $card-radius: 12px;
-$card-border: #e2e4e8;
+$card-border: #e5e7eb;
 $card-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
 $card-shadow-hover: 0 4px 12px rgba(0, 0, 0, 0.08);
 
-$cover-height: 85px;
 $content-padding: 16px;
 
-$color-text-primary: #111418;
+$color-text-primary: #1f2937;
 $color-text-secondary: #6B7280;
 $color-text-muted: #9CA3AF;
 $color-border-light: #f1f5f9;
 $color-favorite: #F59E0B;
-$color-avatar: #475569;
 
 $transition: 150ms ease;
 
@@ -31,9 +29,8 @@ $transition: 150ms ease;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)) !important;
   gap: 20px;
   padding: 24px;
-  overflow: visible !important; // Allow dropdown menus to overflow
+  overflow: visible !important;
 
-  // Responsive
   @media (max-width: 768px) {
     grid-template-columns: 1fr !important;
     gap: 16px;
@@ -42,24 +39,21 @@ $transition: 150ms ease;
 }
 
 // ============================================
-// CARD CONTAINER
+// PROJECT CARD - BEM STRUCTURE
 // ============================================
-.project-card-new {
-  position: relative; // For dropdown positioning
-  background: #ffffff;
-  border: 1px solid $card-border;
+.project-card {
+  display: flex;
+  flex-direction: row;
+  background: #ffffff; // Pure white, NO gradient!
+  border: none; // NO border
   border-radius: $card-radius;
-  overflow: visible !important; // Allow dropdown to overflow
+  overflow: hidden;
   cursor: pointer;
   transition: all 200ms ease;
   box-shadow: $card-shadow;
-  display: flex;
-  flex-direction: column;
 
   &:hover {
-    border-color: #d0d3d8;
     box-shadow: $card-shadow-hover;
-    transform: translateY(-2px);
   }
 
   &:focus-visible {
@@ -67,270 +61,205 @@ $transition: 150ms ease;
     outline-offset: 2px;
   }
 
-  // Ensure dropdown appears above other cards
   .dropdown {
     z-index: 1000 !important;
   }
-}
 
-// ============================================
-// COVER IMAGE
-// ============================================
-.card-cover {
-  height: $cover-height;
-  background-size: cover;
-  background-position: center;
-  position: relative;
-  flex-shrink: 0;
-  overflow: hidden; // For rounded corners
-  border-radius: $card-radius $card-radius 0 0;
-
-  // Overlay gradient for readability
-  &::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(
-      to bottom,
-      rgba(0, 0, 0, 0.1) 0%,
-      rgba(0, 0, 0, 0.3) 100%
-    );
-    pointer-events: none; // Allow clicks through
-  }
-}
-
-// ============================================
-// PRIVACY BADGE
-// ============================================
-.card-privacy-badge {
-  position: absolute;
-  top: 10px;
-  left: 10px;
-  z-index: 2;
-
-  display: flex;
-  align-items: center;
-  gap: 4px;
-
-  padding: 4px 8px;
-  background: rgba(0, 0, 0, 0.5);
-  border-radius: 6px;
-
-  font-family: 'Inter Variable', -apple-system, sans-serif;
-  font-size: 11px;
-  font-weight: 500;
-  color: #ffffff;
-
-  i {
-    font-size: 10px;
-    color: #ffffff; // White icon for visibility on gradients
-  }
-}
-
-// ============================================
-// ACTION BUTTONS
-// ============================================
-.card-actions {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  z-index: 2;
-
-  display: flex;
-  gap: 8px;
-}
-
-.card-action-btn {
-  background: none !important;
-  border: none;
-  padding: 6px;
-  cursor: pointer;
-  color: rgba(255, 255, 255, 0.7);
-  transition: all $transition;
-
-  &:hover {
-    color: #ffffff;
-    background: none !important;
+  // Accent Bar (4px left side) - SOLID color only, no gradient!
+  &__accent {
+    width: 4px;
+    flex-shrink: 0;
+    background-color: #475569; // Default slate, overridden inline via JS
+    background-image: none !important; // Ensure no gradient
+    background-repeat: no-repeat !important;
+    border-radius: 8px 0 0 8px;
   }
 
-  i {
-    font-size: 18px;
+  // Content Area
+  &__content {
+    flex: 1;
+    padding: $content-padding;
+    display: flex;
+    flex-direction: column;
+    min-width: 0; // Allow text truncation
   }
 
-  &.is-favorite {
-    color: #facc15; // Gold/yellow when favorited
-  }
-}
-
-// Favorite button on card cover
-.favorite-btn,
-.card-action-btn {
-  background: none !important;
-  border: none !important;
-  color: rgba(255, 255, 255, 0.6);
-
-  &:hover {
-    color: rgba(255, 255, 255, 0.9);
+  // Header (Title + Actions)
+  &__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 8px;
   }
 
-  &.is-favorite {
-    color: #facc15;
-  }
-}
-
-// Override menu-button styles inside card actions
-.card-actions .menu-button,
-.card-cover .menu-button {
-  background: none !important;
-  border: none !important;
-  box-shadow: none !important;
-  width: auto;
-  height: auto;
-  margin: 0;
-
-  &:hover {
-    background: none !important;
+  &__title {
+    margin: 0;
+    font-family: 'Inter Variable', -apple-system, sans-serif;
+    font-size: 16px;
+    font-weight: 600;
+    color: $color-text-primary;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex: 1;
+    min-width: 0;
   }
 
-  i {
-    color: rgba(255, 255, 255, 0.7);
-    font-size: 18px;
+  &__actions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+  }
+
+  &__action {
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    color: $color-text-secondary;
+    transition: all $transition;
 
     &:hover {
-      color: #ffffff;
+      background: #f3f4f6;
+      color: $color-text-primary;
+    }
+
+    i {
+      font-size: 16px;
+    }
+
+    &.is-favorite {
+      color: #facc15 !important; // Yellow star when active
+
+      i {
+        color: #facc15 !important;
+      }
+    }
+  }
+
+  // Meta Row - Fixed layout: badge, author (truncate), version (right)
+  &__meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+    font-family: 'Inter Variable', -apple-system, sans-serif;
+    font-size: 12px;
+    color: $color-text-secondary;
+  }
+
+  &__badge {
+    flex-shrink: 0;
+    background: #f3f4f6;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 500;
+    color: $color-text-secondary;
+  }
+
+  &__author {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__version {
+    flex-shrink: 0;
+    margin-left: auto;
+    background: #94a3b8; // Slate light
+    color: #ffffff;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-size: 11px;
+    font-weight: 500;
+  }
+
+  // Stats Row
+  &__stats {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    font-family: 'Inter Variable', -apple-system, sans-serif;
+    font-size: 12px;
+    color: $color-text-muted;
+  }
+
+  &__stat {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+
+    i {
+      font-size: 14px;
+    }
+  }
+
+  &__time {
+    margin-left: auto;
+    color: $color-text-muted;
+  }
+
+  // Loading State
+  &.is-loading {
+    pointer-events: none;
+
+    .project-card__accent {
+      background: #e2e8f0;
+    }
+
+    .project-card__title,
+    .project-card__meta,
+    .project-card__stats {
+      background: #f1f5f9;
+      color: transparent;
+      border-radius: 4px;
     }
   }
 }
 
-// ============================================
-// CONTENT
-// ============================================
-.card-body {
-  padding: $content-padding;
-  display: flex;
-  flex-direction: column;
-  flex-grow: 1;
-}
-
-.card-title {
-  margin: 0 0 4px 0;
-  font-family: 'Inter Variable', -apple-system, sans-serif;
-  font-size: 16px;
-  font-weight: 600;
-  color: $color-text-primary;
-
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.card-description {
-  margin: 0 0 12px 0;
-  font-family: 'Inter Variable', -apple-system, sans-serif;
-  font-size: 13px;
-  font-weight: 400;
-  color: $color-text-secondary;
-  line-height: 1.4;
-
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  min-height: 36px; // Reserve space for 2 lines
-}
-
-// ============================================
-// STATS ROW
-// ============================================
-.card-stats {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding-top: 12px;
-  border-top: 1px solid $color-border-light;
-
-  font-family: 'Inter Variable', -apple-system, sans-serif;
-  font-size: 12px;
-  color: $color-text-muted;
-}
-
-.card-stat {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-
-  i {
-    font-size: 14px;
-  }
-}
-
-.card-stat-separator {
-  color: $color-text-muted;
-}
-
-.card-time {
-  color: $color-text-muted;
-  margin-left: auto; // Push to the right
-}
-
-// ============================================
-// FOOTER
-// ============================================
-.card-meta {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-top: 12px;
-
-  font-family: 'Inter Variable', -apple-system, sans-serif;
-  font-size: 12px;
-  color: $color-text-muted;
-}
-
-.card-editor {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.card-avatar {
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  background: $color-avatar;
-
+// Menu button styling inside card
+.project-card__actions .menu-button {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  width: 28px;
+  height: 28px;
   display: flex;
   align-items: center;
   justify-content: center;
+  border-radius: 6px;
+  margin: 0;
 
-  font-size: 10px;
-  font-weight: 600;
-  color: #ffffff;
-}
-
-.card-time {
-  color: $color-text-muted;
-}
-
-// ============================================
-// LOADING STATE (Skeleton)
-// ============================================
-.project-card-new.is-loading {
-  pointer-events: none;
-
-  .card-cover {
-    background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
-    background-size: 200% 100%;
-    animation: shimmer 1.5s infinite;
+  &:hover {
+    background: #f3f4f6 !important;
   }
 
-  .card-title,
-  .card-description,
-  .card-stats,
-  .card-meta {
-    background: #f1f5f9;
-    color: transparent;
-    border-radius: 4px;
+  i {
+    color: $color-text-secondary;
+    font-size: 16px;
+
+    &:hover {
+      color: $color-text-primary;
+    }
+  }
+
+  .dropdown {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    z-index: 1000 !important;
+    margin-top: 4px;
   }
 }
 
@@ -351,90 +280,6 @@ $transition: 150ms ease;
     right: 0;
     z-index: 100;
     margin-top: 4px;
-  }
-}
-
-// ============================================
-// COMPACT MODE (No Cover Image)
-// Per project-card-spec.md
-// ============================================
-.project-card-new.compact {
-  // No cover image, just content
-  min-height: auto;
-
-  .card-body {
-    padding: 14px 16px;
-  }
-
-  .card-title {
-    font-size: 15px;
-  }
-
-  .card-description {
-    min-height: auto;
-    margin-bottom: 10px;
-  }
-
-  .card-stats {
-    padding-top: 10px;
-  }
-
-  .card-meta {
-    margin-top: 10px;
-  }
-}
-
-// Compact header (replaces cover image)
-.card-compact-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 16px;
-  background: #f8fafc;
-  border-bottom: 1px solid #f1f5f9;
-}
-
-.card-privacy-badge-inline {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-family: 'Inter Variable', -apple-system, sans-serif;
-  font-size: 12px;
-  font-weight: 500;
-  color: $color-text-secondary;
-
-  i {
-    font-size: 12px;
-  }
-}
-
-.card-actions-inline {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.card-action-btn-sm {
-  width: 28px;
-  height: 28px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: transparent;
-  border: none;
-  border-radius: 6px;
-  font-size: 14px;
-  color: $color-text-secondary;
-  cursor: pointer;
-  transition: all $transition;
-
-  &:hover {
-    background: #e2e4e8;
-    color: $color-text-primary;
-  }
-
-  &.is-favorite {
-    color: $color-favorite;
   }
 }
 
@@ -553,7 +398,11 @@ $transition: 150ms ease;
   }
 
   &.is-favorite {
-    color: $color-favorite;
+    color: #facc15 !important; // Yellow star when active
+
+    i {
+      color: #facc15 !important;
+    }
   }
 }
 

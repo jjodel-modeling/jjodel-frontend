@@ -432,52 +432,11 @@ project-card .tip {
 }
 
 /* ============================================
-   PROJECT CARD V1 (LEGACY)
+   PROJECT CARD V1 (LEGACY) - DEPRECATED
+   Now using BEM-style .project-card in project-card.scss
    ============================================ */
 
-.project-card {
-  /* Local variables for legacy compatibility */
-  --color: var(--color-text-primary);
-  --accent: var(--color-accent);
-  --accent-disabled: var(--color-text-tertiary);
-  --secondary: var(--color-accent);
-  --terziary: var(--color-error);
-  --bg-1: var(--color-bg-primary);
-  --bg-2: var(--color-bg-secondary);
-  --bg-25: var(--color-bg-secondary);
-  --bg-3: var(--color-bg-tertiary);
-  --bg-3_5: var(--color-error);
-  --bg-4: var(--color-text-tertiary);
-  --bg-5: var(--color-text-secondary);
-  --danger: var(--color-error);
-  --success: var(--color-success);
-  --side-padding: var(--space-5);
-  --sep-padding: var(--space-10);
-
-  --gr-0: linear-gradient(90deg, hsla(233, 100%, 90%, 1) 0%, hsla(0, 0%, 89%, 1) 100%);
-  --fg-0: var(--color);
-  --gr-1: linear-gradient(90deg, hsla(233, 100%, 90%, 1) 0%, hsla(0, 0%, 89%, 1) 100%);
-  --fg-1: var(--color);
-  --gr-2: linear-gradient(90deg, hsla(233, 100%, 90%, 1) 0%, hsla(0, 0%, 89%, 1) 100%);
-  --fg-2: var(--color);
-
-  position: relative;
-  width: 23em;
-  height: 100px;
-  border-radius: var(--radius-md);
-  background-color: var(--color-bg-secondary);
-  background: linear-gradient(90deg, hsla(186, 33%, 94%, 1) 0%, hsla(216, 41%, 79%, 1) 100%);
-  border: none;
-  padding-bottom: var(--space-3);
-  border-bottom: 6px solid var(--color-accent);
-  color: var(--color-text-primary);
-  margin: 0 0.75em 2em 0;
-  transition: var(--transition-fast);
-
-  & > .project-actions > * {
-    margin: auto;
-  }
-}
+/* Legacy .project-card styles removed - see project-card.scss for new BEM styles */
 
 /* ============================================
    PROJECT CARD V2 (NEW DESIGN)
@@ -707,75 +666,7 @@ project-card .tip {
   }
 }
 
-/* ============================================
-   PROJECT CARD METER
-   ============================================ */
-
-.project-card .meter {
-  margin-left: 0;
-  padding-top: var(--space-1);
-}
-
-.project-card .meter .artifact {
-  float: right;
-  margin-right: 1px;
-}
-
-.project-card .meter .artifact span {
-  visibility: hidden;
-  opacity: 0;
-  width: fit-content;
-  padding: 1px 2px;
-  text-align: center;
-  transition: visibility 0s, opacity 0.5s linear;
-}
-
-.project-card:hover .meter .artifact span {
-  visibility: visible;
-  opacity: 1;
-  transition: visibility 0s, opacity 0.5s linear;
-  border-radius: var(--radius-sm);
-}
-
-.project-card .meter .metamodels {
-  border-top: 6px solid var(--color-warning);
-}
-
-.project-card .meter .metamodels span {
-  background-color: var(--color-text-secondary);
-  color: white;
-}
-
-.project-card .meter .models {
-  border-top: 6px solid var(--color-error);
-}
-
-.project-card .meter .models span {
-  background-color: var(--color-text-secondary);
-  color: white;
-}
-
-.project-card .meter .viewpoints {
-  border-top: 6px solid var(--color-info);
-}
-
-.project-card .meter .viewpoints span {
-  background-color: var(--color-text-secondary);
-  color: white;
-}
-
-/* ============================================
-   PROJECT CARD HEADER
-   ============================================ */
-
-.project-card .header label.d-block .bi {
-  margin-right: var(--space-1) !important;
-  margin-left: var(--space-2);
-}
-
-.project-card .header label.d-block .bi:first-of-type {
-  margin-left: 0 !important;
-}
+/* Legacy .project-card .meter and .header styles removed */
 
 /* ============================================
    DOT BLINK ANIMATION
@@ -957,54 +848,7 @@ project-card .tip {
   }
 }
 
-/* ============================================
-   PROJECT CARD TYPOGRAPHY
-   ============================================ */
-
-.project-card h5 {
-  margin-bottom: var(--space-1);
-  font-size: var(--text-base);
-  font-weight: var(--font-semibold);
-}
-
-.project-card label {
-  font-weight: var(--font-light);
-  color: var(--color-text-tertiary);
-}
-
-.project-card .header {
-  padding: var(--space-4);
-}
-
-.project-card .tag {
-  font-weight: var(--font-light);
-  font-size: var(--text-sm);
-  color: var(--color-text-tertiary);
-  padding: var(--space-4);
-}
-
-.project-card .tag h6 {
-  color: var(--color-text-tertiary);
-  font-size: var(--text-lg);
-  font-weight: var(--font-light);
-}
-
-.project-card .tag .bi {
-  font-size: var(--text-lg);
-  margin-left: -1px;
-  color: var(--color-text-tertiary);
-}
-
-.project-card .bi-star,
-.project-card .bi-star-fill {
-  font-size: var(--text-lg);
-  margin-right: 2px;
-}
-
-.project-card .bi-star:hover,
-.project-card .bi-star-fill:hover {
-  color: var(--color-accent);
-}
+/* Legacy .project-card typography styles removed - see project-card.scss */
 
 /* ============================================
    UTILITY CLASSES

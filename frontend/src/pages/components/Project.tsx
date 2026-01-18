@@ -7,6 +7,7 @@ import {Divisor, Item, Menu} from './menu/Menu';
 
 import {icon} from './icons/Icons';
 import {compressToUTF16} from "async-lz-string";
+import {getAccentColor} from '../../utils/colorHash';
 import './project-card.scss';
 
 function formatDate(lastModified: number){
@@ -169,7 +170,7 @@ function Project(props: Props): JSX.Element {
 
         function getClickedElement(e: any){
             // Don't navigate if clicking on interactive elements
-            if (e.target.closest('.card-action-btn') ||
+            if (e.target.closest('.project-card__action') ||
                 e.target.closest('.menu-button') ||
                 e.target.closest('.dropdown') ||
                 e.target.className.includes('bi-star')) {
@@ -178,168 +179,89 @@ function Project(props: Props): JSX.Element {
             selectProject(false);
         }
 
-        // CSS gradients for card covers - vibrant colors only
-        const gradients = [
-            // Blu/Cyan
-            'linear-gradient(135deg, #00c6fb 0%, #005bea 100%)',
-            'linear-gradient(135deg, #0093E9 0%, #80D0C7 100%)',
-            'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
-            'linear-gradient(135deg, #89f7fe 0%, #66a6ff 100%)',
-            'linear-gradient(135deg, #48c6ef 0%, #6f86d6 100%)',
-            // Verde/Teal
-            'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)',
-            'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
-            'linear-gradient(135deg, #2af598 0%, #009efd 100%)',
-            'linear-gradient(135deg, #56ab2f 0%, #a8e063 100%)',
-            'linear-gradient(135deg, #96e6a1 0%, #d4fc79 100%)',
-            // Viola/Rosa
-            'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-            'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
-            'linear-gradient(135deg, #c471f5 0%, #fa71cd 100%)',
-            'linear-gradient(135deg, #ff758c 0%, #ff7eb3 100%)',
-            'linear-gradient(135deg, #f77062 0%, #fe5196 100%)',
-            // Arancio/Rosso/Giallo
-            'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
-            'linear-gradient(135deg, #f6d365 0%, #fda085 100%)',
-            'linear-gradient(135deg, #ff9966 0%, #ff5e62 100%)',
-            'linear-gradient(135deg, #ee0979 0%, #ff6a00 100%)',
-            'linear-gradient(135deg, #f83600 0%, #f9d423 100%)',
-            // Rosa/Pesca
-            'linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%)',
-            'linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%)',
-            'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)',
-            // Pastello vivace
-            'linear-gradient(135deg, #e0c3fc 0%, #8ec5fc 100%)',
-            'linear-gradient(135deg, #fddb92 0%, #d1fdff 100%)',
-        ];
-        // Hash function for consistent color per project
-        const hashCode = (str: string) => {
-            let hash = 0;
-            for (let i = 0; i < str.length; i++) {
-                hash = ((hash << 5) - hash) + str.charCodeAt(i);
-                hash |= 0;
-            }
-            return Math.abs(hash);
-        };
-        // Select gradient based on project ID hash for consistent color
-        const gradientIndex = hashCode(data.id || data.name || '') % gradients.length;
-        const coverStyle = { background: gradients[gradientIndex] };
+        // Get accent color based on project name
+        const accentColor = getAccentColor(data.name || '');
 
-        // Get privacy label and icon
-        const getPrivacyInfo = () => {
+        // Get privacy label
+        const getBadgeLabel = () => {
             switch (data.type) {
-                case 'private':
-                    return { icon: 'bi-lock-fill', label: 'Private' };
-                case 'public':
-                    return { icon: 'bi-unlock-fill', label: 'Public' };
-                case 'collaborative':
-                    return { icon: 'bi-people-fill', label: 'Collaborative' };
-                default:
-                    return { icon: 'bi-file-earmark', label: 'Project' };
+                case 'private': return 'Private';
+                case 'public': return 'Public';
+                case 'collaborative': return 'Collaborative';
+                default: return 'Project';
             }
         };
 
-        const privacyInfo = getPrivacyInfo();
-
-        // Check if compact mode (passed via props.mode)
-        const isCompact = props.mode === 'compact';
+        // Get author display name (show 'You' for offline mode)
+        const getAuthorName = () => {
+            if (typeof data.author === 'string') {
+                if (data.author === 'Offline') return 'You';
+                return data.author;
+            }
+            const authorName = data.author?.name || '';
+            const authorSurname = data.author?.surname || '';
+            // Check if it's the offline user
+            if (authorName === 'Offline' && authorSurname === 'User') return 'You';
+            if (authorName === 'Offline') return 'You';
+            return authorName || authorSurname || 'You';
+        };
 
         return (
             <article
-                className={`project-card-new ${isCompact ? 'compact' : ''}`}
+                className="project-card"
                 onClick={e => getClickedElement(e)}
                 tabIndex={0}
                 role="button"
                 aria-label={`Open project ${data.name}`}
             >
-                {/* Cover Gradient - hidden in compact mode */}
-                {!isCompact && (
-                    <div
-                        className="card-cover"
-                        style={coverStyle}
-                    >
-                        {/* Privacy Badge (top-left) */}
-                        <span className="card-privacy-badge">
-                            {privacyInfo.label}
-                        </span>
-
-                        {/* Actions (top-right) */}
-                        <div className="card-actions">
-                            <button
-                                className={`card-action-btn ${data.isFavorite ? 'is-favorite' : ''}`}
-                                onClick={(e) => { e.stopPropagation(); toggleFavorite(data); }}
-                                aria-label={data.isFavorite ? 'Remove from favorites' : 'Add to favorites'}
-                            >
-                                <i className={data.isFavorite ? 'bi bi-star-fill' : 'bi bi-star'} />
-                            </button>
-                            <div className="menu-button">
-                                <Menu>
-                                    <Item icon={<i className="bi bi-folder2-open" />} action={e => {selectProject()}}>Open</Item>
-                                    <Item icon={icon['download']} action={e => exportProject()}>Download</Item>
-                                    <Item icon={icon['tools']} action={e => selectProject(true)}>Repair & open</Item>
-                                    <Divisor />
-                                    <Item icon={icon['favorite']} action={(e => toggleFavorite(data))}>{!data.isFavorite ? 'Add to favorites' : 'Remove from favorites'}</Item>
-                                    <Divisor />
-                                    <Item icon={icon['delete']} action={async e => await deleteProject()}>Delete</Item>
-                                </Menu>
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                {/* Compact mode header - shows privacy and actions inline */}
-                {isCompact && (
-                    <div className="card-compact-header">
-                        <span className="card-privacy-badge-inline">
-                            {privacyInfo.label}
-                        </span>
-                        <div className="card-actions-inline">
-                            <button
-                                className={`card-action-btn-sm ${data.isFavorite ? 'is-favorite' : ''}`}
-                                onClick={(e) => { e.stopPropagation(); toggleFavorite(data); }}
-                                aria-label={data.isFavorite ? 'Remove from favorites' : 'Add to favorites'}
-                            >
-                                <i className={data.isFavorite ? 'bi bi-star-fill' : 'bi bi-star'} />
-                            </button>
-                            <div className="menu-button">
-                                <Menu>
-                                    <Item icon={<i className="bi bi-folder2-open" />} action={e => {selectProject()}}>Open</Item>
-                                    <Item icon={icon['download']} action={e => exportProject()}>Download</Item>
-                                    <Item icon={icon['tools']} action={e => selectProject(true)}>Repair & open</Item>
-                                    <Divisor />
-                                    <Item icon={icon['favorite']} action={(e => toggleFavorite(data))}>{!data.isFavorite ? 'Add to favorites' : 'Remove from favorites'}</Item>
-                                    <Divisor />
-                                    <Item icon={icon['delete']} action={async e => await deleteProject()}>Delete</Item>
-                                </Menu>
-                            </div>
-                        </div>
-                    </div>
-                )}
+                {/* Accent Bar */}
+                <div className="project-card__accent" style={{ backgroundColor: accentColor }} />
 
                 {/* Content */}
-                <div className="card-body">
-                    <h3 className="card-title">{data.name}</h3>
-                    {/* Only show description if not default and not empty */}
-                    {data.description && !data.description.startsWith('A new Project') && (
-                        <p className="card-description">
-                            {data.description.length > 60
-                                ? data.description.substring(0, 60) + '...'
-                                : data.description}
-                        </p>
-                    )}
+                <div className="project-card__content">
+                    {/* Header: Title + Actions */}
+                    <div className="project-card__header">
+                        <h3 className="project-card__title">{data.name}</h3>
+                        <div className="project-card__actions">
+                            <button
+                                className={`project-card__action ${data.isFavorite ? 'is-favorite' : ''}`}
+                                onClick={(e) => { e.stopPropagation(); toggleFavorite(data); }}
+                                aria-label={data.isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+                            >
+                                <i className={data.isFavorite ? 'bi bi-star-fill' : 'bi bi-star'} />
+                            </button>
+                            <div className="menu-button">
+                                <Menu>
+                                    <Item icon={<i className="bi bi-folder2-open" />} action={e => {selectProject()}}>Open</Item>
+                                    <Item icon={icon['download']} action={e => exportProject()}>Download</Item>
+                                    <Item icon={icon['tools']} action={e => selectProject(true)}>Repair & open</Item>
+                                    <Divisor />
+                                    <Item icon={icon['favorite']} action={(e => toggleFavorite(data))}>{!data.isFavorite ? 'Add to favorites' : 'Remove from favorites'}</Item>
+                                    <Divisor />
+                                    <Item icon={icon['delete']} action={async e => await deleteProject()}>Delete</Item>
+                                </Menu>
+                            </div>
+                        </div>
+                    </div>
 
-                    {/* Stats Row with timestamp */}
-                    <div className="card-stats">
-                        <span className="card-stat">
+                    {/* Meta Row: Badge, Owner, Version */}
+                    <div className="project-card__meta">
+                        <span className="project-card__badge">{getBadgeLabel()}</span>
+                        <span className="project-card__author">{getAuthorName()}</span>
+                        <span className="project-card__version">v{data.version || '2.0'}</span>
+                    </div>
+
+                    {/* Stats Row */}
+                    <div className="project-card__stats">
+                        <span className="project-card__stat">
                             <i className="bi bi-diagram-3" />
                             {data.metamodelsNumber} {data.metamodelsNumber === 1 ? 'metamodel' : 'metamodels'}
                         </span>
-                        <span className="card-stat">
+                        <span className="project-card__stat">
                             <i className="bi bi-file-earmark" />
                             {data.modelsNumber} {data.modelsNumber === 1 ? 'model' : 'models'}
                         </span>
-                        <span className="card-stat-separator">·</span>
-                        <span className="card-time">{formatDate(data.lastModified)}</span>
+                        <span className="project-card__time">{formatDate(data.lastModified)}</span>
                     </div>
                 </div>
             </article>
