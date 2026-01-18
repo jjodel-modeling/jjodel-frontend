@@ -307,6 +307,13 @@
     outline: none;
   }
 
+  /* Project Editor Container */
+  .project-editor-container {
+    flex: 1;
+    overflow-y: auto;
+    background-color: #f8fafc;
+  }
+
   /* ============================================
      DASH CONTENT AREA
      ============================================ */

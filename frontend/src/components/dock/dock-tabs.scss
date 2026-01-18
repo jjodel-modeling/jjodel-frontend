@@ -93,9 +93,65 @@ $transition: 150ms ease;
         }
     }
 
-    // Hide close button by default in main tabs
+    // Hide close button by default (non-closable tabs like Project Summary)
     .dock-tab-close-btn {
         display: none;
+    }
+}
+
+// Show close button for closable tabs (metamodels, models)
+.not-strip .dock-panel .dock-tab:has(.dock-tab-close-btn) {
+    > div,
+    .dock-tab-btn {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 8px 8px 8px 12px !important; // less padding on right for close button
+    }
+
+    .dock-tab-close-btn {
+        display: flex !important;
+        align-items: center;
+        justify-content: center;
+        align-self: center; // force vertical centering
+        width: 20px;
+        height: 20px;
+        min-width: 20px; // prevent shrinking
+        padding: 0;
+        margin-left: 2px;
+        background: transparent;
+        border: none;
+        border-radius: 4px;
+        color: #94a3b8;
+        font-size: 16px;
+        line-height: 1;
+        cursor: pointer;
+        transition: all $transition;
+        opacity: 0;
+        flex-shrink: 0; // prevent shrinking
+
+        &:hover {
+            background: #f1f5f9;
+            color: #475569;
+        }
+
+        &:active {
+            background: #e2e8f0;
+        }
+    }
+
+    &:hover .dock-tab-close-btn {
+        opacity: 1;
+    }
+
+    // Always show close button on active tab
+    &.dock-tab-active .dock-tab-close-btn {
+        opacity: 0.7;
+
+        &:hover {
+            opacity: 1;
+            background: #e2e8f0;
+        }
     }
 }
 
@@ -364,6 +420,20 @@ $transition: 150ms ease;
             color: #f9fafb !important;
             background: #1f2937 !important;
         }
+    }
+
+    // Close button dark theme
+    .not-strip .dock-panel .dock-tab .dock-tab-close-btn {
+        color: #64748b;
+
+        &:hover {
+            background: #374151;
+            color: #94a3b8;
+        }
+    }
+
+    .not-strip .dock-panel .dock-tab.dock-tab-active .dock-tab-close-btn:hover {
+        background: #4b5563;
     }
 
     .breadcrumb-back {

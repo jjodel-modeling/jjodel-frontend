@@ -17,6 +17,7 @@ import {CollabClearHistoryAction, CollabRefreshAction, COMMIT} from "../../redux
 import {ProjectPointers} from "../../joiner/classes";
 import {DTOProjectGetAll} from "../DTO/GetAllProjects";
 import {ProjectResponseDTO} from "../DTO/ProjectResponseDTO";
+import { getNextVersionNumber, formatVersion } from '../../utils/versionUtils';
 
 @RuntimeAccessible('ProjectsApi')
 class ProjectsApi {
@@ -63,11 +64,22 @@ class ProjectsApi {
         dProject.viewpointsNumber = project.viewpoints.length;
         dProject.metamodelsNumber = project.metamodels.length;
         dProject.modelsNumber = project.models.length;
+
+        // Auto-increment version on save (vX.Y format, stored as number e.g. 3.4)
+        const currentVersion = dProject.version;
+        const nextVersion = getNextVersionNumber(currentVersion);
+        dProject.version = nextVersion;
+        console.log(`[Version] Project saved: ${formatVersion(currentVersion)} → ${formatVersion(nextVersion)}`);
+
         const state = await U.compressedState(dProject);
         dProject.state = state;
         if(U.isOffline()) await Offline.save(dProject);
         else await Online.save(dProject);
         U.isProjectModified = false;
+
+        // Update the version in Redux state
+        SetFieldAction.new(dProject.id, 'version', nextVersion, '', false);
+
         return dProject;
     }
 
