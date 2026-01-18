@@ -282,6 +282,236 @@
   }
 }
 
+/* ============================================
+   TAG FILTERS - NETFLIX STYLE
+   Horizontal scroll, single-select chips
+   ============================================ */
+
+.tag-filters-netflix {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 24px;
+  background: #ffffff;
+  border-bottom: 1px solid #e2e8f0;
+
+  &__label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #475569;
+    font-family: 'Inter Variable', -apple-system, sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+    flex-shrink: 0;
+
+    .bi {
+      font-size: 14px;
+      color: #64748b;
+    }
+  }
+
+  &__scroll {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding: 4px 0;
+    flex: 1;
+
+    // Hide scrollbar but keep scrolling
+    scrollbar-width: none; // Firefox
+    -ms-overflow-style: none; // IE/Edge
+    &::-webkit-scrollbar {
+      display: none; // Chrome, Safari
+    }
+
+    // Smooth scroll
+    scroll-behavior: smooth;
+  }
+}
+
+.tag-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 16px;
+  border-radius: 20px;
+  font-family: 'Inter Variable', -apple-system, sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: all 200ms ease;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #475569;
+  flex-shrink: 0;
+
+  &:hover {
+    background: #f8fafc;
+    border-color: #94a3b8;
+  }
+
+  // ACTIVE STATE - High contrast filled style
+  &--active {
+    background: #334155;
+    color: #ffffff;
+    border-color: #334155;
+    font-weight: 600;
+    box-shadow: 0 2px 4px rgba(51, 65, 85, 0.25);
+
+    &:hover {
+      background: #1e293b;
+      border-color: #1e293b;
+      box-shadow: 0 3px 6px rgba(30, 41, 59, 0.3);
+    }
+  }
+}
+
+/* Display Modes - based on project count */
+
+// Subtle mode (< 6 projects): smaller, muted
+.tag-filters-netflix--subtle {
+  padding: 12px 24px;
+
+  .tag-filters-netflix__label {
+    font-size: 11px;
+    color: #94a3b8;
+
+    .bi {
+      font-size: 12px;
+      color: #94a3b8;
+    }
+  }
+
+  .tag-chip {
+    padding: 4px 12px;
+    font-size: 12px;
+    border-color: #e2e8f0;
+    color: #64748b;
+
+    &:hover {
+      border-color: #cbd5e1;
+    }
+
+    &--active {
+      background: #475569;
+      border-color: #475569;
+      box-shadow: 0 1px 3px rgba(71, 85, 105, 0.2);
+    }
+  }
+}
+
+// Normal mode (6-11 projects): default styling
+.tag-filters-netflix--normal {
+  // Uses default styles
+}
+
+// Prominent mode (≥12 projects): larger, more emphasis
+.tag-filters-netflix--prominent {
+  padding: 20px 24px;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+  border-bottom: 2px solid #e2e8f0;
+
+  .tag-filters-netflix__label {
+    font-size: 13px;
+    font-weight: 700;
+    color: #334155;
+
+    .bi {
+      font-size: 16px;
+      color: #475569;
+    }
+  }
+
+  .tag-chip {
+    padding: 8px 20px;
+    font-size: 14px;
+    border-width: 1.5px;
+
+    &--active {
+      background: #1e293b;
+      border-color: #1e293b;
+      box-shadow: 0 3px 8px rgba(30, 41, 59, 0.3);
+
+      &:hover {
+        background: #0f172a;
+        border-color: #0f172a;
+      }
+    }
+  }
+}
+
+/* Filtered count indicator */
+.tag-filters-netflix__count {
+  display: inline-flex;
+  align-items: center;
+  margin-left: auto;
+  padding: 4px 12px;
+  font-family: 'Inter Variable', -apple-system, sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  color: #64748b;
+  background: #f1f5f9;
+  border-radius: 12px;
+  white-space: nowrap;
+  flex-shrink: 0;
+
+  .bi {
+    margin-right: 4px;
+    font-size: 11px;
+  }
+}
+
+/* Legacy tag filters (keep for backwards compatibility) */
+.tag-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 0 24px;
+  margin-bottom: 16px;
+}
+
+.tag-filter {
+  background: #f1f5f9;
+  color: #64748b;
+  border: 1px solid #e2e8f0;
+  padding: 6px 12px;
+  border-radius: 16px;
+  font-family: 'Inter Variable', -apple-system, sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 150ms ease;
+
+  &:hover {
+    background: #e2e8f0;
+    color: #475569;
+  }
+
+  &.active {
+    background: #475569;
+    color: #ffffff;
+    border-color: #475569;
+  }
+}
+
+.tag-filter-clear {
+  background: none;
+  color: #94a3b8;
+  border: none;
+  padding: 6px 12px;
+  font-family: 'Inter Variable', -apple-system, sans-serif;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 150ms ease;
+
+  &:hover {
+    color: #ef4444;
+  }
+}
+
 /* Projects Compact View - List of mini cards */
 .projects-compact {
   display: flex;
@@ -458,7 +688,8 @@
 }
 
 /* ============================================
-   SLIDER VIEW - 3x3 Grid with Pagination
+   SLIDER VIEW - Responsive Grid with Pagination
+   1-3 columns × 3 rows based on screen width (max 3 columns)
    ============================================ */
 
 .projects-slider {
@@ -485,17 +716,18 @@
   flex-shrink: 0;
   width: 100%;
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, 1fr); // Default: 3 columns (max)
+  grid-template-rows: repeat(3, auto); // Always 3 rows
   gap: 20px;
   overflow: visible;
 
-  // Responsive - 2 columns on tablet
-  @media (max-width: 1024px) {
+  // 2 columns on tablet (768px - 1199px)
+  @media (max-width: 1199px) {
     grid-template-columns: repeat(2, 1fr);
   }
 
-  // Responsive - 1 column on mobile
-  @media (max-width: 640px) {
+  // 1 column on mobile (<768px)
+  @media (max-width: 767px) {
     grid-template-columns: 1fr;
   }
 }

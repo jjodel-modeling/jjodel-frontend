@@ -1,5 +1,6 @@
 import './style.scss';
 import './navbar.scss';
+import jjodelLogo from '../../static/img/logo-light-150.png';
 import {
     Dictionary,
     DModel,
@@ -38,7 +39,7 @@ import {Divisor, Item, Menu, UserHeader, SubMenu, SubMenuItem} from '../componen
 
 import Collaborative from "../../components/collaborative/Collaborative";
 import { isProjectModified } from '../../common/libraries/projectModified';
-import { AboutModal } from './about/About';
+import { AboutDialog, AboutDialogController } from './about/AboutDialog';
 import {MetricsPanelManager, showMetrics, toggleMetrics} from '../../components/metrics/Metrics';
 
 import {Undoredocomponent} from "../../components/topbar/undoredocomponent";
@@ -264,7 +265,7 @@ function NavbarComponent(props: AllProps) {
 
         {name: 'Jjodel',
             subItems: [
-                {name: 'About Jjodel', function: () => {AboutModal.open();}, icon: icon['jjodel']},
+                {name: 'About Jjodel', function: () => {AboutDialogController.open();}, icon: icon['jjodel']},
                 {name: 'Roadmap',function: () => open('https://www.jjodel.io/roadmap/'), icon: icon['roadmap']},
             ]},
 
@@ -376,22 +377,29 @@ function NavbarComponent(props: AllProps) {
             ]
         },
 
-        /* Tools - disabled S1-S3, enabled S4+ (when metamodels exist) */
-        /* Dynamic content comes from metamodel - placeholder for now */
+        /* Tools - always visible, some items disabled on dashboard */
         {name: 'Tools',
-            disabled: isDashboard || metamodels.length === 0,
-            subItems: isDashboard || metamodels.length === 0 ? [
-                {name: 'No tools available', disabled: true, icon: <i className="bi bi-tools" />}
-            ] : [
-                {name: 'Metamodel Tools', icon: <i className="bi bi-tools" />, disabled: true,
-                    subItems: metamodels.map((m2, i) => ({
-                        name: props.mmNames[i] || 'Unnamed',
-                        icon: icon['metamodel'],
-                        disabled: true
-                    }))
-                },
+            subItems: [
+                ...(isDashboard || metamodels.length === 0 ? [
+                    {name: 'No metamodel tools', disabled: true, icon: <i className="bi bi-tools" />}
+                ] : [
+                    {name: 'Metamodel Tools', icon: <i className="bi bi-tools" />, disabled: true,
+                        subItems: metamodels.map((m2, i) => ({
+                            name: props.mmNames[i] || 'Unnamed',
+                            icon: icon['metamodel'],
+                            disabled: true
+                        }))
+                    },
+                    {name: 'Custom Tools', icon: <i className="bi bi-gear" />, disabled: true}
+                ]),
                 {name: 'divisor'},
-                {name: 'Custom Tools', icon: <i className="bi bi-gear" />, disabled: true}
+                {name: props.debug ? 'Disable Debug Mode' : 'Enable Debug Mode',
+                    function: () => {
+                        TRANSACTION('debug', ()=>SetRootFieldAction.new('debug', !props.debug), props.debug, !props.debug);
+                        U.debug = !props.debug;
+                    },
+                    icon: <i className={`bi ${props.debug ? 'bi-bug-fill' : 'bi-bug'}`} />
+                }
             ]
         },
 
@@ -441,18 +449,14 @@ function NavbarComponent(props: AllProps) {
     )}
 
     const MainLogo = ()=> {
-        let toggleDebug = (e: any)=>{
-            e.preventDefault();
-            TRANSACTION('debug', ()=>SetRootFieldAction.new('debug', !props.debug), props.debug, !props.debug);
-            U.debug = !props.debug;
-        }
         return (
-        <div className='nav-logo'>
+        <div className='nav-logo' onClick={() => R.navigate('/allProjects')}>
             <div className={"aligner"}>
-                <span className="logo-text" onClick={() => R.navigate('/allProjects')} onContextMenu={toggleDebug}>
-                    Jjodel.
-                </span>
-                {props.debug && <i className="bi bi-bug-fill" onContextMenu={()=>{CollabRefreshAction.new();}}></i>}
+                <img
+                    src={jjodelLogo}
+                    alt="Jjodel"
+                    className="nav-logo__image"
+                />
             </div>
         </div>
         );
@@ -589,10 +593,12 @@ function NavbarComponent(props: AllProps) {
             <MainMenu items={items} />
             <Commands />
             <div className="main-header-right">
+                {props.debug && <span className="debug-badge">DEBUG</span>}
                 <HelpMenu />
                 <UserMenu />
             </div>
         </nav>
+        <AboutDialog />
     </>);
 }
 

@@ -1,18 +1,16 @@
 /**
- * Accent colors for project cards
+ * Pastel accent colors for project cards
  * Each project gets a consistent color based on its name
  */
 const ACCENT_COLORS = [
-  '#3b82f6', // blue
-  '#10b981', // emerald
-  '#8b5cf6', // violet
-  '#f59e0b', // amber
-  '#ef4444', // red
-  '#06b6d4', // cyan
-  '#ec4899', // pink
-  '#84cc16', // lime
-  '#6366f1', // indigo
-  '#14b8a6', // teal
+  '#93c5fd', // blue pastello
+  '#6ee7b7', // emerald pastello
+  '#c4b5fd', // violet pastello
+  '#fcd34d', // amber pastello
+  '#fca5a5', // red pastello
+  '#67e8f9', // cyan pastello
+  '#f9a8d4', // pink pastello
+  '#bef264', // lime pastello
 ];
 
 /**

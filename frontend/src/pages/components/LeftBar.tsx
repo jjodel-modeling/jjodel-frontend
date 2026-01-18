@@ -138,6 +138,20 @@ function LeftBar(props: LeftBarProps): JSX.Element {
                     <Item action={toggleFavorite} icon={!project?.isFavorite ? icon['favorite'] : icon['favoriteFill']}>{!project?.isFavorite ? 'Add to favorites ' : 'Remove from favorites '}</Item>
                     <Item action={closeProject} icon={icon['close']}>Close project </Item>
                 </Menu>
+
+                {/* Footer - Version Only */}
+                <div className="leftbar-footer">
+                    <span className="version-text">Jjodel v2.0</span>
+                    <a
+                        href="https://opensource.org/licenses/MIT"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="license-badge"
+                    >
+                        <span className="license-label">License</span>
+                        <span className="license-type">MIT</span>
+                    </a>
+                </div>
             </div>
             :
             <div className={'leftbar'}>

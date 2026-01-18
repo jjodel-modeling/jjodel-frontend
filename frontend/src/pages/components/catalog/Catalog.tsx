@@ -1,4 +1,4 @@
-import React, {useState} from "react";
+import React, {useState, useMemo, useEffect} from "react";
 import {type Dictionary, LProject, R} from "../../../joiner";
 import { Menu, Item } from "../menu/Menu";
 import { Project } from "../Project";
@@ -44,16 +44,158 @@ type ChildrenType = {
 };
 
 
-type ViewMode = 'cards' | 'compact' | 'slider';
+type ViewMode = 'compact' | 'slider';
+
+// List View with Load More button
+type ListViewProps = {
+    projects: LProject[];
+    projectNames: Dictionary<string, LProject>;
+    allTags: string[];
+};
+
+const PROJECTS_PER_BATCH = 12;
+
+const ListViewWithLoadMore = ({ projects, projectNames, allTags }: ListViewProps) => {
+    const [visibleCount, setVisibleCount] = useState(PROJECTS_PER_BATCH);
+    const [previousCount, setPreviousCount] = useState(0); // Track for stagger animation
+
+    // Reset when projects change (filter applied)
+    useEffect(() => {
+        setVisibleCount(PROJECTS_PER_BATCH);
+        setPreviousCount(0); // Reset animation tracking
+    }, [projects]);
+
+    const visibleProjects = projects.slice(0, visibleCount);
+    const remainingCount = projects.length - visibleCount;
+    const hasMore = remainingCount > 0;
+
+    const handleLoadMore = () => {
+        setPreviousCount(visibleCount); // Save current count before loading more
+        setVisibleCount(prev => prev + PROJECTS_PER_BATCH);
+    };
+
+    return (
+        <div className="project-rows-grid">
+            {visibleProjects.map((p, i) => {
+                // Calculate animation index for newly loaded projects
+                const isNewlyLoaded = i >= previousCount;
+                const animationIndex = isNewlyLoaded ? i - previousCount : -1;
+
+                return (
+                    <Project
+                        key={p.id || i}
+                        data={p}
+                        mode="list"
+                        index={i}
+                        pnames={projectNames}
+                        allTags={allTags}
+                        animationIndex={animationIndex}
+                    />
+                );
+            })}
+
+            {/* Load More Button */}
+            {hasMore ? (
+                <div className="project-list__load-more">
+                    <button className="load-more-button" onClick={handleLoadMore}>
+                        <svg
+                            className="load-more-icon"
+                            width="20"
+                            height="20"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                        >
+                            <polyline points="6 9 12 15 18 9" />
+                        </svg>
+                        <span>Load More</span>
+                        <span className="remaining-count">({remainingCount} remaining)</span>
+                    </button>
+                </div>
+            ) : projects.length > PROJECTS_PER_BATCH ? (
+                <div className="project-list__all-loaded">
+                    <svg
+                        className="check-icon"
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                    >
+                        <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                    <span>All projects loaded ({projects.length} total)</span>
+                </div>
+            ) : null}
+        </div>
+    );
+};
 
 const Catalog = (props: ChildrenType) => {
     const [searchQuery, setSearchQuery] = useState("");
-    const [viewMode, setViewMode] = useState<ViewMode>('cards');
+    const [viewMode, setViewMode] = useState<ViewMode>('slider');
     const [activeTab, setActiveTab] = useState<'all' | 'public' | 'private' | 'collaborative'>('all');
     const [currentPage, setCurrentPage] = useState(0);
+    const [activeTag, setActiveTag] = useState<string | null>(null); // Single-select Netflix-style
 
-    // Slider grid: 3x3 = 9 cards per page
-    const cardsPerPage = 9;
+    // Track window width for responsive slider grid
+    const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1024);
+
+    useEffect(() => {
+        const handleResize = () => setWindowWidth(window.innerWidth);
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
+
+    // Responsive slider grid: 1-3 columns × 3 rows (max 3 columns)
+    // ≥1200px: 3 cols × 3 rows = 9 cards
+    // 768-1199px: 2 cols × 3 rows = 6 cards
+    // <768px: 1 col × 3 rows = 3 cards
+    const cardsPerPage = useMemo(() => {
+        if (windowWidth >= 1200) return 9;  // 3×3 (max)
+        if (windowWidth >= 768) return 6;   // 2×3
+        return 3;                            // 1×3
+    }, [windowWidth]);
+
+    // Reset page when cardsPerPage changes (prevents out-of-bounds page on resize)
+    useEffect(() => {
+        setCurrentPage(0);
+    }, [cardsPerPage]);
+
+    // Collect all unique tags from projects, sorted by frequency
+    const tagStats = useMemo(() => {
+        if (!props.projects) return [];
+        const tagCounts = new Map<string, number>();
+
+        props.projects.forEach((p: LProject) => {
+            if (p.tags && Array.isArray(p.tags)) {
+                p.tags.forEach((t: string) => {
+                    tagCounts.set(t, (tagCounts.get(t) || 0) + 1);
+                });
+            }
+        });
+
+        // Convert to array and sort by frequency (most used first)
+        const result = Array.from(tagCounts.entries())
+            .map(([tag, count]) => ({ tag, count }))
+            .sort((a, b) => b.count - a.count);
+
+        console.log('[DEBUG Catalog] Tag stats (sorted by frequency):', result);
+        return result;
+    }, [props.projects]);
+
+    // Extract just the tag names for passing to Project components
+    const allTags = useMemo(() => tagStats.map(t => t.tag), [tagStats]);
+
+    // Display mode based on project count
+    const displayMode = useMemo(() => {
+        const count = props.projects?.length || 0;
+        if (count < 6) return 'subtle';
+        if (count < 12) return 'normal';
+        return 'prominent';
+    }, [props.projects]);
 
     // Handler for creating project
     const handleCreateProject = async () => {
@@ -78,6 +220,13 @@ const Catalog = (props: ChildrenType) => {
         if (searchQuery.trim()) {
             items = items.filter((p: LProject) =>
                 p.name.toLowerCase().includes(searchQuery.toLowerCase())
+            );
+        }
+
+        // Filter by active tag (single-select)
+        if (activeTag) {
+            items = items.filter((p: LProject) =>
+                p.tags && p.tags.includes(activeTag)
             );
         }
 
@@ -137,6 +286,7 @@ const Catalog = (props: ChildrenType) => {
                                                 mode="cards"
                                                 index={pageIndex * cardsPerPage + i}
                                                 pnames={projectNames}
+                                                allTags={allTags}
                                             />
                                         ))}
                                 </div>
@@ -180,20 +330,13 @@ const Catalog = (props: ChildrenType) => {
             );
         }
 
-        // Compact view - mini cards without cover
-        if (viewMode === 'compact') {
-            return (
-                <div className="projects-compact">
-                    {filteredProjects.map((p, i) => <Project key={p.id || i} data={p} mode="list" index={i} pnames={projectNames} />)}
-                </div>
-            );
-        }
-
-        // Grid layout with cards (default)
+        // Compact/List view - rows with Load More button (default fallback)
         return (
-            <div className="project-cards-grid">
-                {filteredProjects.map((p, i) => <Project key={p.id || i} data={p} mode="cards" index={i} pnames={projectNames} />)}
-            </div>
+            <ListViewWithLoadMore
+                projects={filteredProjects}
+                projectNames={projectNames}
+                allTags={allTags}
+            />
         );
     };
 
@@ -236,28 +379,20 @@ const Catalog = (props: ChildrenType) => {
                         <div className="catalog-controls">
                             <div className="view-toggle">
                                 <button
-                                    className={`view-btn ${viewMode === 'cards' ? 'active' : ''}`}
-                                    onClick={() => setViewMode('cards')}
-                                    title="Grid view"
-                                    aria-label="Grid view"
+                                    className={`view-btn ${viewMode === 'slider' ? 'active' : ''}`}
+                                    onClick={() => { setViewMode('slider'); setCurrentPage(0); }}
+                                    title="Slider view"
+                                    aria-label="Slider view"
                                 >
                                     <i className="bi bi-grid-3x3-gap" />
                                 </button>
                                 <button
                                     className={`view-btn ${viewMode === 'compact' ? 'active' : ''}`}
                                     onClick={() => setViewMode('compact')}
-                                    title="Compact view"
-                                    aria-label="Compact view"
+                                    title="List view"
+                                    aria-label="List view"
                                 >
                                     <i className="bi bi-list" />
-                                </button>
-                                <button
-                                    className={`view-btn ${viewMode === 'slider' ? 'active' : ''}`}
-                                    onClick={() => { setViewMode('slider'); setCurrentPage(0); }}
-                                    title="Slider view"
-                                    aria-label="Slider view"
-                                >
-                                    <i className="bi bi-collection-play" />
                                 </button>
                             </div>
 
@@ -281,6 +416,38 @@ const Catalog = (props: ChildrenType) => {
                             </div>
                         </div>
                     </div>
+
+                    {/* Tag Filters - Netflix Style */}
+                    {tagStats.length > 0 && (
+                        <div className={`tag-filters-netflix tag-filters-netflix--${displayMode}`}>
+                            <div className="tag-filters-netflix__label">
+                                <i className="bi bi-tag" />
+                                <span>TAGS:</span>
+                            </div>
+                            <div className="tag-filters-netflix__scroll">
+                                {tagStats.map(({ tag, count }) => (
+                                    <button
+                                        key={tag}
+                                        className={`tag-chip ${activeTag === tag ? 'tag-chip--active' : ''}`}
+                                        onClick={() => {
+                                            setActiveTag(prev => prev === tag ? null : tag);
+                                            setCurrentPage(0); // Reset pagination on filter change
+                                        }}
+                                        title={`${count} project${count > 1 ? 's' : ''}`}
+                                    >
+                                        {tag}
+                                    </button>
+                                ))}
+                            </div>
+                            {activeTag && (
+                                <div className="tag-filters-netflix__count">
+                                    <i className="bi bi-funnel" />
+                                    {filteredProjects.length} project{filteredProjects.length !== 1 ? 's' : ''}
+                                </div>
+                            )}
+                        </div>
+                    )}
+
                     <div className="catalog">
                         {renderProjects()}
                     </div>

@@ -214,6 +214,7 @@
     align-items: center;
     margin-right: var(--space-8);
     order: -1; /* Ensure logo is first */
+    cursor: pointer;
 
     .logo-text {
       font-size: 22px;
@@ -225,6 +226,21 @@
 
       &:hover {
         color: var(--color-accent);
+      }
+    }
+
+    // Logo Image
+    &__image {
+      height: 28px;
+      width: auto;
+      display: block;
+      transition: opacity 0.15s ease;
+    }
+
+    // Hover effect on the logo
+    &:hover {
+      .nav-logo__image {
+        opacity: 0.85;
       }
     }
 
@@ -1007,5 +1023,32 @@ $transition-menu: 150ms ease;
     .bi {
       color: $color-text-menu;
     }
+  }
+}
+
+// ============================================
+// DEBUG BADGE
+// ============================================
+
+.debug-badge {
+  background: #fef2f2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-family: 'Inter Variable', -apple-system, sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  margin-right: 12px;
+  animation: debugPulse 2s infinite;
+}
+
+@keyframes debugPulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
   }
 }

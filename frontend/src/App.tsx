@@ -30,7 +30,6 @@ import {
 
 import {ExternalLibraries} from "./components/forEndUser/ExternalLibraries";
 import {TooltipVisualizer} from "./components/forEndUser/Tooltip";
-import {BottomBar} from "./pages/components";
 import AlertVisualizer from "./components/alert/Alert";
 import DialogVisualizer from './components/alert/Dialog';
 import { NotificationWidget } from './components/NotificationWidget/NotificationWidget';
@@ -114,7 +113,6 @@ function App(props: AllProps): JSX.Element {
                     }
                 </Routes></Try>
             </HashRouter>
-            {user && window.location.hash.includes('project') && <Try><BottomBar/></Try>}
             {user && <Try><NotificationWidget/></Try>}
 
         </div>

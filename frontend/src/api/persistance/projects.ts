@@ -76,6 +76,14 @@ class ProjectsApi {
         else return await Online.favorite(project);
     }
 
+    static async updateTags(project: DProject, tags: string[]): Promise<void> {
+        console.log('[DEBUG ProjectsApi.updateTags] Called with project:', project);
+        console.log('[DEBUG ProjectsApi.updateTags] Tags to save:', tags);
+        console.log('[DEBUG ProjectsApi.updateTags] Is offline:', U.isOffline());
+        if(U.isOffline()) return Offline.updateTags(project, tags);
+        else return await Online.updateTags(project, tags);
+    }
+
 
     static async importFromText(content: string, name: string = '', date: number = Date.now()) {
         let project = JSON.parse(content) as DProject;
@@ -144,8 +152,10 @@ class Offline {
     }
     static getAll(): void {
         const projects = Storage.read<DProject[]>('projects') || [];
+        console.log('[DEBUG Offline.getAll] Projects from localStorage:', projects);
         TRANSACTION('loading projects (offline)', () => {
             for (const project of projects) {
+                console.log('[DEBUG Offline.getAll] Loading project:', project.name, 'tags:', project.tags);
                 /*if (!project._Id || !project.id && project.state) {
                    let decompressed = U.decompressState(project.state);
                    decompressed it is pointless, the db does not have the jid anyway and cannot single get it.
@@ -159,6 +169,7 @@ class Offline {
                 SetFieldAction.new(project.id, 'metamodelsNumber', project.metamodelsNumber, '', false);
                 SetFieldAction.new(project.id, 'modelsNumber', project.modelsNumber, '', false);
                 SetFieldAction.new(project.id, 'isFavorite', project.isFavorite, '', false);
+                SetFieldAction.new(project.id, 'tags', project.tags || [], '', false);
             }
         });
     }
@@ -188,6 +199,30 @@ class Offline {
         const filtered = projects.filter(p => p.id !== project.id);
         Storage.write('projects', [...filtered, {...project, isFavorite: !project.isFavorite}]);
         SetFieldAction.new(project.id, 'isFavorite', !project.isFavorite);
+    }
+
+    static async updateTags(project: DProject, tags: string[]): Promise<void> {
+        console.log('[DEBUG Offline.updateTags] Called');
+        console.log('[DEBUG Offline.updateTags] Project:', project);
+        console.log('[DEBUG Offline.updateTags] Tags:', tags);
+
+        const projects = Storage.read<DProject[]>('projects') || [];
+        console.log('[DEBUG Offline.updateTags] Projects from storage:', projects);
+
+        const filtered = projects.filter(p => p.id !== project.id);
+        console.log('[DEBUG Offline.updateTags] Filtered projects (without current):', filtered);
+
+        const updatedProject = {...project, tags};
+        console.log('[DEBUG Offline.updateTags] Updated project to save:', updatedProject);
+
+        const newProjectsList = [...filtered, updatedProject];
+        console.log('[DEBUG Offline.updateTags] New projects list to write:', newProjectsList);
+
+        Storage.write('projects', newProjectsList);
+        console.log('[DEBUG Offline.updateTags] Storage.write completed');
+
+        SetFieldAction.new(project.id, 'tags', tags, '', false);
+        console.log('[DEBUG Offline.updateTags] SetFieldAction completed');
     }
 
     static import(project: DProject): void {
@@ -306,8 +341,16 @@ class Online {
         SetFieldAction.new(project.id, 'isFavorite', !project.isFavorite);
     }
 
+    static async updateTags(project: DProject, tags: string[]): Promise<void> {
+        const updatedProject = {...project, tags};
+        const updateProjectRequest = new UpdateProjectRequest(updatedProject);
+        const response = await Api.put(`${Api.persistance}/project/`, updateProjectRequest);
 
-
+        if(response.code !== 200) {
+            U.alert('e', 'Cannot update tags!', 'Something went wrong ...');
+        }
+        SetFieldAction.new(project.id, 'tags', tags, '', false);
+    }
 
     static async import(project: DProject): Promise<void> {
         const updateProjectRequest = new UpdateProjectRequest(project);
