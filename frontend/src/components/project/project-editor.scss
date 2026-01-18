@@ -238,31 +238,40 @@
   }
 }
 
-// Badges
-// ------
+// Badges - Uniform height for all badges
+// --------------------------------------
 .badge {
-  padding: 4px 10px;
-  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 6px 12px;          // Uniform padding
+  min-height: 28px;           // Fixed height for all badges
+  border-radius: 6px;
   font-size: 12px;
   font-weight: 500;
+  line-height: 1.2;
   border: none;
+  white-space: nowrap;
+
+  i {
+    font-size: 12px;
+    flex-shrink: 0;
+  }
 
   &--type {
     background: #f1f5f9;
     color: #64748b;
     text-transform: capitalize;
+    min-width: 85px;          // Fixed width to prevent layout shift
   }
 
   &--clickable {
     cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
     transition: all 0.15s ease;
 
     i {
-      font-size: 10px;
-      opacity: 0.6;
+      opacity: 0.7;
     }
 
     &:hover {
@@ -275,11 +284,11 @@
   }
 
   &--public {
-    background: #dcfce7;
-    color: #16a34a;
+    background: #d1fae5;      // green-100
+    color: #065f46;           // green-800
 
     &:hover {
-      background: #bbf7d0;
+      background: #a7f3d0;
     }
   }
 
@@ -288,6 +297,54 @@
     color: #ffffff;
     font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
     font-size: 11px;
+  }
+
+  // Engine Version - Neutral grey, shows Jjodel platform version
+  &--engine {
+    background: #64748b;
+    color: #ffffff;
+    font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
+    font-size: 11px;
+    cursor: help;
+
+    i {
+      opacity: 0.8;
+    }
+  }
+
+  // Content Version - Green accent, shows project revision
+  &--content {
+    background: #d1fae5;      // green-100
+    color: #065f46;           // green-800
+    font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
+    font-size: 11px;
+    cursor: help;
+  }
+}
+
+// Badge Toggle Button (for making public projects private)
+.badge-toggle-btn {
+  width: 28px;
+  height: 28px;               // Same height as badges
+  min-height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f1f5f9;
+  border: none;
+  border-radius: 6px;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  margin-left: -4px;          // Overlap slightly with badge
+
+  i {
+    font-size: 12px;
+  }
+
+  &:hover {
+    background: #fee2e2;
+    color: #dc2626;
   }
 }
 
@@ -557,6 +614,16 @@
     &--version {
       background: #475569;
       color: #e2e8f0;
+    }
+
+    &--engine {
+      background: #475569;
+      color: #e2e8f0;
+    }
+
+    &--content {
+      background: #065f46;  // green-800 for dark mode
+      color: #d1fae5;       // green-100 for dark mode
     }
   }
 

@@ -1,9 +1,18 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { LModel, LProject, LViewPoint, U } from '../../joiner';
+import { LModel, LProject, LViewPoint, U, store } from '../../joiner';
 import DockManager from '../abstract/DockManager';
 import { createM2 } from '../../pages/components/Navbar';
-import { formatVersion } from '../../utils/versionUtils';
+import { formatVersionNumber } from '../../utils/versionUtils';
+import ShareProjectModal from './ShareProjectModal';
 import './project-editor.scss';
+
+/**
+ * Get the engine (platform) version from the Redux store
+ */
+const getEngineVersion = (): string => {
+    const state = store.getState();
+    return `v${state.version?.n || '2.0'}`;
+};
 
 interface ProjectEditorProps {
     project: LProject;
@@ -42,6 +51,7 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project }) => {
     const [editedDescription, setEditedDescription] = useState(project.description || '');
     const [newTag, setNewTag] = useState('');
     const [isAddingTag, setIsAddingTag] = useState(false);
+    const [showShareModal, setShowShareModal] = useState(false);
 
     const nameInputRef = useRef<HTMLInputElement>(null);
     const descriptionInputRef = useRef<HTMLTextAreaElement>(null);
@@ -155,9 +165,18 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project }) => {
         }
     };
 
-    // Type toggle handler
+    // Type toggle handler - toggles between public/private
     const handleToggleType = () => {
         project.type = project.type === 'public' ? 'private' : 'public';
+    };
+
+    // Handle badge click - if public, open share modal; if private, toggle to public
+    const handleVisibilityBadgeClick = () => {
+        if (project.type === 'public') {
+            setShowShareModal(true);
+        } else {
+            handleToggleType();
+        }
     };
 
     const handleOpenMetamodel = async (mm: LModel) => {
@@ -195,13 +214,38 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project }) => {
                 <div className="project-header__badges">
                     <button
                         className={`badge badge--type badge--clickable ${project.type === 'public' ? 'badge--public' : ''}`}
-                        onClick={handleToggleType}
-                        title="Click to toggle visibility"
+                        onClick={handleVisibilityBadgeClick}
+                        title={project.type === 'public' ? 'Click to get share link' : 'Click to make public'}
                     >
                         {project.type || 'private'}
-                        <i className="bi bi-arrow-left-right" />
+                        {project.type === 'public' ? (
+                            <i className="bi bi-link-45deg" />
+                        ) : (
+                            <i className="bi bi-arrow-left-right" />
+                        )}
                     </button>
-                    <span className="badge badge--version">{formatVersion(project.version)}</span>
+                    {project.type === 'public' && (
+                        <button
+                            className="badge-toggle-btn"
+                            onClick={handleToggleType}
+                            title="Make private"
+                        >
+                            <i className="bi bi-lock" />
+                        </button>
+                    )}
+                    <span
+                        className="badge badge--engine"
+                        title="Jjodel platform version - Same for all projects"
+                    >
+                        <i className="bi bi-gear" />
+                        {getEngineVersion()}
+                    </span>
+                    <span
+                        className="badge badge--content"
+                        title="Project revision - Auto-increments on each save"
+                    >
+                        Rev {formatVersionNumber(project.version)}
+                    </span>
                 </div>
 
                 {/* Editable Name */}
@@ -461,6 +505,13 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project }) => {
                     </div>
                 )}
             </div>
+
+            {/* Share Modal */}
+            <ShareProjectModal
+                project={project}
+                isOpen={showShareModal}
+                onClose={() => setShowShareModal(false)}
+            />
         </div>
     );
 };

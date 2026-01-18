@@ -182,6 +182,8 @@ class Offline {
                 SetFieldAction.new(project.id, 'modelsNumber', project.modelsNumber, '', false);
                 SetFieldAction.new(project.id, 'isFavorite', project.isFavorite, '', false);
                 SetFieldAction.new(project.id, 'tags', project.tags || [], '', false);
+                // Load version from saved project, default to 1.0 if not present
+                SetFieldAction.new(project.id, 'version', project.version || 1.0, '', false);
             }
         });
     }

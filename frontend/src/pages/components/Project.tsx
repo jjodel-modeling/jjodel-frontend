@@ -8,6 +8,7 @@ import {Divisor, Item, Menu} from './menu/Menu';
 import {icon} from './icons/Icons';
 import {compressToUTF16} from "async-lz-string";
 import {getAccentColor} from '../../utils/colorHash';
+import {formatVersionNumber} from '../../utils/versionUtils';
 import './project-card.scss';
 
 function formatDate(lastModified: number){
@@ -303,7 +304,9 @@ function Project(props: Props): JSX.Element {
                     <div className="project-card__meta">
                         <span className="project-card__badge">{getBadgeLabel()}</span>
                         <span className="project-card__author">{getAuthorName()}</span>
-                        <span className="project-card__version">v{data.version || '2.0'}</span>
+                        <span className="project-card__version" title="Project revision - Auto-increments on each save">
+                            Rev {formatVersionNumber(data.version)}
+                        </span>
                     </div>
 
                     {/* Stats Row */}
@@ -505,7 +508,9 @@ function Project(props: Props): JSX.Element {
                 </div>
 
                 {/* Version */}
-                <span className="project-row__version">v{data.version || '2.0'}</span>
+                <span className="project-row__version" title="Project revision - Auto-increments on each save">
+                    Rev {formatVersionNumber(data.version)}
+                </span>
 
                 {/* Time */}
                 <span className="project-row__time">{formatDate(data.lastModified)}</span>

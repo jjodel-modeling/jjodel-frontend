@@ -62,12 +62,27 @@ export function isValidVersion(version: string): boolean {
 }
 
 /**
- * Format a version ensuring it has the 'v' prefix
+ * Format a version ensuring it has the 'v' prefix and X.Y format
+ * Handles both numbers (1.0 → "v1.0") and strings ("v1.0" → "v1.0")
  */
 export function formatVersion(version: string | number | undefined): string {
-    if (!version) return 'v1.0';
+    if (!version && version !== 0) return 'v1.0';
+
+    // If it's a number, use toFixed(1) to ensure decimal format
+    if (typeof version === 'number') {
+        return `v${version.toFixed(1)}`;
+    }
+
+    // It's a string - clean it up
     const versionStr = String(version);
-    return versionStr.startsWith('v') ? versionStr : `v${versionStr}`;
+    const clean = versionStr.replace(/^v/i, '');
+
+    // If it doesn't have a decimal, add .0
+    if (!clean.includes('.')) {
+        return `v${clean}.0`;
+    }
+
+    return versionStr.startsWith('v') ? versionStr : `v${clean}`;
 }
 
 /**
@@ -111,4 +126,12 @@ export function parseVersion(version: string | number | undefined): { major: num
  */
 export function getVersionDisplay(version: string | number | undefined): string {
     return formatVersion(version);
+}
+
+/**
+ * Format version for display without 'v' prefix (e.g. "1.0", "2.3")
+ * Use this for "Rev X.Y" displays
+ */
+export function formatVersionNumber(version: string | number | undefined): string {
+    return formatVersion(version).replace(/^v/i, '');
 }

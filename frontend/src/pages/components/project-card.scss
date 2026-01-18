@@ -194,13 +194,14 @@ $transition: 150ms ease;
   &__version {
     flex-shrink: 0;
     margin-left: auto;
-    background: #94a3b8; // Slate light
-    color: #ffffff;
+    background: #d1fae5;  // green-100 for content/revision version
+    color: #065f46;       // green-800
     padding: 2px 8px;
     border-radius: 4px;
     font-family: 'JetBrains Mono', 'Fira Code', monospace;
     font-size: 11px;
     font-weight: 500;
+    cursor: help;
   }
 
   // Tags Row
@@ -819,16 +820,17 @@ $transition: 150ms ease;
     visibility: visible;
   }
 
-  // Version badge
+  // Version badge - Green accent for content/revision version
   &__version {
-    background: #94a3b8;
-    color: #ffffff;
+    background: #d1fae5;  // green-100
+    color: #065f46;       // green-800
     padding: 2px 8px;
     border-radius: 4px;
     font-family: 'JetBrains Mono', 'Fira Code', monospace;
     font-size: 11px;
     font-weight: 500;
     text-align: center;
+    cursor: help;
   }
 
   // Time ago

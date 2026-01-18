@@ -1223,7 +1223,8 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         _this.type = type;
         _this.name = name;
         _this.state = state || '';
-        _this.version = state ? -1 : VersionFixer.get_highestversion();
+        // Content version: new projects start at 1.0, loaded projects use -1 (to be extracted from state)
+        _this.version = state ? -1 : 1.0;
         if(id) _this.id = id;
         _this.favorite = {};
         let user: DUser = (DPointerTargetable.from(DUser.current) as DUser)
