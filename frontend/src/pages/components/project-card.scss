@@ -452,7 +452,7 @@ $transition: 150ms ease;
 
 .compact-card {
   display: grid;
-  grid-template-columns: minmax(200px, 280px) 1fr auto auto;
+  grid-template-columns: 280px 1fr auto auto auto;
   align-items: center;
   gap: 16px;
   padding: 12px 16px;
@@ -461,6 +461,8 @@ $transition: 150ms ease;
   border-radius: 8px;
   cursor: pointer;
   transition: all $transition;
+  position: relative;
+  overflow: visible !important;
 
   &:hover {
     border-color: #d1d5db;
@@ -474,19 +476,27 @@ $transition: 150ms ease;
 
   // Responsive - stack on mobile
   @media (max-width: 768px) {
-    grid-template-columns: 1fr auto auto;
+    grid-template-columns: 1fr auto auto auto;
     gap: 12px;
 
     .compact-card-stats {
       display: none;
     }
   }
+
+  @media (max-width: 480px) {
+    grid-template-columns: 1fr auto auto;
+
+    .compact-card-badge {
+      display: none;
+    }
+  }
 }
 
-// Hidden container divs - not needed with grid
+// Hidden container divs - children participate directly in grid
 .compact-card-left,
 .compact-card-right {
-  display: contents; // Children participate directly in parent grid
+  display: contents;
 }
 
 .compact-card-name {
@@ -497,7 +507,6 @@ $transition: 150ms ease;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 280px;
 }
 
 .compact-card-stats {
@@ -521,9 +530,7 @@ $transition: 150ms ease;
 }
 
 .compact-card-actions {
-  display: flex;
-  align-items: center;
-  gap: 4px;
+  display: contents; // Star and menu as separate grid items
 }
 
 .compact-favorite-btn {
@@ -551,6 +558,7 @@ $transition: 150ms ease;
 }
 
 .compact-menu-btn {
+  position: relative;
   background: transparent !important;
   border: none !important;
   box-shadow: none !important;
@@ -576,6 +584,15 @@ $transition: 150ms ease;
   }
 
   .dropdown {
+    position: absolute;
+    top: 100%;
+    right: 0;
     z-index: 1000 !important;
+    margin-top: 4px;
+    background: #ffffff;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    border: 1px solid #e5e7eb;
+    min-width: 180px;
   }
 }
