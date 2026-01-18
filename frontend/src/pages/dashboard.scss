@@ -247,6 +247,49 @@
 }
 
 /* ============================================
+   DROP OVERLAY - NEW GLOBAL DRAG & DROP
+   ============================================ */
+
+.drop-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(71, 85, 105, 0.8);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.drop-zone {
+  background: white;
+  border: 2px dashed #475569;
+  border-radius: 16px;
+  padding: 60px 80px;
+  text-align: center;
+
+  i {
+    font-size: 48px;
+    color: #475569;
+    margin-bottom: 16px;
+    display: block;
+  }
+
+  p {
+    font-family: var(--font-sans);
+    font-size: 18px;
+    font-weight: var(--font-medium);
+    color: #374151;
+    margin: 0;
+  }
+}
+
+/* Dashboard dragging state */
+.dashboard-container.is-dragging {
+  /* Optional: add subtle visual feedback to the container */
+}
+
+/* ============================================
    DASHBOARD CONTAINER
    ============================================ */
 

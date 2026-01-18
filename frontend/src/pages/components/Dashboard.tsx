@@ -18,7 +18,7 @@ import {
 import {LeftBar, Navbar} from './';
 
 import '../dashboard.scss'
-import React, {JSX, ReactElement, useRef} from "react";
+import React, {JSX, ReactElement, useRef, useState} from "react";
 import {Btn, CommandBar, Sep} from '../../components/commandbar/CommandBar';
 
 import colors000 from '../../static/img/colors-000.png';
@@ -255,10 +255,58 @@ type ProjectDashboardProps = {
 function GenericDashboard(props: DashProps): any {
     const {children, active} = props;
     const user: LUser = LPointerTargetable.fromPointer(DUser.current);
+    const [isDragging, setIsDragging] = useState(false);
+
+    const handleDragOver = (e: React.DragEvent) => {
+        e.preventDefault();
+        const items = e.dataTransfer.items;
+        if (items.length > 0) {
+            const item = items[0];
+            if (item.kind === 'file') {
+                setIsDragging(true);
+            }
+        }
+    };
+
+    const handleDragLeave = (e: React.DragEvent) => {
+        e.preventDefault();
+        // Only set to false if leaving the container (not entering a child)
+        if (e.currentTarget === e.target || !e.currentTarget.contains(e.relatedTarget as Node)) {
+            setIsDragging(false);
+        }
+    };
+
+    const handleDrop = async (e: React.DragEvent) => {
+        e.preventDefault();
+        setIsDragging(false);
+
+        const file = e.dataTransfer.files[0];
+        if (file && file.name.endsWith('.jjodel')) {
+            const reader = new FileReader();
+            reader.onload = async (event) => {
+                const content = String(event.target?.result);
+                try {
+                    await ProjectsApi.importFromText(content);
+                    U.alert('i', 'Project imported', `"${file.name}" has been imported successfully.`);
+                } catch (err) {
+                    U.alert('e', 'Import failed', 'The file could not be imported. Please check the file format.');
+                }
+            };
+            reader.readAsText(file);
+        } else if (file) {
+            U.alert('w', 'Invalid file type', 'Please drop a .jjodel file to import a project.');
+        }
+    };
 
     return (<>
         <Navbar />
-        <div className={"dashboard-container"} tabIndex={-1}>
+        <div
+            className={`dashboard-container ${isDragging ? 'is-dragging' : ''}`}
+            tabIndex={-1}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+        >
             <LeftBar active={active} projects={user?.projects}/>
             <div className={`dash-content ${active === 'All' ? 'projects-view' : 'user'} ${props.style && props.style}`}>
                 {/* Title for non-All views only - All view title is in AllProjects.tsx CTA row */}
@@ -273,6 +321,16 @@ function GenericDashboard(props: DashProps): any {
                 )}
                 <Catalog children={children}/>
             </div>
+
+            {/* Drop Overlay */}
+            {isDragging && (
+                <div className="drop-overlay">
+                    <div className="drop-zone">
+                        <i className="bi bi-cloud-arrow-up" />
+                        <p>Drop .jjodel file to import</p>
+                    </div>
+                </div>
+            )}
         </div>
     </>);
 }
