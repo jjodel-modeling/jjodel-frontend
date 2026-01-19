@@ -19,10 +19,12 @@ export function JodieMinimized({ activeProvider, hasUnread, onClick }: JodieMini
         <button
             className={`jodie-minimized ${hasUnread ? 'jodie-has-unread' : ''}`}
             onClick={onClick}
-            title="Open Jodie"
-            style={{ backgroundColor: providerInfo.color }}
+            title="Open Jjodie"
         >
-            <i className={`bi ${providerInfo.icon}`} />
+            <i
+                className="bi bi-chat-dots-fill"
+                style={{ color: 'white', fontSize: '28px' }}
+            />
             {hasUnread && <span className="jodie-unread-badge" />}
         </button>
     );

@@ -68,9 +68,13 @@ function ProviderSetting({ provider, config, onUpdate }: ProviderSettingProps): 
                 <div className="jodie-settings-provider-info">
                     <div
                         className="jodie-settings-provider-icon"
-                        style={{ backgroundColor: info.color }}
+                        style={{
+                            backgroundColor: info.bgColor,
+                            border: `2px solid ${info.color}`,
+                            color: info.color,
+                        }}
                     >
-                        <i className={`bi ${info.icon}`} />
+                        <span>{info.textIcon}</span>
                     </div>
                     <div className="jodie-settings-provider-name">
                         <strong>{info.name}</strong>
@@ -235,7 +239,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps): JSX.Elem
                 <div className="jodie-settings-header">
                     <h2>
                         <i className="bi bi-gear" />
-                        Jodie Settings
+                        Jjodie Settings
                     </h2>
                     <button className="jodie-settings-close" onClick={onClose}>
                         <i className="bi bi-x-lg" />
@@ -279,7 +283,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps): JSX.Elem
                                 <h3>Reset Settings?</h3>
                             </div>
                             <p>
-                                Are you sure you want to reset all Jodie settings? 
+                                Are you sure you want to reset all Jjodie settings?
                                 This will remove all API keys and reset to defaults.
                             </p>
                             <div className="jodie-confirm-actions">

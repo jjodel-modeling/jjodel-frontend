@@ -19,6 +19,9 @@ export function ProviderSelector({ activeProvider, onProviderChange, disabled }:
 
     const handleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
         const newProvider = e.target.value as AIProvider;
+        // Persist to localStorage first
+        JodieConfigService.setActiveProvider(newProvider);
+        // Then notify parent component
         onProviderChange(newProvider);
     };
 

@@ -51,7 +51,7 @@ export function ChatInput({ onSend, disabled, placeholder }: ChatInputProps): JS
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder={placeholder || 'Ask Jodie about metamodeling...'}
+                placeholder={placeholder || 'Ask Jjodie about metamodeling...'}
                 disabled={disabled}
                 rows={1}
             />

@@ -20,37 +20,126 @@
     transition: box-shadow 0.2s ease;
 }
 
-.jodie-window.jodie-dragging {
-    cursor: grabbing;
-    box-shadow: var(--shadow-2xl);
+.jodie-window.jodie-dragging,
+.jodie-window.jodie-resizing {
     user-select: none;
 }
 
+.jodie-window.jodie-dragging {
+    cursor: grabbing;
+    box-shadow: var(--shadow-2xl);
+}
+
+/* ========================================
+   Resize Handles - Base Style
+   ======================================== */
+
 .jodie-resize-handle {
     position: absolute;
-    top: 0;
-    left: 0;
-    width: 16px;
-    height: 16px;
-    cursor: nwse-resize;
     z-index: 10;
 }
 
-.jodie-resize-handle::before {
+/* Corner Handles (larger hit area) */
+.jodie-resize-handle.nw,
+.jodie-resize-handle.ne,
+.jodie-resize-handle.sw,
+.jodie-resize-handle.se {
+    width: 20px;
+    height: 20px;
+}
+
+.jodie-resize-handle.nw {
+    top: 0;
+    left: 0;
+    cursor: nw-resize;
+    border-top-left-radius: var(--radius-lg);
+}
+
+.jodie-resize-handle.ne {
+    top: 0;
+    right: 0;
+    cursor: ne-resize;
+    border-top-right-radius: var(--radius-lg);
+}
+
+.jodie-resize-handle.sw {
+    bottom: 0;
+    left: 0;
+    cursor: sw-resize;
+    border-bottom-left-radius: var(--radius-lg);
+}
+
+.jodie-resize-handle.se {
+    bottom: 0;
+    right: 0;
+    cursor: se-resize;
+    border-bottom-right-radius: var(--radius-lg);
+}
+
+/* Visual indicator for SE corner */
+.jodie-resize-handle.se::before {
     content: '';
     position: absolute;
-    top: 4px;
-    left: 4px;
+    bottom: 4px;
+    right: 4px;
     width: 8px;
     height: 8px;
-    border-left: 2px solid var(--color-border-secondary);
-    border-top: 2px solid var(--color-border-secondary);
+    border-right: 2px solid var(--color-border-secondary);
+    border-bottom: 2px solid var(--color-border-secondary);
     opacity: 0;
     transition: opacity 0.2s;
 }
 
-.jodie-window:hover .jodie-resize-handle::before {
+.jodie-window:hover .jodie-resize-handle.se::before {
     opacity: 0.6;
+}
+
+/* Edge Handles */
+.jodie-resize-handle.n,
+.jodie-resize-handle.s {
+    left: 20px;
+    right: 20px;
+    height: 6px;
+}
+
+.jodie-resize-handle.e,
+.jodie-resize-handle.w {
+    top: 20px;
+    bottom: 20px;
+    width: 6px;
+}
+
+.jodie-resize-handle.n {
+    top: 0;
+    cursor: n-resize;
+}
+
+.jodie-resize-handle.s {
+    bottom: 0;
+    cursor: s-resize;
+}
+
+.jodie-resize-handle.e {
+    right: 0;
+    cursor: e-resize;
+}
+
+.jodie-resize-handle.w {
+    left: 0;
+    cursor: w-resize;
+}
+
+/* Hover effect for edge handles */
+.jodie-resize-handle.n:hover,
+.jodie-resize-handle.s:hover,
+.jodie-resize-handle.e:hover,
+.jodie-resize-handle.w:hover {
+    background: rgba(71, 85, 105, 0.1);
+}
+
+/* Active state during resize */
+.jodie-window.jodie-resizing .jodie-resize-handle {
+    background: rgba(71, 85, 105, 0.15);
 }
 
 /* ========================================
@@ -123,8 +212,8 @@
 }
 
 .jodie-close-btn:hover {
-    background: var(--color-error);
-    color: white;
+    background: rgba(239, 68, 68, 0.1);
+    color: #dc2626;
 }
 
 /* ========================================
@@ -154,7 +243,7 @@
 }
 
 .jodie-provider-dropdown:focus {
-    border-color: var(--color-accent);
+    border-color: #475569;
 }
 
 .jodie-provider-indicator {
@@ -211,6 +300,13 @@
     font-size: var(--text-xs);
 }
 
+/* User avatar with blue gradient */
+.jodie-user-avatar {
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    font-weight: 700;
+    font-size: 11px;
+}
+
 .jodie-message-content {
     display: flex;
     flex-direction: column;
@@ -226,7 +322,7 @@
 }
 
 .jodie-message-user .jodie-message-bubble {
-    background: var(--color-accent);
+    background: linear-gradient(135deg, #64748b 0%, #475569 100%);
     color: white;
     border-bottom-right-radius: var(--radius-sm);
 }
@@ -255,6 +351,12 @@
 
 .jodie-message-provider {
     font-weight: var(--font-medium);
+}
+
+/* User author name */
+.jodie-message-author {
+    font-weight: 600;
+    color: #475569;
 }
 
 /* ========================================
@@ -322,8 +424,8 @@
     width: 64px;
     height: 64px;
     border-radius: var(--radius-full);
-    background: var(--color-accent-light);
-    color: var(--color-accent);
+    background: #f1f5f9;
+    color: #475569;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -359,74 +461,106 @@
 }
 
 .jodie-welcome li i {
-    color: var(--color-accent);
+    color: #475569;
     width: 20px;
 }
 
 /* ========================================
-   Input Area
+   Input Area (Enhanced)
    ======================================== */
 
 .jodie-input-container {
     display: flex;
     align-items: flex-end;
-    gap: var(--space-2);
-    padding: var(--space-3);
-    background: var(--color-bg-secondary);
-    border-top: 1px solid var(--color-border-primary);
+    gap: 12px;
+    padding: 16px 20px;
+    background: #ffffff;
+    border-top: 1px solid #e2e8f0;
+    border-radius: 0 0 var(--radius-lg) var(--radius-lg);
 }
 
 .jodie-input {
     flex: 1;
-    padding: var(--space-2) var(--space-3);
-    border: 1px solid var(--color-border-primary);
-    border-radius: var(--radius-lg);
-    background: var(--color-bg-primary);
-    color: var(--color-text-primary);
-    font-size: var(--text-sm);
+    padding: 14px 18px;
+    border: 2px solid #e2e8f0;
+    border-radius: 12px;
+    background: #fafbfc;
+    color: #1e293b;
+    font-size: 15px;
     font-family: inherit;
+    line-height: 1.5;
     resize: none;
     outline: none;
+    min-height: 48px;
     max-height: 120px;
-    transition: border-color 0.15s;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .jodie-input:focus {
-    border-color: var(--color-accent);
+    border-color: #64748b;
+    background: #ffffff;
+    box-shadow: 0 0 0 4px rgba(100, 116, 139, 0.1);
+}
+
+.jodie-input:hover:not(:focus):not(:disabled) {
+    border-color: #cbd5e1;
+    background: #ffffff;
 }
 
 .jodie-input::placeholder {
-    color: var(--color-text-tertiary);
+    color: #94a3b8;
+    font-weight: 400;
 }
 
 .jodie-input:disabled {
-    background: var(--color-bg-tertiary);
+    background: #f1f5f9;
+    color: #94a3b8;
+    border-color: #e2e8f0;
     cursor: not-allowed;
 }
 
 .jodie-send-btn {
-    width: 36px;
-    height: 36px;
+    width: 48px;
+    height: 48px;
+    min-width: 48px;
     border: none;
-    background: var(--color-accent);
+    background: linear-gradient(135deg, #64748b 0%, #475569 100%);
     color: white;
-    border-radius: var(--radius-full);
+    border-radius: 12px;
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    transition: all 0.15s ease;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 2px 8px rgba(71, 85, 105, 0.25);
+}
+
+.jodie-send-btn i {
+    font-size: 18px;
+    color: white;
+}
+
+.jodie-send-btn:disabled i {
+    color: #94a3b8;
 }
 
 .jodie-send-btn:hover:not(:disabled) {
-    background: var(--color-accent-hover);
-    transform: scale(1.05);
+    background: linear-gradient(135deg, #475569 0%, #334155 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(71, 85, 105, 0.35);
+}
+
+.jodie-send-btn:active:not(:disabled) {
+    transform: translateY(0);
+    box-shadow: 0 1px 4px rgba(71, 85, 105, 0.3);
 }
 
 .jodie-send-btn:disabled {
-    background: var(--color-bg-tertiary);
-    color: var(--color-text-tertiary);
+    background: #cbd5e1;
+    color: #94a3b8;
     cursor: not-allowed;
+    box-shadow: none;
+    opacity: 0.6;
 }
 
 /* ========================================
@@ -435,26 +569,34 @@
 
 .jodie-minimized {
     position: fixed;
-    bottom: 20px;
-    right: 20px;
+    bottom: 100px;  /* Positioned above footer */
+    right: 30px;
     z-index: 10000;
-    width: 56px;
-    height: 56px;
+    width: 64px;
+    height: 64px;
     border: none;
     border-radius: var(--radius-full);
+    background: linear-gradient(135deg, #64748b 0%, #475569 100%);
     color: white;
-    font-size: var(--text-xl);
+    font-size: 28px;
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    box-shadow: var(--shadow-lg);
-    transition: all 0.2s ease;
+    box-shadow: 0 8px 24px rgba(71, 85, 105, 0.4);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* White icon - forced */
+.jodie-minimized i {
+    color: white;
+    font-size: 28px;
 }
 
 .jodie-minimized:hover {
     transform: scale(1.1);
-    box-shadow: var(--shadow-xl);
+    box-shadow: 0 12px 32px rgba(71, 85, 105, 0.5);
+    background: linear-gradient(135deg, #475569 0%, #334155 100%);
 }
 
 .jodie-minimized.jodie-has-unread::after {

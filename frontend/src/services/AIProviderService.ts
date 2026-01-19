@@ -5,36 +5,21 @@
 
 import { AIProvider, ChatMessage, PROVIDER_ENDPOINTS } from '../types/jodie';
 import { JodieConfigService } from './JodieConfig';
-
-// System prompt for Jodie
-const JODIE_SYSTEM_PROMPT = `You are Jodie, an expert AI assistant for Jjodel - a metamodeling and domain-specific language (DSL) design tool.
-
-Your expertise includes:
-- Metamodel design patterns and best practices
-- UML class diagrams and relationships (inheritance, composition, aggregation)
-- Model-Driven Development (MDD) and Model-Driven Architecture (MDA)
-- Domain-Specific Languages (DSLs)
-- Ecore and EMF concepts
-- Model validation and constraints (OCL-like expressions)
-- Code generation from models
-
-Guidelines:
-- Be concise but thorough
-- Provide practical examples when helpful
-- Suggest design patterns for common modeling scenarios
-- Help users understand trade-offs in design decisions
-- Use proper metamodeling terminology
-
-When the user asks about their specific metamodel, provide relevant guidance based on general metamodeling principles.`;
+import { buildSystemPromptWithContext } from '../constants/jjodiePrompt';
 
 export class AIProviderService {
     /**
      * Send a message to the specified AI provider
+     * @param message - The user's message
+     * @param provider - Which AI provider to use
+     * @param conversationHistory - Previous messages in the conversation
+     * @param projectContext - Optional context string about the current project/metamodel
      */
     static async chat(
         message: string,
         provider: AIProvider,
-        conversationHistory: ChatMessage[] = []
+        conversationHistory: ChatMessage[] = [],
+        projectContext?: string
     ): Promise<string> {
         const config = JodieConfigService.getProvider(provider);
 
@@ -42,15 +27,18 @@ export class AIProviderService {
             throw new Error(`Provider ${provider} is not configured. Please add your API key in Settings.`);
         }
 
+        // Build system prompt with optional project context
+        const systemPrompt = buildSystemPromptWithContext(projectContext);
+
         switch (provider) {
             case 'claude':
-                return await this.chatClaude(message, config.apiKey, config.model, conversationHistory);
+                return await this.chatClaude(message, config.apiKey, config.model, conversationHistory, systemPrompt);
             case 'openai':
-                return await this.chatOpenAI(message, config.apiKey, config.model, conversationHistory);
+                return await this.chatOpenAI(message, config.apiKey, config.model, conversationHistory, systemPrompt);
             case 'deepseek':
-                return await this.chatDeepSeek(message, config.apiKey, config.model, conversationHistory);
+                return await this.chatDeepSeek(message, config.apiKey, config.model, conversationHistory, systemPrompt);
             case 'gemini':
-                return await this.chatGemini(message, config.apiKey, config.model, conversationHistory);
+                return await this.chatGemini(message, config.apiKey, config.model, conversationHistory, systemPrompt);
             default:
                 throw new Error(`Unknown provider: ${provider}`);
         }
@@ -63,7 +51,8 @@ export class AIProviderService {
         message: string,
         apiKey: string,
         model: string,
-        history: ChatMessage[]
+        history: ChatMessage[],
+        systemPrompt: string
     ): Promise<string> {
         // Build messages array with history
         const messages = [
@@ -84,7 +73,7 @@ export class AIProviderService {
             body: JSON.stringify({
                 model,
                 max_tokens: 2000,
-                system: JODIE_SYSTEM_PROMPT,
+                system: systemPrompt,
                 messages,
             }),
         });
@@ -105,11 +94,12 @@ export class AIProviderService {
         message: string,
         apiKey: string,
         model: string,
-        history: ChatMessage[]
+        history: ChatMessage[],
+        systemPrompt: string
     ): Promise<string> {
         // Build messages array with system prompt and history
         const messages = [
-            { role: 'system' as const, content: JODIE_SYSTEM_PROMPT },
+            { role: 'system' as const, content: systemPrompt },
             ...history.map(msg => ({
                 role: msg.role as 'user' | 'assistant',
                 content: msg.content,
@@ -146,11 +136,12 @@ export class AIProviderService {
         message: string,
         apiKey: string,
         model: string,
-        history: ChatMessage[]
+        history: ChatMessage[],
+        systemPrompt: string
     ): Promise<string> {
         // Build messages array (OpenAI-compatible format)
         const messages = [
-            { role: 'system' as const, content: JODIE_SYSTEM_PROMPT },
+            { role: 'system' as const, content: systemPrompt },
             ...history.map(msg => ({
                 role: msg.role as 'user' | 'assistant',
                 content: msg.content,
@@ -187,18 +178,19 @@ export class AIProviderService {
         message: string,
         apiKey: string,
         model: string,
-        history: ChatMessage[]
+        history: ChatMessage[],
+        systemPrompt: string
     ): Promise<string> {
         // Build contents array for Gemini format
         const contents = [
             // System instruction as first user message
             {
                 role: 'user',
-                parts: [{ text: `System instructions: ${JODIE_SYSTEM_PROMPT}\n\nPlease acknowledge.` }],
+                parts: [{ text: `System instructions: ${systemPrompt}\n\nPlease acknowledge.` }],
             },
             {
                 role: 'model',
-                parts: [{ text: 'Understood. I am Jodie, your metamodeling assistant.' }],
+                parts: [{ text: 'Understood. I am Jjodie, your metamodeling assistant.' }],
             },
             // Conversation history
             ...history.map(msg => ({

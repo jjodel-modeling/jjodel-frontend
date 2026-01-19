@@ -25,6 +25,7 @@ export interface ChatMessage {
     content: string;
     timestamp: number;
     provider?: AIProvider;
+    userName?: string;
 }
 
 export interface ChatState {
@@ -78,26 +79,30 @@ export const PROVIDER_INFO = {
     claude: {
         name: 'Claude',
         company: 'Anthropic',
-        color: '#D97757',
-        icon: 'bi-robot',
+        color: '#D97706',
+        bgColor: '#FEF3C7',
+        textIcon: 'C',
     },
     openai: {
         name: 'ChatGPT',
         company: 'OpenAI',
-        color: '#10a37f',
-        icon: 'bi-chat-dots',
+        color: '#059669',
+        bgColor: '#D1FAE5',
+        textIcon: 'GPT',
     },
     deepseek: {
         name: 'DeepSeek',
         company: 'DeepSeek AI',
-        color: '#3b82f6',
-        icon: 'bi-stars',
+        color: '#2563EB',
+        bgColor: '#DBEAFE',
+        textIcon: 'DS',
     },
     gemini: {
         name: 'Gemini',
         company: 'Google',
-        color: '#8b5cf6',
-        icon: 'bi-gem',
+        color: '#7C3AED',
+        bgColor: '#EDE9FE',
+        textIcon: 'G',
     },
 } as const;
 

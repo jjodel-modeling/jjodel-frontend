@@ -3,13 +3,15 @@
  * Main container for the AI assistant
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { JodieWindow } from './JodieWindow';
 import { JodieMinimized } from './JodieMinimized';
 import { SettingsModal } from './SettingsModal';
 import { AIProvider, ChatMessage, ChatState, PROVIDER_INFO } from '../../types/jodie';
 import { JodieConfigService } from '../../services/JodieConfig';
 import { AIProviderService } from '../../services/AIProviderService';
+import { JjodieContextService } from '../../services/JjodieContext';
+import { DUser, L, LUser, LProject } from '../../joiner';
 import './JodieWindow.css';
 import './SettingsModal.css';
 
@@ -35,6 +37,36 @@ export function Jodie(): JSX.Element {
     const [activeProvider, setActiveProvider] = useState<AIProvider>(() =>
         JodieConfigService.getActiveProvider()
     );
+
+    // Get current user name
+    const userName = useMemo(() => {
+        try {
+            const user: LUser = L.fromPointer(DUser.current);
+            if (user) {
+                const fullName = `${user.name || ''} ${user.surname || ''}`.trim();
+                return fullName || 'You';
+            }
+        } catch {
+            // Fallback if user not available
+        }
+        return 'You';
+    }, []);
+
+    // Get current project context for AI
+    const getProjectContext = useCallback((): string | undefined => {
+        try {
+            const user: LUser = L.fromPointer(DUser.current);
+            if (user?.project) {
+                const project = user.project as LProject;
+                if (project) {
+                    return JjodieContextService.getContextString(project);
+                }
+            }
+        } catch (err) {
+            console.warn('Could not get project context:', err);
+        }
+        return undefined;
+    }, []);
 
     // Listen for open and settings events
     useEffect(() => {
@@ -149,6 +181,7 @@ export function Jodie(): JSX.Element {
             role: 'user',
             content,
             timestamp: Date.now(),
+            userName,
         };
 
         setChatState(prev => ({
@@ -161,8 +194,11 @@ export function Jodie(): JSX.Element {
             // Get conversation history (excluding the message we just added)
             const history = chatState.messages;
 
-            // Call AI provider
-            const response = await AIProviderService.chat(content, providerToUse, history);
+            // Get current project context
+            const projectContext = getProjectContext();
+
+            // Call AI provider with context
+            const response = await AIProviderService.chat(content, providerToUse, history, projectContext);
 
             // Add assistant message
             const assistantMessage: ChatMessage = {
@@ -195,7 +231,7 @@ export function Jodie(): JSX.Element {
                 isWaiting: false,
             }));
         }
-    }, [activeProvider, chatState.messages]);
+    }, [activeProvider, chatState.messages, getProjectContext]);
 
     // Open settings
     const handleOpenSettings = useCallback(() => {

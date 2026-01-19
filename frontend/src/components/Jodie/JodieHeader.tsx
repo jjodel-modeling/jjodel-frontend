@@ -33,10 +33,10 @@ export function JodieHeader({
                     className="jodie-avatar"
                     style={{ backgroundColor: providerInfo.color }}
                 >
-                    <i className={`bi ${providerInfo.icon}`} />
+                    <span>{providerInfo.textIcon}</span>
                 </div>
                 <div className="jodie-title">
-                    <span className="jodie-name">Jodie</span>
+                    <span className="jodie-name">Jjodie</span>
                     <ProviderSelector
                         activeProvider={activeProvider}
                         onProviderChange={onProviderChange}

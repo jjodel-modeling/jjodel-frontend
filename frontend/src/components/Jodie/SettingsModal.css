@@ -129,14 +129,20 @@
 }
 
 .jodie-settings-provider-icon {
-    width: 36px;
-    height: 36px;
-    border-radius: var(--radius-md);
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
     display: flex;
     align-items: center;
     justify-content: center;
-    color: white;
-    font-size: var(--text-base);
+    font-size: 20px;
+    font-weight: 700;
+    flex-shrink: 0;
+    transition: transform 0.2s ease;
+}
+
+.jodie-settings-provider:hover .jodie-settings-provider-icon {
+    transform: scale(1.05);
 }
 
 .jodie-settings-provider-name {
@@ -156,22 +162,45 @@
 }
 
 /* ========================================
-   Toggle Switch (CLAUDE.md compliant)
+   Toggle Switch (Slate Theme)
    ======================================== */
 
 .jodie-settings-toggle {
     position: relative;
     display: inline-block;
-    width: 40px;
-    height: 22px;
+    width: 48px;
+    height: 26px;
     flex-shrink: 0;
+    vertical-align: middle;
 }
 
-.jodie-settings-toggle input {
-    opacity: 0;
-    width: 0;
-    height: 0;
-    position: absolute;
+/* HIDE CHECKBOX COMPLETELY - Multiple Methods */
+.jodie-settings-toggle input[type="checkbox"] {
+    /* Position off-screen */
+    position: absolute !important;
+    left: -9999px !important;
+
+    /* Make invisible */
+    opacity: 0 !important;
+    visibility: hidden !important;
+
+    /* Remove dimensions */
+    width: 0 !important;
+    height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+
+    /* Remove native appearance */
+    appearance: none !important;
+    -webkit-appearance: none !important;
+    -moz-appearance: none !important;
+
+    /* Prevent interactions */
+    pointer-events: none !important;
+
+    /* Clip to nothing */
+    clip: rect(0, 0, 0, 0) !important;
+    overflow: hidden !important;
 }
 
 .jodie-toggle-slider {
@@ -182,33 +211,38 @@
     right: 0;
     bottom: 0;
     background-color: #cbd5e1;
-    border-radius: 11px;
-    transition: background-color 250ms ease;
+    border-radius: 26px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .jodie-toggle-slider::before {
     content: '';
     position: absolute;
-    left: 2px;
-    bottom: 2px;
-    width: 18px;
-    height: 18px;
+    left: 3px;
+    bottom: 3px;
+    width: 20px;
+    height: 20px;
     background-color: white;
     border-radius: 50%;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
-    transition: transform 250ms ease;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .jodie-settings-toggle input:checked + .jodie-toggle-slider {
-    background-color: #06B6D4; /* cyan accent - CLAUDE.md */
+    background: linear-gradient(135deg, #64748b 0%, #475569 100%);
 }
 
 .jodie-settings-toggle input:checked + .jodie-toggle-slider::before {
-    transform: translateX(18px);
+    transform: translateX(22px);
 }
 
 .jodie-settings-toggle input:focus + .jodie-toggle-slider {
-    box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.2);
+    box-shadow: 0 0 0 3px rgba(71, 85, 105, 0.15);
+}
+
+.jodie-settings-toggle input:disabled + .jodie-toggle-slider {
+    opacity: 0.5;
+    cursor: not-allowed;
 }
 
 /* ========================================
@@ -249,8 +283,8 @@
 }
 
 .jodie-settings-field input:focus {
-    border-color: #06B6D4;
-    box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.1);
+    border-color: #475569;
+    box-shadow: 0 0 0 3px rgba(71, 85, 105, 0.1);
 }
 
 .jodie-settings-field input::placeholder {
@@ -283,8 +317,8 @@
 }
 
 .jodie-settings-field select:focus {
-    border-color: #06B6D4;
-    box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.1);
+    border-color: #475569;
+    box-shadow: 0 0 0 3px rgba(71, 85, 105, 0.1);
 }
 
 /* API Key Input with Toggle */
@@ -321,8 +355,8 @@
 
 .jodie-settings-toggle-visibility:focus {
     outline: none;
-    border-color: #06B6D4;
-    box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.1);
+    border-color: #475569;
+    box-shadow: 0 0 0 3px rgba(71, 85, 105, 0.1);
 }
 
 /* ========================================
@@ -355,7 +389,8 @@
 
 .jodie-settings-test-btn:hover:not(:disabled) {
     background: #f8fafc;
-    border-color: #06B6D4;
+    border-color: #475569;
+    color: #475569;
 }
 
 .jodie-settings-test-btn:disabled {
@@ -365,8 +400,8 @@
 
 .jodie-settings-test-btn:focus {
     outline: none;
-    border-color: #06B6D4;
-    box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.1);
+    border-color: #475569;
+    box-shadow: 0 0 0 3px rgba(71, 85, 105, 0.1);
 }
 
 .jodie-settings-test-result {
@@ -377,6 +412,10 @@
     border-radius: 6px;
     font-size: 13px;
     line-height: 1.5;
+    word-wrap: break-word;
+    word-break: break-word;
+    max-width: 100%;
+    overflow-wrap: anywhere;
 }
 
 .jodie-settings-test-result i {
@@ -395,6 +434,8 @@
     background: #fee2e2;
     color: #991b1b;
     border: 1px solid #fca5a5;
+    max-height: 150px;
+    overflow-y: auto;
 }
 
 .jodie-settings-test-result .error-details {
@@ -406,6 +447,9 @@
     padding: 6px 8px;
     border-radius: 4px;
     word-break: break-word;
+    overflow-wrap: anywhere;
+    white-space: pre-wrap;
+    max-width: 100%;
 }
 
 /* Help text for API keys */
@@ -417,7 +461,7 @@
 }
 
 .jodie-settings-help a {
-    color: #06B6D4;
+    color: #475569;
     text-decoration: none;
     font-weight: 500;
 }
@@ -432,6 +476,35 @@
     border-radius: 3px;
     font-family: 'Monaco', 'Courier New', monospace;
     font-size: 11px;
+}
+
+/* Help tips for common errors */
+.jodie-settings-help-box {
+    margin-top: 12px;
+}
+
+.help-tip {
+    padding: 12px;
+    background: #fef3c7;
+    border: 1px solid #fbbf24;
+    border-radius: 6px;
+    font-size: 12px;
+    line-height: 1.6;
+    color: #92400e;
+}
+
+.help-tip a {
+    color: #d97706;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.help-tip a:hover {
+    text-decoration: underline;
+}
+
+.help-tip strong {
+    color: #78350f;
 }
 
 /* ========================================
@@ -475,22 +548,22 @@
     height: 36px;
     padding: 0 20px;
     border: none;
-    background: #06B6D4;
+    background: linear-gradient(135deg, #64748b 0%, #475569 100%);
     color: white;
     font-size: 13px;
     font-weight: 500;
     border-radius: 6px;
     cursor: pointer;
-    transition: background 150ms ease;
+    transition: all 150ms ease;
 }
 
 .jodie-settings-done:hover {
-    background: #0891B2;
+    background: linear-gradient(135deg, #475569 0%, #334155 100%);
 }
 
 .jodie-settings-done:focus {
     outline: none;
-    box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.2);
+    box-shadow: 0 0 0 3px rgba(71, 85, 105, 0.2);
 }
 
 /* ========================================

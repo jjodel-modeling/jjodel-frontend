@@ -52,11 +52,12 @@ $color-brand: #374151;
 $color-brand-light: #4B5563;
 $color-brand-lighter: #6B7280;
 
-// Accent (CYAN - elementi interattivi)
-$color-accent: #06B6D4;
-$color-accent-hover: #0891B2;
-$color-accent-light: rgba(6, 182, 212, 0.1);
-$color-accent-lighter: rgba(6, 182, 212, 0.05);
+// Accent (SLATE - elementi interattivi)
+$color-accent: #475569;
+$color-accent-hover: #334155;
+$color-accent-light: rgba(71, 85, 105, 0.1);
+$color-accent-lighter: rgba(71, 85, 105, 0.05);
+$color-accent-gradient: linear-gradient(135deg, #64748b 0%, #475569 100%);
 
 // Text
 $color-text-primary: #111418;
@@ -156,7 +157,7 @@ $transition-slow: 400ms ease;
 
 ### Buttons
 
-**REGOLA: Niente gradienti. Solo colori solid.**
+**REGOLA: Gradienti slate consentiti per bottoni primary e toggle.**
 
 ```scss
 // Base button
@@ -173,21 +174,21 @@ $transition-slow: 400ms ease;
   border-radius: $radius-md;
   cursor: pointer;
   transition: all $transition-fast;
-  
+
   &:disabled {
     opacity: 0.5;
     cursor: not-allowed;
   }
 }
 
-// Primary (azione principale)
+// Primary (azione principale) - SLATE GRADIENT
 .btn-primary {
   color: $color-text-inverse;
-  background-color: $color-accent;
+  background: linear-gradient(135deg, #64748b 0%, #475569 100%);
   border: none;
-  
+
   &:hover:not(:disabled) {
-    background-color: $color-accent-hover;
+    background: linear-gradient(135deg, #475569 0%, #334155 100%);
   }
 }
 
@@ -232,29 +233,28 @@ $transition-slow: 400ms ease;
 
 ```scss
 .toggle {
-  width: 40px;
-  height: 22px;
-  border-radius: 11px;
-  background-color: $color-border;
-  padding: 2px;
+  width: 48px;
+  height: 26px;
+  border-radius: 26px;
+  background-color: #cbd5e1;
   cursor: pointer;
-  transition: background-color $transition-normal;
-  
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
   &.active {
-    background-color: #06B6D4; // cyan accent
+    background: linear-gradient(135deg, #64748b 0%, #475569 100%); // slate gradient
   }
 }
 
 .toggle-thumb {
-  width: 18px;
-  height: 18px;
+  width: 20px;
+  height: 20px;
   border-radius: 50%;
   background-color: #ffffff;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
-  transition: transform $transition-normal;
-  
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
   .toggle.active & {
-    transform: translateX(18px);
+    transform: translateX(22px);
   }
 }
 ```
@@ -484,10 +484,9 @@ $transition-slow: 400ms ease;
 **CTA BUTTONS (in alto a destra del content):**
 - Solo 2 bottoni:
   1. "Import" → btn-secondary (outlined)
-  2. "New Project" → btn-primary (cyan solid)
+  2. "New Project" → btn-primary (slate gradient)
 - NO terzo bottone "Getting Started"
-- NO gradienti
-- NO colori misti
+- Gradienti slate consentiti per btn-primary
 
 **EMPTY STATE (quando 0 progetti):**
 ```
@@ -507,7 +506,7 @@ $transition-slow: 400ms ease;
 │                                         │
 └─────────────────────────────────────────┘
 ```
-- Icona: bi-rocket-takeoff, 36px, color cyan
+- Icona: bi-rocket-takeoff, 36px, color slate (#475569)
 - Titolo: "Welcome to Jjodel!", 22px, semibold
 - Descrizione: 15px, color secondary, max-width 400px
 - CTA: btn-primary grande
@@ -590,13 +589,14 @@ Dashboard Components:
 ### ❌ DON'T
 
 - **MAI** checkbox nativi del browser
-- **MAI** gradienti sui bottoni
-- **MAI** colori fuori dal design system (arancio, rosa, viola)
+- **MAI** gradienti non-slate (solo slate gradient consentito per primary/toggle)
+- **MAI** colori fuori dal design system (cyan, rosa, viola random)
 - **MAI** layout form orizzontale per input lunghi
 - **MAI** testo troppo denso senza gerarchia
-- **MAI** icone colorate casuali (usa teal o grigio)
+- **MAI** icone colorate casuali (usa slate o grigio)
 - **MAI** bottoni con dimensioni sproporzionate
 - **MAI** mix di stili diversi nella stessa area
+- **MAI** usare emoji (usa testo o Bootstrap Icons)
 
 ---
 
