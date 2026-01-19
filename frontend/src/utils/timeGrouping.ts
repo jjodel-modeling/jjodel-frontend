@@ -3,7 +3,7 @@
  * Groups items by temporal periods (Today, Yesterday, This Week, etc.)
  */
 
-import { ActivityRecord } from '../types/activity';
+import { ActivityRecord, TimelineActivity } from '../types/activity';
 
 export interface TimelineGroup<T> {
     label: string;
@@ -74,6 +74,29 @@ export const groupByTime = <T extends { timestamp: Date | number }>(
         groups[group].push(item);
     });
 
+    return ['Today', 'Yesterday', 'This Week', 'Last Week', 'Older']
+        .filter(label => groups[label].length > 0)
+        .map(label => ({ label, items: groups[label] }));
+};
+
+/**
+ * Group timeline activities (including grouped activities) by time period
+ */
+export const groupTimelineActivitiesByTime = (activities: TimelineActivity[]): TimelineGroup<TimelineActivity>[] => {
+    const groups: Record<string, TimelineActivity[]> = {
+        'Today': [],
+        'Yesterday': [],
+        'This Week': [],
+        'Last Week': [],
+        'Older': []
+    };
+
+    activities.forEach(activity => {
+        const group = getTimeGroup(activity.timestamp);
+        groups[group].push(activity);
+    });
+
+    // Return only non-empty groups in order
     return ['Today', 'Yesterday', 'This Week', 'Last Week', 'Older']
         .filter(label => groups[label].length > 0)
         .map(label => ({ label, items: groups[label] }));

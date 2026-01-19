@@ -60,6 +60,87 @@ export const ACTIVITY_DISPLAY_CONFIG: Record<ActivityType, ActivityDisplayConfig
                 : 'Metamodel evolved',
     },
 
+    [ActivityType.METAMODEL_CLASS_ADDED]: {
+        label: 'Class Added',
+        action: 'modified',
+        getMessage: (activity) =>
+            activity.metadata?.elementName
+                ? `Class "${activity.metadata.elementName}" added`
+                : 'Class added',
+    },
+
+    [ActivityType.METAMODEL_PACKAGE_ADDED]: {
+        label: 'Package Added',
+        action: 'modified',
+        getMessage: (activity) =>
+            activity.metadata?.elementName
+                ? `Package "${activity.metadata.elementName}" added`
+                : 'Package added',
+    },
+
+    [ActivityType.METAMODEL_ENUM_ADDED]: {
+        label: 'Enum Added',
+        action: 'modified',
+        getMessage: (activity) =>
+            activity.metadata?.elementName
+                ? `Enumeration "${activity.metadata.elementName}" added`
+                : 'Enumeration added',
+    },
+
+    [ActivityType.METAMODEL_ATTRIBUTE_ADDED]: {
+        label: 'Attribute Added',
+        action: 'modified',
+        getMessage: (activity) =>
+            activity.metadata?.elementName
+                ? `Attribute "${activity.metadata.elementName}" added`
+                : 'Attribute added',
+    },
+
+    [ActivityType.METAMODEL_REFERENCE_ADDED]: {
+        label: 'Reference Added',
+        action: 'modified',
+        getMessage: (activity) =>
+            activity.metadata?.elementName
+                ? `Reference "${activity.metadata.elementName}" added`
+                : 'Reference added',
+    },
+
+    [ActivityType.METAMODEL_OPERATION_ADDED]: {
+        label: 'Operation Added',
+        action: 'modified',
+        getMessage: (activity) =>
+            activity.metadata?.elementName
+                ? `Operation "${activity.metadata.elementName}" added`
+                : 'Operation added',
+    },
+
+    [ActivityType.METAMODEL_LITERAL_ADDED]: {
+        label: 'Literal Added',
+        action: 'modified',
+        getMessage: (activity) =>
+            activity.metadata?.elementName
+                ? `Literal "${activity.metadata.elementName}" added`
+                : 'Literal added',
+    },
+
+    [ActivityType.METAMODEL_PARAMETER_ADDED]: {
+        label: 'Parameter Added',
+        action: 'modified',
+        getMessage: (activity) =>
+            activity.metadata?.elementName
+                ? `Parameter "${activity.metadata.elementName}" added`
+                : 'Parameter added',
+    },
+
+    [ActivityType.METAMODEL_EXCEPTION_ADDED]: {
+        label: 'Exception Added',
+        action: 'modified',
+        getMessage: (activity) =>
+            activity.metadata?.elementName
+                ? `Exception "${activity.metadata.elementName}" added`
+                : 'Exception added',
+    },
+
     [ActivityType.MODEL_CREATED]: {
         label: 'Created',
         action: 'created',

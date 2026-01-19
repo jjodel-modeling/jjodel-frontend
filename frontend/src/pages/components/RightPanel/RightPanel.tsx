@@ -2,11 +2,13 @@ import React, { JSX, useMemo } from 'react';
 import { LProject, LUser, DUser, L, R } from '../../../joiner';
 import { StatCard } from './StatCard';
 import { ActivityItem } from './ActivityItem';
+import { GroupedActivityItem } from './GroupedActivityItem';
 import { QuickActionButton } from './QuickActionButton';
 import { ProjectsApi } from '../../../api/persistance';
 import { useRecentActivities } from '../../../hooks/useRecentActivities';
 import { getActivityDisplayConfig, getActivityDisplayName } from '../../../constants/activityTypes';
-import { groupActivitiesByTime } from '../../../utils/timeGrouping';
+import { groupTimelineActivitiesByTime } from '../../../utils/timeGrouping';
+import { isGroupedActivity } from '../../../types/activity';
 import './RightPanel.scss';
 
 export type RightPanelProps = {
@@ -18,11 +20,19 @@ export function RightPanel(props: RightPanelProps): JSX.Element {
     const user = props.user || L.fromPointer(DUser.current);
     const projects = props.projects || [];
 
-    // Get recent activities from ActivityLogger
-    const { activities, isEmpty: noActivities } = useRecentActivities({ limit: 20 });
+    // Get recent activities from ActivityLogger with pagination and grouping
+    const {
+        activities,
+        isEmpty: noActivities,
+        hasMore,
+        remainingCount,
+        loadMore,
+        scrollToTop,
+        timelineRef,
+    } = useRecentActivities({ limit: 15, enableGrouping: true });
 
     // Group activities by time period
-    const activityGroups = useMemo(() => groupActivitiesByTime(activities), [activities]);
+    const activityGroups = useMemo(() => groupTimelineActivitiesByTime(activities), [activities]);
 
     // Calculate stats
     const totalProjects = projects.length;
@@ -105,43 +115,76 @@ export function RightPanel(props: RightPanelProps): JSX.Element {
             </div>
 
             {/* Recent Activity Timeline */}
-            <div className="panel-section">
-                <h3 className="section-title">Recent Activity</h3>
-                <div className="activity-timeline">
+            <div className="panel-section activity-section">
+                <div className="activity-header">
+                    <h3 className="section-title">Recent Activity</h3>
+                    {activityGroups.length > 0 && (
+                        <button
+                            className="scroll-to-top-btn"
+                            onClick={scrollToTop}
+                            title="Scroll to top"
+                        >
+                            <i className="bi bi-arrow-up" />
+                        </button>
+                    )}
+                </div>
+                <div className="activity-timeline" ref={timelineRef}>
                     {activityGroups.length > 0 ? (
-                        activityGroups.map((group, groupIndex) => {
-                            // Calculate total items before this group for isRecent check
-                            let itemsBefore = 0;
-                            for (let i = 0; i < groupIndex; i++) {
-                                itemsBefore += activityGroups[i].items.length;
-                            }
+                        <>
+                            {activityGroups.map((group, groupIndex) => {
+                                // Calculate total items before this group for isRecent check
+                                let itemsBefore = 0;
+                                for (let i = 0; i < groupIndex; i++) {
+                                    itemsBefore += activityGroups[i].items.length;
+                                }
 
-                            return (
-                                <div key={group.label} className="timeline-group">
-                                    <div className="timeline-group-label">{group.label}</div>
-                                    {group.items.map((activity, idx) => {
-                                        const globalIndex = itemsBefore + idx;
-                                        const isLastInGroup = idx === group.items.length - 1;
-                                        const isLastGroup = groupIndex === activityGroups.length - 1;
-                                        const isLast = isLastInGroup && isLastGroup;
-                                        const config = getActivityDisplayConfig(activity.type);
-                                        const displayName = getActivityDisplayName(activity);
+                                return (
+                                    <div key={group.label} className="timeline-group">
+                                        <div className="timeline-group-label">{group.label}</div>
+                                        {group.items.map((activity, idx) => {
+                                            const globalIndex = itemsBefore + idx;
+                                            const isLastInGroup = idx === group.items.length - 1;
+                                            const isLastGroup = groupIndex === activityGroups.length - 1;
+                                            const isLast = isLastInGroup && isLastGroup && !hasMore;
 
-                                        return (
-                                            <ActivityItem
-                                                key={activity.id}
-                                                projectId={activity.projectId}
-                                                projectName={displayName}
-                                                action={config.action}
-                                                timestamp={activity.timestamp instanceof Date ? activity.timestamp.getTime() : activity.timestamp}
-                                                isRecent={globalIndex === 0}
-                                                isLast={isLast}
-                                            />
-                                        );
-                                    })}
-                                </div>
-                            );
-                        })
+                                            // Handle grouped activities
+                                            if (isGroupedActivity(activity)) {
+                                                return (
+                                                    <GroupedActivityItem
+                                                        key={activity.id}
+                                                        activity={activity}
+                                                        isRecent={globalIndex === 0}
+                                                        isLast={isLast}
+                                                    />
+                                                );
+                                            }
+
+                                            // Regular single activity
+                                            const config = getActivityDisplayConfig(activity.type);
+                                            const displayName = getActivityDisplayName(activity);
+
+                                            return (
+                                                <ActivityItem
+                                                    key={activity.id}
+                                                    projectId={activity.projectId}
+                                                    projectName={displayName}
+                                                    action={config.action}
+                                                    timestamp={activity.timestamp instanceof Date ? activity.timestamp.getTime() : activity.timestamp}
+                                                    isRecent={globalIndex === 0}
+                                                    isLast={isLast}
+                                                />
+                                            );
+                                        })}
+                                    </div>
+                                );
+                            })}
+                            {hasMore && (
+                                <button className="load-more-btn" onClick={loadMore}>
+                                    <i className="bi bi-arrow-down" />
+                                    Load more ({remainingCount} older)
+                                </button>
+                            )}
+                        </>
                     ) : (
                         <div className="empty-activity">
                             <i className="bi bi-inbox" />

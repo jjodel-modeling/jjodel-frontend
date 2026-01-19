@@ -14,6 +14,17 @@ export enum ActivityType {
     METAMODEL_DELETED = 'metamodel_deleted',
     METAMODEL_EVOLVED = 'metamodel_evolved',
 
+    // Metamodel structural changes
+    METAMODEL_CLASS_ADDED = 'metamodel_class_added',
+    METAMODEL_PACKAGE_ADDED = 'metamodel_package_added',
+    METAMODEL_ENUM_ADDED = 'metamodel_enum_added',
+    METAMODEL_ATTRIBUTE_ADDED = 'metamodel_attribute_added',
+    METAMODEL_REFERENCE_ADDED = 'metamodel_reference_added',
+    METAMODEL_OPERATION_ADDED = 'metamodel_operation_added',
+    METAMODEL_LITERAL_ADDED = 'metamodel_literal_added',
+    METAMODEL_PARAMETER_ADDED = 'metamodel_parameter_added',
+    METAMODEL_EXCEPTION_ADDED = 'metamodel_exception_added',
+
     // Models
     MODEL_CREATED = 'model_created',
     MODEL_DELETED = 'model_deleted',
@@ -38,6 +49,21 @@ export interface ActivityRecord {
 
 export type ActivityInput = Omit<ActivityRecord, 'id' | 'timestamp'>;
 
+// Grouped activity for consecutive modifications
+export interface GroupedActivity extends ActivityRecord {
+    count: number;                    // Number of activities in group
+    items: ActivityRecord[];          // All activities in the group
+    latestTimestamp: number;          // Most recent timestamp (as number for comparison)
+    isGroup: true;                    // Flag to identify grouped activities
+}
+
+export type TimelineActivity = ActivityRecord | GroupedActivity;
+
+// Type guard for grouped activities
+export function isGroupedActivity(activity: TimelineActivity): activity is GroupedActivity {
+    return 'isGroup' in activity && activity.isGroup === true;
+}
+
 // Map ActivityType to the action string used in ActivityItem component
 export const activityTypeToAction: Record<ActivityType, string> = {
     [ActivityType.PROJECT_CREATED]: 'created',
@@ -46,6 +72,15 @@ export const activityTypeToAction: Record<ActivityType, string> = {
     [ActivityType.METAMODEL_CREATED]: 'created',
     [ActivityType.METAMODEL_DELETED]: 'deleted',
     [ActivityType.METAMODEL_EVOLVED]: 'modified',
+    [ActivityType.METAMODEL_CLASS_ADDED]: 'modified',
+    [ActivityType.METAMODEL_PACKAGE_ADDED]: 'modified',
+    [ActivityType.METAMODEL_ENUM_ADDED]: 'modified',
+    [ActivityType.METAMODEL_ATTRIBUTE_ADDED]: 'modified',
+    [ActivityType.METAMODEL_REFERENCE_ADDED]: 'modified',
+    [ActivityType.METAMODEL_OPERATION_ADDED]: 'modified',
+    [ActivityType.METAMODEL_LITERAL_ADDED]: 'modified',
+    [ActivityType.METAMODEL_PARAMETER_ADDED]: 'modified',
+    [ActivityType.METAMODEL_EXCEPTION_ADDED]: 'modified',
     [ActivityType.MODEL_CREATED]: 'created',
     [ActivityType.MODEL_DELETED]: 'deleted',
     [ActivityType.VIEWPOINT_CHANGED]: 'modified',
