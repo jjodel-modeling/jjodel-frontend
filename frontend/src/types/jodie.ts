@@ -49,11 +49,17 @@ export const PROVIDER_MODELS = {
         { value: 'claude-sonnet-4-20250514', label: 'Claude Sonnet 4' },
         { value: 'claude-opus-4-20250514', label: 'Claude Opus 4' },
         { value: 'claude-haiku-4-20250514', label: 'Claude Haiku 4' },
+        // Stable fallback models
+        { value: 'claude-3-5-sonnet-20241022', label: 'Claude 3.5 Sonnet (Stable)' },
+        { value: 'claude-3-opus-20240229', label: 'Claude 3 Opus (Stable)' },
+        { value: 'claude-3-haiku-20240307', label: 'Claude 3 Haiku (Stable)' },
     ],
     openai: [
         { value: 'gpt-4o', label: 'GPT-4o' },
+        { value: 'gpt-4o-mini', label: 'GPT-4o Mini' },
         { value: 'gpt-4-turbo', label: 'GPT-4 Turbo' },
         { value: 'gpt-4', label: 'GPT-4' },
+        { value: 'gpt-3.5-turbo', label: 'GPT-3.5 Turbo' },
     ],
     deepseek: [
         { value: 'deepseek-chat', label: 'DeepSeek Chat' },
@@ -61,6 +67,8 @@ export const PROVIDER_MODELS = {
     ],
     gemini: [
         { value: 'gemini-2.0-flash-exp', label: 'Gemini 2.0 Flash' },
+        { value: 'gemini-1.5-pro', label: 'Gemini 1.5 Pro' },
+        { value: 'gemini-1.5-flash', label: 'Gemini 1.5 Flash' },
         { value: 'gemini-pro', label: 'Gemini Pro' },
     ],
 } as const;

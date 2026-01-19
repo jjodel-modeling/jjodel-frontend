@@ -606,6 +606,24 @@ function NavbarComponent(props: AllProps) {
         </section>);
     };
 
+    // Jodie AI Assistant button
+    const JodieButton = () => {
+        const openJodie = () => {
+            window.dispatchEvent(new CustomEvent('jodie:open'));
+        };
+
+        return (
+            <button
+                className="jodie-trigger-btn"
+                onClick={openJodie}
+                title="Ask Jodie - AI Assistant"
+            >
+                <i className="bi bi-chat-heart" />
+                <span>Jodie</span>
+            </button>
+        );
+    };
+
     const UserMenu = ()=> {
         const userName = `${user?.name || ''} ${user?.surname || ''}`.trim();
         const userEmail = user?.email || '';
@@ -683,6 +701,7 @@ function NavbarComponent(props: AllProps) {
             <Commands />
             <div className="main-header-right">
                 {props.debug && <span className="debug-badge">DEBUG</span>}
+                <JodieButton />
                 <HelpMenu />
                 <UserMenu />
             </div>

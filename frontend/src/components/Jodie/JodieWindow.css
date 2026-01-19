@@ -1,0 +1,622 @@
+/**
+ * Jodie Window Styles
+ * Floating chat window and message components
+ */
+
+/* ========================================
+   Window Container
+   ======================================== */
+
+.jodie-window {
+    position: fixed;
+    z-index: 10000;
+    display: flex;
+    flex-direction: column;
+    background: var(--color-bg-primary);
+    border: 1px solid var(--color-border-primary);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-xl);
+    overflow: hidden;
+    transition: box-shadow 0.2s ease;
+}
+
+.jodie-window.jodie-dragging {
+    cursor: grabbing;
+    box-shadow: var(--shadow-2xl);
+    user-select: none;
+}
+
+.jodie-resize-handle {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 16px;
+    height: 16px;
+    cursor: nwse-resize;
+    z-index: 10;
+}
+
+.jodie-resize-handle::before {
+    content: '';
+    position: absolute;
+    top: 4px;
+    left: 4px;
+    width: 8px;
+    height: 8px;
+    border-left: 2px solid var(--color-border-secondary);
+    border-top: 2px solid var(--color-border-secondary);
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.jodie-window:hover .jodie-resize-handle::before {
+    opacity: 0.6;
+}
+
+/* ========================================
+   Header
+   ======================================== */
+
+.jodie-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--space-3);
+    background: var(--color-bg-secondary);
+    border-bottom: 1px solid var(--color-border-primary);
+    cursor: grab;
+    user-select: none;
+}
+
+.jodie-header-left {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+}
+
+.jodie-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: var(--radius-full);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: var(--text-base);
+}
+
+.jodie-title {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.jodie-name {
+    font-weight: var(--font-semibold);
+    font-size: var(--text-sm);
+    color: var(--color-text-primary);
+}
+
+.jodie-header-right {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+}
+
+.jodie-header-btn {
+    width: 28px;
+    height: 28px;
+    border: none;
+    background: transparent;
+    color: var(--color-text-secondary);
+    border-radius: var(--radius-sm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.jodie-header-btn:hover {
+    background: var(--color-bg-tertiary);
+    color: var(--color-text-primary);
+}
+
+.jodie-close-btn:hover {
+    background: var(--color-error);
+    color: white;
+}
+
+/* ========================================
+   Provider Selector
+   ======================================== */
+
+.jodie-provider-selector {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+.jodie-provider-dropdown {
+    padding: 2px 6px;
+    font-size: var(--text-xs);
+    color: var(--color-text-secondary);
+    background: var(--color-bg-primary);
+    border: 1px solid var(--color-border-primary);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    outline: none;
+    transition: border-color 0.15s;
+}
+
+.jodie-provider-dropdown:hover {
+    border-color: var(--color-border-secondary);
+}
+
+.jodie-provider-dropdown:focus {
+    border-color: var(--color-accent);
+}
+
+.jodie-provider-indicator {
+    width: 8px;
+    height: 8px;
+    border-radius: var(--radius-full);
+}
+
+.jodie-provider-unconfigured {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+    font-size: var(--text-xs);
+    color: var(--color-warning);
+}
+
+/* ========================================
+   Messages Area
+   ======================================== */
+
+.jodie-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: var(--space-4);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+}
+
+.jodie-message {
+    display: flex;
+    gap: var(--space-2);
+    max-width: 90%;
+}
+
+.jodie-message-user {
+    align-self: flex-end;
+    flex-direction: row-reverse;
+}
+
+.jodie-message-assistant {
+    align-self: flex-start;
+}
+
+.jodie-message-avatar {
+    width: 28px;
+    height: 28px;
+    min-width: 28px;
+    border-radius: var(--radius-full);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: var(--text-xs);
+}
+
+.jodie-message-content {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.jodie-message-bubble {
+    padding: var(--space-3);
+    border-radius: var(--radius-lg);
+    font-size: var(--text-sm);
+    line-height: 1.5;
+    word-break: break-word;
+}
+
+.jodie-message-user .jodie-message-bubble {
+    background: var(--color-accent);
+    color: white;
+    border-bottom-right-radius: var(--radius-sm);
+}
+
+.jodie-message-assistant .jodie-message-bubble {
+    background: var(--color-bg-secondary);
+    color: var(--color-text-primary);
+    border-bottom-left-radius: var(--radius-sm);
+}
+
+.jodie-message-text {
+    white-space: pre-wrap;
+}
+
+.jodie-message-meta {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-size: var(--text-xs);
+    color: var(--color-text-tertiary);
+}
+
+.jodie-message-user .jodie-message-meta {
+    justify-content: flex-end;
+}
+
+.jodie-message-provider {
+    font-weight: var(--font-medium);
+}
+
+/* ========================================
+   Typing Indicator
+   ======================================== */
+
+.jodie-avatar-typing {
+    background: var(--color-bg-tertiary);
+    color: var(--color-text-secondary);
+}
+
+.jodie-typing-bubble {
+    padding: var(--space-3) var(--space-4);
+}
+
+.jodie-typing-indicator {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+}
+
+.jodie-typing-indicator span {
+    width: 6px;
+    height: 6px;
+    background: var(--color-text-tertiary);
+    border-radius: var(--radius-full);
+    animation: jodie-typing 1.4s infinite ease-in-out both;
+}
+
+.jodie-typing-indicator span:nth-child(1) {
+    animation-delay: -0.32s;
+}
+
+.jodie-typing-indicator span:nth-child(2) {
+    animation-delay: -0.16s;
+}
+
+@keyframes jodie-typing {
+    0%, 80%, 100% {
+        transform: scale(0.6);
+        opacity: 0.4;
+    }
+    40% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+/* ========================================
+   Welcome Screen
+   ======================================== */
+
+.jodie-welcome {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: var(--space-6);
+    color: var(--color-text-secondary);
+    flex: 1;
+}
+
+.jodie-welcome-icon {
+    width: 64px;
+    height: 64px;
+    border-radius: var(--radius-full);
+    background: var(--color-accent-light);
+    color: var(--color-accent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    margin-bottom: var(--space-4);
+}
+
+.jodie-welcome h3 {
+    font-size: var(--text-lg);
+    font-weight: var(--font-semibold);
+    color: var(--color-text-primary);
+    margin: 0 0 var(--space-2) 0;
+}
+
+.jodie-welcome p {
+    margin: 0 0 var(--space-4) 0;
+    font-size: var(--text-sm);
+}
+
+.jodie-welcome ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    text-align: left;
+}
+
+.jodie-welcome li {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-2) 0;
+    font-size: var(--text-sm);
+}
+
+.jodie-welcome li i {
+    color: var(--color-accent);
+    width: 20px;
+}
+
+/* ========================================
+   Input Area
+   ======================================== */
+
+.jodie-input-container {
+    display: flex;
+    align-items: flex-end;
+    gap: var(--space-2);
+    padding: var(--space-3);
+    background: var(--color-bg-secondary);
+    border-top: 1px solid var(--color-border-primary);
+}
+
+.jodie-input {
+    flex: 1;
+    padding: var(--space-2) var(--space-3);
+    border: 1px solid var(--color-border-primary);
+    border-radius: var(--radius-lg);
+    background: var(--color-bg-primary);
+    color: var(--color-text-primary);
+    font-size: var(--text-sm);
+    font-family: inherit;
+    resize: none;
+    outline: none;
+    max-height: 120px;
+    transition: border-color 0.15s;
+}
+
+.jodie-input:focus {
+    border-color: var(--color-accent);
+}
+
+.jodie-input::placeholder {
+    color: var(--color-text-tertiary);
+}
+
+.jodie-input:disabled {
+    background: var(--color-bg-tertiary);
+    cursor: not-allowed;
+}
+
+.jodie-send-btn {
+    width: 36px;
+    height: 36px;
+    border: none;
+    background: var(--color-accent);
+    color: white;
+    border-radius: var(--radius-full);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.jodie-send-btn:hover:not(:disabled) {
+    background: var(--color-accent-hover);
+    transform: scale(1.05);
+}
+
+.jodie-send-btn:disabled {
+    background: var(--color-bg-tertiary);
+    color: var(--color-text-tertiary);
+    cursor: not-allowed;
+}
+
+/* ========================================
+   Minimized Button
+   ======================================== */
+
+.jodie-minimized {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 10000;
+    width: 56px;
+    height: 56px;
+    border: none;
+    border-radius: var(--radius-full);
+    color: white;
+    font-size: var(--text-xl);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: var(--shadow-lg);
+    transition: all 0.2s ease;
+}
+
+.jodie-minimized:hover {
+    transform: scale(1.1);
+    box-shadow: var(--shadow-xl);
+}
+
+.jodie-minimized.jodie-has-unread::after {
+    content: '';
+    position: absolute;
+    top: -2px;
+    right: -2px;
+    width: 14px;
+    height: 14px;
+    background: var(--color-error);
+    border: 2px solid var(--color-bg-primary);
+    border-radius: var(--radius-full);
+}
+
+.jodie-unread-badge {
+    position: absolute;
+    top: -2px;
+    right: -2px;
+    width: 14px;
+    height: 14px;
+    background: var(--color-error);
+    border: 2px solid var(--color-bg-primary);
+    border-radius: var(--radius-full);
+}
+
+/* ========================================
+   Animations
+   ======================================== */
+
+.jodie-spin {
+    animation: jodie-spin 1s linear infinite;
+}
+
+@keyframes jodie-spin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* ========================================
+   Scrollbar
+   ======================================== */
+
+.jodie-messages::-webkit-scrollbar {
+    width: 6px;
+}
+
+.jodie-messages::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.jodie-messages::-webkit-scrollbar-thumb {
+    background: var(--color-border-secondary);
+    border-radius: var(--radius-full);
+}
+
+.jodie-messages::-webkit-scrollbar-thumb:hover {
+    background: var(--color-text-tertiary);
+}
+
+/* Add this to your Jodie CSS file */
+
+/* Custom Confirm Dialog */
+.jodie-confirm-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 3000;
+  animation: fadeIn 0.2s;
+}
+
+.jodie-confirm-dialog {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  max-width: 400px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+  animation: slideIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideIn {
+  from {
+    transform: scale(0.9) translateY(-20px);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+  }
+}
+
+.jodie-confirm-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.jodie-confirm-header i {
+  font-size: 24px;
+  color: #f59e0b;
+}
+
+.jodie-confirm-header h3 {
+  font-size: 18px;
+  color: #1e293b;
+  margin: 0;
+}
+
+.jodie-confirm-dialog p {
+  color: #64748b;
+  line-height: 1.6;
+  margin-bottom: 20px;
+}
+
+.jodie-confirm-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+.jodie-confirm-cancel,
+.jodie-confirm-reset {
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+}
+
+.jodie-confirm-cancel {
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.jodie-confirm-cancel:hover {
+  background: #e2e8f0;
+}
+
+.jodie-confirm-reset {
+  background: #ef4444;
+  color: white;
+}
+
+.jodie-confirm-reset:hover {
+  background: #dc2626;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+}

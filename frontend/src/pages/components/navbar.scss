@@ -1058,3 +1058,43 @@ $transition-menu: 150ms ease;
     opacity: 0.7;
   }
 }
+
+// ============================================
+// JODIE AI ASSISTANT BUTTON
+// ============================================
+
+.jodie-trigger-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  font-family: 'Inter Variable', -apple-system, sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text-primary);
+  background: linear-gradient(135deg, var(--color-accent-light) 0%, transparent 100%);
+  border: 1px solid var(--color-accent);
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  .bi {
+    font-size: 14px;
+    color: var(--color-accent);
+  }
+
+  &:hover {
+    background: var(--color-accent);
+    color: white;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(var(--color-accent-rgb), 0.3);
+
+    .bi {
+      color: white;
+    }
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+}
