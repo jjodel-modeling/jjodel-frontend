@@ -183,6 +183,12 @@
   /* Z-index */
   z-index: var(--z-navbar);
 
+  /* Global Search positioning */
+  .global-search {
+    margin-left: auto;
+    margin-right: var(--space-4);
+  }
+
   /* Legacy compat */
   --palette-1-hover: var(--color-accent);
 

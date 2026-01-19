@@ -18,6 +18,8 @@ import {ProjectPointers} from "../../joiner/classes";
 import {DTOProjectGetAll} from "../DTO/GetAllProjects";
 import {ProjectResponseDTO} from "../DTO/ProjectResponseDTO";
 import { getNextVersionNumber, formatVersion } from '../../utils/versionUtils';
+import ActivityLogger from '../../services/ActivityLogger';
+import { ActivityType } from '../../types/activity';
 
 @RuntimeAccessible('ProjectsApi')
 class ProjectsApi {
@@ -26,12 +28,18 @@ class ProjectsApi {
         const project = DProject.new(type, name, undefined, m2, m1, undefined, otherProjects);
         if(U.isOffline()) {
             Offline.create(project);
-            // return project;
         }
         else {
             await Online.create(project);
             R.navigate('/allProjects');
         }
+
+        // Log activity
+        ActivityLogger.log({
+            type: ActivityType.PROJECT_CREATED,
+            projectId: project.id,
+            projectName: project.name || 'Unnamed Project',
+        });
     }
 
 
@@ -42,12 +50,22 @@ class ProjectsApi {
     }
 
     static async delete(project: LProject): Promise<void> {
+        const projectName = project.name || 'Unnamed Project';
+        const projectId = project.id;
+
         if(U.isOffline()) {
             Offline.delete(project.__raw as DProject);
         }
         else {
             await Online.delete((project as any)._Id || project.id);
         }
+
+        // Log activity
+        ActivityLogger.log({
+            type: ActivityType.PROJECT_DELETED,
+            projectId,
+            projectName,
+        });
     }
 
 

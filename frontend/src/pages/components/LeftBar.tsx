@@ -198,6 +198,22 @@ function LeftBar(props: LeftBarProps): JSX.Element {
                     <Item action={'trash'} icon={<i className="bi bi-trash" />}>Trash</Item>
                 </Menu>
 
+                {/* Filters Section - Quick access to filtered views */}
+                <Menu title={'Filters'} mode={'collapsable'}>
+                    <Item
+                        action={'allProjects?filter=private'}
+                        icon={<i className="bi bi-lock" />}
+                    >Private</Item>
+                    <Item
+                        action={'allProjects?filter=public'}
+                        icon={<i className="bi bi-globe" />}
+                    >Public</Item>
+                    <Item
+                        action={'allProjects?filter=collaborative'}
+                        icon={<i className="bi bi-people" />}
+                    >Collaborative</Item>
+                </Menu>
+
                 {/* Favorites Section */}
                 <Menu title={'Favorites'} mode={'collapsable'}>
                     {props.projects && props.projects.filter(p => p.isFavorite).length > 0 ? (
@@ -228,8 +244,8 @@ function LeftBar(props: LeftBarProps): JSX.Element {
                     </Menu>
                 }
 
-                {/* Support Section */}
-                <Menu title={'Support'} mode={'collapsable'}>
+                {/* Resources Section */}
+                <Menu title={'Resources'} mode={'collapsable'}>
                     <Item
                         action={() => window.open('https://www.jjodel.io/manual/', '_blank')}
                         icon={<i className="bi bi-book" />}
@@ -238,6 +254,14 @@ function LeftBar(props: LeftBarProps): JSX.Element {
                         action={() => window.open('https://www.jjodel.io/getting-started/', '_blank')}
                         icon={<i className="bi bi-mortarboard" />}
                     >Tutorials</Item>
+                    <Item
+                        action={() => window.open('https://www.jjodel.io/api/', '_blank')}
+                        icon={<i className="bi bi-code-square" />}
+                    >API Reference</Item>
+                    <Item
+                        action={() => window.open('https://github.com/jjodel', '_blank')}
+                        icon={<i className="bi bi-github" />}
+                    >GitHub</Item>
                 </Menu>
 
                 {/* Footer - Version Only */}

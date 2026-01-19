@@ -1,0 +1,116 @@
+/* ============================================
+   GLOBAL SEARCH - Header Search Bar
+   ============================================ */
+
+.global-search {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+
+  background-color: var(--color-bg-secondary);
+  border: 1px solid var(--color-border-primary);
+  border-radius: var(--radius-md);
+
+  padding: var(--space-2) var(--space-3);
+  width: 320px;
+  max-width: 400px;
+
+  transition: var(--transition-fast);
+
+  /* Focus state */
+  &.focused {
+    border-color: var(--color-accent);
+    box-shadow: 0 0 0 3px var(--color-accent-light, rgba(71, 85, 105, 0.1));
+  }
+
+  &:hover:not(.focused) {
+    border-color: var(--color-border-hover);
+  }
+}
+
+.global-search .search-icon {
+  font-size: var(--text-sm);
+  color: var(--color-text-tertiary);
+  flex-shrink: 0;
+}
+
+.global-search input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  color: var(--color-text-primary);
+  min-width: 0;
+
+  &::placeholder {
+    color: var(--color-text-tertiary);
+  }
+
+  &:focus {
+    outline: none;
+  }
+}
+
+.global-search .clear-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  color: var(--color-text-tertiary);
+  transition: var(--transition-fast);
+
+  &:hover {
+    color: var(--color-text-secondary);
+  }
+
+  .bi {
+    font-size: var(--text-sm);
+  }
+}
+
+.global-search .shortcut-hint {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+
+  kbd {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    font-family: var(--font-sans);
+    font-size: 10px;
+    font-weight: var(--font-medium);
+
+    background-color: var(--color-bg-tertiary);
+    border: 1px solid var(--color-border-primary);
+    border-radius: 4px;
+
+    padding: 2px 5px;
+    min-width: 18px;
+
+    color: var(--color-text-tertiary);
+  }
+}
+
+/* Responsive: hide on smaller screens */
+@media (max-width: 900px) {
+  .global-search {
+    width: 200px;
+
+    .shortcut-hint {
+      display: none;
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  .global-search {
+    display: none;
+  }
+}

@@ -1,13 +1,16 @@
-import './style.scss';
-import {DState, DUser, LGraphElement, LModelElement, LUser, U} from "../../joiner";
-import {FakeStateProps} from "../../joiner/types";
 import React, {Dispatch, JSX, ReactElement, ReactNode, useState} from "react";
 import {connect} from "react-redux";
 
+import {DState, DUser, LGraphElement, LModelElement, LUser, U, SetRootFieldAction} from "../../joiner";
+import {FakeStateProps} from "../../joiner/types";
 
 import swen from '../../static/img/swen-splash.png';
 import { About } from './about/About';
 import { Tooltip } from '../../components/forEndUser/Tooltip';
+
+import './style.scss';
+
+const windoww = window as any;
 
 enum notificationType {
     Clients = 0,
@@ -42,6 +45,45 @@ const [animal, setAnimal] = useState(false);
         </>);
 }
 
+/**
+ * Mode Indicator - shows current Basic/Advanced mode
+ * Clickable to toggle between modes
+ */
+const ModeIndicator = ({ advanced }: { advanced: boolean }) => {
+    const toggleMode = () => {
+        const newMode = !advanced;
+        SetRootFieldAction.new('advanced', newMode);
+        windoww.advanced = newMode;
+        localStorage.setItem('jjodel.interfaceMode', newMode ? 'advanced' : 'basic');
+        U.interfaceMode = newMode ? 'advanced' : 'basic';
+        U.alert('i', newMode ? 'Advanced Mode' : 'Basic Mode',
+            newMode ? 'All features and options are now visible' : 'Simplified interface active');
+    };
+
+    return (
+        <Tooltip
+            tooltip={`Click to switch to ${advanced ? 'Basic' : 'Advanced'} mode (Cmd+Shift+M)`}
+            inline
+            offsetY={10}
+            position={'top'}
+        >
+            <div className={`mode-indicator ${advanced ? 'advanced-mode' : ''}`} onClick={toggleMode}>
+                {advanced ? (
+                    <>
+                        <i className="bi bi-lightning-charge-fill" />
+                        <span>Advanced</span>
+                    </>
+                ) : (
+                    <>
+                        <i className="bi bi-sliders2" />
+                        <span>Basic</span>
+                    </>
+                )}
+            </div>
+        </Tooltip>
+    );
+};
+
 function BottomBarComponent(props: AllProps): JSX.Element {
     const [swenOpen, setSwen] = useState(false);
     const {node,data} = props;
@@ -74,6 +116,7 @@ function BottomBarComponent(props: AllProps): JSX.Element {
                     </div>
                 </>
             }
+            <ModeIndicator advanced={props.advanced} />
             <JjodelName />
             <Tooltip tooltip={'MIT: permissive; commercial use, modification, and redistribution allowed; no warranty.'} inline offsetY={10} position={'top'}>
                 <div className="license">
@@ -114,7 +157,8 @@ function BottomBarComponent(props: AllProps): JSX.Element {
 interface OwnProps {}
 interface StateProps {
     node?: LGraphElement;
-    data?: LModelElement
+    data?: LModelElement;
+    advanced: boolean;
 }
 interface DispatchProps {}
 type AllProps = OwnProps & StateProps & DispatchProps;
@@ -125,6 +169,7 @@ function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     const selected = state._lastSelected;
     if(selected?.node) ret.node = LGraphElement.fromPointer(selected.node);
     if(selected?.modelElement) ret.data = LModelElement.fromPointer(selected.modelElement);
+    ret.advanced = state.advanced;
 
     return ret;
 }

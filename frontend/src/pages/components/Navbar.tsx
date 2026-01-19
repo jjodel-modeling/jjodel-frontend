@@ -47,6 +47,9 @@ import {BEGIN, CollabRefreshAction, COMMIT, END} from "../../redux/action/action
 import {Tooltip} from "../../components/forEndUser/Tooltip";
 import {VersionFixer} from "../../redux/VersionFixer";
 import {PinnableDock} from "../../components/dock/MyRcDock";
+import { GlobalSearch } from '../../components/GlobalSearch';
+import ActivityLogger from '../../services/ActivityLogger';
+import { ActivityType } from '../../types/activity';
 
 
 let windoww = window as any;
@@ -64,6 +67,15 @@ export function createM2(project: LProject) {
     lPackage.name = 'default';
     const tab = TabDataMaker.metamodel(dModel);
     DockManager.open('models', tab);
+
+    // Log activity
+    ActivityLogger.log({
+        type: ActivityType.METAMODEL_CREATED,
+        projectId: project.id,
+        projectName: project.name || 'Unnamed Project',
+        entityId: dModel.id,
+        entityName: name,
+    });
 }
 
 const createM1 = (project: LProject, metamodel: LModel) => {
@@ -76,6 +88,15 @@ const createM1 = (project: LProject, metamodel: LModel) => {
     project.graphs = [...project.graphs, lModel.node as LGraph];
     const tab = TabDataMaker.model(dModel);
     DockManager.open('models', tab);
+
+    // Log activity
+    ActivityLogger.log({
+        type: ActivityType.MODEL_CREATED,
+        projectId: project.id,
+        projectName: project.name || 'Unnamed Project',
+        entityId: dModel.id,
+        entityName: name,
+    });
 }
 function getKeyStrokes(keys?: string[]){
     if (!keys || !keys.length) return undefined;
@@ -388,6 +409,22 @@ function NavbarComponent(props: AllProps) {
         /* View - always visible, items disabled on dashboard */
         {name: 'View',
             subItems: [
+                {name: props.advanced ? 'Switch to Basic Mode' : 'Switch to Advanced Mode',
+                    function: () => {
+                        const newMode = !props.advanced;
+                        SetRootFieldAction.new('advanced', newMode);
+                        windoww.advanced = newMode;
+                        // Also update localStorage for persistence
+                        localStorage.setItem('jjodel.interfaceMode', newMode ? 'advanced' : 'basic');
+                        U.interfaceMode = newMode ? 'advanced' : 'basic';
+                        // Show toast notification
+                        U.alert('i', newMode ? 'Advanced Mode' : 'Basic Mode',
+                            newMode ? 'All features and options are now visible' : 'Simplified interface active');
+                    },
+                    icon: props.advanced ? <i className="bi bi-sliders" /> : <i className="bi bi-lightning-charge" />,
+                    keystroke: [Key.cmd, Key.shift, 'M']
+                },
+                {name: 'divisor', function: placeholder},
                 {name: 'Zoom-in', function: placeholder, icon: icon['zoom-in'], disabled: true},
                 {name: 'Zoom-out', function: placeholder, icon: icon['zoom-out'], disabled: true},
                 {name: 'divisor', function: placeholder},
@@ -422,7 +459,7 @@ function NavbarComponent(props: AllProps) {
             ]
         },
 
-        /* Tools - always visible, some items disabled on dashboard */
+        /* Tools - always visible, debug mode only in advanced */
         {name: 'Tools',
             subItems: [
                 ...(isDashboard || metamodels.length === 0 ? [
@@ -437,26 +474,32 @@ function NavbarComponent(props: AllProps) {
                     },
                     {name: 'Custom Tools', icon: <i className="bi bi-gear" />, disabled: true}
                 ]),
-                {name: 'divisor'},
-                {name: props.debug ? 'Disable Debug Mode' : 'Enable Debug Mode',
-                    function: () => {
-                        TRANSACTION('debug', ()=>SetRootFieldAction.new('debug', !props.debug), props.debug, !props.debug);
-                        U.debug = !props.debug;
-                    },
-                    icon: <i className={`bi ${props.debug ? 'bi-bug-fill' : 'bi-bug'}`} />
-                }
+                // Debug Mode toggle - only visible in advanced mode
+                ...(props.advanced ? [
+                    {name: 'divisor'},
+                    {name: props.debug ? 'Disable Debug Mode' : 'Enable Debug Mode',
+                        function: () => {
+                            TRANSACTION('debug', ()=>SetRootFieldAction.new('debug', !props.debug), props.debug, !props.debug);
+                            U.debug = !props.debug;
+                        },
+                        icon: <i className={`bi ${props.debug ? 'bi-bug-fill' : 'bi-bug'}`} />
+                    }
+                ] : [])
             ]
         },
 
-        /* Analyze - always visible, items disabled on dashboard */
+        /* Analyze - always visible, some items only in advanced mode */
         {name: 'Analyze',
             subItems: [
                 {name: 'Live Validation', function: placeholder, icon: icon['validation'], disabled: true},
                 {name: 'Validate', function: placeholder, icon: icon['validate'], disabled: true},
-                {name: 'divisor', function: placeholder},
-                {name: 'M2 Analytics', function: ()=> toggleMetrics(), icon: icon['metrics'], disabled: isDashboard},
-                {name: debuggerr ? 'Hide debugger' : 'Debug loops', function: ()=> setDebugger(!debuggerr), icon: icon[debuggerr ? 'eyeslash' : 'eye'], disabled: isDashboard},
-                {name: 'Check integrity', function: ()=> VersionFixer.autocorrect(undefined, true, true), icon: icon['tools'], disabled: isDashboard},
+                // Advanced-only items below
+                ...(props.advanced ? [
+                    {name: 'divisor', function: placeholder},
+                    {name: 'M2 Analytics', function: ()=> toggleMetrics(), icon: icon['metrics'], disabled: isDashboard},
+                    {name: debuggerr ? 'Hide debugger' : 'Debug loops', function: ()=> setDebugger(!debuggerr), icon: icon[debuggerr ? 'eyeslash' : 'eye'], disabled: isDashboard},
+                    {name: 'Check integrity', function: ()=> VersionFixer.autocorrect(undefined, true, true), icon: icon['tools'], disabled: isDashboard},
+                ] : []),
             ]
         },
 
@@ -636,6 +679,7 @@ function NavbarComponent(props: AllProps) {
         <nav id={'navbar'} className={'w-100 nav-container d-flex'} style={{zIndex: 99}}>
             <MainLogo />
             <MainMenu items={items} />
+            <GlobalSearch placeholder="Search projects..." />
             <Commands />
             <div className="main-header-right">
                 {props.debug && <span className="debug-badge">DEBUG</span>}

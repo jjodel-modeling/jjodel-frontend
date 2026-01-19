@@ -16,6 +16,7 @@ import {
     Try, TRANSACTION, L
 } from '../../joiner';
 import {LeftBar, Navbar} from './';
+import { RightPanel } from './RightPanel';
 
 import '../dashboard.scss'
 import React, {JSX, ReactElement, useRef, useState} from "react";
@@ -298,10 +299,13 @@ function GenericDashboard(props: DashProps): any {
         }
     };
 
+    // Determine layout mode: three-column for dashboard pages, two-column for project editing
+    const layoutClass = active !== 'Project' ? 'three-column' : 'two-column';
+
     return (<>
         <Navbar />
         <div
-            className={`dashboard-container ${isDragging ? 'is-dragging' : ''}`}
+            className={`dashboard-container ${layoutClass} ${isDragging ? 'is-dragging' : ''}`}
             tabIndex={-1}
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
@@ -321,6 +325,11 @@ function GenericDashboard(props: DashProps): any {
                 )}
                 <Catalog children={children}/>
             </div>
+
+            {/* Right Panel - Only visible on dashboard pages (three-column layout) */}
+            {active !== 'Project' && (
+                <RightPanel user={user} projects={user?.projects} />
+            )}
 
             {/* Drop Overlay */}
             {isDragging && (

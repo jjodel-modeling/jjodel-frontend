@@ -29,6 +29,8 @@ import {Tooltip} from "../../forEndUser/Tooltip";
 import {Btn, CommandBar, Sep} from '../../commandbar/CommandBar';
 import {InternalToggle} from '../../widgets/Widgets';
 import {VersionFixer} from "../../../redux/VersionFixer";
+import ActivityLogger from '../../../services/ActivityLogger';
+import { ActivityType } from '../../../types/activity';
 
 type Metadata = {setView: (p: Pointer)=>any, scoreBoost: number}
 function NestedViewComponent(props: AllProps) {
@@ -101,7 +103,26 @@ function NestedViewComponent(props: AllProps) {
         let isVP = d.className === DViewPoint.cname;
         let isDefault = d.id.indexOf('Pointer_View') === 0;
 
-        function select(ptr: Pointer<DViewPoint>){ project.activeViewpoint = ptr as any; }
+        function select(ptr: Pointer<DViewPoint>){
+            const previousViewpoint = project.activeViewpoint;
+            project.activeViewpoint = ptr as any;
+
+            // Log activity for viewpoint change
+            if (ptr !== previousViewpoint?.id) {
+                try {
+                    const viewpointName = d.name || 'Unnamed Viewpoint';
+                    ActivityLogger.log({
+                        type: ActivityType.VIEWPOINT_CHANGED,
+                        projectId: project.id,
+                        projectName: project.name || 'Unnamed Project',
+                        entityId: ptr as string,
+                        entityName: viewpointName,
+                    });
+                } catch (e) {
+                    console.warn('Failed to log viewpoint change activity:', e);
+                }
+            }
+        }
 
         let appliableToEnhanced = (d.name === 'Singleton' ? 'Singleton' : appliableTo);
 

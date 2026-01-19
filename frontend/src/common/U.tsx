@@ -200,6 +200,9 @@ export class U {
     public static userHasInteracted: boolean = false;
     public static isProjectModified: boolean = false;
 
+    // Interface mode: 'basic' or 'advanced' - controls UI complexity level
+    public static interfaceMode: 'basic' | 'advanced' = 'basic';
+
     // Global beforeunload handler - to prevent browser prompt when programmatically navigating
     private static beforeUnloadHandler: ((e: BeforeUnloadEvent) => string | void) | null = null;
     // Bypass flag - when true, the beforeunload handler will not show the browser prompt

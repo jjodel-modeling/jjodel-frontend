@@ -81,8 +81,11 @@ export const MetricsPanel = (props: MetricsProps) => {
         return 100/scale * value + '%';
     }
 
+    // Only show in advanced mode
+    const isAdvanced = U.interfaceMode === 'advanced';
+
     return (<>
-        {windoww.MetricsPanelVisible &&
+        {windoww.MetricsPanelVisible && isAdvanced &&
             <div className={'metrics-panel'}>
                 <h1>Metamodel Analytics
                     <CommandBar style={{float: 'right', height: '20px'}}>

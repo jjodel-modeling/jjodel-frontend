@@ -307,6 +307,72 @@
     outline: none;
   }
 
+  /* ============================================
+     THREE-COLUMN LAYOUT (Dashboard pages)
+     ============================================ */
+  &.three-column {
+    display: grid;
+    grid-template-columns: 240px 1fr 360px;
+    grid-template-rows: 1fr;
+    flex-flow: unset;
+
+    /* Responsive: collapse right panel on medium screens */
+    @media (max-width: 1200px) {
+      grid-template-columns: 240px 1fr;
+
+      .right-panel {
+        display: none;
+      }
+    }
+
+    /* Responsive: collapse left panel on small screens */
+    @media (max-width: 768px) {
+      grid-template-columns: 1fr;
+
+      .leftbar {
+        position: fixed;
+        left: -240px;
+        top: 60px;
+        height: calc(100vh - 60px);
+        z-index: 100;
+        transition: left var(--duration-normal, 250ms) var(--ease-out, ease-out);
+        box-shadow: var(--shadow-lg);
+
+        &.open {
+          left: 0;
+        }
+      }
+    }
+  }
+
+  /* ============================================
+     TWO-COLUMN LAYOUT (Project editor pages)
+     ============================================ */
+  &.two-column {
+    display: grid;
+    grid-template-columns: 240px 1fr;
+    grid-template-rows: 1fr;
+    flex-flow: unset;
+
+    @media (max-width: 768px) {
+      grid-template-columns: 1fr;
+
+      .leftbar {
+        position: fixed;
+        left: -240px;
+        top: 60px;
+        height: calc(100vh - 60px);
+        z-index: 100;
+        transition: left var(--duration-normal, 250ms) var(--ease-out, ease-out);
+        box-shadow: var(--shadow-lg);
+
+        &.open {
+          left: 0;
+        }
+      }
+    }
+  }
+
   /* Project Editor Container */
   .project-editor-container {
     flex: 1;
