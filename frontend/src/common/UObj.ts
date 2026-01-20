@@ -33,13 +33,24 @@ export class Uobj {
             if (!includeProto && !old.hasOwnProperty(key)) continue;
             // if (neww[key] === undefined){
             // if neww have a key with undefined value, it counts (and should) as having that property key defined
-            if (!includeProto ? !neww.hasOwnProperty(key) : !(key in neww)){ (ret.removed as GObject)[key] = old[key]; }
+            console.log('deltaaa', {old, neww, ret, key, includeProto})
+            console.log('deltaaa 2', {old, neww, ret, key, includeProto, iff:!Object.prototype.hasOwnProperty.call(neww, key)})
+            if (!includeProto ? !Object.prototype.hasOwnProperty.call(neww, key) : //neww.hasOwnProperty(key) :
+                !(key in neww)){
+
+                console.log('deltaaa if', {old, neww, ret, key, includeProto});
+                (ret.removed as GObject)[key] = old[key];
+
+            }
             else if (neww[key] === old[key] ||
                 (emptyObjectsCheck &&
                     (typeof old[key] === 'object' && typeof neww[key] === 'object') &&
                     (Object.keys(neww[key]).length === 0 && Object.keys(old[key]).length === 0)
-                )) { (ret.unchanged as GObject)[key] = old[key] }
+                )) {
+                console.log('deltaaa else', {old, neww, ret, key, includeProto});
+                (ret.unchanged as GObject)[key] = old[key] }
             else (ret.changed as GObject)[key] = old[key];
+            console.log('deltaaa end', {old, neww, ret, key, includeProto});
         }
         for (let key in neww) {
             if (!includeProto && !neww.hasOwnProperty(key)) continue;

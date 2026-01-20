@@ -1177,16 +1177,16 @@ export class DefaultView {
     </ContextMenu>
     <div className={'edges'}>
         {level > 1 && [
-            refEdges.map(se => <Edge 
-                data={se.start} 
-                start={se.startVertex} 
-                end={se.endVertex} 
-                anchorStart={0} 
-                anchorEnd={0} 
-                key={se.id + '_with_label'} 
-                id={se.id + '_with_label'} 
-                isReference={true} 
-                view={'Edge' + (se.start.composition ? 'Composition' : (se.start.aggregation ? 'Aggregation' : 'Association'))} 
+            refEdges.map(se => <Edge
+                data={se.start}
+                start={se.startVertex}
+                end={se.endVertex}
+                anchorStart={0}
+                anchorEnd={0}
+                key={se.id + '_with_label'}
+                id={se.id + '_with_label'}
+                isReference={true}
+                view={'Edge' + (se.start.composition ? 'Composition' : (se.start.aggregation ? 'Aggregation' : 'Association'))}
                 label={se.start.name}
                 elabel={se.start.lowerBound === se.start.upperBound ? se.start.lowerBound : se.start.upperBound === -1 ? se.start.lowerBound + '..*' : se.start.lowerBound + '..' + se.start.upperBound}
                 slabel={''}
@@ -1358,17 +1358,15 @@ public static class(): string { return (`
 
     {decorators}
 
-    <ContextualEntry 
-        title={'Highlight Class'} 
-        icon={"bi-paint-bucket"} 
-        action={()=>{node.state = {colorIndex: ((node.state.colorIndex||0) + 1) % (view.palette['outline-'].value.length + 1)}}} 
-        node={node}
+    <ContextMenu
+        title={'Highlight Class'}
+        icon={"bi-paint-bucket"}
+        action={()=>{node.state = {colorIndex: ((node.state.colorIndex||0) + 1) % (view.palette['outline-'].value.length + 1)}}}
     />
-    <ContextualEntry 
-        title={'Reset Highlight'} 
-        icon={"bi-x"} 
-        action={() => {node.state = {colorIndex : 0}}} 
-        node={node}
+    <ContextMenu 
+        title={'Reset Highlight'}
+        icon={"bi-x"}
+        action={() => {node.state = {colorIndex : 0}}}
     />
 
 </View>`);}

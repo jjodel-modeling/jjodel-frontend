@@ -1,3 +1,22 @@
+.context-menu{
+  .hoverable:active>.content,
+  .hoverable:focus>.content,
+  .hoverable:focus-within>.content,
+  .hoverable:hover>.content {
+    box-shadow: none;
+  }
+  .keystrokes{
+    display: flex;
+    &>*{
+      display: inline;
+      margin: auto 0;
+      font-size: .85rem !important;
+      width: 1.2ic !important;
+      // outline: 1px solid red;
+    }
+  }
+}
+
 
 .edit-panel-container {
   position: absolute;
@@ -202,6 +221,8 @@
   color: white;
   background: #233d4d;
   padding: 8px;
+  // padding-right: 0;
+  // width: 220px;
 
   .name {
     font-size: 0.9rem;
@@ -266,11 +287,6 @@
       color: white !important;
       font-size: 1.2em;
       width: 1.5ic;
-    }
-
-    &>div{
-      display: inline;
-      margin-left: auto;
     }
   }
 }

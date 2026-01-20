@@ -29,7 +29,6 @@ import {
 } from "../joiner";
 import {ScrollableComponent} from "../components/forEndUser/Measurable";
 import {
-    ContextualEntry,
     Control,
     MetaElementPicker,
     Panel,
@@ -61,16 +60,10 @@ export class UX{
         // it counts as children iterated regardless. so html indices might be apparently off, but like this is even safer as indices won't change when conditions are changed.
         const innermap = (child0: ReactNode, i1: number, depthIndices: number[]): T => {
             let child: GObject = child0 as any;
+            // console.log('UX recursive map', {child, isRE: React.isValidElement(child)});
 
-            console.log('UX recursive map', {child, isRE: React.isValidElement(child)});
-            if (child?.props?.mode){
-                console.error('UX recursive map', {child, isRE: React.isValidElement(child)});
-
-            }
             if (!React.isValidElement(child)) {
-                console.log('pre childmap error', {child});
                 if (Array.isArray(child)) return React.Children.map(child as T, (c: T, i3: number)=>innermap(c, i3, [...depthIndices, i3])) as T;
-                console.log('post childmap error', {child});
                 if (child && typeof child === "object") {
                     if (!windoww.invalidObjsReact) windoww.invalidObjsReact = [];
                     windoww.invalidObjsReact.push(child);
@@ -88,7 +81,7 @@ export class UX{
             }
             return fn(child as T, i1, depthIndices);
         };
-        console.warn('UX recursive map STRT object re', children);
+        // console.warn('UX recursive map STRT object re', children);
 
         if (!Array.isArray(children)) return innermap(children as ReactNode, 0, [...depthIndices, 0]) as T;
         // replace {data} with {<DefaultNode data={data}/>
@@ -97,7 +90,6 @@ export class UX{
             if (React.isValidElement(c)) return c;
             if (Array.isArray(c)) return c.map(mapLObjectsToJSX);
             let cname = c.className;
-            console.log('object replacement', {c, cname});
             if (!cname) return null; // object not translable to jsx -> ignored
             if (!LPointerTargetable.extends(cname, 'DModelElement')) return null;
             let id = c.id;
@@ -109,11 +101,11 @@ export class UX{
             // return <DefaultNode data={c} />;
         }
         children = children.map(mapLObjectsToJSX) as any;
-        console.warn('UX recursive map MIDD object re', children);
+        // console.warn('UX recursive map MIDD object re', children);
         // if (typeof children[0] === "object") return (children).map( (c: T, i3: number)=>innermap(c, i3, [...depthIndices,i3])) as any as T;
         let ret = React.Children.map(children, (c: T, i3: number)=>innermap(c, i3, [...depthIndices,i3])) as T;
 
-        console.warn('UX recursive map END object re', children);
+        // console.warn('UX recursive map END object re', children);
         return ret;
     }
 
@@ -121,7 +113,7 @@ export class UX{
                       parentnodeid: string, index: number, indices: number[], injectOffset?: LGraph): ReactNode {
         let re: ReactElement | null = UX.ReactNodeAsElement(e);
 
-        console.log('UX inject type', {type: (re?.type as any).WrappedComponent?.name || re?.type, parentComponent, type0:re?.type, e});
+        //console.log('UX inject type', {type: (re?.type as any).WrappedComponent?.name || re?.type, parentComponent, type0:re?.type, e});
         // injectOffset&&console.log("inject offset props 1:", {e, re, injectOffset});
         if (!re) return e;
         // @ts-ignore this
@@ -174,11 +166,9 @@ export class UX{
             case 'Panel':
             case 'Panell':
             case 'MetaElementPicker':
-            case 'ContextualEntry':
             case 'ControlComponent':
             case 'ZoomComponent':
             case 'MetaElementPickerComponent':
-            case 'ContextualEntryComponent':
             case 'PanelComponent':
             case 'PanellComponent':
             case 'SliderComponent':
@@ -202,9 +192,12 @@ export class UX{
                 injectProps.nodeid = parentComponent.props.nodeid;
                 injectProps.graphid = parentComponent.props.graphid;
                 break;
+            case 'ContextualEntry':
             case 'ContextMenuC':
             case 'ContextMenu':
                 injectProps.nodeid = parentComponent.props.nodeid;
+                (injectProps as any).viewid = parentComponent.props.viewid;
+                (injectProps as any).path = ''; // those are at root level, no nesting
                 break;
             case 'Scrollable': case 'ScrollableComponent': case 'World': case 'Camera': case 'Pan': case 'Layer': case 'Viewport': case 'ViewPort': // all aliases of Scrollable
             case 'Measurable': case 'MeasurableComponent': case 'Transformable': case 'Interactive': case 'Scalable': case 'Resizable': case 'Draggable': // all aliases of Measurable

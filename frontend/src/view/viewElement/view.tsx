@@ -1,6 +1,6 @@
 import {
     Constructors,
-    CoordinateMode, D,
+    CoordinateMode, D, DataTransientProperties,
     Debug, DEdgePoint,
     Defaults, DGraph,
     DGraphElement,
@@ -281,7 +281,7 @@ export class DViewElement extends DPointerTargetable {
             .DPointerTargetable().DViewElement(name, jsxString, vp).end(callback);
     }
 
-    static newDefault(forData?: DNamedElement): DViewElement{
+    static newDefault(forData?: DNamedElement, forSelf: boolean = false): DViewElement{
         const jsx = `
 
 /* Jjodel Default View 2.1 */ 
@@ -328,17 +328,24 @@ export class DViewElement extends DPointerTargetable {
 
  `;
         let query = '';
-        if (forData) switch(forData.className) {
-            case 'DClass':
-                query = `context DObject inv: self.instanceof.id = '${forData.id}'`;
-                break;
-            case 'DAttribute':
-            case 'DReference':
-                query = `context DValue inv: self.instanceof.id = '${forData.id}'`;
-                break;
-            default:
+        if (forData) {
+            if (forSelf) {
                 query = `context ${forData.className} inv: self.id = '${forData.id}'`;
-                break;
+            } else switch (forData.className) {
+                case 'DModel':
+                    query = `context DModel inv: self.instanceof.id = '${forData.id}'`;
+                    break;
+                case 'DClass':
+                    query = `context DObject inv: self.instanceof.id = '${forData.id}'`;
+                    break;
+                case 'DAttribute':
+                case 'DReference':
+                    query = `context DValue inv: self.instanceof.id = '${forData.id}'`;
+                    break;
+                default:
+                    query = `context ${forData.className} inv: self.id = '${forData.id}'`;
+                    break;
+            }
         }
         const user = LUser.getUser();
         // const project = LProject.getProject(); if(!project) return this;
@@ -389,6 +396,14 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
     get_isOverlay(c: Context): this["isOverlay"] { return this.get_isExclusiveView(c); }
     set_isOverlay(val: this["isOverlay"], c: Context): boolean { return this.set_isExclusiveView(val, c); }
 
+    tv!: ViewTransientProperties;
+    transient!: DataTransientProperties;
+    __info_of__transient: Info = {type: 'GObject (check it in console)', txt: 'Properties that are not persistent or shared in collaborative environments, such as cached values.'}
+    __info_of__tv: Info = {type: 'GObject (check it in console)', txt: 'Shorter alias for transient view.'}
+    get_transient(c: Context) { return transientProperties.view[c.data.id] || {}; }
+    get_tv(c: Context) { return this.get_transient(c); }
+    set_tv(val: never, c: Context) { return this.cannotSet('transient'); }
+    set_transient(val: never, c: Context) { return this.cannotSet('transient'); }
 
     label!: this["longestLabel"];  // should never be read change their documentation in write only. their values is "read" in this.segments
     longestLabel!: labeltype; // (e:LVoidEdge, segment: EdgeSegment, allNodes: LEdge["allNodes"], allSegments: EdgeSegment[]) => PrimitiveType;
@@ -530,7 +545,18 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
 
     public static GetSnap(c: LogicContext<DVoidVertex> | LogicContext<DViewElement>): DVoidVertex["snap"] { return new GraphPoint(c.data.snap!.x, c.data.snap!.y); }
     public static SetSnap(val: Partial<GraphPoint> | number | string | boolean, c:  LogicContext<DVoidVertex> | LogicContext<DViewElement>): boolean {
-        if (!val) val = 0;
+        const isView = c.data.className.includes('View');
+        if (!val && val !== 0) {
+            if (!isView && c.data.snap) {
+                TRANSACTION('Inherit snap on',
+                    ()=> {
+                        SetFieldAction.new(c.data, 'snap', null as any, '=', false);
+                        SetRootFieldAction.new("NODES_RECOMPILE_snap", c.data.id, '+=');
+                    });
+                return true;
+            }
+            else val = 0;
+        }
         if (typeof val === 'boolean') val = val ? 1 : 0;
         if (typeof val === 'string') val = +val;
         if (typeof val === 'number') val = {x: val, y: val};
@@ -549,10 +575,10 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
         if (!xChanged && !yChanged) return true;
         let diff_old: string = '('+ [(xChanged ? c.data.snap?.x : ''), (yChanged ? c.data.snap?.y : '')].filter(e=>!!e).join(', ') + ')';
         let diff_new: string = '('+ [(xChanged ? gval.x : ''), (yChanged ? gval.y : '')].filter(e=>!!e).join(', ') + ')';
-        TRANSACTION('Update snap',
+        TRANSACTION('Update snap ('+(isView ? 'View' : 'Node')+')',
             ()=> {
-                SetFieldAction.new(c.data, 'snap', gval as any, '+=', false);
-                SetRootFieldAction.new(c.data.className.includes('View') ? "VIEWS_RECOMPILE_snap" : "NODES_RECOMPILE_snap", c.data.id, '+=');
+                SetFieldAction.new(c.data, 'snap', gval as any, '=', false);
+                SetRootFieldAction.new(isView ? "VIEWS_RECOMPILE_snap" : "NODES_RECOMPILE_snap", c.data.id, '+=');
             },
             diff_old, diff_new);
         return true;

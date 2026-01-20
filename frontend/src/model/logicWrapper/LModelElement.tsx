@@ -1,4 +1,4 @@
-import type {
+import {
     Info, Json, ObjectWithoutPointers, orArr, PrimitiveType, unArr,
     Any,
     Dictionary,
@@ -10,7 +10,7 @@ import type {
     Pack,
     Pack1,
     PackArr,
-    Pointer,
+    Pointer, NodeTransientProperties, ViewScore, DataTransientProperties,
 } from "../../joiner";
 import {
     ShortAttribETypes,
@@ -190,6 +190,18 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
     [key: `$${string}`]: LModelElement;
 
     // protected _defaultGetter(c: Context, k: keyof Context["data"]): any {}
+
+    td!: DataTransientProperties;
+    transientData!: DataTransientProperties;
+    __info_of__transientData: Info = {type: 'GObject (check it in console)', txt: 'Properties that are not persistent or shared in collaborative environments, such as cached values.'}
+    __info_of__td: Info = {type: 'GObject (check it in console)', txt: 'Shorter alias for transient model.'}
+    get_transientData(c: Context) { return transientProperties.modelElement[c.data.id] || {}; }
+    get_td(c: Context) { return this.get_transientData(c); }
+    set_td(val: never, c: Context) { return this.cannotSet('transient'); }
+    set_transientData(val: never, c: Context) { return this.cannotSet('transient'); }
+    // __info_of__transient: Info = {type: 'GObject (check it in console)', txt: 'Properties that are not persistent or shared in collaborative environments, such as cached values.'}
+    // get_transient(c: Context) { return transientProperties.modelElement[c.data.id] || {}; }
+    // set_transient(val: never, c: Context) { return this.cannotSet('transient'); }
 
     protected _defaultGetter(c: Context, k: keyof any): any {
         let targetObj = c.data;

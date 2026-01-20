@@ -91,7 +91,6 @@ type AllProps = OwnProps & StateProps & DispatchProps;
 
 function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     const ret: StateProps = {} as FakeStateProps;
-    console.log('Project mapstatetoprops', ProjectsApi.isLoading);
     ret.projectid = U.getProjectID_URL() || '';
     ret.isLoading = ProjectsApi.isLoading;
     return ret;

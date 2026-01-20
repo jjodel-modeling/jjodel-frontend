@@ -39,7 +39,7 @@ export {Selector} from "../components/forEndUser/Selector";
 export {View} from "../components/forEndUser/Aliases";
 export {Try} from "../components/forEndUser/Try";
 export {Grid} from "../components/forEndUser/grid";
-export {ContextMenu} from "../components/forEndUser/ContextMenu";
+export {ContextMenu, ContextualEntry} from "../components/forEndUser/ContextMenu";
 
 
 // export {Image} from "../components/forEndUser/Image";
@@ -54,7 +54,7 @@ export {DataOutputComponent} from "../components/logger/DataOutput";
 export {Overlap} from "../components/forEndUser/Overlap";
 
 export {ControlPanel} from '../components/forEndUser/ControlPanel';
-export {Control, Slider, Toggle_Obsolete, Toggle_Obsolete as Toggle, Zoom, Panel, Panell, MetaElementPicker, ContextualEntry} from '../components/forEndUser/Control';
+export {Control, Slider, Toggle_Obsolete, Toggle_Obsolete as Toggle, Zoom, Panel, Panell, MetaElementPicker, /*ContextualEntry*/} from '../components/forEndUser/Control';
 
 type dict = Dictionary<string, typeof GraphElement | typeof Edge>;
 

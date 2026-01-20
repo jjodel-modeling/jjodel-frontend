@@ -463,6 +463,10 @@ i.bi {
 
 .GraphContainer{ // multi-select popup fix in graph
   overflow: hidden !important;
+  >.Graph{
+    width: 100% !important;
+    height: 100% !important;
+  }
   .Graph, .Graph>.root{ overflow: hidden !important; }
   .scrollable[graph='DGraph']{
     overflow: hidden;

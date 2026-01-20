@@ -439,7 +439,7 @@ const Section = (props: SectionProps) => {
 
 
 
-/* ContextualEntry */
+/* ContextualEntry * /
 
 type ContextualProps = {
     title: string;
@@ -457,7 +457,7 @@ const ContextualEntry = (props: ContextualProps) => {
     props.node.view.state.contextualEntries[props.title] = {title: props.title, action: props.action, icon: props.icon ? props.icon : ''};
 
     return (<></>);
-}
+}*/
 
 
 
@@ -656,7 +656,7 @@ Zoom.cname = 'Zoom';
 Panel.cname = 'Panel';
 Panell.cname = 'Panell';
 MetaElementPicker.cname = 'MetaElementPicker';
-ContextualEntry.cname = 'ContextualEntry';
+// ContextualEntry.cname = 'ContextualEntry';
 Slider.cname = 'Slider';
 ControlComponent.cname = 'ControlComponent';
 SliderComponent.cname = 'SliderComponent';
@@ -668,5 +668,5 @@ PanellComponent.cname = 'PanellComponent';
 //ContextualEntryComponent.cname = 'ContextualEntryComponent';
 SliderComponent.cname = 'SliderComponent';
 
-export {Control, Slider, Toggle_Obsolete, Zoom, Panel, Panell, MetaElementPicker, ContextualEntry};
+export {Control, Slider, Toggle_Obsolete, Zoom, Panel, Panell, MetaElementPicker, /*ContextualEntry*/};
 

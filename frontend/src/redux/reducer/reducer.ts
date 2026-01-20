@@ -983,30 +983,35 @@ function unsafereducer(oldState: DState = initialState, action: Action): DState 
         let dv: DViewElement = DPointerTargetable.fromPointer(vid, ret);
         let tv = transientProperties.view[vid];
         if (!tv) transientProperties.view[vid] = tv = {} as any;
-        if (!dv.jsxString) { transientProperties.view[vid].JSXFunction = undefined as any; continue; }
-        let allContextKeys = {...contextFixedKeys};
-        for (let k of transientProperties.view[vid].constantsList) if (!allContextKeys[k]) allContextKeys[k] = true;
-        for (let k of transientProperties.view[vid].UDList) if (!allContextKeys[k]) allContextKeys[k] = true;
-        let paramStr = '{'+Object.keys(allContextKeys).join(',')+'}';
-
-        const body: string =  'return (' + UX.parseAndInject(DSL.parser(dv.jsxString), dv) + ')';
-        try {
-            transientProperties.view[vid].JSXFunction = new Function(paramStr, body) as ((...a: any) => any);
+        if (!dv.jsxString) { transientProperties.view[vid].JSXFunction = undefined as any; }
+        if (dv.jsxString) {
+            let allContextKeys = {...contextFixedKeys};
+            for (let k of transientProperties.view[vid].constantsList) if (!allContextKeys[k]) allContextKeys[k] = true;
+            for (let k of transientProperties.view[vid].UDList) if (!allContextKeys[k]) allContextKeys[k] = true;
+            let paramStr = '{'+Object.keys(allContextKeys).join(',')+'}';
+            const tv = transientProperties.view[vid];
+            const body: string =  'return (' + UX.parseAndInject(DSL.parser(dv.jsxString), dv) + ')';
+            try {
+                tv.JSXFunction = new Function(paramStr, body) as ((...a: any) => any);
+            }
+            catch (e: any) {
+                /*try{
+                    let try_to_get_better_error = eval("let __f = function(" + paramStr+") {\n" + body + "}");
+                } catch(eeval){
+                    console.error("eval error same as func error", {e, eeval});
+                    e = eeval;
+                }*/
+                console.error('error jsxparse', {vid, e, paramStr, body});
+                tv.JSXFunction = (context) => GraphElementComponent.displayError(e, 'JSX Syntax', dv);
+            }
         }
-        catch (e: any) {
-            /*try{
-                let try_to_get_better_error = eval("let __f = function(" + paramStr+") {\n" + body + "}");
-            } catch(eeval){
-                console.error("eval error same as func error", {e, eeval});
-                e = eeval;
-            }*/
-            console.error('error jsxparse', {vid, e, paramStr, body});
-            transientProperties.view[vid].JSXFunction = (context) => GraphElementComponent.displayError(e, 'JSX Syntax', dv);
-        }
-        for (let nid of Object.keys(transientProperties.node)) { // forced rerender.
+        console.log('update jsx transient', {vid})
+        for (let nid in transientProperties.node) { // forced rerender.
             let tn = transientProperties.node[nid];
             if (!tn) continue;
-            let tnv = tn.viewScores[vid];
+            let tnv = tn.viewScores?.[vid];
+            console.log('update jsx transient', {nid, vid, tn, tnv})
+
             if (!tnv) continue; // if tn or tnv are missing, it is already a force-rerender + reevaluate of apply condition, UD and everything
 
             tnv.jsxChanged = true;

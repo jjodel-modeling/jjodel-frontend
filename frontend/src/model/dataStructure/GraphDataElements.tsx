@@ -34,7 +34,7 @@ import {
     LUser,
     LViewElement,
     MixOnlyFuncs,
-    Node,
+    Node, NodeTransientProperties,
     orArr,
     Pack1,
     PackArr,
@@ -55,7 +55,7 @@ import {
     transientProperties,
     U,
     Uarr,
-    UX,
+    UX, ViewScore,
     windoww
 } from "../../joiner"
 import type {Tooltip} from "../../components/forEndUser/Tooltip";
@@ -67,7 +67,7 @@ import {EdgeGapMode, InitialVertexSize, InitialVertexSizeFunc} from "../../joine
 //console.warn('ts loading graphDataElement');
 type ContextMenuFunc = ((data: LModelElement, node: LGraphElement, view: LViewElement)=>void);
 type ContextMenu = Dictionary<string, ContextMenuFunc | Dictionary<string, ContextMenuFunc>>;
-type ContextMenuRec = Dictionary<string, ContextMenu | ((data: LModelElement, node: LGraphElement, view: LViewElement)=>void)>;
+
 @Node
 @RuntimeAccessible('DGraphElement')
 export class DGraphElement extends DPointerTargetable {
@@ -189,6 +189,19 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
     __info_of__endPoint: Info = {type: "GraphPoint", txt:<span>Where the incoming edges should end their paths.
             <br/>Obtained by combining anchoring point offset specified in view, before snapping to a Vertex border.
             <br/>Defaults in outer coordinates.</span>};
+
+    tn!: NodeTransientProperties;
+    tnv!: ViewScore;
+    transient!: NodeTransientProperties;
+    __info_of__transient: Info = {type: 'GObject (check it in console)', txt: 'Properties that are not persistent or shared in collaborative environments, such as cached values.'}
+    __info_of__tn: Info = {type: 'GObject (check it in console)', txt: 'Shorter alias for transient node.'}
+    __info_of__tnv: Info = {type: 'GObject (check it in console)', txt: 'part of transient properties that are specific to the current combination of node and main view.'}
+    get_transient(c: Context) { return transientProperties.node[c.data.id] || {}; }
+    get_tn(c: Context) { return this.get_transient(c); }
+    get_tnv(c: Context) { return this.get_transient(c).viewScores?.[this.get_view(c)?.id]; }
+    set_transient(val: never, c: Context) { return this.cannotSet('transient'); }
+    set_tn(val: never, c: Context) { return this.cannotSet('transient'); }
+    set_tnv(val: never, c: Context) { return this.cannotSet('transient'); }
 
     graph!: LGraph | LGraphVertex;
     __info_of__graph: Info = {type:"LGraph | LGraphVertex", txt:"Alias for innerGraph"};
@@ -475,7 +488,7 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
 
     get_innerSize(c: Context, canTriggerSet: {w: boolean, h:boolean } = {w:true, h:true}): Readonly<GraphSize> {
         let r = this.get_innerSize_impl(c, canTriggerSet, false);
-        let snap: GraphPoint = (c.data as any).snap || {};
+        let snap: GraphPoint = (this as any as LVoidVertex).get_snap?.(c) || {};
         let ret = new GraphSize(r.x, r.y, r.w, r.h);
 
         // snap to grid;

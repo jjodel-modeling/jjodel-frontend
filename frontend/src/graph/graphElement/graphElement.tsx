@@ -713,15 +713,15 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
     protected getTemplate3_(vid: Pointer<DViewElement>, v: LViewElement, context: GObject): ReactNode{
         let tnv = transientProperties.node[this.props.nodeid].viewScores[vid];
         //console.log("render debug view template 0: " + v.name, {tnv, s_up:tnv.shouldUpdate, oldjsx:tnv.jsxOutput});
-
         if (!tnv.shouldUpdate && tnv.jsxOutput) return tnv.jsxOutput;
 
         //console.log("render debug view template 1: " + v.name,);
 
         let tv = transientProperties.view[vid];
-        console.log('gt3', tv.JSXFunction, context);
+        // console.log('gt3', tv.JSXFunction, context);
+        tnv.contextMenu = []; // reset old entries, new ones are computed now.
         let ret = tnv.jsxOutput = (tv.JSXFunction ? tv.JSXFunction.call(context, context) : null);
-        console.log('gt33', ret);
+        // console.log('gt33', ret);
         if (typeof ret === "object" && ret !== null && !React.isValidElement(ret)) {
             // plain objects cannot be react nodes, but react nodes are objects. so i try serializing
             // this only happens if someone puts an object in jsx
@@ -1269,15 +1269,16 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
             tnv:tn.viewScores[this.props.viewid], ud:tn.viewScores[this.props.viewid].usageDeclarations});*/
 
         // compute jsx
-        tn.contextMenu = []; // reset old entries, new ones are computed now.
         allviews = [mainView]; // todo: remove
+        const mainvid = mainView.id;
         for (let v of allviews) { // main view is the last
-            let viewnodescore = tn.viewScores[v.id];
+            const vid = v.id;
+            let viewnodescore = tn.viewScores[vid];
             jsxOutput = viewnodescore.shouldUpdate ? undefined : viewnodescore.jsxOutput;
             let isMain: true | undefined = v === mainView || undefined;
             if (!jsxOutput) viewnodescore.jsxOutput = jsxOutput =
                 this.renderView(this.props, v, nodeType, classes, styleoverride,
-                    isMain && decoratorViewsOutput, mainView.id, isMain && otherViews.map(v=>v.id));
+                    isMain && decoratorViewsOutput, mainvid, isMain && otherViews.map(v=>v.id));
             if (!isMain) {
                 (decoratorViewsOutput as GObject)[v.name] = jsxOutput;
                 decoratorViewsOutput.push(jsxOutput);

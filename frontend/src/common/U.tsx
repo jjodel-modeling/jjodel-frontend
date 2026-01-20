@@ -3190,14 +3190,25 @@ export class Keystrokes {
     public static clickBackMouseButton = 3;
     public static clickForwardMouseButton = 4;
 
+    // keyboard aliases
+    public static left = 'ArrowLeft';
+    public static right = 'ArrowRight';
+    public static up = 'ArrowUp';
+    public static down = 'ArrowDown';
+    public static win = 'Meta';
+    public static ctrl = 'Control';
+    // mac keys aliases
+    public static cmd = 'Meta';
+    public static option = 'Alt';
     // keyboard
+    public static meta = 'Meta'; // windows key or mac control
     public static escape = 'Escape';
     public static capsLock = 'CapsLock';
+    public static control = 'Control';
     public static shift = 'Shift';
+    public static fn = 'Fn';
     public static tab = 'Tab';
     public static alt = 'Alt';
-    public static cmd = 'Control';
-    public static control = 'Control';
     public static end = 'End';
     public static home = 'Home';
     public static pageUp = 'PageUp';
@@ -3207,7 +3218,7 @@ export class Keystrokes {
     public static audioVolumeMute = 'AudioVolumeMute';
     public static audioVolumeUp = 'AudioVolumeUp';
     public static audioVolumeDown = 'AudioVolumeDown';
-    public static mediaTrackPrevious = 'MediaTrackPrevious';
+    public static mediaTrackPrevious = 'MediaTrackPrevious'; // etc, playpause too
     public static delete = 'Delete'; // canc
     public static backspace = 'Backspace';
     public static space = ' ';
@@ -3219,8 +3230,7 @@ export class Keystrokes {
     public static insert = 'Insert';
     public static f1 = 'F1';
     // weird ones:
-    public static meta = 'Meta'; // f1, or other f's with custom binding and windows key
-    public static unidentified = 'Unidentified'; // brightness
+    public static unidentified = 'Unidentified'; // brightness, F keys without fn (f2, f3...)
     public static __NotReacting__ = 'fn, print, maybe others'; // not even triggering event?
     private static RegisteredKeyStrokes: Dictionary<DocString<'selector'>, {keyup: (e:any)=>any, keydown: (e:any)=>any}> = {};
     public static register(selector: string, arr: {function?: ()=>any, keystroke?: Key[]}[]): void{
@@ -3325,40 +3335,50 @@ export class Keystrokes {
 
 
     public static getKeystrokeJsx(key: string, allowBootIcons: boolean = true, allowBoxIcons: boolean=true, allowTextIcons: boolean = true){
+        if (typeof key !== 'string') return key as any;
         let os = U.getOSBrowserData().os.substring(0, 3).toLowerCase();
         let obj = iconKeys['bi_' + os];
         if (!obj) return Log.eDevv('Found unexpected OS: ' + os, {data:U.getOSBrowserData()}) && '';
-        if (allowBootIcons && key in obj) { let val = obj[key]; return <i key={key} className={"bi " + val} title={key}/>; }
+        let icon_name = obj[key] || iconKeys.bi_global[key];
+        let text = iconKeys['text_' + os][key] || iconKeys.text_global[key];
+        if (allowBootIcons && icon_name) { return <i key={key} className={"bi " + icon_name} title={text || key}/>; }
         //obj = iconKeys['box_' + os];
         // if (!obj) return Log.eDevv('Found unexpected OS: ' + os, {data:U.getOSBrowserData()}) && '';
         //if (allowBoxIcons && key in obj) { let val = obj[key]; return <span><i className={"box-icons?? " + val todo} title={key}/></span>; }
-        obj = iconKeys['text_' + os];
-        if (!obj) return Log.eDevv('Found unexpected OS: ' + os, {data:U.getOSBrowserData()}) && '';
-        if (allowTextIcons && key in obj) { let val = obj[key]; return <i key={key} className={"text-icon " + val} title={key} data-val={val} data-content={key}/>; }
+        if (allowTextIcons && text) { return <i key={key} className={"text-icon " + text} title={text || key} data-val={text} data-content={key}/>; }
         return <span key={key}>{key.toUpperCase()}</span>;
     }
-    public static NamedKeys: Dictionary<string, boolean>;
 }
 
 const iconKeys: Dictionary<string, Dictionary<string, string>> = {
-        bi_win: {
-            [Keystrokes.shift] : "bi-shift"
-        },
-        bi_mac: {
-            [Keystrokes.cmd]   : "bi-command",
-            [Keystrokes.control]   : "bi-command",
-            [Keystrokes.alt]   : "bi-alt",
-            [Keystrokes.shift] : "bi-shift"
-        },
+    bi_global: {
+        [Keystrokes.up]     : "bi-arrow-up",
+        [Keystrokes.down]   : "bi-arrow-down",
+        [Keystrokes.control]: "bi-chevron-up",
+        [Keystrokes.alt]    : "bi-alt", // || bi-option
+        [Keystrokes.shift]  : "bi-shift",
+        [Keystrokes.fn]     : 'bi-globe', // mac always have fn, but i should not register keystrokes to it.
+        [Keystrokes.backspace]: 'bi bi-backspace', //<i className='bi bi-backspace' style={{fontSize: '1em', float: 'right', paddingTop: '2px', fontWeight: '800'}}/>
+    },
+    text_global: {
+        [Keystrokes.control]: "Ctrl",
+    },
+    bi_win: {
+        [Keystrokes.meta]    : "bi-windows", // || bi-microsoft
+    },
+    bi_mac: {
+        [Keystrokes.meta]    : "bi-command",
+    },
     box_win: {},
     box_mac: {},
     text_win: {
-        [Keystrokes.cmd]   : "ctrl",
-        [Keystrokes.control]   : "ctrl",
-        [Keystrokes.alt]   : "alt",
-        [Keystrokes.shift] : "shift"
+        [Keystrokes.meta]    : "Win",
+        [Keystrokes.alt]    : "Alt",
     },
-    text_mac: {},
+    text_mac: {
+        [Keystrokes.meta]    : "Cmd",
+        [Keystrokes.alt]    : "Option",
+    },
 };
 
 // Keystrokes.NamedKeys: Dictionary<string, boolean> = Object.values(Keystrokes).reduce((acc, v) => { acc[v] = true; return acc; }, Keystrokes.NamedKeys as GObject);

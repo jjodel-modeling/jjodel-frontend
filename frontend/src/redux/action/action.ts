@@ -238,8 +238,7 @@ export async function AFTER_UPDATE(a:(newState: DState)=>void) { after_transacti
 
 // to be executed in reducer, for internal jjodel usage, users should never call it.
 export async function DO_AFTER_TRANSACTION_NOT_FOR_USERS(newState: DState) {
-
-    console.log('DO_AFTER_TRANSACTION_NOT_FOR_USERS len:', after_transaction.length);
+    // console.log('DO_AFTER_TRANSACTION_NOT_FOR_USERS len:', after_transaction.length);
     if (after_transaction.length) {
         let callback: (...argss:any)=>void = null as any;
         let arr = [...after_transaction]; // to prevent pushing while executing
@@ -247,7 +246,7 @@ export async function DO_AFTER_TRANSACTION_NOT_FOR_USERS(newState: DState) {
         for (callback of arr) {
             try { callback?.(newState); } catch (e) { Log.ee('Reducer, error in AFTER_TRANSACTION action', e); }
         }
-        console.log('DO_AFTER_TRANSACTION_NOT_FOR_USERS end', [...after_transaction]);
+        // console.log('DO_AFTER_TRANSACTION_NOT_FOR_USERS end', [...after_transaction]);
     }
 }
 

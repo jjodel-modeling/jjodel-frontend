@@ -286,7 +286,7 @@ export function InputComponent(props: AllProps) {
         inputProps = {...rootprops, ...inputProps};
         wrap = false;
     }
-    if ((props as any).id === 'grid') console.log('select get options', {data, field, props});
+
     switch (props.tag){
         case "textarea": input = <textarea {...inputProps}>{inputProps.value}</textarea>; break;
         case "select": /* test */
@@ -316,7 +316,6 @@ export function InputComponent(props: AllProps) {
             }
             else {
                 let options = getSelectOptions(data, field, props.options, props.children, props.id);
-                if ((props as any).id === 'grid') console.log('select get options 2', {data, field, props, options});
                 if (U.isError(options)) throw errorUpdate("Error on <Select> options getter", options);
                 input = <select {...inputProps}>
                     <option value="" disabled selected>{props.placeholder ? props.placeholder : 'Select your option'}</option>

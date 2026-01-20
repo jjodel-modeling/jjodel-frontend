@@ -1,9 +1,10 @@
 import React, {Dispatch, ReactElement, ReactNode, useRef} from 'react';
 import {connect} from 'react-redux';
-import './style.scss';
-import {SetRootFieldAction, TRANSACTION} from '../../redux/action/action';
+import './ContextMenu.scss';
+import {CtxMenuAllProps, CtxMenuPathSeparator} from '../forEndUser/ContextMenu';
 import {
     DClass, DGraph, DGraphElement, Dictionary,
+    SetRootFieldAction, TRANSACTION,
     DNamedElement,
     DState,
     DUser, DV,
@@ -20,7 +21,7 @@ import {
     LValue,
     Pointer, transientProperties,
     U,
-    windoww,
+    windoww, Keystrokes,
 } from '../../joiner';
 import MemoRec from '../../api/memorec';
 import {useStateIfMounted} from 'use-state-if-mounted';
@@ -71,66 +72,146 @@ export function ShowContextMenu(nodeid: Pointer<DGraphElement>, x: number, y: nu
 let contextMenuMap: Dictionary<Pointer<DGraph>, (nodeid: Pointer<DGraphElement>, x: number, y: number)=>void> = {};
 windoww.ShowContextMenu = ShowContextMenu;
 windoww.contextMenuMap = contextMenuMap;
+type RecursiveArray<A> = A[] | RecursiveArray<A>[];
+export type NestedDictionary<K extends keyof GObject = any, V = any> =
+    | Dictionary<K, V>
+    | { [key: string]: NestedDictionary<K, V> };
+
 function addDynamicEntries(jsxList: ReactNode[], nodeid: Pointer<DGraphElement>, data: LModelElement | undefined, node: LGraphElement){
     let tn = transientProperties.node[nodeid];
-    if (!tn.contextMenu?.length) return;
-    let i = -1;
-    let labelsMap: Dictionary<string, true> = {}
-    // aad custom user entries
-    for (let ctx of tn.contextMenu) {
-        i++;
-        let ico = ctx.ico;
-        if (!ico) ico = 'bi bi-person-gear';
-        else if (typeof ico === 'string') {
-            ico = ' ' + ico + ' '; // to simplify code in next line " bi " so i allow it at string end, but not as beginning of another string like "bisect"
-            if ((ico as string).includes(' bi-') && !(ico as string).includes(" bi ")) ico = "bi " + ico;
-            ico = (ico as string).trim();
-        } else {
-            if (!React.isValidElement(ico)) ico = 'bi bi-user';
-        }
-        let label = ctx.label;
-        let labelJSX = ctx.labelJSX;
-        if (!label || typeof "label" !== "string") { label = ctx.path || 'Unnamed user action' + (tn.contextMenu.length > 1 ? ' '+i : ''); }
-        if (!labelJSX || !React.isValidElement(labelJSX)) { labelJSX = null; }
-
-        let action = () => {
-            if (!ctx.action || typeof ctx.action !== 'function') return null;
-            try { ctx.action(data || null, node); }
-            catch (e) {
-                Log.ee("Error during user-defined contextmenu action", {e, label, ctx})
-            }
-        }
-        let hasSubTree = true;
-        jsxList.push(
-            <div key={label} onClick={action} className={'col item'} tabIndex={0}>
-                {typeof (ico as unknown) !== 'string' ? ico : <i className={ico as string} />}
-                {labelJSX || label}
-                {hasSubTree && <div>
-                    <i className={'bi bi-chevron-right'} style={{fontSize: '0.75em', float: 'right', paddingTop: '2px', fontWeight: '800'}}/>
-                </div>}
-            </div>
-        );
+    let arr: CtxMenuAllProps[] = [];
+    for (let vid in tn.viewScores) {
+        let tnv = tn.viewScores[vid];
+        if (!tnv?.contextMenu?.length) continue;
+        U.arrayMergeInPlace(arr, tnv.contextMenu);
     }
+    if (!arr?.length) return;
+    type RecursiveDictExcept<K extends string | number, V, S extends string> = {
+        [S]?: V;
+    } & {
+        [K in Exclude<string, S>]?: V | RecursiveDictExcept<K, V, S>;
+    };
+    type RecursiveCtxMap = RecursiveDictExcept<string, CtxMenuAllProps, '__props'>
+
+    // let map: NestedDictionary<string, ({__props: CtxMenuAllProps} & Omit<Dictionary<Exclude<string, '__props'>, CtxMenuAllProps>, '__props'> & {__props: CtxMenuAllProps} )> = {};
+    let map: RecursiveCtxMap = {};
+
+    // arr.sort((a, b)=> a.path.localeCompare(b.path));
+    for (let c of arr) {
+        let patharr = c.path.split(CtxMenuPathSeparator);
+        let curr: RecursiveCtxMap = map;
+        let prev = map;
+        let p: string = '';
+        for (p of patharr) {
+            if (!curr[p]) curr[p] = {};
+            prev = curr;
+            curr = curr[p] as any;
+        }
+        if (!curr.__props) { curr.__props = c; continue; }
+        // name conflict case
+        p = U.increaseEndingNumber(p+'_1', false, false, (v)=>!!prev[v]);
+        prev[p] = {__props: c};
+    }
+
+    let i = -1;
+    // aad custom user entries
+    function HandleMapLevel(map: RecursiveCtxMap, level: number = 0): ReactNode[] {
+        let entries: ReactNode[] = [];
+        for (let k in map) {
+            if (k === '__props') continue;
+            let submap = map[k] as RecursiveCtxMap;
+            let ctx: CtxMenuAllProps = submap?.__props || {label: k} as any;
+            let key = k;
+            i++;
+            let ico = ctx.ico;
+            if (!ico) ico = 'bi bi-person-gear';
+            else if (typeof ico === 'string') {
+                ico = ' ' + ico + ' '; // to simplify code in next line " bi " so i allow it at string end, but not as beginning of another string like "bisect"
+                if ((ico as string).includes(' bi-') && !(ico as string).includes(" bi ")) ico = "bi " + ico;
+                else if ((ico as string).includes(' bx-') && !(ico as string).includes(" bx ")) ico = "bx " + ico;
+                ico = (ico as string).trim();
+            } else {
+                if (!React.isValidElement(ico)) ico = 'bi bi-user';
+            }
+            let label = ctx.label;
+            let labelJSX = ctx.labelJSX;
+            if (!label || typeof "label" !== "string") { label = k || 'Unnamed user action ' + i; }
+            if (!labelJSX || !React.isValidElement(labelJSX)) { labelJSX = null; }
+
+            let action = () => {
+                let ret: any = false;
+                if (!ctx.action || typeof ctx.action !== 'function') return false;
+                try { ret = ctx.action(data || null, node); }
+                catch (e) {
+                    Log.ee("Error during user-defined contextmenu action", {e, label, ctx});
+                    ret = false;
+                }
+                return ret;
+            }
+
+            let entry = ContextEntry(key, typeof (ico as unknown) !== 'string' ? ico : <i className={ico as string} />, labelJSX || label, action, [], false,
+                HandleMapLevel(submap, level +1), level > 0
+            );
+            entries.push(entry);
+        }
+        return entries;
+    }
+    HandleMapLevel(map, 0);
     separator();
 }
 let jsxList: ReactNode[] = [];
-function ContextEntry(key:string, icon: ReactNode, label: ReactNode, action: null|undefined|(()=>boolean|undefined|Promise<any>),
-                        keycodes: ReactNode, disabled: boolean = false) {
-    // @ts-ignore
-    jsxList.push(<div key={key} disabled={disabled} className={'col item'} tabIndex={0} onClick={async() => {
-        let ret = action ? action() : false;
-        if (U.isPromise(ret)) ret = await ret;
-        if (ret !== false) close(); }}>
-        <span className={'my-auto'}>{icon}</span>
-        <span className={'my-auto'}>{label}</span>
-        <div>{keycodes}</div>
-    </div>);
+
+function SubEntry(key:string, icon: ReactNode, label: ReactNode, action: null|undefined|(()=>any),
+                        keycodes: ReactNode[], disabled: boolean = false, subelements: ReactNode[] = []) {
+    return ContextEntry(key, icon, label, action, keycodes, disabled, subelements, true);
 }
-let hri = 0;
-function separator(){
-    jsxList.push(<hr key={'sep'+hri++} className={'my-1'} />);
+function getKeycode(letter: string | ReactNode): ReactNode{ return Keystrokes.getKeystrokeJsx(letter as any); }
+
+function ContextEntry(key: string, icon: ReactNode, label: ReactNode, action: null|undefined|(()=>any),
+                        keycodes: ReactNode[], disabled: boolean = false, subelements: ReactNode[] = [], isSubElement: boolean = false) {
+    subelements = subelements?.filter(e=>!!e) || [];
+    if (!keycodes) keycodes = [];
+    // @ts-ignore
+    let ret = <div key={key} disabled={disabled} className={'col item'+ (subelements.length ? ' hoverable' : '')} tabIndex={0} onClick={(e) => {
+        e.stopPropagation();
+        if (disabled) return false;
+
+        let ret: any = undefined;
+        if (action) try { ret = action(); } catch (e) { Log.eDevv('Error in ctxmenu default action', {label, action, e}); }
+        else ret = false;
+        console.log('ctx action', {action, ret});
+        if (U.isPromise(ret)) (ret as Promise<any>).then(
+            ret => { if (ret !== false) closefunc(); },
+            reason=>{  Log.ee('Error in Contextmenu user action', {reason, label}); }
+        );
+        else if (ret !== false) closefunc();
+        return false;
+    }}>
+        {typeof icon === "string" ? <span className={'my-auto'} style={{alignContent: 'center'}}>{icon}</span> : icon}
+        <span className={'my-auto ms-2'}>{label}</span>
+        <div className={'mx-auto'}/>
+        {keycodes.length && <div className={'my-auto keystrokes ms-2'} style={{textAlign: 'center'}}>
+            {(keycodes.map(e=>getKeycode(e)) as any)/*.separator(<span className='ms-1'/>)*/}
+        </div>}
+        {subelements.length && <div className={'my-auto ms-2'}><i className={'bi bi-chevron-right'}
+                                     style={{fontSize: '0.75em', float: 'right', paddingTop: '2px', fontWeight: '800'}}/></div>}
+        {subelements.length && <section className={'round content right'} onContextMenu={(e) => e.preventDefault()}>
+            <section className={'right context-menu'}>{
+                subelements//.map(e => e)
+            }
+            </section>
+        </section>}
+    </div>;
+    if (!isSubElement) jsxList.push(ret);
+    return ret;
 }
 
+let hri = 0;
+
+function separator() {
+    jsxList.push(<hr key={'sep' + hri++} className={'my-1'}/>);
+}
+let closefunc: (panelClick?: boolean)=>void = null as any;
 function ContextMenuComponentInner(props: AllProps) {
     // const project = user.project as LProject;
     // const display = props.display;
@@ -159,7 +240,6 @@ function ContextMenuComponentInner(props: AllProps) {
     const node: LGraphElement = L.fromPointer(nodeid);
     if (!node) return null;
     const data: LNamedElement | undefined = node.model as LNamedElement;
-    let hri: number = 0;
     // let ldata: LNamedElement = data as LNamedElement;
     // let ddata: DNamedElement = ldata?.__raw as DNamedElement;
     let ldata = data
@@ -169,6 +249,7 @@ function ContextMenuComponentInner(props: AllProps) {
     let cname = ddata?.className;
 
     const close = (panelClick?: boolean) => {
+        console.error('close ctx');
         if (!display) return;
         setSuggestedName('');
         setMemorec(null);
@@ -178,6 +259,7 @@ function ContextMenuComponentInner(props: AllProps) {
         if (!panelClick) setEditPanel(false);
         // TRANSACTION('close context menu', ()=>{ })
     }
+    closefunc = close;
 
     function updateRef(ref: Element | null) {
         if (!ref || oldRef === ref) return;
@@ -187,7 +269,7 @@ function ContextMenuComponentInner(props: AllProps) {
     }
 
     const addViewSelf = () => {
-        if (ddata) DViewElement.newDefault(ddata as DNamedElement || undefined);
+        if (ddata) DViewElement.newDefault(ddata as DNamedElement || undefined, true);
         close();
     }
     const addViewInstances = () => {
@@ -278,7 +360,7 @@ function ContextMenuComponentInner(props: AllProps) {
         /* Edit button: only on models */
 
         if (true as any || !isM2 && cname !== 'DModel') {
-            ContextEntry('edit', icon['edit'], 'Edit', () => setEditPanel(true) as undefined, null)
+            ContextEntry('edit', icon['edit'], 'Edit', () => setEditPanel(true) as undefined, [])
             separator();
         }
 
@@ -313,7 +395,7 @@ function ContextMenuComponentInner(props: AllProps) {
                 jsxList.push(<div key='ai-c' onClick={structuralFeature} className={'col item'} tabIndex={0}>
                     <span className={'my-auto'}>{icon['ai']}</span>
                     <span className={'my-auto'}>AI Suggest</span>
-                    <div className='d-flex'>
+                    <div className='d-flex ms-auto'>
                         <i className='ms-1 bi bi-chevron-right my-auto' style={{fontSize: '0.75em', float: 'right', paddingTop: '2px', fontWeight: '800'}} />
                     </div>
                 </div>);
@@ -324,6 +406,7 @@ function ContextMenuComponentInner(props: AllProps) {
                     <span className={'my-auto'}>{icon['ai']}</span>
                     <span className={'my-auto'}>AI Suggest</span>
                     <div className='d-flex'>
+                        {/*NB: did not put this in the usual ContextEntry because this element has children loaded lazily, but must have the caret icon anyway. */}
                         <i className='ms-1 bi bi-chevron-right my-auto' style={{fontSize: '0.75em', float: 'right', paddingTop: '2px', fontWeight: '800'}} />
                     </div>
                 </div>);
@@ -345,22 +428,22 @@ function ContextMenuComponentInner(props: AllProps) {
                         user: DUser.current,
                         source: (ddata as any).id
                     })),
-                    <div><i className='bi bi-command'/> E</div>);
+                    [Keystrokes.ctrl, 'E']);
                 separator();
                 break;
         }
 
 
-        /* View-specific menu entry */
-
+        /* View-specific menu entry (old) */
+        /*
         if (node.view.state.contextualEntries) {
             for (const key in node.view.state.contextualEntries) {
                 ContextEntry(key,
                     node.view.state.contextualEntries[key].icon ? <i className={'bi '+node.view.state.contextualEntries[key].icon} /> : <span className={'empty'}/>,
-                    key, () => node.view.state.contextualEntries[key].action(data, node), null)
+                    key, () => node.view.state.contextualEntries[key].action(data, node), [])
             }
             separator();
-        }
+        }*/
 
 
         /* Deselect */
@@ -383,9 +466,7 @@ function ContextMenuComponentInner(props: AllProps) {
                     else node.delete();
                     // if there is data, then the node is indirectly deleted, no need to call it too.
                 },
-            <div>
-                <i className='bi bi-backspace' style={{fontSize: '1em', float: 'right', paddingTop: '2px', fontWeight: '800'}}/>
-            </div>, cannotDelete
+                [Keystrokes.backspace], cannotDelete
             );
         separator();
         
@@ -395,22 +476,14 @@ function ContextMenuComponentInner(props: AllProps) {
         // jsxList.push(<hr key={hri++} className={'my-1'} />);
 
         /* Up / Down */
-        ContextEntry('up', icon['up'], 'Up',
-            ()=> TRANSACTION('move node up (z-axis)', () => node.zIndex += 1),
-                <div><i className='bi bi-command'/><i className="bi bi-arrow-up"/></div>);
-        ContextEntry('down', icon['down'], 'Down',
-            ()=> TRANSACTION('move node down (z-axis)', () => node.zIndex -= 1),
-                <div><i className='bi bi-command'/><i className="bi bi-arrow-down"/></div>);
+        ContextEntry('up', icon['up'], 'Up', ()=> node.zIndex += 1, [Keystrokes.ctrl, Keystrokes.up]);
+        ContextEntry('down', icon['down'], 'Down', ()=>  node.zIndex -= 1, [Keystrokes.ctrl, Keystrokes.down]);
         separator();
         
         /* AUTO-SIZING */
         let gn = node as GObject;
-        if (gn.isResized) ContextEntry('asize', icon['contract'], 'Restore auto-sizing',
-            () => gn.isResized = false,
-            <div><i className='bi bi-command'></i> T</div>)
-        else ContextEntry('nasize', icon['expand'], 'Disable auto-sizing',
-            () => gn.isResized = true,
-            <div><i className='bi bi-command'></i> T</div>)
+        if (gn.isResized) ContextEntry('asize', icon['contract'], 'Restore auto-sizing', () => gn.isResized = false, [Keystrokes.ctrl, 'T'])
+        else ContextEntry('nasize', icon['expand'], 'Disable auto-sizing', () => gn.isResized = true, [Keystrokes.ctrl, 'T'])
         
         // /* LOCK-UNLOCK */
         // jsxList.push(<div onClick={() => {close(); ldata.delete(); /*node.delete();*/}} className={'col item'} tabIndex={0}>{icon['lock']} Lock/Unlock<div> <i
@@ -424,37 +497,20 @@ function ContextMenuComponentInner(props: AllProps) {
         
         /* Analytics */
         if (ldata && model?.isMetamodel) {
-            ContextEntry('analytic', icon['metrics'], 'Analytics', toggleMetrics as any, <div><i className='bi bi-command' /> A</div>);
+            ContextEntry('analytic', icon['metrics'], 'Analytics', toggleMetrics as any, [Keystrokes.ctrl, 'A']);
             separator();
         }
 
 
         /* ADD VIEW */
-        if (isM2 && cname !== 'DEnumerator' && cname !== 'DEnumLiteral' && cname !== 'DOperation' && cname !== 'DParameter' && cname !== 'DAnnotation') {
-            ContextEntry('view+m2', icon['add'], 'Add view', null, null, false, [
-                SubEntry('own', 'For this '+(data?.className || 'DElement').substring(1), addViewSelf),
-                SubEntry('instance', 'For his instances', addViewInstances, )]
+        if (isM2 && (cname === 'DModel' || cname === 'DClass' || cname === 'DAttribute' || cname === 'DReference')) {
+            ContextEntry('view+m2', icon['add'], 'Add view', null, [], false, [
+                SubEntry('own', null, 'For this '+(data?.className || 'DElement').substring(1), addViewSelf, []),
+                SubEntry('instance', null, 'For his instances', addViewInstances, [Keystrokes.alt, Keystrokes.ctrl, 'A'])]
             )
-            jsxList.push(<div key={'view+ m2'} tabIndex={0} className={'col item submenu-holder hoverable'}>
-                {icon['add']} Add view <div style={{position: 'absolute', right: '0'}}>{icon['submenu']}</div>
-                <section className={'round content right'} onContextMenu={(e) => e.preventDefault()}>
-                    <ul className={'right context-menu'}>
-                        <li onClick={() => { close(); addViewSelf(); }} className={'col item'} tabIndex={0}>
-                            <span>For this {(data?.className || 'DElement').substring(1)}</span>
-                        </li>
-                        <li onClick={() => { close(); addViewInstances(); }} className={'col item'} tabIndex={0}>
-                            <span>For his instances</span>
-                        </li>
-                    </ul>
-                </section>
-            </div>);
-        } else jsxList.push(
-            <div key='view+' onClick={async () => {
-                close();
-                addViewInstances();
-            }} className={'col item'} tabIndex={0}>{icon['view']} Add View
-                <div><i className='bi bi-alt'/> <i className='bi bi-command'/> A</div>
-            </div>);
+        } else {
+            ContextEntry('view+', icon['add'], 'Add view', addViewSelf, [Keystrokes.alt, Keystrokes.ctrl, 'A'], false, []);
+        }
     }
 
     /*const edit_x = data.node?.x || 0;
