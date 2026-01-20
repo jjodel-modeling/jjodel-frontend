@@ -28,7 +28,7 @@ import {Tooltip} from "../forEndUser/Tooltip";
 
 import { createRoot } from "react-dom/client";
 import {hiddenkeys} from "../../joiner/proxy";
-const Convert = require('ansi-to-html');
+import Convert from 'ansi-to-html';
 
 let ansiConvert = (window as any).ansiConvert;
 if (!ansiConvert) (window as any).ansiconvert = ansiConvert = new Convert();

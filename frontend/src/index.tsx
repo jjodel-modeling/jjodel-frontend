@@ -1,3 +1,6 @@
+import "./require-polyfill";
+import "./jquery-global";
+
 import React from 'react';
 import ReactDOM from 'react-dom';
 import 'bootstrap/dist/css/bootstrap.min.css';
@@ -8,20 +11,27 @@ import './index.scss';
 import {Provider} from 'react-redux';
 import {store} from './joiner';
 import App from './App';
-/*
-import * as serviceWorkerRegistration from './serviceWorkerRegistration';
-import reportWebVitals from './reportWebVitals';*/
 
 import { createRoot } from "react-dom/client";
 
-let root = document.getElementById('root') as HTMLElement;
-createRoot(root).render(
+// Aspetta che il DOM sia pronto
+const mountApp = () => {
+  const rootElement = document.getElementById('root');
+  if (!rootElement) {
+    console.error('Root element not found!');
+    return;
+  }
+  
+  createRoot(rootElement).render(
     <Provider store={store}>
-        <App />
-    </Provider>,
-);
-/*
-// enable offline PWA and 1-time loading
-serviceWorkerRegistration.register();
-reportWebVitals(console.warn); // optional
-*/
+      <App />
+    </Provider>
+  );
+};
+
+// Monta l'app quando il DOM è pronto
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', mountApp);
+} else {
+  mountApp();
+}
