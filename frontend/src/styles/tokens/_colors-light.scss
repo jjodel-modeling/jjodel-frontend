@@ -1,112 +1,206 @@
 /**
  * JJODEL DESIGN TOKENS - LIGHT THEME
- * Color palette for light mode
- * Based on jjodel-ui-documentation.md Section 5.1
+ * Slate-only color system for ultra-minimal professional UI
+ *
+ * Color Philosophy:
+ * - Primary palette: Slate scale only (no cyan/teal/bright accents)
+ * - Functional colors: Only for semantic states (error/success/warning/info)
+ * - Gradients: Subtle slate-based for depth
  *
  * Usage: These variables are applied when [data-theme="light"] is set on root element
  */
+
+/* ============================================
+   SCSS VARIABLES - Slate Scale
+   Use these in SCSS files for calculations/mixins
+   ============================================ */
+
+// Backgrounds & Surfaces
+$slate-50: #f8fafc;   // Main background
+$slate-100: #f1f5f9;  // Cards, panels
+$slate-150: #e9eff6;  // Hover on light elements
+$slate-200: #e2e8f0;  // Hover states, secondary surfaces
+
+// Borders & Dividers
+$slate-250: #d1d9e3;  // Subtle borders (mid-point)
+$slate-300: #cbd5e1;  // Primary borders
+
+// Text Scale
+$slate-400: #94a3b8;  // Very subtle text, disabled
+$slate-500: #64748b;  // Placeholder text
+$slate-600: #475569;  // Tertiary text
+$slate-700: #334155;  // Secondary text
+$slate-800: #1e293b;  // Hover on dark elements
+$slate-900: #0f172a;  // Primary text
+
+/* ============================================
+   SCSS VARIABLES - Functional Colors
+   Only for semantic states
+   ============================================ */
+
+// Error / Destructive
+$red-50: #fef2f2;
+$red-500: #ef4444;
+$red-600: #dc2626;
+
+// Success
+$green-50: #f0fdf4;
+$green-500: #22c55e;
+$green-600: #16a34a;
+
+// Warning
+$amber-50: #fffbeb;
+$amber-500: #f59e0b;
+$amber-600: #d97706;
+
+// Info / Links (subtle blue, not cyan)
+$blue-50: #eff6ff;
+$blue-500: #3b82f6;
+$blue-600: #2563eb;
+
+/* ============================================
+   SCSS VARIABLES - Gradients
+   Subtle gradients for depth
+   ============================================ */
+
+$gradient-card: linear-gradient(180deg, $slate-50 0%, $slate-100 100%);
+$gradient-sidebar: linear-gradient(180deg, $slate-100 0%, $slate-150 100%);
+$gradient-panel: linear-gradient(135deg, $slate-50 0%, $slate-100 100%);
+$gradient-hover: linear-gradient(180deg, $slate-100 0%, $slate-200 100%);
+
+/* ============================================
+   CSS CUSTOM PROPERTIES - Light Theme
+   ============================================ */
 
 :root,
 :root[data-theme="light"] {
   /* ============================================
      BASE BACKGROUNDS
      ============================================ */
-  --color-bg-primary: #f8f9fa;        /* Main app background */
-  --color-bg-secondary: #ffffff;      /* Cards, panels, elevated surfaces */
-  --color-bg-tertiary: #f0f1f2;       /* Subtle backgrounds, disabled states */
-  --color-bg-elevated: #ffffff;       /* Floating panels, dropdowns */
-  --color-bg-hover: #f0f1f2;          /* Hover state background */
+  --color-bg-primary: #{$slate-50};        /* Main app background */
+  --color-bg-secondary: #ffffff;           /* Cards, panels, elevated surfaces */
+  --color-bg-tertiary: #{$slate-100};      /* Subtle backgrounds */
+  --color-bg-elevated: #ffffff;            /* Floating panels, dropdowns */
+  --color-bg-hover: #{$slate-150};         /* Hover state background */
+  --color-bg-active: #{$slate-200};        /* Active/pressed state */
 
   /* ============================================
      BORDERS
      ============================================ */
-  --color-border-primary: #e2e4e8;    /* Main borders, dividers */
-  --color-border-secondary: #eceef0;  /* Subtle borders */
-  --color-border-hover: #d0d3d8;      /* Hover state borders */
+  --color-border-primary: #{$slate-300};   /* Main borders, dividers */
+  --color-border-secondary: #{$slate-250}; /* Subtle borders */
+  --color-border-hover: #{$slate-400};     /* Hover state borders */
+  --color-border-focus: #{$slate-500};     /* Focus state borders */
 
   /* ============================================
      TEXT COLORS
      ============================================ */
-  --color-text-primary: #111418;      /* Headings, primary text */
-  --color-text-secondary: #5c6370;    /* Body text, secondary info */
-  --color-text-tertiary: #9ca3af;     /* Placeholders, disabled text */
-  --color-text-inverse: #ffffff;      /* Text on dark backgrounds */
+  --color-text-primary: #{$slate-900};     /* Headings, primary text */
+  --color-text-secondary: #{$slate-700};   /* Body text, secondary info */
+  --color-text-tertiary: #{$slate-600};    /* Labels, captions */
+  --color-text-placeholder: #{$slate-500}; /* Placeholder text */
+  --color-text-disabled: #{$slate-400};    /* Disabled text */
+  --color-text-inverse: #ffffff;           /* Text on dark backgrounds */
 
   /* ============================================
-     BRAND - Dark Slate (backgrounds, branding)
+     BRAND - Slate (backgrounds, branding)
      Used for Auth panel, branding elements
      ============================================ */
-  --color-brand: #374151;                       /* Brand color - Auth panel, logos */
-  --color-brand-hover: #1f2937;                 /* Brand hover state */
-  --color-brand-active: #111827;                /* Brand active state */
+  --color-brand: #{$slate-700};            /* Brand color - logos, branding */
+  --color-brand-hover: #{$slate-800};      /* Brand hover state */
+  --color-brand-active: #{$slate-900};     /* Brand active state */
 
   /* ============================================
      ACCENT - Slate (interactive elements)
      Buttons, toggles, links, focus states
      Monochromatic, professional enterprise look
      ============================================ */
-  --color-accent: #475569;                      /* Primary accent - slate-600 */
-  --color-accent-hover: #334155;                /* Hover state - slate-700 */
-  --color-accent-active: #1e293b;               /* Active/pressed state - slate-800 */
-  --color-accent-light: rgba(71, 85, 105, 0.1); /* Subtle backgrounds */
-  --color-accent-lighter: rgba(71, 85, 105, 0.05); /* Very subtle backgrounds */
-  --color-accent-muted: rgba(71, 85, 105, 0.12);   /* Backgrounds, subtle highlights */
-  --color-accent-subtle: rgba(71, 85, 105, 0.06);  /* Very subtle backgrounds */
+  --color-accent: #{$slate-700};                      /* Primary accent */
+  --color-accent-hover: #{$slate-800};                /* Hover state */
+  --color-accent-active: #{$slate-900};               /* Active/pressed state */
+  --color-accent-light: rgba(51, 65, 85, 0.1);        /* Subtle backgrounds */
+  --color-accent-lighter: rgba(51, 65, 85, 0.05);     /* Very subtle backgrounds */
+  --color-accent-muted: rgba(51, 65, 85, 0.12);       /* Backgrounds, subtle highlights */
+  --color-accent-subtle: rgba(51, 65, 85, 0.06);      /* Very subtle backgrounds */
 
   /* ============================================
      SECONDARY
      ============================================ */
-  --color-secondary: #6B7280;                   /* Secondary elements */
-  --color-secondary-hover: #4B5563;             /* Secondary hover */
+  --color-secondary: #{$slate-600};                   /* Secondary elements */
+  --color-secondary-hover: #{$slate-700};             /* Secondary hover */
 
   /* ============================================
-     SEMANTIC COLORS
+     INTERACTIVE STATES
      ============================================ */
+  --color-interactive-default: #{$slate-700};
+  --color-interactive-hover: #{$slate-800};
+  --color-interactive-active: #{$slate-900};
+  --color-interactive-disabled: #{$slate-400};
 
-  /* Success - Green */
-  --color-success: #10b981;
-  --color-success-hover: #059669;
-  --color-success-muted: rgba(16, 185, 129, 0.12);
-  --color-success-subtle: rgba(16, 185, 129, 0.06);
-
-  /* Warning - Amber */
-  --color-warning: #f59e0b;
-  --color-warning-hover: #d97706;
-  --color-warning-muted: rgba(245, 158, 11, 0.12);
-  --color-warning-subtle: rgba(245, 158, 11, 0.06);
-
-  /* Error/Danger - Red */
-  --color-error: #ef4444;
-  --color-error-hover: #dc2626;
+  /* ============================================
+     SEMANTIC COLORS - Error (Red)
+     ============================================ */
+  --color-error: #{$red-500};
+  --color-error-hover: #{$red-600};
+  --color-error-bg: #{$red-50};
   --color-error-muted: rgba(239, 68, 68, 0.12);
   --color-error-subtle: rgba(239, 68, 68, 0.06);
 
-  /* Info - Blue */
-  --color-info: #3b82f6;
-  --color-info-hover: #2563eb;
+  /* ============================================
+     SEMANTIC COLORS - Success (Green)
+     ============================================ */
+  --color-success: #{$green-500};
+  --color-success-hover: #{$green-600};
+  --color-success-bg: #{$green-50};
+  --color-success-muted: rgba(34, 197, 94, 0.12);
+  --color-success-subtle: rgba(34, 197, 94, 0.06);
+
+  /* ============================================
+     SEMANTIC COLORS - Warning (Amber)
+     ============================================ */
+  --color-warning: #{$amber-500};
+  --color-warning-hover: #{$amber-600};
+  --color-warning-bg: #{$amber-50};
+  --color-warning-muted: rgba(245, 158, 11, 0.12);
+  --color-warning-subtle: rgba(245, 158, 11, 0.06);
+
+  /* ============================================
+     SEMANTIC COLORS - Info (Blue)
+     ============================================ */
+  --color-info: #{$blue-500};
+  --color-info-hover: #{$blue-600};
+  --color-info-bg: #{$blue-50};
   --color-info-muted: rgba(59, 130, 246, 0.12);
   --color-info-subtle: rgba(59, 130, 246, 0.06);
+
+  /* ============================================
+     GRADIENTS - CSS Custom Properties
+     ============================================ */
+  --gradient-card: #{$gradient-card};
+  --gradient-sidebar: #{$gradient-sidebar};
+  --gradient-panel: #{$gradient-panel};
+  --gradient-hover: #{$gradient-hover};
 
   /* ============================================
      CANVAS & GRAPH COLORS
      For metamodel/model nodes
      ============================================ */
-  --color-canvas-bg: #ffffff;         /* Canvas background */
-  --color-canvas-grid: #e5e7eb;       /* Grid lines */
-  --color-node-bg: #ffffff;           /* Node background */
-  --color-node-border: #e2e4e8;       /* Node border */
-  --color-node-shadow: rgba(0, 0, 0, 0.08);  /* Node shadow */
+  --color-canvas-bg: #ffffff;             /* Canvas background */
+  --color-canvas-grid: #{$slate-200};     /* Grid lines */
+  --color-node-bg: #ffffff;               /* Node background */
+  --color-node-border: #{$slate-300};     /* Node border */
+  --color-node-shadow: rgba(15, 23, 42, 0.08);  /* Node shadow - slate-900 based */
 
   /* ============================================
      LEGACY COMPATIBILITY
      Map old variable names to new tokens
      TODO: Remove after full migration
      ============================================ */
-  --color: #5B8266;                   /* Legacy: primary color */
-  --accent: var(--color-accent);      /* Legacy: accent color */
-  --bg-1: var(--color-bg-secondary);  /* Legacy: white background */
-  --bg-2: var(--color-bg-tertiary);   /* Legacy: light gray */
-  --bg-3: var(--color-border-primary);/* Legacy: borders */
-  --danger: var(--color-error);       /* Legacy: error color */
-  --success: var(--color-success);    /* Legacy: success color */
+  --color: #{$slate-700};                 /* Legacy: primary color */
+  --accent: var(--color-accent);          /* Legacy: accent color */
+  --bg-1: var(--color-bg-secondary);      /* Legacy: white background */
+  --bg-2: var(--color-bg-tertiary);       /* Legacy: light gray */
+  --bg-3: var(--color-border-primary);    /* Legacy: borders */
+  --danger: var(--color-error);           /* Legacy: error color */
+  --success: var(--color-success);        /* Legacy: success color */
 }
