@@ -3335,7 +3335,7 @@ export class Keystrokes {
 
 
     public static getKeystrokeJsx(key: string, allowBootIcons: boolean = true, allowBoxIcons: boolean=true, allowTextIcons: boolean = true){
-        if (typeof key !== 'string') return key as any;
+        if (typeof (key as unknown) !== 'string') return key as any;
         let os = U.getOSBrowserData().os.substring(0, 3).toLowerCase();
         let obj = iconKeys['bi_' + os];
         if (!obj) return Log.eDevv('Found unexpected OS: ' + os, {data:U.getOSBrowserData()}) && '';

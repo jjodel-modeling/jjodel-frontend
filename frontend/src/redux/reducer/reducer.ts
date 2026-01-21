@@ -1005,15 +1005,12 @@ function unsafereducer(oldState: DState = initialState, action: Action): DState 
                 tv.JSXFunction = (context) => GraphElementComponent.displayError(e, 'JSX Syntax', dv);
             }
         }
-        console.log('update jsx transient', {vid})
+
         for (let nid in transientProperties.node) { // forced rerender.
             let tn = transientProperties.node[nid];
             if (!tn) continue;
             let tnv = tn.viewScores?.[vid];
-            console.log('update jsx transient', {nid, vid, tn, tnv})
-
             if (!tnv) continue; // if tn or tnv are missing, it is already a force-rerender + reevaluate of apply condition, UD and everything
-
             tnv.jsxChanged = true;
             // PS: not needed for UD because they are always checked after every reducer() in shouldupdate()
             // not sure if constants are checked anywhere.
@@ -1460,7 +1457,6 @@ export async function stateInitializer() {
                 return;
             }
             let checkLoaded = (state: DState): boolean => {
-                console.log('check loaded', state.idlookup.clonedCounter, state);
                 if (!state.idlookup[DUser.current]) {
                     console.error('init failed, user not found', DUser.current);
                     return false;

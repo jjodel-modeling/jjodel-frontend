@@ -488,7 +488,7 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
 
     get_innerSize(c: Context, canTriggerSet: {w: boolean, h:boolean } = {w:true, h:true}): Readonly<GraphSize> {
         let r = this.get_innerSize_impl(c, canTriggerSet, false);
-        let snap: GraphPoint = (this as any as LVoidVertex).get_snap?.(c) || {};
+        let snap: GraphPoint = (this as any as LVoidVertex).get_snap?.(c as any) || {} as any;
         let ret = new GraphSize(r.x, r.y, r.w, r.h);
 
         // snap to grid;
@@ -499,7 +499,7 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
         let offset: GraphPoint = new GraphPoint(0, 0);
         switch (grid.type) {
             default: case 'cartesian':
-                console.log('snap cartesian', {ret0:{...ret}, pt, offset, grid, snap, finalRet:ret});
+                // console.log('snap cartesian', {ret0:{...ret}, pt, offset, grid, snap, finalRet:ret});
                 if (grid.x && snap.x) ret.x = Math.round(pt.x / (grid.x * snap.x)) * (grid.x * snap.x) + (ret.x - pt.x);
                 if (grid.y && snap.y) ret.y = Math.round(pt.y / (grid.y * snap.y)) * (grid.y * snap.y) + (ret.y - pt.y);
                 /*if (grid.x && snap.x) offset.x = -(pt.x % grid.x) * snap.x;
@@ -509,7 +509,7 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
             case 'polar':
                 let rpt = Geom.toRadians(pt);
                 let newRadian = {modulo: 0, angle: 0}
-                console.log('snap polar', {ret0:{...ret}, pt, rpt, offset, grid, snap, finalRet:ret, newRadian});
+                // console.log('snap polar', {ret0:{...ret}, pt, rpt, offset, grid, snap, finalRet:ret, newRadian});
                 let moduloStep = grid.x * snap.x;
                 if (grid.x && snap.x) newRadian.modulo = Math.round(rpt.modulo / moduloStep) * moduloStep;
                 let circleNumber= Math.round(rpt.modulo / moduloStep);

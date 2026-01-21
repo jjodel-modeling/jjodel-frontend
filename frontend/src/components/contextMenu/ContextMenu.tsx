@@ -190,12 +190,12 @@ function ContextEntry(key: string, icon: ReactNode, label: ReactNode, action: nu
         {typeof icon === "string" ? <span className={'my-auto'} style={{alignContent: 'center'}}>{icon}</span> : icon}
         <span className={'my-auto ms-2'}>{label}</span>
         <div className={'mx-auto'}/>
-        {keycodes.length && <div className={'my-auto keystrokes ms-2'} style={{textAlign: 'center'}}>
+        {keycodes.length>0 && <div className={'my-auto keystrokes ms-2'} style={{textAlign: 'center'}}>
             {(keycodes.map(e=>getKeycode(e)) as any)/*.separator(<span className='ms-1'/>)*/}
         </div>}
-        {subelements.length && <div className={'my-auto ms-2'}><i className={'bi bi-chevron-right'}
+        {subelements.length>0&& <div className={'my-auto ms-2'}><i className={'bi bi-chevron-right'}
                                      style={{fontSize: '0.75em', float: 'right', paddingTop: '2px', fontWeight: '800'}}/></div>}
-        {subelements.length && <section className={'round content right'} onContextMenu={(e) => e.preventDefault()}>
+        {subelements.length>0 && <section className={'round content right'} onContextMenu={(e) => e.preventDefault()}>
             <section className={'right context-menu'}>{
                 subelements//.map(e => e)
             }

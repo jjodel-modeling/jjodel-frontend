@@ -73,7 +73,7 @@ export class Api {
 
         d = {...data} as any;
         // check if it is already been swapped to desired state
-        console.log('swap id api', {data, id:d.id, guid:d._Id, toJodel});
+        // console.log('swap id api', {data, id:d.id, guid:d._Id, toJodel});
         if (toJodel && d.id && Pointers.isPointer(d.id)) return data;
         if (!toJodel && (Pointers.isPointer(d._Id))) return data;
 

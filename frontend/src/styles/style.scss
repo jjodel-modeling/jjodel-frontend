@@ -166,7 +166,16 @@ input[type='checkbox']:checked { // was .input as class
   background-image: url("../static/svg/toggle-on.svg");
 }
 
-
+.monaco-findInput {
+  .monaco-scrollable-element{
+    left: 0 !important;
+  }
+  .monaco-inputbox {
+    .ibwrapper, textarea.input {
+      min-height: 25px !important;
+    }
+  }
+}
 .properties-tab h6 {
   margin-top: 1em;
 }
