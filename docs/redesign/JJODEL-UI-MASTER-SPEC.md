@@ -205,7 +205,24 @@ $transition-modal: all 200ms ease-out;
 | **Project Grid** | ✅ DONE | ✅ High | Grid + Compact views |
 | **Search Bar** | ✅ DONE | ✅ High | Con debounce |
 | **View Toggles** | ✅ DONE | ⚠️ Medium | Grid/Compact (Slider 🔮 future) |
-| **Empty State** | ✅ DONE | ⚠️ Medium | Con icona grigia |
+| **Empty State (Onboarding Hub)** | ✅ DONE | ⚠️ Medium | Welcome + 3-step cards + resources |
+
+#### Empty State - Onboarding Hub ✅ DONE
+
+**Implemented:** 2025-01-21
+
+**Files:**
+- `src/components/EmptyDashboard/EmptyDashboard.tsx`
+- `src/components/EmptyDashboard/empty-dashboard.scss`
+
+**Features:**
+- Welcome hero with rocket icon
+- 3-step onboarding cards (Quick Start, Learn Basics, Explore)
+- Popular Resources section with 4 links
+- Help footer with community/docs links
+- Responsive grid (3 cols > 2 cols > 1 col)
+- Bootstrap Icons only (no emoji)
+- Slate color palette
 
 #### Project Cards - PENDING FIXES
 
@@ -692,6 +709,7 @@ Mantieni funzionalità esistenti, solo visual update.
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 2.1 | 2026-01-21 | Empty State Onboarding Hub implementato |
 | 2.0 | 2026-01-21 | Master spec unificata creata |
 | 1.x | 2025-2026 | Specs individuali per componenti |
 
@@ -704,19 +722,19 @@ Mantieni funzionalità esistenti, solo visual update.
 | Phase | Status | Progress |
 |-------|--------|----------|
 | Phase 1: Foundation | ✅ DONE | 100% |
-| Phase 2: Core Dashboard | 🚧 IN PROGRESS | 70% |
+| Phase 2: Core Dashboard | 🚧 IN PROGRESS | 80% |
 | Phase 3: Navigation | 📋 TODO | 0% |
 | Phase 4: Dialogs | 📋 TODO | 0% |
 | Phase 5: Editor | 📋 TODO | 0% |
 | Phase 6: Nice-to-Have | 🔮 FUTURE | 0% |
 
-**Overall Progress:** ~45%
+**Overall Progress:** ~48%
 
 ### Next 3 Priorities
 
-1. ⚠️ **Fix Project Card Issues** (3 fixes) - 1-2 ore
-2. ✅ **Form Controls Redesign** - 2-3 giorni
-3. ⚠️ **Main Menu Redesign** - 2-3 giorni
+1. ⚠️ **Fix Project Card Issues** (3 fixes)
+2. 📋 **Form Controls Redesign**
+3. ⚠️ **Main Menu Redesign**
 
 ---
 

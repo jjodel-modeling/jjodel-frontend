@@ -1,40 +1,11 @@
-import React, {useState, useMemo, useEffect} from "react";
-import {type Dictionary, LProject, R} from "../../../joiner";
-import { Menu, Item } from "../menu/Menu";
+import {useState, useMemo, useEffect} from "react";
+import {type Dictionary, LProject} from "../../../joiner";
 import { Project } from "../Project";
 import { ProjectsApi } from "../../../api/persistance";
-
-import { icon } from "../icons/Icons";
+import { EmptyDashboard } from "../../../components/EmptyDashboard/EmptyDashboard";
+import { CreateProjectDialog, ProjectFormData } from "../../../components/CreateProjectDialog/CreateProjectDialog";
 import "./catalog.scss"
 import _ from "lodash";
-
-// Empty State Component - NEW DESIGN
-const EmptyState = (props: { onCreateProject: () => void }) => {
-    return (
-        <div className="dashboard-empty-state">
-            <div className="empty-state-icon">
-                <i className="bi bi-rocket-takeoff" />
-            </div>
-            <h2 className="empty-state-title">Welcome to Jjodel!</h2>
-            <p className="empty-state-description">
-                Create your first project to start modeling. Jjodel makes metamodeling accessible for research and education.
-            </p>
-            <button className="empty-state-btn" onClick={props.onCreateProject}>
-                <i className="bi bi-plus-lg" />
-                Create your first project
-            </button>
-            <a
-                href="https://www.jjodel.io/getting-started/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="empty-state-link"
-            >
-                New to Jjodel? Check out the Getting Started guide
-                <i className="bi bi-arrow-right" />
-            </a>
-        </div>
-    );
-}
 
 // Hidden - using empty state instead
 export const CatalogInfoCard = (props: any) => null;
@@ -139,6 +110,7 @@ const Catalog = (props: ChildrenType) => {
     const [activeTab, setActiveTab] = useState<'all' | 'public' | 'private' | 'collaborative'>('all');
     const [currentPage, setCurrentPage] = useState(0);
     const [activeTag, setActiveTag] = useState<string | null>(null); // Single-select Netflix-style
+    const [showCreateDialog, setShowCreateDialog] = useState(false); // Create project dialog
 
     // Track window width for responsive slider grid
     const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1024);
@@ -178,12 +150,9 @@ const Catalog = (props: ChildrenType) => {
         });
 
         // Convert to array and sort by frequency (most used first)
-        const result = Array.from(tagCounts.entries())
+        return Array.from(tagCounts.entries())
             .map(([tag, count]) => ({ tag, count }))
             .sort((a, b) => b.count - a.count);
-
-        console.log('[DEBUG Catalog] Tag stats (sorted by frequency):', result);
-        return result;
     }, [props.projects]);
 
     // Extract just the tag names for passing to Project components
@@ -197,14 +166,40 @@ const Catalog = (props: ChildrenType) => {
         return 'prominent';
     }, [props.projects]);
 
-    // Handler for creating project
-    const handleCreateProject = async () => {
-        await ProjectsApi.create('private', undefined, undefined, undefined, props.projects);
-        R.navigate("/allProjects");
+    // Handler to open create project dialog
+    const handleOpenCreateDialog = () => {
+        setShowCreateDialog(true);
+    };
+
+    // Handler to close create project dialog
+    const handleCloseCreateDialog = () => {
+        setShowCreateDialog(false);
+    };
+
+    // Handler for submitting the create project form
+    const handleSubmitCreateProject = async (formData: ProjectFormData) => {
+        try {
+            // ProjectsApi.create(type, name, m2[], m1[], otherProjects)
+            // Note: ProjectsApi.create already handles navigation internally
+            // Pass undefined for otherProjects if empty to avoid proxy issues
+            setShowCreateDialog(false); // Close dialog first
+            const existingProjects = props.projects?.length > 0 ? props.projects : undefined;
+            await ProjectsApi.create(formData.type, formData.name, [], [], existingProjects);
+            // Navigation is handled inside ProjectsApi.create
+        } catch (error) {
+            console.error('Error creating project:', error);
+            throw error; // Re-throw so dialog can show error state
+        }
     };
 
     // Check if there are no projects at all
-    const hasNoProjects = !props.projects || props.projects.length === 0;
+    // Use Array.isArray for safer check, and also check for empty array-like objects
+    const projectsArray = props.projects;
+    const hasNoProjects = !projectsArray ||
+        (Array.isArray(projectsArray) && projectsArray.length === 0) ||
+        (!Array.isArray(projectsArray) && (!projectsArray.length || projectsArray.length === 0));
+
+    // Remove debug logs in production
 
     // Filter and sort projects
     const getFilteredProjects = () => {
@@ -343,7 +338,7 @@ const Catalog = (props: ChildrenType) => {
     return (
         <>
             {hasNoProjects ? (
-                <EmptyState onCreateProject={handleCreateProject} />
+                <EmptyDashboard onNewProject={handleOpenCreateDialog} />
             ) : (
                 <>
                     <div className="catalog-header">
@@ -453,6 +448,13 @@ const Catalog = (props: ChildrenType) => {
                     </div>
                 </>
             )}
+
+            {/* Create Project Dialog */}
+            <CreateProjectDialog
+                isOpen={showCreateDialog}
+                onClose={handleCloseCreateDialog}
+                onSubmit={handleSubmitCreateProject}
+            />
         </>
     );
 }

@@ -51,12 +51,12 @@ export function RightPanel(props: RightPanelProps): JSX.Element {
         R.navigate('/allProjects', true);
     };
 
-    const handleOpenTemplates = () => {
-        R.navigate('/templates', true);
+    const handleUserManual = () => {
+        window.open('https://www.jjodel.io/user-manual/', '_blank');
     };
 
     const handleOpenDocs = () => {
-        window.open('https://www.jjodel.io/manual/', '_blank');
+        window.open('https://www.jjodel.io/documentation/', '_blank');
     };
 
     return (
@@ -102,9 +102,9 @@ export function RightPanel(props: RightPanelProps): JSX.Element {
                         variant="primary"
                     />
                     <QuickActionButton
-                        icon="bi-grid-3x3-gap"
-                        label="Browse Templates"
-                        action={handleOpenTemplates}
+                        icon="bi-journal-text"
+                        label="User Manual"
+                        action={handleUserManual}
                     />
                     <QuickActionButton
                         icon="bi-book"
