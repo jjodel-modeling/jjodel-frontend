@@ -9,7 +9,7 @@ import storage from "../../data/storage";
 import { isProjectModified } from '../../common/libraries/projectModified';
 import { Tooltip } from '../../components/forEndUser/Tooltip';
 import {SaveManager} from "../../components/topbar/SaveManager";
-import {Link, useNavigate} from "react-router-dom";
+import {Link, useNavigate, useSearchParams} from "react-router-dom";
 import { DevModeLabel } from '../../components/DevModeLabel/DevModeLabel';
 
 interface StateProps {
@@ -31,7 +31,8 @@ type ItemProps = {
     icon?: any;
     action?: string | MouseEventHandler;
     dot?: boolean;
-    onClick?: MouseEventHandler
+    onClick?: MouseEventHandler;
+    active?: boolean;
 };
 
 const Item = (props: ItemProps) => {
@@ -45,7 +46,7 @@ const Item = (props: ItemProps) => {
     return (<>
 
         {/*<Link to={url} className={'item ' + (props.dot ? 'red-dot' : '')}>{props.icon && props.icon}&nbsp;{props.children}</Link>*/}
-            <div onClick={finalaction} className={'item ' + (props.dot ? 'red-dot' : '')}>
+            <div onClick={finalaction} className={'item ' + (props.dot ? 'red-dot' : '') + (props.active ? ' active' : '')}>
                 {props.icon && props.icon}&nbsp;<span>{props.children}</span>
             </div>
     </>);
@@ -102,6 +103,30 @@ function LeftBar(props: LeftBarProps): JSX.Element {
 
     const {active, project} = props;
     let user: LUser = props.user || L.fromPointer(DUser.current);
+    const navigate = useNavigate();
+
+    // Read/write filter from URL to sync with toolbar (no page reload)
+    const [searchParams, setSearchParams] = useSearchParams();
+    const currentFilter = searchParams.get('filter') || 'all';
+
+    // Handler to change filter - navigates to allProjects with filter param (no page reload if already there)
+    const handleFilterChange = (filter: 'all' | 'public' | 'private' | 'collaborative') => {
+        const filterParam = filter === 'all' ? '' : `?filter=${filter}`;
+        // Check if we're already on allProjects page
+        if (window.location.pathname.includes('allProjects')) {
+            // Just update search params without navigation
+            const newParams = new URLSearchParams(searchParams);
+            if (filter === 'all') {
+                newParams.delete('filter');
+            } else {
+                newParams.set('filter', filter);
+            }
+            setSearchParams(newParams);
+        } else {
+            // Navigate to allProjects with filter
+            R.navigate(`/allProjects${filterParam}`, navigate);
+        }
+    };
 
     const selectProject= (project: LProject) => {
         R.navigate(`/project?id=${project.id}`, true);
@@ -198,22 +223,24 @@ function LeftBar(props: LeftBarProps): JSX.Element {
                 {/* Main Navigation - Workspace */}
                 <Menu>
                     <Item action={'allProjects'} icon={<i className="bi bi-folder" />}>All projects</Item>
-                    <Item action={'trash'} icon={<i className="bi bi-trash" />}>Trash</Item>
                 </Menu>
 
-                {/* Filters Section - Quick access to filtered views */}
+                {/* Filters Section - Quick access to filtered views (synced with toolbar) */}
                 <Menu title={'Filters'} mode={'collapsable'}>
                     <Item
-                        action={'allProjects?filter=private'}
+                        action={() => handleFilterChange('private')}
                         icon={<i className="bi bi-lock" />}
+                        active={currentFilter === 'private'}
                     >Private</Item>
                     <Item
-                        action={'allProjects?filter=public'}
+                        action={() => handleFilterChange('public')}
                         icon={<i className="bi bi-globe" />}
+                        active={currentFilter === 'public'}
                     >Public</Item>
                     <Item
-                        action={'allProjects?filter=collaborative'}
+                        action={() => handleFilterChange('collaborative')}
                         icon={<i className="bi bi-people" />}
+                        active={currentFilter === 'collaborative'}
                     >Collaborative</Item>
                 </Menu>
 

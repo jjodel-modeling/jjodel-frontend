@@ -257,6 +257,37 @@
       background: #d1d5db;
     }
   }
+
+  // Keyboard shortcut badge (⌘K or Ctrl+K)
+  .search-shortcut {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    pointer-events: none;
+    flex-shrink: 0;
+
+    .shortcut-key {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 22px;
+      height: 22px;
+      padding: 0 5px;
+      font-family: 'Inter Variable', -apple-system, sans-serif;
+      font-size: 11px;
+      font-weight: 500;
+      color: #6b7280;
+      background: #ffffff;
+      border: 1px solid #d1d5db;
+      border-radius: 4px;
+      box-shadow: 0 1px 0 #e5e7eb;
+    }
+  }
+
+  // When focused, fade out the shortcut hint
+  &:focus-within .search-shortcut {
+    opacity: 0.5;
+  }
 }
 
 /* No Results Message */

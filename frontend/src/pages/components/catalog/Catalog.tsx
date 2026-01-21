@@ -1,4 +1,5 @@
-import {useState, useMemo, useEffect, useCallback} from "react";
+import {useState, useMemo, useEffect, useCallback, useRef} from "react";
+import {useSearchParams} from "react-router-dom";
 import {type Dictionary, LProject, DProject, U} from "../../../joiner";
 import { Project } from "../Project";
 import { EmptyDashboard } from "../../../components/EmptyDashboard/EmptyDashboard";
@@ -117,11 +118,56 @@ const ListViewWithLoadMore = ({
 };
 
 const Catalog = (props: ChildrenType) => {
+    const [searchParams, setSearchParams] = useSearchParams();
     const [searchQuery, setSearchQuery] = useState("");
     const [viewMode, setViewMode] = useState<ViewMode>('slider');
-    const [activeTab, setActiveTab] = useState<'all' | 'public' | 'private' | 'collaborative'>('all');
     const [currentPage, setCurrentPage] = useState(0);
     const [activeTag, setActiveTag] = useState<string | null>(null); // Single-select Netflix-style
+
+    // Search input ref for keyboard shortcut
+    const searchInputRef = useRef<HTMLInputElement>(null);
+
+    // Detect if user is on Mac for keyboard shortcut display
+    const isMac = useMemo(() => {
+        if (typeof navigator === 'undefined') return false;
+        // Modern approach with fallback
+        const userAgentData = (navigator as any).userAgentData;
+        if (userAgentData?.platform) {
+            return userAgentData.platform.toLowerCase().includes('mac');
+        }
+        // Fallback to userAgent
+        return /Mac|iPhone|iPad|iPod/i.test(navigator.userAgent);
+    }, []);
+
+    // Keyboard shortcut: Cmd+K (Mac) or Ctrl+K (Windows/Linux) to focus search
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            const isShortcut = (e.metaKey || e.ctrlKey) && e.key === 'k';
+            if (isShortcut) {
+                e.preventDefault();
+                searchInputRef.current?.focus();
+                searchInputRef.current?.select();
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, []);
+
+    // Read filter from URL params and sync with activeTab
+    const filterParam = searchParams.get('filter') as 'all' | 'public' | 'private' | 'collaborative' | null;
+    const activeTab = filterParam && ['public', 'private', 'collaborative'].includes(filterParam) ? filterParam : 'all';
+
+    // Handler to change filter - updates URL which syncs sidebar
+    const setActiveTab = useCallback((tab: 'all' | 'public' | 'private' | 'collaborative') => {
+        if (tab === 'all') {
+            // Remove filter param for 'all'
+            searchParams.delete('filter');
+        } else {
+            searchParams.set('filter', tab);
+        }
+        setSearchParams(searchParams);
+    }, [searchParams, setSearchParams]);
 
     // Bulk selection state (for list view)
     const [selectedProjects, setSelectedProjects] = useState<Set<string>>(new Set());
@@ -590,12 +636,13 @@ const Catalog = (props: ChildrenType) => {
                             <div className="projects-search">
                                 <i className="bi bi-search" />
                                 <input
+                                    ref={searchInputRef}
                                     type="text"
                                     placeholder="Search projects..."
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
                                 />
-                                {searchQuery && (
+                                {searchQuery ? (
                                     <button
                                         className="search-clear"
                                         onClick={() => setSearchQuery("")}
@@ -603,6 +650,11 @@ const Catalog = (props: ChildrenType) => {
                                     >
                                         <i className="bi bi-x" />
                                     </button>
+                                ) : (
+                                    <div className="search-shortcut">
+                                        <kbd className="shortcut-key">{isMac ? '⌘' : 'Ctrl'}</kbd>
+                                        <kbd className="shortcut-key">K</kbd>
+                                    </div>
                                 )}
                             </div>
                         </div>

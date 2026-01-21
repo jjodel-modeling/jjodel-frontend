@@ -47,7 +47,6 @@ import {BEGIN, CollabRefreshAction, COMMIT, END} from "../../redux/action/action
 import {Tooltip} from "../../components/forEndUser/Tooltip";
 import {VersionFixer} from "../../redux/VersionFixer";
 import {PinnableDock} from "../../components/dock/MyRcDock";
-import { GlobalSearch } from '../../components/GlobalSearch';
 import ActivityLogger from '../../services/ActivityLogger';
 import { ActivityType } from '../../types/activity';
 
@@ -697,7 +696,6 @@ function NavbarComponent(props: AllProps) {
         <nav id={'navbar'} className={'w-100 nav-container d-flex'} style={{zIndex: 99}}>
             <MainLogo />
             <MainMenu items={items} />
-            <GlobalSearch placeholder="Search projects..." />
             <Commands />
             <div className="main-header-right">
                 {props.debug && <span className="debug-badge">DEBUG</span>}
