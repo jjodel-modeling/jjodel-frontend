@@ -1,0 +1,432 @@
+// Features Modal - Using Design Tokens from CLAUDE.md
+// ===================================================
+
+// === DESIGN TOKENS ===
+// Typography
+$font-family: 'Inter Variable', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+$font-size-xs: 11px;
+$font-size-sm: 12px;
+$font-size-base: 13px;
+$font-size-md: 14px;
+$font-size-lg: 16px;
+$font-weight-normal: 400;
+$font-weight-medium: 500;
+$font-weight-semibold: 600;
+
+// Colors
+$color-text-primary: #111418;
+$color-text-secondary: #6B7280;
+$color-text-tertiary: #9CA3AF;
+$color-bg-primary: #ffffff;
+$color-bg-secondary: #f8fafc;
+$color-bg-tertiary: #f1f5f9;
+$color-border: #e2e4e8;
+$color-border-light: #f0f1f2;
+$color-border-hover: #d0d3d8;
+$color-accent: #475569;
+$color-accent-hover: #334155;
+
+// Spacing
+$spacing-xs: 4px;
+$spacing-sm: 8px;
+$spacing-md: 12px;
+$spacing-lg: 16px;
+$spacing-xl: 20px;
+
+// Border Radius
+$radius-sm: 4px;
+$radius-md: 6px;
+$radius-lg: 8px;
+$radius-xl: 12px;
+
+// Shadows
+$shadow-lg: 0 4px 12px rgba(0, 0, 0, 0.1);
+
+// Transitions
+$transition-fast: 150ms ease;
+
+
+// === MODAL BACKDROP & CONTAINER ===
+.features-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: $spacing-xl;
+  animation: fmFadeIn $transition-fast;
+}
+
+.features-modal__backdrop {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(2px);
+}
+
+.features-modal__container {
+  position: relative;
+  background: $color-bg-primary;
+  border-radius: $radius-xl;
+  box-shadow: $shadow-lg, 0 10px 40px rgba(0, 0, 0, 0.15);
+  width: 100%;
+  max-width: 400px;
+  z-index: 1;
+  overflow: hidden;
+  animation: fmSlideIn 200ms ease;
+}
+
+// === HEADER ===
+.features-modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: $spacing-lg $spacing-xl;
+}
+
+.features-modal__title {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  font-family: $font-family;
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+
+  i {
+    font-size: $spacing-lg;
+    color: $color-accent;
+  }
+}
+
+.features-modal__close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: transparent;
+  border: none;
+  border-radius: $radius-md;
+  color: $color-text-secondary;
+  cursor: pointer;
+  transition: all $transition-fast;
+
+  i {
+    font-size: $font-size-lg;
+  }
+
+  &:hover {
+    background: $color-bg-secondary;
+    color: $color-text-primary;
+  }
+}
+
+// === SEARCH ===
+.features-modal__search {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  padding: $spacing-sm $spacing-xl;
+  border-bottom: 1px solid $color-border;
+
+  i {
+    color: $color-text-secondary;
+    font-size: $font-size-md;
+  }
+}
+
+.features-modal__search-input {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-family: $font-family;
+  font-size: $font-size-base;
+  color: $color-text-primary;
+
+  &::placeholder {
+    color: $color-text-tertiary;
+  }
+}
+
+// === DIVIDER ===
+.features-modal__divider {
+  height: 1px;
+  background: $color-border;
+  margin: 0;
+}
+
+// === FEATURES LIST ===
+.features-modal__list {
+  padding: $spacing-sm;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+// === EMPTY STATE ===
+.features-modal__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: $spacing-sm;
+  padding: $spacing-xl;
+  color: $color-text-tertiary;
+  font-family: $font-family;
+  font-size: $font-size-sm;
+
+  i {
+    font-size: 24px;
+    opacity: 0.5;
+  }
+}
+
+// === FEATURE ITEM ===
+.feature-item {
+  display: flex;
+  align-items: center;
+  gap: $spacing-md;
+  width: 100%;
+  padding: $spacing-md;
+  background: transparent;
+  border: none;
+  border-radius: $radius-lg;
+  cursor: pointer;
+  transition: all $transition-fast;
+  text-align: left;
+
+  &:hover {
+    background: $color-bg-secondary;
+
+    .feature-item__icon {
+      background: $color-accent;
+      color: white;
+      transform: scale(1.05);
+    }
+
+    .feature-item__arrow {
+      opacity: 1;
+      transform: translateX(2px);
+    }
+  }
+
+  &:active {
+    transform: scale(0.98);
+  }
+}
+
+.feature-item__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  background: $color-bg-secondary;
+  border-radius: $radius-lg;
+  color: $color-accent;
+  transition: all $transition-fast;
+
+  i {
+    font-size: $spacing-lg;
+  }
+}
+
+.feature-item__content {
+  flex: 1;
+  min-width: 0;
+}
+
+.feature-item__label {
+  font-family: $font-family;
+  font-size: $font-size-md;
+  font-weight: $font-weight-medium;
+  color: $color-text-primary;
+  margin-bottom: 2px;
+}
+
+.feature-item__description {
+  font-family: $font-family;
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+  line-height: 1.4;
+}
+
+.feature-item__arrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  color: $color-text-secondary;
+  opacity: 0;
+  transition: all $transition-fast;
+
+  i {
+    font-size: $font-size-sm;
+  }
+}
+
+// === SCROLLBAR STYLING ===
+.features-modal__list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.features-modal__list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.features-modal__list::-webkit-scrollbar-thumb {
+  background: $color-border;
+  border-radius: 3px;
+
+  &:hover {
+    background: $color-border-hover;
+  }
+}
+
+// === ANIMATIONS ===
+@keyframes fmFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes fmSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-12px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+// === DARK MODE SUPPORT ===
+@media (prefers-color-scheme: dark) {
+  .features-modal__container {
+    background: #1e293b;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+  }
+
+  .features-modal__title {
+    color: #f8fafc;
+
+    i {
+      color: #94a3b8;
+    }
+  }
+
+  .features-modal__close {
+    color: #94a3b8;
+
+    &:hover {
+      background: #334155;
+      color: #f8fafc;
+    }
+  }
+
+  .features-modal__search {
+    border-bottom-color: #334155;
+
+    i {
+      color: #64748b;
+    }
+  }
+
+  .features-modal__search-input {
+    color: #f8fafc;
+
+    &::placeholder {
+      color: #64748b;
+    }
+  }
+
+  .features-modal__divider {
+    background: #334155;
+  }
+
+  .features-modal__empty {
+    color: #64748b;
+  }
+
+  .feature-item {
+    &:hover {
+      background: #334155;
+
+      .feature-item__icon {
+        background: #64748b;
+      }
+    }
+  }
+
+  .feature-item__icon {
+    background: #1e293b;
+    color: #94a3b8;
+  }
+
+  .feature-item__label {
+    color: #f8fafc;
+  }
+
+  .feature-item__description {
+    color: #94a3b8;
+  }
+
+  .feature-item__arrow {
+    color: #64748b;
+  }
+
+  .features-modal__list::-webkit-scrollbar-thumb {
+    background: #334155;
+
+    &:hover {
+      background: #475569;
+    }
+  }
+}
+
+// === MOBILE RESPONSIVE ===
+@media (max-width: 480px) {
+  .features-modal {
+    padding: $spacing-md;
+  }
+
+  .features-modal__container {
+    max-width: 100%;
+  }
+
+  .features-modal__header {
+    padding: $spacing-md $spacing-lg;
+  }
+
+  .features-modal__search {
+    padding: $spacing-sm $spacing-lg;
+  }
+
+  .feature-item {
+    padding: $spacing-sm $spacing-md;
+  }
+
+  .feature-item__icon {
+    width: 36px;
+    height: 36px;
+
+    i {
+      font-size: $font-size-md;
+    }
+  }
+
+  .feature-item__description {
+    display: none; // Hide descriptions on mobile for compactness
+  }
+}

@@ -128,38 +128,61 @@ function NestedViewComponent(props: AllProps) {
 
         let isActive = d.id === activeViewpointId;
         let canDelete = !isActive && !isDefault;
-        return <li className={"entry-root " + d.className + (isActive ? ' selected' : '')} key={d.id}>
+        let vpClass = isVP ? (d.isExclusiveView ? ' exclusive-vp' : ' overlay-vp') : '';
+        return <li className={"entry-root " + d.className + (isActive ? ' selected' : '') + vpClass} key={d.id}>
 
             <div className={'inline-row'} onClick={()=>setView(d.id)} onDoubleClick={(e) => {select(d.id)}}> {/* activate anche con il dblclick */}
 
-                <div className={"left-stuff vertical-centering "} onClick={preventClick}>
-                    {parr.length >= 1 ?
-                        <>
-                            <i style={{fontSize: '0.55em', marginRight: '24px!important'}} className={'bi cursor-pointer d-block my-auto bi-chevron-' + (isExpanded ? 'down' : 'right')} onClick={expandClick} />
-                            {isExpanded && <div className={"expansion-line"} />}
-                        </>
-                        :
-                        <></>
-                    }
-                </div>
-                <div className={"mid-stuff vertical-centering"} style={{marginLeft: '8px'}}>
-                    <div className={`icon type tree-${appliableToEnhanced} ${d.className}`} style={{width: '24px', height: '24px'}}>{
+                {/* LEFT GROUP - Toggle + Icon + Label */}
+                <div className="row-left">
+                    <div className={"left-stuff"} onClick={preventClick}>
+                        {parr.length >= 1 ?
+                            <>
+                                <i className={'bi cursor-pointer bi-chevron-' + (isExpanded ? 'down' : 'right')} onClick={expandClick} />
+                                {isExpanded && <div className={"expansion-line"} />}
+                            </>
+                            :
+                            <></>
+                        }
+                    </div>
+                    <div className={`icon type tree-${appliableToEnhanced} ${d.className}`}>{
                         isVP ? 'VP' : (appliableToEnhanced === "Any" ? "✲" : appliableToEnhanced[0])
                     }</div>
-                    <div style={{marginLeft: '4px'}}>{d.name}</div>
+                    <div className="node-label">{d.name}</div>
                 </div>
-                <div className={"hover-stuff vertical-centering d-flex "}>
-                    <div className={"ms-auto d-flex"} onClick={preventClick}>
-                        {isVP && d.isExclusiveView &&
-                            <CommandBar style={{transition: '1s 0.3s', marginTop: '2px'}}>
-                                <Btn icon={'check'} action={() => {select(d.id)}} tip={'Activate'}/>
-                            </CommandBar>
 
-                            /* <button className="bg btn-delete my-auto ms-2 green" disabled={active.id === d.id}
-                                onClick={(evt) => {select(d.id)}}>
-                                <i className='bi bi-check2' />
-                            </button>*/
-                        }
+                {/* RIGHT GROUP - Toggle + Actions + Badges */}
+                <div className="row-right">
+                    {/* Active Toggle - Always visible for viewpoints */}
+                    {isVP && d.isExclusiveView && (
+                        <div className="viewpoint-active-toggle" onClick={preventClick}>
+                            <Tooltip tooltip={isActive ? 'Active viewpoint' : 'Click to activate'} inline={true} position={'top'} offsetY={10}>
+                                <div
+                                    className={`vp-toggle ${isActive ? 'active' : ''}`}
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        e.preventDefault();
+                                        select(d.id);
+                                    }}
+                                    role="switch"
+                                    aria-checked={isActive}
+                                    tabIndex={0}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter' || e.key === ' ') {
+                                            e.preventDefault();
+                                            select(d.id);
+                                        }
+                                    }}
+                                >
+                                    <div className="vp-toggle__thumb"></div>
+                                </div>
+                            </Tooltip>
+                        </div>
+                    )}
+
+                    <div className={"hover-stuff"}>
+                        <div className={"d-flex"} onClick={preventClick}>
+                        {/* Activate button removed - replaced with always-visible toggle above */}
 
 
                         <CommandBar style={{transition: '1s 0.3s', marginTop: '2px'}}>
@@ -188,35 +211,35 @@ function NestedViewComponent(props: AllProps) {
                             </Tooltip>
                         </CommandBar>
 
-                        {/* <button className="bg btn-delete my-auto ms-2 green" onClick={(e)=> { l.duplicate(); preventClick(e);}}><i className='bx bx-duplicate' /></button>
-                        <button className="bg btn-delete my-auto ms-2" onClick={(e)=> { l.delete(); preventClick(e);}}><i className="p-1 bi bi-dash" /></button>*/}
+                        </div>
                     </div>
-                </div>
-                <div className={"right-stuff vertical-centering"}>
-                    <div className={"right-content"} onClick={preventClick} >
-                        {
-                            isVP ? <>
-                                <div className={"spacer"}/>
-                            </> : <>{ props.isAdvanced && d.isExclusiveView && <>
-                                <span className={"priority"}>priority: {l.explicitApplicationPriority} </span><i style={{paddingTop: '4px'}} className="bi bi-x"></i>
-                                <div className={"spacer"}/>
-                                <Input type="number"
-                                       className={"change-boost hidden-input priority-booster"}
-                                       inputClassName={"change-boost hidden-input"}
-                                       readOnly={false}
-                                       data={l}
-                                       getter={()=>scoreBoost + ''}
-                                       setter={(v)=>{let pv = l.father; if (pv) pv.subViews = {...pv.__raw.subViews, [d.id]: +v} as any}}
-                                />
-                            </>}
-                                <span className={"right-icon feature-border ocl-icon vertical-centering " + (d.oclCondition.length ? "" : "hidden")}></span>
-                                <span className={"right-icon feature-border js-icon vertical-centering " + (d.jsCondition.length ? "" : "hidden")}></span>
-                            </>
-                        }
-                        <Tooltip tooltip={<div>is {d.isExclusiveView ? "" : "not"} mutually exclusive with other "Ex" views.</div>} position={"bottom"} inline={true}>
-                            <span className={"right-icon feature-border ex-icon vertical-centering " + (d.isExclusiveView ? '' : "hidden")}
-                                  onClick={()=>l.isExclusiveView = !d.isExclusiveView}
-                            /></Tooltip>
+
+                    <div className={"right-stuff"}>
+                        <div className={"right-content"} onClick={preventClick} >
+                            {
+                                isVP ? <>
+                                    <div className={"spacer"}/>
+                                </> : <>{ props.isAdvanced && d.isExclusiveView && <>
+                                    <span className={"priority"}>priority: {l.explicitApplicationPriority} </span><i style={{paddingTop: '4px'}} className="bi bi-x"></i>
+                                    <div className={"spacer"}/>
+                                    <Input type="number"
+                                           className={"change-boost hidden-input priority-booster"}
+                                           inputClassName={"change-boost hidden-input"}
+                                           readOnly={false}
+                                           data={l}
+                                           getter={()=>scoreBoost + ''}
+                                           setter={(v)=>{let pv = l.father; if (pv) pv.subViews = {...pv.__raw.subViews, [d.id]: +v} as any}}
+                                    />
+                                </>}
+                                    <span className={"right-icon feature-border ocl-icon " + (d.oclCondition.length ? "" : "hidden")}></span>
+                                    <span className={"right-icon feature-border js-icon " + (d.jsCondition.length ? "" : "hidden")}></span>
+                                </>
+                            }
+                            <Tooltip tooltip={<div>is {d.isExclusiveView ? "" : "not"} mutually exclusive with other "Ex" views.</div>} position={"bottom"} inline={true}>
+                                <span className={"right-icon feature-border ex-icon " + (d.isExclusiveView ? '' : "hidden")}
+                                      onClick={()=>l.isExclusiveView = !d.isExclusiveView}
+                                /></Tooltip>
+                        </div>
                     </div>
                 </div>
             </div>

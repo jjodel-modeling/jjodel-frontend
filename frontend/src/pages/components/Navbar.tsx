@@ -49,6 +49,7 @@ import {VersionFixer} from "../../redux/VersionFixer";
 import {PinnableDock} from "../../components/dock/MyRcDock";
 import ActivityLogger from '../../services/ActivityLogger';
 import { ActivityType } from '../../types/activity';
+import { LayoutMode, getSavedLayoutMode, saveLayoutMode, getInitialPanelWidth } from '../../components/abstract/Dock';
 
 
 let windoww = window as any;
@@ -266,6 +267,23 @@ function NavbarComponent(props: AllProps) {
     const [isFullscreen, setFullscreen] = useState(false);
     const toggleFullScreen = () => setFullscreen(U.toggleFullscreen(document.body));
 
+    // Layout mode state
+    const [layoutMode, setLayoutModeState] = useState<LayoutMode>(() => {
+        const mode = getSavedLayoutMode();
+        // Apply initial layout mode to body
+        document.body.setAttribute('data-layout-mode', mode);
+        return mode;
+    });
+
+    const handleLayoutModeChange = (mode: LayoutMode) => {
+        setLayoutModeState(mode);
+        saveLayoutMode(mode);
+        // Apply layout mode to body for CSS targeting
+        document.body.setAttribute('data-layout-mode', mode);
+        // Dispatch event to notify dock to update
+        window.dispatchEvent(new CustomEvent('jjodel:layout-mode-change', { detail: { mode } }));
+    };
+
     if (user?.projects) {
         user.projects
             .sort((a, b) => (b.lastModified > a.lastModified) ?  1 : -1)
@@ -458,7 +476,7 @@ function NavbarComponent(props: AllProps) {
             ]
         },
 
-        /* Tools - always visible, debug mode only in advanced */
+        /* Tools - always visible */
         {name: 'Tools',
             subItems: [
                 ...(isDashboard || metamodels.length === 0 ? [
@@ -473,17 +491,15 @@ function NavbarComponent(props: AllProps) {
                     },
                     {name: 'Custom Tools', icon: <i className="bi bi-gear" />, disabled: true}
                 ]),
-                // Debug Mode toggle - only visible in advanced mode
-                ...(props.advanced ? [
-                    {name: 'divisor'},
-                    {name: props.debug ? 'Disable Debug Mode' : 'Enable Debug Mode',
-                        function: () => {
-                            TRANSACTION('debug', ()=>SetRootFieldAction.new('debug', !props.debug), props.debug, !props.debug);
-                            U.debug = !props.debug;
-                        },
-                        icon: <i className={`bi ${props.debug ? 'bi-bug-fill' : 'bi-bug'}`} />
-                    }
-                ] : [])
+                // Debug Mode toggle - always visible (independent from Advanced Mode)
+                {name: 'divisor'},
+                {name: props.debug ? 'Disable Debug Mode' : 'Enable Debug Mode',
+                    function: () => {
+                        TRANSACTION('debug', ()=>SetRootFieldAction.new('debug', !props.debug), props.debug, !props.debug);
+                        U.debug = !props.debug;
+                    },
+                    icon: <i className={`bi ${props.debug ? 'bi-bug-fill' : 'bi-bug'}`} />
+                }
             ]
         },
 
@@ -587,21 +603,7 @@ function NavbarComponent(props: AllProps) {
 
     const Commands = ()=> {
         return (<section className='nav-commands d-flex'>
-            {project && <>
-                {debuggerr ? <DebuggerComponent /> : null}
-                <label className='text-end d-flex'>
-                <span className={"my-auto me-1"}>{props.advanced ? "advanced mode" : "basic mode"}</span>
-                <Input type="toggle"
-                       className={"my-auto"}
-                       style={{fontSize:'1.25em'}}
-                       setter={(v) => {
-                           SetRootFieldAction.new('advanced', v);
-                           windoww.advanced = v;
-                       }}
-                       getter={()=> props.advanced}/>
-                </label>
-            </>
-            }
+            {project && debuggerr ? <DebuggerComponent /> : null}
         </section>);
     };
 
@@ -620,6 +622,66 @@ function NavbarComponent(props: AllProps) {
                 <i className="bi bi-chat-heart" />
                 <span>Jodie</span>
             </button>
+        );
+    };
+
+    // Layout Controls - Split/Sidebar toggle buttons + User Menu
+    // Only visible when editing metamodels and model instances (not on project overview)
+    const LayoutControls = () => {
+        // Check if the editor is manipulating metamodels and model instances
+        // This is true when a project is loaded AND there are metamodels in the editor
+        const isEditingModels = !!project && metamodels.length > 0;
+        if (!isEditingModels) return null;
+
+        // Also check if there are actual editor tabs open (not just the ModelsSummary tab)
+        // The dock has a 'models' group that contains ModelsSummary + any open metamodel/model tabs
+        // We only show layout controls when there are tabs open beyond just the summary
+        const dock = DockManager.dock;
+        if (dock) {
+            const layout = dock.getLayout();
+            // Find the 'models' panel in the layout
+            const modelsPanel = layout?.dockbox?.children?.[0];
+            if (modelsPanel && 'tabs' in modelsPanel) {
+                // If there's only 1 tab (ModelsSummary), we're in the project overview page
+                // Layout controls should only appear when editing a metamodel/model (2+ tabs)
+                if (modelsPanel.tabs.length <= 1) {
+                    return null;
+                }
+            }
+        }
+
+        return (<>
+            <div className="navbar__layout-controls">
+                
+                <Tooltip tooltip="50% - 50%" inline={true} position="bottom" offsetY={8}>
+                    <button
+                        className={`layout-btn ${layoutMode === 'split' ? 'layout-btn--active' : ''}`}
+                        onClick={() => handleLayoutModeChange('split')}
+                        aria-label="Split view"
+                    >
+                        <i className="bi bi-layout-split" />
+                    </button>
+                </Tooltip>
+                <Tooltip tooltip="70% - 30%" inline={true} position="bottom" offsetY={8}>
+                    <button
+                        className={`layout-btn ${layoutMode === 'sidebar' ? 'layout-btn--active' : ''}`}
+                        onClick={() => handleLayoutModeChange('sidebar')}
+                        aria-label="Sidebar view"
+                    >
+                        <i className="bi bi-layout-sidebar-reverse" />
+                    </button>
+                </Tooltip>
+                <Tooltip tooltip="Fullscreen" inline={true} position="bottom" offsetY={8}>
+                    <button
+                        className={`layout-btn ${layoutMode === 'canvas-only' ? 'layout-btn--active' : ''}`}
+                        onClick={() => handleLayoutModeChange('canvas-only')}
+                        aria-label="Fullscreen"
+                    >
+                        <i className="bi bi-fullscreen" />
+                    </button>
+                </Tooltip>
+            </div>
+            </>
         );
     };
 
@@ -698,7 +760,18 @@ function NavbarComponent(props: AllProps) {
             <MainMenu items={items} />
             <Commands />
             <div className="main-header-right">
+                {/* Badges */}
                 {props.debug && <span className="debug-badge">DEBUG</span>}
+                {props.advanced && (
+                    <span className="advanced-mode-badge" title="Advanced Mode is enabled. More options and features are visible.">
+                        ADV
+                    </span>
+                )}
+                {/* Layout Controls Group */}
+                <LayoutControls />
+                {/* Divider */}
+                {project && <div className="navbar__divider" />}
+                {/* User Controls */}
                 <JodieButton />
                 <HelpMenu />
                 <UserMenu />

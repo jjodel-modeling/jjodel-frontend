@@ -449,18 +449,28 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
             <div className="project-section">
                 <div className="project-section__header">
                     <h2 className="project-section__title">METAMODELS</h2>
-                    <button className="btn btn--primary" onClick={handleCreateMetamodel}>
-                        + New
-                    </button>
+                    {metamodels.length > 0 && (
+                        <button className="btn btn--primary" onClick={handleCreateMetamodel}>
+                            + New
+                        </button>
+                    )}
                 </div>
 
                 {metamodels.length === 0 ? (
-                    <div className="empty-state empty-state--dashed">
-                        <span className="empty-state__icon">
+                    <div className="empty-state">
+                        <div className="empty-state__icon">
                             <i className="bi bi-diagram-3" />
-                        </span>
+                        </div>
                         <h3 className="empty-state__title">No metamodels yet</h3>
-                        <p className="empty-state__text">Create your first metamodel to get started</p>
+                        <p className="empty-state__description">
+                            Create a metamodel to define the structure and rules for your domain models.
+                        </p>
+                        <button
+                            className="btn btn--primary btn--empty-state"
+                            onClick={handleCreateMetamodel}
+                        >
+                            Create Your First Metamodel
+                        </button>
                     </div>
                 ) : (
                     <div className="list-card">
@@ -507,12 +517,24 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                 </div>
 
                 {models.length === 0 ? (
-                    <div className="empty-state empty-state--subtle">
-                        <p className="empty-state__text-inline">
+                    <div className="empty-state empty-state--secondary">
+                        <div className="empty-state__icon empty-state__icon--small">
+                            <i className="bi bi-box" />
+                        </div>
+                        <h3 className="empty-state__title">
+                            {metamodels.length === 0 ? 'Create a metamodel first' : 'No models yet'}
+                        </h3>
+                        <p className="empty-state__description">
                             {metamodels.length === 0
-                                ? 'No models yet · Create a metamodel first'
-                                : 'No models yet · Create a model from a metamodel'}
+                                ? 'Models are instances of metamodels. You need to create a metamodel structure before you can create models.'
+                                : 'Create a model to instantiate your metamodel.'}
                         </p>
+                        {metamodels.length === 0 && (
+                            <div className="empty-state__hint">
+                                <i className="bi bi-arrow-up" />
+                                <span>Create your first metamodel in the section above</span>
+                            </div>
+                        )}
                     </div>
                 ) : (
                     <div className="list-card">

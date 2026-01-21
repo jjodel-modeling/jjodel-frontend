@@ -181,6 +181,56 @@ function LeftBar(props: LeftBarProps): JSX.Element {
         }
     }
 
+    // Export Metamodel as .jmm file
+    const exportMetamodel = async() => {
+        if (!project) {
+            U.alert('e', 'Error', 'No project open');
+            return;
+        }
+
+        const metamodels = project.metamodels || [];
+        if (metamodels.length === 0) {
+            U.alert('w', 'No Metamodel', 'This project does not contain any metamodels to export.');
+            return;
+        }
+
+        try {
+            // Get the first metamodel (or could let user choose if multiple)
+            const metamodel = metamodels[0];
+
+            // Build the .jmm file structure
+            const jmmData = {
+                format_version: '1.0',
+                metadata: {
+                    name: metamodel.name || project.name + '-metamodel',
+                    version: project.version?.toString() || '1.0.0',
+                    author: project.author?.name || 'Unknown',
+                    description: project.description || '',
+                    exported_at: new Date().toISOString(),
+                    source_project: project.id,
+                    jjodel_version: '2.0'
+                },
+                metamodel: metamodel.__raw || metamodel
+            };
+
+            // Convert to JSON string (formatted)
+            const jsonString = JSON.stringify(jmmData, null, 2);
+
+            // Generate filename
+            const filename = `${metamodel.name || project.name}-metamodel.jmm`;
+
+            // Trigger download
+            U.download(filename, jsonString);
+
+            // Show success notification
+            U.alert('i', 'Exported', `Metamodel exported: ${filename}`);
+
+        } catch (error) {
+            console.error('Export metamodel error:', error);
+            U.alert('e', 'Export Failed', 'Error exporting metamodel. Please try again.');
+        }
+    }
+
     // Check if there are any projects for "Recently Modified" section
     const hasProjects = props.projects && props.projects.length > 0;
 
@@ -193,6 +243,7 @@ function LeftBar(props: LeftBarProps): JSX.Element {
                 {/* @ts-ignore */}
                 <Menu title={props.project.name ? props.project.name : 'Unnamed Project'} project>
                     <Item action={exportProject} icon={icon['download']}>Download</Item>
+                    <Item action={exportMetamodel} icon={<i className="bi bi-box-arrow-up" />}>Export Metamodel</Item>
                     <Item action={toggleFavorite} icon={!project?.isFavorite ? icon['favorite'] : icon['favoriteFill']}>{!project?.isFavorite ? 'Add to favorites ' : 'Remove from favorites '}</Item>
                     <Item action={closeProject} icon={icon['close']}>Close project </Item>
                 </Menu>

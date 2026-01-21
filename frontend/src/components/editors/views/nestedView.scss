@@ -1,12 +1,874 @@
 /* ============================================
-   NESTED VIEW - VIEWPOINT TAB
-   Design tokens applied
+   NESTED VIEW - VIEWPOINTS PANEL
+   Redesigned following CLAUDE.md design tokens
    ============================================ */
 
+// === DESIGN TOKENS ===
+// Typography
+$font-family: 'Inter Variable', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+$font-size-xs: 11px;
+$font-size-sm: 12px;
+$font-size-base: 13px;
+$font-size-md: 14px;
+$font-weight-normal: 400;
+$font-weight-medium: 500;
+$font-weight-semibold: 600;
+
+// Colors - SLATE PALETTE
+$color-text-primary: #111418;
+$color-text-secondary: #6B7280;
+$color-text-tertiary: #9CA3AF;
+$color-bg-primary: #ffffff;
+$color-bg-secondary: #f8fafc;
+$color-bg-tertiary: #f1f5f9;
+$color-border: #e2e4e8;
+$color-border-hover: #d0d3d8;
+$color-accent: #475569;
+$color-accent-hover: #334155;
+
+// Spacing
+$spacing-xs: 4px;
+$spacing-sm: 8px;
+$spacing-md: 12px;
+$spacing-lg: 16px;
+
+// Border Radius
+$radius-sm: 4px;
+$radius-md: 6px;
+$radius-lg: 8px;
+
+// Transitions
+$transition-fast: 150ms ease;
+$transition-normal: 200ms ease;
+
+// Layout
+$row-height: 32px; // Consistent row height
+$row-padding-v: 6px;
+$row-gap: 8px; // Gap between elements in row
+$icon-size: 24px;
+$vp-group-spacing: 16px; // Spacing between viewpoint groups
+
+// Type colors (muted, professional)
+$color-viewpoint: #475569;    // slate-600
+$color-model: #8b5cf6;        // violet-500 muted
+$color-package: #3b82f6;      // blue-500
+$color-class: #ef4444;        // red-500
+$color-attribute: #dc2626;    // red-600
+$color-enum: #f59e0b;         // amber-500
+$color-literal: #d97706;      // amber-600
+$color-object: #6b7280;       // gray-500
+$color-edge: #64748b;         // slate-500
+$color-vertex: #6b7280;       // gray-500
+
+// ============================================
+// VIEW EDITOR ROOT CONTAINER
+// ============================================
+.view-editor-root {
+  --inner-page-padding: 16px;
+  height: 100%;
+  max-height: 100%;
+  overflow: hidden;
+  padding-right: 4px;
+  background: $color-bg-primary;
+  display: flex;
+  flex-flow: column;
+  font-family: $font-family;
+
+  &:has(.single-view-content) {
+    overflow: hidden;
+  }
+
+  .dock-content .dock-tabpane {
+    overflow: auto !important;
+  }
+}
+
+// ============================================
+// VIEWPOINT TAB SECTION
+// ============================================
+section.viewpoint-tab {
+  color: $color-text-primary;
+  margin: $spacing-md;
+  padding: $spacing-md;
+  font-weight: $font-weight-normal;
+  font-family: $font-family;
+  border: 1px solid $color-border;
+  border-radius: $radius-lg;
+  background-color: $color-bg-primary;
+  transition: all $transition-normal;
+}
+
+// ============================================
+// HEADER
+// ============================================
+section.viewpoint-tab h1,
+section.viewpoint-tab .ps-2.pt-2 h1 {
+  width: 100% !important;
+  display: flex;
+  align-items: center;
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+  padding-bottom: $spacing-md;
+  margin-bottom: $spacing-sm;
+  border-bottom: 1px solid $color-border;
+
+  &::before {
+    position: relative;
+    font-size: $spacing-lg;
+    margin-right: $spacing-sm;
+    font-family: bootstrap-icons;
+    content: "\F341"; // bi-diagram-3
+    color: $color-text-secondary;
+  }
+
+  .command-bar {
+    margin-left: auto;
+  }
+}
+
+// ============================================
+// VIEWPOINT TAB STYLING
+// ============================================
 .viewpoint-tab {
+  // Force left alignment for entire tree
+  text-align: left;
+  width: 100%;
+
+  // ============================================
+  // LIST STYLING - Progressive indentation
+  // ============================================
+  ul {
+    list-style-type: none;
+    padding-left: 20px; // Indentation per level
+    margin: 0;
+    text-align: left;
+    width: 100%;
+  }
+
+  // Root level ul (direct child of viewpoint-tab)
+  & > .ps-2.pt-2 > ul,
+  & > ul,
+  .ps-2.pt-2 {
+    padding-left: 0 !important; // No padding for root level
+  }
+
+  // List items
+  li {
+    list-style: none;
+    text-align: left;
+    width: 100%;
+  }
+
+  .entry-root {
+    position: relative;
+    width: 100%;
+    text-align: left;
+    display: block;
+    margin-bottom: 2px; // Consistent spacing between all nodes
+  }
+
+  // Children container (nested ul)
+  .entry-root > ul {
+    margin-top: $spacing-xs;
+  }
+
+  // ============================================
+  // ROW STYLING - Left aligned with consistent spacing
+  // ============================================
+  .inline-row {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start; // Force left alignment
+    min-height: $row-height;
+    padding: $row-padding-v $spacing-md $row-padding-v $spacing-sm;
+    margin-left: 0;
+    margin-right: 0;
+    border-radius: $radius-md;
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: background-color $transition-fast, border-color $transition-fast, transform 100ms ease;
+    width: 100%;
+    text-align: left;
+
+    &:hover {
+      background-color: #f8fafc; // slate-50 - clear hover feedback
+      border-color: $color-border;
+
+      // Show badges on hover
+      .right-icon:not(.hidden) {
+        opacity: 1;
+        transform: translateX(0);
+      }
+
+      // Show hover buttons
+      .hover-stuff {
+        opacity: 1;
+        transform: translateX(0);
+        visibility: visible;
+      }
+
+      // Scale icon slightly
+      .icon.type {
+        transform: scale(1.05);
+      }
+    }
+
+    // Active state (click feedback)
+    &:active {
+      transform: scale(0.99);
+    }
+  }
+
+  // ============================================
+  // ROW LEFT GROUP - Toggle + Icon + Label
+  // ============================================
+  .row-left {
+    display: flex;
+    align-items: center;
+    gap: $row-gap;
+    flex: 1;
+    min-width: 0; // Allow text truncation
+    text-align: left;
+  }
+
+  // ============================================
+  // ROW RIGHT GROUP - Toggle + Actions + Badges
+  // ============================================
+  .row-right {
+    display: flex;
+    align-items: center;
+    gap: $row-gap;
+    flex-shrink: 0;
+    margin-left: auto; // Push to right
+  }
+
+  // ============================================
+  // NODE LABEL
+  // ============================================
+  .node-label {
+    flex: 1;
+    min-width: 0;
+    font-size: $font-size-base;
+    font-weight: $font-weight-normal;
+    color: $color-text-primary;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-align: left;
+  }
+
+  // ============================================
+  // TOP-LEVEL VIEWPOINT STYLING (No left border)
+  // ============================================
+  .entry-root.DViewPoint {
+    position: relative;
+    margin-bottom: $spacing-xs; // Base spacing between nodes
+
+    // Divider between viewpoint groups (except last one)
+    &:not(:last-child)::after {
+      content: '';
+      display: block;
+      height: 1px;
+      background: #e2e8f0; // slate-200
+      margin: $spacing-md 0 $vp-group-spacing 0; // Top 12px, bottom 16px
+    }
+
+    > .inline-row {
+      background-color: rgba(248, 250, 252, 0.5); // Subtle bg for viewpoint rows
+      margin-bottom: 2px;
+
+      .mid-stuff > div:last-child,
+      .node-label {
+        font-weight: $font-weight-medium;
+      }
+
+      &:hover {
+        background-color: #e2e8f0; // slate-200
+      }
+    }
+  }
+
+  // ============================================
+  // SELECTED VIEWPOINT (No left border)
+  // ============================================
+  li.entry-root.DViewPoint.selected {
+    position: relative;
+    z-index: 0;
+
+    & > .inline-row {
+      background: linear-gradient(135deg, rgba(71, 85, 105, 0.08) 0%, rgba(71, 85, 105, 0.04) 100%);
+      border: 1px solid rgba(71, 85, 105, 0.2);
+    }
+
+    & > .inline-row:hover {
+      background: linear-gradient(135deg, rgba(71, 85, 105, 0.12) 0%, rgba(71, 85, 105, 0.06) 100%);
+      border-color: rgba(71, 85, 105, 0.3);
+    }
+
+    // Dotted line for expanded children
+    &::after {
+      content: "";
+      position: absolute;
+      left: 6px;
+      bottom: 4px;
+      display: block;
+      border-left: 1px dotted $color-border-hover;
+      height: calc(100% - 2.8em);
+      width: 4px;
+    }
+  }
+
+  // ============================================
+  // COLLAPSE/EXPAND TOGGLE (LEFT)
+  // ============================================
+  .left-stuff {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px; // Fixed width for toggle
+    min-width: 16px;
+    flex-shrink: 0;
+
+    .bi {
+      font-size: 11px;
+      color: $color-text-secondary;
+      cursor: pointer;
+      transition: color $transition-fast, transform $transition-fast;
+      padding: 2px;
+      border-radius: $radius-sm;
+
+      &:hover {
+        color: $color-accent;
+        background-color: $color-bg-tertiary;
+      }
+    }
+
+    .bi-caret-right-fill {
+      color: $color-border;
+      cursor: default;
+
+      &:hover {
+        background-color: transparent;
+      }
+    }
+
+    .bi-chevron-down::before,
+    .bi-chevron-right::before {
+      font-weight: 600 !important;
+    }
+
+    // Expansion line (vertical guide)
+    .expansion-line {
+      position: absolute;
+      left: 10px;
+      top: $row-height;
+      bottom: 0;
+      width: 1px;
+      background-color: $color-border;
+    }
+  }
+
+  // ============================================
+  // ICON STYLING
+  // ============================================
+  .icon.type {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: $icon-size;
+    height: $icon-size;
+    min-width: $icon-size;
+    border-radius: $radius-md;
+    font-size: $font-size-xs;
+    font-weight: $font-weight-semibold;
+    color: white;
+    flex-shrink: 0;
+    transition: transform $transition-fast, background-color $transition-fast;
+  }
+
+  // Type-specific colors (SOLID backgrounds with white text)
+  .tree-Any {
+    background-color: #64748b; // slate-500
+    color: white;
+  }
+
+  // ============================================
+  // VIEWPOINT BADGE STYLING
+  // ============================================
+
+  // Exclusive Viewpoint - Solid slate background
+  .entry-root.DViewPoint.exclusive-vp > .inline-row .icon.type.DViewPoint,
+  .icon.type.DViewPoint {
+    background-color: #475569; // slate-600
+    color: #ffffff;
+    font-weight: $font-weight-semibold;
+  }
+
+  // Overlay Viewpoint - Cyan dashed border
+  .entry-root.DViewPoint.overlay-vp > .inline-row .icon.type.DViewPoint {
+    background-color: transparent;
+    border: 1.5px dashed #0891b2; // cyan-600
+    color: #0891b2;
+    font-weight: $font-weight-medium;
+  }
+
+  // Hover states for Exclusive VP badges
+  .entry-root.DViewPoint.exclusive-vp:hover > .inline-row .icon.type.DViewPoint {
+    background-color: #334155; // slate-700
+  }
+
+  // Hover states for Overlay VP badges
+  .entry-root.DViewPoint.overlay-vp:hover > .inline-row .icon.type.DViewPoint {
+    background-color: rgba(8, 145, 178, 0.1);
+    border-style: solid;
+    border-color: #0e7490; // cyan-700
+  }
+
+  // Dark mode support for VP badges
+  @media (prefers-color-scheme: dark) {
+    .entry-root.DViewPoint.exclusive-vp > .inline-row .icon.type.DViewPoint,
+    .icon.type.DViewPoint {
+      background-color: #64748b; // slate-500
+      color: #f8fafc;
+    }
+
+    .entry-root.DViewPoint.overlay-vp > .inline-row .icon.type.DViewPoint {
+      background-color: transparent;
+      border-color: #22d3ee; // cyan-400
+      color: #22d3ee;
+    }
+
+    .entry-root.DViewPoint.exclusive-vp:hover > .inline-row .icon.type.DViewPoint {
+      background-color: #475569; // slate-600
+    }
+
+    .entry-root.DViewPoint.overlay-vp:hover > .inline-row .icon.type.DViewPoint {
+      background-color: rgba(34, 211, 238, 0.1);
+      border-color: #06b6d4; // cyan-500
+    }
+  }
+
+  .tree-Model,
+  .tree-DModel {
+    background-color: #8b5cf6; // violet-500
+    color: white;
+  }
+
+  .tree-Package,
+  .tree-DPackage {
+    background-color: #3b82f6; // blue-500
+    color: white;
+  }
+
+  .tree-Class,
+  .tree-DClass {
+    background-color: #ef4444; // red-500
+    color: white;
+  }
+
+  .tree-Attribute,
+  .tree-DAttribute {
+    background-color: #f97316; // orange-500
+    color: white;
+  }
+
+  .tree-Reference,
+  .tree-DReference {
+    background-color: #06b6d4; // cyan-500
+    color: white;
+  }
+
+  .tree-Operation,
+  .tree-DOperation {
+    background-color: #10b981; // emerald-500
+    color: white;
+  }
+
+  .tree-Enumerator,
+  .tree-DEnumerator {
+    background-color: #f59e0b; // amber-500
+    color: white;
+  }
+
+  .tree-EnumLiteral,
+  .tree-DEnumLiteral {
+    background-color: #d97706; // amber-600
+    color: white;
+  }
+
+  .tree-Object,
+  .tree-DObject {
+    background-color: #6b7280; // gray-500
+    color: white;
+  }
+
+  .tree-Singleton {
+    background-color: #475569; // slate-600
+    color: white;
+  }
+
+  .tree-Value,
+  .tree-DValue {
+    background-color: #78716c; // stone-500
+    color: white;
+  }
+
+  // Edge nodes - distinct colors
+  .tree-Edge,
+  .tree-DEdge {
+    background-color: #64748b; // slate-500
+    color: white;
+  }
+
+  .tree-EdgePoint,
+  .tree-DEdgePoint {
+    background-color: #94a3b8; // slate-400
+    color: white;
+  }
+
+  .tree-EdgeAssociation {
+    background-color: #a855f7; // purple-500
+    color: white;
+  }
+
+  .tree-EdgeDependency {
+    background-color: #ec4899; // pink-500
+    color: white;
+  }
+
+  .tree-EdgeGeneralization {
+    background-color: #14b8a6; // teal-500
+    color: white;
+  }
+
+  .tree-EdgeAggregation {
+    background-color: #0ea5e9; // sky-500
+    color: white;
+  }
+
+  .tree-EdgeComposition {
+    background-color: #2563eb; // blue-600
+    color: white;
+  }
+
+  .tree-Vertex,
+  .tree-DVertex,
+  .tree-GraphVertex,
+  .tree-DGraphVertex {
+    background-color: #8b5cf6; // violet-500
+    color: white;
+  }
+
+  .tree-Graph,
+  .tree-DGraph {
+    background-color: #6366f1; // indigo-500
+    color: white;
+  }
+
+  .tree-Field,
+  .tree-DField {
+    background-color: #9ca3af; // gray-400
+    color: white;
+  }
+
+  // ============================================
+  // MID CONTENT - Node name (Legacy support)
+  // ============================================
+  .mid-stuff {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: $row-gap;
+    cursor: pointer;
+    font-size: $font-size-base;
+    color: $color-text-primary;
+    line-height: 1.4;
+    text-align: left;
+
+    > div:last-child {
+      font-weight: $font-weight-normal;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      text-align: left;
+    }
+  }
+
+  // ============================================
+  // BADGES (Hidden by default, shown on hover)
+  // ============================================
+  .right-icon {
+    display: inline-block;
+    border-radius: $radius-sm;
+    padding-top: 2px;
+    height: 20px;
+    transition: opacity $transition-fast, transform $transition-fast, visibility $transition-fast;
+    opacity: 0;
+    transform: translateX(4px);
+    flex-shrink: 0;
+
+    &.hidden {
+      opacity: 0 !important;
+      visibility: hidden;
+    }
+  }
+
+  // OCL Badge
+  .ocl-icon {
+    &::before {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 32px;
+      height: 20px;
+      background-color: rgba(220, 38, 38, 0.1);
+      color: #dc2626 !important;
+      border-radius: $radius-sm;
+      text-align: center;
+      font-weight: $font-weight-semibold;
+      font-size: 10px;
+      letter-spacing: 0.02em;
+      content: "OCL";
+    }
+
+    &:hover::before {
+      background-color: rgba(220, 38, 38, 0.15);
+    }
+  }
+
+  // JS Badge
+  .js-icon {
+    &::before {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 24px;
+      height: 20px;
+      background-color: rgba(217, 119, 6, 0.1);
+      color: #d97706 !important;
+      border-radius: $radius-sm;
+      text-align: center;
+      font-weight: $font-weight-semibold;
+      font-size: 10px;
+      letter-spacing: 0.02em;
+      content: "JS";
+    }
+
+    &:hover::before {
+      background-color: rgba(217, 119, 6, 0.15);
+    }
+  }
+
+  // EX Badge (Exclusive)
+  .ex-icon {
+    &::before {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 24px;
+      height: 20px;
+      background-color: rgba(71, 85, 105, 0.1);
+      color: $color-accent !important;
+      border-radius: $radius-sm;
+      text-align: center;
+      font-weight: $font-weight-semibold;
+      font-size: 10px;
+      letter-spacing: 0.02em;
+      content: "EX";
+    }
+
+    &:hover::before {
+      background-color: rgba(71, 85, 105, 0.15);
+      cursor: pointer;
+    }
+  }
+
+  // ============================================
+  // VIEWPOINT ACTIVE TOGGLE - Always visible
+  // ============================================
+  .viewpoint-active-toggle {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+    pointer-events: auto;
+    z-index: 10;
+  }
+
+  .vp-toggle {
+    position: relative;
+    width: 32px;
+    height: 18px;
+    border-radius: 18px;
+    background-color: #cbd5e1; // slate-300 (OFF)
+    cursor: pointer;
+    transition: all 150ms ease;
+    pointer-events: auto;
+    user-select: none;
+
+    &__thumb {
+      position: absolute;
+      width: 14px;
+      height: 14px;
+      top: 2px;
+      left: 2px;
+      border-radius: 50%;
+      background-color: #ffffff;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+      transition: all 150ms ease;
+      pointer-events: none; // Thumb doesn't capture clicks
+    }
+
+    // Active state - SLATE color (consistent with design system)
+    &.active {
+      background-color: #475569; // slate-600
+
+      .vp-toggle__thumb {
+        transform: translateX(14px);
+      }
+    }
+
+    // Hover states
+    &:hover:not(.active) {
+      background-color: #94a3b8; // slate-400
+    }
+
+    &.active:hover {
+      background-color: #334155; // slate-700
+    }
+  }
+
+  // Dark mode support
+  @media (prefers-color-scheme: dark) {
+    .vp-toggle {
+      background-color: #475569; // slate-600 (OFF)
+
+      &__thumb {
+        background-color: #f8fafc;
+      }
+
+      &.active {
+        background-color: #64748b; // slate-500
+      }
+
+      &:hover:not(.active) {
+        background-color: #64748b; // slate-500
+      }
+
+      &.active:hover {
+        background-color: #475569; // slate-600
+      }
+    }
+  }
+
+  // ============================================
+  // HOVER ACTION BUTTONS
+  // ============================================
+  .hover-stuff {
+    transition: opacity $transition-fast, transform $transition-fast, visibility $transition-fast;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateX(8px);
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+    height: $row-height - ($row-padding-v * 2);
+
+    .bx,
+    .jj {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 24px;
+      height: 24px;
+      font-size: 16px;
+      color: $color-text-secondary;
+      border-radius: $radius-sm;
+      transition: all $transition-fast;
+      margin-left: 2px;
+
+      &:hover {
+        background-color: $color-bg-tertiary;
+        color: $color-text-primary;
+      }
+    }
+
+    .jj-delete:hover {
+      color: #dc2626;
+      background-color: rgba(220, 38, 38, 0.1);
+    }
+  }
+
+  // ============================================
+  // RIGHT STUFF (Badges)
+  // ============================================
+  .right-stuff {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+    height: $row-height - ($row-padding-v * 2);
+    gap: $spacing-xs;
+
+    .spacer {
+      display: none;
+    }
+  }
+
+  .right-content {
+    cursor: default;
+    margin-left: $spacing-sm;
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+    height: $row-height - ($row-padding-v * 2);
+
+    .priority {
+      display: block;
+      min-width: 5rem;
+      height: 20px;
+      border: 1px solid $color-border;
+      border-radius: $radius-sm;
+      margin: auto;
+      text-align: center;
+      padding: 0 $spacing-sm;
+      font-size: $font-size-xs;
+      line-height: 18px;
+      color: $color-text-secondary;
+    }
+
+    .priority-booster {
+      display: block;
+      height: 20px;
+      margin: auto;
+      margin-right: $spacing-sm;
+      text-align: center;
+      padding: 0 6px;
+      width: 2em;
+      border: 1px solid $color-border !important;
+      border-radius: $radius-sm;
+      font-size: $font-size-sm;
+
+      &:hover,
+      &:focus {
+        outline: 2px solid $color-accent;
+        outline-offset: 1px;
+      }
+    }
+  }
+
+  // ============================================
+  // COMMAND BAR IN HOVER STATE
+  // ============================================
   .inline-row > .hover-stuff {
     .btn-component {
       display: flex;
+      align-items: center;
+      justify-content: center;
 
       > .bi {
         margin: auto;
@@ -14,515 +876,419 @@
     }
   }
 
-  li.entry-root.DViewPoint.selected {
-    position: relative;
-    z-index: 0;
-
-    & > .inline-row {
-      background: var(--color-success-subtle) !important;
-      border: 1px solid var(--color-success-subtle);
-    }
-
-    & > .inline-row:hover {
-      border: 1px solid var(--color-text-tertiary);
-    }
-
-    &::after {
-      content: "";
-      position: absolute;
-      left: 4px;
-      bottom: 4px;
-      display: block;
-      border-left: 1px dotted var(--color-text-primary);
-      height: calc(100% - 2.8em);
-      width: 4px;
-    }
+  .btn-delete.green:hover {
+    background: $color-accent;
   }
 
-  .inline-row {
-    display: flex;
-    border: 1px solid transparent;
-    padding-bottom: 1px;
-  }
-
-  .icon.type {
-    margin: auto;
-    margin-left: var(--space-1);
-    margin-right: var(--space-1);
-    width: 2ic;
-    height: 2ic;
-    align-content: center;
-    border-radius: var(--radius-full);
-  }
-
-  ul {
-    list-style-type: none;
-    padding-left: var(--space-4);
-  }
-
-  /* Tree node type colors - semantic palette */
-  .tree-Any {
-    background-color: var(--color-accent);
-  }
-
-  .tree-DEdgePoint,
-  .tree-EdgePoint {
-    background-color: var(--color-success);
-  }
-
-  .tree-DEdge,
-  .tree-Edge {
-    background-color: var(--color-success-muted);
-  }
-
-  .tree-DField,
-  .tree-Field {
-    background-color: var(--color-text-tertiary);
-  }
-
-  .tree-DVertex,
-  .tree-Vertex {
-    background-color: var(--color-accent-muted);
-  }
-
-  .tree-DGraphVertex,
-  .tree-GraphVertex {
-    background-color: var(--color-accent-hover);
-  }
-
-  .tree-DGraph,
-  .tree-Graph {
-    background-color: var(--color-accent);
-  }
-
+  // ============================================
+  // VERTICAL CENTERING UTILITY
+  // ============================================
   .vertical-centering {
     position: relative;
     display: flex;
+    align-items: center;
 
     > * {
       margin-top: auto;
       margin-bottom: auto;
     }
   }
+}
 
-  .right-icon {
-    display: inline-block;
-    border-radius: calc(var(--radius-md) - 1px);
-    padding-top: 2px;
-    margin-left: 2px;
-    height: 24px;
-    transition: var(--transition-fast);
-
-    &.hidden {
-      opacity: 0.33;
-      color: var(--color-text-tertiary);
-      outline-color: var(--color-text-tertiary);
-      text-shadow: none;
-    }
-  }
-
-  .viewpoint-tab .entry-root.DViewPoint .hover-stuff .bi {
-    &::before {
-      border: none;
-      color: inherit;
-      background-color: var(--color-bg-secondary);
-      border-radius: var(--radius-sm);
-    }
-
-    &:hover::before {
-      outline: 1px solid var(--color-text-primary);
-    }
-
-    &.disabled:hover::before,
-    &:hover:disabled::before {
-      outline: none;
-    }
-  }
-
-  .right-icon:hover {
-    cursor: pointer;
-    color: white;
-  }
-
-  .ocl-icon {
-    transition: var(--transition-fast);
-    color: white;
-  }
-
-  .ocl-icon::before {
-    opacity: 0.7;
-    position: relative;
-    display: block;
-    width: 1.7rem;
-    height: 22px;
-    border: 1px solid var(--color-error);
-    background-color: var(--color-error);
-    color: white !important;
-    border-radius: var(--radius-md);
-    text-align: center;
-    margin: auto;
-    padding-left: auto;
-    padding-right: auto;
-    padding-top: 2px;
-    font-weight: var(--font-semibold);
-    font-size: 0.85em;
-    content: "OCL";
-  }
-
-  .ocl-icon:hover::before {
-    opacity: 1;
-  }
-
-  .js-icon {
-    transition: var(--transition-fast);
-    color: white;
-  }
-
-  .js-icon::before {
-    opacity: 0.7;
-    position: relative;
-    padding-top: 2px;
-    display: block;
-    min-width: 1.7rem;
-    height: 22px;
-    border: 1px solid var(--color-warning);
-    background-color: var(--color-warning);
-    color: white !important;
-    border-radius: var(--radius-md);
-    text-align: center;
-    padding-left: auto;
-    padding-right: auto;
-    margin: auto;
-    font-weight: var(--font-semibold);
-    font-size: 0.85em;
-    content: "JS";
-  }
-
-  .js-icon:hover::before {
-    opacity: 1;
-  }
-
-  .ex-icon {
-    transition: var(--transition-fast);
-    color: white;
-  }
-
-  .ex-icon::before {
-    opacity: 0.7;
-    position: relative;
-    display: block;
-    width: 1.7rem;
-    height: 22px;
-    border: 1px solid var(--color-accent);
-    background-color: var(--color-accent);
-    color: white !important;
-    border-radius: var(--radius-md);
-    text-align: center;
-    margin: auto;
-    padding-left: auto;
-    padding-right: auto;
-    padding-top: 2px;
-    font-weight: var(--font-semibold);
-    font-size: 0.85em;
-    content: "EX";
-    top: 0 !important;
-  }
-
-  .ex-icon:hover::before {
-    opacity: 1;
-  }
-
-  .right-content,
-  .hover-stuff {
-    cursor: pointer;
-    display: flex;
-    height: 26px;
-  }
-
-  .left-stuff {
-    padding-left: 0.125em;
-
-    .bi {
-      font-size: 0.7em;
-      color: var(--color-text-tertiary);
-      cursor: pointer;
-    }
-
-    .bi-caret-right-fill {
-      cursor: not-allowed;
-    }
-
-    .bi:hover {
-      color: var(--color-text-primary);
-    }
-
-    .bi-chevron-down::before,
-    .bi-chevron-right::before {
-      scale: 1.25;
-      font-weight: var(--font-extrabold) !important;
-    }
-
-    width: 1.3ch;
-  }
-
-  .right-content {
-    cursor: default;
-
-    & .priority {
-      display: block;
-      min-width: 6rem;
-      height: 22px;
-      border: 1px solid var(--color-text-primary);
-      border-radius: var(--radius-md);
-      margin: auto;
-      text-align: center;
-      padding-left: var(--space-3);
-      padding-right: var(--space-3);
-      width: 72px;
-      white-space: nowrap;
-    }
-
-    & .priority-booster {
-      display: block;
-      height: 24px;
-      margin: auto;
-      margin-right: var(--space-3);
-      text-align: center;
-      padding-left: var(--space-3);
-      padding-right: var(--space-3);
-      width: 1.5em;
-      height: 22px;
-      border: 1px solid var(--color-text-primary) !important;
-      border-radius: var(--radius-md);
-      text-align: center;
-
-      &:hover,
-      &:focus {
-        outline: 2px solid var(--color-text-primary);
-      }
-    }
-  }
-
-  .right-stuff {
-    max-height: 26px;
-    height: 26px;
-
-    .spacer {
-      margin-left: auto;
-    }
-
-    width: fit-content;
-  }
-
-  .inline-row {
-    position: relative;
-    padding-right: var(--space-2);
-    border-radius: var(--radius-lg);
-    left: -10px;
-    padding-left: var(--space-3);
-
-    &:hover {
-      background-color: var(--color-bg-tertiary);
-      outline: none;
-      border-radius: var(--radius-md);
-      padding-left: var(--space-3);
-    }
-
-    .right-stuff {
-      transform-origin: right;
-    }
-
-    .hover-stuff {
-      height: 26px;
-
-      & > * {
-        height: 26px;
-      }
-
-      .bg,
-      .bx,
-      .jj {
-        height: 26px;
-      }
-
-      .bx,
-      .jj {
-        display: flex;
-        font-size: 18px;
-
-        &:before {
-          line-height: 1;
-          margin: auto;
-        }
-      }
-
-      transition: var(--transition-fast);
-      right: 0;
-      transform: scaleX(0);
-      transform-origin: right;
-      margin-right: var(--space-2);
-    }
-
-    &:hover {
-      .hover-stuff {
-        transition: var(--transition-normal);
-        transform: scaleX(1);
-      }
-
-      .right-content {
-      }
-    }
-  }
-
-  .btn-delete.green:hover {
-    background: var(--color-success);
-  }
-
-  .mid-stuff {
-    flex-grow: 1;
-    cursor: pointer;
-  }
-
+// ============================================
+// SINGLE VIEW CONTENT OVERLAY
+// ============================================
+.view-editor-root {
   .single-view-content {
     position: absolute;
     top: 0;
     bottom: 0;
     left: 0;
     right: 0;
-    background-color: var(--color-bg-primary);
+    background-color: $color-bg-primary;
     z-index: 1;
   }
 
-  .view-editor-root {
-    height: 100%;
-    max-height: 100%;
-    overflow: hidden;
-    padding-right: var(--space-1);
-    background: var(--color-bg-primary);
+  .btn-back {
+    font-size: $font-size-base;
+    margin: auto;
 
-    &:has(.single-view-content) {
-      overflow: hidden;
-    }
-
-    .dock-content .dock-tabpane {
-      overflow: auto !important;
-    }
-
-    section.viewpoint-tab {
-      color: var(--color-text-primary);
-      margin: var(--space-3);
-      padding: var(--space-2);
-      font-weight: var(--font-normal);
-      border: 1px solid var(--color-border-primary);
-      border-radius: var(--radius-md);
-      background-color: var(--color-bg-tertiary);
-      transition: var(--transition-normal);
-    }
-
-    section.viewpoint-tab .ps-2.pt-2 h1 {
-      width: 100% !important;
-      display: block;
-      clear: right !important;
-      font-size: 1.1em;
-      color: var(--color-accent);
-      border-bottom: 1px solid var(--color-border-primary);
-    }
-
-    section.viewpoint-tab h1::before {
-      position: relative;
-      font-size: 1.15em;
-      margin-right: var(--space-2);
-      font-family: bootstrap-icons;
-      content: "\F6D2";
-    }
-
-    .viewpoint {
+    &i::before {
+      transform: translate(0, 1px);
     }
   }
 
-  .view-editor-root {
-    --inner-page-padding: var(--space-4);
-    display: flex;
-    flex-flow: column;
+  .dock-layout {
+    flex-grow: 1;
 
-    .btn-back {
-      font-size: 0.9em;
-      margin: auto;
-
-      &i::before {
-        transform: translate(0, 1px);
-      }
+    .dock-nav-wrap {
+      margin-left: $spacing-xs;
     }
 
-    .dock-layout {
-      flex-grow: 1;
-
-      .dock-nav-wrap {
-        margin-left: var(--space-1);
-      }
-
-      .dock-panel-max-btn {
-        display: none;
-      }
+    .dock-panel-max-btn {
+      display: none;
     }
+  }
 
-    .page-root {
-      padding: var(--inner-page-padding);
-      padding-top: 0;
-    }
+  .page-root {
+    padding: var(--inner-page-padding);
+    padding-top: 0;
+  }
 
-    .view-editor-header {
-      margin-top: var(--space-1);
-      margin-left: var(--inner-page-padding);
-      margin-right: var(--inner-page-padding);
-      display: inline-flex;
-
-      .path-list {
-        display: inline-flex;
-        margin: auto;
-        margin-left: var(--space-2);
-        padding: 0px 0px var(--space-1) 0px;
-        margin-bottom: var(--space-3) !important;
-
-        .path-separator {
-          height: min-content;
-          margin: auto;
-          margin-left: 0.125em;
-          margin-right: 0.125em;
-        }
-
-        .path-element {
-          cursor: pointer;
-          margin: auto;
-
-          &:hover {
-            text-decoration: underline;
-          }
-        }
-      }
-    }
-
-    .editor-label {
-      margin: auto;
-      margin-left: var(--space-2);
-      margin-top: var(--space-3);
-      margin-bottom: var(--space-3);
-
-      & input {
-      }
-    }
-
-    .chevron-holder {
-      margin-top: var(--space-3);
-    }
-
-    .view-editor-header {
-      margin-top: var(--space-6) !important;
-      margin-bottom: var(--space-2);
-    }
+  .view-editor-header {
+    margin-top: $spacing-xs;
+    margin-left: var(--inner-page-padding);
+    margin-right: var(--inner-page-padding);
+    display: inline-flex;
+    margin-top: 24px !important;
+    margin-bottom: $spacing-sm;
 
     .path-list {
+      display: inline-flex;
+      margin: auto;
+      margin-left: $spacing-sm;
+      padding: 0px 0px 4px 0px;
+      margin-bottom: $spacing-md !important;
       float: right !important;
+
+      .path-separator {
+        height: min-content;
+        margin: auto 2px;
+        color: $color-text-tertiary;
+      }
+
+      .path-element {
+        cursor: pointer;
+        margin: auto;
+        color: $color-text-secondary;
+        font-size: $font-size-base;
+
+        &:hover {
+          text-decoration: underline;
+          color: $color-text-primary;
+        }
+      }
     }
+  }
+
+  .editor-label {
+    margin: auto;
+    margin-left: $spacing-sm;
+    margin-top: $spacing-md;
+    margin-bottom: $spacing-md;
+  }
+
+  .chevron-holder {
+    margin-top: $spacing-md;
+  }
+}
+
+// ============================================
+// SCROLLBAR STYLING
+// ============================================
+.viewpoint-tab::-webkit-scrollbar,
+.view-editor-root::-webkit-scrollbar {
+  width: 6px;
+}
+
+.viewpoint-tab::-webkit-scrollbar-track,
+.view-editor-root::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.viewpoint-tab::-webkit-scrollbar-thumb,
+.view-editor-root::-webkit-scrollbar-thumb {
+  background: $color-border;
+  border-radius: 3px;
+
+  &:hover {
+    background: $color-border-hover;
+  }
+}
+
+// ============================================
+// DARK MODE SUPPORT
+// ============================================
+@media (prefers-color-scheme: dark) {
+  .view-editor-root {
+    background: #0f172a;
+  }
+
+  section.viewpoint-tab {
+    background-color: #1e293b;
+    border-color: #334155;
+    color: #f1f5f9;
+
+    h1 {
+      color: #f1f5f9;
+      border-bottom-color: #334155;
+
+      &::before {
+        color: #94a3b8;
+      }
+    }
+  }
+
+  .viewpoint-tab {
+    .inline-row {
+      &:hover {
+        background-color: #334155; // slate-700 - clear hover in dark mode
+        border-color: #475569;
+      }
+    }
+
+    // Divider in dark mode
+    .entry-root.DViewPoint:not(:last-child)::after {
+      background: #334155; // slate-700
+    }
+
+    .entry-root.DViewPoint > .inline-row {
+      background-color: rgba(30, 41, 59, 0.5); // slate-800 subtle
+
+      &:hover {
+        background-color: #334155; // slate-700
+      }
+    }
+
+    li.entry-root.DViewPoint.selected > .inline-row {
+      background: linear-gradient(135deg, rgba(71, 85, 105, 0.2) 0%, rgba(71, 85, 105, 0.1) 100%);
+      border-color: rgba(71, 85, 105, 0.4);
+
+      &:hover {
+        background: linear-gradient(135deg, rgba(71, 85, 105, 0.25) 0%, rgba(71, 85, 105, 0.15) 100%);
+      }
+    }
+
+    .mid-stuff,
+    .node-label {
+      color: #f1f5f9;
+    }
+
+    .left-stuff {
+      .bi {
+        color: #64748b;
+
+        &:hover {
+          color: #94a3b8;
+          background-color: #334155;
+        }
+      }
+
+      .bi-caret-right-fill {
+        color: #334155;
+      }
+
+      .expansion-line {
+        background-color: #334155;
+      }
+    }
+
+    // Dark mode icon backgrounds (slightly lighter versions)
+    .tree-Any {
+      background-color: #64748b; // slate-500
+      color: white;
+    }
+
+    .icon.type.DViewPoint {
+      background-color: #64748b; // slate-500
+      color: #f8fafc;
+    }
+
+    .tree-Model,
+    .tree-DModel {
+      background-color: #a78bfa; // violet-400
+      color: white;
+    }
+
+    .tree-Package,
+    .tree-DPackage {
+      background-color: #60a5fa; // blue-400
+      color: white;
+    }
+
+    .tree-Class,
+    .tree-DClass {
+      background-color: #f87171; // red-400
+      color: white;
+    }
+
+    .tree-Attribute,
+    .tree-DAttribute {
+      background-color: #fb923c; // orange-400
+      color: white;
+    }
+
+    .tree-Reference,
+    .tree-DReference {
+      background-color: #22d3ee; // cyan-400
+      color: white;
+    }
+
+    .tree-Operation,
+    .tree-DOperation {
+      background-color: #34d399; // emerald-400
+      color: white;
+    }
+
+    .tree-Enumerator,
+    .tree-DEnumerator {
+      background-color: #fbbf24; // amber-400
+      color: #1e293b;
+    }
+
+    .tree-EnumLiteral,
+    .tree-DEnumLiteral {
+      background-color: #f59e0b; // amber-500
+      color: white;
+    }
+
+    .tree-Object,
+    .tree-DObject {
+      background-color: #9ca3af; // gray-400
+      color: white;
+    }
+
+    .tree-Value,
+    .tree-DValue {
+      background-color: #a8a29e; // stone-400
+      color: white;
+    }
+
+    .tree-Singleton {
+      background-color: #64748b; // slate-500
+      color: white;
+    }
+
+    .tree-Edge,
+    .tree-DEdge {
+      background-color: #94a3b8; // slate-400
+      color: white;
+    }
+
+    .tree-EdgePoint,
+    .tree-DEdgePoint {
+      background-color: #cbd5e1; // slate-300
+      color: #1e293b;
+    }
+
+    .tree-EdgeAssociation {
+      background-color: #c084fc; // purple-400
+      color: white;
+    }
+
+    .tree-EdgeDependency {
+      background-color: #f472b6; // pink-400
+      color: white;
+    }
+
+    .tree-EdgeGeneralization {
+      background-color: #2dd4bf; // teal-400
+      color: white;
+    }
+
+    .tree-EdgeAggregation {
+      background-color: #38bdf8; // sky-400
+      color: white;
+    }
+
+    .tree-EdgeComposition {
+      background-color: #3b82f6; // blue-500
+      color: white;
+    }
+
+    .tree-Vertex,
+    .tree-DVertex,
+    .tree-GraphVertex,
+    .tree-DGraphVertex {
+      background-color: #a78bfa; // violet-400
+      color: white;
+    }
+
+    .tree-Graph,
+    .tree-DGraph {
+      background-color: #818cf8; // indigo-400
+      color: white;
+    }
+
+    .tree-Field,
+    .tree-DField {
+      background-color: #d1d5db; // gray-300
+      color: #1e293b;
+    }
+
+    // Dark mode badges
+    .ocl-icon::before {
+      background-color: rgba(220, 38, 38, 0.2);
+      color: #f87171 !important;
+    }
+
+    .js-icon::before {
+      background-color: rgba(217, 119, 6, 0.2);
+      color: #fbbf24 !important;
+    }
+
+    .ex-icon::before {
+      background-color: rgba(71, 85, 105, 0.2);
+      color: #94a3b8 !important;
+    }
+
+    .hover-stuff {
+      .bx,
+      .jj {
+        color: #94a3b8;
+
+        &:hover {
+          background-color: #334155;
+          color: #f1f5f9;
+        }
+      }
+
+      .jj-delete:hover {
+        color: #f87171;
+        background-color: rgba(220, 38, 38, 0.15);
+      }
+    }
+
+    .right-content .priority {
+      border-color: #475569;
+      color: #94a3b8;
+    }
+  }
+
+  .view-editor-root .single-view-content {
+    background-color: #0f172a;
+  }
+
+  // Dark mode scrollbar
+  .viewpoint-tab::-webkit-scrollbar-thumb,
+  .view-editor-root::-webkit-scrollbar-thumb {
+    background: #334155;
+
+    &:hover {
+      background: #475569;
+    }
+  }
+}
+
+// ============================================
+// VIEW EDITOR FULLSIZE CONTENT
+// ============================================
+.view-editor-fullsize-content {
+  position: relative;
+  width: 100%;
+  text-align: left;
+}
+
+// ============================================
+// ENSURE LEFT ALIGNMENT THROUGHOUT
+// ============================================
+.viewpoint-tab,
+.view-editor-root,
+.view-editor-fullsize-content {
+  // Reset any right alignment
+  text-align: left !important;
+
+  * {
+    text-align: inherit;
   }
 }

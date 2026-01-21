@@ -1033,30 +1033,80 @@ $transition-menu: 150ms ease;
 }
 
 // ============================================
-// DEBUG BADGE
+// DEBUG BADGE - Matches ADV badge with Amber color
 // ============================================
 
 .debug-badge {
-  background: #fef2f2;
-  color: #dc2626;
-  border: 1px solid #fecaca;
-  padding: 4px 10px;
-  border-radius: 4px;
-  font-family: 'Inter Variable', -apple-system, sans-serif;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  // Typography - Same as ADV badge
+  font-family: 'Inter Variable', -apple-system, BlinkMacSystemFont, sans-serif;
   font-size: 11px;
   font-weight: 600;
-  letter-spacing: 0.5px;
-  margin-right: 12px;
-  animation: debugPulse 2s infinite;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+
+  // Colors - Amber
+  background-color: #f59e0b; // amber-500
+  color: #ffffff;
+
+  // Sizing - Same as ADV badge
+  padding: 6px 14px;
+  border-radius: 6px;
+  margin-right: 8px;
+
+  // Behavior
+  cursor: default;
+  user-select: none;
+  transition: all 150ms ease;
 }
 
-@keyframes debugPulse {
-  0%, 100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.7;
-  }
+// Dark mode support
+[data-theme="dark"] .debug-badge,
+.dark .debug-badge {
+  background-color: #fbbf24; // amber-400
+  color: #111418; // Dark text for contrast
+}
+
+// ============================================
+// ADVANCED MODE BADGE - Minimal Design
+// Clean, prominent badge without icon
+// ============================================
+
+.advanced-mode-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  // Typography - Clean and professional
+  font-family: 'Inter Variable', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+
+  // Colors - Slate
+  background-color: #475569; // slate-600
+  color: #ffffff;
+
+  // Sizing - Increased for better visibility
+  padding: 6px 14px;
+  border-radius: 6px;
+  margin-right: 12px;
+
+  // Behavior
+  cursor: default;
+  user-select: none;
+  transition: all 150ms ease;
+}
+
+// Dark mode support
+[data-theme="dark"] .advanced-mode-badge,
+.dark .advanced-mode-badge {
+  background-color: #64748b; // slate-500
+  color: #f8fafc;
 }
 
 // ============================================
@@ -1097,4 +1147,112 @@ $transition-menu: 150ms ease;
   &:active {
     transform: translateY(0);
   }
+}
+
+// ============================================
+// LAYOUT CONTROLS - Split/Sidebar/Canvas-Only Toggle
+// ============================================
+
+.navbar__layout-controls {
+  display: flex;
+  align-items: center;
+  gap: 2px; // Compact spacing
+  margin-right: 12px;
+  padding: 3px;
+  background: rgba(71, 85, 105, 0.06); // Subtle group background
+  border-radius: 8px;
+}
+
+.layout-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  color: #64748b; // slate-500
+  cursor: pointer;
+  transition: all 150ms ease;
+
+  i {
+    font-size: 15px;
+  }
+
+  &:hover {
+    background: rgba(71, 85, 105, 0.1);
+    color: #475569; // slate-600
+  }
+
+  // Active state (selected mode)
+  &--active {
+    background: #475569; // slate-600
+    color: #ffffff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+
+    &:hover {
+      background: #334155; // slate-700
+      color: #ffffff;
+    }
+  }
+}
+
+/* Nel file navbar.scss o style.scss */
+
+
+.layout-btn--active {
+    background-color: #475569; /* slate-600 - sfondo scuro */
+    
+    i {
+        color: #ffffff; /* icona bianca quando attivo */
+    }
+}
+
+.layout-btn:not(.layout-btn--active) {
+    i {
+        color: #475569; /* icona scura quando non attivo */
+    }
+}
+
+// Dark mode support
+[data-theme="dark"] .navbar__layout-controls,
+.dark .navbar__layout-controls {
+  background: rgba(148, 163, 184, 0.1); // slate-400 with opacity
+}
+
+[data-theme="dark"] .layout-btn,
+.dark .layout-btn {
+  color: #94a3b8; // slate-400
+
+  &:hover {
+    background: rgba(148, 163, 184, 0.15);
+    color: #cbd5e1; // slate-300
+  }
+
+  &--active {
+    background: #64748b; // slate-500
+    color: #f8fafc;
+
+    &:hover {
+      background: #475569; // slate-600
+    }
+  }
+}
+
+// ============================================
+// NAVBAR DIVIDER
+// ============================================
+
+.navbar__divider {
+  width: 1px;
+  height: 24px;
+  background: #e2e8f0; // slate-200
+  margin: 0 8px;
+  flex-shrink: 0;
+}
+
+[data-theme="dark"] .navbar__divider,
+.dark .navbar__divider {
+  background: #334155; // slate-700
 }

@@ -71,118 +71,146 @@
 //     float: left;
 // }
 
-.error-root.ui-draggable.hoverable{
+// Error Root - Container for inline errors on canvas
+.error-root.ui-draggable.hoverable {
     overflow: visible;
     text-align: center;
-    border-color: crimson;
+    border-color: #f59e0b; // Orange warning, not red panic
     margin: 10px;
     pointer-events: all;
 }
 
+// Error Notification - Redesigned for better UX
+// User-friendly with orange warning (not red panic)
 .error-notification {
-    border-radius: var(--radius);
-    max-width: 700px;
-    &.content{ min-width: 400px; }
+    font-family: 'Inter Variable', -apple-system, BlinkMacSystemFont, sans-serif;
+    border-radius: 12px;
+    max-width: 500px;
+    &.content { min-width: 360px; }
     margin: 12px auto;
     margin-top: 0;
-    background-color: whitesmoke; // crimson;
-    color:crimson;
-    outline: 4px solid crimson;
+    background-color: #ffffff;
+    color: #1e293b;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+    padding: 24px;
+    text-align: center;
 
-    padding: 20px;
-    
-
-    & h1 {
-        font-size: 2em;
-    }
-    & h2 {
-        font-size: 1.4em;
-        padding: 10px;
-    }
-
-    & .error-type {
-        padding-bottom: 10px;
-        font-weight: var(--font-light);
-
-        & b {
-            font-size: 1.3em;
-            padding-bottom: 20px;
-        }
-    }
-
-    & .error-details {
-        font-family: 'JetBrains Mono', Lekton, monospace;
-        font-size: 1.3em;
-        padding: 10px;
-        text-align: left;
-        // border: 1px dotted crimson;
-        border-radius: var(--radius);
-        background-color: var(--neutral);
-        color: white;
-        a {
-            color: lightgray;
-        }
-    
-        & div    {
-            font-family: 'JetBrains Mono', Lekton, monospace;
-
-
-        
-            & b {
-                color: crimson!important;
-            }
-
-            & div div:first-of-type {
-                padding-top: 20px;
-               
-            }
-            & div div {
-                color: white;
-            }
-        }
-    }
-
-
+    // Warning icon - Orange (not red)
     &::before {
-        // position: absolute; top: 0; left: -10px;
-        display: inline-block;
-        margin: auto 20px;
-        font-size: 3em;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 56px;
+        height: 56px;
+        margin: 0 auto 16px;
+        font-size: 28px;
         font-family: bootstrap-icons;
-        content: "\F333";
+        content: "\F33B"; // bi-exclamation-triangle
+        background: #fff7ed;
+        color: #ea580c;
+        border-radius: 50%;
     }
-    h1{ display: inline-block; }
 
+    // Title - Friendly message
+    h1 {
+        display: block;
+        font-size: 18px;
+        font-weight: 600;
+        color: #1e293b;
+        margin: 0 0 8px;
+        line-height: 1.3;
+    }
+
+    // Subtitle - View info
+    h2 {
+        font-size: 14px;
+        font-weight: 400;
+        color: #64748b;
+        padding: 0;
+        margin: 0 0 16px;
+        line-height: 1.5;
+    }
+
+    // Error type badge
+    .error-type {
+        padding: 8px 0 12px;
+        font-weight: 500;
+        text-align: left;
+
+        b {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+            background: #fef2f2;
+            color: #dc2626;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.02em;
+        }
+    }
+
+    // Technical details - Dark box
+    .error-details {
+        font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
+        font-size: 12px;
+        padding: 12px;
+        text-align: left;
+        border-radius: 8px;
+        background-color: #1e293b;
+        color: #e2e8f0;
+        max-height: 150px;
+        overflow-y: auto;
+        white-space: pre-wrap;
+        word-break: break-word;
+
+        a {
+            color: #93c5fd;
+            text-decoration: underline;
+        }
+
+        div {
+            font-family: inherit;
+
+            b {
+                color: #fbbf24 !important;
+            }
+
+            div div:first-of-type {
+                padding-top: 12px;
+            }
+
+            div div {
+                color: #e2e8f0;
+            }
+        }
+    }
 }
 
 
 
+// Notification icon - Small warning indicator
 .notification-icon {
     position: absolute;
-    display:block;
+    display: block;
     top: 2px;
     right: 5px;
     cursor: pointer;
-}
 
-.notification-icon::before {
-    position: relative;
-    font-family: 'bootstrap-icons';
-    color: red;
-    text-align: center;
-    padding-left: 5px;
-    display: block;
+    &::before {
+        position: relative;
+        font-family: 'bootstrap-icons';
+        color: #f59e0b; // Orange warning
+        text-align: center;
+        padding-left: 5px;
+        display: block;
+        content: '\F33B'; // bi-exclamation-triangle
+    }
 
-    content: '\F332';
-} 
-
-.notification-icon.opened::before {
-    position: relative;
-    font-family: 'bootstrap-icons';
-    color: var(--accent);
-    text-align: center;
-    padding-left: 5px;
-    display: block;
-
-    content: '\F332';
+    &.opened::before {
+        color: #64748b; // Muted when opened
+    }
 } 

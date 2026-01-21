@@ -26,6 +26,7 @@ import Storage from "../data/storage";
 import Loader from '../components/loader/Loader';
 import {Navbar} from "./components";
 import {CSS_Units} from "../view/viewElement/view";
+import { ProjectLoadingScreen } from '../components/LoadingScreen';
 
 function ProjectComponent(props: AllProps): JSX.Element {
     const {user} = props;
@@ -58,19 +59,11 @@ function ProjectComponent(props: AllProps): JSX.Element {
     const viewsDeDuplicator: Dictionary<Pointer<DViewElement>, LViewElement> = {};
     for (let v of allViews) viewsDeDuplicator[v.id] = v;
     if (!user?.project) {
-        return (
-            <div className={'w-100 h-100 d-flex'}>
-                <div className={'m-auto d-flex p-5'} style={{flexFlow: 'column', cursor:'pointer'}}onClick={(e) => R.navigate('/allProjects')}>
-                    <h4 className={'mx-auto'}>Project loading...</h4>
-                    <div className={'mx-auto'}>if it takes too long try refreshing the page, or click to go back</div>
-                </div>
-            </div>
-        );
+        return <ProjectLoadingScreen />;
     }
 
     return (<>
         <Dashboard active={'Project'} version={props.version} project={user.project} />
-        {/*<Try><Dock /></Try>*/}
         {user.project.type === 'collaborative' && <CollaborativeAttacher project={user.project?.id}/>}
     </>);
 

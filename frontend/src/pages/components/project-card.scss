@@ -145,16 +145,15 @@ $transition: 150ms ease;
     display: flex;
     align-items: center;
     justify-content: center;
-    background: #f8fafc; // Match card background - Issue 3 fix
-    border: 1px solid #e5e7eb;
+    background: transparent;
+    border: none;
     border-radius: 6px;
     cursor: pointer;
     color: $color-text-secondary;
     transition: all $transition;
 
     &:hover {
-      background: #e2e8f0;
-      border-color: #d1d5db;
+      background: #f1f5f9;
       color: $color-text-primary;
     }
 
@@ -164,16 +163,14 @@ $transition: 150ms ease;
 
     &.is-favorite {
       color: #facc15 !important; // Yellow star when active
-      background: #fffbeb; // Amber-50 background when favorited
-      border-color: #fef3c7;
+      background: transparent;
 
       i {
         color: #facc15 !important;
       }
 
       &:hover {
-        background: #fef9c3;
-        border-color: #fde68a;
+        background: #fffbeb;
       }
     }
   }
@@ -336,10 +333,10 @@ $transition: 150ms ease;
   }
 }
 
-// Menu button styling inside card - Issue 3 fix: visible background
+// Menu button styling inside card - Clean, borderless
 .project-card__actions .menu-button {
-  background: #f8fafc !important; // Match card background
-  border: 1px solid #e5e7eb !important;
+  background: transparent !important;
+  border: none !important;
   box-shadow: none !important;
   width: 28px;
   height: 28px;
@@ -351,8 +348,7 @@ $transition: 150ms ease;
   position: relative;
 
   &:hover {
-    background: #e2e8f0 !important;
-    border-color: #d1d5db !important;
+    background: #f1f5f9 !important;
   }
 
   i {
@@ -382,37 +378,41 @@ $transition: 150ms ease;
 
 // ============================================
 // TAG POPOVER
+// Position to the LEFT of the menu, higher z-index
 // ============================================
 .tag-popover {
   position: absolute;
-  top: 100%;
-  right: 16px;
-  margin-top: 4px;
+  top: 40px;
+  right: 60px; // Position to the LEFT of the menu button
   background: #ffffff;
-  border-radius: 8px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-  border: 1px solid #e5e7eb;
-  padding: 8px;
-  z-index: 1001;
-  min-width: 200px;
+  border-radius: 10px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18), 0 0 0 1px rgba(0, 0, 0, 0.05);
+  border: 1px solid #e2e8f0;
+  padding: 12px;
+  z-index: 10001; // Higher than menu dropdown (9999)
+  min-width: 220px;
+  animation: tagPopoverIn 0.15s ease-out;
 
   &__input-row {
     display: flex;
     gap: 8px;
+    align-items: center;
   }
 
   input {
-    border: 1px solid #e2e8f0;
-    border-radius: 6px;
-    padding: 8px 12px;
+    border: 2px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 10px 14px;
     font-family: 'Inter Variable', -apple-system, sans-serif;
-    font-size: 13px;
-    width: 160px;
+    font-size: 14px;
+    width: 100%;
     outline: none;
     flex: 1;
+    transition: border-color 150ms ease, box-shadow 150ms ease;
 
     &:focus {
-      border-color: #94a3b8;
+      border-color: #475569;
+      box-shadow: 0 0 0 3px rgba(71, 85, 105, 0.1);
     }
 
     &::placeholder {
@@ -421,17 +421,25 @@ $transition: 150ms ease;
   }
 
   > button, &__input-row > button {
-    background: none;
+    background: #f1f5f9;
     border: none;
-    color: #94a3b8;
-    font-size: 18px;
+    color: #64748b;
+    font-size: 14px;
     cursor: pointer;
-    padding: 0 4px;
+    padding: 8px;
     line-height: 1;
     flex-shrink: 0;
+    border-radius: 6px;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 150ms ease;
 
     &:hover {
-      color: #64748b;
+      background: #e2e8f0;
+      color: #334155;
     }
   }
 
@@ -461,6 +469,17 @@ $transition: 150ms ease;
       background: #f1f5f9;
       color: #1e293b;
     }
+  }
+}
+
+@keyframes tagPopoverIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 
@@ -590,8 +609,8 @@ $transition: 150ms ease;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #f8fafc; // Issue 3 fix: visible background
-  border: 1px solid #e5e7eb;
+  background: transparent;
+  border: none;
   border-radius: 6px;
   font-size: 14px;
   color: $color-text-secondary;
@@ -599,31 +618,28 @@ $transition: 150ms ease;
   transition: all $transition;
 
   &:hover {
-    background: #e2e8f0;
-    border-color: #d1d5db;
+    background: #f1f5f9;
     color: $color-text-primary;
   }
 
   &.is-favorite {
     color: #facc15 !important; // Yellow star when active
-    background: #fffbeb;
-    border-color: #fef3c7;
+    background: transparent;
 
     i {
       color: #facc15 !important;
     }
 
     &:hover {
-      background: #fef9c3;
-      border-color: #fde68a;
+      background: #fffbeb;
     }
   }
 }
 
 .compact-menu-btn {
   position: relative;
-  background: #f8fafc !important; // Issue 3 fix: visible background
-  border: 1px solid #e5e7eb !important;
+  background: transparent !important;
+  border: none !important;
   box-shadow: none !important;
   width: 28px;
   height: 28px;
@@ -634,8 +650,7 @@ $transition: 150ms ease;
   margin: 0;
 
   &:hover {
-    background: #e2e8f0 !important;
-    border-color: #d1d5db !important;
+    background: #f1f5f9 !important;
   }
 
   i {
@@ -907,38 +922,35 @@ $transition: 150ms ease;
     height: 100%;
   }
 
-  // Favorite button - Issue 3 fix: visible background
+  // Favorite button - Clean, borderless
   &__favorite {
     width: 28px;
     height: 28px;
     display: flex;
     align-items: center;
     justify-content: center;
-    background: #f8fafc; // Match row background
-    border: 1px solid #e5e7eb;
+    background: transparent;
+    border: none;
     border-radius: 6px;
     color: #94a3b8;
     cursor: pointer;
     transition: all 150ms ease;
 
     &:hover {
-      background: #e2e8f0;
-      border-color: #d1d5db;
+      background: #f1f5f9;
       color: #64748b;
     }
 
     &.active {
       color: #facc15 !important;
-      background: #fffbeb; // Amber-50 background when favorited
-      border-color: #fef3c7;
+      background: transparent;
 
       i {
         color: #facc15 !important;
       }
 
       &:hover {
-        background: #fef9c3;
-        border-color: #fde68a;
+        background: #fffbeb;
       }
     }
 
@@ -947,11 +959,11 @@ $transition: 150ms ease;
     }
   }
 
-  // Menu button - Issue 3 fix: visible background
+  // Menu button - Clean, borderless
   &__menu {
     position: relative;
-    background: #f8fafc !important; // Match row background
-    border: 1px solid #e5e7eb !important;
+    background: transparent !important;
+    border: none !important;
     box-shadow: none !important;
     width: 28px;
     height: 28px;
@@ -961,8 +973,7 @@ $transition: 150ms ease;
     border-radius: 6px;
 
     &:hover {
-      background: #e2e8f0 !important;
-      border-color: #d1d5db !important;
+      background: #f1f5f9 !important;
     }
 
     i {
@@ -990,10 +1001,11 @@ $transition: 150ms ease;
     }
   }
 
-  // Tag popover positioning
+  // Tag popover positioning - LEFT of menu, higher z-index
   .tag-popover {
-    top: 100%;
-    right: 0;
+    top: -8px;
+    right: 50px; // Position to the LEFT of the menu
+    z-index: 10001; // Higher than menu dropdown (9999)
   }
 
   // Responsive adjustments

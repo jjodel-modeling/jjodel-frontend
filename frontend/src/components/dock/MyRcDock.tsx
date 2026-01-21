@@ -432,14 +432,14 @@ export class PinnableDock extends DockLayout{
             "children": [
                 {
                     "id": "+24",
-                    "size": 200,
+                    "size": 1, // Left panel - flex behavior
                     "tabs": [ {"id": "DockComponent_rightbar_1"} ] as any,
                     "group": "models",
                     "activeId": "DockComponent_rightbar_1"
                 },
                 {
                     "id": "+25",
-                    "size": 200,
+                    "size": 500, // Right panel - 500px initial width (35% of 1440px)
                     "tabs": [
                         {"id": "DockComponent_rightbar_2"},
                         {"id": "DockComponent_rightbar_4"},

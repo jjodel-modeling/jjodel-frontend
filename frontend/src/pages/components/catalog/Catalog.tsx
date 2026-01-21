@@ -4,6 +4,8 @@ import {type Dictionary, LProject, DProject, U} from "../../../joiner";
 import { Project } from "../Project";
 import { EmptyDashboard } from "../../../components/EmptyDashboard/EmptyDashboard";
 import { DevModeLabel } from "../../../components/DevModeLabel/DevModeLabel";
+import { ConfirmDialog } from "../../../components/ConfirmDialog/ConfirmDialog";
+import { AddTagDialog } from "../../../components/AddTagDialog/AddTagDialog";
 import { ProjectsApi } from "../../../api/persistance";
 import "./catalog.scss"
 import _ from "lodash";
@@ -173,6 +175,12 @@ const Catalog = (props: ChildrenType) => {
     const [selectedProjects, setSelectedProjects] = useState<Set<string>>(new Set());
     const [lastSelectedId, setLastSelectedId] = useState<string | null>(null);
 
+    // Delete confirmation modal state
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+    // Add tag dialog state
+    const [showAddTagDialog, setShowAddTagDialog] = useState(false);
+
     // Track window width for responsive slider grid
     const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1024);
 
@@ -235,13 +243,18 @@ const Catalog = (props: ChildrenType) => {
     }, []);
 
     // Bulk action handlers
-    const handleBulkDelete = useCallback(async () => {
+    // Show delete confirmation modal
+    const handleBulkDeleteClick = useCallback(() => {
+        if (selectedProjects.size === 0) return;
+        setShowDeleteConfirm(true);
+    }, [selectedProjects.size]);
+
+    // Perform actual deletion after modal confirmation
+    const handleBulkDeleteConfirm = useCallback(async () => {
         const count = selectedProjects.size;
         if (count === 0) return;
 
-        if (!window.confirm(`Are you sure you want to delete ${count} project${count > 1 ? 's' : ''}? This action cannot be undone.`)) {
-            return;
-        }
+        setShowDeleteConfirm(false);
 
         try {
             const projectsToDelete = props.projects?.filter((p: LProject) => selectedProjects.has(p.id)) || [];
@@ -273,24 +286,30 @@ const Catalog = (props: ChildrenType) => {
         }
     }, [selectedProjects, props.projects, handleClearSelection]);
 
-    const handleBulkAddTag = useCallback(async () => {
+    // Show add tag dialog
+    const handleBulkAddTagClick = useCallback(() => {
+        if (selectedProjects.size === 0) return;
+        setShowAddTagDialog(true);
+    }, [selectedProjects.size]);
+
+    // Perform actual tag addition after dialog confirmation
+    const handleBulkAddTagConfirm = useCallback(async (tagName: string) => {
         const count = selectedProjects.size;
         if (count === 0) return;
 
-        const tag = window.prompt('Enter tag name to add to selected projects:');
-        if (!tag || !tag.trim()) return;
+        setShowAddTagDialog(false);
 
         try {
             const projectsToTag = props.projects?.filter((p: LProject) => selectedProjects.has(p.id)) || [];
             for (const project of projectsToTag) {
                 const currentTags = project.tags || [];
-                if (!currentTags.includes(tag.trim().toLowerCase())) {
-                    const updatedTags = [...currentTags, tag.trim().toLowerCase()];
+                if (!currentTags.includes(tagName)) {
+                    const updatedTags = [...currentTags, tagName];
                     await ProjectsApi.updateTags(project.__raw as DProject, updatedTags);
                 }
             }
             handleClearSelection();
-            U.alert('i', 'Success', `Tag "${tag.trim()}" added to ${count} project${count > 1 ? 's' : ''}`);
+            U.alert('i', 'Success', `Tag "${tagName}" added to ${count} project${count > 1 ? 's' : ''}`);
         } catch (error) {
             console.error('Bulk add tag error:', error);
             U.alert('e', 'Error', 'Failed to add tag to some projects');
@@ -527,7 +546,7 @@ const Catalog = (props: ChildrenType) => {
                         <div className="toolbar-right">
                             <button
                                 className="toolbar-btn toolbar-btn--delete"
-                                onClick={handleBulkDelete}
+                                onClick={handleBulkDeleteClick}
                                 title={`Delete ${selectedProjects.size} project${selectedProjects.size > 1 ? 's' : ''}`}
                             >
                                 <i className="bi bi-trash" />
@@ -545,7 +564,7 @@ const Catalog = (props: ChildrenType) => {
 
                             <button
                                 className="toolbar-btn"
-                                onClick={handleBulkAddTag}
+                                onClick={handleBulkAddTagClick}
                                 title={`Add tag to ${selectedProjects.size} project${selectedProjects.size > 1 ? 's' : ''}`}
                             >
                                 <i className="bi bi-tag" />
@@ -695,6 +714,27 @@ const Catalog = (props: ChildrenType) => {
                     </div>
                 </>
             )}
+
+            {/* Delete Confirmation Modal */}
+            <ConfirmDialog
+                isOpen={showDeleteConfirm}
+                title="Delete Projects"
+                message={`Are you sure you want to delete ${selectedProjects.size} project${selectedProjects.size > 1 ? 's' : ''}? This action cannot be undone.`}
+                confirmText="Delete"
+                cancelText="Cancel"
+                variant="danger"
+                onConfirm={handleBulkDeleteConfirm}
+                onCancel={() => setShowDeleteConfirm(false)}
+            />
+
+            {/* Add Tag Dialog */}
+            <AddTagDialog
+                isOpen={showAddTagDialog}
+                projectCount={selectedProjects.size}
+                existingTags={allTags}
+                onConfirm={handleBulkAddTagConfirm}
+                onCancel={() => setShowAddTagDialog(false)}
+            />
         </>
     );
 }

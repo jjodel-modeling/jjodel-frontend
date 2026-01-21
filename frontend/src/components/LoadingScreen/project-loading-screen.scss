@@ -1,0 +1,142 @@
+// Project Loading Screen
+// Modern, professional loading screen with animated spinner
+// =========================================================
+
+.project-loading-screen {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  width: 100%;
+  background: #f8fafc; // slate-50
+
+  .loading-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    max-width: 400px;
+    padding: 32px;
+  }
+
+  // Animated Spinner
+  .loading-spinner {
+    width: 64px;
+    height: 64px;
+    margin-bottom: 24px;
+
+    .spinner-svg {
+      animation: rotate 2s linear infinite;
+      width: 100%;
+      height: 100%;
+    }
+
+    .spinner-circle {
+      stroke: #475569; // slate-600
+      stroke-linecap: round;
+      animation: dash 1.5s ease-in-out infinite;
+    }
+  }
+
+  @keyframes rotate {
+    100% {
+      transform: rotate(360deg);
+    }
+  }
+
+  @keyframes dash {
+    0% {
+      stroke-dasharray: 1, 150;
+      stroke-dashoffset: 0;
+    }
+    50% {
+      stroke-dasharray: 90, 150;
+      stroke-dashoffset: -35;
+    }
+    100% {
+      stroke-dasharray: 90, 150;
+      stroke-dashoffset: -124;
+    }
+  }
+
+  // Loading Text
+  .loading-title {
+    font-family: 'Inter Variable', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: 18px;
+    font-weight: 600;
+    color: #1e293b; // slate-900
+    margin: 0 0 8px;
+    line-height: 1.3;
+  }
+
+  .loading-subtitle {
+    font-family: 'Inter Variable', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: 14px;
+    font-weight: 400;
+    color: #64748b; // slate-500
+    margin: 0 0 24px;
+    line-height: 1.5;
+  }
+
+  // Back Button - Minimal, positioned top-left
+  .btn-back {
+    position: absolute;
+    top: 24px;
+    left: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    background: transparent;
+    border: none;
+    border-radius: 8px;
+    color: #64748b; // slate-500
+    cursor: pointer;
+    transition: all 200ms ease;
+
+    &:hover {
+      background: rgba(6, 182, 212, 0.1); // cyan-500 with low opacity
+      color: #06b6d4; // cyan-500
+    }
+
+    &:focus-visible {
+      outline: 2px solid #06b6d4;
+      outline-offset: 2px;
+    }
+
+    i {
+      font-size: 20px;
+    }
+  }
+}
+
+// Dark Mode Support
+@media (prefers-color-scheme: dark) {
+  .project-loading-screen {
+    background: #0f172a; // slate-900
+
+    .loading-spinner .spinner-circle {
+      stroke: #94a3b8; // slate-400
+    }
+
+    .loading-title {
+      color: #f1f5f9; // slate-100
+    }
+
+    .loading-subtitle {
+      color: #94a3b8; // slate-400
+    }
+
+    .btn-back {
+      color: #64748b; // slate-500
+
+      &:hover {
+        background: rgba(6, 182, 212, 0.15); // cyan-500 with low opacity
+        color: #22d3ee; // cyan-400 (lighter for dark mode)
+      }
+    }
+  }
+}

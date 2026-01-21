@@ -1,21 +1,30 @@
 import {DState, SetRootFieldAction, U, windoww} from '../../joiner';
 import {FakeStateProps} from '../../joiner/types';
-import React, {Dispatch, ReactElement, ReactNode} from 'react';
+import React, {Dispatch, ReactElement, ReactNode, useEffect, useState} from 'react';
 import {connect} from 'react-redux';
 import './style.scss';
 
 /**
- * Alert Component - Minimal Redesign
- * Per dialogs-modals-spec.md
+ * Alert Component - Toast Notification Style
+ *
+ * Non-blocking toast notifications that auto-dismiss.
+ * Replaces the old modal-style alerts.
  *
  * Features:
- * - Small 24px icon inline with title
- * - Black title (not colored)
- * - Gray secondary button for neutral actions (Done, Close)
+ * - Auto-dismiss after 4 seconds
+ * - Progress bar showing remaining time
+ * - Click to dismiss early
+ * - Slide-in/out animations
+ * - Success, Error, Warning, Info variants
  */
 
 function AlertComponent(props: AllProps) {
     let {type, title, message} = props;
+    const [isExiting, setIsExiting] = useState(false);
+    const [isVisible, setIsVisible] = useState(false);
+
+    // Duration in milliseconds
+    const DURATION = 4000;
 
     // Normalize type
     let normalizedType: 'success' | 'error' | 'warning' | 'info' = 'success';
@@ -39,13 +48,13 @@ function AlertComponent(props: AllProps) {
     const getIcon = () => {
         switch (normalizedType) {
             case 'success':
-                return <i className="bi bi-check-circle" />;
+                return <i className="bi bi-check-circle-fill" />;
             case 'error':
-                return <i className="bi bi-x-circle" />;
+                return <i className="bi bi-x-circle-fill" />;
             case 'warning':
-                return <i className="bi bi-exclamation-triangle" />;
+                return <i className="bi bi-exclamation-triangle-fill" />;
             case 'info':
-                return <i className="bi bi-info-circle" />;
+                return <i className="bi bi-info-circle-fill" />;
         }
     };
 
@@ -53,47 +62,82 @@ function AlertComponent(props: AllProps) {
     const getDefaultTitle = () => {
         switch (normalizedType) {
             case 'success': return 'Success';
-            case 'error': return 'Something went wrong';
+            case 'error': return 'Error';
             case 'warning': return 'Warning';
-            case 'info': return 'Information';
+            case 'info': return 'Info';
         }
     };
 
-    // Get button label for type
-    const getButtonLabel = () => {
-        switch (normalizedType) {
-            case 'success': return 'Done';
-            case 'error': return 'Close';
-            case 'warning': return 'OK';
-            case 'info': return 'Got it';
-        }
+    // Close the toast
+    const handleClose = () => {
+        setIsExiting(true);
+        setTimeout(() => {
+            SetRootFieldAction.new('alert', '', '');
+            setIsExiting(false);
+            setIsVisible(false);
+        }, 300);
     };
 
-    if (!type || !message) return(<></>);
+    // Auto-dismiss effect
+    useEffect(() => {
+        if (type && message) {
+            setIsVisible(true);
+            setIsExiting(false);
 
-    return(
-        <div className={'alert-container'}>
-            <div className={`alert-card ${normalizedType}`}>
-                {/* Body with inline icon + title */}
-                <div className={'alert-body'}>
-                    <div className={'modal-icon-title'}>
-                        <div className={`modal-icon ${normalizedType}`}>
-                            {getIcon()}
-                        </div>
-                        <h1>{title || getDefaultTitle()}</h1>
+            // Start exit animation before closing
+            const exitTimer = setTimeout(() => {
+                setIsExiting(true);
+            }, DURATION - 300);
+
+            // Actually close after animation
+            const closeTimer = setTimeout(() => {
+                SetRootFieldAction.new('alert', '', '');
+                setIsExiting(false);
+                setIsVisible(false);
+            }, DURATION);
+
+            return () => {
+                clearTimeout(exitTimer);
+                clearTimeout(closeTimer);
+            };
+        }
+    }, [type, message, title]);
+
+    if (!type || !message || !isVisible) return null;
+
+    return (
+        <div className="toast-alert-container">
+            <div
+                className={`toast-alert toast-alert--${normalizedType} ${isExiting ? 'toast-alert--exiting' : ''}`}
+                role="alert"
+                aria-live="polite"
+                onClick={handleClose}
+            >
+                <div className="toast-alert__icon">
+                    {getIcon()}
+                </div>
+                <div className="toast-alert__content">
+                    <div className="toast-alert__title">
+                        {title || getDefaultTitle()}
                     </div>
-                    <div className={'alert-message'}>{message}</div>
+                    {message && message !== title && (
+                        <div className="toast-alert__message">{message}</div>
+                    )}
                 </div>
-
-                {/* Footer with button */}
-                <div className={'alert-button-bar'}>
-                    <button
-                        className={'btn alert-btn'}
-                        onClick={e => SetRootFieldAction.new('alert', '', '')}
-                    >
-                        {getButtonLabel()}
-                    </button>
-                </div>
+                <button
+                    className="toast-alert__close"
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        handleClose();
+                    }}
+                    aria-label="Close notification"
+                >
+                    <i className="bi bi-x" />
+                </button>
+                <div
+                    className="toast-alert__progress"
+                    style={{ animationDuration: `${DURATION}ms` }}
+                />
             </div>
         </div>
     );

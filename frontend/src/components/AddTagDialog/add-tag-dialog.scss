@@ -1,0 +1,224 @@
+/* ============================================
+   ADD TAG DIALOG
+   Custom modal for adding tags to projects
+   Replaces native window.prompt()
+   ============================================ */
+
+.add-tag-dialog-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(2px);
+  z-index: 9998;
+  animation: tagDialogFadeIn 0.2s ease-out;
+}
+
+.add-tag-dialog {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 400px;
+  max-width: 90vw;
+  padding: 32px;
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow:
+    0 20px 60px rgba(0, 0, 0, 0.25),
+    0 0 0 1px rgba(0, 0, 0, 0.05);
+  z-index: 9999;
+  animation: tagDialogSlideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Icon */
+.add-tag-dialog-icon {
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: #f1f5f9;
+  color: #475569;
+  font-size: 28px;
+}
+
+/* Title */
+.add-tag-dialog-title {
+  font-family: 'Inter Variable', -apple-system, sans-serif;
+  font-size: 20px;
+  font-weight: 600;
+  color: #0f172a;
+  margin: 0 0 8px;
+  text-align: center;
+  line-height: 1.3;
+}
+
+/* Subtitle */
+.add-tag-dialog-subtitle {
+  font-family: 'Inter Variable', -apple-system, sans-serif;
+  font-size: 14px;
+  color: #64748b;
+  text-align: center;
+  margin: 0 0 24px;
+}
+
+/* Input */
+.add-tag-dialog-input {
+  width: 100%;
+  height: 48px;
+  padding: 0 16px;
+  font-family: 'Inter Variable', -apple-system, sans-serif;
+  font-size: 15px;
+  color: #0f172a;
+  background: #ffffff;
+  border: 2px solid #e2e8f0;
+  border-radius: 10px;
+  outline: none;
+  transition: all 150ms ease;
+
+  &::placeholder {
+    color: #94a3b8;
+  }
+
+  &:focus {
+    border-color: #475569;
+    box-shadow: 0 0 0 4px rgba(71, 85, 105, 0.1);
+  }
+}
+
+/* Suggestions */
+.add-tag-dialog-suggestions {
+  margin-top: 16px;
+  margin-bottom: 8px;
+
+  .suggestions-label {
+    display: block;
+    font-family: 'Inter Variable', -apple-system, sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 8px;
+  }
+
+  .suggestions-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .suggestion-tag {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 10px;
+    font-family: 'Inter Variable', -apple-system, sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    color: #475569;
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: all 150ms ease;
+
+    &:hover {
+      background: #e2e8f0;
+      border-color: #cbd5e1;
+    }
+  }
+}
+
+/* Actions */
+.add-tag-dialog-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  margin-top: 24px;
+}
+
+/* Buttons */
+.add-tag-dialog-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 110px;
+  height: 42px;
+  padding: 0 20px;
+  font-family: 'Inter Variable', -apple-system, sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 150ms ease;
+  border: none;
+
+  &:focus-visible {
+    outline: 2px solid #475569;
+    outline-offset: 2px;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  /* Secondary (Cancel) */
+  &--secondary {
+    background: #f1f5f9;
+    color: #475569;
+    border: 1px solid #e2e8f0;
+
+    &:hover:not(:disabled) {
+      background: #e2e8f0;
+      border-color: #cbd5e1;
+    }
+
+    &:active:not(:disabled) {
+      background: #cbd5e1;
+    }
+  }
+
+  /* Primary (Add Tag) */
+  &--primary {
+    background: linear-gradient(180deg, #64748b 0%, #475569 100%);
+    color: #ffffff;
+    box-shadow: 0 2px 4px rgba(71, 85, 105, 0.3);
+
+    &:hover:not(:disabled) {
+      background: linear-gradient(180deg, #475569 0%, #334155 100%);
+      box-shadow: 0 4px 8px rgba(71, 85, 105, 0.4);
+    }
+
+    &:active:not(:disabled) {
+      background: #334155;
+      transform: translateY(1px);
+    }
+  }
+}
+
+/* Animations */
+@keyframes tagDialogFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes tagDialogSlideIn {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -48%);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%);
+  }
+}

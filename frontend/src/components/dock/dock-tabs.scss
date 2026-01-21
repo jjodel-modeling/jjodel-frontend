@@ -18,6 +18,39 @@ $accent: #475569;
 $transition: 150ms ease;
 
 // ============================================
+// LOCKED TABS (No drag-and-drop)
+// Editor tabs have tabLocked:true - disable drag cursor
+// ============================================
+
+.not-strip .dock-panel.dock-style-editors {
+    // Disable drag cursor for all tabs in locked group
+    .dock-tab {
+        cursor: default !important;
+
+        > div,
+        .dock-tab-btn,
+        .drag-initiator {
+            cursor: default !important;
+        }
+    }
+
+    // Disable the drag-initiator behavior visually
+    .drag-initiator {
+        pointer-events: none;
+
+        // Re-enable pointer events for close button and content
+        > * {
+            pointer-events: auto;
+        }
+    }
+
+    // Re-enable click events for the tab button itself
+    .dock-tab-btn {
+        pointer-events: auto !important;
+    }
+}
+
+// ============================================
 // MAIN TABS (Segmented Control Style)
 // ============================================
 
@@ -100,57 +133,69 @@ $transition: 150ms ease;
 }
 
 // Show close button for closable tabs (metamodels, models)
+// X icon hidden by default, shown on hover with smooth fade-in
 .not-strip .dock-panel .dock-tab:has(.dock-tab-close-btn) {
     > div,
     .dock-tab-btn {
         display: flex;
         align-items: center;
-        gap: 6px;
-        padding: 8px 8px 8px 12px !important; // less padding on right for close button
+        gap: 0; // No gap - margins handle spacing
+        padding: 8px 12px 8px 12px !important; // Equal padding, X centered via margins
     }
 
     .dock-tab-close-btn {
         display: flex !important;
         align-items: center;
         justify-content: center;
-        align-self: center; // force vertical centering
-        width: 20px;
-        height: 20px;
-        min-width: 20px; // prevent shrinking
+        align-self: center;
+        width: 18px;
+        height: 18px;
+        min-width: 18px;
         padding: 0;
-        margin-left: 2px;
+        margin-left: 12px; // Equal space before X
+        margin-right: 0; // padding-right handles space after X (12px total)
         background: transparent;
         border: none;
         border-radius: 4px;
         color: #94a3b8;
-        font-size: 16px;
+        font-size: 14px;
         line-height: 1;
         cursor: pointer;
-        transition: all $transition;
-        opacity: 0;
-        flex-shrink: 0; // prevent shrinking
+        transition: opacity 200ms ease, background 150ms ease, color 150ms ease;
+        opacity: 0; // Hidden by default
+        flex-shrink: 0;
 
         &:hover {
-            background: #f1f5f9;
+            background: transparent;
             color: #475569;
         }
 
         &:active {
-            background: #e2e8f0;
+            background: transparent;
         }
     }
 
+    // Show close button on tab hover with smooth fade-in
     &:hover .dock-tab-close-btn {
         opacity: 1;
     }
 
-    // Always show close button on active tab
+    // Keep close button hidden on active tab unless hovering
     &.dock-tab-active .dock-tab-close-btn {
+        opacity: 0; // Hidden by default even on active tab
+
+        &:hover {
+            opacity: 1;
+            background: transparent;
+        }
+    }
+
+    // Show on active tab hover too
+    &.dock-tab-active:hover .dock-tab-close-btn {
         opacity: 0.7;
 
         &:hover {
             opacity: 1;
-            background: #e2e8f0;
         }
     }
 }
@@ -433,6 +478,10 @@ $transition: 150ms ease;
     }
 
     .not-strip .dock-panel .dock-tab.dock-tab-active .dock-tab-close-btn:hover {
+        background: #4b5563;
+    }
+
+    .not-strip .dock-panel .dock-tab.dock-tab-active:hover .dock-tab-close-btn:hover {
         background: #4b5563;
     }
 
