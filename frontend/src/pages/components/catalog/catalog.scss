@@ -554,6 +554,263 @@
 }
 
 /* ============================================
+   LIST VIEW CONTAINER
+   Wraps bulk actions bar + project rows
+   ============================================ */
+
+.list-view-container {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  gap: 0;
+}
+
+/* ============================================
+   UNIFIED PROJECTS TOOLBAR
+   Single toolbar with select all, tags, and bulk actions
+   ============================================ */
+
+.projects-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  // Align checkbox with project rows:
+  // grid padding (24px) + row padding (16px) + column centering offset (5px) = 45px
+  padding: 12px 24px 12px 45px;
+  background: #ffffff;
+  border-bottom: 1px solid #e2e8f0;
+  gap: 16px;
+  flex-wrap: wrap;
+
+  .toolbar-left {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .toolbar-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+}
+
+/* Toolbar Checkbox */
+.toolbar-checkbox {
+  // Override global hiding
+  position: relative !important;
+  opacity: 1 !important;
+  width: 18px !important;
+  height: 18px !important;
+  pointer-events: auto !important;
+  display: block !important;
+  visibility: visible !important;
+  flex-shrink: 0;
+
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  -moz-appearance: none !important;
+
+  border: 2px solid #cbd5e1 !important;
+  border-radius: 4px;
+  background: #ffffff !important;
+  cursor: pointer;
+  transition: all 150ms ease;
+
+  &:hover {
+    border-color: #94a3b8 !important;
+    background: #f8fafc !important;
+  }
+
+  &:checked {
+    background: linear-gradient(180deg, #64748b 0%, #475569 100%) !important;
+    border-color: #475569 !important;
+
+    &::after {
+      content: "";
+      position: absolute;
+      left: 5px;
+      top: 2px;
+      width: 4px;
+      height: 8px;
+      border: solid #ffffff;
+      border-width: 0 2px 2px 0;
+      transform: rotate(45deg);
+    }
+  }
+
+  // Indeterminate state (some selected)
+  &:indeterminate {
+    background: #64748b !important;
+    border-color: #475569 !important;
+
+    &::after {
+      content: "";
+      position: absolute;
+      left: 3px;
+      top: 7px;
+      width: 10px;
+      height: 2px;
+      background: #ffffff;
+      border: none;
+      transform: none;
+    }
+  }
+
+  &:focus-visible {
+    outline: 2px solid #475569;
+    outline-offset: 2px;
+  }
+}
+
+/* Toolbar Selection Count */
+.toolbar-selection-count {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: 'Inter Variable', -apple-system, sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  color: #334155;
+  white-space: nowrap;
+  flex-shrink: 0;
+
+  // Override global checkbox label styles that add ::before
+  &::before {
+    display: none !important;
+    content: none !important;
+  }
+}
+
+/* Toolbar Tags Label */
+.toolbar-tags-label {
+  font-family: 'Inter Variable', -apple-system, sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+  flex-shrink: 0;
+
+  // Override global checkbox label styles that add ::before
+  &::before {
+    display: none !important;
+    content: none !important;
+  }
+}
+
+/* Toolbar Tag Filters */
+.toolbar-tag-filters {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 2px 0;
+  flex: 1;
+  min-width: 0;
+
+  // Hide scrollbar but keep scrolling
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* Toolbar Tag Pill */
+.toolbar-tag-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 999px;
+  font-family: 'Inter Variable', -apple-system, sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  color: #475569;
+  cursor: pointer;
+  transition: all 150ms ease;
+  white-space: nowrap;
+  flex-shrink: 0;
+
+  &:hover {
+    background: #f8fafc;
+    border-color: #94a3b8;
+  }
+
+  &--active {
+    background: #334155;
+    color: #ffffff;
+    border-color: #334155;
+    font-weight: 600;
+
+    &:hover {
+      background: #1e293b;
+      border-color: #1e293b;
+    }
+  }
+}
+
+/* Toolbar Bulk Action Buttons */
+.toolbar-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  font-family: 'Inter Variable', -apple-system, sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  color: #475569;
+  cursor: pointer;
+  transition: all 150ms ease;
+  white-space: nowrap;
+
+  .bi {
+    font-size: 14px;
+  }
+
+  &:not(:disabled):hover {
+    background: #f8fafc;
+    border-color: #cbd5e1;
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    background: #f8fafc;
+  }
+
+  // Delete button - red styling
+  &--delete {
+    color: #dc2626;
+    border-color: #fecaca;
+
+    &:hover {
+      background: #fef2f2;
+      border-color: #f87171;
+    }
+  }
+
+  // Cancel button - secondary styling
+  &--cancel {
+    color: #64748b;
+    border-color: #e2e8f0;
+
+    &:hover {
+      background: #f1f5f9;
+      border-color: #cbd5e1;
+    }
+  }
+}
+
+/* ============================================
    PROJECT LIST VIEW
    ============================================ */
 
@@ -657,6 +914,7 @@
   width: 100%;
   padding: 0;
   display: flex;
+  flex-direction: column; // Stack children vertically
   overflow: visible !important; // Allow dropdown menus to overflow
   .details{
     order: 2;

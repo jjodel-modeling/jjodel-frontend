@@ -112,8 +112,8 @@ input[type="checkbox"] {
 }
 
 /* Custom checkbox container - applies to label or wrapper */
-input[type="checkbox"] + span::before,
-input[type="checkbox"] + label::before,
+input[type="checkbox"],
+input[type="checkbox"],
 label:has(input[type="checkbox"])::before {
   content: '';
   display: inline-block;

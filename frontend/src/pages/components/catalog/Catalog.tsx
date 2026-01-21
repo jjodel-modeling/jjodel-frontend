@@ -1,8 +1,9 @@
-import {useState, useMemo, useEffect} from "react";
-import {type Dictionary, LProject} from "../../../joiner";
+import {useState, useMemo, useEffect, useCallback} from "react";
+import {type Dictionary, LProject, DProject, U} from "../../../joiner";
 import { Project } from "../Project";
 import { EmptyDashboard } from "../../../components/EmptyDashboard/EmptyDashboard";
 import { DevModeLabel } from "../../../components/DevModeLabel/DevModeLabel";
+import { ProjectsApi } from "../../../api/persistance";
 import "./catalog.scss"
 import _ from "lodash";
 
@@ -22,11 +23,20 @@ type ListViewProps = {
     projects: LProject[];
     projectNames: Dictionary<string, LProject>;
     allTags: string[];
+    // Selection props
+    selectedProjects: Set<string>;
+    onSelectProject: (projectId: string, shiftKey: boolean) => void;
 };
 
 const PROJECTS_PER_BATCH = 12;
 
-const ListViewWithLoadMore = ({ projects, projectNames, allTags }: ListViewProps) => {
+const ListViewWithLoadMore = ({
+    projects,
+    projectNames,
+    allTags,
+    selectedProjects,
+    onSelectProject
+}: ListViewProps) => {
     const [visibleCount, setVisibleCount] = useState(PROJECTS_PER_BATCH);
     const [previousCount, setPreviousCount] = useState(0); // Track for stagger animation
 
@@ -61,6 +71,8 @@ const ListViewWithLoadMore = ({ projects, projectNames, allTags }: ListViewProps
                         pnames={projectNames}
                         allTags={allTags}
                         animationIndex={animationIndex}
+                        isSelected={selectedProjects.has(p.id)}
+                        onSelect={onSelectProject}
                     />
                 );
             })}
@@ -111,6 +123,10 @@ const Catalog = (props: ChildrenType) => {
     const [currentPage, setCurrentPage] = useState(0);
     const [activeTag, setActiveTag] = useState<string | null>(null); // Single-select Netflix-style
 
+    // Bulk selection state (for list view)
+    const [selectedProjects, setSelectedProjects] = useState<Set<string>>(new Set());
+    const [lastSelectedId, setLastSelectedId] = useState<string | null>(null);
+
     // Track window width for responsive slider grid
     const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1024);
 
@@ -119,6 +135,121 @@ const Catalog = (props: ChildrenType) => {
         window.addEventListener('resize', handleResize);
         return () => window.removeEventListener('resize', handleResize);
     }, []);
+
+    // Clear selection when switching view modes or filters
+    useEffect(() => {
+        setSelectedProjects(new Set());
+        setLastSelectedId(null);
+    }, [viewMode, activeTab, activeTag]);
+
+    // Selection handlers for bulk operations
+    const handleSelectProject = useCallback((projectId: string, shiftKey: boolean) => {
+        setSelectedProjects(prev => {
+            const next = new Set(prev);
+
+            // Shift+Click for range selection
+            if (shiftKey && lastSelectedId && props.projects) {
+                const projectIds = props.projects.map((p: LProject) => p.id);
+                const startIndex = projectIds.indexOf(lastSelectedId);
+                const endIndex = projectIds.indexOf(projectId);
+
+                if (startIndex !== -1 && endIndex !== -1) {
+                    const [min, max] = [Math.min(startIndex, endIndex), Math.max(startIndex, endIndex)];
+                    projectIds.slice(min, max + 1).forEach((id: string) => next.add(id));
+                }
+            } else {
+                // Normal click: toggle selection
+                if (next.has(projectId)) {
+                    next.delete(projectId);
+                } else {
+                    next.add(projectId);
+                }
+            }
+
+            return next;
+        });
+
+        setLastSelectedId(projectId);
+    }, [lastSelectedId, props.projects]);
+
+    const handleSelectAll = useCallback(() => {
+        if (!props.projects) return;
+
+        const allIds = props.projects.map((p: LProject) => p.id);
+        if (selectedProjects.size === allIds.length) {
+            setSelectedProjects(new Set()); // Deselect all
+        } else {
+            setSelectedProjects(new Set(allIds)); // Select all
+        }
+    }, [props.projects, selectedProjects.size]);
+
+    const handleClearSelection = useCallback(() => {
+        setSelectedProjects(new Set());
+        setLastSelectedId(null);
+    }, []);
+
+    // Bulk action handlers
+    const handleBulkDelete = useCallback(async () => {
+        const count = selectedProjects.size;
+        if (count === 0) return;
+
+        if (!window.confirm(`Are you sure you want to delete ${count} project${count > 1 ? 's' : ''}? This action cannot be undone.`)) {
+            return;
+        }
+
+        try {
+            const projectsToDelete = props.projects?.filter((p: LProject) => selectedProjects.has(p.id)) || [];
+            for (const project of projectsToDelete) {
+                await project.delete();
+            }
+            handleClearSelection();
+            U.alert('i', 'Success', `${count} project${count > 1 ? 's' : ''} deleted successfully`);
+        } catch (error) {
+            console.error('Bulk delete error:', error);
+            U.alert('e', 'Error', 'Failed to delete some projects');
+        }
+    }, [selectedProjects, props.projects, handleClearSelection]);
+
+    const handleBulkExport = useCallback(async () => {
+        const count = selectedProjects.size;
+        if (count === 0) return;
+
+        try {
+            const projectsToExport = props.projects?.filter((p: LProject) => selectedProjects.has(p.id)) || [];
+            for (const project of projectsToExport) {
+                U.download(`${project.name}.jjodel`, JSON.stringify(project.__raw));
+            }
+            handleClearSelection();
+            U.alert('i', 'Success', `${count} project${count > 1 ? 's' : ''} exported`);
+        } catch (error) {
+            console.error('Bulk export error:', error);
+            U.alert('e', 'Error', 'Failed to export some projects');
+        }
+    }, [selectedProjects, props.projects, handleClearSelection]);
+
+    const handleBulkAddTag = useCallback(async () => {
+        const count = selectedProjects.size;
+        if (count === 0) return;
+
+        const tag = window.prompt('Enter tag name to add to selected projects:');
+        if (!tag || !tag.trim()) return;
+
+        try {
+            const projectsToTag = props.projects?.filter((p: LProject) => selectedProjects.has(p.id)) || [];
+            for (const project of projectsToTag) {
+                const currentTags = project.tags || [];
+                if (!currentTags.includes(tag.trim().toLowerCase())) {
+                    const updatedTags = [...currentTags, tag.trim().toLowerCase()];
+                    await ProjectsApi.updateTags(project.__raw as DProject, updatedTags);
+                }
+            }
+            handleClearSelection();
+            U.alert('i', 'Success', `Tag "${tag.trim()}" added to ${count} project${count > 1 ? 's' : ''}`);
+        } catch (error) {
+            console.error('Bulk add tag error:', error);
+            U.alert('e', 'Error', 'Failed to add tag to some projects');
+        }
+    }, [selectedProjects, props.projects, handleClearSelection]);
 
     // Responsive slider grid: 1-3 columns × 3 rows (max 3 columns)
     // ≥1200px: 3 cols × 3 rows = 9 cards
@@ -299,12 +430,109 @@ const Catalog = (props: ChildrenType) => {
         }
 
         // Compact/List view - rows with Load More button (default fallback)
+        const allSelected = selectedProjects.size === filteredProjects.length && filteredProjects.length > 0;
+        const someSelected = selectedProjects.size > 0 && selectedProjects.size < filteredProjects.length;
+        const hasSelection = selectedProjects.size > 0;
+
         return (
-            <ListViewWithLoadMore
-                projects={filteredProjects}
-                projectNames={projectNames}
-                allTags={allTags}
-            />
+            <div className="list-view-container">
+                {/* Unified Projects Toolbar */}
+                <div className="projects-toolbar">
+                    <div className="toolbar-left">
+                        {/* Select All Checkbox - ALWAYS visible */}
+                        <input
+                            type="checkbox"
+                            className="toolbar-checkbox"
+                            checked={allSelected}
+                            ref={(el) => {
+                                if (el) {
+                                    el.indeterminate = someSelected;
+                                }
+                            }}
+                            onChange={handleSelectAll}
+                            aria-label="Select all projects"
+                            title={allSelected ? "Deselect all" : someSelected ? "Select all" : "Select all"}
+                        />
+
+                        {/* Selection count - show when projects selected */}
+                        {hasSelection && (
+                            <span className="toolbar-selection-count">
+                                {selectedProjects.size} project{selectedProjects.size > 1 ? 's' : ''} selected
+                            </span>
+                        )}
+
+                        {/* Tags */}
+                        {tagStats.length > 0 && (
+                            <>
+                                <span className="toolbar-tags-label">TAGS:</span>
+                                <div className="toolbar-tag-filters">
+                                    {tagStats.map(({ tag, count }) => (
+                                        <button
+                                            key={tag}
+                                            className={`toolbar-tag-pill ${activeTag === tag ? 'toolbar-tag-pill--active' : ''}`}
+                                            onClick={() => {
+                                                setActiveTag(prev => prev === tag ? null : tag);
+                                                setCurrentPage(0);
+                                            }}
+                                            title={`${count} project${count > 1 ? 's' : ''}`}
+                                        >
+                                            {tag}
+                                        </button>
+                                    ))}
+                                </div>
+                            </>
+                        )}
+                    </div>
+
+                    {/* Bulk Actions - only show when selection > 0 */}
+                    {hasSelection && (
+                        <div className="toolbar-right">
+                            <button
+                                className="toolbar-btn toolbar-btn--delete"
+                                onClick={handleBulkDelete}
+                                title={`Delete ${selectedProjects.size} project${selectedProjects.size > 1 ? 's' : ''}`}
+                            >
+                                <i className="bi bi-trash" />
+                                <span>Delete</span>
+                            </button>
+
+                            <button
+                                className="toolbar-btn"
+                                onClick={handleBulkExport}
+                                title={`Export ${selectedProjects.size} project${selectedProjects.size > 1 ? 's' : ''}`}
+                            >
+                                <i className="bi bi-download" />
+                                <span>Export</span>
+                            </button>
+
+                            <button
+                                className="toolbar-btn"
+                                onClick={handleBulkAddTag}
+                                title={`Add tag to ${selectedProjects.size} project${selectedProjects.size > 1 ? 's' : ''}`}
+                            >
+                                <i className="bi bi-tag" />
+                                <span>Add Tag</span>
+                            </button>
+
+                            <button
+                                className="toolbar-btn toolbar-btn--cancel"
+                                onClick={handleClearSelection}
+                                title="Clear selection"
+                            >
+                                <span>Cancel</span>
+                            </button>
+                        </div>
+                    )}
+                </div>
+
+                <ListViewWithLoadMore
+                    projects={filteredProjects}
+                    projectNames={projectNames}
+                    allTags={allTags}
+                    selectedProjects={selectedProjects}
+                    onSelectProject={handleSelectProject}
+                />
+            </div>
         );
     };
 
@@ -388,8 +616,8 @@ const Catalog = (props: ChildrenType) => {
                         </div>
                     </div>
 
-                    {/* Tag Filters - Netflix Style */}
-                    {tagStats.length > 0 && (
+                    {/* Tag Filters - Netflix Style (only in slider view, list view has tags in toolbar) */}
+                    {viewMode === 'slider' && tagStats.length > 0 && (
                         <div className={`tag-filters-netflix tag-filters-netflix--${displayMode}`}>
                             <div className="tag-filters-netflix__label">
                                 <i className="bi bi-tag" />

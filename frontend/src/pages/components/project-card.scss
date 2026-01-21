@@ -88,14 +88,17 @@ $transition: 150ms ease;
     position: absolute;
   }
 
-  // Accent Bar (4px left side) - SOLID color only, no gradient!
+  // Accent Bar (3px left side) - Subtle slate color
   &__accent {
-    width: 4px;
+    width: 3px;
     flex-shrink: 0;
-    background-color: #475569; // Default slate, overridden inline via JS
-    background-image: none !important; // Ensure no gradient
-    background-repeat: no-repeat !important;
-    border-radius: 8px 0 0 8px;
+    background-color: #64748b; // slate-500 - subtle, refined
+    transition: background-color 150ms ease;
+    border-radius: 6px 0 0 6px;
+  }
+
+  &:hover &__accent {
+    background-color: #475569; // slate-600 on hover
   }
 
   // Content Area
@@ -674,7 +677,7 @@ $transition: 150ms ease;
 .project-row {
   display: grid;
   grid-template-columns:
-    20px           // pallino
+    28px           // checkbox
     minmax(150px, 200px)  // nome
     70px           // badge (Private/Public)
     minmax(80px, 120px)   // autore
@@ -727,11 +730,22 @@ $transition: 150ms ease;
     position: absolute;
   }
 
-  // Colored dot
-  &__dot {
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
+  // Checkbox wrapper (replaces colored dot)
+  &__checkbox {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    flex-shrink: 0;
+  }
+
+  // Selected row state
+  &--selected {
+    background: #f1f5f9;
+
+    &:hover {
+      background: #e2e8f0;
+    }
   }
 
   // Project name
@@ -1143,4 +1157,67 @@ $transition: 150ms ease;
   animation: slideInUp 0.35s cubic-bezier(0.4, 0, 0.2, 1) forwards;
   opacity: 0;
   transform: translateY(12px);
+}
+
+// ============================================
+// PROJECT CHECKBOX - Bulk Selection
+// ============================================
+
+// Override global checkbox hiding for project checkboxes
+.project-checkbox {
+  // CRITICAL: Override global hiding from tokens/index.scss
+  position: relative !important;
+  opacity: 1 !important;
+  width: 18px !important;
+  height: 18px !important;
+  pointer-events: auto !important;
+  display: block !important;
+  visibility: visible !important;
+
+  // Reset appearance
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  -moz-appearance: none !important;
+
+  // Visual styling
+  border: 2px solid #cbd5e1 !important;
+  border-radius: 4px;
+  background: #ffffff !important;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 150ms ease;
+  z-index: 10;
+
+  &:hover {
+    border-color: #94a3b8 !important;
+    background: #f8fafc !important;
+  }
+
+  &:checked {
+    background: linear-gradient(180deg, #64748b 0%, #475569 100%) !important;
+    border-color: #475569 !important;
+
+    // Checkmark
+    &::after {
+      content: "";
+      position: absolute;
+      left: 5px;
+      top: 2px;
+      width: 4px;
+      height: 8px;
+      border: solid #ffffff;
+      border-width: 0 2px 2px 0;
+      transform: rotate(45deg);
+    }
+  }
+
+  &:focus-visible {
+    outline: 2px solid #475569;
+    outline-offset: 2px;
+  }
+
+  &:disabled {
+    opacity: 0.5 !important;
+    cursor: not-allowed;
+  }
 }

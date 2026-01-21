@@ -7,7 +7,6 @@ import {Divisor, Item, Menu} from './menu/Menu';
 
 import {icon} from './icons/Icons';
 import {compressToUTF16} from "async-lz-string";
-import {getAccentColor} from '../../utils/colorHash';
 import {formatVersionNumber} from '../../utils/versionUtils';
 import './project-card.scss';
 
@@ -43,6 +42,9 @@ type Props = {
     pnames: Dictionary<string, LProject>;
     allTags?: string[];
     animationIndex?: number; // For stagger animation on Load More
+    // Selection props (for list view bulk operations)
+    isSelected?: boolean;
+    onSelect?: (projectId: string, shiftKey: boolean) => void;
 };
 type PropsCard = {
     data: LProject;
@@ -59,6 +61,9 @@ type PropsList = {
     pnames: Dictionary<string, LProject>;
     allTags?: string[];
     animationIndex?: number; // For stagger animation on Load More
+    // Selection props (for list view bulk operations)
+    isSelected?: boolean;
+    onSelect?: (projectId: string, shiftKey: boolean) => void;
 };
 
 type ProjectTypeType = {
@@ -234,9 +239,6 @@ function Project(props: Props): JSX.Element {
             selectProject(false);
         }
 
-        // Get accent color based on project name
-        const accentColor = getAccentColor(data.name || '');
-
         // Get privacy label
         const getBadgeLabel = () => {
             switch (data.type) {
@@ -269,8 +271,8 @@ function Project(props: Props): JSX.Element {
                 role="button"
                 aria-label={`Open project ${data.name}`}
             >
-                {/* Accent Bar */}
-                <div className="project-card__accent" style={{ backgroundColor: accentColor }} />
+                {/* Accent Bar - Uniform slate color */}
+                <div className="project-card__accent" />
 
                 {/* Content */}
                 <div className="project-card__content">
@@ -403,10 +405,6 @@ function Project(props: Props): JSX.Element {
     function ProjectList(props: PropsList): JSX.Element {
         const [showTagPopover, setShowTagPopover] = useState(false);
         const [tagInput, setTagInput] = useState('');
-        const accentColor = getAccentColor(data.name || '');
-
-        // Debug: log allTags received
-        console.log('[DEBUG ProjectList] allTags in popover:', props.allTags);
 
         // Filter suggestions based on input
         const suggestions = tagInput.trim()
@@ -444,19 +442,28 @@ function Project(props: Props): JSX.Element {
         };
 
         // Animation class and delay for stagger effect on Load More
-        const { animationIndex = -1 } = props;
+        const { animationIndex = -1, isSelected = false, onSelect } = props;
         const isAnimating = animationIndex >= 0;
         const animationStyle = isAnimating
             ? { animationDelay: `${animationIndex * 50}ms` }
             : undefined;
 
+        // Handle checkbox click
+        const handleCheckboxChange = (e: React.MouseEvent<HTMLInputElement>) => {
+            e.stopPropagation();
+            if (onSelect) {
+                onSelect(data.id, e.shiftKey);
+            }
+        };
+
         return (
             <div
-                className={`project-row ${isAnimating ? 'project-row--entering' : ''}`}
+                className={`project-row ${isAnimating ? 'project-row--entering' : ''} ${isSelected ? 'project-row--selected' : ''}`}
                 style={animationStyle}
                 onClick={(e) => {
                     // Don't navigate if clicking on interactive elements
                     if ((e.target as HTMLElement).closest('.project-row__actions') ||
+                        (e.target as HTMLElement).closest('.project-row__checkbox') ||
                         (e.target as HTMLElement).closest('.menu-button') ||
                         (e.target as HTMLElement).closest('.dropdown') ||
                         (e.target as HTMLElement).closest('.tag-popover')) {
@@ -465,11 +472,17 @@ function Project(props: Props): JSX.Element {
                     selectProject();
                 }}
             >
-                {/* Colored dot */}
-                <span
-                    className="project-row__dot"
-                    style={{ backgroundColor: accentColor }}
-                />
+                {/* Selection Checkbox (replaces colored dot) */}
+                <div className="project-row__checkbox">
+                    <input
+                        type="checkbox"
+                        className="project-checkbox"
+                        checked={isSelected}
+                        onClick={handleCheckboxChange}
+                        onChange={() => {}} // Controlled by onClick
+                        aria-label={`Select ${data.name}`}
+                    />
+                </div>
 
                 {/* Project name */}
                 <span className="project-row__name">{data.name}</span>
@@ -589,7 +602,7 @@ function Project(props: Props): JSX.Element {
     return(<>
         {props.mode === "cards" || props.mode === "compact" ?
             <ProjectCard key={props.key} data={props.data} pnames={props.pnames} mode={props.mode} index={props.index} allTags={props.allTags} /> :
-            <ProjectList key={props.key} data={props.data} pnames={props.pnames} allTags={props.allTags} animationIndex={props.animationIndex} />
+            <ProjectList key={props.key} data={props.data} pnames={props.pnames} allTags={props.allTags} animationIndex={props.animationIndex} isSelected={props.isSelected} onSelect={props.onSelect} />
         }
     </>);
 }
