@@ -1,5 +1,6 @@
 import React from 'react';
 import './empty-dashboard.scss';
+import { DevModeLabel } from '../DevModeLabel/DevModeLabel';
 
 interface OnboardingCardProps {
   icon: string;
@@ -37,19 +38,27 @@ const OnboardingCard: React.FC<OnboardingCardProps> = ({
   </div>
 );
 
-interface ResourceLinkProps {
+interface ResourceCardProps {
   href: string;
   icon: string;
-  children: React.ReactNode;
+  title: string;
+  ariaLabel: string;
 }
 
-const ResourceLink: React.FC<ResourceLinkProps> = ({ href, icon, children }) => (
-  <li>
-    <a href={href} target="_blank" rel="noopener noreferrer">
-      <i className={`bi ${icon}`} />
-      {children}
-    </a>
-  </li>
+const ResourceCard: React.FC<ResourceCardProps> = ({ href, icon, title, ariaLabel }) => (
+  <a
+    href={href}
+    target="_blank"
+    rel="noopener noreferrer"
+    className="resource-card"
+    aria-label={ariaLabel}
+  >
+    <span className="resource-icon">{icon}</span>
+    <span className="resource-title">{title}</span>
+    <span className="resource-arrow">
+      <i className="bi bi-arrow-right" />
+    </span>
+  </a>
 );
 
 interface EmptyDashboardProps {
@@ -69,6 +78,9 @@ export const EmptyDashboard: React.FC<EmptyDashboardProps> = ({
 
   return (
     <div className="empty-dashboard">
+      {/* Dev Mode Label */}
+      <DevModeLabel componentId="T2.1" />
+
       {/* Hero Section */}
       <div className="welcome-hero">
         <div className="hero-icon">
@@ -115,31 +127,40 @@ export const EmptyDashboard: React.FC<EmptyDashboardProps> = ({
 
       {/* Popular Resources */}
       <div className="popular-resources">
-        <h3>
-          <i className="bi bi-book" />
-          Popular Resources
-        </h3>
-        <ul>
-          <ResourceLink href="https://www.jjodel.io/get-started/" icon="bi-rocket-takeoff">
-            Getting Started Guide
-          </ResourceLink>
-          <ResourceLink href="https://www.jjodel.io/user-manual/" icon="bi-journal-text">
-            User Manual & API Reference
-          </ResourceLink>
-          <ResourceLink href="https://www.jjodel.io/tutorials/" icon="bi-play-btn">
-            Video Tutorials
-          </ResourceLink>
-          <ResourceLink href="https://www.jjodel.io/documentation/" icon="bi-file-text">
-            Documentation
-          </ResourceLink>
-        </ul>
+        <h3>Popular Resources</h3>
+        <div className="resources-grid">
+          <ResourceCard
+            href="https://www.jjodel.io/get-started/"
+            icon="🚀"
+            title="Getting Started Guide"
+            ariaLabel="Getting Started Guide - opens in new tab"
+          />
+          <ResourceCard
+            href="https://www.jjodel.io/user-manual/"
+            icon="📖"
+            title="User Manual & API Reference"
+            ariaLabel="User Manual & API Reference - opens in new tab"
+          />
+          <ResourceCard
+            href="https://www.jjodel.io/tutorials/"
+            icon="▶️"
+            title="Video Tutorials"
+            ariaLabel="Video Tutorials - opens in new tab"
+          />
+          <ResourceCard
+            href="https://www.jjodel.io/documentation/"
+            icon="📄"
+            title="Documentation"
+            ariaLabel="Documentation - opens in new tab"
+          />
+        </div>
       </div>
 
       {/* Help Footer */}
       <div className="help-footer">
         <i className="bi bi-chat-dots" />
         <span>Need help?</span>
-        <a href="https://www.jjodel.io/community/" target="_blank" rel="noopener noreferrer">
+        <a href="https://discord.gg/qxy7rjDd" target="_blank" rel="noopener noreferrer">
           Join our community
         </a>
         <span className="separator">or</span>

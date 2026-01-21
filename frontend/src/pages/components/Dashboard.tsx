@@ -233,6 +233,7 @@ export type DashProps = {
     project?: LProject;
     projects?:LProject[];
     style?: any;
+    onNewProject?: () => void;
 };
 
 
@@ -328,7 +329,7 @@ function GenericDashboard(props: DashProps): any {
 
             {/* Right Panel - Only visible on dashboard pages (three-column layout) */}
             {active !== 'Project' && (
-                <RightPanel user={user} projects={user?.projects} />
+                <RightPanel user={user} projects={user?.projects} onNewProject={props.onNewProject} />
             )}
 
             {/* Drop Overlay */}

@@ -9,11 +9,13 @@ import { useRecentActivities } from '../../../hooks/useRecentActivities';
 import { getActivityDisplayConfig, getActivityDisplayName } from '../../../constants/activityTypes';
 import { groupTimelineActivitiesByTime } from '../../../utils/timeGrouping';
 import { isGroupedActivity } from '../../../types/activity';
+import { DevModeLabel } from '../../../components/DevModeLabel/DevModeLabel';
 import './RightPanel.scss';
 
 export type RightPanelProps = {
     user?: LUser;
     projects?: LProject[];
+    onNewProject?: () => void;
 };
 
 export function RightPanel(props: RightPanelProps): JSX.Element {
@@ -45,11 +47,11 @@ export function RightPanel(props: RightPanelProps): JSX.Element {
         return modTime > dayAgo;
     }).length;
 
-    // Quick actions
-    const handleNewProject = async () => {
+    // Quick actions - use prop if provided, otherwise fallback to internal handler
+    const handleNewProject = props.onNewProject || (async () => {
         await ProjectsApi.create('private', undefined, undefined, undefined, projects);
         R.navigate('/allProjects', true);
-    };
+    });
 
     const handleUserManual = () => {
         window.open('https://www.jjodel.io/user-manual/', '_blank');
@@ -61,6 +63,9 @@ export function RightPanel(props: RightPanelProps): JSX.Element {
 
     return (
         <div className="right-panel">
+            {/* Dev Mode Label */}
+            <DevModeLabel componentId="T4.4" position="bottom-right" />
+
             {/* Stats Section */}
             <div className="panel-section">
                 <h3 className="section-title">Overview</h3>

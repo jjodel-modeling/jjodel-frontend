@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import './create-project-dialog.scss';
+import { DevModeLabel } from '../DevModeLabel/DevModeLabel';
 
 interface CreateProjectDialogProps {
   isOpen: boolean;
@@ -90,6 +91,8 @@ export const CreateProjectDialog: React.FC<CreateProjectDialogProps> = ({
   return (
     <div className="dialog-overlay" onClick={handleCancel}>
       <div className="dialog-content" onClick={(e) => e.stopPropagation()}>
+        {/* Dev Mode Label */}
+        <DevModeLabel componentId="T2.2" />
 
         {/* Header */}
         <div className="dialog-header">

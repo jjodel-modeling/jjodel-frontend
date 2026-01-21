@@ -1,9 +1,8 @@
 import {useState, useMemo, useEffect} from "react";
 import {type Dictionary, LProject} from "../../../joiner";
 import { Project } from "../Project";
-import { ProjectsApi } from "../../../api/persistance";
 import { EmptyDashboard } from "../../../components/EmptyDashboard/EmptyDashboard";
-import { CreateProjectDialog, ProjectFormData } from "../../../components/CreateProjectDialog/CreateProjectDialog";
+import { DevModeLabel } from "../../../components/DevModeLabel/DevModeLabel";
 import "./catalog.scss"
 import _ from "lodash";
 
@@ -12,6 +11,7 @@ export const CatalogInfoCard = (props: any) => null;
 type ChildrenType = {
     projects?: any;
     children?: any;
+    onNewProject?: () => void;
 };
 
 
@@ -110,7 +110,6 @@ const Catalog = (props: ChildrenType) => {
     const [activeTab, setActiveTab] = useState<'all' | 'public' | 'private' | 'collaborative'>('all');
     const [currentPage, setCurrentPage] = useState(0);
     const [activeTag, setActiveTag] = useState<string | null>(null); // Single-select Netflix-style
-    const [showCreateDialog, setShowCreateDialog] = useState(false); // Create project dialog
 
     // Track window width for responsive slider grid
     const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1024);
@@ -165,32 +164,6 @@ const Catalog = (props: ChildrenType) => {
         if (count < 12) return 'normal';
         return 'prominent';
     }, [props.projects]);
-
-    // Handler to open create project dialog
-    const handleOpenCreateDialog = () => {
-        setShowCreateDialog(true);
-    };
-
-    // Handler to close create project dialog
-    const handleCloseCreateDialog = () => {
-        setShowCreateDialog(false);
-    };
-
-    // Handler for submitting the create project form
-    const handleSubmitCreateProject = async (formData: ProjectFormData) => {
-        try {
-            // ProjectsApi.create(type, name, m2[], m1[], otherProjects)
-            // Note: ProjectsApi.create already handles navigation internally
-            // Pass undefined for otherProjects if empty to avoid proxy issues
-            setShowCreateDialog(false); // Close dialog first
-            const existingProjects = props.projects?.length > 0 ? props.projects : undefined;
-            await ProjectsApi.create(formData.type, formData.name, [], [], existingProjects);
-            // Navigation is handled inside ProjectsApi.create
-        } catch (error) {
-            console.error('Error creating project:', error);
-            throw error; // Re-throw so dialog can show error state
-        }
-    };
 
     // Check if there are no projects at all
     // Use Array.isArray for safer check, and also check for empty array-like objects
@@ -338,9 +311,12 @@ const Catalog = (props: ChildrenType) => {
     return (
         <>
             {hasNoProjects ? (
-                <EmptyDashboard onNewProject={handleOpenCreateDialog} />
+                <EmptyDashboard onNewProject={props.onNewProject || (() => {})} />
             ) : (
                 <>
+                    {/* Dev Mode Label for Project Grid */}
+                    <DevModeLabel componentId="T3.2" />
+
                     <div className="catalog-header">
                         {/* Filter Tabs */}
                         <div className="catalog-filter-tabs">
@@ -448,13 +424,6 @@ const Catalog = (props: ChildrenType) => {
                     </div>
                 </>
             )}
-
-            {/* Create Project Dialog */}
-            <CreateProjectDialog
-                isOpen={showCreateDialog}
-                onClose={handleCloseCreateDialog}
-                onSubmit={handleSubmitCreateProject}
-            />
         </>
     );
 }

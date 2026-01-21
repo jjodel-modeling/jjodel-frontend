@@ -10,6 +10,7 @@ import { isProjectModified } from '../../common/libraries/projectModified';
 import { Tooltip } from '../../components/forEndUser/Tooltip';
 import {SaveManager} from "../../components/topbar/SaveManager";
 import {Link, useNavigate} from "react-router-dom";
+import { DevModeLabel } from '../../components/DevModeLabel/DevModeLabel';
 
 interface StateProps {
     projects: LProject[];
@@ -159,6 +160,8 @@ function LeftBar(props: LeftBarProps): JSX.Element {
     const hasProjects = props.projects && props.projects.length > 0;
 
     return(<>
+        {/* Dev Mode Label */}
+        <DevModeLabel componentId="T2.3" position="top-left" />
 
         {active === 'Project' ?
             <div className={'leftbar'}>
