@@ -576,11 +576,16 @@
   justify-content: space-between;
   // Align checkbox with project rows:
   // grid padding (24px) + row padding (16px) + column centering offset (5px) = 45px
-  padding: 12px 24px 12px 45px;
+  padding: 12px 24px 12px 40px;
   background: #ffffff;
   border-bottom: 1px solid #e2e8f0;
   gap: 16px;
   flex-wrap: wrap;
+
+  // Grid view variant - no checkbox, standard padding
+  &--grid {
+    padding: 12px 24px;
+  }
 
   .toolbar-left {
     display: flex;
@@ -595,6 +600,32 @@
     align-items: center;
     gap: 8px;
     flex-shrink: 0;
+  }
+}
+
+/* Toolbar Filter Count (when tag is active) */
+.toolbar-filter-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 12px;
+  font-family: 'Inter Variable', -apple-system, sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  color: #64748b;
+  background: #f1f5f9;
+  border-radius: 12px;
+  white-space: nowrap;
+  flex-shrink: 0;
+
+  .bi {
+    font-size: 11px;
+  }
+
+  // Override global checkbox label styles
+  &::before {
+    display: none !important;
+    content: none !important;
   }
 }
 

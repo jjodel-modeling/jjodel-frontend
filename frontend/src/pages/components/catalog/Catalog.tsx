@@ -288,14 +288,6 @@ const Catalog = (props: ChildrenType) => {
     // Extract just the tag names for passing to Project components
     const allTags = useMemo(() => tagStats.map(t => t.tag), [tagStats]);
 
-    // Display mode based on project count
-    const displayMode = useMemo(() => {
-        const count = props.projects?.length || 0;
-        if (count < 6) return 'subtle';
-        if (count < 12) return 'normal';
-        return 'prominent';
-    }, [props.projects]);
-
     // Check if there are no projects at all
     // Use Array.isArray for safer check, and also check for empty array-like objects
     const projectsArray = props.projects;
@@ -616,34 +608,33 @@ const Catalog = (props: ChildrenType) => {
                         </div>
                     </div>
 
-                    {/* Tag Filters - Netflix Style (only in slider view, list view has tags in toolbar) */}
+                    {/* Tags Toolbar - unified styling for slider view (no checkbox/bulk actions) */}
                     {viewMode === 'slider' && tagStats.length > 0 && (
-                        <div className={`tag-filters-netflix tag-filters-netflix--${displayMode}`}>
-                            <div className="tag-filters-netflix__label">
-                                <i className="bi bi-tag" />
-                                <span>TAGS:</span>
-                            </div>
-                            <div className="tag-filters-netflix__scroll">
-                                {tagStats.map(({ tag, count }) => (
-                                    <button
-                                        key={tag}
-                                        className={`tag-chip ${activeTag === tag ? 'tag-chip--active' : ''}`}
-                                        onClick={() => {
-                                            setActiveTag(prev => prev === tag ? null : tag);
-                                            setCurrentPage(0); // Reset pagination on filter change
-                                        }}
-                                        title={`${count} project${count > 1 ? 's' : ''}`}
-                                    >
-                                        {tag}
-                                    </button>
-                                ))}
-                            </div>
-                            {activeTag && (
-                                <div className="tag-filters-netflix__count">
-                                    <i className="bi bi-funnel" />
-                                    {filteredProjects.length} project{filteredProjects.length !== 1 ? 's' : ''}
+                        <div className="projects-toolbar projects-toolbar--grid">
+                            <div className="toolbar-left">
+                                <span className="toolbar-tags-label">TAGS:</span>
+                                <div className="toolbar-tag-filters">
+                                    {tagStats.map(({ tag, count }) => (
+                                        <button
+                                            key={tag}
+                                            className={`toolbar-tag-pill ${activeTag === tag ? 'toolbar-tag-pill--active' : ''}`}
+                                            onClick={() => {
+                                                setActiveTag(prev => prev === tag ? null : tag);
+                                                setCurrentPage(0);
+                                            }}
+                                            title={`${count} project${count > 1 ? 's' : ''}`}
+                                        >
+                                            {tag}
+                                        </button>
+                                    ))}
                                 </div>
-                            )}
+                                {activeTag && (
+                                    <span className="toolbar-filter-count">
+                                        <i className="bi bi-funnel" />
+                                        {filteredProjects.length} project{filteredProjects.length !== 1 ? 's' : ''}
+                                    </span>
+                                )}
+                            </div>
                         </div>
                     )}
 
