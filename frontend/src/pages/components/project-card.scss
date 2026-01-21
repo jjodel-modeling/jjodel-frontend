@@ -55,6 +55,11 @@ $transition: 150ms ease;
 
   &:hover {
     box-shadow: $card-shadow-hover;
+
+    // Issue 3 fix: Update icon backgrounds on card hover
+    .project-card__action:not(.is-favorite) {
+      background: #f1f5f9;
+    }
   }
 
   // Elevate card when dropdown is open
@@ -137,15 +142,16 @@ $transition: 150ms ease;
     display: flex;
     align-items: center;
     justify-content: center;
-    background: transparent;
-    border: none;
+    background: #f8fafc; // Match card background - Issue 3 fix
+    border: 1px solid #e5e7eb;
     border-radius: 6px;
     cursor: pointer;
     color: $color-text-secondary;
     transition: all $transition;
 
     &:hover {
-      background: #f3f4f6;
+      background: #e2e8f0;
+      border-color: #d1d5db;
       color: $color-text-primary;
     }
 
@@ -155,9 +161,16 @@ $transition: 150ms ease;
 
     &.is-favorite {
       color: #facc15 !important; // Yellow star when active
+      background: #fffbeb; // Amber-50 background when favorited
+      border-color: #fef3c7;
 
       i {
         color: #facc15 !important;
+      }
+
+      &:hover {
+        background: #fef9c3;
+        border-color: #fde68a;
       }
     }
   }
@@ -320,10 +333,10 @@ $transition: 150ms ease;
   }
 }
 
-// Menu button styling inside card
+// Menu button styling inside card - Issue 3 fix: visible background
 .project-card__actions .menu-button {
-  background: transparent !important;
-  border: none !important;
+  background: #f8fafc !important; // Match card background
+  border: 1px solid #e5e7eb !important;
   box-shadow: none !important;
   width: 28px;
   height: 28px;
@@ -332,26 +345,30 @@ $transition: 150ms ease;
   justify-content: center;
   border-radius: 6px;
   margin: 0;
+  position: relative;
 
   &:hover {
-    background: #f3f4f6 !important;
+    background: #e2e8f0 !important;
+    border-color: #d1d5db !important;
   }
 
   i {
     color: $color-text-secondary;
     font-size: 16px;
-
-    &:hover {
-      color: $color-text-primary;
-    }
   }
 
+  &:hover i {
+    color: $color-text-primary;
+  }
+
+  // Fix: Dropdown positioning - align to right edge, override menu.scss left:0
   .dropdown {
     position: absolute;
-    top: 100%;
+    top: calc(100% + 4px);
     right: 0;
-    z-index: 1000 !important;
-    margin-top: 4px;
+    left: auto !important; // Override menu.scss .dropdown.right { left: 0 }
+    z-index: 9999 !important;
+    margin-top: 0;
   }
 }
 
@@ -473,7 +490,7 @@ $transition: 150ms ease;
 
 .compact-card {
   display: grid;
-  grid-template-columns: 280px 1fr auto auto auto;
+  grid-template-columns: 280px 1fr auto auto; // Issue 2 fix: adjusted for grouped actions
   align-items: center;
   gap: 16px;
   padding: 12px 16px;
@@ -497,7 +514,7 @@ $transition: 150ms ease;
 
   // Responsive - stack on mobile
   @media (max-width: 768px) {
-    grid-template-columns: 1fr auto auto auto;
+    grid-template-columns: 1fr auto auto; // Issue 2 fix: adjusted for grouped actions
     gap: 12px;
 
     .compact-card-stats {
@@ -506,7 +523,7 @@ $transition: 150ms ease;
   }
 
   @media (max-width: 480px) {
-    grid-template-columns: 1fr auto auto;
+    grid-template-columns: 1fr auto;
 
     .compact-card-badge {
       display: none;
@@ -551,7 +568,17 @@ $transition: 150ms ease;
 }
 
 .compact-card-actions {
-  display: contents; // Star and menu as separate grid items
+  display: flex; // Issue 2 fix: proper alignment with flexbox
+  align-items: center;
+  gap: 4px;
+  justify-content: flex-end;
+}
+
+// Issue 3 fix: Update compact card icon backgrounds on hover
+.compact-card:hover {
+  .compact-favorite-btn:not(.is-favorite) {
+    background: #f1f5f9;
+  }
 }
 
 .compact-favorite-btn {
@@ -560,8 +587,8 @@ $transition: 150ms ease;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: transparent;
-  border: none;
+  background: #f8fafc; // Issue 3 fix: visible background
+  border: 1px solid #e5e7eb;
   border-radius: 6px;
   font-size: 14px;
   color: $color-text-secondary;
@@ -569,23 +596,31 @@ $transition: 150ms ease;
   transition: all $transition;
 
   &:hover {
-    background: #f3f4f6;
+    background: #e2e8f0;
+    border-color: #d1d5db;
     color: $color-text-primary;
   }
 
   &.is-favorite {
     color: #facc15 !important; // Yellow star when active
+    background: #fffbeb;
+    border-color: #fef3c7;
 
     i {
       color: #facc15 !important;
+    }
+
+    &:hover {
+      background: #fef9c3;
+      border-color: #fde68a;
     }
   }
 }
 
 .compact-menu-btn {
   position: relative;
-  background: transparent !important;
-  border: none !important;
+  background: #f8fafc !important; // Issue 3 fix: visible background
+  border: 1px solid #e5e7eb !important;
   box-shadow: none !important;
   width: 28px;
   height: 28px;
@@ -596,24 +631,26 @@ $transition: 150ms ease;
   margin: 0;
 
   &:hover {
-    background: #f3f4f6 !important;
+    background: #e2e8f0 !important;
+    border-color: #d1d5db !important;
   }
 
   i {
     color: $color-text-secondary;
     font-size: 14px;
+  }
 
-    &:hover {
-      color: $color-text-primary;
-    }
+  &:hover i {
+    color: $color-text-primary;
   }
 
   .dropdown {
     position: absolute;
-    top: 100%;
+    top: calc(100% + 4px);
     right: 0;
-    z-index: 1000 !important;
-    margin-top: 4px;
+    left: auto !important; // Override menu.scss .dropdown.right { left: 0 }
+    z-index: 9999 !important;
+    margin-top: 0;
     background: #ffffff;
     border-radius: 8px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
@@ -657,6 +694,11 @@ $transition: 150ms ease;
 
   &:hover {
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+
+    // Issue 3 fix: Update icon backgrounds on row hover
+    .project-row__favorite:not(.active) {
+      background: #f1f5f9;
+    }
   }
 
   // Elevate row when dropdown is open
@@ -842,37 +884,47 @@ $transition: 150ms ease;
     white-space: nowrap;
   }
 
-  // Actions container
+  // Actions container - Issue 2 fix: proper alignment
   &__actions {
     display: flex;
+    align-items: center;
     gap: 4px;
     justify-content: flex-end;
+    height: 100%;
   }
 
-  // Favorite button
+  // Favorite button - Issue 3 fix: visible background
   &__favorite {
     width: 28px;
     height: 28px;
     display: flex;
     align-items: center;
     justify-content: center;
-    background: transparent;
-    border: none;
+    background: #f8fafc; // Match row background
+    border: 1px solid #e5e7eb;
     border-radius: 6px;
     color: #94a3b8;
     cursor: pointer;
     transition: all 150ms ease;
 
     &:hover {
-      background: #f3f4f6;
+      background: #e2e8f0;
+      border-color: #d1d5db;
       color: #64748b;
     }
 
     &.active {
       color: #facc15 !important;
+      background: #fffbeb; // Amber-50 background when favorited
+      border-color: #fef3c7;
 
       i {
         color: #facc15 !important;
+      }
+
+      &:hover {
+        background: #fef9c3;
+        border-color: #fde68a;
       }
     }
 
@@ -881,11 +933,11 @@ $transition: 150ms ease;
     }
   }
 
-  // Menu button
+  // Menu button - Issue 3 fix: visible background
   &__menu {
     position: relative;
-    background: transparent !important;
-    border: none !important;
+    background: #f8fafc !important; // Match row background
+    border: 1px solid #e5e7eb !important;
     box-shadow: none !important;
     width: 28px;
     height: 28px;
@@ -895,24 +947,27 @@ $transition: 150ms ease;
     border-radius: 6px;
 
     &:hover {
-      background: #f3f4f6 !important;
+      background: #e2e8f0 !important;
+      border-color: #d1d5db !important;
     }
 
     i {
       color: #94a3b8;
       font-size: 14px;
-
-      &:hover {
-        color: #64748b;
-      }
     }
 
+    &:hover i {
+      color: #64748b;
+    }
+
+    // Fix: Dropdown positioning - align to right edge, override menu.scss left:0
     .dropdown {
       position: absolute;
-      top: 100%;
+      top: calc(100% + 4px);
       right: 0;
-      z-index: 1000 !important;
-      margin-top: 4px;
+      left: auto !important; // Override menu.scss .dropdown.right { left: 0 }
+      z-index: 9999 !important;
+      margin-top: 0;
       background: #ffffff;
       border-radius: 8px;
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);

@@ -329,11 +329,19 @@
 
   .btn-primary {
     color: #ffffff;
-    background: linear-gradient(135deg, #64748b 0%, #475569 100%);
+    background: var(--gradient-primary-diagonal);
     border: none;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 
     &:hover:not(:disabled) {
-      background: linear-gradient(135deg, #475569 0%, #334155 100%);
+      background: var(--gradient-primary-diagonal-hover);
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      transform: translateY(-1px);
+    }
+
+    &:active:not(:disabled) {
+      background: var(--gradient-primary-active);
+      transform: translateY(0);
     }
   }
 

@@ -42,10 +42,11 @@ interface ResourceCardProps {
   href: string;
   icon: string;
   title: string;
+  description: string;
   ariaLabel: string;
 }
 
-const ResourceCard: React.FC<ResourceCardProps> = ({ href, icon, title, ariaLabel }) => (
+const ResourceCard: React.FC<ResourceCardProps> = ({ href, icon, title, description, ariaLabel }) => (
   <a
     href={href}
     target="_blank"
@@ -53,8 +54,9 @@ const ResourceCard: React.FC<ResourceCardProps> = ({ href, icon, title, ariaLabe
     className="resource-card"
     aria-label={ariaLabel}
   >
-    <span className="resource-icon">{icon}</span>
+    <i className={`bi ${icon} resource-icon`} />
     <span className="resource-title">{title}</span>
+    <span className="resource-description">{description}</span>
     <span className="resource-arrow">
       <i className="bi bi-arrow-right" />
     </span>
@@ -131,26 +133,30 @@ export const EmptyDashboard: React.FC<EmptyDashboardProps> = ({
         <div className="resources-grid">
           <ResourceCard
             href="https://www.jjodel.io/get-started/"
-            icon="🚀"
-            title="Getting Started Guide"
+            icon="bi-rocket-takeoff"
+            title="Getting Started"
+            description="Quick introduction to Jjodel basics"
             ariaLabel="Getting Started Guide - opens in new tab"
           />
           <ResourceCard
             href="https://www.jjodel.io/user-manual/"
-            icon="📖"
-            title="User Manual & API Reference"
+            icon="bi-book"
+            title="User Manual"
+            description="Complete reference and API docs"
             ariaLabel="User Manual & API Reference - opens in new tab"
           />
           <ResourceCard
             href="https://www.jjodel.io/tutorials/"
-            icon="▶️"
+            icon="bi-play-btn"
             title="Video Tutorials"
+            description="Step-by-step video guides"
             ariaLabel="Video Tutorials - opens in new tab"
           />
           <ResourceCard
             href="https://www.jjodel.io/documentation/"
-            icon="📄"
+            icon="bi-file-text"
             title="Documentation"
+            description="In-depth technical documentation"
             ariaLabel="Documentation - opens in new tab"
           />
         </div>

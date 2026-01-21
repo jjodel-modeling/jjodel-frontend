@@ -139,12 +139,20 @@
   }
 
   .btn-primary {
-    background: #334155;
+    background: var(--gradient-primary);
     color: #ffffff;
     border: none;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 
     &:hover {
-      background: #1e293b;
+      background: var(--gradient-primary-hover);
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      transform: translateY(-1px);
+    }
+
+    &:active {
+      background: var(--gradient-primary-active);
+      transform: translateY(0);
     }
   }
 
@@ -177,6 +185,7 @@
     font-weight: var(--font-semibold);
     color: var(--color-text-primary);
     margin: 0 0 var(--space-6) 0;
+    text-align: center;
   }
 
   .resources-grid {
@@ -192,7 +201,8 @@
   .resource-card {
     display: flex;
     flex-direction: column;
-    align-items: flex-start;
+    align-items: center;
+    text-align: center;
     padding: var(--space-6);
     background: #f8fafc;
     border: 1px solid #e2e8f0;
@@ -201,7 +211,7 @@
     color: var(--color-text-primary);
     transition: all 200ms ease-out;
     position: relative;
-    min-height: 120px;
+    min-height: 140px;
     cursor: pointer;
 
     &:hover {
@@ -216,6 +226,7 @@
 
       .resource-icon {
         transform: scale(1.1);
+        color: #334155;
       }
     }
 
@@ -229,16 +240,23 @@
     }
 
     .resource-icon {
-      font-size: 32px;
-      line-height: 1;
+      font-size: 28px;
+      color: #475569;
       margin-bottom: var(--space-3);
-      transition: transform 150ms ease;
+      transition: all 150ms ease;
     }
 
     .resource-title {
-      font-size: 16px;
-      font-weight: var(--font-medium);
+      font-size: 15px;
+      font-weight: var(--font-semibold);
       color: var(--color-text-primary);
+      line-height: 1.4;
+      margin-bottom: var(--space-1);
+    }
+
+    .resource-description {
+      font-size: 13px;
+      color: var(--color-text-secondary);
       line-height: 1.4;
       margin-bottom: auto;
     }
@@ -247,7 +265,6 @@
       font-size: 18px;
       color: #94a3b8;
       transition: all 150ms ease;
-      align-self: flex-start;
       margin-top: var(--space-3);
 
       .bi {
