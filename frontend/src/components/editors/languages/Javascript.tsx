@@ -102,7 +102,9 @@ function JavascriptEditorComponent(props: AllProps) {
                       tabIndex={-1} onBlur={blur}>
             <Editor className={'mx-1'} onChange={change}
                     options={{fontSize: 12, scrollbar: {vertical: 'hidden', horizontalScrollbarSize: 5}, minimap: {enabled: false}, readOnly: readOnly}}
-                    defaultLanguage={'typescript'} value={value} />
+                    defaultLanguage={'typescript'} value={value||""} />
+                    loading={<div style={{padding: '20px'}}>Loading JS Editor...</div>}
+
         </div>}
     </>;
 }

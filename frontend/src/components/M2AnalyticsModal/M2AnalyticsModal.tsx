@@ -35,6 +35,7 @@ export const M2AnalyticsModal: React.FC<M2AnalyticsModalProps> = ({
 }) => {
     const [isVisible, setIsVisible] = useState(false);
     const [isAnimating, setIsAnimating] = useState(false);
+    const [showScoreExplanation, setShowScoreExplanation] = useState(false);
 
     useEffect(() => {
         if (isOpen) {
@@ -203,9 +204,99 @@ export const M2AnalyticsModal: React.FC<M2AnalyticsModalProps> = ({
                                     {metrics.EN}/{metrics.LIT}
                                 </span>
                             </div>
+
+                            {/* Divider before score */}
+                            <div className="metrics-table__divider" />
+
+                            {/* Score row - highlighted */}
+                            <div className="metrics-row metrics-row--score">
+                                <span className="metrics-row__acronym">SCORE</span>
+                                <span className="metrics-row__label">
+                                    Metamodel Complexity Score
+                                    <button
+                                        className="metrics-row__info-btn"
+                                        onClick={() => setShowScoreExplanation(true)}
+                                        title="How is this calculated?"
+                                    >
+                                        <i className="bi bi-info-circle" />
+                                    </button>
+                                </span>
+                                <span className="metrics-row__value metrics-row__value--score">
+                                    {classification.score}
+                                </span>
+                            </div>
                         </div>
                     </div>
                 </div>
+
+                {/* Score Explanation Modal */}
+                {showScoreExplanation && (
+                    <div className="score-explanation-overlay" onClick={() => setShowScoreExplanation(false)}>
+                        <div className="score-explanation-modal" onClick={(e) => e.stopPropagation()}>
+                            <div className="score-explanation-modal__header">
+                                <h3>Complexity Score Calculation</h3>
+                                <button onClick={() => setShowScoreExplanation(false)}>
+                                    <i className="bi bi-x-lg" />
+                                </button>
+                            </div>
+
+                            <div className="score-explanation-modal__content">
+                                <p>
+                                    The <strong>Metamodel Complexity Score</strong> is calculated based on
+                                    multiple structural metrics:
+                                </p>
+
+                                <div className="score-formula">
+                                    <div className="score-component">
+                                        <span className="score-component__label">Metaclasses (MC)</span>
+                                        <span className="score-component__formula">MC × 2</span>
+                                        <span className="score-component__max">max 40 pts</span>
+                                    </div>
+
+                                    <div className="score-component">
+                                        <span className="score-component__label">Structural Features (SF)</span>
+                                        <span className="score-component__formula">SF × 0.5</span>
+                                        <span className="score-component__max">max 30 pts</span>
+                                    </div>
+
+                                    <div className="score-component">
+                                        <span className="score-component__label">Hierarchy (MCWS)</span>
+                                        <span className="score-component__formula">MCWS × 1.5</span>
+                                        <span className="score-component__max">max 20 pts</span>
+                                    </div>
+
+                                    <div className="score-component">
+                                        <span className="score-component__label">Enumerations (EN)</span>
+                                        <span className="score-component__formula">EN × 2</span>
+                                        <span className="score-component__max">max 10 pts</span>
+                                    </div>
+
+                                    <div className="score-total">
+                                        <span>Total Score</span>
+                                        <span>0 - 100</span>
+                                    </div>
+                                </div>
+
+                                <div className="score-ranges">
+                                    <h4>Score Ranges (EMF-based Classification):</h4>
+                                    <ul>
+                                        <li><strong>0-29:</strong> Small metamodel</li>
+                                        <li><strong>30-79:</strong> Medium metamodel</li>
+                                        <li><strong>80-100:</strong> Large metamodel</li>
+                                    </ul>
+                                </div>
+
+                                <div className="score-note">
+                                    <i className="bi bi-lightbulb" />
+                                    <p>
+                                        Higher scores indicate more complex metamodels with more classes,
+                                        features, and hierarchical relationships.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
 
                 {/* Footer */}
                 <div className="m2-analytics-modal__footer">

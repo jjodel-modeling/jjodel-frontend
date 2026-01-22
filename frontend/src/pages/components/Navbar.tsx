@@ -21,7 +21,10 @@ import {
     store,
     U,
     R,
-    Pointer, Pointers, Log
+    Pointer, Pointers, Log,
+    UndoAction,
+    RedoAction,
+    GraphPoint
 } from '../../joiner';
 
 import {icon} from '../components/icons/Icons';
@@ -49,9 +52,10 @@ import ActivityLogger from '../../services/ActivityLogger';
 import { ActivityType } from '../../types/activity';
 import { LayoutMode, getSavedLayoutMode, saveLayoutMode, getInitialPanelWidth } from '../../components/abstract/Dock';
 import { isProjectOverviewPage } from '../../utils/navigationUtils';
-import { formatShortcutPills, getRedoShortcutPills, SHORTCUTS, matchesShortcut, detectCurrentContext, matchesZoomIn, matchesZoomOut, matchesZoomReset } from '../../utils/keyboardShortcuts';
+import { formatShortcutPills, getRedoShortcutPills, SHORTCUTS, matchesShortcut, detectCurrentContext, matchesZoomIn, matchesZoomOut, matchesZoomReset, isMac } from '../../utils/keyboardShortcuts';
 import { AdvancedModeTutorial, shouldShowAdvancedModeTutorial } from '../../components/AdvancedModeTutorial';
 import { M2AnalyticsModal, M2AnalyticsData } from '../../components/M2AnalyticsModal';
+import { ShortcutsReference } from '../../components/ShortcutsReference';
 
 
 let windoww = window as any;
@@ -265,6 +269,33 @@ function placeholder(){}
 const allowPlaceholders = true;
 function open (url: string) { window.open(url, '_blank'); }
 
+// Helper function to perform zoom on active graph
+function performGraphZoom(metamodels: LModel[], action: 'in' | 'out' | 'reset') {
+    const activeMetamodel = metamodels.find(m => m);
+    if (!activeMetamodel) return;
+
+    const graph = activeMetamodel.node as LGraph;
+    if (!graph) return;
+
+    const oldZoom = graph.zoom;
+    let newZoom: GraphPoint;
+
+    switch (action) {
+        case 'in':
+            newZoom = new GraphPoint(oldZoom.x * 1.1, oldZoom.y * 1.1);
+            break;
+        case 'out':
+            newZoom = new GraphPoint(oldZoom.x / 1.1, oldZoom.y / 1.1);
+            break;
+        case 'reset':
+            newZoom = new GraphPoint(1, 1);
+            break;
+    }
+
+    TRANSACTION('zoom ' + action, () => {
+        graph.zoom = newZoom;
+    });
+}
 
 function NavbarComponent(props: AllProps) {
     const [debuggerr, setDebugger] = useState(false);
@@ -289,6 +320,9 @@ function NavbarComponent(props: AllProps) {
         classification: { score: 0, category: 'small' },
         metrics: { PKG: 0, MC: 0, AMC: 0, CMC: 0, IFLMC: 0, MCWS: 0, LMC: null, SF: 0, ASF: null, EN: 0, LIT: 0 }
     });
+
+    // Keyboard Shortcuts Reference state
+    const [showShortcutsReference, setShowShortcutsReference] = useState(false);
 
     // Function to open M2 Analytics with computed data
     const openM2Analytics = () => {
@@ -450,26 +484,87 @@ function NavbarComponent(props: AllProps) {
         return mode;
     });
 
-    const handleLayoutModeChange = (mode: LayoutMode) => {
+    const handleLayoutModeChange = (mode: LayoutMode, resetToDefault: boolean = false) => {
         setLayoutModeState(mode);
         saveLayoutMode(mode);
         // Apply layout mode to body for CSS targeting
         document.body.setAttribute('data-layout-mode', mode);
-        // Dispatch event to notify dock to update
-        window.dispatchEvent(new CustomEvent('jjodel:layout-mode-change', { detail: { mode } }));
+        // Dispatch event to notify dock to update (includes resetToDefault flag)
+        window.dispatchEvent(new CustomEvent('jjodel:layout-mode-change', {
+            detail: { mode, resetToDefault }
+        }));
+    };
+
+    // Handle double-click to reset to default size
+    const handleLayoutModeDoubleClick = (mode: LayoutMode) => {
+        handleLayoutModeChange(mode, true);
     };
 
     // Global context-aware keyboard shortcut handler - prevents browser defaults
     useEffect(() => {
         const handleKeyDown = (event: KeyboardEvent) => {
-            // Check if user is typing in an input/textarea
+            // DEBUG: Log all Cmd/Ctrl key events
+            const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+            const modKey = isMac ? event.metaKey : event.ctrlKey;
+
+            if (modKey) {
+                console.log('[Jjodel Shortcuts] Handler called:', {
+                    key: event.key,
+                    code: event.code,
+                    altKey: event.altKey,
+                    shiftKey: event.shiftKey,
+                    hash: window.location.hash,
+                    projectInClosure: project ? project.name : 'undefined'
+                });
+            }
+
             const target = event.target as HTMLElement;
-            if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
+            const isInputField = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable;
+
+            // ========================================
+            // IMMEDIATELY block browser shortcuts BEFORE any other processing
+            // NOTE: We use Alt+CMD for NEW, CLOSE, SIGN_OUT to avoid Chrome interception
+            // NOTE: On Mac, Alt modifies the key character, so we use event.code for Alt shortcuts
+            // ========================================
+            if (modKey && !isInputField) {
+                const key = event.key.toUpperCase();
+                const code = event.code; // e.g., "KeyN", "KeyW", "KeyQ"
+
+                // Block Jjodel shortcuts (with Alt for NEW/CLOSE/SIGNOUT)
+                // Use event.code for Alt shortcuts since Alt changes the character on Mac
+                const isAltShortcut = event.altKey && (code === 'KeyN' || code === 'KeyW' || code === 'KeyQ');
+                const isCmdOnlyShortcut = !event.altKey && (key === 'S' || key === 'Z' || key === 'Y' ||
+                    key === '+' || key === '=' || key === '-' || key === '0' || key === 'B');
+                const isHelpShortcut = event.shiftKey && event.key === '?';
+
+                if (isAltShortcut || isCmdOnlyShortcut || isHelpShortcut) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    event.stopImmediatePropagation();
+                }
+            }
+
+            // Skip processing if user is typing in an input/textarea
+            if (isInputField) {
                 return;
             }
 
             // Detect current context for context-aware shortcuts
             const context = detectCurrentContext();
+
+            // DEBUG: Log shortcut detection
+            if (modKey && event.altKey) {
+                console.log('[Jjodel Shortcuts] Alt+Cmd pressed:', {
+                    code: event.code,
+                    key: event.key,
+                    context,
+                    matchesNEW: matchesShortcut(event, SHORTCUTS.NEW),
+                    matchesSAVE: matchesShortcut(event, SHORTCUTS.SAVE),
+                    matchesCLOSE: matchesShortcut(event, SHORTCUTS.CLOSE),
+                    project: project ? project.name : 'undefined',
+                    metamodelsCount: metamodels?.length || 0
+                });
+            }
 
             // ========================================
             // CMD/Ctrl + N - Context-Aware NEW
@@ -477,18 +572,50 @@ function NavbarComponent(props: AllProps) {
             if (matchesShortcut(event, SHORTCUTS.NEW)) {
                 event.preventDefault();
                 event.stopPropagation();
+                console.log('[Jjodel Shortcuts] NEW shortcut matched! Context:', context, 'Project:', project?.name);
 
                 switch (context) {
                     case 'DASHBOARD':
-                        // TODO: Implement new project creation
-                        console.log('[Shortcut] New Project');
+                        // Dispatch event for AllProjects to handle (opens Create Project dialog)
+                        window.dispatchEvent(new CustomEvent('jjodel:new-project'));
                         break;
                     case 'PROJECT_EDITOR':
+                        console.log('[Jjodel Shortcuts] Creating M2, project:', project);
                         if (project) createM2(project);
                         break;
                     case 'METAMODEL_EDITOR':
-                        // TODO: Implement new class creation
-                        console.log('[Shortcut] New Class');
+                        // Add new class to the active metamodel's default package
+                        // Try to find the metamodel from last selected element, fallback to first metamodel
+                        let activeMetamodel = metamodels.find(m => m);
+                        if (props.lastSelectedModelElement) {
+                            const selectedMetamodel = metamodels.find(m => m.id === props.lastSelectedModelElement);
+                            if (selectedMetamodel) {
+                                activeMetamodel = selectedMetamodel;
+                            }
+                        }
+                        console.log('[Jjodel Shortcuts] Creating class, activeMetamodel:', activeMetamodel?.name, 'lastSelectedModel:', props.lastSelectedModelElement);
+                        if (activeMetamodel) {
+                            const defaultPkg = activeMetamodel.packages?.[0];
+                            console.log('[Jjodel Shortcuts] defaultPkg:', defaultPkg?.name, 'packages count:', activeMetamodel.packages?.length);
+                            if (defaultPkg) {
+                                console.log('[Jjodel Shortcuts] Calling defaultPkg.addClass()');
+                                const newClass = defaultPkg.addClass();
+                                console.log('[Jjodel Shortcuts] addClass() returned:', newClass?.name, 'id:', newClass?.__raw?.id);
+                                // Select the newly created class to make it visible on the canvas
+                                if (newClass && newClass.__raw?.id) {
+                                    setTimeout(() => {
+                                        const selector = ".Graph [data-dataid='" + newClass.__raw.id + "']";
+                                        const elem = document.querySelector(selector);
+                                        console.log('[Jjodel Shortcuts] Selecting element:', selector, 'found:', !!elem);
+                                        if (elem) {
+                                            (elem as HTMLElement).click();
+                                        }
+                                    }, 100);
+                                }
+                            } else {
+                                console.warn('[Jjodel Shortcuts] No default package found!');
+                            }
+                        }
                         break;
                 }
                 return;
@@ -512,6 +639,7 @@ function NavbarComponent(props: AllProps) {
             // CMD/Ctrl + S - Context-Aware SAVE
             // ========================================
             if (matchesShortcut(event, SHORTCUTS.SAVE)) {
+                console.log('[Jjodel Shortcuts] SAVE shortcut matched! Context:', context, 'Project:', project?.name);
                 event.preventDefault();
                 event.stopPropagation();
 
@@ -529,8 +657,8 @@ function NavbarComponent(props: AllProps) {
                         })();
                     }
                 } else if (context === 'USER_PROFILE') {
-                    // TODO: Save user profile
-                    console.log('[Shortcut] Save Profile');
+                    // Profile changes are auto-saved, show confirmation
+                    U.alert('i', 'Profile Saved', 'Your profile changes are saved automatically.');
                 }
                 return;
             }
@@ -609,6 +737,38 @@ function NavbarComponent(props: AllProps) {
             }
 
             // ========================================
+            // CMD/Ctrl + ? (Shift + /) - Show Keyboard Shortcuts
+            // ========================================
+            const isMacOS = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+            const cmdOrCtrl = isMacOS ? event.metaKey : event.ctrlKey;
+            if (cmdOrCtrl && event.shiftKey && event.key === '?') {
+                event.preventDefault();
+                event.stopPropagation();
+                setShowShortcutsReference(true);
+                return;
+            }
+
+            // ========================================
+            // CMD/Ctrl + Z - UNDO (Editor contexts only)
+            // ========================================
+            if (context === 'METAMODEL_EDITOR' || context === 'PROJECT_EDITOR') {
+                if (matchesShortcut(event, SHORTCUTS.UNDO)) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    UndoAction.new(1, user?.id, false).commit();
+                    return;
+                }
+
+                // CMD/Ctrl + Shift + Z (Mac) or CMD/Ctrl + Y (Windows) - REDO
+                if (matchesShortcut(event, SHORTCUTS.REDO_MAC) || matchesShortcut(event, SHORTCUTS.REDO_WIN)) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    RedoAction.new(1, user?.id, false).commit();
+                    return;
+                }
+            }
+
+            // ========================================
             // ZOOM SHORTCUTS (Editor contexts only)
             // ========================================
             if (context === 'METAMODEL_EDITOR' || context === 'PROJECT_EDITOR') {
@@ -616,8 +776,7 @@ function NavbarComponent(props: AllProps) {
                 if (matchesZoomIn(event)) {
                     event.preventDefault();
                     event.stopPropagation();
-                    // Dispatch zoom in event for canvas to handle
-                    window.dispatchEvent(new CustomEvent('jjodel:zoom', { detail: { action: 'in' } }));
+                    performGraphZoom(metamodels, 'in');
                     return;
                 }
 
@@ -625,8 +784,7 @@ function NavbarComponent(props: AllProps) {
                 if (matchesZoomOut(event)) {
                     event.preventDefault();
                     event.stopPropagation();
-                    // Dispatch zoom out event for canvas to handle
-                    window.dispatchEvent(new CustomEvent('jjodel:zoom', { detail: { action: 'out' } }));
+                    performGraphZoom(metamodels, 'out');
                     return;
                 }
 
@@ -634,18 +792,30 @@ function NavbarComponent(props: AllProps) {
                 if (matchesZoomReset(event)) {
                     event.preventDefault();
                     event.stopPropagation();
-                    // Dispatch zoom reset event for canvas to handle
-                    window.dispatchEvent(new CustomEvent('jjodel:zoom', { detail: { action: 'reset' } }));
+                    performGraphZoom(metamodels, 'reset');
+                    return;
+                }
+
+                // ========================================
+                // CMD/Ctrl + B - TOGGLE TREE VIEW
+                // ========================================
+                if (matchesShortcut(event, SHORTCUTS.TOGGLE_TREE_VIEW)) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    window.dispatchEvent(new CustomEvent('jjodel:toggle-tree-view'));
                     return;
                 }
             }
         };
 
+        // Register on both window and document for maximum coverage
         window.addEventListener('keydown', handleKeyDown, true); // Use capture phase
+        document.addEventListener('keydown', handleKeyDown, true); // Also on document
         return () => {
             window.removeEventListener('keydown', handleKeyDown, true);
+            document.removeEventListener('keydown', handleKeyDown, true);
         };
-    }, [project, metamodels, props.advanced]);
+    }, [project, metamodels, props.advanced, user]);
 
     if (user?.projects) {
         user.projects
@@ -806,19 +976,19 @@ function NavbarComponent(props: AllProps) {
                 },
                 {name: 'divisor', function: placeholder},
                 {name: 'Zoom-in',
-                    function: () => window.dispatchEvent(new CustomEvent('jjodel:zoom', { detail: { action: 'in' } })),
+                    function: () => performGraphZoom(metamodels, 'in'),
                     icon: <i className="bi bi-zoom-in" />,
                     shortcutPills: formatShortcutPills(SHORTCUTS.ZOOM_IN),
                     disabled: isDashboard
                 },
                 {name: 'Zoom-out',
-                    function: () => window.dispatchEvent(new CustomEvent('jjodel:zoom', { detail: { action: 'out' } })),
+                    function: () => performGraphZoom(metamodels, 'out'),
                     icon: <i className="bi bi-zoom-out" />,
                     shortcutPills: formatShortcutPills(SHORTCUTS.ZOOM_OUT),
                     disabled: isDashboard
                 },
                 {name: 'Reset Zoom',
-                    function: () => window.dispatchEvent(new CustomEvent('jjodel:zoom', { detail: { action: 'reset' } })),
+                    function: () => performGraphZoom(metamodels, 'reset'),
                     icon: <i className="bi bi-arrow-counterclockwise" />,
                     shortcutPills: formatShortcutPills(SHORTCUTS.ZOOM_RESET),
                     disabled: isDashboard
@@ -946,7 +1116,12 @@ function NavbarComponent(props: AllProps) {
 
     // Help dropdown menu - matches spec design
     const HelpMenu = () => {
+        const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+        const modKey = isMac ? '\u2318' : 'Ctrl';
+
         const helpItems: MenuEntry[] = [
+            {name: 'Keyboard Shortcuts', function: () => setShowShortcutsReference(true), icon: <i className="bi bi-keyboard" />, keystroke: [modKey, '?']},
+            {name: 'divisor'},
             {name: 'What\'s New in Jjodel', function: ()=> open("https://www.jjodel.io/whats-new/"), icon: <i className="bi bi-bell" />},
             {name: 'Homepage', function: ()=> open("https://www.jjodel.io"), icon: <i className="bi bi-house" />},
             {name: 'divisor'},
@@ -1004,6 +1179,55 @@ function NavbarComponent(props: AllProps) {
         );
     };
 
+    // TreeView Toggle button
+    // Dispatches custom event to toggle the Tree View sidebar
+    const TreeViewToggle = () => {
+        const [isTreeViewOpen, setIsTreeViewOpen] = useState(() => {
+            const saved = localStorage.getItem('jjodel_tree_view_open');
+            return saved === 'true';
+        });
+
+        // Listen for tree view state changes
+        useEffect(() => {
+            const handleStorageChange = () => {
+                const saved = localStorage.getItem('jjodel_tree_view_open');
+                setIsTreeViewOpen(saved === 'true');
+            };
+            window.addEventListener('storage', handleStorageChange);
+            // Also listen for our custom toggle event to sync state
+            const handleToggle = () => {
+                setTimeout(() => {
+                    const saved = localStorage.getItem('jjodel_tree_view_open');
+                    setIsTreeViewOpen(saved === 'true');
+                }, 50);
+            };
+            window.addEventListener('jjodel:toggle-tree-view', handleToggle);
+            return () => {
+                window.removeEventListener('storage', handleStorageChange);
+                window.removeEventListener('jjodel:toggle-tree-view', handleToggle);
+            };
+        }, []);
+
+        const handleToggle = () => {
+            window.dispatchEvent(new CustomEvent('jjodel:toggle-tree-view'));
+        };
+
+        const isMacOS = isMac();
+        const shortcutLabel = isMacOS ? '⌘B' : 'Ctrl+B';
+
+        return (
+            <Tooltip tooltip={`Tree View (${shortcutLabel})`} inline={true} position="bottom" offsetY={8}>
+                <button
+                    className={`layout-btn ${isTreeViewOpen ? 'layout-btn--active' : ''}`}
+                    onClick={handleToggle}
+                    aria-label="Toggle Tree View"
+                >
+                    <i className="bi bi-diagram-2" />
+                </button>
+            </Tooltip>
+        );
+    };
+
     // Layout Controls - Split/Sidebar toggle buttons + User Menu
     // Only visible when editing metamodels and model instances (not on project overview)
     const LayoutControls = () => {
@@ -1039,19 +1263,21 @@ function NavbarComponent(props: AllProps) {
         return (<>
             <div className="navbar__layout-controls">
                 
-                <Tooltip tooltip="50% - 50%" inline={true} position="bottom" offsetY={8}>
+                <Tooltip tooltip="50% - 50% (doppio click = reset)" inline={true} position="bottom" offsetY={8}>
                     <button
                         className={`layout-btn ${layoutMode === 'split' ? 'layout-btn--active' : ''}`}
                         onClick={() => handleLayoutModeChange('split')}
+                        onDoubleClick={() => handleLayoutModeDoubleClick('split')}
                         aria-label="Split view"
                     >
                         <i className="bi bi-layout-split" />
                     </button>
                 </Tooltip>
-                <Tooltip tooltip="70% - 30%" inline={true} position="bottom" offsetY={8}>
+                <Tooltip tooltip="70% - 30% (doppio click = reset)" inline={true} position="bottom" offsetY={8}>
                     <button
                         className={`layout-btn ${layoutMode === 'sidebar' ? 'layout-btn--active' : ''}`}
                         onClick={() => handleLayoutModeChange('sidebar')}
+                        onDoubleClick={() => handleLayoutModeDoubleClick('sidebar')}
                         aria-label="Sidebar view"
                     >
                         <i className="bi bi-layout-sidebar-reverse" />
@@ -1155,6 +1381,8 @@ function NavbarComponent(props: AllProps) {
                 )}
                 {/* Layout Controls Group */}
                 <LayoutControls />
+                {/* Tree View Toggle - only in editor context */}
+                {project && metamodels.length > 0 && !isProjectOverviewPage() && <TreeViewToggle />}
                 {/* Divider */}
                 {project && <div className="navbar__divider" />}
                 {/* User Controls */}
@@ -1173,6 +1401,10 @@ function NavbarComponent(props: AllProps) {
             onClose={() => setShowM2Analytics(false)}
             data={m2AnalyticsData}
         />
+        <ShortcutsReference
+            isOpen={showShortcutsReference}
+            onClose={() => setShowShortcutsReference(false)}
+        />
     </>);
 }
 
@@ -1186,6 +1418,7 @@ interface StateProps {
     debug: boolean;
     lay: string; // layout selected shortened, first char is category, second is index. like u1 = user 1, p2 = project 2
     autosaveLayout: boolean;
+    lastSelectedModelElement?: Pointer<DModel>; // For detecting active metamodel from last selected element
 }
 interface DispatchProps {}
 type AllProps = OwnProps & StateProps & DispatchProps;
@@ -1205,6 +1438,26 @@ function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     ret.debug = state.debug;
     ret.lay = PinnableDock.saveSlotCategory[0] + PinnableDock.saveSlotName[0];
     ret.autosaveLayout = PinnableDock.isAutosave();
+
+    // Get the model of the last selected element (for determining active metamodel in shortcuts)
+    if (state._lastSelected?.modelElement) {
+        try {
+            const lastSelectedElem = state.idlookup[state._lastSelected.modelElement];
+            if (lastSelectedElem) {
+                // Walk up the parent chain to find the model
+                let current: any = lastSelectedElem;
+                while (current) {
+                    if (current.className === 'DModel') {
+                        ret.lastSelectedModelElement = current.id;
+                        break;
+                    }
+                    current = current.father ? state.idlookup[current.father] : null;
+                }
+            }
+        } catch (e) {
+            // Ignore errors in walking the parent chain
+        }
+    }
     return ret;
 }
 

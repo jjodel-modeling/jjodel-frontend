@@ -335,7 +335,8 @@ body > .dragging-layer > div:last-child {
   display: flex;
 
   & > * {
-    overflow: auto;
+    overflow-x: hidden;
+    overflow-y: auto;
     flex-grow: 1;
   }
 }
@@ -562,24 +563,37 @@ body.dock-dragging iframe {
 
 .dock-divider {
   box-sizing: border-box;
-  flex: 0 0 4px;
-  background: var(--color-bg-tertiary);
-  border-left: 1px solid var(--color-bg-primary);
-  border-right: 2px solid var(--color-bg-primary);
-  background-repeat: no-repeat;
-  background-position: center;
-  background-size: 8px 800px;
+  flex: 0 0 8px;
+  background: transparent;
+  border-left: 1px solid var(--color-border-primary);
+  border-right: none;
   z-index: 1;
   transition: var(--transition-fast);
+  position: relative;
 }
 
-.dock-divider:hover {
-  background-image: none;
+/* Visible handle in the center of the divider */
+/* Offset by ~18px to align with panel-resizer (accounts for tab bar height) */
+.dock-divider::after {
+  content: '';
+  position: absolute;
+  top: calc(50% + 18px);
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 4px;
+  height: 40px;
+  background-color: var(--color-border-primary);
+  border-radius: 3px;
+  transition: background-color 150ms ease, height 150ms ease;
+  pointer-events: none; /* Allow clicks to pass through to divider */
+}
+
+.dock-divider:hover::after {
   background-color: var(--color-accent);
+  height: 80px;
 }
 
 .dock-hbox > .dock-divider {
-  transform: scaleX(3);
   cursor: ew-resize;
 }
 
@@ -588,8 +602,16 @@ body.dock-dragging iframe {
 }
 
 .dock-vbox > .dock-divider {
-  transform: scaleY(3);
   cursor: ns-resize;
+}
+
+.dock-vbox > .dock-divider::after {
+  width: 40px;
+  height: 4px;
+}
+
+.dock-vbox > .dock-divider:hover::after {
+  width: 80px;
 }
 
 /* ============================================
@@ -999,12 +1021,42 @@ body.dock-dragging iframe {
    Resolution-based layout with Split/Sidebar modes
    ============================================ */
 
-/* Default Split Mode - percentages based on screen size */
+/* Split Mode - 50%-50% initial layout (resizable) */
+body[data-layout-mode="split"] {
+  .dock-hbox > .dock-panel:first-child,
+  .dock-hbox > .dock-box:first-child {
+    min-width: 300px;
+  }
+
+  .dock-hbox > .dock-panel:last-child,
+  .dock-hbox > .dock-box:last-child {
+    min-width: 400px;
+    transition: opacity 200ms ease;
+  }
+}
+
+/* Sidebar Mode - 70%-30% initial layout (resizable) */
+body[data-layout-mode="sidebar"] {
+  .dock-hbox > .dock-panel:first-child,
+  .dock-hbox > .dock-box:first-child {
+    min-width: 300px;
+  }
+
+  .dock-hbox > .dock-panel:last-child,
+  .dock-hbox > .dock-box:last-child {
+    min-width: 350px;
+    max-width: 550px;
+    box-shadow: -2px 0 8px rgba(0, 0, 0, 0.05);
+    transition: opacity 200ms ease;
+  }
+}
+
+/* Default (no mode) - responsive percentages based on screen size */
 
 /* Monitor 27"+ (≥2560px): 25% properties, 75% canvas */
 @media (min-width: 2560px) {
-  .dock-hbox > .dock-panel:last-child,
-  .dock-hbox > .dock-box:last-child {
+  body:not([data-layout-mode]) .dock-hbox > .dock-panel:last-child,
+  body:not([data-layout-mode]) .dock-hbox > .dock-box:last-child {
     min-width: 500px;
     max-width: 800px;
   }
@@ -1012,8 +1064,8 @@ body.dock-dragging iframe {
 
 /* Desktop FHD (1920-2559px): 35% properties */
 @media (min-width: 1920px) and (max-width: 2559px) {
-  .dock-hbox > .dock-panel:last-child,
-  .dock-hbox > .dock-box:last-child {
+  body:not([data-layout-mode]) .dock-hbox > .dock-panel:last-child,
+  body:not([data-layout-mode]) .dock-hbox > .dock-box:last-child {
     min-width: 500px;
     max-width: 750px;
   }
@@ -1021,8 +1073,8 @@ body.dock-dragging iframe {
 
 /* Laptop (1440-1919px): 40% properties */
 @media (min-width: 1440px) and (max-width: 1919px) {
-  .dock-hbox > .dock-panel:last-child,
-  .dock-hbox > .dock-box:last-child {
+  body:not([data-layout-mode]) .dock-hbox > .dock-panel:last-child,
+  body:not([data-layout-mode]) .dock-hbox > .dock-box:last-child {
     min-width: 450px;
     max-width: 650px;
   }
@@ -1030,28 +1082,10 @@ body.dock-dragging iframe {
 
 /* Tablet and smaller (<1440px): 50% properties */
 @media (max-width: 1439px) {
-  .dock-hbox > .dock-panel:last-child,
-  .dock-hbox > .dock-box:last-child {
+  body:not([data-layout-mode]) .dock-hbox > .dock-panel:last-child,
+  body:not([data-layout-mode]) .dock-hbox > .dock-box:last-child {
     min-width: 400px;
     max-width: 600px;
-  }
-}
-
-/* Sidebar Mode - 30% width (compact properties panel) */
-body[data-layout-mode="sidebar"] {
-  .dock-hbox > .dock-panel:last-child,
-  .dock-hbox > .dock-box:last-child {
-    width: 30% !important;
-    min-width: 350px !important;
-    max-width: 450px !important;
-    flex-shrink: 0 !important;
-    box-shadow: -2px 0 8px rgba(0, 0, 0, 0.05);
-    transition: width 200ms ease, opacity 200ms ease;
-  }
-
-  .dock-hbox > .dock-panel:first-child,
-  .dock-hbox > .dock-box:first-child {
-    flex: 1 !important;
   }
 }
 
@@ -1092,4 +1126,17 @@ body[data-layout-mode="canvas-only"] {
   .dock-hbox > .dock-box:last-child {
     box-shadow: -2px 0 8px rgba(0, 0, 0, 0.3);
   }
+}
+
+/* Dark mode dock divider handle */
+[data-theme="dark"] .dock-divider {
+  border-color: #333;
+}
+
+[data-theme="dark"] .dock-divider::after {
+  background-color: #555;
+}
+
+[data-theme="dark"] .dock-divider:hover::after {
+  background-color: #64748b;
 }

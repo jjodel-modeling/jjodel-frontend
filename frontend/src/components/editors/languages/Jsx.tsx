@@ -133,7 +133,15 @@ function JsxEditorComponent(props: AllProps) {
 
             <Editor className={'mx-1'} onChange={change} language={"typescript"}
                     options={{fontSize: 12, scrollbar: {vertical: 'hidden', horizontalScrollbarSize: 5}, minimap: {enabled: false}, readOnly: readOnly}}
-                    defaultLanguage={'typescript'} value={dview.jsxString} />
+                    defaultLanguage={'typescript'} value={dview.jsxString||""} 
+                    onMount={(editor) => {
+                        console.log('[Monaco JSX] Mounted!');
+                        console.log('[Monaco JSX] View:', view);
+                        console.log('[Monaco JSX] Initial value:', view.jsxString);
+                    }}
+                    loading={<div style={{padding: '20px'}}>Loading JSX Editor...</div>}
+                    
+                    />
         </div>}
     </>);
 }

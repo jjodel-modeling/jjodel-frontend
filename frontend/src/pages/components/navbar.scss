@@ -165,6 +165,8 @@
   position: relative;
   display: flex;
   align-items: center;
+  /* Ensure navbar is above tree view sidebar (z-index: 50) */
+  z-index: 100;
 
   /* Visual */
   background-color: var(--color-bg-primary);
@@ -470,6 +472,9 @@
 }
 
 .nav-container .content {
+  // Ensure all navbar dropdowns are above tree view sidebar (z-index: 100)
+  z-index: 200 !important;
+
   &>ul{
     background-color: var(--color-bg-elevated);
     box-shadow: var(--shadow-dropdown);
@@ -537,9 +542,16 @@
   & label:hover:not(.disabled) {
     background-color: var(--color-accent);
     color: white;
+
+    // Shortcut pill styling on hover
+    .keystrokes .keystroke-pill {
+      background: rgba(255, 255, 255, 0.15);
+      border-color: rgba(255, 255, 255, 0.2);
+      color: rgba(255, 255, 255, 0.9);
+    }
   }
 
-  & .keystroke .bi {
+  & .keystroke-pill .bi {
     font-size: 0.9em;
     font-kerning: none;
   }
@@ -604,6 +616,18 @@
         background-color: var(--color-accent);
         color: white;
 
+        // Icon color on hover
+        .bi, svg {
+          color: white;
+        }
+
+        // Shortcut pill styling on hover
+        .keystrokes .keystroke-pill {
+          background: rgba(255, 255, 255, 0.15);
+          border-color: rgba(255, 255, 255, 0.2);
+          color: rgba(255, 255, 255, 0.9);
+        }
+
         &.disabled {
           background-color: transparent !important;
           color: var(--color-text-tertiary) !important;
@@ -644,11 +668,33 @@
       .keystrokes{
         height: 18px;
         display: flex;
-        justify-content: end;
+        justify-content: flex-end;
+        align-items: center;
         margin: auto;
-        margin-left: 1rem;
+        margin-left: 1.5rem;
+        gap: 3px; // Spacing between individual pill keys
 
-        >*{
+        // Individual pill styling for keyboard shortcuts
+        .keystroke-pill {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Consolas', monospace;
+          font-size: 11px;
+          font-weight: 500;
+          min-width: 20px;
+          padding: 2px 6px;
+          background: rgba(0, 0, 0, 0.06);
+          border: 1px solid rgba(0, 0, 0, 0.1);
+          border-radius: 4px;
+          color: #6b7280;
+          white-space: nowrap;
+          line-height: 1.2;
+          box-shadow: 0 1px 0 rgba(0, 0, 0, 0.05);
+        }
+
+        // Old keystroke format (backward compat)
+        >*:not(.keystroke-pill){
           font-size: 12px;
           width: 1.1ic;
           text-align:center;
@@ -1255,4 +1301,56 @@ $transition-menu: 150ms ease;
 [data-theme="dark"] .navbar__divider,
 .dark .navbar__divider {
   background: #334155; // slate-700
+}
+
+// ============================================
+// KEYBOARD SHORTCUTS - Dark Mode Support
+// ============================================
+
+[data-theme="dark"] .keystrokes .keystroke-pill,
+.dark .keystrokes .keystroke-pill {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.12);
+  color: #94a3b8; // slate-400
+}
+
+// ============================================
+// MENU ITEM UNIFORM STYLING
+// Ensures consistent spacing and alignment
+// ============================================
+
+.nav-container .content.context-menu ul > li > label {
+  // Uniform icon sizing
+  .bi {
+    font-size: 16px;
+    width: 20px;
+    min-width: 20px;
+    text-align: center;
+    margin-right: 10px;
+    flex-shrink: 0;
+  }
+
+  // Chevron for submenus - always aligned right
+  .icon-expand-submenu {
+    font-size: 12px;
+    opacity: 0.6;
+    margin-left: auto;
+  }
+}
+
+// ============================================
+// HELP MENU - POSITION FIX
+// Align dropdown to the right and ensure z-index above tree view sidebar
+// ============================================
+
+.help-menu {
+  position: relative;
+
+  .content.context-menu {
+    // Align to right edge of button (dropdown appears more to the left)
+    right: 0;
+    left: auto;
+    // Ensure menu is above tree view sidebar (z-index: 100)
+    z-index: 200;
+  }
 }

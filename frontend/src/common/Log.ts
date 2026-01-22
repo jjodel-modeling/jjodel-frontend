@@ -223,8 +223,12 @@ export class Log{
                 default:
                     break;
             }
-            // err(e);
-            err(...e);
+
+            if (Array.isArray(e)) {
+                err(e);
+            } else {
+                err(e);
+            }
         }
     }
 }

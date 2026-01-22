@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { featureDefinitions, FeatureDefinition } from './featureDefinitions';
+import { featureDefinitions, FeatureDefinition, getSubFeatures, hasSubFeatures } from './featureDefinitions';
 import './features-palette.scss';
 
 const STORAGE_KEY = 'jjodel_features_palette_collapsed';
@@ -13,6 +13,7 @@ interface FeaturesPaletteProps {
  *
  * Features:
  * - Displays Package, Class, Enumerator items
+ * - Shows sub-features (Attribute, Reference, Operation, Literal) when parent is selected
  * - Supports HTML5 drag & drop to canvas
  * - Collapsible with localStorage persistence
  * - Follows CLAUDE.md design guidelines
@@ -24,6 +25,9 @@ export const FeaturesPalette: React.FC<FeaturesPaletteProps> = ({ className = ''
         return saved === 'true';
     });
 
+    // Track which feature is expanded to show sub-features
+    const [expandedFeatureId, setExpandedFeatureId] = useState<string | null>(null);
+
     // Persist collapsed state to localStorage
     useEffect(() => {
         localStorage.setItem(STORAGE_KEY, String(isCollapsed));
@@ -31,6 +35,13 @@ export const FeaturesPalette: React.FC<FeaturesPaletteProps> = ({ className = ''
 
     const toggleCollapsed = useCallback(() => {
         setIsCollapsed(prev => !prev);
+    }, []);
+
+    // Toggle expanded state for features with sub-features
+    const handleFeatureClick = useCallback((feature: FeatureDefinition) => {
+        if (hasSubFeatures(feature.id)) {
+            setExpandedFeatureId(prev => prev === feature.id ? null : feature.id);
+        }
     }, []);
 
     // Handle drag start - set drag data for canvas drop handling
@@ -51,6 +62,30 @@ export const FeaturesPalette: React.FC<FeaturesPaletteProps> = ({ className = ''
         const target = e.currentTarget as HTMLElement;
         target.classList.remove('dragging');
     }, []);
+
+    // Render a single feature item
+    const renderFeatureItem = (feature: FeatureDefinition, isSubFeature: boolean = false) => {
+        const isExpandable = hasSubFeatures(feature.id);
+        const isExpanded = expandedFeatureId === feature.id;
+
+        return (
+            <div
+                key={feature.id}
+                className={`features-palette__item ${isSubFeature ? 'features-palette__item--sub' : ''} ${isExpanded ? 'features-palette__item--expanded' : ''}`}
+                draggable
+                onDragStart={(e) => handleDragStart(e, feature)}
+                onDragEnd={handleDragEnd}
+                onClick={() => handleFeatureClick(feature)}
+                title={feature.description}
+            >
+                <i className={`bi bi-${feature.icon} features-palette__item-icon`} />
+                <span className="features-palette__item-name">{feature.name}</span>
+                {isExpandable && (
+                    <i className={`bi ${isExpanded ? 'bi-chevron-down' : 'bi-chevron-right'} features-palette__item-chevron`} />
+                )}
+            </div>
+        );
+    };
 
     return (
         <div className={`features-palette ${isCollapsed ? 'features-palette--collapsed' : ''} ${className}`}>
@@ -73,17 +108,18 @@ export const FeaturesPalette: React.FC<FeaturesPaletteProps> = ({ className = ''
 
                 <div className="features-palette__items">
                     {featureDefinitions.map(feature => (
-                        <div
-                            key={feature.id}
-                            className="features-palette__item"
-                            draggable
-                            onDragStart={(e) => handleDragStart(e, feature)}
-                            onDragEnd={handleDragEnd}
-                            title={feature.description}
-                        >
-                            <i className={`bi bi-${feature.icon} features-palette__item-icon`} />
-                            <span className="features-palette__item-name">{feature.name}</span>
-                        </div>
+                        <React.Fragment key={feature.id}>
+                            {renderFeatureItem(feature)}
+
+                            {/* Show sub-features when parent is expanded */}
+                            {expandedFeatureId === feature.id && (
+                                <div className="features-palette__sub-items">
+                                    {getSubFeatures(feature.id).map(subFeature =>
+                                        renderFeatureItem(subFeature, true)
+                                    )}
+                                </div>
+                            )}
+                        </React.Fragment>
                     ))}
                 </div>
             </div>

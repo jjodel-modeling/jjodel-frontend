@@ -402,6 +402,14 @@
   padding: var(--space-3);
   height: 100%;
   overflow: auto;
+
+  // Empty state variant - no element selected
+  &--empty {
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
 }
 
 /* ========================================

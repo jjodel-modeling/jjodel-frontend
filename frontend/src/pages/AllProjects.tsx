@@ -1,6 +1,6 @@
 /* DASHBOARD */
 /* ALLPROJECTS */
-import React, {Component, Dispatch, ReactElement, ReactNode, useState} from 'react';
+import React, {Component, Dispatch, ReactElement, ReactNode, useState, useEffect, useCallback} from 'react';
 
 import {connect} from 'react-redux';
 import {DProject, DState, Log, LProject, R, SetRootFieldAction, Try, U} from '../joiner';
@@ -20,9 +20,10 @@ function AllProjectsComponent(props: AllProps): JSX.Element {
     const [showCreateDialog, setShowCreateDialog] = useState(false);
 
     // Centralized handler for opening create project dialog - used by ALL "New Project" buttons
-    const handleOpenCreateDialog = () => {
+    // Wrapped in useCallback to maintain stable reference for event listeners
+    const handleOpenCreateDialog = useCallback(() => {
         setShowCreateDialog(true);
-    };
+    }, []);
 
     const handleCloseCreateDialog = () => {
         setShowCreateDialog(false);
@@ -38,6 +39,18 @@ function AllProjectsComponent(props: AllProps): JSX.Element {
             throw error;
         }
     };
+
+    // Listen for keyboard shortcut event (CMD+N in dashboard context)
+    useEffect(() => {
+        const handleNewProjectShortcut = () => {
+            handleOpenCreateDialog();
+        };
+
+        window.addEventListener('jjodel:new-project', handleNewProjectShortcut);
+        return () => {
+            window.removeEventListener('jjodel:new-project', handleNewProjectShortcut);
+        };
+    }, [handleOpenCreateDialog]);
 
     function dropConfirm(e: React.DragEvent<HTMLElement>){
         e.preventDefault();

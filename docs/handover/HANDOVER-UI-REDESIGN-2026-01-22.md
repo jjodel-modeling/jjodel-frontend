@@ -51,6 +51,9 @@ This document details all UI/UX improvements made to the Jjodel frontend applica
 25. **Zoom Controls with Keyboard Shortcuts** - CMD++/-, CMD+0 for zoom in/out/reset
 26. **M2 Analytics Modal** - Centered modal with EMF classification gauge and metrics table
 
+### Phase 8 (January 22, 2026 - Night)
+27. **Adaptive Tree View Sidebar** - Resolution-adaptive sidebar for metamodel hierarchy navigation with keyboard shortcut (⌘B)
+
 All changes follow the design system defined in `/CLAUDE.md`.
 
 ---
@@ -84,9 +87,10 @@ All changes follow the design system defined in `/CLAUDE.md`.
 25. [Advanced Mode Tutorial Modal](#25-advanced-mode-tutorial-modal)
 26. [Zoom Controls with Keyboard Shortcuts](#26-zoom-controls-with-keyboard-shortcuts)
 27. [M2 Analytics Modal](#27-m2-analytics-modal)
-28. [File Inventory](#28-file-inventory)
-29. [Technical Notes](#29-technical-notes)
-30. [Testing Checklist](#30-testing-checklist)
+28. [Adaptive Tree View Sidebar](#28-adaptive-tree-view-sidebar)
+29. [File Inventory](#29-file-inventory)
+30. [Technical Notes](#30-technical-notes)
+31. [Testing Checklist](#31-testing-checklist)
 
 ---
 
@@ -2447,7 +2451,198 @@ Full dark mode support via `[data-theme="dark"]` selectors:
 
 ---
 
-## 28. FILE INVENTORY
+## 28. ADAPTIVE TREE VIEW SIDEBAR
+
+### Overview
+
+The Tree View has been redesigned as an adaptive sidebar that responds to screen resolution:
+- **Monitor (≥2560px)**: Permanent right sidebar, open by default
+- **Desktop (1920-2559px)**: Collapsible right sidebar, collapsed by default
+- **Laptop (<1920px)**: Floating overlay on demand
+
+### Files Created
+
+| File Path | Purpose |
+|-----------|---------|
+| `frontend/src/components/TreeViewSidebar/TreeViewSidebar.tsx` | Main sidebar component with resolution-adaptive behavior |
+| `frontend/src/components/TreeViewSidebar/TreeViewContent.tsx` | Tree content component with metamodel hierarchy |
+| `frontend/src/components/TreeViewSidebar/tree-view-sidebar.scss` | Styles for sidebar, overlay, and tree nodes |
+| `frontend/src/components/TreeViewSidebar/index.ts` | Barrel export |
+| `frontend/src/hooks/useResolution.ts` | Resolution detection hook |
+
+### Files Modified
+
+| File Path | Changes |
+|-----------|---------|
+| `frontend/src/pages/components/Navbar.tsx` | Added TreeViewToggle button and ⌘B keyboard shortcut handler |
+| `frontend/src/pages/components/Dashboard.tsx` | Integrated TreeViewSidebar in ProjectDashboard |
+| `frontend/src/utils/keyboardShortcuts.ts` | Added TOGGLE_TREE_VIEW shortcut constant |
+
+### Component: TreeViewSidebar
+
+```tsx
+// Resolution-adaptive behavior
+const resolution = useResolution(); // 'laptop' | 'desktop' | 'monitor'
+
+// localStorage persistence
+const STORAGE_KEY_OPEN = 'jjodel_tree_view_open';
+const STORAGE_KEY_WIDTH = 'jjodel_tree_view_width';
+
+// Width constraints
+const MIN_WIDTH = 250;
+const MAX_WIDTH = 500;
+const DEFAULT_WIDTH = 350;
+
+// Custom event for toggle
+window.dispatchEvent(new CustomEvent('jjodel:toggle-tree-view'));
+```
+
+### Component: TreeViewContent
+
+Connected to Redux to get metamodels and selection state:
+
+```tsx
+function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
+    const metamodelPointers = state.m2models || [];
+    ret.metamodels = LPointerTargetable.fromPointer(metamodelPointers) || [];
+    ret.selectedElementId = state._lastSelected?.modelElement;
+    return ret;
+}
+```
+
+### Hook: useResolution
+
+```tsx
+export type Resolution = 'laptop' | 'desktop' | 'monitor';
+
+export const RESOLUTION_BREAKPOINTS = {
+    MONITOR: 2560,  // 27" Monitor or larger
+    DESKTOP: 1920,  // Desktop FHD
+    LAPTOP: 1920    // Below this is laptop
+};
+
+export function useResolution(): Resolution {
+    // Returns current resolution category
+    // Updates on window resize
+}
+```
+
+### Keyboard Shortcut
+
+| Shortcut | Mac | Windows | Action |
+|----------|-----|---------|--------|
+| Toggle Tree View | ⌘B | Ctrl+B | Open/close sidebar |
+| Close Overlay | ESC | ESC | Close overlay (laptop mode only) |
+
+### UI Elements
+
+**Sidebar (Desktop/Monitor Mode)**:
+- Toggle button with chevron icon
+- Resize handle on left edge (drag to resize 250-500px)
+- Header with tree icon and "Tree View" title
+- Scrollable tree content area
+
+**Overlay (Laptop Mode)**:
+- Semi-transparent backdrop (click to close)
+- Slide-in panel from right
+- Close button in header
+- Auto-close on element selection
+
+**Tree Nodes**:
+- Expand/collapse toggle
+- Type-specific colored icon badges
+- Element name with ellipsis overflow
+- Class extends info (if applicable)
+
+### Tree Type Colors
+
+| Type | Color | Letter |
+|------|-------|--------|
+| DModel | Purple (#8b5cf6) | M |
+| DPackage | Blue (#3b82f6) | P |
+| DClass | Red (#ef4444) | C |
+| DAttribute | Green (#10b981) | A |
+| DReference | Amber (#f59e0b) | R |
+| DEnum | Pink (#ec4899) | E |
+| DEnumLiteral | Light Pink | L |
+| DOperation | Cyan (#06b6d4) | O |
+
+### NavBar Integration
+
+TreeViewToggle button added near layout controls:
+
+```tsx
+const TreeViewToggle = () => {
+    const handleToggle = () => {
+        window.dispatchEvent(new CustomEvent('jjodel:toggle-tree-view'));
+    };
+
+    return (
+        <Tooltip tooltip={`Tree View (${shortcutLabel})`}>
+            <button
+                className={`layout-btn ${isTreeViewOpen ? 'layout-btn--active' : ''}`}
+                onClick={handleToggle}
+            >
+                <i className="bi bi-diagram-2" />
+            </button>
+        </Tooltip>
+    );
+};
+```
+
+### CSS Architecture
+
+```scss
+// Main sidebar container (positioned fixed right)
+.tree-view-sidebar {
+    position: fixed;
+    top: 60px; // Below navbar
+    right: 0;
+    bottom: 0;
+    z-index: 100;
+}
+
+// Laptop overlay mode
+.tree-view-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    background-color: rgba(0, 0, 0, 0.4);
+}
+
+// Tree node with type-specific colors
+.tree-node__icon {
+    &.tree-DClass { background-color: #ef4444; }
+    &.tree-DAttribute { background-color: #10b981; }
+    // etc.
+}
+```
+
+### Dark Mode Support
+
+Full dark mode support via `prefers-color-scheme: dark`:
+
+| Element | Light Mode | Dark Mode |
+|---------|------------|-----------|
+| Sidebar background | `#ffffff` | `#1e1e1e` |
+| Border color | `#e2e4e8` | `#333` |
+| Node hover | `#f8fafc` | `#2d2d2d` |
+| Selected node | `rgba(71, 85, 105, 0.1)` | `rgba(71, 85, 105, 0.3)` |
+| Text primary | `#111418` | `#e0e0e0` |
+
+---
+
+## 29. FILE INVENTORY
+
+### New Files Created (Phase 8)
+
+| File Path | Purpose |
+|-----------|---------|
+| `frontend/src/components/TreeViewSidebar/TreeViewSidebar.tsx` | Resolution-adaptive Tree View sidebar |
+| `frontend/src/components/TreeViewSidebar/TreeViewContent.tsx` | Tree hierarchy content component |
+| `frontend/src/components/TreeViewSidebar/tree-view-sidebar.scss` | Sidebar and tree node styles |
+| `frontend/src/components/TreeViewSidebar/index.ts` | Barrel export |
+| `frontend/src/hooks/useResolution.ts` | Resolution detection hook |
 
 ### New Files Created (Phase 7)
 
@@ -2539,7 +2734,7 @@ Full dark mode support via `[data-theme="dark"]` selectors:
 
 ---
 
-## 29. TECHNICAL NOTES
+## 30. TECHNICAL NOTES
 
 ### U.alert() Function
 
@@ -2641,7 +2836,7 @@ Common icons used:
 
 ---
 
-## 30. TESTING CHECKLIST
+## 31. TESTING CHECKLIST
 
 ### Toast Notifications
 - [ ] Toast appears in top-right corner
@@ -2883,6 +3078,79 @@ Common icons used:
 - [ ] Smooth entrance/exit animations
 - [ ] Mobile responsive (single column on small screens)
 
+### Adaptive Tree View Sidebar (Phase 8)
+
+**Resolution Detection**
+- [ ] Monitor (≥2560px): Sidebar visible and open by default
+- [ ] Desktop (1920-2559px): Sidebar visible but collapsed by default
+- [ ] Laptop (<1920px): No sidebar visible, overlay mode only
+- [ ] Resizing window updates resolution category dynamically
+
+**Sidebar Mode (Desktop/Monitor)**
+- [ ] Toggle button visible at top-left of sidebar
+- [ ] Clicking toggle opens/closes sidebar
+- [ ] Collapsed state shows only toggle + icon
+- [ ] Open state shows header + tree content
+- [ ] Width persisted to localStorage
+- [ ] Resize handle visible on left edge when open
+- [ ] Dragging resize handle adjusts width (250-500px range)
+- [ ] Width clamped within MIN_WIDTH and MAX_WIDTH
+
+**Overlay Mode (Laptop)**
+- [ ] Overlay not visible by default
+- [ ] Toggle from navbar opens overlay
+- [ ] Backdrop covers entire screen with opacity
+- [ ] Click on backdrop closes overlay
+- [ ] ESC key closes overlay
+- [ ] Close button in header closes overlay
+- [ ] Element selection auto-closes overlay
+- [ ] Smooth slide-in animation from right
+
+**Keyboard Shortcut**
+- [ ] ⌘B (Mac) / Ctrl+B (Windows) toggles tree view
+- [ ] Shortcut only active in METAMODEL_EDITOR and PROJECT_EDITOR contexts
+- [ ] Shortcut does NOT fire when typing in input fields
+- [ ] Shortcut prevents browser default (bold text)
+
+**Navbar Integration**
+- [ ] TreeViewToggle button visible near layout controls
+- [ ] Button shows diagram-2 icon
+- [ ] Button has active state when sidebar is open
+- [ ] Tooltip shows "Tree View (⌘B)" on Mac
+- [ ] Tooltip shows "Tree View (Ctrl+B)" on Windows
+- [ ] Button only visible when editing metamodel (not on dashboard)
+
+**Tree Content**
+- [ ] Metamodels listed at root level
+- [ ] Packages nested under metamodels
+- [ ] Classes nested under packages
+- [ ] Attributes/References/Operations nested under classes
+- [ ] Enum literals nested under enumerators
+- [ ] Expand/collapse toggles work correctly
+- [ ] First 2 levels auto-expanded on initial render
+- [ ] Type-specific colored icon badges visible
+- [ ] Abstract classes have outlined icon style
+- [ ] Class extends info shows superclass names
+
+**Selection Sync**
+- [ ] Clicking tree node selects element in Redux state
+- [ ] Selected node has highlight background
+- [ ] Selection syncs with canvas (element highlighted)
+- [ ] Canvas selection reflected in tree (if visible)
+
+**localStorage Persistence**
+- [ ] `jjodel_tree_view_open` stores open/closed state
+- [ ] `jjodel_tree_view_width` stores sidebar width
+- [ ] State persisted across page refreshes
+- [ ] State persisted across sessions
+
+**Dark Mode**
+- [ ] Sidebar background changes to dark
+- [ ] Borders adapt to dark mode
+- [ ] Text colors adapt to dark mode
+- [ ] Node hover states visible in dark mode
+- [ ] Selected node highlight visible in dark mode
+
 ---
 
 ## APPENDIX: Related Documentation
@@ -2894,5 +3162,5 @@ Common icons used:
 ---
 
 *Document generated: January 22, 2026*
-*Last updated: January 22, 2026 (Phase 7 additions - Advanced Mode Tutorial Modal, Zoom Controls)*
+*Last updated: January 22, 2026 (Phase 8 additions - Adaptive Tree View Sidebar)*
 *For questions, refer to the git history on branch `alfonso-frontend-dev`*

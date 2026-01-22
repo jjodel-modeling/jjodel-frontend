@@ -151,6 +151,59 @@ $palette-collapsed-width: 40px;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
+        flex: 1;
+    }
+
+    // Chevron for expandable items
+    &__item-chevron {
+        font-size: 10px;
+        color: $color-text-tertiary;
+        flex-shrink: 0;
+        transition: transform $transition-fast;
+    }
+
+    // Expanded state for parent items
+    &__item--expanded {
+        background-color: $color-accent-light;
+        border-color: rgba($color-accent, 0.2);
+
+        .features-palette__item-icon {
+            color: $color-accent;
+        }
+    }
+
+    // Sub-items container
+    &__sub-items {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        margin-left: 16px;
+        padding-left: 12px;
+        border-left: 2px solid $color-border;
+        margin-top: 2px;
+        margin-bottom: 4px;
+    }
+
+    // Sub-item styling
+    &__item--sub {
+        padding: 8px 10px;
+        background-color: transparent;
+        border: 1px solid transparent;
+
+        &:hover {
+            background-color: $color-bg-secondary;
+            border-color: $color-border;
+        }
+
+        .features-palette__item-icon {
+            font-size: 14px;
+            color: $color-text-secondary;
+        }
+
+        .features-palette__item-name {
+            font-size: 12px;
+            font-weight: 400;
+        }
     }
 }
 
@@ -201,6 +254,34 @@ $palette-collapsed-width: 40px;
 
         &__item-name {
             color: #e5e7eb;
+        }
+
+        &__item-chevron {
+            color: #6B7280;
+        }
+
+        &__item--expanded {
+            background-color: rgba(71, 85, 105, 0.2);
+            border-color: rgba(71, 85, 105, 0.3);
+        }
+
+        &__sub-items {
+            border-left-color: #3d4148;
+        }
+
+        &__item--sub {
+            &:hover {
+                background-color: #2d3138;
+                border-color: #3d4148;
+            }
+
+            .features-palette__item-icon {
+                color: #9CA3AF;
+            }
+
+            .features-palette__item-name {
+                color: #d1d5db;
+            }
         }
     }
 }

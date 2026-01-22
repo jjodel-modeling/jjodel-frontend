@@ -56,7 +56,14 @@ function OclEditorComponent(props: AllProps) {
                         minimap: {enabled: false}, 
                         readOnly: readOnly,
                 }}
-                    defaultLanguage={'js'} value={view.oclCondition} />
+                    defaultLanguage={'js'} value={view.oclCondition||""} 
+                    onMount={(editor) => {
+                        console.log('[Monaco OCL] Mounted!');
+                        console.log('[Monaco OCL] View:', view);
+                        console.log('[Monaco OCL] Initial value:', view.oclCondition);
+                    }}
+                    loading={<div style={{padding: '20px'}}>Loading OCL Editor...</div>}
+                />
         </div>}
     </>);
 }

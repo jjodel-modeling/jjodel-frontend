@@ -26,32 +26,37 @@ export function isMac(): boolean {
 
 /**
  * Detects the current application context for context-aware shortcuts
+ * NOTE: App uses HashRouter, so we check window.location.hash (e.g., "#/project")
  */
 export function detectCurrentContext(): AppContext {
-    const pathname = window.location.pathname;
+    // App uses HashRouter, so the route is in the hash (e.g., "#/project" or "#/allProjects")
+    const hash = window.location.hash || '';
+    // Remove the leading "#" to get the path
+    const path = hash.startsWith('#') ? hash.substring(1) : hash;
 
     // Dashboard: all projects page
-    if (pathname === '/allProjects' || pathname === '/dashboard' || pathname === '/') {
+    if (path === '/allProjects' || path === '/dashboard' || path === '/' || path === '') {
         return 'DASHBOARD';
     }
 
     // User Profile
-    if (pathname.includes('/account') || pathname.includes('/profile') || pathname.includes('/settings')) {
+    if (path.includes('/account') || path.includes('/profile') || path.includes('/settings')) {
         return 'USER_PROFILE';
     }
 
     // Check if we're editing a metamodel (canvas is visible)
     // Look for metamodel editor indicators in the DOM
-    const isMetamodelEditorActive = document.querySelector('.graph-container') !== null
+    // Note: GraphContainer class is used in MetamodelTab.tsx (capital G)
+    const isMetamodelEditorActive = document.querySelector('.GraphContainer') !== null
         || document.querySelector('[data-context="metamodel-editor"]') !== null
-        || document.querySelector('.metamodel-canvas') !== null;
+        || document.querySelector('.Graph') !== null;
 
-    if (isMetamodelEditorActive && pathname.includes('/project')) {
+    if (isMetamodelEditorActive && path.includes('/project')) {
         return 'METAMODEL_EDITOR';
     }
 
     // Project Editor: inside a project but not editing metamodel
-    if (pathname.includes('/project')) {
+    if (path.includes('/project')) {
         return 'PROJECT_EDITOR';
     }
 
@@ -111,11 +116,12 @@ export function formatShortcutPills(config: ShortcutConfig): string[] {
  */
 export const SHORTCUTS = {
     // Context-aware shortcuts (behavior changes based on current context)
-    NEW: { key: 'N', modifiers: ['cmd'] as ModifierKey[] },                    // Context-aware: Project/Metamodel/Class
-    NEW_MODEL: { key: 'N', modifiers: ['cmd', 'shift'] as ModifierKey[] },     // Specific: New Model (in project context)
-    SAVE: { key: 'S', modifiers: ['cmd'] as ModifierKey[] },                   // Context-aware: Save Project/Profile
-    CLOSE: { key: 'W', modifiers: ['cmd'] as ModifierKey[] },                  // Context-aware: Close Project/Profile
-    SIGN_OUT: { key: 'Q', modifiers: ['cmd'] as ModifierKey[] },               // Always: Sign Out
+    // NOTE: Using Alt+CMD to avoid Chrome intercepting CMD+N, CMD+W, etc.
+    NEW: { key: 'N', modifiers: ['alt', 'cmd'] as ModifierKey[] },             // Context-aware: Project/Metamodel/Class (⌥⌘N)
+    NEW_MODEL: { key: 'N', modifiers: ['alt', 'cmd', 'shift'] as ModifierKey[] }, // Specific: New Model (⌥⇧⌘N)
+    SAVE: { key: 'S', modifiers: ['cmd'] as ModifierKey[] },                   // Context-aware: Save Project/Profile (⌘S works)
+    CLOSE: { key: 'W', modifiers: ['alt', 'cmd'] as ModifierKey[] },           // Context-aware: Close Project/Profile (⌥⌘W)
+    SIGN_OUT: { key: 'Q', modifiers: ['alt', 'cmd'] as ModifierKey[] },        // Always: Sign Out (⌥⌘Q)
 
     // Editor-specific shortcuts
     UNDO: { key: 'Z', modifiers: ['cmd'] as ModifierKey[] },                   // Metamodel Editor
@@ -132,6 +138,9 @@ export const SHORTCUTS = {
     COPY_LINK: { key: 'S', modifiers: ['shift', 'cmd'] as ModifierKey[] },
     ADVANCED_MODE: { key: 'M', modifiers: ['shift', 'cmd'] as ModifierKey[] },
     FULLSCREEN: { key: 'F11', modifiers: [] as ModifierKey[] },
+
+    // Tree View toggle (⌘B / Ctrl+B)
+    TOGGLE_TREE_VIEW: { key: 'B', modifiers: ['cmd'] as ModifierKey[] },
 } as const;
 
 /**
@@ -156,6 +165,7 @@ export function getRedoShortcutPills(): string[] {
 
 /**
  * Check if a keyboard event matches a shortcut config
+ * NOTE: On Mac, Alt (Option) modifies the key character, so we use event.code for Alt shortcuts
  */
 export function matchesShortcut(event: KeyboardEvent, config: ShortcutConfig): boolean {
     const isMacOS = isMac();
@@ -171,7 +181,14 @@ export function matchesShortcut(event: KeyboardEvent, config: ShortcutConfig): b
     if (needsShift !== event.shiftKey) return false;
     if (needsAlt !== event.altKey) return false;
 
-    // Check key
+    // Check key - use event.code for Alt shortcuts on Mac (Alt changes the key character)
+    // event.code gives us "KeyN" for the N key regardless of Alt modifier
+    if (needsAlt && isMacOS) {
+        const expectedCode = `Key${config.key.toUpperCase()}`;
+        return event.code === expectedCode;
+    }
+
+    // For non-Alt shortcuts, use event.key
     return event.key.toUpperCase() === config.key.toUpperCase();
 }
 

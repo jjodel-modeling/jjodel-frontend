@@ -878,8 +878,18 @@ function InfoComponent(props: AllProps) {
         default: jsx = <Empty />; break;
     } else jsx = <Empty />;
 
-    // Use new design for tab mode
-    if (tab && data && ddata?.className) {
+    // Tab mode: Always show the Properties panel structure
+    if (tab) {
+        // No element selected - show empty state
+        if (!data || !ddata?.className) {
+            return (
+                <section className="properties-tab properties-panel properties-panel--empty">
+                    <Empty />
+                </section>
+            );
+        }
+
+        // Element selected - show full properties panel
         const showOverview = ddata.className === 'DModel';
         const showActions = ['DModel', 'DClass', 'DEnumerator', 'DAttribute', 'DReference', 'DOperation'].includes(ddata.className);
 

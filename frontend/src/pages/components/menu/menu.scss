@@ -253,6 +253,8 @@ hr.divisor {
   position: relative;
   display: inline-flex;
   align-items: center;
+  /* Ensure menu is above tree view sidebar */
+  z-index: 200;
 }
 
 .menu-trigger {
