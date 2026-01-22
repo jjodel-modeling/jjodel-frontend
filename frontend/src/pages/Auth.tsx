@@ -1,4 +1,4 @@
-import {FormEvent, JSX} from 'react';
+import {FormEvent, JSX, useEffect} from 'react';
 import {useStateIfMounted} from 'use-state-if-mounted';
 import type {Dictionary, GObject} from '../joiner';
 import { DUser, R, SetRootFieldAction, U} from '../joiner';
@@ -10,6 +10,12 @@ import { RegisterRequest } from '../api/DTO/RegisterRequest';
 import { LoginRequest } from '../api/DTO/LoginRequest';
 import { TokenResponse } from '../api/DTO/TokenResponse';
 import {ResetPasswordRequest} from "../api/DTO/ResetPasswordRequest";
+import { BrowserWarningModal } from '../components/BrowserWarningModal';
+import {
+    detectBrowser,
+    shouldShowBrowserWarning,
+    markBrowserWarningShown
+} from '../utils/browserDetection';
 import "./auth.scss"
 
 // Import partner logos
@@ -57,6 +63,26 @@ function AuthPage(): JSX.Element {
     const [newsletter, setNewsletter] = useStateIfMounted(false);
     const [isDirty, setDirty] = useStateIfMounted(false);
     const [dirtyStatuses, setDirtyStatuses] = useStateIfMounted<Dictionary<string, boolean>>({});
+
+    // Browser warning state
+    const [showBrowserWarning, setShowBrowserWarning] = useStateIfMounted(false);
+    const [browserName, setBrowserName] = useStateIfMounted('');
+
+    // Check browser on mount
+    useEffect(() => {
+        if (shouldShowBrowserWarning()) {
+            const browser = detectBrowser();
+            setBrowserName(browser.name);
+            setShowBrowserWarning(true);
+        }
+    }, []);
+
+    // Handler to close browser warning
+    const handleCloseBrowserWarning = () => {
+        markBrowserWarningShown();
+        setShowBrowserWarning(false);
+    };
+
     const dirty = (e: React.MouseEvent<HTMLInputElement | HTMLSelectElement>)=>{
         /* for real-time validation while you write the form, disabled for now
         let name = (e.target as HTMLElement)?.getAttribute?.('name')||'';
@@ -661,6 +687,13 @@ return(<section className={`auth-split-screen ${action === 'register' ? 'registe
             </label>
         </form>
     </div>
+
+    {/* Browser Warning Modal */}
+    <BrowserWarningModal
+        isOpen={showBrowserWarning}
+        browserName={browserName}
+        onClose={handleCloseBrowserWarning}
+    />
 </section>);
 }
 

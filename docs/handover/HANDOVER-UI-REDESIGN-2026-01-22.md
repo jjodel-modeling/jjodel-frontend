@@ -1255,7 +1255,346 @@ This prevents showing layout controls when:
 
 ---
 
-## 14. FILE INVENTORY
+## 14. FEATURES PALETTE SIDEBAR
+
+### Purpose
+Provide a permanent, collapsible sidebar for dragging and dropping metamodel elements (Package, Class, Enumerator) onto the canvas. Replaces the need for floating menus or toolbar clicks.
+
+### Files Created
+
+| File Path | Purpose |
+|-----------|---------|
+| `frontend/src/components/FeaturesPalette/featureDefinitions.ts` | Feature metadata and helper functions |
+| `frontend/src/components/FeaturesPalette/FeaturesPalette.tsx` | Main React component |
+| `frontend/src/components/FeaturesPalette/features-palette.scss` | Styles with dark mode support |
+| `frontend/src/components/FeaturesPalette/index.ts` | Barrel export |
+
+### File Modified
+`frontend/src/components/abstract/tabs/MetamodelTab.tsx`
+
+### Implementation
+
+#### Feature Definitions
+
+```typescript
+export interface FeatureDefinition {
+    id: string;
+    name: string;
+    icon: string;           // Bootstrap Icon class (without 'bi-' prefix)
+    description: string;
+    dragType: string;       // Type used for drag & drop identification
+    defaultData?: Record<string, any>;
+}
+
+export const featureDefinitions: FeatureDefinition[] = [
+    {
+        id: 'package',
+        name: 'Package',
+        icon: 'folder',
+        description: 'Container for organizing model elements',
+        dragType: 'FEATURE_PACKAGE',
+    },
+    {
+        id: 'class',
+        name: 'Class',
+        icon: 'diagram-3',
+        description: 'Define a class with attributes and operations',
+        dragType: 'FEATURE_CLASS',
+    },
+    {
+        id: 'enumerator',
+        name: 'Enumerator',
+        icon: 'list-ul',
+        description: 'Define an enumeration type with literals',
+        dragType: 'FEATURE_ENUMERATOR',
+    }
+];
+```
+
+#### FeaturesPalette Component
+
+```tsx
+export const FeaturesPalette: React.FC<FeaturesPaletteProps> = ({ className = '' }) => {
+    // Initialize collapsed state from localStorage
+    const [isCollapsed, setIsCollapsed] = useState(() => {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        return saved === 'true';
+    });
+
+    // Handle drag start - set drag data for canvas drop handling
+    const handleDragStart = useCallback((e: React.DragEvent, feature: FeatureDefinition) => {
+        e.dataTransfer.setData('application/json', JSON.stringify({
+            type: feature.dragType,
+            featureId: feature.id,
+            defaultData: feature.defaultData
+        }));
+        e.dataTransfer.effectAllowed = 'copy';
+    }, []);
+
+    return (
+        <div className={`features-palette ${isCollapsed ? 'features-palette--collapsed' : ''}`}>
+            <button className="features-palette__toggle" onClick={toggleCollapsed}>
+                <i className={`bi ${isCollapsed ? 'bi-chevron-right' : 'bi-chevron-left'}`} />
+            </button>
+
+            <div className="features-palette__content">
+                <div className="features-palette__header">
+                    <span className="features-palette__title">Features</span>
+                </div>
+
+                <div className="features-palette__items">
+                    {featureDefinitions.map(feature => (
+                        <div
+                            key={feature.id}
+                            className="features-palette__item"
+                            draggable
+                            onDragStart={(e) => handleDragStart(e, feature)}
+                            title={feature.description}
+                        >
+                            <i className={`bi bi-${feature.icon}`} />
+                            <span>{feature.name}</span>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        </div>
+    );
+};
+```
+
+#### Canvas Drop Handler (MetamodelTab.tsx)
+
+```typescript
+// Handle drop on canvas - create element from Features Palette
+const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+
+    try {
+        const dataStr = e.dataTransfer.getData('application/json');
+        if (!dataStr) return;
+
+        const data = JSON.parse(dataStr);
+        const feature = getFeatureByDragType(data.type);
+
+        if (!feature || !model) return;
+
+        // Create the element using model.addChild() - same API as ToolBar
+        const createdElement = model.addChild(feature.id);
+
+        // Execute the returned function if it exists
+        try {
+            if (typeof createdElement === 'function') {
+                (createdElement as any)();
+            }
+        } catch (e) {
+            // Element already created directly
+        }
+
+        // Mark project as modified
+        if (!U.isProjectModified) {
+            U.isProjectModified = U.userHasInteracted = true;
+        }
+    } catch (err) {
+        console.error('Failed to handle drop:', err);
+    }
+}, [model]);
+```
+
+### Visual Design
+
+**Expanded State:**
+```
+┌────────────────────┐
+│ [◀] Features       │
+├────────────────────┤
+│ 📁 Package         │  ← Draggable
+│ 📊 Class           │  ← Draggable
+│ 📋 Enumerator      │  ← Draggable
+└────────────────────┘
+```
+
+**Collapsed State:**
+```
+┌────┐
+│ [▶]│
+└────┘
+```
+
+### CSS Variables
+
+```scss
+$palette-width: 180px;
+$palette-collapsed-width: 40px;
+```
+
+### Features
+- **Collapsible**: Toggle button with chevron icon
+- **Drag & Drop**: HTML5 drag & drop API with `application/json` data
+- **Persistence**: Collapsed state saved to localStorage (`jjodel_features_palette_collapsed`)
+- **Dark Mode**: Full support via `@media (prefers-color-scheme: dark)`
+- **Tooltips**: Description shown on hover
+
+### LocalStorage Key
+
+| Key | Purpose | Values |
+|-----|---------|--------|
+| `jjodel_features_palette_collapsed` | Persists collapsed state | `'true'`, `'false'` |
+
+---
+
+## 15. FEATURESMODAL REMOVAL
+
+### Purpose
+Remove the unused floating modal component that was created but never integrated.
+
+### Files Deleted
+
+| File Path | Description |
+|-----------|-------------|
+| `frontend/src/components/FeaturesModal/FeaturesModal.tsx` | Modal component |
+| `frontend/src/components/FeaturesModal/features-modal.scss` | Modal styles |
+| `frontend/src/components/FeaturesModal/index.ts` | Barrel export |
+
+### Reason for Removal
+The `FeaturesModal` component was created as a potential floating menu for adding elements, but:
+1. It was **never imported or used** anywhere in the codebase
+2. The new `FeaturesPalette` sidebar provides the same functionality in a better UX pattern
+3. Permanent sidebar > floating modal for frequent actions
+
+### Verification
+```bash
+# Before removal
+grep -r "FeaturesModal" frontend/src --include="*.tsx"
+# Result: Only found in FeaturesModal.tsx itself (no imports)
+
+# After removal
+grep -r "FeaturesModal" frontend/src --include="*.tsx"
+# Result: No files found
+```
+
+---
+
+## 16. TOOLBAR SIMPLIFICATION
+
+### Purpose
+The ToolBar component content was commented out as the new FeaturesPalette provides similar functionality.
+
+### File Modified
+`frontend/src/components/toolbar/ToolBar.tsx`
+
+### Change
+The toolbar content div was commented out:
+
+```tsx
+// BEFORE
+<div className={"toolbar hoverable" + (pinned ? " pinned" : '')} tabIndex={0}>
+    <i className={"content pin bi bi-x-lg"} onClick={() => minimize(htmlref)}/>
+    <section className={"content inline w-100"} style={{maxHeight: 'calc(100vh - 120px - 35px - 35px)', overflowY: 'auto'}}>
+        {(content as any )?.length ? content : "Select a node."}
+    </section>
+</div>
+
+// AFTER (commented out)
+// <div className={"toolbar hoverable" + (pinned ? " pinned" : '')} tabIndex={0}>
+//     <i className={"content pin bi bi-x-lg"} onClick={() => minimize(htmlref)}/>
+//     <section className={"content inline w-100"} style={{maxHeight: 'calc(100vh - 120px - 35px - 35px)', overflowY: 'auto'}}>
+//         {(content as any )?.length ? content : "Select a node."}
+//     </section>
+// </div>
+```
+
+### Note
+The ToolBar component is still imported in `MetamodelTab.tsx` but renders nothing visible. This can be fully removed in a future cleanup if desired.
+
+---
+
+## 17. LAYOUT CONTROLS FIX
+
+### Purpose
+Fix the layout controls (Split/Sidebar buttons) so they don't close open tabs when clicked.
+
+### File Modified
+`frontend/src/components/abstract/Dock.tsx`
+
+### Problem
+Previously, clicking a layout button would call `DockManager.dock.loadLayout(layout)` which reset the entire dock, closing any open metamodel/model tabs.
+
+### Solution
+Changed to use CSS-only approach with `body[data-layout-mode]` attribute:
+
+```typescript
+// BEFORE (problematic)
+const handleLayoutChange = (event: CustomEvent<{ mode: LayoutMode }>) => {
+    const newMode = event.detail.mode;
+    setLayoutMode(newMode);
+
+    if (DockManager.dock) {
+        const newWidth = getInitialPanelWidth(newMode);
+        const layout = DockManager.dock.getLayout();
+        if (layout?.dockbox?.children?.[1]) {
+            rightPanel.size = newWidth;
+            DockManager.dock.loadLayout(layout); // ← This closed tabs!
+        }
+    }
+};
+
+// AFTER (fixed)
+const handleLayoutChange = (event: CustomEvent<{ mode: LayoutMode }>) => {
+    const newMode = event.detail.mode;
+    setLayoutMode(newMode);
+
+    // Just trigger resize - CSS handles the actual layout via body[data-layout-mode]
+    if (DockManager.dock) {
+        window.dispatchEvent(new Event('resize'));
+    }
+};
+```
+
+### CSS Rules (in style.scss)
+
+```scss
+body[data-layout-mode="sidebar"] {
+    .dock-hbox > .dock-panel:last-child {
+        width: 30% !important;
+        min-width: 350px;
+        max-width: 450px;
+    }
+}
+
+body[data-layout-mode="canvas-only"] {
+    .dock-hbox > .dock-panel:last-child {
+        width: 0 !important;
+        min-width: 0;
+        overflow: hidden;
+    }
+}
+```
+
+### Result
+- Layout mode changes are now non-destructive
+- Open tabs remain open when switching layouts
+- Smooth transition via CSS
+
+---
+
+## 18. FILE INVENTORY
+
+### New Files Created (Phase 3)
+
+| File Path | Purpose |
+|-----------|---------|
+| `frontend/src/components/FeaturesPalette/featureDefinitions.ts` | Feature metadata |
+| `frontend/src/components/FeaturesPalette/FeaturesPalette.tsx` | Sidebar component |
+| `frontend/src/components/FeaturesPalette/features-palette.scss` | Sidebar styles |
+| `frontend/src/components/FeaturesPalette/index.ts` | Barrel export |
+
+### Files Deleted (Phase 3)
+
+| File Path | Reason |
+|-----------|--------|
+| `frontend/src/components/FeaturesModal/FeaturesModal.tsx` | Unused, replaced by FeaturesPalette |
+| `frontend/src/components/FeaturesModal/features-modal.scss` | Unused |
+| `frontend/src/components/FeaturesModal/index.ts` | Unused |
 
 ### New Files Created (Phase 1)
 
@@ -1290,9 +1629,17 @@ This prevents showing layout controls when:
 | `frontend/src/components/editors/views/NestedView.tsx` | Toggle switch for viewpoints |
 | `frontend/src/components/editors/views/nestedView.scss` | Toggle switch styles, colored icons |
 
+### Existing Files Modified (Phase 3)
+
+| File Path | Changes |
+|-----------|---------|
+| `frontend/src/components/abstract/tabs/MetamodelTab.tsx` | Added FeaturesPalette, drop handler |
+| `frontend/src/components/abstract/Dock.tsx` | Fixed layout change to not reset tabs |
+| `frontend/src/components/toolbar/ToolBar.tsx` | Commented out toolbar content |
+
 ---
 
-## 15. TECHNICAL NOTES
+## 19. TECHNICAL NOTES
 
 ### U.alert() Function
 
@@ -1325,6 +1672,9 @@ import { ErrorModal } from '../components/ErrorModal';
 
 // Layout Mode utilities
 import { LayoutMode, getInitialPanelWidth, getSavedLayoutMode, saveLayoutMode } from '../components/abstract/Dock';
+
+// Features Palette
+import { FeaturesPalette, getFeatureByDragType, featureDefinitions } from '../components/FeaturesPalette';
 ```
 
 ### Custom Events
@@ -1347,6 +1697,7 @@ window.addEventListener('jjodel:layout-mode-change', (event: CustomEvent) => {
 | Key | Purpose | Values |
 |-----|---------|--------|
 | `jjodel_layout_mode` | Persists layout preference | `'split'`, `'sidebar'`, `'canvas-only'` |
+| `jjodel_features_palette_collapsed` | Persists sidebar collapsed state | `'true'`, `'false'` |
 
 ### Body Data Attributes
 
@@ -1382,10 +1733,12 @@ Common icons used:
 - `bi-bug` - Debug
 - `bi-layout-split` - Split layout
 - `bi-layout-sidebar-reverse` - Sidebar layout
+- `bi-folder` - Package
+- `bi-chevron-left` / `bi-chevron-right` - Collapse toggle
 
 ---
 
-## 16. TESTING CHECKLIST
+## 20. TESTING CHECKLIST
 
 ### Toast Notifications
 - [ ] Toast appears in top-right corner
@@ -1477,6 +1830,30 @@ Common icons used:
 - [ ] Active button has white background + shadow
 - [ ] Tooltips display on hover
 - [ ] Panel width updates immediately on click
+- [ ] **NEW**: Switching layouts does NOT close open tabs
+
+### Features Palette Sidebar (Phase 3)
+- [ ] Palette visible in metamodel editor
+- [ ] Toggle button collapses/expands sidebar
+- [ ] Collapsed state persists in localStorage
+- [ ] Package item draggable to canvas
+- [ ] Class item draggable to canvas
+- [ ] Enumerator item draggable to canvas
+- [ ] Dropping creates new element
+- [ ] Project marked as modified after drop
+- [ ] Dark mode support
+- [ ] Tooltip shows description on hover
+- [ ] Drag visual feedback (opacity change)
+
+### FeaturesModal Removal (Phase 3)
+- [ ] No floating "Features" modal appears
+- [ ] No TypeScript errors related to FeaturesModal
+- [ ] No imports of FeaturesModal in codebase
+
+### ToolBar Changes (Phase 3)
+- [ ] ToolBar content is hidden/commented
+- [ ] No errors when opening metamodel
+- [ ] FeaturesPalette replaces ToolBar functionality
 
 ---
 
@@ -1489,4 +1866,5 @@ Common icons used:
 ---
 
 *Document generated: January 22, 2026*
+*Last updated: January 22, 2026 (Phase 3 additions)*
 *For questions, refer to the git history on branch `alfonso-frontend-dev`*
