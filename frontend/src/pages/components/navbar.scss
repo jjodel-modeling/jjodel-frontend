@@ -1117,41 +1117,106 @@ $transition-menu: 150ms ease;
 }
 
 // ============================================
-// ADVANCED MODE BADGE - Minimal Design
-// Clean, prominent badge without icon
+// MODE TOGGLE - Basic/Advanced Mode Switch
+// Replaces the old ADV badge with a toggle button
 // ============================================
 
+.navbar__mode-toggle {
+  display: flex;
+  align-items: center;
+  margin-right: 12px;
+}
+
+.mode-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border: none;
+  border-radius: 6px;
+  font-family: 'Inter Variable', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 150ms ease;
+
+  i {
+    font-size: 14px;
+  }
+
+  // Basic mode (default) - subtle appearance
+  &--basic {
+    background-color: rgba(71, 85, 105, 0.08);
+    color: #64748b; // slate-500
+
+    &:hover {
+      background-color: rgba(71, 85, 105, 0.15);
+      color: #475569; // slate-600
+    }
+  }
+
+  // Advanced mode - more prominent
+  &--advanced {
+    background: linear-gradient(135deg, #64748b 0%, #475569 100%);
+    color: #ffffff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+
+    i {
+      color: #ffffff !important; // Force white icon
+    }
+
+    &:hover {
+      background: linear-gradient(135deg, #475569 0%, #334155 100%);
+    }
+  }
+}
+
+// Dark mode support
+[data-theme="dark"] .mode-toggle-btn,
+.dark .mode-toggle-btn {
+  &--basic {
+    background-color: rgba(148, 163, 184, 0.1);
+    color: #94a3b8; // slate-400
+
+    &:hover {
+      background-color: rgba(148, 163, 184, 0.2);
+      color: #cbd5e1; // slate-300
+    }
+  }
+
+  &--advanced {
+    background: linear-gradient(135deg, #64748b 0%, #475569 100%);
+    color: #f8fafc;
+
+    &:hover {
+      background: linear-gradient(135deg, #475569 0%, #334155 100%);
+    }
+  }
+}
+
+// Legacy support - keep advanced-mode-badge for any remaining usage
 .advanced-mode-badge {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-
-  // Typography - Clean and professional
   font-family: 'Inter Variable', -apple-system, BlinkMacSystemFont, sans-serif;
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.05em;
   text-transform: uppercase;
-
-  // Colors - Slate
-  background-color: #475569; // slate-600
+  background-color: #475569;
   color: #ffffff;
-
-  // Sizing - Increased for better visibility
   padding: 6px 14px;
   border-radius: 6px;
   margin-right: 12px;
-
-  // Behavior
   cursor: default;
   user-select: none;
   transition: all 150ms ease;
 }
 
-// Dark mode support
 [data-theme="dark"] .advanced-mode-badge,
 .dark .advanced-mode-badge {
-  background-color: #64748b; // slate-500
+  background-color: #64748b;
   color: #f8fafc;
 }
 

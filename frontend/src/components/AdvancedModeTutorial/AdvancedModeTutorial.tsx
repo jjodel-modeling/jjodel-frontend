@@ -12,38 +12,45 @@ interface Feature {
     icon: string;
     title: string;
     description: string;
+    badge: 'Collapsible' | 'Always Available';
 }
 
 const features: Feature[] = [
     {
         icon: 'bi-sliders',
-        title: 'Extended Properties',
-        description: 'Access all element properties including constraints, documentation, and advanced type options.'
+        title: 'Advanced Properties',
+        description: 'Access element properties like Final, Singleton, Rootable, and more.',
+        badge: 'Collapsible'
     },
     {
-        icon: 'bi-tools',
-        title: 'Developer Tools',
-        description: 'Enable debug mode, loop debugging, and integrity checking for development workflows.'
-    },
-    {
-        icon: 'bi-graph-up',
-        title: 'M2 Analytics',
-        description: 'View metamodel analytics and metrics to understand your model\'s structure and complexity.'
+        icon: 'bi-eye',
+        title: 'Viewpoints & Templates',
+        description: 'Create custom views with JSX templates and CSS styling.',
+        badge: 'Collapsible'
     },
     {
         icon: 'bi-code-slash',
         title: 'OCL Console',
-        description: 'Write and execute Object Constraint Language queries for model validation.'
+        description: 'Write Object Constraint Language queries for validation and analysis.',
+        badge: 'Collapsible'
     },
     {
-        icon: 'bi-braces',
-        title: 'JSX Templates',
-        description: 'Create custom view templates using JSX for advanced visualization.'
+        icon: 'bi-graph-up',
+        title: 'M2 Analytics',
+        description: 'View metamodel metrics to understand structure and complexity.',
+        badge: 'Collapsible'
     },
     {
-        icon: 'bi-grid-3x3',
+        icon: 'bi-bug',
+        title: 'Debug Tools',
+        description: 'Enable loop debugging, integrity checking, and state inspection.',
+        badge: 'Collapsible'
+    },
+    {
+        icon: 'bi-layout-three-columns',
         title: 'Layout Management',
-        description: 'Save and load custom layouts, manage layout auto-save settings.'
+        description: 'Save and load custom layouts with auto-save settings.',
+        badge: 'Always Available'
     }
 ];
 
@@ -87,11 +94,11 @@ export function AdvancedModeTutorial({ isOpen, onClose }: AdvancedModeTutorialPr
                 {/* Header */}
                 <div className="tutorial-header">
                     <div className="tutorial-header__icon">
-                        <i className="bi bi-lightning-charge-fill" />
+                        <i className="bi bi-lightning-fill" />
                     </div>
                     <h2 className="tutorial-header__title">Advanced Mode Enabled</h2>
                     <p className="tutorial-header__subtitle">
-                        You now have access to all features and expert tools
+                        You now have access to all features. Features are organized in <strong>collapsible sections</strong> — expand only what you need.
                     </p>
                 </div>
 
@@ -103,11 +110,25 @@ export function AdvancedModeTutorial({ isOpen, onClose }: AdvancedModeTutorialPr
                                 <i className={`bi ${feature.icon}`} />
                             </div>
                             <div className="tutorial-feature__content">
-                                <h3 className="tutorial-feature__title">{feature.title}</h3>
+                                <div className="tutorial-feature__header">
+                                    <h3 className="tutorial-feature__title">{feature.title}</h3>
+                                    <span className={`tutorial-feature__badge tutorial-feature__badge--${feature.badge === 'Collapsible' ? 'collapsible' : 'available'}`}>
+                                        {feature.badge === 'Collapsible' ? '▶' : '✓'}
+                                    </span>
+                                </div>
                                 <p className="tutorial-feature__description">{feature.description}</p>
                             </div>
                         </div>
                     ))}
+                </div>
+
+                {/* Tip Box */}
+                <div className="tutorial-tip">
+                    <i className="bi bi-lightbulb" />
+                    <div>
+                        <strong>Tip:</strong> Most advanced features are <strong>collapsed by default</strong>.
+                        Click section headers to expand them when you need more control.
+                    </div>
                 </div>
 
                 {/* Footer */}

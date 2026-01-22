@@ -1374,11 +1374,19 @@ function NavbarComponent(props: AllProps) {
             <div className="main-header-right">
                 {/* Badges */}
                 {props.debug && <span className="debug-badge">DEBUG</span>}
-                {props.advanced && (
-                    <span className="advanced-mode-badge" title="Advanced Mode is enabled. More options and features are visible.">
-                        ADV
-                    </span>
-                )}
+                {/* Mode Toggle - Basic/Advanced */}
+                <div className="navbar__mode-toggle">
+                    <Tooltip tooltip={props.advanced ? "Switch to Basic Mode" : "Switch to Advanced Mode"} inline={true} position="bottom" offsetY={8}>
+                        <button
+                            className={`mode-toggle-btn ${props.advanced ? 'mode-toggle-btn--advanced' : 'mode-toggle-btn--basic'}`}
+                            onClick={toggleAdvancedMode}
+                            aria-label={props.advanced ? "Switch to Basic Mode" : "Switch to Advanced Mode"}
+                        >
+                            <i className={props.advanced ? "bi bi-gear-wide-connected" : "bi bi-mortarboard"} />
+                            <span>{props.advanced ? 'Advanced' : 'Basic'}</span>
+                        </button>
+                    </Tooltip>
+                </div>
                 {/* Layout Controls Group */}
                 <LayoutControls />
                 {/* Tree View Toggle - only in editor context */}

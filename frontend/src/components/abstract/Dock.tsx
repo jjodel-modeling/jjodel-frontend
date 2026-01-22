@@ -235,13 +235,13 @@ function DockComponent(props: AllProps) {
     // Left panel (Models Summary / Canvas)
     layout.dockbox.children.push({tabs: [ModelsSummary], size: leftSize});
 
-    // Fixed tab order: Properties, Viewpoints, Node, Console
+    // Fixed tab order: Properties, Viewpoints, Node (Advanced), Console
     // Tree View is now inside PropertiesWithTreeView component
     // This order is locked (tabLocked:true in editors group)
     const tabs = [];
     tabs.push(structure);  // Properties
     tabs.push(views);      // Viewpoints
-    tabs.push(node);       // Node
+    if (advanced) tabs.push(node);  // Node (Advanced only)
     tabs.push(console);    // Console
     if (advanced) tabs.push(mtm);
     if (advanced) tabs.push(logger);

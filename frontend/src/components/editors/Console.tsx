@@ -29,6 +29,7 @@ import {Tooltip} from "../forEndUser/Tooltip";
 import { createRoot } from "react-dom/client";
 import {hiddenkeys} from "../../joiner/proxy";
 import Convert from 'ansi-to-html';
+import { UpgradePrompt } from '../ModeSystem';
 
 let ansiConvert = (window as any).ansiConvert;
 if (!ansiConvert) (window as any).ansiconvert = ansiConvert = new Convert();
@@ -444,10 +445,21 @@ class ConsoleComponent extends PureComponent<AllProps, ThisState>{
                     {contextkeys}
                 </section>
             }
-            {shortcutsjsx && <section className='group  suggestion-keys shortcuts-container'>
+            {/* Shortcuts - Advanced Mode Only */}
+            {advanced && shortcutsjsx && <section className='group  suggestion-keys shortcuts-container'>
                 <label className={"context-keys pt-0"}>Shortcuts</label>
                 {shortcutsjsx}
             </section>}
+            {/* Upgrade prompt for Basic mode users */}
+            {!advanced && (
+                <UpgradePrompt
+                    features={[
+                        'Access shortcuts for common operations',
+                        'View query history',
+                        'Advanced debugging tools'
+                    ]}
+                />
+            )}
         </div>)
     }
 

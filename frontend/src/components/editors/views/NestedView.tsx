@@ -31,6 +31,7 @@ import {InternalToggle} from '../../widgets/Widgets';
 import {VersionFixer} from "../../../redux/VersionFixer";
 import ActivityLogger from '../../../services/ActivityLogger';
 import { ActivityType } from '../../../types/activity';
+import { LockedFeature } from '../../ModeSystem';
 
 type Metadata = {setView: (p: Pointer)=>any, scoreBoost: number}
 function NestedViewComponent(props: AllProps) {
@@ -261,6 +262,27 @@ function NestedViewComponent(props: AllProps) {
     let [view, setView] = useStateIfMounted(undefined as (undefined | Pointer<DViewElement>));
     let [vp_expanded, setVpExpanded] = useStateIfMounted<Boolean>(false);
 
+    // Basic mode: show locked feature placeholder
+    if (!props.isAdvanced) {
+        return (
+            <div className={"view-editor-root"}>
+                <section className={'viewpoint-tab'}>
+                    <LockedFeature
+                        title="Viewpoints"
+                        description="Viewpoints allow you to create custom visual representations for your metamodel elements. Switch to Advanced mode to access this feature."
+                        icon="eye"
+                        features={[
+                            'Create custom visual templates',
+                            'Define conditional styling rules',
+                            'Configure element appearance',
+                            'Manage multiple viewpoints'
+                        ]}
+                    />
+                </section>
+            </div>
+        );
+    }
+
     let vieweditor = view && <div className={"single-view-content"}><ViewData key={view} viewid={view} viewpoints={viewpoints.map(v=>v.id)} setSelectedView={setView} /></div>;
     return(<div className={"view-editor-root"}>
         <section className={'viewpoint-tab'}>
@@ -269,17 +291,17 @@ function NestedViewComponent(props: AllProps) {
                     <h1 onClick={() => setVpExpanded(!vp_expanded)}>
                         Viewpoints
                         <CommandBar style={{float: 'right'}}>
-                            {vp_expanded ? 
-                                <Btn icon={'shrink'} 
-                                    active={collapseAll} 
-                                    action={() => {setVpExpanded(!vp_expanded);setCollapseAll(true)}}  
-                                    tip={'Collapse all'} 
+                            {vp_expanded ?
+                                <Btn icon={'shrink'}
+                                    active={collapseAll}
+                                    action={() => {setVpExpanded(!vp_expanded);setCollapseAll(true)}}
+                                    tip={'Collapse all'}
 
                                 /> :
-                                <Btn icon={'expand'} 
-                                    active={collapseAll===false} 
-                                    action={() => {setVpExpanded(!vp_expanded);setCollapseAll(false)}} 
-                                    tip={'Expand all'}   
+                                <Btn icon={'expand'}
+                                    active={collapseAll===false}
+                                    action={() => {setVpExpanded(!vp_expanded);setCollapseAll(false)}}
+                                    tip={'Expand all'}
                                 />
                     }
                             <Sep />

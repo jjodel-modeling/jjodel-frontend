@@ -24,6 +24,7 @@ import { CommandBar, Btn } from '../commandbar/CommandBar';
 import { Tooltip } from '../forEndUser/Tooltip';
 import { icon } from '../../pages/components/icons/Icons';
 import { Toggle } from '../../joiner/components';
+import { UpgradePrompt } from '../ModeSystem';
 
 // Custom toggle switch component (div-based to avoid global checkbox styles)
 function PropertiesToggle(props: { data: LModelElement; field: string }) {
@@ -912,37 +913,40 @@ function InfoComponent(props: AllProps) {
                     </div>
                 </div>
 
-                {/* State Section */}
-                <div className="properties-section">
-                    <div className="properties-section-title">
-                        <i className="bi bi-braces" />
-                        State
-                    </div>
-                    <div className="properties-section-content">
-                        <div className="object-state" style={{ margin: 0, border: 'none' }}>
-                            {!ddata || Object.keys(ddata._state).length === 0 ? (
-                                <pre style={{ padding: '12px 16px', margin: 0, color: 'var(--color-text-secondary)' }}>Empty</pre>
-                            ) : (
-                                <ReactJson
-                                    src={ddata._state}
-                                    collapsed={1}
-                                    collapseStringsAfterLength={20}
-                                    displayDataTypes={true}
-                                    displayObjectSize={true}
-                                    enableClipboard={true}
-                                    groupArraysAfterLength={100}
-                                    indentWidth={4}
-                                    name={"state"}
-                                    iconStyle={"triangle"}
-                                    quotesOnKeys={true}
-                                    shouldCollapse={false}
-                                    sortKeys={false}
-                                    theme={"rjv-default"}
-                                />
-                            )}
+                {/* State Section - Advanced Mode Only */}
+                {advanced && (
+                    <div className="properties-section">
+                        <div className="properties-section-title">
+                            <i className="bi bi-braces" />
+                            State
+                            <span className="properties-section-badge advanced">Advanced</span>
+                        </div>
+                        <div className="properties-section-content">
+                            <div className="object-state" style={{ margin: 0, border: 'none' }}>
+                                {!ddata || Object.keys(ddata._state).length === 0 ? (
+                                    <pre style={{ padding: '12px 16px', margin: 0, color: 'var(--color-text-secondary)' }}>Empty</pre>
+                                ) : (
+                                    <ReactJson
+                                        src={ddata._state}
+                                        collapsed={1}
+                                        collapseStringsAfterLength={20}
+                                        displayDataTypes={true}
+                                        displayObjectSize={true}
+                                        enableClipboard={true}
+                                        groupArraysAfterLength={100}
+                                        indentWidth={4}
+                                        name={"state"}
+                                        iconStyle={"triangle"}
+                                        quotesOnKeys={true}
+                                        shouldCollapse={false}
+                                        sortKeys={false}
+                                        theme={"rjv-default"}
+                                    />
+                                )}
+                            </div>
                         </div>
                     </div>
-                </div>
+                )}
 
                 {/* Actions */}
                 {showActions && (
@@ -951,6 +955,17 @@ function InfoComponent(props: AllProps) {
                         onEdit={node?.select ? () => node?.select() : undefined}
                         onDuplicate={data?.duplicate ? () => data?.duplicate?.() : undefined}
                         onDelete={data?.delete ? () => data?.delete?.() : undefined}
+                    />
+                )}
+
+                {/* Upgrade Prompt - Basic Mode Only */}
+                {!advanced && (
+                    <UpgradePrompt
+                        features={[
+                            'View and edit element state',
+                            'Access advanced class options',
+                            'Configure OCL constraints'
+                        ]}
                     />
                 )}
             </section>
