@@ -27,6 +27,12 @@ This document details all UI/UX improvements made to the Jjodel frontend applica
 11. **Resolution-based Layout System** - Dynamic panel width based on screen size
 12. **Layout Controls** - Split/Sidebar view toggle buttons
 
+### Phase 3 (January 22, 2026 - Evening)
+13. **Features Palette Sidebar** - New permanent drag & drop sidebar for adding elements
+14. **FeaturesModal Removal** - Removed unused floating modal component
+15. **ToolBar Simplification** - Commented out redundant toolbar content
+16. **Layout Controls Fix** - Fixed to not close open tabs when switching modes
+
 All changes follow the design system defined in `/CLAUDE.md`.
 
 ---
@@ -46,9 +52,13 @@ All changes follow the design system defined in `/CLAUDE.md`.
 11. [Colored Icons in Viewpoints Panel](#11-colored-icons-in-viewpoints-panel)
 12. [Resolution-based Layout System](#12-resolution-based-layout-system)
 13. [Layout Controls](#13-layout-controls)
-14. [File Inventory](#14-file-inventory)
-15. [Technical Notes](#15-technical-notes)
-16. [Testing Checklist](#16-testing-checklist)
+14. [Features Palette Sidebar](#14-features-palette-sidebar)
+15. [FeaturesModal Removal](#15-featuresmodal-removal)
+16. [ToolBar Simplification](#16-toolbar-simplification)
+17. [Layout Controls Fix](#17-layout-controls-fix)
+18. [File Inventory](#18-file-inventory)
+19. [Technical Notes](#19-technical-notes)
+20. [Testing Checklist](#20-testing-checklist)
 
 ---
 
