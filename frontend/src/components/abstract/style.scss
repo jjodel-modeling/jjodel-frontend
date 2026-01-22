@@ -239,7 +239,7 @@ body > .dragging-layer > div:last-child {
   flex: 0 0 auto;
   background: var(--color-bg-primary);
   border-bottom: 1px solid var(--color-border-primary);
-  padding-left: var(--space-2);
+  padding-left: 0; // Rimosso padding per estendere la barra verso sinistra (era var(--space-2))
 }
 
 .dock-top .dock-content-animated {
