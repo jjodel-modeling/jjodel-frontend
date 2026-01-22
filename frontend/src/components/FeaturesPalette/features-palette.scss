@@ -1,0 +1,206 @@
+/**
+ * Features Palette Styles
+ * Following CLAUDE.md design guidelines
+ */
+
+// Design tokens (matching CLAUDE.md)
+$color-bg-primary: #ffffff;
+$color-bg-secondary: #f8fafc;
+$color-bg-tertiary: #f1f5f9;
+$color-border: #e2e4e8;
+$color-border-hover: #d0d3d8;
+$color-text-primary: #111418;
+$color-text-secondary: #6B7280;
+$color-text-tertiary: #9CA3AF;
+$color-accent: #475569;
+$color-accent-light: rgba(71, 85, 105, 0.1);
+
+$radius-md: 6px;
+$radius-lg: 8px;
+$transition-fast: 150ms ease;
+$transition-normal: 250ms ease;
+
+$palette-width: 180px;
+$palette-collapsed-width: 40px;
+
+.features-palette {
+    position: relative;
+    display: flex;
+    flex-direction: row;
+    width: $palette-width;
+    height: 100%;
+    background-color: $color-bg-primary;
+    border-right: 1px solid $color-border;
+    transition: width $transition-normal;
+    z-index: 10;
+    flex-shrink: 0;
+
+    // Collapsed state
+    &--collapsed {
+        width: $palette-collapsed-width;
+
+        .features-palette__content {
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+        }
+    }
+
+    // Toggle button
+    &__toggle {
+        position: absolute;
+        top: 12px;
+        right: -12px;
+        width: 24px;
+        height: 24px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background-color: $color-bg-primary;
+        border: 1px solid $color-border;
+        border-radius: 50%;
+        cursor: pointer;
+        z-index: 11;
+        transition: all $transition-fast;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+
+        &:hover {
+            background-color: $color-bg-secondary;
+            border-color: $color-border-hover;
+        }
+
+        .bi {
+            font-size: 12px;
+            color: $color-text-secondary;
+        }
+    }
+
+    // Content container
+    &__content {
+        display: flex;
+        flex-direction: column;
+        width: 100%;
+        padding: 12px;
+        opacity: 1;
+        visibility: visible;
+        transition: opacity $transition-fast, visibility $transition-fast;
+    }
+
+    // Header
+    &__header {
+        margin-bottom: 12px;
+        padding-bottom: 8px;
+        border-bottom: 1px solid $color-border;
+    }
+
+    &__title {
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: $color-text-tertiary;
+    }
+
+    // Items container
+    &__items {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    // Individual item
+    &__item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 12px;
+        background-color: $color-bg-secondary;
+        border: 1px solid transparent;
+        border-radius: $radius-md;
+        cursor: grab;
+        transition: all $transition-fast;
+        user-select: none;
+
+        &:hover {
+            background-color: $color-bg-tertiary;
+            border-color: $color-border;
+        }
+
+        &:active {
+            cursor: grabbing;
+        }
+
+        // Dragging state
+        &.dragging {
+            opacity: 0.5;
+            border-color: $color-accent;
+            background-color: $color-accent-light;
+        }
+    }
+
+    &__item-icon {
+        font-size: 16px;
+        color: $color-accent;
+        flex-shrink: 0;
+    }
+
+    &__item-name {
+        font-size: 13px;
+        font-weight: 500;
+        color: $color-text-primary;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+}
+
+// Dark mode support
+@media (prefers-color-scheme: dark) {
+    .features-palette {
+        background-color: #1e2024;
+        border-right-color: #2d3138;
+
+        &__toggle {
+            background-color: #1e2024;
+            border-color: #2d3138;
+
+            &:hover {
+                background-color: #2d3138;
+            }
+
+            .bi {
+                color: #9CA3AF;
+            }
+        }
+
+        &__header {
+            border-bottom-color: #2d3138;
+        }
+
+        &__title {
+            color: #9CA3AF;
+        }
+
+        &__item {
+            background-color: #2d3138;
+
+            &:hover {
+                background-color: #3d4148;
+                border-color: #4d5158;
+            }
+
+            &.dragging {
+                border-color: #64748b;
+                background-color: rgba(71, 85, 105, 0.2);
+            }
+        }
+
+        &__item-icon {
+            color: #94a3b8;
+        }
+
+        &__item-name {
+            color: #e5e7eb;
+        }
+    }
+}
