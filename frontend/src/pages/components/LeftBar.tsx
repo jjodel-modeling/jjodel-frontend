@@ -243,7 +243,7 @@ function LeftBar(props: LeftBarProps): JSX.Element {
                 {/* @ts-ignore */}
                 <Menu title={props.project.name ? props.project.name : 'Unnamed Project'} project>
                     <Item action={exportProject} icon={icon['download']}>Download</Item>
-                    <Item action={exportMetamodel} icon={<i className="bi bi-box-arrow-up" />}>Export Metamodel</Item>
+                    {/* Export Metamodel removed - now in contextual menu on metamodel/model cards */}
                     <Item action={toggleFavorite} icon={!project?.isFavorite ? icon['favorite'] : icon['favoriteFill']}>{!project?.isFavorite ? 'Add to favorites ' : 'Remove from favorites '}</Item>
                     <Item action={closeProject} icon={icon['close']}>Close project </Item>
                 </Menu>

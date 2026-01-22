@@ -11,7 +11,6 @@ import {
     SetRootFieldAction
 } from "../../../joiner";
 import {DefaultNode} from "../../../joiner/components";
-import ToolBar from "../../toolbar/ToolBar";
 import ContextMenu from "../../contextMenu/ContextMenu";
 import { FeaturesPalette, getFeatureByDragType } from "../../FeaturesPalette";
 
@@ -83,7 +82,7 @@ function MetamodelTabComponent(props: AllProps) {
 
 
         <div className={'d-flex h-100'} style={{overflow:'hidden'}} onClick={e => { if (!U.isProjectModified) U.isProjectModified = U.userHasInteracted = true; }}>
-            <ToolBar model={model.id} isMetamodel={model.isMetamodel}/>
+            {/* Fixed Features Palette - always visible */}
             <FeaturesPalette />
             <Try>
                 <div

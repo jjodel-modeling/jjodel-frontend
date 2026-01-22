@@ -7,6 +7,13 @@ import ShareProjectModal from './ShareProjectModal';
 import UnsavedChangesDialog from './UnsavedChangesDialog';
 import './project-editor.scss';
 
+// Types for contextual menu
+type MenuType = 'metamodel' | 'model' | null;
+interface OpenMenu {
+    type: MenuType;
+    id: string;
+}
+
 /**
  * Get the engine (platform) version from the Redux store
  */
@@ -55,6 +62,13 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
     const [isAddingTag, setIsAddingTag] = useState(false);
     const [showShareModal, setShowShareModal] = useState(false);
 
+    // Contextual menu state
+    const [openMenu, setOpenMenu] = useState<OpenMenu | null>(null);
+    const [renamingItem, setRenamingItem] = useState<{ type: MenuType; id: string } | null>(null);
+    const [renameValue, setRenameValue] = useState('');
+    const menuRef = useRef<HTMLDivElement>(null);
+    const renameInputRef = useRef<HTMLInputElement>(null);
+
     // Unsaved changes tracking
     const [isDirty, setIsDirty] = useState(false);
     const [showUnsavedDialog, setShowUnsavedDialog] = useState(false);
@@ -91,6 +105,28 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
         setEditedName(project.name || '');
         setEditedDescription(project.description || '');
     }, [project.name, project.description]);
+
+    // Click-outside handler for contextual menu
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+                setOpenMenu(null);
+            }
+        };
+
+        if (openMenu) {
+            document.addEventListener('mousedown', handleClickOutside);
+            return () => document.removeEventListener('mousedown', handleClickOutside);
+        }
+    }, [openMenu]);
+
+    // Focus rename input when renaming starts
+    useEffect(() => {
+        if (renamingItem && renameInputRef.current) {
+            renameInputRef.current.focus();
+            renameInputRef.current.select();
+        }
+    }, [renamingItem]);
 
     // Browser beforeunload handler - use global handler from U
     // This allows LeftBar and other components to disable it before programmatic navigation
@@ -266,6 +302,107 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
     const handleToggleType = () => {
         project.type = project.type === 'public' ? 'private' : 'public';
         markDirty();
+    };
+
+    // Contextual menu handlers
+    const toggleMenu = (type: MenuType, id: string) => {
+        if (openMenu?.type === type && openMenu?.id === id) {
+            setOpenMenu(null);
+        } else {
+            setOpenMenu({ type, id });
+        }
+    };
+
+    const closeMenu = () => {
+        setOpenMenu(null);
+    };
+
+    // Export metamodel as .jmm file
+    const handleExportMetamodel = (mm: LModel) => {
+        try {
+            const jmmData = {
+                format_version: '1.0',
+                metadata: {
+                    name: mm.name || project.name + '-metamodel',
+                    version: project.version?.toString() || '1.0.0',
+                    author: (project as any).author?.name || 'Unknown',
+                    description: project.description || '',
+                    exported_at: new Date().toISOString(),
+                    source_project: project.id,
+                    jjodel_version: '2.0'
+                },
+                metamodel: (mm as any).__raw || mm
+            };
+
+            const jsonString = JSON.stringify(jmmData, null, 2);
+            const filename = `${mm.name || project.name}-metamodel.jmm`;
+            U.download(filename, jsonString);
+            U.alert('i', 'Exported', `Metamodel exported: ${filename}`);
+        } catch (error) {
+            console.error('Export metamodel error:', error);
+            U.alert('e', 'Export Failed', 'Could not export the metamodel.');
+        }
+        closeMenu();
+    };
+
+    // Export model as .jm file
+    const handleExportModel = (model: LModel) => {
+        try {
+            const jmData = {
+                format_version: '1.0',
+                metadata: {
+                    name: model.name || project.name + '-model',
+                    version: project.version?.toString() || '1.0.0',
+                    author: (project as any).author?.name || 'Unknown',
+                    description: project.description || '',
+                    exported_at: new Date().toISOString(),
+                    source_project: project.id,
+                    jjodel_version: '2.0'
+                },
+                model: (model as any).__raw || model
+            };
+
+            const jsonString = JSON.stringify(jmData, null, 2);
+            const filename = `${model.name || project.name}-model.jm`;
+            U.download(filename, jsonString);
+            U.alert('i', 'Exported', `Model exported: ${filename}`);
+        } catch (error) {
+            console.error('Export model error:', error);
+            U.alert('e', 'Export Failed', 'Could not export the model.');
+        }
+        closeMenu();
+    };
+
+    // Rename handlers
+    const startRename = (type: MenuType, id: string, currentName: string) => {
+        setRenamingItem({ type, id });
+        setRenameValue(currentName || '');
+        closeMenu();
+    };
+
+    const handleRenameSubmit = (item: LModel) => {
+        if (renameValue.trim()) {
+            const newName = renameValue.trim();
+            if (newName !== item.name) {
+                item.name = newName;
+                markDirty();
+            }
+        }
+        setRenamingItem(null);
+        setRenameValue('');
+    };
+
+    const handleRenameCancel = () => {
+        setRenamingItem(null);
+        setRenameValue('');
+    };
+
+    const handleRenameKeyDown = (e: React.KeyboardEvent, item: LModel) => {
+        if (e.key === 'Enter') {
+            handleRenameSubmit(item);
+        } else if (e.key === 'Escape') {
+            handleRenameCancel();
+        }
     };
 
     // Handle badge click - if public, open share modal; if private, toggle to public
@@ -478,24 +615,75 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                             <div className="list-card__item" key={mm.id}>
                                 <span className="list-card__icon list-card__icon--mm">M</span>
                                 <div className="list-card__content">
-                                    <div className="list-card__name">{mm.name || 'Unnamed'}</div>
-                                    <div className="list-card__type">Metamodel</div>
+                                    {renamingItem?.type === 'metamodel' && renamingItem?.id === mm.id ? (
+                                        <input
+                                            ref={renameInputRef}
+                                            type="text"
+                                            className="list-card__rename-input"
+                                            value={renameValue}
+                                            onChange={(e) => setRenameValue(e.target.value)}
+                                            onBlur={() => handleRenameSubmit(mm)}
+                                            onKeyDown={(e) => handleRenameKeyDown(e, mm)}
+                                        />
+                                    ) : (
+                                        <>
+                                            <div className="list-card__name">{mm.name || 'Unnamed'}</div>
+                                            <div className="list-card__type">Metamodel</div>
+                                        </>
+                                    )}
                                 </div>
                                 <div className="list-card__actions">
                                     <button
-                                        className="icon-btn"
-                                        title="Open"
-                                        onClick={() => handleOpenMetamodel(mm)}
+                                        className="icon-btn icon-btn--menu"
+                                        title="More actions"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            toggleMenu('metamodel', mm.id);
+                                        }}
                                     >
-                                        <i className="bi bi-box-arrow-up-right" />
+                                        <i className="bi bi-three-dots-vertical" />
                                     </button>
-                                    <button
-                                        className="icon-btn icon-btn--danger"
-                                        title="Delete"
-                                        onClick={() => handleDeleteMetamodel(mm)}
-                                    >
-                                        <i className="bi bi-trash" />
-                                    </button>
+
+                                    {/* Contextual Menu */}
+                                    {openMenu?.type === 'metamodel' && openMenu?.id === mm.id && (
+                                        <div className="context-menu" ref={menuRef}>
+                                            <button
+                                                className="context-menu__item"
+                                                onClick={() => {
+                                                    handleOpenMetamodel(mm);
+                                                    closeMenu();
+                                                }}
+                                            >
+                                                <i className="bi bi-box-arrow-up-right" />
+                                                Open
+                                            </button>
+                                            <button
+                                                className="context-menu__item"
+                                                onClick={() => handleExportMetamodel(mm)}
+                                            >
+                                                <i className="bi bi-download" />
+                                                Export Metamodel
+                                            </button>
+                                            <button
+                                                className="context-menu__item"
+                                                onClick={() => startRename('metamodel', mm.id, mm.name || '')}
+                                            >
+                                                <i className="bi bi-pencil" />
+                                                Rename
+                                            </button>
+                                            <div className="context-menu__divider" />
+                                            <button
+                                                className="context-menu__item context-menu__item--danger"
+                                                onClick={() => {
+                                                    handleDeleteMetamodel(mm);
+                                                    closeMenu();
+                                                }}
+                                            >
+                                                <i className="bi bi-trash" />
+                                                Delete
+                                            </button>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         ))}
@@ -542,26 +730,77 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                             <div className="list-card__item" key={model.id}>
                                 <span className="list-card__icon list-card__icon--model">m</span>
                                 <div className="list-card__content">
-                                    <div className="list-card__name">{model.name || 'Unnamed'}</div>
-                                    <div className="list-card__type">
-                                        Model {model.instanceof?.name ? `· ${model.instanceof.name}` : ''}
-                                    </div>
+                                    {renamingItem?.type === 'model' && renamingItem?.id === model.id ? (
+                                        <input
+                                            ref={renameInputRef}
+                                            type="text"
+                                            className="list-card__rename-input"
+                                            value={renameValue}
+                                            onChange={(e) => setRenameValue(e.target.value)}
+                                            onBlur={() => handleRenameSubmit(model)}
+                                            onKeyDown={(e) => handleRenameKeyDown(e, model)}
+                                        />
+                                    ) : (
+                                        <>
+                                            <div className="list-card__name">{model.name || 'Unnamed'}</div>
+                                            <div className="list-card__type">
+                                                Model {model.instanceof?.name ? `· ${model.instanceof.name}` : ''}
+                                            </div>
+                                        </>
+                                    )}
                                 </div>
                                 <div className="list-card__actions">
                                     <button
-                                        className="icon-btn"
-                                        title="Open"
-                                        onClick={() => handleOpenModel(model)}
+                                        className="icon-btn icon-btn--menu"
+                                        title="More actions"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            toggleMenu('model', model.id);
+                                        }}
                                     >
-                                        <i className="bi bi-box-arrow-up-right" />
+                                        <i className="bi bi-three-dots-vertical" />
                                     </button>
-                                    <button
-                                        className="icon-btn icon-btn--danger"
-                                        title="Delete"
-                                        onClick={() => handleDeleteModel(model)}
-                                    >
-                                        <i className="bi bi-trash" />
-                                    </button>
+
+                                    {/* Contextual Menu */}
+                                    {openMenu?.type === 'model' && openMenu?.id === model.id && (
+                                        <div className="context-menu" ref={menuRef}>
+                                            <button
+                                                className="context-menu__item"
+                                                onClick={() => {
+                                                    handleOpenModel(model);
+                                                    closeMenu();
+                                                }}
+                                            >
+                                                <i className="bi bi-box-arrow-up-right" />
+                                                Open
+                                            </button>
+                                            <button
+                                                className="context-menu__item"
+                                                onClick={() => handleExportModel(model)}
+                                            >
+                                                <i className="bi bi-download" />
+                                                Export Model
+                                            </button>
+                                            <button
+                                                className="context-menu__item"
+                                                onClick={() => startRename('model', model.id, model.name || '')}
+                                            >
+                                                <i className="bi bi-pencil" />
+                                                Rename
+                                            </button>
+                                            <div className="context-menu__divider" />
+                                            <button
+                                                className="context-menu__item context-menu__item--danger"
+                                                onClick={() => {
+                                                    handleDeleteModel(model);
+                                                    closeMenu();
+                                                }}
+                                            >
+                                                <i className="bi bi-trash" />
+                                                Delete
+                                            </button>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         ))}

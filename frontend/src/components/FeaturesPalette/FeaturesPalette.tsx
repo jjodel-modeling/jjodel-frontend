@@ -1,41 +1,24 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import { featureDefinitions, FeatureDefinition, getSubFeatures, hasSubFeatures } from './featureDefinitions';
 import './features-palette.scss';
-
-const STORAGE_KEY = 'jjodel_features_palette_collapsed';
 
 interface FeaturesPaletteProps {
     className?: string;
 }
 
 /**
- * FeaturesPalette - Collapsible sidebar with draggable metamodel elements
+ * FeaturesPalette - Fixed sidebar with draggable metamodel elements
  *
  * Features:
  * - Displays Package, Class, Enumerator items
- * - Shows sub-features (Attribute, Reference, Operation, Literal) when parent is selected
+ * - Shows sub-features (Attribute, Reference, Operation, Literal) when parent is expanded
  * - Supports HTML5 drag & drop to canvas
- * - Collapsible with localStorage persistence
+ * - Always visible (fixed 200px sidebar)
  * - Follows CLAUDE.md design guidelines
  */
 export const FeaturesPalette: React.FC<FeaturesPaletteProps> = ({ className = '' }) => {
-    // Initialize collapsed state from localStorage
-    const [isCollapsed, setIsCollapsed] = useState(() => {
-        const saved = localStorage.getItem(STORAGE_KEY);
-        return saved === 'true';
-    });
-
     // Track which feature is expanded to show sub-features
     const [expandedFeatureId, setExpandedFeatureId] = useState<string | null>(null);
-
-    // Persist collapsed state to localStorage
-    useEffect(() => {
-        localStorage.setItem(STORAGE_KEY, String(isCollapsed));
-    }, [isCollapsed]);
-
-    const toggleCollapsed = useCallback(() => {
-        setIsCollapsed(prev => !prev);
-    }, []);
 
     // Toggle expanded state for features with sub-features
     const handleFeatureClick = useCallback((feature: FeatureDefinition) => {
@@ -88,24 +71,15 @@ export const FeaturesPalette: React.FC<FeaturesPaletteProps> = ({ className = ''
     };
 
     return (
-        <div className={`features-palette ${isCollapsed ? 'features-palette--collapsed' : ''} ${className}`}>
-            {/* Toggle button - always visible */}
-            <button
-                className="features-palette__toggle"
-                onClick={toggleCollapsed}
-                title={isCollapsed ? 'Expand palette' : 'Collapse palette'}
-                aria-expanded={!isCollapsed}
-                aria-label="Toggle features palette"
-            >
-                <i className={`bi ${isCollapsed ? 'bi-chevron-right' : 'bi-chevron-left'}`} />
-            </button>
+        <div className={`features-palette ${className}`}>
+            {/* Header with icon and title */}
+            <div className="features-palette__header">
+                <i className="bi bi-grid-3x3 features-palette__header-icon" />
+                <span className="features-palette__title">FEATURES</span>
+            </div>
 
-            {/* Palette content - hidden when collapsed */}
+            {/* Palette content - always visible */}
             <div className="features-palette__content">
-                <div className="features-palette__header">
-                    <span className="features-palette__title">Features</span>
-                </div>
-
                 <div className="features-palette__items">
                     {featureDefinitions.map(feature => (
                         <React.Fragment key={feature.id}>
