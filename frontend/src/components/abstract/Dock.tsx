@@ -109,21 +109,17 @@ function DockComponent(props: AllProps) {
             const newMode = event.detail.mode;
             setLayoutMode(newMode);
 
-            // Aggiorna la larghezza del pannello destro
+            // Il ridimensionamento viene gestito dal CSS tramite l'attributo data-layout-mode sul body
+            // che viene già impostato dalla Navbar. Non usiamo loadLayout per evitare di chiudere
+            // i tab aperti. Il CSS in style.scss gestisce le regole per:
+            // - body[data-layout-mode="split"]
+            // - body[data-layout-mode="sidebar"]
+            // - body[data-layout-mode="canvas-only"]
+
+            // Forza un re-render del dock senza ricaricare il layout
             if (DockManager.dock) {
-                const newWidth = getInitialPanelWidth(newMode);
-                const layout = DockManager.dock.getLayout();
-
-                // Trova il pannello destro (editors) e aggiorna la sua dimensione
-                if (layout?.dockbox?.children?.[1]) {
-                    const rightPanel = layout.dockbox.children[1];
-                    if ('size' in rightPanel) {
-                        rightPanel.size = newWidth;
-
-                        // Forza il dock a ricaricare il layout
-                        DockManager.dock.loadLayout(layout);
-                    }
-                }
+                // Trigger resize event to make rc-dock recalculate sizes
+                window.dispatchEvent(new Event('resize'));
             }
         };
 
@@ -135,10 +131,10 @@ function DockComponent(props: AllProps) {
     }, []);
 
     const groups = {
-        'models': {floatable: true, maximizable: true},
+        'models': {floatable: true, maximizable: false},
         // editors group: tabLocked=true disables drag-and-drop reordering
         // Tabs remain in fixed order: Properties, Tree View, Viewpoints, Node, Console
-        'editors': {floatable: true, maximizable: true, tabLocked: true}
+        'editors': {floatable: true, maximizable: false, tabLocked: true}
     };
 
     let advanced:boolean = props.advanced;

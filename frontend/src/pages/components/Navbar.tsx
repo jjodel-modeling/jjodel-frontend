@@ -50,6 +50,7 @@ import {PinnableDock} from "../../components/dock/MyRcDock";
 import ActivityLogger from '../../services/ActivityLogger';
 import { ActivityType } from '../../types/activity';
 import { LayoutMode, getSavedLayoutMode, saveLayoutMode, getInitialPanelWidth } from '../../components/abstract/Dock';
+import { isProjectOverviewPage } from '../../utils/navigationUtils';
 
 
 let windoww = window as any;
@@ -648,6 +649,13 @@ function NavbarComponent(props: AllProps) {
                     return null;
                 }
             }
+        }
+
+
+
+        // Nel tuo componente
+        if (isProjectOverviewPage()) {
+            return null;
         }
 
         return (<>
