@@ -26,7 +26,6 @@ import MemoRec from '../../api/memorec';
 import {useStateIfMounted} from 'use-state-if-mounted';
 import ModellingIcon from "../forEndUser/ModellingIcon";
 import {FakeStateProps} from "../../joiner/types";
-import {toggleMetrics} from '../metrics/Metrics';
 import {icon} from '../../pages/components/icons/Icons';
 import {Tooltip} from "../forEndUser/Tooltip";
 import { Info } from '../editors';
@@ -356,14 +355,6 @@ function ContextMenuComponentInner(props: AllProps) {
         // </div>);
 
         jsxList.push(<hr key={hri++} className={'my-1'} />);
-        
-        /* Analytics */
-        if (ldata && model?.isMetamodel) {
-            jsxList.push(<div key='analytic' onClick={() => {close(); toggleMetrics();}} className={'col item'} tabIndex={0}>{icon['metrics']} Analytics
-                <div><i className='bi bi-command' /> A</div></div>);
-            jsxList.push(<hr key={hri++} className={'my-1'} />);
-        }
-
 
         /* ADD VIEW */
         jsxList.push(<div key='view+' onClick={async () => {close(); addView();}} className={'col item'} tabIndex={0}>{icon['view']} Add View

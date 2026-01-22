@@ -13,7 +13,6 @@ import {
 import {DefaultNode} from "../../../joiner/components";
 import ToolBar from "../../toolbar/ToolBar";
 import ContextMenu from "../../contextMenu/ContextMenu";
-import { MetricsPanel } from "../../metrics/Metrics";
 import { FeaturesPalette, getFeatureByDragType } from "../../FeaturesPalette";
 
 
@@ -72,7 +71,6 @@ function MetamodelTabComponent(props: AllProps) {
     }
     let graphid = graph.id;
     return(<div className={'w-100 h-100'} style={{overflow: 'hidden'}}>
-        <MetricsPanel data={model}/>
         <ContextMenu graph={graphid}/>
         {/*<PendingEdge />*/}
         {/* Temporary Edge Pending Manager */}

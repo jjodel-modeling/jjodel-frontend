@@ -33,6 +33,24 @@ This document details all UI/UX improvements made to the Jjodel frontend applica
 15. **ToolBar Simplification** - Commented out redundant toolbar content
 16. **Layout Controls Fix** - Fixed to not close open tabs when switching modes
 
+### Phase 4 (January 22, 2026 - Night)
+17. **Navbar Menu Icons Uniformization** - All icons now Bootstrap Icons outline style
+18. **Adaptive Keyboard Shortcuts** - Shortcuts adapt to OS (⌘ on Mac, Ctrl on Windows)
+19. **Menu Styling Consistency** - Uniform hover states, spacing, and shortcut styling
+
+### Phase 5 (January 22, 2026 - Late Night)
+20. **Global Keyboard Handler** - Prevents browser from intercepting shortcuts (CMD+S, etc.)
+21. **Keyboard Shortcut Pills** - Individual pill buttons for each key (⌘ and S separately)
+
+### Phase 6 (January 22, 2026 - Late Night)
+22. **Context-Aware Keyboard Shortcuts** - Shortcuts adapt behavior based on current context (Dashboard, Project, Metamodel, Profile)
+23. **Sign-out Menu Item** - Added Sign-out with CMD+Q to Jjodel menu with divider
+
+### Phase 7 (January 22, 2026 - Late Night)
+24. **Advanced Mode Tutorial Modal** - First-time tutorial explaining Advanced Mode features
+25. **Zoom Controls with Keyboard Shortcuts** - CMD++/-, CMD+0 for zoom in/out/reset
+26. **M2 Analytics Modal** - Centered modal with EMF classification gauge and metrics table
+
 All changes follow the design system defined in `/CLAUDE.md`.
 
 ---
@@ -56,9 +74,19 @@ All changes follow the design system defined in `/CLAUDE.md`.
 15. [FeaturesModal Removal](#15-featuresmodal-removal)
 16. [ToolBar Simplification](#16-toolbar-simplification)
 17. [Layout Controls Fix](#17-layout-controls-fix)
-18. [File Inventory](#18-file-inventory)
-19. [Technical Notes](#19-technical-notes)
-20. [Testing Checklist](#20-testing-checklist)
+18. [Navbar Menu Icons Uniformization](#18-navbar-menu-icons-uniformization)
+19. [Adaptive Keyboard Shortcuts](#19-adaptive-keyboard-shortcuts)
+20. [Menu Styling Consistency](#20-menu-styling-consistency)
+21. [Global Keyboard Handler](#21-global-keyboard-handler)
+22. [Keyboard Shortcut Pills](#22-keyboard-shortcut-pills)
+23. [Context-Aware Keyboard Shortcuts](#23-context-aware-keyboard-shortcuts)
+24. [Sign-out Menu Item](#24-sign-out-menu-item)
+25. [Advanced Mode Tutorial Modal](#25-advanced-mode-tutorial-modal)
+26. [Zoom Controls with Keyboard Shortcuts](#26-zoom-controls-with-keyboard-shortcuts)
+27. [M2 Analytics Modal](#27-m2-analytics-modal)
+28. [File Inventory](#28-file-inventory)
+29. [Technical Notes](#29-technical-notes)
+30. [Testing Checklist](#30-testing-checklist)
 
 ---
 
@@ -1577,7 +1605,866 @@ body[data-layout-mode="canvas-only"] {
 
 ---
 
-## 18. FILE INVENTORY
+## 18. NAVBAR MENU ICONS UNIFORMIZATION
+
+### Purpose
+Replace inconsistent icons (mix of outline, filled, and custom dotted icons) with uniform Bootstrap Icons outline style across all navbar menus.
+
+### File Modified
+`frontend/src/pages/components/Navbar.tsx`
+
+### Icon Mapping Changes
+
+| Menu Item | Old Icon | New Icon |
+|-----------|----------|----------|
+| New | `bi-plus-circle-dotted` | `bi-plus-circle` |
+| Recent Projects | `icon['recent']` | `bi-clock-history` |
+| Metamodel | Custom `MetamodelIcon` | `bi-diagram-3` |
+| Model | Custom `ModelIcon` | `bi-box` |
+| Import Project | `icon['import']` | `bi-upload` |
+| Save Project | `icon['save']` | `bi-floppy` |
+| Download Project | `icon['download']` | `bi-download` |
+| Close Project | `icon['close']` | `bi-x-lg` |
+| Delete Project | `icon['delete']` | `bi-trash` |
+| About Jjodel | `icon['jjodel']` | `bi-shield` |
+| Roadmap | `icon['roadmap']` | `bi-calendar3` |
+| Undo | `icon['undo']` | `bi-arrow-counterclockwise` |
+| Redo | `icon['redo']` | `bi-arrow-clockwise` |
+| Favorites | `icon['favorite']` | `bi-star` / `bi-star-fill` |
+| Copy Link | `icon['link']` | `bi-link-45deg` |
+| Zoom-in | `icon['zoom-in']` | `bi-zoom-in` |
+| Zoom-out | `icon['zoom-out']` | `bi-zoom-out` |
+| Save/Load Layout | `bi-columns-gap` | `bi-grid-3x3` |
+| Sidebar | `icon['sidebar']` | `bi-layout-sidebar` |
+| Toolbar | `icon['toolbar2']` | `bi-menu-button` |
+| Fullscreen | `icon['fullscreen']` | `bi-arrows-fullscreen` |
+| Live Validation | `icon['validation']` | `bi-check-circle` |
+| Validate | `icon['validate']` | `bi-clipboard-check` |
+| M2 Analytics | `icon['metrics']` | `bi-graph-up` |
+| Debug Mode | `bi-bug-fill` | `bi-bug` (outline when off) |
+| Learn Jjodel | `icon['learn']` | `bi-infinity` |
+| Getting Started | `icon['getting-started']` | `bi-rocket-takeoff` |
+| Video Tutorials | `icon['video']` | `bi-play-circle` |
+| FAQ | `icon['faq']` | `bi-chat-left-dots` |
+| Support | `icon['support']` | `bi-life-preserver` |
+| Report Bug | `icon['report-bug']` | `bi-bug` |
+| Contact | `icon['contact']` | `bi-envelope` |
+
+### Design Principle
+All icons now use Bootstrap Icons with the `bi-*` class prefix. Filled variants (`bi-*-fill`) are only used for active/selected states (e.g., favorites star when favorited).
+
+---
+
+## 19. ADAPTIVE KEYBOARD SHORTCUTS
+
+### Purpose
+Replace hardcoded keyboard shortcuts with OS-adaptive shortcuts that display correctly on Mac (⌘⇧⌥) and Windows/Linux (Ctrl+Shift+Alt).
+
+### File Created
+`frontend/src/utils/keyboardShortcuts.ts`
+
+### Implementation
+
+#### Type Definitions
+
+```typescript
+export type ModifierKey = 'cmd' | 'ctrl' | 'shift' | 'alt';
+
+export interface ShortcutConfig {
+    key: string;
+    modifiers: ModifierKey[];
+}
+```
+
+#### Platform Detection
+
+```typescript
+export function isMac(): boolean {
+    if (typeof navigator === 'undefined') return false;
+    return navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+}
+```
+
+#### Symbol Mapping
+
+| Modifier | Mac Symbol | Windows/Linux |
+|----------|------------|---------------|
+| cmd | ⌘ | Ctrl |
+| ctrl | ⌃ | Ctrl |
+| shift | ⇧ | Shift |
+| alt | ⌥ | Alt |
+
+#### Format Function
+
+```typescript
+export function formatShortcut(config: ShortcutConfig): string {
+    const isMacOS = isMac();
+    const modifierSymbols = config.modifiers.map(m => getModifierSymbol(m));
+
+    if (isMacOS) {
+        // Mac style: ⌘S (no separator)
+        return modifierSymbols.join('') + config.key.toUpperCase();
+    } else {
+        // Windows/Linux style: Ctrl+S (with +)
+        return [...modifierSymbols, config.key.toUpperCase()].join('+');
+    }
+}
+```
+
+#### Predefined Shortcuts
+
+```typescript
+export const SHORTCUTS = {
+    SAVE: { key: 'S', modifiers: ['cmd'] },
+    CLOSE: { key: 'E', modifiers: ['cmd'] },
+    NEW_METAMODEL: { key: 'M', modifiers: ['alt', 'cmd'] },
+    UNDO: { key: 'Z', modifiers: ['cmd'] },
+    REDO_MAC: { key: 'Z', modifiers: ['cmd', 'shift'] },
+    REDO_WIN: { key: 'Y', modifiers: ['cmd'] },
+    COPY_LINK: { key: 'S', modifiers: ['shift', 'cmd'] },
+    ADVANCED_MODE: { key: 'M', modifiers: ['shift', 'cmd'] },
+};
+```
+
+#### Special Case: Redo
+
+```typescript
+export function getRedoShortcut(): string {
+    return isMac()
+        ? formatShortcut(SHORTCUTS.REDO_MAC)   // ⌘⇧Z
+        : formatShortcut(SHORTCUTS.REDO_WIN);  // Ctrl+Y
+}
+```
+
+### Shortcut Display Examples
+
+| Action | Mac | Windows |
+|--------|-----|---------|
+| Save | ⌘S | Ctrl+S |
+| Close | ⌘E | Ctrl+E |
+| New Metamodel | ⌥⌘M | Alt+Ctrl+M |
+| Undo | ⌘Z | Ctrl+Z |
+| Redo | ⌘⇧Z | Ctrl+Y |
+| Copy Link | ⇧⌘S | Shift+Ctrl+S |
+| Advanced Mode | ⇧⌘M | Shift+Ctrl+M |
+
+---
+
+## 20. MENU STYLING CONSISTENCY
+
+### Purpose
+Ensure uniform styling for menu items including hover states, shortcuts display, icon sizing, and spacing.
+
+### File Modified
+`frontend/src/pages/components/navbar.scss`
+
+### Changes
+
+#### New Shortcut Styling
+
+```scss
+.keystrokes {
+    .keystroke {
+        font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Consolas', monospace;
+        font-size: 11px;
+        font-weight: 500;
+        padding: 2px 6px;
+        background: rgba(0, 0, 0, 0.06);
+        border: 1px solid rgba(0, 0, 0, 0.08);
+        border-radius: 4px;
+        color: #6b7280;
+        white-space: nowrap;
+    }
+}
+```
+
+#### Hover State for Shortcuts
+
+```scss
+>li:hover >label {
+    .keystrokes .keystroke {
+        background: rgba(255, 255, 255, 0.15);
+        border-color: rgba(255, 255, 255, 0.2);
+        color: rgba(255, 255, 255, 0.9);
+    }
+}
+```
+
+#### Dark Mode Support
+
+```scss
+[data-theme="dark"] .keystrokes .keystroke,
+.dark .keystrokes .keystroke {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.12);
+    color: #94a3b8;
+}
+```
+
+#### Uniform Icon Sizing
+
+```scss
+.nav-container .content.context-menu ul > li > label {
+    .bi {
+        font-size: 16px;
+        width: 20px;
+        min-width: 20px;
+        text-align: center;
+        margin-right: 10px;
+        flex-shrink: 0;
+    }
+
+    .icon-expand-submenu {
+        font-size: 12px;
+        opacity: 0.6;
+        margin-left: auto;
+    }
+}
+```
+
+### Visual Design
+
+**Menu Item Structure:**
+```
+┌─────────────────────────────────────────────────────┐
+│ [icon 16px] Menu Item Name          [shortcut] [›]  │
+│   20px      flexible                  auto    12px  │
+└─────────────────────────────────────────────────────┘
+```
+
+**Hover State:**
+```
+┌─────────────────────────────────────────────────────┐
+│ [icon]  Save Project                    ⌘S          │
+│         ↓ slate background (#475569)    ↓           │
+│         white text                      inverted    │
+└─────────────────────────────────────────────────────┘
+```
+
+---
+
+## 21. GLOBAL KEYBOARD HANDLER
+
+**Problem Solved:** Browser was intercepting keyboard shortcuts (e.g., CMD+S triggered browser's "Save Page" dialog instead of Jjodel's Save Project).
+
+### Implementation Details
+
+A global keyboard event handler was added to `Navbar.tsx` using `useEffect` with capture phase:
+
+```typescript
+useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+        // Skip if user is typing in an input
+        const target = event.target as HTMLElement;
+        if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
+            return;
+        }
+
+        // CMD/Ctrl + S - Save Project
+        if (matchesShortcut(event, SHORTCUTS.SAVE)) {
+            event.preventDefault();
+            event.stopPropagation();
+            // Trigger save...
+        }
+        // ... other shortcuts
+    };
+
+    window.addEventListener('keydown', handleKeyDown, true); // Capture phase
+    return () => window.removeEventListener('keydown', handleKeyDown, true);
+}, [project]);
+```
+
+### Shortcuts Handled:
+| Shortcut | Action |
+|----------|--------|
+| `CMD/Ctrl + S` | Save Project |
+| `CMD/Ctrl + E` | Close Project |
+| `Alt + CMD/Ctrl + M` | New Metamodel |
+
+### Key Points:
+- Uses **capture phase** (`true` as third parameter) to intercept before browser
+- Calls `event.preventDefault()` and `event.stopPropagation()`
+- Skips when user is typing in inputs/textareas
+- Uses `matchesShortcut()` function for OS-adaptive matching
+
+---
+
+## 22. KEYBOARD SHORTCUT PILLS
+
+**Problem Solved:** Keyboard shortcuts were displayed as single text (e.g., "⌘S") instead of individual pill buttons (e.g., ⌘ and S separately).
+
+### Before vs After
+
+**Before (single text):**
+```
+┌─────────────────────────────┐
+│ Save Project        [⌘S]   │
+└─────────────────────────────┘
+```
+
+**After (individual pills):**
+```
+┌─────────────────────────────────┐
+│ Save Project        [⌘] [S]    │
+└─────────────────────────────────┘
+```
+
+### Implementation
+
+**New function in `keyboardShortcuts.ts`:**
+```typescript
+export function formatShortcutPills(config: ShortcutConfig): string[] {
+    const modifierSymbols = config.modifiers.map(m => getModifierSymbol(m));
+    return [...modifierSymbols, config.key.toUpperCase()];
+}
+```
+
+**Updated keystroke rendering in `Navbar.tsx`:**
+```typescript
+function getKeyStrokes(keys?: string[], shortcutPills?: string[]) {
+    if (shortcutPills && shortcutPills.length > 0) {
+        return <div className="keystrokes">
+            {shortcutPills.map((pill, index) => (
+                <kbd key={index} className="keystroke-pill">{pill}</kbd>
+            ))}
+        </div>;
+    }
+    // ...fallback
+}
+```
+
+### CSS Styling (navbar.scss)
+```scss
+.keystroke-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Consolas', monospace;
+  font-size: 11px;
+  font-weight: 500;
+  min-width: 20px;
+  padding: 2px 6px;
+  background: rgba(0, 0, 0, 0.06);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 4px;
+  color: #6b7280;
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.05);
+}
+```
+
+---
+
+## 23. CONTEXT-AWARE KEYBOARD SHORTCUTS
+
+**Problem Solved:** Keyboard shortcuts now adapt their behavior based on the current application context, providing an intuitive workflow where CMD+N always means "New [most logical thing in current context]".
+
+### Context Definitions
+
+| Context | Description | Detection |
+|---------|-------------|-----------|
+| `DASHBOARD` | All Projects page | URL: `/allProjects`, `/dashboard`, `/` |
+| `PROJECT_EDITOR` | Inside project, viewing/editing project | URL: `/project/*` without metamodel canvas |
+| `METAMODEL_EDITOR` | Editing a specific metamodel on canvas | URL: `/project/*` with `.graph-container` in DOM |
+| `USER_PROFILE` | User profile/settings page | URL: `/account`, `/profile`, `/settings` |
+
+### Context-Aware Shortcuts
+
+| Shortcut | DASHBOARD | PROJECT_EDITOR | METAMODEL_EDITOR | USER_PROFILE |
+|----------|-----------|----------------|------------------|--------------|
+| CMD+N | New Project | New Metamodel | New Class | - |
+| CMD+Shift+N | - | New Model | - | - |
+| CMD+S | - | Save Project | Save Project | Save Profile |
+| CMD+W | - | Close Project | Close Project | Go Back |
+| CMD+Q | Sign Out | Sign Out | Sign Out | Sign Out |
+
+### Implementation
+
+**Context Detection Function:**
+```typescript
+export function detectCurrentContext(): AppContext {
+    const pathname = window.location.pathname;
+
+    if (pathname === '/allProjects' || pathname === '/dashboard' || pathname === '/') {
+        return 'DASHBOARD';
+    }
+
+    if (pathname.includes('/account') || pathname.includes('/profile')) {
+        return 'USER_PROFILE';
+    }
+
+    const isMetamodelEditorActive = document.querySelector('.graph-container') !== null;
+    if (isMetamodelEditorActive && pathname.includes('/project')) {
+        return 'METAMODEL_EDITOR';
+    }
+
+    if (pathname.includes('/project')) {
+        return 'PROJECT_EDITOR';
+    }
+
+    return 'DASHBOARD';
+}
+```
+
+### Benefits
+- Fewer shortcuts to memorize
+- More intuitive: "CMD+N = New thing that makes sense here"
+- Professional app pattern (Figma, VS Code, Photoshop)
+- Fluid workflow without context switching
+
+---
+
+## 24. SIGN-OUT MENU ITEM
+
+**Added:** Sign-out menu item with CMD+Q shortcut to Jjodel menu.
+
+### Menu Structure
+
+```
+Jjodel Menu:
+├── About Jjodel
+├── Roadmap
+├── ─────────── (divider)
+└── Sign-out         ⌘Q
+```
+
+### Implementation
+
+**Menu Item:**
+```typescript
+{name: 'Jjodel',
+    subItems: [
+        {name: 'About Jjodel', ...},
+        {name: 'Roadmap', ...},
+        {name: 'divisor'},
+        {name: 'Sign-out',
+            function: async () => {
+                if (isProjectModified()) {
+                    // Confirm dialog if unsaved changes
+                } else {
+                    await AuthApi.logout();
+                    R.navigate('/auth');
+                }
+            },
+            icon: <i className="bi bi-box-arrow-right" />,
+            shortcutPills: formatShortcutPills(SHORTCUTS.SIGN_OUT)
+        },
+    ]
+}
+```
+
+### Keyboard Handler
+
+CMD+Q (or Ctrl+Q on Windows) triggers sign-out from any context:
+```typescript
+if (matchesShortcut(event, SHORTCUTS.SIGN_OUT)) {
+    event.preventDefault();
+    if (isProjectModified()) {
+        // Confirm dialog
+    } else {
+        await AuthApi.logout();
+        R.navigate('/auth');
+    }
+}
+```
+
+---
+
+## 25. ADVANCED MODE TUTORIAL MODAL
+
+### Purpose
+Provide a first-time tutorial modal that explains what Advanced Mode unlocks when the user enables it for the first time. This helps users understand the powerful features they're activating.
+
+### Files Created
+
+| File Path | Purpose |
+|-----------|---------|
+| `frontend/src/components/AdvancedModeTutorial/AdvancedModeTutorial.tsx` | Tutorial modal component |
+| `frontend/src/components/AdvancedModeTutorial/advanced-mode-tutorial.scss` | Modal styles with dark mode |
+| `frontend/src/components/AdvancedModeTutorial/index.ts` | Barrel export |
+
+### File Modified
+`frontend/src/pages/components/Navbar.tsx`
+
+### Implementation
+
+#### Component Structure
+
+```tsx
+export function AdvancedModeTutorial({ isOpen, onClose }: AdvancedModeTutorialProps) {
+    return (
+        <div className="advanced-mode-tutorial-overlay">
+            <div className="advanced-mode-tutorial-modal">
+                {/* Header with icon and title */}
+                <div className="tutorial-header">
+                    <div className="tutorial-header__icon">
+                        <i className="bi bi-lightning-charge-fill" />
+                    </div>
+                    <h2>Advanced Mode Enabled</h2>
+                    <p>You now have access to all features and expert tools</p>
+                </div>
+
+                {/* Features Grid */}
+                <div className="tutorial-features">
+                    {features.map(feature => (
+                        <div className="tutorial-feature">
+                            <i className={`bi bi-${feature.icon}`} />
+                            <h3>{feature.title}</h3>
+                            <p>{feature.description}</p>
+                        </div>
+                    ))}
+                </div>
+
+                {/* Footer buttons */}
+                <div className="tutorial-footer">
+                    <button onClick={handleDontShowAgain}>Don't show again</button>
+                    <button onClick={handleClose}>Got it</button>
+                </div>
+            </div>
+        </div>
+    );
+}
+```
+
+#### Features Explained
+
+| Feature | Icon | Description |
+|---------|------|-------------|
+| Extended Properties | bi-sliders | Access all element properties including constraints, documentation, and advanced type options |
+| Developer Tools | bi-tools | Enable debug mode, loop debugging, and integrity checking for development workflows |
+| M2 Analytics | bi-graph-up | View metamodel analytics and metrics to understand your model's structure and complexity |
+| OCL Console | bi-code-slash | Write and execute Object Constraint Language queries for model validation |
+| JSX Templates | bi-braces | Create custom view templates using JSX for advanced visualization |
+| Layout Management | bi-grid-3x3 | Save and load custom layouts, manage layout auto-save settings |
+
+### LocalStorage Key
+
+| Key | Purpose | Values |
+|-----|---------|--------|
+| `jjodel_advanced_mode_tutorial_seen` | Tracks if user has seen the tutorial | `'true'` |
+
+### Utility Functions
+
+```typescript
+// Check if tutorial should be shown
+export function shouldShowAdvancedModeTutorial(): boolean {
+    return localStorage.getItem(STORAGE_KEY) !== 'true';
+}
+
+// Reset tutorial state (for testing)
+export function resetAdvancedModeTutorial(): void {
+    localStorage.removeItem(STORAGE_KEY);
+}
+```
+
+### Integration with Navbar
+
+The tutorial is triggered when Advanced Mode is enabled for the first time:
+
+```typescript
+const enableAdvancedMode = (showTutorial: boolean = true) => {
+    SetRootFieldAction.new('advanced', true);
+    // ... other setup
+
+    // Show tutorial if first time
+    if (showTutorial && shouldShowAdvancedModeTutorial()) {
+        setShowAdvancedTutorial(true);
+    } else {
+        U.alert('i', 'Advanced Mode', 'All features and options are now visible');
+    }
+};
+```
+
+### Visual Design
+
+```
+┌─────────────────────────────────────────────────────┐
+│                                                     │
+│               ⚡ (gradient circle)                  │
+│                                                     │
+│          Advanced Mode Enabled                      │
+│   You now have access to all features and           │
+│   expert tools                                      │
+│                                                     │
+├─────────────────────────────────────────────────────┤
+│ ┌───────────────────┐ ┌───────────────────┐        │
+│ │ 🎚️ Extended Props  │ │ 🔧 Developer Tools │        │
+│ │ Access all element│ │ Enable debug mode,│        │
+│ │ properties...     │ │ loop debugging... │        │
+│ └───────────────────┘ └───────────────────┘        │
+│ ┌───────────────────┐ ┌───────────────────┐        │
+│ │ 📊 M2 Analytics   │ │ 💻 OCL Console    │        │
+│ │ View metamodel    │ │ Write and execute │        │
+│ │ analytics...      │ │ OCL queries...    │        │
+│ └───────────────────┘ └───────────────────┘        │
+│ ┌───────────────────┐ ┌───────────────────┐        │
+│ │ {} JSX Templates  │ │ 📐 Layout Mgmt    │        │
+│ │ Create custom     │ │ Save and load     │        │
+│ │ view templates... │ │ custom layouts... │        │
+│ └───────────────────┘ └───────────────────┘        │
+├─────────────────────────────────────────────────────┤
+│                 [Don't show again]  [Got it]        │
+└─────────────────────────────────────────────────────┘
+```
+
+### Dark Mode Support
+
+Full dark mode support with:
+- Dark overlay background (rgba(0, 0, 0, 0.7))
+- Dark modal background (#1e2024)
+- Adjusted text colors for contrast
+- Dark feature cards (#252830)
+
+---
+
+## 26. ZOOM CONTROLS WITH KEYBOARD SHORTCUTS
+
+### Purpose
+Add keyboard shortcuts for zoom operations (zoom in, zoom out, reset zoom) that work in editor contexts and prevent browser page zoom.
+
+### Files Modified
+- `frontend/src/utils/keyboardShortcuts.ts` - Added zoom shortcuts and matchers
+- `frontend/src/pages/components/Navbar.tsx` - Added zoom keyboard handlers and menu items
+
+### Implementation
+
+#### New Shortcuts in keyboardShortcuts.ts
+
+```typescript
+export const SHORTCUTS = {
+    // ... existing shortcuts ...
+
+    // Zoom shortcuts (editor context only)
+    ZOOM_IN: { key: '+', modifiers: ['cmd'] as ModifierKey[] },   // CMD++ / Ctrl++
+    ZOOM_OUT: { key: '-', modifiers: ['cmd'] as ModifierKey[] },  // CMD+- / Ctrl+-
+    ZOOM_RESET: { key: '0', modifiers: ['cmd'] as ModifierKey[] }, // CMD+0 / Ctrl+0
+};
+```
+
+#### Special Matchers for Zoom
+
+The plus key (`+`) requires special handling because it's `=` on unshifted keyboards:
+
+```typescript
+export function matchesZoomIn(event: KeyboardEvent): boolean {
+    const cmdOrCtrl = isMac() ? event.metaKey : event.ctrlKey;
+    if (!cmdOrCtrl || event.altKey) return false;
+    // Accept '+' or '=' (unshifted plus on US keyboard)
+    return event.key === '+' || event.key === '=';
+}
+```
+
+#### Custom Event System
+
+Zoom actions are dispatched as custom events for the canvas to handle:
+
+```typescript
+window.dispatchEvent(new CustomEvent('jjodel:zoom', {
+    detail: { action: 'in' | 'out' | 'reset' }
+}));
+```
+
+#### Context Availability
+
+Zoom shortcuts only work in editor contexts:
+- ✅ **METAMODEL_EDITOR** - Primary use case (zooming canvas)
+- ✅ **PROJECT_EDITOR** - If canvas/diagrams are present
+- ❌ **DASHBOARD** - No zoom needed
+- ❌ **USER_PROFILE** - No zoom needed
+
+### Menu Items
+
+View menu now includes:
+```
+┌─────────────────────────────────┐
+│ 🔍 Zoom-in           [⌘] [+]    │
+│ 🔍 Zoom-out          [⌘] [-]    │
+│ ↺  Reset Zoom        [⌘] [0]    │
+└─────────────────────────────────┘
+```
+
+### Browser Default Prevention
+
+The keyboard handlers prevent browser defaults:
+- **CMD+Plus / Ctrl+Plus** → Prevents browser page zoom in
+- **CMD+Minus / Ctrl+Minus** → Prevents browser page zoom out
+- **CMD+0 / Ctrl+0** → Prevents browser page zoom reset
+
+### Canvas Integration (TODO)
+
+The canvas component should listen for the `jjodel:zoom` event:
+
+```typescript
+useEffect(() => {
+    const handleZoom = (event: CustomEvent<{ action: 'in' | 'out' | 'reset' }>) => {
+        switch (event.detail.action) {
+            case 'in':
+                // Increase zoom by 10% or step
+                break;
+            case 'out':
+                // Decrease zoom by 10% or step
+                break;
+            case 'reset':
+                // Set zoom to 100% (1.0)
+                break;
+        }
+    };
+
+    window.addEventListener('jjodel:zoom', handleZoom as EventListener);
+    return () => window.removeEventListener('jjodel:zoom', handleZoom as EventListener);
+}, []);
+```
+
+---
+
+## 27. M2 ANALYTICS MODAL
+
+### Purpose
+Provide a centered modal that displays EMF-based metamodel classification and detailed metrics. This modal is only accessible in Advanced Mode and follows the same design pattern as the Advanced Mode Tutorial modal.
+
+### Files Created
+
+| File Path | Purpose |
+|-----------|---------|
+| `frontend/src/components/M2AnalyticsModal/M2AnalyticsModal.tsx` | Modal component with classification gauge and metrics table |
+| `frontend/src/components/M2AnalyticsModal/m2-analytics-modal.scss` | Styles with full dark mode support |
+| `frontend/src/components/M2AnalyticsModal/index.ts` | Barrel export |
+
+### Files Modified
+
+| File Path | Changes |
+|-----------|---------|
+| `frontend/src/pages/components/Navbar.tsx` | Added M2AnalyticsModal import, state, and integration |
+
+### Data Structure
+
+```typescript
+export interface M2AnalyticsData {
+    metamodelName: string;
+    classification: {
+        score: number;  // 0-100
+        category: 'small' | 'medium' | 'large';
+    };
+    metrics: {
+        PKG: number;        // # Packages
+        MC: number;         // # Metaclasses
+        AMC: number;        // # Abstract Metaclasses
+        CMC: number;        // # Concrete Metaclasses
+        IFLMC: number;      // # Concrete Featureless Metaclasses
+        MCWS: number;       // # Metaclasses with Superclass
+        LMC: number | null; // % Isolated Metaclasses (can be NaN)
+        SF: number;         // # Structural Features
+        ASF: number | null; // Avg # Structural Features (can be NaN)
+        EN: number;         // # Enumerations
+        LIT: number;        // # Literals
+    };
+}
+```
+
+### Visual Structure
+
+```
+┌─────────────────────────────────────────────────────────┐
+│ [slate gradient header]                                  │
+│ 📊 Metamodel Analytics                           [×]    │
+├─────────────────────────────────────────────────────────┤
+│                                                          │
+│ ┌─────────────────────────────────────────────────────┐ │
+│ │ ℹ️ Metamodel classification as EMF-based            │ │
+│ │                                                      │ │
+│ │   small          medium           large             │ │
+│ │ ┌────────────────────────────────────────────────┐ │ │
+│ │ │ [slate] |   [orange]      |     [blue]         │ │ │
+│ │ └────────────────────────────────────────────────┘ │ │
+│ │      30         50           80                    │ │
+│ │ 0                           MyMetamodel            │ │
+│ └─────────────────────────────────────────────────────┘ │
+│                                                          │
+│ Metrics                                                  │
+│ ┌─────────────────────────────────────────────────────┐ │
+│ │ PKG   # Packages                              1     │ │
+│ │ MC    # Metaclasses                           12    │ │
+│ │ AMC   # Abstract Metaclasses                  3     │ │
+│ │ CMC   # Concrete Metaclasses                  9     │ │
+│ │ IFLMC # Concrete Featureless Metaclasses      2     │ │
+│ │ MCWS  # Metaclasses with Superclass           5     │ │
+│ │ LMC   % Isolated Metaclasses                 16.7%  │ │
+│ │ SF    # Structural Features                   24    │ │
+│ │ ASF   Avg # Structural Features               2.0   │ │
+│ │ EN/LIT # Enumeration/Literals                2/8    │ │
+│ └─────────────────────────────────────────────────────┘ │
+│                                                          │
+├─────────────────────────────────────────────────────────┤
+│                                          [Close]        │
+└─────────────────────────────────────────────────────────┘
+```
+
+### Classification Gauge
+
+The gauge visualizes metamodel size classification:
+
+| Zone | Range | Color | CSS Variable |
+|------|-------|-------|--------------|
+| Small | 0-30 | Slate | `$gauge-small: #94a3b8` |
+| Medium | 30-80 | Orange | `$gauge-medium: #f59e0b` |
+| Large | 80-100 | Blue | `$gauge-large: #3b82f6` |
+
+### Null/NaN Handling
+
+Some metrics can be null or NaN (e.g., when there are 0 metaclasses):
+
+```typescript
+const formatValue = (value: number | null): string => {
+    if (value === null || (typeof value === 'number' && isNaN(value))) return 'N/A';
+    return value.toString();
+};
+
+const formatPercentage = (value: number | null): string => {
+    if (value === null || (typeof value === 'number' && isNaN(value))) return 'N/A';
+    return `${value.toFixed(1)}%`;
+};
+```
+
+N/A values are styled with orange color (`metrics-row__value--na`).
+
+### Availability
+
+- **Requires:** Advanced Mode enabled
+- **Menu Location:** Metamodel → M2 Analytics
+- **Disabled When:** On Dashboard OR no metamodels loaded
+
+### Dark Mode Support
+
+Full dark mode support via `[data-theme="dark"]` selectors:
+
+| Element | Light Mode | Dark Mode |
+|---------|------------|-----------|
+| Modal background | `#ffffff` | `#1e293b` |
+| Footer background | `#f8fafc` | `#0f172a` |
+| Section background | `#f8fafc` | `#0f172a` |
+| Metrics row | `#f8fafc` | `#0f172a` |
+| Text primary | `#1e293b` | `#f1f5f9` |
+| Marker badge | Dark bg/light text | Light bg/dark text |
+
+---
+
+## 28. FILE INVENTORY
+
+### New Files Created (Phase 7)
+
+| File Path | Purpose |
+|-----------|---------|
+| `frontend/src/components/AdvancedModeTutorial/AdvancedModeTutorial.tsx` | Tutorial modal component |
+| `frontend/src/components/AdvancedModeTutorial/advanced-mode-tutorial.scss` | Modal styles with dark mode |
+| `frontend/src/components/AdvancedModeTutorial/index.ts` | Barrel export |
+| `frontend/src/components/M2AnalyticsModal/M2AnalyticsModal.tsx` | M2 Analytics modal component |
+| `frontend/src/components/M2AnalyticsModal/m2-analytics-modal.scss` | Modal styles with dark mode |
+| `frontend/src/components/M2AnalyticsModal/index.ts` | Barrel export |
+
+### New Files Created (Phase 4)
+
+| File Path | Purpose |
+|-----------|---------|
+| `frontend/src/utils/keyboardShortcuts.ts` | OS-adaptive keyboard shortcuts utility |
 
 ### New Files Created (Phase 3)
 
@@ -1629,6 +2516,19 @@ body[data-layout-mode="canvas-only"] {
 | `frontend/src/components/editors/views/NestedView.tsx` | Toggle switch for viewpoints |
 | `frontend/src/components/editors/views/nestedView.scss` | Toggle switch styles, colored icons |
 
+### Existing Files Modified (Phase 7)
+
+| File Path | Changes |
+|-----------|---------|
+| `frontend/src/pages/components/Navbar.tsx` | Added AdvancedModeTutorial integration, toggle functions |
+
+### Existing Files Modified (Phase 4)
+
+| File Path | Changes |
+|-----------|---------|
+| `frontend/src/pages/components/Navbar.tsx` | All icons to Bootstrap Icons, adaptive shortcuts |
+| `frontend/src/pages/components/navbar.scss` | Shortcut styling, hover states, dark mode |
+
 ### Existing Files Modified (Phase 3)
 
 | File Path | Changes |
@@ -1639,7 +2539,7 @@ body[data-layout-mode="canvas-only"] {
 
 ---
 
-## 19. TECHNICAL NOTES
+## 29. TECHNICAL NOTES
 
 ### U.alert() Function
 
@@ -1675,6 +2575,9 @@ import { LayoutMode, getInitialPanelWidth, getSavedLayoutMode, saveLayoutMode } 
 
 // Features Palette
 import { FeaturesPalette, getFeatureByDragType, featureDefinitions } from '../components/FeaturesPalette';
+
+// Keyboard Shortcuts (Phase 4)
+import { formatShortcut, getRedoShortcut, SHORTCUTS, isMac } from '../utils/keyboardShortcuts';
 ```
 
 ### Custom Events
@@ -1738,7 +2641,7 @@ Common icons used:
 
 ---
 
-## 20. TESTING CHECKLIST
+## 30. TESTING CHECKLIST
 
 ### Toast Notifications
 - [ ] Toast appears in top-right corner
@@ -1855,6 +2758,131 @@ Common icons used:
 - [ ] No errors when opening metamodel
 - [ ] FeaturesPalette replaces ToolBar functionality
 
+### Navbar Menu Icons (Phase 4)
+- [ ] All icons are Bootstrap Icons outline (bi-*)
+- [ ] No custom dotted icons (bi-plus-circle-dotted → bi-plus-circle)
+- [ ] No custom SVG icons in menus
+- [ ] Icon size uniform 16px
+- [ ] Icon width uniform 20px
+- [ ] Icons white on hover (slate background)
+- [ ] Filled variants only for active states (bi-star-fill for favorited)
+
+### Adaptive Keyboard Shortcuts (Phase 4)
+- [ ] On Mac: shows ⌘S, ⌘E, ⌥⌘M, etc.
+- [ ] On Windows: shows Ctrl+S, Ctrl+E, Alt+Ctrl+M, etc.
+- [ ] Redo on Mac: ⌘⇧Z
+- [ ] Redo on Windows: Ctrl+Y
+- [ ] Shortcut appears in monospace font
+- [ ] Shortcut has subtle background (#f1f5f9)
+- [ ] Shortcut border-radius 4px
+- [ ] Shortcut inverts on menu item hover
+
+### Menu Styling Consistency (Phase 4)
+- [ ] Hover state: slate background (#475569)
+- [ ] Hover state: white text
+- [ ] Hover state: white icons
+- [ ] Hover state: shortcut inverts to light
+- [ ] Disabled items: no hover effect
+- [ ] Chevron (›) aligned right
+- [ ] Spacing consistent across all menus
+- [ ] Dark mode: shortcuts visible
+- [ ] Dark mode: proper contrast
+
+### Global Keyboard Handler (Phase 5)
+- [ ] CMD+S (Mac) / Ctrl+S (Windows) saves project, not browser's "Save Page"
+- [ ] CMD+E (Mac) / Ctrl+E (Windows) closes project
+- [ ] Alt+CMD+M (Mac) / Alt+Ctrl+M (Windows) creates new metamodel
+- [ ] Shortcuts work when focus is NOT in an input/textarea
+- [ ] Shortcuts do NOT intercept when typing in input fields
+- [ ] Works on both Mac and Windows
+
+### Keyboard Shortcut Pills (Phase 5)
+- [ ] Each key displayed as separate pill (⌘ and S separately)
+- [ ] Pills have 3px gap between them
+- [ ] Pills have subtle border and shadow
+- [ ] Pills have min-width 20px for small keys
+- [ ] Pills invert to white on hover
+- [ ] Dark mode: pills have correct styling
+
+### Context-Aware Keyboard Shortcuts (Phase 6)
+- [ ] Context detection correctly identifies DASHBOARD on `/allProjects`
+- [ ] Context detection correctly identifies PROJECT_EDITOR in project view
+- [ ] Context detection correctly identifies METAMODEL_EDITOR when canvas visible
+- [ ] Context detection correctly identifies USER_PROFILE on `/account`
+- [ ] CMD+N creates New Project on Dashboard
+- [ ] CMD+N creates New Metamodel in Project Editor
+- [ ] CMD+N creates New Class in Metamodel Editor (TODO)
+- [ ] CMD+Shift+N creates New Model in Project Editor
+- [ ] CMD+S saves project in Project/Metamodel Editor
+- [ ] CMD+W closes project in Project/Metamodel Editor
+- [ ] CMD+W goes back from User Profile
+- [ ] CMD+Q triggers sign-out from any context
+- [ ] Unsaved changes dialog appears before sign-out if needed
+- [ ] Shortcuts do NOT fire when typing in inputs
+
+### Sign-out Menu Item (Phase 6)
+- [ ] Divider appears between Roadmap and Sign-out
+- [ ] Sign-out item visible in Jjodel menu
+- [ ] Sign-out icon: bi-box-arrow-right
+- [ ] Sign-out displays CMD+Q / Ctrl+Q shortcut pills
+- [ ] Clicking Sign-out triggers logout with unsaved changes check
+- [ ] User redirected to /auth after sign-out
+- [ ] Session properly cleared on sign-out
+
+### Advanced Mode Tutorial Modal (Phase 7)
+- [ ] Tutorial appears when enabling Advanced Mode for the first time
+- [ ] Tutorial does NOT appear on subsequent toggles (unless reset)
+- [ ] Modal has backdrop with blur effect
+- [ ] Lightning icon in gradient circle header
+- [ ] 6 feature cards displayed in 2x3 grid
+- [ ] Each feature card has icon, title, and description
+- [ ] "Don't show again" button marks as seen and closes
+- [ ] "Got it" button marks as seen and closes
+- [ ] Click outside modal closes it
+- [ ] localStorage key `jjodel_advanced_mode_tutorial_seen` is set
+- [ ] Dark mode: proper contrast and colors
+- [ ] Smooth entrance/exit animations
+- [ ] Mobile responsive (single column on small screens)
+
+### Zoom Controls with Keyboard Shortcuts (Phase 7)
+- [ ] CMD++ / Ctrl++ dispatches zoom in event (browser page zoom prevented)
+- [ ] CMD+= / Ctrl+= also triggers zoom in (unshifted plus key)
+- [ ] CMD+- / Ctrl+- dispatches zoom out event (browser page zoom prevented)
+- [ ] CMD+0 / Ctrl+0 dispatches zoom reset event (browser page reset prevented)
+- [ ] Zoom shortcuts only work in METAMODEL_EDITOR and PROJECT_EDITOR contexts
+- [ ] Zoom shortcuts do NOT fire on DASHBOARD
+- [ ] Zoom shortcuts do NOT fire on USER_PROFILE
+- [ ] Zoom-in menu item shows [⌘] [+] on Mac, [Ctrl] [+] on Windows
+- [ ] Zoom-out menu item shows [⌘] [-] on Mac, [Ctrl] [-] on Windows
+- [ ] Reset Zoom menu item shows [⌘] [0] on Mac, [Ctrl] [0] on Windows
+- [ ] Menu items are disabled on dashboard
+- [ ] Clicking menu items dispatches jjodel:zoom events
+- [ ] Reset Zoom option present with bi-arrow-counterclockwise icon
+
+### M2 Analytics Modal (Phase 7)
+- [ ] Modal opens from Metamodel → M2 Analytics menu item
+- [ ] Menu item disabled on Dashboard (no metamodel context)
+- [ ] Menu item disabled when no metamodels loaded
+- [ ] Modal has slate gradient header with bi-graph-up icon
+- [ ] Close button (×) in top-right corner works
+- [ ] Clicking backdrop closes modal
+- [ ] Clicking modal content does NOT close modal
+- [ ] Classification gauge shows small/medium/large zones
+- [ ] Gauge marker positioned correctly based on score (0-100)
+- [ ] Gauge color zones: slate (0-30), orange (30-80), blue (80-100)
+- [ ] Metamodel name displayed below gauge
+- [ ] All 10 metrics rows display correctly
+- [ ] Metrics with null values show "N/A" in orange
+- [ ] LMC (%) shows percentage format (e.g., "16.7%")
+- [ ] ASF shows decimal format (e.g., "2.0")
+- [ ] EN/LIT shows combined format (e.g., "2/8")
+- [ ] Close button in footer works
+- [ ] Dark mode: Modal background changes to #1e293b
+- [ ] Dark mode: Marker badge inverts (light bg, dark text)
+- [ ] Dark mode: Section backgrounds change to #0f172a
+- [ ] Smooth entrance/exit animations
+- [ ] Mobile responsive (single column on small screens)
+
 ---
 
 ## APPENDIX: Related Documentation
@@ -1866,5 +2894,5 @@ Common icons used:
 ---
 
 *Document generated: January 22, 2026*
-*Last updated: January 22, 2026 (Phase 3 additions)*
+*Last updated: January 22, 2026 (Phase 7 additions - Advanced Mode Tutorial Modal, Zoom Controls)*
 *For questions, refer to the git history on branch `alfonso-frontend-dev`*

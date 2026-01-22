@@ -28,7 +28,7 @@ import {icon} from '../components/icons/Icons';
 
 import {useNavigate} from 'react-router-dom';
 
-import React, {Component, Dispatch, ReactElement, ReactNode, useState} from 'react';
+import React, {Component, Dispatch, ReactElement, ReactNode, useState, useEffect} from 'react';
 import {FakeStateProps} from '../../joiner/types';
 import {connect} from 'react-redux';
 import {AuthApi, ProjectsApi} from '../../api/persistance';
@@ -40,8 +40,6 @@ import {Divisor, Item, Menu, UserHeader, SubMenu, SubMenuItem} from '../componen
 import Collaborative from "../../components/collaborative/Collaborative";
 import { isProjectModified } from '../../common/libraries/projectModified';
 import { AboutDialog, AboutDialogController } from './about/AboutDialog';
-import {MetricsPanelManager, showMetrics, toggleMetrics} from '../../components/metrics/Metrics';
-
 import {Undoredocomponent} from "../../components/topbar/undoredocomponent";
 import {BEGIN, CollabRefreshAction, COMMIT, END} from "../../redux/action/action";
 import {Tooltip} from "../../components/forEndUser/Tooltip";
@@ -51,6 +49,9 @@ import ActivityLogger from '../../services/ActivityLogger';
 import { ActivityType } from '../../types/activity';
 import { LayoutMode, getSavedLayoutMode, saveLayoutMode, getInitialPanelWidth } from '../../components/abstract/Dock';
 import { isProjectOverviewPage } from '../../utils/navigationUtils';
+import { formatShortcutPills, getRedoShortcutPills, SHORTCUTS, matchesShortcut, detectCurrentContext, matchesZoomIn, matchesZoomOut, matchesZoomReset } from '../../utils/keyboardShortcuts';
+import { AdvancedModeTutorial, shouldShowAdvancedModeTutorial } from '../../components/AdvancedModeTutorial';
+import { M2AnalyticsModal, M2AnalyticsData } from '../../components/M2AnalyticsModal';
 
 
 let windoww = window as any;
@@ -99,7 +100,17 @@ const createM1 = (project: LProject, metamodel: LModel) => {
         entityName: name,
     });
 }
-function getKeyStrokes(keys?: string[]){
+function getKeyStrokes(keys?: string[], shortcutPills?: string[]){
+    // Use new shortcut pills if provided (adaptive to OS)
+    if (shortcutPills && shortcutPills.length > 0) {
+        return <div className="keystrokes">
+            {shortcutPills.map((pill, index) => (
+                <kbd key={index} className="keystroke-pill">{pill}</kbd>
+            ))}
+        </div>;
+    }
+
+    // Fallback to old format for backward compatibility
     if (!keys || !keys.length) return undefined;
     return <div className={"keystrokes"}>
         {keys.map(k => Keystrokes.getKeystrokeJsx(k))}
@@ -141,7 +152,7 @@ function makeEntry(i: MenuEntry|null|undefined, index: number) {
                     <span>{i.icon || <i className="bi bi-app hidden"/>} {i.jsx || <span>{i.name}</span>}</span>
                     {!i.disabled && slength > 0 ?
                         <i className='bi bi-chevron-right icon-expand-submenu'/> :
-                        getKeyStrokes(i.keystroke)
+                        getKeyStrokes(i.keystroke, i.shortcutPills)
                     }
                 </label>
             {hasSubItems &&
@@ -177,6 +188,7 @@ type MenuEntry = {
     icon?: any,
     function?: ()=>any,
     keystroke?: string[],
+    shortcutPills?: string[],  // New: array of pills for keyboard shortcut (adaptive to OS)
     subItems?: (MenuEntry|undefined|null)[],
     disabled?: boolean;
 } | null;
@@ -263,10 +275,172 @@ function NavbarComponent(props: AllProps) {
     Log.eDev(projectid !== project?.id, 'wrong project setup in navbar', {projectid, project});
     let metamodels: LModel[] = L.fromArr(props.metamodels);
     globalProject = project;
-    const Key = Keystrokes;
     const recentProjects: MenuEntry[] = [];
     const [isFullscreen, setFullscreen] = useState(false);
     const toggleFullScreen = () => setFullscreen(U.toggleFullscreen(document.body));
+
+    // Advanced Mode Tutorial state
+    const [showAdvancedTutorial, setShowAdvancedTutorial] = useState(false);
+
+    // M2 Analytics Modal state
+    const [showM2Analytics, setShowM2Analytics] = useState(false);
+    const [m2AnalyticsData, setM2AnalyticsData] = useState<M2AnalyticsData>({
+        metamodelName: 'metamodel_1',
+        classification: { score: 0, category: 'small' },
+        metrics: { PKG: 0, MC: 0, AMC: 0, CMC: 0, IFLMC: 0, MCWS: 0, LMC: null, SF: 0, ASF: null, EN: 0, LIT: 0 }
+    });
+
+    // Function to open M2 Analytics with computed data
+    const openM2Analytics = () => {
+        if (!project || metamodels.length === 0) return;
+
+        const metamodel = metamodels[0];
+
+        // Get classes (LClass instances) and their raw data (DClass)
+        const classes = metamodel.classes || [];
+        const dclasses = classes.map((c: any) => c.__raw);
+
+        // DEBUG: Log metamodel structure
+        console.log('[M2 Analytics] Metamodel:', metamodel.name);
+        console.log('[M2 Analytics] Classes count:', classes.length);
+        if (classes.length > 0) {
+            const firstClass = classes[0];
+            const firstDClass = dclasses[0];
+            console.log('[M2 Analytics] First LClass:', firstClass);
+            console.log('[M2 Analytics] First LClass keys:', Object.keys(firstClass || {}));
+            console.log('[M2 Analytics] First DClass:', firstDClass);
+            console.log('[M2 Analytics] First DClass keys:', Object.keys(firstDClass || {}));
+            console.log('[M2 Analytics] First class attributes:', firstClass?.attributes);
+            console.log('[M2 Analytics] First class allAttributes:', firstClass?.allAttributes);
+            console.log('[M2 Analytics] First class references:', firstClass?.references);
+            console.log('[M2 Analytics] First class extends:', firstClass?.extends);
+            console.log('[M2 Analytics] First class extendedBy:', firstClass?.extendedBy);
+        }
+
+        // PKG: # Packages (including nested)
+        const PKG = metamodel.allSubPackages?.length || 0;
+
+        // MC: # Metaclasses
+        const MC = classes.length;
+
+        // AMC: # Abstract Metaclasses (use DClass for the 'abstract' boolean)
+        const AMC = dclasses.filter((c: any) => c?.abstract === true).length;
+
+        // CMC: # Concrete Metaclasses
+        const CMC = MC - AMC;
+
+        // IFLMC: # Concrete Featureless Metaclasses
+        // Use DClass attributes/references (direct features only, not inherited)
+        const IFLMC = dclasses.filter((c: any) => {
+            if (c?.abstract === true) return false;
+            const attrLen = Array.isArray(c?.attributes) ? c.attributes.length : 0;
+            const refLen = Array.isArray(c?.references) ? c.references.length : 0;
+            return attrLen + refLen === 0;
+        }).length;
+
+        // MCWS: # Metaclasses with Superclass
+        // Use DClass extends array
+        const MCWS = dclasses.filter((c: any) => {
+            const extendsArr = c?.extends;
+            return Array.isArray(extendsArr) && extendsArr.length > 0;
+        }).length;
+
+        // LMC: % Isolated Metaclasses (no superclass and no subclasses)
+        // Use LClass for computed properties (extends and extendedBy)
+        const isolated = classes.filter((c: any) => {
+            const extendsArr = c.extends;
+            const extendedByArr = c.extendedBy;
+            const hasSuper = Array.isArray(extendsArr) && extendsArr.length > 0;
+            const hasSub = Array.isArray(extendedByArr) && extendedByArr.length > 0;
+            return !hasSuper && !hasSub;
+        }).length;
+        const LMC = MC > 0 ? (isolated / MC) * 100 : null;
+
+        // SF: # Structural Features (all attributes + references, including inherited)
+        // Use LClass allAttributes/allReferences for inherited features
+        let allAttrCount = 0;
+        let allRefCount = 0;
+        classes.forEach((c: any) => {
+            const attrs = c.allAttributes;
+            const refs = c.allReferences;
+            allAttrCount += Array.isArray(attrs) ? attrs.length : 0;
+            allRefCount += Array.isArray(refs) ? refs.length : 0;
+        });
+        const SF = allAttrCount + allRefCount;
+
+        console.log('[M2 Analytics] SF calculation - attrs:', allAttrCount, 'refs:', allRefCount, 'total:', SF);
+
+        // ASF: Avg # Structural Features per concrete metaclass
+        const ASF = CMC > 0 ? SF / CMC : null;
+
+        // EN: # Enumerations
+        const EN = metamodel.enumerators?.length || 0;
+
+        // LIT: # Literals
+        const LIT = metamodel.literals?.length || 0;
+
+        console.log('[M2 Analytics] Final metrics:', { PKG, MC, AMC, CMC, IFLMC, MCWS, LMC, SF, ASF, EN, LIT });
+
+        // Calculate EMF classification score (based on # metaclasses)
+        // Small: 0-30, Medium: 30-80, Large: 80+
+        let score = Math.min(MC * 2.5, 100);
+        if (SF > 0) score = Math.min(score + SF * 0.5, 100);
+        score = Math.round(score);
+
+        const category: 'small' | 'medium' | 'large' =
+            score < 30 ? 'small' : score < 80 ? 'medium' : 'large';
+
+        const data: M2AnalyticsData = {
+            metamodelName: metamodel.name || 'Unnamed Metamodel',
+            classification: { score, category },
+            metrics: {
+                PKG,
+                MC,
+                AMC,
+                CMC,
+                IFLMC,
+                MCWS,
+                LMC: LMC !== null ? Math.round(LMC * 100) / 100 : null,
+                SF,
+                ASF: ASF !== null ? Math.round(ASF * 100) / 100 : null,
+                EN,
+                LIT
+            }
+        };
+        setM2AnalyticsData(data);
+        setShowM2Analytics(true);
+    };
+
+    // Function to enable advanced mode (with tutorial check)
+    const enableAdvancedMode = (showTutorial: boolean = true) => {
+        SetRootFieldAction.new('advanced', true);
+        windoww.advanced = true;
+        localStorage.setItem('jjodel.interfaceMode', 'advanced');
+        U.interfaceMode = 'advanced';
+
+        // Show tutorial if it's the first time and showTutorial is true
+        if (showTutorial && shouldShowAdvancedModeTutorial()) {
+            setShowAdvancedTutorial(true);
+        } else {
+            U.alert('i', 'Advanced Mode', 'All features and options are now visible');
+        }
+    };
+
+    const disableAdvancedMode = () => {
+        SetRootFieldAction.new('advanced', false);
+        windoww.advanced = false;
+        localStorage.setItem('jjodel.interfaceMode', 'basic');
+        U.interfaceMode = 'basic';
+        U.alert('i', 'Basic Mode', 'Simplified interface active');
+    };
+
+    const toggleAdvancedMode = () => {
+        if (props.advanced) {
+            disableAdvancedMode();
+        } else {
+            enableAdvancedMode();
+        }
+    };
 
     // Layout mode state
     const [layoutMode, setLayoutModeState] = useState<LayoutMode>(() => {
@@ -285,6 +459,194 @@ function NavbarComponent(props: AllProps) {
         window.dispatchEvent(new CustomEvent('jjodel:layout-mode-change', { detail: { mode } }));
     };
 
+    // Global context-aware keyboard shortcut handler - prevents browser defaults
+    useEffect(() => {
+        const handleKeyDown = (event: KeyboardEvent) => {
+            // Check if user is typing in an input/textarea
+            const target = event.target as HTMLElement;
+            if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
+                return;
+            }
+
+            // Detect current context for context-aware shortcuts
+            const context = detectCurrentContext();
+
+            // ========================================
+            // CMD/Ctrl + N - Context-Aware NEW
+            // ========================================
+            if (matchesShortcut(event, SHORTCUTS.NEW)) {
+                event.preventDefault();
+                event.stopPropagation();
+
+                switch (context) {
+                    case 'DASHBOARD':
+                        // TODO: Implement new project creation
+                        console.log('[Shortcut] New Project');
+                        break;
+                    case 'PROJECT_EDITOR':
+                        if (project) createM2(project);
+                        break;
+                    case 'METAMODEL_EDITOR':
+                        // TODO: Implement new class creation
+                        console.log('[Shortcut] New Class');
+                        break;
+                }
+                return;
+            }
+
+            // ========================================
+            // CMD/Ctrl + Shift + N - NEW MODEL (Project context only)
+            // ========================================
+            if (matchesShortcut(event, SHORTCUTS.NEW_MODEL)) {
+                event.preventDefault();
+                event.stopPropagation();
+
+                if (context === 'PROJECT_EDITOR' && project && metamodels.length > 0) {
+                    // Create model from first metamodel (or could show selector)
+                    createM1(project, metamodels[0]);
+                }
+                return;
+            }
+
+            // ========================================
+            // CMD/Ctrl + S - Context-Aware SAVE
+            // ========================================
+            if (matchesShortcut(event, SHORTCUTS.SAVE)) {
+                event.preventDefault();
+                event.stopPropagation();
+
+                if (context === 'PROJECT_EDITOR' || context === 'METAMODEL_EDITOR') {
+                    if (project) {
+                        (async () => {
+                            try {
+                                SetRootFieldAction.new('isLoading', true);
+                                await ProjectsApi.save(project);
+                                SetRootFieldAction.new('isLoading', false);
+                            } catch (error: any) {
+                                U.alert('e', 'Error while Saving Project', error.message);
+                                SetRootFieldAction.new('isLoading', false);
+                            }
+                        })();
+                    }
+                } else if (context === 'USER_PROFILE') {
+                    // TODO: Save user profile
+                    console.log('[Shortcut] Save Profile');
+                }
+                return;
+            }
+
+            // ========================================
+            // CMD/Ctrl + W - Context-Aware CLOSE
+            // ========================================
+            if (matchesShortcut(event, SHORTCUTS.CLOSE)) {
+                event.preventDefault();
+                event.stopPropagation();
+
+                if (context === 'PROJECT_EDITOR' || context === 'METAMODEL_EDITOR') {
+                    if (project) {
+                        if (isProjectModified()) {
+                            U.dialog2(
+                                'Unsaved changes',
+                                'You have unsaved changes. What do you want to do?',
+                                [
+                                    { txt: 'Cancel' },
+                                    { txt: "Don't save", action: CloseProject as any },
+                                    { txt: 'Save & Exit', action: (() => SaveAndCloseProject(project)) as any }
+                                ]
+                            );
+                        } else {
+                            CloseProject();
+                        }
+                    }
+                } else if (context === 'USER_PROFILE') {
+                    // Go back from profile
+                    R.navigate('/allProjects');
+                }
+                return;
+            }
+
+            // ========================================
+            // CMD/Ctrl + Q - SIGN OUT (all contexts)
+            // ========================================
+            if (matchesShortcut(event, SHORTCUTS.SIGN_OUT)) {
+                event.preventDefault();
+                event.stopPropagation();
+
+                if (isProjectModified()) {
+                    U.dialog('You are about to log out without saving your project. Do you want to proceed?', 'logout', async () => {
+                        await AuthApi.logout();
+                        R.navigate('/auth');
+                    });
+                } else {
+                    (async () => {
+                        await AuthApi.logout();
+                        R.navigate('/auth');
+                    })();
+                }
+                return;
+            }
+
+            // ========================================
+            // Alt + CMD/Ctrl + M - New Metamodel (specific shortcut, any context)
+            // ========================================
+            if (matchesShortcut(event, SHORTCUTS.NEW_METAMODEL)) {
+                event.preventDefault();
+                event.stopPropagation();
+                if (project) {
+                    createM2(project);
+                }
+                return;
+            }
+
+            // ========================================
+            // Shift + CMD/Ctrl + M - Toggle Advanced Mode
+            // ========================================
+            if (matchesShortcut(event, SHORTCUTS.ADVANCED_MODE)) {
+                event.preventDefault();
+                event.stopPropagation();
+                toggleAdvancedMode();
+                return;
+            }
+
+            // ========================================
+            // ZOOM SHORTCUTS (Editor contexts only)
+            // ========================================
+            if (context === 'METAMODEL_EDITOR' || context === 'PROJECT_EDITOR') {
+                // CMD/Ctrl + Plus (+) or (=) - ZOOM IN
+                if (matchesZoomIn(event)) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    // Dispatch zoom in event for canvas to handle
+                    window.dispatchEvent(new CustomEvent('jjodel:zoom', { detail: { action: 'in' } }));
+                    return;
+                }
+
+                // CMD/Ctrl + Minus (-) - ZOOM OUT
+                if (matchesZoomOut(event)) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    // Dispatch zoom out event for canvas to handle
+                    window.dispatchEvent(new CustomEvent('jjodel:zoom', { detail: { action: 'out' } }));
+                    return;
+                }
+
+                // CMD/Ctrl + Zero (0) - RESET ZOOM
+                if (matchesZoomReset(event)) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    // Dispatch zoom reset event for canvas to handle
+                    window.dispatchEvent(new CustomEvent('jjodel:zoom', { detail: { action: 'reset' } }));
+                    return;
+                }
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown, true); // Use capture phase
+        return () => {
+            window.removeEventListener('keydown', handleKeyDown, true);
+        };
+    }, [project, metamodels, props.advanced]);
+
     if (user?.projects) {
         user.projects
             .sort((a, b) => (b.lastModified > a.lastModified) ?  1 : -1)
@@ -292,7 +654,7 @@ function NavbarComponent(props: AllProps) {
             .forEach(p => {
                     let pid = Pointers.from(p);
                     recentProjects.push({
-                        icon: icon['project'], name: p.name, disabled: pid === projectid,
+                        icon: <i className="bi bi-folder" />, name: p.name, disabled: pid === projectid,
                         function: ()=> R.navigate('/project?id=' + pid)
                     })
                 }
@@ -304,16 +666,16 @@ function NavbarComponent(props: AllProps) {
         newModel = {
             id: 'new_model',
             name: 'Model',
-            icon: icon['model'],
+            icon: <i className="bi bi-box" />,
             subItems: metamodels.map((m2, i)=>({
-                name: props.mmNames[i], function: () => createM1(project, m2), keystroke: [], id: 'mmid_'+ props.metamodels[i],
+                name: props.mmNames[i], function: () => createM1(project, m2), id: 'mmid_'+ props.metamodels[i],
             }))
         };
     } else {
         newModel = {
             id: 'new_model',
             name: 'Model',
-            icon: icon['model'],
+            icon: <i className="bi bi-box" />,
             disabled: true
         }
     }
@@ -328,18 +690,29 @@ function NavbarComponent(props: AllProps) {
         saveLayoutItems.push({name: 'Turn off auto-save', function: () => PinnableDock.toggleAutosave(false), icon: <i className="bi bi-lightning-charge-fill"/>});
     } else {
         saveLayoutItems.push({name: 'Turn on auto-save', function: ()=>PinnableDock.toggleAutosave(true), icon: <i className="bi bi-lightning-charge"/>});
-        saveLayoutItems.push({name: 'Save manually', function: () => PinnableDock.save(), icon: icon['save']});
+        saveLayoutItems.push({name: 'Save manually', function: () => PinnableDock.save(), icon: <i className="bi bi-floppy" />});
     }
 
     let lay = props.lay;
     const items: MenuEntry[] = [
 
-        // Jjodel OK
-
+        // Jjodel Menu
         {name: 'Jjodel',
             subItems: [
-                {name: 'About Jjodel', function: () => {AboutDialogController.open();}, icon: icon['jjodel']},
-                {name: 'Roadmap',function: () => open('https://www.jjodel.io/roadmap/'), icon: icon['roadmap']},
+                {name: 'About Jjodel', function: () => {AboutDialogController.open();}, icon: <i className="bi bi-shield" />},
+                {name: 'Roadmap', function: () => open('https://www.jjodel.io/roadmap/'), icon: <i className="bi bi-calendar3" />},
+                {name: 'divisor'},
+                {name: 'Sign-out', function: async () => {
+                    if (isProjectModified()) {
+                        U.dialog('You are about to log out without saving your project. Do you want to proceed?', 'logout', async () => {
+                            await AuthApi.logout();
+                            R.navigate('/auth');
+                        });
+                    } else {
+                        await AuthApi.logout();
+                        R.navigate('/auth');
+                    }
+                }, icon: <i className="bi bi-box-arrow-right" />, shortcutPills: formatShortcutPills(SHORTCUTS.SIGN_OUT)},
             ]},
 
         /* File */
@@ -347,21 +720,20 @@ function NavbarComponent(props: AllProps) {
         {name: 'File',
             subItems: [
                 isDashboard ? null :
-                {name: 'New', icon: icon['new'],
+                {name: 'New', icon: <i className="bi bi-plus-circle" />,
                     subItems: [
-                        {name: 'Project', function: placeholder, icon: icon['project'], disabled: true},
-                        {name: 'Metamodel', icon: icon['metamodel'], function: ()=> { project && createM2(project); }, keystroke: [Key.alt, Key.cmd, 'M']},
+                        {name: 'Project', function: placeholder, icon: <i className="bi bi-folder" />, disabled: true},
+                        {name: 'Metamodel', icon: <i className="bi bi-diagram-3" />, function: ()=> { project && createM2(project); }, shortcutPills: formatShortcutPills(SHORTCUTS.NEW_METAMODEL)},
                         newModel
                     ]
                 },
-                {name: 'Recent Projects', icon: icon['recent'], subItems: recentProjects},
+                {name: 'Recent Projects', icon: <i className="bi bi-clock-history" />, subItems: recentProjects},
 
-                /* Import Project OK */
-                isProject ? null : {name: 'Import Project', function: ProjectsApi.import, icon: icon['import']},
+                /* Import Project */
+                isProject ? null : {name: 'Import Project', function: ProjectsApi.import, icon: <i className="bi bi-upload" />},
                 isDashboard ? null : {name: 'divisor'},
 
-                /* Save Project OK */
-
+                /* Save Project */
                 isDashboard ? null : {name: 'Save Project',
                     function: async () => {
                         if (project) {
@@ -381,14 +753,14 @@ function NavbarComponent(props: AllProps) {
                             }
                         }
                     }
-                    , icon: icon['save'], keystroke: [Key.cmd, 'S']},
+                    , icon: <i className="bi bi-floppy" />, shortcutPills: formatShortcutPills(SHORTCUTS.SAVE)},
 
                 isDashboard ? null : {name: 'Download Project', function: async()=> {
                         if (project) {
                             let dproject = await ProjectsApi.save(project);
                             U.download(`${project.name}.jjodel`, JSON.stringify(dproject));
                         }
-                    }, icon: icon['download']},
+                    }, icon: <i className="bi bi-download" />},
 
                 isDashboard ? null : {name: 'Close Project', function: async() => {
     if (isProjectModified()) {
@@ -404,10 +776,10 @@ function NavbarComponent(props: AllProps) {
     } else {
         CloseProject();
     }
-}, icon: icon['close'], keystroke: [Key.cmd, 'E']},
+}, icon: <i className="bi bi-x-lg" />, shortcutPills: formatShortcutPills(SHORTCUTS.CLOSE)},
 
-                /* Delete Project - vedere come fare  TEMPORARLY DISABLED */
-                isDashboard ? null : {name: 'Delete Project', function: placeholder, icon: icon['delete'], disabled: true},
+                /* Delete Project - temporarily disabled */
+                isDashboard ? null : {name: 'Delete Project', function: placeholder, icon: <i className="bi bi-trash" />, disabled: true},
 
             ]},
 
@@ -415,12 +787,12 @@ function NavbarComponent(props: AllProps) {
         /* Edit - always visible, items disabled on dashboard */
         {name: 'Edit',
             subItems: [
-                {name: 'Undo', icon: icon['undo'], keystroke: [Key.cmd, 'Z'], disabled: isDashboard},
-                {name: 'Redo', icon: icon['redo'], keystroke: [Key.cmd, 'Y'], subItems:[{name:"i"}], disabled: isDashboard},
+                {name: 'Undo', icon: <i className="bi bi-arrow-counterclockwise" />, shortcutPills: formatShortcutPills(SHORTCUTS.UNDO), disabled: isDashboard},
+                {name: 'Redo', icon: <i className="bi bi-arrow-clockwise" />, shortcutPills: getRedoShortcutPills(), subItems:[{name:"i"}], disabled: isDashboard},
                 {name: 'divisor', function: placeholder},
                 {name: (isFavorite ? 'Remove from' : 'Add to') +' Favorites', function: ()=> ProjectsApi.favorite(project?.__raw as DProject),
-                    icon: icon[isFavorite ? 'favoriteFill' : 'favorite'], disabled: isDashboard},
-                {name: 'Copy Public Link', function: placeholder, icon: icon['link'], keystroke: [Key.cmd, Key.shift, 'S'], disabled: true}
+                    icon: <i className={`bi ${isFavorite ? 'bi-star-fill' : 'bi-star'}`} />, disabled: isDashboard},
+                {name: 'Copy Public Link', function: placeholder, icon: <i className="bi bi-link-45deg" />, shortcutPills: formatShortcutPills(SHORTCUTS.COPY_LINK), disabled: true}
             ]
         },
 
@@ -428,52 +800,58 @@ function NavbarComponent(props: AllProps) {
         {name: 'View',
             subItems: [
                 {name: props.advanced ? 'Switch to Basic Mode' : 'Switch to Advanced Mode',
-                    function: () => {
-                        const newMode = !props.advanced;
-                        SetRootFieldAction.new('advanced', newMode);
-                        windoww.advanced = newMode;
-                        // Also update localStorage for persistence
-                        localStorage.setItem('jjodel.interfaceMode', newMode ? 'advanced' : 'basic');
-                        U.interfaceMode = newMode ? 'advanced' : 'basic';
-                        // Show toast notification
-                        U.alert('i', newMode ? 'Advanced Mode' : 'Basic Mode',
-                            newMode ? 'All features and options are now visible' : 'Simplified interface active');
-                    },
+                    function: toggleAdvancedMode,
                     icon: props.advanced ? <i className="bi bi-sliders" /> : <i className="bi bi-lightning-charge" />,
-                    keystroke: [Key.cmd, Key.shift, 'M']
+                    shortcutPills: formatShortcutPills(SHORTCUTS.ADVANCED_MODE)
                 },
                 {name: 'divisor', function: placeholder},
-                {name: 'Zoom-in', function: placeholder, icon: icon['zoom-in'], disabled: true},
-                {name: 'Zoom-out', function: placeholder, icon: icon['zoom-out'], disabled: true},
+                {name: 'Zoom-in',
+                    function: () => window.dispatchEvent(new CustomEvent('jjodel:zoom', { detail: { action: 'in' } })),
+                    icon: <i className="bi bi-zoom-in" />,
+                    shortcutPills: formatShortcutPills(SHORTCUTS.ZOOM_IN),
+                    disabled: isDashboard
+                },
+                {name: 'Zoom-out',
+                    function: () => window.dispatchEvent(new CustomEvent('jjodel:zoom', { detail: { action: 'out' } })),
+                    icon: <i className="bi bi-zoom-out" />,
+                    shortcutPills: formatShortcutPills(SHORTCUTS.ZOOM_OUT),
+                    disabled: isDashboard
+                },
+                {name: 'Reset Zoom',
+                    function: () => window.dispatchEvent(new CustomEvent('jjodel:zoom', { detail: { action: 'reset' } })),
+                    icon: <i className="bi bi-arrow-counterclockwise" />,
+                    shortcutPills: formatShortcutPills(SHORTCUTS.ZOOM_RESET),
+                    disabled: isDashboard
+                },
                 {name: 'divisor', function: placeholder},
                 {name: 'Save layout', disabled: true,
-                    icon: <i className="bi bi-columns-gap"/>,
+                    icon: <i className="bi bi-grid-3x3" />,
                     subItems: saveLayoutItems
                 },
                 {name: 'Load layout', disabled: isDashboard,
-                    icon: <i className="bi bi-columns-gap"/>,
+                    icon: <i className="bi bi-grid-3x3" />,
                     subItems: [
-                        {name: 'Default', function: ()=> PinnableDock.load('Default'), icon: icon['loadl']},
-                        {name: 'Project layouts',
+                        {name: 'Default', function: ()=> PinnableDock.load('Default'), icon: <i className="bi bi-arrow-clockwise" />},
+                        {name: 'Project layouts', icon: <i className="bi bi-folder" />,
                             subItems: [
-                                {name: '1', function: ()=> PinnableDock.load('1', 'project'), icon: lay==='p1' ? icon['loadl'] : icon['check']},
-                                {name: '2', function: ()=> PinnableDock.load('2', 'project'), icon: lay==='p2' ? icon['loadl'] : icon['check']},
-                                {name: '3', function: ()=> PinnableDock.load('3', 'project'), icon: lay==='p3' ? icon['loadl'] : icon['check']},
+                                {name: '1', function: ()=> PinnableDock.load('1', 'project'), icon: lay==='p1' ? <i className="bi bi-check-circle-fill" /> : <i className="bi bi-circle" />},
+                                {name: '2', function: ()=> PinnableDock.load('2', 'project'), icon: lay==='p2' ? <i className="bi bi-check-circle-fill" /> : <i className="bi bi-circle" />},
+                                {name: '3', function: ()=> PinnableDock.load('3', 'project'), icon: lay==='p3' ? <i className="bi bi-check-circle-fill" /> : <i className="bi bi-circle" />},
                             ]
                         },
-                        {name: 'User layouts',
+                        {name: 'User layouts', icon: <i className="bi bi-person" />,
                             subItems: [
-                                {name: '1', function: ()=> PinnableDock.load('1', 'user'), icon: lay==='u1' ? icon['loadl'] : icon['check']},
-                                {name: '2', function: ()=> PinnableDock.load('2', 'user'), icon: lay==='u2' ? icon['loadl'] : icon['check']},
-                                {name: '3', function: ()=> PinnableDock.load('3', 'user'), icon: lay==='u3' ? icon['loadl'] : icon['check']},
+                                {name: '1', function: ()=> PinnableDock.load('1', 'user'), icon: lay==='u1' ? <i className="bi bi-check-circle-fill" /> : <i className="bi bi-circle" />},
+                                {name: '2', function: ()=> PinnableDock.load('2', 'user'), icon: lay==='u2' ? <i className="bi bi-check-circle-fill" /> : <i className="bi bi-circle" />},
+                                {name: '3', function: ()=> PinnableDock.load('3', 'user'), icon: lay==='u3' ? <i className="bi bi-check-circle-fill" /> : <i className="bi bi-circle" />},
                             ]
                         }
                     ]
                 },
                 {name: 'divisor', function: placeholder},
-                {name: 'Show/Hide Sidebar', function: placeholder, icon: icon['sidebar'], disabled: true},
-                {name: 'Show/Hide Toolbar', function: placeholder, icon: icon['toolbar2'], disabled: true},
-                {name: `${isFullscreen ? 'Exit Fullscreen Mode' : 'Fullscreen Mode [F11]'}`, function: toggleFullScreen, icon: icon['fullscreen']},
+                {name: 'Show/Hide Sidebar', function: placeholder, icon: <i className="bi bi-layout-sidebar" />, disabled: true},
+                {name: 'Show/Hide Toolbar', function: placeholder, icon: <i className="bi bi-menu-button" />, disabled: true},
+                {name: `${isFullscreen ? 'Exit Fullscreen Mode' : 'Fullscreen Mode [F11]'}`, function: toggleFullScreen, icon: <i className="bi bi-arrows-fullscreen" />},
             ]
         },
 
@@ -486,7 +864,7 @@ function NavbarComponent(props: AllProps) {
                     {name: 'Metamodel Tools', icon: <i className="bi bi-tools" />, disabled: true,
                         subItems: metamodels.map((m2, i) => ({
                             name: props.mmNames[i] || 'Unnamed',
-                            icon: icon['metamodel'],
+                            icon: <i className="bi bi-diagram-3" />,
                             disabled: true
                         }))
                     },
@@ -507,14 +885,14 @@ function NavbarComponent(props: AllProps) {
         /* Analyze - always visible, some items only in advanced mode */
         {name: 'Analyze',
             subItems: [
-                {name: 'Live Validation', function: placeholder, icon: icon['validation'], disabled: true},
-                {name: 'Validate', function: placeholder, icon: icon['validate'], disabled: true},
+                {name: 'Live Validation', function: placeholder, icon: <i className="bi bi-check-circle" />, disabled: true},
+                {name: 'Validate', function: placeholder, icon: <i className="bi bi-clipboard-check" />, disabled: true},
                 // Advanced-only items below
                 ...(props.advanced ? [
                     {name: 'divisor', function: placeholder},
-                    {name: 'M2 Analytics', function: ()=> toggleMetrics(), icon: icon['metrics'], disabled: isDashboard},
-                    {name: debuggerr ? 'Hide debugger' : 'Debug loops', function: ()=> setDebugger(!debuggerr), icon: icon[debuggerr ? 'eyeslash' : 'eye'], disabled: isDashboard},
-                    {name: 'Check integrity', function: ()=> VersionFixer.autocorrect(undefined, true, true), icon: icon['tools'], disabled: isDashboard},
+                    {name: 'M2 Analytics', function: openM2Analytics, icon: <i className="bi bi-graph-up" />, disabled: isDashboard || metamodels.length === 0},
+                    {name: debuggerr ? 'Hide debugger' : 'Debug loops', function: ()=> setDebugger(!debuggerr), icon: <i className={`bi ${debuggerr ? 'bi-eye-slash' : 'bi-eye'}`} />, disabled: isDashboard},
+                    {name: 'Check integrity', function: ()=> VersionFixer.autocorrect(undefined, true, true), icon: <i className="bi bi-tools" />, disabled: isDashboard},
                 ] : []),
             ]
         },
@@ -572,18 +950,18 @@ function NavbarComponent(props: AllProps) {
             {name: 'What\'s New in Jjodel', function: ()=> open("https://www.jjodel.io/whats-new/"), icon: <i className="bi bi-bell" />},
             {name: 'Homepage', function: ()=> open("https://www.jjodel.io"), icon: <i className="bi bi-house" />},
             {name: 'divisor'},
-            {name: 'Learn Jjodel', function: ()=> open("https://www.jjodel.io/learn-jjodel/"), icon: icon['learn']},
-            {name: 'Getting Started', function: ()=> open("https://www.jjodel.io/getting-started/"), icon: icon['getting-started']},
-            {name: 'Video Tutorials', function: ()=> open("https://www.jjodel.io/video-tutorials/"), icon: icon['video']},
+            {name: 'Learn Jjodel', function: ()=> open("https://www.jjodel.io/learn-jjodel/"), icon: <i className="bi bi-infinity" />},
+            {name: 'Getting Started', function: ()=> open("https://www.jjodel.io/getting-started/"), icon: <i className="bi bi-rocket-takeoff" />},
+            {name: 'Video Tutorials', function: ()=> open("https://www.jjodel.io/video-tutorials/"), icon: <i className="bi bi-play-circle" />},
             {name: 'User Guide', function: ()=> open('https://www.jjodel.io/getting-started/'), icon: <i className="bi bi-journal-text" />},
             {name: 'Glossary', function: ()=> open('https://www.jjodel.io/glossary/'), icon: <i className="bi bi-book" />},
-            {name: 'FAQ', function: placeholder, icon: icon['faq'], disabled: true},
+            {name: 'FAQ', function: placeholder, icon: <i className="bi bi-chat-left-dots" />, disabled: true},
             {name: 'divisor'},
-            {name: 'Support', icon: icon['support'],
+            {name: 'Support', icon: <i className="bi bi-life-preserver" />,
                 subItems: [
-                    {name: 'Report a Bug', function: placeholder, icon: icon['report-bug'], disabled: true},
-                    {name: 'Request a Feature', function: placeholder, icon: icon['feature-request'], disabled: true},
-                    {name: 'Contact', function: placeholder, icon: icon['contact'], disabled: true}
+                    {name: 'Report a Bug', function: placeholder, icon: <i className="bi bi-bug" />, disabled: true},
+                    {name: 'Request a Feature', function: placeholder, icon: <i className="bi bi-hand-index" />, disabled: true},
+                    {name: 'Contact', function: placeholder, icon: <i className="bi bi-envelope" />, disabled: true}
                 ]}
         ];
 
@@ -786,6 +1164,15 @@ function NavbarComponent(props: AllProps) {
             </div>
         </nav>
         <AboutDialog />
+        <AdvancedModeTutorial
+            isOpen={showAdvancedTutorial}
+            onClose={() => setShowAdvancedTutorial(false)}
+        />
+        <M2AnalyticsModal
+            isOpen={showM2Analytics}
+            onClose={() => setShowM2Analytics(false)}
+            data={m2AnalyticsData}
+        />
     </>);
 }
 
