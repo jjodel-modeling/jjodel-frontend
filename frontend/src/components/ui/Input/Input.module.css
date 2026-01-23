@@ -1,0 +1,178 @@
+/**
+ * Input Component Styles
+ */
+
+.inputWrapper {
+  display: flex;
+  flex-direction: column;
+}
+
+.wrapper-full-width {
+  width: 100%;
+}
+
+.inputContainer {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.input {
+  width: 100%;
+  font-family: var(--font-family-sans);
+  font-size: var(--font-size-lg);
+  line-height: var(--line-height-normal);
+  color: var(--color-text-primary);
+  background-color: var(--color-bg-primary);
+  border: var(--input-border-width) solid var(--input-border-color);
+  border-radius: var(--radius-md);
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+  outline: none;
+}
+
+/* Size variants */
+.input-sm {
+  height: var(--input-height-sm);
+  padding: var(--input-padding-y-sm) var(--input-padding-x-sm);
+  font-size: var(--font-size-md);
+}
+
+.input-md {
+  height: var(--input-height-base);
+  padding: var(--input-padding-y-base) var(--input-padding-x-base);
+}
+
+.input-lg {
+  height: var(--input-height-lg);
+  padding: var(--input-padding-y-lg) var(--input-padding-x-lg);
+}
+
+/* Icon padding adjustments */
+.input-with-left-icon {
+  padding-left: 36px;
+}
+
+.input-with-right-icon {
+  padding-right: 36px;
+}
+
+/* States */
+.input::placeholder {
+  color: var(--color-text-tertiary);
+}
+
+.input:hover:not(:disabled):not(:read-only):not(.input-error) {
+  border-color: var(--input-border-color-hover);
+}
+
+.input:focus {
+  border-color: var(--input-border-color-focus);
+  border-width: var(--input-focus-ring-width);
+  /* Adjust padding to compensate for thicker border */
+  padding-top: calc(var(--input-padding-y-base) - 0.5px);
+  padding-bottom: calc(var(--input-padding-y-base) - 0.5px);
+  padding-left: calc(var(--input-padding-x-base) - 0.5px);
+  padding-right: calc(var(--input-padding-x-base) - 0.5px);
+}
+
+.input-sm:focus {
+  padding-top: calc(var(--input-padding-y-sm) - 0.5px);
+  padding-bottom: calc(var(--input-padding-y-sm) - 0.5px);
+  padding-left: calc(var(--input-padding-x-sm) - 0.5px);
+  padding-right: calc(var(--input-padding-x-sm) - 0.5px);
+}
+
+.input-with-left-icon:focus {
+  padding-left: calc(36px - 0.5px);
+}
+
+.input-with-right-icon:focus {
+  padding-right: calc(36px - 0.5px);
+}
+
+.input:disabled,
+.input:read-only {
+  background-color: var(--color-bg-secondary);
+  color: var(--color-text-tertiary);
+  cursor: var(--disabled-cursor);
+  opacity: var(--disabled-opacity);
+}
+
+/* Error state */
+.input-error {
+  border-color: var(--input-border-color-error);
+  border-width: var(--input-focus-ring-width);
+  /* Adjust padding */
+  padding-top: calc(var(--input-padding-y-base) - 0.5px);
+  padding-bottom: calc(--input-padding-y-base) - 0.5px);
+  padding-left: calc(var(--input-padding-x-base) - 0.5px);
+  padding-right: calc(var(--input-padding-x-base) - 0.5px);
+}
+
+.input-error.input-sm {
+  padding-top: calc(var(--input-padding-y-sm) - 0.5px);
+  padding-bottom: calc(var(--input-padding-y-sm) - 0.5px);
+  padding-left: calc(var(--input-padding-x-sm) - 0.5px);
+  padding-right: calc(var(--input-padding-x-sm) - 0.5px);
+}
+
+.input-error.input-with-left-icon {
+  padding-left: calc(36px - 0.5px);
+}
+
+.input-error.input-with-right-icon {
+  padding-right: calc(36px - 0.5px);
+}
+
+.input-error:focus {
+  border-color: var(--input-border-color-error);
+}
+
+/* Full width */
+.input-full-width {
+  width: 100%;
+}
+
+/* Icon containers */
+.leftIconContainer,
+.rightIconContainer {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-tertiary);
+  pointer-events: none;
+  font-size: var(--icon-size-base);
+}
+
+.leftIconContainer {
+  left: 12px;
+}
+
+.rightIconContainer {
+  right: 12px;
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .input {
+    background-color: var(--color-bg-secondary);
+    border-color: var(--input-border-color);
+    color: var(--color-text-primary);
+  }
+
+  .input:hover:not(:disabled):not(:read-only):not(.input-error) {
+    border-color: var(--input-border-color-hover);
+  }
+
+  .input:focus {
+    background-color: var(--color-bg-primary);
+  }
+
+  .input:disabled,
+  .input:read-only {
+    background-color: var(--color-bg-tertiary);
+  }
+}

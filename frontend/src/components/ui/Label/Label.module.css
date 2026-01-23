@@ -1,0 +1,26 @@
+/**
+ * Label Component Styles
+ */
+
+.label {
+  display: block;
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-slate-700);
+  margin-bottom: var(--spacing-2);
+  font-family: var(--font-family-sans);
+  line-height: var(--line-height-normal);
+}
+
+.required {
+  color: var(--color-red-600);
+  margin-left: 2px;
+  font-weight: var(--font-weight-semibold);
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .label {
+    color: var(--color-text-primary);
+  }
+}

@@ -26,6 +26,7 @@ import { Tooltip } from '../forEndUser/Tooltip';
 import { icon } from '../../pages/components/icons/Icons';
 import { Toggle } from '../../joiner/components';
 import { UpgradePrompt } from '../ModeSystem';
+import { Button } from '../ui';
 
 // Custom toggle switch component (div-based to avoid global checkbox styles)
 function PropertiesToggle(props: { data: LModelElement; field: string }) {
@@ -991,61 +992,34 @@ function PropertiesActions(props: {
                     marginBottom: '12px'
                 }}>
                     {onEdit && (
-                        <button className="properties-btn primary" onClick={onEdit} style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            gap: '6px',
-                            padding: '6px 12px',
-                            fontSize: '13px',
-                            fontWeight: 500,
-                            border: 'none',
-                            borderRadius: '4px',
-                            background: '#334155',
-                            color: 'white',
-                            cursor: 'pointer'
-                        }}>
-                            <i className="bi bi-pencil" />
-                            <span>Edit</span>
-                        </button>
+                        <Button
+                            variant="secondary"
+                            size="sm"
+                            icon={<i className="bi bi-pencil" />}
+                            onClick={onEdit}
+                        >
+                            Edit
+                        </Button>
                     )}
                     {onDuplicate && (
-                        <button className="properties-btn secondary" onClick={onDuplicate} style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            gap: '6px',
-                            padding: '6px 12px',
-                            fontSize: '13px',
-                            fontWeight: 500,
-                            border: 'none',
-                            borderRadius: '4px',
-                            background: '#64748b',
-                            color: 'white',
-                            cursor: 'pointer'
-                        }}>
-                            <i className="bi bi-copy" />
-                            <span>Duplicate</span>
-                        </button>
+                        <Button
+                            variant="secondary"
+                            size="sm"
+                            icon={<i className="bi bi-copy" />}
+                            onClick={onDuplicate}
+                        >
+                            Duplicate
+                        </Button>
                     )}
                     {onDelete && (
-                        <button className="properties-btn danger" onClick={onDelete} style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            gap: '6px',
-                            padding: '6px 12px',
-                            fontSize: '13px',
-                            fontWeight: 500,
-                            border: 'none',
-                            borderRadius: '4px',
-                            background: '#dc2626',
-                            color: 'white',
-                            cursor: 'pointer'
-                        }}>
-                            <i className="bi bi-trash" />
-                            <span>Delete</span>
-                        </button>
+                        <Button
+                            variant="danger"
+                            size="sm"
+                            icon={<i className="bi bi-trash" />}
+                            onClick={onDelete}
+                        >
+                            Delete
+                        </Button>
                     )}
                 </div>
                 <div className="action-hint" style={{

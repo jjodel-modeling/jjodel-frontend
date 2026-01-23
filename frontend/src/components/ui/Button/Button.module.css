@@ -1,0 +1,227 @@
+/* BASE BUTTON - Always outline style */
+.button {
+  /* Layout */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-2);
+
+  /* Typography */
+  font-family: var(--font-sans);
+  font-weight: var(--font-weight-medium);
+  line-height: 1;
+  white-space: nowrap;
+
+  /* Appearance - CRITICAL: Always transparent background */
+  background: transparent;
+  border-radius: var(--radius-base);
+  border-width: 1.5px;
+  border-style: solid;
+
+  /* Interaction */
+  cursor: pointer;
+  user-select: none;
+  transition: all var(--transition-base);
+}
+
+.button:focus-visible {
+  outline: 2px solid var(--color-cyan-500);
+  outline-offset: 2px;
+}
+
+/* SIZES */
+.buttonSm {
+  height: var(--input-height-sm);
+  padding: 6px 12px;
+  font-size: var(--font-size-sm);
+}
+
+.buttonMd {
+  height: var(--input-height-base);
+  padding: 10px 20px;
+  font-size: var(--font-size-base);
+}
+
+.buttonLg {
+  height: var(--input-height-lg);
+  padding: 14px 24px;
+  font-size: var(--font-size-lg);
+}
+
+/* VARIANT: PRIMARY (Cyan outline) */
+.buttonPrimary {
+  color: var(--color-cyan-500);
+  border-color: var(--color-cyan-500);
+  background: transparent; /* Explicit */
+}
+
+.buttonPrimary:hover:not(:disabled) {
+  background: var(--color-cyan-50);
+  border-color: var(--color-cyan-600);
+  color: var(--color-cyan-600);
+}
+
+.buttonPrimary:active:not(:disabled) {
+  background: var(--color-cyan-100);
+}
+
+.buttonPrimary:disabled {
+  color: var(--color-slate-300);
+  border-color: var(--color-slate-300);
+  cursor: not-allowed;
+  background: transparent;
+}
+
+/* VARIANT: SECONDARY (Slate outline) */
+.buttonSecondary {
+  color: var(--color-slate-600);
+  border-color: var(--color-slate-300);
+  background: transparent; /* Explicit */
+}
+
+.buttonSecondary:hover:not(:disabled) {
+  background: var(--color-slate-50);
+  border-color: var(--color-slate-400);
+  color: var(--color-slate-700);
+}
+
+.buttonSecondary:active:not(:disabled) {
+  background: var(--color-slate-100);
+}
+
+.buttonSecondary:disabled {
+  color: var(--color-slate-300);
+  border-color: var(--color-slate-200);
+  cursor: not-allowed;
+  background: transparent;
+}
+
+/* VARIANT: DANGER (Red outline) */
+.buttonDanger {
+  color: var(--color-red-600);
+  border-color: var(--color-red-300);
+  background: transparent; /* Explicit */
+}
+
+.buttonDanger:hover:not(:disabled) {
+  background: var(--color-red-50);
+  border-color: var(--color-red-600);
+  color: var(--color-red-700);
+}
+
+.buttonDanger:active:not(:disabled) {
+  background: var(--color-red-100);
+}
+
+.buttonDanger:disabled {
+  color: var(--color-red-300);
+  border-color: var(--color-red-200);
+  cursor: not-allowed;
+  background: transparent;
+}
+
+/* VARIANT: GHOST (Minimal) */
+.buttonGhost {
+  color: var(--color-slate-500);
+  border-color: transparent;
+  background: transparent; /* Explicit */
+}
+
+.buttonGhost:hover:not(:disabled) {
+  background: var(--color-slate-100);
+  color: var(--color-slate-600);
+}
+
+.buttonGhost:active:not(:disabled) {
+  background: var(--color-slate-200);
+}
+
+.buttonGhost:disabled {
+  color: var(--color-slate-300);
+  cursor: not-allowed;
+  background: transparent;
+}
+
+/* FULL WIDTH */
+.fullWidth {
+  width: 100%;
+}
+
+/* LOADING STATE */
+.loading {
+  position: relative;
+  pointer-events: none;
+}
+
+.loading .label {
+  opacity: 0.5;
+}
+
+.spinner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.spinnerIcon {
+  width: 16px;
+  height: 16px;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+    stroke-dashoffset: 28;
+  }
+  to {
+    transform: rotate(360deg);
+    stroke-dashoffset: 0;
+  }
+}
+
+/* ICON */
+.icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.icon svg,
+.icon i {
+  display: block;
+}
+
+.buttonSm .icon svg,
+.buttonSm .icon i {
+  width: 14px;
+  height: 14px;
+  font-size: 14px;
+}
+
+.buttonMd .icon svg,
+.buttonMd .icon i {
+  width: 16px;
+  height: 16px;
+  font-size: 16px;
+}
+
+.buttonLg .icon svg,
+.buttonLg .icon i {
+  width: 18px;
+  height: 18px;
+  font-size: 18px;
+}
+
+/* LABEL */
+.label {
+  display: inline-block;
+}
+
+/* RESPONSIVE */
+@media (max-width: 768px) {
+  .button {
+    width: 100%;
+  }
+}

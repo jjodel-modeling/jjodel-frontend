@@ -1,0 +1,31 @@
+/**
+ * HelpText Component Styles
+ */
+
+.helpText {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-2);
+  margin-top: var(--spacing-2);
+  font-size: var(--font-size-base);
+  color: var(--color-slate-500);
+  font-family: var(--font-family-sans);
+  line-height: var(--line-height-normal);
+}
+
+.helpText i {
+  flex-shrink: 0;
+  margin-top: 2px;
+  color: var(--color-slate-400);
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .helpText {
+    color: var(--color-text-secondary);
+  }
+
+  .helpText i {
+    color: var(--color-text-tertiary);
+  }
+}

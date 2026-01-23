@@ -1,0 +1,28 @@
+.section {
+  margin-top: var(--spacing-8);
+}
+
+.section:first-child {
+  margin-top: 0;
+}
+
+.title {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--color-slate-500);
+  margin: 0 0 var(--spacing-2) 0;
+}
+
+.divider {
+  height: 1px;
+  background-color: var(--color-slate-200);
+  margin-bottom: var(--spacing-4);
+}
+
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-5);
+}

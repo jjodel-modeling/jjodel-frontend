@@ -3,6 +3,7 @@ import './App.scss';
 import './styles/view.scss'; //
 import './styles/style.scss';
 import './styles/forms.scss';
+import './styles/tokens.css';
 import {DState, DUser, Log, LUser, Pointer, R, SetRootFieldAction, statehistory, stateInitializer, Try, U} from "./joiner";
 import {connect} from "react-redux";
 import Loader from "./components/loader/Loader";

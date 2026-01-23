@@ -1,0 +1,103 @@
+.wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-3);
+}
+
+.labelWrapper {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-1);
+}
+
+.label {
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-primary);
+  cursor: pointer;
+}
+
+.description {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  line-height: var(--line-height-normal);
+}
+
+/* TOGGLE TRACK */
+.toggle {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+
+  border: none;
+  border-radius: var(--radius-full);
+  cursor: pointer;
+
+  transition: background-color var(--transition-base);
+
+  /* Off state */
+  background-color: var(--color-slate-300);
+}
+
+.toggle:focus-visible {
+  outline: 2px solid var(--color-cyan-500);
+  outline-offset: 2px;
+}
+
+.toggle:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+/* SIZES */
+.toggleMd {
+  width: 44px;
+  height: 24px;
+  padding: 2px;
+}
+
+.toggleSm {
+  width: 36px;
+  height: 20px;
+  padding: 2px;
+}
+
+/* CHECKED STATE */
+.toggleChecked {
+  background-color: var(--color-cyan-500);
+}
+
+.toggleChecked:hover:not(:disabled) {
+  background-color: var(--color-cyan-600);
+}
+
+/* THUMB */
+.thumb {
+  display: block;
+  border-radius: var(--radius-full);
+  background-color: white;
+  box-shadow: var(--shadow-sm);
+
+  transition: transform var(--transition-base);
+}
+
+.toggleMd .thumb {
+  width: 20px;
+  height: 20px;
+}
+
+.toggleSm .thumb {
+  width: 16px;
+  height: 16px;
+}
+
+/* CHECKED THUMB POSITION */
+.toggleMd.toggleChecked .thumb {
+  transform: translateX(20px);
+}
+
+.toggleSm.toggleChecked .thumb {
+  transform: translateX(16px);
+}
