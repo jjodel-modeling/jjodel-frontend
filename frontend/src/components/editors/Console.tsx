@@ -529,11 +529,12 @@ Tip: Click the keyboard icon in the toolbar for quick reference.`;
 
                 {/* Console Body */}
                 <div className="console-body">
-                    <ConsoleHistory
-                        entries={this.state.entries}
-                        onToggleCollapse={(id) => this.handleToggleCollapse(id)}
-                        onDeleteEntry={(id) => this.handleDeleteEntry(id)}
-                    />
+              <ConsoleHistory
+    entries={this.state.entries}
+    onToggleCollapse={(id) => this.handleToggleCollapse(id)}
+    onDeleteEntry={(id) => this.handleDeleteEntry(id)}
+    onExecuteCode={this.handleExecute}
+/>
                 </div>
 
                 {/* Footer Resize Handle - SimpleFooterResizeHandle */}

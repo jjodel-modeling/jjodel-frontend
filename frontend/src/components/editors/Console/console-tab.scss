@@ -1519,3 +1519,151 @@ $transition-normal: 250ms ease;
     }
   }
 }
+
+// ============================================
+// EMPTY STATE - REDESIGNED
+// ============================================
+
+.console-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px;
+  text-align: center;
+  min-height: 300px;
+}
+
+.console-empty__icon {
+  width: 64px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f1f5f9;
+  border-radius: 16px;
+  margin-bottom: 20px;
+
+  i {
+    font-size: 28px;
+    color: #475569;
+  }
+}
+
+.console-empty__title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #111418;
+  margin: 0 0 8px 0;
+}
+
+.console-empty__description {
+  font-size: 13px;
+  color: #6B7280;
+  margin: 0 0 32px 0;
+  max-width: 320px;
+  line-height: 1.5;
+}
+
+.console-empty__quickstart {
+  width: 100%;
+  max-width: 400px;
+  margin-bottom: 32px;
+}
+
+.console-empty__quickstart-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #9CA3AF;
+  margin-bottom: 12px;
+}
+
+.console-empty__examples {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+.console-empty__example {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 12px 14px;
+  background: #f8fafc;
+  border: 1px solid #e2e4e8;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 150ms ease;
+  text-align: left;
+
+  &:hover {
+    background: #f1f5f9;
+    border-color: #0ea5e9;
+    
+    code {
+      color: #0ea5e9;
+    }
+  }
+
+  code {
+    font-family: 'SF Mono', 'Monaco', 'Inconsolata', monospace;
+    font-size: 13px;
+    font-weight: 500;
+    color: #475569;
+    transition: color 150ms ease;
+  }
+
+  span {
+    font-size: 11px;
+    color: #9CA3AF;
+  }
+}
+
+.console-empty__shortcuts {
+  display: flex;
+  gap: 24px;
+}
+
+.console-empty__shortcut {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+
+  kbd {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 24px;
+    height: 24px;
+    padding: 0 6px;
+    font-family: 'SF Mono', 'Monaco', monospace;
+    font-size: 11px;
+    font-weight: 500;
+    color: #6B7280;
+    background: #f1f5f9;
+    border: 1px solid #e2e4e8;
+    border-radius: 4px;
+  }
+
+  span {
+    font-size: 12px;
+    color: #9CA3AF;
+  }
+}
+
+// Responsive
+@media (max-width: 400px) {
+  .console-empty__examples {
+    grid-template-columns: 1fr;
+  }
+  
+  .console-empty__shortcuts {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 16px;
+  }
+}
