@@ -143,12 +143,14 @@
   height: 42px;
   padding: 0 var(--space-3);
   font-family: var(--font-sans);
-  font-size: var(--text-sm);
+  font-size: 13px!important; // var(--text-xs);
   color: var(--color-text-primary);
   background: #ffffff;
   border: 1px solid #e2e8f0;
   border-radius: var(--radius-md);
-  transition: all 150ms ease;
+  transition: all 150ms ease; 
+
+
 
   &:focus {
     outline: none;

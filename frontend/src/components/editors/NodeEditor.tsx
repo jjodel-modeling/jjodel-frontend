@@ -1,418 +1,766 @@
 /*
-******************************* this is for pbar/node. instead GenericNodeData is for view->node. *******************************
-*/
+ * NodeEditor.tsx - Redesigned Node Tab
+ * 
+ * Displays and edits properties of selected graph elements (Vertex, Edge, Graph).
+ * Features:
+ * - Collapsible sections for progressive disclosure
+ * - Restored Relationships section (Super element, Incoming Edges)
+ * - Improved Anchors visualization with drag support
+ * - Consistent with Jjodel design system
+ */
 
-import React, {Dispatch, ReactElement, ReactNode, useRef, useState} from 'react';
-import ReactJson from 'react-json-view' // npm i react-json-view --force
-import {connect} from 'react-redux';
-import {DState} from '../../redux/store';
+import React, { Dispatch, ReactElement, ReactNode, useRef, useState, useEffect } from 'react';
+import ReactJson from 'react-json-view';
+import { connect } from 'react-redux';
+import { DState } from '../../redux/store';
 import type {
     LModelElement,
     LViewElement,
     LGraphElement,
     LVoidVertex,
-    LVoidEdge, LGraph, DGraphElement,
+    LVoidEdge,
+    LGraph,
+    DGraphElement,
     DNamedElement,
-    IPoint, GraphPoint,
-    Pointer} from '../../joiner'
-import {Draggable, U
+    IPoint,
+    GraphPoint,
+    Pointer
 } from '../../joiner';
 import {
+    U,
     L,
-    Size,
     Input,
     GenericInput,
     SetRootFieldAction,
 } from '../../joiner';
-import './editors.scss';
-import './node-editor.scss';
-import {Empty} from "./Empty";
-import { CommandBar, Btn } from '../commandbar/CommandBar';
-import {SizeInput} from "../forEndUser/SizeInput";
+import { Empty } from "./Empty";
+import { SizeInput } from "../forEndUser/SizeInput";
+import './node-editor-redesign.scss';
 
-function anchorinput(k: string, a: Partial<IPoint>, node: LGraphElement, anchors: DGraphElement['anchors'],
-                     anchorEntries: [string, GraphPoint][], setAnchor: (v: string)=>void, stateanchor: string) {
-    return <div key={k||'updating'} className={'d-flex'}>
-        <Input getter={()=>k} setter={(newname)=>{
-            let tmp = {...anchors};
-            tmp[newname as string] = tmp[k];
-            delete tmp[k];
-            node.anchors = tmp;
-            if (stateanchor !== '__jjAll') setAnchor(newname as string);
-        }} placeholder={'anchor name'} className={"me-3"}/>
-        <SizeInput xgetter={() => a.x + ''} data={undefined as any} field={undefined as any}
-                   ygetter={() => a.y + ''}
-                   xsetter={(v) => {
-                       let tmp = {...anchors};
-                       tmp[k] = {...(tmp[k]||{x:0.5, y:0.5})} as any;
-                       tmp[k].x = +v || 0;
-                       node.anchors = tmp;
-                   }}
-                   ysetter={(v) => {
-                       let tmp = {...anchors};
-                       tmp[k] = {...(tmp[k]||{x:0.5, y:0.5})} as any;
-                       tmp[k].y = +v || 0;
-                       node.anchors = tmp;
-                   }}
-        />
-        <Btn icon={'delete'} tip={'Remove anchor'} style={{display:'inline-block', fontSize: "2em"}} action={() => {
-            if (!anchors[k]) return;
-            let i = anchorEntries.findIndex(e => e[0] === k);
-            let tmp = {...anchors};
-            delete tmp[k];
-            node.anchors = tmp;
-            if (stateanchor !== '__jjAll') setAnchor(anchorEntries[Math.min((i+1), anchorEntries.length-1)][0])
-        }} />
-    </div>
-}
+// ============================================
+// TYPES
+// ============================================
 
-function NodeEditorComponent(props: AllProps) {
-    let anchors = props.selected?.node?.anchors||{};
-    let anchorholder = useRef<HTMLDivElement>(null);
-    let anchorEntries = Object.entries(anchors);
-    let [anchor, setAnchor] = useState(anchorEntries?.[0]?.[0]||'0');
-    const selected = props.selected;
-    const editable = true;
-    if (!selected?.node) return <Empty msg={'Select a node.'}/>;
-    const node = selected.node;
-    const dnode = (node.__raw || node) as DGraphElement
-    let cname = dnode.className;
-    let isGraph = ['DGraph', 'DGraphVertex'].includes(cname); // RuntimeAccessibleClass.extends(cname, 'DGraph');
-    let isVertex = ['DVoidVertex', 'DVertex', 'DEdgePoint', 'DGraphVertex'].includes(cname); // RuntimeAccessibleClass.extends(cname, 'DVoidVertex');
-    let isEdge = ['DVoidEdge', 'DEdge'].includes(cname); // RuntimeAccessibleClass.extends(cname, 'DVoidEdge');
-    let isField = (!isGraph && !isVertex && !isEdge);
-    let isGraphVertex = isVertex && isGraph;
-    let asGraph: LGraph | undefined = isGraph && node as any;
-    let asVertex: LVoidVertex | undefined  = isVertex && node as any;
-    let asEdge: LVoidEdge | undefined = isEdge && node as any;
-    let asField: LVoidEdge | undefined = isField && node as any;
-
-    function openNode(id: Pointer<DGraphElement>) {
-        SetRootFieldAction.new('_lastSelected.node', id, '', false);
-    }
-
-    function getNodeLabel(node: LGraphElement){
-        if (!node) return 'error';
-        let model: DNamedElement | undefined = node.model?.__raw as any;
-        if (!model) return node.className;
-        return node.className + ' - ' +(model.name || model.className)
-    }
-    function getEdgeLabel(edge: LVoidEdge){
-        let s: DNamedElement | undefined = edge?.start?.model?.__raw as any;
-        let e: DNamedElement | undefined = edge?.end?.model?.__raw as any;
-        return [
-            (s ? s.name || s.className : <i style={{color: 'orange'}}>empty</i>),
-            <i className={'bi bi-arrow-right ms-1 me-1'} />,
-            (e ? e.name || e.className : <i style={{color: 'orange'}}>empty</i>)
-        ];
-
-    }
-    const clickableStyle = {cursor:'pointer', color: 'gray'};
-    const headerStyle = {marginBottom:0, marginTop: '0.5em'};
-    const edgeStart: LGraphElement | undefined = asEdge && asEdge.start;
-    const edgeEnd: LGraphElement | undefined = asEdge && asEdge.end;
-    const notFoundStyle = {color: 'orange', cursor:'not-allowed'};
-    const subElements = node.subElements;
-    let edgesIn = !isEdge && node.edgesIn || [];
-    let edgesOut = !isEdge && node.edgesOut || [];
-
-
-
-
-
-    type InputRowProps = {
-        label: string,
-        as: any,
-        field: string,
-        type: string
-    }
-    const InputRow = (props: any) => {
-        return (
-            <div className='input-container'>
-                <b className={'me-2'}>{props.label}</b>
-                <Input data={props.as} field={props.field} type={props.type} readOnly={!editable} />
-            </div>
-        );
-    };
-// todo: zoom entry not working
-    let commonEntries: JSX.Element[] = [];
-    if (!isGraph || isGraphVertex) commonEntries.push(<InputRow label={'Stacking order'} as={node} field={'zIndex'} type={'number'} />);
-    /*
-    let commonEntries: JSX.Element[] = [];
-    if (!isGraph || isGraphVertex) commonEntries.push(<InputRow label={'Stacking order'} as={node} field={'zIndex'} type={'number'} />);
-    function setZoom(val, key){
-        if (!dnode.zoom) {
-            let newzoom = {x:1, y:1};
-            newzoom[key] = val;
-            if (!dnode.zoom) SetFieldAction.new(dnode.id, 'zoom', newzoom, '', false);
-        }
-        else {
-            SetFieldAction.new(dnode.id, 'zoom.'+key, val, '', false);
-        }
-    }
-    commonEntries.push(<SizeInput data={node} field={'ownZoom'} xsetter={(val)=>{
-        if (!dnode.zoom) SetFieldAction(dnode.id, 'zoom', {x: val, y: val});
-    }}/>); // <GenericInput */
-    commonEntries.push(<GenericInput data={node} field={'zoom'} />);
-
-
-    return(<div className={'p-3 node-editor'}>
-        {/*<Input obj={selected.node} field={'id'} label={'ID'} type={'text'} readonly={true}/>*/}
-
-        {asGraph && <><h3>{isGraphVertex ? 'GraphVertex' : 'Graph'}</h3>
-            {commonEntries}
-            <GenericInput data={asGraph} field={'offset'}/>
-            <SizeInput data={asGraph} field={'size'} label={'size'}
-                       xsetter={(x) => asGraph.x = +x}
-                       ysetter={(y) => asGraph.y = +y}
-                       wsetter={(w) => asGraph.w = +w}
-                       hsetter={(h) => asGraph.h = +h}
-            />
-
-            {/*graphSize readonly on LGraph but not on DGraph, = internal graph size. put it for info.*/}
-        </>}
-
-        {asVertex && <>
-            {!isGraphVertex && <>
-                <h3>Vertex</h3>
-                {commonEntries}
-                <InputRow label={'X Position'} as={asVertex} field={'x'} type={'number'}/>
-                <InputRow label={'Y Position'} as={asVertex} field={'y'} type={'number'}/>
-                <InputRow label={'Width'} as={asVertex} field={'width'} type={'number'}/>
-                <InputRow label={'Height'} as={asVertex} field={'height'} type={'number'}/>
-            </>}
-            <InputRow label={'isResized'} as={asVertex} field={'isResized'} type={'checkbox'}/>
-        </>}
-
-        {asEdge && <><h3>Edge</h3>
-            {commonEntries}
-
-            {
-                //  <>
-                //     moved to props & transient properties
-                //     <GenericInput data={asEdge} field={'longestLabel'}
-                //         placeholder={'(edge/*LEdge*/, segment/*EdgeSegment*/, subNodes/*LGraphElement[]*/, allSegments/*EdgeSegment[]*/) => {' +
-                //         '\n\t// a complex example. The label can be either a function like this or a simple string.' +
-                //         '\n\t return (edge.start.model)?.name + \' ~ \' + (e.end.model)?.name + \'(\' + segment.length.toFixed(1) + \')\';' +
-                //         '\n}'}/>
-                //     <GenericInput data={asEdge} field={'labels'}
-                //         placeholder={'(edge/*LEdge*/, segment/*EdgeSegment*/, subNodes/*LGraphElement[]*/, allSegments/*EdgeSegment[]*/) => {' +
-                //         '\n\t// a complex example. The label can be either a function like this or a simple string.' +
-                //         '\n\t return (edge.start.model)?.name + \' ~ \' + (e.end.model)?.name + \'(\' + segment.length.toFixed(1) + \')\';' +
-                //         '\n}'}/>
-                // </>
-            }
-
-            <label>{asEdge.anchorStart && typeof asEdge.anchorStart == 'object' ?
-                <SizeInput data={asEdge} field={'anchorStart'}/> :
-                <GenericInput className='input-container' data={asEdge} field={"anchorStart"}/>}
-                <CommandBar style={{}}><Btn icon={'delete'} tip={'Delete'}
-                                            action={() => asEdge.anchorStart = undefined as any}/></CommandBar>
-            </label>
-            <label>{asEdge.anchorEnd && typeof asEdge.anchorEnd == 'object' ?
-                <SizeInput data={asEdge} field={'anchorEnd'}/> :
-                <GenericInput className='input-container' data={asEdge} field={"anchorEnd"}/>}
-                <CommandBar style={{}}><Btn icon={'delete'} tip={'Delete'}
-                                            action={() => asEdge.anchorEnd = undefined as any}/></CommandBar>
-            </label>
-        </>}
-
-        {asField && <><h3>Field</h3>
-            {commonEntries}
-        </>}
-
-        <div style={{marginTop: '1em', marginBottom: '1em', borderBottom: '1px solid gray'}}/>
-
-        {node.father?.className && <div>
-            <h6 style={{display: 'flex'}}>
-                Super element
-                {/*<span onClick={(e)=> dnode.father && openNode(dnode.father)} style={clickableStyle}>
-                        {[node.father?.className, <i style={{paddingLeft: '8px'}} className="bi bi-chevron-up"></i>]}
-                    </span>*/}
-                <CommandBar style={{paddingLeft: 'var(--tab-sep)', bottom: '3px'}}>
-                    <Btn icon={'up'} action={(e) => dnode.father && openNode(dnode.father)} tip={'Go up'}/>
-                </CommandBar>
-            </h6>
-        </div>}
-
-        {asEdge && [
-            <div key={'es'}><h6 style={headerStyle}>Edge start:{
-                edgeStart ?
-                    <span className={'ms-2'} onClick={(e) => openNode(edgeStart.id)} style={clickableStyle}>
-                        {getNodeLabel(edgeStart)}<i className={'ms-1 bi bi-arrow-right'}/>
-                    </span>
-                    : <span style={notFoundStyle}>Missing</span>
-            }</h6></div>,
-            <div key={'ee'}><h6 style={headerStyle}>Edge End:{
-                edgeEnd ?
-                    <span className={'ms-2'} onClick={(e) => openNode(edgeEnd.id)} style={clickableStyle}>
-                        {getNodeLabel(edgeEnd)}<i className={'ms-1 bi bi-arrow-left'}/>
-                    </span>
-                    : <span style={notFoundStyle}>Missing</span>
-            }</h6></div>
-        ]}
-
-        {subElements.length > 0 && <div>
-            <h6 style={{display: 'flex'}}>
-                Sub elements
-                <CommandBar style={{paddingLeft: 'var(--tab-sep)', bottom: '3px'}}>
-                    <Btn icon={'down'} action={(e) => {
-                    }} tip={'Go down'}/>
-                </CommandBar>
-            </h6>
-            {subElements.map(
-                n => <div key={n.id} className={'w-100 ms-2 sub-element'} onClick={(e) => openNode(n.id)}
-                          style={clickableStyle}>{getNodeLabel(n)}</div>
-            )}
-        </div>}
-
-        {!asEdge && <>
-            {edgesOut.length > 0 && <div>
-                <h6 style={{display: 'flex'}}>
-                    Outgoing Edges
-                </h6>
-                {edgesOut.map(n => <div key={n.id} className={'w-100 ms-2 sub-element'} onClick={(e) => openNode(n.id)}
-                                        style={clickableStyle}>{getEdgeLabel(n)}</div>)}
-            </div>}
-
-            {edgesIn.length > 0 && <div>
-                <h6 style={{display: 'flex'}}>
-                    Incoming Edges
-                </h6>
-                {edgesIn.map(n => <div key={n.id} className={'w-100 ms-2 sub-element'} onClick={(e) => openNode(n.id)}
-                                       style={clickableStyle}>{getEdgeLabel(n)}</div>)}
-            </div>}
-
-            {/*<div>
-                <h6 style={headerStyle}>
-                    Outgoing Edges {edgesOut.length === 0 && <>: <span style={notFoundStyle}>None</span></>}
-                </h6>
-                {edgesOut.length && edgesOut.map(n => <div className={'w-100 ms-2'} onClick={(e)=> openNode(n.id)} style={clickableStyle}>{getEdgeLabel(n)}</div>)}
-            </div>
-
-            <div>
-                <h6 style={headerStyle}>Incoming Edges{edgesIn.length === 0 && <>:
-                    <span style={notFoundStyle}>None</span></>}
-                </h6>
-                {edgesIn.map(n => <div className={'w-100 ms-2'} onClick={(e)=> openNode(n.id)} style={clickableStyle}>{getEdgeLabel(n)}</div>)}
-            </div>*/}
-        </>}
-
-
-        <h6>Node state</h6>
-        <div className={'object-state'}>
-            {Object.keys(dnode._state).length === 0 ? <pre> Empty</pre> :
-                <ReactJson src={dnode._state}
-                           collapsed={1}
-                           collapseStringsAfterLength={20}
-                           displayDataTypes={true}
-                           displayObjectSize={true}
-                           enableClipboard={true}
-                           groupArraysAfterLength={100}
-                           indentWidth={4}
-                           name={"state"}
-                           iconStyle={"triangle"}
-                           quotesOnKeys={true}
-                           shouldCollapse={false /*((field: CollapsedFieldProps) => { return Object.keys(field.src).length > 3;*/}
-                           sortKeys={false}
-                           theme={"rjv-default"}
-                />}
-            {/*<pre>{Object.keys(dnode._state).length ? JSON.stringify(dnode._state, null, '\t') : undefined}</pre>*/}
-        </div>
-        {anchorEntries.length && <>
-        <h6>Anchors</h6>
-        <div className={'anchor-editor'} tabIndex={0}>
-            <div className={'anchor-holder'} ref={anchorholder} style={{position:'relative'}}>
-                {anchorEntries.map((e) => {
-                    let k = e[0];
-                    let a = e[1];
-                    return <Draggable onDragEnd={(empty, evt, ui) => {
-                        let size = Size.of(anchorholder.current as HTMLElement);
-                        let tmp = {...anchors};
-                        tmp[k] = {...tmp[k]} as any;
-                        let coords = {x:ui?.position.left, y:ui?.position.top};
-                        tmp[k].x = coords.x / size.w;
-                        tmp[k].y = coords.y / size.h;
-                        console.log('set anchor', {coords, ui, evt, empty, tmp})
-                        node.anchors = tmp;
-                    }}>
-                    <div className={'editor-anchor d-flex ui-draggable ui-draggable-handle' + (k===anchor?' selected':'')}
-                         tabIndex={0} style={{left: a.x*100 + '%', top: a.y*100 + '%'}} onClick={()=>setAnchor(k)}>
-                        <p className={'m-auto'} tabIndex={0}>{k}</p>
-                    </div>
-                </Draggable>
-                })}
-            </div>
-        </div>
-        <section className={'anchor-editor-text'}>
-            <label className='d-flex'>
-                <span className={"my-auto"}>Edit anchor</span>
-                <select onChange={(e)=>setAnchor(e.target.value)} value={anchor} className={'mx-1 my-auto'}>
-                    <option value={'__jjAll'} key={'__jjAll'} className={"my-auto"}>All</option>
-                    <optgroup label={"anchors"}>{
-                        anchorEntries.map((e) => <option value={e[0]} key={e[0]}>{e[0]}</option>)
-                    }</optgroup>
-                </select>
-                <Btn icon={'add'} action={()=>{
-                    let name = U.increaseEndingNumber('anchor1', false, false, (s) => (s in anchors));
-                    node.anchors = {...anchors, [name]:{x:0.5, y:0.5} as any};
-                    setAnchor(name);
-                }} tip={'Add new anchor'} style={{fontSize: "2em"}} className={"my-auto d-block"}/>
-            </label>
-            {anchor === '__jjAll' ? anchorEntries.map((e) => {
-                let k = e[0];
-                let a = e[1];
-                return anchorinput(k, a, node, anchors, anchorEntries, setAnchor, anchor);
-            }) :
-            anchorinput(anchor, anchors[anchor]||{x:0.5, y:0.5}, node, anchors, anchorEntries, setAnchor, anchor)
-            }
-        </section>
-        </>}
-        {/*
-        <svg className={'anchor-editor'} viewBox={"-0.1 -0.1 1.1 1.1"}>
-            <rect className={'anchor-holder'} />
-            {Object.entries(node.anchors).map((e)=>{ let k = e[0]; let a = e[1];
-                return <g x={a.x} y={a.y}><circle cx={0} cy={0}/><text alignmentBaseline={"middle"}>{k}</text></g>
-            })}
-        </svg>
-        */}
-    </div>
-);
-
-}
-
-interface OwnProps {
-}
+interface OwnProps {}
 
 interface StateProps {
-    selected ? : {
+    selected?: {
         node: LGraphElement;
         view: LViewElement;
         modelElement?: LModelElement;
     };
 }
 
-interface DispatchProps {
-}
+interface DispatchProps {}
 
 type AllProps = OwnProps & StateProps & DispatchProps;
 
+// ============================================
+// COLLAPSIBLE SECTION COMPONENT
+// ============================================
+
+interface SectionProps {
+    title: string;
+    icon: string;
+    defaultOpen?: boolean;
+    badge?: string | number;
+    children: ReactNode;
+}
+
+const Section: React.FC<SectionProps> = ({ 
+    title, 
+    icon, 
+    defaultOpen = true, 
+    badge, 
+    children 
+}) => {
+    const [isOpen, setIsOpen] = useState(defaultOpen);
+
+    return (
+        <div className={`node-section ${isOpen ? 'node-section--open' : ''}`}>
+            <button
+                className="node-section__header"
+                onClick={() => setIsOpen(!isOpen)}
+                type="button"
+            >
+                <div className="node-section__title">
+                    <i className={`bi bi-chevron-${isOpen ? 'down' : 'right'}`} />
+                    <i className={`bi bi-${icon}`} />
+                    <span>{title}</span>
+                </div>
+                {badge !== undefined && (
+                    <span className="node-section__badge">{badge}</span>
+                )}
+            </button>
+            {isOpen && (
+                <div className="node-section__content">
+                    {children}
+                </div>
+            )}
+        </div>
+    );
+};
+
+// ============================================
+// ANCHOR INPUT HELPER
+// ============================================
+
+function anchorinput(
+    k: string,
+    a: Partial<IPoint>,
+    node: LGraphElement,
+    anchors: DGraphElement['anchors'],
+    anchorEntries: [string, GraphPoint][],
+    setAnchor: (v: string) => void,
+    stateanchor: string
+) {
+    return (
+        <div key={k || 'updating'} className="anchor-input-row">
+            <div className="anchor-input-row__field anchor-input-row__field--name">
+                <span className="anchor-input-row__label">name</span>
+                <Input
+                    getter={() => k}
+                    setter={(newname) => {
+                        let tmp = { ...anchors };
+                        tmp[newname as string] = tmp[k];
+                        delete tmp[k];
+                        node.anchors = tmp;
+                        if (stateanchor !== '__jjAll') setAnchor(newname as string);
+                    }}
+                    placeholder={'anchor name'}
+                />
+            </div>
+            <div className="anchor-input-row__field">
+                <span className="anchor-input-row__label">x</span>
+                <input
+                    type="number"
+                    value={(a.x ?? 0.5).toFixed(3)}
+                    onChange={(e) => {
+                        let tmp = { ...anchors };
+                        tmp[k] = { ...(tmp[k] || { x: 0.5, y: 0.5 }) } as any;
+                        tmp[k].x = +e.target.value || 0;
+                        node.anchors = tmp;
+                    }}
+                    step={0.01}
+                    min={0}
+                    max={1}
+                />
+            </div>
+            <div className="anchor-input-row__field">
+                <span className="anchor-input-row__label">y</span>
+                <input
+                    type="number"
+                    value={(a.y ?? 0.5).toFixed(3)}
+                    onChange={(e) => {
+                        let tmp = { ...anchors };
+                        tmp[k] = { ...(tmp[k] || { x: 0.5, y: 0.5 }) } as any;
+                        tmp[k].y = +e.target.value || 0;
+                        node.anchors = tmp;
+                    }}
+                    step={0.01}
+                    min={0}
+                    max={1}
+                />
+            </div>
+            <button
+                className="anchor-input-row__delete"
+                onClick={() => {
+                    if (!anchors[k]) return;
+                    let i = anchorEntries.findIndex((e) => e[0] === k);
+                    let tmp = { ...anchors };
+                    delete tmp[k];
+                    node.anchors = tmp;
+                    if (stateanchor !== '__jjAll')
+                        setAnchor(anchorEntries[Math.min(i + 1, anchorEntries.length - 1)][0]);
+                }}
+                title="Delete anchor"
+            >
+                <i className="bi bi-trash" />
+            </button>
+        </div>
+    );
+}
+
+// ============================================
+// ANCHOR VISUALIZATION COMPONENT
+// ============================================
+
+interface AnchorVisualizationProps {
+    anchors: Record<string, GraphPoint>;
+    selectedAnchor: string | null;
+    onSelect: (name: string) => void;
+    node: LGraphElement;
+}
+
+const AnchorVisualization: React.FC<AnchorVisualizationProps> = ({
+    anchors,
+    selectedAnchor,
+    onSelect,
+    node
+}) => {
+    const containerRef = useRef<HTMLDivElement>(null);
+    const [dragging, setDragging] = useState<string | null>(null);
+    
+    const anchorEntries = Object.entries(anchors);
+
+    // Handle mouse down - start dragging
+    const handleMouseDown = (e: React.MouseEvent, anchorName: string) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setDragging(anchorName);
+        onSelect(anchorName);
+    };
+
+    // Handle mouse move - update anchor position
+    useEffect(() => {
+        if (!dragging) return;
+
+        const handleMouseMove = (e: MouseEvent) => {
+            if (!containerRef.current || !dragging) return;
+            
+            const rect = containerRef.current.getBoundingClientRect();
+            const x = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+            const y = Math.max(0, Math.min(1, (e.clientY - rect.top) / rect.height));
+            
+            const tmp = { ...anchors };
+            tmp[dragging] = { x, y } as GraphPoint;
+            node.anchors = tmp;
+        };
+
+        const handleMouseUp = () => {
+            setDragging(null);
+        };
+
+        document.addEventListener('mousemove', handleMouseMove);
+        document.addEventListener('mouseup', handleMouseUp);
+
+        return () => {
+            document.removeEventListener('mousemove', handleMouseMove);
+            document.removeEventListener('mouseup', handleMouseUp);
+        };
+    }, [dragging, anchors, node]);
+
+    if (anchorEntries.length === 0) {
+        return (
+            <div className="anchor-viz__empty">
+                <i className="bi bi-bullseye" />
+                <span>No anchors defined</span>
+            </div>
+        );
+    }
+
+    return (
+        <div className="anchor-viz">
+            <div 
+                className={`anchor-viz__node ${dragging ? 'anchor-viz__node--dragging' : ''}`} 
+                ref={containerRef}
+            >
+                <div className="anchor-viz__node-body">
+                    <div className="anchor-viz__center" />
+                </div>
+                {anchorEntries.map(([name, point]) => (
+                    <button
+                        key={name}
+                        className={`anchor-viz__point ${selectedAnchor === name ? 'anchor-viz__point--selected' : ''} ${dragging === name ? 'anchor-viz__point--dragging' : ''}`}
+                        style={{
+                            left: `${point.x * 100}%`,
+                            top: `${point.y * 100}%`
+                        }}
+                        onMouseDown={(e) => handleMouseDown(e, name)}
+                        onClick={() => onSelect(name)}
+                        title={`${name} (${point.x.toFixed(2)}, ${point.y.toFixed(2)})`}
+                        tabIndex={0}
+                    >
+                        <span className="anchor-viz__point-label">{name}</span>
+                    </button>
+                ))}
+            </div>
+        </div>
+    );
+};
+
+// ============================================
+// MAIN COMPONENT
+// ============================================
+
+function NodeEditorComponent(props: AllProps) {
+    const anchors = props.selected?.node?.anchors || {};
+    const anchorEntries = Object.entries(anchors);
+    const [anchor, setAnchor] = useState(anchorEntries?.[0]?.[0] || '0');
+
+    const selected = props.selected;
+    const editable = true;
+
+    if (!selected?.node) {
+        return (
+            <Empty
+                icon="bi-bounding-box-fill"
+                title="No node selected"
+                description="Select an element on the canvas to view its node properties."
+            />
+        );
+    }
+
+    const node = selected.node;
+    const dnode = (node.__raw || node) as DGraphElement;
+    const cname = dnode.className;
+
+    // Determine element type
+    const isGraph = ['DGraph', 'DGraphVertex'].includes(cname);
+    const isVertex = ['DVoidVertex', 'DVertex', 'DEdgePoint', 'DGraphVertex'].includes(cname);
+    const isEdge = ['DVoidEdge', 'DEdge'].includes(cname);
+    const isField = !isGraph && !isVertex && !isEdge;
+    const isGraphVertex = isVertex && isGraph;
+
+    const asGraph: LGraph | undefined = isGraph ? (node as any) : undefined;
+    const asVertex: LVoidVertex | undefined = isVertex ? (node as any) : undefined;
+    const asEdge: LVoidEdge | undefined = isEdge ? (node as any) : undefined;
+
+    // Helper functions
+    function openNode(id: Pointer<DGraphElement>) {
+        SetRootFieldAction.new('_lastSelected.node', id, '', false);
+    }
+
+    function getNodeLabel(node: LGraphElement) {
+        if (!node) return 'error';
+        const model: DNamedElement | undefined = node.model?.__raw as any;
+        if (!model) return node.className;
+        return model.name || model.className;
+    }
+
+    function getEdgeLabel(edge: LVoidEdge) {
+        const s: DNamedElement | undefined = edge?.start?.model?.__raw as any;
+        const e: DNamedElement | undefined = edge?.end?.model?.__raw as any;
+        return {
+            start: s ? s.name || s.className : 'empty',
+            end: e ? e.name || e.className : 'empty'
+        };
+    }
+
+    // Get element type info
+    const getElementType = () => {
+        if (isGraphVertex) return { label: 'GraphVertex', icon: 'diagram-3' };
+        if (isGraph) return { label: 'Graph', icon: 'grid-3x3' };
+        if (isEdge) return { label: 'Edge', icon: 'arrow-right' };
+        if (isVertex) return { label: 'Vertex', icon: 'bounding-box' };
+        return { label: 'Field', icon: 'input-cursor' };
+    };
+
+    const elementType = getElementType();
+
+    // Edge endpoints
+    const edgeStart: LGraphElement | undefined = asEdge?.start;
+    const edgeEnd: LGraphElement | undefined = asEdge?.end;
+
+    // Relationships
+    const edgesIn = !isEdge ? node.edgesIn || [] : [];
+    const edgesOut = !isEdge ? node.edgesOut || [] : [];
+    const hasFather = !!node.father?.className;
+    const hasRelationships = hasFather || edgesIn.length > 0 || (isEdge && (edgeStart || edgeEnd));
+
+    // Node state
+    const stateKeys = Object.keys(dnode._state || {});
+    const hasState = stateKeys.length > 0;
+
+    return (
+        <div className="node-editor-redesign">
+            {/* Header */}
+            <div className="node-editor__header">
+                <div className="node-editor__type">
+                    <i className={`bi bi-${elementType.icon}`} />
+                    <span>{elementType.label}</span>
+                </div>
+            </div>
+
+            {/* Section: Transform */}
+            <Section title="Transform" icon="arrows-move" defaultOpen={true}>
+                <div className="node-editor__grid">
+                    {/* Position */}
+                    {asVertex && !isGraphVertex && (
+                        <>
+                            <div className="node-editor__field-row">
+                                <span className="node-editor__field-label">Position</span>
+                                <div className="node-editor__field-inputs">
+                                    <div className="node-editor__input-group">
+                                        <span className="node-editor__input-prefix">x</span>
+                                        <Input
+                                            data={asVertex}
+                                            field="x"
+                                            type="number"
+                                            readOnly={!editable}
+                                        />
+                                    </div>
+                                    <div className="node-editor__input-group">
+                                        <span className="node-editor__input-prefix">y</span>
+                                        <Input
+                                            data={asVertex}
+                                            field="y"
+                                            type="number"
+                                            readOnly={!editable}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="node-editor__field-row">
+                                <span className="node-editor__field-label">Size</span>
+                                <div className="node-editor__field-inputs">
+                                    <div className="node-editor__input-group">
+                                        <span className="node-editor__input-prefix">w</span>
+                                        <Input
+                                            data={asVertex}
+                                            field="width"
+                                            type="number"
+                                            readOnly={!editable}
+                                        />
+                                    </div>
+                                    <div className="node-editor__input-group">
+                                        <span className="node-editor__input-prefix">h</span>
+                                        <Input
+                                            data={asVertex}
+                                            field="height"
+                                            type="number"
+                                            readOnly={!editable}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                        </>
+                    )}
+
+                    {/* Graph-specific: Offset & Size */}
+                    {asGraph && (
+                        <>
+                            <div className="node-editor__field-row">
+                                <span className="node-editor__field-label">Offset</span>
+                                <div className="node-editor__field-inputs">
+                                    <GenericInput data={asGraph} field="offset" />
+                                </div>
+                            </div>
+
+                            <div className="node-editor__field-row">
+                                <span className="node-editor__field-label">Size</span>
+                                <div className="node-editor__field-inputs">
+                                    <SizeInput
+                                        data={asGraph}
+                                        field="size"
+                                        xsetter={(x) => (asGraph.x = +x)}
+                                        ysetter={(y) => (asGraph.y = +y)}
+                                        wsetter={(w) => (asGraph.w = +w)}
+                                        hsetter={(h) => (asGraph.h = +h)}
+                                    />
+                                </div>
+                            </div>
+                        </>
+                    )}
+
+                    {/* Zoom */}
+                    <div className="node-editor__field-row">
+                        <span className="node-editor__field-label">Zoom</span>
+                        <div className="node-editor__field-inputs">
+                            <GenericInput data={node} field="zoom" />
+                        </div>
+                    </div>
+
+                    {/* Stacking order & isResized */}
+                    <div className="node-editor__field-row node-editor__field-row--inline">
+                        {(!isGraph || isGraphVertex) && (
+                            <div className="node-editor__inline-field">
+                                <span className="node-editor__field-label">Stacking order</span>
+                                <Input
+                                    data={node}
+                                    field="zIndex"
+                                    type="number"
+                                    readOnly={!editable}
+                                />
+                            </div>
+                        )}
+
+                        {asVertex && (
+                            <div className="node-editor__inline-field node-editor__inline-field--checkbox">
+                                <Input
+                                    data={asVertex}
+                                    field="isResized"
+                                    type="checkbox"
+                                    readOnly={!editable}
+                                />
+                                <span className="node-editor__field-label">Resized</span>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </Section>
+
+            {/* Section: Relationships */}
+            {hasRelationships && (
+                <Section title="Relationships" icon="diagram-2" defaultOpen={true}>
+                    {/* Super element */}
+                    {hasFather && (
+                        <div className="node-editor__relationship">
+                            <span className="node-editor__relationship-label">Super element</span>
+                            <button
+                                className="node-editor__relationship-link"
+                                onClick={() => dnode.father && openNode(dnode.father)}
+                            >
+                                <span>{node.father?.className || 'Parent'}</span>
+                                <i className="bi bi-arrow-up-right" />
+                            </button>
+                        </div>
+                    )}
+
+                    {/* Edge start/end (for edges) */}
+                    {isEdge && edgeStart && (
+                        <div className="node-editor__relationship">
+                            <span className="node-editor__relationship-label">Edge start</span>
+                            <button
+                                className="node-editor__relationship-link"
+                                onClick={() => openNode(edgeStart.id)}
+                            >
+                                <span>{getNodeLabel(edgeStart)}</span>
+                                <i className="bi bi-arrow-right" />
+                            </button>
+                        </div>
+                    )}
+
+                    {isEdge && edgeEnd && (
+                        <div className="node-editor__relationship">
+                            <span className="node-editor__relationship-label">Edge end</span>
+                            <button
+                                className="node-editor__relationship-link"
+                                onClick={() => openNode(edgeEnd.id)}
+                            >
+                                <span>{getNodeLabel(edgeEnd)}</span>
+                                <i className="bi bi-arrow-left" />
+                            </button>
+                        </div>
+                    )}
+
+                    {/* Incoming edges (for vertices) */}
+                    {edgesIn.length > 0 && (
+                        <div className="node-editor__edges">
+                            <span className="node-editor__edges-label">Incoming Edges</span>
+                            <div className="node-editor__edges-list">
+                                {edgesIn.slice(0, 10).map((edge: LVoidEdge, i: number) => {
+                                    const labels = getEdgeLabel(edge);
+                                    return (
+                                        <div
+                                            key={edge.id || i}
+                                            className="node-editor__edge"
+                                            onClick={() => openNode(edge.id)}
+                                        >
+                                            <span className="node-editor__edge-source">{labels.start}</span>
+                                            <i className="bi bi-arrow-right" />
+                                            <span className="node-editor__edge-target">{labels.end}</span>
+                                        </div>
+                                    );
+                                })}
+                                {edgesIn.length > 10 && (
+                                    <div className="node-editor__edges-more">
+                                        +{edgesIn.length - 10} more
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
+                </Section>
+            )}
+
+            {/* Section: Edge Anchors (for edges) */}
+            {isEdge && asEdge && (
+                <Section title="Edge Anchors" icon="pin-angle" defaultOpen={false}>
+                    <div className="node-editor__edge-anchors">
+                        <div className="node-editor__field-row">
+                            <span className="node-editor__field-label">Start anchor</span>
+                            <div className="node-editor__field-inputs">
+                                {asEdge.anchorStart && typeof asEdge.anchorStart === 'object' ? (
+                                    <SizeInput data={asEdge} field="anchorStart" />
+                                ) : (
+                                    <GenericInput data={asEdge} field="anchorStart" />
+                                )}
+                                <button
+                                    className="node-editor__btn-icon"
+                                    onClick={() => (asEdge.anchorStart = undefined as any)}
+                                    title="Clear anchor"
+                                >
+                                    <i className="bi bi-x-lg" />
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="node-editor__field-row">
+                            <span className="node-editor__field-label">End anchor</span>
+                            <div className="node-editor__field-inputs">
+                                {asEdge.anchorEnd && typeof asEdge.anchorEnd === 'object' ? (
+                                    <SizeInput data={asEdge} field="anchorEnd" />
+                                ) : (
+                                    <GenericInput data={asEdge} field="anchorEnd" />
+                                )}
+                                <button
+                                    className="node-editor__btn-icon"
+                                    onClick={() => (asEdge.anchorEnd = undefined as any)}
+                                    title="Clear anchor"
+                                >
+                                    <i className="bi bi-x-lg" />
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </Section>
+            )}
+
+            {/* Section: Node State */}
+            <Section
+                title="Node State"
+                icon="braces"
+                defaultOpen={false}
+                badge={hasState ? `${stateKeys.length} items` : undefined}
+            >
+                {hasState ? (
+                    <div className="node-editor__state-json">
+                        <ReactJson
+                            src={dnode._state}
+                            collapsed={1}
+                            collapseStringsAfterLength={20}
+                            displayDataTypes={true}
+                            displayObjectSize={true}
+                            enableClipboard={true}
+                            groupArraysAfterLength={100}
+                            indentWidth={4}
+                            name="state"
+                            iconStyle="triangle"
+                            quotesOnKeys={true}
+                            sortKeys={false}
+                            theme="rjv-default"
+                        />
+                    </div>
+                ) : (
+                    <div className="node-editor__empty-state">
+                        <i className="bi bi-code-slash" />
+                        <span>Empty</span>
+                    </div>
+                )}
+            </Section>
+
+            {/* Section: Anchors (for vertices) */}
+            {(isVertex || isGraph) && (
+                <Section
+                    title="Anchors"
+                    icon="bullseye"
+                    defaultOpen={true}
+                    badge={anchorEntries.length > 0 ? `${anchorEntries.length} points` : undefined}
+                >
+                    {/* Anchor Visualization */}
+                    <AnchorVisualization
+                        anchors={anchors}
+                        selectedAnchor={anchor}
+                        onSelect={setAnchor}
+                        node={node}
+                    />
+
+                    {/* Anchor Editor */}
+                    {anchorEntries.length > 0 && (
+                        <div className="node-editor__anchor-editor">
+                            <div className="node-editor__anchor-selector">
+                                <label>Edit anchor</label>
+                                <select
+                                    value={anchor}
+                                    onChange={(e) => setAnchor(e.target.value)}
+                                >
+                                    <option value="__jjAll">All</option>
+                                    <optgroup label="anchors">
+                                        {anchorEntries.map(([name]) => (
+                                            <option key={name} value={name}>
+                                                {name}
+                                            </option>
+                                        ))}
+                                    </optgroup>
+                                </select>
+                                <button
+                                    className="node-editor__btn-icon"
+                                    onClick={() => {
+                                        const name = U.increaseEndingNumber(
+                                            'anchor1',
+                                            false,
+                                            false,
+                                            (s) => s in anchors
+                                        );
+                                        node.anchors = {
+                                            ...anchors,
+                                            [name]: { x: 0.5, y: 0.5 } as any
+                                        };
+                                        setAnchor(name);
+                                    }}
+                                    title="Add new anchor"
+                                >
+                                    <i className="bi bi-plus-lg" />
+                                </button>
+                            </div>
+
+                            {/* Anchor input fields */}
+                            <div className="node-editor__anchor-fields">
+                                {anchor === '__jjAll'
+                                    ? anchorEntries.map(([k, a]) =>
+                                          anchorinput(k, a, node, anchors, anchorEntries, setAnchor, anchor)
+                                      )
+                                    : anchorinput(
+                                          anchor,
+                                          anchors[anchor] || { x: 0.5, y: 0.5 },
+                                          node,
+                                          anchors,
+                                          anchorEntries,
+                                          setAnchor,
+                                          anchor
+                                      )}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* No anchors - add button */}
+                    {anchorEntries.length === 0 && (
+                        <div className="node-editor__anchor-empty">
+                            <button
+                                className="node-editor__btn-add"
+                                onClick={() => {
+                                    node.anchors = {
+                                        ...anchors,
+                                        '0': { x: 0.5, y: 0.5 } as any
+                                    };
+                                    setAnchor('0');
+                                }}
+                            >
+                                <i className="bi bi-plus-lg" />
+                                <span>Add first anchor</span>
+                            </button>
+                        </div>
+                    )}
+                </Section>
+            )}
+        </div>
+    );
+}
+
+// ============================================
+// REDUX CONNECTION
+// ============================================
 
 function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
-    let ret: StateProps = {};
+    const ret: StateProps = {};
     const selected = state._lastSelected;
-    if(selected) {
+
+    if (selected) {
         const modelElement = state._lastSelected?.modelElement;
         const node = state._lastSelected?.node;
         const view = state._lastSelected?.view;
-        if(node && view) {
+
+        if (node && view) {
             ret.selected = {
                 node: L.fromPointer(node),
-                view: L.fromPointer(node),
-                modelElement: (modelElement) ? L.fromPointer(modelElement) : undefined
-            }
+                view: L.fromPointer(view),
+                modelElement: modelElement ? L.fromPointer(modelElement) : undefined
+            };
         }
     }
+
     return ret;
 }
 
@@ -420,7 +768,6 @@ function mapDispatchToProps(dispatch: Dispatch<any>): DispatchProps {
     const ret: DispatchProps = {};
     return ret;
 }
-
 
 export const NodeEditorConnected = connect<StateProps, DispatchProps, OwnProps, DState>(
     mapStateToProps,
@@ -430,6 +777,6 @@ export const NodeEditorConnected = connect<StateProps, DispatchProps, OwnProps, 
 export const NodeEditor = (props: OwnProps, children: ReactNode = []): ReactElement => {
     // @ts-ignore children
     return <NodeEditorConnected {...{...props, children}} />;
-}
-export default NodeEditor;
+};
 
+export default NodeEditor;
