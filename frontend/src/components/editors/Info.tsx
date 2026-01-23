@@ -37,14 +37,15 @@ function PropertiesToggle(props: { data: LModelElement; field: string }) {
     };
 
     return (
-        <div
-            className={`properties-toggle ${value ? 'active' : ''}`}
-            onClick={handleToggle}
-            role="switch"
-            aria-checked={value}
-        >
-            <div className="properties-toggle-thumb" />
-        </div>
+        <label className="toggle-switch">
+            <input
+                type="checkbox"
+                checked={value}
+                onChange={handleToggle}
+                aria-label={field}
+            />
+            <span className="toggle-slider" />
+        </label>
     );
 }
 
@@ -65,16 +66,14 @@ class builder {
                 </div>
             </div>
 
-            <div className={'form-field form-field--toggle'}>
-                <div className="form-field-main">
-                    <label className={'form-label'}>
-                        Read-only
-                    </label>
-                    <div className="form-hint">
-                        Prevent modifications to this element
+            <div className="form-toggle-container">
+                <div className="form-toggle-header">
+                    <div className="form-toggle-content">
+                        <h4 className="form-toggle-title">Read-only</h4>
+                        <p className="form-toggle-description">Prevent modifications to this element</p>
                     </div>
+                    <PropertiesToggle data={data} field={'__readonly'} />
                 </div>
-                <PropertiesToggle data={data} field={'__readonly'} />
             </div>
         </>);
     }
@@ -784,36 +783,186 @@ function PropertiesOverview(props: { data: LModel }) {
                 <h3 className="properties-section-title">Overview</h3>
             </div>
             <div className="properties-section-content">
-                <div className="overview-grid">
-                    {/* Packages */}
-                    <div className="stat-card" title="View packages">
-                        <div className="stat-circle">
-                            <span className="stat-value">{packages}</span>
+                <div className="overview-grid" style={{
+                    display: 'flex',
+                    gap: '16px',
+                    marginBottom: '16px',
+                    flexWrap: 'wrap',
+                    justifyContent: 'center'
+                }}>
+                    {/* Packages Card */}
+                    <div className="stat-card" title="View packages" style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: '12px 16px',
+                        background: '#ffffff',
+                        border: '1px solid #e5e7eb',
+                        borderRadius: '8px',
+                        width: '220px',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease'
+                    }}>
+                        <div style={{
+                            width: '40px',
+                            height: '40px',
+                            borderRadius: '50%',
+                            background: '#f1f5f9',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            marginBottom: '10px'
+                        }}>
+                            <i className="bi bi-folder" style={{
+                                fontSize: '18px',
+                                color: '#64748b'
+                            }} />
                         </div>
-                        <div className="stat-label">Packages</div>
+                        <div style={{
+                            fontSize: '20px',
+                            fontWeight: 700,
+                            color: '#111827',
+                            marginBottom: '2px'
+                        }}>{packages}</div>
+                        <div style={{
+                            fontSize: '13px',
+                            fontWeight: 500,
+                            color: '#6b7280',
+                            textAlign: 'center'
+                        }}>Packages</div>
                     </div>
 
-                    {/* Classes */}
-                    <div className="stat-card" title="View classes">
-                        <div className="stat-circle">
-                            <span className="stat-value">{classes}</span>
+                    {/* Classes Card */}
+                    <div className="stat-card" title="View classes" style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: '12px 16px',
+                        background: '#ffffff',
+                        border: '1px solid #e5e7eb',
+                        borderRadius: '8px',
+                        width: '220px',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease'
+                    }}>
+                        <div style={{
+                            width: '40px',
+                            height: '40px',
+                            borderRadius: '50%',
+                            background: '#f1f5f9',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            marginBottom: '10px'
+                        }}>
+                            <i className="bi bi-grid-3x3" style={{
+                                fontSize: '18px',
+                                color: '#64748b'
+                            }} />
                         </div>
-                        <div className="stat-label">Classes</div>
+                        <div style={{
+                            fontSize: '20px',
+                            fontWeight: 700,
+                            color: '#111827',
+                            marginBottom: '2px'
+                        }}>{classes}</div>
+                        <div style={{
+                            fontSize: '13px',
+                            fontWeight: 500,
+                            color: '#6b7280',
+                            textAlign: 'center'
+                        }}>Classes</div>
                     </div>
 
-                    {/* Enumerators */}
-                    <div className="stat-card" title="View enumerators">
-                        <div className="stat-circle">
-                            <span className="stat-value">{enumerators}</span>
+                    {/* Enumerators Card */}
+                    <div className="stat-card" title="View enumerators" style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: '12px 16px',
+                        background: '#ffffff',
+                        border: '1px solid #e5e7eb',
+                        borderRadius: '8px',
+                        width: '220px',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease'
+                    }}>
+                        <div style={{
+                            width: '40px',
+                            height: '40px',
+                            borderRadius: '50%',
+                            background: '#f1f5f9',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            marginBottom: '10px'
+                        }}>
+                            <i className="bi bi-list-ol" style={{
+                                fontSize: '18px',
+                                color: '#64748b'
+                            }} />
                         </div>
-                        <div className="stat-label">Enumerators</div>
+                        <div style={{
+                            fontSize: '20px',
+                            fontWeight: 700,
+                            color: '#111827',
+                            marginBottom: '2px'
+                        }}>{enumerators}</div>
+                        <div style={{
+                            fontSize: '13px',
+                            fontWeight: 500,
+                            color: '#6b7280',
+                            textAlign: 'center'
+                        }}>Enumerators</div>
                     </div>
                 </div>
 
-                {/* Analytics Hint */}
-                <div className="overview-hint">
-                    <i className="bi bi-info-circle" />
-                    <span>Additional metrics and insights available in Metamodel Analytics</span>
+                {/* Analytics Box with Link */}
+                <div className="overview-analytics-box" style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '10px 12px',
+                    background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '6px',
+                    marginTop: '16px'
+                }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <i className="bi bi-bar-chart-line" style={{
+                            fontSize: '16px',
+                            color: '#475569'
+                        }} />
+                        <span style={{
+                            fontSize: '12px',
+                            fontWeight: 500,
+                            color: '#334155'
+                        }}>Additional metrics and insights available in Metamodel Analytics</span>
+                    </div>
+                    <button style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '5px',
+                        padding: '6px 10px',
+                        background: '#334155',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '4px',
+                        fontSize: '12px',
+                        fontWeight: 500,
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease',
+                        whiteSpace: 'nowrap'
+                    }}
+                    onMouseOver={(e) => e.currentTarget.style.background = '#475569'}
+                    onMouseOut={(e) => e.currentTarget.style.background = '#334155'}
+                    onClick={() => console.log('Navigate to Metamodel Analytics')}>
+                        <span>View Analytics</span>
+                        <i className="bi bi-arrow-right" style={{ fontSize: '12px', color: 'white' }} />
+                    </button>
                 </div>
             </div>
         </div>
@@ -835,28 +984,78 @@ function PropertiesActions(props: {
                 <h3 className="properties-section-title">Actions</h3>
             </div>
             <div className="properties-section-content">
-                <div className="properties-actions">
+                <div className="properties-actions" style={{
+                    display: 'flex',
+                    gap: '8px',
+                    justifyContent: 'flex-end',
+                    marginBottom: '12px'
+                }}>
                     {onEdit && (
-                        <button className="properties-btn primary" onClick={onEdit}>
+                        <button className="properties-btn primary" onClick={onEdit} style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '6px',
+                            padding: '6px 12px',
+                            fontSize: '13px',
+                            fontWeight: 500,
+                            border: 'none',
+                            borderRadius: '4px',
+                            background: '#334155',
+                            color: 'white',
+                            cursor: 'pointer'
+                        }}>
                             <i className="bi bi-pencil" />
                             <span>Edit</span>
                         </button>
                     )}
                     {onDuplicate && (
-                        <button className="properties-btn secondary" onClick={onDuplicate}>
+                        <button className="properties-btn secondary" onClick={onDuplicate} style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '6px',
+                            padding: '6px 12px',
+                            fontSize: '13px',
+                            fontWeight: 500,
+                            border: 'none',
+                            borderRadius: '4px',
+                            background: '#64748b',
+                            color: 'white',
+                            cursor: 'pointer'
+                        }}>
                             <i className="bi bi-copy" />
                             <span>Duplicate</span>
                         </button>
                     )}
                     {onDelete && (
-                        <button className="properties-btn danger" onClick={onDelete}>
+                        <button className="properties-btn danger" onClick={onDelete} style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '6px',
+                            padding: '6px 12px',
+                            fontSize: '13px',
+                            fontWeight: 500,
+                            border: 'none',
+                            borderRadius: '4px',
+                            background: '#dc2626',
+                            color: 'white',
+                            cursor: 'pointer'
+                        }}>
                             <i className="bi bi-trash" />
                             <span>Delete</span>
                         </button>
                     )}
                 </div>
-                <div className="action-hint">
-                    <i className="bi bi-info-circle" />
+                <div className="action-hint" style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    fontSize: '12px',
+                    color: '#6b7280'
+                }}>
+                    <i className="bi bi-info-circle" style={{ fontSize: '14px', color: '#9ca3af' }} />
                     <span>These actions affect the selected element. Changes can be undone with Ctrl+Z.</span>
                 </div>
             </div>

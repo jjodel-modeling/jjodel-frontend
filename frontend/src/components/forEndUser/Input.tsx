@@ -215,8 +215,14 @@ export function InputComponent(props: AllProps) {
     else if (isBoolean) cursor = 'pointer';
     else cursor = 'auto';
 
+    // Add form design system classes based on input type
+    let formClass = '';
+    if (props.tag === 'textarea') formClass = 'form-textarea';
+    else if (props.tag === 'select') formClass = 'form-select';
+    else if (!isBoolean && type !== 'range') formClass = 'form-input';
+
     let inputProps: GObject = {...otherprops,
-        className: [props.inputClassName||'', css].join(' '),
+        className: [formClass, props.inputClassName||'', css].join(' '),
         style: (props.inputStyle || {}),
         spellCheck: (props as any).spellCkeck || false, readOnly, disabled: readOnly, type,
         value: serializeValue(value),

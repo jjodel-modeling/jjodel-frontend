@@ -18,14 +18,14 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 16px 12px;
+  padding: 16px 12px !important;
   background: #ffffff;
   border: 1px solid #e5e7eb;
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.2s ease;
-  min-width: 80px;
-  max-width: 100px;
+  min-width: 80px !important;
+  max-width: 100px !important;
 
   &:hover {
     border-color: #d1d5db;
@@ -39,22 +39,22 @@
 }
 
 .stat-circle {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 48px;
-  height: 48px;
-  background: #334155;
-  border-radius: 50%;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 48px !important;
+  height: 48px !important;
+  background: #334155 !important;
+  border-radius: 50% !important;
   margin-bottom: 8px;
   transition: all 0.2s ease;
   flex-shrink: 0;
 }
 
 .stat-value {
-  font-size: 20px;
-  font-weight: 700;
-  color: #ffffff;
+  font-size: 20px !important;
+  font-weight: 700 !important;
+  color: #ffffff !important;
   line-height: 1;
   font-variant-numeric: tabular-nums;
 }
@@ -178,12 +178,14 @@
 .form-textarea,
 input.form-input,
 textarea.form-textarea {
-  width: 100%;
-  padding: 12px 16px;
+  width: 100%; 
+  height: 40px!important;
+  padding: 14px 16px !important;
   background: #ffffff;
-  border: 1px solid #d1d5db;
+  border: 1px solid #d1d5db !important;
   border-radius: 8px;
-  font-size: 16px;
+  font-size: 16px !important;
+  line-height: 1.5 !important;
   color: #1f2937;
   transition: all 0.2s ease;
 
@@ -192,13 +194,13 @@ textarea.form-textarea {
   }
 
   &:hover {
-    border-color: #9ca3af;
+    border-color: #9ca3af !important;
   }
 
   &:focus {
-    outline: none;
-    border-color: #ef4444;
-    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+    outline: none !important;
+    border-color: #ef4444 !important;
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1) !important;
   }
 
   &:disabled {
@@ -227,15 +229,17 @@ textarea.form-textarea {
 .form-select,
 select.form-select {
   width: 100%;
-  padding: 12px 16px;  // ✅ Match input padding
+  padding: 14px 16px;  // ✅ Match input padding
   padding-right: 40px;  // Extra padding for arrow
   font-size: 16px;  // ✅ Match input font size
+  line-height: 1.5;  // ✅ Match input line-height
   color: #1f2937;
   background: #ffffff;
   border: 1px solid #d1d5db;  // ✅ Match input border
-  border-radius: 8px;  // ✅ Match input radius
+  border-radius: 8px !important;  // ✅ Match input radius
   cursor: pointer;
-  transition: border-color 0.2s ease;
+  transition: border-color 0.2s ease; 
+  
 
   // Custom arrow
   appearance: none;
@@ -470,27 +474,29 @@ select.form-select {
    ======================================== */
 .properties-actions,
 .action-buttons {
-  display: flex;
+  display: flex !important;
   gap: 8px;
-  justify-content: flex-end;
+  justify-content: flex-end !important;
   flex-wrap: wrap;
   margin-bottom: 12px;
 }
 
 .properties-btn,
 .btn {
-  display: inline-flex;
+  display: inline-flex !important;
   align-items: center;
   justify-content: center;
   gap: 6px;
-  padding: 6px 12px;
-  font-size: 13px;
+  padding: 6px 12px !important;
+  font-size: 13px !important;
   font-weight: 500;
   border: none;
   border-radius: 4px;
   cursor: pointer;
   transition: all 0.2s ease;
   white-space: nowrap;
+  width: auto !important;
+  max-width: none !important;
 
   i {
     font-size: 14px;

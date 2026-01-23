@@ -2,6 +2,7 @@ import React, {Dispatch, JSX, useState} from 'react';
 import './App.scss';
 import './styles/view.scss'; //
 import './styles/style.scss';
+import './styles/forms.scss';
 import {DState, DUser, Log, LUser, Pointer, R, SetRootFieldAction, statehistory, stateInitializer, Try, U} from "./joiner";
 import {connect} from "react-redux";
 import Loader from "./components/loader/Loader";
