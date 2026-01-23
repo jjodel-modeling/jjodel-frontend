@@ -1,0 +1,1521 @@
+/* ============================================
+   CONSOLE TAB V2 - IMPROVED UI/UX
+   Design tokens applied per CLAUDE.md
+   ============================================ */
+
+// Variables from design tokens
+$color-accent: #475569;
+$color-accent-hover: #334155;
+$color-accent-light: rgba(71, 85, 105, 0.1);
+$color-text-primary: #111418;
+$color-text-secondary: #6B7280;
+$color-text-tertiary: #9CA3AF;
+$color-bg-primary: #ffffff;
+$color-bg-secondary: #f8fafc;
+$color-bg-tertiary: #f1f5f9;
+$color-border: #e2e4e8;
+$color-border-hover: #d0d3d8;
+$color-error: #ef4444;
+$color-success: #10b981;
+
+$font-family: 'Inter Variable', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+$font-family-mono: 'JetBrains Mono', 'Monaco', 'Menlo', 'Consolas', monospace;
+
+$spacing-sm: 8px;
+$spacing-md: 12px;
+$spacing-lg: 16px;
+$spacing-xl: 20px;
+$spacing-2xl: 24px;
+
+$radius-sm: 4px;
+$radius-md: 6px;
+$radius-lg: 8px;
+
+$transition-fast: 150ms ease;
+$transition-normal: 250ms ease;
+
+/* ============================================
+   CONSOLE TAB CONTAINER
+   ============================================ */
+
+.console-tab-v2 {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: $color-bg-primary;
+  font-family: $font-family;
+  overflow: hidden;
+}
+
+/* ============================================
+   HEADER
+   ============================================ */
+
+.console-header {
+  padding: $spacing-lg;
+  border-bottom: 1px solid $color-border;
+  background: $color-bg-secondary;
+
+  &__title {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    margin: 0 0 4px 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: $color-text-primary;
+
+    i {
+      font-size: 18px;
+      color: $color-accent;
+    }
+  }
+
+  &__subtitle {
+    font-size: 13px;
+    color: $color-text-secondary;
+    margin-left: 26px; // Align with title text
+  }
+}
+
+/* ============================================
+   TOOLBAR
+   ============================================ */
+
+.console-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: $spacing-sm $spacing-md;
+  background: $color-bg-tertiary;
+  border-bottom: 1px solid $color-border;
+
+  &__left,
+  &__right {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+}
+
+.toolbar-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px $spacing-md;
+  background: transparent;
+  border: none;
+  border-radius: $radius-sm;
+  font-family: $font-family;
+  font-size: 13px;
+  font-weight: 500;
+  color: #475569;
+  cursor: pointer;
+  transition: all $transition-fast;
+
+  &:hover:not(:disabled) {
+    background: #e2e8f0;
+    color: #1e293b;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  &--icon-only {
+    padding: 6px;
+
+    span {
+      display: none;
+    }
+  }
+
+  i {
+    font-size: 14px;
+  }
+}
+
+.toolbar-divider {
+  width: 1px;
+  height: 20px;
+  margin: 0 4px;
+  background: $color-border;
+}
+
+.toolbar-info {
+  font-size: 12px;
+  color: $color-text-tertiary;
+  margin-left: $spacing-sm;
+}
+
+/* ============================================
+   CONSOLE BODY (HISTORY)
+   ============================================ */
+
+.console-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0;
+  background: $color-bg-primary;
+}
+
+.console-history {
+  height: 100%;
+  padding: $spacing-lg;
+
+  &__empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: #94a3b8;
+    text-align: center;
+
+    i {
+      font-size: 48px;
+      margin-bottom: $spacing-lg;
+      opacity: 0.5;
+    }
+
+    p {
+      margin: 0 0 $spacing-sm 0;
+      font-size: 16px;
+      font-weight: 600;
+      color: $color-text-secondary;
+    }
+
+    span {
+      font-size: 14px;
+      color: $color-text-tertiary;
+    }
+  }
+
+  &__hint {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    margin-top: $spacing-lg;
+    padding: 12px 16px;
+    background: #dbeafe; // Light blue background (blue-100)
+    border-left: 4px solid #3b82f6; // Blue left border (blue-500)
+    border-radius: 0; // Flat design (no rounded corners)
+    font-size: 14px;
+    line-height: 1.6;
+    color: #1e40af; // Dark blue text (blue-800)
+
+    i {
+      flex-shrink: 0;
+      font-size: 20px;
+      line-height: 1.5;
+      color: #3b82f6; // Blue icon (matches border)
+    }
+
+    code {
+      padding: 2px 6px;
+      background: #bfdbfe; // Slightly darker blue (blue-200)
+      border: none;
+      border-radius: 3px;
+      font-family: $font-family-mono;
+      font-size: 13px;
+      color: #1e3a8a; // Very dark blue (blue-900)
+    }
+  }
+}
+
+/* ============================================
+   CONSOLE ENTRY
+   ============================================ */
+
+.console-entry {
+  margin-bottom: 4px; // Reduced for grouping
+
+  &--command {
+    position: relative; // For timestamp positioning
+    display: flex;
+    gap: $spacing-sm;
+    padding: $spacing-sm $spacing-md;
+    background: #ffffff; // ✅ Same as result (unified background)
+    border: 1px solid $color-border; // Single border around unified panel
+    border-radius: $radius-md $radius-md 0 0; // Rounded top for integrated panel
+    // NO border-bottom - seamless integration with result ✅
+  }
+
+  // Visual grouping: reduce border radius where command connects to its result
+  &--result,
+  &--error,
+  &--info,
+  &--help {
+    margin-bottom: 20px; // Space after each group
+  }
+
+  // When a result/error/info/help follows a command, integrate them into single panel
+  &--command + &--result,
+  &--command + &--error,
+  &--command + &--info,
+  &--command + &--help {
+    margin-top: -1px; // Overlap borders to merge panels
+    border-radius: 0 0 $radius-md $radius-md; // Rounded bottom only
+  }
+
+  // Standalone command (no result following) - fully rounded
+  &--command:not(:has(+ .console-entry--result)):not(:has(+ .console-entry--error)):not(:has(+ .console-entry--info)):not(:has(+ .console-entry--help)) {
+    border-radius: $radius-md; // Fully rounded when standalone
+    border-bottom: 1px solid $color-border; // Keep bottom border
+  }
+
+  // Add gap between command-result groups
+  &--result + &--command,
+  &--error + &--command,
+  &--info + &--command,
+  &--help + &--command {
+    margin-top: 20px;
+  }
+
+  &__prompt {
+    flex-shrink: 0;
+    font-family: $font-family-mono;
+    font-size: 16px;
+    font-weight: 400; // ✅ Normal weight (not bold)
+    color: #64748b; // ✅ Gray (not blue)
+    line-height: 1.5;
+    user-select: none;
+  }
+
+  &__code {
+    flex: 1;
+    margin: 0;
+    padding: 0;
+    font-family: $font-family-mono;
+    font-size: 14px;
+    color: $color-text-primary;
+    white-space: pre-wrap;
+    word-break: break-word;
+    line-height: 1.5;
+
+    // Enable ligatures for JetBrains Mono
+    font-variant-ligatures: normal;
+    font-feature-settings: 'liga' 1, 'calt' 1;
+  }
+
+  // Timestamp button (appears on command hover)
+  .command-timestamp {
+    position: absolute;
+    top: 8px;
+    right: 12px;
+    padding: 2px 8px;
+    background: transparent;
+    border: none;
+    border-radius: $radius-sm;
+    font-size: 11px;
+    font-family: $font-family-mono;
+    color: #94a3b8;
+    cursor: pointer;
+    opacity: 0;
+    transition: all $transition-normal;
+
+    &:hover {
+      background: #f1f5f9;
+      color: #64748b;
+    }
+  }
+
+  &--command:hover .command-timestamp {
+    opacity: 1;
+  }
+
+  &--result,
+  &--error,
+  &--info,
+  &--help {
+    border: 1px solid $color-border;
+    border-top: none; // Connect to command above
+    border-radius: $radius-md;
+    overflow: hidden;
+  }
+
+  &--error {
+    border-color: #fecaca;
+    background: #fef2f2;
+  }
+
+  // Info entry (for /examples, /context, /shortcuts)
+  &--info {
+    background: #ffffff;
+  }
+
+  &__info-content {
+    margin: 0;
+    padding: $spacing-lg;
+    font-family: $font-family-mono;
+    font-size: 13px;
+    line-height: 1.8;
+    color: $color-text-primary;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  // Help entry (for /help with clickable commands)
+  &--help {
+    background: #ffffff;
+    padding: 0;
+  }
+
+  &__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: $spacing-sm $spacing-md;
+    background: $color-bg-tertiary;
+    border-bottom: 1px solid $color-border;
+
+    .console-entry--error & {
+      background: #fee2e2;
+      border-bottom-color: #fecaca;
+    }
+  }
+
+  &__toggle {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 8px;
+    background: transparent;
+    border: none;
+    border-radius: $radius-sm;
+    font-size: 13px;
+    font-weight: 600;
+    color: #64748b;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    &:hover {
+      background: rgba(71, 85, 105, 0.08);
+      color: #334155;
+    }
+
+    &:active {
+      background: rgba(71, 85, 105, 0.12);
+    }
+
+    i {
+      font-size: 13px;
+      transition: transform $transition-fast;
+    }
+  }
+
+  &__actions {
+    display: flex;
+    gap: 4px;
+  }
+
+  &__result {
+    margin: 0;
+    padding: $spacing-md;
+    font-family: $font-family-mono;
+    font-size: 13px;
+    line-height: 1.6;
+    color: $color-text-primary;
+    white-space: pre-wrap;
+    word-break: break-word;
+    overflow-x: auto;
+
+    .error-text {
+      color: $color-error;
+    }
+
+    // JSON Syntax Highlighting
+    .json-key {
+      color: #0066cc; // Blue for keys
+      font-weight: 500;
+    }
+
+    .json-string {
+      color: #22863a; // Green for string values
+    }
+
+    .json-number {
+      color: #005cc5; // Dark blue for numbers
+    }
+
+    .json-boolean {
+      color: #d73a49; // Red for true/false
+    }
+
+    .json-null {
+      color: #6f42c1; // Purple for null
+      font-style: italic;
+    }
+
+    .json-bracket {
+      color: #6a737d; // Gray for brackets
+    }
+
+    .json-punctuation {
+      color: #6a737d; // Gray for commas
+    }
+  }
+}
+
+/* ============================================
+   COLLAPSIBLE JSON VIEWER
+   ============================================ */
+
+.json-viewer {
+  font-family: $font-family-mono;
+  font-size: 13px;
+  line-height: 1.6;
+
+  // Enable ligatures
+  font-variant-ligatures: normal;
+  font-feature-settings: 'liga' 1, 'calt' 1;
+}
+
+.json-collapsible {
+  display: inline-block;
+}
+
+.json-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  margin-right: 4px;
+  background: transparent;
+  border: none;
+  color: #64748b;
+  cursor: pointer;
+  border-radius: 2px;
+  transition: all $transition-fast;
+  vertical-align: middle;
+
+  &:hover {
+    background: rgba(100, 116, 139, 0.1);
+    color: #334155;
+  }
+
+  i {
+    font-size: 10px;
+    transition: transform $transition-fast;
+  }
+}
+
+.json-content {
+  margin-left: 20px;
+  display: block;
+}
+
+.json-line {
+  display: block;
+  padding-left: 4px;
+}
+
+.json-collapsed {
+  color: #94a3b8;
+  font-style: italic;
+  margin: 0 6px;
+  font-size: 12px;
+}
+
+.json-colon {
+  color: #64748b;
+  margin: 0 4px 0 0;
+}
+
+.json-comma {
+  color: #64748b;
+}
+
+.action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: $radius-sm;
+  color: #64748b;
+  cursor: pointer;
+  transition: all $transition-fast;
+
+  &:hover {
+    background: #e2e8f0;
+    color: #475569;
+  }
+
+  i {
+    font-size: 14px;
+  }
+
+  &.active {
+    background: #e2e8f0;
+    color: #475569;
+  }
+}
+
+/* ============================================
+   RESULT SEARCH
+   ============================================ */
+
+.result-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: #f8fafc;
+  border-top: 1px solid #e2e8f0;
+  border-bottom: 1px solid #e2e8f0;
+
+  .search-input {
+    flex: 1;
+    padding: 6px 12px;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    font-size: 13px;
+    font-family: $font-family-mono;
+    color: $color-text-primary;
+
+    &:focus {
+      outline: none;
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+
+    &::placeholder {
+      color: #94a3b8;
+    }
+  }
+
+  .search-close {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    background: transparent;
+    border: none;
+    border-radius: $radius-sm;
+    color: #64748b;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    &:hover {
+      background: #e2e8f0;
+      color: #475569;
+    }
+
+    i {
+      font-size: 14px;
+    }
+  }
+}
+
+.search-highlight {
+  background: #fef08a;
+  color: #854d0e;
+  border-radius: 2px;
+  padding: 0 2px;
+  font-weight: 500;
+}
+
+/* ============================================
+   CONSOLE INPUT
+   ============================================ */
+
+.console-input-wrapper {
+  padding: $spacing-lg;
+  background: $color-bg-primary;
+  border-top: 1px solid $color-border;
+}
+
+.console-input {
+  position: relative;
+  display: flex;
+  gap: $spacing-sm;
+  padding: $spacing-md $spacing-lg;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: $radius-md;
+  transition: all $transition-fast;
+
+  &:focus-within {
+    border-color: $color-accent;
+    box-shadow: 0 0 0 3px $color-accent-light;
+  }
+
+  &__prompt {
+    flex-shrink: 0;
+    font-family: $font-family-mono;
+    font-size: 14px;
+    font-weight: 400; // ✅ Normal weight (not bold)
+    color: #64748b; // ✅ Gray (not blue)
+    padding-top: 2px; // Align with first line of textarea
+    line-height: 1.5;
+    user-select: none;
+  }
+
+  &__field {
+    flex: 1;
+    min-height: 32px;
+    max-height: 200px;
+    padding: 0;
+    border: none;
+    outline: none;
+    font-family: $font-family-mono;
+    font-size: 14px;
+    color: $color-text-primary;
+    background: transparent;
+    resize: none;
+    line-height: 32px;
+
+    // Enable ligatures for JetBrains Mono
+    font-variant-ligatures: normal;
+    font-feature-settings: 'liga' 1, 'calt' 1;
+
+    &::placeholder {
+      color: #94a3b8;
+    }
+  }
+
+  &__suggestions {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    max-height: 400px;
+    overflow-y: auto;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: $radius-md;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    z-index: 100;
+  }
+}
+
+// Autocomplete suggestions sections
+.suggestions-section {
+  &:not(:last-child) {
+    border-bottom: 1px solid #e2e8f0;
+  }
+
+  &__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    background: #f8fafc;
+    border-bottom: 1px solid #e2e8f0;
+
+    .label {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #64748b;
+    }
+
+    .count {
+      font-size: 11px;
+      font-weight: 600;
+      color: #94a3b8;
+    }
+  }
+}
+
+.suggestions-list {
+  padding: 4px;
+}
+
+.suggestion-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 12px;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  font-size: 13px;
+  font-family: $font-family-mono;
+  color: #1e293b;
+  text-align: left;
+  cursor: pointer;
+  transition: all $transition-fast;
+
+  // Enable ligatures for JetBrains Mono
+  font-variant-ligatures: normal;
+  font-feature-settings: 'liga' 1, 'calt' 1;
+
+  &:hover {
+    background: #f1f5f9;
+  }
+
+  &--active {
+    background: #f1f5f9;
+  }
+
+  // Most used items have star icon
+  &--top {
+    i {
+      font-size: 10px;
+      color: #fbbf24; // Gold star
+    }
+  }
+
+  .suggestion-text {
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
+.show-more-btn {
+  display: block;
+  width: 100%;
+  padding: 8px 12px;
+  background: #f8fafc;
+  border: none;
+  border-top: 1px solid #e2e8f0;
+  font-size: 12px;
+  font-weight: 500;
+  color: #3b82f6;
+  text-align: center;
+  cursor: pointer;
+  transition: all $transition-fast;
+
+  &:hover {
+    background: #f1f5f9;
+    color: #2563eb;
+  }
+}
+
+/* ============================================
+   CONSOLE FOOTER (COLLAPSIBLE SECTIONS)
+   ============================================ */
+
+.console-footer {
+  padding: 0 $spacing-lg $spacing-lg $spacing-lg;
+  max-height: 300px; // Default, overridden by inline style when resizable
+  overflow-y: auto;
+  background: $color-bg-primary;
+  flex-shrink: 0; // Don't shrink when resizing
+}
+
+// Footer resize handle (specific styling for console footer)
+.console-footer-resize-handle {
+  // Inherits styles from .resize-handle
+  // This class allows for console-specific overrides if needed
+  border-top: none;
+}
+
+/* ============================================
+   COLLAPSIBLE SECTION
+   ============================================ */
+
+.collapsible-section {
+  margin-bottom: $spacing-md;
+  border: 1px solid $color-border;
+  border-radius: $radius-md;
+  overflow: hidden;
+
+  &__header {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    width: 100%;
+    padding: $spacing-md $spacing-lg;
+    background: $color-bg-tertiary;
+    border: none;
+    font-family: $font-family;
+    font-size: 14px;
+    font-weight: 600;
+    color: #475569;
+    text-align: left;
+    cursor: pointer;
+    transition: background $transition-fast;
+
+    &:hover {
+      background: #e2e8f0;
+    }
+
+    i {
+      font-size: 12px;
+      transition: transform $transition-fast;
+    }
+
+    span {
+      flex: 1;
+    }
+
+    .count {
+      margin-left: auto;
+      font-size: 13px;
+      font-weight: 500;
+      color: #94a3b8;
+    }
+  }
+
+  &__content {
+    padding: $spacing-md;
+    animation: slideDown 0.2s ease;
+  }
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    max-height: 0;
+  }
+  to {
+    opacity: 1;
+    max-height: 500px;
+  }
+}
+
+/* ============================================
+   CONTEXT KEYS
+   ============================================ */
+
+.context-keys-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $spacing-sm;
+}
+
+.context-key {
+  padding: 6px $spacing-md;
+  background: linear-gradient(135deg, #64748b 0%, #475569 100%);
+  border: none;
+  border-radius: $radius-sm;
+  font-family: $font-family-mono;
+  font-size: 13px;
+  color: #ffffff;
+  cursor: pointer;
+  transition: all $transition-fast;
+
+  // Enable ligatures for JetBrains Mono
+  font-variant-ligatures: normal;
+  font-feature-settings: 'liga' 1, 'calt' 1;
+
+  &:hover {
+    background: linear-gradient(135deg, #475569 0%, #334155 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  }
+
+  &--show-more,
+  &--show-less {
+    background: #e2e8f0;
+    color: #475569;
+
+    &:hover {
+      background: #cbd5e1;
+      transform: translateY(-1px);
+    }
+  }
+}
+
+/* ============================================
+   SHORTCUTS
+   ============================================ */
+
+.shortcuts-list {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+}
+
+.shortcut-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: $spacing-md;
+  background: $color-bg-tertiary;
+  border: 1px solid $color-border;
+  border-radius: $radius-md;
+  text-align: left;
+  cursor: pointer;
+  transition: all $transition-fast;
+
+  &:hover {
+    border-color: $color-accent;
+    background: #ffffff;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+  }
+
+  &__label {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    font-size: 13px;
+    font-weight: 600;
+    color: $color-text-primary;
+
+    i {
+      font-size: 14px;
+      color: $color-accent;
+    }
+  }
+
+  &__code {
+    font-family: $font-family-mono;
+    font-size: 12px;
+    color: $color-text-secondary;
+    background: #ffffff;
+    padding: 6px $spacing-sm;
+    border-radius: $radius-sm;
+    border: 1px solid $color-border;
+  }
+}
+
+/* ============================================
+   HELP COMMAND OUTPUT (Clickable Commands)
+   ============================================ */
+
+.help-output {
+  padding: $spacing-lg;
+  font-family: $font-family;
+  font-size: 13px;
+  line-height: 1.8;
+
+  h3 {
+    margin: 0 0 $spacing-md 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: $color-text-primary;
+  }
+
+  .commands-list {
+    margin-bottom: $spacing-2xl;
+  }
+
+  .command-row {
+    display: flex;
+    align-items: baseline;
+    margin-bottom: 6px;
+    padding: 4px 0;
+    transition: background $transition-fast;
+
+    &:hover {
+      background: $color-bg-secondary;
+      margin-left: -8px;
+      margin-right: -8px;
+      padding-left: 8px;
+      padding-right: 8px;
+      border-radius: $radius-sm;
+    }
+  }
+
+  .command-names {
+    display: flex;
+    align-items: baseline;
+    min-width: 220px;
+  }
+
+  .command-link {
+    padding: 0;
+    background: transparent;
+    border: none;
+    font-family: $font-family-mono;
+    font-size: 13px;
+    color: #3b82f6;
+    text-decoration: underline;
+    text-decoration-style: dotted;
+    text-underline-offset: 2px;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    &:hover {
+      color: #2563eb;
+      text-decoration-style: solid;
+      text-decoration-thickness: 2px;
+    }
+
+    &:active {
+      color: #1d4ed8;
+    }
+  }
+
+  .command-separator {
+    color: $color-text-tertiary;
+    margin: 0 2px;
+  }
+
+  .command-description {
+    color: $color-text-secondary;
+  }
+
+  .tips-list {
+    margin: 0;
+    padding-left: 20px;
+    list-style-type: disc;
+
+    li {
+      margin-bottom: 4px;
+      color: $color-text-secondary;
+    }
+  }
+
+  .inline-code {
+    padding: 2px 6px;
+    background: $color-bg-tertiary;
+    border: 1px solid $color-border;
+    border-radius: $radius-sm;
+    font-family: $font-family-mono;
+    font-size: 12px;
+    color: $color-text-primary;
+  }
+
+  kbd {
+    display: inline-block;
+    padding: 2px 6px;
+    background: $color-bg-secondary;
+    border: 1px solid #cbd5e1;
+    border-radius: $radius-sm;
+    font-family: $font-family-mono;
+    font-size: 11px;
+    font-weight: 600;
+    color: $color-text-secondary;
+    box-shadow: 0 1px 0 rgba(0, 0, 0, 0.05);
+  }
+}
+
+/* ============================================
+   DARK MODE (if applicable)
+   ============================================ */
+
+@media (prefers-color-scheme: dark) {
+  .console-tab-v2 {
+    background: #0f172a;
+  }
+
+  .console-header {
+    background: #1e293b;
+    border-bottom-color: #334155;
+
+    &__title {
+      color: #f1f5f9;
+    }
+
+    &__subtitle {
+      color: #64748b;
+    }
+  }
+
+  .console-toolbar {
+    background: #1e293b;
+    border-bottom-color: #334155;
+  }
+
+  .toolbar-btn {
+    color: #cbd5e1;
+
+    &:hover:not(:disabled) {
+      background: #334155;
+      color: #f1f5f9;
+    }
+  }
+
+  .toolbar-divider {
+    background: #334155;
+  }
+
+  .console-body {
+    background: #0f172a;
+  }
+
+  .console-history__empty {
+    color: #64748b;
+
+    p {
+      color: #94a3b8;
+    }
+
+    span {
+      color: #64748b;
+    }
+  }
+
+  .console-history__hint {
+    background: #1e3a8a; // Dark blue background (blue-900)
+    border-left-color: #60a5fa; // Lighter blue border (blue-400)
+    color: #bfdbfe; // Light blue text (blue-200)
+
+    i {
+      color: #60a5fa; // Lighter blue icon (blue-400)
+    }
+
+    code {
+      background: #1e40af; // Darker background (blue-800)
+      color: #dbeafe; // Very light blue (blue-100)
+    }
+  }
+
+  .console-entry {
+    &--command {
+      background: #0f172a; // ✅ Same as result (unified background in dark mode)
+      border-color: #334155; // Dark mode border
+      // NO border-bottom - seamless integration ✅
+    }
+
+    &__prompt {
+      color: #94a3b8; // ✅ Gray in dark mode (not blue)
+    }
+
+    &__code {
+      color: #f1f5f9;
+    }
+
+    // Timestamp - Dark Mode
+    .command-timestamp {
+      color: #64748b;
+
+      &:hover {
+        background: #334155;
+        color: #94a3b8;
+      }
+    }
+
+    &--result,
+    &--error,
+    &--info,
+    &--help {
+      border-color: #334155;
+    }
+
+    &--error {
+      border-color: #991b1b;
+      background: #450a0a;
+    }
+
+    &--info {
+      background: #0f172a;
+    }
+
+    &__info-content {
+      color: #f1f5f9;
+    }
+
+    &--help {
+      background: #0f172a;
+    }
+
+    &__header {
+      background: #1e293b;
+      border-bottom-color: #334155;
+
+      .console-entry--error & {
+        background: #7f1d1d;
+        border-bottom-color: #991b1b;
+      }
+    }
+
+    &__toggle {
+      color: #94a3b8;
+
+      &:hover {
+        background: rgba(148, 163, 184, 0.1);
+        color: #f1f5f9;
+      }
+
+      &:active {
+        background: rgba(148, 163, 184, 0.15);
+      }
+    }
+
+    &__result {
+      color: #f1f5f9;
+      background: #0f172a;
+
+      // JSON Syntax Highlighting - Dark Mode
+      .json-key {
+        color: #58a6ff; // Lighter blue for keys
+      }
+
+      .json-string {
+        color: #7ee787; // Lighter green for string values
+      }
+
+      .json-number {
+        color: #79c0ff; // Light blue for numbers
+      }
+
+      .json-boolean {
+        color: #ff7b72; // Light red for true/false
+      }
+
+      .json-null {
+        color: #d2a8ff; // Light purple for null
+      }
+
+      .json-bracket {
+        color: #8b949e; // Light gray for brackets
+      }
+
+      .json-punctuation {
+        color: #8b949e; // Light gray for commas
+      }
+    }
+  }
+
+  // Collapsible JSON - Dark Mode
+  .json-toggle {
+    color: #94a3b8;
+
+    &:hover {
+      background: rgba(148, 163, 184, 0.1);
+      color: #cbd5e1;
+    }
+  }
+
+  .json-collapsed {
+    color: #64748b;
+  }
+
+  .json-colon,
+  .json-comma {
+    color: #8b949e;
+  }
+
+  .action-btn {
+    color: #94a3b8;
+
+    &:hover {
+      background: #334155;
+      color: #cbd5e1;
+    }
+
+    &.active {
+      background: #334155;
+      color: #cbd5e1;
+    }
+  }
+
+  // Result Search - Dark Mode
+  .result-search {
+    background: #1e293b;
+    border-top-color: #334155;
+    border-bottom-color: #334155;
+
+    .search-input {
+      background: #0f172a;
+      border-color: #334155;
+      color: #f1f5f9;
+
+      &:focus {
+        border-color: #60a5fa;
+        box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.1);
+      }
+
+      &::placeholder {
+        color: #64748b;
+      }
+    }
+
+    .search-close {
+      color: #94a3b8;
+
+      &:hover {
+        background: #334155;
+        color: #cbd5e1;
+      }
+    }
+  }
+
+  .search-highlight {
+    background: #854d0e;
+    color: #fef08a;
+  }
+
+  .console-input-wrapper {
+    background: #0f172a;
+    border-top-color: #334155;
+  }
+
+  .console-input {
+    background: #1e293b;
+    border-color: #334155;
+
+    &:focus-within {
+      border-color: #60a5fa;
+      box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.1);
+    }
+
+    &__prompt {
+      color: #94a3b8; // ✅ Gray in dark mode (not blue)
+    }
+
+    &__field {
+      color: #f1f5f9;
+
+      &::placeholder {
+        color: #64748b;
+      }
+    }
+
+    &__suggestions {
+      background: #1e293b;
+      border-color: #334155;
+
+      .suggestions-section {
+        &:not(:last-child) {
+          border-bottom-color: #334155; // Dark mode section divider
+        }
+
+        &__header {
+          background: #1e293b;
+
+          .label {
+            color: #94a3b8; // Lighter gray for section label
+          }
+
+          .count {
+            color: #64748b;
+          }
+        }
+      }
+
+      .suggestion-item {
+        color: #cbd5e1; // Light text for suggestions
+
+        &:hover {
+          background: #334155;
+          color: #f1f5f9;
+        }
+
+        &--active {
+          background: #334155;
+        }
+
+        &--top i {
+          color: #fbbf24; // Keep same gold star color in dark mode
+        }
+      }
+
+      .show-more-btn {
+        background: #1e293b;
+        color: #60a5fa; // Blue accent for dark mode
+
+        &:hover {
+          background: #334155;
+          color: #93c5fd; // Lighter blue on hover
+        }
+      }
+    }
+  }
+
+  .console-footer {
+    background: #0f172a;
+  }
+
+  .console-footer-resize-handle {
+    border-top-color: #334155; // Dark mode border
+  }
+
+  .collapsible-section {
+    border-color: #334155;
+
+    &__header {
+      background: #1e293b;
+      color: #cbd5e1;
+
+      &:hover {
+        background: #334155;
+      }
+
+      .count {
+        color: #64748b;
+      }
+    }
+  }
+
+  .context-key {
+    background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);
+    color: #0f172a;
+
+    &:hover {
+      background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    }
+
+    &--show-more,
+    &--show-less {
+      background: #334155;
+      color: #cbd5e1;
+
+      &:hover {
+        background: #475569;
+      }
+    }
+  }
+
+  .shortcuts-list {
+    .shortcut-item {
+      background: #1e293b;
+      border-color: #334155;
+
+      &:hover {
+        border-color: #60a5fa;
+        background: #334155;
+      }
+
+      &__label {
+        color: #f1f5f9;
+      }
+
+      &__code {
+        background: #0f172a;
+        color: #94a3b8;
+        border-color: #334155;
+      }
+    }
+  }
+
+  // Help output (clickable commands)
+  .help-output {
+    h3 {
+      color: #f1f5f9;
+    }
+
+    .command-row:hover {
+      background: #1e293b;
+    }
+
+    .command-link {
+      color: #60a5fa;
+
+      &:hover {
+        color: #93c5fd;
+      }
+
+      &:active {
+        color: #3b82f6;
+      }
+    }
+
+    .command-separator,
+    .command-description,
+    .tips-list li {
+      color: #94a3b8;
+    }
+
+    .inline-code {
+      background: #1e293b;
+      border-color: #334155;
+      color: #e0f2fe;
+    }
+
+    kbd {
+      background: #1e293b;
+      border-color: #475569;
+      color: #cbd5e1;
+    }
+  }
+}

@@ -110,19 +110,11 @@
 .console h1 {
   font-size: 1.1em !important;
   color: var(--color-accent);
-  padding-bottom: var(--space-2) !important;
-  border-bottom: 1px solid var(--color-border-primary) !important;
-  margin-bottom: var(--space-4) !important;
+  
+  
+
   padding-top: 0 !important;
 
-  &::before {
-    position: relative;
-    top: 2px;
-    font-size: 1.15em;
-    margin-right: var(--space-2);
-    font-family: bootstrap-icons;
-    content: "\F789";
-  }
 }
 
 .properties-tab hr {
@@ -448,9 +440,10 @@
 
 .properties-header-top {
   display: flex;
-  align-items: center;
+  align-items: center!important;
   gap: var(--space-2);
-  margin-bottom: var(--space-1);
+  height: 47px;
+
 }
 
 .properties-header-name {
@@ -485,6 +478,8 @@
   }
 
   &.class {
+      font-size: 11px;
+    border: none!important;
     background-color: #fef3c7; // Amber for class
     color: #92400e;
   }
@@ -981,4 +976,56 @@
   position: absolute;
   top: 2px;
   left: 2px;
+}
+
+/* ========================================
+   GENERATE WITH AI BUTTON
+   ======================================== */
+.btn-generate-ai {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background-color: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  font-weight: 500;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  margin-left: auto;
+
+  .bi-magic {
+    font-size: 14px;
+    color: #7c3aed;
+  }
+
+  &:hover {
+    background-color: #e2e8f0;
+    border-color: #cbd5e1;
+  }
+
+  &:active {
+    transform: scale(0.98);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+// Dark mode support
+@media (prefers-color-scheme: dark) {
+  .btn-generate-ai {
+    background-color: #1e293b;
+    border-color: #334155;
+    color: #cbd5e1;
+
+    &:hover {
+      background-color: #334155;
+      border-color: #475569;
+    }
+  }
 }

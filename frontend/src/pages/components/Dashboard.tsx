@@ -30,13 +30,7 @@ import colors111 from '../../static/img/colors-111.png';
 
 import useQuery from '../../hooks/useQuery';
 
-import {
-    TbSquareRoundedLetterM,
-    TbSquareRoundedLetterMFilled,
-    TbSquareRoundedLetterV,
-    TbSquareRoundedLetterVFilled,
-    TbSquareRoundedLetterE
-} from "react-icons/tb";
+import { ElementBadge } from '../../components/common/ElementBadge';
 import DockManager from '../../components/abstract/DockManager';
 import Dock from "../../components/abstract/Dock";
 import {CSS_Units} from "../../view/viewElement/view";
@@ -416,7 +410,7 @@ function ProjectCatalog(props: ProjectProps) {
                 return (
                 <div className="row data" key={mm.id}>
                     <div className={'col-4 '} onClick={async () => await DockManager.open2(mm)}>
-                        <TbSquareRoundedLetterMFilled style={{fontSize: '1.5em'}}/> {name}</div>
+                        <ElementBadge type="metamodel" /> {name}</div>
                     <div className={'col-2 artifact-type'}>Metamodel</div>
                     <div className={'buttons'}>
                         <CommandBar noBorder={true} style={{marginBottom: '0'}}>
@@ -437,7 +431,7 @@ function ProjectCatalog(props: ProjectProps) {
                 return (
                 <div className="row data" key={model.id}>
                     <div className={'col-4 '} onClick={async () => await DockManager.open2(model)}>
-                        <TbSquareRoundedLetterM style={{fontSize: '1.5em'}}/> {name}</div>
+                        <ElementBadge type="model" /> {name}</div>
                     <div className={'col-2 artifact-type'}>Model</div>
                     <div className={'buttons'}>
                         <CommandBar noBorder={true} style={{marginBottom: '0'}}>
@@ -457,9 +451,7 @@ function ProjectCatalog(props: ProjectProps) {
                 let name = vp?.name;
                 return (!vp ? <div key={name||'error_'+vp}>errorvp: {vp + ''}</div> :
                     <div className="row data viewpoint" key={name}>
-                        <div className={'col-4'}>{vp.isOverlay ?
-                            <TbSquareRoundedLetterVFilled style={{fontSize: '1.5em'}}/> :
-                            <TbSquareRoundedLetterV style={{fontSize: '1.5em'}}/>} {name}</div>
+                        <div className={'col-4'}><ElementBadge type="viewpoint" /> {name}</div>
                         <div className={'col-2 artifact-type'}>Viewpoint</div>
                         <div className={'buttons'}>
                             <CommandBar noBorder={true} style={{marginBottom: '0'}}>
@@ -478,19 +470,19 @@ function ProjectCatalog(props: ProjectProps) {
                 <h1>Legenda</h1>
                 <div className={'row'}>
                     <div className={'col'}>
-                        <TbSquareRoundedLetterMFilled style={{fontSize: '1.3em'}}/> Metamodels
+                        <ElementBadge type="metamodel" /> Metamodels
                     </div>
                     <div className={'col'}>
-                        <TbSquareRoundedLetterM style={{fontSize: '1.3em'}}/> Models
+                        <ElementBadge type="model" /> Models
                     </div>
                     <div className={'col'}>
-                        <TbSquareRoundedLetterVFilled style={{fontSize: '1.3em'}}/> Viewpoints
+                        <ElementBadge type="viewpoint" /> Viewpoints
                     </div>
                     <div className={'col'}>
-                        <TbSquareRoundedLetterV style={{fontSize: '1.3em'}}/> Overlay Viewpoints
+                        <ElementBadge type="viewpoint" /> Overlay Viewpoints
                     </div>
                     <div className={'col disabled'}>
-                        <TbSquareRoundedLetterE className={'disabled'} style={{fontSize: '1.3em'}}/> Epsilon Transformations
+                        <ElementBadge type="epsilon" className="disabled" /> Epsilon Transformations
                     </div>
                 </div>
             </div>

@@ -308,7 +308,7 @@
     cursor: help;
 
     i {
-      opacity: 0.8;
+      color: #ffffff;
     }
   }
 
@@ -505,14 +505,31 @@
     align-items: center;
     padding: 14px 20px;
     border-bottom: 1px solid #e2e8f0;
-    transition: background 0.15s ease;
+    transition: all 0.2s ease;
+    cursor: pointer;
+    position: relative;
 
     &:last-child {
       border-bottom: none;
     }
 
+    // Keyboard focus styles
+    &:focus {
+      outline: 2px solid #3b82f6;
+      outline-offset: -2px;
+    }
+
+    &:focus:not(:focus-visible) {
+      outline: none;
+    }
+
     &:hover {
       background: #f8fafc;
+      transform: translateX(2px);
+    }
+
+    &:active {
+      transform: translateX(0);
     }
   }
 
@@ -571,10 +588,17 @@
     opacity: 0;
     transition: opacity 0.15s ease;
     position: relative;
+    z-index: 10;  // Ensure actions are above card content
+    pointer-events: auto;  // Allow interaction even though parent has pointer-events
   }
 
   &__item:hover &__actions {
     opacity: 1;
+  }
+
+  // Prevent actions from being hidden by card hover
+  &__actions > * {
+    pointer-events: auto;
   }
 
   &__rename-input {
@@ -647,17 +671,38 @@
 // --------------------------------
 .context-menu {
   position: absolute;
-  top: 100%;
-  right: 0;
-  margin-top: 4px;
+  top: calc(100% + 4px);  // Default: open downward
+  right: 0;               // Default: align to right
   background: #ffffff;
   border: 1px solid #e2e8f0;
   border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1), 0 2px 4px rgba(0, 0, 0, 0.05);
   min-width: 180px;
+  max-width: 250px;
   z-index: 1000;
   padding: 6px 0;
   animation: menuFadeIn 0.15s ease;
+
+  // Smart positioning based on data attributes
+  &[data-align="left"] {
+    left: 0;
+    right: auto;
+  }
+
+  &[data-align="right"] {
+    right: 0;
+    left: auto;
+  }
+
+  &[data-direction="up"] {
+    top: auto;
+    bottom: calc(100% + 4px);
+  }
+
+  &[data-direction="down"] {
+    top: calc(100% + 4px);
+    bottom: auto;
+  }
 
   @keyframes menuFadeIn {
     from {

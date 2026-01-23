@@ -63,28 +63,20 @@ export const UpgradePrompt: React.FC<UpgradePromptProps> = ({
     }
 
     return (
-        <div className="upgrade-prompt">
-            <div className="upgrade-prompt__icon">
+        <div className="upgrade-prompt upgrade-prompt--redesign">
+            <div className="upgrade-prompt__icon-compact">
                 <i className="bi bi-star" />
             </div>
-            <div className="upgrade-prompt__content">
-                <h3>{title}</h3>
-                <p>{description}</p>
-                <ul>
-                    {features.map((feature, i) => (
-                        <li key={i}>
-                            <i className="bi bi-check2" />
-                            {feature}
-                        </li>
-                    ))}
-                </ul>
+            <div className="upgrade-prompt__content-compact">
+                <strong>{title}</strong>
+                <p>Enable Advanced Mode for extended properties, OCL constraints, and more.</p>
             </div>
             <button
-                className="upgrade-prompt__button"
+                className="upgrade-prompt__button-compact"
                 onClick={handleUpgrade}
             >
                 <i className="bi bi-arrow-up-circle" />
-                Enable Advanced Mode
+                Enable
             </button>
         </div>
     );

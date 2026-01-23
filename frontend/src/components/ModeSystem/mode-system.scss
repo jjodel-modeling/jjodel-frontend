@@ -322,6 +322,79 @@ $radius-xl: 12px;
             background: rgba(2, 132, 199, 0.2);
         }
     }
+
+    // Redesign variant - Compact horizontal layout
+    &--redesign {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 16px;
+        background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+        border: 1px solid #bae6fd;
+        border-radius: $radius-lg;
+        margin-top: 24px;
+    }
+
+    &__icon-compact {
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 40px;
+        height: 40px;
+        background: #ffffff;
+        border-radius: 50%;
+
+        i {
+            font-size: 20px;
+            color: #0284c7;
+        }
+    }
+
+    &__content-compact {
+        flex: 1;
+
+        strong {
+            display: block;
+            margin-bottom: 4px;
+            font-size: 14px;
+            font-weight: 600;
+            color: #0c4a6e;
+        }
+
+        p {
+            margin: 0;
+            font-size: 13px;
+            color: #075985;
+            line-height: 1.4;
+        }
+    }
+
+    &__button-compact {
+        flex-shrink: 0;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 8px 16px;
+        background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+        border: none;
+        border-radius: $radius-md;
+        color: #ffffff;
+        font-size: 13px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all $transition-fast;
+
+        &:hover {
+            background: linear-gradient(135deg, #0369a1 0%, #075985 100%);
+            transform: translateY(-1px);
+        }
+
+        i {
+            font-size: 14px;
+            color: #ffffff !important;
+        }
+    }
 }
 
 // ============================================

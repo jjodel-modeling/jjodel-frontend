@@ -15,6 +15,7 @@ import {PermissionModelTab} from "../editors/PermissionModelTab";
 import {MTM} from "../editors/MTM";
 import { isProjectModified } from '../../common/libraries/projectModified';
 import { Logo } from '../../components/logo';
+import { SimpleResizeHandle } from '../SimpleResizeHandle';
 //import MqttEditor from "../rightbar/mqtt/MqttEditor";
 //import NestedView from "../rightbar/nestedViewEditor/ViewEditorNestedVersion";
 //import CollaboratorsEditor from "../rightbar/collaboratorsEditor/CollaboratorsEditor";
@@ -22,7 +23,7 @@ import { Logo } from '../../components/logo';
 // ============================================
 // LAYOUT MODE TYPES
 // ============================================
-export type LayoutMode = 'split' | 'sidebar' | 'canvas-only';
+export type LayoutMode = 'split' | 'sidebar' | 'canvas-only' | 'vertical-console';
 
 /**
  * Get saved layout mode from localStorage
@@ -47,8 +48,30 @@ export function getDefaultPanelRatio(mode: LayoutMode): number {
         case 'split': return 50;      // 50% canvas, 50% properties
         case 'sidebar': return 30;    // 70% canvas, 30% properties
         case 'canvas-only': return 0; // 100% canvas, 0% properties
+        case 'vertical-console': return 0; // Not used for vertical mode
         default: return 50;
     }
+}
+
+/**
+ * Activate vertical console mode programmatically (for testing)
+ * Usage: In browser console, run: window.setVerticalConsoleMode()
+ */
+export function activateVerticalConsoleMode(): void {
+    saveLayoutMode('vertical-console');
+    window.dispatchEvent(new CustomEvent('jjodel:layout-mode-change', {
+        detail: { mode: 'vertical-console' as LayoutMode }
+    }));
+    console.log('✅ Vertical Console Mode activated. Refresh if needed.');
+}
+
+// Expose to window for easy testing
+if (typeof window !== 'undefined') {
+    (window as any).setVerticalConsoleMode = activateVerticalConsoleMode;
+    (window as any).setSplitMode = () => {
+        saveLayoutMode('split');
+        window.location.reload();
+    };
 }
 
 /**
@@ -122,6 +145,18 @@ function DockComponent(props: AllProps) {
 
     // State per il layout mode - si aggiorna quando cambia dalla navbar
     const [layoutMode, setLayoutMode] = useState<LayoutMode>(() => getSavedLayoutMode());
+
+    // State for console height in vertical-console mode
+    const [consoleHeight, setConsoleHeight] = useState<number>(() => {
+        const stored = localStorage.getItem('jjodel_vertical_console_height');
+        return stored ? parseInt(stored, 10) : 400;
+    });
+
+    // Handler for console height change
+    const handleConsoleHeightChange = (height: number) => {
+        setConsoleHeight(height);
+        localStorage.setItem('jjodel_vertical_console_height', height.toString());
+    };
 
     // Listener per l'evento di cambio layout dalla navbar
     useEffect(() => {
@@ -227,6 +262,33 @@ function DockComponent(props: AllProps) {
     const permissions = {id: id(), title: <TabHeader tid={tid()}>Permissions</TabHeader>, group: 'editors', closable: false, content: <TabContent tid={tid()}><PermissionModelTab/></TabContent>};
     const mtm = {id: id(), title: <TabHeader tid={tid()}>Languages</TabHeader>, group: 'editors', closable: false, content: <TabContent tid={tid()}><MTM/></TabContent>};
 
+    // Check if we're in vertical-console mode
+    if (layoutMode === 'vertical-console') {
+        // Vertical layout: Canvas on top, Console at bottom with resize handle
+        const canvasHeight = window.innerHeight - consoleHeight;
+
+        return (
+            <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
+                {/* Canvas area - takes remaining space */}
+                <div style={{ height: `${canvasHeight}px`, overflow: 'auto', position: 'relative' }}>
+                    <ModelsSummaryTab />
+                </div>
+
+                {/* Resize Handle */}
+                <SimpleResizeHandle
+                    onHeightChange={handleConsoleHeightChange}
+                    currentHeight={consoleHeight}
+                />
+
+                {/* Console area - fixed height */}
+                <div style={{ height: `${consoleHeight}px`, overflow: 'auto', background: '#ffffff', borderTop: '1px solid #e2e8f0' }}>
+                    <Console />
+                </div>
+            </div>
+        );
+    }
+
+    // Standard horizontal layout (existing behavior)
     const layout: LayoutData = {dockbox: {mode: 'horizontal', children: []}};
 
     // Calculate panel sizes based on layout mode

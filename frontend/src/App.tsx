@@ -27,6 +27,7 @@ import {
     UsersInfoPage,
     ConfirmAccount
 } from "./pages";
+import { TestLayout } from "./components/TestLayout";
 
 import {ExternalLibraries} from "./components/forEndUser/ExternalLibraries";
 import {TooltipVisualizer} from "./components/forEndUser/Tooltip";
@@ -96,6 +97,8 @@ function App(props: AllProps): JSX.Element {
                             <Route path={'auth'} element={<AuthPage/>}/>
                             {/* Design System - Token Preview */}
                             <Route path={'test-tokens'} element={<TokenPreviewPage/>}/>
+                            {/* Resize Handle Test */}
+                            <Route path={'test-resize'} element={<TestLayout/>}/>
                             {/* non functioning stuff */}
                             <Route path={'settings'} element={<SettingsPage/>}/>
                             <Route path={'projectsInfo'} element={<ProjectsInfoPage_Obsolete/>}/>

@@ -1216,7 +1216,7 @@ function NavbarComponent(props: AllProps) {
         const shortcutLabel = isMacOS ? '⌘B' : 'Ctrl+B';
 
         return (
-            <Tooltip tooltip={`Tree View (${shortcutLabel})`} inline={true} position="bottom" offsetY={8}>
+            <>{/* <Tooltip tooltip={`Tree View (${shortcutLabel})`} inline={true} position="bottom" offsetY={8}>
                 <button
                     className={`layout-btn ${isTreeViewOpen ? 'layout-btn--active' : ''}`}
                     onClick={handleToggle}
@@ -1224,7 +1224,8 @@ function NavbarComponent(props: AllProps) {
                 >
                     <i className="bi bi-diagram-2" />
                 </button>
-            </Tooltip>
+            </Tooltip>*/}
+            </>
         );
     };
 

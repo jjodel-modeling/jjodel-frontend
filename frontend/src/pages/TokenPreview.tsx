@@ -116,7 +116,7 @@ export function TokenPreview() {
               <strong>Sans:</strong> Inter (UI text)
             </p>
             <p style={{ fontFamily: 'var(--font-mono)' }}>
-              <strong>Mono:</strong> IBM Plex Mono (code, console)
+              <strong>Mono:</strong> JetBrains Mono (code, console)
             </p>
           </div>
         </section>

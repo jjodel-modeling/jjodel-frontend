@@ -64,6 +64,10 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
 
     // Contextual menu state
     const [openMenu, setOpenMenu] = useState<OpenMenu | null>(null);
+    const [menuPosition, setMenuPosition] = useState<{
+        align: 'left' | 'right';
+        direction: 'up' | 'down';
+    }>({ align: 'right', direction: 'down' });
     const [renamingItem, setRenamingItem] = useState<{ type: MenuType; id: string } | null>(null);
     const [renameValue, setRenameValue] = useState('');
     const menuRef = useRef<HTMLDivElement>(null);
@@ -304,11 +308,28 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
         markDirty();
     };
 
-    // Contextual menu handlers
-    const toggleMenu = (type: MenuType, id: string) => {
+    // Contextual menu handlers with smart positioning
+    const toggleMenu = (type: MenuType, id: string, e: React.MouseEvent<HTMLButtonElement>) => {
+        e.stopPropagation(); // Prevent card click
+
         if (openMenu?.type === type && openMenu?.id === id) {
             setOpenMenu(null);
         } else {
+            // Calculate smart positioning based on viewport space
+            const button = e.currentTarget;
+            const rect = button.getBoundingClientRect();
+
+            // Determine horizontal alignment
+            const spaceOnRight = window.innerWidth - rect.right;
+            const spaceOnLeft = rect.left;
+            const align = spaceOnRight < 200 && spaceOnLeft > spaceOnRight ? 'left' : 'right';
+
+            // Determine vertical direction
+            const spaceBelow = window.innerHeight - rect.bottom;
+            const spaceAbove = rect.top;
+            const direction = spaceBelow < 200 && spaceAbove > spaceBelow ? 'up' : 'down';
+
+            setMenuPosition({ align, direction });
             setOpenMenu({ type, id });
         }
     };
@@ -612,9 +633,22 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                 ) : (
                     <div className="list-card">
                         {metamodels.map((mm) => (
-                            <div className="list-card__item" key={mm.id}>
+                            <div
+                                className="list-card__item"
+                                key={mm.id}
+                                onClick={() => handleOpenMetamodel(mm)}
+                                role="button"
+                                tabIndex={0}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter' || e.key === ' ') {
+                                        e.preventDefault();
+                                        handleOpenMetamodel(mm);
+                                    }
+                                }}
+                                style={{ cursor: 'pointer' }}
+                            >
                                 <span className="list-card__icon list-card__icon--mm">M</span>
-                                <div className="list-card__content">
+                                <div className="list-card__content" style={{ pointerEvents: 'none' }}>
                                     {renamingItem?.type === 'metamodel' && renamingItem?.id === mm.id ? (
                                         <input
                                             ref={renameInputRef}
@@ -636,17 +670,19 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                                     <button
                                         className="icon-btn icon-btn--menu"
                                         title="More actions"
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            toggleMenu('metamodel', mm.id);
-                                        }}
+                                        onClick={(e) => toggleMenu('metamodel', mm.id, e)}
                                     >
                                         <i className="bi bi-three-dots-vertical" />
                                     </button>
 
                                     {/* Contextual Menu */}
                                     {openMenu?.type === 'metamodel' && openMenu?.id === mm.id && (
-                                        <div className="context-menu" ref={menuRef}>
+                                        <div
+                                            className="context-menu"
+                                            ref={menuRef}
+                                            data-align={menuPosition.align}
+                                            data-direction={menuPosition.direction}
+                                        >
                                             <button
                                                 className="context-menu__item"
                                                 onClick={() => {
@@ -727,9 +763,22 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                 ) : (
                     <div className="list-card">
                         {models.map((model) => (
-                            <div className="list-card__item" key={model.id}>
+                            <div
+                                className="list-card__item"
+                                key={model.id}
+                                onClick={() => handleOpenModel(model)}
+                                role="button"
+                                tabIndex={0}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter' || e.key === ' ') {
+                                        e.preventDefault();
+                                        handleOpenModel(model);
+                                    }
+                                }}
+                                style={{ cursor: 'pointer' }}
+                            >
                                 <span className="list-card__icon list-card__icon--model">m</span>
-                                <div className="list-card__content">
+                                <div className="list-card__content" style={{ pointerEvents: 'none' }}>
                                     {renamingItem?.type === 'model' && renamingItem?.id === model.id ? (
                                         <input
                                             ref={renameInputRef}
@@ -753,17 +802,19 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                                     <button
                                         className="icon-btn icon-btn--menu"
                                         title="More actions"
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            toggleMenu('model', model.id);
-                                        }}
+                                        onClick={(e) => toggleMenu('model', model.id, e)}
                                     >
                                         <i className="bi bi-three-dots-vertical" />
                                     </button>
 
                                     {/* Contextual Menu */}
                                     {openMenu?.type === 'model' && openMenu?.id === model.id && (
-                                        <div className="context-menu" ref={menuRef}>
+                                        <div
+                                            className="context-menu"
+                                            ref={menuRef}
+                                            data-align={menuPosition.align}
+                                            data-direction={menuPosition.direction}
+                                        >
                                             <button
                                                 className="context-menu__item"
                                                 onClick={() => {

@@ -18,6 +18,7 @@ import React, {Component, Dispatch, JSX, ReactElement, ReactNode, useState} from
 import {connect} from 'react-redux';
 import './editors.scss';
 import './info.scss';
+import './info-improvements.scss';
 import './style.scss';
 import {Empty} from "./Empty";
 import { CommandBar, Btn } from '../commandbar/CommandBar';
@@ -52,13 +53,27 @@ class builder {
         return (<>
             {!skipTitle && <h1>{data.name}</h1>}
             {!skipTitle && data.state.description && <><h2>{data.state.description}</h2></>}
-            <label className={'input-container'}>
-                <b className={'me-2'}>Name:</b>
-                <Input data={data} field={'name'} type={'text'}/>
-            </label>
+            <div className={'form-field'}>
+                <label className={'form-label'}>
+                    Name
+                    <span className="form-label-required">*</span>
+                </label>
+                <Input data={data} field={'name'} type={'text'} />
+                <div className="form-hint">
+                    <i className="bi bi-info-circle" />
+                    Must be unique. Used as identifier in code generation.
+                </div>
+            </div>
 
-            <div className={'input-container'}>
-                <b className={'me-2'}>Readonly:</b>
+            <div className={'form-field form-field--toggle'}>
+                <div className="form-field-main">
+                    <label className={'form-label'}>
+                        Read-only
+                    </label>
+                    <div className="form-hint">
+                        Prevent modifications to this element
+                    </div>
+                </div>
                 <PropertiesToggle data={data} field={'__readonly'} />
             </div>
         </>);
@@ -83,13 +98,26 @@ class builder {
         return (<>
             {this.named(data, advanced, skipTitle)}
 
-            <label className={'input-container'}>
-                <b className={'me-2'}>Dependends from models:</b>
-                <MultiSelect isMulti={true} options={multiselectOptions as any} value={multiselectValue} onChange={(v) => {
-                    console.log('setting model dependencies', v);
-                    l.dependencies = v.map(e => e.value) as Any<string[]>;
-                }} />
-            </label>
+            <div className={'form-field'}>
+                <label className={'form-label'}>
+                    Model Dependencies
+                    <span className="form-label-badge">Optional</span>
+                </label>
+                <MultiSelect
+                    isMulti={true}
+                    options={multiselectOptions as any}
+                    value={multiselectValue}
+                    placeholder="Select dependent models..."
+                    onChange={(v) => {
+                        console.log('setting model dependencies', v);
+                        l.dependencies = v.map(e => e.value) as Any<string[]>;
+                    }}
+                />
+                <div className="form-hint">
+                    <i className="bi bi-info-circle" />
+                    This model will import types from selected models
+                </div>
+            </div>
         </>);
     }
 
@@ -221,24 +249,28 @@ class builder {
             <label className={'input-container'}>
                 <b className={'me-2'}></b>
 
-                <button onClick={() => lookupWikidataTerm(lclass.name)}>Self description</button>
+                <button className="btn-generate-ai" onClick={() => lookupWikidataTerm(lclass.name)}>
+                    <i className="bi bi-magic" />
+                    Generate with AI
+                </button>
             </label>
 
-            <label className={'input-container'}>
-                <b className={'me-2'}>Abstract:</b>
-                <Input data={lclass} field={'abstract'} type={'checkbox'}/>
-            </label>
-            <label className={'input-container'}>
-                <b className={'me-2'}>Interface:</b>
-                <Input data={lclass} field={'interface'} type={'checkbox'}/>
-            </label>
-
-            <Tooltip tooltip={"Defines if the class can extend from other linked metamodels."}>
-                <label className={'input-container right'}>
-                    <b className={'me-2'}>Allow Cross-extend:</b>
-                    <Input data={lclass} field={'allowCrossReference'} type={'checkbox'}/>
-                </label>
-            </Tooltip>
+            <div className={'input-container'}>
+                <b className={'me-2'}>Abstract:
+                    <Tooltip tooltip="Prevents direct instantiation. This class can only be inherited by other classes.">
+                        <i className="bi bi-info-circle" style={{marginLeft: '6px', fontSize: '14px', color: '#94a3b8', cursor: 'help'}} />
+                    </Tooltip>
+                </b>
+                <PropertiesToggle data={lclass} field={'abstract'} />
+            </div>
+            <div className={'input-container'}>
+                <b className={'me-2'}>Interface:
+                    <Tooltip tooltip="Defines a contract that other classes must implement. Cannot contain method implementations.">
+                        <i className="bi bi-info-circle" style={{marginLeft: '6px', fontSize: '14px', color: '#94a3b8', cursor: 'help'}} />
+                    </Tooltip>
+                </b>
+                <PropertiesToggle data={lclass} field={'interface'} />
+            </div>
 
             <label className={'input-container'}>
                 <b className={'me-2'}>Extends:</b>
@@ -247,40 +279,51 @@ class builder {
                     lclass.extends = v.map(e => e.value) as Any<string[]>;
                 }} />
             </label>
-            <Tooltip tooltip={"Defines if the class can be extended."}>
-                <label className={'input-container'}>
-                    <b className={'me-2'}>Final:</b>
-                        <Input data={lclass} field={'final'} type={'checkbox'}/>
-                </label>
-            </Tooltip>
-            {false &&
-                <Tooltip tooltip={"Whether the element can be a m1 root (present in toolbar)."}>
-                    <label className={'input-container'}>
-                        <b className={'me-2'}>Rootable:</b>
-                            <Input data={data} field={'rootable'} type={'checkbox3' }/>
-                    </label>
-                </Tooltip>}
-            <label className={'input-container'}>
-                <b className={'me-2'}>Singleton:</b>
-                <Tooltip tooltip={'A singleton element is always present exactly 1 time in every model.' +
-                    '\nA single instance is created dynamically and cannot be created by the user.'}>
-                    <Input data={data} field={'singleton'} type={'checkbox'}/>
-                </Tooltip>
-            </label>
-            {advanced && <label className={'input-container'}>
-                <b className={'me-2'}>Partial:</b>
-                <Input data={data} field={'partial'} type={'checkbox'}/>
-            </label>}
-            <label className={'input-container'}>
-                <b className={'me-2'}>Rootable:</b>
-                <Tooltip tooltip={"Whether the element can be a m1 root (present in toolbar)."}>
-                    <Input data={data} field={'rootable'} type={'checkbox'} getter={()=>dclass.rootable} setter={(val)=>{
-                        lclass.rootable = val as any;
-                        console.log('setter', val);
-                    }}/>
-                </Tooltip>
 
-            </label>
+            {advanced && (
+                <>
+                    <div className={'input-container'}>
+                        <b className={'me-2'}>Allow extension from other packages:
+                            <Tooltip tooltip="Classes in other packages can extend this class.">
+                                <i className="bi bi-info-circle" style={{marginLeft: '6px', fontSize: '14px', color: '#94a3b8', cursor: 'help'}} />
+                            </Tooltip>
+                        </b>
+                        <PropertiesToggle data={lclass} field={'allowCrossReference'} />
+                    </div>
+
+                    <div className={'input-container'}>
+                        <b className={'me-2'}>Final:
+                            <Tooltip tooltip="Prevents this class from being extended by other classes (opposite of Abstract).">
+                                <i className="bi bi-info-circle" style={{marginLeft: '6px', fontSize: '14px', color: '#94a3b8', cursor: 'help'}} />
+                            </Tooltip>
+                        </b>
+                        <PropertiesToggle data={lclass} field={'final'} />
+                    </div>
+
+                    <div className={'input-container'}>
+                        <b className={'me-2'}>Singleton:
+                            <Tooltip tooltip="Only one instance of this class can exist at runtime (Singleton pattern).">
+                                <i className="bi bi-info-circle" style={{marginLeft: '6px', fontSize: '14px', color: '#94a3b8', cursor: 'help'}} />
+                            </Tooltip>
+                        </b>
+                        <PropertiesToggle data={data} field={'singleton'} />
+                    </div>
+
+                    <div className={'input-container'}>
+                        <b className={'me-2'}>Rootable:
+                            <Tooltip tooltip="This element can be used as the root element in models (appears in toolbar).">
+                                <i className="bi bi-info-circle" style={{marginLeft: '6px', fontSize: '14px', color: '#94a3b8', cursor: 'help'}} />
+                            </Tooltip>
+                        </b>
+                        <PropertiesToggle data={data} field={'rootable'} />
+                    </div>
+
+                    <div className={'input-container'}>
+                        <b className={'me-2'}>Partial:</b>
+                        <PropertiesToggle data={data} field={'partial'} />
+                    </div>
+                </>
+            )}
         </>);
     }
 
@@ -731,55 +774,46 @@ function PropertiesHeader(props: { data: LModelElement; className: string }) {
 // Overview stats for Model/Metamodel
 function PropertiesOverview(props: { data: LModel }) {
     const { data } = props;
+    const packages = data.packages?.length || 0;
     const classes = data.classes?.length || 0;
-    const attributes = data.classes?.reduce((sum, c) => sum + (c.attributes?.length || 0), 0) || 0;
-    const references = data.classes?.reduce((sum, c) => sum + (c.references?.length || 0), 0) || 0;
-    const operations = data.classes?.reduce((sum, c) => sum + (c.operations?.length || 0), 0) || 0;
+    const enumerators = data.enumerators?.length || 0;
 
     return (
         <div className="properties-section">
-            <div className="properties-section-title">
-                <i className="bi bi-bar-chart" />
-                Overview
+            <div className="properties-section-header">
+                <h3 className="properties-section-title">Overview</h3>
             </div>
             <div className="properties-section-content">
-                <div className="properties-stats-grid">
-                    <div className="properties-stat-item">
-                        <div className="properties-stat-icon classes">
-                            <i className="bi bi-box" />
+                <div className="overview-grid">
+                    {/* Packages */}
+                    <div className="stat-card" title="View packages">
+                        <div className="stat-circle">
+                            <span className="stat-value">{packages}</span>
                         </div>
-                        <div className="properties-stat-content">
-                            <div className="properties-stat-value">{classes}</div>
-                            <div className="properties-stat-label">Classes</div>
-                        </div>
+                        <div className="stat-label">Packages</div>
                     </div>
-                    <div className="properties-stat-item">
-                        <div className="properties-stat-icon attributes">
-                            <i className="bi bi-type" />
+
+                    {/* Classes */}
+                    <div className="stat-card" title="View classes">
+                        <div className="stat-circle">
+                            <span className="stat-value">{classes}</span>
                         </div>
-                        <div className="properties-stat-content">
-                            <div className="properties-stat-value">{attributes}</div>
-                            <div className="properties-stat-label">Attributes</div>
-                        </div>
+                        <div className="stat-label">Classes</div>
                     </div>
-                    <div className="properties-stat-item">
-                        <div className="properties-stat-icon references">
-                            <i className="bi bi-link-45deg" />
+
+                    {/* Enumerators */}
+                    <div className="stat-card" title="View enumerators">
+                        <div className="stat-circle">
+                            <span className="stat-value">{enumerators}</span>
                         </div>
-                        <div className="properties-stat-content">
-                            <div className="properties-stat-value">{references}</div>
-                            <div className="properties-stat-label">References</div>
-                        </div>
+                        <div className="stat-label">Enumerators</div>
                     </div>
-                    <div className="properties-stat-item">
-                        <div className="properties-stat-icon operations">
-                            <i className="bi bi-gear" />
-                        </div>
-                        <div className="properties-stat-content">
-                            <div className="properties-stat-value">{operations}</div>
-                            <div className="properties-stat-label">Operations</div>
-                        </div>
-                    </div>
+                </div>
+
+                {/* Analytics Hint */}
+                <div className="overview-hint">
+                    <i className="bi bi-info-circle" />
+                    <span>Additional metrics and insights available in Metamodel Analytics</span>
                 </div>
             </div>
         </div>
@@ -797,30 +831,33 @@ function PropertiesActions(props: {
 
     return (
         <div className="properties-section">
-            <div className="properties-section-title">
-                <i className="bi bi-lightning" />
-                Actions
+            <div className="properties-section-header">
+                <h3 className="properties-section-title">Actions</h3>
             </div>
             <div className="properties-section-content">
                 <div className="properties-actions">
                     {onEdit && (
                         <button className="properties-btn primary" onClick={onEdit}>
                             <i className="bi bi-pencil" />
-                            Edit
+                            <span>Edit</span>
                         </button>
                     )}
                     {onDuplicate && (
                         <button className="properties-btn secondary" onClick={onDuplicate}>
                             <i className="bi bi-copy" />
-                            Duplicate
+                            <span>Duplicate</span>
                         </button>
                     )}
                     {onDelete && (
                         <button className="properties-btn danger" onClick={onDelete}>
                             <i className="bi bi-trash" />
-                            Delete
+                            <span>Delete</span>
                         </button>
                     )}
+                </div>
+                <div className="action-hint">
+                    <i className="bi bi-info-circle" />
+                    <span>These actions affect the selected element. Changes can be undone with Ctrl+Z.</span>
                 </div>
             </div>
         </div>
@@ -834,6 +871,9 @@ function InfoComponent(props: AllProps) {
     const popup = mode === 'popup';
     const inline = mode === 'inline';
     const tab = mode === 'tab';
+
+    // State for collapsible sections
+    const [advancedStateOpen, setAdvancedStateOpen] = useState(false);
 
     var data = props.data;
 
@@ -904,47 +944,63 @@ function InfoComponent(props: AllProps) {
 
                 {/* Details Section */}
                 <div className="properties-section">
-                    <div className="properties-section-title">
-                        <i className="bi bi-sliders" />
-                        Details
+                    <div className="properties-section-header">
+                        <h3 className="properties-section-title">Details</h3>
                     </div>
                     <div className="properties-section-content">
                         {jsx}
                     </div>
                 </div>
 
-                {/* State Section - Advanced Mode Only */}
+                {/* State Section - Advanced Mode Only (Collapsible) */}
                 {advanced && (
-                    <div className="properties-section">
-                        <div className="properties-section-title">
-                            <i className="bi bi-braces" />
-                            State
-                            <span className="properties-section-badge advanced">Advanced</span>
-                        </div>
-                        <div className="properties-section-content">
-                            <div className="object-state" style={{ margin: 0, border: 'none' }}>
+                    <div className="properties-section properties-section--collapsible">
+                        <button
+                            className="properties-section-header"
+                            onClick={() => setAdvancedStateOpen(!advancedStateOpen)}
+                        >
+                            <div className="properties-section-title">
+                                <i className={`bi ${advancedStateOpen ? 'bi-chevron-down' : 'bi-chevron-right'}`} />
+                                <i className="bi bi-braces" />
+                                Advanced State
+                            </div>
+                            <span className="properties-section-badge advanced">Optional</span>
+                        </button>
+
+                        {advancedStateOpen && (
+                            <div className="properties-section-content">
                                 {!ddata || Object.keys(ddata._state).length === 0 ? (
-                                    <pre style={{ padding: '12px 16px', margin: 0, color: 'var(--color-text-secondary)' }}>Empty</pre>
+                                    <div className="empty-state">
+                                        <div className="empty-state-icon">
+                                            <i className="bi bi-code-slash" />
+                                        </div>
+                                        <div className="empty-state-title">No custom state defined</div>
+                                        <div className="empty-state-description">
+                                            Advanced state properties are empty. This is normal for most elements.
+                                        </div>
+                                    </div>
                                 ) : (
-                                    <ReactJson
-                                        src={ddata._state}
-                                        collapsed={1}
-                                        collapseStringsAfterLength={20}
-                                        displayDataTypes={true}
-                                        displayObjectSize={true}
-                                        enableClipboard={true}
-                                        groupArraysAfterLength={100}
-                                        indentWidth={4}
-                                        name={"state"}
-                                        iconStyle={"triangle"}
-                                        quotesOnKeys={true}
-                                        shouldCollapse={false}
-                                        sortKeys={false}
-                                        theme={"rjv-default"}
-                                    />
+                                    <div className="object-state" style={{ margin: 0, border: 'none' }}>
+                                        <ReactJson
+                                            src={ddata._state}
+                                            collapsed={1}
+                                            collapseStringsAfterLength={20}
+                                            displayDataTypes={true}
+                                            displayObjectSize={true}
+                                            enableClipboard={true}
+                                            groupArraysAfterLength={100}
+                                            indentWidth={4}
+                                            name={"state"}
+                                            iconStyle={"triangle"}
+                                            quotesOnKeys={true}
+                                            shouldCollapse={false}
+                                            sortKeys={false}
+                                            theme={"rjv-default"}
+                                        />
+                                    </div>
                                 )}
                             </div>
-                        </div>
+                        )}
                     </div>
                 )}
 

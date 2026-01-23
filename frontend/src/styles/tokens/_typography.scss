@@ -13,7 +13,7 @@
   --font-sans: 'Inter Variable', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
 
   /* Monospace - Code, Console */
-  --font-mono: 'IBM Plex Mono', 'JetBrains Mono', 'SF Mono', 'Monaco', 'Consolas', 'Liberation Mono', 'Courier New', monospace;
+  --font-mono: 'JetBrains Mono', 'SF Mono', 'Monaco', 'Consolas', 'Liberation Mono', 'Courier New', monospace;
 
   /* Default font family for body */
   --font-family-base: var(--font-sans);
@@ -69,7 +69,7 @@
 
 /* ============================================
    FONT LOADING
-   Load Inter and IBM Plex Mono from Google Fonts
+   Load Inter and JetBrains Mono from Google Fonts
 
    TODO: Consider self-hosting for:
    - Better performance
@@ -80,8 +80,8 @@
 /* Inter Variable - Full variable font for smooth weight transitions and superior 5K rendering */
 @import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap');
 
-/* IBM Plex Mono - Monospace for code */
-@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+/* JetBrains Mono - Monospace for code */
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap');
 
 /* ============================================
    TYPOGRAPHY CLASSES (Optional utilities)

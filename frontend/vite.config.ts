@@ -1,3 +1,4 @@
+import monacoEditorPlugin from 'vite-plugin-monaco-editor'
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { nodePolyfills } from 'vite-plugin-node-polyfills'
@@ -20,7 +21,16 @@ export default defineConfig({
         global: true,
         process: true
       }
-    })
+    }),
+    monacoEditorPlugin({
+  languageWorkers: [
+    'editorWorkerService',
+    'json',
+    'css',
+    'html',
+    'typescript'
+  ]
+})
   ],
   server: {
     port: 3000

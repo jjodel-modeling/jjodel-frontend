@@ -9,7 +9,7 @@
   "homepage-gitpages-deploy": "https://mdegroup.github.io/jjodel/",
   "dependencies": {
     "@fontsource-variable/inter": "^5.2.6",
-    "@monaco-editor/react": "4.4.6",
+    "@monaco-editor/react": "^4.7.0",
     "@popperjs/core": "^2.11.8",
     "@stekoe/ocl.js": "1.4.5",
     "@types/jest": "^29.5.14",
@@ -143,6 +143,7 @@
     "react-error-overlay": "6.0.9",
     "ts-node": "^10.9.2",
     "vite": "^7.3.1",
+    "vite-plugin-monaco-editor": "^1.1.0",
     "vite-plugin-node-polyfills": "^0.25.0"
   },
   "erasable_comments": {
