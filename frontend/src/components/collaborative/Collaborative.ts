@@ -10,6 +10,7 @@ import {
     RuntimeAccessible, SetRootFieldAction, U
 } from "../../joiner";
 import {COMMIT} from "../../redux/action/action";
+(window as any).io = io;
 
 const ignoredRootFields: (keyof DState)[] = [
     'env',
