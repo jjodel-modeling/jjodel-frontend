@@ -79,8 +79,211 @@ function NestedViewComponent(props: AllProps) {
     let activeViewpointId: Pointer<DPointerTargetable> = project.activeViewpoint.id;
 
     let [collapseAll, setCollapseAll] = useState<boolean | undefined>( undefined );
+function renderEntry(d: DViewElement, childrens: GObject, isExpanded: boolean, toggleExpansion: () => any, depth: number, path: number[], metadata?: Metadata): ReactNode {
+        if (!d) return null;
+        let appliableTo: string;
 
-    function renderEntry(e: DViewElement, childrens: Dictionary<Pointer, number>, isExpanded: boolean,
+        if (collapseAll !== undefined && collapseAll === isExpanded) toggleExpansion();
+        let expandClick = () => {
+            setCollapseAll(undefined);
+            toggleExpansion();
+        }
+
+        if (d.appliableToClasses.length === 1) appliableTo = d.appliableToClasses[0].substring(1);
+        else if (d.appliableToClasses.length === 0) appliableTo = d.appliableTo;
+        else appliableTo = "Any";
+        appliableTo = U.replaceAll(appliableTo, "Void", "");
+        let parr = Object.keys(childrens);
+        let scoreBoost = metadata?.scoreBoost || 0;
+        let l: LViewElement = LPointerTargetable.fromD(d);
+
+        const preventClick = (e: any) => e.stopPropagation();
+        let isVP = d.className === DViewPoint.cname;
+        let isDefault = d.id.indexOf('Pointer_View') === 0;
+        let isOverlay = isVP && !d.isExclusiveView;
+        let isExclusive = isVP && d.isExclusiveView;
+
+        function select(ptr: Pointer<DViewPoint>) {
+            const previousViewpoint = project.activeViewpoint;
+            project.activeViewpoint = ptr as any;
+
+            if (ptr !== previousViewpoint?.id) {
+                try {
+                    const viewpointName = d.name || 'Unnamed Viewpoint';
+                    ActivityLogger.log({
+                        type: ActivityType.VIEWPOINT_CHANGED,
+                        projectId: project.id,
+                        projectName: project.name || 'Unnamed Project',
+                        entityId: ptr as string,
+                        entityName: viewpointName,
+                    });
+                } catch (e) {
+                    console.warn('Failed to log viewpoint change activity:', e);
+                }
+            }
+        }
+
+        let appliableToEnhanced = (d.name === 'Singleton' ? 'Singleton' : appliableTo);
+        let isActive = d.id === activeViewpointId;
+        let canDelete = !isActive && !isDefault;
+
+        // ============================================
+        // VIEWPOINT RENDERING (Box container)
+        // ============================================
+        if (isVP) {
+            return (
+                <li className={`viewpoint-box ${isActive ? 'viewpoint-box--active' : ''} ${isOverlay ? 'viewpoint-box--overlay' : 'viewpoint-box--exclusive'}`} key={d.id}>
+                    {/* Viewpoint Header */}
+                    <div className="viewpoint-box__header" onClick={() => setView(d.id)}>
+                        
+                        <div className="viewpoint-box__header-left">
+                            {/* Radio for Exclusive, Checkbox for Overlay */}
+                            {isExclusive ? (
+                                <label className="viewpoint-radio" onClick={preventClick}>
+                                    <input
+                                        type="radio"
+                                        name="active-viewpoint"
+                                        checked={isActive}
+                                        onChange={() => select(d.id)}
+                                    />
+                                    <span className="viewpoint-radio__custom"></span>
+                                </label>
+                            ) : (
+                                <label className="viewpoint-checkbox" onClick={preventClick}>
+                                    <input
+                                        type="checkbox"
+                                        checked={false}
+                                        onChange={() => {/* TODO: overlay selection logic */}}
+                                    />
+                                    <span className="viewpoint-checkbox__custom"></span>
+                                </label>
+                            )}
+                            
+                            {/* VP Badge */}
+                            <div className={`icon type DViewPoint ${isOverlay ? 'overlay' : 'exclusive'}`}>
+                                VP
+                            </div>
+                            
+                            {/* Viewpoint Name */}
+                            <span className="viewpoint-box__name">{d.name || 'Unnamed'}</span>
+                        </div>
+                        
+                        <div className="viewpoint-box__header-right">
+                            {/* Expand/Collapse */}
+                            {parr.length > 0 && (
+                                <button className="viewpoint-box__toggle" onClick={(e) => { preventClick(e); expandClick(); }}>
+                                    <i className={`bi bi-chevron-${isExpanded ? 'down' : 'right'}`} />
+                                </button>
+                            )}
+                            
+                            {/* EX/OV Badge */}
+                            <span className={`viewpoint-badge ${isExclusive ? 'viewpoint-badge--exclusive' : 'viewpoint-badge--overlay'}`}>
+                                {isExclusive ? 'EX' : 'OV'}
+                            </span>
+                        </div>
+                    </div>
+                    
+                    {/* Viewpoint Content (Views) */}
+                    {isExpanded && parr.length > 0 && (
+                        <div className="viewpoint-box__content">
+                            <ul>
+                                {parr.map((ptr, i) => (
+                                    <GenericTree
+                                        key={ptr}
+                                        data={DPointerTargetable.from(ptr)}
+                                        getSubElements={getSubElements}
+                                        renderEntry={renderEntry}
+                                        depth={depth + 1}
+                                        path={[...path, i]}
+                                        metadata={{ setView: metadata.setView, scoreBoost: childrens[ptr] } as Metadata}
+                                        initialHidingState={true}
+                                    />
+                                ))}
+                            </ul>
+                        </div>
+                    )}
+                </li>
+            );
+        }
+
+        // ============================================
+        // VIEW RENDERING (Inside viewpoint box)
+        // ============================================
+        return (
+            <li className={`view-entry ${view === d.id ? 'view-entry--selected' : ''}`} key={d.id}>
+                <div className="view-entry__row" onClick={() => setView(d.id)}>
+                    {/* Left: Expand + Icon + Name */}
+                    <div className="view-entry__left">
+                        {/* Expand toggle */}
+                        <div className="view-entry__toggle" onClick={preventClick}>
+                            {parr.length >= 1 ? (
+                                <i 
+                                    className={`bi bi-chevron-${isExpanded ? 'down' : 'right'}`} 
+                                    onClick={expandClick}
+                                />
+                            ) : (
+                                <span className="view-entry__toggle-spacer" />
+                            )}
+                        </div>
+                        
+                        {/* Type Icon */}
+                        <div className={`icon type tree-${appliableToEnhanced} ${d.className}`}>
+                            {appliableToEnhanced.charAt(0).toUpperCase()}
+                        </div>
+                        
+                        {/* View Name */}
+                        <span className="view-entry__name">{d.name || 'Unnamed'}</span>
+                    </div>
+                    
+                    {/* Right: Priority + Badges */}
+                    <div className="view-entry__right">
+                        {props.isAdvanced && d.isExclusiveView && (
+                            <div className="view-entry__priority" onClick={preventClick}>
+                                <span className="priority">priority: {l.explicitApplicationPriority}</span>
+                                <i className="bi bi-x priority-clear" onClick={() => { l.explicitApplicationPriority = undefined as any; }}></i>
+                                <Input
+                                    type="number"
+                                    className="priority-booster"
+                                    inputClassName="priority-booster-input"
+                                    readOnly={false}
+                                    data={l}
+                                    getter={() => scoreBoost + ''}
+                                    setter={(v) => { let pv = l.father; if (pv) pv.subViews = { ...pv.__raw.subViews, [d.id]: +v } as any }}
+                                />
+                            </div>
+                        )}
+                        
+                        {/* Feature Badges */}
+                        <div className="view-entry__badges">
+                            <span className={`feature-badge feature-badge--ocl ${d.oclCondition?.length ? '' : 'feature-badge--inactive'}`}>OCL</span>
+                            <span className={`feature-badge feature-badge--js ${d.jsCondition?.length ? '' : 'feature-badge--inactive'}`}>JS</span>
+                            <span className={`feature-badge feature-badge--ex ${d.isExclusiveView ? '' : 'feature-badge--inactive'}`}>EX</span>
+                        </div>
+                    </div>
+                </div>
+                
+                {/* Nested Views */}
+                {isExpanded && parr.length > 0 && (
+                    <ul className="view-entry__children">
+                        {parr.map((ptr, i) => (
+                            <GenericTree
+                                key={ptr}
+                                data={DPointerTargetable.from(ptr)}
+                                getSubElements={getSubElements}
+                                renderEntry={renderEntry}
+                                depth={depth + 1}
+                                path={[...path, i]}
+                                metadata={{ setView: metadata.setView, scoreBoost: childrens[ptr] } as Metadata}
+                                initialHidingState={true}
+                            />
+                        ))}
+                    </ul>
+                )}
+            </li>
+        );
+    }
+
+    function renderEntry2(e: DViewElement, childrens: Dictionary<Pointer, number>, isExpanded: boolean,
                          toggleExpansion: ()=>any, depth: number, path: number[], metadata: Metadata): ReactNode {
         let d = e;
         let appliableTo: string;

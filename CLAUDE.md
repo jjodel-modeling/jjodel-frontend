@@ -408,6 +408,55 @@ $transition-slow: 400ms ease;
 }
 ```
 
+### Tree Type Icons (Viewpoints/TreeView)
+
+**REGOLA: Usare colori pastel consistenti per tutti i tree.**
+```scss
+// Viewpoint/View type colors
+$color-viewpoint: #8b5cf6;    // Purple - Viewpoints
+$color-view-vertex: #3b82f6;  // Blue - Vertex views
+$color-view-field: #64748b;   // Slate - Field views  
+$color-view-edge: #06b6d4;    // Cyan - Edge views
+$color-view-graph: #10b981;   // Green - Graph views
+
+// Badge style: background 12-15% opacity, text full color
+.tree-icon {
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  
+  &.tree-DViewPoint {
+    background: rgba(139, 92, 246, 0.15);
+    color: #8b5cf6;
+  }
+}
+```
+
+### Feature Badges (OCL/JS/EX)
+
+**REGOLA: Muted colors, non saturati, per ridurre rumore visivo.**
+```scss
+.feature-badge {
+  min-width: 24px;
+  height: 20px;
+  font-size: 9px;
+  font-weight: 600;
+  border-radius: 4px;
+  
+  // OCL - subtle red
+  &.ocl { background: rgba(239, 68, 68, 0.1); color: #dc2626; }
+  
+  // JS - subtle amber  
+  &.js { background: rgba(245, 158, 11, 0.1); color: #d97706; }
+  
+  // EX - subtle green (or gray when inactive)
+  &.ex { background: rgba(16, 185, 129, 0.1); color: #059669; }
+  &.ex.inactive { background: rgba(148, 163, 184, 0.1); color: #94a3b8; }
+}
+```
+
 ---
 
 ## 4. PAGE-SPECIFIC GUIDELINES

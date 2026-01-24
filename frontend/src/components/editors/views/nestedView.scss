@@ -79,8 +79,19 @@ $color-vertex: #6b7280;       // gray-500
   }
 
   .dock-content .dock-tabpane {
-    overflow: auto !important;
+    overflow: visible !important;
+    height: fit-content !important;
+    background-color: none !important;
   }
+//.view-editor-root .dock-content .dock-tabpane
+  .dock  {
+
+  }
+
+  .style-tab {
+
+  }
+
 }
 
 // ============================================
@@ -92,10 +103,13 @@ section.viewpoint-tab {
   padding: $spacing-md;
   font-weight: $font-weight-normal;
   font-family: $font-family;
-  border: 1px solid $color-border;
+  //border: 1px solid $color-border;
   border-radius: $radius-lg;
   background-color: $color-bg-primary;
   transition: all $transition-normal;
+
+  height: 100%;
+  width: calc(100% - 10px);;
 }
 
 // ============================================
@@ -261,33 +275,33 @@ section.viewpoint-tab .ps-2.pt-2 h1 {
   // ============================================
   // TOP-LEVEL VIEWPOINT STYLING (No left border)
   // ============================================
-  .entry-root.DViewPoint {
-    position: relative;
-    margin-bottom: $spacing-xs; // Base spacing between nodes
+  // .entry-root.DViewPoint {
+  //   position: relative;
+  //   margin-bottom: $spacing-xs; // Base spacing between nodes
 
-    // Divider between viewpoint groups (except last one)
-    &:not(:last-child)::after {
-      content: '';
-      display: block;
-      height: 1px;
-      background: #e2e8f0; // slate-200
-      margin: $spacing-md 0 $vp-group-spacing 0; // Top 12px, bottom 16px
-    }
+  //   // Divider between viewpoint groups (except last one)
+  //   &:not(:last-child)::after {
+  //     content: '';
+  //     display: block;
+  //     height: 1px;
+  //     background: #e2e8f0; // slate-200
+  //     margin: $spacing-md 0 $vp-group-spacing 0; // Top 12px, bottom 16px
+  //   }
 
-    > .inline-row {
-      background-color: rgba(248, 250, 252, 0.5); // Subtle bg for viewpoint rows
-      margin-bottom: 2px;
+  //   > .inline-row {
+  //     background-color: rgba(248, 250, 252, 0.5); // Subtle bg for viewpoint rows
+  //     margin-bottom: 2px;
 
-      .mid-stuff > div:last-child,
-      .node-label {
-        font-weight: $font-weight-medium;
-      }
+  //     .mid-stuff > div:last-child,
+  //     .node-label {
+  //       font-weight: $font-weight-medium;
+  //     }
 
-      &:hover {
-        background-color: #e2e8f0; // slate-200
-      }
-    }
-  }
+  //     &:hover {
+  //       background-color: #e2e8f0; // slate-200
+  //     }
+  //   }
+  // }
 
   // ============================================
   // SELECTED VIEWPOINT (No left border)
@@ -359,14 +373,14 @@ section.viewpoint-tab .ps-2.pt-2 h1 {
     }
 
     // Expansion line (vertical guide)
-    .expansion-line {
-      position: absolute;
-      left: 10px;
-      top: $row-height;
-      bottom: 0;
-      width: 1px;
-      background-color: $color-border;
-    }
+    // .expansion-line {
+    //   position: absolute;
+    //   left: 10px;
+    //   top: $row-height;
+    //   bottom: 0;
+    //   width: 1px;
+    //   background-color: $color-border;
+    // }
   }
 
   // ============================================
@@ -388,9 +402,143 @@ section.viewpoint-tab .ps-2.pt-2 h1 {
   }
 
   // Type-specific colors (SOLID backgrounds with white text)
-  .tree-Any {
-    background-color: #64748b; // slate-500
-    color: white;
+  // .tree-Any {
+  //   background-color: #64748b; // slate-500
+  //   color: white;
+  // }
+
+  // ============================================
+  // TYPE ICONS - PASTEL STYLE (matching TreeViewSidebar)
+  // Background: 15% opacity, Text: full color
+  // ============================================
+  
+  // ============================================
+  // TYPE ICONS - PASTEL STYLE (matching TreeViewSidebar)
+  // Background: 15% opacity, Text: full color
+  // ============================================
+  
+  .tree-Any,
+  .icon.type:not(.DViewPoint) {
+    background-color: rgba(100, 116, 139, 0.15);
+    color: #64748b;
+  }
+
+  .tree-Model,
+  .tree-DModel {
+    background-color: rgba(139, 92, 246, 0.15);
+    color: #8b5cf6;
+  }
+
+  .tree-Package,
+  .tree-DPackage {
+    background-color: rgba(59, 130, 246, 0.15);
+    color: #3b82f6;
+  }
+
+  .tree-Class,
+  .tree-DClass {
+    background-color: rgba(239, 68, 68, 0.15);
+    color: #ef4444;
+  }
+
+  .tree-Attribute,
+  .tree-DAttribute {
+    background-color: rgba(249, 115, 22, 0.15);
+    color: #f97316;
+  }
+
+  .tree-Reference,
+  .tree-DReference {
+    background-color: rgba(6, 182, 212, 0.15);
+    color: #06b6d4;
+  }
+
+  .tree-Operation,
+  .tree-DOperation {
+    background-color: rgba(16, 185, 129, 0.15);
+    color: #10b981;
+  }
+
+  .tree-Enumerator,
+  .tree-DEnumerator {
+    background-color: rgba(245, 158, 11, 0.15);
+    color: #f59e0b;
+  }
+
+  .tree-EnumLiteral,
+  .tree-DEnumLiteral {
+    background-color: rgba(217, 119, 6, 0.15);
+    color: #d97706;
+  }
+
+  .tree-Object,
+  .tree-DObject {
+    background-color: rgba(107, 114, 128, 0.15);
+    color: #6b7280;
+  }
+
+  .tree-Value,
+  .tree-DValue {
+    background-color: rgba(120, 113, 108, 0.15);
+    color: #78716c;
+  }
+
+  .tree-Singleton {
+    background-color: rgba(71, 85, 105, 0.15);
+    color: #475569;
+  }
+
+  .tree-Parameter,
+  .tree-DParameter {
+    background-color: rgba(16, 185, 129, 0.12);
+    color: #10b981;
+  }
+
+  .tree-Edge,
+  .tree-DEdge {
+    background-color: rgba(100, 116, 139, 0.15);
+    color: #64748b;
+  }
+
+  .tree-EdgePoint,
+  .tree-DEdgePoint {
+    background-color: rgba(148, 163, 184, 0.15);
+    color: #94a3b8;
+  }
+
+  .tree-EdgeAssociation {
+    background-color: rgba(168, 85, 247, 0.15);
+    color: #a855f7;
+  }
+
+  .tree-EdgeDependency {
+    background-color: rgba(236, 72, 153, 0.15);
+    color: #ec4899;
+  }
+
+  .tree-EdgeInheritance {
+    background-color: rgba(139, 92, 246, 0.15);
+    color: #8b5cf6;
+  }
+
+  .tree-EdgeAggregation {
+    background-color: rgba(34, 211, 238, 0.15);
+    color: #22d3ee;
+  }
+
+  .tree-EdgeComposition {
+    background-color: rgba(20, 184, 166, 0.15);
+    color: #14b8a6;
+  }
+
+  .tree-Anchors {
+    background-color: rgba(251, 146, 60, 0.15);
+    color: #fb923c;
+  }
+
+  .tree-Fallback {
+    background-color: rgba(163, 163, 163, 0.15);
+    color: #a3a3a3;
   }
 
   // ============================================
@@ -408,7 +556,7 @@ section.viewpoint-tab .ps-2.pt-2 h1 {
   // Overlay Viewpoint - Cyan dashed border
   .entry-root.DViewPoint.overlay-vp > .inline-row .icon.type.DViewPoint {
     background-color: transparent;
-    border: 1.5px dashed #0891b2; // cyan-600
+    border: 1.5px solid #0891b2; // cyan-600
     color: #0891b2;
     font-weight: $font-weight-medium;
   }
@@ -600,19 +748,66 @@ section.viewpoint-tab .ps-2.pt-2 h1 {
   // ============================================
   // BADGES (Hidden by default, shown on hover)
   // ============================================
+// ============================================
+  // FEATURE BADGES (OCL, JS, EX) - Always visible
+  // ============================================
   .right-icon {
-    display: inline-block;
-    border-radius: $radius-sm;
-    padding-top: 2px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 26px;
     height: 20px;
-    transition: opacity $transition-fast, transform $transition-fast, visibility $transition-fast;
-    opacity: 0;
-    transform: translateX(4px);
-    flex-shrink: 0;
+    padding: 0 6px;
+    font-size: 9px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    border-radius: 4px;
+    opacity: 1 !important;
+    visibility: visible !important;
+    transform: none !important;
+    transition: background-color 150ms ease, color 150ms ease;
+  }
 
+  .right-icon.ocl-icon {
+    background-color: rgba(239, 68, 68, 0.12);
+    color: #dc2626;
+    
+    &::before {
+      content: 'OCL';
+    }
+    
     &.hidden {
-      opacity: 0 !important;
-      visibility: hidden;
+      background-color: rgba(148, 163, 184, 0.08);
+      color: #cbd5e1;
+    }
+  }
+
+  .right-icon.js-icon {
+    background-color: rgba(245, 158, 11, 0.12);
+    color: #d97706;
+    
+    &::before {
+      content: 'JS';
+    }
+    
+    &.hidden {
+      background-color: rgba(148, 163, 184, 0.08);
+      color: #cbd5e1;
+    }
+  }
+
+  .right-icon.ex-icon {
+    background-color: rgba(16, 185, 129, 0.12);
+    color: #059669;
+    
+    &::before {
+      content: 'EX';
+    }
+    
+    &.hidden {
+      background-color: rgba(148, 163, 184, 0.08);
+      color: #cbd5e1;
     }
   }
 
@@ -742,6 +937,631 @@ section.viewpoint-tab .ps-2.pt-2 h1 {
       background-color: #334155; // slate-700
     }
   }
+  // ============================================
+// VIEWPOINT BOX LAYOUT
+// ============================================
+
+.viewpoint-box {
+  margin: 0 8px 12px 0; //   margin: 0 8px 12px 8px; ?
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #ffffff;
+  overflow: hidden;
+  list-style: none;
+
+  
+&--active {
+    border-color: #94a3b8;
+    box-shadow: none;
+  }
+  
+  &--overlay {
+    border-style: dashed;
+    border-color: #cbd5e1;
+  }
+}
+
+// Container padding per evitare overflow
+.viewpoint-tab .ps-2.pt-2 {
+  padding-right: 8px !important;
+}
+
+.viewpoint-tab > ul,
+.viewpoint-tab .ps-2.pt-2 > ul {
+  padding-right: 4px;
+}
+
+
+// Viewpoint Header
+.viewpoint-box__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  background: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
+  cursor: pointer;
+  transition: background-color 150ms ease;
+  
+  &:hover {
+    background: #f1f5f9;
+  }
+  
+  .viewpoint-box--active & {
+    background: rgba(71, 85, 105, 0.06);
+    border-bottom-color: rgba(71, 85, 105, 0.15);
+  }
+}
+.viewpoint-box__header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 1 auto; /* non cresce, può shrinkare, dimensione auto */
+}
+
+.viewpoint-box__header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.viewpoint-box__name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1e293b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.viewpoint-box__toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 150ms ease;
+  
+  &:hover {
+    background: #e2e8f0;
+    color: #334155;
+  }
+  
+  i {
+    font-size: 12px;
+  }
+}
+
+// Viewpoint Badge (EX/OV)
+.viewpoint-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 22px;
+  padding: 0 8px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-radius: 4px;
+  
+  &--exclusive {
+    background: rgba(71, 85, 105, 0.12);
+    color: #475569;
+  }
+  
+  &--overlay {
+    background: rgba(6, 182, 212, 0.12);
+    color: #0891b2;
+  }
+}
+
+// Viewpoint Content (Views container)
+.viewpoint-box__content {
+  padding: 8px 0;
+  
+  > ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+}
+
+// ============================================
+// CUSTOM RADIO BUTTON (Exclusive VP)
+// ============================================
+
+.viewpoint-radio {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  
+  input[type="radio"] {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+  
+  &__custom {
+    width: 18px;
+    height: 18px;
+    border: 2px solid #cbd5e1;
+    border-radius: 50%;
+    background: #ffffff;
+    position: relative;
+    transition: all 150ms ease;
+    
+    &::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) scale(0);
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #475569;
+      transition: transform 150ms ease;
+    }
+  }
+  
+  input[type="radio"]:checked + &__custom {
+    border-color: #475569;
+    
+    &::after {
+      transform: translate(-50%, -50%) scale(1);
+    }
+  }
+  
+  input[type="radio"]:focus + &__custom {
+    box-shadow: 0 0 0 3px rgba(71, 85, 105, 0.15);
+  }
+  
+  &:hover &__custom {
+    border-color: #94a3b8;
+  }
+}
+
+// ============================================
+// CUSTOM CHECKBOX (Overlay VP)
+// ============================================
+.viewpoint-checkbox {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  position: relative;
+  width: 18px;
+  height: 18px;
+  
+  input[type="checkbox"] {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+    margin: 0;
+    padding: 0;
+    pointer-events: none;
+    visibility: hidden;
+  }
+}
+
+.viewpoint-checkbox__custom {
+  width: 18px;
+  height: 18px;
+  border: 2px solid #cbd5e1;
+  border-radius: 4px;
+  background: #ffffff;
+  position: relative;
+  transition: all 150ms ease;
+  
+  &::after {
+    content: '';
+    position: absolute;
+    top: 45%;
+    left: 50%;
+    transform: translate(-50%, -50%) rotate(45deg) scale(0);
+    width: 5px;
+    height: 9px;
+    border: solid #ffffff;
+    border-width: 0 0px 0px 0;
+    transition: transform 150ms ease;
+  }
+}
+
+// .viewpoint-tab .viewpoint-checkbox__custom
+
+.viewpoint-checkbox input[type="checkbox"]:checked + .viewpoint-checkbox__custom {
+  background: #0891b2;
+  border-color: #0891b2;
+  
+  &::after {
+    transform: translate(-50%, -50%) rotate(45deg) scale(1);
+  }
+}
+
+.viewpoint-checkbox input[type="checkbox"]:focus + .viewpoint-checkbox__custom {
+  box-shadow: 0 0 0 3px rgba(8, 145, 178, 0.15);
+}
+
+.viewpoint-checkbox:hover .viewpoint-checkbox__custom {
+  border-color: #94a3b8;
+}
+
+.viewpoint-box__header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  
+  // Remove any vertical lines
+  &::before,
+  &::after {
+    display: none !important;
+  }
+  
+  .expansion-line {
+    display: none !important;
+  }
+}
+
+// ============================================
+// VIEW ENTRY (Inside viewpoint box)
+// ============================================
+
+.view-entry {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.view-entry__row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  min-height: 36px;
+  padding: 4px 12px 4px 8px;
+  margin: 1px 8px;
+
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 150ms ease;
+  
+  &:hover {
+    background: #f8fafc;
+  }
+  
+  .view-entry--selected & {
+    background: rgba(71, 85, 105, 0.08);
+    
+    &:hover {
+      background: rgba(71, 85, 105, 0.12);
+    }
+  }
+}
+
+// .view-entry__left {
+//   display: flex;
+//   align-items: center;
+//   gap: 6px;
+//   flex: 1;
+//   min-width: 0;
+//   justify-content: flex-start;
+// }
+
+.view-entry__left {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.view-entry__toggle {
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  
+  i {
+    font-size: 10px;
+    color: #94a3b8;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    transition: all 150ms ease;
+    
+    &:hover {
+      color: #475569;
+      background: #e2e8f0;
+    }
+  }
+}
+
+.view-entry__toggle-spacer {
+  width: 20px;
+  height: 20px;
+}
+
+.view-entry__name {
+  font-size: 13px;
+  font-weight: 500;
+  color: #334155;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+// .view-entry__right {
+//   display: flex;
+//   align-items: center;
+//   gap: 6px;
+//   flex-shrink: 0;
+//   margin-left: auto;
+// }
+
+.view-entry__right {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+}
+
+.view-entry__priority {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  
+  .priority {
+    min-width: 70px;
+    height: 22px;
+    padding: 0 8px;
+    font-size: 10px;
+    font-family: 'SF Mono', 'Monaco', monospace;
+    color: #94a3b8;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 4px;
+    line-height: 20px;
+    text-align: center;
+  }
+  
+  .priority-clear {
+    font-size: 14px;
+    color: #94a3b8;
+    cursor: pointer;
+    padding: 2px;
+    border-radius: 4px;
+    
+    &:hover {
+      color: #64748b;
+      background: #f1f5f9;
+    }
+  }
+  
+  .priority-booster {
+    width: 44px;
+    height: 22px;
+    padding: 0 4px;
+    font-size: 11px;
+    font-family: 'SF Mono', 'Monaco', monospace;
+    text-align: center;
+    border: 1px solid #e2e8f0;
+    border-radius: 4px;
+    background: #ffffff;
+    
+    &:focus {
+      outline: none;
+      border-color: #475569;
+      box-shadow: 0 0 0 2px rgba(71, 85, 105, 0.1);
+    }
+  }
+}
+
+.view-entry__badges {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+// Feature Badges
+.feature-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 20px;
+  padding: 0 6px;
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  border-radius: 4px;
+  
+  &--ocl {
+    background: rgba(239, 68, 68, 0.12);
+    color: #dc2626;
+  }
+  
+  &--js {
+    background: rgba(245, 158, 11, 0.12);
+    color: #d97706;
+  }
+  
+  &--ex {
+    background: rgba(16, 185, 129, 0.12);
+    color: #059669;
+  }
+  
+  &--inactive {
+    background: rgba(148, 163, 184, 0.08);
+    color: #cbd5e1;
+  }
+}
+
+// Nested views indentation
+.view-entry__children {
+  list-style: none;
+  margin: 0;
+  padding: 0 0 0 24px;
+}
+
+// ============================================
+// DARK MODE - Box Layout
+// ============================================
+
+[data-theme="dark"] {
+  .viewpoint-box {
+    background: #1e293b;
+    border-color: #334155;
+    
+    &--active {
+      border-color: #64748b;
+      box-shadow: 0 0 0 1px rgba(100, 116, 139, 0.2);
+    }
+    
+    &--overlay {
+      border-color: #475569;
+    }
+  }
+  
+  .viewpoint-box__header {
+    background: #0f172a;
+    border-bottom-color: #334155;
+    
+    &:hover {
+      background: #1e293b;
+    }
+    
+    .viewpoint-box--active & {
+      background: rgba(100, 116, 139, 0.1);
+    }
+  }
+  
+  .viewpoint-box__name {
+    color: #f1f5f9;
+  }
+  
+  .viewpoint-box__toggle {
+    color: #94a3b8;
+    
+    &:hover {
+      background: #334155;
+      color: #e2e8f0;
+    }
+  }
+  
+  .viewpoint-badge {
+    &--exclusive {
+      background: rgba(100, 116, 139, 0.2);
+      color: #94a3b8;
+    }
+    
+    &--overlay {
+      background: rgba(34, 211, 238, 0.15);
+      color: #22d3ee;
+    }
+  }
+  
+  .viewpoint-radio__custom,
+  .viewpoint-checkbox__custom {
+    background: #1e293b;
+    border-color: #475569;
+  }
+  
+  .viewpoint-radio input[type="radio"]:checked + .viewpoint-radio__custom {
+    border-color: #64748b;
+    
+    &::after {
+      background: #94a3b8;
+    }
+  }
+  
+  .viewpoint-checkbox input[type="checkbox"]:checked + .viewpoint-checkbox__custom {
+    background: #0891b2;
+    border-color: #0891b2;
+  }
+  
+  .view-entry__row {
+    &:hover {
+      background: #1e293b;
+    }
+    
+    .view-entry--selected & {
+      background: rgba(100, 116, 139, 0.15);
+    }
+  }
+  
+  .view-entry__name {
+    color: #e2e8f0;
+  }
+  
+  .view-entry__toggle i {
+    color: #64748b;
+    
+    &:hover {
+      color: #94a3b8;
+      background: #334155;
+    }
+  }
+  
+  .view-entry__priority {
+    .priority {
+      background: #0f172a;
+      border-color: #334155;
+      color: #64748b;
+    }
+    
+    .priority-booster {
+      background: #1e293b;
+      border-color: #334155;
+      color: #e2e8f0;
+      
+      &:focus {
+        border-color: #64748b;
+      }
+    }
+  }
+  
+  .feature-badge {
+    &--ocl {
+      background: rgba(239, 68, 68, 0.15);
+      color: #f87171;
+    }
+    
+    &--js {
+      background: rgba(245, 158, 11, 0.15);
+      color: #fbbf24;
+    }
+    
+    &--ex {
+      background: rgba(16, 185, 129, 0.15);
+      color: #34d399;
+    }
+    
+    &--inactive {
+      background: rgba(100, 116, 139, 0.1);
+      color: #475569;
+    }
+  }
+}
+
+
+
+
+
+
+
+
+
 
   // Dark mode support
   @media (prefers-color-scheme: dark) {
@@ -821,42 +1641,60 @@ section.viewpoint-tab .ps-2.pt-2 h1 {
 
   .right-content {
     cursor: default;
-    margin-left: $spacing-sm;
+    margin-left: 8px;
     display: flex;
     align-items: center;
     flex-shrink: 0;
-    height: $row-height - ($row-padding-v * 2);
+    gap: 4px;
 
     .priority {
       display: block;
-      min-width: 5rem;
+      min-width: 70px; // Ridotto da 5rem
       height: 20px;
-      border: 1px solid $color-border;
-      border-radius: $radius-sm;
+      border: 1px solid #e2e8f0;
+      border-radius: 4px;
       margin: auto;
       text-align: center;
-      padding: 0 $spacing-sm;
-      font-size: $font-size-xs;
+      padding: 0 6px;
+      font-size: 10px; // Ridotto
+      font-family: 'SF Mono', 'Monaco', monospace;
       line-height: 18px;
-      color: $color-text-secondary;
+      color: #94a3b8; // Più muted
+      background: #f8fafc;
     }
 
     .priority-booster {
       display: block;
       height: 20px;
       margin: auto;
-      margin-right: $spacing-sm;
       text-align: center;
-      padding: 0 6px;
-      width: 2em;
-      border: 1px solid $color-border !important;
-      border-radius: $radius-sm;
-      font-size: $font-size-sm;
+      padding: 0 4px;
+      width: 40px; // Più compatto
+      border: 1px solid #e2e8f0 !important;
+      border-radius: 4px;
+      font-size: 11px;
+      font-family: 'SF Mono', 'Monaco', monospace;
+      background: #ffffff;
 
       &:hover,
       &:focus {
-        outline: 2px solid $color-accent;
-        outline-offset: 1px;
+        outline: none;
+        border-color: #475569 !important;
+        box-shadow: 0 0 0 2px rgba(71, 85, 105, 0.1);
+      }
+    }
+    
+       // X button per reset
+    .bi-x {
+      font-size: 14px;
+      color: #94a3b8;
+      cursor: pointer;
+      padding: 2px;
+      border-radius: 4px;
+      
+      &:hover {
+        color: #64748b;
+        background: #f1f5f9;
       }
     }
   }
@@ -1007,268 +1845,943 @@ section.viewpoint-tab .ps-2.pt-2 h1 {
 }
 
 // ============================================
+// VIEWPOINT BOX LAYOUT - NEW DESIGN
+// ============================================
+
+.viewpoint-box {
+  margin: 0 0 12px 0;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #ffffff;
+  overflow: hidden;
+  list-style: none;
+  
+  &--active {
+    border-color: #475569;
+    box-shadow: 0 0 0 1px rgba(71, 85, 105, 0.1);
+  }
+  
+  &--overlay {
+    border-style: solid!important;
+    border-color: #cbd5e1;
+  }
+}
+
+// Viewpoint Header
+.viewpoint-box__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  background: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
+  cursor: pointer;
+  transition: background-color 150ms ease;
+  
+  &:hover {
+    background: #f1f5f9;
+  }
+  
+  .viewpoint-box--active & {
+    background: rgba(71, 85, 105, 0.06);
+    border-bottom-color: rgba(71, 85, 105, 0.15);
+  }
+}
+
+.viewpoint-box__header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+}
+
+.viewpoint-box__header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.viewpoint-box__name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1e293b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.viewpoint-box__toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 150ms ease;
+  
+  &:hover {
+    background: #e2e8f0;
+    color: #334155;
+  }
+  
+  i {
+    font-size: 12px;
+  }
+}
+
+// Viewpoint Badge (EX/OV)
+.viewpoint-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 22px;
+  padding: 0 8px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-radius: 4px;
+  
+  &--exclusive {
+    background: rgba(71, 85, 105, 0.12);
+    color: #475569;
+  }
+  
+  &--overlay {
+    background: rgba(6, 182, 212, 0.12);
+    color: #0891b2;
+  }
+}
+
+// Viewpoint Content (Views container)
+.viewpoint-box__content {
+  padding: 8px 4px 8px 0;
+  
+  > ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+}
+
+// ============================================
+// CUSTOM RADIO BUTTON (Exclusive VP)
+// ============================================
+
+.viewpoint-radio {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  
+  input[type="radio"] {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+  
+  &__custom {
+    width: 18px;
+    height: 18px;
+    border: 2px solid #cbd5e1;
+    border-radius: 50%;
+    background: #ffffff;
+    position: relative;
+    transition: all 150ms ease;
+    
+    &::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) scale(0);
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #475569;
+      transition: transform 150ms ease;
+    }
+  }
+  
+  input[type="radio"]:checked + &__custom {
+    border-color: #475569;
+    
+    &::after {
+      transform: translate(-50%, -50%) scale(1);
+    }
+  }
+  
+  input[type="radio"]:focus + &__custom {
+    box-shadow: 0 0 0 3px rgba(71, 85, 105, 0.15);
+  }
+  
+  &:hover &__custom {
+    border-color: #94a3b8;
+  }
+}
+
+// ============================================
+// CUSTOM CHECKBOX (Overlay VP)
+// ============================================
+
+.viewpoint-checkbox {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  
+  input[type="checkbox"] {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+  
+  &__custom {
+    width: 18px;
+    height: 18px;
+    border: 2px solid #cbd5e1;
+    border-radius: 4px;
+    background: #ffffff;
+    position: relative;
+    transition: all 150ms ease;
+    
+    &::after {
+      content: '';
+      position: absolute;
+      top: 45%;
+      left: 50%;
+      transform: translate(-50%, -50%) rotate(45deg) scale(0);
+      width: 5px;
+      height: 9px;
+      border: solid #ffffff;
+      border-width: 0 2px 2px 0;
+      transition: transform 150ms ease;
+    }
+  }
+  
+  input[type="checkbox"]:checked + &__custom {
+    background: #0891b2;
+    border-color: #0891b2;
+    
+    &::after {
+      transform: translate(-50%, -50%) rotate(45deg) scale(1);
+    }
+  }
+  
+  input[type="checkbox"]:focus + &__custom {
+    box-shadow: 0 0 0 3px rgba(8, 145, 178, 0.15);
+  }
+  
+  &:hover &__custom {
+    border-color: #94a3b8;
+  }
+}
+
+// ============================================
+// VIEW ENTRY (Inside viewpoint box)
+// ============================================
+
+.view-entry {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.view-entry__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 36px;
+  padding: 4px 12px 4px 12px;
+  margin: 1px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 150ms ease;
+  
+  &:hover {
+    background: #f8fafc;
+  }
+  
+  .view-entry--selected & {
+    background: rgba(71, 85, 105, 0.08);
+    
+    &:hover {
+      background: rgba(71, 85, 105, 0.12);
+    }
+  }
+}
+
+.view-entry__left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.view-entry__toggle {
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  
+  i {
+    font-size: 10px;
+    color: #94a3b8;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    transition: all 150ms ease;
+    
+    &:hover {
+      color: #475569;
+      background: #e2e8f0;
+    }
+  }
+}
+
+.view-entry__toggle-spacer {
+  width: 20px;
+  height: 20px;
+}
+
+.view-entry__name {
+  font-size: 13px;
+  font-weight: 500;
+  color: #334155;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.view-entry__right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.view-entry__priority {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  
+  .priority {
+    min-width: 70px;
+    height: 22px;
+    padding: 0 8px;
+    font-size: 10px;
+    font-family: 'SF Mono', 'Monaco', monospace;
+    color: #94a3b8;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 4px;
+    line-height: 20px;
+    text-align: center;
+  }
+  
+  .priority-clear {
+    font-size: 14px;
+    color: #94a3b8;
+    cursor: pointer;
+    padding: 2px;
+    border-radius: 4px;
+    
+    &:hover {
+      color: #64748b;
+      background: #f1f5f9;
+    }
+  }
+  
+  .priority-booster {
+    width: 44px;
+    height: 22px;
+    padding: 0 4px;
+    font-size: 11px;
+    font-family: 'SF Mono', 'Monaco', monospace;
+    text-align: center;
+    border: 1px solid #e2e8f0;
+    border-radius: 4px;
+    background: #ffffff;
+    
+    &:focus {
+      outline: none;
+      border-color: #475569;
+      box-shadow: 0 0 0 2px rgba(71, 85, 105, 0.1);
+    }
+  }
+}
+
+.view-entry__badges {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+// Feature Badges (OCL/JS/EX)
+.feature-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 20px;
+  padding: 0 6px;
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  border-radius: 4px;
+  
+  &--ocl {
+    background: rgba(239, 68, 68, 0.12);
+    color: #dc2626;
+  }
+  
+  &--js {
+    background: rgba(245, 158, 11, 0.12);
+    color: #d97706;
+  }
+  
+  &--ex {
+    background: rgba(16, 185, 129, 0.12);
+    color: #059669;
+  }
+  
+  &--inactive {
+    background: rgba(148, 163, 184, 0.08);
+    color: #cbd5e1;
+  }
+}
+
+// Nested views indentation
+.view-entry__children {
+  list-style: none;
+  margin: 0;
+  padding: 0 0 0 28px;
+}
+
+// ============================================
+// TYPE ICONS - PASTEL STYLE (for views inside box)
+// ============================================
+
+.view-entry .icon.type {
+  width: 24px;
+  height: 24px;
+  min-width: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.view-entry .tree-Any,
+.view-entry .icon.type:not(.DViewPoint) {
+  background-color: rgba(100, 116, 139, 0.15);
+  color: #64748b;
+}
+
+.view-entry .tree-Model,
+.view-entry .tree-DModel {
+  background-color: rgba(139, 92, 246, 0.15);
+  color: #8b5cf6;
+}
+
+.view-entry .tree-Package,
+.view-entry .tree-DPackage {
+  background-color: rgba(59, 130, 246, 0.15);
+  color: #3b82f6;
+}
+
+.view-entry .tree-Class,
+.view-entry .tree-DClass {
+  background-color: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+}
+
+.view-entry .tree-Attribute,
+.view-entry .tree-DAttribute {
+  background-color: rgba(249, 115, 22, 0.15);
+  color: #f97316;
+}
+
+.view-entry .tree-Reference,
+.view-entry .tree-DReference {
+  background-color: rgba(6, 182, 212, 0.15);
+  color: #06b6d4;
+}
+
+.view-entry .tree-Operation,
+.view-entry .tree-DOperation {
+  background-color: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+}
+
+.view-entry .tree-Enumerator,
+.view-entry .tree-DEnumerator {
+  background-color: rgba(245, 158, 11, 0.15);
+  color: #f59e0b;
+}
+
+.view-entry .tree-EnumLiteral,
+.view-entry .tree-DEnumLiteral {
+  background-color: rgba(217, 119, 6, 0.15);
+  color: #d97706;
+}
+
+.view-entry .tree-Object,
+.view-entry .tree-DObject {
+  background-color: rgba(107, 114, 128, 0.15);
+  color: #6b7280;
+}
+
+.view-entry .tree-Value,
+.view-entry .tree-DValue {
+  background-color: rgba(120, 113, 108, 0.15);
+  color: #78716c;
+}
+
+.view-entry .tree-Singleton {
+  background-color: rgba(71, 85, 105, 0.15);
+  color: #475569;
+}
+
+.view-entry .tree-Parameter,
+.view-entry .tree-DParameter {
+  background-color: rgba(16, 185, 129, 0.12);
+  color: #10b981;
+}
+
+.view-entry .tree-Edge,
+.view-entry .tree-DEdge {
+  background-color: rgba(100, 116, 139, 0.15);
+  color: #64748b;
+}
+
+.view-entry .tree-EdgePoint,
+.view-entry .tree-DEdgePoint {
+  background-color: rgba(148, 163, 184, 0.15);
+  color: #94a3b8;
+}
+
+.view-entry .tree-EdgeAssociation {
+  background-color: rgba(168, 85, 247, 0.15);
+  color: #a855f7;
+}
+
+.view-entry .tree-EdgeDependency {
+  background-color: rgba(236, 72, 153, 0.15);
+  color: #ec4899;
+}
+
+.view-entry .tree-EdgeInheritance {
+  background-color: rgba(139, 92, 246, 0.15);
+  color: #8b5cf6;
+}
+
+.view-entry .tree-EdgeAggregation {
+  background-color: rgba(34, 211, 238, 0.15);
+  color: #22d3ee;
+}
+
+.view-entry .tree-EdgeComposition {
+  background-color: rgba(20, 184, 166, 0.15);
+  color: #14b8a6;
+}
+
+.view-entry .tree-Anchors {
+  background-color: rgba(251, 146, 60, 0.15);
+  color: #fb923c;
+}
+
+.view-entry .tree-Fallback {
+  background-color: rgba(163, 163, 163, 0.15);
+  color: #a3a3a3;
+}
+
+// ============================================
+// VP ICON IN HEADER
+// ============================================
+
+.viewpoint-box__header .icon.type.DViewPoint {
+  width: 24px;
+  height: 24px;
+  min-width: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  font-size: 10px;
+  font-weight: 700;
+  
+  &.exclusive {
+    background-color: #475569;
+    color: #ffffff;
+  }
+  
+  &.overlay {
+    background-color: transparent;
+    border: 1.5px solid #0891b2;
+    color: #0891b2;
+  }
+}
+
+// ============================================
+// DARK MODE - Box Layout
+// ============================================
+
+[data-theme="dark"] {
+  .viewpoint-box {
+    background: #1e293b;
+    border-color: #334155;
+    
+    &--active {
+      border-color: #64748b;
+      box-shadow: 0 0 0 1px rgba(100, 116, 139, 0.2);
+    }
+    
+    &--overlay {
+      border-color: #475569;
+    }
+  }
+  
+  .viewpoint-box__header {
+    background: #0f172a;
+    border-bottom-color: #334155;
+    
+    &:hover {
+      background: #1e293b;
+    }
+    
+    .viewpoint-box--active & {
+      background: rgba(100, 116, 139, 0.1);
+    }
+  }
+  
+  .viewpoint-box__name {
+    color: #f1f5f9;
+  }
+  
+  .viewpoint-box__toggle {
+    color: #94a3b8;
+    
+    &:hover {
+      background: #334155;
+      color: #e2e8f0;
+    }
+  }
+  
+  .viewpoint-badge {
+    &--exclusive {
+      background: rgba(100, 116, 139, 0.2);
+      color: #94a3b8;
+    }
+    
+    &--overlay {
+      background: rgba(34, 211, 238, 0.15);
+      color: #22d3ee;
+    }
+  }
+  
+  .viewpoint-radio__custom,
+  .viewpoint-checkbox__custom {
+    background: #1e293b;
+    border-color: #475569;
+  }
+  
+  .viewpoint-radio input[type="radio"]:checked + .viewpoint-radio__custom {
+    border-color: #64748b;
+    
+    &::after {
+      background: #94a3b8;
+    }
+  }
+  
+  .viewpoint-checkbox input[type="checkbox"]:checked + .viewpoint-checkbox__custom {
+    background: #0891b2;
+    border-color: #0891b2;
+  }
+  
+  .view-entry__row {
+    &:hover {
+      background: rgba(51, 65, 85, 0.5);
+    }
+    
+    .view-entry--selected & {
+      background: rgba(100, 116, 139, 0.15);
+    }
+  }
+  
+  .view-entry__name {
+    color: #e2e8f0;
+  }
+  
+  .view-entry__toggle i {
+    color: #64748b;
+    
+    &:hover {
+      color: #94a3b8;
+      background: #334155;
+    }
+  }
+  
+  .view-entry__priority {
+    .priority {
+      background: #0f172a;
+      border-color: #334155;
+      color: #64748b;
+    }
+    
+    .priority-booster {
+      background: #1e293b;
+      border-color: #334155;
+      color: #e2e8f0;
+      
+      &:focus {
+        border-color: #64748b;
+      }
+    }
+  }
+  
+  .feature-badge {
+    &--ocl {
+      background: rgba(239, 68, 68, 0.15);
+      color: #f87171;
+    }
+    
+    &--js {
+      background: rgba(245, 158, 11, 0.15);
+      color: #fbbf24;
+    }
+    
+    &--ex {
+      background: rgba(16, 185, 129, 0.15);
+      color: #34d399;
+    }
+    
+    &--inactive {
+      background: rgba(100, 116, 139, 0.1);
+      color: #475569;
+    }
+  }
+  
+  // Dark mode pastel type icons
+  .view-entry .tree-Model,
+  .view-entry .tree-DModel {
+    background-color: rgba(139, 92, 246, 0.2);
+    color: #a78bfa;
+  }
+
+  .view-entry .tree-Package,
+  .view-entry .tree-DPackage {
+    background-color: rgba(59, 130, 246, 0.2);
+    color: #60a5fa;
+  }
+
+  .view-entry .tree-Class,
+  .view-entry .tree-DClass {
+    background-color: rgba(239, 68, 68, 0.2);
+    color: #f87171;
+  }
+
+  .view-entry .tree-Attribute,
+  .view-entry .tree-DAttribute {
+    background-color: rgba(249, 115, 22, 0.2);
+    color: #fb923c;
+  }
+
+  .view-entry .tree-Reference,
+  .view-entry .tree-DReference {
+    background-color: rgba(6, 182, 212, 0.2);
+    color: #22d3ee;
+  }
+
+  .view-entry .tree-Operation,
+  .view-entry .tree-DOperation {
+    background-color: rgba(16, 185, 129, 0.2);
+    color: #34d399;
+  }
+
+  .view-entry .tree-Enumerator,
+  .view-entry .tree-DEnumerator {
+    background-color: rgba(245, 158, 11, 0.2);
+    color: #fbbf24;
+  }
+
+  .view-entry .tree-Object,
+  .view-entry .tree-DObject {
+    background-color: rgba(107, 114, 128, 0.2);
+    color: #9ca3af;
+  }
+  
+  .viewpoint-box__header .icon.type.DViewPoint.exclusive {
+    background-color: #64748b;
+    color: #f8fafc;
+  }
+  
+  .viewpoint-box__header .icon.type.DViewPoint.overlay {
+    border-color: #22d3ee;
+    color: #22d3ee;
+  }
+}
+
+// Also support prefers-color-scheme
+@media (prefers-color-scheme: dark) {
+  body:not([data-theme="light"]) {
+    .viewpoint-box {
+      background: #1e293b;
+      border-color: #334155;
+    }
+    
+    .viewpoint-box__header {
+      background: #0f172a;
+      border-bottom-color: #334155;
+    }
+    
+    .viewpoint-box__name {
+      color: #f1f5f9;
+    }
+    
+    .view-entry__name {
+      color: #e2e8f0;
+    }
+    
+    .view-entry__row:hover {
+      background: rgba(51, 65, 85, 0.5);
+    }
+  }
+}
+
+// ============================================
 // DARK MODE SUPPORT
 // ============================================
 @media (prefers-color-scheme: dark) {
-  .view-editor-root {
-    background: #0f172a;
-  }
-
-  section.viewpoint-tab {
-    background-color: #1e293b;
-    border-color: #334155;
-    color: #f1f5f9;
-
-    h1 {
-      color: #f1f5f9;
-      border-bottom-color: #334155;
-
-      &::before {
-        color: #94a3b8;
-      }
-    }
-  }
-
   .viewpoint-tab {
-    .inline-row {
-      &:hover {
-        background-color: #334155; // slate-700 - clear hover in dark mode
-        border-color: #475569;
-      }
-    }
-
-    // Divider in dark mode
-    .entry-root.DViewPoint:not(:last-child)::after {
-      background: #334155; // slate-700
-    }
-
-    .entry-root.DViewPoint > .inline-row {
-      background-color: rgba(30, 41, 59, 0.5); // slate-800 subtle
-
-      &:hover {
-        background-color: #334155; // slate-700
-      }
-    }
-
-    li.entry-root.DViewPoint.selected > .inline-row {
-      background: linear-gradient(135deg, rgba(71, 85, 105, 0.2) 0%, rgba(71, 85, 105, 0.1) 100%);
-      border-color: rgba(71, 85, 105, 0.4);
-
-      &:hover {
-        background: linear-gradient(135deg, rgba(71, 85, 105, 0.25) 0%, rgba(71, 85, 105, 0.15) 100%);
-      }
-    }
-
-    .mid-stuff,
-    .node-label {
-      color: #f1f5f9;
-    }
-
-    .left-stuff {
-      .bi {
-        color: #64748b;
-
-        &:hover {
-          color: #94a3b8;
-          background-color: #334155;
-        }
-      }
-
-      .bi-caret-right-fill {
-        color: #334155;
-      }
-
-      .expansion-line {
-        background-color: #334155;
-      }
-    }
-
-    // Dark mode icon backgrounds (slightly lighter versions)
-    .tree-Any {
-      background-color: #64748b; // slate-500
-      color: white;
-    }
-
-    .icon.type.DViewPoint {
-      background-color: #64748b; // slate-500
-      color: #f8fafc;
-    }
-
+    // Pastel colors in dark mode (slightly brighter)
     .tree-Model,
     .tree-DModel {
-      background-color: #a78bfa; // violet-400
-      color: white;
+      background-color: rgba(139, 92, 246, 0.2);
+      color: #a78bfa;
     }
 
     .tree-Package,
     .tree-DPackage {
-      background-color: #60a5fa; // blue-400
-      color: white;
+      background-color: rgba(59, 130, 246, 0.2);
+      color: #60a5fa;
     }
 
     .tree-Class,
     .tree-DClass {
-      background-color: #f87171; // red-400
-      color: white;
+      background-color: rgba(239, 68, 68, 0.2);
+      color: #f87171;
     }
 
     .tree-Attribute,
     .tree-DAttribute {
-      background-color: #fb923c; // orange-400
-      color: white;
+      background-color: rgba(249, 115, 22, 0.2);
+      color: #fb923c;
     }
 
     .tree-Reference,
     .tree-DReference {
-      background-color: #22d3ee; // cyan-400
-      color: white;
+      background-color: rgba(6, 182, 212, 0.2);
+      color: #22d3ee;
     }
 
     .tree-Operation,
     .tree-DOperation {
-      background-color: #34d399; // emerald-400
-      color: white;
+      background-color: rgba(16, 185, 129, 0.2);
+      color: #34d399;
     }
 
     .tree-Enumerator,
     .tree-DEnumerator {
-      background-color: #fbbf24; // amber-400
-      color: #1e293b;
+      background-color: rgba(245, 158, 11, 0.2);
+      color: #fbbf24;
     }
 
     .tree-EnumLiteral,
     .tree-DEnumLiteral {
-      background-color: #f59e0b; // amber-500
-      color: white;
+      background-color: rgba(217, 119, 6, 0.2);
+      color: #f59e0b;
     }
 
     .tree-Object,
     .tree-DObject {
-      background-color: #9ca3af; // gray-400
-      color: white;
+      background-color: rgba(107, 114, 128, 0.2);
+      color: #9ca3af;
     }
 
     .tree-Value,
     .tree-DValue {
-      background-color: #a8a29e; // stone-400
-      color: white;
+      background-color: rgba(120, 113, 108, 0.2);
+      color: #a8a29e;
     }
 
-    .tree-Singleton {
-      background-color: #64748b; // slate-500
-      color: white;
-    }
-
-    .tree-Edge,
-    .tree-DEdge {
-      background-color: #94a3b8; // slate-400
-      color: white;
-    }
-
-    .tree-EdgePoint,
-    .tree-DEdgePoint {
-      background-color: #cbd5e1; // slate-300
-      color: #1e293b;
-    }
-
-    .tree-EdgeAssociation {
-      background-color: #c084fc; // purple-400
-      color: white;
-    }
-
-    .tree-EdgeDependency {
-      background-color: #f472b6; // pink-400
-      color: white;
-    }
-
-    .tree-EdgeGeneralization {
-      background-color: #2dd4bf; // teal-400
-      color: white;
-    }
-
-    .tree-EdgeAggregation {
-      background-color: #38bdf8; // sky-400
-      color: white;
-    }
-
-    .tree-EdgeComposition {
-      background-color: #3b82f6; // blue-500
-      color: white;
-    }
-
-    .tree-Vertex,
-    .tree-DVertex,
-    .tree-GraphVertex,
-    .tree-DGraphVertex {
-      background-color: #a78bfa; // violet-400
-      color: white;
-    }
-
-    .tree-Graph,
-    .tree-DGraph {
-      background-color: #818cf8; // indigo-400
-      color: white;
-    }
-
-    .tree-Field,
-    .tree-DField {
-      background-color: #d1d5db; // gray-300
-      color: #1e293b;
-    }
-
-    // Dark mode badges
-    .ocl-icon::before {
-      background-color: rgba(220, 38, 38, 0.2);
-      color: #f87171 !important;
-    }
-
-    .js-icon::before {
-      background-color: rgba(217, 119, 6, 0.2);
-      color: #fbbf24 !important;
-    }
-
-    .ex-icon::before {
-      background-color: rgba(71, 85, 105, 0.2);
-      color: #94a3b8 !important;
-    }
-
-    .hover-stuff {
-      .bx,
-      .jj {
-        color: #94a3b8;
-
-        &:hover {
-          background-color: #334155;
-          color: #f1f5f9;
-        }
-      }
-
-      .jj-delete:hover {
-        color: #f87171;
-        background-color: rgba(220, 38, 38, 0.15);
+    // Feature badges in dark mode
+    .right-icon.ocl-icon {
+      background-color: rgba(239, 68, 68, 0.15);
+      color: #f87171;
+      
+      &.hidden {
+        background-color: rgba(100, 116, 139, 0.1);
+        color: #475569;
       }
     }
 
-    .right-content .priority {
-      border-color: #475569;
-      color: #94a3b8;
+    .right-icon.js-icon {
+      background-color: rgba(245, 158, 11, 0.15);
+      color: #fbbf24;
+      
+      &.hidden {
+        background-color: rgba(100, 116, 139, 0.1);
+        color: #475569;
+      }
     }
-  }
 
-  .view-editor-root .single-view-content {
-    background-color: #0f172a;
-  }
+    .right-icon.ex-icon {
+      background-color: rgba(16, 185, 129, 0.15);
+      color: #34d399;
+      
+      &.hidden {
+        background-color: rgba(100, 116, 139, 0.1);
+        color: #475569;
+      }
+    }
 
-  // Dark mode scrollbar
-  .viewpoint-tab::-webkit-scrollbar-thumb,
-  .view-editor-root::-webkit-scrollbar-thumb {
-    background: #334155;
+    // Priority input in dark mode
+    .right-content {
+      .priority {
+        background: #1e293b;
+        border-color: #334155;
+        color: #64748b;
+      }
 
-    &:hover {
-      background: #475569;
+      .priority-booster {
+        background: #0f172a;
+        border-color: #334155 !important;
+        color: #e2e8f0;
+      }
     }
   }
 }
+
+
+
+  
 
 // ============================================
 // VIEW EDITOR FULLSIZE CONTENT
@@ -1277,6 +2790,9 @@ section.viewpoint-tab .ps-2.pt-2 h1 {
   position: relative;
   width: 100%;
   text-align: left;
+  height: fit-content;
+  min-height: 100%;
+
 }
 
 // ============================================
