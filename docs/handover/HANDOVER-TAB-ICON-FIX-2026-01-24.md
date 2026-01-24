@@ -1,9 +1,9 @@
 # Jjodel Handover Document - Tab Icon Fix
 
-**Version**: 1.0.1
+**Version**: 1.0.2
 **Date**: 2026-01-24
-**Time**: 18:00
-**Author**: Alfonso + Claude Sonnet 4.5
+**Time**: 19:30
+**Author**: Alfonso + Claude Opus 4.5
 **Previous Version**: [HANDOVER-UI-REDESIGN-2026-01-24.md](HANDOVER-UI-REDESIGN-2026-01-24.md)
 
 ---
@@ -14,90 +14,93 @@ Jjodel is an open-source metamodeling tool for research and education. Currently
 
 ## Recent Changes
 
-### [1.0.1] - 2026-01-24 18:00
+### [1.0.2] - 2026-01-24 19:30
 
 #### Fixed
-- **Tab Icon Persistence**: Fixed issue where tab icon ("M" for metamodel, model icon for models) would disappear during name editing
-  - **Root Cause**: Tab title component was re-rendering completely when model.name changed, unmounting and remounting ElementBadge
-  - **Solution**: Introduced memoized `TabTitle` component with custom comparison function
-  - **Files Modified**: `frontend/src/components/abstract/tabs/TabDataMaker.tsx`
-  - **Technical Details**: Used React.memo() with custom comparison to prevent unnecessary ElementBadge re-renders while allowing name updates
+- **Tab Icon Persistence**: Fixed issue where tab icon ("M" for metamodel/model) would disappear during name editing
+  - **Root Cause**: In `LModel.set_name()`, DOM manipulation via `innerHTML` was overwriting the entire tab content
+  - **Solution**:
+    1. Changed `innerHTML` to `textContent` in `LModelElement.tsx:5323` to preserve CSS pseudo-elements
+    2. Implemented CSS-only icon approach using `::before` pseudo-element in `tab-title.scss`
+  - **Files Modified**:
+    - `frontend/src/model/logicWrapper/LModelElement.tsx`
+    - `frontend/src/components/abstract/tabs/TabDataMaker.tsx`
+    - `frontend/src/components/abstract/tabs/tab-title.scss` (new file)
 
-#### Technical Implementation
+#### Technical Details
 
-**Before:**
-```typescript
-class TabDataMaker {
-    static metamodel (model: DModel|LModel): TabData {
-        return {
-            id: model.id,
-            title: <div className={"active-on-mouseenter"}>
-                <ElementBadge type="metamodel" /> {model.name}
-            </div>,
-            group: 'models',
-            closable: true,
-            content: <MetamodelTab modelid={model.id} key={model.id} />
-        };
+**Root Cause Analysis:**
+When a model name is edited in the Properties Panel, the `LModel.set_name()` method:
+1. Updates Redux state with the new name
+2. Directly manipulates the DOM: `tab.innerHTML = val` (line 5323)
+
+This `innerHTML = val` was replacing the entire content of the tab title div with just the text, destroying any child elements or React-managed content like the ElementBadge icon.
+
+**Solution - Two-Part Fix:**
+
+**Part 1: CSS-only Icon Approach** (`tab-title.scss`)
+```scss
+.tab-title {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+
+    &::before {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 22px;
+        height: 22px;
+        min-width: 22px;
+        border-radius: 5px;
+        font-size: 11px;
+        font-weight: 600;
+        color: white;
+        flex-shrink: 0;
+    }
+
+    &[data-type="metamodel"]::before {
+        content: "M";
+        background-color: #8b5cf6; // violet-500
+    }
+
+    &[data-type="model"]::before {
+        content: "M";
+        background-color: #a78bfa; // violet-400 (lighter)
     }
 }
 ```
 
-**After:**
+**Part 2: DOM Update Fix** (`LModelElement.tsx`)
 ```typescript
-// Memoized component prevents icon flicker
-const TabTitle = memo<{ type: 'metamodel' | 'model'; name: string }>(
-    ({ type, name }) => (
-        <div className="active-on-mouseenter">
-            <ElementBadge type={type} /> {name}
-        </div>
-    ),
-    // Custom comparison: only re-render if name actually changes
-    // Badge stays mounted even when name updates
-    (prevProps, nextProps) => {
-        return prevProps.name === nextProps.name && prevProps.type === nextProps.type;
-    }
-);
+// Before (BROKEN):
+if (tab) tab.innerHTML = val;
 
-TabTitle.displayName = 'TabTitle';
+// After (FIXED):
+// Update tab title text content - using textContent preserves CSS pseudo-elements (::before icon)
+if (tab) tab.textContent = val;
+```
 
-class TabDataMaker {
-    static metamodel (model: DModel|LModel): TabData {
-        return {
-            id: model.id,
-            title: <TabTitle type="metamodel" name={model.name} />,
-            group: 'models',
-            closable: true,
-            content: <MetamodelTab modelid={model.id} key={model.id} />
-        };
-    }
-
-    static model(model: DModel|LModel): TabData {
-        return {
-            id: model.id,
-            title: <TabTitle type="model" name={model.name} />,
-            group: 'models',
-            closable: true,
-            content: <ModelTab modelid={model.id} metamodelid={(model.instanceof as any)?.id || model.instanceof} />
-        };
-    }
-}
+**Part 3: TabDataMaker Update**
+```typescript
+title: <div className="tab-title active-on-mouseenter" data-type="metamodel">{model.name}</div>
 ```
 
 #### Why This Works
 
-1. **React.memo()** wraps the TabTitle component, preventing unnecessary re-renders
-2. **Custom comparison function** checks only `name` and `type` props
-3. When only `name` changes, TabTitle re-renders BUT ElementBadge stays mounted
-4. No unmount/remount cycle = no visual flicker/disappearance
+1. **CSS `::before` pseudo-element** renders the icon via CSS rules, not DOM content
+2. **`textContent`** only updates the text, not HTML structure - preserves CSS-generated pseudo-elements
+3. The `data-type` attribute tells CSS which color/style to use for the icon
+4. No React component needed for the icon - pure CSS solution
 
-#### Testing Performed
+#### Testing Checklist
 
-- ✅ Tab icon visible when tab first opens
-- ✅ Icon remains visible during name editing
-- ✅ Icon persists after name change
-- ✅ Works for both metamodel and model tabs
-- ✅ No console errors or warnings
-- ✅ No performance degradation
+- [ ] Tab icon visible when tab first opens
+- [ ] Icon remains visible during name editing
+- [ ] Icon persists after name change
+- [ ] Works for both metamodel and model tabs
+- [ ] No console errors or warnings
+- [ ] No performance degradation
 
 ---
 

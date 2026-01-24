@@ -12,16 +12,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 #### Tab Icon Persistence
-- Fixed issue where tab icon (ElementBadge showing "M" for metamodel or model icon) would disappear during name editing
-- **Root Cause**: Tab title component was re-rendering completely when `model.name` changed, causing ElementBadge to unmount and remount
-- **Solution**: Introduced memoized `TabTitle` component with custom comparison function using React.memo()
+- Fixed issue where tab icon ("M" badge for metamodel/model) would disappear during name editing
+- **Root Cause**: `LModel.set_name()` method used `innerHTML = val` to update tab title, which overwrote the entire content including the icon
+- **Solution**: Two-part fix:
+  1. Changed `innerHTML` to `textContent` in `LModelElement.tsx` to preserve CSS pseudo-elements
+  2. Implemented CSS-only icon approach using `::before` pseudo-element (doesn't depend on DOM content)
 - **Technical Details**:
-  - Added `memo` import from React
-  - Created `TabTitle` component with custom comparison function
-  - Comparison checks only `name` and `type` props to prevent unnecessary re-renders
-  - ElementBadge now stays mounted even when name changes
-  - No visual flicker or disappearance during editing
-- **Files Modified**: `/frontend/src/components/abstract/tabs/TabDataMaker.tsx`
+  - CSS `::before` renders icon via CSS rules, unaffected by `textContent` changes
+  - `data-type` attribute determines icon style (metamodel vs model)
+  - No React component needed for icon - pure CSS solution is more stable
+- **Files Modified**:
+  - `/frontend/src/model/logicWrapper/LModelElement.tsx` (line 5323)
+  - `/frontend/src/components/abstract/tabs/TabDataMaker.tsx`
+  - `/frontend/src/components/abstract/tabs/tab-title.scss` (new file)
 - **Impact**: Improved user experience when editing metamodel/model names in tabs
 
 #### Benefits
@@ -30,31 +33,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - ✅ Icon persists after name change
 - ✅ Works for both metamodel and model tabs
 - ✅ No console errors or warnings
-- ✅ Better performance (prevents unnecessary re-renders)
+- ✅ CSS-only approach is more performant than React components
 
 ### Technical Implementation
 
-**Before:**
+**The Bug (LModelElement.tsx:5323):**
 ```typescript
-title: <div className={"active-on-mouseenter"}>
-    <ElementBadge type="metamodel" /> {model.name}
-</div>
+// This was destroying the icon:
+if (tab) tab.innerHTML = val;
+
+// Fixed to:
+if (tab) tab.textContent = val;
 ```
 
-**After:**
-```typescript
-const TabTitle = memo<{ type: 'metamodel' | 'model'; name: string }>(
-    ({ type, name }) => (
-        <div className="active-on-mouseenter">
-            <ElementBadge type={type} /> {name}
-        </div>
-    ),
-    (prevProps, nextProps) => {
-        return prevProps.name === nextProps.name && prevProps.type === nextProps.type;
-    }
-);
+**CSS-Only Icon (tab-title.scss):**
+```scss
+.tab-title[data-type="metamodel"]::before {
+    content: "M";
+    background-color: #8b5cf6;
+    // ... badge styling
+}
+```
 
-title: <TabTitle type="metamodel" name={model.name} />
+**Tab Title Structure:**
+```typescript
+title: <div className="tab-title active-on-mouseenter" data-type="metamodel">{model.name}</div>
 ```
 
 ---

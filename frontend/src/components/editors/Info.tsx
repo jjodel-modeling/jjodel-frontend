@@ -27,6 +27,7 @@ import { icon } from '../../pages/components/icons/Icons';
 import { Toggle } from '../../joiner/components';
 import { UpgradePrompt } from '../ModeSystem';
 import { Button } from '../ui';
+import { M2AnalyticsModal, M2AnalyticsData } from '../M2AnalyticsModal';
 
 // Custom toggle switch component (div-based to avoid global checkbox styles)
 function PropertiesToggle(props: { data: LModelElement; field: string }) {
@@ -772,8 +773,8 @@ function PropertiesHeader(props: { data: LModelElement; className: string }) {
 }
 
 // Overview stats for Model/Metamodel
-function PropertiesOverview(props: { data: LModel }) {
-    const { data } = props;
+function PropertiesOverview(props: { data: LModel; onViewAnalytics?: () => void }) {
+    const { data, onViewAnalytics } = props;
     const packages = data.packages?.length || 0;
     const classes = data.classes?.length || 0;
     const enumerators = data.enumerators?.length || 0;
@@ -960,7 +961,7 @@ function PropertiesOverview(props: { data: LModel }) {
                     }}
                     onMouseOver={(e) => e.currentTarget.style.background = '#475569'}
                     onMouseOut={(e) => e.currentTarget.style.background = '#334155'}
-                    onClick={() => console.log('Navigate to Metamodel Analytics')}>
+                    onClick={onViewAnalytics}>
                         <span>View Analytics</span>
                         <i className="bi bi-arrow-right" style={{ fontSize: '12px', color: 'white' }} />
                     </button>
@@ -1048,6 +1049,112 @@ function InfoComponent(props: AllProps) {
     // State for collapsible sections
     const [advancedStateOpen, setAdvancedStateOpen] = useState(false);
 
+    // State for M2 Analytics Modal
+    const [showM2Analytics, setShowM2Analytics] = useState(false);
+    const [m2AnalyticsData, setM2AnalyticsData] = useState<M2AnalyticsData>({
+        metamodelName: 'metamodel_1',
+        classification: { score: 0, category: 'small' },
+        metrics: { PKG: 0, MC: 0, AMC: 0, CMC: 0, IFLMC: 0, MCWS: 0, LMC: null, SF: 0, ASF: null, EN: 0, LIT: 0 }
+    });
+
+    // Function to calculate M2 Analytics for a metamodel
+    const calculateM2Analytics = (metamodel: LModel): M2AnalyticsData => {
+        const classes = metamodel.classes || [];
+        const dclasses = classes.map((c: any) => c.__raw);
+
+        // PKG: # Packages (including nested)
+        const PKG = metamodel.allSubPackages?.length || 0;
+
+        // MC: # Metaclasses
+        const MC = classes.length;
+
+        // AMC: # Abstract Metaclasses
+        const AMC = dclasses.filter((c: any) => c?.abstract === true).length;
+
+        // CMC: # Concrete Metaclasses
+        const CMC = MC - AMC;
+
+        // IFLMC: # Concrete Featureless Metaclasses
+        const IFLMC = dclasses.filter((c: any) => {
+            if (c?.abstract === true) return false;
+            const attrLen = Array.isArray(c?.attributes) ? c.attributes.length : 0;
+            const refLen = Array.isArray(c?.references) ? c.references.length : 0;
+            return attrLen + refLen === 0;
+        }).length;
+
+        // MCWS: # Metaclasses with Superclass
+        const MCWS = dclasses.filter((c: any) => {
+            const extendsArr = c?.extends;
+            return Array.isArray(extendsArr) && extendsArr.length > 0;
+        }).length;
+
+        // LMC: % Isolated Metaclasses (no superclass and no subclasses)
+        const isolated = classes.filter((c: any) => {
+            const extendsArr = c.extends;
+            const extendedByArr = c.extendedBy;
+            const hasSuper = Array.isArray(extendsArr) && extendsArr.length > 0;
+            const hasSub = Array.isArray(extendedByArr) && extendedByArr.length > 0;
+            return !hasSuper && !hasSub;
+        }).length;
+        const LMC = MC > 0 ? (isolated / MC) * 100 : null;
+
+        // SF: # Structural Features (all attributes + references, including inherited)
+        let allAttrCount = 0;
+        let allRefCount = 0;
+        classes.forEach((c: any) => {
+            const attrs = c.allAttributes;
+            const refs = c.allReferences;
+            allAttrCount += Array.isArray(attrs) ? attrs.length : 0;
+            allRefCount += Array.isArray(refs) ? refs.length : 0;
+        });
+        const SF = allAttrCount + allRefCount;
+
+        // ASF: Avg # Structural Features per concrete metaclass
+        const ASF = CMC > 0 ? SF / CMC : null;
+
+        // EN: # Enumerations
+        const EN = metamodel.enumerators?.length || 0;
+
+        // LIT: # Literals
+        const LIT = metamodel.literals?.length || 0;
+
+        // Calculate EMF classification score (based on # metaclasses)
+        let score = Math.min(MC * 2.5, 100);
+        if (SF > 0) score = Math.min(score + SF * 0.5, 100);
+        score = Math.round(score);
+
+        const category: 'small' | 'medium' | 'large' =
+            score < 30 ? 'small' : score < 80 ? 'medium' : 'large';
+
+        return {
+            metamodelName: metamodel.name || 'Unnamed Metamodel',
+            classification: { score, category },
+            metrics: {
+                PKG,
+                MC,
+                AMC,
+                CMC,
+                IFLMC,
+                MCWS,
+                LMC: LMC !== null ? Math.round(LMC * 100) / 100 : null,
+                SF,
+                ASF: ASF !== null ? Math.round(ASF * 100) / 100 : null,
+                EN,
+                LIT
+            }
+        };
+    };
+
+    // Function to open M2 Analytics modal
+    const openM2Analytics = () => {
+        const rawData = data?.__raw || data;
+        if (data && rawData?.className === 'DModel') {
+            const analyticsData = calculateM2Analytics(data as LModel);
+            setM2AnalyticsData(analyticsData);
+            setShowM2Analytics(true);
+        }
+    };
+
     var data = props.data;
 
     if (inline) {
@@ -1108,96 +1215,105 @@ function InfoComponent(props: AllProps) {
         const showActions = ['DModel', 'DClass', 'DEnumerator', 'DAttribute', 'DReference', 'DOperation'].includes(ddata.className);
 
         return (
-            <section className="properties-tab properties-panel">
-                {/* Header */}
-                <PropertiesHeader data={data} className={ddata.className} />
+            <>
+                <section className="properties-tab properties-panel">
+                    {/* Header */}
+                    <PropertiesHeader data={data} className={ddata.className} />
 
-                {/* Overview - only for Models */}
-                {showOverview && <PropertiesOverview data={data as LModel} />}
+                    {/* Overview - only for Models */}
+                    {showOverview && <PropertiesOverview data={data as LModel} onViewAnalytics={openM2Analytics} />}
 
-                {/* Details Section */}
-                <div className="properties-section">
-                    <div className="properties-section-header">
-                        <h3 className="properties-section-title">Details</h3>
+                    {/* Details Section */}
+                    <div className="properties-section">
+                        <div className="properties-section-header">
+                            <h3 className="properties-section-title">Details</h3>
+                        </div>
+                        <div className="properties-section-content">
+                            {jsx}
+                        </div>
                     </div>
-                    <div className="properties-section-content">
-                        {jsx}
-                    </div>
-                </div>
 
-                {/* State Section - Advanced Mode Only (Collapsible) */}
-                {advanced && (
-                    <div className="properties-section properties-section--collapsible">
-                        <button
-                            className="properties-section-header"
-                            onClick={() => setAdvancedStateOpen(!advancedStateOpen)}
-                        >
-                            <div className="properties-section-title">
-                                <i className={`bi ${advancedStateOpen ? 'bi-chevron-down' : 'bi-chevron-right'}`} />
-                                <i className="bi bi-braces" />
-                                Advanced State
-                            </div>
-                            <span className="properties-section-badge advanced">Optional</span>
-                        </button>
+                    {/* State Section - Advanced Mode Only (Collapsible) */}
+                    {advanced && (
+                        <div className="properties-section properties-section--collapsible">
+                            <button
+                                className="properties-section-header"
+                                onClick={() => setAdvancedStateOpen(!advancedStateOpen)}
+                            >
+                                <div className="properties-section-title">
+                                    <i className={`bi ${advancedStateOpen ? 'bi-chevron-down' : 'bi-chevron-right'}`} />
+                                    <i className="bi bi-braces" />
+                                    Advanced State
+                                </div>
+                                <span className="properties-section-badge advanced">Optional</span>
+                            </button>
 
-                        {advancedStateOpen && (
-                            <div className="properties-section-content">
-                                {!ddata || Object.keys(ddata._state).length === 0 ? (
-                                    <div className="empty-state">
-                                        <div className="empty-state-icon">
-                                            <i className="bi bi-code-slash" />
+                            {advancedStateOpen && (
+                                <div className="properties-section-content">
+                                    {!ddata || Object.keys(ddata._state).length === 0 ? (
+                                        <div className="empty-state">
+                                            <div className="empty-state-icon">
+                                                <i className="bi bi-code-slash" />
+                                            </div>
+                                            <div className="empty-state-title">No custom state defined</div>
+                                            <div className="empty-state-description">
+                                                Advanced state properties are empty. This is normal for most elements.
+                                            </div>
                                         </div>
-                                        <div className="empty-state-title">No custom state defined</div>
-                                        <div className="empty-state-description">
-                                            Advanced state properties are empty. This is normal for most elements.
+                                    ) : (
+                                        <div className="object-state" style={{ margin: 0, border: 'none' }}>
+                                            <ReactJson
+                                                src={ddata._state}
+                                                collapsed={1}
+                                                collapseStringsAfterLength={20}
+                                                displayDataTypes={true}
+                                                displayObjectSize={true}
+                                                enableClipboard={true}
+                                                groupArraysAfterLength={100}
+                                                indentWidth={4}
+                                                name={"state"}
+                                                iconStyle={"triangle"}
+                                                quotesOnKeys={true}
+                                                shouldCollapse={false}
+                                                sortKeys={false}
+                                                theme={"rjv-default"}
+                                            />
                                         </div>
-                                    </div>
-                                ) : (
-                                    <div className="object-state" style={{ margin: 0, border: 'none' }}>
-                                        <ReactJson
-                                            src={ddata._state}
-                                            collapsed={1}
-                                            collapseStringsAfterLength={20}
-                                            displayDataTypes={true}
-                                            displayObjectSize={true}
-                                            enableClipboard={true}
-                                            groupArraysAfterLength={100}
-                                            indentWidth={4}
-                                            name={"state"}
-                                            iconStyle={"triangle"}
-                                            quotesOnKeys={true}
-                                            shouldCollapse={false}
-                                            sortKeys={false}
-                                            theme={"rjv-default"}
-                                        />
-                                    </div>
-                                )}
-                            </div>
-                        )}
-                    </div>
-                )}
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    )}
 
-                {/* Actions */}
-                {showActions && (
-                    <PropertiesActions
-                        data={data}
-                        onEdit={node?.select ? () => node?.select() : undefined}
-                        onDuplicate={data?.duplicate ? () => data?.duplicate?.() : undefined}
-                        onDelete={data?.delete ? () => data?.delete?.() : undefined}
-                    />
-                )}
+                    {/* Actions */}
+                    {showActions && (
+                        <PropertiesActions
+                            data={data}
+                            onEdit={node?.select ? () => node?.select() : undefined}
+                            onDuplicate={data?.duplicate ? () => data?.duplicate?.() : undefined}
+                            onDelete={data?.delete ? () => data?.delete?.() : undefined}
+                        />
+                    )}
 
-                {/* Upgrade Prompt - Basic Mode Only */}
-                {!advanced && (
-                    <UpgradePrompt
-                        features={[
-                            'View and edit element state',
-                            'Access advanced class options',
-                            'Configure OCL constraints'
-                        ]}
-                    />
-                )}
-            </section>
+                    {/* Upgrade Prompt - Basic Mode Only */}
+                    {!advanced && (
+                        <UpgradePrompt
+                            features={[
+                                'View and edit element state',
+                                'Access advanced class options',
+                                'Configure OCL constraints'
+                            ]}
+                        />
+                    )}
+                </section>
+
+                {/* M2 Analytics Modal */}
+                <M2AnalyticsModal
+                    isOpen={showM2Analytics}
+                    onClose={() => setShowM2Analytics(false)}
+                    data={m2AnalyticsData}
+                />
+            </>
         );
     }
 

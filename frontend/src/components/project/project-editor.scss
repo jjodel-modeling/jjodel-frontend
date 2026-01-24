@@ -548,13 +548,13 @@
     flex-shrink: 0;
 
     &--mm {
-      background: #dbeafe;
-      color: #2563eb;
+      background: #E9D5FF;  // Lavender - matches ElementBadge metamodel
+      color: #7C3AED;       // Purple-600
     }
 
     &--model {
-      background: #dcfce7;
-      color: #16a34a;
+      background: #FEF3C7;  // Amber-100 - matches ElementBadge model
+      color: #D97706;       // Amber-600
     }
 
     &--vp {
