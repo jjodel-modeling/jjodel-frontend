@@ -7,6 +7,122 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.0.1] - 2026-01-24
+
+### Fixed
+
+#### Tab Icon Persistence
+- Fixed issue where tab icon (ElementBadge showing "M" for metamodel or model icon) would disappear during name editing
+- **Root Cause**: Tab title component was re-rendering completely when `model.name` changed, causing ElementBadge to unmount and remount
+- **Solution**: Introduced memoized `TabTitle` component with custom comparison function using React.memo()
+- **Technical Details**:
+  - Added `memo` import from React
+  - Created `TabTitle` component with custom comparison function
+  - Comparison checks only `name` and `type` props to prevent unnecessary re-renders
+  - ElementBadge now stays mounted even when name changes
+  - No visual flicker or disappearance during editing
+- **Files Modified**: `/frontend/src/components/abstract/tabs/TabDataMaker.tsx`
+- **Impact**: Improved user experience when editing metamodel/model names in tabs
+
+#### Benefits
+- ✅ Icon visible when tab first opens
+- ✅ Icon remains visible during name editing
+- ✅ Icon persists after name change
+- ✅ Works for both metamodel and model tabs
+- ✅ No console errors or warnings
+- ✅ Better performance (prevents unnecessary re-renders)
+
+### Technical Implementation
+
+**Before:**
+```typescript
+title: <div className={"active-on-mouseenter"}>
+    <ElementBadge type="metamodel" /> {model.name}
+</div>
+```
+
+**After:**
+```typescript
+const TabTitle = memo<{ type: 'metamodel' | 'model'; name: string }>(
+    ({ type, name }) => (
+        <div className="active-on-mouseenter">
+            <ElementBadge type={type} /> {name}
+        </div>
+    ),
+    (prevProps, nextProps) => {
+        return prevProps.name === nextProps.name && prevProps.type === nextProps.type;
+    }
+);
+
+title: <TabTitle type="metamodel" name={model.name} />
+```
+
+---
+
+## [2.0.0] - 2026-01-24
+
+### Added
+
+#### UI Component Library
+- Complete design system implementation with reusable components
+- Design tokens file (`/frontend/src/styles/tokens.css`) with CSS custom properties
+- 10 production-ready UI components:
+  - Button (outline-style only, 4 variants, 3 sizes, loading state, icon support)
+  - Input (sizes, left/right icons, error states, full-width option)
+  - Select (custom Bootstrap Icons chevron, option groups, placeholders)
+  - Textarea (character counter, max length validation, resize control)
+  - Toggle (custom CSS switch, 3 sizes, NOT checkbox)
+  - Label (required asterisk, htmlFor association)
+  - HelpText (secondary color, small font)
+  - ErrorText (red color, icon support)
+  - Field (wrapper combining label + input + help/error)
+  - FormSection (uppercase title, divider, consistent spacing)
+- Barrel export file (`/frontend/src/components/ui/index.ts`) for clean imports
+- FormExample component demonstrating all components in realistic form
+- Global import of tokens in App.tsx
+
+#### Documentation
+- New handover document: `HANDOVER-UI-REDESIGN-2026-01-24.md`
+- Complete documentation of all 5 changes made on January 24, 2026
+- Technical notes on design system adherence
+- Accessibility compliance documentation (WCAG AA)
+- TypeScript strictness guidelines
+- Comprehensive testing checklist
+
+#### Console Empty State Enhancement
+- Interactive quick-start examples (4 clickable buttons)
+- Keyboard shortcuts visual guide (Enter, ↑↓, Tab)
+- Better UX with "Ready to explore" friendly messaging
+- New `onExecuteCode` prop for executing example code
+
+### Changed
+
+#### Button Standardization
+- Fixed Properties Panel ACTIONS buttons to use outline-style
+- Replaced inline-styled filled buttons with Button component
+- All buttons now auto-width (not full-width)
+- Consistent hover/focus states across app
+
+#### Input Field Optimization
+- Made numeric inputs more compact (24px height instead of 32px)
+- Fixed input widths (90px typical) instead of full-width
+- Uniformed font across all inputs (13px, normal weight)
+- Added override for bold styles from GenericInput/SizeInput components
+- Improved layout with flex-wrap for better responsiveness
+
+#### NodeEditor
+- Fixed export issue (added named export)
+- Removed unused `children` parameter
+- Component now imports correctly in Dock.tsx
+
+### Fixed
+- NodeEditor import/export error: "does not provide an export named 'NodeEditor'"
+- Button design rule violation in Properties Panel (filled backgrounds)
+- Inconsistent font styling in numeric inputs (bold vs normal)
+- Input width issues (full-width when should be auto)
+
+---
+
 ## [1.0.0] - 2025-01-23
 
 ### Added

@@ -354,6 +354,7 @@ All documentation updates should:
 - [CLAUDE_DEVELOPMENT_GUIDE.md](../CLAUDE_DEVELOPMENT_GUIDE.md) - Complete development guide
 - [CLAUDE.md](../CLAUDE.md) - UI/UX design system
 - [CHANGELOG.md](../CHANGELOG.md) - Documentation history
+- [AGENTIC-CONVERSATIONAL-DEVELOPMENT.md](../AGENTIC-CONVERSATIONAL-DEVELOPMENT.md) - Development methodology
 
 ### External
 - [Bootstrap Icons](https://icons.getbootstrap.com/) - Icon library
@@ -365,8 +366,8 @@ All documentation updates should:
 
 ## VERSION
 
-**Current Version:** 1.0.0
-**Last Updated:** 2025-01-23
+**Current Version:** 1.1.0
+**Last Updated:** 2026-01-24
 
 For version history, see [CHANGELOG.md](../CHANGELOG.md)
 

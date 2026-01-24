@@ -177,11 +177,42 @@ For automatic deployment, configure these secrets in GitHub:
 - **Local Docker**: http://localhost:3000 (or configured port)
 
 
+## 🎨 Recent UI/UX Improvements
+
+**Latest Update**: January 24, 2026
+
+The Jjodel frontend has undergone significant UI/UX improvements following a modern design system:
+
+### Design System
+- **Color Palette**: Slate base (#475569) with Cyan accents (#06b6d4)
+- **Typography**: Inter Variable font family with consistent sizing
+- **Spacing**: Systematic 8px-based spacing scale
+- **Components**: Production-ready UI component library
+
+### Key Features
+- ✅ **10 Reusable UI Components** - Button, Input, Select, Textarea, Toggle, Field, FormSection, Label, HelpText, ErrorText
+- ✅ **Design Tokens** - Complete CSS custom properties system
+- ✅ **Accessibility** - WCAG AA compliant with keyboard navigation
+- ✅ **TypeScript** - Fully typed with strict mode
+- ✅ **Responsive** - Mobile-first, adaptive layouts
+
+### Documentation
+For detailed UI/UX documentation, see:
+- [`/docs/handover/HANDOVER-UI-REDESIGN-2026-01-24.md`](/docs/handover/HANDOVER-UI-REDESIGN-2026-01-24.md) - Latest improvements
+- [`/docs/CHANGELOG.md`](/docs/CHANGELOG.md) - Complete change history
+- [`/docs/redesign/implementation-log.md`](/docs/redesign/implementation-log.md) - Technical implementation details
+- [`/CLAUDE.md`](/CLAUDE.md) - Complete design system specification
+
+### Development Methodology
+This project uses **Agentic Conversational Development (ACD)** - a collaborative methodology where humans work with AI agents through iterative dialogue:
+- [`/docs/AGENTIC-CONVERSATIONAL-DEVELOPMENT.md`](/docs/AGENTIC-CONVERSATIONAL-DEVELOPMENT.md) - Full methodology documentation
+
 ## 📖 Additional Documentation
 
 - `README.md` - General project information
 - `DOCKER_README.md` - Docker-specific details
 - `frontend/package.json` - Dependencies and scripts configuration
+- `/docs/` - Complete project documentation
 
 ## ⚠️ Important Notes
 
@@ -202,5 +233,5 @@ If you encounter issues:
 [Mail](mailto:info@jjodel.io)
 ---
 
-**Document version**: 1.0  
-**Last updated**: September 18, 2025
+**Document version**: 2.0
+**Last updated**: January 24, 2026

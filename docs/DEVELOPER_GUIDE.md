@@ -3,6 +3,11 @@
 ## Table of Contents
 
 - [Architecture Overview](#architecture-overview)
+- [UI Component Library](#ui-component-library)
+  - [Design Tokens](#design-tokens)
+  - [Available Components](#available-components)
+  - [Usage Examples](#usage-examples)
+  - [Component Guidelines](#component-guidelines)
 - [Console Implementation](#console-implementation)
   - [Component Structure](#component-structure)
   - [State Management](#state-management)
@@ -23,6 +28,322 @@ Jjodel is built with:
 - **TypeScript** for type safety
 - **SCSS** for styling with design tokens
 - **SVG** for canvas rendering
+
+---
+
+## UI Component Library
+
+**Added**: January 24, 2026
+
+Jjodel includes a comprehensive UI component library following a strict design system. All components are production-ready, fully typed, and WCAG AA accessible.
+
+### Design Tokens
+
+All styling uses CSS custom properties from `/frontend/src/styles/tokens.css`:
+
+```css
+/* Import in App.tsx */
+import './styles/tokens.css';
+
+/* Usage in components */
+.myComponent {
+  color: var(--color-slate-700);
+  padding: var(--spacing-4);
+  border-radius: var(--radius-md);
+}
+```
+
+**Key token categories:**
+- **Colors**: `--color-slate-*`, `--color-cyan-*`, `--color-red-*`, `--color-green-*`
+- **Spacing**: `--spacing-1` (4px) to `--spacing-16` (64px)
+- **Typography**: `--font-family-base`, `--font-size-*`, `--font-weight-*`
+- **Form**: `--input-height-*`, `--input-border-color-*`, `--toggle-width-*`
+- **Radius**: `--radius-sm` to `--radius-full`
+- **Transitions**: `--transition-fast`, `--transition-base`, `--transition-slow`
+
+### Available Components
+
+#### Core Form Components
+
+**Button** (`/frontend/src/components/ui/Button/`)
+- **Variants**: `primary`, `secondary`, `danger`, `ghost`
+- **Sizes**: `sm`, `md`, `lg`
+- **Features**: Icons (left/right), loading state, disabled state
+- **CRITICAL**: ALL variants use outline-style (transparent background + border)
+
+```tsx
+import { Button } from '../ui';
+
+<Button variant="primary" size="md" icon={<i className="bi bi-plus" />}>
+  New Project
+</Button>
+```
+
+**Input** (`/frontend/src/components/ui/Input/`)
+- **Sizes**: `sm`, `md`, `lg`
+- **Features**: Left/right icons, error states, full-width option
+- **Types**: text, number, email, password
+
+```tsx
+<Input
+  size="md"
+  placeholder="Search..."
+  leftIcon={<i className="bi bi-search" />}
+  error={!!errors.search}
+  fullWidth
+/>
+```
+
+**Select** (`/frontend/src/components/ui/Select/`)
+- **Features**: Custom chevron (Bootstrap Icons), option groups, placeholders
+- **Sizes**: `sm`, `md`, `lg`
+
+```tsx
+<Select
+  options={[
+    { value: 'model1', label: 'Model 1' },
+    { value: 'model2', label: 'Model 2' },
+  ]}
+  placeholder="Select model..."
+  fullWidth
+/>
+```
+
+**Textarea** (`/frontend/src/components/ui/Textarea/`)
+- **Features**: Character counter, max length, resize control, error states
+
+```tsx
+<Textarea
+  placeholder="Description..."
+  rows={3}
+  maxLength={500}
+  showCharCount
+  fullWidth
+/>
+```
+
+**Toggle** (`/frontend/src/components/ui/Toggle/`)
+- **NOT a checkbox** - Custom CSS-based switch
+- **Sizes**: `sm`, `md`, `lg`
+- **Features**: Label, description, disabled state
+
+```tsx
+<Toggle
+  checked={isEnabled}
+  onChange={setIsEnabled}
+  label="Read-only"
+  description="Prevent modifications"
+  size="md"
+/>
+```
+
+#### Supporting Components
+
+**Label** - Form labels with required asterisk
+**HelpText** - Secondary guidance text (#6B7280, 12px)
+**ErrorText** - Validation error messages (red, icon support)
+
+**Field** - Wrapper combining Label + Input + HelpText/ErrorText
+```tsx
+<Field
+  label="Email"
+  htmlFor="email"
+  required
+  error={errors.email}
+  helpText="We'll never share your email"
+>
+  <Input id="email" type="email" error={!!errors.email} />
+</Field>
+```
+
+**FormSection** - Section grouping with title and divider
+```tsx
+<FormSection title="DETAILS" divider>
+  {/* form fields */}
+</FormSection>
+```
+
+### Usage Examples
+
+**Complete form example:**
+```tsx
+import { Button, Input, Select, Textarea, Toggle, Field, FormSection } from '../ui';
+
+function MyForm() {
+  const [formData, setFormData] = useState({
+    name: '',
+    type: '',
+    description: '',
+    readOnly: false,
+  });
+
+  return (
+    <form>
+      <FormSection title="DETAILS" divider>
+        <Field
+          label="Name"
+          htmlFor="name"
+          required
+          error={errors.name}
+          helpText="Must be unique"
+        >
+          <Input
+            id="name"
+            value={formData.name}
+            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+            error={!!errors.name}
+            fullWidth
+          />
+        </Field>
+
+        <Field label="Type" htmlFor="type">
+          <Select
+            id="type"
+            value={formData.type}
+            onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+            options={typeOptions}
+            fullWidth
+          />
+        </Field>
+
+        <Field label="Description" htmlFor="description">
+          <Textarea
+            id="description"
+            value={formData.description}
+            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+            rows={3}
+            maxLength={500}
+            showCharCount
+            fullWidth
+          />
+        </Field>
+
+        <Toggle
+          checked={formData.readOnly}
+          onChange={(checked) => setFormData({ ...formData, readOnly: checked })}
+          label="Read-only"
+          description="Prevent modifications"
+        />
+      </FormSection>
+
+      <FormSection title="ACTIONS" divider>
+        <div style={{ display: 'flex', gap: '12px' }}>
+          <Button variant="primary" type="submit">
+            Save
+          </Button>
+          <Button variant="secondary" type="button">
+            Cancel
+          </Button>
+        </div>
+      </FormSection>
+    </form>
+  );
+}
+```
+
+See `/frontend/src/components/ui/examples/FormExample.tsx` for complete working example.
+
+### Component Guidelines
+
+#### Design Rules (CRITICAL)
+
+1. **ALL buttons MUST be outline-style** (transparent background + border)
+   - NEVER use filled buttons
+   - Use `variant="primary"` for main actions (cyan border)
+   - Use `variant="danger"` for destructive actions (red border)
+
+2. **Bootstrap Icons ONLY**
+   - NO Font Awesome, Material Icons, or Heroicons
+   - Use `<i className="bi bi-icon-name" />`
+
+3. **Toggle switches for booleans**
+   - NEVER use native checkbox for boolean states
+   - Use custom Toggle component
+
+4. **Design system colors**
+   - Slate base: `#475569`
+   - Cyan accent: `#06b6d4`
+   - Use tokens: `var(--color-slate-600)`, `var(--color-cyan-500)`
+
+5. **Spacing system**
+   - Use multiples of 8px: `8px`, `16px`, `24px`, `32px`
+   - Use tokens: `var(--spacing-2)`, `var(--spacing-4)`, etc.
+
+#### TypeScript
+
+All components use strict TypeScript:
+```tsx
+interface MyComponentProps {
+  /** The component's label */
+  label: string;
+  /** Optional click handler */
+  onClick?: () => void;
+  /** Whether the component is disabled */
+  disabled?: boolean;
+}
+
+export const MyComponent: React.FC<MyComponentProps> = ({
+  label,
+  onClick,
+  disabled = false
+}) => {
+  // Component implementation
+};
+```
+
+#### CSS Modules
+
+All component styles use CSS Modules:
+```tsx
+// MyComponent.module.css
+.button {
+  background: transparent;
+  border: 1.5px solid var(--color-cyan-500);
+  color: var(--color-cyan-500);
+}
+
+.button:hover {
+  background: var(--color-cyan-50);
+}
+
+// MyComponent.tsx
+import styles from './MyComponent.module.css';
+
+<button className={styles.button}>Click</button>
+```
+
+#### Accessibility
+
+All components must be WCAG AA compliant:
+- **Keyboard navigation**: Tab, Enter, Space, Arrow keys
+- **ARIA attributes**: `aria-invalid`, `aria-describedby`, `aria-checked`, etc.
+- **Focus indicators**: Cyan ring with `box-shadow: 0 0 0 2px var(--color-cyan-100)`
+- **Screen readers**: Proper labels and descriptions
+- **Color contrast**: Text meets 4.5:1 ratio minimum
+
+#### File Structure
+
+Components follow this pattern:
+```
+/frontend/src/components/ui/
+├── ComponentName/
+│   ├── ComponentName.tsx         # Main component
+│   ├── ComponentName.module.css  # Scoped styles
+│   └── index.ts                  # Export
+└── index.ts                      # Barrel export
+```
+
+#### Import Pattern
+
+Use barrel exports for clean imports:
+```tsx
+// ✅ Good
+import { Button, Input, Select } from '../ui';
+
+// ❌ Avoid
+import { Button } from '../ui/Button/Button';
+import { Input } from '../ui/Input/Input';
+```
 
 ---
 
