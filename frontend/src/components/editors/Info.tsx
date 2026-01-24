@@ -971,7 +971,7 @@ function PropertiesOverview(props: { data: LModel; onViewAnalytics?: () => void 
     );
 }
 
-// Actions section
+// Actions section - simplified without section wrapper
 function PropertiesActions(props: {
     data: LModelElement;
     onEdit?: () => void;
@@ -981,59 +981,22 @@ function PropertiesActions(props: {
     const { data, onEdit, onDuplicate, onDelete } = props;
 
     return (
-        <div className="properties-section">
-            <div className="properties-section-header">
-                <h3 className="properties-section-title">Actions</h3>
-            </div>
-            <div className="properties-section-content">
-                <div className="properties-actions" style={{
-                    display: 'flex',
-                    gap: '8px',
-                    justifyContent: 'flex-end',
-                    marginBottom: '12px'
-                }}>
-                    {onEdit && (
-                        <Button
-                            variant="secondary"
-                            size="sm"
-                            icon={<i className="bi bi-pencil" />}
-                            onClick={onEdit}
-                        >
-                            Edit
-                        </Button>
-                    )}
-                    {onDuplicate && (
-                        <Button
-                            variant="secondary"
-                            size="sm"
-                            icon={<i className="bi bi-copy" />}
-                            onClick={onDuplicate}
-                        >
-                            Duplicate
-                        </Button>
-                    )}
-                    {onDelete && (
-                        <Button
-                            variant="danger"
-                            size="sm"
-                            icon={<i className="bi bi-trash" />}
-                            onClick={onDelete}
-                        >
-                            Delete
-                        </Button>
-                    )}
-                </div>
-                <div className="action-hint" style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    fontSize: '12px',
-                    color: '#6b7280'
-                }}>
-                    <i className="bi bi-info-circle" style={{ fontSize: '14px', color: '#9ca3af' }} />
-                    <span>These actions affect the selected element. Changes can be undone with Ctrl+Z.</span>
-                </div>
-            </div>
+        <div className="properties-actions-bar">
+            {onEdit && (
+                <button className="properties-btn primary" onClick={onEdit}>
+                    Edit
+                </button>
+            )}
+            {onDuplicate && (
+                <button className="properties-btn secondary" onClick={onDuplicate}>
+                    Duplicate
+                </button>
+            )}
+            {onDelete && (
+                <button className="properties-btn danger" onClick={onDelete}>
+                    Delete
+                </button>
+            )}
         </div>
     );
 }

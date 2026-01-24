@@ -62,23 +62,18 @@ function JsEditorComponent(props: AllProps) {
     const lines = (Math.round(value.split(/\r|\r\n|\n/).length*1.8) < 5 ? 10 : Math.round(value.split(/\r|\r\n|\n/).length*1.8));
 
     return <>
-        <div style={{...(props.style || {})}} className={'cursor-pointer d-flex'} onClick={e => setShow(!show)}>
-            <span className={'my-auto'} tabIndex={-1}>
+        <button
+            type="button"
+            style={{...(props.style || {})}}
+            className={'section-header section-header--collapsible'}
+            onClick={e => setShow(!show)}
+        >
+            <div className="section-header__left">
                 <i className={'bi bi-chevron-' + (show ? 'down' : 'right')} />
-                {/*show ? <i className={'bi bi-eye-fill'} /> : <i className={'bi bi-eye-slash-fill'} /> */}
-            </span>
-            <label className={'editor-label'}>
-                {title || 'JS Editor'}
-            </label>
-            {jsxLabel && jsxLabel}
-            {/* show && <CommandBar style={{paddingTop: '10px'}}>
-                {expand ?
-                    <Btn icon={'shrink'} action={(e) => {setExpand(false); setShow(true)}} tip={'Minimize editor'}/>
-                    :
-                    <Btn icon={'expand'} action={(e) => {setExpand(true); setShow(true)}} tip={'Enlarge editor'}/>
-                }
-            </CommandBar>*/}
-        </div>
+                <h3 className="section-title">{title || 'JS EDITOR'}</h3>
+            </div>
+            {jsxLabel && <div className="section-header__right">{jsxLabel}</div>}
+        </button>
         {show && <div className={'monaco-editor-wrapper'}
                 /* style={{padding: '5px', minHeight: '20px', height: height ? `${height}px` : '100px', resize: 'vertical', overflow:'hidden'}}*/
                 style={{padding: '5px', height:`${lines+'lvh'}`, transition: 'height 0.3s', resize: 'vertical', overflow:'hidden'}}

@@ -353,16 +353,16 @@ select.form-select {
 }
 
 /* ========================================
-   TOGGLE SWITCH - Enhanced Design
+   TOGGLE SWITCH - Compact Design (36x20px)
    ======================================== */
 .properties-toggle {
   position: relative;
   display: inline-block;
-  width: 44px;
-  height: 24px;
+  width: 36px;
+  height: 20px;
   flex-shrink: 0;
   background: #cbd5e1;
-  border-radius: 24px;
+  border-radius: 20px;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   cursor: pointer;
 
@@ -377,17 +377,17 @@ select.form-select {
 
 .properties-toggle-thumb {
   position: absolute;
-  height: 18px;
-  width: 18px;
-  left: 3px;
-  bottom: 3px;
+  height: 16px;
+  width: 16px;
+  left: 2px;
+  top: 2px;
   background: white;
   border-radius: 50%;
   transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 
   .properties-toggle.active & {
-    transform: translateX(20px);
+    transform: translateX(16px);
   }
 }
 
@@ -482,6 +482,22 @@ select.form-select {
   margin-bottom: 12px;
 }
 
+/* Actions bar - simplified without section wrapper */
+.properties-actions-bar {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  padding: 16px;
+  border-top: 1px solid #e2e8f0;
+  margin-top: 8px;
+
+  .properties-btn {
+    width: auto !important;
+    flex: none !important;
+    min-width: 0;
+  }
+}
+
 .properties-btn,
 .btn {
   display: inline-flex !important;
@@ -532,53 +548,40 @@ select.form-select {
   }
 }
 
-.properties-btn.secondary,
-.btn-secondary {
-  background: #64748b;
-  color: white;
+.properties-btn.secondary {
+  background: transparent;
+  color: #334155;
+  border: 1px solid #e2e8f0;
 
   &:hover:not(:disabled) {
-    background: #475569;
+    background: #f8fafc;
+    border-color: #cbd5e1;
   }
 
   &:active:not(:disabled) {
-    background: #334155;
+    background: #f1f5f9;
   }
 }
 
-.properties-btn.danger,
-.btn-danger {
-  background: #dc2626;
-  color: white;
+.properties-btn.danger {
+  background: transparent;
+  color: #dc2626;
+  border: 1px solid #fecaca;
 
   i {
-    color: white;
+    color: #dc2626;
   }
 
   &:hover:not(:disabled) {
-    background: #b91c1c;
+    background: #fef2f2;
+    border-color: #fca5a5;
   }
 
   &:active:not(:disabled) {
-    background: #991b1b;
+    background: #fee2e2;
   }
 }
 
-.action-hint {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 0;
-  font-size: 12px;
-  color: #6b7280;
-  line-height: 1.5;
-
-  i {
-    flex-shrink: 0;
-    font-size: 14px;
-    color: #9ca3af;
-  }
-}
 
 /* ========================================
    DARK MODE SUPPORT
@@ -693,29 +696,29 @@ select.form-select {
     }
   }
 
-  .properties-btn.secondary,
-  .btn-secondary {
-    background: #334155;
+  .properties-btn.secondary {
+    background: transparent;
+    color: #e2e8f0;
+    border: 1px solid #475569;
 
     &:hover:not(:disabled) {
-      background: #475569;
+      background: #334155;
+      border-color: #64748b;
     }
   }
 
-  .properties-btn.danger,
-  .btn-danger {
-    background: #dc2626;
+  .properties-btn.danger {
+    background: transparent;
+    color: #f87171;
+    border: 1px solid #7f1d1d;
 
     &:hover:not(:disabled) {
-      background: #b91c1c;
+      background: rgba(220, 38, 38, 0.1);
+      border-color: #991b1b;
     }
   }
 
-  .action-hint {
-    color: #9ca3af;
-
-    i {
-      color: #6b7280;
-    }
+  .properties-actions-bar {
+    border-top-color: #374151;
   }
 }

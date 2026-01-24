@@ -10,7 +10,6 @@
  */
 
 import React, { Dispatch, ReactElement, ReactNode, useRef, useState, useEffect } from 'react';
-import ReactJson from 'react-json-view';
 import { connect } from 'react-redux';
 import { DState } from '../../redux/store';
 import type {
@@ -358,22 +357,18 @@ function NodeEditorComponent(props: AllProps) {
     const hasFather = !!node.father?.className;
     const hasRelationships = hasFather || edgesIn.length > 0 || (isEdge && (edgeStart || edgeEnd));
 
-    // Node state
-    const stateKeys = Object.keys(dnode._state || {});
-    const hasState = stateKeys.length > 0;
-
     return (
         <div className="node-editor-redesign">
-            {/* Header */}
-            <div className="node-editor__header">
-                <div className="node-editor__type">
-                    <i className={`bi bi-${elementType.icon}`} />
-                    <span>{elementType.label}</span>
+            {/* Header - matches Properties/Viewpoints style */}
+            <div className="node-header">
+                <div className="node-header__icon">
+                    <i className="bi bi-bounding-box-circles" />
                 </div>
+                <h1 className="node-header__title">Node</h1>
             </div>
 
             {/* Section: Transform */}
-            <Section title="Transform" icon="arrows-move" defaultOpen={true}>
+            <Section title="TRANSFORM" icon="arrows-move" defaultOpen={true}>
                 <div className="node-editor__grid">
                     {/* Position */}
                     {asVertex && !isGraphVertex && (
@@ -493,7 +488,7 @@ function NodeEditorComponent(props: AllProps) {
 
             {/* Section: Relationships */}
             {hasRelationships && (
-                <Section title="Relationships" icon="diagram-2" defaultOpen={true}>
+                <Section title="RELATIONSHIPS" icon="diagram-2" defaultOpen={true}>
                     {/* Super element */}
                     {hasFather && (
                         <div className="node-editor__relationship">
@@ -567,7 +562,7 @@ function NodeEditorComponent(props: AllProps) {
 
             {/* Section: Edge Anchors (for edges) */}
             {isEdge && asEdge && (
-                <Section title="Edge Anchors" icon="pin-angle" defaultOpen={false}>
+                <Section title="EDGE ANCHORS" icon="pin-angle" defaultOpen={false}>
                     <div className="node-editor__edge-anchors">
                         <div className="node-editor__field-row">
                             <span className="node-editor__field-label">Start anchor</span>
@@ -608,43 +603,10 @@ function NodeEditorComponent(props: AllProps) {
                 </Section>
             )}
 
-            {/* Section: Node State */}
-            <Section
-                title="Node State"
-                icon="braces"
-                defaultOpen={false}
-                badge={hasState ? `${stateKeys.length} items` : undefined}
-            >
-                {hasState ? (
-                    <div className="node-editor__state-json">
-                        <ReactJson
-                            src={dnode._state}
-                            collapsed={1}
-                            collapseStringsAfterLength={20}
-                            displayDataTypes={true}
-                            displayObjectSize={true}
-                            enableClipboard={true}
-                            groupArraysAfterLength={100}
-                            indentWidth={4}
-                            name="state"
-                            iconStyle="triangle"
-                            quotesOnKeys={true}
-                            sortKeys={false}
-                            theme="rjv-default"
-                        />
-                    </div>
-                ) : (
-                    <div className="node-editor__empty-state">
-                        <i className="bi bi-code-slash" />
-                        <span>Empty</span>
-                    </div>
-                )}
-            </Section>
-
             {/* Section: Anchors (for vertices) */}
             {(isVertex || isGraph) && (
                 <Section
-                    title="Anchors"
+                    title="ANCHORS"
                     icon="bullseye"
                     defaultOpen={true}
                     badge={anchorEntries.length > 0 ? `${anchorEntries.length} points` : undefined}

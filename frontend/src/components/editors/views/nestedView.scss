@@ -105,7 +105,7 @@ section.viewpoint-tab {
   font-family: $font-family;
   //border: 1px solid $color-border;
   border-radius: $radius-lg;
-  background-color: $color-bg-primary;
+  background-color: #f8fafc;  // Light gray background (matches Properties tab)
   transition: all $transition-normal;
 
   height: 100%;
@@ -113,31 +113,65 @@ section.viewpoint-tab {
 }
 
 // ============================================
-// HEADER
+// HEADER - Matches Properties Tab Style
 // ============================================
-section.viewpoint-tab h1,
-section.viewpoint-tab .ps-2.pt-2 h1 {
-  width: 100% !important;
+.viewpoints-header {
   display: flex;
   align-items: center;
-  font-size: $font-size-md;
-  font-weight: $font-weight-semibold;
-  color: $color-text-primary;
-  padding-bottom: $spacing-md;
-  margin-bottom: $spacing-sm;
+  gap: 12px;
+  padding-bottom: $spacing-lg;
+  margin-bottom: $spacing-md;
   border-bottom: 1px solid $color-border;
+}
 
-  &::before {
-    position: relative;
-    font-size: $spacing-lg;
-    margin-right: $spacing-sm;
-    font-family: bootstrap-icons;
-    content: "\F341"; // bi-diagram-3
-    color: $color-text-secondary;
+.viewpoints-header__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  background: #e2e8f0;  // Darker, matches Properties tab
+  border-radius: 12px;
+  flex-shrink: 0;
+
+  i {
+    font-size: 24px;
+    color: #64748b;
+  }
+}
+
+.viewpoints-header__title {
+  font-size: 20px;
+  font-weight: 600;
+  color: #0f172a;
+  margin: 0;
+}
+
+.viewpoints-header__actions {
+  margin-left: auto;
+}
+
+.btn-new {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #ffffff;
+  background: #475569;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 150ms ease;
+
+  &:hover {
+    background: #334155;
   }
 
-  .command-bar {
-    margin-left: auto;
+  &:active {
+    background: #1e293b;
   }
 }
 
@@ -665,7 +699,7 @@ section.viewpoint-tab .ps-2.pt-2 h1 {
   // Edge nodes - distinct colors
   .tree-Edge,
   .tree-DEdge {
-    background-color: #64748b; // slate-500
+    background-color: red; // /#64748b; // slate-500
     color: white;
   }
 
@@ -928,7 +962,7 @@ section.viewpoint-tab .ps-2.pt-2 h1 {
       }
     }
 
-    // Hover states
+    // Hover states .viewpoint-box__header .icon.type.DViewPoint
     &:hover:not(.active) {
       background-color: #94a3b8; // slate-400
     }
@@ -977,7 +1011,7 @@ section.viewpoint-tab .ps-2.pt-2 h1 {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 12px;
+  padding: 10px 12px 10px 10px;
   background: #f8fafc;
   border-bottom: 1px solid #e2e8f0;
   cursor: pointer;
@@ -995,8 +1029,28 @@ section.viewpoint-tab .ps-2.pt-2 h1 {
 .viewpoint-box__header-left {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 0;
   flex: 0 1 auto; /* non cresce, può shrinkare, dimensione auto */
+  padding-left: 0;
+}
+
+// Fixed-width container for radio/checkbox to align VP with M inside content
+.viewpoint-box__header-left .viewpoint-radio,
+.viewpoint-box__header-left .viewpoint-checkbox {
+  width: 33px;
+  flex-shrink: 0;
+  display: flex;
+  justify-content: center;
+}
+
+// VP icon spacing
+.viewpoint-box__header-left .icon.type.DViewPoint {
+  margin-right: 8px;
+}
+
+// VP name left margin removed (handled by icon margin-right)
+.viewpoint-box__header-left .viewpoint-box__name {
+  margin-left: 0;
 }
 
 .viewpoint-box__header-right {
@@ -1078,56 +1132,63 @@ section.viewpoint-tab .ps-2.pt-2 h1 {
 // CUSTOM RADIO BUTTON (Exclusive VP)
 // ============================================
 
-.viewpoint-radio {
+// Radio and checkbox container for alignment
+.viewpoint-radio,
+.viewpoint-checkbox {
+  flex-shrink: 0;
+  width: 24px;
   display: flex;
-  align-items: center;
   justify-content: center;
+}
+
+.viewpoint-radio {
+  align-items: center;
   cursor: pointer;
-  
+
   input[type="radio"] {
     position: absolute;
     opacity: 0;
     width: 0;
     height: 0;
   }
-  
+
   &__custom {
-    width: 18px;
-    height: 18px;
-    border: 2px solid #cbd5e1;
+    width: 16px;
+    height: 16px;
+    border: 1.5px solid #d1d5db;
     border-radius: 50%;
     background: #ffffff;
     position: relative;
     transition: all 150ms ease;
-    
+
     &::after {
       content: '';
       position: absolute;
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%) scale(0);
-      width: 8px;
-      height: 8px;
+      width: 6px;
+      height: 6px;
       border-radius: 50%;
-      background: #475569;
+      background: #64748b;
       transition: transform 150ms ease;
     }
   }
-  
+
   input[type="radio"]:checked + &__custom {
-    border-color: #475569;
-    
+    border-color: #64748b;
+
     &::after {
       transform: translate(-50%, -50%) scale(1);
     }
   }
-  
+
   input[type="radio"]:focus + &__custom {
-    box-shadow: 0 0 0 3px rgba(71, 85, 105, 0.15);
+    box-shadow: 0 0 0 3px rgba(71, 85, 105, 0.1);
   }
-  
+
   &:hover &__custom {
-    border-color: #94a3b8;
+    border-color: #9ca3af;
   }
 }
 
@@ -1135,14 +1196,10 @@ section.viewpoint-tab .ps-2.pt-2 h1 {
 // CUSTOM CHECKBOX (Overlay VP)
 // ============================================
 .viewpoint-checkbox {
-  display: inline-flex;
   align-items: center;
-  justify-content: center;
   cursor: pointer;
   position: relative;
-  width: 18px;
-  height: 18px;
-  
+
   input[type="checkbox"] {
     position: absolute;
     opacity: 0;
@@ -1156,24 +1213,24 @@ section.viewpoint-tab .ps-2.pt-2 h1 {
 }
 
 .viewpoint-checkbox__custom {
-  width: 18px;
-  height: 18px;
-  border: 2px solid #cbd5e1;
+  width: 16px;
+  height: 16px;
+  border: 1.5px solid #d1d5db;
   border-radius: 4px;
   background: #ffffff;
   position: relative;
   transition: all 150ms ease;
-  
+
   &::after {
     content: '';
     position: absolute;
     top: 45%;
     left: 50%;
     transform: translate(-50%, -50%) rotate(45deg) scale(0);
-    width: 5px;
-    height: 9px;
+    width: 4px;
+    height: 8px;
     border: solid #ffffff;
-    border-width: 0 0px 0px 0;
+    border-width: 0 2px 2px 0;
     transition: transform 150ms ease;
   }
 }
@@ -1200,14 +1257,14 @@ section.viewpoint-tab .ps-2.pt-2 h1 {
 .viewpoint-box__header-left {
   display: flex;
   align-items: center;
-  gap: 8px;
-  
+  gap: 0;
+
   // Remove any vertical lines
   &::before,
   &::after {
     display: none !important;
   }
-  
+
   .expansion-line {
     display: none !important;
   }
@@ -1370,6 +1427,7 @@ section.viewpoint-tab .ps-2.pt-2 h1 {
   display: flex;
   align-items: center;
   gap: 4px;
+  margin-left: 12px;  // More space before OCL badge
 }
 
 // Feature Badges
@@ -1419,10 +1477,38 @@ section.viewpoint-tab .ps-2.pt-2 h1 {
 // ============================================
 
 [data-theme="dark"] {
+  section.viewpoint-tab {
+    background-color: #1e293b;  // Dark mode background
+  }
+
+  .viewpoints-header__icon {
+    background: #475569;
+
+    i {
+      color: #94a3b8;
+    }
+  }
+
+  .viewpoints-header__title {
+    color: #f1f5f9;
+  }
+
+  .viewpoints-header {
+    border-bottom-color: #334155;
+  }
+
+  .btn-new {
+    background: #64748b;
+
+    &:hover {
+      background: #475569;
+    }
+  }
+
   .viewpoint-box {
     background: #1e293b;
     border-color: #334155;
-    
+
     &--active {
       border-color: #64748b;
       box-shadow: 0 0 0 1px rgba(100, 116, 139, 0.2);
@@ -1891,9 +1977,9 @@ section.viewpoint-tab .ps-2.pt-2 h1 {
 .viewpoint-box__header-left {
   display: flex;
   align-items: center;
-  gap: 10px;
-  flex: 1;
-  min-width: 0;
+  gap: 0;
+  flex: 0 1 auto;
+  padding-left: 0;
 }
 
 .viewpoint-box__header-right {
@@ -1980,49 +2066,51 @@ section.viewpoint-tab .ps-2.pt-2 h1 {
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  
+  flex-shrink: 0;
+  width: 24px;
+
   input[type="radio"] {
     position: absolute;
     opacity: 0;
     width: 0;
     height: 0;
   }
-  
+
   &__custom {
-    width: 18px;
-    height: 18px;
-    border: 2px solid #cbd5e1;
+    width: 16px;
+    height: 16px;
+    border: 1.5px solid #d1d5db;
     border-radius: 50%;
     background: #ffffff;
     position: relative;
     transition: all 150ms ease;
-    
+
     &::after {
       content: '';
       position: absolute;
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%) scale(0);
-      width: 8px;
-      height: 8px;
+      width: 6px;
+      height: 6px;
       border-radius: 50%;
-      background: #475569;
+      background: #64748b;
       transition: transform 150ms ease;
     }
   }
-  
+
   input[type="radio"]:checked + &__custom {
-    border-color: #475569;
-    
+    border-color: #64748b;
+
     &::after {
       transform: translate(-50%, -50%) scale(1);
     }
   }
-  
+
   input[type="radio"]:focus + &__custom {
     box-shadow: 0 0 0 3px rgba(71, 85, 105, 0.15);
   }
-  
+
   &:hover &__custom {
     border-color: #94a3b8;
   }
@@ -2037,23 +2125,25 @@ section.viewpoint-tab .ps-2.pt-2 h1 {
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  
+  flex-shrink: 0;
+  width: 24px;
+
   input[type="checkbox"] {
     position: absolute;
     opacity: 0;
     width: 0;
     height: 0;
   }
-  
+
   &__custom {
-    width: 18px;
-    height: 18px;
-    border: 2px solid #cbd5e1;
+    width: 16px;
+    height: 16px;
+    border: 1.5px solid #d1d5db;
     border-radius: 4px;
     background: #ffffff;
     position: relative;
     transition: all 150ms ease;
-    
+
     &::after {
       content: '';
       position: absolute;
@@ -2067,20 +2157,20 @@ section.viewpoint-tab .ps-2.pt-2 h1 {
       transition: transform 150ms ease;
     }
   }
-  
+
   input[type="checkbox"]:checked + &__custom {
     background: #0891b2;
     border-color: #0891b2;
-    
+
     &::after {
       transform: translate(-50%, -50%) rotate(45deg) scale(1);
     }
   }
-  
+
   input[type="checkbox"]:focus + &__custom {
     box-shadow: 0 0 0 3px rgba(8, 145, 178, 0.15);
   }
-  
+
   &:hover &__custom {
     border-color: #94a3b8;
   }
@@ -2227,6 +2317,7 @@ section.viewpoint-tab .ps-2.pt-2 h1 {
   display: flex;
   align-items: center;
   gap: 4px;
+  margin-left: 12px;  // More space before OCL badge
 }
 
 // Feature Badges (OCL/JS/EX)
@@ -2288,128 +2379,150 @@ section.viewpoint-tab .ps-2.pt-2 h1 {
   flex-shrink: 0;
 }
 
+/* Default fallback - Gray */
 .view-entry .tree-Any,
 .view-entry .icon.type:not(.DViewPoint) {
   background-color: rgba(100, 116, 139, 0.15);
   color: #64748b;
 }
 
-.view-entry .tree-Model,
-.view-entry .tree-DModel {
-  background-color: rgba(139, 92, 246, 0.15);
-  color: #8b5cf6;
+/* Model - Violet */
+.view-entry .icon.type.tree-Model,
+.view-entry .icon.type.tree-DModel {
+  background-color: rgba(139, 92, 246, 0.15) !important;
+  color: #7c3aed !important;
 }
 
-.view-entry .tree-Package,
-.view-entry .tree-DPackage {
-  background-color: rgba(59, 130, 246, 0.15);
-  color: #3b82f6;
+/* Package - Blue */
+.view-entry .icon.type.tree-Package,
+.view-entry .icon.type.tree-DPackage {
+  background-color: rgba(59, 130, 246, 0.15) !important;
+  color: #2563eb !important;
 }
 
-.view-entry .tree-Class,
-.view-entry .tree-DClass {
-  background-color: rgba(239, 68, 68, 0.15);
-  color: #ef4444;
+/* Class - Rose */
+.view-entry .icon.type.tree-Class,
+.view-entry .icon.type.tree-DClass {
+  background-color: rgba(244, 63, 94, 0.15) !important;
+  color: #e11d48 !important;
 }
 
-.view-entry .tree-Attribute,
-.view-entry .tree-DAttribute {
-  background-color: rgba(249, 115, 22, 0.15);
-  color: #f97316;
+/* Attribute - Orange */
+.view-entry .icon.type.tree-Attribute,
+.view-entry .icon.type.tree-DAttribute {
+  background-color: rgba(249, 115, 22, 0.15) !important;
+  color: #ea580c !important;
 }
 
-.view-entry .tree-Reference,
-.view-entry .tree-DReference {
-  background-color: rgba(6, 182, 212, 0.15);
-  color: #06b6d4;
+/* Reference - Cyan */
+.view-entry .icon.type.tree-Reference,
+.view-entry .icon.type.tree-DReference {
+  background-color: rgba(6, 182, 212, 0.15) !important;
+  color: #0891b2 !important;
 }
 
-.view-entry .tree-Operation,
-.view-entry .tree-DOperation {
-  background-color: rgba(16, 185, 129, 0.15);
-  color: #10b981;
+/* Operation - Emerald */
+.view-entry .icon.type.tree-Operation,
+.view-entry .icon.type.tree-DOperation {
+  background-color: rgba(16, 185, 129, 0.15) !important;
+  color: #059669 !important;
 }
 
-.view-entry .tree-Enumerator,
-.view-entry .tree-DEnumerator {
-  background-color: rgba(245, 158, 11, 0.15);
-  color: #f59e0b;
+/* Enum - Amber */
+.view-entry .icon.type.tree-Enumerator,
+.view-entry .icon.type.tree-DEnumerator {
+  background-color: rgba(245, 158, 11, 0.15) !important;
+  color: #d97706 !important;
 }
 
-.view-entry .tree-EnumLiteral,
-.view-entry .tree-DEnumLiteral {
-  background-color: rgba(217, 119, 6, 0.15);
-  color: #d97706;
+/* Literal - Yellow */
+.view-entry .icon.type.tree-EnumLiteral,
+.view-entry .icon.type.tree-DEnumLiteral {
+  background-color: rgba(234, 179, 8, 0.15) !important;
+  color: #ca8a04 !important;
 }
 
-.view-entry .tree-Object,
-.view-entry .tree-DObject {
-  background-color: rgba(107, 114, 128, 0.15);
-  color: #6b7280;
+/* Object - Warm Brown/Amber (different from Operation which is Emerald) */
+.view-entry .icon.type.tree-Object,
+.view-entry .icon.type.tree-DObject {
+  background-color: rgba(180, 83, 9, 0.15) !important;
+  color: #b45309 !important;
 }
 
-.view-entry .tree-Value,
-.view-entry .tree-DValue {
-  background-color: rgba(120, 113, 108, 0.15);
-  color: #78716c;
+/* Value - Purple */
+.view-entry .icon.type.tree-Value,
+.view-entry .icon.type.tree-DValue {
+  background-color: rgba(168, 85, 247, 0.15) !important;
+  color: #9333ea !important;
 }
 
-.view-entry .tree-Singleton {
-  background-color: rgba(71, 85, 105, 0.15);
-  color: #475569;
+/* Singleton - Indigo */
+.view-entry .icon.type.tree-Singleton {
+  background-color: rgba(99, 102, 241, 0.15) !important;
+  color: #4f46e5 !important;
 }
 
-.view-entry .tree-Parameter,
-.view-entry .tree-DParameter {
-  background-color: rgba(16, 185, 129, 0.12);
-  color: #10b981;
+/* Parameter - Fuchsia/Pink (different from Package which is Blue) */
+.view-entry .icon.type.tree-Parameter,
+.view-entry .icon.type.tree-DParameter {
+  background-color: rgba(236, 72, 153, 0.15) !important;
+  color: #db2777 !important;
 }
 
-.view-entry .tree-Edge,
-.view-entry .tree-DEdge {
-  background-color: rgba(100, 116, 139, 0.15);
-  color: #64748b;
+/* Edge - Slate */
+.view-entry .icon.type.tree-Edge,
+.view-entry .icon.type.tree-DEdge {
+  background-color: #E6E2F2; // rgba(71, 85, 105, 0.15) !important;
+  color: #334155 !important;
 }
 
-.view-entry .tree-EdgePoint,
-.view-entry .tree-DEdgePoint {
-  background-color: rgba(148, 163, 184, 0.15);
-  color: #94a3b8;
+/* EdgePoint - Slate light */
+.view-entry .icon.type.tree-EdgePoint,
+.view-entry .icon.type.tree-DEdgePoint {
+  background-color: #BEE7E5; // rgba(100, 116, 139, 0.12) !important;
+  color: #475569 !important;
 }
 
-.view-entry .tree-EdgeAssociation {
-  background-color: rgba(168, 85, 247, 0.15);
-  color: #a855f7;
+/* Edge Association - Violet */
+.view-entry .icon.type.tree-EdgeAssociation {
+  background-color: rgba(139, 92, 246, 0.12) !important;
+  color: #6d28d9 !important;
 }
 
-.view-entry .tree-EdgeDependency {
-  background-color: rgba(236, 72, 153, 0.15);
-  color: #ec4899;
+/* Edge Dependency - Pink */
+.view-entry .icon.type.tree-EdgeDependency {
+  background-color: rgba(236, 72, 153, 0.12) !important;
+  color: #db2777 !important;
 }
 
-.view-entry .tree-EdgeInheritance {
-  background-color: rgba(139, 92, 246, 0.15);
-  color: #8b5cf6;
+/* Edge Inheritance - Teal */
+.view-entry .icon.type.tree-EdgeInheritance {
+  background-color: rgba(20, 184, 166, 0.12) !important;
+  color: #0d9488 !important;
 }
 
-.view-entry .tree-EdgeAggregation {
-  background-color: rgba(34, 211, 238, 0.15);
-  color: #22d3ee;
+/* Edge Aggregation - Sky */
+.view-entry .icon.type.tree-EdgeAggregation {
+  background-color: rgba(14, 165, 233, 0.12) !important;
+  color: #0284c7 !important;
 }
 
-.view-entry .tree-EdgeComposition {
-  background-color: rgba(20, 184, 166, 0.15);
-  color: #14b8a6;
+/* Edge Composition - Emerald */
+.view-entry .icon.type.tree-EdgeComposition {
+  background-color: rgba(16, 185, 129, 0.12) !important;
+  color: #047857 !important;
 }
 
-.view-entry .tree-Anchors {
-  background-color: rgba(251, 146, 60, 0.15);
-  color: #fb923c;
+/* Anchors - Lime/Green (different from Attribute which is Orange) */
+.view-entry .icon.type.tree-Anchors {
+  background-color: #F3E4DA!important; // rgba(132, 204, 22, 0.15) !important;
+  color: #65a30d !important;
 }
 
-.view-entry .tree-Fallback {
-  background-color: rgba(163, 163, 163, 0.15);
-  color: #a3a3a3;
+/* Fallback - Stone/Warm Brown (different from Attribute and Anchors) */
+.view-entry .icon.type.tree-Fallback {
+  background-color: #F3E4DA!important; //rgba(168, 162, 158, 0.15) !important;
+  color: #78716c !important;
 }
 
 // ============================================
@@ -2419,13 +2532,14 @@ section.viewpoint-tab .ps-2.pt-2 h1 {
 .viewpoint-box__header .icon.type.DViewPoint {
   width: 24px;
   height: 24px;
-  min-width: 24px;
+
   display: flex;
   align-items: center;
   justify-content: center;
   border-radius: 6px;
   font-size: 10px;
   font-weight: 700;
+  padding: 12px 10px!important;
   
   &.exclusive {
     background-color: #475569;
@@ -2434,8 +2548,10 @@ section.viewpoint-tab .ps-2.pt-2 h1 {
   
   &.overlay {
     background-color: transparent;
-    border: 1.5px solid #0891b2;
-    color: #0891b2;
+    border: 1.5px solid #64748b;
+    color: #64748b;
+    width: 24px;
+    height: 24px;
   }
 }
 
@@ -2444,10 +2560,38 @@ section.viewpoint-tab .ps-2.pt-2 h1 {
 // ============================================
 
 [data-theme="dark"] {
+  section.viewpoint-tab {
+    background-color: #1e293b;  // Dark mode background
+  }
+
+  .viewpoints-header__icon {
+    background: #475569;
+
+    i {
+      color: #94a3b8;
+    }
+  }
+
+  .viewpoints-header__title {
+    color: #f1f5f9;
+  }
+
+  .viewpoints-header {
+    border-bottom-color: #334155;
+  }
+
+  .btn-new {
+    background: #64748b;
+
+    &:hover {
+      background: #475569;
+    }
+  }
+
   .viewpoint-box {
     background: #1e293b;
     border-color: #334155;
-    
+
     &--active {
       border-color: #64748b;
       box-shadow: 0 0 0 1px rgba(100, 116, 139, 0.2);
@@ -2498,6 +2642,7 @@ section.viewpoint-tab .ps-2.pt-2 h1 {
   
   .viewpoint-radio__custom,
   .viewpoint-checkbox__custom {
+    display: none;
     background: #1e293b;
     border-color: #475569;
   }
@@ -2579,52 +2724,122 @@ section.viewpoint-tab .ps-2.pt-2 h1 {
   }
   
   // Dark mode pastel type icons
-  .view-entry .tree-Model,
-  .view-entry .tree-DModel {
-    background-color: rgba(139, 92, 246, 0.2);
-    color: #a78bfa;
+  .view-entry .icon.type.tree-Model,
+  .view-entry .icon.type.tree-DModel {
+    background-color: rgba(139, 92, 246, 0.25) !important;
+    color: #a78bfa !important;
   }
 
-  .view-entry .tree-Package,
-  .view-entry .tree-DPackage {
-    background-color: rgba(59, 130, 246, 0.2);
-    color: #60a5fa;
+  .view-entry .icon.type.tree-Package,
+  .view-entry .icon.type.tree-DPackage {
+    background-color: rgba(59, 130, 246, 0.25) !important;
+    color: #60a5fa !important;
   }
 
-  .view-entry .tree-Class,
-  .view-entry .tree-DClass {
-    background-color: rgba(239, 68, 68, 0.2);
-    color: #f87171;
+  .view-entry .icon.type.tree-Class,
+  .view-entry .icon.type.tree-DClass {
+    background-color: rgba(244, 63, 94, 0.25) !important;
+    color: #fb7185 !important;
   }
 
-  .view-entry .tree-Attribute,
-  .view-entry .tree-DAttribute {
-    background-color: rgba(249, 115, 22, 0.2);
-    color: #fb923c;
+  .view-entry .icon.type.tree-Attribute,
+  .view-entry .icon.type.tree-DAttribute {
+    background-color: rgba(249, 115, 22, 0.25) !important;
+    color: #fb923c !important;
   }
 
-  .view-entry .tree-Reference,
-  .view-entry .tree-DReference {
-    background-color: rgba(6, 182, 212, 0.2);
-    color: #22d3ee;
+  .view-entry .icon.type.tree-Reference,
+  .view-entry .icon.type.tree-DReference {
+    background-color: rgba(6, 182, 212, 0.25) !important;
+    color: #22d3ee !important;
   }
 
-  .view-entry .tree-Operation,
-  .view-entry .tree-DOperation {
-    background-color: rgba(16, 185, 129, 0.2);
-    color: #34d399;
+  .view-entry .icon.type.tree-Operation,
+  .view-entry .icon.type.tree-DOperation {
+    background-color: rgba(16, 185, 129, 0.25) !important;
+    color: #34d399 !important;
   }
 
-  .view-entry .tree-Enumerator,
-  .view-entry .tree-DEnumerator {
-    background-color: rgba(245, 158, 11, 0.2);
-    color: #fbbf24;
+  .view-entry .icon.type.tree-Parameter,
+  .view-entry .icon.type.tree-DParameter {
+    background-color: rgba(236, 72, 153, 0.25) !important;
+    color: #f472b6 !important;
   }
 
-  .view-entry .tree-Object,
-  .view-entry .tree-DObject {
-    background-color: rgba(107, 114, 128, 0.2);
-    color: #9ca3af;
+  .view-entry .icon.type.tree-Enumerator,
+  .view-entry .icon.type.tree-DEnumerator {
+    background-color: rgba(245, 158, 11, 0.25) !important;
+    color: #fbbf24 !important;
+  }
+
+  .view-entry .icon.type.tree-EnumLiteral,
+  .view-entry .icon.type.tree-DEnumLiteral {
+    background-color: rgba(234, 179, 8, 0.25) !important;
+    color: #facc15 !important;
+  }
+
+  .view-entry .icon.type.tree-Object,
+  .view-entry .icon.type.tree-DObject {
+    background-color: rgba(180, 83, 9, 0.25) !important;
+    color: #fbbf24 !important;
+  }
+
+  .view-entry .icon.type.tree-Value,
+  .view-entry .icon.type.tree-DValue {
+    background-color: rgba(168, 85, 247, 0.25) !important;
+    color: #c084fc !important;
+  }
+
+  .view-entry .icon.type.tree-Singleton {
+    background-color: rgba(99, 102, 241, 0.25) !important;
+    color: #818cf8 !important;
+  }
+
+  .view-entry .icon.type.tree-Edge,
+  .view-entry .icon.type.tree-DEdge {
+    background-color: rgba(71, 85, 105, 0.25) !important;
+    color: #94a3b8 !important;
+  }
+
+  .view-entry .icon.type.tree-EdgePoint,
+  .view-entry .icon.type.tree-DEdgePoint {
+    background-color: rgba(100, 116, 139, 0.2) !important;
+    color: #94a3b8 !important;
+  }
+
+  .view-entry .icon.type.tree-EdgeAssociation {
+    background-color: rgba(139, 92, 246, 0.2) !important;
+    color: #a78bfa !important;
+  }
+
+  .view-entry .icon.type.tree-EdgeDependency {
+    background-color: rgba(236, 72, 153, 0.2) !important;
+    color: #f472b6 !important;
+  }
+
+  .view-entry .icon.type.tree-EdgeInheritance {
+    background-color: rgba(20, 184, 166, 0.2) !important;
+    color: #2dd4bf !important;
+  }
+
+  .view-entry .icon.type.tree-EdgeAggregation {
+    background-color: rgba(14, 165, 233, 0.2) !important;
+    color: #38bdf8 !important;
+  }
+
+  .view-entry .icon.type.tree-EdgeComposition {
+    background-color: rgba(16, 185, 129, 0.2) !important;
+    color: #34d399 !important;
+  }
+
+  .view-entry .icon.type.tree-Anchors {
+    background-color: rgba(132, 204, 22, 0.25) !important;
+    color: #a3e635 !important;
+  }
+
+  .view-entry .icon.type.tree-Fallback {
+    background-color: rgba(168, 162, 158, 0.25) !important;
+    color: #d6d3d1 !important;
   }
   
   .viewpoint-box__header .icon.type.DViewPoint.exclusive {
@@ -2633,8 +2848,8 @@ section.viewpoint-tab .ps-2.pt-2 h1 {
   }
   
   .viewpoint-box__header .icon.type.DViewPoint.overlay {
-    border-color: #22d3ee;
-    color: #22d3ee;
+    border-color: #94a3b8;
+    color: #94a3b8;
   }
 }
 
@@ -2669,66 +2884,152 @@ section.viewpoint-tab .ps-2.pt-2 h1 {
 // DARK MODE SUPPORT
 // ============================================
 @media (prefers-color-scheme: dark) {
+  section.viewpoint-tab {
+    background-color: #1e293b;  // Dark mode background
+  }
+
+  .viewpoints-header__icon {
+    background: #475569;
+
+    i {
+      color: #94a3b8;
+    }
+  }
+
+  .viewpoints-header__title {
+    color: #f1f5f9;
+  }
+
+  .viewpoints-header {
+    border-bottom-color: #334155;
+  }
+
+  .btn-new {
+    background: #64748b;
+
+    &:hover {
+      background: #475569;
+    }
+  }
+
   .viewpoint-tab {
     // Pastel colors in dark mode (slightly brighter)
     .tree-Model,
     .tree-DModel {
-      background-color: rgba(139, 92, 246, 0.2);
+      background-color: rgba(139, 92, 246, 0.25);
       color: #a78bfa;
     }
 
     .tree-Package,
     .tree-DPackage {
-      background-color: rgba(59, 130, 246, 0.2);
+      background-color: rgba(59, 130, 246, 0.25);
       color: #60a5fa;
     }
 
     .tree-Class,
     .tree-DClass {
-      background-color: rgba(239, 68, 68, 0.2);
-      color: #f87171;
+      background-color: rgba(244, 63, 94, 0.25);
+      color: #fb7185;
     }
 
     .tree-Attribute,
     .tree-DAttribute {
-      background-color: rgba(249, 115, 22, 0.2);
+      background-color: rgba(249, 115, 22, 0.25);
       color: #fb923c;
     }
 
     .tree-Reference,
     .tree-DReference {
-      background-color: rgba(6, 182, 212, 0.2);
+      background-color: rgba(6, 182, 212, 0.25);
       color: #22d3ee;
     }
 
     .tree-Operation,
     .tree-DOperation {
-      background-color: rgba(16, 185, 129, 0.2);
+      background-color: rgba(16, 185, 129, 0.25);
       color: #34d399;
+    }
+
+    .tree-Parameter,
+    .tree-DParameter {
+      background-color: rgba(100, 116, 139, 0.25);
+      color: #94a3b8;
     }
 
     .tree-Enumerator,
     .tree-DEnumerator {
-      background-color: rgba(245, 158, 11, 0.2);
+      background-color: rgba(245, 158, 11, 0.25);
       color: #fbbf24;
     }
 
     .tree-EnumLiteral,
     .tree-DEnumLiteral {
-      background-color: rgba(217, 119, 6, 0.2);
-      color: #f59e0b;
+      background-color: rgba(234, 179, 8, 0.25);
+      color: #facc15;
     }
 
     .tree-Object,
     .tree-DObject {
-      background-color: rgba(107, 114, 128, 0.2);
+      background-color: rgba(107, 114, 128, 0.25);
       color: #9ca3af;
     }
 
     .tree-Value,
     .tree-DValue {
-      background-color: rgba(120, 113, 108, 0.2);
-      color: #a8a29e;
+      background-color: rgba(168, 85, 247, 0.25);
+      color: #c084fc;
+    }
+
+    .tree-Singleton {
+      background-color: rgba(99, 102, 241, 0.25);
+      color: #818cf8;
+    }
+
+    .tree-Edge,
+    .tree-DEdge {
+      background-color: rgba(71, 85, 105, 0.25);
+      color: #94a3b8;
+    }
+
+    .tree-EdgePoint,
+    .tree-DEdgePoint {
+      background-color: rgba(100, 116, 139, 0.2);
+      color: #94a3b8;
+    }
+
+    .tree-EdgeAssociation {
+      background-color: rgba(139, 92, 246, 0.2);
+      color: #a78bfa;
+    }
+
+    .tree-EdgeDependency {
+      background-color: rgba(236, 72, 153, 0.2);
+      color: #f472b6;
+    }
+
+    .tree-EdgeInheritance {
+      background-color: rgba(20, 184, 166, 0.2);
+      color: #2dd4bf;
+    }
+
+    .tree-EdgeAggregation {
+      background-color: rgba(14, 165, 233, 0.2);
+      color: #38bdf8;
+    }
+
+    .tree-EdgeComposition {
+      background-color: rgba(16, 185, 129, 0.2);
+      color: #34d399;
+    }
+
+    .tree-Anchors {
+      background-color: rgba(20, 184, 166, 0.25);
+      color: #2dd4bf;
+    }
+
+    .tree-Fallback {
+      background-color: rgba(156, 163, 175, 0.25);
+      color: #d1d5db;
     }
 
     // Feature badges in dark mode

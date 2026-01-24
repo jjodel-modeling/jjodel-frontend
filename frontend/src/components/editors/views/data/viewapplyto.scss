@@ -1,25 +1,378 @@
-section {
-  overflow:visible;
+/**
+ * Apply To Tab - Redesigned to match Properties
+ * Using global CSS variables for consistency
+ */
+
+// ============================================
+// MAIN CONTAINER
+// ============================================
+.apply-to-tab {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 0 !important;
+  padding: var(--space-4, 16px) !important;
+  margin: var(--space-2, 8px) !important;
+  background-color: var(--color-bg-secondary, #f8fafc) !important;
+  font-family: var(--font-family, 'Inter Variable', -apple-system, BlinkMacSystemFont, sans-serif) !important;
+  font-size: var(--text-sm, 13px) !important;
+  color: var(--color-text-primary, #0f172a) !important;
+  overflow-y: auto !important;
+  height: 100% !important;
+  box-sizing: border-box !important;
+
+  // ============================================
+  // HEADER
+  // ============================================
+  .apply-to-header {
+    font-size: var(--text-xl, 18px) !important;
+    font-weight: 600 !important;
+    color: var(--color-text-primary, #0f172a) !important;
+    margin: 0 0 var(--space-4, 16px) 0 !important;
+    padding-bottom: var(--space-3, 12px) !important;
+    border-bottom: 1px solid var(--color-border-primary, #e2e8f0) !important;
+  }
+
+  // ============================================
+  // FORM FIELDS - Vertical Layout
+  // ============================================
+  .form-field {
+    margin-bottom: var(--space-4, 16px) !important;
+    display: block !important;
+  }
+
+  .form-label {
+    display: block !important;
+    font-size: var(--text-sm, 13px) !important;
+    font-weight: 500 !important;
+    color: var(--color-text-secondary, #334155) !important;
+    margin-bottom: var(--space-2, 6px) !important;
+  }
+
+  // ============================================
+  // INPUT & SELECT STYLES
+  // ============================================
+  input,
+  input[type="text"],
+  input[type="number"],
+  select,
+  textarea,
+  .form-input,
+  .form-select {
+    width: 100% !important;
+    height: var(--input-height, 40px) !important;
+    padding: 8px 12px !important;
+    font-family: inherit !important;
+    font-size: var(--text-md, 14px) !important;
+    color: var(--color-text-primary, #0f172a) !important;
+    background: var(--color-bg-primary, #ffffff) !important;
+    border: 1px solid var(--color-border-primary, #e2e8f0) !important;
+    border-radius: var(--radius-md, 6px) !important;
+    transition: all 150ms ease !important;
+    box-sizing: border-box !important;
+
+    &:focus {
+      outline: none !important;
+      border-color: var(--color-accent, #475569) !important;
+      box-shadow: 0 0 0 3px rgba(71, 85, 105, 0.1) !important;
+    }
+
+    &::placeholder {
+      color: var(--color-text-tertiary, #9ca3af) !important;
+    }
+
+    &:disabled,
+    &[readonly] {
+      background: var(--color-bg-tertiary, #f1f5f9) !important;
+      color: var(--color-text-tertiary, #64748b) !important;
+      cursor: not-allowed !important;
+    }
+  }
+
+  select,
+  .form-select {
+    appearance: none !important;
+    -webkit-appearance: none !important;
+    -moz-appearance: none !important;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Cpath fill='%2364748b' d='M4.5 5.5L8 9l3.5-3.5'/%3E%3C/svg%3E") !important;
+    background-repeat: no-repeat !important;
+    background-position: right 12px center !important;
+    padding-right: 36px !important;
+    cursor: pointer !important;
+  }
+
+  // Input container (from Input component)
+  .input-container {
+    display: block !important;
+    width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    background: transparent !important;
+
+    input, select {
+      width: 100% !important;
+    }
+  }
+
+  // ============================================
+  // TOGGLE SWITCH - For Is Exclusive
+  // ============================================
+  .form-field--toggle {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    padding: 12px 16px !important;
+    background: var(--color-bg-primary, #ffffff) !important;
+    border: 1px solid var(--color-border-primary, #e2e8f0) !important;
+    border-radius: var(--radius-lg, 8px) !important;
+    margin-bottom: var(--space-4, 16px) !important;
+  }
+
+  .toggle-content {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 2px !important;
+  }
+
+  .toggle-label {
+    font-size: var(--text-md, 14px) !important;
+    font-weight: 500 !important;
+    color: var(--color-text-primary, #0f172a) !important;
+  }
+
+  .toggle-description {
+    font-size: var(--text-xs, 12px) !important;
+    color: var(--color-text-tertiary, #64748b) !important;
+  }
 }
 
-section.page-root{
+// Toggle Switch Button (outside container for specificity)
+.apply-to-toggle {
+  position: relative !important;
+  width: 36px !important;
+  height: 20px !important;
+  flex-shrink: 0 !important;
+  background: #cbd5e1 !important;
+  border: none !important;
+  border-radius: 20px !important;
+  cursor: pointer !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  padding: 0 !important;
+
+  &.active {
+    background: linear-gradient(135deg, #64748b 0%, #475569 100%) !important;
+  }
+
+  &:focus {
+    outline: none !important;
+    box-shadow: 0 0 0 3px rgba(71, 85, 105, 0.1) !important;
+  }
+
+  &:disabled {
+    opacity: 0.5 !important;
+    cursor: not-allowed !important;
+  }
+}
+
+.apply-to-toggle-thumb {
+  position: absolute !important;
+  height: 16px !important;
+  width: 16px !important;
+  left: 2px !important;
+  top: 2px !important;
+  background: white !important;
+  border-radius: 50% !important;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2) !important;
+
+  .apply-to-toggle.active & {
+    transform: translateX(16px) !important;
+  }
+}
+
+// ============================================
+// COLLAPSIBLE SECTION HEADERS (OCL/JS)
+// ============================================
+.section-header--collapsible {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  width: 100% !important;
+  padding: 12px 0 !important;
+  background: transparent !important;
+  border: none !important;
+  border-bottom: 1px solid var(--color-border-primary, #e2e8f0) !important;
+  cursor: pointer !important;
+  margin-top: var(--space-4, 16px) !important;
+  text-align: left !important;
+
+  &:hover {
+    background: rgba(0, 0, 0, 0.02) !important;
+  }
+
+  &:focus {
+    outline: none !important;
+  }
+}
+
+.section-header__left {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+
+  i {
+    font-size: 12px !important;
+    color: var(--color-text-tertiary, #64748b) !important;
+    transition: transform 150ms ease !important;
+  }
+}
+
+.section-header__right {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+
+.section-title {
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  color: var(--color-text-tertiary, #64748b) !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.5px !important;
+  margin: 0 !important;
+}
+
+// ============================================
+// MONACO EDITOR WRAPPER
+// ============================================
+.monaco-editor-wrapper {
+  background: var(--color-bg-primary, #ffffff) !important;
+  border: 1px solid var(--color-border-primary, #e2e8f0) !important;
+  border-radius: var(--radius-md, 6px) !important;
+  margin-top: 8px !important;
+  overflow: hidden !important;
+}
+
+// ============================================
+// LEGACY SUPPORT
+// ============================================
+section.page-root {
   display: flex;
   flex-flow: column;
-  &>label{
+
+  & > label {
     display: flex;
     padding-top: 0.125em;
     padding-bottom: 0.125em;
     min-height: min-content;
     height: 32px;
-    font-size: 1.1em!important;
+    font-size: 1.1em !important;
     color: var(--color);
 
-    &>span{
+    & > span {
       margin: auto;
       flex-grow: 1;
     }
-    &>input{
+
+    & > input {
       margin: auto;
+    }
+  }
+}
+
+// ============================================
+// DARK MODE SUPPORT
+// ============================================
+[data-theme="dark"] {
+  .apply-to-tab {
+    background-color: var(--color-bg-secondary, #1e293b) !important;
+    color: var(--color-text-primary, #e2e8f0) !important;
+
+    .apply-to-header {
+      color: var(--color-text-primary, #f1f5f9) !important;
+      border-bottom-color: var(--color-border-primary, #334155) !important;
+    }
+
+    .form-label {
+      color: var(--color-text-secondary, #e2e8f0) !important;
+    }
+
+    input,
+    select,
+    textarea,
+    .form-input,
+    .form-select {
+      background: var(--color-bg-primary, #1e293b) !important;
+      border-color: var(--color-border-primary, #334155) !important;
+      color: var(--color-text-primary, #f1f5f9) !important;
+
+      &:focus {
+        border-color: #64748b !important;
+        box-shadow: 0 0 0 3px rgba(100, 116, 139, 0.2) !important;
+      }
+
+      &::placeholder {
+        color: #64748b !important;
+      }
+
+      &:disabled {
+        background: #334155 !important;
+        color: #64748b !important;
+      }
+    }
+
+    .form-field--toggle {
+      background: var(--color-bg-primary, #1e293b) !important;
+      border-color: var(--color-border-primary, #334155) !important;
+    }
+
+    .toggle-label {
+      color: var(--color-text-primary, #f1f5f9) !important;
+    }
+
+    .toggle-description {
+      color: #94a3b8 !important;
+    }
+
+    .section-header--collapsible {
+      border-bottom-color: var(--color-border-primary, #334155) !important;
+
+      &:hover {
+        background: rgba(255, 255, 255, 0.02) !important;
+      }
+    }
+
+    .section-header__left i {
+      color: #94a3b8 !important;
+    }
+
+    .section-title {
+      color: #9ca3af !important;
+    }
+
+    .monaco-editor-wrapper {
+      background: var(--color-bg-primary, #1e293b) !important;
+      border-color: var(--color-border-primary, #334155) !important;
+    }
+  }
+
+  .apply-to-toggle {
+    background-color: #475569 !important;
+
+    &.active {
+      background: linear-gradient(135deg, #64748b 0%, #475569 100%) !important;
+    }
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    .apply-to-tab {
+      background-color: var(--color-bg-secondary, #1e293b) !important;
+      color: var(--color-text-primary, #e2e8f0) !important;
+    }
+
+    .apply-to-toggle {
+      background-color: #475569 !important;
     }
   }
 }

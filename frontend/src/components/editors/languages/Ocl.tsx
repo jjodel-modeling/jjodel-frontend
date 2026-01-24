@@ -23,23 +23,17 @@ function OclEditorComponent(props: AllProps) {
     const lines = (Math.round(view.oclCondition.split(/\r|\r\n|\n/).length*1.8) < 5 ? 10 : Math.round(view.oclCondition.split(/\r|\r\n|\n/).length*1.8));
 
     return(<>
-        <div style={{...(props.style || {})}} className={'cursor-pointer d-flex'} onClick={e => setShow(!show)}>
-            <span className={'chevron-holder'} tabIndex={-1} >
+        <button
+            type="button"
+            style={{...(props.style || {})}}
+            className={'section-header section-header--collapsible'}
+            onClick={e => setShow(!show)}
+        >
+            <div className="section-header__left">
                 <i className={'bi bi-chevron-' + (show ? 'down' : 'right')} />
-                {/*show ? <i className={'bi bi-eye-fill'} /> : <i className={'bi bi-eye-slash-fill'} /> */}
-            </span>
-            <label className={'editor-label'}>
-                OCL Editor {/*(OCL engine by Stephan Köninger,
-                <a className={'ms-1'} target={'_blank'} href={'https://ocl.stekoe.de/#examples'}>Supported instructions</a>)*/}
-            </label>
-            {/* show && <CommandBar style={{paddingTop: '10px'}}>
-                {expand ?
-                    <Btn icon={'shrink'} action={(e) => {setExpand(false); setShow(true)}} tip={'Minimize editor'}/>
-                    :
-                    <Btn icon={'expand'} action={(e) => {setExpand(true); setShow(true)}} tip={'Enlarge editor'}/>
-                }
-            </CommandBar>*/}
-        </div>
+                <h3 className="section-title">OCL EDITOR</h3>
+            </div>
+        </button>
 
         {show && <div className={"monaco-editor-wrapper"}
                 style={{padding: '5px', height:`${lines+'lvh'}`, transition: 'height 0.3s', resize: 'vertical', overflow:'hidden'}}

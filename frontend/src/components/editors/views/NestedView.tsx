@@ -155,7 +155,7 @@ function renderEntry(d: DViewElement, childrens: GObject, isExpanded: boolean, t
                                         checked={false}
                                         onChange={() => {/* TODO: overlay selection logic */}}
                                     />
-                                    <span className="viewpoint-checkbox__custom"></span>
+                                  
                                 </label>
                             )}
                             
@@ -463,7 +463,6 @@ function renderEntry(d: DViewElement, childrens: GObject, isExpanded: boolean, t
 
 
     let [view, setView] = useStateIfMounted(undefined as (undefined | Pointer<DViewElement>));
-    let [vp_expanded, setVpExpanded] = useStateIfMounted<Boolean>(false);
 
     // Basic mode: show locked feature placeholder
     if (!props.isAdvanced) {
@@ -490,27 +489,17 @@ function renderEntry(d: DViewElement, childrens: GObject, isExpanded: boolean, t
     return(<div className={"view-editor-root"}>
         <section className={'viewpoint-tab'}>
             <div className={"view-editor-fullsize-content"}>
-                <div className={'d-flexd-flex'}>
-                    <h1 onClick={() => setVpExpanded(!vp_expanded)}>
-                        Viewpoints
-                        <CommandBar style={{float: 'right'}}>
-                            {vp_expanded ?
-                                <Btn icon={'shrink'}
-                                    active={collapseAll}
-                                    action={() => {setVpExpanded(!vp_expanded);setCollapseAll(true)}}
-                                    tip={'Collapse all'}
-
-                                /> :
-                                <Btn icon={'expand'}
-                                    active={collapseAll===false}
-                                    action={() => {setVpExpanded(!vp_expanded);setCollapseAll(false)}}
-                                    tip={'Expand all'}
-                                />
-                    }
-                            <Sep />
-                            <Btn icon={'add'} action={addVP} tip={'Create a new viewpoint'} />
-                        </CommandBar>
-                    </h1>
+                {/* Header - matches Properties style */}
+                <div className="viewpoints-header">
+                    <div className="viewpoints-header__icon">
+                        <i className="bi bi-eye" />
+                    </div>
+                    <h1 className="viewpoints-header__title">Viewpoints</h1>
+                    <div className="viewpoints-header__actions">
+                        <button className="btn-new" onClick={addVP} title="Create a new viewpoint">
+                            + New
+                        </button>
+                    </div>
                 </div>
                 {vieweditor}
                 <ul className={"ps-2 pt-2"}>
