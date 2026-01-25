@@ -7,6 +7,7 @@ import tinycolor, {Instance} from "tinycolor2";
 import Editor from "@monaco-editor/react";
 import type {Dictionary, GObject, Pointer,} from '../../../../joiner';
 import {DState, DViewElement, EdgeHead, Input, Keystrokes, Log, LViewElement, U,} from '../../../../joiner';
+import { cssMonacoOptions, withReadOnly } from '../../monacoConfig';
 import type {
     NumberControl,
     PaletteControl,
@@ -766,16 +767,7 @@ function PaletteDataComponent(props: AllProps) {
 
 
             <Editor className={'mx-1'}
-                    options={{
-                        theme: 'vs',
-                        fontSize: 12, 
-                        scrollbar: {
-                            vertical: 'hidden', 
-                            horizontalScrollbarSize: 5
-                        }, 
-                        minimap: {enabled: false}, 
-                        readOnly: readOnly
-                    }}
+                    options={withReadOnly(cssMonacoOptions, readOnly)}
                     defaultLanguage={'less'} value={vcss} onChange={change}/>
         </div>
         {false && <div className={"debug"}><div style={{whiteSpace:'pre'}}>{view.compiled_css}</div></div>}

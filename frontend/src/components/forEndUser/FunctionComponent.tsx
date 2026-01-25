@@ -8,6 +8,7 @@ import "./FunctionComponent.scss";
 import { CommandBar, Btn, Sep } from '../commandbar/CommandBar';
 import { Tooltip } from './Tooltip';
 import Editor from '@monaco-editor/react';
+import { mediumMonacoOptions, withReadOnly } from '../editors/monacoConfig';
 
 /*
  Rationale behind this:
@@ -345,18 +346,7 @@ function FunctionComponent(props: AllProps) {
                 width="100%"
                 defaultLanguage="plaintext"
                 value={state.ta.v}
-                options={{
-                    readOnly: readOnly,
-                    minimap: { enabled: false },
-                    scrollBeyondLastLine: false,
-                    wordWrap: "on",
-                    lineNumbers: "on",
-                    fontSize: 12,
-                    padding: { top: 4, bottom: 4 },
-                    "semanticHighlighting.enabled": true,
-                    scrollbar: { vertical: 'hidden', horizontalScrollbarSize: 5 },
-                    autoIndent: "full"
-                }}
+                options={withReadOnly(mediumMonacoOptions, readOnly)}
                 onChange={(value) => {
                     if (!readOnly) {
                         textAreaChange(value, state, setState);

@@ -62,10 +62,18 @@
   width: 100% !important;
 
   // Prefix text (ret.)
-  .detailedMode {
+  > .detailedMode:first-child {
     font-size: 13px;
     color: var(--form-hint-color, #6b7280);
     font-family: var(--font-mono, 'IBM Plex Mono', monospace);
+    flex-shrink: 0;
+  }
+
+  // First form-field (identifier) - fixed width
+  > .form-field:first-of-type {
+    width: 160px !important;
+    flex-shrink: 0 !important;
+    margin-bottom: 0 !important;
   }
 
   // Arrow icon between inputs
@@ -86,9 +94,24 @@
     }
   }
 
-  // Input fields styling
-  input.input {
+  // Second form-field (expression) - flex to fill
+  > .form-field:last-of-type {
     flex: 1 !important;
+    min-width: 0 !important;
+    margin-bottom: 0 !important;
+  }
+
+  // Form field inside template-item - reset margins
+  > .form-field {
+    margin-bottom: 0 !important;
+    display: block !important;
+  }
+
+  // Input fields styling (both old .input and new .form-input)
+  input.input,
+  input.form-input,
+  .form-input.form-input-fix {
+    width: 100% !important;
     min-width: 0 !important;
     height: var(--input-height, 36px) !important;
     padding: var(--form-input-padding-y, 8px) var(--form-input-padding-x, 12px) !important;
@@ -123,10 +146,11 @@
     }
   }
 
-  // Delete button styling
+  // Delete button styling - always aligned right
   .commandbar {
     padding: 0 !important;
-    margin-left: 4px;
+    margin-left: auto !important;
+    flex-shrink: 0 !important;
   }
 }
 
@@ -137,13 +161,16 @@
   transition: transform var(--time), max-height var(--time) var(--delay) cubic-bezier(0, 0.9, 0, 0.9);
   transform: scaleY(1);
   max-height: 2000px;
-  overflow: hidden;
+  overflow: visible; // Changed from hidden to show focus shadow
   transform-origin: top;
+  padding: 4px; // Space for focus shadow
+  margin: -4px; // Compensate visually
 
   &.collapsed {
     transition: transform var(--time), max-height var(--time) var(--delay) cubic-bezier(1, 0.1, 1, 0.1);
     transform: scaleY(0);
     max-height: 0px;
+    overflow: hidden; // Hide content when collapsed
   }
 
   textarea {

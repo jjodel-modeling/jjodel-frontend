@@ -6,3 +6,7 @@ export {Logger} from './Logger'
 export {Collaborative} from './Collaborative';
 export {MetaData} from './MetaData';
 export {NestedView} from './views/NestedView';
+export {EditorToolbar} from './EditorToolbar';
+export type {EditorToolbarProps} from './EditorToolbar';
+export {EditorFullscreenModal} from './EditorFullscreenModal';
+export type {EditorFullscreenModalProps} from './EditorFullscreenModal';

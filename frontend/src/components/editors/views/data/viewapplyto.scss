@@ -125,6 +125,13 @@
     border: 1px solid var(--color-border-primary, #e2e8f0) !important;
     border-radius: var(--radius-md, 6px) !important;
     margin-bottom: var(--space-4, 16px) !important;
+    transition: border-color 150ms ease !important;
+
+    // Hover changes only border, not background
+    &:hover {
+      border-color: var(--form-input-border-color-hover, #cbd5e1) !important;
+      background: var(--color-bg-primary, #ffffff) !important;
+    }
   }
 
   .toggle-content {

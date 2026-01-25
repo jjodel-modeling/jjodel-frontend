@@ -1,0 +1,132 @@
+/**
+ * EditorToolbar - Styles for reusable Monaco Editor toolbar
+ *
+ * Design tokens from CLAUDE.md
+ */
+
+.editor-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 32px;
+  padding: 0 8px;
+  background-color: var(--color-bg-secondary, #f8fafc);
+  border-bottom: 1px solid var(--color-border, #e2e4e8);
+  border-radius: 6px 6px 0 0;
+  user-select: none;
+
+  // Left side: collapse toggle + icon + title
+  &__left {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+
+    &:hover {
+      .editor-toolbar__title {
+        color: var(--color-text-primary, #111418);
+      }
+    }
+  }
+
+  // Icon before title
+  &__icon {
+    font-size: 14px;
+    color: var(--color-text-secondary, #6B7280);
+  }
+
+  // Title label
+  &__title {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--color-text-secondary, #6B7280);
+    transition: color 150ms ease;
+  }
+
+  // Right side: action buttons
+  &__actions {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+  }
+
+  // Individual toolbar button
+  &__btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    padding: 0;
+    background-color: transparent;
+    border: none;
+    border-radius: 4px;
+    color: var(--color-text-tertiary, #9CA3AF);
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 150ms ease;
+
+    &:hover:not(:disabled) {
+      background-color: var(--color-accent-light, rgba(71, 85, 105, 0.1));
+      color: var(--color-text-primary, #111418);
+    }
+
+    &:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    // Active state (for toggles like wrap, expand)
+    &.active {
+      background-color: var(--color-accent-light, rgba(71, 85, 105, 0.1));
+      color: var(--color-accent, #475569);
+    }
+
+    // Success state (for copy feedback)
+    &.success {
+      color: var(--color-success, #10b981);
+    }
+  }
+
+  // Collapse toggle button
+  &__collapse {
+    width: 20px;
+    height: 20px;
+    font-size: 12px;
+  }
+}
+
+// Dark mode support
+[data-theme="dark"] {
+  .editor-toolbar {
+    background-color: var(--color-bg-secondary-dark, #1e2024);
+    border-bottom-color: var(--color-border-dark, #3a3f47);
+
+    &__icon,
+    &__title {
+      color: var(--color-text-secondary-dark, #9CA3AF);
+    }
+
+    &__left:hover .editor-toolbar__title {
+      color: var(--color-text-primary-dark, #ffffff);
+    }
+
+    &__btn {
+      color: var(--color-text-tertiary-dark, #6B7280);
+
+      &:hover:not(:disabled) {
+        background-color: rgba(255, 255, 255, 0.08);
+        color: var(--color-text-primary-dark, #ffffff);
+      }
+
+      &.active {
+        background-color: rgba(255, 255, 255, 0.1);
+        color: var(--color-accent-dark, #94a3b8);
+      }
+
+      &.success {
+        color: var(--color-success, #10b981);
+      }
+    }
+  }
+}

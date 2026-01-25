@@ -475,14 +475,16 @@ input[type="number"] {
   flex-direction: row !important;
   gap: 16px !important;
   padding: 12px 16px !important;
-  background: #ffffff !important;
+  background: var(--form-input-bg, #ffffff) !important;
   border: 1px solid var(--form-input-border-color) !important;
   border-radius: var(--form-input-border-radius) !important;
   margin-bottom: var(--form-field-gap) !important;
-  transition: background-color 150ms ease !important;
+  transition: border-color 150ms ease !important;
 
+  // FIX: hover changes only border, NOT background
   &:hover {
-    background: #f8fafc !important;
+    border-color: var(--form-input-border-color-hover) !important;
+    background: var(--form-input-bg, #ffffff) !important; // stays white
   }
 }
 
@@ -649,6 +651,15 @@ input[type="number"] {
 // Consistent gray background for all tabs
 // ==============================================
 
+// Parent containers should have white background
+.view-editor-root,
+.viewpoint-tab-container,
+.dock-tabpane {
+  background-color: #ffffff !important;
+  height: 100% !important;
+}
+
+// Tab content containers - extend to full height with gray background
 .properties-tab,
 .viewpoint-tab,
 .node-tab,
@@ -659,7 +670,25 @@ input[type="number"] {
 .options-tab,
 .permissions-tab,
 .page-root {
-  background-color: #f8fafc;
+  background-color: #f8fafc !important;
+  min-height: 100% !important;
+  height: auto !important;
+  padding: 16px !important;
+  box-sizing: border-box !important;
+}
+
+// Ensure tab content wrapper allows extension
+.tab-content-wrapper,
+.dock-tab-content {
+  height: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+
+  > section,
+  > .page-root {
+    flex: 1 !important;
+    min-height: 0 !important;
+  }
 }
 
 // ==============================================
@@ -678,6 +707,13 @@ input[type="number"] {
   --form-toggle-bg: #475569;
   --form-toggle-bg-active: #64748b;
 
+  // Parent container backgrounds
+  .view-editor-root,
+  .viewpoint-tab-container,
+  .dock-tabpane {
+    background-color: #0f172a !important;
+  }
+
   // Tab backgrounds
   .properties-tab,
   .viewpoint-tab,
@@ -689,7 +725,7 @@ input[type="number"] {
   .options-tab,
   .permissions-tab,
   .page-root {
-    background-color: #1e293b;
+    background-color: #1e293b !important;
   }
 
   // Input dark mode
@@ -801,5 +837,76 @@ input[type="number"] {
     --form-hint-color: #94a3b8;
     --form-toggle-bg: #475569;
     --form-toggle-bg-active: #64748b;
+  }
+}
+
+// ==============================================
+// UTILITY CLASSES - Width
+// Prefixed with form- to avoid conflicts with Bootstrap/other frameworks
+// ==============================================
+
+.form-w-auto { width: auto !important; }
+.form-w-full { width: 100% !important; }
+.form-w-80  { width: 80px !important; }
+.form-w-100 { width: 100px !important; }
+.form-w-120 { width: 120px !important; }
+.form-w-150 { width: 150px !important; }
+.form-w-160 { width: 160px !important; }
+.form-w-180 { width: 180px !important; }
+.form-w-200 { width: 200px !important; }
+.form-w-250 { width: 250px !important; }
+.form-w-300 { width: 300px !important; }
+
+// Max-width variants
+.form-max-w-80  { max-width: 80px !important; }
+.form-max-w-100 { max-width: 100px !important; }
+.form-max-w-120 { max-width: 120px !important; }
+.form-max-w-150 { max-width: 150px !important; }
+.form-max-w-180 { max-width: 180px !important; }
+.form-max-w-200 { max-width: 200px !important; }
+.form-max-w-300 { max-width: 300px !important; }
+
+// ==============================================
+// UTILITY CLASSES - Flex
+// Prefixed with form- to avoid conflicts
+// ==============================================
+
+.form-flex-1 {
+  flex: 1 !important;
+  min-width: 0 !important; // Allows shrink below content width
+}
+.form-flex-grow { flex-grow: 1 !important; }
+.form-flex-shrink-0 { flex-shrink: 0 !important; }
+.form-flex-none { flex: none !important; }
+
+// ==============================================
+// FORM INPUT ROW - Container for inline input groups
+// ==============================================
+
+.form-input-row {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  width: 100% !important;
+}
+
+.form-input-row--gap-sm { gap: 4px !important; }
+.form-input-row--gap-md { gap: 8px !important; }
+.form-input-row--gap-lg { gap: 16px !important; }
+
+// Input row with fixed first column
+.form-input-row--fixed-first {
+  > *:first-child {
+    width: 160px !important;
+    flex-shrink: 0 !important;
+  }
+
+  > *:nth-child(2) {
+    flex-shrink: 0 !important;
+  }
+
+  > *:last-child:not(:nth-child(2)) {
+    flex: 1 !important;
+    min-width: 0 !important;
   }
 }

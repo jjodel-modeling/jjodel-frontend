@@ -13,6 +13,7 @@ import {
 import {useStateIfMounted} from 'use-state-if-mounted';
 import {FakeStateProps} from '../../../joiner/types';
 import { CommandBar, Btn } from '../../commandbar/CommandBar';
+import { mediumMonacoOptions, withReadOnly } from '../monacoConfig';
 
 function JsEditorComponent(props: AllProps) {
     const {placeHolder, height, title, getter, setter, jsxLabel, field} = props;
@@ -81,7 +82,7 @@ function JsEditorComponent(props: AllProps) {
                 onFocus={() => setExpand(true)}
                 onBlur={() => {setExpand(false);blur()}}>
             <Editor className={'mx-1'} onChange={change}
-                    options={{fontSize: 12, scrollbar: {vertical: 'hidden', horizontalScrollbarSize: 5}, minimap: {enabled: false}, readOnly: readOnly}}
+                    options={withReadOnly(mediumMonacoOptions, readOnly)}
                     defaultLanguage={'typescript'} value={value||""} 
                     loading={<div style={{padding: '20px'}}>Loading JS Editor...</div>}
                 />

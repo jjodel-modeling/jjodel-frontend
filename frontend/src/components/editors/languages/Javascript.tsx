@@ -14,6 +14,7 @@ import {
 } from '../../../joiner';
 import {useStateIfMounted} from 'use-state-if-mounted';
 import {Btn, CommandBar} from '../../commandbar/CommandBar';
+import { mediumMonacoOptions, withReadOnly } from '../monacoConfig';
 
 function JavascriptEditorComponent(props: AllProps) {
     let {placeHolder, height, title, jsxLabel, data, field} = props;
@@ -102,7 +103,7 @@ function JavascriptEditorComponent(props: AllProps) {
                       style={{padding: '5px', minHeight: '20px', height:`${expand ? '10lvh' : '5lvh'}`, transition: 'height 0.3s', resize: 'vertical', overflow:'hidden'}}
                       tabIndex={-1} onBlur={blur}>
             <Editor className={'mx-1'} onChange={change}
-                    options={{fontSize: 12, scrollbar: {vertical: 'hidden', horizontalScrollbarSize: 5}, minimap: {enabled: false}, readOnly: readOnly}}
+                    options={withReadOnly(mediumMonacoOptions, readOnly)}
                     defaultLanguage={'typescript'} value={value||""} />
                     loading={<div style={{padding: '20px'}}>Loading JS Editor...</div>}
 

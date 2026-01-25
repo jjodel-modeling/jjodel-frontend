@@ -25,13 +25,10 @@ import {hideMetrics} from "../metrics/Metrics";
 import {Nearley} from "../../DSL/nearley/nearley";
 import {ParserData} from "../../joiner/classes";
 import {Tooltip} from "../forEndUser/Tooltip";
+import { baseMonacoOptions } from './monacoConfig';
 
-const monacooptions: monaco.editor.IStandaloneEditorConstructionOptions = {
-    fontSize: 12,
-    scrollbar: {vertical: 'hidden', horizontalScrollbarSize: 5},
-    minimap: {enabled: false},
-    readOnly: false
-};
+// Use centralized Monaco configuration
+const monacooptions = baseMonacoOptions;
 
 let lastID: Pointer | undefined = undefined;
 export function T2MEditor(props: EditorProps & {onBlur?: (value: string|undefined, evt: Event) => void}){

@@ -14,9 +14,14 @@ import App from './App';
 
 import { createRoot } from "react-dom/client";
 
-// ✅ AGGIUNGI MONACO WORKER SETUP QUI
+// ✅ MONACO SETUP - IMPORTANTE: loader.config PRIMA di MonacoEnvironment
 import * as monaco from 'monaco-editor';
+import { loader } from '@monaco-editor/react';
 
+// Configura @monaco-editor/react per usare l'istanza locale invece del CDN
+loader.config({ monaco });
+
+// Configura i workers per Vite
 (self as any).MonacoEnvironment = {
   getWorker(_: any, label: string) {
     if (label === 'json') {

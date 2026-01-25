@@ -5,6 +5,7 @@ import {DState, DViewElement, LViewElement, Pointer, Defaults} from '../../../jo
 import {useStateIfMounted} from 'use-state-if-mounted';
 import {FakeStateProps} from '../../../joiner/types';
 import { Btn, CommandBar } from '../../commandbar/CommandBar';
+import { compactMonacoOptions, withReadOnly } from '../monacoConfig';
 
 function OclEditorComponent(props: AllProps) {
     const view = props.view;
@@ -41,15 +42,7 @@ function OclEditorComponent(props: AllProps) {
                       onFocus={() => setExpand(true)}
                     onBlur={() => {setExpand(false); blur();}}>
             <Editor className={'mx-1'} onChange={change}
-                    options={{
-                        fontSize: 12, 
-                        scrollbar: {
-                            vertical: 'hidden', 
-                            horizontalScrollbarSize: 5
-                        }, 
-                        minimap: {enabled: false}, 
-                        readOnly: readOnly,
-                }}
+                    options={withReadOnly(compactMonacoOptions, readOnly)}
                     defaultLanguage={'js'} value={view.oclCondition||""} 
                     onMount={(editor) => {
                         console.log('[Monaco OCL] Mounted!');
