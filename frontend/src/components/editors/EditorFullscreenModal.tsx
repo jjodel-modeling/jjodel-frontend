@@ -1,11 +1,6 @@
 /**
  * EditorFullscreenModal - Modal fullscreen per Monaco Editor
- *
- * Fornisce un'esperienza di editing a schermo pieno con:
- * - Header con titolo e toolbar
- * - Editor Monaco a larghezza piena
- * - Footer con info (linea, colonna, linguaggio)
- * - Chiusura con X, ESC, o click fuori
+ * VERSIONE SEMPLIFICATA per debug
  */
 
 import React, { useState, useCallback, useEffect, useRef } from 'react';
@@ -14,25 +9,15 @@ import type { editor } from 'monaco-editor';
 import './EditorFullscreenModal.scss';
 
 export interface EditorFullscreenModalProps {
-  /** Se il modal è aperto */
   isOpen: boolean;
-  /** Callback per chiudere il modal */
   onClose: () => void;
-  /** Titolo dell'editor */
   title: string;
-  /** Icona Bootstrap Icons (es: 'bi-filetype-tsx') */
   icon?: string;
-  /** Valore corrente dell'editor */
   value: string;
-  /** Callback quando il valore cambia */
   onChange?: (value: string | undefined) => void;
-  /** Callback al salvataggio (Ctrl+S) */
   onSave?: (value: string) => void;
-  /** Linguaggio dell'editor (es: 'typescript', 'javascript', 'css') */
   language?: string;
-  /** Editor in sola lettura */
   readOnly?: boolean;
-  /** Tema Monaco ('vs' | 'vs-dark') */
   theme?: 'vs' | 'vs-dark';
 }
 
@@ -48,18 +33,12 @@ export function EditorFullscreenModal({
   readOnly = false,
   theme = 'vs',
 }: EditorFullscreenModalProps): JSX.Element | null {
-  const [internalValue, setInternalValue] = useState(value);
-  const [wrap, setWrap] = useState(true);
+  const [wrap, setWrap] = useState(false);
   const [cursorPosition, setCursorPosition] = useState({ line: 1, column: 1 });
   const [copyFeedback, setCopyFeedback] = useState(false);
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
 
-  // Sync internal value when prop changes
-  useEffect(() => {
-    setInternalValue(value);
-  }, [value]);
-
-  // Handle ESC key and Ctrl+S
+  // Handle ESC key
   useEffect(() => {
     if (!isOpen) return;
 
@@ -67,18 +46,17 @@ export function EditorFullscreenModal({
       if (e.key === 'Escape') {
         onClose();
       }
-      // Ctrl+S / Cmd+S per salvare
       if ((e.ctrlKey || e.metaKey) && e.key === 's') {
         e.preventDefault();
-        onSave?.(internalValue);
+        onSave?.(value);
       }
     };
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, onClose, onSave, internalValue]);
+  }, [isOpen, onClose, onSave, value]);
 
-  // Prevent body scroll when modal is open
+  // Body class for hiding GraphContainer
   useEffect(() => {
     if (isOpen) {
       document.body.classList.add('modal-fullscreen-open');
@@ -94,13 +72,6 @@ export function EditorFullscreenModal({
   const handleEditorMount: OnMount = useCallback((editor) => {
     editorRef.current = editor;
 
-    // Force line numbers to be visible
-    editor.updateOptions({
-      lineNumbers: 'on',
-      lineNumbersMinChars: 3,
-    });
-
-    // Track cursor position
     editor.onDidChangeCursorPosition((e) => {
       setCursorPosition({
         line: e.position.lineNumber,
@@ -108,18 +79,12 @@ export function EditorFullscreenModal({
       });
     });
 
-    // Focus and force layout after a short delay
+    // Focus after mount
     setTimeout(() => {
       editor.layout();
       editor.focus();
-    }, 100);
+    }, 50);
   }, []);
-
-  // Value change handler
-  const handleChange = useCallback((newValue: string | undefined) => {
-    setInternalValue(newValue || '');
-    onChange?.(newValue);
-  }, [onChange]);
 
   // Toggle wrap
   const handleWrapToggle = useCallback(() => {
@@ -129,13 +94,13 @@ export function EditorFullscreenModal({
   // Copy content
   const handleCopy = useCallback(async () => {
     try {
-      await navigator.clipboard.writeText(internalValue);
+      await navigator.clipboard.writeText(value);
       setCopyFeedback(true);
       setTimeout(() => setCopyFeedback(false), 1500);
     } catch (err) {
       console.error('Failed to copy:', err);
     }
-  }, [internalValue]);
+  }, [value]);
 
   // Format document
   const handleFormat = useCallback(() => {
@@ -149,71 +114,23 @@ export function EditorFullscreenModal({
     }
   }, [onClose]);
 
-  // Calculate stats
-  const lineCount = internalValue.split('\n').length;
-  const charCount = internalValue.length;
+  // Stats
+  const lineCount = value.split('\n').length;
+  const charCount = value.length;
 
-  // Monaco options - defined inline for full control
+  // Simple Monaco options
   const editorOptions: editor.IStandaloneEditorConstructionOptions = {
     readOnly,
     wordWrap: wrap ? 'on' : 'off',
-
-    // Line numbers
     lineNumbers: 'on',
-    lineNumbersMinChars: 3,
-    renderLineHighlight: 'line',
-
-    // Font
     fontSize: 14,
-    lineHeight: 22,
-    fontFamily: "'JetBrains Mono', 'Fira Code', Consolas, 'Courier New', monospace",
-    fontLigatures: false, // Disable ligatures (=>, ===, !== appear as separate chars)
-    fontWeight: '400',
-
-    // Layout
-    glyphMargin: false,
-    lineDecorationsWidth: 10,
-    folding: true,
-    foldingHighlight: true,
-
-    // Padding
-    padding: { top: 16, bottom: 16 },
-
-    // Scrolling
-    scrollBeyondLastLine: false,
-    smoothScrolling: true,
-
-    // Minimap
+    fontFamily: "'JetBrains Mono', 'Fira Code', Consolas, monospace",
+    fontLigatures: false,
     minimap: { enabled: false },
-
-    // Scrollbar
-    scrollbar: {
-      vertical: 'auto',
-      horizontal: 'auto',
-      verticalScrollbarSize: 10,
-      horizontalScrollbarSize: 10,
-      useShadows: false,
-    },
-
-    // Behavior
     automaticLayout: true,
-
-    // Cursor
-    cursorBlinking: 'smooth',
-    cursorSmoothCaretAnimation: 'on',
-    cursorStyle: 'line',
-
-    // Brackets
-    matchBrackets: 'always',
-    bracketPairColorization: {
-      enabled: true,
-    },
-
-    // Guides
-    guides: {
-      indentation: true,
-      bracketPairs: true,
-    },
+    scrollBeyondLastLine: false,
+    padding: { top: 12, bottom: 12 },
+    renderLineHighlight: 'line',
   };
 
   if (!isOpen) return null;
@@ -230,83 +147,70 @@ export function EditorFullscreenModal({
           </div>
 
           <div className="editor-fullscreen-header__actions">
-            {/* Wrap toggle */}
             <button
               type="button"
               className={`editor-fullscreen-btn ${wrap ? 'active' : ''}`}
               onClick={handleWrapToggle}
-              title={wrap ? 'Disabilita Word Wrap' : 'Abilita Word Wrap'}
+              title={wrap ? 'Disable Word Wrap' : 'Enable Word Wrap'}
             >
               <i className="bi bi-text-wrap" />
             </button>
 
-            {/* Copy */}
             <button
               type="button"
               className={`editor-fullscreen-btn ${copyFeedback ? 'success' : ''}`}
               onClick={handleCopy}
-              title="Copia contenuto"
+              title="Copy content"
             >
               <i className={`bi ${copyFeedback ? 'bi-check-lg' : 'bi-clipboard'}`} />
             </button>
 
-            {/* Format */}
             {!readOnly && (
               <button
                 type="button"
                 className="editor-fullscreen-btn"
                 onClick={handleFormat}
-                title="Formatta documento"
+                title="Format document"
               >
                 <i className="bi bi-code-slash" />
               </button>
             )}
 
-            {/* Divider */}
             <div className="editor-fullscreen-divider" />
 
-            {/* Close */}
             <button
               type="button"
               className="editor-fullscreen-btn editor-fullscreen-btn--close"
               onClick={onClose}
-              title="Chiudi (ESC)"
+              title="Close (ESC)"
             >
               <i className="bi bi-x-lg" />
             </button>
           </div>
         </div>
 
-        {/* Editor */}
+        {/* Editor - SIMPLIFIED */}
         <div className="editor-fullscreen-body">
           <Editor
             width="100%"
             height="100%"
-            value={internalValue}
-            onChange={handleChange}
+            value={value}
+            onChange={onChange}
             language={language}
             theme={theme}
             options={editorOptions}
             onMount={handleEditorMount}
-            loading={
-              <div className="editor-fullscreen-loading">
-                <i className="bi bi-arrow-repeat spin" />
-                <span>Caricamento editor...</span>
-              </div>
-            }
           />
         </div>
 
         {/* Footer */}
         <div className="editor-fullscreen-footer">
           <div className="editor-fullscreen-footer__left">
-            <span>
-              Ln {cursorPosition.line}, Col {cursorPosition.column}
-            </span>
-            <span className="editor-fullscreen-footer__separator">|</span>
-            <span>{lineCount} righe</span>
-            <span className="editor-fullscreen-footer__separator">|</span>
-            <span>{charCount} caratteri</span>
+            <span>Ln {cursorPosition.line}, Col {cursorPosition.column}</span>
+            <span className="editor-fullscreen-footer__separator">│</span>
+            <span>{lineCount} lines</span>
+            <span className="editor-fullscreen-footer__separator">│</span>
+            <span>{charCount} chars</span>
           </div>
 
           <div className="editor-fullscreen-footer__right">
@@ -315,10 +219,10 @@ export function EditorFullscreenModal({
               <button
                 type="button"
                 className="editor-fullscreen-save-btn"
-                onClick={() => onSave(internalValue)}
+                onClick={() => onSave(value)}
               >
                 <i className="bi bi-check2" />
-                Salva
+                Save
               </button>
             )}
           </div>

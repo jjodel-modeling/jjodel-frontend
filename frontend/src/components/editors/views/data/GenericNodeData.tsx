@@ -38,7 +38,6 @@ function GenericNodeDataComponent(props: AllProps) {
     isEdge = false;
     isEdgePoint = false;*/
     return(<section className={'p-3 options-tab'}>
-        <h1 className={'view'}>View: {view.name}</h1>
         {isField && <FieldData viewID={vid} readonly={readOnly} />}
         {isEdge && <EdgeData viewID={vid} readonly={readOnly} />}
         {isEdgePoint && <EdgePointData viewID={vid} readonly={readOnly} />}

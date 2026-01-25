@@ -1892,6 +1892,32 @@ section.viewpoint-tab {
           color: $color-text-primary;
         }
       }
+
+      // Breadcrumb type badge
+      .breadcrumb-type-badge {
+        display: inline-flex;
+        align-items: center;
+        margin-left: $spacing-sm;
+        padding: 2px 8px;
+        font-size: 10px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+        border-radius: $radius-sm;
+        white-space: nowrap;
+
+        // VIEW badge - slate/gray color
+        &.view {
+          background-color: rgba(71, 85, 105, 0.1);
+          color: #475569;
+        }
+
+        // VIEWPOINT badge - violet color
+        &.viewpoint {
+          background-color: rgba(139, 92, 246, 0.1);
+          color: #8b5cf6;
+        }
+      }
     }
   }
 

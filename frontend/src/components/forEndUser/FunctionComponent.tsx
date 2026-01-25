@@ -1,4 +1,4 @@
-import React, {Dispatch, JSX, ReactElement, ReactNode, useEffect, useState} from 'react';
+import React, {Dispatch, JSX, ReactElement, ReactNode, useEffect} from 'react';
 import {connect} from "react-redux";
 import type {Dictionary, DocString, GObject, DState, LViewElement, Pointer, Info} from "../../joiner";
 import {Log, LPointerTargetable, U} from "../../joiner";
@@ -9,6 +9,8 @@ import { CommandBar, Btn, Sep } from '../commandbar/CommandBar';
 import { Tooltip } from './Tooltip';
 import Editor from '@monaco-editor/react';
 import { mediumMonacoOptions, withReadOnly } from '../editors/monacoConfig';
+import EditorToolbar from '../editors/EditorToolbar';
+import EditorFullscreenModal from '../editors/EditorFullscreenModal';
 
 /*
  Rationale behind this:
@@ -177,6 +179,9 @@ function FunctionComponent(props: AllProps) {
     // if (false) return asTextArea(props) // i gave up
     const [state, setState] = useStateIfMounted(parseFunction(props));
     const [showTooltip, setShowTooltip] = useStateIfMounted(false);
+    const [wrap, setWrap] = useStateIfMounted(false);
+    const [fullscreen, setFullscreen] = useStateIfMounted(false);
+    const [expand, setExpand] = useStateIfMounted(false);
     // if (!props.data) return <></>;
     let advancedMode: boolean = state.advancedMode,
         readOnly = props.readOnly; // (props.readonly !== undefined) ? props.readonly : !props.debugMode && props.data.id.indexOf("Pointer_View") !== -1;
@@ -276,6 +281,12 @@ function FunctionComponent(props: AllProps) {
                         }
 
                         <Sep />
+                        <Btn
+    icon={'fullscreen'}
+    action={() => setFullscreen(true)}
+    tip={'Open fullscreen'}
+/>
+<Sep />
                         <Btn icon={'open-down'} action={()=>setState( {...state, collapsed:!state.collapsed})} tip={'Hide definitions'}/>
                     </>
                     :
@@ -336,28 +347,74 @@ function FunctionComponent(props: AllProps) {
                   value={state.ta.v} />*/}
 
 
-            <div className={'monaco-editor-wrapper detailedMode'}
-                    style={{padding: '5px',marginBottom: '10px', minHeight: '20px', transition: 'height 0.3s', height: '200px', resize: 'vertical', overflow:'hidden'}}
-                    tabIndex={-1} >
+            <div className={'detailedMode'}>
+                <EditorToolbar
+                    title="Function Editor"
+                    icon="bi-code-square"
+                    content={state.ta.v}
+                    collapsed={false}
+                    onCollapseToggle={() => {}}
+                    onWrapChange={(newWrap) => setWrap(newWrap)}
+                    onExpandChange={(newExpanded) => setExpand(newExpanded)}
+                    onFullscreenOpen={() => setFullscreen(true)}
+                    disableFullscreen={true}
+                    initialExpanded={expand}
+                    readOnly={readOnly || false}
+                />
+                <div className={'monaco-editor-wrapper'}
+                    style={{
+                        padding: '5px',
+                        marginBottom: '10px',
+                        minHeight: '20px',
+                        transition: 'height 0.3s',
+                        height: expand ? '400px' : '200px',
+                        resize: 'vertical',
+                        overflow: 'hidden'
+                    }}
+                    tabIndex={-1}
+                >
+                    <Editor
+                        width="100%"
+                        defaultLanguage="plaintext"
+                        value={state.ta.v}
+                        options={{
+                            ...withReadOnly(mediumMonacoOptions, readOnly || false),
+                            wordWrap: wrap ? 'on' : 'off'
+                        }}
+                        onChange={(value) => {
+                            if (!readOnly) {
+                                textAreaChange(value, state, setState);
+                                onBlur(state, setState, props);
+                            }
+                        }}
+                    />
+                </div>
+            </div>
 
-            
-
-                <Editor
-                width="100%"
-                defaultLanguage="plaintext"
+            <EditorFullscreenModal
+                isOpen={fullscreen}
+                onClose={() => {
+                    onBlur(state, setState, props);
+                    setFullscreen(false);
+                }}
+                title="Function Editor"
+                icon="bi-code-square"
                 value={state.ta.v}
-                options={withReadOnly(mediumMonacoOptions, readOnly)}
                 onChange={(value) => {
-                    if (!readOnly) {
+                    if (!readOnly && value !== undefined) {
                         textAreaChange(value, state, setState);
-                        onBlur(state, setState, props);
                     }
                 }}
-                
-                />
-
-
-            </div>
+                onSave={(newValue) => {
+                    if (!readOnly) {
+                        textAreaChange(newValue, state, setState);
+                        onBlur({...state, ta: {v: newValue, isDirty: true}}, setState, props);
+                    }
+                    setFullscreen(false);
+                }}
+                language="javascript"
+                readOnly={readOnly || false}
+            />
             {inputs}
             {false && <div style={{whiteSpace:"pre"}}>{(props.data as any)[props.field]}</div>}
         </div>}

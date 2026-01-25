@@ -12,8 +12,9 @@ import {
 } from '../../../joiner';
 import {useStateIfMounted} from 'use-state-if-mounted';
 import {FakeStateProps} from '../../../joiner/types';
-import { CommandBar, Btn } from '../../commandbar/CommandBar';
 import { mediumMonacoOptions, withReadOnly } from '../monacoConfig';
+import EditorToolbar from '../EditorToolbar';
+import EditorFullscreenModal from '../EditorFullscreenModal';
 
 function JsEditorComponent(props: AllProps) {
     const {placeHolder, height, title, getter, setter, jsxLabel, field} = props;
@@ -23,6 +24,8 @@ function JsEditorComponent(props: AllProps) {
     const [oldJs, setOldJs] = useStateIfMounted(js);
     const [show, setShow] = useStateIfMounted(props.initialExpand ? props.initialExpand(data, field) : false);
     const [expand, setExpand] = useStateIfMounted(false);
+    const [wrap, setWrap] = useStateIfMounted(false);
+    const [fullscreen, setFullscreen] = useStateIfMounted(false);
     const monaco = useMonaco();
     (window as any).monaco = monaco;
 
@@ -63,30 +66,49 @@ function JsEditorComponent(props: AllProps) {
     const lines = (Math.round(value.split(/\r|\r\n|\n/).length*1.8) < 5 ? 10 : Math.round(value.split(/\r|\r\n|\n/).length*1.8));
 
     return <>
-        <button
-            type="button"
-            style={{...(props.style || {})}}
-            className={'section-header section-header--collapsible'}
-            onClick={e => setShow(!show)}
-        >
-            <div className="section-header__left">
-                <i className={'bi bi-chevron-' + (show ? 'down' : 'right')} />
-                <h3 className="section-title">{title || 'JS EDITOR'}</h3>
-            </div>
-            {jsxLabel && <div className="section-header__right">{jsxLabel}</div>}
-        </button>
+        <EditorToolbar
+            title={typeof title === 'string' ? title : 'JS Editor'}
+            icon="bi-filetype-js"
+            content={js || ''}
+            collapsed={!show}
+            onCollapseToggle={() => setShow(!show)}
+            onWrapChange={(newWrap) => setWrap(newWrap)}
+            onExpandChange={(newExpanded) => setExpand(newExpanded)}
+            onFullscreenOpen={() => setFullscreen(true)}
+            disableFullscreen={true}
+            initialExpanded={expand}
+            readOnly={readOnly}
+        />
         {show && <div className={'monaco-editor-wrapper'}
-                /* style={{padding: '5px', minHeight: '20px', height: height ? `${height}px` : '100px', resize: 'vertical', overflow:'hidden'}}*/
                 style={{padding: '5px', height:`${lines+'lvh'}`, transition: 'height 0.3s', resize: 'vertical', overflow:'hidden'}}
                 tabIndex={-1}
                 onFocus={() => setExpand(true)}
                 onBlur={() => {setExpand(false);blur()}}>
             <Editor className={'mx-1'} onChange={change}
-                    options={withReadOnly(mediumMonacoOptions, readOnly)}
-                    defaultLanguage={'typescript'} value={value||""} 
+                    options={{
+                        ...withReadOnly(mediumMonacoOptions, readOnly),
+                        wordWrap: wrap ? 'on' : 'off'
+                    }}
+                    defaultLanguage={'typescript'} value={value||""}
                     loading={<div style={{padding: '20px'}}>Loading JS Editor...</div>}
                 />
         </div>}
+
+        <EditorFullscreenModal
+            isOpen={fullscreen}
+            onClose={() => { blur(); setFullscreen(false); }}
+            title={typeof title === 'string' ? title : 'JS Editor'}
+            icon="bi-filetype-js"
+            value={js || ''}
+            onChange={change}
+            onSave={(newValue) => {
+                if (setter) setter(newValue, data, field);
+                else if(field) (data as any)[field] = newValue;
+                setFullscreen(false);
+            }}
+            language="typescript"
+            readOnly={readOnly}
+        />
     </>;
 }
 interface OwnProps {

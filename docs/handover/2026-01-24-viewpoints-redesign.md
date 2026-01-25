@@ -33,7 +33,9 @@ Redesign completo degli stili della tab Viewpoints per allinearla al design syst
 1. [ ] Testare con progetti con molti viewpoints
 2. [ ] Verificare performance scroll con 50+ views
 3. [ ] Considerare virtualizzazione lista se necessario
-4. [ ] Redesign ViewData.tsx (editor singola view) - PROSSIMO TASK
+4. [x] ~~Redesign ViewData.tsx (editor singola view)~~ - **COMPLETATO** → vedi:
+   - `2026-01-25-monaco-editors-fullscreen.md` (EditorToolbar + fullscreen)
+   - `2026-01-25-breadcrumb-badge.md` (Badge tipo + rimozione header ridondanti)
 
 ## Screenshot
 [Aggiungere screenshot before/after]

@@ -8,6 +8,8 @@ import Editor from "@monaco-editor/react";
 import type {Dictionary, GObject, Pointer,} from '../../../../joiner';
 import {DState, DViewElement, EdgeHead, Input, Keystrokes, Log, LViewElement, U,} from '../../../../joiner';
 import { cssMonacoOptions, withReadOnly } from '../../monacoConfig';
+import EditorToolbar from '../../EditorToolbar';
+import EditorFullscreenModal from '../../EditorFullscreenModal';
 import type {
     NumberControl,
     PaletteControl,
@@ -77,6 +79,9 @@ function PaletteDataComponent(props: AllProps) {
     const [css, setCss] = useStateIfMounted(view.css);
 
     const [expand, setExpand] = useStateIfMounted(false);
+    const [wrap, setWrap] = useStateIfMounted(false);
+    const [fullscreen, setFullscreen] = useStateIfMounted(false);
+    const [showEditor, setShowEditor] = useStateIfMounted(true);
 
     const change = (value: string|undefined) => { if(value !== undefined) setCss(value); } // save in local state for frequent changes.
     const blur = () => view.css = css; // confirm in redux state for final state
@@ -375,7 +380,6 @@ function PaletteDataComponent(props: AllProps) {
     const lines = (Math.round(vcss.split(/\r|\r\n|\n/).length*1.8) < 5 ? 10 : Math.round(vcss.split(/\r|\r\n|\n/).length*1.8));
 
     return(<section className={'p-3 style-tab'}>
-        <h1 className={'view'}>View: {props.view.name}</h1>
         <div className={"controls"} style={{position:'relative', zIndex:2}}>
 
             {colors.map((entry, index, entries)=>{
@@ -733,29 +737,30 @@ function PaletteDataComponent(props: AllProps) {
 
         {/* ****** */}
 
-        {/*<label className={'ms-1 mb-1'}>{view.cssIsGlobal ? 'Global' : 'Local'} CSS Editor</label>*/}
-        {vcss.indexOf('//') >= 0 && <b><span style={{color:'red'}}>Warning:</span> Inline comments // are not supported by our compiler.<br/>
+        <EditorToolbar
+            title={cssIsGlobal ? "Global CSS & LESS Editor" : "Local CSS & LESS Editor"}
+            icon="bi-filetype-css"
+            content={vcss}
+            collapsed={!showEditor}
+            onCollapseToggle={() => setShowEditor(!showEditor)}
+            onWrapChange={(newWrap) => setWrap(newWrap)}
+            onExpandChange={(newExpanded) => setExpand(newExpanded)}
+            onFullscreenOpen={() => setFullscreen(true)}
+            disableFullscreen={false}
+            initialExpanded={expand}
+            readOnly={readOnly}
+        />
+        {showEditor && vcss.indexOf('//') >= 0 && <b><span style={{color:'red'}}>Warning:</span> Inline comments // are not supported by our compiler.<br/>
             Please replace them with /* block comments */</b>}
-
-            {/* <div className={"monaco-editor-wrapper"} style={{
-                minHeight: '20px',
-                height:`${expand ? '30lvh' : '10lvh'}`,
-                transition: 'height 0.3s',
-                resize: 'vertical', overflow:'hidden',
-                display: 'flex',
-                flexDirection: 'column'
-            }}
-            onFocus={() => setExpand(true)}
-            onBlur={() => {setExpand(false);blur()}}> */}
-                
+        {showEditor && (
             <div
                 className="monaco-editor-wrapper"
                 style={{
-                    height: '40%',   // use dvh for dynamic viewport on mobile, better than lvh
-                    maxHeight: '40%',                   // cannot exceed the section’s height
+                    height: expand ? '60%' : '40%',
+                    maxHeight: expand ? '800px' : '500px',
                     transition: 'height 0.3s',
                     resize: 'vertical',
-                    overflow: 'auto',                     // scroll instead of overflowing past bottom
+                    overflow: 'auto',
                     display: 'flex',
                     flexDirection: 'column',
                     flex: '1 1 auto'
@@ -763,13 +768,30 @@ function PaletteDataComponent(props: AllProps) {
                 onFocus={() => setExpand(true)}
                 onBlur={() => { setExpand(false); blur(); }}
             >
+                <Editor className={'mx-1'}
+                        options={{
+                            ...withReadOnly(cssMonacoOptions, readOnly),
+                            wordWrap: wrap ? 'on' : 'off'
+                        }}
+                        defaultLanguage={'less'} value={vcss} onChange={change}/>
+            </div>
+        )}
 
-
-
-            <Editor className={'mx-1'}
-                    options={withReadOnly(cssMonacoOptions, readOnly)}
-                    defaultLanguage={'less'} value={vcss} onChange={change}/>
-        </div>
+        <EditorFullscreenModal
+            isOpen={fullscreen}
+            onClose={() => { blur(); setFullscreen(false); }}
+            title={cssIsGlobal ? "Global CSS & LESS Editor" : "Local CSS & LESS Editor"}
+            icon="bi-filetype-css"
+            value={vcss}
+            onChange={change}
+            onSave={(newValue) => {
+                setCss(newValue);
+                view.css = newValue;
+                setFullscreen(false);
+            }}
+            language="less"
+            readOnly={readOnly}
+        />
         {false && <div className={"debug"}><div style={{whiteSpace:'pre'}}>{view.compiled_css}</div></div>}
         {/*<textarea>
             '[data-viewid="'+view.id+'"]{\n' +

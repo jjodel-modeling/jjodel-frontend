@@ -4,15 +4,17 @@ import Editor from '@monaco-editor/react';
 import {DState, DViewElement, LViewElement, Pointer, Defaults} from '../../../joiner';
 import {useStateIfMounted} from 'use-state-if-mounted';
 import {FakeStateProps} from '../../../joiner/types';
-import { Btn, CommandBar } from '../../commandbar/CommandBar';
 import { compactMonacoOptions, withReadOnly } from '../monacoConfig';
+import EditorToolbar from '../EditorToolbar';
+import EditorFullscreenModal from '../EditorFullscreenModal';
 
 function OclEditorComponent(props: AllProps) {
     const view = props.view;
     const [ocl, setOcl] = useStateIfMounted(view.oclCondition);
     const [show, setShow] = useStateIfMounted(true);
-
     const [expand, setExpand] = useStateIfMounted(false);
+    const [wrap, setWrap] = useStateIfMounted(false);
+    const [fullscreen, setFullscreen] = useStateIfMounted(false);
 
     if(!view) return(<></>);
     const readOnly = props.readOnly !== undefined ? props.readOnly : Defaults.check(view.id);
@@ -24,17 +26,19 @@ function OclEditorComponent(props: AllProps) {
     const lines = (Math.round(view.oclCondition.split(/\r|\r\n|\n/).length*1.8) < 5 ? 10 : Math.round(view.oclCondition.split(/\r|\r\n|\n/).length*1.8));
 
     return(<>
-        <button
-            type="button"
-            style={{...(props.style || {})}}
-            className={'section-header section-header--collapsible'}
-            onClick={e => setShow(!show)}
-        >
-            <div className="section-header__left">
-                <i className={'bi bi-chevron-' + (show ? 'down' : 'right')} />
-                <h3 className="section-title">OCL EDITOR</h3>
-            </div>
-        </button>
+        <EditorToolbar
+            title="OCL Editor"
+            icon="bi-braces"
+            content={ocl || ''}
+            collapsed={!show}
+            onCollapseToggle={() => setShow(!show)}
+            onWrapChange={(newWrap) => setWrap(newWrap)}
+            onExpandChange={(newExpanded) => setExpand(newExpanded)}
+            onFullscreenOpen={() => setFullscreen(true)}
+            disableFullscreen={true}
+            initialExpanded={expand}
+            readOnly={readOnly}
+        />
 
         {show && <div className={"monaco-editor-wrapper"}
                 style={{padding: '5px', height:`${lines+'lvh'}`, transition: 'height 0.3s', resize: 'vertical', overflow:'hidden'}}
@@ -42,16 +46,32 @@ function OclEditorComponent(props: AllProps) {
                       onFocus={() => setExpand(true)}
                     onBlur={() => {setExpand(false); blur();}}>
             <Editor className={'mx-1'} onChange={change}
-                    options={withReadOnly(compactMonacoOptions, readOnly)}
-                    defaultLanguage={'js'} value={view.oclCondition||""} 
+                    options={{
+                        ...withReadOnly(compactMonacoOptions, readOnly),
+                        wordWrap: wrap ? 'on' : 'off'
+                    }}
+                    defaultLanguage={'js'} value={view.oclCondition || ""}
                     onMount={(editor) => {
                         console.log('[Monaco OCL] Mounted!');
-                        console.log('[Monaco OCL] View:', view);
-                        console.log('[Monaco OCL] Initial value:', view.oclCondition);
                     }}
                     loading={<div style={{padding: '20px'}}>Loading OCL Editor...</div>}
                 />
         </div>}
+
+        <EditorFullscreenModal
+            isOpen={fullscreen}
+            onClose={() => { blur(); setFullscreen(false); }}
+            title="OCL Editor"
+            icon="bi-braces"
+            value={ocl || ''}
+            onChange={change}
+            onSave={(newValue) => {
+                view.oclCondition = newValue;
+                setFullscreen(false);
+            }}
+            language="javascript"
+            readOnly={readOnly}
+        />
     </>);
 }
 interface OwnProps {

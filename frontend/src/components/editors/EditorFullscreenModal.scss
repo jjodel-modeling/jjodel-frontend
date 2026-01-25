@@ -1,79 +1,66 @@
 /**
- * EditorFullscreenModal Styles
+ * EditorFullscreenModal - True Fullscreen Styling
+ * Makes the modal cover the entire viewport with backdrop
  */
 
-// ===========================================
-// GLOBAL: Hide interfering elements when modal is open
-// ===========================================
-body.modal-fullscreen-open {
-  overflow: hidden !important;
-
-  // Hide the graph/diagram container
-  .GraphContainer {
-    display: none !important;
-  }
-
-  // Also hide any other potentially interfering elements
-  .rc-dock-floating,
-  .context-menu,
-  [class*="popup"],
-  [class*="tooltip"]:not(.editor-fullscreen-modal *) {
-    display: none !important;
-  }
-}
-
-// Overlay
+// ============================================
+// OVERLAY (Backdrop)
+// ============================================
 .editor-fullscreen-overlay {
   position: fixed;
-  inset: 0;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
   z-index: 9999;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(4px);
-  animation: fadeIn 0.15s ease-out;
+  animation: fadeIn 0.2s ease;
 }
 
-// Modal container - Default is light theme
+// ============================================
+// MODAL (Container)
+// ============================================
 .editor-fullscreen-modal {
+  background: white;
+  border-radius: 8px;
+  width: 90vw;
+  height: 90vh;
   display: flex;
   flex-direction: column;
-  width: 92vw;
-  height: 88vh;
-  max-width: 1600px;
-  background: #ffffff;
-  border-radius: 12px;
-  box-shadow:
-    0 25px 50px -12px rgba(0, 0, 0, 0.25),
-    0 0 0 1px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
+  animation: slideUp 0.3s ease;
   overflow: hidden;
-  animation: slideUp 0.2s ease-out;
 }
 
-// Header - Light theme default
+// ============================================
+// HEADER
+// ============================================
 .editor-fullscreen-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 16px;
-  background: #f8fafc;
+  padding: 16px 24px;
   border-bottom: 1px solid #e2e8f0;
+  background: white;
   flex-shrink: 0;
 
   &__left {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 12px;
 
     i {
-      font-size: 18px;
+      font-size: 20px;
       color: #64748b;
     }
 
     h2 {
       margin: 0;
-      font-size: 16px;
+      font-size: 18px;
       font-weight: 600;
       color: #1e293b;
     }
@@ -82,66 +69,53 @@ body.modal-fullscreen-open {
   &__actions {
     display: flex;
     align-items: center;
-    gap: 4px;
+    gap: 8px;
   }
 }
 
-// Badge (read-only)
+// Badge (READ-ONLY)
 .editor-fullscreen-badge {
-  padding: 4px 10px;
+  padding: 4px 12px;
+  background-color: #fef3c7;
+  color: #92400e;
   font-size: 12px;
   font-weight: 600;
-  color: #b45309;
-  background: #fef3c7;
-  border-radius: 6px;
-  border: 1px solid #fde68a;
+  border-radius: 4px;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
 }
 
-// Buttons - Light theme default
+// Action Buttons
 .editor-fullscreen-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
-  padding: 0;
+  width: 36px;
+  height: 36px;
+  background: none;
   border: none;
   border-radius: 6px;
-  background: transparent;
   color: #64748b;
   cursor: pointer;
-  transition: all 0.15s ease;
-
-  i {
-    font-size: 16px;
-  }
+  transition: all 0.2s ease;
+  font-size: 16px;
 
   &:hover {
-    background: #e2e8f0;
+    background: #f1f5f9;
     color: #334155;
   }
 
-  &:active {
-    background: #cbd5e1;
-  }
-
   &.active {
-    background: #cffafe;
-    color: #0e7490;
-
-    &:hover {
-      background: #a5f3fc;
-    }
+    background: #e0f2fe;
+    color: #0369a1;
   }
 
   &.success {
-    background: #dcfce7;
     color: #16a34a;
   }
 
   &--close {
+    font-size: 20px;
+
     &:hover {
       background: #fee2e2;
       color: #dc2626;
@@ -149,33 +123,100 @@ body.modal-fullscreen-open {
   }
 }
 
-// Divider
 .editor-fullscreen-divider {
   width: 1px;
-  height: 20px;
-  margin: 0 8px;
-  background: #cbd5e1;
+  height: 24px;
+  background: #e2e8f0;
+  margin: 0 4px;
 }
 
-// Body (editor container) - CRITICAL for Monaco to fill space
+// ============================================
+// BODY (Editor Area)
+// ============================================
 .editor-fullscreen-body {
   flex: 1;
-  min-height: 0;
   overflow: hidden;
+  background: #f8fafc;
   position: relative;
+  min-height: 0;
 
-  // Force @monaco-editor/react wrapper to fill container
-  > section {
-    position: relative !important;
-    width: 100% !important;
-    height: 100% !important;
+  // Monaco editor wrapper
+  .monaco-editor {
+    .margin,
+    .monaco-editor-background {
+      background: #ffffff !important;
+    }
+  }
+}
+
+// ============================================
+// FOOTER (Stats & Actions)
+// ============================================
+.editor-fullscreen-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 24px;
+  border-top: 1px solid #e2e8f0;
+  background: white;
+  font-size: 13px;
+  color: #64748b;
+  flex-shrink: 0;
+
+  &__left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
   }
 
-  // Force Monaco editor to fill container
-  .monaco-editor-container,
-  .monaco-editor {
-    width: 100% !important;
-    height: 100% !important;
+  &__right {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  &__separator {
+    color: #cbd5e1;
+  }
+
+  &__language {
+    padding: 4px 8px;
+    background: #f1f5f9;
+    border-radius: 4px;
+    font-family: monospace;
+    font-size: 12px;
+    color: #475569;
+    text-transform: uppercase;
+  }
+}
+
+// Save Button
+.editor-fullscreen-save-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background: linear-gradient(135deg, #64748b 0%, #475569 100%);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  i {
+    font-size: 16px;
+  }
+
+  &:hover {
+    background: linear-gradient(135deg, #475569 0%, #334155 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  }
+
+  &:active {
+    transform: translateY(0);
   }
 }
 
@@ -188,142 +229,11 @@ body.modal-fullscreen-open {
   height: 100%;
   gap: 12px;
   color: #64748b;
-  background: #ffffff;
-
-  i {
-    font-size: 24px;
-  }
-
-  .spin {
-    animation: spin 1s linear infinite;
-  }
 }
 
-// Footer - Light theme default
-.editor-fullscreen-footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 8px 16px;
-  background: #f8fafc;
-  border-top: 1px solid #e2e8f0;
-  font-size: 12px;
-  color: #475569;
-  flex-shrink: 0;
-
-  &__left {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-
-  &__right {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-  }
-
-  &__separator {
-    color: #cbd5e1;
-  }
-
-  &__language {
-    padding: 2px 8px;
-    background: #e2e8f0;
-    border-radius: 4px;
-    font-weight: 500;
-    text-transform: capitalize;
-    color: #334155;
-  }
-}
-
-// Save button
-.editor-fullscreen-save-btn {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  border: none;
-  border-radius: 6px;
-  background: #0891b2;
-  color: white;
-  font-size: 12px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background 0.15s ease;
-
-  i {
-    font-size: 14px;
-  }
-
-  &:hover {
-    background: #0e7490;
-  }
-
-  &:active {
-    background: #155e75;
-  }
-}
-
-// Force Monaco to take full width - Additional overrides
-.editor-fullscreen-modal {
-  .monaco-editor,
-  .monaco-editor .overflow-guard,
-  .monaco-editor .monaco-scrollable-element,
-  .monaco-editor .lines-content {
-    width: 100% !important;
-  }
-
-  // Ensure the container has no weird margins
-  .monaco-editor .editor-scrollable {
-    left: 0 !important;
-  }
-
-  // Line numbers visible and styled
-  .monaco-editor .margin {
-    width: auto !important;
-    background: #f8fafc !important;
-  }
-
-  .monaco-editor .line-numbers {
-    width: auto !important;
-    padding-right: 12px !important;
-    color: #94a3b8 !important;
-    font-weight: 500;
-  }
-
-  // Current line number highlight
-  .monaco-editor .current-line-margin {
-    background: transparent !important;
-  }
-
-  .monaco-editor .line-numbers.active-line-number {
-    color: #334155 !important;
-    font-weight: 600;
-  }
-
-  // Current line highlight
-  .monaco-editor .current-line {
-    background-color: rgba(14, 165, 233, 0.08) !important;
-    border: none !important;
-  }
-
-  // Disable ligatures (CSS fallback)
-  .monaco-editor {
-    font-variant-ligatures: none;
-    -webkit-font-variant-ligatures: none;
-
-    .view-lines,
-    .view-line,
-    .mtk1, .mtk2, .mtk3, .mtk4, .mtk5, .mtk6, .mtk7, .mtk8, .mtk9,
-    .mtk10, .mtk11, .mtk12, .mtk13, .mtk14, .mtk15, .mtk16 {
-      font-variant-ligatures: none !important;
-      font-feature-settings: "liga" 0, "calt" 0 !important;
-    }
-  }
-}
-
-// Animations
+// ============================================
+// ANIMATIONS
+// ============================================
 @keyframes fadeIn {
   from {
     opacity: 0;
@@ -336,133 +246,21 @@ body.modal-fullscreen-open {
 @keyframes slideUp {
   from {
     opacity: 0;
-    transform: translateY(20px) scale(0.98);
+    transform: translateY(20px);
   }
   to {
     opacity: 1;
-    transform: translateY(0) scale(1);
+    transform: translateY(0);
   }
 }
 
-@keyframes spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
+// ============================================
+// BODY CLASS (Hide GraphContainer when modal open)
+// ============================================
+body.modal-fullscreen-open {
+  overflow: hidden;
 
-// Dark mode support (when using vs-dark theme)
-[data-theme="dark"] {
-  .editor-fullscreen-modal {
-    background: #1e1e1e;
-  }
-
-  .editor-fullscreen-header {
-    background: #252526;
-    border-color: #3c3c3c;
-
-    &__left {
-      i {
-        color: #9ca3af;
-      }
-
-      h2 {
-        color: #e5e5e5;
-      }
-    }
-  }
-
-  .editor-fullscreen-badge {
-    color: #fbbf24;
-    background: rgba(251, 191, 36, 0.15);
-  }
-
-  .editor-fullscreen-btn {
-    color: #9ca3af;
-
-    &:hover {
-      background: #3c3c3c;
-      color: #e5e5e5;
-    }
-
-    &:active {
-      background: #4a4a4a;
-    }
-
-    &.active {
-      background: rgba(6, 182, 212, 0.2);
-      color: #22d3ee;
-
-      &:hover {
-        background: rgba(6, 182, 212, 0.3);
-      }
-    }
-
-    &.success {
-      background: rgba(34, 197, 94, 0.2);
-      color: #22c55e;
-    }
-
-    &--close:hover {
-      background: rgba(239, 68, 68, 0.2);
-      color: #ef4444;
-    }
-  }
-
-  .editor-fullscreen-divider {
-    background: #4a4a4a;
-  }
-
-  .editor-fullscreen-loading {
-    background: #1e1e1e;
-    color: #9ca3af;
-  }
-
-  .editor-fullscreen-footer {
-    background: #252526;
-    border-color: #3c3c3c;
-    color: #9ca3af;
-
-    &__separator {
-      color: #4a4a4a;
-    }
-
-    &__language {
-      background: #3c3c3c;
-      color: #e5e5e5;
-    }
-  }
-}
-
-// Responsive
-@media (max-width: 768px) {
-  .editor-fullscreen-modal {
-    width: 100vw;
-    height: 100vh;
-    border-radius: 0;
-  }
-
-  .editor-fullscreen-header {
-    padding: 10px 12px;
-
-    h2 {
-      font-size: 14px;
-    }
-  }
-
-  .editor-fullscreen-btn {
-    width: 28px;
-    height: 28px;
-
-    i {
-      font-size: 14px;
-    }
-  }
-
-  .editor-fullscreen-footer {
-    flex-wrap: wrap;
-    gap: 8px;
+  .GraphContainer {
+    display: none !important;
   }
 }

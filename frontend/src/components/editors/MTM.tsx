@@ -25,7 +25,9 @@ import {hideMetrics} from "../metrics/Metrics";
 import {Nearley} from "../../DSL/nearley/nearley";
 import {ParserData} from "../../joiner/classes";
 import {Tooltip} from "../forEndUser/Tooltip";
-import { baseMonacoOptions } from './monacoConfig';
+import { baseMonacoOptions, withReadOnly } from './monacoConfig';
+import EditorToolbar from './EditorToolbar';
+import EditorFullscreenModal from './EditorFullscreenModal';
 
 // Use centralized Monaco configuration
 const monacooptions = baseMonacoOptions;
@@ -60,6 +62,11 @@ export function MTMComponent(props: AllProps): JSX.Element{
     let languages = props.languages;
     let [editor, setEditor] = useState<boolean>(false);
     let [language, setLanguage] = useState('JSON');
+    let [showEditor, setShowEditor] = useState(true);
+    let [expand, setExpand] = useState(false);
+    let [wrap, setWrap] = useState(false);
+    let [fullscreen, setFullscreen] = useState(false);
+    let [localValue, setLocalValue] = useState('');
     if (editor) return <MTMEditor {...{...props, language, setEditor, setLanguage}}/>;
     let languageObj = languages[language];
     if (!languageObj) {
@@ -122,16 +129,58 @@ export function MTMComponent(props: AllProps): JSX.Element{
             </label>
         </label>
 
-        <T2MEditor className={'mx-1'} value={m2t_result} defaultLanguage={language/* === 'JSON' ? 'JSON' : undefined*/} onBlur={(value) => {
-            console.warn('monaco onchange', {d: data, value, did:dataid});
-            if (!data || !value) return;
-            // if (dataid !== lastID) return; // change triggered because element changed -> it's not a user-made edit -> no t2m transform.
-            TRANSACTION('T2M transformation of "'+data.name+'" through "'+language+'"', ()=>{
-                // this is an output text of a m2t transformation, either readonly or edit triggers t2m transform on selected element.
-                // SetRootFieldAction.new('languages.'+language+".m2t", value, '', false)
-                doT2M(L.wrap(data) as LModelElement, language, value);
-            })
-        }}/>
+        <EditorToolbar
+            title={`${language} Output`}
+            icon="bi-arrow-left-right"
+            content={m2t_result}
+            collapsed={!showEditor}
+            onCollapseToggle={() => setShowEditor(!showEditor)}
+            onWrapChange={(newWrap) => setWrap(newWrap)}
+            onExpandChange={(newExpanded) => setExpand(newExpanded)}
+            onFullscreenOpen={() => { setLocalValue(m2t_result); setFullscreen(true); }}
+            disableFullscreen={false}
+            initialExpanded={expand}
+        />
+        {showEditor && (
+            <div
+                className="monaco-editor-wrapper"
+                style={{
+                    height: expand ? '60%' : '40%',
+                    maxHeight: expand ? '800px' : '500px',
+                    transition: 'height 0.3s',
+                    resize: 'vertical',
+                    overflow: 'hidden'
+                }}
+            >
+                <T2MEditor className={'mx-1'} value={m2t_result} defaultLanguage={language}
+                    options={{ wordWrap: wrap ? 'on' : 'off' }}
+                    onBlur={(value) => {
+                        console.warn('monaco onchange', {d: data, value, did:dataid});
+                        if (!data || !value) return;
+                        TRANSACTION('T2M transformation of "'+data.name+'" through "'+language+'"', ()=>{
+                            doT2M(L.wrap(data) as LModelElement, language, value);
+                        })
+                    }}/>
+            </div>
+        )}
+
+        <EditorFullscreenModal
+            isOpen={fullscreen}
+            onClose={() => setFullscreen(false)}
+            title={`${language} Output`}
+            icon="bi-arrow-left-right"
+            value={localValue || m2t_result}
+            onChange={(value) => setLocalValue(value || '')}
+            onSave={(newValue) => {
+                if (data) {
+                    TRANSACTION('T2M transformation of "'+data.name+'" through "'+language+'"', ()=>{
+                        doT2M(L.wrap(data) as LModelElement, language, newValue);
+                    })
+                }
+                setFullscreen(false);
+            }}
+            language={language.toLowerCase()}
+        />
         <div className={'export-row'}>
             <button>Export</button>
             <button>Import</button>

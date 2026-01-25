@@ -22,6 +22,13 @@ function JsxEditorComponent(props: AllProps) {
     const [wrap, setWrap] = useStateIfMounted(false);
     const [fullscreen, setFullscreen] = useStateIfMounted(false);
 
+    // Sync jsx state with dview.jsxString when it changes externally
+    useEffect(() => {
+        if (!fullscreen) {  // Only when modal is not open
+            setJsx(dview.jsxString || '');
+        }
+    }, [dview.jsxString, fullscreen]);
+
     const change = (value: string|undefined) => { // save in local state for frequent changes.
         if (value !== undefined) setJsx(value);
     }
@@ -133,7 +140,7 @@ function JsxEditorComponent(props: AllProps) {
                         wordWrap: wrap ? 'on' : 'off'
                     }}
                     defaultLanguage="typescript"
-                    value={dview.jsxString || ""}
+                    value={jsx}
                     loading={<div style={{padding: '20px'}}>Loading JSX Editor...</div>}
                 />
             </div>
@@ -148,7 +155,8 @@ function JsxEditorComponent(props: AllProps) {
             value={jsx}
             onChange={change}
             onSave={(newValue) => {
-                view.jsxString = newValue;
+                setJsx(newValue);  // Update local state
+                view.jsxString = newValue;  // Save to redux/model
                 setFullscreen(false);
             }}
             language="typescript"

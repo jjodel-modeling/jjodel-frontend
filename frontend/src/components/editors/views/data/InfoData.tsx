@@ -42,9 +42,6 @@ function InfoDataComponent(props: AllProps) {
     let isV: boolean = !isVP;
 
     return(<section className={'apply-to-tab'}>
-        {/* Header */}
-        <h1 className={'apply-to-header'}>View: {view.name}</h1>
-
         {/* Name field - vertical layout */}
         <div className="form-field">
             <label className="form-label">Name</label>

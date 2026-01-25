@@ -24,7 +24,6 @@ function ViewEventsComponent(props: AllProps) {
 
     let initialExpand = (v: any, field: any)=>!!(v as any)[field as string];
     return(<section className={'p-3 events-tab'}>
-        <h1 className={'view'}>View: {view.name}</h1>
         <h2>Default Events</h2>
         <JsEditor key='odu' data={view} field={'onDataUpdate'} title={'onDataUpdate'} initialExpand={initialExpand} readOnly={readOnly}/>
         <JsEditor key='ods' data={view} field={'onDragStart'} title={'onDragStart'} initialExpand={initialExpand} readOnly={readOnly}/>
