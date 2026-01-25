@@ -194,7 +194,8 @@ function FunctionComponent(props: AllProps) {
     for (let row of state.arr) {
         inputs.push(<label className={"d-flex template-item" + (advancedMode ? "" : " my-1")} key={row.index} data-key={row.index}>
             <span className={"my-auto detailedMode"}>{row.id.prefix}.</span>
-            <input className={"my-auto input"}
+            
+            {/* <input className={"my-auto input"} 
                 placeholder={"identifier"} value={row.id.value} disabled={readOnly}
                 tabIndex={row.index*2}
                 onInput={(e)=>identifierChange(e, row.index, state, setState)}
@@ -202,8 +203,8 @@ function FunctionComponent(props: AllProps) {
                 style={{width: '30%'}}
             />
             <span className={"my-auto mx-1 simpleMode"} style={{paddingRight: '6px', paddingLeft: '6px'}}><i style={{fontSize: '1.2em'}} className="bi bi-arrow-left-square"></i></span>
-            <span className={"my-auto mx-1 detailedMode"}>=</span> {/*  */}
-            <input className={"my-auto input"}
+            <span className={"my-auto mx-1 detailedMode"}>=</span> 
+            <input className={"my-auto input"} 
                 placeholder={"expression"}
                 value={row.exp.value}
                 disabled={readOnly}
@@ -211,7 +212,30 @@ function FunctionComponent(props: AllProps) {
                 onInput={(e)=>expressionChange(e, row.index, state, setState)}
                 onBlur={(e)=> !readOnly && onBlur(state, setState, props, row.index)}
                 style={{marginRight: '6px'}}
-            />
+            /> */}
+
+            <div className={'form-field'}>
+                <input className={"form-input form-input-fix"} 
+                    placeholder={"identifier"} value={row.id.value} disabled={readOnly}
+                    tabIndex={row.index*2}
+                    onInput={(e)=>identifierChange(e, row.index, state, setState)}
+                    onBlur={(e)=> !readOnly && onBlur(state, setState, props, row.index)}
+                />
+            </div>
+            <span className={"my-auto mx-1 simpleMode"} style={{paddingRight: '6px', paddingLeft: '6px'}}><i style={{fontSize: '1.2em'}} className="bi bi-arrow-left-square"></i></span>
+            <span className={"my-auto mx-1 detailedMode"}>=</span> 
+            <div className={'form-field'}>
+                <input className={"form-input form-input-fix"} 
+                    placeholder={"expression"}
+                    value={row.exp.value}
+                    disabled={readOnly}
+                    tabIndex={row.index*2+1}
+                    onInput={(e)=>expressionChange(e, row.index, state, setState)}
+                    onBlur={(e)=> !readOnly && onBlur(state, setState, props, row.index)}
+                />
+            </div>
+
+
             <span className={"my-auto detailedMode"}>;</span>
             <CommandBar style={{paddingTop: '10px'}}>
                 <Btn icon={'delete'} tip={'Delete'} action={()=>!readOnly && deleteClick(state, setState, row.index, props, row)} />

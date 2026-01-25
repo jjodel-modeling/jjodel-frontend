@@ -310,40 +310,40 @@
       width: var(--input-height);
       border-radius: var(--input-height)!important;
 
-      & input.my-auto.input {
-        border-radius: var(--input-height)!important;
-        border: none!important;
-        padding: 0!important;
-        margin: 0 0px!important;
+      // & input.my-auto.input {
+      //   border-radius: var(--input-height)!important;
+      //   border: none!important;
+      //   padding: 0!important;
+      //   margin: 0 0px!important;
 
-        height: var(--input-height);
-        width: var(--input-height);
+      //   height: var(--input-height);
+      //   width: var(--input-height);
 
-        -webkit-appearance: none;
-        -moz-appearance: none;
-        appearance: none;
-        background-color: transparent;
+      //   -webkit-appearance: none;
+      //   -moz-appearance: none;
+      //   appearance: none;
+      //   background-color: transparent;
         
-        border: none;
-        cursor: pointer;
-      }
+      //   border: none;
+      //   cursor: pointer;
+      // }
 
-      & input.my-auto.input::-webkit-color-swatch {
-        border-radius: 50%;
-        border: 1px solid var(--neutral);
-      }
+      // & input.my-auto.input::-webkit-color-swatch {
+      //   border-radius: 50%;
+      //   border: 1px solid var(--neutral);
+      // }
 
-      & input.my-auto.input::-moz-color-swatch {
-        border-radius: 50%;
-        border: 1px solid var(--neutral);
-      }
+      // & input.my-auto.input::-moz-color-swatch {
+      //   border-radius: 50%;
+      //   border: 1px solid var(--neutral);
+      // }
 
-      & input.my-auto.input:hover {
-        border: none;
-        -webkit-appearance: none;
-        -moz-appearance: none;
-        appearance: none;
-      }
+      // & input.my-auto.input:hover {
+      //   border: none;
+      //   -webkit-appearance: none;
+      //   -moz-appearance: none;
+      //   appearance: none;
+      // }
 
     }
 

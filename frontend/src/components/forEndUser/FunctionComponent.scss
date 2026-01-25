@@ -1,57 +1,253 @@
-[data-mode="detailedMode"]{
-  .simpleMode{ display: none; }
-  input.input{
-    background: transparent;
-    border: none;
-  }
-}
-[data-mode="simpleMode"]{
-  .detailedMode{ display: none; }
+// FunctionComponent - Redesigned to use centralized form system
+// Uses CSS variables from _form-system.scss
+
+.function-editor-root {
+  padding: 0;
+  margin-bottom: var(--form-field-gap, 16px);
 }
 
-
-.function-editor-header{
+.function-editor-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
   flex-wrap: wrap;
-  margin-bottom: 6px;
+  margin-bottom: 12px;
+  gap: 8px;
 
-  .function-editor-label>*{
-    margin: auto 0;
+  .function-editor-label {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+
+    > * {
+      margin: 0;
+    }
+
+    // Section title styling
+    .jj-editor-title {
+      font-size: 14px !important;
+      font-weight: 600 !important;
+      color: var(--form-input-color, #0f172a) !important;
+      margin: 0 !important;
+    }
+
+    // Subtitle/payoff styling
+    p {
+      font-size: 12px !important;
+      color: var(--form-hint-color, #6b7280) !important;
+      margin: 0 !important;
+      padding: 0 !important;
+    }
   }
-  .button-add{
+
+  .button-add {
     margin: auto 0.5rem;
     border: none;
     padding: 0;
     width: 1.6em;
     height: 1.6em;
   }
-  i.bi{
-    font-size: 1.6em;
+
+  i.bi {
+    font-size: 1.4em;
   }
 }
-.collapsable-section{
+
+// Template item row (key-value pair)
+.template-item {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  margin-bottom: 8px !important;
+  width: 100% !important;
+
+  // Prefix text (ret.)
+  .detailedMode {
+    font-size: 13px;
+    color: var(--form-hint-color, #6b7280);
+    font-family: var(--font-mono, 'IBM Plex Mono', monospace);
+  }
+
+  // Arrow icon between inputs
+  .simpleMode {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: var(--input-height, 36px);
+    background: var(--form-input-bg, #ffffff);
+    border: 1px solid var(--form-input-border-color, #e2e8f0);
+    border-radius: var(--form-input-border-radius, 6px);
+    color: var(--form-hint-color, #6b7280);
+    flex-shrink: 0;
+
+    i {
+      font-size: 14px !important;
+    }
+  }
+
+  // Input fields styling
+  input.input {
+    flex: 1 !important;
+    min-width: 0 !important;
+    height: var(--input-height, 36px) !important;
+    padding: var(--form-input-padding-y, 8px) var(--form-input-padding-x, 12px) !important;
+    font-family: var(--font-sans, 'Inter Variable', -apple-system, sans-serif) !important;
+    font-size: var(--form-input-font-size, 14px) !important;
+    color: var(--form-input-color, #0f172a) !important;
+    background: var(--form-input-bg, #ffffff) !important;
+    border: 1px solid var(--form-input-border-color, #e2e8f0) !important;
+    border-radius: var(--form-input-border-radius, 6px) !important;
+    outline: none !important;
+    box-sizing: border-box !important;
+    transition: border-color 150ms ease, box-shadow 150ms ease !important;
+
+    &:hover:not(:disabled):not(:focus) {
+      border-color: var(--form-input-border-color-hover, #cbd5e1) !important;
+    }
+
+    &:focus {
+      border-color: var(--form-input-border-color-focus, #475569) !important;
+      box-shadow: var(--form-input-focus-shadow, 0 0 0 3px rgba(71, 85, 105, 0.15)) !important;
+    }
+
+    &:disabled {
+      background: #f1f5f9 !important;
+      color: #94a3b8 !important;
+      cursor: not-allowed !important;
+      opacity: 0.7 !important;
+    }
+
+    &::placeholder {
+      color: var(--form-input-placeholder, #9ca3af) !important;
+    }
+  }
+
+  // Delete button styling
+  .commandbar {
+    padding: 0 !important;
+    margin-left: 4px;
+  }
+}
+
+// Collapsable section
+.collapsable-section {
   --time: 300ms;
   --delay: 0ms;
-  //display: grid;
-  //grid-template-rows: 1fr;
-  transition: transform var(--time), max-height var(--time) var(--delay) cubic-bezier(0, 0.9, 0, 0.9), grid-template-rows var(--time);
-  //transition: max-height var(--time) var(--time);
+  transition: transform var(--time), max-height var(--time) var(--delay) cubic-bezier(0, 0.9, 0, 0.9);
   transform: scaleY(1);
   max-height: 2000px;
-  overflow:hidden;
+  overflow: hidden;
   transform-origin: top;
-  &.collapsed{
-    transition: transform var(--time), max-height var(--time) var(--delay) cubic-bezier(1, 0.1, 1, 0.1), grid-template-rows var(--time);
 
+  &.collapsed {
+    transition: transform var(--time), max-height var(--time) var(--delay) cubic-bezier(1, 0.1, 1, 0.1);
     transform: scaleY(0);
     max-height: 0px;
-    //grid-template-rows: 0fr;
   }
+
   textarea {
     padding: 1rem;
   }
-
-}
-.collapsable-section .input {
-  background: #fff7;
 }
 
+// Monaco editor wrapper
+.function-editor-root .monaco-editor-wrapper {
+  background: var(--form-input-bg, #ffffff) !important;
+  border: 1px solid var(--form-input-border-color, #e2e8f0) !important;
+  border-radius: var(--form-input-border-radius, 6px) !important;
+  margin-bottom: 12px !important;
+  overflow: hidden !important;
+}
+
+// Mode toggles
+[data-mode="detailedMode"] {
+  .simpleMode {
+    display: none !important;
+  }
+
+  input.input {
+    background: transparent !important;
+    border: none !important;
+    padding: 4px 8px !important;
+    height: auto !important;
+
+    &:focus {
+      box-shadow: none !important;
+    }
+  }
+}
+
+[data-mode="simpleMode"] {
+  .detailedMode {
+    display: none !important;
+  }
+}
+
+// Tooltip styling
+.function-editor-root .my-tooltip {
+  background: var(--form-input-bg, #ffffff);
+  border: 1px solid var(--form-input-border-color, #e2e8f0);
+  border-radius: var(--form-input-border-radius, 6px);
+  padding: 12px;
+  margin-bottom: 12px;
+  font-size: 13px;
+  color: var(--form-hint-color, #6b7280);
+  line-height: 1.5;
+}
+
+// Dark mode support
+[data-theme="dark"] {
+  .function-editor-header .function-editor-label {
+    .jj-editor-title {
+      color: var(--form-input-color, #f1f5f9) !important;
+    }
+
+    p {
+      color: var(--form-hint-color, #94a3b8) !important;
+    }
+  }
+
+  .template-item {
+    .detailedMode {
+      color: #94a3b8;
+    }
+
+    .simpleMode {
+      background: var(--form-input-bg, #1e293b);
+      border-color: var(--form-input-border-color, #334155);
+      color: #94a3b8;
+    }
+
+    input.input {
+      background: var(--form-input-bg, #1e293b) !important;
+      border-color: var(--form-input-border-color, #334155) !important;
+      color: var(--form-input-color, #f1f5f9) !important;
+
+      &:focus {
+        border-color: var(--form-input-border-color-focus, #64748b) !important;
+        box-shadow: 0 0 0 3px rgba(100, 116, 139, 0.2) !important;
+      }
+
+      &:disabled {
+        background: #0f172a !important;
+        color: #64748b !important;
+      }
+
+      &::placeholder {
+        color: #64748b !important;
+      }
+    }
+  }
+
+  .function-editor-root .monaco-editor-wrapper {
+    background: var(--form-input-bg, #1e293b) !important;
+    border-color: var(--form-input-border-color, #334155) !important;
+  }
+
+  .function-editor-root .my-tooltip {
+    background: var(--form-input-bg, #1e293b);
+    border-color: var(--form-input-border-color, #334155);
+    color: #94a3b8;
+  }
+}
