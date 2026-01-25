@@ -1,0 +1,278 @@
+/**
+ * Events Tab Styling
+ * Improved hierarchy and interaction feedback
+ */
+
+// ============================================
+// MAIN CONTAINER
+// ============================================
+.events-tab {
+  padding: 24px;
+  background: #ffffff;
+}
+
+// ============================================
+// SECTIONS
+// ============================================
+.events-section {
+  margin-bottom: 24px;
+
+  &--default {
+    .events-section-title {
+      color: #475569;
+    }
+  }
+
+  &--custom {
+    .events-section-title {
+      color: #1e293b;
+    }
+  }
+}
+
+.events-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.events-section-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+
+  i {
+    font-size: 16px;
+    color: #64748b;
+  }
+}
+
+.events-section-badge {
+  padding: 4px 10px;
+  background: #f1f5f9;
+  color: #64748b;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  border-radius: 4px;
+}
+
+// ============================================
+// SEPARATOR
+// ============================================
+.events-separator {
+  height: 1px;
+  background: linear-gradient(90deg, transparent 0%, #e2e8f0 20%, #e2e8f0 80%, transparent 100%);
+  margin: 32px 0;
+}
+
+// ============================================
+// EVENTS LIST
+// ============================================
+.events-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+
+  &--custom {
+    gap: 16px;
+  }
+}
+
+// ============================================
+// ADD BUTTON
+// ============================================
+.events-add-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.15s ease;
+
+  &:hover:not(:disabled) {
+    background: #f8fafc;
+    border-color: #cbd5e1;
+    color: #0ea5e9;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  i {
+    font-size: 16px;
+  }
+}
+
+// ============================================
+// EMPTY STATE
+// ============================================
+.events-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px;
+  text-align: center;
+  background: #f8fafc;
+  border-radius: 8px;
+  border: 1px dashed #e2e8f0;
+
+  > i {
+    font-size: 40px;
+    color: #cbd5e1;
+    margin-bottom: 16px;
+  }
+
+  p {
+    margin: 0 0 20px 0;
+    font-size: 14px;
+    color: #64748b;
+  }
+}
+
+.events-empty-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  color: #475569;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+
+  &:hover:not(:disabled) {
+    background: linear-gradient(135deg, #64748b 0%, #475569 100%);
+    border-color: transparent;
+    color: #ffffff;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  i {
+    font-size: 14px;
+  }
+}
+
+// ============================================
+// CUSTOM EVENT WRAPPER
+// ============================================
+.custom-event-wrapper {
+  background: #fafbfc;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  padding: 12px;
+  transition: all 0.15s ease;
+
+  &:hover {
+    border-color: #cbd5e1;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
+  }
+}
+
+.custom-event-name-input {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  padding: 6px 10px;
+  font-size: 14px;
+  font-family: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
+  color: #334155;
+  transition: all 0.15s ease;
+
+  &:focus {
+    outline: none;
+    border-color: #0ea5e9;
+    box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.1);
+  }
+
+  &:disabled {
+    background: #f8fafc;
+    color: #64748b;
+    cursor: not-allowed;
+  }
+}
+
+// ============================================
+// EDITOR TOOLBAR OVERRIDES (within events tab)
+// ============================================
+.events-tab {
+  // Style the editor toolbars within events list
+  .events-list {
+    .editor-toolbar {
+      background: #fafbfc;
+      border-radius: 6px;
+      border: 1px solid #f1f5f9;
+      margin-bottom: 4px;
+      transition: all 0.15s ease;
+
+      &:hover {
+        background: #f1f5f9;
+        border-color: #e2e8f0;
+      }
+    }
+  }
+
+  // Default events should look more subtle
+  .events-section--default .events-list {
+    .editor-toolbar {
+      background: transparent;
+      border-color: transparent;
+
+      &:hover {
+        background: #f8fafc;
+        border-color: #e2e8f0;
+      }
+    }
+  }
+
+  // Custom events should be more prominent
+  .events-section--custom .events-list {
+    .editor-toolbar {
+      background: #ffffff;
+      border-color: #e2e8f0;
+
+      &:hover {
+        border-color: #cbd5e1;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+      }
+    }
+  }
+
+  // Monaco editor wrapper styling
+  .monaco-editor-wrapper {
+    border-radius: 6px;
+    overflow: hidden;
+  }
+
+  // Override h2 if any still present
+  h2 {
+    font-size: 14px;
+    font-weight: 600;
+    color: #1e293b;
+    margin: 0;
+  }
+}
