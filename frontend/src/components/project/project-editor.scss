@@ -49,7 +49,7 @@
     font-size: 28px;
     font-weight: 600;
     color: #1e293b;
-    border: 2px solid #3b82f6;
+    border: 2px solid var(--form-input-border-color-focus, #334155);
     border-radius: 6px;
     padding: 4px 8px;
     width: 100%;
@@ -58,7 +58,7 @@
     background: #ffffff;
 
     &:focus {
-      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+      box-shadow: var(--form-input-focus-shadow, 0 0 0 3px rgba(51, 65, 85, 0.15));
     }
   }
 
@@ -104,7 +104,7 @@
     font-family: inherit;
 
     &:focus {
-      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+      box-shadow: var(--form-input-focus-shadow, 0 0 0 3px rgba(51, 65, 85, 0.15));
     }
   }
 }
@@ -215,7 +215,7 @@
     }
 
     &:focus {
-      box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+      box-shadow: var(--form-input-focus-shadow, 0 0 0 3px rgba(51, 65, 85, 0.15));
     }
   }
 
@@ -515,7 +515,7 @@
 
     // Keyboard focus styles
     &:focus {
-      outline: 2px solid #3b82f6;
+      outline: 2px solid var(--form-input-border-color-focus, #334155);
       outline-offset: -2px;
     }
 
@@ -605,7 +605,7 @@
     font-size: 14px;
     font-weight: 500;
     color: #1e293b;
-    border: 2px solid #3b82f6;
+    border: 2px solid var(--form-input-border-color-focus, #334155);
     border-radius: 4px;
     padding: 4px 8px;
     width: 100%;
@@ -614,7 +614,7 @@
     background: #ffffff;
 
     &:focus {
-      box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+      box-shadow: var(--form-input-focus-shadow, 0 0 0 3px rgba(51, 65, 85, 0.15));
     }
   }
 }

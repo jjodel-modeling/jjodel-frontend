@@ -163,8 +163,9 @@
 
 .nav-container {
   position: relative;
-  display: flex;
-  align-items: center;
+  display: flex !important;
+  align-items: center !important;
+  flex-direction: row !important; // Ensure horizontal layout
   /* Ensure navbar is above tree view sidebar (z-index: 50) */
   z-index: 100;
 
@@ -1040,11 +1041,32 @@ $transition-menu: 150ms ease;
 }
 
 // Header Right Section
+// IMPORTANT: These styles ensure right-side items stay aligned right
+// Added !important to prevent any utility class overrides
 .main-header-right {
-  display: flex;
-  align-items: center;
-  margin-left: auto;
-  gap: 8px;
+  display: flex !important;
+  align-items: center !important;
+  margin-left: auto !important;
+  gap: 8px !important;
+  flex-shrink: 0 !important;
+}
+
+// ==============================================
+// NAVBAR TOGGLES CONTAINER
+// Vertical toggles for Debug and Mode
+// Styles are in VerticalToggle.scss, this adds navbar-specific overrides
+// ==============================================
+
+.navbar-toggles {
+  margin-right: 16px;
+  padding: 4px 0;
+}
+
+// Responsive - compact version
+@media (max-width: 1200px) {
+  .navbar-toggles {
+    margin-right: 12px;
+  }
 }
 
 // Help Button in Menu Bar
@@ -1079,46 +1101,128 @@ $transition-menu: 150ms ease;
 }
 
 // ============================================
-// DEBUG BADGE - Matches ADV badge with Amber color
+// DEBUG TOGGLE - Toggle Button Style
+// OFF = slate outline, ON = amber outline
 // ============================================
 
-.debug-badge {
+.debug-toggle {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 12px;
+  margin-right: 8px;
+  border-radius: 6px;
 
-  // Typography - Same as ADV badge
+  // Typography
   font-family: 'Inter Variable', -apple-system, BlinkMacSystemFont, sans-serif;
   font-size: 11px;
   font-weight: 600;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.5px;
   text-transform: uppercase;
 
-  // Colors - Amber
-  background-color: #f59e0b; // amber-500
-  color: #ffffff;
-
-  // Sizing - Same as ADV badge
-  padding: 6px 14px;
-  border-radius: 6px;
-  margin-right: 8px;
-
   // Behavior
-  cursor: default;
+  cursor: pointer;
   user-select: none;
   transition: all 150ms ease;
+
+  i {
+    font-size: 14px;
+  }
+
+  span {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+  }
+
+  // Default state (OFF) - slate outline like Basic mode
+  background: transparent;
+  border: 1.5px solid #cbd5e1; // slate-300
+  color: #64748b; // slate-500
+
+  i {
+    color: #94a3b8; // slate-400
+  }
+
+  &:hover {
+    background: #f8fafc; // slate-50
+    border-color: #94a3b8; // slate-400
+    color: #475569; // slate-600
+
+    i {
+      color: #64748b;
+    }
+  }
+
+  // Active state (ON) - amber outline
+  &--active {
+    background: transparent;
+    border: 1.5px solid #f59e0b; // amber-500
+    color: #f59e0b;
+
+    i {
+      color: #f59e0b;
+    }
+
+    &:hover {
+      background: rgba(245, 158, 11, 0.08);
+      border-color: #d97706; // amber-600
+      color: #d97706;
+
+      i {
+        color: #d97706;
+      }
+    }
+  }
 }
 
 // Dark mode support
-[data-theme="dark"] .debug-badge,
-.dark .debug-badge {
-  background-color: #fbbf24; // amber-400
-  color: #111418; // Dark text for contrast
+[data-theme="dark"] .debug-toggle,
+.dark .debug-toggle {
+  // OFF state in dark mode
+  background: transparent;
+  border-color: #475569; // slate-600
+  color: #94a3b8; // slate-400
+
+  i {
+    color: #64748b; // slate-500
+  }
+
+  &:hover {
+    background: rgba(148, 163, 184, 0.1);
+    border-color: #64748b; // slate-500
+    color: #cbd5e1; // slate-300
+
+    i {
+      color: #94a3b8;
+    }
+  }
+
+  // ON state in dark mode
+  &--active {
+    border-color: #fbbf24; // amber-400
+    color: #fbbf24;
+
+    i {
+      color: #fbbf24;
+    }
+
+    &:hover {
+      background: rgba(251, 191, 36, 0.1);
+      border-color: #fcd34d; // amber-300
+      color: #fcd34d;
+
+      i {
+        color: #fcd34d;
+      }
+    }
+  }
 }
 
 // ============================================
 // MODE TOGGLE - Basic/Advanced Mode Switch
-// Replaces the old ADV badge with a toggle button
+// Minimal outline style for professional look
 // ============================================
 
 .navbar__mode-toggle {
@@ -1131,8 +1235,8 @@ $transition-menu: 150ms ease;
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 14px;
-  border: none;
+  height: 28px;
+  padding: 0 12px;
   border-radius: 6px;
   font-family: 'Inter Variable', -apple-system, BlinkMacSystemFont, sans-serif;
   font-size: 12px;
@@ -1144,29 +1248,45 @@ $transition-menu: 150ms ease;
     font-size: 14px;
   }
 
-  // Basic mode (default) - subtle appearance
+  // Basic mode (default) - subtle outline
   &--basic {
-    background-color: rgba(71, 85, 105, 0.08);
+    background: transparent;
+    border: 1.5px solid #cbd5e1; // slate-300
     color: #64748b; // slate-500
 
+    i {
+      color: #94a3b8; // slate-400
+    }
+
     &:hover {
-      background-color: rgba(71, 85, 105, 0.15);
+      background: #f8fafc; // slate-50
+      border-color: #94a3b8; // slate-400
       color: #475569; // slate-600
+
+      i {
+        color: #64748b;
+      }
     }
   }
 
-  // Advanced mode - more prominent
+  // Advanced mode - prominent outline
   &--advanced {
-    background: linear-gradient(135deg, #64748b 0%, #475569 100%);
-    color: #ffffff;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+    background: #f1f5f9; // slate-100
+    border: 1.5px solid #475569; // slate-600
+    color: #1e293b; // slate-800
 
     i {
-      color: #ffffff !important; // Force white icon
+      color: #334155; // slate-700
     }
 
     &:hover {
-      background: linear-gradient(135deg, #475569 0%, #334155 100%);
+      background: #e2e8f0; // slate-200
+      border-color: #334155; // slate-700
+      color: #0f172a; // slate-900
+
+      i {
+        color: #1e293b;
+      }
     }
   }
 }
@@ -1175,49 +1295,88 @@ $transition-menu: 150ms ease;
 [data-theme="dark"] .mode-toggle-btn,
 .dark .mode-toggle-btn {
   &--basic {
-    background-color: rgba(148, 163, 184, 0.1);
+    background: transparent;
+    border-color: #475569; // slate-600
     color: #94a3b8; // slate-400
 
+    i {
+      color: #64748b; // slate-500
+    }
+
     &:hover {
-      background-color: rgba(148, 163, 184, 0.2);
+      background: rgba(148, 163, 184, 0.1);
+      border-color: #64748b; // slate-500
       color: #cbd5e1; // slate-300
+
+      i {
+        color: #94a3b8;
+      }
     }
   }
 
   &--advanced {
-    background: linear-gradient(135deg, #64748b 0%, #475569 100%);
-    color: #f8fafc;
+    background: rgba(100, 116, 139, 0.2); // slate-500 at 20%
+    border-color: #94a3b8; // slate-400
+    color: #f1f5f9; // slate-100
+
+    i {
+      color: #e2e8f0; // slate-200
+    }
 
     &:hover {
-      background: linear-gradient(135deg, #475569 0%, #334155 100%);
+      background: rgba(100, 116, 139, 0.3);
+      border-color: #cbd5e1; // slate-300
+      color: #ffffff;
+
+      i {
+        color: #f1f5f9;
+      }
     }
   }
 }
 
 // Legacy support - keep advanced-mode-badge for any remaining usage
+// Updated to minimal outline style for consistency
 .advanced-mode-badge {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-family: 'Inter Variable', -apple-system, BlinkMacSystemFont, sans-serif;
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  background-color: #475569;
-  color: #ffffff;
-  padding: 6px 14px;
-  border-radius: 6px;
+  gap: 6px;
+  height: 28px;
+  padding: 0 12px;
   margin-right: 12px;
+
+  // Typography
+  font-family: 'Inter Variable', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+
+  // Visual - Outline slate style
+  background: #f1f5f9; // slate-100
+  border: 1.5px solid #475569; // slate-600
+  border-radius: 6px;
+  color: #1e293b; // slate-800
+
+  // Behavior
   cursor: default;
   user-select: none;
   transition: all 150ms ease;
+
+  i {
+    font-size: 14px;
+    color: #334155;
+  }
 }
 
 [data-theme="dark"] .advanced-mode-badge,
 .dark .advanced-mode-badge {
-  background-color: #64748b;
-  color: #f8fafc;
+  background: rgba(100, 116, 139, 0.2);
+  border-color: #94a3b8;
+  color: #f1f5f9;
+
+  i {
+    color: #e2e8f0;
+  }
 }
 
 // ============================================

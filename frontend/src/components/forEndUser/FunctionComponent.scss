@@ -4,6 +4,8 @@
 .function-editor-root {
   padding: 0;
   margin-bottom: var(--form-field-gap, 16px);
+  width: 100% !important; // Ensure full width
+  box-sizing: border-box !important;
 }
 
 .function-editor-header {
@@ -102,9 +104,12 @@
   }
 
   // Form field inside template-item - reset margins
-  > .form-field {
+  // Higher specificity to override global .form-field rules
+  > .form-field,
+  > .form-field:not(.form-field--toggle) {
     margin-bottom: 0 !important;
-    display: block !important;
+    display: block !important; // Block display since parent handles flex
+    flex-direction: unset !important; // Reset any flex-direction from global
   }
 
   // Input fields styling (both old .input and new .form-input)
@@ -130,8 +135,8 @@
     }
 
     &:focus {
-      border-color: var(--form-input-border-color-focus, #475569) !important;
-      box-shadow: var(--form-input-focus-shadow, 0 0 0 3px rgba(71, 85, 105, 0.15)) !important;
+      border-color: var(--form-input-border-color-focus, #334155) !important;
+      box-shadow: var(--form-input-focus-shadow, 0 0 0 3px rgba(51, 65, 85, 0.15)) !important;
     }
 
     &:disabled {
@@ -253,7 +258,7 @@
 
       &:focus {
         border-color: var(--form-input-border-color-focus, #64748b) !important;
-        box-shadow: 0 0 0 3px rgba(100, 116, 139, 0.2) !important;
+        box-shadow: var(--form-input-focus-shadow, 0 0 0 3px rgba(100, 116, 139, 0.25)) !important;
       }
 
       &:disabled {

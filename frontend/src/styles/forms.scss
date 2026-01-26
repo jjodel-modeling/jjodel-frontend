@@ -58,8 +58,8 @@
 
   &:focus {
     outline: none;
-    border-color: #ef4444;  // RED focus
-    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+    border-color: var(--form-input-border-color-focus, #334155);
+    box-shadow: var(--form-input-focus-shadow, 0 0 0 3px rgba(51, 65, 85, 0.15));
   }
 
   &:disabled {
@@ -199,7 +199,7 @@
     }
 
     &:focus + .toggle-slider {
-      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+      box-shadow: var(--form-input-focus-shadow, 0 0 0 3px rgba(51, 65, 85, 0.15));
     }
 
     &:disabled + .toggle-slider {
@@ -285,7 +285,7 @@
 
   &:focus {
     outline: none;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    box-shadow: var(--form-input-focus-shadow, 0 0 0 3px rgba(51, 65, 85, 0.15));
   }
 }
 
@@ -353,7 +353,7 @@
 
   &:focus {
     outline: none;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    box-shadow: var(--form-input-focus-shadow, 0 0 0 3px rgba(51, 65, 85, 0.15));
   }
 }
 

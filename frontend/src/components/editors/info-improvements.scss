@@ -200,8 +200,8 @@ textarea.form-textarea {
 
   &:focus {
     outline: none !important;
-    border-color: #ef4444 !important;
-    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1) !important;
+    border-color: var(--form-input-border-color-focus, #334155) !important;
+    box-shadow: var(--form-input-focus-shadow, 0 0 0 3px rgba(51, 65, 85, 0.15)) !important;
   }
 
   &:disabled {
@@ -214,6 +214,7 @@ textarea.form-textarea {
     border-color: #ef4444;
 
     &:focus {
+      border-color: #ef4444; // Keep red border for error state
       box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
     }
   }
@@ -254,11 +255,11 @@ select.form-select {
     border-color: #9ca3af;
   }
 
-  // ✅ RED focus state like user profile
+  // ✅ SLATE focus state (standardized)
   &:focus {
     outline: none;
-    border-color: #ef4444;
-    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+    border-color: var(--form-input-border-color-focus, #334155);
+    box-shadow: var(--form-input-focus-shadow, 0 0 0 3px rgba(51, 65, 85, 0.15));
   }
 
   option {
@@ -371,7 +372,7 @@ select.form-select {
   }
 
   &:focus {
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    box-shadow: var(--form-input-focus-shadow, 0 0 0 3px rgba(51, 65, 85, 0.15));
   }
 }
 
@@ -646,9 +647,9 @@ select.form-select {
     }
 
     &:focus {
-      border-color: #ef4444;
+      border-color: var(--form-input-border-color-focus, #64748b);
       background: #111827;
-      box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+      box-shadow: var(--form-input-focus-shadow, 0 0 0 3px rgba(100, 116, 139, 0.25));
     }
 
     option {

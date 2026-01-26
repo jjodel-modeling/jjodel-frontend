@@ -56,6 +56,7 @@ import { formatShortcutPills, getRedoShortcutPills, SHORTCUTS, matchesShortcut, 
 import { AdvancedModeTutorial, shouldShowAdvancedModeTutorial } from '../../components/AdvancedModeTutorial';
 import { M2AnalyticsModal, M2AnalyticsData } from '../../components/M2AnalyticsModal';
 import { ShortcutsReference } from '../../components/ShortcutsReference';
+import { VerticalToggle } from '../../components/ui/VerticalToggle';
 
 
 let windoww = window as any;
@@ -1373,20 +1374,25 @@ function NavbarComponent(props: AllProps) {
             <MainMenu items={items} />
             <Commands />
             <div className="main-header-right">
-                {/* Badges */}
-                {props.debug && <span className="debug-badge">DEBUG</span>}
-                {/* Mode Toggle - Basic/Advanced */}
-                <div className="navbar__mode-toggle">
-                    <Tooltip tooltip={props.advanced ? "Switch to Basic Mode" : "Switch to Advanced Mode"} inline={true} position="bottom" offsetY={8}>
-                        <button
-                            className={`mode-toggle-btn ${props.advanced ? 'mode-toggle-btn--advanced' : 'mode-toggle-btn--basic'}`}
-                            onClick={toggleAdvancedMode}
-                            aria-label={props.advanced ? "Switch to Basic Mode" : "Switch to Advanced Mode"}
-                        >
-                            <i className={props.advanced ? "bi bi-gear-wide-connected" : "bi bi-mortarboard"} />
-                            <span>{props.advanced ? 'Advanced' : 'Basic'}</span>
-                        </button>
-                    </Tooltip>
+                {/* Vertical Toggles - Debug and Mode */}
+                <div className="navbar-toggles">
+                    <VerticalToggle
+                        isActive={props.debug}
+                        onToggle={() => {
+                            TRANSACTION('debug', ()=>SetRootFieldAction.new('debug', !props.debug), props.debug, !props.debug);
+                            U.debug = !props.debug;
+                        }}
+                        labelOn="debug on"
+                        labelOff="debug off"
+                        variant="debug"
+                    />
+                    <VerticalToggle
+                        isActive={props.advanced}
+                        onToggle={toggleAdvancedMode}
+                        labelOn="advanced"
+                        labelOff="basic"
+                        variant="default"
+                    />
                 </div>
                 {/* Layout Controls Group */}
                 <LayoutControls />

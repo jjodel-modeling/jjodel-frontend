@@ -70,8 +70,8 @@ button, input, select, textarea {
   }
 
   &:focus {
-    border-color: var(--color-accent);
-    box-shadow: 0 0 0 3px var(--color-accent-subtle);
+    border-color: var(--form-input-border-color-focus, #334155);
+    box-shadow: var(--form-input-focus-shadow, 0 0 0 3px rgba(51, 65, 85, 0.15));
   }
 
   &:disabled {
@@ -226,11 +226,11 @@ input[type='checkbox'] {
     background: var(--color-bg-hover);
   }
 
-  /* Focus state */
+  /* Focus state - slate color for consistency */
   &:focus {
     outline: none;
-    border-color: var(--color-accent);
-    box-shadow: 0 0 0 3px var(--color-accent-subtle);
+    border-color: var(--form-input-border-color-focus, #334155);
+    box-shadow: var(--form-input-focus-shadow, 0 0 0 3px rgba(51, 65, 85, 0.15));
   }
 
   /* Checked state */
@@ -433,8 +433,8 @@ select {
   }
 
   &:focus {
-    border-color: var(--color-accent);
-    box-shadow: 0 0 0 3px var(--color-accent-subtle);
+    border-color: var(--form-input-border-color-focus, #334155);
+    box-shadow: var(--form-input-focus-shadow, 0 0 0 3px rgba(51, 65, 85, 0.15));
   }
 
   &:disabled {

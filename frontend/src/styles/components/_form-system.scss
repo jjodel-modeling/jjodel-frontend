@@ -12,9 +12,10 @@
   --form-input-border-radius: 6px;
   --form-input-border-color: #e2e8f0;
   --form-input-border-color-hover: #cbd5e1;
-  --form-input-border-color-focus: #475569;
-  --form-input-focus-shadow: 0 0 0 3px rgba(71, 85, 105, 0.15);
-  --form-input-focus-shadow2: 0 0 0 3px rgba(71, 85, 105, 0.15);
+  // Focus state - SLATE COLOR (standardized across all form elements)
+  --form-input-border-color-focus: #334155;
+  --form-input-focus-shadow: 0 0 0 3px rgba(51, 65, 85, 0.15);
+  --form-input-focus-shadow2: 0 0 0 3px rgba(51, 65, 85, 0.15);
   --form-input-bg: #ffffff;
   --form-input-color: #0f172a;
   --form-input-placeholder: #9ca3af;
@@ -698,7 +699,8 @@ input[type="number"] {
 [data-theme="dark"] {
   --form-input-border-color: #334155;
   --form-input-border-color-hover: #475569;
-  --form-input-border-color-focus: #64748b;
+  --form-input-border-color-focus: #64748b; // Lighter slate for dark mode visibility
+  --form-input-focus-shadow: 0 0 0 3px rgba(100, 116, 139, 0.25); // Dark mode shadow
   --form-input-bg: #1e293b;
   --form-input-color: #f1f5f9;
   --form-input-placeholder: #64748b;
@@ -739,7 +741,7 @@ input[type="number"] {
 
     &:focus {
       border-color: var(--form-input-border-color-focus);
-      box-shadow: 0 0 0 3px rgba(100, 116, 139, 0.2);
+      box-shadow: var(--form-input-focus-shadow);
     }
 
     &:disabled {
@@ -829,7 +831,8 @@ input[type="number"] {
   :root:not([data-theme="light"]) {
     --form-input-border-color: #334155;
     --form-input-border-color-hover: #475569;
-    --form-input-border-color-focus: #64748b;
+    --form-input-border-color-focus: #64748b; // Lighter slate for dark mode
+    --form-input-focus-shadow: 0 0 0 3px rgba(100, 116, 139, 0.25); // Dark mode shadow
     --form-input-bg: #1e293b;
     --form-input-color: #f1f5f9;
     --form-input-placeholder: #64748b;

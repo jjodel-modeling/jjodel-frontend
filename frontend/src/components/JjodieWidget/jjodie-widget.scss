@@ -8,11 +8,12 @@
    ============================================ */
 
 .jjodie-fab {
-  position: fixed;
-  bottom: 24px;
-  right: 24px;
-  width: 56px;
-  height: 56px;
+  position: fixed !important;
+  bottom: 24px !important;
+  right: 24px !important;
+  left: auto !important; // Prevent any left positioning override
+  width: 56px !important;
+  height: 56px !important;
   border-radius: 50%;
   background: var(--gradient-primary);
   color: #ffffff;
