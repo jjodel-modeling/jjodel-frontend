@@ -72,6 +72,11 @@
   color: var(--color-text-inverse, #ffffff);
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 
+  /* CRITICAL: Icons must be white on dark backgrounds */
+  i, .bi, svg {
+    color: #ffffff !important;
+  }
+
   &:hover:not(:disabled) {
     background: var(--gradient-primary-hover);
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
@@ -161,6 +166,11 @@
   color: var(--color-text-inverse, #ffffff);
   border: none;
 
+  /* Icons white on dark/colored backgrounds */
+  i, .bi, svg {
+    color: #ffffff !important;
+  }
+
   &:hover:not(:disabled) {
     background: var(--color-error-hover, #dc2626);
   }
@@ -231,5 +241,100 @@
 
   &.btn-group-vertical {
     flex-direction: column;
+  }
+}
+
+/* ============================================
+   SLATE/DARK BACKGROUND BUTTONS
+   Icons and text must always be white
+   ============================================ */
+
+/* Explicit slate button variant */
+.btn-slate {
+  background: #475569; // slate-600
+  color: #ffffff;
+  border: none;
+
+  i, .bi, svg, span {
+    color: #ffffff !important;
+  }
+
+  &:hover:not(:disabled) {
+    background: #334155; // slate-700
+  }
+
+  &:active:not(:disabled) {
+    background: #1e293b; // slate-800
+  }
+}
+
+/* Slate gradient variant */
+.btn-slate-gradient {
+  background: linear-gradient(135deg, #64748b 0%, #475569 100%);
+  color: #ffffff;
+  border: none;
+
+  i, .bi, svg, span {
+    color: #ffffff !important;
+  }
+
+  &:hover:not(:disabled) {
+    background: linear-gradient(135deg, #475569 0%, #334155 100%);
+  }
+}
+
+/* ============================================
+   GLOBAL RULE: White icons on dark backgrounds
+   Applies to any button with slate-500+ background
+   ============================================ */
+
+button,
+.btn {
+  /* Slate solid backgrounds */
+  &.bg-slate-500,
+  &.bg-slate-600,
+  &.bg-slate-700,
+  &.bg-slate-800,
+  &.bg-slate-900 {
+    color: #ffffff;
+
+    i, .bi, svg {
+      color: #ffffff !important;
+    }
+  }
+}
+
+/* Save buttons in editors/modals */
+.save-btn,
+.btn-save,
+[class*="save-btn"],
+[class*="btn-save"] {
+  i, .bi, svg {
+    color: inherit;
+  }
+
+  /* When on dark/gradient background */
+  &.btn-primary,
+  &.btn-slate,
+  &[style*="gradient"],
+  &[style*="slate"] {
+    i, .bi, svg {
+      color: #ffffff !important;
+    }
+  }
+}
+
+/* Editor fullscreen modal buttons */
+.editor-fullscreen-modal,
+.monaco-fullscreen-modal,
+.fullscreen-editor {
+  .btn-primary,
+  .save-btn,
+  .btn-save,
+  button[class*="primary"],
+  button[class*="save"] {
+    i, .bi, svg {
+      color: #ffffff !important;
+    }
   }
 }

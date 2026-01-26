@@ -609,6 +609,69 @@ button:hover{// experimental, doesn't go well because it applies to N parent ele
   height: 10px!important;
 }
 
+/* ============================================
+   MONACO EDITOR - Line Highlight Styling
+   Use background instead of border for current line
+   ============================================ */
+
+.monaco-editor {
+  // Line highlight - BACKGROUND (not border)
+  .view-overlays .current-line {
+    background-color: rgba(100, 116, 139, 0.06) !important; // slate-500 @ 6%
+    border: none !important;
+    border-left: none !important;
+    border-right: none !important;
+    box-shadow: none !important;
+  }
+
+  // Margin/gutter line highlight
+  .margin-view-overlays .current-line-margin,
+  .margin-view-overlays .current-line-margin-both {
+    background-color: rgba(100, 116, 139, 0.06) !important;
+    border: none !important;
+  }
+
+  // Remove any borders from line elements
+  .current-line,
+  .view-line.current-line,
+  .line-numbers.active-line-number {
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
+  }
+}
+
+// Dark mode - Monaco line highlight
+@media (prefers-color-scheme: dark) {
+  .monaco-editor {
+    .view-overlays .current-line {
+      background-color: rgba(148, 163, 184, 0.1) !important; // slate-400 @ 10%
+      border: none !important;
+    }
+
+    .margin-view-overlays .current-line-margin,
+    .margin-view-overlays .current-line-margin-both {
+      background-color: rgba(148, 163, 184, 0.1) !important;
+      border: none !important;
+    }
+  }
+}
+
+[data-theme="dark"] {
+  .monaco-editor {
+    .view-overlays .current-line {
+      background-color: rgba(148, 163, 184, 0.1) !important;
+      border: none !important;
+    }
+
+    .margin-view-overlays .current-line-margin,
+    .margin-view-overlays .current-line-margin-both {
+      background-color: rgba(148, 163, 184, 0.1) !important;
+      border: none !important;
+    }
+  }
+}
+
 .template-item:first-of-type {
     margin-top: 0!important;
 

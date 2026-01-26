@@ -22,6 +22,7 @@ import {Color} from '../../../forEndUser/Color';
 
 import {Btn, CommandBar} from '../../../commandbar/CommandBar';
 import {HRule} from '../../../widgets/Widgets';
+import './palette-data.scss';
 
 
 function makeNumericInput(prefix: string, number: NumberControl,
@@ -110,50 +111,49 @@ function PaletteDataComponent(props: AllProps) {
     }
 
     const AddPalette = () => {
-        const [open,setOpen] = useState(false);
-        const menuRef = useRef(null);
+        const [isOpen, setIsOpen] = useState(false);
+        const menuRef = useRef<HTMLDivElement>(null);
 
         useClickOutside(menuRef, () => {
-            setOpen(false);
+            setIsOpen(false);
         });
 
+        const handleAdd = (type: 'palette' | 'number' | 'text' | 'path') => {
+            addControl(type);
+            setIsOpen(false);
+        };
 
-        return (<>
-            {/* open ?
-                <div className='palette-buttons'>
-                    <button onClick={()=>addControl('palette')} className='add-palette-item btn btn-success my-btn btn-color'>Add palette</button>
-                    <button onClick={()=> addControl('number')} className='btn btn-success my-btn btn-number'>Add number</button>
-                    <button onClick={()=>addControl('text')} className='btn btn-success my-btn btn-textual'>Add text</button>
-                    <button onClick={()=>addControl('path')}className='btn btn-success my-btn btn-path'>Add path</button>
+        return (
+            <div className="add-dropdown" ref={menuRef}>
+                <button
+                    className={`add-btn ${isOpen ? 'open' : ''}`}
+                    onClick={() => setIsOpen(!isOpen)}
+                    disabled={readOnly}
+                >
+                    <i className="bi bi-plus" />
+                    <span>Add</span>
+                    <i className="bi bi-chevron-down" />
+                </button>
+                <div className={`dropdown-menu ${isOpen ? 'open' : ''}`}>
+                    <button className="dropdown-item" onClick={() => handleAdd('palette')}>
+                        <span className="item-icon"><i className="bi bi-palette" /></span>
+                        <span>Palette</span>
+                    </button>
+                    <button className="dropdown-item" onClick={() => handleAdd('number')}>
+                        <span className="item-icon"><i className="bi bi-123" /></span>
+                        <span>Number</span>
+                    </button>
+                    <button className="dropdown-item" onClick={() => handleAdd('text')}>
+                        <span className="item-icon"><i className="bi bi-fonts" /></span>
+                        <span>Text</span>
+                    </button>
+                    <button className="dropdown-item" onClick={() => handleAdd('path')}>
+                        <span className="item-icon"><i className="bi bi-bezier2" /></span>
+                        <span>Path</span>
+                    </button>
                 </div>
-            :
-                <button onClick={() => setOpen(!open)} className='btn btn-success my-btn'>Add new</button>
-            */}
-
-            <div className={'add-palette-item active hoverable'} tabIndex={-1}>
-                <button onClick={() => addControl('palette')} className='btn btn-success my-btn btn-plus'>
-                    <i style={{color: 'white'}} className="bi bi-plus"/>
-                    <span className={'preview'}>Add new</span>
-                </button>
-                <button onClick={() => addControl('palette')} className='btn btn-success my-btn btn-color content inline'>
-                    <i className="bi bi-palette"></i>
-                    <span>Palette</span>
-                </button>
-                <button onClick={() => addControl('number')} className='btn btn-success my-btn btn-number content inline'>
-                    <i className="bi bi-123"></i>
-                    <span>Number</span>
-                </button>
-                <button onClick={() => addControl('text')} className='btn btn-success my-btn btn-textual content inline'>
-                    <i className="bi bi-type"></i>
-                    <span>Text</span>
-                </button>
-                <button onClick={() => addControl('path')} className='btn btn-success my-btn btn-path content inline'>
-                <i className="bi bi-bezier"></i>                    
-                <span>Path</span>
-                </button>
             </div>
-
-        </>);
+        );
     };
 
     /* *** */
@@ -379,7 +379,15 @@ function PaletteDataComponent(props: AllProps) {
     let colors = Object.keys(palettes.color).sort();
     const lines = (Math.round(vcss.split(/\r|\r\n|\n/).length*1.8) < 5 ? 10 : Math.round(vcss.split(/\r|\r\n|\n/).length*1.8));
 
-    return(<section className={'p-3 style-tab'}>
+    return(<section className={'p-3 style-tab style-tab-redesign'}>
+        {/* STYLE VARIABLES SECTION */}
+        <div className="style-variables-section">
+            <div className="style-section-header">
+                <span className="section-title">Style Variables</span>
+                <AddPalette />
+            </div>
+        </div>
+
         <div className={"controls"} style={{position:'relative', zIndex:2}}>
 
             {colors.map((entry, index, entries)=>{
@@ -696,48 +704,21 @@ function PaletteDataComponent(props: AllProps) {
             )}
         </div>
 
+        {/* SEPARATOR */}
+        <div className="style-separator" />
 
-        <AddPalette />
-
-
-        {/* <div className={"w-100"} style={{display: 'grid', gridTemplateColumns: 'repeat(10, 1fr)', position: 'relative', zIndex:1}}
-             onMouseEnter={(e)=>{ dropDownButton.current?.open()}}
-             onMouseLeave={(e)=>{ dropDownButton.current?.close()}}
-        >
-            <button className="btn btn-success" style={{flexBasis:0, flexGrow:9, gridArea: '1 / 1 / 1 / 1', zIndex: 2, minWidth: 'calc(1000% - var(--smart-editor-addon-width))'}} onClick={()=>addControl('palette')}>+ Palette</button>
-            <DropDownButton ref={dropDownButton} style={{flexBasis:0, flexGrow:1, minWidth:0, gridArea: '1 / 1 / 1 / 11', zIndex:1, transform: 'scaleX(-1)'}}>
-                <div onClick={(e)=> dropDownButton.current?.close()} style={{transform: 'scaleX(-1)'}}>
-                    <button className={"w-100 btn btn-outline-success"} style={{height: 'var(--smart-editor-height)'}}
-                            onClick={()=>addControl('number')}>+ Number</button>
-                    <button className={"w-100 btn btn-outline-success"} style={{height: 'var(--smart-editor-height)'}}
-                            onClick={()=>addControl('text')}>+ Text</button>
-                    <button className={"w-100 btn btn-outline-success"} style={{height: 'var(--smart-editor-height)'}}
-                            onClick={()=>addControl('path')}>+ Path</button>
-                </div>
-            </DropDownButton>
-            </div>*/}
-
-        <HRule theme={'light'} style={{display: 'block', padding: '30px 0px!important'}}/>
-
-        <Input data={view} field={'cssIsGlobal'} type={"checkbox"}  jsxLabel={
-            <div style={{width:'100%', display:'block', float: 'left'}}>
-                {cssIsGlobal ? <b style={{color: 'inherit'}}>Global</b> : <b style={{color: 'inherit'}}>Local</b>}
-                {' CSS & LESS Editor '}
-                {cssIsGlobal ? '(Use with caution)' : ''}
+        {/* CSS EDITOR SECTION */}
+        <div className="css-editor-section">
+            <div className="css-scope-toggle">
+                <Input data={view} field={'cssIsGlobal'} type={"checkbox"} jsxLabel={
+                    <span className={`toggle-label ${cssIsGlobal ? 'active' : ''}`}>
+                        {cssIsGlobal ? 'Global' : 'Local'} CSS & LESS
+                        {cssIsGlobal && <span className="caution-badge" style={{color: '#e11d48', marginLeft: '6px', fontSize: '11px', fontWeight: 500}}>Use with caution</span>}
+                    </span>
+                } />
             </div>
-        } />
 
-        {/* <CommandBar style={{paddingTop: '10px', float: 'right'}}>
-            {expand ?
-                <Btn icon={'shrink'} action={(e) => {setExpand(false)}} tip={'Minimize editor'}/>
-                :
-                <Btn icon={'expand'} action={(e) => {setExpand(true)}} tip={'Enlarge editor'}/>
-            }
-        </CommandBar>*/}
-
-        {/* ****** */}
-
-        <EditorToolbar
+            <EditorToolbar
             title={cssIsGlobal ? "Global CSS & LESS Editor" : "Local CSS & LESS Editor"}
             icon="bi-filetype-css"
             content={vcss}
@@ -793,19 +774,8 @@ function PaletteDataComponent(props: AllProps) {
             readOnly={readOnly}
         />
         {false && <div className={"debug"}><div style={{whiteSpace:'pre'}}>{view.compiled_css}</div></div>}
-        {/*<textarea>
-            '[data-viewid="'+view.id+'"]{\n' +
-            Object.entries(palette).flatMap((entry, index, entries)=>{
-                let prefix = entry[0];
-                let colors = entry[1];
-                return colors.map((color, i)=> "\t--" + prefix + i + ": " + color + ";\n");
-            }).join('')+'\n' + (cssISGlobal ? '}\n' : '\n') +
-            '/ *** custom css area *** /\n' + view.css + (!cssISGlobal ? '}\n' : '\n')
-            view.css
-        </textarea>*/}
-        {
-            // todo: if row have only 1 color can be accessed both as palette prefix-1 or as palett prefix without number, so i can name colors.
-        }
+        </div>
+        {/* END CSS EDITOR SECTION */}
 
     </section>);
 }

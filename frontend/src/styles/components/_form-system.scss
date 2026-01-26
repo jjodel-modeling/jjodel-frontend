@@ -647,6 +647,8 @@ input[type="number"] {
   font-weight: 400;
 }
 
+
+// dock-content dock-content-top dock-content-animated
 // ==============================================
 // TAB CONTAINER BACKGROUNDS
 // Consistent gray background for all tabs
@@ -671,12 +673,12 @@ input[type="number"] {
 .options-tab,
 .permissions-tab,
 .page-root {
-  background-color: transparent!important; //  #f8fafc !important;
+  background-color: #f8fafc !important; // transparent!important; //  
   min-height: 100% !important;
   height: fit-content !important;
-  padding: 3px !important;
+  padding: 10px !important;
   box-sizing: border-box !important;
-  padding-bottom: 10px;
+
 }
 
 // Ensure tab content wrapper allows extension

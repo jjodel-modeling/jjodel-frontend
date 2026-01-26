@@ -74,6 +74,10 @@ $color-vertex: #6b7280;       // gray-500
   flex-flow: column;
   font-family: $font-family;
 
+  // Container queries support
+  container-type: inline-size;
+  container-name: view-editor;
+
   &:has(.single-view-content) {
     overflow: hidden;
   }
@@ -109,7 +113,11 @@ section.viewpoint-tab {
   transition: all $transition-normal;
 
   height: 100%;
-  width: calc(100% - 10px);;
+  width: calc(100% - 10px);
+
+  // Container queries for responsive progressive hiding
+  container-type: inline-size;
+  container-name: viewpoints-panel;
 }
 
 // ============================================
@@ -1478,6 +1486,330 @@ section.viewpoint-tab {
   list-style: none;
   margin: 0;
   padding: 0 0 0 18px; // Reduced from 24px
+}
+
+// ============================================
+// RESPONSIVE PROGRESSIVE HIDING - VIEWPOINTS LIST ONLY
+// Priority hidden FIRST, then badges
+// Breakpoints: 380px → 280px → 200px
+// IMPORTANT: Only affects .view-entry elements, NOT Style tab!
+// ============================================
+
+// TRANSITIONS - Apply ONLY to view-entry elements in viewpoints list
+.viewpoint-tab,
+section.viewpoint-tab {
+  // Only target view entries (tree items), NOT style/template tabs
+  .view-entry,
+  .inline-row.view-row,
+  li[data-type] {
+    .view-entry__priority,
+    .priority,
+    .priority-booster,
+    .priority-clear,
+    .priority-label,
+    .view-entry__badges,
+    .feature-badge,
+    .feature-badge--ocl,
+    .feature-badge--js,
+    .feature-badge--ex,
+    .hover-stuff {
+      transition: opacity 0.3s ease,
+                  visibility 0.3s ease,
+                  max-width 0.3s ease,
+                  padding 0.3s ease,
+                  margin 0.3s ease;
+    }
+  }
+}
+
+// STEP 1: < 380px - Hide PRIORITY (keep badges visible!)
+@container viewpoints-panel (max-width: 380px) {
+  // ONLY target view-entry elements (tree list items)
+  .view-entry,
+  .inline-row.view-row,
+  li[data-type] {
+    .view-entry__priority,
+    .priority,
+    .priority-label,
+    .priority-booster,
+    .priority-clear,
+    .priority-field {
+      opacity: 0 !important;
+      visibility: hidden !important;
+      max-width: 0 !important;
+      overflow: hidden !important;
+      padding: 0 !important;
+      margin: 0 !important;
+      pointer-events: none;
+    }
+
+    // Badges STAY VISIBLE
+    .view-entry__badges,
+    .feature-badge,
+    .feature-badge--ocl,
+    .feature-badge--js,
+    .feature-badge--ex {
+      opacity: 1 !important;
+      visibility: visible !important;
+      max-width: none !important;
+    }
+  }
+}
+
+// STEP 2: < 280px - Hide BADGES (priority already hidden)
+@container viewpoints-panel (max-width: 280px) {
+  // ONLY target view-entry elements
+  .view-entry,
+  .inline-row.view-row,
+  li[data-type] {
+    .view-entry__badges,
+    .feature-badge,
+    .feature-badge--ocl,
+    .feature-badge--js,
+    .feature-badge--ex,
+    .hover-stuff {
+      opacity: 0 !important;
+      visibility: hidden !important;
+      max-width: 0 !important;
+      overflow: hidden !important;
+      padding: 0 !important;
+      margin: 0 !important;
+    }
+  }
+}
+
+// STEP 3: < 200px - Ultra compact (minimal UI)
+@container viewpoints-panel (max-width: 200px) {
+  // ONLY target view-entry elements
+  .view-entry,
+  .inline-row.view-row,
+  li[data-type] {
+    // Compact row padding
+    &.inline-row {
+      padding: 4px 6px !important;
+      gap: 4px !important;
+    }
+
+    // Smaller label font
+    .node-label,
+    .mid-stuff {
+      font-size: 11px !important;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    // Smaller type icon
+    .icon.type {
+      width: 18px !important;
+      height: 18px !important;
+      min-width: 18px !important;
+      font-size: 9px !important;
+    }
+  }
+
+  // Reduce indentation in tree
+  ul.view-tree,
+  ul[class*="viewpoint"] {
+    padding-left: 10px !important;
+  }
+}
+
+// Alternative container queries for view-editor-root
+@container view-editor (max-width: 380px) {
+  .view-entry,
+  .inline-row.view-row,
+  li[data-type] {
+    .view-entry__priority,
+    .priority,
+    .priority-booster,
+    .priority-clear {
+      opacity: 0 !important;
+      visibility: hidden !important;
+      max-width: 0 !important;
+      padding: 0 !important;
+    }
+  }
+}
+
+@container view-editor (max-width: 280px) {
+  .view-entry,
+  .inline-row.view-row,
+  li[data-type] {
+    .view-entry__badges,
+    .feature-badge {
+      opacity: 0 !important;
+      visibility: hidden !important;
+      max-width: 0 !important;
+    }
+  }
+}
+
+// ============================================
+// PROTECTION: Style Tab elements ALWAYS visible
+// These should NEVER be hidden by responsive rules
+// ============================================
+.style-tab,
+.style-tab-redesign,
+.template-tab,
+.events-tab,
+.options-tab,
+.permissions-tab {
+  // Disable container queries for these tabs
+  container-type: normal !important;
+
+  // All interactive elements always visible
+  .add-dropdown,
+  .add-btn,
+  .palette-row,
+  .palette-row-container,
+  .style-variable-row,
+  .row-actions,
+  .action-btn,
+  .delete-btn,
+  .color-picker-root,
+  .monaco-editor-wrapper,
+  .css-editor-section,
+  .style-variables-section {
+    opacity: 1 !important;
+    visibility: visible !important;
+    display: flex !important;
+    max-width: none !important;
+    pointer-events: auto !important;
+  }
+
+  // Specific inline-flex elements
+  .add-btn,
+  .action-btn {
+    display: inline-flex !important;
+  }
+}
+
+// ============================================
+// MEDIA QUERY FALLBACKS (for older browsers)
+// Priority hidden FIRST, then badges
+// ONLY targets view-entry elements in viewpoints list!
+// ============================================
+
+// Viewport < 1300px → Hide PRIORITY (keep badges)
+@media (max-width: 1300px) {
+  .viewpoint-tab,
+  section.viewpoint-tab {
+    // ONLY target view-entry elements (tree list items)
+    .view-entry,
+    .inline-row.view-row,
+    li[data-type] {
+      .view-entry__priority,
+      .priority,
+      .priority-booster,
+      .priority-clear {
+        opacity: 0 !important;
+        visibility: hidden !important;
+        max-width: 0 !important;
+        overflow: hidden !important;
+        padding: 0 !important;
+      }
+
+      // Badges remain visible
+      .view-entry__badges,
+      .feature-badge {
+        opacity: 1 !important;
+        visibility: visible !important;
+      }
+    }
+  }
+
+  // PROTECT Style tab
+  .style-tab,
+  .style-tab-redesign {
+    .add-dropdown,
+    .add-btn,
+    .row-actions,
+    .action-btn {
+      opacity: 1 !important;
+      visibility: visible !important;
+      display: inline-flex !important;
+    }
+  }
+}
+
+// Viewport < 1100px → Hide BADGES too
+@media (max-width: 1100px) {
+  .viewpoint-tab,
+  section.viewpoint-tab {
+    // ONLY target view-entry elements
+    .view-entry,
+    .inline-row.view-row,
+    li[data-type] {
+      .view-entry__badges,
+      .feature-badge,
+      .feature-badge--ocl,
+      .feature-badge--js,
+      .feature-badge--ex,
+      .hover-stuff {
+        opacity: 0 !important;
+        visibility: hidden !important;
+        max-width: 0 !important;
+      }
+    }
+  }
+
+  // PROTECT Style tab
+  .style-tab,
+  .style-tab-redesign {
+    .add-dropdown,
+    .add-btn,
+    .palette-row,
+    .row-actions {
+      opacity: 1 !important;
+      visibility: visible !important;
+    }
+  }
+}
+
+// Viewport < 950px → Ultra compact for viewpoints only
+@media (max-width: 950px) {
+  .viewpoint-tab,
+  section.viewpoint-tab {
+    // ONLY target view-entry elements
+    .view-entry,
+    .inline-row.view-row,
+    li[data-type] {
+      &.inline-row {
+        padding: 4px 6px !important;
+      }
+
+      .node-label {
+        font-size: 12px !important;
+      }
+    }
+
+    // Only reduce indent in tree views
+    ul.view-tree,
+    ul[class*="viewpoint"] {
+      padding-left: 12px !important;
+    }
+  }
+
+  // PROTECT Style tab - always visible
+  .style-tab,
+  .style-tab-redesign {
+    .add-dropdown,
+    .add-btn,
+    .palette-row,
+    .palette-row-container,
+    .row-actions,
+    .action-btn {
+      opacity: 1 !important;
+      visibility: visible !important;
+      display: flex !important;
+    }
+
+    .add-btn,
+    .action-btn {
+      display: inline-flex !important;
+    }
+  }
 }
 
 // ============================================
@@ -3161,6 +3493,7 @@ section.viewpoint-tab {
   text-align: left;
   height: fit-content;
   min-height: 100%;
+  background-color: #f8fafc !important;
 
 }
 

@@ -146,6 +146,35 @@
     .monaco-editor-background {
       background: #ffffff !important;
     }
+
+    // ============================================
+    // LINE HIGHLIGHT - Background instead of Border
+    // ============================================
+
+    // Main line highlight - BACKGROUND
+    .view-overlays .current-line {
+      background-color: rgba(100, 116, 139, 0.06) !important; // slate-500 @ 6%
+      border: none !important;
+      border-left: none !important;
+      border-right: none !important;
+      box-shadow: none !important;
+    }
+
+    // Margin/gutter line highlight
+    .margin-view-overlays .current-line-margin,
+    .margin-view-overlays .current-line-margin-both {
+      background-color: rgba(100, 116, 139, 0.06) !important;
+      border: none !important;
+    }
+
+    // Remove any line borders
+    .current-line,
+    .view-line.current-line,
+    .line-numbers.active-line-number {
+      border: none !important;
+      outline: none !important;
+      box-shadow: none !important;
+    }
   }
 }
 
@@ -262,5 +291,38 @@ body.modal-fullscreen-open {
 
   .GraphContainer {
     display: none !important;
+  }
+}
+
+// ============================================
+// DARK MODE SUPPORT
+// ============================================
+@media (prefers-color-scheme: dark) {
+  .editor-fullscreen-body .monaco-editor {
+    .view-overlays .current-line {
+      background-color: rgba(148, 163, 184, 0.1) !important; // slate-400 @ 10%
+      border: none !important;
+    }
+
+    .margin-view-overlays .current-line-margin,
+    .margin-view-overlays .current-line-margin-both {
+      background-color: rgba(148, 163, 184, 0.1) !important;
+      border: none !important;
+    }
+  }
+}
+
+[data-theme="dark"] {
+  .editor-fullscreen-body .monaco-editor {
+    .view-overlays .current-line {
+      background-color: rgba(148, 163, 184, 0.1) !important;
+      border: none !important;
+    }
+
+    .margin-view-overlays .current-line-margin,
+    .margin-view-overlays .current-line-margin-both {
+      background-color: rgba(148, 163, 184, 0.1) !important;
+      border: none !important;
+    }
   }
 }

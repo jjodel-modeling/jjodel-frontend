@@ -187,6 +187,11 @@ $transition-slow: 400ms ease;
   background: linear-gradient(135deg, #64748b 0%, #475569 100%);
   border: none;
 
+  // CRITICO: Icone sempre bianche su sfondo scuro
+  i, .bi, svg {
+    color: #ffffff !important;
+  }
+
   &:hover:not(:disabled) {
     background: linear-gradient(135deg, #475569 0%, #334155 100%);
   }
@@ -220,11 +225,60 @@ $transition-slow: 400ms ease;
   color: $color-danger;
   background-color: transparent;
   border: 1px solid $color-danger-light;
-  
+
   &:hover:not(:disabled) {
     background-color: rgba(239, 68, 68, 0.05);
   }
 }
+```
+
+### Icone su Bottoni Scuri (REGOLA CRITICA)
+
+**REGOLA: Su bottoni con background slate (solid o gradient), icone e testo DEVONO essere bianchi (#ffffff).**
+
+```scss
+// Bottoni slate solid
+.btn-slate {
+  background: #475569;           // slate-600
+  color: #ffffff;
+
+  i, .bi, svg {
+    color: #ffffff !important;   // Icone sempre bianche
+  }
+}
+
+// Bottoni slate gradient (primary)
+.btn-primary {
+  background: linear-gradient(135deg, #64748b 0%, #475569 100%);
+  color: #ffffff;
+
+  i, .bi, svg {
+    color: #ffffff !important;   // Icone sempre bianche
+  }
+}
+```
+
+| Background | Richiede icone bianche? |
+|------------|------------------------|
+| slate-50 to slate-300 | No (icone scure OK) |
+| slate-400 | Borderline (preferire bianche) |
+| **slate-500 to slate-900** | **SÌ, sempre bianche** |
+| **Gradient slate** | **SÌ, sempre bianche** |
+
+**❌ SBAGLIATO:**
+```html
+<button class="btn-primary">
+  <i class="bi bi-check" style="color: #334155"></i> <!-- Invisibile! -->
+  Save
+</button>
+```
+
+**✅ CORRETTO:**
+```html
+<button class="btn-primary">
+  <i class="bi bi-check"></i> <!-- Eredita bianco dal parent -->
+  Save
+</button>
 ```
 
 ### Toggle Switch (NON checkbox!)
@@ -629,6 +683,7 @@ Dashboard Components:
 - Usare SOLO i colori del design system
 - Toggle switch per boolean
 - Bottoni con stili consistenti (primary/secondary/ghost/danger)
+- **Icone bianche (#ffffff) su bottoni con sfondo slate o gradient**
 - Layout verticale per form (label sopra, input sotto)
 - Spacing consistente (16px padding sezioni, 12px gap elementi)
 - Transizioni smooth su interazioni
@@ -640,6 +695,7 @@ Dashboard Components:
 - **MAI** checkbox nativi del browser
 - **MAI** gradienti non-slate (solo slate gradient consentito per primary/toggle)
 - **MAI** colori fuori dal design system (cyan, rosa, viola random)
+- **MAI** icone scure su bottoni con sfondo slate/scuro (devono essere bianche!)
 - **MAI** layout form orizzontale per input lunghi
 - **MAI** testo troppo denso senza gerarchia
 - **MAI** icone colorate casuali (usa slate o grigio)
