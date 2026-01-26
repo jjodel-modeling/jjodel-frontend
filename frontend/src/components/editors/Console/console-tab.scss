@@ -299,7 +299,7 @@ $transition-normal: 250ms ease;
     font-feature-settings: 'liga' 1, 'calt' 1;
   }
 
-  // Timestamp button (appears on command hover)
+  // Timestamp - always visible (HH:MM format)
   .command-timestamp {
     position: absolute;
     top: 8px;
@@ -312,17 +312,13 @@ $transition-normal: 250ms ease;
     font-family: $font-family-mono;
     color: #94a3b8;
     cursor: pointer;
-    opacity: 0;
+    opacity: 1; // Always visible
     transition: all $transition-normal;
 
     &:hover {
       background: #f1f5f9;
       color: #64748b;
     }
-  }
-
-  &--command:hover .command-timestamp {
-    opacity: 1;
   }
 
   &--result,
@@ -668,12 +664,14 @@ $transition-normal: 250ms ease;
     padding: 0;
     border: none;
     outline: none;
-    font-family: $font-family-mono;
-    font-size: 14px;
+    // CRITICAL: Monospace font for console input - explicit with !important
+    font-family: 'JetBrains Mono', 'SF Mono', 'Monaco', 'Menlo', 'Consolas', 'Liberation Mono', 'Courier New', monospace !important;
+    font-size: 14px !important;
     color: $color-text-primary;
     background: transparent;
     resize: none;
-    line-height: 32px;
+    line-height: 1.6 !important;
+    letter-spacing: -0.01em; // Slightly tighter for monospace
 
     // Enable ligatures for JetBrains Mono
     font-variant-ligatures: normal;
@@ -681,6 +679,7 @@ $transition-normal: 250ms ease;
 
     &::placeholder {
       color: #94a3b8;
+      font-family: inherit; // Inherit monospace from parent
     }
   }
 

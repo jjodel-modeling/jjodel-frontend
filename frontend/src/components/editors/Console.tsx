@@ -324,7 +324,7 @@ Tip: Click the keyboard icon in the toolbar for quick reference.`;
             }
 
             this.setState(prevState => ({
-                entries: [...prevState.entries, commandEntry, resultEntry],
+                entries: [commandEntry, resultEntry, ...prevState.entries], // Prepend for reverse chronological order
                 expression: '',
                 expressionHistory: [...prevState.expressionHistory, code],
                 expressionIndex: prevState.expressionHistory.length
@@ -382,9 +382,9 @@ Tip: Click the keyboard icon in the toolbar for quick reference.`;
             collapsed: false
         };
 
-        // Update state
+        // Update state - prepend for reverse chronological order (newest at top)
         this.setState(prevState => ({
-            entries: [...prevState.entries, commandEntry, resultEntry],
+            entries: [commandEntry, resultEntry, ...prevState.entries],
             expression: '',
             expressionHistory: [...prevState.expressionHistory, code],
             expressionIndex: prevState.expressionHistory.length

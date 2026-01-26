@@ -26,14 +26,14 @@ export const ConsoleEntry: React.FC<ConsoleEntryProps> = ({
   onCopy,
   onDelete
 }) => {
-  const [showAbsoluteTime, setShowAbsoluteTime] = useState(false);
+  const [showRelativeTime, setShowRelativeTime] = useState(false);
 
   // Helper functions for timestamp formatting
+  // HH:MM format by default (no seconds for cleaner look)
   const formatAbsoluteTime = (date: Date) => {
     return date.toLocaleTimeString('en-US', {
       hour: '2-digit',
       minute: '2-digit',
-      second: '2-digit',
       hour12: false
     });
   };
@@ -54,13 +54,13 @@ export const ConsoleEntry: React.FC<ConsoleEntryProps> = ({
         <pre className="console-entry__code">{entry.input}</pre>
         <button
           className="command-timestamp"
-          onClick={() => setShowAbsoluteTime(!showAbsoluteTime)}
-          title={formatAbsoluteTime(entry.timestamp)}
+          onClick={() => setShowRelativeTime(!showRelativeTime)}
+          title={showRelativeTime ? formatAbsoluteTime(entry.timestamp) : formatRelativeTime(entry.timestamp)}
           type="button"
         >
-          {showAbsoluteTime
-            ? formatAbsoluteTime(entry.timestamp)
-            : formatRelativeTime(entry.timestamp)
+          {showRelativeTime
+            ? formatRelativeTime(entry.timestamp)
+            : formatAbsoluteTime(entry.timestamp)
           }
         </button>
       </div>

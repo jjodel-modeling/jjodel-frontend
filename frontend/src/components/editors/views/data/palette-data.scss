@@ -539,9 +539,9 @@ $field-height: 28px;
         // Color suggestion rows - NO overflow
         .roww {
           display: flex !important;
-          gap: 3px !important; // Very tight gap
+          gap: 10px 4px !important; // row-gap: 10px, column-gap: 4px (more vertical spacing)
           flex-wrap: wrap !important;
-          margin-bottom: 3px !important; // Compact
+          margin-bottom: 8px !important; // More space between row groups
           padding: 0 !important;
           overflow: visible !important;
 
