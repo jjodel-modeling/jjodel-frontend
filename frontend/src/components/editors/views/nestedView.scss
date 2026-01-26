@@ -41,12 +41,12 @@ $radius-lg: 8px;
 $transition-fast: 150ms ease;
 $transition-normal: 200ms ease;
 
-// Layout
-$row-height: 32px; // Consistent row height
-$row-padding-v: 6px;
-$row-gap: 8px; // Gap between elements in row
-$icon-size: 24px;
-$vp-group-spacing: 16px; // Spacing between viewpoint groups
+// Layout - COMPACT
+$row-height: 28px; // Reduced from 32px
+$row-padding-v: 4px; // Reduced from 6px
+$row-gap: 6px; // Reduced from 8px
+$icon-size: 22px; // Reduced from 24px
+$vp-group-spacing: 12px; // Reduced from 16px
 
 // Type colors (muted, professional)
 $color-viewpoint: #475569;    // slate-600
@@ -976,22 +976,21 @@ section.viewpoint-tab {
 // ============================================
 
 .viewpoint-box {
-  margin: 0 8px 12px 0; //   margin: 0 8px 12px 8px; ?
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
+  margin: 0 8px 8px 0; // Reduced bottom margin
+  border: 1px solid #e2e8f0; // Light border (slate-200)
+  border-radius: 6px;
   background: #ffffff;
   overflow: hidden;
   list-style: none;
 
-  
-&--active {
-    border-color: #94a3b8;
+  &--active {
+    border-color: #94a3b8; // slate-400 - not too dark
     box-shadow: none;
   }
-  
+
   &--overlay {
     border-style: dashed;
-    border-color: #cbd5e1;
+    border-color: #cbd5e1; // Light
   }
 }
 
@@ -1006,21 +1005,21 @@ section.viewpoint-tab {
 }
 
 
-// Viewpoint Header
+// Viewpoint Header - compact
 .viewpoint-box__header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 12px 10px 10px;
+  padding: 8px 10px 8px 10px; // Reduced padding
   background: #f8fafc;
   border-bottom: 1px solid #e2e8f0;
   cursor: pointer;
   transition: background-color 150ms ease;
-  
+
   &:hover {
     background: #f1f5f9;
   }
-  
+
   .viewpoint-box--active & {
     background: rgba(71, 85, 105, 0.06);
     border-bottom-color: rgba(71, 85, 105, 0.15);
@@ -1117,10 +1116,10 @@ section.viewpoint-tab {
   }
 }
 
-// Viewpoint Content (Views container)
+// Viewpoint Content (Views container) - compact
 .viewpoint-box__content {
-  padding: 8px 0;
-  
+  padding: 4px 0; // Reduced padding
+
   > ul {
     list-style: none;
     margin: 0;
@@ -1284,8 +1283,8 @@ section.viewpoint-tab {
   display: flex;
   align-items: center;
   justify-content: flex-start;
-  min-height: 36px;
-  padding: 4px 12px 4px 8px;
+  min-height: 28px; // Reduced from 36px
+  padding: 2px 12px 2px 8px; // Reduced vertical padding
   margin: 1px 8px;
 
   border-radius: 6px;
@@ -1376,36 +1375,37 @@ section.viewpoint-tab {
   display: flex;
   align-items: center;
   gap: 4px;
-  
+
   .priority {
-    min-width: 70px;
+    min-width: 50px;
     height: 22px;
-    padding: 0 8px;
-    font-size: 10px;
-    font-family: 'SF Mono', 'Monaco', monospace;
-    color: #94a3b8;
+    padding: 0 6px;
+    font-size: 11px;
+    font-weight: 500;
+    font-family: 'Inter Variable', -apple-system, sans-serif;
+    color: #64748b; // slate-500 - più visibile
     background: #f8fafc;
     border: 1px solid #e2e8f0;
     border-radius: 4px;
     line-height: 20px;
     text-align: center;
   }
-  
+
   .priority-clear {
-    font-size: 14px;
+    font-size: 12px; // Reduced
     color: #94a3b8;
     cursor: pointer;
     padding: 2px;
     border-radius: 4px;
-    
+
     &:hover {
       color: #64748b;
       background: #f1f5f9;
     }
   }
-  
+
   .priority-booster {
-    width: 44px;
+    width: 40px;
     height: 22px;
     padding: 0 4px;
     font-size: 11px;
@@ -1414,11 +1414,19 @@ section.viewpoint-tab {
     border: 1px solid #e2e8f0;
     border-radius: 4px;
     background: #ffffff;
-    
+
+    // Hide spinner for compact look
+    -moz-appearance: textfield;
+    &::-webkit-outer-spin-button,
+    &::-webkit-inner-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+
     &:focus {
       outline: none;
-      border-color: #475569;
-      box-shadow: 0 0 0 2px rgba(71, 85, 105, 0.1);
+      border-color: #334155;
+      box-shadow: 0 0 0 2px rgba(51, 65, 85, 0.1);
     }
   }
 }
@@ -1465,11 +1473,11 @@ section.viewpoint-tab {
   }
 }
 
-// Nested views indentation
+// Nested views indentation - compact
 .view-entry__children {
   list-style: none;
   margin: 0;
-  padding: 0 0 0 24px;
+  padding: 0 0 0 18px; // Reduced from 24px
 }
 
 // ============================================
@@ -1727,7 +1735,7 @@ section.viewpoint-tab {
 
   .right-content {
     cursor: default;
-    margin-left: 8px;
+    margin-left: 6px; // Reduced
     display: flex;
     align-items: center;
     flex-shrink: 0;
@@ -1735,49 +1743,58 @@ section.viewpoint-tab {
 
     .priority {
       display: block;
-      min-width: 70px; // Ridotto da 5rem
-      height: 20px;
+      min-width: 50px;
+      height: 22px;
       border: 1px solid #e2e8f0;
       border-radius: 4px;
       margin: auto;
       text-align: center;
-      padding: 0 6px;
-      font-size: 10px; // Ridotto
-      font-family: 'SF Mono', 'Monaco', monospace;
-      line-height: 18px;
-      color: #94a3b8; // Più muted
+      padding: 0 4px;
+      font-size: 11px;
+      font-weight: 500;
+      font-family: 'Inter Variable', -apple-system, sans-serif;
+      line-height: 20px;
+      color: #64748b; // slate-500 - più visibile
       background: #f8fafc;
     }
 
     .priority-booster {
       display: block;
-      height: 20px;
+      height: 22px;
       margin: auto;
       text-align: center;
       padding: 0 4px;
-      width: 40px; // Più compatto
+      width: 40px;
       border: 1px solid #e2e8f0 !important;
       border-radius: 4px;
       font-size: 11px;
       font-family: 'SF Mono', 'Monaco', monospace;
       background: #ffffff;
 
+      // Hide spinner
+      -moz-appearance: textfield;
+      &::-webkit-outer-spin-button,
+      &::-webkit-inner-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+      }
+
       &:hover,
       &:focus {
         outline: none;
-        border-color: #475569 !important;
-        box-shadow: 0 0 0 2px rgba(71, 85, 105, 0.1);
+        border-color: #334155 !important;
+        box-shadow: 0 0 0 2px rgba(51, 65, 85, 0.1);
       }
     }
-    
-       // X button per reset
+
+    // X button per reset
     .bi-x {
-      font-size: 14px;
+      font-size: 12px; // Smaller
       color: #94a3b8;
       cursor: pointer;
       padding: 2px;
       border-radius: 4px;
-      
+
       &:hover {
         color: #64748b;
         background: #f1f5f9;
@@ -1831,6 +1848,10 @@ section.viewpoint-tab {
     right: 0;
     background-color: $color-bg-primary;
     z-index: 1;
+
+    // FIX: Rimuovere background/bordo indesiderato sopra breadcrumb
+    border: none;
+    box-shadow: none;
   }
 
   .btn-back {
@@ -1857,6 +1878,10 @@ section.viewpoint-tab {
   .page-root {
     padding: var(--inner-page-padding);
     padding-top: 0;
+
+    // FIX: Rimuovere background indesiderato
+    background: transparent;
+    border: none;
   }
 
   .view-editor-header {
@@ -1866,6 +1891,14 @@ section.viewpoint-tab {
     display: inline-flex;
     margin-top: 24px !important;
     margin-bottom: $spacing-sm;
+
+    // FIX: Rimuovere background/bordo sopra breadcrumb
+    background: transparent;
+    border: none;
+
+    &::after {
+      display: none;
+    }
 
     .path-list {
       display: inline-flex;
@@ -1961,39 +1994,39 @@ section.viewpoint-tab {
 // ============================================
 
 .viewpoint-box {
-  margin: 0 0 12px 0;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
+  margin: 0 0 8px 0; // Reduced from 12px
+  border: 1px solid #e2e8f0; // Light border (slate-200)
+  border-radius: 6px; // Slightly smaller radius
   background: #ffffff;
   overflow: hidden;
   list-style: none;
-  
+
   &--active {
-    border-color: #475569;
-    box-shadow: 0 0 0 1px rgba(71, 85, 105, 0.1);
+    border-color: #94a3b8; // slate-400 - not too dark
+    box-shadow: 0 0 0 1px rgba(71, 85, 105, 0.08);
   }
-  
+
   &--overlay {
-    border-style: solid!important;
-    border-color: #cbd5e1;
+    border-style: solid !important;
+    border-color: #cbd5e1; // Light border
   }
 }
 
-// Viewpoint Header
+// Viewpoint Header - compact
 .viewpoint-box__header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 12px;
+  padding: 8px 10px; // Reduced padding
   background: #f8fafc;
   border-bottom: 1px solid #e2e8f0;
   cursor: pointer;
   transition: background-color 150ms ease;
-  
+
   &:hover {
     background: #f1f5f9;
   }
-  
+
   .viewpoint-box--active & {
     background: rgba(71, 85, 105, 0.06);
     border-bottom-color: rgba(71, 85, 105, 0.15);
@@ -2074,8 +2107,8 @@ section.viewpoint-tab {
 
 // Viewpoint Content (Views container)
 .viewpoint-box__content {
-  padding: 8px 4px 8px 0;
-  
+  padding: 4px 4px 6px 0; // Reduced padding
+
   > ul {
     list-style: none;
     margin: 0;
@@ -2216,8 +2249,8 @@ section.viewpoint-tab {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  min-height: 36px;
-  padding: 4px 12px 4px 12px;
+  min-height: 28px; // Reduced from 36px - compact rows
+  padding: 2px 12px 2px 12px; // Reduced vertical padding
   margin: 1px 8px;
   border-radius: 6px;
   cursor: pointer;
@@ -2292,36 +2325,37 @@ section.viewpoint-tab {
   display: flex;
   align-items: center;
   gap: 4px;
-  
+
   .priority {
-    min-width: 70px;
+    min-width: 50px;
     height: 22px;
-    padding: 0 8px;
-    font-size: 10px;
-    font-family: 'SF Mono', 'Monaco', monospace;
-    color: #94a3b8;
+    padding: 0 6px;
+    font-size: 11px;
+    font-weight: 500;
+    font-family: 'Inter Variable', -apple-system, sans-serif;
+    color: #64748b; // slate-500 - più visibile
     background: #f8fafc;
     border: 1px solid #e2e8f0;
     border-radius: 4px;
     line-height: 20px;
     text-align: center;
   }
-  
+
   .priority-clear {
-    font-size: 14px;
+    font-size: 12px; // Reduced
     color: #94a3b8;
     cursor: pointer;
     padding: 2px;
     border-radius: 4px;
-    
+
     &:hover {
       color: #64748b;
       background: #f1f5f9;
     }
   }
-  
+
   .priority-booster {
-    width: 44px;
+    width: 40px;
     height: 22px;
     padding: 0 4px;
     font-size: 11px;
@@ -2330,11 +2364,19 @@ section.viewpoint-tab {
     border: 1px solid #e2e8f0;
     border-radius: 4px;
     background: #ffffff;
-    
+
+    // Hide spinner for compact look
+    -moz-appearance: textfield;
+    &::-webkit-outer-spin-button,
+    &::-webkit-inner-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+
     &:focus {
       outline: none;
-      border-color: #475569;
-      box-shadow: 0 0 0 2px rgba(71, 85, 105, 0.1);
+      border-color: #334155;
+      box-shadow: 0 0 0 2px rgba(51, 65, 85, 0.1);
     }
   }
 }
@@ -2381,11 +2423,11 @@ section.viewpoint-tab {
   }
 }
 
-// Nested views indentation
+// Nested views indentation - compact
 .view-entry__children {
   list-style: none;
   margin: 0;
-  padding: 0 0 0 28px;
+  padding: 0 0 0 20px; // Reduced from 28px
 }
 
 // ============================================
@@ -2393,14 +2435,14 @@ section.viewpoint-tab {
 // ============================================
 
 .view-entry .icon.type {
-  width: 24px;
-  height: 24px;
-  min-width: 24px;
+  width: 22px; // Compact - reduced from 24px
+  height: 22px;
+  min-width: 22px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 6px;
-  font-size: 11px;
+  border-radius: 5px;
+  font-size: 10px; // Reduced from 11px
   font-weight: 600;
   flex-shrink: 0;
 }

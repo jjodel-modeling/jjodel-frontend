@@ -7,6 +7,92 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.0.3] - 2026-01-26
+
+### Added
+
+#### Vertical Toggle Component
+- New `VerticalToggle` component for Navbar toggles (Debug/Mode)
+- Minimal vertical pill design (12x28px) with 9px thumb
+- Fixed-width labels (65px) to prevent layout shift
+- Dark mode support with inverted colors
+
+#### Events Tab Redesign
+- Complete visual redesign of Events tab in Viewpoints
+- Separate sections for Default Events and Custom Events
+- Professional empty state with add button
+- Editor toolbar styling improvements
+
+### Changed
+
+#### Viewpoints Panel Priority Styling
+- Priority label: 11px font, weight 500, slate-500 color
+- Priority input: 40x22px with hidden spinner
+- Font family: Inter Variable for labels, SF Mono for inputs
+
+#### Form Focus States Standardization
+- Unified focus ring color: slate-700 (light mode), slate-500 (dark mode)
+- Consistent shadow: 3px ring with 15-25% opacity
+- CSS variables for easy theming
+
+#### JjodieWidget Positioning
+- Fixed bottom-right positioning with `!important` overrides
+- Ensured FAB stays in correct position across all views
+
+### Files Modified
+- `frontend/src/components/ui/VerticalToggle.tsx` (new)
+- `frontend/src/components/ui/VerticalToggle.scss` (new)
+- `frontend/src/pages/components/Navbar.tsx`
+- `frontend/src/pages/components/navbar.scss`
+- `frontend/src/components/editors/views/nestedView.scss`
+- `frontend/src/components/editors/views/data/CustomData.tsx`
+- `frontend/src/components/editors/views/data/events-tab.scss`
+- `frontend/src/styles/components/_form-system.scss`
+- `frontend/src/components/JjodieWidget/jjodie-widget.scss`
+
+---
+
+## [2.0.2] - 2026-01-25
+
+### Added
+
+#### Monaco Editor Fullscreen Integration
+- `EditorToolbar` component for all Monaco editors
+- `EditorFullscreenModal` for comfortable editing (92vw x 88vh)
+- Keyboard shortcuts: ESC to close, Ctrl/Cmd+S to save
+- Word wrap toggle, copy to clipboard, format document
+- Integrated in 6 editors: Js, Javascript, Ocl, PaletteData, MTM, FunctionComponent
+
+#### Breadcrumb Type Badge
+- VIEW/VIEWPOINT badge in breadcrumb navigation
+- VIEW badge: Slate color (#475569)
+- VIEWPOINT badge: Violet color (#8b5cf6)
+
+### Changed
+
+#### Removed Redundant Headers
+- Removed "View: {name}" header from all tab content
+- Information now shown only in breadcrumb (no duplication)
+
+### Files Created
+- `frontend/src/components/editors/EditorToolbar.tsx`
+- `frontend/src/components/editors/EditorToolbar.scss`
+- `frontend/src/components/editors/EditorFullscreenModal.tsx`
+- `frontend/src/components/editors/EditorFullscreenModal.scss`
+- `frontend/src/components/editors/monacoConfig.ts`
+
+### Files Modified
+- `frontend/src/components/editors/languages/Js.tsx`
+- `frontend/src/components/editors/languages/Javascript.tsx`
+- `frontend/src/components/editors/languages/Ocl.tsx`
+- `frontend/src/components/editors/views/data/PaletteData.tsx`
+- `frontend/src/components/editors/MTM.tsx`
+- `frontend/src/components/forEndUser/FunctionComponent.tsx`
+- `frontend/src/components/editors/views/ViewData.tsx`
+- `frontend/src/components/editors/views/nestedView.scss`
+
+---
+
 ## [2.0.1] - 2026-01-24
 
 ### Fixed

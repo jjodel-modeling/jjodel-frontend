@@ -671,11 +671,12 @@ input[type="number"] {
 .options-tab,
 .permissions-tab,
 .page-root {
-  background-color: #f8fafc !important;
+  background-color: transparent!important; //  #f8fafc !important;
   min-height: 100% !important;
-  height: auto !important;
-  padding: 16px !important;
+  height: fit-content !important;
+  padding: 3px !important;
   box-sizing: border-box !important;
+  padding-bottom: 10px;
 }
 
 // Ensure tab content wrapper allows extension
