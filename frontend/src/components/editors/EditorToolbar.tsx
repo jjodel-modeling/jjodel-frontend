@@ -4,12 +4,12 @@
  * Fornisce controlli comuni: Wrap, Copy, Expand, Fullscreen
  */
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, ReactNode } from 'react';
 import './EditorToolbar.scss';
 
 export interface EditorToolbarProps {
-  /** Titolo/label dell'editor */
-  title: string;
+  /** Titolo/label dell'editor (string o ReactNode per custom event name inputs) */
+  title: ReactNode;
   /** Icona Bootstrap Icons (es: 'bi-code-slash') */
   icon?: string;
   /** Contenuto attuale dell'editor (per Copy) */
@@ -87,10 +87,19 @@ export function EditorToolbar({
     onFullscreenOpen?.();
   }, [onFullscreenOpen]);
 
+  // Handle collapse toggle - don't trigger when clicking on input elements
+  const handleLeftClick = useCallback((e: React.MouseEvent) => {
+    // Don't trigger collapse when clicking on input (for custom event name editing)
+    if ((e.target as HTMLElement).tagName === 'INPUT') {
+      return;
+    }
+    onCollapseToggle?.();
+  }, [onCollapseToggle]);
+
   return (
     <div className={`editor-toolbar ${className}`}>
       {/* Left side: collapse toggle + title */}
-      <div className="editor-toolbar__left" onClick={onCollapseToggle}>
+      <div className="editor-toolbar__left" onClick={handleLeftClick}>
         {onCollapseToggle && (
           <button
             type="button"

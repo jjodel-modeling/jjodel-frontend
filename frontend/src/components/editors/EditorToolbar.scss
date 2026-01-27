@@ -41,6 +41,36 @@
     font-weight: 500;
     color: var(--color-text-secondary, #6B7280);
     transition: color 150ms ease;
+
+    // Support for custom event name input inside title
+    input {
+      font-family: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
+      font-size: 13px;
+      font-weight: 500;
+      color: #334155;
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 4px;
+      padding: 4px 8px;
+      min-width: 120px;
+      transition: all 150ms ease;
+
+      &:focus {
+        outline: none;
+        border-color: var(--form-input-border-color-focus, #334155);
+        box-shadow: var(--form-input-focus-shadow, 0 0 0 3px rgba(51, 65, 85, 0.15));
+      }
+
+      &:hover:not(:focus):not(:disabled) {
+        border-color: #cbd5e1;
+      }
+
+      &:disabled {
+        background: #f8fafc;
+        color: #64748b;
+        cursor: not-allowed;
+      }
+    }
   }
 
   // Right side: action buttons
@@ -105,6 +135,27 @@
     &__icon,
     &__title {
       color: var(--color-text-secondary-dark, #9CA3AF);
+    }
+
+    // Custom event name input in dark mode
+    &__title input {
+      background: #1e293b;
+      border-color: #334155;
+      color: #f1f5f9;
+
+      &:focus {
+        border-color: #60a5fa;
+        box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.15);
+      }
+
+      &:hover:not(:focus):not(:disabled) {
+        border-color: #475569;
+      }
+
+      &:disabled {
+        background: #0f172a;
+        color: #64748b;
+      }
     }
 
     &__left:hover .editor-toolbar__title {

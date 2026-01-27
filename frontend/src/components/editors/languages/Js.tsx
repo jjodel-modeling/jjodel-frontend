@@ -67,7 +67,7 @@ function JsEditorComponent(props: AllProps) {
 
     return <>
         <EditorToolbar
-            title={typeof title === 'string' ? title : 'JS Editor'}
+            title={title || 'JS Editor'}
             icon="bi-filetype-js"
             content={js || ''}
             collapsed={!show}
