@@ -8,9 +8,9 @@ function GraphDataComponent(props: AllProps) {
     const readOnly = props.readonly;
     let empty = true;
     // if (empty) return null;
-    return(<section>
+    return(<section className="graph">
         <h5>Graph</h5>
-        <div className={'px-2 no-padding-left'}>
+        <div className={'px-2'}>
             <div className={'input-container'}>
                 <b className={'me-2'}>No options for Graph so far...</b>
             </div>

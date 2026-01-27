@@ -11,6 +11,7 @@ import EdgePointData from "./EdgePointData";
 import FieldData from "./FieldData";
 import GraphData from "./GraphData";
 import NodeData from "./NodeData";
+import "./viewoptions.scss";
 
 function GenericNodeDataComponent(props: AllProps) {
     const view = props.view;
