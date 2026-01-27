@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback, JSX } from 'react';
+import { useNavigate } from 'react-router-dom';
 import './jjodie-widget.scss';
 
 /**
@@ -123,6 +124,7 @@ const findResponse = (query: string): string => {
  * Features simulated responses based on keywords.
  */
 export function JjodieWidget(): JSX.Element {
+    const navigate = useNavigate();
     const [isOpen, setIsOpen] = useState(false);
     const [messages, setMessages] = useState<Message[]>([]);
     const [inputValue, setInputValue] = useState('');
@@ -150,6 +152,19 @@ export function JjodieWidget(): JSX.Element {
     }, [isOpen]);
 
     /**
+     * Listen for jodie:open event from navbar button
+     */
+    useEffect(() => {
+        const handleOpenEvent = () => {
+            setIsOpen(true);
+        };
+        window.addEventListener('jodie:open', handleOpenEvent);
+        return () => {
+            window.removeEventListener('jodie:open', handleOpenEvent);
+        };
+    }, []);
+
+    /**
      * Handle opening the chat panel
      */
     const handleOpen = useCallback(() => {
@@ -162,6 +177,14 @@ export function JjodieWidget(): JSX.Element {
     const handleClose = useCallback(() => {
         setIsOpen(false);
     }, []);
+
+    /**
+     * Handle opening settings page
+     */
+    const handleOpenSettings = useCallback(() => {
+        setIsOpen(false); // Minimize chat
+        navigate('/settings');
+    }, [navigate]);
 
     /**
      * Handle sending a message
@@ -326,6 +349,14 @@ export function JjodieWidget(): JSX.Element {
                         <div className="jjodie-header-actions">
                             <button
                                 className="jjodie-header-btn"
+                                onClick={handleOpenSettings}
+                                aria-label="Settings"
+                                title="AI Settings"
+                            >
+                                <i className="bi bi-gear" />
+                            </button>
+                            <button
+                                className="jjodie-header-btn jjodie-close-btn"
                                 onClick={handleClose}
                                 aria-label="Close"
                             >

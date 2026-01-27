@@ -181,6 +181,11 @@ $transition: 150ms ease;
   background: #ffffff;
   border: 1px solid #d0d3d8;
 
+  // Icons should be slate on light backgrounds
+  i, .bi, svg {
+    color: #475569;
+  }
+
   &:hover:not(:disabled) {
     background: #f1f5f9;
     border-color: #b8bcc4;
@@ -195,6 +200,11 @@ $transition: 150ms ease;
   background: #475569;
   border: none;
 
+  // CRITICAL: Icons must be white on dark backgrounds
+  i, .bi, svg {
+    color: #ffffff !important;
+  }
+
   &:hover:not(:disabled) {
     background: #334155;
   }
@@ -205,6 +215,11 @@ $transition: 150ms ease;
   color: #ffffff;
   background: #475569;
   border: none;
+
+  // CRITICAL: Icons must be white on dark backgrounds
+  i, .bi, svg {
+    color: #ffffff !important;
+  }
 
   &:hover:not(:disabled) {
     background: #334155;
@@ -231,6 +246,11 @@ $transition: 150ms ease;
   background: #EF4444;
   border: none;
 
+  // CRITICAL: Icons must be white on dark backgrounds
+  i, .bi, svg {
+    color: #ffffff !important;
+  }
+
   &:hover:not(:disabled) {
     background: #DC2626;
   }
@@ -245,6 +265,11 @@ $transition: 150ms ease;
   color: #ffffff;
   background: #475569; // Slate-600
   border: none;
+
+  // CRITICAL: Icons must be white on dark backgrounds
+  i, .bi, svg {
+    color: #ffffff !important;
+  }
 
   &:hover:not(:disabled) {
     background: #334155; // Slate-700

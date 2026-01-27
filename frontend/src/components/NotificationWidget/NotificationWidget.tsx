@@ -47,6 +47,24 @@ export const NotificationWidget: React.FC = () => {
     localStorage.setItem('jjodel-dismissed-notifications', JSON.stringify(dismissedIds));
   }, [dismissedIds]);
 
+  // Signal to other components (like Jjodie FAB) when notification is visible
+  useEffect(() => {
+    const shouldShow = isVisible && posts.length > 0 && !isLoading;
+    const hasTipsDismissed = sessionStorage.getItem('jjodel-tips-dismissed') === 'true';
+    const hasSystemNotice = posts.filter(p => p.category === 'system-notice' && !dismissedIds.includes(p.id)).length > 0;
+    const isActuallyVisible = shouldShow && (hasSystemNotice || !hasTipsDismissed);
+
+    if (isActuallyVisible) {
+      document.body.setAttribute('data-notification-visible', 'true');
+    } else {
+      document.body.removeAttribute('data-notification-visible');
+    }
+
+    return () => {
+      document.body.removeAttribute('data-notification-visible');
+    };
+  }, [isVisible, posts, isLoading, dismissedIds]);
+
   // Hide widget on auth page
   if (window.location.hash.includes('auth')) return null;
 

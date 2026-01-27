@@ -1162,24 +1162,6 @@ function NavbarComponent(props: AllProps) {
         </section>);
     };
 
-    // Jodie AI Assistant button
-    const JodieButton = () => {
-        const openJodie = () => {
-            window.dispatchEvent(new CustomEvent('jodie:open'));
-        };
-
-        return (
-            <button
-                className="jodie-trigger-btn"
-                onClick={openJodie}
-                title="Ask Jodie - AI Assistant"
-            >
-                <i className="bi bi-chat-heart" />
-                <span>Jodie</span>
-            </button>
-        );
-    };
-
     // TreeView Toggle button
     // Dispatches custom event to toggle the Tree View sidebar
     const TreeViewToggle = () => {
@@ -1334,7 +1316,10 @@ function NavbarComponent(props: AllProps) {
                         R.navigate('/account');
                         U.resetState();
                     }}>Profile</Item>
-                    <Item icon={<i className="bi bi-person-gear" />} action={placeholder} disabled={true}>Account</Item>
+                    <Item icon={<i className="bi bi-gear" />} action={()=> {
+                        R.navigate('/settings');
+                        U.resetState();
+                    }}>Settings</Item>
                     <Item icon={<i className="bi bi-box-arrow-left" />} action={async ()=> {
                         if (isProjectModified()) {
                             U.dialog('You are about to log out without saving your project. Do you want to proceed?', 'logout', async ()=>{
@@ -1401,7 +1386,6 @@ function NavbarComponent(props: AllProps) {
                 {/* Divider */}
                 {project && <div className="navbar__divider" />}
                 {/* User Controls */}
-                <JodieButton />
                 <HelpMenu />
                 <UserMenu />
             </div>

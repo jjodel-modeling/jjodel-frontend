@@ -236,6 +236,11 @@ $transition-normal: 250ms ease;
   background: linear-gradient(135deg, #64748b 0%, $color-accent 100%);
   border: none;
 
+  /* CRITICAL: Icons must be white on dark backgrounds */
+  i, .bi, svg {
+    color: #ffffff !important;
+  }
+
   &:hover:not(:disabled) {
     background: linear-gradient(135deg, $color-accent 0%, $color-accent-hover 100%);
   }
@@ -245,6 +250,11 @@ $transition-normal: 250ms ease;
   color: $color-text-primary;
   background-color: transparent;
   border: 1px solid $color-border;
+
+  /* Icons should be slate on light backgrounds */
+  i, .bi, svg {
+    color: #475569;
+  }
 
   &:hover:not(:disabled) {
     background-color: $color-bg-secondary;
@@ -256,6 +266,11 @@ $transition-normal: 250ms ease;
   color: $color-accent;
   background-color: rgba(71, 85, 105, 0.1);
   border: none;
+
+  /* Icons should be slate on light backgrounds */
+  i, .bi, svg {
+    color: #475569;
+  }
 
   &:hover:not(:disabled) {
     background-color: rgba(71, 85, 105, 0.15);

@@ -37,7 +37,6 @@ import AlertVisualizer from "./components/alert/Alert";
 import DialogVisualizer from './components/alert/Dialog';
 import { NotificationWidget } from './components/NotificationWidget/NotificationWidget';
 import { Jodie } from './components/Jodie';
-import { JjodieWidget } from './components/JjodieWidget';
 import { DevModeProvider } from './contexts/DevModeContext';
 
 let firstLoading = true;
@@ -121,10 +120,9 @@ function App(props: AllProps): JSX.Element {
                         </>
                         }
                     </Routes></Try>
+                    {user && <Try><NotificationWidget/></Try>}
+                    {user && <Try><Jodie/></Try>}
                 </HashRouter>
-                {user && <Try><NotificationWidget/></Try>}
-                {user && <Try><Jodie/></Try>}
-                {user && <Try><JjodieWidget/></Try>}
 
             </div>
         </DevModeProvider>

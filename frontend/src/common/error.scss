@@ -72,19 +72,29 @@
 // }
 
 // Error Root - Container for inline errors on canvas
+// ZOOM-INDEPENDENT: Counter-scales based on --canvas-zoom CSS variable
 .error-root.ui-draggable.hoverable {
     overflow: visible;
     text-align: center;
     border-color: #f59e0b; // Orange warning, not red panic
     margin: 10px;
     pointer-events: all;
+
+    // Counter-scale to make zoom-independent
+    // The --canvas-zoom variable should be set on the canvas container
+    --counter-scale: calc(1 / var(--canvas-zoom, 1));
+    transform: scale(var(--counter-scale));
+    transform-origin: center center;
 }
 
 // Error Notification - Redesigned for better UX
 // User-friendly with orange warning (not red panic)
+// ZOOM-INDEPENDENT: Fixed visual size regardless of canvas zoom
 .error-notification {
     font-family: 'Inter Variable', -apple-system, BlinkMacSystemFont, sans-serif;
     border-radius: 12px;
+    // Fixed width in pixels (won't scale with zoom)
+    width: 400px;
     max-width: 500px;
     &.content { min-width: 360px; }
     margin: 12px auto;
@@ -192,6 +202,234 @@
 
 
 
+// ============================================
+// ERROR NOTIFICATION PORTAL - Zoom Independent
+// Rendered via React Portal at document.body level
+// ============================================
+.error-notification-portal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(15, 23, 42, 0.4);
+    z-index: 9998;
+    pointer-events: auto;
+    animation: errorFadeIn 200ms ease;
+    cursor: pointer; // Indicate clickable backdrop
+
+    .error-notification {
+        // Override any parent scaling - fixed visual size
+        transform: none !important;
+        width: 400px;
+        max-width: 90vw;
+        animation: errorSlideIn 250ms ease;
+        cursor: default; // Reset cursor inside modal
+        position: relative;
+    }
+}
+
+// Close button for error notification
+.error-notification-close {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    border-radius: 8px;
+    color: #94a3b8;
+    cursor: pointer;
+    transition: all 150ms ease;
+    z-index: 1;
+
+    &:hover {
+        background: #f1f5f9;
+        color: #475569;
+    }
+
+    i {
+        font-size: 18px;
+    }
+}
+
+// Action buttons for error notification
+.error-notification-actions {
+    display: flex;
+    justify-content: center;
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px solid #e2e8f0;
+
+    .btn-dismiss {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 120px;
+        padding: 10px 20px;
+        font-family: 'Inter Variable', -apple-system, BlinkMacSystemFont, sans-serif;
+        font-size: 14px;
+        font-weight: 500;
+        color: #ffffff;
+        background: linear-gradient(135deg, #64748b 0%, #475569 100%);
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 150ms ease;
+
+        &:hover {
+            background: linear-gradient(135deg, #475569 0%, #334155 100%);
+        }
+    }
+}
+
+@keyframes errorFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes errorSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-20px) scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+// ============================================
+// ERROR BADGE - Slick Modern Design
+// Clickable badge with left accent border
+// ============================================
+.error-badge-slick {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 16px;
+    background: #ffffff;
+    border: 1px solid #fecaca;
+    border-left: 4px solid #ef4444;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 200ms ease;
+    box-shadow: 0 2px 8px rgba(239, 68, 68, 0.1);
+    min-width: 200px;
+    max-width: 350px;
+    animation: errorPulse 2s ease-in-out infinite;
+
+    &:hover {
+        background: #fef2f2;
+        border-color: #fca5a5;
+        box-shadow: 0 4px 12px rgba(239, 68, 68, 0.15);
+        transform: translateY(-1px);
+        animation: none; // Stop pulse on hover
+    }
+
+    &:active {
+        transform: translateY(0);
+    }
+
+    // Icon container
+    .error-badge-icon {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 32px;
+        height: 32px;
+        background: #fef2f2;
+        border-radius: 8px;
+        flex-shrink: 0;
+
+        i {
+            font-size: 16px;
+            color: #ef4444;
+        }
+    }
+
+    // Text content
+    .error-badge-content {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        min-width: 0; // For text-overflow
+    }
+
+    // Main title
+    .error-badge-title {
+        font-family: 'Inter Variable', -apple-system, BlinkMacSystemFont, sans-serif;
+        font-size: 13px;
+        color: #991b1b;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+
+        strong {
+            font-weight: 600;
+            color: #7f1d1d;
+        }
+    }
+
+    // Instance info
+    .error-badge-instance {
+        font-family: 'Inter Variable', -apple-system, BlinkMacSystemFont, sans-serif;
+        font-size: 11px;
+        color: #64748b;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+}
+
+// Subtle pulse animation to attract attention
+@keyframes errorPulse {
+    0%, 100% {
+        box-shadow: 0 2px 8px rgba(239, 68, 68, 0.1);
+    }
+    50% {
+        box-shadow: 0 2px 12px rgba(239, 68, 68, 0.25);
+    }
+}
+
+// Legacy support for old class name
+.error-indicator-only {
+    @extend .error-badge-slick;
+}
+
+// Instance info section in modal
+.error-instance-info {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    padding: 12px 16px;
+    margin: 12px 0;
+    background: #f8fafc;
+    border-radius: 8px;
+    font-family: 'Inter Variable', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: 13px;
+    color: #475569;
+
+    .error-instance-name,
+    .error-node-name {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+
+        strong {
+            color: #64748b;
+            font-weight: 500;
+        }
+    }
+}
+
 // Notification icon - Small warning indicator
 .notification-icon {
     position: absolute;
@@ -213,4 +451,205 @@
     &.opened::before {
         color: #64748b; // Muted when opened
     }
-} 
+}
+
+// ============================================
+// DARK MODE SUPPORT
+// ============================================
+@media (prefers-color-scheme: dark) {
+    .error-notification-portal {
+        background: rgba(0, 0, 0, 0.6);
+
+        .error-notification {
+            background-color: #1e293b;
+            border-color: #334155;
+            color: #e2e8f0;
+
+            &::before {
+                background: rgba(234, 88, 12, 0.15);
+                color: #fb923c;
+            }
+
+            h1 {
+                color: #f1f5f9;
+            }
+
+            h2 {
+                color: #94a3b8;
+            }
+
+            .error-type b {
+                background: rgba(220, 38, 38, 0.15);
+                color: #f87171;
+            }
+
+            .error-details {
+                background-color: #0f172a;
+                border: 1px solid #334155;
+            }
+        }
+
+        .error-notification-close {
+            color: #64748b;
+
+            &:hover {
+                background: #334155;
+                color: #e2e8f0;
+            }
+        }
+
+        .error-notification-actions {
+            border-color: #334155;
+
+            .btn-dismiss {
+                background: linear-gradient(135deg, #475569 0%, #334155 100%);
+
+                &:hover {
+                    background: linear-gradient(135deg, #64748b 0%, #475569 100%);
+                }
+            }
+        }
+    }
+
+    .error-badge-slick,
+    .error-indicator-only {
+        background: #1e293b;
+        border-color: #7f1d1d;
+        border-left-color: #f87171;
+        box-shadow: 0 2px 8px rgba(248, 113, 113, 0.15);
+
+        .error-badge-icon {
+            background: rgba(248, 113, 113, 0.15);
+
+            i {
+                color: #f87171;
+            }
+        }
+
+        .error-badge-title {
+            color: #fca5a5;
+
+            strong {
+                color: #fecaca;
+            }
+        }
+
+        .error-badge-instance {
+            color: #94a3b8;
+        }
+
+        &:hover {
+            background: rgba(248, 113, 113, 0.1);
+            box-shadow: 0 4px 12px rgba(248, 113, 113, 0.2);
+        }
+    }
+
+    .error-instance-info {
+        background: #0f172a;
+        color: #e2e8f0;
+
+        .error-instance-name strong,
+        .error-node-name strong {
+            color: #94a3b8;
+        }
+    }
+}
+
+[data-theme="dark"] {
+    .error-notification-portal {
+        background: rgba(0, 0, 0, 0.6);
+
+        .error-notification {
+            background-color: #1e293b;
+            border-color: #334155;
+            color: #e2e8f0;
+
+            &::before {
+                background: rgba(234, 88, 12, 0.15);
+                color: #fb923c;
+            }
+
+            h1 {
+                color: #f1f5f9;
+            }
+
+            h2 {
+                color: #94a3b8;
+            }
+
+            .error-type b {
+                background: rgba(220, 38, 38, 0.15);
+                color: #f87171;
+            }
+
+            .error-details {
+                background-color: #0f172a;
+                border: 1px solid #334155;
+            }
+        }
+
+        .error-notification-close {
+            color: #64748b;
+
+            &:hover {
+                background: #334155;
+                color: #e2e8f0;
+            }
+        }
+
+        .error-notification-actions {
+            border-color: #334155;
+
+            .btn-dismiss {
+                background: linear-gradient(135deg, #475569 0%, #334155 100%);
+
+                &:hover {
+                    background: linear-gradient(135deg, #64748b 0%, #475569 100%);
+                }
+            }
+        }
+
+        .error-instance-info {
+            background: #0f172a;
+            color: #e2e8f0;
+
+            .error-instance-name strong,
+            .error-node-name strong {
+                color: #94a3b8;
+            }
+        }
+    }
+
+    .error-badge-slick,
+    .error-indicator-only {
+        background: #1e293b;
+        border-color: #7f1d1d;
+        border-left-color: #f87171;
+        box-shadow: 0 2px 8px rgba(248, 113, 113, 0.15);
+
+        .error-badge-icon {
+            background: rgba(248, 113, 113, 0.15);
+
+            i {
+                color: #f87171;
+            }
+        }
+
+        .error-badge-title {
+            color: #fca5a5;
+
+            strong {
+                color: #fecaca;
+            }
+        }
+
+        .error-badge-instance {
+            color: #94a3b8;
+        }
+
+        &:hover {
+            background: rgba(248, 113, 113, 0.1);
+            box-shadow: 0 4px 12px rgba(248, 113, 113, 0.2);
+        }
+    }
+}

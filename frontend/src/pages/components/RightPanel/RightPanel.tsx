@@ -1,6 +1,5 @@
 import React, { JSX, useMemo } from 'react';
 import { LProject, LUser, DUser, L, R } from '../../../joiner';
-import { StatCard } from './StatCard';
 import { ActivityItem } from './ActivityItem';
 import { GroupedActivityItem } from './GroupedActivityItem';
 import { QuickActionButton } from './QuickActionButton';
@@ -66,33 +65,54 @@ export function RightPanel(props: RightPanelProps): JSX.Element {
             {/* Dev Mode Label */}
             <DevModeLabel componentId="T4.4" position="bottom-right" />
 
-            {/* Stats Section */}
+            {/* Overview Section - Unified Card with 4 Quadrants */}
             <div className="panel-section">
                 <h3 className="section-title">Overview</h3>
-                <div className="stats-grid">
-                    <StatCard
-                        icon="bi-folder"
-                        label="Total Projects"
-                        value={totalProjects}
-                    />
-                    <StatCard
-                        icon="bi-star-fill"
-                        label="Favorites"
-                        value={favoriteCount}
-                        accent="warning"
-                    />
-                    <StatCard
-                        icon="bi-clock-history"
-                        label="Modified Today"
-                        value={recentlyModified}
-                        accent="info"
-                    />
-                    <StatCard
-                        icon="bi-person"
-                        label="Account"
-                        value={user?.email ? 'Active' : 'Guest'}
-                        accent="success"
-                    />
+                <div className="overview-grid">
+                    <div
+                        className="overview-cell"
+                        onClick={() => R.navigate('/allProjects', true)}
+                        role="button"
+                        tabIndex={0}
+                        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') R.navigate('/allProjects', true); }}
+                    >
+                        <i className="bi bi-folder overview-icon" />
+                        <span className="cell-value">{totalProjects}</span>
+                        <span className="overview-label">Projects</span>
+                    </div>
+                    <div
+                        className="overview-cell"
+                        onClick={() => R.navigate('/allProjects?filter=favorites', true)}
+                        role="button"
+                        tabIndex={0}
+                        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') R.navigate('/allProjects?filter=favorites', true); }}
+                    >
+                        <i className="bi bi-star-fill overview-icon" />
+                        <span className="cell-value">{favoriteCount}</span>
+                        <span className="overview-label">Favorites</span>
+                    </div>
+                    <div
+                        className="overview-cell"
+                        onClick={() => R.navigate('/allProjects?filter=recent', true)}
+                        role="button"
+                        tabIndex={0}
+                        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') R.navigate('/allProjects?filter=recent', true); }}
+                    >
+                        <i className="bi bi-clock-history overview-icon" />
+                        <span className="cell-value">{recentlyModified}</span>
+                        <span className="overview-label">Modified Today</span>
+                    </div>
+                    <div
+                        className="overview-cell"
+                        onClick={() => R.navigate('/account', true)}
+                        role="button"
+                        tabIndex={0}
+                        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') R.navigate('/account', true); }}
+                    >
+                        <i className="bi bi-person overview-icon" />
+                        <span className="cell-value">—</span>
+                        <span className="overview-label">Account</span>
+                    </div>
                 </div>
             </div>
 

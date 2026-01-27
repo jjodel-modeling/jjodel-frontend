@@ -540,6 +540,11 @@ select.form-select {
   background: #334155;
   color: white;
 
+  /* CRITICAL: Icons must be white on dark backgrounds */
+  i, .bi, svg {
+    color: #ffffff !important;
+  }
+
   &:hover:not(:disabled) {
     background: #475569;
   }
@@ -553,6 +558,11 @@ select.form-select {
   background: transparent;
   color: #334155;
   border: 1px solid #e2e8f0;
+
+  /* Icons should be slate on light backgrounds */
+  i, .bi, svg {
+    color: #475569;
+  }
 
   &:hover:not(:disabled) {
     background: #f8fafc;

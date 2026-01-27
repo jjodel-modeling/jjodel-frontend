@@ -113,7 +113,7 @@ function InfoDataComponent(props: AllProps) {
 
             {/* Appliable to - vertical layout */}
             <div className="form-field">
-                <label className="form-label">Appliable to</label>
+                <label className="form-label">Appliable to *** </label>
                 <Select
                     data={view}
                     field={'appliableToClasses'}

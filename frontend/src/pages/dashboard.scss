@@ -57,8 +57,10 @@
   cursor: pointer;
   transition: var(--transition-fast);
 
+  /* Icons should be slate on light backgrounds */
   .bi {
     font-size: var(--text-base);
+    color: #475569;
   }
 
   &:hover {
@@ -393,6 +395,7 @@
      ============================================ */
 
   .dash-content {
+
     flex-grow: 1;
     flex-basis: 0;
     overflow-y: auto;
@@ -412,7 +415,7 @@
       max-height: calc(100% - 40px);
       width: auto;
     }
-
+ 
     .name {
       margin: auto;
     }
@@ -453,6 +456,10 @@
         margin-right: 0;
       }
     }
+  }
+  
+  .dash-content:has(.settings-page) {
+    height: 100%;
   }
 
   /* ============================================

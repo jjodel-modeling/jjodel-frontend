@@ -4,16 +4,15 @@
  */
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { JodieWindow } from './JodieWindow';
 import { JodieMinimized } from './JodieMinimized';
-import { SettingsModal } from './SettingsModal';
 import { AIProvider, ChatMessage, ChatState, PROVIDER_INFO } from '../../types/jodie';
 import { JodieConfigService } from '../../services/JodieConfig';
 import { AIProviderService } from '../../services/AIProviderService';
 import { JjodieContextService } from '../../services/JjodieContext';
 import { DUser, L, LUser, LProject } from '../../joiner';
 import './JodieWindow.css';
-import './SettingsModal.css';
 
 // Generate unique message ID
 function generateMessageId(): string {
@@ -21,17 +20,16 @@ function generateMessageId(): string {
 }
 
 export function Jodie(): JSX.Element {
+    const navigate = useNavigate();
+
     // Chat state
     const [chatState, setChatState] = useState<ChatState>({
         messages: [],
         isOpen: false,
-        isMinimized: false,
+        isMinimized: false,  // Kept for type compatibility
         isWaiting: false,
         hasUnread: false,
     });
-
-    // Settings modal state
-    const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
     // Active provider
     const [activeProvider, setActiveProvider] = useState<AIProvider>(() =>
@@ -68,22 +66,28 @@ export function Jodie(): JSX.Element {
         return undefined;
     }, []);
 
-    // Listen for open and settings events
+    // Listen for open event
     useEffect(() => {
         const handleOpenJodie = () => {
-            setChatState(prev => ({ ...prev, isOpen: true, isMinimized: false, hasUnread: false }));
-        };
-
-        const handleOpenSettings = () => {
-            setIsSettingsOpen(true);
-            setChatState(prev => ({ ...prev, isOpen: true, isMinimized: false }));
+            setChatState(prev => ({ ...prev, isOpen: true, hasUnread: false }));
         };
 
         window.addEventListener('jodie:open', handleOpenJodie);
-        window.addEventListener('jodie:open-settings', handleOpenSettings);
         return () => {
             window.removeEventListener('jodie:open', handleOpenJodie);
-            window.removeEventListener('jodie:open-settings', handleOpenSettings);
+        };
+    }, []);
+
+    // Listen for settings changes from Settings page
+    useEffect(() => {
+        const handleSettingsChanged = () => {
+            // Refresh active provider when settings change
+            setActiveProvider(JodieConfigService.getActiveProvider());
+        };
+
+        window.addEventListener('ai-settings-changed', handleSettingsChanged);
+        return () => {
+            window.removeEventListener('ai-settings-changed', handleSettingsChanged);
         };
     }, []);
 
@@ -104,25 +108,15 @@ export function Jodie(): JSX.Element {
         setChatState(prev => ({
             ...prev,
             isOpen: true,
-            isMinimized: false,
             hasUnread: false,
         }));
     }, []);
 
-    // Minimize to button
-    const handleMinimize = useCallback(() => {
-        setChatState(prev => ({
-            ...prev,
-            isMinimized: true,
-        }));
-    }, []);
-
-    // Close completely
+    // Close the chat window
     const handleClose = useCallback(() => {
         setChatState(prev => ({
             ...prev,
             isOpen: false,
-            isMinimized: false,
         }));
     }, []);
 
@@ -213,7 +207,7 @@ export function Jodie(): JSX.Element {
                 ...prev,
                 messages: [...prev.messages, assistantMessage],
                 isWaiting: false,
-                hasUnread: prev.isMinimized,
+                hasUnread: !prev.isOpen,
             }));
         } catch (error) {
             // Add error message
@@ -233,45 +227,32 @@ export function Jodie(): JSX.Element {
         }
     }, [activeProvider, chatState.messages, getProjectContext]);
 
-    // Open settings
+    // Open settings - navigate to Settings page and close chat
     const handleOpenSettings = useCallback(() => {
-        setIsSettingsOpen(true);
-    }, []);
-
-    // Close settings
-    const handleCloseSettings = useCallback(() => {
-        setIsSettingsOpen(false);
-        // Refresh active provider in case it changed
-        setActiveProvider(JodieConfigService.getActiveProvider());
-    }, []);
+        setChatState(prev => ({ ...prev, isOpen: false }));
+        navigate('/settings');
+    }, [navigate]);
 
     return (
         <>
-            {/* Main chat window or minimized button */}
-            {chatState.isOpen && !chatState.isMinimized ? (
+            {/* Main chat window or FAB */}
+            {chatState.isOpen ? (
                 <JodieWindow
                     messages={chatState.messages}
                     activeProvider={activeProvider}
                     isWaiting={chatState.isWaiting}
                     onSendMessage={handleSendMessage}
                     onProviderChange={handleProviderChange}
-                    onMinimize={handleMinimize}
                     onClose={handleClose}
                     onOpenSettings={handleOpenSettings}
                 />
-            ) : chatState.isMinimized ? (
+            ) : (
                 <JodieMinimized
                     activeProvider={activeProvider}
                     hasUnread={chatState.hasUnread}
                     onClick={handleOpen}
                 />
-            ) : null}
-
-            {/* Settings modal */}
-            <SettingsModal
-                isOpen={isSettingsOpen}
-                onClose={handleCloseSettings}
-            />
+            )}
         </>
     );
 }

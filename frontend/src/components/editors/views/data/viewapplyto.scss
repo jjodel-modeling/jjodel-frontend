@@ -260,6 +260,129 @@
 }
 
 // ============================================
+// APPLIABLE TO - Compact MultiSelect + Slate
+// ============================================
+.form-field:has([class*="-control"]) {
+  // Compact multiselect container
+  [class*="-control"] {
+    min-height: 36px !important;
+    max-height: none !important;
+    border: 1px solid var(--color-border-primary, #e2e8f0) !important;
+    border-radius: var(--radius-md, 6px) !important;
+    background: var(--color-bg-primary, #ffffff) !important;
+    cursor: pointer !important;
+  }
+
+  [class*="-valueContainer"] {
+    padding: 2px 8px !important;
+    flex-wrap: wrap !important;
+    gap: 4px !important;
+  }
+
+  // SLATE badges for selected items
+  [class*="-multiValue"] {
+    background: linear-gradient(180deg, #64748b 0%, #475569 100%) !important;
+    border-radius: 4px !important;
+    margin: 0 !important;
+    border: none !important;
+  }
+
+  [class*="-multiValue__label"] {
+    color: #ffffff !important;
+    font-size: 12px !important;
+    font-weight: 500 !important;
+    padding: 3px 8px !important;
+    padding-right: 4px !important;
+  }
+
+  [class*="-multiValue__remove"] {
+    color: rgba(255, 255, 255, 0.7) !important;
+    padding: 0 4px !important;
+
+    &:hover {
+      background: rgba(0, 0, 0, 0.2) !important;
+      color: #ffffff !important;
+      border-radius: 0 4px 4px 0 !important;
+    }
+
+    svg {
+      width: 14px !important;
+      height: 14px !important;
+    }
+  }
+
+  // Indicators (dropdown arrow)
+  [class*="-indicatorContainer"] {
+    padding: 4px !important;
+    color: #94a3b8 !important;
+
+    &:hover {
+      color: #64748b !important;
+    }
+  }
+
+  [class*="-indicatorSeparator"] {
+    display: none !important;
+  }
+
+  // Placeholder
+  [class*="-placeholder"] {
+    color: var(--color-text-tertiary, #9ca3af) !important;
+    font-size: 14px !important;
+  }
+
+  // Input
+  [class*="-Input"] {
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+}
+
+// Dropdown menu
+.form-field [class*="-menu"] {
+  z-index: 999 !important;
+  border: 1px solid var(--color-border-primary, #e2e8f0) !important;
+  border-radius: var(--radius-md, 6px) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+  background: var(--color-bg-primary, #ffffff) !important;
+  margin-top: 4px !important;
+}
+
+.form-field [class*="-option"] {
+  padding: 8px 12px !important;
+  font-size: 13px !important;
+  cursor: pointer !important;
+
+  &:hover {
+    background: rgba(71, 85, 105, 0.08) !important;
+  }
+}
+
+.form-field [class*="-option--is-selected"] {
+  background: #475569 !important;
+  color: #ffffff !important;
+}
+
+.form-field [class*="-option--is-focused"] {
+  background: rgba(71, 85, 105, 0.08) !important;
+}
+
+// Group label in dropdown
+.form-field [class*="-group"] {
+  padding: 0 !important;
+}
+
+.form-field [class*="-groupHeading"] {
+  font-size: 10px !important;
+  font-weight: 600 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.5px !important;
+  color: var(--color-text-tertiary, #64748b) !important;
+  padding: 8px 12px 4px !important;
+  margin: 0 !important;
+}
+
+// ============================================
 // LEGACY SUPPORT
 // ============================================
 section.page-root {
@@ -290,6 +413,71 @@ section.page-root {
 // DARK MODE SUPPORT
 // ============================================
 [data-theme="dark"] {
+  // Appliable to MultiSelect dark mode - SLATE
+  .form-field:has([class*="-control"]) {
+    [class*="-control"] {
+      background: var(--color-bg-primary, #1e293b) !important;
+      border-color: var(--color-border-primary, #334155) !important;
+    }
+
+    // Slate badges - slightly brighter for dark mode
+    [class*="-multiValue"] {
+      background: linear-gradient(180deg, #64748b 0%, #475569 100%) !important;
+      border: none !important;
+    }
+
+    [class*="-multiValue__label"] {
+      color: #ffffff !important;
+    }
+
+    [class*="-multiValue__remove"] {
+      color: rgba(255, 255, 255, 0.7) !important;
+
+      &:hover {
+        background: rgba(0, 0, 0, 0.2) !important;
+        color: #ffffff !important;
+      }
+    }
+
+    [class*="-placeholder"] {
+      color: #64748b !important;
+    }
+
+    [class*="-indicatorContainer"] {
+      color: #64748b !important;
+
+      &:hover {
+        color: #94a3b8 !important;
+      }
+    }
+  }
+
+  .form-field [class*="-menu"] {
+    background: #1e293b !important;
+    border-color: #334155 !important;
+  }
+
+  .form-field [class*="-option"] {
+    color: #e2e8f0 !important;
+
+    &:hover {
+      background: rgba(100, 116, 139, 0.2) !important;
+    }
+  }
+
+  .form-field [class*="-option--is-selected"] {
+    background: #64748b !important;
+    color: #ffffff !important;
+  }
+
+  .form-field [class*="-option--is-focused"] {
+    background: rgba(100, 116, 139, 0.2) !important;
+  }
+
+  .form-field [class*="-groupHeading"] {
+    color: #94a3b8 !important;
+  }
+
   .apply-to-tab {
     background-color: var(--color-bg-secondary, #1e293b) !important;
     color: var(--color-text-primary, #e2e8f0) !important;
@@ -380,6 +568,41 @@ section.page-root {
 
     .apply-to-toggle {
       background-color: #475569 !important;
+    }
+
+    // MultiSelect dark mode for prefers-color-scheme - SLATE
+    .form-field:has([class*="-control"]) {
+      [class*="-control"] {
+        background: #1e293b !important;
+        border-color: #334155 !important;
+      }
+
+      [class*="-multiValue"] {
+        background: linear-gradient(180deg, #64748b 0%, #475569 100%) !important;
+        border: none !important;
+      }
+
+      [class*="-multiValue__label"] {
+        color: #ffffff !important;
+      }
+
+      [class*="-multiValue__remove"] {
+        color: rgba(255, 255, 255, 0.7) !important;
+      }
+    }
+
+    .form-field [class*="-menu"] {
+      background: #1e293b !important;
+      border-color: #334155 !important;
+    }
+
+    .form-field [class*="-option"] {
+      color: #e2e8f0 !important;
+    }
+
+    .form-field [class*="-option--is-selected"] {
+      background: #64748b !important;
+      color: #ffffff !important;
     }
   }
 }

@@ -16,7 +16,6 @@ interface JodieWindowProps {
     isWaiting: boolean;
     onSendMessage: (message: string) => void;
     onProviderChange: (provider: AIProvider) => void;
-    onMinimize: () => void;
     onClose: () => void;
     onOpenSettings: () => void;
 }
@@ -53,7 +52,6 @@ export function JodieWindow({
     isWaiting,
     onSendMessage,
     onProviderChange,
-    onMinimize,
     onClose,
     onOpenSettings,
 }: JodieWindowProps): JSX.Element {
@@ -86,7 +84,11 @@ export function JodieWindow({
 
     // Handle dragging
     const handleMouseDown = (e: React.MouseEvent) => {
-        if ((e.target as HTMLElement).closest('.jodie-header')) {
+        const target = e.target as HTMLElement;
+        // Don't start drag if clicking on buttons
+        if (target.closest('button')) return;
+
+        if (target.closest('.jodie-header')) {
             setIsDragging(true);
             dragOffset.current = {
                 x: e.clientX - position.x,
@@ -231,7 +233,6 @@ export function JodieWindow({
             <JodieHeader
                 activeProvider={activeProvider}
                 onProviderChange={onProviderChange}
-                onMinimize={onMinimize}
                 onClose={onClose}
                 onOpenSettings={onOpenSettings}
                 isWaiting={isWaiting}

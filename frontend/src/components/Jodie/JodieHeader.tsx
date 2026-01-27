@@ -5,12 +5,11 @@
 
 import React from 'react';
 import { ProviderSelector } from './ProviderSelector';
-import { AIProvider, PROVIDER_INFO } from '../../types/jodie';
+import { AIProvider } from '../../types/jodie';
 
 interface JodieHeaderProps {
     activeProvider: AIProvider;
     onProviderChange: (provider: AIProvider) => void;
-    onMinimize: () => void;
     onClose: () => void;
     onOpenSettings: () => void;
     isWaiting?: boolean;
@@ -19,21 +18,15 @@ interface JodieHeaderProps {
 export function JodieHeader({
     activeProvider,
     onProviderChange,
-    onMinimize,
     onClose,
     onOpenSettings,
     isWaiting,
 }: JodieHeaderProps): JSX.Element {
-    const providerInfo = PROVIDER_INFO[activeProvider];
-
     return (
         <div className="jodie-header">
             <div className="jodie-header-left">
-                <div
-                    className="jodie-avatar"
-                    style={{ backgroundColor: providerInfo.color }}
-                >
-                    <span>{providerInfo.textIcon}</span>
+                <div className="jodie-avatar">
+                    <i className="bi bi-robot" />
                 </div>
                 <div className="jodie-title">
                     <span className="jodie-name">Jjodie</span>
@@ -48,16 +41,9 @@ export function JodieHeader({
                 <button
                     className="jodie-header-btn"
                     onClick={onOpenSettings}
-                    title="Settings"
+                    title="AI Settings"
                 >
                     <i className="bi bi-gear" />
-                </button>
-                <button
-                    className="jodie-header-btn"
-                    onClick={onMinimize}
-                    title="Minimize"
-                >
-                    <i className="bi bi-dash-lg" />
                 </button>
                 <button
                     className="jodie-header-btn jodie-close-btn"

@@ -1,31 +1,91 @@
 /**
  * Jodie Configuration Service
- * Manages AI provider configuration storage in localStorage
+ * Reads AI provider configuration from the unified Settings storage ('jjodie-settings')
+ * and manages window position/size separately
  */
 
 import { JodieConfig, ProviderConfig, AIProvider, DEFAULT_JODIE_CONFIG } from '../types/jodie';
 
-const STORAGE_KEY = 'jjodel_jodie_config';
+// Storage keys
+const SETTINGS_KEY = 'jjodie-settings';  // Shared with Settings page
+const WINDOW_STATE_KEY = 'jjodel_jodie_window';  // Window position/size only
+
+// Settings page uses different provider names - this maps them
+const SETTINGS_TO_JODIE_PROVIDER: Record<string, AIProvider | null> = {
+    'anthropic': 'claude',
+    'openai': 'openai',
+    'google': 'gemini',
+    'deepseek': 'deepseek',
+    // These providers from Settings are not yet supported by Jodie chat
+    'mistral': null,
+    'groq': null,
+    'ollama': null,
+    'custom': null,
+};
+
+const JODIE_TO_SETTINGS_PROVIDER: Record<AIProvider, string> = {
+    'claude': 'anthropic',
+    'openai': 'openai',
+    'gemini': 'google',
+    'deepseek': 'deepseek',
+};
+
+interface SettingsFormat {
+    provider: string;
+    model: string;
+    apiKey: string;
+    enabled: boolean;
+    autoSuggestOnErrors?: boolean;
+    baseUrl?: string;
+}
+
+interface WindowState {
+    position?: { x: number; y: number };
+    size?: { width: number; height: number };
+}
 
 export class JodieConfigService {
     /**
-     * Load configuration from localStorage
+     * Load configuration from Settings storage
      */
     static load(): JodieConfig {
         try {
-            const stored = localStorage.getItem(STORAGE_KEY);
-            if (!stored) return DEFAULT_JODIE_CONFIG;
+            // Load AI settings from unified storage
+            const settingsJson = localStorage.getItem(SETTINGS_KEY);
+            const windowStateJson = localStorage.getItem(WINDOW_STATE_KEY);
 
-            const parsed = JSON.parse(stored);
-            // Merge with defaults to handle new providers
-            return {
-                ...DEFAULT_JODIE_CONFIG,
-                ...parsed,
-                providers: {
-                    ...DEFAULT_JODIE_CONFIG.providers,
-                    ...parsed.providers,
-                },
-            };
+            // Start with defaults
+            const config: JodieConfig = { ...DEFAULT_JODIE_CONFIG };
+
+            // Apply window state if exists
+            if (windowStateJson) {
+                const windowState: WindowState = JSON.parse(windowStateJson);
+                config.position = windowState.position;
+                config.size = windowState.size;
+            }
+
+            // If no settings, return defaults
+            if (!settingsJson) {
+                return config;
+            }
+
+            const settings: SettingsFormat = JSON.parse(settingsJson);
+
+            // Map settings provider to Jodie provider
+            const jodieProvider = SETTINGS_TO_JODIE_PROVIDER[settings.provider];
+
+            if (jodieProvider && settings.apiKey && settings.enabled) {
+                // Update the provider config
+                config.providers[jodieProvider] = {
+                    provider: jodieProvider,
+                    apiKey: settings.apiKey,
+                    model: settings.model,
+                    enabled: true,
+                };
+                config.activeProvider = jodieProvider;
+            }
+
+            return config;
         } catch (error) {
             console.error('Failed to load Jodie config:', error);
             return DEFAULT_JODIE_CONFIG;
@@ -33,14 +93,27 @@ export class JodieConfigService {
     }
 
     /**
-     * Save configuration to localStorage
+     * Get the raw settings from Settings page storage
      */
-    static save(config: JodieConfig): void {
+    static getSettings(): SettingsFormat | null {
         try {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
-        } catch (error) {
-            console.error('Failed to save Jodie config:', error);
+            const settingsJson = localStorage.getItem(SETTINGS_KEY);
+            if (!settingsJson) return null;
+            return JSON.parse(settingsJson);
+        } catch {
+            return null;
         }
+    }
+
+    /**
+     * Check if any provider is configured and enabled
+     */
+    static hasValidConfiguration(): boolean {
+        const settings = this.getSettings();
+        if (!settings) return false;
+
+        const jodieProvider = SETTINGS_TO_JODIE_PROVIDER[settings.provider];
+        return !!(jodieProvider && settings.apiKey && settings.enabled);
     }
 
     /**
@@ -52,27 +125,6 @@ export class JodieConfigService {
     }
 
     /**
-     * Update configuration for a specific provider
-     */
-    static updateProvider(provider: AIProvider, updates: Partial<ProviderConfig>): void {
-        const config = this.load();
-        config.providers[provider] = {
-            ...config.providers[provider],
-            ...updates,
-        };
-        this.save(config);
-    }
-
-    /**
-     * Set the active provider
-     */
-    static setActiveProvider(provider: AIProvider): void {
-        const config = this.load();
-        config.activeProvider = provider;
-        this.save(config);
-    }
-
-    /**
      * Get the active provider
      */
     static getActiveProvider(): AIProvider {
@@ -81,47 +133,81 @@ export class JodieConfigService {
     }
 
     /**
+     * Set the active provider (updates Settings storage)
+     */
+    static setActiveProvider(provider: AIProvider): void {
+        const settings = this.getSettings();
+        if (!settings) return;
+
+        const settingsProvider = JODIE_TO_SETTINGS_PROVIDER[provider];
+        if (settingsProvider) {
+            settings.provider = settingsProvider;
+            localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+
+            // Dispatch event to notify other components
+            window.dispatchEvent(new CustomEvent('ai-settings-changed', { detail: settings }));
+        }
+    }
+
+    /**
      * Get list of enabled providers (with valid API keys)
      */
     static getEnabledProviders(): AIProvider[] {
-        const config = this.load();
-        return Object.entries(config.providers)
-            .filter(([_, cfg]) => cfg.enabled && cfg.apiKey)
-            .map(([provider, _]) => provider as AIProvider);
+        const settings = this.getSettings();
+        if (!settings || !settings.apiKey || !settings.enabled) {
+            return [];
+        }
+
+        const jodieProvider = SETTINGS_TO_JODIE_PROVIDER[settings.provider];
+        return jodieProvider ? [jodieProvider] : [];
     }
 
     /**
      * Check if a provider is properly configured
      */
     static isProviderConfigured(provider: AIProvider): boolean {
-        const config = this.load();
-        const providerConfig = config.providers[provider];
-        return !!(providerConfig?.apiKey && providerConfig?.enabled);
+        const settings = this.getSettings();
+        if (!settings || !settings.apiKey || !settings.enabled) {
+            return false;
+        }
+
+        const settingsProvider = JODIE_TO_SETTINGS_PROVIDER[provider];
+        return settings.provider === settingsProvider;
     }
 
     /**
-     * Update window position
+     * Update window position (stored separately)
      */
     static updatePosition(position: { x: number; y: number }): void {
-        const config = this.load();
-        config.position = position;
-        this.save(config);
+        try {
+            const windowStateJson = localStorage.getItem(WINDOW_STATE_KEY);
+            const windowState: WindowState = windowStateJson ? JSON.parse(windowStateJson) : {};
+            windowState.position = position;
+            localStorage.setItem(WINDOW_STATE_KEY, JSON.stringify(windowState));
+        } catch (error) {
+            console.error('Failed to save window position:', error);
+        }
     }
 
     /**
-     * Update window size
+     * Update window size (stored separately)
      */
     static updateSize(size: { width: number; height: number }): void {
-        const config = this.load();
-        config.size = size;
-        this.save(config);
+        try {
+            const windowStateJson = localStorage.getItem(WINDOW_STATE_KEY);
+            const windowState: WindowState = windowStateJson ? JSON.parse(windowStateJson) : {};
+            windowState.size = size;
+            localStorage.setItem(WINDOW_STATE_KEY, JSON.stringify(windowState));
+        } catch (error) {
+            console.error('Failed to save window size:', error);
+        }
     }
 
     /**
-     * Reset configuration to defaults
+     * Reset window state to defaults
      */
-    static reset(): void {
-        this.save(DEFAULT_JODIE_CONFIG);
+    static resetWindowState(): void {
+        localStorage.removeItem(WINDOW_STATE_KEY);
     }
 }
 
