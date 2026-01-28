@@ -10,10 +10,11 @@ import { JodieConfigService } from '../../services/JodieConfig';
 interface ProviderSelectorProps {
     activeProvider: AIProvider;
     onProviderChange: (provider: AIProvider) => void;
+    onOpenSettings?: () => void;
     disabled?: boolean;
 }
 
-export function ProviderSelector({ activeProvider, onProviderChange, disabled }: ProviderSelectorProps): JSX.Element {
+export function ProviderSelector({ activeProvider, onProviderChange, onOpenSettings, disabled }: ProviderSelectorProps): JSX.Element {
     const enabledProviders = JodieConfigService.getEnabledProviders();
     const providerInfo = PROVIDER_INFO[activeProvider];
 
@@ -25,12 +26,18 @@ export function ProviderSelector({ activeProvider, onProviderChange, disabled }:
         onProviderChange(newProvider);
     };
 
-    // If no providers are configured, show a warning
+    // If no providers are configured, show a warning with link to settings
     if (enabledProviders.length === 0) {
         return (
             <div className="jodie-provider-selector jodie-provider-unconfigured">
                 <i className="bi bi-exclamation-triangle" />
-                <span>No providers configured</span>
+                {onOpenSettings ? (
+                    <button onClick={onOpenSettings} className="configure-link">
+                        Configure providers
+                    </button>
+                ) : (
+                    <span>No providers configured</span>
+                )}
             </div>
         );
     }

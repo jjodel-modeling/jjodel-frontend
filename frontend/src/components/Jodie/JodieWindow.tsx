@@ -18,6 +18,7 @@ interface JodieWindowProps {
     onProviderChange: (provider: AIProvider) => void;
     onClose: () => void;
     onOpenSettings: () => void;
+    onOpenDocumentation?: () => void;
 }
 
 interface Position {
@@ -54,6 +55,7 @@ export function JodieWindow({
     onProviderChange,
     onClose,
     onOpenSettings,
+    onOpenDocumentation,
 }: JodieWindowProps): JSX.Element {
     // Load initial position/size from config
     const config = JodieConfigService.load();
@@ -235,6 +237,7 @@ export function JodieWindow({
                 onProviderChange={onProviderChange}
                 onClose={onClose}
                 onOpenSettings={onOpenSettings}
+                onOpenDocumentation={onOpenDocumentation}
                 isWaiting={isWaiting}
             />
 

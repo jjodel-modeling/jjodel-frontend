@@ -12,6 +12,8 @@ import { JodieConfigService } from '../../services/JodieConfig';
 import { AIProviderService } from '../../services/AIProviderService';
 import { JjodieContextService } from '../../services/JjodieContext';
 import { DUser, L, LUser, LProject } from '../../joiner';
+import DockManager from '../abstract/DockManager';
+import TabDataMaker from '../abstract/tabs/TabDataMaker';
 import './JodieWindow.css';
 
 // Generate unique message ID
@@ -233,6 +235,16 @@ export function Jodie(): JSX.Element {
         navigate('/settings');
     }, [navigate]);
 
+    // Open documentation tab
+    const handleOpenDocumentation = useCallback(() => {
+        try {
+            const tab = TabDataMaker.documentation();
+            DockManager.open('editors', tab);
+        } catch (err) {
+            console.warn('Could not open documentation tab:', err);
+        }
+    }, []);
+
     return (
         <>
             {/* Main chat window or FAB */}
@@ -245,6 +257,7 @@ export function Jodie(): JSX.Element {
                     onProviderChange={handleProviderChange}
                     onClose={handleClose}
                     onOpenSettings={handleOpenSettings}
+                    onOpenDocumentation={handleOpenDocumentation}
                 />
             ) : (
                 <JodieMinimized

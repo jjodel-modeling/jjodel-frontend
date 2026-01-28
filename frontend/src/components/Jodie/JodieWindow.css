@@ -268,6 +268,20 @@
     color: var(--color-warning);
 }
 
+.jodie-provider-unconfigured .configure-link {
+    background: none;
+    border: none;
+    padding: 0;
+    font-size: inherit;
+    color: #64748b;
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+.jodie-provider-unconfigured .configure-link:hover {
+    color: #475569;
+}
+
 /* ========================================
    Messages Area
    ======================================== */

@@ -39,6 +39,10 @@ export class AIProviderService {
                 return await this.chatDeepSeek(message, config.apiKey, config.model, conversationHistory, systemPrompt);
             case 'gemini':
                 return await this.chatGemini(message, config.apiKey, config.model, conversationHistory, systemPrompt);
+            case 'mistral':
+                return await this.chatMistral(message, config.apiKey, config.model, conversationHistory, systemPrompt);
+            case 'groq':
+                return await this.chatGroq(message, config.apiKey, config.model, conversationHistory, systemPrompt);
             default:
                 throw new Error(`Unknown provider: ${provider}`);
         }
@@ -230,6 +234,90 @@ export class AIProviderService {
     }
 
     /**
+     * Chat with Mistral AI
+     */
+    private static async chatMistral(
+        message: string,
+        apiKey: string,
+        model: string,
+        history: ChatMessage[],
+        systemPrompt: string
+    ): Promise<string> {
+        // Build messages array (OpenAI-compatible format)
+        const messages = [
+            { role: 'system' as const, content: systemPrompt },
+            ...history.map(msg => ({
+                role: msg.role as 'user' | 'assistant',
+                content: msg.content,
+            })),
+            { role: 'user' as const, content: message },
+        ];
+
+        const response = await fetch(PROVIDER_ENDPOINTS.mistral, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${apiKey}`,
+            },
+            body: JSON.stringify({
+                model,
+                messages,
+                max_tokens: 2000,
+            }),
+        });
+
+        if (!response.ok) {
+            const error = await response.text();
+            throw new Error(`Mistral API error: ${response.status} - ${error}`);
+        }
+
+        const data = await response.json();
+        return data.choices[0].message.content;
+    }
+
+    /**
+     * Chat with Groq
+     */
+    private static async chatGroq(
+        message: string,
+        apiKey: string,
+        model: string,
+        history: ChatMessage[],
+        systemPrompt: string
+    ): Promise<string> {
+        // Build messages array (OpenAI-compatible format)
+        const messages = [
+            { role: 'system' as const, content: systemPrompt },
+            ...history.map(msg => ({
+                role: msg.role as 'user' | 'assistant',
+                content: msg.content,
+            })),
+            { role: 'user' as const, content: message },
+        ];
+
+        const response = await fetch(PROVIDER_ENDPOINTS.groq, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${apiKey}`,
+            },
+            body: JSON.stringify({
+                model,
+                messages,
+                max_tokens: 2000,
+            }),
+        });
+
+        if (!response.ok) {
+            const error = await response.text();
+            throw new Error(`Groq API error: ${response.status} - ${error}`);
+        }
+
+        const data = await response.json();
+        return data.choices[0].message.content;
+    }
+
+    /**
      * Test if a provider's API key is valid
      */
     static async testConnection(provider: AIProvider): Promise<{ success: boolean; error?: string }> {
@@ -250,6 +338,10 @@ export class AIProviderService {
                     return await this.testDeepSeek(config.apiKey, config.model);
                 case 'gemini':
                     return await this.testGemini(config.apiKey, config.model);
+                case 'mistral':
+                    return await this.testMistral(config.apiKey, config.model);
+                case 'groq':
+                    return await this.testGroq(config.apiKey, config.model);
                 default:
                     return { success: false, error: `Unknown provider: ${provider}` };
             }
@@ -460,6 +552,100 @@ export class AIProviderService {
 
                 if (response.status === 400) {
                     errorMsg = 'Invalid API key or model. Check your key in Google AI Studio.';
+                }
+
+                return { success: false, error: errorMsg };
+            }
+
+            await response.json();
+            return { success: true };
+        } catch (error) {
+            const errorMessage = (error as Error).message;
+            if (errorMessage.includes('Failed to fetch')) {
+                return { success: false, error: 'Network error. Check your internet connection.' };
+            }
+            return { success: false, error: `Connection error: ${errorMessage}` };
+        }
+    }
+
+    /**
+     * Test Mistral API connection
+     */
+    private static async testMistral(apiKey: string, model: string): Promise<{ success: boolean; error?: string }> {
+        try {
+            const response = await fetch(PROVIDER_ENDPOINTS.mistral, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${apiKey}`,
+                },
+                body: JSON.stringify({
+                    model,
+                    max_tokens: 10,
+                    messages: [{ role: 'user', content: 'Hi' }],
+                }),
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                let errorMsg = `API Error (${response.status})`;
+
+                try {
+                    const errorJson = JSON.parse(errorText);
+                    errorMsg = errorJson.error?.message || errorJson.message || errorMsg;
+                } catch {
+                    errorMsg += `: ${errorText.substring(0, 150)}`;
+                }
+
+                if (response.status === 401) {
+                    errorMsg = 'Invalid API key. Please check your key in the Mistral Console.';
+                }
+
+                return { success: false, error: errorMsg };
+            }
+
+            await response.json();
+            return { success: true };
+        } catch (error) {
+            const errorMessage = (error as Error).message;
+            if (errorMessage.includes('Failed to fetch')) {
+                return { success: false, error: 'Network error. Check your internet connection.' };
+            }
+            return { success: false, error: `Connection error: ${errorMessage}` };
+        }
+    }
+
+    /**
+     * Test Groq API connection
+     */
+    private static async testGroq(apiKey: string, model: string): Promise<{ success: boolean; error?: string }> {
+        try {
+            const response = await fetch(PROVIDER_ENDPOINTS.groq, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${apiKey}`,
+                },
+                body: JSON.stringify({
+                    model,
+                    max_tokens: 10,
+                    messages: [{ role: 'user', content: 'Hi' }],
+                }),
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                let errorMsg = `API Error (${response.status})`;
+
+                try {
+                    const errorJson = JSON.parse(errorText);
+                    errorMsg = errorJson.error?.message || errorJson.message || errorMsg;
+                } catch {
+                    errorMsg += `: ${errorText.substring(0, 150)}`;
+                }
+
+                if (response.status === 401) {
+                    errorMsg = 'Invalid API key. Please check your key in the Groq Console.';
                 }
 
                 return { success: false, error: errorMsg };
