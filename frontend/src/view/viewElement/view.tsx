@@ -281,20 +281,20 @@ export class DViewElement extends DPointerTargetable {
             .DPointerTargetable().DViewElement(name, jsxString, vp).end(callback);
     }
 
-    static newDefault(forData?: DNamedElement, forSelf: boolean = false): DViewElement{
+    static newDefault(forData?: DModelElement | DGraphElement, forSelf: boolean = false): DViewElement{
         const jsx = `
 
 /* Jjodel Default View 2.1 */ 
 
-<View className={'root'}>
+<View className={'root bg-white p-1'}>
     <div className={'header'}>
-        <label className={'input-container mx-2'}>
+        {data ? <label className={'input-container mx-2'}>
             <b className={'object-name'}>Name:</b>
             {data.$name ?
                 <Input data={data.$name} field={'value'} hidden={true} autosize={true} placeholder={'enter name'}/> :
-                <Input data={data} field={'name'} hidden={true} autosize={true}  placeholder={'enter name'}/>
+                <Input data={data} field={'name'} hidden={true} autosize={true} placeholder={'enter name'}/>
             }
-        </label>
+        </label> ? null}
     </div>
     <div className={'body'}>To add information here,<br/> edit the view<br/>"{view.name}"</div>
     {decorators}
@@ -355,10 +355,11 @@ export class DViewElement extends DPointerTargetable {
         if (activeVP && activeVP?.id !== Defaults.Pointer_ViewPointDefault) parentView = activeVP;
         else parentView = LPointerTargetable.fromPointer(Defaults.Pointer_ViewModel);
 
-        if (forData?.name) name = 'View for ' + forData.name;
+        let l = forData && L.from(forData);
+        if (l?.name) name = 'View for ' + l.name;
         else {
             let names: string[] = parentView.subViews.map(v => v && v.name);
-            name = U.increaseEndingNumber( 'view_' + 0, false, false, newName => names.indexOf(newName) >= 0);
+            name = U.increaseEndingNumber( 'view_'+(forData?.className ? '_'+forData.className : '') + 0, false, false, newName => names.indexOf(newName) >= 0);
         }
 
         return DViewElement.new2(name, jsx, parentView.__raw, (d)=>{

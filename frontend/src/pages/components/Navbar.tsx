@@ -447,8 +447,8 @@ function NavbarComponent(props: AllProps) {
 
     let itemsToRegister: MenuEntry[] = items; // [...items]; // [...dashboardItems, ...projectItems];
     let keybindings = U.flattenObjectByKey(itemsToRegister, 'subItems')
-        .filter(e=> e && (e.keystroke?.length));
-    Keystrokes.register('#root', keybindings);
+        .filter(e=> e && (e.keystroke?.length) && !e.disabled);
+    Keystrokes.register('#root', 'navbar', keybindings);
 
     type MenuProps = {
         title?: string;

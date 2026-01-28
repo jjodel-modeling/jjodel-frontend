@@ -1530,7 +1530,7 @@ public static object(): string { return (
     
 
     public static error(msg: undefined | ReactNode, errortype: string | "SYNTAX" | "RUNTIME",
-                        data?: DModelElement | undefined, node?: DGraphElement | undefined, v?: LViewElement|DViewElement): React.ReactNode {
+                        data?: DModelElement | undefined, node?: DGraphElement | undefined, v?: LViewElement|DViewElement, clickRetry?: (e:any)=>any): React.ReactNode {
 
         let dname: string | undefined = data && ((data as any).name || data.className.substring(1));
         if (dname && dname.length >= 10) dname = dname.substring(0, 7) + '…';
@@ -1548,8 +1548,8 @@ public static object(): string { return (
         switch (notificationType) {
             case 'classic':
                 return (<Measurable draggable={true} resizable={false}><div className='hoverable error-root graph-centered' tabIndex={0}>
-                    <i className="bi bi-exclamation-diamond-fill" style={{color: "red"}} />
-                    <div className='content fixed error-notification' tabIndex={-1}>
+                    <i className="bi bi-exclamation-diamond-fill" style={{color: "red"}} onClick={clickRetry}/>
+                    <div className='content error-notification' tabIndex={-1} style={{left: '130%'}}>
                         <h1>Something Went Wrong...</h1>
                         {v && <h2>Error in "{v?.name}" syntax view
                             definition{viewpointname ? ' in viewpoint ' + viewpointname : ''}.</h2>}
@@ -1568,7 +1568,10 @@ public static object(): string { return (
                 return null;
 
             case 'notification':
-                return (<div className='notification-icon' onClick={(e) => openNotification(e)}/>);
+                return (<div className='notification-icon' onClick={(e) => {
+                    openNotification(e);
+                    clickRetry?.(e);
+                }} />);
         }
     }
 

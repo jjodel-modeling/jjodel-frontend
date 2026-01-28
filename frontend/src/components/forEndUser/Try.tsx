@@ -189,7 +189,7 @@ class TryComponent extends React.Component<AllProps, State> {
 
 
         let shortErrorBody = (error?.message || "\n").split("\n")[0];
-        let visibleMessage: ReactNode = <div onClick={(e)=> this.reset(e)}>
+        let visibleMessage: ReactNode = <div className={'try-message'}>
             <div>{info ? "has info": "###########"}</div>
             <div>ut:{this.state.stateUpdateTime}, { shortErrorBody }</div>
             <div>What you can try:</div>
@@ -197,12 +197,10 @@ class TryComponent extends React.Component<AllProps, State> {
                 <li>- Undo the last change(s)</li>
                 <li className='prevent'>- Attempt a <a className='prevent' style={{cursor: "pointer"}} onClick={() => VersionFixer.autocorrect(undefined, true, true)}>repair</a></li>
                 {!user?.autoReport && <li className='prevent' onClick={() => report.send()}>- Send us an automatic error report.</li>}
-                <li>- {mailto && [<a href={mailto}>Mail the developers</a>, " or"]} <a href={gitissue} target="_blank"
-                                                                                       rel="noreferrer">open an
-                    issue</a></li>
+                <li>- {mailto && [<a href={mailto}>Mail the developers</a>, " or"]} <a href={gitissue} target="_blank" rel="noreferrer">open an issue</a></li>
             </ul>
         </div>
-        return DefaultView.error(visibleMessage, "unhandled");
+        return DefaultView.error(visibleMessage, "unhandled", undefined, undefined, undefined, (e)=> this.reset(e));
     }
 
     decompress() {

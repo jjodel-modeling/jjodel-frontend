@@ -148,195 +148,6 @@ everytime you put hands into a D-Object shape or valid values, you should docume
     }
 
 
-    private d<D extends DPointerTargetable, L extends LPointerTargetable>(ptr: Pointer<D>, s: DState): D{
-        return s.idlookup[ptr] as any;
-        // {n}
-    }
-    private ['0 -> 2.1'](s: DState): DState {
-        s.version = {n: 2.1, date:"_reconverted", conversionList:[0]};
-        return s;
-    }
-    private ['2.1 -> 2.2'](s: DState): void {
-
-    }
-
-    private ['2.2 -> 2.201'](s: DState): DState {
-        // let ls: LState = LPointerTargetable.from(s); nope, avoid L-objects. actions would fire in present state instead of in parameter state
-        for (let c of (s.classs).map(p=> this.d(p, s))) {
-            c.isSingleton = !!c.isSingleton; // booleanize the undefined
-            c.sealed = [];
-            c.final = false;
-            c.rootable = undefined;
-        }
-        for (let c of Object.values(s.idlookup) as any[]) {
-            if (!c || typeof c !== 'object' || !c.className || !c.id) continue;
-            if (c.isCrossReference === undefined) c.isCrossReference = false;
-        }
-        for (let c of (s.viewelements).map(p=> this.d(p, s))) { c.father = c.viewpoint; }
-        for (let c of (s.viewpoints).map(p=> this.d(p, s))) { c.cssIsGlobal = true; }
-        for (let c of (s.projects).map(p=> this.d(p, s))) { c.favorite = {}; c.description = ''; }
-        for (let c of (s.references).map(p=> this.d(p, s))) { if (c.composition === undefined) c.aggregation = !(c.composition = !!(c as any).containment); }
-        for (let c of (s.models).map(p=> this.d(p, s))) { if (c.dependencies === undefined) c.dependencies = []; }
-        for (let c of (s.attributes).map(p => this.d(p, s))) {
-            c.derived = !!c.derived;
-            c.derived_write = undefined; // c.derived ? '' : undefined;
-            c.derived_read = undefined; // c.derived ? '' : undefined;
-        }
-        for (let id in s.idlookup){
-            let c = s.idlookup[id] as DPointerTargetable;
-            if (!c || !c.className || !c.pointedBy) continue;
-            for (let p of c.pointedBy) { p.source = U.replaceAll(U.replaceAll(U.replaceAll(p.source||'', '+=', ''), '-=', ''), '[]', ''); }
-        }
-        for (let id in s.idlookup){
-            let c = s.idlookup[id] as DPointerTargetable;
-            if (!c || !c.className || !c.zoom) continue;
-            c.zoom = {x:1, y:1} as any as GraphPoint; // for old projects, reset zoom because it was bugged. scrollbar was zooming but without graphical feedback, some projects might have zoom >1000x
-        }
-
-        return s;
-    }
-    private ['2.201 -> 2.202'](s: DState): DState {
-        for (let c of Object.values(s.idlookup) as any[]) {
-            if (!c || typeof c !== 'object' || !c.className || !c.id) continue;
-            if (c.isCrossReference === undefined) c.isCrossReference = false;
-            if (!c.zoom && RuntimeAccessibleClass.extends(c.className, DGraphElement)){
-                c.zoom = {x:1, y:1};
-            }
-        }
-        return s;
-    }
-
-    private ['2.202 -> 2.203'](s: DState): DState {
-        for (let id in s.idlookup){
-            let c = s.idlookup[id] as DPointerTargetable;
-            if (!c || typeof c !== 'object') continue;
-            if ((c as DGraphElement).isSelected) (c as DGraphElement).isSelected = {};
-            if (c?.className?.toLowerCase().includes('view')){
-                (c as DViewPoint|DViewElement).version = 2.202; // it is effectively v1 of views
-            }
-        }
-        return s;
-    }
-    private ['2.203 -> 2.204'](s: DState): DState {
-        let newLanguages = DV.defaultLanguages();
-        if (!s.languages) s.languages = newLanguages;
-        else {
-            for (let key in s.languages) {
-                // erase old languages that got renamed/retired and are not customized.
-                if (!(key in newLanguages) && !s.languages[key].edited) delete s.languages[key];
-            }
-
-            for (let key in newLanguages) {
-                let newLanguage = newLanguages[key];
-                let oldLanguage = s.languages[key];
-                if (!oldLanguage || !oldLanguage.edited) s.languages[key] = newLanguage; // update single obsolete language
-            }
-        }
-        return s;
-    }
-
-    private ['2.204 -> 2.205'](s: DState): DState {
-        for (let c of Object.values(s.idlookup) as any[]) {
-            if (!c || typeof c !== 'object' || !c.className || !c.id) continue;
-            if (c.className === 'DPackage') {
-                let p: DPackage = c;
-                let classifiers: Pointer<any>[] = (p as any).classifiers;
-                if (!p.classes) p.classes = [];
-                if (!p.enumerators) p.enumerators = [];
-                if (!classifiers) continue;
-                for (let ptr of classifiers.filter(c=>!!c)){
-                    let d = this.d(ptr, s);
-                    if (!d) continue;
-                    if (d.className === 'DClass') p.classes.push(ptr);
-                    else if (d.className === 'DEnumerators') p.enumerators.push(ptr);
-                }
-            }
-        }
-        return s;
-    }
-    private ['2.205 -> 2.206'](s: DState): DState {
-        if (!s.RECOMPILE_LANGUAGE) s.RECOMPILE_LANGUAGE = [];
-        for (let e of Object.values(s.idlookup) as any[]) {
-            if (!e || typeof e !== 'object' || !e.className || !e.id) continue;
-            if (!e.__childrenToSort) e.__childrenToSort = [];
-            // fix parameter having default type "operation"
-            if (e.className === 'DParameter' && e.type) {
-                let type = this.d(e.type, s);
-                if (type && type.className === 'DOperation') e.type = Pointers.ESTRING;
-            }
-
-            if (e.className === 'DValue' && e.name?.toLowerCase() === 'name' && e.values[0]) {
-                let o: DObject = this.d(e.father, s);
-                if (o) o.name = e.values[0];
-            }
-        }
-        return s;
-    }
-    private ['2.206 -> 2.207'](s: DState): DState {
-        let ptrsToReplace: Pointer[] = [];
-        for (let k in s.idlookup) {
-            if (k.indexOf('POINT_')!==0) continue;
-            // let newid = 'Pointer'+k;
-            ptrsToReplace.push(k);
-        }
-        for (let i = 0; i < (s.edgepoints||[]).length; i++) {
-            let v = s.edgepoints[i];
-            if (!v || v.indexOf('POINT_')!==0) continue;
-            if (ptrsToReplace.indexOf(v) === -1) ptrsToReplace.push(v);
-        }
-        if (ptrsToReplace.length) {
-            let str = JSON.stringify(s);
-            for (let ptr of ptrsToReplace){ str = str.split(ptr).join('Pointer'+ptr) }
-            s = JSON.parse(str);
-        }
-        for (let e of Object.values(s.idlookup) as any[]) {
-            if (!e || typeof e !== 'object' || !e.className || !e.id) continue;
-        }
-        return s;
-    }
-    private ['2.207 -> 2.208'](s: DState): DState {
-        let old = {...s};
-        for (let lang of Object.values(s.languages)){
-            if (typeof lang !== 'object') continue;
-            for (let k in lang.m2t) {
-                let pd = lang.m2t[k];
-                if (typeof pd !== 'object') continue;
-                pd.__str = pd.str;
-                delete pd.str;
-            }
-            for (let k in lang.t2m) {
-                let pd = lang.t2m[k];
-                if (typeof pd !== 'object') continue;
-                pd.__str = pd.str;
-                delete pd.str;
-            }
-        }
-
-        for (let k in s.idlookup) {
-            let e = s.idlookup[k] as GObject;
-            if (e?.uri) {
-                e.uri.split('jodel-react').join('jjodelreact');
-            }
-        }
-        return s;
-    }
-    private ['2.208 -> 2.209'](s: DState): DState {
-        if (!s.NODES_RECOMPILE_grid) s.NODES_RECOMPILE_grid = [];
-        if (!s.VIEWS_RECOMPILE_grid) s.VIEWS_RECOMPILE_grid = [];
-        if (!s.NODES_RECOMPILE_snap) s.NODES_RECOMPILE_snap = [];
-        if (!s.VIEWS_RECOMPILE_snap) s.VIEWS_RECOMPILE_snap = [];
-        for (let k in s.idlookup) {
-            let e = s.idlookup[k] as GObject;
-            if ((e?.className.includes('Vertex') || e?.className.includes('EdgePoint') || e?.className.includes('View')) && !('snap' in e)) {
-                e.snap = {x:1, y:1};
-            }
-            if ((/*e?.className.includes('Graph') ||*/ e?.className.includes('View')) && !('grid' in e)) {
-                e.grid = {x: 0, y:0, type:'cartesian', center: 'cc', visible: true};
-            }
-        }
-        return s;
-    }
-
     public static autocorrect(s0?: DState, popupIfCorrect: boolean = false, canLoadAction: boolean = false): DState {
         let s: DState;
         if (s0) s = {...s0} as any;
@@ -578,6 +389,202 @@ everytime you put hands into a D-Object shape or valid values, you should docume
             }
         }
     }
+
+    private d<D extends DPointerTargetable, L extends LPointerTargetable>(ptr: Pointer<D>, s: DState): D{
+        return s.idlookup[ptr] as any;
+        // {n}
+    }
+    private ['0 -> 2.1'](s: DState): DState {
+        s.version = {n: 2.1, date:"_reconverted", conversionList:[0]};
+        return s;
+    }
+    private ['2.1 -> 2.2'](s: DState): void {
+
+    }
+
+    private ['2.2 -> 2.201'](s: DState): DState {
+        // let ls: LState = LPointerTargetable.from(s); nope, avoid L-objects. actions would fire in present state instead of in parameter state
+        for (let c of (s.classs).map(p=> this.d(p, s))) {
+            c.isSingleton = !!c.isSingleton; // booleanize the undefined
+            c.sealed = [];
+            c.final = false;
+            c.rootable = undefined;
+        }
+        for (let c of Object.values(s.idlookup) as any[]) {
+            if (!c || typeof c !== 'object' || !c.className || !c.id) continue;
+            if (c.isCrossReference === undefined) c.isCrossReference = false;
+        }
+        for (let c of (s.viewelements).map(p=> this.d(p, s))) { c.father = c.viewpoint; }
+        for (let c of (s.viewpoints).map(p=> this.d(p, s))) { c.cssIsGlobal = true; }
+        for (let c of (s.projects).map(p=> this.d(p, s))) { c.favorite = {}; c.description = ''; }
+        for (let c of (s.references).map(p=> this.d(p, s))) { if (c.composition === undefined) c.aggregation = !(c.composition = !!(c as any).containment); }
+        for (let c of (s.models).map(p=> this.d(p, s))) { if (c.dependencies === undefined) c.dependencies = []; }
+        for (let c of (s.attributes).map(p => this.d(p, s))) {
+            c.derived = !!c.derived;
+            c.derived_write = undefined; // c.derived ? '' : undefined;
+            c.derived_read = undefined; // c.derived ? '' : undefined;
+        }
+        for (let id in s.idlookup){
+            let c = s.idlookup[id] as DPointerTargetable;
+            if (!c || !c.className || !c.pointedBy) continue;
+            for (let p of c.pointedBy) { p.source = U.replaceAll(U.replaceAll(U.replaceAll(p.source||'', '+=', ''), '-=', ''), '[]', ''); }
+        }
+        for (let id in s.idlookup){
+            let c = s.idlookup[id] as DPointerTargetable;
+            if (!c || !c.className || !c.zoom) continue;
+            c.zoom = {x:1, y:1} as any as GraphPoint; // for old projects, reset zoom because it was bugged. scrollbar was zooming but without graphical feedback, some projects might have zoom >1000x
+        }
+
+        return s;
+    }
+    private ['2.201 -> 2.202'](s: DState): DState {
+        for (let c of Object.values(s.idlookup) as any[]) {
+            if (!c || typeof c !== 'object' || !c.className || !c.id) continue;
+            if (c.isCrossReference === undefined) c.isCrossReference = false;
+            if (!c.zoom && RuntimeAccessibleClass.extends(c.className, DGraphElement)){
+                c.zoom = {x:1, y:1};
+            }
+        }
+        return s;
+    }
+
+    private ['2.202 -> 2.203'](s: DState): DState {
+        for (let id in s.idlookup){
+            let c = s.idlookup[id] as DPointerTargetable;
+            if (!c || typeof c !== 'object') continue;
+            if ((c as DGraphElement).isSelected) (c as DGraphElement).isSelected = {};
+            if (c?.className?.toLowerCase().includes('view')){
+                (c as DViewPoint|DViewElement).version = 2.202; // it is effectively v1 of views
+            }
+        }
+        return s;
+    }
+    private ['2.203 -> 2.204'](s: DState): DState {
+        let newLanguages = DV.defaultLanguages();
+        if (!s.languages) s.languages = newLanguages;
+        else {
+            for (let key in s.languages) {
+                // erase old languages that got renamed/retired and are not customized.
+                if (!(key in newLanguages) && !s.languages[key].edited) delete s.languages[key];
+            }
+
+            for (let key in newLanguages) {
+                let newLanguage = newLanguages[key];
+                let oldLanguage = s.languages[key];
+                if (!oldLanguage || !oldLanguage.edited) s.languages[key] = newLanguage; // update single obsolete language
+            }
+        }
+        return s;
+    }
+
+    private ['2.204 -> 2.205'](s: DState): DState {
+        for (let c of Object.values(s.idlookup) as any[]) {
+            if (!c || typeof c !== 'object' || !c.className || !c.id) continue;
+            if (c.className === 'DPackage') {
+                let p: DPackage = c;
+                let classifiers: Pointer<any>[] = (p as any).classifiers;
+                if (!p.classes) p.classes = [];
+                if (!p.enumerators) p.enumerators = [];
+                if (!classifiers) continue;
+                for (let ptr of classifiers.filter(c=>!!c)){
+                    let d = this.d(ptr, s);
+                    if (!d) continue;
+                    if (d.className === 'DClass') p.classes.push(ptr);
+                    else if (d.className === 'DEnumerators') p.enumerators.push(ptr);
+                }
+            }
+        }
+        return s;
+    }
+    private ['2.205 -> 2.206'](s: DState): DState {
+        if (!s.RECOMPILE_LANGUAGE) s.RECOMPILE_LANGUAGE = [];
+        for (let e of Object.values(s.idlookup) as any[]) {
+            if (!e || typeof e !== 'object' || !e.className || !e.id) continue;
+            if (!e.__childrenToSort) e.__childrenToSort = [];
+            // fix parameter having default type "operation"
+            if (e.className === 'DParameter' && e.type) {
+                let type = this.d(e.type, s);
+                if (type && type.className === 'DOperation') e.type = Pointers.ESTRING;
+            }
+
+            if (e.className === 'DValue' && e.name?.toLowerCase() === 'name' && e.values[0]) {
+                let o: DObject = this.d(e.father, s);
+                if (o) o.name = e.values[0];
+            }
+        }
+        return s;
+    }
+    private ['2.206 -> 2.207'](s: DState): DState {
+        let ptrsToReplace: Pointer[] = [];
+        for (let k in s.idlookup) {
+            if (k.indexOf('POINT_')!==0) continue;
+            // let newid = 'Pointer'+k;
+            ptrsToReplace.push(k);
+        }
+        for (let i = 0; i < (s.edgepoints||[]).length; i++) {
+            let v = s.edgepoints[i];
+            if (!v || v.indexOf('POINT_')!==0) continue;
+            if (ptrsToReplace.indexOf(v) === -1) ptrsToReplace.push(v);
+        }
+        if (ptrsToReplace.length) {
+            let str = JSON.stringify(s);
+            for (let ptr of ptrsToReplace){ str = str.split(ptr).join('Pointer'+ptr) }
+            s = JSON.parse(str);
+        }
+        for (let e of Object.values(s.idlookup) as any[]) {
+            if (!e || typeof e !== 'object' || !e.className || !e.id) continue;
+        }
+        return s;
+    }
+    private ['2.207 -> 2.208'](s: DState): DState {
+        let old = {...s};
+        for (let lang of Object.values(s.languages)){
+            if (typeof lang !== 'object') continue;
+            for (let k in lang.m2t) {
+                let pd = lang.m2t[k];
+                if (typeof pd !== 'object') continue;
+                pd.__str = pd.str;
+                delete pd.str;
+            }
+            for (let k in lang.t2m) {
+                let pd = lang.t2m[k];
+                if (typeof pd !== 'object') continue;
+                pd.__str = pd.str;
+                delete pd.str;
+            }
+        }
+
+        for (let k in s.idlookup) {
+            let e = s.idlookup[k] as GObject;
+            if (e?.uri) {
+                e.uri.split('jodel-react').join('jjodelreact');
+            }
+        }
+        return s;
+    }
+    private ['2.208 -> 2.209'](s: DState): DState {
+        if (!s.NODES_RECOMPILE_grid) s.NODES_RECOMPILE_grid = [];
+        if (!s.VIEWS_RECOMPILE_grid) s.VIEWS_RECOMPILE_grid = [];
+        if (!s.NODES_RECOMPILE_snap) s.NODES_RECOMPILE_snap = [];
+        if (!s.VIEWS_RECOMPILE_snap) s.VIEWS_RECOMPILE_snap = [];
+        let oldp: Pointer<DProject>[] = s.projects;
+        const pid: Pointer<DProject> = U.getProjectID_URL() as any;
+        s.projects = [pid];
+        for (let k in s.idlookup) {
+            let e = s.idlookup[k] as GObject;
+            if (k !== pid && e?.className === 'DProject') {
+                delete s.idlookup[k];
+            }
+            if ((e?.className.includes('Vertex') || e?.className.includes('EdgePoint') || e?.className.includes('View')) && !('snap' in e)) {
+                e.snap = {x:1, y:1};
+            }
+            if ((/*e?.className.includes('Graph') ||*/ e?.className.includes('View')) && !('grid' in e)) {
+                e.grid = {x: 0, y:0, type:'cartesian', center: 'cc', visible: true};
+            }
+        }
+        return s;
+    }
+
 }
 
 

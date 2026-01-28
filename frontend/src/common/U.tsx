@@ -3232,14 +3232,21 @@ export class Keystrokes {
     // weird ones:
     public static unidentified = 'Unidentified'; // brightness, F keys without fn (f2, f3...)
     public static __NotReacting__ = 'fn, print, maybe others'; // not even triggering event?
+
     private static RegisteredKeyStrokes: Dictionary<DocString<'selector'>, {keyup: (e:any)=>any, keydown: (e:any)=>any}> = {};
-    public static register(selector: string, arr: {function?: ()=>any, keystroke?: Key[]}[]): void{
-        if (Keystrokes.RegisteredKeyStrokes[selector]) return;
+    private static avoidDuplicateRegisters: Dictionary<DocString<'selector'>, boolean> = {};
+    public static register(selector: string, src: DocString<"unique key to avoid adding twice from same code line">,
+                           arr: {function?: (evt?: any)=>any, keystroke?: Key[]}[]): void{
+        // if (Keystrokes.RegisteredKeyStrokes[selector]) return; disabled, i want 2 different "sources" target body, so i skip by same source instead.
+        if (Keystrokes.avoidDuplicateRegisters[src]) return;
+        Keystrokes.avoidDuplicateRegisters[src] = true;
         let $elems = $(selector);// sort from most "uncommon" to most common key
         let metakeysmap = {
-            [Keystrokes.alt]: 'altKey',
-            [Keystrokes.shift]: 'shiftKey',
-            [Keystrokes.control]: 'ctrlKey',/*
+            [Keystrokes.meta]: true, // 'Meta',
+            [Keystrokes.alt]: true, // 'altKey',
+            [Keystrokes.shift]: true, // 'shiftKey',
+            [Keystrokes.control]: true, // 'ctrlKey',
+            /*
             'altKey': Keystrokes.alt,
             'shiftKey': Keystrokes.shift,
             'ctrlKey': Keystrokes.control,*/
@@ -3249,6 +3256,7 @@ export class Keystrokes {
 
         Log.exDev(!($elems.on as any), 'jQuery is required for Keystrokes.register');
         let optimizedKeyPaths: GObject = {
+            [Keystrokes.meta]: {},
             [Keystrokes.alt]: {},
             [Keystrokes.shift]: {},
             [Keystrokes.control]: {},
@@ -3282,6 +3290,7 @@ export class Keystrokes {
                 curr = curr.parentElement;
             }
             // handle event
+            if (e.metaKey) { $elems.removeClass('key-meta'); }
             if (e.altKey) { $elems.removeClass('key-alt'); }
             if (e.shiftKey) { $elems.removeClass('key-shift'); }
             if (e.ctrlKey) { $elems.removeClass('key-ctrl'); }
@@ -3303,11 +3312,12 @@ export class Keystrokes {
             }
             // handle event
             let root = optimizedKeyPaths;
+            if (e.metaKey) { root = root[Keystrokes.meta] || {}; $elems.addClass('key-meta'); }
             if (e.altKey) { root = root[Keystrokes.alt] || {}; $elems.addClass('key-alt'); }
             if (e.shiftKey) { root = root[Keystrokes.shift] || {}; $elems.addClass('key-shift'); }
             if (e.ctrlKey) { root = root[Keystrokes.control] || {}; $elems.addClass('key-ctrl'); }
             let f = root[e.key];
-            console.log("execute keystrokes", {e, root, optimizedKeyPaths, up:{$elems, keydown, optimizedKeyPaths, arr}});
+            console.log("execute keystrokes", {e, src, root, optimizedKeyPaths, up:{$elems, keydown, optimizedKeyPaths, arr}});
             Log.exDev(f && typeof f !== 'function','found keystroke with invalid func',
                 {key: e.key, shift:e.shiftKey, alt: e.altKey, ctrl: e.ctrlKey, f, root, e})
             f?.();
@@ -3317,20 +3327,22 @@ export class Keystrokes {
         // $elems.off('keydown').on('keydown', null, keydown);
         // $elems.off('keydown').on('keyup', null, keyup);
         let $doc = $(document.body);
-        $doc.off('keydown', selector, keydown).on('keydown', selector, keydown);
-        $doc.off('keyup', selector, keyup).on('keyup', selector, keyup);
-
+        $doc.off('keydown.'+src, selector, keydown as any).on('keydown.'+src as any, selector, keydown);
+        $doc.off('keyup.'+src, selector, keyup as any).on('keyup.'+src as any, selector, keyup);
     }
-    public static unregister(selector: string): void{
+
+
+     public static unregister(selector: string, src: string): void {
         if (!Keystrokes.RegisteredKeyStrokes[selector]) return;
         //$(selector).off('keydown', null as any, Keystrokes.RegisteredKeyStrokes[selector].keydown);
         //$(selector).off('keyup', null as any, Keystrokes.RegisteredKeyStrokes[selector].keyup);
 
         let $doc = $(document.body);
-        $doc.off('keydown', selector, Keystrokes.RegisteredKeyStrokes[selector].keydown);
-        $doc.off('keyup', selector, Keystrokes.RegisteredKeyStrokes[selector].keyup);
+        $doc.off('keydown.src', selector, Keystrokes.RegisteredKeyStrokes[selector].keydown);
+        $doc.off('keyup.src', selector, Keystrokes.RegisteredKeyStrokes[selector].keyup);
 
         delete Keystrokes.RegisteredKeyStrokes[selector];
+        delete Keystrokes.avoidDuplicateRegisters[src];
     }
 
 

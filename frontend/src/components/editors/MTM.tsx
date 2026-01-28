@@ -161,6 +161,7 @@ const serializersArr = Object.keys(serializers);
 
 
 export function clearCache(language: string, engine: string): void{
+    if (!transientProperties.language[language]?.[engine]) return;
     delete transientProperties.language[language][engine];
 }
 
@@ -208,7 +209,9 @@ function MTMEditor(props: EditorAllProps): JSX.Element{
     const fragmentsm2t = Object.keys(m2tobj).filter(k => !(k in notLanguageFragments));
     const fragmentst2m = Object.keys(t2mobj).filter(k => !(k in notLanguageFragments));
 
-    if (t2mpartials) t2m_placeholder = 'Partial transformation for '+t2mfragment+'\nmissing, "default" transformation\nwill be used.\nTo delete this partial,\nrename it and give an empty name.' as any;
+    if (t2mpartials) t2m_placeholder = 'Partial transformation '+t2mfragment+' missing.' +
+        (t2mfragment !== 'Default' ? '\n"Default" transformation will be used.' : '') +
+        '\nTo delete this partial,\nrename it and give an empty name.' as any;
     else switch (t2mengine) {
         default:
         case 'javascript':
@@ -218,7 +221,9 @@ function MTMEditor(props: EditorAllProps): JSX.Element{
             t2m_placeholder = 'main -> foo | bar\nfoo -> "f" "o":*\nbar -> "bar"';
             break;
     }
-    if (m2tpartials) m2t_placeholder = 'Partial transformation for '+m2tfragment+'missing, "default" transformation will be used.\nTo delete this partial, rename it and give an empty name.' as any;
+    if (m2tpartials) m2t_placeholder = 'Partial transformation '+m2tfragment+' missing.' +
+        (m2tfragment !== 'Default' ? '\n"Default" transformation will be used.' : '') +
+        '\nTo delete this partial,\nrename it and give an empty name.' as any;
     else switch (m2tengine) {
         default:
         case 'javascript':
@@ -352,19 +357,22 @@ function MTMEditor(props: EditorAllProps): JSX.Element{
                             setter={(val) => TRANSACTION('language "' + language + '/' + a.engine + '" allow partials',
                                 () => {
                                     SetRootFieldAction.new('languages.' + language + '.'+a.label+'.' + a.engine + '.allowPartials', val, '', false);
+                                    // create empty entries for class, package...
                                     if (val && fragmentsm2t.length === 0) for (let k in defaultpartials) {
-                                        if (!(k in a.obj)) SetRootFieldAction.new('languages.' + language + '.'+a.label+'.' + a.engine + '.'+k, a.func, '', false);
+                                        if (a.func === a.placeholder) return;
+                                        if (!(k in a.obj)) SetRootFieldAction.new('languages.' + language + '.'+a.label+'.' + a.engine + '.'+k, '', '', false);
+                                    }
+                                    if (val && !a.obj.Default && a.obj.__str && a.func !== a.placeholder) {
+                                        SetRootFieldAction.new('languages.' + language + '.'+a.label+'.' + a.engine + '.Default', a.obj.__str, '', false);
                                     }
                                     if (val) a.setFragment('Default');
                                     a.set_oldEngine('__jj_needs_reset__');
-
-                                    if (a.func !== a.placeholder) SetRootFieldAction.new('languages.' + language + '.'+a.label+'.' + a.engine + '.Default', a.func, '', false);
                                     AT_TRANSACTION(()=>{ clearCache(language, a.engine); })
                                 },
                                 a.allowPartials, val)}
-                        /><span className={'my-auto'}> Allow partial {a.operation}s</span></label>
+                        /><span className={'my-auto ms-1'}> Allow partial {a.operation}s</span></label>
                     </Tooltip>
-                    {a.allowPartials ? <div className={'fragments d-flex'}><div className={'fill'}>{
+                    {a.allowPartials ? <div className={'fragments d-flex ms-1'}><div className={'fill'}>{
                         ['+', ...a.fragments].reverse().map(f=><div className={'fragment-btn btn ' +(f === a.fragment ? 'selected btn-secondary' : 'btn-outline-secondary')}
                                               onClick={() => {a.setFragment(f); a.set_oldEngine('__jj_needs_reset__')}}>
                             {f === 'Default'? <span>Default</span> : <Input placeholder={'Confirm to delete'} key={f} getter={()=>f} tooltip={'double click to '+(f==='+'?'add':'rename')+' fragment'} setter={(v)=>{
@@ -394,8 +402,8 @@ function MTMEditor(props: EditorAllProps): JSX.Element{
                         if (old === value) return;
                         console.log('onBlur '+a.label+' pass');
 
-                        TRANSACTION('Edit '+a.LABEL+' language "'+language+'"', ()=> {
-                            SetRootFieldAction.new('languages.'+language+"."+a.LABEL+"."+a.engine+'.' + (a.allowPartials ? a.fragment : '__str'), value, '', false);
+                        TRANSACTION('Edit '+a.label+' language "'+language+'"', ()=> {
+                            SetRootFieldAction.new('languages.'+language+"."+a.label+"."+a.engine+'.' + (a.allowPartials ? a.fragment : '__str'), value, '', false);
                             // SetRootFieldAction.new('RECOMPILE_LANGUAGE', {engine: a.engine, language}, '+=', false);
                             AT_TRANSACTION(()=>clearCache(language, a.engine));
                         })

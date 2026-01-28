@@ -38,12 +38,7 @@ function errorUpdate(msg: string, e: Error){
 }
 
 export function getSelectOptions(data: LPointerTargetable, field: string, options: ReactNode, children?: ReactNode, id_debug?:string): ReactNode {
-    if (!options && children && typeof children === 'object') {
-        if (!Array.isArray(children) || children.length > 0) {
-            options = children;
-        }
-    }
-    if (options) {
+    if (options && React.isValidElement(options) && (options as any)?.length !== 0) {
         if (Array.isArray(options)) {
             return options.map(d => {
                 if (DPointerTargetable.isD(d)) return <option value={d.id}>d.name</option>;
@@ -51,13 +46,26 @@ export function getSelectOptions(data: LPointerTargetable, field: string, option
                     let d2 = L.fromPointer(d) as DPointerTargetable;
                     return d2 ? <option value={d2.id}>d2.name</option> : null;
                 }
-                return d;
+                return React.isValidElement(d) ? d : null;
             });
         }
         return options;
     }
+    if (children && React.isValidElement(children) && (children as any)?.length !== 0) {
+        if (Array.isArray(children)) {
+            return children.map(d => {
+                if (DPointerTargetable.isD(d)) return <option value={d.id}>d.name</option>;
+                if (Pointers.isPointer(d)) {
+                    let d2 = L.fromPointer(d) as DPointerTargetable;
+                    return d2 ? <option value={d2.id}>d2.name</option> : null;
+                }
+                return React.isValidElement(d) ? d : null;
+            });
+        }
+        return children;
+    }
     // children is auto-filled to empty array even if it is not set explicitly in jsx
-    let ret: ReactNode | undefined;
+    let ret: ReactNode | null = null;
     switch (field) {
         default:
         case 'extends':
@@ -321,6 +329,7 @@ export function InputComponent(props: AllProps) {
                     <option value="" disabled selected>{props.placeholder ? props.placeholder : 'Select your option'}</option>
                     {options}
                 </select>;
+
             }
             break;
         case null: case undefined: case "": case "input": input = <input {...inputProps} />; break;
@@ -334,7 +343,7 @@ export function InputComponent(props: AllProps) {
             case 'checkbox': valueStr = value ? 'true' : 'false'; break;
             case 'checkbox3': valueStr = value === false ? 'false' : (value ? 'true' : 'undetermined'); break;
         }
-        console.error('hidden input', {ref: rootprops.ref, rootprops});
+        // console.error('hidden input', {ref: rootprops.ref, rootprops});
         let html: Element | null = !rootprops.ref ? null : typeof rootprops.ref === 'function' ? rootprops.ref() : rootprops.ref.current;
         U.clickedOutside(html?.parentElement, ()=>setVisible(false));
         return <span {...rootprops} onDoubleClick={(e)=>{rootprops.onDoubleClick?.(e); setVisible(true)}}>{valueStr}</span>;
@@ -356,7 +365,10 @@ export function InputComponent(props: AllProps) {
         select?.click();
     }
     return <label className={'input-container'} {...rootprops} /*onClick={openSelect}*/>
-        {label || undefined}{input}{postlabel || undefined}</label>;
+        {label || undefined}
+        {input}
+        {postlabel || undefined}
+    </label>;
     /*
     return(<label className={'p-1'} {...otherprops}
                   style={rootStyle}>

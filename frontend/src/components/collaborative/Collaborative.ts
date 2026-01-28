@@ -6,6 +6,7 @@ import {
     DState,
     DUser,
     type GObject,
+    Log,
     Pointer,
     RuntimeAccessible, SetRootFieldAction, U
 } from "../../joiner";
@@ -33,7 +34,7 @@ const ignoredRootFields: (keyof DState)[] = [
 export class Collaborative {
     static cname: string = 'Collaborative';
     // static client = io('/', {path: '/collaborative', autoConnect: false});
-    static client = io(`${process.env['REACT_APP_COLLABORATIVE']}`, {path: '/collaborative', autoConnect: false});
+    static client = io(process.env['REACT_APP_COLLABORATIVE'], {path: '/collaborative', autoConnect: false});
     public static online: boolean = false;
 
     private static canSend(action: Action): boolean {
@@ -51,7 +52,9 @@ export class Collaborative {
     }
     static async connect(id: Pointer<DProject>){
         Collaborative.client.io.opts.query = {'project': id};
-        await Collaborative.client.connect();
+        Collaborative.client.connect();
+        // 20s timeout for server-side socket (server config) + 5s of extra transmission delay to client.
+        // Collaborative.client.timeout(25000).emit("my-event", (err: any) => {   if (err) { Log.ee('Collaborative request timeout', {err}); } });
         Collaborative.client.on('pullAction', Collaborative.receive);
         Collaborative.online = true;
         // SetRootFieldAction.new('collaborativeSession', true);

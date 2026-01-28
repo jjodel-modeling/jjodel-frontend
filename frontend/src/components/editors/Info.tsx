@@ -62,7 +62,7 @@ class builder {
             {this.named(data, advanced)}
 
             <label className={'input-container'}>
-                <b className={'me-2'}>Dependends from models:</b>
+                <b className={'me-2'}>Depends from models:</b>
                 <MultiSelect isMulti={true} options={multiselectOptions as any} value={multiselectValue} onChange={(v) => {
                     console.log('setting model dependencies', v);
                     l.dependencies = v.map(e => e.value) as Any<string[]>;

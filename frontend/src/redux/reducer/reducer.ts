@@ -1450,7 +1450,7 @@ export async function stateInitializer() {
         if (isProjectPage) {
             let pid: Pointer<DProject> = U.getProjectID_URL() as string;
             const project = await ProjectsApi.getOne(pid);
-            console.log('11 project load api response', {project, isOff:U.isOffline(), userid:DUser.current, user:DUser.getUser()});
+            // console.log('11 project load api response', {project, isOff:U.isOffline(), userid:DUser.current, user:DUser.getUser()});
             if (!project) {
                 // todo: maybe add a retry counter in hash params and reload?
                 console.error('failed to get project', {project});

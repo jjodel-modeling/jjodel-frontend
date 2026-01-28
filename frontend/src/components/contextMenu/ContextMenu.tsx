@@ -21,7 +21,7 @@ import {
     LValue,
     Pointer, transientProperties,
     U,
-    windoww, Keystrokes,
+    windoww, Keystrokes, store, LPointerTargetable, D,
 } from '../../joiner';
 import MemoRec from '../../api/memorec';
 import {useStateIfMounted} from 'use-state-if-mounted';
@@ -35,6 +35,7 @@ import { Btn, CommandBar } from '../commandbar/CommandBar';
 import { createPortal } from 'react-dom';
 import { Logo } from '../logo';
 import { forEach } from 'lodash';
+import {Key} from "../../common/U";
 
 function ContextMenuComponent(props: AllProps) {
     return ContextMenuComponentInner(props);
@@ -159,18 +160,22 @@ function addDynamicEntries(jsxList: ReactNode[], nodeid: Pointer<DGraphElement>,
     HandleMapLevel(map, 0);
     separator();
 }
+
 let jsxList: ReactNode[] = [];
 
 function SubEntry(key:string, icon: ReactNode, label: ReactNode, action: null|undefined|(()=>any),
-                        keycodes: ReactNode[], disabled: boolean = false, subelements: ReactNode[] = []) {
+                        keycodes: Key[], disabled: boolean = false, subelements: ReactNode[] = []) {
     return ContextEntry(key, icon, label, action, keycodes, disabled, subelements, true);
 }
+
 function getKeycode(letter: string | ReactNode): ReactNode{ return Keystrokes.getKeystrokeJsx(letter as any); }
 
+
 function ContextEntry(key: string, icon: ReactNode, label: ReactNode, action: null|undefined|(()=>any),
-                        keycodes: ReactNode[], disabled: boolean = false, subelements: ReactNode[] = [], isSubElement: boolean = false) {
+                        keycodes: Key[], disabled: boolean = false, subelements: ReactNode[] = [], isSubElement: boolean = false) {
     subelements = subelements?.filter(e=>!!e) || [];
     if (!keycodes) keycodes = [];
+
     // @ts-ignore
     let ret = <div key={key} disabled={disabled} className={'col item'+ (subelements.length ? ' hoverable' : '')} tabIndex={0} onClick={(e) => {
         e.stopPropagation();
@@ -212,6 +217,8 @@ function separator() {
     jsxList.push(<hr key={'sep' + hri++} className={'my-1'}/>);
 }
 let closefunc: (panelClick?: boolean)=>void = null as any;
+
+
 function ContextMenuComponentInner(props: AllProps) {
     // const project = user.project as LProject;
     // const display = props.display;
@@ -266,15 +273,6 @@ function ContextMenuComponentInner(props: AllProps) {
         if (oldRef) U.clickedOutside(oldRef, undefined); // remove old callback
         U.clickedOutside(ref, ()=>close()); // register new
         oldRef = ref;
-    }
-
-    const addViewSelf = () => {
-        if (ddata) DViewElement.newDefault(ddata as DNamedElement || undefined, true);
-        close();
-    }
-    const addViewInstances = () => {
-        if (ddata) DViewElement.newDefault(ddata as DNamedElement || undefined);
-        close();
     }
 
     const structuralFeature = async () => {
@@ -389,24 +387,24 @@ function ContextMenuComponentInner(props: AllProps) {
 
         /* Memorec */
 
-        if(ddata && !U.isOffline()) {
-            if(ddata.className === 'DClass') {
+        if (ddata && !U.isOffline()) {
+            if (ddata.className === 'DClass') {
                 // ContextEntry('ai-c', icon['ai'], 'AI suggest', structuralFeature)
+                // NB: did not put this in the usual ContextEntry because this element has children loaded lazily, but must have the caret icon anyway.
                 jsxList.push(<div key='ai-c' onClick={structuralFeature} className={'col item'} tabIndex={0}>
-                    <span className={'my-auto'}>{icon['ai']}</span>
-                    <span className={'my-auto'}>AI Suggest</span>
+                    {icon['ai']}
+                    <span className={'my-auto ms-2'}>AI Suggest</span>
                     <div className='d-flex ms-auto'>
                         <i className='ms-1 bi bi-chevron-right my-auto' style={{fontSize: '0.75em', float: 'right', paddingTop: '2px', fontWeight: '800'}} />
                     </div>
                 </div>);
                 separator();
             }
-            if(ddata.className === 'DPackage') {
+            if (ddata.className === 'DPackage') {
                 jsxList.push(<div key='ai-p' onClick={classifier} className={'col item'} tabIndex={0}>
-                    <span className={'my-auto'}>{icon['ai']}</span>
-                    <span className={'my-auto'}>AI Suggest</span>
+                    {icon['ai']}
+                    <span className={'my-auto ms-2'}>AI Suggest</span>
                     <div className='d-flex'>
-                        {/*NB: did not put this in the usual ContextEntry because this element has children loaded lazily, but must have the caret icon anyway. */}
                         <i className='ms-1 bi bi-chevron-right my-auto' style={{fontSize: '0.75em', float: 'right', paddingTop: '2px', fontWeight: '800'}} />
                     </div>
                 </div>);
@@ -420,18 +418,12 @@ function ContextMenuComponentInner(props: AllProps) {
                 default:
                 case undefined:
                     break;
-                //case 'DValue': if ((ldata as any as LValue).instanceof) jsxList.pop(); ???? break;
-            case 'DClass':
-
-                ContextEntry('ext', icon['extend'], 'Extend',
-                    () => TRANSACTION('Extend class', () => SetRootFieldAction.new('isEdgePending', {
-                        user: DUser.current,
-                        source: (ddata as any).id
-                    })),
-                    [Keystrokes.ctrl, 'E']);
-                separator();
-                break;
-        }
+                // case 'DValue': if ((ldata as any as LValue).instanceof) jsxList.pop(); ???? break;
+                case 'DClass':
+                    ContextEntry('ext', icon['extend'], 'Extend', key_bindings.extend.function, key_bindings.extend.keystroke);
+                    separator();
+                    break;
+            }
 
 
         /* View-specific menu entry (old) */
@@ -459,15 +451,8 @@ function ContextMenuComponentInner(props: AllProps) {
 
         /* Delete */
         let cannotDelete = !!(ddata?.className === 'DValue' && (ddata as any as DValue).instanceof);
-        ContextEntry('delete', icon['delete'], 'Delete', () => {
-                    if (cannotDelete) return false;
-                    close();
-                    if (ldata) ldata.delete();
-                    else node.delete();
-                    // if there is data, then the node is indirectly deleted, no need to call it too.
-                },
-                [Keystrokes.backspace], cannotDelete
-            );
+
+        ContextEntry('delete', icon['delete'], 'Delete', key_bindings.delete.function, key_bindings.delete.keystroke, cannotDelete);
         separator();
         
         /* Refresh */
@@ -476,15 +461,15 @@ function ContextMenuComponentInner(props: AllProps) {
         // jsxList.push(<hr key={hri++} className={'my-1'} />);
 
         /* Up / Down */
-        ContextEntry('up', icon['up'], 'Up', ()=> node.zIndex += 1, [Keystrokes.ctrl, Keystrokes.up]);
-        ContextEntry('down', icon['down'], 'Down', ()=>  node.zIndex -= 1, [Keystrokes.ctrl, Keystrokes.down]);
+        ContextEntry('up', icon['up'], 'Up', key_bindings.up.function, key_bindings.up.keystroke);
+        ContextEntry('down', icon['down'], 'Down', key_bindings.down.function, key_bindings.down.keystroke);
         separator();
         
         /* AUTO-SIZING */
         let gn = node as GObject;
-        if (gn.isResized) ContextEntry('asize', icon['contract'], 'Restore auto-sizing', () => gn.isResized = false, [Keystrokes.ctrl, 'T'])
-        else ContextEntry('nasize', icon['expand'], 'Disable auto-sizing', () => gn.isResized = true, [Keystrokes.ctrl, 'T'])
-        
+        if (gn.isResized) ContextEntry('asize', icon['contract'], 'Restore auto-sizing', () => gn.isResized = false, key_bindings.asize.keystroke)
+        else ContextEntry('nasize', icon['expand'], 'Disable auto-sizing', () => gn.isResized = true, key_bindings.asize.keystroke)
+
         // /* LOCK-UNLOCK */
         // jsxList.push(<div onClick={() => {close(); ldata.delete(); /*node.delete();*/}} className={'col item'} tabIndex={0}>{icon['lock']} Lock/Unlock<div> <i
         //     className='bi bi-command'></i> L</div></div>);
@@ -497,7 +482,7 @@ function ContextMenuComponentInner(props: AllProps) {
         
         /* Analytics */
         if (ldata && model?.isMetamodel) {
-            ContextEntry('analytic', icon['metrics'], 'Analytics', toggleMetrics as any, [Keystrokes.ctrl, 'A']);
+            ContextEntry('analytic', icon['metrics'], 'Analytics', key_bindings.metrics.function, key_bindings.metrics.keystroke);
             separator();
         }
 
@@ -506,10 +491,10 @@ function ContextMenuComponentInner(props: AllProps) {
         if (isM2 && (cname === 'DModel' || cname === 'DClass' || cname === 'DAttribute' || cname === 'DReference')) {
             ContextEntry('view+m2', icon['add'], 'Add view', null, [], false, [
                 SubEntry('own', null, 'For this '+(data?.className || 'DElement').substring(1), addViewSelf, []),
-                SubEntry('instance', null, 'For his instances', addViewInstances, [Keystrokes.alt, Keystrokes.ctrl, 'A'])]
+                SubEntry('instance', null, 'For his instances', addViewInstances, key_bindings.addView.keystroke)]
             )
         } else {
-            ContextEntry('view+', icon['add'], 'Add view', addViewSelf, [Keystrokes.alt, Keystrokes.ctrl, 'A'], false, []);
+            ContextEntry('view+', icon['add'], 'Add view', addViewSelf, key_bindings.addView.keystroke, false, []);
         }
     }
 
@@ -524,7 +509,6 @@ function ContextMenuComponentInner(props: AllProps) {
         <div className={'round' + (editPanel ? ' edit-panel-container' : ' context-menu')}
              style={rootStyle}
              onContextMenu={(e) => e.preventDefault()} ref={updateRef}>
-
             {editPanel ? <>
                     <div className={'edit-panel'}>
                         <Info mode={'popup'}/>
@@ -576,6 +560,110 @@ function ContextMenuComponentInner(props: AllProps) {
 
         </div>);
 }
+
+/*************** keybindings events *****************/
+function getSelected(): {s: DState} & Partial<DState['_lastSelected']> {
+    let s: DState = store.getState();
+    return {s, ...(s._lastSelected || {})};
+}
+
+function addViewSelf() {
+    let {modelElement: dataid, node: nodeid} = getSelected();
+    let ddata = dataid && D.fromPointer(dataid);
+    if (ddata) DViewElement.newDefault(ddata as DNamedElement || undefined, true);
+    else {
+        let dnode = nodeid && D.fromPointer(nodeid);
+        if (dnode) DViewElement.newDefault(dnode, true);
+    }
+    key_bindings.close.function();
+}
+const addViewInstances = () => {
+    let {modelElement: dataid, node: nodeid} = getSelected();
+    let ddata = dataid && D.fromPointer(dataid);
+    if (ddata) DViewElement.newDefault(ddata, false);
+    else {
+        let dnode = nodeid && D.fromPointer(nodeid);
+        if (dnode) DViewElement.newDefault(dnode, false);
+    }
+    key_bindings.close.function();
+}
+
+function addViewKeybind() {
+    let {modelElement: dataid, node: nodeid} = getSelected();
+    let ddata = dataid && D.fromPointer(dataid);
+    let cname = ddata?.className;
+    if (cname === 'DModel' || cname === 'DClass' || cname === 'DAttribute' || cname === 'DReference') addViewInstances();
+    else addViewSelf();
+}
+
+
+/*************** keybindings registration *****************/
+
+let key_bindings: Dictionary<string, KeyBind> = {};
+// todo: populate key_bindings statically, because ctxmenu content is dynamicKeystrokes
+
+class KeyBind {
+    public function: ()=>any;
+    public keystroke: Key[];
+    constructor(f: KeyBind['function'], k: KeyBind['keystroke']) {
+        this.function = f;
+        this.keystroke = k;
+    }
+}
+key_bindings.addView = new KeyBind(addViewKeybind, [Keystrokes.ctrl, Keystrokes.alt, 'V']);
+key_bindings.metrics = new KeyBind(toggleMetrics as any, [Keystrokes.ctrl, Keystrokes.alt, 'B']);
+key_bindings.close = new KeyBind(()=>closefunc(), [Keystrokes.escape]);
+
+key_bindings.asize = new KeyBind(
+    () => {
+        let {node} = getSelected();
+        let lnode = node && L.from(node) as GObject;
+        if (lnode && 'isResized' in lnode) lnode.isResized = !lnode.isResized;
+    }, [Keystrokes.ctrl, 'T']);
+key_bindings.extend = new KeyBind(
+    () => {
+        let {modelElement} = getSelected();
+        let source = modelElement && L.from(modelElement);
+        if (!source || source.className !== 'DClass') return;
+        TRANSACTION('Extend class', () => SetRootFieldAction.new('isEdgePending', {user: DUser.current, source: modelElement}));
+    }, [Keystrokes.ctrl, 'E']);
+key_bindings.delete = new KeyBind(
+    () => {
+        let {modelElement, node} = getSelected();
+        let ldata = modelElement && L.from(modelElement);
+        let lnode = node && L.from(node);
+        if (ldata) ldata.delete();
+        else lnode?.delete();
+    }, [Keystrokes.ctrl, Keystrokes.backspace]);
+key_bindings.up = new KeyBind(
+    () => {
+        let {node} = getSelected();
+        let lnode = node && L.from(node) as LGraphElement;
+        if (lnode) lnode.zIndex += 1;
+    }, [Keystrokes.ctrl, Keystrokes.up]);
+key_bindings.down = new KeyBind(
+    () => {
+        let {node} = getSelected();
+        let lnode = node && L.from(node) as LGraphElement;
+        if (lnode) lnode.zIndex -= 1;
+    }, [Keystrokes.ctrl, Keystrokes.down]);
+
+// let hasRegistered: boolean = false;
+function registerKeystrokes() {
+    if (!windoww.$) {
+        setTimeout(registerKeystrokes, 100);
+        return;
+    }
+    Keystrokes.register('#root', 'ctxmenu', Object.values(key_bindings));
+    // hasRegistered = true;
+}
+setTimeout(registerKeystrokes, 1);
+
+
+
+
+/*************** component registration *****************/
+
 interface OwnProps {
     graph: Pointer<DGraph>
 }
