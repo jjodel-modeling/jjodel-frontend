@@ -217,16 +217,11 @@ function deepCopyButOnlyFollowingPath(oldStateDoNotModify: DState, action: Parse
             // let unpointedElement: DPointerTargetable | undefined;
             // perform final assignment
             if (action.type === CreateElementAction.type && current[key]) {
-                oldValue = current[key];
-                gotChanged = false;
-                let LOG: typeof Log['ee'] = Log.ee;
+                // Element already exists in state - silently skip (this is not an error, just a no-op)
+                // This can happen due to multiple render cycles or collaborative mode
                 let inCollabNode = Collaborative.online && action.value.className.toLowerCase().includes('graph');
-                if (inCollabNode) LOG = Log.ii;
-                let diff = Uobj.objdiff(current[key], action.value);
-                LOG("rejected CreateElementAction"+(inCollabNode ? " (collab node)" : ", rollback occurring:")+"", {action,
-                    preexistingValue: current[key], diff});
-                if (inCollabNode) return false; // warning: use return only when you want to abort and skip subsequent CompositeAction sub-actions like now.
-                else continue;
+                if (inCollabNode) return false; // abort for collab nodes
+                continue; // silently skip for local duplicates
             }
             if (isObjectMerge) {
                 if (typeof newVal === 'string') { let tmp: any = {}; tmp[newVal] = true; newVal = tmp; }

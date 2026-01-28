@@ -8,7 +8,9 @@ import {
     LModel,
     DUser,
     DClass,
-    SetRootFieldAction
+    SetRootFieldAction,
+    Constructors,
+    DPointerTargetable
 } from "../../../joiner";
 import {DefaultNode} from "../../../joiner/components";
 import ContextMenu from "../../contextMenu/ContextMenu";
@@ -35,6 +37,14 @@ function MetamodelTabComponent(props: AllProps) {
             if (!dataStr) return;
 
             const data = JSON.parse(dataStr);
+
+            // Sub-features must be dropped on a Class, not canvas
+            const subFeatureTypes = ['FEATURE_ATTRIBUTE', 'FEATURE_REFERENCE', 'FEATURE_OPERATION', 'FEATURE_LITERAL'];
+            if (subFeatureTypes.includes(data.type)) {
+                // Don't create sub-features on canvas - they need a parent Class
+                return;
+            }
+
             const feature = getFeatureByDragType(data.type);
 
             if (!feature || !model) return;
@@ -63,7 +73,10 @@ function MetamodelTabComponent(props: AllProps) {
 
     if (!model) return(<>closed tab</>);
     if (!graph) {
-        DGraph.new(0, model.id);
+        const graphid = Constructors.DGraph_makeID(model.id);
+        if (!DPointerTargetable.pendingCreation[graphid]) {
+            DGraph.new(0, model.id);
+        }
         return(<div style={{width: "100%", height: "100%", display: "flex"}}>
             <span style={{margin: "auto"}}>Building the Graph...</span>
         </div>);

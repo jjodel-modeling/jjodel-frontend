@@ -606,6 +606,10 @@
     background: linear-gradient(135deg, #475569 0%, #334155 100%);
 }
 
+.jodie-minimized:hover i {
+    color: #ffffff !important;  /* Ensure icon stays white on hover */
+}
+
 /* Stack FAB above notification when visible */
 body[data-notification-visible="true"] .jodie-minimized {
     bottom: 280px;  /* Move above notification widget (~200px height + gap) */

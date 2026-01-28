@@ -365,7 +365,7 @@ function FunctionComponent(props: AllProps) {
                     style={{
                         padding: '5px',
                         marginBottom: '10px',
-                        minHeight: '20px',
+                        minHeight: '120px',
                         transition: 'height 0.3s',
                         height: expand ? '400px' : '200px',
                         resize: 'vertical',

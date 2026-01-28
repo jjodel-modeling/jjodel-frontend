@@ -785,140 +785,24 @@ function PropertiesOverview(props: { data: LModel; onViewAnalytics?: () => void 
                 <h3 className="properties-section-title">Overview</h3>
             </div>
             <div className="properties-section-content">
-                <div className="overview-grid" style={{
-                    display: 'flex',
-                    gap: '16px',
-                    marginBottom: '16px',
-                    flexWrap: 'wrap',
-                    justifyContent: 'center'
-                }}>
-                    {/* Packages Card */}
-                    <div className="stat-card" title="View packages" style={{
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        padding: '12px 16px',
-                        background: '#ffffff',
-                        border: '1px solid #e5e7eb',
-                        borderRadius: '8px',
-                        width: '220px',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s ease'
-                    }}>
-                        <div style={{
-                            width: '40px',
-                            height: '40px',
-                            borderRadius: '50%',
-                            background: '#f1f5f9',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            marginBottom: '10px'
-                        }}>
-                            <i className="bi bi-folder" style={{
-                                fontSize: '18px',
-                                color: '#64748b'
-                            }} />
-                        </div>
-                        <div style={{
-                            fontSize: '20px',
-                            fontWeight: 700,
-                            color: '#111827',
-                            marginBottom: '2px'
-                        }}>{packages}</div>
-                        <div style={{
-                            fontSize: '13px',
-                            fontWeight: 500,
-                            color: '#6b7280',
-                            textAlign: 'center'
-                        }}>Packages</div>
+                {/* Horizontal 1x3 Grid */}
+                <div className="overview-grid-horizontal">
+                    <div className="overview-cell">
+                        <i className="bi bi-folder" />
+                        <span className="cell-value">{packages}</span>
+                        <span className="cell-label">Packages</span>
                     </div>
 
-                    {/* Classes Card */}
-                    <div className="stat-card" title="View classes" style={{
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        padding: '12px 16px',
-                        background: '#ffffff',
-                        border: '1px solid #e5e7eb',
-                        borderRadius: '8px',
-                        width: '220px',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s ease'
-                    }}>
-                        <div style={{
-                            width: '40px',
-                            height: '40px',
-                            borderRadius: '50%',
-                            background: '#f1f5f9',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            marginBottom: '10px'
-                        }}>
-                            <i className="bi bi-grid-3x3" style={{
-                                fontSize: '18px',
-                                color: '#64748b'
-                            }} />
-                        </div>
-                        <div style={{
-                            fontSize: '20px',
-                            fontWeight: 700,
-                            color: '#111827',
-                            marginBottom: '2px'
-                        }}>{classes}</div>
-                        <div style={{
-                            fontSize: '13px',
-                            fontWeight: 500,
-                            color: '#6b7280',
-                            textAlign: 'center'
-                        }}>Classes</div>
+                    <div className="overview-cell">
+                        <i className="bi bi-diagram-3" />
+                        <span className="cell-value">{classes}</span>
+                        <span className="cell-label">Classes</span>
                     </div>
 
-                    {/* Enumerators Card */}
-                    <div className="stat-card" title="View enumerators" style={{
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        padding: '12px 16px',
-                        background: '#ffffff',
-                        border: '1px solid #e5e7eb',
-                        borderRadius: '8px',
-                        width: '220px',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s ease'
-                    }}>
-                        <div style={{
-                            width: '40px',
-                            height: '40px',
-                            borderRadius: '50%',
-                            background: '#f1f5f9',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            marginBottom: '10px'
-                        }}>
-                            <i className="bi bi-list-ol" style={{
-                                fontSize: '18px',
-                                color: '#64748b'
-                            }} />
-                        </div>
-                        <div style={{
-                            fontSize: '20px',
-                            fontWeight: 700,
-                            color: '#111827',
-                            marginBottom: '2px'
-                        }}>{enumerators}</div>
-                        <div style={{
-                            fontSize: '13px',
-                            fontWeight: 500,
-                            color: '#6b7280',
-                            textAlign: 'center'
-                        }}>Enumerators</div>
+                    <div className="overview-cell">
+                        <i className="bi bi-list-ul" />
+                        <span className="cell-value">{enumerators}</span>
+                        <span className="cell-label">Enumerators</span>
                     </div>
                 </div>
 

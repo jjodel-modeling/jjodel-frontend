@@ -268,7 +268,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         }*/
 
         let graph: DGraph = DPointerTargetable.from(graphid, state) as DGraphElement as any; // se non c'è un grafo lo creo
-        if (!graph) {
+        if (!state.idlookup[graphid] && !DPointerTargetable.pendingCreation[graphid]) {
             // Log.exDev(!dataid, 'attempted to make a Graph element without model', {dataid, ownProps, ret, thiss:this});
             if (ret.data) CreateElementAction.new(DGraph.new(0, ret.data.id, parentnodeid, graphid, graphid)); }
         /*else {
@@ -990,15 +990,8 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
                     // 10 units of range checked for 3-loops = 10*3*1.2 = 36 units * 300ms = 10.8sec.   9U = 9.72sec
                     let deltas = loopcheck.calls.map((e, i, a) => i === a.length-1 ? thischange - e : a[i+1] - a[i]);
                     loopcheck.stopUpdateEvents = v.clonedCounter;
-                    Log.eDevv("loop in \""+v.name+"\".onDataUpdate." +
-                        " The event has been disabled until the view changes.", {
-                        change_log: loopcheck.calls,
-                        component: this,
-                        loopcheck,
-                        deltas,
-                        updatingTimer:U.UpdatingTimer,
-                        timediff: (thischange - loopcheck.calls[loopcheck.calls.length - observationRange])
-                    } as any);
+                    // Reduced logging - loop detection still works but doesn't spam console
+                    console.debug("loop in \""+v.name+"\".onDataUpdate - event disabled until view changes");
                 }
             }
         }

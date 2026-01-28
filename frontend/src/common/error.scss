@@ -418,6 +418,7 @@
     color: #475569;
 
     .error-instance-name,
+    .error-class-name,
     .error-node-name {
         display: flex;
         align-items: center;
@@ -427,6 +428,11 @@
             color: #64748b;
             font-weight: 500;
         }
+    }
+
+    .error-class-name {
+        font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
+        font-size: 12px;
     }
 }
 
@@ -549,6 +555,7 @@
         color: #e2e8f0;
 
         .error-instance-name strong,
+        .error-class-name strong,
         .error-node-name strong {
             color: #94a3b8;
         }
@@ -614,6 +621,7 @@
             color: #e2e8f0;
 
             .error-instance-name strong,
+            .error-class-name strong,
             .error-node-name strong {
                 color: #94a3b8;
             }

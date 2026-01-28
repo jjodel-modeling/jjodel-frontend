@@ -1100,61 +1100,148 @@ export class DefaultView {
 
 
 public static class(): string { return (`
-/* -- Jjodel Abstract Syntax Specification v2.1 -- */
+/* -- Jjodel Abstract Syntax Specification v2.2 -- */
 
-<View 
-    className={'root class highlight' + ' level-' + level} 
-    onDoubleClick={()=>{node.state = {colorIndex: ((node.state.colorIndex||0) + 1) % (view.palette['outline-'].value.length + 1)}}} 
-    style={{'--outlineColor': colorIndex !== 0 ? 'var(--outline-'+colorIndex+')': 'transparent', '--borderColor': colorIndex !== 0 ? 'var(--outline-'+colorIndex+')': 'gray'}}    
+<View
+    className={'root class highlight' + ' level-' + level}
+    onDoubleClick={()=>{node.state = {colorIndex: ((node.state.colorIndex||0) + 1) % (view.palette['outline-'].value.length + 1)}}}
+    style={{
+        '--outlineColor': colorIndex !== 0 ? 'var(--outline-'+colorIndex+')': 'transparent',
+        '--borderColor': colorIndex !== 0 ? 'var(--outline-'+colorIndex+')': 'gray',
+        fontFamily: "'SF Mono', Monaco, Consolas, monospace"
+    }}
+    onDragOver={(e) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'copy';
+        e.currentTarget.classList.add('drag-over');
+    }}
+    onDragLeave={(e) => {
+        e.currentTarget.classList.remove('drag-over');
+    }}
+    onDrop={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        e.currentTarget.classList.remove('drag-over');
+        try {
+            const dataStr = e.dataTransfer.getData('application/json');
+            if (!dataStr) return;
+            const dropData = JSON.parse(dataStr);
+            switch (dropData.type) {
+                case 'FEATURE_ATTRIBUTE':
+                    const a = data.addChild('attribute');
+                    try { (a)(); } catch(e) { }
+                    break;
+                case 'FEATURE_REFERENCE':
+                    const r = data.addChild('reference');
+                    try { (r)(); } catch(e) { }
+                    break;
+                case 'FEATURE_OPERATION':
+                    const o = data.addChild('operation');
+                    try { (o)(); } catch(e) { }
+                    break;
+            }
+        } catch (err) {
+            console.error('Drop on class failed:', err);
+        }
+    }}
 >
-   <div className={'header'}>
-    {data.isSingleton && <i className='bi bi-1-square'>&nbsp;</i>}
-    { level > 1 && <b className={'class-name'}>{interface ? 'Interface' : 'Class'}: </b>}    
+    {/* HEADER */}
+    <div className={'header'} style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'flex-start',
+        gap: '8px',
+        padding: '8px 12px',
+        backgroundColor: 'transparent',
+        borderBottom: '1px solid #e2e8f0'
+    }}>
+        {/* Singleton icon */}
+        {data.isSingleton && <i className='bi bi-1-square' style={{color: '#64748b'}}></i>}
 
+        {/* Class/Interface label */}
+        {level > 1 && <span style={{
+            fontSize: '12px',
+            fontWeight: 600,
+            color: '#64748b',
+            fontFamily: "'SF Mono', Monaco, Consolas, monospace"
+        }}>{interface ? 'Interface' : 'Class'}:</span>}
 
-    <span className={(data.abstract ? "abstract": "")}><Input data={data} field={'name'} hidden={true} autosize={true} /></span>
-    {data.extends.some(a => a.model.id !== data.model.id) && <i className="bi bi-arrow-up open"></i>}
-    {data.extendedBy.some(a => a.model.id !== data.model.id) && <i className="bi bi-arrow-down open"></i>}
-    {/* data.referencedBy.filter(a => typeof a !== 'undefined').some(a => a.model.id !== data.model.id) && <i className="bi bi-arrow-left open"></i>*/}
-        
-    {refs.some(b => b.model.id !== data.model.id) && <Tooltip inline position={'top'} offsetX={20} tooltip={refNames.join(',  ')}><i className="bi bi-arrow-left open"></i></Tooltip>}
+        {/* Class name - lighter weight */}
+        <span style={{
+            fontSize: '12px',
+            fontWeight: 400,
+            color: '#1e293b',
+            fontFamily: "'SF Mono', Monaco, Consolas, monospace",
+            fontStyle: data.abstract ? 'italic' : 'normal'
+        }}>
+            <Input data={data} field={'name'} hidden={true} autosize={true} />
+        </span>
 
-
+        {/* Inheritance icons */}
+        {data.extends.some(a => a.model.id !== data.model.id) &&
+            <i className="bi bi-arrow-up" style={{color: '#3b82f6', fontSize: '11px'}}></i>}
+        {data.extendedBy.some(a => a.model.id !== data.model.id) &&
+            <i className="bi bi-arrow-down" style={{color: '#10b981', fontSize: '11px'}}></i>}
+        {refs.some(b => b.model.id !== data.model.id) &&
+            <Tooltip inline position={'top'} offsetX={20} tooltip={refNames.join(', ')}>
+                <i className="bi bi-arrow-left" style={{color: '#f59e0b', fontSize: '11px'}}></i>
+            </Tooltip>}
     </div>
 
-    {level > 2 && <hr/>}
+    {/* BODY - Features */}
+    {level > 2 &&
+        <div className={'class-body'}>
 
-    {level > 2 && 
-        <div className={'class-children'}>
-            {level >= 2 && [
-                attributes.map(c => <DefaultNode key={c.id} data={c} />),
-                references.map(c => <DefaultNode key={c.id} data={c} />),
-                operations.map(c => <DefaultNode key={c.id} data={c} />)
-            ]
-            || [
-            <div className={"summary"}>{[
-                attributes.length ? attributes.length + " attributes" : '',
-                references.length ? references.length + " references" : '',
-                operations.length ? operations.length + " operations" : '',
-                !(attributes.length + references.length + operations.length) ? '- empty -' : ''
-                ].filter(v=>!!v).join(',')}</div>
-            ]
+            {/* ATTRIBUTES Section */}
+            {attributes.length > 0 &&
+                <div className={'features-section attributes-section'}>
+                    {attributes.map(c => <DefaultNode key={c.id} data={c} />)}
+                </div>
+            }
+
+            {/* Separator: attributes -> references */}
+            {attributes.length > 0 && references.length > 0 &&
+                <div className={'section-separator'}></div>
+            }
+
+            {/* REFERENCES Section */}
+            {references.length > 0 &&
+                <div className={'features-section references-section'}>
+                    {references.map(c => <DefaultNode key={c.id} data={c} />)}
+                </div>
+            }
+
+            {/* Separator: references -> operations */}
+            {(attributes.length > 0 || references.length > 0) && operations.length > 0 &&
+                <div className={'section-separator'}></div>
+            }
+
+            {/* OPERATIONS Section */}
+            {operations.length > 0 &&
+                <div className={'features-section operations-section'}>
+                    {operations.map(c => <DefaultNode key={c.id} data={c} />)}
+                </div>
+            }
+
+            {/* Empty state */}
+            {!(attributes.length + references.length + operations.length) &&
+                <div className={'empty-state'}>— empty —</div>
             }
         </div>
     }
 
     {decorators}
 
-    <ContextualEntry 
-        title={'Highlight Class'} 
-        icon={"bi-paint-bucket"} 
-        action={()=>{node.state = {colorIndex: ((node.state.colorIndex||0) + 1) % (view.palette['outline-'].value.length + 1)}}} 
+    <ContextualEntry
+        title={'Highlight Class'}
+        icon={"bi-paint-bucket"}
+        action={()=>{node.state = {colorIndex: ((node.state.colorIndex||0) + 1) % (view.palette['outline-'].value.length + 1)}}}
         node={node}
     />
-    <ContextualEntry 
-        title={'Reset Highlight'} 
-        icon={"bi-x"} 
-        action={() => {node.state = {colorIndex : 0}}} 
+    <ContextualEntry
+        title={'Reset Highlight'}
+        icon={"bi-x"}
+        action={() => {node.state = {colorIndex : 0}}}
         node={node}
     />
 
@@ -1167,7 +1254,32 @@ public static enum(): string { return (
 /* -- Jjodel Abstract Syntax Specification v2.0 -- */
 
 
-<View className={'root enumerator'}>
+<View
+    className={'root enumerator'}
+    onDragOver={(e) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'copy';
+        e.currentTarget.classList.add('drag-over');
+    }}
+    onDragLeave={(e) => {
+        e.currentTarget.classList.remove('drag-over');
+    }}
+    onDrop={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        e.currentTarget.classList.remove('drag-over');
+        try {
+            const dataStr = e.dataTransfer.getData('application/json');
+            if (!dataStr) return;
+            const dropData = JSON.parse(dataStr);
+            if (dropData.type === 'FEATURE_LITERAL') {
+                data.addLiteral('newLiteral');
+            }
+        } catch (err) {
+            console.error('Drop on enum failed:', err);
+        }
+    }}
+>
     <div className={'header'}>
         {level > 1 && <b className={'enumerator-name'}>Enum: </b>}
         {level == 1 && <i className="bi bi-explicit-fill"></i>}<Input data={data} field={'name'} hidden={true} autosize={true} />
@@ -1180,16 +1292,41 @@ public static enum(): string { return (
 </View>`
 );}
 
-    /* FEATURE */
+    /* FEATURE (Attribute / Reference) */
 
     public static feature(): string { return (
 `
-/* -- Jjodel Abstract Syntax Specification v2.11 -- */
+/* -- Jjodel Abstract Syntax Specification v2.3 -- */
 
+<View className={'root feature ' + (data.className === 'DReference' ? 'reference-row' : 'attribute-row')} style={{
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: '4px 10px',
+    fontSize: '12px',
+    fontFamily: "'SF Mono', Monaco, Consolas, monospace",
+    transition: 'background 0.15s ease'
+}}>
+    {/* Left side: Name with colon */}
+    <div style={{display: 'flex', alignItems: 'center', gap: '4px'}}>
+        {/* External indicator */}
+        {(data.type && data.type.model && data.type.model.id !== data.model.id) &&
+            <i className="bi bi-box-arrow-up-right" style={{
+                fontSize: '9px',
+                color: data.className === 'DReference' ? '#f59e0b' : '#3b82f6'
+            }}></i>
+        }
+        <span style={{
+            fontWeight: 500,
+            color: '#334155'
+        }}>{data.name}:</span>
+    </div>
 
-<View className={'root feature w-100'}>
-    {(data.type.model && data.type.model.id !== data.model.id) && <i style={{marginTop: '2.5px'}} className="bi bi-arrow-left"></i>}<span className={'feature-name'}>{data.name}:</span>    
-    <Select data={data} field={'type'} />
+    {/* Right side: Type Select (smaller) */}
+    <div style={{maxWidth: '110px', minWidth: '80px'}}>
+        <Select data={data} field={'type'} />
+    </div>
+
     {decorators}
 </View>`
 );}
@@ -1211,17 +1348,39 @@ public static enum(): string { return (
 
     public static operation(): string { return (
 `
-/* -- Jjodel Abstract Syntax Specification v2.0 -- */
+/* -- Jjodel Abstract Syntax Specification v2.3 -- */
 
+<View className={'root operation operation-row'} style={{
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: '4px 10px',
+    fontSize: '12px',
+    fontFamily: "'SF Mono', Monaco, Consolas, monospace",
+    transition: 'background 0.15s ease'
+}}>
+    {/* Left side: Name with arrow */}
+    <span style={{
+        fontWeight: 500,
+        color: '#334155'
+    }}>{data.name} =></span>
 
-<View className={'root operation w-100 hoverable'}>
-        <span className={'feature-name'}>{data.name + ' =>'}</span>
+    {/* Right side: Return Type Select (smaller) */}
+    <div style={{maxWidth: '110px', minWidth: '80px'}}>
         <Select data={data} field={'type'} />
-    <div className={"parameters content"}>
-    {data.exceptions.length ? " throws " + data.exceptions.join(", ") : ''}
-    {
-        level >= 3 && data.parameters.map(p => <DefaultNode data={p} key={p.id} />)
-    }</div>
+    </div>
+
+    {/* Parameters (if level >= 3) */}
+    {level >= 3 && data.parameters.length > 0 &&
+        <div className={"parameters-section"} style={{
+            marginLeft: '4px',
+            fontSize: '10px',
+            color: '#64748b'
+        }}>
+            {data.parameters.map(p => <DefaultNode data={p} key={p.id} />)}
+        </div>
+    }
+
     {decorators}
 </View>`
 );}
@@ -1347,6 +1506,7 @@ public static object(): string { return (
                             message={msg}
                             dname={dname}
                             nodename={nodename}
+                            dataClassName={data?.className}
                         />
                     </Measurable>
                 );
