@@ -6,6 +6,7 @@ import { formatVersionNumber } from '../../utils/versionUtils';
 import ShareProjectModal from './ShareProjectModal';
 import UnsavedChangesDialog from './UnsavedChangesDialog';
 import DocumentationSection from './DocumentationSection';
+import { EcoreService, XMIService } from '../../services/export';
 import './project-editor.scss';
 
 // Types for contextual menu
@@ -413,6 +414,30 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
         closeMenu();
     };
 
+    // Export metamodel as Ecore (.ecore)
+    const handleExportEcore = (mm: LModel) => {
+        try {
+            EcoreService.exportToFile(mm);
+            U.alert('i', 'Exported', `Metamodel exported as Ecore: ${mm.name}.ecore`);
+        } catch (error) {
+            console.error('Export Ecore error:', error);
+            U.alert('e', 'Export Failed', 'Could not export as Ecore format.');
+        }
+        closeMenu();
+    };
+
+    // Export model as XMI (.xmi) with embedded metamodel
+    const handleExportXMI = (model: LModel) => {
+        try {
+            XMIService.exportToFile(model);
+            U.alert('i', 'Exported', `Model exported as XMI: ${model.name}.xmi`);
+        } catch (error) {
+            console.error('Export XMI error:', error);
+            U.alert('e', 'Export Failed', 'Could not export as XMI format.');
+        }
+        closeMenu();
+    };
+
     // Rename handlers
     const startRename = (type: MenuType, id: string, currentName: string) => {
         setRenamingItem({ type, id });
@@ -740,8 +765,16 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                                                 onClick={() => handleExportMetamodel(mm)}
                                             >
                                                 <i className="bi bi-download" />
-                                                Export Metamodel
+                                                Export (.jmm)
                                             </button>
+                                            <button
+                                                className="context-menu__item"
+                                                onClick={() => handleExportEcore(mm)}
+                                            >
+                                                <i className="bi bi-file-earmark-code" />
+                                                Export Ecore (.ecore)
+                                            </button>
+                                            <div className="context-menu__divider" />
                                             <button
                                                 className="context-menu__item"
                                                 onClick={() => startRename('metamodel', mm.id, mm.name || '')}
@@ -898,8 +931,16 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                                                 onClick={() => handleExportModel(model)}
                                             >
                                                 <i className="bi bi-download" />
-                                                Export Model
+                                                Export (.jm)
                                             </button>
+                                            <button
+                                                className="context-menu__item"
+                                                onClick={() => handleExportXMI(model)}
+                                            >
+                                                <i className="bi bi-file-earmark-code" />
+                                                Export XMI (.xmi)
+                                            </button>
+                                            <div className="context-menu__divider" />
                                             <button
                                                 className="context-menu__item"
                                                 onClick={() => startRename('model', model.id, model.name || '')}
