@@ -1070,6 +1070,7 @@ git diff <commit-hash>
 
 | Data | Commit Hash | Descrizione | File Principali |
 |------|-------------|-------------|-----------------|
+| 2026-01-30 01:05 | `9dedcd404` | Change model tab icon from M to m for visual distinction | `tab-title.scss` |
 | 2026-01-30 00:55 | `3f2613a36` | Remove border separators from metamodel menu items | `project-editor.scss` |
 | 2026-01-30 00:50 | `a278cd0b3` | Remove shadows from metamodel selection menu | `project-editor.scss` |
 | 2026-01-30 00:45 | `98ea3b353` | Simplify metamodel selection menu (minimal design) | `ProjectEditor.tsx`, `project-editor.scss` |
