@@ -851,7 +851,7 @@
   &__item {
     display: block;
     width: 100%;
-    padding: 12px 14px;
+    padding: 10px 14px;
     background: none;
     border: none;
     text-align: left;
@@ -863,10 +863,6 @@
 
     &:hover {
       background: var(--bg-hover, #f8fafc);
-    }
-
-    &:not(:last-child) {
-      border-bottom: 1px solid var(--border-color-light, #f1f5f9);
     }
   }
 }
@@ -1126,10 +1122,6 @@
 
       &:hover {
         background: var(--bg-hover, #334155);
-      }
-
-      &:not(:last-child) {
-        border-color: var(--border-color, #334155);
       }
     }
   }
