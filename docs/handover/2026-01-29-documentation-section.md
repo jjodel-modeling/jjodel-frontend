@@ -1070,6 +1070,7 @@ git diff <commit-hash>
 
 | Data | Commit Hash | Descrizione | File Principali |
 |------|-------------|-------------|-----------------|
+| 2026-01-30 01:40 | `a30ff1a67` | Fix context menu z-index (overflow visible) | `project-editor.scss` |
 | 2026-01-30 01:30 | `7446be9f5` | Ecore/XMI export functionality for metamodels and models | `EcoreService.ts`, `XMIService.ts`, `ExportImportMenu.tsx`, `ImportDropZone.tsx`, `ProjectEditor.tsx` |
 | 2026-01-30 01:05 | `9dedcd404` | Change model tab icon from M to m for visual distinction | `tab-title.scss` |
 | 2026-01-30 00:55 | `3f2613a36` | Remove border separators from metamodel menu items | `project-editor.scss` |
