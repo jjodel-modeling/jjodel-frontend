@@ -799,8 +799,7 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                                             className="metamodel-select-menu__item"
                                             onClick={() => handleCreateModel(mm)}
                                         >
-                                            <span className="metamodel-select-menu__icon">M</span>
-                                            <span className="metamodel-select-menu__name">{mm.name || 'Unnamed'}</span>
+                                            {mm.name || 'Unnamed'}
                                         </button>
                                     ))}
                                 </div>

@@ -815,15 +815,18 @@
   }
 }
 
+// ============================================
+// METAMODEL SELECT MENU - MINIMAL
+// ============================================
+
 .metamodel-select-menu {
   position: absolute;
   top: calc(100% + 4px);
   right: 0;
-  min-width: 220px;
+  min-width: 200px;
   background: var(--bg-primary, #ffffff);
   border: 1px solid var(--border-color, #e2e8f0);
   border-radius: 8px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
   z-index: 100;
   overflow: hidden;
   animation: menuSlideDown 0.15s ease;
@@ -845,14 +848,15 @@
   }
 
   &__item {
-    display: flex;
-    align-items: center;
-    gap: 12px;
+    display: block;
     width: 100%;
     padding: 12px 14px;
     background: none;
     border: none;
     text-align: left;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-primary, #1e293b);
     cursor: pointer;
     transition: background 0.1s ease;
 
@@ -863,26 +867,6 @@
     &:not(:last-child) {
       border-bottom: 1px solid var(--border-color-light, #f1f5f9);
     }
-  }
-
-  &__icon {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 32px;
-    height: 32px;
-    background: #e9d5ff;
-    color: #7c3aed;
-    border-radius: 6px;
-    font-size: 14px;
-    font-weight: 600;
-    flex-shrink: 0;
-  }
-
-  &__name {
-    font-size: 14px;
-    font-weight: 500;
-    color: var(--text-primary, #1e293b);
   }
 }
 
@@ -1127,33 +1111,24 @@
 
   // Metamodel select menu dark mode
   .metamodel-select-menu {
-    background: #1e293b;
-    border-color: #334155;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+    background: var(--bg-secondary, #1e293b);
+    border-color: var(--border-color, #334155);
 
     &__header {
-      background: #0f172a;
-      border-color: #334155;
-      color: #64748b;
+      background: var(--bg-tertiary, #0f172a);
+      border-color: var(--border-color, #334155);
     }
 
     &__item {
+      color: var(--text-primary, #f1f5f9);
+
       &:hover {
-        background: #334155;
+        background: var(--bg-hover, #334155);
       }
 
       &:not(:last-child) {
-        border-color: #334155;
+        border-color: var(--border-color, #334155);
       }
-    }
-
-    &__icon {
-      background: #4c1d95;
-      color: #c4b5fd;
-    }
-
-    &__name {
-      color: #f1f5f9;
     }
   }
 }
