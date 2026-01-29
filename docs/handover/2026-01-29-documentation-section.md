@@ -1053,4 +1053,61 @@ title: React.createElement('div', {
 
 ---
 
-*Ultimo aggiornamento: 2026-01-30 ore 00:15*
+*Ultimo aggiornamento: 2026-01-30 ore 00:30*
+
+---
+
+## VERSION HISTORY / ROLLBACK
+
+Per fare rollback a una versione precedente:
+```bash
+git checkout <commit-hash> -- .
+# oppure per vedere i cambiamenti prima
+git diff <commit-hash>
+```
+
+### Commit History
+
+| Data | Commit Hash | Descrizione | File Principali |
+|------|-------------|-------------|-----------------|
+| 2026-01-30 00:20 | `c90cad4a0` | PDF support, Model capability badges, Metamodel selection dropdown | `types/jodie.ts`, `ChatInput.tsx`, `AIProviderService.ts`, `AISettingsContent.tsx`, `ProjectEditor.tsx`, `Navbar.tsx` |
+
+### Dettaglio Commit `c90cad4a0`
+
+**Features aggiunte:**
+
+1. **PDF Support per Jjodie Chat**
+   - Interfaccia `ChatDocument` in `types/jodie.ts`
+   - Funzione `supportsPDF()` per rilevare supporto provider
+   - `ChatInput.tsx` gestisce upload e preview PDF
+   - `AIProviderService.ts` formatta PDF per Claude e Gemini API
+   - `ChatMessages.tsx` visualizza documenti nei messaggi
+
+2. **Model Capability Badges in AI Settings**
+   - `PROVIDER_MODELS` con capabilities `vision` e `pdf` per ogni modello
+   - Componente `ModelCapabilitiesBadges` in `AISettingsContent.tsx`
+   - Badge "Images", "PDF", "Text only" sotto il select del modello
+   - Stili in `AISettingsContent.scss` con dark mode
+
+3. **Metamodel Selection Dropdown**
+   - Dropdown in `ProjectEditor.tsx` per selezionare metamodel quando si crea un nuovo model
+   - `createM1` esportato da `Navbar.tsx`
+   - Comportamento condizionale: 0 metamodels = disabled, 1 = direct create, 2+ = dropdown menu
+   - Stili in `project-editor.scss` con animazione slideDown
+
+**File modificati (19 files, +1919 -129):**
+- `frontend/src/types/jodie.ts`
+- `frontend/src/components/Jodie/ChatInput.tsx`
+- `frontend/src/components/Jodie/ChatInput.scss`
+- `frontend/src/components/Jodie/Jodie.tsx`
+- `frontend/src/components/Jodie/JodieWindow.tsx`
+- `frontend/src/components/Jodie/ChatMessages.tsx`
+- `frontend/src/components/Jodie/JodieWindow.css`
+- `frontend/src/services/AIProviderService.ts`
+- `frontend/src/components/settings/AISettingsContent.tsx`
+- `frontend/src/components/settings/AISettingsContent.scss`
+- `frontend/src/components/project/ProjectEditor.tsx`
+- `frontend/src/components/project/project-editor.scss`
+- `frontend/src/pages/components/Navbar.tsx`
+
+---
