@@ -41,15 +41,7 @@ export function JodieHeader({
                 </div>
             </div>
             <div className="jodie-header-right">
-                {onOpenDocumentation && (
-                    <button
-                        className="jodie-header-btn"
-                        onClick={onOpenDocumentation}
-                        title="Generate Documentation"
-                    >
-                        <i className="bi bi-file-text" />
-                    </button>
-                )}
+                
                 <button
                     className="jodie-header-btn"
                     onClick={onOpenSettings}

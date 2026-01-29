@@ -13,15 +13,16 @@
 
 import React, { Dispatch, ReactElement, ReactNode, useMemo, useState, useCallback, useEffect } from 'react';
 import { connect } from 'react-redux';
+import Editor from '@monaco-editor/react';
 import { DState, LProject, LUser, DUser, LModel } from '../../../joiner';
 import type { FakeStateProps } from '../../../joiner/types';
-import { JjodieContextService, DocumentationData } from '../../../services/JjodieContext';
-import {
-    DocumentationStatus,
-    ProjectDocumentation,
-    DOCUMENTATION_STORAGE_PREFIX,
-    ConfidenceScore,
-} from '../../../types/jodie';
+import DocumentationService from '../../../services/DocumentationService';
+import type { ProjectDocumentation } from '../../../services/DocumentationService';
+import { JodieConfigService, ALL_PROVIDERS } from '../../../services/JodieConfig';
+import type { AIProvider } from '../../../types/jodie';
+import { useAIProviderPreference } from '../../../hooks/useAIProviderPreference';
+import { DocumentationStatus } from '../../../types/jodie';
+import { markdownMonacoOptions } from '../../editors/monacoConfig';
 import './DocumentationTab.scss';
 
 // ============================================
@@ -42,14 +43,14 @@ function parseMarkdown(text: string): string {
     html = html.replace(/<!-- JJODIE:(AUTO|USER):START:\S+ -->\n?/g, '');
     html = html.replace(/<!-- JJODIE:(AUTO|USER):END:\S+ -->\n?/g, '');
 
-    // Convert @protected ... @end markers to visual indicators
+    // Convert @protected ... @end markers to visual indicators (using Bootstrap Icons, not emoji)
     html = html.replace(
         new RegExp(`${PROTECTED_TAG_START}`, 'g'),
-        '<span class="protected-marker protected-start" title="Protected section - preserved on regeneration">🔒 Protected</span>'
+        '<span class="protected-marker protected-start" title="Protected section - preserved on regeneration"><i class="bi bi-lock-fill"></i> Protected</span>'
     );
     html = html.replace(
         new RegExp(`${PROTECTED_TAG_END}`, 'g'),
-        '<span class="protected-marker protected-end" title="End of protected section">🔓</span>'
+        '<span class="protected-marker protected-end" title="End of protected section"><i class="bi bi-lock-fill"></i></span>'
     );
 
     // Escape HTML first to prevent XSS
@@ -165,98 +166,14 @@ function parseMarkdown(text: string): string {
 // STORAGE HELPERS
 // ============================================
 
-function getStorageKey(projectId: string): string {
-    return `${DOCUMENTATION_STORAGE_PREFIX}${projectId}`;
-}
-
-function loadDocumentation(projectId: string): ProjectDocumentation | null {
-    try {
-        const stored = localStorage.getItem(getStorageKey(projectId));
-        if (stored) {
-            return JSON.parse(stored);
-        }
-    } catch (err) {
-        console.warn('Failed to load documentation from storage:', err);
-    }
-    return null;
-}
-
-function saveDocumentation(projectId: string, doc: ProjectDocumentation): void {
-    try {
-        localStorage.setItem(getStorageKey(projectId), JSON.stringify(doc));
-    } catch (err) {
-        console.warn('Failed to save documentation to storage:', err);
-    }
-}
-
-// ============================================
-// PROTECTED SECTIONS HELPERS
-// ============================================
-
-interface ProtectedSection {
-    id: string;
-    content: string;
-    startIndex: number;
-    endIndex: number;
-}
-
-/**
- * Extract @protected ... @end sections from content
- */
-function extractProtectedSections(content: string): ProtectedSection[] {
-    const sections: ProtectedSection[] = [];
-    const regex = new RegExp(`${PROTECTED_TAG_START}([\\s\\S]*?)${PROTECTED_TAG_END}`, 'g');
-    
-    let match;
-    let index = 0;
-    while ((match = regex.exec(content)) !== null) {
-        sections.push({
-            id: `protected_${index}`,
-            content: match[1].trim(),
-            startIndex: match.index,
-            endIndex: match.index + match[0].length,
-        });
-        index++;
-    }
-    
-    return sections;
-}
-
-/**
- * Count protected sections in content
- */
-function countProtectedSections(content: string): number {
-    const matches = content.match(new RegExp(PROTECTED_TAG_START, 'g'));
-    return matches ? matches.length : 0;
-}
-
-/**
- * Merge regenerated content with preserved protected sections
- */
-function mergeWithProtectedSections(
-    newContent: string,
-    oldProtectedSections: ProtectedSection[]
-): string {
-    if (oldProtectedSections.length === 0) return newContent;
-    
-    // Find the Notes section in new content and replace its protected content
-    // This assumes a standard structure with a Notes section at the end
-    const notesMatch = newContent.match(/(## Notes[\s\S]*?)(@protected[\s\S]*?@end)/);
-    
-    if (notesMatch && oldProtectedSections.length > 0) {
-        const oldContent = oldProtectedSections[0].content;
-        return newContent.replace(
-            notesMatch[2],
-            `${PROTECTED_TAG_START}\n${oldContent}\n${PROTECTED_TAG_END}`
-        );
-    }
-    
-    return newContent;
-}
+// Storage functions now delegated to DocumentationService
+// loadDocumentation -> DocumentationService.load
+// saveDocumentation -> DocumentationService.save
 
 // ============================================
 // STATUS HELPERS
 // ============================================
+// Note: Protected sections helpers are now in DocumentationService
 
 function getDocumentationStatus(
     doc: ProjectDocumentation | null,
@@ -277,6 +194,23 @@ function formatTimeAgo(timestamp: number): string {
     return `${Math.floor(seconds / 86400)}d ago`;
 }
 
+function formatDateTime(timestamp: number): string {
+    const date = new Date(timestamp);
+    const now = new Date();
+    const isToday = date.toDateString() === now.toDateString();
+
+    if (isToday) {
+        return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+
+    return date.toLocaleDateString([], {
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+}
+
 // ============================================
 // CONFIDENCE BADGE COMPONENT
 // ============================================
@@ -288,11 +222,9 @@ interface ConfidenceBadgeProps {
 
 function ConfidenceBadge({ score, showLabel = true }: ConfidenceBadgeProps) {
     const colorClass = score >= 70 ? 'confidence-high' : score >= 40 ? 'confidence-medium' : 'confidence-low';
-    const emoji = score >= 70 ? '🟢' : score >= 40 ? '🟡' : '🔴';
-    
+
     return (
         <span className={`confidence-indicator ${colorClass}`} title={`Documentation confidence: ${score}% - Higher values indicate more reliable semantic analysis`}>
-            <span className="confidence-emoji">{emoji}</span>
             <span className="confidence-value">{score}%</span>
             {showLabel && <span className="confidence-label">confidence</span>}
         </span>
@@ -347,6 +279,76 @@ function RegenerateModal({ protectedCount, onConfirm, onCancel }: RegenerateModa
                     <button className="modal-btn modal-btn-primary" onClick={onConfirm}>
                         <i className="bi bi-arrow-repeat" />
                         Regenerate
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+// ============================================
+// GENERATION PROGRESS MODAL
+// ============================================
+
+interface GenerationStep {
+    id: string;
+    label: string;
+    status: 'pending' | 'running' | 'completed' | 'error';
+    detail?: string;
+}
+
+interface GenerationProgressModalProps {
+    steps: GenerationStep[];
+    onClose: () => void;
+    isComplete: boolean;
+}
+
+function GenerationProgressModal({ steps, onClose, isComplete }: GenerationProgressModalProps) {
+    const hasError = steps.some(s => s.status === 'error');
+
+    return (
+        <div className="progress-modal-overlay" onClick={isComplete || hasError ? onClose : undefined}>
+            <div className="progress-modal" onClick={e => e.stopPropagation()}>
+                <div className="progress-modal-header">
+                    <div className="progress-title">
+                        <i className={`bi ${isComplete && !hasError ? 'bi-check-circle-fill' : hasError ? 'bi-x-circle-fill' : 'bi-stars'}`} />
+                        <span>
+                            {isComplete && !hasError ? 'Generation Complete' :
+                             hasError ? 'Generation Failed' :
+                             'Generating Documentation...'}
+                        </span>
+                    </div>
+                </div>
+
+                <div className="progress-steps">
+                    {steps.map((step, index) => (
+                        <div
+                            key={step.id}
+                            className={`progress-step ${step.status}`}
+                        >
+                            <div className="step-indicator">
+                                {step.status === 'completed' && <i className="bi bi-check-lg" />}
+                                {step.status === 'running' && <div className="spinner" />}
+                                {step.status === 'pending' && <span className="step-number">{index + 1}</span>}
+                                {step.status === 'error' && <i className="bi bi-x-lg" />}
+                            </div>
+                            <div className="step-content">
+                                <div className="step-label">{step.label}</div>
+                                {step.detail && (
+                                    <div className="step-detail">{step.detail}</div>
+                                )}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+
+                <div className="progress-footer">
+                    <button
+                        className="progress-close-btn"
+                        onClick={onClose}
+                        disabled={!isComplete && !hasError}
+                    >
+                        {isComplete || hasError ? 'Close' : 'Please wait...'}
                     </button>
                 </div>
             </div>
@@ -570,16 +572,30 @@ function DocumentationTabComponent(props: AllProps) {
     // Generating state
     const [isGenerating, setIsGenerating] = useState(false);
 
+    // Editor settings
+    const [wordWrap, setWordWrap] = useState<'on' | 'off'>('on');
+    const [splitView, setSplitView] = useState(false);
+    const [fullscreen, setFullscreen] = useState(false);
+    const [editorCopyStatus, setEditorCopyStatus] = useState<'idle' | 'copied'>('idle');
+
+    // AI Provider selector (with persistence)
+    const { selectedProvider, setSelectedProvider } = useAIProviderPreference('documentation');
+    const [showProviderMenu, setShowProviderMenu] = useState(false);
+
+    // Progress modal for regeneration
+    const [showProgressModal, setShowProgressModal] = useState(false);
+    const [generationSteps, setGenerationSteps] = useState<GenerationStep[]>([]);
+
     // Calculate project hash for change detection
     const projectHash = useMemo(() => {
         if (!project) return '';
-        return JjodieContextService.getProjectHash(project);
+        return DocumentationService.calculateHash(project);
     }, [project]);
 
     // Load documentation from storage on mount
     useEffect(() => {
         if (project?.id) {
-            const stored = loadDocumentation(project.id);
+            const stored = DocumentationService.load(project.id);
             setDocumentation(stored);
             if (stored) {
                 setEditContent(stored.content);
@@ -601,29 +617,16 @@ function DocumentationTabComponent(props: AllProps) {
 
     // Count protected sections
     const protectedCount = useMemo(() => {
-        return documentation ? countProtectedSections(documentation.content) : 0;
+        return documentation ? DocumentationService.countProtectedSections(documentation.content) : 0;
     }, [documentation]);
 
-    // Get confidence score (default to calculated if not stored)
+    // Get confidence score from documentation (only for Jjodie-generated docs)
     const confidenceScore = useMemo(() => {
-        if (documentation?.confidence?.overall !== undefined) {
-            return documentation.confidence.overall;
+        if (documentation?.generatedWith === 'jjodie' && documentation.confidence !== undefined) {
+            return documentation.confidence;
         }
-        // Calculate basic confidence if not stored
-        if (!project) return 0;
-        const classCount = project.classes?.length || 0;
-        const hasAttributes = project.classes?.some(c => c.attributes?.length > 0);
-        const hasReferences = project.classes?.some(c => c.references?.length > 0);
-        
-        let score = 30; // Base
-        if (classCount > 0) score += 20;
-        if (classCount > 3) score += 15;
-        if (hasAttributes) score += 15;
-        if (hasReferences) score += 15;
-        if (project.description) score += 5;
-        
-        return Math.min(100, score);
-    }, [documentation, project]);
+        return 0; // Local generation has no confidence score
+    }, [documentation]);
 
     // Parse markdown to HTML
     const renderedHtml = useMemo(() => {
@@ -631,90 +634,199 @@ function DocumentationTabComponent(props: AllProps) {
         return parseMarkdown(content);
     }, [documentation?.content, editContent, viewMode]);
 
+    // Get available AI providers
+    const availableProviders = useMemo(() => {
+        const providers: Array<{ id: 'local' | AIProvider; name: string; available: boolean }> = [
+            { id: 'local', name: 'Local (Instant)', available: true }
+        ];
+
+        // Add configured AI providers
+        for (const providerId of ALL_PROVIDERS) {
+            if (JodieConfigService.isProviderEnabled(providerId)) {
+                const displayName = providerId === 'claude' ? 'Anthropic' :
+                    providerId.charAt(0).toUpperCase() + providerId.slice(1);
+                providers.push({ id: providerId, name: displayName, available: true });
+            }
+        }
+
+        return providers;
+    }, []);
+
+    // Get selected provider display name
+    const selectedProviderName = useMemo(() => {
+        if (selectedProvider === 'local') return 'Local';
+        const provider = availableProviders.find(p => p.id === selectedProvider);
+        return provider?.name || selectedProvider;
+    }, [selectedProvider, availableProviders]);
+
+    // Close provider menu when clicking outside
+    useEffect(() => {
+        const handleClickOutside = () => setShowProviderMenu(false);
+        if (showProviderMenu) {
+            document.addEventListener('click', handleClickOutside);
+            return () => document.removeEventListener('click', handleClickOutside);
+        }
+    }, [showProviderMenu]);
+
     // Generate initial documentation
     const handleGenerate = useCallback(async () => {
         if (!project) return;
 
         setIsGenerating(true);
         try {
-            const docData = await JjodieContextService.generateDocumentationWithSections(project);
-            
-            // Add protected Notes section if not present
-            let content = docData.content;
-            if (!content.includes(PROTECTED_TAG_START)) {
-                content += `\n\n## Notes\n\n${PROTECTED_TAG_START}\n*Add your notes here. This section will be preserved when regenerating documentation.*\n${PROTECTED_TAG_END}\n`;
-            }
-            
+            // Use AI if available, otherwise local
+            const useJjodie = DocumentationService.isAIAvailable();
+            const result = await DocumentationService.generate(project, useJjodie);
+
+            // Content already includes @protected section from DocumentationService
             const newDoc: ProjectDocumentation = {
-                content,
+                content: result.content,
                 generatedAt: Date.now(),
                 projectHash: projectHash,
-                sections: docData.sections,
-                confidence: {
-                    overall: confidenceScore,
-                    sections: {},
-                    factors: [],
-                },
+                confidence: result.confidence,
+                generatedWith: result.generatedWith,
             };
             setDocumentation(newDoc);
-            setEditContent(content);
-            saveDocumentation(project.id, newDoc);
+            setEditContent(result.content);
+            DocumentationService.save(project.id, newDoc);
         } catch (err) {
             console.error('Failed to generate documentation:', err);
+            // Fallback to local
+            try {
+                const result = DocumentationService.generateLocal(project);
+                const newDoc: ProjectDocumentation = {
+                    content: result.content,
+                    generatedAt: Date.now(),
+                    projectHash: projectHash,
+                    confidence: 0,
+                    generatedWith: 'local',
+                };
+                setDocumentation(newDoc);
+                setEditContent(result.content);
+                DocumentationService.save(project.id, newDoc);
+            } catch (fallbackErr) {
+                console.error('Local fallback also failed:', fallbackErr);
+            }
         } finally {
             setIsGenerating(false);
         }
-    }, [project, projectHash, confidenceScore]);
+    }, [project, projectHash]);
 
-    // Regenerate with preservation of protected sections
+    // Regenerate with preservation of protected sections (with progress tracking)
     const handleRegenerate = useCallback(async () => {
         if (!project || !documentation) return;
 
         setShowRegenerateModal(false);
+
+        // Determine if using AI or Local
+        const useAI = selectedProvider !== 'local' && DocumentationService.isAIAvailable();
+
+        // Initialize steps based on generation mode
+        const initialSteps: GenerationStep[] = useAI ? [
+            { id: 'extract', label: 'Extracting metamodel structure', status: 'pending' },
+            { id: 'wikidata', label: 'Fetching Wikidata definitions', status: 'pending' },
+            { id: 'prompt', label: 'Building AI prompt', status: 'pending' },
+            { id: 'generate', label: `Generating with ${selectedProviderName}`, status: 'pending' },
+            { id: 'parse', label: 'Parsing response', status: 'pending' },
+            { id: 'merge', label: 'Merging protected sections', status: 'pending' },
+            { id: 'save', label: 'Saving documentation', status: 'pending' },
+        ] : [
+            { id: 'extract', label: 'Extracting metamodel structure', status: 'pending' },
+            { id: 'infer', label: 'Inferring domain', status: 'pending' },
+            { id: 'generate', label: 'Generating documentation', status: 'pending' },
+            { id: 'merge', label: 'Merging protected sections', status: 'pending' },
+            { id: 'save', label: 'Saving documentation', status: 'pending' },
+        ];
+
+        setGenerationSteps(initialSteps);
+        setShowProgressModal(true);
         setIsGenerating(true);
 
+        // Helper to update step
+        const updateStep = (id: string, status: GenerationStep['status'], detail?: string) => {
+            setGenerationSteps(prev => prev.map(s =>
+                s.id === id ? { ...s, status, detail } : s
+            ));
+        };
+
         try {
-            // Extract protected sections from current content
-            const protectedSections = extractProtectedSections(documentation.content);
-            
-            // Generate new documentation
-            const newDocData = await JjodieContextService.generateDocumentationWithSections(project);
-            
-            // Merge with protected sections
-            let mergedContent = newDocData.content;
-            
-            // Add protected Notes section
-            if (!mergedContent.includes(PROTECTED_TAG_START)) {
-                const oldNotesContent = protectedSections.length > 0 
-                    ? protectedSections[0].content 
-                    : '*Add your notes here. This section will be preserved when regenerating documentation.*';
-                mergedContent += `\n\n## Notes\n\n${PROTECTED_TAG_START}\n${oldNotesContent}\n${PROTECTED_TAG_END}\n`;
+            // Step 1: Extract
+            updateStep('extract', 'running');
+            await new Promise(r => setTimeout(r, 300));
+            const classCount = project.classes?.length || 0;
+            updateStep('extract', 'completed', `${classCount} classes found`);
+
+            if (useAI) {
+                // AI generation steps
+                updateStep('wikidata', 'running');
+                await new Promise(r => setTimeout(r, 400));
+                updateStep('wikidata', 'completed');
+
+                updateStep('prompt', 'running');
+                await new Promise(r => setTimeout(r, 200));
+                updateStep('prompt', 'completed');
+
+                updateStep('generate', 'running');
             } else {
-                // Replace new protected content with old
-                mergedContent = mergeWithProtectedSections(mergedContent, protectedSections);
+                // Local generation steps
+                updateStep('infer', 'running');
+                await new Promise(r => setTimeout(r, 200));
+                updateStep('infer', 'completed');
+
+                updateStep('generate', 'running');
             }
-            
+
+            // Generate documentation
+            const result = await DocumentationService.generate(project, useAI);
+            updateStep('generate', 'completed');
+
+            // Parse response (only for AI mode)
+            if (useAI) {
+                updateStep('parse', 'running');
+                await new Promise(r => setTimeout(r, 300));
+                updateStep('parse', 'completed');
+            }
+
+            // Merge protected sections
+            updateStep('merge', 'running');
+            const mergedContent = DocumentationService.mergeProtectedSections(
+                result.content,
+                documentation.content
+            );
+            updateStep('merge', 'completed');
+
+            // Save
+            updateStep('save', 'running');
             const newDoc: ProjectDocumentation = {
                 content: mergedContent,
                 generatedAt: Date.now(),
                 lastManualEdit: documentation.lastManualEdit,
                 projectHash: projectHash,
-                sections: newDocData.sections,
-                confidence: {
-                    overall: confidenceScore,
-                    sections: {},
-                    factors: [],
-                },
+                confidence: result.confidence,
+                generatedWith: result.generatedWith,
             };
+
             setDocumentation(newDoc);
             setEditContent(mergedContent);
-            saveDocumentation(project.id, newDoc);
+            DocumentationService.save(project.id, newDoc);
+            updateStep('save', 'completed');
+
         } catch (err) {
             console.error('Failed to regenerate documentation:', err);
+            // Mark current running step as error
+            setGenerationSteps(prev => prev.map(s =>
+                s.status === 'running' ? { ...s, status: 'error', detail: String(err) } : s
+            ));
         } finally {
             setIsGenerating(false);
         }
-    }, [project, documentation, projectHash, confidenceScore]);
+    }, [project, documentation, projectHash, selectedProvider, selectedProviderName]);
+
+    // Check if generation is complete
+    const isGenerationComplete = useMemo(() => {
+        return generationSteps.length > 0 &&
+            generationSteps.every(s => s.status === 'completed' || s.status === 'error');
+    }, [generationSteps]);
 
     // Save edited content
     const handleSaveEdit = useCallback(() => {
@@ -726,7 +838,7 @@ function DocumentationTabComponent(props: AllProps) {
             lastManualEdit: Date.now(),
         };
         setDocumentation(newDoc);
-        saveDocumentation(project.id, newDoc);
+        DocumentationService.save(project.id, newDoc);
         setViewMode('formatted');
     }, [project, documentation, editContent]);
 
@@ -736,7 +848,19 @@ function DocumentationTabComponent(props: AllProps) {
             setEditContent(documentation.content);
         }
         setViewMode('formatted');
+        setSplitView(false);
     }, [documentation]);
+
+    // Copy editor content
+    const handleEditorCopy = useCallback(async () => {
+        try {
+            await navigator.clipboard.writeText(editContent);
+            setEditorCopyStatus('copied');
+            setTimeout(() => setEditorCopyStatus('idle'), 2000);
+        } catch (err) {
+            console.error('Failed to copy:', err);
+        }
+    }, [editContent]);
 
     // Copy to clipboard
     const handleCopy = useCallback(async () => {
@@ -838,18 +962,32 @@ function DocumentationTabComponent(props: AllProps) {
                         <ConfidenceBadge score={confidenceScore} />
                     )}
 
-                    {/* Status Badge */}
+                    {/* Status Badge with Timestamp */}
                     {status === 'outdated' && (
-                        <span className="status-badge status-outdated" title="Project has been modified since documentation was generated">
-                            <i className="bi bi-exclamation-triangle" />
-                            Outdated
-                        </span>
+                        <>
+                            <span className="status-badge status-outdated" title="Project has been modified since documentation was generated">
+                                <i className="bi bi-exclamation-triangle" />
+                                Outdated
+                            </span>
+                            {documentation?.generatedAt && (
+                                <span className="status-timestamp" title={`Last generated: ${new Date(documentation.generatedAt).toLocaleString()}`}>
+                                    Last: {formatDateTime(documentation.generatedAt)}
+                                </span>
+                            )}
+                        </>
                     )}
                     {status === 'up_to_date' && (
-                        <span className="status-badge status-synced" title="Documentation is up to date">
-                            <i className="bi bi-check-circle" />
-                            Synced
-                        </span>
+                        <>
+                            <span className="status-badge status-synced" title="Documentation is up to date">
+                                <i className="bi bi-check-circle" />
+                                Synced
+                            </span>
+                            {documentation?.generatedAt && (
+                                <span className="status-timestamp" title={`Generated: ${new Date(documentation.generatedAt).toLocaleString()}`}>
+                                    {formatDateTime(documentation.generatedAt)}
+                                </span>
+                            )}
+                        </>
                     )}
                     {status === 'editing' && (
                         <span className="status-badge status-editing" title="Currently editing">
@@ -862,17 +1000,68 @@ function DocumentationTabComponent(props: AllProps) {
                 <div className="toolbar-right">
                     {viewMode === 'edit' ? (
                         <>
-                            <button className="toolbar-btn" onClick={handleCancelEdit}>
+                            <button
+                                className="toolbar-btn"
+                                onClick={handleCancelEdit}
+                                title="Cancel editing"
+                            >
                                 <i className="bi bi-x-lg" />
                                 <span>Cancel</span>
                             </button>
-                            <button className="toolbar-btn toolbar-btn-primary" onClick={handleSaveEdit}>
+                            <button
+                                className="toolbar-btn toolbar-btn-primary"
+                                onClick={handleSaveEdit}
+                                title="Save changes"
+                            >
                                 <i className="bi bi-check-lg" />
                                 <span>Save</span>
                             </button>
                         </>
                     ) : (
                         <>
+                            {/* AI Provider Selector */}
+                            <div className="provider-selector" onClick={(e) => e.stopPropagation()}>
+                                <button
+                                    className="provider-btn"
+                                    onClick={() => setShowProviderMenu(!showProviderMenu)}
+                                    title="Select AI provider for generation"
+                                >
+                                    <i className="bi bi-cpu" />
+                                    <span>{selectedProviderName}</span>
+                                    <i className={`bi bi-chevron-${showProviderMenu ? 'up' : 'down'}`} />
+                                </button>
+
+                                {showProviderMenu && (
+                                    <div className="provider-menu">
+                                        <div className="provider-menu-header">AI Provider</div>
+
+                                        {availableProviders.map(provider => (
+                                            <button
+                                                key={provider.id}
+                                                className={`provider-option ${selectedProvider === provider.id ? 'active' : ''}`}
+                                                onClick={() => {
+                                                    setSelectedProvider(provider.id);
+                                                    setShowProviderMenu(false);
+                                                }}
+                                                disabled={!provider.available}
+                                            >
+                                                <i className={`bi ${provider.id === 'local' ? 'bi-lightning' : 'bi-stars'}`} />
+                                                <span>{provider.name}</span>
+                                                {selectedProvider === provider.id && (
+                                                    <i className="bi bi-check-lg check-icon" />
+                                                )}
+                                            </button>
+                                        ))}
+
+                                        <div className="provider-menu-footer">
+                                            <span className="provider-hint">
+                                                <i className="bi bi-gear" /> Configure in Settings
+                                            </span>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
                             <button
                                 className="toolbar-btn"
                                 onClick={() => setViewMode('edit')}
@@ -921,13 +1110,81 @@ function DocumentationTabComponent(props: AllProps) {
             {/* Content */}
             <div className="documentation-content">
                 {viewMode === 'edit' ? (
-                    <textarea
-                        className="documentation-editor"
-                        value={editContent}
-                        onChange={(e) => setEditContent(e.target.value)}
-                        placeholder={`Write your documentation in Markdown...\n\nUse @protected and @end to mark sections that should be preserved when regenerating.\n\nExample:\n@protected\nYour custom notes here...\n@end`}
-                        spellCheck={false}
-                    />
+                    <div className={`documentation-editor-wrapper ${fullscreen ? 'fullscreen' : ''}`}>
+                        {/* Editor Container */}
+                        <div className={`editor-container ${splitView ? 'split' : ''}`}>
+                            {/* Monaco Editor Pane */}
+                            <div className="editor-pane">
+                                {/* Floating Light Toolbar */}
+                                <div className="editor-light-toolbar">
+                                    <button
+                                        className={`light-toolbar-btn ${wordWrap === 'on' ? 'active' : ''}`}
+                                        onClick={() => setWordWrap(wordWrap === 'on' ? 'off' : 'on')}
+                                        title={wordWrap === 'on' ? 'Disable word wrap' : 'Enable word wrap'}
+                                    >
+                                        <i className="bi bi-text-wrap" />
+                                    </button>
+                                    <button
+                                        className="light-toolbar-btn"
+                                        onClick={handleEditorCopy}
+                                        title="Copy to clipboard"
+                                    >
+                                        <i className={`bi ${editorCopyStatus === 'copied' ? 'bi-check-lg' : 'bi-clipboard'}`} />
+                                    </button>
+                                    <button
+                                        className={`light-toolbar-btn ${splitView ? 'active' : ''}`}
+                                        onClick={() => setSplitView(!splitView)}
+                                        title={splitView ? 'Hide preview' : 'Show split preview'}
+                                    >
+                                        <i className="bi bi-layout-split" />
+                                    </button>
+                                    <button
+                                        className="light-toolbar-btn"
+                                        onClick={() => setFullscreen(!fullscreen)}
+                                        title={fullscreen ? 'Exit fullscreen' : 'Fullscreen'}
+                                    >
+                                        <i className={`bi ${fullscreen ? 'bi-fullscreen-exit' : 'bi-fullscreen'}`} />
+                                    </button>
+                                </div>
+
+                                <Editor
+                                    width="100%"
+                                    height="100%"
+                                    language="markdown"
+                                    theme={document.documentElement.getAttribute('data-theme') === 'dark' ? 'vs-dark' : 'vs'}
+                                    value={editContent}
+                                    onChange={(value) => setEditContent(value || '')}
+                                    options={{
+                                        ...markdownMonacoOptions,
+                                        wordWrap: wordWrap,
+                                        minimap: { enabled: false },
+                                        lineNumbers: 'on',
+                                        fontSize: 13,
+                                        fontFamily: "'JetBrains Mono', 'Fira Code', 'Consolas', monospace",
+                                        padding: { top: 16, bottom: 16 },
+                                        scrollBeyondLastLine: false,
+                                        renderLineHighlight: 'line',
+                                        cursorBlinking: 'smooth',
+                                        smoothScrolling: true,
+                                    }}
+                                />
+                            </div>
+
+                            {/* Preview Pane (split view only) */}
+                            {splitView && (
+                                <div className="preview-pane">
+                                    <div className="preview-header">
+                                        <i className="bi bi-eye" />
+                                        Preview
+                                    </div>
+                                    <div
+                                        className="preview-content md-content"
+                                        dangerouslySetInnerHTML={{ __html: parseMarkdown(editContent) }}
+                                    />
+                                </div>
+                            )}
+                        </div>
+                    </div>
                 ) : viewMode === 'source' ? (
                     <pre className="documentation-source">
                         <code>{documentation?.content || ''}</code>
@@ -962,6 +1219,15 @@ function DocumentationTabComponent(props: AllProps) {
                     protectedCount={protectedCount}
                     onConfirm={handleRegenerate}
                     onCancel={() => setShowRegenerateModal(false)}
+                />
+            )}
+
+            {/* Generation progress modal */}
+            {showProgressModal && (
+                <GenerationProgressModal
+                    steps={generationSteps}
+                    onClose={() => setShowProgressModal(false)}
+                    isComplete={isGenerationComplete}
                 />
             )}
         </div>

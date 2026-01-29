@@ -36,10 +36,10 @@
         color: #D97706;             // Amber-600
     }
 
-    // Documentation badge - Slate/Gray
+    // Documentation badge - Blue pastel (like DocumentationSection icon)
     &[data-type="documentation"]::before {
         content: "D";
-        background-color: #f1f5f9;  // Slate-100
-        color: #475569;             // Slate-600
+        background-color: #bfdbfe;  // Blue-200 pastel
+        color: #1e40af;             // Blue-800 for contrast
     }
 }

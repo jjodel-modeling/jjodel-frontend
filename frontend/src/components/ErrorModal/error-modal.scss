@@ -131,6 +131,10 @@
       color: #ffffff;
       border: none;
 
+      & .bi {
+        color: #ffffff;
+      }
+
       &:hover {
         background: #334155;
       }
@@ -336,6 +340,10 @@
       .btn--primary {
         background: #475569;
         color: #f1f5f9;
+
+        & .bi {
+          color: #f1f5f9;
+        }
 
         &:hover {
           background: #64748b;
