@@ -1053,7 +1053,7 @@ title: React.createElement('div', {
 
 ---
 
-*Ultimo aggiornamento: 2026-01-30 ore 00:50*
+*Ultimo aggiornamento: 2026-01-30 ore 00:55*
 
 ---
 
@@ -1070,6 +1070,7 @@ git diff <commit-hash>
 
 | Data | Commit Hash | Descrizione | File Principali |
 |------|-------------|-------------|-----------------|
+| 2026-01-30 00:55 | `3f2613a36` | Remove border separators from metamodel menu items | `project-editor.scss` |
 | 2026-01-30 00:50 | `a278cd0b3` | Remove shadows from metamodel selection menu | `project-editor.scss` |
 | 2026-01-30 00:45 | `98ea3b353` | Simplify metamodel selection menu (minimal design) | `ProjectEditor.tsx`, `project-editor.scss` |
 | 2026-01-30 00:20 | `c90cad4a0` | PDF support, Model capability badges, Metamodel selection dropdown | `types/jodie.ts`, `ChatInput.tsx`, `AIProviderService.ts`, `AISettingsContent.tsx`, `ProjectEditor.tsx`, `Navbar.tsx` |
