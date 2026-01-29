@@ -513,6 +513,11 @@
       border-bottom: none;
     }
 
+    // When menu is open, ensure this item is above all other sections
+    &--menu-open {
+      z-index: 10001;
+    }
+
     // Keyboard focus styles
     &:focus {
       outline: 2px solid var(--form-input-border-color-focus, #334155);
@@ -679,7 +684,7 @@
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1), 0 2px 4px rgba(0, 0, 0, 0.05);
   min-width: 180px;
   max-width: 250px;
-  z-index: 1000;
+  z-index: 10000;  // High z-index to appear above all buttons and other elements
   padding: 6px 0;
   animation: menuFadeIn 0.15s ease;
 

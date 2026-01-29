@@ -581,9 +581,9 @@ input[type="number"] {
 // Dropdown menu
 [class*="-menu"],
 .select__menu {
-  border: 1px solid var(--form-input-border-color) !important;
+  //border: 1px solid var(--form-input-border-color) !important;
   border-radius: var(--form-input-border-radius) !important;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+  //box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
   z-index: 100 !important;
 }
 
@@ -594,7 +594,7 @@ input[type="number"] {
   font-size: var(--form-input-font-size) !important;
 
   &:hover {
-    background: #f1f5f9 !important;
+    background: #334155 !important;
   }
 }
 

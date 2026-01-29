@@ -701,7 +701,7 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                     <div className="list-card">
                         {metamodels.map((mm) => (
                             <div
-                                className="list-card__item"
+                                className={`list-card__item ${openMenu?.type === 'metamodel' && openMenu?.id === mm.id ? 'list-card__item--menu-open' : ''}`}
                                 key={mm.id}
                                 onClick={() => handleOpenMetamodel(mm)}
                                 role="button"
@@ -865,7 +865,7 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                     <div className="list-card">
                         {models.map((model) => (
                             <div
-                                className="list-card__item"
+                                className={`list-card__item ${openMenu?.type === 'model' && openMenu?.id === model.id ? 'list-card__item--menu-open' : ''}`}
                                 key={model.id}
                                 onClick={() => handleOpenModel(model)}
                                 role="button"
