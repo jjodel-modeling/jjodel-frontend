@@ -30,10 +30,12 @@
     }
 
     // Model badge - Amber/Yellow (matches ElementBadge)
+    // Lowercase "m" to distinguish from Metamodel "M"
     &[data-type="model"]::before {
-        content: "M";
+        content: "m";
         background-color: #FEF3C7;  // Amber-100
         color: #D97706;             // Amber-600
+        text-transform: none;       // Override default uppercase
     }
 
     // Documentation badge - Blue pastel (like DocumentationSection icon)
