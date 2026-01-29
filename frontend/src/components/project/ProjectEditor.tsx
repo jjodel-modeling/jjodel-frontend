@@ -5,6 +5,7 @@ import { createM2 } from '../../pages/components/Navbar';
 import { formatVersionNumber } from '../../utils/versionUtils';
 import ShareProjectModal from './ShareProjectModal';
 import UnsavedChangesDialog from './UnsavedChangesDialog';
+import DocumentationSection from './DocumentationSection';
 import './project-editor.scss';
 
 // Types for contextual menu
@@ -915,6 +916,9 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                     </div>
                 )}
             </div>
+
+            {/* Documentation Section */}
+            <DocumentationSection project={project} />
 
             {/* Share Modal */}
             <ShareProjectModal

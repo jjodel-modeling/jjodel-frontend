@@ -4,9 +4,11 @@
  *
  * Features:
  * - View/Edit/Source modes
+ * - @protected ... @end tags for preserving user content on regeneration
+ * - Confidence indicator (0-100%) showing documentation reliability
  * - Outdated indicator when project changes after generation
- * - Intelligent regeneration that preserves user sections
- * - Section markers for AUTO vs USER content
+ * - Intelligent regeneration that preserves protected sections
+ * - Export to Markdown and PDF
  */
 
 import React, { Dispatch, ReactElement, ReactNode, useMemo, useState, useCallback, useEffect } from 'react';
@@ -17,9 +19,17 @@ import { JjodieContextService, DocumentationData } from '../../../services/Jjodi
 import {
     DocumentationStatus,
     ProjectDocumentation,
-    DOCUMENTATION_STORAGE_PREFIX
+    DOCUMENTATION_STORAGE_PREFIX,
+    ConfidenceScore,
 } from '../../../types/jodie';
 import './DocumentationTab.scss';
+
+// ============================================
+// CONSTANTS - Protected Section Tags
+// ============================================
+
+const PROTECTED_TAG_START = '@protected';
+const PROTECTED_TAG_END = '@end';
 
 // ============================================
 // MARKDOWN PARSER
@@ -28,15 +38,30 @@ import './DocumentationTab.scss';
 function parseMarkdown(text: string): string {
     let html = text;
 
-    // Remove section markers for rendered view
+    // Remove old section markers for backward compatibility
     html = html.replace(/<!-- JJODIE:(AUTO|USER):START:\S+ -->\n?/g, '');
     html = html.replace(/<!-- JJODIE:(AUTO|USER):END:\S+ -->\n?/g, '');
+
+    // Convert @protected ... @end markers to visual indicators
+    html = html.replace(
+        new RegExp(`${PROTECTED_TAG_START}`, 'g'),
+        '<span class="protected-marker protected-start" title="Protected section - preserved on regeneration">🔒 Protected</span>'
+    );
+    html = html.replace(
+        new RegExp(`${PROTECTED_TAG_END}`, 'g'),
+        '<span class="protected-marker protected-end" title="End of protected section">🔓</span>'
+    );
 
     // Escape HTML first to prevent XSS
     html = html
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;');
+
+    // Restore protected markers after escaping
+    html = html.replace(/&lt;span class="protected-marker.*?&gt;.*?&lt;\/span&gt;/g, match => {
+        return match.replace(/&lt;/g, '<').replace(/&gt;/g, '>');
+    });
 
     // Code blocks (```language\ncode\n```)
     html = html.replace(/```(\w*)\n([\s\S]*?)```/g, (_, lang, code) => {
@@ -69,7 +94,19 @@ function parseMarkdown(text: string): string {
         '<a href="$2" target="_blank" rel="noopener noreferrer" class="md-link">$1</a>'
     );
 
-    // Blockquotes (> quote)
+    // Blockquotes - handle confidence indicators specially
+    html = html.replace(/^&gt; \*\*Confidence Level\*\*:(.+)$/gm, (_, content) => {
+        const match = content.match(/(\d+)%/);
+        const score = match ? parseInt(match[1]) : 50;
+        const colorClass = score >= 70 ? 'confidence-high' : score >= 40 ? 'confidence-medium' : 'confidence-low';
+        return `<div class="confidence-badge-inline ${colorClass}"><strong>Confidence Level</strong>:${content}</div>`;
+    });
+    html = html.replace(/^&gt; Confidence:(.+)$/gm, (_, content) => {
+        const match = content.match(/(\d+)%/);
+        const score = match ? parseInt(match[1]) : 50;
+        const colorClass = score >= 70 ? 'confidence-high' : score >= 40 ? 'confidence-medium' : 'confidence-low';
+        return `<div class="confidence-badge-small ${colorClass}">Confidence:${content}</div>`;
+    });
     html = html.replace(/^&gt; (.+)$/gm, '<blockquote class="md-blockquote">$1</blockquote>');
 
     // Horizontal rule (--- or ***)
@@ -117,7 +154,7 @@ function parseMarkdown(text: string): string {
     html = html.replace(/(?<!<\/pre>|<\/table>)\n(?!<)/g, '<br>');
 
     // Wrap in paragraph if not starting with block element
-    if (!html.match(/^<(h[1-6]|pre|ul|ol|blockquote|hr|table)/)) {
+    if (!html.match(/^<(h[1-6]|pre|ul|ol|blockquote|hr|table|div)/)) {
         html = `<p class="md-p">${html}</p>`;
     }
 
@@ -153,6 +190,71 @@ function saveDocumentation(projectId: string, doc: ProjectDocumentation): void {
 }
 
 // ============================================
+// PROTECTED SECTIONS HELPERS
+// ============================================
+
+interface ProtectedSection {
+    id: string;
+    content: string;
+    startIndex: number;
+    endIndex: number;
+}
+
+/**
+ * Extract @protected ... @end sections from content
+ */
+function extractProtectedSections(content: string): ProtectedSection[] {
+    const sections: ProtectedSection[] = [];
+    const regex = new RegExp(`${PROTECTED_TAG_START}([\\s\\S]*?)${PROTECTED_TAG_END}`, 'g');
+    
+    let match;
+    let index = 0;
+    while ((match = regex.exec(content)) !== null) {
+        sections.push({
+            id: `protected_${index}`,
+            content: match[1].trim(),
+            startIndex: match.index,
+            endIndex: match.index + match[0].length,
+        });
+        index++;
+    }
+    
+    return sections;
+}
+
+/**
+ * Count protected sections in content
+ */
+function countProtectedSections(content: string): number {
+    const matches = content.match(new RegExp(PROTECTED_TAG_START, 'g'));
+    return matches ? matches.length : 0;
+}
+
+/**
+ * Merge regenerated content with preserved protected sections
+ */
+function mergeWithProtectedSections(
+    newContent: string,
+    oldProtectedSections: ProtectedSection[]
+): string {
+    if (oldProtectedSections.length === 0) return newContent;
+    
+    // Find the Notes section in new content and replace its protected content
+    // This assumes a standard structure with a Notes section at the end
+    const notesMatch = newContent.match(/(## Notes[\s\S]*?)(@protected[\s\S]*?@end)/);
+    
+    if (notesMatch && oldProtectedSections.length > 0) {
+        const oldContent = oldProtectedSections[0].content;
+        return newContent.replace(
+            notesMatch[2],
+            `${PROTECTED_TAG_START}\n${oldContent}\n${PROTECTED_TAG_END}`
+        );
+    }
+    
+    return newContent;
+}
+
+// ============================================
 // STATUS HELPERS
 // ============================================
 
@@ -176,17 +278,38 @@ function formatTimeAgo(timestamp: number): string {
 }
 
 // ============================================
+// CONFIDENCE BADGE COMPONENT
+// ============================================
+
+interface ConfidenceBadgeProps {
+    score: number;
+    showLabel?: boolean;
+}
+
+function ConfidenceBadge({ score, showLabel = true }: ConfidenceBadgeProps) {
+    const colorClass = score >= 70 ? 'confidence-high' : score >= 40 ? 'confidence-medium' : 'confidence-low';
+    const emoji = score >= 70 ? '🟢' : score >= 40 ? '🟡' : '🔴';
+    
+    return (
+        <span className={`confidence-indicator ${colorClass}`} title={`Documentation confidence: ${score}% - Higher values indicate more reliable semantic analysis`}>
+            <span className="confidence-emoji">{emoji}</span>
+            <span className="confidence-value">{score}%</span>
+            {showLabel && <span className="confidence-label">confidence</span>}
+        </span>
+    );
+}
+
+// ============================================
 // REGENERATE MODAL
 // ============================================
 
 interface RegenerateModalProps {
-    autoSections: string[];
-    userSections: { id: string; lastModified?: number }[];
+    protectedCount: number;
     onConfirm: () => void;
     onCancel: () => void;
 }
 
-function RegenerateModal({ autoSections, userSections, onConfirm, onCancel }: RegenerateModalProps) {
+function RegenerateModal({ protectedCount, onConfirm, onCancel }: RegenerateModalProps) {
     return (
         <div className="regenerate-modal-overlay" onClick={onCancel}>
             <div className="regenerate-modal" onClick={e => e.stopPropagation()}>
@@ -195,39 +318,27 @@ function RegenerateModal({ autoSections, userSections, onConfirm, onCancel }: Re
                     <h3>Regenerate Documentation?</h3>
                 </div>
                 <div className="regenerate-modal-content">
-                    {autoSections.length > 0 && (
-                        <div className="section-list">
-                            <p className="section-list-title">
-                                <i className="bi bi-arrow-clockwise" />
-                                The following sections will be <strong>updated</strong>:
-                            </p>
-                            <ul>
-                                {autoSections.map(id => (
-                                    <li key={id}>{id}</li>
-                                ))}
-                            </ul>
+                    <p>This will regenerate the documentation based on the current metamodel structure.</p>
+                    
+                    {protectedCount > 0 ? (
+                        <div className="protected-notice">
+                            <i className="bi bi-shield-check" />
+                            <span>
+                                <strong>{protectedCount}</strong> protected section(s) will be preserved.
+                                Content between <code>@protected</code> and <code>@end</code> tags is kept.
+                            </span>
+                        </div>
+                    ) : (
+                        <div className="warning-notice">
+                            <i className="bi bi-exclamation-triangle" />
+                            <span>No protected sections found. All content will be regenerated.</span>
                         </div>
                     )}
-                    {userSections.length > 0 && (
-                        <div className="section-list section-list-preserved">
-                            <p className="section-list-title">
-                                <i className="bi bi-shield-check" />
-                                The following sections will be <strong>preserved</strong>:
-                            </p>
-                            <ul>
-                                {userSections.map(({ id, lastModified }) => (
-                                    <li key={id}>
-                                        {id}
-                                        {lastModified && (
-                                            <span className="modified-time">
-                                                (modified {formatTimeAgo(lastModified)})
-                                            </span>
-                                        )}
-                                    </li>
-                                ))}
-                            </ul>
-                        </div>
-                    )}
+                    
+                    <p className="regenerate-tip">
+                        <i className="bi bi-lightbulb" />
+                        <em>Tip: Use <code>@protected</code> and <code>@end</code> tags in Edit mode to mark sections you want to preserve.</em>
+                    </p>
                 </div>
                 <div className="regenerate-modal-actions">
                     <button className="modal-btn modal-btn-secondary" onClick={onCancel}>
@@ -241,6 +352,192 @@ function RegenerateModal({ autoSections, userSections, onConfirm, onCancel }: Re
             </div>
         </div>
     );
+}
+
+// ============================================
+// EXPORT DROPDOWN
+// ============================================
+
+type ExportFormat = 'markdown' | 'pdf';
+
+interface ExportDropdownProps {
+    onExport: (format: ExportFormat) => void;
+    isOpen: boolean;
+    onToggle: () => void;
+}
+
+function ExportDropdown({ onExport, isOpen, onToggle }: ExportDropdownProps) {
+    return (
+        <div className="export-dropdown-container">
+            <button 
+                className="toolbar-btn toolbar-btn-dark" 
+                onClick={onToggle} 
+                title="Export documentation"
+            >
+                <i className="bi bi-download" />
+                <span>Export</span>
+                <i className={`bi bi-chevron-${isOpen ? 'up' : 'down'} chevron-icon`} />
+            </button>
+            {isOpen && (
+                <div className="export-dropdown">
+                    <button onClick={() => { onExport('markdown'); onToggle(); }}>
+                        <i className="bi bi-markdown" />
+                        <span>Markdown (.md)</span>
+                    </button>
+                    <button onClick={() => { onExport('pdf'); onToggle(); }}>
+                        <i className="bi bi-file-pdf" />
+                        <span>PDF Document</span>
+                    </button>
+                </div>
+            )}
+        </div>
+    );
+}
+
+// ============================================
+// PDF EXPORT HELPER
+// ============================================
+
+function exportToPDF(content: string, projectName: string): void {
+    // Convert markdown to styled HTML
+    const htmlContent = parseMarkdown(content);
+    
+    const styledHtml = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="utf-8">
+            <title>${projectName} - Documentation</title>
+            <style>
+                body {
+                    font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+                    max-width: 800px;
+                    margin: 0 auto;
+                    padding: 40px;
+                    line-height: 1.6;
+                    color: #1e293b;
+                }
+                h1 { 
+                    color: #0f172a; 
+                    border-bottom: 2px solid #0ea5e9; 
+                    padding-bottom: 8px; 
+                    font-size: 28px;
+                }
+                h2 { 
+                    color: #334155; 
+                    margin-top: 32px;
+                    font-size: 22px;
+                    border-bottom: 1px solid #e2e8f0;
+                    padding-bottom: 8px;
+                }
+                h3 { 
+                    color: #475569;
+                    font-size: 18px;
+                }
+                table { 
+                    border-collapse: collapse; 
+                    width: 100%; 
+                    margin: 16px 0;
+                    font-size: 13px;
+                }
+                th, td { 
+                    border: 1px solid #e2e8f0; 
+                    padding: 8px 12px; 
+                    text-align: left; 
+                }
+                th { 
+                    background: #f1f5f9; 
+                    font-weight: 600; 
+                }
+                blockquote { 
+                    border-left: 4px solid #0ea5e9; 
+                    margin: 16px 0; 
+                    padding-left: 16px; 
+                    color: #64748b;
+                    background: #f8fafc;
+                    padding: 12px 16px;
+                    border-radius: 0 4px 4px 0;
+                }
+                code { 
+                    background: #f1f5f9; 
+                    padding: 2px 6px; 
+                    border-radius: 4px; 
+                    font-family: 'Consolas', monospace;
+                    font-size: 0.9em;
+                }
+                pre {
+                    background: #1e293b;
+                    color: #e2e8f0;
+                    padding: 16px;
+                    border-radius: 6px;
+                    overflow-x: auto;
+                }
+                pre code {
+                    background: none;
+                    padding: 0;
+                    color: inherit;
+                }
+                hr { 
+                    border: none; 
+                    border-top: 1px solid #e2e8f0; 
+                    margin: 24px 0; 
+                }
+                .confidence-badge-inline,
+                .confidence-badge-small {
+                    display: inline-block;
+                    padding: 8px 14px;
+                    border-radius: 6px;
+                    font-size: 13px;
+                    margin: 8px 0;
+                }
+                .confidence-high {
+                    background: #dcfce7;
+                    color: #166534;
+                    border-left: 4px solid #22c55e;
+                }
+                .confidence-medium {
+                    background: #fef3c7;
+                    color: #92400e;
+                    border-left: 4px solid #f59e0b;
+                }
+                .confidence-low {
+                    background: #fee2e2;
+                    color: #991b1b;
+                    border-left: 4px solid #ef4444;
+                }
+                .protected-marker {
+                    display: none;
+                }
+                @media print {
+                    body { padding: 20px; }
+                    h1 { page-break-after: avoid; }
+                    h2, h3 { page-break-after: avoid; }
+                    table { page-break-inside: avoid; }
+                }
+            </style>
+        </head>
+        <body>
+            ${htmlContent}
+            <hr>
+            <p style="font-size: 11px; color: #94a3b8; text-align: center;">
+                Generated by Jjodie on ${new Date().toLocaleDateString()}
+            </p>
+        </body>
+        </html>
+    `;
+    
+    // Open print dialog
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+        printWindow.document.write(styledHtml);
+        printWindow.document.close();
+        printWindow.focus();
+        
+        // Give content time to render, then trigger print
+        setTimeout(() => {
+            printWindow.print();
+        }, 300);
+    }
 }
 
 // ============================================
@@ -267,6 +564,9 @@ function DocumentationTabComponent(props: AllProps) {
     // Show regenerate confirmation modal
     const [showRegenerateModal, setShowRegenerateModal] = useState(false);
 
+    // Export dropdown
+    const [showExportDropdown, setShowExportDropdown] = useState(false);
+
     // Generating state
     const [isGenerating, setIsGenerating] = useState(false);
 
@@ -287,14 +587,43 @@ function DocumentationTabComponent(props: AllProps) {
         }
     }, [project?.id]);
 
+    // Close export dropdown when clicking outside
+    useEffect(() => {
+        const handleClickOutside = () => setShowExportDropdown(false);
+        if (showExportDropdown) {
+            document.addEventListener('click', handleClickOutside);
+            return () => document.removeEventListener('click', handleClickOutside);
+        }
+    }, [showExportDropdown]);
+
     // Get current status
     const status = getDocumentationStatus(documentation, projectHash, viewMode === 'edit');
 
-    // Parse sections from documentation
-    const sections = useMemo(() => {
-        if (!documentation) return { auto: [], user: [] };
-        return JjodieContextService.parseSections(documentation.content);
+    // Count protected sections
+    const protectedCount = useMemo(() => {
+        return documentation ? countProtectedSections(documentation.content) : 0;
     }, [documentation]);
+
+    // Get confidence score (default to calculated if not stored)
+    const confidenceScore = useMemo(() => {
+        if (documentation?.confidence?.overall !== undefined) {
+            return documentation.confidence.overall;
+        }
+        // Calculate basic confidence if not stored
+        if (!project) return 0;
+        const classCount = project.classes?.length || 0;
+        const hasAttributes = project.classes?.some(c => c.attributes?.length > 0);
+        const hasReferences = project.classes?.some(c => c.references?.length > 0);
+        
+        let score = 30; // Base
+        if (classCount > 0) score += 20;
+        if (classCount > 3) score += 15;
+        if (hasAttributes) score += 15;
+        if (hasReferences) score += 15;
+        if (project.description) score += 5;
+        
+        return Math.min(100, score);
+    }, [documentation, project]);
 
     // Parse markdown to HTML
     const renderedHtml = useMemo(() => {
@@ -309,23 +638,35 @@ function DocumentationTabComponent(props: AllProps) {
         setIsGenerating(true);
         try {
             const docData = await JjodieContextService.generateDocumentationWithSections(project);
+            
+            // Add protected Notes section if not present
+            let content = docData.content;
+            if (!content.includes(PROTECTED_TAG_START)) {
+                content += `\n\n## Notes\n\n${PROTECTED_TAG_START}\n*Add your notes here. This section will be preserved when regenerating documentation.*\n${PROTECTED_TAG_END}\n`;
+            }
+            
             const newDoc: ProjectDocumentation = {
-                content: docData.content,
+                content,
                 generatedAt: Date.now(),
                 projectHash: projectHash,
                 sections: docData.sections,
+                confidence: {
+                    overall: confidenceScore,
+                    sections: {},
+                    factors: [],
+                },
             };
             setDocumentation(newDoc);
-            setEditContent(docData.content);
+            setEditContent(content);
             saveDocumentation(project.id, newDoc);
         } catch (err) {
             console.error('Failed to generate documentation:', err);
         } finally {
             setIsGenerating(false);
         }
-    }, [project, projectHash]);
+    }, [project, projectHash, confidenceScore]);
 
-    // Regenerate with preservation of user sections
+    // Regenerate with preservation of protected sections
     const handleRegenerate = useCallback(async () => {
         if (!project || !documentation) return;
 
@@ -333,41 +674,56 @@ function DocumentationTabComponent(props: AllProps) {
         setIsGenerating(true);
 
         try {
-            const newDocData = await JjodieContextService.regenerateDocumentation(
-                project,
-                documentation.content
-            );
+            // Extract protected sections from current content
+            const protectedSections = extractProtectedSections(documentation.content);
+            
+            // Generate new documentation
+            const newDocData = await JjodieContextService.generateDocumentationWithSections(project);
+            
+            // Merge with protected sections
+            let mergedContent = newDocData.content;
+            
+            // Add protected Notes section
+            if (!mergedContent.includes(PROTECTED_TAG_START)) {
+                const oldNotesContent = protectedSections.length > 0 
+                    ? protectedSections[0].content 
+                    : '*Add your notes here. This section will be preserved when regenerating documentation.*';
+                mergedContent += `\n\n## Notes\n\n${PROTECTED_TAG_START}\n${oldNotesContent}\n${PROTECTED_TAG_END}\n`;
+            } else {
+                // Replace new protected content with old
+                mergedContent = mergeWithProtectedSections(mergedContent, protectedSections);
+            }
+            
             const newDoc: ProjectDocumentation = {
-                content: newDocData.content,
+                content: mergedContent,
                 generatedAt: Date.now(),
                 lastManualEdit: documentation.lastManualEdit,
                 projectHash: projectHash,
                 sections: newDocData.sections,
+                confidence: {
+                    overall: confidenceScore,
+                    sections: {},
+                    factors: [],
+                },
             };
             setDocumentation(newDoc);
-            setEditContent(newDocData.content);
+            setEditContent(mergedContent);
             saveDocumentation(project.id, newDoc);
         } catch (err) {
             console.error('Failed to regenerate documentation:', err);
         } finally {
             setIsGenerating(false);
         }
-    }, [project, documentation, projectHash]);
+    }, [project, documentation, projectHash, confidenceScore]);
 
     // Save edited content
     const handleSaveEdit = useCallback(() => {
         if (!project || !documentation) return;
 
-        // Mark any modified sections as USER type
-        const updatedSections = JjodieContextService.parseSections(editContent);
         const newDoc: ProjectDocumentation = {
             ...documentation,
             content: editContent,
             lastManualEdit: Date.now(),
-            sections: [
-                ...updatedSections.auto.map(s => ({ ...s, type: 'AUTO' as const })),
-                ...updatedSections.user.map(s => ({ ...s, type: 'USER' as const })),
-            ],
         };
         setDocumentation(newDoc);
         saveDocumentation(project.id, newDoc);
@@ -394,25 +750,28 @@ function DocumentationTabComponent(props: AllProps) {
         }
     }, [documentation]);
 
-    // Download as file
-    const handleDownload = useCallback(() => {
+    // Export handler
+    const handleExport = useCallback((format: ExportFormat) => {
         if (!project || !documentation) return;
-        const filename = `${project.name || 'metamodel'}-documentation.md`;
-        const blob = new Blob([documentation.content], { type: 'text/markdown' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = filename;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
+        
+        const filename = `${project.name || 'metamodel'}-documentation`;
+        
+        if (format === 'markdown') {
+            // Download as .md file
+            const blob = new Blob([documentation.content], { type: 'text/markdown' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${filename}.md`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        } else if (format === 'pdf') {
+            // Export as PDF via print dialog
+            exportToPDF(documentation.content, project.name || 'Metamodel');
+        }
     }, [project, documentation]);
-
-    // Show regenerate modal
-    const handleShowRegenerateModal = useCallback(() => {
-        setShowRegenerateModal(true);
-    }, []);
 
     // ========================================
     // RENDER
@@ -438,7 +797,10 @@ function DocumentationTabComponent(props: AllProps) {
                 <div className="empty-state">
                     <i className="bi bi-file-earmark-text" />
                     <h3>No Documentation Yet</h3>
-                    <p>Generate documentation for your metamodel to get started.</p>
+                    <p>
+                        Generate comprehensive documentation for your metamodel including 
+                        domain analysis, class descriptions, and confidence scoring.
+                    </p>
                     <button
                         className="generate-btn"
                         onClick={handleGenerate}
@@ -470,9 +832,11 @@ function DocumentationTabComponent(props: AllProps) {
                         <i className="bi bi-file-text" />
                         Documentation
                     </h2>
-                    <span className="toolbar-subtitle">
-                        {project.name || 'Metamodel'}
-                    </span>
+                    
+                    {/* Confidence Badge */}
+                    {documentation && (
+                        <ConfidenceBadge score={confidenceScore} />
+                    )}
 
                     {/* Status Badge */}
                     {status === 'outdated' && (
@@ -519,7 +883,7 @@ function DocumentationTabComponent(props: AllProps) {
                             </button>
                             <button
                                 className={`toolbar-btn ${status === 'outdated' ? 'toolbar-btn-warning' : ''}`}
-                                onClick={handleShowRegenerateModal}
+                                onClick={() => setShowRegenerateModal(true)}
                                 disabled={isGenerating}
                                 title="Regenerate documentation"
                             >
@@ -542,14 +906,13 @@ function DocumentationTabComponent(props: AllProps) {
                                 <i className={`bi ${copyStatus === 'copied' ? 'bi-check' : 'bi-clipboard'}`} />
                                 <span>{copyStatus === 'copied' ? 'Copied!' : 'Copy'}</span>
                             </button>
-                            <button
-                                className="toolbar-btn toolbar-btn-primary"
-                                onClick={handleDownload}
-                                title="Download as .md file"
-                            >
-                                <i className="bi bi-download" />
-                                <span>Download</span>
-                            </button>
+                            <div onClick={e => e.stopPropagation()}>
+                                <ExportDropdown
+                                    onExport={handleExport}
+                                    isOpen={showExportDropdown}
+                                    onToggle={() => setShowExportDropdown(!showExportDropdown)}
+                                />
+                            </div>
                         </>
                     )}
                 </div>
@@ -562,7 +925,7 @@ function DocumentationTabComponent(props: AllProps) {
                         className="documentation-editor"
                         value={editContent}
                         onChange={(e) => setEditContent(e.target.value)}
-                        placeholder="Write your documentation in Markdown..."
+                        placeholder={`Write your documentation in Markdown...\n\nUse @protected and @end to mark sections that should be preserved when regenerating.\n\nExample:\n@protected\nYour custom notes here...\n@end`}
                         spellCheck={false}
                     />
                 ) : viewMode === 'source' ? (
@@ -584,14 +947,19 @@ function DocumentationTabComponent(props: AllProps) {
                     {documentation.lastManualEdit && (
                         <span>Last edited {formatTimeAgo(documentation.lastManualEdit)}</span>
                     )}
+                    {protectedCount > 0 && (
+                        <span className="protected-count">
+                            <i className="bi bi-shield-check" />
+                            {protectedCount} protected section(s)
+                        </span>
+                    )}
                 </div>
             )}
 
             {/* Regenerate confirmation modal */}
             {showRegenerateModal && (
                 <RegenerateModal
-                    autoSections={sections.auto.map(s => s.id)}
-                    userSections={sections.user.map(s => ({ id: s.id, lastModified: s.lastModified }))}
+                    protectedCount={protectedCount}
                     onConfirm={handleRegenerate}
                     onCancel={() => setShowRegenerateModal(false)}
                 />

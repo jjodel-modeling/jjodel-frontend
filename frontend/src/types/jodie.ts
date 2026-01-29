@@ -220,3 +220,27 @@ export const DEFAULT_JODIE_CONFIG: JodieConfig = {
     position: undefined,
     size: undefined,
 };
+
+
+// Aggiungi queste interface
+export interface ConfidenceScore {
+    overall: number;
+    sections: Record<string, number>;
+    factors: ConfidenceFactor[];
+}
+
+export interface ConfidenceFactor {
+    factor: string;
+    impact: 'positive' | 'negative';
+    weight: number;
+}
+
+// Modifica ProjectDocumentation aggiungendo:
+export interface ProjectDocumentation {
+    content: string;
+    generatedAt: number;
+    lastManualEdit?: number;
+    projectHash: string;
+    sections: DocumentationSection[];
+    confidence?: ConfidenceScore;  // ← AGGIUNGI QUESTA RIGA
+}
