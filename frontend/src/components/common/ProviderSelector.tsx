@@ -140,8 +140,8 @@ export function ProviderSelector({
                                 setShowMenu(false);
                                 if (onNavigateToSettings) {
                                     onNavigateToSettings();
-                                } else if (openAISettings) {
-                                    openAISettings();
+                                } else if (aiSettingsContext?.openAISettings) {
+                                    aiSettingsContext.openAISettings();
                                 }
                             }}
                         >

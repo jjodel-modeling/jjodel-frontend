@@ -5,7 +5,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 1000;
+    z-index: 10002;  // Higher than Jodie (10000)
     backdrop-filter: blur(2px);
     animation: fadeIn 0.15s ease;
 }

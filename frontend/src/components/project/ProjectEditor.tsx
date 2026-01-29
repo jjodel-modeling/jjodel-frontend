@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { LModel, LProject, LViewPoint, U, store } from '../../joiner';
 import DockManager from '../abstract/DockManager';
-import { createM2 } from '../../pages/components/Navbar';
+import { createM2, createM1 } from '../../pages/components/Navbar';
 import { formatVersionNumber } from '../../utils/versionUtils';
 import ShareProjectModal from './ShareProjectModal';
 import UnsavedChangesDialog from './UnsavedChangesDialog';
@@ -74,6 +74,10 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
     const menuRef = useRef<HTMLDivElement>(null);
     const renameInputRef = useRef<HTMLInputElement>(null);
 
+    // New model metamodel selection menu
+    const [showMetamodelMenu, setShowMetamodelMenu] = useState(false);
+    const metamodelMenuRef = useRef<HTMLDivElement>(null);
+
     // Unsaved changes tracking
     const [isDirty, setIsDirty] = useState(false);
     const [showUnsavedDialog, setShowUnsavedDialog] = useState(false);
@@ -124,6 +128,20 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
             return () => document.removeEventListener('mousedown', handleClickOutside);
         }
     }, [openMenu]);
+
+    // Click-outside handler for metamodel selection menu
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (metamodelMenuRef.current && !metamodelMenuRef.current.contains(event.target as Node)) {
+                setShowMetamodelMenu(false);
+            }
+        };
+
+        if (showMetamodelMenu) {
+            document.addEventListener('mousedown', handleClickOutside);
+            return () => document.removeEventListener('mousedown', handleClickOutside);
+        }
+    }, [showMetamodelMenu]);
 
     // Focus rename input when renaming starts
     useEffect(() => {
@@ -448,6 +466,29 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
         createM2(project);
     };
 
+    // Handle "+ New" button click for models
+    const handleNewModelClick = () => {
+        if (metamodels.length === 0) {
+            // No metamodels - button should be disabled, but handle just in case
+            return;
+        }
+
+        if (metamodels.length === 1) {
+            // Only one metamodel - create model directly
+            createM1(project, metamodels[0]);
+            return;
+        }
+
+        // Multiple metamodels - show selection menu
+        setShowMetamodelMenu(!showMetamodelMenu);
+    };
+
+    // Create model with selected metamodel
+    const handleCreateModel = (metamodel: LModel) => {
+        setShowMetamodelMenu(false);
+        createM1(project, metamodel);
+    };
+
     const handleDeleteMetamodel = (mm: LModel) => {
         mm.delete();
     };
@@ -732,13 +773,40 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
             <div className="project-section">
                 <div className="project-section__header">
                     <h2 className="project-section__title">MODELS</h2>
-                    <button
-                        className="btn btn--primary"
-                        disabled={metamodels.length === 0}
-                        title={metamodels.length === 0 ? 'Create a metamodel first' : 'Create new model'}
-                    >
-                        + New
-                    </button>
+                    <div className="new-model-button-wrapper" ref={metamodelMenuRef}>
+                        <button
+                            className="btn btn--primary"
+                            disabled={metamodels.length === 0}
+                            title={metamodels.length === 0 ? 'Create a metamodel first' : 'Create new model'}
+                            onClick={handleNewModelClick}
+                        >
+                            + New
+                            {metamodels.length > 1 && (
+                                <i className={`bi bi-chevron-${showMetamodelMenu ? 'up' : 'down'} btn-chevron`} />
+                            )}
+                        </button>
+
+                        {/* Metamodel selection dropdown */}
+                        {showMetamodelMenu && metamodels.length > 1 && (
+                            <div className="metamodel-select-menu">
+                                <div className="metamodel-select-menu__header">
+                                    Select metamodel
+                                </div>
+                                <div className="metamodel-select-menu__list">
+                                    {metamodels.map((mm) => (
+                                        <button
+                                            key={mm.id}
+                                            className="metamodel-select-menu__item"
+                                            onClick={() => handleCreateModel(mm)}
+                                        >
+                                            <span className="metamodel-select-menu__icon">M</span>
+                                            <span className="metamodel-select-menu__name">{mm.name || 'Unnamed'}</span>
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                    </div>
                 </div>
 
                 {models.length === 0 ? (

@@ -3,7 +3,7 @@
  * Handles API calls to different AI providers (Claude, OpenAI, DeepSeek, Gemini)
  */
 
-import { AIProvider, ChatMessage, PROVIDER_ENDPOINTS } from '../types/jodie';
+import { AIProvider, ChatMessage, ChatImage, ChatDocument, PROVIDER_ENDPOINTS } from '../types/jodie';
 import { JodieConfigService } from './JodieConfig';
 import { buildSystemPromptWithContext } from '../constants/jjodiePrompt';
 
@@ -14,12 +14,16 @@ export class AIProviderService {
      * @param provider - Which AI provider to use
      * @param conversationHistory - Previous messages in the conversation
      * @param projectContext - Optional context string about the current project/metamodel
+     * @param images - Optional images to include with the message
+     * @param documents - Optional PDF documents to include with the message
      */
     static async chat(
         message: string,
         provider: AIProvider,
         conversationHistory: ChatMessage[] = [],
-        projectContext?: string
+        projectContext?: string,
+        images?: ChatImage[],
+        documents?: ChatDocument[]
     ): Promise<string> {
         const config = JodieConfigService.getProvider(provider);
 
@@ -32,15 +36,15 @@ export class AIProviderService {
 
         switch (provider) {
             case 'claude':
-                return await this.chatClaude(message, config.apiKey, config.model, conversationHistory, systemPrompt);
+                return await this.chatClaude(message, config.apiKey, config.model, conversationHistory, systemPrompt, images, documents);
             case 'openai':
-                return await this.chatOpenAI(message, config.apiKey, config.model, conversationHistory, systemPrompt);
+                return await this.chatOpenAI(message, config.apiKey, config.model, conversationHistory, systemPrompt, images);
             case 'deepseek':
                 return await this.chatDeepSeek(message, config.apiKey, config.model, conversationHistory, systemPrompt);
             case 'gemini':
-                return await this.chatGemini(message, config.apiKey, config.model, conversationHistory, systemPrompt);
+                return await this.chatGemini(message, config.apiKey, config.model, conversationHistory, systemPrompt, images, documents);
             case 'mistral':
-                return await this.chatMistral(message, config.apiKey, config.model, conversationHistory, systemPrompt);
+                return await this.chatMistral(message, config.apiKey, config.model, conversationHistory, systemPrompt, images);
             case 'groq':
                 return await this.chatGroq(message, config.apiKey, config.model, conversationHistory, systemPrompt);
             default:
@@ -56,16 +60,27 @@ export class AIProviderService {
         apiKey: string,
         model: string,
         history: ChatMessage[],
-        systemPrompt: string
+        systemPrompt: string,
+        images?: ChatImage[],
+        documents?: ChatDocument[]
     ): Promise<string> {
         // Build messages array with history
         const messages = [
             ...history.map(msg => ({
                 role: msg.role as 'user' | 'assistant',
-                content: msg.content,
+                content: (msg.images?.length || msg.documents?.length)
+                    ? this.buildClaudeContent(msg.content, msg.images, msg.documents)
+                    : msg.content,
             })),
-            { role: 'user' as const, content: message },
         ];
+
+        // Build current message content with images/documents if present
+        const hasAttachments = (images?.length ?? 0) > 0 || (documents?.length ?? 0) > 0;
+        const currentContent = hasAttachments
+            ? this.buildClaudeContent(message, images, documents)
+            : message;
+
+        messages.push({ role: 'user' as const, content: currentContent });
 
         const response = await fetch(PROVIDER_ENDPOINTS.claude, {
             method: 'POST',
@@ -92,6 +107,52 @@ export class AIProviderService {
     }
 
     /**
+     * Build Claude content array with images, documents and text
+     */
+    private static buildClaudeContent(
+        text: string,
+        images?: ChatImage[],
+        documents?: ChatDocument[]
+    ): Array<{ type: string; text?: string; source?: { type: string; media_type: string; data: string } }> {
+        const content: Array<{ type: string; text?: string; source?: { type: string; media_type: string; data: string } }> = [];
+
+        // Add documents first (PDFs)
+        if (documents) {
+            for (const doc of documents) {
+                content.push({
+                    type: 'document',
+                    source: {
+                        type: 'base64',
+                        media_type: doc.mimeType,
+                        data: doc.data,
+                    },
+                });
+            }
+        }
+
+        // Add images
+        if (images) {
+            for (const img of images) {
+                content.push({
+                    type: 'image',
+                    source: {
+                        type: 'base64',
+                        media_type: img.mimeType,
+                        data: img.data,
+                    },
+                });
+            }
+        }
+
+        // Add text
+        if (text) {
+            content.push({ type: 'text', text });
+        }
+
+        return content;
+    }
+
+    /**
      * Chat with ChatGPT (OpenAI)
      */
     private static async chatOpenAI(
@@ -99,17 +160,24 @@ export class AIProviderService {
         apiKey: string,
         model: string,
         history: ChatMessage[],
-        systemPrompt: string
+        systemPrompt: string,
+        images?: ChatImage[]
     ): Promise<string> {
         // Build messages array with system prompt and history
-        const messages = [
+        const messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string | Array<{ type: string; text?: string; image_url?: { url: string } }> }> = [
             { role: 'system' as const, content: systemPrompt },
             ...history.map(msg => ({
                 role: msg.role as 'user' | 'assistant',
-                content: msg.content,
+                content: msg.images?.length ? this.buildOpenAIContent(msg.content, msg.images) : msg.content,
             })),
-            { role: 'user' as const, content: message },
         ];
+
+        // Build current message content with images if present
+        const currentContent = images?.length
+            ? this.buildOpenAIContent(message, images)
+            : message;
+
+        messages.push({ role: 'user' as const, content: currentContent });
 
         const response = await fetch(PROVIDER_ENDPOINTS.openai, {
             method: 'POST',
@@ -131,6 +199,30 @@ export class AIProviderService {
 
         const data = await response.json();
         return data.choices[0].message.content;
+    }
+
+    /**
+     * Build OpenAI content array with images and text
+     */
+    private static buildOpenAIContent(text: string, images: ChatImage[]): Array<{ type: string; text?: string; image_url?: { url: string } }> {
+        const content: Array<{ type: string; text?: string; image_url?: { url: string } }> = [];
+
+        // Add text first for OpenAI
+        if (text) {
+            content.push({ type: 'text', text });
+        }
+
+        // Add images
+        for (const img of images) {
+            content.push({
+                type: 'image_url',
+                image_url: {
+                    url: `data:${img.mimeType};base64,${img.data}`,
+                },
+            });
+        }
+
+        return content;
     }
 
     /**
@@ -183,10 +275,12 @@ export class AIProviderService {
         apiKey: string,
         model: string,
         history: ChatMessage[],
-        systemPrompt: string
+        systemPrompt: string,
+        images?: ChatImage[],
+        documents?: ChatDocument[]
     ): Promise<string> {
         // Build contents array for Gemini format
-        const contents = [
+        const contents: Array<{ role: string; parts: Array<{ text?: string; inline_data?: { mime_type: string; data: string } }> }> = [
             // System instruction as first user message
             {
                 role: 'user',
@@ -199,14 +293,22 @@ export class AIProviderService {
             // Conversation history
             ...history.map(msg => ({
                 role: msg.role === 'user' ? 'user' : 'model',
-                parts: [{ text: msg.content }],
+                parts: (msg.images?.length || msg.documents?.length)
+                    ? this.buildGeminiParts(msg.content, msg.images, msg.documents)
+                    : [{ text: msg.content }],
             })),
-            // Current message
-            {
-                role: 'user',
-                parts: [{ text: message }],
-            },
         ];
+
+        // Build current message parts with images/documents if present
+        const hasAttachments = (images?.length ?? 0) > 0 || (documents?.length ?? 0) > 0;
+        const currentParts = hasAttachments
+            ? this.buildGeminiParts(message, images, documents)
+            : [{ text: message }];
+
+        contents.push({
+            role: 'user',
+            parts: currentParts,
+        });
 
         const response = await fetch(
             `${PROVIDER_ENDPOINTS.gemini}/${model}:generateContent?key=${apiKey}`,
@@ -234,6 +336,48 @@ export class AIProviderService {
     }
 
     /**
+     * Build Gemini parts array with images, documents and text
+     */
+    private static buildGeminiParts(
+        text: string,
+        images?: ChatImage[],
+        documents?: ChatDocument[]
+    ): Array<{ text?: string; inline_data?: { mime_type: string; data: string } }> {
+        const parts: Array<{ text?: string; inline_data?: { mime_type: string; data: string } }> = [];
+
+        // Add documents first (PDFs) for Gemini
+        if (documents) {
+            for (const doc of documents) {
+                parts.push({
+                    inline_data: {
+                        mime_type: doc.mimeType,
+                        data: doc.data,
+                    },
+                });
+            }
+        }
+
+        // Add images
+        if (images) {
+            for (const img of images) {
+                parts.push({
+                    inline_data: {
+                        mime_type: img.mimeType,
+                        data: img.data,
+                    },
+                });
+            }
+        }
+
+        // Add text
+        if (text) {
+            parts.push({ text });
+        }
+
+        return parts;
+    }
+
+    /**
      * Chat with Mistral AI
      */
     private static async chatMistral(
@@ -241,17 +385,24 @@ export class AIProviderService {
         apiKey: string,
         model: string,
         history: ChatMessage[],
-        systemPrompt: string
+        systemPrompt: string,
+        images?: ChatImage[]
     ): Promise<string> {
-        // Build messages array (OpenAI-compatible format)
-        const messages = [
+        // Build messages array (OpenAI-compatible format for Pixtral vision models)
+        const messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string | Array<{ type: string; text?: string; image_url?: string }> }> = [
             { role: 'system' as const, content: systemPrompt },
             ...history.map(msg => ({
                 role: msg.role as 'user' | 'assistant',
-                content: msg.content,
+                content: msg.images?.length ? this.buildMistralContent(msg.content, msg.images) : msg.content,
             })),
-            { role: 'user' as const, content: message },
         ];
+
+        // Build current message content with images if present
+        const currentContent = images?.length
+            ? this.buildMistralContent(message, images)
+            : message;
+
+        messages.push({ role: 'user' as const, content: currentContent });
 
         const response = await fetch(PROVIDER_ENDPOINTS.mistral, {
             method: 'POST',
@@ -273,6 +424,28 @@ export class AIProviderService {
 
         const data = await response.json();
         return data.choices[0].message.content;
+    }
+
+    /**
+     * Build Mistral content array with images and text (Pixtral format)
+     */
+    private static buildMistralContent(text: string, images: ChatImage[]): Array<{ type: string; text?: string; image_url?: string }> {
+        const content: Array<{ type: string; text?: string; image_url?: string }> = [];
+
+        // Add text first
+        if (text) {
+            content.push({ type: 'text', text });
+        }
+
+        // Add images as data URLs
+        for (const img of images) {
+            content.push({
+                type: 'image_url',
+                image_url: `data:${img.mimeType};base64,${img.data}`,
+            });
+        }
+
+        return content;
     }
 
     /**

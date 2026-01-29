@@ -7,18 +7,20 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { JodieHeader } from './JodieHeader';
 import { ChatMessages } from './ChatMessages';
 import { ChatInput } from './ChatInput';
-import { AIProvider, ChatMessage } from '../../types/jodie';
+import { AIProvider, ChatMessage, ChatImage, ChatDocument } from '../../types/jodie';
 import { JodieConfigService } from '../../services/JodieConfig';
 
 interface JodieWindowProps {
     messages: ChatMessage[];
     activeProvider: AIProvider;
     isWaiting: boolean;
-    onSendMessage: (message: string) => void;
+    onSendMessage: (message: string, images?: ChatImage[], documents?: ChatDocument[]) => void;
     onProviderChange: (provider: AIProvider) => void;
     onClose: () => void;
     onOpenSettings: () => void;
     onOpenDocumentation?: () => void;
+    supportsVision?: boolean;
+    supportsPDF?: boolean;
 }
 
 interface Position {
@@ -56,6 +58,8 @@ export function JodieWindow({
     onClose,
     onOpenSettings,
     onOpenDocumentation,
+    supportsVision,
+    supportsPDF,
 }: JodieWindowProps): JSX.Element {
     // Load initial position/size from config
     const config = JodieConfigService.load();
@@ -246,6 +250,8 @@ export function JodieWindow({
             <ChatInput
                 onSend={onSendMessage}
                 disabled={isWaiting}
+                supportsVision={supportsVision}
+                supportsPDF={supportsPDF}
             />
         </div>
     );

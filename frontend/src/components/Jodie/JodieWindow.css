@@ -494,12 +494,111 @@
 
 .jodie-input-container {
     display: flex;
-    align-items: flex-end;
-    gap: 12px;
-    padding: 16px 20px;
+    flex-direction: column;
+    padding: 12px 16px 16px;
     background: #ffffff;
     border-top: 1px solid #e2e8f0;
     border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+}
+
+/* Image previews above input */
+.jodie-image-previews {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding-bottom: 12px;
+}
+
+.jodie-image-preview {
+    position: relative;
+    width: 64px;
+    height: 64px;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 2px solid #e2e8f0;
+    background: #f8fafc;
+    transition: all 0.2s ease;
+}
+
+.jodie-image-preview img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.jodie-image-preview:hover {
+    border-color: #64748b;
+}
+
+.jodie-image-preview:hover .jodie-image-remove {
+    opacity: 1;
+}
+
+.jodie-image-remove {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #ef4444;
+    border: 2px solid #ffffff;
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    opacity: 0;
+    transition: all 0.15s ease;
+    padding: 0;
+}
+
+.jodie-image-remove i {
+    font-size: 12px;
+    line-height: 1;
+}
+
+.jodie-image-remove:hover {
+    background: #dc2626;
+    transform: scale(1.1);
+}
+
+/* Input row with attach button */
+.jodie-input-row {
+    display: flex;
+    align-items: flex-end;
+    gap: 12px;
+    width: 100%;
+}
+
+/* Attachment button */
+.jodie-attach-btn {
+    width: 40px;
+    height: 48px;
+    min-width: 40px;
+    border: none;
+    background: transparent;
+    color: #64748b;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.jodie-attach-btn i {
+    font-size: 18px;
+}
+
+.jodie-attach-btn:hover:not(:disabled) {
+    background: #f1f5f9;
+    color: #475569;
+}
+
+.jodie-attach-btn:disabled {
+    color: #cbd5e1;
+    cursor: not-allowed;
 }
 
 .jodie-input {
@@ -870,6 +969,32 @@ body[data-notification-visible="true"] .jodie-minimized {
     background: #1e293b;
 }
 
+[data-theme="dark"] .jodie-image-preview {
+    border-color: #334155;
+    background: #1e293b;
+}
+
+[data-theme="dark"] .jodie-image-preview:hover {
+    border-color: #64748b;
+}
+
+[data-theme="dark"] .jodie-image-remove {
+    border-color: #1e293b;
+}
+
+[data-theme="dark"] .jodie-attach-btn {
+    color: #94a3b8;
+}
+
+[data-theme="dark"] .jodie-attach-btn:hover:not(:disabled) {
+    background: #334155;
+    color: #e2e8f0;
+}
+
+[data-theme="dark"] .jodie-attach-btn:disabled {
+    color: #475569;
+}
+
 [data-theme="dark"] .jodie-minimized {
     background: linear-gradient(135deg, #475569 0%, #334155 100%);
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
@@ -894,4 +1019,199 @@ body[data-notification-visible="true"] .jodie-minimized {
 
 [data-theme="dark"] .jodie-confirm-cancel:hover {
     background: #475569;
+}
+
+/* ========================================
+   Message Images
+   ======================================== */
+
+.jodie-message-images {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.jodie-message-image {
+    max-width: 200px;
+    max-height: 150px;
+    border-radius: 8px;
+    object-fit: cover;
+    cursor: pointer;
+    transition: transform 0.2s ease;
+}
+
+.jodie-message-image:hover {
+    transform: scale(1.02);
+}
+
+/* Dark mode for message images */
+[data-theme="dark"] .jodie-message-image {
+    border: 1px solid #334155;
+}
+
+/* ========================================
+   Attachment Previews (Input Area)
+   ======================================== */
+
+.jodie-attachment-previews {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding-bottom: 12px;
+}
+
+/* Document preview in input area */
+.jodie-document-preview {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    max-width: 200px;
+    transition: all 0.2s ease;
+}
+
+.jodie-document-preview:hover {
+    border-color: #64748b;
+}
+
+.jodie-document-preview:hover .jodie-attachment-remove {
+    opacity: 1;
+}
+
+.jodie-document-icon {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(239, 68, 68, 0.1);
+    border-radius: 6px;
+    flex-shrink: 0;
+}
+
+.jodie-document-icon i {
+    font-size: 18px;
+    color: #dc2626;
+}
+
+.jodie-document-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+    flex: 1;
+}
+
+.jodie-document-name {
+    font-size: 12px;
+    font-weight: 500;
+    color: #1e293b;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.jodie-document-size {
+    font-size: 11px;
+    color: #64748b;
+}
+
+/* Remove button for attachments */
+.jodie-attachment-remove {
+    position: relative;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #ef4444;
+    border: none;
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    opacity: 0;
+    transition: all 0.15s ease;
+    padding: 0;
+    flex-shrink: 0;
+}
+
+.jodie-attachment-remove i {
+    font-size: 12px;
+    line-height: 1;
+}
+
+.jodie-attachment-remove:hover {
+    background: #dc2626;
+    transform: scale(1.1);
+}
+
+/* ========================================
+   Message Documents
+   ======================================== */
+
+.jodie-message-documents {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.jodie-message-document {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: rgba(239, 68, 68, 0.08);
+    border-radius: 6px;
+    font-size: 12px;
+}
+
+.jodie-message-document i {
+    font-size: 16px;
+    color: #dc2626;
+}
+
+.jodie-message-document .jodie-document-name {
+    color: #1e293b;
+    font-weight: 500;
+}
+
+/* User message document styling */
+.jodie-message-user .jodie-message-document {
+    background: rgba(255, 255, 255, 0.15);
+}
+
+.jodie-message-user .jodie-message-document i,
+.jodie-message-user .jodie-message-document .jodie-document-name {
+    color: #ffffff;
+}
+
+/* Dark mode for documents */
+[data-theme="dark"] .jodie-document-preview {
+    background: #1e293b;
+    border-color: #334155;
+}
+
+[data-theme="dark"] .jodie-document-preview:hover {
+    border-color: #64748b;
+}
+
+[data-theme="dark"] .jodie-document-name {
+    color: #f1f5f9;
+}
+
+[data-theme="dark"] .jodie-document-size {
+    color: #94a3b8;
+}
+
+[data-theme="dark"] .jodie-message-document {
+    background: rgba(239, 68, 68, 0.12);
+}
+
+[data-theme="dark"] .jodie-message-document .jodie-document-name {
+    color: #f1f5f9;
 }

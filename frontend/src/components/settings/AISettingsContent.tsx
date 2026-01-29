@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { JodieConfigService } from '../../services/JodieConfig';
+import { PROVIDER_MODELS, ModelInfo, AIProvider } from '../../types/jodie';
 import './AISettingsContent.scss';
 
 interface AISettingsContentProps {
@@ -15,13 +16,52 @@ interface ProviderFormState {
     ollama: { baseUrl: string; model: string };
 }
 
+// Map settings provider IDs to PROVIDER_MODELS keys
+const SETTINGS_TO_PROVIDER: Record<string, AIProvider> = {
+    openai: 'openai',
+    anthropic: 'claude',
+    mistral: 'mistral',
+    gemini: 'gemini',
+    ollama: 'groq', // Ollama doesn't have models in PROVIDER_MODELS, use empty
+};
+
 const DEFAULT_MODELS: Record<string, string> = {
     openai: 'gpt-4o',
-    anthropic: 'claude-3-5-sonnet-20241022',
+    anthropic: 'claude-sonnet-4-20250514',
     mistral: 'mistral-large-latest',
-    gemini: 'gemini-pro',
+    gemini: 'gemini-2.0-flash-exp',
     ollama: 'llama2',
 };
+
+// Component to show model capability badges
+function ModelCapabilitiesBadges({ model }: { model: ModelInfo | undefined }): JSX.Element | null {
+    if (!model) return null;
+
+    const { capabilities } = model;
+
+    return (
+        <div className="model-capabilities">
+            {capabilities.vision && (
+                <span className="capability-badge vision" title="Supports image upload">
+                    <i className="bi bi-image" />
+                    Images
+                </span>
+            )}
+            {capabilities.pdf && (
+                <span className="capability-badge pdf" title="Supports PDF upload">
+                    <i className="bi bi-file-earmark-pdf" />
+                    PDF
+                </span>
+            )}
+            {!capabilities.vision && !capabilities.pdf && (
+                <span className="capability-badge text-only" title="Text only">
+                    <i className="bi bi-fonts" />
+                    Text only
+                </span>
+            )}
+        </div>
+    );
+}
 
 export function AISettingsContent({
     onClose,
@@ -176,7 +216,7 @@ export function AISettingsContent({
         name: string,
         icon: string,
         description: string,
-        fields: Array<{ key: string; label: string; type: 'text' | 'password'; placeholder: string }>
+        fields: Array<{ key: string; label: string; type: 'text' | 'password' | 'model'; placeholder: string }>
     ) => {
         const isExpanded = expandedProvider === id;
         const config = (providers as any)[id];
@@ -184,6 +224,11 @@ export function AISettingsContent({
             ? !!config.baseUrl
             : !!config.apiKey;
         const status = testStatus[id] || 'idle';
+
+        // Get available models for this provider
+        const providerKey = SETTINGS_TO_PROVIDER[id];
+        const availableModels: ModelInfo[] = providerKey ? (PROVIDER_MODELS[providerKey] || []) : [];
+        const selectedModel = availableModels.find(m => m.value === config.model);
 
         return (
             <div
@@ -217,12 +262,38 @@ export function AISettingsContent({
                         {fields.map(field => (
                             <div key={field.key} className="form-group">
                                 <label>{field.label}</label>
-                                <input
-                                    type={field.type}
-                                    value={config[field.key] || ''}
-                                    onChange={(e) => updateProvider(id, field.key, e.target.value)}
-                                    placeholder={field.placeholder}
-                                />
+
+                                {field.type === 'model' && availableModels.length > 0 ? (
+                                    // Model select with capabilities
+                                    <div className="model-select-wrapper">
+                                        <select
+                                            className="model-select"
+                                            value={config[field.key] || ''}
+                                            onChange={(e) => updateProvider(id, field.key, e.target.value)}
+                                        >
+                                            <option value="">Select a model...</option>
+                                            {availableModels.map(model => (
+                                                <option
+                                                    key={model.value}
+                                                    value={model.value}
+                                                    disabled={model.deprecated}
+                                                >
+                                                    {model.label}
+                                                    {model.deprecated ? ' (deprecated)' : ''}
+                                                </option>
+                                            ))}
+                                        </select>
+                                        <ModelCapabilitiesBadges model={selectedModel} />
+                                    </div>
+                                ) : (
+                                    // Regular input (text/password)
+                                    <input
+                                        type={field.type === 'model' ? 'text' : field.type}
+                                        value={config[field.key] || ''}
+                                        onChange={(e) => updateProvider(id, field.key, e.target.value)}
+                                        placeholder={field.placeholder}
+                                    />
+                                )}
                             </div>
                         ))}
 
@@ -258,10 +329,10 @@ export function AISettingsContent({
                     'openai',
                     'OpenAI',
                     'bi-stars',
-                    'GPT-4, GPT-4o, GPT-3.5 Turbo',
+                    'GPT-4o, GPT-4 Turbo, GPT-3.5',
                     [
                         { key: 'apiKey', label: 'API Key', type: 'password', placeholder: 'sk-...' },
-                        { key: 'model', label: 'Model', type: 'text', placeholder: 'gpt-4o' },
+                        { key: 'model', label: 'Model', type: 'model', placeholder: '' },
                     ]
                 )}
 
@@ -269,10 +340,10 @@ export function AISettingsContent({
                     'anthropic',
                     'Anthropic',
                     'bi-stars',
-                    'Claude 3.5 Sonnet, Claude 3 Opus',
+                    'Claude Sonnet 4, Claude Opus 4',
                     [
                         { key: 'apiKey', label: 'API Key', type: 'password', placeholder: 'sk-ant-...' },
-                        { key: 'model', label: 'Model', type: 'text', placeholder: 'claude-3-5-sonnet-20241022' },
+                        { key: 'model', label: 'Model', type: 'model', placeholder: '' },
                     ]
                 )}
 
@@ -280,10 +351,10 @@ export function AISettingsContent({
                     'mistral',
                     'Mistral',
                     'bi-stars',
-                    'Mistral Large, Mistral Medium',
+                    'Mistral Large, Pixtral',
                     [
                         { key: 'apiKey', label: 'API Key', type: 'password', placeholder: 'Your Mistral API key' },
-                        { key: 'model', label: 'Model', type: 'text', placeholder: 'mistral-large-latest' },
+                        { key: 'model', label: 'Model', type: 'model', placeholder: '' },
                     ]
                 )}
 
@@ -291,10 +362,10 @@ export function AISettingsContent({
                     'gemini',
                     'Google Gemini',
                     'bi-stars',
-                    'Gemini Pro, Gemini Ultra',
+                    'Gemini 2.0 Flash, Gemini 1.5 Pro',
                     [
                         { key: 'apiKey', label: 'API Key', type: 'password', placeholder: 'Your Gemini API key' },
-                        { key: 'model', label: 'Model', type: 'text', placeholder: 'gemini-pro' },
+                        { key: 'model', label: 'Model', type: 'model', placeholder: '' },
                     ]
                 )}
 
@@ -302,10 +373,10 @@ export function AISettingsContent({
                     'ollama',
                     'Ollama',
                     'bi-hdd-network',
-                    'Local models (Llama 2, CodeLlama, Mistral)',
+                    'Local models (Llama 3, Mistral)',
                     [
                         { key: 'baseUrl', label: 'Base URL', type: 'text', placeholder: 'http://localhost:11434' },
-                        { key: 'model', label: 'Model', type: 'text', placeholder: 'llama2' },
+                        { key: 'model', label: 'Model', type: 'text', placeholder: 'llama3' },
                     ]
                 )}
             </div>

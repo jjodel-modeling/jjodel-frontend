@@ -38,6 +38,7 @@ import DialogVisualizer from './components/alert/Dialog';
 import { NotificationWidget } from './components/NotificationWidget/NotificationWidget';
 import { Jodie } from './components/Jodie';
 import { DevModeProvider } from './contexts/DevModeContext';
+import { AISettingsProvider } from './contexts/AISettingsContext';
 
 let firstLoading = true;
 let browserData = U.getOSBrowserData();
@@ -79,6 +80,7 @@ function App(props: AllProps): JSX.Element {
 
     return (<>
         <DevModeProvider>
+        <AISettingsProvider>
             <div className={"router-wrapper"}>
                 {isLoading && <Loader/>}
                 <ExternalLibraries/>
@@ -125,6 +127,7 @@ function App(props: AllProps): JSX.Element {
                 </HashRouter>
 
             </div>
+        </AISettingsProvider>
         </DevModeProvider>
     </>);
 

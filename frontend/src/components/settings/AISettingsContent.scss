@@ -440,4 +440,122 @@
             background: #334155;
         }
     }
+
+    .model-select {
+        background-color: var(--bg-tertiary, #0f172a);
+        border-color: var(--border-color, #334155);
+        color: var(--text-primary, #f1f5f9);
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2394a3b8' d='M2.5 4.5L6 8l3.5-3.5'/%3E%3C/svg%3E");
+
+        &:focus {
+            background-color: var(--bg-secondary, #1e293b);
+        }
+
+        option {
+            background: var(--bg-secondary, #1e293b);
+        }
+    }
+
+    .capability-badge {
+        &.vision {
+            background: #1e3a5f;
+            color: #93c5fd;
+        }
+
+        &.pdf {
+            background: #4a1d34;
+            color: #f9a8d4;
+        }
+
+        &.text-only {
+            background: var(--bg-hover, #334155);
+            color: var(--text-tertiary, #64748b);
+        }
+    }
+}
+
+// ============================================
+// MODEL SELECT
+// ============================================
+
+.model-select-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.model-select {
+    width: 100%;
+    padding: 10px 12px;
+    font-size: 13px;
+    background: var(--bg-secondary, #f8fafc);
+    border: 1px solid var(--border-color, #e2e8f0);
+    border-radius: 6px;
+    color: var(--text-primary, #1e293b);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2364748b' d='M2.5 4.5L6 8l3.5-3.5'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 36px;
+
+    &:focus {
+        outline: none;
+        border-color: #0ea5e9;
+        background-color: var(--bg-primary, #ffffff);
+        box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.1);
+    }
+
+    &:hover {
+        border-color: var(--border-color-hover, #cbd5e1);
+    }
+
+    option {
+        padding: 8px;
+    }
+
+    option:disabled {
+        color: var(--text-tertiary, #94a3b8);
+        font-style: italic;
+    }
+}
+
+// ============================================
+// MODEL CAPABILITIES BADGES
+// ============================================
+
+.model-capabilities {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.capability-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 500;
+
+    i {
+        font-size: 12px;
+    }
+
+    &.vision {
+        background: #dbeafe;
+        color: #1d4ed8;
+    }
+
+    &.pdf {
+        background: #fce7f3;
+        color: #be185d;
+    }
+
+    &.text-only {
+        background: var(--bg-tertiary, #f1f5f9);
+        color: var(--text-tertiary, #64748b);
+    }
 }

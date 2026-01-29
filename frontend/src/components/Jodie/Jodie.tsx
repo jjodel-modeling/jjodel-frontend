@@ -7,9 +7,10 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { JodieWindow } from './JodieWindow';
 import { JodieMinimized } from './JodieMinimized';
-import { AIProvider, ChatMessage, ChatState, PROVIDER_INFO } from '../../types/jodie';
+import { AIProvider, ChatMessage, ChatImage, ChatDocument, ChatState, PROVIDER_INFO, supportsVision, supportsPDF } from '../../types/jodie';
 import { JodieConfigService } from '../../services/JodieConfig';
 import { AIProviderService } from '../../services/AIProviderService';
+import { useAISettings } from '../../contexts/AISettingsContext';
 import { JjodieContextService } from '../../services/JjodieContext';
 import { DUser, L, LUser, LProject } from '../../joiner';
 import DockManager from '../abstract/DockManager';
@@ -23,6 +24,7 @@ function generateMessageId(): string {
 
 export function Jodie(): JSX.Element {
     const navigate = useNavigate();
+    const { openAISettings } = useAISettings();
 
     // Chat state
     const [chatState, setChatState] = useState<ChatState>({
@@ -51,6 +53,18 @@ export function Jodie(): JSX.Element {
         }
         return 'You';
     }, []);
+
+    // Check if current provider supports vision
+    const providerSupportsVision = useMemo(() => {
+        const config = JodieConfigService.getProvider(activeProvider);
+        return supportsVision(activeProvider, config?.model);
+    }, [activeProvider]);
+
+    // Check if current provider supports PDF documents
+    const providerSupportsPDF = useMemo(() => {
+        const config = JodieConfigService.getProvider(activeProvider);
+        return supportsPDF(activeProvider, config?.model);
+    }, [activeProvider]);
 
     // Get current project context for AI
     const getProjectContext = useCallback((): string | undefined => {
@@ -129,7 +143,7 @@ export function Jodie(): JSX.Element {
     }, []);
 
     // Send message
-    const handleSendMessage = useCallback(async (content: string) => {
+    const handleSendMessage = useCallback(async (content: string, images?: ChatImage[], documents?: ChatDocument[]) => {
         // Determine which provider to use
         let providerToUse = activeProvider;
 
@@ -171,13 +185,15 @@ export function Jodie(): JSX.Element {
             }));
         }
 
-        // Add user message
+        // Add user message (with images/documents if present)
         const userMessage: ChatMessage = {
             id: generateMessageId(),
             role: 'user',
             content,
             timestamp: Date.now(),
             userName,
+            images,
+            documents,
         };
 
         setChatState(prev => ({
@@ -193,8 +209,8 @@ export function Jodie(): JSX.Element {
             // Get current project context
             const projectContext = getProjectContext();
 
-            // Call AI provider with context
-            const response = await AIProviderService.chat(content, providerToUse, history, projectContext);
+            // Call AI provider with context, images and documents
+            const response = await AIProviderService.chat(content, providerToUse, history, projectContext, images, documents);
 
             // Add assistant message
             const assistantMessage: ChatMessage = {
@@ -227,13 +243,12 @@ export function Jodie(): JSX.Element {
                 isWaiting: false,
             }));
         }
-    }, [activeProvider, chatState.messages, getProjectContext]);
+    }, [activeProvider, chatState.messages, getProjectContext, userName]);
 
-    // Open settings - navigate to Settings page and close chat
+    // Open settings - show AI Settings modal
     const handleOpenSettings = useCallback(() => {
-        setChatState(prev => ({ ...prev, isOpen: false }));
-        navigate('/settings');
-    }, [navigate]);
+        openAISettings();
+    }, [openAISettings]);
 
     // Open documentation tab
     const handleOpenDocumentation = useCallback(() => {
@@ -258,6 +273,8 @@ export function Jodie(): JSX.Element {
                     onClose={handleClose}
                     onOpenSettings={handleOpenSettings}
                     onOpenDocumentation={handleOpenDocumentation}
+                    supportsVision={providerSupportsVision}
+                    supportsPDF={providerSupportsPDF}
                 />
             ) : (
                 <JodieMinimized

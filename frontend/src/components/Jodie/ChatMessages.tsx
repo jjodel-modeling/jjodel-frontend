@@ -45,6 +45,30 @@ function MessageBubble({ message }: { message: ChatMessage }): JSX.Element {
             )}
             <div className="jodie-message-content">
                 <div className="jodie-message-bubble">
+                    {/* Display attached images */}
+                    {message.images && message.images.length > 0 && (
+                        <div className="jodie-message-images">
+                            {message.images.map(img => (
+                                <img
+                                    key={img.id}
+                                    src={img.preview}
+                                    alt={img.name || 'Attached image'}
+                                    className="jodie-message-image"
+                                />
+                            ))}
+                        </div>
+                    )}
+                    {/* Display attached documents */}
+                    {message.documents && message.documents.length > 0 && (
+                        <div className="jodie-message-documents">
+                            {message.documents.map(doc => (
+                                <div key={doc.id} className="jodie-message-document">
+                                    <i className="bi bi-file-earmark-pdf" />
+                                    <span className="jodie-document-name">{doc.name}</span>
+                                </div>
+                            ))}
+                        </div>
+                    )}
                     <div className="jodie-message-text">
                         <MarkdownMessage content={message.content} isUser={isUser} />
                     </div>

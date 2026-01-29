@@ -21,6 +21,7 @@ import type { ProjectDocumentation } from '../../../services/DocumentationServic
 import { JodieConfigService, ALL_PROVIDERS } from '../../../services/JodieConfig';
 import type { AIProvider } from '../../../types/jodie';
 import { useAIProviderPreference } from '../../../hooks/useAIProviderPreference';
+import { useAISettingsSafe } from '../../../contexts/AISettingsContext';
 import { DocumentationStatus } from '../../../types/jodie';
 import { markdownMonacoOptions } from '../../editors/monacoConfig';
 import './DocumentationTab.scss';
@@ -581,6 +582,7 @@ function DocumentationTabComponent(props: AllProps) {
     // AI Provider selector (with persistence)
     const { selectedProvider, setSelectedProvider } = useAIProviderPreference('documentation');
     const [showProviderMenu, setShowProviderMenu] = useState(false);
+    const aiSettingsContext = useAISettingsSafe();
 
     // Progress modal for regeneration
     const [showProgressModal, setShowProgressModal] = useState(false);
@@ -1054,9 +1056,15 @@ function DocumentationTabComponent(props: AllProps) {
                                         ))}
 
                                         <div className="provider-menu-footer">
-                                            <span className="provider-hint">
+                                            <button
+                                                className="provider-hint"
+                                                onClick={() => {
+                                                    setShowProviderMenu(false);
+                                                    aiSettingsContext?.openAISettings();
+                                                }}
+                                            >
                                                 <i className="bi bi-gear" /> Configure in Settings
-                                            </span>
+                                            </button>
                                         </div>
                                     </div>
                                 )}

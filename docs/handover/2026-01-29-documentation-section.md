@@ -175,6 +175,9 @@ interface Props {
 | `frontend/src/services/AIProviderPreferences.ts` | **NUOVO** Servizio per preferenze AI provider |
 | `frontend/src/hooks/useAIProviderPreference.ts` | **NUOVO** Hook per preferenze AI provider |
 | `frontend/src/components/common/ProviderSelector.tsx` | **NUOVO** Componente dropdown provider |
+| `frontend/src/components/settings/AISettingsContent.tsx` | **NUOVO** Componente puro configurazione AI |
+| `frontend/src/components/settings/AISettingsModal.tsx` | **NUOVO** Modale AI settings |
+| `frontend/src/contexts/AISettingsContext.tsx` | **NUOVO** Context per modale AI settings |
 
 ---
 
@@ -662,6 +665,52 @@ html = html.replace(
 | 22:00 | Creato `ProviderSelector.scss` stili con dark mode |
 | 22:00 | `DocumentationTab.tsx` ora usa `useAIProviderPreference('documentation')` |
 | 22:00 | Preferenze AI provider persistite in localStorage per ogni feature |
+| 22:30 | **AI SETTINGS MODAL**: Sistema modale condiviso per configurazione AI providers |
+| 22:30 | Creato `AISettingsContent.tsx` componente puro riutilizzabile |
+| 22:30 | Creato `AISettingsContent.scss` stili con dark mode |
+| 22:30 | Creato `AISettingsModal.tsx` wrapper modale |
+| 22:30 | Creato `AISettingsModal.scss` stili modale con animazioni |
+| 22:30 | Creato `AISettingsContext.tsx` context per aprire modale ovunque |
+| 22:30 | Aggiunto `useAISettingsSafe()` hook per uso sicuro fuori dal provider |
+| 22:30 | `ProviderSelector` ora usa automaticamente il context per "Configure in Settings" |
+| 22:45 | **FIX**: "Configure in Settings" in DocumentationTab ora apre il modale AI |
+| 22:45 | Convertito `<span>` in `<button>` con onClick per aprire AISettingsModal |
+| 22:45 | Aggiunto hover state (cyan) al link "Configure in Settings" |
+| 23:00 | **FIX CRITICO**: Aggiunto `AISettingsProvider` in App.tsx |
+| 23:00 | Jodie.tsx ora usa `useAISettings()` per aprire il modale invece di navigare a /settings |
+| 23:00 | Il pulsante gear in JodieHeader e il link "Configure providers" ora aprono il modale |
+| 23:05 | **FIX z-index**: AISettingsModal z-index aumentato a 10002 (sopra Jjodie 10000) |
+| 23:30 | **IMAGE PASTE SUPPORT**: Supporto per incollare immagini nella chat Jjodie |
+| 23:30 | Aggiunta interfaccia `ChatImage` in `types/jodie.ts` |
+| 23:30 | Aggiunto costante `VISION_PROVIDERS` e funzione `supportsVision()` |
+| 23:30 | Aggiornata interfaccia `ChatMessage` con campo `images?: ChatImage[]` |
+| 23:30 | `ChatInput.tsx` completamente riscritto con supporto paste/upload immagini |
+| 23:30 | Creato `ChatInput.scss` con stili per image preview e attachment button |
+| 23:30 | `AIProviderService.ts` aggiornato con supporto immagini per Claude, OpenAI, Gemini, Mistral |
+| 23:30 | Aggiunti helper: `buildClaudeContent()`, `buildOpenAIContent()`, `buildGeminiParts()`, `buildMistralContent()` |
+| 23:30 | `Jodie.tsx` aggiornato con `providerSupportsVision` computed |
+| 23:30 | `JodieWindow.tsx` passa `supportsVision` prop a ChatInput |
+| 23:30 | `ChatMessages.tsx` ora visualizza immagini nei messaggi |
+| 23:30 | Stili per `.jodie-message-images` e `.jodie-message-image` aggiunti a JodieWindow.css |
+| 23:45 | **FIX supportsVision**: Cambiato da whitelist a blacklist approach |
+| 23:45 | Rimosso `VISION_MODELS`, aggiunto `NON_VISION_MODELS` |
+| 23:45 | Claude/OpenAI/Gemini: tutti i modelli moderni supportano vision |
+| 23:45 | Mistral: solo modelli "Pixtral" supportano vision |
+| 23:45 | **FIX CSS**: Spostati stili image preview in JodieWindow.css (priorita` su SCSS) |
+| 23:45 | `.jodie-input-container` ora usa `flex-direction: column` |
+| 23:45 | Aggiunti stili per `.jodie-input-row`, `.jodie-attach-btn`, `.jodie-image-*` |
+| 23:45 | Dark mode completo per tutti i nuovi elementi immagine |
+| 00:15 | **PDF SUPPORT**: Aggiunto supporto per allegare documenti PDF |
+| 00:15 | Aggiunta interfaccia `ChatDocument` in `types/jodie.ts` |
+| 00:15 | Aggiunto costante `PDF_PROVIDERS` e funzione `supportsPDF()` |
+| 00:15 | Aggiornata interfaccia `ChatMessage` con campo `documents?: ChatDocument[]` |
+| 00:15 | `ChatInput.tsx` aggiornato per gestire file PDF |
+| 00:15 | `AIProviderService.ts` aggiornato con supporto documenti per Claude e Gemini |
+| 00:15 | `buildClaudeContent()` e `buildGeminiParts()` ora accettano `documents` |
+| 00:15 | `Jodie.tsx` aggiornato con `providerSupportsPDF` e documenti in `handleSendMessage` |
+| 00:15 | `JodieWindow.tsx` passa `supportsPDF` prop a ChatInput |
+| 00:15 | `ChatMessages.tsx` ora visualizza documenti PDF nei messaggi |
+| 00:15 | Aggiunti stili per `.jodie-attachment-previews`, `.jodie-document-preview`, `.jodie-message-documents` |
 
 ---
 
@@ -719,6 +768,251 @@ jjodel_provider_chat: {"providerId":"mistral","updatedAt":1234567890}
 
 ---
 
+## AI SETTINGS MODAL (Componente Condiviso)
+
+Sistema per configurare AI providers da qualsiasi punto dell'app tramite modale.
+
+### Architettura
+
+```
+AISettingsContent.tsx  (componente puro, riutilizzabile)
+        │
+        ├──► SettingsPage.tsx (/settings/ai)
+        │
+        └──► AISettingsModal.tsx (overlay, apribile ovunque)
+                    │
+                    └──► AISettingsContext (provider React)
+```
+
+### File Creati
+
+| File | Scopo |
+|------|-------|
+| `frontend/src/components/settings/AISettingsContent.tsx` | Componente puro per configurazione providers |
+| `frontend/src/components/settings/AISettingsContent.scss` | Stili con dark mode |
+| `frontend/src/components/settings/AISettingsModal.tsx` | Wrapper modale |
+| `frontend/src/components/settings/AISettingsModal.scss` | Stili modale |
+| `frontend/src/contexts/AISettingsContext.tsx` | Context per aprire modale ovunque |
+
+### Uso
+
+```typescript
+// Nel componente
+import { useAISettings } from '../../contexts/AISettingsContext';
+
+function MyComponent() {
+    const { openAISettings } = useAISettings();
+
+    return (
+        <button onClick={openAISettings}>
+            Configure AI
+        </button>
+    );
+}
+```
+
+### Safe Hook per componenti esterni
+
+```typescript
+// Se il componente potrebbe essere fuori dal Provider
+import { useAISettingsSafe } from '../../contexts/AISettingsContext';
+
+const aiSettings = useAISettingsSafe();  // Returns null if not in provider
+if (aiSettings) {
+    aiSettings.openAISettings();
+}
+```
+
+### Features
+
+- Configurazione per OpenAI, Anthropic, Mistral, Gemini, Ollama
+- Test Connection per ogni provider
+- Salvataggio in localStorage
+- Dark mode completo
+- Chiudi con ESC o click fuori
+- Animazioni slideUp e fadeIn
+
+---
+
+## JJODIE IMAGE PASTE SUPPORT
+
+Supporto per incollare e allegare immagini nella chat di Jjodie per provider con vision capability.
+
+### Provider con Vision Support
+
+| Provider | Vision Support |
+|----------|----------------|
+| OpenAI | Tutti i modelli GPT-4 (gpt-4o, gpt-4o-mini, gpt-4-turbo). **NO** gpt-3.5-turbo |
+| Claude | Tutti i modelli Claude 3+ (sonnet, opus, haiku) |
+| Gemini | Tutti i modelli Gemini 1.5+ e 2.0 |
+| Mistral | **SOLO** modelli Pixtral (pixtral-large-latest, pixtral-12b). I modelli standard (mistral-large, mistral-small) NON supportano vision |
+| DeepSeek | NO vision support |
+| Groq | NO vision support |
+
+**Nota**: La funzione `supportsVision()` usa un approccio blacklist invece di whitelist per essere piu` permissiva con i nuovi modelli.
+
+### Tipi
+
+```typescript
+interface ChatImage {
+    id: string;         // Unique ID (img_timestamp_random)
+    data: string;       // Base64 encoded data (without data URL prefix)
+    mimeType: string;   // e.g., 'image/png', 'image/jpeg'
+    preview: string;    // Full data URL for display
+    name?: string;      // Optional filename
+}
+
+// ChatMessage ora include:
+interface ChatMessage {
+    // ... existing fields
+    images?: ChatImage[];
+}
+```
+
+### Funzionalità
+
+1. **Paste da clipboard**: Cmd+V / Ctrl+V incolla automaticamente immagini
+2. **File picker**: Bottone per selezionare immagini dal filesystem
+3. **Preview**: Anteprima immagini prima dell'invio con X per rimuovere
+4. **Multi-image**: Supporto per più immagini per messaggio
+5. **Vision detection**: Bottone attach e placeholder appaiono solo se provider supporta vision
+
+### Formato API per Provider
+
+**Claude (Anthropic)**:
+```json
+{
+  "type": "image",
+  "source": {
+    "type": "base64",
+    "media_type": "image/png",
+    "data": "base64data..."
+  }
+}
+```
+
+**OpenAI**:
+```json
+{
+  "type": "image_url",
+  "image_url": {
+    "url": "data:image/png;base64,..."
+  }
+}
+```
+
+**Gemini**:
+```json
+{
+  "inline_data": {
+    "mime_type": "image/png",
+    "data": "base64data..."
+  }
+}
+```
+
+**Mistral (Pixtral)**:
+```json
+{
+  "type": "image_url",
+  "image_url": "data:image/png;base64,..."
+}
+```
+
+### File Modificati
+
+| File | Modifiche |
+|------|-----------|
+| `types/jodie.ts` | +ChatImage, +VISION_PROVIDERS, +NON_VISION_MODELS, +supportsVision() |
+| `components/Jodie/ChatInput.tsx` | Riscritto con paste handler, file picker, image preview |
+| `components/Jodie/ChatInput.scss` | Nuovo file con stili per preview e attach button |
+| `services/AIProviderService.ts` | +buildClaudeContent, +buildOpenAIContent, +buildGeminiParts, +buildMistralContent |
+| `components/Jodie/Jodie.tsx` | +providerSupportsVision, updated handleSendMessage |
+| `components/Jodie/JodieWindow.tsx` | +supportsVision prop |
+| `components/Jodie/ChatMessages.tsx` | Visualizza immagini nei messaggi |
+| `components/Jodie/JodieWindow.css` | +.jodie-message-images, +.jodie-message-image |
+
+---
+
+## JJODIE PDF DOCUMENT SUPPORT
+
+Supporto per allegare documenti PDF nella chat di Jjodie per provider con supporto nativo PDF.
+
+### Provider con PDF Support
+
+| Provider | PDF Support |
+|----------|-------------|
+| Claude | ✓ Supporto nativo via document block |
+| Gemini | ✓ Supporto nativo via inline_data |
+| OpenAI | ✗ NO |
+| Mistral | ✗ NO |
+| DeepSeek | ✗ NO |
+| Groq | ✗ NO |
+
+### Tipi
+
+```typescript
+interface ChatDocument {
+    id: string;         // Unique ID (doc_timestamp_random)
+    data: string;       // Base64 encoded data (without data URL prefix)
+    mimeType: string;   // 'application/pdf'
+    name: string;       // Filename (required)
+    size: number;       // File size in bytes
+}
+
+// ChatMessage ora include:
+interface ChatMessage {
+    // ... existing fields
+    images?: ChatImage[];
+    documents?: ChatDocument[];
+}
+```
+
+### Funzionalità
+
+1. **File picker**: Bottone paperclip per selezionare PDF dal filesystem
+2. **Preview**: Anteprima con icona PDF, nome file e dimensione
+3. **Multi-attachment**: Supporto per più PDF e immagini per messaggio
+4. **PDF detection**: Bottone attach mostra icona paperclip se supporta PDF (invece di icona immagine)
+
+### Formato API per Provider
+
+**Claude (Anthropic)**:
+```json
+{
+  "type": "document",
+  "source": {
+    "type": "base64",
+    "media_type": "application/pdf",
+    "data": "base64data..."
+  }
+}
+```
+
+**Gemini**:
+```json
+{
+  "inline_data": {
+    "mime_type": "application/pdf",
+    "data": "base64data..."
+  }
+}
+```
+
+### File Modificati
+
+| File | Modifiche |
+|------|-----------|
+| `types/jodie.ts` | +ChatDocument, +PDF_PROVIDERS, +supportsPDF() |
+| `components/Jodie/ChatInput.tsx` | +document state, +handleFileChange per PDF, +document preview UI |
+| `services/AIProviderService.ts` | +documents param, buildClaudeContent/buildGeminiParts aggiornati |
+| `components/Jodie/Jodie.tsx` | +providerSupportsPDF, +documents in handleSendMessage |
+| `components/Jodie/JodieWindow.tsx` | +supportsPDF prop |
+| `components/Jodie/ChatMessages.tsx` | +jodie-message-documents display |
+| `components/Jodie/JodieWindow.css` | +.jodie-attachment-previews, +.jodie-document-preview, +.jodie-message-document |
+
+---
+
 ## TAB BADGE STYLING
 
 Il badge "D" nella tab è gestito via CSS in `tab-title.scss` usando pseudo-elementi `::before`:
@@ -759,4 +1053,4 @@ title: React.createElement('div', {
 
 ---
 
-*Ultimo aggiornamento: 2026-01-29 ore 22:00*
+*Ultimo aggiornamento: 2026-01-30 ore 00:15*

@@ -85,7 +85,7 @@ export function createM2(project: LProject) {
     });
 }
 
-const createM1 = (project: LProject, metamodel: LModel) => {
+export function createM1(project: LProject, metamodel: LModel) {
     let name = 'model_' + 1;
     let modelNames: (string)[] = metamodel.models.map(m => m.name);
     name = U.increaseEndingNumber(name, false, false, newName => modelNames.indexOf(newName) >= 0);

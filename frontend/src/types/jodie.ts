@@ -19,6 +19,28 @@ export interface JodieConfig {
     size?: { width: number; height: number };
 }
 
+/**
+ * Image attached to a chat message
+ */
+export interface ChatImage {
+    id: string;
+    data: string;        // Base64 encoded image data
+    mimeType: string;    // e.g., 'image/png', 'image/jpeg'
+    preview: string;     // Data URL for preview display
+    name?: string;       // Optional filename
+}
+
+/**
+ * Document (PDF) attached to a chat message
+ */
+export interface ChatDocument {
+    id: string;
+    data: string;        // Base64 encoded document data
+    mimeType: string;    // e.g., 'application/pdf'
+    name: string;        // Filename (required for documents)
+    size: number;        // File size in bytes
+}
+
 export interface ChatMessage {
     id: string;
     role: 'user' | 'assistant';
@@ -26,6 +48,57 @@ export interface ChatMessage {
     timestamp: number;
     provider?: AIProvider;
     userName?: string;
+    images?: ChatImage[];      // Attached images for vision-capable providers
+    documents?: ChatDocument[]; // Attached documents (PDF) for supported providers
+}
+
+/**
+ * Check if a provider/model combination supports vision (image input)
+ * Uses the model capabilities from PROVIDER_MODELS
+ */
+export function supportsVision(provider: AIProvider, model?: string): boolean {
+    // If model specified, check its capabilities
+    if (model) {
+        const capabilities = getModelCapabilities(provider, model);
+        return capabilities.vision;
+    }
+
+    // If no model specified, check if provider has any vision-capable model
+    // Return true if the default/first model supports vision
+    const models = PROVIDER_MODELS[provider];
+    if (models && models.length > 0) {
+        return models[0].capabilities.vision;
+    }
+
+    return false;
+}
+
+/**
+ * Check if a provider/model combination supports PDF documents
+ * Uses the model capabilities from PROVIDER_MODELS
+ */
+export function supportsPDF(provider: AIProvider, model?: string): boolean {
+    // If model specified, check its capabilities
+    if (model) {
+        const capabilities = getModelCapabilities(provider, model);
+        return capabilities.pdf;
+    }
+
+    // If no model specified, check if provider has any PDF-capable model
+    // Return true if the default/first model supports PDF
+    const models = PROVIDER_MODELS[provider];
+    if (models && models.length > 0) {
+        return models[0].capabilities.pdf;
+    }
+
+    return false;
+}
+
+/**
+ * Check if a provider/model supports any attachments (images or PDFs)
+ */
+export function supportsAttachments(provider: AIProvider, model?: string): boolean {
+    return supportsVision(provider, model) || supportsPDF(provider, model);
 }
 
 export interface ChatState {
@@ -88,47 +161,80 @@ export const PROVIDER_ENDPOINTS = {
     groq: 'https://api.groq.com/openai/v1/chat/completions',
 } as const;
 
-// Available models per provider
-export const PROVIDER_MODELS = {
+// ============================================
+// MODEL CAPABILITIES
+// ============================================
+
+export interface ModelCapabilities {
+    vision: boolean;      // Supports image input
+    pdf: boolean;         // Supports PDF documents
+}
+
+export interface ModelInfo {
+    value: string;        // Model ID for API
+    label: string;        // Display name
+    capabilities: ModelCapabilities;
+    deprecated?: boolean; // If model is deprecated
+}
+
+// Available models per provider with capabilities
+export const PROVIDER_MODELS: Record<AIProvider, ModelInfo[]> = {
     claude: [
-        { value: 'claude-sonnet-4-20250514', label: 'Claude Sonnet 4' },
-        { value: 'claude-opus-4-20250514', label: 'Claude Opus 4' },
-        { value: 'claude-haiku-4-20250514', label: 'Claude Haiku 4' },
-        // Stable fallback models
-        { value: 'claude-3-5-sonnet-20241022', label: 'Claude 3.5 Sonnet (Stable)' },
-        { value: 'claude-3-opus-20240229', label: 'Claude 3 Opus (Stable)' },
-        { value: 'claude-3-haiku-20240307', label: 'Claude 3 Haiku (Stable)' },
+        { value: 'claude-sonnet-4-20250514', label: 'Claude Sonnet 4', capabilities: { vision: true, pdf: true } },
+        { value: 'claude-opus-4-20250514', label: 'Claude Opus 4', capabilities: { vision: true, pdf: true } },
+        { value: 'claude-haiku-4-20250514', label: 'Claude Haiku 4', capabilities: { vision: true, pdf: true } },
+        { value: 'claude-3-5-sonnet-20241022', label: 'Claude 3.5 Sonnet', capabilities: { vision: true, pdf: true } },
+        { value: 'claude-3-opus-20240229', label: 'Claude 3 Opus', capabilities: { vision: true, pdf: true } },
+        { value: 'claude-3-haiku-20240307', label: 'Claude 3 Haiku', capabilities: { vision: true, pdf: true } },
     ],
     openai: [
-        { value: 'gpt-4o', label: 'GPT-4o' },
-        { value: 'gpt-4o-mini', label: 'GPT-4o Mini' },
-        { value: 'gpt-4-turbo', label: 'GPT-4 Turbo' },
-        { value: 'gpt-4', label: 'GPT-4' },
-        { value: 'gpt-3.5-turbo', label: 'GPT-3.5 Turbo' },
+        { value: 'gpt-4o', label: 'GPT-4o', capabilities: { vision: true, pdf: false } },
+        { value: 'gpt-4o-mini', label: 'GPT-4o Mini', capabilities: { vision: true, pdf: false } },
+        { value: 'gpt-4-turbo', label: 'GPT-4 Turbo', capabilities: { vision: true, pdf: false } },
+        { value: 'gpt-4', label: 'GPT-4', capabilities: { vision: false, pdf: false } },
+        { value: 'gpt-3.5-turbo', label: 'GPT-3.5 Turbo', capabilities: { vision: false, pdf: false } },
     ],
     deepseek: [
-        { value: 'deepseek-chat', label: 'DeepSeek Chat' },
-        { value: 'deepseek-coder', label: 'DeepSeek Coder' },
+        { value: 'deepseek-chat', label: 'DeepSeek Chat', capabilities: { vision: false, pdf: false } },
+        { value: 'deepseek-coder', label: 'DeepSeek Coder', capabilities: { vision: false, pdf: false } },
     ],
     gemini: [
-        { value: 'gemini-2.0-flash-exp', label: 'Gemini 2.0 Flash' },
-        { value: 'gemini-1.5-pro', label: 'Gemini 1.5 Pro' },
-        { value: 'gemini-1.5-flash', label: 'Gemini 1.5 Flash' },
-        { value: 'gemini-pro', label: 'Gemini Pro' },
+        { value: 'gemini-2.0-flash-exp', label: 'Gemini 2.0 Flash', capabilities: { vision: true, pdf: true } },
+        { value: 'gemini-1.5-pro', label: 'Gemini 1.5 Pro', capabilities: { vision: true, pdf: true } },
+        { value: 'gemini-1.5-flash', label: 'Gemini 1.5 Flash', capabilities: { vision: true, pdf: true } },
+        { value: 'gemini-pro', label: 'Gemini Pro', capabilities: { vision: false, pdf: false }, deprecated: true },
     ],
     mistral: [
-        { value: 'mistral-large-latest', label: 'Mistral Large' },
-        { value: 'mistral-small-latest', label: 'Mistral Small' },
-        { value: 'codestral-latest', label: 'Codestral' },
-        { value: 'ministral-8b-latest', label: 'Ministral 8B' },
+        { value: 'mistral-large-latest', label: 'Mistral Large', capabilities: { vision: false, pdf: false } },
+        { value: 'mistral-small-latest', label: 'Mistral Small', capabilities: { vision: false, pdf: false } },
+        { value: 'pixtral-large-latest', label: 'Pixtral Large', capabilities: { vision: true, pdf: false } },
+        { value: 'pixtral-12b-2409', label: 'Pixtral 12B', capabilities: { vision: true, pdf: false } },
+        { value: 'codestral-latest', label: 'Codestral', capabilities: { vision: false, pdf: false } },
+        { value: 'ministral-8b-latest', label: 'Ministral 8B', capabilities: { vision: false, pdf: false } },
     ],
     groq: [
-        { value: 'llama-3.3-70b-versatile', label: 'Llama 3.3 70B' },
-        { value: 'llama-3.1-8b-instant', label: 'Llama 3.1 8B Instant' },
-        { value: 'mixtral-8x7b-32768', label: 'Mixtral 8x7B' },
-        { value: 'gemma2-9b-it', label: 'Gemma 2 9B' },
+        { value: 'llama-3.3-70b-versatile', label: 'Llama 3.3 70B', capabilities: { vision: false, pdf: false } },
+        { value: 'llama-3.1-8b-instant', label: 'Llama 3.1 8B', capabilities: { vision: false, pdf: false } },
+        { value: 'mixtral-8x7b-32768', label: 'Mixtral 8x7B', capabilities: { vision: false, pdf: false } },
+        { value: 'llava-v1.5-7b-4096-preview', label: 'LLaVA 1.5 7B', capabilities: { vision: true, pdf: false } },
+        { value: 'gemma2-9b-it', label: 'Gemma 2 9B', capabilities: { vision: false, pdf: false } },
     ],
-} as const;
+};
+
+/**
+ * Get model info by provider and model ID
+ */
+export function getModelInfo(provider: AIProvider, modelId: string): ModelInfo | undefined {
+    return PROVIDER_MODELS[provider]?.find(m => m.value === modelId);
+}
+
+/**
+ * Get model capabilities by provider and model ID
+ */
+export function getModelCapabilities(provider: AIProvider, modelId: string): ModelCapabilities {
+    const model = getModelInfo(provider, modelId);
+    return model?.capabilities ?? { vision: false, pdf: false };
+}
 
 // Provider display info
 export const PROVIDER_INFO = {
