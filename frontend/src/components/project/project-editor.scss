@@ -827,6 +827,7 @@
   background: var(--bg-primary, #ffffff);
   border: 1px solid var(--border-color, #e2e8f0);
   border-radius: 8px;
+  box-shadow: none;
   z-index: 100;
   overflow: hidden;
   animation: menuSlideDown 0.15s ease;
@@ -1113,6 +1114,7 @@
   .metamodel-select-menu {
     background: var(--bg-secondary, #1e293b);
     border-color: var(--border-color, #334155);
+    box-shadow: none;
 
     &__header {
       background: var(--bg-tertiary, #0f172a);
