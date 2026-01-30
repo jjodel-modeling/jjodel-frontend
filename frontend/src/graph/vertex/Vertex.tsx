@@ -267,6 +267,10 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
                         throttledResizeUpdate({width: ui.size.width, height: ui.size.height});
                     },
                     stop: (event: GObject, ui: ResizableUI) => {
+                        // Cancel any pending throttled resize updates
+                        const resizeThrottleKey = `resize_${this.props.node?.id || 'unknown'}`;
+                        cancelThrottle(resizeThrottleKey);
+
                         if (!this.state.classes.includes('resized')) this.setState({classes:[...this.state.classes, 'resized']});
                         // if (!withSetSize) { node.width = obj.size.width; node.height = obj.size.height; } else {
                         let absolutemode = false; // this one is less tested and safe, but should work even if html container is sized 0. best if made to work
