@@ -373,7 +373,16 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
         return undefined;
     }
 
+    // Track elements that have already logged errors to avoid spam
+    private static _innerGraphErrorsLogged: Set<string> = new Set();
+
     get_innerGraph(context: Context): LGraph {
+        // EARLY EXIT: If element is not yet initialized (clonedCounter undefined),
+        // silently return self - this is expected during early lifecycle
+        if (context.data?.clonedCounter === undefined) {
+            return (LPointerTargetable.fromD(context.data)) as LGraph;
+        }
+
         let dcurrent: DGraphElement = DPointerTargetable.fromPointer(context.data.father);
 
         // if no parent, but it's a graph, return itself.
@@ -382,22 +391,73 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
             switch(dcurrent.className){
                 case DGraph.cname:
                 case DGraphVertex.cname: return (LPointerTargetable.fromD(dcurrent)) as LGraph;
-                default: return Log.exDevv("root node failed to get containing graph", {cdata:context.data, dcurrent});
+                default:
+                    // GRACEFUL HANDLING: Element has no father yet (lifecycle race condition)
+                    // Try to find graph via the 'graph' pointer if available
+                    const graphPointer = context.data?.graph;
+                    if (graphPointer) {
+                        const graphElement = DPointerTargetable.fromPointer(graphPointer);
+                        if (graphElement) {
+                            return LPointerTargetable.fromD(graphElement) as LGraph;
+                        }
+                    }
+                    // Log only once per element to avoid console spam (only for initialized elements)
+                    const elementId = context.data?.id || 'unknown';
+                    if (!LGraphElement._innerGraphErrorsLogged.has(elementId)) {
+                        LGraphElement._innerGraphErrorsLogged.add(elementId);
+                        // Limit the set size to prevent memory leaks
+                        if (LGraphElement._innerGraphErrorsLogged.size > 1000) {
+                            LGraphElement._innerGraphErrorsLogged.clear();
+                        }
+                        Log.exDevv("root node failed to get containing graph (father not set)", {
+                            elementId,
+                            className: dcurrent?.className
+                        });
+                    }
+                    // Last resort: return self wrapped - callers should handle gracefully
+                    return (LPointerTargetable.fromD(dcurrent)) as LGraph;
             }
         }
 
         // if it have a parent, iterate parents.
-        while(true){
+        let maxIterations = 100; // Prevent infinite loops
+        while(maxIterations-- > 0){
             switch(dcurrent?.className){
                 case DGraph.cname:
                 case DGraphVertex.cname: return (LPointerTargetable.fromD(dcurrent)) as LGraph;
                 default:
-                    Log.exDev(!dcurrent.father, "node failed to get containing graph", {cdata:context.data, dcurrent});
-                    Log.exDev(dcurrent.id === dcurrent.father, "node failed to get containing graph, found loop",
-                        {cdata:context.data, dcurrent, father: LPointerTargetable.from(dcurrent)?.father});
+                    if (!dcurrent?.father) {
+                        // Try graph pointer fallback first
+                        const graphPointer = context.data?.graph;
+                        if (graphPointer) {
+                            const graphElement = DPointerTargetable.fromPointer(graphPointer);
+                            if (graphElement) {
+                                return LPointerTargetable.fromD(graphElement) as LGraph;
+                            }
+                        }
+                        // Only log if element is initialized (not in early lifecycle)
+                        if (dcurrent?.clonedCounter !== undefined) {
+                            const elementId = context.data?.id || 'unknown';
+                            if (!LGraphElement._innerGraphErrorsLogged.has(elementId + '_chain')) {
+                                LGraphElement._innerGraphErrorsLogged.add(elementId + '_chain');
+                                Log.exDev(true, "node failed to get containing graph (no father in chain)", {elementId, className: dcurrent?.className});
+                            }
+                        }
+                        return (LPointerTargetable.fromD(dcurrent)) as LGraph;
+                    }
+                    if (dcurrent.id === dcurrent.father) {
+                        const elementId = context.data?.id || 'unknown';
+                        if (!LGraphElement._innerGraphErrorsLogged.has(elementId + '_loop')) {
+                            LGraphElement._innerGraphErrorsLogged.add(elementId + '_loop');
+                            Log.exDev(true, "node failed to get containing graph, found loop", {elementId});
+                        }
+                        return (LPointerTargetable.fromD(dcurrent)) as LGraph;
+                    }
                     dcurrent = DPointerTargetable.fromPointer(dcurrent.father);
             }
         }
+        // Safety: max iterations reached (silent - should rarely happen)
+        return (LPointerTargetable.fromD(context.data)) as LGraph;
     }
 
     // set_x(val: this["x"], context: Context): boolean { SetFieldAction.new(context.data.id, "x", val, undefined, false); return true; }

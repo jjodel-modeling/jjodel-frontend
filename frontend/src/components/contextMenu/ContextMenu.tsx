@@ -62,7 +62,6 @@ export function ShowContextMenu(nodeid: Pointer<DGraphElement>, x: number, y: nu
         if (graph_html.dataset?.nodetype === 'Graph') { graphid = graph_html.dataset.nodeid; break; }
         graph_html = graph_html.parentElement;
     }
-    // console.log('ShowContextMenu', {nodeid, x, y, html, graphid} );
     if (!graphid) { Log.eDevv('contextmenu graph not found', {nodeid, graphid}); return; }
     contextMenuMap[graphid]?.(nodeid, x, y);
 }

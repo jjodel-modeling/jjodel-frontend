@@ -87,29 +87,90 @@
 .md-code-copy {
     display: flex;
     align-items: center;
-    justify-content: center;
-    width: 28px;
-    height: 28px;
+    gap: 4px;
+    padding: 4px 8px;
     background: transparent;
     border: none;
     border-radius: 4px;
     color: #94a3b8;
+    font-size: 12px;
     cursor: pointer;
     transition: all 0.15s ease;
 
+    i {
+        font-size: 14px;
+    }
+
+    span {
+        font-size: 11px;
+    }
+
     &:hover {
         background: rgba(255, 255, 255, 0.1);
-        color: #ffffff;
+        color: #e2e8f0;
+    }
+
+    &.copied {
+        color: #10b981; // green-500 for success
+
+        &:hover {
+            background: rgba(16, 185, 129, 0.1);
+            color: #10b981;
+        }
     }
 }
 
+// Syntax highlighted code content
+.md-code-content {
+    margin: 0 !important;
+    padding: 12px 16px !important;
+    background: #1e293b !important;
+    overflow-x: auto;
+
+    // Override for line numbers
+    .linenumber {
+        min-width: 2.5em !important;
+        padding-right: 1em !important;
+        text-align: right;
+        color: #475569 !important; // slate-600
+        user-select: none;
+    }
+
+    code {
+        font-family: 'JetBrains Mono', 'IBM Plex Mono', 'Fira Code', 'Consolas', monospace !important;
+        font-size: 13px !important;
+        line-height: 1.5 !important;
+        background: transparent !important;
+    }
+
+    // Scrollbar styling for code blocks
+    &::-webkit-scrollbar {
+        height: 6px;
+    }
+
+    &::-webkit-scrollbar-track {
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 3px;
+    }
+
+    &::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 3px;
+
+        &:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+    }
+}
+
+// Legacy pre/code styling (fallback)
 .md-code-block pre {
     margin: 0;
     padding: 12px 16px;
     overflow-x: auto;
 
     code {
-        font-family: 'IBM Plex Mono', 'Fira Code', 'Consolas', monospace;
+        font-family: 'JetBrains Mono', 'IBM Plex Mono', 'Fira Code', 'Consolas', monospace;
         font-size: 13px;
         line-height: 1.5;
         color: #e2e8f0;

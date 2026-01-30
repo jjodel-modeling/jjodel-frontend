@@ -70,6 +70,7 @@ import {AT_TRANSACTION} from "../../redux/action/action";
 import {ShowContextMenu} from "../../components/contextMenu/ContextMenu";
 import { compareUsageDeclarations } from "../../utils/UDComparator";
 import { PerformanceMetrics } from "../../utils/PerformanceMetrics";
+import { checkVisibility, getViewportFromGraph, shouldEnableCulling, getCullingStats } from "../../utils/ViewportCulling";
 
 const ext_on = "class-can-be-extended";
 const ext_off = "class-cannot-be-extended";
@@ -783,6 +784,13 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
 
     static mousedownComponent: GraphElementComponent | undefined;
     onMouseDown(e: React.MouseEvent): void {
+        console.log('[DEBUG] onMouseDown called', {
+            button: e.button,
+            target: (e.target as HTMLElement)?.className,
+            currentTarget: (e.currentTarget as HTMLElement)?.className,
+            nodeid: this.props.nodeid,
+            isStopped: UX.isStoppedEvt(e)
+        });
         if (UX.isStoppedEvt(e)) return;
         e.stopPropagation();
         GraphElementComponent.mousedownComponent = this;
@@ -1209,6 +1217,38 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
                 this.props.node.adaptSize(size, this.props.view, {w: adaptWidth, h: adaptHeight});
             });
 
+            // VIEWPORT CULLING: Skip rendering off-screen vertices
+            if (!this.props.isGraph && !Debug.lightMode) {
+                const graph = this.props.node?.graph;
+                if (graph) {
+                    const viewport = getViewportFromGraph(graph);
+                    if (viewport && shouldEnableCulling(50)) { // Enable culling for graphs with many elements
+                        const elementBounds = { x: size.x, y: size.y, w: size.w || 100, h: size.h || 50 };
+                        const isVisible = checkVisibility(
+                            this.props.nodeid as string,
+                            elementBounds,
+                            viewport
+                        );
+                        if (!isVisible) {
+                            PerformanceMetrics.countRender('Vertex_culled');
+                            // Return lightweight placeholder to maintain DOM structure
+                            return <div
+                                className="culled-vertex"
+                                data-nodeid={this.props.nodeid}
+                                style={{
+                                    position: 'absolute',
+                                    left: size.x,
+                                    top: size.y,
+                                    width: size.w || 100,
+                                    height: size.h || 50,
+                                    visibility: 'hidden',
+                                    pointerEvents: 'none'
+                                }}
+                            />;
+                        }
+                    }
+                }
+            }
         }
 
 

@@ -1,11 +1,13 @@
 /**
  * Markdown Renderer Component
- * Renders Markdown content with full GFM support (tables, strikethrough, etc.)
+ * Renders Markdown content with full GFM support and syntax highlighting
  */
 
-import React, { memo } from 'react';
+import React, { memo, useState, useCallback } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import './MarkdownRenderer.scss';
 
 interface MarkdownRendererProps {
@@ -13,15 +15,132 @@ interface MarkdownRendererProps {
     className?: string;
 }
 
+// Custom theme based on oneDark but adapted for Jjodie chat
+const jjodieCodeTheme = {
+    ...oneDark,
+    'pre[class*="language-"]': {
+        ...oneDark['pre[class*="language-"]'],
+        background: '#1e293b', // slate-800
+        borderRadius: '0',
+        padding: '12px 16px',
+        margin: '0',
+        fontSize: '13px',
+        lineHeight: '1.5',
+    },
+    'code[class*="language-"]': {
+        ...oneDark['code[class*="language-"]'],
+        background: 'transparent',
+        fontFamily: "'JetBrains Mono', 'IBM Plex Mono', 'Fira Code', 'Consolas', monospace",
+        fontSize: '13px',
+    },
+};
+
+// Mapping for non-standard languages or aliases
+const languageAliases: Record<string, string> = {
+    'plantuml': 'java',      // PlantUML uses Java-like syntax
+    'puml': 'java',
+    'uml': 'java',
+    'ts': 'typescript',
+    'tsx': 'tsx',
+    'js': 'javascript',
+    'jsx': 'jsx',
+    'sh': 'bash',
+    'shell': 'bash',
+    'yml': 'yaml',
+    'md': 'markdown',
+    'ocl': 'typescript',     // OCL has similar syntax
+    'ecore': 'xml',
+    'xmi': 'xml',
+    'emfatic': 'java',
+};
+
+function normalizeLanguage(lang: string | undefined): string {
+    if (!lang) return 'text';
+    const lower = lang.toLowerCase();
+    return languageAliases[lower] || lower;
+}
+
+// Code block component with copy button
+interface CodeBlockProps {
+    language: string;
+    code: string;
+}
+
+const CodeBlock: React.FC<CodeBlockProps> = ({ language, code }) => {
+    const [copied, setCopied] = useState(false);
+
+    const handleCopy = useCallback(async () => {
+        try {
+            await navigator.clipboard.writeText(code);
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+        } catch (err) {
+            console.error('Failed to copy:', err);
+        }
+    }, [code]);
+
+    // Determine label to show
+    const displayLanguage = language === 'text' ? '' : language.toUpperCase();
+    const showLineNumbers = code.split('\n').length > 5;
+
+    return (
+        <div className="md-code-block">
+            {/* Header with language and copy button */}
+            <div className="md-code-header">
+                {displayLanguage && (
+                    <span className="md-code-language">{displayLanguage}</span>
+                )}
+                {!displayLanguage && <span />}
+                <button
+                    className={`md-code-copy ${copied ? 'copied' : ''}`}
+                    onClick={handleCopy}
+                    title={copied ? 'Copied!' : 'Copy code'}
+                >
+                    {copied ? (
+                        <>
+                            <i className="bi bi-check2" />
+                            <span>Copied</span>
+                        </>
+                    ) : (
+                        <>
+                            <i className="bi bi-clipboard" />
+                            <span>Copy</span>
+                        </>
+                    )}
+                </button>
+            </div>
+
+            {/* Code with syntax highlighting */}
+            <SyntaxHighlighter
+                style={jjodieCodeTheme}
+                language={language}
+                PreTag="div"
+                className="md-code-content"
+                showLineNumbers={showLineNumbers}
+                lineNumberStyle={{
+                    minWidth: '2.5em',
+                    paddingRight: '1em',
+                    color: '#475569', // slate-600
+                    userSelect: 'none',
+                }}
+            >
+                {code}
+            </SyntaxHighlighter>
+        </div>
+    );
+};
+
 /**
  * Custom components for ReactMarkdown
  */
-const markdownComponents = {
-    // Code blocks with syntax highlighting placeholder
+const createMarkdownComponents = () => ({
+    // Code blocks with syntax highlighting
     code({ inline, className, children, ...props }: any) {
         const match = /language-(\w+)/.exec(className || '');
-        const language = match ? match[1] : '';
+        const language = normalizeLanguage(match?.[1]);
+        const codeString = String(children).replace(/\n$/, '');
 
+        // Inline code
         if (inline) {
             return (
                 <code className="md-inline-code" {...props}>
@@ -30,25 +149,8 @@ const markdownComponents = {
             );
         }
 
-        return (
-            <div className="md-code-block">
-                {language && (
-                    <div className="md-code-header">
-                        <span className="md-code-language">{language}</span>
-                        <button
-                            className="md-code-copy"
-                            onClick={() => navigator.clipboard.writeText(String(children))}
-                            title="Copy code"
-                        >
-                            <i className="bi bi-clipboard" />
-                        </button>
-                    </div>
-                )}
-                <pre className={className}>
-                    <code {...props}>{children}</code>
-                </pre>
-            </div>
-        );
+        // Block code with syntax highlighting
+        return <CodeBlock language={language} code={codeString} />;
     },
 
     // Tables
@@ -137,7 +239,10 @@ const markdownComponents = {
     del({ children }: any) {
         return <del className="md-del">{children}</del>;
     },
-};
+});
+
+// Memoize components to prevent recreation on every render
+const markdownComponents = createMarkdownComponents();
 
 export const MarkdownRenderer = memo(function MarkdownRenderer({
     content,

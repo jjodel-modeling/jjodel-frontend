@@ -1,4 +1,4 @@
-import React, {Dispatch, JSX, useState} from 'react';
+import React, {Dispatch, JSX, useState, useEffect} from 'react';
 import './App.scss';
 import './styles/view.scss'; //
 import './styles/style.scss';
@@ -50,6 +50,22 @@ function App(props: AllProps): JSX.Element {
     const isLoading = props.isLoading;
     let [user, updateUser] = useState(DUser.current);
     let [useless, forceUpdate] = useState(0);
+
+    // DEBUG: Track mousedown events to diagnose context menu issue
+    useEffect(() => {
+        const debugMouseDown = (e: MouseEvent) => {
+            if (e.button === 2) { // Right-click only
+                console.log('[DEBUG-GLOBAL] Right-click mousedown', {
+                    target: (e.target as HTMLElement)?.className,
+                    targetTag: (e.target as HTMLElement)?.tagName,
+                    propagationStopped: e.defaultPrevented,
+                    eventPhase: e.eventPhase, // 1=capture, 2=target, 3=bubble
+                });
+            }
+        };
+        document.addEventListener('mousedown', debugMouseDown, true); // capture phase
+        return () => document.removeEventListener('mousedown', debugMouseDown, true);
+    }, []);
 
     /*
     const tooltip = props.tooltip;

@@ -20,6 +20,8 @@ import {
     unArr,
     windoww
 } from "../../joiner";
+import { batchedUpdates } from "../../utils/BatchedUpdates";
+import { PerformanceMetrics } from "../../utils/PerformanceMetrics";
 
 // transactional-like start of storage modification
 // todo: nested transaction che conti quanti begin hai effettuato e crei una matrice di pendingActions una per ogni livello nested?
@@ -328,7 +330,12 @@ export class Action extends RuntimeAccessibleClass {
             printobj['stack'] = this.stack;
             printobj['list'] = (this as any).actions;
             console.log('firing action:', printobj);
-            storee.dispatch({...this});
+
+            // OPTIMIZATION: Wrap dispatch in batchedUpdates to ensure React batches the render
+            PerformanceMetrics.countRender('Action_dispatch');
+            batchedUpdates(() => {
+                storee.dispatch({...this});
+            });
         }
         return true;
     }
