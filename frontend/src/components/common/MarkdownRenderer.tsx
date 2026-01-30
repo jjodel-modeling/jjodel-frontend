@@ -8,11 +8,14 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import { ScriptBlock, isJjScriptCode, ScriptLineResult } from '../../jjscript';
 import './MarkdownRenderer.scss';
 
 interface MarkdownRendererProps {
     content: string;
     className?: string;
+    /** Optional callback to execute JjScript commands */
+    onJjScriptExecute?: (commands: string[]) => Promise<ScriptLineResult[]>;
 }
 
 // Custom theme based on oneDark but adapted for Jjodie chat
@@ -60,14 +63,16 @@ function normalizeLanguage(lang: string | undefined): string {
     return languageAliases[lower] || lower;
 }
 
-// Code block component with copy button
+// Code block component with copy button and optional JjScript execution
 interface CodeBlockProps {
     language: string;
     code: string;
+    onJjScriptExecute?: (commands: string[]) => Promise<ScriptLineResult[]>;
 }
 
-const CodeBlock: React.FC<CodeBlockProps> = ({ language, code }) => {
+const CodeBlock: React.FC<CodeBlockProps> = ({ language, code, onJjScriptExecute }) => {
     const [copied, setCopied] = useState(false);
+    const [jjscriptMode, setJjscriptMode] = useState(false);
 
     const handleCopy = useCallback(async () => {
         try {
@@ -84,6 +89,34 @@ const CodeBlock: React.FC<CodeBlockProps> = ({ language, code }) => {
     const displayLanguage = language === 'text' ? '' : language.toUpperCase();
     const showLineNumbers = lineCount > 5;
 
+    // Check if code could be JjScript (only for multi-line blocks)
+    const couldBeJjScript = !isSingleLine && (
+        language === 'jjscript' ||
+        language === 'jjs' ||
+        isJjScriptCode(code)
+    );
+
+    // If in JjScript mode, render ScriptBlock
+    if (jjscriptMode) {
+        return (
+            <div className="md-jjscript-wrapper">
+                <button
+                    className="md-jjscript-exit"
+                    onClick={() => setJjscriptMode(false)}
+                    title="Exit JjScript mode"
+                >
+                    <i className="bi bi-x-lg" />
+                </button>
+                <ScriptBlock
+                    code={code}
+                    onExecute={onJjScriptExecute}
+                    showNormalizeToggle={true}
+                    allowExecution={!!onJjScriptExecute}
+                />
+            </div>
+        );
+    }
+
     return (
         <div className={`md-code-block ${isSingleLine ? 'md-code-block--single' : ''}`}>
             {/* Header only for multi-line code */}
@@ -93,23 +126,36 @@ const CodeBlock: React.FC<CodeBlockProps> = ({ language, code }) => {
                         <span className="md-code-language">{displayLanguage}</span>
                     )}
                     {!displayLanguage && <span />}
-                    <button
-                        className={`md-code-copy ${copied ? 'copied' : ''}`}
-                        onClick={handleCopy}
-                        title={copied ? 'Copied!' : 'Copy code'}
-                    >
-                        {copied ? (
-                            <>
-                                <i className="bi bi-check2" />
-                                <span>Copied</span>
-                            </>
-                        ) : (
-                            <>
-                                <i className="bi bi-clipboard" />
-                                <span>Copy</span>
-                            </>
+                    <div className="md-code-actions">
+                        {/* JjScript run button - only shown if code looks like JjScript */}
+                        {couldBeJjScript && (
+                            <button
+                                className="md-code-jjscript"
+                                onClick={() => setJjscriptMode(true)}
+                                title="Run as JjScript"
+                            >
+                                <i className="bi bi-play-fill" />
+                                <span>Run</span>
+                            </button>
                         )}
-                    </button>
+                        <button
+                            className={`md-code-copy ${copied ? 'copied' : ''}`}
+                            onClick={handleCopy}
+                            title={copied ? 'Copied!' : 'Copy code'}
+                        >
+                            {copied ? (
+                                <>
+                                    <i className="bi bi-check2" />
+                                    <span>Copied</span>
+                                </>
+                            ) : (
+                                <>
+                                    <i className="bi bi-clipboard" />
+                                    <span>Copy</span>
+                                </>
+                            )}
+                        </button>
+                    </div>
                 </div>
             )}
 
@@ -136,7 +182,7 @@ const CodeBlock: React.FC<CodeBlockProps> = ({ language, code }) => {
 /**
  * Custom components for ReactMarkdown
  */
-const createMarkdownComponents = () => ({
+const createMarkdownComponents = (onJjScriptExecute?: (commands: string[]) => Promise<ScriptLineResult[]>) => ({
     // Code blocks with syntax highlighting
     // Note: In react-markdown v6+, 'inline' prop is unreliable
     // We detect inline by: no language class AND no newlines in content
@@ -161,7 +207,7 @@ const createMarkdownComponents = () => ({
 
         // Block code with syntax highlighting
         const language = normalizeLanguage(match?.[1]);
-        return <CodeBlock language={language} code={codeString} />;
+        return <CodeBlock language={language} code={codeString} onJjScriptExecute={onJjScriptExecute} />;
     },
 
     // Tables
@@ -252,18 +298,24 @@ const createMarkdownComponents = () => ({
     },
 });
 
-// Memoize components to prevent recreation on every render
-const markdownComponents = createMarkdownComponents();
+// Default components (without JjScript execution)
+const defaultMarkdownComponents = createMarkdownComponents();
 
 export const MarkdownRenderer = memo(function MarkdownRenderer({
     content,
-    className = ''
+    className = '',
+    onJjScriptExecute
 }: MarkdownRendererProps): JSX.Element {
+    // Use dynamic components if JjScript execution is enabled, otherwise use default
+    const components = onJjScriptExecute
+        ? createMarkdownComponents(onJjScriptExecute)
+        : defaultMarkdownComponents;
+
     return (
         <div className={`markdown-renderer ${className}`}>
             <ReactMarkdown
                 remarkPlugins={[remarkGfm]}
-                components={markdownComponents}
+                components={components}
             >
                 {content}
             </ReactMarkdown>

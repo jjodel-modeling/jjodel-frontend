@@ -140,6 +140,13 @@
     letter-spacing: 0.5px;
 }
 
+// Actions container (copy + jjscript buttons)
+.md-code-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
 .md-code-copy {
     display: flex;
     align-items: center;
@@ -174,6 +181,67 @@
             background: rgba(16, 185, 129, 0.1);
             color: #10b981;
         }
+    }
+}
+
+// JjScript run button
+.md-code-jjscript {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    background: rgba(16, 185, 129, 0.15);
+    border: none;
+    border-radius: 4px;
+    color: #10b981;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+
+    i {
+        font-size: 12px;
+        color: inherit;
+    }
+
+    span {
+        font-size: 11px;
+        font-weight: 500;
+    }
+
+    &:hover {
+        background: rgba(16, 185, 129, 0.25);
+        color: #34d399;
+    }
+}
+
+// JjScript mode wrapper
+.md-jjscript-wrapper {
+    position: relative;
+    margin: 10px 0;
+}
+
+.md-jjscript-exit {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    border-radius: 4px;
+    color: #94a3b8;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+
+    &:hover {
+        background: rgba(255, 255, 255, 0.2);
+        color: #e2e8f0;
     }
 }
 

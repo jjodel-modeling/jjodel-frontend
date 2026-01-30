@@ -79,13 +79,46 @@ export type {
     AutocompleteOptions,
 } from './autocomplete';
 
+// Normalizer - Functions
+export {
+    normalize,
+    normalizeWithDetails,
+    normalizeLine,
+    needsNormalization,
+    getMatchingRule,
+    addNormalizationRule,
+    previewNormalization,
+} from './normalizer';
+
+// Normalizer - Detection
+export {
+    detectJjScript,
+    isJjScriptCode,
+    isJjScriptLine,
+    detectSyntaxType,
+} from './normalizer/detector';
+
+// Normalizer - Types (separate export for type-only exports)
+export type {
+    NormalizationRule,
+    NormalizationResult,
+    NormalizationSummary,
+} from './normalizer';
+
 // UI Components
 export {
     JjScriptInput,
     JjScriptOutput,
     JjScriptInlineOutput,
     JjScriptConsole,
-    JjScriptChatMessage
+    JjScriptChatMessage,
+    ScriptBlock,
+} from './components';
+
+// UI Components - Types (separate export for type-only exports)
+export type {
+    ScriptBlockProps,
+    ScriptLineResult,
 } from './components';
 
 // Default export for convenience

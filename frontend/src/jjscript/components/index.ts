@@ -6,3 +6,5 @@ export { JjScriptInput } from './JjScriptInput';
 export { JjScriptOutput, JjScriptInlineOutput } from './JjScriptOutput';
 export { JjScriptConsole } from './JjScriptConsole';
 export { JjScriptChatMessage } from './JjScriptChatMessage';
+export { ScriptBlock } from './ScriptBlock';
+export type { ScriptBlockProps, ScriptLineResult } from './ScriptBlock';
