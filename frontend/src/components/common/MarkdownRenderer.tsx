@@ -138,13 +138,20 @@ const CodeBlock: React.FC<CodeBlockProps> = ({ language, code }) => {
  */
 const createMarkdownComponents = () => ({
     // Code blocks with syntax highlighting
-    code({ inline, className, children, ...props }: any) {
+    // Note: In react-markdown v6+, 'inline' prop is unreliable
+    // We detect inline by: no language class AND no newlines in content
+    code({ inline, className, children, node, ...props }: any) {
         const match = /language-(\w+)/.exec(className || '');
-        const language = normalizeLanguage(match?.[1]);
+        const hasLanguageClass = Boolean(match);
         const codeString = String(children).replace(/\n$/, '');
+        const hasNewlines = codeString.includes('\n');
 
-        // Inline code
-        if (inline) {
+        // Inline code detection:
+        // - Explicitly inline OR
+        // - No language class AND no newlines (single line without fence)
+        const isInline = inline === true || (!hasLanguageClass && !hasNewlines);
+
+        if (isInline) {
             return (
                 <code className="md-inline-code" {...props}>
                     {children}
@@ -153,6 +160,7 @@ const createMarkdownComponents = () => ({
         }
 
         // Block code with syntax highlighting
+        const language = normalizeLanguage(match?.[1]);
         return <CodeBlock language={language} code={codeString} />;
     },
 
