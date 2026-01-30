@@ -19,6 +19,8 @@ interface JodieWindowProps {
     onClose: () => void;
     onOpenSettings: () => void;
     onOpenDocumentation?: () => void;
+    /** Callback when JjScript execution completes (for metamodel refresh) */
+    onJjScriptExecuted?: () => void;
     supportsVision?: boolean;
     supportsPDF?: boolean;
 }
@@ -58,6 +60,7 @@ export function JodieWindow({
     onClose,
     onOpenSettings,
     onOpenDocumentation,
+    onJjScriptExecuted,
     supportsVision,
     supportsPDF,
 }: JodieWindowProps): JSX.Element {
@@ -245,7 +248,7 @@ export function JodieWindow({
                 isWaiting={isWaiting}
             />
 
-            <ChatMessages messages={messages} isWaiting={isWaiting} />
+            <ChatMessages messages={messages} isWaiting={isWaiting} onJjScriptExecuted={onJjScriptExecuted} />
 
             <ChatInput
                 onSend={onSendMessage}

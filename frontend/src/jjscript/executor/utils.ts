@@ -4,7 +4,31 @@
  */
 
 import { ExecutionContext } from '../types';
-import { DUser, L, LUser, LProject, store } from '../../joiner';
+import { DUser, L, LUser, LProject, LModel, store, LPointerTargetable, LModelElement, DState, GObject } from '../../joiner';
+
+/**
+ * Get the active/selected metamodel from UI state
+ * Uses the _lastSelected state to determine which metamodel is currently being worked on
+ */
+export function getActiveMetamodel(): LModel | null {
+    try {
+        const state: DState & GObject = store.getState();
+        const selected = state._lastSelected?.modelElement;
+
+        if (selected) {
+            const me = LPointerTargetable.fromPointer(selected) as LModelElement;
+            if (me) {
+                const model = me.model;
+                if (model && model.isMetamodel) {
+                    return model;
+                }
+            }
+        }
+        return null;
+    } catch {
+        return null;
+    }
+}
 
 /**
  * Get the current project
@@ -48,19 +72,38 @@ export function getCurrentUser(): LUser | null {
 
 /**
  * Get the default parent for a new element based on type
+ * Prioritizes the currently selected metamodel in the UI
  */
 export function getDefaultParent(project: LProject, elementType: string): any {
-    // For classes, enums, packages: return first metamodel's root package
+    // For classes, enums, packages: use selected metamodel or first available
     if (['class', 'abstract class', 'interface', 'enum', 'enumeration', 'package'].includes(elementType)) {
         const metamodels = (project as any).metamodels || [];
-        if (metamodels.length > 0) {
-            const mm = metamodels[0];
-            const packages = mm.packages || [];
-            if (packages.length > 0) {
-                return packages[0];
-            }
-            return mm;
+
+        if (metamodels.length === 0) {
+            return null;
         }
+
+        // Try to use the active/selected metamodel first
+        const activeMetamodel = getActiveMetamodel();
+        let targetMetamodel = activeMetamodel;
+
+        // If no active metamodel or it's not in this project, use first metamodel
+        if (!targetMetamodel) {
+            targetMetamodel = metamodels[0];
+        } else {
+            // Verify the active metamodel belongs to this project
+            const isInProject = metamodels.some((mm: any) => mm.id === targetMetamodel?.id);
+            if (!isInProject) {
+                targetMetamodel = metamodels[0];
+            }
+        }
+
+        // Get the root package of the target metamodel
+        const packages = targetMetamodel?.packages || [];
+        if (packages.length > 0) {
+            return packages[0];
+        }
+        return targetMetamodel;
     }
     return null;
 }

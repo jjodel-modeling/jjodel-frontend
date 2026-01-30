@@ -14,10 +14,78 @@ import {
 import { DEFAULT_PROMPTS } from '../constants/defaultPrompts';
 
 // ============================================
+// PROMPT MIGRATION
+// ============================================
+
+/**
+ * Version markers for critical prompt content.
+ * When a prompt is missing these markers, it's considered stale and reset.
+ */
+const CRITICAL_MARKERS: Partial<Record<PromptType, string[]>> = {
+    chat: ['JjScript', 'create class', '```jjscript', 'conversational, flowing style'],  // JjScript section + response style markers
+};
+
+/**
+ * Migration version - increment when prompts have breaking changes
+ */
+const PROMPT_VERSION = 3;
+const PROMPT_VERSION_KEY = 'jjodel_prompt_version';
+
+// ============================================
 // PROMPT SERVICE
 // ============================================
 
 export class PromptService {
+
+    /**
+     * Run migration on service initialization
+     */
+    private static migrationRun = false;
+
+    private static runMigration(): void {
+        if (this.migrationRun) return;
+        this.migrationRun = true;
+
+        try {
+            const storedVersion = parseInt(localStorage.getItem(PROMPT_VERSION_KEY) || '0', 10);
+
+            if (storedVersion < PROMPT_VERSION) {
+                console.log(`[PromptService] Migrating prompts from v${storedVersion} to v${PROMPT_VERSION}`);
+
+                // Check and reset stale prompts
+                for (const [type, markers] of Object.entries(CRITICAL_MARKERS)) {
+                    const globalPrompt = this.getGlobalPromptRaw(type as PromptType);
+                    if (globalPrompt && markers) {
+                        const isMissingMarkers = markers.some(marker =>
+                            !globalPrompt.content.includes(marker)
+                        );
+
+                        if (isMissingMarkers) {
+                            console.log(`[PromptService] Resetting stale '${type}' prompt (missing critical content)`);
+                            this.resetGlobalPrompt(type as PromptType);
+                        }
+                    }
+                }
+
+                localStorage.setItem(PROMPT_VERSION_KEY, String(PROMPT_VERSION));
+            }
+        } catch (err) {
+            console.warn('[PromptService] Migration error:', err);
+        }
+    }
+
+    /**
+     * Get raw global prompt without triggering migration (for migration itself)
+     */
+    private static getGlobalPromptRaw(type: PromptType): StoredPrompt | null {
+        try {
+            const key = `${PROMPT_GLOBAL_PREFIX}${type}`;
+            const stored = localStorage.getItem(key);
+            return stored ? JSON.parse(stored) : null;
+        } catch {
+            return null;
+        }
+    }
 
     // ========================================
     // GET PROMPT (with cascading)
@@ -27,6 +95,8 @@ export class PromptService {
      * Get prompt with cascading: project -> global -> default
      */
     static get(type: PromptType, projectId?: string): string {
+        // Run migration check
+        this.runMigration();
         // 1. Check project override
         if (projectId) {
             const projectPrompt = this.getProjectPrompt(type, projectId);

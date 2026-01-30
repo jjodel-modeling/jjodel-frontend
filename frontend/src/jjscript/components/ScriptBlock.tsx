@@ -7,7 +7,7 @@
 
 import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import { oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { normalize, normalizeWithDetails, detectSyntaxType } from '../normalizer';
 import './ScriptBlock.scss';
 
@@ -50,13 +50,13 @@ interface LineState {
 }
 
 // ============================================
-// CUSTOM THEME
+// CUSTOM THEME (Light)
 // ============================================
 
 const scriptBlockTheme = {
-    ...oneDark,
+    ...oneLight,
     'pre[class*="language-"]': {
-        ...oneDark['pre[class*="language-"]'],
+        ...oneLight['pre[class*="language-"]'],
         background: 'transparent',
         margin: 0,
         padding: 0,
@@ -64,7 +64,7 @@ const scriptBlockTheme = {
         lineHeight: '1.6',
     },
     'code[class*="language-"]': {
-        ...oneDark['code[class*="language-"]'],
+        ...oneLight['code[class*="language-"]'],
         background: 'transparent',
         fontFamily: "'JetBrains Mono', 'IBM Plex Mono', 'Fira Code', 'Consolas', monospace",
         fontSize: '13px',
@@ -135,21 +135,36 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
         }
     }, [displayCode]);
 
-    // Execute all commands
+    // Execute all commands (or continue from where stepping left off)
     const handleExecute = useCallback(async () => {
         if (!onExecute || commands.length === 0) return;
 
         abortRef.current = false;
         setExecutionState('running');
 
-        // Reset line states
-        setLineStates(prev =>
-            prev.map(ls => ({ ...ls, status: 'pending', result: undefined }))
-        );
+        // If we were stepping/paused, continue from current position
+        // Otherwise start from the beginning
+        const startIndex = (executionState === 'paused' || executionState === 'stepping')
+            ? currentLineIndex
+            : 0;
+
+        // Reset only lines from startIndex onwards
+        if (startIndex === 0) {
+            setLineStates(prev =>
+                prev.map(ls => ({ ...ls, status: 'pending', result: undefined }))
+            );
+        } else {
+            // Keep already-executed lines as is, reset only remaining ones
+            setLineStates(prev =>
+                prev.map((ls, idx) =>
+                    idx >= startIndex ? { ...ls, status: 'pending', result: undefined } : ls
+                )
+            );
+        }
 
         const results: ScriptLineResult[] = [];
 
-        for (let i = 0; i < commands.length; i++) {
+        for (let i = startIndex; i < commands.length; i++) {
             if (abortRef.current) break;
 
             setCurrentLineIndex(i);
@@ -198,7 +213,7 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
 
         setExecutionState('completed');
         setCurrentLineIndex(-1);
-    }, [commands, onExecute]);
+    }, [commands, onExecute, executionState, currentLineIndex]);
 
     // Step through commands one by one
     const handleStep = useCallback(async () => {

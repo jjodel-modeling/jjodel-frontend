@@ -6,11 +6,14 @@
 
 import React, { useState, useMemo } from 'react';
 import { MarkdownRenderer } from '../common/MarkdownRenderer';
+import type { ScriptLineResult } from '../../jjscript';
 import './MarkdownMessage.css';
 
 interface MarkdownMessageProps {
     content: string;
     isUser?: boolean;
+    /** Optional callback to execute JjScript commands */
+    onJjScriptExecute?: (commands: string[]) => Promise<ScriptLineResult[]>;
 }
 
 /**
@@ -34,7 +37,7 @@ function hasMarkdownSyntax(text: string): boolean {
     return patterns.some(pattern => pattern.test(text));
 }
 
-export function MarkdownMessage({ content, isUser = false }: MarkdownMessageProps): JSX.Element {
+export function MarkdownMessage({ content, isUser = false, onJjScriptExecute }: MarkdownMessageProps): JSX.Element {
     const [showSource, setShowSource] = useState(false);
 
     const hasMarkdown = useMemo(() => hasMarkdownSyntax(content), [content]);
@@ -51,7 +54,11 @@ export function MarkdownMessage({ content, isUser = false }: MarkdownMessageProp
                     <code>{content}</code>
                 </pre>
             ) : (
-                <MarkdownRenderer content={content} className="md-content" />
+                <MarkdownRenderer
+                    content={content}
+                    className="md-content"
+                    onJjScriptExecute={onJjScriptExecute}
+                />
             )}
 
             {/* Toggle button for markdown content */}

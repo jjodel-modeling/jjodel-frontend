@@ -190,6 +190,88 @@
     color: var(--color-text-primary);
 }
 
+.jodie-header-center {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 1;
+    min-width: 0;
+}
+
+.jodie-metamodel-indicator {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    background: rgba(16, 185, 129, 0.1);
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 500;
+    color: #059669;
+    max-width: 180px;
+    overflow: hidden;
+}
+
+.jodie-metamodel-indicator i {
+    font-size: 12px;
+    flex-shrink: 0;
+}
+
+.jodie-metamodel-name {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.jodie-metamodel-count {
+    flex-shrink: 0;
+    padding: 1px 5px;
+    background: rgba(16, 185, 129, 0.2);
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 600;
+}
+
+/* Warning state - no metamodel */
+.jodie-metamodel-indicator.jodie-metamodel-warning {
+    background: rgba(245, 158, 11, 0.1);
+    color: #d97706;
+}
+
+.jodie-metamodel-indicator.jodie-metamodel-warning i {
+    color: #f59e0b;
+}
+
+/* Inactive state - no project */
+.jodie-metamodel-indicator.jodie-metamodel-inactive {
+    background: rgba(100, 116, 139, 0.1);
+    color: #64748b;
+}
+
+.jodie-metamodel-indicator.jodie-metamodel-inactive i {
+    color: #94a3b8;
+}
+
+/* Dark mode metamodel indicator */
+[data-theme="dark"] .jodie-metamodel-indicator {
+    background: rgba(16, 185, 129, 0.15);
+    color: #34d399;
+}
+
+[data-theme="dark"] .jodie-metamodel-count {
+    background: rgba(16, 185, 129, 0.25);
+}
+
+[data-theme="dark"] .jodie-metamodel-indicator.jodie-metamodel-warning {
+    background: rgba(245, 158, 11, 0.15);
+    color: #fbbf24;
+}
+
+[data-theme="dark"] .jodie-metamodel-indicator.jodie-metamodel-inactive {
+    background: rgba(100, 116, 139, 0.15);
+    color: #94a3b8;
+}
+
 .jodie-header-right {
     display: flex;
     align-items: center;
