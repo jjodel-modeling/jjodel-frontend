@@ -197,13 +197,12 @@ export class DocumentationService {
 
     /**
      * Check if project has critical mass for documentation
-     * Requires at least 1 class with at least 1 attribute
+     * Requires at least 1 class
      */
     static hasCriticalMass(project: LProject): boolean {
-        const metamodels = (project as any).metamodels || [];
-        const allClasses = metamodels.flatMap((mm: any) => mm.classes || []);
-        const totalAttributes = allClasses.reduce((sum: number, c: any) => sum + (c.attributes?.length || 0), 0);
-        return allClasses.length >= 1 && totalAttributes >= 1;
+        // Use project.classes which aggregates classes from all packages across all metamodels
+        const classes = (project as any).classes || [];
+        return classes.length >= 1;
     }
 
     // ========================================

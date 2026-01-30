@@ -22,7 +22,7 @@
    ======================================== */
 
 .md-content {
-    line-height: 1.6;
+    line-height: 1.4;
     color: inherit;
 }
 
@@ -36,7 +36,7 @@
 
 /* Paragraphs */
 .md-p {
-    margin: 8px 0;
+    margin: 4px 0;
 }
 
 .md-p:first-child {
@@ -51,20 +51,20 @@
 .md-h1,
 .md-h2,
 .md-h3 {
-    margin: 16px 0 8px;
+    margin: 10px 0 4px;
     font-weight: 600;
     color: #0f172a;
     line-height: 1.3;
 }
 
 .md-h1 {
-    font-size: 18px;
+    font-size: 17px;
     border-bottom: 2px solid #e2e8f0;
-    padding-bottom: 6px;
+    padding-bottom: 4px;
 }
 
 .md-h2 {
-    font-size: 16px;
+    font-size: 15px;
 }
 
 .md-h3 {
@@ -121,8 +121,18 @@
     color: #e2e8f0;
     border-radius: 8px;
     overflow: hidden;
-    margin: 12px 0;
+    margin: 8px 0;
     border: 1px solid #334155;
+}
+
+/* Single line code block - more compact, no header */
+.md-code-block.md-code-block--single {
+    margin: 4px 0;
+    border-radius: 6px;
+}
+
+.md-code-block.md-code-block--single .md-code-content {
+    padding: 8px 12px !important;
 }
 
 /* Code block header */
@@ -169,6 +179,7 @@
 
 .md-code-block .md-code-copy i {
     font-size: 14px;
+    color: inherit;
 }
 
 .md-code-block .md-code-copy span {
@@ -228,8 +239,8 @@
 
 .md-ul,
 .md-ol {
-    margin: 10px 0;
-    padding-left: 20px;
+    margin: 2px 0;
+    padding-left: 18px;
 }
 
 .md-ul {
@@ -242,8 +253,9 @@
 
 .md-li,
 .md-li-ordered {
-    margin: 4px 0;
-    line-height: 1.5;
+    margin: 0;
+    padding: 0;
+    line-height: 1.4;
 }
 
 /* Nested lists */
@@ -251,7 +263,7 @@
 .md-ol .md-ol,
 .md-ul .md-ol,
 .md-ol .md-ul {
-    margin: 4px 0;
+    margin: 1px 0;
 }
 
 /* ========================================
@@ -260,8 +272,8 @@
 
 .md-blockquote {
     border-left: 4px solid #64748b;
-    padding: 8px 0 8px 16px;
-    margin: 12px 0;
+    padding: 6px 0 6px 12px;
+    margin: 6px 0;
     color: #475569;
     font-style: italic;
     background: #f8fafc;

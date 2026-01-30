@@ -79,36 +79,39 @@ const CodeBlock: React.FC<CodeBlockProps> = ({ language, code }) => {
         }
     }, [code]);
 
-    // Determine label to show
+    const lineCount = code.split('\n').length;
+    const isSingleLine = lineCount === 1;
     const displayLanguage = language === 'text' ? '' : language.toUpperCase();
-    const showLineNumbers = code.split('\n').length > 5;
+    const showLineNumbers = lineCount > 5;
 
     return (
-        <div className="md-code-block">
-            {/* Header with language and copy button */}
-            <div className="md-code-header">
-                {displayLanguage && (
-                    <span className="md-code-language">{displayLanguage}</span>
-                )}
-                {!displayLanguage && <span />}
-                <button
-                    className={`md-code-copy ${copied ? 'copied' : ''}`}
-                    onClick={handleCopy}
-                    title={copied ? 'Copied!' : 'Copy code'}
-                >
-                    {copied ? (
-                        <>
-                            <i className="bi bi-check2" />
-                            <span>Copied</span>
-                        </>
-                    ) : (
-                        <>
-                            <i className="bi bi-clipboard" />
-                            <span>Copy</span>
-                        </>
+        <div className={`md-code-block ${isSingleLine ? 'md-code-block--single' : ''}`}>
+            {/* Header only for multi-line code */}
+            {!isSingleLine && (
+                <div className="md-code-header">
+                    {displayLanguage && (
+                        <span className="md-code-language">{displayLanguage}</span>
                     )}
-                </button>
-            </div>
+                    {!displayLanguage && <span />}
+                    <button
+                        className={`md-code-copy ${copied ? 'copied' : ''}`}
+                        onClick={handleCopy}
+                        title={copied ? 'Copied!' : 'Copy code'}
+                    >
+                        {copied ? (
+                            <>
+                                <i className="bi bi-check2" />
+                                <span>Copied</span>
+                            </>
+                        ) : (
+                            <>
+                                <i className="bi bi-clipboard" />
+                                <span>Copy</span>
+                            </>
+                        )}
+                    </button>
+                </div>
+            )}
 
             {/* Code with syntax highlighting */}
             <SyntaxHighlighter
@@ -120,7 +123,7 @@ const CodeBlock: React.FC<CodeBlockProps> = ({ language, code }) => {
                 lineNumberStyle={{
                     minWidth: '2.5em',
                     paddingRight: '1em',
-                    color: '#475569', // slate-600
+                    color: '#475569',
                     userSelect: 'none',
                 }}
             >

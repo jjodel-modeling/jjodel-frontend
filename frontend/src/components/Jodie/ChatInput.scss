@@ -76,6 +76,13 @@
     width: 100%;
 }
 
+// Monospace font for command input
+.jodie-input {
+    font-family: 'JetBrains Mono', 'Fira Code', 'Monaco', 'Consolas', monospace;
+    font-size: 13px;
+    letter-spacing: -0.01em;
+}
+
 // Attachment button
 .jodie-attach-btn {
     width: 40px;

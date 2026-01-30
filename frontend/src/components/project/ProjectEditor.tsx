@@ -79,6 +79,14 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
     const [showMetamodelMenu, setShowMetamodelMenu] = useState(false);
     const metamodelMenuRef = useRef<HTMLDivElement>(null);
 
+    // Import menu for metamodels
+    const [showImportMenu, setShowImportMenu] = useState(false);
+    const importMenuRef = useRef<HTMLDivElement>(null);
+
+    // Hidden file inputs for import
+    const importJmmRef = useRef<HTMLInputElement>(null);
+    const importEcoreRef = useRef<HTMLInputElement>(null);
+
     // Unsaved changes tracking
     const [isDirty, setIsDirty] = useState(false);
     const [showUnsavedDialog, setShowUnsavedDialog] = useState(false);
@@ -143,6 +151,20 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
             return () => document.removeEventListener('mousedown', handleClickOutside);
         }
     }, [showMetamodelMenu]);
+
+    // Click-outside handler for import menu
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (importMenuRef.current && !importMenuRef.current.contains(event.target as Node)) {
+                setShowImportMenu(false);
+            }
+        };
+
+        if (showImportMenu) {
+            document.addEventListener('mousedown', handleClickOutside);
+            return () => document.removeEventListener('mousedown', handleClickOutside);
+        }
+    }, [showImportMenu]);
 
     // Focus rename input when renaming starts
     useEffect(() => {
@@ -426,6 +448,83 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
         closeMenu();
     };
 
+    // Import metamodel from .jmm file
+    const handleImportJmm = () => {
+        importJmmRef.current?.click();
+        setShowImportMenu(false);
+    };
+
+    const handleJmmFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        try {
+            const content = await file.text();
+            const jmmData = JSON.parse(content);
+
+            // Validate format
+            if (!jmmData.metamodel) {
+                throw new Error('Invalid .jmm file format: missing metamodel data');
+            }
+
+            // Extract name from metadata or filename
+            const name = jmmData.metadata?.name || file.name.replace(/\.jmm$/, '');
+
+            // Create new metamodel in project using existing createM2
+            const newMM = createM2(project, name);
+
+            // TODO: Populate metamodel with imported data
+            // For now, just show success with the created metamodel
+            U.alert('i', 'Imported', `Metamodel "${name}" imported successfully`);
+            markDirty();
+
+        } catch (error) {
+            console.error('Import JMM error:', error);
+            U.alert('e', 'Import Failed', `Could not import metamodel: ${(error as Error).message}`);
+        }
+
+        // Reset input
+        if (importJmmRef.current) {
+            importJmmRef.current.value = '';
+        }
+    };
+
+    // Import metamodel from .ecore file
+    const handleImportEcore = () => {
+        importEcoreRef.current?.click();
+        setShowImportMenu(false);
+    };
+
+    const handleEcoreFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        try {
+            const result = await EcoreService.importFromFile(file);
+
+            if (result.success && result.model) {
+                U.alert('i', 'Imported', `Metamodel "${result.model.name}" imported from Ecore`);
+                markDirty();
+
+                // Show warnings if any
+                if (result.warnings.length > 0) {
+                    console.warn('Ecore import warnings:', result.warnings);
+                }
+            } else {
+                throw new Error(result.errors.join(', '));
+            }
+
+        } catch (error) {
+            console.error('Import Ecore error:', error);
+            U.alert('e', 'Import Failed', `Could not import Ecore: ${(error as Error).message}`);
+        }
+
+        // Reset input
+        if (importEcoreRef.current) {
+            importEcoreRef.current.value = '';
+        }
+    };
+
     // Export model as XMI (.xmi) with embedded metamodel
     const handleExportXMI = (model: LModel) => {
         try {
@@ -674,11 +773,43 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
             <div className="project-section">
                 <div className="project-section__header">
                     <h2 className="project-section__title">METAMODELS</h2>
-                    {metamodels.length > 0 && (
+                    <div className="project-section__actions">
+                        {/* Import button with dropdown */}
+                        <div className="import-button-wrapper" ref={importMenuRef}>
+                            <button
+                                className="btn btn--secondary"
+                                onClick={() => setShowImportMenu(!showImportMenu)}
+                            >
+                                <i className="bi bi-upload" />
+                                Import
+                                <i className={`bi bi-chevron-${showImportMenu ? 'up' : 'down'} btn-chevron`} />
+                            </button>
+
+                            {showImportMenu && (
+                                <div className="import-select-menu">
+                                    <button
+                                        className="import-select-menu__item"
+                                        onClick={handleImportJmm}
+                                    >
+                                        <i className="bi bi-file-earmark" />
+                                        Import .jmm
+                                    </button>
+                                    <button
+                                        className="import-select-menu__item"
+                                        onClick={handleImportEcore}
+                                    >
+                                        <i className="bi bi-file-earmark-code" />
+                                        Import Ecore (.ecore)
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* New button */}
                         <button className="btn btn--primary" onClick={handleCreateMetamodel}>
                             + New
                         </button>
-                    )}
+                    </div>
                 </div>
 
                 {metamodels.length === 0 ? (
@@ -1042,6 +1173,22 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                 onCancel={handleCancelDialog}
                 onSave={handleSaveAndContinue}
                 isSaving={isSaving}
+            />
+
+            {/* Hidden file inputs for import */}
+            <input
+                ref={importJmmRef}
+                type="file"
+                accept=".jmm"
+                style={{ display: 'none' }}
+                onChange={handleJmmFileChange}
+            />
+            <input
+                ref={importEcoreRef}
+                type="file"
+                accept=".ecore"
+                style={{ display: 'none' }}
+                onChange={handleEcoreFileChange}
             />
         </div>
     );

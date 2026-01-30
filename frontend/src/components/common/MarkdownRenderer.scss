@@ -4,7 +4,7 @@
 
 .markdown-renderer {
     font-size: 14px;
-    line-height: 1.6;
+    line-height: 1.4;
     color: var(--text-primary, #1e293b);
 
     // Reset margins for first/last elements
@@ -17,7 +17,7 @@
 // ============================================
 
 .md-paragraph {
-    margin: 0 0 8px 0;
+    margin: 0 0 4px 0;
 
     &:last-child {
         margin-bottom: 0;
@@ -29,7 +29,7 @@
 // ============================================
 
 .md-heading {
-    margin: 16px 0 8px 0;
+    margin: 10px 0 4px 0;
     font-weight: 600;
     color: var(--text-primary, #1e293b);
 
@@ -38,9 +38,9 @@
     }
 }
 
-.md-h1 { font-size: 1.5em; }
-.md-h2 { font-size: 1.3em; }
-.md-h3 { font-size: 1.15em; }
+.md-h1 { font-size: 1.4em; }
+.md-h2 { font-size: 1.25em; }
+.md-h3 { font-size: 1.1em; }
 .md-h4 { font-size: 1em; }
 
 // ============================================
@@ -61,10 +61,20 @@
 // ============================================
 
 .md-code-block {
-    margin: 12px 0;
+    margin: 8px 0;
     border-radius: 8px;
     overflow: hidden;
     background: var(--bg-code, #1e293b);
+
+    // Single line code block - more compact
+    &--single {
+        margin: 4px 0;
+        border-radius: 6px;
+
+        .md-code-content {
+            padding: 8px 12px !important;
+        }
+    }
 }
 
 .md-code-header {
@@ -99,6 +109,7 @@
 
     i {
         font-size: 14px;
+        color: inherit;
     }
 
     span {
@@ -183,25 +194,25 @@
 // ============================================
 
 .md-table-wrapper {
-    margin: 12px 0;
+    margin: 8px 0;
     overflow-x: auto;
-    border-radius: 8px;
-    border: 1px solid var(--border-color, #e2e8f0);
 }
 
 .md-table {
     width: 100%;
     border-collapse: collapse;
     font-size: 13px;
+    border: 1px solid var(--border-color, #e2e8f0);
+    border-radius: 8px;
+    overflow: hidden;
 
     th, td {
-        padding: 10px 14px;
+        padding: 8px 14px;
         text-align: left;
         border-bottom: 1px solid var(--border-color, #e2e8f0);
-        word-break: keep-all; // Prevent breaking words like "TypeScript"
+        word-break: keep-all;
     }
 
-    // First column: never wrap (usually contains names/keys)
     th:first-child,
     td:first-child {
         white-space: nowrap;
@@ -209,13 +220,12 @@
 
     th {
         font-weight: 600;
-        background: var(--bg-table-header, #e2e8f0);
+        background: var(--bg-table-header, #f1f5f9);
         color: var(--text-primary, #1e293b);
         white-space: nowrap;
         text-transform: uppercase;
         font-size: 11px;
         letter-spacing: 0.5px;
-        border-bottom: 2px solid var(--border-color-strong, #cbd5e1);
     }
 
     td {
@@ -236,8 +246,8 @@
 // ============================================
 
 .md-list {
-    margin: 8px 0;
-    padding-left: 24px;
+    margin: 2px 0;
+    padding-left: 20px;
 
     &--unordered {
         list-style-type: disc;
@@ -249,13 +259,14 @@
 }
 
 .md-list-item {
-    margin: 2px 0;
-    padding: 2px 0;
+    margin: 0;
+    padding: 0;
+    line-height: 1.4;
     color: var(--text-primary, #1e293b);
 
     // Nested lists
     .md-list {
-        margin: 2px 0;
+        margin: 1px 0;
     }
 }
 
@@ -275,8 +286,8 @@
 // ============================================
 
 .md-blockquote {
-    margin: 12px 0;
-    padding: 12px 16px;
+    margin: 6px 0;
+    padding: 8px 12px;
     border-left: 4px solid var(--color-accent, #475569);
     background: var(--bg-secondary, #f8fafc);
     border-radius: 0 8px 8px 0;
@@ -286,7 +297,7 @@
     }
 
     p + p {
-        margin-top: 8px;
+        margin-top: 4px;
     }
 }
 

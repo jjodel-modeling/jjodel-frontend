@@ -25,31 +25,54 @@ class DockManager {
      * Open Documentation Tab in the left dock area
      */
     static openDocumentation(project: LProject, documentation?: any): void {
-        if (!DockManager.dock) return;
+        console.log('[DockManager] openDocumentation called', { projectId: project?.id, dockAvailable: !!DockManager.dock });
 
-        const tabId = `doc_${project.id}`;
-
-        // Check if tab already exists
-        const existingTab = DockManager.dock.find(tabId);
-        if (existingTab) {
-            DockManager.dock.updateTab(tabId, null as any, true);
+        if (!DockManager.dock) {
+            console.warn('[DockManager] Dock not available, cannot open documentation');
+            U.alert('w', 'Cannot open documentation', 'Please open a metamodel or model first.');
             return;
         }
 
-        // Create new Documentation tab
-        // Uses data-type attribute for CSS-based badge styling (like Metamodel/Model tabs)
-        const tab: TabData = {
-            id: tabId,
-            title: React.createElement('div', {
-                className: 'tab-title active-on-mouseenter',
-                'data-type': 'documentation'
-            }, 'Documentation'),
-            group: 'models',
-            closable: true,
-            content: React.createElement(DocumentationTab, { modelid: project.id })
-        };
+        if (!project?.id) {
+            console.warn('[DockManager] No project ID provided');
+            return;
+        }
 
-        DockManager.dock.dockMove(tab, DockManager.dock.getLayout().dockbox.children[0], 'middle');
+        const tabId = `doc_${project.id}`;
+
+        try {
+            // Check if tab already exists
+            const existingTab = DockManager.dock.find(tabId);
+            if (existingTab) {
+                console.log('[DockManager] Activating existing documentation tab');
+                DockManager.dock.updateTab(tabId, null as any, true);
+                return;
+            }
+
+            // Create new Documentation tab
+            const tab: TabData = {
+                id: tabId,
+                title: React.createElement('div', {
+                    className: 'tab-title active-on-mouseenter',
+                    'data-type': 'documentation'
+                }, 'Documentation'),
+                group: 'models',
+                closable: true,
+                content: React.createElement(DocumentationTab, { modelid: project.id })
+            };
+
+            const layout = DockManager.dock.getLayout();
+            if (layout?.dockbox?.children?.[0]) {
+                console.log('[DockManager] Creating new documentation tab');
+                DockManager.dock.dockMove(tab, layout.dockbox.children[0], 'middle');
+            } else {
+                console.warn('[DockManager] Dock layout not ready');
+                U.alert('w', 'Cannot open documentation', 'The editor layout is not ready. Please try again.');
+            }
+        } catch (error) {
+            console.error('[DockManager] Error opening documentation:', error);
+            U.alert('e', 'Error', 'Failed to open documentation tab.');
+        }
     }
 
 }

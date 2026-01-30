@@ -368,6 +368,12 @@
     letter-spacing: 0.5px;
     font-weight: 600;
   }
+
+  &__actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
 }
 
 // Empty States - Simple & Clean
@@ -883,6 +889,55 @@
   }
 }
 
+// Import Button Wrapper
+// =====================
+.import-button-wrapper {
+  position: relative;
+}
+
+.import-select-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  min-width: 200px;
+  background: var(--bg-primary, #ffffff);
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  z-index: 100;
+  overflow: hidden;
+  animation: menuSlideDown 0.15s ease;
+
+  &__item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 12px 14px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-primary, #1e293b);
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    transition: background 0.15s ease;
+    text-align: left;
+
+    i {
+      font-size: 14px;
+      color: var(--text-secondary, #64748b);
+    }
+
+    &:hover {
+      background: var(--bg-hover, #f8fafc);
+    }
+
+    &:not(:last-child) {
+      border-bottom: 1px solid var(--border-color-light, #f1f5f9);
+    }
+  }
+}
+
 // Dark Mode Support
 // -----------------
 @media (prefers-color-scheme: dark) {
@@ -1124,6 +1179,26 @@
 
     &__item {
       color: var(--text-primary, #f1f5f9);
+
+      &:hover {
+        background: var(--bg-hover, #334155);
+      }
+    }
+  }
+
+  // Import select menu dark mode
+  .import-select-menu {
+    background: var(--bg-secondary, #1e293b);
+    border-color: var(--border-color, #334155);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+
+    &__item {
+      color: var(--text-primary, #f1f5f9);
+      border-color: var(--border-color, #334155);
+
+      i {
+        color: var(--text-secondary, #94a3b8);
+      }
 
       &:hover {
         background: var(--bg-hover, #334155);

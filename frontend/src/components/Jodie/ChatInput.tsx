@@ -5,6 +5,7 @@
 
 import React, { useState, useRef, useEffect, KeyboardEvent, ClipboardEvent, useCallback } from 'react';
 import { ChatImage, ChatDocument } from '../../types/jodie';
+import { JjScriptService } from '../../jjscript';
 import './ChatInput.scss';
 
 interface ChatInputProps {
@@ -77,6 +78,8 @@ export function ChatInput({
     const [message, setMessage] = useState('');
     const [images, setImages] = useState<ChatImage[]>([]);
     const [documents, setDocuments] = useState<ChatDocument[]>([]);
+    const [historyIndex, setHistoryIndex] = useState(-1);
+    const [savedMessage, setSavedMessage] = useState(''); // Save current input when navigating history
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -105,6 +108,9 @@ export function ChatInput({
             setMessage('');
             setImages([]);
             setDocuments([]);
+            // Reset history navigation
+            setHistoryIndex(-1);
+            setSavedMessage('');
             // Reset height
             if (textareaRef.current) {
                 textareaRef.current.style.height = 'auto';
@@ -116,6 +122,51 @@ export function ChatInput({
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
             handleSubmit();
+            return;
+        }
+
+        // History navigation with ArrowUp/ArrowDown
+        const history = JjScriptService.getHistory();
+        if (history.length === 0) return;
+
+        if (e.key === 'ArrowUp') {
+            // Only navigate if cursor is at the start of the input
+            const textarea = textareaRef.current;
+            if (textarea && textarea.selectionStart === 0 && textarea.selectionEnd === 0) {
+                e.preventDefault();
+
+                if (historyIndex === -1) {
+                    // Save current message before navigating
+                    setSavedMessage(message);
+                }
+
+                const newIndex = historyIndex + 1;
+                if (newIndex < history.length) {
+                    setHistoryIndex(newIndex);
+                    // History is stored oldest to newest, so we read from the end
+                    const historyMessage = history[history.length - 1 - newIndex];
+                    setMessage(historyMessage);
+                }
+            }
+        } else if (e.key === 'ArrowDown') {
+            // Only navigate if we're in history mode
+            if (historyIndex > -1) {
+                const textarea = textareaRef.current;
+                if (textarea) {
+                    e.preventDefault();
+
+                    const newIndex = historyIndex - 1;
+                    if (newIndex === -1) {
+                        // Return to saved message
+                        setHistoryIndex(-1);
+                        setMessage(savedMessage);
+                    } else if (newIndex >= 0) {
+                        setHistoryIndex(newIndex);
+                        const historyMessage = history[history.length - 1 - newIndex];
+                        setMessage(historyMessage);
+                    }
+                }
+            }
         }
     };
 

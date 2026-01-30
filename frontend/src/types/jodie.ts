@@ -50,6 +50,10 @@ export interface ChatMessage {
     userName?: string;
     images?: ChatImage[];      // Attached images for vision-capable providers
     documents?: ChatDocument[]; // Attached documents (PDF) for supported providers
+    jjscriptResult?: {         // JjScript command result metadata
+        success: boolean;
+        command: string;
+    };
 }
 
 /**

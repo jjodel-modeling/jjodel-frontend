@@ -608,8 +608,9 @@
     border-radius: 12px;
     background: #fafbfc;
     color: #1e293b;
-    font-size: 15px;
-    font-family: inherit;
+    font-size: 14px;
+    font-family: 'JetBrains Mono', 'Fira Code', 'Monaco', 'Consolas', monospace;
+    letter-spacing: -0.01em;
     line-height: 1.5;
     resize: none;
     outline: none;
@@ -1214,4 +1215,83 @@ body[data-notification-visible="true"] .jodie-minimized {
 
 [data-theme="dark"] .jodie-message-document .jodie-document-name {
     color: #f1f5f9;
+}
+
+/* ========================================
+   JjScript Results Styling
+   ======================================== */
+
+/* JjScript Avatar */
+.jodie-jjscript-avatar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+}
+
+.jodie-jjscript-avatar.jodie-jjscript-success {
+    background: #dcfce7;
+    color: #16a34a;
+}
+
+.jodie-jjscript-avatar.jodie-jjscript-error {
+    background: #fee2e2;
+    color: #dc2626;
+}
+
+/* JjScript Message - full width */
+.jodie-message:has(.jodie-jjscript-bubble) {
+    max-width: 100%;
+}
+
+.jodie-message:has(.jodie-jjscript-bubble) .jodie-message-content {
+    flex: 1;
+}
+
+/* JjScript Bubble - full width with normal border and monospace font */
+.jodie-jjscript-bubble {
+    border-radius: 12px;
+    border: 1px solid var(--color-border, #e2e4e8);
+    background: #ffffff;
+}
+
+.jodie-jjscript-bubble .jodie-message-text {
+    font-family: 'JetBrains Mono', 'Fira Code', 'Monaco', 'Consolas', monospace;
+    font-size: 13px;
+    line-height: 1.6;
+}
+
+/* JjScript Label */
+.jodie-jjscript-label-success {
+    color: #16a34a !important;
+    font-weight: 500;
+}
+
+.jodie-jjscript-label-error {
+    color: #dc2626 !important;
+    font-weight: 500;
+}
+
+/* Dark mode JjScript styling */
+[data-theme="dark"] .jodie-jjscript-avatar.jodie-jjscript-success {
+    background: rgba(22, 163, 74, 0.2);
+    color: #4ade80;
+}
+
+[data-theme="dark"] .jodie-jjscript-avatar.jodie-jjscript-error {
+    background: rgba(220, 38, 38, 0.2);
+    color: #f87171;
+}
+
+[data-theme="dark"] .jodie-jjscript-bubble {
+    background: var(--color-bg-secondary, #1e293b);
+    border-color: var(--color-border, #334155);
+}
+
+[data-theme="dark"] .jodie-jjscript-label-success {
+    color: #4ade80 !important;
+}
+
+[data-theme="dark"] .jodie-jjscript-label-error {
+    color: #f87171 !important;
 }

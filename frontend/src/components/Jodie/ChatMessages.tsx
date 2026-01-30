@@ -25,6 +25,8 @@ function MessageBubble({ message }: { message: ChatMessage }): JSX.Element {
     const isUser = message.role === 'user';
     const providerInfo = message.provider ? PROVIDER_INFO[message.provider] : null;
     const displayName = message.userName || 'You';
+    const isJjScript = !!message.jjscriptResult;
+    const jjScriptSuccess = message.jjscriptResult?.success ?? true;
 
     return (
         <div className={`jodie-message ${isUser ? 'jodie-message-user' : 'jodie-message-assistant'}`}>
@@ -34,8 +36,14 @@ function MessageBubble({ message }: { message: ChatMessage }): JSX.Element {
                     <span>{getInitials(displayName)}</span>
                 </div>
             )}
+            {/* JjScript avatar */}
+            {!isUser && isJjScript && (
+                <div className={`jodie-message-avatar jodie-jjscript-avatar ${jjScriptSuccess ? 'jodie-jjscript-success' : 'jodie-jjscript-error'}`}>
+                    <i className={`bi ${jjScriptSuccess ? 'bi-check-lg' : 'bi-x-lg'}`} />
+                </div>
+            )}
             {/* Assistant avatar with provider icon */}
-            {!isUser && providerInfo && (
+            {!isUser && !isJjScript && providerInfo && (
                 <div
                     className="jodie-message-avatar"
                     style={{ backgroundColor: providerInfo.color }}
@@ -44,7 +52,7 @@ function MessageBubble({ message }: { message: ChatMessage }): JSX.Element {
                 </div>
             )}
             <div className="jodie-message-content">
-                <div className="jodie-message-bubble">
+                <div className={`jodie-message-bubble ${isJjScript ? `jodie-jjscript-bubble ${jjScriptSuccess ? 'jodie-jjscript-bubble-success' : 'jodie-jjscript-bubble-error'}` : ''}`}>
                     {/* Display attached images */}
                     {message.images && message.images.length > 0 && (
                         <div className="jodie-message-images">
@@ -78,12 +86,17 @@ function MessageBubble({ message }: { message: ChatMessage }): JSX.Element {
                         <span className="jodie-message-author">{displayName}</span>
                     )}
                     <span className="jodie-message-time">{formatTimestamp(message.timestamp)}</span>
-                    {!isUser && providerInfo && (
+                    {!isUser && !isJjScript && providerInfo && (
                         <span
                             className="jodie-message-provider"
                             style={{ color: providerInfo.color }}
                         >
                             {providerInfo.name}
+                        </span>
+                    )}
+                    {isJjScript && (
+                        <span className={`jodie-message-provider ${jjScriptSuccess ? 'jodie-jjscript-label-success' : 'jodie-jjscript-label-error'}`}>
+                            JjScript
                         </span>
                     )}
                 </div>

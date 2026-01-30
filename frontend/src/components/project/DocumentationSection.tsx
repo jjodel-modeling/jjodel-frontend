@@ -147,7 +147,7 @@ const DocumentationSection: React.FC<Props> = ({ project }) => {
                     role="button"
                     tabIndex={canGenerate ? 0 : -1}
                     onKeyDown={(e) => e.key === 'Enter' && canGenerate && handleGenerate()}
-                    title={!canGenerate ? 'Add at least 1 class with 1 attribute to generate docs' : ''}
+                    title={!canGenerate ? 'Add at least 1 class to generate documentation' : ''}
                 >
                     <div className="doc-icon doc-icon--empty">
                         {isGenerating ? (

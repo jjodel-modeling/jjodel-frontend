@@ -15,6 +15,7 @@ import { JjodieContextService } from '../../services/JjodieContext';
 import { DUser, L, LUser, LProject } from '../../joiner';
 import DockManager from '../abstract/DockManager';
 import TabDataMaker from '../abstract/tabs/TabDataMaker';
+import { JjScriptService } from '../../jjscript';
 import './JodieWindow.css';
 
 // Generate unique message ID
@@ -144,6 +145,67 @@ export function Jodie(): JSX.Element {
 
     // Send message
     const handleSendMessage = useCallback(async (content: string, images?: ChatImage[], documents?: ChatDocument[]) => {
+        // Check if this is a JjScript command
+        if (JjScriptService.isJjScriptCommand(content)) {
+            // Add user message
+            const userMessage: ChatMessage = {
+                id: generateMessageId(),
+                role: 'user',
+                content,
+                timestamp: Date.now(),
+                userName,
+            };
+
+            setChatState(prev => ({
+                ...prev,
+                messages: [...prev.messages, userMessage],
+                isWaiting: true,
+            }));
+
+            try {
+                // Execute JjScript command
+                const result = await JjScriptService.execute(content);
+
+                // Format result as chat message
+                const responseContent = JjScriptService.formatResultForChat(result);
+
+                const assistantMessage: ChatMessage = {
+                    id: generateMessageId(),
+                    role: 'assistant',
+                    content: responseContent,
+                    timestamp: Date.now(),
+                    jjscriptResult: {
+                        success: result.success,
+                        command: result.command,
+                    },
+                };
+
+                setChatState(prev => ({
+                    ...prev,
+                    messages: [...prev.messages, assistantMessage],
+                    isWaiting: false,
+                }));
+            } catch (error) {
+                const errorMessage: ChatMessage = {
+                    id: generateMessageId(),
+                    role: 'assistant',
+                    content: `**JjScript Error:** ${(error as Error).message}`,
+                    timestamp: Date.now(),
+                    jjscriptResult: {
+                        success: false,
+                        command: 'unknown',
+                    },
+                };
+
+                setChatState(prev => ({
+                    ...prev,
+                    messages: [...prev.messages, errorMessage],
+                    isWaiting: false,
+                }));
+            }
+            return;
+        }
+
         // Determine which provider to use
         let providerToUse = activeProvider;
 
