@@ -16,8 +16,36 @@
  *   setMetamodelContext({ classes: [...], enums: [...], packages: [...] });
  */
 
-// Types
-export * from './types';
+// Types - explicit exports for better compatibility
+export type {
+    Suggestion,
+    SuggestionType,
+    ParseContext,
+    AutocompleteContext,
+    PartialToken,
+    SuggestionProvider,
+    MetamodelContext,
+    ClassInfo,
+    AttributeInfo,
+    ReferenceInfo,
+    OperationInfo,
+    ParameterInfo,
+    EnumInfo,
+    PackageInfo,
+    AutocompleteOptions,
+    CommandDef,
+} from './types';
+
+export {
+    DEFAULT_OPTIONS,
+    COMMAND_DEFS,
+    ELEMENT_TYPE_DEFS,
+    PRIMITIVE_TYPES,
+    KEYWORDS,
+    CLASS_PROPERTIES,
+    ATTRIBUTE_PROPERTIES,
+    REFERENCE_PROPERTIES,
+} from './types';
 
 // Context detection
 export { detectContext, tokenize, findCurrentWord } from './context';

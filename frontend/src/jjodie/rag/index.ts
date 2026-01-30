@@ -34,7 +34,7 @@
 // TYPE EXPORTS
 // ============================================
 
-export {
+export type {
     // Document types
     DocumentSource,
     KnowledgeDocument,
@@ -61,11 +61,17 @@ export {
 
     // Configuration
     RagConfig,
-    DEFAULT_RAG_CONFIG,
 
     // Utility types
     ProgressCallback,
     Result,
+} from './types';
+
+export {
+    // Configuration (runtime value)
+    DEFAULT_RAG_CONFIG,
+
+    // Utility functions
     success,
     failure,
 } from './types';
@@ -84,10 +90,10 @@ export {
 // Vector Store
 export {
     VectorStore,
-    VectorStoreConfig,
     getVectorStore,
     resetVectorStore,
 } from './vectorStore';
+export type { VectorStoreConfig } from './vectorStore';
 
 // Chunker
 export {

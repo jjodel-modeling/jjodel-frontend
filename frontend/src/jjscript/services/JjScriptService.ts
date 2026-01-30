@@ -4,7 +4,8 @@
  */
 
 import { executeCommand, ExecutionResult, parse } from '../index';
-import { getSuggestions as getAutocompleteSuggestions, Suggestion, addRecentCommand } from '../autocomplete';
+import { getSuggestions as getAutocompleteSuggestions, addRecentCommand } from '../autocomplete';
+import type { Suggestion } from '../autocomplete';
 import { DUser, L, LUser, LProject } from '../../joiner';
 
 // ============================================

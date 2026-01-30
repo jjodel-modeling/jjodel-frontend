@@ -14,6 +14,8 @@ import {
     getIndexer,
     getRetriever,
     getVectorStore,
+} from '../jjodie/rag';
+import type {
     KnowledgeDocument,
     DocumentSource,
     IndexStats,

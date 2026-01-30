@@ -711,6 +711,16 @@ html = html.replace(
 | 00:15 | `JodieWindow.tsx` passa `supportsPDF` prop a ChatInput |
 | 00:15 | `ChatMessages.tsx` ora visualizza documenti PDF nei messaggi |
 | 00:15 | Aggiunti stili per `.jodie-attachment-previews`, `.jodie-document-preview`, `.jodie-message-documents` |
+| 01:30 | **MARKDOWN RENDERING**: Migliorata resa markdown in Jjodie chat |
+| 01:30 | Ridotti margini paragrafi (10px → 8px), list items (6px → 4px) |
+| 01:30 | Tightened list padding (24px → 22px), heading margins (16px/8px → 14px/6px) |
+| 01:30 | Paragraphs in list items: `display: inline` + `margin: 0 !important` per tight spacing |
+| 01:30 | Unified inline code color to `#dc2626`, added border |
+| 01:30 | Code blocks: border `rgba(255, 255, 255, 0.08)`, margins 10px |
+| 01:30 | Blockquotes: 3px border, 10px/14px padding, 6px radius |
+| 01:30 | Line-height standardized to 1.5 across components |
+| 01:30 | Table cell padding reduced (10px/14px → 8px/12px) |
+| 01:30 | HR margin reduced (16px → 14px), border 1px |
 
 ---
 
@@ -1039,6 +1049,74 @@ title: React.createElement('div', {
 
 ---
 
+## MARKDOWN RENDERING (Jjodie Chat)
+
+Sistema di rendering markdown per i messaggi di Jjodie chat con supporto GFM completo.
+
+### File
+
+| File | Scopo |
+|------|-------|
+| `frontend/src/components/common/MarkdownRenderer.tsx` | Componente React con react-markdown + remark-gfm |
+| `frontend/src/components/common/MarkdownRenderer.scss` | Stili principali markdown |
+| `frontend/src/components/Jodie/MarkdownMessage.tsx` | Wrapper con toggle source/formatted |
+| `frontend/src/components/Jodie/MarkdownMessage.css` | Stili legacy per backward compatibility |
+
+### Spacing Values
+
+| Elemento | Margin | Padding |
+|----------|--------|---------|
+| Paragraphs | 0 0 8px 0 | - |
+| List container | 6px 0 | 0 0 0 22px |
+| List items | 0 0 4px 0 | 0 |
+| Headings | 14px 0 6px 0 | - |
+| H1 | - | 0 0 5px 0 (bottom) |
+| H2 | - | 0 0 4px 0 (bottom) |
+| Code blocks | 10px 0 | 12px 16px |
+| Blockquotes | 10px 0 | 10px 14px |
+| Tables | 10px 0 | 8px 12px (cells) |
+| HR | 14px 0 | - |
+
+### Key CSS Rules
+
+```scss
+// Critical: paragraphs inside list items must be inline
+.md-list-item {
+    .md-paragraph, p {
+        margin: 0 !important;
+        padding: 0;
+        display: inline;
+    }
+}
+
+// First/last element margin reset
+.markdown-renderer {
+    > :first-child { margin-top: 0 !important; }
+    > :last-child { margin-bottom: 0 !important; }
+}
+
+// Inline code styling
+.md-inline-code {
+    padding: 2px 6px;
+    background: var(--bg-tertiary, #f1f5f9);
+    border: 1px solid var(--border-color, #e2e8f0);
+    border-radius: 4px;
+    color: #dc2626;
+}
+
+// Code blocks
+.md-code-block {
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+}
+```
+
+### Line Height
+
+Standardized to `1.5` across all components for consistent vertical rhythm.
+
+---
+
 ## BRAND COLORS (Slate)
 
 | Elemento | Colore |
@@ -1053,7 +1131,7 @@ title: React.createElement('div', {
 
 ---
 
-*Ultimo aggiornamento: 2026-01-30 ore 00:55*
+*Ultimo aggiornamento: 2026-01-30 ore 01:45*
 
 ---
 
