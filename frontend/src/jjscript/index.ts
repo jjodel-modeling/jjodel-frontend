@@ -59,6 +59,25 @@ export {
 // Services
 export { JjScriptService } from './services';
 
+// Autocomplete
+export {
+    // Engine
+    AutocompleteEngine,
+    getAutocompleteEngine,
+    getSuggestions,
+    applySuggestion,
+    setMetamodelContext,
+    addRecentCommand,
+    // Context
+    detectContext,
+    // Types
+    Suggestion,
+    SuggestionType,
+    AutocompleteContext,
+    MetamodelContext,
+    AutocompleteOptions,
+} from './autocomplete';
+
 // UI Components
 export {
     JjScriptInput,

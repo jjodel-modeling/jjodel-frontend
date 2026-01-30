@@ -474,18 +474,222 @@ jjodie_rag_chunk_{chunkId}: JSON(VectorEntry)
 | `frontend/src/jjodie/rag/retriever.ts` | Ricerca semantica e keyword |
 | `frontend/src/jjodie/rag/indexer.ts` | Pipeline indicizzazione |
 | `frontend/src/jjodie/rag/index.ts` | Exports e convenience functions |
+| `frontend/src/services/JjodieRagService.ts` | **NUOVO** Bridge RAG ↔ Jjodie |
+| `frontend/src/components/Jodie/Jodie.tsx` | Componente chat con integrazione RAG |
 
 ---
 
 ## TODO / PROSSIMI PASSI
 
-1. ⬜ Integrare RAG in Jjodie chat (`Jodie.tsx`)
-2. ⬜ Auto-index on project load
-3. ⬜ Index JjScript command documentation
-4. ⬜ Re-index on metamodel/model changes
+1. ✅ Integrare RAG in Jjodie chat (`Jodie.tsx`)
+2. ✅ Auto-index on project load
+3. ✅ Index JjScript command documentation
+4. ⬜ Re-index on metamodel/model changes (attualmente ogni 30s)
 5. ⬜ UI per visualizzare statistiche index
 6. ⬜ Web Worker per embedding in background
 7. ⬜ Supporto API embedding esterni (OpenAI, Cohere)
+
+---
+
+## INTEGRAZIONE JJODIE CHAT
+
+### File Creati/Modificati
+
+| File | Modifiche |
+|------|-----------|
+| `frontend/src/services/JjodieRagService.ts` | **NUOVO** - Servizio bridge tra RAG e Jjodie |
+| `frontend/src/components/Jodie/Jodie.tsx` | Integrazione RAG context |
+
+### JjodieRagService
+
+Servizio che gestisce:
+- Inizializzazione del sistema RAG
+- Conversione progetti in documenti indicizzabili
+- **Indicizzazione documentazione JjScript** (automatica all'avvio)
+- Ricerca context per query utente
+
+```typescript
+class JjodieRagServiceClass {
+    // Inizializza RAG system
+    async initialize(): Promise<void>;
+
+    // Indicizza contenuto progetto
+    async indexProject(project: LProject): Promise<void>;
+
+    // Ottieni context RAG per una query
+    async getAugmentedContext(query: string, projectId?: string): Promise<string | null>;
+
+    // Ricerca diretta
+    async search(query: string, topK?: number): Promise<RagContext | null>;
+
+    // Statistiche
+    getStats(): IndexStats | null;
+}
+```
+
+### Modifiche a Jodie.tsx
+
+1. **Import aggiunto:**
+```typescript
+import { JjodieRagService } from '../../services/JjodieRagService';
+```
+
+2. **Nuovi state:**
+```typescript
+const lastIndexedProjectRef = useRef<string | null>(null);
+const [ragInitialized, setRagInitialized] = useState(false);
+```
+
+3. **Effect per auto-indexing:**
+```typescript
+useEffect(() => {
+    const initializeAndIndex = async () => {
+        if (!ragInitialized) {
+            await JjodieRagService.initialize();
+            setRagInitialized(true);
+        }
+
+        const project = user?.project as LProject;
+        if (project?.id && project.id !== lastIndexedProjectRef.current) {
+            await JjodieRagService.indexProject(project);
+            lastIndexedProjectRef.current = project.id;
+        }
+    };
+
+    initializeAndIndex();
+    const interval = setInterval(initializeAndIndex, 30000); // Re-index ogni 30s
+    return () => clearInterval(interval);
+}, [ragInitialized]);
+```
+
+4. **Context augmentation in handleSendMessage:**
+```typescript
+// Get RAG-augmented context based on query
+let augmentedContext = projectContext;
+if (ragInitialized) {
+    const ragContext = await JjodieRagService.getAugmentedContext(content);
+    if (ragContext) {
+        augmentedContext = projectContext
+            ? `${projectContext}\n\n---\n\n**Relevant Information:**\n${ragContext}`
+            : `**Relevant Information:**\n${ragContext}`;
+    }
+}
+```
+
+### Flusso Dati
+
+```
+User Opens Project
+       │
+       ▼
+┌─────────────────┐
+│ Jodie useEffect │
+│ (ogni 30s)      │
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│ JjodieRagService│
+│ .indexProject() │
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐     ┌─────────────────┐
+│ Project to Docs │────▶│    Indexer      │
+│ Conversion      │     │ (chunk+embed)   │
+└─────────────────┘     └────────┬────────┘
+                                 │
+                                 ▼
+                        ┌─────────────────┐
+                        │  Vector Store   │
+                        │  (IndexedDB)    │
+                        └─────────────────┘
+
+User Sends Message
+       │
+       ▼
+┌─────────────────┐
+│handleSendMessage│
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│ JjodieRagService│
+│.getAugmentedCtx │
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐     ┌─────────────────┐
+│   Retriever     │────▶│ Relevant Chunks │
+│ (hybrid search) │     │   (top 5)       │
+└─────────────────┘     └────────┬────────┘
+                                 │
+                                 ▼
+                        ┌─────────────────┐
+                        │  AI Provider    │
+                        │ (with context)  │
+                        └─────────────────┘
+```
+
+---
+
+## JJSCRIPT DOCUMENTATION INDEXING
+
+Il sistema RAG indicizza automaticamente la documentazione JjScript all'avvio, permettendo a Jjodie di rispondere a domande sui comandi.
+
+### Documenti Indicizzati (11 documenti)
+
+| ID | Contenuto |
+|----|-----------|
+| `jjscript_overview` | Overview generale di JjScript |
+| `jjscript_create` | Comando CREATE con tutte le opzioni |
+| `jjscript_delete` | Comando DELETE (cascade, force) |
+| `jjscript_rename` | Comando RENAME |
+| `jjscript_set` | Comando SET con proprietà comuni |
+| `jjscript_add` | Comando ADD |
+| `jjscript_list` | Comando LIST con filtri |
+| `jjscript_show` | Comando SHOW (brief/full/tree) |
+| `jjscript_syntax` | Riferimento sintassi (tipi, molteplicità, operatori) |
+| `jjscript_examples` | Esempi pratici completi |
+| `jjscript_elements` | Riferimento tipi elementi (class, attribute, reference, etc.) |
+
+### Implementazione
+
+```typescript
+// In JjodieRagService.ts
+class JjodieRagServiceClass {
+    private jjscriptIndexed = false;
+
+    async initialize(): Promise<void> {
+        await initializeRagSystem();
+        this.initialized = true;
+
+        // Index JjScript docs on first init
+        if (!this.jjscriptIndexed) {
+            await this.indexJjScriptDocumentation();
+        }
+    }
+
+    async indexJjScriptDocumentation(): Promise<void> {
+        const documents = this.generateJjScriptDocuments();
+        for (const doc of documents) {
+            await indexer.indexDocument(doc);
+        }
+        this.jjscriptIndexed = true;
+    }
+}
+```
+
+### Esempio Query
+
+**User:** "Come creo una classe astratta in JjScript?"
+
+**RAG Context Trovato:**
+- jjscript_create (score: 0.85)
+- jjscript_elements (score: 0.72)
+- jjscript_examples (score: 0.65)
+
+**Risposta Jjodie:** Include esempi specifici come `create abstract class Entity`
 
 ---
 
@@ -513,4 +717,4 @@ jjodie_rag_chunk_{chunkId}: JSON(VectorEntry)
 
 ---
 
-*Ultimo aggiornamento: 2026-01-30 ore 17:30*
+*Ultimo aggiornamento: 2026-01-30 ore 18:00*

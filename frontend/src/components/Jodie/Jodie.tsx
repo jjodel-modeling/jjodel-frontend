@@ -3,7 +3,7 @@
  * Main container for the AI assistant
  */
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { JodieWindow } from './JodieWindow';
 import { JodieMinimized } from './JodieMinimized';
@@ -12,6 +12,7 @@ import { JodieConfigService } from '../../services/JodieConfig';
 import { AIProviderService } from '../../services/AIProviderService';
 import { useAISettings } from '../../contexts/AISettingsContext';
 import { JjodieContextService } from '../../services/JjodieContext';
+import { JjodieRagService } from '../../services/JjodieRagService';
 import { DUser, L, LUser, LProject } from '../../joiner';
 import DockManager from '../abstract/DockManager';
 import TabDataMaker from '../abstract/tabs/TabDataMaker';
@@ -40,6 +41,10 @@ export function Jodie(): JSX.Element {
     const [activeProvider, setActiveProvider] = useState<AIProvider>(() =>
         JodieConfigService.getActiveProvider()
     );
+
+    // RAG state
+    const lastIndexedProjectRef = useRef<string | null>(null);
+    const [ragInitialized, setRagInitialized] = useState(false);
 
     // Get current user name
     const userName = useMemo(() => {
@@ -119,6 +124,38 @@ export function Jodie(): JSX.Element {
             JodieConfigService.setActiveProvider(firstEnabled);
         }
     }, [activeProvider]);
+
+    // Initialize RAG and index project content
+    useEffect(() => {
+        const initializeAndIndex = async () => {
+            try {
+                // Initialize RAG system
+                if (!ragInitialized) {
+                    await JjodieRagService.initialize();
+                    setRagInitialized(true);
+                }
+
+                // Get current project
+                const user: LUser = L.fromPointer(DUser.current);
+                const project = user?.project as LProject;
+
+                if (project?.id && project.id !== lastIndexedProjectRef.current) {
+                    // Index project content
+                    await JjodieRagService.indexProject(project);
+                    lastIndexedProjectRef.current = project.id;
+                    console.log('[Jodie] Project indexed for RAG:', project.id);
+                }
+            } catch (error) {
+                console.warn('[Jodie] RAG initialization/indexing failed:', error);
+            }
+        };
+
+        initializeAndIndex();
+
+        // Re-index periodically to catch updates (every 30 seconds)
+        const interval = setInterval(initializeAndIndex, 30000);
+        return () => clearInterval(interval);
+    }, [ragInitialized]);
 
     // Open the chat window
     const handleOpen = useCallback(() => {
@@ -268,11 +305,27 @@ export function Jodie(): JSX.Element {
             // Get conversation history (excluding the message we just added)
             const history = chatState.messages;
 
-            // Get current project context
+            // Get current project context (structural)
             const projectContext = getProjectContext();
 
-            // Call AI provider with context, images and documents
-            const response = await AIProviderService.chat(content, providerToUse, history, projectContext, images, documents);
+            // Get RAG-augmented context based on query
+            let augmentedContext = projectContext;
+            if (ragInitialized) {
+                try {
+                    const ragContext = await JjodieRagService.getAugmentedContext(content);
+                    if (ragContext) {
+                        // Combine structural context with RAG-retrieved context
+                        augmentedContext = projectContext
+                            ? `${projectContext}\n\n---\n\n**Relevant Information:**\n${ragContext}`
+                            : `**Relevant Information:**\n${ragContext}`;
+                    }
+                } catch (ragError) {
+                    console.warn('[Jodie] RAG context retrieval failed:', ragError);
+                }
+            }
+
+            // Call AI provider with augmented context, images and documents
+            const response = await AIProviderService.chat(content, providerToUse, history, augmentedContext, images, documents);
 
             // Add assistant message
             const assistantMessage: ChatMessage = {

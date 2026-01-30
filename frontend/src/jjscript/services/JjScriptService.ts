@@ -4,6 +4,7 @@
  */
 
 import { executeCommand, ExecutionResult, parse } from '../index';
+import { getSuggestions as getAutocompleteSuggestions, Suggestion, addRecentCommand } from '../autocomplete';
 import { DUser, L, LUser, LProject } from '../../joiner';
 
 // ============================================
@@ -67,6 +68,8 @@ export class JjScriptService {
         // Add to history if successful
         if (result.success) {
             this.addToHistory(command);
+            // Record for autocomplete recency boosting
+            this.recordCommand(command.split(/\s+/)[0]);
         }
 
         return result;
@@ -405,41 +408,25 @@ Type \`help\` for full documentation.
 
     /**
      * Get autocomplete suggestions for current input
+     * Returns simple string array for backward compatibility
      */
     static getSuggestions(input: string): string[] {
-        const suggestions: string[] = [];
+        const suggestions = getAutocompleteSuggestions(input);
+        return suggestions.map(s => s.text).slice(0, 10);
+    }
 
-        if (!input || input.length < 1) {
-            return ['create', 'delete', 'rename', 'list', 'show', 'help'];
-        }
+    /**
+     * Get full autocomplete suggestions with metadata
+     */
+    static getFullSuggestions(input: string, cursorPosition?: number): Suggestion[] {
+        return getAutocompleteSuggestions(input, cursorPosition);
+    }
 
-        const lower = input.toLowerCase();
-
-        // Command suggestions
-        const commands = ['create', 'delete', 'rename', 'set', 'add', 'remove', 'move', 'copy', 'list', 'show', 'help', 'undo', 'redo', 'validate'];
-        for (const cmd of commands) {
-            if (cmd.startsWith(lower)) {
-                suggestions.push(cmd);
-            }
-        }
-
-        // Context-aware suggestions based on first word
-        const parts = input.split(/\s+/);
-        if (parts.length >= 2) {
-            const firstWord = parts[0].toLowerCase();
-
-            if (firstWord === 'create' || firstWord === 'add') {
-                const types = ['class', 'abstract class', 'interface', 'attribute', 'reference', 'operation', 'package', 'enum', 'literal'];
-                const lastPart = parts[parts.length - 1].toLowerCase();
-                for (const type of types) {
-                    if (type.startsWith(lastPart)) {
-                        suggestions.push(parts.slice(0, -1).join(' ') + ' ' + type);
-                    }
-                }
-            }
-        }
-
-        return suggestions.slice(0, 8);
+    /**
+     * Record a successfully executed command for recency boosting
+     */
+    static recordCommand(command: string): void {
+        addRecentCommand(command);
     }
 }
 
