@@ -37,6 +37,8 @@ import 'jqueryui/jquery-ui.css';
 import { lightModeAllowedElements } from '../graphElement/graphElement';
 import ContextMenu from "../../components/contextMenu/ContextMenu";
 import {VertexOwnProps, VertexStateProps} from '../graphElement/sharedTypes/sharedTypes';
+import { rafThrottle, cancelThrottle, flushThrottle } from '../../utils/DragThrottle';
+import { PerformanceMetrics } from '../../utils/PerformanceMetrics';
 
 const superclassGraphElementComponent: typeof GraphElementComponent = RuntimeAccessibleClass.classes.GraphElementComponent as any as typeof GraphElementComponent;
 class ThisStatee extends GraphElementStatee { forceupdate?: number }
@@ -174,13 +176,27 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
                         //    as such any edit is not permanent unless reiterated at every start, ing, end event.
                         // about offset: don't know why but in jqui offset seems always === position, so i'm keeping them consistent.
                     }
-                    TRANSACTION('Vertex dragging ' + this.props.node.name, ()=>{
-                        // console.log('Vertex.setsize', obj);
-                        if (!this.props.view.lazySizeUpdate) this.setSize({x:ui.position.left, y:ui.position.top});
-                        for (let vid of allviews) this.doMeasurableEvent(EMeasurableEvents.whileDragging, vid);
-                    })
+
+                    // OPTIMIZATION: Throttle drag updates to ~30fps to reduce TRANSACTION calls
+                    const dragThrottleKey = `drag_${this.props.node?.id || 'unknown'}`;
+                    const throttledDragUpdate = rafThrottle(
+                        dragThrottleKey,
+                        (pos: {left: number, top: number}) => {
+                            PerformanceMetrics.countRender('Vertex_drag_throttled');
+                            TRANSACTION('Vertex dragging ' + this.props.node.name, () => {
+                                if (!this.props.view.lazySizeUpdate) this.setSize({x: pos.left, y: pos.top});
+                                for (let vid of allviews) this.doMeasurableEvent(EMeasurableEvents.whileDragging, vid);
+                            });
+                        },
+                        32 // ~30fps - balance between smoothness and performance
+                    );
+                    throttledDragUpdate({left: ui.position.left, top: ui.position.top});
                 },
                 stop: (evt: GObject, ui: JQUIDragging) => {
+                    // Cancel any pending throttled drag updates
+                    const dragThrottleKey = `drag_${this.props.node?.id || 'unknown'}`;
+                    cancelThrottle(dragThrottleKey);
+
                     if (dragCacheZoom){
                         /*ui.offset.left = (ui.position.left /= dragCacheZoom.x);
                         ui.offset.top = (ui.position.top /= dragCacheZoom.y);*/
@@ -229,14 +245,26 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
                         })
                     },
                     resize: (event: GObject, ui: ResizableUI) => {
-                        TRANSACTION('resizing events ' + this.props.node.name, ()=>{
-                            if (resizeCacheZoom) {
-                                ui.size.width = (ui.size.width /= resizeCacheZoom.x);
-                                ui.size.height = (ui.size.height /= resizeCacheZoom.y);
-                            }
-                            if (!this.props.view.lazySizeUpdate) this.setSize({w:ui.size.width, h:ui.size.height});
-                            for (let vid of allviews) this.doMeasurableEvent(EMeasurableEvents.whileResizing, vid);
-                        })
+                        // Apply zoom correction first (not throttled)
+                        if (resizeCacheZoom) {
+                            ui.size.width = (ui.size.width /= resizeCacheZoom.x);
+                            ui.size.height = (ui.size.height /= resizeCacheZoom.y);
+                        }
+
+                        // OPTIMIZATION: Throttle resize updates to ~30fps
+                        const resizeThrottleKey = `resize_${this.props.node?.id || 'unknown'}`;
+                        const throttledResizeUpdate = rafThrottle(
+                            resizeThrottleKey,
+                            (size: {width: number, height: number}) => {
+                                PerformanceMetrics.countRender('Vertex_resize_throttled');
+                                TRANSACTION('resizing events ' + this.props.node.name, () => {
+                                    if (!this.props.view.lazySizeUpdate) this.setSize({w: size.width, h: size.height});
+                                    for (let vid of allviews) this.doMeasurableEvent(EMeasurableEvents.whileResizing, vid);
+                                });
+                            },
+                            32 // ~30fps
+                        );
+                        throttledResizeUpdate({width: ui.size.width, height: ui.size.height});
                     },
                     stop: (event: GObject, ui: ResizableUI) => {
                         if (!this.state.classes.includes('resized')) this.setState({classes:[...this.state.classes, 'resized']});

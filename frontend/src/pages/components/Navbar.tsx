@@ -31,7 +31,7 @@ import {icon} from '../components/icons/Icons';
 
 import {useNavigate} from 'react-router-dom';
 
-import React, {Component, Dispatch, ReactElement, ReactNode, useState, useEffect} from 'react';
+import React, {Component, Dispatch, ReactElement, ReactNode, useState, useEffect, useMemo, useCallback} from 'react';
 import {FakeStateProps} from '../../joiner/types';
 import {connect} from 'react-redux';
 import {AuthApi, ProjectsApi} from '../../api/persistance';
@@ -198,6 +198,30 @@ type MenuEntry = {
     disabled?: boolean;
 } | null;
 
+// Simple menu components (inline, no complex memoization)
+function Submenu({ title, items }: { title?: string; items: (MenuEntry|null|undefined)[] }) {
+    return (
+        <div className='nav-hamburger hoverable inline' tabIndex={0}>
+            {title && <span className={'menu-title'}>{title}</span>}
+            <div className={'content context-menu'}>
+                <ul>
+                    {items && items.map((i, index) => i ? makeEntry(i, index) : null)}
+                </ul>
+            </div>
+        </div>
+    );
+}
+
+function MainMenu({ items }: { items: (MenuEntry|null|undefined)[] }) {
+    return (
+        <>
+            {items.map(m => !m || !m.subItems?.length ? null :
+                <Submenu key={m.name} title={m.name} items={m.subItems} />
+            )}
+        </>
+    );
+}
+
 type DProps = {}
 
 windoww.updateDebuggerComponent = () => {};
@@ -306,6 +330,8 @@ function NavbarComponent(props: AllProps) {
     let projectid = U.getProjectID_URL();
     Log.eDev(projectid !== project?.id, 'wrong project setup in navbar', {projectid, project});
     let metamodels: LModel[] = L.fromArr(props.metamodels);
+    // Parse mmNames from string (joined with '|||') to avoid array reference changes
+    const mmNamesArray = useMemo(() => props.mmNames ? props.mmNames.split('|||') : [], [props.mmNames]);
     globalProject = project;
     const recentProjects: MenuEntry[] = [];
     const [isFullscreen, setFullscreen] = useState(false);
@@ -588,13 +614,31 @@ function NavbarComponent(props: AllProps) {
                         // Add new class to the active metamodel's default package
                         // Try to find the metamodel from last selected element, fallback to first metamodel
                         let activeMetamodel = metamodels.find(m => m);
-                        if (props.lastSelectedModelElement) {
-                            const selectedMetamodel = metamodels.find(m => m.id === props.lastSelectedModelElement);
+                        // Get lastSelectedModelElement directly from store to avoid re-renders
+                        const currentState = store.getState();
+                        let lastSelectedModelElement: string | undefined;
+                        if (currentState._lastSelected?.modelElement) {
+                            try {
+                                const lastSelectedElem = currentState.idlookup[currentState._lastSelected.modelElement];
+                                if (lastSelectedElem) {
+                                    let current: any = lastSelectedElem;
+                                    while (current) {
+                                        if (current.className === 'DModel') {
+                                            lastSelectedModelElement = current.id;
+                                            break;
+                                        }
+                                        current = current.father ? currentState.idlookup[current.father] : null;
+                                    }
+                                }
+                            } catch (e) { /* ignore */ }
+                        }
+                        if (lastSelectedModelElement) {
+                            const selectedMetamodel = metamodels.find(m => m.id === lastSelectedModelElement);
                             if (selectedMetamodel) {
                                 activeMetamodel = selectedMetamodel;
                             }
                         }
-                        console.log('[Jjodel Shortcuts] Creating class, activeMetamodel:', activeMetamodel?.name, 'lastSelectedModel:', props.lastSelectedModelElement);
+                        console.log('[Jjodel Shortcuts] Creating class, activeMetamodel:', activeMetamodel?.name, 'lastSelectedModel:', lastSelectedModelElement);
                         if (activeMetamodel) {
                             const defaultPkg = activeMetamodel.packages?.[0];
                             console.log('[Jjodel Shortcuts] defaultPkg:', defaultPkg?.name, 'packages count:', activeMetamodel.packages?.length);
@@ -839,7 +883,7 @@ function NavbarComponent(props: AllProps) {
             name: 'Model',
             icon: <i className="bi bi-box" />,
             subItems: metamodels.map((m2, i)=>({
-                name: props.mmNames[i], function: () => createM1(project, m2), id: 'mmid_'+ props.metamodels[i],
+                name: mmNamesArray[i], function: () => createM1(project, m2), id: 'mmid_'+ props.metamodels[i],
             }))
         };
     } else {
@@ -932,6 +976,19 @@ function NavbarComponent(props: AllProps) {
                             U.download(`${project.name}.jjodel`, JSON.stringify(dproject));
                         }
                     }, icon: <i className="bi bi-download" />},
+
+                /* Export Canvas as Image */
+                isDashboard ? null : {name: 'Export Canvas', icon: <i className="bi bi-image" />,
+                    disabled: metamodels.length === 0,
+                    subItems: [
+                        {name: 'Export as PNG', function: () => window.dispatchEvent(new CustomEvent('jjodel:export-canvas', { detail: { format: 'png' } })), icon: <i className="bi bi-file-image" />, disabled: metamodels.length === 0},
+                        {name: 'Export as JPEG', function: () => window.dispatchEvent(new CustomEvent('jjodel:export-canvas', { detail: { format: 'jpeg' } })), icon: <i className="bi bi-file-image" />, disabled: metamodels.length === 0},
+                        {name: 'Export as SVG', function: () => window.dispatchEvent(new CustomEvent('jjodel:export-canvas', { detail: { format: 'svg' } })), icon: <i className="bi bi-filetype-svg" />, disabled: metamodels.length === 0},
+                        {name: 'divisor'},
+                        {name: 'Copy to Clipboard', function: () => window.dispatchEvent(new CustomEvent('jjodel:export-canvas', { detail: { format: 'clipboard' } })), icon: <i className="bi bi-clipboard" />, disabled: metamodels.length === 0},
+                    ]
+                },
+                isDashboard ? null : {name: 'divisor'},
 
                 isDashboard ? null : {name: 'Close Project', function: async() => {
     if (isProjectModified()) {
@@ -1034,7 +1091,7 @@ function NavbarComponent(props: AllProps) {
                 ] : [
                     {name: 'Metamodel Tools', icon: <i className="bi bi-tools" />, disabled: true,
                         subItems: metamodels.map((m2, i) => ({
-                            name: props.mmNames[i] || 'Unnamed',
+                            name: mmNamesArray[i] || 'Unnamed',
                             icon: <i className="bi bi-diagram-3" />,
                             disabled: true
                         }))
@@ -1078,28 +1135,6 @@ function NavbarComponent(props: AllProps) {
         .filter(e=> e && (e.keystroke?.length));
     Keystrokes.register('#root', keybindings);
 
-    type MenuProps = {
-        title?: string;
-        items: (MenuEntry|null|undefined)[];
-    }
-
-    const MainMenu = (props: MenuProps) => {
-        return(<>
-                { props.items.map(m => !m || !m.subItems?.length ? null : <Submenu key={m.name} title={m.name} items={m.subItems} />) }
-            </>
-        );
-    }
-
-    const Submenu = (props: MenuProps) => {
-        return (<div className='nav-hamburger hoverable inline' key={props.title} tabIndex={0}>
-            {props.title && <span className={'menu-title'} key={'title'}>{props.title}</span>}
-            <div className={'content context-menu'} key={'content'}>
-                <ul>
-                    {props.items && props.items.map((i, index) => i ? makeEntry(i, index) : null)}
-                </ul>
-            </div>
-        </div>
-    )}
 
     const MainLogo = ()=> {
         return (
@@ -1411,13 +1446,14 @@ interface OwnProps {}
 interface StateProps {
     user: Pointer<DUser>;
     metamodels: Pointer<DModel>[];
-    mmNames: string[];
+    mmNames: string; // Joined with '|||' to avoid array reference changes causing re-renders
     version: DState['version'];
     advanced: boolean;
     debug: boolean;
     lay: string; // layout selected shortened, first char is category, second is index. like u1 = user 1, p2 = project 2
     autosaveLayout: boolean;
-    lastSelectedModelElement?: Pointer<DModel>; // For detecting active metamodel from last selected element
+    // NOTE: lastSelectedModelElement removed to prevent menu flickering
+    // It's now accessed directly from store in the keyboard shortcut handler
 }
 interface DispatchProps {}
 type AllProps = OwnProps & StateProps & DispatchProps;
@@ -1431,32 +1467,16 @@ function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     // because the dropdown is constantly re-created and disappears.
     ret.user = DUser.current;
     ret.metamodels = state.m2models;
-    ret.mmNames = L.fromArr(ret.metamodels).map((mm: any) => mm?.name); // just to force update in case of renaming
+    // Convert to string to avoid array reference changes causing re-renders
+    // The string will be split back into array in the component
+    ret.mmNames = L.fromArr(ret.metamodels).map((mm: any) => mm?.name).join('|||');
     ret.version = state.version;
     ret.advanced = state.advanced;
     ret.debug = state.debug;
     ret.lay = PinnableDock.saveSlotCategory[0] + PinnableDock.saveSlotName[0];
     ret.autosaveLayout = PinnableDock.isAutosave();
-
-    // Get the model of the last selected element (for determining active metamodel in shortcuts)
-    if (state._lastSelected?.modelElement) {
-        try {
-            const lastSelectedElem = state.idlookup[state._lastSelected.modelElement];
-            if (lastSelectedElem) {
-                // Walk up the parent chain to find the model
-                let current: any = lastSelectedElem;
-                while (current) {
-                    if (current.className === 'DModel') {
-                        ret.lastSelectedModelElement = current.id;
-                        break;
-                    }
-                    current = current.father ? state.idlookup[current.father] : null;
-                }
-            }
-        } catch (e) {
-            // Ignore errors in walking the parent chain
-        }
-    }
+    // NOTE: lastSelectedModelElement is now accessed directly from store in keyboard handler
+    // to prevent menu flickering caused by frequent re-renders
     return ret;
 }
 

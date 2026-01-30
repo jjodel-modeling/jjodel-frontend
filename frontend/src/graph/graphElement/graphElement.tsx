@@ -68,6 +68,8 @@ import {EdgeStateProps, LGraphElement, store, VertexComponent,
 import {NodeTransientProperties, Pack1} from "../../joiner/classes";
 import {AT_TRANSACTION} from "../../redux/action/action";
 import {ShowContextMenu} from "../../components/contextMenu/ContextMenu";
+import { compareUsageDeclarations } from "../../utils/UDComparator";
+import { PerformanceMetrics } from "../../utils/PerformanceMetrics";
 
 const ext_on = "class-can-be-extended";
 const ext_off = "class-cannot-be-extended";
@@ -436,12 +438,13 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
                 out.reason.push(reason);
                 nodeviewentry.shouldUpdate_reason = {...out, reason};
             }
-            else { // check for ud changes
-                let tmpout = { reason: '' };
-                nodeviewentry.shouldUpdate = !U.isShallowEqualWithProxies(old_ud, new_ud, skipDeepKeys, tmpout);
-                nodeviewentry.shouldUpdate_reason = {...tmpout};
-                if (tmpout.reason) out.reason.push(tmpout.reason+' ('+vid+')');
-                (nodeviewentry as any).shouldUpdate_reasonDebug = {old_ud, new_ud};
+            else { // check for ud changes using optimized comparator
+                const udCompare = compareUsageDeclarations(old_ud, new_ud, skipDeepKeys);
+                nodeviewentry.shouldUpdate = !udCompare.equal;
+                nodeviewentry.shouldUpdate_reason = { reason: udCompare.reason || '', changedKeys: udCompare.changedKeys };
+                if (udCompare.reason) out.reason.push(udCompare.reason + ' (' + vid + ')');
+                (nodeviewentry as any).shouldUpdate_reasonDebug = {old_ud, new_ud, udCompare};
+                PerformanceMetrics.countSCU(nodeviewentry.shouldUpdate);
             }
 
             Log.l(debug, "DECORATIVE_VIEW ShouldComponentUpdate " + data?.name + (nodeviewentry.shouldUpdate ? " UPDATED " : " REJECTED ")  + vid,
@@ -509,11 +512,13 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         }
 
         if (!ret) {
-            let tmpout = {reason:''}
-            ret = nodeviewentry.shouldUpdate = !U.isShallowEqualWithProxies(old_ud, new_ud, skipDeepKeys, tmpout);
-            if (tmpout.reason) out.reason.push(tmpout.reason);
-            nodeviewentry.shouldUpdate_reason = {...out};
-            (nodeviewentry as any).shouldUpdate_reasonDebug = {old_ud, new_ud};
+            // Use optimized UD comparator instead of U.isShallowEqualWithProxies
+            const udCompare = compareUsageDeclarations(old_ud, new_ud, skipDeepKeys);
+            ret = nodeviewentry.shouldUpdate = !udCompare.equal;
+            if (udCompare.reason) out.reason.push(udCompare.reason);
+            nodeviewentry.shouldUpdate_reason = { ...out, changedKeys: udCompare.changedKeys };
+            (nodeviewentry as any).shouldUpdate_reasonDebug = {old_ud, new_ud, udCompare};
+            PerformanceMetrics.countSCU(ret);
         }
 
         Log.l(debug, "MAIN_VIEW ShouldComponentUpdate " + data?.name + (nodeviewentry.shouldUpdate ? " UPDATED " : " REJECTED ") + vid,

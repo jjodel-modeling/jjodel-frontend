@@ -2,12 +2,14 @@ import React, { useState } from 'react';
 import { Try, R } from '../joiner';
 import { Dashboard } from './components';
 import { AIAssistantSettings, AppearanceSettings, AdvancedSettings } from './settings/index';
+import { PromptsSettingsSection } from '../components/settings/PromptsSettingsSection';
 import './settings.scss';
 
-type SettingsSection = 'ai-assistant' | 'appearance' | 'advanced';
+type SettingsSection = 'ai-assistant' | 'ai-prompts' | 'appearance' | 'advanced';
 
 const sections = [
     { id: 'ai-assistant' as const, label: 'AI Assistant', icon: 'bi-robot' },
+    { id: 'ai-prompts' as const, label: 'AI Prompts', icon: 'bi-chat-square-text' },
     { id: 'appearance' as const, label: 'Appearance', icon: 'bi-palette' },
     { id: 'advanced' as const, label: 'Advanced', icon: 'bi-sliders' },
 ];
@@ -19,6 +21,8 @@ function SettingsContent() {
         switch (activeSection) {
             case 'ai-assistant':
                 return <AIAssistantSettings />;
+            case 'ai-prompts':
+                return <PromptsSettingsSection />;
             case 'appearance':
                 return <AppearanceSettings />;
             case 'advanced':

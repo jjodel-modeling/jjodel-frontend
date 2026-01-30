@@ -5,7 +5,8 @@
 
 import { AIProvider, ChatMessage, ChatImage, ChatDocument, PROVIDER_ENDPOINTS } from '../types/jodie';
 import { JodieConfigService } from './JodieConfig';
-import { buildSystemPromptWithContext } from '../constants/jjodiePrompt';
+import { PromptService } from './PromptService';
+import { PromptContext } from '../types/prompts';
 
 export class AIProviderService {
     /**
@@ -31,8 +32,11 @@ export class AIProviderService {
             throw new Error(`Provider ${provider} is not configured. Please add your API key in Settings.`);
         }
 
-        // Build system prompt with optional project context
-        const systemPrompt = buildSystemPromptWithContext(projectContext);
+        // Build system prompt with optional project context using PromptService
+        const context: PromptContext | undefined = projectContext
+            ? { customVariables: { projectContext } }
+            : undefined;
+        const systemPrompt = PromptService.getRendered('chat', context);
 
         switch (provider) {
             case 'claude':
