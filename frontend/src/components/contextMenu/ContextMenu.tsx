@@ -1,28 +1,41 @@
 import React, {Dispatch, ReactElement, ReactNode, useRef} from 'react';
 import {connect} from 'react-redux';
-import './ContextMenu.scss';
 import {CtxMenuAllProps, CtxMenuPathSeparator} from '../forEndUser/ContextMenu';
-import {
-    DClass, DGraph, DGraphElement, Dictionary,
-    SetRootFieldAction, TRANSACTION,
+import type {
+    DGraph,
+    DGraphElement,
+    Dictionary,
     DNamedElement,
     DState,
-    DUser, DV,
     DValue,
-    DViewElement,
-    GObject, GraphElementComponent, L,
+    GObject,
     LClass,
-    LGraphElement, LModel, LModelElement,
+    LGraphElement,
+    LModel,
+    LModelElement,
     LNamedElement,
-    LObject, Log,
+    LObject,
     LPackage,
-    LProject, LReference, LStructuralFeature,
-    LUser,
+    LReference,
     LValue,
-    Pointer, transientProperties,
-    U,
-    windoww, Keystrokes, store, LPointerTargetable, D,
+    Pointer,
 } from '../../joiner';
+import {
+    SetRootFieldAction,
+    TRANSACTION,
+    L,
+    Log,
+    D,
+    transientProperties,
+    U,
+    windoww,
+    Keystrokes,
+    store,
+    DViewElement,
+    DUser,
+} from '../../joiner';
+import {Key} from "../../common/U";
+import {toggleMetrics} from '../metrics/Metrics';
 import MemoRec from '../../api/memorec';
 import {useStateIfMounted} from 'use-state-if-mounted';
 import ModellingIcon from "../forEndUser/ModellingIcon";
@@ -34,7 +47,7 @@ import { Btn, CommandBar } from '../commandbar/CommandBar';
 import { createPortal } from 'react-dom';
 import { Logo } from '../logo';
 import { forEach } from 'lodash';
-import {Key} from "../../common/U";
+import './ContextMenu.scss';
 
 function ContextMenuComponent(props: AllProps) {
     return ContextMenuComponentInner(props);

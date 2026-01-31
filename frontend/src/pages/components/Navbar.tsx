@@ -702,12 +702,10 @@ function NavbarComponent(props: AllProps) {
                 if (isProjectModified()) {
                     U.dialog('You are about to log out without saving your project. Do you want to proceed?', 'logout', async () => {
                         await AuthApi.logout();
-                        R.navigate('/auth');
                     });
                 } else {
                     (async () => {
                         await AuthApi.logout();
-                        R.navigate('/auth');
                     })();
                 }
                 return;
@@ -864,7 +862,6 @@ function NavbarComponent(props: AllProps) {
 
     let lay = props.lay;
     const items: MenuEntry[] = [
-check and replace all user to LUser.getUser()
         // Jjodel Menu
         {name: 'Jjodel',
             subItems: [
@@ -874,12 +871,10 @@ check and replace all user to LUser.getUser()
                 {name: 'Sign-out', function: async () => {
                     if (isProjectModified()) {
                         U.dialog('You are about to log out without saving your project. Do you want to proceed?', 'logout', async () => {
-                            await AuthApi.logout(); put navigate in logout
-                            R.navigate('/auth');
+                            await AuthApi.logout();
                         });
                     } else {
                         await AuthApi.logout();
-                        R.navigate('/auth');
                     }
                 }, icon: <i className="bi bi-box-arrow-right" />, shortcutPills: formatShortcutPills(SHORTCUTS.SIGN_OUT)},
                 {name: 'Logout', function: async() => {
@@ -1330,11 +1325,9 @@ check and replace all user to LUser.getUser()
                         if (isProjectModified()) {
                             U.dialog('You are about to log out without saving your project. Do you want to proceed?', 'logout', async ()=>{
                                 await AuthApi.logout();
-                                R.navigate('/auth');
                             });
                         } else {
                             await AuthApi.logout();
-                            R.navigate('/auth');
                         }
                     }}>Sign out</Item>
                     <Divisor />

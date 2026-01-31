@@ -11,6 +11,7 @@ import type {
     LModelElement, LogicContext,
     LNamedElement,
     DClassifier,
+    LModel,
     } from '../joiner';
 import {
     DPackage,

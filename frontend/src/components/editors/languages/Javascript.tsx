@@ -30,7 +30,7 @@ function JavascriptEditorComponent(props: AllProps) {
     const [wrap, setWrap] = useStateIfMounted(false);
     const [fullscreen, setFullscreen] = useStateIfMounted(false);
     const [showTooltip, setShowTooltip] = useStateIfMounted(false);
-    const readOnly = props.readonly !== undefined ? props.readonly : data && Defaults.check(data.id);
+    const readOnly = (props.readonly !== undefined ? props.readonly : data && Defaults.check(data.id)) === true;
     const change = (value: string|undefined) => {
         /* save in local state for frequent changes */
         setJs(value || '');

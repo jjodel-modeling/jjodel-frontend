@@ -22,6 +22,7 @@ import "./auth.scss"
 import logoUnivaq from '../static/img/partners/univaq.png';
 import logoMdu from '../static/img/partners/mdu.svg';
 import logoFbk from '../static/img/partners/fbk.png';
+import Api from "../api/api";
 
 // Branding panel component for split-screen layout
 const BrandingPanel = () => (

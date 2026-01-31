@@ -42,6 +42,7 @@ function NodeDataComponent(props: AllProps) {
                     size="sm"
                 />
             </label>
+
             <label className={'input-container'}>
                 <b>Lazy Update</b>
                 <Toggle
@@ -108,7 +109,7 @@ function NodeDataComponent(props: AllProps) {
                        inputClassName="number-input-compact"
                        getter={() => (view.defaultVSize?.w || 0).toFixed(2)}
                        setter={(val) => view.defaultVSize = {w: +val} as any}/>
-            </div>
+            </label>
 
             <label className={'input-container number-field'} hidden={dview.adaptHeight}>
                 <b>Default Height</b>

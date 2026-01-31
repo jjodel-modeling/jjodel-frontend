@@ -28,15 +28,13 @@ import type {
     DGraph,
     Info,
     Size,
-    GObject,
     DVertex,
-    DGraph,
     Pointer} from '../../joiner'
-import {Draggable, U,
+import {
+    Draggable,
     Select,
     U,
     L,
-    Select,
     Input,
     GenericInput,
     SetRootFieldAction,
@@ -45,10 +43,9 @@ import './editors.scss';
 import './node-editor.scss';
 import { Empty } from "./Empty";
 import { SizeInput } from "../forEndUser/SizeInput";
-import './node-editor-redesign.scss';
+import { Tooltip } from "../forEndUser/Tooltip";
 import { CommandBar, Btn } from '../commandbar/CommandBar';
-import {SizeInput} from "../forEndUser/SizeInput";
-import {Tooltip} from "../forEndUser/Tooltip";
+import './node-editor-redesign.scss';
 
 // ============================================
 // TYPES
@@ -370,6 +367,7 @@ function NodeEditorComponent(props: AllProps) {
     const edgesOut = !isEdge ? node.edgesOut || [] : [];
     const hasFather = !!node.father?.className;
     const hasRelationships = hasFather || edgesIn.length > 0 || (isEdge && (edgeStart || edgeEnd));
+    let grid = asGraph?.grid;
 
     return (
         <div className="node-editor-redesign">

@@ -63,7 +63,7 @@ export const FormExample: React.FC = () => {
             value={formData.name}
             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
             placeholder="Enter model name"
-            error={!!errors.name}
+            error={errors.name}
             fullWidth
           />
         </Field>

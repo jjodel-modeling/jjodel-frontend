@@ -3,19 +3,22 @@
 import React, {Dispatch, JSX, ReactElement, ReactNode, useState} from 'react';
 import {connect} from 'react-redux';
 import {
-    Defaults,
-    DPointerTargetable,
     DState,
     DUser,
-    DViewElement,
-    DViewPoint,
-    Input,
-    LPointerTargetable,
     LProject,
     LUser,
     LViewElement,
     LViewPoint,
     Pointer,
+    DPointerTargetable,
+    DViewElement,
+    DViewPoint,
+    GObject,
+} from '../../../joiner';
+import {
+    Defaults,
+    Input,
+    L,
     TRANSACTION,
     U,
     windoww
@@ -69,9 +72,9 @@ function NestedViewComponent(props: AllProps) {
     //     const ret: StateProps = {} as FakeStateProps;
     //     // const user = LUser.fromPointer(DUser.current, state);
     //     // ret.project = user.project as LProject;
-    //     ret.priority = LPointerTargetable.fromArr(ownProps.priority); // ret.project.viewpoints;
+    //     ret.priority = L.fromArr(ownProps.priority); // ret.project.viewpoints;
     //     ret.debug = state.debug;
-    //     ret.view = LPointerTargetable.fromPointer(ownProps.viewid, state);
+    //     ret.view = L.fromPointer(ownProps.viewid, state);
     //     return ret;
     // }
 
@@ -95,7 +98,7 @@ function renderEntry(d: DViewElement, childrens: GObject, isExpanded: boolean, t
         appliableTo = U.replaceAll(appliableTo, "Void", "");
         let parr = Object.keys(childrens);
         let scoreBoost = metadata?.scoreBoost || 0;
-        let l: LViewElement = LPointerTargetable.fromD(d);
+        let l: LViewElement = L.fromD(d);
 
         const preventClick = (e: any) => e.stopPropagation();
         let isVP = d.className === DViewPoint.cname;
@@ -195,7 +198,7 @@ function renderEntry(d: DViewElement, childrens: GObject, isExpanded: boolean, t
                                         renderEntry={renderEntry}
                                         depth={depth + 1}
                                         path={[...path, i]}
-                                        metadata={{ setView: metadata.setView, scoreBoost: childrens[ptr] } as Metadata}
+                                        metadata={{ setView: metadata?.setView, scoreBoost: childrens[ptr] } as Metadata}
                                         initialHidingState={true}
                                     />
                                 ))}
@@ -273,7 +276,7 @@ function renderEntry(d: DViewElement, childrens: GObject, isExpanded: boolean, t
                                 renderEntry={renderEntry}
                                 depth={depth + 1}
                                 path={[...path, i]}
-                                metadata={{ setView: metadata.setView, scoreBoost: childrens[ptr] } as Metadata}
+                                metadata={{ setView: metadata?.setView, scoreBoost: childrens[ptr] } as Metadata}
                                 initialHidingState={true}
                             />
                         ))}
@@ -301,7 +304,7 @@ function renderEntry(d: DViewElement, childrens: GObject, isExpanded: boolean, t
         appliableTo = U.replaceAll(appliableTo, "Void", "");
         let parr = Object.keys(childrens);
         let scoreBoost = metadata?.scoreBoost || 0;
-        let l: LViewElement = LPointerTargetable.fromD(d);
+        let l: LViewElement = L.fromD(d);
 
         const preventClick = (e: any)=>e.stopPropagation();
         let isVP = d.className === DViewPoint.cname;

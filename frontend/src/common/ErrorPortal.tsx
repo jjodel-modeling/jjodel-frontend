@@ -112,6 +112,7 @@ interface ErrorDisplayProps {
     message: React.ReactNode;
     dname?: string;
     nodename?: string;
+    onClick?: (e:any)=>void;
 }
 
 export const ErrorDisplay: React.FC<ErrorDisplayProps> = ({
@@ -121,7 +122,8 @@ export const ErrorDisplay: React.FC<ErrorDisplayProps> = ({
     errorContext,
     message,
     dname,
-    nodename
+    nodename,
+    onClick
 }) => {
     const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -140,6 +142,7 @@ export const ErrorDisplay: React.FC<ErrorDisplayProps> = ({
     const handleBadgeClick = (e: React.MouseEvent) => {
         e.stopPropagation();
         setIsModalOpen(true);
+        onClick?.(e);
     };
 
     const handleClose = () => {
