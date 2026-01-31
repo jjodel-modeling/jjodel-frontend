@@ -106,9 +106,12 @@ export function matchQualifiedName(pattern: QualifiedName, target: QualifiedName
 /**
  * Parse a multiplicity string into a Multiplicity object
  * Supports formats:
- *   - "[0..1]", "[1..*]", "[*]", "[0..5]"
+ *   - "[0..1]", "[1..*]", "[*]", "[0..5]" - standard EMF/Ecore format
  *   - "0..1", "1..*", "*" (without brackets)
  *   - "1" (single value = [1..1])
+ *   - "*" = [0..*] (zero or more)
+ *   - "+" = [1..*] (one or more)
+ *   - "?" = [0..1] (optional)
  */
 export function parseMultiplicity(raw: string): Multiplicity {
     if (!raw || raw.trim() === '') {
@@ -122,12 +125,22 @@ export function parseMultiplicity(raw: string): Multiplicity {
         raw = raw.substring(1, raw.length - 1);
     }
 
-    // Handle single "*"
+    // Handle single "*" - zero or more (0..*)
     if (raw === '*') {
         return { lower: 0, upper: '*', raw: '[*]' };
     }
 
-    // Handle single number
+    // Handle "+" - one or more (1..*)
+    if (raw === '+') {
+        return { lower: 1, upper: '*', raw: '[+]' };
+    }
+
+    // Handle "?" - optional (0..1)
+    if (raw === '?') {
+        return { lower: 0, upper: 1, raw: '[?]' };
+    }
+
+    // Handle single number - exact count [n..n]
     if (/^\d+$/.test(raw)) {
         const n = parseInt(raw, 10);
         return { lower: n, upper: n, raw: `[${n}]` };

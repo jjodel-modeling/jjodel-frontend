@@ -62,6 +62,8 @@ export type ElementType =
     | 'interface'
     | 'attribute'
     | 'reference'
+    | 'containment'    // Shorthand for reference with containment=true
+    | 'composition'    // Alias for containment
     | 'operation'
     | 'parameter'
     | 'package'
@@ -498,6 +500,7 @@ export const COMMANDS: CommandType[] = [
 
 export const ELEMENT_TYPES: ElementType[] = [
     'class', 'abstract class', 'interface', 'attribute', 'reference',
+    'containment', 'composition',  // Shortcuts for "reference ... containment"
     'operation', 'parameter', 'package', 'enum', 'enumeration',
     'literal', 'model', 'metamodel', 'project', 'annotation'
 ];

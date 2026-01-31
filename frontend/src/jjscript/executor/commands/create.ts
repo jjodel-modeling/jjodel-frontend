@@ -82,7 +82,13 @@ export async function executeCreate(
                 break;
 
             case 'reference':
-                result = await createReference(name, parentElement, options);
+                result = await createReference(name, parentElement, options, false, project);
+                break;
+
+            case 'containment':
+            case 'composition':
+                // "create containment" is shorthand for "create reference ... containment"
+                result = await createReference(name, parentElement, options, true, project);
                 break;
 
             case 'operation':
@@ -253,7 +259,9 @@ async function createAttribute(
 async function createReference(
     name: string,
     parent: any,
-    options: CreateArgs['options']
+    options: CreateArgs['options'],
+    isContainment: boolean = false,
+    project?: any
 ): Promise<ExecutionResult> {
     if (!parent) {
         return {
@@ -271,11 +279,54 @@ async function createReference(
             // DReference.new(name, type, father, persist)
             const newRef = DReference.new(name, undefined, parentId, true);
 
+            // Apply target type if specified
+            let targetTypeName: string | undefined;
+            if (options?.type && project) {
+                // options.type can be { kind: 'class', name: QualifiedName } or { kind: 'primitive', type: string }
+                if (options.type.kind === 'class' && options.type.name) {
+                    const targetClass = resolveElement(options.type.name, project);
+                    if (targetClass) {
+                        SetFieldAction.new(newRef, 'type', targetClass.id, undefined, true);
+                        targetTypeName = targetClass.name;
+                    }
+                }
+            }
+
+            // Apply multiplicity if specified
+            // Multiplicity values: '*' in parsed form means unbounded, converted to -1 for model
+            if (options?.multiplicity) {
+                const { lower, upper } = options.multiplicity;
+                SetFieldAction.new(newRef, 'lowerBound', lower, undefined, false);
+                // Convert '*' to -1 for unbounded upper bound (EMF/Ecore convention)
+                const upperValue = upper === '*' ? -1 : upper;
+                SetFieldAction.new(newRef, 'upperBound', upperValue, undefined, false);
+            }
+
+            // Apply containment if specified (via "containment" keyword or "create containment" command)
+            // Note: The DReference property is called 'composition', but in EMF/Ecore it's called 'containment'
+            const shouldBeContainment = isContainment || options?.containment;
+            if (shouldBeContainment) {
+                // SetFieldAction.new(element, property, value, operator, isPointer)
+                // operator: undefined = '=' assignment
+                // isPointer: false because composition is a boolean value, not a reference
+                SetFieldAction.new(newRef, 'composition', true, undefined, false);
+            }
+
+            const typeLabel = shouldBeContainment ? 'containment' : 'reference';
+            const multiplicityStr = options?.multiplicity?.raw || '';
+
             resolve({
                 success: true,
                 command: 'create',
-                message: `Created reference '${name}'`,
-                data: { id: newRef.id, name, type: 'reference' },
+                message: `Created ${typeLabel} '${name}'${targetTypeName ? ` → ${targetTypeName}` : ''}${multiplicityStr ? ` ${multiplicityStr}` : ''}`,
+                data: {
+                    id: newRef.id,
+                    name,
+                    type: typeLabel,
+                    targetType: targetTypeName,
+                    containment: shouldBeContainment,
+                    multiplicity: options?.multiplicity
+                },
                 affectedElements: [newRef.id, parentId],
                 undoable: true
             });

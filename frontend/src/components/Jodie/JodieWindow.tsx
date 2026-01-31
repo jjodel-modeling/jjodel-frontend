@@ -30,6 +30,13 @@ interface Position {
     y: number;
 }
 
+interface ExecutingCommand {
+    command: string;
+    lineNumber: number;
+    index: number;
+    total: number;
+}
+
 interface Size {
     width: number;
     height: number;
@@ -76,10 +83,30 @@ export function JodieWindow({
     const [size, setSize] = useState<Size>(initialSize);
     const [isDragging, setIsDragging] = useState(false);
     const [resizeDirection, setResizeDirection] = useState<ResizeDirection>(null);
+    const [executingCommand, setExecutingCommand] = useState<ExecutingCommand | null>(null);
 
     const windowRef = useRef<HTMLDivElement>(null);
     const dragOffset = useRef<Position>({ x: 0, y: 0 });
     const resizeStart = useRef<ResizeStart>({ x: 0, y: 0, width: 0, height: 0, posX: 0, posY: 0 });
+
+    // Listen for JjScript execution events
+    useEffect(() => {
+        const handleExecuting = (e: CustomEvent<ExecutingCommand>) => {
+            setExecutingCommand(e.detail);
+        };
+
+        const handleExecutionEnd = () => {
+            setExecutingCommand(null);
+        };
+
+        window.addEventListener('jjscript:executing', handleExecuting as EventListener);
+        window.addEventListener('jjscript:execution-end', handleExecutionEnd);
+
+        return () => {
+            window.removeEventListener('jjscript:executing', handleExecuting as EventListener);
+            window.removeEventListener('jjscript:execution-end', handleExecutionEnd);
+        };
+    }, []);
 
     // Persist position changes
     const savePosition = useCallback((pos: Position) => {
@@ -247,6 +274,21 @@ export function JodieWindow({
                 onOpenDocumentation={onOpenDocumentation}
                 isWaiting={isWaiting}
             />
+
+            {/* Executing Command Toolbar */}
+            {executingCommand && (
+                <div className="jodie-executing-toolbar">
+                    <div className="jodie-executing-indicator">
+                        <i className="bi bi-terminal jodie-spin" />
+                    </div>
+                    <div className="jodie-executing-content">
+                        <div className="jodie-executing-label">
+                            Executing ({executingCommand.index + 1}/{executingCommand.total})
+                        </div>
+                        <code className="jodie-executing-command">{executingCommand.command}</code>
+                    </div>
+                </div>
+            )}
 
             <ChatMessages messages={messages} isWaiting={isWaiting} onJjScriptExecuted={onJjScriptExecuted} />
 

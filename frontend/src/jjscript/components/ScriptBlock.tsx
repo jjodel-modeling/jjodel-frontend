@@ -8,7 +8,6 @@
 import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism';
-import { normalize, normalizeWithDetails, detectSyntaxType } from '../normalizer';
 import './ScriptBlock.scss';
 
 // ============================================
@@ -20,8 +19,6 @@ export interface ScriptBlockProps {
     code: string;
     /** Callback when code is executed */
     onExecute?: (commands: string[]) => Promise<ScriptLineResult[]>;
-    /** Whether to show the normalize toggle */
-    showNormalizeToggle?: boolean;
     /** Initial expanded state */
     defaultExpanded?: boolean;
     /** Whether execution is allowed */
@@ -78,38 +75,31 @@ const scriptBlockTheme = {
 export const ScriptBlock: React.FC<ScriptBlockProps> = ({
     code,
     onExecute,
-    showNormalizeToggle = true,
     defaultExpanded = true,
     allowExecution = true,
     className = '',
 }) => {
     // State
     const [isExpanded, setIsExpanded] = useState(defaultExpanded);
-    const [showNormalized, setShowNormalized] = useState(false);
     const [executionState, setExecutionState] = useState<ExecutionState>('idle');
     const [lineStates, setLineStates] = useState<LineState[]>([]);
     const [currentLineIndex, setCurrentLineIndex] = useState(-1);
     const [copyStatus, setCopyStatus] = useState<'idle' | 'copied'>('idle');
 
     // Refs
-    const stepResolveRef = useRef<(() => void) | null>(null);
     const abortRef = useRef(false);
 
-    // Memoized values
-    const syntaxType = useMemo(() => detectSyntaxType(code), [code]);
-    const normalizedCode = useMemo(() => normalize(code), [code]);
-    const displayCode = showNormalized ? normalizedCode : code;
+    // Memoized values - always use original code (normalized internally if needed)
+    const displayCode = code;
 
     const commands = useMemo(() => {
-        const source = showNormalized ? normalizedCode : code;
-        return source
+        return code
             .split('\n')
             .map(l => l.trim())
             .filter(l => l && !l.startsWith('//') && !l.startsWith('#'));
-    }, [code, normalizedCode, showNormalized]);
+    }, [code]);
 
     const lineCount = displayCode.split('\n').length;
-    const hasNaturalSyntax = syntaxType === 'natural' || syntaxType === 'mixed';
 
     // Initialize line states
     useEffect(() => {
@@ -366,11 +356,6 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
                         <i className={`bi ${isExpanded ? 'bi-chevron-down' : 'bi-chevron-right'}`} />
                     </button>
                     <span className="script-block__label">JjScript</span>
-                    {hasNaturalSyntax && showNormalizeToggle && (
-                        <span className="script-block__syntax-badge">
-                            {syntaxType === 'natural' ? 'Natural' : 'Mixed'}
-                        </span>
-                    )}
                     {lineCount > 1 && (
                         <span className="script-block__line-count">{lineCount} lines</span>
                     )}
@@ -385,18 +370,6 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
                             ) : null}
                             {getStateLabel()}
                         </span>
-                    )}
-
-                    {/* Normalize toggle */}
-                    {hasNaturalSyntax && showNormalizeToggle && (
-                        <button
-                            className={`script-block__toggle ${showNormalized ? 'script-block__toggle--active' : ''}`}
-                            onClick={() => setShowNormalized(!showNormalized)}
-                            title={showNormalized ? 'Show original' : 'Show normalized'}
-                        >
-                            <i className="bi bi-arrow-repeat" />
-                            <span>{showNormalized ? 'Original' : 'Normalized'}</span>
-                        </button>
                     )}
 
                     {/* Copy button */}

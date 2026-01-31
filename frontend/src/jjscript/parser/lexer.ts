@@ -361,25 +361,30 @@ export class Lexer {
     // ============================================
 
     private classifyIdentifier(value: string): TokenType {
-        const lower = value.toLowerCase();
+        // IMPORTANT: Keywords are CASE-SENSITIVE and must be lowercase.
+        // "attribute" (lowercase) → keyword
+        // "Attribute" (PascalCase) → identifier (class name)
+        // This allows class names like "Attribute", "Class", "Reference" etc.
 
-        // Commands
-        if (COMMANDS.includes(lower as any)) {
+        // Commands (case-sensitive: only lowercase)
+        if (COMMANDS.includes(value as any)) {
             return 'COMMAND';
         }
 
-        // Element types (handle multi-word like "abstract class")
-        if (ELEMENT_TYPES.includes(lower as any)) {
+        // Element types (case-sensitive: only lowercase)
+        // Handles: class, attribute, reference, etc.
+        if (ELEMENT_TYPES.includes(value as any)) {
             return 'KEYWORD';
         }
 
-        // Boolean literals
-        if (lower === 'true' || lower === 'false') {
+        // Boolean literals (case-sensitive: only lowercase)
+        if (value === 'true' || value === 'false') {
             return 'BOOLEAN';
         }
 
-        // Keywords
-        if (KEYWORDS.includes(lower)) {
+        // Keywords (case-sensitive: only lowercase)
+        // Handles: to, from, in, type, extends, etc.
+        if (KEYWORDS.includes(value)) {
             return 'KEYWORD';
         }
 

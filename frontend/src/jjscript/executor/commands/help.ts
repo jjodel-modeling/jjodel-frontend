@@ -129,7 +129,7 @@ SYNTAX:
 
 TYPES:
   class, abstract class, interface, attribute, reference,
-  operation, parameter, package, enum, literal
+  containment, operation, parameter, package, enum, literal
 
 OPTIONS FOR CLASSES:
   abstract          - Make class abstract
@@ -148,12 +148,19 @@ OPTIONS FOR REFERENCES:
   containment       - Mark as containment reference
   opposite <ref>    - Set opposite reference
 
+CONTAINMENT (composition):
+  "create containment" is shorthand for "create reference ... containment"
+  Both syntaxes are equivalent:
+    create containment items in Order type Item [0..*]
+    create reference items in Order type Item [0..*] containment
+
 EXAMPLES:
   create class Person
   create abstract class Entity
   create attribute name in Person type String
   create attribute age in Person type Integer default 0
-  create reference children in Person type Person [0..*] containment
+  create reference manager in Person type Person [0..1]
+  create containment children in Person type Person [0..*]
   create enum Status in MyPackage
   create literal ACTIVE in Status value 1
 `,

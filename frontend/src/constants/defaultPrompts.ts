@@ -58,14 +58,18 @@ create attribute attributeName in ClassName type int
 create attribute attributeName in ClassName type boolean
 create attribute attributeName in ClassName type Date
 
-# Create references (relationships)
-create reference refName from SourceClass to TargetClass
-create reference refName from SourceClass to TargetClass [0..1]
-create reference refName from SourceClass to TargetClass [1..*]
-create reference refName from SourceClass to TargetClass [0..*]
+# Create references (relationships) - IMPORTANT: use "in...type" syntax, NOT "from...to"
+create reference refName in SourceClass type TargetClass
+create reference refName in SourceClass type TargetClass [0..1]
+create reference refName in SourceClass type TargetClass [1..*]
+create reference refName in SourceClass type TargetClass [0..*]
+
+# Containments (compositions) - for ownership relationships
+create containment refName in ParentClass type ChildClass
+create containment refName in ParentClass type ChildClass [0..*]
 
 # Inheritance
-create inheritance from ChildClass to ParentClass
+ChildClass extends ParentClass
 
 # Enumerations
 create enum EnumName
@@ -119,11 +123,11 @@ create attribute name in Member type String
 create attribute email in Member type String
 create attribute membershipDate in Member type Date
 
-# Relationships
-create reference authors from Book to Author [1..*]
-create reference books from Library to Book [0..*]
-create reference members from Library to Member [0..*]
-create reference borrowedBooks from Member to Book [0..*]
+# Relationships (using correct "in...type" syntax)
+create reference authors in Book type Author [1..*]
+create reference books in Library type Book [0..*]
+create reference members in Library type Member [0..*]
+create reference borrowedBooks in Member type Book [0..*]
 \`\`\`
 
 **WRONG - NEVER DO THIS:** Responding with JSON, XML, bullet points describing classes, or asking what format the user wants. JjScript is always the answer.

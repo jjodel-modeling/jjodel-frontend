@@ -7,6 +7,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.0.5] - 2026-01-31
+
+### Added
+
+#### Jjodie JjScript Integration
+- AI now generates JjScript code instead of JSON when creating metamodels
+- Prompt versioning system with automatic migration for cached prompts
+- `CRITICAL_MARKERS` check ensures users get updated prompts with JjScript instructions
+- Conversational response style in AI (less bullet points, more flowing text)
+
+### Changed
+
+#### ScriptBlock Light Theme
+- Migrated from `oneDark` to `oneLight` syntax highlighting theme
+- Updated SCSS variables for light theme consistency
+- Hover states now use dark overlays instead of light
+
+#### ScriptBlock STEP to RUN Continuation
+- Fixed bug where clicking "Run" after "Step" would restart from beginning
+- Now continues from `currentLineIndex` preserving already-executed lines
+
+#### ChatMessages Redux Reactivity
+- Changed `useMemo` to `useState` + `store.subscribe()` for `projectContext`
+- Component now properly detects metamodel creation in real-time
+- Green badge appears immediately after creating metamodel
+
+### Fixed
+- AI generating JSON instead of executable JjScript commands
+- "No metamodel" error persisting after metamodel creation
+- STEP to RUN transition trying to re-create existing elements
+
+### Removed
+- Deleted dead code file: `frontend/src/constants/jjodiePrompt.ts`
+
+### Files Modified
+- `frontend/src/constants/defaultPrompts.ts`
+- `frontend/src/services/PromptService.ts`
+- `frontend/src/jjscript/components/ScriptBlock.tsx`
+- `frontend/src/jjscript/components/ScriptBlock.scss`
+- `frontend/src/components/Jodie/ChatMessages.tsx`
+
+---
+
 ## [2.0.3] - 2026-01-26
 
 ### Added
@@ -347,5 +390,5 @@ title: <div className="tab-title active-on-mouseenter" data-type="metamodel">{mo
 
 ---
 
-**Last Updated:** 2025-01-23
+**Last Updated:** 2026-01-31
 **Maintained By:** Development Team

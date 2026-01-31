@@ -211,9 +211,11 @@ export class Parser {
             const value = token.value.toLowerCase();
 
             // Handle element types
+            // Note: 'containment' and 'composition' are shortcuts for "reference ... containment"
             const elementTypes: ElementType[] = [
-                'class', 'interface', 'attribute', 'reference', 'operation',
-                'parameter', 'package', 'enum', 'enumeration', 'literal',
+                'class', 'interface', 'attribute', 'reference',
+                'containment', 'composition',  // Shortcuts for containment references
+                'operation', 'parameter', 'package', 'enum', 'enumeration', 'literal',
                 'model', 'metamodel', 'project', 'annotation'
             ];
 
