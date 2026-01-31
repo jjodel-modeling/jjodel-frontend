@@ -1,10 +1,19 @@
 import {
-    CreateElementAction, Dictionary,
+    Dictionary,
     DModel,
-    DProject, GObject, L, Log,
+    DProject,
+    GObject,
     LProject,
-    Pointer, R, RuntimeAccessible,
-    SetFieldAction, store,
+    Pointer,
+} from '../../joiner';
+import {
+    CreateElementAction,
+    L,
+    Log,
+    R,
+    RuntimeAccessible,
+    SetFieldAction,
+    store,
     TRANSACTION,
     U
 } from '../../joiner';
@@ -17,6 +26,9 @@ import {CollabClearHistoryAction, CollabRefreshAction, COMMIT} from "../../redux
 import {ProjectPointers} from "../../joiner/classes";
 import {DTOProjectGetAll} from "../DTO/GetAllProjects";
 import {ProjectResponseDTO} from "../DTO/ProjectResponseDTO";
+import { getNextVersionNumber, formatVersion } from '../../utils/versionUtils';
+import ActivityLogger from '../../services/ActivityLogger';
+import { ActivityType } from '../../types/activity';
 import {VersionFixer} from "../../redux/VersionFixer";
 
 @RuntimeAccessible('ProjectsApi')
@@ -27,12 +39,18 @@ class ProjectsApi {
         const project = DProject.new(type, name, undefined, m2, m1, undefined, otherProjects);
         if(U.isOffline()) {
             Offline.create(project);
-            // return project;
         }
         else {
             await Online.create(project);
             R.navigate('/allProjects');
         }
+
+        // Log activity
+        ActivityLogger.log({
+            type: ActivityType.PROJECT_CREATED,
+            projectId: project.id,
+            projectName: project.name || 'Unnamed Project',
+        });
     }
 
 
@@ -43,12 +61,22 @@ class ProjectsApi {
     }
 
     static async delete(project: LProject): Promise<void> {
+        const projectName = project.name || 'Unnamed Project';
+        const projectId = project.id;
+
         if(U.isOffline()) {
             Offline.delete(project.__raw as DProject);
         }
         else {
             await Online.delete((project as any)._Id || project.id);
         }
+
+        // Log activity
+        ActivityLogger.log({
+            type: ActivityType.PROJECT_DELETED,
+            projectId,
+            projectName,
+        });
     }
 
 
@@ -65,17 +93,36 @@ class ProjectsApi {
         dProject.viewpointsNumber = project.viewpoints.length;
         dProject.metamodelsNumber = project.metamodels.length;
         dProject.modelsNumber = project.models.length;
+
+        // Auto-increment version on save (vX.Y format, stored as number e.g. 3.4)
+        const currentVersion = dProject.version;
+        const nextVersion = getNextVersionNumber(currentVersion);
+        dProject.version = nextVersion;
+        console.log(`[Version] Project saved: ${formatVersion(currentVersion)} → ${formatVersion(nextVersion)}`);
+
         const state = await U.compressedState(dProject);
         dProject.state = state;
         if(U.isOffline()) await Offline.save(dProject);
         else await Online.save(dProject);
         U.isProjectModified = false;
+
+        // Update the version in Redux state
+        SetFieldAction.new(dProject.id, 'version', nextVersion, '', false);
+
         return dProject;
     }
 
     static async favorite(project: DProject): Promise<void> {
         if(U.isOffline()) return Offline.favorite(project);
         else return await Online.favorite(project);
+    }
+
+    static async updateTags(project: DProject, tags: string[]): Promise<void> {
+        console.log('[DEBUG ProjectsApi.updateTags] Called with project:', project);
+        console.log('[DEBUG ProjectsApi.updateTags] Tags to save:', tags);
+        console.log('[DEBUG ProjectsApi.updateTags] Is offline:', U.isOffline());
+        if(U.isOffline()) return Offline.updateTags(project, tags);
+        else return await Online.updateTags(project, tags);
     }
 
 
@@ -146,8 +193,10 @@ class Offline {
     }
     static getAll(): void {
         const projects = Storage.read<DProject[]>('projects') || [];
+        console.log('[DEBUG Offline.getAll] Projects from localStorage:', projects);
         TRANSACTION('loading projects (offline)', () => {
             for (const project of projects) {
+                console.log('[DEBUG Offline.getAll] Loading project:', project.name, 'tags:', project.tags);
                 /*if (!project._Id || !project.id && project.state) {
                    let decompressed = U.decompressState(project.state);
                    decompressed it is pointless, the db does not have the jid anyway and cannot single get it.
@@ -161,6 +210,9 @@ class Offline {
                 SetFieldAction.new(project.id, 'metamodelsNumber', project.metamodelsNumber, '', false);
                 SetFieldAction.new(project.id, 'modelsNumber', project.modelsNumber, '', false);
                 SetFieldAction.new(project.id, 'isFavorite', project.isFavorite, '', false);
+                SetFieldAction.new(project.id, 'tags', project.tags || [], '', false);
+                // Load version from saved project, default to 1.0 if not present
+                SetFieldAction.new(project.id, 'version', project.version || 1.0, '', false);
             }
         });
     }
@@ -190,6 +242,30 @@ class Offline {
         const filtered = projects.filter(p => p.id !== project.id);
         Storage.write('projects', [...filtered, {...project, isFavorite: !project.isFavorite}]);
         SetFieldAction.new(project.id, 'isFavorite', !project.isFavorite);
+    }
+
+    static async updateTags(project: DProject, tags: string[]): Promise<void> {
+        console.log('[DEBUG Offline.updateTags] Called');
+        console.log('[DEBUG Offline.updateTags] Project:', project);
+        console.log('[DEBUG Offline.updateTags] Tags:', tags);
+
+        const projects = Storage.read<DProject[]>('projects') || [];
+        console.log('[DEBUG Offline.updateTags] Projects from storage:', projects);
+
+        const filtered = projects.filter(p => p.id !== project.id);
+        console.log('[DEBUG Offline.updateTags] Filtered projects (without current):', filtered);
+
+        const updatedProject = {...project, tags};
+        console.log('[DEBUG Offline.updateTags] Updated project to save:', updatedProject);
+
+        const newProjectsList = [...filtered, updatedProject];
+        console.log('[DEBUG Offline.updateTags] New projects list to write:', newProjectsList);
+
+        Storage.write('projects', newProjectsList);
+        console.log('[DEBUG Offline.updateTags] Storage.write completed');
+
+        SetFieldAction.new(project.id, 'tags', tags, '', false);
+        console.log('[DEBUG Offline.updateTags] SetFieldAction completed');
     }
 
     static import(project: DProject): void {
@@ -308,8 +384,16 @@ class Online {
         SetFieldAction.new(project.id, 'isFavorite', !project.isFavorite);
     }
 
+    static async updateTags(project: DProject, tags: string[]): Promise<void> {
+        const updatedProject = {...project, tags};
+        const updateProjectRequest = new UpdateProjectRequest(updatedProject);
+        const response = await Api.put(`${Api.persistance}/project/`, updateProjectRequest);
 
-
+        if(response.code !== 200) {
+            U.alert('e', 'Cannot update tags!', 'Something went wrong ...');
+        }
+        SetFieldAction.new(project.id, 'tags', tags, '', false);
+    }
 
     static async import(project: DProject): Promise<void> {
         const updateProjectRequest = new UpdateProjectRequest(project);

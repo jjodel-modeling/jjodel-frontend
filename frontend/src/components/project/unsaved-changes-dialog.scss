@@ -1,0 +1,215 @@
+// Unsaved Changes Dialog
+// ======================
+
+.unsaved-dialog-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10001;  // Above share modal
+  animation: dialogFadeIn 0.2s ease;
+  padding: 20px;
+}
+
+.unsaved-dialog {
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 28px;
+  max-width: 400px;
+  width: 100%;
+  text-align: center;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  animation: dialogSlideIn 0.3s ease;
+
+  &__icon {
+    font-size: 48px;
+    color: #f59e0b;
+    margin-bottom: 16px;
+
+    i {
+      display: block;
+    }
+  }
+
+  &__title {
+    margin: 0 0 8px;
+    font-size: 20px;
+    font-weight: 700;
+    color: #1e293b;
+  }
+
+  &__message {
+    margin: 0 0 24px;
+    font-size: 14px;
+    color: #64748b;
+    line-height: 1.5;
+  }
+
+  &__actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+  }
+
+  &__btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: none;
+
+    &:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    &--text {
+      background: transparent;
+      color: #64748b;
+      padding: 10px 16px;
+
+      &:hover:not(:disabled) {
+        color: #ef4444;
+        background: #fef2f2;
+      }
+    }
+
+    &--secondary {
+      background: #f1f5f9;
+      color: #475569;
+
+      &:hover:not(:disabled) {
+        background: #e2e8f0;
+        color: #1e293b;
+      }
+    }
+
+    &--primary {
+      background: #3b82f6;
+      color: white;
+
+      &:hover:not(:disabled) {
+        background: #2563eb;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+      }
+
+      &:active:not(:disabled) {
+        transform: translateY(0);
+      }
+    }
+  }
+}
+
+// Spinning animation for loading state
+.spinning {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes dialogFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes dialogSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+// Responsive
+@media (max-width: 480px) {
+  .unsaved-dialog {
+    padding: 24px 20px;
+
+    &__actions {
+      flex-direction: column-reverse;
+      gap: 8px;
+
+      .unsaved-dialog__btn {
+        width: 100%;
+      }
+    }
+  }
+}
+
+// Dark Mode Support
+@media (prefers-color-scheme: dark) {
+  .unsaved-dialog-overlay {
+    background: rgba(0, 0, 0, 0.7);
+  }
+
+  .unsaved-dialog {
+    background: #1e293b;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+
+    &__icon {
+      color: #fbbf24;
+    }
+
+    &__title {
+      color: #f1f5f9;
+    }
+
+    &__message {
+      color: #94a3b8;
+    }
+
+    &__btn {
+      &--text {
+        color: #94a3b8;
+
+        &:hover:not(:disabled) {
+          color: #f87171;
+          background: rgba(248, 113, 113, 0.1);
+        }
+      }
+
+      &--secondary {
+        background: #334155;
+        color: #e2e8f0;
+
+        &:hover:not(:disabled) {
+          background: #475569;
+          color: #f1f5f9;
+        }
+      }
+
+      &--primary {
+        background: #3b82f6;
+        color: white;
+
+        &:hover:not(:disabled) {
+          background: #2563eb;
+        }
+      }
+    }
+  }
+}

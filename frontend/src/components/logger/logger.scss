@@ -1,4 +1,785 @@
+// ============================================
+// LOGGER TAB - Developer Console Redesign
+// Per CLAUDE.md design system
+// ============================================
 
+// Variables
+$color-text-primary: #334155;
+$color-text-secondary: #64748b;
+$color-text-tertiary: #94a3b8;
+$color-bg-primary: #ffffff;
+$color-bg-secondary: #f8fafc;
+$color-border: #e2e8f0;
+$color-border-light: #f1f5f9;
+$font-family: 'Inter Variable', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+$font-mono: 'SF Mono', Monaco, 'Consolas', 'IBM Plex Mono', monospace;
+
+// Log type colors - SOFT/MUTED palette
+// Info - Sky soft
+$color-info: #0ea5e9;
+$color-info-bg: #f0f9ff;           // sky-50
+$color-info-border: #e0f2fe;       // sky-100
+$color-info-text: #0c4a6e;         // sky-900
+
+// Warning - Yellow/Amber soft
+$color-warning: #eab308;
+$color-warning-bg: #fefce8;        // yellow-50
+$color-warning-border: #fef9c3;    // yellow-100
+$color-warning-text: #713f12;      // yellow-900
+
+// Error - Red soft
+$color-error: #ef4444;
+$color-error-bg: #fef2f2;          // red-50
+$color-error-border: #fecaca;      // red-200
+$color-error-text: #7f1d1d;        // red-900
+
+// Exception - Purple soft
+$color-exception: #a855f7;
+$color-exception-bg: #faf5ff;      // purple-50
+$color-exception-border: #e9d5ff;  // purple-200
+$color-exception-text: #581c87;    // purple-900
+
+// ============================================
+// MAIN LOGGER TAB CONTAINER
+// ============================================
+.logger-tab {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: $color-bg-primary;
+  font-family: $font-family;
+  overflow: hidden;
+}
+
+// ============================================
+// HEADER
+// ============================================
+.logger-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid $color-border;
+  background: $color-bg-primary;
+  flex-shrink: 0;
+
+  .logger-title {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: $color-text-secondary;
+  }
+
+  .clear-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    font-size: 12px;
+    font-weight: 500;
+    color: $color-text-secondary;
+    background: $color-bg-secondary;
+    border: 1px solid $color-border;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 150ms ease;
+
+    &:hover {
+      background: $color-border-light;
+      color: $color-text-primary;
+      border-color: darken($color-border, 5%);
+    }
+
+    i {
+      font-size: 14px;
+    }
+  }
+}
+
+// ============================================
+// SEARCH/TOOLBAR ROW
+// ============================================
+.search-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-bottom: 1px solid $color-border;
+  background: $color-bg-secondary;
+  flex-shrink: 0;
+  flex-wrap: nowrap;
+  margin-bottom: 0;
+
+  .search {
+    flex: 1;
+    max-width: 200px;
+    height: 32px;
+    padding: 0 12px;
+    font-size: 13px;
+    font-family: $font-family;
+    color: $color-text-primary;
+    background: $color-bg-primary;
+    border: 1px solid $color-border;
+    border-radius: 6px;
+    outline: none;
+    transition: border-color 150ms ease, box-shadow 150ms ease;
+    margin: 0;
+    text-align: left;
+    max-height: none;
+
+    &:focus {
+      border-color: #64748b;
+      box-shadow: 0 0 0 3px rgba(100, 116, 139, 0.1);
+    }
+
+    &::placeholder {
+      color: $color-text-tertiary;
+    }
+
+    &.invalid {
+      border-color: $color-error;
+      box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+    }
+  }
+
+  // Legacy checkbox style (deprecated)
+  label.checkbox {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: $color-text-secondary;
+    cursor: pointer;
+    margin: 0;
+    white-space: nowrap;
+
+    input[type="checkbox"] {
+      width: 14px;
+      height: 14px;
+      margin: 0;
+      cursor: pointer;
+    }
+
+    label {
+      cursor: pointer;
+      margin: 0;
+    }
+  }
+
+  // New toolbar checkbox - checkbox LEFT of label
+  .toolbar-checkbox {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: $color-text-secondary;
+    cursor: pointer;
+    user-select: none;
+    margin: 0;
+    white-space: nowrap;
+
+    input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      margin: 0;
+      cursor: pointer;
+      // Remove default appearance and style custom
+      -webkit-appearance: none;
+      -moz-appearance: none;
+      appearance: none;
+      border: 2px solid #cbd5e1;
+      border-radius: 4px;
+      background: #ffffff;
+      transition: all 150ms ease;
+      position: relative;
+      flex-shrink: 0;
+
+      &:checked {
+        background: #475569;
+        border-color: #475569;
+
+        // Checkmark
+        &::after {
+          content: '';
+          position: absolute;
+          left: 4px;
+          top: 0px;
+          width: 5px;
+          height: 9px;
+          border: solid white;
+          border-width: 0 2px 2px 0;
+          transform: rotate(45deg);
+        }
+      }
+
+      &:hover {
+        border-color: #94a3b8;
+      }
+
+      &:focus {
+        outline: none;
+        box-shadow: 0 0 0 2px rgba(71, 85, 105, 0.2);
+      }
+    }
+
+    span {
+      line-height: 1;
+    }
+
+    &:hover {
+      color: $color-text-primary;
+    }
+  }
+
+  // Vertical separator
+  .toolbar-separator {
+    width: 1px;
+    height: 24px;
+    background: $color-border;
+    margin: 0 4px;
+    flex-shrink: 0;
+  }
+
+  // Pause/Resume controls container
+  .toolbar-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: auto;
+    border: none;
+    outline: none;
+    background: none;
+  }
+
+  // Toolbar buttons
+  .toolbar-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    font-size: 12px;
+    font-weight: 500;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    transition: all 150ms ease;
+    outline: none;
+    box-shadow: none;
+
+    &:focus, &:focus-visible {
+      outline: none;
+      box-shadow: none;
+    }
+
+    i {
+      font-size: 14px;
+    }
+
+    // Pause button
+    &.pause-btn {
+      color: $color-text-secondary;
+      background: $color-bg-secondary;
+      border: none;
+
+      &:hover {
+        background: $color-border-light;
+        color: $color-text-primary;
+      }
+    }
+
+    // Resume button (more prominent)
+    &.resume-btn {
+      color: #ffffff;
+      background: #475569;
+      border: none;
+
+      i, span {
+        color: #ffffff;
+      }
+
+      &:hover {
+        background: #334155;
+      }
+    }
+  }
+
+  // Clear button in toolbar
+  .btn-danger {
+    padding: 6px 12px;
+    font-size: 12px;
+    font-weight: 500;
+    color: $color-error;
+    background: transparent;
+    border: 1px solid rgba($color-error, 0.3);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 150ms ease;
+    margin: 0;
+
+    &:hover {
+      background: rgba($color-error, 0.05);
+      border-color: $color-error;
+    }
+  }
+}
+
+// ============================================
+// CATEGORY FILTER TABS
+// ============================================
+.categories {
+  display: flex;
+  gap: 8px;
+  padding: 12px 16px;
+  border-bottom: 1px solid $color-border;
+  background: $color-bg-primary;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+
+  button.cat {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    font-size: 12px;
+    font-weight: 500;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 150ms ease;
+    min-height: auto;
+    width: auto;
+
+    .count {
+      margin-left: 4px;
+      padding: 2px 6px;
+      font-size: 10px;
+      font-weight: 600;
+      border-radius: 10px;
+    }
+
+    // Info - Sky soft
+    &.cat_i {
+      background: $color-info-bg;
+      color: $color-info-text;
+      border: 1px solid $color-info-border;
+
+      .count {
+        background: $color-info-border;
+        color: $color-info-text;
+      }
+
+      &:hover, &.active {
+        background: $color-info-border;
+        border-color: #7dd3fc;
+      }
+    }
+
+    // Warning - Yellow soft
+    &.cat_w {
+      background: $color-warning-bg;
+      color: $color-warning-text;
+      border: 1px solid $color-warning-border;
+
+      .count {
+        background: $color-warning-border;
+        color: $color-warning-text;
+      }
+
+      &:hover, &.active {
+        background: $color-warning-border;
+        border-color: #fde047;
+      }
+    }
+
+    // Error - Red soft
+    &.cat_e, &.cat_ex {
+      background: $color-error-bg;
+      color: $color-error-text;
+      border: 1px solid $color-error-border;
+
+      .count {
+        background: $color-error-border;
+        color: $color-error-text;
+      }
+
+      &:hover, &.active {
+        background: $color-error-border;
+        border-color: #f87171;
+      }
+    }
+
+    // Dev Errors/Exceptions - Purple soft
+    &.cat_eDev, &.cat_exDev {
+      background: $color-exception-bg;
+      color: $color-exception-text;
+      border: 1px solid $color-exception-border;
+
+      .count {
+        background: $color-exception-border;
+        color: $color-exception-text;
+      }
+
+      &:hover, &.active {
+        background: $color-exception-border;
+        border-color: #c084fc;
+      }
+    }
+
+    // Inactive state
+    &.inactive {
+      opacity: 0.5;
+    }
+  }
+}
+
+// ============================================
+// PAUSED INDICATOR
+// ============================================
+.paused-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: #fef3c7;
+  color: #92400e;
+  font-size: 12px;
+  font-weight: 500;
+  border-bottom: 1px solid #fde68a;
+  flex-shrink: 0;
+
+  i {
+    font-size: 14px;
+  }
+}
+
+// ============================================
+// LOG ENTRIES CONTAINER
+// ============================================
+ul.entries {
+  flex: 1;
+  min-height: 0;                    // CRITICAL for flexbox scroll!
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 8px 12px;
+  margin: 0;
+  list-style-type: none;
+  pointer-events: auto;             // Ensure mouse events work
+  -webkit-overflow-scrolling: touch; // Smooth scroll on iOS
+  overscroll-behavior: contain;     // Prevent scroll chaining
+
+  // Custom scrollbar
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 3px;
+
+    &:hover {
+      background: #94a3b8;
+    }
+  }
+
+  // Empty state
+  &:empty::after {
+    content: 'No log entries to display';
+    display: block;
+    text-align: center;
+    padding: 40px 20px;
+    color: $color-text-tertiary;
+    font-size: 13px;
+  }
+}
+
+// ============================================
+// SINGLE LOG ENTRY - Soft/Muted colors
+// ============================================
+li.cat {
+  margin-bottom: 8px;
+  border-radius: 6px;
+  overflow: hidden;
+  font-family: $font-mono;
+  font-size: 12px;
+  padding: 0;
+  margin-top: 0;
+
+  // Info - Sky soft (neutral gray base)
+  &.cat_i {
+    background: #f8fafc;           // slate-50
+    border: 1px solid $color-border;
+    border-left: 3px solid $color-info-border;
+
+    .cat {
+      color: #475569;              // slate-600
+    }
+  }
+
+  // Warning - Yellow soft
+  &.cat_w {
+    background: $color-warning-bg;
+    border: 1px solid $color-warning-border;
+    border-left: 3px solid #fde047; // yellow-300
+
+    .cat {
+      color: $color-warning-text;
+    }
+  }
+
+  // Error - Red soft
+  &.cat_e, &.cat_ex {
+    background: $color-error-bg;
+    border: 1px solid $color-error-border;
+    border-left: 3px solid #f87171; // red-400
+
+    .cat {
+      color: $color-error-text;
+    }
+  }
+
+  // Dev Errors/Exceptions - Purple soft
+  &.cat_eDev, &.cat_exDev {
+    background: $color-exception-bg;
+    border: 1px solid $color-exception-border;
+    border-left: 3px solid #c084fc; // purple-400
+
+    .cat {
+      color: $color-exception-text;
+    }
+  }
+
+  &:hover {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  }
+}
+
+// Inner cat div (entry content)
+.cat.hoverable {
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-height: auto;
+  width: 100%;
+  border: none;
+
+  .text {
+    font-size: 12px;
+    line-height: 1.5;
+    word-break: break-word;
+    margin: 0;
+  }
+
+  .content {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 10px;
+    opacity: 0.8;
+    margin-top: 4px;
+    position: static !important;
+    box-shadow: none !important;
+    background: transparent !important;
+
+    .btn-clipboard {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 24px;
+      height: 24px;
+      padding: 0;
+      background: rgba(0, 0, 0, 0.05);
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 150ms ease;
+      margin: 0;
+
+      &:hover {
+        background: rgba(0, 0, 0, 0.1);
+      }
+
+      i {
+        font-size: 12px;
+      }
+    }
+  }
+}
+
+// JSON data output
+.copy-to-clipboard-container {
+  display: none !important;
+}
+
+// ============================================
+// TOAST NOTIFICATIONS - REDESIGNED
+// Less invasive, positioned in corner
+// ============================================
+.jjtoast-holder {
+  overflow-y: visible;
+  position: fixed;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  // CHANGED: Move to bottom-right corner instead of center
+  bottom: 20px;
+  right: 20px;
+  top: auto;
+  left: auto;
+  transform: none;
+  max-width: 360px;
+  min-width: 280px;
+  z-index: 9999;
+  pointer-events: none;
+
+  // Limit to max 3 visible toasts
+  .jjtoast.outer:nth-child(n+4) {
+    display: none;
+  }
+
+  .close-all {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 16px;
+    font-size: 12px;
+    font-weight: 500;
+    color: $color-text-secondary;
+    background: $color-bg-primary;
+    border: 1px solid $color-border;
+    border-radius: 6px;
+    cursor: pointer;
+    pointer-events: all;
+    margin: 0;
+    transition: all 150ms ease;
+    animation: none;
+
+    &:hover {
+      background: $color-bg-secondary;
+      color: $color-text-primary;
+    }
+  }
+
+  .jjtoast.outer {
+    margin: 0;
+    padding: 0;
+    animation: toast-slide-in 300ms ease-out, toast-fade-out 500ms ease-in forwards;
+    animation-delay: 0s, 5s; // Slide in immediately, fade out after 5s
+    pointer-events: all;
+
+    &:hover, &:focus-within {
+      animation-play-state: paused;
+    }
+
+    // Color variants - Softer colors
+    &.cat_l, &.cat_i {
+      --toast-bg: #{$color-info-border};
+      --toast-text: #{$color-info-text};
+      --toast-border: #7dd3fc;
+    }
+    &.cat_w {
+      --toast-bg: #{$color-warning-border};
+      --toast-text: #{$color-warning-text};
+      --toast-border: #fde047;
+    }
+    &.cat_e, &.cat_ex {
+      --toast-bg: #{$color-error-border};
+      --toast-text: #{$color-error-text};
+      --toast-border: #f87171;
+    }
+    &.cat_eDev, &.cat_exDev {
+      --toast-bg: #{$color-exception-border};
+      --toast-text: #{$color-exception-text};
+      --toast-border: #c084fc;
+    }
+  }
+
+  .jjtoast.inner {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 12px 14px;
+    background: var(--toast-bg, $color-error-border);
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    color: var(--toast-text, $color-error-text);
+    max-width: 100%;
+    outline: none;
+    border: 1px solid var(--toast-border, #f87171);
+
+    &:hover {
+      background: var(--toast-border, #f87171);
+      color: #ffffff;
+    }
+
+    .msg {
+      flex: 1;
+      font-size: 13px;
+      line-height: 1.4;
+      word-break: break-word;
+      margin: 0;
+    }
+
+    i.closebtn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 20px;
+      height: 20px;
+      margin: 0;
+      padding: 0;
+      background: rgba(0, 0, 0, 0.1);
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 150ms ease;
+      flex-shrink: 0;
+      outline: none;
+
+      &:before {
+        margin: 0;
+        font-size: 10px;
+        color: inherit;
+      }
+
+      &:hover {
+        background: rgba(0, 0, 0, 0.2);
+        outline: none;
+      }
+    }
+  }
+}
+
+// Toast animations
+@keyframes toast-slide-in {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes toast-fade-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+    visibility: hidden;
+    height: 0;
+    padding: 0;
+    margin: 0;
+  }
+}
+
+// Legacy animation (keep for compatibility)
 @keyframes fade-remove {
   from {
     transform: scale(1, 1);
@@ -12,236 +793,339 @@
     visibility: hidden;
   }
 }
+
 @keyframes resize-remove {
   from {
     max-height: 400px;
-    padding: 0.5em 1em;
+    padding: 12px 14px;
     overflow: hidden;
     transform: scale(1, 1);
-    //opacity: 1;
   }
   to {
     max-height: 0;
-    padding: 0 0;
+    padding: 0;
     overflow: hidden;
-    transform: scale(0.5, 1);
+    transform: scale(0.95, 1);
     visibility: hidden;
-    //opacity: 0;
   }
 }
 
-.jjtoast-holder{
-  overflow-y: visible;
-  position: fixed;
-  display: flex;
-  flex-flow: column-reverse;
-  top: 50%; left: 50%;
-  transform: translate(-50%, -50%);
-  // outline: 2px solid black;
-  min-width: 10px;
-  min-height: 10px;
-  z-index: 999;
-  //pointer-events: none;
-
-  .close-all{
-    animation: linear 1.0s forwards;
-    animation-delay: attr(data-duration ms);
-    animation-name: sudden-remove;
-    background: white;
-    color: black;
-    margin: 0 auto;
-  }
-  .jjtoast.outer{
-    margin: 0 auto;
-    padding: 4.5px 0;
-    //width: 25vw;
-    animation: ease-in 1.0s forwards;
-    animation-delay: attr(data-duration ms);
-    animation-name: resize-remove;
-    &:hover, &:focus-within{
-      animation-play-state: paused !important;
-    }
-
-    --font: #fff;
-    &.cat_l{
-      --cat-color: #0bf;
-      --border: #09f;
-    }
-    &.cat_i{
-      --cat-color: #09f;
-      --border: #047;
-    }
-    &.cat_w{
-      --cat-color: #ca0;
-      --border: #b70;
-    }
-    &.cat_e, &.cat_ex{
-      --cat-color: #f00;
-      --border: #700;
-    }
-    &.cat_eDev, &.cat_exDev{
-      --cat-color: #900;
-      --border: #f00;
-    }
-
-  }
-  .jjtoast.inner{
-    display: flex;
-    flex-wrap: nowrap;
-    //width: 25vw;
-    max-width: 33vw;
-    max-height: 25vh;
-    border-radius: 8px;
-    pointer-events: all;
-    padding: 0.5em 1em;
-
-    color: var(--font);
-    outline: 2px solid var(--border);
-    background-color: var(--cat-color);
-    &:hover{
-      background-color: var(--border);
-      outline: 2px solid var(--font);
-    }
-
-    .msg{
-      flex-grow:1;
-      margin-right: 0.5rem;
-      // css animation to hide after delay, no need to update refresh on jsx
-    }
-
-    i.closebtn{
-      margin: auto 0;
-      border-radius: 100%;
-      width: 1lh;
-      height: 1lh;
-      display: flex;
-      &:before{
-        margin: auto;
-        color: var(--font)
-      }
-      // background-color: var(--cat-color);
-      // background-color: var(--border);
-      outline: 1px solid var(--border);
-      &:hover{
-        // background-color: var(--border);
-        outline: 1px solid var(--font);
-      }
-    }
-  }
-}
-.text-selectable{
+// ============================================
+// TEXT SELECTABLE
+// ============================================
+.text-selectable {
   user-select: auto !important;
 }
 
+// ============================================
+// EMPTY STATE COMPONENT
+// ============================================
+.logger-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  text-align: center;
 
+  i {
+    font-size: 32px;
+    color: $color-text-tertiary;
+    margin-bottom: 12px;
+  }
 
-.copy-to-clipboard-container{
-  display: none !important; // default copy button from JSON JSX library is bugged, cannot handle recursive objects.
+  .empty-title {
+    font-size: 14px;
+    font-weight: 500;
+    color: $color-text-secondary;
+    margin-bottom: 4px;
+  }
+
+  .empty-description {
+    font-size: 12px;
+    color: $color-text-tertiary;
+  }
 }
 
-.search-row{
-  display: flex;
-  flex-wrap: nowrap;
+// ============================================
+// DARK MODE SUPPORT
+// ============================================
+@media (prefers-color-scheme: dark) {
+  .logger-tab {
+    background: #0f172a;
+  }
 
-  .search{
-    flex-basis: 100px;
-    flex-grow: 1;
-    margin-right: 0.25rem;
-    text-align: center;
-    font-size: 1.25em;
-    max-height: 35px;
-    margin-bottom: 0.25rem;
-    &.invalid{
-      border-color: red;
-      text-decoration: grammar-error;
-      &::after{
-        content: 'this is not a valid regular expression';
+  .logger-header {
+    background: #1e293b;
+    border-color: #334155;
+
+    .logger-title {
+      color: #94a3b8;
+    }
+
+    .clear-btn {
+      background: #334155;
+      border-color: #475569;
+      color: #cbd5e1;
+
+      &:hover {
+        background: #475569;
+        color: #f1f5f9;
       }
     }
   }
-  label.checkbox{
-    margin: auto;
-    display: flex;
-    >*{margin: auto;}
-    input{
-      // padding: 5px;
-      margin-left: 0.5rem;
-      margin-right: 2px;
+
+  .search-row {
+    background: #1e293b;
+    border-color: #334155;
+
+    .search {
+      background: #0f172a;
+      border-color: #334155;
+      color: #e2e8f0;
+
+      &:focus {
+        border-color: #64748b;
+      }
+
+      &::placeholder {
+        color: #64748b;
+      }
+    }
+
+    label.checkbox {
+      color: #94a3b8;
+    }
+  }
+
+  .categories {
+    background: #0f172a;
+    border-color: #334155;
+  }
+
+  .paused-indicator {
+    background: rgba(251, 191, 36, 0.15);
+    color: #fbbf24;
+    border-color: rgba(251, 191, 36, 0.3);
+  }
+
+  .search-row {
+    .toolbar-checkbox {
+      color: #94a3b8;
+
+      input[type="checkbox"] {
+        border-color: #475569;
+        background: #1e293b;
+
+        &:checked {
+          background: #64748b;
+          border-color: #64748b;
+        }
+
+        &:hover {
+          border-color: #64748b;
+        }
+      }
+
+      &:hover {
+        color: #e2e8f0;
+      }
+    }
+
+    .toolbar-separator {
+      background: #334155;
+    }
+
+    .toolbar-btn {
+      &.pause-btn {
+        background: #334155;
+        border: none;
+        color: #cbd5e1;
+
+        &:hover {
+          background: #475569;
+          color: #f1f5f9;
+        }
+      }
+
+      &.resume-btn {
+        background: #64748b;
+        border: none;
+
+        i, span {
+          color: #ffffff;
+        }
+
+        &:hover {
+          background: #475569;
+        }
+      }
+    }
+  }
+
+  ul.entries {
+    background: #0f172a;
+
+    &::-webkit-scrollbar-thumb {
+      background: #475569;
+
+      &:hover {
+        background: #64748b;
+      }
+    }
+  }
+
+  li.cat {
+    &.cat_i {
+      background: rgba($color-info, 0.15);
+    }
+    &.cat_w {
+      background: rgba($color-warning, 0.15);
+    }
+    &.cat_e, &.cat_ex {
+      background: rgba($color-error, 0.15);
+    }
+    &.cat_eDev, &.cat_exDev {
+      background: rgba($color-exception, 0.15);
     }
   }
 }
 
-.categories{
-  display: grid;
-  //grid-template-columns: repeat(7, 1fr);
-  grid-auto-flow: column;
-  column-gap: 0.5rem;
-  padding: 0.25rem;
+[data-theme="dark"] {
+  .logger-tab {
+    background: #0f172a;
+  }
 
-  button.cat{
-    width: 100%;
-  }
-}
-.cat{
-  min-height: 30.5px;
-  width: 100%;
-  display: flex;
-  flex-flow: column;
-  --bs-btn-color: var(--cat-color);
-  --bs-btn-border-color: var(--cat-color);
-  --bs-btn-hover-color: var(--cat-color); // #fff;
-  --bs-btn-hover-bg: transparent; // var(--cat-color);
-  >*.text{
-    margin: auto;
-  }
-  &.active{
-    --bs-btn-hover-bg: var(--cat-color);
-    --bs-btn-hover-color: #fff;
-  }
-  --bs-btn-hover-border-color: var(--cat-color);
-  // --bs-btn-focus-shadow-rgb: 220, 53, 69;
-  --bs-btn-active-color: #fff;
-  --bs-btn-active-bg: var(--cat-color);
-  --bs-btn-active-border-color: var(--cat-color);
-  --bs-btn-active-shadow: inset 0 3px 5px rgba(0, 0, 0, 0.125);
-  --bs-btn-disabled-color: var(--cat-color);
-  --bs-btn-disabled-bg: transparent;
-  --bs-btn-disabled-border-color:  var(--cat-color);
-  --bs-gradient: none;
-  // &.inactive{ color: var(--cat-color); }
+  .logger-header {
+    background: #1e293b;
+    border-color: #334155;
 
-  &.cat_l{
-    --cat-color: #0bf;
-  }
-  &.cat_i{
-    --cat-color: #09f;
-    content: "I";
-  }
-  &.cat_w{
-    --cat-color: #ca0;
-    // &.active{ color: black; }
-  }
-  &.cat_e, &.cat_ex{
-    --cat-color: #f00;
-  }
-  &.cat_eDev, &.cat_exDev{
-    --cat-color: #900;
-  }
-}
-li.cat {
-  border: 1px solid var(--cat-color);
-  padding: 0.25rem;
-  margin-top: 0.25rem;
+    .logger-title {
+      color: #94a3b8;
+    }
 
-  &:hover{
-    background-color: 1px solid var(--cat-color);
+    .clear-btn {
+      background: #334155;
+      border-color: #475569;
+      color: #cbd5e1;
+
+      &:hover {
+        background: #475569;
+        color: #f1f5f9;
+      }
+    }
   }
-  //&.cat_e, &.cat_ex,
-  /*&.cat_eDev, &.cat_exDev{
-    .content{ color: white; } // same as &:hover
-  }*/
-}
-ul.entries{
-  list-style-type: none;
-  padding-left: 0rem;
+
+  .search-row {
+    background: #1e293b;
+    border-color: #334155;
+
+    .search {
+      background: #0f172a;
+      border-color: #334155;
+      color: #e2e8f0;
+
+      &:focus {
+        border-color: #64748b;
+      }
+
+      &::placeholder {
+        color: #64748b;
+      }
+    }
+
+    label.checkbox {
+      color: #94a3b8;
+    }
+
+    .toolbar-checkbox {
+      color: #94a3b8;
+
+      input[type="checkbox"] {
+        border-color: #475569;
+        background: #1e293b;
+
+        &:checked {
+          background: #64748b;
+          border-color: #64748b;
+        }
+
+        &:hover {
+          border-color: #64748b;
+        }
+      }
+
+      &:hover {
+        color: #e2e8f0;
+      }
+    }
+
+    .toolbar-separator {
+      background: #334155;
+    }
+
+    .toolbar-btn {
+      &.pause-btn {
+        background: #334155;
+        border: none;
+        color: #cbd5e1;
+
+        &:hover {
+          background: #475569;
+          color: #f1f5f9;
+        }
+      }
+
+      &.resume-btn {
+        background: #64748b;
+        border: none;
+
+        i, span {
+          color: #ffffff;
+        }
+
+        &:hover {
+          background: #475569;
+        }
+      }
+    }
+  }
+
+  .categories {
+    background: #0f172a;
+    border-color: #334155;
+  }
+
+  .paused-indicator {
+    background: rgba(251, 191, 36, 0.15);
+    color: #fbbf24;
+    border-color: rgba(251, 191, 36, 0.3);
+  }
+
+  ul.entries {
+    background: #0f172a;
+
+    &::-webkit-scrollbar-thumb {
+      background: #475569;
+
+      &:hover {
+        background: #64748b;
+      }
+    }
+  }
+
+  li.cat {
+    &.cat_i {
+      background: rgba($color-info, 0.15);
+    }
+    &.cat_w {
+      background: rgba($color-warning, 0.15);
+    }
+    &.cat_e, &.cat_ex {
+      background: rgba($color-error, 0.15);
+    }
+    &.cat_eDev, &.cat_exDev {
+      background: rgba($color-exception, 0.15);
+    }
+  }
 }

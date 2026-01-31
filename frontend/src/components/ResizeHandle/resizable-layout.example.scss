@@ -1,0 +1,115 @@
+// ResizableLayout Example Styles
+// Vertical split layout with Canvas on top, Console on bottom
+
+// Design tokens
+$color-border: #e2e4e8;
+$color-bg-primary: #ffffff;
+$color-bg-secondary: #f8fafc;
+$color-text-primary: #111418;
+$color-text-secondary: #6B7280;
+$color-text-tertiary: #9CA3AF;
+
+.resizable-layout {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  width: 100%;
+  overflow: hidden;
+  background: $color-bg-primary;
+}
+
+.resizable-layout__canvas {
+  flex: 1 1 auto; // Flexible, takes remaining space
+  min-height: 200px; // Minimum viable canvas height
+  overflow: hidden;
+  position: relative;
+  background: $color-bg-primary;
+
+  // If canvas content needs scrolling
+  & > * {
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+  }
+}
+
+.resizable-layout__console {
+  flex: 0 0 auto; // Fixed height (controlled by state)
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-top: 1px solid $color-border;
+  background: $color-bg-primary;
+
+  // Console content should fill the container
+  & > * {
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+  }
+}
+
+// Placeholder styles (for example/demo)
+.resizable-layout__placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 32px;
+  color: $color-text-tertiary;
+  text-align: center;
+
+  i {
+    font-size: 48px;
+    margin-bottom: 16px;
+    color: $color-text-secondary;
+  }
+
+  p {
+    font-size: 18px;
+    font-weight: 600;
+    margin: 0 0 8px 0;
+    color: $color-text-primary;
+  }
+
+  span {
+    font-size: 14px;
+    color: $color-text-secondary;
+  }
+}
+
+// ============================================
+// DARK MODE
+// ============================================
+
+@media (prefers-color-scheme: dark) {
+  .resizable-layout {
+    background: #0f172a;
+  }
+
+  .resizable-layout__canvas {
+    background: #0f172a;
+  }
+
+  .resizable-layout__console {
+    border-top-color: #334155;
+    background: #0f172a;
+  }
+
+  .resizable-layout__placeholder {
+    color: #64748b;
+
+    i {
+      color: #94a3b8;
+    }
+
+    p {
+      color: #f1f5f9;
+    }
+
+    span {
+      color: #94a3b8;
+    }
+  }
+}

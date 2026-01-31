@@ -1,18 +1,54 @@
-import {FormEvent, JSX} from 'react';
+import {FormEvent, JSX, useEffect} from 'react';
 import {useStateIfMounted} from 'use-state-if-mounted';
 import type {Dictionary, DocString, GObject, Pointer} from '../joiner';
 import {Log, DUser, R, SetRootFieldAction, U} from '../joiner';
 import Storage from '../data/storage';
 import {AuthApi, UsersApi} from "../api/persistance";
-import logo from '../static/img/jjodel-124.png';
+import logo from '../static/img/jjodel.png';
 import {Tooltip} from '../components/forEndUser/Tooltip';
 import { RegisterRequest } from '../api/DTO/RegisterRequest';
 import { LoginRequest } from '../api/DTO/LoginRequest';
 import { TokenResponse } from '../api/DTO/TokenResponse';
 import {ResetPasswordRequest} from "../api/DTO/ResetPasswordRequest";
+import { BrowserWarningModal } from '../components/BrowserWarningModal';
+import {
+    detectBrowser,
+    shouldShowBrowserWarning,
+    markBrowserWarningShown
+} from '../utils/browserDetection';
 import "./auth.scss"
-import Api from "../api/api";
-import {JwtClaims} from "../api/DTO/JwtClaims";
+
+// Import partner logos
+import logoUnivaq from '../static/img/partners/univaq.png';
+import logoMdu from '../static/img/partners/mdu.svg';
+import logoFbk from '../static/img/partners/fbk.png';
+
+// Branding panel component for split-screen layout
+const BrandingPanel = () => (
+    <div className="auth-branding">
+        <div className="auth-branding-content">
+            <div className="auth-branding-logo">
+                <img src={logo} alt="Jjodel" />
+            </div>
+            <h1 className="auth-branding-title">Welcome to Jjodel</h1>
+            <p className="auth-branding-tagline">
+                Open-source modeling<br />for research and education
+            </p>
+        </div>
+        <div className="auth-branding-partners">
+            <span className="auth-partners-label">Research partners</span>
+            <div className="auth-partners-logos">
+                <img src={logoUnivaq} alt="Università degli Studi dell'Aquila" />
+                <img src={logoMdu} alt="Mälardalens universitet" />
+                <img src={logoFbk} alt="Fondazione Bruno Kessler" />
+            </div>
+        </div>
+        <div className="auth-branding-footer">
+            <a href="https://jjodel.io" target="_blank" rel="noopener noreferrer" className="auth-branding-url">jjodel.io</a>
+        </div>
+    </div>
+);
+
 const passPattern = '^.{8,}$'; //'^[^\\s].{10,}[^\\s]$';
 function AuthPage(): JSX.Element {
     const [action, setAction] = useStateIfMounted<'login'|'register'|'retrieve-password'>('login');
@@ -27,6 +63,26 @@ function AuthPage(): JSX.Element {
     const [newsletter, setNewsletter] = useStateIfMounted(false);
     const [isDirty, setDirty] = useStateIfMounted(false);
     const [dirtyStatuses, setDirtyStatuses] = useStateIfMounted<Dictionary<string, boolean>>({});
+
+    // Browser warning state
+    const [showBrowserWarning, setShowBrowserWarning] = useStateIfMounted(false);
+    const [browserName, setBrowserName] = useStateIfMounted('');
+
+    // Check browser on mount
+    useEffect(() => {
+        if (shouldShowBrowserWarning()) {
+            const browser = detectBrowser();
+            setBrowserName(browser.name);
+            setShowBrowserWarning(true);
+        }
+    }, []);
+
+    // Handler to close browser warning
+    const handleCloseBrowserWarning = () => {
+        markBrowserWarningShown();
+        setShowBrowserWarning(false);
+    };
+
     const dirty = (e: React.MouseEvent<HTMLInputElement | HTMLSelectElement>)=>{
         /* for real-time validation while you write the form, disabled for now
         let name = (e.target as HTMLElement)?.getAttribute?.('name')||'';
@@ -109,7 +165,7 @@ function AuthPage(): JSX.Element {
             }
 
             if (!raw?.token || typeof raw.token !== 'string') {
-                console.error('lf', {raw});
+                console.error('login failed', {raw});
                 U.alert('e', 'Login failed or invalid token.', '');
                 return false; }
 
@@ -191,17 +247,19 @@ const offline = () => {
     // U.resetState();
 }
 
-return(<section className={`w-100 h-100 login bg ${action === 'register' ? 'register' : action === 'retrieve-password' ? 'retrieve' : ''} `+(isDirty?' dirty':'')}>
+return(<section className={`auth-split-screen ${action === 'register' ? 'register' : action === 'retrieve-password' ? 'retrieve' : ''} `+(isDirty?' dirty':'')}>
 
-    <form className={'d-block bg-white rounded border mx-auto w-fit px-5 py-4 mt-5'} onSubmit={onSubmit} action="form?submit=1">
-        <label className={'fs-1 d-block text-center text-primary login-header'}>
+    {/* Left: Branding Panel */}
+    <BrandingPanel />
 
-            {action === 'register' && 'Create an Account'}
-            {action === 'login' && 'Sign In'}
-            {action === 'retrieve-password' && 'Retrieve your Password'}
-
-
-        </label>
+    {/* Right: Form Panel */}
+    <div className="auth-form-panel">
+        <form className={'auth-form'} onSubmit={onSubmit}>
+            <label className={'auth-form-header'}>
+                {action === 'register' && 'Create an Account'}
+                {action === 'login' && 'Sign In'}
+                {action === 'retrieve-password' && 'Retrieve your Password'}
+            </label>
 
         {action === 'register' && <>
 
@@ -520,7 +578,7 @@ return(<section className={`w-100 h-100 login bg ${action === 'register' ? 'regi
                         />
                     </label>
                 </Tooltip>
-                <br /><br /><br />
+                <div className="auth-section-divider" />
                 <label>
                     Password
                     <input className={'w-100 input w-fit d-block mx-auto mt-2'}
@@ -531,6 +589,7 @@ return(<section className={`w-100 h-100 login bg ${action === 'register' ? 'regi
                         onChange={e => setPassword(e.target.value)}
                         type={'password'} required={true} title={'At least 8 characters'}
                     />
+                    <span className="auth-field-hint">At least 8 characters</span>
                 </label>
 
 
@@ -546,25 +605,22 @@ return(<section className={`w-100 h-100 login bg ${action === 'register' ? 'regi
                     />
                 </label>
 
-                <br /><br /><br />
+                <div className="auth-section-divider" />
                 <Tooltip tooltip={<div style={{padding: '10px', maxWidth: '600px'}}><h6>Newsletter</h6>Select this option for remaining updated about Jjodel new releases, updates, and initiatives.</div>} >
-                    <label>
-                        <input className={'checkbox'}
-                            placeholder={'newsletter'}
-                            checked={newsletter}
-                            onClick={dirty}
-                            onChange={e => setNewsletter(e.target.checked)}
-                            type={'checkbox'}
-                            style={{outline: 'none', marginTop: '10px', float: 'left'}}
-                        />
-                        <div style={{display: 'block', width: '90%', float: 'left', marginBottom: '10px', paddingLeft: '10px'}}>Newsletter. Subscribe to the newsletter to receive updates and news. You can manage your registration preferences at any time. </div>
-                    </label>
-
+                    <div className="auth-custom-checkbox-row" onClick={() => { setDirty(true); setNewsletter(!newsletter); }}>
+                        <div className={`auth-custom-checkbox ${newsletter ? 'checked' : ''}`}>
+                            {newsletter && (
+                                <svg viewBox="0 0 12 12" fill="none" stroke="white" strokeWidth="2">
+                                    <path d="M2 6l3 3 5-5" strokeLinecap="round" strokeLinejoin="round" />
+                                </svg>
+                            )}
+                        </div>
+                        <span className="auth-custom-checkbox-label">Subscribe to the newsletter to receive updates and news about Jjodel.</span>
+                    </div>
                 </Tooltip>
-                <br />
-                <div style={{width: '100%', textAlign: 'center'}}>
-                    By proceeding you accept the terms and conditions.
-                </div>
+                <p className="auth-terms-text">
+                    By proceeding you accept the <a href="https://www.jjodel.io/terms-conditions-page/" target="_blank" rel="noopener noreferrer" className="auth-terms-link">terms and conditions</a>.
+                </p>
                 <button className={'d-block btn btn-primary p-1 mx-auto mt-3 login-button'} type={'submit'} onClick={()=>setDirty(true)}>
                     Create
                 </button>
@@ -642,9 +698,16 @@ return(<section className={`w-100 h-100 login bg ${action === 'register' ? 'regi
                 }
 
             </label>
-            <div className='login-logo'><img src={logo}></img></div>
         </form>
-    </section>);
+    </div>
+
+    {/* Browser Warning Modal */}
+    <BrowserWarningModal
+        isOpen={showBrowserWarning}
+        browserName={browserName}
+        onClose={handleCloseBrowserWarning}
+    />
+</section>);
 }
 
 export {AuthPage};

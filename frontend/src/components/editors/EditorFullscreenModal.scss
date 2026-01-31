@@ -1,0 +1,328 @@
+/**
+ * EditorFullscreenModal - True Fullscreen Styling
+ * Makes the modal cover the entire viewport with backdrop
+ */
+
+// ============================================
+// OVERLAY (Backdrop)
+// ============================================
+.editor-fullscreen-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn 0.2s ease;
+}
+
+// ============================================
+// MODAL (Container)
+// ============================================
+.editor-fullscreen-modal {
+  background: white;
+  border-radius: 8px;
+  width: 90vw;
+  height: 90vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
+  animation: slideUp 0.3s ease;
+  overflow: hidden;
+}
+
+// ============================================
+// HEADER
+// ============================================
+.editor-fullscreen-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 24px;
+  border-bottom: 1px solid #e2e8f0;
+  background: white;
+  flex-shrink: 0;
+
+  &__left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+
+    i {
+      font-size: 20px;
+      color: #64748b;
+    }
+
+    h2 {
+      margin: 0;
+      font-size: 18px;
+      font-weight: 600;
+      color: #1e293b;
+    }
+  }
+
+  &__actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+}
+
+// Badge (READ-ONLY)
+.editor-fullscreen-badge {
+  padding: 4px 12px;
+  background-color: #fef3c7;
+  color: #92400e;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 4px;
+  text-transform: uppercase;
+}
+
+// Action Buttons
+.editor-fullscreen-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  background: none;
+  border: none;
+  border-radius: 6px;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 16px;
+
+  &:hover {
+    background: #f1f5f9;
+    color: #334155;
+  }
+
+  &.active {
+    background: #e0f2fe;
+    color: #0369a1;
+  }
+
+  &.success {
+    color: #16a34a;
+  }
+
+  &--close {
+    font-size: 20px;
+
+    &:hover {
+      background: #fee2e2;
+      color: #dc2626;
+    }
+  }
+}
+
+.editor-fullscreen-divider {
+  width: 1px;
+  height: 24px;
+  background: #e2e8f0;
+  margin: 0 4px;
+}
+
+// ============================================
+// BODY (Editor Area)
+// ============================================
+.editor-fullscreen-body {
+  flex: 1;
+  overflow: hidden;
+  background: #f8fafc;
+  position: relative;
+  min-height: 0;
+
+  // Monaco editor wrapper
+  .monaco-editor {
+    .margin,
+    .monaco-editor-background {
+      background: #ffffff !important;
+    }
+
+    // ============================================
+    // LINE HIGHLIGHT - Background instead of Border
+    // ============================================
+
+    // Main line highlight - BACKGROUND
+    .view-overlays .current-line {
+      background-color: rgba(100, 116, 139, 0.06) !important; // slate-500 @ 6%
+      border: none !important;
+      border-left: none !important;
+      border-right: none !important;
+      box-shadow: none !important;
+    }
+
+    // Margin/gutter line highlight
+    .margin-view-overlays .current-line-margin,
+    .margin-view-overlays .current-line-margin-both {
+      background-color: rgba(100, 116, 139, 0.06) !important;
+      border: none !important;
+    }
+
+    // Remove any line borders
+    .current-line,
+    .view-line.current-line,
+    .line-numbers.active-line-number {
+      border: none !important;
+      outline: none !important;
+      box-shadow: none !important;
+    }
+  }
+}
+
+// ============================================
+// FOOTER (Stats & Actions)
+// ============================================
+.editor-fullscreen-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 24px;
+  border-top: 1px solid #e2e8f0;
+  background: white;
+  font-size: 13px;
+  color: #64748b;
+  flex-shrink: 0;
+
+  &__left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  &__right {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  &__separator {
+    color: #cbd5e1;
+  }
+
+  &__language {
+    padding: 4px 8px;
+    background: #f1f5f9;
+    border-radius: 4px;
+    font-family: monospace;
+    font-size: 12px;
+    color: #475569;
+    text-transform: uppercase;
+  }
+}
+
+// Save Button
+.editor-fullscreen-save-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background: linear-gradient(135deg, #64748b 0%, #475569 100%);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  i {
+    font-size: 16px;
+  }
+
+  &:hover {
+    background: linear-gradient(135deg, #475569 0%, #334155 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+}
+
+// Loading state
+.editor-fullscreen-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  gap: 12px;
+  color: #64748b;
+}
+
+// ============================================
+// ANIMATIONS
+// ============================================
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+// ============================================
+// BODY CLASS (Hide GraphContainer when modal open)
+// ============================================
+body.modal-fullscreen-open {
+  overflow: hidden;
+
+  .GraphContainer {
+    display: none !important;
+  }
+}
+
+// ============================================
+// DARK MODE SUPPORT
+// ============================================
+@media (prefers-color-scheme: dark) {
+  .editor-fullscreen-body .monaco-editor {
+    .view-overlays .current-line {
+      background-color: rgba(148, 163, 184, 0.1) !important; // slate-400 @ 10%
+      border: none !important;
+    }
+
+    .margin-view-overlays .current-line-margin,
+    .margin-view-overlays .current-line-margin-both {
+      background-color: rgba(148, 163, 184, 0.1) !important;
+      border: none !important;
+    }
+  }
+}
+
+[data-theme="dark"] {
+  .editor-fullscreen-body .monaco-editor {
+    .view-overlays .current-line {
+      background-color: rgba(148, 163, 184, 0.1) !important;
+      border: none !important;
+    }
+
+    .margin-view-overlays .current-line-margin,
+    .margin-view-overlays .current-line-margin-both {
+      background-color: rgba(148, 163, 184, 0.1) !important;
+      border: none !important;
+    }
+  }
+}

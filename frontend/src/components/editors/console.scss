@@ -1,65 +1,70 @@
+/* ============================================
+   CONSOLE - RIGHT PANEL
+   Design tokens applied
+   ============================================ */
 
 .suggestion-keys ul {
-  font-family: 'JetBrains Mono', Lekton, monospace;
-  padding-left: 3px;
+  font-family: var(--font-mono);
+  padding-left: var(--space-1);
   display: flex;
   flex-flow: wrap;
-  justify-content: center; // space-evenly;
-  li{
+  justify-content: center;
+
+  li {
     cursor: pointer;
   }
 }
 
 .group.result-container {
+  width: calc(100% - 8px);
+  font-size: 1em !important;
 
-    width: calc(100% - 8px);
-    font-size: 1em!important;
-    
   & .output-row:first-child {
-
-    border-top: 1px solid var(--bg-4);
-    border-left: 1px solid var(--bg-4);
-    border-right: 1px solid var(--bg-4);
-    border-top-left-radius: var(--radius);
-    border-top-right-radius: var(--radius);
-    padding: 0.5em 0 0 0.5em ;
-  
+    border-top: 1px solid var(--color-text-tertiary);
+    border-left: 1px solid var(--color-text-tertiary);
+    border-right: 1px solid var(--color-text-tertiary);
+    border-top-left-radius: var(--radius-md);
+    border-top-right-radius: var(--radius-md);
+    padding: var(--space-2) 0 0 var(--space-2);
   }
 
   .output-row {
-    border-left: 1px solid var(--bg-4);
-    border-right: 1px solid var(--bg-4);
-    padding: 0em 1.5em;
-    background-color: var(--bg-1-3)!important;
+    border-left: 1px solid var(--color-text-tertiary);
+    border-right: 1px solid var(--color-text-tertiary);
+    padding: 0em var(--space-4);
+    background-color: var(--color-bg-tertiary) !important;
   }
 
   .output-row:last-child {
-    border-left: 1px solid var(--bg-4);
-    border-right: 1px solid var(--bg-4);
-    border-bottom: 1px solid var(--bg-4);
+    border-left: 1px solid var(--color-text-tertiary);
+    border-right: 1px solid var(--color-text-tertiary);
+    border-bottom: 1px solid var(--color-text-tertiary);
   }
 
   code {
     font-size: 0.7rem;
-    &>span {
+
+    & > span {
       font-size: 0.7rem;
-      &>span.console-msg {
+
+      & > span.console-msg {
         font-size: 0.8rem;
       }
     }
 
-    &>span.console-msg {
+    & > span.console-msg {
       font-size: 0.8rem;
     }
   }
-
 }
 
-.output-row, .suggestion-keys ul {
+.output-row,
+.suggestion-keys ul {
   position: relative;
-  
 }
-.output-row, .suggestion-keys ul li {
+
+.output-row,
+.suggestion-keys ul li {
   &:hover .output-comment,
   &:focus-within .output-comment,
   &:focus .output-comment,
@@ -74,30 +79,29 @@
 }
 
 .console {
-  color: var(--color);
-  margin: 1rem .5rem;
-  padding: 1rem 1.65rem;
-  font-weight: 300;
+  color: var(--color-text-primary);
+  margin: var(--space-4) var(--space-2);
+  padding: var(--space-4) var(--space-5);
+  font-weight: var(--font-light);
   max-height: 95%;
-  border: 1px solid var(--bg-1-5);
-  border-radius: var(--tab-radius);
-  background-color: var(--bg-1-5)!important;
-  // transition: opacity 0.3s ease-in;
-  width:  calc(100% - 1rem)!important;
+  border: 1px solid var(--color-border-primary);
+  border-radius: var(--radius-lg);
+  background-color: var(--color-bg-tertiary) !important;
+  width: calc(100% - var(--space-4)) !important;
 
   .output-comment {
-    font-family: var(--default-font-family);
-    color: var(--font-color-1);
+    font-family: var(--font-sans);
+    color: var(--color-text-primary);
     display: none;
     position: absolute;
-    z-index:1;
-    background-color: var(--bg-1);
-    padding: 1em;
+    z-index: var(--z-tooltip);
+    background-color: var(--color-bg-primary);
+    padding: var(--space-4);
     margin-left: calc(-2px - 2ch);
-    border-radius: 1em;
-    margin-top: -2px; //var(--vertical-line-space);
-    border: 2px solid var(--bg-3);
-    box-shadow: var(--model-shadow);
+    border-radius: var(--radius-lg);
+    margin-top: -2px;
+    border: 2px solid var(--color-border-primary);
+    box-shadow: var(--shadow-lg);
     white-space: normal;
   }
 
@@ -107,19 +111,18 @@
 
   .console-terminal::before {
     position: absolute;
-    font-family: 'JetBrains Mono', Lekton, monospace;
+    font-family: var(--font-mono);
     font-size: 1.3em;
     content: ">";
     top: calc(1.25rem - 1px);
     left: 0.75rem;
-    // width: 100%!important;
     pointer-events: none;
-
   }
 
   .console-terminal textarea {
-    width: calc(100% - 0.5rem)!important;
-    border: 1px solid var(--bg-4);
+    width: calc(100% - var(--space-2)) !important;
+    border: 1px solid var(--color-text-tertiary);
+
     ::-webkit-resizer {
       display: none;
     }
@@ -127,41 +130,41 @@
   }
 
   .console-terminal textarea:focus {
-    width: calc(100% - 0.5rem)!important;
-    outline: 1px solid var(--accent);
-    top: -2px!important;
+    width: calc(100% - var(--space-2)) !important;
+    outline: 1px solid var(--color-accent);
+    top: -2px !important;
   }
 
   .console-terminal .commands {
     position: absolute;
-    bottom: calc(1em - 1px);
-    border-bottom-left-radius: var(--radius);
-    border-bottom-right-radius: var(--radius);
-    left:1px;
-    width: calc(100% - 2px - 0.5rem);
-    background-color: var(--bg-2);
+    bottom: calc(var(--space-4) - 1px);
+    border-bottom-left-radius: var(--radius-md);
+    border-bottom-right-radius: var(--radius-md);
+    left: 1px;
+    width: calc(100% - 2px - var(--space-2));
+    background-color: var(--color-bg-secondary);
     height: fit-content;
-    border-top: 1px solid var(--bg-3-1);
+    border-top: 1px solid var(--color-border-hover);
     font-size: 1.2em;
     pointer-events: none;
   }
 
   .console-terminal .commands .bi {
     pointer-events: all;
-    color: var(--btn-generic);
-    margin-left: 5px;
+    color: var(--color-text-secondary);
+    margin-left: var(--space-1);
   }
 
   .console-terminal .commands .bi-slash-circle:hover::before {
     font-family: bootstrap-icon;
-    color: var(--btn-generic-accennt);
+    color: var(--color-accent);
     content: "\F566";
     cursor: pointer;
   }
 
   .console-terminal .commands .bi-clipboard-plus:hover::before {
     font-family: bootstrap-icon;
-    color: var(--btn-generic-accennt);
+    color: var(--color-accent);
     content: "\F721";
     cursor: pointer;
   }
@@ -171,14 +174,17 @@
   }
 
   & .console-terminal .commands {
-    .undo, .redo{
+    .undo,
+    .redo {
       float: right;
       margin-left: 0;
-      margin-right: 5px;
-      .redo{
-        margin-right: 15px;
+      margin-right: var(--space-1);
+
+      .redo {
+        margin-right: var(--space-4);
       }
-      &.disabled{
+
+      &.disabled {
         visibility: hidden;
       }
     }
@@ -189,24 +195,24 @@
       font-family: bootstrap-icon;
       cursor: pointer;
     }
+
     .bi:hover::before {
-      color: var(--btn-generic-accennt);
+      color: var(--color-accent);
     }
   }
 
   .bi-arrow-left-square:hover::before {
     content: "\F12D";
   }
+
   .bi-arrow-right-square:hover::before {
     content: "\F136";
   }
-
-
 }
 
-.on-element{
+.on-element {
   display: flex;
-  color: var(--accent);
+  color: var(--color-accent);
 
   &::before {
     position: relative;
@@ -215,105 +221,91 @@
     margin-right: 0;
     font-family: bootstrap-icons;
     content: "\F5C3";
-
-    /* font-size: 1.5em;
-    font-family: bootstrap-icons;
-
-    color: var(--accent);
-    border-bottom: 1px dotted var(--bg-3);
-    margin: auto 0.25rem;
-    // l'elemento era allineato correttamente, ma l'icona stessa non è centrata in verticale. questo lo corregge visualmente.
-    height: 10px;
-    margin-top: -4.5px;*/
   }
 }
 
 .console {
-
   & textarea {
+    // CRITICAL: Monospace font for console input
+    font-family: 'JetBrains Mono', 'SF Mono', 'Monaco', 'Menlo', 'Consolas', 'Liberation Mono', 'Courier New', monospace !important;
+    font-size: 14px !important;
+    line-height: 1.5 !important;
+    color: var(--color-text-primary);
+    padding: var(--space-2) var(--space-4) !important;
+    margin: var(--space-1);
+    border-radius: var(--radius-md);
+    letter-spacing: -0.01em; // Slightly tighter for monospace
+  }
 
-    font-family: 'JetBrains Mono', Lekton, monospace;
-    font-size: 1em;
-    color: var(--color);
-    padding: 0.5rem 1.5rem !important;
-    margin: 0.25rem;
-    border-radius: var(--radius);
+  // Also ensure prompt is monospace
+  .console-terminal::before {
+    font-family: 'JetBrains Mono', 'SF Mono', 'Monaco', monospace !important;
   }
 
   label.on-element {
-    font-weight: 500;
+    font-weight: var(--font-medium);
   }
 
   h4 {
-    font-family: var(--default-font-family);
-    color: var(--accent);
+    font-family: var(--font-sans);
+    color: var(--color-accent);
     font-size: 1.3em;
-    margin-left: 8px;
-    margin-top: 10px;
+    margin-left: var(--space-2);
+    margin-top: var(--space-3);
   }
 
   .output-row {
     border-top: none;
-    border-left: 2px solid var(--bg-3);
-    border-right: 2px solid var(--bg-3);
+    border-left: 2px solid var(--color-border-primary);
+    border-right: 2px solid var(--color-border-primary);
     border-bottom: none;
-
-    background-color: var(--bg-2);
-    //padding: 1rem;
+    background-color: var(--color-bg-secondary);
     padding: 0rem 2ch;
     height: fit-content;
   }
-  .output-row:first-of-type {/*
-    border-top: 2px solid var(--bg-3);
-    border-left: 2px solid var(--bg-3);
-    border-right: 2px solid var(--bg-3);
-    border-bottom: none;
 
-    background-color: var(--bg-2);
-    border-top-left-radius: var(--radius);
-    border-top-right-radius: var(--radius);
-    padding: 1rem;*/
+  .output-row:first-of-type {
     padding-left: 0ch;
-    padding-top: 1ch;// width of '0' char
+    padding-top: 1ch;
   }
-  .output-row:last-of-type {
-    border-bottom: 2px solid var(--bg-3);
-    border-left: 2px solid var(--bg-3);
-    border-right: 2px solid var(--bg-3);
-    border-top: none;
 
-    background-color: var(--bg-2);
-    border-bottom-left-radius: var(--radius);
-    border-bottom-right-radius: var(--radius);
+  .output-row:last-of-type {
+    border-bottom: 2px solid var(--color-border-primary);
+    border-left: 2px solid var(--color-border-primary);
+    border-right: 2px solid var(--color-border-primary);
+    border-top: none;
+    background-color: var(--color-bg-secondary);
+    border-bottom-left-radius: var(--radius-md);
+    border-bottom-right-radius: var(--radius-md);
     padding-bottom: 1ch;
   }
 
-  h4 + .output-row  {
-    border-top: 2px solid var(--bg-3);
-    border-left: 2px solid var(--bg-3);
-    border-right: 2px solid var(--bg-3);
+  h4 + .output-row {
+    border-top: 2px solid var(--color-border-primary);
+    border-left: 2px solid var(--color-border-primary);
+    border-right: 2px solid var(--color-border-primary);
     border-bottom: none;
-
-    background-color: var(--bg-2);
-    border-top-left-radius: var(--radius);
-    border-top-right-radius: var(--radius);
-    padding: 1rem;
+    background-color: var(--color-bg-secondary);
+    border-top-left-radius: var(--radius-md);
+    border-top-right-radius: var(--radius-md);
+    padding: var(--space-4);
   }
 
   br {
     display: block;
-    height: 1px; width: 100%;
+    height: 1px;
+    width: 100%;
   }
 
   span.console-error {
     display: block;
-    padding: 2px 12px;
-    margin-bottom: 4px;
+    padding: var(--space-1) var(--space-3);
+    margin-bottom: var(--space-1);
     width: fit-content;
     color: white;
-    border-radius: 3px;
-    background-color: var(--failure);
-    font-weight: 400;
+    border-radius: var(--radius-sm);
+    background-color: var(--color-error);
+    font-weight: var(--font-normal);
   }
 
   span.console-error .bi {
@@ -322,20 +314,21 @@
 
   span.console-error-msg {
     display: flex;
-    font-family: 'JetBrains Mono', Lekton, monospace;
-    color: var(--bg-5);
+    font-family: var(--font-mono);
+    color: var(--color-text-secondary);
     padding-left: 0px;
     margin-top: auto;
     margin-bottom: auto;
-    >*{
-      margin: auto 0.25rem;
+
+    > * {
+      margin: auto var(--space-1);
     }
-    padding-bottom: 8px;
+    padding-bottom: var(--space-2);
   }
 
   span.console-error-msg .bi {
     font-size: 1.9em;
-    color: var(--failure);
+    color: var(--color-error);
   }
 
   .group {
@@ -343,24 +336,24 @@
   }
 
   .console-msg {
-    font-family: 'JetBrains Mono', Lekton, monospace;
-    color: var(--bg-5);
-    color: var(--keyword-color);
-    font-weight: var(--keyword-weight);
+    font-family: var(--font-mono);
+    color: var(--color-text-secondary);
+    font-weight: var(--font-medium);
   }
 
-  textarea{
+  textarea {
     margin: 0;
-    margin-top: 0.75rem;
-    margin-bottom: 0.5rem;
+    margin-top: var(--space-3);
+    margin-bottom: var(--space-2);
   }
+
   textarea:focus {
-    outline: 2px solid var(--accent);
+    outline: 2px solid var(--color-accent);
   }
 }
 
 .on-element {
-  margin-bottom: 10px;
+  margin-bottom: var(--space-3);
 
   & span {
     font-size: 1.2em;
@@ -368,12 +361,11 @@
 }
 
 .group {
-
   & ul {
-    padding-left: 5px;
+    padding-left: var(--space-1);
   }
 
-  padding-left: 0!important;
+  padding-left: 0 !important;
   text-align: left;
 
   & ul li {
@@ -383,49 +375,23 @@
     height: fit-content;
     width: fit-content;
     color: white;
-    background-color: var(--bg-5);
-    padding: 1px 10px 1px 10px;
-    border-radius: 4px;
-    margin: 2px;
-
+    background-color: var(--color-text-secondary);
+    padding: 1px var(--space-3);
+    border-radius: var(--radius-sm);
+    margin: var(--space-1);
   }
+
   & ul li:hover {
-    background-color: var(--accent);
+    background-color: var(--color-accent);
     color: white;
   }
-
 }
-/*
-.context-keys-list  {
-  & ul {
-    padding-left: 5px!important;
-  }
-  & ul li {
-    float: left;
-    list-style: none;
-    display: block;
-    height: fit-content;
-    width: fit-content;
-    color: white;
-    background-color: var(--bg-5);
-    padding: 1px 10px 1px 10px;
-    border-radius: 4px;
-    margin: 2px;
-
-  }
-  & ul li:hover {
-    background-color: var(--accent);
-    color: white;
-
-  }
-}*/
 
 .context-keys {
-  display:block;
-  font-weight: 500;
-  //clear: both;
-  padding: 30px 0px 10px 0;
-  margin-left: 8px;
-  color: var(--accent);
+  display: block;
+  font-weight: var(--font-medium);
+  padding: var(--space-8) 0 var(--space-3) 0;
+  margin-left: var(--space-2);
+  color: var(--color-accent);
   font-size: 1.3em;
 }

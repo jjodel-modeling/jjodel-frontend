@@ -24,16 +24,15 @@ function EdgePointDataComponent(props: AllProps) {
         // infos[key] = info;
         let key: string = fullKey.substring(prefixLength);
         if (!info.isEdgePoint || info.hidden || info.obsolete || info.todo) continue;
-        rows.push(<label className={'input-container edgepoint-adjust'}>
-            <b className={'me-2'}>{key[0].toUpperCase() + key.substring(1)}:</b>
-            <GenericInput rootClassName={'mx-3 mt-1 d-flex'} className={'d-flex'} data={view}
+        rows.push(<label className={'input-container'} key={key}>
+            <GenericInput rootClassName={'edgepoint-input-row'} className={'d-flex'} data={view}
                           field={key as any} tooltip={true} info={info} disabled={readOnly} />
         </label>);
     }
 
-    return(<section>
+    return(<section className="edgepoint-adjust">
         <h5>EdgePoint</h5>
-        <div className={'px-2 no-padding-left'}>
+        <div className={'px-2'}>
             {rows}
         </div>
     </section>);

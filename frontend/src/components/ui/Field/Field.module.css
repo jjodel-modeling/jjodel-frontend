@@ -1,0 +1,9 @@
+.field {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: var(--spacing-5);
+}
+
+.field:last-child {
+  margin-bottom: 0;
+}

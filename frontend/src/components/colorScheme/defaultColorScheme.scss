@@ -10,7 +10,7 @@
   --mainBorder: var(--mainBorderColor) solid var(--mainBorderWidth);
   --scrollbarW: 0px;
   --tabH: 30px;
-  --bluebordercolor: #0084ff;
+  --bluebordercolor: var(--color-info, #0084ff);
   /*
     --mainFontColor: transparent;
     --mainBackgroundColor: transparent;
@@ -69,7 +69,7 @@
   color: var(--mainFontColor);
   font-family: Helvetica, OpenSans, sans-serif;
   font-size: 11px;
-  font-weight: 600;
+  font-weight: var(--font-semibold);
   line-height: 1.4;
   background-color: var(--mainBackgroundColor);
 
@@ -80,7 +80,7 @@
   --mainBorder: var(--mainBorderColor) solid var(--mainBorderWidth);
   --scrollbarW: 0px;
   --tabH: 30px;
-  --bluebordercolor: #0084ff;
+  --bluebordercolor: var(--color-info, #0084ff);
   /*
     --mainFontColor: transparent;
     --mainBackgroundColor: transparent;
@@ -167,8 +167,8 @@
      this is fine on the input itself but the optgroup cannot have transparent and will be always white.
      now, the problem is if you set a bacgkround-color: inherit / transparent select inside a black element with white text, the optgroup will be white with white text.
      */
-    color: black;
-    background-color: white;
+    color: var(--color-text-primary, black);
+    background-color: var(--color-bg-secondary, white);
   }
 
   [title] {
@@ -196,7 +196,7 @@
   }
 
   .styleEditorSelected {
-    outline: 3px dashed red !important;
+    outline: 3px dashed var(--color-error, red) !important;
   }
 
   /*olds*/
@@ -361,7 +361,7 @@
     flex-grow: 1;
     /*width: calc(100vw - var(--sidebarW) - var(--scrollbarW));/*NB: TO DO: quando nascondi l'hiddeninput */
     height: calc(100vh - calc(var(--topbarH) + var(--tabH)));
-    background-color: #44444c; /*lightgoldenrodyellow;*/
+    background-color: var(--color-bg-tertiary, #44444c); /*lightgoldenrodyellow;*/
   }
 
   #input {
@@ -590,7 +590,7 @@
     flex-grow: 1;
     /*width: calc(100vw - var(--sidebarW) - var(--scrollbarW));/*NB: TO DO: quando nascondi l'hiddeninput */
     height: calc(100vh - calc(var(--topbarH) + var(--tabH)));
-    background-color: #44444c; /*lightgoldenrodyellow;*/
+    background-color: var(--color-bg-tertiary, #44444c); /*lightgoldenrodyellow;*/
   }
 
   #input {
@@ -608,7 +608,7 @@
   // old style.css
   /*@import '../src/themes/squaredTabs.css'; /* You can add global styles to this file, and also import other style files */
   :root {
-    --transparent-1: #ffffff;
+    --transparent-1: var(--color-bg-secondary, #ffffff);
   }
 
   ::-webkit-scrollbar {
@@ -622,7 +622,7 @@
   /*others*/
   ::-webkit-scrollbar-thumb {
     background: var(--color-4);
-    border: 2px solid darkblue;
+    border: 2px solid var(--color-accent-active, darkblue);
     border-radius: 5px;
     /* no one works
     background-clip: padding-box;
@@ -647,8 +647,8 @@
   textarea::selection,
   *[contenteditable=""]::selection,
   *[contenteditable="true"]::selection {
-    background: #0078d7; /* default color for firefox */
-    color: white;
+    background: var(--color-accent, #0078d7); /* default color for firefox */
+    color: var(--color-text-inverse, white);
   }
 
   input[type="checkbox"], input[type="radio"], input[type="color"] {
@@ -692,11 +692,11 @@
 
   td, th {
     padding: 5px;
-    border: 1px solid #aaaaaa;
+    border: 1px solid var(--color-border-primary, #aaaaaa);
   }
 
   th {
-    font-weight: 800;
+    font-weight: var(--font-extrabold);
   }
 
   .propertyBarContainer td, .propertyBarContainer th {
@@ -720,19 +720,19 @@
   .resizableBorder.top { border-top: 5px solid red; }
   .resizableBorder.bottom { border-bottom: 5px solid red; }*/
   .resizableBorder.left {
-    border-left: 5px solid rgb(46, 47, 52);
+    border-left: 5px solid var(--color-bg-tertiary, rgb(46, 47, 52));
   }
 
   .resizableBorder.right {
-    border-right: 5px solid rgb(46, 47, 52);
+    border-right: 5px solid var(--color-bg-tertiary, rgb(46, 47, 52));
   }
 
   .resizableBorder.top {
-    border-top: 5px solid rgb(46, 47, 52);
+    border-top: 5px solid var(--color-bg-tertiary, rgb(46, 47, 52));
   }
 
   .resizableBorder.bottom {
-    border-bottom: 5px solid rgb(46, 47, 52);
+    border-bottom: 5px solid var(--color-bg-tertiary, rgb(46, 47, 52));
   }
 
   /*.template, .whatisthis {
@@ -813,8 +813,8 @@
 
   input:invalid:not([step]), input[invalid]:not([invalid="false"]):not([invalid="0"]), input[invalidDataList]:not([invalidDataList="false"]):not([invalidDataList="0"]) {
     /*NB: segna come invalido ogni cosa fuori dallo step*/
-    border: 2px solid #FF2020 !important;
-    outline: 2px solid #ff2020 !important;
+    border: 2px solid var(--color-error, #FF2020) !important;
+    outline: 2px solid var(--color-error, #ff2020) !important;
     outline-offset: 2px !important;
   }
 
@@ -907,12 +907,12 @@
   }
 
   .debug .todo {
-    background-color: darkred !important;
+    background-color: var(--color-error, darkred) !important;
   }
 
   .todo {
     cursor: not-allowed !important;
-    color: white !important;
+    color: var(--color-text-inverse, white) !important;
   }
 
   .todo > *, .todo * {
@@ -1015,7 +1015,7 @@
   }
 
   .UtabHeader:not([selected="true"]) {
-    font-weight: bold;
+    font-weight: var(--font-bold);
     background-color: var(--mainBorderColor);
   }
 
@@ -1092,19 +1092,19 @@
   }
 
   .changelog li.bugfix::before {
-    color: green;
+    color: var(--color-success, green);
   }
 
   .changelog li.bug::before {
-    color: red;
+    color: var(--color-error, red);
   }
 
   .changelog li.info::before {
-    color: gray;
+    color: var(--color-text-tertiary, gray);
   }
 
   .changelog li.feature::before {
-    color: dodgerblue;
+    color: var(--color-info, dodgerblue);
   }
 
   .filterContainer {
@@ -1134,7 +1134,7 @@
   }
 
   .changelog .title {
-    font-weight: bolder;
+    font-weight: var(--font-extrabold);
   }
 
   .changelog ul.subpoint, .changelog ul.versionSubPoints {
@@ -1180,7 +1180,7 @@
   .csseditorroot .roww .c {
     position: relative;
     margin: 0 auto;
-    font-weight: 800;
+    font-weight: var(--font-extrabold);
     display: flex;
     flex-wrap: wrap;
   }
@@ -1211,7 +1211,7 @@
   }
 
   .csseditorroot .roww .rc {
-    color: white;
+    color: var(--color-text-inverse, white);
   }
 
   .csseditorroot .roww .fc > div {
@@ -1279,7 +1279,7 @@
   }
 
   .csseditorroot .colorblock.empty {
-    border: 1px solid black;
+    border: 1px solid var(--color-text-primary, black);
     text-align: center;
     border-left-width: 0px;
   }

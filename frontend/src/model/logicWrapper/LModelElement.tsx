@@ -5185,8 +5185,9 @@ instanceof === undefined or missing  --> auto-detect and assign the type
             TRANSACTION(this.get_name(c)+'.name', ()=>{
                 SetFieldAction.new(c.data, 'name', val, '', false);
             }, undefined, val)
+            // Update tab title text content - using textContent preserves CSS pseudo-elements (::before icon)
             let tab = document.querySelector('#rc-tabs-2-tab-'+c.data.id+' > .drag-initiator > .active-on-mouseenter');
-            if (tab) tab.innerHTML = val;
+            if (tab) tab.textContent = val;
         }
         return true;
     }

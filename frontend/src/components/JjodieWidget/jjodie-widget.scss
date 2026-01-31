@@ -1,0 +1,507 @@
+/* ============================================
+   JJODIE WIDGET - AI Assistant Chat
+   Per CLAUDE.md Design System
+   ============================================ */
+
+/* ============================================
+   FLOATING ACTION BUTTON
+   ============================================ */
+
+.jjodie-fab {
+  position: fixed !important;
+  bottom: 24px !important;
+  right: 24px !important;
+  left: auto !important; // Prevent any left positioning override
+  width: 56px !important;
+  height: 56px !important;
+  border-radius: 50%;
+  background: var(--gradient-primary);
+  color: #ffffff;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(71, 85, 105, 0.3);
+  transition: all 200ms ease;
+  z-index: 10000;
+
+  .bi {
+    font-size: 24px;
+  }
+
+  &:hover {
+    background: var(--gradient-primary-hover);
+    transform: scale(1.05);
+    box-shadow: 0 6px 16px rgba(71, 85, 105, 0.4);
+  }
+
+  &:active {
+    transform: scale(0.98);
+  }
+}
+
+/* ============================================
+   CHAT PANEL
+   ============================================ */
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.jjodie-panel {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  width: 380px;
+  max-height: 600px;
+  background: var(--color-bg-primary, #ffffff);
+  border: 1px solid var(--color-border-primary, #e2e8f0);
+  border-radius: var(--radius-lg, 12px);
+  box-shadow: 0 8px 32px rgba(15, 23, 42, 0.15);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  z-index: 10001;
+  animation: slideUp 200ms ease;
+}
+
+/* ============================================
+   HEADER
+   ============================================ */
+
+.jjodie-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-3, 12px) var(--space-4, 16px);
+  background: var(--gradient-primary);
+  color: #ffffff;
+  flex-shrink: 0;
+}
+
+.jjodie-header-info {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3, 12px);
+}
+
+.jjodie-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  .bi {
+    font-size: 18px;
+  }
+}
+
+.jjodie-header-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.jjodie-name {
+  font-size: var(--text-sm, 14px);
+  font-weight: var(--font-semibold, 600);
+  line-height: 1.2;
+}
+
+.jjodie-status {
+  font-size: var(--text-xs, 12px);
+  opacity: 0.8;
+  line-height: 1.2;
+}
+
+.jjodie-header-actions {
+  display: flex;
+  gap: var(--space-1, 4px);
+}
+
+.jjodie-header-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm, 6px);
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 150ms ease;
+
+  .bi {
+    font-size: 16px;
+  }
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.2);
+  }
+
+  &.jjodie-close-btn:hover {
+    background: rgba(239, 68, 68, 0.2);
+    color: #fca5a5;
+  }
+}
+
+/* ============================================
+   MESSAGES AREA
+   ============================================ */
+
+.jjodie-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-4, 16px);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3, 12px);
+  min-height: 300px;
+  max-height: 400px;
+}
+
+/* ============================================
+   WELCOME STATE
+   ============================================ */
+
+.jjodie-welcome {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: var(--space-4, 16px) 0;
+
+  .jjodie-welcome-icon {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: var(--space-4, 16px);
+
+    .bi {
+      font-size: 28px;
+      color: #475569;
+    }
+  }
+
+  h3 {
+    font-size: var(--text-lg, 18px);
+    font-weight: var(--font-semibold, 600);
+    color: var(--color-text-primary, #1e293b);
+    margin: 0 0 var(--space-2, 8px) 0;
+  }
+
+  p {
+    font-size: var(--text-sm, 14px);
+    color: var(--color-text-secondary, #64748b);
+    margin: 0 0 var(--space-5, 20px) 0;
+    line-height: var(--leading-relaxed, 1.6);
+  }
+}
+
+.jjodie-suggestions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2, 8px);
+  width: 100%;
+}
+
+.jjodie-suggestions-label {
+  font-size: var(--text-xs, 12px);
+  font-weight: var(--font-medium, 500);
+  color: var(--color-text-tertiary, #94a3b8);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: var(--space-1, 4px);
+}
+
+.jjodie-suggestion-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2, 8px);
+  padding: var(--space-2, 8px) var(--space-3, 12px);
+  background: var(--color-bg-secondary, #f8fafc);
+  border: 1px solid var(--color-border-primary, #e2e8f0);
+  border-radius: var(--radius-md, 6px);
+  font-size: var(--text-sm, 14px);
+  color: var(--color-text-primary, #1e293b);
+  cursor: pointer;
+  transition: all 150ms ease;
+  text-align: left;
+
+  .bi {
+    font-size: 16px;
+    color: #475569;
+    flex-shrink: 0;
+  }
+
+  &:hover {
+    background: var(--color-bg-tertiary, #f1f5f9);
+    border-color: #cbd5e1;
+  }
+}
+
+/* ============================================
+   MESSAGES
+   ============================================ */
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.jjodie-message {
+  display: flex;
+  gap: var(--space-2, 8px);
+  animation: fadeIn 200ms ease;
+}
+
+.jjodie-message-user {
+  flex-direction: row-reverse;
+
+  .jjodie-message-content {
+    background: var(--gradient-primary);
+    color: #ffffff;
+    border-radius: var(--radius-lg, 12px) var(--radius-lg, 12px) 4px var(--radius-lg, 12px);
+  }
+}
+
+.jjodie-message-assistant {
+  .jjodie-message-content {
+    background: var(--color-bg-secondary, #f8fafc);
+    color: var(--color-text-primary, #1e293b);
+    border-radius: var(--radius-lg, 12px) var(--radius-lg, 12px) var(--radius-lg, 12px) 4px;
+    border: 1px solid var(--color-border-primary, #e2e8f0);
+  }
+}
+
+.jjodie-message-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #64748b 0%, #475569 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+
+  .bi {
+    font-size: 14px;
+    color: #ffffff;
+  }
+}
+
+.jjodie-message-content {
+  max-width: 280px;
+  padding: var(--space-3, 12px);
+  font-size: var(--text-sm, 14px);
+  line-height: var(--leading-normal, 1.5);
+
+  p {
+    margin: 0 0 var(--space-2, 8px) 0;
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
+
+  strong {
+    font-weight: var(--font-semibold, 600);
+  }
+
+  br {
+    display: block;
+    content: '';
+    margin-top: var(--space-2, 8px);
+  }
+}
+
+.jjodie-bullet,
+.jjodie-numbered {
+  display: flex;
+  gap: var(--space-2, 8px);
+  margin: var(--space-1, 4px) 0;
+
+  .bullet,
+  .number {
+    flex-shrink: 0;
+    color: inherit;
+    opacity: 0.7;
+  }
+}
+
+/* ============================================
+   TYPING INDICATOR
+   ============================================ */
+
+.jjodie-typing {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: var(--space-3, 12px);
+  background: var(--color-bg-secondary, #f8fafc);
+  border: 1px solid var(--color-border-primary, #e2e8f0);
+  border-radius: var(--radius-lg, 12px) var(--radius-lg, 12px) var(--radius-lg, 12px) 4px;
+}
+
+@keyframes typingBounce {
+  0%, 60%, 100% {
+    transform: translateY(0);
+  }
+  30% {
+    transform: translateY(-4px);
+  }
+}
+
+.jjodie-typing-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #94a3b8;
+  animation: typingBounce 1.4s infinite ease-in-out;
+
+  &:nth-child(1) {
+    animation-delay: 0s;
+  }
+
+  &:nth-child(2) {
+    animation-delay: 0.2s;
+  }
+
+  &:nth-child(3) {
+    animation-delay: 0.4s;
+  }
+}
+
+/* ============================================
+   INPUT AREA
+   ============================================ */
+
+.jjodie-input-area {
+  padding: var(--space-3, 12px) var(--space-4, 16px);
+  border-top: 1px solid var(--color-border-primary, #e2e8f0);
+  background: var(--color-bg-primary, #ffffff);
+  flex-shrink: 0;
+}
+
+.jjodie-input-wrapper {
+  display: flex;
+  gap: var(--space-2, 8px);
+}
+
+.jjodie-input {
+  flex: 1;
+  height: 40px;
+  padding: 0 var(--space-3, 12px);
+  font-family: var(--font-sans, inherit);
+  font-size: var(--text-sm, 14px);
+  color: var(--color-text-primary, #1e293b);
+  background: var(--color-bg-secondary, #f8fafc);
+  border: 1px solid var(--color-border-primary, #e2e8f0);
+  border-radius: var(--radius-md, 6px);
+  outline: none;
+  transition: all 150ms ease;
+
+  &:focus {
+    border-color: #475569;
+    box-shadow: 0 0 0 3px rgba(71, 85, 105, 0.1);
+  }
+
+  &::placeholder {
+    color: var(--color-text-tertiary, #94a3b8);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
+.jjodie-send-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-md, 6px);
+  background: var(--gradient-primary);
+  color: #ffffff;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 150ms ease;
+  flex-shrink: 0;
+
+  .bi {
+    font-size: 16px;
+  }
+
+  &:hover:not(:disabled) {
+    background: var(--gradient-primary-hover);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.jjodie-disclaimer {
+  display: block;
+  margin-top: var(--space-2, 8px);
+  font-size: 11px;
+  color: var(--color-text-tertiary, #94a3b8);
+  text-align: center;
+}
+
+/* ============================================
+   RESPONSIVE
+   ============================================ */
+
+@media (max-width: 440px) {
+  .jjodie-fab {
+    bottom: 16px;
+    right: 16px;
+    width: 48px;
+    height: 48px;
+
+    .bi {
+      font-size: 20px;
+    }
+  }
+
+  .jjodie-panel {
+    bottom: 16px;
+    right: 16px;
+    left: 16px;
+    width: calc(100vw - 32px);
+    max-height: calc(100vh - 100px);
+  }
+
+  .jjodie-messages {
+    max-height: 50vh;
+  }
+
+  .jjodie-message-content {
+    max-width: 240px;
+  }
+}

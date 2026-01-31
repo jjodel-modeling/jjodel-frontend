@@ -1,0 +1,683 @@
+// Syntax Error Modal - Using Design Tokens from CLAUDE.md
+// ========================================================
+
+// === DESIGN TOKENS ===
+// Text
+$color-text-primary: #111418;
+$color-text-secondary: #6B7280;
+$color-text-tertiary: #9CA3AF;
+$color-text-inverse: #ffffff;
+
+// Backgrounds
+$color-bg-primary: #ffffff;
+$color-bg-secondary: #f8fafc;
+$color-bg-tertiary: #f1f5f9;
+
+// Borders
+$color-border: #e2e4e8;
+$color-border-light: #f0f1f2;
+$color-border-hover: #d0d3d8;
+
+// Semantic
+$color-warning: #f59e0b;
+$color-error: #ef4444;
+$color-accent: #475569;
+$color-accent-hover: #334155;
+
+// Typography
+$font-family: 'Inter Variable', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+$font-family-mono: 'JetBrains Mono', 'Monaco', monospace;
+
+$font-size-xs: 11px;
+$font-size-sm: 12px;
+$font-size-base: 13px;
+$font-size-md: 14px;
+$font-size-lg: 16px;
+$font-size-xl: 18px;
+$font-size-2xl: 24px;
+
+$font-weight-normal: 400;
+$font-weight-medium: 500;
+$font-weight-semibold: 600;
+
+// Spacing
+$spacing-xs: 4px;
+$spacing-sm: 8px;
+$spacing-md: 12px;
+$spacing-lg: 16px;
+$spacing-xl: 20px;
+$spacing-2xl: 24px;
+$spacing-3xl: 32px;
+
+// Border Radius
+$radius-sm: 4px;
+$radius-md: 6px;
+$radius-lg: 8px;
+$radius-xl: 12px;
+
+// Shadows
+$shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+$shadow-md: 0 1px 3px rgba(0, 0, 0, 0.08);
+$shadow-lg: 0 4px 12px rgba(0, 0, 0, 0.1);
+
+// Transitions
+$transition-fast: 150ms ease;
+$transition-normal: 250ms ease;
+
+
+// === MODAL CONTAINER ===
+.syntax-error-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: $spacing-xl;
+  animation: semFadeIn $transition-fast;
+}
+
+.modal-backdrop {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+}
+
+.modal-container {
+  position: relative;
+  background: $color-bg-primary;
+  border-radius: $radius-xl;
+  box-shadow: $shadow-lg, 0 20px 60px rgba(0, 0, 0, 0.2);
+  max-width: 700px;
+  width: 100%;
+  max-height: 80vh;
+  overflow-y: auto;
+  padding: $spacing-3xl;
+  z-index: 1;
+  animation: semSlideIn 200ms ease;
+}
+
+// === CLOSE BUTTON ===
+.modal-close {
+  position: absolute;
+  top: $spacing-lg;
+  right: $spacing-lg;
+  background: transparent;
+  border: none;
+  color: $color-text-secondary;
+  cursor: pointer;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: $radius-md;
+  transition: all $transition-fast;
+
+  i {
+    font-size: 18px;
+  }
+
+  &:hover {
+    background: $color-bg-secondary;
+    color: $color-text-primary;
+  }
+}
+
+// === WARNING ICON ===
+.modal-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto $spacing-2xl;
+
+  i {
+    font-size: 32px;
+  }
+
+  &--warning {
+    background: rgba(245, 158, 11, 0.1); // warning light
+    color: $color-warning;
+  }
+}
+
+// === TITLE ===
+.modal-title {
+  font-family: $font-family;
+  font-size: $font-size-2xl;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+  text-align: center;
+  margin: 0 0 $spacing-lg 0;
+}
+
+// === DESCRIPTION ===
+.modal-description {
+  text-align: center;
+  margin-bottom: $spacing-2xl;
+
+  p {
+    font-family: $font-family;
+    font-size: $font-size-md;
+    line-height: 1.6;
+    color: $color-text-secondary;
+    margin: 0 0 $spacing-sm 0;
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
+
+  .error-context {
+    font-size: $font-size-md;
+    color: $color-text-primary;
+
+    strong {
+      font-weight: $font-weight-semibold;
+      color: $color-text-primary;
+    }
+  }
+
+  .error-help {
+    color: $color-text-secondary;
+  }
+}
+
+// === ACTION BUTTONS ===
+.modal-actions {
+  display: flex;
+  gap: $spacing-md;
+  justify-content: center;
+  margin-bottom: $spacing-2xl;
+
+  .btn {
+    flex: 1;
+    max-width: 140px;
+  }
+}
+
+// Button base styles (following CLAUDE.md)
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: $spacing-sm;
+  height: 36px;
+  padding: 0 $spacing-lg;
+  font-family: $font-family;
+  font-size: $font-size-base;
+  font-weight: $font-weight-medium;
+  border-radius: $radius-md;
+  cursor: pointer;
+  transition: all $transition-fast;
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  i {
+    font-size: $font-size-lg;
+  }
+}
+
+.btn-primary {
+  color: $color-text-inverse;
+  background: linear-gradient(135deg, #64748b 0%, $color-accent 100%);
+  border: none;
+
+  /* CRITICAL: Icons must be white on dark backgrounds */
+  i, .bi, svg {
+    color: #ffffff !important;
+  }
+
+  &:hover:not(:disabled) {
+    background: linear-gradient(135deg, $color-accent 0%, $color-accent-hover 100%);
+  }
+}
+
+.btn-secondary {
+  color: $color-text-primary;
+  background-color: transparent;
+  border: 1px solid $color-border;
+
+  /* Icons should be slate on light backgrounds */
+  i, .bi, svg {
+    color: #475569;
+  }
+
+  &:hover:not(:disabled) {
+    background-color: $color-bg-secondary;
+    border-color: $color-border-hover;
+  }
+}
+
+.btn-ghost {
+  color: $color-accent;
+  background-color: rgba(71, 85, 105, 0.1);
+  border: none;
+
+  /* Icons should be slate on light backgrounds */
+  i, .bi, svg {
+    color: #475569;
+  }
+
+  &:hover:not(:disabled) {
+    background-color: rgba(71, 85, 105, 0.15);
+  }
+}
+
+.btn-small {
+  padding: 6px $spacing-md;
+  font-size: $font-size-sm;
+  height: 32px;
+
+  i {
+    font-size: $font-size-sm;
+  }
+}
+
+// === TECHNICAL DETAILS (COLLAPSIBLE) ===
+.technical-details {
+  border-top: 1px solid $color-border;
+  padding-top: $spacing-2xl;
+}
+
+.technical-details__toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  padding: $spacing-md $spacing-lg;
+  background: $color-bg-secondary;
+  border: 1px solid $color-border;
+  border-radius: $radius-lg;
+  font-family: $font-family;
+  font-size: $font-size-md;
+  font-weight: $font-weight-medium;
+  color: $color-accent;
+  cursor: pointer;
+  transition: all $transition-fast;
+
+  &:hover {
+    background: $color-bg-tertiary;
+    border-color: $color-border-hover;
+  }
+
+  i {
+    font-size: $font-size-sm;
+    transition: transform 200ms ease;
+  }
+}
+
+.technical-details__content {
+  padding-top: $spacing-lg;
+  animation: semSlideDown 200ms ease;
+}
+
+// === ERROR MESSAGE ===
+.error-message {
+  margin-bottom: $spacing-lg;
+}
+
+.error-message__label {
+  font-family: $font-family;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-semibold;
+  color: $color-text-tertiary;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: $spacing-sm;
+}
+
+.error-message__text {
+  font-family: $font-family-mono;
+  font-size: $font-size-base;
+  line-height: 1.6;
+  color: $color-error;
+  background: rgba(239, 68, 68, 0.05);
+  padding: $spacing-lg;
+  border-radius: $radius-md;
+  border-left: 3px solid $color-error;
+  word-break: break-word;
+}
+
+// === CODE BOX ===
+.code-box {
+  margin-bottom: $spacing-lg;
+  border: 1px solid $color-border;
+  border-radius: $radius-lg;
+  overflow: hidden;
+}
+
+.code-box__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: $spacing-sm $spacing-md;
+  background: $color-bg-secondary;
+  border-bottom: 1px solid $color-border;
+}
+
+.code-box__label {
+  font-family: $font-family;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-semibold;
+  color: $color-text-tertiary;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.code-box__copy {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+  padding: $spacing-xs $spacing-sm;
+  background: transparent;
+  border: none;
+  border-radius: $radius-sm;
+  font-family: $font-family;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-medium;
+  color: $color-accent;
+  cursor: pointer;
+  transition: all $transition-fast;
+
+  &:hover {
+    background: $color-border-light;
+    color: $color-accent-hover;
+  }
+
+  &--copied {
+    color: $color-success;
+
+    &:hover {
+      color: $color-success;
+    }
+  }
+
+  i {
+    font-size: $font-size-xs;
+  }
+}
+
+.code-box__content {
+  background: #1e293b; // Dark code background (slate-800)
+  color: #e2e8f0;
+  padding: $spacing-lg;
+  margin: 0;
+  min-height: 200px;
+  max-height: 400px;
+  overflow-x: auto;
+  overflow-y: auto;
+  font-family: $font-family-mono;
+  font-size: $font-size-base;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-all;
+
+  code {
+    font-family: inherit;
+    color: inherit;
+  }
+}
+
+// === STACK TRACE ===
+.stack-trace {
+  margin-bottom: $spacing-lg;
+}
+
+.stack-trace__label {
+  font-family: $font-family;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-semibold;
+  color: $color-text-tertiary;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: $spacing-sm;
+}
+
+.stack-trace__content {
+  background: $color-bg-secondary;
+  border: 1px solid $color-border;
+  border-radius: $radius-md;
+  padding: $spacing-md;
+  margin: 0;
+  overflow-x: auto;
+  font-family: $font-family-mono;
+  font-size: $font-size-xs;
+  line-height: 1.5;
+  color: $color-text-secondary;
+  max-height: 200px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+// === TECHNICAL DETAILS ACTIONS ===
+.technical-details__actions {
+  display: flex;
+  justify-content: center;
+  margin-top: $spacing-lg;
+}
+
+// === ANIMATIONS ===
+@keyframes semFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes semSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-16px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes semSlideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+// === DARK MODE SUPPORT ===
+@media (prefers-color-scheme: dark) {
+  .modal-container {
+    background: #1e293b; // slate-800
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+  }
+
+  .modal-close {
+    color: #64748b;
+
+    &:hover {
+      background: #334155;
+      color: #cbd5e1;
+    }
+  }
+
+  .modal-icon--warning {
+    background: rgba(245, 158, 11, 0.15);
+    color: #fbbf24; // warning lighter
+  }
+
+  .modal-title {
+    color: #f8fafc;
+  }
+
+  .modal-description {
+    p {
+      color: #94a3b8;
+    }
+
+    .error-context {
+      color: #cbd5e1;
+
+      strong {
+        color: #f8fafc;
+      }
+    }
+  }
+
+  .modal-actions {
+    .btn-primary {
+      background: linear-gradient(135deg, #64748b 0%, #475569 100%);
+      color: #f1f5f9;
+
+      &:hover:not(:disabled) {
+        background: linear-gradient(135deg, #475569 0%, #334155 100%);
+      }
+    }
+
+    .btn-secondary {
+      background: #334155;
+      color: #94a3b8;
+      border-color: #475569;
+
+      &:hover:not(:disabled) {
+        background: #475569;
+        color: #f1f5f9;
+      }
+    }
+  }
+
+  .technical-details {
+    border-top-color: #334155;
+  }
+
+  .technical-details__toggle {
+    background: #1e293b;
+    border-color: #334155;
+    color: #cbd5e1;
+
+    &:hover {
+      background: #334155;
+      border-color: #475569;
+    }
+  }
+
+  .error-message__label,
+  .code-box__label,
+  .stack-trace__label {
+    color: #94a3b8;
+  }
+
+  .error-message__text {
+    background: rgba(239, 68, 68, 0.1);
+    color: #f87171;
+    border-left-color: #f87171;
+  }
+
+  .code-box {
+    border-color: #334155;
+  }
+
+  .code-box__header {
+    background: #1e293b;
+    border-bottom-color: #334155;
+  }
+
+  .code-box__copy {
+    color: #cbd5e1;
+
+    &:hover {
+      background: #334155;
+      color: #f8fafc;
+    }
+
+    &--copied {
+      color: #10b981; // success green
+
+      &:hover {
+        color: #10b981;
+      }
+    }
+  }
+
+  .code-box__content {
+    background: #0f172a; // Even darker in dark mode
+  }
+
+  .stack-trace__content {
+    background: #1e293b;
+    border-color: #334155;
+    color: #94a3b8;
+  }
+
+  .btn-ghost {
+    color: #cbd5e1;
+
+    &:hover:not(:disabled) {
+      background: rgba(71, 85, 105, 0.25);
+    }
+  }
+}
+
+// === MOBILE RESPONSIVE ===
+@media (max-width: 640px) {
+  .syntax-error-modal {
+    padding: $spacing-md;
+  }
+
+  .modal-container {
+    padding: $spacing-2xl $spacing-xl;
+    max-width: 100%;
+  }
+
+  .modal-close {
+    top: $spacing-md;
+    right: $spacing-md;
+  }
+
+  .modal-icon {
+    width: 56px;
+    height: 56px;
+
+    i {
+      font-size: 28px;
+    }
+  }
+
+  .modal-title {
+    font-size: $font-size-xl;
+  }
+
+  .modal-actions {
+    flex-direction: column;
+
+    .btn {
+      max-width: 100%;
+    }
+  }
+
+  .code-box__content {
+    font-size: $font-size-sm;
+    padding: $spacing-md;
+    min-height: 120px;
+    max-height: 250px;
+  }
+
+  .error-message__text {
+    padding: $spacing-md;
+    font-size: $font-size-sm;
+  }
+}

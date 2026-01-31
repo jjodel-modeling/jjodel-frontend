@@ -1,27 +1,65 @@
-import React, {Dispatch, ReactElement, ReactNode} from "react";
+import React, {Dispatch, ReactElement, ReactNode, useCallback} from "react";
 import {connect} from "react-redux";
 import {DModel, Pointer, Try, U} from "../../../joiner";
 import {
     DState,
-    CreateElementAction,
     DGraph,
     LGraph,
     LModel,
-    Edge,
     DUser,
     DClass,
     SetRootFieldAction
 } from "../../../joiner";
 import {DefaultNode} from "../../../joiner/components";
-import ToolBar from "../../toolbar/ToolBar";
 import ContextMenu from "../../contextMenu/ContextMenu";
-import { MetricsPanel } from "../../metrics/Metrics";
+import { FeaturesPalette, getFeatureByDragType } from "../../FeaturesPalette";
 
 
 function MetamodelTabComponent(props: AllProps) {
     const model = props.model;
     const graph = props.graph;
     const isEdgePending = props.isEdgePending;
+
+    // Handle drag over on canvas - allow drop
+    const handleDragOver = useCallback((e: React.DragEvent) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'copy';
+    }, []);
+
+    // Handle drop on canvas - create element from Features Palette
+    const handleDrop = useCallback((e: React.DragEvent) => {
+        e.preventDefault();
+
+        try {
+            const dataStr = e.dataTransfer.getData('application/json');
+            if (!dataStr) return;
+
+            const data = JSON.parse(dataStr);
+            const feature = getFeatureByDragType(data.type);
+
+            if (!feature || !model) return;
+
+            // Create the element using model.addChild() - same API as ToolBar
+            // The feature.id is lowercase (package, class, enumerator)
+            const createdElement = model.addChild(feature.id);
+
+            // Execute the returned function if it exists (some addChild returns a function)
+            try {
+                if (typeof createdElement === 'function') {
+                    (createdElement as any)();
+                }
+            } catch (e) {
+                // Element already created directly
+            }
+
+            // Mark project as modified
+            if (!U.isProjectModified) {
+                U.isProjectModified = U.userHasInteracted = true;
+            }
+        } catch (err) {
+            console.error('Failed to handle drop:', err);
+        }
+    }, [model]);
 
     if (!model) return(<>closed tab</>);
     if (!graph) {
@@ -32,7 +70,6 @@ function MetamodelTabComponent(props: AllProps) {
     }
     let graphid = graph.id;
     return(<div className={'w-100 h-100'} style={{overflow: 'hidden'}}>
-        <MetricsPanel data={model}/>
         <ContextMenu graph={graphid}/>
         {/*<PendingEdge />*/}
         {/* Temporary Edge Pending Manager */}
@@ -45,9 +82,15 @@ function MetamodelTabComponent(props: AllProps) {
 
 
         <div className={'d-flex h-100'} style={{overflow:'hidden'}} onClick={e => { if (!U.isProjectModified) U.isProjectModified = U.userHasInteracted = true; }}>
-            <ToolBar model={model.id} isMetamodel={model.isMetamodel}/>
+            {/* Fixed Features Palette - always visible */}
+            <FeaturesPalette />
             <Try>
-                <div className={"GraphContainer h-100 w-100"} style={{position: "relative"}}>
+                <div
+                    className={"GraphContainer h-100 w-100"}
+                    style={{position: "relative"}}
+                    onDragOver={handleDragOver}
+                    onDrop={handleDrop}
+                >
                     {graph && <DefaultNode data={model} nodeid={graphid} graphid={graphid}/> ||
                         <div>Error: missing DGraph prop</div>}
                 </div>

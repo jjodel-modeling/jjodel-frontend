@@ -1,0 +1,279 @@
+// About Dialog - Modern Centered Modal
+// ====================================
+
+.about-dialog-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.about-dialog {
+  position: relative;
+  width: 100%;
+  max-width: 400px;
+  margin: 16px;
+  padding: 40px 32px 32px;
+  background: #ffffff;
+  border-radius: 20px;
+  box-shadow:
+    0 25px 50px -12px rgba(0, 0, 0, 0.25),
+    0 0 0 1px rgba(0, 0, 0, 0.05);
+  text-align: center;
+  animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+
+  // Close button
+  &__close {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border: none;
+    border-radius: 8px;
+    background: transparent;
+    color: #94a3b8;
+    cursor: pointer;
+    transition: all 0.15s ease;
+
+    &:hover {
+      background: #f1f5f9;
+      color: #475569;
+    }
+
+    &:focus {
+      outline: none;
+      box-shadow: 0 0 0 2px #e2e8f0;
+    }
+  }
+
+  // Logo
+  &__logo {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 28px;
+
+    img {
+      width: 80px;
+      height: 80px;
+      object-fit: contain;
+      filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.05));
+    }
+  }
+
+  // Description
+  &__description {
+    margin: 0 0 24px;
+    font-size: 14px;
+    line-height: 1.6;
+    color: #475569;
+  }
+
+  // Meta (version & license)
+  &__meta {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+
+  &__version {
+    display: inline-flex;
+    align-items: center;
+    padding: 6px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #334155; // slate-700
+    background: #f1f5f9; // slate-100
+    border: 1px solid #e2e8f0; // slate-200
+    border-radius: 20px;
+  }
+
+  &__license {
+    display: inline-flex;
+    align-items: center;
+    padding: 6px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #1e293b; // slate-800
+    background: #cbd5e1; // slate-300
+    border-radius: 20px;
+    text-decoration: none;
+    transition: all 0.15s ease;
+
+    &:hover {
+      background: #94a3b8; // slate-400
+      color: #0f172a; // slate-900
+    }
+  }
+
+  // Links
+  &__links {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 24px;
+    padding-top: 24px;
+    border-top: 1px solid #e2e8f0;
+  }
+
+  &__link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    font-size: 13px;
+    font-weight: 500;
+    color: #475569;
+    text-decoration: none;
+    border-radius: 8px;
+    transition: all 0.15s ease;
+
+    i {
+      font-size: 14px;
+    }
+
+    &:hover {
+      background: #f1f5f9;
+      color: #0f172a;
+    }
+  }
+
+  // Credits
+  &__credits {
+    padding-top: 20px;
+    border-top: 1px solid #f1f5f9;
+  }
+
+  &__credits-group {
+    margin: 0 0 4px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #334155;
+  }
+
+  &__credits-institution {
+    margin: 0;
+    font-size: 12px;
+    color: #64748b;
+  }
+}
+
+// Dark mode support
+@media (prefers-color-scheme: dark) {
+  .about-dialog-overlay {
+    background: rgba(0, 0, 0, 0.7);
+  }
+
+  .about-dialog {
+    background: #1e293b;
+    box-shadow:
+      0 25px 50px -12px rgba(0, 0, 0, 0.5),
+      0 0 0 1px rgba(255, 255, 255, 0.1);
+
+    &__close {
+      color: #64748b;
+
+      &:hover {
+        background: #334155;
+        color: #e2e8f0;
+      }
+
+      &:focus {
+        box-shadow: 0 0 0 2px #475569;
+      }
+    }
+
+    &__description {
+      color: #cbd5e1;
+    }
+
+    &__version {
+      color: #e2e8f0; // slate-200
+      background: #334155; // slate-700
+      border-color: #475569; // slate-600
+    }
+
+    &__license {
+      color: #f1f5f9; // slate-100
+      background: #475569; // slate-600
+
+      &:hover {
+        background: #64748b; // slate-500
+        color: #f8fafc;
+      }
+    }
+
+    &__links {
+      border-top-color: #334155;
+    }
+
+    &__link {
+      color: #94a3b8;
+
+      &:hover {
+        background: #334155;
+        color: #f8fafc;
+      }
+    }
+
+    &__credits {
+      border-top-color: #334155;
+    }
+
+    &__credits-group {
+      color: #e2e8f0;
+    }
+
+    &__credits-institution {
+      color: #94a3b8;
+    }
+  }
+}
+
+// Mobile responsive
+@media (max-width: 480px) {
+  .about-dialog {
+    padding: 32px 24px 24px;
+
+    &__links {
+      flex-wrap: wrap;
+    }
+
+    &__link {
+      padding: 8px 12px;
+    }
+  }
+}

@@ -1,6 +1,7 @@
 import React, {CSSProperties, Dispatch, ReactElement, ReactNode, useEffect} from 'react';
 import {connect} from 'react-redux';
 import Editor, {useMonaco} from '@monaco-editor/react';
+
 import {
     DState,
     DViewElement,
@@ -12,7 +13,9 @@ import {
     Overlap, GObject, Log, Info
 } from '../../../joiner';
 import {useStateIfMounted} from 'use-state-if-mounted';
-import {Btn, CommandBar} from '../../commandbar/CommandBar';
+import { mediumMonacoOptions, withReadOnly } from '../monacoConfig';
+import EditorToolbar from '../EditorToolbar';
+import EditorFullscreenModal from '../EditorFullscreenModal';
 
 function JavascriptEditorComponent(props: AllProps) {
     let {placeHolder, height, title, jsxLabel, data, field} = props;
@@ -23,9 +26,9 @@ function JavascriptEditorComponent(props: AllProps) {
     });
     const [js, setJs] = useStateIfMounted(getter());
     const [show, setShow] = useStateIfMounted(props.hide === false ? false : true);
-
     const [expand, setExpand] = useStateIfMounted(false);
-
+    const [wrap, setWrap] = useStateIfMounted(false);
+    const [fullscreen, setFullscreen] = useStateIfMounted(false);
     const [showTooltip, setShowTooltip] = useStateIfMounted(false);
     const readOnly = props.readonly !== undefined ? props.readonly : data && Defaults.check(data.id);
     const change = (value: string|undefined) => {
@@ -75,35 +78,53 @@ function JavascriptEditorComponent(props: AllProps) {
     }
     console.log('jsEditor', {value, p: props.field, t:props.title, l:props.jsxLabel});
     return <>
-        <div style={{...(props.style || {})}} className={'cursor-pointer d-flex'} onMouseEnter={e => setShowTooltip(true)} onMouseLeave={e => setShowTooltip(false)} onClick={e => setShow(!show)}>
-            {props.hide !== undefined ? <span className={'my-auto'} tabIndex={-1}>
-                <i className={'bi bi-chevron-' + (show ? 'down' : 'right')} />
-                {/*show ? <i className={'bi bi-eye-fill'}/> : <i className={'bi bi-eye-slash-fill'}/>*/}
-            </span> : undefined}
-            {title}
-            {jsxLabel}
+        <EditorToolbar
+            title={typeof title === 'string' ? title : (typeof jsxLabel === 'string' ? jsxLabel : 'JavaScript Editor')}
+            icon="bi-filetype-js"
+            content={js || ''}
+            collapsed={!show}
+            onCollapseToggle={() => setShow(!show)}
+            onWrapChange={(newWrap) => setWrap(newWrap)}
+            onExpandChange={(newExpanded) => setExpand(newExpanded)}
+            onFullscreenOpen={() => setFullscreen(true)}
+            disableFullscreen={true}
+            initialExpanded={expand}
+            readOnly={readOnly || false}
+        />
 
-            {show && <CommandBar style={{paddingTop: '10px'}}>
-                {expand ?
-                    <Btn icon={'shrink'} action={(e) => {setExpand(false); setShow(true)}} tip={'Minimize editor'}/>
-                    :
-                    <Btn icon={'expand'} action={(e) => {setExpand(true); setShow(true)}} tip={'Enlarge editor'}/>
-                }
-            </CommandBar>}
-        </div>
         {(tooltip && showTooltip) && <div className={'my-tooltip'}>
             <b className={'text-center text-capitalize'}>{field}</b>
             <br />
             <label>{tooltip}</label>
         </div>}
+
         {show && <div className={'monaco-editor-wrapper'}
-            /* style={{padding: '5px', minHeight: '20px', height: height ? `${height}px` : '100px', resize: 'vertical', overflow:'hidden'}}*/
                       style={{padding: '5px', minHeight: '20px', height:`${expand ? '10lvh' : '5lvh'}`, transition: 'height 0.3s', resize: 'vertical', overflow:'hidden'}}
                       tabIndex={-1} onBlur={blur}>
             <Editor className={'mx-1'} onChange={change}
-                    options={{fontSize: 12, scrollbar: {vertical: 'hidden', horizontalScrollbarSize: 5}, minimap: {enabled: false}, readOnly: readOnly}}
-                    defaultLanguage={'typescript'} value={value} />
+                    options={{
+                        ...withReadOnly(mediumMonacoOptions, readOnly),
+                        wordWrap: wrap ? 'on' : 'off'
+                    }}
+                    defaultLanguage={'typescript'} value={value||""}
+                    loading={<div style={{padding: '20px'}}>Loading JS Editor...</div>}
+            />
         </div>}
+
+        <EditorFullscreenModal
+            isOpen={fullscreen}
+            onClose={() => { blur(); setFullscreen(false); }}
+            title="JavaScript Editor"
+            icon="bi-filetype-js"
+            value={js || ''}
+            onChange={change}
+            onSave={(newValue) => {
+                setter(newValue);
+                setFullscreen(false);
+            }}
+            language="typescript"
+            readOnly={readOnly || false}
+        />
     </>;
 }
 interface OwnProps {

@@ -1,0 +1,91 @@
+/**
+ * JJODEL DESIGN TOKENS - SHADOWS
+ * Elevation system for depth and layering
+ * Based on jjodel-ui-documentation.md Section 5.5
+ * Inspired by Material Design elevation
+ */
+
+/* ============================================
+   SHADOW SCALE - DARK THEME
+   Stronger shadows for dark backgrounds
+   ============================================ */
+
+:root[data-theme="dark"] {
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.5);
+  --shadow-xl: 0 16px 48px rgba(0, 0, 0, 0.6);
+  --shadow-2xl: 0 24px 64px rgba(0, 0, 0, 0.7);
+
+  /* Special shadows */
+  --shadow-glow: 0 0 20px var(--color-accent-muted);   /* Accent glow */
+  --shadow-inner: inset 0 2px 4px rgba(0, 0, 0, 0.2);  /* Inner shadow */
+  --shadow-none: none;
+}
+
+/* ============================================
+   SHADOW SCALE - LIGHT THEME
+   Subtle shadows for light backgrounds
+   ============================================ */
+
+:root,
+:root[data-theme="light"] {
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.12);
+  --shadow-xl: 0 16px 48px rgba(0, 0, 0, 0.16);
+  --shadow-2xl: 0 24px 64px rgba(0, 0, 0, 0.20);
+
+  /* Special shadows */
+  --shadow-glow: 0 0 20px var(--color-accent-muted);   /* Accent glow */
+  --shadow-inner: inset 0 2px 4px rgba(0, 0, 0, 0.06); /* Inner shadow */
+  --shadow-none: none;
+}
+
+/* ============================================
+   SEMANTIC SHADOWS
+   Use cases for different shadow levels
+   ============================================ */
+
+:root {
+  /* Component-specific shadows */
+  --shadow-button: var(--shadow-sm);          /* Buttons (subtle) */
+  --shadow-button-hover: var(--shadow-md);    /* Button hover state */
+  --shadow-card: var(--shadow-md);            /* Cards, panels */
+  --shadow-dropdown: var(--shadow-lg);        /* Dropdowns, menus */
+  --shadow-modal: var(--shadow-xl);           /* Modals, dialogs */
+  --shadow-tooltip: var(--shadow-md);         /* Tooltips */
+  --shadow-node: var(--shadow-md);            /* Canvas nodes */
+  --shadow-node-hover: var(--shadow-lg);      /* Node hover state */
+}
+
+/* ============================================
+   LEGACY COMPATIBILITY
+   Map old Material-like shadows to new system
+   Keep existing --smart-elevation-* for now
+   ============================================ */
+
+:root {
+  --smart-elevation-0: var(--shadow-none);
+  --smart-elevation-1: var(--shadow-sm);
+  --smart-elevation-2: var(--shadow-sm);
+  --smart-elevation-4: var(--shadow-md);
+  --smart-elevation-6: var(--shadow-md);
+  --smart-elevation-8: var(--shadow-lg);
+  --smart-elevation-12: var(--shadow-lg);
+  --smart-elevation-16: var(--shadow-xl);
+  --smart-elevation-24: var(--shadow-2xl);
+}
+
+/* ============================================
+   SHADOW UTILITY CLASSES (Optional)
+   ============================================ */
+
+.shadow-none { box-shadow: var(--shadow-none); }
+.shadow-sm { box-shadow: var(--shadow-sm); }
+.shadow-md { box-shadow: var(--shadow-md); }
+.shadow-lg { box-shadow: var(--shadow-lg); }
+.shadow-xl { box-shadow: var(--shadow-xl); }
+.shadow-2xl { box-shadow: var(--shadow-2xl); }
+.shadow-glow { box-shadow: var(--shadow-glow); }
+.shadow-inner { box-shadow: var(--shadow-inner); }

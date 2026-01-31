@@ -129,11 +129,11 @@
     display: none;
   }
   .dock-nav-operations.dock-nav-operations-hidden~.dock-extra-content{
-    display: flex;
+    display: none;
   }
   .my-panel-extra-container {
     display: flex;
-    margin: auto;
+    margin: auto; 
     height: 100%;
   }
   .my-panel-extra-btn{

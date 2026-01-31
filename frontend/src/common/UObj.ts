@@ -1,6 +1,6 @@
 import {GObject, Log, PointedBy, RuntimeAccessible} from "../joiner";
 import {U, Uarr} from "../joiner";
-const stringify = require('json-stable-stringify');
+import stringify from 'json-stable-stringify';
 (window as any).stableStringify = stringify;
 
 @RuntimeAccessible('Uobj')

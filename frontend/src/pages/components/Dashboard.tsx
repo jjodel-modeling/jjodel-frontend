@@ -16,9 +16,10 @@ import {
     Try, TRANSACTION, L
 } from '../../joiner';
 import {LeftBar, Navbar} from './';
+import { RightPanel } from './RightPanel';
 
 import '../dashboard.scss'
-import React, {JSX, ReactElement, useRef} from "react";
+import React, {JSX, ReactElement, useRef, useState} from "react";
 import {Btn, CommandBar, Sep} from '../../components/commandbar/CommandBar';
 
 import colors000 from '../../static/img/colors-000.png';
@@ -29,13 +30,7 @@ import colors111 from '../../static/img/colors-111.png';
 
 import useQuery from '../../hooks/useQuery';
 
-import {
-    TbSquareRoundedLetterM,
-    TbSquareRoundedLetterMFilled,
-    TbSquareRoundedLetterV,
-    TbSquareRoundedLetterVFilled,
-    TbSquareRoundedLetterE
-} from "react-icons/tb";
+import { ElementBadge } from '../../components/common/ElementBadge';
 import DockManager from '../../components/abstract/DockManager';
 import Dock from "../../components/abstract/Dock";
 import {CSS_Units} from "../../view/viewElement/view";
@@ -44,6 +39,7 @@ import { Tooltip } from '../../components/forEndUser/Tooltip';
 import { ProjectsApi } from '../../api/persistance';
 import {Cards} from "./cards/Cards";
 import {createM2} from "./Navbar";
+import {BottomToolbar} from "./BottomToolbar";
 
 
 type UserProps = {
@@ -231,6 +227,7 @@ export type DashProps = {
     project?: LProject;
     projects?:LProject[];
     style?: any;
+    onNewProject?: () => void;
 };
 
 
@@ -254,24 +251,90 @@ type ProjectDashboardProps = {
 function GenericDashboard(props: DashProps): any {
     const {children, active} = props;
     const user: LUser = LUser.getUser();
+    const [isDragging, setIsDragging] = useState(false);
+
+    const handleDragOver = (e: React.DragEvent) => {
+        e.preventDefault();
+        const items = e.dataTransfer.items;
+        if (items.length > 0) {
+            const item = items[0];
+            if (item.kind === 'file') {
+                setIsDragging(true);
+            }
+        }
+    };
+
+    const handleDragLeave = (e: React.DragEvent) => {
+        e.preventDefault();
+        // Only set to false if leaving the container (not entering a child)
+        if (e.currentTarget === e.target || !e.currentTarget.contains(e.relatedTarget as Node)) {
+            setIsDragging(false);
+        }
+    };
+
+    const handleDrop = async (e: React.DragEvent) => {
+        e.preventDefault();
+        setIsDragging(false);
+
+        const file = e.dataTransfer.files[0];
+        if (file && file.name.endsWith('.jjodel')) {
+            const reader = new FileReader();
+            reader.onload = async (event) => {
+                const content = String(event.target?.result);
+                try {
+                    await ProjectsApi.importFromText(content);
+                    U.alert('i', 'Project imported', `"${file.name}" has been imported successfully.`);
+                } catch (err) {
+                    U.alert('e', 'Import failed', 'The file could not be imported. Please check the file format.');
+                }
+            };
+            reader.readAsText(file);
+        } else if (file) {
+            U.alert('w', 'Invalid file type', 'Please drop a .jjodel file to import a project.');
+        }
+    };
+
+    // Determine layout mode: three-column for dashboard pages, two-column for project editing
+    const layoutClass = active !== 'Project' ? 'three-column' : 'two-column';
 
     return (<>
         <Navbar />
-        <div className={"dashboard-container"} tabIndex={-1}>
+        <div
+            className={`dashboard-container ${layoutClass} ${isDragging ? 'is-dragging' : ''}`}
+            tabIndex={-1}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+        >
             <LeftBar active={active} projects={user?.projects}/>
-            <div className={`dash-content user ${props.style && props.style}`}>
-                <div>
-                    <>
-                        {active === "All" && <Title active={active} title={'Dashboard'} icon={<i className="bi bi-columns-gap"></i>} />}
+            <div className={`dash-content ${active === 'All' ? 'projects-view' : 'user'} ${props.style && props.style}`}>
+                {/* Title for non-All views only - All view title is in AllProjects.tsx CTA row */}
+                {active !== "All" && (
+                    <div>
                         {active === "Recent" && <Title  active={active} title={'Recent'} icon={<i className="bi bi-clock"></i>} />}
                         {active === "Templates" && <Title  active={active} title={'Templates'} icon={<i className="bi bi-lightbulb"></i>} />}
                         {active === "Notes" && <Title  active={active} title={'Project Notes'} icon={<i className="bi bi-pencil-square"></i>} />}
                         {active === "Updates" && <Title  active={active} title={'What\'s new'} icon={<i className="bi bi-clock-history"></i>} />}
                         {active === "Profile" && <Title  active={active} title={'Profile'} icon={<i className="bi bi-clock-history"></i>} />}
-                    </>
-                </div>
+                    </div>
+                )}
                 <Catalog children={children}/>
             </div>
+
+            {/* Right Panel - Only visible on dashboard pages (three-column layout) */}
+            {active !== 'Project' && (
+                <RightPanel user={user} projects={user?.projects} onNewProject={props.onNewProject} />
+            )}
+
+            {/* Drop Overlay */}
+            {isDragging && (
+                <div className="drop-overlay">
+                    <div className="drop-zone">
+                        <i className="bi bi-cloud-arrow-up" />
+                        <p>Drop .jjodel file to import</p>
+                    </div>
+                </div>
+            )}
         </div>
     </>);
 }
@@ -347,7 +410,7 @@ function ProjectCatalog(props: ProjectProps) {
                 return (
                 <div className="row data" key={mm.id}>
                     <div className={'col-4 '} onClick={async () => await DockManager.open2(mm)}>
-                        <TbSquareRoundedLetterMFilled style={{fontSize: '1.5em'}}/> {name}</div>
+                        <ElementBadge type="metamodel" /> {name}</div>
                     <div className={'col-2 artifact-type'}>Metamodel</div>
                     <div className={'buttons'}>
                         <CommandBar noBorder={true} style={{marginBottom: '0'}}>
@@ -368,7 +431,7 @@ function ProjectCatalog(props: ProjectProps) {
                 return (
                 <div className="row data" key={model.id}>
                     <div className={'col-4 '} onClick={async () => await DockManager.open2(model)}>
-                        <TbSquareRoundedLetterM style={{fontSize: '1.5em'}}/> {name}</div>
+                        <ElementBadge type="model" /> {name}</div>
                     <div className={'col-2 artifact-type'}>Model</div>
                     <div className={'buttons'}>
                         <CommandBar noBorder={true} style={{marginBottom: '0'}}>
@@ -388,9 +451,7 @@ function ProjectCatalog(props: ProjectProps) {
                 let name = vp?.name;
                 return (!vp ? <div key={name||'error_'+vp}>errorvp: {vp + ''}</div> :
                     <div className="row data viewpoint" key={name}>
-                        <div className={'col-4'}>{vp.isOverlay ?
-                            <TbSquareRoundedLetterVFilled style={{fontSize: '1.5em'}}/> :
-                            <TbSquareRoundedLetterV style={{fontSize: '1.5em'}}/>} {name}</div>
+                        <div className={'col-4'}><ElementBadge type="viewpoint" /> {name}</div>
                         <div className={'col-2 artifact-type'}>Viewpoint</div>
                         <div className={'buttons'}>
                             <CommandBar noBorder={true} style={{marginBottom: '0'}}>
@@ -409,19 +470,19 @@ function ProjectCatalog(props: ProjectProps) {
                 <h1>Legenda</h1>
                 <div className={'row'}>
                     <div className={'col'}>
-                        <TbSquareRoundedLetterMFilled style={{fontSize: '1.3em'}}/> Metamodels
+                        <ElementBadge type="metamodel" /> Metamodels
                     </div>
                     <div className={'col'}>
-                        <TbSquareRoundedLetterM style={{fontSize: '1.3em'}}/> Models
+                        <ElementBadge type="model" /> Models
                     </div>
                     <div className={'col'}>
-                        <TbSquareRoundedLetterVFilled style={{fontSize: '1.3em'}}/> Viewpoints
+                        <ElementBadge type="viewpoint" /> Viewpoints
                     </div>
                     <div className={'col'}>
-                        <TbSquareRoundedLetterV style={{fontSize: '1.3em'}}/> Overlay Viewpoints
+                        <ElementBadge type="viewpoint" /> Overlay Viewpoints
                     </div>
                     <div className={'col disabled'}>
-                        <TbSquareRoundedLetterE className={'disabled'} style={{fontSize: '1.3em'}}/> Epsilon Transformations
+                        <ElementBadge type="epsilon" className="disabled" /> Epsilon Transformations
                     </div>
                 </div>
             </div>
@@ -481,6 +542,7 @@ function ProjectDashboard(props: DashProps): any {
         </Try>
         <Try><Navbar /></Try>
         <Try><Dock /></Try>
+        <Try><BottomToolbar /></Try>
     </>);
 }
 

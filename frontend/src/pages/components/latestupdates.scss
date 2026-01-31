@@ -12,7 +12,7 @@ div.updates-container {
 
     & h1 {
         font-size: 1.3em;
-        font-weight: 500;
+        font-weight: var(--font-medium);
     }
 
     & .updates-item {

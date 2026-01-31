@@ -1,0 +1,166 @@
+/**
+ * JJODEL DESIGN TOKENS - TRANSITIONS
+ * Animation durations and easing functions
+ * Based on jjodel-ui-documentation.md Section 5.6
+ */
+
+:root {
+  /* ============================================
+     DURATION
+     Animation/transition speeds
+     ============================================ */
+
+  --duration-instant: 0ms;        /* No animation */
+  --duration-fast: 150ms;         /* Quick interactions - hover, focus */
+  --duration-normal: 250ms;       /* Standard transitions */
+  --duration-slow: 400ms;         /* Deliberate animations - modals */
+  --duration-slower: 600ms;       /* Very deliberate - page transitions */
+
+  /* ============================================
+     EASING FUNCTIONS
+     Timing curves for natural motion
+     ============================================ */
+
+  --ease-linear: linear;
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);            /* Accelerate */
+  --ease-out: cubic-bezier(0, 0, 0.2, 1);           /* Decelerate */
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);      /* Smooth both ends */
+  --ease-bounce: cubic-bezier(0.68, -0.55, 0.265, 1.55);  /* Playful bounce */
+
+  /* ============================================
+     COMBINED TRANSITIONS
+     Pre-configured transition properties
+     ============================================ */
+
+  /* Fast transitions - hover, focus states */
+  --transition-fast: var(--duration-fast) var(--ease-out);
+  --transition-fast-all: all var(--duration-fast) var(--ease-out);
+
+  /* Normal transitions - default for most UI */
+  --transition-normal: var(--duration-normal) var(--ease-in-out);
+  --transition-normal-all: all var(--duration-normal) var(--ease-in-out);
+
+  /* Slow transitions - modals, panels */
+  --transition-slow: var(--duration-slow) var(--ease-in-out);
+  --transition-slow-all: all var(--duration-slow) var(--ease-in-out);
+
+  /* ============================================
+     COMPONENT-SPECIFIC TRANSITIONS
+     Common use cases
+     ============================================ */
+
+  /* Button transitions */
+  --transition-button: background-color var(--duration-fast) var(--ease-out),
+                       color var(--duration-fast) var(--ease-out),
+                       transform var(--duration-fast) var(--ease-out);
+
+  /* Input focus */
+  --transition-input: border-color var(--duration-fast) var(--ease-out),
+                      box-shadow var(--duration-fast) var(--ease-out);
+
+  /* Modal/Dialog */
+  --transition-modal: opacity var(--duration-normal) var(--ease-in-out),
+                      transform var(--duration-normal) var(--ease-in-out);
+
+  /* Dropdown/Menu */
+  --transition-dropdown: opacity var(--duration-fast) var(--ease-out),
+                         transform var(--duration-fast) var(--ease-out);
+
+  /* Tooltip */
+  --transition-tooltip: opacity var(--duration-fast) var(--ease-out);
+
+  /* Canvas node */
+  --transition-node: box-shadow var(--duration-fast) var(--ease-out),
+                     transform var(--duration-fast) var(--ease-out);
+
+  /* Tab switching */
+  --transition-tab: background-color var(--duration-normal) var(--ease-in-out),
+                    color var(--duration-normal) var(--ease-in-out),
+                    border-color var(--duration-normal) var(--ease-in-out);
+
+  /* ============================================
+     SPECIAL TRANSITIONS
+     ============================================ */
+
+  /* Color transitions only */
+  --transition-colors: background-color var(--duration-fast) var(--ease-out),
+                       color var(--duration-fast) var(--ease-out),
+                       border-color var(--duration-fast) var(--ease-out);
+
+  /* Transform only */
+  --transition-transform: transform var(--duration-fast) var(--ease-out);
+
+  /* Opacity fade */
+  --transition-fade: opacity var(--duration-normal) var(--ease-in-out);
+}
+
+/* ============================================
+   ANIMATION KEYFRAMES
+   Reusable animations
+   ============================================ */
+
+/* Fade in */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Slide in from top */
+@keyframes slideInFromTop {
+  from {
+    transform: translateY(-10px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* Slide in from bottom */
+@keyframes slideInFromBottom {
+  from {
+    transform: translateY(10px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* Scale in */
+@keyframes scaleIn {
+  from {
+    transform: scale(0.95);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* Spin (for loading spinners) */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Pulse (for notifications) */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}

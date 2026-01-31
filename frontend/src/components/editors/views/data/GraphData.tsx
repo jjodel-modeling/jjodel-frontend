@@ -21,9 +21,9 @@ function GraphDataComponent(props: AllProps) {
     let empty = true;
     // if (empty) return null;
     let grid = view.grid;
-    return(<section>
+    return(<section className="graph>
         <h5>Graph</h5>
-        <div className={'px-2 no-padding-left'}>
+        <div className={'px-2'}>
             <SizeInput data={view} label={'Grid'}
                        xlabel={grid!.type === 'polar' ? 'modulo' : 'x'}
                        ylabel={grid!.type === 'polar' ? 'angle' : 'y'}

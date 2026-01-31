@@ -1,11 +1,12 @@
 import './style.scss';
-import {Dispatch, ReactElement, ReactNode} from 'react';
+import React, {Dispatch, ReactElement, ReactNode, useEffect, useState} from 'react';
 import {connect} from 'react-redux';
 import {DProject, DState, DUser, LProject, LUser} from '../../joiner';
 import {FakeStateProps, windoww} from '../../joiner/types';
 import {LayoutData} from 'rc-dock';
-import {Collaborative, Console, Info, Logger, Skeleton, MetaData, NestedView} from "../editors";
+import {Collaborative, Console, Logger, MetaData, NestedView} from "../editors";
 import {NodeEditor} from "../editors/NodeEditor";
+import {PropertiesWithTreeView} from "../editors/PropertiesWithTreeView";
 import DockManager from './DockManager';
 import {PinnableDock, TabContent, TabHeader} from '../dock/MyRcDock';
 import ModelsSummaryTab from "./tabs/ModelsSummaryTab";
@@ -14,9 +15,114 @@ import {PermissionModelTab} from "../editors/PermissionModelTab";
 import {MTM} from "../editors/MTM";
 import { isProjectModified } from '../../common/libraries/projectModified';
 import { Logo } from '../../components/logo';
+import { SimpleResizeHandle } from '../SimpleResizeHandle';
 //import MqttEditor from "../rightbar/mqtt/MqttEditor";
 //import NestedView from "../rightbar/nestedViewEditor/ViewEditorNestedVersion";
 //import CollaboratorsEditor from "../rightbar/collaboratorsEditor/CollaboratorsEditor";
+
+// ============================================
+// LAYOUT MODE TYPES
+// ============================================
+export type LayoutMode = 'split' | 'sidebar' | 'canvas-only' | 'vertical-console';
+
+/**
+ * Get saved layout mode from localStorage
+ */
+export function getSavedLayoutMode(): LayoutMode {
+    const saved = localStorage.getItem('jjodel_layout_mode');
+    return (saved as LayoutMode) || 'split';
+}
+
+/**
+ * Save layout mode to localStorage
+ */
+export function saveLayoutMode(mode: LayoutMode): void {
+    localStorage.setItem('jjodel_layout_mode', mode);
+}
+
+/**
+ * Get the default panel size ratio for a layout mode (as percentage)
+ */
+export function getDefaultPanelRatio(mode: LayoutMode): number {
+    switch (mode) {
+        case 'split': return 50;      // 50% canvas, 50% properties
+        case 'sidebar': return 30;    // 70% canvas, 30% properties
+        case 'canvas-only': return 0; // 100% canvas, 0% properties
+        case 'vertical-console': return 0; // Not used for vertical mode
+        default: return 50;
+    }
+}
+
+/**
+ * Activate vertical console mode programmatically (for testing)
+ * Usage: In browser console, run: window.setVerticalConsoleMode()
+ */
+export function activateVerticalConsoleMode(): void {
+    saveLayoutMode('vertical-console');
+    window.dispatchEvent(new CustomEvent('jjodel:layout-mode-change', {
+        detail: { mode: 'vertical-console' as LayoutMode }
+    }));
+    console.log('✅ Vertical Console Mode activated. Refresh if needed.');
+}
+
+// Expose to window for easy testing
+if (typeof window !== 'undefined') {
+    (window as any).setVerticalConsoleMode = activateVerticalConsoleMode;
+    (window as any).setSplitMode = () => {
+        saveLayoutMode('split');
+        window.location.reload();
+    };
+}
+
+/**
+ * Save dock panel ratio to localStorage for a specific mode
+ */
+export function saveDockPanelRatio(mode: LayoutMode, ratio: number): void {
+    localStorage.setItem(`jjodel_dock_ratio_${mode}`, String(ratio));
+}
+
+/**
+ * Get saved dock panel ratio from localStorage, or default if not saved
+ */
+export function getSavedDockPanelRatio(mode: LayoutMode): number {
+    const saved = localStorage.getItem(`jjodel_dock_ratio_${mode}`);
+    if (saved !== null) {
+        const parsed = parseFloat(saved);
+        if (!isNaN(parsed) && parsed > 0 && parsed <= 100) {
+            return parsed;
+        }
+    }
+    return getDefaultPanelRatio(mode);
+}
+
+/**
+ * Get initial panel width for right panel (for backward compatibility)
+ * @deprecated Use calculatePanelSizes instead
+ */
+export function getInitialPanelWidth(mode: LayoutMode): number {
+    const { rightSize } = calculatePanelSizes(mode);
+    return rightSize;
+}
+
+/**
+ * Calculate panel sizes based on ratio
+ * Returns { leftSize, rightSize } in pixels
+ */
+export function calculatePanelSizes(mode: LayoutMode): { leftSize: number; rightSize: number } {
+    const screenWidth = window.innerWidth;
+
+    // Canvas-only mode: full canvas, no properties
+    if (mode === 'canvas-only') {
+        return { leftSize: screenWidth, rightSize: 0 };
+    }
+
+    // Get saved ratio or default
+    const rightRatio = getSavedDockPanelRatio(mode);
+    const rightSize = Math.max(300, Math.floor(screenWidth * (rightRatio / 100)));
+    const leftSize = screenWidth - rightSize;
+
+    return { leftSize, rightSize };
+}
 
 
 
@@ -36,28 +142,120 @@ function tid(){
 function DockComponent(props: AllProps) {
     const {user} = props;
     idcounter = 0;
-    const groups = {
-        'models': {floatable: true, maximizable: true},
-        'editors': {floatable: true, maximizable: true}
+
+    // State per il layout mode - si aggiorna quando cambia dalla navbar
+    const [layoutMode, setLayoutMode] = useState<LayoutMode>(() => getSavedLayoutMode());
+
+    // State for console height in vertical-console mode
+    const [consoleHeight, setConsoleHeight] = useState<number>(() => {
+        const stored = localStorage.getItem('jjodel_vertical_console_height');
+        return stored ? parseInt(stored, 10) : 400;
+    });
+
+    // Handler for console height change
+    const handleConsoleHeightChange = (height: number) => {
+        setConsoleHeight(height);
+        localStorage.setItem('jjodel_vertical_console_height', height.toString());
     };
 
-    /* Models */
-    // const ModelsSummary = {id: id(), title: <TabHeader tid={tid()}><JLogo style={{marginLeft: '-10px', fontSize: '1.5rem', paddingRight: '6px'}}/> Summary</TabHeader>, group: 'models', closable: false, content: <TabContent tid={tid()}><ModelsSummaryTab /></TabContent>};
+    // Listener per l'evento di cambio layout dalla navbar
+    useEffect(() => {
+        const handleLayoutChange = (event: CustomEvent<{ mode: LayoutMode; resetToDefault?: boolean }>) => {
+            const newMode = event.detail.mode;
+            const resetToDefault = event.detail.resetToDefault || false;
 
+            // Update panel sizes based on mode - do this BEFORE state update to avoid re-render issues
+            if (DockManager.dock) {
+                const currentLayout = DockManager.dock.getLayout();
+                if (currentLayout?.dockbox?.children?.length >= 2) {
+                    const screenWidth = window.innerWidth;
+                    let rightPanelRatio: number;
+
+                    if (resetToDefault) {
+                        // Double-click: reset to default ratio
+                        rightPanelRatio = getDefaultPanelRatio(newMode);
+                        // Clear saved ratio so next single-click uses default
+                        localStorage.removeItem(`jjodel_dock_ratio_${newMode}`);
+                    } else {
+                        // Single-click: use saved ratio or default
+                        rightPanelRatio = getSavedDockPanelRatio(newMode);
+                    }
+
+                    // Calculate sizes based on ratio
+                    const rightPanelSize = Math.floor(screenWidth * (rightPanelRatio / 100));
+                    const leftPanelSize = screenWidth - rightPanelSize;
+
+                    // Create a deep copy to avoid mutating the original layout
+                    // This preserves all tabs and activeId without issues
+                    const updatedLayout = JSON.parse(JSON.stringify(currentLayout));
+
+                    // Update only the sizes - preserves tabs, activeId, and all other properties
+                    updatedLayout.dockbox.children[0].size = leftPanelSize;
+                    updatedLayout.dockbox.children[1].size = rightPanelSize;
+
+                    // Load updated layout - this preserves all open tabs and selection
+                    DockManager.dock.loadLayout(updatedLayout);
+
+                    // Trigger resize event to make rc-dock recalculate
+                    setTimeout(() => window.dispatchEvent(new Event('resize')), 50);
+                }
+            }
+
+            // Update state AFTER layout is updated to avoid race conditions
+            setLayoutMode(newMode);
+        };
+
+        // Listen for dock panel resize to save the ratio
+        const handleDockResize = () => {
+            if (DockManager.dock) {
+                const layout = DockManager.dock.getLayout();
+                if (layout?.dockbox?.children?.length >= 2) {
+                    const leftSize = layout.dockbox.children[0].size || 1;
+                    const rightSize = layout.dockbox.children[1].size || 1;
+                    const total = leftSize + rightSize;
+                    const rightRatio = Math.round((rightSize / total) * 100);
+
+                    // Save the ratio for the current mode
+                    const currentMode = getSavedLayoutMode();
+                    if (currentMode !== 'canvas-only') {
+                        saveDockPanelRatio(currentMode, rightRatio);
+                    }
+                }
+            }
+        };
+
+        window.addEventListener('jjodel:layout-mode-change', handleLayoutChange as EventListener);
+
+        // Debounced resize save (save after user stops resizing)
+        let resizeTimeout: ReturnType<typeof setTimeout>;
+        const debouncedResize = () => {
+            clearTimeout(resizeTimeout);
+            resizeTimeout = setTimeout(handleDockResize, 500);
+        };
+        window.addEventListener('mouseup', debouncedResize);
+
+        return () => {
+            window.removeEventListener('jjodel:layout-mode-change', handleLayoutChange as EventListener);
+            window.removeEventListener('mouseup', debouncedResize);
+            clearTimeout(resizeTimeout);
+        };
+    }, []);
+
+    const groups = {
+        'models': {floatable: true, maximizable: false},
+        // editors group: tabLocked=true disables drag-and-drop reordering
+        // Tabs remain in fixed order: Properties, Tree View, Viewpoints, Node, Console
+        'editors': {floatable: true, maximizable: false, tabLocked: true}
+    };
 
     let advanced:boolean = props.advanced;
-    /* Editors */
-
 
     const ModelsSummary = {id: id(), title: <TabHeader tid={tid()}><Logo style={{marginLeft: '-10px', fontSize: '1.5rem', paddingRight: '6px'}}/> {DProject.getProject()?.name}</TabHeader>, group: 'models', closable: false, content: <TabContent tid={tid()}><ModelsSummaryTab /></TabContent>};
-    //const test = {id: id(), title: 'Test', group: 'editors', closable: false, content: <TestTab />};
-    const structure = {id: id(), title: <TabHeader tid={tid()}>Properties</TabHeader>, group: 'editors', closable: false, content: <TabContent tid={tid()}><Info mode={'tab'}/></TabContent>};
+    const structure = {id: id(), title: <TabHeader tid={tid()}>Properties</TabHeader>, group: 'editors', closable: false, content: <TabContent tid={tid()}><PropertiesWithTreeView mode={'tab'}/></TabContent>};
     const metadata = {id: id(), title: <TabHeader tid={tid()}>Metadata</TabHeader>, group: 'editors', closable: false, content: <TabContent tid={tid()}><MetaData /></TabContent>};
-    const tree = {id: id(), title: <TabHeader tid={tid()}>Tree View</TabHeader>, group: 'editors', closable: false, content: <TabContent tid={tid()}><Skeleton /></TabContent>};
-    // const views = {id: id(), title: <TabHeader tid={tid()}>Views</TabHeader>, group: 'editors', closable: false, content: <TabContent tid={tid()}><Views /></TabContent>};
+    // Tree View tab removed - now using dedicated TreeViewSidebar component
     const node = {id: id(), title: <TabHeader tid={tid()}>Node</TabHeader>, group: 'editors', closable: false, content: <TabContent tid={tid()}><NodeEditor /></TabContent>};
     const views = {id: id(), title: <TabHeader tid={tid()}>Viewpoints</TabHeader>, group: 'editors', closable: false, content: <TabContent tid={tid()}><NestedView /></TabContent>};
-    //const validation = {id: id(), title: <TabHeader tid={tid()}>Validation</TabHeader>, group: 'editors', closable: false, content: <TabContent tid={tid()}><ViewpointEditor validation={true} /></TabContent>};
     const collaborative = {id: id(), title: <TabHeader tid={tid()}>Collaborative</TabHeader>, group: 'editors', closable: false, content: <TabContent tid={tid()}><Collaborative /></TabContent>};
     // const mqtt = {id: id(), title: <TabHeader tid={tid()}>Mqtt</TabHeader>, group: 'editors', closable: false, content: <TabContent tid={tid()}><MqttEditor /></TabContent>};
     // const broker = {id: id(), title: <TabHeader tid={tid()}>Broker</TabHeader>, group: 'editors', closable: false, content: <TabContent tid={tid()}><BrokerEditor /></TabContent>};
@@ -66,22 +264,55 @@ function DockComponent(props: AllProps) {
     const permissions = {id: id(), title: <TabHeader tid={tid()}>Permissions</TabHeader>, group: 'editors', closable: false, content: <TabContent tid={tid()}><PermissionModelTab/></TabContent>};
     const mtm = {id: id(), title: <TabHeader tid={tid()}>Languages</TabHeader>, group: 'editors', closable: false, content: <TabContent tid={tid()}><MTM/></TabContent>};
 
-    const layout: LayoutData = {dockbox: {mode: 'horizontal', children: []}};
-    layout.dockbox.children.push({tabs: [ModelsSummary]});
+    // Check if we're in vertical-console mode
+    if (layoutMode === 'vertical-console') {
+        // Vertical layout: Canvas on top, Console at bottom with resize handle
+        const canvasHeight = window.innerHeight - consoleHeight;
 
+        return (
+            <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
+                {/* Canvas area - takes remaining space */}
+                <div style={{ height: `${canvasHeight}px`, overflow: 'auto', position: 'relative' }}>
+                    <ModelsSummaryTab />
+                </div>
+
+                {/* Resize Handle */}
+                <SimpleResizeHandle
+                    onHeightChange={handleConsoleHeightChange}
+                    currentHeight={consoleHeight}
+                />
+
+                {/* Console area - fixed height */}
+                <div style={{ height: `${consoleHeight}px`, overflow: 'auto', background: '#ffffff', borderTop: '1px solid #e2e8f0' }}>
+                    <Console />
+                </div>
+            </div>
+        );
+    }
+
+    // Standard horizontal layout (existing behavior)
+    const layout: LayoutData = {dockbox: {mode: 'horizontal', children: []}};
+
+    // Calculate panel sizes based on layout mode
+    const { leftSize, rightSize } = calculatePanelSizes(layoutMode);
+
+    // Left panel (Models Summary / Canvas)
+    layout.dockbox.children.push({tabs: [ModelsSummary], size: leftSize});
+
+    // Fixed tab order: Properties, Viewpoints, Node (Advanced), Console
+    // Tree View is now inside PropertiesWithTreeView component
+    // This order is locked (tabLocked:true in editors group)
     const tabs = [];
-    tabs.push(structure);
-    tabs.push(tree);
-    tabs.push(views);
-    // if (advanced) tabs.push(metadata);
-    // if (advanced) tabs.push(broker);
-    tabs.push(node);
-    tabs.push(console);
+    tabs.push(structure);  // Properties
+    tabs.push(views);      // Viewpoints
+    if (advanced) tabs.push(node);  // Node (Advanced only)
+    tabs.push(console);    // Console
     if (advanced) tabs.push(mtm);
     if (advanced) tabs.push(logger);
 
-    // if (?.type === 'collaborative') tabs.push(collaborative);
+// if (?.type === 'collaborative') tabs.push(collaborative);
     if (false && LProject.getProject()?.type === 'collaborative') tabs.push(permissions);
+    // Right panel (Editors) - Properties, Viewpoints, Node, Console
     layout.dockbox.children.push({tabs});
 
     return (<PinnableDock key={''+advanced} ref={dock => { DockManager.dock = dock }} defaultLayout={layout} groups={groups} />);

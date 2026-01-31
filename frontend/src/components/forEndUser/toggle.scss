@@ -52,9 +52,9 @@ div.toggle{
     &::after {
       content: '';
       display: block;
-      border: none; // var(--border) solid var(--bg-3-1); 
+      border: none; // var(--border) solid var(--bg-3-1);
       border-radius: var(--dimension);
-      background:  white;
+      background: var(--color-bg-secondary, white);
       transition: all 0.3s ease-in;
       width: calc(var(--dimension) - var(--border)*2);
       height: calc(var(--dimension) - var(--border)*2);
@@ -109,7 +109,7 @@ div.toggle{
 
  .toggle span {
     color: var(--color);
-    font-weight: 400;
+    font-weight: var(--font-normal);
     position: relative;
     display: block;
     margin-right: calc(var(--dimension) + 20px);

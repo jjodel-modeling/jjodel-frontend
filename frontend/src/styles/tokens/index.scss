@@ -1,0 +1,211 @@
+/**
+ * JJODEL DESIGN TOKENS - MASTER INDEX
+ *
+ * This is the single source of truth for all design tokens.
+ * Import this file in your main App.scss or index.scss
+ *
+ * Usage:
+ *   @import './tokens/index';
+ *
+ * Then use tokens in your components:
+ *   .my-button {
+ *     background: var(--color-accent);
+ *     padding: var(--space-4);
+ *     border-radius: var(--radius-md);
+ *     transition: var(--transition-fast-all);
+ *   }
+ *
+ * Theme switching:
+ *   Add [data-theme="dark"] to <html> or <body> element
+ *   JavaScript: document.documentElement.setAttribute('data-theme', 'dark');
+ */
+
+/* ============================================
+   IMPORT ORDER
+   Order matters! Colors first, then everything else
+   ============================================ */
+
+/* 1. Colors - Load light theme first (default) */
+@import './colors-light';
+
+/* 2. Colors - Dark theme (overrides when [data-theme="dark"]) */
+@import './colors-dark';
+
+/* 3. Typography - Fonts, sizes, weights */
+@import './typography';
+
+/* 4. Spacing - Margins, paddings, gaps */
+@import './spacing';
+
+/* 5. Shadows - Elevation system */
+@import './shadows';
+
+/* 6. Radius - Border rounding */
+@import './radius';
+
+/* 7. Transitions - Animations, easings */
+@import './transitions';
+
+/* 8. Z-Index - Layering */
+@import './z-index';
+
+/* 9. Gradients - Button and UI gradients */
+@import './gradients';
+
+/* ============================================
+   GLOBAL RESETS & BASE STYLES
+   Apply design tokens to base elements
+   ============================================ */
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  /* Set base font size - all rem units based on this */
+  font-size: 16px;
+
+  /* Default theme (can be changed via data-theme attribute) */
+  /* Light theme is default, no need to set data-theme */
+}
+
+body {
+  /* Apply base styles */
+  margin: 0;
+  padding: 0;
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  font-weight: var(--font-normal);
+  line-height: var(--leading-normal);
+  color: var(--color-text-primary);
+  background-color: var(--color-bg-primary);
+
+  /* Smooth font rendering */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+
+  /* Improve text rendering */
+  text-rendering: optimizeLegibility;
+}
+
+/* ============================================
+   THEME SWITCHING UTILITIES
+   ============================================ */
+
+/* You can add a class to temporarily disable transitions during theme switch */
+body.theme-transitioning * {
+  transition: none !important;
+}
+
+/* ============================================
+   CUSTOM CHECKBOX - MINIMAL TEAL STYLE
+   Replaces default browser checkbox
+   ============================================ */
+
+/* Hide native checkbox but keep accessible */
+input[type="checkbox"] {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+/* Custom checkbox container - applies to label or wrapper */
+input[type="checkbox"],
+input[type="checkbox"],
+label:has(input[type="checkbox"])::before {
+  content: '';
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  min-width: 18px;
+  border-radius: 4px;
+  border: 2px solid var(--color-border-secondary, #d0d3d8);
+  background-color: var(--color-bg-elevated, #ffffff);
+  vertical-align: middle;
+  margin-right: var(--space-2, 8px);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  position: relative;
+}
+
+/* Hover state */
+input[type="checkbox"]:not(:checked):not(:disabled) + span:hover::before,
+input[type="checkbox"]:not(:checked):not(:disabled) + label:hover::before,
+label:has(input[type="checkbox"]:not(:checked):not(:disabled)):hover::before {
+  border-color: var(--color-accent, #475569);
+}
+
+/* Checked state */
+input[type="checkbox"]:checked + span::before,
+input[type="checkbox"]:checked + label::before,
+label:has(input[type="checkbox"]:checked)::before {
+  border: none;
+  background-color: var(--color-accent, #475569);
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 12 12' fill='none' stroke='white' stroke-width='2' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M2 6l3 3 5-5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: 10px 10px;
+}
+
+/* Focus state */
+input[type="checkbox"]:focus + span::before,
+input[type="checkbox"]:focus + label::before,
+label:has(input[type="checkbox"]:focus)::before {
+  box-shadow: 0 0 0 2px rgba(71, 85, 105, 0.25);
+}
+
+/* Disabled state */
+input[type="checkbox"]:disabled + span::before,
+input[type="checkbox"]:disabled + label::before,
+label:has(input[type="checkbox"]:disabled)::before {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Wrapper for checkbox + label inline layout */
+.checkbox-wrapper,
+.auth-checkbox-row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2, 8px);
+  cursor: pointer;
+
+  input[type="checkbox"] + span::before,
+  input[type="checkbox"] + label::before {
+    margin-right: 0; /* Gap handled by flex */
+    margin-top: 2px; /* Align with first line of text */
+  }
+}
+
+/* ============================================
+   MIGRATION NOTES
+   ============================================ */
+
+/*
+  DEPRECATION WARNINGS:
+
+  The following old variables are mapped to new tokens for backward compatibility:
+  - --color → Use --color-accent or --color-text-primary
+  - --accent → Use --color-accent
+  - --bg-1, --bg-2, --bg-3 → Use --color-bg-primary, --color-bg-secondary, etc.
+  - --danger → Use --color-error
+  - --success → Use --color-success
+  - --radius → Use --radius-sm, --radius-md, etc.
+
+  TODO: Search and replace these in component files, then remove legacy mappings
+
+  BREAKING CHANGES FROM OLD SYSTEM:
+  - Background shades consolidated (bg-1-1, bg-1-3, bg-1-5 → removed)
+  - Active tab color changed from pink (--terziary) to accent
+  - Button heights standardized to 36px (from various sizes)
+  - Input heights standardized to 40px (from 26px)
+
+  BENEFITS OF NEW SYSTEM:
+  ✅ Dark mode fully supported
+  ✅ Single source of truth for all design values
+  ✅ Better semantic naming
+  ✅ Easier to maintain and update
+  ✅ No more conflicting color definitions across files
+*/

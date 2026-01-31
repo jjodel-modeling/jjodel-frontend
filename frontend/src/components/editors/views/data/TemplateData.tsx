@@ -14,7 +14,6 @@ function TemplateData(props: AllProps) {
 
     return(<>
         <section className={'p-3 template-tab'}>
-            <h1 className={'view'}>View: {props.view.name}</h1>
             {/*<TextArea data={view} field={"constants"} label={"Constants"}  readonly={readOnly} />*/}
             {/*<TextArea data={view} field={"preRenderFunc"} label={"PreRender Function"}  readonly={readOnly} />*/}
             <JsxEditor viewid={view.id} readOnly={readOnly} />

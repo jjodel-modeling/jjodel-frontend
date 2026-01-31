@@ -34,6 +34,9 @@ import {
     D,
     Uobj,
 } from '../joiner';
+import {Dependency} from "../joiner/types";
+import ActivityLogger from '../services/ActivityLogger';
+import { ActivityType } from '../types/activity';
 
 export class Dummy {
 
@@ -47,6 +50,27 @@ export class Dummy {
             const deletedID = dDeleted.id as any;
             if (dDeleted.__readonly) return;
             if (deletedID.indexOf('Pointer_View') !== -1 ) return; // cannot delete default views/viewpoints
+
+            // Log activity for model/metamodel deletion
+            if (dDeleted.className === 'DModel') {
+                try {
+                    const lModel = lDeleted as unknown as LModel;
+                    const project = lModel.project;
+                    if (project) {
+                        const isMetamodel = (dDeleted as any).isMetamodel;
+                        ActivityLogger.log({
+                            type: isMetamodel ? ActivityType.METAMODEL_DELETED : ActivityType.MODEL_DELETED,
+                            projectId: project.id,
+                            projectName: project.name || 'Unnamed Project',
+                            entityId: deletedID,
+                            entityName: (dDeleted as any).name || (isMetamodel ? 'Unnamed Metamodel' : 'Unnamed Model'),
+                        });
+                    }
+                } catch (e) {
+                    console.warn('Failed to log delete activity:', e);
+                }
+            }
+
             SetRootFieldAction.new('_lastSelected', undefined, '');
 
             // console.log('1 get_delete() '+(dDeleted as any)?.name, {carr: lDeleted.children, dData: dDeleted, cn:dDeleted?.className, dependencies});

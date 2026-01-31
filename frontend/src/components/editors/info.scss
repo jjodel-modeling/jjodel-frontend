@@ -1,22 +1,22 @@
-/*section {
-  padding: .5rem; // p-2 too generic selector
-}*/
+/* ============================================
+   RIGHT PANEL TABS - INSPECTOR
+   Design tokens applied
+   ============================================ */
 
-.console {
-
-}
-.properties-tab{
-  .input-container>b.me-2{
+/* Properties tab feature button */
+.properties-tab {
+  .input-container > b.me-2 {
     margin: auto 0;
   }
 
-  .command-bar .tab-btn.add.add-feature::before{
-    outline: 1.5px solid black;
-    border-radius: 100%;
+  .command-bar .tab-btn.add.add-feature::before {
+    outline: 1.5px solid var(--color-text-primary);
+    border-radius: var(--radius-full);
     font-size: 1em;
   }
 }
 
+/* Common tab container styles */
 .properties-tab,
 .collaborative-tab,
 .tree-view,
@@ -27,78 +27,78 @@
 .options-tab,
 .node-editor,
 .permission-tab,
-.console {
-  margin: 0.5rem !important;
-  padding: 0.5rem !important;
-  background-color: var(--bg-2);
-  // padding-left: 1.5rem !important;
-  // padding-right: 0.5rem!important;
-  & section {
+.console,
+.apply-to-tab {
+  margin: var(--space-2) !important;
+  padding: var(--space-2) !important;
+  background-color: var(--color-bg-secondary);
 
+  & section {
   }
 }
 
-
-
+/* Properties tab React Select overrides */
 .properties-tab {
-
   & .css-b62m3t-container {
   }
+
   & .css-13cymwt-control {
-    border: 1px solid var(--bg-4-1);
-    
+    border: 1px solid var(--color-border-primary);
   }
 
   & .css-9jq23d {
-    background-color: var(--accent);
+    background-color: var(--color-accent);
     color: white;
     border-top-right-radius: 0;
     border-bottom-right-radius: 0;
-    border-top-left-radius: 3px;
-    border-bottom-left-radius: 3px;
+    border-top-left-radius: var(--radius-sm);
+    border-bottom-left-radius: var(--radius-sm);
   }
 
   & .css-v7duua {
-    background-color: var(--accent);
+    background-color: var(--color-accent);
     color: white;
     border-top-left-radius: 0;
     border-bottom-left-radius: 0;
-    border-top-right-radius: 3px;
-    border-bottom-right-radius: 3px;
-    margin: 0!important;
+    border-top-right-radius: var(--radius-sm);
+    border-bottom-right-radius: var(--radius-sm);
+    margin: 0 !important;
   }
+
   & .css-v7duua:hover {
-    background-color: var(--color);
+    background-color: var(--color-text-primary);
     color: white;
   }
+
   & .css-1dyz3mf {
-    padding: 0 0 0 0.5em;
+    padding: 0 0 0 var(--space-2);
   }
 
   & select {
     min-width: 200px;
     height: var(--input-height);
   }
-
-
 }
 
+/* No data placeholder */
 .no-data-to-display {
-  background-color: var(--bg-2-5);
-  margin: 0.5rem;
+  background-color: var(--color-bg-tertiary);
+  margin: var(--space-2);
   display: flex;
   height: 100%;
   width: 100%;
-  >*{
+
+  > * {
     margin: auto;
-    font-size: 0.8rem;
-    padding: 1rem;
-    border: 1px solid var(--color);
-    border-radius: var(--radius);
-    background-color: var(--bg-2);
+    font-size: var(--text-sm);
+    padding: var(--space-4);
+    border: 1px solid var(--color-text-primary);
+    border-radius: var(--radius-md);
+    background-color: var(--color-bg-secondary);
   }
 }
 
+/* Tab titles */
 .rightbar-title,
 .collaborative-tab h1,
 .properties-tab h1,
@@ -109,196 +109,185 @@
 .options-tab h1.view,
 .node-editor h3,
 .console h1 {
-  font-size: 1.1em!important;
-  color: var(--accent);
-  padding-bottom: 0.5em!important;
-  border-bottom: 1px solid var(--bg-2-5)!important;
-  margin-bottom: 1em!important;
-  padding-top: 0!important; 
+  font-size: 1.1em !important;
+  color: var(--color-accent);
+  
+  
 
+  padding-top: 0 !important;
 
-  &::before {
-    position: relative;
-    top: 2px;
-    font-size: 1.15em;
-    margin-right: var(--tab-sep);
-    font-family: bootstrap-icons;
-    content: "\F789";
-  }
 }
 
 .properties-tab hr {
-  margin-top: 0.5em;
-  color: var(--bg-2-5)!important;
+  margin-top: var(--space-2);
+  color: var(--color-border-primary) !important;
 }
 
+/* Collaborative tab */
 .collaborative-tab h1::before {
   position: relative;
   top: 2px;
   font-size: 1.15em;
-  margin-right: var(--tab-sep);
+  margin-right: var(--space-2);
   font-family: bootstrap-icons;
   content: "\F2EE";
 }
+
 .collaborative-tab h5 {
-  font-size: 1.1em!important;
-  color: var(--accent);
+  font-size: 1.1em !important;
+  color: var(--color-accent);
 }
 
 .collaborative-tab input {
-  color: var(--color);
-  outline: 1px solid var(--accent);
+  color: var(--color-text-primary);
+  outline: 1px solid var(--color-accent);
   border: none;
-  // outline-color: var(--accent)!important;
-  // outline-width: 2px!important;
-  height: var(--input-height)!important;
-
-  padding: 1px 8px!important;
+  height: var(--input-height) !important;
+  padding: 1px var(--space-2) !important;
   min-width: 170px;
   transition: min-width 0.3s ease-in-out;
 }
 
 .collaborative-tab input::placeholder {
-  color: var(--bg-3);
+  color: var(--color-text-tertiary);
   font-style: italic;
 }
 
 .collaborative-tab input:focus {
-  padding: 2px 9px;
-  border-radius: var(--radius)!important;
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-md) !important;
   height: var(--input-height);
-  outline: 2px solid var(--accent);
-
+  outline: 2px solid var(--color-accent);
   min-width: 70%;
-  border-radius: var(--radius)!important;
   border: none;
 }
+
 .collaborative-tab .alert {
-  background-color: var(--accent);
+  background-color: var(--color-accent);
   color: white;
-  border: 1px dotted var(--accent);
-  padding: 6px 10px;
+  border: 1px dotted var(--color-accent);
+  padding: var(--space-2) var(--space-3);
   width: fit-content;
-  margin: 14px;
+  margin: var(--space-4);
+  border-radius: var(--radius-md);
 
   & i {
     color: white;
-    padding-right: 4px;
+    padding-right: var(--space-1);
   }
 }
 
-
+/* Loading animation */
 .loader {
   width: 8px;
   height: 8px;
-  border-radius: 50%;
+  border-radius: var(--radius-full);
   display: block;
-  margin:7px auto;
+  margin: 7px auto;
   position: relative;
-  background: var(--bg-2);
-  box-shadow: -12px 0 var(--bg-2), 12px 0 var(--bg-2);
+  background: var(--color-bg-secondary);
+  box-shadow: -12px 0 var(--color-bg-secondary), 12px 0 var(--color-bg-secondary);
   box-sizing: border-box;
   animation: shadowPulse 2s linear infinite;
 }
 
 @keyframes shadowPulse {
   33% {
-    background: var(--bg-2);
-    box-shadow: -12px 0 var(--accent), 12px 0 var(--bg-2);
+    background: var(--color-bg-secondary);
+    box-shadow: -12px 0 var(--color-accent), 12px 0 var(--color-bg-secondary);
   }
   66% {
-    background: var(--accent);
-    box-shadow: -12px 0 var(--bg-2), 12px 0 var(--bg-2);
+    background: var(--color-accent);
+    box-shadow: -12px 0 var(--color-bg-secondary), 12px 0 var(--color-bg-secondary);
   }
   100% {
-    background: var(--bg-2);
-    box-shadow: -12px 0 var(--bg-2), 12px 0 var(--accent);
+    background: var(--color-bg-secondary);
+    box-shadow: -12px 0 var(--color-bg-secondary), 12px 0 var(--color-accent);
   }
 }
-      
 
+/* Properties tab headings */
+.properties-tab h1 {
+  padding-top: 0px !important;
+}
 
-
-
-.properties-tab h1 {padding-top: 0px!important;}
 .properties-tab h2 {
   font-size: 1.1em;
-  margin-bottom: 20px;
+  margin-bottom: var(--space-5);
   font-style: italic;
-  color: var(--color);
-  font-weight: 300;
+  color: var(--color-text-primary);
+  font-weight: var(--font-light);
 }
 
 .properties-tab h2:first-letter {
-    text-transform: uppercase;
+  text-transform: uppercase;
 }
 
+/* Console icon */
 .console h1::before {
   content: "\F5C3";
 }
 
-
-
-
-
-
-
+/* Template tab */
 .template-tab h1::before {
   position: relative;
   top: 2px;
   font-size: 1.15em;
-  margin-right: var(--tab-sep);
+  margin-right: var(--space-2);
   font-family: bootstrap-icons;
   content: "\F2C7";
 }
 
-
+/* Style tab */
 .style-tab h1::before {
   position: relative;
   top: 2px;
   font-size: 1.15em;
-  margin-right: var(--tab-sep);
+  margin-right: var(--space-2);
   font-family: bootstrap-icons;
   content: "\F66D";
 }
 
+/* Events tab */
 .events-tab {
-
   & h2 {
     font-size: 1em;
-    color: var(--accent);
+    color: var(--color-accent);
   }
+
   & h1::before {
     position: relative;
     top: 2px;
     font-size: 1.15em;
-    margin-right: var(--tab-sep);
+    margin-right: var(--space-2);
     font-family: bootstrap-icons;
     content: "\F18A";
   }
 }
 
+/* Options tab */
 .options-tab {
   & p {
-    font-size: 1.1em!important;
+    font-size: 1.1em !important;
   }
 
   & h2 {
     font-size: 1em;
-    color: var(--accent);
+    color: var(--color-accent);
   }
+
   & h1::before {
     position: relative;
     top: 2px;
     font-size: 1.15em;
-    margin-right: var(--tab-sep);
+    margin-right: var(--space-2);
     font-family: bootstrap-icons;
     content: "\F5D9";
   }
 
   & h5 {
-    font-size: 1.1em!important;
-    color: var(--accent);
+    font-size: 1.1em !important;
+    color: var(--color-accent);
   }
 
   & section.node {
@@ -306,108 +295,738 @@
     padding-right: 0;
 
     & .px-2 {
-      padding-left: 0!important;
+      padding-left: 0 !important;
     }
   }
 
   & section {
-    padding-left: 0!important;
+    padding-left: 0 !important;
 
     & .px-2.no-padding-left {
-      padding-left: 0!important;
-      padding-right: 0!important;
+      padding-left: 0 !important;
+      padding-right: 0 !important;
 
       & .input-container {
-
-
-
-        &>label.mx-3 {
-          margin-right: 0!important;
-          margin-bottom: 10px;
+        & > label.mx-3 {
+          margin-right: 0 !important;
+          margin-bottom: var(--space-3);
         }
       }
     }
   }
 
-
-
-
   .options-field {
-
     padding-left: 0;
     font-size: 1em;
 
-
-
     & h5 {
-
-      color: var(--accent);
+      color: var(--color-accent);
       margin-left: 0;
-      padding-left: 0!important;
+      padding-left: 0 !important;
       font-size: 1.2em;
     }
-
   }
 }
 
 .options-tab .section .node h5 {
-  padding-left: 0!important; 
+  padding-left: 0 !important;
 }
 
+/* Node editor */
 .node-editor {
-
   & h3::before {
     position: relative;
     top: 2px;
     font-size: 1.15em;
-    margin-right: var(--tab-sep);
+    margin-right: var(--space-2);
     font-family: bootstrap-icons;
-    content: "\F2EC"!important; // geo-alt F3E8, capsule F7DF, code slash F2C6, diagram2 F2EC, disc F2FF, gear F3E3, hand index F403, window F620
+    content: "\F2EC" !important;
   }
 
   & h6 {
     position: relative;
     font-size: 1.1em;
-    color: var(--accent)!important;
-
+    color: var(--color-accent) !important;
     margin-bottom: 0;
     padding-bottom: 0;
     height: 2em;
-
   }
 
   .sub-element {
-    margin-left: 0px!important;
+    margin-left: 0px !important;
   }
+
   .sub-element:last-of-type {
-      padding-bottom: 10px;
+    padding-bottom: var(--space-3);
   }
 
   .object-state {
-    border: 1px solid var(--bg-4)!important;
-    background-color: var(--bg-1-3);
-    border-radius: var(--radius);
-    padding: 0.5em;
-    font-family: Lekton, monospace;
-    margin-bottom: 1em;
-
+    border: 1px solid var(--color-text-tertiary) !important;
+    background-color: var(--color-bg-tertiary);
+    border-radius: var(--radius-md);
+    padding: var(--space-2);
+    font-family: var(--font-mono);
+    margin-bottom: var(--space-4);
 
     & .react-json-view {
-      background-color: var(--bg-1-1);
-      border-radius: var(--radius);
-      padding: 0.5em;
-      font-family: Lekton, monospace!important;
-      font-size: 1.15em!important;
-      font-weight: 500!important;
+      background-color: var(--color-bg-primary);
+      border-radius: var(--radius-md);
+      padding: var(--space-2);
+      font-family: var(--font-mono) !important;
+      font-size: 1.15em !important;
+      font-weight: var(--font-medium) !important;
       line-height: 1em;
 
       & .data-type-label {
-        font-family: Lekton, monospace!important;
-        font-size: 1em!important;
-        color: cadetblue;
+        font-family: var(--font-mono) !important;
+        font-size: 1em !important;
+        color: var(--color-info);
+      }
+    }
+  }
+}
 
+/* ============================================
+   PROPERTIES PANEL - REDESIGNED
+   Modern card-based layout with sections
+   ============================================ */
+
+.properties-panel {
+  padding: var(--space-3);
+  height: 100%;
+  overflow: auto;
+
+  // Empty state variant - no element selected
+  &--empty {
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
+/* ========================================
+   HEADER SECTION
+   ======================================== */
+.properties-header {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-4);
+  margin-bottom: var(--space-5);
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid var(--color-border-primary);
+}
+
+.properties-header-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-lg);
+  background-color: var(--color-accent-light, rgba(6, 182, 212, 0.1));
+  color: var(--color-accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  flex-shrink: 0;
+
+  .bi {
+    font-size: 24px;
+  }
+}
+
+.properties-header-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.properties-header-top {
+  display: flex;
+  align-items: center!important;
+  gap: var(--space-2);
+  height: 47px;
+
+}
+
+.properties-header-name {
+  font-size: var(--text-lg);
+  font-weight: var(--font-semibold);
+  color: var(--color-text-primary);
+  margin: 0;
+  line-height: 1.3;
+  text-decoration: none;
+}
+
+.properties-header-badge {
+  font-size: 11px;
+  font-weight: var(--font-medium);
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+  background-color: #f1f5f9; // Neutral gray, not cyan
+  color: #374151; // Brand color
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+
+  // Semantic colors per type - per color guidelines
+  &.metamodel {
+    background-color: #dbeafe; // Blue for metamodel
+    color: #1e40af;
+  }
+
+  &.model {
+    background-color: #dcfce7; // Green for model/package
+    color: #166534;
+  }
+
+  &.class {
+      font-size: 11px;
+    border: none!important;
+    background-color: #fef3c7; // Amber for class
+    color: #92400e;
+  }
+
+  &.attribute {
+    background-color: rgba(249, 115, 22, 0.1);
+    color: #f97316;
+  }
+
+  &.reference {
+    background-color: rgba(34, 197, 94, 0.1);
+    color: #22c55e;
+  }
+}
+
+.properties-header-description {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  margin: 0;
+  line-height: 1.4;
+}
+
+/* ========================================
+   SECTION CONTAINER
+   ======================================== */
+.properties-section {
+  margin-bottom: var(--space-5);
+}
+
+.properties-section-title {
+  font-size: 12px;
+  font-weight: var(--font-semibold);
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: var(--space-3);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+
+  .bi {
+    font-size: 14px;
+    color: var(--color-accent);
+  }
+}
+
+.properties-section-content {
+  background-color: var(--color-bg-elevated);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border-secondary);
+  overflow: hidden;
+}
+
+/* ========================================
+   OVERVIEW - Stats Grid
+   ======================================== */
+.properties-stats-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1px;
+  background-color: var(--color-border-secondary);
+}
+
+.properties-stat-item {
+  background-color: var(--color-bg-elevated);
+  padding: 14px var(--space-4);
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.properties-stat-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+
+  &.classes {
+    background-color: rgba(59, 130, 246, 0.1);
+    color: #3b82f6;
+  }
+
+  &.attributes {
+    background-color: rgba(168, 85, 247, 0.1);
+    color: #a855f7;
+  }
+
+  &.references {
+    background-color: rgba(34, 197, 94, 0.1);
+    color: #22c55e;
+  }
+
+  &.operations {
+    background-color: rgba(249, 115, 22, 0.1);
+    color: #f97316;
+  }
+}
+
+.properties-stat-content {
+  flex: 1;
+}
+
+.properties-stat-value {
+  font-size: var(--text-lg);
+  font-weight: var(--font-semibold);
+  color: var(--color-text-primary);
+  line-height: 1;
+}
+
+.properties-stat-label {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  margin-top: 2px;
+}
+
+/* ========================================
+   DETAILS - Form Fields
+   ======================================== */
+.properties-form-field {
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--color-border-tertiary);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.properties-form-label {
+  font-size: var(--text-sm);
+  color: var(--color-text-primary);
+  font-weight: var(--font-medium);
+  white-space: nowrap;
+}
+
+.properties-form-input {
+  font-size: var(--text-sm);
+  color: var(--color-text-primary);
+  background-color: var(--color-bg-secondary);
+  border: 1px solid var(--color-border-secondary);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
+  min-width: 160px;
+  max-width: 200px;
+  outline: none;
+  transition: border-color 0.15s ease;
+
+  &:focus {
+    border-color: var(--color-accent);
+  }
+}
+
+.properties-form-select {
+  font-size: var(--text-sm);
+  color: var(--color-text-primary);
+  background-color: var(--color-bg-secondary);
+  border: 1px solid var(--color-border-secondary);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
+  min-width: 160px;
+  max-width: 200px;
+  outline: none;
+  cursor: pointer;
+
+  &:focus {
+    border-color: var(--color-accent);
+  }
+}
+
+/* ========================================
+   INFO - Metadata
+   ======================================== */
+.properties-info-row {
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--color-border-tertiary);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.properties-info-label {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+
+.properties-info-value {
+  font-size: var(--text-sm);
+  color: var(--color-text-primary);
+}
+
+/* ========================================
+   ACTIONS - Buttons
+   ======================================== */
+.properties-actions {
+  display: flex;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+}
+
+.properties-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  border: none;
+
+  .bi {
+    font-size: 14px;
+  }
+
+  &.primary {
+    flex: 1;
+    background-color: var(--color-accent);
+    color: white;
+
+    &:hover {
+      background-color: var(--color-accent-hover, #334155);
+    }
+
+    &:active {
+      transform: scale(0.98);
+    }
+  }
+
+  &.secondary {
+    flex: 1;
+    background-color: transparent;
+    color: var(--color-text-primary);
+    border: 1px solid var(--color-border-secondary);
+
+    &:hover {
+      background-color: var(--color-bg-hover);
+      border-color: var(--color-border-primary);
+    }
+
+    &:active {
+      transform: scale(0.98);
+    }
+  }
+
+  &.danger {
+    flex: 1;
+    background-color: transparent;
+    color: var(--color-error);
+    border: 1px solid rgba(220, 38, 38, 0.3);
+
+    &:hover {
+      background-color: rgba(220, 38, 38, 0.1);
+      border-color: rgba(220, 38, 38, 0.5);
+    }
+
+    &:active {
+      transform: scale(0.98);
+    }
+  }
+}
+
+/* ========================================
+   LEGACY INPUT CONTAINER (Override)
+   ======================================== */
+.properties-panel .input-container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-2) var(--space-4);
+  border-bottom: 1px solid var(--color-border-tertiary);
+  margin: 0;
+  min-height: 44px;
+  gap: var(--space-3);
+
+  /* CRITICAL: Hide the global checkbox ::before pseudo-element (ghost checkbox) */
+  &::before {
+    display: none !important;
+    content: none !important;
+  }
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  > b.me-2 {
+    font-size: var(--text-sm);
+    color: var(--color-text-primary);
+    font-weight: var(--font-medium);
+    margin: 0 !important;
+    flex-shrink: 0;
+  }
+
+  input[type="text"],
+  input[type="number"] {
+    font-size: var(--text-sm);
+    color: var(--color-text-primary);
+    background-color: var(--color-bg-secondary);
+    border: 1px solid var(--color-border-secondary);
+    border-radius: var(--radius-md);
+    padding: var(--space-2) var(--space-3);
+    min-width: 140px;
+    flex: 1;
+    max-width: 200px;
+    outline: none;
+    margin-left: auto;
+    height: 36px;
+
+    &:focus {
+      border-color: var(--color-accent);
+    }
+  }
+
+  /* Toggle switch styling - override global hidden checkbox */
+  input[type="checkbox"].switch {
+    position: relative !important;
+    opacity: 1 !important;
+    width: 40px !important;
+    height: 22px !important;
+    pointer-events: auto !important;
+    appearance: none !important;
+    -webkit-appearance: none !important;
+    border: none !important;
+    border-radius: 11px !important;
+    background-color: #e2e4e8 !important;
+    cursor: pointer;
+    transition: background-color 0.25s ease;
+    margin-left: auto;
+    flex-shrink: 0;
+    padding: 2px;
+
+    /* Toggle thumb using ::after pseudo-element */
+    &::after {
+      content: '' !important;
+      position: absolute !important;
+      top: 2px !important;
+      left: 2px !important;
+      width: 18px !important;
+      height: 18px !important;
+      border-radius: 50% !important;
+      background-color: #ffffff !important;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2) !important;
+      transition: transform 0.25s ease !important;
+      display: block !important;
+    }
+
+    &:checked {
+      background-color: var(--color-accent, #475569) !important;
+
+      &::after {
+        transform: translateX(18px) !important;
+      }
+    }
+
+    &:focus {
+      box-shadow: 0 0 0 2px rgba(6, 182, 212, 0.25) !important;
+    }
+
+    &:hover {
+      background-color: #d0d3d8 !important;
+
+      &:checked {
+        background-color: var(--color-accent-hover, #334155) !important;
       }
     }
   }
 
+  /* Regular checkbox styling (fallback) - override global hidden checkbox */
+  input[type="checkbox"]:not(.switch) {
+    position: relative !important;
+    opacity: 1 !important;
+    width: 18px !important;
+    height: 18px !important;
+    pointer-events: auto !important;
+    appearance: none !important;
+    -webkit-appearance: none !important;
+    border: 2px solid var(--color-border-secondary, #d0d3d8) !important;
+    border-radius: 4px !important;
+    background-color: var(--color-bg-elevated, #ffffff) !important;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    margin-left: auto;
+    flex-shrink: 0;
+
+    &:hover {
+      border-color: var(--color-accent, #475569) !important;
+    }
+
+    &:checked {
+      border: none !important;
+      background-color: var(--color-accent, #475569) !important;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 12 12' fill='none' stroke='white' stroke-width='2' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M2 6l3 3 5-5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") !important;
+      background-position: center !important;
+      background-repeat: no-repeat !important;
+      background-size: 10px 10px !important;
+    }
+
+    &:focus {
+      box-shadow: 0 0 0 2px rgba(6, 182, 212, 0.25) !important;
+    }
+  }
+
+  select {
+    font-size: var(--text-sm);
+    color: var(--color-text-primary);
+    background-color: var(--color-bg-secondary);
+    border: 1px solid var(--color-border-secondary);
+    border-radius: var(--radius-md);
+    padding: var(--space-2) var(--space-3);
+    min-width: 140px;
+    flex: 1;
+    max-width: 200px;
+    outline: none;
+    margin-left: auto;
+    height: 36px;
+
+    &:focus {
+      border-color: var(--color-accent);
+    }
+  }
+}
+
+/* Override global checkbox label ::before for properties panel */
+.properties-panel label.input-container::before,
+.properties-panel .input-container::before,
+.properties-panel label:has(input[type="checkbox"])::before {
+  display: none !important;
+  content: none !important;
+}
+
+/* ========================================
+   PROPERTIES PANEL - Additional Fixes
+   ======================================== */
+
+/* Monochrome cyan header icon */
+.properties-header-icon {
+  background-color: var(--color-accent-light, rgba(6, 182, 212, 0.1)) !important;
+
+  .bi {
+    color: var(--color-accent, #475569) !important;
+  }
+}
+
+/* ========================================
+   CUSTOM TOGGLE SWITCH (div-based)
+   ======================================== */
+.properties-toggle {
+  width: 40px;
+  height: 22px;
+  border-radius: 11px;
+  background-color: #e2e4e8;
+  padding: 2px;
+  cursor: pointer;
+  transition: background-color 0.25s ease;
+  position: relative;
+  flex-shrink: 0;
+  margin-left: auto;
+
+  &:hover {
+    background-color: #d0d3d8;
+  }
+
+  &.active {
+    background-color: var(--color-accent, #475569);
+
+    &:hover {
+      background-color: var(--color-accent-hover, #334155);
+    }
+
+    .properties-toggle-thumb {
+      transform: translateX(18px);
+    }
+  }
+}
+
+.properties-toggle-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background-color: #ffffff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  transition: transform 0.25s ease;
+  position: absolute;
+  top: 2px;
+  left: 2px;
+}
+
+/* ========================================
+   GENERATE WITH AI BUTTON
+   ======================================== */
+.btn-generate-ai {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background-color: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  font-weight: 500;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  margin-left: auto;
+
+  .bi-magic {
+    font-size: 14px;
+    color: #7c3aed;
+  }
+
+  &:hover {
+    background-color: #e2e8f0;
+    border-color: #cbd5e1;
+  }
+
+  &:active {
+    transform: scale(0.98);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+// Dark mode support
+@media (prefers-color-scheme: dark) {
+  .btn-generate-ai {
+    background-color: #1e293b;
+    border-color: #334155;
+    color: #cbd5e1;
+
+    &:hover {
+      background-color: #334155;
+      border-color: #475569;
+    }
+  }
 }

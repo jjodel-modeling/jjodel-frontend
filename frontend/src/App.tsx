@@ -2,6 +2,8 @@ import React, {Dispatch, JSX, useState} from 'react';
 import './App.scss';
 import './styles/view.scss'; //
 import './styles/style.scss';
+import './styles/forms.scss';
+import './styles/tokens.css';
 import {DState, DUser, Log, LUser, Pointer, R, SetRootFieldAction, statehistory, stateInitializer, Try, U} from "./joiner";
 import {connect} from "react-redux";
 import Loader from "./components/loader/Loader";
@@ -22,16 +24,20 @@ import {
     RecentPage_Obsolete,
     SettingsPage,
     TemplatePage,
+    TokenPreviewPage,
     UpdatesPage,
     UsersInfoPage,
     ConfirmAccount
 } from "./pages";
+import { TestLayout } from "./components/TestLayout";
 
 import {ExternalLibraries} from "./components/forEndUser/ExternalLibraries";
 import {TooltipVisualizer} from "./components/forEndUser/Tooltip";
-import {BottomBar} from "./pages/components";
 import AlertVisualizer from "./components/alert/Alert";
 import DialogVisualizer from './components/alert/Dialog';
+import { NotificationWidget } from './components/NotificationWidget/NotificationWidget';
+import { Jodie } from './components/Jodie';
+import { DevModeProvider } from './contexts/DevModeContext';
 
 let firstLoading = true;
 let browserData = U.getOSBrowserData();
@@ -72,46 +78,54 @@ function App(props: AllProps): JSX.Element {
     //console.log('app render 2', {firstLoading, navigating:U.navigating, isLoading, useless, user});
 
     return (<>
-        <div className={"router-wrapper"}>
-            {isLoading && <Loader/>}
-            <ExternalLibraries/>
-            <Try><TooltipVisualizer/></Try>
+        <DevModeProvider>
+            <div className={"router-wrapper"}>
+                {isLoading && <Loader/>}
+                <ExternalLibraries/>
+                <Try><TooltipVisualizer/></Try>
 
-            {/*<MessageVisualizer />*/}
-            <Try><AlertVisualizer/></Try>
-            <Try><DialogVisualizer/></Try>
-            <HashRouter>
-                <Try><PathChecker/></Try>
-                <Try><Routes>
-                    {user ? <>
-                        <Route path={'allProjects'} element={<AllProjectsPage/>}/>
-                        <Route path={'project'} element={<ProjectPage/>}/>
-                        <Route path={'updates'} element={<UpdatesPage/>}/>
-                        <Route path={'account'} element={<AccountPage/>}/>
-                        <Route path={'auth'} element={<AuthPage/>}/>
-                        {/* non functioning stuff */}
-                        <Route path={'settings'} element={<SettingsPage/>}/>
-                        <Route path={'projectsInfo'} element={<ProjectsInfoPage_Obsolete/>}/>
-                        <Route path={'news'} element={<NewsPage/>}/>
-                        <Route path={'usersInfo'} element={<UsersInfoPage/>}/>
-                        <Route path={'profile'} element={<ProfilePage/>}/>
-                        <Route path={'archive'} element={<ArchivePage/>}/>
-                        <Route path={'notes'} element={<NotesPage/>}/>
-                        <Route path={'templates'} element={<TemplatePage/>}/>
-                        <Route path={'recent'} element={<RecentPage_Obsolete/>}/>
-                        <Route path={'community'} element={<CommunityPage/>}/>
-                        { /* working fallback, keep it last */}
-                        <Route path={'*'} element={<AllProjectsPage/>}/>
-                    </> :
-                    <>
-                        <Route path={'confirm/:id/:token'} element={<ConfirmAccount/>}/>
-                        <Route path={'*'} element={<AuthPage/>}/>
-                    </>
-                    }
-                </Routes></Try>
-            </HashRouter>
-            {user && <Try><BottomBar/></Try>}
-        </div>
+                {/*<MessageVisualizer />*/}
+                <Try><AlertVisualizer/></Try>
+                <Try><DialogVisualizer/></Try>
+                <HashRouter>
+                    <Try><PathChecker/></Try>
+                    <Try><Routes>
+                        {user ? <>
+                            <Route path={'allProjects'} element={<AllProjectsPage/>}/>
+                            <Route path={'project'} element={<ProjectPage/>}/>
+                            <Route path={'updates'} element={<UpdatesPage/>}/>
+                            <Route path={'account'} element={<AccountPage/>}/>
+                            <Route path={'auth'} element={<AuthPage/>}/>
+                            {/* Design System - Token Preview */}
+                            <Route path={'test-tokens'} element={<TokenPreviewPage/>}/>
+                            {/* Resize Handle Test */}
+                            <Route path={'test-resize'} element={<TestLayout/>}/>
+                            {/* non functioning stuff */}
+                            <Route path={'settings'} element={<SettingsPage/>}/>
+                            <Route path={'projectsInfo'} element={<ProjectsInfoPage_Obsolete/>}/>
+                            <Route path={'news'} element={<NewsPage/>}/>
+                            <Route path={'usersInfo'} element={<UsersInfoPage/>}/>
+                            <Route path={'profile'} element={<ProfilePage/>}/>
+                            <Route path={'archive'} element={<ArchivePage/>}/>
+                            <Route path={'notes'} element={<NotesPage/>}/>
+                            <Route path={'templates'} element={<TemplatePage/>}/>
+                            <Route path={'recent'} element={<RecentPage_Obsolete/>}/>
+                            <Route path={'community'} element={<CommunityPage/>}/>
+                            { /* working fallback, keep it last */}
+                            <Route path={'*'} element={<AllProjectsPage/>}/>
+                        </> :
+                        <>
+                            <Route path={'confirm/:id/:token'} element={<ConfirmAccount/>}/>
+                            <Route path={'*'} element={<AuthPage/>}/>
+                        </>
+                        }
+                    </Routes></Try>
+                    {user && <Try><NotificationWidget/></Try>}
+                    {user && <Try><Jodie/></Try>}
+                </HashRouter>
+
+            </div>
+        </DevModeProvider>
     </>);
 
     /*

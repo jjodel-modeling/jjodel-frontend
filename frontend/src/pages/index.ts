@@ -15,5 +15,6 @@ export {UsersInfoPage} from './UsersInfo';
 export {ProjectsInfoPage_Obsolete} from './ProjectsInfo';
 export {NewsPage} from './News';
 export {ConfirmAccount} from './ConfirmAccount';
+export {default as TokenPreviewPage} from './TokenPreview';
 
 

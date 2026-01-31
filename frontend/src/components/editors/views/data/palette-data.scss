@@ -1,0 +1,1731 @@
+// ============================================
+// STYLE TAB - Palettes & CSS Editor
+// Design System Compliant
+// ============================================
+
+// Design Tokens
+$font-family: 'Inter Variable', -apple-system, BlinkMacSystemFont, sans-serif;
+$font-family-mono: 'SF Mono', 'Monaco', 'Consolas', monospace;
+
+$color-text-primary: #334155;
+$color-text-secondary: #64748b;
+$color-text-tertiary: #94a3b8;
+
+$color-bg-primary: #ffffff;
+$color-bg-secondary: #f8fafc;
+$color-bg-tertiary: #f1f5f9;
+
+$color-border: #e2e8f0;
+$color-border-hover: #cbd5e1;
+
+$color-accent: #475569;
+$color-danger: #ef4444;
+$color-danger-bg: #fef2f2;
+
+$radius-sm: 4px;
+$radius-md: 6px;
+$radius-lg: 8px;
+
+$transition-fast: 150ms ease;
+
+// Standard field height for all inputs
+$field-height: 28px;
+
+// ============================================
+// STYLE TAB CONTAINER
+// ============================================
+.style-tab-redesign {
+  padding: 16px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  overflow: visible; // Allow popovers to overflow
+
+  // CRITICAL: Disable container queries for Style tab
+  // Responsive hiding should ONLY apply to viewpoints list, not here!
+  container-type: normal !important;
+
+  // Controls section needs overflow visible for popovers
+  .controls {
+    overflow: visible !important;
+  }
+}
+
+// ============================================
+// PROTECTION: Style Tab elements ALWAYS visible
+// Never affected by responsive hiding rules
+// ============================================
+.style-tab,
+.style-tab-redesign {
+  // All interactive elements must always be visible
+  .add-dropdown,
+  .add-btn,
+  .palette-row,
+  .palette-row-container,
+  .palette-row-v2,
+  .style-variable-row,
+  .row-actions,
+  .action-btn,
+  .delete-btn,
+  .color-container,
+  .color-picker-root,
+  .monaco-editor-wrapper,
+  .monaco-editor-container,
+  .css-editor-section,
+  .style-variables-section,
+  .palettes-section {
+    opacity: 1 !important;
+    visibility: visible !important;
+    max-width: none !important;
+    pointer-events: auto !important;
+  }
+
+  // Flex elements
+  .add-dropdown,
+  .palette-row,
+  .palette-row-container,
+  .row-actions {
+    display: flex !important;
+  }
+
+  // Inline-flex elements
+  .add-btn,
+  .action-btn {
+    display: inline-flex !important;
+  }
+}
+
+// ============================================
+// SECTION HEADER
+// ============================================
+.style-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+
+  .section-title {
+    font-family: $font-family;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: $color-text-secondary;
+  }
+}
+
+// ============================================
+// ADD DROPDOWN
+// ============================================
+.style-tab-redesign .add-dropdown,
+.add-dropdown {
+  position: relative;
+  display: inline-block;
+
+  .add-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    font-family: $font-family;
+    font-size: 12px;
+    font-weight: 500;
+
+    // SLATE COLORS for consistency
+    color: #475569;                 // slate-600
+    background: #f8fafc;            // slate-50
+    border: 1px solid #e2e8f0;      // slate-200
+    border-radius: $radius-md;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    &:hover {
+      background: #f1f5f9;          // slate-100
+      border-color: #cbd5e1;        // slate-300
+      color: #334155;               // slate-700
+    }
+
+    &.open,
+    &:focus {
+      background: #f1f5f9;          // slate-100
+      border-color: #94a3b8;        // slate-400
+      outline: none;
+      box-shadow: 0 0 0 2px rgba(71, 85, 105, 0.1);
+    }
+
+    i.bi-plus {
+      font-size: 14px;
+      color: inherit;
+    }
+
+    i.bi-chevron-down,
+    i.bi-chevron-up {
+      font-size: 10px;
+      margin-left: 2px;
+      color: #64748b;               // slate-500
+      transition: transform $transition-fast;
+    }
+
+    &.open i.bi-chevron-down {
+      transform: rotate(180deg);
+    }
+  }
+
+  // Override Bootstrap dropdown-menu styles
+  > .dropdown-menu {
+    display: block !important; // Override Bootstrap display:none
+    position: absolute !important;
+    top: calc(100% + 4px) !important;
+    right: 0 !important;
+    left: auto !important;
+    margin: 0 !important;
+    min-width: 150px !important;
+    background: $color-bg-primary !important;
+    border: 1px solid $color-border !important;
+    border-radius: $radius-lg !important;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12) !important;
+    padding: 4px !important;
+    z-index: 1000 !important;
+
+    // Hidden by default
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-8px);
+    pointer-events: none;
+    transition: all $transition-fast;
+
+    // Visible when open
+    &.open {
+      opacity: 1;
+      visibility: visible;
+      transform: translateY(0);
+      pointer-events: auto;
+    }
+
+    .dropdown-item {
+      display: flex !important;
+      align-items: center !important;
+      gap: 10px !important;
+      padding: 8px 12px !important;
+      font-family: $font-family !important;
+      font-size: 13px !important;
+      font-weight: 400 !important;
+      color: $color-text-primary !important;
+      border-radius: $radius-sm !important;
+      cursor: pointer !important;
+      transition: background $transition-fast !important;
+      border: none !important;
+      background: transparent !important;
+      width: 100% !important;
+      text-align: left !important;
+      white-space: nowrap !important;
+
+      &:hover {
+        background: $color-bg-tertiary !important;
+        color: $color-text-primary !important;
+      }
+
+      .item-icon {
+        width: 18px;
+        text-align: center;
+        font-size: 14px;
+        color: $color-text-secondary;
+
+        i {
+          color: inherit;
+        }
+      }
+    }
+  }
+}
+
+// ============================================
+// STYLE VARIABLES SECTION (ex Palettes)
+// ============================================
+.style-variables-section {
+  flex-shrink: 0;
+  margin-bottom: 8px;
+}
+
+// ============================================
+// COLOR SWATCHES - CERCHI (Override existing styles)
+// ============================================
+.style-tab-redesign,
+.style-tab {
+  // Color picker root (individual color)
+  .color-picker-root {
+    width: 24px !important;
+    height: 24px !important;
+    border-radius: 50% !important; // CERCHIO
+    border: 2px solid rgba(255, 255, 255, 0.9) !important;
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.1) !important;
+    cursor: pointer !important;
+    transition: transform 150ms ease, box-shadow 150ms ease !important;
+    overflow: visible !important; // IMPORTANT: Allow popover to show
+    padding: 0 !important;
+    margin: 0 2px !important;
+    position: relative !important; // For absolute positioned popover
+
+    &:hover,
+    &:focus-within {
+      transform: scale(1.15) !important;
+      box-shadow:
+        0 0 0 1px rgba(0, 0, 0, 0.15),
+        0 3px 8px rgba(0, 0, 0, 0.2) !important;
+      z-index: 100 !important; // High z-index for popover visibility
+      overflow: visible !important;
+    }
+
+    // Inner color input
+    input[type="color"],
+    .my-auto.input {
+      width: 100% !important;
+      height: 100% !important;
+      border: none !important;
+      border-radius: 50% !important;
+      padding: 0 !important;
+      margin: 0 !important;
+      cursor: pointer !important;
+
+      &::-webkit-color-swatch-wrapper {
+        padding: 0 !important;
+      }
+
+      &::-webkit-color-swatch {
+        border: none !important;
+        border-radius: 50% !important;
+      }
+
+      &::-moz-color-swatch {
+        border: none !important;
+        border-radius: 50% !important;
+      }
+    }
+
+    // Popover/suggestions content - ensure visibility
+    .content.suggestions {
+      z-index: 99999 !important;
+      position: absolute !important;
+    }
+  }
+
+  // Color container (row of colors)
+  .color-container {
+    overflow: visible !important; // Allow popover to show outside
+  }
+
+  // Suggestion button colors
+  .color-suggestion {
+    width: 24px !important;
+    height: 24px !important;
+    border-radius: 50% !important; // CERCHIO
+    border: 2px solid rgba(255, 255, 255, 0.8) !important;
+    padding: 0 !important;
+    margin: 2px !important;
+    cursor: pointer !important;
+    transition: transform 150ms ease !important;
+
+    &:hover {
+      transform: scale(1.15) !important;
+    }
+
+    i.bi {
+      font-size: 12px !important;
+    }
+  }
+}
+
+// ============================================
+// PALETTE ROW CONTAINER (wrapper with name input)
+// ============================================
+.palette-row-container {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  background: $color-bg-primary;
+  border: 1px solid $color-border;
+  border-radius: $radius-lg;
+  margin-bottom: 8px;
+  min-height: 44px;
+  transition: all $transition-fast;
+
+  &:hover {
+    border-color: $color-border-hover;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+
+    .commandbar {
+      opacity: 1;
+    }
+  }
+
+  // Variable name input (prefix) - MONOSPACE
+  input.prefix {
+    width: 120px !important;
+    min-width: 120px !important;
+    max-width: 140px !important;
+    height: $field-height !important; // 28px
+    padding: 0 10px !important;
+    font-family: $font-family-mono !important;
+    font-size: 12px !important;
+    font-weight: 500 !important;
+    color: $color-text-primary !important;
+    background: $color-bg-secondary !important;
+    border: 1px solid $color-border !important;
+    border-radius: $radius-sm !important;
+    flex-shrink: 0 !important;
+
+    &:hover {
+      border-color: $color-border-hover !important;
+    }
+
+    &:focus {
+      outline: none !important;
+      border-color: $color-accent !important;
+      box-shadow: 0 0 0 2px rgba(71, 85, 105, 0.1) !important;
+    }
+
+    &:disabled {
+      background: $color-bg-tertiary !important;
+      color: $color-text-tertiary !important;
+    }
+  }
+
+  // Inner palette-row
+  .palette-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+    min-width: 0;
+
+    &.path,
+    &.numeric,
+    &.textual {
+      gap: 10px;
+    }
+  }
+}
+
+// ============================================
+// COLOR CONTAINER & SWATCHES
+// ============================================
+.palette-row-container,
+.style-tab {
+  .color-container {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 6px !important;
+    align-items: center !important;
+    flex: 1 !important;
+    min-height: $field-height !important;
+    padding: 2px 0 !important;
+    overflow: visible !important; // Allow popover to show
+  }
+
+  .suggestion-container {
+    display: flex;
+    align-items: center;
+    margin-left: auto;
+    flex-shrink: 0;
+  }
+}
+
+// Ensure palette row container allows popover overflow
+.palette-row-container {
+  overflow: visible !important;
+  position: relative !important; // For absolute positioned children
+
+  .palette-row {
+    overflow: visible !important;
+  }
+
+  .color-container {
+    overflow: visible !important;
+    position: relative !important;
+  }
+}
+
+// ============================================
+// COLOR POPOVER STYLES (suggestions)
+// Full height, no scrollbars, perfect circles
+// ============================================
+
+// CRITICAL: Override parent container overflow to show popovers
+// The .view-editor-root has overflow:hidden which clips popovers
+.view-editor-root:has(.color-picker-root:hover),
+.view-editor-root:has(.color-picker-root:focus-within) {
+  overflow: visible !important;
+}
+
+// Ensure all parent containers allow overflow
+.style-tab-redesign,
+.style-tab {
+  // Main container must not clip
+  overflow: visible !important;
+
+  .style-variables-section,
+  .controls {
+    overflow: visible !important;
+  }
+}
+
+.style-tab-redesign,
+.style-tab {
+  .color-picker-root.hoverable {
+    // Show popover on hover/focus
+    &:hover,
+    &:focus-within {
+      overflow: visible !important;
+      z-index: 9999 !important;
+
+      .content.suggestions {
+        display: flex !important;
+        flex-flow: column !important;
+        position: absolute !important;
+        z-index: 99999 !important;
+        // Position below and centered
+        top: calc(100% + 8px) !important;
+        left: 50% !important;
+        transform: translateX(-50%) !important;
+
+        // DIMENSIONS - Very compact
+        width: 220px !important; // Compact width
+        min-width: 220px !important;
+        max-width: 90vw !important;
+        padding: 10px !important; // Compact padding
+
+        // HEIGHT - Auto to fit all content, NO scrollbar
+        height: auto !important;
+        max-height: none !important;
+
+        // NO SCROLLBARS
+        overflow: visible !important;
+        overflow-x: hidden !important;
+        overflow-y: visible !important;
+
+        background: #1e293b !important; // slate-800
+        border: 1px solid #334155 !important; // slate-700
+        border-radius: 12px !important;
+        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4) !important;
+
+        // Hide any scrollbars (Webkit)
+        &::-webkit-scrollbar {
+          display: none !important;
+          width: 0 !important;
+          height: 0 !important;
+        }
+        // Firefox
+        scrollbar-width: none !important;
+        // IE/Edge
+        -ms-overflow-style: none !important;
+
+        // Section headers - very compact
+        h6 {
+          color: #94a3b8 !important;
+          font-size: 9px !important; // Smaller
+          font-weight: 600 !important;
+          text-transform: uppercase !important;
+          letter-spacing: 0.04em !important;
+          margin: 6px 0 4px 0 !important; // Very compact
+          padding: 0 !important;
+
+          &:first-child {
+            margin-top: 0 !important;
+          }
+        }
+
+        // Color suggestion rows - NO overflow
+        .roww {
+          display: flex !important;
+          gap: 10px 4px !important; // row-gap: 10px, column-gap: 4px (more vertical spacing)
+          flex-wrap: wrap !important;
+          margin-bottom: 8px !important; // More space between row groups
+          padding: 0 !important;
+          overflow: visible !important;
+
+          // PERFECT CIRCLES - Small 20px (smaller than palette swatches)
+          .color-suggestion {
+            width: 20px !important; // Smaller than outside swatches
+            height: 20px !important;
+            min-width: 20px !important;
+            min-height: 20px !important;
+            aspect-ratio: 1 / 1 !important; // Ensures perfect circle
+            flex-shrink: 0 !important;
+            border-radius: 50% !important;
+            border: 1.5px solid rgba(255, 255, 255, 0.2) !important; // Thinner border
+            cursor: pointer !important;
+            transition: transform 150ms ease, border-color 150ms ease !important;
+
+            &:hover {
+              transform: scale(1.2) !important; // More pronounced on smaller size
+              border-color: rgba(255, 255, 255, 0.5) !important;
+            }
+
+            .bi {
+              font-size: 9px !important; // Smaller icon
+              display: flex !important;
+              align-items: center !important;
+              justify-content: center !important;
+              width: 100% !important;
+              height: 100% !important;
+            }
+          }
+        }
+
+        // Delete button - very compact
+        .delete-color,
+        .jj-delete {
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          gap: 4px !important;
+          width: 100% !important;
+          padding: 6px !important; // Compact
+          margin-top: 8px !important; // Compact
+          font-size: 10px !important; // Smaller
+          font-weight: 500 !important;
+          color: #94a3b8 !important;
+          background: transparent !important;
+          border: 1px solid #475569 !important;
+          border-radius: 4px !important;
+          cursor: pointer !important;
+          transition: all 150ms ease !important;
+
+          &:hover {
+            background: rgba(239, 68, 68, 0.1) !important;
+            border-color: #ef4444 !important;
+            color: #fca5a5 !important;
+          }
+        }
+
+        // Opacity slider - compact
+        input[type="range"] {
+          width: 100% !important;
+          height: 4px !important; // Thinner
+          margin: 6px 0 !important; // Compact
+          -webkit-appearance: none !important;
+          appearance: none !important;
+          background: #475569 !important;
+          border-radius: 2px !important;
+
+          &::-webkit-slider-thumb {
+            -webkit-appearance: none !important;
+            width: 12px !important; // Smaller
+            height: 12px !important;
+            border-radius: 50% !important;
+            background: #64748b !important;
+            border: 2px solid #ffffff !important;
+            cursor: pointer !important;
+            margin-top: -4px !important;
+          }
+
+          &::-moz-range-thumb {
+            width: 12px !important;
+            height: 12px !important;
+            border-radius: 50% !important;
+            background: #64748b !important;
+            border: 2px solid #ffffff !important;
+            cursor: pointer !important;
+          }
+        }
+      }
+    }
+  }
+}
+
+// ============================================
+// PATH ROW INPUTS
+// ============================================
+.palette-row.path {
+  .value {
+    flex: 1;
+    min-width: 0;
+
+    .d-flex {
+      display: flex;
+      gap: 8px;
+    }
+  }
+
+  input.value {
+    height: $field-height !important; // 28px
+    padding: 0 10px !important;
+    font-family: $font-family-mono !important;
+    font-size: 12px !important;
+    color: $color-text-secondary !important;
+    background: $color-bg-primary !important;
+    border: 1px solid $color-border !important;
+    border-radius: $radius-sm !important;
+
+    &::placeholder {
+      color: $color-text-tertiary;
+    }
+
+    &:focus {
+      outline: none;
+      border-color: $color-accent;
+      box-shadow: 0 0 0 2px rgba(71, 85, 105, 0.1);
+    }
+  }
+
+  select {
+    height: $field-height !important; // 28px
+    padding: 0 28px 0 10px !important;
+    font-family: $font-family !important;
+    font-size: 12px !important;
+    color: $color-text-primary !important;
+    background: $color-bg-primary !important;
+    border: 1px solid $color-border !important;
+    border-radius: $radius-sm !important;
+    cursor: pointer !important;
+    appearance: none !important;
+    background-image: url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%2364748b' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") !important;
+    background-repeat: no-repeat !important;
+    background-position: right 10px center !important;
+
+    &:focus {
+      outline: none;
+      border-color: $color-accent;
+    }
+  }
+
+  // X and Y inputs in hoverable content
+  .content.d-flex {
+    label {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 11px;
+      color: $color-text-tertiary;
+
+      input.x,
+      input.y {
+        width: 80px;
+        height: 24px;
+        padding: 0 8px;
+        font-family: $font-family-mono;
+        font-size: 11px;
+        border: 1px solid $color-border;
+        border-radius: $radius-sm;
+        background: $color-bg-primary;
+      }
+    }
+  }
+}
+
+// ============================================
+// NUMERIC ROW INPUTS - Fine Tuned v2
+// ============================================
+.palette-row.numeric {
+  // ----------------------------------------
+  // SLIDER - Bigger handle, centered, solid track
+  // ----------------------------------------
+  input.value[type="range"] {
+    flex: 1;
+    min-width: 60px;
+    height: 6px; // Thicker track
+    -webkit-appearance: none;
+    appearance: none;
+    background: $color-accent; // SOLID slate-600
+    border-radius: 3px;
+    cursor: pointer;
+    margin: 0 4px;
+
+    // Track Firefox - SOLID
+    &::-moz-range-track {
+      height: 6px;
+      background: $color-accent;
+      border-radius: 3px;
+      border: none;
+    }
+
+    // Track WebKit - SOLID
+    &::-webkit-slider-runnable-track {
+      height: 6px;
+      background: $color-accent;
+      border-radius: 3px;
+    }
+
+    // Thumb WebKit - BIGGER (16px) and CENTERED
+    &::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 16px; // Was 12px
+      height: 16px; // Was 12px
+      border-radius: 50%;
+      background: $color-accent;
+      border: 3px solid #ffffff; // Thicker border
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+      cursor: pointer;
+      margin-top: -5px; // CENTERED: (16 - 6) / 2 = 5
+      transition: transform $transition-fast, box-shadow $transition-fast;
+
+      &:hover {
+        transform: scale(1.1);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+      }
+    }
+
+    // Thumb Firefox - BIGGER (16px)
+    &::-moz-range-thumb {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: $color-accent;
+      border: 3px solid #ffffff;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+      cursor: pointer;
+      transition: transform $transition-fast;
+
+      &:hover {
+        transform: scale(1.1);
+      }
+    }
+
+    // Focus state
+    &:focus {
+      outline: none;
+
+      &::-webkit-slider-thumb {
+        box-shadow: 0 0 0 3px rgba(71, 85, 105, 0.25), 0 1px 4px rgba(0, 0, 0, 0.2);
+      }
+
+      &::-moz-range-thumb {
+        box-shadow: 0 0 0 3px rgba(71, 85, 105, 0.25), 0 1px 4px rgba(0, 0, 0, 0.2);
+      }
+    }
+  }
+
+  // ----------------------------------------
+  // CAMPO NUMERICO - For ###,# format
+  // ----------------------------------------
+  input.spinner {
+    width: 80px !important; // Optimized for "999,9"
+    height: $field-height !important; // 28px
+    padding: 0 0px 0 8px!important;
+    font-family: $font-family-mono !important;
+    font-size: 13px !important;
+    text-align: right !important; // Numbers right-aligned
+    color: $color-text-primary !important;
+    background: $color-bg-primary !important;
+    border: 1px solid $color-border !important;
+    border-radius: $radius-md !important;
+
+    // Hide spinner arrows
+    -moz-appearance: textfield;
+    &::-webkit-outer-spin-button,
+    &::-webkit-inner-spin-button {
+      -webkit-appearance: none;
+      margin: 0 0 0 4px;
+    }
+
+    &:focus {
+      outline: none;
+      border-color: $color-accent;
+      box-shadow: 0 0 0 2px rgba(71, 85, 105, 0.1);
+    }
+  }
+
+  // ----------------------------------------
+  // UNITÀ DI MISURA - More compact
+  // ----------------------------------------
+  input.unit {
+    width: 32px !important; // Was 36px
+    height: $field-height !important; // 28px
+    padding: 0 !important;
+    font-family: $font-family-mono !important;
+    font-size: 11px !important; // Smaller font
+    text-align: center !important;
+    color: $color-text-secondary !important;
+    background: $color-bg-secondary !important;
+    border: 1px solid $color-border !important;
+    border-radius: $radius-md !important;
+
+    &:focus {
+      outline: none;
+      border-color: $color-accent;
+    }
+  }
+}
+
+// ============================================
+// TEXT ROW INPUTS
+// ============================================
+.palette-row.textual {
+  input.value {
+    flex: 1 !important;
+    height: $field-height !important; // 28px
+    padding: 0 10px !important;
+    font-family: $font-family !important;
+    font-size: 13px !important;
+    color: $color-text-primary !important;
+    background: $color-bg-primary !important;
+    border: 1px solid $color-border !important;
+    border-radius: $radius-sm !important;
+
+    &::placeholder {
+      color: $color-text-tertiary;
+    }
+
+    &:focus {
+      outline: none;
+      border-color: $color-accent;
+      box-shadow: 0 0 0 2px rgba(71, 85, 105, 0.1);
+    }
+  }
+}
+
+// ============================================
+// COMMAND BAR (actions on hover)
+// ============================================
+.palette-row-container .commandbar {
+  opacity: 0;
+  transition: opacity $transition-fast;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+// ============================================
+// LEGACY PALETTE ROW (kept for compatibility)
+// ============================================
+.palette-row-v2 {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  background: $color-bg-primary;
+  border: 1px solid $color-border;
+  border-radius: $radius-lg;
+  margin-bottom: 8px;
+  min-height: 44px;
+  transition: all $transition-fast;
+
+  &:hover {
+    border-color: $color-border-hover;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+
+    .palette-actions {
+      opacity: 1;
+    }
+  }
+
+  // Type icon
+  .palette-type-icon {
+    width: 24px;
+    height: 24px;
+    min-width: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: $color-text-secondary;
+    margin-right: 10px;
+    flex-shrink: 0;
+    align-self: center; // Vertical alignment fix
+
+    i {
+      font-size: 14px;
+    }
+
+    &.color i { color: #8b5cf6; }
+    &.number i { color: #3b82f6; }
+    &.text i { color: #10b981; }
+    &.path i { color: #f59e0b; }
+  }
+
+  // Nome palette - MONOSPACE
+  .palette-name {
+    width: 120px;
+    min-width: 120px;
+    max-width: 140px;
+    height: $field-height; // 28px
+    padding: 0 10px;
+    font-family: $font-family-mono;
+    font-size: 12px;
+    font-weight: 500;
+    color: $color-text-primary;
+    background: $color-bg-secondary;
+    border: 1px solid $color-border;
+    border-radius: $radius-sm;
+    margin-right: 12px;
+    flex-shrink: 0;
+
+    &:hover {
+      border-color: $color-border-hover;
+    }
+
+    &:focus {
+      outline: none;
+      border-color: $color-accent;
+      box-shadow: 0 0 0 2px rgba(71, 85, 105, 0.1);
+    }
+
+    &:disabled {
+      background: $color-bg-tertiary;
+      color: $color-text-tertiary;
+    }
+  }
+
+  // Color swatches container
+  .palette-colors {
+    display: flex;
+    gap: 6px;
+    flex: 1;
+    flex-wrap: wrap;
+    align-items: center;
+    min-height: $field-height;
+  }
+
+  // Singolo color swatch - CERCHIO
+  .color-swatch {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%; // CERCHIO!
+    border: 2px solid rgba(255, 255, 255, 0.9);
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.1);
+    cursor: pointer;
+    transition: transform $transition-fast, box-shadow $transition-fast;
+    position: relative;
+
+    &:hover {
+      transform: scale(1.15);
+      box-shadow:
+        0 0 0 1px rgba(0, 0, 0, 0.15),
+        0 3px 8px rgba(0, 0, 0, 0.2);
+      z-index: 1;
+    }
+
+    // Transparent pattern for alpha colors
+    &.has-alpha {
+      background-image:
+        linear-gradient(45deg, #ccc 25%, transparent 25%),
+        linear-gradient(-45deg, #ccc 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, #ccc 75%),
+        linear-gradient(-45deg, transparent 75%, #ccc 75%);
+      background-size: 8px 8px;
+      background-position: 0 0, 0 4px, 4px -4px, -4px 0px;
+
+      .color-fill {
+        position: absolute;
+        inset: 0;
+        border-radius: inherit;
+      }
+    }
+  }
+
+  // Add color button - CERCHIO
+  .add-color-btn {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%; // CERCHIO!
+    border: 1px dashed $color-border-hover;
+    background: transparent;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all $transition-fast;
+
+    i {
+      font-size: 12px;
+      color: $color-text-tertiary;
+    }
+
+    &:hover {
+      border-color: $color-accent;
+      background: $color-bg-tertiary;
+
+      i {
+        color: $color-accent;
+      }
+    }
+  }
+
+  // Content area for numeric/text/path
+  .palette-content {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    input, select {
+      font-family: $font-family;
+      font-size: 12px;
+      height: $field-height; // 28px
+      padding: 0 10px;
+      border: 1px solid $color-border;
+      border-radius: $radius-sm;
+      background: $color-bg-primary;
+      color: $color-text-primary;
+      transition: all $transition-fast;
+
+      &:focus {
+        outline: none;
+        border-color: $color-accent;
+        box-shadow: 0 0 0 2px rgba(71, 85, 105, 0.1);
+      }
+    }
+
+    .value-input {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .unit-input {
+      width: 50px;
+    }
+
+    .range-input {
+      flex: 1;
+      min-width: 60px;
+    }
+
+    .spinner-input {
+      width: 60px;
+      font-family: $font-family-mono;
+      text-align: center;
+
+      // Hide spinner arrows
+      -moz-appearance: textfield;
+      &::-webkit-outer-spin-button,
+      &::-webkit-inner-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+      }
+    }
+  }
+
+  // Actions (Edit, Delete)
+  .palette-actions {
+    display: flex;
+    gap: 4px;
+    opacity: 0;
+    transition: opacity $transition-fast;
+    margin-left: 8px;
+
+    .action-btn {
+      width: 26px;
+      height: 26px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: transparent;
+      border: none;
+      border-radius: $radius-sm;
+      color: $color-text-tertiary;
+      cursor: pointer;
+      transition: all $transition-fast;
+
+      &:hover {
+        background: $color-bg-tertiary;
+        color: $color-text-primary;
+      }
+
+      &.delete:hover {
+        background: $color-danger-bg;
+        color: $color-danger;
+      }
+
+      i {
+        font-size: 14px;
+      }
+    }
+  }
+}
+
+// ============================================
+// STYLE SEPARATOR
+// ============================================
+.style-separator {
+  height: 1px;
+  background: $color-border;
+  margin: 16px 0;
+  flex-shrink: 0;
+}
+
+// ============================================
+// CSS EDITOR SECTION
+// ============================================
+.css-editor-section {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 200px;
+
+  .editor-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+
+    .editor-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+
+      .title-text {
+        font-family: $font-family;
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: $color-text-secondary;
+      }
+
+      .language-badge {
+        font-family: $font-family;
+        font-size: 10px;
+        font-weight: 500;
+        padding: 2px 6px;
+        background: #dbeafe;
+        color: #1d4ed8;
+        border-radius: $radius-sm;
+      }
+    }
+  }
+
+  .monaco-editor-container {
+    flex: 1;
+    border: 1px solid $color-border;
+    border-radius: $radius-lg;
+    overflow: hidden;
+  }
+}
+
+// ============================================
+// MONACO EDITOR - Line Highlight with Background
+// Background instead of border for current line
+// ============================================
+.style-tab,
+.style-tab-redesign {
+  .monaco-editor-wrapper,
+  .monaco-editor-container {
+    .monaco-editor {
+      // Line highlight - BACKGROUND (not border)
+      .view-overlays .current-line {
+        background-color: rgba(100, 116, 139, 0.06) !important; // slate-500 @ 6%
+        border: none !important;
+        border-left: none !important;
+        border-right: none !important;
+        box-shadow: none !important;
+      }
+
+      // Margin/gutter line highlight
+      .margin-view-overlays .current-line-margin,
+      .margin-view-overlays .current-line-margin-both {
+        background-color: rgba(100, 116, 139, 0.06) !important;
+        border: none !important;
+      }
+
+      // Remove any borders from line elements
+      .current-line,
+      .view-line.current-line,
+      .line-numbers.active-line-number {
+        border: none !important;
+        outline: none !important;
+        box-shadow: none !important;
+      }
+    }
+  }
+}
+
+// ============================================
+// GLOBAL/LOCAL TOGGLE
+// ============================================
+.css-scope-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+
+  // CRITICAL: Hide native checkbox element (visible in debug mode)
+  // The Input component renders a checkbox, but we only want the label visible
+  input[type="checkbox"] {
+    position: absolute !important;
+    opacity: 0 !important;
+    width: 0 !important;
+    height: 0 !important;
+    pointer-events: none !important;
+    visibility: hidden !important;
+  }
+
+  // Also hide any orphan checkbox that might appear
+  > input,
+  label > input {
+    position: absolute !important;
+    opacity: 0 !important;
+    width: 0 !important;
+    height: 0 !important;
+    visibility: hidden !important;
+  }
+
+  .toggle-label {
+    font-family: $font-family;
+    font-size: 12px;
+    color: $color-text-secondary;
+    cursor: pointer; // Make it clickable
+
+    &.active {
+      color: $color-text-primary;
+      font-weight: 500;
+    }
+  }
+
+  // Caution badge - Raspberry red
+  .caution-badge {
+    background-color: #e11d48 !important; // rose-600 (raspberry)
+    font-size: 11px !important;
+    color: white !important;
+    padding: 4px 6px !important;
+    border-radius: $radius-sm !important;
+    font-weight: 500 !important;
+  }
+}
+
+// ============================================
+// EMPTY STATE
+// ============================================
+.palettes-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: $color-bg-secondary;
+  border: 1px dashed $color-border;
+  border-radius: $radius-lg;
+  text-align: center;
+
+  .empty-icon {
+    font-size: 24px;
+    color: $color-text-tertiary;
+    margin-bottom: 8px;
+  }
+
+  .empty-title {
+    font-family: $font-family;
+    font-size: 13px;
+    font-weight: 500;
+    color: $color-text-secondary;
+    margin-bottom: 4px;
+  }
+
+  .empty-description {
+    font-family: $font-family;
+    font-size: 12px;
+    color: $color-text-tertiary;
+  }
+}
+
+// ============================================
+// DARK MODE SUPPORT
+// ============================================
+[data-theme="dark"] {
+  .style-section-header .section-title {
+    color: #94a3b8;
+  }
+
+  // Caution badge - lighter rose for dark mode
+  .css-scope-toggle .caution-badge {
+    color: #fb7185 !important; // rose-400
+  }
+
+  .add-dropdown {
+    .add-btn {
+      color: #e2e8f0;               // slate-200
+      background: #1e293b!important;          // slate-800
+      border-color: #334155;        // slate-700
+
+      &:hover {
+        background: #334155;        // slate-700
+        border-color: #475569;      // slate-600
+        color: #f1f5f9;             // slate-100
+      }
+
+      &.open,
+      &:focus {
+        background: #334155;
+        border-color: #64748b;      // slate-500
+        box-shadow: 0 0 0 2px rgba(100, 116, 139, 0.2);
+      }
+
+      i.bi-chevron-down,
+      i.bi-chevron-up {
+        color: #94a3b8;             // slate-400
+      }
+    }
+
+    .dropdown-menu {
+      background: #1e293b !important;
+      border-color: #334155 !important;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3) !important;
+
+      .dropdown-item {
+        color: #e2e8f0 !important;
+
+        &:hover {
+          background: #334155 !important;
+        }
+
+        .item-icon {
+          color: #94a3b8;
+        }
+      }
+    }
+  }
+
+  // Monaco Editor - Dark mode line highlight
+  .style-tab,
+  .style-tab-redesign {
+    .monaco-editor-wrapper,
+    .monaco-editor-container {
+      .monaco-editor {
+        .view-overlays .current-line {
+          background-color: rgba(148, 163, 184, 0.1) !important; // slate-400 @ 10%
+          border: none !important;
+        }
+
+        .margin-view-overlays .current-line-margin,
+        .margin-view-overlays .current-line-margin-both {
+          background-color: rgba(148, 163, 184, 0.1) !important;
+          border: none !important;
+        }
+      }
+    }
+  }
+
+  // Palette row container (new)
+  .palette-row-container {
+    background: #1e293b;
+    border-color: #334155;
+
+    &:hover {
+      border-color: #475569;
+    }
+
+    input.prefix {
+      background: #0f172a !important;
+      border-color: #334155 !important;
+      color: #e2e8f0 !important;
+
+      &:focus {
+        border-color: #64748b !important;
+        box-shadow: 0 0 0 2px rgba(100, 116, 139, 0.15) !important;
+      }
+    }
+  }
+
+  // Path row dark mode
+  .palette-row.path {
+    input.value {
+      background: #0f172a !important;
+      border-color: #334155 !important;
+      color: #e2e8f0 !important;
+
+      &::placeholder {
+        color: #64748b;
+      }
+    }
+
+    select {
+      background: #1e293b !important;
+      border-color: #334155 !important;
+      color: #e2e8f0 !important;
+    }
+
+    .content.d-flex label input {
+      background: #0f172a;
+      border-color: #334155;
+      color: #e2e8f0;
+    }
+  }
+
+  // Numeric row dark mode
+  .palette-row.numeric {
+    input.value[type="range"] {
+      background: #64748b; // slate-500 (solid)
+
+      &::-webkit-slider-runnable-track {
+        background: #64748b;
+      }
+
+      &::-moz-range-track {
+        background: #64748b;
+      }
+
+      &::-webkit-slider-thumb {
+        background: #94a3b8; // slate-400
+        border-color: #1e293b;
+      }
+
+      &::-moz-range-thumb {
+        background: #94a3b8;
+        border-color: #1e293b;
+      }
+
+      &:focus::-webkit-slider-thumb {
+        box-shadow: 0 0 0 3px rgba(148, 163, 184, 0.25), 0 1px 4px rgba(0, 0, 0, 0.2);
+      }
+
+      &:focus::-moz-range-thumb {
+        box-shadow: 0 0 0 3px rgba(148, 163, 184, 0.25), 0 1px 4px rgba(0, 0, 0, 0.2);
+      }
+    }
+
+    input.spinner {
+      background: #0f172a !important;
+      border-color: #334155 !important;
+      color: #e2e8f0 !important;
+
+      &:focus {
+        border-color: #64748b !important;
+      }
+    }
+
+    input.unit {
+      background: #1e293b !important;
+      border-color: #334155 !important;
+      color: #94a3b8 !important;
+    }
+  }
+
+  // Text row dark mode
+  .palette-row.textual {
+    input.value {
+      background: #0f172a !important;
+      border-color: #334155 !important;
+      color: #e2e8f0 !important;
+
+      &::placeholder {
+        color: #64748b;
+      }
+    }
+  }
+
+  .palette-row-v2 {
+    background: #1e293b;
+    border-color: #334155;
+
+    &:hover {
+      border-color: #475569;
+    }
+
+    .palette-type-icon {
+      color: #94a3b8;
+
+      i {
+        color: inherit;
+      }
+    }
+
+    .palette-name {
+      background: #0f172a;
+      border-color: #334155;
+      color: #e2e8f0;
+
+      &:focus {
+        border-color: #64748b;
+        box-shadow: 0 0 0 2px rgba(100, 116, 139, 0.15);
+      }
+
+      &:disabled {
+        background: #1e293b;
+        color: #64748b;
+      }
+    }
+
+    .color-swatch {
+      border-color: rgba(255, 255, 255, 0.1);
+    }
+
+    .add-color-btn {
+      border-color: #475569;
+
+      i {
+        color: #64748b;
+      }
+
+      &:hover {
+        border-color: #64748b;
+        background: #334155;
+
+        i {
+          color: #94a3b8;
+        }
+      }
+    }
+
+    .palette-content {
+      input, select {
+        background: #0f172a;
+        border-color: #334155;
+        color: #e2e8f0;
+
+        &:focus {
+          border-color: #64748b;
+          box-shadow: 0 0 0 2px rgba(100, 116, 139, 0.15);
+        }
+      }
+    }
+
+    .palette-actions .action-btn {
+      color: #64748b;
+
+      &:hover {
+        background: #334155;
+        color: #f1f5f9;
+      }
+
+      &.delete:hover {
+        background: rgba(239, 68, 68, 0.15);
+        color: #fca5a5;
+      }
+    }
+  }
+
+  .style-separator {
+    background: #334155;
+  }
+
+  .css-editor-section {
+    .editor-header .editor-title .language-badge {
+      background: rgba(59, 130, 246, 0.2);
+      color: #60a5fa;
+    }
+
+    .monaco-editor-container {
+      border-color: #334155;
+    }
+  }
+
+  .palettes-empty-state,
+  .style-variables-empty-state {
+    background: #1e293b;
+    border-color: #334155;
+
+    .empty-icon {
+      color: #64748b;
+    }
+
+    .empty-title {
+      color: #94a3b8;
+    }
+
+    .empty-description {
+      color: #64748b;
+    }
+  }
+}
+
+// Fallback for prefers-color-scheme
+@media (prefers-color-scheme: dark) {
+  .style-section-header .section-title {
+    color: #94a3b8;
+  }
+
+  .add-dropdown .add-btn {
+    color: #e2e8f0;               // slate-200
+    background: #1e293b;          // slate-800
+    border-color: #334155;        // slate-700
+
+    &:hover {
+      background: #334155;        // slate-700
+      border-color: #475569;      // slate-600
+      color: #f1f5f9;
+    }
+
+    &.open,
+    &:focus {
+      background: #334155;
+      border-color: #64748b;
+      box-shadow: 0 0 0 2px rgba(100, 116, 139, 0.2);
+    }
+
+    i.bi-chevron-down,
+    i.bi-chevron-up {
+      color: #94a3b8;             // slate-400
+    }
+  }
+
+  .palette-row-container,
+  .palette-row-v2 {
+    background: #1e293b;
+    border-color: #334155;
+
+    input.prefix {
+      background: #0f172a;
+      border-color: #334155;
+      color: #e2e8f0;
+    }
+  }
+
+  .palette-row.path input.value,
+  .palette-row.textual input.value {
+    background: #0f172a;
+    border-color: #334155;
+    color: #e2e8f0;
+  }
+
+  .palette-row.numeric {
+    input.value[type="range"] {
+      background: #64748b; // slate-500 solid
+
+      &::-webkit-slider-runnable-track {
+        background: #64748b;
+      }
+
+      &::-moz-range-track {
+        background: #64748b;
+      }
+
+      &::-webkit-slider-thumb {
+        background: #94a3b8;
+        border-color: #1e293b;
+      }
+
+      &::-moz-range-thumb {
+        background: #94a3b8;
+        border-color: #1e293b;
+      }
+    }
+
+    input.spinner {
+      background: #0f172a;
+      border-color: #334155;
+      color: #e2e8f0;
+    }
+
+    input.unit {
+      background: #1e293b;
+      border-color: #334155;
+      color: #94a3b8;
+    }
+  }
+}
+
+// ============================================
+// DEBUG MODE: Hide unwanted checkbox elements
+// In debug mode, native checkboxes may become visible
+// ============================================
+.style-tab,
+.style-tab-redesign {
+  // Hide any checkbox that appears after labels/titles
+  .editor-title,
+  .editor-label,
+  .css-editor-header,
+  [class*="editor-header"] {
+    + input[type="checkbox"],
+    + .checkbox,
+    + div:empty,
+    + span:empty {
+      display: none !important;
+    }
+  }
+
+  // Specifically in debug mode
+  [data-debug="true"] &,
+  &.debug-mode {
+    input[type="checkbox"]:not([class]) {
+      display: none !important;
+    }
+  }
+}

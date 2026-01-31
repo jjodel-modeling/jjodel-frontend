@@ -1,0 +1,698 @@
+/* ============================================
+   DIAGRAM REFINED STYLES
+   Canvas node, edge, and label styling using design tokens
+   ============================================ */
+
+@import './tokens/index';
+
+/* ----------------------------------------
+   DIAGRAM TYPOGRAPHY
+   Monospace font for all diagram elements
+   ---------------------------------------- */
+
+.Vertex,
+.GraphVertex,
+.class,
+.enumerator,
+.package,
+.attribute,
+.reference,
+.operation,
+.literal,
+.object,
+.value,
+[data-nodetype="Vertex"],
+[data-nodetype="GraphVertex"],
+[data-nodetype="Edge"],
+[data-nodetype="EdgePoint"] {
+  font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+  font-size: 10px;
+}
+
+/* ----------------------------------------
+   NODE/VERTEX STYLING
+   Refined class diagram node appearance
+   ---------------------------------------- */
+
+/* Base Vertex styling */
+.Vertex,
+.GraphVertex {
+  /* Subtle rounded corners */
+  border-radius: var(--radius-sm, 3px);
+
+  /* Subtle shadow for depth */
+  box-shadow: var(--shadow-sm, 0 1px 2px 0 rgba(0, 0, 0, 0.05));
+
+  /* Smooth transitions */
+  transition: box-shadow var(--transition-fast, 150ms) ease,
+              transform var(--transition-fast, 150ms) ease;
+
+  &:hover {
+    box-shadow: var(--shadow-md, 0 4px 6px -1px rgba(0, 0, 0, 0.1));
+  }
+
+  &:focus-within {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+}
+
+/* Class node refinements */
+.class {
+  border-radius: 6px !important;
+  overflow: hidden;
+  background: var(--color-bg-primary, #ffffff);
+  border: 2.5px solid var(--color-accent, #5B8266) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+
+  /* Header with CLASS badge */
+  > .header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: var(--color-bg-secondary, #f5f6f7);
+    border-bottom: 1px solid var(--color-border-secondary, #eaecf0);
+
+    & input {
+      font-size: 13px;
+    }
+  }
+
+  .class-name {
+    font-weight: var(--font-bold, 700);
+    font-size: 13px;
+    color: var(--color-text-primary, #1a1a2e);
+  }
+
+  /* Children container (attributes, references, operations) */
+  .class-children {
+    padding: 8px 12px;
+    background: var(--color-bg-primary, #ffffff);
+  }
+
+  /* Hover effect with shadow */
+  &:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  }
+}
+
+/* Type badge styling (CLASS, ENUM, etc.) */
+.class-badge,
+.type-badge,
+.node-type-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 4px;
+  font-size: 8px;
+  font-weight: var(--font-semibold, 600);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-inverse, #ffffff);
+  background-color: var(--color-accent, #5B8266);
+  border-radius: 2px;
+}
+
+/* Enumerator styling */
+.enumerator {
+  border-radius: var(--radius-sm, 3px) !important;
+  overflow: hidden;
+
+  > .header {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 6px;
+    background: var(--color-bg-secondary, #f9fafb);
+    border-bottom: 1px solid var(--color-border-secondary, #eaecf0);
+  }
+
+  .enumerator-children {
+    padding: 4px 0;
+  }
+}
+
+/* Package styling */
+.package {
+  border-radius: var(--radius-sm, 3px) !important;
+  overflow: hidden;
+  border: 1px solid var(--color-border-primary, #e2e4e8);
+  background: var(--color-bg-primary, #ffffff);
+}
+
+
+/* ----------------------------------------
+   ATTRIBUTE & REFERENCE ROW STYLING
+   Rows inside class nodes
+   ---------------------------------------- */
+
+/* Base row styling for attributes and references */
+.attribute,
+.reference {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 0;
+  font-size: 10px;
+  color: var(--color-text-primary, #1a1a2e);
+  border-bottom: 1px solid var(--color-border-light, #f0f1f3);
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  /* Row name (e.g., ref_0, attr_1) */
+  .name,
+  .field-name {
+    font-weight: var(--font-medium, 500);
+    color: var(--color-text-primary, #1a1a2e);
+    min-width: 50px;
+  }
+
+  /* Type indicator / dropdown */
+  select,
+  .type-selector,
+  .dropdown {
+    font-family: inherit;
+    font-size: 9px;
+    padding: 2px 6px;
+    border: 1px solid var(--color-border-secondary, #e2e4e8);
+    border-radius: 3px;
+    background-color: var(--color-bg-primary, #ffffff);
+    color: var(--color-text-secondary, #525866);
+    cursor: pointer;
+    min-width: 80px;
+
+    &:hover {
+      border-color: var(--color-accent, #5B8266);
+    }
+
+    &:focus {
+      outline: none;
+      border-color: var(--color-accent, #5B8266);
+      box-shadow: 0 0 0 2px var(--color-accent-muted, rgba(91, 130, 102, 0.12));
+    }
+  }
+
+  /* Multiplicity indicator (e.g., 0..1, 1..*) */
+  .multiplicity,
+  .cardinality {
+    font-size: 9px;
+    font-weight: var(--font-semibold, 600);
+    color: var(--color-text-tertiary, #717784);
+    padding: 1px 4px;
+    background-color: var(--color-bg-tertiary, #f4f5f6);
+    border-radius: 2px;
+    white-space: nowrap;
+  }
+}
+
+/* Operation styling */
+.operation {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 0;
+  font-size: 10px;
+  color: var(--color-text-primary, #1a1a2e);
+
+  .operation-name {
+    font-weight: var(--font-medium, 500);
+  }
+
+  .operation-params {
+    color: var(--color-text-secondary, #525866);
+  }
+
+  .operation-return {
+    color: var(--color-text-tertiary, #717784);
+    font-style: italic;
+  }
+}
+
+/* Literal styling (for enums) */
+.literal {
+  padding: 3px 8px;
+  font-size: 10px;
+  color: var(--color-text-primary, #1a1a2e);
+  border-bottom: 1px solid var(--color-border-light, #f0f1f3);
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+
+/* ----------------------------------------
+   EDGE POINT STYLING
+   Circular draggable points on edges
+   ---------------------------------------- */
+
+[data-nodetype="EdgePoint"] {
+  /* Base circular styling */
+  .edgePoint,
+  > div {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background-color: var(--color-bg-primary, #ffffff);
+    border: 2px solid var(--color-accent, #5B8266);
+    box-shadow: var(--shadow-sm, 0 1px 2px 0 rgba(0, 0, 0, 0.05));
+    cursor: grab;
+    transition: transform var(--transition-fast, 150ms) ease,
+                box-shadow var(--transition-fast, 150ms) ease,
+                border-color var(--transition-fast, 150ms) ease;
+
+    &:hover {
+      transform: scale(1.2);
+      box-shadow: var(--shadow-md, 0 4px 6px -1px rgba(0, 0, 0, 0.1));
+      border-color: var(--color-accent-hover, #4A6B54);
+    }
+
+    &:active {
+      cursor: grabbing;
+      transform: scale(1.1);
+      border-color: var(--color-accent-active, #3A5443);
+    }
+  }
+}
+
+/* Standalone edge point class */
+.edgePoint {
+  border-radius: 50%;
+  background-color: var(--color-bg-primary, #ffffff);
+  border: 2px solid var(--color-accent, #5B8266);
+  box-shadow: var(--shadow-sm, 0 1px 2px 0 rgba(0, 0, 0, 0.05));
+}
+
+
+/* ----------------------------------------
+   EDGE LABEL STYLING
+   Pill-style labels for edge names and multiplicity
+   ---------------------------------------- */
+
+/* Base label container */
+.label-start,
+.label-end {
+  overflow: visible;
+}
+
+/* Label text styling - pill style */
+.label-text {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 6px;
+  font-family: 'JetBrains Mono', 'Consolas', monospace;
+  font-size: 9px;
+  font-weight: var(--font-medium, 500);
+  color: var(--color-text-secondary, #525866);
+  background-color: var(--color-bg-secondary, #f9fafb);
+  border: 1px solid var(--color-border-secondary, #eaecf0);
+  border-radius: 2px;
+  white-space: nowrap;
+  box-shadow: var(--shadow-xs, 0 1px 2px 0 rgba(0, 0, 0, 0.03));
+
+  /* Alignment classes */
+  &.left {
+    transform: translateX(-100%);
+  }
+
+  &.right {
+    transform: translateX(0);
+  }
+
+  &.center {
+    transform: translateX(-50%);
+  }
+}
+
+/* Multiplicity label (end label) - slightly more prominent */
+.label-end .label-text {
+  font-size: 8px;
+  font-weight: var(--font-semibold, 600);
+  color: var(--color-text-tertiary, #717784);
+  background-color: var(--color-bg-tertiary, #f4f5f6);
+}
+
+/* Edge name label (main label on edge) */
+.edge-label,
+.edge-name-label {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 6px;
+  font-family: 'JetBrains Mono', 'Consolas', monospace;
+  font-size: 9px;
+  font-weight: var(--font-medium, 500);
+  color: var(--color-text-primary, #1a1a2e);
+  background-color: var(--color-bg-primary, #ffffff);
+  border: 1px solid var(--color-border-primary, #e2e4e8);
+  border-radius: 2px;
+  box-shadow: var(--shadow-sm, 0 1px 2px 0 rgba(0, 0, 0, 0.05));
+}
+
+
+/* ----------------------------------------
+   EDGE PATH STYLING
+   Connection lines between nodes
+   ---------------------------------------- */
+
+[data-nodetype="Edge"] {
+  path {
+    /* Base stroke styling */
+    stroke: var(--color-border-primary, #d1d5db);
+    stroke-width: 1.5px;
+    fill: none;
+
+    /* Smooth animation for hover effects */
+    transition: stroke var(--transition-fast, 150ms) ease,
+                stroke-width var(--transition-fast, 150ms) ease;
+
+    /* Hover state */
+    &:hover,
+    &.hover-activator:hover ~ path {
+      stroke: var(--color-accent, #5B8266);
+      stroke-width: 2px;
+    }
+
+    /* Clickable path for interaction */
+    &.clickable {
+      cursor: pointer;
+    }
+
+    /* Dashed lines for optional relationships */
+    &.dashed {
+      stroke-dasharray: 5, 5;
+    }
+
+    /* Full path styling */
+    &.full {
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+  }
+
+  /* Selection state for edges */
+  &.selected-by-me path {
+    stroke: var(--color-accent, #5B8266);
+    stroke-width: 2.5px;
+  }
+
+  &.selected-by-others path {
+    stroke: var(--color-info, #3b82f6);
+    stroke-width: 2px;
+  }
+}
+
+
+/* ----------------------------------------
+   ARROW/MARKER STYLING
+   Arrow heads for directed edges
+   ---------------------------------------- */
+
+/* SVG marker refinements */
+marker {
+  path {
+    fill: var(--color-border-primary, #d1d5db);
+    stroke: none;
+
+    /* Hover state inheritance */
+    [data-nodetype="Edge"]:hover & {
+      fill: var(--color-accent, #5B8266);
+    }
+  }
+}
+
+/* Arrow head styling classes */
+.arrow-head {
+  fill: var(--color-border-primary, #d1d5db);
+  stroke: var(--color-border-primary, #d1d5db);
+  stroke-width: 1px;
+
+  /* Inheritance arrow (hollow triangle) */
+  &.inheritance {
+    fill: var(--color-bg-primary, #ffffff);
+    stroke: var(--color-border-primary, #d1d5db);
+    stroke-width: 1.5px;
+  }
+
+  /* Composition arrow (filled diamond) */
+  &.composition {
+    fill: var(--color-border-primary, #d1d5db);
+  }
+
+  /* Aggregation arrow (hollow diamond) */
+  &.aggregation {
+    fill: var(--color-bg-primary, #ffffff);
+    stroke: var(--color-border-primary, #d1d5db);
+    stroke-width: 1.5px;
+  }
+
+  /* Association arrow (simple line) */
+  &.association {
+    fill: var(--color-border-primary, #d1d5db);
+  }
+}
+
+
+/* ----------------------------------------
+   CANVAS/GRAPH CONTAINER
+   Background grid and overall canvas styling
+   ---------------------------------------- */
+
+.GraphContainer,
+.graph,
+[data-nodetype="Graph"] {
+  background-color: var(--color-canvas-bg, var(--color-bg-primary, #ffffff));
+
+  /* Grid pattern - dots style */
+  &.grid-classic {
+    background-image: radial-gradient(var(--color-canvas-grid, #e5e7eb) 1px, transparent 0);
+    background-size: 20px 20px;
+    background-position: 10px 10px;
+  }
+
+  /* Grid pattern - paper style */
+  &.grid-paper {
+    background-color: var(--color-canvas-bg, #ffffff);
+    background-image:
+      linear-gradient(to right, var(--color-canvas-grid, rgba(4, 125, 200, 0.1)) 0.5px, transparent 0px),
+      linear-gradient(to bottom, var(--color-canvas-grid, rgba(4, 125, 200, 0.1)) 0.5px, transparent 0px),
+      linear-gradient(to right, var(--color-canvas-grid, rgba(164, 200, 4, 0.08)) 0.5px, transparent 0px),
+      linear-gradient(to bottom, var(--color-canvas-grid, rgba(164, 200, 4, 0.08)) 0.5px, transparent 0px);
+    background-size:
+      90px 90px,
+      90px 90px,
+      9px 9px,
+      9px 9px;
+  }
+}
+
+
+/* ----------------------------------------
+   EMPTY STATE STYLING
+   "No attributes defined" placeholder
+   ---------------------------------------- */
+
+.empty-state,
+.no-attributes,
+.no-children {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 4px;
+  color: var(--color-text-tertiary, #717784);
+  font-family: 'JetBrains Mono', 'Consolas', monospace;
+  font-size: 9px;
+  text-align: center;
+
+  /* Icon styling */
+  .bi,
+  i,
+  svg {
+    font-size: 1rem;
+    margin-bottom: 4px;
+    opacity: 0.5;
+  }
+
+  /* Text styling */
+  span,
+  p {
+    color: var(--color-text-tertiary, #717784);
+    font-style: italic;
+  }
+}
+
+
+/* ----------------------------------------
+   SELECTION STATES
+   Visual feedback for selected elements
+   ---------------------------------------- */
+
+.selected-by-me {
+  outline: 1px dashed var(--color-accent, #5B8266);
+  outline-offset: 1px;
+
+  &.Vertex,
+  &.GraphVertex {
+    box-shadow: 0 0 0 2px var(--color-accent-muted, rgba(91, 130, 102, 0.12)),
+                var(--shadow-sm);
+  }
+}
+
+.selected-by-others {
+  outline: 1px dashed var(--color-info, #3b82f6);
+  outline-offset: 1px;
+
+  &.Vertex,
+  &.GraphVertex {
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.12),
+                var(--shadow-sm);
+  }
+}
+
+
+/* ----------------------------------------
+   DARK THEME OVERRIDES
+   Adjustments for dark mode
+   ---------------------------------------- */
+
+[data-theme="dark"] {
+  .class,
+  .enumerator,
+  .package {
+    background: var(--color-node-bg, var(--color-bg-secondary, #2a2a3c));
+    border-color: var(--color-node-border, var(--color-border-primary, #3a3a4c));
+
+    > .header {
+      background: var(--color-bg-tertiary, #1e1e2e);
+      border-color: var(--color-border-secondary, #3a3a4c);
+    }
+  }
+
+  .label-text {
+    background-color: var(--color-bg-secondary, #2a2a3c);
+    border-color: var(--color-border-secondary, #3a3a4c);
+    color: var(--color-text-secondary, #a0a0b0);
+  }
+
+  [data-nodetype="EdgePoint"] {
+    .edgePoint,
+    > div {
+      background-color: var(--color-bg-secondary, #2a2a3c);
+      border-color: var(--color-accent, #7FA88A);
+    }
+  }
+
+  [data-nodetype="Edge"] path {
+    stroke: var(--color-border-secondary, #4a4a5c);
+  }
+}
+
+
+/* ----------------------------------------
+   EDGE & EDGEPOINT POSITIONING
+   Base positioning from style.scss
+   ---------------------------------------- */
+
+[data-nodetype="EdgePoint"] {
+  pointer-events: all; /* Fix: edge root has pointerEvents none */
+}
+
+[data-nodetype="Edge"] {
+  position: absolute;
+  overflow: visible;
+  height: 0;
+
+  /* Edge selection - remove outline (handled by path stroke) */
+  &.selected-by-me,
+  &.selected-by-others {
+    outline: none !important;
+  }
+}
+
+
+/* ----------------------------------------
+   EXTENSION STATE INDICATORS
+   Visual feedback for extensibility
+   ---------------------------------------- */
+
+[data-nodetype] {
+  --ext_on: var(--color-success);
+  --ext_off: var(--color-error);
+
+  &:not(.Edge) {
+    &.class-can-be-extended {
+      outline: 3px solid var(--ext_on);
+      border-radius: var(--radius-sm, 3px);
+      outline-offset: 3px;
+    }
+
+    &.class-cannot-be-extended {
+      outline: 3px solid var(--ext_off);
+      border-radius: var(--radius-sm, 3px);
+      outline-offset: 3px;
+    }
+  }
+
+  &.Edge {
+    &.class-can-be-extended path {
+      stroke: var(--ext_on);
+    }
+
+    &.class-cannot-be-extended path {
+      stroke: var(--ext_off);
+    }
+  }
+}
+
+
+/* ----------------------------------------
+   GRAPH CONTAINER OVERFLOW FIXES
+   Multi-select popup fix in graph
+   ---------------------------------------- */
+
+.GraphContainer {
+  overflow: hidden !important;
+
+  .Graph,
+  .Graph > .root {
+    overflow: hidden !important;
+  }
+
+  .scrollable[graph='DGraph'] {
+    overflow: hidden;
+
+    > .panning-handle {
+      overflow: hidden;
+    }
+  }
+
+  /* Allow dropdowns to expand */
+  [data-nodetype],
+  [data-nodetype] > * {
+    &:has(.css-1nmdiq5-menu) {
+      min-height: min-content !important;
+    }
+  }
+
+  .css-b62m3t-container {
+    min-height: fit-content;
+  }
+
+  /* React-Select dropdown menu styling */
+  .css-1nmdiq5-menu {
+    margin: -10px 0px;
+    padding: 18px 0px;
+    background-color: transparent;
+    box-shadow: none;
+    position: relative;
+    z-index: 1;
+
+    & > * {
+      background-color: var(--color-bg-elevated);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-lg);
+    }
+  }
+}

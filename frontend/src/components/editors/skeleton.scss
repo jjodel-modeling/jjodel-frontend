@@ -11,14 +11,14 @@
   color: var(--color);
   // margin: 1rem .5rem;
   // padding: 1rem 1.65rem;
-  font-weight: 300;
+  font-weight: var(--font-light);
   // border: 1px solid var(--bg-1-5);
   border-radius: var(--tab-radius);
   // background-color: var(--bg-1-5);
   transition: opacity 0.3s;
 
   & h4 {
-    padding-top: 20px!important;
+    padding-top: 15px!important;
   }
 
   & input[type=text], input[type=number] {
@@ -278,7 +278,7 @@ input[type="number"]::-webkit-outer-spin-button {
   color: var(--color);
   margin: 1rem .5rem;
   padding: 1rem 1.65rem;
-  font-weight: 300;
+  font-weight: var(--font-light);
 
   border: 1px solid var(--bg-1-5);
   border-radius: 8px;
@@ -419,7 +419,7 @@ input[type="number"]::-webkit-outer-spin-button {
     color: var(--color);
     margin: 1rem .5rem;
     padding: 1rem 1.65rem;
-    font-weight: 300;
+    font-weight: var(--font-light);
     max-height: 95%;
     border: 1px solid var(--bg-1-5);
     border-radius: 8px;
@@ -451,7 +451,7 @@ input[type="number"]::-webkit-outer-spin-button {
     }
 
     &  label.on-element {
-      font-weight: 500;
+      font-weight: var(--font-medium);
     }
 
     & h4 {
@@ -475,7 +475,7 @@ input[type="number"]::-webkit-outer-spin-button {
       color: white;
       border-radius: 3px;
       background-color: var(--failure);
-      font-weight: 400;
+      font-weight: var(--font-normal);
     }
 
 
@@ -501,7 +501,7 @@ input[type="number"]::-webkit-outer-spin-button {
     }
 
     & .context-keys {
-      font-weight: 500;
+      font-weight: var(--font-medium);
       font-size: 1.1em;
     }
 

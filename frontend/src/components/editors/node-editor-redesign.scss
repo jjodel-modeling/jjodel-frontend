@@ -1,0 +1,1058 @@
+/**
+ * NodeEditor Redesign Styles
+ * 
+ * Design System: Jjodel slate base + cyan accents
+ * Following CLAUDE.md design guidelines
+ */
+
+// ============================================
+// DESIGN TOKENS
+// ============================================
+
+$color-border: #e2e4e8;
+$color-border-light: #f0f1f2;
+$color-bg-primary: #ffffff;
+$color-bg-secondary: #f8fafc;
+$color-bg-tertiary: #f1f5f9;
+$color-text-primary: #111418;
+$color-text-secondary: #6B7280;
+$color-text-tertiary: #9CA3AF;
+$color-accent: #475569;
+$color-accent-light: rgba(71, 85, 105, 0.1);
+$color-accent-cyan: #06b6d4;
+$color-accent-cyan-light: rgba(6, 182, 212, 0.1);
+$color-danger: #ef4444;
+$color-danger-light: rgba(239, 68, 68, 0.1);
+
+$transition-fast: 150ms ease;
+$transition-normal: 250ms ease;
+
+$radius-sm: 4px;
+$radius-md: 6px;
+$radius-lg: 8px;
+
+$font-mono: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', monospace;
+
+// ============================================
+// MAIN CONTAINER
+// ============================================
+
+.node-editor-redesign {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    background-color: $color-bg-secondary; // Light gray background
+    overflow-y: auto;
+    padding: 16px;
+    gap: 12px;
+    font-family: 'Inter Variable', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: 13px;
+    color: $color-text-primary;
+}
+
+// ============================================
+// HEADER - Matches Properties/Viewpoints style
+// ============================================
+
+.node-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding-bottom: 16px;
+    margin-bottom: 4px;
+    border-bottom: 1px solid $color-border;
+}
+
+.node-header__icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    background: #e2e8f0;
+    border-radius: 12px;
+    flex-shrink: 0;
+
+    i {
+        font-size: 24px;
+        color: #64748b;
+    }
+}
+
+.node-header__title {
+    font-size: 20px;
+    font-weight: 600;
+    color: #0f172a;
+    margin: 0;
+}
+
+// ============================================
+// COLLAPSIBLE SECTIONS
+// ============================================
+
+.node-section {
+    border: 1px solid $color-border;
+    border-radius: $radius-lg;
+    background: $color-bg-primary;
+    overflow: hidden;
+    transition: box-shadow $transition-fast;
+
+    &--open {
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+    }
+}
+
+.node-section__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 12px 14px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    transition: background-color $transition-fast;
+    text-align: left;
+
+    &:hover {
+        background-color: $color-bg-secondary;
+    }
+
+    &:focus {
+        outline: none;
+        background-color: $color-bg-secondary;
+    }
+}
+
+.node-section__title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: $color-text-primary;
+
+    i {
+        font-size: 12px;
+        color: $color-text-secondary;
+
+        &:first-child {
+            font-size: 10px;
+            color: $color-text-tertiary;
+        }
+    }
+}
+
+.node-section__badge {
+    font-size: 11px;
+    font-weight: 500;
+    color: $color-text-tertiary;
+    padding: 2px 8px;
+    background: $color-bg-tertiary;
+    border-radius: 10px;
+}
+
+.node-section__content {
+    padding: 14px;
+    padding-top: 4px;
+    border-top: 1px solid $color-border-light;
+}
+
+// ============================================
+// FORM FIELDS
+// ============================================
+
+.node-editor__grid {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.node-editor__field-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+
+    &--inline {
+        margin-top: 12px;
+        padding-top: 12px;
+        border-top: 1px solid $color-border-light;
+        flex-wrap: wrap;
+    }
+}
+
+.node-editor__field-label {
+    font-size: 12px;
+    font-weight: 500;
+    color: $color-text-secondary;
+    min-width: 80px;
+    flex-shrink: 0;
+}
+
+.node-editor__field-inputs {
+    display: flex;
+    gap: 8px;
+    flex: 1;
+    align-items: center;
+    flex-wrap: wrap;
+
+    // Style inputs from joiner components
+    input[type="number"],
+    input[type="text"] {
+        width: auto;
+        height: 24px;
+        padding: 0 10px;
+        font-family: $font-mono;
+        font-size: 13px;
+        font-weight: 400;
+        color: $color-text-primary;
+        background: $color-bg-secondary;
+        border: 1px solid $color-border;
+        border-radius: $radius-sm;
+        outline: none;
+        transition: border-color $transition-fast, box-shadow $transition-fast;
+
+        &:focus {
+            border-color: $color-accent-cyan;
+            box-shadow: 0 0 0 2px $color-accent-cyan-light;
+            background: $color-bg-primary;
+        }
+    }
+
+    // Override any bold styles from GenericInput/SizeInput components
+    input, .generic-input input, .size-input input {
+        font-weight: 400 !important;
+        font-style: normal !important;
+    }
+}
+
+.node-editor__input-group {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+
+    input {
+        width: 90px;
+        min-width: 70px;
+        max-width: 120px;
+    }
+}
+
+.node-editor__input-prefix {
+    font-size: 11px;
+    font-weight: 500;
+    color: $color-text-tertiary;
+    text-transform: lowercase;
+}
+
+.node-editor__inline-field {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    .node-editor__field-label {
+        min-width: auto;
+    }
+
+    input[type="number"] {
+        width: 60px;
+    }
+
+    &--checkbox {
+        input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            accent-color: $color-accent-cyan;
+            cursor: pointer;
+        }
+    }
+}
+
+// ============================================
+// RELATIONSHIPS SECTION
+// ============================================
+
+.node-editor__relationship {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 0;
+
+    &:not(:last-child) {
+        border-bottom: 1px solid $color-border-light;
+    }
+}
+
+.node-editor__relationship-label {
+    font-size: 12px;
+    font-weight: 500;
+    color: $color-text-secondary;
+}
+
+.node-editor__relationship-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    font-size: 12px;
+    font-weight: 500;
+    color: $color-accent-cyan;
+    background: $color-accent-cyan-light;
+    border: none;
+    border-radius: $radius-sm;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    &:hover {
+        background: darken(rgba(6, 182, 212, 0.1), 5%);
+
+        i {
+            transform: translate(2px, -2px);
+        }
+    }
+
+    i {
+        font-size: 11px;
+        transition: transform $transition-fast;
+    }
+}
+
+.node-editor__edges {
+    padding-top: 10px;
+}
+
+.node-editor__edges-label {
+    display: block;
+    font-size: 12px;
+    font-weight: 500;
+    color: $color-text-secondary;
+    margin-bottom: 8px;
+}
+
+.node-editor__edges-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.node-editor__edge {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: $color-bg-secondary;
+    border-radius: $radius-sm;
+    font-size: 12px;
+    cursor: pointer;
+    transition: background-color $transition-fast;
+
+    &:hover {
+        background: $color-bg-tertiary;
+    }
+
+    i {
+        font-size: 10px;
+        color: $color-text-tertiary;
+    }
+}
+
+.node-editor__edge-source {
+    color: $color-text-secondary;
+}
+
+.node-editor__edge-target {
+    color: $color-text-primary;
+    font-weight: 500;
+}
+
+.node-editor__edges-more {
+    font-size: 11px;
+    color: $color-text-tertiary;
+    padding: 4px 12px;
+    font-style: italic;
+}
+
+// ============================================
+// NODE STATE (JSON)
+// ============================================
+
+.node-editor__state-json {
+    margin: 0;
+    padding: 12px;
+    background: $color-bg-tertiary;
+    border-radius: $radius-sm;
+    overflow-x: auto;
+
+    // Override react-json-view styles
+    .react-json-view {
+        font-family: $font-mono !important;
+        font-size: 11px !important;
+        background: transparent !important;
+    }
+}
+
+.node-editor__empty-state {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 24px;
+    color: $color-text-tertiary;
+    font-size: 12px;
+
+    i {
+        font-size: 14px;
+    }
+}
+
+// ============================================
+// ANCHORS SECTION
+// ============================================
+
+.anchor-viz {
+    display: flex;
+    justify-content: center;
+    padding: 24px;
+    background: $color-bg-secondary;
+    border-radius: $radius-md;
+    margin-bottom: 16px;
+
+    &__empty {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+        padding: 32px;
+        color: $color-text-tertiary;
+        font-size: 12px;
+
+        i {
+            font-size: 24px;
+            opacity: 0.5;
+        }
+    }
+}
+
+.anchor-viz__node {
+    position: relative;
+    width: 280px;
+    height: 180px;
+    
+    &--dragging {
+        cursor: grabbing;
+        
+        .anchor-viz__point {
+            cursor: grabbing;
+        }
+    }
+}
+
+.anchor-viz__node-body {
+    position: absolute;
+    inset: 24px;
+    background: $color-bg-primary;
+    border: 2px solid $color-border;
+    border-radius: $radius-sm;
+
+    &::before,
+    &::after {
+        content: '';
+        position: absolute;
+        background: $color-border-light;
+    }
+
+    &::before {
+        top: 50%;
+        left: -24px;
+        right: -24px;
+        height: 1px;
+    }
+
+    &::after {
+        left: 50%;
+        top: -24px;
+        bottom: -24px;
+        width: 1px;
+    }
+}
+
+.anchor-viz__center {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 24px;
+    height: 24px;
+    background: $color-accent-cyan-light;
+    border: 2px solid $color-accent-cyan;
+    border-radius: 50%;
+    z-index: 2;
+}
+
+.anchor-viz__point {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    background: $color-bg-primary;
+    border: 1.5px solid $color-border;
+    border-radius: 50%;
+    cursor: grab;
+    transition: all $transition-fast;
+    z-index: 1;
+    padding: 0;
+
+    &:hover {
+        border-color: $color-accent-cyan;
+        background: $color-accent-cyan-light;
+        z-index: 3;
+
+        .anchor-viz__point-label {
+            color: $color-accent-cyan;
+        }
+    }
+
+    &--selected {
+        border-color: $color-accent-cyan;
+        background: $color-accent-cyan;
+        box-shadow: 0 0 0 3px $color-accent-cyan-light;
+        z-index: 3;
+
+        .anchor-viz__point-label {
+            color: white;
+        }
+    }
+    
+    &--dragging {
+        cursor: grabbing;
+        transform: translate(-50%, -50%) scale(1.2);
+        box-shadow: 0 4px 12px rgba(6, 182, 212, 0.4);
+        z-index: 10;
+    }
+}
+
+.anchor-viz__point-label {
+    font-size: 9px;
+    font-weight: 600;
+    color: $color-text-secondary;
+    text-transform: lowercase;
+    letter-spacing: -0.3px;
+    transition: color $transition-fast;
+    user-select: none;
+}
+
+// ============================================
+// ANCHOR EDITOR
+// ============================================
+
+.node-editor__anchor-editor {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.node-editor__anchor-selector {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    label {
+        font-size: 12px;
+        font-weight: 500;
+        color: $color-text-secondary;
+        white-space: nowrap;
+    }
+
+    select {
+        flex: 1;
+        height: 32px;
+        padding: 0 10px;
+        font-size: 12px;
+        color: $color-text-primary;
+        background: $color-bg-secondary;
+        border: 1px solid $color-border;
+        border-radius: $radius-sm;
+        outline: none;
+        cursor: pointer;
+
+        &:focus {
+            border-color: $color-accent-cyan;
+            box-shadow: 0 0 0 2px $color-accent-cyan-light;
+        }
+    }
+}
+
+.node-editor__anchor-fields {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.anchor-input-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px;
+    background: $color-bg-secondary;
+    border-radius: $radius-md;
+
+    &__field {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        flex: 1;
+
+        &--name {
+            flex: 2;
+        }
+
+        input {
+            width: 100%;
+            height: 32px;
+            padding: 0 10px;
+            font-family: $font-mono;
+            font-size: 13px;
+            font-weight: 400;
+            color: $color-text-primary;
+            background: $color-bg-primary;
+            border: 1px solid $color-border;
+            border-radius: $radius-sm;
+            outline: none;
+
+            &:focus {
+                border-color: $color-accent-cyan;
+                box-shadow: 0 0 0 2px $color-accent-cyan-light;
+            }
+        }
+    }
+
+    &__label {
+        font-size: 11px;
+        font-weight: 500;
+        color: $color-text-tertiary;
+        text-transform: lowercase;
+        flex-shrink: 0;
+    }
+
+    &__delete {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 32px;
+        height: 32px;
+        background: $color-bg-primary;
+        border: 1px solid $color-border;
+        border-radius: $radius-sm;
+        cursor: pointer;
+        transition: all $transition-fast;
+        color: $color-text-secondary;
+        flex-shrink: 0;
+
+        &:hover {
+            border-color: $color-danger;
+            color: $color-danger;
+            background: $color-danger-light;
+        }
+
+        i {
+            font-size: 14px;
+        }
+    }
+}
+
+.node-editor__anchor-empty {
+    display: flex;
+    justify-content: center;
+    padding: 16px;
+}
+
+.node-editor__btn-add {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    font-size: 13px;
+    font-weight: 500;
+    color: $color-accent-cyan;
+    background: $color-accent-cyan-light;
+    border: 1px dashed $color-accent-cyan;
+    border-radius: $radius-md;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    &:hover {
+        background: darken(rgba(6, 182, 212, 0.1), 5%);
+    }
+
+    i {
+        font-size: 14px;
+    }
+}
+
+.node-editor__btn-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    background: $color-bg-primary;
+    border: 1px solid $color-border;
+    border-radius: $radius-sm;
+    cursor: pointer;
+    transition: all $transition-fast;
+    color: $color-text-secondary;
+    flex-shrink: 0;
+
+    &:hover {
+        border-color: $color-accent-cyan;
+        color: $color-accent-cyan;
+        background: $color-accent-cyan-light;
+    }
+
+    i {
+        font-size: 14px;
+    }
+}
+
+// ============================================
+// EDGE ANCHORS SECTION
+// ============================================
+
+.node-editor__edge-anchors {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+// ============================================
+// RESPONSIVE
+// ============================================
+
+@media (max-width: 400px) {
+    .node-editor-redesign {
+        padding: 12px;
+    }
+
+    .node-editor__field-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 6px;
+    }
+
+    .node-editor__field-label {
+        min-width: auto;
+    }
+
+    .node-editor__field-inputs {
+        width: 100%;
+    }
+
+    .anchor-viz__node {
+        width: 220px;
+        height: 140px;
+    }
+
+    .anchor-viz__point {
+        width: 26px;
+        height: 26px;
+    }
+
+    .anchor-viz__point-label {
+        font-size: 8px;
+    }
+
+    .anchor-input-row {
+        flex-wrap: wrap;
+
+        &__field {
+            min-width: 80px;
+
+            &--name {
+                flex-basis: 100%;
+                margin-bottom: 4px;
+            }
+        }
+    }
+}
+
+// ============================================
+// DARK MODE SUPPORT
+// ============================================
+
+[data-theme="dark"] {
+    .node-editor-redesign {
+        background-color: #1e2024;
+        color: #e5e7eb;
+    }
+
+    .node-header {
+        border-bottom-color: #374151;
+    }
+
+    .node-header__icon {
+        background: #374151;
+
+        i {
+            color: #9ca3af;
+        }
+    }
+
+    .node-header__title {
+        color: #f3f4f6;
+    }
+
+    .node-section {
+        border-color: #374151;
+        background: #252830;
+    }
+
+    .node-section__header:hover,
+    .node-section__header:focus {
+        background-color: #2d3139;
+    }
+
+    .node-section__title {
+        color: #e5e7eb;
+
+        i {
+            color: #9ca3af;
+        }
+    }
+
+    .node-section__badge {
+        background: #374151;
+        color: #9ca3af;
+    }
+
+    .node-section__content {
+        border-top-color: #374151;
+    }
+
+    .node-editor__field-label {
+        color: #9ca3af;
+    }
+
+    .node-editor__field-inputs {
+        input[type="number"],
+        input[type="text"] {
+            color: #e5e7eb;
+            background: #1e2024;
+            border-color: #374151;
+
+            &:focus {
+                border-color: $color-accent-cyan;
+                box-shadow: 0 0 0 2px rgba(6, 182, 212, 0.2);
+                background: #252830;
+            }
+        }
+    }
+
+    .node-editor__relationship {
+        border-bottom-color: #374151;
+    }
+
+    .node-editor__relationship-label {
+        color: #9ca3af;
+    }
+
+    .node-editor__edge {
+        background: #1e2024;
+
+        &:hover {
+            background: #2d3139;
+        }
+    }
+
+    .node-editor__edge-source {
+        color: #9ca3af;
+    }
+
+    .node-editor__edge-target {
+        color: #e5e7eb;
+    }
+
+    .anchor-viz {
+        background: #1e2024;
+    }
+
+    .anchor-viz__node-body {
+        background: #252830;
+        border-color: #374151;
+
+        &::before,
+        &::after {
+            background: #374151;
+        }
+    }
+
+    .anchor-viz__point {
+        background: #252830;
+        border-color: #374151;
+
+        &:hover {
+            background: rgba(6, 182, 212, 0.15);
+        }
+
+        &--selected {
+            background: $color-accent-cyan;
+        }
+    }
+
+    .anchor-viz__point-label {
+        color: #9ca3af;
+    }
+
+    .anchor-input-row {
+        background: #1e2024;
+
+        input {
+            color: #e5e7eb;
+            background: #252830;
+            border-color: #374151;
+
+            &:focus {
+                border-color: $color-accent-cyan;
+                box-shadow: 0 0 0 2px rgba(6, 182, 212, 0.2);
+            }
+        }
+
+        &__label {
+            color: #6b7280;
+        }
+
+        &__delete {
+            background: #252830;
+            border-color: #374151;
+            color: #9ca3af;
+
+            &:hover {
+                border-color: $color-danger;
+                background: rgba(239, 68, 68, 0.15);
+            }
+        }
+    }
+
+    .node-editor__anchor-selector {
+        label {
+            color: #9ca3af;
+        }
+
+        select {
+            color: #e5e7eb;
+            background: #1e2024;
+            border-color: #374151;
+
+            &:focus {
+                border-color: $color-accent-cyan;
+                box-shadow: 0 0 0 2px rgba(6, 182, 212, 0.2);
+            }
+        }
+    }
+
+    .node-editor__btn-icon {
+        background: #252830;
+        border-color: #374151;
+        color: #9ca3af;
+
+        &:hover {
+            border-color: $color-accent-cyan;
+            background: rgba(6, 182, 212, 0.15);
+        }
+    }
+
+    .node-editor__btn-add {
+        background: rgba(6, 182, 212, 0.1);
+        border-color: rgba(6, 182, 212, 0.5);
+
+        &:hover {
+            background: rgba(6, 182, 212, 0.15);
+        }
+    }
+
+    .node-editor__empty-state {
+        color: #6b7280;
+    }
+}
+
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+        .node-editor-redesign {
+            background-color: #1e2024;
+            color: #e5e7eb;
+        }
+
+        .node-header {
+            border-bottom-color: #374151;
+        }
+
+        .node-header__icon {
+            background: #374151;
+
+            i {
+                color: #9ca3af;
+            }
+        }
+
+        .node-header__title {
+            color: #f3f4f6;
+        }
+
+        .node-section {
+            border-color: #374151;
+            background: #252830;
+        }
+
+        .node-section__header:hover,
+        .node-section__header:focus {
+            background-color: #2d3139;
+        }
+
+        .node-section__title {
+            color: #e5e7eb;
+        }
+
+        .node-section__badge {
+            background: #374151;
+            color: #9ca3af;
+        }
+
+        .node-section__content {
+            border-top-color: #374151;
+        }
+
+        .node-editor__field-label {
+            color: #9ca3af;
+        }
+
+        .node-editor__field-inputs {
+            input[type="number"],
+            input[type="text"] {
+                color: #e5e7eb;
+                background: #1e2024;
+                border-color: #374151;
+            }
+        }
+
+        .anchor-viz {
+            background: #1e2024;
+        }
+
+        .anchor-viz__node-body {
+            background: #252830;
+            border-color: #374151;
+        }
+
+        .anchor-input-row {
+            background: #1e2024;
+
+            input {
+                color: #e5e7eb;
+                background: #252830;
+                border-color: #374151;
+            }
+        }
+    }
+}

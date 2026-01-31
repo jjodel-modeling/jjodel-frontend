@@ -1,0 +1,190 @@
+/* ============================================
+   BULK ACTIONS BAR
+   Sticky bar for bulk project operations
+   ============================================ */
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.bulk-actions-bar {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: calc(100% - 48px);
+    padding: var(--space-3, 12px) var(--space-4, 16px);
+    margin: 0 24px 16px 24px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: var(--radius-md, 6px);
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
+    animation: slideDown 0.2s ease-out;
+
+    &__left {
+        display: flex;
+        align-items: center;
+        gap: var(--space-3, 12px);
+    }
+
+    &__select-all {
+        display: flex;
+        align-items: center;
+        gap: var(--space-2, 8px);
+        cursor: pointer;
+        user-select: none;
+
+        .bulk-checkbox {
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border: 2px solid #cbd5e1;
+            border-radius: 4px;
+            background: #ffffff;
+            cursor: pointer;
+            position: relative;
+            transition: all 150ms ease;
+
+            &:hover {
+                border-color: #94a3b8;
+            }
+
+            &:checked {
+                background: linear-gradient(180deg, #64748b 0%, #475569 100%);
+                border-color: #475569;
+
+                &::after {
+                    content: "";
+                    position: absolute;
+                    left: 5px;
+                    top: 2px;
+                    width: 4px;
+                    height: 8px;
+                    border: solid #ffffff;
+                    border-width: 0 2px 2px 0;
+                    transform: rotate(45deg);
+                }
+            }
+
+            &:focus-visible {
+                outline: 2px solid #475569;
+                outline-offset: 2px;
+            }
+        }
+    }
+
+    &__count {
+        font-family: var(--font-sans, 'Inter Variable', sans-serif);
+        font-size: var(--text-sm, 14px);
+        font-weight: var(--font-semibold, 600);
+        color: #334155;
+    }
+
+    &__actions {
+        display: flex;
+        align-items: center;
+        gap: var(--space-2, 8px);
+    }
+}
+
+/* ============================================
+   BULK ACTION BUTTONS
+   ============================================ */
+
+.bulk-action-btn {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2, 8px);
+    padding: var(--space-2, 8px) var(--space-3, 12px);
+    font-family: var(--font-sans, 'Inter Variable', sans-serif);
+    font-size: var(--text-sm, 14px);
+    font-weight: var(--font-medium, 500);
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: var(--radius-sm, 4px);
+    color: #475569;
+    cursor: pointer;
+    transition: all 150ms ease;
+
+    i {
+        font-size: 16px;
+    }
+
+    &:hover {
+        background: #f1f5f9;
+        border-color: #cbd5e1;
+    }
+
+    &:active {
+        transform: scale(0.98);
+    }
+
+    &:focus-visible {
+        outline: 2px solid #475569;
+        outline-offset: 2px;
+    }
+
+    // Danger variant (Delete)
+    &--danger {
+        color: #dc2626;
+
+        &:hover {
+            background: #fef2f2;
+            border-color: #fecaca;
+        }
+    }
+
+    // Secondary variant (Cancel)
+    &--secondary {
+        background: transparent;
+        border-color: #cbd5e1;
+
+        &:hover {
+            background: #f1f5f9;
+        }
+    }
+}
+
+/* ============================================
+   RESPONSIVE
+   ============================================ */
+
+@media (max-width: 640px) {
+    .bulk-actions-bar {
+        flex-direction: column;
+        gap: var(--space-3, 12px);
+        align-items: stretch;
+
+        &__left {
+            justify-content: center;
+        }
+
+        &__actions {
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+    }
+
+    .bulk-action-btn {
+        flex: 1;
+        min-width: auto;
+        justify-content: center;
+
+        span {
+            display: none;
+        }
+
+        &--secondary span {
+            display: inline;
+        }
+    }
+}

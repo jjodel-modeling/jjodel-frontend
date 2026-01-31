@@ -17,6 +17,7 @@ import {
 import React, {ReactNode, useState} from "react";
 import {PaletteType} from "../view/viewElement/view";
 import "./error.scss";
+import { ErrorDisplay } from "./ErrorPortal";
 import {LanguageObject} from "../joiner/classes";
 
 const notificationType: 'classic'|'alert'|'notification' = 'classic';
@@ -1547,21 +1548,21 @@ public static object(): string { return (
 
         switch (notificationType) {
             case 'classic':
-                return (<Measurable draggable={true} resizable={false}><div className='hoverable error-root graph-centered' tabIndex={0}>
-                    <i className="bi bi-exclamation-diamond-fill" style={{color: "red"}} onClick={clickRetry}/>
-                    <div className='content error-notification' tabIndex={-1} style={{left: '130%'}}>
-                        <h1>Something Went Wrong...</h1>
-                        {v && <h2>Error in "{v?.name}" syntax view
-                            definition{viewpointname ? ' in viewpoint ' + viewpointname : ''}.</h2>}
-                        <div className={'error-type'}>
-                            <b data-dname={dname} data-nodename={nodename} data-str={false}>
-                                {errortype} Error {on}
-                                {false && v && <div>While applying view "{v?.name}"</div>}
-                            </b>
-                        </div>
-                        <div className={'error-details'}>{msg}</div>
-                    </div>
-                    </div></Measurable>);
+                // Use ErrorDisplay which manages both badge and modal with state
+                return (
+                    <Measurable draggable={true} resizable={false}>
+                        <ErrorDisplay
+                            viewName={v?.name}
+                            viewpointName={viewpointname}
+                            errorType={errortype}
+                            errorContext={on}
+                            message={msg}
+                            dname={dname}
+                            nodename={nodename}
+                            onClick={clickRetry}
+                        />
+                    </Measurable>
+                );
 
             case 'alert':
                 U.alert('e', 'Error in ' + v?.name + (viewpointname ? 'of '+viewpointname : ''), dname);

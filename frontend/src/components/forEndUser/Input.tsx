@@ -243,8 +243,14 @@ export function InputComponent(props: AllProps) {
     else if (isBoolean) cursor = 'pointer';
     else cursor = 'auto';
 
+    // Add form design system classes based on input type
+    let formClass = '';
+    if (props.tag === 'textarea') formClass = 'form-textarea';
+    else if (props.tag === 'select') formClass = 'form-select';
+    else if (!isBoolean && type !== 'range') formClass = 'form-input';
+
     let inputProps: GObject = {...otherprops,
-        className: [props.inputClassName||'', classes].join(' '),
+        className: [formClass, props.inputClassName||'', classes].join(' '),
         style: (props.inputStyle || {}),
         spellCheck: (props as any).spellCkeck || false, readOnly, disabled: readOnly, type,
         value: serializeValue(value),
@@ -329,7 +335,6 @@ export function InputComponent(props: AllProps) {
                     <option value="" disabled selected>{props.placeholder ? props.placeholder : 'Select your option'}</option>
                     {options}
                 </select>;
-
             }
             break;
         case null: case undefined: case "": case "input": input = <input {...inputProps} />; break;
@@ -393,6 +398,7 @@ export function InputComponent(props: AllProps) {
     </label>);
     */
 }
+
 export interface InputOwnProps extends GenericProps {
     data?: LPointerTargetable | DPointerTargetable | Pointer<DPointerTargetable, 1, 1, LPointerTargetable>;
     field?: string;

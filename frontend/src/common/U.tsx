@@ -208,6 +208,47 @@ export class U {
     private static lastClickedTime: number = 0;
     public static userHasInteracted: boolean = false;
     public static isProjectModified: boolean = false;
+
+    // Interface mode: 'basic' or 'advanced' - controls UI complexity level
+    public static interfaceMode: 'basic' | 'advanced' = 'basic';
+
+    // Global beforeunload handler - to prevent browser prompt when programmatically navigating
+    private static beforeUnloadHandler: ((e: BeforeUnloadEvent) => string | void) | null = null;
+    // Bypass flag - when true, the beforeunload handler will not show the browser prompt
+    public static shouldBypassBeforeUnload: boolean = false;
+
+    /**
+     * Enable the browser's "unsaved changes" warning.
+     * Called when entering a project with unsaved changes.
+     */
+    public static enableUnsavedChangesWarning(): void {
+        if (U.beforeUnloadHandler) return; // Already enabled
+        U.shouldBypassBeforeUnload = false; // Reset bypass flag
+        U.beforeUnloadHandler = (e: BeforeUnloadEvent) => {
+            // Check bypass flag FIRST - if true, skip the warning
+            if (U.shouldBypassBeforeUnload) return;
+            if (U.isProjectModified) {
+                e.preventDefault();
+                e.returnValue = '';
+                return '';
+            }
+        };
+        window.addEventListener('beforeunload', U.beforeUnloadHandler);
+    }
+
+    /**
+     * Disable the browser's "unsaved changes" warning.
+     * Call this BEFORE programmatic navigation (after user chooses "Don't save" or "Save & Exit").
+     */
+    public static disableUnsavedChangesWarning(): void {
+        // Set bypass flag first - this is the most reliable way to prevent the prompt
+        U.shouldBypassBeforeUnload = true;
+        if (U.beforeUnloadHandler) {
+            window.removeEventListener('beforeunload', U.beforeUnloadHandler);
+            U.beforeUnloadHandler = null;
+        }
+    }
+
     private static clickedOutsideCallback(e: any & ClickEvent){
         let target = e.target as Element;
         let clickedAncestors = U.ancestorArray(target, undefined, true);
@@ -358,7 +399,7 @@ export class U {
 
     static dialogOptions?: DialogOptions = undefined;
 
-    static async dialog2(title: string, question: string, options: {txt:string, acton?: ()=>{}}[]): Promise<string> {
+    static async dialog2(title: string, question: string, options: {txt:string, action?: ()=>{}}[]): Promise<string> {
         let resolve: ((str: string | PromiseLike<string>) => void) = null as any;
         let reject: ((str: string | PromiseLike<string>) => void) = null as any;
         let promise = new Promise<string>(

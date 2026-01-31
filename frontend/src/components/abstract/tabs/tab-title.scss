@@ -1,0 +1,38 @@
+/* Tab Title - CSS-only approach for stable icons */
+/* Uses ::before pseudo-element to avoid React re-rendering issues */
+/* Matches ElementBadge component styling for consistency */
+
+.tab-title {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+
+    // Icon badge via ::before pseudo-element
+    &::before {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 20px;
+        height: 20px;
+        min-width: 20px;
+        border-radius: 4px;
+        font-size: 12px;
+        font-weight: 600;
+        flex-shrink: 0;
+        text-transform: uppercase;
+    }
+
+    // Metamodel badge - Lavender/Purple (matches ElementBadge)
+    &[data-type="metamodel"]::before {
+        content: "M";
+        background-color: #E9D5FF;  // Lavender
+        color: #7C3AED;             // Purple-600
+    }
+
+    // Model badge - Amber/Yellow (matches ElementBadge)
+    &[data-type="model"]::before {
+        content: "M";
+        background-color: #FEF3C7;  // Amber-100
+        color: #D97706;             // Amber-600
+    }
+}

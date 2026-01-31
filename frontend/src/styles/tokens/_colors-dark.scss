@@ -1,0 +1,112 @@
+/**
+ * JJODEL DESIGN TOKENS - DARK THEME
+ * Color palette for dark mode
+ * Based on jjodel-ui-documentation.md Section 5.1
+ *
+ * Usage: These variables are applied when [data-theme="dark"] is set on root element
+ */
+
+:root[data-theme="dark"] {
+  /* ============================================
+     BASE BACKGROUNDS
+     ============================================ */
+  --color-bg-primary: #08090a;        /* Main app background - darkest */
+  --color-bg-secondary: #0f1012;      /* Cards, panels - slightly lighter */
+  --color-bg-tertiary: #16181a;       /* Subtle backgrounds, hover states */
+  --color-bg-elevated: rgba(255, 255, 255, 0.04);  /* Floating panels, dropdowns */
+  --color-bg-hover: rgba(255, 255, 255, 0.06);     /* Hover state background */
+
+  /* ============================================
+     BORDERS
+     ============================================ */
+  --color-border-primary: rgba(255, 255, 255, 0.08);   /* Main borders, dividers */
+  --color-border-secondary: rgba(255, 255, 255, 0.04); /* Subtle borders */
+  --color-border-hover: rgba(255, 255, 255, 0.12);     /* Hover state borders */
+
+  /* ============================================
+     TEXT COLORS
+     ============================================ */
+  --color-text-primary: #f0f0f0;      /* Headings, primary text */
+  --color-text-secondary: #a0a0a0;    /* Body text, secondary info */
+  --color-text-tertiary: #606060;     /* Placeholders, disabled text */
+  --color-text-inverse: #08090a;      /* Text on light backgrounds */
+
+  /* ============================================
+     BRAND - Dark Slate (backgrounds, branding)
+     Adjusted for dark mode visibility
+     ============================================ */
+  --color-brand: #9ca3af;                       /* Brand color - lighter for dark bg */
+  --color-brand-hover: #d1d5db;                 /* Brand hover state */
+  --color-brand-active: #6b7280;                /* Brand active state */
+
+  /* ============================================
+     ACCENT - Slate (interactive elements)
+     Lighter slate for visibility on dark backgrounds
+     Monochromatic, professional enterprise look
+     ============================================ */
+  --color-accent: #94a3b8;                      /* Primary accent - slate-400 */
+  --color-accent-hover: #cbd5e1;                /* Hover state - slate-300 */
+  --color-accent-active: #64748b;               /* Active/pressed state - slate-500 */
+  --color-accent-light: rgba(148, 163, 184, 0.15); /* Subtle backgrounds */
+  --color-accent-lighter: rgba(148, 163, 184, 0.08); /* Very subtle backgrounds */
+  --color-accent-muted: rgba(148, 163, 184, 0.15);   /* Backgrounds, subtle highlights */
+  --color-accent-subtle: rgba(148, 163, 184, 0.08);  /* Very subtle backgrounds */
+
+  /* ============================================
+     SECONDARY
+     ============================================ */
+  --color-secondary: #9ca3af;                   /* Secondary elements */
+  --color-secondary-hover: #d1d5db;             /* Secondary hover */
+
+  /* ============================================
+     SEMANTIC COLORS
+     Adjusted for better contrast on dark backgrounds
+     ============================================ */
+
+  /* Success - Lighter Green */
+  --color-success: #34d399;
+  --color-success-hover: #4ade80;
+  --color-success-muted: rgba(52, 211, 153, 0.15);
+  --color-success-subtle: rgba(52, 211, 153, 0.08);
+
+  /* Warning - Lighter Amber */
+  --color-warning: #fbbf24;
+  --color-warning-hover: #fcd34d;
+  --color-warning-muted: rgba(251, 191, 36, 0.15);
+  --color-warning-subtle: rgba(251, 191, 36, 0.08);
+
+  /* Error/Danger - Lighter Red */
+  --color-error: #f87171;
+  --color-error-hover: #fca5a5;
+  --color-error-muted: rgba(248, 113, 113, 0.15);
+  --color-error-subtle: rgba(248, 113, 113, 0.08);
+
+  /* Info - Lighter Blue */
+  --color-info: #60a5fa;
+  --color-info-hover: #93c5fd;
+  --color-info-muted: rgba(96, 165, 250, 0.15);
+  --color-info-subtle: rgba(96, 165, 250, 0.08);
+
+  /* ============================================
+     CANVAS & GRAPH COLORS
+     For metamodel/model nodes in dark mode
+     ============================================ */
+  --color-canvas-bg: #0f1012;         /* Canvas background - same as secondary */
+  --color-canvas-grid: rgba(255, 255, 255, 0.05);  /* Subtle grid lines */
+  --color-node-bg: #16181a;           /* Node background - tertiary */
+  --color-node-border: rgba(255, 255, 255, 0.1);   /* Slightly visible border */
+  --color-node-shadow: rgba(0, 0, 0, 0.4);  /* Stronger shadow for depth */
+
+  /* ============================================
+     LEGACY COMPATIBILITY
+     Map old variable names to new tokens for dark mode
+     TODO: Remove after full migration
+     ============================================ */
+  --color: #7FA88A;                   /* Legacy: primary color (now accent) */
+  --accent: var(--color-accent);      /* Legacy: accent color */
+  --bg-1: var(--color-bg-secondary);  /* Legacy: main background */
+  --bg-2: var(--color-bg-tertiary);   /* Legacy: secondary bg */
+  --bg-3: var(--color-border-primary);/* Legacy: borders */
+  --danger: var(--color-error);       /* Legacy: error color */
+  --success: var(--color-success);    /* Legacy: success color */
+}

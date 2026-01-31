@@ -27,7 +27,6 @@ import MemoRec from '../../api/memorec';
 import {useStateIfMounted} from 'use-state-if-mounted';
 import ModellingIcon from "../forEndUser/ModellingIcon";
 import {FakeStateProps} from "../../joiner/types";
-import {toggleMetrics} from '../metrics/Metrics';
 import {icon} from '../../pages/components/icons/Icons';
 import {Tooltip} from "../forEndUser/Tooltip";
 import { Info } from '../editors';
@@ -347,7 +346,6 @@ function ContextMenuComponentInner(props: AllProps) {
 
             if (ldata) {
                 let meta = (ldata as LObject|LValue).instanceof;
-                // header is different, keep it isolated
                 jsxList.push(<div key={lname} className={'col name '+(isM2 ? 'meta' : '')+'model'}>
                     {((isM2 ? cname.substring(1) : (meta?.name || 'Shapeless')) + ': ') + lname}</div>);
             }
@@ -464,7 +462,7 @@ function ContextMenuComponentInner(props: AllProps) {
         ContextEntry('up', icon['up'], 'Up', key_bindings.up.function, key_bindings.up.keystroke);
         ContextEntry('down', icon['down'], 'Down', key_bindings.down.function, key_bindings.down.keystroke);
         separator();
-        
+
         /* AUTO-SIZING */
         let gn = node as GObject;
         if (gn.isResized) ContextEntry('asize', icon['contract'], 'Restore auto-sizing', () => gn.isResized = false, key_bindings.asize.keystroke)
@@ -479,7 +477,7 @@ function ContextMenuComponentInner(props: AllProps) {
         // </div>);
 
         separator();
-        
+
         /* Analytics */
         if (ldata && model?.isMetamodel) {
             ContextEntry('analytic', icon['metrics'], 'Analytics', key_bindings.metrics.function, key_bindings.metrics.keystroke);
@@ -520,8 +518,7 @@ function ContextMenuComponentInner(props: AllProps) {
                 :
 
                 <>
-                    {jsxList/*.map((jsx, index) => {return <li key={index}>{jsx}</li>})*/}
-
+               {jsxList/*.map((jsx, index) => {return <li key={index}>{jsx}</li>})*/}
                 {/* Memorec */}
 
                 {(data && memorec?.data) && <div className={'context-menu round'} style={{overflow: 'auto', maxHeight: '12em', top: display.y - 100, left: display.x + 130}}>
@@ -555,9 +552,7 @@ function ContextMenuComponentInner(props: AllProps) {
                         </div>
                     </div>
                 </div>}
-
             </>}
-
         </div>);
 }
 

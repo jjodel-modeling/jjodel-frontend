@@ -1,0 +1,164 @@
+/**
+ * Empty State Styles for Properties Panel
+ * Following CLAUDE.md design guidelines
+ */
+
+// Design tokens (matching CLAUDE.md)
+$color-bg-primary: #ffffff;
+$color-bg-secondary: #f8fafc;
+$color-bg-tertiary: #f1f5f9;
+$color-border: #e2e4e8;
+$color-text-primary: #111418;
+$color-text-secondary: #6B7280;
+$color-text-tertiary: #9CA3AF;
+$color-accent: #475569;
+$color-accent-light: rgba(71, 85, 105, 0.1);
+
+$radius-md: 6px;
+$radius-lg: 8px;
+$transition-fast: 150ms ease;
+
+// ============================================
+// PROPERTIES EMPTY STATE
+// ============================================
+
+.properties-empty-state {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    min-height: 300px;
+    padding: 32px 24px;
+    background-color: $color-bg-primary;
+}
+
+.properties-empty-state__content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    max-width: 280px;
+}
+
+.properties-empty-state__icon {
+    width: 64px;
+    height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: $color-bg-tertiary;
+    border-radius: 50%;
+    margin-bottom: 20px;
+
+    .bi {
+        font-size: 28px;
+        color: $color-accent;
+    }
+}
+
+.properties-empty-state__title {
+    font-size: 16px;
+    font-weight: 600;
+    color: $color-text-primary;
+    margin: 0 0 8px 0;
+}
+
+.properties-empty-state__description {
+    font-size: 13px;
+    line-height: 1.5;
+    color: $color-text-secondary;
+    margin: 0 0 24px 0;
+}
+
+.properties-empty-state__hints {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 100%;
+}
+
+.properties-empty-state__hint {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    background-color: $color-bg-secondary;
+    border-radius: $radius-md;
+    transition: background-color $transition-fast;
+
+    .bi {
+        font-size: 16px;
+        color: $color-accent;
+        flex-shrink: 0;
+    }
+
+    span {
+        font-size: 12px;
+        color: $color-text-secondary;
+        text-align: left;
+    }
+
+    &:hover {
+        background-color: $color-bg-tertiary;
+    }
+}
+
+// ============================================
+// LEGACY NO DATA STYLES
+// ============================================
+
+.no-data-to-display {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+    color: $color-text-tertiary;
+    font-size: 13px;
+}
+
+// ============================================
+// DARK MODE SUPPORT
+// ============================================
+
+[data-theme="dark"] {
+    .properties-empty-state {
+        background-color: #1e1e1e;
+    }
+
+    .properties-empty-state__icon {
+        background-color: #2d2d2d;
+
+        .bi {
+            color: #94a3b8;
+        }
+    }
+
+    .properties-empty-state__title {
+        color: #e5e7eb;
+    }
+
+    .properties-empty-state__description {
+        color: #9CA3AF;
+    }
+
+    .properties-empty-state__hint {
+        background-color: #252525;
+
+        .bi {
+            color: #94a3b8;
+        }
+
+        span {
+            color: #9CA3AF;
+        }
+
+        &:hover {
+            background-color: #2d2d2d;
+        }
+    }
+
+    .no-data-to-display {
+        color: #6B7280;
+    }
+}

@@ -1,0 +1,93 @@
+/**
+ * JJODEL DESIGN TOKENS - SPACING
+ * Spacing scale based on 4px grid
+ * Based on jjodel-ui-documentation.md Section 5.3
+ */
+
+:root {
+  /* ============================================
+     SPACING SCALE
+     Based on 4px grid (0.25rem)
+     ============================================ */
+
+  --space-0: 0;           /* 0px - No space */
+  --space-1: 0.25rem;     /* 4px */
+  --space-2: 0.5rem;      /* 8px */
+  --space-3: 0.75rem;     /* 12px */
+  --space-4: 1rem;        /* 16px - Base unit */
+  --space-5: 1.25rem;     /* 20px */
+  --space-6: 1.5rem;      /* 24px */
+  --space-8: 2rem;        /* 32px */
+  --space-10: 2.5rem;     /* 40px */
+  --space-12: 3rem;       /* 48px */
+  --space-16: 4rem;       /* 64px */
+  --space-20: 5rem;       /* 80px */
+  --space-24: 6rem;       /* 96px */
+
+  /* ============================================
+     COMPONENT-SPECIFIC SPACING
+     Common spacing patterns
+     ============================================ */
+
+  /* Input/Control Heights */
+  --input-height: 40px;
+  --input-height-sm: 32px;
+  --input-height-lg: 48px;
+
+  /* Button Padding */
+  --button-padding-x: var(--space-4);     /* 16px horizontal */
+  --button-padding-y: var(--space-2);     /* 8px vertical */
+
+  /* Panel/Card Padding */
+  --panel-padding: var(--space-6);        /* 24px */
+  --panel-padding-sm: var(--space-4);     /* 16px */
+  --panel-padding-lg: var(--space-8);     /* 32px */
+
+  /* Gap between elements */
+  --gap-xs: var(--space-1);   /* 4px */
+  --gap-sm: var(--space-2);   /* 8px */
+  --gap-md: var(--space-4);   /* 16px */
+  --gap-lg: var(--space-6);   /* 24px */
+  --gap-xl: var(--space-8);   /* 32px */
+
+  /* ============================================
+     LEGACY COMPATIBILITY
+     Map old spacing variables to new tokens
+     TODO: Remove after full migration
+     ============================================ */
+
+  --side-padding: var(--space-8);     /* 32px (was 31px) */
+  --sep-padding: var(--space-16);     /* 64px (was 4em) */
+  --tab-sep: var(--space-2);          /* 8px */
+  --tab-margin: var(--space-3);       /* 12px (was 0.75rem) */
+}
+
+/* ============================================
+   SPACING UTILITY CLASSES (Optional)
+   Can be used for quick spacing adjustments
+   ============================================ */
+
+/* Margin utilities */
+.m-0 { margin: var(--space-0); }
+.m-1 { margin: var(--space-1); }
+.m-2 { margin: var(--space-2); }
+.m-3 { margin: var(--space-3); }
+.m-4 { margin: var(--space-4); }
+.m-6 { margin: var(--space-6); }
+.m-8 { margin: var(--space-8); }
+
+/* Padding utilities */
+.p-0 { padding: var(--space-0); }
+.p-1 { padding: var(--space-1); }
+.p-2 { padding: var(--space-2); }
+.p-3 { padding: var(--space-3); }
+.p-4 { padding: var(--space-4); }
+.p-6 { padding: var(--space-6); }
+.p-8 { padding: var(--space-8); }
+
+/* Gap utilities (for flexbox/grid) */
+.gap-xs { gap: var(--gap-xs); }
+.gap-sm { gap: var(--gap-sm); }
+.gap-md { gap: var(--gap-md); }
+.gap-lg { gap: var(--gap-lg); }
+.gap-xl { gap: var(--gap-xl); }

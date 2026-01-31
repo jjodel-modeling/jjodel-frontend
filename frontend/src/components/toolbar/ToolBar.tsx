@@ -37,10 +37,81 @@ import {
 import {InitialVertexSizeObj} from "../../joiner/types";
 import ModellingIcon from "../forEndUser/ModellingIcon";
 import {Tooltip} from "../forEndUser/Tooltip";
+import ActivityLogger from '../../services/ActivityLogger';
+import { ActivityType } from '../../types/activity';
 
 interface ThisState {}
 
 let ti = 0; // tabindex counter
+
+// Map item_dname to ActivityType for logging
+function getActivityTypeForElement(item_dname: string): ActivityType | null {
+    const typeMap: Record<string, ActivityType> = {
+        'DClass': ActivityType.METAMODEL_CLASS_ADDED,
+        'DPackage': ActivityType.METAMODEL_PACKAGE_ADDED,
+        'DEnumerator': ActivityType.METAMODEL_ENUM_ADDED,
+        'DAttribute': ActivityType.METAMODEL_ATTRIBUTE_ADDED,
+        'DReference': ActivityType.METAMODEL_REFERENCE_ADDED,
+        'DOperation': ActivityType.METAMODEL_OPERATION_ADDED,
+        'DLiteral': ActivityType.METAMODEL_LITERAL_ADDED,
+        'DParameter': ActivityType.METAMODEL_PARAMETER_ADDED,
+        'DException': ActivityType.METAMODEL_EXCEPTION_ADDED,
+    };
+    return typeMap[item_dname] || null;
+}
+
+// Log metamodel element addition activity
+function logMetamodelAddition(
+    activityType: ActivityType,
+    parentElement: LModelElement,
+    createdElement: DModelElement | LModelElement
+): void {
+    try {
+        // Walk up parent chain to find the model
+        let currentModel: LModel | null = null;
+        let current: LModelElement | null = parentElement;
+
+        while (current && !currentModel) {
+            if (current.className === 'DModel') {
+                currentModel = current as unknown as LModel;
+                break;
+            }
+            current = current.father as LModelElement | null;
+        }
+
+        if (!currentModel) {
+            console.warn('Could not find model for element, cannot log activity');
+            return;
+        }
+
+        // Get project from model
+        const project = currentModel.project;
+        if (!project) {
+            console.warn('Could not find project for model, cannot log activity');
+            return;
+        }
+
+        // Get element info
+        const dElement = (createdElement as LModelElement)?.__raw || createdElement as DModelElement;
+        const elementName = (dElement as any)?.name || 'New Element';
+        const metamodelName = currentModel.name || 'Unnamed Metamodel';
+
+        // Log the activity
+        ActivityLogger.log({
+            type: activityType,
+            projectId: project.id,
+            projectName: project.name || 'Unnamed Project',
+            entityId: currentModel.id,
+            entityName: metamodelName,
+            metadata: {
+                elementName: elementName,
+                elementType: dElement.className,
+            },
+        });
+    } catch (error) {
+        console.warn('Failed to log metamodel addition activity:', error);
+    }
+}
 
 function toolbarClick(item_dname: string, data: LModelElement|undefined, myDictValidator: Dictionary<DocString<"DClassName">, DocString<"hisChildren">[]>, node?:LGraphElement) {
 
@@ -86,11 +157,22 @@ function toolbarClick(item_dname: string, data: LModelElement|undefined, myDictV
             if (!data || !myDictValidator) return;
             let item = item_dname.substring(1).toLowerCase();
             let d = data.addChild(item);
+
+            // Track created element for activity logging
+            let createdElement: DModelElement | LModelElement | null = null;
             try {
                 let d2 = (d as any)();
+                createdElement = d2;
                 if (myDictValidator[item_dname]) select(d2);
             } catch(e) {
+                createdElement = d;
                 if (myDictValidator[item_dname]) select(d);
+            }
+
+            // Log the activity if we have a valid activity type
+            const activityType = getActivityTypeForElement(item_dname);
+            if (activityType && createdElement && data) {
+                logMetamodelAddition(activityType, data, createdElement);
             }
             break;
     }
@@ -381,13 +463,13 @@ function ToolBarComponent(props: AllProps) {
                      setTimeout(() => {
                          if (htmlref.current) (htmlref.current as any).children[0].focus();
                      }, 1)
-                 }}>
+                }}>
                 <div className={"toolbar hoverable" + (pinned ? " pinned" : '')} tabIndex={0}>
                     <i className={"content pin bi bi-x-lg"} onClick={() => minimize(htmlref)}/>
                     {/* margins calc: 120 height of graph, 35 margin from graph top, repeated for bottom. */}
-                    <section className={"content inline w-100"} style={{maxHeight: 'calc(100vh - 120px - 35px - 35px)', overflowY: 'auto'}}>
+                 <section className={"content inline w-100"} style={{maxHeight: 'calc(100vh - 120px - 35px - 35px)', overflowY: 'auto'}}>
                         {(content as any )?.length ? content : "Select a node."}
-                    </section>
+                     </section>
                 </div>
             </div>);
     }

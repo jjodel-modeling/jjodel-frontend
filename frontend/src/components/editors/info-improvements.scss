@@ -1,0 +1,735 @@
+/* ============================================
+   PROPERTIES TAB IMPROVEMENTS
+   Comprehensive enhancements for professional form design
+   ============================================ */
+
+/* ========================================
+   OVERVIEW GRID - Compact Cards with Small Circles
+   ======================================== */
+.overview-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.stat-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 16px 12px !important;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 80px !important;
+  max-width: 100px !important;
+
+  &:hover {
+    border-color: #d1d5db;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+
+    .stat-circle {
+      background: #475569;
+      transform: scale(1.05);
+    }
+  }
+}
+
+.stat-circle {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 48px !important;
+  height: 48px !important;
+  background: #334155 !important;
+  border-radius: 50% !important;
+  margin-bottom: 8px;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.stat-value {
+  font-size: 20px !important;
+  font-weight: 700 !important;
+  color: #ffffff !important;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.stat-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: #64748b;
+  text-align: center;
+  line-height: 1.2;
+}
+
+/* Analytics Hint - Subtle Gray Text */
+.overview-hint {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 0;
+  background: transparent;
+  border: none;
+  font-size: 12px;
+  color: #6b7280;
+  margin-top: 8px;
+
+  i {
+    flex-shrink: 0;
+    font-size: 14px;
+    color: #9ca3af;
+  }
+
+  span {
+    line-height: 1.5;
+  }
+}
+
+/* ========================================
+   SPACING SYSTEM - Consistent
+   ======================================== */
+.properties-tab {
+  padding: 24px;
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.properties-section,
+.form-section {
+  margin-bottom: 32px;
+  border: none;
+  padding: 0;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+
+.properties-section-header,
+.form-section-header {
+  margin-bottom: 16px;
+}
+
+.properties-section-title,
+.form-section-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin: 0;
+}
+
+.properties-section-content {
+  border: none;
+  background: transparent;
+  padding: 0;
+}
+
+.overview-section {
+  margin-bottom: 32px;
+}
+
+/* ========================================
+   FORM FIELDS - Consistent Spacing
+   ======================================== */
+.form-field {
+  margin-bottom: 20px;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+
+.form-label {
+  display: block;
+  font-size: 14px;
+  font-weight: 500;
+  color: #1f2937;
+  margin-bottom: 6px;
+
+  .form-label-required {
+    color: #ef4444;
+    margin-left: 2px;
+  }
+}
+
+.form-label-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  background: #f1f5f9;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 500;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-left: 6px;
+}
+
+/* Select wrapper removed - using standard select with background-image arrow */
+
+.form-input,
+.form-textarea,
+input.form-input,
+textarea.form-textarea {
+  width: 100%; 
+  height: 32px!important;
+  padding: 14px 16px !important;
+  background: #ffffff;
+  border: 1px solid #d1d5db !important;
+  border-radius: 8px;
+  font-size: 13px !important;
+  line-height: 1.5 !important;
+  color: #1f2937;
+  margin-bottom: 2px;
+  transition: all 0.2s ease;
+
+  &::placeholder {
+    color: #9ca3af;
+  }
+
+  &:hover {
+    border-color: #9ca3af !important;
+  }
+
+  &:focus {
+    outline: none !important;
+    border-color: var(--form-input-border-color-focus, #334155) !important;
+    box-shadow: var(--form-input-focus-shadow, 0 0 0 3px rgba(51, 65, 85, 0.15)) !important;
+  }
+
+  &:disabled {
+    background: #f3f4f6;
+    color: #9ca3af;
+    cursor: not-allowed;
+  }
+
+  &.error {
+    border-color: #ef4444;
+
+    &:focus {
+      border-color: #ef4444; // Keep red border for error state
+      box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+    }
+  }
+}
+
+.form-textarea {
+  resize: vertical;
+  min-height: 100px;
+  font-family: 'JetBrains Mono', 'Monaco', monospace;
+  line-height: 1.6;
+}
+
+/* Enhanced select - match user profile style */
+.form-select,
+select.form-select {
+  width: 100%;
+  padding: 14px 16px;  // ✅ Match input padding
+  padding-right: 40px;  // Extra padding for arrow
+  font-size: 16px;  // ✅ Match input font size
+  line-height: 1.5;  // ✅ Match input line-height
+  color: #1f2937;
+  background: #ffffff;
+  border: 1px solid #d1d5db;  // ✅ Match input border
+  border-radius: 8px !important;  // ✅ Match input radius
+  cursor: pointer;
+  transition: border-color 0.2s ease; 
+  
+
+  // Custom arrow
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%239ca3af' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+
+  &:hover {
+    border-color: #9ca3af;
+  }
+
+  // ✅ SLATE focus state (standardized)
+  &:focus {
+    outline: none;
+    border-color: var(--form-input-border-color-focus, #334155);
+    box-shadow: var(--form-input-focus-shadow, 0 0 0 3px rgba(51, 65, 85, 0.15));
+  }
+
+  option {
+    padding: 8px;
+    background: #ffffff;
+    color: #1f2937;
+  }
+
+  option:disabled {
+    color: #9ca3af;
+    font-style: italic;
+  }
+}
+
+.form-hint {
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+  margin-top: 6px;
+  font-size: 13px;
+  color: #6b7280;
+  line-height: 1.5;
+
+  i {
+    flex-shrink: 0;
+    font-size: 14px;
+    color: #9ca3af;
+    margin-top: 2px;
+  }
+}
+
+.form-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin-top: 6px;
+  font-size: 12px;
+  color: #ef4444;
+
+  i {
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+}
+
+/* Inline form field (for toggle switches) */
+.form-field--inline {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.form-field-content {
+  flex: 1;
+}
+
+/* Toggle field with background (Refinement 2) */
+.form-field--toggle {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 16px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  transition: background 0.2s ease;
+
+  &:hover {
+    background: #f1f5f9;
+  }
+
+  .form-field-main {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .form-label {
+    margin-bottom: 4px;
+  }
+
+  .form-hint {
+    margin-top: 4px;
+  }
+
+  .properties-toggle,
+  .toggle-switch {
+    flex-shrink: 0;
+    margin-top: 2px;  // Align with label
+  }
+}
+
+/* ========================================
+   TOGGLE SWITCH - Compact Design (36x20px)
+   ======================================== */
+.properties-toggle {
+  position: relative;
+  display: inline-block;
+  width: 36px;
+  height: 20px;
+  flex-shrink: 0;
+  background: #cbd5e1;
+  border-radius: 20px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+
+  &.active {
+    background: linear-gradient(135deg, #64748b 0%, #475569 100%);
+  }
+
+  &:focus {
+    box-shadow: var(--form-input-focus-shadow, 0 0 0 3px rgba(51, 65, 85, 0.15));
+  }
+}
+
+.properties-toggle-thumb {
+  position: absolute;
+  height: 16px;
+  width: 16px;
+  left: 2px;
+  top: 2px;
+  background: white;
+  border-radius: 50%;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+
+  .properties-toggle.active & {
+    transform: translateX(16px);
+  }
+}
+
+/* ========================================
+   COLLAPSIBLE SECTIONS
+   ======================================== */
+.properties-section--collapsible {
+  .properties-section-header {
+    cursor: pointer;
+    padding: 0;
+    border: none;
+    background: none;
+    width: 100%;
+    text-align: left;
+    margin-bottom: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--color-border-primary);
+
+    &:hover .properties-section-title {
+      color: #3b82f6;
+    }
+  }
+
+  .properties-section-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: color 0.2s ease;
+
+    i {
+      font-size: 12px;
+    }
+  }
+
+  .properties-section-content {
+    padding-top: 20px;  // ✅ Spacing after section header
+  }
+}
+
+/* ========================================
+   EMPTY STATE
+   ======================================== */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px;
+  text-align: center;
+}
+
+.empty-state-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  background: #f1f5f9;
+  border-radius: 50%;
+  color: #94a3b8;
+  font-size: 32px;
+  margin-bottom: 16px;
+}
+
+.empty-state-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #0f172a;
+  margin-bottom: 8px;
+}
+
+.empty-state-description {
+  font-size: 14px;
+  color: #64748b;
+  margin-bottom: 20px;
+  max-width: 400px;
+  line-height: 1.5;
+}
+
+/* ========================================
+   ACTION BUTTONS - Small, Right-Aligned
+   ======================================== */
+.properties-actions,
+.action-buttons {
+  display: flex !important;
+  gap: 8px;
+  justify-content: flex-end !important;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+/* Actions bar - simplified without section wrapper */
+.properties-actions-bar {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  padding: 16px;
+  border-top: 1px solid #e2e8f0;
+  margin-top: 8px;
+
+  .properties-btn {
+    width: auto !important;
+    flex: none !important;
+    min-width: 0;
+  }
+}
+
+.properties-btn,
+.btn {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 6px 12px !important;
+  font-size: 13px !important;
+  font-weight: 500;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  width: auto !important;
+  max-width: none !important;
+
+  i {
+    font-size: 14px;
+  }
+
+  &:hover:not(:disabled) {
+    opacity: 0.9;
+    transform: translateY(-1px);
+  }
+
+  &:active:not(:disabled) {
+    transform: translateY(0);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.properties-btn.primary,
+.btn-primary {
+  background: #334155;
+  color: white;
+
+  /* CRITICAL: Icons must be white on dark backgrounds */
+  i, .bi, svg {
+    color: #ffffff !important;
+  }
+
+  &:hover:not(:disabled) {
+    background: #475569;
+  }
+
+  &:active:not(:disabled) {
+    background: #1e293b;
+  }
+}
+
+.properties-btn.secondary {
+  background: transparent;
+  color: #334155;
+  border: 1px solid #e2e8f0;
+
+  /* Icons should be slate on light backgrounds */
+  i, .bi, svg {
+    color: #475569;
+  }
+
+  &:hover:not(:disabled) {
+    background: #f8fafc;
+    border-color: #cbd5e1;
+  }
+
+  &:active:not(:disabled) {
+    background: #f1f5f9;
+  }
+}
+
+.properties-btn.danger {
+  background: transparent;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+
+  i {
+    color: #dc2626;
+  }
+
+  &:hover:not(:disabled) {
+    background: #fef2f2;
+    border-color: #fca5a5;
+  }
+
+  &:active:not(:disabled) {
+    background: #fee2e2;
+  }
+}
+
+
+/* ========================================
+   DARK MODE SUPPORT
+   ======================================== */
+@media (prefers-color-scheme: dark) {
+  .properties-tab {
+    background: #111827;
+  }
+
+  .stat-card {
+    background: #1f2937;
+    border-color: #374151;
+
+    &:hover {
+      border-color: #4b5563;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+
+      .stat-circle {
+        background: #64748b;
+      }
+    }
+  }
+
+  .stat-circle {
+    background: #475569;
+  }
+
+  .stat-value {
+    color: #ffffff;
+  }
+
+  .stat-label {
+    color: #94a3b8;
+  }
+
+  .overview-hint {
+    color: #9ca3af;
+
+    i {
+      color: #6b7280;
+    }
+  }
+
+  .form-label,
+  .properties-section-title,
+  .form-section-title {
+    color: #f3f4f6;
+  }
+
+  .form-input,
+  .form-textarea,
+  .form-select,
+  input.form-input,
+  textarea.form-textarea,
+  select.form-select {
+    background: #1f2937;
+    border-color: #374151;
+    color: #f3f4f6;
+
+    &:hover {
+      border-color: #4b5563;
+    }
+
+    &:focus {
+      border-color: var(--form-input-border-color-focus, #64748b);
+      background: #111827;
+      box-shadow: var(--form-input-focus-shadow, 0 0 0 3px rgba(100, 116, 139, 0.25));
+    }
+
+    option {
+      background: #1f2937;
+      color: #f3f4f6;
+    }
+  }
+
+  .form-hint {
+    color: #9ca3af;
+
+    i {
+      color: #6b7280;
+    }
+  }
+
+  .empty-state-icon {
+    background: #1f2937;
+    color: #6b7280;
+  }
+
+  .empty-state-title {
+    color: #f3f4f6;
+  }
+
+  .empty-state-description {
+    color: #9ca3af;
+  }
+
+  .form-field--toggle {
+    background: #1f2937;
+    border-color: #374151;
+
+    &:hover {
+      background: #374151;
+    }
+  }
+
+  .properties-btn.primary,
+  .btn-primary {
+    background: #475569;
+
+    &:hover:not(:disabled) {
+      background: #64748b;
+    }
+  }
+
+  .properties-btn.secondary {
+    background: transparent;
+    color: #e2e8f0;
+    border: 1px solid #475569;
+
+    &:hover:not(:disabled) {
+      background: #334155;
+      border-color: #64748b;
+    }
+  }
+
+  .properties-btn.danger {
+    background: transparent;
+    color: #f87171;
+    border: 1px solid #7f1d1d;
+
+    &:hover:not(:disabled) {
+      background: rgba(220, 38, 38, 0.1);
+      border-color: #991b1b;
+    }
+  }
+
+  .properties-actions-bar {
+    border-top-color: #374151;
+  }
+}

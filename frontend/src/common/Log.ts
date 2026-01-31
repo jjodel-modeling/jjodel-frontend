@@ -156,6 +156,10 @@ export class Log{
     private static get_loggercomponent(): any { return Log._loggerComponent; }
     private static updateLoggerComponent(type: LoggerType, args: any[], short_str: string, cat: LoggerType, exception?: Error): void {
         let c = Log.get_loggercomponent();
+
+        // Check if logging is paused (static flag on LoggerComponent)
+        if (c?.constructor?.isPaused) return;
+
         let update: LoggerCategoryState = new LoggerCategoryState(args, short_str, cat, exception);
         Log.messageMapping[type].push(update);
         Log.allMessages.push(update);
@@ -223,8 +227,12 @@ export class Log{
                 default:
                     break;
             }
-            // err(e);
-            err(...e);
+
+            if (Array.isArray(e)) {
+                err(e);
+            } else {
+                err(e);
+            }
         }
     }
 }

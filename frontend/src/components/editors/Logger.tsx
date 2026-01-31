@@ -13,6 +13,7 @@ import {FakeStateProps} from '../../joiner/types';
 import React, {Component, Dispatch, JSX, PureComponent, ReactElement, ReactNode} from 'react';
 import {connect} from 'react-redux';
 import './style.scss';
+import '../logger/logger.scss';
 import {Empty} from "./Empty";
 
 const msgdurations: Dictionary<LoggerType, number> = {
@@ -24,6 +25,10 @@ const msgdurations: Dictionary<LoggerType, number> = {
     'l': 1.25,
     'i': 1,
 }
+
+// Performance: Limit max log entries to prevent memory issues
+const MAX_LOG_ENTRIES = 500;
+const MAX_ENTRIES_PER_CATEGORY = 100;
 function getDuration(msg: LoggerCategoryState): number{
     // average English reading speed is 250 WPM
     // average english word is 4.5 char
@@ -38,6 +43,7 @@ class ThisState {
     searchTagAsRegExp: boolean = false;
     searchTagIsDeep: boolean = false;
     regexpIsInvalid: boolean = false; // to mark the input as invalid without triggering a Log.e message loop
+    isPaused: boolean = false; // Pause/Resume logging
 
     // counters to force update. (data source is in Log.messageMapping
     l_counter: number = 0;
@@ -53,6 +59,7 @@ class LoggerComponent extends PureComponent<AllProps, ThisState> {
     public static cname: string = "LoggerComponent";
     public static loggers: LoggerComponent[] = [];
     private static max_id: number = 0;
+    public static isPaused: boolean = false; // Static flag for Log class to check
     public id: number;
     public categoryAliases: Partial<Dictionary<LoggerType, LoggerType>>;
 
@@ -83,6 +90,11 @@ class LoggerComponent extends PureComponent<AllProps, ThisState> {
     }
     private changeDeepSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
         this.setState({...this.state, searchTagIsDeep: e.target.checked});
+    }
+    private togglePause = () => {
+        const newPausedState = !this.state.isPaused;
+        LoggerComponent.isPaused = newPausedState; // Update static flag for Log class
+        this.setState({...this.state, isPaused: newPausedState});
     }
     /*
     private changeMinDate = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -154,13 +166,49 @@ class LoggerComponent extends PureComponent<AllProps, ThisState> {
         </div>;
     }
 
-    clearLogs() {
-        for (let key in Log.messageMapping) Log.messageMapping[key as LoggerType] = [];
+    clearLogs2 = () => {
+        // Temporarily pause to prevent new logs during clear
+        const wasPaused = LoggerComponent.isPaused;
+        LoggerComponent.isPaused = true;
+
+        // Clear all message arrays
+        for (let key in Log.messageMapping) {
+            Log.messageMapping[key as LoggerType] = [];
+        }
         Log.allMessages = [];
-        this.forceUpdate();
-        // just need to modify any counter in a way that is different from both curr val and the next counter update
-        // this.setState({e_counter: -1});
+
+        // Reset all counters and force re-render
+        this.setState({
+            l_counter: 0,
+            i_counter: 0,
+            w_counter: 0,
+            e_counter: 0,
+            ex_counter: 0,
+            eDev_counter: 0,
+            exDev_counter: 0
+        }, () => {
+            // Restore pause state and force update
+            LoggerComponent.isPaused = wasPaused;
+            this.forceUpdate();
+        });
     }
+
+    clearLogs = () => {
+    // 1. Metti in PAUSA per fermare nuovi log
+    LoggerComponent.isPaused = true;
+    
+    // 2. Svuota tutto
+    const categories: LoggerType[] = ['l', 'i', 'w', 'e', 'ex', 'eDev', 'exDev'];
+    for (const cat of categories) {
+        Log.messageMapping[cat] = [];
+    }
+    Log.allMessages = [];
+    
+    // 3. Aggiorna state con isPaused = true e forza re-render
+    this.setState({ isPaused: true }, () => {
+        this.forceUpdate();
+    });
+}
 
     hide(e?: HTMLElement|null) {
         if (!e) return;
@@ -170,21 +218,21 @@ class LoggerComponent extends PureComponent<AllProps, ThisState> {
     private generateToasts(allMessages: LoggerCategoryState[], categories: LoggerType[]): JSX.Element {
         let now = Date.now();
         let old = allMessages;
-        allMessages = allMessages.filter(msg => !msg.toastHidden && (msg.expireTime === undefined || msg.expireTime <= now));
+        // Filter visible toasts and limit to max 3
+        allMessages = allMessages
+            .filter(msg => !msg.toastHidden && (msg.expireTime === undefined || msg.expireTime <= now))
+            .slice(0, 3); // Limit to max 3 visible toasts
 
-        console.log('generateToasts', {allMessages, old})
         let out = {maxDuration:0};
         return <div className={'jjtoast-holder text-selectable'}>
             {allMessages.map(msg => this.toast(msg, out))}
             {allMessages.length >= 2 ?
-                <button key={'closebtn'} className={'close-all btn btn-outline-danger'} data-count={count++} data-duration={out.maxDuration} onClick={(e) => {
+                <button key={'closebtn'} className={'close-all'} onClick={(e) => {
                     let target: HTMLElement = (e.target as any).parentNode as HTMLElement;
-                    // todo: should manual trigger animation instead
                     for (let c of target.children) this.hide(c as HTMLElement);
-                    allMessages.forEach(m => m.toastHidden = true);
+                    old.forEach(m => m.toastHidden = true);
                     }}>
                     Close all
-                    {/*<i className={'bi bi-x-lg closebtn'}/>*/}
                 </button>
                 : null}
         </div>
@@ -195,8 +243,6 @@ class LoggerComponent extends PureComponent<AllProps, ThisState> {
         if (out.maxDuration < duration) out.maxDuration = duration;
         if (!msg.expireTime) msg.expireTime = msg.time + duration;
 
-
-        console.log('msg toast', {msg});
         return <div className={'jjtoast outer cat_' + msg.category}
                     key={msg.time + (msg as any).primitiveStringified[0]}
                     data-duration={(msg.expireTime - msg.time)+''}
@@ -234,51 +280,104 @@ class LoggerComponent extends PureComponent<AllProps, ThisState> {
         let allMessages: LoggerCategoryState[] = [];
         this.user = LUser.getUser();
         this.autoReport = this.user.autoReport;
-        
+
+        // Performance: Trim Log.allMessages if it exceeds limit
+        if (Log.allMessages && Log.allMessages.length > MAX_LOG_ENTRIES) {
+            Log.allMessages = Log.allMessages.slice(-MAX_LOG_ENTRIES);
+        }
+
         for (key of categories) {
             if (!this.isCatActive(key)) continue; // U.arrayMergeInPlace(allMessages, Log.messageMapping[key])
             let msg: LoggerCategoryState;
-            for (msg of Log.messageMapping[key]) {
+            let categoryMessages = Log.messageMapping[key];
+
+            // Performance: Trim old messages if category exceeds limit
+            if (categoryMessages.length > MAX_ENTRIES_PER_CATEGORY) {
+                Log.messageMapping[key] = categoryMessages.slice(-MAX_ENTRIES_PER_CATEGORY);
+                categoryMessages = Log.messageMapping[key];
+            }
+
+            for (msg of categoryMessages) {
                 if (this.filter(msg)) allMessages.push(msg);
             }
         }
         // order is reversed so newest is first in list
         allMessages.sort((a, b) => b.time - a.time);
 
-        return (<section className={'p-2 logger-tab'}>
-            <div>
-                <div className={"d-flex search-row p-1"}>
-                    <input placeholder={"filter"} className={"input search " + (this.state.regexpIsInvalid && "invalid")} type={"search"} value={this.state.searchTag} onChange={ this.changeSearch } />
-                    <label className={"checkbox"}>
-                        <input className="input" type="checkbox" checked={this.state.searchTagAsRegExp} onChange={this.changeRegexpSearch} />
-                        <label>RegExp</label>
-                    </label>
-                    <label className={"checkbox"}>
-                        <input className="input" type="checkbox" checked={this.state.searchTagIsDeep} onChange={this.changeDeepSearch} />
-                        <label>Deep</label>
-                    </label>
-                    <button onClick={e => this.clearLogs()} className={'btn btn-danger ms-1'}>
-                        Clear
-                    </button>
-                </div>
-                {/*<input label={"from"} type="datetime-local" value={ new Date(this.state.minDate).toString()} onChange={this.changeMinDate} />
-                <input label={"to"} type="datetime-local" value={ new Date(this.state.maxDate).toString()} onChange={this.changeMaxDate} /> */}
+        // Performance: Limit total displayed entries
+        if (allMessages.length > MAX_LOG_ENTRIES) {
+            allMessages = allMessages.slice(0, MAX_LOG_ENTRIES);
+        }
+
+        return (<section className={'logger-tab'}>
+            {/* Header */}
+            <div className="logger-header">
+                <span className="logger-title">Logger</span>
+                <button onClick={e => this.clearLogs()} className="clear-btn">
+                    <i className="bi bi-trash" />
+                    Clear All
+                </button>
             </div>
+
+            {/* Toolbar */}
+            <div className={"search-row"}>
+                <input placeholder={"Filter logs..."} className={"search " + (this.state.regexpIsInvalid ? "invalid" : "")} type={"search"} value={this.state.searchTag} onChange={ this.changeSearch } />
+                <label className={"toolbar-checkbox"}>
+                    <input type="checkbox" checked={this.state.searchTagAsRegExp} onChange={this.changeRegexpSearch} />
+                    <span>RegExp</span>
+                </label>
+                <label className={"toolbar-checkbox"}>
+                    <input type="checkbox" checked={this.state.searchTagIsDeep} onChange={this.changeDeepSearch} />
+                    <span>Deep</span>
+                </label>
+
+                <div className="toolbar-separator" />
+
+                <div className="toolbar-controls">
+                    {this.state.isPaused ? (
+                        <button className="toolbar-btn resume-btn" onClick={this.togglePause} title="Resume logging">
+                            <i className="bi bi-play-fill" />
+                            <span>Resume</span>
+                        </button>
+                    ) : (
+                        <button className="toolbar-btn pause-btn" onClick={this.togglePause} title="Pause logging">
+                            <i className="bi bi-pause-fill" />
+                            <span>Pause</span>
+                        </button>
+                    )}
+                </div>
+            </div>
+
+            {/* Paused indicator */}
+            {this.state.isPaused && (
+                <div className="paused-indicator">
+                    <i className="bi bi-pause-circle" />
+                    Logging paused
+                </div>
+            )}
+            {/* Category Filter Tabs */}
             <div className={"categories"}>
                 { categories.filter(cat => !(cat in categoryAliases)).map((cat) => (
-                    <button className={"btn btn"+(this.isCatActive(cat) && "-outline")+"-danger cat cat_" + cat + (this.isCatActive(cat) ? " active" : " inactive")}
-                            key={cat} onClick={e=>this.toggleCat(cat)}>{labelAliases[cat] || cat}</button>))
+                    <button className={"cat cat_" + cat + (this.isCatActive(cat) ? " active" : " inactive")}
+                            key={cat} onClick={e=>this.toggleCat(cat)}>
+                        {labelAliases[cat] || cat}
+                        <span className="count">{Log.messageMapping[cat]?.length || 0}</span>
+                    </button>))
                 }
             </div>
+
+            {/* Log Entries */}
             <ul className={"entries"}>
                 { allMessages.map( (msg) => (
-                    <li className={"hoverable cat cat_"+msg.category} key={msg.time+'_'+msg.short_string}>
-                        {false && <span className={"preview"}>{msg.short_string}</span>}
-                        {false && <span className={"content"}>{msg.long_string}</span>}
+                    <li className={"cat cat_"+msg.category} key={msg.time+'_'+msg.short_string}>
                         {this.displayArgs(msg, msg.category)}
                     </li>))
                 }
-                { allMessages.length === 0 && <Empty /> }
+                { allMessages.length === 0 && <Empty
+                    icon="bi-terminal"
+                    title="No logs to display"
+                    description="Application logs will appear here. Try adjusting your filters if you expected to see logs."
+                /> }
             </ul>
             {this.generateToasts(allMessages, categories)}
         </section>);

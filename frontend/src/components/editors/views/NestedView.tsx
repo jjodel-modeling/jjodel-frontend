@@ -29,6 +29,9 @@ import {Tooltip} from "../../forEndUser/Tooltip";
 import {Btn, CommandBar, Sep} from '../../commandbar/CommandBar';
 import {InternalToggle} from '../../widgets/Widgets';
 import {VersionFixer} from "../../../redux/VersionFixer";
+import ActivityLogger from '../../../services/ActivityLogger';
+import { ActivityType } from '../../../types/activity';
+import { LockedFeature } from '../../ModeSystem';
 
 type Metadata = {setView: (p: Pointer)=>any, scoreBoost: number}
 function NestedViewComponent(props: AllProps) {
@@ -76,8 +79,211 @@ function NestedViewComponent(props: AllProps) {
     let activeViewpointId: Pointer<DPointerTargetable> = project.activeViewpoint.id;
 
     let [collapseAll, setCollapseAll] = useState<boolean | undefined>( undefined );
+function renderEntry(d: DViewElement, childrens: GObject, isExpanded: boolean, toggleExpansion: () => any, depth: number, path: number[], metadata?: Metadata): ReactNode {
+        if (!d) return null;
+        let appliableTo: string;
 
-    function renderEntry(e: DViewElement, childrens: Dictionary<Pointer, number>, isExpanded: boolean,
+        if (collapseAll !== undefined && collapseAll === isExpanded) toggleExpansion();
+        let expandClick = () => {
+            setCollapseAll(undefined);
+            toggleExpansion();
+        }
+
+        if (d.appliableToClasses.length === 1) appliableTo = d.appliableToClasses[0].substring(1);
+        else if (d.appliableToClasses.length === 0) appliableTo = d.appliableTo;
+        else appliableTo = "Any";
+        appliableTo = U.replaceAll(appliableTo, "Void", "");
+        let parr = Object.keys(childrens);
+        let scoreBoost = metadata?.scoreBoost || 0;
+        let l: LViewElement = LPointerTargetable.fromD(d);
+
+        const preventClick = (e: any) => e.stopPropagation();
+        let isVP = d.className === DViewPoint.cname;
+        let isDefault = d.id.indexOf('Pointer_View') === 0;
+        let isOverlay = isVP && !d.isExclusiveView;
+        let isExclusive = isVP && d.isExclusiveView;
+
+        function select(ptr: Pointer<DViewPoint>) {
+            const previousViewpoint = project.activeViewpoint;
+            project.activeViewpoint = ptr as any;
+
+            if (ptr !== previousViewpoint?.id) {
+                try {
+                    const viewpointName = d.name || 'Unnamed Viewpoint';
+                    ActivityLogger.log({
+                        type: ActivityType.VIEWPOINT_CHANGED,
+                        projectId: project.id,
+                        projectName: project.name || 'Unnamed Project',
+                        entityId: ptr as string,
+                        entityName: viewpointName,
+                    });
+                } catch (e) {
+                    console.warn('Failed to log viewpoint change activity:', e);
+                }
+            }
+        }
+
+        let appliableToEnhanced = (d.name === 'Singleton' ? 'Singleton' : appliableTo);
+        let isActive = d.id === activeViewpointId;
+        let canDelete = !isActive && !isDefault;
+
+        // ============================================
+        // VIEWPOINT RENDERING (Box container)
+        // ============================================
+        if (isVP) {
+            return (
+                <li className={`viewpoint-box ${isActive ? 'viewpoint-box--active' : ''} ${isOverlay ? 'viewpoint-box--overlay' : 'viewpoint-box--exclusive'}`} key={d.id}>
+                    {/* Viewpoint Header */}
+                    <div className="viewpoint-box__header" onClick={() => setView(d.id)}>
+                        
+                        <div className="viewpoint-box__header-left">
+                            {/* Radio for Exclusive, Checkbox for Overlay */}
+                            {isExclusive ? (
+                                <label className="viewpoint-radio" onClick={preventClick}>
+                                    <input
+                                        type="radio"
+                                        name="active-viewpoint"
+                                        checked={isActive}
+                                        onChange={() => select(d.id)}
+                                    />
+                                    <span className="viewpoint-radio__custom"></span>
+                                </label>
+                            ) : (
+                                <label className="viewpoint-checkbox" onClick={preventClick}>
+                                    <input
+                                        type="checkbox"
+                                        checked={false}
+                                        onChange={() => {/* TODO: overlay selection logic */}}
+                                    />
+                                  
+                                </label>
+                            )}
+                            
+                            {/* VP Badge */}
+                            <div className={`icon type DViewPoint ${isOverlay ? 'overlay' : 'exclusive'}`}>
+                                VP
+                            </div>
+                            
+                            {/* Viewpoint Name */}
+                            <span className="viewpoint-box__name">{d.name || 'Unnamed'}</span>
+                        </div>
+                        
+                        <div className="viewpoint-box__header-right">
+                            {/* Expand/Collapse */}
+                            {parr.length > 0 && (
+                                <button className="viewpoint-box__toggle" onClick={(e) => { preventClick(e); expandClick(); }}>
+                                    <i className={`bi bi-chevron-${isExpanded ? 'down' : 'right'}`} />
+                                </button>
+                            )}
+                            
+                            {/* EX/OV Badge */}
+                            <span className={`viewpoint-badge ${isExclusive ? 'viewpoint-badge--exclusive' : 'viewpoint-badge--overlay'}`}>
+                                {isExclusive ? 'EX' : 'OV'}
+                            </span>
+                        </div>
+                    </div>
+                    
+                    {/* Viewpoint Content (Views) */}
+                    {isExpanded && parr.length > 0 && (
+                        <div className="viewpoint-box__content">
+                            <ul>
+                                {parr.map((ptr, i) => (
+                                    <GenericTree
+                                        key={ptr}
+                                        data={DPointerTargetable.from(ptr)}
+                                        getSubElements={getSubElements}
+                                        renderEntry={renderEntry}
+                                        depth={depth + 1}
+                                        path={[...path, i]}
+                                        metadata={{ setView: metadata.setView, scoreBoost: childrens[ptr] } as Metadata}
+                                        initialHidingState={true}
+                                    />
+                                ))}
+                            </ul>
+                        </div>
+                    )}
+                </li>
+            );
+        }
+
+        // ============================================
+        // VIEW RENDERING (Inside viewpoint box)
+        // ============================================
+        return (
+            <li className={`view-entry ${view === d.id ? 'view-entry--selected' : ''}`} key={d.id}>
+                <div className="view-entry__row" onClick={() => setView(d.id)}>
+                    {/* Left: Expand + Icon + Name */}
+                    <div className="view-entry__left">
+                        {/* Expand toggle */}
+                        <div className="view-entry__toggle" onClick={preventClick}>
+                            {parr.length >= 1 ? (
+                                <i 
+                                    className={`bi bi-chevron-${isExpanded ? 'down' : 'right'}`} 
+                                    onClick={expandClick}
+                                />
+                            ) : (
+                                <span className="view-entry__toggle-spacer" />
+                            )}
+                        </div>
+                        
+                        {/* Type Icon */}
+                        <div className={`icon type tree-${appliableToEnhanced} ${d.className}`}>
+                            {appliableToEnhanced.charAt(0).toUpperCase()}
+                        </div>
+                        
+                        {/* View Name */}
+                        <span className="view-entry__name">{d.name || 'Unnamed'}</span>
+                    </div>
+                    
+                    {/* Right: Priority + Badges */}
+                    <div className="view-entry__right">
+                        {props.isAdvanced && d.isExclusiveView && (
+                            <div className="view-entry__priority" onClick={preventClick}>
+                                <span className="priority">priority: {l.explicitApplicationPriority}</span>
+                                <i className="bi bi-x priority-clear" onClick={() => { l.explicitApplicationPriority = undefined as any; }}></i>
+                                <Input
+                                    type="number"
+                                    className="priority-booster"
+                                    inputClassName="priority-booster-input"
+                                    readOnly={false}
+                                    data={l}
+                                    getter={() => scoreBoost + ''}
+                                    setter={(v) => { let pv = l.father; if (pv) pv.subViews = { ...pv.__raw.subViews, [d.id]: +v } as any }}
+                                />
+                            </div>
+                        )}
+                        
+                        {/* Feature Badges */}
+                        <div className="view-entry__badges">
+                            <span className={`feature-badge feature-badge--ocl ${d.oclCondition?.length ? '' : 'feature-badge--inactive'}`}>OCL</span>
+                            <span className={`feature-badge feature-badge--js ${d.jsCondition?.length ? '' : 'feature-badge--inactive'}`}>JS</span>
+                            <span className={`feature-badge feature-badge--ex ${d.isExclusiveView ? '' : 'feature-badge--inactive'}`}>EX</span>
+                        </div>
+                    </div>
+                </div>
+                
+                {/* Nested Views */}
+                {isExpanded && parr.length > 0 && (
+                    <ul className="view-entry__children">
+                        {parr.map((ptr, i) => (
+                            <GenericTree
+                                key={ptr}
+                                data={DPointerTargetable.from(ptr)}
+                                getSubElements={getSubElements}
+                                renderEntry={renderEntry}
+                                depth={depth + 1}
+                                path={[...path, i]}
+                                metadata={{ setView: metadata.setView, scoreBoost: childrens[ptr] } as Metadata}
+                                initialHidingState={true}
+                            />
+                        ))}
+                    </ul>
+                )}
+            </li>
+        );
+    }
+
+    function renderEntry2(e: DViewElement, childrens: Dictionary<Pointer, number>, isExpanded: boolean,
                          toggleExpansion: ()=>any, depth: number, path: number[], metadata: Metadata): ReactNode {
         let d = e;
         let appliableTo: string;
@@ -101,44 +307,86 @@ function NestedViewComponent(props: AllProps) {
         let isVP = d.className === DViewPoint.cname;
         let isDefault = d.id.indexOf('Pointer_View') === 0;
 
-        function select(ptr: Pointer<DViewPoint>){ project.activeViewpoint = ptr as any; }
+        function select(ptr: Pointer<DViewPoint>){
+            const previousViewpoint = project.activeViewpoint;
+            project.activeViewpoint = ptr as any;
+
+            // Log activity for viewpoint change
+            if (ptr !== previousViewpoint?.id) {
+                try {
+                    const viewpointName = d.name || 'Unnamed Viewpoint';
+                    ActivityLogger.log({
+                        type: ActivityType.VIEWPOINT_CHANGED,
+                        projectId: project.id,
+                        projectName: project.name || 'Unnamed Project',
+                        entityId: ptr as string,
+                        entityName: viewpointName,
+                    });
+                } catch (e) {
+                    console.warn('Failed to log viewpoint change activity:', e);
+                }
+            }
+        }
 
         let appliableToEnhanced = (d.name === 'Singleton' ? 'Singleton' : appliableTo);
 
         let isActive = d.id === activeViewpointId;
         let canDelete = !isActive && !isDefault;
-        return <li className={"entry-root " + d.className + (isActive ? ' selected' : '')} key={d.id}>
+        let vpClass = isVP ? (d.isExclusiveView ? ' exclusive-vp' : ' overlay-vp') : '';
+        return <li className={"entry-root " + d.className + (isActive ? ' selected' : '') + vpClass} key={d.id}>
 
             <div className={'inline-row'} onClick={()=>setView(d.id)} onDoubleClick={(e) => {select(d.id)}}> {/* activate anche con il dblclick */}
 
-                <div className={"left-stuff vertical-centering "} onClick={preventClick}>
-                    {parr.length >= 1 ?
-                        <>
-                            <i style={{fontSize: '0.55em', marginRight: '24px!important'}} className={'bi cursor-pointer d-block my-auto bi-chevron-' + (isExpanded ? 'down' : 'right')} onClick={expandClick} />
-                            {isExpanded && <div className={"expansion-line"} />}
-                        </>
-                        :
-                        <></>
-                    }
-                </div>
-                <div className={"mid-stuff vertical-centering"} style={{marginLeft: '8px'}}>
-                    <div className={`icon type tree-${appliableToEnhanced} ${d.className}`} style={{width: '24px', height: '24px'}}>{
+                {/* LEFT GROUP - Toggle + Icon + Label */}
+                <div className="row-left">
+                    <div className={"left-stuff"} onClick={preventClick}>
+                        {parr.length >= 1 ?
+                            <>
+                                <i className={'bi cursor-pointer bi-chevron-' + (isExpanded ? 'down' : 'right')} onClick={expandClick} />
+                                {isExpanded && <div className={"expansion-line"} />}
+                            </>
+                            :
+                            <></>
+                        }
+                    </div>
+                    <div className={`icon type tree-${appliableToEnhanced} ${d.className}`}>{
                         isVP ? 'VP' : (appliableToEnhanced === "Any" ? "✲" : appliableToEnhanced[0])
                     }</div>
-                    <div style={{marginLeft: '4px'}}>{d.name}</div>
+                    <div className="node-label">{d.name}</div>
                 </div>
-                <div className={"hover-stuff vertical-centering d-flex "}>
-                    <div className={"ms-auto d-flex"} onClick={preventClick}>
-                        {isVP && d.isExclusiveView &&
-                            <CommandBar style={{transition: '1s 0.3s', marginTop: '2px'}}>
-                                <Btn icon={'check'} action={() => {select(d.id)}} tip={'Activate'}/>
-                            </CommandBar>
 
-                            /* <button className="bg btn-delete my-auto ms-2 green" disabled={active.id === d.id}
-                                onClick={(evt) => {select(d.id)}}>
-                                <i className='bi bi-check2' />
-                            </button>*/
-                        }
+                {/* RIGHT GROUP - Toggle + Actions + Badges */}
+                <div className="row-right">
+                    {/* Active Toggle - Always visible for viewpoints */}
+                    {isVP && d.isExclusiveView && (
+                        <div className="viewpoint-active-toggle" onClick={preventClick}>
+                            <Tooltip tooltip={isActive ? 'Active viewpoint' : 'Click to activate'} inline={true} position={'top'} offsetY={10}>
+                                <div
+                                    className={`vp-toggle ${isActive ? 'active' : ''}`}
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        e.preventDefault();
+                                        select(d.id);
+                                    }}
+                                    role="switch"
+                                    aria-checked={isActive}
+                                    tabIndex={0}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter' || e.key === ' ') {
+                                            e.preventDefault();
+                                            select(d.id);
+                                        }
+                                    }}
+                                >
+                                    <div className="vp-toggle__thumb"></div>
+                                </div>
+                            </Tooltip>
+                        </div>
+                    )}
+
+                    <div className={"hover-stuff"}>
+                        <div className={"d-flex"} onClick={preventClick}>
+                        {/* Activate button removed - replaced with always-visible toggle above */}
 
 
                         <CommandBar style={{transition: '1s 0.3s', marginTop: '2px'}}>
@@ -167,35 +415,35 @@ function NestedViewComponent(props: AllProps) {
                             </Tooltip>
                         </CommandBar>
 
-                        {/* <button className="bg btn-delete my-auto ms-2 green" onClick={(e)=> { l.duplicate(); preventClick(e);}}><i className='bx bx-duplicate' /></button>
-                        <button className="bg btn-delete my-auto ms-2" onClick={(e)=> { l.delete(); preventClick(e);}}><i className="p-1 bi bi-dash" /></button>*/}
+                        </div>
                     </div>
-                </div>
-                <div className={"right-stuff vertical-centering"}>
-                    <div className={"right-content"} onClick={preventClick} >
-                        {
-                            isVP ? <>
-                                <div className={"spacer"}/>
-                            </> : <>{ props.isAdvanced && d.isExclusiveView && <>
-                                <span className={"priority"}>priority: {l.explicitApplicationPriority} </span><i style={{paddingTop: '4px'}} className="bi bi-x"></i>
-                                <div className={"spacer"}/>
-                                <Input type="number"
-                                       className={"change-boost hidden-input priority-booster"}
-                                       inputClassName={"change-boost hidden-input"}
-                                       readOnly={false}
-                                       data={l}
-                                       getter={()=>scoreBoost + ''}
-                                       setter={(v)=>{let pv = l.father; if (pv) pv.subViews = {...pv.__raw.subViews, [d.id]: +v} as any}}
-                                />
-                            </>}
-                                <span className={"right-icon feature-border ocl-icon vertical-centering " + (d.oclCondition.length ? "" : "hidden")}></span>
-                                <span className={"right-icon feature-border js-icon vertical-centering " + (d.jsCondition.length ? "" : "hidden")}></span>
-                            </>
-                        }
-                        <Tooltip tooltip={<div>is {d.isExclusiveView ? "" : "not"} mutually exclusive with other "Ex" views.</div>} position={"bottom"} inline={true}>
-                            <span className={"right-icon feature-border ex-icon vertical-centering " + (d.isExclusiveView ? '' : "hidden")}
-                                  onClick={()=>l.isExclusiveView = !d.isExclusiveView}
-                            /></Tooltip>
+
+                    <div className={"right-stuff"}>
+                        <div className={"right-content"} onClick={preventClick} >
+                            {
+                                isVP ? <>
+                                    <div className={"spacer"}/>
+                                </> : <>{ props.isAdvanced && d.isExclusiveView && <>
+                                    <span className={"priority"}>priority: {l.explicitApplicationPriority} </span><i style={{paddingTop: '4px'}} className="bi bi-x"></i>
+                                    <div className={"spacer"}/>
+                                    <Input type="number"
+                                           className={"change-boost hidden-input priority-booster"}
+                                           inputClassName={"change-boost hidden-input"}
+                                           readOnly={false}
+                                           data={l}
+                                           getter={()=>scoreBoost + ''}
+                                           setter={(v)=>{let pv = l.father; if (pv) pv.subViews = {...pv.__raw.subViews, [d.id]: +v} as any}}
+                                    />
+                                </>}
+                                    <span className={"right-icon feature-border ocl-icon " + (d.oclCondition.length ? "" : "hidden")}></span>
+                                    <span className={"right-icon feature-border js-icon " + (d.jsCondition.length ? "" : "hidden")}></span>
+                                </>
+                            }
+                            <Tooltip tooltip={<div>is {d.isExclusiveView ? "" : "not"} mutually exclusive with other "Ex" views.</div>} position={"bottom"} inline={true}>
+                                <span className={"right-icon feature-border ex-icon " + (d.isExclusiveView ? '' : "hidden")}
+                                      onClick={()=>l.isExclusiveView = !d.isExclusiveView}
+                                /></Tooltip>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -215,33 +463,43 @@ function NestedViewComponent(props: AllProps) {
 
 
     let [view, setView] = useStateIfMounted(undefined as (undefined | Pointer<DViewElement>));
-    let [vp_expanded, setVpExpanded] = useStateIfMounted<Boolean>(false);
+
+    // Basic mode: show locked feature placeholder
+    if (!props.isAdvanced) {
+        return (
+            <div className={"view-editor-root"}>
+                <section className={'viewpoint-tab'}>
+                    <LockedFeature
+                        title="Viewpoints"
+                        description="Viewpoints allow you to create custom visual representations for your metamodel elements. Switch to Advanced mode to access this feature."
+                        icon="eye"
+                        features={[
+                            'Create custom visual templates',
+                            'Define conditional styling rules',
+                            'Configure element appearance',
+                            'Manage multiple viewpoints'
+                        ]}
+                    />
+                </section>
+            </div>
+        );
+    }
 
     let vieweditor = view && <div className={"single-view-content"}><ViewData key={view} viewid={view} viewpoints={viewpoints.map(v=>v.id)} setSelectedView={setView} /></div>;
     return(<div className={"view-editor-root"}>
         <section className={'viewpoint-tab'}>
             <div className={"view-editor-fullsize-content"}>
-                <div className={'d-flexd-flex'}>
-                    <h1 onClick={() => setVpExpanded(!vp_expanded)}>
-                        Viewpoints
-                        <CommandBar style={{float: 'right'}}>
-                            {vp_expanded ? 
-                                <Btn icon={'shrink'} 
-                                    active={collapseAll} 
-                                    action={() => {setVpExpanded(!vp_expanded);setCollapseAll(true)}}  
-                                    tip={'Collapse all'} 
-
-                                /> :
-                                <Btn icon={'expand'} 
-                                    active={collapseAll===false} 
-                                    action={() => {setVpExpanded(!vp_expanded);setCollapseAll(false)}} 
-                                    tip={'Expand all'}   
-                                />
-                    }
-                            <Sep />
-                            <Btn icon={'add'} action={addVP} tip={'Create a new viewpoint'} />
-                        </CommandBar>
-                    </h1>
+                {/* Header - matches Properties style */}
+                <div className="viewpoints-header">
+                    <div className="viewpoints-header__icon">
+                        <i className="bi bi-eye" />
+                    </div>
+                    <h1 className="viewpoints-header__title">Viewpoints</h1>
+                    <div className="viewpoints-header__actions">
+                        <button className="btn-new" onClick={addVP} title="Create a new viewpoint">
+                            + New
+                        </button>
+                    </div>
                 </div>
                 {vieweditor}
                 <ul className={"ps-2 pt-2"}>

@@ -5,9 +5,8 @@ import {DState, DViewElement, GObject, LViewElement, Pointer, TextArea, U} from 
 import {connect} from "react-redux";
 import {JsEditor} from "../../languages";
 import {Function} from "../../../forEndUser/FunctionComponent";
-// import JsEditor from "../../jsEditor/JsEditor";
-
 import { CommandBar, Btn, Sep } from '../../../commandbar/CommandBar';
+import './events-tab.scss';
 
 function ViewEventsComponent(props: AllProps) {
     const view = props.view;
@@ -23,64 +22,109 @@ function ViewEventsComponent(props: AllProps) {
     }
 
     let initialExpand = (v: any, field: any)=>!!(v as any)[field as string];
-    return(<section className={'p-3 events-tab'}>
-        <h1 className={'view'}>View: {view.name}</h1>
-        <h2>Default Events</h2>
-        <JsEditor key='odu' data={view} field={'onDataUpdate'} title={'onDataUpdate'} initialExpand={initialExpand} readOnly={readOnly}/>
-        <JsEditor key='ods' data={view} field={'onDragStart'} title={'onDragStart'} initialExpand={initialExpand} readOnly={readOnly}/>
-        <JsEditor key='odw' data={view} field={'whileDragging'} title={'whileDragging'} initialExpand={initialExpand} readOnly={readOnly}/>
-        <JsEditor key='ode' data={view} field={'onDragEnd'} title={'onDragEnd'} initialExpand={initialExpand} readOnly={readOnly}/>
-        <JsEditor key='ors' data={view} field={'onResizeStart'} title={'onResizeStart'} initialExpand={initialExpand} readOnly={readOnly}/>
-        <JsEditor key='orw' data={view} field={'whileResizing'} title={'whileResizing'} initialExpand={initialExpand} readOnly={readOnly}/>
-        <JsEditor key='ore' data={view} field={'onResizeEnd'} title={'onResizeEnd'} initialExpand={initialExpand} readOnly={readOnly}/>
-        <div className={'d-flex mx-auto'} style={{marginTop: '14px'}}>
-            <h2>Custom Events</h2>
-            <CommandBar className={'ms-auto'} style={{paddingTop: '12px'}}>
-                <Btn icon={'add'} action={addEvent}  tip={'New event'}/>
-            </CommandBar>
+    const customEventKeys = Object.keys(dview.events).filter(k => dview.events[k]);
+
+    return(<section className={'events-tab'}>
+        {/* Default Events Section */}
+        <div className="events-section events-section--default">
+            <div className="events-section-header">
+                <h3 className="events-section-title">
+                    <i className="bi bi-gear" />
+                    Default Events
+                </h3>
+                <span className="events-section-badge">System</span>
+            </div>
+            <div className="events-list">
+                <JsEditor key='odu' data={view} field={'onDataUpdate'} title={'onDataUpdate'} initialExpand={initialExpand} readOnly={readOnly}/>
+                <JsEditor key='ods' data={view} field={'onDragStart'} title={'onDragStart'} initialExpand={initialExpand} readOnly={readOnly}/>
+                <JsEditor key='odw' data={view} field={'whileDragging'} title={'whileDragging'} initialExpand={initialExpand} readOnly={readOnly}/>
+                <JsEditor key='ode' data={view} field={'onDragEnd'} title={'onDragEnd'} initialExpand={initialExpand} readOnly={readOnly}/>
+                <JsEditor key='ors' data={view} field={'onResizeStart'} title={'onResizeStart'} initialExpand={initialExpand} readOnly={readOnly}/>
+                <JsEditor key='orw' data={view} field={'whileResizing'} title={'whileResizing'} initialExpand={initialExpand} readOnly={readOnly}/>
+                <JsEditor key='ore' data={view} field={'onResizeEnd'} title={'onResizeEnd'} initialExpand={initialExpand} readOnly={readOnly}/>
+            </div>
         </div>
 
-        {Object.keys(dview.events).map((k) => {
-            let val = dview.events[k];
-            if (!val) return;
-            return <>
-            <JsEditor
-            data={view} key={k/* if val does not update, concatenate it to the key (k+val)*/}
-            readOnly={readOnly}
-            initialExpand={()=>true}
-            title={<input defaultValue={k} disabled={readOnly} onBlur={(e)=>{
-                let newname = e.target.value;
-                if (k === newname) return;
-                let newEvent: GObject = {};
-                newEvent[newname] = dview.events[k];
-                newEvent[k] = undefined;
-                view.events = newEvent;
-            }}/>}
-            jsxLabel={<CommandBar className={'ms-auto'} style={{paddingTop: '9px'}}>
-                <Btn icon={'delete'} tip={'Remove event'} action={() => {
-                    let newEvent: GObject = {};
-                    newEvent[k] = undefined; // this is how you trigger deletion with object -= action
-                    view.events = newEvent;
-                }}/>
-            </CommandBar>}
+        {/* Separator */}
+        <div className="events-separator" />
 
-            /* jsxLabel={<button className={'btn btn-danger my-auto ms-auto'} onClick={() => {
-                let newEvent: GObject = {};
-                newEvent[k] = undefined; // this is how you trigger deletion with object -= action
-                view.events = newEvent;
-            }}>
-                <i className={'p-1 bi bi-trash3-fill'} />
-            </button>}*/
+        {/* Custom Events Section */}
+        <div className="events-section events-section--custom">
+            <div className="events-section-header">
+                <h3 className="events-section-title">
+                    <i className="bi bi-code-square" />
+                    Custom Events
+                </h3>
+                <button
+                    className="events-add-btn"
+                    onClick={addEvent}
+                    disabled={readOnly}
+                    title="Add custom event"
+                >
+                    <i className="bi bi-plus" />
+                </button>
+            </div>
 
-
-            getter={() => val}
-            setter={(js) => {
-                let newEvent: GObject = {};
-                newEvent[k] = js;
-                view.events = newEvent;
-            }}
-        /></>})}
-        <div className={'p-4'}></div>
+            {customEventKeys.length === 0 ? (
+                <div className="events-empty-state">
+                    <i className="bi bi-plus-circle" />
+                    <p>No custom events defined</p>
+                    <button
+                        className="events-empty-btn"
+                        onClick={addEvent}
+                        disabled={readOnly}
+                    >
+                        <i className="bi bi-plus" />
+                        Add Event
+                    </button>
+                </div>
+            ) : (
+                <div className="events-list events-list--custom">
+                    {customEventKeys.map((k) => {
+                        let val = dview.events[k];
+                        return (
+                            <div className="custom-event-wrapper" key={k}>
+                                <JsEditor
+                                    data={view}
+                                    readOnly={readOnly}
+                                    initialExpand={()=>true}
+                                    title={
+                                        <input
+                                            className="custom-event-name-input"
+                                            defaultValue={k}
+                                            disabled={readOnly}
+                                            onBlur={(e)=>{
+                                                let newname = e.target.value;
+                                                if (k === newname) return;
+                                                let newEvent: GObject = {};
+                                                newEvent[newname] = dview.events[k];
+                                                newEvent[k] = undefined;
+                                                view.events = newEvent;
+                                            }}
+                                        />
+                                    }
+                                    jsxLabel={
+                                        <CommandBar className={'ms-auto'} style={{paddingTop: '9px'}}>
+                                            <Btn icon={'delete'} tip={'Remove event'} action={() => {
+                                                let newEvent: GObject = {};
+                                                newEvent[k] = undefined;
+                                                view.events = newEvent;
+                                            }}/>
+                                        </CommandBar>
+                                    }
+                                    getter={() => val}
+                                    setter={(js) => {
+                                        let newEvent: GObject = {};
+                                        newEvent[k] = js;
+                                        view.events = newEvent;
+                                    }}
+                                />
+                            </div>
+                        );
+                    })}
+                </div>
+            )}
+        </div>
     </section>);
 }
 

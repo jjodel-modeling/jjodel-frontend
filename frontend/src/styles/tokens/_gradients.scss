@@ -1,0 +1,75 @@
+/**
+ * JJODEL DESIGN TOKENS - GRADIENTS
+ *
+ * Gradient tokens for buttons and UI elements that require visual depth.
+ * Uses slate palette for a professional, enterprise look.
+ *
+ * Usage:
+ *   .my-button {
+ *     background: var(--gradient-primary);
+ *     &:hover { background: var(--gradient-primary-hover); }
+ *   }
+ */
+
+/* ============================================
+   SCSS VARIABLES - Gradient Color Stops
+   ============================================ */
+
+// Primary Button Gradient Stops (slate)
+$gradient-start: #64748b;        // slate-500 (lighter top)
+$gradient-end: #475569;          // slate-600 (darker bottom)
+$gradient-hover-start: #475569;  // slate-600
+$gradient-hover-end: #334155;    // slate-700
+$gradient-active-start: #334155; // slate-700
+$gradient-active-end: #1e293b;   // slate-800
+
+/* ============================================
+   SCSS VARIABLES - Complete Gradients
+   ============================================ */
+
+$gradient-primary: linear-gradient(180deg, $gradient-start 0%, $gradient-end 100%);
+$gradient-primary-hover: linear-gradient(180deg, $gradient-hover-start 0%, $gradient-hover-end 100%);
+$gradient-primary-active: linear-gradient(180deg, $gradient-active-start 0%, $gradient-active-end 100%);
+
+// Diagonal variants
+$gradient-primary-diagonal: linear-gradient(135deg, $gradient-start 0%, $gradient-end 100%);
+$gradient-primary-diagonal-hover: linear-gradient(135deg, $gradient-hover-start 0%, $gradient-hover-end 100%);
+
+/* ============================================
+   CSS CUSTOM PROPERTIES - Gradients
+   ============================================ */
+
+:root,
+:root[data-theme="light"] {
+  /* Primary Button Gradients - Vertical (180deg) */
+  --gradient-primary: #{$gradient-primary};
+  --gradient-primary-hover: #{$gradient-primary-hover};
+  --gradient-primary-active: #{$gradient-primary-active};
+
+  /* Primary Button Gradients - Diagonal (135deg) */
+  --gradient-primary-diagonal: #{$gradient-primary-diagonal};
+  --gradient-primary-diagonal-hover: #{$gradient-primary-diagonal-hover};
+
+  /* Gradient Color Stops (for custom compositions) */
+  --gradient-start: #{$gradient-start};
+  --gradient-end: #{$gradient-end};
+  --gradient-hover-start: #{$gradient-hover-start};
+  --gradient-hover-end: #{$gradient-hover-end};
+  --gradient-active-start: #{$gradient-active-start};
+  --gradient-active-end: #{$gradient-active-end};
+
+  /* Gradient Direction */
+  --gradient-direction: 180deg;
+}
+
+/* ============================================
+   DARK THEME GRADIENTS
+   Slightly adjusted for dark backgrounds
+   ============================================ */
+
+:root[data-theme="dark"] {
+  /* Primary Button Gradients - slightly more contrast on dark */
+  --gradient-primary: linear-gradient(180deg, #64748b 0%, #475569 100%);
+  --gradient-primary-hover: linear-gradient(180deg, #475569 0%, #334155 100%);
+  --gradient-primary-active: linear-gradient(180deg, #334155 0%, #1e293b 100%);
+}

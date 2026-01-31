@@ -1,3 +1,5 @@
+@use './dock-tabs.scss';
+
 .dock-tab {
     --color: #233d4d;
   --accent: #048BA8;
@@ -288,6 +290,7 @@
 }
 
 .dock-nav-operations{
+    display: none;
     float: right;
     height: 100%;
     .dock-nav-more{
@@ -328,19 +331,18 @@
     bottom: 0;
     height: auto;
     padding: 0;
-    // background: red;
     display: flex;
     width: 28px;
-    color: var(--terziary);
-    &:hover{ color: red; }
+    color: #94a3b8; // slate-400 - subtle default color
+    &:hover{ color: #64748b; } // slate-500 on hover
     &::before{
         margin: auto;
-        content: "\f629"; // "\f623" x in a circle | "\f62a" x only | "\f629" square-x
-        font-size: 0.8rem;
+        content: "\f62a"; // bi-x - simple clean X icon
+        font-size: 1rem; // slightly larger for better visibility
 
         font-family: bootstrap-icons !important;
         font-style: normal;
-        font-weight: normal !important;
+        font-weight: var(--font-normal) !important;
         font-variant: normal;
         text-transform: none;
     }

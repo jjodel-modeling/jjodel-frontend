@@ -1,183 +1,564 @@
+/* ============================================
+   ALERTS & DIALOGS - MINIMAL REDESIGN
+   Per dialogs-modals-spec.md
+
+   Key changes:
+   - Icon 24px inline with title (no large icon with halo)
+   - Black title
+   - Gray secondary buttons for neutral actions
+   - Slate for CTA primary buttons (monochromatic)
+   ============================================ */
+
+// ============================================
+// VARIABLES
+// ============================================
+$modal-bg: #ffffff;
+$modal-radius: 12px;
+$modal-shadow: 0 8px 32px rgba(0, 0, 0, 0.16);
+$overlay-bg: rgba(17, 20, 24, 0.5);
+
+$color-success: #10B981;
+$color-error: #EF4444;
+$color-warning: #F59E0B;
+$color-info: #6B7280;
+
+$color-text-primary: #111418;
+$color-text-secondary: #6B7280;
+$color-border: #e2e4e8;
+$color-bg-subtle: #fafbfc;
+
+$transition: 150ms ease;
+
+// ============================================
+// OVERLAY
+// ============================================
 .alert-container, .dialog-container {
-  position: absolute;
-  width: 100%; height: 100%;
-  background-color: rgba(0, 0, 0, 0.3);
-  z-index: 9999;
+  position: fixed;
+  inset: 0;
+  background: $overlay-bg;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: modalFadeIn 150ms ease;
 }
+
+// ============================================
+// MODAL CARD
+// ============================================
 .alert-card, .dialog-card {
-  position: absolute;
-  top: 30%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  padding: 10px 20px;
-  width: 450px;
-  height: 280px;
-  background-color: whitesmoke;
-  border-radius: calc(var(--radius) * 3);
-  box-shadow: 0 0 10px gray;
+  position: relative;
+  background: $modal-bg;
+  border-radius: $modal-radius;
+  box-shadow: $modal-shadow;
+  max-width: 440px;
+  width: 90%;
+  overflow: hidden;
+  animation: modalSlideUp 200ms ease;
+
+  // Reset for minimal design
+  min-height: auto;
+  padding: 0;
+  top: auto;
+  left: auto;
+  transform: none;
 
   h1 {
+    font-family: 'Inter Variable', -apple-system, sans-serif;
+    font-size: 18px;
     font-weight: 600;
-    font-size: 1.5em;
-    color: var(--accent)!important;
-    text-align: center;
+    color: $color-text-primary; // Always black, not colored
+    margin: 0;
+    line-height: 1.3;
+    text-align: left;
   }
-
-  
 }
-.alert-header {
-  margin: 20px auto;
-  width: 80px;
-  height: 80px;
-  padding: 10px 10px;
-  border-radius: 50px;
-  background-color: #E1FAF2; // success
+
+// ============================================
+// MODAL BODY (icon + title + message)
+// ============================================
+.alert-body, .dialog-body {
+  padding: 24px 20px;
+}
+
+// Icon + Title inline container
+.modal-icon-title {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+// Icon styling - small 24px inline
+.modal-icon {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
   justify-content: center;
 
-  & .bi {
-    position: absolute;
-    right: 30px;
-    font-size: 1.5em;
-    top: 30px;
-
+  i {
+    font-size: 24px;
   }
 
-  & .alert-sign-outer {
-    margin: auto;
-    width: 60px;
-    height: 60px;
-    border-radius: 50px;
-    background-color: #D3F8EC; // success
-    padding: 7px 14px;
-
-  }
-  .alert-sign-inner::before {
-    width: 40px;
-    height: 40px;
-    margin: auto;
-
-    border-radius: 50%;
-    font-family: bootstrap-icons;
-    font-size: 32px;
-    content: '\F26B';
-    
-    color: #31C79B; // var(--success); // success
-  }
+  &.success { color: $color-success; }
+  &.error { color: $color-error; }
+  &.warning { color: $color-warning; }
+  &.info { color: $color-info; }
 }
 
-.dialog-header {
-  margin: 20px auto;
-  width: 80px;
-  height: 80px;
-  padding: 10px 10px;
-  border-radius: 50px;
-  background-color: #FEF5EB; //#F1F1F8; // #EFF8FA; // #E0E7F5; // success
-  justify-content: center;
-
-  & .bi {
-    position: absolute;
-    right: 30px;
-    font-size: 1.5em;
-    top: 30px;
-
-  }
-
-  & .dialog-sign-outer {
-    margin: auto;
-    width: 60px;
-    height: 60px;
-    border-radius: 50px;
-    background-color: #FEEBD8; // #E4E4F2; // #E0F1F5; // #D1DBF0; // success
-    padding: 7px 14px;
-
-  }
-  .dialog-sign-inner::before {
-    width: 40px;
-    height: 40px;
-    margin: auto;
-
-    border-radius: 50%;
-    font-family: bootstrap-icons;
-    font-size: 32px;
-    content: '\F505';
-    
-    color:#EC7B09; // #7776BC; //#46B1C9; // #778FCF; // var(--success); // success
-  }
+// Legacy header support - hide the large icon
+.alert-header, .dialog-header {
+  display: none; // Remove the large icon with halo
 }
 
-.alert-card.error {
-  .alert-header {
-    background-color: #FCEDF2; // success
-    
-    & .alert-sign-outer {
-      background-color: #F9DCE6; // success
-    }
-    .alert-sign-inner::before {
-      content: '\F333';
-      
-      color: #DF4376; // var(--success); // success
-    }
-  }
-}
-
+// Message/description
 .alert-message, .dialog-message {
-  text-align: center;
+  font-family: 'Inter Variable', -apple-system, sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+  color: $color-text-secondary;
+  line-height: 1.5;
+  margin: 0;
+  text-align: left;
+  padding-left: 36px; // Align with title (24px icon + 12px gap)
 }
 
+// When there's no icon, remove padding
+.dialog-card:not(:has(.modal-icon)) .dialog-message {
+  padding-left: 0;
+}
+
+// ============================================
+// FOOTER / BUTTON BAR
+// ============================================
 .alert-button-bar, .dialog-button-bar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 16px 20px;
+  border-top: 1px solid $color-border;
+  background: $color-bg-subtle;
+
+  // Reset legacy styles
+  position: relative;
+  bottom: auto;
+  left: auto;
+  width: auto;
+  height: auto;
+  min-height: auto;
+  border-radius: 0;
+}
+
+// ============================================
+// BUTTONS
+// ============================================
+.btn {
+  padding: 10px 20px;
+  font-family: 'Inter Variable', -apple-system, sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all $transition;
+
+  &:focus-visible {
+    outline: 2px solid #475569;
+    outline-offset: 2px;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+// Secondary button (for neutral actions: Done, Close, Cancel, Got it)
+.alert-btn, .btn-secondary {
+  color: #374151;
+  background: #ffffff;
+  border: 1px solid #d0d3d8;
+
+  // Icons should be slate on light backgrounds
+  i, .bi, svg {
+    color: #475569;
+  }
+
+  &:hover:not(:disabled) {
+    background: #f1f5f9;
+    border-color: #b8bcc4;
+    transform: none; // Remove bounce effect
+    box-shadow: none;
+  }
+}
+
+// Primary button (for CTA: Save, Create, Submit)
+.btn-primary {
+  color: #ffffff;
+  background: #475569;
+  border: none;
+
+  // CRITICAL: Icons must be white on dark backgrounds
+  i, .bi, svg {
+    color: #ffffff !important;
+  }
+
+  &:hover:not(:disabled) {
+    background: #334155;
+  }
+}
+
+// Dialog confirm button - can be primary or secondary depending on action
+.dialog-btn {
+  color: #ffffff;
+  background: #475569;
+  border: none;
+
+  // CRITICAL: Icons must be white on dark backgrounds
+  i, .bi, svg {
+    color: #ffffff !important;
+  }
+
+  &:hover:not(:disabled) {
+    background: #334155;
+    transform: none;
+    box-shadow: none;
+  }
+}
+
+// Cancel button - secondary style
+.dialog-cancel-btn {
+  color: #374151;
+  background: #ffffff;
+  border: 1px solid #d0d3d8;
+
+  &:hover:not(:disabled) {
+    background: #f1f5f9;
+    border-color: #b8bcc4;
+  }
+}
+
+// Destructive button (for Delete, Remove, Discard)
+.btn-destructive {
+  color: #ffffff;
+  background: #EF4444;
+  border: none;
+
+  // CRITICAL: Icons must be white on dark backgrounds
+  i, .bi, svg {
+    color: #ffffff !important;
+  }
+
+  &:hover:not(:disabled) {
+    background: #DC2626;
+  }
+
+  &:focus-visible {
+    outline-color: #EF4444;
+  }
+}
+
+// Slate button (for Logout, Save & Exit - neutral but actionable)
+.btn-slate {
+  color: #ffffff;
+  background: #475569; // Slate-600
+  border: none;
+
+  // CRITICAL: Icons must be white on dark backgrounds
+  i, .bi, svg {
+    color: #ffffff !important;
+  }
+
+  &:hover:not(:disabled) {
+    background: #334155; // Slate-700
+    color: #ffffff; // Keep text white on hover
+  }
+
+  &:focus-visible {
+    outline-color: #475569;
+  }
+}
+
+// Warning/discard button (for "Don't save" - secondary with warning hint)
+.btn-text-only {
+  color: #dc2626; // Red-600 - indicates discard/warning action
+  background: #ffffff;
+  border: 1px solid #fca5a5; // Red-300 - subtle red border
+  padding: 10px 16px;
+
+  &:hover:not(:disabled) {
+    color: #b91c1c; // Red-700
+    background: #fef2f2; // Red-50
+    border-color: #f87171; // Red-400
+  }
+
+  &:focus-visible {
+    outline-color: #dc2626;
+  }
+}
+
+// Ghost button (for links in About dialog)
+.btn-ghost {
+  padding: 8px 12px;
+  font-size: 13px;
+  color: $color-text-secondary;
+  background: transparent;
+  border: none;
+
+  &:hover:not(:disabled) {
+    color: $color-text-primary;
+    background: #f1f5f9;
+  }
+}
+
+// ============================================
+// ANIMATIONS
+// ============================================
+@keyframes modalFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes modalSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+// Legacy animation names (keep for compatibility)
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+// ============================================
+// SPECIFIC ALERT TYPE VARIANTS
+// ============================================
+
+// Success alert - uses .alert-btn as secondary (gray) "Done" button
+.alert-card.success {
+  .alert-btn {
+    // Gray secondary button for "Done"
+    color: #374151;
+    background: #ffffff;
+    border: 1px solid #d0d3d8;
+
+    &:hover {
+      background: #f1f5f9;
+      border-color: #b8bcc4;
+    }
+  }
+}
+
+// Error alert
+.alert-card.error {
+  .alert-btn {
+    // Gray secondary button for "Close" or "Try Again"
+    color: #374151;
+    background: #ffffff;
+    border: 1px solid #d0d3d8;
+
+    &:hover {
+      background: #f1f5f9;
+      border-color: #b8bcc4;
+    }
+  }
+}
+
+// Warning alert
+.alert-card.warning {
+  // May have multiple buttons - primary for Save, secondary for others
+}
+
+// ============================================
+// TOAST ALERT STYLES
+// Non-blocking toast notifications that auto-dismiss
+// ============================================
+
+.toast-alert-container {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 10000;
+  pointer-events: none;
+}
+
+.toast-alert {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  min-width: 320px;
+  max-width: 420px;
+  padding: 16px;
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow:
+    0 4px 12px rgba(0, 0, 0, 0.08),
+    0 8px 32px rgba(0, 0, 0, 0.12),
+    0 0 0 1px rgba(0, 0, 0, 0.04);
+  pointer-events: auto;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  animation: toastSlideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+
+  &:hover {
+    box-shadow:
+      0 6px 16px rgba(0, 0, 0, 0.1),
+      0 12px 40px rgba(0, 0, 0, 0.14),
+      0 0 0 1px rgba(0, 0, 0, 0.06);
+  }
+
+  // Variant colors
+  &--success {
+    border-left: 4px solid $color-success;
+
+    .toast-alert__icon {
+      color: $color-success;
+    }
+  }
+
+  &--error {
+    border-left: 4px solid $color-error;
+
+    .toast-alert__icon {
+      color: $color-error;
+    }
+  }
+
+  &--warning {
+    border-left: 4px solid $color-warning;
+
+    .toast-alert__icon {
+      color: $color-warning;
+    }
+  }
+
+  &--info {
+    border-left: 4px solid $color-info;
+
+    .toast-alert__icon {
+      color: $color-info;
+    }
+  }
+
+  // Exit animation
+  &--exiting {
+    animation: toastSlideOut 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+}
+
+.toast-alert__icon {
+  flex-shrink: 0;
+  font-size: 20px;
+  line-height: 1;
+}
+
+.toast-alert__content {
+  flex: 1;
+  min-width: 0;
+}
+
+.toast-alert__title {
+  font-family: 'Inter Variable', -apple-system, sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  color: $color-text-primary;
+  line-height: 1.3;
+  margin-bottom: 2px;
+}
+
+.toast-alert__message {
+  font-family: 'Inter Variable', -apple-system, sans-serif;
+  font-size: 13px;
+  font-weight: 400;
+  color: $color-text-secondary;
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+.toast-alert__close {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  color: $color-text-secondary;
+  cursor: pointer;
+  transition: all 150ms ease;
+  margin: -4px -4px -4px 0;
+
+  &:hover {
+    background: #f1f5f9;
+    color: $color-text-primary;
+  }
+
+  i {
+    font-size: 18px;
+  }
+}
+
+.toast-alert__progress {
   position: absolute;
   bottom: 0;
   left: 0;
-  width: 100%;
-  height: 70px;
-  margin: auto;
-  display: flex;
-  justify-content: space-evenly;
-  background-color: var(--bg-2-5);
-  border-bottom-left-radius: calc(var(--radius) * 3);
-  border-bottom-right-radius: calc(var(--radius) * 3);
-  text-align: center;
-  padding-top: 10px;
-  border: 2px solid transparent;
+  height: 3px;
+  background: linear-gradient(90deg, rgba(71, 85, 105, 0.3) 0%, rgba(71, 85, 105, 0.6) 100%);
+  border-radius: 0 0 0 12px;
+  animation: toastProgress linear forwards;
+  transform-origin: left;
 }
 
-.alert-btn {
-  display: inline-block;
-  background-color: var(--color);
-  color: white;
-  &:hover {
-    background-color: transparent;
-    color: var(--color);
-    border: 2px solid var(--color)!important;
+// Toast animations
+@keyframes toastSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(100%);
   }
-
-}
-
-.dialog-btn {
-  display: inline-block;
-  background-color: var(--color);
-  color: white;
-  border: 2px solid var(--color)!important;
-
-  &:hover {
-    background-color: transparent;
-    color: var(--color);
-    border: 2px solid var(--color)!important;
+  to {
+    opacity: 1;
+    transform: translateX(0);
   }
-
 }
 
-.dialog-cancel-btn {
-  display: inline-block;
-  background-color: transparent;
-  color: var(--color);
-  margin-right: 20px;
-  border: 2px solid var(--color)!important;
-  &:hover {
-    background-color: var(--color)!important;
-    color: white!important;
-    border: 2px solid var(--color)!important;
+@keyframes toastSlideOut {
+  from {
+    opacity: 1;
+    transform: translateX(0);
   }
-
+  to {
+    opacity: 0;
+    transform: translateX(100%);
+  }
 }
 
+@keyframes toastProgress {
+  from {
+    width: 100%;
+  }
+  to {
+    width: 0%;
+  }
+}

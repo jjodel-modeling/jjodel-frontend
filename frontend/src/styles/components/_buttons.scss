@@ -1,0 +1,355 @@
+/**
+ * JJODEL GLOBAL BUTTON STYLES
+ *
+ * Centralized button styles using design tokens.
+ * All buttons across the app should use these classes.
+ *
+ * Usage:
+ *   <button class="btn btn-primary">Primary Action</button>
+ *   <button class="btn btn-secondary">Secondary</button>
+ *   <button class="btn btn-outline">Outline</button>
+ *   <button class="btn btn-ghost">Ghost</button>
+ *   <button class="btn btn-danger">Delete</button>
+ *
+ * Size Variants:
+ *   <button class="btn btn-primary btn-sm">Small</button>
+ *   <button class="btn btn-primary btn-lg">Large</button>
+ *
+ * Full Width:
+ *   <button class="btn btn-primary btn-block">Full Width</button>
+ */
+
+/* ============================================
+   BASE BUTTON
+   ============================================ */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2, 8px);
+  padding: var(--space-2, 8px) var(--space-4, 16px);
+  min-height: 36px;
+  font-family: var(--font-sans, 'Inter Variable', -apple-system, sans-serif);
+  font-size: var(--text-sm, 14px);
+  font-weight: var(--font-medium, 500);
+  line-height: var(--leading-normal, 1.5);
+  text-decoration: none;
+  white-space: nowrap;
+  border: none;
+  border-radius: var(--radius-md, 6px);
+  cursor: pointer;
+  transition: all 150ms ease;
+  user-select: none;
+
+  /* Icon sizing */
+  i, .bi {
+    font-size: 16px;
+    line-height: 1;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--color-accent, #475569);
+    outline-offset: 2px;
+  }
+
+  &:disabled,
+  &.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
+  }
+}
+
+/* ============================================
+   PRIMARY BUTTON - WITH GRADIENT
+   Main call-to-action buttons
+   ============================================ */
+
+.btn-primary,
+.btn-primary-solid {
+  background: var(--gradient-primary);
+  color: var(--color-text-inverse, #ffffff);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+
+  /* CRITICAL: Icons must be white on dark backgrounds */
+  i, .bi, svg {
+    color: #ffffff !important;
+  }
+
+  &:hover:not(:disabled) {
+    background: var(--gradient-primary-hover);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    transform: translateY(-1px);
+  }
+
+  &:active:not(:disabled) {
+    background: var(--gradient-primary-active);
+    transform: translateY(0);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  }
+
+  &:disabled {
+    background: var(--color-text-disabled, #94a3b8);
+    box-shadow: none;
+  }
+}
+
+/* ============================================
+   SECONDARY BUTTON - Outlined
+   Secondary actions, cancel buttons
+   ============================================ */
+
+.btn-secondary,
+.btn-secondary-outlined {
+  background: var(--color-bg-secondary, #ffffff);
+  color: var(--color-text-secondary, #334155);
+  border: 1px solid var(--color-border-primary, #cbd5e1);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+
+  /* Icons should be slate on light backgrounds */
+  i, .bi, svg {
+    color: #475569;
+  }
+
+  &:hover:not(:disabled) {
+    background: var(--color-bg-tertiary, #f1f5f9);
+    border-color: var(--color-border-hover, #94a3b8);
+  }
+
+  &:active:not(:disabled) {
+    background: var(--color-bg-active, #e2e8f0);
+  }
+}
+
+/* ============================================
+   OUTLINE BUTTON
+   Minimal style, no fill
+   ============================================ */
+
+.btn-outline {
+  background: transparent;
+  color: var(--color-text-secondary, #334155);
+  border: 1px solid var(--color-border-primary, #cbd5e1);
+
+  /* Icons should be slate on light backgrounds */
+  i, .bi, svg {
+    color: #475569;
+  }
+
+  &:hover:not(:disabled) {
+    background: var(--color-bg-hover, #f8fafc);
+    border-color: var(--color-border-hover, #94a3b8);
+  }
+
+  &:active:not(:disabled) {
+    background: var(--color-bg-active, #e2e8f0);
+  }
+}
+
+/* ============================================
+   GHOST BUTTON
+   No border, very minimal
+   ============================================ */
+
+.btn-ghost {
+  background: transparent;
+  color: var(--color-text-secondary, #334155);
+  border: none;
+
+  /* Icons should be slate on light backgrounds */
+  i, .bi, svg {
+    color: #475569;
+  }
+
+  &:hover:not(:disabled) {
+    background: var(--color-bg-hover, #f1f5f9);
+  }
+
+  &:active:not(:disabled) {
+    background: var(--color-bg-active, #e2e8f0);
+  }
+}
+
+/* ============================================
+   DANGER BUTTON
+   Destructive actions (delete, remove)
+   ============================================ */
+
+.btn-danger {
+  background: var(--color-error, #ef4444);
+  color: var(--color-text-inverse, #ffffff);
+  border: none;
+
+  /* Icons white on dark/colored backgrounds */
+  i, .bi, svg {
+    color: #ffffff !important;
+  }
+
+  &:hover:not(:disabled) {
+    background: var(--color-error-hover, #dc2626);
+  }
+
+  &:active:not(:disabled) {
+    background: #b91c1c; // red-700
+  }
+}
+
+/* ============================================
+   SIZE VARIANTS
+   ============================================ */
+
+.btn-sm {
+  padding: var(--space-1, 4px) var(--space-3, 12px);
+  min-height: 28px;
+  font-size: var(--text-xs, 12px);
+
+  i, .bi {
+    font-size: 14px;
+  }
+}
+
+.btn-lg {
+  padding: var(--space-3, 12px) var(--space-6, 24px);
+  min-height: 44px;
+  font-size: var(--text-base, 16px);
+
+  i, .bi {
+    font-size: 18px;
+  }
+}
+
+/* ============================================
+   LAYOUT VARIANTS
+   ============================================ */
+
+/* Full width button */
+.btn-block {
+  width: 100%;
+}
+
+/* Icon-only button */
+.btn-icon {
+  padding: var(--space-2, 8px);
+  min-width: 36px;
+
+  &.btn-sm {
+    padding: var(--space-1, 4px);
+    min-width: 28px;
+    min-height: 28px;
+  }
+
+  &.btn-lg {
+    padding: var(--space-3, 12px);
+    min-width: 44px;
+    min-height: 44px;
+  }
+}
+
+/* ============================================
+   BUTTON GROUP
+   ============================================ */
+
+.btn-group {
+  display: inline-flex;
+  gap: var(--space-2, 8px);
+
+  &.btn-group-vertical {
+    flex-direction: column;
+  }
+}
+
+/* ============================================
+   SLATE/DARK BACKGROUND BUTTONS
+   Icons and text must always be white
+   ============================================ */
+
+/* Explicit slate button variant */
+.btn-slate {
+  background: #475569; // slate-600
+  color: #ffffff;
+  border: none;
+
+  i, .bi, svg, span {
+    color: #ffffff !important;
+  }
+
+  &:hover:not(:disabled) {
+    background: #334155; // slate-700
+  }
+
+  &:active:not(:disabled) {
+    background: #1e293b; // slate-800
+  }
+}
+
+/* Slate gradient variant */
+.btn-slate-gradient {
+  background: linear-gradient(135deg, #64748b 0%, #475569 100%);
+  color: #ffffff;
+  border: none;
+
+  i, .bi, svg, span {
+    color: #ffffff !important;
+  }
+
+  &:hover:not(:disabled) {
+    background: linear-gradient(135deg, #475569 0%, #334155 100%);
+  }
+}
+
+/* ============================================
+   GLOBAL RULE: White icons on dark backgrounds
+   Applies to any button with slate-500+ background
+   ============================================ */
+
+button,
+.btn {
+  /* Slate solid backgrounds */
+  &.bg-slate-500,
+  &.bg-slate-600,
+  &.bg-slate-700,
+  &.bg-slate-800,
+  &.bg-slate-900 {
+    color: #ffffff;
+
+    i, .bi, svg {
+      color: #ffffff !important;
+    }
+  }
+}
+
+/* Save buttons in editors/modals */
+.save-btn,
+.btn-save,
+[class*="save-btn"],
+[class*="btn-save"] {
+  i, .bi, svg {
+    color: inherit;
+  }
+
+  /* When on dark/gradient background */
+  &.btn-primary,
+  &.btn-slate,
+  &[style*="gradient"],
+  &[style*="slate"] {
+    i, .bi, svg {
+      color: #ffffff !important;
+    }
+  }
+}
+
+/* Editor fullscreen modal buttons */
+.editor-fullscreen-modal,
+.monaco-fullscreen-modal,
+.fullscreen-editor {
+  .btn-primary,
+  .save-btn,
+  .btn-save,
+  button[class*="primary"],
+  button[class*="save"] {
+    i, .bi, svg {
+      color: #ffffff !important;
+    }
+  }
+}

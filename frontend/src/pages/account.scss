@@ -1,0 +1,588 @@
+// ============================================
+// Account/Profile Page - Redesign
+// Design tokens from CLAUDE.md
+// ============================================
+
+.account-page {
+    max-width: 1100px;
+    width: 100%;
+    margin: 0 auto;
+    padding: 40px 24px;
+    font-family: 'Inter Variable', -apple-system, BlinkMacSystemFont, sans-serif;
+
+    // Align to top, not vertically centered
+    align-self: flex-start;
+}
+
+// ============================================
+// Page Header
+// ============================================
+.account-header {
+    margin-bottom: 32px;
+
+    &__title {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-size: 28px;
+        font-weight: 700;
+        color: #111418;
+        margin: 0 0 8px 0;
+
+        i {
+            font-size: 32px;
+            color: #475569;
+        }
+    }
+
+    &__subtitle {
+        font-size: 15px;
+        color: #6B7280;
+        margin: 0;
+    }
+}
+
+// ============================================
+// Account Cards
+// ============================================
+.account-content {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.account-card {
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 16px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    overflow: hidden;
+
+    &__header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 24px;
+        border-bottom: 1px solid #e5e7eb;
+        background: #f8fafc;
+    }
+
+    &__header-content {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+
+        i {
+            font-size: 20px;
+            color: #475569;
+        }
+
+        h2 {
+            font-size: 18px;
+            font-weight: 600;
+            color: #111418;
+            margin: 0;
+        }
+    }
+
+    &__status {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 13px;
+        font-weight: 500;
+        color: #f59e0b;
+
+        i {
+            font-size: 20px;
+            animation: pulse 2s infinite;
+        }
+    }
+
+    &__body {
+        padding: 32px 24px;
+    }
+
+    &__footer {
+        padding: 20px 24px;
+        border-top: 1px solid #e5e7eb;
+        background: #f8fafc;
+        display: flex;
+        justify-content: flex-end;
+    }
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+// ============================================
+// Form Layout
+// ============================================
+.account-form {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 24px;
+
+    &--single {
+        grid-template-columns: 1fr;
+        max-width: 500px;
+    }
+}
+
+.form-field {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+
+    &--full {
+        grid-column: 1 / -1;
+    }
+}
+
+.form-label {
+    font-size: 13px;
+    font-weight: 500;
+    color: #374151;
+
+    &__required {
+        color: #ef4444;
+        margin-left: 2px;
+    }
+}
+
+.form-input,
+.form-select {
+    width: 100%;
+    padding: 10px 12px;
+    font-size: 14px;
+    font-family: 'Inter Variable', -apple-system, BlinkMacSystemFont, sans-serif;
+    color: #111418;
+    background: #ffffff;
+    border: 1.5px solid #d1d5db;
+    border-radius: 8px;
+    transition: all 0.2s;
+
+    &::placeholder {
+        color: #9ca3af;
+    }
+
+    &:hover {
+        border-color: #9ca3af;
+    }
+
+    &:focus {
+        outline: none;
+        border-color: #475569;
+        box-shadow: 0 0 0 3px rgba(71, 85, 105, 0.1);
+    }
+
+    &--error {
+        border-color: #ef4444;
+        background: #fef2f2;
+
+        &:focus {
+            border-color: #ef4444;
+            box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+        }
+    }
+}
+
+.form-select {
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%236B7280' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 36px;
+}
+
+.form-error {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: #ef4444;
+    margin-top: 4px;
+
+    i {
+        font-size: 14px;
+        flex-shrink: 0;
+    }
+}
+
+// ============================================
+// Password Input with Toggle
+// ============================================
+.password-input {
+    position: relative;
+    width: 100%;
+
+    input {
+        width: 100%;
+        padding-right: 44px;
+    }
+
+    &__toggle {
+        position: absolute;
+        right: 8px;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 32px;
+        height: 32px;
+        border: none;
+        background: transparent;
+        border-radius: 6px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        color: #6B7280;
+        transition: all 0.2s;
+
+        &:hover {
+            background: #f1f5f9;
+            color: #111418;
+        }
+
+        i {
+            font-size: 16px;
+        }
+    }
+}
+
+// ============================================
+// Password Strength Indicator
+// ============================================
+.password-strength {
+    margin-top: 8px;
+
+    &__bar {
+        width: 100%;
+        height: 4px;
+        background: #e5e7eb;
+        border-radius: 2px;
+        overflow: hidden;
+        margin-bottom: 6px;
+    }
+
+    &__fill {
+        height: 100%;
+        transition: all 0.3s ease;
+        border-radius: 2px;
+
+        &--weak {
+            background: #ef4444;
+        }
+
+        &--medium {
+            background: #f59e0b;
+        }
+
+        &--strong {
+            background: #10b981;
+        }
+    }
+
+    &__label {
+        font-size: 12px;
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+
+        &--weak {
+            color: #ef4444;
+        }
+
+        &--medium {
+            color: #f59e0b;
+        }
+
+        &--strong {
+            color: #10b981;
+        }
+    }
+}
+
+// ============================================
+// Preferences
+// ============================================
+.preferences-list {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.preference-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 16px;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+
+    &:hover {
+        background: #f8fafc;
+        border-color: #cbd5e1;
+    }
+
+    &__content {
+        flex: 1;
+    }
+
+    &__title {
+        font-size: 14px;
+        font-weight: 600;
+        color: #111418;
+        margin-bottom: 4px;
+    }
+
+    &__description {
+        font-size: 13px;
+        color: #6B7280;
+        line-height: 1.5;
+    }
+}
+
+.preference-toggle {
+    width: 48px;
+    height: 28px;
+    background: #cbd5e1;
+    border-radius: 14px;
+    position: relative;
+    cursor: pointer;
+    transition: background 0.2s;
+    flex-shrink: 0;
+
+    &__thumb {
+        position: absolute;
+        top: 3px;
+        left: 3px;
+        width: 22px;
+        height: 22px;
+        background: #ffffff;
+        border-radius: 50%;
+        transition: transform 0.2s;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+    }
+
+    &--active {
+        background: linear-gradient(135deg, #64748b 0%, #475569 100%);
+
+        .preference-toggle__thumb {
+            transform: translateX(20px);
+        }
+    }
+}
+
+// ============================================
+// Buttons
+// ============================================
+.account-page .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px 24px;
+    font-size: 14px;
+    font-weight: 600;
+    font-family: 'Inter Variable', -apple-system, BlinkMacSystemFont, sans-serif;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s;
+
+    i {
+        font-size: 16px;
+    }
+
+    &--primary {
+        background: linear-gradient(135deg, #64748b 0%, #475569 100%);
+        color: #ffffff;
+
+        &:hover:not(:disabled) {
+            background: linear-gradient(135deg, #475569 0%, #334155 100%);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(71, 85, 105, 0.3);
+        }
+
+        &:active:not(:disabled) {
+            transform: translateY(0);
+        }
+
+        &:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+    }
+}
+
+.spin {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+// ============================================
+// Dark Mode
+// ============================================
+@media (prefers-color-scheme: dark) {
+    .account-header {
+        &__title {
+            color: #f1f5f9;
+
+            i {
+                color: #94a3b8;
+            }
+        }
+
+        &__subtitle {
+            color: #94a3b8;
+        }
+    }
+
+    .account-card {
+        background: #1e293b;
+        border-color: #334155;
+
+        &__header {
+            border-bottom-color: #334155;
+            background: #0f172a;
+
+            i {
+                color: #94a3b8;
+            }
+
+            h2 {
+                color: #f1f5f9;
+            }
+        }
+
+        &__footer {
+            border-top-color: #334155;
+            background: #0f172a;
+        }
+    }
+
+    .form-label {
+        color: #cbd5e1;
+
+        &__required {
+            color: #f87171;
+        }
+    }
+
+    .form-input,
+    .form-select {
+        background: #0f172a;
+        border-color: #334155;
+        color: #f1f5f9;
+
+        &::placeholder {
+            color: #64748b;
+        }
+
+        &:hover {
+            border-color: #475569;
+        }
+
+        &:focus {
+            border-color: #64748b;
+            box-shadow: 0 0 0 3px rgba(148, 163, 184, 0.2);
+        }
+
+        &--error {
+            border-color: #ef4444;
+            background: #3f1f1f;
+        }
+    }
+
+    .password-input__toggle {
+        color: #94a3b8;
+
+        &:hover {
+            background: #334155;
+            color: #f1f5f9;
+        }
+    }
+
+    .password-strength__bar {
+        background: #334155;
+    }
+
+    .preference-item {
+        border-color: #334155;
+
+        &:hover {
+            background: #0f172a;
+            border-color: #475569;
+        }
+
+        &__title {
+            color: #f1f5f9;
+        }
+
+        &__description {
+            color: #94a3b8;
+        }
+    }
+
+    .preference-toggle {
+        background: #475569;
+
+        &--active {
+            background: linear-gradient(135deg, #64748b 0%, #475569 100%);
+        }
+    }
+
+    .account-page .btn--primary {
+        background: linear-gradient(135deg, #64748b 0%, #475569 100%);
+
+        &:hover:not(:disabled) {
+            background: linear-gradient(135deg, #475569 0%, #64748b 100%);
+        }
+    }
+}
+
+// ============================================
+// Responsive
+// ============================================
+@media (max-width: 768px) {
+    .account-page {
+        padding: 24px 16px;
+    }
+
+    .account-header__title {
+        font-size: 24px;
+    }
+
+    .account-form {
+        grid-template-columns: 1fr;
+    }
+
+    .form-field {
+        &--full {
+            grid-column: 1;
+        }
+    }
+
+    .preference-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+
+    .account-card__footer {
+        .btn {
+            width: 100%;
+        }
+    }
+}

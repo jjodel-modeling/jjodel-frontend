@@ -14,66 +14,82 @@ import {
     Select
 } from '../../../../joiner';
 import {FakeStateProps} from "../../../../joiner/types";
-import {connect} from "react-redux"
+import {connect} from "react-redux";
+import {Toggle} from '../../../ui/Toggle/Toggle';
 import {SizeInput} from "../../../forEndUser/SizeInput";
+
 function NodeDataComponent(props: AllProps) {
     const view = props.view;
     let dview = (view.__raw || view) as DViewElement;
     const readOnly = props.readonly;
-/*
-    const objectTypes = ["", "DModel", "DPackage", "DEnumerator", "DEnumLiteral", "DClass", "DAttribute", "DReference", "DOperation", "DParameter", "DObject", "DValue", "DStructuralFeature"];
 
-    const classesOptions = <optgroup label={"Object type"}>
-        {objectTypes.map((o)=><option key={o} value={o}>{o.length ? o.substring(1) : "anything"}</option>)}
-    </optgroup>;*/
+    // Helper to update view field
+    const setField = (field: string, value: boolean) => {
+        if (!readOnly && view) {
+            (view as any)[field] = value;
+        }
+    };
 
     return(<section className='node'>
-        {/*<Select obj={view} field={"useSizeFrom"} readonly={readOnly} options={
-            <optgroup label="Node position depends from what?">
-                <option value={EuseSizeFrom.nv}>Node & View: Will change his position when the view or graph changes</option>
-                <option value={EuseSizeFrom.n}>Node only: Will keep his position when view changes, but not when the graph is changed</option>
-                <option value={EuseSizeFrom.m}>Model: Will keep his position regardless of view or graph applied, but cannot represent the same model fragment with two different nodes</option>
-            </optgroup>
-        } tooltip={ "Node & View: Will change his position when the view or graph changes.\n" +
-                    "Node only: Will keep his position when view changes, but not when the graph is changed.\n"+
-                    "Model: Will keep his position regardless of view or graph applied, but cannot represent the same model fragment with two different nodes."
-        }></Select>*/}
-
-        {/*[<Input data={view} field={"scalezoomx"} label={"Zoom X"} type={"number"}/>,                <Input data={view} field={"scalezoomy"} label={"Zoom Y"} type={"number"}/>]*/}
-
         <h5>Vertex</h5>
         <div className={'px-2'}>
             <label className={'input-container'}>
-                <b className={'me-2'}>Store Size in View:</b>
-                {<Input data={view} field={"storeSize"} readOnly={readOnly} tooltip={
-                    <div>On - The node position depends from the view currently displayed.<br/>Off - It depends from the
-                        graph.</div>} type={"checkbox"}/>
-                    /* on = EuseSizeFrom.nv,   off = EuseSizeFrom.n */
-                }
+                <b>Store Size in View</b>
+                <Toggle
+                    checked={!!view?.storeSize}
+                    onChange={(val) => setField('storeSize', val)}
+                    disabled={readOnly}
+                    size="sm"
+                />
             </label>
             <label className={'input-container'}>
-                <b className={'me-2'}>Lazy Update:</b>
-                <Input data={view} field={"lazySizeUpdate"} type={"checkbox"} tooltip={true} readOnly={readOnly}/>
-            </label>
-
-            <label className={'input-container'}>
-                <b className={'me-2'}>Adapt Width:</b>
-                <Input data={view} field={"adaptWidth"} type={"checkbox"} readOnly={readOnly} tooltip={true}/>
-            </label>
-
-            <label className={'input-container'}>
-                <b className={'me-2'}>Adapt Height:</b>
-                <Input data={view} field={"adaptHeight"} type={"checkbox"} readOnly={readOnly}/>
+                <b>Lazy Update</b>
+                <Toggle
+                    checked={!!view?.lazySizeUpdate}
+                    onChange={(val) => setField('lazySizeUpdate', val)}
+                    disabled={readOnly}
+                    size="sm"
+                />
             </label>
 
             <label className={'input-container'}>
-                <b className={'me-2'}>Draggable:</b>
-                <Input data={view} field={"draggable"} type={"checkbox"} readOnly={readOnly}/>
+                <b>Adapt Width</b>
+                <Toggle
+                    checked={!!view?.adaptWidth}
+                    onChange={(val) => setField('adaptWidth', val)}
+                    disabled={readOnly}
+                    size="sm"
+                />
             </label>
 
             <label className={'input-container'}>
-                <b className={'me-2'}>Resizable:</b>
-                <Input data={view} field={"resizable"} type={"checkbox"} readOnly={readOnly}/>
+                <b>Adapt Height</b>
+                <Toggle
+                    checked={!!view?.adaptHeight}
+                    onChange={(val) => setField('adaptHeight', val)}
+                    disabled={readOnly}
+                    size="sm"
+                />
+            </label>
+
+            <label className={'input-container'}>
+                <b>Draggable</b>
+                <Toggle
+                    checked={!!view?.draggable}
+                    onChange={(val) => setField('draggable', val)}
+                    disabled={readOnly}
+                    size="sm"
+                />
+            </label>
+
+            <label className={'input-container'}>
+                <b>Resizable</b>
+                <Toggle
+                    checked={!!view?.resizable}
+                    onChange={(val) => setField('resizable', val)}
+                    disabled={readOnly}
+                    size="sm"
+                />
             </label>
 
             <label className={'input-container'}>
@@ -86,16 +102,20 @@ function NodeDataComponent(props: AllProps) {
                 />
             </label>
 
-            <label className={'input-container'} data-hidden={dview.defaultVSize?.w}>
-                <b className={'me-2'}>Default Width:</b>
+            <label className={'input-container number-field'} hidden={dview.adaptWidth}>
+                <b>Default Width</b>
                 <Input data={view} type={"number"} readOnly={readOnly}
-                       getter={() => '' + view.defaultVSize.w} setter={(val) => view.defaultVSize = {w: +val} as any}/>
-            </label>
+                       inputClassName="number-input-compact"
+                       getter={() => (view.defaultVSize?.w || 0).toFixed(2)}
+                       setter={(val) => view.defaultVSize = {w: +val} as any}/>
+            </div>
 
-            <label className={'input-container'} data-hidden={dview.defaultVSize?.h}>
-                <b className={'me-2'}>Default Height:</b>
+            <label className={'input-container number-field'} hidden={dview.adaptHeight}>
+                <b>Default Height</b>
                 <Input data={view} type={"number"} readOnly={readOnly}
-                       getter={() => '' + view.defaultVSize.h} setter={(val) => view.defaultVSize = {h: +val} as any}/>
+                       inputClassName="number-input-compact"
+                       getter={() => (view.defaultVSize?.h || 0).toFixed(2)}
+                       setter={(val) => view.defaultVSize = {h: +val} as any} />
             </label>
         </div>
     </section>);

@@ -1,0 +1,55 @@
+/**
+ * JJODEL DESIGN TOKENS - BORDER RADIUS
+ * Rounding scale for UI elements
+ * Based on jjodel-ui-documentation.md Section 5.4
+ */
+
+:root {
+  /* ============================================
+     RADIUS SCALE
+     ============================================ */
+
+  --radius-none: 0;           /* 0px - Sharp corners */
+  --radius-sm: 4px;           /* Small - inputs, tags */
+  --radius-md: 8px;           /* Medium - buttons, cards */
+  --radius-lg: 12px;          /* Large - panels, modals */
+  --radius-xl: 16px;          /* Extra large - dialogs */
+  --radius-2xl: 24px;         /* Very large - special cases */
+  --radius-full: 9999px;      /* Fully rounded - pills, avatars */
+
+  /* ============================================
+     COMPONENT-SPECIFIC RADIUS
+     Common use cases
+     ============================================ */
+
+  --radius-button: var(--radius-md);      /* 8px - buttons */
+  --radius-input: var(--radius-md);       /* 8px - inputs, selects */
+  --radius-card: var(--radius-lg);        /* 12px - cards, panels */
+  --radius-modal: var(--radius-xl);       /* 16px - modals, dialogs */
+  --radius-dropdown: var(--radius-md);    /* 8px - dropdowns, menus */
+  --radius-tooltip: var(--radius-sm);     /* 4px - tooltips */
+  --radius-node: var(--radius-lg);        /* 12px - canvas nodes */
+
+  /* ============================================
+     LEGACY COMPATIBILITY
+     Map old radius variable to new system
+     TODO: Remove after full migration
+     ============================================ */
+
+  --radius: var(--radius-sm);             /* 4px - old default */
+  --tab-radius: var(--radius-sm);         /* 4px - tabs */
+  --btn-radius: var(--radius-md);         /* 8px - buttons */
+  --model-radius: var(--radius-lg);       /* 12px - model nodes */
+}
+
+/* ============================================
+   RADIUS UTILITY CLASSES (Optional)
+   ============================================ */
+
+.rounded-none { border-radius: var(--radius-none); }
+.rounded-sm { border-radius: var(--radius-sm); }
+.rounded-md { border-radius: var(--radius-md); }
+.rounded-lg { border-radius: var(--radius-lg); }
+.rounded-xl { border-radius: var(--radius-xl); }
+.rounded-2xl { border-radius: var(--radius-2xl); }
+.rounded-full { border-radius: var(--radius-full); }

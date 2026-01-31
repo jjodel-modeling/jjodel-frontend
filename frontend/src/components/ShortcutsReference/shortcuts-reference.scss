@@ -1,0 +1,408 @@
+// Shortcuts Reference Modal Styles
+// Following Jjodel UI Design System
+
+// Design tokens
+$color-accent-gradient: linear-gradient(135deg, #64748b 0%, #475569 100%);
+$color-accent-gradient-hover: linear-gradient(135deg, #475569 0%, #334155 100%);
+
+$color-text-primary: #1e293b;
+$color-text-secondary: #64748b;
+$color-text-tertiary: #94a3b8;
+$color-text-inverse: #ffffff;
+
+$color-bg-primary: #ffffff;
+$color-bg-secondary: #f8fafc;
+$color-bg-tertiary: #f1f5f9;
+
+$color-border: #e2e8f0;
+$color-border-light: #f1f5f9;
+
+$radius-sm: 4px;
+$radius-md: 6px;
+$radius-lg: 8px;
+$radius-xl: 12px;
+
+$transition-fast: 150ms ease;
+$transition-normal: 200ms ease;
+
+$font-family: 'Inter Variable', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+$font-family-mono: 'SF Mono', Monaco, 'Cascadia Code', 'Consolas', monospace;
+
+// Backdrop
+.shortcuts-reference-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+    z-index: 9998;
+    opacity: 0;
+    transition: opacity $transition-normal;
+
+    &.visible {
+        opacity: 1;
+    }
+}
+
+// Modal
+.shortcuts-reference-modal {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0.95);
+    width: 90%;
+    max-width: 800px;
+    max-height: 85vh;
+    background: $color-bg-primary;
+    border-radius: $radius-xl;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    opacity: 0;
+    transition: transform $transition-normal, opacity $transition-normal;
+    font-family: $font-family;
+
+    &.visible {
+        transform: translate(-50%, -50%) scale(1);
+        opacity: 1;
+    }
+
+    // Header
+    &__header {
+        position: relative;
+        padding: 20px 28px;
+        background: $color-accent-gradient;
+        color: $color-text-inverse;
+        flex-shrink: 0;
+    }
+
+    &__title {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-size: 20px;
+        font-weight: 600;
+        margin: 0;
+        color: $color-text-inverse;
+
+        i {
+            font-size: 22px;
+        }
+    }
+
+    &__close {
+        position: absolute;
+        top: 16px;
+        right: 16px;
+        width: 32px;
+        height: 32px;
+        border: none;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: $radius-md;
+        color: $color-text-inverse;
+        font-size: 16px;
+        cursor: pointer;
+        transition: all $transition-fast;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
+        &:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+    }
+
+    // Tabs
+    &__tabs {
+        display: flex;
+        gap: 4px;
+        padding: 16px 28px 0;
+        background: $color-bg-secondary;
+        border-bottom: 1px solid $color-border;
+        flex-shrink: 0;
+        overflow-x: auto;
+
+        button {
+            padding: 10px 18px;
+            border: none;
+            background: transparent;
+            color: $color-text-secondary;
+            font-family: $font-family;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            border-radius: $radius-md $radius-md 0 0;
+            transition: all $transition-fast;
+            position: relative;
+            white-space: nowrap;
+
+            &:hover {
+                background: $color-bg-tertiary;
+                color: $color-text-primary;
+            }
+
+            &.active {
+                background: $color-bg-primary;
+                color: $color-text-primary;
+                font-weight: 600;
+
+                &::after {
+                    content: '';
+                    position: absolute;
+                    bottom: -1px;
+                    left: 0;
+                    right: 0;
+                    height: 2px;
+                    background: #64748b;
+                }
+            }
+        }
+    }
+
+    // Content
+    &__content {
+        padding: 24px 28px;
+        overflow-y: auto;
+        flex: 1;
+    }
+
+    // Footer
+    &__footer {
+        padding: 16px 28px;
+        background: $color-bg-secondary;
+        border-top: 1px solid $color-border;
+        flex-shrink: 0;
+    }
+
+    &__hint {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin: 0;
+        font-size: 13px;
+        color: $color-text-secondary;
+
+        i {
+            color: #f59e0b;
+            font-size: 16px;
+        }
+
+        .keystroke {
+            margin: 0 2px;
+        }
+    }
+}
+
+// Section
+.shortcuts-section {
+    margin-bottom: 28px;
+
+    &:last-child {
+        margin-bottom: 0;
+    }
+
+    &__title {
+        font-size: 15px;
+        font-weight: 600;
+        color: $color-text-primary;
+        margin: 0 0 14px 0;
+        padding-bottom: 8px;
+        border-bottom: 2px solid $color-border;
+    }
+}
+
+// Table
+.shortcuts-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+
+    thead {
+        th {
+            text-align: left;
+            padding: 10px 12px;
+            background: $color-bg-secondary;
+            color: $color-text-secondary;
+            font-weight: 600;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid $color-border;
+
+            &:first-child {
+                border-radius: $radius-md 0 0 0;
+                width: 160px;
+            }
+
+            &:nth-child(2) {
+                width: 40%;
+            }
+
+            &:last-child {
+                border-radius: 0 $radius-md 0 0;
+            }
+        }
+    }
+
+    tbody {
+        tr {
+            transition: background-color $transition-fast;
+
+            &:hover {
+                background: $color-bg-secondary;
+            }
+
+            &:not(:last-child) {
+                border-bottom: 1px solid $color-border-light;
+            }
+        }
+
+        td {
+            padding: 10px 12px;
+            vertical-align: middle;
+        }
+    }
+
+    &__keys {
+        white-space: nowrap;
+
+        .keystroke {
+            margin-right: 4px;
+
+            &:last-child {
+                margin-right: 0;
+            }
+        }
+    }
+
+    &__description {
+        color: $color-text-primary;
+        font-weight: 500;
+    }
+
+    &__action {
+        color: $color-text-secondary;
+        font-size: 12px;
+
+        code {
+            font-family: $font-family-mono;
+            background: $color-bg-tertiary;
+            padding: 2px 6px;
+            border-radius: $radius-sm;
+            color: #475569;
+            font-size: 11px;
+        }
+    }
+}
+
+// Keystroke pill
+.keystroke {
+    font-family: $font-family-mono;
+    font-size: 11px;
+    font-weight: 500;
+    padding: 3px 7px;
+    background: $color-bg-tertiary;
+    border: 1px solid $color-border;
+    border-radius: $radius-sm;
+    color: $color-text-secondary;
+    min-width: 20px;
+    text-align: center;
+    white-space: nowrap;
+    display: inline-block;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+// Dark mode
+[data-theme="dark"] {
+    .shortcuts-reference-backdrop {
+        background: rgba(0, 0, 0, 0.7);
+    }
+
+    .shortcuts-reference-modal {
+        background: #1e293b;
+
+        &__tabs {
+            background: #0f172a;
+            border-bottom-color: #334155;
+
+            button {
+                color: #94a3b8;
+
+                &:hover {
+                    background: #1e293b;
+                    color: #cbd5e1;
+                }
+
+                &.active {
+                    background: #1e293b;
+                    color: #f1f5f9;
+
+                    &::after {
+                        background: #94a3b8;
+                    }
+                }
+            }
+        }
+
+        &__content {
+            background: #1e293b;
+        }
+
+        &__footer {
+            background: #0f172a;
+            border-top-color: #334155;
+        }
+
+        &__hint {
+            color: #94a3b8;
+        }
+    }
+
+    .shortcuts-section {
+        &__title {
+            color: #f1f5f9;
+            border-bottom-color: #334155;
+        }
+    }
+
+    .shortcuts-table {
+        thead th {
+            background: #0f172a;
+            color: #94a3b8;
+            border-bottom-color: #334155;
+        }
+
+        tbody {
+            tr:hover {
+                background: #0f172a;
+            }
+
+            tr:not(:last-child) {
+                border-bottom-color: #334155;
+            }
+        }
+
+        &__description {
+            color: #f1f5f9;
+        }
+
+        &__action {
+            color: #94a3b8;
+
+            code {
+                background: #0f172a;
+                color: #cbd5e1;
+            }
+        }
+    }
+
+    .keystroke {
+        background: rgba(255, 255, 255, 0.1);
+        border-color: rgba(255, 255, 255, 0.15);
+        color: #cbd5e1;
+    }
+}

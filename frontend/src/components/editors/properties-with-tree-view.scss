@@ -1,0 +1,472 @@
+// Properties with Tree View - Split Panel Styles
+// Combines Properties panel (left, FLUID) with Tree View (right, FIXED WIDTH)
+
+// Design tokens
+$color-border: #e2e4e8;
+$color-border-light: #f0f1f2;
+$color-bg-primary: #ffffff;
+$color-bg-secondary: #f8fafc;
+$color-bg-tertiary: #f1f5f9;
+$color-text-primary: #111418;
+$color-text-secondary: #6B7280;
+$color-text-tertiary: #9CA3AF;
+$color-accent: #475569;
+$color-accent-light: rgba(71, 85, 105, 0.1);
+$color-accent-blue: #3b82f6;
+
+$transition-fast: 150ms ease;
+$transition-normal: 250ms ease;
+
+$radius-sm: 4px;
+$radius-md: 6px;
+
+// ============================================
+// GLOBAL RESIZE CURSOR (applied to body)
+// ============================================
+
+body.resizing-tree-view {
+    cursor: col-resize !important;
+    user-select: none !important;
+
+    * {
+        cursor: col-resize !important;
+    }
+}
+
+// ============================================
+// MAIN CONTAINER
+// ============================================
+
+.properties-with-tree-view {
+    display: flex;
+    height: 100%;
+    width: 100%;
+    overflow: hidden;
+    background-color: $color-bg-primary;
+    position: relative;
+
+    // During resize, disable pointer events on children to prevent interference
+    &.is-resizing {
+        .properties-panel-container,
+        .tree-view-panel-container {
+            pointer-events: none;
+            user-select: none;
+        }
+
+        .panel-resizer-handle {
+            background-color: $color-accent-blue;
+            height: 100px;
+        }
+    }
+}
+
+// ============================================
+// PROPERTIES PANEL (LEFT) - FLUID
+// ============================================
+
+.properties-panel-container {
+    flex: 1 1 auto; // Grows to fill available space
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
+    min-width: 300px; // Don't let it get too narrow
+
+    // The Info component styles already handle scrolling
+    .properties-tab,
+    .properties-panel {
+        height: 100%;
+        overflow-y: auto;
+    }
+}
+
+// ============================================
+// RESIZABLE DIVIDER
+// ============================================
+
+.panel-resizer {
+    flex: 0 0 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: col-resize;
+    background-color: transparent;
+    position: relative;
+    z-index: 10;
+    user-select: none;
+
+    // Expand hit area for easier grabbing
+    &::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        left: -6px;
+        right: -6px;
+        cursor: col-resize;
+    }
+
+    &:hover,
+    &:active {
+        .panel-resizer-handle {
+            background-color: $color-accent-blue;
+            height: 80px;
+        }
+    }
+}
+
+.panel-resizer-handle {
+    width: 4px;
+    height: 40px;
+    background-color: darken($color-border, 5%);
+    border-radius: 3px;
+    transition: background-color $transition-fast, height $transition-fast;
+}
+
+// ============================================
+// TREE VIEW PANEL (RIGHT) - FIXED WIDTH
+// ============================================
+
+.tree-view-panel-container {
+    flex: 0 0 auto; // Fixed width (controlled by JS inline style)
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
+    background-color: $color-bg-primary;
+    border-left: 1px solid $color-border;
+    // Smooth transitions when toggling visibility
+    transition: flex-basis $transition-normal, width $transition-normal;
+}
+
+.tree-view-panel-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    border-bottom: 1px solid $color-border;
+    background-color: $color-bg-primary;
+    font-size: 12px;
+    font-weight: 600;
+    color: $color-text-secondary;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    flex-shrink: 0;
+
+    > i {
+        font-size: 14px;
+        color: $color-accent;
+    }
+
+    > span {
+        flex: 1;
+    }
+}
+
+.tree-view-toggle-btn {
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    border-radius: $radius-sm;
+    cursor: pointer;
+    color: $color-text-tertiary;
+    transition: all $transition-fast;
+
+    &:hover {
+        background-color: $color-bg-tertiary;
+        color: $color-text-primary;
+    }
+
+    i {
+        font-size: 12px;
+    }
+}
+
+// ============================================
+// COLLAPSED STATE
+// ============================================
+
+.tree-view-collapsed {
+    flex: 0 0 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: $color-bg-primary;
+    border-left: 1px solid $color-border;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    &:hover {
+        background-color: $color-bg-secondary;
+
+        i {
+            color: $color-text-primary;
+        }
+    }
+
+    i {
+        font-size: 14px;
+        color: $color-text-tertiary;
+        transition: color $transition-fast;
+    }
+}
+
+.tree-view-panel-body {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 4px 0;
+
+    // Custom scrollbar
+    &::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    &::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    &::-webkit-scrollbar-thumb {
+        background-color: $color-border;
+        border-radius: 3px;
+
+        &:hover {
+            background-color: darken($color-border, 10%);
+        }
+    }
+
+    // ============================================
+    // TREE NODE STYLES (scoped for specificity)
+    // ============================================
+
+    // Toggle button - reset browser defaults
+    .tree-node__toggle {
+        width: 20px;
+        height: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: none !important;
+        border: none !important;
+        box-shadow: none !important;
+        outline: none;
+        cursor: pointer;
+        color: $color-text-tertiary;
+        padding: 0;
+        flex-shrink: 0;
+        transition: color $transition-fast;
+
+        &:hover:not(:disabled) {
+            color: $color-text-primary;
+        }
+
+        &:disabled {
+            cursor: default;
+            opacity: 0.3;
+        }
+
+        i {
+            font-size: 10px;
+        }
+    }
+
+    // Tree node icon - PASTEL STYLE
+    .tree-node__icon {
+        width: 20px;
+        height: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 4px;
+        font-size: 11px;
+        font-weight: 700;
+        flex-shrink: 0;
+
+        // Model (purple)
+        &.tree-DModel {
+            background-color: rgba(139, 92, 246, 0.15);
+            color: #8b5cf6;
+        }
+
+        // Package (blue)
+        &.tree-DPackage {
+            background-color: rgba(59, 130, 246, 0.15);
+            color: #3b82f6;
+        }
+
+        // Class (red)
+        &.tree-DClass {
+            background-color: rgba(239, 68, 68, 0.15);
+            color: #ef4444;
+
+            &.abstract-class {
+                background-color: rgba(239, 68, 68, 0.08);
+                border: 1px dashed rgba(239, 68, 68, 0.5);
+            }
+        }
+
+        // Attribute (dark red)
+        &.tree-DAttribute {
+            background-color: rgba(220, 38, 38, 0.12);
+            color: #dc2626;
+        }
+
+        // Reference (dark red)
+        &.tree-DReference {
+            background-color: rgba(220, 38, 38, 0.12);
+            color: #dc2626;
+        }
+
+        // Enum (amber)
+        &.tree-DEnumerator,
+        &.tree-DEnum {
+            background-color: rgba(245, 158, 11, 0.15);
+            color: #f59e0b;
+        }
+
+        // Enum Literal (dark amber)
+        &.tree-DEnumLiteral {
+            background-color: rgba(217, 119, 6, 0.12);
+            color: #d97706;
+        }
+
+        // Operation (cyan)
+        &.tree-DOperation {
+            background-color: rgba(6, 182, 212, 0.15);
+            color: #06b6d4;
+        }
+
+        // Parameter (light cyan)
+        &.tree-DParameter {
+            background-color: rgba(6, 182, 212, 0.10);
+            color: #22d3ee;
+        }
+
+        // Object (purple)
+        &.tree-DObject {
+            background-color: rgba(139, 92, 246, 0.15);
+            color: #8b5cf6;
+        }
+    }
+
+    // Tree node name
+    .tree-node__name {
+        font-size: 12px;
+        color: $color-text-primary;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    // Tree node header
+    .tree-node__header {
+        display: flex;
+        align-items: center;
+        gap: 2px;
+        padding: 3px 6px;
+        border-radius: $radius-sm;
+        cursor: pointer;
+        transition: background-color $transition-fast;
+
+        &:hover {
+            background-color: $color-bg-secondary;
+        }
+
+        &--selected {
+            background-color: rgba(71, 85, 105, 0.12);
+
+            &:hover {
+                background-color: rgba(71, 85, 105, 0.15);
+            }
+        }
+    }
+
+    // Metamodel tree header
+    .metamodel-tree__header {
+        display: flex;
+        align-items: center;
+        gap: 2px;
+        padding: 4px 6px;
+        border-radius: $radius-sm;
+        cursor: pointer;
+        transition: background-color $transition-fast;
+
+        &:hover {
+            background-color: $color-bg-secondary;
+        }
+    }
+
+    .metamodel-tree__title {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        flex: 1;
+        font-size: 12px;
+        font-weight: 600;
+        color: $color-text-primary;
+    }
+}
+
+// ============================================
+// DARK MODE SUPPORT
+// ============================================
+
+[data-theme="dark"] {
+    .properties-with-tree-view {
+        background-color: #1e1e1e;
+    }
+
+    .panel-resizer-handle {
+        background-color: #555;
+
+        .panel-resizer:hover &,
+        .panel-resizer:active & {
+            background-color: #60a5fa;
+        }
+    }
+
+    .tree-view-panel-container {
+        background-color: #1e1e1e;
+        border-color: #333;
+    }
+
+    .tree-view-panel-header {
+        background-color: #1e1e1e;
+        border-color: #333;
+        color: #888;
+
+        > i {
+            color: #6b7280;
+        }
+    }
+
+    .tree-view-toggle-btn {
+        color: #888;
+
+        &:hover {
+            background-color: #333;
+            color: #e0e0e0;
+        }
+    }
+
+    .tree-view-collapsed {
+        background-color: #1e1e1e;
+        border-color: #333;
+
+        &:hover {
+            background-color: #252525;
+
+            i {
+                color: #e0e0e0;
+            }
+        }
+
+        i {
+            color: #6b7280;
+        }
+    }
+}

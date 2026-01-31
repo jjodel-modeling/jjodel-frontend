@@ -7,7 +7,9 @@ import Editor, { useMonaco } from "@monaco-editor/react";
 
 // import monacoTypes2 from '!raw-loader!../../../static/monacotypes';
 import monacoTypes from '../../../static/monacotypes';
-import { CommandBar, Btn } from "../../commandbar/CommandBar";
+import { typescriptMonacoOptions, withReadOnly } from '../monacoConfig';
+import EditorToolbar from "../EditorToolbar";
+import EditorFullscreenModal from "../EditorFullscreenModal";
 
 function JsxEditorComponent(props: AllProps) {
     const monaco = useMonaco();
@@ -16,8 +18,16 @@ function JsxEditorComponent(props: AllProps) {
     const readOnly = props.readOnly !== undefined ? props.readOnly : !props.debugmode && Defaults.check(dview.id);
     const [jsx, setJsx] = useStateIfMounted(dview.jsxString || '');
     const [show, setShow] = useStateIfMounted(true);
-
     const [expand, setExpand] = useStateIfMounted(false);
+    const [wrap, setWrap] = useStateIfMounted(false);
+    const [fullscreen, setFullscreen] = useStateIfMounted(false);
+
+    // Sync jsx state with dview.jsxString when it changes externally
+    useEffect(() => {
+        if (!fullscreen) {  // Only when modal is not open
+            setJsx(dview.jsxString || '');
+        }
+    }, [dview.jsxString, fullscreen]);
 
     const change = (value: string|undefined) => { // save in local state for frequent changes.
         if (value !== undefined) setJsx(value);
@@ -72,23 +82,17 @@ function JsxEditorComponent(props: AllProps) {
     }
     if (lines < 5) lines = 5;
     return(<>
-        <div className={'cursor-pointer d-flex'} onClick={e => setShow(!show)}>
-            <span className={'my-auto'} tabIndex={-1} >
-                <i className={'bi bi-chevron-' + (show ? 'down' : 'right')} />
-                {/*show ? <i className={'bi bi-eye-fill'} /> : <i className={'bi bi-eye-slash-fill'} /> */}
-            </span>
-            <label className={'editor-label'}>
-                JSX Editor
-            </label>
-
-            {/* show && <CommandBar style={{paddingTop: '10px'}}>
-                {expand ?
-                    <Btn icon={'shrink'} action={(e) => {setExpand(false); setShow(true)}} tip={'Minimize editor'}/>
-                    :
-                    <Btn icon={'expand'} action={(e) => {setExpand(true); setShow(true)}} tip={'Enlarge editor'}/>
-                }
-            </CommandBar>*/}
-        </div>
+        <EditorToolbar
+            title="JSX Editor"
+            icon="bi-code-slash"
+            content={jsx}
+            collapsed={!show}
+            onCollapseToggle={() => setShow(!show)}
+            onWrapChange={(newWrap) => setWrap(newWrap)}
+            onExpandChange={(newExpanded) => setExpand(newExpanded)}
+            onFullscreenOpen={() => setFullscreen(true)}
+            initialExpanded={expand}
+        />
         {show && <div className={'mt-1'}>
             {/*
             Seems like this issue was fixed?
@@ -113,28 +117,51 @@ function JsxEditorComponent(props: AllProps) {
                 Please replace it with explicit null and undefined checks, or a ||.
             </label>}
         </div>}
-        {show && /* <div className={'monaco-editor-wrapper'}
-                    style={{padding: '5px', minHeight: '20px', transition: 'height 0.3s', height:`${expand ? 'calc('+(lines-1)+' * 16px)' : (5*16)+'px'}`, resize: 'vertical', overflow:'hidden'}}
-                    onFocus={() => setExpand(true)}
-                    onBlur={(e) => {setExpand(false); blur(e);}}
-                    tabIndex={-1} >*/
-                    <div className={'monaco-editor-wrapper'}
-                    style={{
-                        padding: '5px', 
-                        transition: 'height 0.3s', 
-                        height: '40%', 
-                        maxHeight: '500px',
-                        resize: 'vertical', 
-                        overflow:'hidden'
+        {show && (
+            <div
+                className="monaco-editor-wrapper"
+                style={{
+                    padding: '5px',
+                    transition: 'height 0.3s',
+                    height: expand ? '60%' : '40%',
+                    maxHeight: expand ? '800px' : '500px',
+                    resize: 'vertical',
+                    overflow: 'hidden'
+                }}
+                onBlur={(e) => blur(e)}
+                tabIndex={-1}
+            >
+                <Editor
+                    className="mx-1"
+                    onChange={change}
+                    language="typescript"
+                    options={{
+                        ...withReadOnly(typescriptMonacoOptions, readOnly),
+                        wordWrap: wrap ? 'on' : 'off'
                     }}
-                    onFocus={() => {}}
-                    onBlur={(e) => {blur(e);}}
-                    tabIndex={-1} >
+                    defaultLanguage="typescript"
+                    value={jsx}
+                    loading={<div style={{padding: '20px'}}>Loading JSX Editor...</div>}
+                />
+            </div>
+        )}
 
-            <Editor className={'mx-1'} onChange={change} language={"typescript"}
-                    options={{fontSize: 12, scrollbar: {vertical: 'hidden', horizontalScrollbarSize: 5}, minimap: {enabled: false}, readOnly: readOnly}}
-                    defaultLanguage={'typescript'} value={dview.jsxString} />
-        </div>}
+        {/* Fullscreen Modal */}
+        <EditorFullscreenModal
+            isOpen={fullscreen}
+            onClose={() => { blur(); setFullscreen(false); }}
+            title="JSX Editor"
+            icon="bi-code-slash"
+            value={jsx}
+            onChange={change}
+            onSave={(newValue) => {
+                setJsx(newValue);  // Update local state
+                view.jsxString = newValue;  // Save to redux/model
+                setFullscreen(false);
+            }}
+            language="typescript"
+            readOnly={readOnly}
+        />
     </>);
 }
 interface OwnProps {

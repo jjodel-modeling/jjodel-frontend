@@ -78,6 +78,11 @@ function ViewDataComponent(props: AllProps) {
                     <div className={"path-element"} onClick={()=>props.setSelectedView(v.id)}>
                         {U.cropStr(v.name, 1,1, 10, 10)}
                     </div>
+                    {i === viewChain.length - 1 && (
+                        <span className={`breadcrumb-type-badge ${isVP ? 'viewpoint' : 'view'}`}>
+                            {isVP ? 'VIEWPOINT' : 'VIEW'}
+                        </span>
+                    )}
                 </>) as any
                 ).separator(
                     <i className={"path-separator bi bi-chevron-right"} />

@@ -1,0 +1,919 @@
+// ==============================================
+// JJODEL FORM SYSTEM
+// Centralized form styles for consistent UI
+// ==============================================
+
+// Design tokens (fallback values if tokens not loaded)
+:root {
+  --form-input-height: 36px;
+  --form-input-padding-x: 12px;
+  --form-input-padding-y: 8px;
+  --form-input-font-size: 14px;
+  --form-input-border-radius: 6px;
+  --form-input-border-color: #e2e8f0;
+  --form-input-border-color-hover: #cbd5e1;
+  // Focus state - SLATE COLOR (standardized across all form elements)
+  --form-input-border-color-focus: #334155;
+  --form-input-focus-shadow: 0 0 0 3px rgba(51, 65, 85, 0.15);
+  --form-input-focus-shadow2: 0 0 0 3px rgba(51, 65, 85, 0.15);
+  --form-input-bg: #ffffff;
+  --form-input-color: #0f172a;
+  --form-input-placeholder: #9ca3af;
+  --form-label-color: #334155;
+  --form-label-font-size: 13px;
+  --form-label-font-weight: 500;
+  --form-hint-color: #6b7280;
+  --form-hint-font-size: 12px;
+  --form-toggle-width: 36px;
+  --form-toggle-height: 20px;
+  --form-toggle-bg: #cbd5e1;
+  --form-toggle-bg-active: #475569;
+  --form-toggle-thumb-size: 16px;
+  --form-field-gap: 16px;
+}
+
+// ==============================================
+// BASE INPUT STYLES
+// Applies to all input, select, textarea elements
+// ==============================================
+
+// Global input reset and base styles
+.input,
+input.input,
+input[type="text"],
+input[type="number"],
+input[type="email"],
+input[type="password"],
+input[type="url"],
+input[type="tel"],
+input[type="date"],
+input[type="time"],
+textarea,
+.form-input, .form-input.form-input-fix,
+.form-textarea {
+  width: 100% !important;
+  height: var(--form-input-height) !important;
+  padding: var(--form-input-padding-y) var(--form-input-padding-x) !important;
+  font-family: var(--font-sans, 'Inter Variable', -apple-system, sans-serif) !important;
+  font-size: var(--form-input-font-size) !important;
+  color: var(--form-input-color) !important;
+  background: var(--form-input-bg) !important;
+  border: 1px solid var(--form-input-border-color) !important;
+  border-radius: var(--form-input-border-radius) !important;
+  outline: none !important;
+  box-sizing: border-box !important;
+  transition: border-color 150ms ease, box-shadow 150ms ease !important;
+
+  &:hover:not(:disabled):not(:focus) {
+    border-color: var(--form-input-border-color-hover) !important;
+  }
+
+  &:focus {
+    border-color: var(--form-input-border-color-focus) !important;
+    //box-shadow: var(--form-input-focus-shadow) !important;
+    outline: 3px solid rgba(71, 85, 105, 0.15) !important;
+  }
+
+  &:disabled {
+    background: #f1f5f9 !important;
+    color: #94a3b8 !important;
+    cursor: not-allowed !important;
+    opacity: 0.7 !important;
+  }
+
+  &::placeholder {
+    color: var(--form-input-placeholder);
+  }
+}
+
+// .form-input.form-input-fix {
+//     height: var(--form-input-height) !important;
+//     padding: var(--form-input-padding-y) var(--form-input-padding-x) !important;
+//     font-family: var(--font-sans, 'Inter Variable', -apple-system, sans-serif) !important;
+//     font-size: var(--form-input-font-size) !important;
+//     color: var(--form-input-color) !important;
+//     background: var(--form-input-bg) !important;
+//     border: 1px solid var(--form-input-border-color) !important;
+//     border-radius: var(--form-input-border-radius) !important;
+//     outline: none !important;
+//     box-sizing: border-box !important;
+//     transition: border-color 150ms ease, box-shadow 150ms ease !important;
+  
+//   &:hover:not(:disabled):not(:focus) {
+//     border-color: var(--form-input-border-color-hover)!important;
+//   }
+
+//   &:focus {
+//     border-color: var(--form-input-border-color-focus)!important;
+//     box-shadow: var(--form-input-focus-shadow)!important;
+//   }
+
+//   &:disabled {
+//     background: #f1f5f9!important;
+//     color: #94a3b8!important;
+//     cursor: not-allowed!important;
+//     opacity: 0.7!important;
+//   }
+
+//   &::placeholder {
+//     color: var(--form-input-placeholder)!important;
+//   }
+// }
+
+// Textarea specific
+textarea,
+.form-textarea {
+  height: auto;
+  min-height: 80px;
+  resize: vertical;
+  line-height: 1.5;
+}
+
+// ==============================================
+// SELECT STYLES
+// ==============================================
+
+select,
+.select,
+.form-select {
+  width: 100% !important;
+  height: var(--form-input-height) !important;
+  padding: var(--form-input-padding-y) var(--form-input-padding-x) !important;
+  padding-right: 36px !important; // Space for arrow
+  font-family: var(--font-sans, 'Inter Variable', -apple-system, sans-serif) !important;
+  font-size: var(--form-input-font-size) !important;
+  color: var(--form-input-color) !important;
+  background: var(--form-input-bg) !important;
+  border: 1px solid var(--form-input-border-color) !important;
+  border-radius: var(--form-input-border-radius) !important;
+  outline: none !important;
+  box-sizing: border-box !important;
+  cursor: pointer !important;
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  -moz-appearance: none !important;
+
+  // Custom dropdown arrow
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2364748b' d='M3 4.5L6 7.5L9 4.5'/%3E%3C/svg%3E") !important;
+  background-repeat: no-repeat !important;
+  background-position: right 12px center !important;
+
+  transition: border-color 150ms ease, box-shadow 150ms ease !important;
+
+  &:hover:not(:disabled):not(:focus) {
+    border-color: var(--form-input-border-color-hover);
+  }
+
+  &:focus {
+    border-color: var(--form-input-border-color-focus);
+    box-shadow: var(--form-input-focus-shadow);
+  }
+
+  &:disabled {
+    background: #f1f5f9;
+    color: #94a3b8;
+    cursor: not-allowed;
+    opacity: 0.7;
+  }
+
+  option {
+    padding: 8px;
+    background: #ffffff;
+    color: var(--form-input-color);
+  }
+}
+
+// ==============================================
+// NUMBER INPUT WITH SPINNER
+// ==============================================
+
+input[type="number"] {
+  // Remove default spinner in Firefox
+  -moz-appearance: textfield;
+
+  // Custom spinner styling
+  &::-webkit-outer-spin-button,
+  &::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+}
+
+// Optional: show spinner on hover/focus
+.number-input-with-spinner {
+  input[type="number"] {
+    &::-webkit-outer-spin-button,
+    &::-webkit-inner-spin-button {
+      -webkit-appearance: inner-spin-button;
+      opacity: 1;
+    }
+  }
+}
+
+// ==============================================
+// INPUT CONTAINER (Legacy support)
+// Override existing .input-container styles
+// ==============================================
+
+.input-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: var(--form-field-gap);
+  flex-wrap: wrap;
+
+  // Label styling (the <b> element)
+  > b,
+  > label:first-child {
+    font-size: var(--form-label-font-size);
+    font-weight: var(--form-label-font-weight);
+    color: var(--form-label-color);
+    white-space: nowrap;
+    min-width: 100px;
+  }
+
+  // Input/Select inside container
+  > input,
+  > select,
+  > .input,
+  > .select {
+    flex: 1;
+    min-width: 120px;
+    height: var(--form-input-height);
+  }
+
+  // Checkbox/Radio styling
+  > input[type="checkbox"],
+  > input[type="radio"] {
+    width: 18px;
+    height: 18px;
+    flex: none;
+    min-width: auto;
+    cursor: pointer;
+    accent-color: #475569;
+  }
+}
+
+// Vertical layout variant
+.input-container--vertical,
+.form-field:not(.form-field--toggle) {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 6px !important;
+  margin-bottom: var(--form-field-gap) !important;
+
+  > b,
+  > label:first-child,
+  > .form-label {
+    font-size: var(--form-label-font-size) !important;
+    font-weight: var(--form-label-font-weight) !important;
+    color: var(--form-label-color) !important;
+  }
+
+  > input,
+  > select,
+  > textarea {
+    width: 100% !important;
+  }
+}
+
+// ==============================================
+// FORM LABELS
+// ==============================================
+
+.form-label {
+  display: block;
+  font-size: var(--form-label-font-size);
+  font-weight: var(--form-label-font-weight);
+  color: var(--form-label-color);
+  margin-bottom: 6px;
+}
+
+.form-label-required {
+  color: #ef4444;
+  margin-left: 2px;
+}
+
+.form-label-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  background: #f1f5f9;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 500;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-left: 8px;
+  vertical-align: middle;
+}
+
+// ==============================================
+// FORM HINTS & ERRORS
+// ==============================================
+
+.form-hint {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin-top: 6px;
+  font-size: var(--form-hint-font-size);
+  color: var(--form-hint-color);
+  line-height: 1.4;
+
+  i {
+    flex-shrink: 0;
+    font-size: 14px;
+    color: #9ca3af;
+    margin-top: 1px;
+  }
+}
+
+.form-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin-top: 6px;
+  font-size: var(--form-hint-font-size);
+  color: #ef4444;
+
+  i {
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+}
+
+// ==============================================
+// TOGGLE SWITCH
+// Universal toggle component
+// ==============================================
+
+.toggle,
+.form-toggle {
+  position: relative;
+  width: var(--form-toggle-width);
+  height: var(--form-toggle-height);
+  flex-shrink: 0;
+  cursor: pointer;
+
+  // Hide native checkbox
+  input[type="checkbox"] {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+}
+
+.toggle-slider,
+.form-toggle-slider {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: var(--form-toggle-bg);
+  border-radius: var(--form-toggle-height);
+  transition: background-color 200ms ease;
+  cursor: pointer;
+
+  &::before {
+    content: '';
+    position: absolute;
+    height: var(--form-toggle-thumb-size);
+    width: var(--form-toggle-thumb-size);
+    left: 2px;
+    bottom: 2px;
+    background-color: #ffffff;
+    border-radius: 50%;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+    transition: transform 200ms ease;
+  }
+}
+
+// Checked state
+.toggle input:checked + .toggle-slider,
+.form-toggle input:checked + .form-toggle-slider,
+.toggle.active .toggle-slider,
+.form-toggle.active .form-toggle-slider {
+  background-color: var(--form-toggle-bg-active);
+
+  &::before {
+    transform: translateX(16px);
+  }
+}
+
+// Focus state
+.toggle input:focus + .toggle-slider,
+.form-toggle input:focus + .form-toggle-slider {
+  box-shadow: 0 0 0 3px rgba(71, 85, 105, 0.15);
+}
+
+// Disabled state
+.toggle input:disabled + .toggle-slider,
+.form-toggle input:disabled + .form-toggle-slider {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+// Div-based toggle (for PropertiesToggle component)
+.properties-toggle,
+.apply-to-toggle {
+  position: relative !important;
+  width: var(--form-toggle-width) !important;
+  height: var(--form-toggle-height) !important;
+  background-color: var(--form-toggle-bg) !important;
+  border-radius: var(--form-toggle-height) !important;
+  border: none !important;
+  cursor: pointer !important;
+  transition: background-color 200ms ease !important;
+  flex-shrink: 0 !important;
+  padding: 0 !important;
+
+  &.active {
+    background: linear-gradient(135deg, #64748b 0%, #475569 100%) !important;
+
+    .properties-toggle-thumb,
+    .apply-to-toggle-thumb {
+      transform: translateX(16px) !important;
+    }
+  }
+
+  &:focus {
+    outline: none !important;
+    box-shadow: 0 0 0 3px rgba(71, 85, 105, 0.15) !important;
+  }
+
+  &:disabled {
+    opacity: 0.5 !important;
+    cursor: not-allowed !important;
+  }
+}
+
+.properties-toggle-thumb,
+.apply-to-toggle-thumb {
+  position: absolute !important;
+  top: 2px !important;
+  left: 2px !important;
+  width: var(--form-toggle-thumb-size) !important;
+  height: var(--form-toggle-thumb-size) !important;
+  background-color: #ffffff !important;
+  border-radius: 50% !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2) !important;
+  transition: transform 200ms ease !important;
+}
+
+// ==============================================
+// TOGGLE ROW PATTERN
+// Label + description on left, toggle on right
+// ==============================================
+
+.toggle-row,
+.form-field--toggle {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  flex-direction: row !important;
+  gap: 16px !important;
+  padding: 12px 16px !important;
+  background: var(--form-input-bg, #ffffff) !important;
+  border: 1px solid var(--form-input-border-color) !important;
+  border-radius: var(--form-input-border-radius) !important;
+  margin-bottom: var(--form-field-gap) !important;
+  transition: border-color 150ms ease !important;
+
+  // FIX: hover changes only border, NOT background
+  &:hover {
+    border-color: var(--form-input-border-color-hover) !important;
+    background: var(--form-input-bg, #ffffff) !important; // stays white
+  }
+}
+
+.toggle-row__content,
+.toggle-content {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 2px !important;
+  flex: 1 !important;
+  min-width: 0 !important;
+}
+
+.toggle-row__label,
+.toggle-label {
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  color: #0f172a !important;
+}
+
+.toggle-row__description,
+.toggle-description {
+  font-size: 12px !important;
+  color: #64748b !important;
+  line-height: 1.4 !important;
+}
+
+// ==============================================
+// MULTISELECT STYLES
+// For react-select or similar components
+// ==============================================
+
+// Override react-select control
+[class*="-control"],
+.css-control,
+.select__control {
+  min-height: var(--form-input-height) !important;
+  border: 1px solid var(--form-input-border-color) !important;
+  border-radius: var(--form-input-border-radius) !important;
+  box-shadow: none !important;
+  background: var(--form-input-bg) !important;
+
+  &:hover {
+    border-color: var(--form-input-border-color-hover) !important;
+  }
+}
+
+[class*="-control--is-focused"],
+.css-control--is-focused,
+.select__control--is-focused {
+  border-color: var(--form-input-border-color-focus) !important;
+  box-shadow: var(--form-input-focus-shadow) !important;
+}
+
+// Value container padding
+[class*="-valueContainer"],
+.select__value-container {
+  padding: 0 var(--form-input-padding-x) !important;
+}
+
+// Multi-value chips
+[class*="-multiValue"],
+.select__multi-value {
+  background: #e2e8f0 !important;
+  border-radius: 4px !important;
+  margin: 2px !important;
+}
+
+[class*="-multiValue__label"],
+.select__multi-value__label {
+  color: #334155 !important;
+  font-size: 13px !important;
+  padding: 2px 6px !important;
+}
+
+[class*="-multiValue__remove"],
+.select__multi-value__remove {
+  color: #64748b !important;
+
+  &:hover {
+    background: #cbd5e1 !important;
+    color: #334155 !important;
+  }
+}
+
+// Dropdown menu
+[class*="-menu"],
+.select__menu {
+  border: 1px solid var(--form-input-border-color) !important;
+  border-radius: var(--form-input-border-radius) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+  z-index: 100 !important;
+}
+
+// Menu options
+[class*="-option"],
+.select__option {
+  padding: 10px var(--form-input-padding-x) !important;
+  font-size: var(--form-input-font-size) !important;
+
+  &:hover {
+    background: #f1f5f9 !important;
+  }
+}
+
+[class*="-option--is-selected"],
+.select__option--is-selected {
+  background: #e0f2fe !important;
+  color: #0369a1 !important;
+}
+
+// ==============================================
+// SECTION HEADERS (Collapsible)
+// ==============================================
+
+.section-header,
+.form-section-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--form-input-border-color);
+  margin-bottom: 16px;
+  cursor: pointer;
+  user-select: none;
+
+  &:hover {
+    background: rgba(0, 0, 0, 0.02);
+    margin-left: -8px;
+    margin-right: -8px;
+    padding-left: 8px;
+    padding-right: 8px;
+  }
+
+  i {
+    font-size: 12px;
+    color: #64748b;
+    transition: transform 150ms ease;
+  }
+
+  &.collapsed i {
+    transform: rotate(-90deg);
+  }
+}
+
+.section-title,
+.form-section-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin: 0;
+  margin-bottom: 16px!important;
+}
+
+.section-count {
+  margin-left: auto;
+  font-size: 12px;
+  color: #9ca3af;
+  font-weight: 400;
+}
+
+
+// dock-content dock-content-top dock-content-animated
+// ==============================================
+// TAB CONTAINER BACKGROUNDS
+// Consistent gray background for all tabs
+// ==============================================
+
+// Parent containers should have white background
+.view-editor-root,
+.viewpoint-tab-container,
+.dock-tabpane {
+  background-color: #ffffff !important;
+  height: 100% !important;
+}
+
+// Tab content containers - extend to full height with gray background
+.properties-tab,
+.viewpoint-tab,
+.node-tab,
+.apply-to-tab,
+.template-tab,
+.style-tab,
+.events-tab,
+.options-tab,
+.permissions-tab,
+.page-root {
+  background-color: #f8fafc !important; // transparent!important; //  
+  min-height: 100% !important;
+  height: fit-content !important;
+  padding: 10px !important;
+  box-sizing: border-box !important;
+
+}
+
+// Ensure tab content wrapper allows extension
+.tab-content-wrapper,
+.dock-tab-content {
+  height: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+
+  > section,
+  > .page-root {
+    flex: 1 !important;
+    min-height: 0 !important;
+  }
+}
+
+// ==============================================
+// DARK MODE
+// ==============================================
+
+[data-theme="dark"] {
+  --form-input-border-color: #334155;
+  --form-input-border-color-hover: #475569;
+  --form-input-border-color-focus: #64748b; // Lighter slate for dark mode visibility
+  --form-input-focus-shadow: 0 0 0 3px rgba(100, 116, 139, 0.25); // Dark mode shadow
+  --form-input-bg: #1e293b;
+  --form-input-color: #f1f5f9;
+  --form-input-placeholder: #64748b;
+  --form-label-color: #e2e8f0;
+  --form-hint-color: #94a3b8;
+  --form-toggle-bg: #475569;
+  --form-toggle-bg-active: #64748b;
+
+  // Parent container backgrounds
+  .view-editor-root,
+  .viewpoint-tab-container,
+  .dock-tabpane {
+    background-color: #0f172a !important;
+  }
+
+  // Tab backgrounds
+  .properties-tab,
+  .viewpoint-tab,
+  .node-tab,
+  .apply-to-tab,
+  .template-tab,
+  .style-tab,
+  .events-tab,
+  .options-tab,
+  .permissions-tab,
+  .page-root {
+    background-color: #1e293b !important;
+  }
+
+  // Input dark mode
+  .input,
+  input,
+  select,
+  textarea {
+    background: var(--form-input-bg);
+    border-color: var(--form-input-border-color);
+    color: var(--form-input-color);
+
+    &:focus {
+      border-color: var(--form-input-border-color-focus);
+      box-shadow: var(--form-input-focus-shadow);
+    }
+
+    &:disabled {
+      background: #0f172a;
+      color: #64748b;
+    }
+
+    &::placeholder {
+      color: var(--form-input-placeholder);
+    }
+
+    option {
+      background: #1e293b;
+      color: var(--form-input-color);
+    }
+  }
+
+  // Select arrow dark mode
+  select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2394a3b8' d='M3 4.5L6 7.5L9 4.5'/%3E%3C/svg%3E");
+  }
+
+  // Toggle row dark mode
+  .toggle-row,
+  .form-field--toggle {
+    background: #1e293b;
+    border-color: var(--form-input-border-color);
+
+    &:hover {
+      background: #0f172a;
+    }
+  }
+
+  .toggle-row__label,
+  .toggle-label {
+    color: #f1f5f9;
+  }
+
+  .toggle-row__description,
+  .toggle-description {
+    color: #94a3b8;
+  }
+
+  // Section header dark mode
+  .section-header,
+  .form-section-header {
+    border-bottom-color: #334155;
+  }
+
+  .section-title,
+  .form-section-title {
+    color: #9ca3af;
+  }
+
+  // MultiSelect dark mode
+  [class*="-control"],
+  .select__control {
+    background: #1e293b !important;
+    border-color: #334155 !important;
+  }
+
+  [class*="-menu"],
+  .select__menu {
+    background: #1e293b !important;
+    border-color: #334155 !important;
+  }
+
+  [class*="-option"],
+  .select__option {
+    &:hover {
+      background: #334155 !important;
+    }
+  }
+
+  [class*="-multiValue"],
+  .select__multi-value {
+    background: #334155 !important;
+  }
+
+  [class*="-multiValue__label"],
+  .select__multi-value__label {
+    color: #e2e8f0 !important;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --form-input-border-color: #334155;
+    --form-input-border-color-hover: #475569;
+    --form-input-border-color-focus: #64748b; // Lighter slate for dark mode
+    --form-input-focus-shadow: 0 0 0 3px rgba(100, 116, 139, 0.25); // Dark mode shadow
+    --form-input-bg: #1e293b;
+    --form-input-color: #f1f5f9;
+    --form-input-placeholder: #64748b;
+    --form-label-color: #e2e8f0;
+    --form-hint-color: #94a3b8;
+    --form-toggle-bg: #475569;
+    --form-toggle-bg-active: #64748b;
+  }
+}
+
+// ==============================================
+// UTILITY CLASSES - Width
+// Prefixed with form- to avoid conflicts with Bootstrap/other frameworks
+// ==============================================
+
+.form-w-auto { width: auto !important; }
+.form-w-full { width: 100% !important; }
+.form-w-80  { width: 80px !important; }
+.form-w-100 { width: 100px !important; }
+.form-w-120 { width: 120px !important; }
+.form-w-150 { width: 150px !important; }
+.form-w-160 { width: 160px !important; }
+.form-w-180 { width: 180px !important; }
+.form-w-200 { width: 200px !important; }
+.form-w-250 { width: 250px !important; }
+.form-w-300 { width: 300px !important; }
+
+// Max-width variants
+.form-max-w-80  { max-width: 80px !important; }
+.form-max-w-100 { max-width: 100px !important; }
+.form-max-w-120 { max-width: 120px !important; }
+.form-max-w-150 { max-width: 150px !important; }
+.form-max-w-180 { max-width: 180px !important; }
+.form-max-w-200 { max-width: 200px !important; }
+.form-max-w-300 { max-width: 300px !important; }
+
+// ==============================================
+// UTILITY CLASSES - Flex
+// Prefixed with form- to avoid conflicts
+// ==============================================
+
+.form-flex-1 {
+  flex: 1 !important;
+  min-width: 0 !important; // Allows shrink below content width
+}
+.form-flex-grow { flex-grow: 1 !important; }
+.form-flex-shrink-0 { flex-shrink: 0 !important; }
+.form-flex-none { flex: none !important; }
+
+// ==============================================
+// FORM INPUT ROW - Container for inline input groups
+// ==============================================
+
+.form-input-row {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  width: 100% !important;
+}
+
+.form-input-row--gap-sm { gap: 4px !important; }
+.form-input-row--gap-md { gap: 8px !important; }
+.form-input-row--gap-lg { gap: 16px !important; }
+
+// Input row with fixed first column
+.form-input-row--fixed-first {
+  > *:first-child {
+    width: 160px !important;
+    flex-shrink: 0 !important;
+  }
+
+  > *:nth-child(2) {
+    flex-shrink: 0 !important;
+  }
+
+  > *:last-child:not(:nth-child(2)) {
+    flex: 1 !important;
+    min-width: 0 !important;
+  }
+}

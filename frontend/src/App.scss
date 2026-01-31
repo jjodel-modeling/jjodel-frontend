@@ -1,3 +1,25 @@
+/**
+ * JJODEL DESIGN TOKENS - Import first!
+ * This must be imported before any other styles to ensure
+ * design tokens are available throughout the application
+ */
+@import './styles/tokens/index';
+
+/**
+ * GLOBAL COMPONENT STYLES
+ * Buttons, forms, and other reusable components
+ */
+@import './styles/components/buttons';
+
+/**
+ * DIAGRAM REFINED STYLES
+ * Canvas node, edge, and label styling
+ */
+@import './styles/diagram';
+
+/**
+ * EXISTING ANIMATIONS & STYLES
+ */
 @keyframes animationoffset {
   0% {
     offset-distance: 0%;
@@ -43,7 +65,7 @@ label{
 content: "\f282";
 transform: inherit;
 transition: inherit;
-font-weight: 900 !important;
+font-weight: var(--font-extrabold) !important;
 }
 .capitalize-first-letter:first-letter {
   // works only on "block" elements? not even flex?
@@ -352,7 +374,7 @@ input, textarea, [contenteditable], pre, .console-output-container, .selectable{
     content: attr(data-val);
     text-transform: capitalize;
     font-variant: normal;
-    // font-weight: normal;
+    // font-weight: var(--font-normal);
     font-style: normal; // removes italic
   }
 }

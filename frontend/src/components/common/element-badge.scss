@@ -1,0 +1,171 @@
+/**
+ * ElementBadge Styles
+ * Matches tree view badge style with colored backgrounds and single letters
+ */
+
+.element-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+  flex-shrink: 0;
+  text-transform: uppercase;
+  transition: background-color 150ms ease, color 150ms ease;
+}
+
+/* Metamodel - Lavender/Purple */
+.element-badge--metamodel {
+  background-color: #E9D5FF;  /* Lavender */
+  color: #7C3AED;             /* Purple-600 */
+}
+
+/* Model - Amber/Yellow */
+.element-badge--model {
+  background-color: #FEF3C7;  /* Amber-100 */
+  color: #D97706;             /* Amber-600 */
+}
+
+/* Package - Blue */
+.element-badge--package {
+  background-color: #DBEAFE;  /* Blue-100 */
+  color: #2563EB;             /* Blue-600 */
+}
+
+/* Class & Concept - Red */
+.element-badge--class,
+.element-badge--concept {
+  background-color: #FEE2E2;  /* Red-100 */
+  color: #DC2626;             /* Red-600 */
+}
+
+/* Enum & Enumerator - Amber */
+.element-badge--enum,
+.element-badge--enumerator {
+  background-color: #FEF3C7;  /* Amber-100 */
+  color: #D97706;             /* Amber-600 */
+}
+
+/* Attribute - Green */
+.element-badge--attribute {
+  background-color: #D1FAE5;  /* Green-100 */
+  color: #059669;             /* Green-600 */
+}
+
+/* Reference - Cyan */
+.element-badge--reference {
+  background-color: #CFFAFE;  /* Cyan-100 */
+  color: #0891B2;             /* Cyan-600 */
+}
+
+/* Operation - Indigo */
+.element-badge--operation {
+  background-color: #E0E7FF;  /* Indigo-100 */
+  color: #4F46E5;             /* Indigo-600 */
+}
+
+/* Parameter - Slate */
+.element-badge--parameter {
+  background-color: #F1F5F9;  /* Slate-100 */
+  color: #475569;             /* Slate-600 */
+}
+
+/* Literal - Gray */
+.element-badge--literal {
+  background-color: #F3F4F6;  /* Gray-100 */
+  color: #6B7280;             /* Gray-600 */
+}
+
+/* Object - Teal */
+.element-badge--object {
+  background-color: #CCFBF1;  /* Teal-100 */
+  color: #0D9488;             /* Teal-600 */
+}
+
+/* Viewpoint - Pink */
+.element-badge--viewpoint {
+  background-color: #FCE7F3;  /* Pink-100 */
+  color: #DB2777;             /* Pink-600 */
+}
+
+/* Epsilon/Transformation - Orange */
+.element-badge--epsilon,
+.element-badge--transformation {
+  background-color: #FFEDD5;  /* Orange-100 */
+  color: #EA580C;             /* Orange-600 */
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .element-badge--metamodel {
+    background-color: rgba(139, 92, 246, 0.15);
+    color: #A78BFA;
+  }
+
+  .element-badge--model {
+    background-color: rgba(245, 158, 11, 0.15);
+    color: #FBBF24;
+  }
+
+  .element-badge--package {
+    background-color: rgba(59, 130, 246, 0.15);
+    color: #60A5FA;
+  }
+
+  .element-badge--class,
+  .element-badge--concept {
+    background-color: rgba(239, 68, 68, 0.15);
+    color: #F87171;
+  }
+
+  .element-badge--enum,
+  .element-badge--enumerator {
+    background-color: rgba(245, 158, 11, 0.15);
+    color: #FBBF24;
+  }
+
+  .element-badge--attribute {
+    background-color: rgba(16, 185, 129, 0.15);
+    color: #34D399;
+  }
+
+  .element-badge--reference {
+    background-color: rgba(6, 182, 212, 0.15);
+    color: #22D3EE;
+  }
+
+  .element-badge--operation {
+    background-color: rgba(99, 102, 241, 0.15);
+    color: #818CF8;
+  }
+
+  .element-badge--parameter {
+    background-color: rgba(71, 85, 105, 0.15);
+    color: #94A3B8;
+  }
+
+  .element-badge--literal {
+    background-color: rgba(107, 114, 128, 0.15);
+    color: #9CA3AF;
+  }
+
+  .element-badge--object {
+    background-color: rgba(20, 184, 166, 0.15);
+    color: #2DD4BF;
+  }
+
+  .element-badge--viewpoint {
+    background-color: rgba(219, 39, 119, 0.15);
+    color: #F9A8D4;
+  }
+
+  .element-badge--epsilon,
+  .element-badge--transformation {
+    background-color: rgba(234, 88, 12, 0.15);
+    color: #FB923C;
+  }
+}
