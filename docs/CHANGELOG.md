@@ -7,6 +7,62 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.1.0] - 2026-02-01
+
+### Added
+
+#### JjTL - Jjodel Transformation Language
+- Complete transformation language for Model-to-Model transformations
+- Declarative syntax: `SourceClass -> TargetClass { attr -> attr }`
+- Full lexer/tokenizer with error tracking and position information
+- Recursive descent parser generating complete AST
+- Monaco Editor integration with syntax highlighting (Jjodel slate/cyan theme)
+- Autocompletion provider with keywords, snippets, and built-in functions
+- `JjtlEditor` React component for easy integration
+
+#### JjTL IDE Components
+- `MetamodelTreeView` - Collapsible tree for metamodel visualization
+- `DualMetamodelPanel` - Side-by-side source/target metamodels with drag-drop
+- `MappingLinesOverlay` - SVG Bezier curves connecting mapped elements
+- `ProblemsPanel` - Error/warning list with filtering (VS Code style)
+- `MappingTraceView` - Execution trace viewer with attribute details
+- `InferredMappingsPanel` - AI-suggested mappings with confidence scores
+
+#### JjTL Development Environment
+- `JjtlToolbar` - File/edit/execute actions with metamodel selectors
+- `JjtlStatusBar` - Parser status, cursor position, execution info
+- `JjtlDevelopmentEnv` - Full IDE container with configurable layouts
+
+#### JjTL React Hooks
+- `useJjtlParser` - Debounced parsing with error tracking
+- `useJjtlExecutor` - Execution state and trace management
+
+### Files Created
+- `frontend/src/jjtl/types/tokens.ts`
+- `frontend/src/jjtl/types/ast.ts`
+- `frontend/src/jjtl/lexer/lexer.ts`
+- `frontend/src/jjtl/parser/parser.ts`
+- `frontend/src/jjtl/executor/executor.ts`
+- `frontend/src/jjtl/editor/JjtlEditor.tsx`
+- `frontend/src/jjtl/editor/jjtlLanguage.ts`
+- `frontend/src/jjtl/editor/jjtlTheme.ts`
+- `frontend/src/jjtl/editor/jjtlCompletions.ts`
+- `frontend/src/jjtl/views/MetamodelTreeView.tsx`
+- `frontend/src/jjtl/views/DualMetamodelPanel.tsx`
+- `frontend/src/jjtl/views/MappingLinesOverlay.tsx`
+- `frontend/src/jjtl/views/ProblemsPanel.tsx`
+- `frontend/src/jjtl/views/MappingTraceView.tsx`
+- `frontend/src/jjtl/views/InferredMappingsPanel.tsx`
+- `frontend/src/jjtl/components/JjtlToolbar.tsx`
+- `frontend/src/jjtl/components/JjtlStatusBar.tsx`
+- `frontend/src/jjtl/components/JjtlDevelopmentEnv.tsx`
+- `frontend/src/jjtl/hooks/useJjtlParser.ts`
+- `frontend/src/jjtl/hooks/useJjtlExecutor.ts`
+- `frontend/src/jjtl/styles/jjtl.scss`
+- `frontend/src/jjtl/README.md`
+
+---
+
 ## [2.0.5] - 2026-01-31
 
 ### Added

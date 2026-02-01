@@ -7,10 +7,12 @@ import ShareProjectModal from './ShareProjectModal';
 import UnsavedChangesDialog from './UnsavedChangesDialog';
 import DocumentationSection from './DocumentationSection';
 import { EcoreService, XMIService } from '../../services/export';
+import { NewTransformationDialog, TransformationsList } from '../../jjtl/components';
+import { JjtlTransformation, createTransformation } from '../../jjtl/types';
 import './project-editor.scss';
 
 // Types for contextual menu
-type MenuType = 'metamodel' | 'model' | null;
+type MenuType = 'metamodel' | 'model' | 'transformation' | null;
 interface OpenMenu {
     type: MenuType;
     id: string;
@@ -54,6 +56,10 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
     const models = project.models || [];
     const viewpoints = project.viewpoints || [];
     const tags = project.tags || [];
+
+    // Transformations state (in-memory for now)
+    const [transformations, setTransformations] = useState<JjtlTransformation[]>([]);
+    const [showNewTransformationDialog, setShowNewTransformationDialog] = useState(false);
 
     // Editing states
     const [isEditingName, setIsEditingName] = useState(false);
@@ -629,6 +635,63 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
         vp.delete();
     };
 
+    // Transformation handlers
+    const handleCreateTransformation = (name: string, sourceId?: string, targetId?: string, description?: string) => {
+        const sourceMM = metamodels.find(mm => mm.id === sourceId);
+        const targetMM = metamodels.find(mm => mm.id === targetId);
+
+        const newTransformation = createTransformation(
+            name,
+            sourceId,
+            sourceMM?.name,
+            targetId,
+            targetMM?.name,
+            description
+        );
+
+        setTransformations(prev => [...prev, newTransformation]);
+        setShowNewTransformationDialog(false);
+        markDirty();
+    };
+
+    const handleOpenTransformation = async (transformation: JjtlTransformation) => {
+        // TODO: Open in JjTL editor tab
+        // For now, just log it
+        console.log('Opening transformation:', transformation.name);
+        // await DockManager.openJjtlEditor(transformation);
+    };
+
+    const handleRenameTransformation = (id: string, newName: string) => {
+        setTransformations(prev => prev.map(t =>
+            t.id === id
+                ? { ...t, name: newName, modifiedAt: Date.now() }
+                : t
+        ));
+        markDirty();
+    };
+
+    const handleDeleteTransformation = (id: string) => {
+        setTransformations(prev => prev.filter(t => t.id !== id));
+        markDirty();
+    };
+
+    const handleDuplicateTransformation = (id: string) => {
+        const original = transformations.find(t => t.id === id);
+        if (original) {
+            const duplicate = createTransformation(
+                `${original.name} (copy)`,
+                original.sourceMetamodelId,
+                original.sourceMetamodelName,
+                original.targetMetamodelId,
+                original.targetMetamodelName,
+                original.description
+            );
+            duplicate.code = original.code;
+            setTransformations(prev => [...prev, duplicate]);
+            markDirty();
+        }
+    };
+
     return (
         <div className="project-editor">
             {/* Header */}
@@ -1099,6 +1162,41 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                 )}
             </div>
 
+            {/* Transformations Section */}
+            <div className="project-section">
+                <div className="project-section__header">
+                    <h2 className="project-section__title">
+                        TRANSFORMATIONS {transformations.length > 0 && `(${transformations.length})`}
+                    </h2>
+                    <button
+                        className="btn btn--primary"
+                        onClick={() => setShowNewTransformationDialog(true)}
+                    >
+                        + New
+                    </button>
+                </div>
+
+                {transformations.length === 0 ? (
+                    <div className="empty-state empty-state--secondary">
+                        <div className="empty-state__icon empty-state__icon--small">
+                            <i className="bi bi-arrow-left-right" />
+                        </div>
+                        <h3 className="empty-state__title">No transformations yet</h3>
+                        <p className="empty-state__description">
+                            Create model-to-model transformations using JjTL to automate conversions between metamodels.
+                        </p>
+                    </div>
+                ) : (
+                    <TransformationsList
+                        transformations={transformations}
+                        onOpen={handleOpenTransformation}
+                        onRename={handleRenameTransformation}
+                        onDelete={handleDeleteTransformation}
+                        onDuplicate={handleDuplicateTransformation}
+                    />
+                )}
+            </div>
+
             {/* Viewpoints Section */}
             <div className="project-section">
                 <div className="project-section__header">
@@ -1164,6 +1262,20 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                 project={project}
                 isOpen={showShareModal}
                 onClose={() => setShowShareModal(false)}
+            />
+
+            {/* New Transformation Dialog */}
+            <NewTransformationDialog
+                isOpen={showNewTransformationDialog}
+                onClose={() => setShowNewTransformationDialog(false)}
+                onSubmit={(data) => handleCreateTransformation(
+                    data.name,
+                    data.sourceMetamodelId,
+                    data.targetMetamodelId,
+                    data.description
+                )}
+                existingNames={transformations.map(t => t.name)}
+                metamodels={metamodels.map(mm => ({ id: mm.id, name: mm.name || 'Unnamed' }))}
             />
 
             {/* Unsaved Changes Dialog */}
