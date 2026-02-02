@@ -12,6 +12,8 @@ export interface MappingLine {
     type: 'class' | 'attribute' | 'reference';
     isInferred?: boolean;
     isSelected?: boolean;
+    /** Status for visibility logic: pending only shows when hovered, toInsert always shows */
+    status?: 'pending' | 'toInsert' | 'rejected';
 }
 
 interface LineCoordinates {
@@ -23,31 +25,51 @@ interface LineCoordinates {
     type: 'class' | 'attribute' | 'reference';
     isInferred?: boolean;
     isSelected?: boolean;
+    status?: 'pending' | 'toInsert' | 'rejected';
 }
 
 export interface MappingLinesOverlayProps {
     lines: MappingLine[];
     containerRef: React.RefObject<HTMLDivElement>;
+    hoveredLineId?: string | null;
     onLineClick?: (lineId: string) => void;
-    onLineDelete?: (lineId: string) => void;
+    onLineHover?: (lineId: string | null) => void;
 }
 
-// Colors for different mapping types
-const LINE_COLORS: Record<string, string> = {
-    class: '#0ea5e9',      // cyan
-    attribute: '#10b981',   // green
-    reference: '#8b5cf6',   // purple
-};
+// Type-based colors for mapping arrows (Green/Pink for max contrast)
+const MAPPING_COLORS = {
+    class: {
+        normal: '#6ee7b7',      // Green mint pastel (emerald-300)
+        highlighted: '#10b981', // Green emerald (emerald-500)
+    },
+    attribute: {
+        normal: '#fca5a5',      // Pink coral pastel (red-300)
+        highlighted: '#ef4444', // Red coral (red-500)
+    },
+    reference: {
+        normal: '#fca5a5',      // Same as attribute
+        highlighted: '#ef4444',
+    },
+} as const;
 
 export const MappingLinesOverlay: React.FC<MappingLinesOverlayProps> = ({
     lines,
     containerRef,
+    hoveredLineId,
     onLineClick,
-    onLineDelete,
+    onLineHover,
 }) => {
     const [coordinates, setCoordinates] = useState<LineCoordinates[]>([]);
-    const [hoveredLine, setHoveredLine] = useState<string | null>(null);
+    const [internalHoveredLine, setInternalHoveredLine] = useState<string | null>(null);
     const svgRef = useRef<SVGSVGElement>(null);
+
+    // Combine internal hover and external hover
+    const effectiveHoveredLine = hoveredLineId ?? internalHoveredLine;
+
+    // Debug: Log incoming lines
+    useEffect(() => {
+        console.log('[MappingLinesOverlay] Lines received:', lines.length, lines.map(l => ({ id: l.id, status: l.status })));
+    }, [lines]);
 
     // Calculate line coordinates from element positions
     const calculateCoordinates = useCallback(() => {
@@ -67,7 +89,9 @@ export const MappingLinesOverlay: React.FC<MappingLinesOverlayProps> = ({
                 const sourceRect = sourceEl.getBoundingClientRect();
                 const targetRect = targetEl.getBoundingClientRect();
 
-                // Calculate positions relative to container
+                // Source is in left tree (start from right edge)
+                // Target is in right tree (end at left edge)
+                // Arrow points from source → target (left → right)
                 const x1 = sourceRect.right - containerRect.left;
                 const y1 = sourceRect.top + sourceRect.height / 2 - containerRect.top;
                 const x2 = targetRect.left - containerRect.left;
@@ -82,66 +106,118 @@ export const MappingLinesOverlay: React.FC<MappingLinesOverlayProps> = ({
                     type: line.type,
                     isInferred: line.isInferred,
                     isSelected: line.isSelected,
+                    status: line.status,
                 });
+            } else {
+                // Debug: log when elements are not found
+                if (process.env.NODE_ENV === 'development') {
+                    if (!sourceEl) console.warn(`[MappingLinesOverlay] Source element not found: ${line.sourceId}`);
+                    if (!targetEl) console.warn(`[MappingLinesOverlay] Target element not found: ${line.targetId}`);
+                }
             }
         });
 
+        console.log('[MappingLinesOverlay] Calculated coordinates:', newCoordinates.length, newCoordinates.map(c => ({ id: c.id, status: c.status })));
         setCoordinates(newCoordinates);
     }, [lines, containerRef]);
 
-    // Recalculate on lines change or resize
+    // Recalculate on lines change, resize, or scroll
     useEffect(() => {
+        // Initial calculation
         calculateCoordinates();
 
-        const observer = new ResizeObserver(() => {
-            calculateCoordinates();
-        });
+        // Debounce recalculations with requestAnimationFrame
+        let rafId: number | null = null;
+        const debouncedCalculate = () => {
+            if (rafId) cancelAnimationFrame(rafId);
+            rafId = requestAnimationFrame(calculateCoordinates);
+        };
 
+        // Observe resize
+        const resizeObserver = new ResizeObserver(debouncedCalculate);
         if (containerRef.current) {
-            observer.observe(containerRef.current);
+            resizeObserver.observe(containerRef.current);
         }
 
-        // Also listen to scroll events
-        const handleScroll = () => calculateCoordinates();
+        // Observe DOM changes (tree expand/collapse)
+        const mutationObserver = new MutationObserver(debouncedCalculate);
+        if (containerRef.current) {
+            mutationObserver.observe(containerRef.current, {
+                childList: true,
+                subtree: true,
+                attributes: true,
+                attributeFilter: ['class', 'style'],
+            });
+        }
+
+        // Listen to scroll events (capture phase for child scrolls)
+        const handleScroll = debouncedCalculate;
         containerRef.current?.addEventListener('scroll', handleScroll, true);
 
         return () => {
-            observer.disconnect();
+            if (rafId) cancelAnimationFrame(rafId);
+            resizeObserver.disconnect();
+            mutationObserver.disconnect();
             containerRef.current?.removeEventListener('scroll', handleScroll, true);
         };
     }, [calculateCoordinates, containerRef]);
 
-    // Generate curved path
+    // Generate Manhattan path with rounded corners
     const generatePath = useCallback((coords: LineCoordinates): string => {
         const { x1, y1, x2, y2 } = coords;
+
+        // Corner radius for rounded turns
+        const radius = 8;
+
+        // Calculate midpoint for the vertical segment
         const midX = (x1 + x2) / 2;
 
-        // Bezier curve control points
-        const cx1 = midX;
-        const cy1 = y1;
-        const cx2 = midX;
-        const cy2 = y2;
+        // If elements are close vertically, use simple straight line
+        if (Math.abs(y1 - y2) < 10) {
+            return `M ${x1} ${y1} L ${x2} ${y2}`;
+        }
 
-        return `M ${x1} ${y1} C ${cx1} ${cy1}, ${cx2} ${cy2}, ${x2} ${y2}`;
+        // Manhattan path: horizontal -> vertical -> horizontal
+        // With rounded corners using quadratic bezier curves
+
+        // Build path with rounded corners
+        let path = `M ${x1} ${y1}`;
+
+        // Horizontal to first corner (with rounded turn)
+        if (y1 < y2) {
+            // Source is above target
+            path += ` L ${midX - radius} ${y1}`;
+            path += ` Q ${midX} ${y1}, ${midX} ${y1 + radius}`;
+            path += ` L ${midX} ${y2 - radius}`;
+            path += ` Q ${midX} ${y2}, ${midX + radius} ${y2}`;
+        } else {
+            // Source is below target
+            path += ` L ${midX - radius} ${y1}`;
+            path += ` Q ${midX} ${y1}, ${midX} ${y1 - radius}`;
+            path += ` L ${midX} ${y2 + radius}`;
+            path += ` Q ${midX} ${y2}, ${midX + radius} ${y2}`;
+        }
+
+        // Final horizontal to target
+        path += ` L ${x2} ${y2}`;
+
+        return path;
     }, []);
 
     // Handle line interactions
     const handleLineMouseEnter = useCallback((lineId: string) => {
-        setHoveredLine(lineId);
-    }, []);
+        setInternalHoveredLine(lineId);
+        onLineHover?.(lineId);
+    }, [onLineHover]);
 
     const handleLineMouseLeave = useCallback(() => {
-        setHoveredLine(null);
-    }, []);
+        setInternalHoveredLine(null);
+        onLineHover?.(null);
+    }, [onLineHover]);
 
     const handleLineClick = useCallback((lineId: string) => {
         onLineClick?.(lineId);
     }, [onLineClick]);
-
-    const handleDeleteClick = useCallback((e: React.MouseEvent, lineId: string) => {
-        e.stopPropagation();
-        onLineDelete?.(lineId);
-    }, [onLineDelete]);
 
     if (coordinates.length === 0) {
         return <div className="jjtl-mapping-overlay-empty" />;
@@ -151,58 +227,54 @@ export const MappingLinesOverlay: React.FC<MappingLinesOverlayProps> = ({
         <svg
             ref={svgRef}
             className="jjtl-mapping-overlay"
-            style={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                width: '100%',
-                height: '100%',
-                pointerEvents: 'none',
-                overflow: 'visible',
-            }}
         >
             <defs>
-                {/* Arrow marker */}
-                <marker
-                    id="arrowhead"
-                    markerWidth="10"
-                    markerHeight="7"
-                    refX="9"
-                    refY="3.5"
-                    orient="auto"
-                >
-                    <polygon
-                        points="0 0, 10 3.5, 0 7"
-                        fill="#64748b"
-                    />
+                {/* Class mapping arrows - Green */}
+                <marker id="arrow-class-normal" markerWidth="6" markerHeight="5" refX="5" refY="2.5" orient="auto">
+                    <polyline points="0 0, 5 2.5, 0 5" fill="none" stroke={MAPPING_COLORS.class.normal} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                </marker>
+                <marker id="arrow-class-highlighted" markerWidth="6" markerHeight="5" refX="5" refY="2.5" orient="auto">
+                    <polyline points="0 0, 5 2.5, 0 5" fill="none" stroke={MAPPING_COLORS.class.highlighted} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                 </marker>
 
-                {/* Markers for each type */}
-                {Object.entries(LINE_COLORS).map(([type, color]) => (
-                    <marker
-                        key={type}
-                        id={`arrowhead-${type}`}
-                        markerWidth="10"
-                        markerHeight="7"
-                        refX="9"
-                        refY="3.5"
-                        orient="auto"
-                    >
-                        <polygon
-                            points="0 0, 10 3.5, 0 7"
-                            fill={color}
-                        />
-                    </marker>
-                ))}
+                {/* Attribute mapping arrows - Pink */}
+                <marker id="arrow-attr-normal" markerWidth="6" markerHeight="5" refX="5" refY="2.5" orient="auto">
+                    <polyline points="0 0, 5 2.5, 0 5" fill="none" stroke={MAPPING_COLORS.attribute.normal} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                </marker>
+                <marker id="arrow-attr-highlighted" markerWidth="6" markerHeight="5" refX="5" refY="2.5" orient="auto">
+                    <polyline points="0 0, 5 2.5, 0 5" fill="none" stroke={MAPPING_COLORS.attribute.highlighted} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                </marker>
             </defs>
 
             {/* Render lines */}
             {coordinates.map(coords => {
-                const color = LINE_COLORS[coords.type] || LINE_COLORS.class;
-                const isHovered = hoveredLine === coords.id;
+                const isHovered = effectiveHoveredLine === coords.id;
                 const isSelected = coords.isSelected;
-                const strokeWidth = isSelected ? 3 : isHovered ? 2.5 : 2;
-                const opacity = coords.isInferred ? 0.5 : 1;
+                const isHighlighted = isHovered || isSelected;
+
+                // Visibility logic based on status:
+                // - pending: only show when hovered or selected
+                // - toInsert: always show (gray when not hovered, cyan when hovered)
+                // - rejected: never show
+                // - undefined (legacy): always show
+                if (coords.status === 'rejected') {
+                    return null;
+                }
+                if (coords.status === 'pending' && !isHighlighted) {
+                    return null;
+                }
+
+                // Get colors based on mapping type (class vs attribute)
+                const mappingType = coords.type === 'class' ? 'class' : 'attribute';
+                const colors = MAPPING_COLORS[mappingType];
+
+                // Style based on state and type
+                const strokeColor = isHighlighted ? colors.highlighted : colors.normal;
+                const strokeWidth = isHighlighted ? 1.5 : 1;
+                const strokeOpacity = isHighlighted ? 1 : 0.6;
+                const markerId = mappingType === 'class'
+                    ? (isHighlighted ? 'arrow-class-highlighted' : 'arrow-class-normal')
+                    : (isHighlighted ? 'arrow-attr-highlighted' : 'arrow-attr-normal');
 
                 return (
                     <g key={coords.id}>
@@ -222,42 +294,15 @@ export const MappingLinesOverlay: React.FC<MappingLinesOverlayProps> = ({
                         <path
                             d={generatePath(coords)}
                             fill="none"
-                            stroke={color}
+                            stroke={strokeColor}
                             strokeWidth={strokeWidth}
-                            strokeDasharray={coords.isInferred ? '5,5' : undefined}
-                            opacity={opacity}
-                            markerEnd={`url(#arrowhead-${coords.type})`}
+                            strokeOpacity={strokeOpacity}
+                            strokeDasharray={coords.isInferred ? '4,3' : undefined}
+                            markerEnd={`url(#${markerId})`}
                             style={{
-                                transition: 'stroke-width 150ms ease',
-                                filter: isSelected ? 'drop-shadow(0 0 3px rgba(14, 165, 233, 0.5))' : undefined,
+                                transition: 'stroke 150ms ease, stroke-width 150ms ease, stroke-opacity 150ms ease',
                             }}
                         />
-
-                        {/* Delete button on hover */}
-                        {isHovered && onLineDelete && (
-                            <g
-                                transform={`translate(${(coords.x1 + coords.x2) / 2 - 10}, ${(coords.y1 + coords.y2) / 2 - 10})`}
-                                style={{ pointerEvents: 'all', cursor: 'pointer' }}
-                                onClick={(e) => handleDeleteClick(e, coords.id)}
-                            >
-                                <circle
-                                    cx="10"
-                                    cy="10"
-                                    r="10"
-                                    fill="#ef4444"
-                                />
-                                <text
-                                    x="10"
-                                    y="14"
-                                    textAnchor="middle"
-                                    fill="white"
-                                    fontSize="12"
-                                    fontWeight="bold"
-                                >
-                                    ×
-                                </text>
-                            </g>
-                        )}
                     </g>
                 );
             })}

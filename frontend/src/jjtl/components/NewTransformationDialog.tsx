@@ -3,9 +3,50 @@
  * Dialog for creating a new JjTL transformation
  */
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { TransformationFormData, generateUniqueName } from '../types/transformation';
 import '../../components/CreateProjectDialog/create-project-dialog.scss';
+
+// ============================================
+// HELPER FUNCTIONS
+// ============================================
+
+/**
+ * Converts a string to PascalCase removing spaces and special characters
+ * "Activity Diagrams" → "ActivityDiagrams"
+ * "petri nets" → "PetriNets"
+ * "my_metamodel" → "MyMetamodel"
+ */
+function toPascalCase(str: string): string {
+    if (!str) return '';
+
+    return str
+        // Split by spaces, underscores, dashes
+        .split(/[\s_-]+/)
+        // Capitalize first letter of each word
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+        // Join
+        .join('');
+}
+
+/**
+ * Generates a transformation name from metamodel names
+ * "Activity Diagrams" + "Petri Nets" → "ActivityDiagramsToPetriNets"
+ */
+function generateTransformationNameFromMetamodels(sourceName: string, targetName: string): string {
+    if (!sourceName || !targetName) {
+        return 'Transformation';
+    }
+
+    const source = toPascalCase(sourceName);
+    const target = toPascalCase(targetName);
+
+    return `${source}To${target}`;
+}
+
+// ============================================
+// INTERFACES
+// ============================================
 
 interface MetamodelOption {
     id: string;
@@ -33,29 +74,62 @@ export const NewTransformationDialog: React.FC<NewTransformationDialogProps> = (
     const [targetMetamodelId, setTargetMetamodelId] = useState('');
     const [errors, setErrors] = useState<{ name?: string; source?: string; target?: string }>({});
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isNameManuallyEdited, setIsNameManuallyEdited] = useState(false);
 
     const inputRef = useRef<HTMLInputElement>(null);
     const wasOpenRef = useRef(false);
+
+    // Get selected metamodel objects
+    const sourceMetamodel = useMemo(
+        () => metamodels.find(m => m.id === sourceMetamodelId),
+        [metamodels, sourceMetamodelId]
+    );
+    const targetMetamodel = useMemo(
+        () => metamodels.find(m => m.id === targetMetamodelId),
+        [metamodels, targetMetamodelId]
+    );
 
     // Reset form ONLY when dialog opens (transition from closed to open)
     useEffect(() => {
         if (isOpen && !wasOpenRef.current) {
             // Dialog just opened - initialize form
-            const uniqueName = generateUniqueName('Transformation', existingNames);
-            setName(uniqueName);
+            setName('');
             setDescription('');
-            setSourceMetamodelId(metamodels.length > 0 ? metamodels[0].id : '');
-            setTargetMetamodelId(metamodels.length > 1 ? metamodels[1].id : (metamodels.length > 0 ? metamodels[0].id : ''));
+            setSourceMetamodelId('');
+            setTargetMetamodelId('');
             setErrors({});
+            setIsNameManuallyEdited(false);
 
             // Focus input after a short delay
             setTimeout(() => {
                 inputRef.current?.focus();
-                inputRef.current?.select();
             }, 100);
         }
         wasOpenRef.current = isOpen;
     }, [isOpen]); // Only depend on isOpen, not on metamodels/existingNames
+
+    // Auto-generate name when source or target metamodel changes
+    useEffect(() => {
+        // Only auto-generate if user hasn't manually edited the name
+        if (!isNameManuallyEdited && isOpen) {
+            const sourceName = sourceMetamodel?.name || '';
+            const targetName = targetMetamodel?.name || '';
+
+            if (sourceName && targetName) {
+                // Generate name from metamodel names
+                let generatedName = generateTransformationNameFromMetamodels(sourceName, targetName);
+
+                // Make sure it's unique
+                generatedName = generateUniqueName(generatedName, existingNames);
+
+                setName(generatedName);
+            } else if (!sourceName && !targetName) {
+                // Both empty - clear name
+                setName('');
+            }
+            // If only one is selected, keep the current name (or empty)
+        }
+    }, [sourceMetamodelId, targetMetamodelId, sourceMetamodel, targetMetamodel, isNameManuallyEdited, isOpen, existingNames]);
 
     // Handle ESC key to close
     useEffect(() => {
@@ -174,10 +248,11 @@ export const NewTransformationDialog: React.FC<NewTransformationDialogProps> = (
                                         id="transformation-name"
                                         type="text"
                                         className={`form-input ${errors.name ? 'error' : ''}`}
-                                        placeholder="StateMachine2PetriNet"
+                                        placeholder="e.g., StateMachineToPetriNet"
                                         value={name}
                                         onChange={(e) => {
                                             setName(e.target.value);
+                                            setIsNameManuallyEdited(true); // User took control
                                             if (errors.name) setErrors({ ...errors, name: undefined });
                                         }}
                                         disabled={isSubmitting}

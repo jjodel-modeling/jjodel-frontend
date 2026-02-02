@@ -13,6 +13,8 @@ export interface MappingConnection {
     targetElementId: string;
     mappingType: 'class' | 'attribute' | 'reference';
     isInferred?: boolean;
+    /** Status for visibility: pending only shows when hovered, toInsert always shows */
+    status?: 'pending' | 'toInsert' | 'rejected';
 }
 
 export interface DualMetamodelPanelProps {
@@ -22,7 +24,9 @@ export interface DualMetamodelPanelProps {
     targetMetamodelName: string;
     mappings: MappingConnection[];
     selectedMapping?: string;
+    hoveredMapping?: string | null;
     onMappingSelect?: (mapping: MappingConnection) => void;
+    onMappingHover?: (mappingId: string | null) => void;
     onMappingCreate?: (sourceId: string, targetId: string) => void;
     onMappingDelete?: (mappingId: string) => void;
 }
@@ -34,15 +38,20 @@ export const DualMetamodelPanel: React.FC<DualMetamodelPanelProps> = ({
     targetMetamodelName,
     mappings,
     selectedMapping,
+    hoveredMapping,
     onMappingSelect,
+    onMappingHover,
     onMappingCreate,
-    onMappingDelete,
 }) => {
     const containerRef = useRef<HTMLDivElement>(null);
     const [selectedSource, setSelectedSource] = useState<string | undefined>();
     const [selectedTarget, setSelectedTarget] = useState<string | undefined>();
     const [mappingLines, setMappingLines] = useState<MappingLine[]>([]);
     const [dragSource, setDragSource] = useState<MetamodelElement | null>(null);
+    const [internalHoveredMapping, setInternalHoveredMapping] = useState<string | null>(null);
+
+    // Combine internal and external hover state
+    const effectiveHoveredMapping = hoveredMapping ?? internalHoveredMapping;
 
     // Calculate mapping lines from connections
     useEffect(() => {
@@ -55,14 +64,20 @@ export const DualMetamodelPanel: React.FC<DualMetamodelPanelProps> = ({
             type: mapping.mappingType,
             isInferred: mapping.isInferred,
             isSelected: mapping.id === selectedMapping,
+            status: mapping.status,
         }));
+
+        console.log('[DualMetamodelPanel] Mappings received:', mappings.length, mappings.map(m => ({ id: m.id, status: m.status })));
+        console.log('[DualMetamodelPanel] MappingLines created:', lines.length, lines.map(l => ({ id: l.id, status: l.status })));
 
         setMappingLines(lines);
     }, [mappings, selectedMapping]);
 
-    // Get highlighted elements based on selected mapping
+    // Get highlighted elements based on selected or hovered mapping
     const getHighlightedElements = useCallback((): Set<string> => {
         const highlighted = new Set<string>();
+
+        // Highlight selected mapping elements
         if (selectedMapping) {
             const mapping = mappings.find(m => m.id === selectedMapping);
             if (mapping) {
@@ -70,10 +85,26 @@ export const DualMetamodelPanel: React.FC<DualMetamodelPanelProps> = ({
                 highlighted.add(mapping.targetElementId);
             }
         }
+
+        // Also highlight hovered mapping elements
+        if (effectiveHoveredMapping) {
+            const mapping = mappings.find(m => m.id === effectiveHoveredMapping);
+            if (mapping) {
+                highlighted.add(mapping.sourceElementId);
+                highlighted.add(mapping.targetElementId);
+            }
+        }
+
         return highlighted;
-    }, [mappings, selectedMapping]);
+    }, [mappings, selectedMapping, effectiveHoveredMapping]);
 
     const highlightedElements = getHighlightedElements();
+
+    // Handle line hover
+    const handleLineHover = useCallback((lineId: string | null) => {
+        setInternalHoveredMapping(lineId);
+        onMappingHover?.(lineId);
+    }, [onMappingHover]);
 
     // Handle element selection
     const handleSourceSelect = useCallback((element: MetamodelElement) => {
@@ -147,15 +178,8 @@ export const DualMetamodelPanel: React.FC<DualMetamodelPanelProps> = ({
                 />
             </div>
 
-            {/* Mapping lines overlay */}
-            <div className="jjtl-dual-panel-center">
-                <MappingLinesOverlay
-                    lines={mappingLines}
-                    containerRef={containerRef}
-                    onLineClick={handleLineClick}
-                    onLineDelete={onMappingDelete}
-                />
-            </div>
+            {/* Center spacer for visual separation */}
+            <div className="jjtl-dual-panel-center" />
 
             {/* Target metamodel */}
             <div
@@ -172,6 +196,15 @@ export const DualMetamodelPanel: React.FC<DualMetamodelPanelProps> = ({
                     highlightedElements={highlightedElements}
                 />
             </div>
+
+            {/* Mapping lines overlay - covers entire panel */}
+            <MappingLinesOverlay
+                lines={mappingLines}
+                containerRef={containerRef}
+                hoveredLineId={effectiveHoveredMapping}
+                onLineClick={handleLineClick}
+                onLineHover={handleLineHover}
+            />
 
             {/* Drag hint */}
             {dragSource && (

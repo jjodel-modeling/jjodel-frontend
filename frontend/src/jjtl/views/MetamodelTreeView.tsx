@@ -80,6 +80,9 @@ const TreeNode: React.FC<TreeNodeProps> = ({
                 onClick={handleClick}
                 draggable={element.type === 'class' || element.type === 'attribute'}
                 onDragStart={handleDragStart}
+                data-element-id={element.id}
+                data-element-name={element.name}
+                data-element-type={element.type}
             >
                 {/* Expand/collapse icon */}
                 <span className="jjtl-tree-expand" onClick={(e) => { e.stopPropagation(); setIsExpanded(!isExpanded); }}>

@@ -204,14 +204,15 @@ export class SimpleMatcher {
         return {
             id: `cls_${source.id}_${target.id}`,
             sourceClass: source.name,
+            sourceClassId: source.id,
             targetClass: target.name,
+            targetClassId: target.id,
             confidence: exactMatch ? 'high' : 'medium',
             reason: exactMatch ? 'same-name-same-type' : 'similar-name',
             reasonText: exactMatch
                 ? 'Same class name'
                 : `Similar names: ${source.name} ~ ${target.name}`,
-            accepted: false,
-            rejected: false,
+            status: 'pending',
         };
     }
 
@@ -257,17 +258,20 @@ export class SimpleMatcher {
         return {
             id: `attr_${sourceClass.id}_${sourceAttr.id}_${targetAttr.id}`,
             sourceClass: sourceClass.name,
+            sourceClassId: sourceClass.id,
             sourceAttribute: sourceAttr.name,
+            sourceAttributeId: sourceAttr.id,
             sourceType: sourceAttr.dataType,
             targetClass: targetClass.name,
+            targetClassId: targetClass.id,
             targetAttribute: targetAttr.name,
+            targetAttributeId: targetAttr.id,
             targetType: targetAttr.dataType,
             confidence,
             reason,
             reasonText,
             conversionHint,
-            accepted: false,
-            rejected: false,
+            status: 'pending',
         };
     }
 
@@ -283,16 +287,19 @@ export class SimpleMatcher {
         return {
             id: `ref_${sourceClass.id}_${sourceRef.id}_${targetRef.id}`,
             sourceClass: sourceClass.name,
+            sourceClassId: sourceClass.id,
             sourceAttribute: sourceRef.name,
+            sourceAttributeId: sourceRef.id,
             sourceType: sourceRef.dataType ? `-> ${sourceRef.dataType}` : undefined,
             targetClass: targetClass.name,
+            targetClassId: targetClass.id,
             targetAttribute: targetRef.name,
+            targetAttributeId: targetRef.id,
             targetType: targetRef.dataType ? `-> ${targetRef.dataType}` : undefined,
             confidence: 'medium',
             reason: 'same-name-same-type',
             reasonText: 'Same reference name',
-            accepted: false,
-            rejected: false,
+            status: 'pending',
         };
     }
 

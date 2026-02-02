@@ -3,7 +3,7 @@
  * Main container for the JjTL development environment
  */
 
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { JjtlToolbar } from './JjtlToolbar';
 import { JjtlStatusBar } from './JjtlStatusBar';
 import { JjtlEditor } from '../editor';
@@ -81,7 +81,7 @@ export const JjtlDevelopmentEnv: React.FC<JjtlDevelopmentEnvProps> = ({
     const [isSidePanelCollapsed, setIsSidePanelCollapsed] = useState(false);
     const [cursorPosition, setCursorPosition] = useState({ line: 1, column: 1 });
 
-    // Side panel resize state
+    // Left side panel resize state
     const [sidePanelWidth, setSidePanelWidth] = useState(() => {
         const saved = localStorage.getItem('jjtl-sidebar-width');
         return saved ? parseInt(saved, 10) : 280;
@@ -89,9 +89,21 @@ export const JjtlDevelopmentEnv: React.FC<JjtlDevelopmentEnvProps> = ({
     const [isResizingSidePanel, setIsResizingSidePanel] = useState(false);
     const sidePanelRef = useRef<HTMLDivElement>(null);
 
+    // Right panel (Suggested Mappings) resize state
+    const [rightPanelWidth, setRightPanelWidth] = useState(() => {
+        const saved = localStorage.getItem('jjtl-right-panel-width');
+        return saved ? parseInt(saved, 10) : 400; // Larger default: 400px
+    });
+    const [isResizingRightPanel, setIsResizingRightPanel] = useState(false);
+    const rightPanelRef = useRef<HTMLDivElement>(null);
+
     // Mappings state
     const [mappings, setMappings] = useState<MappingConnection[]>([]);
     const [selectedMapping, setSelectedMapping] = useState<string | undefined>();
+
+    // Suggestions state - for arrow visualization in DualMetamodelPanel
+    const [suggestions, setSuggestions] = useState<MappingSuggestion[]>([]);
+    const [hoveredSuggestion, setHoveredSuggestion] = useState<string | null>(null);
 
     // Refs
     const editorRef = useRef<any>(null);
@@ -165,35 +177,37 @@ export const JjtlDevelopmentEnv: React.FC<JjtlDevelopmentEnvProps> = ({
         setMappings(prev => prev.filter(m => m.id !== mappingId));
     }, []);
 
-    // Handle suggestion accept - add to mappings
-    const handleSuggestionAccept = useCallback((suggestion: MappingSuggestion) => {
-        const newMapping: MappingConnection = {
-            id: `mapping-${Date.now()}`,
-            sourceElementId: suggestion.sourceAttribute
-                ? `${suggestion.sourceClass}.${suggestion.sourceAttribute}`
-                : suggestion.sourceClass,
-            targetElementId: suggestion.targetAttribute
-                ? `${suggestion.targetClass}.${suggestion.targetAttribute}`
-                : suggestion.targetClass,
-            mappingType: suggestion.sourceAttribute ? 'attribute' : 'class',
-        };
-        setMappings(prev => [...prev, newMapping]);
+    // Handle suggestions update from SuggestedMappingsPanel
+    const handleSuggestionsChange = useCallback((newSuggestions: MappingSuggestion[]) => {
+        setSuggestions(newSuggestions);
     }, []);
 
-    // Handle accept all suggestions
-    const handleSuggestionAcceptAll = useCallback((suggestions: MappingSuggestion[]) => {
-        const newMappings: MappingConnection[] = suggestions.map(suggestion => ({
-            id: `mapping-${Date.now()}-${suggestion.id}`,
-            sourceElementId: suggestion.sourceAttribute
-                ? `${suggestion.sourceClass}.${suggestion.sourceAttribute}`
-                : suggestion.sourceClass,
-            targetElementId: suggestion.targetAttribute
-                ? `${suggestion.targetClass}.${suggestion.targetAttribute}`
-                : suggestion.targetClass,
-            mappingType: suggestion.sourceAttribute ? 'attribute' : 'class',
-        }));
-        setMappings(prev => [...prev, ...newMappings]);
+    // Handle suggestion hover (bidirectional: cards ↔ arrows)
+    const handleSuggestionHover = useCallback((suggestionId: string | null) => {
+        setHoveredSuggestion(suggestionId);
     }, []);
+
+    // Convert suggestions to MappingConnections for DualMetamodelPanel visualization
+    const suggestionMappings: MappingConnection[] = useMemo(() => {
+        // Only include non-rejected suggestions
+        const result = suggestions
+            .filter(s => s.status !== 'rejected')
+            .map(suggestion => ({
+                id: suggestion.id,
+                sourceElementId: suggestion.sourceAttributeId || suggestion.sourceClassId,
+                targetElementId: suggestion.targetAttributeId || suggestion.targetClassId,
+                mappingType: (suggestion.sourceAttribute ? 'attribute' : 'class') as 'class' | 'attribute' | 'reference',
+                status: suggestion.status,
+            }));
+        console.log('[JjtlDevelopmentEnv] Suggestions:', suggestions.length, suggestions.map(s => ({ id: s.id, status: s.status })));
+        console.log('[JjtlDevelopmentEnv] SuggestionMappings:', result.length, result.map(m => ({ id: m.id, status: m.status })));
+        return result;
+    }, [suggestions]);
+
+    // Combine regular mappings with suggestion mappings
+    const allMappings = useMemo(() => {
+        return [...mappings, ...suggestionMappings];
+    }, [mappings, suggestionMappings]);
 
     // Handle insert generated JjTL code from suggestions
     const handleInsertCode = useCallback((generatedCode: string) => {
@@ -223,7 +237,7 @@ export const JjtlDevelopmentEnv: React.FC<JjtlDevelopmentEnvProps> = ({
         }
     }, [code, onCodeChange, parse]);
 
-    // Side panel resize logic
+    // Left side panel resize logic
     useEffect(() => {
         const handleMouseMove = (e: MouseEvent) => {
             if (!isResizingSidePanel || !sidePanelRef.current) return;
@@ -252,6 +266,38 @@ export const JjtlDevelopmentEnv: React.FC<JjtlDevelopmentEnvProps> = ({
             document.removeEventListener('mouseup', handleMouseUp);
         };
     }, [isResizingSidePanel]);
+
+    // Right panel (Suggested Mappings) resize logic
+    useEffect(() => {
+        const handleMouseMove = (e: MouseEvent) => {
+            if (!isResizingRightPanel || !rightPanelRef.current) return;
+
+            // For right panel: width = right edge of panel - mouse X
+            const panelRect = rightPanelRef.current.getBoundingClientRect();
+            const newWidth = panelRect.right - e.clientX;
+            const clampedWidth = Math.max(300, Math.min(600, newWidth));
+            setRightPanelWidth(clampedWidth);
+            localStorage.setItem('jjtl-right-panel-width', String(clampedWidth));
+        };
+
+        const handleMouseUp = () => {
+            setIsResizingRightPanel(false);
+            document.body.style.cursor = '';
+            document.body.style.userSelect = '';
+        };
+
+        if (isResizingRightPanel) {
+            document.addEventListener('mousemove', handleMouseMove);
+            document.addEventListener('mouseup', handleMouseUp);
+            document.body.style.cursor = 'col-resize';
+            document.body.style.userSelect = 'none';
+        }
+
+        return () => {
+            document.removeEventListener('mousemove', handleMouseMove);
+            document.removeEventListener('mouseup', handleMouseUp);
+        };
+    }, [isResizingRightPanel]);
 
     // Keyboard shortcuts
     useEffect(() => {
@@ -309,9 +355,11 @@ export const JjtlDevelopmentEnv: React.FC<JjtlDevelopmentEnvProps> = ({
                             targetMetamodel={targetMetamodel}
                             sourceMetamodelName={sourceMetamodelName}
                             targetMetamodelName={targetMetamodelName}
-                            mappings={mappings}
+                            mappings={allMappings}
                             selectedMapping={selectedMapping}
+                            hoveredMapping={hoveredSuggestion}
                             onMappingSelect={(m) => setSelectedMapping(m.id)}
+                            onMappingHover={handleSuggestionHover}
                             onMappingCreate={handleMappingCreate}
                             onMappingDelete={handleMappingDelete}
                         />
@@ -348,7 +396,19 @@ export const JjtlDevelopmentEnv: React.FC<JjtlDevelopmentEnvProps> = ({
 
                 {/* Right panel - Suggested mappings (optional) */}
                 {layoutMode === 'split-horizontal' && (
-                    <div className="jjtl-dev-env-inferred-panel">
+                    <div
+                        ref={rightPanelRef}
+                        className={`jjtl-dev-env-inferred-panel ${isResizingRightPanel ? 'resizing' : ''}`}
+                        style={{ width: rightPanelWidth }}
+                    >
+                        {/* Resize handle on left edge */}
+                        <div
+                            className="jjtl-right-panel-resize-handle"
+                            onMouseDown={(e) => {
+                                e.preventDefault();
+                                setIsResizingRightPanel(true);
+                            }}
+                        />
                         <SuggestedMappingsPanel
                             sourceMetamodel={sourceMetamodel}
                             targetMetamodel={targetMetamodel}
@@ -356,8 +416,9 @@ export const JjtlDevelopmentEnv: React.FC<JjtlDevelopmentEnvProps> = ({
                             getTargetMetamodel={getTargetMetamodel}
                             sourceMetamodelName={sourceMetamodelName}
                             targetMetamodelName={targetMetamodelName}
-                            onAccept={handleSuggestionAccept}
-                            onAcceptAll={handleSuggestionAcceptAll}
+                            hoveredMapping={hoveredSuggestion}
+                            onMappingHover={handleSuggestionHover}
+                            onSuggestionsChange={handleSuggestionsChange}
                             onInsertCode={handleInsertCode}
                         />
                     </div>

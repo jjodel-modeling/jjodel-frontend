@@ -104,62 +104,78 @@ export class MappingSuggestionService {
     }
 
     /**
-     * Accept a suggestion (mark as accepted)
+     * Toggle a suggestion between pending and toInsert
      */
-    acceptSuggestion(suggestionId: string): void {
+    toggleSuggestion(suggestionId: string): void {
         if (!this.lastResult) return;
 
         const suggestion = this.lastResult.suggestions.find(s => s.id === suggestionId);
         if (suggestion) {
-            suggestion.accepted = true;
-            suggestion.rejected = false;
+            suggestion.status = suggestion.status === 'toInsert' ? 'pending' : 'toInsert';
         }
     }
 
     /**
-     * Reject a suggestion (mark as rejected)
+     * Mark a suggestion for insertion
+     */
+    markForInsert(suggestionId: string): void {
+        if (!this.lastResult) return;
+
+        const suggestion = this.lastResult.suggestions.find(s => s.id === suggestionId);
+        if (suggestion) {
+            suggestion.status = 'toInsert';
+        }
+    }
+
+    /**
+     * Reject a suggestion (remove from list)
      */
     rejectSuggestion(suggestionId: string): void {
         if (!this.lastResult) return;
 
         const suggestion = this.lastResult.suggestions.find(s => s.id === suggestionId);
         if (suggestion) {
-            suggestion.rejected = true;
-            suggestion.accepted = false;
+            suggestion.status = 'rejected';
         }
     }
 
     /**
-     * Accept all pending suggestions
+     * Mark all pending suggestions for insertion
      */
-    acceptAllPending(): MappingSuggestion[] {
+    markAllForInsert(): MappingSuggestion[] {
         if (!this.lastResult) return [];
 
-        const pending = this.lastResult.suggestions.filter(
-            s => !s.accepted && !s.rejected
-        );
+        const pending = this.lastResult.suggestions.filter(s => s.status === 'pending');
 
         for (const suggestion of pending) {
-            suggestion.accepted = true;
+            suggestion.status = 'toInsert';
         }
 
         return pending;
     }
 
     /**
-     * Get pending suggestions (not accepted or rejected)
+     * Get pending suggestions
      */
     getPendingSuggestions(): MappingSuggestion[] {
         if (!this.lastResult) return [];
-        return this.lastResult.suggestions.filter(s => !s.accepted && !s.rejected);
+        return this.lastResult.suggestions.filter(s => s.status === 'pending');
     }
 
     /**
-     * Get accepted suggestions
+     * Get suggestions marked for insertion
      */
-    getAcceptedSuggestions(): MappingSuggestion[] {
+    getToInsertSuggestions(): MappingSuggestion[] {
         if (!this.lastResult) return [];
-        return this.lastResult.suggestions.filter(s => s.accepted);
+        return this.lastResult.suggestions.filter(s => s.status === 'toInsert');
+    }
+
+    /**
+     * Get visible suggestions (not rejected)
+     */
+    getVisibleSuggestions(): MappingSuggestion[] {
+        if (!this.lastResult) return [];
+        return this.lastResult.suggestions.filter(s => s.status !== 'rejected');
     }
 
     /**

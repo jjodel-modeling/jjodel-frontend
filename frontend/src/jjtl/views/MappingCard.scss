@@ -1,6 +1,6 @@
 /**
  * MappingCard Styles
- * Visual card for displaying mapping suggestions
+ * Visual card for displaying mapping suggestions with checkbox workflow
  */
 
 .mapping-card {
@@ -10,13 +10,28 @@
     margin-bottom: 8px;
     overflow: hidden;
     transition: all 0.15s ease;
+    cursor: pointer;
 
     &:hover {
         border-color: #cbd5e1;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
     }
 
-    &.accepted {
+    // When arrow is hovered (highlight from line hover)
+    &.hovered {
+        border-color: #0ea5e9;
+        box-shadow: 0 0 0 2px rgba(14, 165, 233, 0.2);
+    }
+
+    // When card is selected
+    &.selected {
+        border-color: #0ea5e9;
+        background: #f0f9ff;
+        box-shadow: 0 0 0 2px rgba(14, 165, 233, 0.3);
+    }
+
+    // Checked state (toInsert)
+    &.checked {
         background: #f0fdf4;
         border-color: #86efac;
 
@@ -24,34 +39,58 @@
             background: #bbf7d0;
         }
     }
-
-    &.rejected {
-        opacity: 0.5;
-        background: #fef2f2;
-        border-color: #fecaca;
-
-        .mapping-type-badge {
-            background: #fecaca;
-        }
-    }
 }
 
 .mapping-card-main {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 10px;
     padding: 12px;
+}
+
+// Checkbox button
+.checkbox-btn {
+    width: 28px;
+    height: 28px;
+    border: none;
+    background: transparent;
+    color: #94a3b8;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    transition: all 0.15s ease;
+    flex-shrink: 0;
+
+    &:hover {
+        background: #f1f5f9;
+        color: #64748b;
+    }
+
+    &.checked {
+        color: #0ea5e9;
+
+        &:hover {
+            color: #0284c7;
+            background: #e0f2fe;
+        }
+    }
+
+    i {
+        font-size: 18px;
+    }
 }
 
 // Type badge (C = Class, A = Attribute)
 .mapping-type-badge {
-    width: 28px;
-    height: 28px;
+    width: 24px;
+    height: 24px;
     border-radius: 6px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 700;
     flex-shrink: 0;
 
@@ -124,7 +163,7 @@
     display: flex;
     align-items: center;
     gap: 4px;
-    padding: 4px 10px;
+    padding: 4px 8px;
     border-radius: 12px;
     font-size: 11px;
     font-weight: 500;
@@ -147,8 +186,8 @@
 }
 
 .action-btn {
-    width: 28px;
-    height: 28px;
+    width: 26px;
+    height: 26px;
     border: 1px solid #e2e8f0;
     border-radius: 6px;
     background: white;
@@ -163,29 +202,10 @@
         background: #f1f5f9;
     }
 
-    // Accept - Verde pastello
-    &.accept:hover {
-        background: #d1fae5;
-        border-color: #86efac;
-        color: #166534;
-    }
-
-    &.accept.active {
-        background: #d1fae5;
-        border-color: #22c55e;
-        color: #166534;
-    }
-
     // Reject - Rosso pastello
     &.reject:hover {
         background: #fee2e2;
         border-color: #fca5a5;
-        color: #991b1b;
-    }
-
-    &.reject.active {
-        background: #fee2e2;
-        border-color: #f87171;
         color: #991b1b;
     }
 

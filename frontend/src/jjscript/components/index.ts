@@ -10,3 +10,5 @@ export { ScriptBlock } from './ScriptBlock';
 export type { ScriptBlockProps, ScriptLineResult, ScriptTarget } from './ScriptBlock';
 export { ScriptExecutionWindow } from './ScriptExecutionWindow';
 export type { ScriptExecutionWindowProps } from './ScriptExecutionWindow';
+export { JjScriptSuccessNotification, parseExecutionResult } from './JjScriptSuccessNotification';
+export type { JjScriptSuccessNotificationProps, ParsedNotification } from './JjScriptSuccessNotification';

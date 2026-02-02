@@ -1,6 +1,10 @@
 /**
  * MappingCard Component
- * Visual card for displaying a mapping suggestion with expand/collapse functionality
+ * Visual card for displaying a mapping suggestion with checkbox workflow
+ *
+ * - Checkbox: toggle between pending (unchecked) and toInsert (checked)
+ * - X button: reject/remove from list
+ * - Expand: show details
  */
 
 import React, { useState } from 'react';
@@ -9,16 +13,27 @@ import './MappingCard.scss';
 
 interface MappingCardProps {
     mapping: MappingSuggestion;
-    onAccept: () => void;
+    isHovered: boolean;
+    isSelected: boolean;
+    onToggle: () => void;
     onReject: () => void;
+    onHover: (id: string | null) => void;
+    onSelect: (id: string | null) => void;
 }
 
 export const MappingCard: React.FC<MappingCardProps> = ({
     mapping,
-    onAccept,
+    isHovered,
+    isSelected,
+    onToggle,
     onReject,
+    onHover,
+    onSelect,
 }) => {
     const [isExpanded, setIsExpanded] = useState(false);
+
+    // Is this mapping checked (marked for insertion)?
+    const isChecked = mapping.status === 'toInsert';
 
     // Determine mapping type
     const mappingType = mapping.sourceAttribute ? 'attribute' : 'class';
@@ -51,16 +66,34 @@ export const MappingCard: React.FC<MappingCardProps> = ({
     const needsConversion = mapping.sourceType && mapping.targetType &&
         mapping.sourceType.toLowerCase() !== mapping.targetType.toLowerCase();
 
-    // Determine card state
+    // Determine card state classes
     const cardClass = [
         'mapping-card',
-        mapping.accepted ? 'accepted' : '',
-        mapping.rejected ? 'rejected' : '',
+        isChecked ? 'checked' : '',
+        isHovered ? 'hovered' : '',
+        isSelected ? 'selected' : '',
     ].filter(Boolean).join(' ');
 
     return (
-        <div className={cardClass}>
+        <div
+            className={cardClass}
+            onMouseEnter={() => onHover(mapping.id)}
+            onMouseLeave={() => onHover(null)}
+            onClick={() => onSelect(mapping.id)}
+        >
             <div className="mapping-card-main">
+                {/* Checkbox */}
+                <button
+                    className={`checkbox-btn ${isChecked ? 'checked' : ''}`}
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        onToggle();
+                    }}
+                    title={isChecked ? 'Uncheck to move to pending' : 'Check to mark for insertion'}
+                >
+                    <i className={`bi ${isChecked ? 'bi-check-square-fill' : 'bi-square'}`} />
+                </button>
+
                 {/* Type badge */}
                 <div className={`mapping-type-badge ${mappingType}`}>
                     {typeIcon}
@@ -91,22 +124,21 @@ export const MappingCard: React.FC<MappingCardProps> = ({
                 {/* Actions */}
                 <div className="mapping-actions">
                     <button
-                        className={`action-btn accept ${mapping.accepted ? 'active' : ''}`}
-                        onClick={(e) => { e.stopPropagation(); onAccept(); }}
-                        title="Accept mapping"
-                    >
-                        <i className="bi bi-check-lg" />
-                    </button>
-                    <button
-                        className={`action-btn reject ${mapping.rejected ? 'active' : ''}`}
-                        onClick={(e) => { e.stopPropagation(); onReject(); }}
-                        title="Reject mapping"
+                        className="action-btn reject"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onReject();
+                        }}
+                        title="Remove mapping"
                     >
                         <i className="bi bi-x-lg" />
                     </button>
                     <button
                         className={`action-btn expand ${isExpanded ? 'expanded' : ''}`}
-                        onClick={() => setIsExpanded(!isExpanded)}
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            setIsExpanded(!isExpanded);
+                        }}
                         title={isExpanded ? 'Collapse' : 'Show details'}
                     >
                         <i className={`bi bi-chevron-${isExpanded ? 'up' : 'down'}`} />

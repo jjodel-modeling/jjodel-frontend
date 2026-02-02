@@ -1,9 +1,14 @@
 /**
  * SuggestedMappingsPanel - UI for displaying and managing mapping suggestions
  * Supports Simple mode (name/type matching) and AI mode (LLM-assisted)
+ *
+ * Workflow:
+ * - Checkbox checked (☑) = toInsert - mapping will be inserted into editor
+ * - Checkbox unchecked (☐) = pending - candidate mapping
+ * - X button = rejected - removed from list
  */
 
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { MetamodelElement } from './MetamodelTreeView';
 import {
     MappingSuggestion,
@@ -24,26 +29,18 @@ export interface SuggestedMappingsPanelProps {
     getTargetMetamodel?: () => MetamodelElement[];
     sourceMetamodelName?: string;
     targetMetamodelName?: string;
-    onAccept?: (suggestion: MappingSuggestion) => void;
-    onAcceptAll?: (suggestions: MappingSuggestion[]) => void;
-    onReject?: (suggestion: MappingSuggestion) => void;
+    /** Callback when a mapping is hovered (for arrow highlighting) */
+    onMappingHover?: (mappingId: string | null) => void;
+    /** Currently hovered mapping ID (from external source like arrow hover) */
+    hoveredMapping?: string | null;
+    /** Callback when suggestions list changes (for arrow visualization) */
+    onSuggestionsChange?: (suggestions: MappingSuggestion[]) => void;
     /** Callback to insert generated JjTL code into the editor */
     onInsertCode?: (code: string) => void;
 }
 
 /**
- * Generate JjTL code from accepted mapping suggestions
- * Groups attribute mappings by source-target class pair to handle
- * attribute mappings with different target classes correctly.
- *
- * Example: If we have:
- *   - Transition -> Transition (class)
- *   - Transition.name -> Transition.name (attr - same target)
- *   - Transition.condition -> Arc.weight (attr - DIFFERENT target)
- *
- * This generates:
- *   Transition -> Transition { name -> name }
- *   Transition -> Arc { condition -> weight }
+ * Generate JjTL code from toInsert mapping suggestions
  */
 function generateJjtlCode(mappings: MappingSuggestion[]): string {
     if (mappings.length === 0) return '';
@@ -90,7 +87,6 @@ function generateJjtlCode(mappings: MappingSuggestion[]): string {
     }
 
     // Second: Handle attribute mappings with different target classes
-    // (not covered by any class mapping)
     for (const [pairKey, attrs] of attrByClassPair) {
         if (processedPairs.has(pairKey)) continue;
 
@@ -117,42 +113,58 @@ export const SuggestedMappingsPanel: React.FC<SuggestedMappingsPanelProps> = ({
     getTargetMetamodel,
     sourceMetamodelName = 'Source',
     targetMetamodelName = 'Target',
-    onAccept,
-    onAcceptAll,
-    onReject,
+    onMappingHover,
+    hoveredMapping,
+    onSuggestionsChange,
     onInsertCode,
 }) => {
     // State
     const [mode, setMode] = useState<SuggestionMode>('simple');
     const [result, setResult] = useState<SuggestionResult | null>(null);
     const [isAnalyzing, setIsAnalyzing] = useState(false);
+    const [internalHoveredId, setInternalHoveredId] = useState<string | null>(null);
+    const [selectedId, setSelectedId] = useState<string | null>(null);
+
+    // Combine internal hover state with external prop
+    const hoveredId = hoveredMapping ?? internalHoveredId;
 
     // Check AI availability
     const isAIAvailable = useMemo(() => mappingSuggestionService.isAIAvailable(), []);
     const aiProviderName = useMemo(() => mappingSuggestionService.getAIProviderName(), []);
 
     // Filter suggestions by status
+    const toInsertSuggestions = useMemo(() => {
+        if (!result) return [];
+        return result.suggestions.filter(s => s.status === 'toInsert');
+    }, [result]);
+
     const pendingSuggestions = useMemo(() => {
         if (!result) return [];
-        return result.suggestions.filter(s => !s.accepted && !s.rejected);
+        return result.suggestions.filter(s => s.status === 'pending');
     }, [result]);
 
-    const acceptedSuggestions = useMemo(() => {
+    const visibleSuggestions = useMemo(() => {
         if (!result) return [];
-        return result.suggestions.filter(s => s.accepted);
+        return result.suggestions.filter(s => s.status !== 'rejected');
     }, [result]);
 
-    // Analyze metamodels - fetches FRESH data if getter functions are provided
+    // Notify parent of suggestions changes (for arrow visualization)
+    // Create a deep copy to ensure React detects the change
+    useEffect(() => {
+        if (result && onSuggestionsChange) {
+            // Deep copy suggestions to ensure React detects the change
+            const suggestionsCopy = result.suggestions.map(s => ({ ...s }));
+            console.log('[SuggestedMappingsPanel] Notifying parent of suggestions change:',
+                suggestionsCopy.length,
+                suggestionsCopy.map(s => ({ id: s.id, status: s.status })));
+            onSuggestionsChange(suggestionsCopy);
+        }
+    }, [result, onSuggestionsChange]);
+
+    // Analyze metamodels
     const handleAnalyze = useCallback(async () => {
-        // Get fresh metamodel data - prefer getters over static props
         const sourceMetamodel = getSourceMetamodel ? getSourceMetamodel() : (staticSourceMetamodel || []);
         const targetMetamodel = getTargetMetamodel ? getTargetMetamodel() : (staticTargetMetamodel || []);
-
-        console.log('[SuggestedMappingsPanel] Analyzing fresh metamodels:', {
-            sourceClasses: sourceMetamodel.filter(e => e.type === 'class').length,
-            targetClasses: targetMetamodel.filter(e => e.type === 'class').length,
-            usingGetters: !!(getSourceMetamodel || getTargetMetamodel)
-        });
 
         if (sourceMetamodel.length === 0 || targetMetamodel.length === 0) {
             setResult({
@@ -185,38 +197,46 @@ export const SuggestedMappingsPanel: React.FC<SuggestedMappingsPanelProps> = ({
         }
     }, [getSourceMetamodel, getTargetMetamodel, staticSourceMetamodel, staticTargetMetamodel, mode, sourceMetamodelName, targetMetamodelName]);
 
-    // Accept suggestion
-    const handleAccept = useCallback((suggestion: MappingSuggestion) => {
-        mappingSuggestionService.acceptSuggestion(suggestion.id);
+    // Toggle suggestion between pending and toInsert
+    const handleToggle = useCallback((suggestion: MappingSuggestion) => {
+        mappingSuggestionService.toggleSuggestion(suggestion.id);
         setResult({ ...mappingSuggestionService.getLastResult()! });
-        onAccept?.(suggestion);
-    }, [onAccept]);
+    }, []);
 
     // Reject suggestion
     const handleReject = useCallback((suggestion: MappingSuggestion) => {
         mappingSuggestionService.rejectSuggestion(suggestion.id);
         setResult({ ...mappingSuggestionService.getLastResult()! });
-        onReject?.(suggestion);
-    }, [onReject]);
+    }, []);
 
-    // Accept all pending
-    const handleAcceptAll = useCallback(() => {
-        const accepted = mappingSuggestionService.acceptAllPending();
+    // Mark all pending for insert
+    const handleMarkAllForInsert = useCallback(() => {
+        mappingSuggestionService.markAllForInsert();
         setResult({ ...mappingSuggestionService.getLastResult()! });
-        onAcceptAll?.(accepted);
-    }, [onAcceptAll]);
+    }, []);
 
-    // Insert accepted mappings as JjTL code
+    // Insert toInsert mappings as JjTL code
     const handleInsertMappings = useCallback(() => {
-        if (acceptedSuggestions.length === 0) return;
+        if (toInsertSuggestions.length === 0) return;
 
-        const code = generateJjtlCode(acceptedSuggestions);
+        const code = generateJjtlCode(toInsertSuggestions);
         console.log('[SuggestedMappingsPanel] Generated JjTL code:', code);
 
         onInsertCode?.(code);
-    }, [acceptedSuggestions, onInsertCode]);
+    }, [toInsertSuggestions, onInsertCode]);
 
-    // Check if we can analyze - if getters are provided, always allow (they return fresh data)
+    // Handle hover
+    const handleHover = useCallback((id: string | null) => {
+        setInternalHoveredId(id);
+        onMappingHover?.(id);
+    }, [onMappingHover]);
+
+    // Handle select - toggle: click on selected card to deselect
+    const handleSelect = useCallback((id: string | null) => {
+        setSelectedId(prev => prev === id ? null : id);
+    }, []);
+
+    // Check if we can analyze
     const hasGetters = !!(getSourceMetamodel && getTargetMetamodel);
     const hasStaticData = (staticSourceMetamodel?.length ?? 0) > 0 && (staticTargetMetamodel?.length ?? 0) > 0;
     const canAnalyze = hasGetters || hasStaticData;
@@ -301,74 +321,84 @@ export const SuggestedMappingsPanel: React.FC<SuggestedMappingsPanelProps> = ({
                     {/* Stats */}
                     <div className="suggestions-stats">
                         <span className="stat">
-                            <strong>{result.suggestions.length}</strong> found
+                            <strong>{visibleSuggestions.length}</strong> found
                         </span>
-                        <span className="stat">
+                        <span className="stat pending">
                             <strong>{pendingSuggestions.length}</strong> pending
                         </span>
-                        <span className="stat">
-                            <strong>{acceptedSuggestions.length}</strong> accepted
+                        <span className="stat to-insert">
+                            <strong>{toInsertSuggestions.length}</strong> to insert
                         </span>
                     </div>
 
-                    {/* Accept All Button */}
-                    {pendingSuggestions.length > 1 && (
-                        <button className="btn-accept-all" onClick={handleAcceptAll}>
-                            <i className="bi bi-check-all" />
-                            Accept All ({pendingSuggestions.length})
-                        </button>
+                    {/* TO INSERT Section */}
+                    {toInsertSuggestions.length > 0 && (
+                        <div className="suggestions-section to-insert-section">
+                            <h4 className="section-title">
+                                <i className="bi bi-check-square-fill" />
+                                TO INSERT ({toInsertSuggestions.length})
+                            </h4>
+                            <div className="suggestions-list">
+                                {toInsertSuggestions.map(suggestion => (
+                                    <MappingCard
+                                        key={suggestion.id}
+                                        mapping={suggestion}
+                                        isHovered={hoveredId === suggestion.id}
+                                        isSelected={selectedId === suggestion.id}
+                                        onToggle={() => handleToggle(suggestion)}
+                                        onReject={() => handleReject(suggestion)}
+                                        onHover={handleHover}
+                                        onSelect={handleSelect}
+                                    />
+                                ))}
+                            </div>
+                        </div>
                     )}
 
-                    {/* Pending Suggestions */}
+                    {/* PENDING Section */}
                     {pendingSuggestions.length > 0 && (
-                        <div className="suggestions-section">
-                            <h4 className="section-title">Pending</h4>
+                        <div className="suggestions-section pending-section">
+                            <div className="section-header-row">
+                                <h4 className="section-title">
+                                    <i className="bi bi-square" />
+                                    PENDING ({pendingSuggestions.length})
+                                </h4>
+                                {pendingSuggestions.length > 1 && (
+                                    <button className="select-all-link" onClick={handleMarkAllForInsert}>
+                                        Select all
+                                    </button>
+                                )}
+                            </div>
                             <div className="suggestions-list">
                                 {pendingSuggestions.map(suggestion => (
                                     <MappingCard
                                         key={suggestion.id}
                                         mapping={suggestion}
-                                        onAccept={() => handleAccept(suggestion)}
+                                        isHovered={hoveredId === suggestion.id}
+                                        isSelected={selectedId === suggestion.id}
+                                        onToggle={() => handleToggle(suggestion)}
                                         onReject={() => handleReject(suggestion)}
+                                        onHover={handleHover}
+                                        onSelect={handleSelect}
                                     />
                                 ))}
                             </div>
                         </div>
                     )}
 
-                    {/* Accepted Suggestions */}
-                    {acceptedSuggestions.length > 0 && (
-                        <div className="suggestions-section accepted-section">
-                            <h4 className="section-title">
-                                <i className="bi bi-check-circle" />
-                                Accepted
-                            </h4>
-                            <div className="suggestions-list">
-                                {acceptedSuggestions.map(suggestion => (
-                                    <MappingCard
-                                        key={suggestion.id}
-                                        mapping={suggestion}
-                                        onAccept={() => handleAccept(suggestion)}
-                                        onReject={() => handleReject(suggestion)}
-                                    />
-                                ))}
-                            </div>
-
-                            {/* Insert Mappings Button */}
-                            {onInsertCode && (
-                                <button
-                                    className="btn-insert-mappings"
-                                    onClick={handleInsertMappings}
-                                >
-                                    <i className="bi bi-code-slash" />
-                                    Insert {acceptedSuggestions.length} mapping{acceptedSuggestions.length > 1 ? 's' : ''} into editor
-                                </button>
-                            )}
-                        </div>
+                    {/* Insert Button */}
+                    {toInsertSuggestions.length > 0 && onInsertCode && (
+                        <button
+                            className="btn-insert-mappings"
+                            onClick={handleInsertMappings}
+                        >
+                            <i className="bi bi-code-slash" />
+                            Insert {toInsertSuggestions.length} mapping{toInsertSuggestions.length > 1 ? 's' : ''} into editor
+                        </button>
                     )}
 
                     {/* Empty State */}
-                    {result.suggestions.length === 0 && (
+                    {visibleSuggestions.length === 0 && (
                         <div className="empty-state">
                             <i className="bi bi-inbox" />
                             <p>No mappings suggested</p>

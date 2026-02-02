@@ -10,6 +10,9 @@ import { JodieConfigService } from '../../services/JodieConfig';
 import { AIProviderService } from '../../services/AIProviderService';
 
 export class AIMatcher {
+    // Store elements for ID lookup after AI response
+    private sourceElements: MetamodelElement[] = [];
+    private targetElements: MetamodelElement[] = [];
 
     /**
      * Check if AI is available (any provider configured and enabled)
@@ -38,6 +41,10 @@ export class AIMatcher {
         if (!this.isAvailable()) {
             throw new Error('AI provider not configured. Please configure an AI provider in Settings.');
         }
+
+        // Store elements for ID lookup after AI response
+        this.sourceElements = sourceElements;
+        this.targetElements = targetElements;
 
         const prompt = this.buildPrompt(
             sourceElements,
@@ -192,26 +199,77 @@ Notes:
                 return [];
             }
 
-            return parsed.map((item: any, index: number) => ({
-                id: `ai_${index}_${Date.now()}`,
-                sourceClass: item.sourceClass || '',
-                sourceAttribute: item.sourceAttribute || undefined,
-                sourceType: item.sourceType,
-                targetClass: item.targetClass || '',
-                targetAttribute: item.targetAttribute || undefined,
-                targetType: item.targetType,
-                confidence: this.normalizeConfidence(item.confidence),
-                reason: 'ai-inferred',
-                reasonText: item.reason || 'AI suggested mapping',
-                conversionHint: item.conversionHint,
-                accepted: false,
-                rejected: false,
-            }));
+            return parsed.map((item: any, index: number) => {
+                // Resolve names to element IDs
+                const sourceClass = this.findClass(this.sourceElements, item.sourceClass);
+                const targetClass = this.findClass(this.targetElements, item.targetClass);
+                const sourceAttr = item.sourceAttribute && sourceClass
+                    ? this.findAttribute(sourceClass, item.sourceAttribute)
+                    : undefined;
+                const targetAttr = item.targetAttribute && targetClass
+                    ? this.findAttribute(targetClass, item.targetAttribute)
+                    : undefined;
+
+                return {
+                    id: `ai_${index}_${Date.now()}`,
+                    sourceClass: item.sourceClass || '',
+                    sourceClassId: sourceClass?.id || `unknown_src_${item.sourceClass}`,
+                    sourceAttribute: item.sourceAttribute || undefined,
+                    sourceAttributeId: sourceAttr?.id,
+                    sourceType: item.sourceType || sourceAttr?.dataType,
+                    targetClass: item.targetClass || '',
+                    targetClassId: targetClass?.id || `unknown_tgt_${item.targetClass}`,
+                    targetAttribute: item.targetAttribute || undefined,
+                    targetAttributeId: targetAttr?.id,
+                    targetType: item.targetType || targetAttr?.dataType,
+                    confidence: this.normalizeConfidence(item.confidence),
+                    reason: 'ai-inferred' as const,
+                    reasonText: item.reason || 'AI suggested mapping',
+                    conversionHint: item.conversionHint,
+                    status: 'pending',
+                };
+            });
         } catch (error) {
             console.error('[AIMatcher] Failed to parse response:', error);
             console.error('[AIMatcher] Response was:', response);
             return [];
         }
+    }
+
+    /**
+     * Find a class by name in the metamodel elements
+     */
+    private findClass(elements: MetamodelElement[], name: string): MetamodelElement | undefined {
+        if (!name) return undefined;
+        const lowerName = name.toLowerCase();
+
+        const search = (els: MetamodelElement[]): MetamodelElement | undefined => {
+            for (const el of els) {
+                if (el.type === 'class' && el.name.toLowerCase() === lowerName) {
+                    return el;
+                }
+                if (el.children) {
+                    const found = search(el.children);
+                    if (found) return found;
+                }
+            }
+            return undefined;
+        };
+
+        return search(elements);
+    }
+
+    /**
+     * Find an attribute by name within a class
+     */
+    private findAttribute(classEl: MetamodelElement, attrName: string): MetamodelElement | undefined {
+        if (!attrName || !classEl.children) return undefined;
+        const lowerName = attrName.toLowerCase();
+
+        return classEl.children.find(
+            c => (c.type === 'attribute' || c.type === 'reference') &&
+                 c.name.toLowerCase() === lowerName
+        );
     }
 
     /**

@@ -15,18 +15,28 @@ export type SuggestionReason =
     | 'structural-match'          // Structural similarity (AI)
     | 'ai-inferred';              // AI inferred
 
+export type MappingStatus = 'pending' | 'toInsert' | 'rejected';
+
 export interface MappingSuggestion {
     id: string;
 
-    // Source
+    // Source (names for display)
     sourceClass: string;
     sourceAttribute?: string;    // undefined = class-level mapping
     sourceType?: string;
 
-    // Target
+    // Source element IDs (for tree node lookup)
+    sourceClassId: string;
+    sourceAttributeId?: string;
+
+    // Target (names for display)
     targetClass: string;
     targetAttribute?: string;
     targetType?: string;
+
+    // Target element IDs (for tree node lookup)
+    targetClassId: string;
+    targetAttributeId?: string;
 
     // Metadata
     confidence: SuggestionConfidence;
@@ -36,9 +46,8 @@ export interface MappingSuggestion {
     // For conversions
     conversionHint?: string;     // e.g., "true=1, false=0"
 
-    // State
-    accepted: boolean;
-    rejected: boolean;
+    // State - new checkbox-based workflow
+    status: MappingStatus;
 }
 
 export interface SuggestionResult {
