@@ -17,7 +17,7 @@ export function JodieMinimized({ hasUnread, onClick }: JodieMinimizedProps): JSX
         <button
             className={`jodie-minimized ${hasUnread ? 'jodie-has-unread' : ''}`}
             onClick={onClick}
-            title="Open Jjodie"
+            title="Ask Jjodie"
         >
             <i className="bi bi-robot" />
             {hasUnread && <span className="jodie-unread-badge" />}

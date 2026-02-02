@@ -12,6 +12,7 @@ interface JodieHeaderProps {
     onProviderChange: (provider: AIProvider) => void;
     onClose: () => void;
     onOpenSettings: () => void;
+    onOpenDocumentation?: () => void;
     isWaiting?: boolean;
 }
 
@@ -20,6 +21,7 @@ export function JodieHeader({
     onProviderChange,
     onClose,
     onOpenSettings,
+    onOpenDocumentation,
     isWaiting,
 }: JodieHeaderProps): JSX.Element {
     return (
@@ -33,11 +35,13 @@ export function JodieHeader({
                     <ProviderSelector
                         activeProvider={activeProvider}
                         onProviderChange={onProviderChange}
+                        onOpenSettings={onOpenSettings}
                         disabled={isWaiting}
                     />
                 </div>
             </div>
             <div className="jodie-header-right">
+                
                 <button
                     className="jodie-header-btn"
                     onClick={onOpenSettings}

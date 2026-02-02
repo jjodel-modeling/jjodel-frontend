@@ -12,6 +12,8 @@ import {
     RuntimeAccessibleClass, store, transientProperties, ViewEClassMatch
 } from "../joiner";
 import {OclResult} from "@stekoe/ocl.js/dist/components/OclResult";
+import { lazyEvaluateOCL, getOCLStats } from "../utils/LazyOCL";
+import { PerformanceMetrics } from "../utils/PerformanceMetrics";
 
 let windoww = window as any;
 
@@ -62,68 +64,83 @@ export class OCL{
 
     public static test_bugged_new(mp0: DModelElement | LModelElement | undefined, view0: LViewElement | DViewElement | undefined, node0?: LGraphElement | DGraphElement): boolean | (typeof ViewEClassMatch)["MISMATCH_OCL"] {
         if (!mp0 || !view0) return ViewEClassMatch.MISMATCH_OCL;
-        let mp: DModelElement, lmp: LModelElement;
-        let node: DGraphElement, lnode: LGraphElement;
-        let view: DViewElement;
-        // @ts-ignore
-        if ((mp = mp0.__raw)) lmp = mp0; else { lmp = mp0; mp = (lmp as LModelElement)?.__raw; }
-        // @ts-ignore
-        if ((node = node0?.__raw)) lnode = node0; else { lnode = node0; node = lnode?.__raw; }
-        // @ts-ignore
-        let td = transientProperties.modelElement[mp.id];
-        if (!td) transientProperties.modelElement[mp.id] = td = new DataTransientProperties();
-        view = (view0 as LViewElement)?.__raw || view0;
-        let oclCondition = view.oclCondition;
-        let tv = transientProperties.view[view.id];
-        console.log("Evaluating ocl: "+view.oclCondition, {view, ocl:view.oclCondition});
-        if (!view.oclCondition) { return true; }
-        let oclEngine: OclEngine;
-        if (!tv) transientProperties.view[view.id] = tv = {} as any;
-        if (tv.oclEngine) oclEngine = tv.oclEngine;
-        else {
-            windoww.OclEngine = OclEngine;
-            tv.oclEngine = oclEngine = OclEngine.create();
-            let state: DState = store.getState();
-            let rootModel: DModel = mp as any;
-            windoww.rootModel = rootModel;
-            while (rootModel && rootModel.className !== "DModel") rootModel = DPointerTargetable.fromPointer(rootModel.father, state);
-            oclEngine.registerTypes(RuntimeAccessibleClass.getOCLClasses(rootModel.id));
-            oclEngine.addOclExpression(oclCondition);
-            console.log("4 Evaluating ocl: "+view.oclCondition, {view, ocl:view.oclCondition, mp, lmp, oclEngine});
-        }
-        try {
-            let oclResult: OclResult;
-            if (!lmp) lmp = LPointerTargetable.fromD(mp);
-            if (node) {
-                // dangerous cheat, to make ocl be able to access current "node" if model have multiple nodes.
-                const oldNode = td.node;
-                td.node = lnode || LPointerTargetable.fromD(node);
-                oclResult = oclEngine.evaluate(lmp)
-                td.node = oldNode;
+
+        // OPTIMIZATION: Use lazy OCL evaluation with caching
+        return lazyEvaluateOCL(mp0, view0, () => {
+            PerformanceMetrics.countRender('OCL_test_bugged_new_evaluated');
+
+            let mp: DModelElement, lmp: LModelElement;
+            let node: DGraphElement, lnode: LGraphElement;
+            let view: DViewElement;
+            // @ts-ignore
+            if ((mp = mp0.__raw)) lmp = mp0; else { lmp = mp0; mp = (lmp as LModelElement)?.__raw; }
+            // @ts-ignore
+            if ((node = node0?.__raw)) lnode = node0; else { lnode = node0; node = lnode?.__raw; }
+            // @ts-ignore
+            let td = transientProperties.modelElement[mp.id];
+            if (!td) transientProperties.modelElement[mp.id] = td = new DataTransientProperties();
+            view = (view0 as LViewElement)?.__raw || view0;
+            let oclCondition = view.oclCondition;
+            let tv = transientProperties.view[view.id];
+            // Reduced logging for performance
+            // console.log("Evaluating ocl: "+view.oclCondition, {view, ocl:view.oclCondition});
+            if (!view.oclCondition) { return true; }
+            let oclEngine: OclEngine;
+            if (!tv) transientProperties.view[view.id] = tv = {} as any;
+            if (tv.oclEngine) oclEngine = tv.oclEngine;
+            else {
+                windoww.OclEngine = OclEngine;
+                tv.oclEngine = oclEngine = OclEngine.create();
+                let state: DState = store.getState();
+                let rootModel: DModel = mp as any;
+                windoww.rootModel = rootModel;
+                while (rootModel && rootModel.className !== "DModel") rootModel = DPointerTargetable.fromPointer(rootModel.father, state);
+                oclEngine.registerTypes(RuntimeAccessibleClass.getOCLClasses(rootModel.id));
+                oclEngine.addOclExpression(oclCondition);
+                // Reduced logging for performance
+                // console.log("4 Evaluating ocl: "+view.oclCondition, {view, ocl:view.oclCondition, mp, lmp, oclEngine});
             }
-            else oclResult = oclEngine.evaluate(lmp);
-            windoww.oclDebug={oclResult, oclEngine, lmp, oclCondition};
-            console.log("5 Evaluating ocl: "+view.oclCondition, {view, ocl:view.oclCondition, mp, lmp, oclResult, oclEngine});
-            // return oclResult ? OCL.getOCLScore(oclCondition) : ViewEClassMatch.MISMATCH_OCL;
-            let matches: boolean = oclResult && oclResult.getEvaluatedContexts().length > 0 && oclResult.getResult();
-            return matches || ViewEClassMatch.MISMATCH_OCL;
-        } catch(e) {
-            Log.ee('failed to evalute OCL expression:', {e, obj: mp, view: view.name, oclexp: view.oclCondition, node});
-            return ViewEClassMatch.MISMATCH_OCL;
-        }
-        // oclEngine.setTypeDeterminer()
+            try {
+                let oclResult: OclResult;
+                if (!lmp) lmp = LPointerTargetable.fromD(mp);
+                if (node) {
+                    // dangerous cheat, to make ocl be able to access current "node" if model have multiple nodes.
+                    const oldNode = td.node;
+                    td.node = lnode || LPointerTargetable.fromD(node);
+                    oclResult = oclEngine.evaluate(lmp)
+                    td.node = oldNode;
+                }
+                else oclResult = oclEngine.evaluate(lmp);
+                windoww.oclDebug={oclResult, oclEngine, lmp, oclCondition};
+                // Reduced logging for performance
+                // console.log("5 Evaluating ocl: "+view.oclCondition, {view, ocl:view.oclCondition, mp, lmp, oclResult, oclEngine});
+                // return oclResult ? OCL.getOCLScore(oclCondition) : ViewEClassMatch.MISMATCH_OCL;
+                let matches: boolean = oclResult && oclResult.getEvaluatedContexts().length > 0 && oclResult.getResult();
+                return matches || ViewEClassMatch.MISMATCH_OCL;
+            } catch(e) {
+                Log.ee('failed to evalute OCL expression:', {e, obj: mp, view: view.name, oclexp: view.oclCondition, node});
+                return ViewEClassMatch.MISMATCH_OCL;
+            }
+            // oclEngine.setTypeDeterminer()
+        });
     }
     public static test(me: DModelElement | LModelElement | undefined, view: LViewElement | DViewElement | undefined, node?: LGraphElement | DGraphElement): boolean | (typeof ViewEClassMatch)["MISMATCH_OCL"] {
         if (!view) return false;
         const condition = view.oclCondition;
         if (!condition) return true;
         if (!me) return false;
-        try {
-            const types = RuntimeAccessibleClass.getAllClasses();
-            return !!OCL.filter(true, 'src', [me], condition, types as any)[0];
-        } catch (e) {
-            return false
-        }
+
+        // OPTIMIZATION: Use lazy OCL evaluation with caching
+        return lazyEvaluateOCL(me, view, () => {
+            PerformanceMetrics.countRender('OCL_test_evaluated');
+            try {
+                const types = RuntimeAccessibleClass.getAllClasses();
+                return !!OCL.filter(true, 'src', [me], condition, types as any)[0];
+            } catch (e) {
+                Log.ee('OCL evaluation failed:', {e, me, view: (view as any)?.name, condition});
+                return false;
+            }
+        });
     }
 
 

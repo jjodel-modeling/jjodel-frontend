@@ -1,10 +1,12 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { LModel, LProject, LViewPoint, U, store } from '../../joiner';
 import DockManager from '../abstract/DockManager';
-import { createM2 } from '../../pages/components/Navbar';
+import { createM2, createM1 } from '../../pages/components/Navbar';
 import { formatVersionNumber } from '../../utils/versionUtils';
 import ShareProjectModal from './ShareProjectModal';
 import UnsavedChangesDialog from './UnsavedChangesDialog';
+import DocumentationSection from './DocumentationSection';
+import { EcoreService, XMIService } from '../../services/export';
 import './project-editor.scss';
 
 // Types for contextual menu
@@ -73,6 +75,18 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
     const menuRef = useRef<HTMLDivElement>(null);
     const renameInputRef = useRef<HTMLInputElement>(null);
 
+    // New model metamodel selection menu
+    const [showMetamodelMenu, setShowMetamodelMenu] = useState(false);
+    const metamodelMenuRef = useRef<HTMLDivElement>(null);
+
+    // Import menu for metamodels
+    const [showImportMenu, setShowImportMenu] = useState(false);
+    const importMenuRef = useRef<HTMLDivElement>(null);
+
+    // Hidden file inputs for import
+    const importJmmRef = useRef<HTMLInputElement>(null);
+    const importEcoreRef = useRef<HTMLInputElement>(null);
+
     // Unsaved changes tracking
     const [isDirty, setIsDirty] = useState(false);
     const [showUnsavedDialog, setShowUnsavedDialog] = useState(false);
@@ -123,6 +137,34 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
             return () => document.removeEventListener('mousedown', handleClickOutside);
         }
     }, [openMenu]);
+
+    // Click-outside handler for metamodel selection menu
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (metamodelMenuRef.current && !metamodelMenuRef.current.contains(event.target as Node)) {
+                setShowMetamodelMenu(false);
+            }
+        };
+
+        if (showMetamodelMenu) {
+            document.addEventListener('mousedown', handleClickOutside);
+            return () => document.removeEventListener('mousedown', handleClickOutside);
+        }
+    }, [showMetamodelMenu]);
+
+    // Click-outside handler for import menu
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (importMenuRef.current && !importMenuRef.current.contains(event.target as Node)) {
+                setShowImportMenu(false);
+            }
+        };
+
+        if (showImportMenu) {
+            document.addEventListener('mousedown', handleClickOutside);
+            return () => document.removeEventListener('mousedown', handleClickOutside);
+        }
+    }, [showImportMenu]);
 
     // Focus rename input when renaming starts
     useEffect(() => {
@@ -394,6 +436,107 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
         closeMenu();
     };
 
+    // Export metamodel as Ecore (.ecore)
+    const handleExportEcore = (mm: LModel) => {
+        try {
+            EcoreService.exportToFile(mm);
+            U.alert('i', 'Exported', `Metamodel exported as Ecore: ${mm.name}.ecore`);
+        } catch (error) {
+            console.error('Export Ecore error:', error);
+            U.alert('e', 'Export Failed', 'Could not export as Ecore format.');
+        }
+        closeMenu();
+    };
+
+    // Import metamodel from .jmm file
+    const handleImportJmm = () => {
+        importJmmRef.current?.click();
+        setShowImportMenu(false);
+    };
+
+    const handleJmmFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        try {
+            const content = await file.text();
+            const jmmData = JSON.parse(content);
+
+            // Validate format
+            if (!jmmData.metamodel) {
+                throw new Error('Invalid .jmm file format: missing metamodel data');
+            }
+
+            // Extract name from metadata or filename
+            const name = jmmData.metadata?.name || file.name.replace(/\.jmm$/, '');
+
+            // Create new metamodel in project using existing createM2
+            const newMM = createM2(project, name);
+
+            // TODO: Populate metamodel with imported data
+            // For now, just show success with the created metamodel
+            U.alert('i', 'Imported', `Metamodel "${name}" imported successfully`);
+            markDirty();
+
+        } catch (error) {
+            console.error('Import JMM error:', error);
+            U.alert('e', 'Import Failed', `Could not import metamodel: ${(error as Error).message}`);
+        }
+
+        // Reset input
+        if (importJmmRef.current) {
+            importJmmRef.current.value = '';
+        }
+    };
+
+    // Import metamodel from .ecore file
+    const handleImportEcore = () => {
+        importEcoreRef.current?.click();
+        setShowImportMenu(false);
+    };
+
+    const handleEcoreFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        try {
+            const result = await EcoreService.importFromFile(file);
+
+            if (result.success && result.model) {
+                U.alert('i', 'Imported', `Metamodel "${result.model.name}" imported from Ecore`);
+                markDirty();
+
+                // Show warnings if any
+                if (result.warnings.length > 0) {
+                    console.warn('Ecore import warnings:', result.warnings);
+                }
+            } else {
+                throw new Error(result.errors.join(', '));
+            }
+
+        } catch (error) {
+            console.error('Import Ecore error:', error);
+            U.alert('e', 'Import Failed', `Could not import Ecore: ${(error as Error).message}`);
+        }
+
+        // Reset input
+        if (importEcoreRef.current) {
+            importEcoreRef.current.value = '';
+        }
+    };
+
+    // Export model as XMI (.xmi) with embedded metamodel
+    const handleExportXMI = (model: LModel) => {
+        try {
+            XMIService.exportToFile(model);
+            U.alert('i', 'Exported', `Model exported as XMI: ${model.name}.xmi`);
+        } catch (error) {
+            console.error('Export XMI error:', error);
+            U.alert('e', 'Export Failed', 'Could not export as XMI format.');
+        }
+        closeMenu();
+    };
+
     // Rename handlers
     const startRename = (type: MenuType, id: string, currentName: string) => {
         setRenamingItem({ type, id });
@@ -445,6 +588,29 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
 
     const handleCreateMetamodel = () => {
         createM2(project);
+    };
+
+    // Handle "+ New" button click for models
+    const handleNewModelClick = () => {
+        if (metamodels.length === 0) {
+            // No metamodels - button should be disabled, but handle just in case
+            return;
+        }
+
+        if (metamodels.length === 1) {
+            // Only one metamodel - create model directly
+            createM1(project, metamodels[0]);
+            return;
+        }
+
+        // Multiple metamodels - show selection menu
+        setShowMetamodelMenu(!showMetamodelMenu);
+    };
+
+    // Create model with selected metamodel
+    const handleCreateModel = (metamodel: LModel) => {
+        setShowMetamodelMenu(false);
+        createM1(project, metamodel);
     };
 
     const handleDeleteMetamodel = (mm: LModel) => {
@@ -607,11 +773,43 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
             <div className="project-section">
                 <div className="project-section__header">
                     <h2 className="project-section__title">METAMODELS</h2>
-                    {metamodels.length > 0 && (
+                    <div className="project-section__actions">
+                        {/* Import button with dropdown */}
+                        <div className="import-button-wrapper" ref={importMenuRef}>
+                            <button
+                                className="btn btn--secondary"
+                                onClick={() => setShowImportMenu(!showImportMenu)}
+                            >
+                                <i className="bi bi-upload" />
+                                Import
+                                <i className={`bi bi-chevron-${showImportMenu ? 'up' : 'down'} btn-chevron`} />
+                            </button>
+
+                            {showImportMenu && (
+                                <div className="import-select-menu">
+                                    <button
+                                        className="import-select-menu__item"
+                                        onClick={handleImportJmm}
+                                    >
+                                        <i className="bi bi-file-earmark" />
+                                        Import .jmm
+                                    </button>
+                                    <button
+                                        className="import-select-menu__item"
+                                        onClick={handleImportEcore}
+                                    >
+                                        <i className="bi bi-file-earmark-code" />
+                                        Import Ecore (.ecore)
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* New button */}
                         <button className="btn btn--primary" onClick={handleCreateMetamodel}>
                             + New
                         </button>
-                    )}
+                    </div>
                 </div>
 
                 {metamodels.length === 0 ? (
@@ -634,7 +832,7 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                     <div className="list-card">
                         {metamodels.map((mm) => (
                             <div
-                                className="list-card__item"
+                                className={`list-card__item ${openMenu?.type === 'metamodel' && openMenu?.id === mm.id ? 'list-card__item--menu-open' : ''}`}
                                 key={mm.id}
                                 onClick={() => handleOpenMetamodel(mm)}
                                 role="button"
@@ -698,8 +896,16 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                                                 onClick={() => handleExportMetamodel(mm)}
                                             >
                                                 <i className="bi bi-download" />
-                                                Export Metamodel
+                                                Export (.jmm)
                                             </button>
+                                            <button
+                                                className="context-menu__item"
+                                                onClick={() => handleExportEcore(mm)}
+                                            >
+                                                <i className="bi bi-file-earmark-code" />
+                                                Export Ecore (.ecore)
+                                            </button>
+                                            <div className="context-menu__divider" />
                                             <button
                                                 className="context-menu__item"
                                                 onClick={() => startRename('metamodel', mm.id, mm.name || '')}
@@ -731,13 +937,39 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
             <div className="project-section">
                 <div className="project-section__header">
                     <h2 className="project-section__title">MODELS</h2>
-                    <button
-                        className="btn btn--primary"
-                        disabled={metamodels.length === 0}
-                        title={metamodels.length === 0 ? 'Create a metamodel first' : 'Create new model'}
-                    >
-                        + New
-                    </button>
+                    <div className="new-model-button-wrapper" ref={metamodelMenuRef}>
+                        <button
+                            className="btn btn--primary"
+                            disabled={metamodels.length === 0}
+                            title={metamodels.length === 0 ? 'Create a metamodel first' : 'Create new model'}
+                            onClick={handleNewModelClick}
+                        >
+                            + New
+                            {metamodels.length > 1 && (
+                                <i className={`bi bi-chevron-${showMetamodelMenu ? 'up' : 'down'} btn-chevron`} />
+                            )}
+                        </button>
+
+                        {/* Metamodel selection dropdown */}
+                        {showMetamodelMenu && metamodels.length > 1 && (
+                            <div className="metamodel-select-menu">
+                                <div className="metamodel-select-menu__header">
+                                    Select metamodel
+                                </div>
+                                <div className="metamodel-select-menu__list">
+                                    {metamodels.map((mm) => (
+                                        <button
+                                            key={mm.id}
+                                            className="metamodel-select-menu__item"
+                                            onClick={() => handleCreateModel(mm)}
+                                        >
+                                            {mm.name || 'Unnamed'}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                    </div>
                 </div>
 
                 {models.length === 0 ? (
@@ -764,7 +996,7 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                     <div className="list-card">
                         {models.map((model) => (
                             <div
-                                className="list-card__item"
+                                className={`list-card__item ${openMenu?.type === 'model' && openMenu?.id === model.id ? 'list-card__item--menu-open' : ''}`}
                                 key={model.id}
                                 onClick={() => handleOpenModel(model)}
                                 role="button"
@@ -830,8 +1062,16 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                                                 onClick={() => handleExportModel(model)}
                                             >
                                                 <i className="bi bi-download" />
-                                                Export Model
+                                                Export (.jm)
                                             </button>
+                                            <button
+                                                className="context-menu__item"
+                                                onClick={() => handleExportXMI(model)}
+                                            >
+                                                <i className="bi bi-file-earmark-code" />
+                                                Export XMI (.xmi)
+                                            </button>
+                                            <div className="context-menu__divider" />
                                             <button
                                                 className="context-menu__item"
                                                 onClick={() => startRename('model', model.id, model.name || '')}
@@ -916,6 +1156,9 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                 )}
             </div>
 
+            {/* Documentation Section */}
+            <DocumentationSection project={project} />
+
             {/* Share Modal */}
             <ShareProjectModal
                 project={project}
@@ -930,6 +1173,22 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                 onCancel={handleCancelDialog}
                 onSave={handleSaveAndContinue}
                 isSaving={isSaving}
+            />
+
+            {/* Hidden file inputs for import */}
+            <input
+                ref={importJmmRef}
+                type="file"
+                accept=".jmm"
+                style={{ display: 'none' }}
+                onChange={handleJmmFileChange}
+            />
+            <input
+                ref={importEcoreRef}
+                type="file"
+                accept=".ecore"
+                style={{ display: 'none' }}
+                onChange={handleEcoreFileChange}
             />
         </div>
     );

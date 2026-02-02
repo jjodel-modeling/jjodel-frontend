@@ -1,7 +1,7 @@
 import React, {Dispatch, ReactElement, ReactNode} from "react";
 import {connect} from "react-redux";
 import {DModel, DPointerTargetable, Pointer, Try, U} from "../../../joiner";
-import {CreateElementAction, DGraph, DModelElement, DState, LGraph, LModel, LModelElement} from "../../../joiner";
+import {CreateElementAction, DGraph, DModelElement, DState, LGraph, LModel, LModelElement, Constructors} from "../../../joiner";
 import {DefaultNode} from "../../../joiner/components";
 import ToolBar from "../../toolbar/ToolBar";
 import ContextMenu from "../../contextMenu/ContextMenu";
@@ -13,8 +13,11 @@ function ModelTabComponent(props: AllProps) {
 
     if (!model) return(<>closed tab</>);
     if (!graph) {
-        DGraph.new(0, model.id);
-        console.log('create m1 graph', {model});
+        const graphid = Constructors.DGraph_makeID(model.id);
+        if (!DPointerTargetable.pendingCreation[graphid]) {
+            DGraph.new(0, model.id);
+            console.log('create m1 graph', {model});
+        }
         return(<div style={{width: "100%", height: "100%", display: "flex"}}>
             <span style={{margin: "auto"}}>Building the Graph...</span>
         </div>);

@@ -269,7 +269,7 @@ export class TargetableProxyHandler<ME extends GObject = DModelElement, LE exten
         let isError = false;
         // console.error('_proxy get PRE:', {targetObj, propKey, proxyitself, arguments});
         try { ret = this.get0(targetObj, propKey, proxyitself); } catch(e) {
-            Log.eDevv('failed to get property', {targetObj, propKey, e});
+            // Log.eDevv('failed to get property', {targetObj, propKey, e}); // Silenced - too noisy
             ret = e;
             isError = true;
         }

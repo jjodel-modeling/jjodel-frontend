@@ -1,0 +1,186 @@
+/**
+ * ImportDropZone Styles
+ * Drag & drop overlay for file import
+ */
+
+.import-drop-zone {
+    position: relative;
+    min-height: 100%;
+}
+
+// ============================================
+// OVERLAY
+// ============================================
+
+.import-drop-zone__overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 50;
+    pointer-events: none;
+}
+
+.import-drop-zone__overlay--drag {
+    background: rgba(14, 165, 233, 0.08);
+    border: 2px dashed #0ea5e9;
+    border-radius: 12px;
+}
+
+.import-drop-zone__overlay--loading {
+    background: rgba(255, 255, 255, 0.9);
+}
+
+// ============================================
+// CONTENT BOX
+// ============================================
+
+.import-drop-zone__content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 32px 48px;
+    background: var(--bg-primary, #ffffff);
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+
+    i {
+        font-size: 40px;
+        color: #0ea5e9;
+    }
+}
+
+.import-drop-zone__title {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text-primary, #334155);
+}
+
+.import-drop-zone__hint {
+    font-size: 13px;
+    font-weight: 400;
+    color: var(--text-tertiary, #94a3b8);
+}
+
+// ============================================
+// SPINNING ANIMATION
+// ============================================
+
+.spinning {
+    animation: importSpin 1s linear infinite;
+}
+
+@keyframes importSpin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+// ============================================
+// STATUS MESSAGE
+// ============================================
+
+.import-drop-zone__status {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 18px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    z-index: 1000;
+    animation: statusSlideIn 0.2s ease;
+    max-width: 400px;
+
+    i {
+        font-size: 16px;
+        flex-shrink: 0;
+    }
+
+    span {
+        white-space: pre-line;
+    }
+}
+
+.import-drop-zone__status--success {
+    background: #dcfce7;
+    color: #166534;
+    border: 1px solid #86efac;
+
+    i {
+        color: #22c55e;
+    }
+}
+
+.import-drop-zone__status--error {
+    background: #fee2e2;
+    color: #991b1b;
+    border: 1px solid #fca5a5;
+
+    i {
+        color: #ef4444;
+    }
+}
+
+@keyframes statusSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+// ============================================
+// DARK MODE
+// ============================================
+
+[data-theme="dark"] {
+    .import-drop-zone__overlay--drag {
+        background: rgba(14, 165, 233, 0.12);
+    }
+
+    .import-drop-zone__overlay--loading {
+        background: rgba(15, 23, 42, 0.9);
+    }
+
+    .import-drop-zone__content {
+        background: var(--bg-secondary, #1e293b);
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    }
+
+    .import-drop-zone__title {
+        color: var(--text-primary, #f1f5f9);
+    }
+
+    .import-drop-zone__hint {
+        color: var(--text-tertiary, #64748b);
+    }
+
+    .import-drop-zone__status--success {
+        background: #064e3b;
+        color: #a7f3d0;
+        border-color: #059669;
+
+        i {
+            color: #34d399;
+        }
+    }
+
+    .import-drop-zone__status--error {
+        background: #450a0a;
+        color: #fecaca;
+        border-color: #dc2626;
+
+        i {
+            color: #f87171;
+        }
+    }
+}

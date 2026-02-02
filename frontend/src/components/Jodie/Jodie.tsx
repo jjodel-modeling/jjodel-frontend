@@ -3,15 +3,20 @@
  * Main container for the AI assistant
  */
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { JodieWindow } from './JodieWindow';
 import { JodieMinimized } from './JodieMinimized';
-import { AIProvider, ChatMessage, ChatState, PROVIDER_INFO } from '../../types/jodie';
+import { AIProvider, ChatMessage, ChatImage, ChatDocument, ChatState, PROVIDER_INFO, supportsVision, supportsPDF } from '../../types/jodie';
 import { JodieConfigService } from '../../services/JodieConfig';
 import { AIProviderService } from '../../services/AIProviderService';
+import { useAISettings } from '../../contexts/AISettingsContext';
 import { JjodieContextService } from '../../services/JjodieContext';
+import { JjodieRagService } from '../../services/JjodieRagService';
 import { DUser, L, LUser, LProject } from '../../joiner';
+import DockManager from '../abstract/DockManager';
+import TabDataMaker from '../abstract/tabs/TabDataMaker';
+import { JjScriptService } from '../../jjscript';
 import './JodieWindow.css';
 
 // Generate unique message ID
@@ -21,6 +26,7 @@ function generateMessageId(): string {
 
 export function Jodie(): JSX.Element {
     const navigate = useNavigate();
+    const { openAISettings } = useAISettings();
 
     // Chat state
     const [chatState, setChatState] = useState<ChatState>({
@@ -36,6 +42,10 @@ export function Jodie(): JSX.Element {
         JodieConfigService.getActiveProvider()
     );
 
+    // RAG state
+    const lastIndexedProjectRef = useRef<string | null>(null);
+    const [ragInitialized, setRagInitialized] = useState(false);
+
     // Get current user name
     const userName = useMemo(() => {
         try {
@@ -49,6 +59,18 @@ export function Jodie(): JSX.Element {
         }
         return 'You';
     }, []);
+
+    // Check if current provider supports vision
+    const providerSupportsVision = useMemo(() => {
+        const config = JodieConfigService.getProvider(activeProvider);
+        return supportsVision(activeProvider, config?.model);
+    }, [activeProvider]);
+
+    // Check if current provider supports PDF documents
+    const providerSupportsPDF = useMemo(() => {
+        const config = JodieConfigService.getProvider(activeProvider);
+        return supportsPDF(activeProvider, config?.model);
+    }, [activeProvider]);
 
     // Get current project context for AI
     const getProjectContext = useCallback((): string | undefined => {
@@ -103,6 +125,38 @@ export function Jodie(): JSX.Element {
         }
     }, [activeProvider]);
 
+    // Initialize RAG and index project content
+    useEffect(() => {
+        const initializeAndIndex = async () => {
+            try {
+                // Initialize RAG system
+                if (!ragInitialized) {
+                    await JjodieRagService.initialize();
+                    setRagInitialized(true);
+                }
+
+                // Get current project
+                const user: LUser = L.fromPointer(DUser.current);
+                const project = user?.project as LProject;
+
+                if (project?.id && project.id !== lastIndexedProjectRef.current) {
+                    // Index project content
+                    await JjodieRagService.indexProject(project);
+                    lastIndexedProjectRef.current = project.id;
+                    console.log('[Jodie] Project indexed for RAG:', project.id);
+                }
+            } catch (error) {
+                console.warn('[Jodie] RAG initialization/indexing failed:', error);
+            }
+        };
+
+        initializeAndIndex();
+
+        // Re-index periodically to catch updates (every 30 seconds)
+        const interval = setInterval(initializeAndIndex, 30000);
+        return () => clearInterval(interval);
+    }, [ragInitialized]);
+
     // Open the chat window
     const handleOpen = useCallback(() => {
         setChatState(prev => ({
@@ -127,7 +181,68 @@ export function Jodie(): JSX.Element {
     }, []);
 
     // Send message
-    const handleSendMessage = useCallback(async (content: string) => {
+    const handleSendMessage = useCallback(async (content: string, images?: ChatImage[], documents?: ChatDocument[]) => {
+        // Check if this is a JjScript command
+        if (JjScriptService.isJjScriptCommand(content)) {
+            // Add user message
+            const userMessage: ChatMessage = {
+                id: generateMessageId(),
+                role: 'user',
+                content,
+                timestamp: Date.now(),
+                userName,
+            };
+
+            setChatState(prev => ({
+                ...prev,
+                messages: [...prev.messages, userMessage],
+                isWaiting: true,
+            }));
+
+            try {
+                // Execute JjScript command
+                const result = await JjScriptService.execute(content);
+
+                // Format result as chat message
+                const responseContent = JjScriptService.formatResultForChat(result);
+
+                const assistantMessage: ChatMessage = {
+                    id: generateMessageId(),
+                    role: 'assistant',
+                    content: responseContent,
+                    timestamp: Date.now(),
+                    jjscriptResult: {
+                        success: result.success,
+                        command: result.command,
+                    },
+                };
+
+                setChatState(prev => ({
+                    ...prev,
+                    messages: [...prev.messages, assistantMessage],
+                    isWaiting: false,
+                }));
+            } catch (error) {
+                const errorMessage: ChatMessage = {
+                    id: generateMessageId(),
+                    role: 'assistant',
+                    content: `**JjScript Error:** ${(error as Error).message}`,
+                    timestamp: Date.now(),
+                    jjscriptResult: {
+                        success: false,
+                        command: 'unknown',
+                    },
+                };
+
+                setChatState(prev => ({
+                    ...prev,
+                    messages: [...prev.messages, errorMessage],
+                    isWaiting: false,
+                }));
+            }
+            return;
+        }
+
         // Determine which provider to use
         let providerToUse = activeProvider;
 
@@ -169,13 +284,15 @@ export function Jodie(): JSX.Element {
             }));
         }
 
-        // Add user message
+        // Add user message (with images/documents if present)
         const userMessage: ChatMessage = {
             id: generateMessageId(),
             role: 'user',
             content,
             timestamp: Date.now(),
             userName,
+            images,
+            documents,
         };
 
         setChatState(prev => ({
@@ -188,11 +305,27 @@ export function Jodie(): JSX.Element {
             // Get conversation history (excluding the message we just added)
             const history = chatState.messages;
 
-            // Get current project context
+            // Get current project context (structural)
             const projectContext = getProjectContext();
 
-            // Call AI provider with context
-            const response = await AIProviderService.chat(content, providerToUse, history, projectContext);
+            // Get RAG-augmented context based on query
+            let augmentedContext = projectContext;
+            if (ragInitialized) {
+                try {
+                    const ragContext = await JjodieRagService.getAugmentedContext(content);
+                    if (ragContext) {
+                        // Combine structural context with RAG-retrieved context
+                        augmentedContext = projectContext
+                            ? `${projectContext}\n\n---\n\n**Relevant Information:**\n${ragContext}`
+                            : `**Relevant Information:**\n${ragContext}`;
+                    }
+                } catch (ragError) {
+                    console.warn('[Jodie] RAG context retrieval failed:', ragError);
+                }
+            }
+
+            // Call AI provider with augmented context, images and documents
+            const response = await AIProviderService.chat(content, providerToUse, history, augmentedContext, images, documents);
 
             // Add assistant message
             const assistantMessage: ChatMessage = {
@@ -225,13 +358,22 @@ export function Jodie(): JSX.Element {
                 isWaiting: false,
             }));
         }
-    }, [activeProvider, chatState.messages, getProjectContext]);
+    }, [activeProvider, chatState.messages, getProjectContext, userName]);
 
-    // Open settings - navigate to Settings page and close chat
+    // Open settings - show AI Settings modal
     const handleOpenSettings = useCallback(() => {
-        setChatState(prev => ({ ...prev, isOpen: false }));
-        navigate('/settings');
-    }, [navigate]);
+        openAISettings();
+    }, [openAISettings]);
+
+    // Open documentation tab
+    const handleOpenDocumentation = useCallback(() => {
+        try {
+            const tab = TabDataMaker.documentation();
+            DockManager.open('editors', tab);
+        } catch (err) {
+            console.warn('Could not open documentation tab:', err);
+        }
+    }, []);
 
     return (
         <>
@@ -245,6 +387,9 @@ export function Jodie(): JSX.Element {
                     onProviderChange={handleProviderChange}
                     onClose={handleClose}
                     onOpenSettings={handleOpenSettings}
+                    onOpenDocumentation={handleOpenDocumentation}
+                    supportsVision={providerSupportsVision}
+                    supportsPDF={providerSupportsPDF}
                 />
             ) : (
                 <JodieMinimized

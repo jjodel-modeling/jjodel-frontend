@@ -231,3 +231,27 @@ export const jsonMonacoOptions: editor.IStandaloneEditorConstructionOptions = {
   insertSpaces: true,
   formatOnPaste: true,
 };
+
+/**
+ * Opzioni specifiche per Markdown.
+ * Usa per: Documentation Editor, README, Notes.
+ */
+export const markdownMonacoOptions: editor.IStandaloneEditorConstructionOptions = {
+  ...baseMonacoOptions,
+  fontSize: 14,
+  lineHeight: 22,
+  wordWrap: 'on',
+  lineNumbers: 'off',
+  glyphMargin: false,
+  folding: false,
+  lineDecorationsWidth: 0,
+  lineNumbersMinChars: 0,
+  renderLineHighlight: 'none',
+  padding: { top: 16, bottom: 16 },
+  scrollbar: {
+    vertical: 'auto',
+    horizontal: 'hidden',
+    verticalScrollbarSize: 8,
+    useShadows: false,
+  },
+};

@@ -1,4 +1,4 @@
-import React, {Dispatch, ReactElement, ReactNode, useCallback} from "react";
+import React, {Dispatch, ReactElement, ReactNode, useCallback, useRef, useEffect} from "react";
 import {connect} from "react-redux";
 import {DModel, Pointer, Try, U} from "../../../joiner";
 import {
@@ -8,17 +8,64 @@ import {
     LModel,
     DUser,
     DClass,
-    SetRootFieldAction
+    SetRootFieldAction,
+    Constructors,
+    DPointerTargetable
 } from "../../../joiner";
 import {DefaultNode} from "../../../joiner/components";
 import ContextMenu from "../../contextMenu/ContextMenu";
 import { FeaturesPalette, getFeatureByDragType } from "../../FeaturesPalette";
+import { CanvasExportService, ExportFormat } from "../../../services/CanvasExportService";
 
 
 function MetamodelTabComponent(props: AllProps) {
     const model = props.model;
     const graph = props.graph;
     const isEdgePending = props.isEdgePending;
+    const canvasRef = useRef<HTMLDivElement>(null);
+
+    // Listen for export events from File menu
+    useEffect(() => {
+        const handleExportCanvas = async (e: CustomEvent<{ format: string }>) => {
+            if (!canvasRef.current || !model) return;
+
+            const { format } = e.detail;
+            const filename = model.name || 'metamodel';
+
+            try {
+                if (format === 'clipboard') {
+                    const success = await CanvasExportService.copyToClipboard(canvasRef.current, {
+                        backgroundColor: '#ffffff',
+                    });
+                    if (success) {
+                        U.alert('i', 'Copied to Clipboard', 'Canvas image copied to clipboard');
+                    } else {
+                        U.alert('e', 'Copy Failed', 'Failed to copy canvas to clipboard');
+                    }
+                } else {
+                    const result = await CanvasExportService.export(canvasRef.current, {
+                        format: format as ExportFormat,
+                        filename,
+                        backgroundColor: '#ffffff',
+                        scale: 2,
+                    });
+                    if (result.success) {
+                        U.alert('i', 'Export Complete', `Canvas exported as ${result.filename}`);
+                    } else {
+                        U.alert('e', 'Export Failed', result.error || 'Failed to export canvas');
+                    }
+                }
+            } catch (error) {
+                console.error('[MetamodelTab] Export failed:', error);
+                U.alert('e', 'Export Failed', 'An error occurred during export');
+            }
+        };
+
+        window.addEventListener('jjodel:export-canvas', handleExportCanvas as EventListener);
+        return () => {
+            window.removeEventListener('jjodel:export-canvas', handleExportCanvas as EventListener);
+        };
+    }, [model]);
 
     // Handle drag over on canvas - allow drop
     const handleDragOver = useCallback((e: React.DragEvent) => {
@@ -35,6 +82,14 @@ function MetamodelTabComponent(props: AllProps) {
             if (!dataStr) return;
 
             const data = JSON.parse(dataStr);
+
+            // Sub-features must be dropped on a Class, not canvas
+            const subFeatureTypes = ['FEATURE_ATTRIBUTE', 'FEATURE_REFERENCE', 'FEATURE_OPERATION', 'FEATURE_LITERAL'];
+            if (subFeatureTypes.includes(data.type)) {
+                // Don't create sub-features on canvas - they need a parent Class
+                return;
+            }
+
             const feature = getFeatureByDragType(data.type);
 
             if (!feature || !model) return;
@@ -63,7 +118,10 @@ function MetamodelTabComponent(props: AllProps) {
 
     if (!model) return(<>closed tab</>);
     if (!graph) {
-        DGraph.new(0, model.id);
+        const graphid = Constructors.DGraph_makeID(model.id);
+        if (!DPointerTargetable.pendingCreation[graphid]) {
+            DGraph.new(0, model.id);
+        }
         return(<div style={{width: "100%", height: "100%", display: "flex"}}>
             <span style={{margin: "auto"}}>Building the Graph...</span>
         </div>);
@@ -86,6 +144,7 @@ function MetamodelTabComponent(props: AllProps) {
             <FeaturesPalette />
             <Try>
                 <div
+                    ref={canvasRef}
                     className={"GraphContainer h-100 w-100"}
                     style={{position: "relative"}}
                     onDragOver={handleDragOver}

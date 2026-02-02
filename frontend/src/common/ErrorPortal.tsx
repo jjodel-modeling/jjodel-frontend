@@ -11,6 +11,7 @@ interface ErrorPortalProps {
     message: React.ReactNode;
     dname?: string;
     nodename?: string;
+    dataClassName?: string; // The className of the data object (e.g., "DAttribute")
 }
 
 export const ErrorPortal: React.FC<ErrorPortalProps> = ({
@@ -22,7 +23,8 @@ export const ErrorPortal: React.FC<ErrorPortalProps> = ({
     errorContext,
     message,
     dname,
-    nodename
+    nodename,
+    dataClassName
 }) => {
     // Handle Escape key to close
     const handleKeyDown = useCallback((e: KeyboardEvent) => {
@@ -73,9 +75,10 @@ export const ErrorPortal: React.FC<ErrorPortalProps> = ({
                 )}
 
                 {/* Instance info */}
-                {(dname || nodename) && (
+                {(dname || nodename || dataClassName) && (
                     <div className='error-instance-info'>
                         {dname && <span className='error-instance-name'><strong>Instance:</strong> {dname}</span>}
+                        {dataClassName && <span className='error-class-name'><strong>Class:</strong> {dataClassName}</span>}
                         {nodename && <span className='error-node-name'><strong>Node:</strong> {nodename}</span>}
                     </div>
                 )}
@@ -113,6 +116,7 @@ interface ErrorDisplayProps {
     dname?: string;
     nodename?: string;
     onClick?: (e:any)=>void;
+    dataClassName?: string; // The className of the data object (e.g., "DAttribute")
 }
 
 export const ErrorDisplay: React.FC<ErrorDisplayProps> = ({
@@ -123,7 +127,8 @@ export const ErrorDisplay: React.FC<ErrorDisplayProps> = ({
     message,
     dname,
     nodename,
-    onClick
+    onClick,
+    dataClassName,
 }) => {
     const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -189,6 +194,7 @@ export const ErrorDisplay: React.FC<ErrorDisplayProps> = ({
                 message={message}
                 dname={dname}
                 nodename={nodename}
+                dataClassName={dataClassName}
             />
         </>
     );

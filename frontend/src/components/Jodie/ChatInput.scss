@@ -1,0 +1,174 @@
+/**
+ * ChatInput Component Styles
+ * Image paste preview and attachment button styles
+ */
+
+// Image preview container above input
+.jodie-image-previews {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 12px 16px 0;
+    margin-bottom: -4px;
+}
+
+// Individual image preview
+.jodie-image-preview {
+    position: relative;
+    width: 64px;
+    height: 64px;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 2px solid #e2e8f0;
+    background: #f8fafc;
+    transition: all 0.2s ease;
+
+    img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    &:hover {
+        border-color: #64748b;
+
+        .jodie-image-remove {
+            opacity: 1;
+        }
+    }
+}
+
+// Remove button on image preview
+.jodie-image-remove {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #ef4444;
+    border: 2px solid #ffffff;
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    opacity: 0;
+    transition: all 0.15s ease;
+    padding: 0;
+
+    i {
+        font-size: 12px;
+        line-height: 1;
+    }
+
+    &:hover {
+        background: #dc2626;
+        transform: scale(1.1);
+    }
+}
+
+// Input row with optional attach button
+.jodie-input-row {
+    display: flex;
+    align-items: flex-end;
+    gap: 12px;
+    width: 100%;
+}
+
+// Monospace font for command input
+.jodie-input {
+    font-family: 'JetBrains Mono', 'Fira Code', 'Monaco', 'Consolas', monospace;
+    font-size: 13px;
+    letter-spacing: -0.01em;
+}
+
+// Attachment button
+.jodie-attach-btn {
+    width: 40px;
+    height: 48px;
+    min-width: 40px;
+    border: none;
+    background: transparent;
+    color: #64748b;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.15s ease;
+
+    i {
+        font-size: 18px;
+    }
+
+    &:hover:not(:disabled) {
+        background: #f1f5f9;
+        color: #475569;
+    }
+
+    &:disabled {
+        color: #cbd5e1;
+        cursor: not-allowed;
+    }
+}
+
+// Adjust input container for image support
+.jodie-input-container {
+    display: flex;
+    flex-direction: column;
+    padding: 12px 16px 16px;
+
+    // When there are images, add some visual separation
+    &:has(.jodie-image-previews) {
+        padding-top: 0;
+    }
+}
+
+// Vision hint indicator
+.jodie-vision-hint {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: #94a3b8;
+    padding: 0 4px;
+    margin-bottom: 8px;
+
+    i {
+        font-size: 12px;
+    }
+}
+
+// Dark mode support
+[data-theme="dark"] {
+    .jodie-image-preview {
+        border-color: #334155;
+        background: #1e293b;
+
+        &:hover {
+            border-color: #64748b;
+        }
+    }
+
+    .jodie-image-remove {
+        border-color: #1e293b;
+    }
+
+    .jodie-attach-btn {
+        color: #94a3b8;
+
+        &:hover:not(:disabled) {
+            background: #334155;
+            color: #e2e8f0;
+        }
+
+        &:disabled {
+            color: #475569;
+        }
+    }
+
+    .jodie-vision-hint {
+        color: #64748b;
+    }
+}

@@ -1,0 +1,452 @@
+/**
+ * ScriptBlock Styles
+ * Design: "Understated Excellence" - subtle but precise, professional
+ */
+
+// ============================================
+// VARIABLES
+// ============================================
+
+$script-bg: #1e293b;
+$script-bg-header: #0f172a;
+$script-border: rgba(255, 255, 255, 0.08);
+$script-text: #e2e8f0;
+$script-text-muted: #94a3b8;
+$script-accent: #475569;
+$script-success: #10b981;
+$script-error: #ef4444;
+$script-warning: #f59e0b;
+$script-running: #3b82f6;
+
+// ============================================
+// CONTAINER
+// ============================================
+
+.script-block {
+    background: $script-bg;
+    border-radius: 8px;
+    border: 1px solid $script-border;
+    overflow: hidden;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    margin: 10px 0;
+
+    &--collapsed {
+        .script-block__content {
+            display: none;
+        }
+    }
+}
+
+// ============================================
+// HEADER
+// ============================================
+
+.script-block__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px;
+    background: $script-bg-header;
+    border-bottom: 1px solid $script-border;
+    min-height: 40px;
+}
+
+.script-block__header-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.script-block__header-right {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.script-block__expand-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    padding: 0;
+    background: transparent;
+    border: none;
+    color: $script-text-muted;
+    cursor: pointer;
+    border-radius: 3px;
+    transition: all 0.15s ease;
+
+    &:hover {
+        color: $script-text;
+        background: rgba(255, 255, 255, 0.1);
+    }
+
+    i {
+        font-size: 12px;
+    }
+}
+
+.script-block__label {
+    font-size: 12px;
+    font-weight: 600;
+    color: $script-text-muted;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.script-block__syntax-badge {
+    font-size: 10px;
+    font-weight: 500;
+    padding: 2px 6px;
+    background: rgba(71, 85, 105, 0.4);
+    color: #94a3b8;
+    border-radius: 3px;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.script-block__line-count {
+    font-size: 11px;
+    color: $script-text-muted;
+    opacity: 0.7;
+}
+
+// ============================================
+// STATE INDICATOR
+// ============================================
+
+.script-block__state {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    font-weight: 500;
+    padding: 3px 8px;
+    border-radius: 4px;
+    margin-right: 8px;
+
+    &--running,
+    &--stepping {
+        background: rgba(59, 130, 246, 0.15);
+        color: #60a5fa;
+    }
+
+    &--paused {
+        background: rgba(245, 158, 11, 0.15);
+        color: #fbbf24;
+    }
+
+    &--completed {
+        background: rgba(16, 185, 129, 0.15);
+        color: #34d399;
+    }
+
+    &--error {
+        background: rgba(239, 68, 68, 0.15);
+        color: #f87171;
+    }
+}
+
+.script-block__spinner {
+    width: 10px;
+    height: 10px;
+    border: 2px solid currentColor;
+    border-top-color: transparent;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+// ============================================
+// TOGGLE & BUTTONS
+// ============================================
+
+.script-block__toggle {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
+    background: transparent;
+    border: 1px solid $script-border;
+    border-radius: 4px;
+    color: $script-text-muted;
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+
+    i {
+        font-size: 12px;
+    }
+
+    &:hover {
+        background: rgba(255, 255, 255, 0.05);
+        color: $script-text;
+        border-color: rgba(255, 255, 255, 0.15);
+    }
+
+    &--active {
+        background: rgba(71, 85, 105, 0.3);
+        color: $script-text;
+        border-color: rgba(255, 255, 255, 0.15);
+    }
+}
+
+.script-block__btn {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    background: transparent;
+    border: none;
+    border-radius: 4px;
+    color: $script-text-muted;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s ease;
+
+    i {
+        font-size: 14px;
+    }
+
+    &:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+    }
+
+    &:hover:not(:disabled) {
+        background: rgba(255, 255, 255, 0.1);
+        color: $script-text;
+    }
+
+    &--icon {
+        padding: 4px 6px;
+    }
+
+    &--copied {
+        color: $script-success;
+    }
+
+    &--step {
+        border: 1px solid $script-border;
+
+        &:hover:not(:disabled) {
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+    }
+
+    &--run {
+        background: linear-gradient(135deg, #64748b 0%, #475569 100%);
+        color: white;
+
+        &:hover:not(:disabled) {
+            background: linear-gradient(135deg, #475569 0%, #334155 100%);
+        }
+
+        i, span {
+            color: white;
+        }
+    }
+
+    &--stop {
+        background: rgba(239, 68, 68, 0.15);
+        color: #f87171;
+
+        &:hover {
+            background: rgba(239, 68, 68, 0.25);
+        }
+    }
+}
+
+// ============================================
+// CODE CONTENT
+// ============================================
+
+.script-block__content {
+    display: flex;
+    overflow-x: auto;
+}
+
+.script-block__line-numbers {
+    display: flex;
+    flex-direction: column;
+    padding: 12px 0;
+    background: rgba(0, 0, 0, 0.2);
+    border-right: 1px solid $script-border;
+    user-select: none;
+    min-width: 40px;
+}
+
+.line-number {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 20.8px; // Match line height of code
+    padding: 0 8px;
+    font-size: 12px;
+    color: $script-text-muted;
+    opacity: 0.5;
+
+    &--current {
+        background: rgba(59, 130, 246, 0.15);
+        opacity: 1;
+    }
+}
+
+.line-number__num {
+    font-family: 'JetBrains Mono', 'IBM Plex Mono', monospace;
+    font-size: 11px;
+}
+
+.line-status {
+    width: 12px;
+    height: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    &--pending {
+        width: 6px;
+        height: 6px;
+        background: $script-text-muted;
+        opacity: 0.3;
+        border-radius: 50%;
+    }
+
+    &--running {
+        width: 8px;
+        height: 8px;
+        background: $script-running;
+        border-radius: 50%;
+        animation: pulse 1s ease-in-out infinite;
+    }
+
+    &--success {
+        color: $script-success;
+        font-size: 12px;
+    }
+
+    &--error {
+        color: $script-error;
+        font-size: 12px;
+    }
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.6; transform: scale(0.85); }
+}
+
+.script-block__code {
+    flex: 1;
+    padding: 12px 16px;
+    overflow-x: auto;
+
+    pre {
+        margin: 0 !important;
+        padding: 0 !important;
+        background: transparent !important;
+    }
+
+    code {
+        font-family: 'JetBrains Mono', 'IBM Plex Mono', 'Fira Code', 'Consolas', monospace !important;
+        font-size: 13px !important;
+        line-height: 1.6 !important;
+    }
+}
+
+// Code line states
+.code-line {
+    display: block;
+    padding: 0 4px;
+    margin: 0 -4px;
+    border-radius: 2px;
+    transition: background 0.15s ease;
+
+    &--current {
+        background: rgba(59, 130, 246, 0.1);
+    }
+
+    &--success {
+        background: rgba(16, 185, 129, 0.08);
+    }
+
+    &--error {
+        background: rgba(239, 68, 68, 0.1);
+    }
+}
+
+// ============================================
+// MESSAGES
+// ============================================
+
+.script-block__error,
+.script-block__success {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    font-size: 12px;
+    border-top: 1px solid $script-border;
+
+    i {
+        font-size: 14px;
+    }
+}
+
+.script-block__error {
+    background: rgba(239, 68, 68, 0.1);
+    color: #fca5a5;
+
+    i {
+        color: #f87171;
+    }
+}
+
+.script-block__success {
+    background: rgba(16, 185, 129, 0.1);
+    color: #6ee7b7;
+
+    i {
+        color: #34d399;
+    }
+}
+
+// ============================================
+// SCROLLBAR
+// ============================================
+
+.script-block__content::-webkit-scrollbar,
+.script-block__code::-webkit-scrollbar {
+    height: 6px;
+}
+
+.script-block__content::-webkit-scrollbar-track,
+.script-block__code::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.script-block__content::-webkit-scrollbar-thumb,
+.script-block__code::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 3px;
+
+    &:hover {
+        background: rgba(255, 255, 255, 0.25);
+    }
+}
+
+// ============================================
+// LIGHT MODE (if needed)
+// ============================================
+
+[data-theme="light"] {
+    .script-block {
+        // Keep dark theme for code blocks even in light mode
+        // This is intentional for readability
+    }
+}

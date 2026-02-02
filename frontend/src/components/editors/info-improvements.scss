@@ -67,6 +67,49 @@
   line-height: 1.2;
 }
 
+/* ========================================
+   OVERVIEW GRID HORIZONTAL - 1x3 Layout with Dividers
+   ======================================== */
+.overview-grid-horizontal {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  background: #e2e8f0;  // Divider color
+  gap: 1px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  overflow: hidden;
+  margin-bottom: 0;
+}
+
+.overview-grid-horizontal .overview-cell {
+  background: #f1f5f9;  // Slate light background
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 16px 12px;
+  gap: 4px;
+
+  i {
+    font-size: 20px;
+    color: #64748b;
+  }
+}
+
+.overview-grid-horizontal .cell-value {
+  font-size: 24px;
+  font-weight: 700;
+  color: #1e293b;
+  line-height: 1;
+}
+
+.overview-grid-horizontal .cell-label {
+  font-size: 11px;
+  font-weight: 500;
+  color: #64748b;
+  text-align: center;
+}
+
 /* Analytics Hint - Subtle Gray Text */
 .overview-hint {
   display: flex;
@@ -392,6 +435,9 @@ select.form-select {
   }
 }
 
+// NOTE: .toggle-switch and .toggle-slider styles are now centralized in
+// /styles/components/_form-system.scss
+
 /* ========================================
    COLLAPSIBLE SECTIONS
    ======================================== */
@@ -635,6 +681,30 @@ select.form-select {
       color: #6b7280;
     }
   }
+
+  // Dark mode for horizontal grid
+  .overview-grid-horizontal {
+    background: #334155;
+    border-color: #334155;
+  }
+
+  .overview-grid-horizontal .overview-cell {
+    background: #1e293b;
+  }
+
+  .overview-grid-horizontal .cell-value {
+    color: #f1f5f9;
+  }
+
+  .overview-grid-horizontal .cell-label {
+    color: #94a3b8;
+  }
+
+  .overview-grid-horizontal .overview-cell i {
+    color: #94a3b8;
+  }
+
+  // NOTE: Toggle dark mode styles are centralized in _form-system.scss
 
   .form-label,
   .properties-section-title,

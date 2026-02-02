@@ -68,6 +68,9 @@ import {EdgeStateProps, LGraphElement, store, VertexComponent,
 import {NodeTransientProperties, Pack1} from "../../joiner/classes";
 import {AT_TRANSACTION} from "../../redux/action/action";
 import {ShowContextMenu} from "../../components/contextMenu/ContextMenu";
+import { compareUsageDeclarations } from "../../utils/UDComparator";
+import { PerformanceMetrics } from "../../utils/PerformanceMetrics";
+import { checkVisibility, getViewportFromGraph, shouldEnableCulling, getCullingStats } from "../../utils/ViewportCulling";
 
 const ext_on = "class-can-be-extended";
 const ext_off = "class-cannot-be-extended";
@@ -268,7 +271,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         }*/
 
         let graph: DGraph = DPointerTargetable.from(graphid, state) as DGraphElement as any; // se non c'è un grafo lo creo
-        if (!graph) {
+        if (!state.idlookup[graphid] && !DPointerTargetable.pendingCreation[graphid]) {
             // Log.exDev(!dataid, 'attempted to make a Graph element without model', {dataid, ownProps, ret, thiss:this});
             if (ret.data) CreateElementAction.new(DGraph.new(0, ret.data.id, parentnodeid, graphid, graphid)); }
         /*else {
@@ -436,12 +439,13 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
                 out.reason.push(reason);
                 nodeviewentry.shouldUpdate_reason = {...out, reason};
             }
-            else { // check for ud changes
-                let tmpout = { reason: '' };
-                nodeviewentry.shouldUpdate = !U.isShallowEqualWithProxies(old_ud, new_ud, skipDeepKeys, tmpout);
-                nodeviewentry.shouldUpdate_reason = {...tmpout};
-                if (tmpout.reason) out.reason.push(tmpout.reason+' ('+vid+')');
-                (nodeviewentry as any).shouldUpdate_reasonDebug = {old_ud, new_ud};
+            else { // check for ud changes using optimized comparator
+                const udCompare = compareUsageDeclarations(old_ud, new_ud, skipDeepKeys);
+                nodeviewentry.shouldUpdate = !udCompare.equal;
+                nodeviewentry.shouldUpdate_reason = { reason: udCompare.reason || '', changedKeys: udCompare.changedKeys };
+                if (udCompare.reason) out.reason.push(udCompare.reason + ' (' + vid + ')');
+                (nodeviewentry as any).shouldUpdate_reasonDebug = {old_ud, new_ud, udCompare};
+                PerformanceMetrics.countSCU(nodeviewentry.shouldUpdate);
             }
 
             Log.l(debug, "DECORATIVE_VIEW ShouldComponentUpdate " + data?.name + (nodeviewentry.shouldUpdate ? " UPDATED " : " REJECTED ")  + vid,
@@ -509,11 +513,13 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         }
 
         if (!ret) {
-            let tmpout = {reason:''}
-            ret = nodeviewentry.shouldUpdate = !U.isShallowEqualWithProxies(old_ud, new_ud, skipDeepKeys, tmpout);
-            if (tmpout.reason) out.reason.push(tmpout.reason);
-            nodeviewentry.shouldUpdate_reason = {...out};
-            (nodeviewentry as any).shouldUpdate_reasonDebug = {old_ud, new_ud};
+            // Use optimized UD comparator instead of U.isShallowEqualWithProxies
+            const udCompare = compareUsageDeclarations(old_ud, new_ud, skipDeepKeys);
+            ret = nodeviewentry.shouldUpdate = !udCompare.equal;
+            if (udCompare.reason) out.reason.push(udCompare.reason);
+            nodeviewentry.shouldUpdate_reason = { ...out, changedKeys: udCompare.changedKeys };
+            (nodeviewentry as any).shouldUpdate_reasonDebug = {old_ud, new_ud, udCompare};
+            PerformanceMetrics.countSCU(ret);
         }
 
         Log.l(debug, "MAIN_VIEW ShouldComponentUpdate " + data?.name + (nodeviewentry.shouldUpdate ? " UPDATED " : " REJECTED ") + vid,
@@ -780,6 +786,13 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
 
     static mousedownComponent: GraphElementComponent | undefined;
     onMouseDown(e: React.MouseEvent): void {
+        console.log('[DEBUG] onMouseDown called', {
+            button: e.button,
+            target: (e.target as HTMLElement)?.className,
+            currentTarget: (e.currentTarget as HTMLElement)?.className,
+            nodeid: this.props.nodeid,
+            isStopped: UX.isStoppedEvt(e)
+        });
         if (UX.isStoppedEvt(e)) return;
         e.stopPropagation();
         GraphElementComponent.mousedownComponent = this;
@@ -992,15 +1005,8 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
                     // 10 units of range checked for 3-loops = 10*3*1.2 = 36 units * 300ms = 10.8sec.   9U = 9.72sec
                     let deltas = loopcheck.calls.map((e, i, a) => i === a.length-1 ? thischange - e : a[i+1] - a[i]);
                     loopcheck.stopUpdateEvents = v.clonedCounter;
-                    Log.eDevv("loop in \""+v.name+"\".onDataUpdate." +
-                        " The event has been disabled until the view changes.", {
-                        change_log: loopcheck.calls,
-                        component: this,
-                        loopcheck,
-                        deltas,
-                        updatingTimer:U.UpdatingTimer,
-                        timediff: (thischange - loopcheck.calls[loopcheck.calls.length - observationRange])
-                    } as any);
+                    // Reduced logging - loop detection still works but doesn't spam console
+                    console.debug("loop in \""+v.name+"\".onDataUpdate - event disabled until view changes");
                 }
             }
         }
@@ -1213,6 +1219,38 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
                 this.props.node.adaptSize(size, this.props.view, {w: adaptWidth, h: adaptHeight});
             });
 
+            // VIEWPORT CULLING: Skip rendering off-screen vertices
+            if (!this.props.isGraph && !Debug.lightMode) {
+                const graph = this.props.node?.graph;
+                if (graph) {
+                    const viewport = getViewportFromGraph(graph);
+                    if (viewport && shouldEnableCulling(50)) { // Enable culling for graphs with many elements
+                        const elementBounds = { x: size.x, y: size.y, w: size.w || 100, h: size.h || 50 };
+                        const isVisible = checkVisibility(
+                            this.props.nodeid as string,
+                            elementBounds,
+                            viewport
+                        );
+                        if (!isVisible) {
+                            PerformanceMetrics.countRender('Vertex_culled');
+                            // Return lightweight placeholder to maintain DOM structure
+                            return <div
+                                className="culled-vertex"
+                                data-nodeid={this.props.nodeid}
+                                style={{
+                                    position: 'absolute',
+                                    left: size.x,
+                                    top: size.y,
+                                    width: size.w || 100,
+                                    height: size.h || 50,
+                                    visibility: 'hidden',
+                                    pointerEvents: 'none'
+                                }}
+                            />;
+                        }
+                    }
+                }
+            }
         }
 
 

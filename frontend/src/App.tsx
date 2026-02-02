@@ -1,4 +1,4 @@
-import React, {Dispatch, JSX, useState} from 'react';
+import React, {Dispatch, JSX, useState, useEffect} from 'react';
 import './App.scss';
 import './styles/view.scss'; //
 import './styles/style.scss';
@@ -38,6 +38,7 @@ import DialogVisualizer from './components/alert/Dialog';
 import { NotificationWidget } from './components/NotificationWidget/NotificationWidget';
 import { Jodie } from './components/Jodie';
 import { DevModeProvider } from './contexts/DevModeContext';
+import { AISettingsProvider } from './contexts/AISettingsContext';
 
 let firstLoading = true;
 let browserData = U.getOSBrowserData();
@@ -49,6 +50,22 @@ function App(props: AllProps): JSX.Element {
     const isLoading = props.isLoading;
     let [user, updateUser] = useState(DUser.current);
     let [useless, forceUpdate] = useState(0);
+
+    // DEBUG: Track mousedown events to diagnose context menu issue
+    useEffect(() => {
+        const debugMouseDown = (e: MouseEvent) => {
+            if (e.button === 2) { // Right-click only
+                console.log('[DEBUG-GLOBAL] Right-click mousedown', {
+                    target: (e.target as HTMLElement)?.className,
+                    targetTag: (e.target as HTMLElement)?.tagName,
+                    propagationStopped: e.defaultPrevented,
+                    eventPhase: e.eventPhase, // 1=capture, 2=target, 3=bubble
+                });
+            }
+        };
+        document.addEventListener('mousedown', debugMouseDown, true); // capture phase
+        return () => document.removeEventListener('mousedown', debugMouseDown, true);
+    }, []);
 
     /*
     const tooltip = props.tooltip;
@@ -79,6 +96,7 @@ function App(props: AllProps): JSX.Element {
 
     return (<>
         <DevModeProvider>
+        <AISettingsProvider>
             <div className={"router-wrapper"}>
                 {isLoading && <Loader/>}
                 <ExternalLibraries/>
@@ -125,6 +143,7 @@ function App(props: AllProps): JSX.Element {
                 </HashRouter>
 
             </div>
+        </AISettingsProvider>
         </DevModeProvider>
     </>);
 

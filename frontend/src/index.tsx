@@ -77,3 +77,12 @@ if (document.readyState === 'loading') {
 } else {
   mountApp();
 }
+
+// Performance benchmarking utilities (available in browser console)
+import './utils/PerformanceMetrics';
+import './utils/CanvasBenchmark';
+import './utils/DragThrottle';
+import './utils/BatchedUpdates';
+import './utils/LazyOCL';
+import './utils/ViewportCulling';
+import './utils/__tests__/UDComparator.test';

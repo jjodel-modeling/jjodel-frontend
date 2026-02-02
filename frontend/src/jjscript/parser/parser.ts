@@ -1,0 +1,795 @@
+/**
+ * JjScript Parser
+ * Parses tokenized JjScript input into an Abstract Syntax Tree
+ */
+
+import { Lexer, tokenize } from './lexer';
+import {
+    parseQualifiedName,
+    parseMultiplicity,
+    parseTypeReference,
+    parseLiteralValue,
+    suggestCorrection
+} from './grammar';
+import {
+    Token,
+    TokenType,
+    CommandNode,
+    CommandType,
+    ElementType,
+    ParseResult,
+    ParseError,
+    CreateArgs,
+    DeleteArgs,
+    RenameArgs,
+    SetArgs,
+    AddArgs,
+    RemoveArgs,
+    MoveArgs,
+    CopyArgs,
+    ListArgs,
+    ShowArgs,
+    HelpArgs,
+    UndoRedoArgs,
+    ClearArgs,
+    ValidateArgs,
+    CreateOptions,
+    QualifiedName,
+    COMMANDS,
+    ELEMENT_TYPES,
+    KEYWORDS
+} from '../types';
+
+// ============================================
+// PARSER CLASS
+// ============================================
+
+export class Parser {
+    private tokens: Token[] = [];
+    private current: number = 0;
+    private errors: ParseError[] = [];
+
+    /**
+     * Parse input string into AST
+     */
+    parse(input: string): ParseResult {
+        // Tokenize
+        this.tokens = tokenize(input);
+        this.current = 0;
+        this.errors = [];
+
+        // Skip leading newlines
+        while (this.check('NEWLINE')) {
+            this.advance();
+        }
+
+        // Empty input
+        if (this.isAtEnd() || this.check('EOF')) {
+            return {
+                success: false,
+                errors: [{ message: 'Empty command', position: { line: 1, column: 1 } }],
+                tokens: this.tokens
+            };
+        }
+
+        try {
+            const ast = this.parseCommand();
+            return {
+                success: this.errors.length === 0,
+                ast: this.errors.length === 0 ? ast : undefined,
+                errors: this.errors.length > 0 ? this.errors : undefined,
+                tokens: this.tokens
+            };
+        } catch (e) {
+            const error = e as Error;
+            this.errors.push({
+                message: error.message,
+                position: this.currentPosition()
+            });
+            return {
+                success: false,
+                errors: this.errors,
+                tokens: this.tokens
+            };
+        }
+    }
+
+    // ============================================
+    // COMMAND PARSING
+    // ============================================
+
+    private parseCommand(): CommandNode {
+        const token = this.peek();
+        const position = { line: token.line, column: token.column };
+
+        if (token.type !== 'COMMAND') {
+            // Try to be helpful
+            const suggestion = suggestCorrection(token.value, COMMANDS);
+            const msg = suggestion
+                ? `Expected command, found '${token.value}'. Did you mean '${suggestion}'?`
+                : `Expected command (create, delete, rename, etc.), found '${token.value}'`;
+            throw new Error(msg);
+        }
+
+        const command = token.value.toLowerCase() as CommandType;
+        this.advance();
+
+        let args;
+        switch (command) {
+            case 'create':
+                args = this.parseCreateCommand();
+                break;
+            case 'delete':
+                args = this.parseDeleteCommand();
+                break;
+            case 'rename':
+                args = this.parseRenameCommand();
+                break;
+            case 'set':
+                args = this.parseSetCommand();
+                break;
+            case 'add':
+                args = this.parseAddCommand();
+                break;
+            case 'remove':
+                args = this.parseRemoveCommand();
+                break;
+            case 'move':
+                args = this.parseMoveCommand();
+                break;
+            case 'copy':
+                args = this.parseCopyCommand();
+                break;
+            case 'list':
+                args = this.parseListCommand();
+                break;
+            case 'show':
+                args = this.parseShowCommand();
+                break;
+            case 'help':
+                args = this.parseHelpCommand();
+                break;
+            case 'undo':
+            case 'redo':
+                args = this.parseUndoRedoCommand(command);
+                break;
+            case 'clear':
+                args = this.parseClearCommand();
+                break;
+            case 'validate':
+                args = this.parseValidateCommand();
+                break;
+            default:
+                throw new Error(`Unknown command: ${command}`);
+        }
+
+        return { type: 'Command', command, args, position };
+    }
+
+    // ============================================
+    // CREATE COMMAND
+    // ============================================
+
+    private parseCreateCommand(): CreateArgs {
+        // Parse element type (e.g., "class", "abstract class", "attribute")
+        const elementType = this.parseElementType();
+
+        // Parse name
+        const name = this.expectIdentifierOrQualified('element name');
+
+        // Parse optional parent context (in Package, in Class)
+        let parent: QualifiedName | undefined;
+        if (this.matchKeyword('in')) {
+            parent = this.parseQualifiedNameToken();
+        }
+
+        // Parse options
+        const options = this.parseCreateOptions(elementType);
+
+        return {
+            command: 'create',
+            elementType,
+            name: typeof name === 'string' ? name : name.segments[name.segments.length - 1],
+            parent: typeof name === 'string' ? parent : name,
+            options
+        };
+    }
+
+    private parseElementType(): ElementType {
+        // Check for "abstract class" or "interface"
+        if (this.checkKeyword('abstract')) {
+            this.advance();
+            if (this.checkKeyword('class')) {
+                this.advance();
+                return 'abstract class';
+            }
+            throw new Error("Expected 'class' after 'abstract'");
+        }
+
+        const token = this.peek();
+        if (token.type === 'KEYWORD' || token.type === 'IDENTIFIER') {
+            const value = token.value.toLowerCase();
+
+            // Handle element types
+            const elementTypes: ElementType[] = [
+                'class', 'interface', 'attribute', 'reference', 'operation',
+                'parameter', 'package', 'enum', 'enumeration', 'literal',
+                'model', 'metamodel', 'project', 'annotation'
+            ];
+
+            if (elementTypes.includes(value as ElementType)) {
+                this.advance();
+                return value as ElementType;
+            }
+        }
+
+        const suggestion = suggestCorrection(token.value, ELEMENT_TYPES);
+        const msg = suggestion
+            ? `Expected element type (class, attribute, etc.), found '${token.value}'. Did you mean '${suggestion}'?`
+            : `Expected element type (class, attribute, reference, etc.), found '${token.value}'`;
+        throw new Error(msg);
+    }
+
+    private parseCreateOptions(elementType: ElementType): CreateOptions | undefined {
+        const options: CreateOptions = {};
+        let hasOptions = false;
+
+        // Parse options based on element type
+        while (!this.isAtEnd() && !this.check('NEWLINE') && !this.check('EOF')) {
+            // type: TypeName
+            if (this.matchKeyword('type') || this.matchOperator(':')) {
+                options.type = parseTypeReference(this.expectIdentifierOrQualified('type name') as string);
+                hasOptions = true;
+                continue;
+            }
+
+            // extends: SuperClass
+            if (this.matchKeyword('extends')) {
+                const superClass = this.parseQualifiedNameToken();
+                if (!options.superClasses) options.superClasses = [];
+                options.superClasses.push(superClass);
+                options.superClass = superClass;
+                hasOptions = true;
+                continue;
+            }
+
+            // [multiplicity]
+            if (this.check('MULTIPLICITY')) {
+                options.multiplicity = parseMultiplicity(this.advance().value);
+                hasOptions = true;
+                continue;
+            }
+
+            // default: value
+            if (this.matchKeyword('default')) {
+                if (this.matchOperator('=') || this.matchOperator(':')) {
+                    // optional = or :
+                }
+                options.defaultValue = this.parseLiteralValueToken();
+                hasOptions = true;
+                continue;
+            }
+
+            // opposite: referenceName
+            if (this.matchKeyword('opposite')) {
+                options.opposite = this.parseQualifiedNameToken();
+                hasOptions = true;
+                continue;
+            }
+
+            // Boolean flags
+            if (this.matchKeyword('abstract')) { options.abstract = true; hasOptions = true; continue; }
+            if (this.matchKeyword('derived')) { options.derived = true; hasOptions = true; continue; }
+            if (this.matchKeyword('readonly')) { options.readonly = true; hasOptions = true; continue; }
+            if (this.matchKeyword('transient')) { options.transient = true; hasOptions = true; continue; }
+            if (this.matchKeyword('volatile')) { options.volatile = true; hasOptions = true; continue; }
+            if (this.matchKeyword('unsettable')) { options.unsettable = true; hasOptions = true; continue; }
+            if (this.matchKeyword('containment')) { options.containment = true; hasOptions = true; continue; }
+            if (this.matchKeyword('container')) { options.container = true; hasOptions = true; continue; }
+            if (this.matchKeyword('id')) { options.id = true; hasOptions = true; continue; }
+
+            // returnType for operations
+            if (this.matchKeyword('returns') || this.matchKeyword('return')) {
+                options.returnType = parseTypeReference(this.expectIdentifierOrQualified('return type') as string);
+                hasOptions = true;
+                continue;
+            }
+
+            // value for enum literals
+            if (this.matchKeyword('value') || this.matchOperator('=')) {
+                const valueToken = this.peek();
+                if (valueToken.type === 'NUMBER') {
+                    options.value = parseInt(this.advance().value, 10);
+                    hasOptions = true;
+                }
+                continue;
+            }
+
+            // nsUri, nsPrefix for packages
+            if (this.matchKeyword('nsuri') || this.matchKeyword('uri')) {
+                if (this.matchOperator('=')) {
+                    // optional =
+                }
+                const uriToken = this.peek();
+                if (uriToken.type === 'STRING') {
+                    options.nsUri = this.advance().value;
+                    hasOptions = true;
+                }
+                continue;
+            }
+
+            if (this.matchKeyword('nsprefix') || this.matchKeyword('prefix')) {
+                if (this.matchOperator('=')) {
+                    // optional =
+                }
+                options.nsPrefix = this.expectIdentifierOrString('namespace prefix');
+                hasOptions = true;
+                continue;
+            }
+
+            // If we can't parse more options, break
+            break;
+        }
+
+        return hasOptions ? options : undefined;
+    }
+
+    // ============================================
+    // DELETE COMMAND
+    // ============================================
+
+    private parseDeleteCommand(): DeleteArgs {
+        const target = this.parseQualifiedNameToken();
+
+        let cascade = false;
+        let force = false;
+
+        while (!this.isAtEnd() && !this.check('NEWLINE') && !this.check('EOF')) {
+            if (this.matchKeyword('cascade')) { cascade = true; continue; }
+            if (this.matchKeyword('force')) { force = true; continue; }
+            break;
+        }
+
+        return { command: 'delete', target, cascade, force };
+    }
+
+    // ============================================
+    // RENAME COMMAND
+    // ============================================
+
+    private parseRenameCommand(): RenameArgs {
+        const target = this.parseQualifiedNameToken();
+
+        // Expect 'to' or 'as'
+        if (!this.matchKeyword('to') && !this.matchKeyword('as')) {
+            throw new Error("Expected 'to' or 'as' after target in rename command");
+        }
+
+        const newName = this.expectIdentifier('new name');
+
+        return { command: 'rename', target, newName };
+    }
+
+    // ============================================
+    // SET COMMAND
+    // ============================================
+
+    private parseSetCommand(): SetArgs {
+        const target = this.parseQualifiedNameToken();
+
+        // Property name (could be part of qualified name or separate)
+        let property: string;
+        if (target.member) {
+            property = target.member;
+            target.member = undefined;
+        } else {
+            if (this.matchOperator('.')) {
+                property = this.expectIdentifier('property name');
+            } else {
+                property = this.expectIdentifier('property name');
+            }
+        }
+
+        // Operator (=, +=, -=)
+        let operator: '=' | '+=' | '-=' = '=';
+        if (this.matchOperator('+=')) {
+            operator = '+=';
+        } else if (this.matchOperator('-=')) {
+            operator = '-=';
+        } else if (this.matchOperator('=')) {
+            operator = '=';
+        } else if (this.matchKeyword('to')) {
+            operator = '=';
+        }
+
+        // Value
+        const value = this.parseValueOrQualified();
+
+        return { command: 'set', target, property, value, operator };
+    }
+
+    // ============================================
+    // ADD COMMAND
+    // ============================================
+
+    private parseAddCommand(): AddArgs {
+        const elementType = this.parseElementType();
+        const name = this.expectIdentifier('element name');
+
+        // Expect 'to'
+        if (!this.matchKeyword('to') && !this.matchKeyword('in')) {
+            throw new Error("Expected 'to' or 'in' after element name in add command");
+        }
+
+        const to = this.parseQualifiedNameToken();
+        const options = this.parseCreateOptions(elementType);
+
+        return { command: 'add', elementType, name, to, options };
+    }
+
+    // ============================================
+    // REMOVE COMMAND
+    // ============================================
+
+    private parseRemoveCommand(): RemoveArgs {
+        const target = this.parseQualifiedNameToken();
+
+        // Expect 'from'
+        if (!this.matchKeyword('from')) {
+            throw new Error("Expected 'from' after target in remove command");
+        }
+
+        const from = this.parseQualifiedNameToken();
+
+        return { command: 'remove', target, from };
+    }
+
+    // ============================================
+    // MOVE COMMAND
+    // ============================================
+
+    private parseMoveCommand(): MoveArgs {
+        const target = this.parseQualifiedNameToken();
+
+        // Expect 'to'
+        if (!this.matchKeyword('to')) {
+            throw new Error("Expected 'to' after target in move command");
+        }
+
+        const to = this.parseQualifiedNameToken();
+
+        return { command: 'move', target, to };
+    }
+
+    // ============================================
+    // COPY COMMAND
+    // ============================================
+
+    private parseCopyCommand(): CopyArgs {
+        const target = this.parseQualifiedNameToken();
+
+        // Expect 'to'
+        if (!this.matchKeyword('to')) {
+            throw new Error("Expected 'to' after target in copy command");
+        }
+
+        const to = this.parseQualifiedNameToken();
+
+        let newName: string | undefined;
+        let deep = false;
+
+        while (!this.isAtEnd() && !this.check('NEWLINE') && !this.check('EOF')) {
+            if (this.matchKeyword('as')) {
+                newName = this.expectIdentifier('new name');
+                continue;
+            }
+            if (this.matchKeyword('deep')) {
+                deep = true;
+                continue;
+            }
+            break;
+        }
+
+        return { command: 'copy', target, to, newName, deep };
+    }
+
+    // ============================================
+    // LIST COMMAND
+    // ============================================
+
+    private parseListCommand(): ListArgs {
+        let elementType: ElementType | 'all' | undefined;
+
+        // Mapping plurals to singular element types
+        const pluralToSingular: Record<string, ElementType> = {
+            'classes': 'class',
+            'attributes': 'attribute',
+            'references': 'reference',
+            'operations': 'operation',
+            'parameters': 'parameter',
+            'packages': 'package',
+            'enums': 'enum',
+            'enumerations': 'enumeration',
+            'literals': 'literal',
+            'models': 'model',
+            'metamodels': 'metamodel',
+            'projects': 'project',
+            'annotations': 'annotation',
+            'interfaces': 'interface'
+        };
+
+        // Optional element type filter
+        if (!this.isAtEnd() && !this.check('NEWLINE') && !this.check('EOF')) {
+            if (this.checkKeyword('all')) {
+                this.advance();
+                elementType = 'all';
+            } else if (this.peek().type === 'KEYWORD' || this.peek().type === 'IDENTIFIER') {
+                const value = this.peek().value.toLowerCase();
+
+                // Check for plural form first
+                if (pluralToSingular[value]) {
+                    this.advance();
+                    elementType = pluralToSingular[value];
+                } else if (ELEMENT_TYPES.includes(value as ElementType)) {
+                    elementType = this.parseElementType();
+                }
+            }
+        }
+
+        // Parse filters
+        let filter: ListArgs['filter'];
+        while (!this.isAtEnd() && !this.check('NEWLINE') && !this.check('EOF')) {
+            if (this.matchKeyword('in')) {
+                if (!filter) filter = {};
+                filter.in = this.parseQualifiedNameToken();
+                continue;
+            }
+            break;
+        }
+
+        return { command: 'list', elementType, filter };
+    }
+
+    // ============================================
+    // SHOW COMMAND
+    // ============================================
+
+    private parseShowCommand(): ShowArgs {
+        let target: QualifiedName | 'project' | 'model';
+        let detail: 'brief' | 'full' | 'tree' | undefined;
+
+        if (this.checkKeyword('project')) {
+            this.advance();
+            target = 'project';
+        } else if (this.checkKeyword('model')) {
+            this.advance();
+            target = 'model';
+        } else {
+            target = this.parseQualifiedNameToken();
+        }
+
+        // Parse detail level
+        if (this.matchKeyword('brief')) detail = 'brief';
+        else if (this.matchKeyword('full')) detail = 'full';
+        else if (this.matchKeyword('tree')) detail = 'tree';
+
+        return { command: 'show', target, detail };
+    }
+
+    // ============================================
+    // HELP COMMAND
+    // ============================================
+
+    private parseHelpCommand(): HelpArgs {
+        let topic: HelpArgs['topic'];
+
+        if (!this.isAtEnd() && !this.check('NEWLINE') && !this.check('EOF')) {
+            const token = this.peek();
+            if (token.type === 'COMMAND' || token.type === 'KEYWORD' || token.type === 'IDENTIFIER') {
+                this.advance();
+                topic = token.value.toLowerCase() as HelpArgs['topic'];
+            }
+        }
+
+        return { command: 'help', topic };
+    }
+
+    // ============================================
+    // UNDO/REDO COMMAND
+    // ============================================
+
+    private parseUndoRedoCommand(command: 'undo' | 'redo'): UndoRedoArgs {
+        let steps: number | undefined;
+
+        if (this.check('NUMBER')) {
+            steps = parseInt(this.advance().value, 10);
+        }
+
+        return { command, steps };
+    }
+
+    // ============================================
+    // CLEAR COMMAND
+    // ============================================
+
+    private parseClearCommand(): ClearArgs {
+        let target: 'history' | 'selection' | 'console' | undefined;
+
+        if (this.matchKeyword('history')) target = 'history';
+        else if (this.matchKeyword('selection')) target = 'selection';
+        else if (this.matchKeyword('console')) target = 'console';
+
+        return { command: 'clear', target };
+    }
+
+    // ============================================
+    // VALIDATE COMMAND
+    // ============================================
+
+    private parseValidateCommand(): ValidateArgs {
+        let target: QualifiedName | 'all' | undefined;
+
+        if (this.checkKeyword('all')) {
+            this.advance();
+            target = 'all';
+        } else if (!this.isAtEnd() && !this.check('NEWLINE') && !this.check('EOF')) {
+            if (this.peek().type === 'IDENTIFIER' || this.peek().type === 'QUALIFIED_NAME') {
+                target = this.parseQualifiedNameToken();
+            }
+        }
+
+        return { command: 'validate', target };
+    }
+
+    // ============================================
+    // HELPER METHODS
+    // ============================================
+
+    private parseQualifiedNameToken(): QualifiedName {
+        const token = this.peek();
+
+        if (token.type === 'QUALIFIED_NAME' || token.type === 'IDENTIFIER') {
+            this.advance();
+            return parseQualifiedName(token.value);
+        }
+
+        throw new Error(`Expected qualified name or identifier, found '${token.value}'`);
+    }
+
+    private parseLiteralValueToken() {
+        const token = this.peek();
+
+        if (token.type === 'STRING') {
+            this.advance();
+            return parseLiteralValue(`"${token.value}"`);
+        }
+        if (token.type === 'NUMBER') {
+            this.advance();
+            return parseLiteralValue(token.value);
+        }
+        if (token.type === 'BOOLEAN') {
+            this.advance();
+            return parseLiteralValue(token.value);
+        }
+        if (token.type === 'IDENTIFIER' || token.type === 'KEYWORD') {
+            const value = token.value.toLowerCase();
+            if (value === 'null' || value === 'true' || value === 'false') {
+                this.advance();
+                return parseLiteralValue(value);
+            }
+        }
+
+        throw new Error(`Expected literal value, found '${token.value}'`);
+    }
+
+    private parseValueOrQualified() {
+        const token = this.peek();
+
+        // Check for literal values first
+        if (token.type === 'STRING' || token.type === 'NUMBER' || token.type === 'BOOLEAN') {
+            return this.parseLiteralValueToken();
+        }
+
+        // Check for null/true/false keywords
+        if (token.type === 'IDENTIFIER' || token.type === 'KEYWORD') {
+            const value = token.value.toLowerCase();
+            if (value === 'null' || value === 'true' || value === 'false') {
+                return this.parseLiteralValueToken();
+            }
+        }
+
+        // Otherwise, treat as qualified name
+        return this.parseQualifiedNameToken();
+    }
+
+    private expectIdentifier(what: string): string {
+        const token = this.peek();
+        if (token.type === 'IDENTIFIER' || token.type === 'KEYWORD') {
+            this.advance();
+            return token.value;
+        }
+        throw new Error(`Expected ${what}, found '${token.value}'`);
+    }
+
+    private expectIdentifierOrQualified(what: string): string | QualifiedName {
+        const token = this.peek();
+        if (token.type === 'QUALIFIED_NAME') {
+            this.advance();
+            return parseQualifiedName(token.value);
+        }
+        if (token.type === 'IDENTIFIER' || token.type === 'KEYWORD') {
+            this.advance();
+            return token.value;
+        }
+        throw new Error(`Expected ${what}, found '${token.value}'`);
+    }
+
+    private expectIdentifierOrString(what: string): string {
+        const token = this.peek();
+        if (token.type === 'STRING' || token.type === 'IDENTIFIER') {
+            this.advance();
+            return token.value;
+        }
+        throw new Error(`Expected ${what}, found '${token.value}'`);
+    }
+
+    // ============================================
+    // TOKEN NAVIGATION
+    // ============================================
+
+    private peek(): Token {
+        return this.tokens[this.current] || { type: 'EOF', value: '', position: 0, line: 1, column: 1 };
+    }
+
+    private advance(): Token {
+        if (!this.isAtEnd()) {
+            this.current++;
+        }
+        return this.tokens[this.current - 1];
+    }
+
+    private check(type: TokenType): boolean {
+        return this.peek().type === type;
+    }
+
+    private checkKeyword(keyword: string): boolean {
+        const token = this.peek();
+        return (token.type === 'KEYWORD' || token.type === 'IDENTIFIER') &&
+               token.value.toLowerCase() === keyword.toLowerCase();
+    }
+
+    private matchKeyword(keyword: string): boolean {
+        if (this.checkKeyword(keyword)) {
+            this.advance();
+            return true;
+        }
+        return false;
+    }
+
+    private matchOperator(op: string): boolean {
+        const token = this.peek();
+        if (token.type === 'OPERATOR' && token.value === op) {
+            this.advance();
+            return true;
+        }
+        return false;
+    }
+
+    private isAtEnd(): boolean {
+        return this.current >= this.tokens.length || this.peek().type === 'EOF';
+    }
+
+    private currentPosition(): { line: number; column: number } {
+        const token = this.peek();
+        return { line: token.line, column: token.column };
+    }
+}
+
+// ============================================
+// CONVENIENCE FUNCTION
+// ============================================
+
+export function parse(input: string): ParseResult {
+    const parser = new Parser();
+    return parser.parse(input);
+}

@@ -1,0 +1,564 @@
+// ============================================
+// MARKDOWN RENDERER STYLES
+// ============================================
+
+.markdown-renderer {
+    font-size: 14px;
+    line-height: 1.5;
+    color: var(--text-primary, #1e293b);
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+
+    // Reset margins for first/last elements
+    > :first-child { margin-top: 0 !important; }
+    > :last-child { margin-bottom: 0 !important; }
+
+    // Better spacing between sections
+    > .md-heading + .md-list,
+    > .md-heading + .md-paragraph {
+        margin-top: 6px;
+    }
+
+    > .md-paragraph + .md-heading,
+    > .md-list + .md-heading {
+        margin-top: 14px;
+    }
+
+    // Ensure list items don't add extra spacing from paragraphs
+    .md-list .md-paragraph {
+        margin: 0 !important;
+        display: inline;
+    }
+}
+
+// ============================================
+// PARAGRAPHS
+// ============================================
+
+.md-paragraph {
+    margin: 0 0 8px 0;
+    line-height: 1.5;
+
+    &:last-child {
+        margin-bottom: 0;
+    }
+
+    // Consecutive paragraphs
+    & + & {
+        margin-top: 8px;
+    }
+}
+
+// ============================================
+// HEADINGS
+// ============================================
+
+.md-heading {
+    margin: 14px 0 6px 0;
+    font-weight: 600;
+    color: var(--text-primary, #0f172a);
+    line-height: 1.3;
+
+    &:first-child {
+        margin-top: 0;
+    }
+}
+
+.md-h1 {
+    font-size: 1.3em;
+    padding-bottom: 5px;
+    border-bottom: 1px solid var(--border-color, #e2e8f0);
+    margin-bottom: 10px;
+}
+
+.md-h2 {
+    font-size: 1.15em;
+    padding-bottom: 4px;
+    border-bottom: 1px solid var(--border-color, #e2e8f0);
+    margin-bottom: 8px;
+}
+
+.md-h3 {
+    font-size: 1.1em;
+}
+
+.md-h4 {
+    font-size: 1em;
+    font-weight: 600;
+}
+
+// ============================================
+// INLINE CODE
+// ============================================
+
+.md-inline-code {
+    padding: 2px 6px;
+    font-family: 'IBM Plex Mono', 'Fira Code', 'Consolas', monospace;
+    font-size: 0.9em;
+    background: var(--bg-tertiary, #f1f5f9);
+    border-radius: 4px;
+    border: 1px solid var(--border-color, #e2e8f0);
+    color: #dc2626;
+}
+
+// ============================================
+// CODE BLOCKS
+// ============================================
+
+.md-code-block {
+    margin: 10px 0;
+    border-radius: 8px;
+    overflow: hidden;
+    background: var(--bg-code, #1e293b);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+
+    // Single line code block - more compact
+    &--single {
+        margin: 6px 0;
+        border-radius: 6px;
+
+        .md-code-content {
+            padding: 8px 12px !important;
+        }
+    }
+}
+
+.md-code-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px;
+    background: var(--bg-code-header, #0f172a);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.md-code-language {
+    font-size: 12px;
+    font-weight: 500;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+// Actions container (copy + jjscript buttons)
+.md-code-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.md-code-copy {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
+    background: transparent;
+    border: none;
+    border-radius: 4px;
+    color: #94a3b8;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+
+    i {
+        font-size: 14px;
+        color: inherit;
+    }
+
+    span {
+        font-size: 11px;
+    }
+
+    &:hover {
+        background: rgba(255, 255, 255, 0.1);
+        color: #e2e8f0;
+    }
+
+    &.copied {
+        color: #10b981; // green-500 for success
+
+        &:hover {
+            background: rgba(16, 185, 129, 0.1);
+            color: #10b981;
+        }
+    }
+}
+
+// JjScript run button
+.md-code-jjscript {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    background: rgba(16, 185, 129, 0.15);
+    border: none;
+    border-radius: 4px;
+    color: #10b981;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+
+    i {
+        font-size: 12px;
+        color: inherit;
+    }
+
+    span {
+        font-size: 11px;
+        font-weight: 500;
+    }
+
+    &:hover {
+        background: rgba(16, 185, 129, 0.25);
+        color: #34d399;
+    }
+}
+
+// JjScript mode wrapper
+.md-jjscript-wrapper {
+    position: relative;
+    margin: 10px 0;
+}
+
+.md-jjscript-exit {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    border-radius: 4px;
+    color: #94a3b8;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+
+    &:hover {
+        background: rgba(255, 255, 255, 0.2);
+        color: #e2e8f0;
+    }
+}
+
+// Syntax highlighted code content
+.md-code-content {
+    margin: 0 !important;
+    padding: 12px 16px !important;
+    background: #1e293b !important;
+    overflow-x: auto;
+
+    // Override for line numbers
+    .linenumber {
+        min-width: 2.5em !important;
+        padding-right: 1em !important;
+        text-align: right;
+        color: #475569 !important; // slate-600
+        user-select: none;
+    }
+
+    code {
+        font-family: 'JetBrains Mono', 'IBM Plex Mono', 'Fira Code', 'Consolas', monospace !important;
+        font-size: 13px !important;
+        line-height: 1.5 !important;
+        background: transparent !important;
+    }
+
+    // Scrollbar styling for code blocks
+    &::-webkit-scrollbar {
+        height: 6px;
+    }
+
+    &::-webkit-scrollbar-track {
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 3px;
+    }
+
+    &::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 3px;
+
+        &:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+    }
+}
+
+// Legacy pre/code styling (fallback)
+.md-code-block pre {
+    margin: 0;
+    padding: 12px 16px;
+    overflow-x: auto;
+
+    code {
+        font-family: 'JetBrains Mono', 'IBM Plex Mono', 'Fira Code', 'Consolas', monospace;
+        font-size: 13px;
+        line-height: 1.5;
+        color: #e2e8f0;
+        background: none;
+    }
+}
+
+// ============================================
+// TABLES (GFM)
+// ============================================
+
+.md-table-wrapper {
+    margin: 10px 0;
+    overflow-x: auto;
+    border-radius: 8px;
+    border: 1px solid var(--border-color, #e2e8f0);
+}
+
+.md-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+
+    th, td {
+        padding: 8px 12px;
+        text-align: left;
+        border-bottom: 1px solid var(--border-color, #e2e8f0);
+    }
+
+    th:first-child,
+    td:first-child {
+        white-space: nowrap;
+    }
+
+    th {
+        font-weight: 600;
+        background: var(--bg-table-header, #f8fafc);
+        color: var(--text-primary, #0f172a);
+        font-size: 12px;
+    }
+
+    td {
+        color: var(--text-primary, #1e293b);
+        line-height: 1.4;
+    }
+
+    tr:last-child td {
+        border-bottom: none;
+    }
+
+    tr:hover td {
+        background: var(--bg-hover, #f8fafc);
+    }
+
+    // Align numbers to right
+    td:last-child {
+        &:not(:first-child) {
+            text-align: right;
+        }
+    }
+}
+
+// ============================================
+// LISTS
+// ============================================
+
+.md-list {
+    margin: 6px 0;
+    padding-left: 22px;
+
+    &--unordered {
+        list-style-type: disc;
+    }
+
+    &--ordered {
+        list-style-type: decimal;
+    }
+
+    // First list has no top margin
+    &:first-child {
+        margin-top: 0;
+    }
+
+    // Last list has no bottom margin
+    &:last-child {
+        margin-bottom: 0;
+    }
+}
+
+.md-list-item {
+    margin: 0 0 4px 0;
+    padding: 0;
+    line-height: 1.5;
+    color: var(--text-primary, #1e293b);
+
+    // Last item has no bottom margin
+    &:last-child {
+        margin-bottom: 0;
+    }
+
+    // Remove paragraph margins inside list items - critical for tight spacing
+    .md-paragraph,
+    p {
+        margin: 0 !important;
+        padding: 0;
+        display: inline;
+    }
+
+    // Nested lists inside items
+    .md-list {
+        margin: 4px 0 0 0;
+        display: block;
+    }
+
+    // Strong text inside list items
+    .md-strong,
+    strong {
+        color: var(--text-primary, #0f172a);
+    }
+
+    // Inline code in list items
+    .md-inline-code {
+        vertical-align: baseline;
+    }
+}
+
+// Task lists (GFM)
+.md-task-item {
+    list-style: none;
+    margin-left: -24px;
+    padding-left: 24px;
+
+    input[type="checkbox"] {
+        margin-right: 8px;
+        vertical-align: middle;
+    }
+}
+
+// ============================================
+// BLOCKQUOTES
+// ============================================
+
+.md-blockquote {
+    margin: 10px 0;
+    padding: 10px 14px;
+    border-left: 3px solid var(--color-accent, #475569);
+    background: var(--bg-secondary, #f8fafc);
+    border-radius: 0 6px 6px 0;
+    font-style: italic;
+    color: var(--text-secondary, #475569);
+
+    .md-paragraph,
+    p {
+        margin: 0;
+    }
+
+    .md-paragraph + .md-paragraph,
+    p + p {
+        margin-top: 6px;
+    }
+}
+
+// ============================================
+// LINKS
+// ============================================
+
+.md-link {
+    color: var(--color-link, #0ea5e9);
+    text-decoration: none;
+
+    &:hover {
+        text-decoration: underline;
+    }
+}
+
+.md-external-icon {
+    margin-left: 4px;
+    font-size: 0.8em;
+    opacity: 0.7;
+}
+
+// ============================================
+// TEXT FORMATTING
+// ============================================
+
+.md-strong {
+    font-weight: 600;
+    color: var(--text-primary, #0f172a);
+}
+
+.md-em {
+    font-style: italic;
+    color: inherit;
+}
+
+.md-del {
+    text-decoration: line-through;
+    opacity: 0.6;
+    color: var(--text-secondary, #64748b);
+}
+
+// Combine strong inside list items (like "Metaclasses: description")
+.md-list-item .md-strong {
+    color: var(--text-primary, #0f172a);
+}
+
+// ============================================
+// HORIZONTAL RULE
+// ============================================
+
+.md-hr {
+    margin: 14px 0;
+    border: none;
+    border-top: 1px solid var(--border-color, #e2e8f0);
+}
+
+// ============================================
+// DARK MODE
+// ============================================
+
+[data-theme="dark"] {
+    .markdown-renderer {
+        color: var(--text-primary, #e2e8f0);
+    }
+
+    .md-heading {
+        color: var(--text-primary, #f1f5f9);
+    }
+
+    .md-inline-code {
+        background: var(--bg-tertiary, #334155);
+        color: #fb7185;
+    }
+
+    .md-table-wrapper {
+        border-color: var(--border-color, #334155);
+    }
+
+    .md-table {
+        th {
+            background: var(--bg-table-header, #334155);
+            color: var(--text-primary, #f1f5f9);
+            border-bottom-color: var(--border-color-strong, #475569);
+        }
+
+        th, td {
+            border-color: var(--border-color, #334155);
+        }
+
+        td {
+            color: var(--text-secondary, #94a3b8);
+        }
+
+        tr:hover td {
+            background: var(--bg-hover, #334155);
+        }
+    }
+
+    .md-blockquote {
+        background: var(--bg-tertiary, #1e293b);
+    }
+
+    .md-strong {
+        color: var(--text-primary, #f1f5f9);
+    }
+}

@@ -123,7 +123,8 @@ function JsxEditorComponent(props: AllProps) {
                 style={{
                     padding: '5px',
                     transition: 'height 0.3s',
-                    height: expand ? '60%' : '40%',
+                    height: expand ? '60vh' : '40vh',
+                    minHeight: '200px',
                     maxHeight: expand ? '800px' : '500px',
                     resize: 'vertical',
                     overflow: 'hidden'

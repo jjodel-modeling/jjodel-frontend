@@ -2,6 +2,7 @@ import {DModel, LModel} from '../../../model/logicWrapper';
 import {TabData} from 'rc-dock';
 import MetamodelTab from './MetamodelTab';
 import ModelTab from './ModelTab';
+import DocumentationTab from './DocumentationTab';
 import './tab-title.scss';
 
 // CSS-only approach: uses data attribute and ::before pseudo-element
@@ -24,6 +25,18 @@ class TabDataMaker {
             group: 'models',
             closable: true,
             content: <ModelTab modelid={model.id} metamodelid={(model.instanceof as any)?.id || model.instanceof} />
+        };
+    }
+
+    static documentation(model?: DModel|LModel): TabData {
+        const tabId = model ? `doc_${model.id}` : 'documentation';
+        const tabTitle = model ? `${model.name} Docs` : 'Documentation';
+        return {
+            id: tabId,
+            title: <div className="tab-title active-on-mouseenter" data-type="documentation">{tabTitle}</div>,
+            group: 'editors',
+            closable: true,
+            content: <DocumentationTab modelid={model?.id} key={tabId} />
         };
     }
 }

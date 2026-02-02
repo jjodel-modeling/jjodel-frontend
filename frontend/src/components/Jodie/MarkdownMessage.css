@@ -22,21 +22,32 @@
    ======================================== */
 
 .md-content {
-    line-height: 1.6;
+    line-height: 1.5;
     color: inherit;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
 }
 
 .md-content > *:first-child {
-    margin-top: 0;
+    margin-top: 0 !important;
 }
 
 .md-content > *:last-child {
-    margin-bottom: 0;
+    margin-bottom: 0 !important;
+}
+
+/* Better spacing between sections */
+.md-content > .md-h1 + .md-list,
+.md-content > .md-h1 + .md-p,
+.md-content > .md-h2 + .md-list,
+.md-content > .md-h2 + .md-p {
+    margin-top: 8px;
 }
 
 /* Paragraphs */
 .md-p {
-    margin: 8px 0;
+    margin: 0 0 8px 0;
+    line-height: 1.5;
 }
 
 .md-p:first-child {
@@ -47,28 +58,48 @@
     margin-bottom: 0;
 }
 
+.md-p + .md-p {
+    margin-top: 8px;
+}
+
 /* Headings */
 .md-h1,
 .md-h2,
-.md-h3 {
-    margin: 16px 0 8px;
+.md-h3,
+.md-h4 {
+    margin: 14px 0 6px;
     font-weight: 600;
     color: #0f172a;
     line-height: 1.3;
 }
 
+.md-h1:first-child,
+.md-h2:first-child,
+.md-h3:first-child,
+.md-h4:first-child {
+    margin-top: 0;
+}
+
 .md-h1 {
-    font-size: 18px;
-    border-bottom: 2px solid #e2e8f0;
-    padding-bottom: 6px;
+    font-size: 17px;
+    border-bottom: 1px solid #e2e8f0;
+    padding-bottom: 5px;
+    margin-bottom: 10px;
 }
 
 .md-h2 {
-    font-size: 16px;
+    font-size: 15px;
+    border-bottom: 1px solid #e2e8f0;
+    padding-bottom: 4px;
+    margin-bottom: 8px;
 }
 
 .md-h3 {
     font-size: 14px;
+}
+
+.md-h4 {
+    font-size: 13px;
 }
 
 /* Strong and Emphasis */
@@ -115,55 +146,133 @@
     white-space: nowrap;
 }
 
-/* Code Blocks */
+/* Code Blocks - Now using react-syntax-highlighter */
 .md-code-block {
     background: #1e293b;
     color: #e2e8f0;
-    padding: 14px 16px;
     border-radius: 8px;
-    overflow-x: auto;
-    margin: 12px 0;
-    font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
-    font-size: 12px;
-    line-height: 1.5;
+    overflow: hidden;
+    margin: 10px 0;
+    border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-.md-code-block code {
+/* Single line code block - more compact, no header */
+.md-code-block.md-code-block--single {
+    margin: 6px 0;
+    border-radius: 6px;
+}
+
+.md-code-block.md-code-block--single .md-code-content {
+    padding: 8px 12px !important;
+}
+
+/* Code block header */
+.md-code-block .md-code-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 12px;
+    background: #0f172a;
+    border-bottom: 1px solid #334155;
+    min-height: 32px;
+}
+
+.md-code-block .md-code-language {
+    font-size: 11px;
+    font-weight: 600;
+    color: #94a3b8;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
+
+.md-code-block .md-code-copy {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
     background: transparent;
-    color: inherit;
-    padding: 0;
     border: none;
-    font-size: inherit;
-    white-space: pre;
+    border-radius: 4px;
+    color: #94a3b8;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.md-code-block .md-code-copy:hover {
+    background: #334155;
+    color: #e2e8f0;
+}
+
+.md-code-block .md-code-copy.copied {
+    color: #10b981;
+}
+
+.md-code-block .md-code-copy i {
+    font-size: 14px;
+    color: inherit;
+}
+
+.md-code-block .md-code-copy span {
+    font-size: 11px;
+}
+
+/* Syntax highlighted content */
+.md-code-block .md-code-content {
+    margin: 0 !important;
+    padding: 12px !important;
+    background: #1e293b !important;
+    overflow-x: auto;
+}
+
+.md-code-block .md-code-content code {
+    font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace !important;
+    font-size: 13px !important;
+    line-height: 1.5 !important;
+    background: transparent !important;
+}
+
+/* Line numbers styling */
+.md-code-block .linenumber {
+    min-width: 2.5em !important;
+    padding-right: 1em !important;
+    text-align: right;
+    color: #475569 !important;
+    user-select: none;
 }
 
 /* Code block scrollbar */
+.md-code-block .md-code-content::-webkit-scrollbar,
 .md-code-block::-webkit-scrollbar {
     height: 6px;
 }
 
+.md-code-block .md-code-content::-webkit-scrollbar-track,
 .md-code-block::-webkit-scrollbar-track {
-    background: rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.05);
     border-radius: 3px;
 }
 
+.md-code-block .md-code-content::-webkit-scrollbar-thumb,
 .md-code-block::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.3);
+    background: rgba(255, 255, 255, 0.2);
     border-radius: 3px;
 }
 
+.md-code-block .md-code-content::-webkit-scrollbar-thumb:hover,
 .md-code-block::-webkit-scrollbar-thumb:hover {
-    background: rgba(255, 255, 255, 0.4);
+    background: rgba(255, 255, 255, 0.3);
 }
 
 /* ========================================
-   Lists
+   Lists - Styles now handled by MarkdownRenderer.scss
    ======================================== */
 
+/* Legacy classes for backward compatibility */
 .md-ul,
 .md-ol {
-    margin: 10px 0;
-    padding-left: 20px;
+    margin: 6px 0;
+    padding-left: 22px;
 }
 
 .md-ul {
@@ -176,8 +285,24 @@
 
 .md-li,
 .md-li-ordered {
-    margin: 4px 0;
+    margin: 0 0 4px 0;
+    padding: 0;
     line-height: 1.5;
+}
+
+.md-li:last-child,
+.md-li-ordered:last-child {
+    margin-bottom: 0;
+}
+
+/* Remove paragraph margins inside list items - critical for tight spacing */
+.md-li p,
+.md-li-ordered p,
+.md-li .md-p,
+.md-li-ordered .md-p {
+    margin: 0 !important;
+    padding: 0;
+    display: inline;
 }
 
 /* Nested lists */
@@ -185,7 +310,7 @@
 .md-ol .md-ol,
 .md-ul .md-ol,
 .md-ol .md-ul {
-    margin: 4px 0;
+    margin: 4px 0 0 0;
 }
 
 /* ========================================
@@ -193,13 +318,13 @@
    ======================================== */
 
 .md-blockquote {
-    border-left: 4px solid #64748b;
-    padding: 8px 0 8px 16px;
-    margin: 12px 0;
+    border-left: 3px solid #64748b;
+    padding: 10px 14px;
+    margin: 10px 0;
     color: #475569;
     font-style: italic;
     background: #f8fafc;
-    border-radius: 0 4px 4px 0;
+    border-radius: 0 6px 6px 0;
 }
 
 /* ========================================
@@ -208,8 +333,8 @@
 
 .md-hr {
     border: none;
-    border-top: 2px solid #e2e8f0;
-    margin: 16px 0;
+    border-top: 1px solid #e2e8f0;
+    margin: 14px 0;
 }
 
 /* ========================================

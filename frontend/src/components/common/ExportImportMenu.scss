@@ -1,0 +1,151 @@
+/**
+ * ExportImportMenu Styles
+ * Dropdown menu for export/import operations
+ */
+
+.export-import-menu {
+    position: relative;
+    display: inline-flex;
+}
+
+// ============================================
+// TRIGGER BUTTON
+// ============================================
+
+.export-import-menu__trigger {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    background: transparent;
+    border: none;
+    border-radius: 4px;
+    color: var(--text-tertiary, #94a3b8);
+    cursor: pointer;
+    transition: all 0.15s ease;
+
+    &:hover:not(:disabled) {
+        background: var(--bg-hover, #f1f5f9);
+        color: var(--text-primary, #334155);
+    }
+
+    &:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    i {
+        font-size: 14px;
+    }
+}
+
+// ============================================
+// DROPDOWN MENU
+// ============================================
+
+.export-import-menu__dropdown {
+    position: absolute;
+    top: calc(100% + 4px);
+    right: 0;
+    min-width: 180px;
+    background: var(--bg-primary, #ffffff);
+    border: 1px solid var(--border-color, #e2e8f0);
+    border-radius: 8px;
+    z-index: 100;
+    overflow: hidden;
+    animation: exportMenuSlideDown 0.15s ease;
+}
+
+@keyframes exportMenuSlideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+// ============================================
+// MENU ITEM
+// ============================================
+
+.export-import-menu__item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 10px 14px;
+    background: none;
+    border: none;
+    text-align: left;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-primary, #334155);
+    cursor: pointer;
+    transition: background 0.1s ease;
+
+    &:hover {
+        background: var(--bg-hover, #f8fafc);
+    }
+
+    i {
+        font-size: 14px;
+        color: var(--text-secondary, #64748b);
+        width: 16px;
+        text-align: center;
+    }
+
+    span {
+        flex: 1;
+    }
+}
+
+// ============================================
+// HINT (file extension)
+// ============================================
+
+.export-import-menu__hint {
+    font-size: 11px;
+    font-weight: 400;
+    color: var(--text-tertiary, #94a3b8);
+    font-family: 'IBM Plex Mono', monospace;
+}
+
+// ============================================
+// DARK MODE
+// ============================================
+
+[data-theme="dark"] {
+    .export-import-menu__trigger {
+        color: var(--text-tertiary, #64748b);
+
+        &:hover:not(:disabled) {
+            background: var(--bg-hover, #334155);
+            color: var(--text-primary, #e2e8f0);
+        }
+    }
+
+    .export-import-menu__dropdown {
+        background: var(--bg-secondary, #1e293b);
+        border-color: var(--border-color, #334155);
+    }
+
+    .export-import-menu__item {
+        color: var(--text-primary, #e2e8f0);
+
+        &:hover {
+            background: var(--bg-hover, #334155);
+        }
+
+        i {
+            color: var(--text-secondary, #94a3b8);
+        }
+    }
+
+    .export-import-menu__hint {
+        color: var(--text-tertiary, #64748b);
+    }
+}

@@ -1,36 +1,51 @@
 /**
  * Jodie Configuration Service
- * Reads AI provider configuration from the unified Settings storage ('jjodie-settings')
- * and manages window position/size separately
+ * Manages per-provider AI configuration with separate API keys for each provider
  */
 
-import { JodieConfig, ProviderConfig, AIProvider, DEFAULT_JODIE_CONFIG } from '../types/jodie';
+import { JodieConfig, ProviderConfig, AIProvider, DEFAULT_JODIE_CONFIG, PROVIDER_MODELS } from '../types/jodie';
 
-// Storage keys
-const SETTINGS_KEY = 'jjodie-settings';  // Shared with Settings page
-const WINDOW_STATE_KEY = 'jjodel_jodie_window';  // Window position/size only
+// Storage keys - separate key per provider for security
+const STORAGE_KEYS: Record<AIProvider, string> = {
+    claude: 'jjodie_provider_claude',
+    openai: 'jjodie_provider_openai',
+    deepseek: 'jjodie_provider_deepseek',
+    gemini: 'jjodie_provider_gemini',
+    mistral: 'jjodie_provider_mistral',
+    groq: 'jjodie_provider_groq',
+};
 
-// Settings page uses different provider names - this maps them
+const ACTIVE_PROVIDER_KEY = 'jjodie_active_provider';
+const WINDOW_STATE_KEY = 'jjodel_jodie_window';
+
+// Legacy key for migration
+const LEGACY_SETTINGS_KEY = 'jjodie-settings';
+
+// Map from Settings page provider names to Jodie provider names
 const SETTINGS_TO_JODIE_PROVIDER: Record<string, AIProvider | null> = {
     'anthropic': 'claude',
     'openai': 'openai',
     'google': 'gemini',
     'deepseek': 'deepseek',
-    // These providers from Settings are not yet supported by Jodie chat
-    'mistral': null,
-    'groq': null,
+    'mistral': 'mistral',
+    'groq': 'groq',
     'ollama': null,
     'custom': null,
 };
 
-const JODIE_TO_SETTINGS_PROVIDER: Record<AIProvider, string> = {
-    'claude': 'anthropic',
-    'openai': 'openai',
-    'gemini': 'google',
-    'deepseek': 'deepseek',
-};
+interface ProviderStorageFormat {
+    apiKey: string;
+    model: string;
+    enabled: boolean;
+    lastTested?: number;
+}
 
-interface SettingsFormat {
+interface WindowState {
+    position?: { x: number; y: number };
+    size?: { width: number; height: number };
+}
+
+interface LegacySettingsFormat {
     provider: string;
     model: string;
     apiKey: string;
@@ -39,50 +54,91 @@ interface SettingsFormat {
     baseUrl?: string;
 }
 
-interface WindowState {
-    position?: { x: number; y: number };
-    size?: { width: number; height: number };
-}
+// All supported providers in display order
+export const ALL_PROVIDERS: AIProvider[] = ['openai', 'claude', 'gemini', 'deepseek', 'mistral', 'groq'];
 
 export class JodieConfigService {
     /**
-     * Load configuration from Settings storage
+     * Initialize and migrate from legacy settings if needed
+     */
+    static initialize(): void {
+        this.migrateFromLegacySettings();
+    }
+
+    /**
+     * Migrate from old single-key settings to new per-provider format
+     */
+    private static migrateFromLegacySettings(): void {
+        try {
+            const legacyJson = localStorage.getItem(LEGACY_SETTINGS_KEY);
+            if (!legacyJson) return;
+
+            const legacy: LegacySettingsFormat = JSON.parse(legacyJson);
+            const jodieProvider = SETTINGS_TO_JODIE_PROVIDER[legacy.provider];
+
+            // If we have a valid provider with an API key, migrate it
+            if (jodieProvider && legacy.apiKey) {
+                const existingConfig = this.getProviderConfig(jodieProvider);
+
+                // Only migrate if we don't already have this provider configured
+                if (!existingConfig || !existingConfig.apiKey) {
+                    this.saveProviderConfig(jodieProvider, {
+                        apiKey: legacy.apiKey,
+                        model: legacy.model,
+                        enabled: legacy.enabled,
+                    });
+
+                    // Set as active provider if enabled
+                    if (legacy.enabled) {
+                        this.setActiveProvider(jodieProvider);
+                    }
+                }
+            }
+
+            // Don't delete legacy settings - Settings page still uses them
+            // localStorage.removeItem(LEGACY_SETTINGS_KEY);
+        } catch (error) {
+            console.error('Failed to migrate legacy settings:', error);
+        }
+    }
+
+    /**
+     * Load full configuration from storage
      */
     static load(): JodieConfig {
         try {
-            // Load AI settings from unified storage
-            const settingsJson = localStorage.getItem(SETTINGS_KEY);
-            const windowStateJson = localStorage.getItem(WINDOW_STATE_KEY);
-
             // Start with defaults
-            const config: JodieConfig = { ...DEFAULT_JODIE_CONFIG };
+            const config: JodieConfig = JSON.parse(JSON.stringify(DEFAULT_JODIE_CONFIG));
 
-            // Apply window state if exists
+            // Load each provider's config
+            for (const provider of ALL_PROVIDERS) {
+                const providerConfig = this.getProviderConfig(provider);
+                if (providerConfig) {
+                    config.providers[provider] = {
+                        provider,
+                        apiKey: providerConfig.apiKey,
+                        model: providerConfig.model,
+                        enabled: providerConfig.enabled,
+                    };
+                }
+            }
+
+            // Load active provider
+            const activeProvider = localStorage.getItem(ACTIVE_PROVIDER_KEY);
+            if (activeProvider && ALL_PROVIDERS.includes(activeProvider as AIProvider)) {
+                config.activeProvider = activeProvider as AIProvider;
+            } else {
+                // Default to first enabled provider
+                const firstEnabled = this.getEnabledProviders()[0];
+                config.activeProvider = firstEnabled || 'claude';
+            }
+
+            // Load window state
+            const windowStateJson = localStorage.getItem(WINDOW_STATE_KEY);
             if (windowStateJson) {
                 const windowState: WindowState = JSON.parse(windowStateJson);
                 config.position = windowState.position;
                 config.size = windowState.size;
-            }
-
-            // If no settings, return defaults
-            if (!settingsJson) {
-                return config;
-            }
-
-            const settings: SettingsFormat = JSON.parse(settingsJson);
-
-            // Map settings provider to Jodie provider
-            const jodieProvider = SETTINGS_TO_JODIE_PROVIDER[settings.provider];
-
-            if (jodieProvider && settings.apiKey && settings.enabled) {
-                // Update the provider config
-                config.providers[jodieProvider] = {
-                    provider: jodieProvider,
-                    apiKey: settings.apiKey,
-                    model: settings.model,
-                    enabled: true,
-                };
-                config.activeProvider = jodieProvider;
             }
 
             return config;
@@ -93,90 +149,157 @@ export class JodieConfigService {
     }
 
     /**
-     * Get the raw settings from Settings page storage
+     * Get configuration for a specific provider
      */
-    static getSettings(): SettingsFormat | null {
+    static getProviderConfig(provider: AIProvider): ProviderStorageFormat | null {
         try {
-            const settingsJson = localStorage.getItem(SETTINGS_KEY);
-            if (!settingsJson) return null;
-            return JSON.parse(settingsJson);
+            const json = localStorage.getItem(STORAGE_KEYS[provider]);
+            if (!json) return null;
+            return JSON.parse(json);
         } catch {
             return null;
         }
     }
 
     /**
+     * Save configuration for a specific provider
+     */
+    static saveProviderConfig(provider: AIProvider, config: Partial<ProviderStorageFormat>): void {
+        try {
+            const existing = this.getProviderConfig(provider) || {
+                apiKey: '',
+                model: PROVIDER_MODELS[provider][0].value,
+                enabled: false,
+            };
+
+            const updated: ProviderStorageFormat = {
+                ...existing,
+                ...config,
+            };
+
+            localStorage.setItem(STORAGE_KEYS[provider], JSON.stringify(updated));
+
+            // Dispatch event to notify other components
+            window.dispatchEvent(new CustomEvent('ai-provider-changed', {
+                detail: { provider, config: updated }
+            }));
+        } catch (error) {
+            console.error(`Failed to save provider config for ${provider}:`, error);
+        }
+    }
+
+    /**
+     * Get the provider config in the format expected by Jodie components
+     */
+    static getProvider(provider: AIProvider): ProviderConfig | null {
+        const config = this.getProviderConfig(provider);
+        if (!config || !config.apiKey || !config.enabled) {
+            return null;
+        }
+
+        return {
+            provider,
+            apiKey: config.apiKey,
+            model: config.model,
+            enabled: config.enabled,
+        };
+    }
+
+    /**
      * Check if any provider is configured and enabled
      */
     static hasValidConfiguration(): boolean {
-        const settings = this.getSettings();
-        if (!settings) return false;
-
-        const jodieProvider = SETTINGS_TO_JODIE_PROVIDER[settings.provider];
-        return !!(jodieProvider && settings.apiKey && settings.enabled);
+        return this.getEnabledProviders().length > 0;
     }
 
     /**
-     * Get configuration for a specific provider
+     * Get list of providers with valid API keys
      */
-    static getProvider(provider: AIProvider): ProviderConfig | null {
-        const config = this.load();
-        return config.providers[provider] || null;
+    static getConfiguredProviders(): AIProvider[] {
+        return ALL_PROVIDERS.filter(provider => {
+            const config = this.getProviderConfig(provider);
+            return config && config.apiKey;
+        });
     }
 
     /**
-     * Get the active provider
-     */
-    static getActiveProvider(): AIProvider {
-        const config = this.load();
-        return config.activeProvider;
-    }
-
-    /**
-     * Set the active provider (updates Settings storage)
-     */
-    static setActiveProvider(provider: AIProvider): void {
-        const settings = this.getSettings();
-        if (!settings) return;
-
-        const settingsProvider = JODIE_TO_SETTINGS_PROVIDER[provider];
-        if (settingsProvider) {
-            settings.provider = settingsProvider;
-            localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
-
-            // Dispatch event to notify other components
-            window.dispatchEvent(new CustomEvent('ai-settings-changed', { detail: settings }));
-        }
-    }
-
-    /**
-     * Get list of enabled providers (with valid API keys)
+     * Get list of enabled providers (with valid API keys and enabled flag)
      */
     static getEnabledProviders(): AIProvider[] {
-        const settings = this.getSettings();
-        if (!settings || !settings.apiKey || !settings.enabled) {
-            return [];
-        }
-
-        const jodieProvider = SETTINGS_TO_JODIE_PROVIDER[settings.provider];
-        return jodieProvider ? [jodieProvider] : [];
+        return ALL_PROVIDERS.filter(provider => {
+            const config = this.getProviderConfig(provider);
+            return config && config.apiKey && config.enabled;
+        });
     }
 
     /**
-     * Check if a provider is properly configured
+     * Check if a specific provider is properly configured
      */
     static isProviderConfigured(provider: AIProvider): boolean {
-        const settings = this.getSettings();
-        if (!settings || !settings.apiKey || !settings.enabled) {
-            return false;
-        }
-
-        const settingsProvider = JODIE_TO_SETTINGS_PROVIDER[provider];
-        return settings.provider === settingsProvider;
+        const config = this.getProviderConfig(provider);
+        return !!(config && config.apiKey);
     }
 
     /**
-     * Update window position (stored separately)
+     * Check if a specific provider is enabled (configured + enabled flag)
+     */
+    static isProviderEnabled(provider: AIProvider): boolean {
+        const config = this.getProviderConfig(provider);
+        return !!(config && config.apiKey && config.enabled);
+    }
+
+    /**
+     * Get the currently active provider
+     */
+    static getActiveProvider(): AIProvider {
+        const saved = localStorage.getItem(ACTIVE_PROVIDER_KEY);
+        if (saved && ALL_PROVIDERS.includes(saved as AIProvider)) {
+            // Verify the saved provider is still enabled
+            if (this.isProviderEnabled(saved as AIProvider)) {
+                return saved as AIProvider;
+            }
+        }
+
+        // Fall back to first enabled provider
+        const enabled = this.getEnabledProviders();
+        return enabled[0] || 'claude';
+    }
+
+    /**
+     * Set the active provider
+     */
+    static setActiveProvider(provider: AIProvider): void {
+        localStorage.setItem(ACTIVE_PROVIDER_KEY, provider);
+
+        // Dispatch event to notify other components
+        window.dispatchEvent(new CustomEvent('ai-settings-changed', {
+            detail: { activeProvider: provider }
+        }));
+    }
+
+    /**
+     * Mark a provider's connection as tested
+     */
+    static markProviderTested(provider: AIProvider): void {
+        const config = this.getProviderConfig(provider);
+        if (config) {
+            this.saveProviderConfig(provider, {
+                ...config,
+                lastTested: Date.now(),
+            });
+        }
+    }
+
+    /**
+     * Get provider test timestamp
+     */
+    static getProviderLastTested(provider: AIProvider): number | null {
+        const config = this.getProviderConfig(provider);
+        return config?.lastTested || null;
+    }
+
+    /**
+     * Update window position
      */
     static updatePosition(position: { x: number; y: number }): void {
         try {
@@ -190,7 +313,7 @@ export class JodieConfigService {
     }
 
     /**
-     * Update window size (stored separately)
+     * Update window size
      */
     static updateSize(size: { width: number; height: number }): void {
         try {
@@ -209,6 +332,61 @@ export class JodieConfigService {
     static resetWindowState(): void {
         localStorage.removeItem(WINDOW_STATE_KEY);
     }
+
+    /**
+     * Clear all provider configurations
+     */
+    static clearAllProviders(): void {
+        for (const provider of ALL_PROVIDERS) {
+            localStorage.removeItem(STORAGE_KEYS[provider]);
+        }
+        localStorage.removeItem(ACTIVE_PROVIDER_KEY);
+    }
+
+    /**
+     * Export all configurations as JSON (for backup)
+     */
+    static exportConfig(): string {
+        const config: Record<string, any> = {};
+
+        for (const provider of ALL_PROVIDERS) {
+            const providerConfig = this.getProviderConfig(provider);
+            if (providerConfig) {
+                config[provider] = providerConfig;
+            }
+        }
+
+        config.activeProvider = this.getActiveProvider();
+
+        return JSON.stringify(config, null, 2);
+    }
+
+    /**
+     * Import configurations from JSON
+     */
+    static importConfig(json: string): boolean {
+        try {
+            const config = JSON.parse(json);
+
+            for (const provider of ALL_PROVIDERS) {
+                if (config[provider]) {
+                    this.saveProviderConfig(provider, config[provider]);
+                }
+            }
+
+            if (config.activeProvider && ALL_PROVIDERS.includes(config.activeProvider)) {
+                this.setActiveProvider(config.activeProvider);
+            }
+
+            return true;
+        } catch (error) {
+            console.error('Failed to import config:', error);
+            return false;
+        }
+    }
 }
+
+// Initialize on module load
+JodieConfigService.initialize();
 
 export default JodieConfigService;

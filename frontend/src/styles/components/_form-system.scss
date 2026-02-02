@@ -346,17 +346,21 @@ input[type="number"] {
 // ==============================================
 // TOGGLE SWITCH
 // Universal toggle component
+// All aliases: .toggle, .form-toggle, .toggle-switch
 // ==============================================
 
 .toggle,
-.form-toggle {
+.form-toggle,
+.toggle-switch {
   position: relative;
+  display: inline-block;
   width: var(--form-toggle-width);
   height: var(--form-toggle-height);
   flex-shrink: 0;
   cursor: pointer;
 
   // Hide native checkbox
+  input,
   input[type="checkbox"] {
     position: absolute;
     opacity: 0;
@@ -394,9 +398,11 @@ input[type="number"] {
 // Checked state
 .toggle input:checked + .toggle-slider,
 .form-toggle input:checked + .form-toggle-slider,
+.toggle-switch input:checked + .toggle-slider,
 .toggle.active .toggle-slider,
-.form-toggle.active .form-toggle-slider {
-  background-color: var(--form-toggle-bg-active);
+.form-toggle.active .form-toggle-slider,
+.toggle-switch.active .toggle-slider {
+  background: linear-gradient(135deg, #64748b 0%, #475569 100%);
 
   &::before {
     transform: translateX(16px);
@@ -405,13 +411,15 @@ input[type="number"] {
 
 // Focus state
 .toggle input:focus + .toggle-slider,
-.form-toggle input:focus + .form-toggle-slider {
+.form-toggle input:focus + .form-toggle-slider,
+.toggle-switch input:focus + .toggle-slider {
   box-shadow: 0 0 0 3px rgba(71, 85, 105, 0.15);
 }
 
 // Disabled state
 .toggle input:disabled + .toggle-slider,
-.form-toggle input:disabled + .form-toggle-slider {
+.form-toggle input:disabled + .form-toggle-slider,
+.toggle-switch input:disabled + .toggle-slider {
   opacity: 0.5;
   cursor: not-allowed;
 }
@@ -573,9 +581,9 @@ input[type="number"] {
 // Dropdown menu
 [class*="-menu"],
 .select__menu {
-  border: 1px solid var(--form-input-border-color) !important;
+  //border: 1px solid var(--form-input-border-color) !important;
   border-radius: var(--form-input-border-radius) !important;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+  //box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
   z-index: 100 !important;
 }
 
@@ -586,7 +594,7 @@ input[type="number"] {
   font-size: var(--form-input-font-size) !important;
 
   &:hover {
-    background: #f1f5f9 !important;
+    background: #334155 !important;
   }
 }
 
@@ -916,4 +924,30 @@ input[type="number"] {
     flex: 1 !important;
     min-width: 0 !important;
   }
+}
+
+// ==============================================
+// MONACO EDITOR - Minimum Height
+// Prevents editors from collapsing when using percentage heights
+// ==============================================
+
+.monaco-editor-wrapper {
+  min-height: 150px !important;
+}
+
+// Specific contexts may need larger minimum heights
+.template-tab .monaco-editor-wrapper,
+.jsx-editor .monaco-editor-wrapper {
+  min-height: 200px !important;
+}
+
+// Function component editors (Constants, Observed properties)
+.function-editor-root .monaco-editor-wrapper {
+  min-height: 120px !important;
+}
+
+// Full-height editors in dedicated panels
+.MTM-tab .monaco-editor-wrapper,
+.console-tab .monaco-editor-wrapper {
+  min-height: 300px !important;
 }

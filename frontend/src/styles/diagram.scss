@@ -25,8 +25,8 @@
 [data-nodetype="GraphVertex"],
 [data-nodetype="Edge"],
 [data-nodetype="EdgePoint"] {
-  font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
-  font-size: 10px;
+  font-family: 'JetBrains Mono', 'SF Mono', 'Fira Code', 'Consolas', monospace;
+  font-size: 12px;
 }
 
 /* ----------------------------------------
@@ -65,35 +65,90 @@
   border: 2.5px solid var(--color-accent, #5B8266) !important;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 
-  /* Header with CLASS badge */
-  > .header {
+  /* Header with CLASS/Interface label and name */
+  > .header { border: 1px solid red!important;
     display: flex;
-    align-items: center;
+    justify-content: space-between;
     gap: 8px;
     padding: 8px 12px;
-    background: var(--color-bg-secondary, #f5f6f7);
-    border-bottom: 1px solid var(--color-border-secondary, #eaecf0);
+    background: transparent;
+    border-bottom: 1px solid #e2e8f0;
+    font-family: 'JetBrains Mono', Monaco, Consolas, monospace;
+    font-size: 12px;
 
+    /* Input field for class name - lighter weight, no border */
     & input {
-      font-size: 13px;
+      font-family: 'JetBrains Mono', Monaco, Consolas, monospace !important;
+      font-size: 12px !important;
+      font-weight: 400 !important;
+      color: #1e293b !important;
+      background: transparent !important;
+      border: none !important;
+      outline: none !important;
+      box-shadow: none !important;
+      padding: 0;
+      min-width: 60px;
     }
   }
 
+  /* Legacy class-name support */
   .class-name {
-    font-weight: var(--font-bold, 700);
+    font-family: 'JetBrains Mono', 'SF Mono', 'Consolas', monospace;
+    font-weight: 600;
     font-size: 13px;
     color: var(--color-text-primary, #1a1a2e);
+    margin-left: auto;
+    text-align: right;
+
+    &.abstract {
+      font-style: italic;
+    }
   }
 
-  /* Children container (attributes, references, operations) */
+  /* Body container for features */
+  .class-body {
+    padding: 8px 0;
+    background: var(--color-bg-primary, #ffffff);
+  }
+
+  /* Legacy children container */
   .class-children {
     padding: 8px 12px;
     background: var(--color-bg-primary, #ffffff);
   }
 
+  /* Section separator (dashed line between attr/ref/op sections) */
+  .section-separator {
+    border: none;
+    border-top: 1px dashed #e2e8f0;
+    margin: 6px 14px;
+  }
+
+  /* Features section container */
+  .features-section {
+    /* Section-specific styling if needed */
+  }
+
+  /* Empty state */
+  .empty-state {
+    padding: 12px 14px;
+    color: #94a3b8;
+    font-size: 12px;
+    font-style: italic;
+    text-align: center;
+  }
+
   /* Hover effect with shadow */
   &:hover {
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  }
+
+  /* Drag-over effect for drop target */
+  &.drag-over {
+    outline: 2px dashed #3b82f6;
+    outline-offset: 2px;
+    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.2);
+    background: rgba(59, 130, 246, 0.02);
   }
 }
 
@@ -130,6 +185,13 @@
   .enumerator-children {
     padding: 4px 0;
   }
+
+  /* Drag-over effect for drop target */
+  &.drag-over {
+    outline: 2px dashed #3b82f6;
+    outline-offset: 2px;
+    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.2);
+  }
 }
 
 /* Package styling */
@@ -151,9 +213,9 @@
 .reference {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 4px 0;
-  font-size: 10px;
+  gap: 8px;
+  padding: 6px 0;
+  font-size: 13px;
   color: var(--color-text-primary, #1a1a2e);
   border-bottom: 1px solid var(--color-border-light, #f0f1f3);
 
@@ -161,27 +223,37 @@
     border-bottom: none;
   }
 
+  &:hover {
+    background: #f8fafc;
+  }
+
   /* Row name (e.g., ref_0, attr_1) */
   .name,
-  .field-name {
-    font-weight: var(--font-medium, 500);
-    color: var(--color-text-primary, #1a1a2e);
-    min-width: 50px;
+  .field-name,
+  .feature-name {
+    font-family: 'JetBrains Mono', 'SF Mono', 'Consolas', monospace;
+    font-weight: 500;
+    font-size: 13px;
+    color: #475569;
+    min-width: 80px;
+    flex-shrink: 0;
   }
 
   /* Type indicator / dropdown */
   select,
   .type-selector,
-  .dropdown {
-    font-family: inherit;
-    font-size: 9px;
-    padding: 2px 6px;
+  .dropdown,
+  .css-b62m3t-container {
+    font-family: 'JetBrains Mono', 'SF Mono', 'Consolas', monospace;
+    font-size: 12px;
+    padding: 4px 8px;
     border: 1px solid var(--color-border-secondary, #e2e4e8);
-    border-radius: 3px;
+    border-radius: 4px;
     background-color: var(--color-bg-primary, #ffffff);
     color: var(--color-text-secondary, #525866);
     cursor: pointer;
-    min-width: 80px;
+    min-width: 90px;
+    max-width: 140px;
 
     &:hover {
       border-color: var(--color-accent, #5B8266);
@@ -194,37 +266,180 @@
     }
   }
 
+  /* React-Select specific styling */
+  .css-b62m3t-container {
+    min-width: 90px;
+    max-width: 140px;
+
+    .css-13cymwt-control,
+    .css-t3ipsp-control {
+      min-height: 28px;
+      font-family: 'JetBrains Mono', 'SF Mono', 'Consolas', monospace;
+      font-size: 12px;
+      border-color: var(--color-border-secondary, #e2e4e8);
+      border-radius: 4px;
+
+      &:hover {
+        border-color: var(--color-accent, #5B8266);
+      }
+    }
+
+    .css-1dimb5e-singleValue {
+      font-family: 'JetBrains Mono', 'SF Mono', 'Consolas', monospace;
+      font-size: 12px;
+    }
+  }
+
   /* Multiplicity indicator (e.g., 0..1, 1..*) */
   .multiplicity,
   .cardinality {
-    font-size: 9px;
+    font-size: 11px;
     font-weight: var(--font-semibold, 600);
     color: var(--color-text-tertiary, #717784);
-    padding: 1px 4px;
+    padding: 2px 6px;
     background-color: var(--color-bg-tertiary, #f4f5f6);
-    border-radius: 2px;
+    border-radius: 3px;
     white-space: nowrap;
   }
 }
 
-/* Operation styling */
-.operation {
+/* Root feature container (used by default view templates) */
+.root.feature {
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 4px 0;
-  font-size: 10px;
+  justify-content: space-between;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-family: 'SF Mono', Monaco, Consolas, monospace;
+  transition: background 0.15s ease;
+
+  &:hover {
+    background: #f8fafc;
+  }
+
+  .feature-name {
+    font-family: 'JetBrains Mono', 'SF Mono', 'Consolas', monospace;
+    font-weight: 500;
+    font-size: 12px;
+    color: #334155;
+  }
+
+  /* Smaller select inside feature rows */
+  .css-b62m3t-container {
+    flex: 0 0 auto;
+    min-width: 80px;
+    max-width: 110px;
+
+    .css-13cymwt-control,
+    .css-t3ipsp-control {
+      min-height: 24px !important;
+      font-size: 11px !important;
+      padding: 0 4px;
+    }
+
+    .css-1dimb5e-singleValue {
+      font-size: 11px !important;
+    }
+
+    .css-1xc3v61-indicatorContainer,
+    .css-15lsz6c-indicatorContainer {
+      padding: 2px 4px !important;
+    }
+  }
+}
+
+/* Attribute row styling */
+.root.feature.attribute-row {
+  > i.bi-circle {
+    font-size: 7px;
+    color: #94a3b8;
+  }
+}
+
+/* Reference row styling */
+.root.feature.reference-row {
+  > i.bi-arrow-right {
+    font-size: 10px;
+    color: #3b82f6;
+  }
+}
+
+/* Operation row styling */
+.root.operation.operation-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-family: 'SF Mono', Monaco, Consolas, monospace;
+  transition: background 0.15s ease;
+
+  &:hover {
+    background: #f8fafc;
+  }
+
+  .feature-name {
+    font-family: 'JetBrains Mono', 'SF Mono', 'Consolas', monospace;
+    font-weight: 500;
+    font-size: 12px;
+    color: #334155;
+  }
+
+  /* Smaller select */
+  .css-b62m3t-container {
+    flex: 0 0 auto;
+    min-width: 80px;
+    max-width: 110px;
+
+    .css-13cymwt-control,
+    .css-t3ipsp-control {
+      min-height: 24px !important;
+      font-size: 11px !important;
+      padding: 0 4px;
+    }
+
+    .css-1dimb5e-singleValue {
+      font-size: 11px !important;
+    }
+
+    .css-1xc3v61-indicatorContainer,
+    .css-15lsz6c-indicatorContainer {
+      padding: 2px 4px !important;
+    }
+  }
+
+  .parameters-section {
+    font-size: 10px;
+    color: #64748b;
+  }
+}
+
+/* Operation styling (legacy support) */
+.operation:not(.operation-row) {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+  font-size: 13px;
   color: var(--color-text-primary, #1a1a2e);
 
-  .operation-name {
-    font-weight: var(--font-medium, 500);
+  .operation-name,
+  .feature-name {
+    font-family: 'JetBrains Mono', 'SF Mono', 'Consolas', monospace;
+    font-weight: 500;
+    font-size: 13px;
+    color: #475569;
   }
 
   .operation-params {
+    font-family: 'JetBrains Mono', 'SF Mono', 'Consolas', monospace;
+    font-size: 12px;
     color: var(--color-text-secondary, #525866);
   }
 
   .operation-return {
+    font-family: 'JetBrains Mono', 'SF Mono', 'Consolas', monospace;
+    font-size: 12px;
     color: var(--color-text-tertiary, #717784);
     font-style: italic;
   }
@@ -232,13 +447,18 @@
 
 /* Literal styling (for enums) */
 .literal {
-  padding: 3px 8px;
-  font-size: 10px;
+  padding: 6px 8px;
+  font-family: 'JetBrains Mono', 'SF Mono', 'Consolas', monospace;
+  font-size: 12px;
   color: var(--color-text-primary, #1a1a2e);
   border-bottom: 1px solid var(--color-border-light, #f0f1f3);
 
   &:last-child {
     border-bottom: none;
+  }
+
+  &:hover {
+    background: #f8fafc;
   }
 }
 
