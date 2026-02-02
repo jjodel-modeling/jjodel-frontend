@@ -242,8 +242,9 @@ export class Lexer {
         this.advance(); // [
 
         // Check if it looks like a multiplicity
+        // Supports: [0..1], [1..*], [*], [+], [?], [0..5], etc.
         const remaining = this.input.substring(this.position);
-        const multiplicityMatch = remaining.match(/^(\d+|\*)(?:\.\.(\d+|\*))?\]/);
+        const multiplicityMatch = remaining.match(/^(\d+|\*|\+|\?)(?:\.\.(\d+|\*))?\]/);
 
         if (multiplicityMatch) {
             const innerStart = this.position;

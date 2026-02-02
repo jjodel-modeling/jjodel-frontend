@@ -13,4 +13,7 @@ export type { JjtlDevelopmentEnvProps } from './JjtlDevelopmentEnv';
 
 export { NewTransformationDialog } from './NewTransformationDialog';
 
+export { ExecuteTransformationDialog } from './ExecuteTransformationDialog';
+export type { ExecuteTransformationDialogProps, ModelOption } from './ExecuteTransformationDialog';
+
 export { TransformationsList } from './TransformationsList';

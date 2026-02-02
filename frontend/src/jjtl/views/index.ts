@@ -19,3 +19,6 @@ export type { MappingTraceViewProps, TraceEntry } from './MappingTraceView';
 
 export { InferredMappingsPanel } from './InferredMappingsPanel';
 export type { InferredMappingsPanelProps, InferredMapping } from './InferredMappingsPanel';
+
+export { SuggestedMappingsPanel } from './SuggestedMappingsPanel';
+export type { SuggestedMappingsPanelProps } from './SuggestedMappingsPanel';

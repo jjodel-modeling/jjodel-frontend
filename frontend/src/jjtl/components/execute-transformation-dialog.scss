@@ -1,0 +1,252 @@
+/**
+ * ExecuteTransformationDialog Styles
+ * Styles for the transformation execution dialog
+ */
+
+// Variables (matching jjtl.scss)
+$color-primary: #0ea5e9;
+$color-primary-light: rgba(14, 165, 233, 0.1);
+
+$color-accent: #475569;
+$color-accent-light: rgba(71, 85, 105, 0.1);
+$color-accent-gradient: linear-gradient(135deg, #64748b 0%, #475569 100%);
+
+$color-success: #10b981;
+$color-success-light: rgba(16, 185, 129, 0.1);
+
+$color-purple: #8b5cf6;
+$color-purple-light: rgba(139, 92, 246, 0.1);
+
+$color-text-primary: #111418;
+$color-text-secondary: #6b7280;
+$color-text-tertiary: #9ca3af;
+
+$color-bg-primary: #ffffff;
+$color-bg-secondary: #f8fafc;
+$color-bg-tertiary: #f1f5f9;
+
+$color-border: #e2e4e8;
+$color-border-light: #f0f1f2;
+
+$font-family: 'Inter Variable', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+
+$font-size-xs: 11px;
+$font-size-sm: 12px;
+$font-size-base: 13px;
+$font-size-md: 14px;
+
+$spacing-xs: 4px;
+$spacing-sm: 8px;
+$spacing-md: 12px;
+$spacing-lg: 16px;
+$spacing-xl: 20px;
+
+$radius-sm: 4px;
+$radius-md: 6px;
+$radius-lg: 8px;
+
+$transition-fast: 150ms ease;
+
+// ============================================
+// Dialog Content Modifier
+// ============================================
+
+.dialog-content--execute {
+    max-width: 480px;
+}
+
+// ============================================
+// Execute Icon (Green)
+// ============================================
+
+.execute-icon {
+    background: $color-success-light !important;
+
+    i {
+        color: $color-success !important;
+    }
+}
+
+// ============================================
+// Execute Info Section
+// ============================================
+
+.execute-info {
+    padding: $spacing-md $spacing-lg;
+    background-color: $color-bg-secondary;
+    border-bottom: 1px solid $color-border;
+}
+
+.execute-info-row {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+
+    &:not(:last-child) {
+        margin-bottom: $spacing-sm;
+    }
+}
+
+.execute-info-label {
+    font-size: $font-size-sm;
+    color: $color-text-tertiary;
+}
+
+.execute-info-value {
+    font-size: $font-size-md;
+    font-weight: 600;
+    color: $color-text-primary;
+}
+
+.execute-info-metamodels {
+    margin-top: $spacing-sm;
+}
+
+.execute-metamodel {
+    display: inline-flex;
+    align-items: center;
+    gap: $spacing-xs;
+    padding: $spacing-xs $spacing-sm;
+    border-radius: $radius-sm;
+    font-size: $font-size-sm;
+    font-weight: 500;
+
+    i {
+        font-size: $font-size-sm;
+    }
+
+    &.source {
+        background-color: $color-primary-light;
+        color: $color-primary;
+    }
+
+    &.target {
+        background-color: $color-purple-light;
+        color: $color-purple;
+    }
+}
+
+.execute-arrow {
+    color: $color-text-tertiary;
+    font-size: $font-size-md;
+    margin: 0 $spacing-xs;
+}
+
+// ============================================
+// Form Additions
+// ============================================
+
+.form-hint {
+    margin: 0 0 $spacing-sm;
+    font-size: $font-size-xs;
+    color: $color-text-tertiary;
+
+    strong {
+        color: $color-text-secondary;
+    }
+}
+
+.form-count {
+    display: block;
+    margin-top: $spacing-xs;
+    font-size: $font-size-xs;
+    color: $color-text-tertiary;
+}
+
+// ============================================
+// Execution Preview
+// ============================================
+
+.execute-preview {
+    margin-top: $spacing-lg;
+    padding: $spacing-md;
+    background-color: $color-bg-tertiary;
+    border-radius: $radius-md;
+    border: 1px solid $color-border-light;
+}
+
+.execute-preview-title {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+    font-size: $font-size-xs;
+    font-weight: 600;
+    color: $color-text-tertiary;
+    text-transform: uppercase;
+    margin-bottom: $spacing-md;
+
+    i {
+        font-size: $font-size-sm;
+        color: $color-primary;
+    }
+}
+
+.execute-preview-content {
+    display: flex;
+    align-items: center;
+    gap: $spacing-md;
+
+    > i {
+        color: $color-text-tertiary;
+        font-size: $font-size-sm;
+    }
+}
+
+.execute-preview-item {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    flex: 1;
+}
+
+.execute-preview-label {
+    font-size: $font-size-xs;
+    color: $color-text-tertiary;
+}
+
+.execute-preview-value {
+    font-size: $font-size-sm;
+    font-weight: 500;
+    padding: $spacing-xs $spacing-sm;
+    border-radius: $radius-sm;
+
+    &.source {
+        background-color: $color-primary-light;
+        color: $color-primary;
+    }
+
+    &.target {
+        background-color: $color-purple-light;
+        color: $color-purple;
+    }
+}
+
+// ============================================
+// Execute Button
+// ============================================
+
+.btn-execute {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+
+    &:hover:not(:disabled) {
+        background: linear-gradient(135deg, #059669 0%, #047857 100%) !important;
+    }
+
+    i {
+        color: white !important;
+    }
+}
+
+// ============================================
+// Spinning Animation
+// ============================================
+
+.spinning {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}

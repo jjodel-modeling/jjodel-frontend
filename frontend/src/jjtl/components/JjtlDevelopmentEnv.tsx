@@ -11,19 +11,36 @@ import { DualMetamodelPanel, MappingConnection } from '../views/DualMetamodelPan
 import { MetamodelElement } from '../views/MetamodelTreeView';
 import { ProblemsPanel, Problem, parserErrorToProblem } from '../views/ProblemsPanel';
 import { MappingTraceView, TraceEntry } from '../views/MappingTraceView';
-import { InferredMappingsPanel, InferredMapping } from '../views/InferredMappingsPanel';
+import { SuggestedMappingsPanel } from '../views/SuggestedMappingsPanel';
+import { MappingSuggestion } from '../types/suggestions';
 import { useJjtlParser } from '../hooks/useJjtlParser';
 import { useJjtlExecutor } from '../hooks/useJjtlExecutor';
 import { ParserError } from '../types';
+import { ExecuteTransformationDialog, ModelOption } from './ExecuteTransformationDialog';
+
+// Import JjTL styles
+import '../styles/jjtl.scss';
 
 export interface JjtlDevelopmentEnvProps {
     initialCode?: string;
+    /** Static source metamodel data */
     sourceMetamodel?: MetamodelElement[];
+    /** Static target metamodel data */
     targetMetamodel?: MetamodelElement[];
+    /** Getter function to fetch fresh source metamodel data (for Suggested Mappings) */
+    getSourceMetamodel?: () => MetamodelElement[];
+    /** Getter function to fetch fresh target metamodel data (for Suggested Mappings) */
+    getTargetMetamodel?: () => MetamodelElement[];
     sourceMetamodelName?: string;
     targetMetamodelName?: string;
+    /** Available models for transformation execution */
+    availableModels?: ModelOption[];
+    /** Existing model names (to prevent duplicates) */
+    existingModelNames?: string[];
     onSave?: (code: string) => void;
     onCodeChange?: (code: string) => void;
+    /** Callback when transformation is executed */
+    onExecuteTransformation?: (sourceModelId: string, outputModelName: string) => Promise<void>;
 }
 
 type BottomPanelTab = 'problems' | 'trace' | 'inferred';
@@ -44,13 +61,19 @@ export const JjtlDevelopmentEnv: React.FC<JjtlDevelopmentEnvProps> = ({
     initialCode = DEFAULT_CODE,
     sourceMetamodel = [],
     targetMetamodel = [],
+    getSourceMetamodel,
+    getTargetMetamodel,
     sourceMetamodelName = 'Source',
     targetMetamodelName = 'Target',
+    availableModels = [],
+    existingModelNames = [],
     onSave,
     onCodeChange,
+    onExecuteTransformation,
 }) => {
     // State
     const [code, setCode] = useState(initialCode);
+    const [isExecuteDialogOpen, setIsExecuteDialogOpen] = useState(false);
     const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
     const [layoutMode, setLayoutMode] = useState<LayoutMode>('split-horizontal');
     const [bottomPanelTab, setBottomPanelTab] = useState<BottomPanelTab>('problems');
@@ -58,13 +81,17 @@ export const JjtlDevelopmentEnv: React.FC<JjtlDevelopmentEnvProps> = ({
     const [isSidePanelCollapsed, setIsSidePanelCollapsed] = useState(false);
     const [cursorPosition, setCursorPosition] = useState({ line: 1, column: 1 });
 
+    // Side panel resize state
+    const [sidePanelWidth, setSidePanelWidth] = useState(() => {
+        const saved = localStorage.getItem('jjtl-sidebar-width');
+        return saved ? parseInt(saved, 10) : 280;
+    });
+    const [isResizingSidePanel, setIsResizingSidePanel] = useState(false);
+    const sidePanelRef = useRef<HTMLDivElement>(null);
+
     // Mappings state
     const [mappings, setMappings] = useState<MappingConnection[]>([]);
     const [selectedMapping, setSelectedMapping] = useState<string | undefined>();
-
-    // Inferred mappings
-    const [inferredMappings, setInferredMappings] = useState<InferredMapping[]>([]);
-    const [isAnalyzing, setIsAnalyzing] = useState(false);
 
     // Refs
     const editorRef = useRef<any>(null);
@@ -97,12 +124,24 @@ export const JjtlDevelopmentEnv: React.FC<JjtlDevelopmentEnvProps> = ({
         setHasUnsavedChanges(false);
     }, [code, onSave]);
 
-    // Handle execute
-    const handleExecute = useCallback(() => {
+    // Handle execute button click - opens the dialog
+    const handleExecuteClick = useCallback(() => {
+        if (isValid) {
+            setIsExecuteDialogOpen(true);
+        }
+    }, [isValid]);
+
+    // Handle actual transformation execution from dialog
+    const handleExecuteTransformation = useCallback(async (sourceModelId: string, outputModelName: string) => {
+        if (onExecuteTransformation) {
+            await onExecuteTransformation(sourceModelId, outputModelName);
+        }
+        // Also execute the internal executor for tracing
         if (ast && sourceMetamodel.length > 0) {
             execute(ast, sourceMetamodel);
         }
-    }, [ast, sourceMetamodel, execute]);
+        setIsExecuteDialogOpen(false);
+    }, [ast, sourceMetamodel, execute, onExecuteTransformation]);
 
     // Handle problem click - navigate to error location
     const handleProblemClick = useCallback((problem: Problem) => {
@@ -126,42 +165,93 @@ export const JjtlDevelopmentEnv: React.FC<JjtlDevelopmentEnvProps> = ({
         setMappings(prev => prev.filter(m => m.id !== mappingId));
     }, []);
 
-    // Handle inferred mapping accept
-    const handleAcceptInferred = useCallback((mapping: InferredMapping) => {
+    // Handle suggestion accept - add to mappings
+    const handleSuggestionAccept = useCallback((suggestion: MappingSuggestion) => {
         const newMapping: MappingConnection = {
             id: `mapping-${Date.now()}`,
-            sourceElementId: mapping.sourceClass,
-            targetElementId: mapping.targetClass,
-            mappingType: mapping.mappingType,
+            sourceElementId: suggestion.sourceAttribute
+                ? `${suggestion.sourceClass}.${suggestion.sourceAttribute}`
+                : suggestion.sourceClass,
+            targetElementId: suggestion.targetAttribute
+                ? `${suggestion.targetClass}.${suggestion.targetAttribute}`
+                : suggestion.targetClass,
+            mappingType: suggestion.sourceAttribute ? 'attribute' : 'class',
         };
         setMappings(prev => [...prev, newMapping]);
-        setInferredMappings(prev => prev.filter(m => m.id !== mapping.id));
     }, []);
 
-    // Handle accept all inferred
-    const handleAcceptAllInferred = useCallback((mappingsToAccept: InferredMapping[]) => {
-        const newMappings: MappingConnection[] = mappingsToAccept.map(m => ({
-            id: `mapping-${Date.now()}-${m.id}`,
-            sourceElementId: m.sourceClass,
-            targetElementId: m.targetClass,
-            mappingType: m.mappingType,
+    // Handle accept all suggestions
+    const handleSuggestionAcceptAll = useCallback((suggestions: MappingSuggestion[]) => {
+        const newMappings: MappingConnection[] = suggestions.map(suggestion => ({
+            id: `mapping-${Date.now()}-${suggestion.id}`,
+            sourceElementId: suggestion.sourceAttribute
+                ? `${suggestion.sourceClass}.${suggestion.sourceAttribute}`
+                : suggestion.sourceClass,
+            targetElementId: suggestion.targetAttribute
+                ? `${suggestion.targetClass}.${suggestion.targetAttribute}`
+                : suggestion.targetClass,
+            mappingType: suggestion.sourceAttribute ? 'attribute' : 'class',
         }));
         setMappings(prev => [...prev, ...newMappings]);
-        setInferredMappings(prev => prev.filter(m => !mappingsToAccept.some(a => a.id === m.id)));
     }, []);
 
-    // Refresh analysis for inferred mappings
-    const handleRefreshAnalysis = useCallback(() => {
-        setIsAnalyzing(true);
-        // Simulate analysis - in real implementation, this would analyze metamodels
-        setTimeout(() => {
-            // Generate sample inferred mappings based on naming similarity
-            const inferred: InferredMapping[] = [];
-            // This is a placeholder - real implementation would analyze metamodel structure
-            setInferredMappings(inferred);
-            setIsAnalyzing(false);
-        }, 1500);
-    }, []);
+    // Handle insert generated JjTL code from suggestions
+    const handleInsertCode = useCallback((generatedCode: string) => {
+        console.log('[JjtlDevelopmentEnv] Inserting generated code:', generatedCode);
+
+        // Find the header section (transformation ... from ... to ...)
+        // and append the generated mappings after it
+        // Using [\s\S] instead of . with 's' flag for multiline matching
+        const headerPattern = /^(transformation\s+\S+[\s\S]*?\n\s*\nfrom\s+\S+\s*\nto\s+\S+\s*\n)/;
+        const headerMatch = code.match(headerPattern);
+
+        if (headerMatch) {
+            // Append after header, replacing any existing content after it
+            const header = headerMatch[1];
+            const newCode = header + '\n' + generatedCode;
+            setCode(newCode);
+            setHasUnsavedChanges(true);
+            onCodeChange?.(newCode);
+            parse(newCode);
+        } else {
+            // No header found, just append to the end
+            const newCode = code.trim() + '\n\n' + generatedCode;
+            setCode(newCode);
+            setHasUnsavedChanges(true);
+            onCodeChange?.(newCode);
+            parse(newCode);
+        }
+    }, [code, onCodeChange, parse]);
+
+    // Side panel resize logic
+    useEffect(() => {
+        const handleMouseMove = (e: MouseEvent) => {
+            if (!isResizingSidePanel || !sidePanelRef.current) return;
+
+            const newWidth = e.clientX - sidePanelRef.current.getBoundingClientRect().left;
+            const clampedWidth = Math.max(200, Math.min(800, newWidth));
+            setSidePanelWidth(clampedWidth);
+            localStorage.setItem('jjtl-sidebar-width', String(clampedWidth));
+        };
+
+        const handleMouseUp = () => {
+            setIsResizingSidePanel(false);
+            document.body.style.cursor = '';
+            document.body.style.userSelect = '';
+        };
+
+        if (isResizingSidePanel) {
+            document.addEventListener('mousemove', handleMouseMove);
+            document.addEventListener('mouseup', handleMouseUp);
+            document.body.style.cursor = 'col-resize';
+            document.body.style.userSelect = 'none';
+        }
+
+        return () => {
+            document.removeEventListener('mousemove', handleMouseMove);
+            document.removeEventListener('mouseup', handleMouseUp);
+        };
+    }, [isResizingSidePanel]);
 
     // Keyboard shortcuts
     useEffect(() => {
@@ -174,13 +264,13 @@ export const JjtlDevelopmentEnv: React.FC<JjtlDevelopmentEnvProps> = ({
             }
             if (isMod && e.key === 'Enter') {
                 e.preventDefault();
-                handleExecute();
+                handleExecuteClick();
             }
         };
 
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [handleSave, handleExecute]);
+    }, [handleSave, handleExecuteClick]);
 
     // Parser status
     const parserStatus = parserErrors.length > 0 ? 'error' : isValid ? 'valid' : 'idle';
@@ -193,17 +283,21 @@ export const JjtlDevelopmentEnv: React.FC<JjtlDevelopmentEnvProps> = ({
                 sourceMetamodel={sourceMetamodelName}
                 targetMetamodel={targetMetamodelName}
                 hasUnsavedChanges={hasUnsavedChanges}
-                canExecute={isValid && sourceMetamodel.length > 0}
+                canExecute={isValid}
                 isExecuting={isExecuting}
                 onSave={handleSave}
-                onExecute={handleExecute}
+                onExecute={handleExecuteClick}
             />
 
             {/* Main content area */}
             <div className={`jjtl-dev-env-content jjtl-layout--${layoutMode}`}>
                 {/* Left panel - Dual metamodel view (optional) */}
                 {layoutMode !== 'editor-only' && !isSidePanelCollapsed && (
-                    <div className="jjtl-dev-env-side-panel">
+                    <div
+                        ref={sidePanelRef}
+                        className={`jjtl-dev-env-side-panel ${isResizingSidePanel ? 'resizing' : ''}`}
+                        style={{ width: sidePanelWidth }}
+                    >
                         <div className="jjtl-dev-env-side-header">
                             <span>Metamodels</span>
                             <button onClick={() => setIsSidePanelCollapsed(true)}>
@@ -220,6 +314,14 @@ export const JjtlDevelopmentEnv: React.FC<JjtlDevelopmentEnvProps> = ({
                             onMappingSelect={(m) => setSelectedMapping(m.id)}
                             onMappingCreate={handleMappingCreate}
                             onMappingDelete={handleMappingDelete}
+                        />
+                        {/* Resize handle */}
+                        <div
+                            className="jjtl-side-panel-resize-handle"
+                            onMouseDown={(e) => {
+                                e.preventDefault();
+                                setIsResizingSidePanel(true);
+                            }}
                         />
                     </div>
                 )}
@@ -244,16 +346,19 @@ export const JjtlDevelopmentEnv: React.FC<JjtlDevelopmentEnvProps> = ({
                     />
                 </div>
 
-                {/* Right panel - Inferred mappings (optional) */}
+                {/* Right panel - Suggested mappings (optional) */}
                 {layoutMode === 'split-horizontal' && (
                     <div className="jjtl-dev-env-inferred-panel">
-                        <InferredMappingsPanel
-                            mappings={inferredMappings}
-                            isAnalyzing={isAnalyzing}
-                            onAccept={handleAcceptInferred}
-                            onAcceptAll={handleAcceptAllInferred}
-                            onReject={(m) => setInferredMappings(prev => prev.filter(i => i.id !== m.id))}
-                            onRefreshAnalysis={handleRefreshAnalysis}
+                        <SuggestedMappingsPanel
+                            sourceMetamodel={sourceMetamodel}
+                            targetMetamodel={targetMetamodel}
+                            getSourceMetamodel={getSourceMetamodel}
+                            getTargetMetamodel={getTargetMetamodel}
+                            sourceMetamodelName={sourceMetamodelName}
+                            targetMetamodelName={targetMetamodelName}
+                            onAccept={handleSuggestionAccept}
+                            onAcceptAll={handleSuggestionAcceptAll}
+                            onInsertCode={handleInsertCode}
                         />
                     </div>
                 )}
@@ -346,6 +451,18 @@ export const JjtlDevelopmentEnv: React.FC<JjtlDevelopmentEnvProps> = ({
                 lastExecutionTime={lastExecutionTime}
                 mappedElementsCount={trace.filter(t => t.status === 'success').length}
                 onErrorsClick={() => { setBottomPanelTab('problems'); setIsBottomPanelCollapsed(false); }}
+            />
+
+            {/* Execute Transformation Dialog */}
+            <ExecuteTransformationDialog
+                isOpen={isExecuteDialogOpen}
+                onClose={() => setIsExecuteDialogOpen(false)}
+                onExecute={handleExecuteTransformation}
+                transformationName={ast?.name || 'Untitled'}
+                sourceMetamodelName={sourceMetamodelName}
+                targetMetamodelName={targetMetamodelName}
+                availableModels={availableModels}
+                existingModelNames={existingModelNames}
             />
         </div>
     );

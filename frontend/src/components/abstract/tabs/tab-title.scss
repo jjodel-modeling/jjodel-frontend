@@ -44,4 +44,26 @@
         background-color: #bfdbfe;  // Blue-200 pastel
         color: #1e40af;             // Blue-800 for contrast
     }
+
+    // Transformation badge - Emerald/Green pastel
+    // Uses inline icon instead of letter, so style the .bi icon
+    &[data-type="transformation"] {
+        &::before {
+            display: none;  // Hide the pseudo-element
+        }
+
+        .bi {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 20px;
+            height: 20px;
+            min-width: 20px;
+            border-radius: 4px;
+            font-size: 10px;            // Slightly smaller for icon
+            background-color: #D1FAE5;  // Emerald-100
+            color: #059669;             // Emerald-600
+            margin-right: 0 !important; // Override inline style
+        }
+    }
 }

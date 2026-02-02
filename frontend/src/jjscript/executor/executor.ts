@@ -26,6 +26,7 @@ import { executeHelp } from './commands/help';
 import { executeUndo, executeRedo } from './commands/undoredo';
 import { executeClear } from './commands/clear';
 import { executeValidate } from './commands/validate';
+import { executeExtends } from './commands/extends';
 
 // ============================================
 // EXECUTOR CLASS
@@ -124,6 +125,9 @@ export class JjScriptExecutor {
                     break;
                 case 'validate':
                     result = await executeValidate(ast.args as any, this.context);
+                    break;
+                case 'extends':
+                    result = await executeExtends(ast.args as any, this.context);
                     break;
                 default:
                     result = {

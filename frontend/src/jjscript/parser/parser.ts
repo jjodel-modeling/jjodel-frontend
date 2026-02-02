@@ -33,6 +33,7 @@ import {
     UndoRedoArgs,
     ClearArgs,
     ValidateArgs,
+    ExtendsArgs,
     CreateOptions,
     QualifiedName,
     COMMANDS,
@@ -101,6 +102,14 @@ export class Parser {
     private parseCommand(): CommandNode {
         const token = this.peek();
         const position = { line: token.line, column: token.column };
+
+        // Special case: "ChildClass extends ParentClass" syntax
+        // Check if first token is identifier/qualified_name and next is 'extends'
+        if ((token.type === 'IDENTIFIER' || token.type === 'QUALIFIED_NAME') &&
+            this.peekNext()?.value.toLowerCase() === 'extends') {
+            const args = this.parseExtendsCommand();
+            return { type: 'Command', command: 'extends', args, position };
+        }
 
         if (token.type !== 'COMMAND') {
             // Try to be helpful
@@ -341,6 +350,24 @@ export class Parser {
     // ============================================
 
     private parseDeleteCommand(): DeleteArgs {
+        // Check if an element type is specified (e.g., "delete class MyClass")
+        // This is optional - "delete MyClass" also works
+        let elementType: ElementType | undefined;
+        const token = this.peek();
+
+        if (token.type === 'KEYWORD' || token.type === 'IDENTIFIER') {
+            const value = token.value.toLowerCase();
+            const elementTypes: ElementType[] = [
+                'class', 'interface', 'attribute', 'reference',
+                'operation', 'parameter', 'package', 'enum', 'enumeration', 'literal'
+            ];
+
+            if (elementTypes.includes(value as ElementType)) {
+                elementType = value as ElementType;
+                this.advance();
+            }
+        }
+
         const target = this.parseQualifiedNameToken();
 
         let cascade = false;
@@ -352,7 +379,7 @@ export class Parser {
             break;
         }
 
-        return { command: 'delete', target, cascade, force };
+        return { command: 'delete', target, cascade, force, elementType };
     }
 
     // ============================================
@@ -360,7 +387,39 @@ export class Parser {
     // ============================================
 
     private parseRenameCommand(): RenameArgs {
-        const target = this.parseQualifiedNameToken();
+        // Check if an element type is specified (e.g., "rename class MyClass to NewName")
+        // This is optional - "rename MyClass to NewName" also works
+        let elementType: ElementType | undefined;
+        const token = this.peek();
+
+        if (token.type === 'KEYWORD' || token.type === 'IDENTIFIER') {
+            const value = token.value.toLowerCase();
+            const elementTypes: ElementType[] = [
+                'class', 'interface', 'attribute', 'reference',
+                'operation', 'parameter', 'package', 'enum', 'enumeration', 'literal'
+            ];
+
+            if (elementTypes.includes(value as ElementType)) {
+                elementType = value as ElementType;
+                this.advance();
+            }
+        }
+
+        // Parse element name
+        let target = this.parseQualifiedNameToken();
+
+        // Check for "in <parent>" clause (e.g., "rename attribute attr_0 in MyClass to newName")
+        // This creates a qualified target: MyClass.attr_0
+        if (this.matchKeyword('in')) {
+            const parent = this.parseQualifiedNameToken();
+            // Reconstruct target as parent.elementName
+            const elementName = target.segments[target.segments.length - 1];
+            target = {
+                segments: parent.segments,
+                member: elementName,
+                raw: `${parent.raw}.${elementName}`
+            };
+        }
 
         // Expect 'to' or 'as'
         if (!this.matchKeyword('to') && !this.matchKeyword('as')) {
@@ -369,7 +428,7 @@ export class Parser {
 
         const newName = this.expectIdentifier('new name');
 
-        return { command: 'rename', target, newName };
+        return { command: 'rename', target, newName, elementType };
     }
 
     // ============================================
@@ -434,6 +493,25 @@ export class Parser {
     // ============================================
 
     private parseRemoveCommand(): RemoveArgs {
+        // Special case: "remove extends from ChildClass" - clear all inheritance
+        if (this.checkKeyword('extends')) {
+            this.advance(); // consume 'extends'
+
+            // Expect 'from'
+            if (!this.matchKeyword('from')) {
+                throw new Error("Expected 'from' after 'extends' in remove command");
+            }
+
+            const from = this.parseQualifiedNameToken();
+
+            // Use special marker for extends removal
+            return {
+                command: 'remove',
+                target: { segments: ['__extends__'], raw: '__extends__' },
+                from
+            };
+        }
+
         const target = this.parseQualifiedNameToken();
 
         // Expect 'from'
@@ -644,6 +722,24 @@ export class Parser {
     }
 
     // ============================================
+    // EXTENDS COMMAND
+    // ============================================
+
+    private parseExtendsCommand(): ExtendsArgs {
+        // Syntax: ChildClass extends ParentClass
+        const childClass = this.parseQualifiedNameToken();
+
+        // Expect 'extends' keyword
+        if (!this.matchKeyword('extends')) {
+            throw new Error("Expected 'extends' keyword");
+        }
+
+        const parentClass = this.parseQualifiedNameToken();
+
+        return { command: 'extends', childClass, parentClass };
+    }
+
+    // ============================================
     // HELPER METHODS
     // ============================================
 
@@ -743,6 +839,10 @@ export class Parser {
         return this.tokens[this.current] || { type: 'EOF', value: '', position: 0, line: 1, column: 1 };
     }
 
+    private peekNext(): Token | undefined {
+        return this.tokens[this.current + 1];
+    }
+
     private advance(): Token {
         if (!this.isAtEnd()) {
             this.current++;
@@ -756,7 +856,8 @@ export class Parser {
 
     private checkKeyword(keyword: string): boolean {
         const token = this.peek();
-        return (token.type === 'KEYWORD' || token.type === 'IDENTIFIER') &&
+        // Also accept COMMAND tokens for keywords like 'extends' that are both commands and keywords
+        return (token.type === 'KEYWORD' || token.type === 'IDENTIFIER' || token.type === 'COMMAND') &&
                token.value.toLowerCase() === keyword.toLowerCase();
     }
 

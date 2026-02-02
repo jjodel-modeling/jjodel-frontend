@@ -54,7 +54,8 @@ export type CommandType =
     | 'clear'
     | 'export'
     | 'import'
-    | 'validate';
+    | 'validate'
+    | 'extends';
 
 export type ElementType =
     | 'class'
@@ -109,7 +110,8 @@ export type CommandArgs =
     | HelpArgs
     | UndoRedoArgs
     | ClearArgs
-    | ValidateArgs;
+    | ValidateArgs
+    | ExtendsArgs;
 
 // CREATE command
 export interface CreateArgs {
@@ -163,6 +165,8 @@ export interface DeleteArgs {
     target: QualifiedName;
     cascade?: boolean;
     force?: boolean;
+    /** Optional element type for explicit syntax: "delete class MyClass" */
+    elementType?: ElementType;
 }
 
 // RENAME command
@@ -170,6 +174,8 @@ export interface RenameArgs {
     command: 'rename';
     target: QualifiedName;
     newName: string;
+    /** Optional element type for explicit syntax: "rename class OldName to NewName" */
+    elementType?: ElementType;
 }
 
 // SET command
@@ -255,6 +261,13 @@ export interface ValidateArgs {
     command: 'validate';
     target?: QualifiedName | 'all';
     rules?: string[];
+}
+
+// EXTENDS command (set class inheritance)
+export interface ExtendsArgs {
+    command: 'extends';
+    childClass: QualifiedName;
+    parentClass: QualifiedName;
 }
 
 // ============================================
@@ -427,6 +440,13 @@ export interface ParseError {
 export interface ExecutionContext {
     projectId: string;
     modelId?: string;
+    /**
+     * The target metamodel ID for commands that create or modify elements.
+     * When specified, element resolution will be scoped to this metamodel only,
+     * preventing the bug where elements are added to wrong classes when
+     * the same class name exists in multiple metamodels.
+     */
+    targetMetamodelId?: string;
     selectedElement?: string;
     history: CommandHistoryEntry[];
     variables: Map<string, any>;
@@ -495,7 +515,7 @@ export const TYPE_ALIASES: Record<string, PrimitiveTypeName> = {
 export const COMMANDS: CommandType[] = [
     'create', 'delete', 'rename', 'set', 'add', 'remove',
     'move', 'copy', 'list', 'show', 'help', 'undo', 'redo',
-    'clear', 'export', 'import', 'validate'
+    'clear', 'export', 'import', 'validate', 'extends'
 ];
 
 export const ELEMENT_TYPES: ElementType[] = [

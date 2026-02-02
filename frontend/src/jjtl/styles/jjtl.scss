@@ -100,11 +100,6 @@ $shadow-md: 0 1px 3px rgba(0, 0, 0, 0.08);
     &.jjtl-layout--split-horizontal {
         flex-direction: row;
 
-        .jjtl-dev-env-side-panel {
-            width: 280px;
-            border-right: 1px solid $color-border;
-        }
-
         .jjtl-dev-env-inferred-panel {
             width: 280px;
             border-left: 1px solid $color-border;
@@ -116,7 +111,9 @@ $shadow-md: 0 1px 3px rgba(0, 0, 0, 0.08);
 
         .jjtl-dev-env-side-panel {
             height: 200px;
+            width: auto !important; // Override inline width in vertical mode
             border-bottom: 1px solid $color-border;
+            border-right: none;
         }
     }
 }
@@ -127,10 +124,54 @@ $shadow-md: 0 1px 3px rgba(0, 0, 0, 0.08);
 }
 
 .jjtl-dev-env-side-panel {
+    position: relative;
     background-color: $color-bg-primary;
     overflow: hidden;
     display: flex;
     flex-direction: column;
+    flex-shrink: 0;
+    border-right: 1px solid $color-border;
+
+    &.resizing {
+        user-select: none;
+    }
+}
+
+// Resize handle for side panel
+.jjtl-side-panel-resize-handle {
+    position: absolute;
+    top: 0;
+    right: -2px;
+    bottom: 0;
+    width: 4px;
+    cursor: col-resize;
+    background: transparent;
+    z-index: 10;
+    transition: background-color 0.15s ease;
+
+    // Subtle visual indicator
+    &::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        right: 1px;
+        width: 1px;
+        background: transparent;
+        transition: background-color 0.15s ease;
+    }
+
+    &:hover {
+        background: rgba(14, 165, 233, 0.3);
+
+        &::after {
+            background: #0ea5e9;
+        }
+    }
+
+    &:active {
+        background: rgba(14, 165, 233, 0.4);
+    }
 }
 
 .jjtl-dev-env-side-header {
@@ -1408,6 +1449,540 @@ $shadow-md: 0 1px 3px rgba(0, 0, 0, 0.08);
     &:hover {
         background-color: $color-error;
         color: white;
+    }
+}
+
+// ============================================
+// Suggested Mappings Panel
+// ============================================
+
+.suggested-mappings-panel {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    background-color: $color-bg-primary;
+}
+
+.panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: $spacing-sm $spacing-md;
+    border-bottom: 1px solid $color-border;
+}
+
+.panel-title {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    font-size: $font-size-sm;
+    font-weight: 600;
+    color: $color-text-primary;
+    margin: 0;
+
+    i {
+        color: $color-warning;
+        font-size: $font-size-md;
+    }
+}
+
+// Mode Selector
+.mode-selector {
+    display: flex;
+    gap: $spacing-xs;
+    padding: $spacing-sm $spacing-md;
+    background-color: $color-bg-secondary;
+    border-bottom: 1px solid $color-border;
+}
+
+.mode-btn {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+    flex: 1;
+    padding: $spacing-sm $spacing-md;
+    background-color: $color-bg-primary;
+    border: 1px solid $color-border;
+    border-radius: $radius-md;
+    font-size: $font-size-sm;
+    font-weight: 500;
+    color: $color-text-secondary;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    &:hover:not(.disabled) {
+        border-color: $color-border-hover;
+        color: $color-text-primary;
+    }
+
+    &.active {
+        background: $color-accent-gradient;
+        border-color: transparent;
+        color: white;
+
+        i {
+            color: white;
+        }
+    }
+
+    &.disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    i {
+        font-size: $font-size-md;
+    }
+}
+
+.provider-badge {
+    font-size: 10px;
+    font-weight: 600;
+    padding: 2px $spacing-xs;
+    background-color: rgba(255, 255, 255, 0.2);
+    border-radius: $radius-sm;
+    text-transform: uppercase;
+}
+
+.mode-description {
+    padding: $spacing-sm $spacing-md;
+    border-bottom: 1px solid $color-border;
+
+    p {
+        margin: 0;
+        font-size: $font-size-xs;
+        color: $color-text-tertiary;
+    }
+}
+
+// Analyze Section
+.analyze-section {
+    padding: $spacing-md;
+    border-bottom: 1px solid $color-border;
+}
+
+.btn-analyze {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: $spacing-sm;
+    width: 100%;
+    padding: $spacing-sm $spacing-md;
+    background: $color-accent-gradient;
+    border: none;
+    border-radius: $radius-md;
+    font-size: $font-size-sm;
+    font-weight: 500;
+    color: white;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    &:hover:not(:disabled) {
+        background: linear-gradient(135deg, #475569 0%, #334155 100%);
+    }
+
+    &:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    i {
+        font-size: $font-size-md;
+        color: white;
+    }
+}
+
+.analyze-hint {
+    margin: $spacing-sm 0 0;
+    font-size: $font-size-xs;
+    color: $color-text-tertiary;
+    text-align: center;
+}
+
+// Error Message
+.error-message {
+    display: flex;
+    align-items: flex-start;
+    gap: $spacing-sm;
+    padding: $spacing-md;
+    margin: $spacing-md;
+    background-color: $color-error-light;
+    border-radius: $radius-md;
+    font-size: $font-size-sm;
+    color: $color-error;
+
+    i {
+        flex-shrink: 0;
+        font-size: $font-size-md;
+    }
+}
+
+// Suggestions Container
+.suggestions-container {
+    flex: 1;
+    overflow: auto;
+    padding: $spacing-md;
+}
+
+.suggestions-stats {
+    display: flex;
+    gap: $spacing-md;
+    margin-bottom: $spacing-md;
+}
+
+.stat {
+    font-size: $font-size-xs;
+    color: $color-text-secondary;
+
+    strong {
+        color: $color-text-primary;
+        font-weight: 600;
+    }
+}
+
+.btn-accept-all {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: $spacing-xs;
+    width: 100%;
+    padding: $spacing-sm;
+    margin-bottom: $spacing-md;
+    background-color: $color-success-light;
+    border: 1px solid $color-success;
+    border-radius: $radius-md;
+    font-size: $font-size-sm;
+    font-weight: 500;
+    color: $color-success;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    &:hover {
+        background-color: $color-success;
+        color: white;
+    }
+
+    i {
+        font-size: $font-size-md;
+    }
+}
+
+// Suggestions Section
+.suggestions-section {
+    margin-bottom: $spacing-lg;
+}
+
+.section-title {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+    font-size: $font-size-xs;
+    font-weight: 600;
+    color: $color-text-tertiary;
+    text-transform: uppercase;
+    margin-bottom: $spacing-sm;
+
+    i {
+        font-size: $font-size-sm;
+    }
+}
+
+.suggestions-list {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-sm;
+}
+
+// Suggestion Card
+.suggestion-card {
+    position: relative;
+    background-color: $color-bg-secondary;
+    border: 1px solid $color-border;
+    border-radius: $radius-md;
+    overflow: hidden;
+    transition: all $transition-fast;
+
+    &:hover {
+        border-color: $color-border-hover;
+    }
+
+    &.expanded {
+        border-color: $color-primary;
+    }
+
+    &.accepted {
+        background-color: $color-success-light;
+        border-color: $color-success;
+        opacity: 0.7;
+
+        .suggestion-mapping {
+            font-size: $font-size-xs;
+        }
+
+        .mapping-arrow {
+            color: $color-success;
+        }
+    }
+}
+
+.suggestion-header {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    padding: $spacing-sm $spacing-md;
+    cursor: pointer;
+}
+
+.suggestion-mapping {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+    flex: 1;
+    font-size: $font-size-sm;
+    overflow: hidden;
+}
+
+.mapping-source,
+.mapping-target {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+}
+
+.class-name {
+    font-weight: 500;
+    color: $color-text-primary;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.mapping-source .class-name {
+    color: $color-primary;
+}
+
+.mapping-target .class-name {
+    color: $color-purple;
+}
+
+.attr-separator {
+    color: $color-text-tertiary;
+}
+
+.attr-name {
+    color: $color-text-secondary;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.mapping-arrow {
+    color: $color-text-tertiary;
+    font-size: 10px;
+    flex-shrink: 0;
+}
+
+.suggestion-confidence {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+    font-size: $font-size-xs;
+    font-weight: 500;
+    padding: 2px $spacing-sm;
+    border-radius: $radius-sm;
+    flex-shrink: 0;
+
+    i {
+        font-size: 10px;
+    }
+
+    &.confidence-high {
+        background-color: $color-success-light;
+        color: $color-success;
+    }
+
+    &.confidence-medium {
+        background-color: $color-warning-light;
+        color: $color-warning;
+    }
+
+    &.confidence-low {
+        background-color: $color-error-light;
+        color: $color-error;
+    }
+}
+
+.expand-icon {
+    color: $color-text-tertiary;
+    font-size: 10px;
+    flex-shrink: 0;
+}
+
+// Suggestion Details
+.suggestion-details {
+    padding: $spacing-sm $spacing-md;
+    background-color: $color-bg-tertiary;
+    border-top: 1px solid $color-border;
+}
+
+.detail-row {
+    display: flex;
+    gap: $spacing-sm;
+    margin-bottom: $spacing-xs;
+    font-size: $font-size-xs;
+
+    &:last-child {
+        margin-bottom: 0;
+    }
+}
+
+.detail-label {
+    color: $color-text-tertiary;
+    flex-shrink: 0;
+}
+
+.detail-value {
+    color: $color-text-primary;
+    flex: 1;
+
+    code {
+        padding: 1px $spacing-xs;
+        background-color: $color-bg-secondary;
+        border-radius: $radius-sm;
+        font-family: $font-family-mono;
+        font-size: 10px;
+    }
+
+    i {
+        margin: 0 $spacing-xs;
+        font-size: 8px;
+        color: $color-text-tertiary;
+    }
+
+    &.conversion-hint {
+        font-family: $font-family-mono;
+        color: $color-info;
+    }
+}
+
+// Suggestion Actions
+.suggestion-actions {
+    position: absolute;
+    right: $spacing-sm;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    gap: $spacing-xs;
+    opacity: 0;
+    transition: opacity $transition-fast;
+
+    .suggestion-card:hover & {
+        opacity: 1;
+    }
+}
+
+.btn-accept,
+.btn-reject {
+    width: 28px;
+    height: 28px;
+    border: none;
+    border-radius: $radius-sm;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all $transition-fast;
+
+    i {
+        font-size: $font-size-md;
+    }
+}
+
+.btn-accept {
+    background-color: $color-success-light;
+    color: $color-success;
+
+    &:hover {
+        background-color: $color-success;
+        color: white;
+    }
+}
+
+.btn-reject {
+    background-color: $color-error-light;
+    color: $color-error;
+
+    &:hover {
+        background-color: $color-error;
+        color: white;
+    }
+}
+
+// Accepted Section
+.accepted-section {
+    .section-title {
+        color: $color-success;
+    }
+}
+
+// Insert Mappings Button
+.btn-insert-mappings {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: $spacing-sm;
+    width: 100%;
+    padding: $spacing-md $spacing-lg;
+    margin-top: $spacing-md;
+    background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+    border: none;
+    border-radius: $radius-lg;
+    font-size: $font-size-sm;
+    font-weight: 500;
+    color: white;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    i {
+        font-size: $font-size-md;
+        color: white;
+    }
+
+    &:hover {
+        background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(14, 165, 233, 0.3);
+    }
+
+    &:active {
+        transform: translateY(0);
+    }
+}
+
+// Empty & Initial State
+.empty-state,
+.initial-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: $spacing-sm;
+    padding: $spacing-xl;
+    text-align: center;
+    color: $color-text-tertiary;
+
+    i {
+        font-size: 32px;
+        opacity: 0.5;
+    }
+
+    p {
+        margin: 0;
+        font-size: $font-size-sm;
+    }
+
+    span {
+        font-size: $font-size-xs;
     }
 }
 

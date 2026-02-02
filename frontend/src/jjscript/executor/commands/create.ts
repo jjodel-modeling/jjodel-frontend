@@ -9,9 +9,9 @@ import {
     ExecutionContext,
     QualifiedName
 } from '../../types';
-import { resolveElement } from '../resolvers';
+import { resolveElement, resolveElementInMetamodel } from '../resolvers';
 import { qualifiedNameToString } from '../../parser/grammar';
-import { getProject, getDefaultParent, needsParent } from '../utils';
+import { getProject, getDefaultParent, needsParent, getTargetMetamodel } from '../utils';
 
 // Import Jjodel model types and actions
 import {
@@ -48,10 +48,28 @@ export async function executeCreate(
             };
         }
 
-        // Resolve parent context
-        const parentElement = parent
-            ? resolveElement(parent, project)
-            : getDefaultParent(project, elementType);
+        // Get target metamodel for scoped resolution
+        // This prevents the bug where elements are added to wrong classes
+        // when the same class name exists in multiple metamodels
+        const targetMetamodel = getTargetMetamodel(context, project);
+
+        // Resolve parent context - use scoped resolution when we have a target metamodel
+        let parentElement;
+        if (parent) {
+            // First try scoped resolution within target metamodel
+            if (targetMetamodel) {
+                parentElement = resolveElementInMetamodel(parent, targetMetamodel);
+                if (!parentElement) {
+                    // Log warning but try project-wide fallback for backward compatibility
+                    console.warn(`[JjScript] Parent '${qualifiedNameToString(parent)}' not found in target metamodel, trying project-wide search`);
+                    parentElement = resolveElement(parent, project);
+                }
+            } else {
+                parentElement = resolveElement(parent, project);
+            }
+        } else {
+            parentElement = getDefaultParent(project, elementType);
+        }
 
         if (!parentElement && needsParent(elementType)) {
             return {
@@ -74,7 +92,7 @@ export async function executeCreate(
             case 'class':
             case 'abstract class':
             case 'interface':
-                result = await createClass(name, parentElement, options, elementType === 'abstract class', elementType === 'interface', project);
+                result = await createClass(name, parentElement, options, elementType === 'abstract class', elementType === 'interface', project, targetMetamodel);
                 break;
 
             case 'attribute':
@@ -82,13 +100,13 @@ export async function executeCreate(
                 break;
 
             case 'reference':
-                result = await createReference(name, parentElement, options, false, project);
+                result = await createReference(name, parentElement, options, false, project, targetMetamodel);
                 break;
 
             case 'containment':
             case 'composition':
                 // "create containment" is shorthand for "create reference ... containment"
-                result = await createReference(name, parentElement, options, true, project);
+                result = await createReference(name, parentElement, options, true, project, targetMetamodel);
                 break;
 
             case 'operation':
@@ -144,7 +162,8 @@ async function createClass(
     options: CreateArgs['options'],
     isAbstract: boolean = false,
     isInterface: boolean = false,
-    project?: any
+    project?: any,
+    targetMetamodel?: any
 ): Promise<ExecutionResult> {
     return new Promise((resolve) => {
         try {
@@ -164,10 +183,17 @@ async function createClass(
                 true        // persist - automatically dispatches the action
             );
 
-            // Handle superclass (extends)
+            // Handle superclass (extends) - use scoped resolution when available
             let superClassName: string | undefined;
             if (options?.superClass && project) {
-                const superClass = resolveElement(options.superClass, project);
+                // Prefer scoped resolution within the target metamodel
+                let superClass = targetMetamodel
+                    ? resolveElementInMetamodel(options.superClass, targetMetamodel)
+                    : null;
+                // Fallback to project-wide search
+                if (!superClass) {
+                    superClass = resolveElement(options.superClass, project);
+                }
                 if (superClass) {
                     // Set the extends property using SetFieldAction
                     // The '=' operator sets the array, '+=' adds to it
@@ -176,11 +202,16 @@ async function createClass(
                 }
             }
 
-            // Handle multiple superclasses
+            // Handle multiple superclasses - use scoped resolution when available
             if (options?.superClasses && options.superClasses.length > 1 && project) {
                 // Skip first one as it's already handled above
                 for (let i = 1; i < options.superClasses.length; i++) {
-                    const superClass = resolveElement(options.superClasses[i], project);
+                    let superClass = targetMetamodel
+                        ? resolveElementInMetamodel(options.superClasses[i], targetMetamodel)
+                        : null;
+                    if (!superClass) {
+                        superClass = resolveElement(options.superClasses[i], project);
+                    }
                     if (superClass) {
                         SetFieldAction.new(newClass, 'extends', superClass.id, '+=', true);
                     }
@@ -261,7 +292,8 @@ async function createReference(
     parent: any,
     options: CreateArgs['options'],
     isContainment: boolean = false,
-    project?: any
+    project?: any,
+    targetMetamodel?: any
 ): Promise<ExecutionResult> {
     if (!parent) {
         return {
@@ -284,7 +316,17 @@ async function createReference(
             if (options?.type && project) {
                 // options.type can be { kind: 'class', name: QualifiedName } or { kind: 'primitive', type: string }
                 if (options.type.kind === 'class' && options.type.name) {
-                    const targetClass = resolveElement(options.type.name, project);
+                    // Use scoped resolution when we have a target metamodel
+                    // This prevents resolving to wrong class when same name exists in multiple metamodels
+                    let targetClass = targetMetamodel
+                        ? resolveElementInMetamodel(options.type.name, targetMetamodel)
+                        : null;
+
+                    // Fall back to project-wide search if not found in target metamodel
+                    if (!targetClass) {
+                        targetClass = resolveElement(options.type.name, project);
+                    }
+
                     if (targetClass) {
                         SetFieldAction.new(newRef, 'type', targetClass.id, undefined, true);
                         targetTypeName = targetClass.name;

@@ -114,3 +114,32 @@ export function getDefaultParent(project: LProject, elementType: string): any {
 export function needsParent(elementType: string): boolean {
     return ['attribute', 'reference', 'operation', 'parameter', 'literal'].includes(elementType);
 }
+
+/**
+ * Get the target metamodel from context.
+ * Uses targetMetamodelId if explicitly set, otherwise falls back to the active metamodel.
+ *
+ * @param context - The execution context
+ * @param project - The current project
+ * @returns The target metamodel or null
+ */
+export function getTargetMetamodel(context: ExecutionContext, project: LProject): LModel | null {
+    const metamodels = (project as any).metamodels || [];
+
+    // If explicitly specified, use that
+    if (context.targetMetamodelId) {
+        const target = metamodels.find((mm: LModel) => mm.id === context.targetMetamodelId);
+        if (target) return target;
+    }
+
+    // Otherwise use the active/selected metamodel
+    const active = getActiveMetamodel();
+    if (active) {
+        // Verify it belongs to this project
+        const isInProject = metamodels.some((mm: LModel) => mm.id === active.id);
+        if (isInProject) return active;
+    }
+
+    // Fall back to first metamodel
+    return metamodels.length > 0 ? metamodels[0] : null;
+}

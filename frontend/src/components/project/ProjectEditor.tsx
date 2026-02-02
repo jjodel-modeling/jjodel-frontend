@@ -9,6 +9,7 @@ import DocumentationSection from './DocumentationSection';
 import { EcoreService, XMIService } from '../../services/export';
 import { NewTransformationDialog, TransformationsList } from '../../jjtl/components';
 import { JjtlTransformation, createTransformation } from '../../jjtl/types';
+import { convertMetamodelToJjtl, findMetamodelById } from '../../jjtl/utils/metamodelConverter';
 import './project-editor.scss';
 
 // Types for contextual menu
@@ -620,10 +621,14 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
     };
 
     const handleDeleteMetamodel = (mm: LModel) => {
+        // Close any open tabs for this metamodel before deleting
+        DockManager.closeTabsForEntity(mm.id, 'metamodel');
         mm.delete();
     };
 
     const handleDeleteModel = (model: LModel) => {
+        // Close any open tabs for this model before deleting
+        DockManager.closeTabsForEntity(model.id, 'model');
         model.delete();
     };
 
@@ -655,10 +660,79 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
     };
 
     const handleOpenTransformation = async (transformation: JjtlTransformation) => {
-        // TODO: Open in JjTL editor tab
-        // For now, just log it
-        console.log('Opening transformation:', transformation.name);
-        // await DockManager.openJjtlEditor(transformation);
+        // Find source and target metamodels (initial snapshot)
+        const sourceMM = findMetamodelById(metamodels, transformation.sourceMetamodelId);
+        const targetMM = findMetamodelById(metamodels, transformation.targetMetamodelId);
+
+        // Convert metamodels to JjTL format (initial snapshot)
+        const sourceMetamodelElements = sourceMM ? convertMetamodelToJjtl(sourceMM) : [];
+        const targetMetamodelElements = targetMM ? convertMetamodelToJjtl(targetMM) : [];
+
+        // Build available models list for transformation execution
+        // Models (not metamodels) with their conforming metamodel info
+        const availableModels = (models || []).map(model => ({
+            id: model.id,
+            name: model.name || 'Unnamed Model',
+            metamodelId: (model.instanceof as LModel)?.id || '',
+            metamodelName: (model.instanceof as LModel)?.name || ''
+        }));
+
+        // Get existing model names to prevent duplicates when creating output
+        const existingModelNames = [
+            ...(models || []).map(m => m.name || ''),
+            ...(metamodels || []).map(m => m.name || '')
+        ].filter(Boolean);
+
+        console.log('[ProjectEditor] Opening transformation', {
+            name: transformation.name,
+            sourceMetamodelId: transformation.sourceMetamodelId,
+            sourceMetamodelName: transformation.sourceMetamodelName,
+            sourceElements: sourceMetamodelElements.length,
+            targetElements: targetMetamodelElements.length,
+            modelsInProject: models?.length || 0,
+            availableModels: availableModels.map(m => ({
+                id: m.id,
+                name: m.name,
+                metamodelId: m.metamodelId,
+                metamodelName: m.metamodelName
+            }))
+        });
+
+        // Create getter functions that fetch FRESH metamodel data on demand
+        // These are called when user clicks "Analyze" in Suggested Mappings panel
+        const getSourceMetamodel = () => {
+            const freshMM = findMetamodelById(project.metamodels || [], transformation.sourceMetamodelId);
+            const result = freshMM ? convertMetamodelToJjtl(freshMM) : [];
+            console.log('[ProjectEditor] getSourceMetamodel called, classes:', result.filter(e => e.type === 'class').length);
+            return result;
+        };
+
+        const getTargetMetamodel = () => {
+            const freshMM = findMetamodelById(project.metamodels || [], transformation.targetMetamodelId);
+            const result = freshMM ? convertMetamodelToJjtl(freshMM) : [];
+            console.log('[ProjectEditor] getTargetMetamodel called, classes:', result.filter(e => e.type === 'class').length);
+            return result;
+        };
+
+        // Open transformation in JjTL Development Environment tab
+        DockManager.openTransformation(
+            transformation,
+            sourceMetamodelElements,
+            targetMetamodelElements,
+            (updatedCode) => {
+                // Update transformation code when saved
+                setTransformations(prev => prev.map(t =>
+                    t.id === transformation.id
+                        ? { ...t, code: updatedCode, modifiedAt: Date.now() }
+                        : t
+                ));
+                markDirty();
+            },
+            getSourceMetamodel,
+            getTargetMetamodel,
+            availableModels,
+            existingModelNames
+        );
     };
 
     const handleRenameTransformation = (id: string, newName: string) => {
@@ -671,6 +745,8 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
     };
 
     const handleDeleteTransformation = (id: string) => {
+        // Close any open tabs for this transformation before deleting
+        DockManager.closeTabsForEntity(id, 'transformation');
         setTransformations(prev => prev.filter(t => t.id !== id));
         markDirty();
     };

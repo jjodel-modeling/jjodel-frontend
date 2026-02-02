@@ -519,6 +519,132 @@ const { ast, errors: parserErrors } = parse(tokens);
 
 ---
 
+---
+
+## LAVORO COMPLETATO (Sessione 2 - 2026-02-01)
+
+### 7. JjScript `extends` Command
+
+Implementato comando `extends` per definire ereditarietà tra classi in JjScript.
+
+#### Sintassi
+```jjscript
+ChildClass extends ParentClass
+```
+
+#### Files Creati/Modificati
+
+**frontend/src/jjscript/executor/commands/extends.ts** (nuovo):
+- Risolve child e parent class nel metamodel corrente
+- Verifica che entrambi siano classi
+- Rileva cicli di ereditarietà
+- Usa `SetFieldAction.new()` con `+=` per supportare ereditarietà multipla (Ecore)
+
+**frontend/src/jjscript/parser/parser.ts**:
+- Aggiunto `peekNext()` per lookahead
+- Rilevamento speciale pattern `Identifier extends Identifier`
+- Metodo `parseExtendsCommand()` per parsing
+
+**frontend/src/jjscript/types.ts**:
+- Aggiunto `'extends'` a `CommandType`
+- Nuova interfaccia `ExtendsArgs`
+
+**frontend/src/jjscript/executor/executor.ts**:
+- Aggiunto case per comando `extends`
+
+**frontend/src/jjscript/executor/commands/index.ts**:
+- Export `executeExtends`
+
+---
+
+### 8. Execute Transformation Dialog
+
+Dialog per eseguire trasformazioni JjTL con selezione del modello sorgente.
+
+#### UI Design
+
+```
+┌─────────────────────────────────────────┐
+│ ▶  Execute Transformation         [X]  │
+├─────────────────────────────────────────┤
+│ Transformation: StateMachine2PetriNet   │
+│ [StateMachineMM] → [PetriNetMM]         │
+├─────────────────────────────────────────┤
+│                                         │
+│ Source Model *                          │
+│ Select an instance of StateMachineMM    │
+│ ┌─────────────────────────────────────┐ │
+│ │ MyStateMachine                    ▼ │ │
+│ └─────────────────────────────────────┘ │
+│ 3 models available                      │
+│                                         │
+│ Output Model Name *                     │
+│ Name for the generated PetriNetMM       │
+│ ┌─────────────────────────────────────┐ │
+│ │ StateMachineMM_to_PetriNetMM        │ │
+│ └─────────────────────────────────────┘ │
+│                                         │
+│ ┌─ EXECUTION PREVIEW ─────────────────┐ │
+│ │ Input: MyStateMachine               │ │
+│ │   →                                 │ │
+│ │ Output: StateMachineMM_to_PetriNetMM│ │
+│ └─────────────────────────────────────┘ │
+│                                         │
+├─────────────────────────────────────────┤
+│              [Cancel]  [▶ Execute]      │
+└─────────────────────────────────────────┘
+```
+
+#### Features
+- Filtro automatico modelli compatibili (conformi al metamodel sorgente)
+- Generazione automatica nome output
+- Validazione nome duplicato
+- Preview esecuzione
+- Warning se nessun modello compatibile
+
+#### Files Creati
+
+**frontend/src/jjtl/components/ExecuteTransformationDialog.tsx**:
+```typescript
+interface ExecuteTransformationDialogProps {
+    isOpen: boolean;
+    onClose: () => void;
+    onExecute: (sourceModelId: string, outputModelName: string) => void;
+    transformationName: string;
+    sourceMetamodelName: string;
+    targetMetamodelName: string;
+    availableModels: ModelOption[];
+    existingModelNames: string[];
+}
+
+interface ModelOption {
+    id: string;
+    name: string;
+    metamodelId: string;
+    metamodelName: string;
+}
+```
+
+**frontend/src/jjtl/components/execute-transformation-dialog.scss**:
+- Stili dialog con design system Jjodel
+- Badge colorati source (cyan) / target (purple)
+- Bottone execute verde gradient
+- Preview box con layout flex
+
+#### Files Modificati
+
+**frontend/src/jjtl/components/JjtlDevelopmentEnv.tsx**:
+- Nuove props: `availableModels`, `existingModelNames`, `onExecuteTransformation`
+- State `isExecuteDialogOpen`
+- Handler `handleExecuteClick` apre dialog
+- Handler `handleExecuteTransformation` esegue trasformazione
+- Integrazione dialog nel render
+
+**frontend/src/jjtl/components/index.ts**:
+- Export `ExecuteTransformationDialog` e tipi
+
+---
+
 ## TODO / PROSSIMI PASSI (Sprint 2)
 
 1. ⬜ **Executor Implementation** - Implementare esecuzione effettiva trasformazioni

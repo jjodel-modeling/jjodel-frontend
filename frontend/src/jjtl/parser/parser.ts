@@ -46,9 +46,12 @@ export class JjtlParser {
         const startToken = this.consume(TokenType.TRANSFORMATION, "Expected 'transformation'");
         const name = this.consume(TokenType.IDENTIFIER, "Expected transformation name").value;
 
+        // Allow newlines between header parts
+        this.skipNewlines();
         this.consume(TokenType.FROM, "Expected 'from'");
         const sourceMetamodel = this.consume(TokenType.IDENTIFIER, "Expected source metamodel name").value;
 
+        this.skipNewlines();
         this.consume(TokenType.TO, "Expected 'to'");
         const targetMetamodel = this.consume(TokenType.IDENTIFIER, "Expected target metamodel name").value;
 
