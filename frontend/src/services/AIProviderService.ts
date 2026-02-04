@@ -3,7 +3,7 @@
  * Handles API calls to different AI providers (Claude, OpenAI, DeepSeek, Gemini)
  */
 
-import { AIProvider, ChatMessage, ChatImage, ChatDocument, PROVIDER_ENDPOINTS } from '../types/jodie';
+import { AIProvider, TAIProvider, ChatMessage, ChatImage, ChatDocument, PROVIDER_ENDPOINTS } from '../types/jodie';
 import { JodieConfigService } from './JodieConfig';
 import { PromptService } from './PromptService';
 import { PromptContext } from '../types/prompts';
@@ -20,7 +20,7 @@ export class AIProviderService {
      */
     static async chat(
         message: string,
-        provider: AIProvider,
+        provider: TAIProvider,
         conversationHistory: ChatMessage[] = [],
         projectContext?: string,
         images?: ChatImage[],
@@ -39,20 +39,20 @@ export class AIProviderService {
         const systemPrompt = PromptService.getRendered('chat', context);
 
         switch (provider) {
-            case 'claude':
+            case AIProvider.Claude:
                 return await this.chatClaude(message, config.apiKey, config.model, conversationHistory, systemPrompt, images, documents);
-            case 'openai':
+            case AIProvider.GPT:
                 return await this.chatOpenAI(message, config.apiKey, config.model, conversationHistory, systemPrompt, images);
-            case 'deepseek':
+            case AIProvider.DeepSeek:
                 return await this.chatDeepSeek(message, config.apiKey, config.model, conversationHistory, systemPrompt);
-            case 'gemini':
+            case AIProvider.Gemini:
                 return await this.chatGemini(message, config.apiKey, config.model, conversationHistory, systemPrompt, images, documents);
-            case 'mistral':
+            case AIProvider.Mistral:
                 return await this.chatMistral(message, config.apiKey, config.model, conversationHistory, systemPrompt, images);
-            case 'groq':
+            case AIProvider.Groq:
                 return await this.chatGroq(message, config.apiKey, config.model, conversationHistory, systemPrompt);
             default:
-                throw new Error(`Unknown provider: ${provider}`);
+                throw new Error(`Unsupported provider: ${provider}`);
         }
     }
 
@@ -497,7 +497,7 @@ export class AIProviderService {
     /**
      * Test if a provider's API key is valid
      */
-    static async testConnection(provider: AIProvider): Promise<{ success: boolean; error?: string }> {
+    static async testConnection(provider: TAIProvider): Promise<{ success: boolean; error?: string }> {
         try {
             const config = JodieConfigService.getProvider(provider);
 
@@ -507,20 +507,20 @@ export class AIProviderService {
 
             // Use provider-specific test methods for better error handling
             switch (provider) {
-                case 'claude':
+                case AIProvider.Claude:
                     return await this.testClaude(config.apiKey, config.model);
-                case 'openai':
+                case  AIProvider.GPT:
                     return await this.testOpenAI(config.apiKey, config.model);
-                case 'deepseek':
+                case  AIProvider.DeepSeek:
                     return await this.testDeepSeek(config.apiKey, config.model);
-                case 'gemini':
+                case  AIProvider.Gemini:
                     return await this.testGemini(config.apiKey, config.model);
-                case 'mistral':
+                case  AIProvider.Mistral:
                     return await this.testMistral(config.apiKey, config.model);
-                case 'groq':
+                case  AIProvider.Groq:
                     return await this.testGroq(config.apiKey, config.model);
                 default:
-                    return { success: false, error: `Unknown provider: ${provider}` };
+                    return { success: false, error: `Unsupported provider: ${provider}` };
             }
         } catch (error) {
             return {

@@ -4,6 +4,7 @@ import { useAIProviderPreference } from '../../hooks/useAIProviderPreference';
 import { JodieConfigService } from '../../services/JodieConfig';
 import { useAISettingsSafe } from '../../contexts/AISettingsContext';
 import './ProviderSelector.scss';
+import {AIProvider} from "../../types/jodie";
 
 interface ProviderSelectorProps {
     feature: AIFeature;
@@ -46,31 +47,31 @@ export function ProviderSelector({
         }
 
         // OpenAI
-        const openai = JodieConfigService.getProvider('openai');
+        const openai = JodieConfigService.getProvider(AIProvider.GPT);
         if (openai?.apiKey) {
             list.push({ id: 'openai', name: 'OpenAI', icon: 'bi-stars', available: true });
         }
 
         // Anthropic
-        const anthropic = JodieConfigService.getProvider('anthropic');
+        const anthropic = JodieConfigService.getProvider(AIProvider.Claude);
         if (anthropic?.apiKey) {
             list.push({ id: 'anthropic', name: 'Anthropic', icon: 'bi-stars', available: true });
         }
 
         // Mistral
-        const mistral = JodieConfigService.getProvider('mistral');
+        const mistral = JodieConfigService.getProvider(AIProvider.Mistral);
         if (mistral?.apiKey) {
             list.push({ id: 'mistral', name: 'Mistral', icon: 'bi-stars', available: true });
         }
 
         // Gemini
-        const gemini = JodieConfigService.getProvider('gemini');
+        const gemini = JodieConfigService.getProvider(AIProvider.Gemini);
         if (gemini?.apiKey) {
             list.push({ id: 'gemini', name: 'Gemini', icon: 'bi-stars', available: true });
         }
 
         // Ollama
-        const ollama = JodieConfigService.getProvider('ollama');
+        const ollama = JodieConfigService.getProvider(AIProvider.Ollama);
         if (ollama?.baseUrl) {
             list.push({ id: 'ollama', name: 'Ollama', icon: 'bi-hdd-network', available: true });
         }

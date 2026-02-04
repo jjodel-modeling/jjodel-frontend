@@ -269,9 +269,11 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
                 if (!v[ka]) continue;
 
                 if (c.data.anchors[ka]) {
-                    for (let kk in v[ka]) { //for each key within an anchor (x, y, w, h)
+
+                    for (let kk0 in v[ka]) { //for each key within an anchor (x, y, w, h)
+                        let kk: keyof IPoint = kk0 as any;
                         // if i was attempting to set a partial size, complete it with the old size values.
-                        if ((v[ka][kk] === undefined) && (c.data.anchors[ka][kk] !== undefined)) v[ka][kk] = c.data.anchors[ka][kk];
+                        if ((v[ka][kk] === undefined) && (c.data.anchors[ka]?.[kk] !== undefined)) (v as any)[ka][kk] = c.data.anchors[ka][kk];
                     }
                 }
                 if (v[ka].x === undefined || isNaN(v[ka].x)) v[ka].x = 0.5;

@@ -3,26 +3,15 @@
  * Exports metamodel canvas (SVG + HTML) as image
  */
 
-import { toPng, toJpeg, toSvg, toBlob } from 'html-to-image';
+import { toPng, toJpeg, toSvg, toBlob,} from 'html-to-image';
+import type { Options as ExportOptions0} from 'html-to-image/src/types.ts';
+export type ExportOptions = ExportOptions0;
 
 // ============================================
 // TYPES
 // ============================================
 
 export type ExportFormat = 'png' | 'jpeg' | 'svg';
-
-export interface ExportOptions {
-    /** Export format */
-    format: ExportFormat;
-    /** Image quality for JPEG (0-1) */
-    quality?: number;
-    /** Background color (default: white) */
-    backgroundColor?: string;
-    /** Scale factor for higher resolution (default: 2 for retina) */
-    scale?: number;
-    /** Custom filename (without extension) */
-    filename?: string;
-}
 
 interface ExportResult {
     success: boolean;
@@ -35,10 +24,11 @@ interface ExportResult {
 // ============================================
 
 const DEFAULT_OPTIONS: Partial<ExportOptions> = {
-    format: 'png',
+    type: 'image/png',
     quality: 0.95,
     backgroundColor: '#ffffff',
-    scale: 2,
+    pixelRatio: 0.5,
+    style: {padding: '5px' }
 };
 
 // ============================================
@@ -96,10 +86,11 @@ export class CanvasExportService {
 
             const blob = await toBlob(graphElement, {
                 quality: opts.quality,
-                pixelRatio: opts.scale,
+                pixelRatio: opts.pixelRatio,
                 backgroundColor: opts.backgroundColor,
                 style: {
-                    transform: 'none',
+                    //transform: 'none',
+                    ...opts.style
                 },
                 filter: this.createFilter(),
             });
@@ -119,7 +110,7 @@ export class CanvasExportService {
         options: Partial<ExportOptions> = {}
     ): Promise<boolean> {
         try {
-            const blob = await this.exportAsBlob(canvasElement, { ...options, format: 'png' });
+            const blob = await this.exportAsBlob(canvasElement, { ...options, type: 'image/png' });
 
             if (!blob) {
                 throw new Error('Failed to generate image blob');
@@ -176,22 +167,21 @@ export class CanvasExportService {
         options: ExportOptions
     ): Promise<string> {
         const exportOptions = {
-            quality: options.quality,
-            pixelRatio: options.scale,
-            backgroundColor: options.backgroundColor,
+            ...options,
             style: {
                 // Reset any transforms that might affect the export
                 transform: 'none',
+                ...(options.style || {})
             },
             filter: this.createFilter(),
         };
 
-        switch (options.format) {
-            case 'jpeg':
+        switch (options.type) {
+            case 'jpeg': case 'image/jpeg':
                 return await toJpeg(element, exportOptions);
-            case 'svg':
+            case 'svg': case 'image/svg':
                 return await toSvg(element, exportOptions);
-            case 'png':
+            case 'png': case 'image/png':
             default:
                 return await toPng(element, exportOptions);
         }
@@ -201,9 +191,14 @@ export class CanvasExportService {
      * Generate filename based on options
      */
     private static generateFilename(options: ExportOptions): string {
-        const base = options.filename || 'metamodel';
+        const base = (options as any).filename || 'metamodel';
         const timestamp = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
-        const extension = options.format;
+        let extension = options.type;
+        if (typeof extension !== 'string') extension = 'png';
+        if (extension.includes('/')) {
+            let arr = extension.split('/').filter(e=>!!e);
+            extension = arr[arr.length - 1];
+        }
 
         return `${base}_${timestamp}.${extension}`;
     }

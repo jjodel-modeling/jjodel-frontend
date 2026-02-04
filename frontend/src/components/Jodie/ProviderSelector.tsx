@@ -4,12 +4,12 @@
  */
 
 import React from 'react';
-import { AIProvider, PROVIDER_INFO, PROVIDER_MODELS } from '../../types/jodie';
+import { TAIProvider, PROVIDER_INFO, PROVIDER_MODELS } from '../../types/jodie';
 import { JodieConfigService } from '../../services/JodieConfig';
 
 interface ProviderSelectorProps {
-    activeProvider: AIProvider;
-    onProviderChange: (provider: AIProvider) => void;
+    activeProvider: TAIProvider;
+    onProviderChange: (provider: TAIProvider) => void;
     onOpenSettings?: () => void;
     disabled?: boolean;
 }
@@ -19,7 +19,7 @@ export function ProviderSelector({ activeProvider, onProviderChange, onOpenSetti
     const providerInfo = PROVIDER_INFO[activeProvider];
 
     const handleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-        const newProvider = e.target.value as AIProvider;
+        const newProvider = e.target.value as TAIProvider;
         // Persist to localStorage first
         JodieConfigService.setActiveProvider(newProvider);
         // Then notify parent component

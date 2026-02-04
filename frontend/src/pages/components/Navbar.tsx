@@ -61,8 +61,8 @@ import { VerticalToggle } from '../../components/ui/VerticalToggle';
 
 let windoww = window as any;
 
-export function createM2(project: LProject) {
-    let name = 'metamodel_' + 1;
+export function createM2(project: LProject, name0?: string) {
+    let name = name0 || 'metamodel_' + 1;
     let names: string[] = Selectors.getAllMetamodels().map(m => m.name);
     name = U.increaseEndingNumber(name, false, false, newName => names.indexOf(newName) >= 0);
     const dModel = DModel.new(name, undefined, true);

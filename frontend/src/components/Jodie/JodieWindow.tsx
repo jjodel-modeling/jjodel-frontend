@@ -7,15 +7,15 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { JodieHeader } from './JodieHeader';
 import { ChatMessages } from './ChatMessages';
 import { ChatInput } from './ChatInput';
-import { AIProvider, ChatMessage, ChatImage, ChatDocument } from '../../types/jodie';
+import { TAIProvider, ChatMessage, ChatImage, ChatDocument } from '../../types/jodie';
 import { JodieConfigService } from '../../services/JodieConfig';
 
 interface JodieWindowProps {
     messages: ChatMessage[];
-    activeProvider: AIProvider;
+    activeProvider: TAIProvider;
     isWaiting: boolean;
     onSendMessage: (message: string, images?: ChatImage[], documents?: ChatDocument[]) => void;
-    onProviderChange: (provider: AIProvider) => void;
+    onProviderChange: (provider: TAIProvider) => void;
     onClose: () => void;
     onOpenSettings: () => void;
     onOpenDocumentation?: () => void;

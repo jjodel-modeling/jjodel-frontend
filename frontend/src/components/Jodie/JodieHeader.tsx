@@ -5,11 +5,11 @@
 
 import React from 'react';
 import { ProviderSelector } from './ProviderSelector';
-import { AIProvider } from '../../types/jodie';
+import { TAIProvider } from '../../types/jodie';
 
 interface JodieHeaderProps {
-    activeProvider: AIProvider;
-    onProviderChange: (provider: AIProvider) => void;
+    activeProvider: TAIProvider;
+    onProviderChange: (provider: TAIProvider) => void;
     onClose: () => void;
     onOpenSettings: () => void;
     onOpenDocumentation?: () => void;

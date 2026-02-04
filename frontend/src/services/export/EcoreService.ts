@@ -211,9 +211,9 @@ export class EcoreService {
         }
 
         // Default value
-        if (attr.defaultValueLiteral) {
+        /*if (attr.defaultValueLiteral) {
             parts.push(`defaultValueLiteral="${this.escapeXml(attr.defaultValueLiteral)}"`);
-        }
+        }*/
 
         // Other properties
         if (attr.derived) parts.push(`derived="true"`);

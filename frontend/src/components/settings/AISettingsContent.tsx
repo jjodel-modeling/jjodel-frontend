@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { JodieConfigService } from '../../services/JodieConfig';
-import { PROVIDER_MODELS, ModelInfo, AIProvider } from '../../types/jodie';
+import { PROVIDER_MODELS, ModelInfo, AIProvider, TAIProvider } from '../../types/jodie';
 import './AISettingsContent.scss';
+import {Dictionary} from "../../joiner";
 
 interface AISettingsContentProps {
     onClose?: () => void;
@@ -13,7 +14,7 @@ interface ProviderFormState {
     anthropic: { apiKey: string; model: string };
     mistral: { apiKey: string; model: string };
     gemini: { apiKey: string; model: string };
-    ollama: { baseUrl: string; model: string };
+    ollama: { apiKey: string, baseUrl?: string; model: string };
 }
 
 // Map settings provider IDs to PROVIDER_MODELS keys
@@ -72,7 +73,7 @@ export function AISettingsContent({
         anthropic: { apiKey: '', model: DEFAULT_MODELS.anthropic },
         mistral: { apiKey: '', model: DEFAULT_MODELS.mistral },
         gemini: { apiKey: '', model: DEFAULT_MODELS.gemini },
-        ollama: { baseUrl: '', model: DEFAULT_MODELS.ollama },
+        ollama: { apiKey: '', baseUrl: '', model: DEFAULT_MODELS.ollama },
     });
 
     const [testStatus, setTestStatus] = useState<Record<string, 'idle' | 'testing' | 'success' | 'error'>>({});
@@ -82,11 +83,11 @@ export function AISettingsContent({
     // Load existing configuration
     useEffect(() => {
         const loadConfig = () => {
-            const openai = JodieConfigService.getProvider('openai');
-            const anthropic = JodieConfigService.getProvider('anthropic');
-            const mistral = JodieConfigService.getProvider('mistral');
-            const gemini = JodieConfigService.getProvider('gemini');
-            const ollama = JodieConfigService.getProvider('ollama');
+            const openai = JodieConfigService.getProvider(AIProvider.GPT);
+            const anthropic = JodieConfigService.getProvider(AIProvider.Claude);
+            const mistral = JodieConfigService.getProvider(AIProvider.Mistral);
+            const gemini = JodieConfigService.getProvider(AIProvider.Gemini);
+            const ollama = JodieConfigService.getProvider(AIProvider.Ollama);
 
             setProviders({
                 openai: {
@@ -106,7 +107,8 @@ export function AISettingsContent({
                     model: gemini?.model || DEFAULT_MODELS.gemini
                 },
                 ollama: {
-                    baseUrl: ollama?.baseUrl || '',
+                    apiKey: ollama?.apiKey || '',
+                    // baseUrl: ollama?.baseUrl || '',
                     model: ollama?.model || DEFAULT_MODELS.ollama
                 },
             });
@@ -118,7 +120,6 @@ export function AISettingsContent({
     // Save configuration
     const handleSave = async () => {
         setSaveStatus('saving');
-
         try {
             // Save each provider
             if (providers.openai.apiKey) {
@@ -159,6 +160,7 @@ export function AISettingsContent({
 
             if (providers.ollama.baseUrl) {
                 JodieConfigService.setProvider('ollama', {
+                    apiKey: '',
                     baseUrl: providers.ollama.baseUrl,
                     model: providers.ollama.model,
                 });
@@ -227,7 +229,7 @@ export function AISettingsContent({
 
         // Get available models for this provider
         const providerKey = SETTINGS_TO_PROVIDER[id];
-        const availableModels: ModelInfo[] = providerKey ? (PROVIDER_MODELS[providerKey] || []) : [];
+        const availableModels: ModelInfo[] = PROVIDER_MODELS[providerKey as TAIProvider] || [];
         const selectedModel = availableModels.find(m => m.value === config.model);
 
         return (

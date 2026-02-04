@@ -1,44 +1,48 @@
 import React, { useState, useEffect } from 'react';
-import { AIProvider, PROVIDER_MODELS, PROVIDER_INFO } from '../../types/jodie';
-import { JodieConfigService, ALL_PROVIDERS } from '../../services/JodieConfig';
+import { TAIProvider, PROVIDER_MODELS, PROVIDER_INFO, AIProvider, ALL_AI_PROVIDERS } from '../../types/jodie';
+import { JodieConfigService } from '../../services/JodieConfig';
 import { AIProviderService } from '../../services/AIProviderService';
+import {Dictionary} from "../../joiner";
 
 // Provider metadata for settings UI
-const PROVIDER_METADATA: Record<AIProvider, {
+const PROVIDER_METADATA: Dictionary<TAIProvider, {
     name: string;
     keyUrl: string;
     keyPlaceholder: string;
 }> = {
-    openai: {
+    Copilot: {keyPlaceholder: "", keyUrl: "", name: ""},
+    Llama: {keyPlaceholder: "", keyUrl: "", name: ""},
+    Ollama: {keyPlaceholder: "", keyUrl: "", name: ""},
+    [AIProvider.GPT]: {
         name: 'OpenAI',
         keyUrl: 'https://platform.openai.com/api-keys',
         keyPlaceholder: 'sk-...',
     },
-    claude: {
+    [AIProvider.Claude]: {
         name: 'Anthropic',
         keyUrl: 'https://console.anthropic.com/settings/keys',
         keyPlaceholder: 'sk-ant-...',
     },
-    gemini: {
+    [AIProvider.Gemini]: {
         name: 'Google (Gemini)',
         keyUrl: 'https://aistudio.google.com/apikey',
         keyPlaceholder: 'AIza...',
     },
-    deepseek: {
+    [AIProvider.DeepSeek]: {
         name: 'DeepSeek',
         keyUrl: 'https://platform.deepseek.com/api_keys',
         keyPlaceholder: 'sk-...',
     },
-    mistral: {
+    [AIProvider.Mistral]: {
         name: 'Mistral AI',
         keyUrl: 'https://console.mistral.ai/api-keys',
         keyPlaceholder: 'Enter API key...',
     },
-    groq: {
+    [AIProvider.Groq]: {
         name: 'Groq',
         keyUrl: 'https://console.groq.com/keys',
         keyPlaceholder: 'gsk_...',
-    },
+    }
 };
 
 interface ProviderState {
@@ -50,7 +54,7 @@ interface ProviderState {
     testMessage: string;
 }
 
-type ProvidersState = Record<AIProvider, ProviderState>;
+type ProvidersState = Record<TAIProvider, ProviderState>;
 
 // Re-export for backward compatibility
 export interface AISettings {
@@ -63,13 +67,14 @@ export interface AISettings {
 }
 
 export function AIAssistantSettings() {
+
     const [providers, setProviders] = useState<ProvidersState>(() => {
         const initial: Partial<ProvidersState> = {};
-        for (const provider of ALL_PROVIDERS) {
+        for (const provider of ALL_AI_PROVIDERS) {
             const config = JodieConfigService.getProviderConfig(provider);
             initial[provider] = {
                 apiKey: config?.apiKey || '',
-                model: config?.model || PROVIDER_MODELS[provider][0].value,
+                model: config?.model || PROVIDER_MODELS[provider]?.[0]?.value || '',
                 enabled: config?.enabled || false,
                 showKey: false,
                 testStatus: 'idle',
@@ -83,12 +88,12 @@ export function AIAssistantSettings() {
     useEffect(() => {
         const loadSettings = () => {
             const updated: Partial<ProvidersState> = {};
-            for (const provider of ALL_PROVIDERS) {
+            for (const provider of ALL_AI_PROVIDERS) {
                 const config = JodieConfigService.getProviderConfig(provider);
                 updated[provider] = {
                     ...providers[provider],
                     apiKey: config?.apiKey || '',
-                    model: config?.model || PROVIDER_MODELS[provider][0].value,
+                    model: config?.model || PROVIDER_MODELS[provider]?.[0]?.value || '',
                     enabled: config?.enabled || false,
                 };
             }
@@ -103,7 +108,7 @@ export function AIAssistantSettings() {
         return () => window.removeEventListener('ai-provider-changed', handleChange);
     }, []);
 
-    const updateProvider = (provider: AIProvider, updates: Partial<ProviderState>) => {
+    const updateProvider = (provider: TAIProvider, updates: Partial<ProviderState>) => {
         setProviders(prev => ({
             ...prev,
             [provider]: { ...prev[provider], ...updates },
@@ -120,7 +125,7 @@ export function AIAssistantSettings() {
         }
     };
 
-    const testConnection = async (provider: AIProvider) => {
+    const testConnection = async (provider: TAIProvider) => {
         const state = providers[provider];
 
         if (!state.apiKey) {
@@ -189,7 +194,7 @@ export function AIAssistantSettings() {
             </p>
 
             <div className="providers-list">
-                {ALL_PROVIDERS.map(provider => {
+                {ALL_AI_PROVIDERS.map(provider => {
                     const state = providers[provider];
                     const meta = PROVIDER_METADATA[provider];
                     const info = PROVIDER_INFO[provider];

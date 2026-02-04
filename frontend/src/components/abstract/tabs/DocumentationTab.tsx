@@ -14,15 +14,15 @@
 import React, { Dispatch, ReactElement, ReactNode, useMemo, useState, useCallback, useEffect } from 'react';
 import { connect } from 'react-redux';
 import Editor from '@monaco-editor/react';
-import { DState, LProject, LUser, DUser, LModel } from '../../../joiner';
+import { DState, LProject, LUser, DUser, LModel, U } from '../../../joiner';
 import type { FakeStateProps } from '../../../joiner/types';
 import DocumentationService from '../../../services/DocumentationService';
 import type { ProjectDocumentation } from '../../../services/DocumentationService';
-import { JodieConfigService, ALL_PROVIDERS } from '../../../services/JodieConfig';
-import type { AIProvider } from '../../../types/jodie';
+import { JodieConfigService } from '../../../services/JodieConfig';
+import type {TAIProvider} from '../../../types/jodie';
 import { useAIProviderPreference } from '../../../hooks/useAIProviderPreference';
 import { useAISettingsSafe } from '../../../contexts/AISettingsContext';
-import { DocumentationStatus } from '../../../types/jodie';
+import {ALL_AI_PROVIDERS, DocumentationStatus } from '../../../types/jodie';
 import { markdownMonacoOptions } from '../../editors/monacoConfig';
 import './DocumentationTab.scss';
 
@@ -638,15 +638,14 @@ function DocumentationTabComponent(props: AllProps) {
 
     // Get available AI providers
     const availableProviders = useMemo(() => {
-        const providers: Array<{ id: 'local' | AIProvider; name: string; available: boolean }> = [
+        const providers: Array<{ id: 'local' | TAIProvider; name: string; available: boolean }> = [
             { id: 'local', name: 'Local (Instant)', available: true }
         ];
 
         // Add configured AI providers
-        for (const providerId of ALL_PROVIDERS) {
+        for (const providerId of ALL_AI_PROVIDERS) {
             if (JodieConfigService.isProviderEnabled(providerId)) {
-                const displayName = providerId === 'claude' ? 'Anthropic' :
-                    providerId.charAt(0).toUpperCase() + providerId.slice(1);
+                const displayName = U.camelCase(providerId);
                 providers.push({ id: providerId, name: displayName, available: true });
             }
         }

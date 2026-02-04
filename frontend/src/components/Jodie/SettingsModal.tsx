@@ -3,9 +3,10 @@
  * Configure AI providers and API keys
  */
 
-import React, { useState, useEffect } from 'react';
+import React, {useState, useEffect, ReactNode} from 'react';
 import {
     AIProvider,
+    TAIProvider,
     JodieConfig,
     PROVIDER_INFO,
     PROVIDER_MODELS,
@@ -19,9 +20,31 @@ interface SettingsModalProps {
 }
 
 interface ProviderSettingProps {
-    provider: AIProvider;
+    provider: TAIProvider;
     config: JodieConfig;
-    onUpdate: (provider: AIProvider, updates: Partial<JodieConfig['providers'][AIProvider]>) => void;
+    onUpdate: (provider: TAIProvider, updates: Partial<JodieConfig['providers'][TAIProvider]>) => void;
+}
+
+function API_Key_JSX(provider: TAIProvider) {// todo: should really make a class containing all info of a service instead of scattered data.
+    let info: {
+        url: string,
+        displayName: ReactNode;
+        tip?: ReactNode;
+    }
+    switch (provider) {
+        case AIProvider.Claude: info = {url: 'https://console.anthropic.com/settings/keys', displayName: 'console.anthropic.com'}; break;
+        case AIProvider.GPT: info = {url: 'https://platform.openai.com/api-keys', displayName: 'platform.openai'}; break;
+        case AIProvider.DeepSeek: info = {url: 'https://platform.deepseek.com/api_keys', displayName: 'platform.deepseek.com'}; break;
+        case AIProvider.Gemini: info = {url: 'https://aistudio.google.com/app/apikey', displayName: 'Google AI Studio'}; break;
+        default: info = {url: '#', displayName: 'Unsupported service 🚫'}; break;
+        // case 'template: info = {url: '', displayName: ''}; break;
+    }
+    if (!info.tip) info.tip = <>{" "}Keys start with <code>sk-ant-</code></>;
+    return (
+        <div className="jodie-settings-help">
+            <i className="bi bi-info-circle" /> Get your API key from{' '}
+            <a href={info.url} target="_blank" rel="noopener noreferrer">{info.displayName}</a>.{info.tip}
+        </div>);
 }
 
 function ProviderSetting({ provider, config, onUpdate }: ProviderSettingProps): JSX.Element {
@@ -111,40 +134,7 @@ function ProviderSetting({ provider, config, onUpdate }: ProviderSettingProps): 
                             </button>
                         </div>
                         {/* Help text for API key */}
-                        {provider === 'claude' && (
-                            <div className="jodie-settings-help">
-                                <i className="bi bi-info-circle" /> Get your API key from{' '}
-                                <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener noreferrer">
-                                    console.anthropic.com
-                                </a>
-                                . Keys start with <code>sk-ant-</code>
-                            </div>
-                        )}
-                        {provider === 'openai' && (
-                            <div className="jodie-settings-help">
-                                <i className="bi bi-info-circle" /> Get your API key from{' '}
-                                <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer">
-                                    platform.openai.com
-                                </a>
-                                . Keys start with <code>sk-</code>
-                            </div>
-                        )}
-                        {provider === 'deepseek' && (
-                            <div className="jodie-settings-help">
-                                <i className="bi bi-info-circle" /> Get your API key from{' '}
-                                <a href="https://platform.deepseek.com/api_keys" target="_blank" rel="noopener noreferrer">
-                                    platform.deepseek.com
-                                </a>
-                            </div>
-                        )}
-                        {provider === 'gemini' && (
-                            <div className="jodie-settings-help">
-                                <i className="bi bi-info-circle" /> Get your API key from{' '}
-                                <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer">
-                                    Google AI Studio
-                                </a>
-                            </div>
-                        )}
+                        {API_Key_JSX(provider)}
                     </div>
 
                     <div className="jodie-settings-field">
@@ -204,7 +194,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps): JSX.Elem
         }
     }, [isOpen]);
 
-    const handleProviderUpdate = (provider: AIProvider, updates: Partial<JodieConfig['providers'][AIProvider]>) => {
+    const handleProviderUpdate = (provider: TAIProvider, updates: Partial<JodieConfig['providers'][TAIProvider]>) => {
         const newConfig = {
             ...config,
             providers: {
@@ -231,7 +221,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps): JSX.Elem
 
     if (!isOpen) return null;
 
-    const providers: AIProvider[] = ['claude', 'openai', 'deepseek', 'gemini'];
+    const providers: TAIProvider[] = [AIProvider.Claude, AIProvider.GPT, AIProvider.DeepSeek, AIProvider.Gemini];
 
     return (
         <div className="jodie-settings-overlay" onClick={onClose}>

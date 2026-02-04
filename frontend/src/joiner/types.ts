@@ -90,7 +90,7 @@ export type Json<T extends GObject = RawObject> =
         ;
 
 // export type Dictionary<K extends keyof any, T> = { [P in K]: T; };
-export type Dictionary<K extends keyof GObject = any, V = any> = { [P in K]: V; } & { _subMaps?: V};
+export type Dictionary<K extends keyof GObject = any, V = any> = { [P in K]: V; }; // & { _subMaps?: V};
 // _subMaps type *actually just Dict<str, boolean> but if i set it as bool and access a random element of the map it will be typed as boolean | V*/
 export type DocString<T, COMMENT = ''> = string;
 export type NotFound = null;

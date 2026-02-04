@@ -3,16 +3,27 @@
  * Manages per-provider AI configuration with separate API keys for each provider
  */
 
-import { JodieConfig, ProviderConfig, AIProvider, DEFAULT_JODIE_CONFIG, PROVIDER_MODELS } from '../types/jodie';
+import {
+    JodieConfig,
+    ProviderConfig,
+    AIProvider,
+    TAIProvider,
+    DEFAULT_JODIE_CONFIG,
+    PROVIDER_MODELS,
+    ALL_AI_PROVIDERS
+} from '../types/jodie';
 
 // Storage keys - separate key per provider for security
-const STORAGE_KEYS: Record<AIProvider, string> = {
-    claude: 'jjodie_provider_claude',
-    openai: 'jjodie_provider_openai',
-    deepseek: 'jjodie_provider_deepseek',
-    gemini: 'jjodie_provider_gemini',
-    mistral: 'jjodie_provider_mistral',
-    groq: 'jjodie_provider_groq',
+const STORAGE_KEYS: Record<TAIProvider, string> = {
+    [AIProvider.Claude]: 'jjodie_provider_claude',
+    [AIProvider.GPT]: 'jjodie_provider_openai',
+    [AIProvider.DeepSeek]: 'jjodie_provider_deepseek',
+    [AIProvider.Gemini]: 'jjodie_provider_gemini',
+    [AIProvider.Mistral]: 'jjodie_provider_mistral',
+    [AIProvider.Groq]: 'jjodie_provider_groq',
+    [AIProvider.Ollama]: 'jjodie_provider_Ollama',
+    [AIProvider.Llama]: 'jjodie_provider_Llama',
+    [AIProvider.Copilot]: 'jjodie_provider_Copilot',
 };
 
 const ACTIVE_PROVIDER_KEY = 'jjodie_active_provider';
@@ -22,14 +33,14 @@ const WINDOW_STATE_KEY = 'jjodel_jodie_window';
 const LEGACY_SETTINGS_KEY = 'jjodie-settings';
 
 // Map from Settings page provider names to Jodie provider names
-const SETTINGS_TO_JODIE_PROVIDER: Record<string, AIProvider | null> = {
-    'anthropic': 'claude',
-    'openai': 'openai',
-    'google': 'gemini',
-    'deepseek': 'deepseek',
-    'mistral': 'mistral',
-    'groq': 'groq',
-    'ollama': null,
+const SETTINGS_TO_JODIE_PROVIDER: Record<string, TAIProvider | null> = {
+    'anthropic': AIProvider.Claude,
+    'openai': AIProvider.GPT,
+    'google': AIProvider.Gemini,
+    'deepseek': AIProvider.DeepSeek,
+    'mistral': AIProvider.Mistral,
+    'groq': AIProvider.Groq,
+    'ollama': AIProvider.Ollama,
     'custom': null,
 };
 
@@ -54,8 +65,6 @@ interface LegacySettingsFormat {
     baseUrl?: string;
 }
 
-// All supported providers in display order
-export const ALL_PROVIDERS: AIProvider[] = ['openai', 'claude', 'gemini', 'deepseek', 'mistral', 'groq'];
 
 export class JodieConfigService {
     /**
@@ -111,7 +120,7 @@ export class JodieConfigService {
             const config: JodieConfig = JSON.parse(JSON.stringify(DEFAULT_JODIE_CONFIG));
 
             // Load each provider's config
-            for (const provider of ALL_PROVIDERS) {
+            for (const provider of ALL_AI_PROVIDERS) {
                 const providerConfig = this.getProviderConfig(provider);
                 if (providerConfig) {
                     config.providers[provider] = {
@@ -125,8 +134,8 @@ export class JodieConfigService {
 
             // Load active provider
             const activeProvider = localStorage.getItem(ACTIVE_PROVIDER_KEY);
-            if (activeProvider && ALL_PROVIDERS.includes(activeProvider as AIProvider)) {
-                config.activeProvider = activeProvider as AIProvider;
+            if (activeProvider && AIProvider.isValidProvider(activeProvider)) {
+                config.activeProvider = activeProvider;
             } else {
                 // Default to first enabled provider
                 const firstEnabled = this.getEnabledProviders()[0];
@@ -151,7 +160,7 @@ export class JodieConfigService {
     /**
      * Get configuration for a specific provider
      */
-    static getProviderConfig(provider: AIProvider): ProviderStorageFormat | null {
+    static getProviderConfig(provider: TAIProvider): ProviderStorageFormat | null {
         try {
             const json = localStorage.getItem(STORAGE_KEYS[provider]);
             if (!json) return null;
@@ -164,7 +173,7 @@ export class JodieConfigService {
     /**
      * Save configuration for a specific provider
      */
-    static saveProviderConfig(provider: AIProvider, config: Partial<ProviderStorageFormat>): void {
+    static saveProviderConfig(provider: TAIProvider, config: Partial<ProviderStorageFormat>): void {
         try {
             const existing = this.getProviderConfig(provider) || {
                 apiKey: '',
@@ -191,7 +200,7 @@ export class JodieConfigService {
     /**
      * Get the provider config in the format expected by Jodie components
      */
-    static getProvider(provider: AIProvider): ProviderConfig | null {
+    static getProvider(provider: TAIProvider): ProviderConfig | null {
         const config = this.getProviderConfig(provider);
         if (!config || !config.apiKey || !config.enabled) {
             return null;
@@ -215,8 +224,8 @@ export class JodieConfigService {
     /**
      * Get list of providers with valid API keys
      */
-    static getConfiguredProviders(): AIProvider[] {
-        return ALL_PROVIDERS.filter(provider => {
+    static getConfiguredProviders(): TAIProvider[] {
+        return ALL_AI_PROVIDERS.filter(provider => {
             const config = this.getProviderConfig(provider);
             return config && config.apiKey;
         });
@@ -225,8 +234,8 @@ export class JodieConfigService {
     /**
      * Get list of enabled providers (with valid API keys and enabled flag)
      */
-    static getEnabledProviders(): AIProvider[] {
-        return ALL_PROVIDERS.filter(provider => {
+    static getEnabledProviders(): TAIProvider[] {
+        return ALL_AI_PROVIDERS.filter(provider => {
             const config = this.getProviderConfig(provider);
             return config && config.apiKey && config.enabled;
         });
@@ -235,7 +244,7 @@ export class JodieConfigService {
     /**
      * Check if a specific provider is properly configured
      */
-    static isProviderConfigured(provider: AIProvider): boolean {
+    static isProviderConfigured(provider: TAIProvider): boolean {
         const config = this.getProviderConfig(provider);
         return !!(config && config.apiKey);
     }
@@ -243,7 +252,7 @@ export class JodieConfigService {
     /**
      * Check if a specific provider is enabled (configured + enabled flag)
      */
-    static isProviderEnabled(provider: AIProvider): boolean {
+    static isProviderEnabled(provider: TAIProvider): boolean {
         const config = this.getProviderConfig(provider);
         return !!(config && config.apiKey && config.enabled);
     }
@@ -251,12 +260,12 @@ export class JodieConfigService {
     /**
      * Get the currently active provider
      */
-    static getActiveProvider(): AIProvider {
+    static getActiveProvider(): TAIProvider {
         const saved = localStorage.getItem(ACTIVE_PROVIDER_KEY);
-        if (saved && ALL_PROVIDERS.includes(saved as AIProvider)) {
+        if (saved && ALL_AI_PROVIDERS.includes(saved as TAIProvider)) {
             // Verify the saved provider is still enabled
-            if (this.isProviderEnabled(saved as AIProvider)) {
-                return saved as AIProvider;
+            if (this.isProviderEnabled(saved as TAIProvider)) {
+                return saved as TAIProvider;
             }
         }
 
@@ -268,7 +277,7 @@ export class JodieConfigService {
     /**
      * Set the active provider
      */
-    static setActiveProvider(provider: AIProvider): void {
+    static setActiveProvider(provider: TAIProvider): void {
         localStorage.setItem(ACTIVE_PROVIDER_KEY, provider);
 
         // Dispatch event to notify other components
@@ -280,7 +289,7 @@ export class JodieConfigService {
     /**
      * Mark a provider's connection as tested
      */
-    static markProviderTested(provider: AIProvider): void {
+    static markProviderTested(provider: TAIProvider): void {
         const config = this.getProviderConfig(provider);
         if (config) {
             this.saveProviderConfig(provider, {
@@ -293,7 +302,7 @@ export class JodieConfigService {
     /**
      * Get provider test timestamp
      */
-    static getProviderLastTested(provider: AIProvider): number | null {
+    static getProviderLastTested(provider: TAIProvider): number | null {
         const config = this.getProviderConfig(provider);
         return config?.lastTested || null;
     }
@@ -337,7 +346,7 @@ export class JodieConfigService {
      * Clear all provider configurations
      */
     static clearAllProviders(): void {
-        for (const provider of ALL_PROVIDERS) {
+        for (const provider of ALL_AI_PROVIDERS) {
             localStorage.removeItem(STORAGE_KEYS[provider]);
         }
         localStorage.removeItem(ACTIVE_PROVIDER_KEY);
@@ -349,7 +358,7 @@ export class JodieConfigService {
     static exportConfig(): string {
         const config: Record<string, any> = {};
 
-        for (const provider of ALL_PROVIDERS) {
+        for (const provider of ALL_AI_PROVIDERS) {
             const providerConfig = this.getProviderConfig(provider);
             if (providerConfig) {
                 config[provider] = providerConfig;
@@ -368,13 +377,13 @@ export class JodieConfigService {
         try {
             const config = JSON.parse(json);
 
-            for (const provider of ALL_PROVIDERS) {
+            for (const provider of ALL_AI_PROVIDERS) {
                 if (config[provider]) {
                     this.saveProviderConfig(provider, config[provider]);
                 }
             }
 
-            if (config.activeProvider && ALL_PROVIDERS.includes(config.activeProvider)) {
+            if (config.activeProvider && ALL_AI_PROVIDERS.includes(config.activeProvider)) {
                 this.setActiveProvider(config.activeProvider);
             }
 
@@ -383,6 +392,21 @@ export class JodieConfigService {
             console.error('Failed to import config:', error);
             return false;
         }
+    }
+
+    static setProvider(service: string, param2: { apiKey: string; model: string, baseUrl?: string }) {
+        console.error('JodieConfigService.setProvider: todo');
+    }
+
+    static removeProvider(service: string) {
+        console.error('JodieConfigService.removeProvider: todo');
+    }
+
+    static save(newConfig: any): any {
+        console.error('JodieConfigService.save: todo');
+    }
+    static reset(): any {
+        console.error('JodieConfigService.reset: todo');
     }
 }
 

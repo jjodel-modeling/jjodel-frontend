@@ -43,12 +43,7 @@ function MetamodelTabComponent(props: AllProps) {
                         U.alert('e', 'Copy Failed', 'Failed to copy canvas to clipboard');
                     }
                 } else {
-                    const result = await CanvasExportService.export(canvasRef.current, {
-                        format: format as ExportFormat,
-                        filename,
-                        backgroundColor: '#ffffff',
-                        scale: 2,
-                    });
+                    const result = await CanvasExportService.export(canvasRef.current);
                     if (result.success) {
                         U.alert('i', 'Export Complete', `Canvas exported as ${result.filename}`);
                     } else {
@@ -61,9 +56,9 @@ function MetamodelTabComponent(props: AllProps) {
             }
         };
 
-        window.addEventListener('jjodel:export-canvas', handleExportCanvas as EventListener);
+        window.addEventListener('jjodel:export-canvas', handleExportCanvas as any);
         return () => {
-            window.removeEventListener('jjodel:export-canvas', handleExportCanvas as EventListener);
+            window.removeEventListener('jjodel:export-canvas', handleExportCanvas as any);
         };
     }, [model]);
 

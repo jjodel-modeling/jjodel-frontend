@@ -7,7 +7,17 @@ import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useNavigate } from 'react-router-dom';
 import { JodieWindow } from './JodieWindow';
 import { JodieMinimized } from './JodieMinimized';
-import { AIProvider, ChatMessage, ChatImage, ChatDocument, ChatState, PROVIDER_INFO, supportsVision, supportsPDF } from '../../types/jodie';
+import {
+    AIProvider,
+    ChatMessage,
+    ChatImage,
+    ChatDocument,
+    ChatState,
+    PROVIDER_INFO,
+    supportsVision,
+    supportsPDF,
+    TAIProvider
+} from '../../types/jodie';
 import { JodieConfigService } from '../../services/JodieConfig';
 import { AIProviderService } from '../../services/AIProviderService';
 import { useAISettings } from '../../contexts/AISettingsContext';
@@ -38,7 +48,7 @@ export function Jodie(): JSX.Element {
     });
 
     // Active provider
-    const [activeProvider, setActiveProvider] = useState<AIProvider>(() =>
+    const [activeProvider, setActiveProvider] = useState<TAIProvider>(() =>
         JodieConfigService.getActiveProvider()
     );
 
@@ -175,7 +185,7 @@ export function Jodie(): JSX.Element {
     }, []);
 
     // Change provider
-    const handleProviderChange = useCallback((provider: AIProvider) => {
+    const handleProviderChange = useCallback((provider: TAIProvider) => {
         setActiveProvider(provider);
         JodieConfigService.setActiveProvider(provider);
     }, []);

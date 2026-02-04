@@ -73,7 +73,7 @@ export function ExportImageMenu({
         filename,
         padding: 40,
         backgroundColor: '#ffffff',
-    });
+    } as any);
 
     // Close menu when clicking outside
     useEffect(() => {
@@ -104,7 +104,7 @@ export function ExportImageMenu({
             title: includeTitle ? title : undefined,
             includeTimestamp,
             scale,
-        });
+        } as any);
 
         if (success) {
             setIsOpen(false);

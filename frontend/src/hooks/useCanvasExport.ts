@@ -46,7 +46,7 @@ export function useCanvasExport(
             const result = await CanvasExportService.export(canvasRef.current, {
                 ...defaultOptions,
                 ...options,
-                format,
+                type:format,
             });
 
             if (!result.success) {
