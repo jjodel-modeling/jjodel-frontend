@@ -4,6 +4,7 @@
 
 import * as monaco from 'monaco-editor';
 import { JJTL_LANGUAGE_ID } from './jjtlLanguage';
+import {CancellationToken, editor, languages, Position} from "monaco-editor";
 
 // Keywords with descriptions
 const KEYWORDS = [
@@ -100,8 +101,11 @@ function createCompletionItem(
 /**
  * JjTL Completion Provider
  */
-export const jjtlCompletionProvider: monaco.languages.CompletionItemProvider = {
-    triggerCharacters: ['.', '-', '>', ' '],
+class MonacoCompletion implements monaco.languages.CompletionItemProvider{
+    triggerCharacters: string[];
+    constructor() {
+        this.triggerCharacters = ['.', '-', '>', ' '];
+    }
 
     provideCompletionItems(
         model: monaco.editor.ITextModel,
@@ -221,7 +225,7 @@ export const jjtlCompletionProvider: monaco.languages.CompletionItemProvider = {
         }
 
         return { suggestions };
-    },
+    }
 
     /**
      * Check if position is inside a mapping body
@@ -237,8 +241,9 @@ export const jjtlCompletionProvider: monaco.languages.CompletionItemProvider = {
             }
         }
         return braceCount > 0;
-    },
-};
+    }
+}
+
 
 /**
  * Register completion provider for JjTL
@@ -249,3 +254,5 @@ export function registerJjtlCompletions(): monaco.IDisposable {
         jjtlCompletionProvider
     );
 }
+
+export const jjtlCompletionProvider = new MonacoCompletion();
