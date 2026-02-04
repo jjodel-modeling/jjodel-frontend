@@ -3,22 +3,37 @@
  * Displays command execution results
  */
 
-import React, { memo } from 'react';
+import React, { memo, useMemo } from 'react';
 import { ExecutionResult } from '../types';
+import { JjScriptSuccessNotification, parseExecutionResult } from './JjScriptSuccessNotification';
 import './JjScriptOutput.scss';
 
 interface JjScriptOutputProps {
     result: ExecutionResult;
     command?: string;
     className?: string;
+    /** Use beautiful notification style for success (default: true) */
+    useBeautifulNotification?: boolean;
 }
 
 export const JjScriptOutput: React.FC<JjScriptOutputProps> = memo(({
     result,
     command,
-    className = ''
+    className = '',
+    useBeautifulNotification = true
 }) => {
     const { success, message, errors, warnings, data } = result;
+
+    // Parse result for beautiful notification
+    const parsedNotification = useMemo(() => {
+        if (success && useBeautifulNotification) {
+            return parseExecutionResult(result.command, message, data);
+        }
+        return null;
+    }, [success, useBeautifulNotification, result.command, message, data]);
+
+    // Check if this is a display-only command (list, show, help)
+    const isDisplayCommand = ['list', 'show', 'help'].includes(result.command);
 
     return (
         <div className={`jjscript-output ${success ? 'jjscript-output--success' : 'jjscript-output--error'} ${className}`}>
@@ -30,24 +45,37 @@ export const JjScriptOutput: React.FC<JjScriptOutputProps> = memo(({
                 </div>
             )}
 
-            {/* Status indicator */}
-            <div className="jjscript-output-status">
-                <span className={`status-icon ${success ? 'status-icon--success' : 'status-icon--error'}`}>
-                    {success ? (
-                        <i className="bi bi-check-circle-fill" />
-                    ) : (
-                        <i className="bi bi-x-circle-fill" />
-                    )}
-                </span>
-                <span className="status-text">
-                    {success ? 'Success' : 'Error'}
-                </span>
-            </div>
+            {/* Success: Beautiful notification for action commands */}
+            {success && parsedNotification && !isDisplayCommand ? (
+                <JjScriptSuccessNotification
+                    operation={parsedNotification.operation}
+                    target={parsedNotification.target}
+                    secondary={parsedNotification.secondary}
+                    connector={parsedNotification.connector}
+                    details={parsedNotification.details}
+                />
+            ) : (
+                <>
+                    {/* Error or display command: Show classic status indicator */}
+                    <div className="jjscript-output-status">
+                        <span className={`status-icon ${success ? 'status-icon--success' : 'status-icon--error'}`}>
+                            {success ? (
+                                <i className="bi bi-check-circle-fill" />
+                            ) : (
+                                <i className="bi bi-x-circle-fill" />
+                            )}
+                        </span>
+                        <span className="status-text">
+                            {success ? 'Success' : 'Error'}
+                        </span>
+                    </div>
 
-            {/* Main message */}
-            <div className="jjscript-output-message">
-                {formatMessage(message)}
-            </div>
+                    {/* Main message */}
+                    <div className="jjscript-output-message">
+                        {formatMessage(message)}
+                    </div>
+                </>
+            )}
 
             {/* Errors */}
             {errors && errors.length > 0 && (
@@ -123,9 +151,34 @@ function formatMessage(message: string): JSX.Element[] {
  */
 export const JjScriptInlineOutput: React.FC<JjScriptOutputProps> = memo(({
     result,
-    className = ''
+    className = '',
+    useBeautifulNotification = true
 }) => {
-    const { success, message } = result;
+    const { success, message, data } = result;
+
+    // Parse result for beautiful notification
+    const parsedNotification = useMemo(() => {
+        if (success && useBeautifulNotification) {
+            return parseExecutionResult(result.command, message, data);
+        }
+        return null;
+    }, [success, useBeautifulNotification, result.command, message, data]);
+
+    // Check if this is a display-only command (list, show, help)
+    const isDisplayCommand = ['list', 'show', 'help'].includes(result.command);
+
+    // Use beautiful notification for success action commands
+    if (success && parsedNotification && !isDisplayCommand) {
+        return (
+            <JjScriptSuccessNotification
+                operation={parsedNotification.operation}
+                target={parsedNotification.target}
+                secondary={parsedNotification.secondary}
+                connector={parsedNotification.connector}
+                compact={true}
+            />
+        );
+    }
 
     return (
         <span className={`jjscript-inline-output ${success ? 'success' : 'error'} ${className}`}>

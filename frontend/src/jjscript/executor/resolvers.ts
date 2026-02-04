@@ -5,14 +5,214 @@
 
 import { QualifiedName } from '../types';
 import { qualifiedNameToString, matchQualifiedName, parseQualifiedName } from '../parser/grammar';
-import { LProject } from '../../joiner';
+import { LProject, LModel } from '../../joiner';
 
 // ============================================
-// MAIN RESOLVER
+// METAMODEL-SCOPED RESOLVER (PREFERRED)
 // ============================================
 
 /**
- * Resolve a qualified name to a model element
+ * Resolve a qualified name to a model element WITHIN a specific metamodel.
+ * This is the preferred function when you know the target metamodel,
+ * as it prevents ambiguity when the same name exists in multiple metamodels.
+ *
+ * @param target - The qualified name to resolve
+ * @param metamodel - The metamodel to search within
+ * @returns The resolved element or null
+ */
+export function resolveElementInMetamodel(target: QualifiedName, metamodel: LModel): any {
+    if (!target || !metamodel) return null;
+
+    const segments = target.segments;
+    if (segments.length === 0) return null;
+
+    let result: any = null;
+
+    // Strategy 1: Direct path resolution within metamodel
+    result = resolveByPathInMetamodel(segments, metamodel);
+    if (result) {
+        if (target.member) {
+            result = resolveMember(result, target.member);
+        }
+        return result;
+    }
+
+    // Strategy 2: Name-only resolution within metamodel
+    if (segments.length === 1) {
+        result = resolveByNameInMetamodel(segments[0], metamodel);
+        if (result) {
+            if (target.member) {
+                result = resolveMember(result, target.member);
+            }
+            return result;
+        }
+    }
+
+    return null;
+}
+
+/**
+ * Find a class by name ONLY within a specific metamodel.
+ * This prevents the bug where elements are added to wrong classes
+ * when the same class name exists in multiple metamodels.
+ *
+ * @param className - The class name to find
+ * @param metamodel - The metamodel to search within
+ * @returns The class element or null
+ */
+export function findClassInMetamodel(className: string, metamodel: LModel): any {
+    if (!className || !metamodel) return null;
+
+    const nameLower = className.toLowerCase();
+
+    // Search in classes collection
+    const classes = metamodel.classes || [];
+    for (const cls of classes) {
+        if (cls?.name?.toLowerCase() === nameLower) {
+            return cls;
+        }
+    }
+
+    // Also search in packages
+    const packages = metamodel.packages || [];
+    for (const pkg of packages) {
+        const result = findClassInPackage(className, pkg);
+        if (result) return result;
+    }
+
+    return null;
+}
+
+/**
+ * Find a class within a package and its subpackages
+ */
+function findClassInPackage(className: string, pkg: any): any {
+    if (!pkg) return null;
+
+    const nameLower = className.toLowerCase();
+
+    // Search in package's classes
+    const classifiers = pkg.classifiers || [];
+    for (const cls of classifiers) {
+        if (cls?.name?.toLowerCase() === nameLower) {
+            return cls;
+        }
+    }
+
+    // Search in subpackages
+    const subPackages = pkg.subPackages || [];
+    for (const subPkg of subPackages) {
+        const result = findClassInPackage(className, subPkg);
+        if (result) return result;
+    }
+
+    return null;
+}
+
+/**
+ * Resolve by path within a specific metamodel
+ */
+function resolveByPathInMetamodel(segments: string[], metamodel: LModel): any {
+    if (segments.length === 0) return null;
+
+    let current: any = metamodel;
+
+    for (let i = 0; i < segments.length; i++) {
+        const segmentName = segments[i].toLowerCase();
+        let found = false;
+
+        // Try to find in metamodel collections (no cross-metamodel search)
+        const collections = [
+            'packages', 'subPackages', 'classifiers', 'classes',
+            'attributes', 'references', 'operations', 'parameters',
+            'literals', 'enumerators'
+        ];
+
+        for (const collName of collections) {
+            const collection = current[collName];
+            if (Array.isArray(collection)) {
+                const match = collection.find((item: any) =>
+                    item?.name?.toLowerCase() === segmentName
+                );
+                if (match) {
+                    current = match;
+                    found = true;
+                    break;
+                }
+            }
+        }
+
+        // Also check direct name match
+        if (!found && current.name?.toLowerCase() === segmentName) {
+            found = true;
+        }
+
+        if (!found) {
+            return null;
+        }
+    }
+
+    return current;
+}
+
+/**
+ * Resolve by name within a specific metamodel only
+ */
+function resolveByNameInMetamodel(name: string, metamodel: LModel): any {
+    const nameLower = name.toLowerCase();
+    const results: any[] = [];
+
+    function search(item: any): void {
+        if (!item) return;
+
+        // Check current item
+        if (item.name?.toLowerCase() === nameLower) {
+            results.push(item);
+        }
+
+        // Search in collections (no metamodels/models - stay within this metamodel)
+        const collections = [
+            'packages', 'subPackages', 'classifiers', 'classes',
+            'attributes', 'references', 'operations', 'parameters',
+            'literals', 'enumerators'
+        ];
+
+        for (const collName of collections) {
+            const collection = item[collName];
+            if (Array.isArray(collection)) {
+                for (const child of collection) {
+                    search(child);
+                }
+            }
+        }
+    }
+
+    search(metamodel);
+
+    // Return first match within this metamodel
+    return results.length > 0 ? results[0] : null;
+}
+
+/**
+ * Get a metamodel by ID from a project
+ */
+export function getMetamodelById(project: LProject, metamodelId: string): LModel | null {
+    if (!project || !metamodelId) return null;
+
+    const metamodels = project.metamodels || [];
+    return metamodels.find((mm: LModel) => mm.id === metamodelId) || null;
+}
+
+// ============================================
+// MAIN RESOLVER (searches entire project)
+// ============================================
+
+/**
+ * Resolve a qualified name to a model element.
+ *
+ * WARNING: This function searches across ALL metamodels in the project.
+ * If there are duplicate names across metamodels, it may return the wrong element.
+ * Prefer using resolveElementInMetamodel() when you know the target metamodel.
  */
 export function resolveElement(target: QualifiedName, project: LProject): any {
     if (!target || !project) return null;

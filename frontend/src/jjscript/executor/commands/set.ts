@@ -77,8 +77,11 @@ export async function executeSet(
         const convertedValue = convertValue(value, propertyInfo.type, project);
         const oldValue = element[property];
 
+        // Apply special property transformations (e.g., readonly -> !changeable)
+        const transformedValue = transformPropertyValue(property, convertedValue);
+
         // Apply operator
-        let finalValue = convertedValue;
+        let finalValue = transformedValue;
         if (operator === '+=' && Array.isArray(oldValue)) {
             finalValue = [...oldValue, convertedValue];
         } else if (operator === '-=' && Array.isArray(oldValue)) {
@@ -151,8 +154,8 @@ function getPropertyInfo(element: any, property: string): PropertyInfo {
     const commonProps = ['name', 'annotations'];
 
     // Type-specific properties
-    const classProps = ['abstract', 'interface', 'superTypes', 'attributes', 'references', 'operations'];
-    const attributeProps = ['type', 'lowerBound', 'upperBound', 'derived', 'changeable', 'transient', 'volatile', 'unsettable', 'iD', 'defaultValueLiteral'];
+    const classProps = ['abstract', 'interface', 'singleton', 'superTypes', 'attributes', 'references', 'operations'];
+    const attributeProps = ['type', 'lowerBound', 'upperBound', 'derived', 'changeable', 'transient', 'volatile', 'unsettable', 'iD', 'defaultValueLiteral', 'default'];
     const referenceProps = ['type', 'lowerBound', 'upperBound', 'containment', 'container', 'opposite', 'resolveProxies'];
     const operationProps = ['type', 'parameters', 'exceptions'];
     const packageProps = ['uri', 'prefix', 'classifiers', 'subPackages'];
@@ -211,12 +214,34 @@ function mapPropertyName(property: string): string {
     const mapping: Record<string, string> = {
         'readonly': 'changeable', // Note: readonly = !changeable
         'default': 'defaultValueLiteral',
+        'defaultvalue': 'defaultValueLiteral',
         'lower': 'lowerBound',
         'upper': 'upperBound',
         'id': 'iD',
+        // Singleton is stored directly as 'singleton' in Jjodel
     };
 
     return mapping[property.toLowerCase()] || property;
+}
+
+/**
+ * Handle special property value transformations
+ * For example, 'readonly = true' means 'changeable = false'
+ */
+function transformPropertyValue(property: string, value: any): any {
+    const propLower = property.toLowerCase();
+
+    // 'readonly' is the inverse of 'changeable'
+    if (propLower === 'readonly') {
+        if (typeof value === 'boolean') {
+            return !value;
+        }
+        if (value && typeof value === 'object' && value.kind === 'boolean') {
+            return !value.value;
+        }
+    }
+
+    return value;
 }
 
 function convertValue(

@@ -48,17 +48,20 @@ $row-gap: 6px; // Reduced from 8px
 $icon-size: 22px; // Reduced from 24px
 $vp-group-spacing: 12px; // Reduced from 16px
 
-// Type colors (muted, professional)
+// Type colors - DISTINCT for each type (from CLAUDE.md)
 $color-viewpoint: #475569;    // slate-600
-$color-model: #8b5cf6;        // violet-500 muted
-$color-package: #3b82f6;      // blue-500
-$color-class: #ef4444;        // red-500
-$color-attribute: #dc2626;    // red-600
-$color-enum: #f59e0b;         // amber-500
-$color-literal: #d97706;      // amber-600
+$color-model: #64748b;        // slate-500 (Metamodels)
+$color-package: #f59e0b;      // amber-500 (Packages)
+$color-class: #0ea5e9;        // cyan-500 (Classes)
+$color-attribute: #10b981;    // green-500 (Attributes)
+$color-reference: #8b5cf6;    // purple-500 (References)
+$color-operation: #06b6d4;    // cyan-400 (Operations)
+$color-enum: #ec4899;         // pink-500 (Enumerations)
+$color-literal: #f472b6;      // pink-400 (Enum Literals)
 $color-object: #6b7280;       // gray-500
 $color-edge: #64748b;         // slate-500
 $color-vertex: #6b7280;       // gray-500
+$color-parameter: #9ca3af;    // gray-400 (Parameters)
 
 // ============================================
 // VIEW EDITOR ROOT CONTAINER
@@ -467,50 +470,58 @@ section.viewpoint-tab {
 
   .tree-Model,
   .tree-DModel {
-    background-color: rgba(139, 92, 246, 0.15);
-    color: #8b5cf6;
+    // Slate - Metamodels
+    background-color: rgba(100, 116, 139, 0.15);
+    color: #64748b;
   }
 
   .tree-Package,
   .tree-DPackage {
-    background-color: rgba(59, 130, 246, 0.15);
-    color: #3b82f6;
-  }
-
-  .tree-Class,
-  .tree-DClass {
-    background-color: rgba(239, 68, 68, 0.15);
-    color: #ef4444;
-  }
-
-  .tree-Attribute,
-  .tree-DAttribute {
-    background-color: rgba(249, 115, 22, 0.15);
-    color: #f97316;
-  }
-
-  .tree-Reference,
-  .tree-DReference {
-    background-color: rgba(6, 182, 212, 0.15);
-    color: #06b6d4;
-  }
-
-  .tree-Operation,
-  .tree-DOperation {
-    background-color: rgba(16, 185, 129, 0.15);
-    color: #10b981;
-  }
-
-  .tree-Enumerator,
-  .tree-DEnumerator {
+    // Amber - Packages
     background-color: rgba(245, 158, 11, 0.15);
     color: #f59e0b;
   }
 
+  .tree-Class,
+  .tree-DClass {
+    // Cyan - Classes
+    background-color: rgba(14, 165, 233, 0.15);
+    color: #0ea5e9;
+  }
+
+  .tree-Attribute,
+  .tree-DAttribute {
+    // Green - Attributes
+    background-color: rgba(16, 185, 129, 0.15);
+    color: #10b981;
+  }
+
+  .tree-Reference,
+  .tree-DReference {
+    // Purple - References
+    background-color: rgba(139, 92, 246, 0.15);
+    color: #8b5cf6;
+  }
+
+  .tree-Operation,
+  .tree-DOperation {
+    // Cyan (darker) - Operations
+    background-color: rgba(6, 182, 212, 0.15);
+    color: #06b6d4;
+  }
+
+  .tree-Enumerator,
+  .tree-DEnumerator {
+    // Pink - Enumerations
+    background-color: rgba(236, 72, 153, 0.15);
+    color: #ec4899;
+  }
+
   .tree-EnumLiteral,
   .tree-DEnumLiteral {
-    background-color: rgba(217, 119, 6, 0.15);
-    color: #d97706;
+    // Light Pink - Enum Literals
+    background-color: rgba(244, 114, 182, 0.15);
+    color: #f472b6;
   }
 
   .tree-Object,
@@ -532,8 +543,9 @@ section.viewpoint-tab {
 
   .tree-Parameter,
   .tree-DParameter {
-    background-color: rgba(16, 185, 129, 0.12);
-    color: #10b981;
+    // Gray - Parameters
+    background-color: rgba(156, 163, 175, 0.15);
+    color: #9ca3af;
   }
 
   .tree-Edge,
@@ -641,49 +653,57 @@ section.viewpoint-tab {
 
   .tree-Model,
   .tree-DModel {
-    background-color: #8b5cf6; // violet-500
+    // Slate - Metamodels
+    background-color: #64748b;
     color: white;
   }
 
   .tree-Package,
   .tree-DPackage {
-    background-color: #3b82f6; // blue-500
+    // Amber - Packages
+    background-color: #f59e0b;
     color: white;
   }
 
   .tree-Class,
   .tree-DClass {
-    background-color: #ef4444; // red-500
+    // Cyan - Classes
+    background-color: #0ea5e9;
     color: white;
   }
 
   .tree-Attribute,
   .tree-DAttribute {
-    background-color: #f97316; // orange-500
+    // Green - Attributes
+    background-color: #10b981;
     color: white;
   }
 
   .tree-Reference,
   .tree-DReference {
-    background-color: #06b6d4; // cyan-500
+    // Purple - References
+    background-color: #8b5cf6;
     color: white;
   }
 
   .tree-Operation,
   .tree-DOperation {
-    background-color: #10b981; // emerald-500
+    // Cyan (darker) - Operations
+    background-color: #06b6d4;
     color: white;
   }
 
   .tree-Enumerator,
   .tree-DEnumerator {
-    background-color: #f59e0b; // amber-500
+    // Pink - Enumerations
+    background-color: #ec4899;
     color: white;
   }
 
   .tree-EnumLiteral,
   .tree-DEnumLiteral {
-    background-color: #d97706; // amber-600
+    // Light Pink - Enum Literals
+    background-color: #f472b6;
     color: white;
   }
 
@@ -2786,87 +2806,87 @@ section.viewpoint-tab {
   color: #64748b;
 }
 
-/* Model - Violet */
+/* Model - Slate (Metamodels) */
 .view-entry .icon.type.tree-Model,
 .view-entry .icon.type.tree-DModel {
-  background-color: rgba(139, 92, 246, 0.15) !important;
-  color: #7c3aed !important;
+  background-color: rgba(100, 116, 139, 0.15) !important;
+  color: #64748b !important;
 }
 
-/* Package - Blue */
+/* Package - Amber */
 .view-entry .icon.type.tree-Package,
 .view-entry .icon.type.tree-DPackage {
-  background-color: rgba(59, 130, 246, 0.15) !important;
-  color: #2563eb !important;
+  background-color: rgba(245, 158, 11, 0.15) !important;
+  color: #f59e0b !important;
 }
 
-/* Class - Rose */
+/* Class - Cyan */
 .view-entry .icon.type.tree-Class,
 .view-entry .icon.type.tree-DClass {
-  background-color: rgba(244, 63, 94, 0.15) !important;
-  color: #e11d48 !important;
+  background-color: rgba(14, 165, 233, 0.15) !important;
+  color: #0ea5e9 !important;
 }
 
-/* Attribute - Orange */
+/* Attribute - Green */
 .view-entry .icon.type.tree-Attribute,
 .view-entry .icon.type.tree-DAttribute {
-  background-color: rgba(249, 115, 22, 0.15) !important;
-  color: #ea580c !important;
+  background-color: rgba(16, 185, 129, 0.15) !important;
+  color: #10b981 !important;
 }
 
-/* Reference - Cyan */
+/* Reference - Purple */
 .view-entry .icon.type.tree-Reference,
 .view-entry .icon.type.tree-DReference {
-  background-color: rgba(6, 182, 212, 0.15) !important;
-  color: #0891b2 !important;
+  background-color: rgba(139, 92, 246, 0.15) !important;
+  color: #8b5cf6 !important;
 }
 
-/* Operation - Emerald */
+/* Operation - Cyan (darker) */
 .view-entry .icon.type.tree-Operation,
 .view-entry .icon.type.tree-DOperation {
-  background-color: rgba(16, 185, 129, 0.15) !important;
-  color: #059669 !important;
+  background-color: rgba(6, 182, 212, 0.15) !important;
+  color: #06b6d4 !important;
 }
 
-/* Enum - Amber */
+/* Enum - Pink */
 .view-entry .icon.type.tree-Enumerator,
 .view-entry .icon.type.tree-DEnumerator {
-  background-color: rgba(245, 158, 11, 0.15) !important;
-  color: #d97706 !important;
+  background-color: rgba(236, 72, 153, 0.15) !important;
+  color: #ec4899 !important;
 }
 
-/* Literal - Yellow */
+/* Literal - Light Pink */
 .view-entry .icon.type.tree-EnumLiteral,
 .view-entry .icon.type.tree-DEnumLiteral {
-  background-color: rgba(234, 179, 8, 0.15) !important;
-  color: #ca8a04 !important;
+  background-color: rgba(244, 114, 182, 0.15) !important;
+  color: #f472b6 !important;
 }
 
-/* Object - Warm Brown/Amber (different from Operation which is Emerald) */
+/* Object - Gray */
 .view-entry .icon.type.tree-Object,
 .view-entry .icon.type.tree-DObject {
-  background-color: rgba(180, 83, 9, 0.15) !important;
-  color: #b45309 !important;
+  background-color: rgba(107, 114, 128, 0.15) !important;
+  color: #6b7280 !important;
 }
 
-/* Value - Purple */
+/* Value - Gray (lighter) */
 .view-entry .icon.type.tree-Value,
 .view-entry .icon.type.tree-DValue {
-  background-color: rgba(168, 85, 247, 0.15) !important;
-  color: #9333ea !important;
+  background-color: rgba(120, 113, 108, 0.15) !important;
+  color: #78716c !important;
 }
 
-/* Singleton - Indigo */
+/* Singleton - Slate */
 .view-entry .icon.type.tree-Singleton {
-  background-color: rgba(99, 102, 241, 0.15) !important;
-  color: #4f46e5 !important;
+  background-color: rgba(71, 85, 105, 0.15) !important;
+  color: #475569 !important;
 }
 
-/* Parameter - Fuchsia/Pink (different from Package which is Blue) */
+/* Parameter - Gray (light) */
 .view-entry .icon.type.tree-Parameter,
 .view-entry .icon.type.tree-DParameter {
-  background-color: rgba(236, 72, 153, 0.15) !important;
-  color: #db2777 !important;
+  background-color: rgba(156, 163, 175, 0.15) !important;
+  color: #9ca3af !important;
 }
 
 /* Edge - Slate */
@@ -3126,73 +3146,85 @@ section.viewpoint-tab {
   // Dark mode pastel type icons
   .view-entry .icon.type.tree-Model,
   .view-entry .icon.type.tree-DModel {
-    background-color: rgba(139, 92, 246, 0.25) !important;
-    color: #a78bfa !important;
+    // Slate - Metamodels (brighter for dark mode)
+    background-color: rgba(100, 116, 139, 0.25) !important;
+    color: #94a3b8 !important;
   }
 
   .view-entry .icon.type.tree-Package,
   .view-entry .icon.type.tree-DPackage {
-    background-color: rgba(59, 130, 246, 0.25) !important;
-    color: #60a5fa !important;
-  }
-
-  .view-entry .icon.type.tree-Class,
-  .view-entry .icon.type.tree-DClass {
-    background-color: rgba(244, 63, 94, 0.25) !important;
-    color: #fb7185 !important;
-  }
-
-  .view-entry .icon.type.tree-Attribute,
-  .view-entry .icon.type.tree-DAttribute {
-    background-color: rgba(249, 115, 22, 0.25) !important;
-    color: #fb923c !important;
-  }
-
-  .view-entry .icon.type.tree-Reference,
-  .view-entry .icon.type.tree-DReference {
-    background-color: rgba(6, 182, 212, 0.25) !important;
-    color: #22d3ee !important;
-  }
-
-  .view-entry .icon.type.tree-Operation,
-  .view-entry .icon.type.tree-DOperation {
-    background-color: rgba(16, 185, 129, 0.25) !important;
-    color: #34d399 !important;
-  }
-
-  .view-entry .icon.type.tree-Parameter,
-  .view-entry .icon.type.tree-DParameter {
-    background-color: rgba(236, 72, 153, 0.25) !important;
-    color: #f472b6 !important;
-  }
-
-  .view-entry .icon.type.tree-Enumerator,
-  .view-entry .icon.type.tree-DEnumerator {
+    // Amber - Packages
     background-color: rgba(245, 158, 11, 0.25) !important;
     color: #fbbf24 !important;
   }
 
+  .view-entry .icon.type.tree-Class,
+  .view-entry .icon.type.tree-DClass {
+    // Cyan - Classes
+    background-color: rgba(14, 165, 233, 0.25) !important;
+    color: #38bdf8 !important;
+  }
+
+  .view-entry .icon.type.tree-Attribute,
+  .view-entry .icon.type.tree-DAttribute {
+    // Green - Attributes
+    background-color: rgba(16, 185, 129, 0.25) !important;
+    color: #34d399 !important;
+  }
+
+  .view-entry .icon.type.tree-Reference,
+  .view-entry .icon.type.tree-DReference {
+    // Purple - References
+    background-color: rgba(139, 92, 246, 0.25) !important;
+    color: #a78bfa !important;
+  }
+
+  .view-entry .icon.type.tree-Operation,
+  .view-entry .icon.type.tree-DOperation {
+    // Cyan (darker) - Operations
+    background-color: rgba(6, 182, 212, 0.25) !important;
+    color: #22d3ee !important;
+  }
+
+  .view-entry .icon.type.tree-Parameter,
+  .view-entry .icon.type.tree-DParameter {
+    // Gray - Parameters
+    background-color: rgba(156, 163, 175, 0.25) !important;
+    color: #d1d5db !important;
+  }
+
+  .view-entry .icon.type.tree-Enumerator,
+  .view-entry .icon.type.tree-DEnumerator {
+    // Pink - Enumerations
+    background-color: rgba(236, 72, 153, 0.25) !important;
+    color: #f472b6 !important;
+  }
+
   .view-entry .icon.type.tree-EnumLiteral,
   .view-entry .icon.type.tree-DEnumLiteral {
-    background-color: rgba(234, 179, 8, 0.25) !important;
-    color: #facc15 !important;
+    // Light Pink - Enum Literals
+    background-color: rgba(244, 114, 182, 0.25) !important;
+    color: #f9a8d4 !important;
   }
 
   .view-entry .icon.type.tree-Object,
   .view-entry .icon.type.tree-DObject {
-    background-color: rgba(180, 83, 9, 0.25) !important;
-    color: #fbbf24 !important;
+    // Gray - Objects
+    background-color: rgba(107, 114, 128, 0.25) !important;
+    color: #9ca3af !important;
   }
 
   .view-entry .icon.type.tree-Value,
   .view-entry .icon.type.tree-DValue {
-    background-color: rgba(168, 85, 247, 0.25) !important;
-    color: #c084fc !important;
+    // Gray (lighter) - Values
+    background-color: rgba(120, 113, 108, 0.25) !important;
+    color: #a8a29e !important;
   }
 
   .view-entry .icon.type.tree-Singleton {
-    background-color: rgba(99, 102, 241, 0.25) !important;
-    color: #818cf8 !important;
+    // Slate - Singletons
+    background-color: rgba(71, 85, 105, 0.25) !important;
+    color: #94a3b8 !important;
   }
 
   .view-entry .icon.type.tree-Edge,
@@ -3316,56 +3348,65 @@ section.viewpoint-tab {
     // Pastel colors in dark mode (slightly brighter)
     .tree-Model,
     .tree-DModel {
-      background-color: rgba(139, 92, 246, 0.25);
-      color: #a78bfa;
-    }
-
-    .tree-Package,
-    .tree-DPackage {
-      background-color: rgba(59, 130, 246, 0.25);
-      color: #60a5fa;
-    }
-
-    .tree-Class,
-    .tree-DClass {
-      background-color: rgba(244, 63, 94, 0.25);
-      color: #fb7185;
-    }
-
-    .tree-Attribute,
-    .tree-DAttribute {
-      background-color: rgba(249, 115, 22, 0.25);
-      color: #fb923c;
-    }
-
-    .tree-Reference,
-    .tree-DReference {
-      background-color: rgba(6, 182, 212, 0.25);
-      color: #22d3ee;
-    }
-
-    .tree-Operation,
-    .tree-DOperation {
-      background-color: rgba(16, 185, 129, 0.25);
-      color: #34d399;
-    }
-
-    .tree-Parameter,
-    .tree-DParameter {
+      // Slate - Metamodels
       background-color: rgba(100, 116, 139, 0.25);
       color: #94a3b8;
     }
 
-    .tree-Enumerator,
-    .tree-DEnumerator {
+    .tree-Package,
+    .tree-DPackage {
+      // Amber - Packages
       background-color: rgba(245, 158, 11, 0.25);
       color: #fbbf24;
     }
 
+    .tree-Class,
+    .tree-DClass {
+      // Cyan - Classes
+      background-color: rgba(14, 165, 233, 0.25);
+      color: #38bdf8;
+    }
+
+    .tree-Attribute,
+    .tree-DAttribute {
+      // Green - Attributes
+      background-color: rgba(16, 185, 129, 0.25);
+      color: #34d399;
+    }
+
+    .tree-Reference,
+    .tree-DReference {
+      // Purple - References
+      background-color: rgba(139, 92, 246, 0.25);
+      color: #a78bfa;
+    }
+
+    .tree-Operation,
+    .tree-DOperation {
+      // Cyan (darker) - Operations
+      background-color: rgba(6, 182, 212, 0.25);
+      color: #22d3ee;
+    }
+
+    .tree-Parameter,
+    .tree-DParameter {
+      // Gray - Parameters
+      background-color: rgba(156, 163, 175, 0.25);
+      color: #d1d5db;
+    }
+
+    .tree-Enumerator,
+    .tree-DEnumerator {
+      // Pink - Enumerations
+      background-color: rgba(236, 72, 153, 0.25);
+      color: #f472b6;
+    }
+
     .tree-EnumLiteral,
     .tree-DEnumLiteral {
-      background-color: rgba(234, 179, 8, 0.25);
-      color: #facc15;
+      // Light Pink - Enum Literals
+      background-color: rgba(244, 114, 182, 0.25);
+      color: #f9a8d4;
     }
 
     .tree-Object,

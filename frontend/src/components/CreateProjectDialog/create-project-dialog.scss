@@ -17,6 +17,16 @@
   z-index: 1000;
   padding: var(--space-4);
   animation: fadeIn 150ms ease;
+  // Create isolated stacking context
+  isolation: isolate;
+
+  // Ensure the overlay background doesn't interfere with dialog content
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+  }
 }
 
 @keyframes fadeIn {
@@ -36,16 +46,36 @@
 }
 
 .dialog-content {
+  position: relative;
+  z-index: 1001;  // Above overlay (z-index: 1000)
   background: #ffffff;
   border-radius: var(--radius-xl);
   box-shadow: 0 20px 60px rgba(15, 23, 42, 0.2), 0 0 0 1px rgba(15, 23, 42, 0.05);
   width: 100%;
   max-width: 480px;
   max-height: 90vh;
-  overflow: hidden;
+  overflow: hidden;  // Clip content for border-radius
   display: flex;
   flex-direction: column;
   animation: slideUp 200ms ease;
+
+  // Ensure form inside dialog is fully interactive
+  form {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;  // Allow flex shrinking
+  }
+
+  // All interactive elements should respond to clicks
+  input, select, textarea, button {
+    pointer-events: auto !important;
+    cursor: pointer;
+
+    &[type="text"], &[type="email"], &[type="password"] {
+      cursor: text;
+    }
+  }
 }
 
 /* ============================================
@@ -143,7 +173,7 @@
   height: 42px;
   padding: 0 var(--space-3);
   font-family: var(--font-sans);
-  font-size: 13px!important; // var(--text-xs);
+  font-size: 13px !important;
   color: var(--color-text-primary);
   background: #ffffff;
   border: 1px solid #e2e8f0;
@@ -210,6 +240,134 @@
   font-size: var(--text-xs);
   color: #ef4444;
   margin-top: var(--space-1);
+}
+
+.form-select {
+  width: 100%;
+  height: 42px;
+  padding: 0 var(--space-3);
+  padding-right: 36px;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  color: var(--color-text-primary);
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: var(--radius-md);
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2364748b' d='M2 4l4 4 4-4'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  cursor: pointer;
+  transition: all 150ms ease;
+
+  &:focus {
+    outline: none;
+    border-color: #475569;
+    box-shadow: 0 0 0 3px rgba(71, 85, 105, 0.1);
+  }
+
+  &.error {
+    border-color: #ef4444;
+
+    &:focus {
+      box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+    }
+  }
+
+  &:disabled {
+    background-color: #f8fafc;
+    cursor: not-allowed;
+  }
+}
+
+/* Row layout for side-by-side inputs */
+.form-group-row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  margin-bottom: var(--space-5);
+
+  .form-group--half {
+    flex: 1;
+    margin-bottom: 0;
+  }
+}
+
+/* Arrow between source and target metamodel selects */
+.form-arrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-top: 28px; // Align with input center
+  color: #94a3b8;
+
+  .bi {
+    font-size: 18px;
+  }
+}
+
+/* Hint messages in forms */
+.form-hint {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  font-size: var(--text-xs);
+  line-height: 1.5;
+
+  .bi {
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+
+  &--warning {
+    background: #fef3c7;
+    border: 1px solid #fbbf24;
+    color: #92400e;
+
+    .bi {
+      color: #d97706;
+    }
+  }
+}
+
+/* Warning box for missing prerequisites */
+.dialog-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: var(--radius-md);
+  color: #991b1b;
+
+  > .bi {
+    flex-shrink: 0;
+    font-size: 20px;
+    color: #dc2626;
+    margin-top: 2px;
+  }
+
+  strong {
+    display: block;
+    font-weight: var(--font-semibold);
+    margin-bottom: var(--space-1);
+  }
+
+  p {
+    margin: 0;
+    font-size: var(--text-sm);
+    color: #7f1d1d;
+  }
+}
+
+/* Transformation dialog width override */
+.dialog-content--transformation {
+  max-width: 520px;
 }
 
 /* ============================================

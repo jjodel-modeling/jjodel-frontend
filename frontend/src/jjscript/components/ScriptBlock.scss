@@ -1,17 +1,17 @@
 /**
  * ScriptBlock Styles
- * Design: "Understated Excellence" - subtle but precise, professional
+ * Design: Light theme for better readability
  */
 
 // ============================================
-// VARIABLES
+// VARIABLES (Light Theme)
 // ============================================
 
-$script-bg: #1e293b;
-$script-bg-header: #0f172a;
-$script-border: rgba(255, 255, 255, 0.08);
-$script-text: #e2e8f0;
-$script-text-muted: #94a3b8;
+$script-bg: #f8fafc;
+$script-bg-header: #f1f5f9;
+$script-border: #e2e8f0;
+$script-text: #1e293b;
+$script-text-muted: #64748b;
 $script-accent: #475569;
 $script-success: #10b981;
 $script-error: #ef4444;
@@ -79,7 +79,7 @@ $script-running: #3b82f6;
 
     &:hover {
         color: $script-text;
-        background: rgba(255, 255, 255, 0.1);
+        background: rgba(0, 0, 0, 0.06);
     }
 
     i {
@@ -110,6 +110,74 @@ $script-running: #3b82f6;
     font-size: 11px;
     color: $script-text-muted;
     opacity: 0.7;
+}
+
+// ============================================
+// TARGET SELECTOR
+// ============================================
+
+.script-block__target {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-right: 8px;
+    padding-right: 8px;
+    border-right: 1px solid $script-border;
+}
+
+.script-block__target-label {
+    font-size: 11px;
+    color: $script-text-muted;
+    font-weight: 500;
+}
+
+.script-block__target-select {
+    padding: 4px 8px;
+    font-size: 12px;
+    font-family: inherit;
+    color: $script-text;
+    background: white;
+    border: 1px solid $script-border;
+    border-radius: 4px;
+    cursor: pointer;
+    min-width: 140px;
+    outline: none;
+    transition: border-color 0.15s ease;
+
+    &:hover {
+        border-color: #cbd5e1;
+    }
+
+    &:focus {
+        border-color: $script-running;
+        box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
+    }
+}
+
+.script-block__target-locked {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
+    font-size: 12px;
+    font-weight: 500;
+    color: $script-accent;
+    background: rgba(71, 85, 105, 0.1);
+    border-radius: 4px;
+
+    i {
+        font-size: 10px;
+        opacity: 0.7;
+    }
+
+    &--error {
+        color: $script-error;
+        background: rgba(239, 68, 68, 0.1);
+
+        i {
+            opacity: 1;
+        }
+    }
 }
 
 // ============================================
@@ -183,15 +251,15 @@ $script-running: #3b82f6;
     }
 
     &:hover {
-        background: rgba(255, 255, 255, 0.05);
+        background: rgba(0, 0, 0, 0.04);
         color: $script-text;
-        border-color: rgba(255, 255, 255, 0.15);
+        border-color: #cbd5e1;
     }
 
     &--active {
-        background: rgba(71, 85, 105, 0.3);
+        background: rgba(71, 85, 105, 0.1);
         color: $script-text;
-        border-color: rgba(255, 255, 255, 0.15);
+        border-color: #cbd5e1;
     }
 }
 
@@ -219,7 +287,7 @@ $script-running: #3b82f6;
     }
 
     &:hover:not(:disabled) {
-        background: rgba(255, 255, 255, 0.1);
+        background: rgba(0, 0, 0, 0.06);
         color: $script-text;
     }
 
@@ -235,7 +303,7 @@ $script-running: #3b82f6;
         border: 1px solid $script-border;
 
         &:hover:not(:disabled) {
-            border-color: rgba(255, 255, 255, 0.2);
+            border-color: #cbd5e1;
         }
     }
 
@@ -253,11 +321,11 @@ $script-running: #3b82f6;
     }
 
     &--stop {
-        background: rgba(239, 68, 68, 0.15);
-        color: #f87171;
+        background: rgba(239, 68, 68, 0.1);
+        color: #dc2626;
 
         &:hover {
-            background: rgba(239, 68, 68, 0.25);
+            background: rgba(239, 68, 68, 0.15);
         }
     }
 }
@@ -275,7 +343,7 @@ $script-running: #3b82f6;
     display: flex;
     flex-direction: column;
     padding: 12px 0;
-    background: rgba(0, 0, 0, 0.2);
+    background: rgba(0, 0, 0, 0.03);
     border-right: 1px solid $script-border;
     user-select: none;
     min-width: 40px;
@@ -399,20 +467,20 @@ $script-running: #3b82f6;
 }
 
 .script-block__error {
-    background: rgba(239, 68, 68, 0.1);
-    color: #fca5a5;
+    background: rgba(239, 68, 68, 0.08);
+    color: #dc2626;
 
     i {
-        color: #f87171;
+        color: #ef4444;
     }
 }
 
 .script-block__success {
-    background: rgba(16, 185, 129, 0.1);
-    color: #6ee7b7;
+    background: rgba(16, 185, 129, 0.08);
+    color: #059669;
 
     i {
-        color: #34d399;
+        color: #10b981;
     }
 }
 
@@ -427,16 +495,16 @@ $script-running: #3b82f6;
 
 .script-block__content::-webkit-scrollbar-track,
 .script-block__code::-webkit-scrollbar-track {
-    background: rgba(255, 255, 255, 0.05);
+    background: rgba(0, 0, 0, 0.03);
 }
 
 .script-block__content::-webkit-scrollbar-thumb,
 .script-block__code::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.15);
+    background: rgba(0, 0, 0, 0.12);
     border-radius: 3px;
 
     &:hover {
-        background: rgba(255, 255, 255, 0.25);
+        background: rgba(0, 0, 0, 0.2);
     }
 }
 
@@ -448,5 +516,240 @@ $script-running: #3b82f6;
     .script-block {
         // Keep dark theme for code blocks even in light mode
         // This is intentional for readability
+    }
+}
+
+// ============================================
+// EXECUTION COMPLETE MODAL
+// ============================================
+
+.execution-complete-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    animation: fadeIn 0.15s ease;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+.execution-complete-modal {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+    text-align: center;
+    padding: 32px 40px;
+    max-width: 400px;
+    width: 90%;
+    animation: slideUp 0.2s ease;
+
+    @keyframes slideUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .modal-icon {
+        font-size: 48px;
+        margin-bottom: 16px;
+
+        &.success {
+            color: $script-success;
+        }
+
+        &.error {
+            color: $script-error;
+        }
+    }
+
+    h2 {
+        margin: 0 0 24px;
+        font-size: 20px;
+        font-weight: 600;
+        color: $script-text;
+    }
+
+    .execution-stats {
+        display: flex;
+        justify-content: center;
+        gap: 24px;
+        margin-bottom: 28px;
+        flex-wrap: wrap;
+    }
+
+    .stat {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        min-width: 60px;
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: $script-running;
+        }
+
+        .stat-label {
+            font-size: 11px;
+            color: $script-text-muted;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: 2px;
+        }
+
+        &.error .stat-value {
+            color: $script-error;
+        }
+    }
+
+    .modal-close-btn {
+        padding: 10px 36px;
+        border: none;
+        border-radius: 8px;
+        background: linear-gradient(135deg, #64748b 0%, #475569 100%);
+        color: white;
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.15s ease;
+
+        &:hover {
+            background: linear-gradient(135deg, #475569 0%, #334155 100%);
+            transform: translateY(-1px);
+        }
+
+        &:active {
+            transform: translateY(0);
+        }
+    }
+
+    // Error modal variant - wider to accommodate error details
+    &.has-error {
+        max-width: 500px;
+        text-align: left;
+
+        h2 {
+            text-align: center;
+        }
+
+        .modal-icon {
+            text-align: center;
+        }
+    }
+
+    // Error details section
+    .error-details {
+        background: #fef2f2;
+        border: 1px solid #fecaca;
+        border-radius: 8px;
+        padding: 16px;
+        margin-bottom: 16px;
+        text-align: left;
+    }
+
+    .error-row {
+        display: flex;
+        gap: 12px;
+        margin-bottom: 12px;
+        align-items: flex-start;
+
+        &:last-child {
+            margin-bottom: 0;
+        }
+    }
+
+    .error-label {
+        font-weight: 600;
+        color: #991b1b;
+        min-width: 80px;
+        flex-shrink: 0;
+        font-size: 13px;
+    }
+
+    .error-value {
+        color: $script-text;
+        font-size: 13px;
+    }
+
+    .error-command {
+        font-family: 'JetBrains Mono', 'IBM Plex Mono', monospace;
+        font-size: 12px;
+        background: #fee2e2;
+        padding: 4px 8px;
+        border-radius: 4px;
+        color: #991b1b;
+        word-break: break-all;
+        line-height: 1.4;
+    }
+
+    .error-message {
+        color: #dc2626;
+        font-size: 13px;
+        line-height: 1.4;
+    }
+
+    // Retry info badge
+    .retry-info {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin: 12px 0;
+        padding: 8px 12px;
+        background: #fef3c7;
+        border-radius: 6px;
+        color: #92400e;
+        font-size: 12px;
+        font-weight: 500;
+
+        i {
+            font-size: 14px;
+        }
+    }
+
+    // Error hint section
+    .error-hint {
+        display: flex;
+        gap: 10px;
+        padding: 12px;
+        background: #f1f5f9;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        text-align: left;
+
+        i {
+            color: #f59e0b;
+            font-size: 18px;
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+
+        span {
+            font-size: 12px;
+            color: #475569;
+            line-height: 1.5;
+        }
+    }
+
+    // Stat variant for successful retries
+    .stat.retry .stat-value {
+        color: $script-warning;
     }
 }

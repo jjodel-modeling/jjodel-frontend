@@ -572,6 +572,11 @@
       background: #fef3c7;
       color: #d97706;
     }
+
+    &--transformation {
+      background: #D1FAE5;  // Emerald-100 - transformation arrows
+      color: #059669;       // Emerald-600
+    }
   }
 
   &__content {
@@ -591,6 +596,23 @@
   &__type {
     font-size: 12px;
     color: #64748b;
+  }
+
+  &__error-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-left: 8px;
+    padding: 2px 6px;
+    background: #fef2f2;
+    color: #dc2626;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 500;
+
+    i {
+      font-size: 10px;
+    }
   }
 
   &__actions {
@@ -1059,6 +1081,11 @@
       &--vp {
         background: #451a03;
         color: #fbbf24;
+      }
+
+      &--transformation {
+        background: #064e3b;  // Emerald-900
+        color: #6ee7b7;       // Emerald-300
       }
     }
 

@@ -3,13 +3,18 @@
  * Displays the conversation history with the AI
  */
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useCallback, useState } from 'react';
 import { ChatMessage, PROVIDER_INFO } from '../../types/jodie';
 import { MarkdownMessage } from './MarkdownMessage';
+import { executeCommand, ScriptLineResult } from '../../jjscript';
+import { DUser, L, LUser, LProject, LModel, store } from '../../joiner';
+import { Selectors } from '../../redux/selectors/selectors';
 
 interface ChatMessagesProps {
     messages: ChatMessage[];
     isWaiting?: boolean;
+    /** Optional callback when JjScript execution completes (for refresh/update) */
+    onJjScriptExecuted?: () => void;
 }
 
 function formatTimestamp(timestamp: number): string {
@@ -21,7 +26,7 @@ function getInitials(name: string): string {
     return name.split(' ').map(n => n[0] || '').join('').toUpperCase().slice(0, 2) || 'U';
 }
 
-function MessageBubble({ message }: { message: ChatMessage }): JSX.Element {
+function MessageBubble({ message, onJjScriptExecute }: { message: ChatMessage; onJjScriptExecute?: (commands: string[]) => Promise<ScriptLineResult[]> }): JSX.Element {
     const isUser = message.role === 'user';
     const providerInfo = message.provider ? PROVIDER_INFO[message.provider] : null;
     const displayName = message.userName || 'You';
@@ -78,7 +83,11 @@ function MessageBubble({ message }: { message: ChatMessage }): JSX.Element {
                         </div>
                     )}
                     <div className="jodie-message-text">
-                        <MarkdownMessage content={message.content} isUser={isUser} />
+                        <MarkdownMessage
+                            content={message.content}
+                            isUser={isUser}
+                            onJjScriptExecute={onJjScriptExecute}
+                        />
                     </div>
                 </div>
                 <div className="jodie-message-meta">
@@ -124,13 +133,119 @@ function TypingIndicator(): JSX.Element {
     );
 }
 
-export function ChatMessages({ messages, isWaiting }: ChatMessagesProps): JSX.Element {
+export function ChatMessages({ messages, isWaiting, onJjScriptExecuted }: ChatMessagesProps): JSX.Element {
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
     // Auto-scroll to bottom when new messages arrive
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [messages, isWaiting]);
+
+    // Helper function to get project context
+    const getProjectContext = useCallback(() => {
+        try {
+            const user: LUser = L.fromPointer(DUser.current);
+            if (!user?.project) {
+                return { hasProject: false, hasMetamodel: false, metamodelName: null, metamodelCount: 0 };
+            }
+            const project = user.project as LProject;
+            const metamodels = (project as any).metamodels || [];
+
+            // Try to get the active/selected metamodel
+            const activeModel = Selectors.getActiveModel();
+            let targetMetamodel: LModel | null = null;
+            let metamodelName: string | null = null;
+
+            if (activeModel && activeModel.isMetamodel) {
+                targetMetamodel = activeModel;
+                metamodelName = activeModel.name || 'Unnamed';
+            } else if (metamodels.length > 0) {
+                targetMetamodel = metamodels[0];
+                metamodelName = targetMetamodel?.name || 'Unnamed';
+            }
+
+            return {
+                hasProject: true,
+                hasMetamodel: metamodels.length > 0,
+                metamodelName,
+                metamodelCount: metamodels.length,
+            };
+        } catch {
+            return { hasProject: false, hasMetamodel: false, metamodelName: null, metamodelCount: 0 };
+        }
+    }, []);
+
+    // Subscribe to Redux store changes to detect metamodel creation
+    const [projectContext, setProjectContext] = useState(() => getProjectContext());
+
+    useEffect(() => {
+        // Update context immediately
+        setProjectContext(getProjectContext());
+
+        // Subscribe to Redux store changes
+        const unsubscribe = store.subscribe(() => {
+            const newContext = getProjectContext();
+            setProjectContext(prev => {
+                // Only update if actually changed
+                if (prev.hasProject !== newContext.hasProject ||
+                    prev.hasMetamodel !== newContext.hasMetamodel ||
+                    prev.metamodelCount !== newContext.metamodelCount) {
+                    return newContext;
+                }
+                return prev;
+            });
+        });
+
+        return () => unsubscribe();
+    }, [getProjectContext]);
+
+    // JjScript execution handler
+    const handleJjScriptExecute = useCallback(async (commands: string[]): Promise<ScriptLineResult[]> => {
+        // Check if project is available
+        if (!projectContext.hasProject) {
+            return [{
+                command: commands[0] || '',
+                success: false,
+                message: 'Per eseguire questo script, apri prima un progetto.',
+            }];
+        }
+
+        // Check if metamodel is available
+        if (!projectContext.hasMetamodel) {
+            return [{
+                command: commands[0] || '',
+                success: false,
+                message: 'Il progetto non ha metamodelli. Clicca "+ New" nella sezione METAMODELS per crearne uno, poi esegui di nuovo lo script.',
+            }];
+        }
+
+        const results: ScriptLineResult[] = [];
+
+        for (const command of commands) {
+            try {
+                const result = await executeCommand(command);
+                results.push({
+                    command,
+                    success: result.success,
+                    message: result.message,
+                    warnings: result.warnings,
+                });
+            } catch (err) {
+                results.push({
+                    command,
+                    success: false,
+                    message: err instanceof Error ? err.message : 'Unknown error',
+                });
+            }
+        }
+
+        // Notify parent that execution completed (for metamodel refresh)
+        if (onJjScriptExecuted) {
+            onJjScriptExecuted();
+        }
+
+        return results;
+    }, [onJjScriptExecuted, projectContext]);
 
     return (
         <div className="jodie-messages">
@@ -151,7 +266,11 @@ export function ChatMessages({ messages, isWaiting }: ChatMessagesProps): JSX.El
             ) : (
                 <>
                     {messages.map(message => (
-                        <MessageBubble key={message.id} message={message} />
+                        <MessageBubble
+                            key={message.id}
+                            message={message}
+                            onJjScriptExecute={handleJjScriptExecute}
+                        />
                     ))}
                     {isWaiting && <TypingIndicator />}
                 </>

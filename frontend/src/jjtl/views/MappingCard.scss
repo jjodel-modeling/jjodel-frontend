@@ -1,0 +1,331 @@
+/**
+ * MappingCard Styles
+ * Visual card for displaying mapping suggestions with checkbox workflow
+ */
+
+.mapping-card {
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    margin-bottom: 8px;
+    overflow: hidden;
+    transition: all 0.15s ease;
+    cursor: pointer;
+
+    &:hover {
+        border-color: #cbd5e1;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    }
+
+    // When arrow is hovered (highlight from line hover)
+    &.hovered {
+        border-color: #0ea5e9;
+        box-shadow: 0 0 0 2px rgba(14, 165, 233, 0.2);
+    }
+
+    // When card is selected
+    &.selected {
+        border-color: #0ea5e9;
+        background: #f0f9ff;
+        box-shadow: 0 0 0 2px rgba(14, 165, 233, 0.3);
+    }
+
+    // Checked state (toInsert)
+    &.checked {
+        background: #f0fdf4;
+        border-color: #86efac;
+
+        .mapping-type-badge {
+            background: #bbf7d0;
+        }
+    }
+}
+
+.mapping-card-main {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px;
+}
+
+// Checkbox button
+.checkbox-btn {
+    width: 28px;
+    height: 28px;
+    border: none;
+    background: transparent;
+    color: #94a3b8;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    transition: all 0.15s ease;
+    flex-shrink: 0;
+
+    &:hover {
+        background: #f1f5f9;
+        color: #64748b;
+    }
+
+    &.checked {
+        color: #0ea5e9;
+
+        &:hover {
+            color: #0284c7;
+            background: #e0f2fe;
+        }
+    }
+
+    i {
+        font-size: 18px;
+    }
+}
+
+// Type badge (C = Class, A = Attribute)
+.mapping-type-badge {
+    width: 24px;
+    height: 24px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 700;
+    flex-shrink: 0;
+
+    &.class {
+        background: #dbeafe;
+        color: #2563eb;
+    }
+
+    &.attribute {
+        background: #f3e8ff;
+        color: #9333ea;
+    }
+}
+
+// Content area
+.mapping-content {
+    flex: 1;
+    min-width: 0; // Allow text truncation
+}
+
+.mapping-names {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    margin-bottom: 2px;
+}
+
+.source-name {
+    color: #0ea5e9;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 45%;
+}
+
+.arrow {
+    color: #94a3b8;
+    flex-shrink: 0;
+}
+
+.target-name {
+    color: #8b5cf6;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 45%;
+}
+
+.mapping-subtitle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+    color: #64748b;
+}
+
+.conversion-badge {
+    background: #fef3c7;
+    color: #92400e;
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 500;
+}
+
+// Confidence badge
+.mapping-confidence {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 500;
+    flex-shrink: 0;
+}
+
+.confidence-icon {
+    font-size: 8px;
+}
+
+.confidence-label {
+    text-transform: lowercase;
+}
+
+// Action buttons
+.mapping-actions {
+    display: flex;
+    gap: 4px;
+    flex-shrink: 0;
+}
+
+.action-btn {
+    width: 26px;
+    height: 26px;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    background: white;
+    color: #64748b;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s ease;
+
+    &:hover {
+        background: #f1f5f9;
+    }
+
+    // Reject - Rosso pastello
+    &.reject:hover {
+        background: #fee2e2;
+        border-color: #fca5a5;
+        color: #991b1b;
+    }
+
+    // Expand - Neutro
+    &.expand:hover {
+        background: #f1f5f9;
+        border-color: #cbd5e1;
+    }
+
+    &.expand.expanded {
+        background: #e2e8f0;
+        border-color: #cbd5e1;
+    }
+
+    i {
+        font-size: 14px;
+    }
+}
+
+// Expanded details section
+.mapping-details {
+    padding: 16px;
+    background: #f8fafc;
+    border-top: 1px solid #e2e8f0;
+}
+
+.details-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    margin-bottom: 16px;
+}
+
+.detail-column {
+    // Column container
+}
+
+.detail-header {
+    font-size: 11px;
+    font-weight: 600;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 8px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.detail-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 6px;
+    font-size: 12px;
+
+    &:last-child {
+        margin-bottom: 0;
+    }
+}
+
+.detail-label {
+    color: #64748b;
+    min-width: 60px;
+}
+
+.detail-value {
+    color: #334155;
+    font-weight: 500;
+
+    &.type {
+        font-family: 'JetBrains Mono', 'IBM Plex Mono', monospace;
+        background: #e2e8f0;
+        padding: 1px 6px;
+        border-radius: 4px;
+        font-size: 11px;
+    }
+}
+
+// Conversion hint
+.conversion-hint {
+    display: flex;
+    gap: 10px;
+    padding: 12px;
+    background: #fef3c7;
+    border-radius: 8px;
+    margin-bottom: 12px;
+
+    > i {
+        color: #f59e0b;
+        font-size: 16px;
+        flex-shrink: 0;
+    }
+}
+
+.hint-label {
+    font-size: 11px;
+    color: #92400e;
+    margin-bottom: 4px;
+}
+
+.hint-code {
+    display: block;
+    font-family: 'JetBrains Mono', 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    color: #78350f;
+    background: rgba(0, 0, 0, 0.05);
+    padding: 4px 8px;
+    border-radius: 4px;
+}
+
+// Reason text
+.mapping-reason {
+    font-size: 12px;
+    color: #64748b;
+
+    .reason-label {
+        font-weight: 500;
+        margin-right: 6px;
+    }
+
+    .reason-text {
+        font-style: italic;
+    }
+}

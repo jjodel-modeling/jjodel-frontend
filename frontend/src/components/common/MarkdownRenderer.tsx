@@ -110,7 +110,6 @@ const CodeBlock: React.FC<CodeBlockProps> = ({ language, code, onJjScriptExecute
                 <ScriptBlock
                     code={code}
                     onExecute={onJjScriptExecute}
-                    showNormalizeToggle={true}
                     allowExecution={!!onJjScriptExecute}
                 />
             </div>

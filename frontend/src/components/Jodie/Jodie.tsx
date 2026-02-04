@@ -385,6 +385,13 @@ export function Jodie(): JSX.Element {
         }
     }, []);
 
+    // JjScript execution completed - trigger metamodel refresh
+    const handleJjScriptExecuted = useCallback(() => {
+        // Emit custom event for metamodel refresh
+        window.dispatchEvent(new CustomEvent('jjscript:executed'));
+        console.log('[Jjodie] JjScript executed - metamodel refresh triggered');
+    }, []);
+
     return (
         <>
             {/* Main chat window or FAB */}
@@ -398,6 +405,7 @@ export function Jodie(): JSX.Element {
                     onClose={handleClose}
                     onOpenSettings={handleOpenSettings}
                     onOpenDocumentation={handleOpenDocumentation}
+                    onJjScriptExecuted={handleJjScriptExecuted}
                     supportsVision={providerSupportsVision}
                     supportsPDF={providerSupportsPDF}
                 />

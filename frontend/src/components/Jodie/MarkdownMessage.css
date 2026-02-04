@@ -146,14 +146,14 @@
     white-space: nowrap;
 }
 
-/* Code Blocks - Now using react-syntax-highlighter */
+/* Code Blocks - Light Theme */
 .md-code-block {
-    background: #1e293b;
-    color: #e2e8f0;
+    background: #f8fafc;
+    color: #334155;
     border-radius: 8px;
     overflow: hidden;
     margin: 10px 0;
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    border: 1px solid #e2e8f0;
 }
 
 /* Single line code block - more compact, no header */
@@ -172,15 +172,15 @@
     justify-content: space-between;
     align-items: center;
     padding: 6px 12px;
-    background: #0f172a;
-    border-bottom: 1px solid #334155;
+    background: #f1f5f9;
+    border-bottom: 1px solid #e2e8f0;
     min-height: 32px;
 }
 
 .md-code-block .md-code-language {
     font-size: 11px;
     font-weight: 600;
-    color: #94a3b8;
+    color: #64748b;
     letter-spacing: 0.5px;
     text-transform: uppercase;
 }
@@ -193,15 +193,15 @@
     background: transparent;
     border: none;
     border-radius: 4px;
-    color: #94a3b8;
+    color: #64748b;
     font-size: 12px;
     cursor: pointer;
     transition: all 0.15s ease;
 }
 
 .md-code-block .md-code-copy:hover {
-    background: #334155;
-    color: #e2e8f0;
+    background: #e2e8f0;
+    color: #334155;
 }
 
 .md-code-block .md-code-copy.copied {
@@ -221,7 +221,7 @@
 .md-code-block .md-code-content {
     margin: 0 !important;
     padding: 12px !important;
-    background: #1e293b !important;
+    background: #f8fafc !important;
     overflow-x: auto;
 }
 
@@ -230,6 +230,7 @@
     font-size: 13px !important;
     line-height: 1.5 !important;
     background: transparent !important;
+    color: #334155 !important;
 }
 
 /* Line numbers styling */
@@ -237,8 +238,10 @@
     min-width: 2.5em !important;
     padding-right: 1em !important;
     text-align: right;
-    color: #475569 !important;
+    color: #94a3b8 !important;
     user-select: none;
+    background: #f1f5f9;
+    border-right: 1px solid #e2e8f0;
 }
 
 /* Code block scrollbar */
@@ -249,19 +252,19 @@
 
 .md-code-block .md-code-content::-webkit-scrollbar-track,
 .md-code-block::-webkit-scrollbar-track {
-    background: rgba(255, 255, 255, 0.05);
+    background: #f1f5f9;
     border-radius: 3px;
 }
 
 .md-code-block .md-code-content::-webkit-scrollbar-thumb,
 .md-code-block::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.2);
+    background: #cbd5e1;
     border-radius: 3px;
 }
 
 .md-code-block .md-code-content::-webkit-scrollbar-thumb:hover,
 .md-code-block::-webkit-scrollbar-thumb:hover {
-    background: rgba(255, 255, 255, 0.3);
+    background: #94a3b8;
 }
 
 /* ========================================

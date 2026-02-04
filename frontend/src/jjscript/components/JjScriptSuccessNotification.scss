@@ -1,0 +1,292 @@
+/**
+ * JjScriptSuccessNotification Styles
+ * Beautiful success notifications for JjScript commands
+ */
+
+// ============================================
+// BASE NOTIFICATION (CREATE - GREEN)
+// ============================================
+
+.jjscript-success-notification {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px 16px;
+    background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+    border: 1px solid #86efac;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(34, 197, 94, 0.1);
+    animation: slideIn 0.2s ease-out;
+
+    // ========================================
+    // HEADER
+    // ========================================
+    .notification-header {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .notification-icon {
+        font-size: 16px;
+        color: #16a34a;
+        flex-shrink: 0;
+    }
+
+    .operation-text {
+        font-size: 14px;
+        font-weight: 600;
+        color: #166534;
+    }
+
+    // ========================================
+    // BODY
+    // ========================================
+    .notification-body {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding-left: 24px; // Align with text after icon
+        flex-wrap: wrap;
+    }
+
+    .target-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 6px 12px;
+        background: white;
+        border: 1px solid #86efac;
+        border-radius: 6px;
+        font-family: 'JetBrains Mono', 'SF Mono', 'Monaco', 'Consolas', monospace;
+        font-size: 13px;
+        font-weight: 500;
+        color: #166534;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+
+        &.secondary {
+            background: #f0fdf4;
+            border-color: #bbf7d0;
+        }
+    }
+
+    .connector {
+        font-size: 12px;
+        color: #4ade80;
+        font-weight: 500;
+    }
+
+    // ========================================
+    // DETAILS
+    // ========================================
+    .notification-details {
+        padding-left: 24px;
+        font-size: 12px;
+        color: #15803d;
+        font-family: 'JetBrains Mono', 'SF Mono', 'Monaco', 'Consolas', monospace;
+    }
+
+    // ========================================
+    // COMPACT VARIANT
+    // ========================================
+    &.compact {
+        flex-direction: row;
+        align-items: center;
+        padding: 8px 12px;
+        gap: 8px;
+
+        .notification-header,
+        .notification-body {
+            display: contents;
+        }
+
+        .notification-body {
+            padding-left: 0;
+        }
+
+        .target-badge {
+            padding: 4px 8px;
+            font-size: 12px;
+        }
+    }
+}
+
+// ============================================
+// DELETE VARIANT (RED)
+// ============================================
+
+.jjscript-success-notification.delete {
+    background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+    border-color: #fca5a5;
+    box-shadow: 0 2px 8px rgba(239, 68, 68, 0.1);
+
+    .notification-icon {
+        color: #dc2626;
+    }
+
+    .operation-text {
+        color: #991b1b;
+    }
+
+    .target-badge {
+        border-color: #fca5a5;
+        color: #991b1b;
+
+        &.secondary {
+            background: #fef2f2;
+            border-color: #fecaca;
+        }
+    }
+
+    .connector {
+        color: #f87171;
+    }
+
+    .notification-details {
+        color: #b91c1c;
+    }
+}
+
+// ============================================
+// UPDATE VARIANT (BLUE)
+// ============================================
+
+.jjscript-success-notification.update {
+    background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+    border-color: #93c5fd;
+    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.1);
+
+    .notification-icon {
+        color: #2563eb;
+    }
+
+    .operation-text {
+        color: #1e40af;
+    }
+
+    .target-badge {
+        border-color: #93c5fd;
+        color: #1e40af;
+
+        &.secondary {
+            background: #eff6ff;
+            border-color: #bfdbfe;
+        }
+    }
+
+    .connector {
+        color: #60a5fa;
+    }
+
+    .notification-details {
+        color: #1d4ed8;
+    }
+}
+
+// ============================================
+// ANIMATION
+// ============================================
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+// ============================================
+// DARK MODE SUPPORT (optional)
+// ============================================
+
+@media (prefers-color-scheme: dark) {
+    .jjscript-success-notification {
+        // Green variant
+        background: linear-gradient(135deg, #052e16 0%, #064e3b 100%);
+        border-color: #065f46;
+
+        .notification-icon {
+            color: #4ade80;
+        }
+
+        .operation-text {
+            color: #86efac;
+        }
+
+        .target-badge {
+            background: #064e3b;
+            border-color: #065f46;
+            color: #86efac;
+
+            &.secondary {
+                background: #052e16;
+            }
+        }
+
+        .connector {
+            color: #22c55e;
+        }
+
+        .notification-details {
+            color: #4ade80;
+        }
+
+        // Delete variant
+        &.delete {
+            background: linear-gradient(135deg, #450a0a 0%, #7f1d1d 100%);
+            border-color: #991b1b;
+
+            .notification-icon {
+                color: #f87171;
+            }
+
+            .operation-text {
+                color: #fca5a5;
+            }
+
+            .target-badge {
+                background: #7f1d1d;
+                border-color: #991b1b;
+                color: #fca5a5;
+
+                &.secondary {
+                    background: #450a0a;
+                }
+            }
+
+            .connector {
+                color: #ef4444;
+            }
+        }
+
+        // Update variant
+        &.update {
+            background: linear-gradient(135deg, #172554 0%, #1e3a8a 100%);
+            border-color: #1d4ed8;
+
+            .notification-icon {
+                color: #60a5fa;
+            }
+
+            .operation-text {
+                color: #93c5fd;
+            }
+
+            .target-badge {
+                background: #1e3a8a;
+                border-color: #1d4ed8;
+                color: #93c5fd;
+
+                &.secondary {
+                    background: #172554;
+                }
+            }
+
+            .connector {
+                color: #3b82f6;
+            }
+        }
+    }
+}

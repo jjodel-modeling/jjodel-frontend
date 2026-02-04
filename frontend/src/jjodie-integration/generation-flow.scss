@@ -1,0 +1,385 @@
+// ============================================
+// JJODIE GENERATION FLOW STYLES
+// Design: Understated Excellence
+// ============================================
+
+// Variables
+$bg-primary: #0f172a;
+$bg-secondary: #1e293b;
+$bg-tertiary: #334155;
+$border-color: #334155;
+$text-primary: #f1f5f9;
+$text-secondary: #94a3b8;
+$text-muted: #64748b;
+$accent-cyan: #0ea5e9;
+$success: #10b981;
+$error: #ef4444;
+$warning: #fbbf24;
+
+// ============================================
+// CONFIRMATION DIALOG
+// ============================================
+
+.jjodie-confirmation {
+    display: flex;
+    gap: 12px;
+    padding: 16px;
+    background: $bg-secondary;
+    border: 1px solid $border-color;
+    border-radius: 8px;
+    margin: 8px 0;
+
+    .jjodie-confirmation-icon {
+        flex-shrink: 0;
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba($accent-cyan, 0.15);
+        border-radius: 8px;
+
+        i { font-size: 16px; color: $accent-cyan; }
+    }
+
+    .jjodie-confirmation-content { flex: 1; }
+
+    .jjodie-confirmation-title {
+        font-size: 13px;
+        font-weight: 600;
+        color: $text-primary;
+        margin-bottom: 4px;
+    }
+
+    .jjodie-confirmation-message {
+        font-size: 13px;
+        color: $text-secondary;
+        line-height: 1.5;
+        margin-bottom: 12px;
+    }
+
+    .jjodie-confirmation-actions {
+        display: flex;
+        gap: 8px;
+    }
+}
+
+// ============================================
+// METAMODEL SELECTOR
+// ============================================
+
+.jjodie-selector {
+    display: flex;
+    gap: 12px;
+    padding: 16px;
+    background: $bg-secondary;
+    border: 1px solid $border-color;
+    border-radius: 8px;
+    margin: 8px 0;
+
+    .jjodie-selector-icon {
+        flex-shrink: 0;
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba($accent-cyan, 0.15);
+        border-radius: 8px;
+
+        i { font-size: 16px; color: $accent-cyan; }
+    }
+
+    .jjodie-selector-content { flex: 1; }
+    .jjodie-selector-title { font-size: 13px; font-weight: 600; color: $text-primary; margin-bottom: 4px; }
+    .jjodie-selector-message { font-size: 13px; color: $text-secondary; margin-bottom: 12px; }
+
+    .jjodie-selector-options {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        margin-bottom: 12px;
+    }
+
+    .jjodie-selector-option {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 12px;
+        background: $bg-primary;
+        border: 1px solid $border-color;
+        border-radius: 6px;
+        color: $text-primary;
+        font-size: 13px;
+        cursor: pointer;
+        transition: all 0.15s ease;
+
+        i { font-size: 14px; color: $text-muted; }
+
+        &:hover {
+            background: $bg-tertiary;
+            border-color: lighten($border-color, 10%);
+            i { color: $accent-cyan; }
+        }
+    }
+
+    .jjodie-selector-footer { display: flex; justify-content: flex-end; }
+}
+
+// ============================================
+// BUTTONS
+// ============================================
+
+.jjodie-btn, .jjs-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    border: 1px solid transparent;
+
+    i { font-size: 14px; }
+    &:disabled { opacity: 0.5; cursor: not-allowed; }
+}
+
+.jjodie-btn-primary, .jjs-btn-primary {
+    background: $accent-cyan;
+    color: white;
+    &:hover:not(:disabled) { background: darken($accent-cyan, 8%); }
+}
+
+.jjodie-btn-secondary, .jjs-btn-secondary {
+    background: $bg-tertiary;
+    color: $text-primary;
+    border-color: lighten($border-color, 10%);
+    &:hover:not(:disabled) { background: lighten($bg-tertiary, 5%); }
+}
+
+.jjodie-btn-ghost, .jjs-btn-ghost {
+    background: transparent;
+    color: $text-muted;
+    &:hover:not(:disabled) { color: $text-primary; background: rgba(255,255,255,0.05); }
+}
+
+.jjodie-btn-danger, .jjs-btn-danger {
+    background: $error;
+    color: white;
+    &:hover:not(:disabled) { background: darken($error, 8%); }
+}
+
+// ============================================
+// SCRIPT EXECUTION BLOCK
+// ============================================
+
+.jjs-execution-block {
+    background: $bg-primary;
+    border: 1px solid $bg-secondary;
+    border-radius: 8px;
+    overflow: hidden;
+    margin: 8px 0;
+    font-family: 'JetBrains Mono', 'SF Mono', 'Fira Code', monospace;
+
+    .jjs-execution-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 10px 16px;
+        background: $bg-secondary;
+        border-bottom: 1px solid $border-color;
+
+        .jjs-execution-title {
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: $text-muted;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+
+            i { color: $accent-cyan; font-size: 14px; }
+        }
+
+        .jjs-execution-meta { font-size: 11px; color: darken($text-muted, 10%); }
+    }
+
+    .jjs-execution-code {
+        max-height: 280px;
+        overflow-y: auto;
+
+        &::-webkit-scrollbar { width: 6px; }
+        &::-webkit-scrollbar-track { background: transparent; }
+        &::-webkit-scrollbar-thumb { background: $border-color; border-radius: 3px; }
+    }
+
+    .jjs-execution-line {
+        display: flex;
+        align-items: center;
+        padding: 6px 16px;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+
+        &::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 3px;
+            background: transparent;
+            transition: background 0.2s ease;
+        }
+
+        &.jjs-current {
+            background: rgba($accent-cyan, 0.08);
+            &::before { background: $accent-cyan; }
+            .jjs-line-content { color: $text-primary; }
+            .jjs-line-number { color: $accent-cyan; }
+        }
+
+        &.jjs-executed {
+            &::before { background: $success; }
+            .jjs-line-content { color: $text-muted; }
+        }
+
+        &.jjs-error {
+            background: rgba($error, 0.08);
+            &::before { background: $error; }
+            .jjs-line-content { color: lighten($error, 20%); }
+        }
+
+        &.jjs-pending .jjs-line-content { color: darken($text-muted, 10%); }
+
+        .jjs-line-number {
+            width: 28px;
+            text-align: right;
+            margin-right: 12px;
+            font-size: 11px;
+            color: $border-color;
+            user-select: none;
+        }
+
+        .jjs-line-content { flex: 1; font-size: 12px; color: $text-secondary; }
+
+        .jjs-line-status {
+            width: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            i { font-size: 12px; }
+            .jjs-success { color: $success; }
+            .jjs-error-icon { color: $error; }
+            .jjs-current-icon { color: $accent-cyan; }
+        }
+    }
+
+    .jjs-execution-progress {
+        height: 2px;
+        background: $bg-secondary;
+
+        .jjs-progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, $accent-cyan, lighten($accent-cyan, 10%));
+            transition: width 0.3s ease;
+        }
+    }
+
+    .jjs-execution-error {
+        padding: 10px 16px;
+        background: rgba($error, 0.1);
+        border-top: 1px solid rgba($error, 0.2);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 12px;
+        color: lighten($error, 20%);
+
+        i { color: $error; }
+    }
+
+    .jjs-execution-actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 12px 16px;
+        background: $bg-primary;
+        border-top: 1px solid $bg-secondary;
+    }
+
+    .jjs-execution-complete, .jjs-execution-cancelled {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 13px;
+        i { font-size: 16px; }
+    }
+
+    .jjs-execution-complete { color: $success; }
+    .jjs-execution-cancelled { color: $text-muted; }
+
+    .jjs-execution-footer {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 8px 16px;
+        border-top: 1px solid $bg-secondary;
+        font-size: 11px;
+        color: darken($text-muted, 10%);
+
+        .jjs-status {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+
+            .jjs-status-dot {
+                width: 6px;
+                height: 6px;
+                border-radius: 50%;
+
+                &.jjs-ready-to-execute { background: $text-muted; }
+                &.jjs-executing { background: $accent-cyan; animation: pulse-dot 1.5s ease-in-out infinite; }
+                &.jjs-paused { background: $warning; }
+                &.jjs-completed { background: $success; }
+                &.jjs-cancelled { background: $text-muted; }
+                &.jjs-error { background: $error; }
+            }
+        }
+
+        .jjs-counter { font-variant-numeric: tabular-nums; }
+    }
+}
+
+// ============================================
+// LOADING
+// ============================================
+
+.jjodie-loading {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    background: $bg-secondary;
+    border: 1px solid $border-color;
+    border-radius: 8px;
+    margin: 8px 0;
+    font-size: 13px;
+    color: $text-secondary;
+
+    i { color: $accent-cyan; animation: spin 1s linear infinite; }
+}
+
+@keyframes pulse-dot {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}

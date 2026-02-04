@@ -77,13 +77,15 @@ JjScript allows you to manipulate metamodels using simple text commands.
 
 COMMANDS:
   create <type> <name> [options]  - Create a new element
-  delete <target> [cascade|force] - Delete an element
-  rename <target> to <newname>    - Rename an element
+  delete [type] <target> [cascade|force] - Delete an element
+  rename [type] <target> to <newname>    - Rename an element
   set <target>.<prop> = <value>   - Set a property value
   add <type> <name> to <target>   - Add element to container
   remove <target> from <parent>   - Remove from container
+  remove extends from <class>     - Clear class inheritance
   move <target> to <destination>  - Move element
   copy <target> to <dest> [as <name>] - Copy element
+  <Child> extends <Parent>        - Set class inheritance
   list [type] [in <scope>]        - List elements
   show <target> [brief|full|tree] - Show element details
   help [topic]                    - Show help
@@ -99,10 +101,13 @@ ELEMENT TYPES:
 EXAMPLES:
   create class Person
   create attribute name in Person type String
-  create reference friends in Person type Person [0..*]
+  create reference friends in Person type Person [*]
   set Person.abstract = true
-  rename Person to Human
-  delete Human cascade
+  set Person.singleton = true
+  Employee extends Person
+  rename class Person to Human
+  delete class Human cascade
+  remove extends from Employee
 
 Type 'help <command>' for detailed help on a specific command.
 Type 'help syntax' for syntax details.
@@ -129,7 +134,7 @@ SYNTAX:
 
 TYPES:
   class, abstract class, interface, attribute, reference,
-  operation, parameter, package, enum, literal
+  containment, operation, parameter, package, enum, literal
 
 OPTIONS FOR CLASSES:
   abstract          - Make class abstract
@@ -148,12 +153,19 @@ OPTIONS FOR REFERENCES:
   containment       - Mark as containment reference
   opposite <ref>    - Set opposite reference
 
+CONTAINMENT (composition):
+  "create containment" is shorthand for "create reference ... containment"
+  Both syntaxes are equivalent:
+    create containment items in Order type Item [0..*]
+    create reference items in Order type Item [0..*] containment
+
 EXAMPLES:
   create class Person
   create abstract class Entity
   create attribute name in Person type String
   create attribute age in Person type Integer default 0
-  create reference children in Person type Person [0..*] containment
+  create reference manager in Person type Person [0..1]
+  create containment children in Person type Person [0..*]
   create enum Status in MyPackage
   create literal ACTIVE in Status value 1
 `,
@@ -164,6 +176,10 @@ Deletes a model element.
 
 SYNTAX:
   delete <target> [cascade] [force]
+  delete <type> <target> [cascade] [force]
+
+The element type (class, attribute, etc.) is optional and can be used
+for clarity or to resolve ambiguity.
 
 OPTIONS:
   cascade   - Also delete all contained elements
@@ -171,7 +187,9 @@ OPTIONS:
 
 EXAMPLES:
   delete Person
+  delete class Person
   delete Person cascade
+  delete attribute name force
   delete MyPackage::OldClass force
 `,
         rename: `
@@ -182,9 +200,20 @@ Renames a model element.
 SYNTAX:
   rename <target> to <newname>
   rename <target> as <newname>
+  rename <type> <target> to <newname>
+  rename <type> <name> in <parent> to <newname>
+
+The element type (class, attribute, etc.) is optional and can be used
+for clarity or to resolve ambiguity.
+
+The "in <parent>" clause is useful for specifying the parent container
+when renaming nested elements like attributes or references.
 
 EXAMPLES:
   rename Person to Human
+  rename class Person to Human
+  rename attribute oldAttr in Person to newAttr
+  rename reference items in Order to orderItems
   rename MyClass.oldAttr to newAttr
 `,
         set: `
@@ -199,14 +228,20 @@ SYNTAX:
   set <target> <property> -= <value>  (remove from collection)
 
 COMMON PROPERTIES:
-  Classes: abstract, interface, superTypes
-  Attributes: type, lowerBound, upperBound, derived, changeable, defaultValueLiteral
+  Classes: abstract, interface, singleton, superTypes
+  Attributes: type, lowerBound, upperBound, derived, changeable, default, readonly
   References: type, containment, opposite, lowerBound, upperBound
   Packages: uri, prefix
 
+PROPERTY ALIASES:
+  default → defaultValueLiteral
+  readonly → !changeable (inverted boolean)
+
 EXAMPLES:
   set Person.abstract = true
-  set Person.name type = String
+  set Person.singleton = true
+  set Person.name.default = "Unknown"
+  set Person.age.readonly = true
   set Person.superTypes += Animal
 `,
         add: `
@@ -224,14 +259,18 @@ EXAMPLES:
         remove: `
 REMOVE Command
 ==============
-Removes an element from a collection.
+Removes an element from a collection or clears inheritance.
 
 SYNTAX:
   remove <element> from <container>
+  remove extends from <class>
+
+The second form clears all superclasses from the specified class.
 
 EXAMPLES:
   remove name from Person
   remove Employee from MyPackage
+  remove extends from Employee
 `,
         move: `
 MOVE Command
@@ -346,6 +385,33 @@ SYNTAX:
 EXAMPLES:
   clear history   - Clear command history
   clear console   - Clear console output
+`,
+        extends: `
+EXTENDS Command
+===============
+Sets class inheritance (shorthand syntax).
+
+SYNTAX:
+  <ChildClass> extends <ParentClass>
+
+This is equivalent to using set with the extends property:
+  set ChildClass.extends += ParentClass
+
+The extends command:
+  - Sets the parent class for a child class
+  - Supports multiple inheritance (can be called multiple times)
+  - Detects circular inheritance and prevents it
+  - Works with qualified names (Package::Class)
+
+EXAMPLES:
+  SoftGoal extends Goal
+  Employee extends Person
+  domain::Manager extends domain::Employee
+
+NOTES:
+  - Both child and parent must be classes (not interfaces or enums)
+  - The command adds to the extends list, it doesn't replace
+  - Use this to quickly define inheritance hierarchies
 `,
     };
 
@@ -481,7 +547,9 @@ MULTIPLICITY:
   [0..1]   - Optional (zero or one)
   [1..*]   - One or more
   [0..*]   - Zero or more (same as [*])
-  [*]      - Many
+  [*]      - Many (alias for [0..*])
+  [+]      - One or more (alias for [1..*])
+  [?]      - Optional (alias for [0..1])
 
 VALUES:
   String:   "hello", 'world'

@@ -40,6 +40,11 @@ export async function executeRemove(
             };
         }
 
+        // Special case: "remove extends from ChildClass" - clear all inheritance
+        if (target.segments.length === 1 && target.segments[0] === '__extends__') {
+            return executeRemoveExtends(from, project);
+        }
+
         // Resolve both elements
         const targetElement = resolveElement(target, project);
         if (!targetElement) {
@@ -125,6 +130,89 @@ export async function executeRemove(
             errors: [{ code: 'REMOVE_ERROR', message: err.message }]
         };
     }
+}
+
+// ============================================
+// REMOVE EXTENDS (CLEAR INHERITANCE)
+// ============================================
+
+async function executeRemoveExtends(
+    classRef: import('../../types').QualifiedName,
+    project: LProject
+): Promise<ExecutionResult> {
+    const classElement = resolveElement(classRef, project);
+
+    if (!classElement) {
+        return {
+            success: false,
+            command: 'remove',
+            message: `Class not found: ${qualifiedNameToString(classRef)}`,
+            errors: [{
+                code: 'CLASS_NOT_FOUND',
+                message: `Could not find class '${qualifiedNameToString(classRef)}'`
+            }]
+        };
+    }
+
+    // Verify it's a class
+    const className = classElement.className || classElement.constructor?.name || '';
+    if (!className.includes('Class')) {
+        return {
+            success: false,
+            command: 'remove',
+            message: `'${qualifiedNameToString(classRef)}' is not a class`,
+            errors: [{
+                code: 'NOT_A_CLASS',
+                message: `Cannot remove extends from non-class element`
+            }]
+        };
+    }
+
+    // Check if class has any extends
+    const currentExtends = classElement.extends || [];
+    if (currentExtends.length === 0) {
+        return {
+            success: true,
+            command: 'remove',
+            message: `Class '${classElement.name}' has no superclasses`,
+            data: {
+                classId: classElement.id,
+                className: classElement.name,
+                removedCount: 0
+            }
+        };
+    }
+
+    // Remove all extends
+    return new Promise((resolve) => {
+        try {
+            TRANSACTION('JjScript: Remove all extends', () => {
+                // Set extends to empty array
+                SetFieldAction.new(classElement, 'extends', [], '=', false);
+
+                resolve({
+                    success: true,
+                    command: 'remove',
+                    message: `Removed all superclasses from '${classElement.name}' (${currentExtends.length} removed)`,
+                    data: {
+                        classId: classElement.id,
+                        className: classElement.name,
+                        removedCount: currentExtends.length,
+                        previousExtends: currentExtends
+                    },
+                    affectedElements: [classElement.id],
+                    undoable: true
+                });
+            });
+        } catch (error) {
+            resolve({
+                success: false,
+                command: 'remove',
+                message: `Failed to remove extends: ${(error as Error).message}`,
+                errors: [{ code: 'REMOVE_EXTENDS_ERROR', message: (error as Error).message }]
+            });
+        }
+    });
 }
 
 // ============================================
