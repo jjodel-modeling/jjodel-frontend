@@ -28,8 +28,14 @@ export interface ClassMappingAST extends ASTNode {
     targetClass: string;
     targetMultiplicity?: MultiplicityAST;
     condition?: ExpressionAST;
-    body: AttributeMappingAST[];
+    body: MappingBodyItemAST[];
 }
+
+// Union type for items that can appear in a mapping body
+export type MappingBodyItemAST =
+    | AttributeMappingAST
+    | AlertStatementAST
+    | NotifyStatementAST;
 
 // Multiplicity: [*], [1], [0..*]
 export interface MultiplicityAST extends ASTNode {
@@ -91,13 +97,16 @@ export type ExpressionAST =
     | MemberAccessAST
     | FunctionCallAST
     | BinaryExpressionAST
-    | ConditionalExpressionAST;
+    | ConditionalExpressionAST
+    | PromptExpressionAST
+    | InputExpressionAST
+    | ArrayLiteralAST;
 
-// Literal: "hello", 42, true
+// Literal: "hello", 42, true, null
 export interface LiteralAST extends ASTNode {
     type: 'Literal';
-    value: string | number | boolean;
-    literalType: 'string' | 'number' | 'boolean';
+    value: string | number | boolean | null;
+    literalType: 'string' | 'number' | 'boolean' | 'null';
 }
 
 // Identifier: name, source
@@ -134,6 +143,64 @@ export interface ConditionalExpressionAST extends ASTNode {
     condition: ExpressionAST;
     thenBranch: ExpressionAST;
     elseBranch: ExpressionAST;
+}
+
+// ============================================
+// INTERACTIVE STATEMENTS & EXPRESSIONS
+// ============================================
+
+export type AlertType = 'info' | 'warning' | 'error' | 'success';
+export type InputType = 'string' | 'number' | 'boolean' | 'date' | 'select';
+
+/**
+ * Alert statement - blocking modal dialog
+ * alert("message", "type")
+ */
+export interface AlertStatementAST extends ASTNode {
+    type: 'AlertStatement';
+    message: ExpressionAST;
+    alertType: AlertType;
+}
+
+/**
+ * Notify statement - non-blocking toast notification
+ * notify("message", duration)
+ */
+export interface NotifyStatementAST extends ASTNode {
+    type: 'NotifyStatement';
+    message: ExpressionAST;
+    duration: number; // ms, default 3000
+}
+
+/**
+ * Prompt expression - asks user for text input, returns String
+ * prompt("message", "default")
+ */
+export interface PromptExpressionAST extends ASTNode {
+    type: 'PromptExpression';
+    message: ExpressionAST;
+    defaultValue?: ExpressionAST;
+}
+
+/**
+ * Input expression - asks user for typed input
+ * input("message", "type", default)
+ */
+export interface InputExpressionAST extends ASTNode {
+    type: 'InputExpression';
+    message: ExpressionAST;
+    inputType: InputType;
+    defaultValue?: ExpressionAST;
+    options?: ExpressionAST[]; // For 'select' type
+}
+
+/**
+ * Array literal for select options
+ * ["option1", "option2", "option3"]
+ */
+export interface ArrayLiteralAST extends ASTNode {
+    type: 'ArrayLiteral';
+    elements: ExpressionAST[];
 }
 
 // Parser result

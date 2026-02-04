@@ -1,56 +1,27 @@
-import React, { useState, useEffect } from 'react';
-import { AIProvider, PROVIDER_MODELS, PROVIDER_INFO } from '../../types/jodie';
+/**
+ * AI Assistant Settings
+ * Slate minimal design with proper test connection status
+ */
+
+import React, { useState, useEffect, useCallback } from 'react';
+import {
+    AIProvider,
+    PROVIDER_MODELS,
+} from '../../types/jodie';
 import { JodieConfigService, ALL_PROVIDERS } from '../../services/JodieConfig';
-import { AIProviderService } from '../../services/AIProviderService';
+import { ProviderConfigModal } from './ProviderConfigModal';
 
-// Provider metadata for settings UI
-const PROVIDER_METADATA: Record<AIProvider, {
-    name: string;
-    keyUrl: string;
-    keyPlaceholder: string;
-}> = {
-    openai: {
-        name: 'OpenAI',
-        keyUrl: 'https://platform.openai.com/api-keys',
-        keyPlaceholder: 'sk-...',
-    },
-    claude: {
-        name: 'Anthropic',
-        keyUrl: 'https://console.anthropic.com/settings/keys',
-        keyPlaceholder: 'sk-ant-...',
-    },
-    gemini: {
-        name: 'Google (Gemini)',
-        keyUrl: 'https://aistudio.google.com/apikey',
-        keyPlaceholder: 'AIza...',
-    },
-    deepseek: {
-        name: 'DeepSeek',
-        keyUrl: 'https://platform.deepseek.com/api_keys',
-        keyPlaceholder: 'sk-...',
-    },
-    mistral: {
-        name: 'Mistral AI',
-        keyUrl: 'https://console.mistral.ai/api-keys',
-        keyPlaceholder: 'Enter API key...',
-    },
-    groq: {
-        name: 'Groq',
-        keyUrl: 'https://console.groq.com/keys',
-        keyPlaceholder: 'gsk_...',
-    },
+// Provider display names and initials for slate minimal icons
+const PROVIDER_INFO_MINIMAL: Record<AIProvider, { name: string; initial: string }> = {
+    openai: { name: 'OpenAI', initial: 'O' },
+    claude: { name: 'Anthropic', initial: 'C' },
+    gemini: { name: 'Google Gemini', initial: 'G' },
+    deepseek: { name: 'DeepSeek', initial: 'D' },
+    mistral: { name: 'Mistral AI', initial: 'M' },
+    groq: { name: 'Groq', initial: 'G' },
+    kimi: { name: 'Kimi', initial: 'K' },
+    ollama: { name: 'Ollama', initial: 'O' },
 };
-
-interface ProviderState {
-    apiKey: string;
-    model: string;
-    enabled: boolean;
-    showKey: boolean;
-    testStatus: 'idle' | 'testing' | 'success' | 'error';
-    testMessage: string;
-}
-
-type ProvidersState = Record<AIProvider, ProviderState>;
 
 // Re-export for backward compatibility
 export interface AISettings {
@@ -62,7 +33,18 @@ export interface AISettings {
     baseUrl?: string;
 }
 
-export function AIAssistantSettings() {
+interface ProviderState {
+    apiKey: string;
+    model: string;
+    enabled: boolean;
+    lastTested?: number;
+    baseUrl?: string;
+}
+
+type ProvidersState = Record<AIProvider, ProviderState>;
+
+export const AIAssistantSettings: React.FC = () => {
+    // State for all providers
     const [providers, setProviders] = useState<ProvidersState>(() => {
         const initial: Partial<ProvidersState> = {};
         for (const provider of ALL_PROVIDERS) {
@@ -71,13 +53,15 @@ export function AIAssistantSettings() {
                 apiKey: config?.apiKey || '',
                 model: config?.model || PROVIDER_MODELS[provider][0].value,
                 enabled: config?.enabled || false,
-                showKey: false,
-                testStatus: 'idle',
-                testMessage: '',
+                lastTested: config?.lastTested,
+                baseUrl: config?.baseUrl,
             };
         }
         return initial as ProvidersState;
     });
+
+    // Modal state
+    const [selectedProvider, setSelectedProvider] = useState<AIProvider | null>(null);
 
     // Load saved settings on mount
     useEffect(() => {
@@ -86,13 +70,14 @@ export function AIAssistantSettings() {
             for (const provider of ALL_PROVIDERS) {
                 const config = JodieConfigService.getProviderConfig(provider);
                 updated[provider] = {
-                    ...providers[provider],
                     apiKey: config?.apiKey || '',
                     model: config?.model || PROVIDER_MODELS[provider][0].value,
                     enabled: config?.enabled || false,
+                    lastTested: config?.lastTested,
+                    baseUrl: config?.baseUrl,
                 };
             }
-            setProviders(prev => ({ ...prev, ...updated } as ProvidersState));
+            setProviders(updated as ProvidersState);
         };
 
         loadSettings();
@@ -103,209 +88,123 @@ export function AIAssistantSettings() {
         return () => window.removeEventListener('ai-provider-changed', handleChange);
     }, []);
 
-    const updateProvider = (provider: AIProvider, updates: Partial<ProviderState>) => {
+    // Open modal for a provider
+    const openModal = useCallback((provider: AIProvider) => {
+        setSelectedProvider(provider);
+    }, []);
+
+    // Close modal
+    const closeModal = useCallback(() => {
+        setSelectedProvider(null);
+    }, []);
+
+    // Save provider config from modal
+    const handleSaveProvider = useCallback((
+        provider: AIProvider,
+        config: { apiKey: string; model: string; enabled: boolean; baseUrl?: string }
+    ) => {
+        // Update local state - preserve lastTested
         setProviders(prev => ({
             ...prev,
-            [provider]: { ...prev[provider], ...updates },
+            [provider]: {
+                ...config,
+                lastTested: prev[provider]?.lastTested,
+            },
         }));
 
-        // Save to storage if it's a config field (not UI state)
-        if ('apiKey' in updates || 'model' in updates || 'enabled' in updates) {
-            const current = providers[provider];
-            JodieConfigService.saveProviderConfig(provider, {
-                apiKey: updates.apiKey ?? current.apiKey,
-                model: updates.model ?? current.model,
-                enabled: updates.enabled ?? current.enabled,
-            });
+        // Persist to storage
+        JodieConfigService.saveProviderConfig(provider, config);
+    }, []);
+
+    // Get status for display - "Connected" only after successful test
+    const getProviderStatus = (providerName: AIProvider) => {
+        const state = providers[providerName];
+
+        // Ollama doesn't require API key - check if it's been tested
+        if (providerName === 'ollama') {
+            if (state.enabled && state.lastTested) {
+                return { text: 'Connected', class: 'connected' };
+            }
+            return { text: 'Ready', class: 'ready' };
         }
+
+        // Other providers: No API key = not configured
+        if (!state.apiKey) {
+            return { text: 'Not configured', class: 'not-configured' };
+        }
+
+        // Has API key + enabled + has been tested = Connected
+        if (state.enabled && state.lastTested) {
+            return { text: 'Connected', class: 'connected' };
+        }
+
+        // Has API key but not tested = Ready to test
+        return { text: 'Ready', class: 'ready' };
     };
 
-    const testConnection = async (provider: AIProvider) => {
+    // Get model label for display
+    const getModelLabel = (provider: AIProvider) => {
         const state = providers[provider];
-
-        if (!state.apiKey) {
-            updateProvider(provider, {
-                testStatus: 'error',
-                testMessage: 'API key required',
-            });
-            return;
-        }
-
-        updateProvider(provider, {
-            testStatus: 'testing',
-            testMessage: 'Testing...',
-        });
-
-        try {
-            // Temporarily save to test
-            JodieConfigService.saveProviderConfig(provider, {
-                apiKey: state.apiKey,
-                model: state.model,
-                enabled: true, // Temporarily enable for test
-            });
-
-            const result = await AIProviderService.testConnection(provider);
-
-            if (result.success) {
-                JodieConfigService.markProviderTested(provider);
-                updateProvider(provider, {
-                    testStatus: 'success',
-                    testMessage: 'Connected!',
-                    enabled: true, // Keep enabled after successful test
-                });
-            } else {
-                // Revert enabled state on failure
-                JodieConfigService.saveProviderConfig(provider, {
-                    apiKey: state.apiKey,
-                    model: state.model,
-                    enabled: state.enabled,
-                });
-                updateProvider(provider, {
-                    testStatus: 'error',
-                    testMessage: result.error || 'Connection failed',
-                });
-            }
-        } catch (error: any) {
-            updateProvider(provider, {
-                testStatus: 'error',
-                testMessage: error.message || 'Connection failed',
-            });
-        }
-
-        // Reset status after 5 seconds
-        setTimeout(() => {
-            updateProvider(provider, {
-                testStatus: 'idle',
-                testMessage: '',
-            });
-        }, 5000);
+        const models = PROVIDER_MODELS[provider];
+        const found = models.find(m => m.value === state.model);
+        return found?.label || state.model;
     };
 
     return (
         <div className="settings-section-content ai-providers-section">
             <p className="settings-description">
-                Configure your AI providers below. Each provider requires its own API key.
+                Configure your AI providers below. Click on a provider to set up your API key and model.
                 Only enabled providers will appear in the Jjodie chat selector.
             </p>
 
             <div className="providers-list">
                 {ALL_PROVIDERS.map(provider => {
-                    const state = providers[provider];
-                    const meta = PROVIDER_METADATA[provider];
-                    const info = PROVIDER_INFO[provider];
-                    const models = PROVIDER_MODELS[provider];
-
-                    // Determine status badge state
-                    const getBadgeStatus = () => {
-                        if (!state.apiKey) return 'not-configured';
-                        if (state.testStatus === 'error') return 'error';
-                        if (state.enabled) return 'enabled';
-                        return 'disabled';
-                    };
-                    const badgeStatus = getBadgeStatus();
+                    const info = PROVIDER_INFO_MINIMAL[provider];
+                    const status = getProviderStatus(provider);
+                    const modelLabel = getModelLabel(provider);
 
                     return (
-                        <div key={provider} className={`provider-row ${state.enabled ? 'enabled' : ''}`}>
-                            {/* Row 1: Icon + Name | Status Badge + Test */}
-                            <div className="provider-header-row">
-                                <div className="provider-identity">
-                                    <div
-                                        className="provider-icon"
-                                        style={{ backgroundColor: info.bgColor, color: info.color }}
-                                    >
-                                        {info.textIcon}
-                                    </div>
-                                    <span className="provider-name">{meta.name}</span>
-                                </div>
-                                <div className="provider-actions">
-                                    {/* Status Badge - clickable to toggle enable/disable */}
-                                    <button
-                                        className={`status-badge-btn ${badgeStatus}`}
-                                        onClick={() => {
-                                            if (state.apiKey) {
-                                                updateProvider(provider, { enabled: !state.enabled });
-                                            }
-                                        }}
-                                        disabled={!state.apiKey}
-                                        title={
-                                            !state.apiKey ? 'Add API key first' :
-                                            state.enabled ? 'Click to disable' : 'Click to enable'
-                                        }
-                                    >
-                                        {badgeStatus === 'enabled' && <i className="bi bi-check-lg" />}
-                                        {badgeStatus === 'disabled' && <i className="bi bi-circle" />}
-                                        {badgeStatus === 'error' && <i className="bi bi-exclamation-triangle" />}
-                                        {badgeStatus === 'not-configured' && <i className="bi bi-dash" />}
-                                    </button>
-                                    <button
-                                        className={`test-btn ${state.testStatus}`}
-                                        onClick={() => testConnection(provider)}
-                                        disabled={!state.apiKey || state.testStatus === 'testing'}
-                                        title="Test connection"
-                                    >
-                                        {state.testStatus === 'testing' && (
-                                            <i className="bi bi-arrow-repeat spinning" />
-                                        )}
-                                        Test
-                                    </button>
-                                </div>
+                        <div
+                            key={provider}
+                            className={`provider-card-slate ${status.class}`}
+                            onClick={() => openModal(provider)}
+                            role="button"
+                            tabIndex={0}
+                            onKeyDown={(e) => e.key === 'Enter' && openModal(provider)}
+                        >
+                            {/* Slate minimal icon with initial letter */}
+                            <div className="provider-initial">
+                                {info.initial}
                             </div>
 
-                            {/* Row 2: API Key + Model Dropdown */}
-                            <div className="provider-inputs-row">
-                                <div className="api-key-field">
-                                    <input
-                                        type={state.showKey ? 'text' : 'password'}
-                                        className="settings-input"
-                                        value={state.apiKey}
-                                        onChange={(e) => updateProvider(provider, { apiKey: e.target.value })}
-                                        placeholder={meta.keyPlaceholder}
-                                    />
-                                    <button
-                                        className="toggle-visibility"
-                                        onClick={() => updateProvider(provider, { showKey: !state.showKey })}
-                                        title={state.showKey ? 'Hide' : 'Show'}
-                                        type="button"
-                                    >
-                                        <i className={`bi ${state.showKey ? 'bi-eye-slash' : 'bi-eye'}`} />
-                                    </button>
-                                </div>
-                                <select
-                                    className="settings-select model-select"
-                                    value={state.model}
-                                    onChange={(e) => updateProvider(provider, { model: e.target.value })}
-                                >
-                                    {models.map(model => (
-                                        <option key={model.value} value={model.value}>
-                                            {model.label}
-                                        </option>
-                                    ))}
-                                </select>
+                            {/* Provider info */}
+                            <div className="provider-info">
+                                <span className="provider-name">{info.name}</span>
+                                <span className="provider-model">{modelLabel}</span>
                             </div>
 
-                            {/* Row 3: Get API key link + Status message */}
-                            <div className="provider-footer-row">
-                                <a
-                                    href={meta.keyUrl}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="key-link"
-                                >
-                                    <i className="bi bi-box-arrow-up-right" />
-                                    Get API key
-                                </a>
-                                {state.testStatus !== 'idle' && state.testMessage && (
-                                    <span className={`test-message ${state.testStatus}`}>
-                                        {state.testMessage}
-                                    </span>
-                                )}
+                            {/* Status */}
+                            <div className={`provider-status ${status.class}`}>
+                                <span className="status-dot" />
+                                <span className="status-text">{status.text}</span>
                             </div>
                         </div>
                     );
                 })}
             </div>
+
+            {/* Configuration Modal */}
+            {selectedProvider && (
+                <ProviderConfigModal
+                    provider={selectedProvider}
+                    isOpen={true}
+                    onClose={closeModal}
+                    onSave={handleSaveProvider}
+                    initialConfig={providers[selectedProvider]}
+                />
+            )}
         </div>
     );
-}
+};
 
 export default AIAssistantSettings;

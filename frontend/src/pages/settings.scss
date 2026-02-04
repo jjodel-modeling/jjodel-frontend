@@ -703,7 +703,7 @@
 }
 
 // ============================================
-// AI PROVIDERS SECTION - Horizontal Layout
+// AI PROVIDERS SECTION - Slate Minimal Design
 // ============================================
 
 .ai-providers-section {
@@ -711,56 +711,80 @@
         font-size: 14px;
         color: #64748b;
         margin: 0 0 20px;
-        line-height: 1.5;
+        line-height: 1.6;
     }
 
     .providers-list {
         display: flex;
         flex-direction: column;
-        gap: 12px;
+        gap: 8px;
     }
 
-    // Provider row - horizontal compact card
-    .provider-row {
+    // Slate Minimal Provider Card - Centered Name Layout
+    .provider-card-slate {
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;  // Center the name
         background: #ffffff;
         border: 1px solid #e2e8f0;
         border-radius: 10px;
         padding: 14px 16px;
+        min-height: 72px;
+        cursor: pointer;
         transition: all 150ms ease;
 
-        &.enabled {
-            border-color: #10b981;
-            background: linear-gradient(to right, #f0fdf4 0%, #ffffff 100%);
-        }
-
         &:hover {
+            background: #f8fafc;
             border-color: #cbd5e1;
         }
+
+        &:focus {
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(71, 85, 105, 0.15);
+        }
+
+        // Connected state - subtle slate gradient
+        &.connected {
+            background: linear-gradient(to right, #ffffff, #f8fafc);
+            border-color: #e2e8f0;
+        }
     }
 
-    // Row 1: Icon + Name | Checkbox + Test
-    .provider-header-row {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        margin-bottom: 12px;
-    }
-
-    .provider-identity {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-    }
-
-    .provider-icon {
+    // Slate minimal icon with initial letter - fixed left position
+    .provider-initial {
+        position: absolute;
+        left: 16px;
+        top: 50%;
+        transform: translateY(-50%);
         width: 32px;
         height: 32px;
-        border-radius: 6px;
+        border-radius: 8px;
+        background: #f1f5f9;
+        color: #475569;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 11px;
-        font-weight: 700;
+        font-size: 13px;
+        font-weight: 600;
+        flex-shrink: 0;
+        transition: all 150ms ease;
+        letter-spacing: -0.5px;
+    }
+
+    // Highlight icon on connected status
+    .provider-card-slate.connected .provider-initial {
+        background: #475569;
+        color: #ffffff;
+    }
+
+    // Provider info - centered
+    .provider-info {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 2px;
+        text-align: center;
     }
 
     .provider-name {
@@ -769,228 +793,90 @@
         color: #1e293b;
     }
 
-    .provider-actions {
-        display: flex;
-        align-items: center;
-        gap: 10px;
+    .provider-model {
+        font-size: 12px;
+        color: #64748b;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
 
-    // Status Badge Button - replaces checkbox
-    .status-badge-btn {
+    // Status indicator - fixed right position
+    .provider-status {
+        position: absolute;
+        right: 16px;
+        top: 50%;
+        transform: translateY(-50%);
         display: flex;
-        align-items: center;
-        justify-content: center;
-        width: 28px;
-        height: 28px;
-        border-radius: 6px;
-        border: none;
-        cursor: pointer;
-        transition: all 150ms ease;
-        font-size: 14px;
-
-        // Enabled state - green
-        &.enabled {
-            background: #10b981;
-            color: #ffffff;
-
-            &:hover {
-                background: #059669;
-            }
-        }
-
-        // Disabled state - gray
-        &.disabled {
-            background: #e2e8f0;
-            color: #64748b;
-
-            &:hover {
-                background: #cbd5e1;
-            }
-        }
-
-        // Error state - red/orange
-        &.error {
-            background: #fecaca;
-            color: #dc2626;
-
-            &:hover {
-                background: #fca5a5;
-            }
-        }
-
-        // Not configured state - dashed outline
-        &.not-configured {
-            background: transparent;
-            border: 1px dashed #cbd5e1;
-            color: #94a3b8;
-            cursor: not-allowed;
-        }
-
-        &:disabled {
-            cursor: not-allowed;
-            opacity: 0.5;
-        }
-
-        i {
-            font-size: 14px;
-        }
-    }
-
-    .test-btn {
-        display: inline-flex;
         align-items: center;
         gap: 6px;
-        padding: 6px 12px;
-        font-size: 13px;
-        font-weight: 500;
-        color: #475569;
-        background: #ffffff;
-        border: 1px solid #e2e8f0;
-        border-radius: 6px;
-        cursor: pointer;
-        transition: all 150ms ease;
+        flex-shrink: 0;
 
-        i {
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+
+        .status-text {
             font-size: 12px;
+            font-weight: 500;
         }
 
-        &:hover:not(:disabled) {
-            background: #f8fafc;
-            border-color: #cbd5e1;
+        &.connected {
+            .status-dot { background: #22c55e; }
+            .status-text { color: #16a34a; }
         }
 
-        &:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-
-        &.testing {
-            color: #64748b;
-        }
-
-        &.success {
-            color: #10b981;
-            border-color: #10b981;
-            background: #f0fdf4;
+        &.ready {
+            .status-dot { background: #94a3b8; }
+            .status-text { color: #64748b; }
         }
 
         &.error {
-            color: #ef4444;
-            border-color: #ef4444;
-            background: #fef2f2;
+            .status-dot { background: #ef4444; }
+            .status-text { color: #dc2626; }
         }
 
-        .spinning {
-            animation: spin 1s linear infinite;
-        }
-    }
-
-    // Row 2: API Key + Model dropdown
-    .provider-inputs-row {
-        display: flex;
-        gap: 12px;
-        margin-bottom: 8px;
-        align-items: stretch;
-
-        @media (max-width: 640px) {
-            flex-direction: column;
+        &.not-configured {
+            .status-dot { display: none; }
+            .status-text { color: #94a3b8; }
         }
     }
+}
 
-    .api-key-field {
-        flex: 2; // ~65-70% of space
-        min-width: 0;
-        display: flex;
-        gap: 0;
-        position: relative;
+// ============================================
+// AI PROVIDERS - RESPONSIVE
+// ============================================
 
-        .settings-input {
-            flex: 1;
-            width: auto !important;
-            min-width: 0;
-            border-radius: 6px;
-            padding-right: 40px; // Space for eye icon
-            font-family: 'SF Mono', Monaco, monospace;
+@media (max-width: 480px) {
+    .ai-providers-section {
+        .provider-card-slate {
+            padding: 12px;
+            min-height: 64px;
+        }
+
+        .provider-initial {
+            left: 12px;
+            width: 28px;
+            height: 28px;
+            font-size: 11px;
+        }
+
+        .provider-name {
             font-size: 13px;
         }
 
-        .toggle-visibility {
-            position: absolute;
-            right: 1px;
-            top: 1px;
-            bottom: 1px;
-            width: 36px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: transparent;
-            border: none;
-            border-radius: 0 5px 5px 0;
-            cursor: pointer;
-            color: #94a3b8;
-            transition: all 150ms ease;
+        .provider-model {
+            font-size: 11px;
+        }
 
-            &:hover {
-                color: #475569;
-                background: #f1f5f9;
+        .provider-status {
+            right: 12px;
+
+            .status-text {
+                font-size: 11px;
             }
-
-            i {
-                font-size: 14px;
-            }
-        }
-    }
-
-    .model-select {
-        flex: 1; // ~30-35% of space
-        min-width: 140px;
-        max-width: 200px;
-
-        @media (max-width: 640px) {
-            max-width: 100%;
-        }
-    }
-
-    // Row 3: Get API key link + Test message
-    .provider-footer-row {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        min-height: 20px;
-    }
-
-    .key-link {
-        display: inline-flex;
-        align-items: center;
-        gap: 4px;
-        font-size: 12px;
-        color: #64748b;
-        text-decoration: none;
-
-        &:hover {
-            color: #475569;
-            text-decoration: underline;
-        }
-
-        i {
-            font-size: 10px;
-        }
-    }
-
-    .test-message {
-        font-size: 12px;
-        font-weight: 500;
-
-        &.testing {
-            color: #64748b;
-        }
-
-        &.success {
-            color: #10b981;
-        }
-
-        &.error {
-            color: #ef4444;
         }
     }
 }
@@ -1210,111 +1096,65 @@
         }
     }
 
-    // AI Providers section dark mode
+    // AI Providers section dark mode - Slate minimal cards (centered layout)
     .ai-providers-section {
         .settings-description {
             color: #94a3b8;
         }
 
-        .provider-row {
-            background: #0f172a;
+        .provider-card-slate {
+            background: #1e293b;
             border-color: #334155;
 
-            &.enabled {
-                border-color: #10b981;
-                background: linear-gradient(to right, rgba(16, 185, 129, 0.1) 0%, #0f172a 100%);
-            }
-
             &:hover {
+                background: #334155;
                 border-color: #475569;
             }
+
+            &:focus {
+                box-shadow: 0 0 0 2px rgba(100, 116, 139, 0.25);
+            }
+
+            // Connected state - subtle gradient in dark mode
+            &.connected {
+                background: linear-gradient(to right, #1e293b, #243042);
+                border-color: #475569;
+            }
+        }
+
+        .provider-initial {
+            background: #334155;
+            color: #94a3b8;
+        }
+
+        .provider-card-slate.connected .provider-initial {
+            background: #64748b;
+            color: #ffffff;
         }
 
         .provider-name {
             color: #f1f5f9;
         }
 
-        // Status Badge Button dark mode
-        .status-badge-btn {
-            &.enabled {
-                background: #10b981;
-                color: #ffffff;
-
-                &:hover {
-                    background: #059669;
-                }
-            }
-
-            &.disabled {
-                background: #334155;
-                color: #94a3b8;
-
-                &:hover {
-                    background: #475569;
-                }
-            }
-
-            &.error {
-                background: rgba(239, 68, 68, 0.2);
-                color: #f87171;
-
-                &:hover {
-                    background: rgba(239, 68, 68, 0.3);
-                }
-            }
-
-            &.not-configured {
-                background: transparent;
-                border-color: #475569;
-                color: #64748b;
-            }
-        }
-
-        .test-btn {
-            background: #1e293b;
-            border-color: #334155;
-            color: #e2e8f0;
-
-            &:hover:not(:disabled) {
-                background: #334155;
-            }
-
-            &.success {
-                background: rgba(16, 185, 129, 0.15);
-                border-color: #10b981;
-            }
-
-            &.error {
-                background: rgba(239, 68, 68, 0.15);
-                border-color: #ef4444;
-            }
-        }
-
-        .api-key-field .toggle-visibility {
-            background: transparent;
-            color: #64748b;
-
-            &:hover {
-                background: #334155;
-                color: #e2e8f0;
-            }
-        }
-
-        .key-link {
+        .provider-model {
             color: #94a3b8;
-
-            &:hover {
-                color: #e2e8f0;
-            }
         }
 
-        .test-message {
-            &.success {
-                color: #4ade80;
+        .provider-status {
+            &.connected {
+                .status-dot { background: #4ade80; }
+                .status-text { color: #4ade80; }
             }
-
+            &.ready {
+                .status-dot { background: #64748b; }
+                .status-text { color: #94a3b8; }
+            }
             &.error {
-                color: #f87171;
+                .status-dot { background: #f87171; }
+                .status-text { color: #f87171; }
+            }
+            &.not-configured {
+                .status-text { color: #64748b; }
             }
         }
     }

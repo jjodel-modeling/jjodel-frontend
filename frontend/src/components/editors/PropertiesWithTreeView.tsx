@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useEffect, useCallback, useRef } from 'react';
 import { Info } from './Info';
 import { TreeViewContent } from '../TreeViewSidebar/TreeViewContent';
+import { useTreeViewPanel } from '../../contexts/TreeViewPanelContext';
 import './properties-with-tree-view.scss';
 // Import tree view styles for icon colors and tree node styling
 import '../TreeViewSidebar/tree-view-sidebar.scss';
@@ -14,14 +15,10 @@ import '../TreeViewSidebar/tree-view-sidebar.scss';
  *
  * The Tree View can be toggled on/off with a button in the header.
  * The Tree View width is resizable via a draggable divider.
+ * Auto-expands when JjScript execution starts.
  */
 
-// localStorage keys
-const STORAGE_KEY_VISIBLE = 'jjodel_tree_view_visible';
-const STORAGE_KEY_WIDTH = 'jjodel_tree_view_width';
-
 // Tree View width constraints (in pixels)
-const TREE_VIEW_DEFAULT_WIDTH = 280;
 const TREE_VIEW_MIN_WIDTH = 200;
 const TREE_VIEW_MAX_WIDTH = 500;
 
@@ -41,53 +38,16 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
     const startXRef = useRef(0);
     const startWidthRef = useRef(0);
 
-    // Initialize tree view visibility from localStorage
-    const [isTreeViewVisible, setIsTreeViewVisible] = useState(() => {
-        const saved = localStorage.getItem(STORAGE_KEY_VISIBLE);
-        // Default to true (visible) if not set
-        return saved !== null ? saved === 'true' : true;
-    });
-
-    // Initialize tree view width from localStorage (in pixels)
-    const [treeViewWidth, setTreeViewWidth] = useState(() => {
-        const saved = localStorage.getItem(STORAGE_KEY_WIDTH);
-        if (saved !== null) {
-            const parsed = parseInt(saved, 10);
-            // Check if it's a valid pixel value
-            if (!isNaN(parsed) && parsed >= TREE_VIEW_MIN_WIDTH && parsed <= TREE_VIEW_MAX_WIDTH) {
-                return parsed;
-            }
-            // Migration: if value is between 0-100, it's old percentage format
-            // Convert to pixels assuming ~700px container width
-            if (!isNaN(parsed) && parsed > 0 && parsed <= 100) {
-                const convertedWidth = Math.round((parsed / 100) * 700);
-                return Math.max(TREE_VIEW_MIN_WIDTH, Math.min(TREE_VIEW_MAX_WIDTH, convertedWidth));
-            }
-        }
-        return TREE_VIEW_DEFAULT_WIDTH;
-    });
-
-    // Save tree view width to localStorage when it changes
-    useEffect(() => {
-        localStorage.setItem(STORAGE_KEY_WIDTH, String(treeViewWidth));
-    }, [treeViewWidth]);
-
-    // Save visibility to localStorage
-    useEffect(() => {
-        localStorage.setItem(STORAGE_KEY_VISIBLE, String(isTreeViewVisible));
-    }, [isTreeViewVisible]);
-
-    // Toggle tree view visibility
-    const toggleTreeView = useCallback(() => {
-        setIsTreeViewVisible(prev => {
-            const newValue = !prev;
-            // Dispatch event for any external listeners
-            window.dispatchEvent(new CustomEvent('jjodel:properties-tree-view-toggle', {
-                detail: { visible: newValue }
-            }));
-            return newValue;
-        });
-    }, []);
+    // Get tree view state from context
+    const {
+        isVisible: isTreeViewVisible,
+        toggle: toggleTreeView,
+        hide: hideTreeView,
+        isHighlighted,
+        width: treeViewWidth,
+        setWidth: setTreeViewWidth,
+        isScriptExecuting,
+    } = useTreeViewPanel();
 
     // Listen for external toggle events (e.g., from keyboard shortcut)
     useEffect(() => {
@@ -155,7 +115,7 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
             document.body.style.userSelect = '';
             document.body.classList.remove('resizing-tree-view');
         };
-    }, []);
+    }, [setTreeViewWidth]);
 
     // Auto-hide Tree View when container is too narrow
     useEffect(() => {
@@ -165,7 +125,7 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
 
             // Auto-hide if too narrow and tree is visible
             if (containerWidth < AUTO_HIDE_THRESHOLD && isTreeViewVisible) {
-                setIsTreeViewVisible(false);
+                hideTreeView();
             }
         };
 
@@ -176,7 +136,7 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
         return () => {
             window.removeEventListener('resize', checkWidth);
         };
-    }, [isTreeViewVisible]);
+    }, [isTreeViewVisible, hideTreeView]);
 
     // For non-tab modes, just render Info without the split
     if (mode !== 'tab') {
@@ -208,9 +168,9 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
                         <div className="panel-resizer-handle" />
                     </div>
 
-                    {/* Tree View - FIXED WIDTH */}
+                    {/* Tree View - FIXED WIDTH with transitions */}
                     <div
-                        className="tree-view-panel-container"
+                        className={`tree-view-panel-container ${isHighlighted ? 'tree-view-panel-container--highlighted' : ''} ${isScriptExecuting ? 'tree-view-panel-container--executing' : ''}`}
                         style={{
                             flexBasis: `${treeViewWidth}px`,
                             width: `${treeViewWidth}px`,
@@ -221,6 +181,12 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
                         <div className="tree-view-panel-header">
                             <i className="bi bi-diagram-2" />
                             <span>TREE VIEW</span>
+                            {isScriptExecuting && (
+                                <span className="tree-view-executing-badge">
+                                    <span className="pulse-dot" />
+                                    Executing
+                                </span>
+                            )}
                             <button
                                 className="tree-view-toggle-btn"
                                 onClick={toggleTreeView}
@@ -236,7 +202,11 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
                 </>
             ) : (
                 /* Tree View Panel - Collapsed */
-                <div className="tree-view-collapsed" onClick={toggleTreeView} title="Expand Tree View">
+                <div
+                    className={`tree-view-collapsed ${isHighlighted ? 'tree-view-collapsed--highlighted' : ''}`}
+                    onClick={toggleTreeView}
+                    title="Expand Tree View"
+                >
                     <i className="bi bi-chevron-left" />
                 </div>
             )}

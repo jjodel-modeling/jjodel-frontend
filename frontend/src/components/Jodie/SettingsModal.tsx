@@ -12,6 +12,7 @@ import {
 } from '../../types/jodie';
 import { JodieConfigService } from '../../services/JodieConfig';
 import { AIProviderService } from '../../services/AIProviderService';
+import { ProviderIcon } from '../icons';
 
 interface SettingsModalProps {
     isOpen: boolean;
@@ -74,7 +75,7 @@ function ProviderSetting({ provider, config, onUpdate }: ProviderSettingProps): 
                             color: info.color,
                         }}
                     >
-                        <span>{info.textIcon}</span>
+                        <ProviderIcon provider={provider} size={16} />
                     </div>
                     <div className="jodie-settings-provider-name">
                         <strong>{info.name}</strong>

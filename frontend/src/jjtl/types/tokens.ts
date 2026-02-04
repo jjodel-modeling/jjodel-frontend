@@ -10,11 +10,18 @@ export enum TokenType {
     WHEN = 'WHEN',
     HELPER = 'HELPER',
 
+    // Interactive Keywords
+    ALERT = 'ALERT',
+    NOTIFY = 'NOTIFY',
+    PROMPT = 'PROMPT',
+    INPUT = 'INPUT',
+
     // Literals
     IDENTIFIER = 'IDENTIFIER',
     STRING = 'STRING',
     NUMBER = 'NUMBER',
     BOOLEAN = 'BOOLEAN',
+    NULL = 'NULL',
 
     // Operators
     ARROW = 'ARROW',              // ->

@@ -449,7 +449,6 @@ export const JjtlDevelopmentEnv: React.FC<JjtlDevelopmentEnvProps> = ({
                             <span className="jjtl-dev-env-bottom-badge">{trace.length}</span>
                         )}
                     </button>
-
                     <div className="jjtl-dev-env-bottom-spacer" />
 
                     {/* Layout toggle */}

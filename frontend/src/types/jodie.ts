@@ -3,13 +3,14 @@
  * Type definitions for the multi-provider AI assistant
  */
 
-export type AIProvider = 'claude' | 'openai' | 'deepseek' | 'gemini' | 'mistral' | 'groq';
+export type AIProvider = 'claude' | 'openai' | 'deepseek' | 'gemini' | 'mistral' | 'groq' | 'kimi' | 'ollama';
 
 export interface ProviderConfig {
     provider: AIProvider;
     apiKey: string;
     model: string;
     enabled: boolean;
+    baseUrl?: string;  // Custom base URL (used by Ollama for non-default endpoints)
 }
 
 export interface JodieConfig {
@@ -163,7 +164,41 @@ export const PROVIDER_ENDPOINTS = {
     gemini: 'https://generativelanguage.googleapis.com/v1beta/models',
     mistral: 'https://api.mistral.ai/v1/chat/completions',
     groq: 'https://api.groq.com/openai/v1/chat/completions',
+    kimi: 'https://api.moonshot.cn/v1/chat/completions',
+    ollama: 'http://localhost:11434/v1/chat/completions', // Default local, configurable via baseUrl
 } as const;
+
+// Default Ollama base URL (can be overridden in provider config)
+export const OLLAMA_DEFAULT_BASE_URL = 'http://localhost:11434';
+
+// Proxy endpoints for providers that don't support CORS
+// Update the subdomain after deploying the Cloudflare Worker
+const PROXY_BASE_URL = 'https://jjodel-ai-proxy.alfonso99.workers.dev';
+const PROXY_BASE_URL_DEV = 'http://localhost:8787';
+
+export const PROXY_ENDPOINTS = {
+    anthropic: `${PROXY_BASE_URL}/v1/anthropic/messages`,
+    gemini: `${PROXY_BASE_URL}/v1/gemini`,
+} as const;
+
+// For local development
+export const PROXY_ENDPOINTS_DEV = {
+    anthropic: `${PROXY_BASE_URL_DEV}/v1/anthropic/messages`,
+    gemini: `${PROXY_BASE_URL_DEV}/v1/gemini`,
+} as const;
+
+// Helper to get correct proxy URL
+export function getProxyEndpoint(provider: 'anthropic' | 'gemini'): string {
+    const isDev = typeof window !== 'undefined' && window.location.hostname === 'localhost';
+    return isDev ? PROXY_ENDPOINTS_DEV[provider] : PROXY_ENDPOINTS[provider];
+}
+
+/**
+ * Check if a provider needs proxy (doesn't support browser CORS)
+ */
+export function providerNeedsProxy(provider: AIProvider): boolean {
+    return provider === 'claude' || provider === 'gemini';
+}
 
 // ============================================
 // MODEL CAPABILITIES
@@ -223,6 +258,20 @@ export const PROVIDER_MODELS: Record<AIProvider, ModelInfo[]> = {
         { value: 'llava-v1.5-7b-4096-preview', label: 'LLaVA 1.5 7B', capabilities: { vision: true, pdf: false } },
         { value: 'gemma2-9b-it', label: 'Gemma 2 9B', capabilities: { vision: false, pdf: false } },
     ],
+    kimi: [
+        { value: 'moonshot-v1-8k', label: 'Moonshot V1 8K', capabilities: { vision: false, pdf: false } },
+        { value: 'moonshot-v1-32k', label: 'Moonshot V1 32K', capabilities: { vision: false, pdf: false } },
+        { value: 'moonshot-v1-128k', label: 'Moonshot V1 128K', capabilities: { vision: false, pdf: false } },
+    ],
+    ollama: [
+        { value: 'llama3.2', label: 'Llama 3.2', capabilities: { vision: false, pdf: false } },
+        { value: 'llama3.2:1b', label: 'Llama 3.2 1B', capabilities: { vision: false, pdf: false } },
+        { value: 'llama3.1', label: 'Llama 3.1', capabilities: { vision: false, pdf: false } },
+        { value: 'mistral', label: 'Mistral', capabilities: { vision: false, pdf: false } },
+        { value: 'codellama', label: 'Code Llama', capabilities: { vision: false, pdf: false } },
+        { value: 'llava', label: 'LLaVA', capabilities: { vision: true, pdf: false } },
+        { value: 'qwen2.5', label: 'Qwen 2.5', capabilities: { vision: false, pdf: false } },
+    ],
 };
 
 /**
@@ -240,49 +289,55 @@ export function getModelCapabilities(provider: AIProvider, modelId: string): Mod
     return model?.capabilities ?? { vision: false, pdf: false };
 }
 
-// Provider display info
+// Provider display info - colors for icon backgrounds
 export const PROVIDER_INFO = {
     claude: {
         name: 'Claude',
         company: 'Anthropic',
-        color: '#D97706',
-        bgColor: '#FEF3C7',
-        textIcon: 'C',
+        color: '#D97706',           // amber-600 (icon color)
+        bgColor: '#FEF3C7',         // amber-100 (background)
     },
     openai: {
         name: 'ChatGPT',
         company: 'OpenAI',
-        color: '#059669',
-        bgColor: '#D1FAE5',
-        textIcon: 'GPT',
+        color: '#059669',           // emerald-600
+        bgColor: '#D1FAE5',         // emerald-100
     },
     deepseek: {
         name: 'DeepSeek',
         company: 'DeepSeek AI',
-        color: '#2563EB',
-        bgColor: '#DBEAFE',
-        textIcon: 'DS',
+        color: '#2563EB',           // blue-600
+        bgColor: '#DBEAFE',         // blue-100
     },
     gemini: {
         name: 'Gemini',
         company: 'Google',
-        color: '#7C3AED',
-        bgColor: '#EDE9FE',
-        textIcon: 'G',
+        color: '#7C3AED',           // violet-600
+        bgColor: '#EDE9FE',         // violet-100
     },
     mistral: {
         name: 'Mistral',
         company: 'Mistral AI',
-        color: '#F97316',
-        bgColor: '#FFEDD5',
-        textIcon: 'M',
+        color: '#F97316',           // orange-600
+        bgColor: '#FFEDD5',         // orange-100
     },
     groq: {
         name: 'Groq',
         company: 'Groq',
-        color: '#EF4444',
-        bgColor: '#FEE2E2',
-        textIcon: 'GQ',
+        color: '#EF4444',           // red-600
+        bgColor: '#FEE2E2',         // red-100
+    },
+    kimi: {
+        name: 'Kimi',
+        company: 'Moonshot AI',
+        color: '#0891B2',           // cyan-600
+        bgColor: '#CFFAFE',         // cyan-100
+    },
+    ollama: {
+        name: 'Ollama',
+        company: 'Local',
+        color: '#475569',           // slate-600
+        bgColor: '#F1F5F9',         // slate-100
     },
 } as const;
 
@@ -324,6 +379,19 @@ export const DEFAULT_JODIE_CONFIG: JodieConfig = {
             apiKey: '',
             model: 'llama-3.3-70b-versatile',
             enabled: false,
+        },
+        kimi: {
+            provider: 'kimi',
+            apiKey: '',
+            model: 'moonshot-v1-8k',
+            enabled: false,
+        },
+        ollama: {
+            provider: 'ollama',
+            apiKey: '',  // Ollama doesn't require API key by default
+            model: 'llama3.2',
+            enabled: false,
+            baseUrl: 'http://localhost:11434',
         },
     },
     activeProvider: 'claude',

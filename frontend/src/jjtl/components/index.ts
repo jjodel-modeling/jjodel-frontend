@@ -17,3 +17,16 @@ export { ExecuteTransformationDialog } from './ExecuteTransformationDialog';
 export type { ExecuteTransformationDialogProps, ModelOption } from './ExecuteTransformationDialog';
 
 export { TransformationsList } from './TransformationsList';
+
+export { GrammarDiagram, renderDiagram, exportDiagramAsSVG, GRAMMAR_RULES } from './GrammarDiagram';
+export type { GrammarRule, GrammarRuleInfo } from './GrammarDiagram';
+
+// Interactive Dialogs
+export {
+    JjtlDialogManager,
+    JjtlAlertDialog,
+    JjtlPromptDialog,
+    JjtlInputDialog,
+    JjtlNotifyToast,
+    useToasts,
+} from './dialogs';

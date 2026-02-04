@@ -1,0 +1,361 @@
+/**
+ * JjTL Interactive Dialogs Styles
+ * Following CLAUDE.md design system guidelines
+ */
+
+// Variables from design system
+$color-text-primary: #111418;
+$color-text-secondary: #6B7280;
+$color-text-tertiary: #9CA3AF;
+$color-bg-primary: #ffffff;
+$color-bg-secondary: #f8fafc;
+$color-border: #e2e4e8;
+$color-accent: #475569;
+$color-accent-light: rgba(71, 85, 105, 0.1);
+
+// Alert type colors
+$color-info: #3b82f6;
+$color-warning: #f59e0b;
+$color-error: #ef4444;
+$color-success: #10b981;
+
+$radius-md: 6px;
+$radius-lg: 8px;
+$radius-xl: 12px;
+
+$shadow-lg: 0 4px 12px rgba(0, 0, 0, 0.15);
+$transition-fast: 150ms ease;
+$transition-normal: 250ms ease;
+
+// Dialog Overlay
+.jjtl-dialog-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(2px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    animation: fadeIn $transition-fast forwards;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px) scale(0.98);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+// Base Dialog
+.jjtl-dialog {
+    background: $color-bg-primary;
+    border-radius: $radius-xl;
+    box-shadow: $shadow-lg;
+    min-width: 360px;
+    max-width: 480px;
+    animation: slideIn $transition-normal forwards;
+
+    &__header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 16px 20px;
+        border-bottom: 1px solid $color-border;
+
+        &-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: $radius-md;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+
+            &--info {
+                background: rgba($color-info, 0.1);
+                color: $color-info;
+            }
+            &--warning {
+                background: rgba($color-warning, 0.1);
+                color: $color-warning;
+            }
+            &--error {
+                background: rgba($color-error, 0.1);
+                color: $color-error;
+            }
+            &--success {
+                background: rgba($color-success, 0.1);
+                color: $color-success;
+            }
+            &--prompt {
+                background: $color-accent-light;
+                color: $color-accent;
+            }
+        }
+
+        &-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: $color-text-primary;
+            margin: 0;
+        }
+    }
+
+    &__body {
+        padding: 20px;
+
+        &-message {
+            font-size: 14px;
+            line-height: 1.5;
+            color: $color-text-secondary;
+            margin: 0 0 16px 0;
+            white-space: pre-wrap;
+        }
+    }
+
+    &__input {
+        width: 100%;
+        height: 40px;
+        padding: 0 12px;
+        font-family: inherit;
+        font-size: 14px;
+        color: $color-text-primary;
+        background: $color-bg-primary;
+        border: 1px solid $color-border;
+        border-radius: $radius-md;
+        outline: none;
+        transition: border-color $transition-fast, box-shadow $transition-fast;
+
+        &:focus {
+            border-color: $color-accent;
+            box-shadow: 0 0 0 3px $color-accent-light;
+        }
+
+        &::placeholder {
+            color: $color-text-tertiary;
+        }
+    }
+
+    &__select {
+        width: 100%;
+        height: 40px;
+        padding: 0 12px;
+        font-family: inherit;
+        font-size: 14px;
+        color: $color-text-primary;
+        background: $color-bg-primary;
+        border: 1px solid $color-border;
+        border-radius: $radius-md;
+        outline: none;
+        cursor: pointer;
+        appearance: none;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%235c6370' d='M2 4l4 4 4-4'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 12px center;
+        transition: border-color $transition-fast, box-shadow $transition-fast;
+
+        &:focus {
+            border-color: $color-accent;
+            box-shadow: 0 0 0 3px $color-accent-light;
+        }
+    }
+
+    &__toggle {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+
+        &-switch {
+            position: relative;
+            width: 48px;
+            height: 26px;
+            border-radius: 26px;
+            background: #cbd5e1;
+            cursor: pointer;
+            transition: background $transition-normal;
+
+            &.active {
+                background: linear-gradient(135deg, #64748b 0%, #475569 100%);
+            }
+        }
+
+        &-thumb {
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #ffffff;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+            transition: transform $transition-normal;
+
+            .active & {
+                transform: translateX(22px);
+            }
+        }
+
+        &-label {
+            font-size: 14px;
+            color: $color-text-primary;
+        }
+    }
+
+    &__footer {
+        display: flex;
+        justify-content: flex-end;
+        gap: 8px;
+        padding: 16px 20px;
+        border-top: 1px solid $color-border;
+    }
+
+    &__btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        height: 36px;
+        padding: 0 16px;
+        font-family: inherit;
+        font-size: 13px;
+        font-weight: 500;
+        border-radius: $radius-md;
+        cursor: pointer;
+        transition: all $transition-fast;
+
+        &:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        &--primary {
+            color: #ffffff;
+            background: linear-gradient(135deg, #64748b 0%, #475569 100%);
+            border: none;
+
+            i, .bi, svg {
+                color: #ffffff !important;
+            }
+
+            &:hover:not(:disabled) {
+                background: linear-gradient(135deg, #475569 0%, #334155 100%);
+            }
+        }
+
+        &--secondary {
+            color: $color-text-primary;
+            background: transparent;
+            border: 1px solid $color-border;
+
+            &:hover:not(:disabled) {
+                background: $color-bg-secondary;
+                border-color: darken($color-border, 5%);
+            }
+        }
+    }
+}
+
+// Toast Notification
+.jjtl-toast-container {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 10001;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.jjtl-toast {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    background: $color-text-primary;
+    color: #ffffff;
+    border-radius: $radius-lg;
+    box-shadow: $shadow-lg;
+    font-size: 13px;
+    min-width: 280px;
+    max-width: 400px;
+    animation: toastIn $transition-normal forwards;
+
+    &--exiting {
+        animation: toastOut $transition-fast forwards;
+    }
+
+    &__icon {
+        font-size: 16px;
+        opacity: 0.8;
+    }
+
+    &__message {
+        flex: 1;
+        line-height: 1.4;
+    }
+
+    &__close {
+        background: transparent;
+        border: none;
+        color: rgba(255, 255, 255, 0.6);
+        cursor: pointer;
+        padding: 4px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: color $transition-fast;
+
+        &:hover {
+            color: #ffffff;
+        }
+    }
+}
+
+@keyframes toastIn {
+    from {
+        opacity: 0;
+        transform: translateX(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes toastOut {
+    from {
+        opacity: 1;
+        transform: translateX(0);
+    }
+    to {
+        opacity: 0;
+        transform: translateX(20px);
+    }
+}
+
+// Date Input (custom styling for date picker)
+.jjtl-dialog__input[type="date"] {
+    &::-webkit-calendar-picker-indicator {
+        cursor: pointer;
+        opacity: 0.6;
+        transition: opacity $transition-fast;
+
+        &:hover {
+            opacity: 1;
+        }
+    }
+}

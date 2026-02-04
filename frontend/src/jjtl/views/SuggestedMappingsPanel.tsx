@@ -17,6 +17,7 @@ import {
 } from '../types/suggestions';
 import { mappingSuggestionService } from '../services';
 import { MappingCard } from './MappingCard';
+import GrammarTab from './GrammarTab';
 
 export interface SuggestedMappingsPanelProps {
     /** Static source metamodel data (use getSourceMetamodel for fresh data) */
@@ -272,148 +273,163 @@ export const SuggestedMappingsPanel: React.FC<SuggestedMappingsPanelProps> = ({
                         <span className="provider-badge">{aiProviderName}</span>
                     )}
                 </button>
-            </div>
-
-            {/* Mode Description */}
-            <div className="mode-description">
-                {mode === 'simple' ? (
-                    <p>Matches elements by name similarity and type compatibility.</p>
-                ) : (
-                    <p>Uses AI to find semantic relationships between metamodels.</p>
-                )}
-            </div>
-
-            {/* Analyze Button */}
-            <div className="analyze-section">
                 <button
-                    className="btn-analyze"
-                    onClick={handleAnalyze}
-                    disabled={!canAnalyze || isAnalyzing}
+                    className={`mode-btn ${mode === 'grammar' ? 'active' : ''}`}
+                    onClick={() => setMode('grammar')}
+                    title="JjTL Grammar Reference"
                 >
-                    {isAnalyzing ? (
-                        <>
-                            <i className="bi bi-arrow-repeat spinning" />
-                            Analyzing...
-                        </>
-                    ) : (
-                        <>
-                            <i className="bi bi-search" />
-                            Analyze Metamodels
-                        </>
-                    )}
+                    <i className="bi bi-signpost-split" />
+                    Grammar
                 </button>
-                {!canAnalyze && (
-                    <p className="analyze-hint">Load both metamodels to analyze</p>
-                )}
             </div>
 
-            {/* Error Message */}
-            {result?.error && (
-                <div className="error-message">
-                    <i className="bi bi-exclamation-triangle" />
-                    {result.error}
-                </div>
-            )}
-
-            {/* Results */}
-            {result && !result.error && (
-                <div className="suggestions-container">
-                    {/* Stats */}
-                    <div className="suggestions-stats">
-                        <span className="stat">
-                            <strong>{visibleSuggestions.length}</strong> found
-                        </span>
-                        <span className="stat pending">
-                            <strong>{pendingSuggestions.length}</strong> pending
-                        </span>
-                        <span className="stat to-insert">
-                            <strong>{toInsertSuggestions.length}</strong> to insert
-                        </span>
+            {/* Grammar Tab Content */}
+            {mode === 'grammar' ? (
+                <GrammarTab compact />
+            ) : (
+                <>
+                    {/* Mode Description */}
+                    <div className="mode-description">
+                        {mode === 'simple' ? (
+                            <p>Matches elements by name similarity and type compatibility.</p>
+                        ) : (
+                            <p>Uses AI to find semantic relationships between metamodels.</p>
+                        )}
                     </div>
 
-                    {/* TO INSERT Section */}
-                    {toInsertSuggestions.length > 0 && (
-                        <div className="suggestions-section to-insert-section">
-                            <h4 className="section-title">
-                                <i className="bi bi-check-square-fill" />
-                                TO INSERT ({toInsertSuggestions.length})
-                            </h4>
-                            <div className="suggestions-list">
-                                {toInsertSuggestions.map(suggestion => (
-                                    <MappingCard
-                                        key={suggestion.id}
-                                        mapping={suggestion}
-                                        isHovered={hoveredId === suggestion.id}
-                                        isSelected={selectedId === suggestion.id}
-                                        onToggle={() => handleToggle(suggestion)}
-                                        onReject={() => handleReject(suggestion)}
-                                        onHover={handleHover}
-                                        onSelect={handleSelect}
-                                    />
-                                ))}
-                            </div>
-                        </div>
-                    )}
-
-                    {/* PENDING Section */}
-                    {pendingSuggestions.length > 0 && (
-                        <div className="suggestions-section pending-section">
-                            <div className="section-header-row">
-                                <h4 className="section-title">
-                                    <i className="bi bi-square" />
-                                    PENDING ({pendingSuggestions.length})
-                                </h4>
-                                {pendingSuggestions.length > 1 && (
-                                    <button className="select-all-link" onClick={handleMarkAllForInsert}>
-                                        Select all
-                                    </button>
-                                )}
-                            </div>
-                            <div className="suggestions-list">
-                                {pendingSuggestions.map(suggestion => (
-                                    <MappingCard
-                                        key={suggestion.id}
-                                        mapping={suggestion}
-                                        isHovered={hoveredId === suggestion.id}
-                                        isSelected={selectedId === suggestion.id}
-                                        onToggle={() => handleToggle(suggestion)}
-                                        onReject={() => handleReject(suggestion)}
-                                        onHover={handleHover}
-                                        onSelect={handleSelect}
-                                    />
-                                ))}
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Insert Button */}
-                    {toInsertSuggestions.length > 0 && onInsertCode && (
+                    {/* Analyze Button */}
+                    <div className="analyze-section">
                         <button
-                            className="btn-insert-mappings"
-                            onClick={handleInsertMappings}
+                            className="btn-analyze"
+                            onClick={handleAnalyze}
+                            disabled={!canAnalyze || isAnalyzing}
                         >
-                            <i className="bi bi-code-slash" />
-                            Insert {toInsertSuggestions.length} mapping{toInsertSuggestions.length > 1 ? 's' : ''} into editor
+                            {isAnalyzing ? (
+                                <>
+                                    <i className="bi bi-arrow-repeat spinning" />
+                                    Analyzing...
+                                </>
+                            ) : (
+                                <>
+                                    <i className="bi bi-search" />
+                                    Analyze Metamodels
+                                </>
+                            )}
                         </button>
-                    )}
+                        {!canAnalyze && (
+                            <p className="analyze-hint">Load both metamodels to analyze</p>
+                        )}
+                    </div>
 
-                    {/* Empty State */}
-                    {visibleSuggestions.length === 0 && (
-                        <div className="empty-state">
-                            <i className="bi bi-inbox" />
-                            <p>No mappings suggested</p>
-                            <span>Try using AI mode for semantic analysis</span>
+                    {/* Error Message */}
+                    {result?.error && (
+                        <div className="error-message">
+                            <i className="bi bi-exclamation-triangle" />
+                            {result.error}
                         </div>
                     )}
-                </div>
-            )}
 
-            {/* Initial State */}
-            {!result && !isAnalyzing && (
-                <div className="initial-state">
-                    <i className="bi bi-diagram-3" />
-                    <p>Analyze metamodels to get mapping suggestions</p>
-                </div>
+                    {/* Results */}
+                    {result && !result.error && (
+                        <div className="suggestions-container">
+                            {/* Stats */}
+                            <div className="suggestions-stats">
+                                <span className="stat">
+                                    <strong>{visibleSuggestions.length}</strong> found
+                                </span>
+                                <span className="stat pending">
+                                    <strong>{pendingSuggestions.length}</strong> pending
+                                </span>
+                                <span className="stat to-insert">
+                                    <strong>{toInsertSuggestions.length}</strong> to insert
+                                </span>
+                            </div>
+
+                            {/* TO INSERT Section */}
+                            {toInsertSuggestions.length > 0 && (
+                                <div className="suggestions-section to-insert-section">
+                                    <h4 className="section-title">
+                                        <i className="bi bi-check-square-fill" />
+                                        TO INSERT ({toInsertSuggestions.length})
+                                    </h4>
+                                    <div className="suggestions-list">
+                                        {toInsertSuggestions.map(suggestion => (
+                                            <MappingCard
+                                                key={suggestion.id}
+                                                mapping={suggestion}
+                                                isHovered={hoveredId === suggestion.id}
+                                                isSelected={selectedId === suggestion.id}
+                                                onToggle={() => handleToggle(suggestion)}
+                                                onReject={() => handleReject(suggestion)}
+                                                onHover={handleHover}
+                                                onSelect={handleSelect}
+                                            />
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* PENDING Section */}
+                            {pendingSuggestions.length > 0 && (
+                                <div className="suggestions-section pending-section">
+                                    <div className="section-header-row">
+                                        <h4 className="section-title">
+                                            <i className="bi bi-square" />
+                                            PENDING ({pendingSuggestions.length})
+                                        </h4>
+                                        {pendingSuggestions.length > 1 && (
+                                            <button className="select-all-link" onClick={handleMarkAllForInsert}>
+                                                Select all
+                                            </button>
+                                        )}
+                                    </div>
+                                    <div className="suggestions-list">
+                                        {pendingSuggestions.map(suggestion => (
+                                            <MappingCard
+                                                key={suggestion.id}
+                                                mapping={suggestion}
+                                                isHovered={hoveredId === suggestion.id}
+                                                isSelected={selectedId === suggestion.id}
+                                                onToggle={() => handleToggle(suggestion)}
+                                                onReject={() => handleReject(suggestion)}
+                                                onHover={handleHover}
+                                                onSelect={handleSelect}
+                                            />
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Insert Button */}
+                            {toInsertSuggestions.length > 0 && onInsertCode && (
+                                <button
+                                    className="btn-insert-mappings"
+                                    onClick={handleInsertMappings}
+                                >
+                                    <i className="bi bi-code-slash" />
+                                    Insert {toInsertSuggestions.length} mapping{toInsertSuggestions.length > 1 ? 's' : ''} into editor
+                                </button>
+                            )}
+
+                            {/* Empty State */}
+                            {visibleSuggestions.length === 0 && (
+                                <div className="empty-state">
+                                    <i className="bi bi-inbox" />
+                                    <p>No mappings suggested</p>
+                                    <span>Try using AI mode for semantic analysis</span>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {/* Initial State */}
+                    {!result && !isAnalyzing && (
+                        <div className="initial-state">
+                            <i className="bi bi-diagram-3" />
+                            <p>Analyze metamodels to get mapping suggestions</p>
+                        </div>
+                    )}
+                </>
             )}
         </div>
     );

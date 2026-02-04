@@ -29,6 +29,90 @@ const BUILTIN_FUNCTIONS = [
     { label: 'toLower', detail: 'Convert to lowercase', insertText: 'toLower()' },
 ];
 
+// Interactive functions (statements and expressions)
+const INTERACTIVE_FUNCTIONS = [
+    // Statements (blocking dialogs, no return value used in mappings)
+    {
+        label: 'alert',
+        detail: 'Show blocking alert dialog',
+        documentation: 'Displays a modal alert dialog that blocks execution until dismissed.\nTypes: info, warning, error, success',
+        insertText: 'alert("${1:message}"${2:, "${3|info,warning,error,success|}"})',
+    },
+    {
+        label: 'alert-info',
+        detail: 'Show info alert',
+        documentation: 'Display an informational message to the user',
+        insertText: 'alert("${1:message}", "info")',
+    },
+    {
+        label: 'alert-warning',
+        detail: 'Show warning alert',
+        documentation: 'Display a warning message to the user',
+        insertText: 'alert("${1:message}", "warning")',
+    },
+    {
+        label: 'alert-error',
+        detail: 'Show error alert',
+        documentation: 'Display an error message to the user',
+        insertText: 'alert("${1:message}", "error")',
+    },
+    {
+        label: 'alert-success',
+        detail: 'Show success alert',
+        documentation: 'Display a success message to the user',
+        insertText: 'alert("${1:message}", "success")',
+    },
+    {
+        label: 'notify',
+        detail: 'Show non-blocking toast notification',
+        documentation: 'Displays a toast notification that auto-dismisses.\nDuration in milliseconds (default: 3000)',
+        insertText: 'notify("${1:message}"${2:, ${3:3000}})',
+    },
+    // Expressions (return values, can be used in attribute mappings)
+    {
+        label: 'prompt',
+        detail: 'Ask user for text input (returns String)',
+        documentation: 'Displays a dialog asking for text input.\nReturns the user\'s input as a String.',
+        insertText: 'prompt("${1:Enter value}"${2:, "${3:default}"})',
+    },
+    {
+        label: 'input',
+        detail: 'Ask user for typed input',
+        documentation: 'Displays a dialog asking for typed input.\nTypes: string, number, boolean, date, select',
+        insertText: 'input("${1:Enter value}", "${2|string,number,boolean,date,select|}"${3:, ${4:defaultValue}})',
+    },
+    {
+        label: 'input-string',
+        detail: 'Ask user for string input',
+        documentation: 'Ask user for a string value',
+        insertText: 'input("${1:Enter text}", "string"${2:, "${3:default}"})',
+    },
+    {
+        label: 'input-number',
+        detail: 'Ask user for number input',
+        documentation: 'Ask user for a numeric value',
+        insertText: 'input("${1:Enter number}", "number"${2:, ${3:0}})',
+    },
+    {
+        label: 'input-boolean',
+        detail: 'Ask user for yes/no choice',
+        documentation: 'Ask user for a boolean (yes/no) value',
+        insertText: 'input("${1:Confirm action?}", "boolean"${2:, ${3:false}})',
+    },
+    {
+        label: 'input-date',
+        detail: 'Ask user for date input',
+        documentation: 'Ask user to select a date',
+        insertText: 'input("${1:Select date}", "date")',
+    },
+    {
+        label: 'input-select',
+        detail: 'Ask user to select from options',
+        documentation: 'Ask user to select from a list of options',
+        insertText: 'input("${1:Choose option}", "select", ${2:null}, ["${3:Option 1}", "${4:Option 2}"])',
+    },
+];
+
 // Snippets for common patterns
 const SNIPPETS = [
     {
@@ -83,7 +167,7 @@ export function setCompletionContext(context: CompletionContext): void {
  * Create completion item from definition
  */
 function createCompletionItem(
-    item: { label: string; detail: string; insertText: string },
+    item: { label: string; detail: string; insertText: string; documentation?: string },
     kind: monaco.languages.CompletionItemKind,
     range: monaco.IRange
 ): monaco.languages.CompletionItem {
@@ -91,6 +175,7 @@ function createCompletionItem(
         label: item.label,
         kind,
         detail: item.detail,
+        documentation: item.documentation,
         insertText: item.insertText,
         insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
         range,
@@ -182,6 +267,17 @@ export const jjtlCompletionProvider: monaco.languages.CompletionItemProvider = {
                     });
                 });
             }
+
+            // Interactive functions (available everywhere in body)
+            if (isInBody) {
+                INTERACTIVE_FUNCTIONS.forEach(fn => {
+                    suggestions.push(createCompletionItem(
+                        fn,
+                        monaco.languages.CompletionItemKind.Function,
+                        range
+                    ));
+                });
+            }
         }
         // Default - show all
         else {
@@ -217,6 +313,15 @@ export const jjtlCompletionProvider: monaco.languages.CompletionItemProvider = {
                 detail: 'Boolean false',
                 insertText: 'false',
                 range,
+            });
+
+            // Interactive functions
+            INTERACTIVE_FUNCTIONS.forEach(fn => {
+                suggestions.push(createCompletionItem(
+                    fn,
+                    monaco.languages.CompletionItemKind.Function,
+                    range
+                ));
             });
         }
 

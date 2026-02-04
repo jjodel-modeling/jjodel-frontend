@@ -12,12 +12,23 @@ export const jjtlLanguageDefinition: monaco.languages.IMonarchLanguage = {
 
     keywords: [
         'transformation', 'from', 'to', 'when', 'helper',
-        'if', 'then', 'else', 'true', 'false',
+        'if', 'then', 'else', 'true', 'false', 'null',
+    ],
+
+    // Interactive keywords - highlighted distinctly
+    interactiveKeywords: [
+        'alert', 'notify', 'prompt', 'input',
     ],
 
     builtinFunctions: [
         'map', 'mapAll', 'resolve', 'select', 'collect',
         'first', 'isEmpty', 'size', 'concat', 'toUpper', 'toLower',
+    ],
+
+    // Alert types and input types
+    typeConstants: [
+        'info', 'warning', 'error', 'success',
+        'string', 'number', 'boolean', 'date', 'select',
     ],
 
     operators: [
@@ -34,8 +45,12 @@ export const jjtlLanguageDefinition: monaco.languages.IMonarchLanguage = {
             // Keywords
             [/\b(transformation|from|to|when|helper|if|then|else)\b/, 'keyword'],
 
-            // Booleans
-            [/\b(true|false)\b/, 'constant.language'],
+            // Interactive keywords - distinct purple color
+            [/\b(alert|notify)\b/, 'keyword.interactive.statement'],
+            [/\b(prompt|input)\b/, 'keyword.interactive.expression'],
+
+            // Booleans and null
+            [/\b(true|false|null)\b/, 'constant.language'],
 
             // Built-in functions
             [/\b(map|mapAll|resolve|select|collect|first|isEmpty|size)\b/, 'support.function'],
@@ -47,7 +62,9 @@ export const jjtlLanguageDefinition: monaco.languages.IMonarchLanguage = {
             // Numbers
             [/\d+(\.\d+)?/, 'number'],
 
-            // Strings
+            // Strings with special handling for type constants
+            [/"(info|warning|error|success)"/, 'string.alerttype'],
+            [/"(string|number|boolean|date|select)"/, 'string.inputtype'],
             [/"([^"\\]|\\.)*"/, 'string'],
 
             // Arrow

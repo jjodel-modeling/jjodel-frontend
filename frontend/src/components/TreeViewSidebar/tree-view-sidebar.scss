@@ -553,6 +553,144 @@ $color-parameter: #9ca3af;  // Gray (light) - Parameters
 }
 
 // ============================================
+// ELEMENT HIGHLIGHTING (JjScript execution)
+// ============================================
+
+// Highlight colors by action type
+$color-highlight-create: #10b981; // Green - new elements
+$color-highlight-modify: #3b82f6; // Blue - modified elements
+$color-highlight-delete: #ef4444; // Red - deleted elements
+$color-highlight-unknown: #f59e0b; // Amber - unknown action
+
+// Highlight animations
+@keyframes highlightPulse {
+    0% {
+        box-shadow: inset 0 0 0 2px transparent;
+    }
+    15% {
+        box-shadow: inset 0 0 0 2px currentColor;
+    }
+    100% {
+        box-shadow: inset 0 0 0 2px transparent;
+    }
+}
+
+@keyframes highlightFlash {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.7;
+    }
+}
+
+@keyframes badgeBounce {
+    0%, 100% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.1);
+    }
+}
+
+// Base highlighted state
+.tree-node__header--highlighted,
+.metamodel-tree__header--highlighted {
+    animation: highlightFlash 400ms ease-out;
+    position: relative;
+
+    &::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        border-radius: $radius-sm;
+        pointer-events: none;
+        animation: highlightPulse 2000ms ease-out;
+    }
+}
+
+// Action-specific highlight colors
+.tree-node__header--action-create,
+.metamodel-tree__header--action-create {
+    background-color: rgba($color-highlight-create, 0.12) !important;
+
+    &::after {
+        color: $color-highlight-create;
+    }
+
+    .tree-node__name {
+        color: darken($color-highlight-create, 10%);
+        font-weight: 600;
+    }
+}
+
+.tree-node__header--action-modify,
+.metamodel-tree__header--action-modify {
+    background-color: rgba($color-highlight-modify, 0.1) !important;
+
+    &::after {
+        color: $color-highlight-modify;
+    }
+}
+
+.tree-node__header--action-delete,
+.metamodel-tree__header--action-delete {
+    background-color: rgba($color-highlight-delete, 0.1) !important;
+    text-decoration: line-through;
+    opacity: 0.7;
+
+    &::after {
+        color: $color-highlight-delete;
+    }
+
+    .tree-node__name {
+        color: $color-highlight-delete;
+    }
+}
+
+.tree-node__header--action-unknown,
+.metamodel-tree__header--action-unknown {
+    background-color: rgba($color-highlight-unknown, 0.1) !important;
+
+    &::after {
+        color: $color-highlight-unknown;
+    }
+}
+
+// NEW badge for created elements
+.tree-node__badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1px 6px;
+    font-size: 9px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-radius: 3px;
+    margin-left: 6px;
+    flex-shrink: 0;
+
+    &--new {
+        background: linear-gradient(135deg, $color-highlight-create 0%, darken($color-highlight-create, 10%) 100%);
+        color: #ffffff;
+        animation: badgeBounce 600ms ease-out;
+        box-shadow: 0 1px 3px rgba($color-highlight-create, 0.3);
+    }
+}
+
+// Script executing state indicator on tree nodes
+.tree-view-content--executing {
+    .tree-node__header,
+    .metamodel-tree__header {
+        transition: background-color 150ms ease;
+    }
+}
+
+// ============================================
 // DARK MODE SUPPORT
 // ============================================
 
@@ -599,6 +737,39 @@ $color-parameter: #9ca3af;  // Gray (light) - Parameters
         p {
             color: #e0e0e0;
         }
+    }
+
+    // Dark mode highlight colors (slightly brighter for visibility)
+    .tree-node__header--action-create,
+    .metamodel-tree__header--action-create {
+        background-color: rgba(#34d399, 0.15) !important;
+
+        .tree-node__name {
+            color: #34d399;
+        }
+    }
+
+    .tree-node__header--action-modify,
+    .metamodel-tree__header--action-modify {
+        background-color: rgba(#60a5fa, 0.15) !important;
+    }
+
+    .tree-node__header--action-delete,
+    .metamodel-tree__header--action-delete {
+        background-color: rgba(#f87171, 0.15) !important;
+
+        .tree-node__name {
+            color: #f87171;
+        }
+    }
+
+    .tree-node__header--action-unknown,
+    .metamodel-tree__header--action-unknown {
+        background-color: rgba(#fbbf24, 0.15) !important;
+    }
+
+    .tree-node__badge--new {
+        background: linear-gradient(135deg, #34d399 0%, #10b981 100%);
     }
 
     // Dark mode pastel colors (slightly brighter)

@@ -21,6 +21,15 @@ import {
     ParameterAST,
     ParserResult,
     ParserError,
+    // Interactive types
+    MappingBodyItemAST,
+    AlertStatementAST,
+    NotifyStatementAST,
+    PromptExpressionAST,
+    InputExpressionAST,
+    ArrayLiteralAST,
+    AlertType,
+    InputType,
 } from '../types';
 
 export class JjtlParser {
@@ -162,18 +171,25 @@ export class JjtlParser {
         };
     }
 
-    // mappingBody = attributeMapping*
-    private mappingBody(): AttributeMappingAST[] {
-        const mappings: AttributeMappingAST[] = [];
+    // mappingBody = (attributeMapping | interactiveStatement)*
+    private mappingBody(): MappingBodyItemAST[] {
+        const items: MappingBodyItemAST[] = [];
 
         this.skipNewlines();
 
         while (!this.check(TokenType.RBRACE) && !this.isAtEnd()) {
-            mappings.push(this.attributeMapping());
+            // Check for interactive statements first
+            if (this.check(TokenType.ALERT)) {
+                items.push(this.alertStatement());
+            } else if (this.check(TokenType.NOTIFY)) {
+                items.push(this.notifyStatement());
+            } else {
+                items.push(this.attributeMapping());
+            }
             this.skipNewlines();
         }
 
-        return mappings;
+        return items;
     }
 
     // attributeMapping = (IDENTIFIER "->")? IDENTIFIER (":" conversion)? | "->" IDENTIFIER objectCreation
@@ -377,10 +393,25 @@ export class JjtlParser {
         return expr;
     }
 
-    // primary = IDENTIFIER | literal | "(" expression ")"
+    // primary = IDENTIFIER | literal | "(" expression ")" | prompt | input | arrayLiteral
     private primary(): ExpressionAST {
-        if (this.check(TokenType.BOOLEAN) || this.check(TokenType.NUMBER) || this.check(TokenType.STRING)) {
+        // Check for literals (boolean, number, string, null)
+        if (this.check(TokenType.BOOLEAN) || this.check(TokenType.NUMBER) || this.check(TokenType.STRING) || this.check(TokenType.NULL)) {
             return this.literal();
+        }
+
+        // Check for interactive expressions
+        if (this.check(TokenType.PROMPT)) {
+            return this.promptExpression();
+        }
+
+        if (this.check(TokenType.INPUT)) {
+            return this.inputExpression();
+        }
+
+        // Check for array literal
+        if (this.check(TokenType.LBRACKET)) {
+            return this.arrayLiteral();
         }
 
         if (this.check(TokenType.IDENTIFIER)) {
@@ -424,11 +455,11 @@ export class JjtlParser {
         throw this.error(this.peek(), "Expected expression");
     }
 
-    // literal = STRING | NUMBER | BOOLEAN
+    // literal = STRING | NUMBER | BOOLEAN | NULL
     private literal(): LiteralAST {
         const token = this.advance();
-        let value: string | number | boolean;
-        let literalType: 'string' | 'number' | 'boolean';
+        let value: string | number | boolean | null;
+        let literalType: 'string' | 'number' | 'boolean' | 'null';
 
         switch (token.type) {
             case TokenType.STRING:
@@ -443,6 +474,10 @@ export class JjtlParser {
                 value = token.value.toLowerCase() === 'true';
                 literalType = 'boolean';
                 break;
+            case TokenType.NULL:
+                value = null;
+                literalType = 'null';
+                break;
             default:
                 throw this.error(token, "Expected literal");
         }
@@ -452,6 +487,156 @@ export class JjtlParser {
             value,
             literalType,
             location: this.makeLocation(token, token),
+        };
+    }
+
+    // ============================================
+    // INTERACTIVE STATEMENTS
+    // ============================================
+
+    // alertStatement = "alert" "(" expression ("," alertType)? ")"
+    private alertStatement(): AlertStatementAST {
+        const startToken = this.consume(TokenType.ALERT, "Expected 'alert'");
+        this.consume(TokenType.LPAREN, "Expected '(' after 'alert'");
+
+        const message = this.expression();
+
+        let alertType: AlertType = 'info';
+        if (this.match(TokenType.COMMA)) {
+            const typeToken = this.consume(TokenType.STRING, "Expected alert type string");
+            const typeValue = typeToken.value.toLowerCase();
+            if (['info', 'warning', 'error', 'success'].includes(typeValue)) {
+                alertType = typeValue as AlertType;
+            } else {
+                this.errors.push({
+                    message: `Invalid alert type: "${typeValue}". Expected: info, warning, error, success`,
+                    line: typeToken.line,
+                    column: typeToken.column,
+                });
+            }
+        }
+
+        this.consume(TokenType.RPAREN, "Expected ')' after alert arguments");
+
+        return {
+            type: 'AlertStatement',
+            message,
+            alertType,
+            location: this.makeLocation(startToken, this.previous()),
+        };
+    }
+
+    // notifyStatement = "notify" "(" expression ("," NUMBER)? ")"
+    private notifyStatement(): NotifyStatementAST {
+        const startToken = this.consume(TokenType.NOTIFY, "Expected 'notify'");
+        this.consume(TokenType.LPAREN, "Expected '(' after 'notify'");
+
+        const message = this.expression();
+
+        let duration = 3000;
+        if (this.match(TokenType.COMMA)) {
+            const durationToken = this.consume(TokenType.NUMBER, "Expected duration number");
+            duration = parseInt(durationToken.value, 10);
+        }
+
+        this.consume(TokenType.RPAREN, "Expected ')' after notify arguments");
+
+        return {
+            type: 'NotifyStatement',
+            message,
+            duration,
+            location: this.makeLocation(startToken, this.previous()),
+        };
+    }
+
+    // ============================================
+    // INTERACTIVE EXPRESSIONS
+    // ============================================
+
+    // promptExpression = "prompt" "(" expression ("," expression)? ")"
+    private promptExpression(): PromptExpressionAST {
+        const startToken = this.consume(TokenType.PROMPT, "Expected 'prompt'");
+        this.consume(TokenType.LPAREN, "Expected '(' after 'prompt'");
+
+        const message = this.expression();
+
+        let defaultValue: ExpressionAST | undefined;
+        if (this.match(TokenType.COMMA)) {
+            defaultValue = this.expression();
+        }
+
+        this.consume(TokenType.RPAREN, "Expected ')' after prompt arguments");
+
+        return {
+            type: 'PromptExpression',
+            message,
+            defaultValue,
+            location: this.makeLocation(startToken, this.previous()),
+        };
+    }
+
+    // inputExpression = "input" "(" expression "," inputType ("," defaultValue)? ")"
+    private inputExpression(): InputExpressionAST {
+        const startToken = this.consume(TokenType.INPUT, "Expected 'input'");
+        this.consume(TokenType.LPAREN, "Expected '(' after 'input'");
+
+        const message = this.expression();
+        this.consume(TokenType.COMMA, "Expected ',' after message");
+
+        const typeToken = this.consume(TokenType.STRING, "Expected input type");
+        const inputType = typeToken.value.toLowerCase() as InputType;
+
+        if (!['string', 'number', 'boolean', 'date', 'select'].includes(inputType)) {
+            this.errors.push({
+                message: `Invalid input type: "${inputType}". Expected: string, number, boolean, date, select`,
+                line: typeToken.line,
+                column: typeToken.column,
+            });
+        }
+
+        let defaultValue: ExpressionAST | undefined;
+        let options: ExpressionAST[] | undefined;
+
+        if (this.match(TokenType.COMMA)) {
+            if (inputType === 'select') {
+                // Parse array literal for options
+                const arrayLiteral = this.arrayLiteral();
+                options = arrayLiteral.elements;
+            } else {
+                defaultValue = this.expression();
+            }
+        }
+
+        this.consume(TokenType.RPAREN, "Expected ')' after input arguments");
+
+        return {
+            type: 'InputExpression',
+            message,
+            inputType,
+            defaultValue,
+            options,
+            location: this.makeLocation(startToken, this.previous()),
+        };
+    }
+
+    // arrayLiteral = "[" (expression ("," expression)*)? "]"
+    private arrayLiteral(): ArrayLiteralAST {
+        const startToken = this.consume(TokenType.LBRACKET, "Expected '[' for array");
+
+        const elements: ExpressionAST[] = [];
+
+        if (!this.check(TokenType.RBRACKET)) {
+            do {
+                elements.push(this.expression());
+            } while (this.match(TokenType.COMMA));
+        }
+
+        this.consume(TokenType.RBRACKET, "Expected ']' after array elements");
+
+        return {
+            type: 'ArrayLiteral',
+            elements,
+            location: this.makeLocation(startToken, this.previous()),
         };
     }
 

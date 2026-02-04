@@ -13,6 +13,12 @@ const KEYWORDS: Record<string, TokenType> = {
     'helper': TokenType.HELPER,
     'true': TokenType.BOOLEAN,
     'false': TokenType.BOOLEAN,
+    'null': TokenType.NULL,
+    // Interactive keywords
+    'alert': TokenType.ALERT,
+    'notify': TokenType.NOTIFY,
+    'prompt': TokenType.PROMPT,
+    'input': TokenType.INPUT,
 };
 
 export class JjtlLexer {

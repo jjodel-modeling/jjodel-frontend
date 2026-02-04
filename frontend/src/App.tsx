@@ -39,6 +39,11 @@ import { NotificationWidget } from './components/NotificationWidget/Notification
 import { Jodie } from './components/Jodie';
 import { DevModeProvider } from './contexts/DevModeContext';
 import { AISettingsProvider } from './contexts/AISettingsContext';
+import { GlobalDrawerProvider } from './contexts/GlobalDrawerContext';
+import { FeaturesPanelProvider } from './contexts/FeaturesPanelContext';
+import { TreeViewPanelProvider } from './contexts/TreeViewPanelContext';
+import { GlobalDrawer } from './components/GlobalDrawer';
+import { JjtlDialogManager } from './jjtl/components';
 
 let firstLoading = true;
 let browserData = U.getOSBrowserData();
@@ -97,6 +102,9 @@ function App(props: AllProps): JSX.Element {
     return (<>
         <DevModeProvider>
         <AISettingsProvider>
+        <GlobalDrawerProvider>
+        <FeaturesPanelProvider>
+        <TreeViewPanelProvider>
             <div className={"router-wrapper"}>
                 {isLoading && <Loader/>}
                 <ExternalLibraries/>
@@ -105,6 +113,7 @@ function App(props: AllProps): JSX.Element {
                 {/*<MessageVisualizer />*/}
                 <Try><AlertVisualizer/></Try>
                 <Try><DialogVisualizer/></Try>
+                <Try><JjtlDialogManager/></Try>
                 <HashRouter>
                     <Try><PathChecker/></Try>
                     <Try><Routes>
@@ -141,8 +150,12 @@ function App(props: AllProps): JSX.Element {
                     {user && <Try><NotificationWidget/></Try>}
                     {user && <Try><Jodie/></Try>}
                 </HashRouter>
+                {user && <Try><GlobalDrawer/></Try>}
 
             </div>
+        </TreeViewPanelProvider>
+        </FeaturesPanelProvider>
+        </GlobalDrawerProvider>
         </AISettingsProvider>
         </DevModeProvider>
     </>);

@@ -12,6 +12,7 @@ import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { ScriptTarget, ScriptLineResult } from './ScriptBlock';
+import { ExecutionErrorDialog, ExecutionErrorInfo, ExecutionStats } from './ExecutionErrorDialog';
 import './ScriptExecutionWindow.scss';
 
 // ============================================
@@ -111,9 +112,19 @@ export const ScriptExecutionWindow: React.FC<ScriptExecutionWindowProps> = ({
     const [currentExecutableIndex, setCurrentExecutableIndex] = useState(-1);
     const [outputMessages, setOutputMessages] = useState<string[]>([]);
 
+    // Error dialog state
+    const [errorDialogOpen, setErrorDialogOpen] = useState(false);
+    const [errorDialogInfo, setErrorDialogInfo] = useState<ExecutionErrorInfo | null>(null);
+    const [executionStats, setExecutionStats] = useState<ExecutionStats>({ commandsExecuted: 0, errors: 0, duration: 0 });
+    const [executionStartTime, setExecutionStartTime] = useState<number>(0);
+
     // Refs
     const abortRef = useRef(false);
     const codeContainerRef = useRef<HTMLDivElement>(null);
+
+    // Promise resolver for error dialog actions
+    const errorActionResolverRef = useRef<((action: 're-evaluate' | 'stop' | 'continue') => void) | null>(null);
+    const reEvaluateCommandRef = useRef<string>('');
 
     // Parse script into lines
     useEffect(() => {
@@ -159,8 +170,70 @@ export const ScriptExecutionWindow: React.FC<ScriptExecutionWindowProps> = ({
         }
     }, []);
 
+    // Show error dialog and wait for user action
+    const showErrorDialog = useCallback((
+        line: ParsedLine,
+        errorMessage: string,
+        commandsExecuted: number,
+        errors: number
+    ): Promise<'re-evaluate' | 'stop' | 'continue'> => {
+        return new Promise((resolve) => {
+            const duration = (Date.now() - executionStartTime) / 1000;
+
+            setErrorDialogInfo({
+                line: line.index + 1,
+                command: line.text.trim(),
+                errorMessage,
+                errorType: errorMessage.toLowerCase().includes('not found') ? 'not_found' :
+                           errorMessage.toLowerCase().includes('parse') ? 'parse' : 'execution',
+            });
+
+            setExecutionStats({
+                commandsExecuted,
+                errors,
+                duration,
+            });
+
+            errorActionResolverRef.current = resolve;
+            setErrorDialogOpen(true);
+        });
+    }, [executionStartTime]);
+
+    // Handle error dialog re-evaluate
+    const handleErrorReEvaluate = useCallback(async (newCommand: string): Promise<boolean> => {
+        try {
+            const [result] = await onExecute([newCommand], target.id);
+
+            if (result.success) {
+                // Store the successful command for updating the line
+                reEvaluateCommandRef.current = newCommand;
+                setErrorDialogOpen(false);
+                errorActionResolverRef.current?.('re-evaluate');
+                return true;
+            }
+
+            // Command still failed
+            return false;
+        } catch (err) {
+            return false;
+        }
+    }, [onExecute, target.id]);
+
+    // Handle error dialog stop
+    const handleErrorStop = useCallback(() => {
+        setErrorDialogOpen(false);
+        errorActionResolverRef.current?.('stop');
+    }, []);
+
+    // Handle error dialog continue
+    const handleErrorContinue = useCallback(() => {
+        setErrorDialogOpen(false);
+        errorActionResolverRef.current?.('continue');
+    }, []);
+
     // Execute single command with retry mechanism
-    const executeCommand = useCallback(async (line: ParsedLine): Promise<boolean> => {
+    // Returns { success: boolean, error?: string } for better error handling
+    const executeCommand = useCallback(async (line: ParsedLine): Promise<{ success: boolean; error?: string }> => {
         const command = line.text.trim();
         let lastError = '';
         let attempts = 0;
@@ -191,7 +264,7 @@ export const ScriptExecutionWindow: React.FC<ScriptExecutionWindowProps> = ({
                         setOutputMessages(prev => [...prev, `✓ ${result.message || command}`]);
                     }
 
-                    return true;
+                    return { success: true };
                 }
 
                 // Command failed - check if retryable
@@ -207,7 +280,7 @@ export const ScriptExecutionWindow: React.FC<ScriptExecutionWindowProps> = ({
                         )
                     );
                     setOutputMessages(prev => [...prev, `✗ ${lastError}`]);
-                    return false;
+                    return { success: false, error: lastError };
                 }
 
                 // Retryable error - wait and retry if we have attempts left
@@ -232,7 +305,7 @@ export const ScriptExecutionWindow: React.FC<ScriptExecutionWindowProps> = ({
                         )
                     );
                     setOutputMessages(prev => [...prev, `✗ ${lastError}`]);
-                    return false;
+                    return { success: false, error: lastError };
                 }
 
                 // Retryable exception - wait and retry if we have attempts left
@@ -269,16 +342,22 @@ export const ScriptExecutionWindow: React.FC<ScriptExecutionWindowProps> = ({
             `  ↳ Retried ${MAX_RETRIES} times (waited ${totalWaitTime}ms total)`
         ]);
 
-        return false;
+        return { success: false, error: lastError };
     }, [onExecute, target.id]);
 
-    // Run all commands
+    // Run all commands with interactive error handling
     const handleRunAll = useCallback(async () => {
         if (executableLines.length === 0) return;
 
         abortRef.current = false;
         setExecutionState('running');
         setOutputMessages([`Executing on ${target.name}...`]);
+
+        // Track execution stats
+        const startTime = Date.now();
+        setExecutionStartTime(startTime);
+        let commandsExecuted = 0;
+        let errors = 0;
 
         // Reset all executable lines to pending
         setParsedLines(prev =>
@@ -292,7 +371,9 @@ export const ScriptExecutionWindow: React.FC<ScriptExecutionWindowProps> = ({
         for (let i = 0; i < executableLines.length; i++) {
             if (abortRef.current) {
                 setOutputMessages(prev => [...prev, '⚠ Execution stopped']);
-                break;
+                setExecutionState('idle');
+                setCurrentExecutableIndex(-1);
+                return;
             }
 
             const line = executableLines[i];
@@ -306,20 +387,59 @@ export const ScriptExecutionWindow: React.FC<ScriptExecutionWindowProps> = ({
                 )
             );
 
-            const success = await executeCommand(line);
+            const result = await executeCommand(line);
 
-            if (!success) {
-                setExecutionState('error');
-                return;
+            if (result.success) {
+                commandsExecuted++;
+            } else {
+                errors++;
+
+                // Show error dialog and wait for user action
+                const action = await showErrorDialog(line, result.error || 'Unknown error', commandsExecuted, errors);
+
+                if (action === 'stop') {
+                    // Stop execution
+                    setExecutionState('error');
+                    setOutputMessages(prev => [...prev, '⚠ Execution stopped by user']);
+                    setCurrentExecutableIndex(-1);
+                    return;
+                } else if (action === 're-evaluate') {
+                    // Re-evaluate was successful - update line status and count as success
+                    const newCommand = reEvaluateCommandRef.current;
+                    setParsedLines(prev =>
+                        prev.map(l =>
+                            l.index === line.index
+                                ? {
+                                      ...l,
+                                      text: newCommand, // Update with edited command
+                                      status: 'success',
+                                      result: { command: newCommand, success: true, message: `Executed: ${newCommand}` },
+                                  }
+                                : l
+                        )
+                    );
+                    setOutputMessages(prev => [...prev, `✓ ${newCommand} (re-evaluated)`]);
+                    commandsExecuted++;
+                    errors--; // Undo the error count since it was fixed
+                } else if (action === 'continue') {
+                    // Continue - keep the error status, move to next command
+                    setOutputMessages(prev => [...prev, `⚠ Skipped: ${line.text.trim()}`]);
+                    // Line already marked as error by executeCommand
+                }
             }
         }
 
         if (!abortRef.current) {
-            setExecutionState('completed');
-            setOutputMessages(prev => [...prev, `✓ All ${executableLines.length} commands executed successfully`]);
+            const hasErrors = errors > 0;
+            setExecutionState(hasErrors ? 'error' : 'completed');
+            if (hasErrors) {
+                setOutputMessages(prev => [...prev, `⚠ Completed with ${errors} error(s). ${commandsExecuted} commands executed.`]);
+            } else {
+                setOutputMessages(prev => [...prev, `✓ All ${executableLines.length} commands executed successfully`]);
+            }
         }
         setCurrentExecutableIndex(-1);
-    }, [executableLines, target.name, executeCommand, scrollToLine]);
+    }, [executableLines, target.name, executeCommand, scrollToLine, showErrorDialog]);
 
     // Step through commands
     const handleStep = useCallback(async () => {
@@ -360,9 +480,9 @@ export const ScriptExecutionWindow: React.FC<ScriptExecutionWindowProps> = ({
             )
         );
 
-        const success = await executeCommand(line);
+        const result = await executeCommand(line);
 
-        if (success) {
+        if (result.success) {
             if (nextIndex < executableLines.length - 1) {
                 setCurrentExecutableIndex(nextIndex + 1);
                 setExecutionState('paused');
@@ -582,6 +702,18 @@ export const ScriptExecutionWindow: React.FC<ScriptExecutionWindowProps> = ({
                     </span>
                 </div>
             </div>
+
+            {/* Error Dialog */}
+            {errorDialogOpen && errorDialogInfo && (
+                <ExecutionErrorDialog
+                    isOpen={errorDialogOpen}
+                    error={errorDialogInfo}
+                    stats={executionStats}
+                    onReEvaluate={handleErrorReEvaluate}
+                    onStop={handleErrorStop}
+                    onContinue={handleErrorContinue}
+                />
+            )}
         </div>
     );
 };
