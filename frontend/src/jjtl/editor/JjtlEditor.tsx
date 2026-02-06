@@ -11,10 +11,16 @@ import { tokenize } from '../lexer';
 import { parse } from '../parser';
 import { ParserError } from '../types';
 
+interface CursorPosition {
+    line: number;
+    column: number;
+}
+
 interface JjtlEditorProps {
     value: string;
     onChange?: (value: string) => void;
     onParse?: (result: { errors: ParserError[] }) => void;
+    onCursorPositionChange?: (position: CursorPosition) => void;
     height?: string | number;
     readOnly?: boolean;
 }
@@ -33,6 +39,7 @@ export const JjtlEditor: React.FC<JjtlEditorProps> = ({
     value,
     onChange,
     onParse,
+    onCursorPositionChange,
     height = '400px',
     readOnly = false,
 }) => {
@@ -100,8 +107,25 @@ export const JjtlEditor: React.FC<JjtlEditorProps> = ({
             parseContent(newValue);
         });
 
+        // Handle cursor position changes
+        editor.onDidChangeCursorPosition((e) => {
+            onCursorPositionChange?.({
+                line: e.position.lineNumber,
+                column: e.position.column,
+            });
+        });
+
         // Initial parse
         parseContent(value);
+
+        // Report initial cursor position
+        const initialPosition = editor.getPosition();
+        if (initialPosition) {
+            onCursorPositionChange?.({
+                line: initialPosition.lineNumber,
+                column: initialPosition.column,
+            });
+        }
 
         return () => {
             editor.dispose();

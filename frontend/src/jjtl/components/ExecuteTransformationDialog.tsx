@@ -169,20 +169,26 @@ export const ExecuteTransformationDialog: React.FC<ExecuteTransformationDialogPr
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        console.log('[ExecuteTransformationDialog] handleSubmit called');
 
-        if (!validate()) return;
+        if (!validate()) {
+            console.log('[ExecuteTransformationDialog] Validation failed');
+            return;
+        }
 
         setIsExecuting(true);
+        console.log('[ExecuteTransformationDialog] Calling onExecute with:', { sourceModelId, outputModelName: outputModelName.trim() });
 
         try {
             await onExecute(sourceModelId, outputModelName.trim());
+            console.log('[ExecuteTransformationDialog] onExecute completed successfully');
             // Reset and close on success
             setSourceModelId('');
             setOutputModelName('');
             setErrors({});
             onClose();
         } catch (error) {
-            console.error('Error executing transformation:', error);
+            console.error('[ExecuteTransformationDialog] Error executing transformation:', error);
             setIsExecuting(false);
         }
     };

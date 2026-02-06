@@ -51,7 +51,8 @@
   flex-shrink: 0;
 }
 
-.stat-value {
+// Scoped to .stat-circle to avoid affecting other .stat-value elements globally
+.stat-circle .stat-value {
   font-size: 20px !important;
   font-weight: 700 !important;
   color: #ffffff !important;

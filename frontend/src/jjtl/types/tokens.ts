@@ -1,9 +1,14 @@
 /**
  * JjTL Token Types
+ *
+ * JjTL uses JjEL for expressions, so this includes both
+ * transformation-specific tokens and JjEL expression tokens.
  */
 
 export enum TokenType {
-    // Keywords
+    // ============================================
+    // JJTL-SPECIFIC KEYWORDS
+    // ============================================
     TRANSFORMATION = 'TRANSFORMATION',
     FROM = 'FROM',
     TO = 'TO',
@@ -16,21 +21,54 @@ export enum TokenType {
     PROMPT = 'PROMPT',
     INPUT = 'INPUT',
 
-    // Literals
+    // ============================================
+    // JJEL KEYWORDS (for expressions)
+    // ============================================
+    IF = 'IF',
+    THEN = 'THEN',
+    ELSE = 'ELSE',
+    AND = 'AND',
+    OR = 'OR',
+    NOT = 'NOT',
+    IS = 'IS',
+
+    // ============================================
+    // LITERALS
+    // ============================================
     IDENTIFIER = 'IDENTIFIER',
     STRING = 'STRING',
     NUMBER = 'NUMBER',
     BOOLEAN = 'BOOLEAN',
     NULL = 'NULL',
 
-    // Operators
+    // ============================================
+    // OPERATORS
+    // ============================================
+    // JjTL operators
     ARROW = 'ARROW',              // ->
     COLON = 'COLON',              // :
     EQUALS = 'EQUALS',            // =
     DOT = 'DOT',                  // .
     COMMA = 'COMMA',              // ,
 
-    // Brackets
+    // JjEL operators
+    QUESTION_DOT = 'QUESTION_DOT',     // ?.  (null-safe navigation)
+    NULL_COALESCE = 'NULL_COALESCE',   // ??  (null coalesce)
+    EQUALS_EQUALS = 'EQUALS_EQUALS',   // ==  (equality)
+    NOT_EQUALS = 'NOT_EQUALS',         // !=  (inequality)
+    LESS_THAN = 'LESS_THAN',           // <
+    GREATER_THAN = 'GREATER_THAN',     // >
+    LESS_EQUAL = 'LESS_EQUAL',         // <=
+    GREATER_EQUAL = 'GREATER_EQUAL',   // >=
+    PLUS = 'PLUS',                     // +
+    MINUS = 'MINUS',                   // -
+    STAR = 'STAR',                     // *
+    SLASH = 'SLASH',                   // /
+    PERCENT = 'PERCENT',               // %
+
+    // ============================================
+    // BRACKETS
+    // ============================================
     LBRACE = 'LBRACE',            // {
     RBRACE = 'RBRACE',            // }
     LPAREN = 'LPAREN',            // (
@@ -38,7 +76,9 @@ export enum TokenType {
     LBRACKET = 'LBRACKET',        // [
     RBRACKET = 'RBRACKET',        // ]
 
-    // Special
+    // ============================================
+    // SPECIAL
+    // ============================================
     COMMENT = 'COMMENT',          // # ...
     NEWLINE = 'NEWLINE',
     WHITESPACE = 'WHITESPACE',
@@ -47,6 +87,36 @@ export enum TokenType {
     // Errors
     UNKNOWN = 'UNKNOWN',
 }
+
+/**
+ * Keywords mapping (lowercase to token type)
+ */
+export const JJTL_KEYWORDS: Record<string, TokenType> = {
+    // JjTL-specific
+    'transformation': TokenType.TRANSFORMATION,
+    'from': TokenType.FROM,
+    'to': TokenType.TO,
+    'when': TokenType.WHEN,
+    'helper': TokenType.HELPER,
+    'alert': TokenType.ALERT,
+    'notify': TokenType.NOTIFY,
+    'prompt': TokenType.PROMPT,
+    'input': TokenType.INPUT,
+
+    // JjEL keywords
+    'if': TokenType.IF,
+    'then': TokenType.THEN,
+    'else': TokenType.ELSE,
+    'and': TokenType.AND,
+    'or': TokenType.OR,
+    'not': TokenType.NOT,
+    'is': TokenType.IS,
+
+    // Literals
+    'true': TokenType.BOOLEAN,
+    'false': TokenType.BOOLEAN,
+    'null': TokenType.NULL,
+};
 
 export interface Token {
     type: TokenType;

@@ -31,7 +31,7 @@ function toPascalCase(str: string): string {
 
 /**
  * Generates a transformation name from metamodel names
- * "Activity Diagrams" + "Petri Nets" → "ActivityDiagramsToPetriNets"
+ * "Activity Diagrams" + "Petri Nets" → "ActivityDiagrams-2-PetriNets"
  */
 function generateTransformationNameFromMetamodels(sourceName: string, targetName: string): string {
     if (!sourceName || !targetName) {
@@ -41,7 +41,7 @@ function generateTransformationNameFromMetamodels(sourceName: string, targetName
     const source = toPascalCase(sourceName);
     const target = toPascalCase(targetName);
 
-    return `${source}To${target}`;
+    return `${source}-2-${target}`;
 }
 
 // ============================================
@@ -248,7 +248,7 @@ export const NewTransformationDialog: React.FC<NewTransformationDialogProps> = (
                                         id="transformation-name"
                                         type="text"
                                         className={`form-input ${errors.name ? 'error' : ''}`}
-                                        placeholder="e.g., StateMachineToPetriNet"
+                                        placeholder="e.g., StateMachine-2-PetriNet"
                                         value={name}
                                         onChange={(e) => {
                                             setName(e.target.value);

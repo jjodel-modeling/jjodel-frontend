@@ -1,6 +1,9 @@
 /**
  * JjTL Parser
  * Converts tokens into AST
+ *
+ * JjTL uses JjEL for expressions. This parser implements the full
+ * JjEL expression grammar with proper operator precedence.
  */
 
 import {
@@ -16,6 +19,15 @@ import {
     LiteralAST,
     IdentifierAST,
     MemberAccessAST,
+    NullSafeMemberAccessAST,
+    FunctionCallAST,
+    NullSafeFunctionCallAST,
+    BinaryExpressionAST,
+    UnaryExpressionAST,
+    ConditionalExpressionAST,
+    NullCoalesceExpressionAST,
+    IsTypeExpressionAST,
+    LambdaExpressionAST,
     MultiplicityAST,
     HelperAST,
     ParameterAST,
@@ -351,49 +363,391 @@ export class JjtlParser {
         };
     }
 
-    // expression = primary ("." IDENTIFIER ("(" arguments? ")")?)*
+    // ============================================
+    // JJEL EXPRESSION PARSING
+    // ============================================
+    // Precedence (lowest to highest):
+    // 1. if-then-else
+    // 2. ?? (null coalesce)
+    // 3. or
+    // 4. and
+    // 5. == !=
+    // 6. < > <= >=
+    // 7. is
+    // 8. + -
+    // 9. * / %
+    // 10. not, unary -
+    // 11. . ?. () (postfix)
+    // 12. primary
+
+    // expression = ifThenElse
     private expression(): ExpressionAST {
+        return this.ifThenElse();
+    }
+
+    // ifThenElse = nullCoalesce ("if" nullCoalesce "then" nullCoalesce ("else" ifThenElse)?)?
+    private ifThenElse(): ExpressionAST {
+        // Check for "if" at start
+        if (this.check(TokenType.IF)) {
+            const startToken = this.advance();
+            const condition = this.nullCoalesce();
+            this.consume(TokenType.THEN, "Expected 'then' after condition");
+            const thenBranch = this.nullCoalesce();
+
+            let elseBranch: ExpressionAST | null = null;
+            if (this.match(TokenType.ELSE)) {
+                elseBranch = this.ifThenElse();
+            }
+
+            return {
+                type: 'ConditionalExpression',
+                condition,
+                thenBranch,
+                elseBranch,
+                location: this.makeLocation(startToken, this.previous()),
+            } as ConditionalExpressionAST;
+        }
+
+        return this.nullCoalesce();
+    }
+
+    // nullCoalesce = logicalOr ("??" logicalOr)*
+    private nullCoalesce(): ExpressionAST {
+        let expr = this.logicalOr();
+
+        while (this.match(TokenType.NULL_COALESCE)) {
+            const startToken = this.previous();
+            const right = this.logicalOr();
+            expr = {
+                type: 'NullCoalesceExpression',
+                left: expr,
+                right,
+                location: this.makeLocation(startToken, this.previous()),
+            } as NullCoalesceExpressionAST;
+        }
+
+        return expr;
+    }
+
+    // logicalOr = logicalAnd ("or" logicalAnd)*
+    private logicalOr(): ExpressionAST {
+        let expr = this.logicalAnd();
+
+        while (this.match(TokenType.OR)) {
+            const startToken = this.previous();
+            const right = this.logicalAnd();
+            expr = {
+                type: 'BinaryExpression',
+                operator: 'or',
+                left: expr,
+                right,
+                location: this.makeLocation(startToken, this.previous()),
+            } as BinaryExpressionAST;
+        }
+
+        return expr;
+    }
+
+    // logicalAnd = equality ("and" equality)*
+    private logicalAnd(): ExpressionAST {
+        let expr = this.equality();
+
+        while (this.match(TokenType.AND)) {
+            const startToken = this.previous();
+            const right = this.equality();
+            expr = {
+                type: 'BinaryExpression',
+                operator: 'and',
+                left: expr,
+                right,
+                location: this.makeLocation(startToken, this.previous()),
+            } as BinaryExpressionAST;
+        }
+
+        return expr;
+    }
+
+    // equality = comparison (("==" | "!=") comparison)*
+    private equality(): ExpressionAST {
+        let expr = this.comparison();
+
+        while (this.match(TokenType.EQUALS_EQUALS, TokenType.NOT_EQUALS)) {
+            const op = this.previous().type === TokenType.EQUALS_EQUALS ? '==' : '!=';
+            const startToken = this.previous();
+            const right = this.comparison();
+            expr = {
+                type: 'BinaryExpression',
+                operator: op,
+                left: expr,
+                right,
+                location: this.makeLocation(startToken, this.previous()),
+            } as BinaryExpressionAST;
+        }
+
+        return expr;
+    }
+
+    // comparison = isType (("<" | ">" | "<=" | ">=") isType)*
+    private comparison(): ExpressionAST {
+        let expr = this.isType();
+
+        while (this.match(TokenType.LESS_THAN, TokenType.GREATER_THAN, TokenType.LESS_EQUAL, TokenType.GREATER_EQUAL)) {
+            const opToken = this.previous();
+            let op: string;
+            switch (opToken.type) {
+                case TokenType.LESS_THAN: op = '<'; break;
+                case TokenType.GREATER_THAN: op = '>'; break;
+                case TokenType.LESS_EQUAL: op = '<='; break;
+                case TokenType.GREATER_EQUAL: op = '>='; break;
+                default: op = '<';
+            }
+            const right = this.isType();
+            expr = {
+                type: 'BinaryExpression',
+                operator: op,
+                left: expr,
+                right,
+                location: this.makeLocation(opToken, this.previous()),
+            } as BinaryExpressionAST;
+        }
+
+        return expr;
+    }
+
+    // isType = addition ("is" IDENTIFIER)?
+    private isType(): ExpressionAST {
+        let expr = this.addition();
+
+        if (this.match(TokenType.IS)) {
+            const startToken = this.previous();
+            const typeName = this.consume(TokenType.IDENTIFIER, "Expected type name after 'is'").value;
+            expr = {
+                type: 'IsTypeExpression',
+                expression: expr,
+                targetType: typeName,
+                location: this.makeLocation(startToken, this.previous()),
+            } as IsTypeExpressionAST;
+        }
+
+        return expr;
+    }
+
+    // addition = multiplication (("+" | "-") multiplication)*
+    private addition(): ExpressionAST {
+        let expr = this.multiplication();
+
+        while (this.match(TokenType.PLUS, TokenType.MINUS)) {
+            const op = this.previous().type === TokenType.PLUS ? '+' : '-';
+            const startToken = this.previous();
+            const right = this.multiplication();
+            expr = {
+                type: 'BinaryExpression',
+                operator: op,
+                left: expr,
+                right,
+                location: this.makeLocation(startToken, this.previous()),
+            } as BinaryExpressionAST;
+        }
+
+        return expr;
+    }
+
+    // multiplication = unary (("*" | "/" | "%") unary)*
+    private multiplication(): ExpressionAST {
+        let expr = this.unary();
+
+        while (this.match(TokenType.STAR, TokenType.SLASH, TokenType.PERCENT)) {
+            const opToken = this.previous();
+            let op: string;
+            switch (opToken.type) {
+                case TokenType.STAR: op = '*'; break;
+                case TokenType.SLASH: op = '/'; break;
+                case TokenType.PERCENT: op = '%'; break;
+                default: op = '*';
+            }
+            const right = this.unary();
+            expr = {
+                type: 'BinaryExpression',
+                operator: op,
+                left: expr,
+                right,
+                location: this.makeLocation(opToken, this.previous()),
+            } as BinaryExpressionAST;
+        }
+
+        return expr;
+    }
+
+    // unary = ("not" | "-") unary | postfix
+    private unary(): ExpressionAST {
+        if (this.match(TokenType.NOT)) {
+            const startToken = this.previous();
+            const operand = this.unary();
+            return {
+                type: 'UnaryExpression',
+                operator: 'not',
+                operand,
+                location: this.makeLocation(startToken, this.previous()),
+            } as UnaryExpressionAST;
+        }
+
+        if (this.match(TokenType.MINUS)) {
+            const startToken = this.previous();
+            const operand = this.unary();
+            return {
+                type: 'UnaryExpression',
+                operator: '-',
+                operand,
+                location: this.makeLocation(startToken, this.previous()),
+            } as UnaryExpressionAST;
+        }
+
+        return this.postfix();
+    }
+
+    // postfix = primary (("." | "?.") IDENTIFIER ("(" arguments? ")")?)*
+    private postfix(): ExpressionAST {
         let expr = this.primary();
 
-        while (this.match(TokenType.DOT)) {
-            const property = this.consume(TokenType.IDENTIFIER, "Expected property name").value;
+        while (true) {
+            if (this.match(TokenType.DOT)) {
+                const property = this.consume(TokenType.IDENTIFIER, "Expected property name").value;
 
-            if (this.match(TokenType.LPAREN)) {
-                // Function call
-                const args: ExpressionAST[] = [];
-                if (!this.check(TokenType.RPAREN)) {
-                    do {
-                        args.push(this.expression());
-                    } while (this.match(TokenType.COMMA));
-                }
-                this.consume(TokenType.RPAREN, "Expected ')'");
-
-                expr = {
-                    type: 'FunctionCall',
-                    callee: {
+                if (this.match(TokenType.LPAREN)) {
+                    const args = this.argumentList();
+                    expr = {
+                        type: 'FunctionCall',
+                        callee: {
+                            type: 'MemberAccess',
+                            object: expr,
+                            property,
+                            location: this.makeLocation(this.previous(), this.previous()),
+                        } as MemberAccessAST,
+                        arguments: args,
+                        location: this.makeLocation(this.previous(), this.previous()),
+                    } as FunctionCallAST;
+                } else {
+                    expr = {
                         type: 'MemberAccess',
                         object: expr,
                         property,
                         location: this.makeLocation(this.previous(), this.previous()),
-                    } as MemberAccessAST,
-                    arguments: args,
-                    location: this.makeLocation(this.previous(), this.previous()),
-                };
+                    } as MemberAccessAST;
+                }
+            } else if (this.match(TokenType.QUESTION_DOT)) {
+                const property = this.consume(TokenType.IDENTIFIER, "Expected property name after '?.'").value;
+
+                if (this.match(TokenType.LPAREN)) {
+                    const args = this.argumentList();
+                    expr = {
+                        type: 'NullSafeFunctionCall',
+                        callee: {
+                            type: 'NullSafeMemberAccess',
+                            object: expr,
+                            property,
+                            location: this.makeLocation(this.previous(), this.previous()),
+                        } as NullSafeMemberAccessAST,
+                        arguments: args,
+                        location: this.makeLocation(this.previous(), this.previous()),
+                    } as NullSafeFunctionCallAST;
+                } else {
+                    expr = {
+                        type: 'NullSafeMemberAccess',
+                        object: expr,
+                        property,
+                        location: this.makeLocation(this.previous(), this.previous()),
+                    } as NullSafeMemberAccessAST;
+                }
             } else {
-                // Member access
-                expr = {
-                    type: 'MemberAccess',
-                    object: expr,
-                    property,
-                    location: this.makeLocation(this.previous(), this.previous()),
-                };
+                break;
             }
         }
 
         return expr;
     }
 
-    // primary = IDENTIFIER | literal | "(" expression ")" | prompt | input | arrayLiteral
+    // argumentList = (expression ("," expression)*)?
+    private argumentList(): ExpressionAST[] {
+        const args: ExpressionAST[] = [];
+
+        if (!this.check(TokenType.RPAREN)) {
+            do {
+                // Check for lambda: identifier ":" expression
+                if (this.check(TokenType.IDENTIFIER) && this.peekNext()?.type === TokenType.COLON) {
+                    args.push(this.lambda());
+                } else if (this.check(TokenType.LPAREN) && this.isLambdaStart()) {
+                    args.push(this.lambda());
+                } else {
+                    args.push(this.expression());
+                }
+            } while (this.match(TokenType.COMMA));
+        }
+
+        this.consume(TokenType.RPAREN, "Expected ')' after arguments");
+        return args;
+    }
+
+    // Check if current position starts a multi-param lambda: (a, b): expr
+    private isLambdaStart(): boolean {
+        if (!this.check(TokenType.LPAREN)) return false;
+
+        // Look ahead to find matching ) and check if followed by :
+        let depth = 0;
+        let i = this.current;
+
+        while (i < this.tokens.length) {
+            const t = this.tokens[i];
+            if (t.type === TokenType.LPAREN) depth++;
+            else if (t.type === TokenType.RPAREN) {
+                depth--;
+                if (depth === 0) {
+                    // Check if followed by colon
+                    const next = this.tokens[i + 1];
+                    return next && next.type === TokenType.COLON;
+                }
+            }
+            i++;
+        }
+
+        return false;
+    }
+
+    // lambda = IDENTIFIER ":" expression | "(" paramList ")" ":" expression
+    private lambda(): LambdaExpressionAST {
+        const startToken = this.peek();
+        const params: string[] = [];
+
+        if (this.match(TokenType.LPAREN)) {
+            // Multi-param: (a, b): expr
+            if (!this.check(TokenType.RPAREN)) {
+                do {
+                    params.push(this.consume(TokenType.IDENTIFIER, "Expected parameter name").value);
+                } while (this.match(TokenType.COMMA));
+            }
+            this.consume(TokenType.RPAREN, "Expected ')' after parameters");
+        } else {
+            // Single param: x: expr
+            params.push(this.consume(TokenType.IDENTIFIER, "Expected parameter name").value);
+        }
+
+        this.consume(TokenType.COLON, "Expected ':' in lambda");
+        const body = this.expression();
+
+        return {
+            type: 'LambdaExpression',
+            params,
+            body,
+            location: this.makeLocation(startToken, this.previous()),
+        };
+    }
+
+    // Peek next token
+    private peekNext(): Token | undefined {
+        if (this.current + 1 >= this.tokens.length) return undefined;
+        return this.tokens[this.current + 1];
+    }
+
+    // primary = IDENTIFIER | literal | "(" expression ")" | "[" elements "]" | prompt | input
     private primary(): ExpressionAST {
         // Check for literals (boolean, number, string, null)
         if (this.check(TokenType.BOOLEAN) || this.check(TokenType.NUMBER) || this.check(TokenType.STRING) || this.check(TokenType.NULL)) {
@@ -414,19 +768,13 @@ export class JjtlParser {
             return this.arrayLiteral();
         }
 
+        // Check for identifier or function call
         if (this.check(TokenType.IDENTIFIER)) {
             const token = this.advance();
 
             // Check for function call
             if (this.match(TokenType.LPAREN)) {
-                const args: ExpressionAST[] = [];
-                if (!this.check(TokenType.RPAREN)) {
-                    do {
-                        args.push(this.expression());
-                    } while (this.match(TokenType.COMMA));
-                }
-                this.consume(TokenType.RPAREN, "Expected ')'");
-
+                const args = this.argumentList();
                 return {
                     type: 'FunctionCall',
                     callee: {
@@ -436,16 +784,17 @@ export class JjtlParser {
                     } as IdentifierAST,
                     arguments: args,
                     location: this.makeLocation(token, this.previous()),
-                };
+                } as FunctionCallAST;
             }
 
             return {
                 type: 'Identifier',
                 name: token.value,
                 location: this.makeLocation(token, token),
-            };
+            } as IdentifierAST;
         }
 
+        // Parenthesized expression
         if (this.match(TokenType.LPAREN)) {
             const expr = this.expression();
             this.consume(TokenType.RPAREN, "Expected ')'");

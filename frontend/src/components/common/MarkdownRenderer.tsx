@@ -96,21 +96,15 @@ const CodeBlock: React.FC<CodeBlockProps> = ({ language, code, onJjScriptExecute
         isJjScriptCode(code)
     );
 
-    // If in JjScript mode, render ScriptBlock
+    // If in JjScript mode, render ScriptBlock with integrated close button
     if (jjscriptMode) {
         return (
             <div className="md-jjscript-wrapper">
-                <button
-                    className="md-jjscript-exit"
-                    onClick={() => setJjscriptMode(false)}
-                    title="Exit JjScript mode"
-                >
-                    <i className="bi bi-x-lg" />
-                </button>
                 <ScriptBlock
                     code={code}
                     onExecute={onJjScriptExecute}
                     allowExecution={!!onJjScriptExecute}
+                    onClose={() => setJjscriptMode(false)}
                 />
             </div>
         );

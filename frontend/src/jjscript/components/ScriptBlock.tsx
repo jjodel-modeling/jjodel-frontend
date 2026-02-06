@@ -41,6 +41,8 @@ export interface ScriptBlockProps {
     onTargetChange?: (targetId: string) => void;
     /** Callback to open execution window */
     onOpenExecutionWindow?: (script: string, target: ScriptTarget) => void;
+    /** Optional close callback (shows X button in header - used for JjScript mode exit) */
+    onClose?: () => void;
 }
 
 export interface ScriptLineResult {
@@ -68,18 +70,12 @@ interface ExecutionStats {
     skippedLines: number;
     errors: number;
     duration: number;
-    /** Number of successful retries during execution */
-    successfulRetries?: number;
 }
 
 interface ExecutionErrorInfo {
     command: string;
     lineNumber: number;
     error: string;
-    /** Whether a retry was attempted */
-    wasRetried: boolean;
-    /** Error message from retry attempt (if different) */
-    retryError?: string;
 }
 
 // Utility function for delay between commands
@@ -87,36 +83,8 @@ const sleep = (ms: number): Promise<void> => {
     return new Promise(resolve => setTimeout(resolve, ms));
 };
 
-// Delay between commands in batch mode (ms)
+// Delay between commands in batch mode (ms) - for visual pacing
 const BATCH_DELAY_MS = 20;
-
-// Retry delay when parent not found (ms)
-const RETRY_DELAY_MS = 150;
-
-// Maximum number of retries for parent not found errors
-const MAX_RETRIES = 1;
-
-// Error patterns that indicate "parent not found" - retryable errors
-const RETRYABLE_ERROR_PATTERNS = [
-    /class .* not found/i,
-    /parent .* not found/i,
-    /container .* not found/i,
-    /package .* not found/i,
-    /cannot find .* to add/i,
-    /target .* does not exist/i,
-    /element .* not found/i,
-    /could not find parent/i,
-    /no parent class/i,
-    /unable to locate/i,
-    /not found in/i,
-];
-
-/**
- * Check if an error message indicates a "parent not found" error that can be retried
- */
-function isRetryableError(errorMessage: string): boolean {
-    return RETRYABLE_ERROR_PATTERNS.some(pattern => pattern.test(errorMessage));
-}
 
 // ============================================
 // CUSTOM THEME (Light)
@@ -157,6 +125,7 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
     selectedTargetId,
     onTargetChange,
     onOpenExecutionWindow,
+    onClose,
 }) => {
     // State
     const [isExpanded, setIsExpanded] = useState(defaultExpanded);
@@ -181,7 +150,19 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
     // Refs
     const abortRef = useRef(false);
     const startTimeRef = useRef<number>(0);
-    const successfulRetriesRef = useRef<number>(0);
+
+    // DEBUG: Log execution stats when modal is shown
+    useEffect(() => {
+        if (showCompleteModal && executionStats) {
+            console.log('[ScriptBlock] Modal shown with stats:', {
+                executedCommands: executionStats.executedCommands,
+                duration: executionStats.duration,
+                errors: executionStats.errors,
+                totalCommands: executionStats.totalCommands,
+                skippedLines: executionStats.skippedLines,
+            });
+        }
+    }, [showCompleteModal, executionStats]);
 
     // Memoized values - always use original code (normalized internally if needed)
     const displayCode = code;
@@ -262,53 +243,6 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
         }
     }, [onOpenExecutionWindow, code, resolvedTarget, hasValidTarget]);
 
-    /**
-     * Execute a single command with retry logic for "parent not found" errors
-     */
-    const executeWithRetry = useCallback(async (
-        command: string,
-        lineNumber: number,
-        executor: (cmd: string) => Promise<ScriptLineResult>
-    ): Promise<{ success: boolean; result: ScriptLineResult; wasRetried: boolean; retryError?: string }> => {
-        // First attempt
-        const firstResult = await executor(command);
-
-        if (firstResult.success) {
-            return { success: true, result: firstResult, wasRetried: false };
-        }
-
-        // Check if error is retryable (parent not found)
-        const errorMessage = firstResult.message || '';
-        if (!isRetryableError(errorMessage)) {
-            // Non-retryable error, fail immediately
-            return { success: false, result: firstResult, wasRetried: false };
-        }
-
-        console.log(`[JjScript] Line ${lineNumber}: Parent not found, waiting ${RETRY_DELAY_MS}ms and retrying...`);
-        console.log(`[JjScript] Command: ${command}`);
-        console.log(`[JjScript] First error: ${errorMessage}`);
-
-        // Wait and retry
-        await sleep(RETRY_DELAY_MS);
-
-        const retryResult = await executor(command);
-
-        if (retryResult.success) {
-            console.log(`[JjScript] Line ${lineNumber}: Retry successful!`);
-            successfulRetriesRef.current++;
-            return { success: true, result: retryResult, wasRetried: true };
-        }
-
-        // Retry also failed
-        console.error(`[JjScript] Line ${lineNumber}: Retry failed!`);
-        return {
-            success: false,
-            result: firstResult,
-            wasRetried: true,
-            retryError: retryResult.message
-        };
-    }, []);
-
     // Execute all commands (or continue from where stepping left off)
     const handleExecute = useCallback(async () => {
         if (!onExecute || commands.length === 0) return;
@@ -329,7 +263,6 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
 
         abortRef.current = false;
         startTimeRef.current = Date.now();
-        successfulRetriesRef.current = 0;
         setExecutionState('running');
         setExecutionErrorInfo(null);
 
@@ -375,15 +308,9 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
             );
 
             try {
-                // Execute with retry for parent not found errors
-                const { success, result, wasRetried, retryError } = await executeWithRetry(
-                    commands[i],
-                    i + 1, // 1-based line number
-                    async (cmd) => {
-                        const [res] = await onExecute([cmd], resolvedTarget?.id);
-                        return res;
-                    }
-                );
+                // Execute command directly (dependencies are handled by executor pre-check)
+                const [result] = await onExecute([commands[i]], resolvedTarget?.id);
+                const success = result.success;
 
                 results.push(result);
 
@@ -407,8 +334,6 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
                         command: commands[i],
                         lineNumber: i + 1,
                         error: result.message || 'Unknown error',
-                        wasRetried,
-                        retryError,
                     });
 
                     // Set pause info for the error dialog
@@ -470,7 +395,6 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
                     command: commands[i],
                     lineNumber: i + 1,
                     error: errorMessage,
-                    wasRetried: false,
                 });
 
                 // Set pause info for the error dialog
@@ -505,14 +429,15 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
 
         // Execution completed successfully
         const duration = Date.now() - startTimeRef.current;
-        setExecutionStats({
+        const stats = {
             totalCommands: commands.length,
             executedCommands: executedCount,
             skippedLines: 0,
             errors: 0,
-            duration,
-            successfulRetries: successfulRetriesRef.current,
-        });
+            duration: duration > 0 ? duration : 0,
+        };
+        console.log('[ScriptBlock] Setting execution stats (handleExecute):', stats);
+        setExecutionStats(stats);
         setExecutionState('completed');
         setCurrentLineIndex(-1);
         setShowCompleteModal(true);
@@ -532,7 +457,7 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
                 totalCommands: commands.length,
             }
         }));
-    }, [code, commands, onExecute, executionState, currentLineIndex, hasValidTarget, availableTargets.length, resolvedTarget, executeWithRetry]);
+    }, [code, commands, onExecute, executionState, currentLineIndex, hasValidTarget, availableTargets.length, resolvedTarget]);
 
     // Step through commands one by one
     const handleStep = useCallback(async () => {
@@ -561,7 +486,6 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
             setCurrentLineIndex(0);
             setExecutionState('stepping');
             startTimeRef.current = Date.now(); // Start timing
-            successfulRetriesRef.current = 0;
             setExecutionErrorInfo(null);
 
             // Reset new error dialog state
@@ -577,14 +501,15 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
         if (nextIndex >= commands.length) {
             // Show completion modal
             const duration = Date.now() - startTimeRef.current;
-            setExecutionStats({
+            const stats = {
                 totalCommands: commands.length,
                 executedCommands: commands.length,
                 skippedLines: 0,
                 errors: 0,
-                duration,
-                successfulRetries: successfulRetriesRef.current,
-            });
+                duration: duration > 0 ? duration : 0,
+            };
+            console.log('[ScriptBlock] Setting execution stats (handleStep start):', stats);
+            setExecutionStats(stats);
             setExecutionState('completed');
             setShowCompleteModal(true);
             return;
@@ -602,15 +527,9 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
         );
 
         try {
-            // Execute with retry for parent not found errors
-            const { success, result, wasRetried, retryError } = await executeWithRetry(
-                commands[nextIndex],
-                nextIndex + 1, // 1-based line number
-                async (cmd) => {
-                    const [res] = await onExecute([cmd], resolvedTarget?.id);
-                    return res;
-                }
-            );
+            // Execute command directly (dependencies are handled by executor pre-check)
+            const [result] = await onExecute([commands[nextIndex]], resolvedTarget?.id);
+            const success = result.success;
 
             setLineStates(prev =>
                 prev.map((ls, idx) =>
@@ -631,14 +550,15 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
             } else if (success) {
                 // Last step completed - show modal
                 const duration = Date.now() - startTimeRef.current;
-                setExecutionStats({
+                const stats = {
                     totalCommands: commands.length,
                     executedCommands: nextIndex + 1,
                     skippedLines: 0,
                     errors: 0,
-                    duration,
-                    successfulRetries: successfulRetriesRef.current,
-                });
+                    duration: duration > 0 ? duration : 0,
+                };
+                console.log('[ScriptBlock] Setting execution stats (handleStep success):', stats);
+                setExecutionStats(stats);
                 setExecutionState('completed');
                 setCurrentLineIndex(-1);
                 setShowCompleteModal(true);
@@ -662,18 +582,17 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
                     command: commands[nextIndex],
                     lineNumber: nextIndex + 1,
                     error: result.message || 'Unknown error',
-                    wasRetried,
-                    retryError,
                 });
                 const duration = Date.now() - startTimeRef.current;
-                setExecutionStats({
+                const stats = {
                     totalCommands: commands.length,
                     executedCommands: nextIndex,
                     skippedLines: 0,
                     errors: 1,
-                    duration,
-                    successfulRetries: successfulRetriesRef.current,
-                });
+                    duration: duration > 0 ? duration : 0,
+                };
+                console.log('[ScriptBlock] Setting execution stats (handleStep error):', stats);
+                setExecutionStats(stats);
                 setExecutionState('error');
                 setShowCompleteModal(true);
 
@@ -709,18 +628,18 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
                 command: commands[nextIndex],
                 lineNumber: nextIndex + 1,
                 error: errorMessage,
-                wasRetried: false,
             });
             // Show error modal
             const duration = Date.now() - startTimeRef.current;
-            setExecutionStats({
+            const stats = {
                 totalCommands: commands.length,
                 executedCommands: nextIndex,
                 skippedLines: 0,
                 errors: 1,
-                duration,
-                successfulRetries: successfulRetriesRef.current,
-            });
+                duration: duration > 0 ? duration : 0,
+            };
+            console.log('[ScriptBlock] Setting execution stats (handleStep catch):', stats);
+            setExecutionStats(stats);
             setExecutionState('error');
             setShowCompleteModal(true);
 
@@ -734,7 +653,7 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
                 }
             }));
         }
-    }, [code, commands, currentLineIndex, executionState, onExecute, hasValidTarget, availableTargets.length, resolvedTarget, executeWithRetry]);
+    }, [code, commands, currentLineIndex, executionState, onExecute, hasValidTarget, availableTargets.length, resolvedTarget]);
 
     // Stop execution
     const handleStop = useCallback(() => {
@@ -811,14 +730,9 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
             );
 
             try {
-                const { success, result, wasRetried, retryError } = await executeWithRetry(
-                    commands[i],
-                    i + 1,
-                    async (cmd) => {
-                        const [res] = await onExecute([cmd], resolvedTarget?.id);
-                        return res;
-                    }
-                );
+                // Execute command directly (dependencies are handled by executor pre-check)
+                const [result] = await onExecute([commands[i]], resolvedTarget?.id);
+                const success = result.success;
 
                 setLineStates(prev =>
                     prev.map((ls, idx) =>
@@ -909,7 +823,7 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
                 skippedCount: allSkippedLines.length,
             }
         }));
-    }, [pauseInfo, onExecute, commands, lineStates, skippedLinesSet, errorsList, executeWithRetry, resolvedTarget]);
+    }, [pauseInfo, onExecute, commands, lineStates, skippedLinesSet, errorsList, resolvedTarget]);
 
     // Close error dialog (stop execution and show summary)
     const handleCloseErrorDialog = useCallback(() => {
@@ -1128,6 +1042,17 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
                             )}
                         </>
                     )}
+
+                    {/* Close button (for JjScript mode exit) */}
+                    {onClose && (
+                        <button
+                            className="script-block__btn script-block__btn--close"
+                            onClick={onClose}
+                            title="Exit JjScript mode"
+                        >
+                            <i className="bi bi-x-lg" />
+                        </button>
+                    )}
                 </div>
             </div>
 
@@ -1212,21 +1137,6 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
                                     <span className="error-label">Error:</span>
                                     <span className="error-message">{executionErrorInfo.error}</span>
                                 </div>
-
-                                {executionErrorInfo.wasRetried && (
-                                    <>
-                                        <div className="retry-info">
-                                            <i className="bi bi-arrow-repeat" />
-                                            Retry attempted after {RETRY_DELAY_MS}ms
-                                        </div>
-                                        {executionErrorInfo.retryError && executionErrorInfo.retryError !== executionErrorInfo.error && (
-                                            <div className="error-row">
-                                                <span className="error-label">Retry error:</span>
-                                                <span className="error-message">{executionErrorInfo.retryError}</span>
-                                            </div>
-                                        )}
-                                    </>
-                                )}
                             </div>
                         )}
 
@@ -1234,39 +1144,33 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
                         {executionStats.errors > 0 && executionErrorInfo && (
                             <div className="error-hint">
                                 <i className="bi bi-lightbulb" />
-                                <span>
-                                    {executionErrorInfo.wasRetried
-                                        ? 'The parent element was not found even after waiting. Check that the parent exists and is spelled correctly.'
-                                        : 'Check the command syntax and ensure all referenced elements exist.'}
-                                </span>
+                                <span>Check the command syntax and ensure all referenced elements exist.</span>
                             </div>
                         )}
 
                         <div className="execution-stats">
                             <div className="stat">
-                                <span className="stat-value">{executionStats.executedCommands}</span>
+                                <span className="stat-value">{executionStats.executedCommands ?? 0}</span>
                                 <span className="stat-label">commands executed</span>
                             </div>
-                            {executionStats.skippedLines > 0 && (
+                            {(executionStats.skippedLines ?? 0) > 0 && (
                                 <div className="stat">
-                                    <span className="stat-value">{executionStats.skippedLines}</span>
+                                    <span className="stat-value">{executionStats.skippedLines ?? 0}</span>
                                     <span className="stat-label">lines skipped</span>
                                 </div>
                             )}
-                            {executionStats.errors > 0 && (
+                            {(executionStats.errors ?? 0) > 0 && (
                                 <div className="stat error">
-                                    <span className="stat-value">{executionStats.errors}</span>
+                                    <span className="stat-value">{executionStats.errors ?? 0}</span>
                                     <span className="stat-label">errors</span>
                                 </div>
                             )}
-                            {(executionStats.successfulRetries ?? 0) > 0 && (
-                                <div className="stat retry">
-                                    <span className="stat-value">{executionStats.successfulRetries}</span>
-                                    <span className="stat-label">successful retries</span>
-                                </div>
-                            )}
                             <div className="stat">
-                                <span className="stat-value">{(executionStats.duration / 1000).toFixed(2)}s</span>
+                                <span className="stat-value">
+                                    {executionStats.duration != null && !isNaN(executionStats.duration)
+                                        ? `${(executionStats.duration / 1000).toFixed(2)}s`
+                                        : '0.00s'}
+                                </span>
                                 <span className="stat-label">duration</span>
                             </div>
                         </div>

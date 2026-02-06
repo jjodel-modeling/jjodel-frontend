@@ -4,7 +4,7 @@ import TabDataMaker from "./tabs/TabDataMaker";
 import {DocumentationTab} from "./tabs/DocumentationTab";
 import React from 'react';
 import { JjtlDevelopmentEnv, ModelOption } from '../../jjtl/components';
-import { JjtlTransformation } from '../../jjtl/types';
+import { JjtlTransformation, TransformationAST } from '../../jjtl/types';
 import { MetamodelElement } from '../../jjtl/views/MetamodelTreeView';
 
 @RuntimeAccessible('DockManager')
@@ -156,6 +156,7 @@ class DockManager {
      * @param getTargetMetamodel - Optional getter for fresh target metamodel data
      * @param availableModels - Optional list of models available for transformation execution
      * @param existingModelNames - Optional list of existing model names (to prevent duplicates)
+     * @param onExecuteTransformation - Optional callback when transformation is executed
      */
     static openTransformation(
         transformation: JjtlTransformation,
@@ -165,7 +166,8 @@ class DockManager {
         getSourceMetamodel?: () => MetamodelElement[],
         getTargetMetamodel?: () => MetamodelElement[],
         availableModels?: ModelOption[],
-        existingModelNames?: string[]
+        existingModelNames?: string[],
+        onExecuteTransformation?: (sourceModelId: string, outputModelName: string, ast: TransformationAST) => Promise<void>
     ): void {
         console.log('[DockManager] openTransformation called', {
             transformationId: transformation?.id,
@@ -227,7 +229,8 @@ class DockManager {
                     onSave: onSave,
                     onCodeChange: (_code: string) => {
                         // Code change tracked internally
-                    }
+                    },
+                    onExecuteTransformation: onExecuteTransformation
                 })
             };
 

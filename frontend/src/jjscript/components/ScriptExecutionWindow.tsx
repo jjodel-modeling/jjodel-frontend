@@ -16,35 +16,6 @@ import { ExecutionErrorDialog, ExecutionErrorInfo, ExecutionStats } from './Exec
 import './ScriptExecutionWindow.scss';
 
 // ============================================
-// RETRY CONFIGURATION
-// ============================================
-
-const MAX_RETRIES = 4;
-const RETRY_DELAY_MS = 150;
-
-const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-
-/**
- * Check if an error message indicates a retryable condition
- * (typically element/parent not found due to race conditions)
- */
-function isRetryableError(error: string): boolean {
-    const retryablePatterns = [
-        /not found/i,
-        /does not exist/i,
-        /cannot find/i,
-        /could not find/i,
-        /unable to locate/i,
-        /parent .* not found/i,
-        /class .* not found/i,
-        /element .* not found/i,
-        /no such/i,
-    ];
-
-    return retryablePatterns.some(pattern => pattern.test(error));
-}
-
-// ============================================
 // TYPES
 // ============================================
 
@@ -231,118 +202,54 @@ export const ScriptExecutionWindow: React.FC<ScriptExecutionWindowProps> = ({
         errorActionResolverRef.current?.('continue');
     }, []);
 
-    // Execute single command with retry mechanism
+    // Execute single command (dependencies are handled by executor pre-check)
     // Returns { success: boolean, error?: string } for better error handling
     const executeCommand = useCallback(async (line: ParsedLine): Promise<{ success: boolean; error?: string }> => {
         const command = line.text.trim();
-        let lastError = '';
-        let attempts = 0;
 
-        while (attempts < MAX_RETRIES) {
-            attempts++;
+        try {
+            const [result] = await onExecute([command], target.id);
 
-            try {
-                const [result] = await onExecute([command], target.id);
-
-                if (result.success) {
-                    // Success - update line status
-                    setParsedLines(prev =>
-                        prev.map(l =>
-                            l.index === line.index
-                                ? { ...l, status: 'success', result }
-                                : l
-                        )
-                    );
-
-                    // Log success with retry info if needed
-                    if (attempts > 1) {
-                        setOutputMessages(prev => [
-                            ...prev,
-                            `✓ ${result.message || command} (succeeded on attempt ${attempts})`
-                        ]);
-                    } else {
-                        setOutputMessages(prev => [...prev, `✓ ${result.message || command}`]);
-                    }
-
-                    return { success: true };
-                }
-
-                // Command failed - check if retryable
-                lastError = result.message || 'Unknown error';
-
-                if (!isRetryableError(lastError)) {
-                    // Non-retryable error - fail immediately
-                    setParsedLines(prev =>
-                        prev.map(l =>
-                            l.index === line.index
-                                ? { ...l, status: 'error', result }
-                                : l
-                        )
-                    );
-                    setOutputMessages(prev => [...prev, `✗ ${lastError}`]);
-                    return { success: false, error: lastError };
-                }
-
-                // Retryable error - wait and retry if we have attempts left
-                if (attempts < MAX_RETRIES) {
-                    console.log(`[JjScript] Attempt ${attempts}/${MAX_RETRIES} failed: ${lastError}, retrying in ${RETRY_DELAY_MS}ms...`);
-                    await sleep(RETRY_DELAY_MS);
-                }
-            } catch (err) {
-                lastError = err instanceof Error ? err.message : 'Unknown error';
-
-                if (!isRetryableError(lastError)) {
-                    // Non-retryable exception - fail immediately
-                    setParsedLines(prev =>
-                        prev.map(l =>
-                            l.index === line.index
-                                ? {
-                                      ...l,
-                                      status: 'error',
-                                      result: { command, success: false, message: lastError },
-                                  }
-                                : l
-                        )
-                    );
-                    setOutputMessages(prev => [...prev, `✗ ${lastError}`]);
-                    return { success: false, error: lastError };
-                }
-
-                // Retryable exception - wait and retry if we have attempts left
-                if (attempts < MAX_RETRIES) {
-                    console.log(`[JjScript] Attempt ${attempts}/${MAX_RETRIES} exception: ${lastError}, retrying in ${RETRY_DELAY_MS}ms...`);
-                    await sleep(RETRY_DELAY_MS);
-                }
+            if (result.success) {
+                // Success - update line status
+                setParsedLines(prev =>
+                    prev.map(l =>
+                        l.index === line.index
+                            ? { ...l, status: 'success', result }
+                            : l
+                    )
+                );
+                setOutputMessages(prev => [...prev, `✓ ${result.message || command}`]);
+                return { success: true };
             }
+
+            // Command failed
+            const errorMessage = result.message || 'Unknown error';
+            setParsedLines(prev =>
+                prev.map(l =>
+                    l.index === line.index
+                        ? { ...l, status: 'error', result }
+                        : l
+                )
+            );
+            setOutputMessages(prev => [...prev, `✗ ${errorMessage}`]);
+            return { success: false, error: errorMessage };
+        } catch (err) {
+            const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+            setParsedLines(prev =>
+                prev.map(l =>
+                    l.index === line.index
+                        ? {
+                              ...l,
+                              status: 'error',
+                              result: { command, success: false, message: errorMessage },
+                          }
+                        : l
+                )
+            );
+            setOutputMessages(prev => [...prev, `✗ ${errorMessage}`]);
+            return { success: false, error: errorMessage };
         }
-
-        // All retries exhausted
-        const totalWaitTime = (MAX_RETRIES - 1) * RETRY_DELAY_MS;
-        console.error(`[JjScript] All ${MAX_RETRIES} attempts failed for: ${command}`);
-
-        setParsedLines(prev =>
-            prev.map(l =>
-                l.index === line.index
-                    ? {
-                          ...l,
-                          status: 'error',
-                          result: {
-                              command,
-                              success: false,
-                              message: lastError,
-                              warnings: [`Retried ${MAX_RETRIES} times (waited ${totalWaitTime}ms total)`]
-                          },
-                      }
-                    : l
-            )
-        );
-        setOutputMessages(prev => [
-            ...prev,
-            `✗ ${lastError}`,
-            `  ↳ Retried ${MAX_RETRIES} times (waited ${totalWaitTime}ms total)`
-        ]);
-
-        return { success: false, error: lastError };
     }, [onExecute, target.id]);
 
     // Run all commands with interactive error handling

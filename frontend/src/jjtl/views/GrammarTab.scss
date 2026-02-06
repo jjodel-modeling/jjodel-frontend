@@ -159,6 +159,25 @@
         box-shadow: 0 2px 8px rgba(14, 165, 233, 0.1);
     }
 
+    &--highlighted {
+        border-color: #f59e0b !important;
+        box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.3), 0 4px 12px rgba(245, 158, 11, 0.15);
+        animation: grammar-highlight-pulse 2s ease-in-out;
+
+        .grammar-rule__name {
+            color: #d97706;
+        }
+    }
+
+    @keyframes grammar-highlight-pulse {
+        0%, 100% {
+            box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.3), 0 4px 12px rgba(245, 158, 11, 0.15);
+        }
+        50% {
+            box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.4), 0 4px 16px rgba(245, 158, 11, 0.25);
+        }
+    }
+
     // ========================================
     // HEADER
     // ========================================
@@ -201,6 +220,46 @@
     &__desc {
         font-size: 11px;
         color: #94a3b8;
+    }
+
+    // ========================================
+    // ACTIONS (expand button + chevron)
+    // ========================================
+
+    &__actions {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    &__expand-btn {
+        width: 26px;
+        height: 26px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: transparent;
+        border: 1px solid transparent;
+        border-radius: 4px;
+        color: #94a3b8;
+        cursor: pointer;
+        opacity: 0;
+        transition: all 150ms ease;
+
+        &:hover {
+            background: #f1f5f9;
+            border-color: #e2e8f0;
+            color: #0ea5e9;
+        }
+
+        i {
+            font-size: 11px;
+        }
+    }
+
+    &:hover &__expand-btn,
+    &--expanded &__expand-btn {
+        opacity: 1;
     }
 
     // ========================================
@@ -317,12 +376,31 @@
             border-color: #0ea5e9;
         }
 
+        &--highlighted {
+            border-color: #f59e0b !important;
+            box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.3), 0 4px 12px rgba(245, 158, 11, 0.15);
+
+            .grammar-rule__name {
+                color: #fbbf24;
+            }
+        }
+
         &__header:hover {
             background: #0f172a;
         }
 
         &__name {
             color: #f1f5f9;
+        }
+
+        &__expand-btn {
+            color: #64748b;
+
+            &:hover {
+                background: #334155;
+                border-color: #475569;
+                color: #0ea5e9;
+            }
         }
 
         &__content {

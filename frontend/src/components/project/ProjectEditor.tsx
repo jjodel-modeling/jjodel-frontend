@@ -8,7 +8,8 @@ import UnsavedChangesDialog from './UnsavedChangesDialog';
 import DocumentationSection from './DocumentationSection';
 import { EcoreService, XMIService } from '../../services/export';
 import { NewTransformationDialog, TransformationsList } from '../../jjtl/components';
-import { JjtlTransformation, createTransformation } from '../../jjtl/types';
+import { JjtlTransformation, createTransformation, TransformationAST } from '../../jjtl/types';
+import { execute as executeTransformation, ExecutionResult } from '../../jjtl/executor';
 import { convertMetamodelToJjtl, findMetamodelById } from '../../jjtl/utils/metamodelConverter';
 import './project-editor.scss';
 
@@ -670,12 +671,19 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
 
         // Build available models list for transformation execution
         // Models (not metamodels) with their conforming metamodel info
-        const availableModels = (models || []).map(model => ({
-            id: model.id,
-            name: model.name || 'Unnamed Model',
-            metamodelId: (model.instanceof as LModel)?.id || '',
-            metamodelName: (model.instanceof as LModel)?.name || ''
-        }));
+        // Note: model.instanceof is a Pointer — access .id/.name directly without casting
+        const availableModels = (models || []).map(model => {
+            const instanceOf = model.instanceof;
+            const mmId = instanceOf?.id || '';
+            const mmName = instanceOf?.name || '';
+
+            return {
+                id: model.id,
+                name: model.name || 'Unnamed Model',
+                metamodelId: mmId,
+                metamodelName: mmName,
+            };
+        });
 
         // Get existing model names to prevent duplicates when creating output
         const existingModelNames = [
@@ -714,6 +722,77 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
             return result;
         };
 
+        // Callback when transformation is executed
+        const handleExecuteTransformation = async (
+            sourceModelId: string,
+            outputModelName: string,
+            ast: TransformationAST
+        ): Promise<void> => {
+            console.log('[ProjectEditor] handleExecuteTransformation called', {
+                sourceModelId,
+                outputModelName,
+                astMappings: ast?.mappings?.length || 0
+            });
+
+            try {
+                // Find the source model
+                const sourceModel = models.find(m => m.id === sourceModelId);
+                if (!sourceModel) {
+                    U.alert('e', 'Error', `Source model not found: ${sourceModelId}`);
+                    return;
+                }
+
+                // Find the target metamodel (as LModel from project.metamodels)
+                const targetMetamodel = metamodels.find(mm => mm.id === transformation.targetMetamodelId);
+                if (!targetMetamodel) {
+                    U.alert('e', 'Error', `Target metamodel not found: ${transformation.targetMetamodelId}`);
+                    return;
+                }
+
+                // Get source model data (instances)
+                // The model's graph/node contains the actual instances
+                // IMPORTANT: Create a DEEP COPY to prevent mutation of the original source model
+                const originalChildren = sourceModel.node?.children || [];
+                const sourceModelData = JSON.parse(JSON.stringify(originalChildren));
+                console.log('[ProjectEditor] Source model data (deep copy):', sourceModelData.length, 'elements');
+
+                // Execute the transformation
+                const result: ExecutionResult = executeTransformation(ast, sourceModelData, targetMetamodel);
+                console.log('[ProjectEditor] Execution result:', {
+                    success: result.success,
+                    errors: result.errors,
+                    targetInstancesCount: result.targetModel?.roots?.length || 0
+                });
+
+                if (!result.success) {
+                    U.alert('e', 'Transformation Failed', result.errors.join('\n'));
+                    return;
+                }
+
+                // Create a new model from the transformation result
+                // createM1 creates a model conforming to the metamodel, adds it to project, and opens tab
+                createM1(project, targetMetamodel);
+
+                // The model was created and added to project.models by createM1
+                // Find it and rename to the user-specified name
+                const createdModel = project.models[project.models.length - 1];
+                if (createdModel) {
+                    createdModel.name = outputModelName;
+
+                    // TODO: Populate the new model with transformation results
+                    // The result.targetModel contains the created instances
+                    // This needs to be integrated with the model structure
+
+                    console.log('[ProjectEditor] Created output model:', outputModelName);
+                    U.alert('i', 'Transformation Executed', `Output model "${outputModelName}" created successfully.`);
+                    markDirty();
+                }
+            } catch (error) {
+                console.error('[ProjectEditor] Error executing transformation:', error);
+                U.alert('e', 'Error', `Failed to execute transformation: ${error}`);
+            }
+        };
+
         // Open transformation in JjTL Development Environment tab
         DockManager.openTransformation(
             transformation,
@@ -731,7 +810,8 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
             getSourceMetamodel,
             getTargetMetamodel,
             availableModels,
-            existingModelNames
+            existingModelNames,
+            handleExecuteTransformation
         );
     };
 

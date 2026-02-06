@@ -321,6 +321,29 @@ $transition-normal: 250ms ease;
     }
   }
 
+  // Language badge for command entries
+  &__lang-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 6px;
+    font-size: 10px;
+    font-weight: 600;
+    border-radius: $radius-sm;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    flex-shrink: 0;
+
+    &--js {
+      background: rgba(245, 158, 11, 0.15);
+      color: #d97706;
+    }
+
+    &--jjel {
+      background: rgba(14, 165, 233, 0.15);
+      color: #0ea5e9;
+    }
+  }
+
   &--result,
   &--error,
   &--info,
@@ -1085,6 +1108,28 @@ $transition-normal: 250ms ease;
     color: $color-text-secondary;
     box-shadow: 0 1px 0 rgba(0, 0, 0, 0.05);
   }
+
+  // Language mode banner
+  .language-mode-banner {
+    margin: $spacing-lg 0;
+    padding: $spacing-md $spacing-lg;
+    background: linear-gradient(135deg, rgba(71, 85, 105, 0.08) 0%, rgba(100, 116, 139, 0.08) 100%);
+    border: 1px solid rgba(71, 85, 105, 0.2);
+    border-radius: $radius-md;
+    font-size: 13px;
+    color: $color-text-secondary;
+
+    strong {
+      color: $color-accent;
+      font-weight: 600;
+    }
+  }
+
+  // Strikethrough for deprecated syntax
+  .inline-code.strikethrough {
+    text-decoration: line-through;
+    opacity: 0.6;
+  }
 }
 
 /* ============================================
@@ -1171,6 +1216,19 @@ $transition-normal: 250ms ease;
 
     &__code {
       color: #f1f5f9;
+    }
+
+    // Language badge - Dark Mode
+    &__lang-badge {
+      &--js {
+        background: rgba(245, 158, 11, 0.2);
+        color: #fbbf24;
+      }
+
+      &--jjel {
+        background: rgba(14, 165, 233, 0.2);
+        color: #38bdf8;
+      }
     }
 
     // Timestamp - Dark Mode
@@ -1515,6 +1573,20 @@ $transition-normal: 250ms ease;
       background: #1e293b;
       border-color: #475569;
       color: #cbd5e1;
+    }
+
+    .language-mode-banner {
+      background: linear-gradient(135deg, rgba(71, 85, 105, 0.2) 0%, rgba(100, 116, 139, 0.2) 100%);
+      border-color: rgba(100, 116, 139, 0.3);
+      color: #94a3b8;
+
+      strong {
+        color: #60a5fa;
+      }
+    }
+
+    .inline-code.strikethrough {
+      opacity: 0.5;
     }
   }
 }

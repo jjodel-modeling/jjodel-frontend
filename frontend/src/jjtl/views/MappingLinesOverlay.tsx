@@ -1,6 +1,11 @@
 /**
  * MappingLinesOverlay Component
  * SVG overlay that draws connection lines between mapped elements
+ *
+ * Features:
+ * - Non-overlapping lines (offset on vertical segment)
+ * - Distinct colors for each mapping
+ * - Hover/selection highlighting
  */
 
 import React, { useEffect, useState, useCallback, useRef } from 'react';
@@ -36,21 +41,62 @@ export interface MappingLinesOverlayProps {
     onLineHover?: (lineId: string | null) => void;
 }
 
-// Type-based colors for mapping arrows (Green/Pink for max contrast)
-const MAPPING_COLORS = {
-    class: {
-        normal: '#6ee7b7',      // Green mint pastel (emerald-300)
-        highlighted: '#10b981', // Green emerald (emerald-500)
-    },
-    attribute: {
-        normal: '#fca5a5',      // Pink coral pastel (red-300)
-        highlighted: '#ef4444', // Red coral (red-500)
-    },
-    reference: {
-        normal: '#fca5a5',      // Same as attribute
-        highlighted: '#ef4444',
-    },
-} as const;
+// ============================================
+// DISTINCT COLORS PALETTE
+// ============================================
+
+// 12 distinguishable colors (ColorBrewer-inspired categorical palette)
+const DISTINCT_COLORS = [
+    '#3cb44b', // Green
+    '#4363d8', // Blue
+    '#e6194b', // Red
+    '#f58231', // Orange
+    '#911eb4', // Purple
+    '#42d4f4', // Cyan
+    '#f032e6', // Magenta
+    '#469990', // Teal
+    '#9A6324', // Brown
+    '#aaffc3', // Mint
+    '#dcbeff', // Lavender
+    '#ffe119', // Yellow
+];
+
+// Highlighted versions (more saturated)
+const DISTINCT_COLORS_HIGHLIGHT = [
+    '#00cc00', // Green
+    '#0000ff', // Blue
+    '#ff0000', // Red
+    '#ff6600', // Orange
+    '#9900cc', // Purple
+    '#00ccff', // Cyan
+    '#ff00ff', // Magenta
+    '#009999', // Teal
+    '#996600', // Brown
+    '#00ff99', // Mint
+    '#cc99ff', // Lavender
+    '#ffcc00', // Yellow
+];
+
+/**
+ * Get color for a line by index
+ */
+const getLineColor = (index: number, isHighlighted: boolean): string => {
+    const colors = isHighlighted ? DISTINCT_COLORS_HIGHLIGHT : DISTINCT_COLORS;
+    return colors[index % colors.length];
+};
+
+/**
+ * Calculate offset to prevent overlapping lines
+ * Distributes lines evenly around the center
+ */
+const calculateLineOffset = (index: number, totalLines: number): number => {
+    if (totalLines <= 1) return 0;
+
+    const spacing = 6; // pixels between lines (reduced from 10 for tighter grouping)
+    const totalWidth = (totalLines - 1) * spacing;
+    const startOffset = -totalWidth / 2;
+    return startOffset + (index * spacing);
+};
 
 export const MappingLinesOverlay: React.FC<MappingLinesOverlayProps> = ({
     lines,
@@ -65,11 +111,6 @@ export const MappingLinesOverlay: React.FC<MappingLinesOverlayProps> = ({
 
     // Combine internal hover and external hover
     const effectiveHoveredLine = hoveredLineId ?? internalHoveredLine;
-
-    // Debug: Log incoming lines
-    useEffect(() => {
-        console.log('[MappingLinesOverlay] Lines received:', lines.length, lines.map(l => ({ id: l.id, status: l.status })));
-    }, [lines]);
 
     // Calculate line coordinates from element positions
     const calculateCoordinates = useCallback(() => {
@@ -91,7 +132,6 @@ export const MappingLinesOverlay: React.FC<MappingLinesOverlayProps> = ({
 
                 // Source is in left tree (start from right edge)
                 // Target is in right tree (end at left edge)
-                // Arrow points from source → target (left → right)
                 const x1 = sourceRect.right - containerRect.left;
                 const y1 = sourceRect.top + sourceRect.height / 2 - containerRect.top;
                 const x2 = targetRect.left - containerRect.left;
@@ -108,38 +148,27 @@ export const MappingLinesOverlay: React.FC<MappingLinesOverlayProps> = ({
                     isSelected: line.isSelected,
                     status: line.status,
                 });
-            } else {
-                // Debug: log when elements are not found
-                if (process.env.NODE_ENV === 'development') {
-                    if (!sourceEl) console.warn(`[MappingLinesOverlay] Source element not found: ${line.sourceId}`);
-                    if (!targetEl) console.warn(`[MappingLinesOverlay] Target element not found: ${line.targetId}`);
-                }
             }
         });
 
-        console.log('[MappingLinesOverlay] Calculated coordinates:', newCoordinates.length, newCoordinates.map(c => ({ id: c.id, status: c.status })));
         setCoordinates(newCoordinates);
     }, [lines, containerRef]);
 
     // Recalculate on lines change, resize, or scroll
     useEffect(() => {
-        // Initial calculation
         calculateCoordinates();
 
-        // Debounce recalculations with requestAnimationFrame
         let rafId: number | null = null;
         const debouncedCalculate = () => {
             if (rafId) cancelAnimationFrame(rafId);
             rafId = requestAnimationFrame(calculateCoordinates);
         };
 
-        // Observe resize
         const resizeObserver = new ResizeObserver(debouncedCalculate);
         if (containerRef.current) {
             resizeObserver.observe(containerRef.current);
         }
 
-        // Observe DOM changes (tree expand/collapse)
         const mutationObserver = new MutationObserver(debouncedCalculate);
         if (containerRef.current) {
             mutationObserver.observe(containerRef.current, {
@@ -150,7 +179,6 @@ export const MappingLinesOverlay: React.FC<MappingLinesOverlayProps> = ({
             });
         }
 
-        // Listen to scroll events (capture phase for child scrolls)
         const handleScroll = debouncedCalculate;
         containerRef.current?.addEventListener('scroll', handleScroll, true);
 
@@ -162,15 +190,20 @@ export const MappingLinesOverlay: React.FC<MappingLinesOverlayProps> = ({
         };
     }, [calculateCoordinates, containerRef]);
 
-    // Generate Manhattan path with rounded corners
-    const generatePath = useCallback((coords: LineCoordinates): string => {
+    // Generate Manhattan path with rounded corners and offset
+    const generatePath = useCallback((
+        coords: LineCoordinates,
+        index: number,
+        total: number
+    ): string => {
         const { x1, y1, x2, y2 } = coords;
 
         // Corner radius for rounded turns
-        const radius = 8;
+        const radius = 3;
 
-        // Calculate midpoint for the vertical segment
-        const midX = (x1 + x2) / 2;
+        // Calculate offset to avoid overlapping
+        const offset = calculateLineOffset(index, total);
+        const midX = ((x1 + x2) / 2) + offset;
 
         // If elements are close vertically, use simple straight line
         if (Math.abs(y1 - y2) < 10) {
@@ -178,12 +211,8 @@ export const MappingLinesOverlay: React.FC<MappingLinesOverlayProps> = ({
         }
 
         // Manhattan path: horizontal -> vertical -> horizontal
-        // With rounded corners using quadratic bezier curves
-
-        // Build path with rounded corners
         let path = `M ${x1} ${y1}`;
 
-        // Horizontal to first corner (with rounded turn)
         if (y1 < y2) {
             // Source is above target
             path += ` L ${midX - radius} ${y1}`;
@@ -198,7 +227,6 @@ export const MappingLinesOverlay: React.FC<MappingLinesOverlayProps> = ({
             path += ` Q ${midX} ${y2}, ${midX + radius} ${y2}`;
         }
 
-        // Final horizontal to target
         path += ` L ${x2} ${y2}`;
 
         return path;
@@ -219,6 +247,16 @@ export const MappingLinesOverlay: React.FC<MappingLinesOverlayProps> = ({
         onLineClick?.(lineId);
     }, [onLineClick]);
 
+    // Filter visible coordinates (for offset calculation)
+    const visibleCoordinates = coordinates.filter(coords => {
+        if (coords.status === 'rejected') return false;
+        if (coords.status === 'pending') {
+            const isHighlighted = effectiveHoveredLine === coords.id || coords.isSelected;
+            return isHighlighted;
+        }
+        return true;
+    });
+
     if (coordinates.length === 0) {
         return <div className="jjtl-mapping-overlay-empty" />;
     }
@@ -229,58 +267,71 @@ export const MappingLinesOverlay: React.FC<MappingLinesOverlayProps> = ({
             className="jjtl-mapping-overlay"
         >
             <defs>
-                {/* Class mapping arrows - Green */}
-                <marker id="arrow-class-normal" markerWidth="6" markerHeight="5" refX="5" refY="2.5" orient="auto">
-                    <polyline points="0 0, 5 2.5, 0 5" fill="none" stroke={MAPPING_COLORS.class.normal} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                </marker>
-                <marker id="arrow-class-highlighted" markerWidth="6" markerHeight="5" refX="5" refY="2.5" orient="auto">
-                    <polyline points="0 0, 5 2.5, 0 5" fill="none" stroke={MAPPING_COLORS.class.highlighted} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                </marker>
+                {/* Dynamic markers for each visible line */}
+                {visibleCoordinates.map((coords, index) => {
+                    const colorNormal = getLineColor(index, false);
+                    const colorHighlight = getLineColor(index, true);
 
-                {/* Attribute mapping arrows - Pink */}
-                <marker id="arrow-attr-normal" markerWidth="6" markerHeight="5" refX="5" refY="2.5" orient="auto">
-                    <polyline points="0 0, 5 2.5, 0 5" fill="none" stroke={MAPPING_COLORS.attribute.normal} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                </marker>
-                <marker id="arrow-attr-highlighted" markerWidth="6" markerHeight="5" refX="5" refY="2.5" orient="auto">
-                    <polyline points="0 0, 5 2.5, 0 5" fill="none" stroke={MAPPING_COLORS.attribute.highlighted} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                </marker>
+                    return (
+                        <React.Fragment key={`markers-${coords.id}`}>
+                            <marker
+                                id={`arrow-${coords.id}-normal`}
+                                markerWidth="6"
+                                markerHeight="5"
+                                refX="5"
+                                refY="2.5"
+                                orient="auto"
+                            >
+                                <polyline
+                                    points="0 0, 5 2.5, 0 5"
+                                    fill="none"
+                                    stroke={colorNormal}
+                                    strokeWidth="1.5"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                />
+                            </marker>
+                            <marker
+                                id={`arrow-${coords.id}-highlighted`}
+                                markerWidth="6"
+                                markerHeight="5"
+                                refX="5"
+                                refY="2.5"
+                                orient="auto"
+                            >
+                                <polyline
+                                    points="0 0, 5 2.5, 0 5"
+                                    fill="none"
+                                    stroke={colorHighlight}
+                                    strokeWidth="1.5"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                />
+                            </marker>
+                        </React.Fragment>
+                    );
+                })}
             </defs>
 
             {/* Render lines */}
-            {coordinates.map(coords => {
+            {visibleCoordinates.map((coords, index) => {
                 const isHovered = effectiveHoveredLine === coords.id;
                 const isSelected = coords.isSelected;
                 const isHighlighted = isHovered || isSelected;
 
-                // Visibility logic based on status:
-                // - pending: only show when hovered or selected
-                // - toInsert: always show (gray when not hovered, cyan when hovered)
-                // - rejected: never show
-                // - undefined (legacy): always show
-                if (coords.status === 'rejected') {
-                    return null;
-                }
-                if (coords.status === 'pending' && !isHighlighted) {
-                    return null;
-                }
-
-                // Get colors based on mapping type (class vs attribute)
-                const mappingType = coords.type === 'class' ? 'class' : 'attribute';
-                const colors = MAPPING_COLORS[mappingType];
-
-                // Style based on state and type
-                const strokeColor = isHighlighted ? colors.highlighted : colors.normal;
-                const strokeWidth = isHighlighted ? 1.5 : 1;
-                const strokeOpacity = isHighlighted ? 1 : 0.6;
-                const markerId = mappingType === 'class'
-                    ? (isHighlighted ? 'arrow-class-highlighted' : 'arrow-class-normal')
-                    : (isHighlighted ? 'arrow-attr-highlighted' : 'arrow-attr-normal');
+                // Get unique color for this line
+                const strokeColor = getLineColor(index, isHighlighted);
+                const strokeWidth = isHighlighted ? 2 : 1.2;
+                const strokeOpacity = isHighlighted ? 1 : 0.7;
+                const markerId = isHighlighted
+                    ? `arrow-${coords.id}-highlighted`
+                    : `arrow-${coords.id}-normal`;
 
                 return (
                     <g key={coords.id}>
                         {/* Invisible wider path for easier click */}
                         <path
-                            d={generatePath(coords)}
+                            d={generatePath(coords, index, visibleCoordinates.length)}
                             fill="none"
                             stroke="transparent"
                             strokeWidth={12}
@@ -292,7 +343,7 @@ export const MappingLinesOverlay: React.FC<MappingLinesOverlayProps> = ({
 
                         {/* Visible line */}
                         <path
-                            d={generatePath(coords)}
+                            d={generatePath(coords, index, visibleCoordinates.length)}
                             fill="none"
                             stroke={strokeColor}
                             strokeWidth={strokeWidth}

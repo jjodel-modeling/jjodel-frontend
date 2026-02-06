@@ -18,6 +18,7 @@ import {
 import { mappingSuggestionService } from '../services';
 import { MappingCard } from './MappingCard';
 import GrammarTab from './GrammarTab';
+import type { GrammarRule } from '../components/GrammarDiagram/types';
 
 export interface SuggestedMappingsPanelProps {
     /** Static source metamodel data (use getSourceMetamodel for fresh data) */
@@ -38,6 +39,8 @@ export interface SuggestedMappingsPanelProps {
     onSuggestionsChange?: (suggestions: MappingSuggestion[]) => void;
     /** Callback to insert generated JjTL code into the editor */
     onInsertCode?: (code: string) => void;
+    /** Highlighted grammar rule (from editor cursor position) */
+    highlightedGrammarRule?: GrammarRule | null;
 }
 
 /**
@@ -118,6 +121,7 @@ export const SuggestedMappingsPanel: React.FC<SuggestedMappingsPanelProps> = ({
     hoveredMapping,
     onSuggestionsChange,
     onInsertCode,
+    highlightedGrammarRule,
 }) => {
     // State
     const [mode, setMode] = useState<SuggestionMode>('simple');
@@ -285,7 +289,7 @@ export const SuggestedMappingsPanel: React.FC<SuggestedMappingsPanelProps> = ({
 
             {/* Grammar Tab Content */}
             {mode === 'grammar' ? (
-                <GrammarTab compact />
+                <GrammarTab compact highlightedRule={highlightedGrammarRule} />
             ) : (
                 <>
                     {/* Mode Description */}

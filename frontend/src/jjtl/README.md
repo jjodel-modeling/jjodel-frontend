@@ -9,7 +9,7 @@ import { tokenize, parse, JjtlEditor } from './jjtl';
 
 // Parse JjTL code
 const source = `
-transformation StateMachine2PetriNet
+transformation StateMachine-2-PetriNet
 
 from StateMachineMM
 to   PetriNetMM
@@ -68,7 +68,7 @@ jjtl/
 ## Esempio Completo
 
 ```jjtl
-transformation StateMachine2PetriNet
+transformation StateMachine-2-PetriNet
 
 from StateMachineMM
 to   PetriNetMM

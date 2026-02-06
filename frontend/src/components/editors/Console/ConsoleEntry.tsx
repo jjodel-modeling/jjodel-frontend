@@ -2,6 +2,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import { U } from '../../../joiner';
 import { HelpCommandOutput } from './HelpCommandOutput';
 import { RootJSONViewer } from './CollapsibleJSONViewer';
+import type { ConsoleLanguage } from './LanguageToggle';
+
+// Re-export ConsoleLanguage for backwards compatibility
+export type { ConsoleLanguage } from './LanguageToggle';
 
 export interface ConsoleEntryData {
   id: string;
@@ -11,6 +15,7 @@ export interface ConsoleEntryData {
   input?: string;
   collapsed?: boolean;
   onCommandClick?: (command: string) => void;
+  language?: ConsoleLanguage;
 }
 
 interface ConsoleEntryProps {
@@ -51,6 +56,11 @@ export const ConsoleEntry: React.FC<ConsoleEntryProps> = ({
     return (
       <div className="console-entry console-entry--command">
         <span className="console-entry__prompt">&gt;</span>
+        {entry.language && (
+          <span className={`console-entry__lang-badge console-entry__lang-badge--${entry.language}`}>
+            {entry.language === 'jjel' ? 'JjEL' : 'JS'}
+          </span>
+        )}
         <pre className="console-entry__code">{entry.input}</pre>
         <button
           className="command-timestamp"
@@ -72,7 +82,10 @@ export const ConsoleEntry: React.FC<ConsoleEntryProps> = ({
     return (
       <div className="console-entry console-entry--help">
         {entry.onCommandClick && (
-          <HelpCommandOutput onCommandClick={entry.onCommandClick} />
+          <HelpCommandOutput
+            onCommandClick={entry.onCommandClick}
+            language={entry.language}
+          />
         )}
       </div>
     );

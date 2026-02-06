@@ -1140,3 +1140,11 @@ body[data-layout-mode="canvas-only"] {
 [data-theme="dark"] .dock-divider:hover::after {
   background-color: #64748b;
 }
+
+/* ============================================
+   JJTL EDITOR ACTIVE - HIDE RIGHT PANEL
+   NOTE: Now handled via JavaScript (rc-dock layout manipulation)
+   in JjtlDevelopmentEnv.tsx for more reliable behavior.
+   The CSS approach was removed because rc-dock caches tab
+   contents and doesn't unmount components when switching tabs.
+   ============================================ */

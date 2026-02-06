@@ -2,19 +2,24 @@ import React from 'react';
 import { U } from '../../../joiner';
 import { Tooltip } from '../../forEndUser/Tooltip';
 import { ConsoleEntryData } from './ConsoleEntry';
+import { LanguageToggle, ConsoleLanguage } from './LanguageToggle';
 
 interface ConsoleToolbarProps {
   onClear: () => void;
   onCopyAll: (entries: ConsoleEntryData[]) => void;
   entries: ConsoleEntryData[];
   historyCount: number;
+  language: ConsoleLanguage;
+  onLanguageChange: (language: ConsoleLanguage) => void;
 }
 
 export const ConsoleToolbar: React.FC<ConsoleToolbarProps> = ({
   onClear,
   onCopyAll,
   entries,
-  historyCount
+  historyCount,
+  language,
+  onLanguageChange
 }) => {
   const handleClearConsole = () => {
     if (entries.length === 0) {
@@ -74,17 +79,22 @@ export const ConsoleToolbar: React.FC<ConsoleToolbarProps> = ({
       </div>
 
       <div className="console-toolbar__right">
+        <LanguageToggle
+          language={language}
+          onChange={onLanguageChange}
+        />
+
+        <div className="toolbar-divider" />
+
         <button
           className="toolbar-btn toolbar-btn--icon-only"
           title="Keyboard shortcuts"
           type="button"
           onClick={() => {
-            Tooltip.show(
-              'Enter: Execute | Shift+Enter: New line | ↑↓: History | Tab: Autocomplete | Ctrl+L: Clear',
-              undefined,
-              undefined,
-              5
-            );
+            const shortcuts = language === 'js'
+              ? 'Enter: Execute | Shift+Enter: New line | ↑↓: History | Tab: Autocomplete | Ctrl+L: Clear'
+              : 'Enter: Evaluate | Shift+Enter: New line | ↑↓: History | Tab: Autocomplete | Ctrl+L: Clear';
+            Tooltip.show(shortcuts, undefined, undefined, 5);
           }}
         >
           <i className="bi bi-keyboard" />

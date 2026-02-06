@@ -1,6 +1,14 @@
 /**
  * JjTL Abstract Syntax Tree Types
+ *
+ * JjTL uses JjEL for expressions. The ExpressionAST type is a union
+ * of both JjTL-specific expressions and JjEL expressions.
  */
+
+import type { JjelExpression } from '../../jjel/types/ast';
+
+// Re-export JjEL expression type for convenience
+export type { JjelExpression };
 
 // Base node
 export interface ASTNode {
@@ -91,16 +99,26 @@ export interface ParameterAST extends ASTNode {
 }
 
 // Expressions
+// JjTL expressions include both JjTL-specific nodes and JjEL expression nodes
 export type ExpressionAST =
+    // JjTL-specific (kept for backwards compatibility)
     | LiteralAST
     | IdentifierAST
     | MemberAccessAST
+    | NullSafeMemberAccessAST
     | FunctionCallAST
+    | NullSafeFunctionCallAST
     | BinaryExpressionAST
+    | UnaryExpressionAST
     | ConditionalExpressionAST
+    | NullCoalesceExpressionAST
+    | IsTypeExpressionAST
+    | LambdaExpressionAST
     | PromptExpressionAST
     | InputExpressionAST
-    | ArrayLiteralAST;
+    | ArrayLiteralAST
+    // JjEL expression wrapper (for direct JjEL integration)
+    | JjelExpressionWrapperAST;
 
 // Literal: "hello", 42, true, null
 export interface LiteralAST extends ASTNode {
@@ -122,6 +140,13 @@ export interface MemberAccessAST extends ASTNode {
     property: string;
 }
 
+// Null-safe member access: source?.name
+export interface NullSafeMemberAccessAST extends ASTNode {
+    type: 'NullSafeMemberAccess';
+    object: ExpressionAST;
+    property: string;
+}
+
 // Function call: source.map(), calculateAge(birthDate)
 export interface FunctionCallAST extends ASTNode {
     type: 'FunctionCall';
@@ -129,12 +154,26 @@ export interface FunctionCallAST extends ASTNode {
     arguments: ExpressionAST[];
 }
 
-// Binary expression: a + b, x == y
+// Null-safe function call: source?.map()
+export interface NullSafeFunctionCallAST extends ASTNode {
+    type: 'NullSafeFunctionCall';
+    callee: ExpressionAST;
+    arguments: ExpressionAST[];
+}
+
+// Binary expression: a + b, x == y, a and b
 export interface BinaryExpressionAST extends ASTNode {
     type: 'BinaryExpression';
-    operator: string;
+    operator: string;  // +, -, *, /, %, ==, !=, <, >, <=, >=, and, or
     left: ExpressionAST;
     right: ExpressionAST;
+}
+
+// Unary expression: not x, -value
+export interface UnaryExpressionAST extends ASTNode {
+    type: 'UnaryExpression';
+    operator: 'not' | '-';
+    operand: ExpressionAST;
 }
 
 // Conditional: if x then y else z
@@ -142,7 +181,34 @@ export interface ConditionalExpressionAST extends ASTNode {
     type: 'ConditionalExpression';
     condition: ExpressionAST;
     thenBranch: ExpressionAST;
-    elseBranch: ExpressionAST;
+    elseBranch: ExpressionAST | null;  // null for "if x then y" without else
+}
+
+// Null coalesce: a ?? b
+export interface NullCoalesceExpressionAST extends ASTNode {
+    type: 'NullCoalesceExpression';
+    left: ExpressionAST;
+    right: ExpressionAST;
+}
+
+// Type check: x is Class
+export interface IsTypeExpressionAST extends ASTNode {
+    type: 'IsTypeExpression';
+    expression: ExpressionAST;
+    targetType: string;
+}
+
+// Lambda: x: x.name or (a, b): a + b
+export interface LambdaExpressionAST extends ASTNode {
+    type: 'LambdaExpression';
+    params: string[];
+    body: ExpressionAST;
+}
+
+// Wrapper for direct JjEL AST integration
+export interface JjelExpressionWrapperAST extends ASTNode {
+    type: 'JjelExpression';
+    expression: JjelExpression;
 }
 
 // ============================================
