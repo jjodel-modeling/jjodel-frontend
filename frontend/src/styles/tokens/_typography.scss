@@ -12,8 +12,8 @@
   /* Sans-serif - UI Text (Variable Font for superior rendering on 5K displays) */
   --font-sans: 'Inter Variable', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
 
-  /* Monospace - Code, Console */
-  --font-mono: 'JetBrains Mono', 'SF Mono', 'Monaco', 'Consolas', 'Liberation Mono', 'Courier New', monospace;
+  /* Monospace - Code, Console (IBM Plex Mono - no ligatures by default) */
+  --font-mono: 'IBM Plex Mono', 'SF Mono', 'Monaco', 'Consolas', 'Liberation Mono', 'Courier New', monospace;
 
   /* Default font family for body */
   --font-family-base: var(--font-sans);
@@ -80,8 +80,8 @@
 /* Inter Variable - Full variable font for smooth weight transitions and superior 5K rendering */
 @import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap');
 
-/* JetBrains Mono - Monospace for code */
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap');
+/* IBM Plex Mono - Monospace for code (no ligatures) */
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap');
 
 /* ============================================
    TYPOGRAPHY CLASSES (Optional utilities)
@@ -121,10 +121,12 @@
   line-height: var(--leading-normal);
 }
 
-/* Monospace */
+/* Monospace - ligatures disabled for code readability */
 .text-mono {
   font-family: var(--font-mono);
   font-size: var(--text-sm);
+  font-variant-ligatures: none;
+  font-feature-settings: 'liga' 0, 'calt' 0;
 }
 
 /* ============================================

@@ -23,7 +23,7 @@ export const baseMonacoOptions: editor.IStandaloneEditorConstructionOptions = {
   // -------------------------
   // Font
   // -------------------------
-  fontFamily: "'JetBrains Mono', 'Fira Code', Consolas, 'Courier New', monospace",
+  fontFamily: "'IBM Plex Mono', 'SF Mono', Consolas, 'Courier New', monospace",
   fontSize: 13,
   fontLigatures: false, // Disable ligatures (=>, ===, !== appear as separate chars)
   fontWeight: '400',

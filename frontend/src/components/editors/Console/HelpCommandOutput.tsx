@@ -1,6 +1,19 @@
 import React from 'react';
 import type { ConsoleLanguage } from './LanguageToggle';
 
+// Inline style to force disable ligatures
+const noLigatureStyle: React.CSSProperties = {
+  fontVariantLigatures: 'none',
+  fontFeatureSettings: "'liga' 0, 'calt' 0, 'clig' 0, 'dlig' 0",
+};
+
+// Code component with ligatures disabled
+const Code: React.FC<{ children: React.ReactNode; strikethrough?: boolean }> = ({ children, strikethrough }) => (
+  <code className={`inline-code${strikethrough ? ' strikethrough' : ''}`} style={noLigatureStyle}>
+    {children}
+  </code>
+);
+
 interface ClickableCommand {
   command: string;
   description: string;
@@ -23,7 +36,7 @@ const AVAILABLE_COMMANDS: ClickableCommand[] = [
 
 export const HelpCommandOutput: React.FC<HelpCommandOutputProps> = ({ onCommandClick, language = 'js' }) => {
   return (
-    <div className="help-output">
+    <div className="help-output" style={noLigatureStyle}>
       <h3>Available Commands:</h3>
       <div className="commands-list">
         {AVAILABLE_COMMANDS.map((cmd, i) => (
@@ -65,43 +78,43 @@ export const HelpCommandOutput: React.FC<HelpCommandOutputProps> = ({ onCommandC
         <>
           <h3>JjEL Syntax:</h3>
           <ul className="tips-list">
-            <li>Logical: <code className="inline-code">and</code>, <code className="inline-code">or</code>, <code className="inline-code">not</code> (NOT <code className="inline-code strikethrough">&&</code>, <code className="inline-code strikethrough">||</code>, <code className="inline-code strikethrough">!</code>)</li>
-            <li>Conditional: <code className="inline-code">if cond then a else b</code> (NOT ternary)</li>
-            <li>Lambda: <code className="inline-code">x: x.name</code> (NOT <code className="inline-code strikethrough">x =&gt; x.name</code>)</li>
-            <li>Null-safe: <code className="inline-code">obj?.prop</code>, <code className="inline-code">value ?? default</code></li>
+            <li>Logical: <Code>and</Code>, <Code>or</Code>, <Code>not</Code> (NOT <Code>&amp;&amp;</Code>, <Code>||</Code>, <Code>!</Code>)</li>
+            <li>Conditional: <Code>if cond then a else b</Code> (NOT ternary)</li>
+            <li>Lambda: <Code>x: x.name</Code> (NOT <Code>x =&gt; x.name</Code>)</li>
+            <li>Null-safe: <Code>obj?.prop</Code>, <Code>value ?? default</Code></li>
           </ul>
           <h3>Quick Examples:</h3>
           <ul className="tips-list">
-            <li><code className="inline-code">data.classes</code> - all classes</li>
-            <li><code className="inline-code">data.classes.filter(c: c.abstract)</code> - filter</li>
-            <li><code className="inline-code">data.classes.map(c: c.name)</code> - map to names</li>
-            <li><code className="inline-code">if node.abstract then "abs" else "conc"</code></li>
+            <li><Code>data.classes</Code> - all classes</li>
+            <li><Code>data.classes.filter(c: c.abstract)</Code> - filter</li>
+            <li><Code>data.classes.map(c: c.name)</Code> - map to names</li>
+            <li><Code>if node.abstract then "abs" else "conc"</Code></li>
           </ul>
         </>
       ) : (
         <>
           <h3>JavaScript Syntax:</h3>
           <ul className="tips-list">
-            <li>Logical: <code className="inline-code">&&</code>, <code className="inline-code">||</code>, <code className="inline-code">!</code></li>
-            <li>Conditional: <code className="inline-code">condition ? a : b</code></li>
-            <li>Arrow: <code className="inline-code">x =&gt; x.name</code></li>
-            <li>Null-safe: <code className="inline-code">obj?.prop</code>, <code className="inline-code">value ?? default</code></li>
+            <li>Logical: <Code>&amp;&amp;</Code>, <Code>||</Code>, <Code>!</Code></li>
+            <li>Conditional: <Code>condition ? a : b</Code></li>
+            <li>Arrow: <Code>x =&gt; x.name</Code></li>
+            <li>Null-safe: <Code>obj?.prop</Code>, <Code>value ?? default</Code></li>
           </ul>
           <h3>Quick Examples:</h3>
           <ul className="tips-list">
-            <li><code className="inline-code">data.classes</code> - all classes</li>
-            <li><code className="inline-code">data.classes.filter(c =&gt; c.abstract)</code> - filter</li>
-            <li><code className="inline-code">data.classes.map(c =&gt; c.name)</code> - map to names</li>
-            <li><code className="inline-code">node.abstract ? "abs" : "conc"</code></li>
+            <li><Code>data.classes</Code> - all classes</li>
+            <li><Code>data.classes.filter(c =&gt; c.abstract)</Code> - filter</li>
+            <li><Code>data.classes.map(c =&gt; c.name)</Code> - map to names</li>
+            <li><Code>node.abstract ? "abs" : "conc"</Code></li>
           </ul>
         </>
       )}
 
       <h3>Context Variables:</h3>
       <ul className="tips-list">
-        <li><code className="inline-code">data</code> - current model/metamodel</li>
-        <li><code className="inline-code">node</code> - selected element</li>
-        <li><code className="inline-code">view</code> - active view/viewpoint</li>
+        <li><Code>data</Code> - current model/metamodel</li>
+        <li><Code>node</Code> - selected element</li>
+        <li><Code>view</Code> - active view/viewpoint</li>
       </ul>
 
       <h3>Keyboard:</h3>

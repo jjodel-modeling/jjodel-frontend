@@ -138,19 +138,25 @@ export class JjtlExecutor {
 
     /**
      * Execute the transformation on a source model
+     * NOTE: Creates a deep copy of sourceModel to prevent mutation of the original data
      */
     execute(sourceModel: any, targetMetamodel?: any): ExecutionResult {
         console.log('[JjTL Executor] Starting execution...');
         console.log('[JjTL Executor] AST:', this.ast);
         console.log('[JjTL Executor] AST mappings count:', this.ast?.mappings?.length ?? 0);
-        console.log('[JjTL Executor] Source model:', sourceModel);
+
+        // CRITICAL: Deep copy source model to prevent mutation of original data
+        // This ensures the source model remains intact after transformation
+        const sourceModelCopy = sourceModel ? JSON.parse(JSON.stringify(sourceModel)) : sourceModel;
+
+        console.log('[JjTL Executor] Source model (deep copy):', sourceModelCopy);
         console.log('[JjTL Executor] Target metamodel:', targetMetamodel);
 
         const startTime = performance.now();
 
         try {
-            // Initialize context
-            this.initializeContext(sourceModel, targetMetamodel);
+            // Initialize context with the COPY, not the original
+            this.initializeContext(sourceModelCopy, targetMetamodel);
 
             // Register helpers
             this.registerHelpers();
@@ -161,8 +167,8 @@ export class JjtlExecutor {
                 roots: [],
             };
 
-            // Get all source instances
-            const sourceInstances = this.extractSourceInstances(sourceModel);
+            // Get all source instances from the COPY
+            const sourceInstances = this.extractSourceInstances(sourceModelCopy);
 
             // Execute class mappings
             for (const mapping of this.ast.mappings) {
@@ -255,7 +261,28 @@ export class JjtlExecutor {
     private extractSourceInstances(sourceModel: any): Map<string, any[]> {
         const instances = new Map<string, any[]>();
 
-        // Handle Jjodel model structure
+        console.log('[JjTL Executor] extractSourceInstances: input type:',
+            Array.isArray(sourceModel) ? 'array' : typeof sourceModel);
+
+        // Handle ARRAY of objects directly (from Jjodel model.objects)
+        if (Array.isArray(sourceModel)) {
+            console.log('[JjTL Executor] Processing array of', sourceModel.length, 'elements');
+            for (const item of sourceModel) {
+                if (item && typeof item === 'object') {
+                    const className = item.className || item.__type || 'UnknownClass';
+                    if (!instances.has(className)) {
+                        instances.set(className, []);
+                    }
+                    instances.get(className)!.push(item);
+                    console.log(`[JjTL Executor] Added instance of "${className}":`, item.name || item.id);
+                }
+            }
+            console.log('[JjTL Executor] Instances by class:',
+                Array.from(instances.entries()).map(([k, v]) => `${k}: ${v.length}`).join(', '));
+            return instances;
+        }
+
+        // Handle Jjodel model structure with .classes
         if (sourceModel?.classes && Array.isArray(sourceModel.classes)) {
             // Extract class definitions
             for (const cls of sourceModel.classes) {
@@ -296,6 +323,9 @@ export class JjtlExecutor {
             }
         }
 
+        console.log('[JjTL Executor] Final instances by class:',
+            Array.from(instances.entries()).map(([k, v]) => `${k}: ${v.length}`).join(', '));
+
         return instances;
     }
 
@@ -308,21 +338,39 @@ export class JjtlExecutor {
         targetModel: TargetModel
     ): void {
         const sourceClassName = mapping.sourceClass;
+        const targetClassName = mapping.targetClass;
         const instances = sourceInstances.get(sourceClassName) || [];
+
+        console.log(`[JjTL Executor] executeClassMapping: ${sourceClassName} -> ${targetClassName}`);
+        console.log(`[JjTL Executor] Found ${instances.length} source instances of type "${sourceClassName}"`);
 
         for (const sourceInstance of instances) {
             this.stats.sourceInstancesProcessed++;
+
+            console.log(`[JjTL Executor] Processing source instance:`, {
+                id: sourceInstance?.id,
+                name: sourceInstance?.name,
+                className: sourceInstance?.className,
+                __type: sourceInstance?.__type,
+            });
 
             // Check condition if present
             if (mapping.condition) {
                 const condResult = this.evaluateCondition(mapping.condition, sourceInstance);
                 if (!condResult) {
+                    console.log(`[JjTL Executor] Instance skipped due to condition`);
                     continue; // Skip this instance
                 }
             }
 
-            // Create target instance(s)
+            // Create target instance(s) with the TARGET class name (not source!)
             const targetInstances = this.createTargetInstances(mapping, sourceInstance, targetModel);
+            console.log(`[JjTL Executor] Created ${targetInstances.length} target instance(s) of type "${targetClassName}"`);
+            console.log(`[JjTL Executor] Target instance(s):`, targetInstances.map(t => ({
+                id: t.id,
+                className: t.className,
+                __type: t.__type,
+            })));
 
             // Execute attribute mappings for each target instance
             for (const targetInstance of targetInstances) {
@@ -392,14 +440,23 @@ export class JjtlExecutor {
 
     /**
      * Create a single target instance
+     * @param className - The TARGET class name (from mapping.targetClass)
+     * @param sourceInstance - The source instance being transformed
      */
     private createTargetInstance(className: string, sourceInstance: any): any {
-        return {
+        // IMPORTANT: className must be the TARGET class, not the source class!
+        console.log(`[JjTL Executor] createTargetInstance: creating instance of TARGET class "${className}"`);
+        console.log(`[JjTL Executor] createTargetInstance: from source "${sourceInstance?.className || sourceInstance?.__type}"`);
+
+        const targetInstance = {
             __type: className,
             className,
             __sourceId: sourceInstance?.id || sourceInstance?.name,
             __createdBy: 'JjTL',
         };
+
+        console.log(`[JjTL Executor] createTargetInstance: created:`, targetInstance);
+        return targetInstance;
     }
 
     /**

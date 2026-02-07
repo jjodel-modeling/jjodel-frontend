@@ -220,6 +220,11 @@ export const ConsoleInput: React.FC<ConsoleInputProps> = ({
         placeholder={finalPlaceholder}
         rows={1}
         spellCheck={false}
+        style={{
+          border: 'none',
+          outline: 'none',
+          boxShadow: 'none',
+        }}
       />
 
       {/* Autocomplete suggestions */}

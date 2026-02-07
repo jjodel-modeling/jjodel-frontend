@@ -578,11 +578,19 @@ Tip: Click the keyboard icon in the toolbar for quick reference.`;
             }
 
             this.setState(prevState => ({
-                entries: [commandEntry, resultEntry, ...prevState.entries], // Prepend for reverse chronological order
+                entries: [...prevState.entries, commandEntry, resultEntry], // Append for chronological order (newest at bottom)
                 expression: '',
                 expressionHistory: [...prevState.expressionHistory, code],
                 expressionIndex: prevState.expressionHistory.length
-            }));
+            }), () => {
+                // Auto-scroll to show new result (wait for DOM update)
+                setTimeout(() => {
+                    const lastEntry = document.querySelector('.console-history .console-entry:last-child');
+                    if (lastEntry) {
+                        lastEntry.scrollIntoView({ behavior: 'smooth', block: 'end' });
+                    }
+                }, 50);
+            });
 
             return;
         }
@@ -666,13 +674,21 @@ Tip: Click the keyboard icon in the toolbar for quick reference.`;
             language: this.state.language
         };
 
-        // Update state - prepend for reverse chronological order (newest at top)
+        // Update state - append for chronological order (newest at bottom)
         this.setState(prevState => ({
-            entries: [commandEntry, resultEntry, ...prevState.entries],
+            entries: [...prevState.entries, commandEntry, resultEntry],
             expression: '',
             expressionHistory: [...prevState.expressionHistory, code],
             expressionIndex: prevState.expressionHistory.length
-        }));
+        }), () => {
+            // Auto-scroll to show new result (wait for DOM update)
+            setTimeout(() => {
+                const lastEntry = document.querySelector('.console-history .console-entry:last-child');
+                if (lastEntry) {
+                    lastEntry.scrollIntoView({ behavior: 'smooth', block: 'end' });
+                }
+            }, 50);
+        });
 
         // Set native console variables for debugging
         this.setNativeConsoleVariables();

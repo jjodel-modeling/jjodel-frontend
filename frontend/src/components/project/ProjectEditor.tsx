@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { LModel, LProject, LViewPoint, U, store } from '../../joiner';
+import { LModel, LProject, LViewPoint, LClass, LObject, U, store } from '../../joiner';
 import DockManager from '../abstract/DockManager';
 import { createM2, createM1 } from '../../pages/components/Navbar';
 import { formatVersionNumber } from '../../utils/versionUtils';
@@ -671,11 +671,52 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
 
         // Build available models list for transformation execution
         // Models (not metamodels) with their conforming metamodel info
-        // Note: model.instanceof is a Pointer — access .id/.name directly without casting
+        // DEBUG: Log raw data to understand the structure
+        console.log('[ProjectEditor] DEBUG - Raw data:', {
+            modelsCount: models?.length || 0,
+            metamodelsCount: metamodels?.length || 0,
+            metamodelIds: metamodels?.map(m => ({ id: m.id, name: m.name })),
+            sourceMetamodelName: transformation.sourceMetamodelName,
+            firstModel: models?.[0] ? {
+                id: models[0].id,
+                name: models[0].name,
+                instanceof: models[0].instanceof,
+                instanceofType: typeof models[0].instanceof,
+                // Also try to access as proxy
+                instanceofId: (models[0].instanceof as any)?.id,
+                instanceofName: (models[0].instanceof as any)?.name,
+            } : null,
+        });
+
         const availableModels = (models || []).map(model => {
+            // model.instanceof can be:
+            // 1. An LModel proxy (has .id and .name) when accessed through LModel proxy
+            // 2. A raw Pointer string when accessed from raw DModel data
+            // 3. undefined/null
             const instanceOf = model.instanceof;
-            const mmId = instanceOf?.id || '';
-            const mmName = instanceOf?.name || '';
+            let mmId = '';
+            let mmName = '';
+
+            if (instanceOf) {
+                if (typeof instanceOf === 'string') {
+                    // Raw Pointer string - need to look up metamodel by ID
+                    mmId = instanceOf;
+                    const mm = metamodels?.find(m => m.id === mmId);
+                    mmName = mm?.name || '';
+                } else if (typeof instanceOf === 'object') {
+                    // LModel proxy - can access .id and .name directly
+                    mmId = (instanceOf as any).id || '';
+                    mmName = (instanceOf as any).name || '';
+                }
+            }
+
+            console.log('[ProjectEditor] DEBUG - Model mapping:', {
+                modelName: model.name,
+                instanceofRaw: instanceOf,
+                instanceofType: typeof instanceOf,
+                extractedMmId: mmId,
+                extractedMmName: mmName,
+            });
 
             return {
                 id: model.id,
@@ -750,14 +791,48 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                 }
 
                 // Get source model data (instances)
-                // The model's graph/node contains the actual instances
+                // Use model.objects to get the actual LObject instances
                 // IMPORTANT: Create a DEEP COPY to prevent mutation of the original source model
-                const originalChildren = sourceModel.node?.children || [];
-                const sourceModelData = JSON.parse(JSON.stringify(originalChildren));
-                console.log('[ProjectEditor] Source model data (deep copy):', sourceModelData.length, 'elements');
+                const sourceObjects = sourceModel.objects || [];
+                console.log('[ProjectEditor] Source objects count:', sourceObjects.length);
 
-                // Execute the transformation
-                const result: ExecutionResult = executeTransformation(ast, sourceModelData, targetMetamodel);
+                // Convert LObjects to a format the executor understands
+                // The executor expects objects with className, attributes, etc.
+                const sourceModelData = sourceObjects.map((obj: LObject) => {
+                    const className = obj.instanceof?.name || '';
+                    const result: Record<string, any> = {
+                        id: obj.id,
+                        name: obj.name,
+                        className: className,
+                        __type: className,
+                    };
+
+                    // Extract attribute values from features
+                    if (obj.features) {
+                        for (const feature of obj.features) {
+                            if (feature.name) {
+                                // For single values use .value, for multi-valued use .values
+                                result[feature.name] = feature.values?.length > 0
+                                    ? (feature.values.length === 1 ? feature.values[0] : feature.values)
+                                    : feature.value;
+                            }
+                        }
+                    }
+
+                    return result;
+                });
+
+                // Deep copy to ensure we don't modify the original
+                const sourceModelDataCopy = JSON.parse(JSON.stringify(sourceModelData));
+                console.log('[ProjectEditor] Source model data (deep copy):', sourceModelDataCopy.length, 'elements');
+                console.log('[ProjectEditor] Source elements by class:', sourceModelDataCopy.reduce((acc: Record<string, number>, obj: any) => {
+                    acc[obj.className] = (acc[obj.className] || 0) + 1;
+                    return acc;
+                }, {}));
+
+                // Execute the transformation with the COPY to protect original data
+                // The executor also does its own deep copy, so this is double-protection
+                const result: ExecutionResult = executeTransformation(ast, sourceModelDataCopy, targetMetamodel);
                 console.log('[ProjectEditor] Execution result:', {
                     success: result.success,
                     errors: result.errors,
@@ -779,12 +854,71 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                 if (createdModel) {
                     createdModel.name = outputModelName;
 
-                    // TODO: Populate the new model with transformation results
-                    // The result.targetModel contains the created instances
-                    // This needs to be integrated with the model structure
+                    // Populate the new model with transformation results
+                    if (result.targetModel?.instances) {
+                        console.log('[ProjectEditor] Populating target model with transformation results...');
+
+                        // Get classes from the target metamodel
+                        const targetClasses: LClass[] = targetMetamodel.classes || [];
+                        console.log('[ProjectEditor] Target metamodel classes:', targetClasses.map(c => c.name));
+
+                        let instancesCreated = 0;
+
+                        // For each class type in the transformation result
+                        result.targetModel.instances.forEach((instances, className) => {
+                            console.log(`[ProjectEditor] Processing ${instances.length} instances of "${className}"`);
+
+                            // Find the matching class in the target metamodel
+                            const targetClass = targetClasses.find(c => c.name === className);
+                            if (!targetClass) {
+                                console.warn(`[ProjectEditor] Class "${className}" not found in target metamodel`);
+                                return;
+                            }
+
+                            // Create each instance
+                            for (const instance of instances) {
+                                try {
+                                    // Create a new object in the model
+                                    const dObject = createdModel.addObject({}, targetClass.id);
+                                    const lObject: LObject = LObject.fromD(dObject);
+
+                                    console.log(`[ProjectEditor] Created object of type "${className}":`, {
+                                        id: lObject.id,
+                                        featuresCount: lObject.features?.length || 0,
+                                    });
+
+                                    // Set attribute values from the transformation result
+                                    for (const [attrName, attrValue] of Object.entries(instance)) {
+                                        // Skip internal properties
+                                        if (attrName.startsWith('__') || attrName === 'className') {
+                                            continue;
+                                        }
+
+                                        // Find the feature by name
+                                        const feature = lObject.features?.find(f => f.name === attrName);
+                                        if (feature) {
+                                            // Set the value based on whether it's multi-valued
+                                            if (Array.isArray(attrValue)) {
+                                                feature.values = attrValue;
+                                            } else {
+                                                feature.value = attrValue;
+                                            }
+                                            console.log(`[ProjectEditor] Set ${attrName} = ${JSON.stringify(attrValue)}`);
+                                        }
+                                    }
+
+                                    instancesCreated++;
+                                } catch (err) {
+                                    console.error(`[ProjectEditor] Error creating instance of "${className}":`, err);
+                                }
+                            }
+                        });
+
+                        console.log(`[ProjectEditor] Created ${instancesCreated} instances in target model`);
+                    }
 
                     console.log('[ProjectEditor] Created output model:', outputModelName);
-                    U.alert('i', 'Transformation Executed', `Output model "${outputModelName}" created successfully.`);
+                    U.alert('i', 'Transformation Executed', `Output model "${outputModelName}" created with ${result.stats?.targetInstancesCreated || 0} instances.`);
                     markDirty();
                 }
             } catch (error) {

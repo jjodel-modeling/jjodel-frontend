@@ -19,7 +19,7 @@ $color-error: #ef4444;
 $color-success: #10b981;
 
 $font-family: 'Inter Variable', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-$font-family-mono: 'JetBrains Mono', 'Monaco', 'Menlo', 'Consolas', monospace;
+$font-family-mono: 'IBM Plex Mono', 'Monaco', 'Menlo', 'Consolas', monospace;
 
 $spacing-sm: 8px;
 $spacing-md: 12px;
@@ -294,9 +294,9 @@ $transition-normal: 250ms ease;
     word-break: break-word;
     line-height: 1.5;
 
-    // Enable ligatures for JetBrains Mono
-    font-variant-ligatures: normal;
-    font-feature-settings: 'liga' 1, 'calt' 1;
+    // Disable ligatures
+    font-variant-ligatures: none;
+    font-feature-settings: 'liga' 0, 'calt' 0;
   }
 
   // Timestamp - always visible (HH:MM format)
@@ -486,9 +486,9 @@ $transition-normal: 250ms ease;
   font-size: 13px;
   line-height: 1.6;
 
-  // Enable ligatures
-  font-variant-ligatures: normal;
-  font-feature-settings: 'liga' 1, 'calt' 1;
+  // Disable ligatures
+  font-variant-ligatures: none;
+  font-feature-settings: 'liga' 0, 'calt' 0;
 }
 
 .json-collapsible {
@@ -659,14 +659,16 @@ $transition-normal: 250ms ease;
   display: flex;
   gap: $spacing-sm;
   padding: $spacing-md $spacing-lg;
+  // Sfondo bianco per il container
   background: #ffffff;
-  border: 1px solid #e2e8f0;
+  // Light border
+  border: 1px solid $color-border;
   border-radius: $radius-md;
   transition: all $transition-fast;
 
   &:focus-within {
     border-color: $color-accent;
-    box-shadow: 0 0 0 3px $color-accent-light;
+    box-shadow: 0 0 0 2px $color-accent-light;
   }
 
   &__prompt {
@@ -675,34 +677,50 @@ $transition-normal: 250ms ease;
     font-size: 14px;
     font-weight: 400; // ✅ Normal weight (not bold)
     color: #64748b; // ✅ Gray (not blue)
-    padding-top: 2px; // Align with first line of textarea
-    line-height: 1.5;
+    line-height: 1.6; // Match textarea line-height
     user-select: none;
   }
 
   &__field {
     flex: 1;
-    min-height: 32px;
-    max-height: 200px;
+    // Altezza minima per 2+ righe (~22px per riga con line-height 1.6)
+    min-height: 56px; // ~2.5 righe
+    // Resize verticale con limite max 40% viewport
+    max-height: 40vh;
+    resize: vertical;
     padding: 0;
-    border: none;
-    outline: none;
-    // CRITICAL: Monospace font for console input - explicit with !important
-    font-family: 'JetBrains Mono', 'SF Mono', 'Monaco', 'Menlo', 'Consolas', 'Liberation Mono', 'Courier New', monospace !important;
+    margin: 0; // Remove any default margin
+    // RIMUOVI BORDO COMPLETAMENTE
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
+    // CRITICAL: Monospace font for console input - IBM Plex Mono (no ligatures)
+    font-family: 'IBM Plex Mono', 'SF Mono', 'Monaco', 'Menlo', 'Consolas', 'Liberation Mono', 'Courier New', monospace !important;
     font-size: 14px !important;
     color: $color-text-primary;
     background: transparent;
-    resize: none;
     line-height: 1.6 !important;
     letter-spacing: -0.01em; // Slightly tighter for monospace
 
-    // Enable ligatures for JetBrains Mono
-    font-variant-ligatures: normal;
-    font-feature-settings: 'liga' 1, 'calt' 1;
+    // Disable ligatures
+    font-variant-ligatures: none;
+    font-feature-settings: 'liga' 0, 'calt' 0;
+
+    // Stile per il resizer nell'angolo
+    &::-webkit-resizer {
+      background-color: $color-border;
+      border-radius: 2px;
+    }
 
     &::placeholder {
       color: #94a3b8;
       font-family: inherit; // Inherit monospace from parent
+    }
+
+    &:focus {
+      border: none !important;
+      outline: none !important;
+      box-shadow: none !important;
     }
   }
 
@@ -771,9 +789,9 @@ $transition-normal: 250ms ease;
   cursor: pointer;
   transition: all $transition-fast;
 
-  // Enable ligatures for JetBrains Mono
-  font-variant-ligatures: normal;
-  font-feature-settings: 'liga' 1, 'calt' 1;
+  // Disable ligatures
+  font-variant-ligatures: none;
+  font-feature-settings: 'liga' 0, 'calt' 0;
 
   &:hover {
     background: #f1f5f9;
@@ -923,9 +941,9 @@ $transition-normal: 250ms ease;
   cursor: pointer;
   transition: all $transition-fast;
 
-  // Enable ligatures for JetBrains Mono
-  font-variant-ligatures: normal;
-  font-feature-settings: 'liga' 1, 'calt' 1;
+  // Disable ligatures
+  font-variant-ligatures: none;
+  font-feature-settings: 'liga' 0, 'calt' 0;
 
   &:hover {
     background: linear-gradient(135deg, #475569 0%, #334155 100%);
@@ -1094,6 +1112,11 @@ $transition-normal: 250ms ease;
     font-family: $font-family-mono;
     font-size: 12px;
     color: $color-text-primary;
+
+    // Disable ligatures - use !important to override font defaults
+    font-variant-ligatures: none !important;
+    -webkit-font-feature-settings: 'liga' 0, 'calt' 0, 'clig' 0, 'dlig' 0 !important;
+    font-feature-settings: 'liga' 0, 'calt' 0, 'clig' 0, 'dlig' 0 !important;
   }
 
   kbd {
@@ -1399,11 +1422,12 @@ $transition-normal: 250ms ease;
 
   .console-input {
     background: #1e293b;
-    border-color: #334155;
+    // Light border in dark mode
+    border: 1px solid #334155;
 
     &:focus-within {
       border-color: #60a5fa;
-      box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.1);
+      box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.2);
     }
 
     &__prompt {
@@ -1412,9 +1436,22 @@ $transition-normal: 250ms ease;
 
     &__field {
       color: #f1f5f9;
+      border: none !important;
+      outline: none !important;
+      box-shadow: none !important;
+
+      &::-webkit-resizer {
+        background-color: #475569;
+      }
 
       &::placeholder {
         color: #64748b;
+      }
+
+      &:focus {
+        border: none !important;
+        outline: none !important;
+        box-shadow: none !important;
       }
     }
 
