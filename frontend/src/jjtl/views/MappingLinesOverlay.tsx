@@ -190,7 +190,11 @@ export const MappingLinesOverlay: React.FC<MappingLinesOverlayProps> = ({
         };
     }, [calculateCoordinates, containerRef]);
 
-    // Generate Manhattan path with rounded corners and offset
+    /**
+     * Generate Manhattan-style path with smooth rounded corners
+     * ALWAYS uses Manhattan routing (horizontal → vertical → horizontal)
+     * Even when elements are at the same vertical level
+     */
     const generatePath = useCallback((
         coords: LineCoordinates,
         index: number,
@@ -198,38 +202,63 @@ export const MappingLinesOverlay: React.FC<MappingLinesOverlayProps> = ({
     ): string => {
         const { x1, y1, x2, y2 } = coords;
 
-        // Corner radius for rounded turns
-        const radius = 3;
+        // Corner radius for smooth turns
+        const baseRadius = 3;
 
-        // Calculate offset to avoid overlapping
+        // Calculate horizontal offset for middle segment to prevent overlapping
         const offset = calculateLineOffset(index, total);
         const midX = ((x1 + x2) / 2) + offset;
 
-        // If elements are close vertically, use simple straight line
-        if (Math.abs(y1 - y2) < 10) {
-            return `M ${x1} ${y1} L ${x2} ${y2}`;
+        // Calculate small vertical offset for TARGET endpoint only to prevent arrowhead overlap
+        const targetVerticalSpacing = 4;
+        const targetYOffset = total > 1 ? (index - (total - 1) / 2) * targetVerticalSpacing : 0;
+        const adjustedY2 = y2 + targetYOffset;
+
+        // Vertical distance
+        const dy = adjustedY2 - y1;
+        const absDy = Math.abs(dy);
+
+        // Calculate safe radius that doesn't exceed available space
+        const maxRadiusFromDy = absDy > 0 ? absDy / 2 : baseRadius;
+        const maxRadiusFromDx = Math.abs(midX - x1) - 5;
+        const safeRadius = Math.max(2, Math.min(baseRadius, maxRadiusFromDy, maxRadiusFromDx));
+
+        // ALWAYS Manhattan - even when elements are at same level
+        if (absDy < 1) {
+            // Elements at same level: create small detour to maintain Manhattan style
+            const detourOffset = 8;
+            return [
+                `M ${x1} ${y1}`,
+                `L ${midX - safeRadius} ${y1}`,
+                `Q ${midX} ${y1}, ${midX} ${y1 + detourOffset}`,
+                `L ${midX} ${adjustedY2 - detourOffset}`,
+                `Q ${midX} ${adjustedY2}, ${midX + safeRadius} ${adjustedY2}`,
+                `L ${x2} ${adjustedY2}`
+            ].join(' ');
         }
 
-        // Manhattan path: horizontal -> vertical -> horizontal
-        let path = `M ${x1} ${y1}`;
-
-        if (y1 < y2) {
-            // Source is above target
-            path += ` L ${midX - radius} ${y1}`;
-            path += ` Q ${midX} ${y1}, ${midX} ${y1 + radius}`;
-            path += ` L ${midX} ${y2 - radius}`;
-            path += ` Q ${midX} ${y2}, ${midX + radius} ${y2}`;
+        // Normal Manhattan path
+        if (dy > 0) {
+            // Target is BELOW source: → ↓ →
+            return [
+                `M ${x1} ${y1}`,
+                `L ${midX - safeRadius} ${y1}`,
+                `Q ${midX} ${y1}, ${midX} ${y1 + safeRadius}`,
+                `L ${midX} ${adjustedY2 - safeRadius}`,
+                `Q ${midX} ${adjustedY2}, ${midX + safeRadius} ${adjustedY2}`,
+                `L ${x2} ${adjustedY2}`
+            ].join(' ');
         } else {
-            // Source is below target
-            path += ` L ${midX - radius} ${y1}`;
-            path += ` Q ${midX} ${y1}, ${midX} ${y1 - radius}`;
-            path += ` L ${midX} ${y2 + radius}`;
-            path += ` Q ${midX} ${y2}, ${midX + radius} ${y2}`;
+            // Target is ABOVE source: → ↑ →
+            return [
+                `M ${x1} ${y1}`,
+                `L ${midX - safeRadius} ${y1}`,
+                `Q ${midX} ${y1}, ${midX} ${y1 - safeRadius}`,
+                `L ${midX} ${adjustedY2 + safeRadius}`,
+                `Q ${midX} ${adjustedY2}, ${midX + safeRadius} ${adjustedY2}`,
+                `L ${x2} ${adjustedY2}`
+            ].join(' ');
         }
-
-        path += ` L ${x2} ${y2}`;
-
-        return path;
     }, []);
 
     // Handle line interactions

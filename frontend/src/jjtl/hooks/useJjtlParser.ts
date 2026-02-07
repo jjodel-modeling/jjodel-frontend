@@ -15,6 +15,8 @@ export interface UseJjtlParserResult {
     isParsing: boolean;
     parse: (source: string) => void;
     parseAsync: (source: string) => Promise<void>;
+    /** Parse immediately and return the result (no debounce, returns AST directly) */
+    parseNow: (source: string) => { ast: TransformationAST | null; errors: ParserError[] };
 }
 
 export interface UseJjtlParserOptions {
@@ -37,8 +39,11 @@ export function useJjtlParser(options: UseJjtlParserOptions = {}): UseJjtlParser
 
     // Parse source synchronously
     const parseSource = useCallback((source: string): { ast: TransformationAST | null; errors: ParserError[] } => {
+        console.log('[useJjtlParser] Parsing source, length:', source.length);
+
         // Tokenize
         const lexerResult = tokenize(source);
+        console.log('[useJjtlParser] Tokens count:', lexerResult.tokens.length);
 
         // Convert lexer errors to parser errors format
         const lexerErrors: ParserError[] = lexerResult.errors.map(e => ({
@@ -49,6 +54,11 @@ export function useJjtlParser(options: UseJjtlParserOptions = {}): UseJjtlParser
 
         // Parse
         const parserResult = parse(lexerResult.tokens);
+        console.log('[useJjtlParser] Parse result:', {
+            hasAst: !!parserResult.ast,
+            mappingsCount: parserResult.ast?.mappings?.length || 0,
+            errorsCount: parserResult.errors.length
+        });
 
         // Combine errors
         const allErrors = [...lexerErrors, ...parserResult.errors];
@@ -121,6 +131,16 @@ export function useJjtlParser(options: UseJjtlParserOptions = {}): UseJjtlParser
     // Compute isValid
     const isValid = ast !== null && errors.length === 0;
 
+    // Parse immediately and return result (useful for getting fresh AST at execution time)
+    const parseNow = useCallback((source: string): { ast: TransformationAST | null; errors: ParserError[] } => {
+        console.log('[useJjtlParser] parseNow called - immediate parse with result');
+        const result = parseSource(source);
+        // Also update state
+        setAst(result.ast);
+        setErrors(result.errors);
+        return result;
+    }, [parseSource]);
+
     return {
         ast,
         errors,
@@ -128,6 +148,7 @@ export function useJjtlParser(options: UseJjtlParserOptions = {}): UseJjtlParser
         isParsing,
         parse: debouncedParse,
         parseAsync,
+        parseNow,
     };
 }
 

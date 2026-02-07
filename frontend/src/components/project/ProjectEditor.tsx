@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { LModel, LProject, LViewPoint, LClass, LObject, U, store } from '../../joiner';
+import { LModel, LProject, LViewPoint, LClass, LObject, U, store, DObject, LPointerTargetable } from '../../joiner';
 import DockManager from '../abstract/DockManager';
 import { createM2, createM1 } from '../../pages/components/Navbar';
 import { formatVersionNumber } from '../../utils/versionUtils';
@@ -775,6 +775,12 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                 astMappings: ast?.mappings?.length || 0
             });
 
+            // Validate AST has mappings
+            if (!ast || !ast.mappings || ast.mappings.length === 0) {
+                U.alert('w', 'No Mappings', 'The transformation has no mappings defined. Add class mappings to transform the model.');
+                return;
+            }
+
             try {
                 // Find the source model
                 const sourceModel = models.find(m => m.id === sourceModelId);
@@ -791,13 +797,10 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                 }
 
                 // Get source model data (instances)
-                // Use model.objects to get the actual LObject instances
-                // IMPORTANT: Create a DEEP COPY to prevent mutation of the original source model
                 const sourceObjects = sourceModel.objects || [];
                 console.log('[ProjectEditor] Source objects count:', sourceObjects.length);
 
                 // Convert LObjects to a format the executor understands
-                // The executor expects objects with className, attributes, etc.
                 const sourceModelData = sourceObjects.map((obj: LObject) => {
                     const className = obj.instanceof?.name || '';
                     const result: Record<string, any> = {
@@ -807,11 +810,9 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                         __type: className,
                     };
 
-                    // Extract attribute values from features
                     if (obj.features) {
                         for (const feature of obj.features) {
                             if (feature.name) {
-                                // For single values use .value, for multi-valued use .values
                                 result[feature.name] = feature.values?.length > 0
                                     ? (feature.values.length === 1 ? feature.values[0] : feature.values)
                                     : feature.value;
@@ -822,21 +823,16 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                     return result;
                 });
 
-                // Deep copy to ensure we don't modify the original
+                // Deep copy to protect original data
                 const sourceModelDataCopy = JSON.parse(JSON.stringify(sourceModelData));
                 console.log('[ProjectEditor] Source model data (deep copy):', sourceModelDataCopy.length, 'elements');
-                console.log('[ProjectEditor] Source elements by class:', sourceModelDataCopy.reduce((acc: Record<string, number>, obj: any) => {
-                    acc[obj.className] = (acc[obj.className] || 0) + 1;
-                    return acc;
-                }, {}));
 
-                // Execute the transformation with the COPY to protect original data
-                // The executor also does its own deep copy, so this is double-protection
+                // Execute the transformation
                 const result: ExecutionResult = executeTransformation(ast, sourceModelDataCopy, targetMetamodel);
                 console.log('[ProjectEditor] Execution result:', {
                     success: result.success,
                     errors: result.errors,
-                    targetInstancesCount: result.targetModel?.roots?.length || 0
+                    targetInstancesCount: result.targetModel?.instances?.size || 0
                 });
 
                 if (!result.success) {
@@ -844,83 +840,104 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                     return;
                 }
 
-                // Create a new model from the transformation result
-                // createM1 creates a model conforming to the metamodel, adds it to project, and opens tab
+                // ============================================
+                // STEP 1: Create model using createM1 (this works!)
+                // ============================================
+                const modelsCountBefore = project.models?.length || 0;
+                console.log('[ProjectEditor] Models count before createM1:', modelsCountBefore);
+
+                // Call createM1 - this handles everything: model, graph, tab
                 createM1(project, targetMetamodel);
 
-                // The model was created and added to project.models by createM1
-                // Find it and rename to the user-specified name
-                const createdModel = project.models[project.models.length - 1];
-                if (createdModel) {
-                    createdModel.name = outputModelName;
+                // Get the newly created model (it's the last one added)
+                const newModels = project.models || [];
+                console.log('[ProjectEditor] Models count after createM1:', newModels.length);
 
-                    // Populate the new model with transformation results
-                    if (result.targetModel?.instances) {
-                        console.log('[ProjectEditor] Populating target model with transformation results...');
-
-                        // Get classes from the target metamodel
-                        const targetClasses: LClass[] = targetMetamodel.classes || [];
-                        console.log('[ProjectEditor] Target metamodel classes:', targetClasses.map(c => c.name));
-
-                        let instancesCreated = 0;
-
-                        // For each class type in the transformation result
-                        result.targetModel.instances.forEach((instances, className) => {
-                            console.log(`[ProjectEditor] Processing ${instances.length} instances of "${className}"`);
-
-                            // Find the matching class in the target metamodel
-                            const targetClass = targetClasses.find(c => c.name === className);
-                            if (!targetClass) {
-                                console.warn(`[ProjectEditor] Class "${className}" not found in target metamodel`);
-                                return;
-                            }
-
-                            // Create each instance
-                            for (const instance of instances) {
-                                try {
-                                    // Create a new object in the model
-                                    const dObject = createdModel.addObject({}, targetClass.id);
-                                    const lObject: LObject = LObject.fromD(dObject);
-
-                                    console.log(`[ProjectEditor] Created object of type "${className}":`, {
-                                        id: lObject.id,
-                                        featuresCount: lObject.features?.length || 0,
-                                    });
-
-                                    // Set attribute values from the transformation result
-                                    for (const [attrName, attrValue] of Object.entries(instance)) {
-                                        // Skip internal properties
-                                        if (attrName.startsWith('__') || attrName === 'className') {
-                                            continue;
-                                        }
-
-                                        // Find the feature by name
-                                        const feature = lObject.features?.find(f => f.name === attrName);
-                                        if (feature) {
-                                            // Set the value based on whether it's multi-valued
-                                            if (Array.isArray(attrValue)) {
-                                                feature.values = attrValue;
-                                            } else {
-                                                feature.value = attrValue;
-                                            }
-                                            console.log(`[ProjectEditor] Set ${attrName} = ${JSON.stringify(attrValue)}`);
-                                        }
-                                    }
-
-                                    instancesCreated++;
-                                } catch (err) {
-                                    console.error(`[ProjectEditor] Error creating instance of "${className}":`, err);
-                                }
-                            }
-                        });
-
-                        console.log(`[ProjectEditor] Created ${instancesCreated} instances in target model`);
-                    }
-
-                    console.log('[ProjectEditor] Created output model:', outputModelName);
-                    U.alert('i', 'Transformation Executed', `Output model "${outputModelName}" created with ${result.stats?.targetInstancesCreated || 0} instances.`);
-                    markDirty();
+                const createdModel = newModels[newModels.length - 1];
+                if (!createdModel) {
+                    console.error('[ProjectEditor] Failed to get created model');
+                    U.alert('e', 'Error', 'Failed to create target model');
+                    return;
                 }
+
+                console.log('[ProjectEditor] Created model:', {
+                    id: createdModel.id,
+                    name: createdModel.name
+                });
+
+                // ============================================
+                // STEP 2: Rename model to outputModelName
+                // ============================================
+                createdModel.name = outputModelName;
+                console.log('[ProjectEditor] Renamed model to:', outputModelName);
+
+                // ============================================
+                // STEP 3: Populate instances from transformation
+                // ============================================
+                let instancesCreated = 0;
+
+                if (result.targetModel?.instances) {
+                    const targetClasses: LClass[] = targetMetamodel.classes || [];
+                    console.log('[ProjectEditor] Target metamodel classes:', targetClasses.map(c => c.name));
+
+                    result.targetModel.instances.forEach((instances: any[], className: string) => {
+                        console.log(`[ProjectEditor] Processing ${instances.length} instances of "${className}"`);
+
+                        const targetClass = targetClasses.find(c => c.name === className);
+                        if (!targetClass) {
+                            console.warn(`[ProjectEditor] Class "${className}" not found in target metamodel`);
+                            return;
+                        }
+
+                        for (const instanceData of instances) {
+                            try {
+                                // Create DObject in the created model
+                                const objectName = instanceData.name || instanceData.__name || `${className}_${instancesCreated}`;
+                                const dObject = DObject.new(
+                                    objectName,
+                                    targetClass.id,      // instanceof = target class
+                                    createdModel.id,     // father = created model
+                                    true
+                                );
+
+                                console.log(`[ProjectEditor] Created DObject:`, {
+                                    id: dObject.id,
+                                    name: objectName,
+                                    className: className
+                                });
+
+                                // Set attribute values
+                                const lObject = LPointerTargetable.fromD(dObject) as LObject;
+                                for (const [attrName, attrValue] of Object.entries(instanceData)) {
+                                    if (attrName.startsWith('__') || ['className', 'id', 'name'].includes(attrName)) {
+                                        continue;
+                                    }
+                                    const feature = lObject.features?.find(f => f.name === attrName);
+                                    if (feature && attrValue !== undefined && attrValue !== null) {
+                                        if (Array.isArray(attrValue)) {
+                                            feature.values = attrValue;
+                                        } else {
+                                            feature.value = attrValue;
+                                        }
+                                        console.log(`[ProjectEditor] Set ${attrName} = ${JSON.stringify(attrValue)}`);
+                                    }
+                                }
+
+                                instancesCreated++;
+                            } catch (err) {
+                                console.error(`[ProjectEditor] Error creating instance:`, err);
+                            }
+                        }
+                    });
+                }
+
+                console.log(`[ProjectEditor] Created ${instancesCreated} instances in target model`);
+
+                // Success notification
+                U.alert('i', 'Transformation Executed',
+                    `Output model "${outputModelName}" created with ${instancesCreated} instances.`);
+                markDirty();
+
             } catch (error) {
                 console.error('[ProjectEditor] Error executing transformation:', error);
                 U.alert('e', 'Error', `Failed to execute transformation: ${error}`);

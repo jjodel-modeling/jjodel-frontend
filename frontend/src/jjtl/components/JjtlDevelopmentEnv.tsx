@@ -124,14 +124,43 @@ export const JjtlDevelopmentEnv: React.FC<JjtlDevelopmentEnvProps> = ({
     // Refs
     const editorRef = useRef<any>(null);
 
-    // Parser hook
-    const { ast, errors: parserErrors, isValid, parse } = useJjtlParser();
+    // Parser hook - includes parseNow for immediate parsing with result
+    const { ast, errors: parserErrors, isValid, parse, parseNow } = useJjtlParser();
+
+    // Ref to track latest AST (avoids stale closure issues)
+    const astRef = useRef(ast);
+    useEffect(() => {
+        astRef.current = ast;
+        console.log('[JjtlDevelopmentEnv] AST updated in ref:', {
+            hasAst: !!ast,
+            mappingsCount: ast?.mappings?.length || 0
+        });
+    }, [ast]);
 
     // Executor hook
     const { execute, trace, isExecuting, executionStatus, lastExecutionTime } = useJjtlExecutor();
 
     // Convert parser errors to problems
     const problems: Problem[] = parserErrors.map((e, i) => parserErrorToProblem(e, i));
+
+    // Parse initial code on mount to ensure AST is populated
+    useEffect(() => {
+        if (initialCode) {
+            console.log('[JjtlDevelopmentEnv] Initial parse on mount, code length:', initialCode.length);
+            parseNow(initialCode);
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []); // Only run on mount - parseNow is stable
+
+    // Re-parse when initialCode prop changes (component receives new transformation)
+    useEffect(() => {
+        if (initialCode && initialCode !== code) {
+            console.log('[JjtlDevelopmentEnv] initialCode prop changed, re-parsing');
+            setCode(initialCode);
+            parseNow(initialCode);
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [initialCode]); // Only react to initialCode changes
 
     // Handle code change
     const handleCodeChange = useCallback((newCode: string) => {
@@ -217,17 +246,49 @@ export const JjtlDevelopmentEnv: React.FC<JjtlDevelopmentEnvProps> = ({
         console.log('[JjtlDevelopmentEnv] sourceModelId:', sourceModelId);
         console.log('[JjtlDevelopmentEnv] outputModelName:', outputModelName);
 
+        // Get fresh AST by parsing the current code (avoids stale closure)
+        // First try the ref, if it has mappings use it; otherwise re-parse
+        let currentAst = astRef.current;
+        console.log('[JjtlDevelopmentEnv] AST from ref:', {
+            hasAst: !!currentAst,
+            mappingsCount: currentAst?.mappings?.length || 0
+        });
+
+        // If AST is stale (no mappings), force a fresh parse
+        if (!currentAst || !currentAst.mappings || currentAst.mappings.length === 0) {
+            console.log('[JjtlDevelopmentEnv] AST appears stale, forcing re-parse of current code');
+            addOutputMessage('Re-parsing transformation code...');
+            const freshResult = parseNow(code);
+            currentAst = freshResult.ast;
+            console.log('[JjtlDevelopmentEnv] Fresh parse result:', {
+                hasAst: !!currentAst,
+                mappingsCount: currentAst?.mappings?.length || 0,
+                errorsCount: freshResult.errors.length
+            });
+        }
+
+        if (!currentAst) {
+            console.error('[JjtlDevelopmentEnv] Cannot execute: AST is null after re-parse');
+            addOutputMessage('Error: Failed to parse transformation code');
+            return;
+        }
+
+        if (!currentAst.mappings || currentAst.mappings.length === 0) {
+            console.warn('[JjtlDevelopmentEnv] No mappings in AST');
+            addOutputMessage('Warning: No mappings defined in transformation');
+        }
+
         try {
-            if (onExecuteTransformation && ast) {
-                addOutputMessage(`Processing ${ast.mappings?.length || 0} mappings...`);
-                await onExecuteTransformation(sourceModelId, outputModelName, ast);
+            if (onExecuteTransformation) {
+                addOutputMessage(`Processing ${currentAst.mappings?.length || 0} mappings...`);
+                await onExecuteTransformation(sourceModelId, outputModelName, currentAst);
                 addOutputMessage('Transformation completed successfully.');
             }
 
             // Also execute the internal executor for tracing
-            if (ast && sourceMetamodel.length > 0) {
+            if (currentAst && sourceMetamodel.length > 0) {
                 const sourceMetamodelCopy = JSON.parse(JSON.stringify(sourceMetamodel));
-                execute(ast, sourceMetamodelCopy);
+                execute(currentAst, sourceMetamodelCopy);
             }
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : String(error);
@@ -239,7 +300,7 @@ export const JjtlDevelopmentEnv: React.FC<JjtlDevelopmentEnvProps> = ({
         // Switch to output tab to show results
         setBottomPanelTab('output');
         setIsBottomPanelCollapsed(false);
-    }, [ast, sourceMetamodel, execute, onExecuteTransformation, clearOutput, addOutputMessage]);
+    }, [code, sourceMetamodel, execute, onExecuteTransformation, clearOutput, addOutputMessage, parseNow]);
 
     // Handle problem click - navigate to error location
     const handleProblemClick = useCallback((problem: Problem) => {

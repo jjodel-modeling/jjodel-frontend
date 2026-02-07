@@ -795,6 +795,9 @@ Tip: Click the keyboard icon in the toolbar for quick reference.`;
             contextkeysarr = Object.getOwnPropertyNames(objraw) || [];
         }
 
+        // Filter out internal/private keys (starting with _ or __)
+        contextkeysarr = contextkeysarr.filter(key => !key.startsWith('_'));
+
         // Set native console variables for debugging
         this.setNativeConsoleVariables();
 
