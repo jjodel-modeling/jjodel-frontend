@@ -160,12 +160,13 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
                     <div
                         className="panel-resizer"
                         onMouseDown={handleResizeStart}
-                        title="Drag to resize"
+                        title="Drag to resize - Double-click to reset"
                         role="separator"
                         aria-orientation="vertical"
                         aria-label="Resize tree view"
+                        tabIndex={0}
                     >
-                        <div className="panel-resizer-handle" />
+                        <i className="bi bi-grip-vertical resize-grip-icon-vertical" />
                     </div>
 
                     {/* Tree View - FIXED WIDTH with transitions */}

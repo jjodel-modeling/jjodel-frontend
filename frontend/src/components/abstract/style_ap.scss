@@ -742,7 +742,7 @@ body.dock-dragging iframe {
   z-index: 300;
   width: 32px;
   height: 32px;
-  left: calc(50% - 16px);
+  left: 50%;
   top: calc(50% - 16px);
   font-family: var(--font-sans);
   background: inherit;

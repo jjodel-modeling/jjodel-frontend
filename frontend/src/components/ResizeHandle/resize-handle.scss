@@ -12,53 +12,49 @@ $transition-normal: 250ms ease;
 
 .resize-handle {
   position: relative;
-  height: 8px;
-  background: transparent;  // ✅ Always transparent (no thick background)
+  height: 16px;
+  background: transparent;
   cursor: ns-resize;
   z-index: 100;
-  flex-shrink: 0; // Prevent handle from shrinking in flex layouts
+  flex-shrink: 0;
+  user-select: none;
 
   // Larger hit area for easier dragging
-  // This creates an invisible extended clickable area
   &::before {
     content: '';
     position: absolute;
     top: -4px;
     left: 0;
     right: 0;
-    height: 16px; // Larger than visual height (8px + 4px padding each side)
+    height: 24px;
     cursor: ns-resize;
   }
 
-  // Hover state - keep transparent, only show indicator
+  // Hover state
   &:hover {
-    background: transparent;  // ✅ No thick background
-
-    .resize-handle__indicator {
-      background: $color-accent;
-      opacity: 1;
+    .resize-handle__icon {
+      color: #0ea5e9;
+      background-color: rgba(14, 165, 233, 0.06);
     }
   }
 
-  // Dragging state - keep transparent, only show indicator
+  // Dragging state
   &.dragging {
-    background: transparent;  // ✅ No thick background
-
-    .resize-handle__indicator {
-      background: #3b82f6; // Blue to show active dragging
-      opacity: 1;
+    .resize-handle__icon {
+      color: #0ea5e9;
+      background-color: rgba(14, 165, 233, 0.1);
+      transform: scaleY(1.2);
     }
   }
 
   // Focus state for keyboard accessibility
   &:focus {
-    outline: 2px solid #3b82f6;
-    outline-offset: 2px;
-  }
-
-  // Focus visible (only show outline when keyboard focused)
-  &:focus:not(:focus-visible) {
     outline: none;
+
+    .resize-handle__icon {
+      color: #0ea5e9;
+      background-color: rgba(14, 165, 233, 0.06);
+    }
   }
 }
 
@@ -71,23 +67,17 @@ $transition-normal: 250ms ease;
   display: flex;
   align-items: center;
   justify-content: center;
-  pointer-events: none; // Let clicks pass through to parent
-  // ❌ NO borders here - line comes from parent context (console-footer-resize-handle)
+  pointer-events: none;
 }
 
-.resize-handle__indicator {
-  width: 40px;
-  height: 4px;
-  background: #cbd5e1; // Light gray by default
-  border-radius: 2px;
-  opacity: 0;  // ✅ Hidden by default
-  transition: all $transition-normal;
-
-  // Visible on hover/drag
-  .resize-handle:hover &,
-  .resize-handle.dragging & {
-    opacity: 1;
-  }
+// Icon-based resize indicator
+.resize-handle__icon {
+  font-size: 16px;
+  color: #94a3b8;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background-color: transparent;
+  transition: color $transition-fast, background-color $transition-fast, transform $transition-fast;
 }
 
 // ============================================
@@ -95,34 +85,30 @@ $transition-normal: 250ms ease;
 // ============================================
 
 @media (prefers-color-scheme: dark) {
-  // ❌ NO border colors needed - line comes from parent context
-
   .resize-handle {
-    // Hover state - dark mode (keep transparent)
     &:hover {
-      background: transparent;  // ✅ No thick background
-
-      .resize-handle__indicator {
-        background: #94a3b8; // Lighter gray for dark mode
+      .resize-handle__icon {
+        color: #60a5fa;
+        background-color: rgba(96, 165, 250, 0.1);
       }
     }
 
-    // Dragging state - dark mode (keep transparent)
     &.dragging {
-      background: transparent;  // ✅ No thick background
-
-      .resize-handle__indicator {
-        background: #60a5fa; // Lighter blue for dark mode
+      .resize-handle__icon {
+        color: #60a5fa;
+        background-color: rgba(96, 165, 250, 0.15);
       }
     }
 
-    // Focus state - dark mode
     &:focus {
-      outline-color: #60a5fa;
+      .resize-handle__icon {
+        color: #60a5fa;
+        background-color: rgba(96, 165, 250, 0.1);
+      }
     }
   }
 
-  .resize-handle__indicator {
-    background: #475569; // Darker gray for dark mode default
+  .resize-handle__icon {
+    color: #64748b;
   }
 }

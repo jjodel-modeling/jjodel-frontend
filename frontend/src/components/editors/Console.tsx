@@ -829,39 +829,46 @@ Tip: Click the keyboard icon in the toolbar for quick reference.`;
                     onLanguageChange={this.handleLanguageChange}
                 />
 
-                {/* Console Body */}
-                <div className="console-body">
-              <ConsoleHistory
-    entries={this.state.entries}
-    onToggleCollapse={(id) => this.handleToggleCollapse(id)}
-    onDeleteEntry={(id) => this.handleDeleteEntry(id)}
-    onExecuteCode={this.handleExecute}
-/>
-                </div>
-
-                {/* Footer Resize Handle - SimpleFooterResizeHandle */}
-                <SimpleFooterResizeHandle
-                    onHeightChange={this.handleFooterHeightChange}
-                    currentHeight={this.state.footerHeight}
-                    minHeight={100}
-                    maxHeight={400}
-                    containerSelector=".console-tab-v2"
-                />
-
-                {/* Input Area */}
-                <div className="console-input-wrapper">
-                    <ConsoleInput
-                        value={this.state.expression}
-                        onChange={(value) => this.setState({ expression: value })}
-                        onExecute={this.handleExecute}
-                        history={this.state.expressionHistory.filter(h => h.trim() !== '')}
-                        contextKeys={contextkeysarr}
-                        language={this.state.language}
+                {/* Console Body - flex to fill remaining space */}
+                <div className="console-body" style={{ flex: 1, overflow: 'auto', minHeight: '100px' }}>
+                    <ConsoleHistory
+                        entries={this.state.entries}
+                        onToggleCollapse={(id) => this.handleToggleCollapse(id)}
+                        onDeleteEntry={(id) => this.handleDeleteEntry(id)}
+                        onExecuteCode={this.handleExecute}
                     />
                 </div>
 
-                {/* Footer - Collapsible Sections */}
-                <div className="console-footer" style={{ maxHeight: `${this.state.footerHeight}px` }}>
+                {/* Bottom Section - Input + Footer with controlled height */}
+                <div
+                    className="console-bottom-section"
+                    style={{
+                        height: `${this.state.footerHeight}px`
+                    }}
+                >
+                    {/* Resize Handle - at the TOP of bottom section */}
+                    <SimpleFooterResizeHandle
+                        onHeightChange={this.handleFooterHeightChange}
+                        currentHeight={this.state.footerHeight}
+                        minHeight={150}
+                        maxHeightPercent={0.4}
+                        containerSelector=".console-tab-v2"
+                    />
+
+                    {/* Input Area */}
+                    <div className="console-input-wrapper" style={{ flexShrink: 0 }}>
+                        <ConsoleInput
+                            value={this.state.expression}
+                            onChange={(value) => this.setState({ expression: value })}
+                            onExecute={this.handleExecute}
+                            history={this.state.expressionHistory.filter(h => h.trim() !== '')}
+                            contextKeys={contextkeysarr}
+                            language={this.state.language}
+                        />
+                    </div>
+
+                    {/* Footer - Collapsible Sections */}
+                    <div className="console-footer" style={{ flex: 1, overflow: 'auto' }}>
                     <CollapsibleContextKeys
                         contextKeys={contextkeysarr.sort()}
                         onInsertKey={this.handleInsertContextKey}
@@ -882,6 +889,7 @@ Tip: Click the keyboard icon in the toolbar for quick reference.`;
                             ]}
                         />
                     )}
+                    </div>
                 </div>
             </div>
         )

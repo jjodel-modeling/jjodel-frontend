@@ -310,36 +310,22 @@ $shadow-md: 0 1px 3px rgba(0, 0, 0, 0.08);
 .jjtl-side-panel-resize-handle {
     position: absolute;
     top: 0;
-    right: -2px;
+    right: -6px;
     bottom: 0;
-    width: 4px;
+    width: 12px;
     cursor: col-resize;
     background: transparent;
     z-index: 10;
-    transition: background-color 0.15s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    user-select: none;
+    flex-shrink: 0;
 
-    // Subtle visual indicator
-    &::after {
-        content: '';
-        position: absolute;
-        top: 0;
-        bottom: 0;
-        right: 1px;
-        width: 1px;
-        background: transparent;
-        transition: background-color 0.15s ease;
-    }
+    // Icon styling handled by .resize-grip-icon-vertical class in console-tab.scss
 
-    &:hover {
-        background: rgba(14, 165, 233, 0.3);
-
-        &::after {
-            background: #0ea5e9;
-        }
-    }
-
-    &:active {
-        background: rgba(14, 165, 233, 0.4);
+    &:focus {
+        outline: none;
     }
 }
 
@@ -405,36 +391,22 @@ $shadow-md: 0 1px 3px rgba(0, 0, 0, 0.08);
 .jjtl-right-panel-resize-handle {
     position: absolute;
     top: 0;
-    left: -2px;
+    left: -6px;
     bottom: 0;
-    width: 4px;
+    width: 12px;
     cursor: col-resize;
     background: transparent;
     z-index: 10;
-    transition: background-color 0.15s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    user-select: none;
+    flex-shrink: 0;
 
-    // Subtle visual indicator
-    &::after {
-        content: '';
-        position: absolute;
-        top: 0;
-        bottom: 0;
-        left: 1px;
-        width: 1px;
-        background: transparent;
-        transition: background-color 0.15s ease;
-    }
+    // Icon styling handled by .resize-grip-icon-vertical class in console-tab.scss
 
-    &:hover {
-        background: rgba(14, 165, 233, 0.3);
-
-        &::after {
-            background: #0ea5e9;
-        }
-    }
-
-    &:active {
-        background: rgba(14, 165, 233, 0.4);
+    &:focus {
+        outline: none;
     }
 }
 

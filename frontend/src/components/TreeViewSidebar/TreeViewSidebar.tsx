@@ -185,7 +185,12 @@ export const TreeViewSidebar: React.FC<TreeViewSidebarProps> = ({ className }) =
                     <div
                         className="tree-view-sidebar__resize-handle"
                         onMouseDown={handleResizeStart}
-                    />
+                        role="separator"
+                        aria-orientation="vertical"
+                        title="Drag to resize"
+                    >
+                        <i className={`bi bi-grip-vertical resize-grip-icon-vertical ${isDragging ? 'dragging' : ''}`} />
+                    </div>
 
                     {/* Header */}
                     <div className="tree-view-sidebar__header">

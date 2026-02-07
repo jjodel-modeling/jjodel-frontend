@@ -130,20 +130,17 @@ $color-parameter: #9ca3af;  // Gray (light) - Parameters
     position: absolute;
     top: 0;
     left: 0;
-    width: 4px;
+    width: 12px;
     height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     cursor: ew-resize;
     background-color: transparent;
     transition: background-color $transition-fast;
     z-index: 10;
 
-    &:hover {
-        background-color: $color-accent-light;
-    }
-
-    .tree-view-sidebar--dragging & {
-        background-color: $color-accent;
-    }
+    // Icon styles are handled by .resize-grip-icon-vertical class in console-tab.scss
 }
 
 // Header

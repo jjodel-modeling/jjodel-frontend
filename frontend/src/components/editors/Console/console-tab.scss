@@ -158,6 +158,20 @@ $transition-normal: 250ms ease;
   overflow-y: auto;
   padding: 0;
   background: $color-bg-primary;
+  min-height: 100px;
+}
+
+/* ============================================
+   CONSOLE BOTTOM SECTION (Input + Footer)
+   ============================================ */
+
+.console-bottom-section {
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid $color-border;
+  background: $color-bg-primary;
+  flex-shrink: 0;
+  margin-top: 20px;
 }
 
 .console-history {
@@ -645,13 +659,86 @@ $transition-normal: 250ms ease;
 }
 
 /* ============================================
+   RESIZE GRIP ICONS (Both orientations)
+   ============================================ */
+
+// Horizontal grip (for vertical resize - console footer) - LEGACY alias
+.resize-grip-icon {
+  font-size: 16px;
+  color: #94a3b8;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background-color: white;
+  transition: color 150ms ease, background-color 150ms ease, transform 150ms ease;
+  cursor: ns-resize;
+
+  &:hover {
+    color: #64748b;
+    background-color: #f1f5f9;
+    transform: scaleY(1.1);
+  }
+
+  &.dragging {
+    color: #0ea5e9;
+    background-color: rgba(14, 165, 233, 0.08);
+    transform: scaleY(1.2);
+  }
+}
+
+// Vertical grip (for horizontal resize - between side panels)
+.resize-grip-icon-vertical {
+  font-size: 16px;
+  color: #94a3b8;
+  padding: 8px 2px;
+  border-radius: 4px;
+  background-color: transparent;
+  transition: color 150ms ease, background-color 150ms ease, transform 150ms ease;
+  cursor: ew-resize;
+
+  &:hover {
+    color: #64748b;
+    background-color: #f1f5f9;
+    transform: scaleX(1.1);
+  }
+
+  &.dragging {
+    color: #0ea5e9;
+    background-color: rgba(14, 165, 233, 0.08);
+    transform: scaleX(1.2);
+  }
+}
+
+// Horizontal grip (for vertical resize - console footer)
+.resize-grip-icon-horizontal {
+  font-size: 16px;
+  color: #94a3b8;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background-color: white;
+  transition: color 150ms ease, background-color 150ms ease, transform 150ms ease;
+  cursor: ns-resize;
+
+  &:hover {
+    color: #64748b;
+    background-color: #f1f5f9;
+    transform: scaleY(1.1);
+  }
+
+  &.dragging {
+    color: #0ea5e9;
+    background-color: rgba(14, 165, 233, 0.08);
+    transform: scaleY(1.2);
+  }
+}
+
+/* ============================================
    CONSOLE INPUT
    ============================================ */
 
 .console-input-wrapper {
   padding: $spacing-lg;
   background: $color-bg-primary;
-  border-top: 1px solid $color-border;
+  // Note: No border-top here - the single horizontal line is on .console-bottom-section
 }
 
 .console-input {
@@ -1417,7 +1504,7 @@ $transition-normal: 250ms ease;
 
   .console-input-wrapper {
     background: #0f172a;
-    border-top-color: #334155;
+    // Note: No border-top here - the single horizontal line is on .console-bottom-section
   }
 
   .console-input {
@@ -1512,6 +1599,37 @@ $transition-normal: 250ms ease;
 
   .console-footer-resize-handle {
     border-top-color: #334155; // Dark mode border
+  }
+
+  .resize-grip-icon,
+  .resize-grip-icon-horizontal {
+    color: #64748b;
+    background-color: #1e293b;
+
+    &:hover {
+      color: #94a3b8;
+      background-color: #334155;
+    }
+
+    &.dragging {
+      color: #38bdf8;
+      background-color: rgba(56, 189, 248, 0.15);
+    }
+  }
+
+  .resize-grip-icon-vertical {
+    color: #64748b;
+    background-color: transparent;
+
+    &:hover {
+      color: #94a3b8;
+      background-color: #334155;
+    }
+
+    &.dragging {
+      color: #38bdf8;
+      background-color: rgba(56, 189, 248, 0.15);
+    }
   }
 
   .collapsible-section {

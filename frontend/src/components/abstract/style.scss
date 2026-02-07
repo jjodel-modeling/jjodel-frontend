@@ -578,14 +578,14 @@ body.dock-dragging iframe {
   content: '';
   position: absolute;
   top: calc(50% + 18px);
-  left: 50%;
+  left: 0%;
   transform: translate(-50%, -50%);
   width: 4px;
   height: 40px;
   background-color: var(--color-border-primary);
   border-radius: 3px;
   transition: background-color 150ms ease, height 150ms ease;
-  pointer-events: none; /* Allow clicks to pass through to divider */
+  pointer-events: none;
 }
 
 .dock-divider:hover::after {
@@ -612,6 +612,7 @@ body.dock-dragging iframe {
 
 .dock-vbox > .dock-divider:hover::after {
   width: 80px;
+  height: 4px;
 }
 
 /* ============================================
@@ -1134,11 +1135,13 @@ body[data-layout-mode="canvas-only"] {
 }
 
 [data-theme="dark"] .dock-divider::after {
-  background-color: #555;
+  color: #64748b;
+  background-color: transparent;
 }
 
 [data-theme="dark"] .dock-divider:hover::after {
-  background-color: #64748b;
+  color: #94a3b8;
+  background-color: #334155;
 }
 
 /* ============================================

@@ -63,9 +63,10 @@ export const ResizeHandle: React.FC<ResizeHandleProps> = ({
       aria-valuenow={isDragging ? 1 : 0}
       tabIndex={0}
       onKeyDown={handleKeyDown}
+      title="Drag to resize - Double-click to reset"
     >
       <div className="resize-handle__track">
-        <div className="resize-handle__indicator" />
+        <i className="bi bi-grip-horizontal resize-handle__icon" />
       </div>
     </div>
   );

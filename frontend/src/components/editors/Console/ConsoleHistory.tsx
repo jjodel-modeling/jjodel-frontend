@@ -23,7 +23,7 @@ export const ConsoleHistory: React.FC<ConsoleHistoryProps> = ({
   };
 
   const quickStartExamples = [
-    { code: 'data', description: 'Current model data' },
+    { code: 'data', description: 'Current model element' },
     { code: 'data.classes', description: 'All classes' },
     { code: 'node', description: 'Selected node' },
     { code: '/help', description: 'Show commands' },
