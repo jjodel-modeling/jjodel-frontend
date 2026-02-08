@@ -584,7 +584,7 @@ export function renderDiagram(rule: GrammarRule, container: HTMLElement): void {
                     .loop { stroke: #94a3b8; }
                     .arrow { fill: #64748b; stroke: none; }
                     .terminal { fill: #f0f9ff; stroke: #0ea5e9; stroke-width: 1.5; }
-                    .terminal-text { fill: #0369a1; font-family: 'SF Mono', Monaco, monospace; font-size: 12px; font-weight: 600; text-anchor: middle; }
+                    .terminal-text { fill: #0369a1; font-family: 'IBM Plex Mono', Monaco, monospace; font-size: 12px; font-weight: 600; text-anchor: middle; }
                     .nonterminal { fill: #fefce8; stroke: #ca8a04; stroke-width: 1.5; }
                     .nonterminal-text { fill: #854d0e; font-family: -apple-system, BlinkMacSystemFont, sans-serif; font-size: 12px; text-anchor: middle; }
                 </style>

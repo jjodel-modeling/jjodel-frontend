@@ -12,36 +12,40 @@ import '../../components/CreateProjectDialog/create-project-dialog.scss';
 // ============================================
 
 /**
- * Converts a string to PascalCase removing spaces and special characters
- * "Activity Diagrams" → "ActivityDiagrams"
- * "petri nets" → "PetriNets"
- * "my_metamodel" → "MyMetamodel"
+ * Sanitizes a string to be a valid JjTL identifier
+ * Removes/replaces invalid characters, keeps only letters, numbers, and underscores
+ * "Activity Diagrams" → "Activity_Diagrams"
+ * "petri-nets" → "petri_nets"
+ * "my_metamodel" → "my_metamodel"
  */
-function toPascalCase(str: string): string {
+function sanitizeForJjtl(str: string): string {
     if (!str) return '';
 
     return str
-        // Split by spaces, underscores, dashes
-        .split(/[\s_-]+/)
-        // Capitalize first letter of each word
-        .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-        // Join
-        .join('');
+        // Replace spaces, dashes, and other invalid chars with underscore
+        .replace(/[^a-zA-Z0-9_]/g, '_')
+        // Remove consecutive underscores
+        .replace(/_+/g, '_')
+        // Remove leading/trailing underscores
+        .replace(/^_|_$/g, '')
+        // Ensure it starts with a letter (prepend 'T' if it starts with number)
+        .replace(/^(\d)/, 'T$1');
 }
 
 /**
  * Generates a transformation name from metamodel names
- * "Activity Diagrams" + "Petri Nets" → "ActivityDiagrams-2-PetriNets"
+ * Uses "_to_" separator which is valid in JjTL syntax
+ * "Activity Diagrams" + "Petri Nets" → "Activity_Diagrams_to_Petri_Nets"
  */
 function generateTransformationNameFromMetamodels(sourceName: string, targetName: string): string {
     if (!sourceName || !targetName) {
         return 'Transformation';
     }
 
-    const source = toPascalCase(sourceName);
-    const target = toPascalCase(targetName);
+    const source = sanitizeForJjtl(sourceName);
+    const target = sanitizeForJjtl(targetName);
 
-    return `${source}-2-${target}`;
+    return `${source}_to_${target}`;
 }
 
 // ============================================
@@ -142,11 +146,21 @@ export const NewTransformationDialog: React.FC<NewTransformationDialogProps> = (
         return () => window.removeEventListener('keydown', handleEsc);
     }, [isOpen]);
 
+    /**
+     * Checks if a name is a valid JjTL identifier
+     * Must start with letter or underscore, contain only letters/numbers/underscores
+     */
+    const isValidJjtlIdentifier = (name: string): boolean => {
+        return /^[a-zA-Z_][a-zA-Z0-9_]*$/.test(name);
+    };
+
     const validate = (): boolean => {
         const newErrors: typeof errors = {};
 
         if (!name.trim()) {
             newErrors.name = 'Transformation name is required';
+        } else if (!isValidJjtlIdentifier(name.trim())) {
+            newErrors.name = 'Name can only contain letters, numbers, and underscores (no spaces or dashes)';
         } else if (existingNames.includes(name.trim())) {
             newErrors.name = 'A transformation with this name already exists';
         }
@@ -248,7 +262,7 @@ export const NewTransformationDialog: React.FC<NewTransformationDialogProps> = (
                                         id="transformation-name"
                                         type="text"
                                         className={`form-input ${errors.name ? 'error' : ''}`}
-                                        placeholder="e.g., StateMachine-2-PetriNet"
+                                        placeholder="e.g., StateMachine_to_PetriNet"
                                         value={name}
                                         onChange={(e) => {
                                             setName(e.target.value);

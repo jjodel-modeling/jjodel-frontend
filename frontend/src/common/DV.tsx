@@ -1108,7 +1108,7 @@ public static class(): string { return (`
     style={{
         '--outlineColor': colorIndex !== 0 ? 'var(--outline-'+colorIndex+')': 'transparent',
         '--borderColor': colorIndex !== 0 ? 'var(--outline-'+colorIndex+')': 'gray',
-        fontFamily: "'SF Mono', Monaco, Consolas, monospace"
+        fontFamily: "'IBM Plex Mono', Monaco, Consolas, monospace"
     }}
     onDragOver={(e) => {
         e.preventDefault();
@@ -1163,7 +1163,7 @@ public static class(): string { return (`
             fontSize: '12px',
             fontWeight: 600,
             color: '#64748b',
-            fontFamily: "'SF Mono', Monaco, Consolas, monospace"
+            fontFamily: "'IBM Plex Mono', Monaco, Consolas, monospace"
         }}>{interface ? 'Interface' : 'Class'}:</span>}
 
         {/* Class name - lighter weight */}
@@ -1171,7 +1171,7 @@ public static class(): string { return (`
             fontSize: '12px',
             fontWeight: 400,
             color: '#1e293b',
-            fontFamily: "'SF Mono', Monaco, Consolas, monospace",
+            fontFamily: "'IBM Plex Mono', Monaco, Consolas, monospace",
             fontStyle: data.abstract ? 'italic' : 'normal'
         }}>
             <Input data={data} field={'name'} hidden={true} autosize={true} />
@@ -1304,7 +1304,7 @@ public static enum(): string { return (
     justifyContent: 'space-between',
     padding: '4px 10px',
     fontSize: '12px',
-    fontFamily: "'SF Mono', Monaco, Consolas, monospace",
+    fontFamily: "'IBM Plex Mono', Monaco, Consolas, monospace",
     transition: 'background 0.15s ease'
 }}>
     {/* Left side: Name with colon */}
@@ -1356,7 +1356,7 @@ public static enum(): string { return (
     justifyContent: 'space-between',
     padding: '4px 10px',
     fontSize: '12px',
-    fontFamily: "'SF Mono', Monaco, Consolas, monospace",
+    fontFamily: "'IBM Plex Mono', Monaco, Consolas, monospace",
     transition: 'background 0.15s ease'
 }}>
     {/* Left side: Name with arrow */}

@@ -191,9 +191,9 @@ export const MappingLinesOverlay: React.FC<MappingLinesOverlayProps> = ({
     }, [calculateCoordinates, containerRef]);
 
     /**
-     * Generate Manhattan-style path with smooth rounded corners
-     * ALWAYS uses Manhattan routing (horizontal → vertical → horizontal)
-     * Even when elements are at the same vertical level
+     * Generate path between source and target elements
+     * Uses STRAIGHT LINE when elements are at the same vertical level
+     * Uses Manhattan routing (horizontal → vertical → horizontal) otherwise
      */
     const generatePath = useCallback((
         coords: LineCoordinates,
@@ -223,18 +223,10 @@ export const MappingLinesOverlay: React.FC<MappingLinesOverlayProps> = ({
         const maxRadiusFromDx = Math.abs(midX - x1) - 5;
         const safeRadius = Math.max(2, Math.min(baseRadius, maxRadiusFromDy, maxRadiusFromDx));
 
-        // ALWAYS Manhattan - even when elements are at same level
-        if (absDy < 1) {
-            // Elements at same level: create small detour to maintain Manhattan style
-            const detourOffset = 8;
-            return [
-                `M ${x1} ${y1}`,
-                `L ${midX - safeRadius} ${y1}`,
-                `Q ${midX} ${y1}, ${midX} ${y1 + detourOffset}`,
-                `L ${midX} ${adjustedY2 - detourOffset}`,
-                `Q ${midX} ${adjustedY2}, ${midX + safeRadius} ${adjustedY2}`,
-                `L ${x2} ${adjustedY2}`
-            ].join(' ');
+        // ★ STRAIGHT LINE when elements are at the same vertical level
+        if (absDy < 5) {
+            // Elements at (nearly) same level: use straight horizontal line
+            return `M ${x1} ${y1} L ${x2} ${adjustedY2}`;
         }
 
         // Normal Manhattan path

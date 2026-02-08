@@ -343,6 +343,7 @@ export class JjtlExecutor {
 
         console.log(`[JjTL Executor] executeClassMapping: ${sourceClassName} -> ${targetClassName}`);
         console.log(`[JjTL Executor] Found ${instances.length} source instances of type "${sourceClassName}"`);
+        console.log(`[JjTL Executor] Class mapping body:`, JSON.stringify(mapping.body, null, 2));
 
         for (const sourceInstance of instances) {
             this.stats.sourceInstancesProcessed++;
@@ -467,13 +468,36 @@ export class JjtlExecutor {
         sourceInstance: any,
         targetInstance: any
     ): void {
+        console.log('[JjTL Executor] executeAttributeMappings called:', {
+            bodyLength: body?.length || 0,
+            bodyTypes: body?.map(b => b?.type) || [],
+            sourceInstanceName: sourceInstance?.name,
+            targetInstanceClassName: targetInstance?.className
+        });
+
+        if (!body || body.length === 0) {
+            console.log('[JjTL Executor] WARNING: No attribute mappings in body!');
+            return;
+        }
+
         for (const item of body) {
+            console.log('[JjTL Executor] Processing body item:', {
+                type: item?.type,
+                sourceAttribute: item?.sourceAttribute,
+                targetAttribute: item?.targetAttribute,
+                hasConversion: !!item?.conversion,
+                conversionType: item?.conversion?.type,
+                hasExpression: !!item?.conversion?.expression
+            });
+
             if (item.type === 'AttributeMapping') {
                 this.executeAttributeMapping(item as AttributeMappingAST, sourceInstance, targetInstance);
                 this.stats.attributeMappingsExecuted++;
             }
             // Handle other statement types (Alert, Notify) if needed
         }
+
+        console.log('[JjTL Executor] Target instance after mappings:', targetInstance);
     }
 
     /**
@@ -484,28 +508,46 @@ export class JjtlExecutor {
         sourceInstance: any,
         targetInstance: any
     ): void {
+        console.log('[JjTL Executor] executeAttributeMapping:', {
+            sourceAttribute: mapping.sourceAttribute,
+            targetAttribute: mapping.targetAttribute,
+            hasObjectCreation: !!mapping.objectCreation,
+            hasConversion: !!mapping.conversion,
+            conversionExpression: mapping.conversion?.expression?.type,
+            conversionMappings: mapping.conversion?.mappings?.length
+        });
+
         try {
             let value: JjelValue;
 
             if (mapping.objectCreation) {
                 // Handle object creation: -> Arc { ... }
+                console.log('[JjTL Executor] Handling object creation');
                 value = this.executeObjectCreation(mapping.objectCreation, sourceInstance);
             } else if (mapping.conversion) {
                 // Handle conversion
+                console.log('[JjTL Executor] Handling conversion with expression or mappings');
                 value = this.executeConversion(mapping.conversion, sourceInstance, mapping.sourceAttribute);
+                console.log('[JjTL Executor] Conversion result:', value);
             } else if (mapping.sourceAttribute) {
                 // Direct attribute mapping: source.attr -> target.attr
+                console.log('[JjTL Executor] Direct attribute mapping');
                 const ctx = this.createInstanceContext(sourceInstance);
                 value = this.evaluatePropertyPath(mapping.sourceAttribute, ctx);
+                console.log('[JjTL Executor] Direct mapping result:', value);
             } else {
                 // No source, use null
+                console.log('[JjTL Executor] No source, using null');
                 value = null;
             }
 
             // Set target attribute
-            targetInstance[mapping.targetAttribute] = fromJjelValue(value);
+            const finalValue = fromJjelValue(value);
+            targetInstance[mapping.targetAttribute] = finalValue;
+            console.log(`[JjTL Executor] Set ${mapping.targetAttribute} = ${JSON.stringify(finalValue)}`);
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : String(error);
+            console.error('[JjTL Executor] Error in executeAttributeMapping:', errorMessage);
             this.errors.push(
                 `Failed to map ${mapping.sourceAttribute || '(creation)'} -> ${mapping.targetAttribute}: ${errorMessage}`
             );
@@ -520,14 +562,31 @@ export class JjtlExecutor {
         sourceInstance: any,
         sourceAttribute?: string
     ): JjelValue {
+        console.log('[JjTL Executor] executeConversion:', {
+            hasExpression: !!conversion.expression,
+            expressionType: conversion.expression?.type,
+            hasMappings: !!(conversion.mappings && conversion.mappings.length > 0),
+            sourceAttribute,
+            sourceInstanceKeys: Object.keys(sourceInstance || {})
+        });
+
         if (conversion.expression) {
             // JjEL expression
+            console.log('[JjTL Executor] Evaluating expression:', JSON.stringify(conversion.expression, null, 2));
             const ctx = this.createInstanceContext(sourceInstance);
-            return this.evaluateExpression(conversion.expression, ctx);
+            console.log('[JjTL Executor] Context bindings for expression:', {
+                name: ctx.get('name'),
+                source: ctx.get('source'),
+                self: ctx.get('self')
+            });
+            const result = this.evaluateExpression(conversion.expression, ctx);
+            console.log('[JjTL Executor] Expression result:', result);
+            return result;
         }
 
         if (conversion.mappings && conversion.mappings.length > 0) {
             // Value mappings: true=1, false=0
+            console.log('[JjTL Executor] Evaluating value mappings');
             const ctx = this.createInstanceContext(sourceInstance);
             const sourceValue = sourceAttribute
                 ? this.evaluatePropertyPath(sourceAttribute, ctx)
@@ -544,6 +603,7 @@ export class JjtlExecutor {
             return sourceValue;
         }
 
+        console.log('[JjTL Executor] No expression or mappings, returning null');
         return null;
     }
 
@@ -603,29 +663,53 @@ export class JjtlExecutor {
     }
 
     /**
-     * Evaluate a property path (e.g., "source.owner.name")
+     * Evaluate a property path (e.g., "source.owner.name" or simple "name")
      */
     private evaluatePropertyPath(path: string, ctx: EvaluationContext): JjelValue {
-        // Use JjEL evaluation for the path
-        try {
-            return jjelEval(path, this.contextToRecord(ctx));
-        } catch {
-            // Try direct property access on 'source'
-            const source = ctx.get('source');
-            if (source && typeof source === 'object' && source !== null) {
-                const parts = path.split('.');
-                let current: any = source;
-                for (const part of parts) {
-                    if (current && typeof current === 'object' && part in current) {
-                        current = current[part];
-                    } else {
-                        return null;
-                    }
-                }
-                return toJjelValue(current);
+        const source = ctx.get('source');
+
+        // FIRST: Try direct property access for simple attribute names (most common case)
+        if (source && typeof source === 'object' && source !== null && !path.includes('.')) {
+            const directValue = (source as Record<string, any>)[path];
+            if (directValue !== undefined) {
+                console.log(`[JjTL Executor] evaluatePropertyPath: direct access "${path}" = ${JSON.stringify(directValue)}`);
+                return toJjelValue(directValue);
             }
-            return null;
         }
+
+        // SECOND: Try context variable lookup
+        const ctxValue = ctx.get(path);
+        if (ctxValue !== undefined) {
+            console.log(`[JjTL Executor] evaluatePropertyPath: context lookup "${path}" = ${JSON.stringify(ctxValue)}`);
+            return ctxValue;
+        }
+
+        // THIRD: Try JjEL evaluation for complex paths
+        try {
+            const result = jjelEval(path, this.contextToRecord(ctx));
+            console.log(`[JjTL Executor] evaluatePropertyPath: jjelEval "${path}" = ${JSON.stringify(result)}`);
+            return result;
+        } catch (e) {
+            console.warn(`[JjTL Executor] evaluatePropertyPath: jjelEval failed for "${path}":`, e);
+        }
+
+        // FOURTH: Manual path traversal for dotted paths
+        if (source && typeof source === 'object' && path.includes('.')) {
+            const parts = path.split('.');
+            let current: any = source;
+            for (const part of parts) {
+                if (current && typeof current === 'object' && part in current) {
+                    current = current[part];
+                } else {
+                    console.warn(`[JjTL Executor] evaluatePropertyPath: path "${path}" failed at "${part}"`);
+                    return null;
+                }
+            }
+            return toJjelValue(current);
+        }
+
+        console.warn(`[JjTL Executor] evaluatePropertyPath: could not resolve "${path}"`);
+        return null;
     }
 
     /**
@@ -636,8 +720,12 @@ export class JjtlExecutor {
             case 'Literal':
                 return this.getLiteralValue(expr as LiteralAST);
 
-            case 'Identifier':
-                return ctx.get((expr as IdentifierAST).name) ?? null;
+            case 'Identifier': {
+                const name = (expr as IdentifierAST).name;
+                const value = ctx.get(name) ?? null;
+                console.log('[JjTL Executor] Identifier lookup:', { name, value });
+                return value;
+            }
 
             case 'MemberAccess': {
                 const memberExpr = expr as MemberAccessAST;
@@ -927,11 +1015,21 @@ export class JjtlExecutor {
         const left = this.evaluateExpression(expr.left, ctx);
         const right = this.evaluateExpression(expr.right, ctx);
 
+        console.log('[JjTL Executor] evaluateBinaryExpression:', {
+            operator: expr.operator,
+            left,
+            right,
+            leftType: typeof left,
+            rightType: typeof right
+        });
+
         switch (expr.operator) {
             // Arithmetic
             case '+':
                 if (typeof left === 'string' || typeof right === 'string') {
-                    return String(left ?? '') + String(right ?? '');
+                    const result = String(left ?? '') + String(right ?? '');
+                    console.log('[JjTL Executor] String concatenation result:', result);
+                    return result;
                 }
                 return (Number(left) || 0) + (Number(right) || 0);
             case '-':
@@ -1099,6 +1197,18 @@ export class JjtlExecutor {
             const value = ctx.get(name);
             if (value !== undefined) {
                 record[name] = value;
+            }
+        }
+
+        // ★ CRITICAL FIX: Also extract instance properties from 'source'
+        // createInstanceContext adds all source instance properties as bindings,
+        // but they need to be passed through to jjelEval for property path resolution
+        const source = ctx.get('source');
+        if (source && typeof source === 'object' && !Array.isArray(source)) {
+            for (const [key, value] of Object.entries(source as Record<string, any>)) {
+                if (!key.startsWith('__') && !(key in record)) {
+                    record[key] = value as JjelValue;
+                }
             }
         }
 

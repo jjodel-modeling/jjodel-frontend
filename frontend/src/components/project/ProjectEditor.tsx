@@ -1,6 +1,23 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { LModel, LProject, LViewPoint, LClass, LObject, U, store, DObject, LPointerTargetable } from '../../joiner';
+import {
+    LModel,
+    LProject,
+    LViewPoint,
+    LClass,
+    LObject,
+    LPointerTargetable,
+    U,
+    store,
+    DModel,
+    DGraph,
+    DObject,
+    Constructors,
+    SetFieldAction,
+    SetRootFieldAction,
+    TRANSACTION
+} from '../../joiner';
 import DockManager from '../abstract/DockManager';
+import TabDataMaker from '../abstract/tabs/TabDataMaker';
 import { createM2, createM1 } from '../../pages/components/Navbar';
 import { formatVersionNumber } from '../../utils/versionUtils';
 import ShareProjectModal from './ShareProjectModal';
@@ -763,6 +780,31 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
             return result;
         };
 
+        /**
+         * Genera un nome unico per il modello aggiungendo un numero progressivo se necessario
+         *
+         * @param baseName - Il nome desiderato (es: "metamodel_1_to_metamodel_2")
+         * @param existingNames - Array di nomi già esistenti
+         * @returns Nome unico (es: "metamodel_1_to_metamodel_2 (1)")
+         */
+        const generateUniqueModelName = (baseName: string, existingNames: string[]): string => {
+            // Se il nome base non esiste, usalo direttamente
+            if (!existingNames.includes(baseName)) {
+                return baseName;
+            }
+
+            // Altrimenti trova il primo numero disponibile
+            let counter = 1;
+            let uniqueName = `${baseName} (${counter})`;
+
+            while (existingNames.includes(uniqueName)) {
+                counter++;
+                uniqueName = `${baseName} (${counter})`;
+            }
+
+            return uniqueName;
+        };
+
         // Callback when transformation is executed
         const handleExecuteTransformation = async (
             sourceModelId: string,
@@ -775,41 +817,101 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                 astMappings: ast?.mappings?.length || 0
             });
 
-            // Validate AST has mappings
+            // Validate AST
             if (!ast || !ast.mappings || ast.mappings.length === 0) {
-                U.alert('w', 'No Mappings', 'The transformation has no mappings defined. Add class mappings to transform the model.');
+                console.error('[ProjectEditor] AST has no mappings!');
+                U.alert('e', 'Error', 'Transformation has no mappings defined.');
                 return;
             }
 
             try {
-                // Find the source model
+                // Find source model
                 const sourceModel = models.find(m => m.id === sourceModelId);
                 if (!sourceModel) {
-                    U.alert('e', 'Error', `Source model not found: ${sourceModelId}`);
+                    U.alert('e', 'Error', `Source model not found`);
                     return;
                 }
 
-                // Find the target metamodel (as LModel from project.metamodels)
-                const targetMetamodel = metamodels.find(mm => mm.id === transformation.targetMetamodelId);
+                // Find transformation and target metamodel
+                const currentTransformation = transformations.find(t => t.targetMetamodelId);
+                if (!currentTransformation) {
+                    U.alert('e', 'Error', 'Transformation not found');
+                    return;
+                }
+
+                const targetMetamodel = metamodels.find(mm => mm.id === currentTransformation.targetMetamodelId);
                 if (!targetMetamodel) {
-                    U.alert('e', 'Error', `Target metamodel not found: ${transformation.targetMetamodelId}`);
+                    U.alert('e', 'Error', `Target metamodel not found`);
                     return;
                 }
 
-                // Get source model data (instances)
+                // Prepare source data (deep copy)
                 const sourceObjects = sourceModel.objects || [];
                 console.log('[ProjectEditor] Source objects count:', sourceObjects.length);
 
-                // Convert LObjects to a format the executor understands
                 const sourceModelData = sourceObjects.map((obj: LObject) => {
-                    const className = obj.instanceof?.name || '';
+                    // Resolve className with multiple fallback paths
+                    let className = '';
+
+                    // Method 1: Direct instanceof.name (standard path)
+                    if (obj.instanceof && obj.instanceof.name) {
+                        className = obj.instanceof.name;
+                        console.log(`[ProjectEditor] className from instanceof.name: "${className}"`);
+                    }
+
+                    // Method 2: Check __raw.instanceof and resolve via Redux state
+                    if (!className && (obj as any).__raw?.instanceof) {
+                        const classPointer = (obj as any).__raw.instanceof;
+                        const state = store.getState() as any;
+                        const classData = state[classPointer];
+                        if (classData && classData.name) {
+                            className = classData.name;
+                            console.log(`[ProjectEditor] className from __raw.instanceof lookup: "${className}"`);
+                        }
+                    }
+
+                    // Method 3: Check features for __class or type indicator
+                    if (!className && obj.features) {
+                        for (const feature of obj.features) {
+                            if (feature.name === '__class' || feature.name === '__type') {
+                                const val = feature.values?.length > 0 ? feature.values[0] : feature.value;
+                                if (typeof val === 'string') {
+                                    className = val;
+                                    console.log(`[ProjectEditor] className from feature "${feature.name}": "${className}"`);
+                                    break;
+                                }
+                            }
+                        }
+                    }
+
+                    // Method 4: Extract from object name pattern (e.g., "A_0" → "A")
+                    if (!className && obj.name) {
+                        const match = obj.name.match(/^([A-Za-z]+)_\d+$/);
+                        if (match) {
+                            className = match[1];
+                            console.log(`[ProjectEditor] className extracted from name pattern "${obj.name}": "${className}"`);
+                        }
+                    }
+
+                    // Debug: Log all attempts if still no className
+                    if (!className) {
+                        console.warn('[ProjectEditor] Could not resolve className for object:', {
+                            id: obj.id,
+                            name: obj.name,
+                            instanceof: obj.instanceof,
+                            __raw: (obj as any).__raw,
+                            features: obj.features?.map(f => ({ name: f.name, value: f.value, values: f.values }))
+                        });
+                        // Last resort: use object name as-is
+                        className = obj.name || 'UnknownClass';
+                    }
+
                     const result: Record<string, any> = {
                         id: obj.id,
                         name: obj.name,
                         className: className,
                         __type: className,
                     };
-
                     if (obj.features) {
                         for (const feature of obj.features) {
                             if (feature.name) {
@@ -820,14 +922,20 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                         }
                     }
 
+                    console.log(`[ProjectEditor] Source object mapped:`, {
+                        id: obj.id,
+                        name: obj.name,
+                        resolvedClassName: className,
+                        featureCount: obj.features?.length || 0
+                    });
+
                     return result;
                 });
 
-                // Deep copy to protect original data
                 const sourceModelDataCopy = JSON.parse(JSON.stringify(sourceModelData));
-                console.log('[ProjectEditor] Source model data (deep copy):', sourceModelDataCopy.length, 'elements');
+                console.log('[ProjectEditor] Source model data (deep copy):', sourceModelDataCopy.length);
 
-                // Execute the transformation
+                // Execute transformation
                 const result: ExecutionResult = executeTransformation(ast, sourceModelDataCopy, targetMetamodel);
                 console.log('[ProjectEditor] Execution result:', {
                     success: result.success,
@@ -841,105 +949,188 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                 }
 
                 // ============================================
-                // STEP 1: Create model using createM1 (this works!)
+                // CREAZIONE MODELLO - NON USARE createM1!
                 // ============================================
-                const modelsCountBefore = project.models?.length || 0;
-                console.log('[ProjectEditor] Models count before createM1:', modelsCountBefore);
 
-                // Call createM1 - this handles everything: model, graph, tab
-                createM1(project, targetMetamodel);
+                // Raccogli i nomi esistenti di modelli e metamodelli
+                const existingNames = [
+                    ...(models || []).map(m => m.name || ''),
+                    ...(metamodels || []).map(m => m.name || '')
+                ].filter(Boolean);
 
-                // Get the newly created model (it's the last one added)
-                const newModels = project.models || [];
-                console.log('[ProjectEditor] Models count after createM1:', newModels.length);
+                // Genera nome unico
+                const uniqueOutputName = generateUniqueModelName(outputModelName, existingNames);
 
-                const createdModel = newModels[newModels.length - 1];
-                if (!createdModel) {
-                    console.error('[ProjectEditor] Failed to get created model');
-                    U.alert('e', 'Error', 'Failed to create target model');
-                    return;
-                }
-
-                console.log('[ProjectEditor] Created model:', {
-                    id: createdModel.id,
-                    name: createdModel.name
+                console.log('[ProjectEditor] Output model name:', {
+                    requested: outputModelName,
+                    unique: uniqueOutputName,
+                    existingCount: existingNames.filter(n => n.startsWith(outputModelName)).length
                 });
 
-                // ============================================
-                // STEP 2: Rename model to outputModelName
-                // ============================================
-                createdModel.name = outputModelName;
-                console.log('[ProjectEditor] Renamed model to:', outputModelName);
-
-                // ============================================
-                // STEP 3: Populate instances from transformation
-                // ============================================
+                let createdDModel: DModel | null = null;
+                let createdDGraph: DGraph | null = null;
+                let createdModelId: string | null = null;
                 let instancesCreated = 0;
 
-                if (result.targetModel?.instances) {
-                    const targetClasses: LClass[] = targetMetamodel.classes || [];
-                    console.log('[ProjectEditor] Target metamodel classes:', targetClasses.map(c => c.name));
+                // Store object NAME (not ID!) with attributes — ID from DObject.new() is unreliable
+                const pendingAttributeSets: Array<{
+                    objectName: string;
+                    className: string;
+                    attributes: Record<string, any>;
+                }> = [];
 
-                    result.targetModel.instances.forEach((instances: any[], className: string) => {
-                        console.log(`[ProjectEditor] Processing ${instances.length} instances of "${className}"`);
+                TRANSACTION('Execute Transformation: Create Target Model', () => {
+                    // STEP 1: Crea DModel con il nome UNICO
+                    const dModel: DModel = DModel.new(
+                        uniqueOutputName,       // ← USA IL NOME UNICO!
+                        targetMetamodel.id,     // instanceof = target metamodel
+                        false,                  // isMetamodel = false
+                        true                    // persist = true
+                    );
+                    createdDModel = dModel;
+                    createdModelId = dModel.id;
+                    console.log('[ProjectEditor] Created DModel with UNIQUE name:', {
+                        id: dModel.id,
+                        name: uniqueOutputName
+                    });
 
-                        const targetClass = targetClasses.find(c => c.name === className);
-                        if (!targetClass) {
-                            console.warn(`[ProjectEditor] Class "${className}" not found in target metamodel`);
-                            return;
-                        }
+                    // STEP 2: Crea DGraph
+                    const graphId = Constructors.DGraph_makeID(dModel.id);
+                    const dGraph: DGraph = DGraph.new(0, dModel.id, undefined, undefined, graphId);
+                    createdDGraph = dGraph;
+                    console.log('[ProjectEditor] Created DGraph:', { id: dGraph.id });
 
-                        for (const instanceData of instances) {
-                            try {
-                                // Create DObject in the created model
-                                const objectName = instanceData.name || instanceData.__name || `${className}_${instancesCreated}`;
-                                const dObject = DObject.new(
-                                    objectName,
-                                    targetClass.id,      // instanceof = target class
-                                    createdModel.id,     // father = created model
-                                    true
-                                );
+                    // STEP 3: Aggiungi model a project.models
+                    SetFieldAction.new(project.id, 'models', dModel.id, '+=', true);
+                    console.log('[ProjectEditor] Added model to project.models');
 
-                                console.log(`[ProjectEditor] Created DObject:`, {
-                                    id: dObject.id,
-                                    name: objectName,
-                                    className: className
-                                });
+                    // STEP 4: Aggiungi graph a state.graphs (ROOT!) - per ModelTab
+                    SetRootFieldAction.new('graphs', dGraph.id, '+=', true);
+                    console.log('[ProjectEditor] Added graph to state.graphs (ROOT)');
 
-                                // Set attribute values
-                                const lObject = LPointerTargetable.fromD(dObject) as LObject;
+                    // STEP 5: Aggiungi graph a project.graphs - per persistenza
+                    SetFieldAction.new(project.id, 'graphs', dGraph.id, '+=', true);
+                    console.log('[ProjectEditor] Added graph to project.graphs');
+
+                    // STEP 6: Crea istanze
+                    if (result.targetModel?.instances) {
+                        const targetClasses: LClass[] = targetMetamodel.classes || [];
+                        console.log('[ProjectEditor] Target classes:', targetClasses.map(c => c.name));
+
+                        result.targetModel.instances.forEach((instances: any[], className: string) => {
+                            console.log(`[ProjectEditor] Creating ${instances.length} instances of "${className}"`);
+
+                            const targetClass = targetClasses.find(c => c.name === className);
+                            if (!targetClass) {
+                                console.warn(`[ProjectEditor] Class "${className}" not found`);
+                                return;
+                            }
+
+                            for (const instanceData of instances) {
+                                console.log(`[ProjectEditor] instanceData from executor:`, instanceData);
+
+                                const objectName = instanceData.name || `${className}_${instancesCreated}`;
+                                const dObject = DObject.new(targetClass.id, dModel.id, DModel, objectName, true);
+                                console.log(`[ProjectEditor] Created instance:`, { name: objectName, class: className });
+
+                                // Collect attributes for deferred setting (after TRANSACTION)
+                                const attrs: Record<string, any> = {};
                                 for (const [attrName, attrValue] of Object.entries(instanceData)) {
-                                    if (attrName.startsWith('__') || ['className', 'id', 'name'].includes(attrName)) {
-                                        continue;
-                                    }
-                                    const feature = lObject.features?.find(f => f.name === attrName);
-                                    if (feature && attrValue !== undefined && attrValue !== null) {
-                                        if (Array.isArray(attrValue)) {
-                                            feature.values = attrValue;
-                                        } else {
-                                            feature.value = attrValue;
-                                        }
-                                        console.log(`[ProjectEditor] Set ${attrName} = ${JSON.stringify(attrValue)}`);
-                                    }
+                                    if (attrName.startsWith('__') || ['className', 'id', 'name'].includes(attrName)) continue;
+                                    if (attrValue === undefined || attrValue === null) continue;
+                                    attrs[attrName] = attrValue;
+                                }
+
+                                if (Object.keys(attrs).length > 0) {
+                                    pendingAttributeSets.push({
+                                        objectName: objectName,
+                                        className,
+                                        attributes: attrs,
+                                    });
+                                    console.log(`[ProjectEditor] Queued attributes for "${objectName}":`, attrs);
                                 }
 
                                 instancesCreated++;
-                            } catch (err) {
-                                console.error(`[ProjectEditor] Error creating instance:`, err);
                             }
+                        });
+                    }
+
+                    console.log(`[ProjectEditor] Total instances created: ${instancesCreated}`);
+                });
+
+                // STEP 8: Set attributes after delay — use LModel proxy to find objects by name
+                if (pendingAttributeSets.length > 0 && createdModelId) {
+                    const modelId = createdModelId;
+                    console.log(`[ProjectEditor] STEP 8: Will set attributes for ${pendingAttributeSets.length} objects via LModel proxy`);
+
+                    // Use setTimeout to wait for Redux propagation and rendering
+                    setTimeout(() => {
+                        try {
+                            const lModel = LPointerTargetable.fromD(modelId) as LModel;
+                            if (!lModel) {
+                                console.error(`[ProjectEditor] Could not get LModel for ${modelId}`);
+                                return;
+                            }
+
+                            const objects = lModel.objects || [];
+                            console.log(`[ProjectEditor] LModel has ${objects.length} objects:`, objects.map((o: LObject) => o.name));
+
+                            for (const pending of pendingAttributeSets) {
+                                // Find object by name
+                                const lObject = objects.find((o: LObject) => o.name === pending.objectName);
+                                if (!lObject) {
+                                    console.warn(`[ProjectEditor] Object "${pending.objectName}" not found in model`);
+                                    continue;
+                                }
+
+                                console.log(`[ProjectEditor] Found "${pending.objectName}", setting attributes...`);
+
+                                for (const [attrName, attrValue] of Object.entries(pending.attributes)) {
+                                    try {
+                                        const feature = (lObject as any)['$' + attrName];
+                                        if (feature) {
+                                            feature.value = attrValue;
+                                            console.log(`[ProjectEditor] ✅ Set ${pending.objectName}.${attrName} = ${JSON.stringify(attrValue)}`);
+                                        } else {
+                                            console.warn(`[ProjectEditor] ❌ Feature "$${attrName}" not found on "${pending.objectName}"`);
+                                            // Try listing available features for debugging
+                                            const features = lObject.features || [];
+                                            console.warn(`[ProjectEditor] Available features:`, features.map((f: any) => f.name));
+                                        }
+                                    } catch (e) {
+                                        console.error(`[ProjectEditor] Error setting ${attrName} on "${pending.objectName}":`, e);
+                                    }
+                                }
+                            }
+
+                            console.log(`[ProjectEditor] ✅ Attribute setting complete`);
+                        } catch (e) {
+                            console.error(`[ProjectEditor] Error in STEP 8:`, e);
                         }
-                    });
+                    }, 1000); // 1 second delay — generous, ensures everything is propagated
                 }
 
-                console.log(`[ProjectEditor] Created ${instancesCreated} instances in target model`);
+                // STEP 7: Apri tab DOPO un delay per Redux
+                if (createdDModel) {
+                    console.log('[ProjectEditor] Waiting for Redux propagation...');
 
-                // Success notification
-                U.alert('i', 'Transformation Executed',
-                    `Output model "${outputModelName}" created with ${instancesCreated} instances.`);
-                markDirty();
+                    await new Promise<void>((resolve) => {
+                        setTimeout(() => {
+                            console.log('[ProjectEditor] Opening tab...');
+                            const tab = TabDataMaker.model(createdDModel!);
+                            DockManager.open('models', tab);
+                            resolve();
+                        }, 200);
+                    });
+
+                    U.alert('i', 'Transformation Executed',
+                        `Created model "${uniqueOutputName}" with ${instancesCreated} instances.`);
+
+                    markDirty();
+                }
 
             } catch (error) {
-                console.error('[ProjectEditor] Error executing transformation:', error);
+                console.error('[ProjectEditor] Error:', error);
                 U.alert('e', 'Error', `Failed to execute transformation: ${error}`);
             }
         };

@@ -46,7 +46,7 @@ $color-border-hover: #d0d3d8;
 
 // Typography
 $font-family: 'Inter Variable', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-$font-family-mono: 'JetBrains Mono', 'SF Mono', 'Fira Code', monospace;
+$font-family-mono: 'JetBrains Mono', 'IBM Plex Mono', 'Fira Code', monospace;
 
 $font-size-xs: 11px;
 $font-size-sm: 12px;
@@ -911,6 +911,15 @@ $shadow-md: 0 1px 3px rgba(0, 0, 0, 0.08);
     overflow: hidden;
     position: relative;
     z-index: 1;
+}
+
+.jjtl-dual-panel-source {
+    padding-right: 8px;  // Space between content and center divider
+}
+
+.jjtl-dual-panel-target {
+    padding-left: 8px;   // Space between center divider and content
+    padding-right: 16px; // ★ Right margin to prevent type touching the edge
 }
 
 .jjtl-dual-panel-center {

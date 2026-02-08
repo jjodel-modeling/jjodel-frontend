@@ -782,7 +782,7 @@ $transition-normal: 250ms ease;
     outline: none !important;
     box-shadow: none !important;
     // CRITICAL: Monospace font for console input - IBM Plex Mono (no ligatures)
-    font-family: 'IBM Plex Mono', 'SF Mono', 'Monaco', 'Menlo', 'Consolas', 'Liberation Mono', 'Courier New', monospace !important;
+    font-family: 'IBM Plex Mono', 'Monaco', 'Menlo', 'Consolas', 'Liberation Mono', 'Courier New', monospace !important;
     font-size: 14px !important;
     color: $color-text-primary;
     background: transparent;
@@ -1836,7 +1836,7 @@ $transition-normal: 250ms ease;
   }
 
   code {
-    font-family: 'SF Mono', 'Monaco', 'Inconsolata', monospace;
+    font-family: 'IBM Plex Mono', 'Monaco', 'Inconsolata', monospace;
     font-size: 13px;
     font-weight: 500;
     color: #475569;
@@ -1866,7 +1866,7 @@ $transition-normal: 250ms ease;
     min-width: 24px;
     height: 24px;
     padding: 0 6px;
-    font-family: 'SF Mono', 'Monaco', monospace;
+    font-family: 'IBM Plex Mono', 'Monaco', monospace;
     font-size: 11px;
     font-weight: 500;
     color: #6B7280;

@@ -10,6 +10,7 @@ import { registerJjtlTheme, JJTL_THEME_ID } from './jjtlTheme';
 import { tokenize } from '../lexer';
 import { parse } from '../parser';
 import { ParserError } from '../types';
+import { largeMonacoOptions, mergeMonacoOptions } from '../../components/editors/monacoConfig';
 
 interface CursorPosition {
     line: number;
@@ -81,21 +82,35 @@ export const JjtlEditor: React.FC<JjtlEditorProps> = ({
 
         ensureRegistered();
 
+        // JjTL Editor options - aligned with JSX Editor configuration
+        const jjtlEditorOptions = mergeMonacoOptions(largeMonacoOptions, {
+            // Font - same as JSX Editor
+            fontFamily: "'IBM Plex Mono', Monaco, Consolas, monospace",
+            fontSize: 13,
+            fontWeight: '400',
+            lineHeight: 20,
+            fontLigatures: false,
+
+            // Layout
+            wordWrap: 'on',
+            folding: true,
+
+            // Cursor
+            cursorBlinking: 'smooth',
+            cursorSmoothCaretAnimation: 'on',
+            cursorStyle: 'line',
+
+            // Tab
+            tabSize: 4,
+            insertSpaces: true,
+        });
+
         const editor = monaco.editor.create(containerRef.current, {
+            ...jjtlEditorOptions,
             value,
             language: JJTL_LANGUAGE_ID,
             theme: JJTL_THEME_ID,
-            minimap: { enabled: false },
-            fontSize: 13,
-            fontFamily: "'JetBrains Mono', 'SF Mono', 'Fira Code', monospace",
-            lineNumbers: 'on',
-            renderLineHighlight: 'line',
-            scrollBeyondLastLine: false,
-            automaticLayout: true,
-            tabSize: 4,
-            insertSpaces: true,
             readOnly,
-            wordWrap: 'on',
         });
 
         editorRef.current = editor;
