@@ -233,6 +233,61 @@ interface AttributeMappingAST {
 4. Crea DModel + DGraph
 5. Aggiungi a Redux state
 
+### ⚠️ Pattern Critici per Object Persistence (2026-02-09)
+
+#### DObject.new() — ID Temporanei
+`DObject.new()` ritorna un ID temporaneo che **NON corrisponde** all'ID reale dell'oggetto nel framework. Gli oggetti non sono accessibili tramite `store.getState()[dObject.id]`.
+
+```typescript
+// ❌ SBAGLIATO — l'ID è temporaneo
+const dObject = DObject.new(classId, modelId, DModel, name, true);
+store.getState()[dObject.id]; // → undefined!
+
+// ❌ SBAGLIATO — SetFieldAction non scrive valori leggibili dal proxy
+SetFieldAction.new(featurePointer, 'values', [value], '', true);
+
+// ✅ CORRETTO — trova per NOME via proxy LModel
+const lModel = LPointerTargetable.fromD(modelId) as LModel;
+const lObject = lModel.objects.find(o => o.name === objectName);
+
+// ✅ CORRETTO — scrivi valori via proxy
+(lObject as any)['$' + attrName].value = attrValue;
+```
+
+#### Pattern Deferred Attribute Setting
+Dopo una TRANSACTION che crea oggetti, i proxy non sono immediatamente disponibili. Usa `setTimeout` per attendere la propagazione Redux:
+
+```typescript
+// 1. Dentro TRANSACTION: accumula per NOME (non ID!)
+const pending: Array<{ objectName: string; attributes: Record<string, any> }> = [];
+
+TRANSACTION('Create Objects', () => {
+    const dObject = DObject.new(classId, modelId, DModel, name, true);
+    pending.push({ objectName: name, attributes: { label: 'value' } });
+});
+
+// 2. Dopo TRANSACTION: delay + proxy
+setTimeout(() => {
+    const lModel = LPointerTargetable.fromD(modelId) as LModel;
+    for (const { objectName, attributes } of pending) {
+        const lObj = lModel.objects.find(o => o.name === objectName);
+        if (!lObj) continue;
+        for (const [attr, val] of Object.entries(attributes)) {
+            (lObj as any)['$' + attr].value = val;
+        }
+    }
+}, 1000);
+```
+
+#### evaluatePropertyPath — 4 Strategie Fallback
+Il metodo `evaluatePropertyPath` nell'executor risolve nomi di proprietà con:
+1. **Direct access** — `source[path]` per proprietà dell'istanza
+2. **Context lookup** — `ctx.get(path)` per variabili di contesto
+3. **JjEL evaluation** — `jjelEval(path, record)` per espressioni complesse
+4. **Manual traversal** — split per `.` e traverse manuale per path come `source.owner.name`
+
+**CRITICO:** `contextToRecord()` deve includere TUTTE le proprietà dell'istanza source, non solo le variabili hardcoded.
+
 ---
 
 ## 🐛 Bug Noti e Soluzioni
@@ -252,12 +307,24 @@ astRef.current = currentAST;
 - Usa `SetRootFieldAction.new('graphs', graphId, '+=', true)` per aggiungere a state.graphs
 - Usa `setTimeout(200)` prima di aprire il tab
 
-### Attribute Mapping Non Funziona (IN CORSO)
+### Attribute Mapping Non Funziona (RISOLTO 2026-02-09)
 **Problema:** `label` resta `undefined` dopo trasformazione
-**Causa:** `applyAttributeMappings()` non viene chiamato o i valori non vengono copiati nelle features
-**Soluzione:** Verificare che:
-1. L'executor applichi i mapping dal `classMapping.body`
-2. ProjectEditor copi `instanceData[attrName]` in `feature.value`
+**Root Causes:**
+1. `evaluatePropertyPath()` non passava proprietà istanza a `contextToRecord()`
+2. `DObject.new()` ritorna ID temporanei non usabili per lookup Redux
+3. `SetFieldAction` non scrive valori leggibili dal proxy
+
+**Soluzione:**
+1. Fix executor `evaluatePropertyPath` con accesso diretto + contextToRecord esteso
+2. Trovare oggetti per NOME via `lModel.objects.find(o => o.name)`
+3. Scrivere valori via proxy `$attr.value = val`
+
+### Nuovi Bug Aperti (2026-02-09)
+| Bug | Stato | Note |
+|-----|-------|------|
+| Valore duplicato (tutti B ricevono A_0) | ⚠️ APERTO | Da verificare executor loop |
+| Doppia esecuzione executor | ⚠️ APERTO | React double rendering |
+| "Error in View: Fallback" su target | ⚠️ APERTO | Rendering modello creato |
 
 ---
 
