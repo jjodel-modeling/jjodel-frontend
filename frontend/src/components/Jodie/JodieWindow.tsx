@@ -9,6 +9,7 @@ import { ChatMessages } from './ChatMessages';
 import { ChatInput } from './ChatInput';
 import { AIProvider, ChatMessage, ChatImage, ChatDocument } from '../../types/jodie';
 import { JodieConfigService } from '../../services/JodieConfig';
+import { AIDisclaimer } from '../common/AIDisclaimer';
 
 interface JodieWindowProps {
     messages: ChatMessage[];
@@ -291,6 +292,8 @@ export function JodieWindow({
             )}
 
             <ChatMessages messages={messages} isWaiting={isWaiting} onJjScriptExecuted={onJjScriptExecuted} />
+
+            <AIDisclaimer />
 
             <ChatInput
                 onSend={onSendMessage}

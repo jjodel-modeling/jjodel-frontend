@@ -462,14 +462,28 @@ $shadow-md: 0 1px 3px rgba(0, 0, 0, 0.08);
 }
 
 .jjtl-dev-env-bottom-badge {
-    background-color: $color-error;
-    color: white;
     font-size: 10px;
     font-weight: 600;
     padding: 1px 6px;
     border-radius: 10px;
     min-width: 18px;
     text-align: center;
+
+    // Default: error style (for Problems tab)
+    background-color: $color-error;
+    color: white;
+
+    // Info variant (for Output and Trace tabs - neutral)
+    &--info {
+        background-color: $color-accent-light;
+        color: $color-accent;
+    }
+
+    // Success variant (optional)
+    &--success {
+        background-color: $color-success-light;
+        color: $color-success;
+    }
 }
 
 .jjtl-dev-env-bottom-spacer {

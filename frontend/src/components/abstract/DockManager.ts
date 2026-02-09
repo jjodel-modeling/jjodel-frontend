@@ -6,6 +6,7 @@ import React from 'react';
 import { JjtlDevelopmentEnv, ModelOption } from '../../jjtl/components';
 import { JjtlTransformation, TransformationAST } from '../../jjtl/types';
 import { MetamodelElement } from '../../jjtl/views/MetamodelTreeView';
+import type { ExecutionResult } from '../../jjtl/executor';
 
 @RuntimeAccessible('DockManager')
 class DockManager {
@@ -167,7 +168,7 @@ class DockManager {
         getTargetMetamodel?: () => MetamodelElement[],
         availableModels?: ModelOption[],
         existingModelNames?: string[],
-        onExecuteTransformation?: (sourceModelId: string, outputModelName: string, ast: TransformationAST) => Promise<void>
+        onExecuteTransformation?: (sourceModelId: string, outputModelName: string, ast: TransformationAST) => Promise<ExecutionResult | void>
     ): void {
         console.log('[DockManager] openTransformation called', {
             transformationId: transformation?.id,
@@ -191,12 +192,31 @@ class DockManager {
 
         const tabId = `jjtl_${transformation.id}`;
 
+        // Create tab content with current props (needed for both new and existing tabs)
+        const tabContent = React.createElement(JjtlDevelopmentEnv, {
+            initialCode: transformation.code,
+            sourceMetamodel: sourceMetamodel || [],
+            targetMetamodel: targetMetamodel || [],
+            getSourceMetamodel: getSourceMetamodel,
+            getTargetMetamodel: getTargetMetamodel,
+            sourceMetamodelName: transformation.sourceMetamodelName || 'Source',
+            targetMetamodelName: transformation.targetMetamodelName || 'Target',
+            availableModels: availableModels || [],
+            existingModelNames: existingModelNames || [],
+            onSave: onSave,
+            onCodeChange: (_code: string) => {
+                // Code change tracked internally
+            },
+            onExecuteTransformation: onExecuteTransformation
+        });
+
         try {
             // Check if tab already exists
             const existingTab = DockManager.dock.find(tabId);
             if (existingTab) {
-                console.log('[DockManager] Activating existing transformation tab');
-                DockManager.dock.updateTab(tabId, null as any, true);
+                console.log('[DockManager] Updating and activating existing transformation tab');
+                // CRITICAL: Update tab content with fresh callbacks to avoid stale closures
+                DockManager.dock.updateTab(tabId, { content: tabContent }, true);
                 return;
             }
 
@@ -216,22 +236,7 @@ class DockManager {
                 ]),
                 group: 'models',
                 closable: true,
-                content: React.createElement(JjtlDevelopmentEnv, {
-                    initialCode: transformation.code,
-                    sourceMetamodel: sourceMetamodel || [],
-                    targetMetamodel: targetMetamodel || [],
-                    getSourceMetamodel: getSourceMetamodel,
-                    getTargetMetamodel: getTargetMetamodel,
-                    sourceMetamodelName: transformation.sourceMetamodelName || 'Source',
-                    targetMetamodelName: transformation.targetMetamodelName || 'Target',
-                    availableModels: availableModels || [],
-                    existingModelNames: existingModelNames || [],
-                    onSave: onSave,
-                    onCodeChange: (_code: string) => {
-                        // Code change tracked internally
-                    },
-                    onExecuteTransformation: onExecuteTransformation
-                })
+                content: tabContent
             };
 
             const layout = DockManager.dock.getLayout();

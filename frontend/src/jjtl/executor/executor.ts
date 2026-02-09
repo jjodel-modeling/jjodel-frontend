@@ -35,6 +35,13 @@ import {
 } from '../../jjel';
 import type { JjelValue, JjelFunction } from '../../jjel';
 
+import {
+    TraceModel,
+    TraceModelBuilder,
+    TraceElementRef,
+    TraceLinkBuilder,
+} from './traceModel';
+
 // Re-export Jjodel converter utilities for convenience
 export {
     convertJjodelModelToSource,
@@ -69,6 +76,8 @@ export interface ExecutionContext {
     evalContext: EvaluationContext;
     /** Registered helper functions */
     helpers: Map<string, JjelFunction>;
+    /** Trace model builder for recording execution trace */
+    traceBuilder: TraceModelBuilder;
 }
 
 /**
@@ -81,6 +90,8 @@ export interface ExecutionResult {
     targetModel?: TargetModel;
     /** Trace mapping: source -> target */
     trace?: Map<any, any>;
+    /** Structured trace model for visualization and bidi support */
+    traceModel?: TraceModel;
     /** Error messages */
     errors: string[];
     /** Warning messages */
@@ -177,10 +188,23 @@ export class JjtlExecutor {
 
             this.stats.executionTimeMs = performance.now() - startTime;
 
+            // Build final trace model
+            const traceModel = this.context.traceBuilder.build();
+
+            // Log trace stats
+            const traceStats = this.context.traceBuilder.getStats();
+            console.log('[JjTL Executor] Trace stats:', traceStats);
+            console.log('[JjTL Executor] Trace model:', {
+                transformationName: traceModel.transformationName,
+                linksCount: traceModel.links.length,
+                invertiblePercentage: traceStats.invertiblePercentage + '%',
+            });
+
             return {
                 success: this.errors.length === 0,
                 targetModel,
                 trace: this.context.trace,
+                traceModel,
                 errors: this.errors,
                 warnings: this.warnings,
                 stats: this.stats,
@@ -217,13 +241,23 @@ export class JjtlExecutor {
             bindings.instances = toJjelValue(sourceModel.instances);
         }
 
+        // Create trace model builder
+        const transformationName = this.ast.name || 'Anonymous';
+        const sourceModelName = this.ast.sourceMetamodel || 'source';
+        const targetModelName = this.ast.targetMetamodel || 'target';
+        const traceBuilder = new TraceModelBuilder(transformationName, sourceModelName, targetModelName);
+
         this.context = {
             sourceModel,
             targetMetamodel,
             trace: new Map(),
             evalContext: new EvaluationContext(bindings),
             helpers: new Map(),
+            traceBuilder,
         };
+
+        // Register resolve() and resolveAll() as JjEL builtins
+        this.registerTraceBuiltins();
     }
 
     /**
@@ -235,6 +269,37 @@ export class JjtlExecutor {
             this.context.helpers.set(helper.name, helperFn);
             this.context.evalContext.registerBuiltin(helper.name, helperFn);
         }
+    }
+
+    /**
+     * Register trace-related builtins: resolve() and resolveAll()
+     */
+    private registerTraceBuiltins(): void {
+        const traceBuilder = this.context.traceBuilder;
+
+        // resolve(sourceElementName, targetClassName?) -> TraceElementRef | null
+        const resolveFn = createFunction(
+            ['sourceElementName', 'targetClassName'],
+            (args: JjelValue[]) => {
+                const sourceElementName = String(args[0] ?? '');
+                const targetClassName = args[1] ? String(args[1]) : undefined;
+                const result = traceBuilder.resolve(sourceElementName, targetClassName);
+                return result ? toJjelValue(result) : null;
+            }
+        );
+        this.context.evalContext.registerBuiltin('resolve', resolveFn);
+
+        // resolveAll(sourceElementName, targetClassName?) -> TraceElementRef[]
+        const resolveAllFn = createFunction(
+            ['sourceElementName', 'targetClassName'],
+            (args: JjelValue[]) => {
+                const sourceElementName = String(args[0] ?? '');
+                const targetClassName = args[1] ? String(args[1]) : undefined;
+                const results = traceBuilder.resolveAll(sourceElementName, targetClassName);
+                return toJjelValue(results);
+            }
+        );
+        this.context.evalContext.registerBuiltin('resolveAll', resolveAllFn);
     }
 
     /**
@@ -340,8 +405,10 @@ export class JjtlExecutor {
         const sourceClassName = mapping.sourceClass;
         const targetClassName = mapping.targetClass;
         const instances = sourceInstances.get(sourceClassName) || [];
+        const ruleName = `${sourceClassName} -> ${targetClassName}`;
+        const hasGuard = !!mapping.condition;
 
-        console.log(`[JjTL Executor] executeClassMapping: ${sourceClassName} -> ${targetClassName}`);
+        console.log(`[JjTL Executor] executeClassMapping: ${ruleName}`);
         console.log(`[JjTL Executor] Found ${instances.length} source instances of type "${sourceClassName}"`);
         console.log(`[JjTL Executor] Class mapping body:`, JSON.stringify(mapping.body, null, 2));
 
@@ -373,9 +440,25 @@ export class JjtlExecutor {
                 __type: t.__type,
             })));
 
-            // Execute attribute mappings for each target instance
+            // Create trace element references
+            const sourceRef: TraceElementRef = {
+                modelName: this.ast.sourceMetamodel || 'source',
+                elementName: sourceInstance.name || sourceInstance.id || `${sourceClassName}_${this.stats.sourceInstancesProcessed}`,
+                className: sourceClassName,
+            };
+
+            const targetRefs: TraceElementRef[] = targetInstances.map((t, i) => ({
+                modelName: this.ast.targetMetamodel || 'target',
+                elementName: t.name || t.id || `${targetClassName}_${i}`,
+                className: targetClassName,
+            }));
+
+            // Add trace link
+            const traceLink = this.context.traceBuilder.addLink(ruleName, sourceRef, targetRefs, hasGuard);
+
+            // Execute attribute mappings for each target instance with trace
             for (const targetInstance of targetInstances) {
-                this.executeAttributeMappings(mapping.body, sourceInstance, targetInstance);
+                this.executeAttributeMappingsWithTrace(mapping.body, sourceInstance, targetInstance, traceLink);
             }
 
             this.stats.classMappingsExecuted++;
@@ -498,6 +581,201 @@ export class JjtlExecutor {
         }
 
         console.log('[JjTL Executor] Target instance after mappings:', targetInstance);
+    }
+
+    /**
+     * Execute attribute mappings with trace recording
+     */
+    private executeAttributeMappingsWithTrace(
+        body: any[],
+        sourceInstance: any,
+        targetInstance: any,
+        traceLink: TraceLinkBuilder
+    ): void {
+        console.log('[JjTL Executor] executeAttributeMappingsWithTrace called');
+
+        if (!body || body.length === 0) {
+            return;
+        }
+
+        for (const item of body) {
+            if (item.type === 'AttributeMapping') {
+                const mapping = item as AttributeMappingAST;
+                this.executeAttributeMappingWithTrace(mapping, sourceInstance, targetInstance, traceLink);
+                this.stats.attributeMappingsExecuted++;
+            }
+        }
+
+        console.log('[JjTL Executor] Target instance after mappings:', targetInstance);
+    }
+
+    /**
+     * Execute a single attribute mapping with trace recording
+     */
+    private executeAttributeMappingWithTrace(
+        mapping: AttributeMappingAST,
+        sourceInstance: any,
+        targetInstance: any,
+        traceLink: TraceLinkBuilder
+    ): void {
+        try {
+            let value: JjelValue;
+            let sourceValue: any = null;
+            const hasExpression = !!mapping.conversion?.expression;
+            const expressionSource = hasExpression ? this.getExpressionSource(mapping.conversion!.expression!) : undefined;
+
+            if (mapping.objectCreation) {
+                value = this.executeObjectCreation(mapping.objectCreation, sourceInstance);
+            } else if (mapping.conversion) {
+                // Get source value before conversion
+                if (mapping.sourceAttribute) {
+                    const ctx = this.createInstanceContext(sourceInstance);
+                    sourceValue = fromJjelValue(this.evaluatePropertyPath(mapping.sourceAttribute, ctx));
+                }
+                value = this.executeConversion(mapping.conversion, sourceInstance, mapping.sourceAttribute);
+            } else if (mapping.sourceAttribute) {
+                const ctx = this.createInstanceContext(sourceInstance);
+                value = this.evaluatePropertyPath(mapping.sourceAttribute, ctx);
+                sourceValue = fromJjelValue(value);
+            } else {
+                value = null;
+            }
+
+            // Set target attribute
+            const finalValue = fromJjelValue(value);
+            targetInstance[mapping.targetAttribute] = finalValue;
+
+            // Determine invertibility
+            const invertible = this.isBindingInvertible(mapping);
+
+            // Record binding in trace
+            traceLink.addBinding(
+                mapping.sourceAttribute || null,
+                mapping.targetAttribute,
+                expressionSource,
+                sourceValue,
+                finalValue,
+                invertible,
+                invertible ? this.computeInverseExpression(mapping) : undefined
+            );
+
+            console.log(`[JjTL Executor] Set ${mapping.targetAttribute} = ${JSON.stringify(finalValue)} (invertible: ${invertible})`);
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            this.errors.push(
+                `Failed to map ${mapping.sourceAttribute || '(creation)'} -> ${mapping.targetAttribute}: ${errorMessage}`
+            );
+        }
+    }
+
+    /**
+     * Determine if a binding is invertible (can be reversed)
+     */
+    private isBindingInvertible(mapping: AttributeMappingAST): boolean {
+        // Object creation is not invertible
+        if (mapping.objectCreation) {
+            return false;
+        }
+
+        // No conversion = direct copy = invertible
+        if (!mapping.conversion) {
+            return true;
+        }
+
+        // Value mappings are invertible if they are 1:1
+        if (mapping.conversion.mappings && mapping.conversion.mappings.length > 0) {
+            // Check for duplicate target values (would make reverse ambiguous)
+            const targetValues = mapping.conversion.mappings.map(m => JSON.stringify(m.targetValue.value));
+            const uniqueTargets = new Set(targetValues);
+            return uniqueTargets.size === mapping.conversion.mappings.length;
+        }
+
+        // Expression conversions - analyze for invertibility
+        if (mapping.conversion.expression) {
+            return this.isExpressionInvertible(mapping.conversion.expression);
+        }
+
+        return true;
+    }
+
+    /**
+     * Check if an expression is invertible
+     */
+    private isExpressionInvertible(expr: ExpressionAST): boolean {
+        switch (expr.type) {
+            case 'Identifier':
+                // Simple property reference is invertible
+                return true;
+
+            case 'MemberAccess':
+            case 'NullSafeMemberAccess':
+                // Property access is invertible
+                return true;
+
+            case 'BinaryExpression': {
+                const binExpr = expr as BinaryExpressionAST;
+                // String concatenation with constant is invertible if we know the constant
+                if (binExpr.operator === '+') {
+                    const leftIsLiteral = binExpr.left.type === 'Literal';
+                    const rightIsLiteral = binExpr.right.type === 'Literal';
+                    // name + '_suffix' is invertible (can strip suffix)
+                    // '_prefix' + name is invertible (can strip prefix)
+                    return leftIsLiteral || rightIsLiteral;
+                }
+                return false;
+            }
+
+            case 'FunctionCall':
+                // Most function calls are not invertible
+                return false;
+
+            case 'Literal':
+                // Constant values are technically invertible (always same)
+                return true;
+
+            default:
+                return false;
+        }
+    }
+
+    /**
+     * Compute inverse expression for invertible bindings
+     */
+    private computeInverseExpression(mapping: AttributeMappingAST): string | undefined {
+        if (!mapping.conversion) {
+            // Direct copy: inverse is also direct copy
+            return mapping.targetAttribute;
+        }
+
+        if (mapping.conversion.expression) {
+            const expr = mapping.conversion.expression;
+
+            // Handle name + '_suffix' -> strip suffix
+            if (expr.type === 'BinaryExpression') {
+                const binExpr = expr as BinaryExpressionAST;
+                if (binExpr.operator === '+' && binExpr.right.type === 'Literal') {
+                    const suffix = (binExpr.right as LiteralAST).value;
+                    if (typeof suffix === 'string') {
+                        return `${mapping.targetAttribute}.substring(0, ${mapping.targetAttribute}.length - ${suffix.length})`;
+                    }
+                }
+                if (binExpr.operator === '+' && binExpr.left.type === 'Literal') {
+                    const prefix = (binExpr.left as LiteralAST).value;
+                    if (typeof prefix === 'string') {
+                        return `${mapping.targetAttribute}.substring(${prefix.length})`;
+                    }
+                }
+            }
+        }
+
+        return undefined;
+    }
+
+    /**
+     * Get source representation of an expression (for trace)
+     */
+    private getExpressionSource(expr: ExpressionAST): string {
+        return this.astToSource(expr);
     }
 
     /**

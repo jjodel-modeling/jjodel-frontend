@@ -1,0 +1,45 @@
+/**
+ * AI Disclaimer Styles
+ * Subtle, non-intrusive disclaimer for AI-generated content
+ */
+
+.ai-disclaimer {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    font-size: 11px;
+    color: #94a3b8;           // slate-400
+    background: transparent;
+    border-top: 1px solid #1e293b; // slate-800 — subtle separator
+
+    i {
+        font-size: 12px;
+        flex-shrink: 0;
+    }
+
+    span {
+        line-height: 1.4;
+    }
+
+    // Light theme variant
+    .light-theme &,
+    [data-theme="light"] & {
+        color: #64748b;       // slate-500
+        border-top-color: #e2e8f0; // slate-200
+    }
+
+    // Compact variant — for inline use in code blocks, tight spaces
+    &--compact {
+        display: inline-flex;
+        padding: 2px 0;
+        font-size: 10px;
+        color: #64748b;       // slate-500
+        border-top: none;
+        gap: 4px;
+
+        i {
+            font-size: 10px;
+        }
+    }
+}

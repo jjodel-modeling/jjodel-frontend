@@ -288,6 +288,50 @@ Il metodo `evaluatePropertyPath` nell'executor risolve nomi di proprietà con:
 
 **CRITICO:** `contextToRecord()` deve includere TUTTE le proprietà dell'istanza source, non solo le variabili hardcoded.
 
+### JjTL — Development Plan
+
+For the complete JjTL development roadmap (8 phases + invertibility analysis track), see:
+**`/docs/jjtl/JJTL-DEVELOPMENT-PLAN.md`**
+
+JjTL is designed as both a user-facing transformation language AND a core IR (Intermediate Representation) that ATL and ETL can be translated into. The development plan covers:
+- Phase 1-5: Language features (trace model, rule system, expressions, imperative, modularity)
+- Phase 6-7: ATL and ETL front-ends (parse → translate to JjTL → execute)
+- Phase 8: Advanced features (bidirectionality, incrementality, AI-assisted transformation)
+- Cross-cutting: Static invertibility analysis with real-time IDE feedback
+
+### Modifica Sintassi JjTL — Checklist Obbligatoria
+
+Quando si modifica la grammatica JjTL, aggiornare **SEMPRE** tutti e 4 i file:
+
+1. **Lexer** (`frontend/src/jjtl/parser/lexer.ts`) — nuovi token se necessari
+2. **Parser** (`frontend/src/jjtl/parser/parser.ts`) — regole di parsing
+3. **Grammar Rules** (`frontend/src/jjtl/diagrams/types.ts`) — EBNF in `GRAMMAR_RULES`
+4. **Railroad Diagrams** (`frontend/src/jjtl/diagrams/GrammarDiagram.tsx`) — rendering visuale
+
+⚠️ Non aggiornare MAI solo il parser senza gli altri. I railroad diagrams sono la documentazione visiva per l'utente e non si aggiornano automaticamente.
+
+### Stato JjTL (Aggiornamento 2026-02-09)
+
+**Completato:**
+- ✅ Parser JjTL → AST
+- ✅ Executor: class mapping (A -> B)
+- ✅ Executor: attribute mapping diretto (name -> label)
+- ✅ Executor: evaluatePropertyPath con fallback multi-strategia
+- ✅ ProjectEditor: creazione modello target con DModel.new
+- ✅ ProjectEditor: creazione istanze con DObject.new
+- ✅ ProjectEditor: deferred attribute setting via LModel proxy
+- ✅ UI: Manhattan arrows per mapping visualization
+- ✅ UI: nomi trasformazioni con `_to_` (no trattini)
+- ✅ UI: nomi modelli unici con numerazione progressiva
+
+**Da Completare:**
+- ❌ Conversion expressions JjEL (name -> label : name + '_suffix') — da testare
+- ❌ Multi-attribute mapping — da testare
+- ❌ Reference mapping (oggetti collegati)
+- ❌ Guard conditions (`when` clause)
+- ❌ Undo/redo per trasformazioni
+- ❌ Cleanup log di debug
+
 ---
 
 ## 🐛 Bug Noti e Soluzioni

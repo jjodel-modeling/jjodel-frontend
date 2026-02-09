@@ -781,36 +781,56 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
         };
 
         /**
-         * Genera un nome unico per il modello aggiungendo un numero progressivo se necessario
+         * Generate unique model name by appending (N) suffix if needed.
+         * Finds the highest existing suffix and increments by 1.
          *
-         * @param baseName - Il nome desiderato (es: "metamodel_1_to_metamodel_2")
-         * @param existingNames - Array di nomi già esistenti
-         * @returns Nome unico (es: "metamodel_1_to_metamodel_2 (1)")
+         * @param baseName - The desired name (e.g., "metamodel_1_to_metamodel_2")
+         * @param existingNames - Array of existing names
+         * @returns Unique name (e.g., "metamodel_1_to_metamodel_2 (1)")
          */
         const generateUniqueModelName = (baseName: string, existingNames: string[]): string => {
-            // Se il nome base non esiste, usalo direttamente
+            // If base name doesn't exist, use it directly
             if (!existingNames.includes(baseName)) {
                 return baseName;
             }
 
-            // Altrimenti trova il primo numero disponibile
-            let counter = 1;
-            let uniqueName = `${baseName} (${counter})`;
+            // Find all existing names that match the pattern "baseName (N)"
+            // Escape special regex characters in baseName
+            const escapedBaseName = baseName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const pattern = new RegExp(`^${escapedBaseName} \\((\\d+)\\)$`);
 
-            while (existingNames.includes(uniqueName)) {
-                counter++;
-                uniqueName = `${baseName} (${counter})`;
+            let maxSuffix = 0;
+            for (const name of existingNames) {
+                const match = name.match(pattern);
+                if (match) {
+                    const suffix = parseInt(match[1], 10);
+                    if (suffix > maxSuffix) {
+                        maxSuffix = suffix;
+                    }
+                }
             }
 
-            return uniqueName;
+            // Return baseName with the next available suffix (max + 1)
+            return `${baseName} (${maxSuffix + 1})`;
         };
 
+        // Execution guard to prevent double-firing
+        let isExecutingTransformation = false;
+
         // Callback when transformation is executed
+        // Returns ExecutionResult so JjtlDevelopmentEnv can update trace display
         const handleExecuteTransformation = async (
             sourceModelId: string,
             outputModelName: string,
             ast: TransformationAST
-        ): Promise<void> => {
+        ): Promise<ExecutionResult | void> => {
+            // Guard against double execution (React StrictMode, button+form submit, etc.)
+            if (isExecutingTransformation) {
+                console.warn('[ProjectEditor] Transformation already executing, skipping duplicate call');
+                return;
+            }
+            isExecutingTransformation = true;
+
             console.log('[ProjectEditor] handleExecuteTransformation called', {
                 sourceModelId,
                 outputModelName,
@@ -821,6 +841,7 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
             if (!ast || !ast.mappings || ast.mappings.length === 0) {
                 console.error('[ProjectEditor] AST has no mappings!');
                 U.alert('e', 'Error', 'Transformation has no mappings defined.');
+                isExecutingTransformation = false;
                 return;
             }
 
@@ -829,6 +850,7 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                 const sourceModel = models.find(m => m.id === sourceModelId);
                 if (!sourceModel) {
                     U.alert('e', 'Error', `Source model not found`);
+                    isExecutingTransformation = false;
                     return;
                 }
 
@@ -836,12 +858,14 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                 const currentTransformation = transformations.find(t => t.targetMetamodelId);
                 if (!currentTransformation) {
                     U.alert('e', 'Error', 'Transformation not found');
+                    isExecutingTransformation = false;
                     return;
                 }
 
                 const targetMetamodel = metamodels.find(mm => mm.id === currentTransformation.targetMetamodelId);
                 if (!targetMetamodel) {
                     U.alert('e', 'Error', `Target metamodel not found`);
+                    isExecutingTransformation = false;
                     return;
                 }
 
@@ -933,30 +957,38 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                 });
 
                 const sourceModelDataCopy = JSON.parse(JSON.stringify(sourceModelData));
-                console.log('[ProjectEditor] Source model data (deep copy):', sourceModelDataCopy.length);
-
                 // Execute transformation
                 const result: ExecutionResult = executeTransformation(ast, sourceModelDataCopy, targetMetamodel);
-                console.log('[ProjectEditor] Execution result:', {
-                    success: result.success,
-                    errors: result.errors,
-                    targetInstancesCount: result.targetModel?.instances?.size || 0
-                });
 
                 if (!result.success) {
                     U.alert('e', 'Transformation Failed', result.errors.join('\n'));
-                    return;
+                    isExecutingTransformation = false;
+                    return result;
                 }
 
                 // ============================================
                 // CREAZIONE MODELLO - NON USARE createM1!
                 // ============================================
 
-                // Raccogli i nomi esistenti di modelli e metamodelli
+                // CRITICAL: Get fresh model names from Redux store, NOT from stale component state
+                // This ensures we catch recently created models that haven't triggered a re-render yet
+                const freshState = store.getState() as any;
+                const freshExistingNames: string[] = [];
+
+                // Iterate through state and collect all model/metamodel names
+                for (const key in freshState) {
+                    const item = freshState[key];
+                    if (item && typeof item === 'object' && item.className === 'DModel' && item.name) {
+                        freshExistingNames.push(item.name);
+                    }
+                }
+
+                // Also include names from component state as fallback
                 const existingNames = [
+                    ...freshExistingNames,
                     ...(models || []).map(m => m.name || ''),
                     ...(metamodels || []).map(m => m.name || '')
-                ].filter(Boolean);
+                ].filter((name, index, arr) => name && arr.indexOf(name) === index); // Remove duplicates
 
                 // Genera nome unico
                 const uniqueOutputName = generateUniqueModelName(outputModelName, existingNames);
@@ -964,7 +996,8 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                 console.log('[ProjectEditor] Output model name:', {
                     requested: outputModelName,
                     unique: uniqueOutputName,
-                    existingCount: existingNames.filter(n => n.startsWith(outputModelName)).length
+                    existingNames: existingNames,
+                    freshNamesCount: freshExistingNames.length
                 });
 
                 let createdDModel: DModel | null = null;
@@ -1110,28 +1143,45 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                     }, 1000); // 1 second delay — generous, ensures everything is propagated
                 }
 
-                // STEP 7: Apri tab DOPO un delay per Redux
+                // Return the execution result IMMEDIATELY so JjtlDevelopmentEnv can update trace display
+                // Tab opening and attribute setting happen in the background (fire-and-forget)
+                // Broadcast execution result via custom event (for JjtlDevelopmentEnv trace display)
+                window.dispatchEvent(new CustomEvent('jjtl-execution-result', { detail: result }));
+
+                // STEP 7: Open tab AFTER a delay for Redux (fire-and-forget, don't await)
                 if (createdDModel) {
-                    console.log('[ProjectEditor] Waiting for Redux propagation...');
+                    const modelToOpen = createdDModel;
+                    const modelName = uniqueOutputName;
+                    const count = instancesCreated;
 
-                    await new Promise<void>((resolve) => {
-                        setTimeout(() => {
-                            console.log('[ProjectEditor] Opening tab...');
-                            const tab = TabDataMaker.model(createdDModel!);
+                    setTimeout(() => {
+                        try {
+                            const tab = TabDataMaker.model(modelToOpen);
                             DockManager.open('models', tab);
-                            resolve();
-                        }, 200);
-                    });
-
-                    U.alert('i', 'Transformation Executed',
-                        `Created model "${uniqueOutputName}" with ${instancesCreated} instances.`);
-
-                    markDirty();
+                            U.alert('i', 'Transformation Executed',
+                                `Created model "${modelName}" with ${count} instances.`);
+                            markDirty();
+                        } catch (e) {
+                            console.error('[ProjectEditor] Error opening tab:', e);
+                        }
+                    }, 200);
                 }
+
+                // Reset execution guard
+                isExecutingTransformation = false;
+                return result;
 
             } catch (error) {
                 console.error('[ProjectEditor] Error:', error);
                 U.alert('e', 'Error', `Failed to execute transformation: ${error}`);
+                // Reset execution guard
+                isExecutingTransformation = false;
+                // Return failed result so JjtlDevelopmentEnv can show errors
+                return {
+                    success: false,
+                    errors: [error instanceof Error ? error.message : String(error)],
+                    warnings: [],
+                } as ExecutionResult;
             }
         };
 

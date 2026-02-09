@@ -11,6 +11,7 @@ import { oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import './ScriptBlock.scss';
 import { ExecutionErrorDialog } from './ExecutionErrorDialog';
 import { parseError, ExecutionPauseInfo, ExecutionSummary, JjScriptError } from '../executor/errors';
+import { AIDisclaimer } from '../../components/common/AIDisclaimer';
 
 // ============================================
 // TYPES
@@ -1077,6 +1078,10 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
                         >
                             {displayCode}
                         </SyntaxHighlighter>
+                    </div>
+                    {/* AI Disclaimer (compact) */}
+                    <div className="script-block__disclaimer">
+                        <AIDisclaimer compact />
                     </div>
                 </div>
             )}

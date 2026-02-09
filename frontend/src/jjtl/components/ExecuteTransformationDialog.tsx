@@ -20,7 +20,7 @@ export interface ModelOption {
 export interface ExecuteTransformationDialogProps {
     isOpen: boolean;
     onClose: () => void;
-    onExecute: (sourceModelId: string, outputModelName: string) => void;
+    onExecute: (sourceModelId: string, outputModelName: string) => Promise<void>;
     transformationName: string;
     sourceMetamodelName: string;
     targetMetamodelName: string;

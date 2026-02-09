@@ -24,6 +24,7 @@ import { useAIProviderPreference } from '../../../hooks/useAIProviderPreference'
 import { useAISettingsSafe } from '../../../contexts/AISettingsContext';
 import { DocumentationStatus } from '../../../types/jodie';
 import { markdownMonacoOptions } from '../../editors/monacoConfig';
+import { AIDisclaimer } from '../../common/AIDisclaimer';
 import './DocumentationTab.scss';
 
 // ============================================
@@ -1204,6 +1205,11 @@ function DocumentationTabComponent(props: AllProps) {
                     />
                 )}
             </div>
+
+            {/* AI Disclaimer */}
+            {documentation && viewMode !== 'edit' && (
+                <AIDisclaimer />
+            )}
 
             {/* Footer with metadata */}
             {documentation && viewMode !== 'edit' && (

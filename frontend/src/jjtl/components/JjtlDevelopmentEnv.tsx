@@ -41,12 +41,13 @@ export interface JjtlDevelopmentEnvProps {
     existingModelNames?: string[];
     onSave?: (code: string) => void;
     onCodeChange?: (code: string) => void;
-    /** Callback when transformation is executed - receives AST for execution by parent */
+    /** Callback when transformation is executed - receives AST for execution by parent.
+     * Returns ExecutionResult so JjtlDevelopmentEnv can display trace without re-executing. */
     onExecuteTransformation?: (
         sourceModelId: string,
         outputModelName: string,
         ast: import('../types').TransformationAST
-    ) => Promise<void>;
+    ) => Promise<import('../executor').ExecutionResult | void>;
 }
 
 type BottomPanelTab = 'problems' | 'trace' | 'output';
@@ -137,8 +138,21 @@ export const JjtlDevelopmentEnv: React.FC<JjtlDevelopmentEnvProps> = ({
         });
     }, [ast]);
 
-    // Executor hook
-    const { execute, trace, isExecuting, executionStatus, lastExecutionTime } = useJjtlExecutor();
+    // Executor hook - we use setResultFromExternal to update trace from ProjectEditor's execution
+    const { setResultFromExternal, trace, isExecuting, executionStatus, lastExecutionTime } = useJjtlExecutor();
+
+    // Listen for execution results via custom event (bypasses callback chain issues)
+    useEffect(() => {
+        const handler = (e: Event) => {
+            const customEvent = e as CustomEvent;
+            const result = customEvent.detail;
+            if (result) {
+                setResultFromExternal(result, 0);
+            }
+        };
+        window.addEventListener('jjtl-execution-result', handler);
+        return () => window.removeEventListener('jjtl-execution-result', handler);
+    }, [setResultFromExternal]);
 
     // Convert parser errors to problems
     const problems: Problem[] = parserErrors.map((e, i) => parserErrorToProblem(e, i));
@@ -281,26 +295,47 @@ export const JjtlDevelopmentEnv: React.FC<JjtlDevelopmentEnvProps> = ({
         try {
             if (onExecuteTransformation) {
                 addOutputMessage(`Processing ${currentAst.mappings?.length || 0} mappings...`);
-                await onExecuteTransformation(sourceModelId, outputModelName, currentAst);
-                addOutputMessage('Transformation completed successfully.');
-            }
+                const startTime = performance.now();
+                console.log('[JjtlDevelopmentEnv] Calling onExecuteTransformation...');
+                const result = await onExecuteTransformation(sourceModelId, outputModelName, currentAst);
+                const executionTimeMs = Math.round(performance.now() - startTime);
+                console.log('[JjtlDevelopmentEnv] onExecuteTransformation returned:', {
+                    hasResult: !!result,
+                    success: result?.success,
+                    hasTraceModel: !!result?.traceModel,
+                    linksCount: result?.traceModel?.links?.length
+                });
 
-            // Also execute the internal executor for tracing
-            if (currentAst && sourceMetamodel.length > 0) {
-                const sourceMetamodelCopy = JSON.parse(JSON.stringify(sourceMetamodel));
-                execute(currentAst, sourceMetamodelCopy);
+                // Update trace display from the result returned by ProjectEditor
+                if (result) {
+                    console.log('[JjtlDevelopmentEnv] Calling setResultFromExternal with result');
+                    setResultFromExternal(result, executionTimeMs);
+                    if (result.success) {
+                        addOutputMessage('Transformation completed successfully.');
+                        addOutputMessage(`Created ${result.targetModel?.instances?.size || 0} target class types.`);
+                    } else {
+                        addOutputMessage(`Transformation failed: ${result.errors.join(', ')}`);
+                    }
+                } else {
+                    console.warn('[JjtlDevelopmentEnv] No result returned from onExecuteTransformation');
+                    addOutputMessage('Transformation completed (no result returned).');
+                }
+            } else {
+                console.warn('[JjtlDevelopmentEnv] onExecuteTransformation callback is undefined');
             }
         } catch (error) {
+            console.error('[JjtlDevelopmentEnv] Error in transformation execution:', error);
             const errorMessage = error instanceof Error ? error.message : String(error);
             addOutputMessage(`Error: ${errorMessage}`);
         }
 
-        setIsExecuteDialogOpen(false);
+        // NOTE: Dialog closes itself after onExecute completes - don't close it here
+        // to avoid double-closing race condition
 
         // Switch to output tab to show results
         setBottomPanelTab('output');
         setIsBottomPanelCollapsed(false);
-    }, [code, sourceMetamodel, execute, onExecuteTransformation, clearOutput, addOutputMessage, parseNow]);
+    }, [code, onExecuteTransformation, clearOutput, addOutputMessage, parseNow, setResultFromExternal]);
 
     // Handle problem click - navigate to error location
     const handleProblemClick = useCallback((problem: Problem) => {
@@ -767,7 +802,7 @@ export const JjtlDevelopmentEnv: React.FC<JjtlDevelopmentEnvProps> = ({
                         <i className="bi bi-diagram-2" />
                         Trace
                         {trace.length > 0 && (
-                            <span className="jjtl-dev-env-bottom-badge">{trace.length}</span>
+                            <span className="jjtl-dev-env-bottom-badge jjtl-dev-env-bottom-badge--info">{trace.length}</span>
                         )}
                     </button>
                     <button
@@ -777,7 +812,7 @@ export const JjtlDevelopmentEnv: React.FC<JjtlDevelopmentEnvProps> = ({
                         <i className="bi bi-terminal" />
                         Output
                         {outputMessages.length > 0 && (
-                            <span className="jjtl-dev-env-bottom-badge">{outputMessages.length}</span>
+                            <span className="jjtl-dev-env-bottom-badge jjtl-dev-env-bottom-badge--info">{outputMessages.length}</span>
                         )}
                     </button>
                     <div className="jjtl-dev-env-bottom-spacer" />

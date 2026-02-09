@@ -502,6 +502,20 @@ $script-running: #3b82f6;
 }
 
 // ============================================
+// AI DISCLAIMER
+// ============================================
+
+.script-block__disclaimer {
+    padding: 4px 12px;
+    background: rgba(0, 0, 0, 0.02);
+    border-top: 1px solid $script-border;
+
+    .ai-disclaimer--compact {
+        color: $script-text-muted;
+    }
+}
+
+// ============================================
 // SCROLLBAR
 // ============================================
 
