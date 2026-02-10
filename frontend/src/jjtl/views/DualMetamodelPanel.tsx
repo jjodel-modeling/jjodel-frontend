@@ -1,11 +1,30 @@
 /**
  * DualMetamodelPanel Component
  * Side-by-side view of source and target metamodels with mapping visualization
+ * Supports toggling between metamodel (schema) and instance (data) views
  */
 
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { MetamodelTreeView, MetamodelElement } from './MetamodelTreeView';
 import { MappingLinesOverlay, MappingLine } from './MappingLinesOverlay';
+
+/**
+ * Format an instance attribute value for display
+ */
+function formatInstanceValue(value: any): string {
+    if (value === null) return 'null';
+    if (value === undefined) return 'undefined';
+    if (typeof value === 'string') return `"${value}"`;
+    if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+    if (Array.isArray(value)) {
+        if (value.length === 0) return '[]';
+        return `[${value.length} items]`;
+    }
+    if (typeof value === 'object') {
+        return '{...}';
+    }
+    return String(value);
+}
 
 export interface MappingConnection {
     id: string;
@@ -16,6 +35,15 @@ export interface MappingConnection {
     /** Status for visibility: pending only shows when hovered, toInsert always shows */
     status?: 'pending' | 'toInsert' | 'rejected';
 }
+
+export interface InstanceElement {
+    id: string;
+    name: string;
+    className: string;
+    attributes?: { name: string; value: any }[];
+}
+
+export type ViewMode = 'metamodel' | 'instances';
 
 export interface DualMetamodelPanelProps {
     sourceMetamodel: MetamodelElement[];
@@ -29,6 +57,11 @@ export interface DualMetamodelPanelProps {
     onMappingHover?: (mappingId: string | null) => void;
     onMappingCreate?: (sourceId: string, targetId: string) => void;
     onMappingDelete?: (mappingId: string) => void;
+    // Instance-level props
+    sourceInstances?: InstanceElement[];
+    targetInstances?: InstanceElement[];
+    viewMode?: ViewMode;
+    onViewModeChange?: (mode: ViewMode) => void;
 }
 
 export const DualMetamodelPanel: React.FC<DualMetamodelPanelProps> = ({
@@ -42,6 +75,11 @@ export const DualMetamodelPanel: React.FC<DualMetamodelPanelProps> = ({
     onMappingSelect,
     onMappingHover,
     onMappingCreate,
+    // Instance-level props
+    sourceInstances = [],
+    targetInstances = [],
+    viewMode: externalViewMode,
+    onViewModeChange,
 }) => {
     const containerRef = useRef<HTMLDivElement>(null);
     const [selectedSource, setSelectedSource] = useState<string | undefined>();
@@ -49,6 +87,60 @@ export const DualMetamodelPanel: React.FC<DualMetamodelPanelProps> = ({
     const [mappingLines, setMappingLines] = useState<MappingLine[]>([]);
     const [dragSource, setDragSource] = useState<MetamodelElement | null>(null);
     const [internalHoveredMapping, setInternalHoveredMapping] = useState<string | null>(null);
+
+    // View mode state (controlled or uncontrolled)
+    const [internalViewMode, setInternalViewMode] = useState<ViewMode>('metamodel');
+    const viewMode = externalViewMode ?? internalViewMode;
+
+    const handleViewModeChange = useCallback((mode: ViewMode) => {
+        if (onViewModeChange) {
+            onViewModeChange(mode);
+        } else {
+            setInternalViewMode(mode);
+        }
+    }, [onViewModeChange]);
+
+    // Convert instances to MetamodelElement format for display in tree
+    const convertInstancesToElements = useCallback((instances: InstanceElement[]): MetamodelElement[] => {
+        // Group instances by className
+        const grouped = instances.reduce((acc, inst) => {
+            if (!acc[inst.className]) {
+                acc[inst.className] = [];
+            }
+            acc[inst.className].push(inst);
+            return acc;
+        }, {} as Record<string, InstanceElement[]>);
+
+        // Create tree structure: Class -> Instances
+        return Object.entries(grouped).map(([className, classInstances]) => ({
+            id: `class-${className}`,
+            name: className,
+            type: 'class' as const,
+            children: classInstances.map(inst => ({
+                id: inst.id,
+                name: inst.name || inst.id,
+                type: 'attribute' as const, // Use attribute type for instances
+                children: inst.attributes?.map(attr => ({
+                    id: `${inst.id}-${attr.name}`,
+                    name: `${attr.name}: ${formatInstanceValue(attr.value)}`,
+                    type: 'attribute' as const,
+                })) || [],
+            })),
+        }));
+    }, []);
+
+    // Get displayed elements based on view mode
+    const displayedSourceElements = viewMode === 'instances'
+        ? convertInstancesToElements(sourceInstances)
+        : sourceMetamodel;
+
+    const displayedTargetElements = viewMode === 'instances'
+        ? convertInstancesToElements(targetInstances)
+        : targetMetamodel;
+
+    const hasSourceInstances = sourceInstances.length > 0;
+    const hasTargetInstances = targetInstances.length > 0;
+    const hasAnyInstances = hasSourceInstances || hasTargetInstances;
 
     // Combine internal and external hover state
     const effectiveHoveredMapping = hoveredMapping ?? internalHoveredMapping;
@@ -165,46 +257,87 @@ export const DualMetamodelPanel: React.FC<DualMetamodelPanelProps> = ({
 
     return (
         <div className="jjtl-dual-panel" ref={containerRef}>
-            {/* Source metamodel */}
+            {/* View mode toggle - only show when instances are available */}
+            {hasAnyInstances && (
+                <div className="jjtl-dual-panel-view-toggle">
+                    <button
+                        className={`jjtl-view-toggle-btn ${viewMode === 'metamodel' ? 'active' : ''}`}
+                        onClick={() => handleViewModeChange('metamodel')}
+                        title="View metamodel structure"
+                    >
+                        <i className="bi bi-diagram-3" />
+                        <span>Schema</span>
+                    </button>
+                    <button
+                        className={`jjtl-view-toggle-btn ${viewMode === 'instances' ? 'active' : ''}`}
+                        onClick={() => handleViewModeChange('instances')}
+                        title="View model instances"
+                    >
+                        <i className="bi bi-collection" />
+                        <span>Instances</span>
+                        {(hasSourceInstances || hasTargetInstances) && (
+                            <span className="jjtl-view-toggle-badge">
+                                {sourceInstances.length + targetInstances.length}
+                            </span>
+                        )}
+                    </button>
+                </div>
+            )}
+
+            {/* Source metamodel/instances */}
             <div className="jjtl-dual-panel-side jjtl-dual-panel-source">
                 <MetamodelTreeView
-                    metamodel={sourceMetamodel}
-                    title={sourceMetamodelName}
+                    metamodel={displayedSourceElements}
+                    title={viewMode === 'instances' ? `${sourceMetamodelName} Instances` : sourceMetamodelName}
                     side="source"
                     selectedElement={selectedSource}
                     onElementSelect={handleSourceSelect}
                     onElementDragStart={handleSourceDragStart}
                     highlightedElements={highlightedElements}
                 />
+                {viewMode === 'instances' && sourceInstances.length === 0 && (
+                    <div className="jjtl-dual-panel-no-instances">
+                        <i className="bi bi-inbox" />
+                        <span>No source instances</span>
+                    </div>
+                )}
             </div>
 
             {/* Center spacer for visual separation */}
             <div className="jjtl-dual-panel-center" />
 
-            {/* Target metamodel */}
+            {/* Target metamodel/instances */}
             <div
                 className="jjtl-dual-panel-side jjtl-dual-panel-target"
                 onDrop={handleTargetDrop}
                 onDragOver={handleDragOver}
             >
                 <MetamodelTreeView
-                    metamodel={targetMetamodel}
-                    title={targetMetamodelName}
+                    metamodel={displayedTargetElements}
+                    title={viewMode === 'instances' ? `${targetMetamodelName} Instances` : targetMetamodelName}
                     side="target"
                     selectedElement={selectedTarget}
                     onElementSelect={handleTargetSelect}
                     highlightedElements={highlightedElements}
                 />
+                {viewMode === 'instances' && targetInstances.length === 0 && (
+                    <div className="jjtl-dual-panel-no-instances">
+                        <i className="bi bi-inbox" />
+                        <span>No target instances</span>
+                    </div>
+                )}
             </div>
 
-            {/* Mapping lines overlay - covers entire panel */}
-            <MappingLinesOverlay
-                lines={mappingLines}
-                containerRef={containerRef}
-                hoveredLineId={effectiveHoveredMapping}
-                onLineClick={handleLineClick}
-                onLineHover={handleLineHover}
-            />
+            {/* Mapping lines overlay - covers entire panel (only show in metamodel mode) */}
+            {viewMode === 'metamodel' && (
+                <MappingLinesOverlay
+                    lines={mappingLines}
+                    containerRef={containerRef}
+                    hoveredLineId={effectiveHoveredMapping}
+                    onLineClick={handleLineClick}
+                    onLineHover={handleLineHover}
+                />
+            )}
 
             {/* Drag hint */}
             {dragSource && (

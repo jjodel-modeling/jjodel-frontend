@@ -1,0 +1,601 @@
+/**
+ * MappingTraceView Styles
+ * Rich, expandable trace view for JjTL transformation execution
+ */
+
+// Variables (matching jjtl.scss)
+$color-primary: #0ea5e9;
+$color-primary-light: rgba(14, 165, 233, 0.1);
+
+$color-purple: #8b5cf6;
+$color-purple-light: rgba(139, 92, 246, 0.1);
+
+$color-success: #10b981;
+$color-success-light: rgba(16, 185, 129, 0.1);
+
+$color-warning: #f59e0b;
+$color-warning-light: rgba(245, 158, 11, 0.1);
+
+$color-error: #ef4444;
+$color-error-light: rgba(239, 68, 68, 0.1);
+
+$color-text-primary: #111418;
+$color-text-secondary: #6b7280;
+$color-text-tertiary: #9ca3af;
+
+$color-bg-primary: #ffffff;
+$color-bg-secondary: #f8fafc;
+$color-bg-tertiary: #f1f5f9;
+
+$color-border: #e2e4e8;
+$color-border-light: #f0f1f2;
+
+$font-family: 'Inter Variable', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+$font-family-mono: 'JetBrains Mono', 'IBM Plex Mono', monospace;
+
+$font-size-xs: 11px;
+$font-size-sm: 12px;
+$font-size-base: 13px;
+
+$spacing-xs: 4px;
+$spacing-sm: 8px;
+$spacing-md: 12px;
+$spacing-lg: 16px;
+
+$radius-sm: 4px;
+$radius-md: 6px;
+
+$transition-fast: 150ms ease;
+
+// ============================================
+// TRACE VIEW CONTAINER
+// ============================================
+
+.trace-view {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    background-color: $color-bg-primary;
+    font-family: $font-family;
+}
+
+// ============================================
+// HEADER
+// ============================================
+
+.trace-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: $spacing-sm $spacing-md;
+    border-bottom: 1px solid $color-border;
+}
+
+.trace-header-left {
+    display: flex;
+    align-items: center;
+    gap: $spacing-md;
+}
+
+.trace-header-right {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+}
+
+.trace-title {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+    font-size: $font-size-base;
+    font-weight: 600;
+    color: $color-text-primary;
+    margin: 0;
+
+    i {
+        color: $color-primary;
+        font-size: 14px;
+    }
+}
+
+.trace-count {
+    font-size: $font-size-xs;
+    color: $color-text-tertiary;
+    background-color: $color-bg-tertiary;
+    padding: 2px 8px;
+    border-radius: 10px;
+}
+
+.trace-expand-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    background: none;
+    border: 1px solid $color-border;
+    border-radius: $radius-sm;
+    color: $color-text-secondary;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    &:hover {
+        background-color: $color-bg-secondary;
+        border-color: $color-border;
+        color: $color-text-primary;
+    }
+
+    i {
+        font-size: 12px;
+    }
+}
+
+// ============================================
+// STATS BAR
+// ============================================
+
+.trace-stats {
+    display: flex;
+    gap: $spacing-lg;
+    padding: $spacing-sm $spacing-md;
+    border-bottom: 1px solid $color-border;
+    background-color: $color-bg-secondary;
+}
+
+.trace-stat {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+    font-size: $font-size-sm;
+    font-weight: 500;
+
+    i {
+        font-size: 14px;
+    }
+
+    &--success {
+        color: $color-success;
+    }
+
+    &--warning {
+        color: $color-warning;
+    }
+
+    &--failed {
+        color: $color-error;
+    }
+
+    &--invertible {
+        color: $color-primary;
+        margin-left: auto;
+    }
+}
+
+.trace-stat-label {
+    font-size: $font-size-xs;
+    font-weight: 400;
+    color: $color-text-tertiary;
+    margin-left: 2px;
+}
+
+// ============================================
+// CONTROLS (SEARCH & FILTER)
+// ============================================
+
+.trace-controls {
+    display: flex;
+    gap: $spacing-sm;
+    padding: $spacing-sm $spacing-md;
+    border-bottom: 1px solid $color-border;
+}
+
+.trace-search {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+    flex: 1;
+    padding: $spacing-xs $spacing-sm;
+    background-color: $color-bg-secondary;
+    border: 1px solid $color-border;
+    border-radius: $radius-sm;
+    transition: all $transition-fast;
+
+    &:focus-within {
+        border-color: $color-primary;
+        background-color: $color-bg-primary;
+    }
+
+    i {
+        color: $color-text-tertiary;
+        font-size: $font-size-sm;
+    }
+
+    input {
+        flex: 1;
+        border: none;
+        background: none;
+        font-size: $font-size-sm;
+        color: $color-text-primary;
+        outline: none;
+
+        &::placeholder {
+            color: $color-text-tertiary;
+        }
+    }
+}
+
+.trace-search-clear {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    background: none;
+    border: none;
+    color: $color-text-tertiary;
+    cursor: pointer;
+    padding: 0;
+
+    &:hover {
+        color: $color-text-primary;
+    }
+}
+
+.trace-filter {
+    padding: $spacing-xs $spacing-sm;
+    font-size: $font-size-sm;
+    border: 1px solid $color-border;
+    border-radius: $radius-sm;
+    background-color: $color-bg-primary;
+    color: $color-text-primary;
+    cursor: pointer;
+    outline: none;
+
+    &:focus {
+        border-color: $color-primary;
+    }
+}
+
+// ============================================
+// TRACE LIST
+// ============================================
+
+.trace-list {
+    flex: 1;
+    overflow: auto;
+}
+
+.trace-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: $spacing-sm;
+    padding: 40px $spacing-lg;
+    color: $color-text-tertiary;
+    text-align: center;
+
+    i {
+        font-size: 32px;
+        opacity: 0.5;
+    }
+
+    span {
+        font-size: $font-size-sm;
+    }
+}
+
+.trace-empty-hint {
+    font-size: $font-size-xs !important;
+    opacity: 0.7;
+}
+
+// ============================================
+// TRACE ENTRY
+// ============================================
+
+.trace-entry {
+    border-bottom: 1px solid $color-border-light;
+
+    &:last-child {
+        border-bottom: none;
+    }
+
+    &.expanded {
+        background-color: $color-bg-secondary;
+    }
+
+    &--success {
+        .trace-entry-header {
+            border-left: 3px solid $color-success;
+        }
+    }
+
+    &--warning {
+        .trace-entry-header {
+            border-left: 3px solid $color-warning;
+        }
+    }
+
+    &--failed {
+        .trace-entry-header {
+            border-left: 3px solid $color-error;
+        }
+    }
+}
+
+.trace-entry-header {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    padding: $spacing-sm $spacing-md;
+    padding-left: $spacing-sm;
+    cursor: pointer;
+    transition: background-color $transition-fast;
+
+    &:hover {
+        background-color: $color-bg-tertiary;
+    }
+}
+
+.trace-chevron {
+    font-size: 10px;
+    color: $color-text-tertiary;
+    width: 16px;
+    flex-shrink: 0;
+}
+
+.trace-status-icon {
+    font-size: 14px;
+    flex-shrink: 0;
+}
+
+.trace-mapping-info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.trace-rule {
+    font-size: $font-size-sm;
+    font-weight: 500;
+    color: $color-text-primary;
+    font-family: $font-family-mono;
+}
+
+.trace-elements {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+    font-size: $font-size-xs;
+}
+
+.trace-element-link {
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    &:hover {
+        text-decoration: underline;
+    }
+
+    &--source {
+        color: $color-primary;
+    }
+
+    &--target {
+        color: $color-purple;
+    }
+}
+
+.trace-arrow {
+    font-size: 10px;
+    color: $color-text-tertiary;
+}
+
+.trace-bindings-count {
+    font-size: $font-size-xs;
+    color: $color-text-tertiary;
+    background-color: $color-bg-tertiary;
+    padding: 2px 6px;
+    border-radius: $radius-sm;
+    flex-shrink: 0;
+}
+
+// ============================================
+// TRACE ENTRY BODY (EXPANDED)
+// ============================================
+
+.trace-entry-body {
+    padding: $spacing-md;
+    padding-left: 36px;
+    background-color: $color-bg-secondary;
+    border-top: 1px solid $color-border-light;
+}
+
+.trace-element-info {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-xs;
+    margin-bottom: $spacing-md;
+    padding: $spacing-sm;
+    background-color: $color-bg-primary;
+    border-radius: $radius-sm;
+    border: 1px solid $color-border-light;
+}
+
+.trace-element-row {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    font-size: $font-size-xs;
+}
+
+.trace-element-label {
+    color: $color-text-tertiary;
+    width: 50px;
+    flex-shrink: 0;
+}
+
+.trace-element-class {
+    font-weight: 600;
+    color: $color-text-primary;
+    padding: 1px 6px;
+    background-color: $color-bg-tertiary;
+    border-radius: $radius-sm;
+}
+
+.trace-element-name {
+    color: $color-text-secondary;
+    font-family: $font-family-mono;
+}
+
+// ============================================
+// ATTRIBUTE BINDINGS
+// ============================================
+
+.trace-bindings {
+    margin-bottom: $spacing-md;
+}
+
+.trace-bindings-header {
+    font-size: $font-size-xs;
+    font-weight: 600;
+    color: $color-text-tertiary;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: $spacing-sm;
+}
+
+.trace-bindings-list {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-xs;
+}
+
+.trace-binding {
+    padding: $spacing-sm;
+    background-color: $color-bg-primary;
+    border: 1px solid $color-border-light;
+    border-radius: $radius-sm;
+}
+
+.trace-binding-attrs {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+    margin-bottom: $spacing-xs;
+}
+
+.trace-binding-source {
+    font-weight: 500;
+    color: $color-primary;
+    font-size: $font-size-sm;
+}
+
+.trace-binding-target {
+    font-weight: 500;
+    color: $color-purple;
+    font-size: $font-size-sm;
+}
+
+.trace-binding-arrow {
+    font-size: 10px;
+    color: $color-text-tertiary;
+}
+
+.trace-binding-invertible {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    background-color: $color-success-light;
+    border-radius: $radius-sm;
+    margin-left: auto;
+
+    i {
+        font-size: 10px;
+        color: $color-success;
+    }
+}
+
+.trace-binding-values {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+    font-family: $font-family-mono;
+    font-size: $font-size-xs;
+}
+
+.trace-binding-value {
+    padding: 2px 6px;
+    background-color: $color-bg-tertiary;
+    border-radius: $radius-sm;
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+
+    &--source {
+        color: $color-primary;
+    }
+
+    &--target {
+        color: $color-purple;
+    }
+}
+
+.trace-binding-expression {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+    margin-top: $spacing-xs;
+    padding-top: $spacing-xs;
+    border-top: 1px dashed $color-border-light;
+    font-size: $font-size-xs;
+    color: $color-text-secondary;
+
+    i {
+        font-size: 10px;
+        color: $color-text-tertiary;
+    }
+
+    code {
+        font-family: $font-family-mono;
+        padding: 1px 4px;
+        background-color: $color-bg-tertiary;
+        border-radius: 2px;
+    }
+}
+
+// ============================================
+// DETAILS / ERROR MESSAGE
+// ============================================
+
+.trace-details {
+    display: flex;
+    align-items: flex-start;
+    gap: $spacing-sm;
+    padding: $spacing-sm;
+    background-color: $color-bg-tertiary;
+    border-radius: $radius-sm;
+    font-size: $font-size-xs;
+    color: $color-text-secondary;
+
+    i {
+        color: $color-primary;
+        flex-shrink: 0;
+        margin-top: 1px;
+    }
+
+    &--error {
+        background-color: $color-error-light;
+        color: $color-error;
+
+        i {
+            color: $color-error;
+        }
+    }
+}

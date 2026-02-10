@@ -111,6 +111,13 @@ export const JjtlDevelopmentEnv: React.FC<JjtlDevelopmentEnvProps> = ({
     const [isResizingRightPanel, setIsResizingRightPanel] = useState(false);
     const rightPanelRef = useRef<HTMLDivElement>(null);
 
+    // Bottom panel resize state
+    const [bottomPanelHeight, setBottomPanelHeight] = useState(() => {
+        const saved = localStorage.getItem('jjtl-bottom-panel-height');
+        return saved ? parseInt(saved, 10) : 220;
+    });
+    const [isResizingBottomPanel, setIsResizingBottomPanel] = useState(false);
+
     // Mappings state
     const [mappings, setMappings] = useState<MappingConnection[]>([]);
     const [selectedMapping, setSelectedMapping] = useState<string | undefined>();
@@ -481,6 +488,36 @@ export const JjtlDevelopmentEnv: React.FC<JjtlDevelopmentEnvProps> = ({
         };
     }, [isResizingRightPanel]);
 
+    // Bottom panel resize logic
+    useEffect(() => {
+        const handleMouseMove = (e: MouseEvent) => {
+            if (!isResizingBottomPanel) return;
+            // Calculate from bottom of viewport (account for status bar ~24px)
+            const newHeight = window.innerHeight - e.clientY - 24;
+            const clamped = Math.max(100, Math.min(window.innerHeight * 0.5, newHeight));
+            setBottomPanelHeight(clamped);
+            localStorage.setItem('jjtl-bottom-panel-height', String(clamped));
+        };
+
+        const handleMouseUp = () => {
+            setIsResizingBottomPanel(false);
+            document.body.style.cursor = '';
+            document.body.style.userSelect = '';
+        };
+
+        if (isResizingBottomPanel) {
+            document.addEventListener('mousemove', handleMouseMove);
+            document.addEventListener('mouseup', handleMouseUp);
+            document.body.style.cursor = 'row-resize';
+            document.body.style.userSelect = 'none';
+        }
+
+        return () => {
+            document.removeEventListener('mousemove', handleMouseMove);
+            document.removeEventListener('mouseup', handleMouseUp);
+        };
+    }, [isResizingBottomPanel]);
+
     // Nascondi pannello destro globale quando JjTL è attivo
     // Usando manipolazione diretta del layout rc-dock (più affidabile del CSS)
     useEffect(() => {
@@ -782,7 +819,23 @@ export const JjtlDevelopmentEnv: React.FC<JjtlDevelopmentEnvProps> = ({
             </div>
 
             {/* Bottom panel */}
-            <div className={`jjtl-dev-env-bottom ${isBottomPanelCollapsed ? 'collapsed' : ''}`}>
+            <div
+                className={`jjtl-dev-env-bottom ${isBottomPanelCollapsed ? 'collapsed' : ''}`}
+                style={{ height: isBottomPanelCollapsed ? 36 : bottomPanelHeight }}
+            >
+                {/* Resize handle at top */}
+                {!isBottomPanelCollapsed && (
+                    <div
+                        className={`jjtl-bottom-panel-resize-handle ${isResizingBottomPanel ? 'resizing' : ''}`}
+                        onMouseDown={(e) => {
+                            e.preventDefault();
+                            setIsResizingBottomPanel(true);
+                        }}
+                        role="separator"
+                        aria-orientation="horizontal"
+                        title="Drag to resize panel"
+                    />
+                )}
                 {/* Tab bar */}
                 <div className="jjtl-dev-env-bottom-tabs">
                     <button

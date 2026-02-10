@@ -415,12 +415,58 @@ $shadow-md: 0 1px 3px rgba(0, 0, 0, 0.08);
 // ============================================
 
 .jjtl-dev-env-bottom {
-    border-top: 1px solid $color-border;
+    min-height: 36px;
+    display: flex;
+    flex-direction: column;
+    border-top: none; // Resize handle provides top border when expanded
     background-color: $color-bg-primary;
+    position: relative;
+    flex-shrink: 0;
 
     &.collapsed {
+        height: 36px !important;
+        min-height: 36px;
+        border-top: 1px solid $color-border; // Restore border when collapsed
+
         .jjtl-dev-env-bottom-content {
             display: none;
+        }
+
+        .jjtl-bottom-panel-resize-handle {
+            display: none; // Hide resize handle when collapsed
+        }
+    }
+}
+
+.jjtl-bottom-panel-resize-handle {
+    height: 8px;
+    cursor: row-resize;
+    z-index: 100;
+    background: $color-bg-tertiary;
+    border-bottom: 1px solid $color-border;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color $transition-fast;
+
+    // Visible grip indicator in center
+    &::before {
+        content: '';
+        width: 48px;
+        height: 4px;
+        background: $color-border-hover;
+        border-radius: 2px;
+        transition: all $transition-fast;
+    }
+
+    &:hover,
+    &.resizing {
+        background: rgba(14, 165, 233, 0.2);
+
+        &::before {
+            background: $color-primary;
+            width: 64px;
         }
     }
 }
@@ -431,6 +477,8 @@ $shadow-md: 0 1px 3px rgba(0, 0, 0, 0.08);
     padding: 0 $spacing-sm;
     border-bottom: 1px solid $color-border;
     height: 36px;
+    min-height: 36px;
+    flex-shrink: 0;
 }
 
 .jjtl-dev-env-bottom-tab {
@@ -530,8 +578,10 @@ $shadow-md: 0 1px 3px rgba(0, 0, 0, 0.08);
 }
 
 .jjtl-dev-env-bottom-content {
-    height: 180px;
-    overflow: auto;
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    min-height: 0;
 }
 
 // ============================================
@@ -976,6 +1026,82 @@ $shadow-md: 0 1px 3px rgba(0, 0, 0, 0.08);
     border-radius: $radius-md;
     white-space: nowrap;
     box-shadow: $shadow-md;
+}
+
+// View mode toggle (Schema / Instances)
+.jjtl-dual-panel-view-toggle {
+    position: absolute;
+    top: $spacing-sm;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 2px;
+    padding: 3px;
+    background-color: $color-bg-tertiary;
+    border-radius: $radius-md;
+    z-index: 5;
+    box-shadow: $shadow-sm;
+}
+
+.jjtl-view-toggle-btn {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+    padding: $spacing-xs $spacing-sm;
+    background: none;
+    border: none;
+    border-radius: $radius-sm;
+    font-size: $font-size-xs;
+    font-weight: 500;
+    color: $color-text-secondary;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    i {
+        font-size: $font-size-sm;
+    }
+
+    &:hover {
+        color: $color-text-primary;
+        background-color: rgba(255, 255, 255, 0.5);
+    }
+
+    &.active {
+        background-color: $color-bg-primary;
+        color: $color-primary;
+        box-shadow: $shadow-sm;
+    }
+}
+
+.jjtl-view-toggle-badge {
+    font-size: 10px;
+    font-weight: 600;
+    padding: 1px 5px;
+    background-color: $color-primary-light;
+    color: $color-primary;
+    border-radius: 10px;
+    min-width: 16px;
+    text-align: center;
+}
+
+.jjtl-dual-panel-no-instances {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: $spacing-sm;
+    padding: $spacing-xl;
+    color: $color-text-tertiary;
+    text-align: center;
+
+    i {
+        font-size: 24px;
+        opacity: 0.5;
+    }
+
+    span {
+        font-size: $font-size-xs;
+    }
 }
 
 // ============================================
