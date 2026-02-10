@@ -90,14 +90,15 @@
     }
   }
 
-  // EXCEPTION: Multi-select .form-select wrapper must grow with content
+  // EXCEPTION: Multi-select .form-select wrapper - auto height
   // The className ends up on the label.input-container wrapper
   .form-select:has([class*="-control"]),
   .form-select:has(.jjodel-select__control),
   label.form-select,
   .input-container.form-select {
     height: auto !important;
-    min-height: 36px !important;
+    min-height: 38px !important;
+    max-height: 60px !important;
     padding: 0 !important;
     border: none !important;
     background: transparent !important;
@@ -129,18 +130,19 @@
       width: 100% !important;
     }
 
-    // Reset fixed height for react-select multi-select containers
+    // Reset height for react-select multi-select containers - auto with max
     &:has([class*="-control"]) {
       height: auto !important;
-      min-height: 36px !important;
+      min-height: 38px !important;
+      max-height: 60px !important;
     }
 
-    // Multi-select with form-select class - MUST override fixed 40px height
+    // Multi-select with form-select class - auto height
     &.form-select:has([class*="-control"]),
     &.form-select:has(.jjodel-select__control) {
       height: auto !important;
-      min-height: 36px !important;
-      max-height: none !important;
+      min-height: 38px !important;
+      max-height: 60px !important;
       padding: 0 !important;
       border: none !important;
       background: transparent !important;
@@ -295,15 +297,15 @@
 }
 
 // ============================================
-// APPLICABLE TO - Multi-select matching single-select style
+// APPLICABLE TO - Multi-select with auto height
 // ============================================
 .form-field:has([class*="-control"]) {
-  // 1. Control container - match single select height (38px)
+  // 1. Control container - auto height with max limit
   [class*="-control"] {
-    min-height: 38px !important;  // Same as single select
+    min-height: 38px !important;
     height: auto !important;
-    max-height: none !important;
-    border: 1px solid var(--color-border-primary, #e2e8f0) !important;
+    max-height: 60px !important;
+    border: 0px solid var(--color-border-primary, #e2e8f0) !important;
     border-radius: var(--radius-md, 6px) !important;
     background: var(--color-bg-primary, #ffffff) !important;
     cursor: pointer !important;
@@ -313,25 +315,27 @@
     align-items: center !important;
 
     &:hover {
-      border-color: #cbd5e1 !important;
+      border-color: transparent!important; // #cbd5e1 !important;
     }
   }
 
+  // Value container - Input LEFT, Tags RIGHT
   [class*="-valueContainer"] {
-    padding: 4px 8px !important;
-    min-height: auto !important;
-    height: auto !important;
-    flex-wrap: wrap !important;
-    gap: 4px !important;
-    overflow: visible !important;
     display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
     align-items: center !important;
+    gap: 0 !important;  // Gap managed by margin
+    padding: 4px 8px !important;
+    overflow: visible !important;
     flex: 1 1 0% !important;
   }
 
-  // 2. Filter input - borderless and seamless
+  // 2. Filter input - grows to push tags right
   [class*="-Input"] {
-    margin: 0 2px !important;
+    flex: 1 1 auto !important;
+    min-width: 50px !important;
+    margin: 0 !important;
     padding: 0 !important;
 
     input {
@@ -342,15 +346,46 @@
       padding: 0 !important;
       margin: 0 !important;
       font-size: 13px !important;
+      width: 100% !important;
     }
   }
 
-  // Light slate badges for selected items
+  // FIRST tag - pushed to right with margin-left: auto
+  [class*="-multiValue"]:first-of-type {
+    margin-left: auto !important;
+  }
+
+  // ALL tags - styling and spacing
   [class*="-multiValue"] {
-    background: #f1f5f9 !important;  // slate-100 — light, subtle
-    border: 1px solid #e2e8f0 !important;  // slate-200 border
+    background: #f1f5f9 !important;
+    border: 1px solid #e2e8f0 !important;
     border-radius: 4px !important;
-    margin: 0 !important;
+    flex-shrink: 0 !important;
+    margin: 0 0 0 4px !important;
+
+    
+  }
+
+  .jjodel-select__input {    
+    width: max-content !important;
+    padding: 0!important;
+    margin-left: 6px !important;
+    height: 24px !important;
+    border: none!important;
+    outline: none!important;
+  }
+    
+  .jjodel-select__input:active, .jjodel-select__input:focus  {
+    border: none!important;
+    outline: none!important;
+  }
+
+
+
+
+  // HIDE clear indicator (X button)
+  [class*="-clearIndicator"] {
+    display: none !important;
   }
 
   [class*="-multiValue__label"] {
@@ -715,7 +750,7 @@ section.page-root {
 }
 
 // ============================================
-// GLOBAL OVERRIDE - Multi-select wrapper must NOT have fixed height
+// GLOBAL OVERRIDE - Multi-select wrapper auto height
 // This rule has maximum specificity to override all other height rules
 // ============================================
 .apply-to-tab .form-field label.input-container.form-select,
@@ -723,8 +758,8 @@ section.page-root {
 label.input-container.form-select:has([class*="jjodel-select"]),
 label.input-container.form-select:has([class*="-control"]) {
   height: auto !important;
-  min-height: 36px !important;
-  max-height: none !important;
+  min-height: 38px !important;
+  max-height: 60px !important;
   padding: 0 !important;
   border: none !important;
   background: transparent !important;

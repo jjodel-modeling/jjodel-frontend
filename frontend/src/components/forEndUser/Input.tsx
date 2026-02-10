@@ -295,23 +295,24 @@ export function InputComponent(props: AllProps) {
                 // @ts-ignore
                 input = <MultiSelect {...inputProps} isMulti={true} options={options}
                     classNamePrefix="jjodel-select"
+                    isClearable={false}
                     styles={{
                         control: (base: any) => ({
                             ...base,
-                            minHeight: '38px',  // Match single select height
+                            minHeight: '38px',
                             height: 'auto',
-                            maxHeight: 'none',
+                            maxHeight: '60px',
                             overflow: 'visible',
                             borderColor: '#e2e8f0',
                         }),
                         valueContainer: (base: any) => ({
                             ...base,
                             padding: '4px 8px',
-                            flexWrap: 'wrap',
+                            flexWrap: 'nowrap',
                             gap: '4px',
                             overflow: 'visible',
-                            height: 'auto',
-                            minHeight: 'auto',
+                            display: 'flex',
+                            flexDirection: 'row',
                         }),
                         indicatorsContainer: (base: any) => ({
                             ...base,
@@ -320,8 +321,17 @@ export function InputComponent(props: AllProps) {
                         }),
                         input: (base: any) => ({
                             ...base,
-                            margin: '0 2px',
+                            margin: 0,
                             padding: 0,
+                            flex: '1 1 auto',
+                        }),
+                        multiValue: (base: any) => ({
+                            ...base,
+                            margin: '0 0 0 4px',
+                            flexShrink: 0,
+                        }),
+                        clearIndicator: () => ({
+                            display: 'none',
                         }),
                         placeholder: (base: any) => ({
                             ...base,

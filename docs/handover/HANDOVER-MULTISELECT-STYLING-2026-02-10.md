@@ -32,12 +32,14 @@ All changes follow the design system defined in `/CLAUDE.md`.
 
 ---
 
-## 1. MULTI-SELECT CONTAINER FIX
+## 1. MULTI-SELECT CONTAINER FIX — INLINE LAYOUT
 
 ### Problem
-The "Applicable to" multi-select in Viewpoints panel had tags overflowing outside the container due to:
-- Fixed height (40px) inherited from `.form-select` class
-- `overflow: hidden` on parent containers
+The "Applicable to" multi-select in Viewpoints panel needed a clean, fixed-height layout that:
+- Matches single-select height (38px)
+- Displays tags inline (no wrapping)
+- Supports horizontal scroll for many selections
+- Hides scrollbar for clean appearance
 
 ### Solution
 
@@ -48,7 +50,7 @@ The "Applicable to" multi-select in Viewpoints panel had tags overflowing outsid
 
 **Key Changes:**
 
-1. **Added `classNamePrefix` and `styles` prop to react-select:**
+1. **Fixed-height inline layout with horizontal scroll:**
 ```tsx
 input = <MultiSelect {...inputProps} isMulti={true} options={options}
     classNamePrefix="jjodel-select"
@@ -56,47 +58,57 @@ input = <MultiSelect {...inputProps} isMulti={true} options={options}
         control: (base: any) => ({
             ...base,
             minHeight: '38px',
-            height: 'auto',
-            maxHeight: 'none',
-            overflow: 'visible',
+            height: '38px',      // Fixed height - no grow
+            maxHeight: '38px',
+            overflow: 'hidden',
         }),
         valueContainer: (base: any) => ({
             ...base,
             padding: '4px 8px',
-            flexWrap: 'wrap',
+            flexWrap: 'nowrap',   // Inline, no wrap
             gap: '4px',
-            overflow: 'visible',
+            overflowX: 'auto',    // Horizontal scroll
+            overflowY: 'hidden',
+            height: '30px',
+            scrollbarWidth: 'none',  // Hide scrollbar
         }),
         // ...
     }}
 />
 ```
 
-2. **CSS overrides for container growth:**
+2. **CSS for fixed height with hidden scrollbar:**
 ```scss
-// Control container - match single select height (38px)
+// Control container - FIXED 38px height
 [class*="-control"] {
-    min-height: 38px !important;
-    height: auto !important;
-    max-height: none !important;
-    overflow: visible !important;
+    height: 38px !important;
+    max-height: 38px !important;
+    overflow: hidden !important;
+    flex-wrap: nowrap !important;
 }
 
-// Value container - where tags live
+// Value container - inline with horizontal scroll
 [class*="-valueContainer"] {
-    flex-wrap: wrap !important;
-    gap: 4px !important;
-    overflow: visible !important;
+    height: 30px !important;
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    scrollbar-width: none !important;  // Firefox
+    -ms-overflow-style: none !important;  // IE/Edge
+
+    &::-webkit-scrollbar {
+        display: none !important;  // Chrome, Safari
+    }
 }
 ```
 
-3. **Parent container exceptions:**
+3. **Parent container fixed height:**
 ```scss
-// Exception for multi-select wrapper
+// Multi-select wrapper - FIXED 38px
 .form-select:has([class*="-control"]) {
-    height: auto !important;
-    min-height: 36px !important;
-    overflow: visible !important;
+    height: 38px !important;
+    max-height: 38px !important;
+    overflow: hidden !important;
 }
 ```
 
@@ -320,14 +332,15 @@ Multiple layers of overrides ensure proper styling:
 
 ## TESTING CHECKLIST
 
-- [ ] Multi-select container expands when multiple tags are selected
-- [ ] Tags wrap to second line when container is narrow
+- [ ] Multi-select has fixed 38px height (same as single-select)
+- [ ] Tags display inline (no wrapping to second line)
+- [ ] Horizontal scroll works when many tags are selected
+- [ ] Scrollbar is hidden (invisible scrolling)
 - [ ] Tags have light slate background (#f1f5f9)
 - [ ] Remove (x) button turns red on hover
 - [ ] Dropdown menu has subtle shadow and rounded corners
 - [ ] Selected options show subtle cyan background
 - [ ] Group headers are uppercase and subtle gray
-- [ ] Multi-select height matches single-select when empty
 - [ ] Toggle switches are 36×20px
 - [ ] Toggle active state is slate (#334155), not cyan
 - [ ] "Applicable to" label spelling is correct
@@ -336,8 +349,13 @@ Multiple layers of overrides ensure proper styling:
 
 ## CHANGELOG
 
+**February 10, 2026 (Update 2):**
+- Changed multi-select to fixed 38px height with inline layout
+- Tags now scroll horizontally instead of wrapping
+- Hidden scrollbar for clean appearance
+
 **February 10, 2026:**
-- Fixed multi-select container overflow (tags now wrap properly)
+- Fixed multi-select container overflow
 - Redesigned multi-select tags (light slate instead of dark gradient)
 - Fine-tuned multi-select to match single-select styling
 - Standardized toggle switches to 36×20px with slate active color

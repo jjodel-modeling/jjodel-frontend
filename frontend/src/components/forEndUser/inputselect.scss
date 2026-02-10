@@ -117,13 +117,13 @@ select.model-select {
 .input-container {
   overflow: visible !important;
 
-  // 1. Main control container - match single select height (38px)
+  // 1. Main control container - auto height with max limit
   .jjodel-select__control,
   [class$="-control"],
   [class*="-control "] {
-    min-height: 38px !important;  // Same as single select
+    min-height: 38px !important;
     height: auto !important;
-    max-height: none !important;
+    max-height: 60px !important;
     overflow: visible !important;
     display: flex !important;
     flex-wrap: wrap !important;
@@ -133,30 +133,30 @@ select.model-select {
     background: var(--color-bg-primary, #ffffff) !important;
 
     &:hover {
-      border-color: #cbd5e1 !important;  // slate-300 on hover
+      border-color: #cbd5e1 !important;
     }
   }
 
-  // Value container - where tags live
+  // Value container - Input LEFT, Tags RIGHT
   .jjodel-select__value-container,
   [class$="-ValueContainer"],
   [class*="-valueContainer"] {
-    min-height: auto !important;
-    height: auto !important;
-    max-height: none !important;
-    padding: 4px 8px !important;
-    flex-wrap: wrap !important;
-    gap: 4px !important;
-    overflow: visible !important;
     display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
     align-items: center !important;
+    gap: 0 !important;  // Gap managed by margin
+    padding: 4px 8px !important;
+    overflow: visible !important;
     flex: 1 1 0% !important;
   }
 
-  // 2. Filter input - borderless and seamless
+  // 2. Filter input - grows to push tags right
   .jjodel-select__input,
   [class*="-Input"] {
-    margin: 0 2px !important;
+    flex: 1 1 auto !important;
+    min-width: 50px !important;
+    margin: 0 !important;
     padding: 0 !important;
 
     input {
@@ -168,18 +168,33 @@ select.model-select {
       margin: 0 !important;
       font-size: 13px !important;
       color: #334155 !important;
+      width: 100% !important;
     }
   }
 
-  // Multi-value tags (selected items) - Light slate style
+  // FIRST tag - pushed to right with margin-left: auto
+  .jjodel-select__multi-value:first-of-type,
+  [class$="-multiValue"]:first-of-type,
+  [class*="-multiValue "]:first-of-type {
+    margin-left: auto !important;
+  }
+
+  // ALL tags - styling and spacing
   .jjodel-select__multi-value,
   [class$="-multiValue"],
   [class*="-multiValue "] {
-    background: #f1f5f9 !important;  // slate-100 — light, subtle
-    border: 1px solid #e2e8f0 !important;  // slate-200 border
+    background: #f1f5f9 !important;
+    border: 1px solid #e2e8f0 !important;
     border-radius: 4px !important;
-    margin: 0 !important;
     flex-shrink: 0 !important;
+    margin: 0 0 0 4px !important;
+    
+  }
+
+  // HIDE clear indicator (X button)
+  .jjodel-select__clear-indicator,
+  [class*="-clearIndicator"] {
+    display: none !important;
   }
 
   .jjodel-select__multi-value__label,
@@ -270,6 +285,7 @@ select.model-select {
     background: var(--color-bg-primary, #ffffff) !important;
     margin-top: 4px !important;
     overflow: hidden !important;
+
   }
 
   // Group header ("APPLY TO")
