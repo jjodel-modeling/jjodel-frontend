@@ -395,14 +395,14 @@ input[type="number"] {
   }
 }
 
-// Checked state
+// Checked state - slate solid (#334155), NOT cyan
 .toggle input:checked + .toggle-slider,
 .form-toggle input:checked + .form-toggle-slider,
 .toggle-switch input:checked + .toggle-slider,
 .toggle.active .toggle-slider,
 .form-toggle.active .form-toggle-slider,
 .toggle-switch.active .toggle-slider {
-  background: linear-gradient(135deg, #64748b 0%, #475569 100%);
+  background: #334155;
 
   &::before {
     transform: translateX(16px);
@@ -439,7 +439,7 @@ input[type="number"] {
   padding: 0 !important;
 
   &.active {
-    background: linear-gradient(135deg, #64748b 0%, #475569 100%) !important;
+    background: #334155 !important; // slate solid, NOT cyan
 
     .properties-toggle-thumb,
     .apply-to-toggle-thumb {

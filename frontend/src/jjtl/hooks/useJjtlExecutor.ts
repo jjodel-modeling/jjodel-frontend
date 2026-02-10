@@ -225,6 +225,8 @@ export function useJjtlExecutor(options: UseJjtlExecutorOptions = {}): UseJjtlEx
                         targetAttr: b.targetAttribute,
                         sourceValue: b.sourceValue,
                         targetValue: b.targetValue,
+                        invertible: b.invertible,
+                        expression: b.expression,
                     })),
                 }));
                 setTrace(traceEntries);

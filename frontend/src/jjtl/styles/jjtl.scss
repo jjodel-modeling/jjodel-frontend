@@ -791,7 +791,27 @@ $shadow-md: 0 1px 3px rgba(0, 0, 0, 0.08);
 }
 
 .jjtl-statusbar-ok {
-    color: $color-success;
+    color: white;
+
+    i {
+        color: white;
+    }
+}
+
+// All status bar items should be white (except errors/warnings)
+.jjtl-statusbar-parser,
+.jjtl-statusbar-execution,
+.jjtl-statusbar-time,
+.jjtl-statusbar-mapped,
+.jjtl-statusbar-cursor,
+.jjtl-statusbar-line-ending,
+.jjtl-statusbar-encoding,
+.jjtl-statusbar-language {
+    color: white;
+
+    i {
+        color: white;
+    }
 }
 
 .jjtl-statusbar-language {

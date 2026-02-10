@@ -44,6 +44,7 @@ import { FeaturesPanelProvider } from './contexts/FeaturesPanelContext';
 import { TreeViewPanelProvider } from './contexts/TreeViewPanelContext';
 import { GlobalDrawer } from './components/GlobalDrawer';
 import { JjtlDialogManager } from './jjtl/components';
+import { SettingsModalProvider } from './contexts/SettingsModalContext';
 
 let firstLoading = true;
 let browserData = U.getOSBrowserData();
@@ -100,6 +101,7 @@ function App(props: AllProps): JSX.Element {
     //console.log('app render 2', {firstLoading, navigating:U.navigating, isLoading, useless, user});
 
     return (<>
+        <SettingsModalProvider>
         <DevModeProvider>
         <AISettingsProvider>
         <GlobalDrawerProvider>
@@ -158,6 +160,7 @@ function App(props: AllProps): JSX.Element {
         </GlobalDrawerProvider>
         </AISettingsProvider>
         </DevModeProvider>
+        </SettingsModalProvider>
     </>);
 
     /*

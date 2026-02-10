@@ -852,7 +852,7 @@ export const JjtlDevelopmentEnv: React.FC<JjtlDevelopmentEnvProps> = ({
                         className={`jjtl-dev-env-bottom-tab ${bottomPanelTab === 'trace' ? 'active' : ''}`}
                         onClick={() => { setBottomPanelTab('trace'); setIsBottomPanelCollapsed(false); }}
                     >
-                        <i className="bi bi-diagram-2" />
+                        <i className="bi bi-bezier2" />
                         Trace
                         {trace.length > 0 && (
                             <span className="jjtl-dev-env-bottom-badge jjtl-dev-env-bottom-badge--info">{trace.length}</span>

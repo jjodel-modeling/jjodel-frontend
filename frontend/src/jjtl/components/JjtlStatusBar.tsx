@@ -30,16 +30,16 @@ export interface JjtlStatusBarProps {
 }
 
 const STATUS_CONFIG = {
-    idle: { icon: 'bi-circle', color: '#94a3b8', label: 'Idle' },
-    parsing: { icon: 'bi-arrow-repeat spinning', color: '#0ea5e9', label: 'Parsing...' },
-    valid: { icon: 'bi-check-circle-fill', color: '#10b981', label: 'Valid' },
+    idle: { icon: 'bi-circle', color: 'white', label: 'Idle' },
+    parsing: { icon: 'bi-arrow-repeat spinning', color: 'white', label: 'Parsing...' },
+    valid: { icon: 'bi-check-circle-fill', color: 'white', label: 'Valid' },
     error: { icon: 'bi-x-circle-fill', color: '#ef4444', label: 'Errors' },
 };
 
 const EXECUTION_STATUS_CONFIG = {
-    idle: { icon: 'bi-circle', color: '#94a3b8', label: 'Ready' },
-    running: { icon: 'bi-arrow-repeat spinning', color: '#0ea5e9', label: 'Running' },
-    success: { icon: 'bi-check-circle-fill', color: '#10b981', label: 'Success' },
+    idle: { icon: 'bi-circle', color: 'white', label: 'Ready' },
+    running: { icon: 'bi-arrow-repeat spinning', color: 'white', label: 'Running' },
+    success: { icon: 'bi-check-circle-fill', color: 'white', label: 'Success' },
     failed: { icon: 'bi-x-circle-fill', color: '#ef4444', label: 'Failed' },
 };
 

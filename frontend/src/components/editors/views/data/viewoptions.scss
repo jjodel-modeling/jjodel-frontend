@@ -905,7 +905,7 @@ section.edgepoint-adjust input.switch[type="checkbox"],
     background: #ffffff !important;
     border: 1px solid #e2e8f0 !important;
     border-radius: 6px !important;
-    flex-shrink: 0 !important;
+    flex-shrink: 0 !important;        
 
     &:focus {
       border-color: #64748b !important;
@@ -945,6 +945,7 @@ section.edgepoint-adjust input.switch[type="checkbox"],
   border: 1px solid #e2e8f0 !important;
   border-radius: 6px !important;
   flex-shrink: 0 !important;
+
 }
 
 // ============================================
