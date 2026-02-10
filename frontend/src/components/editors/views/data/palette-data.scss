@@ -97,12 +97,13 @@ $field-height: 28px;
 }
 
 // ============================================
-// SECTION HEADER
+// SECTION HEADER - Title left, Add button right
 // ============================================
 .style-section-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  width: 100% !important;
   margin-bottom: 12px;
 
   .section-title {
@@ -112,6 +113,12 @@ $field-height: 28px;
     text-transform: uppercase;
     letter-spacing: 0.05em;
     color: $color-text-secondary;
+    flex-shrink: 0;
+  }
+
+  // Ensure add-dropdown is pushed to the right
+  .add-dropdown {
+    margin-left: auto !important;
   }
 }
 
@@ -124,51 +131,60 @@ $field-height: 28px;
   display: inline-block;
 
   .add-btn {
-    display: flex;
-    align-items: center;
+    display: flex !important;
+    align-items: center !important;
     gap: 6px;
-    padding: 6px 12px;
+    padding: 6px 12px !important;
     font-family: $font-family;
-    font-size: 12px;
-    font-weight: 500;
+    font-size: 12px !important;
+    font-weight: 500 !important;
 
-    // SLATE COLORS for consistency
-    color: #475569;                 // slate-600
-    background: #f8fafc;            // slate-50
-    border: 1px solid #e2e8f0;      // slate-200
-    border-radius: $radius-md;
+    // SLATE GRADIENT - Primary button style per design system
+    color: #ffffff !important;
+    background: linear-gradient(135deg, #64748b 0%, #475569 100%) !important;
+    border: none !important;
+    border-radius: $radius-md !important;
     cursor: pointer;
     transition: all $transition-fast;
 
     &:hover {
-      background: #f1f5f9;          // slate-100
-      border-color: #cbd5e1;        // slate-300
-      color: #334155;               // slate-700
+      background: linear-gradient(135deg, #475569 0%, #334155 100%) !important;
+      color: #ffffff !important;
     }
 
     &.open,
     &:focus {
-      background: #f1f5f9;          // slate-100
-      border-color: #94a3b8;        // slate-400
-      outline: none;
-      box-shadow: 0 0 0 2px rgba(71, 85, 105, 0.1);
+      background: linear-gradient(135deg, #475569 0%, #334155 100%) !important;
+      outline: none !important;
+      box-shadow: 0 0 0 2px rgba(71, 85, 105, 0.2) !important;
+    }
+
+    // Icons always white on dark background
+    i, .bi, svg {
+      color: #ffffff !important;
     }
 
     i.bi-plus {
-      font-size: 14px;
-      color: inherit;
+      font-size: 14px !important;
+      color: #ffffff !important;
     }
 
     i.bi-chevron-down,
     i.bi-chevron-up {
-      font-size: 10px;
+      font-size: 10px !important;
       margin-left: 2px;
-      color: #64748b;               // slate-500
+      color: rgba(255, 255, 255, 0.8) !important;
       transition: transform $transition-fast;
     }
 
     &.open i.bi-chevron-down {
       transform: rotate(180deg);
+    }
+
+    // Disabled state
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
     }
   }
 
@@ -245,6 +261,7 @@ $field-height: 28px;
 // ============================================
 .style-variables-section {
   flex-shrink: 0;
+  width: 100% !important;
   margin-bottom: 8px;
 }
 
@@ -1331,26 +1348,24 @@ $field-height: 28px;
 
   .add-dropdown {
     .add-btn {
-      color: #e2e8f0;               // slate-200
-      background: #1e293b!important;          // slate-800
-      border-color: #334155;        // slate-700
+      // Slate gradient works in both light and dark mode
+      color: #ffffff;
+      background: linear-gradient(135deg, #64748b 0%, #475569 100%) !important;
+      border: none;
 
       &:hover {
-        background: #334155;        // slate-700
-        border-color: #475569;      // slate-600
-        color: #f1f5f9;             // slate-100
+        background: linear-gradient(135deg, #475569 0%, #334155 100%) !important;
       }
 
       &.open,
       &:focus {
-        background: #334155;
-        border-color: #64748b;      // slate-500
-        box-shadow: 0 0 0 2px rgba(100, 116, 139, 0.2);
+        background: linear-gradient(135deg, #475569 0%, #334155 100%) !important;
+        box-shadow: 0 0 0 2px rgba(100, 116, 139, 0.3);
       }
 
       i.bi-chevron-down,
       i.bi-chevron-up {
-        color: #94a3b8;             // slate-400
+        color: rgba(255, 255, 255, 0.8);
       }
     }
 
@@ -1623,26 +1638,24 @@ $field-height: 28px;
   }
 
   .add-dropdown .add-btn {
-    color: #e2e8f0;               // slate-200
-    background: #1e293b;          // slate-800
-    border-color: #334155;        // slate-700
+    // Slate gradient works in both light and dark mode
+    color: #ffffff;
+    background: linear-gradient(135deg, #64748b 0%, #475569 100%);
+    border: none;
 
     &:hover {
-      background: #334155;        // slate-700
-      border-color: #475569;      // slate-600
-      color: #f1f5f9;
+      background: linear-gradient(135deg, #475569 0%, #334155 100%);
     }
 
     &.open,
     &:focus {
-      background: #334155;
-      border-color: #64748b;
-      box-shadow: 0 0 0 2px rgba(100, 116, 139, 0.2);
+      background: linear-gradient(135deg, #475569 0%, #334155 100%);
+      box-shadow: 0 0 0 2px rgba(100, 116, 139, 0.3);
     }
 
     i.bi-chevron-down,
     i.bi-chevron-up {
-      color: #94a3b8;             // slate-400
+      color: rgba(255, 255, 255, 0.8);
     }
   }
 
