@@ -35,7 +35,7 @@ function FieldDataComponent(props: AllProps) {
         <h5>Field</h5>
         <div>
             <div className={'input-container'}>
-                <p>Appliable to:</p>
+                <p>Applicable to:</p>
                 <Select data={view} field={'appliableTo'}
                         options={graphElementOptions}
                         getter={() => dview.appliableTo || 'Any'}

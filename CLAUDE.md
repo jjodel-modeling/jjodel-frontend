@@ -74,6 +74,123 @@ $error: #ef4444;      // Rosso
 - **SOLO Bootstrap Icons** (`bi bi-*`)
 - Mai usare altre librerie di icone
 
+### Buttons
+- **Primary buttons:** Slate gradient (`linear-gradient(135deg, #334155, #1e293b)`)
+- **Secondary buttons:** Transparent with border
+- **Danger buttons:** Red accent for destructive actions
+- **Cyan (#0ea5e9):** NEVER for button backgrounds — only for focus states, active indicators, and links
+- **Icons on dark buttons:** Always white (`#ffffff`)
+
+```scss
+// Primary button example
+.btn-primary {
+    background: linear-gradient(135deg, #334155, #1e293b);
+    color: white;
+
+    &:hover {
+        background: linear-gradient(135deg, #475569, #334155);
+    }
+}
+```
+
+### Toggle Styles
+
+**Two toggle styles exist in the app:**
+
+- **Style A (Vertical toggle):** ONLY for toolbar debug/advanced mode toggles in the navbar
+- **Style B (Horizontal switch):** Everywhere else — settings, properties, options, preferences
+
+**Standard horizontal switch (36×20px):**
+```scss
+.jjodel-switch {
+    width: 36px;
+    height: 20px;
+    background: #cbd5e1;        // inactive
+    border-radius: 10px;
+
+    &.active {
+        background: #334155;    // slate — NOT cyan
+    }
+
+    // Thumb: 16×16px white circle
+    &::after {
+        width: 16px;
+        height: 16px;
+        background: white;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+    }
+}
+```
+
+**Key rules:**
+- Active color: `#334155` (slate), NOT cyan
+- Inactive color: `#cbd5e1`
+- Knob: white circle with subtle shadow
+- Size: 36×20px (compact)
+- Label always to the LEFT of the switch, never inside it
+
+### Multi-Select (react-select)
+
+**Visual consistency with single-select:**
+- Same height (38px) as regular selects
+- Container grows only when tags wrap to second line
+- Borderless filter input (seamless typing)
+- Smaller, lighter indicator icons (14px)
+
+**Tag styling (light slate):**
+```scss
+// Selected tag chips
+[class*="-multiValue"] {
+    background: #f1f5f9;           // slate-100 — light, subtle
+    border: 1px solid #e2e8f0;     // slate-200 border
+    border-radius: 4px;
+}
+
+[class*="-multiValue__label"] {
+    color: #334155;                // slate-700 — readable
+    font-size: 12px;
+    font-weight: 500;
+    padding: 2px 6px;
+}
+
+[class*="-multiValue__remove"] {
+    color: #94a3b8;                // slate-400
+    &:hover {
+        background: #e2e8f0;       // slate-200
+        color: #ef4444;            // red on hover
+    }
+}
+```
+
+**Dropdown menu styling:**
+```scss
+// Selected option (subtle cyan, not solid)
+[class*="-option--is-selected"] {
+    background: rgba(14, 165, 233, 0.08);  // very subtle cyan
+    color: #0ea5e9;
+    font-weight: 500;
+}
+
+// Hover state
+[class*="-option"]:hover {
+    background: #f1f5f9;           // slate-100
+}
+
+// Group header
+[class*="-groupHeading"] {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #94a3b8;
+}
+```
+
+**Implementation:**
+- Uses `classNamePrefix="jjodel-select"` for reliable CSS targeting
+- Inline `styles` prop overrides react-select defaults
+- Files: `inputselect.scss`, `viewapplyto.scss`, `Input.tsx`
+
 ---
 
 ## 📁 Struttura Progetto

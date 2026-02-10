@@ -109,4 +109,223 @@ select.model-select {
   margin-left: 50%;
   transform: translateX(-50%);
 }
+
+// ============================================
+// REACT-SELECT MULTISELECT - Match single-select styling
+// Using jjodel-select__ prefix for reliable targeting
+// ============================================
+.input-container {
+  overflow: visible !important;
+
+  // 1. Main control container - match single select height (38px)
+  .jjodel-select__control,
+  [class$="-control"],
+  [class*="-control "] {
+    min-height: 38px !important;  // Same as single select
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    display: flex !important;
+    flex-wrap: wrap !important;
+    align-items: center !important;
+    border: 1px solid var(--color-border-primary, #e2e8f0) !important;
+    border-radius: var(--radius-md, 6px) !important;
+    background: var(--color-bg-primary, #ffffff) !important;
+
+    &:hover {
+      border-color: #cbd5e1 !important;  // slate-300 on hover
+    }
+  }
+
+  // Value container - where tags live
+  .jjodel-select__value-container,
+  [class$="-ValueContainer"],
+  [class*="-valueContainer"] {
+    min-height: auto !important;
+    height: auto !important;
+    max-height: none !important;
+    padding: 4px 8px !important;
+    flex-wrap: wrap !important;
+    gap: 4px !important;
+    overflow: visible !important;
+    display: flex !important;
+    align-items: center !important;
+    flex: 1 1 0% !important;
+  }
+
+  // 2. Filter input - borderless and seamless
+  .jjodel-select__input,
+  [class*="-Input"] {
+    margin: 0 2px !important;
+    padding: 0 !important;
+
+    input {
+      border: none !important;
+      outline: none !important;
+      box-shadow: none !important;
+      background: transparent !important;
+      padding: 0 !important;
+      margin: 0 !important;
+      font-size: 13px !important;
+      color: #334155 !important;
+    }
+  }
+
+  // Multi-value tags (selected items) - Light slate style
+  .jjodel-select__multi-value,
+  [class$="-multiValue"],
+  [class*="-multiValue "] {
+    background: #f1f5f9 !important;  // slate-100 — light, subtle
+    border: 1px solid #e2e8f0 !important;  // slate-200 border
+    border-radius: 4px !important;
+    margin: 0 !important;
+    flex-shrink: 0 !important;
+  }
+
+  .jjodel-select__multi-value__label,
+  [class$="-multiValue__label"] {
+    color: #334155 !important;  // slate-700 — readable
+    font-size: 12px !important;
+    font-weight: 500 !important;
+    padding: 2px 6px !important;
+    padding-right: 4px !important;
+  }
+
+  .jjodel-select__multi-value__remove,
+  [class$="-multiValue__remove"] {
+    color: #94a3b8 !important;  // slate-400
+    padding: 0 4px !important;
+    cursor: pointer !important;
+    border-radius: 0 4px 4px 0 !important;
+
+    &:hover {
+      background: #e2e8f0 !important;  // slate-200
+      color: #ef4444 !important;  // red on hover for "remove" affordance
+    }
+
+    svg {
+      width: 12px !important;
+      height: 12px !important;
+    }
+  }
+
+  // 3. Indicator icons - smaller, lighter to match single select chevron
+  .jjodel-select__indicators,
+  [class$="-IndicatorsContainer"],
+  [class*="-indicatorsContainer"] {
+    align-self: center !important;
+    padding: 0 4px !important;
+    flex-shrink: 0 !important;
+
+    svg {
+      width: 14px !important;
+      height: 14px !important;
+      color: #94a3b8 !important;  // slate-400, subtle
+    }
+
+    &:hover svg {
+      color: #64748b !important;  // slate-500 on hover
+    }
+  }
+
+  .jjodel-select__dropdown-indicator,
+  [class*="-dropdownIndicator"] {
+    padding: 4px !important;
+
+    svg {
+      width: 14px !important;
+      height: 14px !important;
+      color: #94a3b8 !important;
+    }
+  }
+
+  .jjodel-select__clear-indicator,
+  [class*="-clearIndicator"] {
+    padding: 4px !important;
+
+    svg {
+      width: 12px !important;
+      height: 12px !important;
+      color: #94a3b8 !important;
+    }
+
+    &:hover svg {
+      color: #ef4444 !important;
+    }
+  }
+
+  // Hide separator between X and chevron
+  .jjodel-select__indicator-separator,
+  [class$="-indicatorSeparator"] {
+    display: none !important;
+  }
+
+  // 4. Dropdown menu - match Jjodel design system
+  .jjodel-select__menu,
+  [class*="-menu"] {
+    z-index: 999 !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 6px !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08) !important;
+    background: var(--color-bg-primary, #ffffff) !important;
+    margin-top: 4px !important;
+    overflow: hidden !important;
+  }
+
+  // Group header ("APPLY TO")
+  .jjodel-select__group,
+  [class*="-group"] {
+    padding: 0 !important;
+  }
+
+  .jjodel-select__group-heading,
+  [class*="-groupHeading"] {
+    font-size: 10px !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.05em !important;
+    color: #94a3b8 !important;
+    text-transform: uppercase !important;
+    padding: 8px 12px 4px !important;
+    margin: 0 !important;
+  }
+
+  // Option items
+  .jjodel-select__option,
+  [class*="-option"] {
+    font-size: 13px !important;
+    color: #334155 !important;
+    padding: 8px 12px !important;
+    cursor: pointer !important;
+    background: transparent !important;
+
+    // Hover state
+    &:hover {
+      background: #f1f5f9 !important;  // slate-100
+    }
+  }
+
+  .jjodel-select__option--is-focused,
+  [class*="-option--is-focused"] {
+    background: #f1f5f9 !important;  // slate-100
+  }
+
+  // Selected/active state
+  .jjodel-select__option--is-selected,
+  [class*="-option--is-selected"] {
+    background: rgba(14, 165, 233, 0.08) !important;  // very subtle cyan
+    color: #0ea5e9 !important;
+    font-weight: 500 !important;
+
+    &:hover {
+      background: rgba(14, 165, 233, 0.12) !important;
+    }
+  }
+
+  // Placeholder
+  .jjodel-select__placeholder,
+  [class*="-placeholder"] {
+    color: #9ca3af !important;
+    font-size: 13px !important;
+  }
+}
 /******************************              Multiselect END              ******************************/

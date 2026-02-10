@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none">
+  <rect width="32" height="32" rx="6" fill="#ffffff"/>
+  <defs>
+    <linearGradient id="gemini-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#4285f4"/>
+      <stop offset="50%" style="stop-color:#9b72cb"/>
+      <stop offset="100%" style="stop-color:#d96570"/>
+    </linearGradient>
+  </defs>
+  <!-- 4-pointed star/sparkle -->
+  <path d="M16 4c0 6.627-5.373 12-12 12 6.627 0 12 5.373 12 12 0-6.627 5.373-12 12-12-6.627 0-12-5.373-12-12z" fill="url(#gemini-gradient)"/>
+</svg>

@@ -294,6 +294,41 @@ export function InputComponent(props: AllProps) {
                 rootprops.onMouseLeave = (e:any) => { UX.stopEvt(e); old.onMouseLeave?.(); console.log('multiselect onMouseLeave'); };*/
                 // @ts-ignore
                 input = <MultiSelect {...inputProps} isMulti={true} options={options}
+                    classNamePrefix="jjodel-select"
+                    styles={{
+                        control: (base: any) => ({
+                            ...base,
+                            minHeight: '38px',  // Match single select height
+                            height: 'auto',
+                            maxHeight: 'none',
+                            overflow: 'visible',
+                            borderColor: '#e2e8f0',
+                        }),
+                        valueContainer: (base: any) => ({
+                            ...base,
+                            padding: '4px 8px',
+                            flexWrap: 'wrap',
+                            gap: '4px',
+                            overflow: 'visible',
+                            height: 'auto',
+                            minHeight: 'auto',
+                        }),
+                        indicatorsContainer: (base: any) => ({
+                            ...base,
+                            alignSelf: 'center',
+                            padding: '0 4px',
+                        }),
+                        input: (base: any) => ({
+                            ...base,
+                            margin: '0 2px',
+                            padding: 0,
+                        }),
+                        placeholder: (base: any) => ({
+                            ...base,
+                            color: '#9ca3af',
+                            fontSize: '13px',
+                        }),
+                    }}
                     onChange={((v0: MultiSelectOption[]) => {
                         let v = v0.map(v => v.value);
                         confirmValue(undefined, v);
