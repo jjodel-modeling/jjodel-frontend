@@ -26,6 +26,71 @@
 }
 
 // ============================================
+// DEFAULT PROVIDER SECTION
+// ============================================
+
+.default-provider-section {
+    margin-bottom: 24px;
+    padding: 16px;
+    background: var(--bg-secondary, #f8fafc);
+    border: 1px solid var(--border-color, #e2e8f0);
+    border-radius: 8px;
+}
+
+.default-provider-header {
+    margin-bottom: 12px;
+}
+
+.default-provider-label {
+    display: block;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary, #334155);
+    margin-bottom: 4px;
+}
+
+.default-provider-hint {
+    font-size: 12px;
+    color: var(--text-tertiary, #94a3b8);
+    margin: 0;
+}
+
+.default-provider-select {
+    width: 100%;
+    max-width: 300px;
+    padding: 10px 12px;
+    font-size: 13px;
+    background: var(--bg-primary, #ffffff);
+    border: 1px solid var(--border-color, #e2e8f0);
+    border-radius: 6px;
+    color: var(--text-primary, #334155);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2364748b' d='M2.5 4.5L6 8l3.5-3.5'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 36px;
+
+    &:focus {
+        outline: none;
+        border-color: #334155;
+        box-shadow: 0 0 0 3px rgba(51, 65, 85, 0.15);
+    }
+
+    &:hover {
+        border-color: var(--border-color-hover, #cbd5e1);
+    }
+}
+
+.default-provider-empty {
+    font-size: 12px;
+    color: var(--text-tertiary, #94a3b8);
+    margin: 8px 0 0;
+    font-style: italic;
+}
+
+// ============================================
 // PROVIDERS LIST
 // ============================================
 
@@ -386,6 +451,32 @@
         }
         p {
             color: var(--text-secondary, #94a3b8);
+        }
+    }
+
+    .default-provider-section {
+        background: var(--bg-tertiary, #0f172a);
+        border-color: var(--border-color, #334155);
+    }
+
+    .default-provider-label {
+        color: var(--text-primary, #f1f5f9);
+    }
+
+    .default-provider-select {
+        background-color: var(--bg-secondary, #1e293b);
+        border-color: var(--border-color, #334155);
+        color: var(--text-primary, #f1f5f9);
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2394a3b8' d='M2.5 4.5L6 8l3.5-3.5'/%3E%3C/svg%3E");
+
+        &:focus {
+            background-color: var(--bg-hover, #334155);
+            border-color: #64748b;
+            box-shadow: 0 0 0 3px rgba(100, 116, 139, 0.2);
+        }
+
+        option {
+            background: var(--bg-secondary, #1e293b);
         }
     }
 

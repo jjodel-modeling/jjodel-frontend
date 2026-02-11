@@ -19,6 +19,8 @@ import { mappingSuggestionService } from '../services';
 import { MappingCard } from './MappingCard';
 import GrammarTab from './GrammarTab';
 import type { GrammarRule } from '../components/GrammarDiagram/types';
+import { ProviderSelector, LocalOption } from '../../components/common/ProviderSelector';
+import { useAIProviderPreference } from '../../hooks/useAIProviderPreference';
 
 export interface SuggestedMappingsPanelProps {
     /** Static source metamodel data (use getSourceMetamodel for fresh data) */
@@ -110,6 +112,11 @@ function generateJjtlCode(mappings: MappingSuggestion[]): string {
     return code.trim();
 }
 
+// Local options for the ProviderSelector
+const MAPPINGS_LOCAL_OPTIONS: LocalOption[] = [
+    { id: 'simple', label: 'Simple (Local)', icon: 'lightning-charge' }
+];
+
 export const SuggestedMappingsPanel: React.FC<SuggestedMappingsPanelProps> = ({
     sourceMetamodel: staticSourceMetamodel,
     targetMetamodel: staticTargetMetamodel,
@@ -124,18 +131,32 @@ export const SuggestedMappingsPanel: React.FC<SuggestedMappingsPanelProps> = ({
     highlightedGrammarRule,
 }) => {
     // State
-    const [mode, setMode] = useState<SuggestionMode>('simple');
+    const [showGrammar, setShowGrammar] = useState(false);
+    const [selectedLocalOption, setSelectedLocalOption] = useState<string | null>('simple');
     const [result, setResult] = useState<SuggestionResult | null>(null);
     const [isAnalyzing, setIsAnalyzing] = useState(false);
     const [internalHoveredId, setInternalHoveredId] = useState<string | null>(null);
     const [selectedId, setSelectedId] = useState<string | null>(null);
+
+    // AI provider preference for mappings feature
+    const { selectedProvider, resolvedProvider } = useAIProviderPreference('mappings');
+
+    // Determine current mode based on selection
+    const mode: SuggestionMode = useMemo(() => {
+        if (showGrammar) return 'grammar';
+        if (selectedLocalOption === 'simple') return 'simple';
+        return 'ai';
+    }, [showGrammar, selectedLocalOption]);
 
     // Combine internal hover state with external prop
     const hoveredId = hoveredMapping ?? internalHoveredId;
 
     // Check AI availability
     const isAIAvailable = useMemo(() => mappingSuggestionService.isAIAvailable(), []);
-    const aiProviderName = useMemo(() => mappingSuggestionService.getAIProviderName(), []);
+    const aiProviderName = useMemo(() => {
+        if (selectedLocalOption === 'simple') return null;
+        return mappingSuggestionService.getAIProviderName() || resolvedProvider;
+    }, [selectedLocalOption, resolvedProvider]);
 
     // Filter suggestions by status
     const toInsertSuggestions = useMemo(() => {
@@ -256,30 +277,21 @@ export const SuggestedMappingsPanel: React.FC<SuggestedMappingsPanelProps> = ({
                 </h3>
             </div>
 
-            {/* Mode Selector */}
+            {/* Mode Selector - Provider dropdown + Grammar button */}
             <div className="mode-selector">
+                <ProviderSelector
+                    feature="mappings"
+                    localOptions={MAPPINGS_LOCAL_OPTIONS}
+                    selectedLocalOption={selectedLocalOption}
+                    onLocalOptionSelect={(optionId) => {
+                        setSelectedLocalOption(optionId);
+                        setShowGrammar(false);
+                    }}
+                    compact
+                />
                 <button
-                    className={`mode-btn ${mode === 'simple' ? 'active' : ''}`}
-                    onClick={() => setMode('simple')}
-                >
-                    <i className="bi bi-list-check" />
-                    Simple
-                </button>
-                <button
-                    className={`mode-btn ${mode === 'ai' ? 'active' : ''} ${!isAIAvailable ? 'disabled' : ''}`}
-                    onClick={() => isAIAvailable && setMode('ai')}
-                    disabled={!isAIAvailable}
-                    title={!isAIAvailable ? 'Configure AI provider in Settings' : `Using ${aiProviderName}`}
-                >
-                    <i className="bi bi-stars" />
-                    AI
-                    {isAIAvailable && aiProviderName && (
-                        <span className="provider-badge">{aiProviderName}</span>
-                    )}
-                </button>
-                <button
-                    className={`mode-btn ${mode === 'grammar' ? 'active' : ''}`}
-                    onClick={() => setMode('grammar')}
+                    className={`mode-btn grammar-btn ${showGrammar ? 'active' : ''}`}
+                    onClick={() => setShowGrammar(!showGrammar)}
                     title="JjTL Grammar Reference"
                 >
                     <i className="bi bi-signpost-split" />
@@ -288,16 +300,19 @@ export const SuggestedMappingsPanel: React.FC<SuggestedMappingsPanelProps> = ({
             </div>
 
             {/* Grammar Tab Content */}
-            {mode === 'grammar' ? (
+            {showGrammar ? (
                 <GrammarTab compact highlightedRule={highlightedGrammarRule} />
             ) : (
                 <>
                     {/* Mode Description */}
                     <div className="mode-description">
-                        {mode === 'simple' ? (
+                        {selectedLocalOption === 'simple' ? (
                             <p>Matches elements by name similarity and type compatibility.</p>
                         ) : (
-                            <p>Uses AI to find semantic relationships between metamodels.</p>
+                            <p>
+                                Uses AI to find semantic relationships between metamodels.
+                                {aiProviderName && <span className="provider-indicator"> ({aiProviderName})</span>}
+                            </p>
                         )}
                     </div>
 

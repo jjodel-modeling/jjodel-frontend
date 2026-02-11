@@ -21,7 +21,7 @@ import type { ProjectDocumentation } from '../../../services/DocumentationServic
 import { JodieConfigService, ALL_PROVIDERS } from '../../../services/JodieConfig';
 import type { AIProvider } from '../../../types/jodie';
 import { useAIProviderPreference } from '../../../hooks/useAIProviderPreference';
-import { useAISettingsSafe } from '../../../contexts/AISettingsContext';
+import { useSettingsModalSafe } from '../../../contexts/SettingsModalContext';
 import { DocumentationStatus } from '../../../types/jodie';
 import { markdownMonacoOptions } from '../../editors/monacoConfig';
 import { AIDisclaimer } from '../../common/AIDisclaimer';
@@ -583,7 +583,7 @@ function DocumentationTabComponent(props: AllProps) {
     // AI Provider selector (with persistence)
     const { selectedProvider, setSelectedProvider } = useAIProviderPreference('documentation');
     const [showProviderMenu, setShowProviderMenu] = useState(false);
-    const aiSettingsContext = useAISettingsSafe();
+    const settingsModal = useSettingsModalSafe();
 
     // Progress modal for regeneration
     const [showProgressModal, setShowProgressModal] = useState(false);
@@ -1061,7 +1061,7 @@ function DocumentationTabComponent(props: AllProps) {
                                                 className="provider-hint"
                                                 onClick={() => {
                                                     setShowProviderMenu(false);
-                                                    aiSettingsContext?.openAISettings();
+                                                    settingsModal?.openSettings('providers');
                                                 }}
                                             >
                                                 <i className="bi bi-gear" /> Configure in Settings

@@ -10,6 +10,7 @@
 - Creare metamodelli (definizioni di strutture)
 - Creare modelli (istanze conformi ai metamodelli)
 - Definire trasformazioni model-to-model (JjTL)
+- Eseguire trasformazioni model-to-model
 - Manipolare metamodelli via scripting (JjScript)
 - Valutare espressioni sui modelli (JjEL)
 
@@ -451,6 +452,127 @@ Quando si modifica la grammatica JjTL, aggiornare **SEMPRE** tutti e 4 i file:
 
 ---
 
+## 🤖 AI Provider System (2026-02-11)
+
+Sistema unificato per la gestione dei provider AI in tutte le feature dell'applicazione.
+
+### Architettura
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    Settings Page                             │
+│  ┌─────────────────┐  ┌──────────────────────────────────┐  │
+│  │   Sidebar       │  │  AISettingsContent               │  │
+│  │   - Profile     │  │  - Default Provider selector     │  │
+│  │   - Providers ◄─┼──┼─ - Provider cards (API keys)     │  │
+│  │   - ...         │  │  - Model selection per provider  │  │
+│  └─────────────────┘  └──────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────┘
+                              ▲
+                              │ openSettings('providers')
+                              │
+┌─────────────────────────────┴───────────────────────────────┐
+│              SettingsModalContext                            │
+│  - openSettings(section?)  - Keyboard shortcut: Cmd+,       │
+│  - closeSettings()         - Renders UnifiedSettingsModal   │
+└─────────────────────────────────────────────────────────────┘
+                              ▲
+                              │ useSettingsModalSafe()
+                              │
+┌─────────────────────────────┴───────────────────────────────┐
+│              ProviderSelector Component                      │
+│  - Dropdown con icone distintive per provider               │
+│  - Supporta local options (non-AI)                          │
+│  - "Configure in Settings" link                             │
+│  - Compact mode per toolbar                                 │
+└─────────────────────────────────────────────────────────────┘
+                              ▲
+                              │ useAIProviderPreference(feature)
+                              │
+┌─────────────────────────────┴───────────────────────────────┐
+│              AIProviderPreferences Service                   │
+│  - Per-feature preferences (localStorage)                   │
+│  - Global default fallback                                  │
+│  - CustomEvent sync across components                       │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Features Supportate
+
+| Feature | AIFeature ID | Local Options |
+|---------|--------------|---------------|
+| Documentation | `'documentation'` | Local (Instant) |
+| Jjodie Chat | `'chat'` | - |
+| ScriptBlock | `'scriptblock'` | - |
+| Suggested Mappings | `'mappings'` | Simple (Local) |
+
+### Provider Resolution Order
+
+1. **Feature override** — preferenza specifica per la feature
+2. **Global default** — impostato in Settings
+3. **First configured** — primo provider con API key valida
+
+### Provider Icons
+
+Ogni provider ha un'icona Bootstrap distintiva con colore brand:
+
+| Provider | Icon | Color |
+|----------|------|-------|
+| OpenAI | `bi-circle` | `#10a37f` (green) |
+| Anthropic | `bi-chat-square-text` | `#d97706` (amber) |
+| DeepSeek | `bi-search` | `#4d6bfe` (blue) |
+| Mistral | `bi-wind` | `#ff7000` (orange) |
+| Gemini | `bi-gem` | `#4285f4` (Google blue) |
+| Groq | `bi-speedometer2` | `#f55036` (red) |
+| Kimi | `bi-moon` | `#6366f1` (purple) |
+| Ollama | `bi-hdd-network` | `#10b981` (green) |
+| Local | `bi-lightning` | `#f59e0b` (amber) |
+
+### Componenti Chiave
+
+| File | Descrizione |
+|------|-------------|
+| `services/AIProviderPreferences.ts` | Service per persistenza preferenze |
+| `hooks/useAIProviderPreference.ts` | Hook per accesso preferenze |
+| `components/common/ProviderSelector.tsx` | Dropdown riutilizzabile |
+| `contexts/SettingsModalContext.tsx` | Context per aprire Settings |
+| `components/settings/AISettingsContent.tsx` | UI configurazione provider |
+
+### Uso del ProviderSelector
+
+```typescript
+import { ProviderSelector, LocalOption } from '../common/ProviderSelector';
+
+// Con local options
+const LOCAL_OPTIONS: LocalOption[] = [
+    { id: 'local', label: 'Local (Instant)', icon: 'lightning' }
+];
+
+<ProviderSelector
+    feature="documentation"
+    localOptions={LOCAL_OPTIONS}
+    selectedLocalOption={isLocalMode ? 'local' : null}
+    onLocalOptionSelect={(id) => setLocalMode(id === 'local')}
+    compact
+/>
+
+// Solo AI providers
+<ProviderSelector feature="chat" />
+```
+
+### Navigazione a Settings
+
+```typescript
+import { useSettingsModalSafe } from '../../contexts/SettingsModalContext';
+
+const settingsModal = useSettingsModalSafe();
+
+// Apri Settings alla sezione Providers
+settingsModal?.openSettings('providers');
+```
+
+---
+
 ## 🐛 Bug Noti e Soluzioni
 
 ### Stale AST Bug (RISOLTO)
@@ -529,9 +651,11 @@ astRef.current = currentAST;
 
 ## 🔄 Workflow Preferito
 
+- Al termine di ogni task che introduce nuovi pattern o convenzioni, proponi un aggiornamento a questo file.
+
 ### Per Feature Complesse
 1. **Discuti architettura** prima di implementare
-2. Crea un **prompt dettagliato** con requisiti chiari
+2. Crea un **prompt dettagliato e autocontenuto** con requisiti chiari
 3. Usa **Plan Mode** in Claude Code per verificare l'approccio
 4. Implementa in modo incrementale
 5. Testa e itera

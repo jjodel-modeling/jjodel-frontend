@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { JodieConfigService } from '../../services/JodieConfig';
+import { AIProviderPreferences } from '../../services/AIProviderPreferences';
 import { PROVIDER_MODELS, ModelInfo, AIProvider } from '../../types/jodie';
 import './AISettingsContent.scss';
 
@@ -118,6 +119,23 @@ export function AISettingsContent({
     const [testStatus, setTestStatus] = useState<Record<string, 'idle' | 'testing' | 'success' | 'error'>>({});
     const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
     const [expandedProvider, setExpandedProvider] = useState<string | null>(null);
+    const [defaultProvider, setDefaultProvider] = useState<string | null>(
+        () => AIProviderPreferences.getGlobalDefault()
+    );
+
+    // List of configured providers for the default selector
+    const configuredProvidersList = useMemo(() => {
+        const list: Array<{ id: string; name: string }> = [];
+        if (providers.openai.apiKey) list.push({ id: 'openai', name: 'OpenAI' });
+        if (providers.anthropic.apiKey) list.push({ id: 'anthropic', name: 'Anthropic' });
+        if (providers.deepseek.apiKey) list.push({ id: 'deepseek', name: 'DeepSeek' });
+        if (providers.mistral.apiKey) list.push({ id: 'mistral', name: 'Mistral' });
+        if (providers.gemini.apiKey) list.push({ id: 'gemini', name: 'Google Gemini' });
+        if (providers.groq.apiKey) list.push({ id: 'groq', name: 'Groq' });
+        if (providers.kimi.apiKey) list.push({ id: 'kimi', name: 'Kimi' });
+        if (providers.ollama.baseUrl) list.push({ id: 'ollama', name: 'Ollama' });
+        return list;
+    }, [providers]);
 
     // Load existing configuration
     useEffect(() => {
@@ -457,6 +475,35 @@ export function AISettingsContent({
                     <p>Configure your AI providers for documentation generation and chat.</p>
                 </div>
             )}
+
+            {/* Default Provider Selector */}
+            <div className="default-provider-section">
+                <div className="default-provider-header">
+                    <label className="default-provider-label">Default Provider</label>
+                    <p className="default-provider-hint">
+                        Used when no specific provider is selected for a feature.
+                    </p>
+                </div>
+                <select
+                    className="default-provider-select"
+                    value={defaultProvider || ''}
+                    onChange={(e) => {
+                        const newDefault = e.target.value || null;
+                        setDefaultProvider(newDefault);
+                        AIProviderPreferences.setGlobalDefault(newDefault);
+                    }}
+                >
+                    <option value="">Auto (first available)</option>
+                    {configuredProvidersList.map(p => (
+                        <option key={p.id} value={p.id}>{p.name}</option>
+                    ))}
+                </select>
+                {configuredProvidersList.length === 0 && (
+                    <p className="default-provider-empty">
+                        Configure at least one provider below to set a default.
+                    </p>
+                )}
+            </div>
 
             <div className="providers-list">
                 {renderProviderCard(

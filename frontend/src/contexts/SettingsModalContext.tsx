@@ -104,4 +104,12 @@ export function useOpenSettings(): (section?: SettingsSection) => void {
     return openSettings;
 }
 
+/**
+ * Safe version that returns null if context is not available.
+ * Use this in components that may be rendered outside the provider.
+ */
+export function useSettingsModalSafe(): SettingsModalContextType | null {
+    return useContext(SettingsModalContext) ?? null;
+}
+
 export default SettingsModalContext;

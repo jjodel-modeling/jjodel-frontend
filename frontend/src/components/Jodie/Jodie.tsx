@@ -10,7 +10,7 @@ import { JodieMinimized } from './JodieMinimized';
 import { AIProvider, ChatMessage, ChatImage, ChatDocument, ChatState, PROVIDER_INFO, supportsVision, supportsPDF } from '../../types/jodie';
 import { JodieConfigService } from '../../services/JodieConfig';
 import { AIProviderService } from '../../services/AIProviderService';
-import { useAISettings } from '../../contexts/AISettingsContext';
+import { useSettingsModal } from '../../contexts/SettingsModalContext';
 import { JjodieContextService } from '../../services/JjodieContext';
 import { JjodieRagService } from '../../services/JjodieRagService';
 import { DUser, L, LUser, LProject } from '../../joiner';
@@ -26,7 +26,7 @@ function generateMessageId(): string {
 
 export function Jodie(): JSX.Element {
     const navigate = useNavigate();
-    const { openAISettings } = useAISettings();
+    const { openSettings } = useSettingsModal();
 
     // Chat state
     const [chatState, setChatState] = useState<ChatState>({
@@ -360,10 +360,10 @@ export function Jodie(): JSX.Element {
         }
     }, [activeProvider, chatState.messages, getProjectContext, userName]);
 
-    // Open settings - show AI Settings modal
+    // Open settings - open unified settings modal at Providers section
     const handleOpenSettings = useCallback(() => {
-        openAISettings();
-    }, [openAISettings]);
+        openSettings('providers');
+    }, [openSettings]);
 
     // Open documentation tab
     const handleOpenDocumentation = useCallback(() => {

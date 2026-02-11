@@ -38,7 +38,6 @@ import DialogVisualizer from './components/alert/Dialog';
 import { NotificationWidget } from './components/NotificationWidget/NotificationWidget';
 import { Jodie } from './components/Jodie';
 import { DevModeProvider } from './contexts/DevModeContext';
-import { AISettingsProvider } from './contexts/AISettingsContext';
 import { GlobalDrawerProvider } from './contexts/GlobalDrawerContext';
 import { FeaturesPanelProvider } from './contexts/FeaturesPanelContext';
 import { TreeViewPanelProvider } from './contexts/TreeViewPanelContext';
@@ -103,7 +102,6 @@ function App(props: AllProps): JSX.Element {
     return (<>
         <SettingsModalProvider>
         <DevModeProvider>
-        <AISettingsProvider>
         <GlobalDrawerProvider>
         <FeaturesPanelProvider>
         <TreeViewPanelProvider>
@@ -158,7 +156,6 @@ function App(props: AllProps): JSX.Element {
         </TreeViewPanelProvider>
         </FeaturesPanelProvider>
         </GlobalDrawerProvider>
-        </AISettingsProvider>
         </DevModeProvider>
         </SettingsModalProvider>
     </>);
