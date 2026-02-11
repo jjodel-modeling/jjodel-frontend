@@ -306,8 +306,9 @@ function DockComponent(props: AllProps) {
     tabs.push(views);      // Viewpoints
     if (advanced) tabs.push(node);  // Node (Advanced only)
     tabs.push(console);    // Console
-    if (advanced) tabs.push(mtm);
-    if (advanced) tabs.push(logger);
+    // Languages and Logger tabs removed from UI (kept components for future use)
+    // if (advanced) tabs.push(mtm);
+    // if (advanced) tabs.push(logger);
 
     if (false && user?.project?.type === 'collaborative') tabs.push(permissions);
 

@@ -1877,16 +1877,66 @@ $shadow-md: 0 1px 3px rgba(0, 0, 0, 0.08);
     }
 }
 
-// Mode Selector
+// Mode Selector - ProviderSelector + Grammar button
 .mode-selector {
     display: flex;
-    gap: $spacing-xs;
+    align-items: center;
+    gap: $spacing-sm;
     padding: $spacing-sm $spacing-md;
     background-color: $color-bg-secondary;
     border-bottom: 1px solid $color-border;
+
+    // ProviderSelector takes available space
+    .provider-selector {
+        flex: 1;
+        min-width: 0;
+
+        .provider-btn {
+            width: 100%;
+            justify-content: flex-start;
+        }
+    }
 }
 
-.mode-btn {
+// Grammar button (standalone)
+.mode-btn.grammar-btn {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+    padding: $spacing-sm $spacing-md;
+    background-color: $color-bg-primary;
+    border: 1px solid $color-border;
+    border-radius: $radius-md;
+    font-size: $font-size-sm;
+    font-weight: 500;
+    color: $color-text-secondary;
+    cursor: pointer;
+    transition: all $transition-fast;
+    white-space: nowrap;
+    flex-shrink: 0;
+
+    &:hover {
+        border-color: $color-border-hover;
+        color: $color-text-primary;
+    }
+
+    &.active {
+        background: $color-accent-gradient;
+        border-color: transparent;
+        color: white;
+
+        i {
+            color: white;
+        }
+    }
+
+    i {
+        font-size: $font-size-md;
+    }
+}
+
+// Legacy mode-btn styles (for backward compat)
+.mode-btn:not(.grammar-btn) {
     display: flex;
     align-items: center;
     gap: $spacing-xs;
@@ -1933,6 +1983,12 @@ $shadow-md: 0 1px 3px rgba(0, 0, 0, 0.08);
     background-color: rgba(255, 255, 255, 0.2);
     border-radius: $radius-sm;
     text-transform: uppercase;
+}
+
+.provider-indicator {
+    font-size: $font-size-xs;
+    color: $color-primary;
+    font-weight: 500;
 }
 
 .mode-description {
