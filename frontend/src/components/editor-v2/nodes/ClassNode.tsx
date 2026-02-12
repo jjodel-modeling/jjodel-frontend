@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { Handle, Position, type NodeProps, type Node } from '@xyflow/react';
+import { Handle, Position, NodeResizer, type NodeProps, type Node } from '@xyflow/react';
 import ViewpointRenderer from '../viewpoint/ViewpointRenderer';
 
 export interface ClassNodeData {
@@ -33,16 +33,38 @@ function ClassNode({ data, selected }: NodeProps<ClassNodeType>) {
     if (data.jsxString) {
         return (
             <div className={`class-node viewpoint-wrapper ${selected ? 'selected' : ''}`}>
-                <Handle type="target" position={Position.Left} />
+                <NodeResizer
+                    isVisible={selected}
+                    minWidth={120}
+                    minHeight={60}
+                    lineClassName="node-resize-line"
+                    handleClassName="node-resize-handle"
+                />
+                {/* 4 anchor points */}
+                <Handle type="target" position={Position.Top} id="top" className="anchor-handle" />
+                <Handle type="source" position={Position.Right} id="right" className="anchor-handle" />
+                <Handle type="target" position={Position.Bottom} id="bottom" className="anchor-handle" />
+                <Handle type="source" position={Position.Left} id="left" className="anchor-handle" />
                 <ViewpointRenderer jsxString={data.jsxString} context={data} />
-                <Handle type="source" position={Position.Right} />
             </div>
         );
     }
 
     return (
         <div className={`class-node ${selected ? 'selected' : ''}`}>
-            <Handle type="target" position={Position.Left} />
+            <NodeResizer
+                isVisible={selected}
+                minWidth={180}
+                minHeight={60}
+                lineClassName="node-resize-line"
+                handleClassName="node-resize-handle"
+            />
+
+            {/* 4 anchor points: top, right, bottom, left */}
+            <Handle type="target" position={Position.Top} id="top" className="anchor-handle" />
+            <Handle type="source" position={Position.Right} id="right" className="anchor-handle" />
+            <Handle type="target" position={Position.Bottom} id="bottom" className="anchor-handle" />
+            <Handle type="source" position={Position.Left} id="left" className="anchor-handle" />
 
             <div className="class-node__header" onDoubleClick={handleDoubleClick}>
                 {editing ? (
@@ -64,8 +86,6 @@ function ClassNode({ data, selected }: NodeProps<ClassNodeType>) {
                     <span className="field-type">{attr.type}</span>
                 </div>
             ))}
-
-            <Handle type="source" position={Position.Right} />
         </div>
     );
 }

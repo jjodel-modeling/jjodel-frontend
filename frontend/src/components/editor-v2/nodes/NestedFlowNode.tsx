@@ -65,10 +65,15 @@ function NestedFlowNode({ data, selected }: NodeProps<NestedFlowNodeType>) {
                 isVisible={selected}
                 minWidth={250}
                 minHeight={150}
-                lineClassName="nested-flow-node__resizer-line"
-                handleClassName="nested-flow-node__resizer-handle"
+                lineClassName="node-resize-line"
+                handleClassName="node-resize-handle"
             />
-            <Handle type="target" position={Position.Left} />
+
+            {/* 4 anchor points: top, right, bottom, left */}
+            <Handle type="target" position={Position.Top} id="top" className="anchor-handle" />
+            <Handle type="source" position={Position.Right} id="right" className="anchor-handle" />
+            <Handle type="target" position={Position.Bottom} id="bottom" className="anchor-handle" />
+            <Handle type="source" position={Position.Left} id="left" className="anchor-handle" />
 
             <div className="nested-flow-node__header">{data.label}</div>
 
@@ -94,8 +99,6 @@ function NestedFlowNode({ data, selected }: NodeProps<NestedFlowNodeType>) {
                     </div>
                 ))}
             </div>
-
-            <Handle type="source" position={Position.Right} />
         </div>
     );
 }

@@ -25,12 +25,87 @@ $red-500: #ef4444;
     height: 100vh;
     width: 100%;
     background: $slate-800;
+
+    &:focus {
+        outline: none;
+    }
+}
+
+// Main area (toolbar + canvas)
+.editor-v2__main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
 }
 
 // Canvas wrapper
 .editor-v2__canvas {
     flex: 1;
-    height: 100%;
+    position: relative;
+}
+
+// Toolbar
+.editor-v2-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 12px;
+    background: $slate-700;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    flex-shrink: 0;
+}
+
+.toolbar-group {
+    display: flex;
+    gap: 2px;
+}
+
+.toolbar-separator {
+    width: 1px;
+    height: 20px;
+    background: rgba(255, 255, 255, 0.15);
+    margin: 0 4px;
+}
+
+.toolbar-spacer {
+    flex: 1;
+}
+
+.toolbar-hint {
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.4);
+    margin-right: 8px;
+}
+
+.toolbar-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border: none;
+    background: transparent;
+    color: rgba(255, 255, 255, 0.6);
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.15s;
+
+    &:hover {
+        background: rgba(255, 255, 255, 0.1);
+        color: white;
+    }
+
+    &.active {
+        background: rgba($cyan-500, 0.2);
+        color: $cyan-500;
+    }
+
+    &.danger:hover {
+        background: rgba($red-500, 0.15);
+        color: #f87171;
+    }
 }
 
 // Palette sidebar
@@ -119,27 +194,9 @@ $red-500: #ef4444;
         border: 1px solid rgba(255, 255, 255, 0.1);
     }
 
-    // Controls
+    // Controls (hidden - using custom toolbar)
     .react-flow__controls {
-        border-radius: 8px;
-        overflow: hidden;
-        border: 1px solid rgba(255, 255, 255, 0.1);
-
-        button {
-            background: $slate-700;
-            border-color: rgba(255, 255, 255, 0.1);
-            color: white;
-            width: 28px;
-            height: 28px;
-
-            &:hover {
-                background: $slate-600;
-            }
-
-            svg {
-                fill: currentColor;
-            }
-        }
+        display: none;
     }
 
     // Attribution (hide)
@@ -149,9 +206,92 @@ $red-500: #ef4444;
 
     // Selection box
     .react-flow__selection {
-        background: rgba($cyan-500, 0.1);
-        border: 1px solid $cyan-500;
+        background: rgba($cyan-500, 0.08) !important;
+        border: 1px solid rgba($cyan-500, 0.4) !important;
+        border-radius: 4px;
     }
+
+    // Selection rect when box-selecting
+    .react-flow__nodesselection-rect {
+        background: rgba($cyan-500, 0.08);
+        border: 1px dashed $cyan-500;
+    }
+}
+
+// NodeResizer overrides - CRITICAL: override all default styles
+// The NodeResizer creates elements with various classes
+
+// Hide ALL resize line controls (edge resize areas)
+.node-resize-line,
+.react-flow__resize-control.line,
+.react-flow__resize-control:not(.handle) {
+    background: transparent !important;
+    background-color: transparent !important;
+    border: none !important;
+    border-color: transparent !important;
+    box-shadow: none !important;
+    opacity: 0 !important;
+    pointer-events: auto;
+
+    &:hover {
+        opacity: 0.5 !important;
+        background: rgba($cyan-500, 0.15) !important;
+    }
+}
+
+// Show corner handles (8x8 cyan squares)
+.node-resize-handle,
+.react-flow__resize-control.handle {
+    width: 8px !important;
+    height: 8px !important;
+    min-width: 8px !important;
+    min-height: 8px !important;
+    max-width: 8px !important;
+    max-height: 8px !important;
+    background: $cyan-500 !important;
+    background-color: $cyan-500 !important;
+    border: 2px solid $slate-800 !important;
+    border-radius: 2px !important;
+    opacity: 1 !important;
+    box-shadow: none !important;
+}
+
+// Extra specificity for stubborn defaults
+[class*="resize-control"][class*="line"],
+[class*="resize-control"][class*="left"]:not([class*="handle"]),
+[class*="resize-control"][class*="right"]:not([class*="handle"]),
+[class*="resize-control"][class*="top"]:not([class*="handle"]),
+[class*="resize-control"][class*="bottom"]:not([class*="handle"]) {
+    background: transparent !important;
+    background-color: transparent !important;
+    border: none !important;
+    opacity: 0 !important;
+}
+
+// Anchor handles - 4 connection points per node
+.anchor-handle {
+    width: 8px !important;
+    height: 8px !important;
+    background: $slate-600 !important;
+    border: 2px solid rgba(255, 255, 255, 0.3) !important;
+    border-radius: 50% !important;
+    transition: all 0.15s;
+
+    &:hover {
+        background: $cyan-500 !important;
+        border-color: white !important;
+        transform: scale(1.3);
+    }
+}
+
+// Handle states during connection
+.react-flow__handle-connecting {
+    background: $cyan-500 !important;
+}
+
+.react-flow__handle-valid {
+    background: #22c55e !important;
+    border-color: white !important;
 }
 
 // Class Node
@@ -160,6 +300,9 @@ $red-500: #ef4444;
     border: 1px solid rgba(255, 255, 255, 0.15);
     border-radius: 8px;
     min-width: 180px;
+    min-height: 60px;
+    width: 100%;
+    height: 100%;
     overflow: hidden;
     font-size: 13px;
     color: white;
@@ -222,24 +365,6 @@ $red-500: #ef4444;
             font-style: italic;
         }
     }
-
-    // Handles
-    .react-flow__handle {
-        width: 10px;
-        height: 10px;
-        background: $slate-500;
-        border: 2px solid $slate-700;
-        transition: all 0.15s;
-
-        &:hover {
-            background: $cyan-500;
-            transform: scale(1.2);
-        }
-
-        &.connecting {
-            background: $cyan-400;
-        }
-    }
 }
 
 // Nested Flow Node
@@ -249,6 +374,8 @@ $red-500: #ef4444;
     border-radius: 8px;
     min-width: 250px;
     min-height: 150px;
+    width: 100%;
+    height: 100%;
     color: white;
     position: relative;
 
@@ -292,37 +419,13 @@ $red-500: #ef4444;
             border-color: $cyan-500;
         }
     }
-
-    // Resizer styles
-    &__resizer-line {
-        border-color: $cyan-500 !important;
-    }
-
-    &__resizer-handle {
-        background: $cyan-500 !important;
-        border: none !important;
-        width: 8px !important;
-        height: 8px !important;
-    }
-
-    // Handles
-    .react-flow__handle {
-        width: 10px;
-        height: 10px;
-        background: $slate-500;
-        border: 2px solid $slate-700;
-        transition: all 0.15s;
-
-        &:hover {
-            background: $green-500;
-            transform: scale(1.2);
-        }
-    }
 }
 
 // Viewpoint container
 .viewpoint-container {
     min-width: 120px;
+    width: 100%;
+    height: 100%;
 }
 
 .viewpoint-error {
@@ -459,9 +562,4 @@ $red-500: #ef4444;
             text-align: center;
         }
     }
-}
-
-// Focus outline for keyboard navigation
-.editor-v2:focus {
-    outline: none;
 }

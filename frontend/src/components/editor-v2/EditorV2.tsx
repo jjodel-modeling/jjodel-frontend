@@ -2,13 +2,14 @@ import React, { useCallback, useRef, useState } from 'react';
 import {
     ReactFlow,
     Background,
-    Controls,
     MiniMap,
     useNodesState,
     useEdgesState,
     addEdge,
     useReactFlow,
     ReactFlowProvider,
+    MarkerType,
+    SelectionMode,
     type Node,
     type Edge,
     type Connection,
@@ -22,6 +23,7 @@ import ClassNode, { type ClassNodeData } from './nodes/ClassNode';
 import NestedFlowNode, { type NestedFlowNodeData } from './nodes/NestedFlowNode';
 import ManhattanEdge from './edges/ManhattanEdge';
 import PalettePanel from './panels/PalettePanel';
+import Toolbar from './Toolbar';
 import ContextMenu from './ContextMenu';
 
 import './EditorV2.scss';
@@ -37,7 +39,7 @@ const edgeTypes: EdgeTypes = {
     manhattan: ManhattanEdge,
 };
 
-// Initial nodes for demonstration
+// Initial nodes for demonstration (including Obstacle node for testing routing)
 const initialNodes: Node[] = [
     {
         id: '1',
@@ -54,13 +56,22 @@ const initialNodes: Node[] = [
     {
         id: '2',
         type: 'classNode',
-        position: { x: 400, y: 100 },
+        position: { x: 500, y: 100 },
         data: {
             label: 'Address',
             attributes: [
                 { name: 'street', type: 'EString' },
                 { name: 'city', type: 'EString' },
             ],
+        } as ClassNodeData,
+    },
+    {
+        id: '5',
+        type: 'classNode',
+        position: { x: 300, y: 100 },
+        data: {
+            label: 'Obstacle',
+            attributes: [{ name: 'test', type: 'EBool' }],
         } as ClassNodeData,
     },
     {
@@ -78,11 +89,11 @@ const initialNodes: Node[] = [
     {
         id: '4',
         type: 'classNode',
-        position: { x: 400, y: 350 },
+        position: { x: 500, y: 350 },
         data: {
             label: 'CustomRendered',
             jsxString: `React.createElement('div', {
-                style: { padding: '12px', background: 'linear-gradient(135deg, #0ea5e9, #334155)', borderRadius: '8px', color: 'white' }
+                style: { padding: '12px', background: 'linear-gradient(135deg, #0ea5e9, #334155)', borderRadius: '8px', color: 'white', width: '100%', height: '100%', boxSizing: 'border-box' }
             },
                 React.createElement('h4', { style: { margin: 0 } }, data.label),
                 React.createElement('p', { style: { margin: '4px 0 0', fontSize: '11px', opacity: 0.8 } }, 'Rendered via viewpoint')
@@ -97,10 +108,26 @@ const initialEdges: Edge[] = [
         id: 'e1-2',
         source: '1',
         target: '2',
+        sourceHandle: 'right',
+        targetHandle: 'left',
         type: 'manhattan',
         label: 'livesAt',
     },
 ];
+
+// Default edge options with arrow marker
+const defaultEdgeOptions = {
+    type: 'manhattan',
+    markerEnd: {
+        type: MarkerType.ArrowClosed,
+        color: 'rgba(255, 255, 255, 0.5)',
+        width: 20,
+        height: 20,
+    },
+    style: {
+        strokeWidth: 1.5,
+    },
+};
 
 // Context menu state type
 interface ContextMenuState {
@@ -118,17 +145,18 @@ function EditorV2Inner() {
     const reactFlowWrapper = useRef<HTMLDivElement>(null);
     const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
     const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
-    const { screenToFlowPosition, getNodes, getEdges } = useReactFlow();
+    const { screenToFlowPosition, getNodes, getEdges, zoomIn, zoomOut, fitView } = useReactFlow();
     const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
+    const [snapEnabled, setSnapEnabled] = useState(true);
 
     // Handle new connections between nodes
     const onConnect = useCallback(
         (connection: Connection) => {
-            // Create manhattan edge by default
             const newEdge: Edge = {
                 ...connection,
-                id: `e${connection.source}-${connection.target}-${Date.now()}`,
+                id: `e_${Date.now()}`,
                 type: 'manhattan',
+                // sourceHandle and targetHandle come from connection automatically
             } as Edge;
             setEdges((eds) => addEdge(newEdge, eds));
         },
@@ -188,70 +216,93 @@ function EditorV2Inner() {
 
     // Delete selected nodes and edges
     const deleteSelected = useCallback(() => {
-        const selectedNodes = getNodes().filter(n => n.selected);
-        const selectedEdges = getEdges().filter(e => e.selected);
+        const selectedNodes = getNodes().filter((n) => n.selected);
+        const selectedEdges = getEdges().filter((e) => e.selected);
 
         if (selectedNodes.length > 0 || selectedEdges.length > 0) {
-            const nodeIds = new Set(selectedNodes.map(n => n.id));
+            const nodeIds = new Set(selectedNodes.map((n) => n.id));
 
-            setNodes(nds => nds.filter(n => !nodeIds.has(n.id)));
+            setNodes((nds) => nds.filter((n) => !nodeIds.has(n.id)));
             // Remove selected edges + edges connected to deleted nodes
-            setEdges(eds => eds.filter(e =>
-                !selectedEdges.some(se => se.id === e.id) &&
-                !nodeIds.has(e.source) &&
-                !nodeIds.has(e.target)
-            ));
+            setEdges((eds) =>
+                eds.filter(
+                    (e) =>
+                        !selectedEdges.some((se) => se.id === e.id) &&
+                        !nodeIds.has(e.source) &&
+                        !nodeIds.has(e.target)
+                )
+            );
         }
     }, [getNodes, getEdges, setNodes, setEdges]);
 
     // Delete specific node by ID
-    const deleteNode = useCallback((nodeId: string) => {
-        setNodes(nds => nds.filter(n => n.id !== nodeId));
-        setEdges(eds => eds.filter(e => e.source !== nodeId && e.target !== nodeId));
-    }, [setNodes, setEdges]);
+    const deleteNode = useCallback(
+        (nodeId: string) => {
+            setNodes((nds) => nds.filter((n) => n.id !== nodeId));
+            setEdges((eds) =>
+                eds.filter((e) => e.source !== nodeId && e.target !== nodeId)
+            );
+        },
+        [setNodes, setEdges]
+    );
 
     // Delete specific edge by ID
-    const deleteEdge = useCallback((edgeId: string) => {
-        setEdges(eds => eds.filter(e => e.id !== edgeId));
-    }, [setEdges]);
+    const deleteEdge = useCallback(
+        (edgeId: string) => {
+            setEdges((eds) => eds.filter((e) => e.id !== edgeId));
+        },
+        [setEdges]
+    );
 
     // Duplicate a node
-    const duplicateNode = useCallback((nodeId: string) => {
-        const node = getNodes().find(n => n.id === nodeId);
-        if (!node) return;
+    const duplicateNode = useCallback(
+        (nodeId: string) => {
+            const node = getNodes().find((n) => n.id === nodeId);
+            if (!node) return;
 
-        const newNode: Node = {
-            ...node,
-            id: `node_${Date.now()}`,
-            position: {
-                x: node.position.x + 50,
-                y: node.position.y + 50,
-            },
-            selected: false,
-        };
+            const newNode: Node = {
+                ...node,
+                id: `node_${Date.now()}`,
+                position: {
+                    x: node.position.x + 50,
+                    y: node.position.y + 50,
+                },
+                selected: false,
+            };
 
-        setNodes(nds => [...nds, newNode]);
-    }, [getNodes, setNodes]);
+            setNodes((nds) => [...nds, newNode]);
+        },
+        [getNodes, setNodes]
+    );
 
     // Keyboard handler for delete
-    const onKeyDown = useCallback((event: React.KeyboardEvent) => {
-        if (event.key === 'Delete' || event.key === 'Backspace') {
-            // Don't delete if we're in an input field (inline editing)
-            if ((event.target as HTMLElement).tagName === 'INPUT') return;
-            deleteSelected();
-        }
-    }, [deleteSelected]);
+    const onKeyDown = useCallback(
+        (event: React.KeyboardEvent) => {
+            if (event.key === 'Delete' || event.key === 'Backspace') {
+                // Don't delete if we're in an input field (inline editing)
+                if ((event.target as HTMLElement).tagName === 'INPUT') return;
+                deleteSelected();
+            }
+        },
+        [deleteSelected]
+    );
 
     // Context menu handlers
-    const onNodeContextMenu = useCallback((event: React.MouseEvent, node: Node) => {
-        event.preventDefault();
-        setContextMenu({ x: event.clientX, y: event.clientY, nodeId: node.id });
-    }, []);
+    const onNodeContextMenu = useCallback(
+        (event: React.MouseEvent, node: Node) => {
+            event.preventDefault();
+            setContextMenu({ x: event.clientX, y: event.clientY, nodeId: node.id });
+        },
+        []
+    );
 
-    const onEdgeContextMenu = useCallback((event: React.MouseEvent, edge: Edge) => {
-        event.preventDefault();
-        setContextMenu({ x: event.clientX, y: event.clientY, edgeId: edge.id });
-    }, []);
+    const onEdgeContextMenu = useCallback(
+        (event: React.MouseEvent, edge: Edge) => {
+            event.preventDefault();
+            setContextMenu({ x: event.clientX, y: event.clientY, edgeId: edge.id });
+        },
+        []
+    );
 
     const onPaneClick = useCallback(() => {
         setContextMenu(null);
@@ -291,50 +342,76 @@ function EditorV2Inner() {
         return [];
     };
 
+    // Toolbar handlers
+    const handleZoomIn = useCallback(() => {
+        zoomIn();
+    }, [zoomIn]);
+
+    const handleZoomOut = useCallback(() => {
+        zoomOut();
+    }, [zoomOut]);
+
+    const handleFitView = useCallback(() => {
+        fitView({ padding: 0.2 });
+    }, [fitView]);
+
+    const handleToggleSnap = useCallback(() => {
+        setSnapEnabled((prev) => !prev);
+    }, []);
+
     return (
-        <div
-            className="editor-v2"
-            tabIndex={0}
-            onKeyDown={onKeyDown}
-        >
+        <div className="editor-v2" tabIndex={0} onKeyDown={onKeyDown}>
             <PalettePanel />
-            <div className="editor-v2__canvas" ref={reactFlowWrapper}>
-                <ReactFlow
-                    nodes={nodes}
-                    edges={edges}
-                    onNodesChange={onNodesChange}
-                    onEdgesChange={onEdgesChange}
-                    onConnect={onConnect}
-                    onDrop={onDrop}
-                    onDragOver={onDragOver}
-                    onNodeContextMenu={onNodeContextMenu}
-                    onEdgeContextMenu={onEdgeContextMenu}
-                    onPaneClick={onPaneClick}
-                    nodeTypes={nodeTypes}
-                    edgeTypes={edgeTypes}
-                    defaultEdgeOptions={{ type: 'manhattan' }}
-                    fitView
-                    fitViewOptions={{ padding: 0.2 }}
-                    multiSelectionKeyCode="Shift"
-                    deleteKeyCode={null}
-                >
-                    <Background
-                        variant={BackgroundVariant.Dots}
-                        gap={16}
-                        size={1}
-                        color="rgba(255, 255, 255, 0.1)"
-                    />
-                    <Controls />
-                    <MiniMap
-                        nodeStrokeWidth={3}
-                        nodeColor={(node) => {
-                            if (node.type === 'classNode') return '#0ea5e9';
-                            if (node.type === 'nestedFlowNode') return '#10b981';
-                            return '#334155';
-                        }}
-                        maskColor="rgba(30, 41, 59, 0.8)"
-                    />
-                </ReactFlow>
+            <div className="editor-v2__main">
+                <Toolbar
+                    snapEnabled={snapEnabled}
+                    onToggleSnap={handleToggleSnap}
+                    onZoomIn={handleZoomIn}
+                    onZoomOut={handleZoomOut}
+                    onFitView={handleFitView}
+                    onDeleteSelected={deleteSelected}
+                />
+                <div className="editor-v2__canvas" ref={reactFlowWrapper}>
+                    <ReactFlow
+                        nodes={nodes}
+                        edges={edges}
+                        onNodesChange={onNodesChange}
+                        onEdgesChange={onEdgesChange}
+                        onConnect={onConnect}
+                        onDrop={onDrop}
+                        onDragOver={onDragOver}
+                        onNodeContextMenu={onNodeContextMenu}
+                        onEdgeContextMenu={onEdgeContextMenu}
+                        onPaneClick={onPaneClick}
+                        nodeTypes={nodeTypes}
+                        edgeTypes={edgeTypes}
+                        defaultEdgeOptions={defaultEdgeOptions}
+                        fitView
+                        fitViewOptions={{ padding: 0.2 }}
+                        snapToGrid={snapEnabled}
+                        snapGrid={[16, 16]}
+                        multiSelectionKeyCode="Shift"
+                        selectionMode={SelectionMode.Partial}
+                        panOnDrag={[0, 1, 2]}
+                        deleteKeyCode={null}
+                    >
+                        <Background
+                            variant={BackgroundVariant.Dots}
+                            gap={16}
+                            size={1}
+                            color="rgba(255, 255, 255, 0.08)"
+                        />
+                        <MiniMap
+                            nodeStrokeWidth={3}
+                            nodeColor={(node) => {
+                                if (node.type === 'classNode') return '#0ea5e9';
+                                if (node.type === 'nestedFlowNode') return '#10b981';
+                                return '#334155';
+                            }}
+                            maskColor="rgba(30, 41, 59, 0.8)"
+                        />
+                    </ReactFlow>
+                </div>
             </div>
 
             {contextMenu && (
