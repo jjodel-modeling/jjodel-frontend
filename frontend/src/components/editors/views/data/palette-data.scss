@@ -42,6 +42,11 @@ $field-height: 28px;
   gap: 0;
   overflow: visible; // Allow popovers to overflow
 
+  // CRITICAL: Prevent expanding beyond panel
+  max-width: 100%;
+  min-width: 0;      // Allow flex shrinking
+  box-sizing: border-box;
+
   // CRITICAL: Disable container queries for Style tab
   // Responsive hiding should ONLY apply to viewpoints list, not here!
   container-type: normal !important;
@@ -49,6 +54,8 @@ $field-height: 28px;
   // Controls section needs overflow visible for popovers
   .controls {
     overflow: visible !important;
+    max-width: 100%;
+    min-width: 0;
   }
 }
 
@@ -656,8 +663,11 @@ $field-height: 28px;
 // PATH ROW INPUTS
 // ============================================
 .palette-row.path {
+  // Path input container - compact fixed width (editable in modal)
   .value {
-    flex: 1;
+    flex: 0 0 160px !important;
+    width: 160px !important;
+    max-width: 160px !important;
     min-width: 0;
 
     .d-flex {
@@ -670,11 +680,13 @@ $field-height: 28px;
     height: $field-height !important; // 28px
     padding: 0 10px !important;
     font-family: $font-family-mono !important;
-    font-size: 12px !important;
+    font-size: 11px !important;          // Slightly smaller for compact preview
     color: $color-text-secondary !important;
     background: $color-bg-primary !important;
     border: 1px solid $color-border !important;
     border-radius: $radius-sm !important;
+    text-overflow: ellipsis;
+    overflow: hidden;
 
     &::placeholder {
       color: $color-text-tertiary;
@@ -687,7 +699,11 @@ $field-height: 28px;
     }
   }
 
+  // Preset select - takes remaining space
   select {
+    flex: 1 1 auto !important;
+    min-width: 120px !important;
+    max-width: none !important;
     height: $field-height !important; // 28px
     padding: 0 28px 0 10px !important;
     font-family: $font-family !important;
@@ -729,6 +745,53 @@ $field-height: 28px;
         background: $color-bg-primary;
       }
     }
+  }
+}
+
+// ============================================
+// MARKER EDIT BUTTON - Icon + Text style
+// ============================================
+.marker-edit-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  height: 28px;
+  padding: 0 10px;
+  border: 1px solid #cbd5e1;       // slate-300
+  border-radius: 4px;
+  background: #f8fafc;             // slate-50
+  color: #475569;                  // slate-600
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  flex-shrink: 0;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+
+  &:hover:not(:disabled) {
+    background: #e2e8f0;           // slate-200
+    border-color: #94a3b8;         // slate-400
+    color: #0ea5e9;                // cyan on hover
+  }
+
+  &:active:not(:disabled) {
+    background: #cbd5e1;           // slate-300
+  }
+
+  &:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(14, 165, 233, 0.3);
+    border-color: #0ea5e9;
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  i {
+    font-size: 12px;
   }
 }
 
@@ -1513,6 +1576,28 @@ $field-height: 28px;
       &::placeholder {
         color: #64748b;
       }
+    }
+  }
+
+  // Marker edit button dark mode
+  .marker-edit-btn {
+    background: #1e293b;           // slate-800
+    border-color: #475569;         // slate-600
+    color: #94a3b8;                // slate-400
+
+    &:hover:not(:disabled) {
+      background: #334155;         // slate-700
+      border-color: #64748b;       // slate-500
+      color: #0ea5e9;              // cyan on hover
+    }
+
+    &:active:not(:disabled) {
+      background: #0f172a;         // slate-900
+    }
+
+    &:focus-visible {
+      box-shadow: 0 0 0 2px rgba(14, 165, 233, 0.4);
+      border-color: #0ea5e9;
     }
   }
 

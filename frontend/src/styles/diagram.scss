@@ -630,7 +630,7 @@
    ---------------------------------------- */
 
 /* SVG marker refinements */
-marker {
+.graph-canvas marker {
   path {
     fill: var(--color-border-primary, #d1d5db);
     stroke: none;
@@ -641,6 +641,8 @@ marker {
     }
   }
 }
+
+
 
 /* Arrow head styling classes */
 .arrow-head {
