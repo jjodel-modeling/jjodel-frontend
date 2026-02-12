@@ -92,7 +92,7 @@ $red-500: #ef4444;
     font-size: 14px;
     transition: all 0.15s;
 
-    &:hover {
+    &:hover:not(:disabled) {
         background: rgba(255, 255, 255, 0.1);
         color: white;
     }
@@ -102,9 +102,14 @@ $red-500: #ef4444;
         color: $cyan-500;
     }
 
-    &.danger:hover {
+    &.danger:hover:not(:disabled) {
         background: rgba($red-500, 0.15);
         color: #f87171;
+    }
+
+    &:disabled {
+        color: rgba(255, 255, 255, 0.25);
+        cursor: not-allowed;
     }
 }
 
@@ -503,6 +508,188 @@ $red-500: #ef4444;
 .react-flow__edge-text {
     font-size: 11px;
     fill: rgba(255, 255, 255, 0.6);
+}
+
+// Properties Panel
+.properties-panel {
+    width: 240px;
+    background: $slate-700;
+    border-left: 1px solid rgba(255, 255, 255, 0.1);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+
+    &__header {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 12px;
+        font-size: 12px;
+        font-weight: 600;
+        color: rgba(255, 255, 255, 0.9);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        background: $slate-800;
+
+        i {
+            font-size: 14px;
+            color: $cyan-500;
+        }
+    }
+
+    &__empty {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+        color: rgba(255, 255, 255, 0.4);
+        font-size: 12px;
+
+        i {
+            font-size: 32px;
+            opacity: 0.5;
+        }
+    }
+
+    &__content {
+        flex: 1;
+        overflow-y: auto;
+        padding: 12px;
+    }
+}
+
+.property-group {
+    margin-bottom: 12px;
+
+    &:last-child {
+        margin-bottom: 0;
+    }
+}
+
+.property-label {
+    display: block;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: rgba(255, 255, 255, 0.5);
+    margin-bottom: 4px;
+}
+
+.property-value {
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.8);
+    padding: 6px 8px;
+    background: $slate-800;
+    border-radius: 4px;
+
+    &.readonly {
+        color: rgba(255, 255, 255, 0.5);
+        font-family: 'IBM Plex Mono', Monaco, Consolas, monospace;
+        font-size: 11px;
+    }
+}
+
+.property-input {
+    width: 100%;
+    padding: 6px 8px;
+    background: $slate-800;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+    color: white;
+    font-size: 12px;
+    outline: none;
+    transition: border-color 0.15s;
+
+    &:focus {
+        border-color: $cyan-500;
+    }
+
+    &::placeholder {
+        color: rgba(255, 255, 255, 0.3);
+    }
+}
+
+.property-row {
+    display: flex;
+    gap: 8px;
+}
+
+.property-coord {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 8px;
+    background: $slate-800;
+    border-radius: 4px;
+    font-size: 11px;
+
+    span:first-child {
+        color: rgba(255, 255, 255, 0.5);
+        font-weight: 600;
+    }
+
+    span:last-child {
+        color: rgba(255, 255, 255, 0.8);
+        font-family: 'IBM Plex Mono', Monaco, Consolas, monospace;
+    }
+}
+
+.property-attributes {
+    background: $slate-800;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.property-attribute {
+    display: flex;
+    justify-content: space-between;
+    padding: 6px 8px;
+    font-size: 11px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+
+    &:last-child {
+        border-bottom: none;
+    }
+
+    .attr-name {
+        color: rgba(255, 255, 255, 0.8);
+    }
+
+    .attr-type {
+        color: $cyan-500;
+        font-style: italic;
+    }
+}
+
+.property-empty-list {
+    padding: 8px;
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.4);
+    font-style: italic;
+    text-align: center;
+}
+
+.property-connection {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 6px 8px;
+    background: $slate-800;
+    border-radius: 4px;
+    font-size: 11px;
+
+    .conn-node {
+        color: rgba(255, 255, 255, 0.8);
+        font-family: 'IBM Plex Mono', Monaco, Consolas, monospace;
+    }
+
+    .conn-handle {
+        color: rgba(255, 255, 255, 0.5);
+        font-size: 10px;
+    }
 }
 
 // Connection line (while dragging)

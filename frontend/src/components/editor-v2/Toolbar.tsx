@@ -1,5 +1,3 @@
-import React from 'react';
-
 interface ToolbarProps {
     snapEnabled: boolean;
     onToggleSnap: () => void;
@@ -7,11 +5,15 @@ interface ToolbarProps {
     onZoomOut: () => void;
     onFitView: () => void;
     onDeleteSelected: () => void;
+    onUndo: () => void;
+    onRedo: () => void;
+    canUndo: boolean;
+    canRedo: boolean;
 }
 
 /**
  * Compact toolbar for editor controls.
- * Provides zoom, snap-to-grid toggle, and delete actions.
+ * Provides undo/redo, zoom, snap-to-grid toggle, and delete actions.
  */
 function Toolbar({
     snapEnabled,
@@ -20,9 +22,36 @@ function Toolbar({
     onZoomOut,
     onFitView,
     onDeleteSelected,
+    onUndo,
+    onRedo,
+    canUndo,
+    canRedo,
 }: ToolbarProps) {
     return (
         <div className="editor-v2-toolbar">
+            {/* Undo/Redo */}
+            <div className="toolbar-group">
+                <button
+                    className="toolbar-btn"
+                    onClick={onUndo}
+                    disabled={!canUndo}
+                    title="Undo (Ctrl+Z)"
+                >
+                    <i className="bi bi-arrow-counterclockwise" />
+                </button>
+                <button
+                    className="toolbar-btn"
+                    onClick={onRedo}
+                    disabled={!canRedo}
+                    title="Redo (Ctrl+Shift+Z)"
+                >
+                    <i className="bi bi-arrow-clockwise" />
+                </button>
+            </div>
+
+            <div className="toolbar-separator" />
+
+            {/* Zoom */}
             <div className="toolbar-group">
                 <button
                     className="toolbar-btn"
@@ -49,6 +78,7 @@ function Toolbar({
 
             <div className="toolbar-separator" />
 
+            {/* Snap */}
             <div className="toolbar-group">
                 <button
                     className={`toolbar-btn ${snapEnabled ? 'active' : ''}`}
@@ -61,6 +91,7 @@ function Toolbar({
 
             <div className="toolbar-separator" />
 
+            {/* Delete */}
             <div className="toolbar-group">
                 <button
                     className="toolbar-btn danger"
@@ -74,7 +105,7 @@ function Toolbar({
             <div className="toolbar-spacer" />
 
             <div className="toolbar-hint">
-                <span>Shift+drag for box select</span>
+                <span>Shift+drag for box select | Ctrl+C/V/X</span>
             </div>
         </div>
     );

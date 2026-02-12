@@ -1,4 +1,4 @@
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useRef, useState, useMemo } from 'react';
 import {
     ReactFlow,
     Background,
@@ -23,8 +23,11 @@ import ClassNode, { type ClassNodeData } from './nodes/ClassNode';
 import NestedFlowNode, { type NestedFlowNodeData } from './nodes/NestedFlowNode';
 import ManhattanEdge from './edges/ManhattanEdge';
 import PalettePanel from './panels/PalettePanel';
+import PropertiesPanel from './panels/PropertiesPanel';
 import Toolbar from './Toolbar';
 import ContextMenu from './ContextMenu';
+import { useHistory } from './hooks/useHistory';
+import { EditorContext } from './contexts/EditorContext';
 
 import './EditorV2.scss';
 
@@ -137,6 +140,12 @@ interface ContextMenuState {
     edgeId?: string;
 }
 
+// Clipboard state type
+interface ClipboardState {
+    nodes: Node[];
+    edges: Edge[];
+}
+
 /**
  * Inner editor component that uses React Flow hooks.
  * Must be wrapped in ReactFlowProvider.
@@ -148,19 +157,29 @@ function EditorV2Inner() {
     const { screenToFlowPosition, getNodes, getEdges, zoomIn, zoomOut, fitView } = useReactFlow();
     const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
     const [snapEnabled, setSnapEnabled] = useState(true);
+    const clipboard = useRef<ClipboardState>({ nodes: [], edges: [] });
+
+    // History for undo/redo
+    const { takeSnapshot, undo, redo, canUndo, canRedo } = useHistory(getNodes, getEdges);
+    // Force re-render to update canUndo/canRedo
+    const [, forceUpdate] = useState({});
+
+    // Get selected nodes and edges for properties panel
+    const selectedNodes = useMemo(() => nodes.filter((n) => n.selected), [nodes]);
+    const selectedEdges = useMemo(() => edges.filter((e) => e.selected), [edges]);
 
     // Handle new connections between nodes
     const onConnect = useCallback(
         (connection: Connection) => {
+            takeSnapshot();
             const newEdge: Edge = {
                 ...connection,
                 id: `e_${Date.now()}`,
                 type: 'manhattan',
-                // sourceHandle and targetHandle come from connection automatically
             } as Edge;
             setEdges((eds) => addEdge(newEdge, eds));
         },
-        [setEdges]
+        [setEdges, takeSnapshot]
     );
 
     // Handle drop from palette
@@ -170,6 +189,8 @@ function EditorV2Inner() {
 
             const type = event.dataTransfer.getData('application/reactflow');
             if (!type) return;
+
+            takeSnapshot();
 
             // Convert screen coordinates to flow coordinates (accounts for pan/zoom)
             const position = screenToFlowPosition({
@@ -205,7 +226,7 @@ function EditorV2Inner() {
 
             setNodes((nds) => [...nds, newNode]);
         },
-        [screenToFlowPosition, setNodes]
+        [screenToFlowPosition, setNodes, takeSnapshot]
     );
 
     // Allow drop
@@ -220,6 +241,7 @@ function EditorV2Inner() {
         const selectedEdges = getEdges().filter((e) => e.selected);
 
         if (selectedNodes.length > 0 || selectedEdges.length > 0) {
+            takeSnapshot();
             const nodeIds = new Set(selectedNodes.map((n) => n.id));
 
             setNodes((nds) => nds.filter((n) => !nodeIds.has(n.id)));
@@ -233,25 +255,27 @@ function EditorV2Inner() {
                 )
             );
         }
-    }, [getNodes, getEdges, setNodes, setEdges]);
+    }, [getNodes, getEdges, setNodes, setEdges, takeSnapshot]);
 
     // Delete specific node by ID
     const deleteNode = useCallback(
         (nodeId: string) => {
+            takeSnapshot();
             setNodes((nds) => nds.filter((n) => n.id !== nodeId));
             setEdges((eds) =>
                 eds.filter((e) => e.source !== nodeId && e.target !== nodeId)
             );
         },
-        [setNodes, setEdges]
+        [setNodes, setEdges, takeSnapshot]
     );
 
     // Delete specific edge by ID
     const deleteEdge = useCallback(
         (edgeId: string) => {
+            takeSnapshot();
             setEdges((eds) => eds.filter((e) => e.id !== edgeId));
         },
-        [setEdges]
+        [setEdges, takeSnapshot]
     );
 
     // Duplicate a node
@@ -260,6 +284,7 @@ function EditorV2Inner() {
             const node = getNodes().find((n) => n.id === nodeId);
             if (!node) return;
 
+            takeSnapshot();
             const newNode: Node = {
                 ...node,
                 id: `node_${Date.now()}`,
@@ -272,19 +297,160 @@ function EditorV2Inner() {
 
             setNodes((nds) => [...nds, newNode]);
         },
-        [getNodes, setNodes]
+        [getNodes, setNodes, takeSnapshot]
     );
 
-    // Keyboard handler for delete
+    // Undo handler
+    const handleUndo = useCallback(() => {
+        const state = undo();
+        if (state) {
+            setNodes(state.nodes);
+            setEdges(state.edges);
+            forceUpdate({});
+        }
+    }, [undo, setNodes, setEdges]);
+
+    // Redo handler
+    const handleRedo = useCallback(() => {
+        const state = redo();
+        if (state) {
+            setNodes(state.nodes);
+            setEdges(state.edges);
+            forceUpdate({});
+        }
+    }, [redo, setNodes, setEdges]);
+
+    // Copy selected nodes and edges
+    const copySelected = useCallback(() => {
+        const selectedNodes = getNodes().filter((n) => n.selected);
+        const selectedEdges = getEdges().filter((e) => e.selected);
+
+        // Also include edges between selected nodes
+        const nodeIds = new Set(selectedNodes.map((n) => n.id));
+        const connectedEdges = getEdges().filter(
+            (e) => nodeIds.has(e.source) && nodeIds.has(e.target)
+        );
+
+        clipboard.current = {
+            nodes: JSON.parse(JSON.stringify(selectedNodes)),
+            edges: JSON.parse(JSON.stringify([...selectedEdges, ...connectedEdges])),
+        };
+    }, [getNodes, getEdges]);
+
+    // Cut selected nodes and edges
+    const cutSelected = useCallback(() => {
+        copySelected();
+        deleteSelected();
+    }, [copySelected, deleteSelected]);
+
+    // Paste from clipboard
+    const pasteClipboard = useCallback(() => {
+        if (clipboard.current.nodes.length === 0) return;
+
+        takeSnapshot();
+        const now = Date.now();
+        const idMap = new Map<string, string>();
+
+        // Create new nodes with offset and new IDs
+        const newNodes = clipboard.current.nodes.map((node, i) => {
+            const newId = `node_${now}_${i}`;
+            idMap.set(node.id, newId);
+            return {
+                ...node,
+                id: newId,
+                position: {
+                    x: node.position.x + 50,
+                    y: node.position.y + 50,
+                },
+                selected: true,
+            };
+        });
+
+        // Create new edges with updated source/target IDs
+        const newEdges = clipboard.current.edges
+            .filter((e) => idMap.has(e.source) && idMap.has(e.target))
+            .map((edge, i) => ({
+                ...edge,
+                id: `e_${now}_${i}`,
+                source: idMap.get(edge.source)!,
+                target: idMap.get(edge.target)!,
+                selected: false,
+            }));
+
+        // Deselect existing and add new
+        setNodes((nds) => [
+            ...nds.map((n) => ({ ...n, selected: false })),
+            ...newNodes,
+        ]);
+        setEdges((eds) => [
+            ...eds.map((e) => ({ ...e, selected: false })),
+            ...newEdges,
+        ]);
+    }, [setNodes, setEdges, takeSnapshot]);
+
+    // Select all nodes
+    const selectAll = useCallback(() => {
+        setNodes((nds) => nds.map((n) => ({ ...n, selected: true })));
+        setEdges((eds) => eds.map((e) => ({ ...e, selected: true })));
+    }, [setNodes, setEdges]);
+
+    // Keyboard handler
     const onKeyDown = useCallback(
         (event: React.KeyboardEvent) => {
+            // Don't handle if we're in an input field
+            if ((event.target as HTMLElement).tagName === 'INPUT') return;
+
+            const isMod = event.ctrlKey || event.metaKey;
+
+            // Delete
             if (event.key === 'Delete' || event.key === 'Backspace') {
-                // Don't delete if we're in an input field (inline editing)
-                if ((event.target as HTMLElement).tagName === 'INPUT') return;
                 deleteSelected();
+                return;
+            }
+
+            // Undo: Ctrl+Z
+            if (isMod && event.key === 'z' && !event.shiftKey) {
+                event.preventDefault();
+                handleUndo();
+                return;
+            }
+
+            // Redo: Ctrl+Shift+Z or Ctrl+Y
+            if (isMod && ((event.key === 'z' && event.shiftKey) || event.key === 'y')) {
+                event.preventDefault();
+                handleRedo();
+                return;
+            }
+
+            // Copy: Ctrl+C
+            if (isMod && event.key === 'c') {
+                event.preventDefault();
+                copySelected();
+                return;
+            }
+
+            // Cut: Ctrl+X
+            if (isMod && event.key === 'x') {
+                event.preventDefault();
+                cutSelected();
+                return;
+            }
+
+            // Paste: Ctrl+V
+            if (isMod && event.key === 'v') {
+                event.preventDefault();
+                pasteClipboard();
+                return;
+            }
+
+            // Select All: Ctrl+A
+            if (isMod && event.key === 'a') {
+                event.preventDefault();
+                selectAll();
+                return;
             }
         },
-        [deleteSelected]
+        [deleteSelected, handleUndo, handleRedo, copySelected, cutSelected, pasteClipboard, selectAll]
     );
 
     // Context menu handlers
@@ -359,70 +525,127 @@ function EditorV2Inner() {
         setSnapEnabled((prev) => !prev);
     }, []);
 
-    return (
-        <div className="editor-v2" tabIndex={0} onKeyDown={onKeyDown}>
-            <PalettePanel />
-            <div className="editor-v2__main">
-                <Toolbar
-                    snapEnabled={snapEnabled}
-                    onToggleSnap={handleToggleSnap}
-                    onZoomIn={handleZoomIn}
-                    onZoomOut={handleZoomOut}
-                    onFitView={handleFitView}
-                    onDeleteSelected={deleteSelected}
-                />
-                <div className="editor-v2__canvas" ref={reactFlowWrapper}>
-                    <ReactFlow
-                        nodes={nodes}
-                        edges={edges}
-                        onNodesChange={onNodesChange}
-                        onEdgesChange={onEdgesChange}
-                        onConnect={onConnect}
-                        onDrop={onDrop}
-                        onDragOver={onDragOver}
-                        onNodeContextMenu={onNodeContextMenu}
-                        onEdgeContextMenu={onEdgeContextMenu}
-                        onPaneClick={onPaneClick}
-                        nodeTypes={nodeTypes}
-                        edgeTypes={edgeTypes}
-                        defaultEdgeOptions={defaultEdgeOptions}
-                        fitView
-                        fitViewOptions={{ padding: 0.2 }}
-                        snapToGrid={snapEnabled}
-                        snapGrid={[16, 16]}
-                        multiSelectionKeyCode="Shift"
-                        selectionMode={SelectionMode.Partial}
-                        panOnDrag={[0, 1, 2]}
-                        deleteKeyCode={null}
-                    >
-                        <Background
-                            variant={BackgroundVariant.Dots}
-                            gap={16}
-                            size={1}
-                            color="rgba(255, 255, 255, 0.08)"
-                        />
-                        <MiniMap
-                            nodeStrokeWidth={3}
-                            nodeColor={(node) => {
-                                if (node.type === 'classNode') return '#0ea5e9';
-                                if (node.type === 'nestedFlowNode') return '#10b981';
-                                return '#334155';
-                            }}
-                            maskColor="rgba(30, 41, 59, 0.8)"
-                        />
-                    </ReactFlow>
-                </div>
-            </div>
+    // Properties panel handlers
+    const handleNodeChange = useCallback(
+        (nodeId: string, data: Partial<ClassNodeData | NestedFlowNodeData>) => {
+            takeSnapshot();
+            setNodes((nds) =>
+                nds.map((n) =>
+                    n.id === nodeId ? { ...n, data: { ...n.data, ...data } } : n
+                )
+            );
+        },
+        [setNodes, takeSnapshot]
+    );
 
-            {contextMenu && (
-                <ContextMenu
-                    x={contextMenu.x}
-                    y={contextMenu.y}
-                    items={getContextMenuItems()}
-                    onClose={closeContextMenu}
+    const handleEdgeChange = useCallback(
+        (edgeId: string, data: Partial<Edge>) => {
+            takeSnapshot();
+            setEdges((eds) =>
+                eds.map((e) => (e.id === edgeId ? { ...e, ...data } : e))
+            );
+        },
+        [setEdges, takeSnapshot]
+    );
+
+    // Take snapshot on node/edge changes that matter (drag end, resize end)
+    const handleNodesChange = useCallback(
+        (changes: any[]) => {
+            // Check if any change is a position change that just ended (drag end)
+            const hasDragEnd = changes.some(
+                (c) => c.type === 'position' && c.dragging === false
+            );
+            // Check if any change is a dimensions change (resize)
+            const hasResize = changes.some((c) => c.type === 'dimensions');
+
+            if (hasDragEnd || hasResize) {
+                takeSnapshot();
+            }
+            onNodesChange(changes);
+        },
+        [onNodesChange, takeSnapshot]
+    );
+
+    // Context value for child components (e.g., ClassNode) to take snapshots
+    const editorContextValue = useMemo(() => ({ takeSnapshot }), [takeSnapshot]);
+
+    return (
+        <EditorContext.Provider value={editorContextValue}>
+            <div className="editor-v2" tabIndex={0} onKeyDown={onKeyDown}>
+                <PalettePanel />
+                <div className="editor-v2__main">
+                    <Toolbar
+                        snapEnabled={snapEnabled}
+                        onToggleSnap={handleToggleSnap}
+                        onZoomIn={handleZoomIn}
+                        onZoomOut={handleZoomOut}
+                        onFitView={handleFitView}
+                        onDeleteSelected={deleteSelected}
+                        onUndo={handleUndo}
+                        onRedo={handleRedo}
+                        canUndo={canUndo}
+                        canRedo={canRedo}
+                    />
+                    <div className="editor-v2__canvas" ref={reactFlowWrapper}>
+                        <ReactFlow
+                            nodes={nodes}
+                            edges={edges}
+                            onNodesChange={handleNodesChange}
+                            onEdgesChange={onEdgesChange}
+                            onConnect={onConnect}
+                            onDrop={onDrop}
+                            onDragOver={onDragOver}
+                            onNodeContextMenu={onNodeContextMenu}
+                            onEdgeContextMenu={onEdgeContextMenu}
+                            onPaneClick={onPaneClick}
+                            nodeTypes={nodeTypes}
+                            edgeTypes={edgeTypes}
+                            defaultEdgeOptions={defaultEdgeOptions}
+                            fitView
+                            fitViewOptions={{ padding: 0.2 }}
+                            snapToGrid={snapEnabled}
+                            snapGrid={[16, 16]}
+                            multiSelectionKeyCode="Shift"
+                            selectionMode={SelectionMode.Partial}
+                            panOnDrag={[0, 1, 2]}
+                            deleteKeyCode={null}
+                        >
+                            <Background
+                                variant={BackgroundVariant.Dots}
+                                gap={16}
+                                size={1}
+                                color="rgba(255, 255, 255, 0.08)"
+                            />
+                            <MiniMap
+                                nodeStrokeWidth={3}
+                                nodeColor={(node) => {
+                                    if (node.type === 'classNode') return '#0ea5e9';
+                                    if (node.type === 'nestedFlowNode') return '#10b981';
+                                    return '#334155';
+                                }}
+                                maskColor="rgba(30, 41, 59, 0.8)"
+                            />
+                        </ReactFlow>
+                    </div>
+                </div>
+
+                <PropertiesPanel
+                    selectedNodes={selectedNodes}
+                    selectedEdges={selectedEdges}
+                    onNodeChange={handleNodeChange}
+                    onEdgeChange={handleEdgeChange}
                 />
-            )}
-        </div>
+
+                {contextMenu && (
+                    <ContextMenu
+                        x={contextMenu.x}
+                        y={contextMenu.y}
+                        items={getContextMenuItems()}
+                        onClose={closeContextMenu}
+                    />
+                )}
+            </div>
+        </EditorContext.Provider>
     );
 }
 

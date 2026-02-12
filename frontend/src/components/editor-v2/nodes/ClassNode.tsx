@@ -1,6 +1,7 @@
-import React, { useState, useCallback } from 'react';
-import { Handle, Position, NodeResizer, type NodeProps, type Node } from '@xyflow/react';
+import { useState, useCallback, useEffect } from 'react';
+import { Handle, Position, NodeResizer, useReactFlow, type NodeProps, type Node } from '@xyflow/react';
 import ViewpointRenderer from '../viewpoint/ViewpointRenderer';
+import { useEditorContextSafe } from '../contexts/EditorContext';
 
 export interface ClassNodeData {
     label: string;
@@ -11,23 +12,50 @@ export interface ClassNodeData {
 
 export type ClassNodeType = Node<ClassNodeData, 'classNode'>;
 
-function ClassNode({ data, selected }: NodeProps<ClassNodeType>) {
+function ClassNode({ id, data, selected }: NodeProps<ClassNodeType>) {
+    const { setNodes } = useReactFlow();
+    const editorContext = useEditorContextSafe();
     const [editing, setEditing] = useState(false);
     const [name, setName] = useState(data.label);
+
+    // Sync local state when data.label changes externally (e.g., from PropertiesPanel or undo)
+    useEffect(() => {
+        setName(data.label);
+    }, [data.label]);
 
     const handleDoubleClick = useCallback(() => {
         setEditing(true);
     }, []);
 
-    const handleBlur = useCallback(() => {
+    const commitName = useCallback(() => {
         setEditing(false);
-    }, []);
-
-    const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
-        if (e.key === 'Enter') {
-            setEditing(false);
+        // Only update if name actually changed
+        if (name !== data.label) {
+            // Take snapshot for undo before changing
+            editorContext?.takeSnapshot();
+            setNodes((nds) =>
+                nds.map((n) =>
+                    n.id === id ? { ...n, data: { ...n.data, label: name } } : n
+                )
+            );
         }
-    }, []);
+    }, [id, name, data.label, setNodes, editorContext]);
+
+    const handleBlur = useCallback(() => {
+        commitName();
+    }, [commitName]);
+
+    const handleKeyDown = useCallback(
+        (e: React.KeyboardEvent) => {
+            if (e.key === 'Enter') {
+                commitName();
+            } else if (e.key === 'Escape') {
+                setName(data.label); // Revert to original
+                setEditing(false);
+            }
+        },
+        [commitName, data.label]
+    );
 
     // If there's a jsxString, use ViewpointRenderer
     if (data.jsxString) {
