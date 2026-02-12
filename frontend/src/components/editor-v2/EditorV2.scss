@@ -113,6 +113,96 @@ $red-500: #ef4444;
     }
 }
 
+// Alignment Toolbar (appears when 2+ nodes selected)
+.alignment-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 12px;
+    background: rgba($cyan-500, 0.08);
+    border-bottom: 1px solid rgba($cyan-500, 0.15);
+    flex-shrink: 0;
+    animation: slideDown 0.15s ease-out;
+
+    &__group {
+        display: flex;
+        align-items: center;
+        gap: 2px;
+    }
+
+    &__label {
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: rgba(255, 255, 255, 0.4);
+        margin-right: 4px;
+        font-weight: 500;
+    }
+
+    &__divider {
+        width: 1px;
+        height: 18px;
+        background: rgba(255, 255, 255, 0.12);
+        margin: 0 4px;
+    }
+
+    &__separator {
+        width: 1px;
+        height: 22px;
+        background: rgba(255, 255, 255, 0.1);
+        margin: 0 4px;
+    }
+
+    &__count {
+        font-size: 11px;
+        color: rgba(255, 255, 255, 0.35);
+        margin-left: auto;
+        font-family: 'IBM Plex Mono', Monaco, Consolas, monospace;
+    }
+}
+
+.alignment-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border: none;
+    background: transparent;
+    color: rgba(255, 255, 255, 0.55);
+    border-radius: 5px;
+    cursor: pointer;
+    transition: all 0.12s;
+    padding: 0;
+
+    svg, i {
+        font-size: 14px;
+        width: 16px;
+        height: 16px;
+    }
+
+    &:hover {
+        background: rgba(255, 255, 255, 0.1);
+        color: white;
+    }
+
+    &:active {
+        background: rgba($cyan-500, 0.2);
+        color: $cyan-500;
+    }
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-4px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
 // Palette sidebar
 .editor-v2-palette {
     width: 200px;
@@ -123,6 +213,20 @@ $red-500: #ef4444;
     flex-direction: column;
     gap: 4px;
     overflow-y: auto;
+
+    .palette-group {
+        margin-bottom: 12px;
+
+        &__title {
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: rgba(255, 255, 255, 0.5);
+            font-weight: 600;
+            margin-bottom: 6px;
+            padding: 0 8px;
+        }
+    }
 
     .palette-title {
         font-size: 11px;
@@ -158,6 +262,69 @@ $red-500: #ef4444;
             font-size: 16px;
             color: $cyan-500;
         }
+
+        // Member items (drop on nodes, not canvas)
+        &--member {
+            // No special styling - same as other items
+        }
+
+        &__hint {
+            font-size: 9px;
+            color: rgba(255, 255, 255, 0.25);
+            margin-left: auto;
+            font-style: italic;
+        }
+    }
+
+    .palette-connection-modes {
+        display: flex;
+        gap: 4px;
+        padding: 0 4px;
+        margin-bottom: 8px;
+    }
+
+    .palette-connection-mode {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 8px 10px;
+        background: transparent;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 6px;
+        color: rgba(255, 255, 255, 0.5);
+        font-size: 12px;
+        cursor: pointer;
+        transition: all 0.15s;
+
+        &:hover {
+            background: rgba(255, 255, 255, 0.05);
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        &.active {
+            background: rgba($cyan-500, 0.15);
+            border-color: rgba($cyan-500, 0.4);
+            color: white;
+
+            .palette-connection-mode__icon {
+                color: $cyan-500;
+            }
+        }
+
+        &__icon {
+            font-size: 14px;
+            width: 16px;
+            text-align: center;
+        }
+    }
+
+    .palette-info {
+        padding: 8px 12px;
+        font-size: 11px;
+        color: rgba(255, 255, 255, 0.5);
+        line-height: 1.5;
+        font-style: italic;
     }
 
     .palette-divider {
@@ -305,7 +472,7 @@ $red-500: #ef4444;
     border: 1px solid rgba(255, 255, 255, 0.15);
     border-radius: 8px;
     min-width: 180px;
-    min-height: 60px;
+    min-height: 50px;
     width: 100%;
     height: 100%;
     overflow: hidden;
@@ -316,6 +483,10 @@ $red-500: #ef4444;
     &.selected {
         border-color: $cyan-500;
         box-shadow: 0 0 0 2px rgba($cyan-500, 0.3), 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+
+    &.abstract {
+        border-style: dashed;
     }
 
     &.viewpoint-wrapper {
@@ -332,11 +503,253 @@ $red-500: #ef4444;
         }
     }
 
+    &__stereotype {
+        text-align: center;
+        font-size: 10px;
+        color: rgba(255, 255, 255, 0.6);
+        padding: 4px 0 0;
+        background: linear-gradient(135deg, $slate-600, $cyan-600);
+    }
+
     &__header {
         background: linear-gradient(135deg, $slate-600, $cyan-600);
         padding: 8px 12px;
         font-weight: 600;
         cursor: text;
+        text-align: center;
+
+        .italic {
+            font-style: italic;
+        }
+
+        input {
+            background: transparent;
+            border: none;
+            outline: none;
+            color: white;
+            font: inherit;
+            font-weight: inherit;
+            width: 100%;
+            padding: 0;
+            text-align: center;
+
+            &::selection {
+                background: rgba(255, 255, 255, 0.3);
+            }
+        }
+    }
+
+    &__separator {
+        height: 1px;
+        background: rgba(255, 255, 255, 0.15);
+    }
+
+    &__section {
+        padding: 2px 0;
+    }
+
+    &__field {
+        display: flex;
+        justify-content: space-between;
+        padding: 2px 12px;
+        font-size: 11px;
+
+        .field-name {
+            color: rgba(255, 255, 255, 0.9);
+            cursor: text;
+
+            &:hover {
+                text-decoration: underline;
+                text-decoration-style: dotted;
+            }
+        }
+
+        .field-type {
+            color: $cyan-500;
+            font-style: italic;
+            cursor: text;
+
+            &:hover {
+                text-decoration: underline;
+                text-decoration-style: dotted;
+            }
+        }
+
+        .field-input {
+            background: transparent;
+            border: none;
+            outline: none;
+            color: rgba(255, 255, 255, 0.9);
+            font: inherit;
+            padding: 0;
+            width: 60px;
+            min-width: 30px;
+
+            &::selection {
+                background: rgba(255, 255, 255, 0.3);
+            }
+
+            &--type {
+                color: $cyan-500;
+                font-style: italic;
+                text-align: right;
+            }
+        }
+
+        .field-select {
+            background: $slate-600;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 3px;
+            outline: none;
+            color: $cyan-500;
+            font: inherit;
+            font-style: italic;
+            font-size: 10px;
+            padding: 1px 2px;
+            cursor: pointer;
+
+            option {
+                background: $slate-700;
+                color: white;
+                font-style: normal;
+            }
+        }
+
+        &.operation .field-name {
+            font-style: italic;
+            color: rgba(255, 255, 255, 0.8);
+        }
+    }
+
+    &__empty-hint {
+        text-align: center;
+        font-size: 11px;
+        color: rgba(255, 255, 255, 0.2);
+        padding: 12px;
+        font-style: italic;
+    }
+
+    // Drop target state
+    &.drop-target {
+        border-color: $cyan-500;
+        box-shadow: 0 0 0 2px rgba($cyan-500, 0.25), inset 0 0 20px rgba($cyan-500, 0.05);
+    }
+}
+
+// Enum Node
+$purple-600: #7c3aed;
+$purple-700: #6d28d9;
+
+.enum-node {
+    background: $slate-700;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 8px;
+    min-width: 140px;
+    min-height: 50px;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    font-size: 13px;
+    color: white;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+
+    &.selected {
+        border-color: $purple-600;
+        box-shadow: 0 0 0 2px rgba($purple-600, 0.3), 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+
+    &__stereotype {
+        text-align: center;
+        font-size: 10px;
+        color: rgba(255, 255, 255, 0.6);
+        padding: 4px 0 0;
+        background: linear-gradient(135deg, $slate-600, $purple-600);
+    }
+
+    &__header {
+        background: linear-gradient(135deg, $slate-600, $purple-600);
+        padding: 8px 12px;
+        font-weight: 600;
+        cursor: text;
+        text-align: center;
+
+        input {
+            background: transparent;
+            border: none;
+            outline: none;
+            color: white;
+            font: inherit;
+            font-weight: inherit;
+            width: 100%;
+            padding: 0;
+            text-align: center;
+
+            &::selection {
+                background: rgba(255, 255, 255, 0.3);
+            }
+        }
+    }
+
+    &__separator {
+        height: 1px;
+        background: rgba(255, 255, 255, 0.15);
+    }
+
+    &__literals {
+        padding: 4px 0;
+    }
+
+    &__literal {
+        padding: 2px 12px;
+        font-size: 11px;
+        color: rgba(255, 255, 255, 0.8);
+        font-family: 'IBM Plex Mono', Monaco, Consolas, monospace;
+    }
+
+    &__empty-hint {
+        text-align: center;
+        font-size: 11px;
+        color: rgba(255, 255, 255, 0.2);
+        padding: 12px;
+        font-style: italic;
+    }
+
+    // Drop target state
+    &.drop-target {
+        border-color: $purple-600;
+        box-shadow: 0 0 0 2px rgba($purple-600, 0.25), inset 0 0 20px rgba($purple-600, 0.05);
+    }
+}
+
+// Package Node (UML tab style)
+.package-node {
+    min-width: 200px;
+    min-height: 120px;
+    width: 100%;
+    height: 100%;
+    font-size: 13px;
+    color: white;
+
+    &.selected {
+        .package-node__tab,
+        .package-node__body {
+            border-color: $green-500;
+        }
+
+        .package-node__body {
+            box-shadow: 0 0 0 2px rgba($green-500, 0.3), 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+    }
+
+    &__tab {
+        display: inline-block;
+        background: $slate-700;
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        border-bottom: none;
+        border-radius: 6px 6px 0 0;
+        padding: 4px 12px;
+        font-weight: 600;
+        font-size: 12px;
 
         input {
             background: transparent;
@@ -354,75 +767,13 @@ $red-500: #ef4444;
         }
     }
 
-    &__field {
-        display: flex;
-        justify-content: space-between;
-        padding: 4px 12px;
-        border-top: 1px solid rgba(255, 255, 255, 0.05);
-        font-size: 11px;
-
-        .field-name {
-            color: rgba(255, 255, 255, 0.9);
-        }
-
-        .field-type {
-            color: $cyan-500;
-            font-style: italic;
-        }
-    }
-}
-
-// Nested Flow Node
-.nested-flow-node {
-    background: $slate-700;
-    border: 1px dashed rgba(255, 255, 255, 0.25);
-    border-radius: 8px;
-    min-width: 250px;
-    min-height: 150px;
-    width: 100%;
-    height: 100%;
-    color: white;
-    position: relative;
-
-    &__header {
-        padding: 8px 12px;
-        font-weight: 600;
-        font-size: 13px;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        background: rgba($green-500, 0.15);
-        border-radius: 8px 8px 0 0;
-    }
-
-    &__canvas {
-        position: relative;
-        min-height: 100px;
-        padding: 8px;
-    }
-
-    .nested-vertex {
-        background: $slate-600;
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        border-radius: 6px;
-        padding: 6px 10px;
-        font-size: 11px;
-        cursor: grab;
-        user-select: none;
-        touch-action: none;
-        white-space: nowrap;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-        transition: box-shadow 0.15s, transform 0.15s, border-color 0.15s;
-
-        &.dragging {
-            cursor: grabbing;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
-            transform: scale(1.05);
-            z-index: 10;
-            border-color: $cyan-500;
-        }
-
-        &:hover:not(.dragging) {
-            border-color: $cyan-500;
-        }
+    &__body {
+        background: $slate-700;
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        border-radius: 0 8px 8px 8px;
+        min-height: 80px;
+        height: calc(100% - 28px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
     }
 }
 
@@ -442,7 +793,90 @@ $red-500: #ef4444;
     border: 1px solid rgba($red-500, 0.3);
 }
 
-// Manhattan edge
+// Reference edge
+.reference-edge {
+    stroke: rgba(255, 255, 255, 0.5);
+    stroke-width: 1.5;
+    fill: none;
+
+    &.selected {
+        stroke: $cyan-500;
+        stroke-width: 2;
+    }
+
+    &.composition {
+        stroke: $green-500;
+    }
+
+    &.aggregation {
+        stroke: #f59e0b; // amber
+    }
+
+    &.association {
+        stroke: rgba(255, 255, 255, 0.5);
+    }
+}
+
+// Inheritance edge
+.inheritance-edge {
+    stroke: rgba(255, 255, 255, 0.4);
+    stroke-width: 1.5;
+    fill: none;
+
+    &.selected {
+        stroke: $cyan-500;
+        stroke-width: 2;
+    }
+}
+
+// Reference edge markers (SVG defs)
+.reference-marker {
+    &--filled {
+        fill: $green-500;
+        stroke: none;
+    }
+
+    &--hollow {
+        fill: $slate-800;
+        stroke: #f59e0b;
+        stroke-width: 1.5;
+    }
+
+    &--arrow {
+        fill: none;
+        stroke: rgba(255, 255, 255, 0.5);
+        stroke-width: 1.5;
+    }
+}
+
+// Reference edge badges
+.reference-badge {
+    font-size: 10px;
+    pointer-events: none;
+
+    &__bg {
+        fill: $slate-700;
+        stroke: rgba(255, 255, 255, 0.2);
+        stroke-width: 1;
+    }
+
+    &__text {
+        fill: rgba(255, 255, 255, 0.8);
+        font-family: 'IBM Plex Mono', Monaco, Consolas, monospace;
+        font-size: 9px;
+        text-anchor: middle;
+        dominant-baseline: central;
+    }
+
+    &__kind {
+        fill: rgba(255, 255, 255, 0.6);
+        font-size: 11px;
+        text-anchor: middle;
+        dominant-baseline: central;
+    }
+}
+
+// Manhattan edge (legacy)
 .react-flow__edge-path {
     stroke: rgba(255, 255, 255, 0.4);
     stroke-width: 1.5;
@@ -510,30 +944,76 @@ $red-500: #ef4444;
     fill: rgba(255, 255, 255, 0.6);
 }
 
-// Properties Panel
+// ============================================
+// PROPERTIES PANEL — Professional Design
+// ============================================
+
+$panel-bg: #1a2332;
+$panel-section-bg: #253347;
+$panel-border: rgba(255, 255, 255, 0.08);
+$panel-text: rgba(255, 255, 255, 0.85);
+$panel-text-muted: rgba(255, 255, 255, 0.45);
+$panel-text-dim: rgba(255, 255, 255, 0.3);
+$panel-input-bg: rgba(0, 0, 0, 0.25);
+$panel-input-border: rgba(255, 255, 255, 0.12);
+
 .properties-panel {
-    width: 240px;
-    background: $slate-700;
-    border-left: 1px solid rgba(255, 255, 255, 0.1);
+    width: 280px;
+    background: $panel-bg;
+    border-left: 1px solid $panel-border;
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    flex-shrink: 0;
+    font-size: 13px;
+    color: $panel-text;
+
+    &__scroll {
+        flex: 1;
+        overflow-y: auto;
+        overflow-x: hidden;
+
+        &::-webkit-scrollbar {
+            width: 5px;
+        }
+        &::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        &::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+            &:hover { background: rgba(255, 255, 255, 0.2); }
+        }
+    }
 
     &__header {
         display: flex;
         align-items: center;
-        gap: 8px;
-        padding: 12px;
-        font-size: 12px;
-        font-weight: 600;
-        color: rgba(255, 255, 255, 0.9);
-        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        background: $slate-800;
+        gap: 10px;
+        padding: 14px 16px;
+        background: $panel-section-bg;
+        border-bottom: 1px solid $panel-border;
+        flex-shrink: 0;
 
         i {
-            font-size: 14px;
+            font-size: 15px;
             color: $cyan-500;
+            width: 20px;
+            text-align: center;
         }
+    }
+
+    &__title {
+        font-weight: 600;
+        font-size: 13px;
+        letter-spacing: 0.01em;
+    }
+
+    &__subtitle {
+        font-size: 11px;
+        color: $panel-text-muted;
+        margin-left: auto;
+        font-family: 'IBM Plex Mono', Monaco, Consolas, monospace;
     }
 
     &__empty {
@@ -543,153 +1023,440 @@ $red-500: #ef4444;
         align-items: center;
         justify-content: center;
         gap: 12px;
-        color: rgba(255, 255, 255, 0.4);
-        font-size: 12px;
+        color: $panel-text-dim;
+        font-size: 13px;
+        padding: 40px;
+        text-align: center;
 
         i {
-            font-size: 32px;
+            font-size: 28px;
             opacity: 0.5;
+        }
+
+        span {
+            line-height: 1.5;
+        }
+    }
+}
+
+// ============================================
+// SECTIONS — Collapsible
+// ============================================
+
+.prop-section {
+    border-bottom: 1px solid $panel-border;
+
+    &__header {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 10px 16px;
+        cursor: pointer;
+        user-select: none;
+        transition: background 0.12s;
+
+        &:hover {
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .chevron {
+            font-size: 10px;
+            color: $panel-text-muted;
+            transition: transform 0.2s;
+            width: 12px;
+            text-align: center;
+        }
+
+        &.collapsed .chevron {
+            transform: rotate(-90deg);
         }
     }
 
-    &__content {
-        flex: 1;
-        overflow-y: auto;
-        padding: 12px;
-    }
-}
-
-.property-group {
-    margin-bottom: 12px;
-
-    &:last-child {
-        margin-bottom: 0;
-    }
-}
-
-.property-label {
-    display: block;
-    font-size: 10px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: rgba(255, 255, 255, 0.5);
-    margin-bottom: 4px;
-}
-
-.property-value {
-    font-size: 12px;
-    color: rgba(255, 255, 255, 0.8);
-    padding: 6px 8px;
-    background: $slate-800;
-    border-radius: 4px;
-
-    &.readonly {
-        color: rgba(255, 255, 255, 0.5);
-        font-family: 'IBM Plex Mono', Monaco, Consolas, monospace;
+    &__title {
         font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: $panel-text-muted;
+        font-weight: 500;
+    }
+
+    &__count {
+        font-size: 10px;
+        color: $panel-text-dim;
+        margin-left: auto;
+        font-family: 'IBM Plex Mono', Monaco, Consolas, monospace;
+        background: rgba(255, 255, 255, 0.06);
+        padding: 1px 6px;
+        border-radius: 8px;
+    }
+
+    &__body {
+        padding: 0 16px 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    &__actions {
+        margin-left: auto;
     }
 }
 
-.property-input {
-    width: 100%;
-    padding: 6px 8px;
-    background: $slate-800;
-    border: 1px solid rgba(255, 255, 255, 0.1);
+// Section add button (small)
+.prop-section-add-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    border: none;
+    background: transparent;
+    color: $panel-text-muted;
+    cursor: pointer;
     border-radius: 4px;
-    color: white;
-    font-size: 12px;
+    font-size: 14px;
+    transition: all 0.15s;
+
+    &:hover {
+        color: $cyan-500;
+        background: rgba($cyan-500, 0.1);
+    }
+}
+
+// ============================================
+// FORM ELEMENTS
+// ============================================
+
+.prop-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.prop-label {
+    font-size: 11px;
+    color: $panel-text-muted;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+}
+
+.prop-input {
+    background: $panel-input-bg;
+    border: 1px solid $panel-input-border;
+    border-radius: 6px;
+    color: $panel-text;
+    font-size: 13px;
+    padding: 7px 10px;
     outline: none;
-    transition: border-color 0.15s;
+    width: 100%;
+    box-sizing: border-box;
+    transition: border-color 0.15s, box-shadow 0.15s;
+    font-family: inherit;
+
+    &::placeholder {
+        color: $panel-text-dim;
+    }
+
+    &:hover {
+        border-color: rgba(255, 255, 255, 0.2);
+    }
 
     &:focus {
         border-color: $cyan-500;
+        box-shadow: 0 0 0 2px rgba($cyan-500, 0.12);
     }
 
-    &::placeholder {
-        color: rgba(255, 255, 255, 0.3);
+    &--sm {
+        padding: 5px 8px;
+        font-size: 12px;
+        flex: 1;
+        min-width: 0;
+    }
+
+    &--xs {
+        width: 52px;
+        text-align: center;
+        font-family: 'IBM Plex Mono', Monaco, Consolas, monospace;
+        font-size: 12px;
+        padding: 5px 6px;
+    }
+
+    &--mono {
+        font-family: 'IBM Plex Mono', Monaco, Consolas, monospace;
+        font-size: 12px;
     }
 }
 
-.property-row {
+.prop-select {
+    background: $panel-input-bg;
+    border: 1px solid $panel-input-border;
+    border-radius: 6px;
+    color: $panel-text;
+    font-size: 12px;
+    padding: 5px 8px;
+    outline: none;
+    cursor: pointer;
+    min-width: 80px;
+    transition: border-color 0.15s;
+
+    &:hover { border-color: rgba(255, 255, 255, 0.2); }
+    &:focus { border-color: $cyan-500; }
+
+    option {
+        background: $panel-bg;
+        color: $panel-text;
+    }
+}
+
+.prop-checkbox {
     display: flex;
+    align-items: center;
     gap: 8px;
+    cursor: pointer;
+    font-size: 12px;
+    color: $panel-text;
+    padding: 4px 0;
+
+    input[type="checkbox"] {
+        appearance: none;
+        width: 16px;
+        height: 16px;
+        border: 1.5px solid $panel-input-border;
+        border-radius: 4px;
+        background: $panel-input-bg;
+        cursor: pointer;
+        position: relative;
+        flex-shrink: 0;
+        transition: all 0.15s;
+
+        &:checked {
+            background: $cyan-500;
+            border-color: $cyan-500;
+
+            &::after {
+                content: '';
+                position: absolute;
+                left: 4.5px;
+                top: 1.5px;
+                width: 5px;
+                height: 9px;
+                border: solid white;
+                border-width: 0 2px 2px 0;
+                transform: rotate(45deg);
+            }
+        }
+
+        &:hover {
+            border-color: rgba(255, 255, 255, 0.3);
+        }
+    }
 }
 
-.property-coord {
-    flex: 1;
+// ============================================
+// LIST ITEMS (Attributes, Literals, Operations)
+// ============================================
+
+.prop-list-item {
     display: flex;
     align-items: center;
     gap: 6px;
-    padding: 6px 8px;
-    background: $slate-800;
+    padding: 4px 0;
     border-radius: 4px;
-    font-size: 11px;
 
-    span:first-child {
-        color: rgba(255, 255, 255, 0.5);
-        font-weight: 600;
-    }
-
-    span:last-child {
-        color: rgba(255, 255, 255, 0.8);
-        font-family: 'IBM Plex Mono', Monaco, Consolas, monospace;
+    &:hover {
+        .prop-remove-btn { opacity: 1; }
     }
 }
 
-.property-attributes {
-    background: $slate-800;
-    border-radius: 4px;
-    overflow: hidden;
-}
-
-.property-attribute {
+.prop-remove-btn {
     display: flex;
-    justify-content: space-between;
-    padding: 6px 8px;
-    font-size: 11px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border: none;
+    background: transparent;
+    color: $panel-text-dim;
+    cursor: pointer;
+    border-radius: 4px;
+    font-size: 13px;
+    flex-shrink: 0;
+    opacity: 0;
+    transition: all 0.15s;
 
-    &:last-child {
-        border-bottom: none;
-    }
-
-    .attr-name {
-        color: rgba(255, 255, 255, 0.8);
-    }
-
-    .attr-type {
-        color: $cyan-500;
-        font-style: italic;
+    &:hover {
+        color: #f87171;
+        background: rgba(239, 68, 68, 0.1);
     }
 }
 
-.property-empty-list {
-    padding: 8px;
+// ============================================
+// REFERENCE KIND SELECTOR
+// ============================================
+
+.prop-kind-selector {
+    display: flex;
+    gap: 4px;
+    background: $panel-input-bg;
+    border-radius: 8px;
+    padding: 3px;
+}
+
+.prop-kind-option {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    padding: 6px 8px;
+    border: none;
+    background: transparent;
+    color: $panel-text-muted;
+    border-radius: 6px;
+    cursor: pointer;
     font-size: 11px;
-    color: rgba(255, 255, 255, 0.4);
+    transition: all 0.15s;
+    white-space: nowrap;
+
+    &:hover {
+        color: $panel-text;
+        background: rgba(255, 255, 255, 0.05);
+    }
+
+    &.active {
+        background: $panel-section-bg;
+        color: white;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+    }
+
+    &__icon {
+        font-size: 12px;
+    }
+
+    &__label {
+        font-size: 11px;
+        text-transform: capitalize;
+    }
+}
+
+// ============================================
+// EDGE TYPE SELECTOR
+// ============================================
+
+.prop-edge-type-selector {
+    display: flex;
+    gap: 4px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 8px;
+    padding: 3px;
+}
+
+.prop-edge-type {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 7px 10px;
+    border: none;
+    background: transparent;
+    color: $panel-text-muted;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 12px;
+    transition: all 0.15s;
+
+    &:hover:not(:disabled) {
+        color: $panel-text;
+        background: rgba(255, 255, 255, 0.05);
+    }
+
+    &.active {
+        background: rgba($cyan-500, 0.15);
+        color: white;
+        cursor: default;
+
+        i { color: $cyan-500; }
+    }
+
+    &:disabled {
+        cursor: default;
+    }
+
+    i { font-size: 13px; }
+}
+
+// ============================================
+// CARDINALITY
+// ============================================
+
+.prop-cardinality {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    &__inputs {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    &__dot {
+        color: $panel-text-dim;
+        font-size: 11px;
+    }
+
+    &__preview {
+        font-family: 'IBM Plex Mono', Monaco, Consolas, monospace;
+        font-size: 12px;
+        color: $cyan-500;
+        background: rgba($cyan-500, 0.1);
+        padding: 4px 8px;
+        border-radius: 4px;
+        margin-left: auto;
+    }
+}
+
+// ============================================
+// INFO ELEMENTS
+// ============================================
+
+.prop-badge {
+    display: inline-flex;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.06);
+    color: $panel-text-muted;
+    font-size: 11px;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-family: 'IBM Plex Mono', Monaco, Consolas, monospace;
+    gap: 4px;
+}
+
+.prop-row {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.prop-info {
+    font-size: 12px;
+    color: $panel-text-muted;
+}
+
+.prop-hint {
+    font-size: 10px;
+    color: $panel-text-dim;
+    font-style: italic;
+    margin-top: -4px;
+}
+
+.prop-empty {
+    font-size: 11px;
+    color: $panel-text-dim;
     font-style: italic;
     text-align: center;
-}
-
-.property-connection {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    padding: 6px 8px;
-    background: $slate-800;
-    border-radius: 4px;
-    font-size: 11px;
-
-    .conn-node {
-        color: rgba(255, 255, 255, 0.8);
-        font-family: 'IBM Plex Mono', Monaco, Consolas, monospace;
-    }
-
-    .conn-handle {
-        color: rgba(255, 255, 255, 0.5);
-        font-size: 10px;
-    }
+    padding: 8px 0;
 }
 
 // Connection line (while dragging)
@@ -748,5 +1515,11 @@ $red-500: #ef4444;
             width: 16px;
             text-align: center;
         }
+    }
+
+    &__divider {
+        height: 1px;
+        background: rgba(255, 255, 255, 0.08);
+        margin: 3px 8px;
     }
 }

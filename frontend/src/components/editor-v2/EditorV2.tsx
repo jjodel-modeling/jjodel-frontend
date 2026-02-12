@@ -8,7 +8,6 @@ import {
     addEdge,
     useReactFlow,
     ReactFlowProvider,
-    MarkerType,
     SelectionMode,
     type Node,
     type Edge,
@@ -19,117 +18,140 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
-import ClassNode, { type ClassNodeData } from './nodes/ClassNode';
-import NestedFlowNode, { type NestedFlowNodeData } from './nodes/NestedFlowNode';
-import ManhattanEdge from './edges/ManhattanEdge';
+import ClassNode from './nodes/ClassNode';
+import EnumNode from './nodes/EnumNode';
+import PackageNode from './nodes/PackageNode';
+import ReferenceEdge from './edges/ReferenceEdge';
+import InheritanceEdge from './edges/InheritanceEdge';
 import PalettePanel from './panels/PalettePanel';
 import PropertiesPanel from './panels/PropertiesPanel';
 import Toolbar from './Toolbar';
-import ContextMenu from './ContextMenu';
+import AlignmentToolbar from './AlignmentToolbar';
+import ContextMenu, { type ContextMenuItem } from './ContextMenu';
 import { useHistory } from './hooks/useHistory';
+import { useAlignment } from './hooks/useAlignment';
 import { EditorContext } from './contexts/EditorContext';
+import type { ClassNodeData, EnumNodeData, PackageNodeData, ReferenceEdgeData, InheritanceEdgeData } from './types';
 
 import './EditorV2.scss';
 
 // Register custom node types
 const nodeTypes: NodeTypes = {
     classNode: ClassNode,
-    nestedFlowNode: NestedFlowNode,
+    enumNode: EnumNode,
+    packageNode: PackageNode,
 };
 
 // Register custom edge types
 const edgeTypes: EdgeTypes = {
-    manhattan: ManhattanEdge,
+    reference: ReferenceEdge,
+    inheritance: InheritanceEdge,
 };
 
-// Initial nodes for demonstration (including Obstacle node for testing routing)
+// Initial nodes for metamodel demonstration
 const initialNodes: Node[] = [
+    // Package
     {
-        id: '1',
+        id: 'pkg_1',
+        type: 'packageNode',
+        position: { x: 50, y: 50 },
+        style: { zIndex: -1, width: 600, height: 400 },
+        data: { label: 'myMetamodel' } as PackageNodeData,
+    },
+    // Classes
+    {
+        id: 'class_1',
         type: 'classNode',
-        position: { x: 100, y: 100 },
+        position: { x: 100, y: 130 },
         data: {
             label: 'Person',
+            isAbstract: false,
             attributes: [
-                { name: 'name', type: 'EString' },
-                { name: 'age', type: 'EInt' },
+                { id: 'a1', name: 'name', type: 'EString', lowerBound: 1, upperBound: 1 },
+                { id: 'a2', name: 'age', type: 'EInt', lowerBound: 0, upperBound: 1 },
             ],
         } as ClassNodeData,
     },
     {
-        id: '2',
+        id: 'class_2',
         type: 'classNode',
-        position: { x: 500, y: 100 },
+        position: { x: 420, y: 130 },
         data: {
             label: 'Address',
+            isAbstract: false,
             attributes: [
-                { name: 'street', type: 'EString' },
-                { name: 'city', type: 'EString' },
+                { id: 'a3', name: 'street', type: 'EString', lowerBound: 1, upperBound: 1 },
+                { id: 'a4', name: 'city', type: 'EString', lowerBound: 1, upperBound: 1 },
+                { id: 'a5', name: 'zipCode', type: 'EString', lowerBound: 0, upperBound: 1 },
             ],
         } as ClassNodeData,
     },
     {
-        id: '5',
+        id: 'class_3',
         type: 'classNode',
-        position: { x: 300, y: 100 },
+        position: { x: 100, y: 310 },
         data: {
-            label: 'Obstacle',
-            attributes: [{ name: 'test', type: 'EBool' }],
-        } as ClassNodeData,
-    },
-    {
-        id: '3',
-        type: 'nestedFlowNode',
-        position: { x: 100, y: 350 },
-        data: {
-            label: 'StateMachine',
-            children: [
-                { id: 'inner-1', label: 'Idle', position: { x: 20, y: 40 } },
-                { id: 'inner-2', label: 'Running', position: { x: 150, y: 40 } },
+            label: 'NamedElement',
+            isAbstract: true,
+            attributes: [
+                { id: 'a6', name: 'name', type: 'EString', lowerBound: 1, upperBound: 1 },
             ],
-        } as NestedFlowNodeData,
-    },
-    {
-        id: '4',
-        type: 'classNode',
-        position: { x: 500, y: 350 },
-        data: {
-            label: 'CustomRendered',
-            jsxString: `React.createElement('div', {
-                style: { padding: '12px', background: 'linear-gradient(135deg, #0ea5e9, #334155)', borderRadius: '8px', color: 'white', width: '100%', height: '100%', boxSizing: 'border-box' }
-            },
-                React.createElement('h4', { style: { margin: 0 } }, data.label),
-                React.createElement('p', { style: { margin: '4px 0 0', fontSize: '11px', opacity: 0.8 } }, 'Rendered via viewpoint')
-            )`,
         } as ClassNodeData,
+    },
+    // Enum
+    {
+        id: 'enum_1',
+        type: 'enumNode',
+        position: { x: 420, y: 310 },
+        data: {
+            label: 'Gender',
+            literals: [
+                { id: 'l1', name: 'MALE', value: 0 },
+                { id: 'l2', name: 'FEMALE', value: 1 },
+                { id: 'l3', name: 'OTHER', value: 2 },
+            ],
+        } as EnumNodeData,
     },
 ];
 
 // Initial edges for demonstration
 const initialEdges: Edge[] = [
+    // Person -> Address (composition)
     {
-        id: 'e1-2',
-        source: '1',
-        target: '2',
+        id: 'ref_1',
+        source: 'class_1',
+        target: 'class_2',
         sourceHandle: 'right',
         targetHandle: 'left',
-        type: 'manhattan',
-        label: 'livesAt',
+        type: 'reference',
+        label: 'addresses',
+        data: {
+            reference: {
+                id: 'ref_1',
+                name: 'addresses',
+                kind: 'composition',
+                targetClassId: 'class_2',
+                lowerBound: 0,
+                upperBound: -1,
+                containment: true,
+            },
+        } as ReferenceEdgeData,
+    },
+    // Person extends NamedElement (inheritance)
+    {
+        id: 'inh_1',
+        source: 'class_1',
+        target: 'class_3',
+        sourceHandle: 'bottom',
+        targetHandle: 'top',
+        type: 'inheritance',
+        data: {} as InheritanceEdgeData,
     },
 ];
 
-// Default edge options with arrow marker
+// Default edge options
 const defaultEdgeOptions = {
-    type: 'manhattan',
-    markerEnd: {
-        type: MarkerType.ArrowClosed,
-        color: 'rgba(255, 255, 255, 0.5)',
-        width: 20,
-        height: 20,
-    },
-    style: {
-        strokeWidth: 1.5,
-    },
+    type: 'reference',
 };
 
 // Context menu state type
@@ -138,6 +160,8 @@ interface ContextMenuState {
     y: number;
     nodeId?: string;
     edgeId?: string;
+    isMultiSelect?: boolean;
+    selectedCount?: number;
 }
 
 // Clipboard state type
@@ -157,6 +181,7 @@ function EditorV2Inner() {
     const { screenToFlowPosition, getNodes, getEdges, zoomIn, zoomOut, fitView } = useReactFlow();
     const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
     const [snapEnabled, setSnapEnabled] = useState(true);
+    const [connectionMode, setConnectionMode] = useState<'reference' | 'inheritance'>('reference');
     const clipboard = useRef<ClipboardState>({ nodes: [], edges: [] });
 
     // History for undo/redo
@@ -164,22 +189,63 @@ function EditorV2Inner() {
     // Force re-render to update canUndo/canRedo
     const [, forceUpdate] = useState({});
 
+    // Alignment tools
+    const {
+        alignLeft,
+        alignCenterVertical,
+        alignRight,
+        alignTop,
+        alignCenterHorizontal,
+        alignBottom,
+        distributeHorizontally,
+        distributeVertically,
+    } = useAlignment();
+
     // Get selected nodes and edges for properties panel
     const selectedNodes = useMemo(() => nodes.filter((n) => n.selected), [nodes]);
     const selectedEdges = useMemo(() => edges.filter((e) => e.selected), [edges]);
 
-    // Handle new connections between nodes
+    // Handle new connections between nodes - creates reference or inheritance edge
     const onConnect = useCallback(
         (connection: Connection) => {
             takeSnapshot();
-            const newEdge: Edge = {
-                ...connection,
-                id: `e_${Date.now()}`,
-                type: 'manhattan',
-            } as Edge;
-            setEdges((eds) => addEdge(newEdge, eds));
+
+            if (connectionMode === 'inheritance') {
+                const newEdge: Edge = {
+                    id: `inh_${Date.now()}`,
+                    source: connection.source!,
+                    target: connection.target!,
+                    sourceHandle: connection.sourceHandle,
+                    targetHandle: connection.targetHandle,
+                    type: 'inheritance',
+                    data: {} as InheritanceEdgeData,
+                };
+                setEdges((eds) => addEdge(newEdge, eds));
+            } else {
+                const newEdge: Edge = {
+                    id: `ref_${Date.now()}`,
+                    source: connection.source!,
+                    target: connection.target!,
+                    sourceHandle: connection.sourceHandle,
+                    targetHandle: connection.targetHandle,
+                    type: 'reference',
+                    label: 'newRef',
+                    data: {
+                        reference: {
+                            id: `ref_${Date.now()}`,
+                            name: 'newRef',
+                            kind: 'association',
+                            targetClassId: connection.target!,
+                            lowerBound: 0,
+                            upperBound: -1,
+                            containment: false,
+                        },
+                    } as ReferenceEdgeData,
+                };
+                setEdges((eds) => addEdge(newEdge, eds));
+            }
         },
-        [setEdges, takeSnapshot]
+        [connectionMode, setEdges, takeSnapshot]
     );
 
     // Handle drop from palette
@@ -187,12 +253,14 @@ function EditorV2Inner() {
         (event: React.DragEvent) => {
             event.preventDefault();
 
-            const type = event.dataTransfer.getData('application/reactflow');
-            if (!type) return;
+            const rawType = event.dataTransfer.getData('application/reactflow');
+            if (!rawType) return;
+
+            // Members must be dropped on nodes, not canvas
+            if (['attribute', 'operation', 'literal'].includes(rawType)) return;
 
             takeSnapshot();
 
-            // Convert screen coordinates to flow coordinates (accounts for pan/zoom)
             const position = screenToFlowPosition({
                 x: event.clientX,
                 y: event.clientY,
@@ -200,28 +268,59 @@ function EditorV2Inner() {
 
             let newNode: Node;
 
-            if (type === 'classNode') {
-                newNode = {
-                    id: `node_${Date.now()}`,
-                    type: 'classNode',
-                    position,
-                    data: {
-                        label: 'NewClass',
-                        attributes: [],
-                    } as ClassNodeData,
-                };
-            } else if (type === 'nestedFlowNode') {
-                newNode = {
-                    id: `node_${Date.now()}`,
-                    type: 'nestedFlowNode',
-                    position,
-                    data: {
-                        label: 'Container',
-                        children: [],
-                    } as NestedFlowNodeData,
-                };
-            } else {
-                return;
+            switch (rawType) {
+                case 'classNode':
+                    newNode = {
+                        id: `class_${Date.now()}`,
+                        type: 'classNode',
+                        position,
+                        data: {
+                            label: 'NewClass',
+                            isAbstract: false,
+                            attributes: [],
+                        } as ClassNodeData,
+                    };
+                    break;
+
+                case 'classNode:abstract':
+                    newNode = {
+                        id: `class_${Date.now()}`,
+                        type: 'classNode',
+                        position,
+                        data: {
+                            label: 'NewAbstractClass',
+                            isAbstract: true,
+                            attributes: [],
+                        } as ClassNodeData,
+                    };
+                    break;
+
+                case 'enumNode':
+                    newNode = {
+                        id: `enum_${Date.now()}`,
+                        type: 'enumNode',
+                        position,
+                        data: {
+                            label: 'NewEnum',
+                            literals: [],
+                        } as EnumNodeData,
+                    };
+                    break;
+
+                case 'packageNode':
+                    newNode = {
+                        id: `pkg_${Date.now()}`,
+                        type: 'packageNode',
+                        position,
+                        style: { zIndex: -1 },
+                        data: {
+                            label: 'NewPackage',
+                        } as PackageNodeData,
+                    };
+                    break;
+
+                default:
+                    return;
             }
 
             setNodes((nds) => [...nds, newNode]);
@@ -245,7 +344,6 @@ function EditorV2Inner() {
             const nodeIds = new Set(selectedNodes.map((n) => n.id));
 
             setNodes((nds) => nds.filter((n) => !nodeIds.has(n.id)));
-            // Remove selected edges + edges connected to deleted nodes
             setEdges((eds) =>
                 eds.filter(
                     (e) =>
@@ -287,7 +385,7 @@ function EditorV2Inner() {
             takeSnapshot();
             const newNode: Node = {
                 ...node,
-                id: `node_${Date.now()}`,
+                id: `${node.type}_${Date.now()}`,
                 position: {
                     x: node.position.x + 50,
                     y: node.position.y + 50,
@@ -325,7 +423,6 @@ function EditorV2Inner() {
         const selectedNodes = getNodes().filter((n) => n.selected);
         const selectedEdges = getEdges().filter((e) => e.selected);
 
-        // Also include edges between selected nodes
         const nodeIds = new Set(selectedNodes.map((n) => n.id));
         const connectedEdges = getEdges().filter(
             (e) => nodeIds.has(e.source) && nodeIds.has(e.target)
@@ -351,9 +448,8 @@ function EditorV2Inner() {
         const now = Date.now();
         const idMap = new Map<string, string>();
 
-        // Create new nodes with offset and new IDs
         const newNodes = clipboard.current.nodes.map((node, i) => {
-            const newId = `node_${now}_${i}`;
+            const newId = `${node.type}_${now}_${i}`;
             idMap.set(node.id, newId);
             return {
                 ...node,
@@ -366,18 +462,16 @@ function EditorV2Inner() {
             };
         });
 
-        // Create new edges with updated source/target IDs
         const newEdges = clipboard.current.edges
             .filter((e) => idMap.has(e.source) && idMap.has(e.target))
             .map((edge, i) => ({
                 ...edge,
-                id: `e_${now}_${i}`,
+                id: `ref_${now}_${i}`,
                 source: idMap.get(edge.source)!,
                 target: idMap.get(edge.target)!,
                 selected: false,
             }));
 
-        // Deselect existing and add new
         setNodes((nds) => [
             ...nds.map((n) => ({ ...n, selected: false })),
             ...newNodes,
@@ -397,53 +491,46 @@ function EditorV2Inner() {
     // Keyboard handler
     const onKeyDown = useCallback(
         (event: React.KeyboardEvent) => {
-            // Don't handle if we're in an input field
             if ((event.target as HTMLElement).tagName === 'INPUT') return;
+            if ((event.target as HTMLElement).tagName === 'SELECT') return;
 
             const isMod = event.ctrlKey || event.metaKey;
 
-            // Delete
             if (event.key === 'Delete' || event.key === 'Backspace') {
                 deleteSelected();
                 return;
             }
 
-            // Undo: Ctrl+Z
             if (isMod && event.key === 'z' && !event.shiftKey) {
                 event.preventDefault();
                 handleUndo();
                 return;
             }
 
-            // Redo: Ctrl+Shift+Z or Ctrl+Y
             if (isMod && ((event.key === 'z' && event.shiftKey) || event.key === 'y')) {
                 event.preventDefault();
                 handleRedo();
                 return;
             }
 
-            // Copy: Ctrl+C
             if (isMod && event.key === 'c') {
                 event.preventDefault();
                 copySelected();
                 return;
             }
 
-            // Cut: Ctrl+X
             if (isMod && event.key === 'x') {
                 event.preventDefault();
                 cutSelected();
                 return;
             }
 
-            // Paste: Ctrl+V
             if (isMod && event.key === 'v') {
                 event.preventDefault();
                 pasteClipboard();
                 return;
             }
 
-            // Select All: Ctrl+A
             if (isMod && event.key === 'a') {
                 event.preventDefault();
                 selectAll();
@@ -453,13 +540,26 @@ function EditorV2Inner() {
         [deleteSelected, handleUndo, handleRedo, copySelected, cutSelected, pasteClipboard, selectAll]
     );
 
+    // Wrap alignment actions with snapshot for undo support
+    const withSnapshot = useCallback((action: () => void) => {
+        takeSnapshot();
+        action();
+    }, [takeSnapshot]);
+
     // Context menu handlers
     const onNodeContextMenu = useCallback(
         (event: React.MouseEvent, node: Node) => {
             event.preventDefault();
-            setContextMenu({ x: event.clientX, y: event.clientY, nodeId: node.id });
+            const selectedCount = getNodes().filter(n => n.selected).length;
+            setContextMenu({
+                x: event.clientX,
+                y: event.clientY,
+                nodeId: node.id,
+                isMultiSelect: selectedCount > 1,
+                selectedCount,
+            });
         },
-        []
+        [getNodes]
     );
 
     const onEdgeContextMenu = useCallback(
@@ -478,8 +578,37 @@ function EditorV2Inner() {
         setContextMenu(null);
     }, []);
 
-    // Build context menu items based on what was clicked
-    const getContextMenuItems = () => {
+    const getContextMenuItems = (): ContextMenuItem[] => {
+        // Multi-select context menu with alignment options
+        if (contextMenu?.isMultiSelect && contextMenu.selectedCount && contextMenu.selectedCount > 1) {
+            const items: ContextMenuItem[] = [
+                { label: 'Align left', icon: 'bi-align-start', onClick: () => withSnapshot(alignLeft) },
+                { label: 'Align center', icon: 'bi-align-center', onClick: () => withSnapshot(alignCenterVertical) },
+                { label: 'Align right', icon: 'bi-align-end', onClick: () => withSnapshot(alignRight) },
+                { divider: true },
+                { label: 'Align top', icon: 'bi-align-top', onClick: () => withSnapshot(alignTop) },
+                { label: 'Align middle', icon: 'bi-align-middle', onClick: () => withSnapshot(alignCenterHorizontal) },
+                { label: 'Align bottom', icon: 'bi-align-bottom', onClick: () => withSnapshot(alignBottom) },
+            ];
+
+            // Distribution only with 3+ nodes
+            if (contextMenu.selectedCount >= 3) {
+                items.push(
+                    { divider: true },
+                    { label: 'Distribute horizontally', icon: 'bi-distribute-horizontal', onClick: () => withSnapshot(distributeHorizontally) },
+                    { label: 'Distribute vertically', icon: 'bi-distribute-vertical', onClick: () => withSnapshot(distributeVertically) },
+                );
+            }
+
+            items.push(
+                { divider: true },
+                { label: `Delete ${contextMenu.selectedCount} nodes`, icon: 'bi-trash', danger: true, onClick: deleteSelected },
+            );
+
+            return items;
+        }
+
+        // Single node context menu
         if (contextMenu?.nodeId) {
             return [
                 {
@@ -488,17 +617,33 @@ function EditorV2Inner() {
                     onClick: () => duplicateNode(contextMenu.nodeId!),
                 },
                 {
-                    label: 'Delete node',
+                    label: 'Delete',
                     icon: 'bi-trash',
                     danger: true,
                     onClick: () => deleteNode(contextMenu.nodeId!),
                 },
             ];
         }
+
+        // Edge context menu
         if (contextMenu?.edgeId) {
+            const edge = getEdges().find((e) => e.id === contextMenu.edgeId);
+            const isInheritance = edge?.type === 'inheritance';
+
             return [
                 {
-                    label: 'Delete edge',
+                    label: isInheritance ? 'Convert to Reference' : 'Convert to Inheritance',
+                    icon: isInheritance ? 'bi-arrow-right' : 'bi-triangle',
+                    onClick: () => {
+                        if (isInheritance) {
+                            convertToReference(contextMenu.edgeId!);
+                        } else {
+                            convertToInheritance(contextMenu.edgeId!);
+                        }
+                    },
+                },
+                {
+                    label: isInheritance ? 'Delete inheritance' : 'Delete reference',
                     icon: 'bi-trash',
                     danger: true,
                     onClick: () => deleteEdge(contextMenu.edgeId!),
@@ -509,25 +654,14 @@ function EditorV2Inner() {
     };
 
     // Toolbar handlers
-    const handleZoomIn = useCallback(() => {
-        zoomIn();
-    }, [zoomIn]);
-
-    const handleZoomOut = useCallback(() => {
-        zoomOut();
-    }, [zoomOut]);
-
-    const handleFitView = useCallback(() => {
-        fitView({ padding: 0.2 });
-    }, [fitView]);
-
-    const handleToggleSnap = useCallback(() => {
-        setSnapEnabled((prev) => !prev);
-    }, []);
+    const handleZoomIn = useCallback(() => zoomIn(), [zoomIn]);
+    const handleZoomOut = useCallback(() => zoomOut(), [zoomOut]);
+    const handleFitView = useCallback(() => fitView({ padding: 0.2 }), [fitView]);
+    const handleToggleSnap = useCallback(() => setSnapEnabled((prev) => !prev), []);
 
     // Properties panel handlers
     const handleNodeChange = useCallback(
-        (nodeId: string, data: Partial<ClassNodeData | NestedFlowNodeData>) => {
+        (nodeId: string, data: any) => {
             takeSnapshot();
             setNodes((nds) =>
                 nds.map((n) =>
@@ -548,14 +682,57 @@ function EditorV2Inner() {
         [setEdges, takeSnapshot]
     );
 
-    // Take snapshot on node/edge changes that matter (drag end, resize end)
+    // Convert edge to inheritance
+    const convertToInheritance = useCallback(
+        (edgeId: string) => {
+            takeSnapshot();
+            setEdges((eds) =>
+                eds.map((e) =>
+                    e.id === edgeId
+                        ? { ...e, type: 'inheritance', label: undefined, data: {} as InheritanceEdgeData }
+                        : e
+                )
+            );
+        },
+        [setEdges, takeSnapshot]
+    );
+
+    // Convert edge to reference
+    const convertToReference = useCallback(
+        (edgeId: string) => {
+            takeSnapshot();
+            setEdges((eds) =>
+                eds.map((e) =>
+                    e.id === edgeId
+                        ? {
+                              ...e,
+                              type: 'reference',
+                              label: 'newRef',
+                              data: {
+                                  reference: {
+                                      id: e.id,
+                                      name: 'newRef',
+                                      kind: 'association',
+                                      targetClassId: e.target,
+                                      lowerBound: 0,
+                                      upperBound: -1,
+                                      containment: false,
+                                  },
+                              } as ReferenceEdgeData,
+                          }
+                        : e
+                )
+            );
+        },
+        [setEdges, takeSnapshot]
+    );
+
+    // Take snapshot on node changes (drag end, resize end)
     const handleNodesChange = useCallback(
         (changes: any[]) => {
-            // Check if any change is a position change that just ended (drag end)
             const hasDragEnd = changes.some(
                 (c) => c.type === 'position' && c.dragging === false
             );
-            // Check if any change is a dimensions change (resize)
             const hasResize = changes.some((c) => c.type === 'dimensions');
 
             if (hasDragEnd || hasResize) {
@@ -566,13 +743,15 @@ function EditorV2Inner() {
         [onNodesChange, takeSnapshot]
     );
 
-    // Context value for child components (e.g., ClassNode) to take snapshots
     const editorContextValue = useMemo(() => ({ takeSnapshot }), [takeSnapshot]);
 
     return (
         <EditorContext.Provider value={editorContextValue}>
             <div className="editor-v2" tabIndex={0} onKeyDown={onKeyDown}>
-                <PalettePanel />
+                <PalettePanel
+                    connectionMode={connectionMode}
+                    onConnectionModeChange={setConnectionMode}
+                />
                 <div className="editor-v2__main">
                     <Toolbar
                         snapEnabled={snapEnabled}
@@ -585,6 +764,17 @@ function EditorV2Inner() {
                         onRedo={handleRedo}
                         canUndo={canUndo}
                         canRedo={canRedo}
+                    />
+                    <AlignmentToolbar
+                        selectedCount={selectedNodes.length}
+                        onAlignLeft={() => withSnapshot(alignLeft)}
+                        onAlignCenterV={() => withSnapshot(alignCenterVertical)}
+                        onAlignRight={() => withSnapshot(alignRight)}
+                        onAlignTop={() => withSnapshot(alignTop)}
+                        onAlignCenterH={() => withSnapshot(alignCenterHorizontal)}
+                        onAlignBottom={() => withSnapshot(alignBottom)}
+                        onDistributeH={() => withSnapshot(distributeHorizontally)}
+                        onDistributeV={() => withSnapshot(distributeVertically)}
                     />
                     <div className="editor-v2__canvas" ref={reactFlowWrapper}>
                         <ReactFlow
@@ -620,7 +810,8 @@ function EditorV2Inner() {
                                 nodeStrokeWidth={3}
                                 nodeColor={(node) => {
                                     if (node.type === 'classNode') return '#0ea5e9';
-                                    if (node.type === 'nestedFlowNode') return '#10b981';
+                                    if (node.type === 'enumNode') return '#7c3aed';
+                                    if (node.type === 'packageNode') return '#64748b';
                                     return '#334155';
                                 }}
                                 maskColor="rgba(30, 41, 59, 0.8)"
@@ -634,6 +825,8 @@ function EditorV2Inner() {
                     selectedEdges={selectedEdges}
                     onNodeChange={handleNodeChange}
                     onEdgeChange={handleEdgeChange}
+                    onConvertToInheritance={convertToInheritance}
+                    onConvertToReference={convertToReference}
                 />
 
                 {contextMenu && (
@@ -650,8 +843,8 @@ function EditorV2Inner() {
 }
 
 /**
- * Editor V2 - React Flow based canvas editor PoC.
- * Wrapped in ReactFlowProvider to enable hooks.
+ * Editor V2 - Metamodel Editor based on React Flow.
+ * Supports Package, Class, Enumeration nodes and Reference edges.
  */
 function EditorV2() {
     return (

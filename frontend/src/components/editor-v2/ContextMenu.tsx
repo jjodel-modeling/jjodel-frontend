@@ -1,10 +1,11 @@
 import React from 'react';
 
-interface ContextMenuItem {
-    label: string;
+export interface ContextMenuItem {
+    label?: string;
     icon?: string;
     danger?: boolean;
-    onClick: () => void;
+    onClick?: () => void;
+    divider?: boolean;
 }
 
 interface ContextMenuProps {
@@ -16,6 +17,7 @@ interface ContextMenuProps {
 
 /**
  * Context menu component for right-click actions on nodes and edges.
+ * Supports regular items and dividers.
  */
 function ContextMenu({ x, y, items, onClose }: ContextMenuProps) {
     return (
@@ -26,19 +28,23 @@ function ContextMenu({ x, y, items, onClose }: ContextMenuProps) {
                 className="context-menu"
                 style={{ left: x, top: y }}
             >
-                {items.map((item, i) => (
-                    <button
-                        key={i}
-                        className={`context-menu__item ${item.danger ? 'danger' : ''}`}
-                        onClick={() => {
-                            item.onClick();
-                            onClose();
-                        }}
-                    >
-                        {item.icon && <i className={`bi ${item.icon}`} />}
-                        <span>{item.label}</span>
-                    </button>
-                ))}
+                {items.map((item, i) =>
+                    item.divider ? (
+                        <div key={i} className="context-menu__divider" />
+                    ) : (
+                        <button
+                            key={i}
+                            className={`context-menu__item ${item.danger ? 'danger' : ''}`}
+                            onClick={() => {
+                                item.onClick?.();
+                                onClose();
+                            }}
+                        >
+                            {item.icon && <i className={`bi ${item.icon}`} />}
+                            <span>{item.label}</span>
+                        </button>
+                    )
+                )}
             </div>
         </>
     );
