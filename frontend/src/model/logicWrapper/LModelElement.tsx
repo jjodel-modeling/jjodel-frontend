@@ -5168,16 +5168,21 @@ instanceof === undefined or missing  --> auto-detect and assign the type
         let s: DState = store.getState();
         let classes: LClass[] = this.get_classes(context, s);
         let references: LReference[] = Debug.lightMode ? [] : classes.flatMap(c=>c.references);
+        console.log('[EdgeDebug] references found:', references.length, references.map(r => r?.name));
         ret.reference = references.map( (r) => {
             let sn = r?.notEdge;
-            if (!sn || !sn.html) return undefined;
+            if (!sn) { console.log('[EdgeDebug] ref', r?.name, 'skipped: no notEdge node'); return undefined; }
+            if (!sn.html) { console.log('[EdgeDebug] ref', r?.name, 'skipped: sn.html is undefined (not rendered yet)'); return undefined; }
             let end = r.type;
             // if (end.id === r.id) return undefined;
             let en = end?.notEdge;
-            if (!en || !en.html) return undefined;
+            if (!en) { console.log('[EdgeDebug] ref', r?.name, 'skipped: end notEdge is undefined'); return undefined; }
+            if (!en.html) { console.log('[EdgeDebug] ref', r?.name, 'skipped: en.html is undefined (target not rendered yet)'); return undefined; }
+            console.log('[EdgeDebug] ref', r?.name, 'PASSED - creating EdgeStarter');
             //console.log('pre edgestarter', {r, end, sn, en});
             return new EdgeStarter(r, end, sn, en, [], 0, 'association');
-        }).filter<EdgeStarter>(function(e):e is EdgeStarter{ return !!e});
+        }).filter<EdgeStarter>(function(e):e is EdgeStarter{ return !!e });
+        console.log('[EdgeDebug] final reference edges:', ret.reference.length);
         // ret.extend = classes.flatMap( c => EdgeStarter.oneToMany(c, c.extends));
 
         let alreadyAdded: Dictionary<Pointer, LClass> = {};

@@ -73,7 +73,7 @@ export class UX{
         if (!re) return e;
         // @ts-ignore this
         // const parentComponent = this;
-        const type = (re.type as any).WrappedComponent?.name || re.type;
+        const type = (re.type as any).WrappedComponent?.name || (re.type as any).cname || (re.type as any).name || re.type;
         let injectProps: GraphElementOwnProps = {} as any;
         /* if (false && injectOffset) {
             const style = {...(re.props?.style || {})};
@@ -124,14 +124,10 @@ export class UX{
                 injectProps2.key = UX.getKey(re) || (parentnodeid + "_input_"+index);
                 return React.cloneElement(re, injectProps2);
             case windoww.Components.GraphElementComponent.cname:
-            // case windoww.Components.DefaultNode.name:
             case windoww.Components.DefaultNodeComponent.cname:
-            // case windoww.Components.Graph.name:
-            // case windoww.Components.GraphComponent.cname:
-            case "Graph": case "GraphComponent":
-            // case windoww.Components.Field.name:
-            // case windoww.Components.FieldComponent.cname:
-            // case windoww.Components.Vertex.name:
+            case "DefaultNode": case "DefaultNodeComponent2": // DefaultNode variants
+            case "Graph": case "GraphComponent": case "GraphVertex":
+            case "Field": case "Vertex": case "VoidVertex": // Function components need nodeid injection
             case EdgeComponent.cname:
             case windoww.Components.VertexComponent.cname:
                 injectProps.parentViewId = parentComponent.props.view.id || (parentComponent.props.view as any); // re.props.view ||  thiss.props.view

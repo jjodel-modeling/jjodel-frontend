@@ -330,11 +330,11 @@ end:`
 
     public static errorView(publicmsg: ReactNode, debughiddenmsg:any, errortype: string, data?: DModelElement | undefined, node?: DGraphElement | undefined, v?: LViewElement|DViewElement): React.ReactNode {
         let visibleMessage = publicmsg && typeof publicmsg === "string" ? U.replaceAll(publicmsg, "Parse Error:", "").trim() : publicmsg;
-        console.error("error in view:", {publicmsg, debuginfo:debughiddenmsg});
+        console.debug("[View Error]", {publicmsg, debuginfo:debughiddenmsg});
         return DefaultView.error(visibleMessage, errortype, data, node, v); }
     public static errorView_string(publicmsg: string, debughiddenmsg:any, errortype: string, data?: DModelElement | undefined, node?: DGraphElement | undefined, v?: LViewElement|DViewElement): React.ReactNode {
         let visibleMessage = publicmsg && typeof publicmsg === "string" ? U.replaceAll(publicmsg, "Parse Error:", "").trim() : publicmsg;
-        console.error("error in view:", {publicmsg, debuginfo:debughiddenmsg});
+        console.debug("[View Error]", {publicmsg, debuginfo:debughiddenmsg});
         return DefaultView.error_string(visibleMessage, errortype, data, node, v); }
 
     // {ancors.map( a => <EdgePoint view={"aaaaa"} initialSize={{x: node.w * a.x, y: node.h * a.y}}/>)}
@@ -865,8 +865,8 @@ foreignObject.label-end, foreignObject.label-start {
             "ret.end = edge.end\n"+
             "ret.segments = edge.segments\n\n"+
             "ret.position = ret.getPosition()\n"+
-            "ret.sPos = ret.position.start\n"+
-            "ret.ePos = ret.position.end\n" + 
+            "ret.sPos = ret.position ? ret.position.start : { x: 0, y: 0, align: 'left' }\n"+
+            "ret.ePos = ret.position ? ret.position.end : { x: 0, y: 0, align: 'right' }\n" +
             "}";
 
         
@@ -1363,7 +1363,7 @@ public static enum(): string { return (
     <span style={{
         fontWeight: 500,
         color: '#334155'
-    }}>{data.name} =></span>
+    }}>{data.name}{' =>'}</span>
 
     {/* Right side: Return Type Select (smaller) */}
     <div style={{maxWidth: '110px', minWidth: '80px'}}>

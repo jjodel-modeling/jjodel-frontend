@@ -137,12 +137,16 @@ everytime you put hands into a D-Object shape or valid values, you should docume
                 LViewElement.updateDefaultView(v, s);
             }
         }
-        // add new default views
-        for (let k in Defaults.defaultViewsMap) {
-            if (!s.idlookup[k]) s.idlookup[k] = Defaults.defaultViewsMap[k];
+        // add new default views from fresh cache (not defaultViewsMap which only contains `true` flags)
+        for (let k in Defaults.freshViewsMap) {
+            if (!s.idlookup[k]) {
+                s.idlookup[k] = Defaults.freshViewsMap[k];
+            }
         }
-        for (let k in Defaults.defaultViewPointsMap) {
-            if (!s.idlookup[k]) s.idlookup[k] = Defaults.defaultViewPointsMap[k];
+        for (let k in Defaults.freshViewPointsMap) {
+            if (!s.idlookup[k]) {
+                s.idlookup[k] = Defaults.freshViewPointsMap[k];
+            }
         }
 
         if (canAutocorrect) s = VersionFixer.autocorrect(s, false, false);

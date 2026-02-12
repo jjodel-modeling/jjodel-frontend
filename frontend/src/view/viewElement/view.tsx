@@ -655,12 +655,14 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
                     let patharr: string[] = val.split('.');
                     let curr: GObject = c.data;
                     for (let pathseg of patharr) {
-                        curr = curr[pathseg];
-                        Log.e(!curr && (val.length > 1 || patharr.length > 1), "invalid variable path in css path control", {token:val, view:c.data.name});
+                        curr = curr?.[pathseg];
+                        // Silently skip invalid paths - this is not a critical error
                         if (!curr) break;
                     }
-                    if (typeof curr === "object" || (typeof curr === "undefined" && (val.length > 1 || patharr.length > 1)))
-                        Log.ee( "invalid variable path in css path control", {token:val, view:c.data.name});
+                    if (typeof curr === "object" || typeof curr === "undefined") {
+                        // Path didn't resolve to a primitive value, use original token
+                        // console.debug("[compileCss] unresolved path:", {token:val, view:c.data?.name});
+                    }
                     else val = curr || val;
                     return val;
                 }).filter(p=>!!p);
@@ -1543,8 +1545,23 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
 
     static updateDefaultView(v: DViewElement | DViewPoint, state?: DState): void {
         let s = state || store.getState();
-        let newView: DViewElement | DViewPoint = Defaults.defaultViewPointsMap[v.id]||Defaults.defaultViewsMap[v.id];
-        if (!newView) return; // not a default view
+        // Use fresh views cache first, fall back to defaultViewsMap
+        let newView: DViewElement | DViewPoint | undefined = Defaults.getFreshView(v.id);
+        if (!newView) {
+            // Fallback to old maps if fresh cache not initialized
+            newView = Defaults.defaultViewPointsMap[v.id] || Defaults.defaultViewsMap[v.id];
+            console.log('[updateDefaultView] Using fallback for', v.id, 'newView:', typeof newView);
+        }
+        if (!newView || typeof newView !== 'object') {
+            console.log('[updateDefaultView] Skipping', v.id, '- no fresh view found');
+            return; // not a default view or not initialized
+        }
+        // Debug log for key views
+        if ((newView as any).name === 'Attribute' || (newView as any).name === 'Class') {
+            console.log('[updateDefaultView] Updating', (newView as any).name,
+                'old appliableToClasses:', (v as any).appliableToClasses,
+                '-> new appliableToClasses:', (newView as any).appliableToClasses);
+        }
         newView = {...newView} as any;
         newView.css_MUST_RECOMPILE = true;
         newView.pointedBy = PointedBy.merge(newView, v);

@@ -4,7 +4,7 @@
  *
  * Features:
  * - Preset library with categorized marker shapes
- * - Live SVG preview of the marker shape
+ * - Interactive SVG preview with draggable handles
  * - Live preview of marker on a sample edge
  * - Monaco editor for direct path editing
  */
@@ -14,6 +14,8 @@ import { createPortal } from 'react-dom';
 import Editor from '@monaco-editor/react';
 import { compactMonacoOptions, mergeMonacoOptions } from './monacoConfig';
 import { MARKER_PRESETS, MarkerPreset, PresetCategory, findPresetByPath } from './markerPresets';
+import { InteractivePathCanvas } from './InteractivePathCanvas';
+import { PathData, parsePath, serializePath } from './pathDataModel';
 import './EdgeMarkerEditorModal.scss';
 
 // ============================================
@@ -51,6 +53,9 @@ export const EdgeMarkerEditorModal: React.FC<EdgeMarkerEditorModalProps> = ({
     const [fillMode, setFillMode] = useState<MarkerFillMode>('filled');
     const [zoom, setZoom] = useState(1);          // 0.5 - 4, default 1
 
+    // PathData for interactive canvas
+    const [pathData, setPathData] = useState<PathData>(() => parsePath(initialPath));
+
     // Stable unique ID for the live preview marker
     const [previewMarkerId] = useState(() => `marker-prev-${Math.random().toString(36).slice(2, 8)}`);
 
@@ -63,6 +68,7 @@ export const EdgeMarkerEditorModal: React.FC<EdgeMarkerEditorModalProps> = ({
             setCurrentPath(initialPath);
             setEditorValue(initialPath);
             setPreviewPosition(markerPosition);
+            setPathData(parsePath(initialPath));
 
             // Try to find matching preset for initial path
             const preset = findPresetByPath(initialPath);
@@ -75,6 +81,26 @@ export const EdgeMarkerEditorModal: React.FC<EdgeMarkerEditorModalProps> = ({
             }
         }
     }, [isOpen, initialPath, markerPosition]);
+
+    // Sync pathData when currentPath changes from Monaco or presets
+    useEffect(() => {
+        const parsed = parsePath(currentPath);
+        const serialized = serializePath(parsed);
+        const currentSerialized = serializePath(pathData);
+
+        // Only update if actually different (avoid infinite loops)
+        if (serialized !== currentSerialized) {
+            setPathData(parsed);
+        }
+    }, [currentPath]);
+
+    // Handle path data changes from interactive canvas
+    const handlePathDataChange = useCallback((newData: PathData) => {
+        setPathData(newData);
+        const newPathStr = serializePath(newData);
+        setCurrentPath(newPathStr);
+        setEditorValue(newPathStr);
+    }, []);
 
     // Handle keyboard shortcuts (Escape to close)
     useEffect(() => {
@@ -220,7 +246,6 @@ export const EdgeMarkerEditorModal: React.FC<EdgeMarkerEditorModalProps> = ({
     const viewBoxSize = baseSize / zoom;  // zoom=1 → 30×30 area, zoom=2 → 15×15
     const viewBoxOffset = (10 - viewBoxSize) / 2;  // center on marker midpoint (5,5)
     const shapeViewBox = `${viewBoxOffset} ${viewBoxOffset} ${viewBoxSize} ${viewBoxSize}`;
-    const shapeStrokeWidth = 0.5 / zoom;  // scale inversely to maintain visual thickness
 
     if (!isOpen) return null;
 
@@ -323,43 +348,17 @@ export const EdgeMarkerEditorModal: React.FC<EdgeMarkerEditorModalProps> = ({
                                 </div>
                             </div>
                             <div className="edge-marker-editor-modal__shape-container">
-                                <svg
-                                    viewBox={shapeViewBox}
-                                    className="edge-marker-editor-modal__shape-svg"
-                                    preserveAspectRatio="xMidYMid meet"
-                                >
-                                    {/* Grid pattern - scaled with zoom */}
-                                    <defs>
-                                        <pattern id={`grid-${markerId}`} width="1" height="1" patternUnits="userSpaceOnUse">
-                                            <circle cx="0.5" cy="0.5" r={0.15 / zoom} fill="#94a3b8" opacity="0.4" />
-                                        </pattern>
-                                    </defs>
-                                    <rect x={viewBoxOffset} y={viewBoxOffset} width={viewBoxSize} height={viewBoxSize} fill={`url(#grid-${markerId})`} />
-
-                                    {/* Origin crosshair */}
-                                    <line x1={viewBoxOffset} y1="5" x2={viewBoxOffset + viewBoxSize} y2="5" stroke="#94a3b8" strokeWidth={0.08 / zoom} opacity="0.3" />
-                                    <line x1="5" y1={viewBoxOffset} x2="5" y2={viewBoxOffset + viewBoxSize} stroke="#94a3b8" strokeWidth={0.08 / zoom} opacity="0.3" />
-
-                                    {/* Marker bounding box (0-10) */}
-                                    <rect x="0" y="0" width="10" height="10" fill="none" stroke="#0ea5e9" strokeWidth={0.06 / zoom} strokeDasharray={`${0.3 / zoom} ${0.2 / zoom}`} opacity="0.5" />
-
-                                    {/* The marker path */}
-                                    {currentPath && (
-                                        <path
-                                            d={currentPath}
-                                            fill={fillMode === 'filled' ? '#0ea5e9' : 'transparent'}
-                                            stroke="#0ea5e9"
-                                            strokeWidth={shapeStrokeWidth}
-                                        />
-                                    )}
-
-                                    {/* Empty state */}
-                                    {!currentPath && (
-                                        <text x="5" y="5.5" textAnchor="middle" fontSize={1.5 / zoom} fill="#94a3b8" opacity="0.7">
-                                            No marker
-                                        </text>
-                                    )}
-                                </svg>
+                                {/* Interactive Path Canvas */}
+                                <div className="edge-marker-editor-modal__shape-svg">
+                                    <InteractivePathCanvas
+                                        pathData={pathData}
+                                        onPathChange={handlePathDataChange}
+                                        fillMode={fillMode}
+                                        zoom={zoom}
+                                        viewBox={shapeViewBox}
+                                        markerId={markerId}
+                                    />
+                                </div>
 
                                 {/* Vertical Zoom Slider */}
                                 <div className="marker-zoom-slider-container">
@@ -471,7 +470,7 @@ export const EdgeMarkerEditorModal: React.FC<EdgeMarkerEditorModalProps> = ({
                             />
                         </div>
                         <div className="edge-marker-editor-modal__code-hint">
-                            SVG path commands: M (move), L (line), A (arc), Z (close)
+                            SVG path commands: M (move), L (line), Q (quadratic), C (cubic), Z (close)
                         </div>
                     </div>
                 </div>

@@ -235,11 +235,36 @@ export class DState extends DPointerTargetable{
     }
     static init(store?: DState): void {
         windoww.preventNavigation = false;
+        // Always initialize fresh views cache for project loading, even if starting on dashboard
+        if (!Defaults.freshViewsInitialized) {
+            this.initFreshViewsCache();
+        }
         if (windoww.location.hash.indexOf('#/project') === 0) this.init_editor(store);
         else this.init_dashboard(store);
     }
     static init_dashboard(store?: DState): void {
         console.error('init_dash');
+    }
+    // Create fresh views and store in cache without adding to Redux state
+    // This ensures fresh views are available for updating old project views
+    static initFreshViewsCache(): void {
+        if (Defaults.freshViewsInitialized) return;
+
+        // Create viewpoints in memory (persist = false to avoid adding to Redux)
+        const viewpoint = DViewPoint.newVP('Default', (vp)=>{
+            vp.palette = { 'border-': U.hexToPalette('#a3a3a3') };
+        }, false, Defaults.Pointer_ViewPointDefault);
+
+        const validationVP = DViewPoint.newVP('Default Validation', (vp)=>{
+            vp.isExclusiveView = false;
+            vp.isValidation = true;
+        }, false, Defaults.Pointer_ViewPointValidation);
+
+        // Create fresh views in memory (makeDefaultGraphViews creates with persist=false)
+        const views: DViewElement[] = makeDefaultGraphViews(viewpoint, validationVP);
+
+        // Store in fresh cache
+        Defaults.storeFreshViews(views, [viewpoint, validationVP]);
     }
     static init_editor(store?: DState): void {
         this.fixcolors();
@@ -336,6 +361,9 @@ otherwise you would click the edge container instead of the graph-elements benea
             Log.exDev(viewpoint.id !== Defaults.viewpoints[0], "wrong vp id initialization", {viewpoint, def:Defaults.viewpoints});
             const views: DViewElement[] = makeDefaultGraphViews(viewpoint, validationViewpoint);
 
+            // Store fresh views in cache BEFORE they get potentially overwritten by loaded project data
+            Defaults.storeFreshViews(views, [viewpoint, validationViewpoint]);
+
             for (let view of views) { CreateElementAction.new(view); }
 
             for (let primitiveType of Object.values(ShortAttribETypes)) {
@@ -426,13 +454,16 @@ function makeDefaultGraphViews(vp: DViewPoint, validationVP: DViewPoint): DViewE
             "ret.type = data && data.className.substring(1) || 'shapeless object';\n"+
             "}";
         v.onDataUpdate = `
-let err = undefined;
 if (!data) return;
-//if (name.indexOf(" ") >= 0) err = type + " names cannot contain white spaces."; else
+let err = undefined;
 if (name.length === 0) err = type + " must be named.";
 else if (!name[0].match(/[A-Za-z_$]/)) err = type + " names must begin with an alphabet letter or $_ symbols.";
-else if (!name.match(/^[A-Za-z_$]+[A-Za-z0-9$_\\s]*$/)) err = type + " names can only contain an alphanumeric chars or or $_ symbols";
-if (node.state.error_naming !== err) node.state = {error_naming: err};
+else if (!name.match(/^[A-Za-z_$]+[A-Za-z0-9$_\\s]*$/)) err = type + " names can only contain alphanumeric chars or $_ symbols";
+// Only update if the error value actually changed (avoid loops)
+const currentErr = node.state?.error_naming;
+if (currentErr !== err) {
+    node.state = {...(node.state || {}), error_naming: err};
+}
 `.trim();}, false, Defaults.Pointer_ViewCheckName );
 
     let errorCheckLowerbound: DViewElement = DViewElement.new2('Lowerbound error view', DV.invisibleJsx(), validationVP, (v) => {
@@ -443,14 +474,17 @@ if (node.state.error_naming !== err) node.state = {error_naming: err};
                 "// ** preparations and default behaviour here ** //\n" +
                 "// add preparation code here (like for loops to count something), then list the dependencies below.\n" +
                 "// ** declarations here ** //\n" +
-                "ret.valuesLength = data.values.filter(v=>v!==undefined).length;\n"+
-                "ret.missingLowerbound = Math.max(0, data.lowerBound - ret.valuesLength);\n" +
+                "ret.valuesLength = data?.values?.filter(v=>v!==undefined).length || 0;\n"+
+                "ret.missingLowerbound = Math.max(0, (data?.lowerBound || 0) - ret.valuesLength);\n" +
                 "}";
             v.onDataUpdate = `
-let err = undefined;\n
-if (missingLowerbound > 0) err = (data.className.substring(1))\n
- \t\t+ ' Lowerbound violation, missing ' + missingLowerbound + ' values.';\n
-node.state = {error_lowerbound: err};\n
+let err = undefined;
+if (missingLowerbound > 0) err = (data.className.substring(1)) + ' Lowerbound violation, missing ' + missingLowerbound + ' values.';
+// Only update if the error value actually changed (avoid loops)
+const currentErr = node.state?.error_lowerbound;
+if (currentErr !== err) {
+    node.state = {...(node.state || {}), error_lowerbound: err};
+}
 `.trim();
     }, false, Defaults.Pointer_ViewLowerbound );
     // errorOverlayView.oclCondition = 'context DValue inv: self.value < 0';
@@ -473,9 +507,12 @@ node.state = {error_lowerbound: err};\n
         v.usageDeclarations = "";
         v.usageDeclarations = `(ret)=>{ // scope: data, node, view, state,
 // ** preparations and default behaviour here ** //
-// add preparation code here (like for loops to count something), then list the dependencies below.
-// ** declarations here ** //
-ret.parentView = L.from(component.props.parentviewid);
+// Fallback view - minimal declarations
+try {
+    ret.parentView = component?.props?.parentviewid ? L.from(component.props.parentviewid) : undefined;
+} catch(e) {
+    ret.parentView = undefined;
+}
 }`
         v.css =
 `&.mainView > .void{

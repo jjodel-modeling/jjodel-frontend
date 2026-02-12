@@ -1,0 +1,467 @@
+// Editor V2 - React Flow PoC Styles
+// Design tokens from Jjodel design system
+
+// Colors
+$slate-900: #0f172a;
+$slate-800: #1e293b;
+$slate-700: #334155;
+$slate-600: #475569;
+$slate-500: #64748b;
+$slate-400: #94a3b8;
+$slate-300: #cbd5e1;
+$slate-200: #e2e8f0;
+$slate-100: #f1f5f9;
+
+$cyan-600: #0891b2;
+$cyan-500: #0ea5e9;
+$cyan-400: #22d3ee;
+
+$green-500: #10b981;
+$red-500: #ef4444;
+
+// Main editor container
+.editor-v2 {
+    display: flex;
+    height: 100vh;
+    width: 100%;
+    background: $slate-800;
+}
+
+// Canvas wrapper
+.editor-v2__canvas {
+    flex: 1;
+    height: 100%;
+}
+
+// Palette sidebar
+.editor-v2-palette {
+    width: 200px;
+    background: $slate-700;
+    border-right: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    overflow-y: auto;
+
+    .palette-title {
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: rgba(255, 255, 255, 0.5);
+        margin-bottom: 8px;
+        padding: 0 8px;
+    }
+
+    .palette-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 12px;
+        border-radius: 6px;
+        cursor: grab;
+        color: rgba(255, 255, 255, 0.8);
+        font-size: 13px;
+        transition: background 0.15s;
+        user-select: none;
+
+        &:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        &:active {
+            cursor: grabbing;
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        i {
+            font-size: 16px;
+            color: $cyan-500;
+        }
+    }
+
+    .palette-divider {
+        height: 1px;
+        background: rgba(255, 255, 255, 0.1);
+        margin: 12px 0;
+    }
+
+    .palette-instructions {
+        padding: 8px;
+        font-size: 11px;
+        color: rgba(255, 255, 255, 0.5);
+        line-height: 1.6;
+
+        p {
+            margin: 4px 0;
+        }
+
+        strong {
+            color: rgba(255, 255, 255, 0.7);
+        }
+    }
+}
+
+// React Flow overrides
+.editor-v2 .react-flow {
+    background: $slate-800;
+
+    // Background pattern
+    .react-flow__background {
+        background: $slate-800;
+    }
+
+    // MiniMap
+    .react-flow__minimap {
+        background: $slate-700;
+        border-radius: 8px;
+        overflow: hidden;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    // Controls
+    .react-flow__controls {
+        border-radius: 8px;
+        overflow: hidden;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+
+        button {
+            background: $slate-700;
+            border-color: rgba(255, 255, 255, 0.1);
+            color: white;
+            width: 28px;
+            height: 28px;
+
+            &:hover {
+                background: $slate-600;
+            }
+
+            svg {
+                fill: currentColor;
+            }
+        }
+    }
+
+    // Attribution (hide)
+    .react-flow__attribution {
+        display: none;
+    }
+
+    // Selection box
+    .react-flow__selection {
+        background: rgba($cyan-500, 0.1);
+        border: 1px solid $cyan-500;
+    }
+}
+
+// Class Node
+.class-node {
+    background: $slate-700;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 8px;
+    min-width: 180px;
+    overflow: hidden;
+    font-size: 13px;
+    color: white;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+
+    &.selected {
+        border-color: $cyan-500;
+        box-shadow: 0 0 0 2px rgba($cyan-500, 0.3), 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+
+    &.viewpoint-wrapper {
+        background: transparent;
+        border: none;
+        box-shadow: none;
+        min-width: auto;
+        overflow: visible;
+
+        &.selected {
+            outline: 2px solid $cyan-500;
+            outline-offset: 2px;
+            border-radius: 8px;
+        }
+    }
+
+    &__header {
+        background: linear-gradient(135deg, $slate-600, $cyan-600);
+        padding: 8px 12px;
+        font-weight: 600;
+        cursor: text;
+
+        input {
+            background: transparent;
+            border: none;
+            outline: none;
+            color: white;
+            font: inherit;
+            font-weight: inherit;
+            width: 100%;
+            padding: 0;
+
+            &::selection {
+                background: rgba(255, 255, 255, 0.3);
+            }
+        }
+    }
+
+    &__field {
+        display: flex;
+        justify-content: space-between;
+        padding: 4px 12px;
+        border-top: 1px solid rgba(255, 255, 255, 0.05);
+        font-size: 11px;
+
+        .field-name {
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .field-type {
+            color: $cyan-500;
+            font-style: italic;
+        }
+    }
+
+    // Handles
+    .react-flow__handle {
+        width: 10px;
+        height: 10px;
+        background: $slate-500;
+        border: 2px solid $slate-700;
+        transition: all 0.15s;
+
+        &:hover {
+            background: $cyan-500;
+            transform: scale(1.2);
+        }
+
+        &.connecting {
+            background: $cyan-400;
+        }
+    }
+}
+
+// Nested Flow Node
+.nested-flow-node {
+    background: $slate-700;
+    border: 1px dashed rgba(255, 255, 255, 0.25);
+    border-radius: 8px;
+    min-width: 250px;
+    min-height: 150px;
+    color: white;
+    position: relative;
+
+    &__header {
+        padding: 8px 12px;
+        font-weight: 600;
+        font-size: 13px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        background: rgba($green-500, 0.15);
+        border-radius: 8px 8px 0 0;
+    }
+
+    &__canvas {
+        position: relative;
+        min-height: 100px;
+        padding: 8px;
+    }
+
+    .nested-vertex {
+        background: $slate-600;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 6px;
+        padding: 6px 10px;
+        font-size: 11px;
+        cursor: grab;
+        user-select: none;
+        touch-action: none;
+        white-space: nowrap;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        transition: box-shadow 0.15s, transform 0.15s, border-color 0.15s;
+
+        &.dragging {
+            cursor: grabbing;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+            transform: scale(1.05);
+            z-index: 10;
+            border-color: $cyan-500;
+        }
+
+        &:hover:not(.dragging) {
+            border-color: $cyan-500;
+        }
+    }
+
+    // Resizer styles
+    &__resizer-line {
+        border-color: $cyan-500 !important;
+    }
+
+    &__resizer-handle {
+        background: $cyan-500 !important;
+        border: none !important;
+        width: 8px !important;
+        height: 8px !important;
+    }
+
+    // Handles
+    .react-flow__handle {
+        width: 10px;
+        height: 10px;
+        background: $slate-500;
+        border: 2px solid $slate-700;
+        transition: all 0.15s;
+
+        &:hover {
+            background: $green-500;
+            transform: scale(1.2);
+        }
+    }
+}
+
+// Viewpoint container
+.viewpoint-container {
+    min-width: 120px;
+}
+
+.viewpoint-error {
+    padding: 8px 12px;
+    background: rgba($red-500, 0.2);
+    color: #fca5a5;
+    border-radius: 6px;
+    font-size: 11px;
+    border: 1px solid rgba($red-500, 0.3);
+}
+
+// Manhattan edge
+.react-flow__edge-path {
+    stroke: rgba(255, 255, 255, 0.4);
+    stroke-width: 1.5;
+}
+
+.react-flow__edge.selected .react-flow__edge-path {
+    stroke: $cyan-500;
+    stroke-width: 2;
+}
+
+// Edge label
+.edge-label {
+    font-size: 11px;
+    pointer-events: all;
+
+    &__text {
+        background: $slate-700;
+        color: rgba(255, 255, 255, 0.8);
+        padding: 2px 8px;
+        border-radius: 4px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        white-space: nowrap;
+        cursor: default;
+        transition: border-color 0.15s;
+
+        &:hover {
+            border-color: rgba(255, 255, 255, 0.3);
+        }
+    }
+
+    &.selected &__text {
+        border-color: $cyan-500;
+        color: white;
+    }
+
+    &__input {
+        background: $slate-800;
+        border: 1px solid $cyan-500;
+        color: white;
+        font-size: 11px;
+        padding: 2px 8px;
+        border-radius: 4px;
+        outline: none;
+        width: 100px;
+        text-align: center;
+
+        &::selection {
+            background: rgba($cyan-500, 0.3);
+        }
+    }
+}
+
+// Legacy class for backwards compatibility
+.manhattan-edge__label {
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.7);
+    background: $slate-700;
+    padding: 2px 6px;
+    border-radius: 4px;
+    white-space: nowrap;
+}
+
+.react-flow__edge-text {
+    font-size: 11px;
+    fill: rgba(255, 255, 255, 0.6);
+}
+
+// Connection line (while dragging)
+.react-flow__connection-line {
+    stroke: $cyan-500;
+    stroke-width: 2;
+    stroke-dasharray: 5 5;
+}
+
+// Context Menu
+.context-menu-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 999;
+}
+
+.context-menu {
+    position: fixed;
+    z-index: 1000;
+    background: $slate-700;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 8px;
+    padding: 4px;
+    min-width: 160px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+
+    &__item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        width: 100%;
+        padding: 8px 12px;
+        border: none;
+        background: transparent;
+        color: rgba(255, 255, 255, 0.8);
+        font-size: 13px;
+        border-radius: 4px;
+        cursor: pointer;
+        text-align: left;
+        transition: background 0.15s;
+
+        &:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        &.danger {
+            color: #f87171;
+
+            &:hover {
+                background: rgba($red-500, 0.15);
+            }
+        }
+
+        i {
+            font-size: 14px;
+            width: 16px;
+            text-align: center;
+        }
+    }
+}
+
+// Focus outline for keyboard navigation
+.editor-v2:focus {
+    outline: none;
+}

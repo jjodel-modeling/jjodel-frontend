@@ -1,0 +1,185 @@
+/**
+ * InteractivePathCanvas Styles
+ * Handles, tangent lines, hit zones, and context menu
+ */
+
+// ============================================
+// INTERACTIVE CANVAS
+// ============================================
+
+.interactive-path-canvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+
+    // Shape path
+    &__shape {
+        pointer-events: none;
+    }
+
+    // Hit zone for hover detection
+    &__hit-zone {
+        cursor: default;
+        pointer-events: stroke;
+
+        .interactive-path-canvas--handles-visible & {
+            cursor: crosshair;
+        }
+    }
+
+    // Tangent lines (control point → endpoint)
+    &__tangent,
+    &__tangent-group {
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 0.2s ease;
+    }
+
+    &--handles-visible &__tangent,
+    &--handles-visible &__tangent-group {
+        opacity: 0.6;
+    }
+
+    // Handle base styles
+    &__handle {
+        opacity: 0;
+        transition: opacity 0.2s ease, r 0.15s ease;
+        pointer-events: all;
+
+        &--dragging {
+            filter: drop-shadow(0 0 3px rgba(14, 165, 233, 0.5));
+        }
+    }
+
+    &--handles-visible &__handle {
+        opacity: 1;
+    }
+
+    // Endpoint handles (cyan)
+    &__handle--endpoint {
+        // Styled inline for dynamic sizing
+    }
+
+    // Control point handles (amber)
+    &__handle--control {
+        // Styled inline for dynamic sizing
+    }
+}
+
+// ============================================
+// CONTEXT MENU
+// ============================================
+
+.path-context-menu {
+    position: fixed;
+    z-index: 10001;  // Above modal (9999)
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 4px;
+    min-width: 180px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+    animation: contextMenuFadeIn 0.1s ease;
+
+    @keyframes contextMenuFadeIn {
+        from {
+            opacity: 0;
+            transform: scale(0.95);
+        }
+        to {
+            opacity: 1;
+            transform: scale(1);
+        }
+    }
+
+    &__backdrop {
+        position: fixed;
+        inset: 0;
+        z-index: 10000;
+    }
+
+    &__item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        width: 100%;
+        padding: 8px 12px;
+        border: none;
+        background: none;
+        border-radius: 4px;
+        font-size: 12px;
+        color: #334155;
+        cursor: pointer;
+        text-align: left;
+        transition: background 0.1s ease;
+
+        &:hover {
+            background: #f1f5f9;
+        }
+
+        i {
+            font-size: 14px;
+            width: 16px;
+            text-align: center;
+            color: #64748b;
+        }
+
+        &--danger {
+            color: #ef4444;
+
+            i {
+                color: #ef4444;
+            }
+
+            &:hover {
+                background: #fef2f2;
+            }
+        }
+    }
+
+    &__divider {
+        height: 1px;
+        background: #e2e8f0;
+        margin: 4px 0;
+    }
+}
+
+// ============================================
+// DARK MODE
+// ============================================
+
+@media (prefers-color-scheme: dark) {
+    .path-context-menu {
+        background: #1e293b;
+        border-color: #334155;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+
+        &__item {
+            color: #e2e8f0;
+
+            &:hover {
+                background: #334155;
+            }
+
+            i {
+                color: #94a3b8;
+            }
+
+            &--danger {
+                color: #f87171;
+
+                i {
+                    color: #f87171;
+                }
+
+                &:hover {
+                    background: rgba(239, 68, 68, 0.15);
+                }
+            }
+        }
+
+        &__divider {
+            background: #334155;
+        }
+    }
+}

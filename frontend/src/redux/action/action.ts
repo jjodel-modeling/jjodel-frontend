@@ -146,7 +146,7 @@ export function END(actionstoPrepend: Action[] = [], path?: string, oldval?: any
     // console.warn('TRANSACTION END', {depth: t.transactionDepthLevel});
     if (actionstoPrepend.length) t.pendingActions = [...actionstoPrepend, ...t.pendingActions];
 
-    if (t.transactionDepthLevel < 0) { console.error("mismatching END()"); t.transactionDepthLevel = 0; }
+    if (t.transactionDepthLevel < 0) { console.debug("mismatching END() - transaction already closed"); t.transactionDepthLevel = 0; }
     if (t.transactionDepthLevel === 0) return FINAL_END(path, oldval, newval, desc);
     return false;
 }

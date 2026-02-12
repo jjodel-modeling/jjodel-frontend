@@ -105,7 +105,9 @@ class DefaultViews {
             'ret.firstPackage = packages[0]\n'+
             'ret.otherPackages = packages.slice(1)\n'+
             'ret.m1Objects = data && !data.isMetamodel ? data.allSubObjects : []\n'+
+            'console.log("[EdgeDebug] suggestedEdges:", suggestedEdges, "ref count:", (suggestedEdges.reference || []).length)\n'+
             'ret.refEdges = (suggestedEdges.reference || []).filter(e => !e.vertexOverlaps && e.sameGraph)\n'+
+            'console.log("[EdgeDebug] refEdges after filter:", ret.refEdges.length, "filtered out:", (suggestedEdges.reference || []).length - ret.refEdges.length)\n'+
             'ret.extendEdges = (suggestedEdges.extend || []).filter(e => !e.vertexOverlaps && e.sameGraph)\n'+
             udLevelG + udGridG + udSnapG +
             '}';
@@ -282,17 +284,17 @@ div.header:has(.open:hover) {
     // add preparation code here (like for loops to count something), then list the dependencies below.
     // ¡ The element will update only if one of the Observed Properties has changed !
     // ** declarations here ** //
-    ret.attributes = data.attributes
-    ret.references = data.references
-    ret.operations = data.operations
-    ret.abstract = data.abstract
-    ret.interface = data.interface
+    ret.attributes = data?.attributes || []
+    ret.references = data?.references || []
+    ret.operations = data?.operations || []
+    ret.abstract = data?.abstract || false
+    ret.interface = data?.interface || false
     ${udLevel}
     ${udGrid}
     ${udSnap}
-    ret.refs = data.referencedBy.filter(a => typeof a !== 'undefined')
-    ret.refNames = ret.refs.filter(a => typeof a !== 'undefined').filter(a => a.model.id !== data.model.id).map(a => a.model.name + '::'  + a.parent.name + '.' + a.name)
-    ret.colorIndex = node.state.colorIndex ?? 0
+    ret.refs = (data?.referencedBy || []).filter(a => typeof a !== 'undefined')
+    ret.refNames = ret.refs.filter(a => a && a.model).filter(a => a.model?.id !== data?.model?.id).map(a => (a.model?.name || '') + '::'  + (a.parent?.name || '') + '.' + (a.name || ''))
+    ret.colorIndex = node?.state?.colorIndex ?? 0
 
 }`;
             // view.events = {e1:"(num) => {\n\tdata.name = num;\n}"}
@@ -392,7 +394,7 @@ border-radius: 3px;
     // add preparation code here (like for loops to count something), then list the dependencies below.
     // ¡ The element will update only if one of the Observed Properties has changed !
     // ** declarations here ** //
-    ret.literals = data.literals
+    ret.literals = data?.literals || []
     ${udLevel}
     ${udSnap}
 
@@ -569,7 +571,7 @@ border-radius: 3px;
                 '// add preparation code here (like for loops to count something), then list the dependencies below.\n' +
                 // ¡ The element will update only if one of the Observed Properties has changed !
                 '// ** declarations here ** //\n' +
-                'ret.metaclassName = data.instanceof?.name || \'Object\'\n' +
+                'ret.metaclassName = data?.instanceof?.name || \'Object\'\n' +
                 udLevel + udSnap +
 
                 '}';
