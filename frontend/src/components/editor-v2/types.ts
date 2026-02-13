@@ -79,14 +79,22 @@ export interface MetaParameter {
     type: EDataType | string;
 }
 
+// === Edge Waypoint ===
+export interface EdgeWaypoint {
+    segmentIndex: number;  // which segment of the path
+    offset: number;        // offset in pixels from auto-calculated position
+}
+
 // === Edge Data ===
 export interface ReferenceEdgeData {
     reference: MetaReference;
+    waypoints?: EdgeWaypoint[];
     [key: string]: unknown;
 }
 
 export interface InheritanceEdgeData {
     // No additional data — inheritance is just source → target
+    waypoints?: EdgeWaypoint[];
     [key: string]: unknown;
 }
 

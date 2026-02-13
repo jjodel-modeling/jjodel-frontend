@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
-import { Handle, Position, NodeResizer, useReactFlow, type NodeProps, type Node } from '@xyflow/react';
+import { NodeResizer, useReactFlow, type NodeProps, type Node } from '@xyflow/react';
 import ViewpointRenderer from '../viewpoint/ViewpointRenderer';
+import DynamicHandles from '../components/DynamicHandles';
 import { useEditorContextSafe } from '../contexts/EditorContext';
 import type { ClassNodeData } from '../types';
 import { createAttribute, createOperation, E_DATA_TYPES } from '../types';
@@ -144,10 +145,7 @@ function ClassNode({ id, data, selected }: NodeProps<ClassNodeType>) {
                     lineClassName="node-resize-line"
                     handleClassName="node-resize-handle"
                 />
-                <Handle type="source" position={Position.Top} id="top" className="mm-anchor" />
-                <Handle type="source" position={Position.Right} id="right" className="mm-anchor" />
-                <Handle type="source" position={Position.Bottom} id="bottom" className="mm-anchor" />
-                <Handle type="source" position={Position.Left} id="left" className="mm-anchor" />
+                <DynamicHandles nodeId={id} />
                 <ViewpointRenderer jsxString={data.jsxString} context={data} />
             </div>
         );
@@ -180,10 +178,7 @@ function ClassNode({ id, data, selected }: NodeProps<ClassNodeType>) {
                 handleClassName="node-resize-handle"
             />
 
-            <Handle type="source" position={Position.Top} id="top" className="mm-anchor" />
-            <Handle type="source" position={Position.Right} id="right" className="mm-anchor" />
-            <Handle type="source" position={Position.Bottom} id="bottom" className="mm-anchor" />
-            <Handle type="source" position={Position.Left} id="left" className="mm-anchor" />
+            <DynamicHandles nodeId={id} />
 
             {/* Header with optional badge */}
             <div className="mm-node__header" onDoubleClick={handleDoubleClick}>

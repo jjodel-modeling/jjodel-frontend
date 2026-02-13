@@ -231,13 +231,20 @@ function EditorV2Inner() {
         (connection: Connection) => {
             takeSnapshot();
 
+            const edgeType = connectionMode === 'inheritance' ? 'inheritance' : 'reference';
+            const { sourceHandle, targetHandle } = getOptimalAnchors(
+                connection.source!,
+                connection.target!,
+                edgeType
+            );
+
             if (connectionMode === 'inheritance') {
                 const newEdge: Edge = {
                     id: `inh_${Date.now()}`,
                     source: connection.source!,
                     target: connection.target!,
-                    sourceHandle: connection.sourceHandle,
-                    targetHandle: connection.targetHandle,
+                    sourceHandle,
+                    targetHandle,
                     type: 'inheritance',
                     data: {} as InheritanceEdgeData,
                 };
@@ -247,8 +254,8 @@ function EditorV2Inner() {
                     id: `ref_${Date.now()}`,
                     source: connection.source!,
                     target: connection.target!,
-                    sourceHandle: connection.sourceHandle,
-                    targetHandle: connection.targetHandle,
+                    sourceHandle,
+                    targetHandle,
                     type: 'reference',
                     label: 'newRef',
                     data: {
@@ -266,7 +273,7 @@ function EditorV2Inner() {
                 setEdges((eds) => addEdge(newEdge, eds));
             }
         },
-        [connectionMode, setEdges, takeSnapshot]
+        [connectionMode, setEdges, takeSnapshot, getOptimalAnchors]
     );
 
     // Handle drop from palette
@@ -650,6 +657,8 @@ function EditorV2Inner() {
         if (contextMenu?.edgeId) {
             const edge = getEdges().find((e) => e.id === contextMenu.edgeId);
             const isInheritance = edge?.type === 'inheritance';
+            const edgeData = edge?.data as ReferenceEdgeData | InheritanceEdgeData | undefined;
+            const hasWaypoints = edgeData?.waypoints && edgeData.waypoints.length > 0;
 
             return [
                 {
@@ -663,6 +672,20 @@ function EditorV2Inner() {
                         }
                     },
                 },
+                ...(hasWaypoints ? [{
+                    label: 'Reset routing',
+                    icon: 'bi-arrow-counterclockwise',
+                    onClick: () => {
+                        takeSnapshot();
+                        setEdges((eds) =>
+                            eds.map((ed) =>
+                                ed.id === contextMenu.edgeId
+                                    ? { ...ed, data: { ...ed.data, waypoints: [] } }
+                                    : ed
+                            )
+                        );
+                    },
+                }] : []),
                 {
                     label: isInheritance ? 'Delete inheritance' : 'Delete reference',
                     icon: 'bi-trash',
@@ -774,9 +797,11 @@ function EditorV2Inner() {
                 setEdges((currentEdges) =>
                     currentEdges.map((edge) => {
                         if (movedNodeIds.has(edge.source) || movedNodeIds.has(edge.target)) {
+                            const edgeType = edge.type === 'inheritance' ? 'inheritance' : 'reference';
                             const { sourceHandle, targetHandle } = getOptimalAnchors(
                                 edge.source,
-                                edge.target
+                                edge.target,
+                                edgeType
                             );
                             return { ...edge, sourceHandle, targetHandle };
                         }

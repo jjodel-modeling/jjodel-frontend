@@ -2,7 +2,7 @@
  * Edge utility functions for Manhattan routing with rounded corners
  */
 
-export const EDGE_PADDING = 20;
+export const EDGE_PADDING = 25;
 
 interface Rect {
     x: number;
@@ -236,4 +236,167 @@ export function computeSelfLoopPath(
     const cp2Y = targetY - loopSize;
 
     return `M ${sourceX} ${sourceY} C ${cp1X} ${cp1Y}, ${cp2X} ${cp2Y}, ${targetX} ${targetY}`;
+}
+
+/**
+ * Parses points from an SVG path string.
+ */
+export function parsePathPoints(path: string): { x: number; y: number }[] {
+    const points: { x: number; y: number }[] = [];
+    const commands = path.match(/[ML]\s*[-\d.]+\s+[-\d.]+/g);
+    if (!commands) return points;
+
+    for (const cmd of commands) {
+        const nums = cmd.match(/[-\d.]+/g);
+        if (nums && nums.length >= 2) {
+            points.push({ x: parseFloat(nums[0]), y: parseFloat(nums[1]) });
+        }
+    }
+    return points;
+}
+
+/**
+ * Finds the best position for an edge label.
+ * Chooses the longest segment of the path and positions the label at its center.
+ *
+ * @param path - SVG path ("M x y L x y L x y ...")
+ * @returns { x, y } - Coordinates for the label
+ */
+export function computeLabelPosition(path: string): { x: number; y: number } {
+    const points = parsePathPoints(path);
+    if (points.length < 2) return { x: 0, y: 0 };
+
+    let longestLength = 0;
+    let longestMidpoint = { x: 0, y: 0 };
+
+    for (let i = 0; i < points.length - 1; i++) {
+        const p1 = points[i];
+        const p2 = points[i + 1];
+        const length = Math.abs(p2.x - p1.x) + Math.abs(p2.y - p1.y);
+
+        if (length > longestLength) {
+            longestLength = length;
+            longestMidpoint = {
+                x: (p1.x + p2.x) / 2,
+                y: (p1.y + p2.y) / 2,
+            };
+        }
+    }
+
+    return longestMidpoint;
+}
+
+/**
+ * Finds the position for cardinality (near the target).
+ * Uses the last segment of the path, offset from the target.
+ *
+ * @param path - SVG path
+ * @param offset - Distance from target (default 25px)
+ * @returns { x, y } - Coordinates for cardinality
+ */
+export function computeCardinalityPosition(
+    path: string,
+    offset: number = 25
+): { x: number; y: number } {
+    const points = parsePathPoints(path);
+    if (points.length < 2) return { x: 0, y: 0 };
+
+    const last = points[points.length - 1];
+    const prev = points[points.length - 2];
+
+    const dx = last.x - prev.x;
+    const dy = last.y - prev.y;
+    const len = Math.sqrt(dx * dx + dy * dy);
+
+    if (len === 0) return last;
+
+    return {
+        x: last.x - (dx / len) * offset,
+        y: last.y - (dy / len) * offset,
+    };
+}
+
+// === Waypoint Types ===
+export interface EdgeWaypoint {
+    segmentIndex: number;
+    offset: number;
+}
+
+export interface SegmentInfo {
+    index: number;
+    midX: number;
+    midY: number;
+    isHorizontal: boolean;
+}
+
+/**
+ * Extracts segment information from a path for waypoint rendering.
+ */
+export function getPathSegments(path: string): SegmentInfo[] {
+    const points = parsePathPoints(path);
+    const segments: SegmentInfo[] = [];
+
+    for (let i = 0; i < points.length - 1; i++) {
+        const p1 = points[i];
+        const p2 = points[i + 1];
+        const isH = Math.abs(p2.y - p1.y) < 1;
+
+        segments.push({
+            index: i,
+            midX: (p1.x + p2.x) / 2,
+            midY: (p1.y + p2.y) / 2,
+            isHorizontal: isH,
+        });
+    }
+
+    return segments;
+}
+
+/**
+ * Applies waypoint offsets to path points.
+ *
+ * @param points - Array of path points
+ * @param waypoints - Array of waypoint offsets
+ * @returns Adjusted points with waypoint offsets applied
+ */
+export function applyWaypoints(
+    points: { x: number; y: number }[],
+    waypoints: EdgeWaypoint[]
+): { x: number; y: number }[] {
+    if (!waypoints || waypoints.length === 0) return points;
+
+    const adjusted = points.map((p) => ({ ...p }));
+
+    for (const wp of waypoints) {
+        const i = wp.segmentIndex;
+        if (i < 0 || i >= adjusted.length - 1) continue;
+
+        const p1 = adjusted[i];
+        const p2 = adjusted[i + 1];
+        const isHorizontal = Math.abs(p2.y - p1.y) < 1;
+
+        if (isHorizontal) {
+            // Move horizontal segment vertically
+            p1.y += wp.offset;
+            p2.y += wp.offset;
+        } else {
+            // Move vertical segment horizontally
+            p1.x += wp.offset;
+            p2.x += wp.offset;
+        }
+    }
+
+    return adjusted;
+}
+
+/**
+ * Converts an array of points to an SVG path string.
+ */
+export function pointsToPath(points: { x: number; y: number }[]): string {
+    if (points.length === 0) return '';
+    let d = `M ${points[0].x} ${points[0].y}`;
+    for (let i = 1; i < points.length; i++) {
+        d += ` L ${points[i].x} ${points[i].y}`;
+    }
+    return d;
 }

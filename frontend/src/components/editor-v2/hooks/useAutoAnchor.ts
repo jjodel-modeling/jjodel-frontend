@@ -133,12 +133,14 @@ function estimatePathLength(
  * @param sourceRect - The source node rectangle
  * @param targetRect - The target node rectangle
  * @param isSelfReference - Whether this is a self-referencing edge
+ * @param edgeType - Optional edge type for semantic preferences ('inheritance' | 'reference')
  * @returns The optimal source and target handle IDs
  */
 function computeBestAnchors(
     sourceRect: NodeRect,
     targetRect: NodeRect,
-    isSelfReference: boolean
+    isSelfReference: boolean,
+    edgeType?: 'inheritance' | 'reference'
 ): { sourceHandle: string; targetHandle: string } {
     // Self-reference: use fixed handles for compact loop
     if (isSelfReference) {
@@ -152,10 +154,20 @@ function computeBestAnchors(
     let bestSource: Side = 'right';
     let bestTarget: Side = 'left';
 
+    // Inheritance preference bonus - strongly prefer top→bottom for subclass→superclass
+    const INHERITANCE_BONUS = 150;
+
     // Test all 16 combinations
     for (const sa of sourceAnchors) {
         for (const ta of targetAnchors) {
-            const score = estimatePathLength(sa, ta, sourceRect, targetRect);
+            let score = estimatePathLength(sa, ta, sourceRect, targetRect);
+
+            // For inheritance edges, prefer source=top, target=bottom
+            if (edgeType === 'inheritance') {
+                if (sa.side === 'top') score -= INHERITANCE_BONUS;
+                if (ta.side === 'bottom') score -= INHERITANCE_BONUS;
+            }
+
             if (score < bestScore) {
                 bestScore = score;
                 bestSource = sa.side;
@@ -176,7 +188,11 @@ export function useAutoAnchor() {
     const nodes = useNodes();
 
     const getOptimalAnchors = useCallback(
-        (sourceId: string, targetId: string): { sourceHandle: string; targetHandle: string } => {
+        (
+            sourceId: string,
+            targetId: string,
+            edgeType?: 'inheritance' | 'reference'
+        ): { sourceHandle: string; targetHandle: string } => {
             const sourceNode = nodes.find((n) => n.id === sourceId);
             const targetNode = nodes.find((n) => n.id === targetId);
 
@@ -188,7 +204,7 @@ export function useAutoAnchor() {
             const targetRect = getNodeRect(targetNode);
             const isSelfReference = sourceId === targetId;
 
-            return computeBestAnchors(sourceRect, targetRect, isSelfReference);
+            return computeBestAnchors(sourceRect, targetRect, isSelfReference, edgeType);
         },
         [nodes]
     );

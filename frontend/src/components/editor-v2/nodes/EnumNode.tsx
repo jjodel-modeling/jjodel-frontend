@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
-import { Handle, Position, NodeResizer, useReactFlow, type NodeProps, type Node } from '@xyflow/react';
+import { NodeResizer, useReactFlow, type NodeProps, type Node } from '@xyflow/react';
+import DynamicHandles from '../components/DynamicHandles';
 import type { EnumNodeData } from '../types';
 import { createLiteral } from '../types';
 import { useEditorContextSafe } from '../contexts/EditorContext';
@@ -130,10 +131,7 @@ function EnumNode({ id, data, selected }: NodeProps<EnumNodeType>) {
                 handleClassName="node-resize-handle"
             />
 
-            <Handle type="source" position={Position.Top} id="top" className="mm-anchor" />
-            <Handle type="source" position={Position.Right} id="right" className="mm-anchor" />
-            <Handle type="source" position={Position.Bottom} id="bottom" className="mm-anchor" />
-            <Handle type="source" position={Position.Left} id="left" className="mm-anchor" />
+            <DynamicHandles nodeId={id} />
 
             {/* Header with badge */}
             <div className="mm-node__header" onDoubleClick={() => setEditing(true)}>

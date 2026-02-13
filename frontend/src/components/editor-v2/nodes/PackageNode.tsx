@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
-import { Handle, Position, NodeResizer, useReactFlow, type NodeProps, type Node } from '@xyflow/react';
+import { NodeResizer, useReactFlow, type NodeProps, type Node } from '@xyflow/react';
+import DynamicHandles from '../components/DynamicHandles';
 import type { PackageNodeData } from '../types';
 import { useEditorContextSafe } from '../contexts/EditorContext';
 
@@ -49,10 +50,7 @@ function PackageNode({ id, data, selected }: NodeProps<PackageNodeType>) {
                 handleClassName="node-resize-handle"
             />
 
-            <Handle type="source" position={Position.Top} id="top" className="mm-anchor" />
-            <Handle type="source" position={Position.Right} id="right" className="mm-anchor" />
-            <Handle type="source" position={Position.Bottom} id="bottom" className="mm-anchor" />
-            <Handle type="source" position={Position.Left} id="left" className="mm-anchor" />
+            <DynamicHandles nodeId={id} />
 
             {/* Package tab header */}
             <div className="mm-node__tab" onDoubleClick={() => setEditing(true)}>

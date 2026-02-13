@@ -635,11 +635,12 @@ function ReferenceEdgeProperties({
             containment: kind === 'composition',
         };
 
+        // Preserve existing data (like waypoints) while updating reference
         onUpdate(edge.id, {
             label: name,
-            data: { reference: updatedRef } as ReferenceEdgeData,
+            data: { ...edgeData, reference: updatedRef } as ReferenceEdgeData,
         });
-    }, [name, kind, lowerBound, upperBound, edge.id, edge.target, ref, onUpdate]);
+    }, [name, kind, lowerBound, upperBound, edge.id, edge.target, ref, edgeData, onUpdate]);
 
     const handleKindChange = (newKind: ReferenceKind) => {
         setKind(newKind);
@@ -652,9 +653,10 @@ function ReferenceEdgeProperties({
             upperBound,
             containment: newKind === 'composition',
         };
+        // Preserve existing data (like waypoints) while updating reference
         onUpdate(edge.id, {
             label: name,
-            data: { reference: updatedRef } as ReferenceEdgeData,
+            data: { ...edgeData, reference: updatedRef } as ReferenceEdgeData,
         });
     };
 
