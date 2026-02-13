@@ -128,6 +128,92 @@ function estimatePathLength(
 }
 
 /**
+ * Deconflicts bidirectional edges (A→B and B→A) by assigning them different anchor combinations.
+ *
+ * When two edges connect the same pair of nodes in opposite directions, they would normally
+ * choose the same anchor sides and overlap completely. This function detects such pairs and
+ * assigns alternating anchor combinations based on the dominant axis between nodes.
+ *
+ * @param edges - Array of edges with their computed anchors
+ * @param nodeRects - Map of node IDs to their rectangles
+ * @returns Map of edge IDs to adjusted anchor handles
+ */
+function deconflictBidirectionalEdges(
+    edges: { id: string; source: string; target: string; sourceHandle: string; targetHandle: string; type?: string }[],
+    nodeRects: Map<string, NodeRect>
+): Map<string, { sourceHandle: string; targetHandle: string }> {
+    const result = new Map<string, { sourceHandle: string; targetHandle: string }>();
+
+    // Group edges by node pair (sorted to group A→B with B→A)
+    const pairMap = new Map<string, typeof edges>();
+    for (const edge of edges) {
+        const pairKey = [edge.source, edge.target].sort().join('::');
+        const group = pairMap.get(pairKey) || [];
+        group.push(edge);
+        pairMap.set(pairKey, group);
+    }
+
+    // Process each pair group
+    for (const [, group] of pairMap) {
+        // Find bidirectional pairs (same nodes, opposite directions)
+        const bidirectionalPairs: Array<{ forward: typeof edges[0]; reverse: typeof edges[0] }> = [];
+        const processed = new Set<string>();
+
+        for (const edge of group) {
+            if (processed.has(edge.id)) continue;
+
+            const opposite = group.find(e => e.source === edge.target && e.target === edge.source);
+            if (opposite && !processed.has(opposite.id)) {
+                bidirectionalPairs.push({ forward: edge, reverse: opposite });
+                processed.add(edge.id);
+                processed.add(opposite.id);
+            }
+        }
+
+        // Assign alternating anchors to bidirectional pairs
+        for (const pair of bidirectionalPairs) {
+            const sourceRect = nodeRects.get(pair.forward.source);
+            const targetRect = nodeRects.get(pair.forward.target);
+
+            if (!sourceRect || !targetRect) continue;
+
+            // Determine dominant axis between nodes
+            const dx = targetRect.centerX - sourceRect.centerX;
+            const dy = targetRect.centerY - sourceRect.centerY;
+            const isHorizontalDominant = Math.abs(dx) > Math.abs(dy);
+
+            if (isHorizontalDominant) {
+                // Nodes are horizontally separated → use vertical anchors for separation
+                // Forward edge: top-to-top, Reverse edge: bottom-to-bottom
+                if (dx > 0) {
+                    // Target is to the right
+                    result.set(pair.forward.id, { sourceHandle: 'top', targetHandle: 'top' });
+                    result.set(pair.reverse.id, { sourceHandle: 'bottom', targetHandle: 'bottom' });
+                } else {
+                    // Target is to the left
+                    result.set(pair.forward.id, { sourceHandle: 'bottom', targetHandle: 'bottom' });
+                    result.set(pair.reverse.id, { sourceHandle: 'top', targetHandle: 'top' });
+                }
+            } else {
+                // Nodes are vertically separated → use horizontal anchors for separation
+                // Forward edge: left-to-left, Reverse edge: right-to-right
+                if (dy > 0) {
+                    // Target is below
+                    result.set(pair.forward.id, { sourceHandle: 'left', targetHandle: 'left' });
+                    result.set(pair.reverse.id, { sourceHandle: 'right', targetHandle: 'right' });
+                } else {
+                    // Target is above
+                    result.set(pair.forward.id, { sourceHandle: 'right', targetHandle: 'right' });
+                    result.set(pair.reverse.id, { sourceHandle: 'left', targetHandle: 'left' });
+                }
+            }
+        }
+    }
+
+    return result;
+}
+
+/**
  * Computes the best anchor pair by testing all 16 combinations.
  *
  * @param sourceRect - The source node rectangle
@@ -209,7 +295,59 @@ export function useAutoAnchor() {
         [nodes]
     );
 
-    return { getOptimalAnchors };
+    /**
+     * Computes optimal anchors for all edges at once, with bidirectional deconfliction.
+     * Use this when you have multiple edges and want to prevent overlap between
+     * bidirectional pairs (A→B and B→A).
+     */
+    const getOptimalAnchorsForAllEdges = useCallback(
+        (
+            edges: { id: string; source: string; target: string; type?: string }[]
+        ): Map<string, { sourceHandle: string; targetHandle: string }> => {
+            // Build node rects map
+            const nodeRects = new Map<string, NodeRect>();
+            for (const node of nodes) {
+                nodeRects.set(node.id, getNodeRect(node));
+            }
+
+            // First pass: compute best anchors for each edge individually
+            const edgesWithAnchors = edges.map(edge => {
+                const sourceNode = nodes.find(n => n.id === edge.source);
+                const targetNode = nodes.find(n => n.id === edge.target);
+
+                if (!sourceNode || !targetNode) {
+                    return { ...edge, sourceHandle: 'right', targetHandle: 'left' };
+                }
+
+                const sourceRect = getNodeRect(sourceNode);
+                const targetRect = getNodeRect(targetNode);
+                const isSelfReference = edge.source === edge.target;
+                const edgeType = edge.type === 'inheritance' ? 'inheritance' : 'reference';
+                const anchors = computeBestAnchors(sourceRect, targetRect, isSelfReference, edgeType);
+
+                return { ...edge, ...anchors };
+            });
+
+            // Second pass: apply bidirectional deconfliction
+            const deconflicted = deconflictBidirectionalEdges(edgesWithAnchors, nodeRects);
+
+            // Build result map
+            const result = new Map<string, { sourceHandle: string; targetHandle: string }>();
+            for (const edge of edgesWithAnchors) {
+                const adjusted = deconflicted.get(edge.id);
+                if (adjusted) {
+                    result.set(edge.id, adjusted);
+                } else {
+                    result.set(edge.id, { sourceHandle: edge.sourceHandle, targetHandle: edge.targetHandle });
+                }
+            }
+
+            return result;
+        },
+        [nodes]
+    );
+
+    return { getOptimalAnchors, getOptimalAnchorsForAllEdges };
 }
 
 export { computeBestAnchors, getNodeRect };

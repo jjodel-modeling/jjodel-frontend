@@ -220,7 +220,7 @@ function EditorV2Inner() {
     } = useAlignment();
 
     // Auto-anchor for optimal edge routing
-    const { getOptimalAnchors } = useAutoAnchor();
+    const { getOptimalAnchors, getOptimalAnchorsForAllEdges } = useAutoAnchor();
 
     // Get selected nodes and edges for properties panel
     const selectedNodes = useMemo(() => nodes.filter((n) => n.selected), [nodes]);
@@ -231,49 +231,122 @@ function EditorV2Inner() {
         (connection: Connection) => {
             takeSnapshot();
 
+            const newEdgeId = connectionMode === 'inheritance'
+                ? `inh_${Date.now()}`
+                : `ref_${Date.now()}`;
             const edgeType = connectionMode === 'inheritance' ? 'inheritance' : 'reference';
-            const { sourceHandle, targetHandle } = getOptimalAnchors(
-                connection.source!,
-                connection.target!,
-                edgeType
+
+            // Check for existing opposite-direction edge to apply bidirectional deconfliction
+            const existingOpposite = edges.find(
+                (e) => e.source === connection.target && e.target === connection.source
             );
 
-            if (connectionMode === 'inheritance') {
-                const newEdge: Edge = {
-                    id: `inh_${Date.now()}`,
-                    source: connection.source!,
-                    target: connection.target!,
-                    sourceHandle,
-                    targetHandle,
-                    type: 'inheritance',
-                    data: {} as InheritanceEdgeData,
-                };
-                setEdges((eds) => addEdge(newEdge, eds));
+            if (existingOpposite) {
+                // Bidirectional pair detected - use deconfliction for both edges
+                const edgesToCalculate = [
+                    { id: existingOpposite.id, source: existingOpposite.source, target: existingOpposite.target, type: existingOpposite.type },
+                    { id: newEdgeId, source: connection.source!, target: connection.target!, type: edgeType },
+                ];
+                const optimalAnchors = getOptimalAnchorsForAllEdges(edgesToCalculate);
+
+                const newAnchors = optimalAnchors.get(newEdgeId);
+                const oppositeAnchors = optimalAnchors.get(existingOpposite.id);
+
+                if (connectionMode === 'inheritance') {
+                    const newEdge: Edge = {
+                        id: newEdgeId,
+                        source: connection.source!,
+                        target: connection.target!,
+                        sourceHandle: newAnchors?.sourceHandle || 'top',
+                        targetHandle: newAnchors?.targetHandle || 'bottom',
+                        type: 'inheritance',
+                        data: {} as InheritanceEdgeData,
+                    };
+                    setEdges((eds) => {
+                        // Update opposite edge anchors
+                        const updated = oppositeAnchors
+                            ? eds.map((e) => e.id === existingOpposite.id
+                                ? { ...e, sourceHandle: oppositeAnchors.sourceHandle, targetHandle: oppositeAnchors.targetHandle }
+                                : e)
+                            : eds;
+                        return addEdge(newEdge, updated);
+                    });
+                } else {
+                    const newEdge: Edge = {
+                        id: newEdgeId,
+                        source: connection.source!,
+                        target: connection.target!,
+                        sourceHandle: newAnchors?.sourceHandle || 'right',
+                        targetHandle: newAnchors?.targetHandle || 'left',
+                        type: 'reference',
+                        label: 'newRef',
+                        data: {
+                            reference: {
+                                id: newEdgeId,
+                                name: 'newRef',
+                                kind: 'association',
+                                targetClassId: connection.target!,
+                                lowerBound: 0,
+                                upperBound: -1,
+                                containment: false,
+                            },
+                        } as ReferenceEdgeData,
+                    };
+                    setEdges((eds) => {
+                        // Update opposite edge anchors
+                        const updated = oppositeAnchors
+                            ? eds.map((e) => e.id === existingOpposite.id
+                                ? { ...e, sourceHandle: oppositeAnchors.sourceHandle, targetHandle: oppositeAnchors.targetHandle }
+                                : e)
+                            : eds;
+                        return addEdge(newEdge, updated);
+                    });
+                }
             } else {
-                const newEdge: Edge = {
-                    id: `ref_${Date.now()}`,
-                    source: connection.source!,
-                    target: connection.target!,
-                    sourceHandle,
-                    targetHandle,
-                    type: 'reference',
-                    label: 'newRef',
-                    data: {
-                        reference: {
-                            id: `ref_${Date.now()}`,
-                            name: 'newRef',
-                            kind: 'association',
-                            targetClassId: connection.target!,
-                            lowerBound: 0,
-                            upperBound: -1,
-                            containment: false,
-                        },
-                    } as ReferenceEdgeData,
-                };
-                setEdges((eds) => addEdge(newEdge, eds));
+                // No bidirectional pair - use simple anchor calculation
+                const { sourceHandle, targetHandle } = getOptimalAnchors(
+                    connection.source!,
+                    connection.target!,
+                    edgeType
+                );
+
+                if (connectionMode === 'inheritance') {
+                    const newEdge: Edge = {
+                        id: newEdgeId,
+                        source: connection.source!,
+                        target: connection.target!,
+                        sourceHandle,
+                        targetHandle,
+                        type: 'inheritance',
+                        data: {} as InheritanceEdgeData,
+                    };
+                    setEdges((eds) => addEdge(newEdge, eds));
+                } else {
+                    const newEdge: Edge = {
+                        id: newEdgeId,
+                        source: connection.source!,
+                        target: connection.target!,
+                        sourceHandle,
+                        targetHandle,
+                        type: 'reference',
+                        label: 'newRef',
+                        data: {
+                            reference: {
+                                id: newEdgeId,
+                                name: 'newRef',
+                                kind: 'association',
+                                targetClassId: connection.target!,
+                                lowerBound: 0,
+                                upperBound: -1,
+                                containment: false,
+                            },
+                        } as ReferenceEdgeData,
+                    };
+                    setEdges((eds) => addEdge(newEdge, eds));
+                }
             }
         },
-        [connectionMode, setEdges, takeSnapshot, getOptimalAnchors]
+        [connectionMode, edges, setEdges, takeSnapshot, getOptimalAnchors, getOptimalAnchorsForAllEdges]
     );
 
     // Handle drop from palette
@@ -793,25 +866,39 @@ function EditorV2Inner() {
                         .map((c) => c.id)
                 );
 
-                // Recalculate optimal anchors for edges connected to moved nodes
-                setEdges((currentEdges) =>
-                    currentEdges.map((edge) => {
-                        if (movedNodeIds.has(edge.source) || movedNodeIds.has(edge.target)) {
-                            const edgeType = edge.type === 'inheritance' ? 'inheritance' : 'reference';
-                            const { sourceHandle, targetHandle } = getOptimalAnchors(
-                                edge.source,
-                                edge.target,
-                                edgeType
-                            );
-                            return { ...edge, sourceHandle, targetHandle };
+                // Recalculate optimal anchors for ALL edges connected to moved nodes
+                // using bidirectional deconfliction to prevent overlapping A→B and B→A edges
+                setEdges((currentEdges) => {
+                    // Find edges that need recalculation (connected to moved nodes)
+                    const edgesToRecalculate = currentEdges.filter(
+                        (e) => movedNodeIds.has(e.source) || movedNodeIds.has(e.target)
+                    );
+
+                    if (edgesToRecalculate.length === 0) return currentEdges;
+
+                    // Calculate optimal anchors with bidirectional deconfliction
+                    const optimalAnchors = getOptimalAnchorsForAllEdges(
+                        edgesToRecalculate.map((e) => ({
+                            id: e.id,
+                            source: e.source,
+                            target: e.target,
+                            type: e.type,
+                        }))
+                    );
+
+                    // Apply new anchors
+                    return currentEdges.map((edge) => {
+                        const anchors = optimalAnchors.get(edge.id);
+                        if (anchors) {
+                            return { ...edge, sourceHandle: anchors.sourceHandle, targetHandle: anchors.targetHandle };
                         }
                         return edge;
-                    })
-                );
+                    });
+                });
             }
             onNodesChange(changes);
         },
-        [onNodesChange, takeSnapshot, setEdges, getOptimalAnchors]
+        [onNodesChange, takeSnapshot, setEdges, getOptimalAnchorsForAllEdges]
     );
 
     const editorContextValue = useMemo(() => ({ takeSnapshot }), [takeSnapshot]);
