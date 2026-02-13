@@ -1,141 +1,163 @@
 /**
  * Edge utility functions for Manhattan routing with rounded corners
+ *
+ * Phase 6: Side-aware routing - the router now knows which side the edge
+ * exits from and enters to, producing clean paths without U-turns.
  */
 
 export const EDGE_PADDING = 25;
 
-interface Rect {
-    x: number;
-    y: number;
-    width: number;
-    height: number;
-}
+export type Side = 'top' | 'right' | 'bottom' | 'left';
 
-export function getNodeRect(node: any): Rect {
-    return {
-        x: node.position.x,
-        y: node.position.y,
-        width: node.measured?.width ?? node.width ?? 180,
-        height: node.measured?.height ?? node.height ?? 80,
-    };
-}
-
-function rectsOverlap(
-    rect: Rect,
-    x1: number,
-    y1: number,
-    x2: number,
-    y2: number
-): boolean {
-    const padded = {
-        x: rect.x - EDGE_PADDING,
-        y: rect.y - EDGE_PADDING,
-        width: rect.width + EDGE_PADDING * 2,
-        height: rect.height + EDGE_PADDING * 2,
-    };
-
-    if (Math.abs(y1 - y2) < 1) {
-        const minX = Math.min(x1, x2);
-        const maxX = Math.max(x1, x2);
-        return (
-            y1 > padded.y &&
-            y1 < padded.y + padded.height &&
-            maxX > padded.x &&
-            minX < padded.x + padded.width
-        );
+/**
+ * Returns a unit direction vector for a given side.
+ * This is the direction the edge EXITS from that side.
+ */
+function sideDirection(side: Side): { dx: number; dy: number } {
+    switch (side) {
+        case 'top':    return { dx: 0, dy: -1 };
+        case 'right':  return { dx: 1, dy: 0 };
+        case 'bottom': return { dx: 0, dy: 1 };
+        case 'left':   return { dx: -1, dy: 0 };
     }
-
-    if (Math.abs(x1 - x2) < 1) {
-        const minY = Math.min(y1, y2);
-        const maxY = Math.max(y1, y2);
-        return (
-            x1 > padded.x &&
-            x1 < padded.x + padded.width &&
-            maxY > padded.y &&
-            minY < padded.y + padded.height
-        );
-    }
-
-    return false;
 }
 
 /**
- * Computes a Manhattan (orthogonal) path between two points,
- * avoiding obstacles when possible.
+ * Extracts the side from a handle ID (e.g., "right-0" → "right").
+ */
+export function getSideFromHandle(handleId: string | null | undefined): Side {
+    if (!handleId) return 'right';
+    const base = handleId.split('-')[0];
+    if (['top', 'right', 'bottom', 'left'].includes(base)) return base as Side;
+    return 'right';
+}
+
+/**
+ * Removes duplicate and collinear points from a point array.
+ */
+function cleanPoints(points: { x: number; y: number }[]): { x: number; y: number }[] {
+    if (points.length < 2) return points;
+
+    // Remove consecutive duplicates
+    const deduped: { x: number; y: number }[] = [points[0]];
+    for (let i = 1; i < points.length; i++) {
+        const prev = deduped[deduped.length - 1];
+        if (Math.abs(points[i].x - prev.x) > 0.5 || Math.abs(points[i].y - prev.y) > 0.5) {
+            deduped.push(points[i]);
+        }
+    }
+
+    // Remove collinear points
+    if (deduped.length < 3) return deduped;
+
+    const result: { x: number; y: number }[] = [deduped[0]];
+    for (let i = 1; i < deduped.length - 1; i++) {
+        const prev = result[result.length - 1];
+        const curr = deduped[i];
+        const next = deduped[i + 1];
+
+        const collinearX = Math.abs(prev.x - curr.x) < 0.5 && Math.abs(curr.x - next.x) < 0.5;
+        const collinearY = Math.abs(prev.y - curr.y) < 0.5 && Math.abs(curr.y - next.y) < 0.5;
+
+        if (!collinearX && !collinearY) {
+            result.push(curr);
+        }
+    }
+    result.push(deduped[deduped.length - 1]);
+
+    return result;
+}
+
+/**
+ * Side-aware Manhattan router.
+ *
+ * Strategy:
+ * 1. Extend source point in sourceSide direction by EDGE_PADDING → "exitPoint"
+ * 2. Extend target point in targetSide direction by EDGE_PADDING → "entryPoint"
+ * 3. Connect exitPoint to entryPoint with 1 or 2 segments (always Manhattan)
+ *
+ * This produces paths with 3-5 segments total, always respecting exit/entry directions.
  */
 export function computeManhattanPath(
     sourceX: number,
     sourceY: number,
+    sourceSide: Side,
     targetX: number,
     targetY: number,
-    sourceNodeId: string,
-    targetNodeId: string,
-    allNodes: any[]
+    targetSide: Side,
 ): string {
-    const dy = Math.abs(targetY - sourceY);
+    const PAD = EDGE_PADDING;
 
-    if (dy < 5) {
-        return `M ${sourceX} ${sourceY} L ${targetX} ${targetY}`;
+    const srcDir = sideDirection(sourceSide);
+    const tgtDir = sideDirection(targetSide);
+
+    // Exit and entry points with padding
+    let exitX = sourceX + srcDir.dx * PAD;
+    let exitY = sourceY + srcDir.dy * PAD;
+    let entryX = targetX + tgtDir.dx * PAD;
+    let entryY = targetY + tgtDir.dy * PAD;
+
+    // Check if we need extra padding (backtracking scenario)
+    const exitH = srcDir.dx !== 0;
+    const entryH = tgtDir.dx !== 0;
+
+    // Does the exit→entry direction conflict with exit direction?
+    const dxToEntry = entryX - exitX;
+    const dyToEntry = entryY - exitY;
+
+    const exitConflict = (srcDir.dx > 0 && dxToEntry < -PAD) || (srcDir.dx < 0 && dxToEntry > PAD)
+        || (srcDir.dy > 0 && dyToEntry < -PAD) || (srcDir.dy < 0 && dyToEntry > PAD);
+
+    if (exitConflict) {
+        // Extend padding further to avoid backtracking
+        exitX = sourceX + srcDir.dx * PAD * 2;
+        exitY = sourceY + srcDir.dy * PAD * 2;
+        entryX = targetX + tgtDir.dx * PAD * 2;
+        entryY = targetY + tgtDir.dy * PAD * 2;
     }
 
-    const obstacles = allNodes
-        .filter((n) => n.id !== sourceNodeId && n.id !== targetNodeId)
-        .map(getNodeRect);
-
-    const midX = (sourceX + targetX) / 2;
-    const standardPath = [
+    // Build point array
+    const points: { x: number; y: number }[] = [
         { x: sourceX, y: sourceY },
-        { x: midX, y: sourceY },
-        { x: midX, y: targetY },
-        { x: targetX, y: targetY },
+        { x: exitX, y: exitY },
     ];
 
-    let hasCollision = false;
-    for (let i = 0; i < standardPath.length - 1; i++) {
-        const p1 = standardPath[i];
-        const p2 = standardPath[i + 1];
-        for (const obs of obstacles) {
-            if (rectsOverlap(obs, p1.x, p1.y, p2.x, p2.y)) {
-                hasCollision = true;
-                break;
-            }
+    // Connect exit → entry
+    if (exitH && entryH) {
+        // Both horizontal exits: use midY
+        if (Math.abs(exitY - entryY) < 1) {
+            points.push({ x: entryX, y: entryY });
+        } else {
+            const midY = (exitY + entryY) / 2;
+            points.push({ x: exitX, y: midY });
+            points.push({ x: entryX, y: midY });
+            points.push({ x: entryX, y: entryY });
         }
-        if (hasCollision) break;
+    } else if (exitH && !entryH) {
+        // Exit horizontal, entry vertical: L-shape
+        points.push({ x: entryX, y: exitY });
+        points.push({ x: entryX, y: entryY });
+    } else if (!exitH && entryH) {
+        // Exit vertical, entry horizontal: L-shape
+        points.push({ x: exitX, y: entryY });
+        points.push({ x: entryX, y: entryY });
+    } else {
+        // Both vertical: use midX
+        if (Math.abs(exitX - entryX) < 1) {
+            points.push({ x: entryX, y: entryY });
+        } else {
+            const midX = (exitX + entryX) / 2;
+            points.push({ x: midX, y: exitY });
+            points.push({ x: midX, y: entryY });
+            points.push({ x: entryX, y: entryY });
+        }
     }
 
-    if (!hasCollision) {
-        return `M ${sourceX} ${sourceY} L ${midX} ${sourceY} L ${midX} ${targetY} L ${targetX} ${targetY}`;
-    }
+    // Final target point
+    points.push({ x: targetX, y: targetY });
 
-    let topY = Infinity;
-    let bottomY = -Infinity;
-    for (const obs of obstacles) {
-        topY = Math.min(topY, obs.y - EDGE_PADDING);
-        bottomY = Math.max(bottomY, obs.y + obs.height + EDGE_PADDING);
-    }
-
-    const sourceRect = allNodes.find((n) => n.id === sourceNodeId);
-    const targetRect = allNodes.find((n) => n.id === targetNodeId);
-    if (sourceRect) {
-        const sr = getNodeRect(sourceRect);
-        topY = Math.min(topY, sr.y - EDGE_PADDING);
-        bottomY = Math.max(bottomY, sr.y + sr.height + EDGE_PADDING);
-    }
-    if (targetRect) {
-        const tr = getNodeRect(targetRect);
-        topY = Math.min(topY, tr.y - EDGE_PADDING);
-        bottomY = Math.max(bottomY, tr.y + tr.height + EDGE_PADDING);
-    }
-
-    const useTop =
-        Math.abs(sourceY - topY) + Math.abs(targetY - topY) <
-        Math.abs(sourceY - bottomY) + Math.abs(targetY - bottomY);
-    const detourY = useTop ? topY : bottomY;
-
-    const offsetX1 = sourceX + EDGE_PADDING;
-    const offsetX2 = targetX - EDGE_PADDING;
-
-    return `M ${sourceX} ${sourceY} L ${offsetX1} ${sourceY} L ${offsetX1} ${detourY} L ${offsetX2} ${detourY} L ${offsetX2} ${targetY} L ${targetX} ${targetY}`;
+    // Clean up: remove duplicates and collinear points
+    return pointsToPath(cleanPoints(points));
 }
 
 /**
@@ -218,7 +240,6 @@ export function roundManhattanPath(path: string, radius: number = 4): string {
  * @param sourceY - Source handle Y position
  * @param targetX - Target handle X position
  * @param targetY - Target handle Y position
- * @param loopSize - Size of the loop (default 40px)
  * @returns SVG path with cubic Bezier curve
  */
 export function computeSelfLoopPath(
@@ -226,14 +247,17 @@ export function computeSelfLoopPath(
     sourceY: number,
     targetX: number,
     targetY: number,
-    loopSize: number = 40
 ): string {
-    // Control points create a compact loop
-    // Exit to the right, curve up, then come back to target
-    const cp1X = sourceX + loopSize;
-    const cp1Y = sourceY;
-    const cp2X = targetX + loopSize;
-    const cp2Y = targetY - loopSize;
+    // Compact loop size
+    const size = 30;
+
+    // Control point 1: out to the right from source
+    const cp1X = sourceX + size;
+    const cp1Y = sourceY - size * 0.5;
+
+    // Control point 2: above the target, coming from the right
+    const cp2X = targetX + size * 0.5;
+    const cp2Y = targetY - size;
 
     return `M ${sourceX} ${sourceY} C ${cp1X} ${cp1Y}, ${cp2X} ${cp2Y}, ${targetX} ${targetY}`;
 }

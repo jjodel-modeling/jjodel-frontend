@@ -2,10 +2,9 @@ import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import {
     EdgeLabelRenderer,
     useReactFlow,
-    useNodes,
     type EdgeProps,
 } from '@xyflow/react';
-import type { ReferenceEdgeData, ReferenceKind, EdgeWaypoint } from '../types';
+import type { ReferenceEdgeData, ReferenceKind } from '../types';
 import { formatCardinality } from '../types';
 import {
     computeManhattanPath,
@@ -17,6 +16,7 @@ import {
     applyWaypoints,
     pointsToPath,
     getPathSegments,
+    getSideFromHandle,
 } from '../utils/edgeUtils';
 
 function ReferenceEdge(props: EdgeProps) {
@@ -28,6 +28,8 @@ function ReferenceEdge(props: EdgeProps) {
         targetY,
         source,
         target,
+        sourceHandleId,
+        targetHandleId,
         data,
         selected,
         label,
@@ -35,7 +37,6 @@ function ReferenceEdge(props: EdgeProps) {
 
     const edgeData = data as ReferenceEdgeData | undefined;
     const { setEdges, getViewport } = useReactFlow();
-    const nodes = useNodes();
     const [editing, setEditing] = useState(false);
     const [labelText, setLabelText] = useState(String(label || edgeData?.reference?.name || ''));
     const dragRef = useRef<{ segmentIndex: number; startPos: number; startOffset: number; isHorizontal: boolean } | null>(null);
@@ -53,10 +54,14 @@ function ReferenceEdge(props: EdgeProps) {
 
     const isSelfLoop = source === target;
 
-    // Compute base path
+    // Get sides from handle IDs
+    const sourceSide = getSideFromHandle(sourceHandleId);
+    const targetSide = getSideFromHandle(targetHandleId);
+
+    // Compute base path (now side-aware, no nodes dependency!)
     const rawPath = useMemo(
-        () => computeManhattanPath(sourceX, sourceY, targetX, targetY, source, target, nodes),
-        [sourceX, sourceY, targetX, targetY, source, target, nodes]
+        () => computeManhattanPath(sourceX, sourceY, sourceSide, targetX, targetY, targetSide),
+        [sourceX, sourceY, sourceSide, targetX, targetY, targetSide]
     );
 
     // Parse points and apply waypoints
@@ -80,6 +85,30 @@ function ReferenceEdge(props: EdgeProps) {
 
     // Position label on the longest segment of the path
     const labelPos = useMemo(() => computeLabelPosition(adjustedPath), [adjustedPath]);
+
+    // Calculate label offset based on segment orientation (perpendicular to segment)
+    const labelOffset = useMemo(() => {
+        if (isSelfLoop) return { x: 0, y: -16 };
+
+        const points = parsePathPoints(adjustedPath);
+        let longestLen = 0;
+        let longestIsHorizontal = true;
+
+        for (let i = 0; i < points.length - 1; i++) {
+            const p1 = points[i];
+            const p2 = points[i + 1];
+            const len = Math.abs(p2.x - p1.x) + Math.abs(p2.y - p1.y);
+            if (len > longestLen) {
+                longestLen = len;
+                longestIsHorizontal = Math.abs(p2.y - p1.y) < 1;
+            }
+        }
+
+        // Offset perpendicular to the segment
+        return longestIsHorizontal
+            ? { x: 0, y: -14 }   // label above horizontal segment
+            : { x: -14, y: 0 };  // label to the left of vertical segment
+    }, [adjustedPath, isSelfLoop]);
 
     // Position cardinality near the target
     const cardinalityPos = useMemo(() => computeCardinalityPosition(adjustedPath), [adjustedPath]);
@@ -220,12 +249,12 @@ function ReferenceEdge(props: EdgeProps) {
             />
 
             <EdgeLabelRenderer>
-                {/* Label - positioned on longest segment */}
+                {/* Label - positioned on longest segment with smart offset */}
                 <div
                     className={`edge-label ${selected ? 'selected' : ''}`}
                     style={{
                         position: 'absolute',
-                        transform: `translate(-50%, -50%) translate(${labelPos.x}px, ${labelPos.y - 16}px)`,
+                        transform: `translate(-50%, -50%) translate(${labelPos.x + labelOffset.x}px, ${labelPos.y + labelOffset.y}px)`,
                         pointerEvents: 'all',
                     }}
                     onDoubleClick={(e) => { e.stopPropagation(); setEditing(true); }}

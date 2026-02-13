@@ -120,7 +120,7 @@ const initialNodes: Node[] = [
 
 // Initial edges for demonstration
 const initialEdges: Edge[] = [
-    // Person -> Address (composition)
+    // Person -> Address (association)
     {
         id: 'ref_1',
         source: 'class_1',
@@ -133,11 +133,11 @@ const initialEdges: Edge[] = [
             reference: {
                 id: 'ref_1',
                 name: 'addresses',
-                kind: 'composition',
+                kind: 'association',
                 targetClassId: 'class_2',
                 lowerBound: 0,
                 upperBound: -1,
-                containment: true,
+                containment: false,
             },
         } as ReferenceEdgeData,
     },

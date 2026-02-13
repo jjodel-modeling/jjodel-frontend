@@ -832,25 +832,91 @@
         }
     }
 
-    // Select for type - compact inline
+    // Select for type - ultra compact inline
     &__select {
         background: var(--surface-1);
         border: 1px solid var(--border-default);
-        border-radius: 3px;
+        border-radius: 2px;
         outline: none;
         color: var(--field-type-color);
         font: inherit;
-        font-size: 12px;
-        padding: 0 2px;
-        height: 18px;
+        font-size: 11px;
+        padding: 0 1px;
+        height: 15px;
         cursor: pointer;
         width: auto;
         min-width: 0;
-        max-width: 80px;
+        max-width: 55px;
 
         option {
             background: var(--surface-1);
             color: var(--text-primary);
+        }
+    }
+}
+
+// ============================================
+// INLINE TYPE SELECT (Custom compact dropdown)
+// ============================================
+
+.inline-type-select {
+    position: relative;
+    outline: none;
+
+    &__list {
+        position: absolute;
+        top: -2px;
+        left: -4px;
+        min-width: 90px;
+        max-height: 140px;
+        overflow-y: auto;
+        background: var(--surface-1);
+        border: 1px solid var(--border-default);
+        border-radius: 4px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        z-index: 100;
+        padding: 2px 0;
+
+        &::-webkit-scrollbar {
+            width: 4px;
+        }
+        &::-webkit-scrollbar-thumb {
+            background: var(--scrollbar-thumb);
+            border-radius: 2px;
+        }
+    }
+
+    &__group {
+        padding: 3px 8px 2px;
+        font-size: 9px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--text-dim);
+        border-top: 1px solid var(--border-subtle);
+        margin-top: 2px;
+
+        &:first-child {
+            border-top: none;
+            margin-top: 0;
+        }
+    }
+
+    &__option {
+        padding: 3px 8px;
+        font-size: 11px;
+        color: var(--text-secondary);
+        cursor: pointer;
+        white-space: nowrap;
+
+        &:hover,
+        &.highlighted {
+            background: var(--surface-hover);
+        }
+
+        &.selected {
+            color: var(--accent);
+            font-weight: 500;
         }
     }
 }
@@ -962,16 +1028,17 @@
     }
 }
 
-// Reference edge markers
+// Reference edge markers - all use same edge color
 .reference-marker {
     &.filled {
-        fill: var(--green);
-        stroke: none;
+        fill: var(--edge-marker-stroke);
+        stroke: var(--edge-marker-stroke);
+        stroke-width: 1;
     }
 
     &.hollow {
         fill: var(--edge-marker-fill);
-        stroke: var(--amber);
+        stroke: var(--edge-marker-stroke);
         stroke-width: 1.5;
     }
 

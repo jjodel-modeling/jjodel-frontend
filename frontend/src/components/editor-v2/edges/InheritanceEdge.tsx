@@ -1,5 +1,5 @@
 import { useMemo, useCallback, useRef } from 'react';
-import { useNodes, useReactFlow, EdgeLabelRenderer, type EdgeProps } from '@xyflow/react';
+import { useReactFlow, EdgeLabelRenderer, type EdgeProps } from '@xyflow/react';
 import type { InheritanceEdgeData } from '../types';
 import {
     computeManhattanPath,
@@ -9,11 +9,11 @@ import {
     applyWaypoints,
     pointsToPath,
     getPathSegments,
+    getSideFromHandle,
 } from '../utils/edgeUtils';
 
 function InheritanceEdge(props: EdgeProps) {
-    const { id, sourceX, sourceY, targetX, targetY, source, target, selected, data } = props;
-    const nodes = useNodes();
+    const { id, sourceX, sourceY, targetX, targetY, source, target, sourceHandleId, targetHandleId, selected, data } = props;
     const { setEdges, getViewport } = useReactFlow();
     const dragRef = useRef<{ segmentIndex: number; startPos: number; startOffset: number; isHorizontal: boolean } | null>(null);
 
@@ -22,10 +22,14 @@ function InheritanceEdge(props: EdgeProps) {
 
     const isSelfLoop = source === target;
 
-    // Compute base path
+    // Get sides from handle IDs
+    const sourceSide = getSideFromHandle(sourceHandleId);
+    const targetSide = getSideFromHandle(targetHandleId);
+
+    // Compute base path (side-aware, no nodes dependency!)
     const rawPath = useMemo(
-        () => computeManhattanPath(sourceX, sourceY, targetX, targetY, source, target, nodes),
-        [sourceX, sourceY, targetX, targetY, source, target, nodes]
+        () => computeManhattanPath(sourceX, sourceY, sourceSide, targetX, targetY, targetSide),
+        [sourceX, sourceY, sourceSide, targetX, targetY, targetSide]
     );
 
     // Parse points and apply waypoints

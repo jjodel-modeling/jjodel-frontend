@@ -2,9 +2,10 @@ import { useState, useCallback, useEffect } from 'react';
 import { NodeResizer, useReactFlow, type NodeProps, type Node } from '@xyflow/react';
 import ViewpointRenderer from '../viewpoint/ViewpointRenderer';
 import DynamicHandles from '../components/DynamicHandles';
+import InlineTypeSelect from '../components/InlineTypeSelect';
 import { useEditorContextSafe } from '../contexts/EditorContext';
 import type { ClassNodeData } from '../types';
-import { createAttribute, createOperation, E_DATA_TYPES } from '../types';
+import { createAttribute, createOperation } from '../types';
 
 export type ClassNodeType = Node<ClassNodeData, 'classNode'>;
 
@@ -226,13 +227,9 @@ function ClassNode({ id, data, selected }: NodeProps<ClassNodeType>) {
                                         )}
                                         <span className="mm-field__separator">:</span>
                                         {editingAttr?.id === attr.id && editingAttr.field === 'type' ? (
-                                            <select
-                                                className="mm-field__select"
-                                                autoFocus
+                                            <InlineTypeSelect
                                                 value={editValue}
-                                                onChange={(e) => {
-                                                    setEditValue(e.target.value);
-                                                    const newType = e.target.value;
+                                                onChange={(newType) => {
                                                     editorContext?.takeSnapshot();
                                                     setNodes(nds => nds.map(n => {
                                                         if (n.id !== id) return n;
@@ -249,12 +246,8 @@ function ClassNode({ id, data, selected }: NodeProps<ClassNodeType>) {
                                                     }));
                                                     setEditingAttr(null);
                                                 }}
-                                                onBlur={() => setEditingAttr(null)}
-                                            >
-                                                {E_DATA_TYPES.map(t => (
-                                                    <option key={t} value={t}>{t}</option>
-                                                ))}
-                                            </select>
+                                                onClose={() => setEditingAttr(null)}
+                                            />
                                         ) : (
                                             <span
                                                 className="mm-field__type"
