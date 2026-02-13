@@ -209,3 +209,31 @@ export function roundManhattanPath(path: string, radius: number = 4): string {
 
     return d;
 }
+
+/**
+ * Computes a compact self-loop path (Bezier curve) for edges where source === target.
+ * The loop exits from the right side and curves back to the top.
+ *
+ * @param sourceX - Source handle X position
+ * @param sourceY - Source handle Y position
+ * @param targetX - Target handle X position
+ * @param targetY - Target handle Y position
+ * @param loopSize - Size of the loop (default 40px)
+ * @returns SVG path with cubic Bezier curve
+ */
+export function computeSelfLoopPath(
+    sourceX: number,
+    sourceY: number,
+    targetX: number,
+    targetY: number,
+    loopSize: number = 40
+): string {
+    // Control points create a compact loop
+    // Exit to the right, curve up, then come back to target
+    const cp1X = sourceX + loopSize;
+    const cp1Y = sourceY;
+    const cp2X = targetX + loopSize;
+    const cp2Y = targetY - loopSize;
+
+    return `M ${sourceX} ${sourceY} C ${cp1X} ${cp1Y}, ${cp2X} ${cp2Y}, ${targetX} ${targetY}`;
+}

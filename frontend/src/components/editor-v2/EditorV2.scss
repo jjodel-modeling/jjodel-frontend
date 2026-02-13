@@ -387,6 +387,10 @@
         border-radius: 8px;
         overflow: hidden;
         border: 1px solid var(--border-subtle);
+
+        .react-flow__minimap-node {
+            opacity: 0.4;
+        }
     }
 
     .react-flow__controls {
@@ -530,7 +534,7 @@
     height: 100%;
     overflow: hidden;
     font-family: 'IBM Plex Mono', Monaco, Consolas, monospace;
-    font-size: 12px;
+    font-size: 13px;
     color: var(--text-primary);
     box-shadow: 0 2px 8px var(--node-shadow);
     cursor: default;
@@ -567,7 +571,7 @@
         padding: 3px 8px;
         min-height: 20px;
         font-weight: 500;
-        font-size: 12px;
+        font-size: 13px;
         cursor: grab;
         color: var(--node-header-text);
 
@@ -587,7 +591,7 @@
         background: var(--header-badge-bg);
         color: var(--header-badge-color);
         border-radius: 3px;
-        font-size: 9px;
+        font-size: 10px;
         font-weight: 700;
         flex-shrink: 0;
     }
@@ -639,7 +643,7 @@
     // Empty state
     &__empty {
         text-align: center;
-        font-size: 9px;
+        font-size: 10px;
         color: var(--text-dim);
         padding: 4px 8px;
         font-style: italic;
@@ -657,7 +661,7 @@
         border-radius: 4px 4px 0 0;
         padding: 2px 8px;
         font-weight: 500;
-        font-size: 11px;
+        font-size: 12px;
         color: var(--package-header-text);
         cursor: grab;
 
@@ -669,7 +673,7 @@
     // Package container area
     &__container {
         background: var(--package-body-bg);
-        border: 1px solid var(--border-default);
+        border: 1px solid var(--package-body-border, var(--border-default));
         border-radius: 0 4px 4px 4px;
         min-height: 80px;
         height: calc(100% - 26px);
@@ -755,7 +759,7 @@
     grid-template-columns: subgrid;
     padding: 1px 6px;
     min-height: 15px;
-    font-size: 11px;
+    font-size: 12px;
     align-items: center;
     transition: background 0.1s;
 
@@ -767,7 +771,7 @@
     &__name {
         color: var(--field-name-color);
         cursor: text;
-        font-size: 11px;
+        font-size: 12px;
         white-space: nowrap;
 
         &:hover {
@@ -786,7 +790,7 @@
     &__type {
         color: var(--field-type-color);
         cursor: text;
-        font-size: 11px;
+        font-size: 12px;
         white-space: nowrap;
 
         &:hover {
@@ -798,7 +802,7 @@
     // Bounds [0..*]
     &__bound {
         color: var(--field-bound-color);
-        font-size: 10px;
+        font-size: 11px;
         text-align: right;
         padding-left: 4px;
     }
@@ -827,7 +831,7 @@
         outline: none;
         color: var(--field-type-color);
         font: inherit;
-        font-size: 11px;
+        font-size: 12px;
         padding: 1px 2px;
         cursor: pointer;
 
@@ -861,7 +865,7 @@
     grid-template-columns: subgrid;
     padding: 1px 6px;
     min-height: 15px;
-    font-size: 11px;
+    font-size: 13px;
     align-items: center;
     transition: background 0.1s;
 
@@ -964,13 +968,13 @@
     &.hollow {
         fill: var(--edge-marker-fill);
         stroke: var(--amber);
-        stroke-width: 1;
+        stroke-width: 1.5;
     }
 
     &.arrow {
         fill: none;
         stroke: var(--edge-marker-stroke);
-        stroke-width: 1;
+        stroke-width: 1.5;
     }
 }
 
@@ -978,7 +982,7 @@
 .inheritance-marker {
     fill: var(--edge-marker-fill);
     stroke: var(--edge-marker-stroke);
-    stroke-width: 1;
+    stroke-width: 1.5;
 
     &.selected {
         stroke: var(--edge-selected);
@@ -1036,6 +1040,7 @@
     border-radius: 2px;
     border: none;
     white-space: nowrap;
+    box-shadow: none;
 }
 
 .edge-label {
@@ -1088,23 +1093,6 @@
 }
 
 // .edge-cardinality styles merged above with .edge-label__text
-
-.edge-kind-badge {
-    font-size: 10px;
-    color: var(--text-dim);
-
-    &.composition {
-        color: var(--green);
-    }
-
-    &.aggregation {
-        color: var(--amber);
-    }
-
-    &.association {
-        color: var(--text-muted);
-    }
-}
 
 // ============================================
 // CONNECTION LINE
@@ -1476,7 +1464,7 @@
     color: var(--text-muted);
     border-radius: 6px;
     cursor: pointer;
-    font-size: 11px;
+    font-size: 12px;
     transition: all 0.15s;
     white-space: nowrap;
 

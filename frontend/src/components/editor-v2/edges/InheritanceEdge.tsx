@@ -1,17 +1,24 @@
 import { useMemo } from 'react';
 import { useNodes, type EdgeProps } from '@xyflow/react';
-import { computeManhattanPath, roundManhattanPath } from '../utils/edgeUtils';
+import { computeManhattanPath, roundManhattanPath, computeSelfLoopPath } from '../utils/edgeUtils';
 
 function InheritanceEdge(props: EdgeProps) {
     const { id, sourceX, sourceY, targetX, targetY, source, target, selected } = props;
     const nodes = useNodes();
+
+    const isSelfLoop = source === target;
 
     const rawPath = useMemo(
         () => computeManhattanPath(sourceX, sourceY, targetX, targetY, source, target, nodes),
         [sourceX, sourceY, targetX, targetY, source, target, nodes]
     );
 
-    const path = useMemo(() => roundManhattanPath(rawPath, 8), [rawPath]);
+    const path = useMemo(() => {
+        if (isSelfLoop) {
+            return computeSelfLoopPath(sourceX, sourceY, targetX, targetY);
+        }
+        return roundManhattanPath(rawPath, 8);
+    }, [rawPath, isSelfLoop, sourceX, sourceY, targetX, targetY]);
 
     // Marker ID unique per edge
     const markerTriangleId = `inheritance-triangle-${id}`;
@@ -25,8 +32,8 @@ function InheritanceEdge(props: EdgeProps) {
                     viewBox="0 0 14 14"
                     refX="14"
                     refY="7"
-                    markerWidth="10"
-                    markerHeight="10"
+                    markerWidth="12"
+                    markerHeight="12"
                     orient="auto"
                 >
                     <path

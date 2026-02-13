@@ -31,6 +31,7 @@ import AlignmentToolbar from './AlignmentToolbar';
 import ContextMenu, { type ContextMenuItem } from './ContextMenu';
 import { useHistory } from './hooks/useHistory';
 import { useAlignment } from './hooks/useAlignment';
+import { useAutoAnchor } from './hooks/useAutoAnchor';
 import { EditorContext } from './contexts/EditorContext';
 import type { ClassNodeData, EnumNodeData, PackageNodeData, ReferenceEdgeData, InheritanceEdgeData } from './types';
 
@@ -51,19 +52,19 @@ const edgeTypes: EdgeTypes = {
 
 // Initial nodes for metamodel demonstration
 const initialNodes: Node[] = [
-    // Package — compact
+    // Package — container
     {
         id: 'pkg_1',
         type: 'packageNode',
-        position: { x: 30, y: 30 },
-        style: { zIndex: -1, width: 420, height: 320 },
+        position: { x: 20, y: 20 },
+        style: { zIndex: -1, width: 520, height: 280 },
         data: { label: 'myMetamodel' } satisfies PackageNodeData,
     },
-    // Classes — closer together
+    // Person — top left
     {
         id: 'class_1',
         type: 'classNode',
-        position: { x: 60, y: 80 },
+        position: { x: 50, y: 60 },
         data: {
             label: 'Person',
             isAbstract: false,
@@ -73,10 +74,11 @@ const initialNodes: Node[] = [
             ],
         } satisfies ClassNodeData,
     },
+    // Address — right of Person
     {
         id: 'class_2',
         type: 'classNode',
-        position: { x: 280, y: 80 },
+        position: { x: 330, y: 60 },
         data: {
             label: 'Address',
             isAbstract: false,
@@ -87,10 +89,11 @@ const initialNodes: Node[] = [
             ],
         } satisfies ClassNodeData,
     },
+    // NamedElement — below Person
     {
         id: 'class_3',
         type: 'classNode',
-        position: { x: 60, y: 230 },
+        position: { x: 50, y: 200 },
         data: {
             label: 'NamedElement',
             isAbstract: true,
@@ -99,11 +102,11 @@ const initialNodes: Node[] = [
             ],
         } satisfies ClassNodeData,
     },
-    // Enum
+    // Gender — below Address
     {
         id: 'enum_1',
         type: 'enumNode',
-        position: { x: 280, y: 230 },
+        position: { x: 350, y: 200 },
         data: {
             label: 'Gender',
             literals: [
@@ -215,6 +218,9 @@ function EditorV2Inner() {
         distributeHorizontally,
         distributeVertically,
     } = useAlignment();
+
+    // Auto-anchor for optimal edge routing
+    const { getOptimalAnchors } = useAutoAnchor();
 
     // Get selected nodes and edges for properties panel
     const selectedNodes = useMemo(() => nodes.filter((n) => n.selected), [nodes]);
@@ -756,10 +762,31 @@ function EditorV2Inner() {
 
             if (hasDragEnd || hasResize) {
                 takeSnapshot();
+
+                // Get IDs of moved/resized nodes
+                const movedNodeIds = new Set(
+                    changes
+                        .filter((c) => c.type === 'position' || c.type === 'dimensions')
+                        .map((c) => c.id)
+                );
+
+                // Recalculate optimal anchors for edges connected to moved nodes
+                setEdges((currentEdges) =>
+                    currentEdges.map((edge) => {
+                        if (movedNodeIds.has(edge.source) || movedNodeIds.has(edge.target)) {
+                            const { sourceHandle, targetHandle } = getOptimalAnchors(
+                                edge.source,
+                                edge.target
+                            );
+                            return { ...edge, sourceHandle, targetHandle };
+                        }
+                        return edge;
+                    })
+                );
             }
             onNodesChange(changes);
         },
-        [onNodesChange, takeSnapshot]
+        [onNodesChange, takeSnapshot, setEdges, getOptimalAnchors]
     );
 
     const editorContextValue = useMemo(() => ({ takeSnapshot }), [takeSnapshot]);

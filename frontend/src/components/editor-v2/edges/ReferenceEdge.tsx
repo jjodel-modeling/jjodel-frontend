@@ -7,7 +7,7 @@ import {
 } from '@xyflow/react';
 import type { ReferenceEdgeData, ReferenceKind } from '../types';
 import { formatCardinality } from '../types';
-import { computeManhattanPath, roundManhattanPath } from '../utils/edgeUtils';
+import { computeManhattanPath, roundManhattanPath, computeSelfLoopPath } from '../utils/edgeUtils';
 
 function ReferenceEdge(props: EdgeProps) {
     const {
@@ -32,12 +32,19 @@ function ReferenceEdge(props: EdgeProps) {
     const ref = edgeData?.reference;
     const kind: ReferenceKind = ref?.kind || 'association';
 
+    const isSelfLoop = source === target;
+
     const rawPath = useMemo(
         () => computeManhattanPath(sourceX, sourceY, targetX, targetY, source, target, nodes),
         [sourceX, sourceY, targetX, targetY, source, target, nodes]
     );
 
-    const path = useMemo(() => roundManhattanPath(rawPath, 8), [rawPath]);
+    const path = useMemo(() => {
+        if (isSelfLoop) {
+            return computeSelfLoopPath(sourceX, sourceY, targetX, targetY);
+        }
+        return roundManhattanPath(rawPath, 8);
+    }, [rawPath, isSelfLoop, sourceX, sourceY, targetX, targetY]);
 
     const labelX = (sourceX + targetX) / 2;
     const labelY = (sourceY + targetY) / 2;
@@ -162,18 +169,6 @@ function ReferenceEdge(props: EdgeProps) {
                         {cardinality}
                     </div>
                 )}
-
-                {/* Kind badge */}
-                <div
-                    className={`edge-kind-badge ${kind}`}
-                    style={{
-                        position: 'absolute',
-                        transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY + 10}px)`,
-                        pointerEvents: 'none',
-                    }}
-                >
-                    {kind === 'composition' ? '◆' : kind === 'aggregation' ? '◇' : '→'}
-                </div>
             </EdgeLabelRenderer>
         </>
     );
