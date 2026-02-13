@@ -133,10 +133,10 @@ function ClassNode({ id, data, selected }: NodeProps<ClassNodeType>) {
         setDragOver(false);
     }, [id, setNodes, editorContext]);
 
-    // If there's a jsxString, use ViewpointRenderer
+    // Viewpoint rendering
     if (data.jsxString) {
         return (
-            <div className={`class-node viewpoint-wrapper ${selected ? 'selected' : ''}`}>
+            <div className={`mm-node mm-class viewpoint-wrapper ${selected ? 'selected' : ''}`}>
                 <NodeResizer
                     isVisible={selected}
                     minWidth={120}
@@ -144,10 +144,10 @@ function ClassNode({ id, data, selected }: NodeProps<ClassNodeType>) {
                     lineClassName="node-resize-line"
                     handleClassName="node-resize-handle"
                 />
-                <Handle type="target" position={Position.Top} id="top" className="anchor-handle" />
-                <Handle type="source" position={Position.Right} id="right" className="anchor-handle" />
-                <Handle type="target" position={Position.Bottom} id="bottom" className="anchor-handle" />
-                <Handle type="source" position={Position.Left} id="left" className="anchor-handle" />
+                <Handle type="source" position={Position.Top} id="top" className="mm-anchor" />
+                <Handle type="source" position={Position.Right} id="right" className="mm-anchor" />
+                <Handle type="source" position={Position.Bottom} id="bottom" className="mm-anchor" />
+                <Handle type="source" position={Position.Left} id="left" className="mm-anchor" />
                 <ViewpointRenderer jsxString={data.jsxString} context={data} />
             </div>
         );
@@ -156,34 +156,41 @@ function ClassNode({ id, data, selected }: NodeProps<ClassNodeType>) {
     const isAbstract = data.isAbstract ?? false;
     const hasContent = (data.attributes?.length || 0) > 0 || (data.operations?.length || 0) > 0;
 
+    // Format bounds for display
+    const formatBounds = (lower: number, upper: number): string | null => {
+        if (lower === 0 && upper === 1) return null; // Default, no display
+        if (lower === 1 && upper === 1) return null; // Required single, no display
+        if (upper === -1) return `[${lower}..*]`;
+        if (lower === upper) return `[${lower}]`;
+        return `[${lower}..${upper}]`;
+    };
+
     return (
         <div
-            className={`class-node ${selected ? 'selected' : ''} ${isAbstract ? 'abstract' : ''} ${dragOver ? 'drop-target' : ''}`}
+            className={`mm-node mm-class ${selected ? 'selected' : ''} ${isAbstract ? 'abstract' : ''} ${dragOver ? 'drop-target' : ''}`}
             onDragOver={(e) => { handleDragOver(e); setDragOver(true); }}
             onDragLeave={() => setDragOver(false)}
             onDrop={handleDrop}
         >
             <NodeResizer
                 isVisible={selected}
-                minWidth={180}
-                minHeight={50}
+                minWidth={140}
+                minHeight={40}
                 lineClassName="node-resize-line"
                 handleClassName="node-resize-handle"
             />
 
-            <Handle type="target" position={Position.Top} id="top" className="anchor-handle" />
-            <Handle type="source" position={Position.Right} id="right" className="anchor-handle" />
-            <Handle type="target" position={Position.Bottom} id="bottom" className="anchor-handle" />
-            <Handle type="source" position={Position.Left} id="left" className="anchor-handle" />
+            <Handle type="source" position={Position.Top} id="top" className="mm-anchor" />
+            <Handle type="source" position={Position.Right} id="right" className="mm-anchor" />
+            <Handle type="source" position={Position.Bottom} id="bottom" className="mm-anchor" />
+            <Handle type="source" position={Position.Left} id="left" className="mm-anchor" />
 
-            {/* Stereotype for abstract classes */}
-            {isAbstract && (
-                <div className="class-node__stereotype">«abstract»</div>
-            )}
-
-            <div className="class-node__header" onDoubleClick={handleDoubleClick}>
+            {/* Header with optional badge */}
+            <div className="mm-node__header" onDoubleClick={handleDoubleClick}>
+                {isAbstract && <span className="mm-node__badge">A</span>}
                 {editing ? (
                     <input
+                        className="mm-node__input"
                         autoFocus
                         value={name}
                         onChange={(e) => setName(e.target.value)}
@@ -191,103 +198,108 @@ function ClassNode({ id, data, selected }: NodeProps<ClassNodeType>) {
                         onKeyDown={handleKeyDown}
                     />
                 ) : (
-                    <span className={isAbstract ? 'italic' : ''}>{name}</span>
+                    <span className="mm-node__name">{name}</span>
                 )}
             </div>
 
-            {/* Separator before attributes */}
-            {data.attributes && data.attributes.length > 0 && (
-                <div className="class-node__separator" />
-            )}
-
-            {/* Attributes */}
-            {data.attributes && data.attributes.length > 0 && (
-                <div className="class-node__section">
-                    {data.attributes.map((attr) => (
-                        <div key={attr.id} className="class-node__field">
-                            {editingAttr?.id === attr.id && editingAttr.field === 'name' ? (
-                                <input
-                                    className="field-input"
-                                    autoFocus
-                                    value={editValue}
-                                    onChange={(e) => setEditValue(e.target.value)}
-                                    onBlur={commitAttrEdit}
-                                    onKeyDown={handleAttrKeyDown}
-                                />
-                            ) : (
-                                <span
-                                    className="field-name"
-                                    onDoubleClick={() => startEditAttr(attr.id, 'name', attr.name)}
-                                >
-                                    {attr.name}
-                                </span>
-                            )}
-                            {editingAttr?.id === attr.id && editingAttr.field === 'type' ? (
-                                <select
-                                    className="field-select"
-                                    autoFocus
-                                    value={editValue}
-                                    onChange={(e) => {
-                                        setEditValue(e.target.value);
-                                        // Auto-commit on select change
-                                        const newType = e.target.value;
-                                        editorContext?.takeSnapshot();
-                                        setNodes(nds => nds.map(n => {
-                                            if (n.id !== id) return n;
-                                            const nodeData = n.data as ClassNodeData;
-                                            return {
-                                                ...n,
-                                                data: {
-                                                    ...nodeData,
-                                                    attributes: nodeData.attributes.map(a =>
-                                                        a.id === attr.id ? { ...a, type: newType } : a
-                                                    ),
-                                                },
-                                            };
-                                        }));
-                                        setEditingAttr(null);
-                                    }}
-                                    onBlur={() => setEditingAttr(null)}
-                                >
-                                    {E_DATA_TYPES.map(t => (
-                                        <option key={t} value={t}>{t}</option>
-                                    ))}
-                                </select>
-                            ) : (
-                                <span
-                                    className="field-type"
-                                    onDoubleClick={() => startEditAttr(attr.id, 'type', attr.type)}
-                                >
-                                    {attr.type}
-                                    {(attr.upperBound === -1 || attr.upperBound > 1) && '[]'}
-                                </span>
-                            )}
+            {/* Body with attributes and operations */}
+            {hasContent && (
+                <div className="mm-node__body">
+                    {/* Attributes */}
+                    {data.attributes && data.attributes.length > 0 && (
+                        <div className="mm-node__fields">
+                            {data.attributes.map((attr) => {
+                                const bounds = formatBounds(attr.lowerBound ?? 0, attr.upperBound ?? 1);
+                                return (
+                                    <div key={attr.id} className="mm-field">
+                                        {editingAttr?.id === attr.id && editingAttr.field === 'name' ? (
+                                            <input
+                                                className="mm-field__input"
+                                                autoFocus
+                                                value={editValue}
+                                                onChange={(e) => setEditValue(e.target.value)}
+                                                onBlur={commitAttrEdit}
+                                                onKeyDown={handleAttrKeyDown}
+                                            />
+                                        ) : (
+                                            <span
+                                                className="mm-field__name"
+                                                onDoubleClick={() => startEditAttr(attr.id, 'name', attr.name)}
+                                            >
+                                                {attr.name}
+                                            </span>
+                                        )}
+                                        <span className="mm-field__separator">:</span>
+                                        {editingAttr?.id === attr.id && editingAttr.field === 'type' ? (
+                                            <select
+                                                className="mm-field__select"
+                                                autoFocus
+                                                value={editValue}
+                                                onChange={(e) => {
+                                                    setEditValue(e.target.value);
+                                                    const newType = e.target.value;
+                                                    editorContext?.takeSnapshot();
+                                                    setNodes(nds => nds.map(n => {
+                                                        if (n.id !== id) return n;
+                                                        const nodeData = n.data as ClassNodeData;
+                                                        return {
+                                                            ...n,
+                                                            data: {
+                                                                ...nodeData,
+                                                                attributes: nodeData.attributes.map(a =>
+                                                                    a.id === attr.id ? { ...a, type: newType } : a
+                                                                ),
+                                                            },
+                                                        };
+                                                    }));
+                                                    setEditingAttr(null);
+                                                }}
+                                                onBlur={() => setEditingAttr(null)}
+                                            >
+                                                {E_DATA_TYPES.map(t => (
+                                                    <option key={t} value={t}>{t}</option>
+                                                ))}
+                                            </select>
+                                        ) : (
+                                            <span
+                                                className="mm-field__type"
+                                                onDoubleClick={() => startEditAttr(attr.id, 'type', attr.type)}
+                                            >
+                                                {attr.type}
+                                            </span>
+                                        )}
+                                        {bounds ? <span className="mm-field__bound">{bounds}</span> : <span />}
+                                    </div>
+                                );
+                            })}
                         </div>
-                    ))}
+                    )}
+
+                    {/* Operations separator */}
+                    {(data.attributes?.length ?? 0) > 0 && (data.operations?.length ?? 0) > 0 && (
+                        <div className="mm-node__separator" />
+                    )}
+
+                    {/* Operations */}
+                    {data.operations && data.operations.length > 0 && (
+                        <div className="mm-node__fields">
+                            {data.operations.map((op) => (
+                                <div key={op.id} className="mm-field mm-operation">
+                                    <span className="mm-field__name">{op.name}()</span>
+                                    <span className="mm-field__separator">:</span>
+                                    <span className="mm-field__type">{op.returnType}</span>
+                                    <span />
+                                </div>
+                            ))}
+                        </div>
+                    )}
                 </div>
             )}
 
-            {/* Separator before operations */}
-            {data.operations && data.operations.length > 0 && (
-                <div className="class-node__separator" />
-            )}
-
-            {/* Operations */}
-            {data.operations && data.operations.length > 0 && (
-                <div className="class-node__section">
-                    {data.operations.map((op) => (
-                        <div key={op.id} className="class-node__field operation">
-                            <span className="field-name">{op.name}()</span>
-                            <span className="field-type">{op.returnType}</span>
-                        </div>
-                    ))}
-                </div>
-            )}
-
-            {/* Empty hint */}
+            {/* Empty state */}
             {!hasContent && (
-                <div className="class-node__empty-hint">
-                    Drop attributes here
+                <div className="mm-node__empty">
+                    Drop attributes
                 </div>
             )}
         </div>

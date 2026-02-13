@@ -1,4 +1,4 @@
-import React, { useCallback, useRef, useState, useMemo } from 'react';
+import React, { useCallback, useRef, useState, useMemo, useEffect } from 'react';
 import {
     ReactFlow,
     Background,
@@ -9,6 +9,7 @@ import {
     useReactFlow,
     ReactFlowProvider,
     SelectionMode,
+    ConnectionMode,
     type Node,
     type Edge,
     type Connection,
@@ -50,19 +51,19 @@ const edgeTypes: EdgeTypes = {
 
 // Initial nodes for metamodel demonstration
 const initialNodes: Node[] = [
-    // Package
+    // Package — compact
     {
         id: 'pkg_1',
         type: 'packageNode',
-        position: { x: 50, y: 50 },
-        style: { zIndex: -1, width: 600, height: 400 },
-        data: { label: 'myMetamodel' } as PackageNodeData,
+        position: { x: 30, y: 30 },
+        style: { zIndex: -1, width: 420, height: 320 },
+        data: { label: 'myMetamodel' } satisfies PackageNodeData,
     },
-    // Classes
+    // Classes — closer together
     {
         id: 'class_1',
         type: 'classNode',
-        position: { x: 100, y: 130 },
+        position: { x: 60, y: 80 },
         data: {
             label: 'Person',
             isAbstract: false,
@@ -70,12 +71,12 @@ const initialNodes: Node[] = [
                 { id: 'a1', name: 'name', type: 'EString', lowerBound: 1, upperBound: 1 },
                 { id: 'a2', name: 'age', type: 'EInt', lowerBound: 0, upperBound: 1 },
             ],
-        } as ClassNodeData,
+        } satisfies ClassNodeData,
     },
     {
         id: 'class_2',
         type: 'classNode',
-        position: { x: 420, y: 130 },
+        position: { x: 280, y: 80 },
         data: {
             label: 'Address',
             isAbstract: false,
@@ -84,25 +85,25 @@ const initialNodes: Node[] = [
                 { id: 'a4', name: 'city', type: 'EString', lowerBound: 1, upperBound: 1 },
                 { id: 'a5', name: 'zipCode', type: 'EString', lowerBound: 0, upperBound: 1 },
             ],
-        } as ClassNodeData,
+        } satisfies ClassNodeData,
     },
     {
         id: 'class_3',
         type: 'classNode',
-        position: { x: 100, y: 310 },
+        position: { x: 60, y: 230 },
         data: {
             label: 'NamedElement',
             isAbstract: true,
             attributes: [
                 { id: 'a6', name: 'name', type: 'EString', lowerBound: 1, upperBound: 1 },
             ],
-        } as ClassNodeData,
+        } satisfies ClassNodeData,
     },
     // Enum
     {
         id: 'enum_1',
         type: 'enumNode',
-        position: { x: 420, y: 310 },
+        position: { x: 280, y: 230 },
         data: {
             label: 'Gender',
             literals: [
@@ -110,7 +111,7 @@ const initialNodes: Node[] = [
                 { id: 'l2', name: 'FEMALE', value: 1 },
                 { id: 'l3', name: 'OTHER', value: 2 },
             ],
-        } as EnumNodeData,
+        } satisfies EnumNodeData,
     },
 ];
 
@@ -178,11 +179,25 @@ function EditorV2Inner() {
     const reactFlowWrapper = useRef<HTMLDivElement>(null);
     const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
     const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
-    const { screenToFlowPosition, getNodes, getEdges, zoomIn, zoomOut, fitView } = useReactFlow();
+    const { screenToFlowPosition, getNodes, getEdges, zoomIn, zoomOut, fitView, getViewport, setViewport } = useReactFlow();
     const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
     const [snapEnabled, setSnapEnabled] = useState(true);
     const [connectionMode, setConnectionMode] = useState<'reference' | 'inheritance'>('reference');
     const clipboard = useRef<ClipboardState>({ nodes: [], edges: [] });
+
+    // Theme state with localStorage persistence
+    const [theme, setTheme] = useState<'dark' | 'light'>(() => {
+        const saved = localStorage.getItem('editor-v2-theme');
+        return (saved === 'light' || saved === 'dark') ? saved : 'dark';
+    });
+
+    useEffect(() => {
+        localStorage.setItem('editor-v2-theme', theme);
+    }, [theme]);
+
+    const handleToggleTheme = useCallback(() => {
+        setTheme(prev => prev === 'dark' ? 'light' : 'dark');
+    }, []);
 
     // History for undo/redo
     const { takeSnapshot, undo, redo, canUndo, canRedo } = useHistory(getNodes, getEdges);
@@ -656,6 +671,10 @@ function EditorV2Inner() {
     // Toolbar handlers
     const handleZoomIn = useCallback(() => zoomIn(), [zoomIn]);
     const handleZoomOut = useCallback(() => zoomOut(), [zoomOut]);
+    const handleResetZoom = useCallback(() => {
+        const { x, y } = getViewport();
+        setViewport({ x, y, zoom: 1 });
+    }, [getViewport, setViewport]);
     const handleFitView = useCallback(() => fitView({ padding: 0.2 }), [fitView]);
     const handleToggleSnap = useCallback(() => setSnapEnabled((prev) => !prev), []);
 
@@ -747,7 +766,7 @@ function EditorV2Inner() {
 
     return (
         <EditorContext.Provider value={editorContextValue}>
-            <div className="editor-v2" tabIndex={0} onKeyDown={onKeyDown}>
+            <div className={`editor-v2 theme-${theme}`} tabIndex={0} onKeyDown={onKeyDown}>
                 <PalettePanel
                     connectionMode={connectionMode}
                     onConnectionModeChange={setConnectionMode}
@@ -758,12 +777,15 @@ function EditorV2Inner() {
                         onToggleSnap={handleToggleSnap}
                         onZoomIn={handleZoomIn}
                         onZoomOut={handleZoomOut}
+                        onResetZoom={handleResetZoom}
                         onFitView={handleFitView}
                         onDeleteSelected={deleteSelected}
                         onUndo={handleUndo}
                         onRedo={handleRedo}
                         canUndo={canUndo}
                         canRedo={canRedo}
+                        theme={theme}
+                        onToggleTheme={handleToggleTheme}
                     />
                     <AlignmentToolbar
                         selectedCount={selectedNodes.length}
@@ -791,6 +813,7 @@ function EditorV2Inner() {
                             nodeTypes={nodeTypes}
                             edgeTypes={edgeTypes}
                             defaultEdgeOptions={defaultEdgeOptions}
+                            connectionMode={ConnectionMode.Loose}
                             fitView
                             fitViewOptions={{ padding: 0.2 }}
                             snapToGrid={snapEnabled}
@@ -804,17 +827,17 @@ function EditorV2Inner() {
                                 variant={BackgroundVariant.Dots}
                                 gap={16}
                                 size={1}
-                                color="rgba(255, 255, 255, 0.08)"
+                                color={theme === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.08)'}
                             />
                             <MiniMap
                                 nodeStrokeWidth={3}
                                 nodeColor={(node) => {
-                                    if (node.type === 'classNode') return '#0ea5e9';
+                                    if (node.type === 'classNode') return theme === 'dark' ? '#0ea5e9' : '#0284c7';
                                     if (node.type === 'enumNode') return '#7c3aed';
-                                    if (node.type === 'packageNode') return '#64748b';
-                                    return '#334155';
+                                    if (node.type === 'packageNode') return theme === 'dark' ? '#64748b' : '#94a3b8';
+                                    return theme === 'dark' ? '#334155' : '#e2e8f0';
                                 }}
-                                maskColor="rgba(30, 41, 59, 0.8)"
+                                maskColor={theme === 'dark' ? 'rgba(30, 41, 59, 0.8)' : 'rgba(241, 245, 249, 0.8)'}
                             />
                         </ReactFlow>
                     </div>

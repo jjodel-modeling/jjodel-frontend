@@ -1,37 +1,27 @@
 // Editor V2 - React Flow PoC Styles
-// Design tokens from Jjodel design system
+// Design tokens via CSS custom properties for theming
 
-// Colors
-$slate-900: #0f172a;
-$slate-800: #1e293b;
-$slate-700: #334155;
-$slate-600: #475569;
-$slate-500: #64748b;
-$slate-400: #94a3b8;
-$slate-300: #cbd5e1;
-$slate-200: #e2e8f0;
-$slate-100: #f1f5f9;
+@import './themes';
 
-$cyan-600: #0891b2;
-$cyan-500: #0ea5e9;
-$cyan-400: #22d3ee;
+// ============================================
+// EDITOR LAYOUT
+// ============================================
 
-$green-500: #10b981;
-$red-500: #ef4444;
-
-// Main editor container
 .editor-v2 {
     display: flex;
     height: 100vh;
     width: 100%;
-    background: $slate-800;
+    background: var(--canvas-bg);
+    color: var(--text-primary);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
 
     &:focus {
         outline: none;
     }
 }
 
-// Main area (toolbar + canvas)
 .editor-v2__main {
     flex: 1;
     display: flex;
@@ -39,20 +29,47 @@ $red-500: #ef4444;
     overflow: hidden;
 }
 
-// Canvas wrapper
 .editor-v2__canvas {
     flex: 1;
     position: relative;
 }
 
-// Toolbar
+// ============================================
+// CANVAS CURSOR
+// ============================================
+
+.editor-v2 .react-flow {
+    cursor: default;
+}
+
+.editor-v2 .react-flow__pane {
+    cursor: default !important;
+
+    &:active {
+        cursor: move !important;
+    }
+}
+
+.editor-v2 .react-flow__renderer {
+    cursor: default !important;
+}
+
+// During connection creation
+.editor-v2 .react-flow__pane.connecting {
+    cursor: crosshair !important;
+}
+
+// ============================================
+// TOOLBAR
+// ============================================
+
 .editor-v2-toolbar {
     display: flex;
     align-items: center;
     gap: 4px;
     padding: 6px 12px;
-    background: $slate-700;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    background: var(--surface-1);
+    border-bottom: 1px solid var(--border-subtle);
     flex-shrink: 0;
 }
 
@@ -64,7 +81,7 @@ $red-500: #ef4444;
 .toolbar-separator {
     width: 1px;
     height: 20px;
-    background: rgba(255, 255, 255, 0.15);
+    background: var(--border-default);
     margin: 0 4px;
 }
 
@@ -74,7 +91,7 @@ $red-500: #ef4444;
 
 .toolbar-hint {
     font-size: 11px;
-    color: rgba(255, 255, 255, 0.4);
+    color: var(--text-dim);
     margin-right: 8px;
 }
 
@@ -86,41 +103,44 @@ $red-500: #ef4444;
     height: 32px;
     border: none;
     background: transparent;
-    color: rgba(255, 255, 255, 0.6);
+    color: var(--text-secondary);
     border-radius: 6px;
     cursor: pointer;
     font-size: 14px;
     transition: all 0.15s;
 
     &:hover:not(:disabled) {
-        background: rgba(255, 255, 255, 0.1);
-        color: white;
+        background: var(--surface-hover);
+        color: var(--text-primary);
     }
 
     &.active {
-        background: rgba($cyan-500, 0.2);
-        color: $cyan-500;
+        background: var(--accent-muted);
+        color: var(--accent);
     }
 
     &.danger:hover:not(:disabled) {
-        background: rgba($red-500, 0.15);
-        color: #f87171;
+        background: var(--danger-bg);
+        color: var(--danger);
     }
 
     &:disabled {
-        color: rgba(255, 255, 255, 0.25);
+        opacity: 0.3;
         cursor: not-allowed;
     }
 }
 
-// Alignment Toolbar (appears when 2+ nodes selected)
+// ============================================
+// ALIGNMENT TOOLBAR
+// ============================================
+
 .alignment-toolbar {
     display: flex;
     align-items: center;
     gap: 6px;
     padding: 5px 12px;
-    background: rgba($cyan-500, 0.08);
-    border-bottom: 1px solid rgba($cyan-500, 0.15);
+    background: var(--alignment-bg);
+    border-bottom: 1px solid var(--alignment-border);
     flex-shrink: 0;
     animation: slideDown 0.15s ease-out;
 
@@ -134,7 +154,7 @@ $red-500: #ef4444;
         font-size: 10px;
         text-transform: uppercase;
         letter-spacing: 0.05em;
-        color: rgba(255, 255, 255, 0.4);
+        color: var(--text-dim);
         margin-right: 4px;
         font-weight: 500;
     }
@@ -142,20 +162,20 @@ $red-500: #ef4444;
     &__divider {
         width: 1px;
         height: 18px;
-        background: rgba(255, 255, 255, 0.12);
+        background: var(--border-subtle);
         margin: 0 4px;
     }
 
     &__separator {
         width: 1px;
         height: 22px;
-        background: rgba(255, 255, 255, 0.1);
+        background: var(--border-subtle);
         margin: 0 4px;
     }
 
     &__count {
         font-size: 11px;
-        color: rgba(255, 255, 255, 0.35);
+        color: var(--text-dim);
         margin-left: auto;
         font-family: 'IBM Plex Mono', Monaco, Consolas, monospace;
     }
@@ -169,7 +189,7 @@ $red-500: #ef4444;
     height: 28px;
     border: none;
     background: transparent;
-    color: rgba(255, 255, 255, 0.55);
+    color: var(--text-muted);
     border-radius: 5px;
     cursor: pointer;
     transition: all 0.12s;
@@ -182,13 +202,13 @@ $red-500: #ef4444;
     }
 
     &:hover {
-        background: rgba(255, 255, 255, 0.1);
-        color: white;
+        background: var(--surface-hover);
+        color: var(--text-primary);
     }
 
     &:active {
-        background: rgba($cyan-500, 0.2);
-        color: $cyan-500;
+        background: var(--accent-muted);
+        color: var(--accent);
     }
 }
 
@@ -203,11 +223,14 @@ $red-500: #ef4444;
     }
 }
 
-// Palette sidebar
+// ============================================
+// PALETTE SIDEBAR
+// ============================================
+
 .editor-v2-palette {
     width: 200px;
-    background: $slate-700;
-    border-right: 1px solid rgba(255, 255, 255, 0.1);
+    background: var(--surface-1);
+    border-right: 1px solid var(--border-subtle);
     padding: 12px;
     display: flex;
     flex-direction: column;
@@ -221,7 +244,7 @@ $red-500: #ef4444;
             font-size: 10px;
             text-transform: uppercase;
             letter-spacing: 0.05em;
-            color: rgba(255, 255, 255, 0.5);
+            color: var(--text-muted);
             font-weight: 600;
             margin-bottom: 6px;
             padding: 0 8px;
@@ -232,7 +255,7 @@ $red-500: #ef4444;
         font-size: 11px;
         text-transform: uppercase;
         letter-spacing: 0.05em;
-        color: rgba(255, 255, 255, 0.5);
+        color: var(--text-muted);
         margin-bottom: 8px;
         padding: 0 8px;
     }
@@ -244,33 +267,32 @@ $red-500: #ef4444;
         padding: 8px 12px;
         border-radius: 6px;
         cursor: grab;
-        color: rgba(255, 255, 255, 0.8);
+        color: var(--text-secondary);
         font-size: 13px;
         transition: background 0.15s;
         user-select: none;
 
         &:hover {
-            background: rgba(255, 255, 255, 0.1);
+            background: var(--surface-hover);
         }
 
         &:active {
             cursor: grabbing;
-            background: rgba(255, 255, 255, 0.15);
+            background: var(--surface-hover);
         }
 
         i {
             font-size: 16px;
-            color: $cyan-500;
+            color: var(--accent);
         }
 
-        // Member items (drop on nodes, not canvas)
         &--member {
-            // No special styling - same as other items
+            // No special styling
         }
 
         &__hint {
             font-size: 9px;
-            color: rgba(255, 255, 255, 0.25);
+            color: var(--text-dim);
             margin-left: auto;
             font-style: italic;
         }
@@ -290,25 +312,25 @@ $red-500: #ef4444;
         gap: 6px;
         padding: 8px 10px;
         background: transparent;
-        border: 1px solid rgba(255, 255, 255, 0.1);
+        border: 1px solid var(--border-default);
         border-radius: 6px;
-        color: rgba(255, 255, 255, 0.5);
+        color: var(--text-muted);
         font-size: 12px;
         cursor: pointer;
         transition: all 0.15s;
 
         &:hover {
-            background: rgba(255, 255, 255, 0.05);
-            color: rgba(255, 255, 255, 0.7);
+            background: var(--surface-hover);
+            color: var(--text-secondary);
         }
 
         &.active {
-            background: rgba($cyan-500, 0.15);
-            border-color: rgba($cyan-500, 0.4);
-            color: white;
+            background: var(--accent-muted);
+            border-color: var(--selection-border);
+            color: var(--text-primary);
 
             .palette-connection-mode__icon {
-                color: $cyan-500;
+                color: var(--accent);
             }
         }
 
@@ -322,21 +344,21 @@ $red-500: #ef4444;
     .palette-info {
         padding: 8px 12px;
         font-size: 11px;
-        color: rgba(255, 255, 255, 0.5);
+        color: var(--text-muted);
         line-height: 1.5;
         font-style: italic;
     }
 
     .palette-divider {
         height: 1px;
-        background: rgba(255, 255, 255, 0.1);
+        background: var(--border-subtle);
         margin: 12px 0;
     }
 
     .palette-instructions {
         padding: 8px;
         font-size: 11px;
-        color: rgba(255, 255, 255, 0.5);
+        color: var(--text-muted);
         line-height: 1.6;
 
         p {
@@ -344,56 +366,53 @@ $red-500: #ef4444;
         }
 
         strong {
-            color: rgba(255, 255, 255, 0.7);
+            color: var(--text-secondary);
         }
     }
 }
 
-// React Flow overrides
-.editor-v2 .react-flow {
-    background: $slate-800;
+// ============================================
+// REACT FLOW OVERRIDES
+// ============================================
 
-    // Background pattern
+.editor-v2 .react-flow {
+    background: var(--canvas-bg);
+
     .react-flow__background {
-        background: $slate-800;
+        background: var(--canvas-bg);
     }
 
-    // MiniMap
     .react-flow__minimap {
-        background: $slate-700;
+        background: var(--surface-1);
         border-radius: 8px;
         overflow: hidden;
-        border: 1px solid rgba(255, 255, 255, 0.1);
+        border: 1px solid var(--border-subtle);
     }
 
-    // Controls (hidden - using custom toolbar)
     .react-flow__controls {
         display: none;
     }
 
-    // Attribution (hide)
     .react-flow__attribution {
         display: none;
     }
 
-    // Selection box
     .react-flow__selection {
-        background: rgba($cyan-500, 0.08) !important;
-        border: 1px solid rgba($cyan-500, 0.4) !important;
+        background: var(--selection-bg) !important;
+        border: 1px solid var(--selection-border) !important;
         border-radius: 4px;
     }
 
-    // Selection rect when box-selecting
     .react-flow__nodesselection-rect {
-        background: rgba($cyan-500, 0.08);
-        border: 1px dashed $cyan-500;
+        background: var(--selection-bg);
+        border: 1px dashed var(--accent);
     }
 }
 
-// NodeResizer overrides - CRITICAL: override all default styles
-// The NodeResizer creates elements with various classes
+// ============================================
+// NODE RESIZER
+// ============================================
 
-// Hide ALL resize line controls (edge resize areas)
 .node-resize-line,
 .react-flow__resize-control.line,
 .react-flow__resize-control:not(.handle) {
@@ -407,11 +426,10 @@ $red-500: #ef4444;
 
     &:hover {
         opacity: 0.5 !important;
-        background: rgba($cyan-500, 0.15) !important;
+        background: var(--accent-muted) !important;
     }
 }
 
-// Show corner handles (8x8 cyan squares)
 .node-resize-handle,
 .react-flow__resize-control.handle {
     width: 8px !important;
@@ -420,15 +438,14 @@ $red-500: #ef4444;
     min-height: 8px !important;
     max-width: 8px !important;
     max-height: 8px !important;
-    background: $cyan-500 !important;
-    background-color: $cyan-500 !important;
-    border: 2px solid $slate-800 !important;
+    background: var(--resize-handle-bg) !important;
+    background-color: var(--resize-handle-bg) !important;
+    border: 2px solid var(--resize-handle-border) !important;
     border-radius: 2px !important;
     opacity: 1 !important;
     box-shadow: none !important;
 }
 
-// Extra specificity for stubborn defaults
 [class*="resize-control"][class*="line"],
 [class*="resize-control"][class*="left"]:not([class*="handle"]),
 [class*="resize-control"][class*="right"]:not([class*="handle"]),
@@ -440,53 +457,92 @@ $red-500: #ef4444;
     opacity: 0 !important;
 }
 
-// Anchor handles - 4 connection points per node
-.anchor-handle {
+// ============================================
+// ANCHOR HANDLES — Hidden by default, visible on hover/selection
+// ============================================
+
+.mm-anchor {
     width: 8px !important;
     height: 8px !important;
-    background: $slate-600 !important;
-    border: 2px solid rgba(255, 255, 255, 0.3) !important;
+    background: var(--anchor-bg) !important;
+    border: 1.5px solid var(--anchor-border) !important;
     border-radius: 50% !important;
-    transition: all 0.15s;
-
-    &:hover {
-        background: $cyan-500 !important;
-        border-color: white !important;
-        transform: scale(1.3);
-    }
+    opacity: 0 !important;
+    transition: opacity 0.15s ease, transform 0.15s ease !important;
+    pointer-events: none !important;
 }
 
-// Handle states during connection
+// Visible when NODE is hovered
+.mm-node:hover .mm-anchor {
+    opacity: 1 !important;
+    pointer-events: all !important;
+}
+
+// Visible when NODE is selected
+.mm-node.selected .mm-anchor {
+    opacity: 1 !important;
+    pointer-events: all !important;
+}
+
+// Visible during connection creation
+.react-flow__node.connecting .mm-anchor,
+.react-flow.connecting .mm-anchor {
+    opacity: 0.6 !important;
+    pointer-events: all !important;
+}
+
+// Node target under mouse shows full anchors during connection
+.react-flow.connecting .react-flow__node:hover .mm-anchor {
+    opacity: 1 !important;
+}
+
+// Hover on anchor itself — highlight
+.mm-anchor:hover {
+    opacity: 1 !important;
+    background: var(--accent) !important;
+    border-color: var(--text-primary) !important;
+    transform: scale(1.3) !important;
+}
+
 .react-flow__handle-connecting {
-    background: $cyan-500 !important;
+    opacity: 1 !important;
+    background: var(--accent) !important;
+    pointer-events: all !important;
 }
 
 .react-flow__handle-valid {
-    background: #22c55e !important;
-    border-color: white !important;
+    opacity: 1 !important;
+    background: var(--anchor-valid) !important;
+    border-color: var(--text-primary) !important;
+    pointer-events: all !important;
 }
 
-// Class Node
-.class-node {
-    background: $slate-700;
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    border-radius: 8px;
-    min-width: 180px;
-    min-height: 50px;
+// ============================================
+// MM-NODE BASE STYLES (Compact Technical Style)
+// ============================================
+
+.mm-node {
+    background: var(--node-bg);
+    border: 1px solid var(--border-default);
+    border-radius: 4px;
+    min-width: 140px;
     width: 100%;
     height: 100%;
     overflow: hidden;
-    font-size: 13px;
-    color: white;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    font-family: 'IBM Plex Mono', Monaco, Consolas, monospace;
+    font-size: 12px;
+    color: var(--text-primary);
+    box-shadow: 0 2px 8px var(--node-shadow);
+    cursor: default;
 
     &.selected {
-        border-color: $cyan-500;
-        box-shadow: 0 0 0 2px rgba($cyan-500, 0.3), 0 4px 12px rgba(0, 0, 0, 0.3);
+        border-color: var(--accent);
+        box-shadow: 0 0 0 2px var(--accent-muted), 0 2px 8px var(--node-shadow);
     }
 
-    &.abstract {
-        border-style: dashed;
+    &.drop-target {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 2px var(--drop-glow), inset 0 0 16px var(--drop-inner);
     }
 
     &.viewpoint-wrapper {
@@ -497,287 +553,354 @@ $red-500: #ef4444;
         overflow: visible;
 
         &.selected {
-            outline: 2px solid $cyan-500;
+            outline: 2px solid var(--accent);
             outline-offset: 2px;
-            border-radius: 8px;
+            border-radius: 4px;
         }
     }
 
-    &__stereotype {
-        text-align: center;
-        font-size: 10px;
-        color: rgba(255, 255, 255, 0.6);
-        padding: 4px 0 0;
-        background: linear-gradient(135deg, $slate-600, $cyan-600);
-    }
-
+    // Header - compact, flat background
     &__header {
-        background: linear-gradient(135deg, $slate-600, $cyan-600);
-        padding: 8px 12px;
-        font-weight: 600;
-        cursor: text;
-        text-align: center;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 3px 8px;
+        min-height: 20px;
+        font-weight: 500;
+        font-size: 12px;
+        cursor: grab;
+        color: var(--node-header-text);
 
-        .italic {
-            font-style: italic;
-        }
-
-        input {
-            background: transparent;
-            border: none;
-            outline: none;
-            color: white;
-            font: inherit;
-            font-weight: inherit;
-            width: 100%;
-            padding: 0;
-            text-align: center;
-
-            &::selection {
-                background: rgba(255, 255, 255, 0.3);
-            }
+        &:active {
+            cursor: grabbing;
         }
     }
 
-    &__separator {
-        height: 1px;
-        background: rgba(255, 255, 255, 0.15);
+    // Badge - small type indicator
+    &__badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0 3px;
+        min-width: 14px;
+        height: 14px;
+        background: var(--header-badge-bg);
+        color: var(--header-badge-color);
+        border-radius: 3px;
+        font-size: 9px;
+        font-weight: 700;
+        flex-shrink: 0;
     }
 
-    &__section {
+    // Name - editable
+    &__name {
+        flex: 1;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    // Input for editing name
+    &__input {
+        flex: 1;
+        min-width: 0;
+        background: transparent;
+        border: none;
+        outline: none;
+        color: inherit;
+        font: inherit;
+        padding: 0;
+
+        &::selection {
+            background: var(--selection-bg);
+        }
+    }
+
+    // Body - contains fields
+    &__body {
         padding: 2px 0;
     }
 
-    &__field {
-        display: flex;
-        justify-content: space-between;
-        padding: 2px 12px;
-        font-size: 11px;
-
-        .field-name {
-            color: rgba(255, 255, 255, 0.9);
-            cursor: text;
-
-            &:hover {
-                text-decoration: underline;
-                text-decoration-style: dotted;
-            }
-        }
-
-        .field-type {
-            color: $cyan-500;
-            font-style: italic;
-            cursor: text;
-
-            &:hover {
-                text-decoration: underline;
-                text-decoration-style: dotted;
-            }
-        }
-
-        .field-input {
-            background: transparent;
-            border: none;
-            outline: none;
-            color: rgba(255, 255, 255, 0.9);
-            font: inherit;
-            padding: 0;
-            width: 60px;
-            min-width: 30px;
-
-            &::selection {
-                background: rgba(255, 255, 255, 0.3);
-            }
-
-            &--type {
-                color: $cyan-500;
-                font-style: italic;
-                text-align: right;
-            }
-        }
-
-        .field-select {
-            background: $slate-600;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 3px;
-            outline: none;
-            color: $cyan-500;
-            font: inherit;
-            font-style: italic;
-            font-size: 10px;
-            padding: 1px 2px;
-            cursor: pointer;
-
-            option {
-                background: $slate-700;
-                color: white;
-                font-style: normal;
-            }
-        }
-
-        &.operation .field-name {
-            font-style: italic;
-            color: rgba(255, 255, 255, 0.8);
-        }
+    // Fields container with grid for alignment
+    &__fields {
+        display: grid;
+        grid-template-columns: auto auto 1fr auto;
+        gap: 0;
     }
 
-    &__empty-hint {
-        text-align: center;
-        font-size: 11px;
-        color: rgba(255, 255, 255, 0.2);
-        padding: 12px;
-        font-style: italic;
-    }
-
-    // Drop target state
-    &.drop-target {
-        border-color: $cyan-500;
-        box-shadow: 0 0 0 2px rgba($cyan-500, 0.25), inset 0 0 20px rgba($cyan-500, 0.05);
-    }
-}
-
-// Enum Node
-$purple-600: #7c3aed;
-$purple-700: #6d28d9;
-
-.enum-node {
-    background: $slate-700;
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    border-radius: 8px;
-    min-width: 140px;
-    min-height: 50px;
-    width: 100%;
-    height: 100%;
-    overflow: hidden;
-    font-size: 13px;
-    color: white;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-
-    &.selected {
-        border-color: $purple-600;
-        box-shadow: 0 0 0 2px rgba($purple-600, 0.3), 0 4px 12px rgba(0, 0, 0, 0.3);
-    }
-
-    &__stereotype {
-        text-align: center;
-        font-size: 10px;
-        color: rgba(255, 255, 255, 0.6);
-        padding: 4px 0 0;
-        background: linear-gradient(135deg, $slate-600, $purple-600);
-    }
-
-    &__header {
-        background: linear-gradient(135deg, $slate-600, $purple-600);
-        padding: 8px 12px;
-        font-weight: 600;
-        cursor: text;
-        text-align: center;
-
-        input {
-            background: transparent;
-            border: none;
-            outline: none;
-            color: white;
-            font: inherit;
-            font-weight: inherit;
-            width: 100%;
-            padding: 0;
-            text-align: center;
-
-            &::selection {
-                background: rgba(255, 255, 255, 0.3);
-            }
-        }
-    }
-
+    // Separator between sections
     &__separator {
         height: 1px;
-        background: rgba(255, 255, 255, 0.15);
+        background: var(--node-separator);
+        margin: 4px 8px;
     }
 
-    &__literals {
-        padding: 4px 0;
-    }
-
-    &__literal {
-        padding: 2px 12px;
-        font-size: 11px;
-        color: rgba(255, 255, 255, 0.8);
-        font-family: 'IBM Plex Mono', Monaco, Consolas, monospace;
-    }
-
-    &__empty-hint {
+    // Empty state
+    &__empty {
         text-align: center;
-        font-size: 11px;
-        color: rgba(255, 255, 255, 0.2);
-        padding: 12px;
+        font-size: 9px;
+        color: var(--text-dim);
+        padding: 4px 8px;
         font-style: italic;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', system-ui, sans-serif;
     }
 
-    // Drop target state
-    &.drop-target {
-        border-color: $purple-600;
-        box-shadow: 0 0 0 2px rgba($purple-600, 0.25), inset 0 0 20px rgba($purple-600, 0.05);
+    // Package tab style header
+    &__tab {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: var(--package-header-bg);
+        border: 1px solid var(--border-default);
+        border-bottom: none;
+        border-radius: 4px 4px 0 0;
+        padding: 2px 8px;
+        font-weight: 500;
+        font-size: 11px;
+        color: var(--package-header-text);
+        cursor: grab;
+
+        &:active {
+            cursor: grabbing;
+        }
+    }
+
+    // Package container area
+    &__container {
+        background: var(--package-body-bg);
+        border: 1px solid var(--border-default);
+        border-radius: 0 4px 4px 4px;
+        min-height: 80px;
+        height: calc(100% - 26px);
     }
 }
 
-// Package Node (UML tab style)
-.package-node {
-    min-width: 200px;
-    min-height: 120px;
-    width: 100%;
-    height: 100%;
-    font-size: 13px;
-    color: white;
+// ============================================
+// MM-CLASS (Class Node)
+// ============================================
+
+.mm-class {
+    min-height: 40px;
+
+    .mm-node__header {
+        background: var(--class-header-bg);
+    }
+
+    &.abstract {
+        border-style: dashed;
+
+        .mm-node__header {
+            background: var(--class-abstract-header-bg);
+        }
+    }
+}
+
+// ============================================
+// MM-ENUM (Enum Node)
+// ============================================
+
+.mm-enum {
+    min-width: 120px;
+    min-height: 40px;
+
+    .mm-node__header {
+        background: var(--enum-header-bg);
+    }
 
     &.selected {
-        .package-node__tab,
-        .package-node__body {
-            border-color: $green-500;
-        }
-
-        .package-node__body {
-            box-shadow: 0 0 0 2px rgba($green-500, 0.3), 0 4px 12px rgba(0, 0, 0, 0.3);
-        }
+        border-color: var(--enum-accent);
+        box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.3), 0 2px 8px var(--node-shadow);
     }
 
-    &__tab {
-        display: inline-block;
-        background: $slate-700;
-        border: 1px solid rgba(255, 255, 255, 0.15);
-        border-bottom: none;
-        border-radius: 6px 6px 0 0;
-        padding: 4px 12px;
-        font-weight: 600;
-        font-size: 12px;
-
-        input {
-            background: transparent;
-            border: none;
-            outline: none;
-            color: white;
-            font: inherit;
-            font-weight: inherit;
-            width: 100%;
-            padding: 0;
-
-            &::selection {
-                background: rgba(255, 255, 255, 0.3);
-            }
-        }
-    }
-
-    &__body {
-        background: $slate-700;
-        border: 1px solid rgba(255, 255, 255, 0.15);
-        border-radius: 0 8px 8px 8px;
-        min-height: 80px;
-        height: calc(100% - 28px);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    &.drop-target {
+        border-color: var(--enum-accent);
+        box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.25), inset 0 0 16px rgba(124, 58, 237, 0.05);
     }
 }
 
-// Viewpoint container
+// ============================================
+// MM-PACKAGE (Package Node)
+// ============================================
+
+.mm-package {
+    min-width: 200px;
+    min-height: 120px;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+
+    &.selected {
+        border: none;
+        box-shadow: none;
+
+        .mm-node__tab,
+        .mm-node__container {
+            border-color: var(--package-accent);
+        }
+
+        .mm-node__container {
+            box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.3), 0 2px 8px var(--node-shadow);
+        }
+    }
+}
+
+// ============================================
+// MM-FIELD (Attribute/Operation Row)
+// ============================================
+
+.mm-field {
+    display: grid;
+    grid-column: 1 / -1;
+    grid-template-columns: subgrid;
+    padding: 1px 6px;
+    min-height: 15px;
+    font-size: 11px;
+    align-items: center;
+    transition: background 0.1s;
+
+    &:hover {
+        background: var(--field-row-hover);
+    }
+
+    // Field name
+    &__name {
+        color: var(--field-name-color);
+        cursor: text;
+        font-size: 11px;
+        white-space: nowrap;
+
+        &:hover {
+            text-decoration: underline;
+            text-decoration-style: dotted;
+        }
+    }
+
+    // Colon separator
+    &__separator {
+        color: var(--text-dim);
+        padding: 0 2px;
+    }
+
+    // Type
+    &__type {
+        color: var(--field-type-color);
+        cursor: text;
+        font-size: 11px;
+        white-space: nowrap;
+
+        &:hover {
+            text-decoration: underline;
+            text-decoration-style: dotted;
+        }
+    }
+
+    // Bounds [0..*]
+    &__bound {
+        color: var(--field-bound-color);
+        font-size: 10px;
+        text-align: right;
+        padding-left: 4px;
+    }
+
+    // Input for editing
+    &__input {
+        background: transparent;
+        border: none;
+        outline: none;
+        color: var(--field-name-color);
+        font: inherit;
+        padding: 0;
+        width: 60px;
+        min-width: 30px;
+
+        &::selection {
+            background: var(--selection-bg);
+        }
+    }
+
+    // Select for type
+    &__select {
+        background: var(--surface-1);
+        border: 1px solid var(--border-default);
+        border-radius: 3px;
+        outline: none;
+        color: var(--field-type-color);
+        font: inherit;
+        font-size: 11px;
+        padding: 1px 2px;
+        cursor: pointer;
+
+        option {
+            background: var(--surface-1);
+            color: var(--text-primary);
+        }
+    }
+}
+
+// Operation styling
+.mm-operation {
+    .mm-field__name {
+        font-style: italic;
+        color: var(--text-secondary);
+    }
+}
+
+// ============================================
+// MM-LITERAL (Enum Literal Row)
+// ============================================
+
+// Enum fields - 2 columns (name only, no type)
+.mm-enum .mm-node__fields {
+    grid-template-columns: 1fr;
+}
+
+.mm-literal {
+    display: grid;
+    grid-column: 1 / -1;
+    grid-template-columns: subgrid;
+    padding: 1px 6px;
+    min-height: 15px;
+    font-size: 11px;
+    align-items: center;
+    transition: background 0.1s;
+
+    &:hover {
+        background: var(--field-row-hover);
+    }
+
+    &__name {
+        color: var(--literal-name-color);
+        cursor: text;
+        text-transform: uppercase;
+        letter-spacing: 0.02em;
+
+        &:hover {
+            text-decoration: underline;
+            text-decoration-style: dotted;
+        }
+    }
+
+    &__input {
+        background: transparent;
+        border: none;
+        outline: none;
+        color: var(--literal-name-color);
+        font: inherit;
+        padding: 0;
+        width: 100%;
+        text-transform: uppercase;
+
+        &::selection {
+            background: var(--selection-bg);
+        }
+    }
+}
+
+// ============================================
+// VIEWPOINT
+// ============================================
+
 .viewpoint-container {
     min-width: 120px;
     width: 100%;
@@ -786,82 +909,94 @@ $purple-700: #6d28d9;
 
 .viewpoint-error {
     padding: 8px 12px;
-    background: rgba($red-500, 0.2);
-    color: #fca5a5;
+    background: var(--danger-bg);
+    color: var(--danger);
     border-radius: 6px;
     font-size: 11px;
-    border: 1px solid rgba($red-500, 0.3);
+    border: 1px solid var(--danger);
 }
 
-// Reference edge
+// ============================================
+// EDGES
+// ============================================
+
 .reference-edge {
-    stroke: rgba(255, 255, 255, 0.5);
-    stroke-width: 1.5;
+    stroke: var(--edge-color);
+    stroke-width: 1;
     fill: none;
 
     &.selected {
-        stroke: $cyan-500;
-        stroke-width: 2;
+        stroke: var(--edge-selected);
+        stroke-width: 1.5;
     }
 
     &.composition {
-        stroke: $green-500;
+        stroke: var(--green);
     }
 
     &.aggregation {
-        stroke: #f59e0b; // amber
+        stroke: var(--amber);
     }
 
     &.association {
-        stroke: rgba(255, 255, 255, 0.5);
+        stroke: var(--edge-color);
     }
 }
 
-// Inheritance edge
 .inheritance-edge {
-    stroke: rgba(255, 255, 255, 0.4);
-    stroke-width: 1.5;
+    stroke: var(--edge-color);
+    stroke-width: 1;
     fill: none;
 
     &.selected {
-        stroke: $cyan-500;
-        stroke-width: 2;
+        stroke: var(--edge-selected);
+        stroke-width: 1.5;
     }
 }
 
-// Reference edge markers (SVG defs)
+// Reference edge markers
 .reference-marker {
-    &--filled {
-        fill: $green-500;
+    &.filled {
+        fill: var(--green);
         stroke: none;
     }
 
-    &--hollow {
-        fill: $slate-800;
-        stroke: #f59e0b;
-        stroke-width: 1.5;
+    &.hollow {
+        fill: var(--edge-marker-fill);
+        stroke: var(--amber);
+        stroke-width: 1;
     }
 
-    &--arrow {
+    &.arrow {
         fill: none;
-        stroke: rgba(255, 255, 255, 0.5);
-        stroke-width: 1.5;
+        stroke: var(--edge-marker-stroke);
+        stroke-width: 1;
     }
 }
 
-// Reference edge badges
+// Inheritance edge marker (hollow triangle)
+.inheritance-marker {
+    fill: var(--edge-marker-fill);
+    stroke: var(--edge-marker-stroke);
+    stroke-width: 1;
+
+    &.selected {
+        stroke: var(--edge-selected);
+    }
+}
+
 .reference-badge {
     font-size: 10px;
     pointer-events: none;
 
     &__bg {
-        fill: $slate-700;
-        stroke: rgba(255, 255, 255, 0.2);
+        fill: var(--edge-label-bg);
+        stroke: var(--border-default);
         stroke-width: 1;
     }
 
     &__text {
-        fill: rgba(255, 255, 255, 0.8);
+        fill: var(--text-secondary);
         font-family: 'IBM Plex Mono', Monaco, Consolas, monospace;
         font-size: 9px;
         text-anchor: middle;
@@ -869,71 +1004,79 @@ $purple-700: #6d28d9;
     }
 
     &__kind {
-        fill: rgba(255, 255, 255, 0.6);
+        fill: var(--text-muted);
         font-size: 11px;
         text-anchor: middle;
         dominant-baseline: central;
     }
 }
 
-// Manhattan edge (legacy)
 .react-flow__edge-path {
-    stroke: rgba(255, 255, 255, 0.4);
+    stroke: var(--edge-color);
     stroke-width: 1.5;
 }
 
 .react-flow__edge.selected .react-flow__edge-path {
-    stroke: $cyan-500;
+    stroke: var(--edge-selected);
     stroke-width: 2;
 }
 
-// Edge label
+// ============================================
+// EDGE LABELS
+// ============================================
+
+// Shared style for edge labels and cardinality
+.edge-label__text,
+.edge-cardinality {
+    font-family: 'IBM Plex Mono', Monaco, Consolas, monospace;
+    font-size: 10px;
+    color: var(--text-muted);
+    background: transparent;
+    padding: 1px 4px;
+    border-radius: 2px;
+    border: none;
+    white-space: nowrap;
+}
+
 .edge-label {
-    font-size: 11px;
     pointer-events: all;
 
     &__text {
-        background: $slate-700;
-        color: rgba(255, 255, 255, 0.8);
-        padding: 2px 8px;
-        border-radius: 4px;
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        white-space: nowrap;
         cursor: default;
         transition: border-color 0.15s;
 
         &:hover {
-            border-color: rgba(255, 255, 255, 0.3);
+            border-color: var(--border-default);
         }
     }
 
     &.selected &__text {
-        border-color: $cyan-500;
-        color: white;
+        border-color: var(--accent);
+        color: var(--text-primary);
     }
 
     &__input {
-        background: $slate-800;
-        border: 1px solid $cyan-500;
-        color: white;
-        font-size: 11px;
-        padding: 2px 8px;
-        border-radius: 4px;
+        font-family: 'IBM Plex Mono', Monaco, Consolas, monospace;
+        background: var(--input-bg);
+        border: 1px solid var(--accent);
+        color: var(--input-text);
+        font-size: 10px;
+        padding: 1px 4px;
+        border-radius: 2px;
         outline: none;
-        width: 100px;
+        width: 60px;
         text-align: center;
 
         &::selection {
-            background: rgba($cyan-500, 0.3);
+            background: var(--selection-bg);
         }
     }
 }
 
-// Legacy class for backwards compatibility
 .manhattan-edge__label {
     font-size: 11px;
-    color: rgba(255, 255, 255, 0.7);
-    background: $slate-700;
+    color: var(--text-secondary);
+    background: var(--edge-label-bg);
     padding: 2px 6px;
     border-radius: 4px;
     white-space: nowrap;
@@ -941,32 +1084,52 @@ $purple-700: #6d28d9;
 
 .react-flow__edge-text {
     font-size: 11px;
-    fill: rgba(255, 255, 255, 0.6);
+    fill: var(--text-muted);
+}
+
+// .edge-cardinality styles merged above with .edge-label__text
+
+.edge-kind-badge {
+    font-size: 10px;
+    color: var(--text-dim);
+
+    &.composition {
+        color: var(--green);
+    }
+
+    &.aggregation {
+        color: var(--amber);
+    }
+
+    &.association {
+        color: var(--text-muted);
+    }
 }
 
 // ============================================
-// PROPERTIES PANEL — Professional Design
+// CONNECTION LINE
 // ============================================
 
-$panel-bg: #1a2332;
-$panel-section-bg: #253347;
-$panel-border: rgba(255, 255, 255, 0.08);
-$panel-text: rgba(255, 255, 255, 0.85);
-$panel-text-muted: rgba(255, 255, 255, 0.45);
-$panel-text-dim: rgba(255, 255, 255, 0.3);
-$panel-input-bg: rgba(0, 0, 0, 0.25);
-$panel-input-border: rgba(255, 255, 255, 0.12);
+.react-flow__connection-line {
+    stroke: var(--accent);
+    stroke-width: 2;
+    stroke-dasharray: 5 5;
+}
+
+// ============================================
+// PROPERTIES PANEL
+// ============================================
 
 .properties-panel {
     width: 280px;
-    background: $panel-bg;
-    border-left: 1px solid $panel-border;
+    background: var(--surface-2);
+    border-left: 1px solid var(--border-subtle);
     display: flex;
     flex-direction: column;
     overflow: hidden;
     flex-shrink: 0;
     font-size: 13px;
-    color: $panel-text;
+    color: var(--text-primary);
 
     &__scroll {
         flex: 1;
@@ -980,9 +1143,9 @@ $panel-input-border: rgba(255, 255, 255, 0.12);
             background: transparent;
         }
         &::-webkit-scrollbar-thumb {
-            background: rgba(255, 255, 255, 0.1);
+            background: var(--scrollbar-thumb);
             border-radius: 3px;
-            &:hover { background: rgba(255, 255, 255, 0.2); }
+            &:hover { background: var(--scrollbar-thumb-hover); }
         }
     }
 
@@ -991,13 +1154,13 @@ $panel-input-border: rgba(255, 255, 255, 0.12);
         align-items: center;
         gap: 10px;
         padding: 14px 16px;
-        background: $panel-section-bg;
-        border-bottom: 1px solid $panel-border;
+        background: var(--surface-3);
+        border-bottom: 1px solid var(--border-subtle);
         flex-shrink: 0;
 
         i {
             font-size: 15px;
-            color: $cyan-500;
+            color: var(--accent);
             width: 20px;
             text-align: center;
         }
@@ -1011,7 +1174,7 @@ $panel-input-border: rgba(255, 255, 255, 0.12);
 
     &__subtitle {
         font-size: 11px;
-        color: $panel-text-muted;
+        color: var(--text-muted);
         margin-left: auto;
         font-family: 'IBM Plex Mono', Monaco, Consolas, monospace;
     }
@@ -1023,7 +1186,7 @@ $panel-input-border: rgba(255, 255, 255, 0.12);
         align-items: center;
         justify-content: center;
         gap: 12px;
-        color: $panel-text-dim;
+        color: var(--text-dim);
         font-size: 13px;
         padding: 40px;
         text-align: center;
@@ -1040,11 +1203,11 @@ $panel-input-border: rgba(255, 255, 255, 0.12);
 }
 
 // ============================================
-// SECTIONS — Collapsible
+// SECTIONS
 // ============================================
 
 .prop-section {
-    border-bottom: 1px solid $panel-border;
+    border-bottom: 1px solid var(--border-subtle);
 
     &__header {
         display: flex;
@@ -1056,12 +1219,12 @@ $panel-input-border: rgba(255, 255, 255, 0.12);
         transition: background 0.12s;
 
         &:hover {
-            background: rgba(255, 255, 255, 0.03);
+            background: var(--surface-hover);
         }
 
         .chevron {
             font-size: 10px;
-            color: $panel-text-muted;
+            color: var(--text-muted);
             transition: transform 0.2s;
             width: 12px;
             text-align: center;
@@ -1076,16 +1239,16 @@ $panel-input-border: rgba(255, 255, 255, 0.12);
         font-size: 11px;
         text-transform: uppercase;
         letter-spacing: 0.06em;
-        color: $panel-text-muted;
+        color: var(--text-muted);
         font-weight: 500;
     }
 
     &__count {
         font-size: 10px;
-        color: $panel-text-dim;
+        color: var(--text-dim);
         margin-left: auto;
         font-family: 'IBM Plex Mono', Monaco, Consolas, monospace;
-        background: rgba(255, 255, 255, 0.06);
+        background: var(--surface-hover);
         padding: 1px 6px;
         border-radius: 8px;
     }
@@ -1102,7 +1265,6 @@ $panel-input-border: rgba(255, 255, 255, 0.12);
     }
 }
 
-// Section add button (small)
 .prop-section-add-btn {
     display: flex;
     align-items: center;
@@ -1111,15 +1273,15 @@ $panel-input-border: rgba(255, 255, 255, 0.12);
     height: 20px;
     border: none;
     background: transparent;
-    color: $panel-text-muted;
+    color: var(--text-muted);
     cursor: pointer;
     border-radius: 4px;
     font-size: 14px;
     transition: all 0.15s;
 
     &:hover {
-        color: $cyan-500;
-        background: rgba($cyan-500, 0.1);
+        color: var(--accent);
+        background: var(--accent-subtle);
     }
 }
 
@@ -1135,16 +1297,16 @@ $panel-input-border: rgba(255, 255, 255, 0.12);
 
 .prop-label {
     font-size: 11px;
-    color: $panel-text-muted;
+    color: var(--text-muted);
     font-weight: 500;
     letter-spacing: 0.02em;
 }
 
 .prop-input {
-    background: $panel-input-bg;
-    border: 1px solid $panel-input-border;
+    background: var(--input-bg);
+    border: 1px solid var(--input-border);
     border-radius: 6px;
-    color: $panel-text;
+    color: var(--input-text);
     font-size: 13px;
     padding: 7px 10px;
     outline: none;
@@ -1154,16 +1316,16 @@ $panel-input-border: rgba(255, 255, 255, 0.12);
     font-family: inherit;
 
     &::placeholder {
-        color: $panel-text-dim;
+        color: var(--input-placeholder);
     }
 
     &:hover {
-        border-color: rgba(255, 255, 255, 0.2);
+        border-color: var(--border-strong);
     }
 
     &:focus {
-        border-color: $cyan-500;
-        box-shadow: 0 0 0 2px rgba($cyan-500, 0.12);
+        border-color: var(--input-focus);
+        box-shadow: 0 0 0 2px var(--accent-muted);
     }
 
     &--sm {
@@ -1188,10 +1350,10 @@ $panel-input-border: rgba(255, 255, 255, 0.12);
 }
 
 .prop-select {
-    background: $panel-input-bg;
-    border: 1px solid $panel-input-border;
+    background: var(--input-bg);
+    border: 1px solid var(--input-border);
     border-radius: 6px;
-    color: $panel-text;
+    color: var(--input-text);
     font-size: 12px;
     padding: 5px 8px;
     outline: none;
@@ -1199,12 +1361,12 @@ $panel-input-border: rgba(255, 255, 255, 0.12);
     min-width: 80px;
     transition: border-color 0.15s;
 
-    &:hover { border-color: rgba(255, 255, 255, 0.2); }
-    &:focus { border-color: $cyan-500; }
+    &:hover { border-color: var(--border-strong); }
+    &:focus { border-color: var(--input-focus); }
 
     option {
-        background: $panel-bg;
-        color: $panel-text;
+        background: var(--surface-2);
+        color: var(--input-text);
     }
 }
 
@@ -1214,24 +1376,24 @@ $panel-input-border: rgba(255, 255, 255, 0.12);
     gap: 8px;
     cursor: pointer;
     font-size: 12px;
-    color: $panel-text;
+    color: var(--text-primary);
     padding: 4px 0;
 
     input[type="checkbox"] {
         appearance: none;
         width: 16px;
         height: 16px;
-        border: 1.5px solid $panel-input-border;
+        border: 1.5px solid var(--input-border);
         border-radius: 4px;
-        background: $panel-input-bg;
+        background: var(--input-bg);
         cursor: pointer;
         position: relative;
         flex-shrink: 0;
         transition: all 0.15s;
 
         &:checked {
-            background: $cyan-500;
-            border-color: $cyan-500;
+            background: var(--accent);
+            border-color: var(--accent);
 
             &::after {
                 content: '';
@@ -1247,13 +1409,13 @@ $panel-input-border: rgba(255, 255, 255, 0.12);
         }
 
         &:hover {
-            border-color: rgba(255, 255, 255, 0.3);
+            border-color: var(--border-strong);
         }
     }
 }
 
 // ============================================
-// LIST ITEMS (Attributes, Literals, Operations)
+// LIST ITEMS
 // ============================================
 
 .prop-list-item {
@@ -1276,7 +1438,7 @@ $panel-input-border: rgba(255, 255, 255, 0.12);
     height: 22px;
     border: none;
     background: transparent;
-    color: $panel-text-dim;
+    color: var(--text-dim);
     cursor: pointer;
     border-radius: 4px;
     font-size: 13px;
@@ -1285,19 +1447,19 @@ $panel-input-border: rgba(255, 255, 255, 0.12);
     transition: all 0.15s;
 
     &:hover {
-        color: #f87171;
-        background: rgba(239, 68, 68, 0.1);
+        color: var(--danger);
+        background: var(--danger-bg);
     }
 }
 
 // ============================================
-// REFERENCE KIND SELECTOR
+// KIND & TYPE SELECTORS
 // ============================================
 
 .prop-kind-selector {
     display: flex;
     gap: 4px;
-    background: $panel-input-bg;
+    background: var(--input-bg);
     border-radius: 8px;
     padding: 3px;
 }
@@ -1311,7 +1473,7 @@ $panel-input-border: rgba(255, 255, 255, 0.12);
     padding: 6px 8px;
     border: none;
     background: transparent;
-    color: $panel-text-muted;
+    color: var(--text-muted);
     border-radius: 6px;
     cursor: pointer;
     font-size: 11px;
@@ -1319,14 +1481,14 @@ $panel-input-border: rgba(255, 255, 255, 0.12);
     white-space: nowrap;
 
     &:hover {
-        color: $panel-text;
-        background: rgba(255, 255, 255, 0.05);
+        color: var(--text-primary);
+        background: var(--surface-hover);
     }
 
     &.active {
-        background: $panel-section-bg;
-        color: white;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+        background: var(--surface-3);
+        color: var(--text-primary);
+        box-shadow: 0 1px 3px var(--node-shadow);
     }
 
     &__icon {
@@ -1339,14 +1501,10 @@ $panel-input-border: rgba(255, 255, 255, 0.12);
     }
 }
 
-// ============================================
-// EDGE TYPE SELECTOR
-// ============================================
-
 .prop-edge-type-selector {
     display: flex;
     gap: 4px;
-    background: rgba(0, 0, 0, 0.2);
+    background: var(--input-bg);
     border-radius: 8px;
     padding: 3px;
 }
@@ -1360,23 +1518,23 @@ $panel-input-border: rgba(255, 255, 255, 0.12);
     padding: 7px 10px;
     border: none;
     background: transparent;
-    color: $panel-text-muted;
+    color: var(--text-muted);
     border-radius: 6px;
     cursor: pointer;
     font-size: 12px;
     transition: all 0.15s;
 
     &:hover:not(:disabled) {
-        color: $panel-text;
-        background: rgba(255, 255, 255, 0.05);
+        color: var(--text-primary);
+        background: var(--surface-hover);
     }
 
     &.active {
-        background: rgba($cyan-500, 0.15);
-        color: white;
+        background: var(--accent-muted);
+        color: var(--text-primary);
         cursor: default;
 
-        i { color: $cyan-500; }
+        i { color: var(--accent); }
     }
 
     &:disabled {
@@ -1402,15 +1560,15 @@ $panel-input-border: rgba(255, 255, 255, 0.12);
     }
 
     &__dot {
-        color: $panel-text-dim;
+        color: var(--text-dim);
         font-size: 11px;
     }
 
     &__preview {
         font-family: 'IBM Plex Mono', Monaco, Consolas, monospace;
         font-size: 12px;
-        color: $cyan-500;
-        background: rgba($cyan-500, 0.1);
+        color: var(--accent);
+        background: var(--accent-muted);
         padding: 4px 8px;
         border-radius: 4px;
         margin-left: auto;
@@ -1424,8 +1582,8 @@ $panel-input-border: rgba(255, 255, 255, 0.12);
 .prop-badge {
     display: inline-flex;
     align-items: center;
-    background: rgba(255, 255, 255, 0.06);
-    color: $panel-text-muted;
+    background: var(--surface-hover);
+    color: var(--text-muted);
     font-size: 11px;
     padding: 3px 8px;
     border-radius: 4px;
@@ -1441,32 +1599,28 @@ $panel-input-border: rgba(255, 255, 255, 0.12);
 
 .prop-info {
     font-size: 12px;
-    color: $panel-text-muted;
+    color: var(--text-muted);
 }
 
 .prop-hint {
     font-size: 10px;
-    color: $panel-text-dim;
+    color: var(--text-dim);
     font-style: italic;
     margin-top: -4px;
 }
 
 .prop-empty {
     font-size: 11px;
-    color: $panel-text-dim;
+    color: var(--text-dim);
     font-style: italic;
     text-align: center;
     padding: 8px 0;
 }
 
-// Connection line (while dragging)
-.react-flow__connection-line {
-    stroke: $cyan-500;
-    stroke-width: 2;
-    stroke-dasharray: 5 5;
-}
+// ============================================
+// CONTEXT MENU
+// ============================================
 
-// Context Menu
 .context-menu-backdrop {
     position: fixed;
     inset: 0;
@@ -1476,12 +1630,12 @@ $panel-input-border: rgba(255, 255, 255, 0.12);
 .context-menu {
     position: fixed;
     z-index: 1000;
-    background: $slate-700;
-    border: 1px solid rgba(255, 255, 255, 0.15);
+    background: var(--menu-bg);
+    border: 1px solid var(--border-default);
     border-radius: 8px;
     padding: 4px;
     min-width: 160px;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+    box-shadow: 0 8px 24px var(--menu-shadow);
 
     &__item {
         display: flex;
@@ -1491,7 +1645,7 @@ $panel-input-border: rgba(255, 255, 255, 0.12);
         padding: 8px 12px;
         border: none;
         background: transparent;
-        color: rgba(255, 255, 255, 0.8);
+        color: var(--text-secondary);
         font-size: 13px;
         border-radius: 4px;
         cursor: pointer;
@@ -1499,14 +1653,14 @@ $panel-input-border: rgba(255, 255, 255, 0.12);
         transition: background 0.15s;
 
         &:hover {
-            background: rgba(255, 255, 255, 0.1);
+            background: var(--surface-hover);
         }
 
         &.danger {
-            color: #f87171;
+            color: var(--danger);
 
             &:hover {
-                background: rgba($red-500, 0.15);
+                background: var(--danger-bg);
             }
         }
 
@@ -1519,7 +1673,7 @@ $panel-input-border: rgba(255, 255, 255, 0.12);
 
     &__divider {
         height: 1px;
-        background: rgba(255, 255, 255, 0.08);
+        background: var(--border-subtle);
         margin: 3px 8px;
     }
 }

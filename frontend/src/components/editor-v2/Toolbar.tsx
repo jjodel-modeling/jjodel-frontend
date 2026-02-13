@@ -3,12 +3,15 @@ interface ToolbarProps {
     onToggleSnap: () => void;
     onZoomIn: () => void;
     onZoomOut: () => void;
+    onResetZoom: () => void;
     onFitView: () => void;
     onDeleteSelected: () => void;
     onUndo: () => void;
     onRedo: () => void;
     canUndo: boolean;
     canRedo: boolean;
+    theme: 'dark' | 'light';
+    onToggleTheme: () => void;
 }
 
 /**
@@ -20,12 +23,15 @@ function Toolbar({
     onToggleSnap,
     onZoomIn,
     onZoomOut,
+    onResetZoom,
     onFitView,
     onDeleteSelected,
     onUndo,
     onRedo,
     canUndo,
     canRedo,
+    theme,
+    onToggleTheme,
 }: ToolbarProps) {
     return (
         <div className="editor-v2-toolbar">
@@ -69,6 +75,13 @@ function Toolbar({
                 </button>
                 <button
                     className="toolbar-btn"
+                    onClick={onResetZoom}
+                    title="Reset zoom (100%)"
+                >
+                    <i className="bi bi-aspect-ratio" />
+                </button>
+                <button
+                    className="toolbar-btn"
                     onClick={onFitView}
                     title="Fit view"
                 >
@@ -99,6 +112,19 @@ function Toolbar({
                     title="Delete selected (Delete/Backspace)"
                 >
                     <i className="bi bi-trash" />
+                </button>
+            </div>
+
+            <div className="toolbar-separator" />
+
+            {/* Theme toggle */}
+            <div className="toolbar-group">
+                <button
+                    className="toolbar-btn"
+                    onClick={onToggleTheme}
+                    title={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
+                >
+                    <i className={theme === 'dark' ? 'bi bi-sun' : 'bi bi-moon'} />
                 </button>
             </div>
 

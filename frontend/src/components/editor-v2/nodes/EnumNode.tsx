@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import { NodeResizer, useReactFlow, type NodeProps, type Node } from '@xyflow/react';
+import { Handle, Position, NodeResizer, useReactFlow, type NodeProps, type Node } from '@xyflow/react';
 import type { EnumNodeData } from '../types';
 import { createLiteral } from '../types';
 import { useEditorContextSafe } from '../contexts/EditorContext';
@@ -12,6 +12,10 @@ function EnumNode({ id, data, selected }: NodeProps<EnumNodeType>) {
     const [editing, setEditing] = useState(false);
     const [name, setName] = useState(data.label);
     const [dragOver, setDragOver] = useState(false);
+
+    // Inline editing for literals
+    const [editingLit, setEditingLit] = useState<string | null>(null);
+    const [editValue, setEditValue] = useState('');
 
     useEffect(() => {
         setName(data.label);
@@ -41,6 +45,44 @@ function EnumNode({ id, data, selected }: NodeProps<EnumNodeType>) {
         [commitName, data.label]
     );
 
+    // Start editing a literal
+    const startEditLit = useCallback((litId: string, currentValue: string) => {
+        setEditingLit(litId);
+        setEditValue(currentValue);
+    }, []);
+
+    // Commit literal edit
+    const commitLitEdit = useCallback(() => {
+        if (!editingLit) return;
+
+        const lit = data.literals.find(l => l.id === editingLit);
+        if (lit && editValue !== lit.name) {
+            editorContext?.takeSnapshot();
+            setNodes(nds => nds.map(n => {
+                if (n.id !== id) return n;
+                const nodeData = n.data as EnumNodeData;
+                return {
+                    ...n,
+                    data: {
+                        ...nodeData,
+                        literals: nodeData.literals.map(l =>
+                            l.id === editingLit ? { ...l, name: editValue } : l
+                        ),
+                    },
+                };
+            }));
+        }
+        setEditingLit(null);
+    }, [editingLit, editValue, data.literals, id, setNodes, editorContext]);
+
+    const handleLitKeyDown = useCallback((e: React.KeyboardEvent) => {
+        if (e.key === 'Enter') {
+            commitLitEdit();
+        } else if (e.key === 'Escape') {
+            setEditingLit(null);
+        }
+    }, [commitLitEdit]);
+
     // Drop handler - accept literal from palette
     const handleDragOver = useCallback((e: React.DragEvent) => {
         if (e.dataTransfer.types.includes('application/reactflow')) {
@@ -51,7 +93,7 @@ function EnumNode({ id, data, selected }: NodeProps<EnumNodeType>) {
 
     const handleDrop = useCallback((e: React.DragEvent) => {
         e.preventDefault();
-        e.stopPropagation(); // Prevent canvas drop
+        e.stopPropagation();
         const itemType = e.dataTransfer.getData('application/reactflow');
 
         if (itemType === 'literal') {
@@ -71,26 +113,34 @@ function EnumNode({ id, data, selected }: NodeProps<EnumNodeType>) {
         setDragOver(false);
     }, [id, data.literals, setNodes, editorContext]);
 
+    const hasLiterals = data.literals.length > 0;
+
     return (
         <div
-            className={`enum-node ${selected ? 'selected' : ''} ${dragOver ? 'drop-target' : ''}`}
+            className={`mm-node mm-enum ${selected ? 'selected' : ''} ${dragOver ? 'drop-target' : ''}`}
             onDragOver={(e) => { handleDragOver(e); setDragOver(true); }}
             onDragLeave={() => setDragOver(false)}
             onDrop={handleDrop}
         >
             <NodeResizer
                 isVisible={selected}
-                minWidth={150}
-                minHeight={50}
+                minWidth={120}
+                minHeight={40}
                 lineClassName="node-resize-line"
                 handleClassName="node-resize-handle"
             />
 
-            <div className="enum-node__stereotype">«enumeration»</div>
+            <Handle type="source" position={Position.Top} id="top" className="mm-anchor" />
+            <Handle type="source" position={Position.Right} id="right" className="mm-anchor" />
+            <Handle type="source" position={Position.Bottom} id="bottom" className="mm-anchor" />
+            <Handle type="source" position={Position.Left} id="left" className="mm-anchor" />
 
-            <div className="enum-node__header" onDoubleClick={() => setEditing(true)}>
+            {/* Header with badge */}
+            <div className="mm-node__header" onDoubleClick={() => setEditing(true)}>
+                <span className="mm-node__badge">E</span>
                 {editing ? (
                     <input
+                        className="mm-node__input"
                         autoFocus
                         value={name}
                         onChange={(e) => setName(e.target.value)}
@@ -98,24 +148,43 @@ function EnumNode({ id, data, selected }: NodeProps<EnumNodeType>) {
                         onKeyDown={handleKeyDown}
                     />
                 ) : (
-                    <span>{name}</span>
+                    <span className="mm-node__name">{name}</span>
                 )}
             </div>
 
-            {data.literals.length > 0 && <div className="enum-node__separator" />}
-
-            <div className="enum-node__literals">
-                {data.literals.map((lit) => (
-                    <div key={lit.id} className="enum-node__literal">
-                        {lit.name}
+            {/* Body with literals */}
+            {hasLiterals && (
+                <div className="mm-node__body">
+                    <div className="mm-node__fields">
+                        {data.literals.map((lit) => (
+                            <div key={lit.id} className="mm-literal">
+                                {editingLit === lit.id ? (
+                                    <input
+                                        className="mm-literal__input"
+                                        autoFocus
+                                        value={editValue}
+                                        onChange={(e) => setEditValue(e.target.value)}
+                                        onBlur={commitLitEdit}
+                                        onKeyDown={handleLitKeyDown}
+                                    />
+                                ) : (
+                                    <span
+                                        className="mm-literal__name"
+                                        onDoubleClick={() => startEditLit(lit.id, lit.name)}
+                                    >
+                                        {lit.name}
+                                    </span>
+                                )}
+                            </div>
+                        ))}
                     </div>
-                ))}
-            </div>
+                </div>
+            )}
 
-            {/* Empty hint */}
-            {data.literals.length === 0 && (
-                <div className="enum-node__empty-hint">
-                    Drop literals here
+            {/* Empty state */}
+            {!hasLiterals && (
+                <div className="mm-node__empty">
+                    Drop literals
                 </div>
             )}
         </div>

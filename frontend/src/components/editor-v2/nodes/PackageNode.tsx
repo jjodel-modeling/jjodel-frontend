@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import { NodeResizer, useReactFlow, type NodeProps, type Node } from '@xyflow/react';
+import { Handle, Position, NodeResizer, useReactFlow, type NodeProps, type Node } from '@xyflow/react';
 import type { PackageNodeData } from '../types';
 import { useEditorContextSafe } from '../contexts/EditorContext';
 
@@ -40,18 +40,26 @@ function PackageNode({ id, data, selected }: NodeProps<PackageNodeType>) {
     );
 
     return (
-        <div className={`package-node ${selected ? 'selected' : ''}`}>
+        <div className={`mm-node mm-package ${selected ? 'selected' : ''}`}>
             <NodeResizer
                 isVisible={selected}
-                minWidth={300}
-                minHeight={200}
+                minWidth={200}
+                minHeight={120}
                 lineClassName="node-resize-line"
                 handleClassName="node-resize-handle"
             />
 
-            <div className="package-node__tab" onDoubleClick={() => setEditing(true)}>
+            <Handle type="source" position={Position.Top} id="top" className="mm-anchor" />
+            <Handle type="source" position={Position.Right} id="right" className="mm-anchor" />
+            <Handle type="source" position={Position.Bottom} id="bottom" className="mm-anchor" />
+            <Handle type="source" position={Position.Left} id="left" className="mm-anchor" />
+
+            {/* Package tab header */}
+            <div className="mm-node__tab" onDoubleClick={() => setEditing(true)}>
+                <span className="mm-node__badge">P</span>
                 {editing ? (
                     <input
+                        className="mm-node__input"
                         autoFocus
                         value={name}
                         onChange={(e) => setName(e.target.value)}
@@ -59,11 +67,12 @@ function PackageNode({ id, data, selected }: NodeProps<PackageNodeType>) {
                         onKeyDown={handleKeyDown}
                     />
                 ) : (
-                    <span>{name}</span>
+                    <span className="mm-node__name">{name}</span>
                 )}
             </div>
 
-            <div className="package-node__body" />
+            {/* Package body (container for nested elements) */}
+            <div className="mm-node__container" />
         </div>
     );
 }
