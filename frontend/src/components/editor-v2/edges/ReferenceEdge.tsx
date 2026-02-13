@@ -2,6 +2,7 @@ import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import {
     EdgeLabelRenderer,
     useReactFlow,
+    useNodes,
     type EdgeProps,
 } from '@xyflow/react';
 import type { ReferenceEdgeData, ReferenceKind } from '../types';
@@ -17,6 +18,8 @@ import {
     pointsToPath,
     getPathSegments,
     getSideFromHandle,
+    avoidObstacles,
+    getNodeRect,
 } from '../utils/edgeUtils';
 
 function ReferenceEdge(props: EdgeProps) {
@@ -37,6 +40,7 @@ function ReferenceEdge(props: EdgeProps) {
 
     const edgeData = data as ReferenceEdgeData | undefined;
     const { setEdges, getViewport } = useReactFlow();
+    const nodes = useNodes();
     const [editing, setEditing] = useState(false);
     const [labelText, setLabelText] = useState(String(label || edgeData?.reference?.name || ''));
     const dragRef = useRef<{ segmentIndex: number; startPos: number; startOffset: number; isHorizontal: boolean } | null>(null);
@@ -58,17 +62,28 @@ function ReferenceEdge(props: EdgeProps) {
     const sourceSide = getSideFromHandle(sourceHandleId);
     const targetSide = getSideFromHandle(targetHandleId);
 
-    // Compute base path (now side-aware, no nodes dependency!)
+    // Compute obstacles (all nodes except source and target)
+    const obstacleRects = useMemo(() => {
+        return nodes
+            .filter(n => n.id !== source && n.id !== target)
+            .map(n => getNodeRect(n));
+    }, [nodes, source, target]);
+
+    // Compute base path (side-aware)
     const rawPath = useMemo(
         () => computeManhattanPath(sourceX, sourceY, sourceSide, targetX, targetY, targetSide),
         [sourceX, sourceY, sourceSide, targetX, targetY, targetSide]
     );
 
-    // Parse points and apply waypoints
+    // Pipeline: parse → avoid obstacles → apply waypoints
     const rawPoints = useMemo(() => parsePathPoints(rawPath), [rawPath]);
+    const routedPoints = useMemo(
+        () => avoidObstacles(rawPoints, obstacleRects),
+        [rawPoints, obstacleRects]
+    );
     const adjustedPoints = useMemo(
-        () => (waypoints.length > 0 ? applyWaypoints(rawPoints, waypoints) : rawPoints),
-        [rawPoints, waypoints]
+        () => (waypoints.length > 0 ? applyWaypoints(routedPoints, waypoints) : routedPoints),
+        [routedPoints, waypoints]
     );
     const adjustedPath = useMemo(() => pointsToPath(adjustedPoints), [adjustedPoints]);
 
