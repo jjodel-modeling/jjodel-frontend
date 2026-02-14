@@ -3,6 +3,8 @@ import { useReactFlow, useNodes, EdgeLabelRenderer, type EdgeProps } from '@xyfl
 import type { InheritanceEdgeData } from '../types';
 import {
     computeManhattanPath,
+    computeAStarPath,
+    OBSTACLE_AVOIDANCE_ENABLED,
     roundManhattanPath,
     computeSelfLoopPath,
     parsePathPoints,
@@ -10,14 +12,12 @@ import {
     pointsToPath,
     getPathSegments,
     getSideFromHandle,
-    avoidObstacles,
-    getNodeRect,
 } from '../utils/edgeUtils';
+import { useObstacleGrid } from '../contexts/ObstacleGridContext';
 
 function InheritanceEdge(props: EdgeProps) {
     const { id, sourceX, sourceY, targetX, targetY, source, target, sourceHandleId, targetHandleId, selected, data } = props;
     const { setEdges, getViewport } = useReactFlow();
-    const nodes = useNodes();
     const dragRef = useRef<{ segmentIndex: number; startPos: number; startOffset: number; isHorizontal: boolean } | null>(null);
 
     const edgeData = data as InheritanceEdgeData | undefined;
@@ -25,32 +25,35 @@ function InheritanceEdge(props: EdgeProps) {
 
     const isSelfLoop = source === target;
 
+    // Phase 7: obstacle grid context
+    const { grid, version } = useObstacleGrid();
+    const allNodes = useNodes();
+
     // Get sides from handle IDs
     const sourceSide = getSideFromHandle(sourceHandleId);
     const targetSide = getSideFromHandle(targetHandleId);
 
-    // Compute obstacles (all nodes except source and target)
-    const obstacleRects = useMemo(() => {
-        return nodes
-            .filter(n => n.id !== source && n.id !== target)
-            .map(n => getNodeRect(n));
-    }, [nodes, source, target]);
-
-    // Compute base path (side-aware)
+    // Compute base path — A* when enabled, classic otherwise
     const rawPath = useMemo(
-        () => computeManhattanPath(sourceX, sourceY, sourceSide, targetX, targetY, targetSide),
-        [sourceX, sourceY, sourceSide, targetX, targetY, targetSide]
+        () => {
+            if (OBSTACLE_AVOIDANCE_ENABLED && grid) {
+                return computeAStarPath(
+                    grid, sourceX, sourceY, sourceSide,
+                    targetX, targetY, targetSide,
+                    source, target, allNodes as any,
+                );
+            }
+            return computeManhattanPath(sourceX, sourceY, sourceSide, targetX, targetY, targetSide);
+        },
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+        [sourceX, sourceY, sourceSide, targetX, targetY, targetSide, grid, version, source, target]
     );
 
-    // Pipeline: parse → avoid obstacles → apply waypoints
+    // Pipeline: parse → apply waypoints → round corners
     const rawPoints = useMemo(() => parsePathPoints(rawPath), [rawPath]);
-    const routedPoints = useMemo(
-        () => avoidObstacles(rawPoints, obstacleRects),
-        [rawPoints, obstacleRects]
-    );
     const adjustedPoints = useMemo(
-        () => (waypoints.length > 0 ? applyWaypoints(routedPoints, waypoints) : routedPoints),
-        [routedPoints, waypoints]
+        () => (waypoints.length > 0 ? applyWaypoints(rawPoints, waypoints) : rawPoints),
+        [rawPoints, waypoints]
     );
     const adjustedPath = useMemo(() => pointsToPath(adjustedPoints), [adjustedPoints]);
 
@@ -150,21 +153,24 @@ function InheritanceEdge(props: EdgeProps) {
             />
 
             {/* Waypoint handles - shown when selected */}
+            {/* Waypoint handles - shown when selected, excluding first/last segments */}
             {selected && !isSelfLoop && (
                 <EdgeLabelRenderer>
-                    {segments.map((seg) => (
-                        <div
-                            key={seg.index}
-                            className="edge-waypoint"
-                            style={{
-                                position: 'absolute',
-                                transform: `translate(-50%, -50%) translate(${seg.midX}px, ${seg.midY}px)`,
-                                cursor: seg.isHorizontal ? 'ns-resize' : 'ew-resize',
-                                pointerEvents: 'all',
-                            }}
-                            onMouseDown={(e) => handleWaypointDragStart(e, seg.index, seg.isHorizontal)}
-                        />
-                    ))}
+                    {segments
+                        .filter(seg => seg.index > 0 && seg.index < segments.length - 1)
+                        .map((seg) => (
+                            <div
+                                key={seg.index}
+                                className="edge-waypoint"
+                                style={{
+                                    position: 'absolute',
+                                    transform: `translate(-50%, -50%) translate(${seg.midX}px, ${seg.midY}px)`,
+                                    cursor: seg.isHorizontal ? 'ns-resize' : 'ew-resize',
+                                    pointerEvents: 'all',
+                                }}
+                                onMouseDown={(e) => handleWaypointDragStart(e, seg.index, seg.isHorizontal)}
+                            />
+                        ))}
                 </EdgeLabelRenderer>
             )}
         </>

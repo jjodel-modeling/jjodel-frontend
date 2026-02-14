@@ -3,9 +3,17 @@
  *
  * Phase 6: Side-aware routing - the router now knows which side the edge
  * exits from and enters to, producing clean paths without U-turns.
+ *
+ * Phase 7: A* grid-based obstacle avoidance (opt-in via OBSTACLE_AVOIDANCE_ENABLED).
  */
 
+import { ObstacleGrid, type Rect as GridRect } from './ObstacleGrid';
+import { astarManhattan } from './astarPathfinder';
+
 export const EDGE_PADDING = 25;
+
+/** Toggle for Phase 7 A* obstacle avoidance. Default OFF for incremental testing. */
+export const OBSTACLE_AVOIDANCE_ENABLED = false;
 
 export type Side = 'top' | 'right' | 'bottom' | 'left';
 
@@ -34,20 +42,28 @@ export function getSideFromHandle(handleId: string | null | undefined): Side {
 
 /**
  * Removes duplicate and collinear points from a point array.
+ * IMPORTANT: Always preserves the first and last points exactly as-is,
+ * since they represent the source and target anchor positions on the node border.
  */
 function cleanPoints(points: { x: number; y: number }[]): { x: number; y: number }[] {
     if (points.length < 2) return points;
 
-    // Remove consecutive duplicates
-    const deduped: { x: number; y: number }[] = [points[0]];
-    for (let i = 1; i < points.length; i++) {
+    // Always keep the first and last points exactly as-is
+    const first = points[0];
+    const last = points[points.length - 1];
+
+    // Remove consecutive duplicates from middle points only
+    const deduped: { x: number; y: number }[] = [first];
+    for (let i = 1; i < points.length - 1; i++) {
         const prev = deduped[deduped.length - 1];
         if (Math.abs(points[i].x - prev.x) > 0.5 || Math.abs(points[i].y - prev.y) > 0.5) {
             deduped.push(points[i]);
         }
     }
+    // Always add the last point even if close to previous
+    deduped.push(last);
 
-    // Remove collinear points
+    // Remove collinear middle points only
     if (deduped.length < 3) return deduped;
 
     const result: { x: number; y: number }[] = [deduped[0]];
@@ -79,14 +95,20 @@ function cleanPoints(points: { x: number; y: number }[]): { x: number; y: number
  * This produces paths with 3-5 segments total, always respecting exit/entry directions.
  */
 export function computeManhattanPath(
-    sourceX: number,
-    sourceY: number,
+    _sourceX: number,
+    _sourceY: number,
     sourceSide: Side,
-    targetX: number,
-    targetY: number,
+    _targetX: number,
+    _targetY: number,
     targetSide: Side,
 ): string {
     const PAD = EDGE_PADDING;
+
+    // Mutable copies (needed for snap adjustments)
+    let sourceX = _sourceX;
+    let sourceY = _sourceY;
+    let targetX = _targetX;
+    let targetY = _targetY;
 
     const srcDir = sideDirection(sourceSide);
     const tgtDir = sideDirection(targetSide);
@@ -97,9 +119,39 @@ export function computeManhattanPath(
     let entryX = targetX + tgtDir.dx * PAD;
     let entryY = targetY + tgtDir.dy * PAD;
 
-    // Check if we need extra padding (backtracking scenario)
+    // === SNAP: eliminate micro-offsets that cause wiggles ===
+    const SNAP_THRESHOLD = 8;
     const exitH = srcDir.dx !== 0;
     const entryH = tgtDir.dx !== 0;
+
+    // Snap vertical paths (both exits vertical): align X coordinates
+    if (!exitH && !entryH && Math.abs(sourceX - targetX) < SNAP_THRESHOLD) {
+        const avgX = (sourceX + targetX) / 2;
+        sourceX = avgX;
+        targetX = avgX;
+        exitX = avgX;
+        entryX = avgX;
+    }
+
+    // Snap horizontal paths (both exits horizontal): align Y coordinates
+    if (exitH && entryH && Math.abs(sourceY - targetY) < SNAP_THRESHOLD) {
+        const avgY = (sourceY + targetY) / 2;
+        sourceY = avgY;
+        targetY = avgY;
+        exitY = avgY;
+        entryY = avgY;
+    }
+
+    // For L-shaped paths: snap the shared axis
+    if (exitH && !entryH && Math.abs(exitY - entryY) < SNAP_THRESHOLD) {
+        entryY = exitY;
+    }
+    if (!exitH && entryH && Math.abs(exitX - entryX) < SNAP_THRESHOLD) {
+        entryX = exitX;
+    }
+
+    // Check if we need extra padding (backtracking scenario)
+    // (exitH and entryH already defined above)
 
     // Does the exit→entry direction conflict with exit direction?
     const dxToEntry = entryX - exitX;
@@ -156,12 +208,30 @@ export function computeManhattanPath(
     // Final target point
     points.push({ x: targetX, y: targetY });
 
+    // === MARKER COMPENSATION ===
+    // Edges are rendered BELOW nodes in React Flow (SVG layer under HTML layer).
+    // Pushing endpoints INTO the node would hide markers under the node background.
+    // Keep endpoints exactly at the border; refX on each marker already aligns
+    // the visual tip/base with the path endpoint.
+    // Set to 0. Kept as a named constant for easy tuning if needed.
+    const MARKER_COMPENSATION = 4;
+
+    // Extend first point (source) into the source node
+    points[0].x -= srcDir.dx * MARKER_COMPENSATION;
+    points[0].y -= srcDir.dy * MARKER_COMPENSATION;
+
+    // Extend last point (target) into the target node
+    const lastIdx = points.length - 1;
+    points[lastIdx].x -= tgtDir.dx * MARKER_COMPENSATION;
+    points[lastIdx].y -= tgtDir.dy * MARKER_COMPENSATION;
+
     // Clean up: remove duplicates and collinear points
     return pointsToPath(cleanPoints(points));
 }
 
 // ============================================
-// OBSTACLE AVOIDANCE
+// OBSTACLE AVOIDANCE (disabled — Phase 7 will replace with A* grid router)
+// Functions kept for future reference.
 // ============================================
 
 interface Rect {
@@ -193,7 +263,7 @@ function segmentHitsRect(
     x1: number, y1: number,
     x2: number, y2: number,
     rect: Rect,
-    margin: number = 5
+    margin: number
 ): boolean {
     const rLeft = rect.x - margin;
     const rRight = rect.x + rect.width + margin;
@@ -204,40 +274,117 @@ function segmentHitsRect(
         // Horizontal segment
         const minX = Math.min(x1, x2);
         const maxX = Math.max(x1, x2);
-        return y1 > rTop && y1 < rBottom && maxX > rLeft && minX < rRight;
+        return y1 >= rTop && y1 <= rBottom && maxX > rLeft && minX < rRight;
     }
 
     if (Math.abs(x1 - x2) < 1) {
         // Vertical segment
         const minY = Math.min(y1, y2);
         const maxY = Math.max(y1, y2);
-        return x1 > rLeft && x1 < rRight && maxY > rTop && minY < rBottom;
+        return x1 >= rLeft && x1 <= rRight && maxY > rTop && minY < rBottom;
     }
 
     return false;
 }
 
 /**
+ * Calculates total Manhattan length of a point sequence.
+ */
+function totalPathLength(points: { x: number; y: number }[]): number {
+    let total = 0;
+    for (let i = 0; i < points.length - 1; i++) {
+        total += Math.abs(points[i + 1].x - points[i].x) + Math.abs(points[i + 1].y - points[i].y);
+    }
+    return total;
+}
+
+/**
+ * Computes the shortest detour around an obstacle for a single segment.
+ * Calculates BOTH possible detour directions and picks the shorter one.
+ */
+function computeSmartDetour(
+    p1: { x: number; y: number },
+    p2: { x: number; y: number },
+    rect: Rect,
+    pad: number
+): { x: number; y: number }[] {
+    const isHorizontal = Math.abs(p1.y - p2.y) < 1;
+
+    if (isHorizontal) {
+        // Horizontal segment → detour goes above or below
+        const segY = p1.y;
+        const beforeX = rect.x - pad;
+        const afterX = rect.x + rect.width + pad;
+        const aboveY = rect.y - pad;
+        const belowY = rect.y + rect.height + pad;
+
+        const optionA = [
+            p1,
+            { x: beforeX, y: segY },
+            { x: beforeX, y: aboveY },
+            { x: afterX, y: aboveY },
+            { x: afterX, y: segY },
+            p2,
+        ];
+
+        const optionB = [
+            p1,
+            { x: beforeX, y: segY },
+            { x: beforeX, y: belowY },
+            { x: afterX, y: belowY },
+            { x: afterX, y: segY },
+            p2,
+        ];
+
+        return totalPathLength(optionA) <= totalPathLength(optionB) ? optionA : optionB;
+    } else {
+        // Vertical segment → detour goes left or right
+        const segX = p1.x;
+        const beforeY = rect.y - pad;
+        const afterY = rect.y + rect.height + pad;
+        const leftX = rect.x - pad;
+        const rightX = rect.x + rect.width + pad;
+
+        const optionA = [
+            p1,
+            { x: segX, y: beforeY },
+            { x: leftX, y: beforeY },
+            { x: leftX, y: afterY },
+            { x: segX, y: afterY },
+            p2,
+        ];
+
+        const optionB = [
+            p1,
+            { x: segX, y: beforeY },
+            { x: rightX, y: beforeY },
+            { x: rightX, y: afterY },
+            { x: segX, y: afterY },
+            p2,
+        ];
+
+        return totalPathLength(optionA) <= totalPathLength(optionB) ? optionA : optionB;
+    }
+}
+
+/**
  * Post-processes a Manhattan path to avoid obstacles (other nodes).
  *
- * Strategy:
- * For each segment that crosses a node, shift it to go around the node.
- * - Horizontal segment crossing a node → split into segments that go above or below
- * - Vertical segment crossing a node → split into segments that go left or right
+ * Strategy: for each segment that hits a node, compute both possible detours
+ * (left/right or above/below) and pick the shortest one.
  *
  * @param points - Array of path points from computeManhattanPath
  * @param obstacles - Array of node rectangles to avoid (exclude source and target nodes)
- * @param pad - Minimum distance from obstacles (default EDGE_PADDING)
+ * @param pad - Minimum distance from obstacles (default 15px — compact but visible)
  * @returns Adjusted points array that avoids all obstacles
  */
 export function avoidObstacles(
     points: { x: number; y: number }[],
     obstacles: Rect[],
-    pad: number = EDGE_PADDING
+    pad: number = 15
 ): { x: number; y: number }[] {
     if (obstacles.length === 0 || points.length < 2) return points;
 
-    // We may need multiple passes since fixing one collision could create another
     let current = [...points.map(p => ({ ...p }))];
     const MAX_ITERATIONS = 3;
 
@@ -252,77 +399,26 @@ export function avoidObstacles(
             // Find the first obstacle this segment hits
             let hitRect: Rect | null = null;
             for (const obs of obstacles) {
-                if (segmentHitsRect(p1.x, p1.y, p2.x, p2.y, obs)) {
+                if (segmentHitsRect(p1.x, p1.y, p2.x, p2.y, obs, pad)) {
                     hitRect = obs;
                     break;
                 }
             }
 
             if (!hitRect) {
-                // No collision, keep the endpoint
                 newPoints.push(p2);
                 continue;
             }
 
             changed = true;
-
-            if (Math.abs(p1.y - p2.y) < 1) {
-                // HORIZONTAL segment hitting a node
-                // Decide: go above or below the obstacle?
-                const segY = p1.y;
-                const obstacleTopY = hitRect.y - pad;
-                const obstacleBottomY = hitRect.y + hitRect.height + pad;
-
-                // Choose the closer detour
-                const goAbove = Math.abs(segY - obstacleTopY) <= Math.abs(segY - obstacleBottomY);
-                const detourY = goAbove ? obstacleTopY : obstacleBottomY;
-
-                // Calculate detour points
-                const beforeX = hitRect.x - pad;
-                const afterX = hitRect.x + hitRect.width + pad;
-
-                // Clamp to stay within the segment's X range
-                const minX = Math.min(p1.x, p2.x);
-                const maxX = Math.max(p1.x, p2.x);
-                const clampedBeforeX = Math.max(beforeX, minX);
-                const clampedAfterX = Math.min(afterX, maxX);
-
-                newPoints.push({ x: clampedBeforeX, y: segY });
-                newPoints.push({ x: clampedBeforeX, y: detourY });
-                newPoints.push({ x: clampedAfterX, y: detourY });
-                newPoints.push({ x: clampedAfterX, y: segY });
-                newPoints.push(p2);
-            } else if (Math.abs(p1.x - p2.x) < 1) {
-                // VERTICAL segment hitting a node
-                // Decide: go left or right?
-                const segX = p1.x;
-                const obstacleLeftX = hitRect.x - pad;
-                const obstacleRightX = hitRect.x + hitRect.width + pad;
-
-                const goLeft = Math.abs(segX - obstacleLeftX) <= Math.abs(segX - obstacleRightX);
-                const detourX = goLeft ? obstacleLeftX : obstacleRightX;
-
-                const beforeY = hitRect.y - pad;
-                const afterY = hitRect.y + hitRect.height + pad;
-
-                const minY = Math.min(p1.y, p2.y);
-                const maxY = Math.max(p1.y, p2.y);
-                const clampedBeforeY = Math.max(beforeY, minY);
-                const clampedAfterY = Math.min(afterY, maxY);
-
-                newPoints.push({ x: segX, y: clampedBeforeY });
-                newPoints.push({ x: detourX, y: clampedBeforeY });
-                newPoints.push({ x: detourX, y: clampedAfterY });
-                newPoints.push({ x: segX, y: clampedAfterY });
-                newPoints.push(p2);
-            } else {
-                // Diagonal segment (shouldn't happen in Manhattan routing)
-                newPoints.push(p2);
+            const detourPoints = computeSmartDetour(p1, p2, hitRect, pad);
+            // Push all detour points except the first (which is p1, already in newPoints)
+            for (let d = 1; d < detourPoints.length; d++) {
+                newPoints.push(detourPoints[d]);
             }
         }
 
         current = cleanPoints(newPoints);
-
         if (!changed) break;
     }
 
@@ -339,7 +435,7 @@ export function avoidObstacles(
  */
 export function roundManhattanPath(path: string, radius: number = 4): string {
     // Parse points from path
-    const points: { x: number; y: number }[] = [];
+    let points: { x: number; y: number }[] = [];
     const commands = path.match(/[ML]\s*[-\d.]+\s+[-\d.]+/g);
     if (!commands) return path;
 
@@ -351,6 +447,21 @@ export function roundManhattanPath(path: string, radius: number = 4): string {
     }
 
     if (points.length < 3) return path;
+
+    // Pre-processing: remove degenerate (near-zero-length) segments that cause
+    // the radius to collapse to 0. Always keep first and last points.
+    const cleaned: { x: number; y: number }[] = [points[0]];
+    for (let i = 1; i < points.length - 1; i++) {
+        const prev = cleaned[cleaned.length - 1];
+        const dist = Math.abs(points[i].x - prev.x) + Math.abs(points[i].y - prev.y);
+        if (dist >= 1) {
+            cleaned.push(points[i]);
+        }
+    }
+    cleaned.push(points[points.length - 1]);
+    points = cleaned;
+
+    if (points.length < 3) return pointsToPath(points);
 
     let d = `M ${points[0].x} ${points[0].y}`;
 
@@ -369,11 +480,15 @@ export function roundManhattanPath(path: string, radius: number = 4): string {
         const len1 = Math.abs(dx1) + Math.abs(dy1);
         const len2 = Math.abs(dx2) + Math.abs(dy2);
 
-        // Radius cannot exceed half of shortest segment
-        const r = Math.min(radius, len1 / 2, len2 / 2);
+        // Radius cannot exceed half of interior segments, but for the first/last
+        // corner we allow the full length of the endpoint segment so the arc
+        // doesn't shorten the segment toward the marker.
+        const maxR1 = (i === 1) ? len1 : len1 / 2;
+        const maxR2 = (i === points.length - 2) ? len2 : len2 / 2;
+        const r = Math.min(radius, maxR1, maxR2);
 
-        if (r < 1) {
-            // Segment too short, no arc
+        if (r < 0.5) {
+            // Segment too short for any visible arc
             d += ` L ${curr.x} ${curr.y}`;
             continue;
         }
@@ -592,4 +707,243 @@ export function pointsToPath(points: { x: number; y: number }[]): string {
         d += ` L ${points[i].x} ${points[i].y}`;
     }
     return d;
+}
+
+// ============================================
+// Port Distribution — indexed handle assignment
+// ============================================
+
+/**
+ * Extracts the base side from a handle ID.
+ * "right" -> "right", "right-0" -> "right", "bottom-1" -> "bottom"
+ */
+function getBaseSide(handleId: string | null | undefined): Side {
+    if (!handleId) return 'right';
+    const base = handleId.split('-')[0];
+    if (['top', 'right', 'bottom', 'left'].includes(base)) return base as Side;
+    return 'right';
+}
+
+interface MinimalEdge {
+    id: string;
+    source: string;
+    target: string;
+    type?: string;
+    sourceHandle?: string | null;
+    targetHandle?: string | null;
+}
+
+/**
+ * Assigns indexed handle IDs to edges based on port sharing rules.
+ *
+ * Mirrors the grouping logic of DynamicHandles.tsx exactly so that the
+ * handle IDs on edges match the Handle elements rendered in the DOM.
+ *
+ * Rules:
+ * - Inheritance targets on the same (node, side) share ONE port (fan-in)
+ * - Everything else (sources, reference targets) gets its own port
+ * - When multiple ports share a side, they get indexed IDs: "right-0", "right-1", etc.
+ * - Single ports keep the plain side name: "right"
+ */
+export function computeDistributedHandles(
+    edges: MinimalEdge[],
+): Map<string, { sourceHandle: string; targetHandle: string }> {
+    // Collect all unique node IDs
+    const nodeIds = new Set<string>();
+    for (const e of edges) {
+        nodeIds.add(e.source);
+        nodeIds.add(e.target);
+    }
+
+    // Per-edge handle assignments
+    const sourceHandleMap = new Map<string, string>();
+    const targetHandleMap = new Map<string, string>();
+
+    // For each node, replicate DynamicHandles' computeNodeHandles logic
+    for (const nodeId of nodeIds) {
+        const sideGroups: Record<Side, Map<string, { edgeIds: string[]; role: 'source' | 'target' }>> = {
+            top: new Map(), right: new Map(), bottom: new Map(), left: new Map(),
+        };
+
+        // Iterate edges in array order (same order as DynamicHandles sees via useEdges)
+        for (const edge of edges) {
+            const edgeType = edge.type || 'reference';
+
+            // As source
+            if (edge.source === nodeId) {
+                const side = getBaseSide(edge.sourceHandle);
+                sideGroups[side].set(`source:${edge.id}`, {
+                    edgeIds: [edge.id],
+                    role: 'source',
+                });
+            }
+
+            // As target
+            if (edge.target === nodeId) {
+                const side = getBaseSide(edge.targetHandle);
+
+                if (edgeType === 'inheritance') {
+                    // Inheritance fan-in: merge into single group
+                    const existing = sideGroups[side].get('target:inheritance');
+                    if (existing) {
+                        existing.edgeIds.push(edge.id);
+                    } else {
+                        sideGroups[side].set('target:inheritance', {
+                            edgeIds: [edge.id],
+                            role: 'target',
+                        });
+                    }
+                } else {
+                    // Reference: each edge gets its own port
+                    sideGroups[side].set(`target:${edge.id}`, {
+                        edgeIds: [edge.id],
+                        role: 'target',
+                    });
+                }
+            }
+        }
+
+        // Assign indexed handle IDs per side
+        for (const side of ['top', 'right', 'bottom', 'left'] as Side[]) {
+            const groups = Array.from(sideGroups[side].values());
+            if (groups.length === 0) continue;
+
+            const totalPorts = groups.length;
+            groups.forEach((group, index) => {
+                const handleId = totalPorts > 1 ? `${side}-${index}` : side;
+                for (const edgeId of group.edgeIds) {
+                    if (group.role === 'source') {
+                        sourceHandleMap.set(edgeId, handleId);
+                    } else {
+                        targetHandleMap.set(edgeId, handleId);
+                    }
+                }
+            });
+        }
+    }
+
+    // Build result
+    const result = new Map<string, { sourceHandle: string; targetHandle: string }>();
+    for (const edge of edges) {
+        result.set(edge.id, {
+            sourceHandle: sourceHandleMap.get(edge.id) || getBaseSide(edge.sourceHandle),
+            targetHandle: targetHandleMap.get(edge.id) || getBaseSide(edge.targetHandle),
+        });
+    }
+    return result;
+}
+
+// ============================================
+// Phase 7 — A* routing integration
+// ============================================
+
+/**
+ * Compute a Manhattan path using the A* grid router.
+ *
+ * If A* succeeds the returned SVG path string already includes
+ * marker compensation (same 1px rule as computeManhattanPath).
+ * If A* fails, falls back to the classic computeManhattanPath.
+ *
+ * @param grid - Shared obstacle grid from ObstacleGridContext
+ * @param sourceX - Source handle X
+ * @param sourceY - Source handle Y
+ * @param sourceSide - Exit side
+ * @param targetX - Target handle X
+ * @param targetY - Target handle Y
+ * @param targetSide - Entry side
+ * @param sourceNodeId - ID of source node (to exclude from obstacles)
+ * @param targetNodeId - ID of target node (to exclude from obstacles)
+ * @param allNodes - All React Flow nodes (for building per-edge grid exclusions)
+ */
+export function computeAStarPath(
+    grid: ObstacleGrid,
+    sourceX: number,
+    sourceY: number,
+    sourceSide: Side,
+    targetX: number,
+    targetY: number,
+    targetSide: Side,
+    sourceNodeId: string,
+    targetNodeId: string,
+    allNodes: Array<{ id: string; type?: string; parentId?: string; parentNode?: string;
+        position: { x: number; y: number };
+        internals?: { positionAbsolute?: { x: number; y: number } };
+        positionAbsolute?: { x: number; y: number };
+        measured?: { width?: number; height?: number };
+        width?: number; height?: number;
+    }>,
+): string {
+    // Clone the shared grid so per-edge exclusions don't leak
+    // (cheap — we just re-create and re-mark, skipping src/tgt/packages/ancestors)
+
+    const nodeRects: Array<{ id: string; type: string | undefined; parentId: string | undefined; rect: GridRect }> = [];
+    for (const n of allNodes) {
+        const pos = (n.internals?.positionAbsolute ?? n.positionAbsolute ?? n.position) as { x: number; y: number };
+        nodeRects.push({
+            id: n.id,
+            type: n.type,
+            parentId: (n as any).parentId ?? (n as any).parentNode,
+            rect: {
+                x: pos.x,
+                y: pos.y,
+                width: n.measured?.width ?? n.width ?? 180,
+                height: n.measured?.height ?? n.height ?? 80,
+            },
+        });
+    }
+
+    // Collect IDs of ancestors of source/target (packages that contain them)
+    const ancestorIds = new Set<string>();
+    const collectAncestors = (nodeId: string) => {
+        const entry = nodeRects.find(n => n.id === nodeId);
+        if (entry?.parentId) {
+            ancestorIds.add(entry.parentId);
+            collectAncestors(entry.parentId);
+        }
+    };
+    collectAncestors(sourceNodeId);
+    collectAncestors(targetNodeId);
+
+    // Build a per-edge grid that excludes source, target, packages, and ancestors
+    const bounds = { ...grid['config'].bounds };  // reuse the shared grid bounds
+    const perEdgeGrid = new ObstacleGrid({
+        cellSize: 10,
+        padding: 20,
+        bounds,
+    });
+
+    for (const entry of nodeRects) {
+        // Skip source and target nodes
+        if (entry.id === sourceNodeId || entry.id === targetNodeId) continue;
+        // Skip package nodes (containers)
+        if (entry.type === 'packageNode') continue;
+        // Skip ancestor containers
+        if (ancestorIds.has(entry.id)) continue;
+
+        perEdgeGrid.markObstacle(entry.rect);
+    }
+
+    // Clear corridors for source and target so the path can reach them
+    const sourceEntry = nodeRects.find(n => n.id === sourceNodeId);
+    const targetEntry = nodeRects.find(n => n.id === targetNodeId);
+    if (sourceEntry) perEdgeGrid.clearCorridor(sourceEntry.rect, sourceSide, 4);
+    if (targetEntry) perEdgeGrid.clearCorridor(targetEntry.rect, targetSide, 4);
+
+    // Run A*
+    const result = astarManhattan(
+        perEdgeGrid,
+        { x: sourceX, y: sourceY },
+        { x: targetX, y: targetY },
+        sourceSide,
+        targetSide,
+    );
+
+    if (!result.success || result.path.length < 2) {
+        // Fallback to classic routing
+        return computeManhattanPath(sourceX, sourceY, sourceSide, targetX, targetY, targetSide);
+    }
+
+    // No marker compensation needed — endpoints at exact border position.
+    // (Edges render below nodes; pushing inside would hide markers.)
+    return pointsToPath(cleanPoints(result.path.map(p => ({ ...p }))));
 }

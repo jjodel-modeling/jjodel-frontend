@@ -532,16 +532,16 @@
     min-width: 140px;
     width: 100%;
     height: 100%;
-    overflow: hidden;
+    // overflow: hidden;
     font-family: 'IBM Plex Mono', Monaco, Consolas, monospace;
     font-size: 13px;
     color: var(--text-primary);
-    box-shadow: 0 2px 8px var(--node-shadow);
+    box-shadow: 0 1px 3px var(--node-shadow), 0 4px 12px var(--node-shadow-deep, rgba(0, 0, 0, 0.08));
     cursor: default;
 
     &.selected {
         border-color: var(--accent);
-        box-shadow: 0 0 0 2px var(--accent-muted), 0 2px 8px var(--node-shadow);
+        box-shadow: 0 0 0 2px var(--accent-muted), 0 4px 16px var(--node-shadow-deep, rgba(0, 0, 0, 0.12));
     }
 
     &.drop-target {
@@ -567,9 +567,10 @@
     &__header {
         display: flex;
         align-items: center;
+        justify-content: center;
         gap: 6px;
-        padding: 3px 8px;
-        min-height: 20px;
+        padding: 4px 8px;
+        min-height: 22px;
         font-weight: 500;
         font-size: 13px;
         cursor: grab;
@@ -578,9 +579,17 @@
         &:active {
             cursor: grabbing;
         }
+
+        // When stereotype is present, stack vertically
+        &:has(.mm-node__stereotype) {
+            flex-direction: column;
+            gap: 0;
+            padding: 3px 8px 4px;
+            text-align: center;
+        }
     }
 
-    // Badge - small type indicator
+    // Badge - small type indicator (legacy)
     &__badge {
         display: inline-flex;
         align-items: center;
@@ -594,6 +603,17 @@
         font-size: 10px;
         font-weight: 700;
         flex-shrink: 0;
+    }
+
+    // UML stereotype label (e.g. «abstract», «enumeration»)
+    &__stereotype {
+        font-size: 9px;
+        font-style: italic;
+        font-weight: 400;
+        color: var(--stereotype-color, rgba(255, 255, 255, 0.6));
+        letter-spacing: 0.02em;
+        flex-shrink: 0;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', system-ui, sans-serif;
     }
 
     // Name - editable
@@ -621,9 +641,9 @@
         }
     }
 
-    // Body - contains fields
+    // Body - contains fields, auto-fit to content
     &__body {
-        padding: 2px 0;
+        padding: 4px 0 2px;
     }
 
     // Fields container with grid for alignment
@@ -637,7 +657,7 @@
     &__separator {
         height: 1px;
         background: var(--node-separator);
-        margin: 4px 8px;
+        margin: 3px 8px;
     }
 
     // Empty state
@@ -685,17 +705,18 @@
 // ============================================
 
 .mm-class {
-    min-height: 40px;
-
     .mm-node__header {
         background: var(--class-header-bg);
+        border-bottom: 1px solid var(--node-separator);
     }
 
     &.abstract {
-        border-style: dashed;
-
         .mm-node__header {
             background: var(--class-abstract-header-bg);
+        }
+
+        .mm-node__name {
+            font-style: italic;
         }
     }
 }
@@ -706,10 +727,10 @@
 
 .mm-enum {
     min-width: 120px;
-    min-height: 40px;
 
     .mm-node__header {
         background: var(--enum-header-bg);
+        border-bottom: 1px solid var(--node-separator);
     }
 
     &.selected {
@@ -757,8 +778,8 @@
     display: grid;
     grid-column: 1 / -1;
     grid-template-columns: subgrid;
-    padding: 1px 6px;
-    min-height: 15px;
+    padding: 2px 8px;
+    min-height: 20px;
     font-size: 12px;
     align-items: center;
     transition: background 0.1s;
@@ -767,11 +788,12 @@
         background: var(--field-row-hover);
     }
 
-    // Field name
+    // Field name — stronger weight for readability
     &__name {
         color: var(--field-name-color);
         cursor: text;
         font-size: 12px;
+        font-weight: 500;
         white-space: nowrap;
         padding: 0 2px;
         border-radius: 2px;
@@ -781,17 +803,19 @@
         }
     }
 
-    // Colon separator
+    // Colon separator — muted
     &__separator {
         color: var(--text-dim);
-        padding: 0 2px;
+        padding: 0 1px;
+        opacity: 0.6;
     }
 
-    // Type
+    // Type — lighter weight, distinct color
     &__type {
         color: var(--field-type-color);
         cursor: text;
         font-size: 12px;
+        font-weight: 400;
         white-space: nowrap;
         padding: 0 2px;
         border-radius: 2px;
@@ -942,8 +966,8 @@
     display: grid;
     grid-column: 1 / -1;
     grid-template-columns: subgrid;
-    padding: 1px 6px;
-    min-height: 15px;
+    padding: 2px 8px;
+    min-height: 20px;
     font-size: 13px;
     align-items: center;
     transition: background 0.1s;
@@ -1100,15 +1124,27 @@
 // EDGE LABELS
 // ============================================
 
-// Shared style for edge labels and cardinality
-.edge-label__text,
+// Edge label text
+.edge-label__text {
+    font-family: 'IBM Plex Mono', Monaco, Consolas, monospace;
+    font-size: 10px;
+    color: var(--text-secondary);
+    background: var(--edge-label-bg);
+    padding: 1px 5px;
+    border-radius: 3px;
+    border: none;
+    white-space: nowrap;
+    box-shadow: none;
+}
+
+// Cardinality — naked text, no background
 .edge-cardinality {
     font-family: 'IBM Plex Mono', Monaco, Consolas, monospace;
     font-size: 10px;
+    font-weight: 500;
     color: var(--text-muted);
-    background: var(--edge-label-bg);
-    padding: 2px 6px;
-    border-radius: 3px;
+    background: none;
+    padding: 0;
     border: none;
     white-space: nowrap;
     box-shadow: none;
@@ -1387,12 +1423,15 @@
     border-radius: 6px;
     color: var(--input-text);
     font-size: 13px;
-    padding: 7px 10px;
+    height: 36px;
+    min-height: 36px;
+    padding: 6px 10px;
     outline: none;
     width: 100%;
     box-sizing: border-box;
     transition: border-color 0.15s, box-shadow 0.15s;
     font-family: inherit;
+    line-height: 1.4;
 
     &::placeholder {
         color: var(--input-placeholder);
@@ -1408,7 +1447,7 @@
     }
 
     &--sm {
-        padding: 5px 8px;
+        padding: 6px 8px;
         font-size: 12px;
         flex: 1;
         min-width: 0;
@@ -1419,7 +1458,7 @@
         text-align: center;
         font-family: 'IBM Plex Mono', Monaco, Consolas, monospace;
         font-size: 12px;
-        padding: 5px 6px;
+        padding: 6px 6px;
     }
 
     &--mono {
@@ -1433,15 +1472,23 @@
     border: 1px solid var(--input-border);
     border-radius: 6px;
     color: var(--input-text);
-    font-size: 12px;
-    padding: 5px 8px;
+    font-size: 13px;
+    height: 36px;
+    min-height: 36px;
+    padding: 6px 10px;
+    padding-right: 28px;
     outline: none;
     cursor: pointer;
     min-width: 80px;
+    box-sizing: border-box;
     transition: border-color 0.15s;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 16 16'%3E%3Cpath fill='%2364748b' d='M4.646 5.646a.5.5 0 0 1 .708 0L8 8.293l2.646-2.647a.5.5 0 0 1 .708.708l-3 3a.5.5 0 0 1-.708 0l-3-3a.5.5 0 0 1 0-.708z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 8px center;
 
     &:hover { border-color: var(--border-strong); }
-    &:focus { border-color: var(--input-focus); }
+    &:focus { border-color: var(--input-focus); box-shadow: 0 0 0 2px var(--accent-muted); }
 
     option {
         background: var(--surface-2);
@@ -1498,14 +1545,21 @@
 // ============================================
 
 .prop-list-item {
-    display: flex;
-    align-items: center;
+    display: grid;
+    grid-template-columns: 1fr 1fr auto;
     gap: 6px;
+    align-items: center;
     padding: 4px 0;
     border-radius: 4px;
 
     &:hover {
         .prop-remove-btn { opacity: 1; }
+    }
+
+    .prop-input--sm,
+    .prop-select {
+        min-width: 0;
+        width: 100%;
     }
 }
 
@@ -1513,8 +1567,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 22px;
-    height: 22px;
+    width: 28px;
+    height: 28px;
     border: none;
     background: transparent;
     color: var(--text-dim);

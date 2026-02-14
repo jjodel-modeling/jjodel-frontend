@@ -181,9 +181,9 @@ function ClassNode({ id, data, selected }: NodeProps<ClassNodeType>) {
 
             <DynamicHandles nodeId={id} />
 
-            {/* Header with optional badge */}
+            {/* Header with optional stereotype */}
             <div className="mm-node__header" onDoubleClick={handleDoubleClick}>
-                {isAbstract && <span className="mm-node__badge">A</span>}
+                {isAbstract && <span className="mm-node__stereotype">{'\u00ABabstract\u00BB'}</span>}
                 {editing ? (
                     <input
                         className="mm-node__input"

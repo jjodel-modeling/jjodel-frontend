@@ -1,5 +1,6 @@
-import { useCallback, useState, useEffect } from 'react';
+import { useCallback, useState, useEffect, useMemo } from 'react';
 import type { Node, Edge } from '@xyflow/react';
+import { useNodes } from '@xyflow/react';
 import type {
     ClassNodeData,
     EnumNodeData,
@@ -11,7 +12,7 @@ import type {
     MetaOperation,
     ReferenceKind,
 } from '../types';
-import { createAttribute, createLiteral, createOperation, formatCardinality, E_DATA_TYPES } from '../types';
+import { createAttribute, createLiteral, createReference, createOperation, formatCardinality, E_DATA_TYPES } from '../types';
 
 interface PropertiesPanelProps {
     selectedNodes: Node[];
@@ -164,14 +165,26 @@ function ClassNodeProperties({ node, onUpdate }: { node: Node; onUpdate: (id: st
     const [name, setName] = useState(nodeData.label);
     const [isAbstract, setIsAbstract] = useState(nodeData.isAbstract ?? false);
     const [attributes, setAttributes] = useState<MetaAttribute[]>(nodeData.attributes || []);
+    const [references, setReferences] = useState<MetaReference[]>(nodeData.references || []);
     const [operations, setOperations] = useState<MetaOperation[]>(nodeData.operations || []);
+
+    // All class nodes for the reference target dropdown
+    const allNodes = useNodes();
+    const availableClasses = useMemo(() =>
+        allNodes
+            .filter(n => n.type === 'classNode' && n.id !== node.id)
+            .map(n => ({ id: n.id, name: (n.data as ClassNodeData).label }))
+            .sort((a, b) => a.name.localeCompare(b.name)),
+        [allNodes, node.id]
+    );
 
     useEffect(() => {
         setName(nodeData.label);
         setIsAbstract(nodeData.isAbstract ?? false);
         setAttributes(nodeData.attributes || []);
+        setReferences(nodeData.references || []);
         setOperations(nodeData.operations || []);
-    }, [node.id, nodeData.label, nodeData.isAbstract, nodeData.attributes, nodeData.operations]);
+    }, [node.id, nodeData.label, nodeData.isAbstract, nodeData.attributes, nodeData.references, nodeData.operations]);
 
     const commit = useCallback((updates: Partial<ClassNodeData>) => {
         onUpdate(node.id, { ...nodeData, ...updates });
@@ -184,6 +197,7 @@ function ClassNodeProperties({ node, onUpdate }: { node: Node; onUpdate: (id: st
         commit({ isAbstract: checked });
     };
 
+    // Attribute handlers
     const addAttribute = () => {
         const updated = [...attributes, createAttribute()];
         setAttributes(updated);
@@ -204,6 +218,28 @@ function ClassNodeProperties({ node, onUpdate }: { node: Node; onUpdate: (id: st
         commit({ attributes: updated });
     };
 
+    // Reference handlers
+    const addReference = () => {
+        const updated = [...references, createReference()];
+        setReferences(updated);
+        commit({ references: updated });
+    };
+
+    const updateReference = (index: number, field: keyof MetaReference, val: string | number | boolean) => {
+        const updated = references.map((ref, i) =>
+            i === index ? { ...ref, [field]: val } : ref
+        );
+        setReferences(updated);
+        commit({ references: updated });
+    };
+
+    const removeReference = (index: number) => {
+        const updated = references.filter((_, i) => i !== index);
+        setReferences(updated);
+        commit({ references: updated });
+    };
+
+    // Operation handlers
     const addOperation = () => {
         const updated = [...operations, createOperation()];
         setOperations(updated);
@@ -288,6 +324,47 @@ function ClassNodeProperties({ node, onUpdate }: { node: Node; onUpdate: (id: st
                                 ))}
                             </select>
                             <button className="prop-remove-btn" onClick={() => removeAttribute(i)} title="Remove">
+                                <i className="bi bi-x" />
+                            </button>
+                        </div>
+                    ))}
+                </Section>
+
+                <Section
+                    title="References"
+                    count={references.length}
+                    action={
+                        <button
+                            className="prop-section-add-btn"
+                            onClick={addReference}
+                            title="Add reference"
+                        >
+                            <i className="bi bi-plus" />
+                        </button>
+                    }
+                >
+                    {references.length === 0 && (
+                        <div className="prop-empty">Click + to add a reference</div>
+                    )}
+                    {references.map((ref, i) => (
+                        <div key={ref.id} className="prop-list-item">
+                            <input
+                                className="prop-input prop-input--sm"
+                                value={ref.name}
+                                onChange={(e) => updateReference(i, 'name', e.target.value)}
+                                placeholder="refName"
+                            />
+                            <select
+                                className="prop-select"
+                                value={ref.targetClassId}
+                                onChange={(e) => updateReference(i, 'targetClassId', e.target.value)}
+                            >
+                                <option value="">-- target --</option>
+                                {availableClasses.map(cls => (
+                                    <option key={cls.id} value={cls.id}>{cls.name}</option>
+                                ))}
+                            </select>
+                            <button className="prop-remove-btn" onClick={() => removeReference(i)} title="Remove">
                                 <i className="bi bi-x" />
                             </button>
                         </div>

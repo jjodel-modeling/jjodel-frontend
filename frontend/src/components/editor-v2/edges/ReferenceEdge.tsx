@@ -9,6 +9,8 @@ import type { ReferenceEdgeData, ReferenceKind } from '../types';
 import { formatCardinality } from '../types';
 import {
     computeManhattanPath,
+    computeAStarPath,
+    OBSTACLE_AVOIDANCE_ENABLED,
     roundManhattanPath,
     computeSelfLoopPath,
     computeLabelPosition,
@@ -18,9 +20,8 @@ import {
     pointsToPath,
     getPathSegments,
     getSideFromHandle,
-    avoidObstacles,
-    getNodeRect,
 } from '../utils/edgeUtils';
+import { useObstacleGrid } from '../contexts/ObstacleGridContext';
 
 function ReferenceEdge(props: EdgeProps) {
     const {
@@ -40,7 +41,6 @@ function ReferenceEdge(props: EdgeProps) {
 
     const edgeData = data as ReferenceEdgeData | undefined;
     const { setEdges, getViewport } = useReactFlow();
-    const nodes = useNodes();
     const [editing, setEditing] = useState(false);
     const [labelText, setLabelText] = useState(String(label || edgeData?.reference?.name || ''));
     const dragRef = useRef<{ segmentIndex: number; startPos: number; startOffset: number; isHorizontal: boolean } | null>(null);
@@ -58,32 +58,35 @@ function ReferenceEdge(props: EdgeProps) {
 
     const isSelfLoop = source === target;
 
+    // Phase 7: obstacle grid context
+    const { grid, version } = useObstacleGrid();
+    const allNodes = useNodes();
+
     // Get sides from handle IDs
     const sourceSide = getSideFromHandle(sourceHandleId);
     const targetSide = getSideFromHandle(targetHandleId);
 
-    // Compute obstacles (all nodes except source and target)
-    const obstacleRects = useMemo(() => {
-        return nodes
-            .filter(n => n.id !== source && n.id !== target)
-            .map(n => getNodeRect(n));
-    }, [nodes, source, target]);
-
-    // Compute base path (side-aware)
+    // Compute base path — A* when enabled, classic otherwise
     const rawPath = useMemo(
-        () => computeManhattanPath(sourceX, sourceY, sourceSide, targetX, targetY, targetSide),
-        [sourceX, sourceY, sourceSide, targetX, targetY, targetSide]
+        () => {
+            if (OBSTACLE_AVOIDANCE_ENABLED && grid) {
+                return computeAStarPath(
+                    grid, sourceX, sourceY, sourceSide,
+                    targetX, targetY, targetSide,
+                    source, target, allNodes as any,
+                );
+            }
+            return computeManhattanPath(sourceX, sourceY, sourceSide, targetX, targetY, targetSide);
+        },
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+        [sourceX, sourceY, sourceSide, targetX, targetY, targetSide, grid, version, source, target]
     );
 
-    // Pipeline: parse → avoid obstacles → apply waypoints
+    // Pipeline: parse → apply waypoints → round corners
     const rawPoints = useMemo(() => parsePathPoints(rawPath), [rawPath]);
-    const routedPoints = useMemo(
-        () => avoidObstacles(rawPoints, obstacleRects),
-        [rawPoints, obstacleRects]
-    );
     const adjustedPoints = useMemo(
-        () => (waypoints.length > 0 ? applyWaypoints(routedPoints, waypoints) : routedPoints),
-        [routedPoints, waypoints]
+        () => (waypoints.length > 0 ? applyWaypoints(rawPoints, waypoints) : rawPoints),
+        [rawPoints, waypoints]
     );
     const adjustedPath = useMemo(() => pointsToPath(adjustedPoints), [adjustedPoints]);
 
@@ -119,14 +122,24 @@ function ReferenceEdge(props: EdgeProps) {
             }
         }
 
-        // Offset perpendicular to the segment
+        // Offset perpendicular to the segment (16px clearance = label height + gap)
         return longestIsHorizontal
-            ? { x: 0, y: -14 }   // label above horizontal segment
-            : { x: -14, y: 0 };  // label to the left of vertical segment
+            ? { x: 0, y: -16 }   // label above horizontal segment
+            : { x: -16, y: 0 };  // label to the left of vertical segment
     }, [adjustedPath, isSelfLoop]);
 
-    // Position cardinality near the target
+    // Position cardinality near the target, with perpendicular offset
     const cardinalityPos = useMemo(() => computeCardinalityPosition(adjustedPath), [adjustedPath]);
+    const cardinalityOffset = useMemo(() => {
+        const points = parsePathPoints(adjustedPath);
+        if (points.length < 2) return { x: 0, y: -16 };
+        const last = points[points.length - 1];
+        const prev = points[points.length - 2];
+        const isLastHorizontal = Math.abs(last.y - prev.y) < Math.abs(last.x - prev.x);
+        return isLastHorizontal
+            ? { x: 0, y: -16 }   // above horizontal segment
+            : { x: -16, y: 0 };  // left of vertical segment
+    }, [adjustedPath]);
 
     const commitLabel = useCallback(() => {
         setEditing(false);
@@ -289,13 +302,13 @@ function ReferenceEdge(props: EdgeProps) {
                     )}
                 </div>
 
-                {/* Cardinality badge - positioned near target */}
+                {/* Cardinality badge - positioned near target, perpendicular to last segment */}
                 {cardinality && (
                     <div
                         className="edge-cardinality"
                         style={{
                             position: 'absolute',
-                            transform: `translate(-50%, -50%) translate(${cardinalityPos.x}px, ${cardinalityPos.y - 16}px)`,
+                            transform: `translate(-50%, -50%) translate(${cardinalityPos.x + cardinalityOffset.x}px, ${cardinalityPos.y + cardinalityOffset.y}px)`,
                             pointerEvents: 'none',
                         }}
                     >
@@ -303,20 +316,22 @@ function ReferenceEdge(props: EdgeProps) {
                     </div>
                 )}
 
-                {/* Waypoint handles - shown when selected */}
-                {selected && !isSelfLoop && segments.map((seg) => (
-                    <div
-                        key={seg.index}
-                        className="edge-waypoint"
-                        style={{
-                            position: 'absolute',
-                            transform: `translate(-50%, -50%) translate(${seg.midX}px, ${seg.midY}px)`,
-                            cursor: seg.isHorizontal ? 'ns-resize' : 'ew-resize',
-                            pointerEvents: 'all',
-                        }}
-                        onMouseDown={(e) => handleWaypointDragStart(e, seg.index, seg.isHorizontal)}
-                    />
-                ))}
+                {/* Waypoint handles - shown when selected, excluding first/last segments */}
+                {selected && !isSelfLoop && segments
+                    .filter(seg => seg.index > 0 && seg.index < segments.length - 1)
+                    .map((seg) => (
+                        <div
+                            key={seg.index}
+                            className="edge-waypoint"
+                            style={{
+                                position: 'absolute',
+                                transform: `translate(-50%, -50%) translate(${seg.midX}px, ${seg.midY}px)`,
+                                cursor: seg.isHorizontal ? 'ns-resize' : 'ew-resize',
+                                pointerEvents: 'all',
+                            }}
+                            onMouseDown={(e) => handleWaypointDragStart(e, seg.index, seg.isHorizontal)}
+                        />
+                    ))}
             </EdgeLabelRenderer>
         </>
     );

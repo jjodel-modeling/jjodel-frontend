@@ -133,9 +133,9 @@ function EnumNode({ id, data, selected }: NodeProps<EnumNodeType>) {
 
             <DynamicHandles nodeId={id} />
 
-            {/* Header with badge */}
+            {/* Header with stereotype */}
             <div className="mm-node__header" onDoubleClick={() => setEditing(true)}>
-                <span className="mm-node__badge">E</span>
+                <span className="mm-node__stereotype">{'\u00ABenumeration\u00BB'}</span>
                 {editing ? (
                     <input
                         className="mm-node__input"

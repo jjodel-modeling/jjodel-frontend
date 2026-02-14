@@ -39,6 +39,7 @@
   // Nodes
   --node-bg: #334155;
   --node-shadow: rgba(0, 0, 0, 0.3);
+  --node-shadow-deep: rgba(0, 0, 0, 0.25);
   --node-separator: rgba(255, 255, 255, 0.1);
 
   // Node header colors (muted, desaturated)
@@ -54,6 +55,7 @@
   --package-header-text: rgba(255, 255, 255, 0.9);
   --header-badge-bg: rgba(0, 0, 0, 0.25);
   --header-badge-color: rgba(255, 255, 255, 0.7);
+  --stereotype-color: rgba(255, 255, 255, 0.6);
 
   // Color coding for fields
   --field-name-color: #e2e8f0;
@@ -159,6 +161,7 @@
   // Nodes
   --node-bg: #ffffff;
   --node-shadow: rgba(0, 0, 0, 0.06);
+  --node-shadow-deep: rgba(0, 0, 0, 0.08);
   --node-separator: rgba(0, 0, 0, 0.08);
 
   // Node header colors (muted, pastel)
@@ -174,6 +177,7 @@
   --package-header-text: #334155;
   --header-badge-bg: rgba(0, 0, 0, 0.2);
   --header-badge-color: rgba(255, 255, 255, 0.85);
+  --stereotype-color: rgba(255, 255, 255, 0.7);
 
   // Color coding for fields
   --field-name-color: #1e293b;

@@ -49,6 +49,7 @@ export interface ClassNodeData {
     label: string;
     isAbstract: boolean;
     attributes: MetaAttribute[];
+    references?: MetaReference[];
     operations?: MetaOperation[];
     jsxString?: string;
     [key: string]: unknown;
@@ -116,6 +117,18 @@ export function createLiteral(name: string = 'NEW_VALUE', value: number): MetaLi
         id: `lit_${Date.now()}_${Math.random().toString(36).slice(2, 5)}`,
         name,
         value,
+    };
+}
+
+export function createReference(name: string = 'newRef', targetClassId: string = ''): MetaReference {
+    return {
+        id: `ref_${Date.now()}_${Math.random().toString(36).slice(2, 5)}`,
+        name,
+        kind: 'association',
+        targetClassId,
+        lowerBound: 0,
+        upperBound: -1,
+        containment: false,
     };
 }
 

@@ -10,6 +10,7 @@ import {
     ReactFlowProvider,
     SelectionMode,
     ConnectionMode,
+    PanOnScrollMode,
     type Node,
     type Edge,
     type Connection,
@@ -33,6 +34,8 @@ import { useHistory } from './hooks/useHistory';
 import { useAlignment } from './hooks/useAlignment';
 import { useAutoAnchor } from './hooks/useAutoAnchor';
 import { EditorContext } from './contexts/EditorContext';
+import { ObstacleGridProvider } from './contexts/ObstacleGridContext';
+import { computeDistributedHandles } from './utils/edgeUtils';
 import type { ClassNodeData, EnumNodeData, PackageNodeData, ReferenceEdgeData, InheritanceEdgeData } from './types';
 
 import './EditorV2.scss';
@@ -222,6 +225,18 @@ function EditorV2Inner() {
     // Auto-anchor for optimal edge routing
     const { getOptimalAnchors, getOptimalAnchorsForAllEdges } = useAutoAnchor();
 
+    // Helper: apply port distribution (indexed handles) after any edge update
+    const applyDistribution = useCallback((edgeList: Edge[]): Edge[] => {
+        const distributed = computeDistributedHandles(edgeList);
+        return edgeList.map((edge) => {
+            const handles = distributed.get(edge.id);
+            if (handles) {
+                return { ...edge, sourceHandle: handles.sourceHandle, targetHandle: handles.targetHandle };
+            }
+            return edge;
+        });
+    }, []);
+
     // Get selected nodes and edges for properties panel
     const selectedNodes = useMemo(() => nodes.filter((n) => n.selected), [nodes]);
     const selectedEdges = useMemo(() => edges.filter((e) => e.selected), [edges]);
@@ -263,13 +278,12 @@ function EditorV2Inner() {
                         data: {} as InheritanceEdgeData,
                     };
                     setEdges((eds) => {
-                        // Update opposite edge anchors
                         const updated = oppositeAnchors
                             ? eds.map((e) => e.id === existingOpposite.id
                                 ? { ...e, sourceHandle: oppositeAnchors.sourceHandle, targetHandle: oppositeAnchors.targetHandle }
                                 : e)
                             : eds;
-                        return addEdge(newEdge, updated);
+                        return applyDistribution(addEdge(newEdge, updated));
                     });
                 } else {
                     const newEdge: Edge = {
@@ -293,13 +307,12 @@ function EditorV2Inner() {
                         } as ReferenceEdgeData,
                     };
                     setEdges((eds) => {
-                        // Update opposite edge anchors
                         const updated = oppositeAnchors
                             ? eds.map((e) => e.id === existingOpposite.id
                                 ? { ...e, sourceHandle: oppositeAnchors.sourceHandle, targetHandle: oppositeAnchors.targetHandle }
                                 : e)
                             : eds;
-                        return addEdge(newEdge, updated);
+                        return applyDistribution(addEdge(newEdge, updated));
                     });
                 }
             } else {
@@ -320,7 +333,7 @@ function EditorV2Inner() {
                         type: 'inheritance',
                         data: {} as InheritanceEdgeData,
                     };
-                    setEdges((eds) => addEdge(newEdge, eds));
+                    setEdges((eds) => applyDistribution(addEdge(newEdge, eds)));
                 } else {
                     const newEdge: Edge = {
                         id: newEdgeId,
@@ -342,11 +355,11 @@ function EditorV2Inner() {
                             },
                         } as ReferenceEdgeData,
                     };
-                    setEdges((eds) => addEdge(newEdge, eds));
+                    setEdges((eds) => applyDistribution(addEdge(newEdge, eds)));
                 }
             }
         },
-        [connectionMode, edges, setEdges, takeSnapshot, getOptimalAnchors, getOptimalAnchorsForAllEdges]
+        [connectionMode, edges, setEdges, takeSnapshot, getOptimalAnchors, getOptimalAnchorsForAllEdges, applyDistribution]
     );
 
     // Handle drop from palette
@@ -886,19 +899,20 @@ function EditorV2Inner() {
                         }))
                     );
 
-                    // Apply new anchors
-                    return currentEdges.map((edge) => {
+                    // Apply side-level anchors, then distribute ports within each side
+                    const updated = currentEdges.map((edge) => {
                         const anchors = optimalAnchors.get(edge.id);
                         if (anchors) {
                             return { ...edge, sourceHandle: anchors.sourceHandle, targetHandle: anchors.targetHandle };
                         }
                         return edge;
                     });
+                    return applyDistribution(updated);
                 });
             }
             onNodesChange(changes);
         },
-        [onNodesChange, takeSnapshot, setEdges, getOptimalAnchorsForAllEdges]
+        [onNodesChange, takeSnapshot, setEdges, getOptimalAnchorsForAllEdges, applyDistribution]
     );
 
     const editorContextValue = useMemo(() => ({ takeSnapshot }), [takeSnapshot]);
@@ -960,6 +974,12 @@ function EditorV2Inner() {
                             multiSelectionKeyCode="Shift"
                             selectionMode={SelectionMode.Partial}
                             panOnDrag={[0, 1, 2]}
+                            zoomOnScroll={false}
+                            panOnScroll={false}
+                            panOnScrollMode={PanOnScrollMode.Free}
+                            zoomActivationKeyCode="Shift"
+                            preventScrolling={false}
+                            zoomOnPinch={true}
                             deleteKeyCode={null}
                         >
                             <Background
@@ -1011,7 +1031,9 @@ function EditorV2Inner() {
 function EditorV2() {
     return (
         <ReactFlowProvider>
-            <EditorV2Inner />
+            <ObstacleGridProvider>
+                <EditorV2Inner />
+            </ObstacleGridProvider>
         </ReactFlowProvider>
     );
 }
