@@ -192,19 +192,37 @@ function InheritanceEdge(props: EdgeProps) {
                     <defs>
                         <marker
                             id={treeMarkerId}
-                            viewBox="0 0 14 14"
-                            refX="14"
-                            refY="7"
-                            markerWidth="12"
-                            markerHeight="12"
+                            viewBox="0 0 12 10"
+                            refX="7"
+                            refY="5"
+                            markerWidth="14"
+                            markerHeight="10"
                             orient="auto"
                         >
                             <path
-                                d="M 14 0 L 0 7 L 14 14 Z"
+                                d="M 12 0 L 0 5 L 12 10 Z"
                                 className={`inheritance-marker ${selectedClass}`}
                             />
                         </marker>
                     </defs>
+                )}
+
+                {/* Invisible hit-test paths for easier selection */}
+                <path
+                    d={treeGeometry.trunkPath}
+                    fill="none"
+                    stroke="transparent"
+                    strokeWidth={20}
+                    style={{ pointerEvents: 'stroke' }}
+                />
+                {treeGeometry.barAndBranchesPath && (
+                    <path
+                        d={treeGeometry.barAndBranchesPath}
+                        fill="none"
+                        stroke="transparent"
+                        strokeWidth={20}
+                        style={{ pointerEvents: 'stroke' }}
+                    />
                 )}
 
                 {/* Trunk: bar → parent */}
@@ -265,21 +283,29 @@ function InheritanceEdge(props: EdgeProps) {
                     {/* Hollow triangle (UML generalization marker) */}
                     <marker
                         id={markerTriangleId}
-                        viewBox="0 0 14 14"
-                        refX="14"
-                        refY="7"
-                        markerWidth="12"
-                        markerHeight="12"
+                        viewBox="0 0 12 10"
+                        refX="7"
+                        refY="5"
+                        markerWidth="14"
+                        markerHeight="10"
                         orient="auto"
                     >
                         <path
-                            d="M 14 0 L 0 7 L 14 14 Z"
+                            d="M 12 0 L 0 5 L 12 10 Z"
                             className={`inheritance-marker ${selected ? 'selected' : ''}`}
                         />
                     </marker>
                 </defs>
             )}
 
+            {/* Invisible hit-test path for easier selection */}
+            <path
+                d={path}
+                fill="none"
+                stroke="transparent"
+                strokeWidth={20}
+                style={{ pointerEvents: 'stroke' }}
+            />
             <path
                 d={path}
                 fill="none"

@@ -61,6 +61,16 @@
     cursor: crosshair !important;
 }
 
+// When hovering over a target node during connection drag → pointer cursor
+// to indicate the node is a valid drop target for the connection
+.react-flow.connecting .react-flow__node:hover {
+    cursor: pointer !important;
+
+    * {
+        cursor: pointer !important;
+    }
+}
+
 // ============================================
 // TOOLBAR
 // ============================================
@@ -73,6 +83,9 @@
     background: var(--surface-1);
     border-bottom: 1px solid var(--border-subtle);
     flex-shrink: 0;
+
+    position: relative;
+  
 }
 
 .toolbar-group {

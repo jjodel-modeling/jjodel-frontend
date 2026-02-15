@@ -238,46 +238,54 @@ function ReferenceEdge(props: EdgeProps) {
     return (
         <>
             <defs>
-                {/* Diamante pieno - Composition */}
+                {/* Diamante pieno - Composition (source side) */}
                 <marker
                     id={markerFilledId}
                     viewBox="0 0 12 8"
                     refX="0"
                     refY="4"
-                    markerWidth="8"
-                    markerHeight="6"
-                    orient="auto-start-reverse"
+                    markerWidth="12"
+                    markerHeight="8"
+                    orient="auto"
                 >
                     <path d="M 0 4 L 6 0 L 12 4 L 6 8 Z" className="reference-marker filled" />
                 </marker>
 
-                {/* Diamante vuoto - Aggregation */}
+                {/* Diamante vuoto - Aggregation (source side) */}
                 <marker
                     id={markerEmptyId}
                     viewBox="0 0 12 8"
                     refX="0"
                     refY="4"
-                    markerWidth="8"
-                    markerHeight="6"
-                    orient="auto-start-reverse"
+                    markerWidth="12"
+                    markerHeight="8"
+                    orient="auto"
                 >
                     <path d="M 0 4 L 6 0 L 12 4 L 6 8 Z" className="reference-marker hollow" />
                 </marker>
 
-                {/* Freccia - target */}
+                {/* Freccia - target (1.3x size) */}
                 <marker
                     id={markerArrowId}
                     viewBox="0 0 10 10"
                     refX="10"
                     refY="5"
-                    markerWidth="6"
-                    markerHeight="6"
+                    markerWidth="8"
+                    markerHeight="8"
                     orient="auto"
                 >
                     <path d="M 0 0 L 10 5 L 0 10" className="reference-marker arrow" />
                 </marker>
             </defs>
 
+            {/* Invisible hit-test path for easier selection */}
+            <path
+                d={path}
+                fill="none"
+                stroke="transparent"
+                strokeWidth={20}
+                style={{ pointerEvents: 'stroke' }}
+            />
             <path
                 d={path}
                 fill="none"

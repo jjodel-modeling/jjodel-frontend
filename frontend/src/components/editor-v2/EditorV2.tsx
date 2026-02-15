@@ -1033,6 +1033,7 @@ function EditorV2Inner() {
                             preventScrolling={false}
                             zoomOnPinch={true}
                             deleteKeyCode={null}
+                            connectionRadius={40}
                         >
                             <Background
                                 variant={BackgroundVariant.Dots}

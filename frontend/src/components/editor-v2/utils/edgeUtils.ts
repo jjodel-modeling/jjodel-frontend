@@ -19,19 +19,6 @@ export const OBSTACLE_AVOIDANCE_ENABLED = false;
 export type Side = 'top' | 'right' | 'bottom' | 'left';
 
 /**
- * Returns a unit direction vector for a given side.
- * This is the direction the edge EXITS from that side.
- */
-function sideDirection(side: Side): { dx: number; dy: number } {
-    switch (side) {
-        case 'top':    return { dx: 0, dy: -1 };
-        case 'right':  return { dx: 1, dy: 0 };
-        case 'bottom': return { dx: 0, dy: 1 };
-        case 'left':   return { dx: -1, dy: 0 };
-    }
-}
-
-/**
  * Extracts the side from a handle ID (e.g., "right-0" → "right").
  */
 export function getSideFromHandle(handleId: string | null | undefined): Side {
@@ -115,10 +102,6 @@ export function computeManhattanPath(
     let targetY = _targetY;
 
     const SNAP = 8;
-    const MARKER_COMP = 4;
-
-    const srcDir = sideDirection(sourceSide);
-    const tgtDir = sideDirection(targetSide);
 
     // Self-loop: identical endpoints
     if (Math.abs(sourceX - targetX) < 1 && Math.abs(sourceY - targetY) < 1) {
@@ -144,13 +127,6 @@ export function computeManhattanPath(
             points = routeAdjacent(sourceX, sourceY, sourceSide, targetX, targetY, targetSide, SNAP);
             break;
     }
-
-    // Marker compensation: extend endpoints slightly into nodes
-    points[0].x -= srcDir.dx * MARKER_COMP;
-    points[0].y -= srcDir.dy * MARKER_COMP;
-    const lastIdx = points.length - 1;
-    points[lastIdx].x -= tgtDir.dx * MARKER_COMP;
-    points[lastIdx].y -= tgtDir.dy * MARKER_COMP;
 
     return pointsToPath(cleanPoints(points));
 }
@@ -947,8 +923,6 @@ export function computeTreeConnectorPath(
 /**
  * Compute a Manhattan path using the A* grid router.
  *
- * If A* succeeds the returned SVG path string already includes
- * marker compensation (same 1px rule as computeManhattanPath).
  * If A* fails, falls back to the classic computeManhattanPath.
  *
  * @param grid - Shared obstacle grid from ObstacleGridContext
