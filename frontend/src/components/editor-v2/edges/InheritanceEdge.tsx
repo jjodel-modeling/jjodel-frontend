@@ -1,5 +1,5 @@
 import { useMemo, useCallback, useRef } from 'react';
-import { useReactFlow, useNodes, EdgeLabelRenderer, type EdgeProps } from '@xyflow/react';
+import { useReactFlow, useNodes, useEdges, EdgeLabelRenderer, type EdgeProps } from '@xyflow/react';
 import type { InheritanceEdgeData } from '../types';
 import {
     computeManhattanPath,
@@ -12,6 +12,8 @@ import {
     pointsToPath,
     getPathSegments,
     getSideFromHandle,
+    computeTreeConnectorPath,
+    type TreeBranch,
 } from '../utils/edgeUtils';
 import { useObstacleGrid } from '../contexts/ObstacleGridContext';
 
@@ -28,10 +30,52 @@ function InheritanceEdge(props: EdgeProps) {
     // Phase 7: obstacle grid context
     const { grid, version } = useObstacleGrid();
     const allNodes = useNodes();
+    const allEdges = useEdges();
 
     // Get sides from handle IDs
     const sourceSide = getSideFromHandle(sourceHandleId);
     const targetSide = getSideFromHandle(targetHandleId);
+
+    // ═══ Tree group detection ═══
+    // Find all inheritance edges targeting the same parent, sorted by ID for stable primary
+    const group = useMemo(() => {
+        return allEdges
+            .filter(e => e.type === 'inheritance' && e.target === target)
+            .sort((a, b) => a.id.localeCompare(b.id));
+    }, [allEdges, target]);
+
+    const isPrimary = group.length > 0 && group[0].id === id;
+    const isGrouped = group.length > 1;
+
+    // Unified selection: highlight whole tree when any edge in the group is selected
+    const anyInGroupSelected = useMemo(() => {
+        if (!isGrouped) return !!selected;
+        return group.some(e => e.selected);
+    }, [isGrouped, group, selected]);
+
+    // ═══ Tree connector geometry (computed by all grouped edges for branch access) ═══
+    const treeGeometry = useMemo(() => {
+        if (!isGrouped) return null;
+
+        const nodeMap = new Map(allNodes.map(n => [n.id, n]));
+        const branches: TreeBranch[] = [];
+
+        for (const edge of group) {
+            const childNode = nodeMap.get(edge.source);
+            if (!childNode) continue;
+
+            const w = (childNode.measured?.width ?? (childNode as any).width ?? 180) as number;
+            const h = (childNode.measured?.height ?? (childNode as any).height ?? 80) as number;
+            const childCenterX = (childNode.position?.x ?? 0) + w / 2;
+            const childY = sourceSide === 'top'
+                ? (childNode.position?.y ?? 0)
+                : (childNode.position?.y ?? 0) + h;
+
+            branches.push({ childX: childCenterX, childY, edgeId: edge.id });
+        }
+
+        return computeTreeConnectorPath(targetX, targetY, branches);
+    }, [isGrouped, group, allNodes, targetX, targetY, sourceSide]);
 
     // Compute base path — A* when enabled, classic otherwise
     const rawPath = useMemo(
@@ -122,9 +166,67 @@ function InheritanceEdge(props: EdgeProps) {
         [id, waypoints, setEdges, getViewport]
     );
 
-    // Marker ID unique per edge
+    // Marker ID unique per edge (or per group for tree connector)
     const markerTriangleId = `inheritance-triangle-${id}`;
 
+    // ═══ CASE 1: Primary edge in a group → render tree connector ═══
+    if (isPrimary && isGrouped && treeGeometry) {
+        const treeMarkerId = `inheritance-triangle-group-${target}`;
+        const selectedClass = anyInGroupSelected ? 'selected' : '';
+        return (
+            <>
+                <defs>
+                    <marker
+                        id={treeMarkerId}
+                        viewBox="0 0 14 14"
+                        refX="14"
+                        refY="7"
+                        markerWidth="12"
+                        markerHeight="12"
+                        orient="auto"
+                    >
+                        <path
+                            d="M 14 0 L 0 7 L 14 14 Z"
+                            className={`inheritance-marker ${selectedClass}`}
+                        />
+                    </marker>
+                </defs>
+
+                {/* Trunk: bar → parent (markerEnd for triangle at parent) */}
+                <path
+                    d={treeGeometry.trunkPath}
+                    fill="none"
+                    className={`inheritance-edge ${selectedClass}`}
+                    markerEnd={`url(#${treeMarkerId})`}
+                />
+
+                {/* Bar + branches (no marker) */}
+                {treeGeometry.barAndBranchesPath && (
+                    <path
+                        d={treeGeometry.barAndBranchesPath}
+                        fill="none"
+                        className={`inheritance-edge ${selectedClass}`}
+                    />
+                )}
+            </>
+        );
+    }
+
+    // ═══ CASE 2: Secondary edge in a group → invisible hit-test path ═══
+    if (!isPrimary && isGrouped && treeGeometry) {
+        const branchPath = treeGeometry.branchPaths.get(id);
+        return (
+            <path
+                d={branchPath || `M ${sourceX} ${sourceY} L ${targetX} ${targetY}`}
+                fill="none"
+                stroke="transparent"
+                strokeWidth={20}
+                style={{ pointerEvents: 'stroke' }}
+            />
+        );
+    }
+
+    // ═══ CASE 3: Single inheritance edge → standard Manhattan rendering ═══
     return (
         <>
             <defs>

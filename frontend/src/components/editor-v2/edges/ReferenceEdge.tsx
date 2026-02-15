@@ -105,6 +105,7 @@ function ReferenceEdge(props: EdgeProps) {
     const labelPos = useMemo(() => computeLabelPosition(adjustedPath), [adjustedPath]);
 
     // Calculate label offset based on segment orientation (perpendicular to segment)
+    // For parallel edges, alternate offset direction based on handle index so labels don't overlap
     const labelOffset = useMemo(() => {
         if (isSelfLoop) return { x: 0, y: -16 };
 
@@ -122,13 +123,18 @@ function ReferenceEdge(props: EdgeProps) {
             }
         }
 
+        // Use handle index to alternate offset direction for parallel edges
+        const handleIndex = sourceHandleId ? parseInt(sourceHandleId.split('-')[1] || '0', 10) : 0;
+        const sign = handleIndex % 2 === 0 ? -1 : 1;
+
         // Offset perpendicular to the segment (16px clearance = label height + gap)
         return longestIsHorizontal
-            ? { x: 0, y: -16 }   // label above horizontal segment
-            : { x: -16, y: 0 };  // label to the left of vertical segment
-    }, [adjustedPath, isSelfLoop]);
+            ? { x: 0, y: sign * 16 }   // even: above, odd: below
+            : { x: sign * 16, y: 0 };  // even: left, odd: right
+    }, [adjustedPath, isSelfLoop, sourceHandleId]);
 
     // Position cardinality near the target, with perpendicular offset
+    // Uses same handle-index alternation as label offset for consistency
     const cardinalityPos = useMemo(() => computeCardinalityPosition(adjustedPath), [adjustedPath]);
     const cardinalityOffset = useMemo(() => {
         const points = parsePathPoints(adjustedPath);
@@ -136,10 +142,14 @@ function ReferenceEdge(props: EdgeProps) {
         const last = points[points.length - 1];
         const prev = points[points.length - 2];
         const isLastHorizontal = Math.abs(last.y - prev.y) < Math.abs(last.x - prev.x);
+
+        const handleIndex = targetHandleId ? parseInt(targetHandleId.split('-')[1] || '0', 10) : 0;
+        const sign = handleIndex % 2 === 0 ? -1 : 1;
+
         return isLastHorizontal
-            ? { x: 0, y: -16 }   // above horizontal segment
-            : { x: -16, y: 0 };  // left of vertical segment
-    }, [adjustedPath]);
+            ? { x: 0, y: sign * 16 }   // even: above, odd: below
+            : { x: sign * 16, y: 0 };  // even: left, odd: right
+    }, [adjustedPath, targetHandleId]);
 
     const commitLabel = useCallback(() => {
         setEditing(false);

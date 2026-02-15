@@ -32,11 +32,11 @@ import AlignmentToolbar from './AlignmentToolbar';
 import ContextMenu, { type ContextMenuItem } from './ContextMenu';
 import { useHistory } from './hooks/useHistory';
 import { useAlignment } from './hooks/useAlignment';
-import { useAutoAnchor } from './hooks/useAutoAnchor';
+import { useAutoAnchor, computeAnchorsWithHysteresis, getNodeRect } from './hooks/useAutoAnchor';
 import { EditorContext } from './contexts/EditorContext';
 import { ObstacleGridProvider } from './contexts/ObstacleGridContext';
-import { computeDistributedHandles } from './utils/edgeUtils';
-import type { ClassNodeData, EnumNodeData, PackageNodeData, ReferenceEdgeData, InheritanceEdgeData } from './types';
+import { getBaseSide, getNextFreeHandleIndex, computePortDistribution } from './utils/portDistribution';
+import type { ClassNodeData, EnumNodeData, PackageNodeData, ReferenceEdgeData, InheritanceEdgeData, AnchorConfig } from './types';
 
 import './EditorV2.scss';
 
@@ -128,8 +128,8 @@ const initialEdges: Edge[] = [
         id: 'ref_1',
         source: 'class_1',
         target: 'class_2',
-        sourceHandle: 'right',
-        targetHandle: 'left',
+        sourceHandle: 'right-0',
+        targetHandle: 'left-0',
         type: 'reference',
         label: 'addresses',
         data: {
@@ -149,8 +149,8 @@ const initialEdges: Edge[] = [
         id: 'inh_1',
         source: 'class_1',
         target: 'class_3',
-        sourceHandle: 'bottom',
-        targetHandle: 'top',
+        sourceHandle: 'bottom-0',
+        targetHandle: 'top-0',
         type: 'inheritance',
         data: {} as InheritanceEdgeData,
     },
@@ -223,19 +223,46 @@ function EditorV2Inner() {
     } = useAlignment();
 
     // Auto-anchor for optimal edge routing
-    const { getOptimalAnchors, getOptimalAnchorsForAllEdges } = useAutoAnchor();
+    const { getOptimalAnchors } = useAutoAnchor();
 
-    // Helper: apply port distribution (indexed handles) after any edge update
+    // Helper: build node positions map for spatial port ordering
+    const buildNodePositions = useCallback((nodeList: Node[]) => {
+        const map = new Map<string, { centerX: number; centerY: number }>();
+        for (const n of nodeList) {
+            const w = ((n.measured?.width ?? (n as any).width ?? 180) as number);
+            const h = ((n.measured?.height ?? (n as any).height ?? 80) as number);
+            map.set(n.id, {
+                centerX: n.position.x + w / 2,
+                centerY: n.position.y + h / 2,
+            });
+        }
+        return map;
+    }, []);
+
+    // Apply port distribution — assigns indexed handle IDs to edges.
+    // All handles are pre-allocated in the DOM (pool pattern), so we can
+    // assign the correct indexed handles immediately without waiting.
     const applyDistribution = useCallback((edgeList: Edge[]): Edge[] => {
-        const distributed = computeDistributedHandles(edgeList);
-        return edgeList.map((edge) => {
-            const handles = distributed.get(edge.id);
-            if (handles) {
-                return { ...edge, sourceHandle: handles.sourceHandle, targetHandle: handles.targetHandle };
+        const currentNodes = getNodes();
+        const nodeIds = currentNodes.map(n => n.id);
+        const positions = buildNodePositions(currentNodes);
+
+        const { edgeHandles } = computePortDistribution(edgeList, nodeIds, positions);
+
+        return edgeList.map(edge => {
+            const distributed = edgeHandles.get(edge.id);
+            if (distributed &&
+                (edge.sourceHandle !== distributed.sourceHandle ||
+                 edge.targetHandle !== distributed.targetHandle)) {
+                return {
+                    ...edge,
+                    sourceHandle: distributed.sourceHandle,
+                    targetHandle: distributed.targetHandle,
+                };
             }
             return edge;
         });
-    }, []);
+    }, [getNodes, buildNodePositions]);
 
     // Get selected nodes and edges for properties panel
     const selectedNodes = useMemo(() => nodes.filter((n) => n.selected), [nodes]);
@@ -251,115 +278,66 @@ function EditorV2Inner() {
                 : `ref_${Date.now()}`;
             const edgeType = connectionMode === 'inheritance' ? 'inheritance' : 'reference';
 
-            // Check for existing opposite-direction edge to apply bidirectional deconfliction
-            const existingOpposite = edges.find(
-                (e) => e.source === connection.target && e.target === connection.source
-            );
+            // Determine the side for the new edge.
+            // Extract the base SIDE from the user's drag. If not available, use auto-anchor fallback.
+            let sourceSide: string;
+            let targetSide: string;
 
-            if (existingOpposite) {
-                // Bidirectional pair detected - use deconfliction for both edges
-                const edgesToCalculate = [
-                    { id: existingOpposite.id, source: existingOpposite.source, target: existingOpposite.target, type: existingOpposite.type },
-                    { id: newEdgeId, source: connection.source!, target: connection.target!, type: edgeType },
-                ];
-                const optimalAnchors = getOptimalAnchorsForAllEdges(edgesToCalculate);
-
-                const newAnchors = optimalAnchors.get(newEdgeId);
-                const oppositeAnchors = optimalAnchors.get(existingOpposite.id);
-
-                if (connectionMode === 'inheritance') {
-                    const newEdge: Edge = {
-                        id: newEdgeId,
-                        source: connection.source!,
-                        target: connection.target!,
-                        sourceHandle: newAnchors?.sourceHandle || 'top',
-                        targetHandle: newAnchors?.targetHandle || 'bottom',
-                        type: 'inheritance',
-                        data: {} as InheritanceEdgeData,
-                    };
-                    setEdges((eds) => {
-                        const updated = oppositeAnchors
-                            ? eds.map((e) => e.id === existingOpposite.id
-                                ? { ...e, sourceHandle: oppositeAnchors.sourceHandle, targetHandle: oppositeAnchors.targetHandle }
-                                : e)
-                            : eds;
-                        return applyDistribution(addEdge(newEdge, updated));
-                    });
-                } else {
-                    const newEdge: Edge = {
-                        id: newEdgeId,
-                        source: connection.source!,
-                        target: connection.target!,
-                        sourceHandle: newAnchors?.sourceHandle || 'right',
-                        targetHandle: newAnchors?.targetHandle || 'left',
-                        type: 'reference',
-                        label: 'newRef',
-                        data: {
-                            reference: {
-                                id: newEdgeId,
-                                name: 'newRef',
-                                kind: 'association',
-                                targetClassId: connection.target!,
-                                lowerBound: 0,
-                                upperBound: -1,
-                                containment: false,
-                            },
-                        } as ReferenceEdgeData,
-                    };
-                    setEdges((eds) => {
-                        const updated = oppositeAnchors
-                            ? eds.map((e) => e.id === existingOpposite.id
-                                ? { ...e, sourceHandle: oppositeAnchors.sourceHandle, targetHandle: oppositeAnchors.targetHandle }
-                                : e)
-                            : eds;
-                        return applyDistribution(addEdge(newEdge, updated));
-                    });
-                }
+            if (connection.sourceHandle && connection.targetHandle) {
+                sourceSide = getBaseSide(connection.sourceHandle);
+                targetSide = getBaseSide(connection.targetHandle);
             } else {
-                // No bidirectional pair - use simple anchor calculation
-                const { sourceHandle, targetHandle } = getOptimalAnchors(
+                const optimal = getOptimalAnchors(
                     connection.source!,
                     connection.target!,
                     edgeType
                 );
-
-                if (connectionMode === 'inheritance') {
-                    const newEdge: Edge = {
-                        id: newEdgeId,
-                        source: connection.source!,
-                        target: connection.target!,
-                        sourceHandle,
-                        targetHandle,
-                        type: 'inheritance',
-                        data: {} as InheritanceEdgeData,
-                    };
-                    setEdges((eds) => applyDistribution(addEdge(newEdge, eds)));
-                } else {
-                    const newEdge: Edge = {
-                        id: newEdgeId,
-                        source: connection.source!,
-                        target: connection.target!,
-                        sourceHandle,
-                        targetHandle,
-                        type: 'reference',
-                        label: 'newRef',
-                        data: {
-                            reference: {
-                                id: newEdgeId,
-                                name: 'newRef',
-                                kind: 'association',
-                                targetClassId: connection.target!,
-                                lowerBound: 0,
-                                upperBound: -1,
-                                containment: false,
-                            },
-                        } as ReferenceEdgeData,
-                    };
-                    setEdges((eds) => applyDistribution(addEdge(newEdge, eds)));
-                }
+                sourceSide = optimal.sourceHandle;
+                targetSide = optimal.targetHandle;
             }
+
+            const sourceAnchor: AnchorConfig = { mode: 'auto', side: sourceSide as AnchorConfig['side'] };
+            const targetAnchor: AnchorConfig = { mode: 'auto', side: targetSide as AnchorConfig['side'] };
+
+            // Allocate the next free handle index so multiple edges between the
+            // same pair of nodes get distinct handle IDs from the start.
+            const currentEdges = getEdges();
+            const sourceIndex = getNextFreeHandleIndex(connection.source!, sourceSide, 'source', currentEdges);
+            const targetIndex = getNextFreeHandleIndex(connection.target!, targetSide, 'target', currentEdges);
+
+            const newEdge: Edge = {
+                id: newEdgeId,
+                source: connection.source!,
+                target: connection.target!,
+                sourceHandle: `${sourceSide}-${sourceIndex}`,
+                targetHandle: `${targetSide}-${targetIndex}`,
+                type: edgeType,
+                ...(edgeType === 'reference' ? {
+                    label: 'newRef',
+                    data: {
+                        reference: {
+                            id: newEdgeId,
+                            name: 'newRef',
+                            kind: 'association',
+                            targetClassId: connection.target!,
+                            lowerBound: 0,
+                            upperBound: -1,
+                            containment: false,
+                        },
+                        sourceAnchor,
+                        targetAnchor,
+                    } as ReferenceEdgeData,
+                } : {
+                    data: {
+                        sourceAnchor,
+                        targetAnchor,
+                    } as InheritanceEdgeData,
+                }),
+            };
+
+            setEdges((eds) => applyDistribution([...eds, newEdge]));
         },
-        [connectionMode, edges, setEdges, takeSnapshot, getOptimalAnchors, getOptimalAnchorsForAllEdges, applyDistribution]
+        [connectionMode, setEdges, getEdges, takeSnapshot, getOptimalAnchors, applyDistribution]
     );
 
     // Handle drop from palette
@@ -458,36 +436,38 @@ function EditorV2Inner() {
             const nodeIds = new Set(selectedNodes.map((n) => n.id));
 
             setNodes((nds) => nds.filter((n) => !nodeIds.has(n.id)));
-            setEdges((eds) =>
+            setEdges((eds) => applyDistribution(
                 eds.filter(
                     (e) =>
                         !selectedEdges.some((se) => se.id === e.id) &&
                         !nodeIds.has(e.source) &&
                         !nodeIds.has(e.target)
                 )
-            );
+            ));
         }
-    }, [getNodes, getEdges, setNodes, setEdges, takeSnapshot]);
+    }, [getNodes, getEdges, setNodes, setEdges, takeSnapshot, applyDistribution]);
 
     // Delete specific node by ID
     const deleteNode = useCallback(
         (nodeId: string) => {
             takeSnapshot();
             setNodes((nds) => nds.filter((n) => n.id !== nodeId));
-            setEdges((eds) =>
+            setEdges((eds) => applyDistribution(
                 eds.filter((e) => e.source !== nodeId && e.target !== nodeId)
-            );
+            ));
         },
-        [setNodes, setEdges, takeSnapshot]
+        [setNodes, setEdges, takeSnapshot, applyDistribution]
     );
 
     // Delete specific edge by ID
     const deleteEdge = useCallback(
         (edgeId: string) => {
             takeSnapshot();
-            setEdges((eds) => eds.filter((e) => e.id !== edgeId));
+            setEdges((eds) => applyDistribution(
+                eds.filter((e) => e.id !== edgeId)
+            ));
         },
-        [setEdges, takeSnapshot]
+        [setEdges, takeSnapshot, applyDistribution]
     );
 
     // Duplicate a node
@@ -879,31 +859,37 @@ function EditorV2Inner() {
                         .map((c) => c.id)
                 );
 
-                // Recalculate optimal anchors for ALL edges connected to moved nodes
-                // using bidirectional deconfliction to prevent overlapping A→B and B→A edges
+                // Build nodeRects map from current nodes
+                const nodeRects = new Map(
+                    nodes.map((n) => [n.id, getNodeRect(n)])
+                );
+
+                // Recalculate anchors with hysteresis for edges connected to moved nodes
                 setEdges((currentEdges) => {
-                    // Find edges that need recalculation (connected to moved nodes)
                     const edgesToRecalculate = currentEdges.filter(
                         (e) => movedNodeIds.has(e.source) || movedNodeIds.has(e.target)
                     );
 
                     if (edgesToRecalculate.length === 0) return currentEdges;
 
-                    // Calculate optimal anchors with bidirectional deconfliction
-                    const optimalAnchors = getOptimalAnchorsForAllEdges(
-                        edgesToRecalculate.map((e) => ({
-                            id: e.id,
-                            source: e.source,
-                            target: e.target,
-                            type: e.type,
-                        }))
-                    );
+                    // Hysteresis-aware calculation: only switch sides when significantly better
+                    const anchorResults = computeAnchorsWithHysteresis(edgesToRecalculate, nodeRects);
 
-                    // Apply side-level anchors, then distribute ports within each side
+                    // Apply anchors + persist AnchorConfig in edge.data.
+                    // Start with -0 index; applyDistribution assigns correct indexed handles.
                     const updated = currentEdges.map((edge) => {
-                        const anchors = optimalAnchors.get(edge.id);
-                        if (anchors) {
-                            return { ...edge, sourceHandle: anchors.sourceHandle, targetHandle: anchors.targetHandle };
+                        const result = anchorResults.get(edge.id);
+                        if (result) {
+                            return {
+                                ...edge,
+                                sourceHandle: `${result.sourceHandle}-0`,
+                                targetHandle: `${result.targetHandle}-0`,
+                                data: {
+                                    ...edge.data,
+                                    sourceAnchor: result.sourceAnchor,
+                                    targetAnchor: result.targetAnchor,
+                                },
+                            };
                         }
                         return edge;
                     });
@@ -912,7 +898,7 @@ function EditorV2Inner() {
             }
             onNodesChange(changes);
         },
-        [onNodesChange, takeSnapshot, setEdges, getOptimalAnchorsForAllEdges, applyDistribution]
+        [onNodesChange, takeSnapshot, setEdges, nodes, applyDistribution]
     );
 
     const editorContextValue = useMemo(() => ({ takeSnapshot }), [takeSnapshot]);

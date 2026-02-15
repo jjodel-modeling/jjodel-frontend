@@ -10,7 +10,8 @@
 import { ObstacleGrid, type Rect as GridRect } from './ObstacleGrid';
 import { astarManhattan } from './astarPathfinder';
 
-export const EDGE_PADDING = 25;
+export const EDGE_PADDING = 25; // legacy — kept for ManhattanEdge.tsx compatibility
+const DETOUR_PADDING = 30; // used only for same-side and backward U-shape routing
 
 /** Toggle for Phase 7 A* obstacle avoidance. Default OFF for incremental testing. */
 export const OBSTACLE_AVOIDANCE_ENABLED = false;
@@ -85,14 +86,19 @@ function cleanPoints(points: { x: number; y: number }[]): { x: number; y: number
 }
 
 /**
- * Side-aware Manhattan router.
+ * Minimum-segment Manhattan router.
  *
- * Strategy:
- * 1. Extend source point in sourceSide direction by EDGE_PADDING → "exitPoint"
- * 2. Extend target point in targetSide direction by EDGE_PADDING → "entryPoint"
- * 3. Connect exitPoint to entryPoint with 1 or 2 segments (always Manhattan)
+ * Produces the minimum number of segments (1-4) based on the
+ * sourceSide/targetSide pair and relative node positions.
+ * No forced padding — segments go directly from border to border.
  *
- * This produces paths with 3-5 segments total, always respecting exit/entry directions.
+ * Segment counts by case:
+ * - Opposite sides, aligned:   1 segment (straight line)
+ * - Opposite sides, offset:    3 segments (Z-shape)
+ * - Opposite sides, backward:  5 segments (U-detour)
+ * - Adjacent sides, clean:     2 segments (L-shape)
+ * - Adjacent sides, backward:  3 segments (Z-fallback)
+ * - Same side:                 3 segments (U-shape with detour)
  */
 export function computeManhattanPath(
     _sourceX: number,
@@ -102,131 +108,239 @@ export function computeManhattanPath(
     _targetY: number,
     targetSide: Side,
 ): string {
-    const PAD = EDGE_PADDING;
-
-    // Mutable copies (needed for snap adjustments)
+    // Mutable copies for snap adjustments
     let sourceX = _sourceX;
     let sourceY = _sourceY;
     let targetX = _targetX;
     let targetY = _targetY;
 
+    const SNAP = 8;
+    const MARKER_COMP = 4;
+
     const srcDir = sideDirection(sourceSide);
     const tgtDir = sideDirection(targetSide);
 
-    // Exit and entry points with padding
-    let exitX = sourceX + srcDir.dx * PAD;
-    let exitY = sourceY + srcDir.dy * PAD;
-    let entryX = targetX + tgtDir.dx * PAD;
-    let entryY = targetY + tgtDir.dy * PAD;
-
-    // === SNAP: eliminate micro-offsets that cause wiggles ===
-    const SNAP_THRESHOLD = 8;
-    const exitH = srcDir.dx !== 0;
-    const entryH = tgtDir.dx !== 0;
-
-    // Snap vertical paths (both exits vertical): align X coordinates
-    if (!exitH && !entryH && Math.abs(sourceX - targetX) < SNAP_THRESHOLD) {
-        const avgX = (sourceX + targetX) / 2;
-        sourceX = avgX;
-        targetX = avgX;
-        exitX = avgX;
-        entryX = avgX;
+    // Self-loop: identical endpoints
+    if (Math.abs(sourceX - targetX) < 1 && Math.abs(sourceY - targetY) < 1) {
+        return computeSelfLoopPath(sourceX, sourceY, targetX, targetY);
     }
 
-    // Snap horizontal paths (both exits horizontal): align Y coordinates
-    if (exitH && entryH && Math.abs(sourceY - targetY) < SNAP_THRESHOLD) {
-        const avgY = (sourceY + targetY) / 2;
-        sourceY = avgY;
-        targetY = avgY;
-        exitY = avgY;
-        entryY = avgY;
+    // Classify side pair
+    const pair = categorizeSidePair(sourceSide, targetSide);
+
+    let points: { x: number; y: number }[];
+
+    switch (pair) {
+        case 'opposite-horizontal':
+            points = routeOppositeH(sourceX, sourceY, sourceSide, targetX, targetY, SNAP);
+            break;
+        case 'opposite-vertical':
+            points = routeOppositeV(sourceX, sourceY, sourceSide, targetX, targetY, SNAP);
+            break;
+        case 'same':
+            points = routeSameSide(sourceX, sourceY, sourceSide, targetX, targetY);
+            break;
+        case 'adjacent':
+            points = routeAdjacent(sourceX, sourceY, sourceSide, targetX, targetY, targetSide, SNAP);
+            break;
     }
 
-    // For L-shaped paths: snap the shared axis
-    if (exitH && !entryH && Math.abs(exitY - entryY) < SNAP_THRESHOLD) {
-        entryY = exitY;
-    }
-    if (!exitH && entryH && Math.abs(exitX - entryX) < SNAP_THRESHOLD) {
-        entryX = exitX;
-    }
-
-    // Check if we need extra padding (backtracking scenario)
-    // (exitH and entryH already defined above)
-
-    // Does the exit→entry direction conflict with exit direction?
-    const dxToEntry = entryX - exitX;
-    const dyToEntry = entryY - exitY;
-
-    const exitConflict = (srcDir.dx > 0 && dxToEntry < -PAD) || (srcDir.dx < 0 && dxToEntry > PAD)
-        || (srcDir.dy > 0 && dyToEntry < -PAD) || (srcDir.dy < 0 && dyToEntry > PAD);
-
-    if (exitConflict) {
-        // Extend padding further to avoid backtracking
-        exitX = sourceX + srcDir.dx * PAD * 2;
-        exitY = sourceY + srcDir.dy * PAD * 2;
-        entryX = targetX + tgtDir.dx * PAD * 2;
-        entryY = targetY + tgtDir.dy * PAD * 2;
-    }
-
-    // Build point array
-    const points: { x: number; y: number }[] = [
-        { x: sourceX, y: sourceY },
-        { x: exitX, y: exitY },
-    ];
-
-    // Connect exit → entry
-    if (exitH && entryH) {
-        // Both horizontal exits: use midY
-        if (Math.abs(exitY - entryY) < 1) {
-            points.push({ x: entryX, y: entryY });
-        } else {
-            const midY = (exitY + entryY) / 2;
-            points.push({ x: exitX, y: midY });
-            points.push({ x: entryX, y: midY });
-            points.push({ x: entryX, y: entryY });
-        }
-    } else if (exitH && !entryH) {
-        // Exit horizontal, entry vertical: L-shape
-        points.push({ x: entryX, y: exitY });
-        points.push({ x: entryX, y: entryY });
-    } else if (!exitH && entryH) {
-        // Exit vertical, entry horizontal: L-shape
-        points.push({ x: exitX, y: entryY });
-        points.push({ x: entryX, y: entryY });
-    } else {
-        // Both vertical: use midX
-        if (Math.abs(exitX - entryX) < 1) {
-            points.push({ x: entryX, y: entryY });
-        } else {
-            const midX = (exitX + entryX) / 2;
-            points.push({ x: midX, y: exitY });
-            points.push({ x: midX, y: entryY });
-            points.push({ x: entryX, y: entryY });
-        }
-    }
-
-    // Final target point
-    points.push({ x: targetX, y: targetY });
-
-    // === MARKER COMPENSATION ===
-    // Edges are rendered BELOW nodes in React Flow (SVG layer under HTML layer).
-    // Pushing endpoints INTO the node would hide markers under the node background.
-    // Keep endpoints exactly at the border; refX on each marker already aligns
-    // the visual tip/base with the path endpoint.
-    // Set to 0. Kept as a named constant for easy tuning if needed.
-    const MARKER_COMPENSATION = 4;
-
-    // Extend first point (source) into the source node
-    points[0].x -= srcDir.dx * MARKER_COMPENSATION;
-    points[0].y -= srcDir.dy * MARKER_COMPENSATION;
-
-    // Extend last point (target) into the target node
+    // Marker compensation: extend endpoints slightly into nodes
+    points[0].x -= srcDir.dx * MARKER_COMP;
+    points[0].y -= srcDir.dy * MARKER_COMP;
     const lastIdx = points.length - 1;
-    points[lastIdx].x -= tgtDir.dx * MARKER_COMPENSATION;
-    points[lastIdx].y -= tgtDir.dy * MARKER_COMPENSATION;
+    points[lastIdx].x -= tgtDir.dx * MARKER_COMP;
+    points[lastIdx].y -= tgtDir.dy * MARKER_COMP;
 
-    // Clean up: remove duplicates and collinear points
     return pointsToPath(cleanPoints(points));
+}
+
+function categorizeSidePair(s: Side, t: Side): 'opposite-horizontal' | 'opposite-vertical' | 'same' | 'adjacent' {
+    if (s === t) return 'same';
+    if ((s === 'right' && t === 'left') || (s === 'left' && t === 'right')) return 'opposite-horizontal';
+    if ((s === 'bottom' && t === 'top') || (s === 'top' && t === 'bottom')) return 'opposite-vertical';
+    return 'adjacent';
+}
+
+/** Opposite horizontal: right→left or left→right */
+function routeOppositeH(
+    sx: number, sy: number, sSide: Side,
+    tx: number, ty: number, snap: number,
+): { x: number; y: number }[] {
+    const goingRight = sSide === 'right';
+    const targetInFront = goingRight ? (tx > sx) : (tx < sx);
+
+    if (targetInFront) {
+        // Snap: nearly aligned vertically → straight line
+        if (Math.abs(ty - sy) < snap) {
+            const avgY = (sy + ty) / 2;
+            return [{ x: sx, y: avgY }, { x: tx, y: avgY }];
+        }
+        // Z-shape: 3 segments, bend at midpoint X
+        const midX = (sx + tx) / 2;
+        return [
+            { x: sx, y: sy },
+            { x: midX, y: sy },
+            { x: midX, y: ty },
+            { x: tx, y: ty },
+        ];
+    } else {
+        // Target behind: U-detour (5 segments)
+        const detourX = goingRight
+            ? Math.max(sx, tx) + DETOUR_PADDING
+            : Math.min(sx, tx) - DETOUR_PADDING;
+        const midY = (sy + ty) / 2;
+        const entryDetourX = goingRight
+            ? Math.min(sx, tx) - DETOUR_PADDING
+            : Math.max(sx, tx) + DETOUR_PADDING;
+        return [
+            { x: sx, y: sy },
+            { x: detourX, y: sy },
+            { x: detourX, y: midY },
+            { x: entryDetourX, y: midY },
+            { x: entryDetourX, y: ty },
+            { x: tx, y: ty },
+        ];
+    }
+}
+
+/** Opposite vertical: bottom→top or top→bottom */
+function routeOppositeV(
+    sx: number, sy: number, sSide: Side,
+    tx: number, ty: number, snap: number,
+): { x: number; y: number }[] {
+    const goingDown = sSide === 'bottom';
+    const targetInFront = goingDown ? (ty > sy) : (ty < sy);
+
+    if (targetInFront) {
+        // Snap: nearly aligned horizontally → straight line
+        if (Math.abs(tx - sx) < snap) {
+            const avgX = (sx + tx) / 2;
+            return [{ x: avgX, y: sy }, { x: avgX, y: ty }];
+        }
+        // Z-shape: 3 segments, bend at midpoint Y
+        const midY = (sy + ty) / 2;
+        return [
+            { x: sx, y: sy },
+            { x: sx, y: midY },
+            { x: tx, y: midY },
+            { x: tx, y: ty },
+        ];
+    } else {
+        // Target behind: U-detour (5 segments)
+        const detourY = goingDown
+            ? Math.max(sy, ty) + DETOUR_PADDING
+            : Math.min(sy, ty) - DETOUR_PADDING;
+        const midX = (sx + tx) / 2;
+        const entryDetourY = goingDown
+            ? Math.min(sy, ty) - DETOUR_PADDING
+            : Math.max(sy, ty) + DETOUR_PADDING;
+        return [
+            { x: sx, y: sy },
+            { x: sx, y: detourY },
+            { x: midX, y: detourY },
+            { x: midX, y: entryDetourY },
+            { x: tx, y: entryDetourY },
+            { x: tx, y: ty },
+        ];
+    }
+}
+
+/** Same side: right→right, left→left, top→top, bottom→bottom (U-shape with detour) */
+function routeSameSide(
+    sx: number, sy: number, side: Side,
+    tx: number, ty: number,
+): { x: number; y: number }[] {
+    switch (side) {
+        case 'right': {
+            const detourX = Math.max(sx, tx) + DETOUR_PADDING;
+            return [{ x: sx, y: sy }, { x: detourX, y: sy }, { x: detourX, y: ty }, { x: tx, y: ty }];
+        }
+        case 'left': {
+            const detourX = Math.min(sx, tx) - DETOUR_PADDING;
+            return [{ x: sx, y: sy }, { x: detourX, y: sy }, { x: detourX, y: ty }, { x: tx, y: ty }];
+        }
+        case 'bottom': {
+            const detourY = Math.max(sy, ty) + DETOUR_PADDING;
+            return [{ x: sx, y: sy }, { x: sx, y: detourY }, { x: tx, y: detourY }, { x: tx, y: ty }];
+        }
+        case 'top': {
+            const detourY = Math.min(sy, ty) - DETOUR_PADDING;
+            return [{ x: sx, y: sy }, { x: sx, y: detourY }, { x: tx, y: detourY }, { x: tx, y: ty }];
+        }
+    }
+}
+
+/** Adjacent sides: L-shape (2 segments) or Z-fallback (3 segments) */
+function routeAdjacent(
+    sx: number, sy: number, sSide: Side,
+    tx: number, ty: number, tSide: Side,
+    snap: number,
+): { x: number; y: number }[] {
+    const sourceHorizontal = (sSide === 'right' || sSide === 'left');
+
+    if (sourceHorizontal) {
+        // Source exits horizontally → first segment horizontal, second vertical
+        const goingRight = sSide === 'right';
+        const targetInDirection = goingRight ? (tx >= sx) : (tx <= sx);
+
+        // Also check target entry direction
+        const tGoingDown = tSide === 'bottom';
+        const sourceInTargetDirection = tGoingDown ? (sy >= ty) : (sy <= ty);
+
+        if (targetInDirection && sourceInTargetDirection) {
+            // Clean L-shape: bend at (tx, sy)
+            // Snap if nearly aligned
+            if (Math.abs(sy - ty) < snap) {
+                const avgY = (sy + ty) / 2;
+                return [{ x: sx, y: avgY }, { x: tx, y: avgY }];
+            }
+            if (Math.abs(sx - tx) < snap) {
+                const avgX = (sx + tx) / 2;
+                return [{ x: avgX, y: sy }, { x: avgX, y: ty }];
+            }
+            return [{ x: sx, y: sy }, { x: tx, y: sy }, { x: tx, y: ty }];
+        } else {
+            // Z-fallback: 3 segments with midpoint
+            const midX = (sx + tx) / 2;
+            return [
+                { x: sx, y: sy },
+                { x: midX, y: sy },
+                { x: midX, y: ty },
+                { x: tx, y: ty },
+            ];
+        }
+    } else {
+        // Source exits vertically → first segment vertical, second horizontal
+        const goingDown = sSide === 'bottom';
+        const targetInDirection = goingDown ? (ty >= sy) : (ty <= sy);
+
+        // Check target entry direction
+        const tGoingRight = tSide === 'right';
+        const sourceInTargetDirection = tGoingRight ? (sx >= tx) : (sx <= tx);
+
+        if (targetInDirection && sourceInTargetDirection) {
+            // Clean L-shape: bend at (sx, ty)
+            if (Math.abs(sx - tx) < snap) {
+                const avgX = (sx + tx) / 2;
+                return [{ x: avgX, y: sy }, { x: avgX, y: ty }];
+            }
+            if (Math.abs(sy - ty) < snap) {
+                const avgY = (sy + ty) / 2;
+                return [{ x: sx, y: avgY }, { x: tx, y: avgY }];
+            }
+            return [{ x: sx, y: sy }, { x: sx, y: ty }, { x: tx, y: ty }];
+        } else {
+            // Z-fallback: 3 segments with midpoint
+            const midY = (sy + ty) / 2;
+            return [
+                { x: sx, y: sy },
+                { x: sx, y: midY },
+                { x: tx, y: midY },
+                { x: tx, y: ty },
+            ];
+        }
+    }
 }
 
 // ============================================
@@ -710,127 +824,120 @@ export function pointsToPath(points: { x: number; y: number }[]): string {
 }
 
 // ============================================
-// Port Distribution — indexed handle assignment
+// Port Distribution — delegates to shared portDistribution.ts
 // ============================================
 
-/**
- * Extracts the base side from a handle ID.
- * "right" -> "right", "right-0" -> "right", "bottom-1" -> "bottom"
- */
-function getBaseSide(handleId: string | null | undefined): Side {
-    if (!handleId) return 'right';
-    const base = handleId.split('-')[0];
-    if (['top', 'right', 'bottom', 'left'].includes(base)) return base as Side;
-    return 'right';
-}
-
-interface MinimalEdge {
-    id: string;
-    source: string;
-    target: string;
-    type?: string;
-    sourceHandle?: string | null;
-    targetHandle?: string | null;
-}
+import { computePortDistribution, type NodePosition } from './portDistribution';
 
 /**
- * Assigns indexed handle IDs to edges based on port sharing rules.
- *
- * Mirrors the grouping logic of DynamicHandles.tsx exactly so that the
- * handle IDs on edges match the Handle elements rendered in the DOM.
- *
- * Rules:
- * - Inheritance targets on the same (node, side) share ONE port (fan-in)
- * - Everything else (sources, reference targets) gets its own port
- * - When multiple ports share a side, they get indexed IDs: "right-0", "right-1", etc.
- * - Single ports keep the plain side name: "right"
+ * Wrapper: computes distributed (indexed) handle IDs for edges.
+ * Delegates to the shared computePortDistribution which is also used by DynamicHandles.
  */
 export function computeDistributedHandles(
-    edges: MinimalEdge[],
+    edges: { id: string; source: string; target: string; type?: string; sourceHandle?: string | null; targetHandle?: string | null }[],
+    nodePositions?: Map<string, NodePosition>,
 ): Map<string, { sourceHandle: string; targetHandle: string }> {
-    // Collect all unique node IDs
-    const nodeIds = new Set<string>();
+    const nodeIdSet = new Set<string>();
     for (const e of edges) {
-        nodeIds.add(e.source);
-        nodeIds.add(e.target);
+        nodeIdSet.add(e.source);
+        nodeIdSet.add(e.target);
+    }
+    const { edgeHandles } = computePortDistribution(edges, Array.from(nodeIdSet), nodePositions);
+    return edgeHandles;
+}
+
+// ============================================
+// Tree Connector — shared rendering for inheritance fan-in
+// ============================================
+
+export interface TreeBranch {
+    /** Center X of child node's top (or bottom) handle */
+    childX: number;
+    /** Y coordinate of child node's source handle */
+    childY: number;
+    /** Edge ID for this branch */
+    edgeId: string;
+}
+
+export interface TreeConnectorGeometry {
+    /** Path from bar up to parent — gets markerEnd triangle */
+    trunkPath: string;
+    /** Horizontal bar + vertical branches to children — no marker */
+    barAndBranchesPath: string;
+    /** Per-edge hit-test paths (edgeId → L-shaped route from trunk junction to child) */
+    branchPaths: Map<string, string>;
+}
+
+/**
+ * Computes the geometry of a tree connector for inheritance edges.
+ *
+ * Layout (parent above children — standard UML):
+ *   parentX, parentY (bottom center of parent)
+ *       │  trunk
+ *   ────┼────  bar (horizontal, at barY)
+ *   │       │  branches (vertical, to child tops)
+ *   C1      C2
+ *
+ * @param parentX - X of the parent's target handle (bottom center)
+ * @param parentY - Y of the parent's target handle (bottom edge)
+ * @param branches - Array of child positions and edge IDs
+ */
+export function computeTreeConnectorPath(
+    parentX: number,
+    parentY: number,
+    branches: TreeBranch[],
+): TreeConnectorGeometry {
+    const empty: TreeConnectorGeometry = {
+        trunkPath: '',
+        barAndBranchesPath: '',
+        branchPaths: new Map(),
+    };
+
+    if (branches.length === 0) return empty;
+
+    const sorted = [...branches].sort((a, b) => a.childX - b.childX);
+
+    // barY = midpoint between parent handle and closest child handle
+    const closestChildY = Math.min(...sorted.map(b => b.childY));
+    const barY = parentY + (closestChildY - parentY) / 2;
+
+    // Single child: straight line (no bar needed)
+    if (sorted.length === 1) {
+        const child = sorted[0];
+        // Path from child to parent (markerEnd at parent)
+        const trunkPath = `M ${child.childX} ${child.childY} L ${parentX} ${parentY}`;
+        const branchPaths = new Map<string, string>();
+        branchPaths.set(child.edgeId, trunkPath);
+        return { trunkPath, barAndBranchesPath: '', branchPaths };
     }
 
-    // Per-edge handle assignments
-    const sourceHandleMap = new Map<string, string>();
-    const targetHandleMap = new Map<string, string>();
+    // Multi-child: trunk + bar + branches
+    const leftX = sorted[0].childX;
+    const rightX = sorted[sorted.length - 1].childX;
 
-    // For each node, replicate DynamicHandles' computeNodeHandles logic
-    for (const nodeId of nodeIds) {
-        const sideGroups: Record<Side, Map<string, { edgeIds: string[]; role: 'source' | 'target' }>> = {
-            top: new Map(), right: new Map(), bottom: new Map(), left: new Map(),
-        };
+    // Extend bar to include parentX if it falls outside the child range
+    const barLeftX = Math.min(leftX, parentX);
+    const barRightX = Math.max(rightX, parentX);
 
-        // Iterate edges in array order (same order as DynamicHandles sees via useEdges)
-        for (const edge of edges) {
-            const edgeType = edge.type || 'reference';
+    // Trunk: from bar up to parent (markerEnd will be placed at the parent end)
+    const trunkPath = `M ${parentX} ${barY} L ${parentX} ${parentY}`;
 
-            // As source
-            if (edge.source === nodeId) {
-                const side = getBaseSide(edge.sourceHandle);
-                sideGroups[side].set(`source:${edge.id}`, {
-                    edgeIds: [edge.id],
-                    role: 'source',
-                });
-            }
+    // Bar (horizontal) + branches (vertical drops to each child)
+    let barAndBranches = `M ${barLeftX} ${barY} L ${barRightX} ${barY}`;
 
-            // As target
-            if (edge.target === nodeId) {
-                const side = getBaseSide(edge.targetHandle);
+    const branchPaths = new Map<string, string>();
+    for (const child of sorted) {
+        // Vertical branch from bar down to child
+        barAndBranches += ` M ${child.childX} ${barY} L ${child.childX} ${child.childY}`;
 
-                if (edgeType === 'inheritance') {
-                    // Inheritance fan-in: merge into single group
-                    const existing = sideGroups[side].get('target:inheritance');
-                    if (existing) {
-                        existing.edgeIds.push(edge.id);
-                    } else {
-                        sideGroups[side].set('target:inheritance', {
-                            edgeIds: [edge.id],
-                            role: 'target',
-                        });
-                    }
-                } else {
-                    // Reference: each edge gets its own port
-                    sideGroups[side].set(`target:${edge.id}`, {
-                        edgeIds: [edge.id],
-                        role: 'target',
-                    });
-                }
-            }
-        }
-
-        // Assign indexed handle IDs per side
-        for (const side of ['top', 'right', 'bottom', 'left'] as Side[]) {
-            const groups = Array.from(sideGroups[side].values());
-            if (groups.length === 0) continue;
-
-            const totalPorts = groups.length;
-            groups.forEach((group, index) => {
-                const handleId = totalPorts > 1 ? `${side}-${index}` : side;
-                for (const edgeId of group.edgeIds) {
-                    if (group.role === 'source') {
-                        sourceHandleMap.set(edgeId, handleId);
-                    } else {
-                        targetHandleMap.set(edgeId, handleId);
-                    }
-                }
-            });
-        }
+        // Hit-test path: L-shaped route from trunk junction through bar to this child
+        branchPaths.set(
+            child.edgeId,
+            `M ${parentX} ${barY} L ${child.childX} ${barY} L ${child.childX} ${child.childY}`,
+        );
     }
 
-    // Build result
-    const result = new Map<string, { sourceHandle: string; targetHandle: string }>();
-    for (const edge of edges) {
-        result.set(edge.id, {
-            sourceHandle: sourceHandleMap.get(edge.id) || getBaseSide(edge.sourceHandle),
-            targetHandle: targetHandleMap.get(edge.id) || getBaseSide(edge.targetHandle),
-        });
-    }
-    return result;
+    return { trunkPath, barAndBranchesPath: barAndBranches, branchPaths };
 }
 
 // ============================================

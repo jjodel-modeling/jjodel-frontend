@@ -1,5 +1,6 @@
 import { useCallback } from 'react';
 import { useNodes } from '@xyflow/react';
+import type { AnchorConfig, AnchorSide } from '../types';
 
 const SIDES = ['top', 'right', 'bottom', 'left'] as const;
 type Side = (typeof SIDES)[number];
@@ -11,12 +12,6 @@ interface NodeRect {
     height: number;
     centerX: number;
     centerY: number;
-}
-
-interface AnchorPoint {
-    x: number;
-    y: number;
-    side: Side;
 }
 
 /**
@@ -36,95 +31,6 @@ function getNodeRect(node: any): NodeRect {
         centerX: x + width / 2,
         centerY: y + height / 2,
     };
-}
-
-/**
- * Calculates the anchor points (exit/entry) for each side of a node.
- */
-function getAnchorPoints(rect: NodeRect): AnchorPoint[] {
-    return [
-        { x: rect.centerX, y: rect.y, side: 'top' },
-        { x: rect.x + rect.width, y: rect.centerY, side: 'right' },
-        { x: rect.centerX, y: rect.y + rect.height, side: 'bottom' },
-        { x: rect.x, y: rect.centerY, side: 'left' },
-    ];
-}
-
-/**
- * Checks if a line segment (approximated by midpoint) passes through a rectangle.
- */
-function segmentIntersectsRect(
-    p1: { x: number; y: number },
-    p2: { x: number; y: number },
-    rect: NodeRect
-): boolean {
-    // Check if the midpoint of the segment is inside the rectangle
-    const midX = (p1.x + p2.x) / 2;
-    const midY = (p1.y + p2.y) / 2;
-
-    const margin = 5;
-    return (
-        midX > rect.x - margin &&
-        midX < rect.x + rect.width + margin &&
-        midY > rect.y - margin &&
-        midY < rect.y + rect.height + margin
-    );
-}
-
-/**
- * Estimates the length of a Manhattan path between two anchor points.
- * Uses heuristics (penalties/bonuses) instead of computing the actual path.
- *
- * @param sourcePoint - The source anchor point
- * @param targetPoint - The target anchor point
- * @param sourceRect - The source node rectangle
- * @param targetRect - The target node rectangle
- * @returns Estimated path length (lower is better)
- */
-function estimatePathLength(
-    sourcePoint: AnchorPoint,
-    targetPoint: AnchorPoint,
-    sourceRect: NodeRect,
-    targetRect: NodeRect
-): number {
-    const dx = targetPoint.x - sourcePoint.x;
-    const dy = targetPoint.y - sourcePoint.y;
-
-    // Base Manhattan distance
-    let length = Math.abs(dx) + Math.abs(dy);
-
-    const PENALTY = 200;
-
-    // Source penalties - penalize exiting in a direction opposite to target
-    if (sourcePoint.side === 'right' && dx < 0) length += PENALTY; // exit right but target is left
-    if (sourcePoint.side === 'left' && dx > 0) length += PENALTY; // exit left but target is right
-    if (sourcePoint.side === 'bottom' && dy < 0) length += PENALTY; // exit bottom but target is above
-    if (sourcePoint.side === 'top' && dy > 0) length += PENALTY; // exit top but target is below
-
-    // Target penalties - penalize arriving from wrong direction
-    if (targetPoint.side === 'left' && dx < 0) length += PENALTY; // arrive from left but source is left
-    if (targetPoint.side === 'right' && dx > 0) length += PENALTY; // arrive from right but source is right
-    if (targetPoint.side === 'top' && dy < 0) length += PENALTY; // arrive from top but source is above
-    if (targetPoint.side === 'bottom' && dy > 0) length += PENALTY; // arrive from bottom but source is below
-
-    // Penalize if path would pass through either node
-    if (segmentIntersectsRect(sourcePoint, targetPoint, sourceRect)) length += PENALTY;
-    if (segmentIntersectsRect(sourcePoint, targetPoint, targetRect)) length += PENALTY;
-
-    // Light penalty for same-side combinations (produces U-shaped paths)
-    if (sourcePoint.side === targetPoint.side) length += 50;
-
-    // Bonus for opposite sides (produces direct paths)
-    if (
-        (sourcePoint.side === 'right' && targetPoint.side === 'left') ||
-        (sourcePoint.side === 'left' && targetPoint.side === 'right') ||
-        (sourcePoint.side === 'top' && targetPoint.side === 'bottom') ||
-        (sourcePoint.side === 'bottom' && targetPoint.side === 'top')
-    ) {
-        length -= 30;
-    }
-
-    return length;
 }
 
 /**
@@ -213,56 +119,270 @@ function deconflictBidirectionalEdges(
     return result;
 }
 
+// Angular dead-zone thresholds (radians)
+const DEG_30 = Math.PI / 6;
+const DEG_60 = Math.PI / 3;
+
 /**
- * Computes the best anchor pair by testing all 16 combinations.
+ * Computes the best anchor pair using angular dead-zone logic.
+ *
+ * - Overlap on X axis → force vertical routing
+ * - Overlap on Y axis → force horizontal routing
+ * - angle < 30° → strongly horizontal
+ * - angle > 60° → strongly vertical
+ * - 30°–60° (dead zone) → keep current sides if available, else nearest-side
  *
  * @param sourceRect - The source node rectangle
  * @param targetRect - The target node rectangle
  * @param isSelfReference - Whether this is a self-referencing edge
- * @param edgeType - Optional edge type for semantic preferences ('inheritance' | 'reference')
- * @returns The optimal source and target handle IDs
+ * @param edgeType - Optional edge type for semantic preferences
+ * @param currentSourceSide - Current source side (for dead-zone retention)
+ * @param currentTargetSide - Current target side (for dead-zone retention)
  */
 function computeBestAnchors(
     sourceRect: NodeRect,
     targetRect: NodeRect,
     isSelfReference: boolean,
-    edgeType?: 'inheritance' | 'reference'
+    edgeType?: 'inheritance' | 'reference',
+    currentSourceSide?: Side,
+    currentTargetSide?: Side,
 ): { sourceHandle: string; targetHandle: string } {
-    // Self-reference: use fixed handles for compact loop
+    // Self-reference: fixed handles for compact loop
     if (isSelfReference) {
         return { sourceHandle: 'right', targetHandle: 'top' };
     }
 
-    const sourceAnchors = getAnchorPoints(sourceRect);
-    const targetAnchors = getAnchorPoints(targetRect);
+    // Inheritance: semantic vertical ports (UML convention)
+    if (edgeType === 'inheritance') {
+        const dy = targetRect.centerY - sourceRect.centerY;
+        if (dy < 0) {
+            return { sourceHandle: 'top', targetHandle: 'bottom' };
+        } else {
+            return { sourceHandle: 'bottom', targetHandle: 'top' };
+        }
+    }
 
-    let bestScore = Infinity;
-    let bestSource: Side = 'right';
-    let bestTarget: Side = 'left';
+    // Reference: angular dead-zone approach
+    const dx = targetRect.centerX - sourceRect.centerX;
+    const dy = targetRect.centerY - sourceRect.centerY;
 
-    // Inheritance preference bonus - strongly prefer top→bottom for subclass→superclass
-    const INHERITANCE_BONUS = 150;
+    // Overlap detection: do the node projections overlap on each axis?
+    const overlapX = !(sourceRect.x + sourceRect.width < targetRect.x ||
+                       targetRect.x + targetRect.width < sourceRect.x);
+    const overlapY = !(sourceRect.y + sourceRect.height < targetRect.y ||
+                       targetRect.y + targetRect.height < sourceRect.y);
 
-    // Test all 16 combinations
-    for (const sa of sourceAnchors) {
-        for (const ta of targetAnchors) {
-            let score = estimatePathLength(sa, ta, sourceRect, targetRect);
+    // Nodes overlap on X → force vertical
+    if (overlapX && !overlapY) {
+        if (dy > 0) return { sourceHandle: 'bottom', targetHandle: 'top' };
+        return { sourceHandle: 'top', targetHandle: 'bottom' };
+    }
 
-            // For inheritance edges, prefer source=top, target=bottom
-            if (edgeType === 'inheritance') {
-                if (sa.side === 'top') score -= INHERITANCE_BONUS;
-                if (ta.side === 'bottom') score -= INHERITANCE_BONUS;
-            }
+    // Nodes overlap on Y → force horizontal
+    if (overlapY && !overlapX) {
+        if (dx > 0) return { sourceHandle: 'right', targetHandle: 'left' };
+        return { sourceHandle: 'left', targetHandle: 'right' };
+    }
 
-            if (score < bestScore) {
-                bestScore = score;
-                bestSource = sa.side;
-                bestTarget = ta.side;
+    // Angular classification
+    const angle = Math.atan2(Math.abs(dy), Math.abs(dx));
+
+    let sourceSide: Side;
+    let targetSide: Side;
+
+    if (angle < DEG_30) {
+        // Strongly horizontal
+        sourceSide = dx > 0 ? 'right' : 'left';
+        targetSide = dx > 0 ? 'left' : 'right';
+    } else if (angle > DEG_60) {
+        // Strongly vertical
+        sourceSide = dy > 0 ? 'bottom' : 'top';
+        targetSide = dy > 0 ? 'top' : 'bottom';
+    } else {
+        // Dead zone (30°–60°): keep current if available
+        if (currentSourceSide && currentTargetSide) {
+            sourceSide = currentSourceSide;
+            targetSide = currentTargetSide;
+        } else {
+            // No prior state — use nearest-side
+            if (Math.abs(dx) >= Math.abs(dy)) {
+                sourceSide = dx > 0 ? 'right' : 'left';
+                targetSide = dx > 0 ? 'left' : 'right';
+            } else {
+                sourceSide = dy > 0 ? 'bottom' : 'top';
+                targetSide = dy > 0 ? 'top' : 'bottom';
             }
         }
     }
 
-    return { sourceHandle: bestSource, targetHandle: bestTarget };
+    return { sourceHandle: sourceSide, targetHandle: targetSide };
+}
+
+/** Edge shape consumed by computeAnchorsWithHysteresis */
+interface MinimalEdgeWithData {
+    id: string;
+    source: string;
+    target: string;
+    type?: string;
+    sourceHandle?: string | null;
+    targetHandle?: string | null;
+    data?: {
+        sourceAnchor?: AnchorConfig;
+        targetAnchor?: AnchorConfig;
+        [key: string]: unknown;
+    };
+}
+
+/** Result shape returned per edge */
+interface AnchorResult {
+    sourceHandle: string;
+    targetHandle: string;
+    sourceAnchor: AnchorConfig;
+    targetAnchor: AnchorConfig;
+}
+
+/**
+ * Extracts the base side from a handle ID string.
+ * "right" → "right", "right-0" → "right", "bottom-1" → "bottom"
+ */
+function getBaseSide(handleId: string | null | undefined): Side {
+    if (!handleId) return 'right';
+    const base = handleId.split('-')[0];
+    if (SIDES.includes(base as Side)) return base as Side;
+    return 'right';
+}
+
+/**
+ * Reads anchor config from edge data with fallback for legacy edges.
+ */
+function getAnchorConfig(
+    edgeData: MinimalEdgeWithData['data'],
+    endpoint: 'source' | 'target',
+    handleId: string | null | undefined
+): AnchorConfig {
+    const config = endpoint === 'source' ? edgeData?.sourceAnchor : edgeData?.targetAnchor;
+    if (config) return config;
+    // Legacy fallback: derive from current handle
+    return { mode: 'auto', side: getBaseSide(handleId) as AnchorSide };
+}
+
+/**
+ * Computes anchors for all edges with hysteresis — only switches sides when
+ * the new side is significantly better (30% improvement threshold).
+ *
+ * Respects pinned anchors and applies bidirectional deconfliction.
+ */
+function computeAnchorsWithHysteresis(
+    edges: MinimalEdgeWithData[],
+    nodeRects: Map<string, NodeRect>
+): Map<string, AnchorResult> {
+    const result = new Map<string, AnchorResult>();
+
+    // First pass: compute anchors per edge with hysteresis
+    const edgesWithAnchors: Array<MinimalEdgeWithData & { sourceHandle: string; targetHandle: string }> = [];
+
+    for (const edge of edges) {
+        const sourceRect = nodeRects.get(edge.source);
+        const targetRect = nodeRects.get(edge.target);
+
+        if (!sourceRect || !targetRect) {
+            const fallback: AnchorResult = {
+                sourceHandle: 'right', targetHandle: 'left',
+                sourceAnchor: { mode: 'auto', side: 'right' },
+                targetAnchor: { mode: 'auto', side: 'left' },
+            };
+            result.set(edge.id, fallback);
+            edgesWithAnchors.push({ ...edge, sourceHandle: 'right', targetHandle: 'left' });
+            continue;
+        }
+
+        const isSelfReference = edge.source === edge.target;
+        const currentSource = getAnchorConfig(edge.data, 'source', edge.sourceHandle);
+        const currentTarget = getAnchorConfig(edge.data, 'target', edge.targetHandle);
+
+        // Self-reference: fixed handles
+        if (isSelfReference) {
+            const r: AnchorResult = {
+                sourceHandle: 'right', targetHandle: 'top',
+                sourceAnchor: { mode: 'auto', side: 'right' },
+                targetAnchor: { mode: 'auto', side: 'top' },
+            };
+            result.set(edge.id, r);
+            edgesWithAnchors.push({ ...edge, sourceHandle: 'right', targetHandle: 'top' });
+            continue;
+        }
+
+        // Both pinned: keep as-is
+        if (currentSource.mode === 'pinned' && currentTarget.mode === 'pinned') {
+            const r: AnchorResult = {
+                sourceHandle: currentSource.side, targetHandle: currentTarget.side,
+                sourceAnchor: currentSource, targetAnchor: currentTarget,
+            };
+            result.set(edge.id, r);
+            edgesWithAnchors.push({ ...edge, sourceHandle: currentSource.side, targetHandle: currentTarget.side });
+            continue;
+        }
+
+        // Inheritance: always vertical (semantic)
+        const edgeType = edge.type === 'inheritance' ? 'inheritance' : 'reference';
+        if (edgeType === 'inheritance') {
+            const dy = targetRect.centerY - sourceRect.centerY;
+            const sh: AnchorSide = dy < 0 ? 'top' : 'bottom';
+            const th: AnchorSide = dy < 0 ? 'bottom' : 'top';
+            const r: AnchorResult = {
+                sourceHandle: sh, targetHandle: th,
+                sourceAnchor: { mode: 'auto', side: sh },
+                targetAnchor: { mode: 'auto', side: th },
+            };
+            result.set(edge.id, r);
+            edgesWithAnchors.push({ ...edge, sourceHandle: sh, targetHandle: th });
+            continue;
+        }
+
+        // Reference with at least one auto side: compute best with dead-zone
+        // Pass current sides so the dead-zone (30°–60°) retains them
+        const currentSrcSide = currentSource.mode === 'pinned' ? undefined : currentSource.side as Side;
+        const currentTgtSide = currentTarget.mode === 'pinned' ? undefined : currentTarget.side as Side;
+        const best = computeBestAnchors(
+            sourceRect, targetRect, false, 'reference',
+            currentSrcSide, currentTgtSide,
+        );
+
+        // Respect pinning per-endpoint
+        const finalSourceSide: AnchorSide = currentSource.mode === 'pinned'
+            ? currentSource.side
+            : best.sourceHandle as AnchorSide;
+        const finalTargetSide: AnchorSide = currentTarget.mode === 'pinned'
+            ? currentTarget.side
+            : best.targetHandle as AnchorSide;
+
+        const r: AnchorResult = {
+            sourceHandle: finalSourceSide,
+            targetHandle: finalTargetSide,
+            sourceAnchor: { mode: currentSource.mode, side: finalSourceSide },
+            targetAnchor: { mode: currentTarget.mode, side: finalTargetSide },
+        };
+        result.set(edge.id, r);
+        edgesWithAnchors.push({ ...edge, sourceHandle: finalSourceSide, targetHandle: finalTargetSide });
+    }
+
+    // Second pass: bidirectional deconfliction
+    const deconflicted = deconflictBidirectionalEdges(edgesWithAnchors, nodeRects);
+
+    // Merge deconfliction results — update handle IDs and anchor sides
+    for (const [edgeId, adjusted] of deconflicted) {
+        const existing = result.get(edgeId);
+        if (existing) {
+            result.set(edgeId, {
+                sourceHandle: adjusted.sourceHandle,
+                targetHandle: adjusted.targetHandle,
+                sourceAnchor: { mode: existing.sourceAnchor.mode, side: adjusted.sourceHandle as AnchorSide },
+                targetAnchor: { mode: existing.targetAnchor.mode, side: adjusted.targetHandle as AnchorSide },
+            });
+        }
+    }
+
+    return result;
 }
 
 /**
@@ -350,5 +470,5 @@ export function useAutoAnchor() {
     return { getOptimalAnchors, getOptimalAnchorsForAllEdges };
 }
 
-export { computeBestAnchors, getNodeRect };
-export type { NodeRect, Side };
+export { computeBestAnchors, getNodeRect, computeAnchorsWithHysteresis, getAnchorConfig };
+export type { NodeRect, Side, MinimalEdgeWithData, AnchorResult };

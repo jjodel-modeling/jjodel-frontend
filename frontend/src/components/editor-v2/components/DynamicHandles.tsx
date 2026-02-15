@@ -1,19 +1,17 @@
-import { Handle, Position, useEdges, type Node as RFNode } from '@xyflow/react';
-import { useMemo } from 'react';
+import React from 'react';
+import { Handle, Position, useEdges, useNodes, useUpdateNodeInternals } from '@xyflow/react';
+import { useMemo, useEffect } from 'react';
+import { computePortDistribution, type Side } from '../utils/portDistribution';
 
-type Side = 'top' | 'right' | 'bottom' | 'left';
-type EdgeType = 'reference' | 'inheritance';
-
-interface PortInfo {
-    handleId: string;
-    position: number; // 0-1 along the side
-}
+const MAX_HANDLES_PER_SIDE = 4;
+const SIDES: readonly Side[] = ['top', 'right', 'bottom', 'left'];
 
 interface DynamicHandlesProps {
     nodeId: string;
+    maxHandlesPerSide?: number;
 }
 
-const POSITION_MAP: Record<Side, Position> = {
+const SIDE_TO_POSITION: Record<Side, Position> = {
     top: Position.Top,
     right: Position.Right,
     bottom: Position.Bottom,
@@ -21,162 +19,100 @@ const POSITION_MAP: Record<Side, Position> = {
 };
 
 /**
- * Extracts the base side from a handle ID.
+ * Pre-allocated Handle Pool for React Flow nodes.
+ *
+ * Renders MAX_HANDLES_PER_SIDE handles per side (both source and target types),
+ * always present in the DOM. Active handles (connected to edges) are positioned
+ * and visible; inactive handles are invisible but registered in React Flow.
+ *
+ * This eliminates the chicken-and-egg problem where edges referencing indexed
+ * handles (e.g. right-1) would fail because the handle didn't exist yet.
  */
-function getBaseSide(handleId: string | null | undefined): Side {
-    if (!handleId) return 'right';
-    const base = handleId.split('-')[0];
-    if (['top', 'right', 'bottom', 'left'].includes(base)) {
-        return base as Side;
-    }
-    return 'right';
-}
+function DynamicHandles({ nodeId, maxHandlesPerSide = MAX_HANDLES_PER_SIDE }: DynamicHandlesProps) {
+    const edges = useEdges();
+    const nodes = useNodes();
+    const updateNodeInternals = useUpdateNodeInternals();
 
-/**
- * Computes required handles for a node based on connected edges.
- */
-function computeNodeHandles(nodeId: string, edges: any[]): Record<Side, PortInfo[]> {
-    const sideGroups: Record<Side, Map<string, { edgeIds: string[]; edgeType: EdgeType; role: 'source' | 'target' }>> = {
-        top: new Map(),
-        right: new Map(),
-        bottom: new Map(),
-        left: new Map(),
-    };
-
-    // Collect all edges connected to this node
-    for (const edge of edges) {
-        const edgeType = (edge.type as EdgeType) || 'reference';
-
-        // As source
-        if (edge.source === nodeId) {
-            const side = getBaseSide(edge.sourceHandle);
-            const key = `source:${edge.id}`;
-            sideGroups[side].set(key, {
-                edgeIds: [edge.id],
-                edgeType,
-                role: 'source',
+    const nodePositions = useMemo(() => {
+        const map = new Map<string, { centerX: number; centerY: number }>();
+        for (const n of nodes) {
+            const w = (n.measured?.width ?? (n as any).width ?? 180) as number;
+            const h = (n.measured?.height ?? (n as any).height ?? 80) as number;
+            map.set(n.id, {
+                centerX: n.position.x + w / 2,
+                centerY: n.position.y + h / 2,
             });
         }
+        return map;
+    }, [nodes]);
 
-        // As target
-        if (edge.target === nodeId) {
-            const side = getBaseSide(edge.targetHandle);
+    // Compute which handles are active (connected to edges) and their positions (0–1)
+    const activeHandles = useMemo(() => {
+        const allNodeIds = nodes.map(n => n.id);
+        const { nodeHandles } = computePortDistribution(edges, allNodeIds, nodePositions);
+        const config = nodeHandles.get(nodeId);
 
-            if (edgeType === 'inheritance') {
-                // Inheritance fan-in: merge into single group
-                const inhKey = 'target:inheritance';
-                const existing = sideGroups[side].get(inhKey);
-                if (existing) {
-                    existing.edgeIds.push(edge.id);
-                } else {
-                    sideGroups[side].set(inhKey, {
-                        edgeIds: [edge.id],
-                        edgeType: 'inheritance',
-                        role: 'target',
-                    });
+        const active = new Map<string, number>();
+        if (config) {
+            for (const side of SIDES) {
+                for (const port of config[side]) {
+                    active.set(port.handleId, port.position);
                 }
-            } else {
-                // Reference: each edge gets its own port
-                const key = `target:${edge.id}`;
-                sideGroups[side].set(key, {
-                    edgeIds: [edge.id],
-                    edgeType,
-                    role: 'target',
-                });
             }
         }
-    }
+        return active;
+    }, [edges, nodes, nodePositions, nodeId]);
 
-    // Convert to port info
-    const result: Record<Side, PortInfo[]> = {
-        top: [],
-        right: [],
-        bottom: [],
-        left: [],
-    };
+    // Serialize active handle positions to detect changes
+    const activeHandlesKey = useMemo(() => {
+        const entries = Array.from(activeHandles.entries()).sort(([a], [b]) => a.localeCompare(b));
+        return entries.map(([id, pos]) => `${id}:${pos}`).join(',');
+    }, [activeHandles]);
 
-    for (const side of ['top', 'right', 'bottom', 'left'] as Side[]) {
-        const groups = Array.from(sideGroups[side].values());
-        const totalPorts = Math.max(1, groups.length);
-
-        if (groups.length === 0) {
-            // Always have at least the default handle
-            result[side].push({ handleId: side, position: 0.5 });
-        } else {
-            groups.forEach((group, index) => {
-                const handleId = totalPorts > 1 ? `${side}-${index}` : side;
-                const position = totalPorts === 1
-                    ? 0.5
-                    : 0.25 + (0.5 * index) / (totalPorts - 1);
-                result[side].push({ handleId, position });
-            });
-        }
-    }
-
-    return result;
-}
-
-/**
- * Component that renders dynamic handles for a node.
- * Handles are distributed based on connected edges.
- */
-function DynamicHandles({ nodeId }: DynamicHandlesProps) {
-    const edges = useEdges();
-
-    const handleConfig = useMemo(
-        () => computeNodeHandles(nodeId, edges),
-        [nodeId, edges]
-    );
+    // Force React Flow to re-read handle DOM positions when they change.
+    // React Flow caches handle bounds on mount and only updates when
+    // position/id/type props change — NOT when style changes.
+    useEffect(() => {
+        updateNodeInternals(nodeId);
+    }, [activeHandlesKey, nodeId, updateNodeInternals]);
 
     return (
         <>
-            {/* Top handles */}
-            {handleConfig.top.map((port) => (
-                <Handle
-                    key={port.handleId}
-                    type="source"
-                    position={Position.Top}
-                    id={port.handleId}
-                    className="mm-anchor"
-                    style={{ left: `${port.position * 100}%` }}
-                />
-            ))}
+            {SIDES.flatMap(side =>
+                Array.from({ length: maxHandlesPerSide }, (_, index) => {
+                    const handleId = `${side}-${index}`;
+                    const position = activeHandles.get(handleId);
+                    const isActive = position !== undefined;
 
-            {/* Right handles */}
-            {handleConfig.right.map((port) => (
-                <Handle
-                    key={port.handleId}
-                    type="source"
-                    position={Position.Right}
-                    id={port.handleId}
-                    className="mm-anchor"
-                    style={{ top: `${port.position * 100}%` }}
-                />
-            ))}
+                    const positionProp = side === 'left' || side === 'right' ? 'top' : 'left';
+                    const style: React.CSSProperties = isActive
+                        ? { [positionProp]: `${position * 100}%` }
+                        : {};
 
-            {/* Bottom handles */}
-            {handleConfig.bottom.map((port) => (
-                <Handle
-                    key={port.handleId}
-                    type="source"
-                    position={Position.Bottom}
-                    id={port.handleId}
-                    className="mm-anchor"
-                    style={{ left: `${port.position * 100}%` }}
-                />
-            ))}
+                    const className = isActive ? 'mm-anchor' : 'mm-anchor--pool';
 
-            {/* Left handles */}
-            {handleConfig.left.map((port) => (
-                <Handle
-                    key={port.handleId}
-                    type="source"
-                    position={Position.Left}
-                    id={port.handleId}
-                    className="mm-anchor"
-                    style={{ top: `${port.position * 100}%` }}
-                />
-            ))}
+                    return (
+                        <React.Fragment key={handleId}>
+                            <Handle
+                                type="target"
+                                position={SIDE_TO_POSITION[side]}
+                                id={handleId}
+                                className={className}
+                                style={style}
+                                isConnectableStart={false}
+                            />
+                            <Handle
+                                type="source"
+                                position={SIDE_TO_POSITION[side]}
+                                id={handleId}
+                                className={className}
+                                style={style}
+                                isConnectableEnd={false}
+                            />
+                        </React.Fragment>
+                    );
+                })
+            )}
         </>
     );
 }

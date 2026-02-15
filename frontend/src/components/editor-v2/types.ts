@@ -86,16 +86,29 @@ export interface EdgeWaypoint {
     offset: number;        // offset in pixels from auto-calculated position
 }
 
+// === Anchor Config ===
+export type AnchorSide = 'top' | 'right' | 'bottom' | 'left';
+export type AnchorMode = 'auto' | 'pinned';
+
+export interface AnchorConfig {
+    mode: AnchorMode;
+    side: AnchorSide;
+}
+
 // === Edge Data ===
 export interface ReferenceEdgeData {
     reference: MetaReference;
     waypoints?: EdgeWaypoint[];
+    sourceAnchor?: AnchorConfig;
+    targetAnchor?: AnchorConfig;
     [key: string]: unknown;
 }
 
 export interface InheritanceEdgeData {
     // No additional data — inheritance is just source → target
     waypoints?: EdgeWaypoint[];
+    sourceAnchor?: AnchorConfig;
+    targetAnchor?: AnchorConfig;
     [key: string]: unknown;
 }
 

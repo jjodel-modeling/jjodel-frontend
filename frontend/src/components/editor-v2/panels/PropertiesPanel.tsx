@@ -6,11 +6,15 @@ import type {
     EnumNodeData,
     PackageNodeData,
     ReferenceEdgeData,
+    InheritanceEdgeData,
     MetaAttribute,
     MetaLiteral,
     MetaReference,
     MetaOperation,
     ReferenceKind,
+    AnchorSide,
+    AnchorMode,
+    AnchorConfig,
 } from '../types';
 import { createAttribute, createLiteral, createReference, createOperation, formatCardinality, E_DATA_TYPES } from '../types';
 
@@ -140,6 +144,7 @@ function PropertiesPanel({
                 <aside className="properties-panel">
                     <InheritanceEdgeProperties
                         edge={selectedEdge}
+                        onEdgeChange={onEdgeChange}
                         onConvertToReference={onConvertToReference}
                     />
                 </aside>
@@ -622,14 +627,102 @@ function GenericNodeProperties({ node, onUpdate }: { node: Node; onUpdate: (id: 
     );
 }
 
+// === Anchor Selector ===
+function AnchorSelector({
+    label,
+    currentSide,
+    mode,
+    onChange,
+}: {
+    label: string;
+    currentSide: AnchorSide;
+    mode: AnchorMode;
+    onChange: (side: AnchorSide, mode: AnchorMode) => void;
+}) {
+    return (
+        <div className="anchor-selector">
+            <span className="anchor-selector__label">{label}</span>
+            <div className="anchor-selector__grid">
+                {/* Top */}
+                <div className="anchor-selector__cell anchor-selector__cell--top">
+                    <button
+                        className={`anchor-btn ${currentSide === 'top' ? 'active' : ''}`}
+                        onClick={() => onChange('top', 'pinned')}
+                        title="Top"
+                    >
+                        <i className="bi bi-arrow-up" />
+                    </button>
+                </div>
+                {/* Middle row: left, center, right */}
+                <div className="anchor-selector__cell anchor-selector__cell--left">
+                    <button
+                        className={`anchor-btn ${currentSide === 'left' ? 'active' : ''}`}
+                        onClick={() => onChange('left', 'pinned')}
+                        title="Left"
+                    >
+                        <i className="bi bi-arrow-left" />
+                    </button>
+                </div>
+                <div className="anchor-selector__cell anchor-selector__cell--center">
+                    <span className={`anchor-center ${mode === 'pinned' ? 'pinned' : ''}`}>
+                        {mode === 'pinned' ? <i className="bi bi-pin-fill" /> : 'A'}
+                    </span>
+                </div>
+                <div className="anchor-selector__cell anchor-selector__cell--right">
+                    <button
+                        className={`anchor-btn ${currentSide === 'right' ? 'active' : ''}`}
+                        onClick={() => onChange('right', 'pinned')}
+                        title="Right"
+                    >
+                        <i className="bi bi-arrow-right" />
+                    </button>
+                </div>
+                {/* Bottom */}
+                <div className="anchor-selector__cell anchor-selector__cell--bottom">
+                    <button
+                        className={`anchor-btn ${currentSide === 'bottom' ? 'active' : ''}`}
+                        onClick={() => onChange('bottom', 'pinned')}
+                        title="Bottom"
+                    >
+                        <i className="bi bi-arrow-down" />
+                    </button>
+                </div>
+            </div>
+            <button
+                className={`anchor-auto-btn ${mode === 'auto' ? 'active' : ''}`}
+                onClick={() => onChange(currentSide, 'auto')}
+            >
+                Auto
+            </button>
+        </div>
+    );
+}
+
 // === Inheritance Edge Properties ===
 function InheritanceEdgeProperties({
     edge,
+    onEdgeChange,
     onConvertToReference,
 }: {
     edge: Edge;
+    onEdgeChange: (edgeId: string, data: Partial<Edge>) => void;
     onConvertToReference?: (edgeId: string) => void;
 }) {
+    const edgeData = edge.data as InheritanceEdgeData | undefined;
+    const sourceAnchor: AnchorConfig = edgeData?.sourceAnchor || { mode: 'auto', side: (edge.sourceHandle || 'top') as AnchorSide };
+    const targetAnchor: AnchorConfig = edgeData?.targetAnchor || { mode: 'auto', side: (edge.targetHandle || 'bottom') as AnchorSide };
+
+    const handleAnchorChange = useCallback((endpoint: 'source' | 'target', side: AnchorSide, mode: AnchorMode) => {
+        const anchorKey = endpoint === 'source' ? 'sourceAnchor' : 'targetAnchor';
+        const handleKey = endpoint === 'source' ? 'sourceHandle' : 'targetHandle';
+        onEdgeChange(edge.id, {
+            [handleKey]: side,
+            data: {
+                ...edgeData,
+                [anchorKey]: { mode, side } as AnchorConfig,
+            },
+        });
+    }, [edge.id, edgeData, onEdgeChange]);
     return (
         <>
             <div className="properties-panel__header">
@@ -669,6 +762,23 @@ function InheritanceEdgeProperties({
                 <Section title="Semantics" defaultOpen={false}>
                     <div className="prop-info">
                         The child class inherits all attributes, operations, and references from the parent class.
+                    </div>
+                </Section>
+
+                <Section title="Anchors" defaultOpen={false}>
+                    <div className="prop-anchors-row">
+                        <AnchorSelector
+                            label="Source"
+                            currentSide={sourceAnchor.side}
+                            mode={sourceAnchor.mode}
+                            onChange={(side, mode) => handleAnchorChange('source', side, mode)}
+                        />
+                        <AnchorSelector
+                            label="Target"
+                            currentSide={targetAnchor.side}
+                            mode={targetAnchor.mode}
+                            onChange={(side, mode) => handleAnchorChange('target', side, mode)}
+                        />
                     </div>
                 </Section>
             </div>
@@ -736,6 +846,21 @@ function ReferenceEdgeProperties({
             data: { ...edgeData, reference: updatedRef } as ReferenceEdgeData,
         });
     };
+
+    const sourceAnchor: AnchorConfig = edgeData?.sourceAnchor || { mode: 'auto', side: (edge.sourceHandle || 'right') as AnchorSide };
+    const targetAnchor: AnchorConfig = edgeData?.targetAnchor || { mode: 'auto', side: (edge.targetHandle || 'left') as AnchorSide };
+
+    const handleAnchorChange = useCallback((endpoint: 'source' | 'target', side: AnchorSide, mode: AnchorMode) => {
+        const anchorKey = endpoint === 'source' ? 'sourceAnchor' : 'targetAnchor';
+        const handleKey = endpoint === 'source' ? 'sourceHandle' : 'targetHandle';
+        onUpdate(edge.id, {
+            [handleKey]: side,
+            data: {
+                ...edgeData,
+                [anchorKey]: { mode, side } as AnchorConfig,
+            },
+        });
+    }, [edge.id, edgeData, onUpdate]);
 
     return (
         <>
@@ -826,6 +951,23 @@ function ReferenceEdgeProperties({
                     </div>
                     <div className="prop-row">
                         <span className="prop-badge">target: {edge.target}</span>
+                    </div>
+                </Section>
+
+                <Section title="Anchors" defaultOpen={false}>
+                    <div className="prop-anchors-row">
+                        <AnchorSelector
+                            label="Source"
+                            currentSide={sourceAnchor.side}
+                            mode={sourceAnchor.mode}
+                            onChange={(side, mode) => handleAnchorChange('source', side, mode)}
+                        />
+                        <AnchorSelector
+                            label="Target"
+                            currentSide={targetAnchor.side}
+                            mode={targetAnchor.mode}
+                            onChange={(side, mode) => handleAnchorChange('target', side, mode)}
+                        />
                     </div>
                 </Section>
             </div>

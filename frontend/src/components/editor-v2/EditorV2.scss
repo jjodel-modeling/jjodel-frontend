@@ -521,6 +521,23 @@
     pointer-events: all !important;
 }
 
+// Pool handles — pre-allocated but inactive, always invisible
+.react-flow__handle.mm-anchor--pool,
+.mm-node:hover .react-flow__handle.mm-anchor--pool,
+.mm-node.selected .react-flow__handle.mm-anchor--pool,
+.react-flow__node.connecting .mm-anchor--pool,
+.react-flow.connecting .mm-anchor--pool,
+.react-flow.connecting .react-flow__node:hover .mm-anchor--pool {
+    opacity: 0 !important;
+    pointer-events: none !important;
+    width: 1px !important;
+    height: 1px !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    background: transparent !important;
+    border: none !important;
+}
+
 // ============================================
 // MM-NODE BASE STYLES (Compact Technical Style)
 // ============================================
@@ -533,7 +550,7 @@
     width: 100%;
     height: 100%;
     // overflow: hidden;
-    font-family: 'IBM Plex Mono', Monaco, Consolas, monospace;
+    font-family: 'Inter Variable', 'Inter', sans-serif;
     font-size: 13px;
     color: var(--text-primary);
     box-shadow: 0 1px 3px var(--node-shadow), 0 4px 12px var(--node-shadow-deep, rgba(0, 0, 0, 0.08));
@@ -613,7 +630,7 @@
         color: var(--stereotype-color, rgba(255, 255, 255, 0.6));
         letter-spacing: 0.02em;
         flex-shrink: 0;
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', system-ui, sans-serif;
+        font-family: 'Inter Variable', 'Inter', sans-serif;
     }
 
     // Name - editable
@@ -667,7 +684,7 @@
         color: var(--text-dim);
         padding: 4px 8px;
         font-style: italic;
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', system-ui, sans-serif;
+        font-family: 'Inter Variable', 'Inter', sans-serif;
     }
 
     // Package tab style header
@@ -1096,7 +1113,7 @@
 
     &__text {
         fill: var(--text-secondary);
-        font-family: 'IBM Plex Mono', Monaco, Consolas, monospace;
+        font-family: 'Inter Variable', 'Inter', sans-serif;
         font-size: 9px;
         text-anchor: middle;
         dominant-baseline: central;
@@ -1126,10 +1143,10 @@
 
 // Edge label text
 .edge-label__text {
-    font-family: 'IBM Plex Mono', Monaco, Consolas, monospace;
-    font-size: 10px;
+    font-family: 'Inter Variable', 'Inter', sans-serif;
+    font-size: 9px;
     color: var(--text-secondary);
-    background: var(--edge-label-bg);
+    //background: var(--edge-label-bg);
     padding: 1px 5px;
     border-radius: 3px;
     border: none;
@@ -1139,8 +1156,8 @@
 
 // Cardinality — naked text, no background
 .edge-cardinality {
-    font-family: 'IBM Plex Mono', Monaco, Consolas, monospace;
-    font-size: 10px;
+    font-family: 'Inter Variable', 'Inter', sans-serif;
+    font-size: 9px;
     font-weight: 500;
     color: var(--text-muted);
     background: none;
@@ -1152,6 +1169,8 @@
 
 .edge-label {
     pointer-events: all;
+    background-color: transparent!important;
+    border: none!important;
 
     &__text {
         cursor: default;
@@ -1168,11 +1187,11 @@
     }
 
     &__input {
-        font-family: 'IBM Plex Mono', Monaco, Consolas, monospace;
+        font-family: 'Inter Variable', 'Inter', sans-serif;
         background: var(--input-bg);
         border: 1px solid var(--accent);
         color: var(--input-text);
-        font-size: 10px;
+        font-size: 9px;
         padding: 1px 4px;
         border-radius: 2px;
         outline: none;
@@ -1186,7 +1205,7 @@
 }
 
 .manhattan-edge__label {
-    font-size: 11px;
+    font-size: 10px;
     color: var(--text-secondary);
     background: var(--edge-label-bg);
     padding: 2px 6px;
@@ -1195,7 +1214,7 @@
 }
 
 .react-flow__edge-text {
-    font-size: 11px;
+    font-size: 10px;
     fill: var(--text-muted);
 }
 
@@ -1509,7 +1528,7 @@
         appearance: none;
         width: 16px;
         height: 16px;
-        border: 1.5px solid var(--input-border);
+        border: 1.5px solid var(--border-strong, rgba(0, 0, 0, 0.35));
         border-radius: 4px;
         background: var(--input-bg);
         cursor: pointer;
@@ -1518,8 +1537,8 @@
         transition: all 0.15s;
 
         &:checked {
-            background: var(--accent);
-            border-color: var(--accent);
+            background: #334155;
+            border-color: #334155;
 
             &::after {
                 content: '';
@@ -1808,5 +1827,209 @@
         height: 1px;
         background: var(--border-subtle);
         margin: 3px 8px;
+    }
+}
+
+// ============================================
+// ANCHOR SELECTOR
+// ============================================
+
+.prop-anchors-row {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+}
+
+.anchor-selector {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+
+    &__label {
+        font-size: 11px;
+        font-weight: 600;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+    }
+
+    &__grid {
+        display: grid;
+        grid-template-columns: 28px 28px 28px;
+        grid-template-rows: 28px 28px 28px;
+        gap: 2px;
+    }
+
+    &__cell {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
+        &--top    { grid-column: 2; grid-row: 1; }
+        &--left   { grid-column: 1; grid-row: 2; }
+        &--center { grid-column: 2; grid-row: 2; }
+        &--right  { grid-column: 3; grid-row: 2; }
+        &--bottom { grid-column: 2; grid-row: 3; }
+    }
+}
+
+.anchor-btn {
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--border-subtle);
+    border-radius: 4px;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 12px;
+    padding: 0;
+    transition: all 0.12s;
+
+    &:hover {
+        background: var(--surface-hover);
+        color: var(--text-primary);
+        border-color: var(--border-color);
+    }
+
+    &.active {
+        background: rgba(14, 165, 233, 0.15);
+        border-color: #0ea5e9;
+        color: #0ea5e9;
+    }
+}
+
+.anchor-center {
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-muted);
+    border: 1px solid var(--border-subtle);
+    border-radius: 4px;
+    background: var(--surface-2);
+
+    &.pinned {
+        color: #0ea5e9;
+        border-color: rgba(14, 165, 233, 0.3);
+
+        i { font-size: 11px; }
+    }
+}
+
+.anchor-auto-btn {
+    font-size: 10px;
+    font-weight: 600;
+    padding: 2px 10px;
+    border: 1px solid var(--border-subtle);
+    border-radius: 3px;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.12s;
+
+    &:hover {
+        background: var(--surface-hover);
+        color: var(--text-primary);
+    }
+
+    &.active {
+        background: var(--surface-3);
+        color: var(--text-primary);
+        border-color: var(--border-color);
+    }
+}
+
+// ============================================
+// HEADER VARIANTS (switchable via body class from DevTools)
+//
+// Usage:  document.body.classList.add('header-variant-a')
+// Reset:  document.body.className = ''
+// No class on body → current default appearance
+// ============================================
+
+// --- Variant A: Current colors at reduced opacity (60%) ---
+body.header-variant-a {
+    // Dark theme
+    .editor-v2.theme-dark {
+        --class-header-bg: rgba(55, 88, 122, 0.6);           // #37587a @ 60%
+        --class-abstract-header-bg: rgba(62, 74, 90, 0.6);   // #3e4a5a @ 60%
+        --enum-header-bg: rgba(91, 74, 122, 0.6);            // #5b4a7a @ 60%
+        --package-header-bg: rgba(45, 58, 74, 0.6);          // #2d3a4a @ 60%
+    }
+    // Light theme
+    .editor-v2.theme-light {
+        --class-header-bg: rgba(123, 175, 212, 0.65);        // #7bafd4 @ 65%
+        --class-abstract-header-bg: rgba(168, 181, 196, 0.65); // #a8b5c4 @ 65%
+        --enum-header-bg: rgba(165, 149, 201, 0.65);         // #a595c9 @ 65%
+        --package-header-bg: rgba(216, 222, 230, 0.65);      // #d8dee6 @ 65%
+    }
+}
+
+// --- Variant B: White/light header with colored top border ---
+body.header-variant-b {
+    .mm-node__header {
+        border-top: 4px solid var(--variant-b-accent, #5b8fb9);
+    }
+
+    // Dark theme
+    .editor-v2.theme-dark {
+        --class-header-bg: #2d3a4a;
+        --class-abstract-header-bg: #2d3a4a;
+        --enum-header-bg: #2d3a4a;
+        --node-header-text: rgba(255, 255, 255, 0.85);
+        --stereotype-color: rgba(255, 255, 255, 0.5);
+
+        .mm-class .mm-node__header { --variant-b-accent: #5b8fb9; }
+        .mm-class.abstract .mm-node__header { --variant-b-accent: #94a3b8; }
+        .mm-enum .mm-node__header { --variant-b-accent: #8b7db8; }
+    }
+
+    // Light theme
+    .editor-v2.theme-light {
+        --class-header-bg: #f8fafc;
+        --class-abstract-header-bg: #f8fafc;
+        --enum-header-bg: #f8fafc;
+        --node-header-text: #334155;
+        --stereotype-color: #64748b;
+
+        .mm-class .mm-node__header { --variant-b-accent: #5b8fb9; }
+        .mm-class.abstract .mm-node__header { --variant-b-accent: #94a3b8; }
+        .mm-enum .mm-node__header { --variant-b-accent: #8b7db8; }
+    }
+}
+
+// --- Variant C: Pastel background with matching dark text ---
+body.header-variant-c {
+    // Dark theme — slightly muted pastels for dark mode
+    .editor-v2.theme-dark {
+        --class-header-bg: rgba(59, 130, 246, 0.2);          // blue tint
+        --class-abstract-header-bg: rgba(148, 163, 184, 0.2); // gray tint
+        --enum-header-bg: rgba(139, 92, 246, 0.2);           // purple tint
+        --node-header-text: rgba(255, 255, 255, 0.9);
+        --stereotype-color: rgba(255, 255, 255, 0.55);
+    }
+
+    // Light theme — true pastel backgrounds
+    .editor-v2.theme-light {
+        --class-header-bg: #dbeafe;
+        --class-abstract-header-bg: #e2e8f0;
+        --enum-header-bg: #ede9fe;
+        --node-header-text: #1e40af;
+        --stereotype-color: #6366f1;
+
+        .mm-class.abstract {
+            --node-header-text: #334155;
+            --stereotype-color: #64748b;
+        }
+        .mm-enum {
+            --node-header-text: #5b21b6;
+        }
     }
 }
