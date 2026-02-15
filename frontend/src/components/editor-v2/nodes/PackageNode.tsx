@@ -16,6 +16,16 @@ function PackageNode({ id, data, selected }: NodeProps<PackageNodeType>) {
         setName(data.label);
     }, [data.label]);
 
+    // Auto-edit mode for newly created nodes
+    useEffect(() => {
+        if (data.autoEdit) {
+            setEditing(true);
+            setNodes(nds => nds.map(n =>
+                n.id === id ? { ...n, data: { ...n.data, autoEdit: undefined } } : n
+            ));
+        }
+    }, [data.autoEdit, id, setNodes]);
+
     const commitName = useCallback(() => {
         setEditing(false);
         if (name !== data.label) {
@@ -61,6 +71,7 @@ function PackageNode({ id, data, selected }: NodeProps<PackageNodeType>) {
                         autoFocus
                         value={name}
                         onChange={(e) => setName(e.target.value)}
+                        onFocus={(e) => e.target.select()}
                         onBlur={commitName}
                         onKeyDown={handleKeyDown}
                     />

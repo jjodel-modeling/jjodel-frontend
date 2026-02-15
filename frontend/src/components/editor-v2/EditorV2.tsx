@@ -434,6 +434,7 @@ function EditorV2Inner() {
                             label: 'NewClass',
                             isAbstract: false,
                             attributes: [],
+                            autoEdit: true,
                         } as ClassNodeData,
                     };
                     break;
@@ -447,6 +448,7 @@ function EditorV2Inner() {
                             label: 'NewAbstractClass',
                             isAbstract: true,
                             attributes: [],
+                            autoEdit: true,
                         } as ClassNodeData,
                     };
                     break;
@@ -459,6 +461,7 @@ function EditorV2Inner() {
                         data: {
                             label: 'NewEnum',
                             literals: [],
+                            autoEdit: true,
                         } as EnumNodeData,
                     };
                     break;
@@ -471,6 +474,7 @@ function EditorV2Inner() {
                         style: { zIndex: -1 },
                         data: {
                             label: 'NewPackage',
+                            autoEdit: true,
                         } as PackageNodeData,
                     };
                     break;

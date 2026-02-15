@@ -27,6 +27,16 @@ function ClassNode({ id, data, selected }: NodeProps<ClassNodeType>) {
         setName(data.label);
     }, [data.label]);
 
+    // Auto-edit mode for newly created nodes
+    useEffect(() => {
+        if (data.autoEdit) {
+            setEditing(true);
+            setNodes(nds => nds.map(n =>
+                n.id === id ? { ...n, data: { ...n.data, autoEdit: undefined } } : n
+            ));
+        }
+    }, [data.autoEdit, id, setNodes]);
+
     // Start editing an attribute field
     const startEditAttr = useCallback((attrId: string, field: 'name' | 'type', currentValue: string) => {
         setEditingAttr({ id: attrId, field });
@@ -120,6 +130,9 @@ function ClassNode({ id, data, selected }: NodeProps<ClassNodeType>) {
                     ? { ...n, data: { ...n.data, attributes: [...(n.data as ClassNodeData).attributes, newAttr] } }
                     : n
             ));
+            // Auto-focus the new attribute name
+            setEditingAttr({ id: newAttr.id, field: 'name' });
+            setEditValue(newAttr.name);
         }
 
         if (itemType === 'operation') {
@@ -183,15 +196,15 @@ function ClassNode({ id, data, selected }: NodeProps<ClassNodeType>) {
 
             <DynamicHandles nodeId={id} />
 
-            {/* Header with optional stereotype */}
+            {/* Header — abstract classes get italic name via CSS (.abstract .mm-node__name) */}
             <div className="mm-node__header" onDoubleClick={handleDoubleClick}>
-                {isAbstract && <span className="mm-node__stereotype">{'\u00ABabstract\u00BB'}</span>}
                 {editing ? (
                     <input
                         className="mm-node__input"
                         autoFocus
                         value={name}
                         onChange={(e) => setName(e.target.value)}
+                        onFocus={(e) => e.target.select()}
                         onBlur={handleBlur}
                         onKeyDown={handleKeyDown}
                     />
@@ -224,6 +237,7 @@ function ClassNode({ id, data, selected }: NodeProps<ClassNodeType>) {
                                                 autoFocus
                                                 value={editValue}
                                                 onChange={(e) => setEditValue(e.target.value)}
+                                                onFocus={(e) => e.target.select()}
                                                 onBlur={commitAttrEdit}
                                                 onKeyDown={handleAttrKeyDown}
                                             />
@@ -294,10 +308,9 @@ function ClassNode({ id, data, selected }: NodeProps<ClassNodeType>) {
                 </div>
             )}
 
-            {/* Empty state */}
+            {/* Empty drop zone */}
             {showBody && !hasContent && (
                 <div className="mm-node__empty">
-                    Drop attributes
                 </div>
             )}
         </div>

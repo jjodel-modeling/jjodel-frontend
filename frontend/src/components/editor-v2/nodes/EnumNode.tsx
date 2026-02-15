@@ -22,6 +22,16 @@ function EnumNode({ id, data, selected }: NodeProps<EnumNodeType>) {
         setName(data.label);
     }, [data.label]);
 
+    // Auto-edit mode for newly created nodes
+    useEffect(() => {
+        if (data.autoEdit) {
+            setEditing(true);
+            setNodes(nds => nds.map(n =>
+                n.id === id ? { ...n, data: { ...n.data, autoEdit: undefined } } : n
+            ));
+        }
+    }, [data.autoEdit, id, setNodes]);
+
     const commitName = useCallback(() => {
         setEditing(false);
         if (name !== data.label) {
@@ -109,6 +119,9 @@ function EnumNode({ id, data, selected }: NodeProps<EnumNodeType>) {
                     ? { ...n, data: { ...n.data, literals: [...(n.data as EnumNodeData).literals, newLit] } }
                     : n
             ));
+            // Auto-focus the new literal name
+            setEditingLit(newLit.id);
+            setEditValue(newLit.name);
         }
 
         setDragOver(false);
@@ -135,15 +148,16 @@ function EnumNode({ id, data, selected }: NodeProps<EnumNodeType>) {
 
             <DynamicHandles nodeId={id} />
 
-            {/* Header with stereotype */}
+            {/* Header — inline icon instead of stereotype */}
             <div className="mm-node__header" onDoubleClick={() => setEditing(true)}>
-                <span className="mm-node__stereotype">{'\u00ABenumeration\u00BB'}</span>
+                <i className="bi bi-list-ul" style={{ fontSize: '0.75em', marginRight: '4px', opacity: 0.6 }} />
                 {editing ? (
                     <input
                         className="mm-node__input"
                         autoFocus
                         value={name}
                         onChange={(e) => setName(e.target.value)}
+                        onFocus={(e) => e.target.select()}
                         onBlur={commitName}
                         onKeyDown={handleKeyDown}
                     />
@@ -172,6 +186,7 @@ function EnumNode({ id, data, selected }: NodeProps<EnumNodeType>) {
                                         autoFocus
                                         value={editValue}
                                         onChange={(e) => setEditValue(e.target.value)}
+                                        onFocus={(e) => e.target.select()}
                                         onBlur={commitLitEdit}
                                         onKeyDown={handleLitKeyDown}
                                     />
@@ -189,10 +204,9 @@ function EnumNode({ id, data, selected }: NodeProps<EnumNodeType>) {
                 </div>
             )}
 
-            {/* Empty state */}
+            {/* Empty drop zone */}
             {showBody && !hasLiterals && (
                 <div className="mm-node__empty">
-                    Drop literals
                 </div>
             )}
         </div>
