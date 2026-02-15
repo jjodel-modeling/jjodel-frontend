@@ -35,7 +35,7 @@ import { useAutoAnchor, computeAnchorsWithHysteresis, getNodeRect } from './hook
 import { EditorContext } from './contexts/EditorContext';
 import { ObstacleGridProvider } from './contexts/ObstacleGridContext';
 import { getBaseSide, getNextFreeHandleIndex, computePortDistribution } from './utils/portDistribution';
-import type { ClassNodeData, EnumNodeData, PackageNodeData, ReferenceEdgeData, InheritanceEdgeData, AnchorConfig, ReferenceKind, NotationMode } from './types';
+import type { ClassNodeData, EnumNodeData, PackageNodeData, ReferenceEdgeData, InheritanceEdgeData, AnchorConfig, ReferenceKind, NotationMode, ColorScheme } from './types';
 import { EdgeTypePopup, type EdgeTypeChoice } from './components/EdgeTypePopup';
 
 import './EditorV2.scss';
@@ -220,6 +220,17 @@ function EditorV2Inner() {
     useEffect(() => {
         localStorage.setItem('editor-v2-notation', notation);
     }, [notation]);
+
+    // Color scheme state with localStorage persistence
+    const VALID_SCHEMES: ColorScheme[] = ['default', 'monochrome', 'pastel-lavender', 'pastel-rose', 'pastel-ocean', 'pastel-earth', 'pastel-meadow', 'high-contrast', 'print'];
+    const [colorScheme, setColorScheme] = useState<ColorScheme>(() => {
+        const saved = localStorage.getItem('editor-v2-color-scheme');
+        return VALID_SCHEMES.includes(saved as ColorScheme) ? (saved as ColorScheme) : 'default';
+    });
+
+    useEffect(() => {
+        localStorage.setItem('editor-v2-color-scheme', colorScheme);
+    }, [colorScheme]);
 
     const handleToggleTheme = useCallback(() => {
         setTheme(prev => prev === 'dark' ? 'light' : 'dark');
@@ -958,7 +969,7 @@ function EditorV2Inner() {
 
     return (
         <EditorContext.Provider value={editorContextValue}>
-            <div className={`editor-v2 theme-${theme} notation-${notation}`} tabIndex={0} onKeyDown={onKeyDown}>
+            <div className={`editor-v2 theme-${theme} notation-${notation}${colorScheme !== 'default' ? ` scheme-${colorScheme}` : ''}`} tabIndex={0} onKeyDown={onKeyDown}>
                 <PalettePanel />
                 <div className="editor-v2__main">
                     <Toolbar
@@ -977,6 +988,8 @@ function EditorV2Inner() {
                         onToggleTheme={handleToggleTheme}
                         notation={notation}
                         onNotationChange={setNotation}
+                        colorScheme={colorScheme}
+                        onColorSchemeChange={setColorScheme}
                     />
                     <AlignmentToolbar
                         selectedCount={selectedNodes.length}

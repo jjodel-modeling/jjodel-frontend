@@ -1,6 +1,18 @@
 // === Notation modes ===
 export type NotationMode = 'uml' | 'simplified' | 'compact' | 'wireframe' | 'er';
 
+// === Color schemes ===
+export type ColorScheme =
+    | 'default'
+    | 'monochrome'
+    | 'pastel-lavender'
+    | 'pastel-rose'
+    | 'pastel-ocean'
+    | 'pastel-earth'
+    | 'pastel-meadow'
+    | 'high-contrast'
+    | 'print';
+
 // === Tipi primitivi Ecore ===
 export type EDataType =
     | 'EString'

@@ -172,6 +172,16 @@ function InheritanceEdge(props: EdgeProps) {
     // Marker ID unique per edge (or per group for tree connector)
     const markerTriangleId = `inheritance-triangle-${id}`;
 
+    // Midpoint for ISA label in ER notation (must be before early returns to respect hooks rules)
+    const midPoint = useMemo(() => {
+        const pts = parsePathPoints(adjustedPath);
+        if (pts.length < 2) return { x: (sourceX + targetX) / 2, y: (sourceY + targetY) / 2 };
+        const mid = Math.floor(pts.length / 2);
+        const p1 = pts[mid - 1];
+        const p2 = pts[mid];
+        return { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 };
+    }, [adjustedPath, sourceX, sourceY, targetX, targetY]);
+
     // ═══ CASE 1: Primary edge in a group → render tree connector ═══
     if (isPrimary && isGrouped && treeGeometry) {
         const treeMarkerId = `inheritance-triangle-group-${target}`;
@@ -248,17 +258,6 @@ function InheritanceEdge(props: EdgeProps) {
     }
 
     // ═══ CASE 3: Single inheritance edge → standard Manhattan rendering ═══
-
-    // Midpoint for ISA label in ER notation
-    const midPoint = useMemo(() => {
-        const pts = parsePathPoints(adjustedPath);
-        if (pts.length < 2) return { x: (sourceX + targetX) / 2, y: (sourceY + targetY) / 2 };
-        const mid = Math.floor(pts.length / 2);
-        const p1 = pts[mid - 1];
-        const p2 = pts[mid];
-        return { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 };
-    }, [adjustedPath, sourceX, sourceY, targetX, targetY]);
-
     return (
         <>
             {!isERNotation && (

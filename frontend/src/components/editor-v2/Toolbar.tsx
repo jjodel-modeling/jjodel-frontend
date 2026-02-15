@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import type { NotationMode } from './types';
+import type { NotationMode, ColorScheme } from './types';
+import ColorSchemeSelector from './components/ColorSchemeSelector';
 
 interface ToolbarProps {
     snapEnabled: boolean;
@@ -17,13 +18,15 @@ interface ToolbarProps {
     onToggleTheme: () => void;
     notation: NotationMode;
     onNotationChange: (notation: NotationMode) => void;
+    colorScheme: ColorScheme;
+    onColorSchemeChange: (scheme: ColorScheme) => void;
 }
 
 const NOTATION_OPTIONS: Array<{ id: NotationMode; name: string; desc: string; icon: string }> = [
     { id: 'uml',        name: 'UML',        desc: 'Standard class diagram',  icon: 'bi-diagram-3' },
-    { id: 'simplified',  name: 'Simplified', desc: 'Names only, minimal',     icon: 'bi-layout-text-sidebar-reverse' },
-    { id: 'compact',     name: 'Compact',    desc: 'Headers only',            icon: 'bi-square' },
-    { id: 'wireframe',   name: 'Wireframe',  desc: 'Blueprint style',         icon: 'bi-pencil-square' },
+    { id: 'simplified',  name: 'Simplified', desc: 'Names only, minimal',     icon: 'bi-list' },
+    { id: 'compact',     name: 'Compact',    desc: 'Headers only',            icon: 'bi-textarea' },
+    { id: 'wireframe',   name: 'Wireframe',  desc: 'Blueprint style',         icon: 'bi-bounding-box-circles' },
     { id: 'er',          name: 'ER',         desc: 'Entity-Relationship',     icon: 'bi-database' },
 ];
 
@@ -47,6 +50,8 @@ function Toolbar({
     onToggleTheme,
     notation,
     onNotationChange,
+    colorScheme,
+    onColorSchemeChange,
 }: ToolbarProps) {
     const [notationOpen, setNotationOpen] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
@@ -207,6 +212,16 @@ function Toolbar({
                         </div>
                     )}
                 </div>
+            </div>
+
+            <div className="toolbar-separator" />
+
+            {/* Color scheme selector */}
+            <div className="toolbar-group">
+                <ColorSchemeSelector
+                    colorScheme={colorScheme}
+                    onColorSchemeChange={onColorSchemeChange}
+                />
             </div>
 
             <div className="toolbar-spacer" />

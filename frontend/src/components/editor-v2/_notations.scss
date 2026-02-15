@@ -105,11 +105,16 @@
 // ── Notation selector dropdown (toolbar) ──
 .notation-selector {
     position: relative;
+    flex-shrink: 0;
+    width:  fit-content!important;
+
+
 
     &__trigger {
         display: flex;
         align-items: center;
         gap: 4px;
+        width: fit-content!important;
         padding: 4px 8px;
         font-size: 11px;
         white-space: nowrap;

@@ -3,6 +3,7 @@
 
 @import './themes';
 @import './notations';
+@import './color-schemes';
 
 // ============================================
 // EDITOR LAYOUT
@@ -77,6 +78,7 @@
 .toolbar-group {
     display: flex;
     gap: 2px;
+
 }
 
 .toolbar-separator {
