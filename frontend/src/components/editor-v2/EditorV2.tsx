@@ -34,7 +34,7 @@ import { useAlignment } from './hooks/useAlignment';
 import { useAutoAnchor, computeAnchorsWithHysteresis, getNodeRect } from './hooks/useAutoAnchor';
 import { EditorContext } from './contexts/EditorContext';
 import { ObstacleGridProvider } from './contexts/ObstacleGridContext';
-import { getBaseSide, getNextFreeHandleIndex, computePortDistribution } from './utils/portDistribution';
+import { getNextFreeHandleIndex, computePortDistribution } from './utils/portDistribution';
 import type { ClassNodeData, EnumNodeData, PackageNodeData, ReferenceEdgeData, InheritanceEdgeData, AnchorConfig, ReferenceKind, NotationMode, ColorScheme } from './types';
 import { EdgeTypePopup, type EdgeTypeChoice } from './components/EdgeTypePopup';
 
@@ -341,26 +341,22 @@ function EditorV2Inner() {
             const newEdgeId = isInheritance ? `inh_${Date.now()}` : `ref_${Date.now()}`;
             const edgeType = isInheritance ? 'inheritance' : 'reference';
 
-            let sourceSide: string;
-            let targetSide: string;
+            const currentEdges = getEdges();
 
-            if (connection.sourceHandle && connection.targetHandle) {
-                sourceSide = getBaseSide(connection.sourceHandle);
-                targetSide = getBaseSide(connection.targetHandle);
-            } else {
-                const optimal = getOptimalAnchors(
-                    connection.source!,
-                    connection.target!,
-                    edgeType
-                );
-                sourceSide = optimal.sourceHandle;
-                targetSide = optimal.targetHandle;
-            }
+            // Always use occupancy-aware anchor selection.
+            // Connection handles from React Flow are arbitrary pool handles (closest to mouse),
+            // not intentional routing choices by the user.
+            const optimal = getOptimalAnchors(
+                connection.source!,
+                connection.target!,
+                edgeType,
+                currentEdges,
+            );
+            const sourceSide = optimal.sourceHandle;
+            const targetSide = optimal.targetHandle;
 
             const sourceAnchor: AnchorConfig = { mode: 'auto', side: sourceSide as AnchorConfig['side'] };
             const targetAnchor: AnchorConfig = { mode: 'auto', side: targetSide as AnchorConfig['side'] };
-
-            const currentEdges = getEdges();
             const sourceIndex = getNextFreeHandleIndex(connection.source!, sourceSide, 'source', currentEdges);
             const targetIndex = getNextFreeHandleIndex(connection.target!, targetSide, 'target', currentEdges);
 
