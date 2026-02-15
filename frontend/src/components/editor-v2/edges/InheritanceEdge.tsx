@@ -16,6 +16,7 @@ import {
     type TreeBranch,
 } from '../utils/edgeUtils';
 import { useObstacleGrid } from '../contexts/ObstacleGridContext';
+import { useEditorContextSafe } from '../contexts/EditorContext';
 
 function InheritanceEdge(props: EdgeProps) {
     const { id, sourceX, sourceY, targetX, targetY, source, target, sourceHandleId, targetHandleId, selected, data } = props;
@@ -24,6 +25,8 @@ function InheritanceEdge(props: EdgeProps) {
 
     const edgeData = data as InheritanceEdgeData | undefined;
     const waypoints = edgeData?.waypoints || [];
+    const notation = useEditorContextSafe()?.notation ?? 'uml';
+    const isERNotation = notation === 'er';
 
     const isSelfLoop = source === target;
 
@@ -175,29 +178,31 @@ function InheritanceEdge(props: EdgeProps) {
         const selectedClass = anyInGroupSelected ? 'selected' : '';
         return (
             <>
-                <defs>
-                    <marker
-                        id={treeMarkerId}
-                        viewBox="0 0 14 14"
-                        refX="14"
-                        refY="7"
-                        markerWidth="12"
-                        markerHeight="12"
-                        orient="auto"
-                    >
-                        <path
-                            d="M 14 0 L 0 7 L 14 14 Z"
-                            className={`inheritance-marker ${selectedClass}`}
-                        />
-                    </marker>
-                </defs>
+                {!isERNotation && (
+                    <defs>
+                        <marker
+                            id={treeMarkerId}
+                            viewBox="0 0 14 14"
+                            refX="14"
+                            refY="7"
+                            markerWidth="12"
+                            markerHeight="12"
+                            orient="auto"
+                        >
+                            <path
+                                d="M 14 0 L 0 7 L 14 14 Z"
+                                className={`inheritance-marker ${selectedClass}`}
+                            />
+                        </marker>
+                    </defs>
+                )}
 
-                {/* Trunk: bar → parent (markerEnd for triangle at parent) */}
+                {/* Trunk: bar → parent */}
                 <path
                     d={treeGeometry.trunkPath}
                     fill="none"
                     className={`inheritance-edge ${selectedClass}`}
-                    markerEnd={`url(#${treeMarkerId})`}
+                    markerEnd={isERNotation ? undefined : `url(#${treeMarkerId})`}
                 />
 
                 {/* Bar + branches (no marker) */}
@@ -207,6 +212,22 @@ function InheritanceEdge(props: EdgeProps) {
                         fill="none"
                         className={`inheritance-edge ${selectedClass}`}
                     />
+                )}
+
+                {/* ISA label for ER notation on trunk midpoint */}
+                {isERNotation && (
+                    <EdgeLabelRenderer>
+                        <div
+                            className={`edge-label ${selectedClass}`}
+                            style={{
+                                position: 'absolute',
+                                transform: `translate(-50%, -50%) translate(${targetX}px, ${targetY + 16}px)`,
+                                pointerEvents: 'none',
+                            }}
+                        >
+                            <span className="edge-label__text edge-label__isa">ISA</span>
+                        </div>
+                    </EdgeLabelRenderer>
                 )}
             </>
         );
@@ -227,54 +248,78 @@ function InheritanceEdge(props: EdgeProps) {
     }
 
     // ═══ CASE 3: Single inheritance edge → standard Manhattan rendering ═══
+
+    // Midpoint for ISA label in ER notation
+    const midPoint = useMemo(() => {
+        const pts = parsePathPoints(adjustedPath);
+        if (pts.length < 2) return { x: (sourceX + targetX) / 2, y: (sourceY + targetY) / 2 };
+        const mid = Math.floor(pts.length / 2);
+        const p1 = pts[mid - 1];
+        const p2 = pts[mid];
+        return { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 };
+    }, [adjustedPath, sourceX, sourceY, targetX, targetY]);
+
     return (
         <>
-            <defs>
-                {/* Hollow triangle (UML generalization marker) - base at target, tip pointing back */}
-                <marker
-                    id={markerTriangleId}
-                    viewBox="0 0 14 14"
-                    refX="14"
-                    refY="7"
-                    markerWidth="12"
-                    markerHeight="12"
-                    orient="auto"
-                >
-                    <path
-                        d="M 14 0 L 0 7 L 14 14 Z"
-                        className={`inheritance-marker ${selected ? 'selected' : ''}`}
-                    />
-                </marker>
-            </defs>
+            {!isERNotation && (
+                <defs>
+                    {/* Hollow triangle (UML generalization marker) */}
+                    <marker
+                        id={markerTriangleId}
+                        viewBox="0 0 14 14"
+                        refX="14"
+                        refY="7"
+                        markerWidth="12"
+                        markerHeight="12"
+                        orient="auto"
+                    >
+                        <path
+                            d="M 14 0 L 0 7 L 14 14 Z"
+                            className={`inheritance-marker ${selected ? 'selected' : ''}`}
+                        />
+                    </marker>
+                </defs>
+            )}
 
             <path
                 d={path}
                 fill="none"
                 className={`inheritance-edge ${selected ? 'selected' : ''}`}
-                markerEnd={`url(#${markerTriangleId})`}
+                markerEnd={isERNotation ? undefined : `url(#${markerTriangleId})`}
             />
 
-            {/* Waypoint handles - shown when selected */}
-            {/* Waypoint handles - shown when selected, excluding first/last segments */}
-            {selected && !isSelfLoop && (
-                <EdgeLabelRenderer>
-                    {segments
-                        .filter(seg => seg.index > 0 && seg.index < segments.length - 1)
-                        .map((seg) => (
-                            <div
-                                key={seg.index}
-                                className="edge-waypoint"
-                                style={{
-                                    position: 'absolute',
-                                    transform: `translate(-50%, -50%) translate(${seg.midX}px, ${seg.midY}px)`,
-                                    cursor: seg.isHorizontal ? 'ns-resize' : 'ew-resize',
-                                    pointerEvents: 'all',
-                                }}
-                                onMouseDown={(e) => handleWaypointDragStart(e, seg.index, seg.isHorizontal)}
-                            />
-                        ))}
-                </EdgeLabelRenderer>
-            )}
+            <EdgeLabelRenderer>
+                {/* ISA label for ER notation */}
+                {isERNotation && (
+                    <div
+                        className={`edge-label ${selected ? 'selected' : ''}`}
+                        style={{
+                            position: 'absolute',
+                            transform: `translate(-50%, -50%) translate(${midPoint.x}px, ${midPoint.y}px)`,
+                            pointerEvents: 'none',
+                        }}
+                    >
+                        <span className="edge-label__text edge-label__isa">ISA</span>
+                    </div>
+                )}
+
+                {/* Waypoint handles - shown when selected, excluding first/last segments */}
+                {selected && !isSelfLoop && segments
+                    .filter(seg => seg.index > 0 && seg.index < segments.length - 1)
+                    .map((seg) => (
+                        <div
+                            key={seg.index}
+                            className="edge-waypoint"
+                            style={{
+                                position: 'absolute',
+                                transform: `translate(-50%, -50%) translate(${seg.midX}px, ${seg.midY}px)`,
+                                cursor: seg.isHorizontal ? 'ns-resize' : 'ew-resize',
+                                pointerEvents: 'all',
+                            }}
+                            onMouseDown={(e) => handleWaypointDragStart(e, seg.index, seg.isHorizontal)}
+                        />
+                    ))}
+            </EdgeLabelRenderer>
         </>
     );
 }

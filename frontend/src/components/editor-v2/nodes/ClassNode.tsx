@@ -152,8 +152,10 @@ function ClassNode({ id, data, selected }: NodeProps<ClassNodeType>) {
         );
     }
 
+    const notation = editorContext?.notation ?? 'uml';
     const isAbstract = data.isAbstract ?? false;
     const hasContent = (data.attributes?.length || 0) > 0 || (data.operations?.length || 0) > 0;
+    const showBody = notation !== 'compact';
 
     // Format bounds for display
     const formatBounds = (lower: number, upper: number): string | null => {
@@ -199,7 +201,15 @@ function ClassNode({ id, data, selected }: NodeProps<ClassNodeType>) {
             </div>
 
             {/* Body with attributes and operations */}
-            {hasContent && (
+            {showBody && hasContent && notation === 'er' && (
+                <div className="mm-node__body mm-node__body--er">
+                    <span className="mm-node__er-attrs">
+                        {data.attributes?.map(a => a.name).join(', ')}
+                    </span>
+                </div>
+            )}
+
+            {showBody && hasContent && notation !== 'er' && (
                 <div className="mm-node__body">
                     {/* Attributes */}
                     {data.attributes && data.attributes.length > 0 && (
@@ -285,7 +295,7 @@ function ClassNode({ id, data, selected }: NodeProps<ClassNodeType>) {
             )}
 
             {/* Empty state */}
-            {!hasContent && (
+            {showBody && !hasContent && (
                 <div className="mm-node__empty">
                     Drop attributes
                 </div>

@@ -114,7 +114,9 @@ function EnumNode({ id, data, selected }: NodeProps<EnumNodeType>) {
         setDragOver(false);
     }, [id, data.literals, setNodes, editorContext]);
 
+    const notation = editorContext?.notation ?? 'uml';
     const hasLiterals = data.literals.length > 0;
+    const showBody = notation !== 'compact';
 
     return (
         <div
@@ -150,8 +152,16 @@ function EnumNode({ id, data, selected }: NodeProps<EnumNodeType>) {
                 )}
             </div>
 
-            {/* Body with literals */}
-            {hasLiterals && (
+            {/* Body with literals — ER mode: comma-separated */}
+            {showBody && hasLiterals && notation === 'er' && (
+                <div className="mm-node__body mm-node__body--er">
+                    <span className="mm-node__er-attrs">
+                        {data.literals.map(l => l.name).join(', ')}
+                    </span>
+                </div>
+            )}
+
+            {showBody && hasLiterals && notation !== 'er' && (
                 <div className="mm-node__body">
                     <div className="mm-node__fields">
                         {data.literals.map((lit) => (
@@ -180,7 +190,7 @@ function EnumNode({ id, data, selected }: NodeProps<EnumNodeType>) {
             )}
 
             {/* Empty state */}
-            {!hasLiterals && (
+            {showBody && !hasLiterals && (
                 <div className="mm-node__empty">
                     Drop literals
                 </div>

@@ -22,6 +22,7 @@ import {
     getSideFromHandle,
 } from '../utils/edgeUtils';
 import { useObstacleGrid } from '../contexts/ObstacleGridContext';
+import { useEditorContextSafe } from '../contexts/EditorContext';
 
 function ReferenceEdge(props: EdgeProps) {
     const {
@@ -41,6 +42,7 @@ function ReferenceEdge(props: EdgeProps) {
 
     const edgeData = data as ReferenceEdgeData | undefined;
     const { setEdges, getViewport } = useReactFlow();
+    const notation = useEditorContextSafe()?.notation ?? 'uml';
     const [editing, setEditing] = useState(false);
     const [labelText, setLabelText] = useState(String(label || edgeData?.reference?.name || ''));
     const dragRef = useRef<{ segmentIndex: number; startPos: number; startOffset: number; isHorizontal: boolean } | null>(null);
@@ -224,6 +226,8 @@ function ReferenceEdge(props: EdgeProps) {
         [id, waypoints, setEdges, getViewport]
     );
 
+    const showDiamonds = notation === 'uml';
+    const showCardinality = notation === 'uml' || notation === 'wireframe';
     const cardinality = ref ? formatCardinality(ref.lowerBound, ref.upperBound) : '';
 
     // Marker IDs unique per edge
@@ -279,8 +283,8 @@ function ReferenceEdge(props: EdgeProps) {
                 fill="none"
                 className={`reference-edge ${kind} ${selected ? 'selected' : ''}`}
                 markerStart={
-                    kind === 'composition' ? `url(#${markerFilledId})` :
-                    kind === 'aggregation' ? `url(#${markerEmptyId})` :
+                    showDiamonds && kind === 'composition' ? `url(#${markerFilledId})` :
+                    showDiamonds && kind === 'aggregation' ? `url(#${markerEmptyId})` :
                     undefined
                 }
                 markerEnd={`url(#${markerArrowId})`}
@@ -313,7 +317,7 @@ function ReferenceEdge(props: EdgeProps) {
                 </div>
 
                 {/* Cardinality badge - positioned near target, perpendicular to last segment */}
-                {cardinality && (
+                {showCardinality && cardinality && (
                     <div
                         className="edge-cardinality"
                         style={{

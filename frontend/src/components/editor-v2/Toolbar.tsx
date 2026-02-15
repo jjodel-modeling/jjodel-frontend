@@ -1,3 +1,6 @@
+import { useState, useEffect, useRef, useCallback } from 'react';
+import type { NotationMode } from './types';
+
 interface ToolbarProps {
     snapEnabled: boolean;
     onToggleSnap: () => void;
@@ -12,11 +15,21 @@ interface ToolbarProps {
     canRedo: boolean;
     theme: 'dark' | 'light';
     onToggleTheme: () => void;
+    notation: NotationMode;
+    onNotationChange: (notation: NotationMode) => void;
 }
+
+const NOTATION_OPTIONS: Array<{ id: NotationMode; name: string; desc: string; icon: string }> = [
+    { id: 'uml',        name: 'UML',        desc: 'Standard class diagram',  icon: 'bi-diagram-3' },
+    { id: 'simplified',  name: 'Simplified', desc: 'Names only, minimal',     icon: 'bi-layout-text-sidebar-reverse' },
+    { id: 'compact',     name: 'Compact',    desc: 'Headers only',            icon: 'bi-square' },
+    { id: 'wireframe',   name: 'Wireframe',  desc: 'Blueprint style',         icon: 'bi-pencil-square' },
+    { id: 'er',          name: 'ER',         desc: 'Entity-Relationship',     icon: 'bi-database' },
+];
 
 /**
  * Compact toolbar for editor controls.
- * Provides undo/redo, zoom, snap-to-grid toggle, and delete actions.
+ * Provides undo/redo, zoom, snap-to-grid toggle, delete, theme, and notation mode.
  */
 function Toolbar({
     snapEnabled,
@@ -32,7 +45,41 @@ function Toolbar({
     canRedo,
     theme,
     onToggleTheme,
+    notation,
+    onNotationChange,
 }: ToolbarProps) {
+    const [notationOpen, setNotationOpen] = useState(false);
+    const dropdownRef = useRef<HTMLDivElement>(null);
+
+    const currentNotation = NOTATION_OPTIONS.find(n => n.id === notation) ?? NOTATION_OPTIONS[0];
+
+    // Close dropdown on click outside
+    useEffect(() => {
+        if (!notationOpen) return;
+        const handleClick = (e: MouseEvent) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+                setNotationOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClick);
+        return () => document.removeEventListener('mousedown', handleClick);
+    }, [notationOpen]);
+
+    // Close dropdown on Escape
+    useEffect(() => {
+        if (!notationOpen) return;
+        const handleKey = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') setNotationOpen(false);
+        };
+        document.addEventListener('keydown', handleKey);
+        return () => document.removeEventListener('keydown', handleKey);
+    }, [notationOpen]);
+
+    const handleSelect = useCallback((id: NotationMode) => {
+        onNotationChange(id);
+        setNotationOpen(false);
+    }, [onNotationChange]);
+
     return (
         <div className="editor-v2-toolbar">
             {/* Undo/Redo */}
@@ -126,6 +173,40 @@ function Toolbar({
                 >
                     <i className={theme === 'dark' ? 'bi bi-sun' : 'bi bi-moon'} />
                 </button>
+            </div>
+
+            <div className="toolbar-separator" />
+
+            {/* Notation selector */}
+            <div className="toolbar-group">
+                <div className="notation-selector" ref={dropdownRef}>
+                    <button
+                        className="toolbar-btn notation-selector__trigger"
+                        onClick={() => setNotationOpen(prev => !prev)}
+                        title="Notation mode"
+                    >
+                        <i className={`bi ${currentNotation.icon}`} />
+                        <span className="notation-selector__label">{currentNotation.name}</span>
+                        <i className="bi bi-chevron-down notation-selector__chevron" />
+                    </button>
+                    {notationOpen && (
+                        <div className="notation-selector__dropdown">
+                            {NOTATION_OPTIONS.map(opt => (
+                                <button
+                                    key={opt.id}
+                                    className={`notation-selector__option ${notation === opt.id ? 'active' : ''}`}
+                                    onClick={() => handleSelect(opt.id)}
+                                >
+                                    <i className={`bi ${opt.icon}`} />
+                                    <div>
+                                        <div className="notation-selector__option-name">{opt.name}</div>
+                                        <div className="notation-selector__option-desc">{opt.desc}</div>
+                                    </div>
+                                </button>
+                            ))}
+                        </div>
+                    )}
+                </div>
             </div>
 
             <div className="toolbar-spacer" />

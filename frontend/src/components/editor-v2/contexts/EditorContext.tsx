@@ -1,7 +1,9 @@
 import { createContext, useContext } from 'react';
+import type { NotationMode } from '../types';
 
 interface EditorContextValue {
     takeSnapshot: () => void;
+    notation: NotationMode;
 }
 
 export const EditorContext = createContext<EditorContextValue | null>(null);

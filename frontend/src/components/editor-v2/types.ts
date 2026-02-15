@@ -1,3 +1,6 @@
+// === Notation modes ===
+export type NotationMode = 'uml' | 'simplified' | 'compact' | 'wireframe' | 'er';
+
 // === Tipi primitivi Ecore ===
 export type EDataType =
     | 'EString'

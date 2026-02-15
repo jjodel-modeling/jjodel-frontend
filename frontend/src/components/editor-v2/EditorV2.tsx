@@ -35,7 +35,7 @@ import { useAutoAnchor, computeAnchorsWithHysteresis, getNodeRect } from './hook
 import { EditorContext } from './contexts/EditorContext';
 import { ObstacleGridProvider } from './contexts/ObstacleGridContext';
 import { getBaseSide, getNextFreeHandleIndex, computePortDistribution } from './utils/portDistribution';
-import type { ClassNodeData, EnumNodeData, PackageNodeData, ReferenceEdgeData, InheritanceEdgeData, AnchorConfig, ReferenceKind } from './types';
+import type { ClassNodeData, EnumNodeData, PackageNodeData, ReferenceEdgeData, InheritanceEdgeData, AnchorConfig, ReferenceKind, NotationMode } from './types';
 import { EdgeTypePopup, type EdgeTypeChoice } from './components/EdgeTypePopup';
 
 import './EditorV2.scss';
@@ -209,6 +209,17 @@ function EditorV2Inner() {
     useEffect(() => {
         localStorage.setItem('editor-v2-theme', theme);
     }, [theme]);
+
+    // Notation mode state with localStorage persistence
+    const VALID_NOTATIONS: NotationMode[] = ['uml', 'simplified', 'compact', 'wireframe', 'er'];
+    const [notation, setNotation] = useState<NotationMode>(() => {
+        const saved = localStorage.getItem('editor-v2-notation');
+        return VALID_NOTATIONS.includes(saved as NotationMode) ? (saved as NotationMode) : 'uml';
+    });
+
+    useEffect(() => {
+        localStorage.setItem('editor-v2-notation', notation);
+    }, [notation]);
 
     const handleToggleTheme = useCallback(() => {
         setTheme(prev => prev === 'dark' ? 'light' : 'dark');
@@ -943,11 +954,11 @@ function EditorV2Inner() {
         [onNodesChange, takeSnapshot, setEdges, nodes, applyDistribution]
     );
 
-    const editorContextValue = useMemo(() => ({ takeSnapshot }), [takeSnapshot]);
+    const editorContextValue = useMemo(() => ({ takeSnapshot, notation }), [takeSnapshot, notation]);
 
     return (
         <EditorContext.Provider value={editorContextValue}>
-            <div className={`editor-v2 theme-${theme}`} tabIndex={0} onKeyDown={onKeyDown}>
+            <div className={`editor-v2 theme-${theme} notation-${notation}`} tabIndex={0} onKeyDown={onKeyDown}>
                 <PalettePanel />
                 <div className="editor-v2__main">
                     <Toolbar
@@ -964,6 +975,8 @@ function EditorV2Inner() {
                         canRedo={canRedo}
                         theme={theme}
                         onToggleTheme={handleToggleTheme}
+                        notation={notation}
+                        onNotationChange={setNotation}
                     />
                     <AlignmentToolbar
                         selectedCount={selectedNodes.length}
