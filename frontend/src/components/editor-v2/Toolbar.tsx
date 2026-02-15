@@ -66,8 +66,8 @@ function Toolbar({
                 setNotationOpen(false);
             }
         };
-        document.addEventListener('mousedown', handleClick);
-        return () => document.removeEventListener('mousedown', handleClick);
+        document.addEventListener('mousedown', handleClick, true);
+        return () => document.removeEventListener('mousedown', handleClick, true);
     }, [notationOpen]);
 
     // Close dropdown on Escape

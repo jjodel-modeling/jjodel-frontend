@@ -59,8 +59,8 @@ function ColorSchemeSelector({ colorScheme, onColorSchemeChange }: ColorSchemeSe
                 setSubmenuOpen(false);
             }
         };
-        document.addEventListener('mousedown', handleClick);
-        return () => document.removeEventListener('mousedown', handleClick);
+        document.addEventListener('mousedown', handleClick, true);
+        return () => document.removeEventListener('mousedown', handleClick, true);
     }, [open]);
 
     // Close dropdown on Escape
