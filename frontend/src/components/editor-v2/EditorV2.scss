@@ -298,49 +298,6 @@
         }
     }
 
-    .palette-connection-modes {
-        display: flex;
-        gap: 4px;
-        padding: 0 4px;
-        margin-bottom: 8px;
-    }
-
-    .palette-connection-mode {
-        flex: 1;
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        padding: 8px 10px;
-        background: transparent;
-        border: 1px solid var(--border-default);
-        border-radius: 6px;
-        color: var(--text-muted);
-        font-size: 12px;
-        cursor: pointer;
-        transition: all 0.15s;
-
-        &:hover {
-            background: var(--surface-hover);
-            color: var(--text-secondary);
-        }
-
-        &.active {
-            background: var(--accent-muted);
-            border-color: var(--selection-border);
-            color: var(--text-primary);
-
-            .palette-connection-mode__icon {
-                color: var(--accent);
-            }
-        }
-
-        &__icon {
-            font-size: 14px;
-            width: 16px;
-            text-align: center;
-        }
-    }
-
     .palette-info {
         padding: 8px 12px;
         font-size: 11px;

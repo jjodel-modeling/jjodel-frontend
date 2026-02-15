@@ -5,7 +5,6 @@ import {
     MiniMap,
     useNodesState,
     useEdgesState,
-    addEdge,
     useReactFlow,
     ReactFlowProvider,
     SelectionMode,
@@ -36,7 +35,8 @@ import { useAutoAnchor, computeAnchorsWithHysteresis, getNodeRect } from './hook
 import { EditorContext } from './contexts/EditorContext';
 import { ObstacleGridProvider } from './contexts/ObstacleGridContext';
 import { getBaseSide, getNextFreeHandleIndex, computePortDistribution } from './utils/portDistribution';
-import type { ClassNodeData, EnumNodeData, PackageNodeData, ReferenceEdgeData, InheritanceEdgeData, AnchorConfig } from './types';
+import type { ClassNodeData, EnumNodeData, PackageNodeData, ReferenceEdgeData, InheritanceEdgeData, AnchorConfig, ReferenceKind } from './types';
+import { EdgeTypePopup, type EdgeTypeChoice } from './components/EdgeTypePopup';
 
 import './EditorV2.scss';
 
@@ -177,19 +177,28 @@ interface ClipboardState {
     edges: Edge[];
 }
 
+// Pending connection waiting for user to pick edge type via popup
+interface PendingConnection {
+    connection: Connection;
+    position: { x: number; y: number };
+}
+
 /**
  * Inner editor component that uses React Flow hooks.
  * Must be wrapped in ReactFlowProvider.
  */
 function EditorV2Inner() {
-    const reactFlowWrapper = useRef<HTMLDivElement>(null);
     const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
     const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
     const { screenToFlowPosition, getNodes, getEdges, zoomIn, zoomOut, fitView, getViewport, setViewport } = useReactFlow();
     const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
     const [snapEnabled, setSnapEnabled] = useState(true);
-    const [connectionMode, setConnectionMode] = useState<'reference' | 'inheritance'>('reference');
     const clipboard = useRef<ClipboardState>({ nodes: [], edges: [] });
+
+    // Edge type popup: pending connection waiting for user to pick edge type
+    const [pendingConnection, setPendingConnection] = useState<PendingConnection | null>(null);
+    const pendingConnectionRef = useRef<Connection | null>(null);
+    const editorContainerRef = useRef<HTMLDivElement>(null);
 
     // Theme state with localStorage persistence
     const [theme, setTheme] = useState<'dark' | 'light'>(() => {
@@ -268,18 +277,48 @@ function EditorV2Inner() {
     const selectedNodes = useMemo(() => nodes.filter((n) => n.selected), [nodes]);
     const selectedEdges = useMemo(() => edges.filter((e) => e.selected), [edges]);
 
-    // Handle new connections between nodes - creates reference or inheritance edge
+    // Handle new connections: save the valid connection, then show edge type popup on drop
     const onConnect = useCallback(
         (connection: Connection) => {
+            // Store the valid connection; onConnectEnd will show the popup
+            pendingConnectionRef.current = connection;
+        },
+        []
+    );
+
+    const onConnectEnd = useCallback(
+        (event: MouseEvent | TouchEvent) => {
+            const connection = pendingConnectionRef.current;
+            pendingConnectionRef.current = null;
+
+            if (!connection || !connection.source || !connection.target) {
+                // Invalid connection (dropped on empty canvas) — ignore
+                return;
+            }
+
+            const clientX = 'touches' in event ? event.changedTouches[0].clientX : event.clientX;
+            const clientY = 'touches' in event ? event.changedTouches[0].clientY : event.clientY;
+
+            setPendingConnection({
+                connection,
+                position: { x: clientX, y: clientY },
+            });
+        },
+        []
+    );
+
+    // Called when user picks an edge type from the popup
+    const handleEdgeTypeSelected = useCallback(
+        (choice: EdgeTypeChoice) => {
+            if (!pendingConnection) return;
+
+            const { connection } = pendingConnection;
             takeSnapshot();
 
-            const newEdgeId = connectionMode === 'inheritance'
-                ? `inh_${Date.now()}`
-                : `ref_${Date.now()}`;
-            const edgeType = connectionMode === 'inheritance' ? 'inheritance' : 'reference';
+            const isInheritance = choice === 'inheritance';
+            const newEdgeId = isInheritance ? `inh_${Date.now()}` : `ref_${Date.now()}`;
+            const edgeType = isInheritance ? 'inheritance' : 'reference';
 
-            // Determine the side for the new edge.
-            // Extract the base SIDE from the user's drag. If not available, use auto-anchor fallback.
             let sourceSide: string;
             let targetSide: string;
 
@@ -299,8 +338,6 @@ function EditorV2Inner() {
             const sourceAnchor: AnchorConfig = { mode: 'auto', side: sourceSide as AnchorConfig['side'] };
             const targetAnchor: AnchorConfig = { mode: 'auto', side: targetSide as AnchorConfig['side'] };
 
-            // Allocate the next free handle index so multiple edges between the
-            // same pair of nodes get distinct handle IDs from the start.
             const currentEdges = getEdges();
             const sourceIndex = getNextFreeHandleIndex(connection.source!, sourceSide, 'source', currentEdges);
             const targetIndex = getNextFreeHandleIndex(connection.target!, targetSide, 'target', currentEdges);
@@ -318,11 +355,11 @@ function EditorV2Inner() {
                         reference: {
                             id: newEdgeId,
                             name: 'newRef',
-                            kind: 'association',
+                            kind: choice as ReferenceKind,
                             targetClassId: connection.target!,
                             lowerBound: 0,
                             upperBound: -1,
-                            containment: false,
+                            containment: choice === 'composition',
                         },
                         sourceAnchor,
                         targetAnchor,
@@ -336,9 +373,14 @@ function EditorV2Inner() {
             };
 
             setEdges((eds) => applyDistribution([...eds, newEdge]));
+            setPendingConnection(null);
         },
-        [connectionMode, setEdges, getEdges, takeSnapshot, getOptimalAnchors, applyDistribution]
+        [pendingConnection, setEdges, getEdges, takeSnapshot, getOptimalAnchors, applyDistribution]
     );
+
+    const handleEdgeTypeCancelled = useCallback(() => {
+        setPendingConnection(null);
+    }, []);
 
     // Handle drop from palette
     const onDrop = useCallback(
@@ -906,10 +948,7 @@ function EditorV2Inner() {
     return (
         <EditorContext.Provider value={editorContextValue}>
             <div className={`editor-v2 theme-${theme}`} tabIndex={0} onKeyDown={onKeyDown}>
-                <PalettePanel
-                    connectionMode={connectionMode}
-                    onConnectionModeChange={setConnectionMode}
-                />
+                <PalettePanel />
                 <div className="editor-v2__main">
                     <Toolbar
                         snapEnabled={snapEnabled}
@@ -937,13 +976,14 @@ function EditorV2Inner() {
                         onDistributeH={() => withSnapshot(distributeHorizontally)}
                         onDistributeV={() => withSnapshot(distributeVertically)}
                     />
-                    <div className="editor-v2__canvas" ref={reactFlowWrapper}>
+                    <div className="editor-v2__canvas" ref={editorContainerRef} style={{ position: 'relative' }}>
                         <ReactFlow
                             nodes={nodes}
                             edges={edges}
                             onNodesChange={handleNodesChange}
                             onEdgesChange={onEdgesChange}
                             onConnect={onConnect}
+                            onConnectEnd={onConnectEnd}
                             onDrop={onDrop}
                             onDragOver={onDragOver}
                             onNodeContextMenu={onNodeContextMenu}
@@ -985,6 +1025,15 @@ function EditorV2Inner() {
                                 maskColor={theme === 'dark' ? 'rgba(30, 41, 59, 0.8)' : 'rgba(241, 245, 249, 0.8)'}
                             />
                         </ReactFlow>
+
+                        {pendingConnection && (
+                            <EdgeTypePopup
+                                position={pendingConnection.position}
+                                containerRef={editorContainerRef}
+                                onSelect={handleEdgeTypeSelected}
+                                onCancel={handleEdgeTypeCancelled}
+                            />
+                        )}
                     </div>
                 </div>
 

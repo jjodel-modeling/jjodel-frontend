@@ -7,11 +7,6 @@ interface PaletteItem {
     group: string;
 }
 
-interface PalettePanelProps {
-    connectionMode: 'reference' | 'inheritance';
-    onConnectionModeChange: (mode: 'reference' | 'inheritance') => void;
-}
-
 const paletteItems: PaletteItem[] = [
     { type: 'packageNode', label: 'Package', icon: 'bi-folder', group: 'Structure' },
     { type: 'classNode', label: 'Class', icon: 'bi-diagram-3', group: 'Classifiers' },
@@ -28,7 +23,7 @@ const groups = [...new Set(paletteItems.map(i => i.group))];
  * Sidebar palette with draggable metamodel elements.
  * Drag items onto the canvas to create new nodes.
  */
-function PalettePanel({ connectionMode, onConnectionModeChange }: PalettePanelProps) {
+function PalettePanel() {
     const onDragStart = useCallback((event: React.DragEvent, item: PaletteItem) => {
         event.dataTransfer.setData('application/reactflow', item.type);
         event.dataTransfer.effectAllowed = 'move';
@@ -58,22 +53,6 @@ function PalettePanel({ connectionMode, onConnectionModeChange }: PalettePanelPr
 
             <div className="palette-group">
                 <div className="palette-group__title">Connections</div>
-                <div className="palette-connection-modes">
-                    <button
-                        className={`palette-connection-mode ${connectionMode === 'reference' ? 'active' : ''}`}
-                        onClick={() => onConnectionModeChange('reference')}
-                    >
-                        <span className="palette-connection-mode__icon">→</span>
-                        <span>Reference</span>
-                    </button>
-                    <button
-                        className={`palette-connection-mode ${connectionMode === 'inheritance' ? 'active' : ''}`}
-                        onClick={() => onConnectionModeChange('inheritance')}
-                    >
-                        <span className="palette-connection-mode__icon">▷</span>
-                        <span>Inheritance</span>
-                    </button>
-                </div>
                 <div className="palette-info">
                     <i className="bi bi-info-circle" style={{ marginRight: '4px' }} />
                     Drag between anchors to connect
