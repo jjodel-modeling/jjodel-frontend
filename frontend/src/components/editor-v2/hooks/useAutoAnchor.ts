@@ -323,16 +323,18 @@ function computeAnchorsWithHysteresis(
             continue;
         }
 
-        // Inheritance: always vertical (semantic)
+        // Inheritance: default vertical, but respect individually pinned endpoints
         const edgeType = edge.type === 'inheritance' ? 'inheritance' : 'reference';
         if (edgeType === 'inheritance') {
             const dy = targetRect.centerY - sourceRect.centerY;
-            const sh: AnchorSide = dy < 0 ? 'top' : 'bottom';
-            const th: AnchorSide = dy < 0 ? 'bottom' : 'top';
+            const autoSh: AnchorSide = dy < 0 ? 'top' : 'bottom';
+            const autoTh: AnchorSide = dy < 0 ? 'bottom' : 'top';
+            const sh = currentSource.mode === 'pinned' ? currentSource.side : autoSh;
+            const th = currentTarget.mode === 'pinned' ? currentTarget.side : autoTh;
             const r: AnchorResult = {
                 sourceHandle: sh, targetHandle: th,
-                sourceAnchor: { mode: 'auto', side: sh },
-                targetAnchor: { mode: 'auto', side: th },
+                sourceAnchor: { mode: currentSource.mode, side: sh },
+                targetAnchor: { mode: currentTarget.mode, side: th },
             };
             result.set(edge.id, r);
             edgesWithAnchors.push({ ...edge, sourceHandle: sh, targetHandle: th });
@@ -400,15 +402,22 @@ function computeAnchorsWithHysteresis(
     // Second pass: bidirectional deconfliction
     const deconflicted = deconflictBidirectionalEdges(edgesWithAnchors, nodeRects);
 
-    // Merge deconfliction results — update handle IDs and anchor sides
+    // Merge deconfliction results — update handle IDs and anchor sides.
+    // IMPORTANT: never overwrite a pinned endpoint's side.
     for (const [edgeId, adjusted] of deconflicted) {
         const existing = result.get(edgeId);
         if (existing) {
+            const srcPinned = existing.sourceAnchor.mode === 'pinned';
+            const tgtPinned = existing.targetAnchor.mode === 'pinned';
             result.set(edgeId, {
-                sourceHandle: adjusted.sourceHandle,
-                targetHandle: adjusted.targetHandle,
-                sourceAnchor: { mode: existing.sourceAnchor.mode, side: adjusted.sourceHandle as AnchorSide },
-                targetAnchor: { mode: existing.targetAnchor.mode, side: adjusted.targetHandle as AnchorSide },
+                sourceHandle: srcPinned ? existing.sourceHandle : adjusted.sourceHandle,
+                targetHandle: tgtPinned ? existing.targetHandle : adjusted.targetHandle,
+                sourceAnchor: srcPinned
+                    ? existing.sourceAnchor
+                    : { mode: 'auto', side: adjusted.sourceHandle as AnchorSide },
+                targetAnchor: tgtPinned
+                    ? existing.targetAnchor
+                    : { mode: 'auto', side: adjusted.targetHandle as AnchorSide },
             });
         }
     }

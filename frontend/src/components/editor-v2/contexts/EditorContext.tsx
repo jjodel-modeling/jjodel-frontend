@@ -1,9 +1,11 @@
 import { createContext, useContext } from 'react';
+import type { Edge } from '@xyflow/react';
 import type { NotationMode } from '../types';
 
 interface EditorContextValue {
     takeSnapshot: () => void;
     notation: NotationMode;
+    onEdgeDataChange?: (edgeId: string, data: Partial<Edge>) => void;
 }
 
 export const EditorContext = createContext<EditorContextValue | null>(null);

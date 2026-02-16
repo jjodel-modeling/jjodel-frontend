@@ -1066,7 +1066,7 @@
 .inheritance-marker {
     fill: var(--edge-marker-fill);
     stroke: var(--edge-marker-stroke);
-    stroke-width: 1.5;
+    stroke-width: 1;
 
     &.selected {
         stroke: var(--edge-selected);
@@ -1203,9 +1203,71 @@
 }
 
 // ============================================
-// EDGE WAYPOINT HANDLES
+// EDGE WAYPOINT HANDLES (segment drag handles)
 // ============================================
 
+.segment-handle {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--accent, #0ea5e9);
+    border: 2px solid #fff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+    z-index: 10;
+    transition: width 0.1s, height 0.1s, background 0.1s;
+
+    &:hover {
+        width: 10px;
+        height: 10px;
+        background: #22d3ee;
+    }
+
+    &.dragging {
+        width: 10px;
+        height: 10px;
+        background: #22d3ee;
+        box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.25), 0 1px 3px rgba(0, 0, 0, 0.3);
+    }
+}
+
+// ============================================
+// ENDPOINT HANDLES (source/target anchor drag)
+// ============================================
+
+.endpoint-handle {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #ffffff;
+    border: 2px solid var(--accent, #0ea5e9);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+    z-index: 11;
+    cursor: grab;
+    transition: width 0.1s, height 0.1s, background 0.1s, border-color 0.1s;
+
+    &:hover {
+        width: 12px;
+        height: 12px;
+        background: #e0f2fe;
+        border-color: #22d3ee;
+    }
+
+    &.dragging {
+        width: 12px;
+        height: 12px;
+        background: var(--accent, #0ea5e9);
+        border-color: #fff;
+        cursor: grabbing;
+        box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.3), 0 2px 6px rgba(0, 0, 0, 0.3);
+    }
+}
+
+.endpoint-side-indicator {
+    pointer-events: none;
+    z-index: 9;
+    border-radius: 2px;
+    background: rgba(14, 165, 233, 0.35);
+}
 
 // ============================================
 // PROPERTIES PANEL

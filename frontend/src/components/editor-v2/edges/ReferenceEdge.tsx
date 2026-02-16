@@ -3,6 +3,7 @@ import {
     EdgeLabelRenderer,
     useReactFlow,
     useNodes,
+    useEdges,
     type EdgeProps,
 } from '@xyflow/react';
 import type { ReferenceEdgeData, ReferenceKind } from '../types';
@@ -19,9 +20,15 @@ import {
     applyWaypoints,
     pointsToPath,
     getSideFromHandle,
+    registerEdgePath,
+    unregisterEdgePath,
+    getEdgeCrossings,
+    buildFinalPath,
 } from '../utils/edgeUtils';
 import { useObstacleGrid } from '../contexts/ObstacleGridContext';
 import { useEditorContextSafe } from '../contexts/EditorContext';
+import { SegmentHandles } from './SegmentHandles';
+import { EndpointHandles } from './EndpointHandles';
 
 function ReferenceEdge(props: EdgeProps) {
     const {
@@ -61,6 +68,7 @@ function ReferenceEdge(props: EdgeProps) {
     // Phase 7: obstacle grid context
     const { grid, version } = useObstacleGrid();
     const allNodes = useNodes();
+    const allEdges = useEdges();
 
     // Get sides from handle IDs
     const sourceSide = getSideFromHandle(sourceHandleId);
@@ -90,13 +98,29 @@ function ReferenceEdge(props: EdgeProps) {
     );
     const adjustedPath = useMemo(() => pointsToPath(adjustedPoints), [adjustedPoints]);
 
-    // Final path with rounding
+    // Register path for crossing detection by other edges
+    useEffect(() => {
+        registerEdgePath(id, adjustedPoints, source, target);
+        return () => unregisterEdgePath(id);
+    }, [id, adjustedPoints, source, target]);
+
+    // Detect crossings with other edges
+    const crossings = useMemo(
+        () => getEdgeCrossings(id, adjustedPoints),
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+        [id, adjustedPoints, allNodes, allEdges]
+    );
+
+    // Final path with rounding and bridge arcs
     const path = useMemo(() => {
         if (isSelfLoop) {
             return computeSelfLoopPath(sourceX, sourceY, targetX, targetY);
         }
+        if (crossings.length > 0) {
+            return buildFinalPath(adjustedPoints, crossings, 4, 6);
+        }
         return roundManhattanPath(adjustedPath, 4);
-    }, [adjustedPath, isSelfLoop, sourceX, sourceY, targetX, targetY]);
+    }, [adjustedPath, adjustedPoints, crossings, isSelfLoop, sourceX, sourceY, targetX, targetY]);
 
     // Position label on the longest segment of the path
     const labelPos = useMemo(() => computeLabelPosition(adjustedPath), [adjustedPath]);
@@ -238,6 +262,30 @@ function ReferenceEdge(props: EdgeProps) {
                 }
                 markerEnd={`url(#${markerArrowId})`}
             />
+
+            {/* Segment handles for manual edge customization */}
+            {!isSelfLoop && (
+                <SegmentHandles
+                    edgeId={id}
+                    adjustedPath={adjustedPath}
+                    waypoints={waypoints}
+                    selected={!!selected}
+                />
+            )}
+
+            {/* Endpoint handles for anchor drag */}
+            {!isSelfLoop && (
+                <EndpointHandles
+                    edgeId={id}
+                    sourceX={sourceX}
+                    sourceY={sourceY}
+                    targetX={targetX}
+                    targetY={targetY}
+                    sourceNodeId={source}
+                    targetNodeId={target}
+                    selected={!!selected}
+                />
+            )}
 
             <EdgeLabelRenderer>
                 {/* Label - positioned on longest segment with smart offset */}

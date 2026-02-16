@@ -654,6 +654,42 @@ export function parsePathPoints(path: string): { x: number; y: number }[] {
 }
 
 /**
+ * Splits a multi-move SVG path into separate continuous point arrays.
+ * Each M command starts a new sub-path. Only sub-paths with 2+ points are returned.
+ */
+export function parsePathSubPaths(path: string): { x: number; y: number }[][] {
+    if (!path) return [];
+
+    const subPaths: { x: number; y: number }[][] = [];
+    const commands = path.match(/[ML]\s*[-\d.]+\s+[-\d.]+/g);
+    if (!commands) return [];
+
+    let current: { x: number; y: number }[] = [];
+
+    for (const cmd of commands) {
+        const nums = cmd.match(/[-\d.]+/g);
+        if (!nums || nums.length < 2) continue;
+
+        const point = { x: parseFloat(nums[0]), y: parseFloat(nums[1]) };
+
+        if (cmd.trimStart().startsWith('M')) {
+            if (current.length >= 2) {
+                subPaths.push(current);
+            }
+            current = [point];
+        } else {
+            current.push(point);
+        }
+    }
+
+    if (current.length >= 2) {
+        subPaths.push(current);
+    }
+
+    return subPaths;
+}
+
+/**
  * Finds the best position for an edge label.
  * Chooses the longest segment of the path and positions the label at its center.
  *
@@ -812,6 +848,41 @@ export function inferAnchorSideFromSegment(
     } else {
         return dy >= 0 ? 'bottom' : 'top';
     }
+}
+
+/**
+ * Projects a point onto the closest point on the perimeter of a rectangle.
+ * Used by EndpointHandles to constrain drag to the node boundary.
+ *
+ * Uses closest-point-on-boundary (not ray-from-center) so the handle follows the
+ * perimeter freely as the user drags around the node — all 4 sides are reachable.
+ */
+export function projectToPerimeter(
+    mouseX: number,
+    mouseY: number,
+    rect: { x: number; y: number; width: number; height: number },
+): { x: number; y: number; side: Side } {
+    const left = rect.x;
+    const right = rect.x + rect.width;
+    const top = rect.y;
+    const bottom = rect.y + rect.height;
+
+    const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
+
+    // Candidate closest point on each side (clamped to side extent)
+    const candidates: { x: number; y: number; side: Side; dist: number }[] = [
+        { x: clamp(mouseX, left, right), y: top, side: 'top',
+          dist: Math.hypot(clamp(mouseX, left, right) - mouseX, top - mouseY) },
+        { x: clamp(mouseX, left, right), y: bottom, side: 'bottom',
+          dist: Math.hypot(clamp(mouseX, left, right) - mouseX, bottom - mouseY) },
+        { x: left, y: clamp(mouseY, top, bottom), side: 'left',
+          dist: Math.hypot(left - mouseX, clamp(mouseY, top, bottom) - mouseY) },
+        { x: right, y: clamp(mouseY, top, bottom), side: 'right',
+          dist: Math.hypot(right - mouseX, clamp(mouseY, top, bottom) - mouseY) },
+    ];
+
+    candidates.sort((a, b) => a.dist - b.dist);
+    return { x: candidates[0].x, y: candidates[0].y, side: candidates[0].side };
 }
 
 /**
@@ -1054,4 +1125,295 @@ export function computeAStarPath(
     // No marker compensation needed — endpoints at exact border position.
     // (Edges render below nodes; pushing inside would hide markers.)
     return pointsToPath(cleanPoints(result.path.map(p => ({ ...p }))));
+}
+
+// ============================================
+// Edge Crossing Detection — Bridge/Jump Arc Support
+// ============================================
+
+export interface CrossingPoint {
+    x: number;
+    y: number;
+    segmentIndex: number;
+}
+
+interface EdgePathEntry {
+    points: { x: number; y: number }[];
+    sourceNode: string;
+    targetNode: string;
+}
+
+/** Module-level registry of computed edge paths for crossing detection. */
+const edgePathRegistry = new Map<string, EdgePathEntry>();
+
+/** Register an edge's computed path segments for crossing detection by other edges. */
+export function registerEdgePath(
+    edgeId: string,
+    points: { x: number; y: number }[],
+    sourceNode: string,
+    targetNode: string,
+): void {
+    edgePathRegistry.set(edgeId, { points, sourceNode, targetNode });
+}
+
+/** Unregister an edge's path (call on unmount). */
+export function unregisterEdgePath(edgeId: string): void {
+    edgePathRegistry.delete(edgeId);
+}
+
+/**
+ * Finds crossing points where horizontal segments of this edge
+ * intersect vertical segments of other registered edges.
+ *
+ * Only H×V crossings: the horizontal edge draws the bridge arc to hop
+ * over the vertical edge. The vertical edge passes underneath unchanged.
+ */
+export function getEdgeCrossings(
+    edgeId: string,
+    myPoints: { x: number; y: number }[],
+): CrossingPoint[] {
+    if (myPoints.length < 2) return [];
+
+    const crossings: CrossingPoint[] = [];
+    const ENDPOINT_THRESHOLD = 12;
+
+    const myStart = myPoints[0];
+    const myEnd = myPoints[myPoints.length - 1];
+
+    for (const [otherId, entry] of edgePathRegistry) {
+        // Skip same logical edge and its tree sub-segments (trunk, bar, branches)
+        if (otherId === edgeId ||
+            otherId.startsWith(edgeId + '__') ||
+            edgeId.startsWith(otherId + '__')) continue;
+
+        const otherPoints = entry.points;
+        if (otherPoints.length < 2) continue;
+
+        const otherStart = otherPoints[0];
+        const otherEnd = otherPoints[otherPoints.length - 1];
+
+        for (let i = 0; i < myPoints.length - 1; i++) {
+            const myP1 = myPoints[i];
+            const myP2 = myPoints[i + 1];
+
+            // Only process horizontal segments of this edge
+            if (Math.abs(myP2.y - myP1.y) >= 1) continue;
+
+            const myY = (myP1.y + myP2.y) / 2;
+            const myMinX = Math.min(myP1.x, myP2.x);
+            const myMaxX = Math.max(myP1.x, myP2.x);
+
+            for (let j = 0; j < otherPoints.length - 1; j++) {
+                const oP1 = otherPoints[j];
+                const oP2 = otherPoints[j + 1];
+
+                // Only crosses with vertical segments of the other edge
+                if (Math.abs(oP2.x - oP1.x) >= 1) continue;
+
+                const oX = (oP1.x + oP2.x) / 2;
+                const oMinY = Math.min(oP1.y, oP2.y);
+                const oMaxY = Math.max(oP1.y, oP2.y);
+
+                // Strict interior crossing (not at segment endpoints)
+                if (oX > myMinX + 1 && oX < myMaxX - 1 &&
+                    myY > oMinY + 1 && myY < oMaxY - 1) {
+
+                    const cx = oX;
+                    const cy = myY;
+
+                    // Skip crossings near any edge endpoint
+                    if (Math.hypot(cx - myStart.x, cy - myStart.y) < ENDPOINT_THRESHOLD ||
+                        Math.hypot(cx - myEnd.x, cy - myEnd.y) < ENDPOINT_THRESHOLD ||
+                        Math.hypot(cx - otherStart.x, cy - otherStart.y) < ENDPOINT_THRESHOLD ||
+                        Math.hypot(cx - otherEnd.x, cy - otherEnd.y) < ENDPOINT_THRESHOLD) {
+                        continue;
+                    }
+
+                    crossings.push({ x: cx, y: cy, segmentIndex: i });
+                }
+            }
+        }
+    }
+
+    return crossings;
+}
+
+/**
+ * Builds the final SVG path with rounded corners AND bridge arcs at crossings.
+ * When no crossings are provided, produces the same output as roundManhattanPath.
+ */
+export function buildFinalPath(
+    inputPoints: { x: number; y: number }[],
+    crossings: CrossingPoint[],
+    cornerRadius: number = 4,
+    bridgeRadius: number = 6,
+): string {
+    if (inputPoints.length < 2) return '';
+
+    // Clean degenerate segments (same as roundManhattanPath)
+    let points: { x: number; y: number }[] = [inputPoints[0]];
+    for (let i = 1; i < inputPoints.length - 1; i++) {
+        const prev = points[points.length - 1];
+        const dist = Math.abs(inputPoints[i].x - prev.x) + Math.abs(inputPoints[i].y - prev.y);
+        if (dist >= 1) points.push(inputPoints[i]);
+    }
+    points.push(inputPoints[inputPoints.length - 1]);
+
+    if (points.length < 2) return `M ${inputPoints[0].x} ${inputPoints[0].y}`;
+
+    // Single segment (no corners to round)
+    if (points.length === 2) {
+        let d = `M ${points[0].x} ${points[0].y}`;
+        const segCrossings = filterCrossingsForSegment(
+            crossings.filter(c => c.segmentIndex === 0),
+            points[0], points[1], bridgeRadius,
+        );
+        d += emitLineWithBridges(points[0].x, points[0].y, points[1].x, points[1].y, segCrossings, bridgeRadius);
+        return d;
+    }
+
+    // Group crossings by segment index
+    const crossingMap = new Map<number, CrossingPoint[]>();
+    for (const c of crossings) {
+        if (!crossingMap.has(c.segmentIndex)) crossingMap.set(c.segmentIndex, []);
+        crossingMap.get(c.segmentIndex)!.push(c);
+    }
+
+    let d = `M ${points[0].x} ${points[0].y}`;
+    let prevX = points[0].x;
+    let prevY = points[0].y;
+
+    for (let i = 1; i < points.length - 1; i++) {
+        const prev = points[i - 1];
+        const curr = points[i];
+        const next = points[i + 1];
+
+        const dx1 = curr.x - prev.x;
+        const dy1 = curr.y - prev.y;
+        const dx2 = next.x - curr.x;
+        const dy2 = next.y - curr.y;
+
+        const len1 = Math.abs(dx1) + Math.abs(dy1);
+        const len2 = Math.abs(dx2) + Math.abs(dy2);
+
+        const maxR1 = (i === 1) ? len1 : len1 / 2;
+        const maxR2 = (i === points.length - 2) ? len2 : len2 / 2;
+        const r = Math.min(cornerRadius, maxR1, maxR2);
+
+        if (r < 0.5) {
+            const segIdx = i - 1;
+            const segCrossings = filterCrossingsForSegment(
+                crossingMap.get(segIdx) || [],
+                { x: prevX, y: prevY }, curr, bridgeRadius,
+            );
+            d += emitLineWithBridges(prevX, prevY, curr.x, curr.y, segCrossings, bridgeRadius);
+            prevX = curr.x;
+            prevY = curr.y;
+            continue;
+        }
+
+        const beforeX = curr.x - Math.sign(dx1) * (dx1 !== 0 ? r : 0);
+        const beforeY = curr.y - Math.sign(dy1) * (dy1 !== 0 ? r : 0);
+        const afterX = curr.x + Math.sign(dx2) * (dx2 !== 0 ? r : 0);
+        const afterY = curr.y + Math.sign(dy2) * (dy2 !== 0 ? r : 0);
+
+        const cross = dx1 * dy2 - dy1 * dx2;
+        const sweep = cross > 0 ? 1 : 0;
+
+        // Emit segment from prev to before-corner, with bridges
+        const segIdx = i - 1;
+        const segCrossings = filterCrossingsForSegment(
+            crossingMap.get(segIdx) || [],
+            { x: prevX, y: prevY }, { x: beforeX, y: beforeY }, bridgeRadius,
+        );
+        d += emitLineWithBridges(prevX, prevY, beforeX, beforeY, segCrossings, bridgeRadius);
+
+        // Corner arc
+        d += ` A ${r} ${r} 0 0 ${sweep} ${afterX} ${afterY}`;
+
+        prevX = afterX;
+        prevY = afterY;
+    }
+
+    // Last segment
+    const lastSegIdx = points.length - 2;
+    const last = points[points.length - 1];
+    const lastCrossings = filterCrossingsForSegment(
+        crossingMap.get(lastSegIdx) || [],
+        { x: prevX, y: prevY }, last, bridgeRadius,
+    );
+    d += emitLineWithBridges(prevX, prevY, last.x, last.y, lastCrossings, bridgeRadius);
+
+    return d;
+}
+
+/**
+ * Filters crossings to those that fit within the visible portion of a horizontal segment,
+ * ensuring enough space for the bridge arc (bridgeRadius on each side).
+ */
+function filterCrossingsForSegment(
+    crossings: CrossingPoint[],
+    start: { x: number; y: number },
+    end: { x: number; y: number },
+    bridgeRadius: number,
+): CrossingPoint[] {
+    if (crossings.length === 0) return crossings;
+
+    // Only horizontal segments get bridges
+    if (Math.abs(end.y - start.y) >= 1) return [];
+
+    const minX = Math.min(start.x, end.x) + bridgeRadius + 1;
+    const maxX = Math.max(start.x, end.x) - bridgeRadius - 1;
+
+    return crossings.filter(c => c.x >= minX && c.x <= maxX);
+}
+
+/**
+ * Emits an SVG line segment (L command) with optional bridge arcs at crossing points.
+ * Bridges are semicircular arcs that bulge upward (negative Y in SVG coords).
+ * Only horizontal segments get bridges.
+ */
+function emitLineWithBridges(
+    startX: number, startY: number,
+    endX: number, endY: number,
+    crossings: CrossingPoint[],
+    bridgeRadius: number,
+): string {
+    if (crossings.length === 0) {
+        return ` L ${endX} ${endY}`;
+    }
+
+    // Only horizontal segments get bridges
+    if (Math.abs(endY - startY) >= 1) {
+        return ` L ${endX} ${endY}`;
+    }
+
+    const goingRight = endX > startX;
+    const y = startY;
+    const r = bridgeRadius;
+
+    // Sort crossings in order of travel
+    const sorted = [...crossings].sort((a, b) => goingRight ? a.x - b.x : b.x - a.x);
+
+    // Filter out crossings too close to each other
+    const filtered: CrossingPoint[] = [];
+    for (const c of sorted) {
+        if (filtered.length === 0 || Math.abs(c.x - filtered[filtered.length - 1].x) >= 2 * r + 2) {
+            filtered.push(c);
+        }
+    }
+
+    let d = '';
+    for (const c of filtered) {
+        const beforeX = goingRight ? c.x - r : c.x + r;
+        const afterX = goingRight ? c.x + r : c.x - r;
+        // sweep=1 for left-to-right (clockwise = upward), sweep=0 for right-to-left
+        const sweep = goingRight ? 1 : 0;
+
+        d += ` L ${beforeX} ${y}`;
+        d += ` A ${r} ${r} 0 0 ${sweep} ${afterX} ${y}`;
+    }
+    d += ` L ${endX} ${endY}`;
+
+    return d;
 }

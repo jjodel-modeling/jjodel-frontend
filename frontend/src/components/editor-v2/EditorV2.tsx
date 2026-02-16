@@ -853,11 +853,12 @@ function EditorV2Inner() {
     const handleEdgeChange = useCallback(
         (edgeId: string, data: Partial<Edge>) => {
             takeSnapshot();
-            setEdges((eds) =>
-                eds.map((e) => (e.id === edgeId ? { ...e, ...data } : e))
-            );
+            setEdges((eds) => {
+                const updated = eds.map((e) => (e.id === edgeId ? { ...e, ...data } : e));
+                return applyDistribution(updated);
+            });
         },
-        [setEdges, takeSnapshot]
+        [setEdges, takeSnapshot, applyDistribution]
     );
 
     // Convert edge to inheritance
@@ -965,7 +966,7 @@ function EditorV2Inner() {
         [onNodesChange, takeSnapshot, setEdges, nodes, applyDistribution]
     );
 
-    const editorContextValue = useMemo(() => ({ takeSnapshot, notation }), [takeSnapshot, notation]);
+    const editorContextValue = useMemo(() => ({ takeSnapshot, notation, onEdgeDataChange: handleEdgeChange }), [takeSnapshot, notation, handleEdgeChange]);
 
     return (
         <EditorContext.Provider value={editorContextValue}>

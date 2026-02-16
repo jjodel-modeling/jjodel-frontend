@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useEffect } from 'react';
 import { useNodes, useEdges, EdgeLabelRenderer, type EdgeProps } from '@xyflow/react';
 import type { InheritanceEdgeData } from '../types';
 import {
@@ -8,14 +8,21 @@ import {
     roundManhattanPath,
     computeSelfLoopPath,
     parsePathPoints,
+    parsePathSubPaths,
     applyWaypoints,
     pointsToPath,
     getSideFromHandle,
     computeTreeConnectorPath,
+    registerEdgePath,
+    unregisterEdgePath,
+    getEdgeCrossings,
+    buildFinalPath,
     type TreeBranch,
 } from '../utils/edgeUtils';
 import { useObstacleGrid } from '../contexts/ObstacleGridContext';
 import { useEditorContextSafe } from '../contexts/EditorContext';
+import { SegmentHandles } from './SegmentHandles';
+import { EndpointHandles } from './EndpointHandles';
 
 function InheritanceEdge(props: EdgeProps) {
     const { id, sourceX, sourceY, targetX, targetY, source, target, sourceHandleId, targetHandleId, selected, data } = props;
@@ -101,16 +108,95 @@ function InheritanceEdge(props: EdgeProps) {
     );
     const adjustedPath = useMemo(() => pointsToPath(adjustedPoints), [adjustedPoints]);
 
-    // Final path with rounding
+    // Register path for crossing detection by other edges
+    useEffect(() => {
+        registerEdgePath(id, adjustedPoints, source, target);
+        return () => unregisterEdgePath(id);
+    }, [id, adjustedPoints, source, target]);
+
+    // Register tree geometry paths (trunk, bar, branches) for crossing detection
+    useEffect(() => {
+        if (!isPrimary || !isGrouped || !treeGeometry) return;
+
+        const treeIds: string[] = [];
+
+        // Register trunk path (vertical segment from bar to parent)
+        const trunkPts = parsePathPoints(treeGeometry.trunkPath);
+        if (trunkPts.length >= 2) {
+            const tid = `${id}__trunk`;
+            registerEdgePath(tid, trunkPts, source, target);
+            treeIds.push(tid);
+        }
+
+        // Register bar + branch sub-paths (horizontal bar + vertical branches to children)
+        if (treeGeometry.barAndBranchesPath) {
+            const subPaths = parsePathSubPaths(treeGeometry.barAndBranchesPath);
+            subPaths.forEach((pts, idx) => {
+                if (pts.length >= 2) {
+                    const sid = `${id}__tree_${idx}`;
+                    registerEdgePath(sid, pts, source, target);
+                    treeIds.push(sid);
+                }
+            });
+        }
+
+        return () => { treeIds.forEach(tid => unregisterEdgePath(tid)); };
+    }, [id, isPrimary, isGrouped, treeGeometry, source, target]);
+
+    // Detect crossings with other edges
+    const crossings = useMemo(
+        () => getEdgeCrossings(id, adjustedPoints),
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+        [id, adjustedPoints, allNodes, allEdges]
+    );
+
+    // Final path with rounding and bridge arcs
     const path = useMemo(() => {
         if (isSelfLoop) {
             return computeSelfLoopPath(sourceX, sourceY, targetX, targetY);
         }
+        if (crossings.length > 0) {
+            return buildFinalPath(adjustedPoints, crossings, 4, 6);
+        }
         return roundManhattanPath(adjustedPath, 4);
-    }, [adjustedPath, isSelfLoop, sourceX, sourceY, targetX, targetY]);
+    }, [adjustedPath, adjustedPoints, crossings, isSelfLoop, sourceX, sourceY, targetX, targetY]);
 
     // Marker ID unique per edge (or per group for tree connector)
     const markerTriangleId = `inheritance-triangle-${id}`;
+
+    // Compute crossings for tree segments so they also get bridge arcs
+    const trunkPathFinal = useMemo(() => {
+        if (!isPrimary || !isGrouped || !treeGeometry) return '';
+        const trunkPts = parsePathPoints(treeGeometry.trunkPath);
+        if (trunkPts.length < 2) return treeGeometry.trunkPath;
+        const trunkCrossings = getEdgeCrossings(`${id}__trunk`, trunkPts);
+        if (trunkCrossings.length > 0) {
+            return buildFinalPath(trunkPts, trunkCrossings, 4, 6);
+        }
+        return treeGeometry.trunkPath;
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [id, isPrimary, isGrouped, treeGeometry, allNodes, allEdges]);
+
+    const barBranchesPathFinal = useMemo(() => {
+        if (!isPrimary || !isGrouped || !treeGeometry?.barAndBranchesPath) return treeGeometry?.barAndBranchesPath || '';
+        const subPaths = parsePathSubPaths(treeGeometry.barAndBranchesPath);
+        const finalParts: string[] = [];
+        for (let idx = 0; idx < subPaths.length; idx++) {
+            const pts = subPaths[idx];
+            if (pts.length < 2) {
+                finalParts.push(pointsToPath(pts));
+                continue;
+            }
+            const segCrossings = getEdgeCrossings(`${id}__tree_${idx}`, pts);
+            if (segCrossings.length > 0) {
+                finalParts.push(buildFinalPath(pts, segCrossings, 4, 6));
+            } else {
+                finalParts.push(pointsToPath(pts));
+            }
+        }
+        return finalParts.join(' ');
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [id, isPrimary, isGrouped, treeGeometry, allNodes, allEdges]);
 
     // Midpoint for ISA label in ER notation (must be before early returns to respect hooks rules)
     const midPoint = useMemo(() => {
@@ -126,6 +212,12 @@ function InheritanceEdge(props: EdgeProps) {
     if (isPrimary && isGrouped && treeGeometry) {
         const treeMarkerId = `inheritance-triangle-group-${target}`;
         const selectedClass = anyInGroupSelected ? 'selected' : '';
+
+        // Connection points: use actual React Flow handle positions for accurate endpoint handles
+        const trunkPts = parsePathPoints(treeGeometry.trunkPath);
+        const parentEndpoint = trunkPts.length > 0 ? trunkPts[trunkPts.length - 1] : { x: targetX, y: targetY };
+        const childEndpoint = { x: sourceX, y: sourceY };
+
         return (
             <>
                 {!isERNotation && (
@@ -133,9 +225,9 @@ function InheritanceEdge(props: EdgeProps) {
                         <marker
                             id={treeMarkerId}
                             viewBox="0 0 12 10"
-                            refX="0"
+                            refX="12"
                             refY="5"
-                            markerWidth="14"
+                            markerWidth="12"
                             markerHeight="10"
                             orient="auto"
                         >
@@ -165,20 +257,34 @@ function InheritanceEdge(props: EdgeProps) {
                     />
                 )}
 
-                {/* Trunk: bar → parent */}
+                {/* Trunk: bar → parent (with bridge arcs at crossings) */}
                 <path
-                    d={treeGeometry.trunkPath}
+                    d={trunkPathFinal}
                     fill="none"
                     className={`inheritance-edge ${selectedClass}`}
                     markerEnd={isERNotation ? undefined : `url(#${treeMarkerId})`}
                 />
 
-                {/* Bar + branches (no marker) */}
+                {/* Bar + branches (with bridge arcs at crossings) */}
                 {treeGeometry.barAndBranchesPath && (
                     <path
-                        d={treeGeometry.barAndBranchesPath}
+                        d={barBranchesPathFinal}
                         fill="none"
                         className={`inheritance-edge ${selectedClass}`}
+                    />
+                )}
+
+                {/* Endpoint handle: target at trunk→parent, source at branch→child */}
+                {!isSelfLoop && (
+                    <EndpointHandles
+                        edgeId={id}
+                        sourceX={childEndpoint.x}
+                        sourceY={childEndpoint.y}
+                        targetX={parentEndpoint.x}
+                        targetY={parentEndpoint.y}
+                        sourceNodeId={source}
+                        targetNodeId={target}
+                        selected={!!selected}
                     />
                 )}
 
@@ -201,17 +307,37 @@ function InheritanceEdge(props: EdgeProps) {
         );
     }
 
-    // ═══ CASE 2: Secondary edge in a group → invisible hit-test path ═══
+    // ═══ CASE 2: Secondary edge in a group → invisible hit-test path + segment handles ═══
     if (!isPrimary && isGrouped && treeGeometry) {
         const branchPath = treeGeometry.branchPaths.get(id);
+
+        // Use actual React Flow handle position for accurate endpoint handle
+        const childEndpoint = { x: sourceX, y: sourceY };
+
         return (
-            <path
-                d={branchPath || `M ${sourceX} ${sourceY} L ${targetX} ${targetY}`}
-                fill="none"
-                stroke="transparent"
-                strokeWidth={20}
-                style={{ pointerEvents: 'stroke' }}
-            />
+            <>
+                <path
+                    d={branchPath || `M ${sourceX} ${sourceY} L ${targetX} ${targetY}`}
+                    fill="none"
+                    stroke="transparent"
+                    strokeWidth={20}
+                    style={{ pointerEvents: 'stroke' }}
+                />
+                {/* Endpoint handle: only source (child side); target is on trunk rendered by primary */}
+                {!isSelfLoop && (
+                    <EndpointHandles
+                        edgeId={id}
+                        sourceX={childEndpoint.x}
+                        sourceY={childEndpoint.y}
+                        targetX={targetX}
+                        targetY={targetY}
+                        sourceNodeId={source}
+                        targetNodeId={target}
+                        selected={!!selected}
+                        hideTarget
+                    />
+                )}
+            </>
         );
     }
 
@@ -223,11 +349,11 @@ function InheritanceEdge(props: EdgeProps) {
                     {/* Hollow triangle (UML generalization marker) */}
                     <marker
                         id={markerTriangleId}
-                        viewBox="0 0 12 10"
-                        refX="0"
-                        refY="5"
-                        markerWidth="14"
-                        markerHeight="10"
+                        viewBox="0 0 12 8"
+                        refX="12"
+                        refY="4"
+                        markerWidth="12"
+                        markerHeight="8"
                         orient="auto"
                     >
                         <path
@@ -252,6 +378,30 @@ function InheritanceEdge(props: EdgeProps) {
                 className={`inheritance-edge ${selected ? 'selected' : ''}`}
                 markerEnd={isERNotation ? undefined : `url(#${markerTriangleId})`}
             />
+
+            {/* Segment handles for manual edge customization */}
+            {!isSelfLoop && (
+                <SegmentHandles
+                    edgeId={id}
+                    adjustedPath={adjustedPath}
+                    waypoints={waypoints}
+                    selected={!!selected}
+                />
+            )}
+
+            {/* Endpoint handles for anchor drag */}
+            {!isSelfLoop && (
+                <EndpointHandles
+                    edgeId={id}
+                    sourceX={sourceX}
+                    sourceY={sourceY}
+                    targetX={targetX}
+                    targetY={targetY}
+                    sourceNodeId={source}
+                    targetNodeId={target}
+                    selected={!!selected}
+                />
+            )}
 
             <EdgeLabelRenderer>
                 {/* ISA label for ER notation */}
