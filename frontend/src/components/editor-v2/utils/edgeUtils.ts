@@ -764,10 +764,14 @@ export function applyWaypoints(
     if (!waypoints || waypoints.length === 0) return points;
 
     const adjusted = points.map((p) => ({ ...p }));
+    const lastSeg = adjusted.length - 2; // index of the last segment
 
     for (const wp of waypoints) {
         const i = wp.segmentIndex;
         if (i < 0 || i >= adjusted.length - 1) continue;
+
+        // Skip first/last segments — anchor endpoints must stay fixed
+        if (i === 0 || i === lastSeg) continue;
 
         const p1 = adjusted[i];
         const p2 = adjusted[i + 1];
@@ -785,6 +789,29 @@ export function applyWaypoints(
     }
 
     return adjusted;
+}
+
+/**
+ * Given a node center and the midpoint of a dragged first/last segment,
+ * infers which anchor side the edge should use.
+ *
+ * The direction from node center to segment midpoint determines the side:
+ * predominant horizontal → right/left, predominant vertical → bottom/top.
+ */
+export function inferAnchorSideFromSegment(
+    nodeCenterX: number,
+    nodeCenterY: number,
+    segmentMidX: number,
+    segmentMidY: number,
+): Side {
+    const dx = segmentMidX - nodeCenterX;
+    const dy = segmentMidY - nodeCenterY;
+
+    if (Math.abs(dx) >= Math.abs(dy)) {
+        return dx >= 0 ? 'right' : 'left';
+    } else {
+        return dy >= 0 ? 'bottom' : 'top';
+    }
 }
 
 /**

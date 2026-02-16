@@ -1206,23 +1206,6 @@
 // EDGE WAYPOINT HANDLES
 // ============================================
 
-.edge-waypoint {
-    width: 10px;
-    height: 10px;
-    background: var(--accent);
-    border: 1.5px solid white;
-    border-radius: 50%;
-    opacity: 0.7;
-    transition: opacity 0.15s, width 0.15s ease, height 0.15s ease, margin 0.15s ease;
-    z-index: 10;
-
-    &:hover {
-        opacity: 1;
-        width: 14px;
-        height: 14px;
-        margin: -2px; // compensate growth to stay centered
-    }
-}
 
 // ============================================
 // PROPERTIES PANEL
