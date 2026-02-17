@@ -6,6 +6,8 @@ interface EditorContextValue {
     takeSnapshot: () => void;
     notation: NotationMode;
     onEdgeDataChange?: (edgeId: string, data: Partial<Edge>) => void;
+    /** Recalculate auto-anchors for a specific edge (e.g. after segment handle drag). */
+    recalculateAnchors?: (edgeId: string) => void;
 }
 
 export const EditorContext = createContext<EditorContextValue | null>(null);

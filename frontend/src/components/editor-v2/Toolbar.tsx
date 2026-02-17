@@ -23,7 +23,7 @@ interface ToolbarProps {
 }
 
 const NOTATION_OPTIONS: Array<{ id: NotationMode; name: string; desc: string; icon: string }> = [
-    { id: 'uml',        name: 'Structured',        desc: 'Standard class diagram',  icon: 'bi-diagram-3' },
+    { id: 'uml',        name: 'Structured',        desc: 'Class diagram like',  icon: 'bi-diagram-3' },
     { id: 'simplified',  name: 'Simplified', desc: 'Names only, minimal',     icon: 'bi-list' },
     { id: 'compact',     name: 'Compact',    desc: 'Headers only',            icon: 'bi-textarea' },
     { id: 'wireframe',   name: 'Wireframe',  desc: 'Blueprint style',         icon: 'bi-bounding-box-circles' },

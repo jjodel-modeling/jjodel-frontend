@@ -20,27 +20,41 @@ export interface GridConfig {
     bounds: Rect;       // world-space bounds the grid covers
 }
 
+/** Pre-computed node rectangle for obstacle checks. */
+export interface NodeRect {
+    id: string;
+    type: string | undefined;
+    parentId: string | undefined;
+    rect: Rect;
+}
+
 export class ObstacleGrid {
     private blocked: Set<string>;
-    private config: GridConfig;
+    private _config: GridConfig;
     /** Number of columns in the grid */
     readonly cols: number;
     /** Number of rows in the grid */
     readonly rows: number;
 
     constructor(config: GridConfig) {
-        this.config = config;
+        this._config = config;
         this.blocked = new Set();
         this.cols = Math.ceil(config.bounds.width / config.cellSize);
         this.rows = Math.ceil(config.bounds.height / config.cellSize);
     }
 
+    // ── Public accessors ─────────────────────────────────────
+
+    get bounds(): Rect { return this._config.bounds; }
+    get cellSize(): number { return this._config.cellSize; }
+    get obstaclePadding(): number { return this._config.padding; }
+
     // ── Coordinate conversion ───────────────────────────────────
 
     /** Convert world coordinates to grid cell (col, row). */
     toGrid(worldX: number, worldY: number): { col: number; row: number } {
-        const col = Math.floor((worldX - this.config.bounds.x) / this.config.cellSize);
-        const row = Math.floor((worldY - this.config.bounds.y) / this.config.cellSize);
+        const col = Math.floor((worldX - this._config.bounds.x) / this._config.cellSize);
+        const row = Math.floor((worldY - this._config.bounds.y) / this._config.cellSize);
         return {
             col: Math.max(0, Math.min(col, this.cols - 1)),
             row: Math.max(0, Math.min(row, this.rows - 1)),
@@ -50,8 +64,8 @@ export class ObstacleGrid {
     /** Convert grid cell to world coordinates (center of cell). */
     toWorld(col: number, row: number): { x: number; y: number } {
         return {
-            x: this.config.bounds.x + (col + 0.5) * this.config.cellSize,
-            y: this.config.bounds.y + (row + 0.5) * this.config.cellSize,
+            x: this._config.bounds.x + (col + 0.5) * this._config.cellSize,
+            y: this._config.bounds.y + (row + 0.5) * this._config.cellSize,
         };
     }
 
@@ -61,11 +75,30 @@ export class ObstacleGrid {
      * Mark cells covered by a rectangle (node + padding) as blocked.
      */
     markObstacle(rect: Rect): void {
-        const pad = this.config.padding;
+        const pad = this._config.padding;
         const topLeft = this.toGrid(rect.x - pad, rect.y - pad);
         const bottomRight = this.toGrid(
             rect.x + rect.width + pad,
             rect.y + rect.height + pad,
+        );
+
+        for (let r = topLeft.row; r <= bottomRight.row; r++) {
+            for (let c = topLeft.col; c <= bottomRight.col; c++) {
+                this.blocked.add(`${c},${r}`);
+            }
+        }
+    }
+
+    /**
+     * Mark cells covered by a rectangle WITHOUT padding.
+     * Used for thin linear obstacles (e.g. inheritance tree segments)
+     * where the rect already includes the desired margin.
+     */
+    markRect(rect: Rect): void {
+        const topLeft = this.toGrid(rect.x, rect.y);
+        const bottomRight = this.toGrid(
+            rect.x + rect.width,
+            rect.y + rect.height,
         );
 
         for (let r = topLeft.row; r <= bottomRight.row; r++) {
@@ -80,6 +113,14 @@ export class ObstacleGrid {
         if (col < 0 || col >= this.cols || row < 0 || row >= this.rows) return false;
         return !this.blocked.has(`${col},${row}`);
     }
+
+    /** Force a single cell to be walkable (unblock it). */
+    clearCell(col: number, row: number): void {
+        this.blocked.delete(`${col},${row}`);
+    }
+
+    /** Number of currently blocked cells — useful for diagnostics. */
+    get blockedCount(): number { return this.blocked.size; }
 
     /**
      * Clear (unblock) the cells of a node and a corridor extending outward

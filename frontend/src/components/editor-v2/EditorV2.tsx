@@ -22,8 +22,7 @@ import '@xyflow/react/dist/style.css';
 import ClassNode from './nodes/ClassNode';
 import EnumNode from './nodes/EnumNode';
 import PackageNode from './nodes/PackageNode';
-import ReferenceEdge from './edges/ReferenceEdge';
-import InheritanceEdge from './edges/InheritanceEdge';
+import UnifiedEdge from './edges/UnifiedEdge';
 import PalettePanel from './panels/PalettePanel';
 import PropertiesPanel from './panels/PropertiesPanel';
 import Toolbar from './Toolbar';
@@ -47,10 +46,10 @@ const nodeTypes: NodeTypes = {
     packageNode: PackageNode,
 };
 
-// Register custom edge types
+// Register custom edge types — both map to UnifiedEdge which handles all variants
 const edgeTypes: EdgeTypes = {
-    reference: ReferenceEdge,
-    inheritance: InheritanceEdge,
+    reference: UnifiedEdge,
+    inheritance: UnifiedEdge,
 };
 
 // Initial nodes for metamodel demonstration
@@ -942,9 +941,15 @@ function EditorV2Inner() {
 
                     // Apply anchors + persist AnchorConfig in edge.data.
                     // Start with -0 index; applyDistribution assigns correct indexed handles.
+                    // When anchor sides change, clear waypoints since they're relative to the old path shape.
                     const updated = currentEdges.map((edge) => {
                         const result = anchorResults.get(edge.id);
                         if (result) {
+                            const currentSrcSide = edge.sourceHandle?.split('-')[0];
+                            const currentTgtSide = edge.targetHandle?.split('-')[0];
+                            const sidesChanged = currentSrcSide !== result.sourceHandle
+                                || currentTgtSide !== result.targetHandle;
+
                             return {
                                 ...edge,
                                 sourceHandle: `${result.sourceHandle}-0`,
@@ -953,6 +958,7 @@ function EditorV2Inner() {
                                     ...edge.data,
                                     sourceAnchor: result.sourceAnchor,
                                     targetAnchor: result.targetAnchor,
+                                    ...(sidesChanged ? { waypoints: [] } : {}),
                                 },
                             };
                         }
@@ -966,7 +972,47 @@ function EditorV2Inner() {
         [onNodesChange, takeSnapshot, setEdges, nodes, applyDistribution]
     );
 
-    const editorContextValue = useMemo(() => ({ takeSnapshot, notation, onEdgeDataChange: handleEdgeChange }), [takeSnapshot, notation, handleEdgeChange]);
+    // Recalculate anchors for a specific edge (called by SegmentHandles after drag).
+    // If the optimal anchor side changes, clear waypoints since they'd be invalid.
+    const recalculateAnchors = useCallback(
+        (edgeId: string) => {
+            const nodeRectsMap = new Map(nodes.map((n) => [n.id, getNodeRect(n)]));
+            setEdges((currentEdges) => {
+                const edge = currentEdges.find(e => e.id === edgeId);
+                if (!edge) return currentEdges;
+
+                const anchorResults = computeAnchorsWithHysteresis([edge], nodeRectsMap);
+                const result = anchorResults.get(edgeId);
+                if (!result) return currentEdges;
+
+                const currentSrcSide = edge.sourceHandle?.split('-')[0];
+                const currentTgtSide = edge.targetHandle?.split('-')[0];
+                const sidesChanged = currentSrcSide !== result.sourceHandle
+                    || currentTgtSide !== result.targetHandle;
+
+                if (!sidesChanged) return currentEdges;
+
+                const updated = currentEdges.map(e => {
+                    if (e.id !== edgeId) return e;
+                    return {
+                        ...e,
+                        sourceHandle: `${result.sourceHandle}-0`,
+                        targetHandle: `${result.targetHandle}-0`,
+                        data: {
+                            ...e.data,
+                            sourceAnchor: result.sourceAnchor,
+                            targetAnchor: result.targetAnchor,
+                            waypoints: [],
+                        },
+                    };
+                });
+                return applyDistribution(updated);
+            });
+        },
+        [nodes, setEdges, applyDistribution]
+    );
+
+    const editorContextValue = useMemo(() => ({ takeSnapshot, notation, onEdgeDataChange: handleEdgeChange, recalculateAnchors }), [takeSnapshot, notation, handleEdgeChange, recalculateAnchors]);
 
     return (
         <EditorContext.Provider value={editorContextValue}>

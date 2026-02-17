@@ -1,6 +1,7 @@
 import { useCallback, useRef, useMemo } from 'react';
 import { EdgeLabelRenderer, useReactFlow } from '@xyflow/react';
 import { getPathSegments, type SegmentInfo, type EdgeWaypoint } from '../utils/edgeUtils';
+import { useEditorContextSafe } from '../contexts/EditorContext';
 
 interface SegmentHandlesProps {
     edgeId: string;
@@ -52,7 +53,8 @@ function DraggableHandle({ edgeId, segment, waypoints }: {
     segment: SegmentInfo;
     waypoints: EdgeWaypoint[];
 }) {
-    const { setEdges, screenToFlowPosition } = useReactFlow();
+    const { setEdges, getEdges, screenToFlowPosition } = useReactFlow();
+    const editorCtx = useEditorContextSafe();
     const handleRef = useRef<HTMLDivElement>(null);
     const dragState = useRef<{
         startFlowPos: { x: number; y: number };
@@ -104,31 +106,43 @@ function DraggableHandle({ edgeId, segment, waypoints }: {
             dragState.current = null;
             if (el) el.classList.remove('dragging');
 
-            // Persist waypoint to edge data
-            setEdges((edges) => edges.map((e) => {
-                if (e.id !== edgeId) return e;
-                const currentWaypoints: EdgeWaypoint[] = (e.data as any)?.waypoints || [];
-                const idx = currentWaypoints.findIndex(wp => wp.segmentIndex === segment.index);
-                let newWaypoints: EdgeWaypoint[];
+            // Compute new waypoints
+            const currentEdge = getEdges().find(e => e.id === edgeId);
+            const currentWaypoints: EdgeWaypoint[] = (currentEdge?.data as any)?.waypoints || [];
+            const wpIdx = currentWaypoints.findIndex(wp => wp.segmentIndex === segment.index);
+            let newWaypoints: EdgeWaypoint[];
 
-                if (idx >= 0) {
-                    newWaypoints = currentWaypoints.map((wp, i) =>
-                        i === idx ? { ...wp, offset: newOffset } : wp
-                    );
-                } else {
-                    newWaypoints = [...currentWaypoints, { segmentIndex: segment.index, offset: newOffset }];
-                }
+            if (wpIdx >= 0) {
+                newWaypoints = currentWaypoints.map((wp, i) =>
+                    i === wpIdx ? { ...wp, offset: newOffset } : wp
+                );
+            } else {
+                newWaypoints = [...currentWaypoints, { segmentIndex: segment.index, offset: newOffset }];
+            }
 
-                // Remove near-zero offsets (user dragged back to original position)
-                newWaypoints = newWaypoints.filter(wp => Math.abs(wp.offset) > 1);
+            // Remove near-zero offsets (user dragged back to original position)
+            newWaypoints = newWaypoints.filter(wp => Math.abs(wp.offset) > 1);
 
-                return { ...e, data: { ...e.data, waypoints: newWaypoints } };
-            }));
+            // Persist via EditorContext (triggers snapshot + applyDistribution)
+            if (editorCtx?.onEdgeDataChange) {
+                editorCtx.onEdgeDataChange(edgeId, {
+                    data: { ...currentEdge?.data, waypoints: newWaypoints },
+                });
+                // Recalculate auto-anchors: if the drag makes a different side significantly
+                // better, the anchor switches and waypoints are cleared (new path shape).
+                editorCtx.recalculateAnchors?.(edgeId);
+            } else {
+                // Fallback: direct setEdges (no snapshot, no distribution)
+                setEdges((edges) => edges.map((e) => {
+                    if (e.id !== edgeId) return e;
+                    return { ...e, data: { ...e.data, waypoints: newWaypoints } };
+                }));
+            }
         };
 
         document.addEventListener('mousemove', onMouseMove);
         document.addEventListener('mouseup', onMouseUp);
-    }, [edgeId, segment, existingWaypoint, screenToFlowPosition, setEdges]);
+    }, [edgeId, segment, existingWaypoint, screenToFlowPosition, setEdges, getEdges, editorCtx]);
 
     return (
         <div

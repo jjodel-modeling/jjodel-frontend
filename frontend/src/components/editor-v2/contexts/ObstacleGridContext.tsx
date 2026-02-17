@@ -4,22 +4,30 @@
  * The provider calls useNodes() ONCE and rebuilds the grid on a 100ms debounce.
  * Individual edge components consume the context and only recompute their path
  * when `version` changes or their own source/target coordinates change.
+ *
+ * Also caches pre-computed `nodeRects` so per-edge A* calls don't need to
+ * re-iterate allNodes on every render.
  */
 
-import { createContext, useContext, useState, useEffect, useRef, useMemo, type ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useRef, useMemo, useCallback, type ReactNode } from 'react';
 import { useNodes } from '@xyflow/react';
-import { ObstacleGrid, type Rect } from '../utils/ObstacleGrid';
+import { ObstacleGrid, type Rect, type NodeRect } from '../utils/ObstacleGrid';
 
 // ── Context type ────────────────────────────────────────────────
 
 interface ObstacleGridContextType {
     grid: ObstacleGrid | null;
-    version: number;   // incremented every time the grid is rebuilt
+    nodeRects: NodeRect[];   // pre-computed rects for per-edge A* grids
+    version: number;         // incremented every time the grid is rebuilt or tree obstacles change
+    /** Bump version to signal that tree obstacles have changed (called by useTreeLayout). */
+    bumpVersion: () => void;
 }
 
 const ObstacleGridCtx = createContext<ObstacleGridContextType>({
     grid: null,
+    nodeRects: [],
     version: 0,
+    bumpVersion: () => {},
 });
 
 // ── Hook ────────────────────────────────────────────────────────
@@ -85,16 +93,17 @@ interface ObstacleGridProviderProps {
 export function ObstacleGridProvider({ children }: ObstacleGridProviderProps) {
     const nodes = useNodes();
     const [grid, setGrid] = useState<ObstacleGrid | null>(null);
+    const [nodeRects, setNodeRects] = useState<NodeRect[]>([]);
     const [version, setVersion] = useState(0);
     const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-    // Rebuild grid on debounce whenever nodes change
+    // Rebuild grid + nodeRects on debounce whenever nodes change
     useEffect(() => {
         if (timerRef.current) clearTimeout(timerRef.current);
 
         timerRef.current = setTimeout(() => {
-            // Collect rects for ALL nodes (we'll use them for bounds)
-            const allRects: Array<{ id: string; type: string | undefined; parentId: string | undefined; rect: Rect }> = [];
+            // Collect rects for ALL nodes
+            const allRects: NodeRect[] = [];
             for (const node of nodes) {
                 allRects.push({
                     id: node.id,
@@ -121,6 +130,7 @@ export function ObstacleGridProvider({ children }: ObstacleGridProviderProps) {
             }
 
             setGrid(newGrid);
+            setNodeRects(allRects);
             setVersion(v => v + 1);
         }, DEBOUNCE_MS);
 
@@ -129,7 +139,10 @@ export function ObstacleGridProvider({ children }: ObstacleGridProviderProps) {
         };
     }, [nodes]);
 
-    const value = useMemo(() => ({ grid, version }), [grid, version]);
+    /** Stable callback for edges to signal tree obstacle changes without rebuilding the grid. */
+    const bumpVersion = useCallback(() => { setVersion(v => v + 1); }, []);
+
+    const value = useMemo(() => ({ grid, nodeRects, version, bumpVersion }), [grid, nodeRects, version, bumpVersion]);
 
     return (
         <ObstacleGridCtx.Provider value={value}>

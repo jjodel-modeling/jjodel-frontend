@@ -7,14 +7,17 @@
  * Phase 7: A* grid-based obstacle avoidance (opt-in via OBSTACLE_AVOIDANCE_ENABLED).
  */
 
-import { ObstacleGrid, type Rect as GridRect } from './ObstacleGrid';
-import { astarManhattan } from './astarPathfinder';
+import { ObstacleGrid, type NodeRect } from './ObstacleGrid';
+import { astarManhattan, smoothPath } from './astarPathfinder';
 
 export const EDGE_PADDING = 25; // legacy — kept for ManhattanEdge.tsx compatibility
 const DETOUR_PADDING = 30; // used only for same-side and backward U-shape routing
 
-/** Toggle for Phase 7 A* obstacle avoidance. Default OFF for incremental testing. */
-export const OBSTACLE_AVOIDANCE_ENABLED = false;
+/** Toggle for Phase 7 A* obstacle avoidance. */
+export const OBSTACLE_AVOIDANCE_ENABLED = true;
+
+/** Padding used for the fast-path obstruction check (matches ObstacleGrid's default). */
+const OBSTRUCTION_CHECK_PADDING = 10;
 
 export type Side = 'top' | 'right' | 'bottom' | 'left';
 
@@ -960,6 +963,8 @@ export function computeTreeConnectorPath(
     parentX: number,
     parentY: number,
     branches: TreeBranch[],
+    obstacleRects?: NodeRect[],
+    excludeIds?: Set<string>,
 ): TreeConnectorGeometry {
     const empty: TreeConnectorGeometry = {
         trunkPath: '',
@@ -973,7 +978,7 @@ export function computeTreeConnectorPath(
 
     // barY = midpoint between parent handle and closest child handle
     const closestChildY = Math.min(...sorted.map(b => b.childY));
-    const barY = parentY + (closestChildY - parentY) / 2;
+    const defaultBarY = parentY + (closestChildY - parentY) / 2;
 
     // Single child: straight line (no bar needed)
     if (sorted.length === 1) {
@@ -992,6 +997,13 @@ export function computeTreeConnectorPath(
     // Extend bar to include parentX if it falls outside the child range
     const barLeftX = Math.min(leftX, parentX);
     const barRightX = Math.max(rightX, parentX);
+
+    // ── Obstacle-aware barY search ──────────────────────────────
+    const barY = findClearBarY(
+        defaultBarY, parentX, parentY, sorted,
+        barLeftX, barRightX, closestChildY,
+        obstacleRects, excludeIds,
+    );
 
     // Trunk: from bar up to parent (markerEnd will be placed at the parent end)
     const trunkPath = `M ${parentX} ${barY} L ${parentX} ${parentY}`;
@@ -1014,25 +1026,391 @@ export function computeTreeConnectorPath(
     return { trunkPath, barAndBranchesPath: barAndBranches, branchPaths };
 }
 
+// ── Helper: find a barY that avoids obstacle nodes ────────────────
+
+const BAR_OBSTACLE_MARGIN = 8; // px margin around obstacles when checking bar clearance
+const BAR_Y_SEARCH_STEP = 10;  // px step when searching for clear barY
+
+/**
+ * Check if a candidate barY produces a tree layout (bar + trunk + branches)
+ * that doesn't intersect any obstacle node rects (excluding tree members).
+ */
+function isBarYClear(
+    barY: number,
+    parentX: number,
+    parentY: number,
+    sorted: TreeBranch[],
+    barLeftX: number,
+    barRightX: number,
+    obstacles: NodeRect[],
+    excludeIds: Set<string>,
+): boolean {
+    for (const obs of obstacles) {
+        if (excludeIds.has(obs.id)) continue;
+        // Skip package containers — they're not real obstacles
+        if (obs.type === 'packageNode') continue;
+
+        const r = obs.rect;
+
+        // Check horizontal bar segment
+        if (segmentHitsRect(barLeftX, barY, barRightX, barY, r, BAR_OBSTACLE_MARGIN)) {
+            return false;
+        }
+
+        // Check trunk segment (bar up to parent)
+        if (segmentHitsRect(parentX, barY, parentX, parentY, r, BAR_OBSTACLE_MARGIN)) {
+            return false;
+        }
+
+        // Check each vertical branch (bar down to child)
+        for (const child of sorted) {
+            if (segmentHitsRect(child.childX, barY, child.childX, child.childY, r, BAR_OBSTACLE_MARGIN)) {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
+/**
+ * Find a clear barY position for the inheritance tree bar.
+ * Starts from the default midpoint and searches outward (alternating above/below)
+ * within the parent-to-children range. Falls back to default if no clear position found.
+ */
+function findClearBarY(
+    defaultBarY: number,
+    parentX: number,
+    parentY: number,
+    sorted: TreeBranch[],
+    barLeftX: number,
+    barRightX: number,
+    closestChildY: number,
+    obstacleRects?: NodeRect[],
+    excludeIds?: Set<string>,
+): number {
+    // No obstacles to check — use default
+    if (!obstacleRects || obstacleRects.length === 0 || !excludeIds) {
+        return defaultBarY;
+    }
+
+    // Check if default is already clear
+    if (isBarYClear(defaultBarY, parentX, parentY, sorted, barLeftX, barRightX, obstacleRects, excludeIds)) {
+        return defaultBarY;
+    }
+
+    // Search outward from default barY, alternating above and below
+    // Stay within the parent-to-children vertical range (with some margin)
+    const minY = parentY + 15;  // don't place bar too close to parent
+    const maxY = closestChildY - 15; // don't place bar too close to children
+    const maxOffset = Math.abs(closestChildY - parentY);
+
+    for (let offset = BAR_Y_SEARCH_STEP; offset <= maxOffset; offset += BAR_Y_SEARCH_STEP) {
+        // Try above default
+        const above = defaultBarY - offset;
+        if (above >= minY && isBarYClear(above, parentX, parentY, sorted, barLeftX, barRightX, obstacleRects, excludeIds)) {
+            return above;
+        }
+
+        // Try below default
+        const below = defaultBarY + offset;
+        if (below <= maxY && isBarYClear(below, parentX, parentY, sorted, barLeftX, barRightX, obstacleRects, excludeIds)) {
+            return below;
+        }
+    }
+
+    // No clear position found — fall back to default
+    return defaultBarY;
+}
+
 // ============================================
 // Phase 7 — A* routing integration
 // ============================================
 
+// ── Tree Obstacle Registry ──────────────────────────────────
+
+interface TreeObstacleEntry {
+    rects: Array<{ x: number; y: number; width: number; height: number }>;
+    parentNodeId: string;
+}
+
+const treeObstacleRegistry = new Map<string, TreeObstacleEntry>();
+
+/** Thickness (total width) for tree segment obstacle rects — 5 px margin per side. */
+const TREE_OBSTACLE_THICKNESS = 10;
+
+/** Convert a line segment (horizontal or vertical) to a thin rectangle. */
+function segmentToRect(
+    p1: { x: number; y: number },
+    p2: { x: number; y: number },
+    thickness: number,
+): { x: number; y: number; width: number; height: number } {
+    if (Math.abs(p1.x - p2.x) < 1) {
+        // Vertical segment
+        const x = (p1.x + p2.x) / 2;
+        const minY = Math.min(p1.y, p2.y);
+        const maxY = Math.max(p1.y, p2.y);
+        return { x: x - thickness / 2, y: minY, width: thickness, height: maxY - minY };
+    } else {
+        // Horizontal segment
+        const y = (p1.y + p2.y) / 2;
+        const minX = Math.min(p1.x, p2.x);
+        const maxX = Math.max(p1.x, p2.x);
+        return { x: minX, y: y - thickness / 2, width: maxX - minX, height: thickness };
+    }
+}
+
+/** Convert a polyline (array of points) to thin obstacle rects, one per segment. */
+function pathToObstacleRects(
+    points: Array<{ x: number; y: number }>,
+    thickness: number,
+): Array<{ x: number; y: number; width: number; height: number }> {
+    const rects: Array<{ x: number; y: number; width: number; height: number }> = [];
+    for (let i = 0; i < points.length - 1; i++) {
+        const rect = segmentToRect(points[i], points[i + 1], thickness);
+        if (rect.width > 0.5 || rect.height > 0.5) {
+            rects.push(rect);
+        }
+    }
+    return rects;
+}
+
+/**
+ * Register inheritance tree segments (trunk, bar, branches) as thin-rect
+ * obstacles so A* routes around them.
+ * Called by useTreeLayout when tree geometry is computed.
+ */
+export function updateTreeObstacles(
+    groupId: string,
+    trunkPath: string,
+    barAndBranchesPath: string | undefined,
+    parentNodeId: string,
+): void {
+    const rects: Array<{ x: number; y: number; width: number; height: number }> = [];
+
+    const trunkPts = parsePathPoints(trunkPath);
+    if (trunkPts.length >= 2) {
+        rects.push(...pathToObstacleRects(trunkPts, TREE_OBSTACLE_THICKNESS));
+    }
+
+    if (barAndBranchesPath) {
+        const subPaths = parsePathSubPaths(barAndBranchesPath);
+        for (const pts of subPaths) {
+            if (pts.length >= 2) {
+                rects.push(...pathToObstacleRects(pts, TREE_OBSTACLE_THICKNESS));
+            }
+        }
+    }
+
+    treeObstacleRegistry.set(groupId, { rects, parentNodeId });
+}
+
+/** Remove tree obstacles when inheritance group unmounts or changes. */
+export function removeTreeObstacles(groupId: string): void {
+    treeObstacleRegistry.delete(groupId);
+}
+
+// ── Obstruction helpers ─────────────────────────────────────
+// (uses the existing segmentHitsRect(x1,y1,x2,y2,rect,margin) defined above)
+
+/**
+ * Fast-path check: does the classic Manhattan path intersect any obstacle?
+ * Checks BOTH node rects (with padding) and tree obstacle rects.
+ */
+function isPathObstructed(
+    points: Array<{ x: number; y: number }>,
+    nodeRects: NodeRect[],
+    excludeIds: Set<string>,
+    padding: number,
+): boolean {
+    for (let i = 0; i < points.length - 1; i++) {
+        const p1 = points[i];
+        const p2 = points[i + 1];
+
+        // Check node obstacles
+        for (const entry of nodeRects) {
+            if (excludeIds.has(entry.id) || entry.type === 'packageNode') continue;
+            if (segmentHitsRect(p1.x, p1.y, p2.x, p2.y, entry.rect, padding)) {
+                return true;
+            }
+        }
+
+        // Check tree obstacles (rect already includes margin, so use margin=0).
+        // Tree segments are always obstacles — even when the edge targets the tree's parent node,
+        // the edge must route around the trunk/bar/branches.
+        for (const [, treeEntry] of treeObstacleRegistry) {
+            for (const r of treeEntry.rects) {
+                if (segmentHitsRect(p1.x, p1.y, p2.x, p2.y, r, 0)) {
+                    return true;
+                }
+            }
+        }
+    }
+    return false;
+}
+
+// ── FIX 1: Endpoint alignment ───────────────────────────────
+
+/** Minimum perpendicular stub length (px). Used when the path needs a
+ *  direction change but the next/prev point shares the exit/entry axis
+ *  coordinate, making a standard L-connector degenerate to zero length. */
+const STUB_LENGTH = 20;
+
+/**
+ * Ensure the first and last segments of an A* path are perpendicular
+ * to the exit/entry side of the source/target node.
+ *
+ * Two cases per endpoint:
+ * - **Standard**: the adjacent point differs on both axes → insert a single
+ *   L-connector corner point.
+ * - **Degenerate**: the adjacent point shares the exit/entry axis coordinate
+ *   (e.g. directly above a right-side anchor) → an L-connector would produce
+ *   a zero-length segment.  Instead, insert a 2-point perpendicular stub
+ *   in the exit/entry direction.
+ */
+function alignPathEndpoints(
+    path: Array<{ x: number; y: number }>,
+    sourceSide: Side,
+    targetSide: Side,
+): Array<{ x: number; y: number }> {
+    if (path.length < 2) return path;
+    const result = path.map(p => ({ ...p }));
+
+    // ── Align start: force first segment perpendicular to source side ──
+    {
+        const first = result[0];
+        const second = result[1];
+        const exitH = sourceSide === 'left' || sourceSide === 'right';
+
+        if (exitH) {
+            // First segment must be horizontal (shared Y)
+            if (Math.abs(first.y - second.y) > 0.5) {
+                if (Math.abs(first.x - second.x) > 0.5) {
+                    // Standard L-connector: corner at (second.x, first.y)
+                    result.splice(1, 0, { x: second.x, y: first.y });
+                } else {
+                    // Degenerate: second point is directly above/below →
+                    // insert stub in the exit direction
+                    const stubX = sourceSide === 'right'
+                        ? first.x + STUB_LENGTH : first.x - STUB_LENGTH;
+                    result.splice(1, 0,
+                        { x: stubX, y: first.y },
+                        { x: stubX, y: second.y },
+                    );
+                }
+            }
+        } else {
+            // First segment must be vertical (shared X)
+            if (Math.abs(first.x - second.x) > 0.5) {
+                if (Math.abs(first.y - second.y) > 0.5) {
+                    // Standard L-connector: corner at (first.x, second.y)
+                    result.splice(1, 0, { x: first.x, y: second.y });
+                } else {
+                    // Degenerate: second point is directly left/right →
+                    // insert stub in the exit direction
+                    const stubY = sourceSide === 'bottom'
+                        ? first.y + STUB_LENGTH : first.y - STUB_LENGTH;
+                    result.splice(1, 0,
+                        { x: first.x, y: stubY },
+                        { x: second.x, y: stubY },
+                    );
+                }
+            }
+        }
+    }
+
+    // ── Align end: force last segment perpendicular to target side ──
+    {
+        const n = result.length;
+        const last = result[n - 1];
+        const prev = result[n - 2];
+        const entryH = targetSide === 'left' || targetSide === 'right';
+
+        if (entryH) {
+            // Last segment must be horizontal (shared Y)
+            if (Math.abs(last.y - prev.y) > 0.5) {
+                if (Math.abs(last.x - prev.x) > 0.5) {
+                    // Standard L-connector: corner at (prev.x, last.y)
+                    result.splice(n - 1, 0, { x: prev.x, y: last.y });
+                } else {
+                    // Degenerate: prev is directly above/below target →
+                    // insert stub in the entry direction
+                    const stubX = targetSide === 'right'
+                        ? last.x + STUB_LENGTH : last.x - STUB_LENGTH;
+                    result.splice(n - 1, 0,
+                        { x: stubX, y: prev.y },
+                        { x: stubX, y: last.y },
+                    );
+                }
+            }
+        } else {
+            // Last segment must be vertical (shared X)
+            if (Math.abs(last.x - prev.x) > 0.5) {
+                if (Math.abs(last.y - prev.y) > 0.5) {
+                    // Standard L-connector: corner at (last.x, prev.y)
+                    result.splice(n - 1, 0, { x: last.x, y: prev.y });
+                } else {
+                    // Degenerate: prev is directly left/right of target →
+                    // insert stub in the entry direction
+                    const stubY = targetSide === 'bottom'
+                        ? last.y + STUB_LENGTH : last.y - STUB_LENGTH;
+                    result.splice(n - 1, 0,
+                        { x: prev.x, y: stubY },
+                        { x: last.x, y: stubY },
+                    );
+                }
+            }
+        }
+    }
+
+    return result;
+}
+
+// ── A* path computation ─────────────────────────────────────
+
+/** Direction offsets for the four cardinal directions keyed by Side. */
+const SIDE_OFFSETS: Record<Side, { dc: number; dr: number }> = {
+    top:    { dc: 0, dr: -1 },
+    bottom: { dc: 0, dr:  1 },
+    left:   { dc: -1, dr: 0 },
+    right:  { dc:  1, dr: 0 },
+};
+
+/**
+ * Force-clear the grid cell at a world point AND a small corridor (6 cells)
+ * in the exit/entry direction.  This is called AFTER the re-mark step to
+ * guarantee that A* can start from / reach source and target anchors even
+ * when nearby obstacle rects overlap with the anchor cell.
+ */
+function forceStartGoalWalkable(
+    grid: ObstacleGrid,
+    worldX: number,
+    worldY: number,
+    side: Side,
+): void {
+    const cell = grid.toGrid(worldX, worldY);
+    const { dc, dr } = SIDE_OFFSETS[side];
+
+    // Clear the anchor cell itself
+    grid.clearCell(cell.col, cell.row);
+
+    // Clear a corridor of 6 cells in the exit/entry direction
+    // (wider than the 4-cell clearCorridor to bridge any re-marked gap)
+    for (let d = 1; d <= 6; d++) {
+        grid.clearCell(cell.col + dc * d, cell.row + dr * d);
+    }
+}
+
 /**
  * Compute a Manhattan path using the A* grid router.
  *
+ * Optimisation: first checks whether the classic Manhattan path is obstacle-free
+ * (including both nodes and tree segments). If so the analytic path is returned
+ * directly (cleaner appearance, zero grid cost).
+ * Otherwise builds a per-edge obstacle grid and runs A*.
  * If A* fails, falls back to the classic computeManhattanPath.
  *
  * @param grid - Shared obstacle grid from ObstacleGridContext
- * @param sourceX - Source handle X
- * @param sourceY - Source handle Y
- * @param sourceSide - Exit side
- * @param targetX - Target handle X
- * @param targetY - Target handle Y
- * @param targetSide - Entry side
- * @param sourceNodeId - ID of source node (to exclude from obstacles)
- * @param targetNodeId - ID of target node (to exclude from obstacles)
- * @param allNodes - All React Flow nodes (for building per-edge grid exclusions)
+ * @param nodeRects - Pre-computed node rectangles from ObstacleGridContext
  */
 export function computeAStarPath(
     grid: ObstacleGrid,
@@ -1044,33 +1422,8 @@ export function computeAStarPath(
     targetSide: Side,
     sourceNodeId: string,
     targetNodeId: string,
-    allNodes: Array<{ id: string; type?: string; parentId?: string; parentNode?: string;
-        position: { x: number; y: number };
-        internals?: { positionAbsolute?: { x: number; y: number } };
-        positionAbsolute?: { x: number; y: number };
-        measured?: { width?: number; height?: number };
-        width?: number; height?: number;
-    }>,
+    nodeRects: NodeRect[],
 ): string {
-    // Clone the shared grid so per-edge exclusions don't leak
-    // (cheap — we just re-create and re-mark, skipping src/tgt/packages/ancestors)
-
-    const nodeRects: Array<{ id: string; type: string | undefined; parentId: string | undefined; rect: GridRect }> = [];
-    for (const n of allNodes) {
-        const pos = (n.internals?.positionAbsolute ?? n.positionAbsolute ?? n.position) as { x: number; y: number };
-        nodeRects.push({
-            id: n.id,
-            type: n.type,
-            parentId: (n as any).parentId ?? (n as any).parentNode,
-            rect: {
-                x: pos.x,
-                y: pos.y,
-                width: n.measured?.width ?? n.width ?? 180,
-                height: n.measured?.height ?? n.height ?? 80,
-            },
-        });
-    }
-
     // Collect IDs of ancestors of source/target (packages that contain them)
     const ancestorIds = new Set<string>();
     const collectAncestors = (nodeId: string) => {
@@ -1083,23 +1436,64 @@ export function computeAStarPath(
     collectAncestors(sourceNodeId);
     collectAncestors(targetNodeId);
 
-    // Build a per-edge grid that excludes source, target, packages, and ancestors
-    const bounds = { ...grid['config'].bounds };  // reuse the shared grid bounds
+    // IDs to exclude from obstacle checks (source, target, ancestors)
+    const excludeIds = new Set<string>([sourceNodeId, targetNodeId, ...ancestorIds]);
+
+    // ── Diagnostic: collect obstacle info ──
+    const obstacleNodes = nodeRects.filter(
+        n => !excludeIds.has(n.id) && n.type !== 'packageNode',
+    );
+    console.log('[EdgeRouting] ── computeAStarPath ──');
+    console.log('[EdgeRouting] Obstacles:', obstacleNodes.length,
+        obstacleNodes.map(n => ({ id: n.id, ...n.rect })));
+    console.log('[EdgeRouting] Source:', { x: sourceX, y: sourceY, side: sourceSide, nodeId: sourceNodeId });
+    console.log('[EdgeRouting] Target:', { x: targetX, y: targetY, side: targetSide, nodeId: targetNodeId });
+    console.log('[EdgeRouting] Grid bounds:', grid.bounds, 'cellSize:', grid.cellSize);
+
+    // ── Fast path: classic Manhattan route doesn't hit anything ──
+    const classicPath = computeManhattanPath(sourceX, sourceY, sourceSide, targetX, targetY, targetSide);
+    const classicPoints = parsePathPoints(classicPath);
+    const obstructed = isPathObstructed(classicPoints, nodeRects, excludeIds, OBSTRUCTION_CHECK_PADDING);
+
+    console.log('[EdgeRouting] Classic path points:', classicPoints.length, classicPoints);
+    console.log('[EdgeRouting] Classic path obstructed:', obstructed);
+
+    if (!obstructed) {
+        // Check if the straight-line from source to target would intersect any obstacle
+        const straightHits = obstacleNodes.filter(n =>
+            segmentHitsRect(sourceX, sourceY, targetX, targetY, n.rect, OBSTRUCTION_CHECK_PADDING),
+        );
+        console.log('[EdgeRouting] FAST-PATH used. Straight line would hit:', straightHits.length,
+            straightHits.map(n => n.id));
+        return classicPath;
+    }
+
+    console.log('[EdgeRouting] Running A*...');
+
+    // ── A* needed: build per-edge grid ──
+    // Use REDUCED padding (5 px ≈ half a cell) compared to the shared grid (20 px).
+    // The shared grid's 20 px padding is fine for the fast-path obstruction check,
+    // but for the A* grid it creates continuous walls between closely-spaced nodes
+    // that leave no walkable cells for the pathfinder to navigate around obstacles.
+    // 5 px keeps a small aesthetic margin while ensuring navigability.
+    const A_STAR_PADDING = 5;
     const perEdgeGrid = new ObstacleGrid({
-        cellSize: 10,
-        padding: 20,
-        bounds,
+        cellSize: grid.cellSize,
+        padding: A_STAR_PADDING,
+        bounds: { ...grid.bounds },
     });
 
+    // Mark node obstacles (with the reduced 5 px padding)
     for (const entry of nodeRects) {
-        // Skip source and target nodes
-        if (entry.id === sourceNodeId || entry.id === targetNodeId) continue;
-        // Skip package nodes (containers)
-        if (entry.type === 'packageNode') continue;
-        // Skip ancestor containers
-        if (ancestorIds.has(entry.id)) continue;
-
+        if (excludeIds.has(entry.id) || entry.type === 'packageNode') continue;
         perEdgeGrid.markObstacle(entry.rect);
+    }
+
+    // Mark tree obstacles (thin rects, no extra padding — rect already includes margin).
+    for (const [, treeEntry] of treeObstacleRegistry) {
+        for (const rect of treeEntry.rects) {
+            perEdgeGrid.markRect(rect);
+        }
     }
 
     // Clear corridors for source and target so the path can reach them
@@ -1107,6 +1501,26 @@ export function computeAStarPath(
     const targetEntry = nodeRects.find(n => n.id === targetNodeId);
     if (sourceEntry) perEdgeGrid.clearCorridor(sourceEntry.rect, sourceSide, 4);
     if (targetEntry) perEdgeGrid.clearCorridor(targetEntry.rect, targetSide, 4);
+
+    // Re-mark core rects (without padding) for non-excluded obstacle nodes.
+    // clearCorridor may have unblocked cells belonging to intermediate nodes
+    // (e.g., node B between vertically-aligned A and C). Re-marking their core
+    // rects ensures intermediate nodes stay solid obstacles.
+    for (const entry of nodeRects) {
+        if (excludeIds.has(entry.id) || entry.type === 'packageNode') continue;
+        perEdgeGrid.markRect(entry.rect);
+    }
+
+    // Re-clear corridors AFTER re-mark: the re-mark step can re-block cells
+    // inside the source/target corridors when an obstacle's core rect overlaps
+    // with the corridor zone.  Running clearCorridor again ensures the A*
+    // pathfinder can always reach source and target anchors.
+    if (sourceEntry) perEdgeGrid.clearCorridor(sourceEntry.rect, sourceSide, 4);
+    if (targetEntry) perEdgeGrid.clearCorridor(targetEntry.rect, targetSide, 4);
+
+    // Final safety: force-clear the exact anchor cells + exit/entry direction
+    forceStartGoalWalkable(perEdgeGrid, sourceX, sourceY, sourceSide);
+    forceStartGoalWalkable(perEdgeGrid, targetX, targetY, targetSide);
 
     // Run A*
     const result = astarManhattan(
@@ -1117,14 +1531,28 @@ export function computeAStarPath(
         targetSide,
     );
 
+    console.log('[EdgeRouting] A* result:', {
+        success: result.success,
+        rawPoints: result.path.length,
+        path: result.path,
+    });
+
     if (!result.success || result.path.length < 2) {
-        // Fallback to classic routing
-        return computeManhattanPath(sourceX, sourceY, sourceSide, targetX, targetY, targetSide);
+        console.log('[EdgeRouting] A* FAILED — falling back to classic');
+        return classicPath;
     }
 
-    // No marker compensation needed — endpoints at exact border position.
-    // (Edges render below nodes; pushing inside would hide markers.)
-    return pointsToPath(cleanPoints(result.path.map(p => ({ ...p }))));
+    // Line-of-sight smoothing: shortcut unnecessary intermediate waypoints
+    // by checking if non-adjacent points can be connected directly or via
+    // a single L-connector without hitting obstacles on the per-edge grid.
+    const smoothed = smoothPath(result.path, perEdgeGrid);
+    console.log('[EdgeRouting] After smoothing:', smoothed.length, 'points', smoothed);
+
+    // FIX 1: Align first/last segments with exit/entry directions
+    const aligned = alignPathEndpoints(smoothed, sourceSide, targetSide);
+    const finalPoints = cleanPoints(aligned);
+    console.log('[EdgeRouting] Final path:', finalPoints.length, 'points', finalPoints);
+    return pointsToPath(finalPoints);
 }
 
 // ============================================
@@ -1141,19 +1569,25 @@ interface EdgePathEntry {
     points: { x: number; y: number }[];
     sourceNode: string;
     targetNode: string;
+    /** Optional group ID for tree exclusion. All entries sharing the same
+     *  treeGroupId are considered part of the same visual structure —
+     *  crossings between them are suppressed (no bridge arcs). */
+    treeGroupId?: string;
 }
 
 /** Module-level registry of computed edge paths for crossing detection. */
 const edgePathRegistry = new Map<string, EdgePathEntry>();
 
-/** Register an edge's computed path segments for crossing detection by other edges. */
+/** Register an edge's computed path segments for crossing detection by other edges.
+ *  @param treeGroupId - Optional group ID; entries with the same group skip crossing detection. */
 export function registerEdgePath(
     edgeId: string,
     points: { x: number; y: number }[],
     sourceNode: string,
     targetNode: string,
+    treeGroupId?: string,
 ): void {
-    edgePathRegistry.set(edgeId, { points, sourceNode, targetNode });
+    edgePathRegistry.set(edgeId, { points, sourceNode, targetNode, treeGroupId });
 }
 
 /** Unregister an edge's path (call on unmount). */
@@ -1171,20 +1605,30 @@ export function unregisterEdgePath(edgeId: string): void {
 export function getEdgeCrossings(
     edgeId: string,
     myPoints: { x: number; y: number }[],
+    nodeRects?: NodeRect[],
 ): CrossingPoint[] {
     if (myPoints.length < 2) return [];
 
     const crossings: CrossingPoint[] = [];
     const ENDPOINT_THRESHOLD = 12;
+    /** Minimum distance from individual segment endpoints to accept a crossing. */
+    const SEG_INTERIOR_MARGIN = 6;
+    /** Margin around node rects where crossings are suppressed. */
+    const NODE_CROSSING_MARGIN = 15;
 
     const myStart = myPoints[0];
     const myEnd = myPoints[myPoints.length - 1];
 
+    // Look up my own registry entry to get treeGroupId
+    const myEntry = edgePathRegistry.get(edgeId);
+    const myGroupId = myEntry?.treeGroupId;
+
     for (const [otherId, entry] of edgePathRegistry) {
-        // Skip same logical edge and its tree sub-segments (trunk, bar, branches)
-        if (otherId === edgeId ||
-            otherId.startsWith(edgeId + '__') ||
-            edgeId.startsWith(otherId + '__')) continue;
+        if (otherId === edgeId) continue;
+
+        // Skip entries in the same tree group (inheritance edges + their
+        // tree segments all share the same treeGroupId = parent node ID).
+        if (myGroupId && entry.treeGroupId && myGroupId === entry.treeGroupId) continue;
 
         const otherPoints = entry.points;
         if (otherPoints.length < 2) continue;
@@ -1214,9 +1658,10 @@ export function getEdgeCrossings(
                 const oMinY = Math.min(oP1.y, oP2.y);
                 const oMaxY = Math.max(oP1.y, oP2.y);
 
-                // Strict interior crossing (not at segment endpoints)
-                if (oX > myMinX + 1 && oX < myMaxX - 1 &&
-                    myY > oMinY + 1 && myY < oMaxY - 1) {
+                // Strict interior crossing — increased margin to avoid
+                // false positives on short connector segments
+                if (oX > myMinX + SEG_INTERIOR_MARGIN && oX < myMaxX - SEG_INTERIOR_MARGIN &&
+                    myY > oMinY + SEG_INTERIOR_MARGIN && myY < oMaxY - SEG_INTERIOR_MARGIN) {
 
                     const cx = oX;
                     const cy = myY;
@@ -1227,6 +1672,23 @@ export function getEdgeCrossings(
                         Math.hypot(cx - otherStart.x, cy - otherStart.y) < ENDPOINT_THRESHOLD ||
                         Math.hypot(cx - otherEnd.x, cy - otherEnd.y) < ENDPOINT_THRESHOLD) {
                         continue;
+                    }
+
+                    // FIX 3a: Skip crossings inside or very near any node
+                    // (edges naturally converge near nodes — bridges there are spurious)
+                    if (nodeRects) {
+                        let nearNode = false;
+                        for (const nr of nodeRects) {
+                            const r = nr.rect;
+                            if (cx >= r.x - NODE_CROSSING_MARGIN &&
+                                cx <= r.x + r.width + NODE_CROSSING_MARGIN &&
+                                cy >= r.y - NODE_CROSSING_MARGIN &&
+                                cy <= r.y + r.height + NODE_CROSSING_MARGIN) {
+                                nearNode = true;
+                                break;
+                            }
+                        }
+                        if (nearNode) continue;
                     }
 
                     crossings.push({ x: cx, y: cy, segmentIndex: i });
