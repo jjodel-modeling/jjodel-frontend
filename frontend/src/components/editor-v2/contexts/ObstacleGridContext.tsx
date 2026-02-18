@@ -39,7 +39,7 @@ export function useObstacleGrid(): ObstacleGridContextType {
 // ── Config ──────────────────────────────────────────────────────
 
 const CELL_SIZE = 10;
-const OBSTACLE_PADDING = 20;
+const OBSTACLE_PADDING = 40;
 const BOUNDS_MARGIN = 200;   // extra world-space margin around the node bounding box
 const DEBOUNCE_MS = 100;
 

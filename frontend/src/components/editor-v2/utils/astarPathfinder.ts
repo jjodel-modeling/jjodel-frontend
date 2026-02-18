@@ -142,26 +142,8 @@ export function astarManhattan(
     const startWalkable = grid.isWalkable(startCell.col, startCell.row);
     const goalWalkable = grid.isWalkable(endCell.col, endCell.row);
 
-    console.log('[A*] Grid:', grid.cols, '×', grid.rows, '=', grid.cols * grid.rows, 'cells,',
-        'blocked:', grid.blockedCount);
-    console.log('[A*] Start cell:', startCell, 'world:', start, 'walkable:', startWalkable);
-    console.log('[A*] Goal cell:', endCell, 'world:', end, 'walkable:', goalWalkable);
-
     // If start or goal is blocked, A* cannot succeed — bail early
     if (!startWalkable || !goalWalkable) {
-        console.log('[A*] FAILED: start or goal cell is BLOCKED!',
-            !startWalkable ? 'START BLOCKED' : '', !goalWalkable ? 'GOAL BLOCKED' : '');
-        // Check immediate neighbors
-        for (const [dc, dr, dir] of MOVES) {
-            const nc = startCell.col + dc;
-            const nr = startCell.row + dr;
-            console.log(`[A*]   start neighbor ${dir}: (${nc},${nr}) walkable=${grid.isWalkable(nc, nr)}`);
-        }
-        for (const [dc, dr, dir] of MOVES) {
-            const nc = endCell.col + dc;
-            const nr = endCell.row + dr;
-            console.log(`[A*]   goal neighbor ${dir}: (${nc},${nr}) walkable=${grid.isWalkable(nc, nr)}`);
-        }
         return { path: [], success: false };
     }
 
@@ -196,8 +178,6 @@ export function astarManhattan(
 
         // Goal reached?
         if (current.col === endCell.col && current.row === endCell.row) {
-            console.log('[A*] SUCCESS after', iterations, 'iterations,', best.size, 'states');
-
             // Reconstruct path → world coordinates
             const cells: Array<{ col: number; row: number }> = [];
             let node: AStarNode | null = current;
@@ -280,11 +260,6 @@ export function astarManhattan(
     }
 
     // A* failed
-    const failReason = open.size === 0
-        ? 'OPEN SET EMPTY — goal unreachable (continuous wall of obstacles?)'
-        : `ITERATION LIMIT reached (${iterations}/${MAX_ITERATIONS})`;
-    console.log('[A*] FAILED:', failReason);
-    console.log('[A*] States explored:', best.size, ', open set remaining:', open.size);
     return { path: [], success: false };
 }
 

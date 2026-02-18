@@ -31,6 +31,7 @@ import ContextMenu, { type ContextMenuItem } from './ContextMenu';
 import { useHistory } from './hooks/useHistory';
 import { useAlignment } from './hooks/useAlignment';
 import { useAutoAnchor, computeAnchorsWithHysteresis, getNodeRect } from './hooks/useAutoAnchor';
+import { useObstacleAwareAnchors } from './hooks/useObstacleAwareAnchors';
 import { EditorContext } from './contexts/EditorContext';
 import { ObstacleGridProvider } from './contexts/ObstacleGridContext';
 import { getNextFreeHandleIndex, computePortDistribution } from './utils/portDistribution';
@@ -254,6 +255,9 @@ function EditorV2Inner() {
 
     // Auto-anchor for optimal edge routing
     const { getOptimalAnchors } = useAutoAnchor();
+
+    // Obstacle-aware post-pass: re-evaluates anchor sides using A* multi-candidate scoring
+    useObstacleAwareAnchors();
 
     // Helper: build node positions map for spatial port ordering
     const buildNodePositions = useCallback((nodeList: Node[]) => {
@@ -916,32 +920,27 @@ function EditorV2Inner() {
             if (hasDragEnd || hasResize) {
                 takeSnapshot();
 
-                // Get IDs of moved/resized nodes
                 const movedNodeIds = new Set(
                     changes
                         .filter((c) => c.type === 'position' || c.type === 'dimensions')
                         .map((c) => c.id)
                 );
 
-                // Build nodeRects map from current nodes
                 const nodeRects = new Map(
                     nodes.map((n) => [n.id, getNodeRect(n)])
                 );
 
-                // Recalculate anchors with hysteresis for edges connected to moved nodes
                 setEdges((currentEdges) => {
                     const edgesToRecalculate = currentEdges.filter(
-                        (e) => movedNodeIds.has(e.source) || movedNodeIds.has(e.target)
+                        (e) => (movedNodeIds.has(e.source) || movedNodeIds.has(e.target))
+                            // Skip edges optimized by OAA — let the hook handle them
+                            && !(e.data as any)?.oaaOptimized
                     );
 
                     if (edgesToRecalculate.length === 0) return currentEdges;
 
-                    // Hysteresis-aware calculation: only switch sides when significantly better
                     const anchorResults = computeAnchorsWithHysteresis(edgesToRecalculate, nodeRects);
 
-                    // Apply anchors + persist AnchorConfig in edge.data.
-                    // Start with -0 index; applyDistribution assigns correct indexed handles.
-                    // When anchor sides change, clear waypoints since they're relative to the old path shape.
                     const updated = currentEdges.map((edge) => {
                         const result = anchorResults.get(edge.id);
                         if (result) {
@@ -980,6 +979,9 @@ function EditorV2Inner() {
             setEdges((currentEdges) => {
                 const edge = currentEdges.find(e => e.id === edgeId);
                 if (!edge) return currentEdges;
+
+                // Skip edges optimized by OAA — let the hook handle them
+                if ((edge.data as any)?.oaaOptimized) return currentEdges;
 
                 const anchorResults = computeAnchorsWithHysteresis([edge], nodeRectsMap);
                 const result = anchorResults.get(edgeId);

@@ -1439,36 +1439,14 @@ export function computeAStarPath(
     // IDs to exclude from obstacle checks (source, target, ancestors)
     const excludeIds = new Set<string>([sourceNodeId, targetNodeId, ...ancestorIds]);
 
-    // ── Diagnostic: collect obstacle info ──
-    const obstacleNodes = nodeRects.filter(
-        n => !excludeIds.has(n.id) && n.type !== 'packageNode',
-    );
-    console.log('[EdgeRouting] ── computeAStarPath ──');
-    console.log('[EdgeRouting] Obstacles:', obstacleNodes.length,
-        obstacleNodes.map(n => ({ id: n.id, ...n.rect })));
-    console.log('[EdgeRouting] Source:', { x: sourceX, y: sourceY, side: sourceSide, nodeId: sourceNodeId });
-    console.log('[EdgeRouting] Target:', { x: targetX, y: targetY, side: targetSide, nodeId: targetNodeId });
-    console.log('[EdgeRouting] Grid bounds:', grid.bounds, 'cellSize:', grid.cellSize);
-
     // ── Fast path: classic Manhattan route doesn't hit anything ──
     const classicPath = computeManhattanPath(sourceX, sourceY, sourceSide, targetX, targetY, targetSide);
     const classicPoints = parsePathPoints(classicPath);
     const obstructed = isPathObstructed(classicPoints, nodeRects, excludeIds, OBSTRUCTION_CHECK_PADDING);
 
-    console.log('[EdgeRouting] Classic path points:', classicPoints.length, classicPoints);
-    console.log('[EdgeRouting] Classic path obstructed:', obstructed);
-
     if (!obstructed) {
-        // Check if the straight-line from source to target would intersect any obstacle
-        const straightHits = obstacleNodes.filter(n =>
-            segmentHitsRect(sourceX, sourceY, targetX, targetY, n.rect, OBSTRUCTION_CHECK_PADDING),
-        );
-        console.log('[EdgeRouting] FAST-PATH used. Straight line would hit:', straightHits.length,
-            straightHits.map(n => n.id));
         return classicPath;
     }
-
-    console.log('[EdgeRouting] Running A*...');
 
     // ── A* needed: build per-edge grid ──
     // Use REDUCED padding (5 px ≈ half a cell) compared to the shared grid (20 px).
@@ -1531,14 +1509,7 @@ export function computeAStarPath(
         targetSide,
     );
 
-    console.log('[EdgeRouting] A* result:', {
-        success: result.success,
-        rawPoints: result.path.length,
-        path: result.path,
-    });
-
     if (!result.success || result.path.length < 2) {
-        console.log('[EdgeRouting] A* FAILED — falling back to classic');
         return classicPath;
     }
 
@@ -1546,12 +1517,10 @@ export function computeAStarPath(
     // by checking if non-adjacent points can be connected directly or via
     // a single L-connector without hitting obstacles on the per-edge grid.
     const smoothed = smoothPath(result.path, perEdgeGrid);
-    console.log('[EdgeRouting] After smoothing:', smoothed.length, 'points', smoothed);
 
     // FIX 1: Align first/last segments with exit/entry directions
     const aligned = alignPathEndpoints(smoothed, sourceSide, targetSide);
     const finalPoints = cleanPoints(aligned);
-    console.log('[EdgeRouting] Final path:', finalPoints.length, 'points', finalPoints);
     return pointsToPath(finalPoints);
 }
 
