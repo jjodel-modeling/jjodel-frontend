@@ -19,8 +19,12 @@ function ClassNode({ id, data, selected }: NodeProps<ClassNodeType>) {
     const [name, setName] = useState(data.label);
     const [dragOver, setDragOver] = useState(false);
 
-    // Inline editing for attributes
-    const [editingAttr, setEditingAttr] = useState<{ id: string; field: 'name' | 'type' } | null>(null);
+    // Inline editing for attributes and operations
+    const [editingField, setEditingField] = useState<{
+        id: string;
+        field: 'name' | 'type' | 'returnType';
+        kind: 'attr' | 'op';
+    } | null>(null);
     const [editValue, setEditValue] = useState('');
 
     useEffect(() => {
@@ -37,45 +41,72 @@ function ClassNode({ id, data, selected }: NodeProps<ClassNodeType>) {
         }
     }, [data.autoEdit, id, setNodes]);
 
-    // Start editing an attribute field
-    const startEditAttr = useCallback((attrId: string, field: 'name' | 'type', currentValue: string) => {
-        setEditingAttr({ id: attrId, field });
+    // Start editing an attribute or operation field
+    const startEditField = useCallback((
+        itemId: string,
+        field: 'name' | 'type' | 'returnType',
+        currentValue: string,
+        kind: 'attr' | 'op',
+    ) => {
+        setEditingField({ id: itemId, field, kind });
         setEditValue(currentValue);
     }, []);
 
-    // Commit attribute edit
-    const commitAttrEdit = useCallback(() => {
-        if (!editingAttr) return;
+    // Commit attribute or operation edit
+    const commitFieldEdit = useCallback(() => {
+        if (!editingField) return;
 
-        const attr = data.attributes?.find(a => a.id === editingAttr.id);
-        if (attr && editValue !== attr[editingAttr.field]) {
-            editorContext?.takeSnapshot();
-            setNodes(nds => nds.map(n => {
-                if (n.id !== id) return n;
-                const nodeData = n.data as ClassNodeData;
-                return {
-                    ...n,
-                    data: {
-                        ...nodeData,
-                        attributes: nodeData.attributes.map(a =>
-                            a.id === editingAttr.id
-                                ? { ...a, [editingAttr.field]: editValue }
-                                : a
-                        ),
-                    },
-                };
-            }));
+        if (editingField.kind === 'attr') {
+            const attr = data.attributes?.find(a => a.id === editingField.id);
+            if (attr && editValue !== attr[editingField.field as 'name' | 'type']) {
+                editorContext?.takeSnapshot();
+                setNodes(nds => nds.map(n => {
+                    if (n.id !== id) return n;
+                    const nodeData = n.data as ClassNodeData;
+                    return {
+                        ...n,
+                        data: {
+                            ...nodeData,
+                            attributes: nodeData.attributes.map(a =>
+                                a.id === editingField.id
+                                    ? { ...a, [editingField.field]: editValue }
+                                    : a
+                            ),
+                        },
+                    };
+                }));
+            }
+        } else {
+            const op = data.operations?.find(o => o.id === editingField.id);
+            if (op && editValue !== op[editingField.field as 'name' | 'returnType']) {
+                editorContext?.takeSnapshot();
+                setNodes(nds => nds.map(n => {
+                    if (n.id !== id) return n;
+                    const nodeData = n.data as ClassNodeData;
+                    return {
+                        ...n,
+                        data: {
+                            ...nodeData,
+                            operations: (nodeData.operations || []).map(o =>
+                                o.id === editingField.id
+                                    ? { ...o, [editingField.field]: editValue }
+                                    : o
+                            ),
+                        },
+                    };
+                }));
+            }
         }
-        setEditingAttr(null);
-    }, [editingAttr, editValue, data.attributes, id, setNodes, editorContext]);
+        setEditingField(null);
+    }, [editingField, editValue, data.attributes, data.operations, id, setNodes, editorContext]);
 
-    const handleAttrKeyDown = useCallback((e: React.KeyboardEvent) => {
+    const handleFieldKeyDown = useCallback((e: React.KeyboardEvent) => {
         if (e.key === 'Enter') {
-            commitAttrEdit();
+            commitFieldEdit();
         } else if (e.key === 'Escape') {
-            setEditingAttr(null);
+            setEditingField(null);
         }
-    }, [commitAttrEdit]);
+    }, [commitFieldEdit]);
 
     const handleDoubleClick = useCallback(() => {
         setEditing(true);
@@ -131,7 +162,7 @@ function ClassNode({ id, data, selected }: NodeProps<ClassNodeType>) {
                     : n
             ));
             // Auto-focus the new attribute name
-            setEditingAttr({ id: newAttr.id, field: 'name' });
+            setEditingField({ id: newAttr.id, field: 'name', kind: 'attr' });
             setEditValue(newAttr.name);
         }
 
@@ -197,7 +228,11 @@ function ClassNode({ id, data, selected }: NodeProps<ClassNodeType>) {
             <DynamicHandles nodeId={id} />
 
             {/* Header — abstract classes get italic name via CSS (.abstract .mm-node__name) */}
-            <div className="mm-node__header" onDoubleClick={handleDoubleClick}>
+            <div
+                className="mm-node__header"
+                onDoubleClick={handleDoubleClick}
+                onClick={() => { if (selected && !editing) setEditing(true); }}
+            >
                 {editing ? (
                     <input
                         className="mm-node__input"
@@ -231,26 +266,27 @@ function ClassNode({ id, data, selected }: NodeProps<ClassNodeType>) {
                                 const bounds = formatBounds(attr.lowerBound ?? 0, attr.upperBound ?? 1);
                                 return (
                                     <div key={attr.id} className="mm-field">
-                                        {editingAttr?.id === attr.id && editingAttr.field === 'name' ? (
+                                        {editingField?.id === attr.id && editingField.field === 'name' ? (
                                             <input
                                                 className="mm-field__input"
                                                 autoFocus
                                                 value={editValue}
                                                 onChange={(e) => setEditValue(e.target.value)}
                                                 onFocus={(e) => e.target.select()}
-                                                onBlur={commitAttrEdit}
-                                                onKeyDown={handleAttrKeyDown}
+                                                onBlur={commitFieldEdit}
+                                                onKeyDown={handleFieldKeyDown}
                                             />
                                         ) : (
                                             <span
                                                 className="mm-field__name"
-                                                onDoubleClick={() => startEditAttr(attr.id, 'name', attr.name)}
+                                                onDoubleClick={() => startEditField(attr.id, 'name', attr.name, 'attr')}
+                                                onClick={() => { if (selected) startEditField(attr.id, 'name', attr.name, 'attr'); }}
                                             >
                                                 {attr.name}
                                             </span>
                                         )}
                                         <span className="mm-field__separator">:</span>
-                                        {editingAttr?.id === attr.id && editingAttr.field === 'type' ? (
+                                        {editingField?.id === attr.id && editingField.field === 'type' ? (
                                             <InlineTypeSelect
                                                 value={editValue}
                                                 onChange={(newType) => {
@@ -268,14 +304,15 @@ function ClassNode({ id, data, selected }: NodeProps<ClassNodeType>) {
                                                             },
                                                         };
                                                     }));
-                                                    setEditingAttr(null);
+                                                    setEditingField(null);
                                                 }}
-                                                onClose={() => setEditingAttr(null)}
+                                                onClose={() => setEditingField(null)}
                                             />
                                         ) : (
                                             <span
                                                 className="mm-field__type"
-                                                onDoubleClick={() => startEditAttr(attr.id, 'type', attr.type)}
+                                                onDoubleClick={() => startEditField(attr.id, 'type', attr.type, 'attr')}
+                                                onClick={() => { if (selected) startEditField(attr.id, 'type', attr.type, 'attr'); }}
                                             >
                                                 {attr.type}
                                             </span>
@@ -297,9 +334,57 @@ function ClassNode({ id, data, selected }: NodeProps<ClassNodeType>) {
                         <div className="mm-node__fields">
                             {data.operations.map((op) => (
                                 <div key={op.id} className="mm-field mm-operation">
-                                    <span className="mm-field__name">{op.name}()</span>
+                                    {editingField?.id === op.id && editingField.field === 'name' ? (
+                                        <input
+                                            className="mm-field__input"
+                                            autoFocus
+                                            value={editValue}
+                                            onChange={(e) => setEditValue(e.target.value)}
+                                            onFocus={(e) => e.target.select()}
+                                            onBlur={commitFieldEdit}
+                                            onKeyDown={handleFieldKeyDown}
+                                        />
+                                    ) : (
+                                        <span
+                                            className="mm-field__name"
+                                            onDoubleClick={() => startEditField(op.id, 'name', op.name, 'op')}
+                                            onClick={() => { if (selected) startEditField(op.id, 'name', op.name, 'op'); }}
+                                        >
+                                            {op.name}()
+                                        </span>
+                                    )}
                                     <span className="mm-field__separator">:</span>
-                                    <span className="mm-field__type">{op.returnType}</span>
+                                    {editingField?.id === op.id && editingField.field === 'returnType' ? (
+                                        <InlineTypeSelect
+                                            value={editValue}
+                                            onChange={(newType) => {
+                                                editorContext?.takeSnapshot();
+                                                setNodes(nds => nds.map(n => {
+                                                    if (n.id !== id) return n;
+                                                    const nodeData = n.data as ClassNodeData;
+                                                    return {
+                                                        ...n,
+                                                        data: {
+                                                            ...nodeData,
+                                                            operations: (nodeData.operations || []).map(o =>
+                                                                o.id === op.id ? { ...o, returnType: newType } : o
+                                                            ),
+                                                        },
+                                                    };
+                                                }));
+                                                setEditingField(null);
+                                            }}
+                                            onClose={() => setEditingField(null)}
+                                        />
+                                    ) : (
+                                        <span
+                                            className="mm-field__type"
+                                            onDoubleClick={() => startEditField(op.id, 'returnType', op.returnType, 'op')}
+                                            onClick={() => { if (selected) startEditField(op.id, 'returnType', op.returnType, 'op'); }}
+                                        >
+                                            {op.returnType}
+                                        </span>
+                                    )}
                                     <span />
                                 </div>
                             ))}

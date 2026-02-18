@@ -68,6 +68,7 @@ function UnifiedEdge(props: EdgeProps) {
     const ref = edgeData?.reference;
     const kind: ReferenceKind = ref?.kind || 'association';
     const waypoints = edgeData?.waypoints || [];
+    const autoEdit = edgeData?.autoEdit as boolean | undefined;
 
     const { setEdges } = useReactFlow();
     const notation = useEditorContextSafe()?.notation ?? 'uml';
@@ -83,6 +84,16 @@ function UnifiedEdge(props: EdgeProps) {
             setLabelText(String(label || ref?.name || ''));
         }
     }, [label, ref?.name, editing]);
+
+    // ─── Auto-edit for newly created edges ───
+    useEffect(() => {
+        if (autoEdit) {
+            setEditing(true);
+            setEdges(edges => edges.map(e =>
+                e.id === id ? { ...e, data: { ...e.data, autoEdit: undefined } } : e
+            ));
+        }
+    }, [autoEdit, id, setEdges]);
 
     // ─── Obstacle grid context ───
     const { grid, nodeRects, version } = useObstacleGrid();
@@ -513,6 +524,7 @@ function UnifiedEdge(props: EdgeProps) {
                             pointerEvents: 'all',
                         }}
                         onDoubleClick={(e) => { e.stopPropagation(); setEditing(true); }}
+                        onClick={(e) => { if (selected) { e.stopPropagation(); setEditing(true); } }}
                     >
                         {editing ? (
                             <input

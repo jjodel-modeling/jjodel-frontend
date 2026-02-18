@@ -6,6 +6,7 @@ import {
     unregisterEdgePath,
     getEdgeCrossings,
     buildFinalPath,
+    roundManhattanPath,
     parsePathPoints,
     parsePathSubPaths,
     pointsToPath,
@@ -174,7 +175,7 @@ export function useTreeLayout(
         if (trunkCrossings.length > 0) {
             return buildFinalPath(trunkPts, trunkCrossings, 4, 6);
         }
-        return treeGeometry.trunkPath;
+        return roundManhattanPath(treeGeometry.trunkPath, 4);
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [edgeId, isPrimary, isGrouped, treeGeometry, allNodes, allEdges, nodeRects]);
 
@@ -192,7 +193,7 @@ export function useTreeLayout(
             if (segCrossings.length > 0) {
                 finalParts.push(buildFinalPath(pts, segCrossings, 4, 6));
             } else {
-                finalParts.push(pointsToPath(pts));
+                finalParts.push(roundManhattanPath(pointsToPath(pts), 4));
             }
         }
         return finalParts.join(' ');

@@ -384,6 +384,7 @@ function EditorV2Inner() {
                         },
                         sourceAnchor,
                         targetAnchor,
+                        autoEdit: true,
                     } as ReferenceEdgeData,
                 } : {
                     data: {
@@ -420,6 +421,12 @@ function EditorV2Inner() {
                 x: event.clientX,
                 y: event.clientY,
             });
+
+            // Center node under cursor instead of placing top-left at cursor
+            const defaultNodeWidth = rawType === 'packageNode' ? 200 : 140;
+            const defaultNodeHeight = rawType === 'packageNode' ? 120 : 40;
+            position.x -= defaultNodeWidth / 2;
+            position.y -= defaultNodeHeight / 2;
 
             let newNode: Node;
 
@@ -900,6 +907,7 @@ function EditorV2Inner() {
                                       upperBound: -1,
                                       containment: false,
                                   },
+                                  autoEdit: true,
                               } as ReferenceEdgeData,
                           }
                         : e

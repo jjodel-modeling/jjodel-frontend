@@ -401,10 +401,23 @@
     opacity: 0 !important;
     pointer-events: auto;
 
+
+    &.top, &.bottom {
+        height: 4px !important;
+        min-height: 4px !important;
+        max-height: 4px !important;
+    }
+    &.left, &.right {
+        width: 4px !important;
+        min-width: 4px !important;
+        max-width: 4px !important;
+    }
+
     &:hover {
         opacity: 0.5 !important;
         background: var(--accent-muted) !important;
     }
+
 }
 
 .node-resize-handle,
@@ -1116,7 +1129,7 @@
 // Edge label text
 .edge-label__text {
     font-family: 'Inter Variable', 'Inter', sans-serif;
-    font-size: 9px;
+    font-size: 10px;
     color: var(--text-secondary);
     //background: var(--edge-label-bg);
     padding: 1px 5px;
@@ -1129,7 +1142,7 @@
 // Cardinality — naked text, no background
 .edge-cardinality {
     font-family: 'Inter Variable', 'Inter', sans-serif;
-    font-size: 9px;
+    font-size: 10px;
     font-weight: 500;
     color: var(--text-muted);
     background: none;

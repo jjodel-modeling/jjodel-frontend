@@ -1008,19 +1008,20 @@ export function computeTreeConnectorPath(
     // Trunk: from bar up to parent (markerEnd will be placed at the parent end)
     const trunkPath = `M ${parentX} ${barY} L ${parentX} ${parentY}`;
 
-    // Bar (horizontal) + branches (vertical drops to each child)
-    let barAndBranches = `M ${barLeftX} ${barY} L ${barRightX} ${barY}`;
+    // Branches: each branch is an L-shaped path from the trunk junction (parentX, barY)
+    // through the horizontal bar to the child. This creates 3-point paths with a corner
+    // at (childX, barY) that roundManhattanPath can round with smooth arcs.
+    let barAndBranches = '';
 
     const branchPaths = new Map<string, string>();
     for (const child of sorted) {
-        // Vertical branch from bar down to child
-        barAndBranches += ` M ${child.childX} ${barY} L ${child.childX} ${child.childY}`;
+        // L-shaped route: trunk junction → horizontal along bar → vertical down to child
+        const branchPath = `M ${parentX} ${barY} L ${child.childX} ${barY} L ${child.childX} ${child.childY}`;
+        if (barAndBranches) barAndBranches += ' ';
+        barAndBranches += branchPath;
 
-        // Hit-test path: L-shaped route from trunk junction through bar to this child
-        branchPaths.set(
-            child.edgeId,
-            `M ${parentX} ${barY} L ${child.childX} ${barY} L ${child.childX} ${child.childY}`,
-        );
+        // Hit-test path: same L-shaped route
+        branchPaths.set(child.edgeId, branchPath);
     }
 
     return { trunkPath, barAndBranchesPath: barAndBranches, branchPaths };
