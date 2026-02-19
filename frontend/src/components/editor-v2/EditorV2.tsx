@@ -37,6 +37,20 @@ import { ObstacleGridProvider } from './contexts/ObstacleGridContext';
 import { getNextFreeHandleIndex, computePortDistribution } from './utils/portDistribution';
 import type { ClassNodeData, EnumNodeData, PackageNodeData, ReferenceEdgeData, InheritanceEdgeData, AnchorConfig, ReferenceKind, NotationMode, ColorScheme } from './types';
 import { EdgeTypePopup, type EdgeTypeChoice } from './components/EdgeTypePopup';
+import { useJjomSync } from './hooks/useJjomSync';
+import { useJjomSelection } from './hooks/useJjomSelection';
+import { getSyncMode } from './sync/syncState';
+import {
+    syncPositionToJjom,
+    syncPositionBatchToJjom,
+    syncSizeToJjom,
+    syncInheritanceEdge,
+    syncReferenceEdge,
+    syncDeleteVertex,
+    syncDeleteEdge,
+    syncNodeLabel,
+} from './sync/canvasToJjom';
+import { rafThrottle, cancelThrottle } from '../../utils/DragThrottle';
 
 import './EditorV2.scss';
 
@@ -183,13 +197,29 @@ interface PendingConnection {
     position: { x: number; y: number };
 }
 
+export interface EditorV2Props {
+    /** Model ID from JjOM. When provided, the editor will read from Redux (Phase 2). */
+    modelid?: string;
+    /** Callback to switch back to the classic editor. */
+    onSwitchEditor?: () => void;
+}
+
 /**
  * Inner editor component that uses React Flow hooks.
  * Must be wrapped in ReactFlowProvider.
  */
-function EditorV2Inner() {
-    const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
-    const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
+function EditorV2Inner({ modelid, onSwitchEditor }: EditorV2Props) {
+    // Phase 3: React Flow state — initialised from demo data when standalone,
+    // or populated by useJjomSync when modelid is provided.
+    const [nodes, setNodes, onNodesChange] = useNodesState(modelid ? [] : initialNodes);
+    const [edges, setEdges, onEdgesChange] = useEdgesState(modelid ? [] : initialEdges);
+
+    // Phase 3: bidirectional incremental sync with JjOM/Redux
+    const { isJjomMode } = useJjomSync(modelid, setNodes, setEdges);
+
+    // Selection sync: standalone hook — updates Properties panel via _lastSelected
+    const jjomSelection = useJjomSelection(modelid, isJjomMode);
+
     const { screenToFlowPosition, getNodes, getEdges, zoomIn, zoomOut, fitView, getViewport, setViewport } = useReactFlow();
     const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
     const [snapEnabled, setSnapEnabled] = useState(true);
@@ -396,8 +426,17 @@ function EditorV2Inner() {
 
             setEdges((eds) => applyDistribution([...eds, newEdge]));
             setPendingConnection(null);
+
+            // Phase 3: sync edge creation to JjOM
+            if (isJjomMode) {
+                if (isInheritance) {
+                    syncInheritanceEdge(connection.source!, connection.target!);
+                } else {
+                    syncReferenceEdge(connection.source!, connection.target!, 'newRef');
+                }
+            }
         },
-        [pendingConnection, setEdges, getEdges, takeSnapshot, getOptimalAnchors, applyDistribution]
+        [pendingConnection, setEdges, getEdges, takeSnapshot, getOptimalAnchors, applyDistribution, isJjomMode]
     );
 
     const handleEdgeTypeCancelled = useCallback(() => {
@@ -518,8 +557,18 @@ function EditorV2Inner() {
                         !nodeIds.has(e.target)
                 )
             ));
+
+            // Phase 3: sync deletions to JjOM
+            if (isJjomMode) {
+                for (const edge of selectedEdges) {
+                    syncDeleteEdge(edge.id, edge.type === 'inheritance');
+                }
+                for (const node of selectedNodes) {
+                    syncDeleteVertex(node.id);
+                }
+            }
         }
-    }, [getNodes, getEdges, setNodes, setEdges, takeSnapshot, applyDistribution]);
+    }, [getNodes, getEdges, setNodes, setEdges, takeSnapshot, applyDistribution, isJjomMode]);
 
     // Delete specific node by ID
     const deleteNode = useCallback(
@@ -529,19 +578,24 @@ function EditorV2Inner() {
             setEdges((eds) => applyDistribution(
                 eds.filter((e) => e.source !== nodeId && e.target !== nodeId)
             ));
+            // Phase 3: sync to JjOM
+            if (isJjomMode) syncDeleteVertex(nodeId);
         },
-        [setNodes, setEdges, takeSnapshot, applyDistribution]
+        [setNodes, setEdges, takeSnapshot, applyDistribution, isJjomMode]
     );
 
     // Delete specific edge by ID
     const deleteEdge = useCallback(
         (edgeId: string) => {
             takeSnapshot();
+            const edge = getEdges().find(e => e.id === edgeId);
             setEdges((eds) => applyDistribution(
                 eds.filter((e) => e.id !== edgeId)
             ));
+            // Phase 3: sync to JjOM
+            if (isJjomMode && edge) syncDeleteEdge(edgeId, edge.type === 'inheritance');
         },
-        [setEdges, takeSnapshot, applyDistribution]
+        [setEdges, getEdges, takeSnapshot, applyDistribution, isJjomMode]
     );
 
     // Duplicate a node
@@ -740,7 +794,8 @@ function EditorV2Inner() {
 
     const onPaneClick = useCallback(() => {
         setContextMenu(null);
-    }, []);
+        jjomSelection.onPaneClick();
+    }, [jjomSelection]);
 
     const closeContextMenu = useCallback(() => {
         setContextMenu(null);
@@ -856,8 +911,12 @@ function EditorV2Inner() {
                     n.id === nodeId ? { ...n, data: { ...n.data, ...data } } : n
                 )
             );
+            // Phase 3: sync label change to JjOM
+            if (isJjomMode && data.label !== undefined) {
+                syncNodeLabel(nodeId, data.label);
+            }
         },
-        [setNodes, takeSnapshot]
+        [setNodes, takeSnapshot, isJjomMode]
     );
 
     const handleEdgeChange = useCallback(
@@ -974,9 +1033,65 @@ function EditorV2Inner() {
                     return applyDistribution(updated);
                 });
             }
+
+            // Phase 3: sync position/size changes to JjOM
+            if (isJjomMode) {
+                // -- Drag sync --
+                if (hasDragEnd) {
+                    // Lazy mode: sync final position on drag end
+                    const dragEndChanges = changes.filter(
+                        (c: any) => c.type === 'position' && c.dragging === false && c.position
+                    );
+                    const lazyUpdates = dragEndChanges.filter(
+                        (c: any) => getSyncMode(c.id) === 'lazy'
+                    );
+                    if (lazyUpdates.length > 0) {
+                        syncPositionBatchToJjom(
+                            lazyUpdates.map((c: any) => ({
+                                id: c.id, x: c.position.x, y: c.position.y,
+                            })),
+                        );
+                    }
+                    // Faithful mode: flush any pending RAF-throttled writes
+                    for (const c of dragEndChanges) {
+                        if (getSyncMode(c.id) === 'faithful') {
+                            cancelThrottle(`jjom_drag_${c.id}`);
+                            syncPositionToJjom(c.id, c.position.x, c.position.y);
+                        }
+                    }
+                }
+
+                // -- Faithful drag: during drag, dispatch position via RAF throttle --
+                const draggingChanges = changes.filter(
+                    (c: any) => c.type === 'position' && c.dragging === true && c.position
+                        && getSyncMode(c.id) === 'faithful'
+                );
+                for (const c of draggingChanges) {
+                    rafThrottle(
+                        `jjom_drag_${c.id}`,
+                        (pos: { x: number; y: number }) => {
+                            syncPositionToJjom(c.id, pos.x, pos.y);
+                        },
+                        32, // ~30fps matching classic editor
+                    )({ x: c.position.x, y: c.position.y });
+                }
+
+                // -- Resize sync (always lazy — on resize end) --
+                if (hasResize) {
+                    for (const c of changes.filter((ch: any) => ch.type === 'dimensions')) {
+                        const node = nodes.find((n) => n.id === c.id);
+                        const w = c.dimensions?.width ?? node?.measured?.width;
+                        const h = c.dimensions?.height ?? node?.measured?.height;
+                        if (w !== undefined && h !== undefined) {
+                            syncSizeToJjom(c.id, w, h);
+                        }
+                    }
+                }
+            }
+
             onNodesChange(changes);
         },
-        [onNodesChange, takeSnapshot, setEdges, nodes, applyDistribution]
+        [onNodesChange, takeSnapshot, setEdges, nodes, applyDistribution, isJjomMode]
     );
 
     // Recalculate anchors for a specific edge (called by SegmentHandles after drag).
@@ -1071,6 +1186,8 @@ function EditorV2Inner() {
                             onDragOver={onDragOver}
                             onNodeContextMenu={onNodeContextMenu}
                             onEdgeContextMenu={onEdgeContextMenu}
+                            onNodeClick={jjomSelection.onNodeClick}
+                            onEdgeClick={jjomSelection.onEdgeClick}
                             onPaneClick={onPaneClick}
                             nodeTypes={nodeTypes}
                             edgeTypes={edgeTypes}
@@ -1147,14 +1264,15 @@ function EditorV2Inner() {
  * Editor V2 - Metamodel Editor based on React Flow.
  * Supports Package, Class, Enumeration nodes and Reference edges.
  */
-function EditorV2() {
+function EditorV2({ modelid, onSwitchEditor }: EditorV2Props) {
     return (
         <ReactFlowProvider>
             <ObstacleGridProvider>
-                <EditorV2Inner />
+                <EditorV2Inner modelid={modelid} onSwitchEditor={onSwitchEditor} />
             </ObstacleGridProvider>
         </ReactFlowProvider>
     );
 }
 
 export default EditorV2;
+export { EditorV2 };

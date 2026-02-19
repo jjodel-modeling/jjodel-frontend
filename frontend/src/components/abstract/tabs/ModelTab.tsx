@@ -5,6 +5,7 @@ import {CreateElementAction, DGraph, DModelElement, DState, LGraph, LModel, LMod
 import {DefaultNode} from "../../../joiner/components";
 import ToolBar from "../../toolbar/ToolBar";
 import ContextMenu from "../../contextMenu/ContextMenu";
+import { EditorSwitch } from "./EditorSwitch";
 
 
 function ModelTabComponent(props: AllProps) {
@@ -27,14 +28,16 @@ function ModelTabComponent(props: AllProps) {
     let graphid = graph.id;
     return(<div className={'w-100 h-100'} style={{overflow: 'hidden'}}>
         <ContextMenu graph={graphid}/>
-        <div className={'d-flex h-100'} style={{overflow:'hidden'}} onClick={e => { if (!U.isProjectModified) U.isProjectModified = U.userHasInteracted = true; }}>
-            <ToolBar model={model.id} isMetamodel={model.isMetamodel} metamodelId={props.metamodelid} />
-            <Try>
-                <div className={"GraphContainer h-100 w-100"} style={{position:"relative"}}>
-                    {graph && <DefaultNode data={model} nodeid={graphid} graphid={graphid} />}
-                </div>
-            </Try>
-        </div>
+        <EditorSwitch modelid={model.id}>
+            <div className={'d-flex h-100'} style={{overflow:'hidden'}} onClick={e => { if (!U.isProjectModified) U.isProjectModified = U.userHasInteracted = true; }}>
+                <ToolBar model={model.id} isMetamodel={model.isMetamodel} metamodelId={props.metamodelid} />
+                <Try>
+                    <div className={"GraphContainer h-100 w-100"} style={{position:"relative"}}>
+                        {graph && <DefaultNode data={model} nodeid={graphid} graphid={graphid} />}
+                    </div>
+                </Try>
+            </div>
+        </EditorSwitch>
     </div>);
 }
 interface OwnProps {

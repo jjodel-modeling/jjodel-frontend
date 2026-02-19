@@ -1,0 +1,375 @@
+/**
+ * Action Confirmation Component Styles
+ * Compact and detailed modes
+ */
+
+/* ===================================
+   COMPACT ACTION CONFIRMATION
+   =================================== */
+
+/* Compact confirmation (single line) */
+.jodie-action-confirmation.compact {
+    margin: 12px 16px;
+    padding: 10px 14px;
+    background: linear-gradient(135deg, #ECFDF5 0%, #D1FAE5 100%);
+    border: 1.5px solid #86EFAC;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    animation: slideIn 0.2s ease-out;
+    box-shadow: 0 2px 8px rgba(34, 197, 94, 0.15);
+}
+
+.jodie-action-confirmation.compact.delete {
+    background: linear-gradient(135deg, #FEF2F2 0%, #FEE2E2 100%);
+    border-color: #FCA5A5;
+    box-shadow: 0 2px 8px rgba(239, 68, 68, 0.15);
+}
+
+.jodie-action-confirmation.compact.modify {
+    background: linear-gradient(135deg, #FFFBEB 0%, #FEF3C7 100%);
+    border-color: #FCD34D;
+    box-shadow: 0 2px 8px rgba(245, 158, 11, 0.15);
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Action info (title) */
+.action-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.jodie-action-confirmation.compact .action-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #065F46;
+    white-space: nowrap;
+}
+
+.jodie-action-confirmation.compact.delete .action-title {
+    color: #991B1B;
+}
+
+.jodie-action-confirmation.compact.modify .action-title {
+    color: #92400E;
+}
+
+/* Action details */
+.jodie-action-confirmation.compact .action-details {
+    flex: 1;
+    font-size: 13px;
+    color: #047857;
+    font-family: 'Monaco', 'Courier New', monospace;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.jodie-action-confirmation.compact.delete .action-details {
+    color: #DC2626;
+}
+
+.jodie-action-confirmation.compact.modify .action-details {
+    color: #D97706;
+}
+
+/* Inline warning */
+.action-warning-inline {
+    flex-shrink: 0;
+    color: #F59E0B;
+    font-size: 14px;
+}
+
+/* Compact buttons (icon only) */
+.jodie-action-confirmation.compact .action-buttons {
+    display: flex;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+.jodie-action-confirmation.compact .action-btn {
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    font-size: 14px;
+}
+
+.jodie-action-confirmation.compact .action-btn.confirm {
+    background: #10B981;
+    color: white;
+}
+
+.jodie-action-confirmation.compact .action-btn.confirm:hover:not(:disabled) {
+    background: #059669;
+    transform: scale(1.05);
+}
+
+.jodie-action-confirmation.compact .action-btn.confirm.destructive {
+    background: #EF4444;
+}
+
+.jodie-action-confirmation.compact .action-btn.confirm.destructive:hover:not(:disabled) {
+    background: #DC2626;
+}
+
+.jodie-action-confirmation.compact .action-btn.cancel {
+    background: white;
+    color: #64748B;
+    border: 1.5px solid #CBD5E1;
+}
+
+.jodie-action-confirmation.compact .action-btn.cancel:hover:not(:disabled) {
+    background: #F8FAFC;
+    border-color: #94A3B8;
+}
+
+.jodie-action-confirmation.compact .action-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* ===================================
+   DETAILED ACTION CONFIRMATION
+   =================================== */
+
+/* Detailed confirmation (for complex actions) */
+.jodie-action-confirmation.detailed {
+    margin: 12px 16px;
+    padding: 14px;
+    background: linear-gradient(135deg, #ECFDF5 0%, #D1FAE5 100%);
+    border: 2px solid #86EFAC;
+    border-radius: 10px;
+    animation: slideIn 0.3s ease-out;
+    box-shadow: 0 4px 12px rgba(34, 197, 94, 0.2);
+}
+
+.jodie-action-confirmation.detailed.delete {
+    background: linear-gradient(135deg, #FEF2F2 0%, #FEE2E2 100%);
+    border-color: #FCA5A5;
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2);
+}
+
+.jodie-action-confirmation.detailed.modify {
+    background: linear-gradient(135deg, #FFFBEB 0%, #FEF3C7 100%);
+    border-color: #FCD34D;
+    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.2);
+}
+
+/* Detailed header */
+.action-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid rgba(6, 95, 70, 0.2);
+}
+
+.jodie-action-confirmation.detailed.delete .action-header {
+    border-bottom-color: rgba(153, 27, 27, 0.2);
+}
+
+.jodie-action-confirmation.detailed.modify .action-header {
+    border-bottom-color: rgba(146, 64, 14, 0.2);
+}
+
+.jodie-action-confirmation.detailed .action-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: #065F46;
+}
+
+.jodie-action-confirmation.detailed.delete .action-title {
+    color: #991B1B;
+}
+
+.jodie-action-confirmation.detailed.modify .action-title {
+    color: #92400E;
+}
+
+/* Detailed body */
+.action-body {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.action-field {
+    display: flex;
+    gap: 8px;
+    font-size: 13px;
+    align-items: flex-start;
+}
+
+.field-label {
+    font-weight: 600;
+    color: #047857;
+    min-width: 80px;
+    flex-shrink: 0;
+}
+
+.jodie-action-confirmation.detailed.delete .field-label {
+    color: #DC2626;
+}
+
+.jodie-action-confirmation.detailed.modify .field-label {
+    color: #D97706;
+}
+
+.field-value {
+    color: #065F46;
+    font-family: 'Monaco', 'Courier New', monospace;
+}
+
+.jodie-action-confirmation.detailed.delete .field-value {
+    color: #991B1B;
+}
+
+.jodie-action-confirmation.detailed.modify .field-value {
+    color: #92400E;
+}
+
+.field-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.field-item {
+    padding: 4px 8px;
+    background: white;
+    border-radius: 4px;
+    font-family: 'Monaco', 'Courier New', monospace;
+    font-size: 12px;
+    color: #065F46;
+    border: 1px solid #BBF7D0;
+}
+
+.field-code {
+    padding: 8px;
+    background: white;
+    border-radius: 4px;
+    font-family: 'Monaco', 'Courier New', monospace;
+    font-size: 12px;
+    color: #065F46;
+    border: 1px solid #BBF7D0;
+    margin: 0;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+/* Warnings */
+.action-warnings {
+    margin-top: 8px;
+}
+
+.action-warning {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 8px 10px;
+    background: rgba(251, 191, 36, 0.15);
+    border: 1px solid rgba(251, 191, 36, 0.3);
+    border-radius: 6px;
+    font-size: 12px;
+    color: #92400E;
+}
+
+.action-warning i {
+    margin-top: 1px;
+    flex-shrink: 0;
+    color: #F59E0B;
+}
+
+/* Detailed footer/buttons */
+.action-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+.jodie-action-confirmation.detailed .action-btn.text {
+    padding: 8px 14px;
+    border: none;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s;
+}
+
+.jodie-action-confirmation.detailed .action-btn.confirm.text {
+    background: #10B981;
+    color: white;
+}
+
+.jodie-action-confirmation.detailed .action-btn.confirm.text:hover:not(:disabled) {
+    background: #059669;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(16, 185, 129, 0.3);
+}
+
+.jodie-action-confirmation.detailed .action-btn.confirm.text.destructive {
+    background: #EF4444;
+}
+
+.jodie-action-confirmation.detailed .action-btn.confirm.text.destructive:hover:not(:disabled) {
+    background: #DC2626;
+    box-shadow: 0 4px 8px rgba(239, 68, 68, 0.3);
+}
+
+.jodie-action-confirmation.detailed .action-btn.cancel.text {
+    background: white;
+    color: #64748B;
+    border: 1.5px solid #CBD5E1;
+}
+
+.jodie-action-confirmation.detailed .action-btn.cancel.text:hover:not(:disabled) {
+    background: #F8FAFC;
+    border-color: #94A3B8;
+}
+
+.jodie-action-confirmation.detailed .action-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Spinner */
+.action-spinner {
+    width: 14px;
+    height: 14px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
