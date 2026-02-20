@@ -38,6 +38,8 @@ interface UseJjomSyncResult {
     isJjomMode: boolean;
     /** True when a graph was found for the modelid. */
     hasGraph: boolean;
+    /** The JjOM graph ID (DGraph pointer), available when isJjomMode is true. */
+    graphId: string | null;
 }
 
 type SetNodes = React.Dispatch<React.SetStateAction<Node[]>>;
@@ -150,7 +152,18 @@ export function useJjomSync(
         const result = new Map<string, any>();
         for (const id of subElementIds) {
             const elem = state.idlookup[id];
-            if (elem) result.set(id, elem);
+            if (elem) {
+                result.set(id, elem);
+                // Track the model element (DClass/DEnum/DReference) pointed to
+                // by this graph element. When e.g. an attribute is added to a
+                // DClass, the DVertex stays the same but state.idlookup[modelId]
+                // gets a new reference — this lets us detect that change.
+                const modelId = (elem as any).model;
+                if (modelId && typeof modelId === 'string') {
+                    const modelElem = state.idlookup[modelId];
+                    if (modelElem) result.set(`model:${id}`, modelElem);
+                }
+            }
         }
         return result;
     }, mapReferenceEqual);
@@ -270,13 +283,18 @@ export function useJjomSync(
         // --- Property changes on existing elements ---
         const prevElements = prevElementsRef.current;
         for (const [id, dElement] of elementSnapshots) {
+            if (id.startsWith('model:')) continue; // model entries are for detection only
             if (!prevIds.has(id)) continue; // already handled above as addition
             if (isCanvasUpdated(id)) continue; // anti-bounce
 
             const prevD = prevElements.get(id);
-            if (prevD === dElement) continue; // reference unchanged — no update needed
+            const prevModel = prevElements.get(`model:${id}`);
+            const currModel = elementSnapshots.get(`model:${id}`);
 
-            // D-object reference changed → re-transform
+            // Skip if BOTH the graph element and its model element are unchanged
+            if (prevD === dElement && prevModel === currModel) continue;
+
+            // D-object or model reference changed → re-transform
             try {
                 const lProxy: any = LPointerTargetable.fromPointer(id);
                 if (!lProxy) continue;
@@ -323,5 +341,5 @@ export function useJjomSync(
         };
     }, []);
 
-    return { isJjomMode, hasGraph };
+    return { isJjomMode, hasGraph, graphId: graphInfo?.graphId ?? null };
 }

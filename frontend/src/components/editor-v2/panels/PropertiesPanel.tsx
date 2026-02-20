@@ -17,6 +17,21 @@ import type {
     AnchorConfig,
 } from '../types';
 import { createAttribute, createLiteral, createReference, createOperation, formatCardinality, E_DATA_TYPES } from '../types';
+import {
+    syncClassAbstract,
+    syncAddAttribute,
+    syncUpdateAttribute,
+    syncRemoveAttribute,
+    syncAddOperation,
+    syncUpdateOperation,
+    syncRemoveOperation,
+    syncAddEnumLiteral,
+    syncUpdateEnumLiteral,
+    syncRemoveEnumLiteral,
+    syncEdgeRefProperty,
+    syncEdgeRefKind,
+    syncNodeLabel,
+} from '../sync/canvasToJjom';
 
 interface PropertiesPanelProps {
     selectedNodes: Node[];
@@ -25,6 +40,7 @@ interface PropertiesPanelProps {
     onEdgeChange: (edgeId: string, data: Partial<Edge>) => void;
     onConvertToInheritance?: (edgeId: string) => void;
     onConvertToReference?: (edgeId: string) => void;
+    isJjomMode?: boolean;
 }
 
 // Collapsible section component
@@ -70,6 +86,7 @@ function PropertiesPanel({
     onEdgeChange,
     onConvertToInheritance,
     onConvertToReference,
+    isJjomMode,
 }: PropertiesPanelProps) {
     const selectedNode = selectedNodes.length === 1 ? selectedNodes[0] : null;
     const selectedEdge = selectedEdges.length === 1 && selectedNodes.length === 0 ? selectedEdges[0] : null;
@@ -113,19 +130,19 @@ function PropertiesPanel({
             case 'classNode':
                 return (
                     <aside className="properties-panel">
-                        <ClassNodeProperties node={selectedNode} onUpdate={onNodeChange} />
+                        <ClassNodeProperties node={selectedNode} onUpdate={onNodeChange} isJjomMode={isJjomMode} />
                     </aside>
                 );
             case 'enumNode':
                 return (
                     <aside className="properties-panel">
-                        <EnumNodeProperties node={selectedNode} onUpdate={onNodeChange} />
+                        <EnumNodeProperties node={selectedNode} onUpdate={onNodeChange} isJjomMode={isJjomMode} />
                     </aside>
                 );
             case 'packageNode':
                 return (
                     <aside className="properties-panel">
-                        <PackageNodeProperties node={selectedNode} onUpdate={onNodeChange} />
+                        <PackageNodeProperties node={selectedNode} onUpdate={onNodeChange} isJjomMode={isJjomMode} />
                     </aside>
                 );
             default:
@@ -156,6 +173,7 @@ function PropertiesPanel({
                     edge={selectedEdge}
                     onUpdate={onEdgeChange}
                     onConvertToInheritance={onConvertToInheritance}
+                    isJjomMode={isJjomMode}
                 />
             </aside>
         );
@@ -165,13 +183,20 @@ function PropertiesPanel({
 }
 
 // === Class Node Properties ===
-function ClassNodeProperties({ node, onUpdate }: { node: Node; onUpdate: (id: string, data: any) => void }) {
+function ClassNodeProperties({ node, onUpdate, isJjomMode }: { node: Node; onUpdate: (id: string, data: any) => void; isJjomMode?: boolean }) {
     const nodeData = node.data as ClassNodeData;
     const [name, setName] = useState(nodeData.label);
-    const [isAbstract, setIsAbstract] = useState(nodeData.isAbstract ?? false);
-    const [attributes, setAttributes] = useState<MetaAttribute[]>(nodeData.attributes || []);
-    const [references, setReferences] = useState<MetaReference[]>(nodeData.references || []);
-    const [operations, setOperations] = useState<MetaOperation[]>(nodeData.operations || []);
+
+    // In JjOM mode, read directly from nodeData (JjOM is source of truth via useJjomSync).
+    // In standalone mode, use local state as before.
+    const attributes = nodeData.attributes || [];
+    const references = nodeData.references || [];
+    const operations = nodeData.operations || [];
+    const isAbstract = nodeData.isAbstract ?? false;
+
+    // Local edit buffers for inline text editing (attr names, op names).
+    // Key: `${elementId}:${field}`, Value: current editing value.
+    const [editBuffers, setEditBuffers] = useState<Record<string, string>>({});
 
     // All class nodes for the reference target dropdown
     const allNodes = useNodes();
@@ -185,48 +210,90 @@ function ClassNodeProperties({ node, onUpdate }: { node: Node; onUpdate: (id: st
 
     useEffect(() => {
         setName(nodeData.label);
-        setIsAbstract(nodeData.isAbstract ?? false);
-        setAttributes(nodeData.attributes || []);
-        setReferences(nodeData.references || []);
-        setOperations(nodeData.operations || []);
-    }, [node.id, nodeData.label, nodeData.isAbstract, nodeData.attributes, nodeData.references, nodeData.operations]);
+        setEditBuffers({});
+    }, [node.id, nodeData.label]);
 
     const commit = useCallback((updates: Partial<ClassNodeData>) => {
         onUpdate(node.id, { ...nodeData, ...updates });
     }, [node.id, nodeData, onUpdate]);
 
-    const commitName = () => commit({ label: name });
+    // --- Name ---
+    const commitName = () => {
+        if (isJjomMode) {
+            syncNodeLabel(node.id, name);
+        } else {
+            commit({ label: name });
+        }
+    };
 
+    // --- Abstract ---
     const toggleAbstract = (checked: boolean) => {
-        setIsAbstract(checked);
-        commit({ isAbstract: checked });
+        if (isJjomMode) {
+            syncClassAbstract(node.id, checked);
+        } else {
+            commit({ isAbstract: checked });
+        }
     };
 
-    // Attribute handlers
+    // --- Edit buffer helpers ---
+    const getEditValue = (id: string, field: string, original: string): string => {
+        const key = `${id}:${field}`;
+        return key in editBuffers ? editBuffers[key] : original;
+    };
+
+    const setEditValue = (id: string, field: string, value: string) => {
+        setEditBuffers(prev => ({ ...prev, [`${id}:${field}`]: value }));
+    };
+
+    const clearEditBuffer = (id: string, field: string) => {
+        setEditBuffers(prev => {
+            const next = { ...prev };
+            delete next[`${id}:${field}`];
+            return next;
+        });
+    };
+
+    // --- Attributes ---
     const addAttribute = () => {
-        const updated = [...attributes, createAttribute()];
-        setAttributes(updated);
-        commit({ attributes: updated });
+        if (isJjomMode) {
+            syncAddAttribute(node.id);
+        } else {
+            const updated = [...attributes, createAttribute()];
+            commit({ attributes: updated });
+        }
     };
 
-    const updateAttribute = (index: number, field: keyof MetaAttribute, val: string | number) => {
-        const updated = attributes.map((attr, i) =>
-            i === index ? { ...attr, [field]: val } : attr
-        );
-        setAttributes(updated);
-        commit({ attributes: updated });
+    const commitAttrField = (attrId: string, field: string, value: string) => {
+        if (isJjomMode) {
+            syncUpdateAttribute(attrId, field, value, node.id);
+        } else {
+            const updated = attributes.map(a => a.id === attrId ? { ...a, [field]: value } : a);
+            commit({ attributes: updated });
+        }
+        clearEditBuffer(attrId, field);
     };
 
-    const removeAttribute = (index: number) => {
-        const updated = attributes.filter((_, i) => i !== index);
-        setAttributes(updated);
-        commit({ attributes: updated });
+    const handleAttrTypeChange = (attrId: string, value: string) => {
+        if (isJjomMode) {
+            syncUpdateAttribute(attrId, 'type', value, node.id);
+        } else {
+            const updated = attributes.map(a => a.id === attrId ? { ...a, type: value } : a);
+            commit({ attributes: updated });
+        }
     };
 
-    // Reference handlers
+    const removeAttribute = (attrId: string) => {
+        if (isJjomMode) {
+            syncRemoveAttribute(attrId, node.id);
+        } else {
+            const updated = attributes.filter(a => a.id !== attrId);
+            commit({ attributes: updated });
+        }
+    };
+
+    // --- References (inline) ---
     const addReference = () => {
         const updated = [...references, createReference()];
-        setReferences(updated);
         commit({ references: updated });
     };
 
@@ -234,35 +301,50 @@ function ClassNodeProperties({ node, onUpdate }: { node: Node; onUpdate: (id: st
         const updated = references.map((ref, i) =>
             i === index ? { ...ref, [field]: val } : ref
         );
-        setReferences(updated);
         commit({ references: updated });
     };
 
     const removeReference = (index: number) => {
         const updated = references.filter((_, i) => i !== index);
-        setReferences(updated);
         commit({ references: updated });
     };
 
-    // Operation handlers
+    // --- Operations ---
     const addOperation = () => {
-        const updated = [...operations, createOperation()];
-        setOperations(updated);
-        commit({ operations: updated });
+        if (isJjomMode) {
+            syncAddOperation(node.id);
+        } else {
+            const updated = [...operations, createOperation()];
+            commit({ operations: updated });
+        }
     };
 
-    const updateOperation = (index: number, field: keyof MetaOperation, val: string) => {
-        const updated = operations.map((op, i) =>
-            i === index ? { ...op, [field]: val } : op
-        );
-        setOperations(updated);
-        commit({ operations: updated });
+    const commitOpField = (opId: string, field: string, value: string) => {
+        if (isJjomMode) {
+            syncUpdateOperation(opId, field, value, node.id);
+        } else {
+            const updated = operations.map(o => o.id === opId ? { ...o, [field]: value } : o);
+            commit({ operations: updated });
+        }
+        clearEditBuffer(opId, field);
     };
 
-    const removeOperation = (index: number) => {
-        const updated = operations.filter((_, i) => i !== index);
-        setOperations(updated);
-        commit({ operations: updated });
+    const handleOpReturnTypeChange = (opId: string, value: string) => {
+        if (isJjomMode) {
+            syncUpdateOperation(opId, 'type', value, node.id);
+        } else {
+            const updated = operations.map(o => o.id === opId ? { ...o, returnType: value } : o);
+            commit({ operations: updated });
+        }
+    };
+
+    const removeOperation = (opId: string) => {
+        if (isJjomMode) {
+            syncRemoveOperation(opId, node.id);
+        } else {
+            const updated = operations.filter(o => o.id !== opId);
+            commit({ operations: updated });
+        }
     };
 
     return (
@@ -311,24 +393,26 @@ function ClassNodeProperties({ node, onUpdate }: { node: Node; onUpdate: (id: st
                     {attributes.length === 0 && (
                         <div className="prop-empty">Drop attributes from palette or click +</div>
                     )}
-                    {attributes.map((attr, i) => (
+                    {attributes.map((attr) => (
                         <div key={attr.id} className="prop-list-item">
                             <input
                                 className="prop-input prop-input--sm"
-                                value={attr.name}
-                                onChange={(e) => updateAttribute(i, 'name', e.target.value)}
+                                value={getEditValue(attr.id, 'name', attr.name)}
+                                onChange={(e) => setEditValue(attr.id, 'name', e.target.value)}
+                                onBlur={(e) => commitAttrField(attr.id, 'name', e.target.value)}
+                                onKeyDown={(e) => e.key === 'Enter' && commitAttrField(attr.id, 'name', (e.target as HTMLInputElement).value)}
                                 placeholder="name"
                             />
                             <select
                                 className="prop-select"
                                 value={attr.type}
-                                onChange={(e) => updateAttribute(i, 'type', e.target.value)}
+                                onChange={(e) => handleAttrTypeChange(attr.id, e.target.value)}
                             >
                                 {E_DATA_TYPES.map(t => (
                                     <option key={t} value={t}>{t}</option>
                                 ))}
                             </select>
-                            <button className="prop-remove-btn" onClick={() => removeAttribute(i)} title="Remove">
+                            <button className="prop-remove-btn" onClick={() => removeAttribute(attr.id)} title="Remove">
                                 <i className="bi bi-x" />
                             </button>
                         </div>
@@ -339,41 +423,59 @@ function ClassNodeProperties({ node, onUpdate }: { node: Node; onUpdate: (id: st
                     title="References"
                     count={references.length}
                     action={
-                        <button
-                            className="prop-section-add-btn"
-                            onClick={addReference}
-                            title="Add reference"
-                        >
-                            <i className="bi bi-plus" />
-                        </button>
+                        !isJjomMode ? (
+                            <button
+                                className="prop-section-add-btn"
+                                onClick={addReference}
+                                title="Add reference"
+                            >
+                                <i className="bi bi-plus" />
+                            </button>
+                        ) : undefined
                     }
                 >
-                    {references.length === 0 && (
-                        <div className="prop-empty">Click + to add a reference</div>
+                    {isJjomMode ? (
+                        <>
+                            {references.length === 0 && (
+                                <div className="prop-empty">Draw reference edges between classes</div>
+                            )}
+                            {references.map((ref) => (
+                                <div key={ref.id} className="prop-list-item prop-list-item--readonly">
+                                    <span className="prop-info">{ref.name}</span>
+                                    <span className="prop-info prop-info--type">{'\u2192'} {availableClasses.find(c => c.id === ref.targetClassId)?.name || '?'}</span>
+                                </div>
+                            ))}
+                        </>
+                    ) : (
+                        <>
+                            {references.length === 0 && (
+                                <div className="prop-empty">Click + to add a reference</div>
+                            )}
+                            {references.map((ref, i) => (
+                                <div key={ref.id} className="prop-list-item">
+                                    <input
+                                        className="prop-input prop-input--sm"
+                                        value={ref.name}
+                                        onChange={(e) => updateReference(i, 'name', e.target.value)}
+                                        placeholder="refName"
+                                    />
+                                    <select
+                                        className="prop-select"
+                                        value={ref.targetClassId}
+                                        onChange={(e) => updateReference(i, 'targetClassId', e.target.value)}
+                                    >
+                                        <option value="">-- target --</option>
+                                        {availableClasses.map(cls => (
+                                            <option key={cls.id} value={cls.id}>{cls.name}</option>
+                                        ))}
+                                    </select>
+                                    <button className="prop-remove-btn" onClick={() => removeReference(i)} title="Remove">
+                                        <i className="bi bi-x" />
+                                    </button>
+                                </div>
+                            ))}
+                        </>
                     )}
-                    {references.map((ref, i) => (
-                        <div key={ref.id} className="prop-list-item">
-                            <input
-                                className="prop-input prop-input--sm"
-                                value={ref.name}
-                                onChange={(e) => updateReference(i, 'name', e.target.value)}
-                                placeholder="refName"
-                            />
-                            <select
-                                className="prop-select"
-                                value={ref.targetClassId}
-                                onChange={(e) => updateReference(i, 'targetClassId', e.target.value)}
-                            >
-                                <option value="">-- target --</option>
-                                {availableClasses.map(cls => (
-                                    <option key={cls.id} value={cls.id}>{cls.name}</option>
-                                ))}
-                            </select>
-                            <button className="prop-remove-btn" onClick={() => removeReference(i)} title="Remove">
-                                <i className="bi bi-x" />
-                            </button>
-                        </div>
-                    ))}
                 </Section>
 
                 <Section
@@ -392,25 +494,27 @@ function ClassNodeProperties({ node, onUpdate }: { node: Node; onUpdate: (id: st
                     {operations.length === 0 && (
                         <div className="prop-empty">Drop operations from palette or click +</div>
                     )}
-                    {operations.map((op, i) => (
+                    {operations.map((op) => (
                         <div key={op.id} className="prop-list-item">
                             <input
                                 className="prop-input prop-input--sm"
-                                value={op.name}
-                                onChange={(e) => updateOperation(i, 'name', e.target.value)}
+                                value={getEditValue(op.id, 'name', op.name)}
+                                onChange={(e) => setEditValue(op.id, 'name', e.target.value)}
+                                onBlur={(e) => commitOpField(op.id, 'name', e.target.value)}
+                                onKeyDown={(e) => e.key === 'Enter' && commitOpField(op.id, 'name', (e.target as HTMLInputElement).value)}
                                 placeholder="name"
                             />
                             <select
                                 className="prop-select"
                                 value={op.returnType}
-                                onChange={(e) => updateOperation(i, 'returnType', e.target.value)}
+                                onChange={(e) => handleOpReturnTypeChange(op.id, e.target.value)}
                             >
                                 <option value="void">void</option>
                                 {E_DATA_TYPES.map(t => (
                                     <option key={t} value={t}>{t}</option>
                                 ))}
                             </select>
-                            <button className="prop-remove-btn" onClick={() => removeOperation(i)} title="Remove">
+                            <button className="prop-remove-btn" onClick={() => removeOperation(op.id)} title="Remove">
                                 <i className="bi bi-x" />
                             </button>
                         </div>
@@ -429,43 +533,81 @@ function ClassNodeProperties({ node, onUpdate }: { node: Node; onUpdate: (id: st
 }
 
 // === Enum Node Properties ===
-function EnumNodeProperties({ node, onUpdate }: { node: Node; onUpdate: (id: string, data: any) => void }) {
+function EnumNodeProperties({ node, onUpdate, isJjomMode }: { node: Node; onUpdate: (id: string, data: any) => void; isJjomMode?: boolean }) {
     const nodeData = node.data as EnumNodeData;
     const [name, setName] = useState(nodeData.label);
-    const [literals, setLiterals] = useState<MetaLiteral[]>(nodeData.literals || []);
+    const literals = nodeData.literals || [];
+
+    const [editBuffers, setEditBuffers] = useState<Record<string, string>>({});
 
     useEffect(() => {
         setName(nodeData.label);
-        setLiterals(nodeData.literals || []);
-    }, [node.id, nodeData.label, nodeData.literals]);
+        setEditBuffers({});
+    }, [node.id, nodeData.label]);
 
     const commit = useCallback((updates: Partial<EnumNodeData>) => {
         onUpdate(node.id, { ...nodeData, ...updates });
     }, [node.id, nodeData, onUpdate]);
 
-    const commitName = () => commit({ label: name });
+    const commitName = () => {
+        if (isJjomMode) {
+            syncNodeLabel(node.id, name);
+        } else {
+            commit({ label: name });
+        }
+    };
 
+    // --- Edit buffer helpers ---
+    const getEditValue = (id: string, field: string, original: string): string => {
+        const key = `${id}:${field}`;
+        return key in editBuffers ? editBuffers[key] : original;
+    };
+
+    const setEditValue = (id: string, field: string, value: string) => {
+        setEditBuffers(prev => ({ ...prev, [`${id}:${field}`]: value }));
+    };
+
+    const clearEditBuffer = (id: string, field: string) => {
+        setEditBuffers(prev => {
+            const next = { ...prev };
+            delete next[`${id}:${field}`];
+            return next;
+        });
+    };
+
+    // --- Literals ---
     const addLiteral = () => {
-        const nextValue = literals.length > 0 ? Math.max(...literals.map(l => l.value)) + 1 : 0;
-        const updated = [...literals, createLiteral('NEW_VALUE', nextValue)];
-        setLiterals(updated);
-        commit({ literals: updated });
+        if (isJjomMode) {
+            syncAddEnumLiteral(node.id);
+        } else {
+            const nextValue = literals.length > 0 ? Math.max(...literals.map(l => l.value)) + 1 : 0;
+            const updated = [...literals, createLiteral('NEW_VALUE', nextValue)];
+            commit({ literals: updated });
+        }
     };
 
-    const updateLiteral = (index: number, field: 'name' | 'value', val: string) => {
-        const updated = literals.map((lit, i) =>
-            i === index
-                ? { ...lit, [field]: field === 'value' ? parseInt(val) || 0 : val }
-                : lit
-        );
-        setLiterals(updated);
-        commit({ literals: updated });
+    const commitLitField = (litId: string, field: string, value: string) => {
+        if (isJjomMode) {
+            const finalValue = field === 'value' ? (parseInt(value) || 0) : value;
+            syncUpdateEnumLiteral(litId, field, finalValue, node.id);
+        } else {
+            const updated = literals.map(l =>
+                l.id === litId
+                    ? { ...l, [field]: field === 'value' ? (parseInt(value) || 0) : value }
+                    : l
+            );
+            commit({ literals: updated });
+        }
+        clearEditBuffer(litId, field);
     };
 
-    const removeLiteral = (index: number) => {
-        const updated = literals.filter((_, i) => i !== index);
-        setLiterals(updated);
-        commit({ literals: updated });
+    const removeLiteral = (litId: string) => {
+        if (isJjomMode) {
+            syncRemoveEnumLiteral(litId, node.id);
+        } else {
+            const updated = literals.filter(l => l.id !== litId);
+            commit({ literals: updated });
+        }
     };
 
     return (
@@ -506,15 +648,17 @@ function EnumNodeProperties({ node, onUpdate }: { node: Node; onUpdate: (id: str
                     {literals.length === 0 && (
                         <div className="prop-empty">Drop literals from palette or click +</div>
                     )}
-                    {literals.map((lit, i) => (
+                    {literals.map((lit) => (
                         <div key={lit.id} className="prop-list-item">
                             <input
                                 className="prop-input prop-input--sm prop-input--mono"
-                                value={lit.name}
-                                onChange={(e) => updateLiteral(i, 'name', e.target.value)}
+                                value={getEditValue(lit.id, 'name', lit.name)}
+                                onChange={(e) => setEditValue(lit.id, 'name', e.target.value)}
+                                onBlur={(e) => commitLitField(lit.id, 'name', e.target.value)}
+                                onKeyDown={(e) => e.key === 'Enter' && commitLitField(lit.id, 'name', (e.target as HTMLInputElement).value)}
                                 placeholder="NAME"
                             />
-                            <button className="prop-remove-btn" onClick={() => removeLiteral(i)} title="Remove">
+                            <button className="prop-remove-btn" onClick={() => removeLiteral(lit.id)} title="Remove">
                                 <i className="bi bi-x" />
                             </button>
                         </div>
@@ -533,7 +677,7 @@ function EnumNodeProperties({ node, onUpdate }: { node: Node; onUpdate: (id: str
 }
 
 // === Package Node Properties ===
-function PackageNodeProperties({ node, onUpdate }: { node: Node; onUpdate: (id: string, data: any) => void }) {
+function PackageNodeProperties({ node, onUpdate, isJjomMode }: { node: Node; onUpdate: (id: string, data: any) => void; isJjomMode?: boolean }) {
     const nodeData = node.data as PackageNodeData;
     const [name, setName] = useState(nodeData.label);
 
@@ -542,7 +686,11 @@ function PackageNodeProperties({ node, onUpdate }: { node: Node; onUpdate: (id: 
     }, [node.id, nodeData.label]);
 
     const commitName = () => {
-        onUpdate(node.id, { ...nodeData, label: name });
+        if (isJjomMode) {
+            syncNodeLabel(node.id, name);
+        } else {
+            onUpdate(node.id, { ...nodeData, label: name });
+        }
     };
 
     return (
@@ -791,10 +939,12 @@ function ReferenceEdgeProperties({
     edge,
     onUpdate,
     onConvertToInheritance,
+    isJjomMode,
 }: {
     edge: Edge;
     onUpdate: (id: string, data: Partial<Edge>) => void;
     onConvertToInheritance?: (edgeId: string) => void;
+    isJjomMode?: boolean;
 }) {
     const edgeData = edge.data as ReferenceEdgeData | undefined;
     const ref = edgeData?.reference;
@@ -811,7 +961,7 @@ function ReferenceEdgeProperties({
         setUpperBound(ref?.upperBound ?? -1);
     }, [edge.id, ref]);
 
-    const commit = useCallback(() => {
+    const commitRF = useCallback(() => {
         const updatedRef: MetaReference = {
             id: ref?.id || edge.id,
             name,
@@ -821,30 +971,55 @@ function ReferenceEdgeProperties({
             upperBound,
             containment: kind === 'composition',
         };
-
-        // Preserve existing data (like waypoints) while updating reference
         onUpdate(edge.id, {
             label: name,
             data: { ...edgeData, reference: updatedRef } as ReferenceEdgeData,
         });
     }, [name, kind, lowerBound, upperBound, edge.id, edge.target, ref, edgeData, onUpdate]);
 
+    const commitName = () => {
+        if (isJjomMode) {
+            syncEdgeRefProperty(edge.id, 'name', name);
+        } else {
+            commitRF();
+        }
+    };
+
     const handleKindChange = (newKind: ReferenceKind) => {
         setKind(newKind);
-        const updatedRef: MetaReference = {
-            id: ref?.id || edge.id,
-            name,
-            kind: newKind,
-            targetClassId: edge.target,
-            lowerBound,
-            upperBound,
-            containment: newKind === 'composition',
-        };
-        // Preserve existing data (like waypoints) while updating reference
-        onUpdate(edge.id, {
-            label: name,
-            data: { ...edgeData, reference: updatedRef } as ReferenceEdgeData,
-        });
+        if (isJjomMode) {
+            syncEdgeRefKind(edge.id, newKind);
+        } else {
+            const updatedRef: MetaReference = {
+                id: ref?.id || edge.id,
+                name,
+                kind: newKind,
+                targetClassId: edge.target,
+                lowerBound,
+                upperBound,
+                containment: newKind === 'composition',
+            };
+            onUpdate(edge.id, {
+                label: name,
+                data: { ...edgeData, reference: updatedRef } as ReferenceEdgeData,
+            });
+        }
+    };
+
+    const commitLowerBound = () => {
+        if (isJjomMode) {
+            syncEdgeRefProperty(edge.id, 'lowerBound', lowerBound);
+        } else {
+            commitRF();
+        }
+    };
+
+    const commitUpperBound = () => {
+        if (isJjomMode) {
+            syncEdgeRefProperty(edge.id, 'upperBound', upperBound);
+        } else {
+            commitRF();
+        }
     };
 
     const sourceAnchor: AnchorConfig = edgeData?.sourceAnchor || { mode: 'auto', side: (edge.sourceHandle || 'right') as AnchorSide };
@@ -894,8 +1069,8 @@ function ReferenceEdgeProperties({
                             className="prop-input"
                             value={name}
                             onChange={(e) => setName(e.target.value)}
-                            onBlur={commit}
-                            onKeyDown={(e) => e.key === 'Enter' && commit()}
+                            onBlur={commitName}
+                            onKeyDown={(e) => e.key === 'Enter' && commitName()}
                         />
                     </div>
                 </Section>
@@ -909,7 +1084,7 @@ function ReferenceEdgeProperties({
                                 onClick={() => handleKindChange(k)}
                             >
                                 <span className="prop-kind-option__icon">
-                                    {k === 'composition' ? '◆' : k === 'aggregation' ? '◇' : '→'}
+                                    {k === 'composition' ? '\u25C6' : k === 'aggregation' ? '\u25C7' : '\u2192'}
                                 </span>
                                 <span className="prop-kind-option__label">{k.slice(0, 5)}</span>
                             </button>
@@ -926,7 +1101,7 @@ function ReferenceEdgeProperties({
                                 min="0"
                                 value={lowerBound}
                                 onChange={(e) => setLowerBound(parseInt(e.target.value) || 0)}
-                                onBlur={commit}
+                                onBlur={commitLowerBound}
                             />
                             <span className="prop-cardinality__dot">..</span>
                             <input
@@ -935,7 +1110,7 @@ function ReferenceEdgeProperties({
                                 min="-1"
                                 value={upperBound}
                                 onChange={(e) => setUpperBound(parseInt(e.target.value) || -1)}
-                                onBlur={commit}
+                                onBlur={commitUpperBound}
                             />
                         </div>
                         <span className="prop-cardinality__preview">

@@ -48,7 +48,9 @@ import {
     syncReferenceEdge,
     syncDeleteVertex,
     syncDeleteEdge,
-    syncNodeLabel,
+    syncCreateClass,
+    syncCreateEnum,
+    syncCreatePackage,
 } from './sync/canvasToJjom';
 import { rafThrottle, cancelThrottle } from '../../utils/DragThrottle';
 
@@ -215,7 +217,7 @@ function EditorV2Inner({ modelid, onSwitchEditor }: EditorV2Props) {
     const [edges, setEdges, onEdgesChange] = useEdgesState(modelid ? [] : initialEdges);
 
     // Phase 3: bidirectional incremental sync with JjOM/Redux
-    const { isJjomMode } = useJjomSync(modelid, setNodes, setEdges);
+    const { isJjomMode, graphId } = useJjomSync(modelid, setNodes, setEdges);
 
     // Selection sync: standalone hook — updates Properties panel via _lastSelected
     const jjomSelection = useJjomSelection(modelid, isJjomMode);
@@ -454,8 +456,6 @@ function EditorV2Inner({ modelid, onSwitchEditor }: EditorV2Props) {
             // Members must be dropped on nodes, not canvas
             if (['attribute', 'operation', 'literal'].includes(rawType)) return;
 
-            takeSnapshot();
-
             const position = screenToFlowPosition({
                 x: event.clientX,
                 y: event.clientY,
@@ -466,6 +466,32 @@ function EditorV2Inner({ modelid, onSwitchEditor }: EditorV2Props) {
             const defaultNodeHeight = rawType === 'packageNode' ? 120 : 40;
             position.x -= defaultNodeWidth / 2;
             position.y -= defaultNodeHeight / 2;
+
+            // ── JjOM mode: create real model+vertex in JjOM ──────────────
+            // useJjomSync will detect the new DVertex in graph.subElements
+            // and create the RF node automatically.
+            if (isJjomMode && graphId) {
+                switch (rawType) {
+                    case 'classNode':
+                        syncCreateClass(graphId, position.x, position.y, false);
+                        break;
+                    case 'classNode:abstract':
+                        syncCreateClass(graphId, position.x, position.y, true);
+                        break;
+                    case 'enumNode':
+                        syncCreateEnum(graphId, position.x, position.y);
+                        break;
+                    case 'packageNode':
+                        syncCreatePackage(graphId, position.x, position.y);
+                        break;
+                    default:
+                        return;
+                }
+                return;
+            }
+
+            // ── Standalone mode: create RF-only nodes ────────────────────
+            takeSnapshot();
 
             let newNode: Node;
 
@@ -530,7 +556,7 @@ function EditorV2Inner({ modelid, onSwitchEditor }: EditorV2Props) {
 
             setNodes((nds) => [...nds, newNode]);
         },
-        [screenToFlowPosition, setNodes, takeSnapshot]
+        [screenToFlowPosition, setNodes, takeSnapshot, isJjomMode, graphId]
     );
 
     // Allow drop
@@ -911,12 +937,8 @@ function EditorV2Inner({ modelid, onSwitchEditor }: EditorV2Props) {
                     n.id === nodeId ? { ...n, data: { ...n.data, ...data } } : n
                 )
             );
-            // Phase 3: sync label change to JjOM
-            if (isJjomMode && data.label !== undefined) {
-                syncNodeLabel(nodeId, data.label);
-            }
         },
-        [setNodes, takeSnapshot, isJjomMode]
+        [setNodes, takeSnapshot]
     );
 
     const handleEdgeChange = useCallback(
@@ -1245,6 +1267,7 @@ function EditorV2Inner({ modelid, onSwitchEditor }: EditorV2Props) {
                     onEdgeChange={handleEdgeChange}
                     onConvertToInheritance={convertToInheritance}
                     onConvertToReference={convertToReference}
+                    isJjomMode={isJjomMode}
                 />
 
                 {contextMenu && (
