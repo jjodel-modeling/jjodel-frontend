@@ -1,7 +1,11 @@
 import React, { useState } from 'react';
 import { ConfirmDialog } from '../../components/ConfirmDialog/ConfirmDialog';
 
-export function AdvancedSettings() {
+type SettingProps = {
+    onDirtyChange: (...a:any)=>any
+}
+
+export function AdvancedSettings(props: SettingProps) {
     const [debugMode, setDebugMode] = useState(() => {
         return localStorage.getItem('debug-mode') === 'true';
     });

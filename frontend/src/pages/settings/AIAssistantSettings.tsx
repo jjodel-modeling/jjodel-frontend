@@ -4,7 +4,7 @@
  */
 import React, { useState, useEffect } from 'react';
 import { TAIProvider, AIProvider, PROVIDER_MODELS, PROVIDER_INFO, ALL_AI_PROVIDERS } from '../../types/jodie';
-import { JodieConfigService, ALL_PROVIDERS } from '../../services/JodieConfig';
+import { JodieConfigService } from '../../services/JodieConfig';
 import { AIProviderService } from '../../services/AIProviderService';
 import type {Dictionary} from "../../joiner";
 import { ProviderConfigModal } from './ProviderConfigModal';
@@ -14,39 +14,43 @@ const PROVIDER_METADATA: Dictionary<TAIProvider, {
     name: string;
     keyUrl: string;
     keyPlaceholder: string;
+    initial?: string;
 }> = {
-    Copilot: {keyPlaceholder: "", keyUrl: "", name: ""},
-    Llama: {keyPlaceholder: "", keyUrl: "", name: ""},
-    Ollama: {keyPlaceholder: "", keyUrl: "", name: ""},
     [AIProvider.GPT]: {
         name: 'OpenAI',
         keyUrl: 'https://platform.openai.com/api-keys',
         keyPlaceholder: 'sk-...',
+        initial: 'GPT'
     },
     [AIProvider.Claude]: {
         name: 'Anthropic',
         keyUrl: 'https://console.anthropic.com/settings/keys',
         keyPlaceholder: 'sk-ant-...',
+        initial: 'C'
     },
     [AIProvider.Gemini]: {
         name: 'Google (Gemini)',
         keyUrl: 'https://aistudio.google.com/apikey',
         keyPlaceholder: 'AIza...',
+        initial: 'Gm'
     },
     [AIProvider.DeepSeek]: {
         name: 'DeepSeek',
         keyUrl: 'https://platform.deepseek.com/api_keys',
         keyPlaceholder: 'sk-...',
+        initial: 'D'
     },
     [AIProvider.Mistral]: {
         name: 'Mistral AI',
         keyUrl: 'https://console.mistral.ai/api-keys',
         keyPlaceholder: 'Enter API key...',
+        initial: 'M'
     },
     [AIProvider.Groq]: {
         name: 'Groq',
         keyUrl: 'https://console.groq.com/keys',
         keyPlaceholder: 'gsk_...',
+        initial: 'Gq'
     },
     [AIProvider.Kimi]: {
         name: 'Kimi',
@@ -55,6 +59,14 @@ const PROVIDER_METADATA: Dictionary<TAIProvider, {
     [AIProvider.Ollama]: {
         name: 'Ollama',
         initial: 'O'
+    },
+    [AIProvider.Llama]: {
+        name: 'Llama',
+        initial: 'L'
+    },
+    [AIProvider.Copilot]: {
+        name: 'Copilot',
+        initial: 'Cp'
     },
 };
 

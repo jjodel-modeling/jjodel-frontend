@@ -5,6 +5,26 @@
 import type {Dictionary} from "../joiner";
 import {} from "../joiner";
 
+export class AI{
+    static GPT: AI;
+    static Claude: AI;
+    static DeepSeek: AI;
+    static Gemini: AI;
+    static Mistral: AI;
+    static Groq: AI;
+    static Ollama: AI;
+    static Llama: AI;
+    static Copilot: AI;
+    static Kimi: AI;
+    name: TAIProvider;
+    company: TAICompany;
+    constructor(name: TAIProvider, company: TAICompany) {
+        this.name = name;
+        this.company = company;
+        (AI as any)[name] = this;
+    }
+}
+
 export class AIProvider {
     static isValidProvider(provider: any): provider is TAIProvider { return !!companymap[provider as TAIProvider]; }
     static isValidCompany(company: any): company is TAICompany { return !!aimap[company as TAICompany]; }
