@@ -1,6 +1,23 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { LModel, LProject, LViewPoint, U, store } from '../../joiner';
+import {
+    LModel,
+    LProject,
+    LViewPoint,
+    LClass,
+    LObject,
+    LPointerTargetable,
+    U,
+    store,
+    DModel,
+    DGraph,
+    DObject,
+    Constructors,
+    SetFieldAction,
+    SetRootFieldAction,
+    TRANSACTION
+} from '../../joiner';
 import DockManager from '../abstract/DockManager';
+import TabDataMaker from '../abstract/tabs/TabDataMaker';
 import { createM2, createM1 } from '../../pages/components/Navbar';
 import { formatVersionNumber } from '../../utils/versionUtils';
 import ShareProjectModal from './ShareProjectModal';
@@ -8,7 +25,8 @@ import UnsavedChangesDialog from './UnsavedChangesDialog';
 import DocumentationSection from './DocumentationSection';
 import { EcoreService, XMIService } from '../../services/export';
 import { NewTransformationDialog, TransformationsList } from '../../jjtl/components';
-import { JjtlTransformation, createTransformation } from '../../jjtl/types';
+import { JjtlTransformation, createTransformation, TransformationAST } from '../../jjtl/types';
+import { execute as executeTransformation, ExecutionResult } from '../../jjtl/executor';
 import { convertMetamodelToJjtl, findMetamodelById } from '../../jjtl/utils/metamodelConverter';
 import './project-editor.scss';
 
@@ -670,12 +688,60 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
 
         // Build available models list for transformation execution
         // Models (not metamodels) with their conforming metamodel info
-        const availableModels = (models || []).map(model => ({
-            id: model.id,
-            name: model.name || 'Unnamed Model',
-            metamodelId: (model.instanceof as LModel)?.id || '',
-            metamodelName: (model.instanceof as LModel)?.name || ''
-        }));
+        // DEBUG: Log raw data to understand the structure
+        console.log('[ProjectEditor] DEBUG - Raw data:', {
+            modelsCount: models?.length || 0,
+            metamodelsCount: metamodels?.length || 0,
+            metamodelIds: metamodels?.map(m => ({ id: m.id, name: m.name })),
+            sourceMetamodelName: transformation.sourceMetamodelName,
+            firstModel: models?.[0] ? {
+                id: models[0].id,
+                name: models[0].name,
+                instanceof: models[0].instanceof,
+                instanceofType: typeof models[0].instanceof,
+                // Also try to access as proxy
+                instanceofId: (models[0].instanceof as any)?.id,
+                instanceofName: (models[0].instanceof as any)?.name,
+            } : null,
+        });
+
+        const availableModels = (models || []).map(model => {
+            // model.instanceof can be:
+            // 1. An LModel proxy (has .id and .name) when accessed through LModel proxy
+            // 2. A raw Pointer string when accessed from raw DModel data
+            // 3. undefined/null
+            const instanceOf = model.instanceof;
+            let mmId = '';
+            let mmName = '';
+
+            if (instanceOf) {
+                if (typeof instanceOf === 'string') {
+                    // Raw Pointer string - need to look up metamodel by ID
+                    mmId = instanceOf;
+                    const mm = metamodels?.find(m => m.id === mmId);
+                    mmName = mm?.name || '';
+                } else if (typeof instanceOf === 'object') {
+                    // LModel proxy - can access .id and .name directly
+                    mmId = (instanceOf as any).id || '';
+                    mmName = (instanceOf as any).name || '';
+                }
+            }
+
+            console.log('[ProjectEditor] DEBUG - Model mapping:', {
+                modelName: model.name,
+                instanceofRaw: instanceOf,
+                instanceofType: typeof instanceOf,
+                extractedMmId: mmId,
+                extractedMmName: mmName,
+            });
+
+            return {
+                id: model.id,
+                name: model.name || 'Unnamed Model',
+                metamodelId: mmId,
+                metamodelName: mmName,
+            };
+        });
 
         // Get existing model names to prevent duplicates when creating output
         const existingModelNames = [
@@ -714,6 +780,411 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
             return result;
         };
 
+        /**
+         * Generate unique model name by appending (N) suffix if needed.
+         * Finds the highest existing suffix and increments by 1.
+         *
+         * @param baseName - The desired name (e.g., "metamodel_1_to_metamodel_2")
+         * @param existingNames - Array of existing names
+         * @returns Unique name (e.g., "metamodel_1_to_metamodel_2 (1)")
+         */
+        const generateUniqueModelName = (baseName: string, existingNames: string[]): string => {
+            // If base name doesn't exist, use it directly
+            if (!existingNames.includes(baseName)) {
+                return baseName;
+            }
+
+            // Find all existing names that match the pattern "baseName (N)"
+            // Escape special regex characters in baseName
+            const escapedBaseName = baseName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const pattern = new RegExp(`^${escapedBaseName} \\((\\d+)\\)$`);
+
+            let maxSuffix = 0;
+            for (const name of existingNames) {
+                const match = name.match(pattern);
+                if (match) {
+                    const suffix = parseInt(match[1], 10);
+                    if (suffix > maxSuffix) {
+                        maxSuffix = suffix;
+                    }
+                }
+            }
+
+            // Return baseName with the next available suffix (max + 1)
+            return `${baseName} (${maxSuffix + 1})`;
+        };
+
+        // Execution guard to prevent double-firing
+        let isExecutingTransformation = false;
+
+        // Callback when transformation is executed
+        // Returns ExecutionResult so JjtlDevelopmentEnv can update trace display
+        const handleExecuteTransformation = async (
+            sourceModelId: string,
+            outputModelName: string,
+            ast: TransformationAST
+        ): Promise<ExecutionResult | void> => {
+            // Guard against double execution (React StrictMode, button+form submit, etc.)
+            if (isExecutingTransformation) {
+                console.warn('[ProjectEditor] Transformation already executing, skipping duplicate call');
+                return;
+            }
+            isExecutingTransformation = true;
+
+            console.log('[ProjectEditor] handleExecuteTransformation called', {
+                sourceModelId,
+                outputModelName,
+                astMappings: ast?.mappings?.length || 0
+            });
+
+            // Validate AST
+            if (!ast || !ast.mappings || ast.mappings.length === 0) {
+                console.error('[ProjectEditor] AST has no mappings!');
+                U.alert('e', 'Error', 'Transformation has no mappings defined.');
+                isExecutingTransformation = false;
+                return;
+            }
+
+            try {
+                // Find source model
+                const sourceModel = models.find(m => m.id === sourceModelId);
+                if (!sourceModel) {
+                    U.alert('e', 'Error', `Source model not found`);
+                    isExecutingTransformation = false;
+                    return;
+                }
+
+                // Find transformation and target metamodel
+                const currentTransformation = transformations.find(t => t.targetMetamodelId);
+                if (!currentTransformation) {
+                    U.alert('e', 'Error', 'Transformation not found');
+                    isExecutingTransformation = false;
+                    return;
+                }
+
+                const targetMetamodel = metamodels.find(mm => mm.id === currentTransformation.targetMetamodelId);
+                if (!targetMetamodel) {
+                    U.alert('e', 'Error', `Target metamodel not found`);
+                    isExecutingTransformation = false;
+                    return;
+                }
+
+                // Prepare source data (deep copy)
+                const sourceObjects = sourceModel.objects || [];
+                console.log('[ProjectEditor] Source objects count:', sourceObjects.length);
+
+                const sourceModelData = sourceObjects.map((obj: LObject) => {
+                    // Resolve className with multiple fallback paths
+                    let className = '';
+
+                    // Method 1: Direct instanceof.name (standard path)
+                    if (obj.instanceof && obj.instanceof.name) {
+                        className = obj.instanceof.name;
+                        console.log(`[ProjectEditor] className from instanceof.name: "${className}"`);
+                    }
+
+                    // Method 2: Check __raw.instanceof and resolve via Redux state
+                    if (!className && (obj as any).__raw?.instanceof) {
+                        const classPointer = (obj as any).__raw.instanceof;
+                        const state = store.getState() as any;
+                        const classData = state[classPointer];
+                        if (classData && classData.name) {
+                            className = classData.name;
+                            console.log(`[ProjectEditor] className from __raw.instanceof lookup: "${className}"`);
+                        }
+                    }
+
+                    // Method 3: Check features for __class or type indicator
+                    if (!className && obj.features) {
+                        for (const feature of obj.features) {
+                            if (feature.name === '__class' || feature.name === '__type') {
+                                const val = feature.values?.length > 0 ? feature.values[0] : feature.value;
+                                if (typeof val === 'string') {
+                                    className = val;
+                                    console.log(`[ProjectEditor] className from feature "${feature.name}": "${className}"`);
+                                    break;
+                                }
+                            }
+                        }
+                    }
+
+                    // Method 4: Extract from object name pattern (e.g., "A_0" → "A")
+                    if (!className && obj.name) {
+                        const match = obj.name.match(/^([A-Za-z]+)_\d+$/);
+                        if (match) {
+                            className = match[1];
+                            console.log(`[ProjectEditor] className extracted from name pattern "${obj.name}": "${className}"`);
+                        }
+                    }
+
+                    // Debug: Log all attempts if still no className
+                    if (!className) {
+                        console.warn('[ProjectEditor] Could not resolve className for object:', {
+                            id: obj.id,
+                            name: obj.name,
+                            instanceof: obj.instanceof,
+                            __raw: (obj as any).__raw,
+                            features: obj.features?.map(f => ({ name: f.name, value: f.value, values: f.values }))
+                        });
+                        // Last resort: use object name as-is
+                        className = obj.name || 'UnknownClass';
+                    }
+
+                    const result: Record<string, any> = {
+                        id: obj.id,
+                        name: obj.name,
+                        className: className,
+                        __type: className,
+                    };
+                    if (obj.features) {
+                        for (const feature of obj.features) {
+                            if (feature.name) {
+                                result[feature.name] = feature.values?.length > 0
+                                    ? (feature.values.length === 1 ? feature.values[0] : feature.values)
+                                    : feature.value;
+                            }
+                        }
+                    }
+
+                    console.log(`[ProjectEditor] Source object mapped:`, {
+                        id: obj.id,
+                        name: obj.name,
+                        resolvedClassName: className,
+                        featureCount: obj.features?.length || 0
+                    });
+
+                    return result;
+                });
+
+                const sourceModelDataCopy = JSON.parse(JSON.stringify(sourceModelData));
+                // Execute transformation
+                const result: ExecutionResult = executeTransformation(ast, sourceModelDataCopy, targetMetamodel);
+
+                if (!result.success) {
+                    U.alert('e', 'Transformation Failed', result.errors.join('\n'));
+                    isExecutingTransformation = false;
+                    return result;
+                }
+
+                // ============================================
+                // CREAZIONE MODELLO - NON USARE createM1!
+                // ============================================
+
+                // CRITICAL: Get fresh model names from Redux store, NOT from stale component state
+                // This ensures we catch recently created models that haven't triggered a re-render yet
+                const freshState = store.getState() as any;
+                const freshExistingNames: string[] = [];
+
+                // Iterate through state and collect all model/metamodel names
+                for (const key in freshState) {
+                    const item = freshState[key];
+                    if (item && typeof item === 'object' && item.className === 'DModel' && item.name) {
+                        freshExistingNames.push(item.name);
+                    }
+                }
+
+                // Also include names from component state as fallback
+                const existingNames = [
+                    ...freshExistingNames,
+                    ...(models || []).map(m => m.name || ''),
+                    ...(metamodels || []).map(m => m.name || '')
+                ].filter((name, index, arr) => name && arr.indexOf(name) === index); // Remove duplicates
+
+                // Genera nome unico
+                const uniqueOutputName = generateUniqueModelName(outputModelName, existingNames);
+
+                console.log('[ProjectEditor] Output model name:', {
+                    requested: outputModelName,
+                    unique: uniqueOutputName,
+                    existingNames: existingNames,
+                    freshNamesCount: freshExistingNames.length
+                });
+
+                let createdDModel: DModel | null = null;
+                let createdDGraph: DGraph | null = null;
+                let createdModelId: string | null = null;
+                let instancesCreated = 0;
+
+                // Store object NAME (not ID!) with attributes — ID from DObject.new() is unreliable
+                const pendingAttributeSets: Array<{
+                    objectName: string;
+                    className: string;
+                    attributes: Record<string, any>;
+                }> = [];
+
+                TRANSACTION('Execute Transformation: Create Target Model', () => {
+                    // STEP 1: Crea DModel con il nome UNICO
+                    const dModel: DModel = DModel.new(
+                        uniqueOutputName,       // ← USA IL NOME UNICO!
+                        targetMetamodel.id,     // instanceof = target metamodel
+                        false,                  // isMetamodel = false
+                        true                    // persist = true
+                    );
+                    createdDModel = dModel;
+                    createdModelId = dModel.id;
+                    console.log('[ProjectEditor] Created DModel with UNIQUE name:', {
+                        id: dModel.id,
+                        name: uniqueOutputName
+                    });
+
+                    // STEP 2: Crea DGraph
+                    const graphId = Constructors.DGraph_makeID(dModel.id);
+                    const dGraph: DGraph = DGraph.new(0, dModel.id, undefined, undefined, graphId);
+                    createdDGraph = dGraph;
+                    console.log('[ProjectEditor] Created DGraph:', { id: dGraph.id });
+
+                    // STEP 3: Aggiungi model a project.models
+                    SetFieldAction.new(project.id, 'models', dModel.id, '+=', true);
+                    console.log('[ProjectEditor] Added model to project.models');
+
+                    // STEP 4: Aggiungi graph a state.graphs (ROOT!) - per ModelTab
+                    SetRootFieldAction.new('graphs', dGraph.id, '+=', true);
+                    console.log('[ProjectEditor] Added graph to state.graphs (ROOT)');
+
+                    // STEP 5: Aggiungi graph a project.graphs - per persistenza
+                    SetFieldAction.new(project.id, 'graphs', dGraph.id, '+=', true);
+                    console.log('[ProjectEditor] Added graph to project.graphs');
+
+                    // STEP 6: Crea istanze
+                    if (result.targetModel?.instances) {
+                        const targetClasses: LClass[] = targetMetamodel.classes || [];
+                        console.log('[ProjectEditor] Target classes:', targetClasses.map(c => c.name));
+
+                        result.targetModel.instances.forEach((instances: any[], className: string) => {
+                            console.log(`[ProjectEditor] Creating ${instances.length} instances of "${className}"`);
+
+                            const targetClass = targetClasses.find(c => c.name === className);
+                            if (!targetClass) {
+                                console.warn(`[ProjectEditor] Class "${className}" not found`);
+                                return;
+                            }
+
+                            for (const instanceData of instances) {
+                                console.log(`[ProjectEditor] instanceData from executor:`, instanceData);
+
+                                const objectName = instanceData.name || `${className}_${instancesCreated}`;
+                                const dObject = DObject.new(targetClass.id, dModel.id, DModel, objectName, true);
+                                console.log(`[ProjectEditor] Created instance:`, { name: objectName, class: className });
+
+                                // Collect attributes for deferred setting (after TRANSACTION)
+                                const attrs: Record<string, any> = {};
+                                for (const [attrName, attrValue] of Object.entries(instanceData)) {
+                                    if (attrName.startsWith('__') || ['className', 'id', 'name'].includes(attrName)) continue;
+                                    if (attrValue === undefined || attrValue === null) continue;
+                                    attrs[attrName] = attrValue;
+                                }
+
+                                if (Object.keys(attrs).length > 0) {
+                                    pendingAttributeSets.push({
+                                        objectName: objectName,
+                                        className,
+                                        attributes: attrs,
+                                    });
+                                    console.log(`[ProjectEditor] Queued attributes for "${objectName}":`, attrs);
+                                }
+
+                                instancesCreated++;
+                            }
+                        });
+                    }
+
+                    console.log(`[ProjectEditor] Total instances created: ${instancesCreated}`);
+                });
+
+                // STEP 8: Set attributes after delay — use LModel proxy to find objects by name
+                if (pendingAttributeSets.length > 0 && createdModelId) {
+                    const modelId = createdModelId;
+                    console.log(`[ProjectEditor] STEP 8: Will set attributes for ${pendingAttributeSets.length} objects via LModel proxy`);
+
+                    // Use setTimeout to wait for Redux propagation and rendering
+                    setTimeout(() => {
+                        try {
+                            const lModel = LPointerTargetable.fromD(modelId) as LModel;
+                            if (!lModel) {
+                                console.error(`[ProjectEditor] Could not get LModel for ${modelId}`);
+                                return;
+                            }
+
+                            const objects = lModel.objects || [];
+                            console.log(`[ProjectEditor] LModel has ${objects.length} objects:`, objects.map((o: LObject) => o.name));
+
+                            for (const pending of pendingAttributeSets) {
+                                // Find object by name
+                                const lObject = objects.find((o: LObject) => o.name === pending.objectName);
+                                if (!lObject) {
+                                    console.warn(`[ProjectEditor] Object "${pending.objectName}" not found in model`);
+                                    continue;
+                                }
+
+                                console.log(`[ProjectEditor] Found "${pending.objectName}", setting attributes...`);
+
+                                for (const [attrName, attrValue] of Object.entries(pending.attributes)) {
+                                    try {
+                                        const feature = (lObject as any)['$' + attrName];
+                                        if (feature) {
+                                            feature.value = attrValue;
+                                            console.log(`[ProjectEditor] ✅ Set ${pending.objectName}.${attrName} = ${JSON.stringify(attrValue)}`);
+                                        } else {
+                                            console.warn(`[ProjectEditor] ❌ Feature "$${attrName}" not found on "${pending.objectName}"`);
+                                            // Try listing available features for debugging
+                                            const features = lObject.features || [];
+                                            console.warn(`[ProjectEditor] Available features:`, features.map((f: any) => f.name));
+                                        }
+                                    } catch (e) {
+                                        console.error(`[ProjectEditor] Error setting ${attrName} on "${pending.objectName}":`, e);
+                                    }
+                                }
+                            }
+
+                            console.log(`[ProjectEditor] ✅ Attribute setting complete`);
+                        } catch (e) {
+                            console.error(`[ProjectEditor] Error in STEP 8:`, e);
+                        }
+                    }, 1000); // 1 second delay — generous, ensures everything is propagated
+                }
+
+                // Return the execution result IMMEDIATELY so JjtlDevelopmentEnv can update trace display
+                // Tab opening and attribute setting happen in the background (fire-and-forget)
+                // Broadcast execution result via custom event (for JjtlDevelopmentEnv trace display)
+                window.dispatchEvent(new CustomEvent('jjtl-execution-result', { detail: result }));
+
+                // STEP 7: Open tab AFTER a delay for Redux (fire-and-forget, don't await)
+                if (createdDModel) {
+                    const modelToOpen = createdDModel;
+                    const modelName = uniqueOutputName;
+                    const count = instancesCreated;
+
+                    setTimeout(() => {
+                        try {
+                            const tab = TabDataMaker.model(modelToOpen);
+                            DockManager.open('models', tab);
+                            U.alert('i', 'Transformation Executed',
+                                `Created model "${modelName}" with ${count} instances.`);
+                            markDirty();
+                        } catch (e) {
+                            console.error('[ProjectEditor] Error opening tab:', e);
+                        }
+                    }, 200);
+                }
+
+                // Reset execution guard
+                isExecutingTransformation = false;
+                return result;
+
+            } catch (error) {
+                console.error('[ProjectEditor] Error:', error);
+                U.alert('e', 'Error', `Failed to execute transformation: ${error}`);
+                // Reset execution guard
+                isExecutingTransformation = false;
+                // Return failed result so JjtlDevelopmentEnv can show errors
+                return {
+                    success: false,
+                    errors: [error instanceof Error ? error.message : String(error)],
+                    warnings: [],
+                } as ExecutionResult;
+            }
+        };
+
         // Open transformation in JjTL Development Environment tab
         DockManager.openTransformation(
             transformation,
@@ -731,7 +1202,8 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
             getSourceMetamodel,
             getTargetMetamodel,
             availableModels,
-            existingModelNames
+            existingModelNames,
+            handleExecuteTransformation
         );
     };
 

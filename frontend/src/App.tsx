@@ -30,6 +30,7 @@ import {
     ConfirmAccount
 } from "./pages";
 import { TestLayout } from "./components/TestLayout";
+import EditorV2 from "./components/editor-v2/EditorV2";
 
 import {ExternalLibraries} from "./components/forEndUser/ExternalLibraries";
 import {TooltipVisualizer} from "./components/forEndUser/Tooltip";
@@ -38,7 +39,12 @@ import DialogVisualizer from './components/alert/Dialog';
 import { NotificationWidget } from './components/NotificationWidget/NotificationWidget';
 import { Jodie } from './components/Jodie';
 import { DevModeProvider } from './contexts/DevModeContext';
-import { AISettingsProvider } from './contexts/AISettingsContext';
+import { GlobalDrawerProvider } from './contexts/GlobalDrawerContext';
+import { FeaturesPanelProvider } from './contexts/FeaturesPanelContext';
+import { TreeViewPanelProvider } from './contexts/TreeViewPanelContext';
+import { GlobalDrawer } from './components/GlobalDrawer';
+import { JjtlDialogManager } from './jjtl/components';
+import { SettingsModalProvider } from './contexts/SettingsModalContext';
 
 let firstLoading = true;
 let browserData = U.getOSBrowserData();
@@ -95,8 +101,11 @@ function App(props: AllProps): JSX.Element {
     //console.log('app render 2', {firstLoading, navigating:U.navigating, isLoading, useless, user});
 
     return (<>
+        <SettingsModalProvider>
         <DevModeProvider>
-        <AISettingsProvider>
+        <GlobalDrawerProvider>
+        <FeaturesPanelProvider>
+        <TreeViewPanelProvider>
             <div className={"router-wrapper"}>
                 {isLoading && <Loader/>}
                 <ExternalLibraries/>
@@ -105,6 +114,7 @@ function App(props: AllProps): JSX.Element {
                 {/*<MessageVisualizer />*/}
                 <Try><AlertVisualizer/></Try>
                 <Try><DialogVisualizer/></Try>
+                <Try><JjtlDialogManager/></Try>
                 <HashRouter>
                     <Try><PathChecker/></Try>
                     <Try><Routes>
@@ -118,6 +128,8 @@ function App(props: AllProps): JSX.Element {
                             <Route path={'test-tokens'} element={<TokenPreviewPage/>}/>
                             {/* Resize Handle Test */}
                             <Route path={'test-resize'} element={<TestLayout/>}/>
+                            {/* Editor V2 - React Flow PoC */}
+                            <Route path={'editor-v2'} element={<EditorV2/>}/>
                             {/* non functioning stuff */}
                             <Route path={'settings'} element={<SettingsPage/>}/>
                             <Route path={'projectsInfo'} element={<ProjectsInfoPage_Obsolete/>}/>
@@ -141,10 +153,14 @@ function App(props: AllProps): JSX.Element {
                     {user && <Try><NotificationWidget/></Try>}
                     {user && <Try><Jodie/></Try>}
                 </HashRouter>
+                {user && <Try><GlobalDrawer/></Try>}
 
             </div>
-        </AISettingsProvider>
+        </TreeViewPanelProvider>
+        </FeaturesPanelProvider>
+        </GlobalDrawerProvider>
         </DevModeProvider>
+        </SettingsModalProvider>
     </>);
 
     /*

@@ -1,0 +1,247 @@
+// ============================================
+// THEME DEFINITIONS
+// ============================================
+
+// === DARK THEME (default) ===
+.editor-v2.theme-dark {
+  // Canvas
+  --canvas-bg: #1e293b;
+  --canvas-dots: rgba(255, 255, 255, 0.08);
+
+  // Surfaces
+  --surface-1: #334155;
+  --surface-2: #1e293b;
+  --surface-3: #253347;
+  --surface-hover: rgba(255, 255, 255, 0.1);
+
+  // Borders
+  --border-subtle: rgba(255, 255, 255, 0.08);
+  --border-default: rgba(255, 255, 255, 0.15);
+  --border-strong: rgba(255, 255, 255, 0.25);
+
+  // Text
+  --text-primary: rgba(255, 255, 255, 0.9);
+  --text-secondary: rgba(255, 255, 255, 0.6);
+  --text-muted: rgba(255, 255, 255, 0.45);
+  --text-dim: rgba(255, 255, 255, 0.3);
+
+  // Accent
+  --accent: #0ea5e9;
+  --accent-hover: #38bdf8;
+  --accent-muted: rgba(14, 165, 233, 0.15);
+  --accent-subtle: rgba(14, 165, 233, 0.08);
+
+  // Semantic colors
+  --green: #10b981;
+  --purple: #7c3aed;
+  --amber: #f59e0b;
+
+  // Nodes
+  --node-bg: #334155;
+  --node-shadow: rgba(0, 0, 0, 0.3);
+  --node-shadow-deep: rgba(0, 0, 0, 0.25);
+  --node-separator: rgba(255, 255, 255, 0.1);
+
+  // Node header colors (muted, desaturated)
+  --class-header-bg: #37587a;
+  --class-abstract-header-bg: #3e4a5a;
+  --enum-header-bg: #5b4a7a;
+  --package-header-bg: #2d3a4a;
+  --package-body-bg: rgba(30, 41, 59, 0.6);
+  --package-body-border: rgba(255, 255, 255, 0.1);
+
+  // Header text
+  --node-header-text: #ffffff;
+  --package-header-text: rgba(255, 255, 255, 0.9);
+  --header-badge-bg: rgba(0, 0, 0, 0.25);
+  --header-badge-color: rgba(255, 255, 255, 0.7);
+  --stereotype-color: rgba(255, 255, 255, 0.6);
+
+  // Color coding for fields
+  --field-name-color: #e2e8f0;
+  --field-type-color: #67e8f9;
+  --field-bound-color: rgba(255, 255, 255, 0.55);
+  --field-row-hover: rgba(255, 255, 255, 0.04);
+  --field-row-border: rgba(255, 255, 255, 0.04);
+
+  // Literal (same as field name for consistency)
+  --literal-name-color: #e2e8f0;
+
+  // Enum
+  --enum-accent: #7c3aed;
+
+  // Package
+  --package-accent: #10b981;
+
+  // Edges
+  --edge-color: rgba(255, 255, 255, 0.5);
+  --edge-selected: #0ea5e9;
+  --edge-label-bg: #334155;
+  --edge-marker-fill: #1e293b;
+  --edge-marker-stroke: rgba(255, 255, 255, 0.5);
+
+  // Input
+  --input-bg: rgba(0, 0, 0, 0.25);
+  --input-border: rgba(255, 255, 255, 0.12);
+  --input-focus: #0ea5e9;
+  --input-text: rgba(255, 255, 255, 0.85);
+  --input-placeholder: rgba(255, 255, 255, 0.3);
+
+  // Danger
+  --danger: #f87171;
+  --danger-bg: rgba(239, 68, 68, 0.15);
+
+  // Scrollbar
+  --scrollbar-thumb: rgba(255, 255, 255, 0.1);
+  --scrollbar-thumb-hover: rgba(255, 255, 255, 0.2);
+
+  // Selection
+  --selection-bg: rgba(14, 165, 233, 0.08);
+  --selection-border: rgba(14, 165, 233, 0.4);
+
+  // Context menu
+  --menu-bg: #334155;
+  --menu-shadow: rgba(0, 0, 0, 0.4);
+
+  // Alignment toolbar
+  --alignment-bg: rgba(14, 165, 233, 0.08);
+  --alignment-border: rgba(14, 165, 233, 0.15);
+
+  // Drop target
+  --drop-glow: rgba(14, 165, 233, 0.3);
+  --drop-inner: rgba(14, 165, 233, 0.05);
+
+  // Anchor handles
+  --anchor-bg: #475569;
+  --anchor-border: rgba(255, 255, 255, 0.3);
+  --anchor-valid: #22c55e;
+
+  // Minimap
+  --minimap-mask: rgba(30, 41, 59, 0.8);
+
+  // Resize handles
+  --resize-handle-bg: #0ea5e9;
+  --resize-handle-border: #1e293b;
+}
+
+// === LIGHT THEME ===
+.editor-v2.theme-light {
+  // Canvas
+  --canvas-bg: #f8fafc;
+  --canvas-dots: rgba(0, 0, 0, 0.08);
+
+  // Surfaces
+  --surface-1: #ffffff;
+  --surface-2: #f1f5f9;
+  --surface-3: #e2e8f0;
+  --surface-hover: rgba(0, 0, 0, 0.05);
+
+  // Borders
+  --border-subtle: rgba(0, 0, 0, 0.06);
+  --border-default: rgba(0, 0, 0, 0.12);
+  --border-strong: rgba(0, 0, 0, 0.2);
+
+  // Text
+  --text-primary: #1e293b;
+  --text-secondary: #475569;
+  --text-muted: #64748b;
+  --text-dim: #94a3b8;
+
+  // Accent
+  --accent: #0284c7;
+  --accent-hover: #0369a1;
+  --accent-muted: rgba(2, 132, 199, 0.12);
+  --accent-subtle: rgba(2, 132, 199, 0.06);
+
+  // Semantic colors
+  --green: #059669;
+  --purple: #7c3aed;
+  --amber: #d97706;
+
+  // Nodes
+  --node-bg: #ffffff;
+  --node-shadow: rgba(0, 0, 0, 0.06);
+  --node-shadow-deep: rgba(0, 0, 0, 0.08);
+  --node-separator: rgba(0, 0, 0, 0.08);
+
+  // Node header colors (muted, pastel)
+  --class-header-bg: #7bafd4;
+  --class-abstract-header-bg: #a8b5c4;
+  --enum-header-bg: #a595c9;
+  --package-header-bg: #d8dee6;
+  --package-body-bg: rgba(241, 245, 249, 0.8);
+  --package-body-border: rgba(0, 0, 0, 0.15);
+
+  // Header text
+  --node-header-text: #ffffff;
+  --package-header-text: #334155;
+  --header-badge-bg: rgba(0, 0, 0, 0.2);
+  --header-badge-color: rgba(255, 255, 255, 0.85);
+  --stereotype-color: rgba(255, 255, 255, 0.7);
+
+  // Color coding for fields
+  --field-name-color: #1e293b;
+  --field-type-color: #0369a1;
+  --field-bound-color: rgba(0, 0, 0, 0.5);
+  --field-row-hover: rgba(0, 0, 0, 0.03);
+  --field-row-border: rgba(0, 0, 0, 0.05);
+
+  // Literal (same as field name for consistency)
+  --literal-name-color: #1e293b;
+
+  // Enum
+  --enum-accent: #7c3aed;
+
+  // Package
+  --package-accent: #059669;
+
+  // Edges
+  --edge-color: rgba(0, 0, 0, 0.45);
+  --edge-selected: #0284c7;
+  --edge-label-bg: #ffffff;
+  --edge-marker-fill: #f8fafc;
+  --edge-marker-stroke: rgba(0, 0, 0, 0.5);
+
+  // Input
+  --input-bg: #ffffff;
+  --input-border: rgba(0, 0, 0, 0.15);
+  --input-focus: #0284c7;
+  --input-text: #1e293b;
+  --input-placeholder: #94a3b8;
+
+  // Danger
+  --danger: #dc2626;
+  --danger-bg: rgba(220, 38, 38, 0.08);
+
+  // Scrollbar
+  --scrollbar-thumb: rgba(0, 0, 0, 0.15);
+  --scrollbar-thumb-hover: rgba(0, 0, 0, 0.25);
+
+  // Selection
+  --selection-bg: rgba(2, 132, 199, 0.08);
+  --selection-border: rgba(2, 132, 199, 0.4);
+
+  // Context menu
+  --menu-bg: #ffffff;
+  --menu-shadow: rgba(0, 0, 0, 0.12);
+
+  // Alignment toolbar
+  --alignment-bg: rgba(2, 132, 199, 0.06);
+  --alignment-border: rgba(2, 132, 199, 0.12);
+
+  // Drop target
+  --drop-glow: rgba(2, 132, 199, 0.2);
+  --drop-inner: rgba(2, 132, 199, 0.04);
+
+  // Anchor handles
+  --anchor-bg: #e2e8f0;
+  --anchor-border: rgba(0, 0, 0, 0.2);
+  --anchor-valid: #16a34a;
+
+  // Minimap
+  --minimap-mask: rgba(241, 245, 249, 0.8);
+
+  // Resize handles
+  --resize-handle-bg: #0284c7;
+  --resize-handle-border: #ffffff;
+}

@@ -1,6 +1,14 @@
 /**
  * JjTL Abstract Syntax Tree Types
+ *
+ * JjTL uses JjEL for expressions. The ExpressionAST type is a union
+ * of both JjTL-specific expressions and JjEL expressions.
  */
+
+import type { JjelExpression } from '../../jjel/types/ast';
+
+// Re-export JjEL expression type for convenience
+export type { JjelExpression };
 
 // Base node
 export interface ASTNode {
@@ -28,8 +36,14 @@ export interface ClassMappingAST extends ASTNode {
     targetClass: string;
     targetMultiplicity?: MultiplicityAST;
     condition?: ExpressionAST;
-    body: AttributeMappingAST[];
+    body: MappingBodyItemAST[];
 }
+
+// Union type for items that can appear in a mapping body
+export type MappingBodyItemAST =
+    | AttributeMappingAST
+    | AlertStatementAST
+    | NotifyStatementAST;
 
 // Multiplicity: [*], [1], [0..*]
 export interface MultiplicityAST extends ASTNode {
@@ -85,19 +99,32 @@ export interface ParameterAST extends ASTNode {
 }
 
 // Expressions
+// JjTL expressions include both JjTL-specific nodes and JjEL expression nodes
 export type ExpressionAST =
+    // JjTL-specific (kept for backwards compatibility)
     | LiteralAST
     | IdentifierAST
     | MemberAccessAST
+    | NullSafeMemberAccessAST
     | FunctionCallAST
+    | NullSafeFunctionCallAST
     | BinaryExpressionAST
-    | ConditionalExpressionAST;
+    | UnaryExpressionAST
+    | ConditionalExpressionAST
+    | NullCoalesceExpressionAST
+    | IsTypeExpressionAST
+    | LambdaExpressionAST
+    | PromptExpressionAST
+    | InputExpressionAST
+    | ArrayLiteralAST
+    // JjEL expression wrapper (for direct JjEL integration)
+    | JjelExpressionWrapperAST;
 
-// Literal: "hello", 42, true
+// Literal: "hello", 42, true, null
 export interface LiteralAST extends ASTNode {
     type: 'Literal';
-    value: string | number | boolean;
-    literalType: 'string' | 'number' | 'boolean';
+    value: string | number | boolean | null;
+    literalType: 'string' | 'number' | 'boolean' | 'null';
 }
 
 // Identifier: name, source
@@ -113,6 +140,13 @@ export interface MemberAccessAST extends ASTNode {
     property: string;
 }
 
+// Null-safe member access: source?.name
+export interface NullSafeMemberAccessAST extends ASTNode {
+    type: 'NullSafeMemberAccess';
+    object: ExpressionAST;
+    property: string;
+}
+
 // Function call: source.map(), calculateAge(birthDate)
 export interface FunctionCallAST extends ASTNode {
     type: 'FunctionCall';
@@ -120,12 +154,26 @@ export interface FunctionCallAST extends ASTNode {
     arguments: ExpressionAST[];
 }
 
-// Binary expression: a + b, x == y
+// Null-safe function call: source?.map()
+export interface NullSafeFunctionCallAST extends ASTNode {
+    type: 'NullSafeFunctionCall';
+    callee: ExpressionAST;
+    arguments: ExpressionAST[];
+}
+
+// Binary expression: a + b, x == y, a and b
 export interface BinaryExpressionAST extends ASTNode {
     type: 'BinaryExpression';
-    operator: string;
+    operator: string;  // +, -, *, /, %, ==, !=, <, >, <=, >=, and, or
     left: ExpressionAST;
     right: ExpressionAST;
+}
+
+// Unary expression: not x, -value
+export interface UnaryExpressionAST extends ASTNode {
+    type: 'UnaryExpression';
+    operator: 'not' | '-';
+    operand: ExpressionAST;
 }
 
 // Conditional: if x then y else z
@@ -133,7 +181,92 @@ export interface ConditionalExpressionAST extends ASTNode {
     type: 'ConditionalExpression';
     condition: ExpressionAST;
     thenBranch: ExpressionAST;
-    elseBranch: ExpressionAST;
+    elseBranch: ExpressionAST | null;  // null for "if x then y" without else
+}
+
+// Null coalesce: a ?? b
+export interface NullCoalesceExpressionAST extends ASTNode {
+    type: 'NullCoalesceExpression';
+    left: ExpressionAST;
+    right: ExpressionAST;
+}
+
+// Type check: x is Class
+export interface IsTypeExpressionAST extends ASTNode {
+    type: 'IsTypeExpression';
+    expression: ExpressionAST;
+    targetType: string;
+}
+
+// Lambda: x: x.name or (a, b): a + b
+export interface LambdaExpressionAST extends ASTNode {
+    type: 'LambdaExpression';
+    params: string[];
+    body: ExpressionAST;
+}
+
+// Wrapper for direct JjEL AST integration
+export interface JjelExpressionWrapperAST extends ASTNode {
+    type: 'JjelExpression';
+    expression: JjelExpression;
+}
+
+// ============================================
+// INTERACTIVE STATEMENTS & EXPRESSIONS
+// ============================================
+
+export type AlertType = 'info' | 'warning' | 'error' | 'success';
+export type InputType = 'string' | 'number' | 'boolean' | 'date' | 'select';
+
+/**
+ * Alert statement - blocking modal dialog
+ * alert("message", "type")
+ */
+export interface AlertStatementAST extends ASTNode {
+    type: 'AlertStatement';
+    message: ExpressionAST;
+    alertType: AlertType;
+}
+
+/**
+ * Notify statement - non-blocking toast notification
+ * notify("message", duration)
+ */
+export interface NotifyStatementAST extends ASTNode {
+    type: 'NotifyStatement';
+    message: ExpressionAST;
+    duration: number; // ms, default 3000
+}
+
+/**
+ * Prompt expression - asks user for text input, returns String
+ * prompt("message", "default")
+ */
+export interface PromptExpressionAST extends ASTNode {
+    type: 'PromptExpression';
+    message: ExpressionAST;
+    defaultValue?: ExpressionAST;
+}
+
+/**
+ * Input expression - asks user for typed input
+ * input("message", "type", default)
+ */
+export interface InputExpressionAST extends ASTNode {
+    type: 'InputExpression';
+    message: ExpressionAST;
+    inputType: InputType;
+    defaultValue?: ExpressionAST;
+    options?: ExpressionAST[]; // For 'select' type
+}
+
+/**
+ * Array literal for select options
+ * ["option1", "option2", "option3"]
+ */
+export interface ArrayLiteralAST extends ASTNode {
+    type: 'ArrayLiteral';
+    elements: ExpressionAST[];
 }
 
 // Parser result

@@ -1,6 +1,6 @@
 import React, {Dispatch, ReactElement, ReactNode, useCallback, useRef, useEffect} from "react";
 import {connect} from "react-redux";
-import {DModel, Pointer, Try, U} from "../../../joiner";
+import {DModel, Pointer, Try, U, GraphSize, transientProperties, SetFieldAction, TRANSACTION} from "../../../joiner";
 import {
     DState,
     DGraph,
@@ -16,6 +16,7 @@ import {DefaultNode} from "../../../joiner/components";
 import ContextMenu from "../../contextMenu/ContextMenu";
 import { FeaturesPalette, getFeatureByDragType } from "../../FeaturesPalette";
 import { CanvasExportService, ExportFormat } from "../../../services/CanvasExportService";
+import { EditorSwitch } from "./EditorSwitch";
 
 
 function MetamodelTabComponent(props: AllProps) {
@@ -87,19 +88,56 @@ function MetamodelTabComponent(props: AllProps) {
 
             const feature = getFeatureByDragType(data.type);
 
-            if (!feature || !model) return;
+            if (!feature || !model || !graph) return;
+
+            // Calculate drop position in graph coordinates
+            let dropX = 100; // default position
+            let dropY = 100;
+
+            if (canvasRef.current) {
+                const rect = canvasRef.current.getBoundingClientRect();
+                const clientX = e.clientX - rect.left;
+                const clientY = e.clientY - rect.top;
+
+                // Convert screen coords to graph coords using graph.translateHtmlSize
+                const graphCoords = graph.translateHtmlSize(new GraphSize(clientX, clientY, 0, 0));
+                dropX = graphCoords.x;
+                dropY = graphCoords.y;
+            }
 
             // Create the element using model.addChild() - same API as ToolBar
             // The feature.id is lowercase (package, class, enumerator)
-            const createdElement = model.addChild(feature.id);
+            let createdElement = model.addChild(feature.id);
 
             // Execute the returned function if it exists (some addChild returns a function)
+            let elementId: string | undefined;
             try {
                 if (typeof createdElement === 'function') {
-                    (createdElement as any)();
+                    createdElement = (createdElement as any)();
+                }
+                // Get the element ID for position setting
+                if (createdElement && typeof createdElement === 'object' && 'id' in createdElement) {
+                    elementId = (createdElement as any).id;
                 }
             } catch (e) {
                 // Element already created directly
+            }
+
+            // Set position on the node after it's created (with delay for React render)
+            if (elementId) {
+                const setPositionWithRetry = (retries: number = 0) => {
+                    const tm = transientProperties.modelElement[elementId!];
+                    if (tm?.node?.__raw) {
+                        TRANSACTION('Set drop position', () => {
+                            SetFieldAction.new(tm.node.__raw, 'x', dropX, '', false);
+                            SetFieldAction.new(tm.node.__raw, 'y', dropY, '', false);
+                        });
+                    } else if (retries < 10) {
+                        // Node not created yet, retry after a short delay
+                        setTimeout(() => setPositionWithRetry(retries + 1), 50);
+                    }
+                };
+                setTimeout(() => setPositionWithRetry(), 50);
             }
 
             // Mark project as modified
@@ -109,13 +147,16 @@ function MetamodelTabComponent(props: AllProps) {
         } catch (err) {
             console.error('Failed to handle drop:', err);
         }
-    }, [model]);
+    }, [model, graph]);
 
     if (!model) return(<>closed tab</>);
     if (!graph) {
         const graphid = Constructors.DGraph_makeID(model.id);
         if (!DPointerTargetable.pendingCreation[graphid]) {
-            DGraph.new(0, model.id);
+            const dGraph = DGraph.new(0, model.id);
+            // Add graph to state.graphs (root) so mapStateToProps can find it
+            SetRootFieldAction.new('graphs', dGraph.id, '+=', true);
+            console.log('create m2 graph', {model, graphId: dGraph.id});
         }
         return(<div style={{width: "100%", height: "100%", display: "flex"}}>
             <span style={{margin: "auto"}}>Building the Graph...</span>
@@ -134,22 +175,24 @@ function MetamodelTabComponent(props: AllProps) {
         </div>}
 
 
-        <div className={'d-flex h-100'} style={{overflow:'hidden'}} onClick={e => { if (!U.isProjectModified) U.isProjectModified = U.userHasInteracted = true; }}>
-            {/* Fixed Features Palette - always visible */}
-            <FeaturesPalette />
-            <Try>
-                <div
-                    ref={canvasRef}
-                    className={"GraphContainer h-100 w-100"}
-                    style={{position: "relative"}}
-                    onDragOver={handleDragOver}
-                    onDrop={handleDrop}
-                >
-                    {graph && <DefaultNode data={model} nodeid={graphid} graphid={graphid}/> ||
-                        <div>Error: missing DGraph prop</div>}
-                </div>
-            </Try>
-        </div>
+        <EditorSwitch modelid={model.id}>
+            <div className={'d-flex h-100'} style={{overflow:'hidden'}} onClick={e => { if (!U.isProjectModified) U.isProjectModified = U.userHasInteracted = true; }}>
+                {/* Fixed Features Palette - always visible */}
+                <FeaturesPalette />
+                <Try>
+                    <div
+                        ref={canvasRef}
+                        className={"GraphContainer h-100 w-100"}
+                        style={{position: "relative"}}
+                        onDragOver={handleDragOver}
+                        onDrop={handleDrop}
+                    >
+                        {graph && <DefaultNode data={model} nodeid={graphid} graphid={graphid}/> ||
+                            <div>Error: missing DGraph prop</div>}
+                    </div>
+                </Try>
+            </div>
+        </EditorSwitch>
     </div>);
 
 }

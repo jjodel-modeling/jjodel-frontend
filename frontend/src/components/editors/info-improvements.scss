@@ -51,7 +51,8 @@
   flex-shrink: 0;
 }
 
-.stat-value {
+// Scoped to .stat-circle to avoid affecting other .stat-value elements globally
+.stat-circle .stat-value {
   font-size: 20px !important;
   font-weight: 700 !important;
   color: #ffffff !important;
@@ -390,15 +391,18 @@ select.form-select {
   }
 
   .properties-toggle,
-  .toggle-switch {
+  .toggle-switch,
+  .jjodel-switch {
     flex-shrink: 0;
     margin-top: 2px;  // Align with label
   }
 }
 
 /* ========================================
-   TOGGLE SWITCH - Compact Design (36x20px)
+   TOGGLE SWITCH - Standard Horizontal (36x20px)
+   Uses global .jjodel-switch class from _switch.scss
    ======================================== */
+// Legacy support for .properties-toggle (prefer .jjodel-switch)
 .properties-toggle {
   position: relative;
   display: inline-block;
@@ -406,16 +410,21 @@ select.form-select {
   height: 20px;
   flex-shrink: 0;
   background: #cbd5e1;
-  border-radius: 20px;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 10px;
+  transition: all 200ms ease;
   cursor: pointer;
 
   &.active {
-    background: linear-gradient(135deg, #64748b 0%, #475569 100%);
+    background: #334155; // slate solid, NOT cyan
+  }
+
+  &:hover:not(.active) {
+    background: #94a3b8;
   }
 
   &:focus {
-    box-shadow: var(--form-input-focus-shadow, 0 0 0 3px rgba(51, 65, 85, 0.15));
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(51, 65, 85, 0.15);
   }
 }
 
@@ -427,8 +436,8 @@ select.form-select {
   top: 2px;
   background: white;
   border-radius: 50%;
-  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  transition: transform 200ms ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
 
   .properties-toggle.active & {
     transform: translateX(16px);

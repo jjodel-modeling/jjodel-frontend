@@ -1,5 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { featureDefinitions, FeatureDefinition, getSubFeatures, hasSubFeatures } from './featureDefinitions';
+import { useFeaturesPanelSafe } from '../../contexts/FeaturesPanelContext';
 import './features-palette.scss';
 
 interface FeaturesPaletteProps {
@@ -7,16 +8,22 @@ interface FeaturesPaletteProps {
 }
 
 /**
- * FeaturesPalette - Fixed sidebar with draggable metamodel elements
+ * FeaturesPalette - Collapsible sidebar with draggable metamodel elements
  *
  * Features:
  * - Displays Package, Class, Enumerator items
  * - Shows sub-features (Attribute, Reference, Operation, Literal) when parent is expanded
  * - Supports HTML5 drag & drop to canvas
- * - Always visible (fixed 200px sidebar)
+ * - Collapsible sidebar with smooth transitions
+ * - Auto-expands when JjScript creates metamodel elements
  * - Follows CLAUDE.md design guidelines
  */
 export const FeaturesPalette: React.FC<FeaturesPaletteProps> = ({ className = '' }) => {
+    // Get panel state from context (optional - works without provider)
+    const panelContext = useFeaturesPanelSafe();
+    const isPanelExpanded = panelContext?.isExpanded ?? true;
+    const togglePanel = panelContext?.toggle;
+
     // Track which feature is expanded to show sub-features
     const [expandedFeatureId, setExpandedFeatureId] = useState<string | null>(null);
 
@@ -71,14 +78,24 @@ export const FeaturesPalette: React.FC<FeaturesPaletteProps> = ({ className = ''
     };
 
     return (
-        <div className={`features-palette ${className}`}>
+        <div className={`features-palette ${className} ${!isPanelExpanded ? 'features-palette--collapsed' : ''}`}>
             {/* Header with icon and title */}
             <div className="features-palette__header">
                 <i className="bi bi-grid-3x3 features-palette__header-icon" />
                 <span className="features-palette__title">FEATURES</span>
+                {/* Collapse/Expand toggle button */}
+                {togglePanel && (
+                    <button
+                        className="features-palette__toggle"
+                        onClick={togglePanel}
+                        title={isPanelExpanded ? 'Collapse panel' : 'Expand panel'}
+                    >
+                        <i className={`bi ${isPanelExpanded ? 'bi-chevron-left' : 'bi-chevron-right'}`} />
+                    </button>
+                )}
             </div>
 
-            {/* Palette content - always visible */}
+            {/* Palette content - collapses smoothly */}
             <div className="features-palette__content">
                 <div className="features-palette__items">
                     {featureDefinitions.map(feature => (

@@ -1501,7 +1501,7 @@ body[data-notification-visible="true"] .jodie-minimized {
     border-radius: 8px;
     overflow: hidden;
     margin: 8px 0;
-    font-family: 'JetBrains Mono', 'SF Mono', 'Fira Code', monospace;
+    font-family: 'JetBrains Mono', 'IBM Plex Mono', 'Fira Code', monospace;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
 }
 
@@ -2026,7 +2026,7 @@ body[data-notification-visible="true"] .jodie-minimized {
 }
 
 .jodie-executing-command {
-    font-family: 'JetBrains Mono', 'SF Mono', 'Fira Code', monospace;
+    font-family: 'JetBrains Mono', 'IBM Plex Mono', 'Fira Code', monospace;
     font-size: 11px;
     color: #334155;
     background: transparent;

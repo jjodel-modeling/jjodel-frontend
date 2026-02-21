@@ -21,6 +21,7 @@
     "@types/react-dom": "^18.3.6",
     "@types/react-router-dom": "^5.3.3",
     "@types/tinycolor2": "^1.4.6",
+    "@xyflow/react": "^12.10.0",
     "ansi-to-html": "^0.7.2",
     "async-lz-string": "^1.1.0",
     "axios": "^1.8.4",

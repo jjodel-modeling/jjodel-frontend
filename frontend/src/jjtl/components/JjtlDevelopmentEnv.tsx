@@ -20,6 +20,8 @@ import { ExecuteTransformationDialog, ModelOption } from './ExecuteTransformatio
 
 // Import JjTL styles
 import '../styles/jjtl.scss';
+import { getGrammarRuleAtPosition } from '../utils/astToGrammar';
+import type { GrammarRule } from '../components/GrammarDiagram/types';
 
 export interface JjtlDevelopmentEnvProps {
     initialCode?: string;
@@ -39,11 +41,16 @@ export interface JjtlDevelopmentEnvProps {
     existingModelNames?: string[];
     onSave?: (code: string) => void;
     onCodeChange?: (code: string) => void;
-    /** Callback when transformation is executed */
-    onExecuteTransformation?: (sourceModelId: string, outputModelName: string) => Promise<void>;
+    /** Callback when transformation is executed - receives AST for execution by parent.
+     * Returns ExecutionResult so JjtlDevelopmentEnv can display trace without re-executing. */
+    onExecuteTransformation?: (
+        sourceModelId: string,
+        outputModelName: string,
+        ast: import('../types').TransformationAST
+    ) => Promise<import('../executor').ExecutionResult | void>;
 }
 
-type BottomPanelTab = 'problems' | 'trace' | 'inferred';
+type BottomPanelTab = 'problems' | 'trace' | 'output';
 type LayoutMode = 'editor-only' | 'split-horizontal' | 'split-vertical';
 
 const DEFAULT_CODE = `transformation NewTransformation
@@ -81,6 +88,13 @@ export const JjtlDevelopmentEnv: React.FC<JjtlDevelopmentEnvProps> = ({
     const [isSidePanelCollapsed, setIsSidePanelCollapsed] = useState(false);
     const [cursorPosition, setCursorPosition] = useState({ line: 1, column: 1 });
 
+    // Output messages for the Output tab
+    const [outputMessages, setOutputMessages] = useState<string[]>([]);
+
+    // Editor action buttons state
+    const [isEditorFullscreen, setIsEditorFullscreen] = useState(false);
+    const [copyStatus, setCopyStatus] = useState<'idle' | 'copied'>('idle');
+
     // Left side panel resize state
     const [sidePanelWidth, setSidePanelWidth] = useState(() => {
         const saved = localStorage.getItem('jjtl-sidebar-width');
@@ -97,6 +111,13 @@ export const JjtlDevelopmentEnv: React.FC<JjtlDevelopmentEnvProps> = ({
     const [isResizingRightPanel, setIsResizingRightPanel] = useState(false);
     const rightPanelRef = useRef<HTMLDivElement>(null);
 
+    // Bottom panel resize state
+    const [bottomPanelHeight, setBottomPanelHeight] = useState(() => {
+        const saved = localStorage.getItem('jjtl-bottom-panel-height');
+        return saved ? parseInt(saved, 10) : 220;
+    });
+    const [isResizingBottomPanel, setIsResizingBottomPanel] = useState(false);
+
     // Mappings state
     const [mappings, setMappings] = useState<MappingConnection[]>([]);
     const [selectedMapping, setSelectedMapping] = useState<string | undefined>();
@@ -105,17 +126,62 @@ export const JjtlDevelopmentEnv: React.FC<JjtlDevelopmentEnvProps> = ({
     const [suggestions, setSuggestions] = useState<MappingSuggestion[]>([]);
     const [hoveredSuggestion, setHoveredSuggestion] = useState<string | null>(null);
 
+    // Grammar sync state - highlighted rule based on cursor position
+    const [highlightedGrammarRule, setHighlightedGrammarRule] = useState<GrammarRule | null>(null);
+
     // Refs
     const editorRef = useRef<any>(null);
 
-    // Parser hook
-    const { ast, errors: parserErrors, isValid, parse } = useJjtlParser();
+    // Parser hook - includes parseNow for immediate parsing with result
+    const { ast, errors: parserErrors, isValid, parse, parseNow } = useJjtlParser();
 
-    // Executor hook
-    const { execute, trace, isExecuting, executionStatus, lastExecutionTime } = useJjtlExecutor();
+    // Ref to track latest AST (avoids stale closure issues)
+    const astRef = useRef(ast);
+    useEffect(() => {
+        astRef.current = ast;
+        console.log('[JjtlDevelopmentEnv] AST updated in ref:', {
+            hasAst: !!ast,
+            mappingsCount: ast?.mappings?.length || 0
+        });
+    }, [ast]);
+
+    // Executor hook - we use setResultFromExternal to update trace from ProjectEditor's execution
+    const { setResultFromExternal, trace, isExecuting, executionStatus, lastExecutionTime } = useJjtlExecutor();
+
+    // Listen for execution results via custom event (bypasses callback chain issues)
+    useEffect(() => {
+        const handler = (e: Event) => {
+            const customEvent = e as CustomEvent;
+            const result = customEvent.detail;
+            if (result) {
+                setResultFromExternal(result, 0);
+            }
+        };
+        window.addEventListener('jjtl-execution-result', handler);
+        return () => window.removeEventListener('jjtl-execution-result', handler);
+    }, [setResultFromExternal]);
 
     // Convert parser errors to problems
     const problems: Problem[] = parserErrors.map((e, i) => parserErrorToProblem(e, i));
+
+    // Parse initial code on mount to ensure AST is populated
+    useEffect(() => {
+        if (initialCode) {
+            console.log('[JjtlDevelopmentEnv] Initial parse on mount, code length:', initialCode.length);
+            parseNow(initialCode);
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []); // Only run on mount - parseNow is stable
+
+    // Re-parse when initialCode prop changes (component receives new transformation)
+    useEffect(() => {
+        if (initialCode && initialCode !== code) {
+            console.log('[JjtlDevelopmentEnv] initialCode prop changed, re-parsing');
+            setCode(initialCode);
+            parseNow(initialCode);
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [initialCode]); // Only react to initialCode changes
 
     // Handle code change
     const handleCodeChange = useCallback((newCode: string) => {
@@ -138,22 +204,145 @@ export const JjtlDevelopmentEnv: React.FC<JjtlDevelopmentEnvProps> = ({
 
     // Handle execute button click - opens the dialog
     const handleExecuteClick = useCallback(() => {
+        console.log('[JjtlDevelopmentEnv] handleExecuteClick called, isValid:', isValid);
         if (isValid) {
+            console.log('[JjtlDevelopmentEnv] Opening ExecuteTransformationDialog...');
             setIsExecuteDialogOpen(true);
+        } else {
+            console.log('[JjtlDevelopmentEnv] Cannot execute: transformation is not valid');
         }
     }, [isValid]);
 
+    // Handle copy code to clipboard
+    const handleCopyCode = useCallback(async () => {
+        try {
+            await navigator.clipboard.writeText(code);
+            setCopyStatus('copied');
+            setTimeout(() => setCopyStatus('idle'), 2000);
+        } catch (err) {
+            console.error('Failed to copy code:', err);
+        }
+    }, [code]);
+
+    // Handle fullscreen toggle
+    const handleToggleFullscreen = useCallback(() => {
+        setIsEditorFullscreen(prev => !prev);
+    }, []);
+
+    // Handle validate - triggers parsing and shows problems
+    const handleValidate = useCallback(() => {
+        parse(code);
+        setBottomPanelTab('problems');
+        setIsBottomPanelCollapsed(false);
+    }, [code, parse]);
+
+    // Handle cursor position change - update grammar sync
+    const handleCursorPositionChange = useCallback((position: { line: number; column: number }) => {
+        setCursorPosition(position);
+
+        // Update highlighted grammar rule based on cursor position
+        const rule = getGrammarRuleAtPosition(ast, position.line, position.column);
+        setHighlightedGrammarRule(rule);
+    }, [ast]);
+
+    // Helper per aggiungere messaggi all'output
+    const addOutputMessage = useCallback((message: string) => {
+        setOutputMessages(prev => [...prev, `[${new Date().toLocaleTimeString()}] ${message}`]);
+    }, []);
+
+    // Helper per pulire l'output
+    const clearOutput = useCallback(() => {
+        setOutputMessages([]);
+    }, []);
+
     // Handle actual transformation execution from dialog
     const handleExecuteTransformation = useCallback(async (sourceModelId: string, outputModelName: string) => {
-        if (onExecuteTransformation) {
-            await onExecuteTransformation(sourceModelId, outputModelName);
+        // Clear previous output and start logging
+        clearOutput();
+        addOutputMessage('Starting transformation execution...');
+        addOutputMessage(`Source model: ${sourceModelId}`);
+        addOutputMessage(`Output model: ${outputModelName}`);
+
+        console.log('[JjtlDevelopmentEnv] handleExecuteTransformation called');
+        console.log('[JjtlDevelopmentEnv] sourceModelId:', sourceModelId);
+        console.log('[JjtlDevelopmentEnv] outputModelName:', outputModelName);
+
+        // Get fresh AST by parsing the current code (avoids stale closure)
+        // First try the ref, if it has mappings use it; otherwise re-parse
+        let currentAst = astRef.current;
+        console.log('[JjtlDevelopmentEnv] AST from ref:', {
+            hasAst: !!currentAst,
+            mappingsCount: currentAst?.mappings?.length || 0
+        });
+
+        // If AST is stale (no mappings), force a fresh parse
+        if (!currentAst || !currentAst.mappings || currentAst.mappings.length === 0) {
+            console.log('[JjtlDevelopmentEnv] AST appears stale, forcing re-parse of current code');
+            addOutputMessage('Re-parsing transformation code...');
+            const freshResult = parseNow(code);
+            currentAst = freshResult.ast;
+            console.log('[JjtlDevelopmentEnv] Fresh parse result:', {
+                hasAst: !!currentAst,
+                mappingsCount: currentAst?.mappings?.length || 0,
+                errorsCount: freshResult.errors.length
+            });
         }
-        // Also execute the internal executor for tracing
-        if (ast && sourceMetamodel.length > 0) {
-            execute(ast, sourceMetamodel);
+
+        if (!currentAst) {
+            console.error('[JjtlDevelopmentEnv] Cannot execute: AST is null after re-parse');
+            addOutputMessage('Error: Failed to parse transformation code');
+            return;
         }
-        setIsExecuteDialogOpen(false);
-    }, [ast, sourceMetamodel, execute, onExecuteTransformation]);
+
+        if (!currentAst.mappings || currentAst.mappings.length === 0) {
+            console.warn('[JjtlDevelopmentEnv] No mappings in AST');
+            addOutputMessage('Warning: No mappings defined in transformation');
+        }
+
+        try {
+            if (onExecuteTransformation) {
+                addOutputMessage(`Processing ${currentAst.mappings?.length || 0} mappings...`);
+                const startTime = performance.now();
+                console.log('[JjtlDevelopmentEnv] Calling onExecuteTransformation...');
+                const result = await onExecuteTransformation(sourceModelId, outputModelName, currentAst);
+                const executionTimeMs = Math.round(performance.now() - startTime);
+                console.log('[JjtlDevelopmentEnv] onExecuteTransformation returned:', {
+                    hasResult: !!result,
+                    success: result?.success,
+                    hasTraceModel: !!result?.traceModel,
+                    linksCount: result?.traceModel?.links?.length
+                });
+
+                // Update trace display from the result returned by ProjectEditor
+                if (result) {
+                    console.log('[JjtlDevelopmentEnv] Calling setResultFromExternal with result');
+                    setResultFromExternal(result, executionTimeMs);
+                    if (result.success) {
+                        addOutputMessage('Transformation completed successfully.');
+                        addOutputMessage(`Created ${result.targetModel?.instances?.size || 0} target class types.`);
+                    } else {
+                        addOutputMessage(`Transformation failed: ${result.errors.join(', ')}`);
+                    }
+                } else {
+                    console.warn('[JjtlDevelopmentEnv] No result returned from onExecuteTransformation');
+                    addOutputMessage('Transformation completed (no result returned).');
+                }
+            } else {
+                console.warn('[JjtlDevelopmentEnv] onExecuteTransformation callback is undefined');
+            }
+        } catch (error) {
+            console.error('[JjtlDevelopmentEnv] Error in transformation execution:', error);
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            addOutputMessage(`Error: ${errorMessage}`);
+        }
+
+        // NOTE: Dialog closes itself after onExecute completes - don't close it here
+        // to avoid double-closing race condition
+
+        // Switch to output tab to show results
+        setBottomPanelTab('output');
+        setIsBottomPanelCollapsed(false);
+    }, [code, onExecuteTransformation, clearOutput, addOutputMessage, parseNow, setResultFromExternal]);
 
     // Handle problem click - navigate to error location
     const handleProblemClick = useCallback((problem: Problem) => {
@@ -299,24 +488,150 @@ export const JjtlDevelopmentEnv: React.FC<JjtlDevelopmentEnvProps> = ({
         };
     }, [isResizingRightPanel]);
 
+    // Bottom panel resize logic
+    useEffect(() => {
+        const handleMouseMove = (e: MouseEvent) => {
+            if (!isResizingBottomPanel) return;
+            // Calculate from bottom of viewport (account for status bar ~24px)
+            const newHeight = window.innerHeight - e.clientY - 24;
+            const clamped = Math.max(100, Math.min(window.innerHeight * 0.5, newHeight));
+            setBottomPanelHeight(clamped);
+            localStorage.setItem('jjtl-bottom-panel-height', String(clamped));
+        };
+
+        const handleMouseUp = () => {
+            setIsResizingBottomPanel(false);
+            document.body.style.cursor = '';
+            document.body.style.userSelect = '';
+        };
+
+        if (isResizingBottomPanel) {
+            document.addEventListener('mousemove', handleMouseMove);
+            document.addEventListener('mouseup', handleMouseUp);
+            document.body.style.cursor = 'row-resize';
+            document.body.style.userSelect = 'none';
+        }
+
+        return () => {
+            document.removeEventListener('mousemove', handleMouseMove);
+            document.removeEventListener('mouseup', handleMouseUp);
+        };
+    }, [isResizingBottomPanel]);
+
+    // Nascondi pannello destro globale quando JjTL è attivo
+    // Usando manipolazione diretta del layout rc-dock (più affidabile del CSS)
+    useEffect(() => {
+        // Import DockManager dynamically to avoid circular dependencies
+        import('../../components/abstract/DockManager').then(({ default: DockManager }) => {
+            let originalRightPanelSize: number | null = null;
+
+            // Nascondi pannello destro al mount
+            const hideRightPanel = () => {
+                if (!DockManager.dock) return;
+
+                try {
+                    const layout = DockManager.dock.getLayout();
+                    if (layout?.dockbox?.children?.length >= 2) {
+                        // Salva dimensione originale
+                        originalRightPanelSize = layout.dockbox.children[1].size as number;
+
+                        // Crea copia del layout e imposta dimensione a 0
+                        const updatedLayout = JSON.parse(JSON.stringify(layout));
+                        updatedLayout.dockbox.children[1].size = 0;
+                        updatedLayout.dockbox.children[0].size = window.innerWidth;
+
+                        DockManager.dock.loadLayout(updatedLayout);
+                        console.log('[JjTL] Right panel hidden, original size:', originalRightPanelSize);
+
+                        // Trigger resize per ricalcolare
+                        setTimeout(() => window.dispatchEvent(new Event('resize')), 50);
+                    }
+                } catch (error) {
+                    console.error('[JjTL] Error hiding right panel:', error);
+                }
+            };
+
+            // Piccolo delay per assicurarsi che il dock sia pronto
+            const timer = setTimeout(hideRightPanel, 100);
+
+            // Store cleanup info in ref for access in cleanup
+            (window as any).__jjtl_original_size = originalRightPanelSize;
+            (window as any).__jjtl_hide_timer = timer;
+        });
+
+        // Cleanup: ripristina pannello destro al unmount
+        return () => {
+            // Clear any pending timer
+            if ((window as any).__jjtl_hide_timer) {
+                clearTimeout((window as any).__jjtl_hide_timer);
+            }
+
+            import('../../components/abstract/DockManager').then(({ default: DockManager }) => {
+                if (!DockManager.dock) return;
+
+                try {
+                    const layout = DockManager.dock.getLayout();
+                    if (layout?.dockbox?.children?.length >= 2) {
+                        // Usa dimensione salvata o default
+                        const rightSize = (window as any).__jjtl_original_size || 400;
+
+                        const updatedLayout = JSON.parse(JSON.stringify(layout));
+                        updatedLayout.dockbox.children[1].size = rightSize;
+                        updatedLayout.dockbox.children[0].size = window.innerWidth - rightSize;
+
+                        DockManager.dock.loadLayout(updatedLayout);
+                        console.log('[JjTL] Right panel restored, size:', rightSize);
+
+                        // Trigger resize per ricalcolare
+                        setTimeout(() => window.dispatchEvent(new Event('resize')), 50);
+                    }
+                } catch (error) {
+                    console.error('[JjTL] Error showing right panel:', error);
+                }
+
+                // Cleanup window properties
+                delete (window as any).__jjtl_original_size;
+                delete (window as any).__jjtl_hide_timer;
+            });
+        };
+    }, []);
+
     // Keyboard shortcuts
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
             const isMod = e.metaKey || e.ctrlKey;
 
+            // Ctrl+S → Save
             if (isMod && e.key === 's') {
                 e.preventDefault();
                 handleSave();
             }
+            // Ctrl+Enter → Execute
             if (isMod && e.key === 'Enter') {
                 e.preventDefault();
-                handleExecuteClick();
+                if (isValid && !isExecuting) {
+                    handleExecuteClick();
+                }
+            }
+            // Ctrl+Shift+V → Validate
+            if (isMod && e.shiftKey && e.key === 'V') {
+                e.preventDefault();
+                handleValidate();
+            }
+            // F11 → Fullscreen toggle
+            if (e.key === 'F11') {
+                e.preventDefault();
+                handleToggleFullscreen();
+            }
+            // Esc → Exit fullscreen
+            if (e.key === 'Escape' && isEditorFullscreen) {
+                setIsEditorFullscreen(false);
             }
         };
 
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [handleSave, handleExecuteClick]);
+    }, [handleSave, handleExecuteClick, handleValidate, handleToggleFullscreen, isValid, isExecuting, isEditorFullscreen]);
 
     // Parser status
     const parserStatus = parserErrors.length > 0 ? 'error' : isValid ? 'valid' : 'idle';
@@ -370,7 +685,13 @@ export const JjtlDevelopmentEnv: React.FC<JjtlDevelopmentEnvProps> = ({
                                 e.preventDefault();
                                 setIsResizingSidePanel(true);
                             }}
-                        />
+                            role="separator"
+                            aria-orientation="vertical"
+                            tabIndex={0}
+                            title="Drag to resize"
+                        >
+                            <i className={`bi bi-grip-vertical resize-grip-icon-vertical ${isResizingSidePanel ? 'dragging' : ''}`} />
+                        </div>
                     </div>
                 )}
 
@@ -385,16 +706,79 @@ export const JjtlDevelopmentEnv: React.FC<JjtlDevelopmentEnvProps> = ({
                 )}
 
                 {/* Center - Editor */}
-                <div className="jjtl-dev-env-editor">
+                <div className={`jjtl-dev-env-editor ${isEditorFullscreen ? 'fullscreen' : ''}`}>
+                    {/* Editor action buttons - top right corner */}
+                    <div className="jjtl-editor-actions">
+                        {/* Copy button */}
+                        <button
+                            className={`jjtl-editor-action-btn ${copyStatus === 'copied' ? 'copied' : ''}`}
+                            onClick={handleCopyCode}
+                            title={copyStatus === 'copied' ? 'Copied!' : 'Copy code'}
+                        >
+                            <i className={`bi ${copyStatus === 'copied' ? 'bi-check-lg' : 'bi-clipboard'}`} />
+                        </button>
+
+                        {/* Fullscreen button */}
+                        <button
+                            className="jjtl-editor-action-btn"
+                            onClick={handleToggleFullscreen}
+                            title={isEditorFullscreen ? 'Exit fullscreen (Esc)' : 'Fullscreen (F11)'}
+                        >
+                            <i className={`bi ${isEditorFullscreen ? 'bi-fullscreen-exit' : 'bi-fullscreen'}`} />
+                        </button>
+
+                        {/* Divider */}
+                        <div className="jjtl-editor-action-divider" />
+
+                        {/* Validate button */}
+                        <button
+                            className="jjtl-editor-action-btn"
+                            onClick={handleValidate}
+                            disabled={!code.trim()}
+                            title="Validate (Ctrl+Shift+V)"
+                        >
+                            <i className="bi bi-check2-circle" />
+                        </button>
+
+                        {/* Execute button */}
+                        <button
+                            className="jjtl-editor-action-btn jjtl-editor-action-btn--primary"
+                            onClick={handleExecuteClick}
+                            disabled={!isValid || isExecuting}
+                            title="Execute transformation (Ctrl+Enter)"
+                        >
+                            <i className={`bi ${isExecuting ? 'bi-hourglass-split' : 'bi-play-fill'}`} />
+                        </button>
+                    </div>
+
+                    {/* Fullscreen overlay header */}
+                    {isEditorFullscreen && (
+                        <div className="jjtl-fullscreen-header">
+                            <span className="jjtl-fullscreen-title">
+                                <i className="bi bi-arrow-left-right" />
+                                {ast?.name || 'Transformation'}
+                            </span>
+                            <button
+                                className="jjtl-fullscreen-close"
+                                onClick={handleToggleFullscreen}
+                                title="Exit fullscreen (Esc)"
+                            >
+                                <i className="bi bi-x-lg" />
+                            </button>
+                        </div>
+                    )}
+
+                    {/* Monaco Editor */}
                     <JjtlEditor
                         value={code}
                         onChange={handleCodeChange}
                         onParse={handleParse}
+                        onCursorPositionChange={handleCursorPositionChange}
                         height="100%"
                     />
                 </div>
 
-                {/* Right panel - Suggested mappings (optional) */}
+                {/* Right panel - Suggested Mappings ONLY */}
                 {layoutMode === 'split-horizontal' && (
                     <div
                         ref={rightPanelRef}
@@ -408,7 +792,15 @@ export const JjtlDevelopmentEnv: React.FC<JjtlDevelopmentEnvProps> = ({
                                 e.preventDefault();
                                 setIsResizingRightPanel(true);
                             }}
-                        />
+                            role="separator"
+                            aria-orientation="vertical"
+                            tabIndex={0}
+                            title="Drag to resize"
+                        >
+                            <i className={`bi bi-grip-vertical resize-grip-icon-vertical ${isResizingRightPanel ? 'dragging' : ''}`} />
+                        </div>
+
+                        {/* Suggested Mappings - unico contenuto */}
                         <SuggestedMappingsPanel
                             sourceMetamodel={sourceMetamodel}
                             targetMetamodel={targetMetamodel}
@@ -420,13 +812,30 @@ export const JjtlDevelopmentEnv: React.FC<JjtlDevelopmentEnvProps> = ({
                             onMappingHover={handleSuggestionHover}
                             onSuggestionsChange={handleSuggestionsChange}
                             onInsertCode={handleInsertCode}
+                            highlightedGrammarRule={highlightedGrammarRule}
                         />
                     </div>
                 )}
             </div>
 
             {/* Bottom panel */}
-            <div className={`jjtl-dev-env-bottom ${isBottomPanelCollapsed ? 'collapsed' : ''}`}>
+            <div
+                className={`jjtl-dev-env-bottom ${isBottomPanelCollapsed ? 'collapsed' : ''}`}
+                style={{ height: isBottomPanelCollapsed ? 36 : bottomPanelHeight }}
+            >
+                {/* Resize handle at top */}
+                {!isBottomPanelCollapsed && (
+                    <div
+                        className={`jjtl-bottom-panel-resize-handle ${isResizingBottomPanel ? 'resizing' : ''}`}
+                        onMouseDown={(e) => {
+                            e.preventDefault();
+                            setIsResizingBottomPanel(true);
+                        }}
+                        role="separator"
+                        aria-orientation="horizontal"
+                        title="Drag to resize panel"
+                    />
+                )}
                 {/* Tab bar */}
                 <div className="jjtl-dev-env-bottom-tabs">
                     <button
@@ -443,13 +852,22 @@ export const JjtlDevelopmentEnv: React.FC<JjtlDevelopmentEnvProps> = ({
                         className={`jjtl-dev-env-bottom-tab ${bottomPanelTab === 'trace' ? 'active' : ''}`}
                         onClick={() => { setBottomPanelTab('trace'); setIsBottomPanelCollapsed(false); }}
                     >
-                        <i className="bi bi-diagram-2" />
+                        <i className="bi bi-bezier2" />
                         Trace
                         {trace.length > 0 && (
-                            <span className="jjtl-dev-env-bottom-badge">{trace.length}</span>
+                            <span className="jjtl-dev-env-bottom-badge jjtl-dev-env-bottom-badge--info">{trace.length}</span>
                         )}
                     </button>
-
+                    <button
+                        className={`jjtl-dev-env-bottom-tab ${bottomPanelTab === 'output' ? 'active' : ''}`}
+                        onClick={() => { setBottomPanelTab('output'); setIsBottomPanelCollapsed(false); }}
+                    >
+                        <i className="bi bi-terminal" />
+                        Output
+                        {outputMessages.length > 0 && (
+                            <span className="jjtl-dev-env-bottom-badge jjtl-dev-env-bottom-badge--info">{outputMessages.length}</span>
+                        )}
+                    </button>
                     <div className="jjtl-dev-env-bottom-spacer" />
 
                     {/* Layout toggle */}
@@ -496,6 +914,24 @@ export const JjtlDevelopmentEnv: React.FC<JjtlDevelopmentEnvProps> = ({
                         )}
                         {bottomPanelTab === 'trace' && (
                             <MappingTraceView trace={trace} />
+                        )}
+                        {bottomPanelTab === 'output' && (
+                            <div className="jjtl-output-panel">
+                                {outputMessages.length === 0 ? (
+                                    <div className="jjtl-output-empty">
+                                        <i className="bi bi-terminal" />
+                                        <span>No output yet. Execute transformation to see results.</span>
+                                    </div>
+                                ) : (
+                                    <div className="jjtl-output-messages">
+                                        {outputMessages.map((msg, idx) => (
+                                            <div key={idx} className="jjtl-output-line">
+                                                {msg}
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
                         )}
                     </div>
                 )}

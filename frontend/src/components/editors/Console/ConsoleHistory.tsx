@@ -23,7 +23,7 @@ export const ConsoleHistory: React.FC<ConsoleHistoryProps> = ({
   };
 
   const quickStartExamples = [
-    { code: 'data', description: 'Current model data' },
+    { code: 'data', description: 'Current model element' },
     { code: 'data.classes', description: 'All classes' },
     { code: 'node', description: 'Selected node' },
     { code: '/help', description: 'Show commands' },
@@ -38,7 +38,7 @@ export const ConsoleHistory: React.FC<ConsoleHistoryProps> = ({
           </div>
           <h3 className="console-empty__title">Ready to explore</h3>
           <p className="console-empty__description">
-            Run JavaScript to inspect your model, query data, or test expressions.
+            Execute JavaScript or JjEL expressions to inspect your model, query data, and test transformations.
           </p>
 
           <div className="console-empty__quickstart">

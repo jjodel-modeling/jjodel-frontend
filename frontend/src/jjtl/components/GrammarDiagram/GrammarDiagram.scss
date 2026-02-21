@@ -1,0 +1,413 @@
+// ============================================
+// GRAMMAR DIAGRAM COMPONENT
+// JjTL Grammar Railroad Diagrams
+// ============================================
+
+.grammar-diagram {
+    display: flex;
+    height: 100%;
+    min-height: 400px;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    overflow: hidden;
+
+    // ========================================
+    // SIDEBAR
+    // ========================================
+
+    &__sidebar {
+        width: 200px;
+        background: #f8fafc;
+        border-right: 1px solid #e2e8f0;
+        display: flex;
+        flex-direction: column;
+        flex-shrink: 0;
+    }
+
+    &__sidebar-title {
+        padding: 16px;
+        margin: 0;
+        font-size: 11px;
+        font-weight: 600;
+        color: #64748b;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        border-bottom: 1px solid #e2e8f0;
+    }
+
+    &__rule-list {
+        list-style: none;
+        margin: 0;
+        padding: 8px;
+        overflow-y: auto;
+        flex: 1;
+    }
+
+    &__rule-item {
+        padding: 10px 12px;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: all 150ms ease;
+        margin-bottom: 2px;
+
+        &:hover {
+            background: #e2e8f0;
+        }
+
+        &:focus {
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(14, 165, 233, 0.3);
+        }
+
+        &.active {
+            background: linear-gradient(135deg, #64748b 0%, #475569 100%);
+
+            .grammar-diagram__rule-name {
+                color: white;
+            }
+        }
+
+        &.highlight {
+            animation: highlight-pulse 1.5s ease-in-out infinite;
+        }
+    }
+
+    @keyframes highlight-pulse {
+        0%, 100% {
+            box-shadow: 0 0 0 0 rgba(14, 165, 233, 0.4);
+        }
+        50% {
+            box-shadow: 0 0 0 4px rgba(14, 165, 233, 0);
+        }
+    }
+
+    &__rule-name {
+        font-size: 13px;
+        font-weight: 500;
+        color: #334155;
+    }
+
+    // ========================================
+    // MAIN CONTENT
+    // ========================================
+
+    &__main {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        padding: 24px;
+        overflow-y: auto;
+        gap: 20px;
+    }
+
+    &__header {
+        padding-bottom: 16px;
+        border-bottom: 1px solid #e2e8f0;
+    }
+
+    &__title {
+        margin: 0 0 8px 0;
+        font-size: 20px;
+        font-weight: 600;
+        color: #1e293b;
+    }
+
+    &__description {
+        margin: 0;
+        font-size: 14px;
+        color: #64748b;
+        line-height: 1.5;
+    }
+
+    // ========================================
+    // EBNF NOTATION
+    // ========================================
+
+    &__ebnf {
+        background: #0f172a;
+        border-radius: 8px;
+        overflow: hidden;
+
+        &-label {
+            padding: 8px 16px;
+            font-size: 10px;
+            font-weight: 600;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            background: #1e293b;
+            border-bottom: 1px solid #334155;
+        }
+
+        code {
+            display: block;
+            padding: 14px 16px;
+            font-family: 'IBM Plex Mono', 'Monaco', 'Menlo', monospace;
+            font-size: 13px;
+            color: #e2e8f0;
+            white-space: pre-wrap;
+            word-break: break-word;
+            line-height: 1.5;
+        }
+    }
+
+    // ========================================
+    // DIAGRAM CANVAS
+    // ========================================
+
+    &__canvas-wrapper {
+        background: #fafafa;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        overflow: hidden;
+    }
+
+    &__canvas-label {
+        padding: 8px 16px;
+        font-size: 10px;
+        font-weight: 600;
+        color: #64748b;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        background: #f1f5f9;
+        border-bottom: 1px solid #e2e8f0;
+    }
+
+    &__canvas {
+        padding: 20px;
+        overflow-x: auto;
+        min-height: 80px;
+        display: flex;
+        align-items: center;
+        justify-content: flex-start;
+
+        svg {
+            max-width: 100%;
+            height: auto;
+        }
+    }
+
+    // ========================================
+    // EXAMPLE CODE
+    // ========================================
+
+    &__example {
+        background: #1e293b;
+        border-radius: 8px;
+        overflow: hidden;
+
+        &-label {
+            padding: 8px 16px;
+            font-size: 10px;
+            font-weight: 600;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            background: #0f172a;
+            border-bottom: 1px solid #334155;
+        }
+
+        pre {
+            margin: 0;
+            padding: 16px;
+            overflow-x: auto;
+
+            code {
+                font-family: 'IBM Plex Mono', 'Monaco', 'Menlo', monospace;
+                font-size: 13px;
+                color: #e2e8f0;
+                line-height: 1.6;
+            }
+        }
+    }
+
+    // ========================================
+    // COMPACT MODE
+    // ========================================
+
+    &--compact {
+        min-height: auto;
+        border: none;
+        background: transparent;
+        border-radius: 0;
+
+        .grammar-diagram__canvas-wrapper {
+            border: none;
+            background: #f8fafc;
+        }
+
+        .grammar-diagram__canvas-label {
+            display: none;
+        }
+
+        .grammar-diagram__canvas {
+            padding: 12px;
+            justify-content: center;
+        }
+    }
+}
+
+// ============================================
+// DARK MODE
+// ============================================
+
+@media (prefers-color-scheme: dark) {
+    .grammar-diagram {
+        background: #1e293b;
+        border-color: #334155;
+
+        &__sidebar {
+            background: #0f172a;
+            border-color: #334155;
+        }
+
+        &__sidebar-title {
+            color: #94a3b8;
+            border-color: #334155;
+        }
+
+        &__rule-item {
+            &:hover {
+                background: #334155;
+            }
+
+            &.active {
+                background: linear-gradient(135deg, #64748b 0%, #475569 100%);
+            }
+        }
+
+        &__rule-name {
+            color: #e2e8f0;
+        }
+
+        &__header {
+            border-color: #334155;
+        }
+
+        &__title {
+            color: #f1f5f9;
+        }
+
+        &__description {
+            color: #94a3b8;
+        }
+
+        &__canvas-wrapper {
+            background: #0f172a;
+            border-color: #334155;
+        }
+
+        &__canvas-label {
+            background: #1e293b;
+            border-color: #334155;
+            color: #94a3b8;
+        }
+
+        &__canvas {
+            background: #0f172a;
+
+            // Dark mode SVG styles
+            svg {
+                .connector {
+                    stroke: #64748b;
+                }
+
+                .terminal {
+                    fill: #0c4a6e;
+                    stroke: #0ea5e9;
+                }
+
+                .terminal-text {
+                    fill: #7dd3fc;
+                }
+
+                .nonterminal {
+                    fill: #422006;
+                    stroke: #ca8a04;
+                }
+
+                .nonterminal-text {
+                    fill: #fde047;
+                }
+
+                .arrow {
+                    fill: #64748b;
+                }
+            }
+        }
+
+        &--compact {
+            .grammar-diagram__canvas-wrapper {
+                background: #1e293b;
+            }
+
+            .grammar-diagram__canvas {
+                background: #1e293b;
+            }
+        }
+    }
+}
+
+// ============================================
+// RESPONSIVE
+// ============================================
+
+@media (max-width: 768px) {
+    .grammar-diagram {
+        flex-direction: column;
+        min-height: auto;
+
+        &__sidebar {
+            width: 100%;
+            border-right: none;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        &__rule-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            padding: 12px;
+            overflow-y: visible;
+        }
+
+        &__rule-item {
+            padding: 8px 12px;
+            margin-bottom: 0;
+        }
+
+        &__main {
+            padding: 16px;
+        }
+
+        &__canvas {
+            padding: 12px;
+        }
+    }
+}
+
+@media (max-width: 480px) {
+    .grammar-diagram {
+        &__title {
+            font-size: 18px;
+        }
+
+        &__description {
+            font-size: 13px;
+        }
+
+        &__ebnf code,
+        &__example pre code {
+            font-size: 12px;
+        }
+
+        &__rule-item {
+            padding: 6px 10px;
+        }
+
+        &__rule-name {
+            font-size: 12px;
+        }
+    }
+}

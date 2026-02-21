@@ -1,0 +1,2067 @@
+// Editor V2 - React Flow PoC Styles
+// Design tokens via CSS custom properties for theming
+
+@import './themes';
+@import './notations';
+@import './color-schemes';
+
+// ============================================
+// EDITOR LAYOUT
+// ============================================
+
+.editor-v2 {
+    display: flex;
+    height: 100vh;
+    width: 100%;
+    background: var(--canvas-bg);
+    color: var(--text-primary);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+
+    &:focus {
+        outline: none;
+    }
+}
+
+.editor-v2__main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.editor-v2__canvas {
+    flex: 1;
+    position: relative;
+}
+
+// ============================================
+// CANVAS CURSOR
+// ============================================
+
+.editor-v2 .react-flow {
+    cursor: default;
+}
+
+.editor-v2 .react-flow__pane {
+    cursor: default !important;
+
+    &:active {
+        cursor: move !important;
+    }
+}
+
+.editor-v2 .react-flow__renderer {
+    cursor: default !important;
+}
+
+// During connection creation
+.editor-v2 .react-flow__pane.connecting {
+    cursor: crosshair !important;
+}
+
+// When hovering over a target node during connection drag → pointer cursor
+// to indicate the node is a valid drop target for the connection
+.react-flow.connecting .react-flow__node:hover {
+    cursor: pointer !important;
+
+    * {
+        cursor: pointer !important;
+    }
+}
+
+// ============================================
+// TOOLBAR
+// ============================================
+
+.editor-v2-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 12px;
+    background: var(--surface-1);
+    border-bottom: 1px solid var(--border-subtle);
+    flex-shrink: 0;
+
+    position: relative;
+  
+}
+
+.toolbar-group {
+    display: flex;
+    gap: 2px;
+
+}
+
+.toolbar-separator {
+    width: 1px;
+    height: 20px;
+    background: var(--border-default);
+    margin: 0 4px;
+}
+
+.toolbar-spacer {
+    flex: 1;
+}
+
+.toolbar-hint {
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-right: 8px;
+}
+
+.toolbar-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border: none;
+    background: transparent;
+    color: var(--text-secondary);
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.15s;
+
+    &:hover:not(:disabled) {
+        background: var(--surface-hover);
+        color: var(--text-primary);
+    }
+
+    &.active {
+        background: var(--accent-muted);
+        color: var(--accent);
+    }
+
+    &.danger:hover:not(:disabled) {
+        background: var(--danger-bg);
+        color: var(--danger);
+    }
+
+    &:disabled {
+        opacity: 0.3;
+        cursor: not-allowed;
+    }
+}
+
+// ============================================
+// ALIGNMENT TOOLBAR
+// ============================================
+
+.alignment-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 12px;
+    background: var(--alignment-bg);
+    border-bottom: 1px solid var(--alignment-border);
+    flex-shrink: 0;
+    animation: slideDown 0.15s ease-out;
+
+    &__group {
+        display: flex;
+        align-items: center;
+        gap: 2px;
+    }
+
+    &__label {
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--text-dim);
+        margin-right: 4px;
+        font-weight: 500;
+    }
+
+    &__divider {
+        width: 1px;
+        height: 18px;
+        background: var(--border-subtle);
+        margin: 0 4px;
+    }
+
+    &__separator {
+        width: 1px;
+        height: 22px;
+        background: var(--border-subtle);
+        margin: 0 4px;
+    }
+
+    &__count {
+        font-size: 11px;
+        color: var(--text-dim);
+        margin-left: auto;
+        font-family: 'IBM Plex Mono', Monaco, Consolas, monospace;
+    }
+}
+
+.alignment-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    border-radius: 5px;
+    cursor: pointer;
+    transition: all 0.12s;
+    padding: 0;
+
+    svg, i {
+        font-size: 14px;
+        width: 16px;
+        height: 16px;
+    }
+
+    &:hover {
+        background: var(--surface-hover);
+        color: var(--text-primary);
+    }
+
+    &:active {
+        background: var(--accent-muted);
+        color: var(--accent);
+    }
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-4px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+// ============================================
+// PALETTE SIDEBAR
+// ============================================
+
+.editor-v2-palette {
+    width: 200px;
+    background: var(--surface-1);
+    border-right: 1px solid var(--border-subtle);
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    overflow-y: auto;
+
+    .palette-group {
+        margin-bottom: 12px;
+
+        &__title {
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+            font-weight: 600;
+            margin-bottom: 6px;
+            padding: 0 8px;
+        }
+    }
+
+    .palette-title {
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--text-muted);
+        margin-bottom: 8px;
+        padding: 0 8px;
+    }
+
+    .palette-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 12px;
+        border-radius: 6px;
+        cursor: grab;
+        color: var(--text-secondary);
+        font-size: 13px;
+        transition: background 0.15s;
+        user-select: none;
+
+        &:hover {
+            background: var(--surface-hover);
+        }
+
+        &:active {
+            cursor: grabbing;
+            background: var(--surface-hover);
+        }
+
+        i {
+            font-size: 16px;
+            color: var(--accent);
+        }
+
+        &--member {
+            // No special styling
+        }
+
+        &__hint {
+            font-size: 9px;
+            color: var(--text-dim);
+            margin-left: auto;
+            font-style: italic;
+        }
+    }
+
+    .palette-info {
+        padding: 8px 12px;
+        font-size: 11px;
+        color: var(--text-muted);
+        line-height: 1.5;
+        font-style: italic;
+    }
+
+    .palette-divider {
+        height: 1px;
+        background: var(--border-subtle);
+        margin: 12px 0;
+    }
+
+    .palette-instructions {
+        padding: 8px;
+        font-size: 11px;
+        color: var(--text-muted);
+        line-height: 1.6;
+
+        p {
+            margin: 4px 0;
+        }
+
+        strong {
+            color: var(--text-secondary);
+        }
+    }
+}
+
+// ============================================
+// REACT FLOW OVERRIDES
+// ============================================
+
+.editor-v2 .react-flow {
+    background: var(--canvas-bg);
+
+    .react-flow__background {
+        background: var(--canvas-bg);
+    }
+
+    .react-flow__minimap {
+        background: var(--surface-1);
+        border-radius: 8px;
+        overflow: hidden;
+        border: 1px solid var(--border-subtle);
+
+        .react-flow__minimap-node {
+            opacity: 0.4;
+        }
+    }
+
+    .react-flow__controls {
+        display: none;
+    }
+
+    .react-flow__attribution {
+        display: none;
+    }
+
+    .react-flow__selection {
+        background: var(--selection-bg) !important;
+        border: 1px solid var(--selection-border) !important;
+        border-radius: 4px;
+    }
+
+    .react-flow__nodesselection-rect {
+        background: var(--selection-bg);
+        border: 1px dashed var(--accent);
+    }
+}
+
+// ============================================
+// NODE RESIZER
+// ============================================
+
+.node-resize-line,
+.react-flow__resize-control.line,
+.react-flow__resize-control:not(.handle) {
+    background: transparent !important;
+    background-color: transparent !important;
+    border: none !important;
+    border-color: transparent !important;
+    box-shadow: none !important;
+    opacity: 0 !important;
+    pointer-events: auto;
+
+
+    &.top, &.bottom {
+        height: 4px !important;
+        min-height: 4px !important;
+        max-height: 4px !important;
+    }
+    &.left, &.right {
+        width: 4px !important;
+        min-width: 4px !important;
+        max-width: 4px !important;
+    }
+
+    &:hover {
+        opacity: 0.5 !important;
+        background: var(--accent-muted) !important;
+    }
+
+}
+
+.node-resize-handle,
+.react-flow__resize-control.handle {
+    width: 8px !important;
+    height: 8px !important;
+    min-width: 8px !important;
+    min-height: 8px !important;
+    max-width: 8px !important;
+    max-height: 8px !important;
+    background: var(--resize-handle-bg) !important;
+    background-color: var(--resize-handle-bg) !important;
+    border: 2px solid var(--resize-handle-border) !important;
+    border-radius: 2px !important;
+    opacity: 1 !important;
+    box-shadow: none !important;
+}
+
+[class*="resize-control"][class*="line"],
+[class*="resize-control"][class*="left"]:not([class*="handle"]),
+[class*="resize-control"][class*="right"]:not([class*="handle"]),
+[class*="resize-control"][class*="top"]:not([class*="handle"]),
+[class*="resize-control"][class*="bottom"]:not([class*="handle"]) {
+    background: transparent !important;
+    background-color: transparent !important;
+    border: none !important;
+    opacity: 0 !important;
+}
+
+// ============================================
+// ANCHOR HANDLES — Hidden by default, visible on hover/selection
+// ============================================
+
+.mm-anchor {
+    width: 8px !important;
+    height: 8px !important;
+    background: var(--anchor-bg) !important;
+    border: 1.5px solid var(--anchor-border) !important;
+    border-radius: 50% !important;
+    opacity: 0 !important;
+    transition: opacity 0.15s ease, transform 0.15s ease !important;
+    pointer-events: none !important;
+}
+
+// Visible when NODE is hovered
+.mm-node:hover .mm-anchor {
+    opacity: 1 !important;
+    pointer-events: all !important;
+}
+
+// Visible when NODE is selected
+.mm-node.selected .mm-anchor {
+    opacity: 1 !important;
+    pointer-events: all !important;
+}
+
+// Visible during connection creation
+.react-flow__node.connecting .mm-anchor,
+.react-flow.connecting .mm-anchor {
+    opacity: 0.6 !important;
+    pointer-events: all !important;
+}
+
+// Node target under mouse shows full anchors during connection
+.react-flow.connecting .react-flow__node:hover .mm-anchor {
+    opacity: 1 !important;
+}
+
+// Hover on anchor itself — highlight
+.mm-anchor:hover {
+    opacity: 1 !important;
+    background: var(--accent) !important;
+    border-color: var(--text-primary) !important;
+    transform: scale(1.3) !important;
+}
+
+.react-flow__handle-connecting {
+    opacity: 1 !important;
+    background: var(--accent) !important;
+    pointer-events: all !important;
+}
+
+.react-flow__handle-valid {
+    opacity: 1 !important;
+    background: var(--anchor-valid) !important;
+    border-color: var(--text-primary) !important;
+    pointer-events: all !important;
+}
+
+// Pool handles — pre-allocated but inactive, always invisible
+.react-flow__handle.mm-anchor--pool,
+.mm-node:hover .react-flow__handle.mm-anchor--pool,
+.mm-node.selected .react-flow__handle.mm-anchor--pool,
+.react-flow__node.connecting .mm-anchor--pool,
+.react-flow.connecting .mm-anchor--pool,
+.react-flow.connecting .react-flow__node:hover .mm-anchor--pool {
+    opacity: 0 !important;
+    pointer-events: none !important;
+    width: 1px !important;
+    height: 1px !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    background: transparent !important;
+    border: none !important;
+}
+
+// ============================================
+// MM-NODE BASE STYLES (Compact Technical Style)
+// ============================================
+
+.mm-node {
+    background: var(--node-bg);
+    border: 1px solid var(--border-default);
+    border-radius: 4px;
+    min-width: 140px;
+    width: 100%;
+    height: 100%;
+    // overflow: hidden;
+    font-family: 'Inter Variable', 'Inter', sans-serif;
+    font-size: 13px;
+    color: var(--text-primary);
+    box-shadow: 0 1px 3px var(--node-shadow), 0 4px 12px var(--node-shadow-deep, rgba(0, 0, 0, 0.08));
+    cursor: default;
+
+    &.selected {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 2px var(--accent-muted), 0 4px 16px var(--node-shadow-deep, rgba(0, 0, 0, 0.12));
+    }
+
+    &.drop-target {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 2px var(--drop-glow), inset 0 0 16px var(--drop-inner);
+    }
+
+    &.viewpoint-wrapper {
+        background: transparent;
+        border: none;
+        box-shadow: none;
+        min-width: auto;
+        overflow: visible;
+
+        &.selected {
+            outline: 2px solid var(--accent);
+            outline-offset: 2px;
+            border-radius: 4px;
+        }
+    }
+
+    // Header - compact, flat background
+    &__header {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        padding: 4px 8px;
+        min-height: 22px;
+        font-weight: 500;
+        font-size: 13px;
+        cursor: grab;
+        color: var(--node-header-text);
+
+        &:active {
+            cursor: grabbing;
+        }
+
+        // When stereotype is present, stack vertically
+        &:has(.mm-node__stereotype) {
+            flex-direction: column;
+            gap: 0;
+            padding: 3px 8px 4px;
+            text-align: center;
+        }
+    }
+
+    // Badge - small type indicator (legacy)
+    &__badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0 3px;
+        min-width: 14px;
+        height: 14px;
+        background: var(--header-badge-bg);
+        color: var(--header-badge-color);
+        border-radius: 3px;
+        font-size: 10px;
+        font-weight: 700;
+        flex-shrink: 0;
+    }
+
+    // UML stereotype label (e.g. «abstract», «enumeration»)
+    &__stereotype {
+        font-size: 9px;
+        font-style: italic;
+        font-weight: 400;
+        color: var(--stereotype-color, rgba(255, 255, 255, 0.6));
+        letter-spacing: 0.02em;
+        flex-shrink: 0;
+        font-family: 'Inter Variable', 'Inter', sans-serif;
+    }
+
+    // Name - editable, centered in header
+    &__name {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    // Input for editing name
+    &__input {
+        min-width: 0;
+        background: transparent;
+        border: none;
+        outline: none;
+        color: inherit;
+        font: inherit;
+        padding: 0;
+        text-align: center;
+
+        &::selection {
+            background: var(--selection-bg);
+        }
+    }
+
+    // Body - contains fields, auto-fit to content
+    &__body {
+        padding: 4px 0 2px;
+    }
+
+    // Fields container with grid for alignment
+    &__fields {
+        display: grid;
+        grid-template-columns: auto auto 1fr auto;
+        gap: 0;
+    }
+
+    // Separator between sections
+    &__separator {
+        height: 1px;
+        background: var(--node-separator);
+        margin: 3px 8px;
+    }
+
+    // Empty state
+    &__empty {
+        text-align: center;
+        font-size: 10px;
+        color: var(--text-dim);
+        padding: 4px 8px;
+        font-style: italic;
+        font-family: 'Inter Variable', 'Inter', sans-serif;
+    }
+
+    // Package tab style header
+    &__tab {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: var(--package-header-bg);
+        border: 1px solid var(--border-default);
+        border-bottom: none;
+        border-radius: 4px 4px 0 0;
+        padding: 2px 8px;
+        font-weight: 500;
+        font-size: 12px;
+        color: var(--package-header-text);
+        cursor: grab;
+
+        &:active {
+            cursor: grabbing;
+        }
+    }
+
+    // Package container area
+    &__container {
+        background: var(--package-body-bg);
+        border: 1px solid var(--package-body-border, var(--border-default));
+        border-radius: 0 4px 4px 4px;
+        min-height: 80px;
+        height: calc(100% - 26px);
+    }
+}
+
+// ============================================
+// MM-CLASS (Class Node)
+// ============================================
+
+.mm-class {
+    .mm-node__header {
+        background: var(--class-header-bg);
+        border-bottom: 1px solid var(--node-separator);
+    }
+
+    &.abstract {
+        .mm-node__header {
+            background: var(--class-abstract-header-bg);
+        }
+
+        .mm-node__name {
+            font-style: italic;
+        }
+    }
+}
+
+// ============================================
+// MM-ENUM (Enum Node)
+// ============================================
+
+.mm-enum {
+    min-width: 120px;
+
+    .mm-node__header {
+        background: var(--enum-header-bg);
+        border-bottom: 1px solid var(--node-separator);
+    }
+
+    &.selected {
+        border-color: var(--enum-accent);
+        box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.3), 0 2px 8px var(--node-shadow);
+    }
+
+    &.drop-target {
+        border-color: var(--enum-accent);
+        box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.25), inset 0 0 16px rgba(124, 58, 237, 0.05);
+    }
+}
+
+// ============================================
+// MM-PACKAGE (Package Node)
+// ============================================
+
+.mm-package {
+    min-width: 200px;
+    min-height: 120px;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+
+    &.selected {
+        border: none;
+        box-shadow: none;
+
+        .mm-node__tab,
+        .mm-node__container {
+            border-color: var(--package-accent);
+        }
+
+        .mm-node__container {
+            box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.3), 0 2px 8px var(--node-shadow);
+        }
+    }
+}
+
+// ============================================
+// MM-FIELD (Attribute/Operation Row)
+// ============================================
+
+.mm-field {
+    display: grid;
+    grid-column: 1 / -1;
+    grid-template-columns: subgrid;
+    padding: 2px 8px;
+    min-height: 20px;
+    font-size: 12px;
+    align-items: center;
+    transition: background 0.1s;
+
+    &:hover {
+        background: var(--field-row-hover);
+    }
+
+    // Field name — stronger weight for readability
+    &__name {
+        color: var(--field-name-color);
+        cursor: text;
+        font-size: 12px;
+        font-weight: 500;
+        white-space: nowrap;
+        padding: 0 2px;
+        border-radius: 2px;
+
+        &:hover {
+            background: var(--surface-hover);
+        }
+    }
+
+    // Colon separator — muted
+    &__separator {
+        color: var(--text-dim);
+        padding: 0 1px;
+        opacity: 0.6;
+    }
+
+    // Type — lighter weight, distinct color
+    &__type {
+        color: var(--field-type-color);
+        cursor: text;
+        font-size: 12px;
+        font-weight: 400;
+        white-space: nowrap;
+        padding: 0 2px;
+        border-radius: 2px;
+
+        &:hover {
+            background: var(--surface-hover);
+        }
+    }
+
+    // Bounds [0..*]
+    &__bound {
+        color: var(--field-bound-color);
+        font-size: 11px;
+        text-align: right;
+        padding-left: 4px;
+    }
+
+    // Input for editing
+    &__input {
+        background: var(--input-bg);
+        border: 1px solid var(--border-default);
+        border-radius: 3px;
+        outline: none;
+        color: var(--field-name-color);
+        font: inherit;
+        padding: 0 4px;
+        height: 18px;
+        width: auto;
+        min-width: 40px;
+        max-width: 100px;
+
+        &:focus {
+            border-color: var(--accent);
+        }
+
+        &::selection {
+            background: var(--selection-bg);
+        }
+    }
+
+    // Select for type - ultra compact inline
+    &__select {
+        background: var(--surface-1);
+        border: 1px solid var(--border-default);
+        border-radius: 2px;
+        outline: none;
+        color: var(--field-type-color);
+        font: inherit;
+        font-size: 11px;
+        padding: 0 1px;
+        height: 15px;
+        cursor: pointer;
+        width: auto;
+        min-width: 0;
+        max-width: 55px;
+
+        option {
+            background: var(--surface-1);
+            color: var(--text-primary);
+        }
+    }
+}
+
+// ============================================
+// INLINE TYPE SELECT (Custom compact dropdown)
+// ============================================
+
+.inline-type-select {
+    position: relative;
+    outline: none;
+
+    &__list {
+        position: absolute;
+        top: -2px;
+        left: -4px;
+        min-width: 90px;
+        max-height: 140px;
+        overflow-y: auto;
+        background: var(--surface-1);
+        border: 1px solid var(--border-default);
+        border-radius: 4px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        z-index: 100;
+        padding: 2px 0;
+
+        &::-webkit-scrollbar {
+            width: 4px;
+        }
+        &::-webkit-scrollbar-thumb {
+            background: var(--scrollbar-thumb);
+            border-radius: 2px;
+        }
+    }
+
+    &__group {
+        padding: 3px 8px 2px;
+        font-size: 9px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--text-dim);
+        border-top: 1px solid var(--border-subtle);
+        margin-top: 2px;
+
+        &:first-child {
+            border-top: none;
+            margin-top: 0;
+        }
+    }
+
+    &__option {
+        padding: 3px 8px;
+        font-size: 11px;
+        color: var(--text-secondary);
+        cursor: pointer;
+        white-space: nowrap;
+
+        &:hover,
+        &.highlighted {
+            background: var(--surface-hover);
+        }
+
+        &.selected {
+            color: var(--accent);
+            font-weight: 500;
+        }
+    }
+}
+
+// Operation styling
+.mm-operation {
+    .mm-field__name {
+        font-style: italic;
+        color: var(--text-secondary);
+    }
+}
+
+// ============================================
+// MM-LITERAL (Enum Literal Row)
+// ============================================
+
+// Enum fields - 2 columns (name only, no type)
+.mm-enum .mm-node__fields {
+    grid-template-columns: 1fr;
+}
+
+.mm-literal {
+    display: grid;
+    grid-column: 1 / -1;
+    grid-template-columns: subgrid;
+    padding: 2px 8px;
+    min-height: 20px;
+    font-size: 13px;
+    align-items: center;
+    transition: background 0.1s;
+
+    &:hover {
+        background: var(--field-row-hover);
+    }
+
+    &__name {
+        color: var(--literal-name-color);
+        cursor: text;
+        text-transform: uppercase;
+        letter-spacing: 0.02em;
+
+        &:hover {
+            text-decoration: underline;
+            text-decoration-style: dotted;
+        }
+    }
+
+    &__input {
+        background: transparent;
+        border: none;
+        outline: none;
+        color: var(--literal-name-color);
+        font: inherit;
+        padding: 0;
+        width: 100%;
+        text-transform: uppercase;
+
+        &::selection {
+            background: var(--selection-bg);
+        }
+    }
+}
+
+// ============================================
+// VIEWPOINT
+// ============================================
+
+.viewpoint-container {
+    min-width: 120px;
+    width: 100%;
+    height: 100%;
+}
+
+.viewpoint-error {
+    padding: 8px 12px;
+    background: var(--danger-bg);
+    color: var(--danger);
+    border-radius: 6px;
+    font-size: 11px;
+    border: 1px solid var(--danger);
+}
+
+// ============================================
+// EDGES
+// ============================================
+
+.reference-edge {
+    stroke: var(--edge-color);
+    stroke-width: 1;
+    fill: none;
+
+    &.selected {
+        stroke: var(--edge-selected);
+        stroke-width: 1.5;
+    }
+
+    // All edge types use the same stroke color
+    // The kind (composition/aggregation) is shown via markers, not stroke color
+}
+
+.inheritance-edge {
+    stroke: var(--edge-color);
+    stroke-width: 1;
+    fill: none;
+
+    &.selected {
+        stroke: var(--edge-selected);
+        stroke-width: 1.5;
+    }
+}
+
+// Reference edge markers - all use same edge color
+.reference-marker {
+    &.filled {
+        fill: var(--edge-marker-stroke);
+        stroke: var(--edge-marker-stroke);
+        stroke-width: 1;
+    }
+
+    &.hollow {
+        fill: var(--edge-marker-fill);
+        stroke: var(--edge-marker-stroke);
+        stroke-width: 1.5;
+    }
+
+    &.arrow {
+        fill: none;
+        stroke: var(--edge-marker-stroke);
+        stroke-width: 1.5;
+    }
+}
+
+// Inheritance edge marker (hollow triangle)
+.inheritance-marker {
+    fill: var(--edge-marker-fill);
+    stroke: var(--edge-marker-stroke);
+    stroke-width: 1;
+
+    &.selected {
+        stroke: var(--edge-selected);
+    }
+}
+
+.reference-badge {
+    font-size: 10px;
+    pointer-events: none;
+
+    &__bg {
+        fill: var(--edge-label-bg);
+        stroke: var(--border-default);
+        stroke-width: 1;
+    }
+
+    &__text {
+        fill: var(--text-secondary);
+        font-family: 'Inter Variable', 'Inter', sans-serif;
+        font-size: 9px;
+        text-anchor: middle;
+        dominant-baseline: central;
+    }
+
+    &__kind {
+        fill: var(--text-muted);
+        font-size: 11px;
+        text-anchor: middle;
+        dominant-baseline: central;
+    }
+}
+
+.react-flow__edge-path {
+    stroke: var(--edge-color);
+    stroke-width: 1.5;
+}
+
+.react-flow__edge.selected .react-flow__edge-path {
+    stroke: var(--edge-selected);
+    stroke-width: 2;
+}
+
+// ============================================
+// EDGE LABELS
+// ============================================
+
+// Edge label text
+.edge-label__text {
+    font-family: 'Inter Variable', 'Inter', sans-serif;
+    font-size: 10px;
+    color: var(--text-secondary);
+    //background: var(--edge-label-bg);
+    padding: 1px 5px;
+    border-radius: 3px;
+    border: none;
+    white-space: nowrap;
+    box-shadow: none;
+}
+
+// Cardinality — naked text, no background
+.edge-cardinality {
+    font-family: 'Inter Variable', 'Inter', sans-serif;
+    font-size: 10px;
+    font-weight: 500;
+    color: var(--text-muted);
+    background: none;
+    padding: 0;
+    border: none;
+    white-space: nowrap;
+    box-shadow: none;
+}
+
+.edge-label {
+    pointer-events: all;
+    background-color: transparent!important;
+    border: none!important;
+
+    &__text {
+        cursor: default;
+        transition: border-color 0.15s;
+
+        &:hover {
+            border-color: var(--border-default);
+        }
+    }
+
+    &.selected &__text {
+        border-color: var(--accent);
+        color: var(--text-primary);
+    }
+
+    &__input {
+        font-family: 'Inter Variable', 'Inter', sans-serif;
+        background: var(--input-bg);
+        border: 1px solid var(--accent);
+        color: var(--input-text);
+        font-size: 9px;
+        padding: 1px 4px;
+        border-radius: 2px;
+        outline: none;
+        width: 60px;
+        text-align: center;
+
+        &::selection {
+            background: var(--selection-bg);
+        }
+    }
+}
+
+.manhattan-edge__label {
+    font-size: 10px;
+    color: var(--text-secondary);
+    background: var(--edge-label-bg);
+    padding: 2px 6px;
+    border-radius: 4px;
+    white-space: nowrap;
+}
+
+.react-flow__edge-text {
+    font-size: 10px;
+    fill: var(--text-muted);
+}
+
+// .edge-cardinality styles merged above with .edge-label__text
+
+// ============================================
+// CONNECTION LINE
+// ============================================
+
+.react-flow__connection-line {
+    stroke: var(--accent);
+    stroke-width: 2;
+    stroke-dasharray: 5 5;
+}
+
+// ============================================
+// EDGE WAYPOINT HANDLES (segment drag handles)
+// ============================================
+
+.segment-handle {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--accent, #0ea5e9);
+    border: 2px solid #fff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+    z-index: 10;
+    transition: width 0.1s, height 0.1s, background 0.1s;
+
+    &:hover {
+        width: 10px;
+        height: 10px;
+        background: #22d3ee;
+    }
+
+    &.dragging {
+        width: 10px;
+        height: 10px;
+        background: #22d3ee;
+        box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.25), 0 1px 3px rgba(0, 0, 0, 0.3);
+    }
+}
+
+// ============================================
+// ENDPOINT HANDLES (source/target anchor drag)
+// ============================================
+
+.endpoint-handle {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #ffffff;
+    border: 2px solid var(--accent, #0ea5e9);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+    z-index: 11;
+    cursor: grab;
+    transition: width 0.1s, height 0.1s, background 0.1s, border-color 0.1s;
+
+    &:hover {
+        width: 12px;
+        height: 12px;
+        background: #e0f2fe;
+        border-color: #22d3ee;
+    }
+
+    &.dragging {
+        width: 12px;
+        height: 12px;
+        background: var(--accent, #0ea5e9);
+        border-color: #fff;
+        cursor: grabbing;
+        box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.3), 0 2px 6px rgba(0, 0, 0, 0.3);
+    }
+}
+
+.endpoint-side-indicator {
+    pointer-events: none;
+    z-index: 9;
+    border-radius: 2px;
+    background: rgba(14, 165, 233, 0.35);
+}
+
+// ============================================
+// PROPERTIES PANEL
+// ============================================
+
+.properties-panel {
+    width: 280px;
+    background: var(--surface-2);
+    border-left: 1px solid var(--border-subtle);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    flex-shrink: 0;
+    font-size: 13px;
+    color: var(--text-primary);
+
+    &__scroll {
+        flex: 1;
+        overflow-y: auto;
+        overflow-x: hidden;
+
+        &::-webkit-scrollbar {
+            width: 5px;
+        }
+        &::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        &::-webkit-scrollbar-thumb {
+            background: var(--scrollbar-thumb);
+            border-radius: 3px;
+            &:hover { background: var(--scrollbar-thumb-hover); }
+        }
+    }
+
+    &__header {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 14px 16px;
+        background: var(--surface-3);
+        border-bottom: 1px solid var(--border-subtle);
+        flex-shrink: 0;
+
+        i {
+            font-size: 15px;
+            color: var(--accent);
+            width: 20px;
+            text-align: center;
+        }
+    }
+
+    &__title {
+        font-weight: 600;
+        font-size: 13px;
+        letter-spacing: 0.01em;
+    }
+
+    &__subtitle {
+        font-size: 11px;
+        color: var(--text-muted);
+        margin-left: auto;
+        font-family: 'IBM Plex Mono', Monaco, Consolas, monospace;
+    }
+
+    &__empty {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+        color: var(--text-dim);
+        font-size: 13px;
+        padding: 40px;
+        text-align: center;
+
+        i {
+            font-size: 28px;
+            opacity: 0.5;
+        }
+
+        span {
+            line-height: 1.5;
+        }
+    }
+}
+
+// ============================================
+// SECTIONS
+// ============================================
+
+.prop-section {
+    border-bottom: 1px solid var(--border-subtle);
+
+    &__header {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 10px 16px;
+        cursor: pointer;
+        user-select: none;
+        transition: background 0.12s;
+
+        &:hover {
+            background: var(--surface-hover);
+        }
+
+        .chevron {
+            font-size: 10px;
+            color: var(--text-muted);
+            transition: transform 0.2s;
+            width: 12px;
+            text-align: center;
+        }
+
+        &.collapsed .chevron {
+            transform: rotate(-90deg);
+        }
+    }
+
+    &__title {
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--text-muted);
+        font-weight: 500;
+    }
+
+    &__count {
+        font-size: 10px;
+        color: var(--text-dim);
+        margin-left: auto;
+        font-family: 'IBM Plex Mono', Monaco, Consolas, monospace;
+        background: var(--surface-hover);
+        padding: 1px 6px;
+        border-radius: 8px;
+    }
+
+    &__body {
+        padding: 0 16px 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    &__actions {
+        margin-left: auto;
+    }
+}
+
+.prop-section-add-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    border-radius: 4px;
+    font-size: 14px;
+    transition: all 0.15s;
+
+    &:hover {
+        color: var(--accent);
+        background: var(--accent-subtle);
+    }
+}
+
+// ============================================
+// FORM ELEMENTS
+// ============================================
+
+.prop-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.prop-label {
+    font-size: 11px;
+    color: var(--text-muted);
+    font-weight: 500;
+    letter-spacing: 0.02em;
+}
+
+.prop-input {
+    background: var(--input-bg);
+    border: 1px solid var(--input-border);
+    border-radius: 6px;
+    color: var(--input-text);
+    font-size: 13px;
+    height: 36px;
+    min-height: 36px;
+    padding: 6px 10px;
+    outline: none;
+    width: 100%;
+    box-sizing: border-box;
+    transition: border-color 0.15s, box-shadow 0.15s;
+    font-family: inherit;
+    line-height: 1.4;
+
+    &::placeholder {
+        color: var(--input-placeholder);
+    }
+
+    &:hover {
+        border-color: var(--border-strong);
+    }
+
+    &:focus {
+        border-color: var(--input-focus);
+        box-shadow: 0 0 0 2px var(--accent-muted);
+    }
+
+    &--sm {
+        padding: 6px 8px;
+        font-size: 12px;
+        flex: 1;
+        min-width: 0;
+    }
+
+    &--xs {
+        width: 52px;
+        text-align: center;
+        font-family: 'IBM Plex Mono', Monaco, Consolas, monospace;
+        font-size: 12px;
+        padding: 6px 6px;
+    }
+
+    &--mono {
+        font-family: 'IBM Plex Mono', Monaco, Consolas, monospace;
+        font-size: 12px;
+    }
+}
+
+.prop-select {
+    background: var(--input-bg);
+    border: 1px solid var(--input-border);
+    border-radius: 6px;
+    color: var(--input-text);
+    font-size: 13px;
+    height: 36px;
+    min-height: 36px;
+    padding: 6px 10px;
+    padding-right: 28px;
+    outline: none;
+    cursor: pointer;
+    min-width: 80px;
+    box-sizing: border-box;
+    transition: border-color 0.15s;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 16 16'%3E%3Cpath fill='%2364748b' d='M4.646 5.646a.5.5 0 0 1 .708 0L8 8.293l2.646-2.647a.5.5 0 0 1 .708.708l-3 3a.5.5 0 0 1-.708 0l-3-3a.5.5 0 0 1 0-.708z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+
+    &:hover { border-color: var(--border-strong); }
+    &:focus { border-color: var(--input-focus); box-shadow: 0 0 0 2px var(--accent-muted); }
+
+    option {
+        background: var(--surface-2);
+        color: var(--input-text);
+    }
+}
+
+.prop-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    font-size: 12px;
+    color: var(--text-primary);
+    padding: 4px 0;
+
+    input[type="checkbox"] {
+        appearance: none;
+        width: 16px;
+        height: 16px;
+        border: 1.5px solid var(--border-strong, rgba(0, 0, 0, 0.35));
+        border-radius: 4px;
+        background: var(--input-bg);
+        cursor: pointer;
+        position: relative;
+        flex-shrink: 0;
+        transition: all 0.15s;
+
+        &:checked {
+            background: #334155;
+            border-color: #334155;
+
+            &::after {
+                content: '';
+                position: absolute;
+                left: 4.5px;
+                top: 1.5px;
+                width: 5px;
+                height: 9px;
+                border: solid white;
+                border-width: 0 2px 2px 0;
+                transform: rotate(45deg);
+            }
+        }
+
+        &:hover {
+            border-color: var(--border-strong);
+        }
+    }
+}
+
+// ============================================
+// LIST ITEMS
+// ============================================
+
+.prop-list-item {
+    display: grid;
+    grid-template-columns: 1fr 1fr auto;
+    gap: 6px;
+    align-items: center;
+    padding: 4px 0;
+    border-radius: 4px;
+
+    &:hover {
+        .prop-remove-btn { opacity: 1; }
+    }
+
+    .prop-input--sm,
+    .prop-select {
+        min-width: 0;
+        width: 100%;
+    }
+}
+
+.prop-remove-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border: none;
+    background: transparent;
+    color: var(--text-dim);
+    cursor: pointer;
+    border-radius: 4px;
+    font-size: 13px;
+    flex-shrink: 0;
+    opacity: 0;
+    transition: all 0.15s;
+
+    &:hover {
+        color: var(--danger);
+        background: var(--danger-bg);
+    }
+}
+
+// ============================================
+// KIND & TYPE SELECTORS
+// ============================================
+
+.prop-kind-selector {
+    display: flex;
+    gap: 4px;
+    background: var(--input-bg);
+    border-radius: 8px;
+    padding: 3px;
+}
+
+.prop-kind-option {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    padding: 6px 8px;
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 12px;
+    transition: all 0.15s;
+    white-space: nowrap;
+
+    &:hover {
+        color: var(--text-primary);
+        background: var(--surface-hover);
+    }
+
+    &.active {
+        background: var(--surface-3);
+        color: var(--text-primary);
+        box-shadow: 0 1px 3px var(--node-shadow);
+    }
+
+    &__icon {
+        font-size: 12px;
+    }
+
+    &__label {
+        font-size: 11px;
+        text-transform: capitalize;
+    }
+}
+
+.prop-edge-type-selector {
+    display: flex;
+    gap: 4px;
+    background: var(--input-bg);
+    border-radius: 8px;
+    padding: 3px;
+}
+
+.prop-edge-type {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 7px 10px;
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 12px;
+    transition: all 0.15s;
+
+    &:hover:not(:disabled) {
+        color: var(--text-primary);
+        background: var(--surface-hover);
+    }
+
+    &.active {
+        background: var(--accent-muted);
+        color: var(--text-primary);
+        cursor: default;
+
+        i { color: var(--accent); }
+    }
+
+    &:disabled {
+        cursor: default;
+    }
+
+    i { font-size: 13px; }
+}
+
+// ============================================
+// CARDINALITY
+// ============================================
+
+.prop-cardinality {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    &__inputs {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    &__dot {
+        color: var(--text-dim);
+        font-size: 11px;
+    }
+
+    &__preview {
+        font-family: 'IBM Plex Mono', Monaco, Consolas, monospace;
+        font-size: 12px;
+        color: var(--accent);
+        background: var(--accent-muted);
+        padding: 4px 8px;
+        border-radius: 4px;
+        margin-left: auto;
+    }
+}
+
+// ============================================
+// INFO ELEMENTS
+// ============================================
+
+.prop-badge {
+    display: inline-flex;
+    align-items: center;
+    background: var(--surface-hover);
+    color: var(--text-muted);
+    font-size: 11px;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-family: 'IBM Plex Mono', Monaco, Consolas, monospace;
+    gap: 4px;
+}
+
+.prop-row {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.prop-info {
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+.prop-hint {
+    font-size: 10px;
+    color: var(--text-dim);
+    font-style: italic;
+    margin-top: -4px;
+}
+
+.prop-empty {
+    font-size: 11px;
+    color: var(--text-dim);
+    font-style: italic;
+    text-align: center;
+    padding: 8px 0;
+}
+
+// ============================================
+// CONTEXT MENU
+// ============================================
+
+.context-menu-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 999;
+}
+
+.context-menu {
+    position: fixed;
+    z-index: 1000;
+    background: var(--menu-bg);
+    border: 1px solid var(--border-default);
+    border-radius: 8px;
+    padding: 4px;
+    min-width: 160px;
+    box-shadow: 0 8px 24px var(--menu-shadow);
+
+    &__item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        width: 100%;
+        padding: 8px 12px;
+        border: none;
+        background: transparent;
+        color: var(--text-secondary);
+        font-size: 13px;
+        border-radius: 4px;
+        cursor: pointer;
+        text-align: left;
+        transition: background 0.15s;
+
+        &:hover {
+            background: var(--surface-hover);
+        }
+
+        &.danger {
+            color: var(--danger);
+
+            &:hover {
+                background: var(--danger-bg);
+            }
+        }
+
+        i {
+            font-size: 14px;
+            width: 16px;
+            text-align: center;
+        }
+    }
+
+    &__divider {
+        height: 1px;
+        background: var(--border-subtle);
+        margin: 3px 8px;
+    }
+}
+
+// ============================================
+// ANCHOR SELECTOR
+// ============================================
+
+.prop-anchors-row {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+}
+
+.anchor-selector {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+
+    &__label {
+        font-size: 11px;
+        font-weight: 600;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+    }
+
+    &__grid {
+        display: grid;
+        grid-template-columns: 28px 28px 28px;
+        grid-template-rows: 28px 28px 28px;
+        gap: 2px;
+    }
+
+    &__cell {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
+        &--top    { grid-column: 2; grid-row: 1; }
+        &--left   { grid-column: 1; grid-row: 2; }
+        &--center { grid-column: 2; grid-row: 2; }
+        &--right  { grid-column: 3; grid-row: 2; }
+        &--bottom { grid-column: 2; grid-row: 3; }
+    }
+}
+
+.anchor-btn {
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--border-subtle);
+    border-radius: 4px;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 12px;
+    padding: 0;
+    transition: all 0.12s;
+
+    &:hover {
+        background: var(--surface-hover);
+        color: var(--text-primary);
+        border-color: var(--border-color);
+    }
+
+    &.active {
+        background: rgba(14, 165, 233, 0.15);
+        border-color: #0ea5e9;
+        color: #0ea5e9;
+    }
+}
+
+.anchor-center {
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-muted);
+    border: 1px solid var(--border-subtle);
+    border-radius: 4px;
+    background: var(--surface-2);
+
+    &.pinned {
+        color: #0ea5e9;
+        border-color: rgba(14, 165, 233, 0.3);
+
+        i { font-size: 11px; }
+    }
+}
+
+.anchor-auto-btn {
+    font-size: 10px;
+    font-weight: 600;
+    padding: 2px 10px;
+    border: 1px solid var(--border-subtle);
+    border-radius: 3px;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.12s;
+
+    &:hover {
+        background: var(--surface-hover);
+        color: var(--text-primary);
+    }
+
+    &.active {
+        background: var(--surface-3);
+        color: var(--text-primary);
+        border-color: var(--border-color);
+    }
+}
+
+// ============================================
+// HEADER VARIANTS (switchable via body class from DevTools)
+//
+// Usage:  document.body.classList.add('header-variant-a')
+// Reset:  document.body.className = ''
+// No class on body → current default appearance
+// ============================================
+
+// --- Variant A: Current colors at reduced opacity (60%) ---
+body.header-variant-a {
+    // Dark theme
+    .editor-v2.theme-dark {
+        --class-header-bg: rgba(55, 88, 122, 0.6);           // #37587a @ 60%
+        --class-abstract-header-bg: rgba(62, 74, 90, 0.6);   // #3e4a5a @ 60%
+        --enum-header-bg: rgba(91, 74, 122, 0.6);            // #5b4a7a @ 60%
+        --package-header-bg: rgba(45, 58, 74, 0.6);          // #2d3a4a @ 60%
+    }
+    // Light theme
+    .editor-v2.theme-light {
+        --class-header-bg: rgba(123, 175, 212, 0.65);        // #7bafd4 @ 65%
+        --class-abstract-header-bg: rgba(168, 181, 196, 0.65); // #a8b5c4 @ 65%
+        --enum-header-bg: rgba(165, 149, 201, 0.65);         // #a595c9 @ 65%
+        --package-header-bg: rgba(216, 222, 230, 0.65);      // #d8dee6 @ 65%
+    }
+}
+
+// --- Variant B: White/light header with colored top border ---
+body.header-variant-b {
+    .mm-node__header {
+        border-top: 4px solid var(--variant-b-accent, #5b8fb9);
+    }
+
+    // Dark theme
+    .editor-v2.theme-dark {
+        --class-header-bg: #2d3a4a;
+        --class-abstract-header-bg: #2d3a4a;
+        --enum-header-bg: #2d3a4a;
+        --node-header-text: rgba(255, 255, 255, 0.85);
+        --stereotype-color: rgba(255, 255, 255, 0.5);
+
+        .mm-class .mm-node__header { --variant-b-accent: #5b8fb9; }
+        .mm-class.abstract .mm-node__header { --variant-b-accent: #94a3b8; }
+        .mm-enum .mm-node__header { --variant-b-accent: #8b7db8; }
+    }
+
+    // Light theme
+    .editor-v2.theme-light {
+        --class-header-bg: #f8fafc;
+        --class-abstract-header-bg: #f8fafc;
+        --enum-header-bg: #f8fafc;
+        --node-header-text: #334155;
+        --stereotype-color: #64748b;
+
+        .mm-class .mm-node__header { --variant-b-accent: #5b8fb9; }
+        .mm-class.abstract .mm-node__header { --variant-b-accent: #94a3b8; }
+        .mm-enum .mm-node__header { --variant-b-accent: #8b7db8; }
+    }
+}
+
+// --- Variant C: Pastel background with matching dark text ---
+body.header-variant-c {
+    // Dark theme — slightly muted pastels for dark mode
+    .editor-v2.theme-dark {
+        --class-header-bg: rgba(59, 130, 246, 0.2);          // blue tint
+        --class-abstract-header-bg: rgba(148, 163, 184, 0.2); // gray tint
+        --enum-header-bg: rgba(139, 92, 246, 0.2);           // purple tint
+        --node-header-text: rgba(255, 255, 255, 0.9);
+        --stereotype-color: rgba(255, 255, 255, 0.55);
+    }
+
+    // Light theme — true pastel backgrounds
+    .editor-v2.theme-light {
+        --class-header-bg: #dbeafe;
+        --class-abstract-header-bg: #e2e8f0;
+        --enum-header-bg: #ede9fe;
+        --node-header-text: #1e40af;
+        --stereotype-color: #6366f1;
+
+        .mm-class.abstract {
+            --node-header-text: #334155;
+            --stereotype-color: #64748b;
+        }
+        .mm-enum {
+            --node-header-text: #5b21b6;
+        }
+    }
+}

@@ -1,0 +1,6 @@
+name = "jjodel-ai-proxy"
+main = "src/index.ts"
+compatibility_date = "2024-01-29"
+
+[vars]
+ALLOWED_ORIGINS = "https://jjodel.io,https://www.jjodel.io,http://localhost:3000,http://localhost:5173"

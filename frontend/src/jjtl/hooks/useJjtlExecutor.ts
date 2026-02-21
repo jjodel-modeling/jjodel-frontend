@@ -12,6 +12,8 @@ export type ExecutionStatus = 'idle' | 'running' | 'success' | 'failed';
 
 export interface UseJjtlExecutorResult {
     execute: (ast: TransformationAST, sourceModel: any) => Promise<ExecutionResult>;
+    /** Update state from an externally-provided ExecutionResult (no re-execution) */
+    setResultFromExternal: (result: ExecutionResult, executionTimeMs?: number) => void;
     isExecuting: boolean;
     executionStatus: ExecutionStatus;
     lastResult: ExecutionResult | null;
@@ -72,8 +74,34 @@ export function useJjtlExecutor(options: UseJjtlExecutorOptions = {}): UseJjtlEx
             if (result.success) {
                 setExecutionStatus('success');
 
-                // Generate trace entries from result
-                if (result.trace) {
+                // Prefer structured traceModel if available
+                if (result.traceModel && result.traceModel.links.length > 0) {
+                    const traceEntries: TraceEntry[] = result.traceModel.links.map((link, index) => ({
+                        id: `trace-${index}`,
+                        timestamp: result.traceModel!.executedAt,
+                        sourceElement: {
+                            id: link.sourceElement.elementName,
+                            className: link.sourceElement.className,
+                            name: link.sourceElement.elementName,
+                        },
+                        targetElement: {
+                            id: link.targetElements[0]?.elementName || 'unknown',
+                            className: link.targetElements[0]?.className || 'Unknown',
+                            name: link.targetElements[0]?.elementName,
+                        },
+                        mappingRule: link.rule,
+                        status: 'success',
+                        attributeMappings: link.bindings.map(b => ({
+                            sourceAttr: b.sourceAttribute || '(derived)',
+                            targetAttr: b.targetAttribute,
+                            sourceValue: b.sourceValue,
+                            targetValue: b.targetValue,
+                        })),
+                    }));
+                    setTrace(traceEntries);
+                }
+                // Fallback to legacy trace if no traceModel
+                else if (result.trace) {
                     const traceEntries: TraceEntry[] = [];
                     let traceIndex = 0;
 
@@ -139,6 +167,7 @@ export function useJjtlExecutor(options: UseJjtlExecutorOptions = {}): UseJjtlEx
             const failedResult: ExecutionResult = {
                 success: false,
                 errors: [errorMessage],
+                warnings: [],
             };
 
             setLastResult(failedResult);
@@ -162,8 +191,98 @@ export function useJjtlExecutor(options: UseJjtlExecutorOptions = {}): UseJjtlEx
         setErrors([]);
     }, []);
 
+    // Set result from external source (e.g., from ProjectEditor execution)
+    // This updates the trace display without re-executing
+    const setResultFromExternal = useCallback((result: ExecutionResult, executionTimeMs?: number) => {
+        setLastResult(result);
+        if (executionTimeMs !== undefined) {
+            setLastExecutionTime(executionTimeMs);
+        }
+
+        if (result.success) {
+            setExecutionStatus('success');
+            setErrors([]);
+
+            // Prefer structured traceModel if available
+            if (result.traceModel && result.traceModel.links.length > 0) {
+                const traceEntries: TraceEntry[] = result.traceModel.links.map((link, index) => ({
+                    id: `trace-${index}`,
+                    timestamp: result.traceModel!.executedAt,
+                    sourceElement: {
+                        id: link.sourceElement.elementName,
+                        className: link.sourceElement.className,
+                        name: link.sourceElement.elementName,
+                    },
+                    targetElement: {
+                        id: link.targetElements[0]?.elementName || 'unknown',
+                        className: link.targetElements[0]?.className || 'Unknown',
+                        name: link.targetElements[0]?.elementName,
+                    },
+                    mappingRule: link.rule,
+                    status: 'success',
+                    attributeMappings: link.bindings.map(b => ({
+                        sourceAttr: b.sourceAttribute || '(derived)',
+                        targetAttr: b.targetAttribute,
+                        sourceValue: b.sourceValue,
+                        targetValue: b.targetValue,
+                        invertible: b.invertible,
+                        expression: b.expression,
+                    })),
+                }));
+                setTrace(traceEntries);
+            }
+            // Fallback to legacy trace if no traceModel
+            else if (result.trace) {
+                const traceEntries: TraceEntry[] = [];
+                let traceIndex = 0;
+
+                result.trace.forEach((targetObj, sourceObj) => {
+                    traceEntries.push({
+                        id: `trace-${traceIndex++}`,
+                        timestamp: Date.now(),
+                        sourceElement: {
+                            id: sourceObj.id || `source-${traceIndex}`,
+                            className: sourceObj.className || 'Unknown',
+                            name: sourceObj.name,
+                        },
+                        targetElement: {
+                            id: targetObj.id || `target-${traceIndex}`,
+                            className: targetObj.className || 'Unknown',
+                            name: targetObj.name,
+                        },
+                        mappingRule: `${sourceObj.className} -> ${targetObj.className}`,
+                        status: 'success',
+                    });
+                });
+
+                setTrace(traceEntries);
+            }
+        } else {
+            setExecutionStatus('failed');
+            setErrors(result.errors);
+
+            // Add failed trace entries
+            setTrace([{
+                id: 'trace-failed',
+                timestamp: Date.now(),
+                sourceElement: {
+                    id: 'error',
+                    className: 'Error',
+                },
+                targetElement: {
+                    id: 'error',
+                    className: 'Error',
+                },
+                mappingRule: 'Execution failed',
+                status: 'failed',
+                details: result.errors.join('; '),
+            }]);
+        }
+    }, []);
+
     return {
         execute: executeTransformation,
+        setResultFromExternal,
         isExecuting,
         executionStatus,
         lastResult,

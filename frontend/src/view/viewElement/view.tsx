@@ -1,3 +1,12 @@
+import type {
+    DModelElement,
+    DNamedElement,
+    DocString,
+    getWParams,
+    GObject,
+    LogicContext,
+    Pointer,
+} from "../../joiner";
 import {
     Constructors,
     CoordinateMode, D, DataTransientProperties,
@@ -5,9 +14,6 @@ import {
     Defaults, DGraph,
     DGraphElement,
     Dictionary, type DModel,
-    DModelElement,
-    DNamedElement,
-    DocString,
     DPointerTargetable, DProject,
     DState,
     DViewPoint, DVoidEdge, DVoidVertex,
@@ -15,18 +21,15 @@ import {
     EdgeGapMode, EdgeSegment,
     EGraphElements,
     EModelElements, Geom,
-    getWParams,
-    GObject,
     GraphPoint,
     GraphSize,
-    Info, L, LEdge, LEdgePoint, LGraph, LGraphElement, LModelElement,
+    Info, L, LEdge, LEdgePoint,
+    LGraph, LGraphElement, LModelElement,
     Log,
-    LogicContext,
     LPointerTargetable, LProject, LUser,
     LViewPoint,
     LVoidEdge,
     MyProxyHandler, PointedBy,
-    Pointer,
     Pointers, PrimitiveType,
     RuntimeAccessible,
     RuntimeAccessibleClass,
@@ -1715,8 +1718,23 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
 
     static updateDefaultView(v: DViewElement | DViewPoint, state?: DState): void {
         let s = state || store.getState();
-        let newView: DViewElement | DViewPoint = Defaults.defaultViewPointsMap[v.id]||Defaults.defaultViewsMap[v.id];
-        if (!newView) return; // not a default view
+        // Use fresh views cache first, fall back to defaultViewsMap
+        let newView: DViewElement | DViewPoint | undefined = Defaults.getFreshView(v.id);
+        if (!newView) {
+            // Fallback to old maps if fresh cache not initialized
+            newView = Defaults.defaultViewPointsMap[v.id] || Defaults.defaultViewsMap[v.id];
+            console.log('[updateDefaultView] Using fallback for', v.id, 'newView:', typeof newView);
+        }
+        if (!newView || typeof newView !== 'object') {
+            console.log('[updateDefaultView] Skipping', v.id, '- no fresh view found');
+            return; // not a default view or not initialized
+        }
+        // Debug log for key views
+        if ((newView as any).name === 'Attribute' || (newView as any).name === 'Class') {
+            console.log('[updateDefaultView] Updating', (newView as any).name,
+                'old appliableToClasses:', (v as any).appliableToClasses,
+                '-> new appliableToClasses:', (newView as any).appliableToClasses);
+        }
         newView = {...newView} as any;
         newView.css_MUST_RECOMPILE = true;
         newView.pointedBy = PointedBy.merge(newView, v);

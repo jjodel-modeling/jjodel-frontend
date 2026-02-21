@@ -27,6 +27,56 @@ import {
 } from '../../../joiner';
 
 // ============================================
+// VALIDATION HELPERS
+// ============================================
+
+/**
+ * Get the element type name for error messages
+ */
+function getElementTypeName(element: any): string {
+    if (!element) return 'unknown';
+
+    const className = element.className || element.constructor?.name || '';
+
+    if (className.includes('Class')) return 'class';
+    if (className.includes('Package')) return 'package';
+    if (className.includes('Enum') || className.includes('Enumerator')) return 'enum';
+    if (className.includes('Operation')) return 'operation';
+    if (className.includes('Attribute')) return 'attribute';
+    if (className.includes('Reference')) return 'reference';
+    if (className.includes('Model')) return 'model';
+
+    return className.toLowerCase() || 'unknown';
+}
+
+/**
+ * Check if element is a Class (not Package, Enum, etc.)
+ */
+function isClass(element: any): boolean {
+    if (!element) return false;
+    const className = element.className || element.constructor?.name || '';
+    return className.includes('Class') && !className.includes('DataType');
+}
+
+/**
+ * Check if element is an Enum/Enumerator
+ */
+function isEnum(element: any): boolean {
+    if (!element) return false;
+    const className = element.className || element.constructor?.name || '';
+    return className.includes('Enum') || className.includes('Enumerator');
+}
+
+/**
+ * Check if element is an Operation
+ */
+function isOperation(element: any): boolean {
+    if (!element) return false;
+    const className = element.className || element.constructor?.name || '';
+    return className.includes('Operation');
+}
+
+// ============================================
 // CREATE COMMAND EXECUTOR
 // ============================================
 
@@ -258,6 +308,21 @@ async function createAttribute(
         };
     }
 
+    // Validate that the parent is a class
+    if (!isClass(parent)) {
+        const parentType = getElementTypeName(parent);
+        return {
+            success: false,
+            command: 'create',
+            message: `Cannot create attribute in ${parentType} '${parent.name || 'unnamed'}'. Attributes can only be added to classes.`,
+            errors: [{
+                code: 'INVALID_PARENT_TYPE',
+                message: `Expected a class, but '${parent.name || 'parent'}' is a ${parentType}`,
+                suggestion: 'Use "create attribute <name> in <ClassName> type <Type>"'
+            }]
+        };
+    }
+
     return new Promise((resolve) => {
         try {
             const parentId = parent.id || parent;
@@ -301,6 +366,22 @@ async function createReference(
             command: 'create',
             message: 'Reference requires a parent class',
             errors: [{ code: 'NO_PARENT', message: 'Specify a class to add the reference to' }]
+        };
+    }
+
+    // Validate that the parent is a class
+    if (!isClass(parent)) {
+        const parentType = getElementTypeName(parent);
+        const refType = isContainment ? 'containment/composition' : 'reference';
+        return {
+            success: false,
+            command: 'create',
+            message: `Cannot create ${refType} in ${parentType} '${parent.name || 'unnamed'}'. References can only be added to classes.`,
+            errors: [{
+                code: 'INVALID_PARENT_TYPE',
+                message: `Expected a class, but '${parent.name || 'parent'}' is a ${parentType}`,
+                suggestion: 'Use "create reference <name> in <ClassName> type <TargetClass>"'
+            }]
         };
     }
 
@@ -397,6 +478,21 @@ async function createOperation(
         };
     }
 
+    // Validate that the parent is a class
+    if (!isClass(parent)) {
+        const parentType = getElementTypeName(parent);
+        return {
+            success: false,
+            command: 'create',
+            message: `Cannot create operation in ${parentType} '${parent.name || 'unnamed'}'. Operations can only be added to classes.`,
+            errors: [{
+                code: 'INVALID_PARENT_TYPE',
+                message: `Expected a class, but '${parent.name || 'parent'}' is a ${parentType}`,
+                suggestion: 'Use "create operation <name> in <ClassName>"'
+            }]
+        };
+    }
+
     return new Promise((resolve) => {
         try {
             const parentId = parent.id || parent;
@@ -435,6 +531,21 @@ async function createParameter(
             command: 'create',
             message: 'Parameter requires a parent operation',
             errors: [{ code: 'NO_PARENT', message: 'Specify an operation to add the parameter to' }]
+        };
+    }
+
+    // Validate that the parent is an operation
+    if (!isOperation(parent)) {
+        const parentType = getElementTypeName(parent);
+        return {
+            success: false,
+            command: 'create',
+            message: `Cannot create parameter in ${parentType} '${parent.name || 'unnamed'}'. Parameters can only be added to operations.`,
+            errors: [{
+                code: 'INVALID_PARENT_TYPE',
+                message: `Expected an operation, but '${parent.name || 'parent'}' is a ${parentType}`,
+                suggestion: 'Use "create parameter <name> in <ClassName>.<operationName> type <Type>"'
+            }]
         };
     }
 
@@ -544,6 +655,21 @@ async function createEnumLiteral(
             command: 'create',
             message: 'Enum literal requires a parent enum',
             errors: [{ code: 'NO_PARENT', message: 'Specify an enum to add the literal to' }]
+        };
+    }
+
+    // Validate that the parent is an enum
+    if (!isEnum(parent)) {
+        const parentType = getElementTypeName(parent);
+        return {
+            success: false,
+            command: 'create',
+            message: `Cannot create literal in ${parentType} '${parent.name || 'unnamed'}'. Literals can only be added to enums.`,
+            errors: [{
+                code: 'INVALID_PARENT_TYPE',
+                message: `Expected an enum, but '${parent.name || 'parent'}' is a ${parentType}`,
+                suggestion: 'Use "create literal <name> in <EnumName>"'
+            }]
         };
     }
 

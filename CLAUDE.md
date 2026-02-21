@@ -1,827 +1,723 @@
-# JJODEL UI REDESIGN - CLAUDE BRIEFING
+# CLAUDE.md - Jjodel Project Reference
 
-> Questo file contiene tutte le linee guida per il redesign UI di Jjodel.
-> Claude in VS Code deve leggere questo file per ogni modifica UI.
-
----
-
-## 1. VISION & POSITIONING
-
-### Cos'è Jjodel
-Jjodel è un tool di metamodellazione **SaaS** per ricerca e didattica. È l'unico tool di questo tipo veramente cloud-native.
-
-### Target Users (priorità)
-1. **Studenti** — non devono essere intimiditi
-2. **Accademici/Ricercatori** — devono poterlo adottare nei corsi
-3. **Designer DSL** — power users che creano metamodelli
-4. **Investitori** (indiretto) — deve apparire enterprise-grade
-
-### Principio Fondamentale
-> **Ridotto carico cognitivo** — L'interfaccia non deve intimidire né sovraccaricare.
-
-### Brand Personality
-- **Friendly** — le cose devono apparire semplici
-- **Moderno** — estetica contemporanea, non datata
-- **Serio & Autorevole** — ispira fiducia
-- **Professionale** — aspetto enterprise-grade
-- **Innovativo** — deve sembrare qualcosa di nuovo, anche sorprendente
-
-### Layered Disclosure Strategy
-L'interfaccia comunica a livelli diversi:
-
-| Layer | Cosa Vede l'Utente | Sensazione |
-|-------|-------------------|------------|
-| Surface | UI pulita, minimal, azioni chiare | "Posso farcela" |
-| Middle | Hint di profondità, menu avanzati | "C'è potenza sotto" |
-| Deep | Console, OCL, Templates JSX | "Tool serio" |
-
-### Reference Design
-- **Framer** — layout simile, dark mode desaturato
-- **Figma** — patterns interazione canvas
-- **Notion** — semplicità che nasconde potenza
+> Questo file contiene tutte le informazioni, convenzioni e decisioni architetturali per il progetto Jjodel. Da usare come riferimento in Claude Code (VS Code) e nelle sessioni future.
 
 ---
 
-## 2. DESIGN TOKENS
+## 🎯 Contesto del Progetto
+
+**Jjodel** è un metamodeling tool open-source per ricerca ed educazione. Permette di:
+- Creare metamodelli (definizioni di strutture)
+- Creare modelli (istanze conformi ai metamodelli)
+- Definire trasformazioni model-to-model (JjTL)
+- Eseguire trasformazioni model-to-model
+- Manipolare metamodelli via scripting (JjScript)
+- Valutare espressioni sui modelli (JjEL)
+
+**Status UI Redesign:** ~50% completato
+**Focus:** Ridurre cognitive load mantenendo full functionality
+**Users:** Ricercatori, educatori, studenti (beginner to expert)
+
+---
+
+## 🛠 Tech Stack
+
+| Tecnologia | Uso |
+|------------|-----|
+| **React 18** | Framework UI |
+| **TypeScript** | Strict mode |
+| **Vite** | Bundler (migrato da webpack) |
+| **Redux** | State management |
+| **Monaco Editor** | Code editing (JjTL, JjScript, JSX) |
+| **Bootstrap Icons** | Unica libreria icone |
+| **SCSS** | Styling |
+
+### Librerie Chiave
+- `LPointerTargetable` - Sistema di riferimenti tra oggetti
+- `DModel`, `DObject`, `DGraph` - Data layer (D = Data)
+- `LModel`, `LObject`, `LClass` - Logic layer (L = Logic wrapper)
+- `SetFieldAction`, `SetRootFieldAction` - Redux actions
+
+---
+
+## 🎨 Design System
 
 ### Colori
-
 ```scss
-// Brand Primary
-$color-brand: #374151;
-$color-brand-light: #4B5563;
-$color-brand-lighter: #6B7280;
+// Base (Slate)
+$slate-900: #0f172a;  // Background scuro
+$slate-800: #1e293b;  // Panels
+$slate-700: #334155;  // Borders
+$slate-400: #94a3b8;  // Testo secondario
+$slate-200: #e2e8f0;  // Testo chiaro
 
-// Accent (SLATE - elementi interattivi)
-$color-accent: #475569;
-$color-accent-hover: #334155;
-$color-accent-light: rgba(71, 85, 105, 0.1);
-$color-accent-lighter: rgba(71, 85, 105, 0.05);
-$color-accent-gradient: linear-gradient(135deg, #64748b 0%, #475569 100%);
-
-// Text
-$color-text-primary: #111418;
-$color-text-secondary: #6B7280;
-$color-text-tertiary: #9CA3AF;
-$color-text-inverse: #ffffff;
-
-// Backgrounds
-$color-bg-primary: #ffffff;
-$color-bg-secondary: #f8fafc;
-$color-bg-tertiary: #f1f5f9;
-
-// Borders
-$color-border: #e2e4e8;
-$color-border-light: #f0f1f2;
-$color-border-hover: #d0d3d8;
+// Accent (Cyan)
+$cyan-500: #0ea5e9;   // Primary accent
+$cyan-400: #22d3ee;   // Hover
+$cyan-600: #0891b2;   // Active
 
 // Semantic
-$color-success: #10b981;
-$color-warning: #f59e0b;
-$color-error: #ef4444;
-$color-info: #3b82f6;
-
-// Danger (per delete buttons)
-$color-danger: #ef4444;
-$color-danger-light: #fecaca;
+$success: #10b981;    // Verde
+$warning: #f59e0b;    // Arancio  
+$error: #ef4444;      // Rosso
 ```
 
 ### Typography
-
-```scss
-// Font Family
-$font-family: 'Inter Variable', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-$font-family-mono: 'IBM Plex Mono', 'Monaco', monospace;
-
-// Font Sizes
-$font-size-xs: 11px;
-$font-size-sm: 12px;
-$font-size-base: 13px;
-$font-size-md: 14px;
-$font-size-lg: 16px;
-$font-size-xl: 18px;
-$font-size-2xl: 24px;
-
-// Font Weights
-$font-weight-normal: 400;
-$font-weight-medium: 500;
-$font-weight-semibold: 600;
-
-// Line Heights
-$line-height-tight: 1.2;
-$line-height-normal: 1.5;
-$line-height-relaxed: 1.6;
-```
+- **Font UI:** System fonts
+- **Font Code:** `'IBM Plex Mono', Monaco, Consolas, monospace`
+- **Gerarchia chiara** con pesi e dimensioni coerenti
 
 ### Spacing
+- **Grid base:** 8px
+- Padding standard: 8px, 12px, 16px, 24px
 
-```scss
-$spacing-xs: 4px;
-$spacing-sm: 8px;
-$spacing-md: 12px;
-$spacing-lg: 16px;
-$spacing-xl: 20px;
-$spacing-2xl: 24px;
-$spacing-3xl: 32px;
-```
-
-### Border Radius
-
-```scss
-$radius-sm: 4px;
-$radius-md: 6px;
-$radius-lg: 8px;
-$radius-xl: 12px;
-$radius-full: 9999px;
-```
-
-### Shadows
-
-```scss
-$shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
-$shadow-md: 0 1px 3px rgba(0, 0, 0, 0.08);
-$shadow-lg: 0 4px 12px rgba(0, 0, 0, 0.1);
-```
-
-### Transitions
-
-```scss
-$transition-fast: 150ms ease;
-$transition-normal: 250ms ease;
-$transition-slow: 400ms ease;
-```
-
----
-
-## 3. COMPONENT PATTERNS
+### Icone
+- **SOLO Bootstrap Icons** (`bi bi-*`)
+- Mai usare altre librerie di icone
 
 ### Buttons
-
-**REGOLA: Gradienti slate consentiti per bottoni primary e toggle.**
+- **Primary buttons:** Slate gradient (`linear-gradient(135deg, #334155, #1e293b)`)
+- **Secondary buttons:** Transparent with border
+- **Danger buttons:** Red accent for destructive actions
+- **Cyan (#0ea5e9):** NEVER for button backgrounds — only for focus states, active indicators, and links
+- **Icons on dark buttons:** Always white (`#ffffff`)
 
 ```scss
-// Base button
-.btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  height: 36px;
-  padding: 0 16px;
-  font-family: $font-family;
-  font-size: 13px;
-  font-weight: 500;
-  border-radius: $radius-md;
-  cursor: pointer;
-  transition: all $transition-fast;
-
-  &:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-}
-
-// Primary (azione principale) - SLATE GRADIENT
+// Primary button example
 .btn-primary {
-  color: $color-text-inverse;
-  background: linear-gradient(135deg, #64748b 0%, #475569 100%);
-  border: none;
+    background: linear-gradient(135deg, #334155, #1e293b);
+    color: white;
 
-  // CRITICO: Icone sempre bianche su sfondo scuro
-  i, .bi, svg {
-    color: #ffffff !important;
-  }
-
-  &:hover:not(:disabled) {
-    background: linear-gradient(135deg, #475569 0%, #334155 100%);
-  }
-}
-
-// Secondary (azione secondaria)
-.btn-secondary {
-  color: $color-text-primary;
-  background-color: transparent;
-  border: 1px solid $color-border;
-  
-  &:hover:not(:disabled) {
-    background-color: $color-bg-secondary;
-    border-color: $color-border-hover;
-  }
-}
-
-// Ghost (azione terziaria)
-.btn-ghost {
-  color: $color-accent;
-  background-color: $color-accent-light;
-  border: none;
-  
-  &:hover:not(:disabled) {
-    background-color: $color-accent-lighter;
-  }
-}
-
-// Danger (delete, azioni distruttive)
-.btn-danger {
-  color: $color-danger;
-  background-color: transparent;
-  border: 1px solid $color-danger-light;
-
-  &:hover:not(:disabled) {
-    background-color: rgba(239, 68, 68, 0.05);
-  }
-}
-```
-
-### Icone su Bottoni Scuri (REGOLA CRITICA)
-
-**REGOLA: Su bottoni con background slate (solid o gradient), icone e testo DEVONO essere bianchi (#ffffff).**
-
-```scss
-// Bottoni slate solid
-.btn-slate {
-  background: #475569;           // slate-600
-  color: #ffffff;
-
-  i, .bi, svg {
-    color: #ffffff !important;   // Icone sempre bianche
-  }
-}
-
-// Bottoni slate gradient (primary)
-.btn-primary {
-  background: linear-gradient(135deg, #64748b 0%, #475569 100%);
-  color: #ffffff;
-
-  i, .bi, svg {
-    color: #ffffff !important;   // Icone sempre bianche
-  }
-}
-```
-
-| Background | Richiede icone bianche? |
-|------------|------------------------|
-| slate-50 to slate-300 | No (icone scure OK) |
-| slate-400 | Borderline (preferire bianche) |
-| **slate-500 to slate-900** | **SÌ, sempre bianche** |
-| **Gradient slate** | **SÌ, sempre bianche** |
-
-**❌ SBAGLIATO:**
-```html
-<button class="btn-primary">
-  <i class="bi bi-check" style="color: #334155"></i> <!-- Invisibile! -->
-  Save
-</button>
-```
-
-**✅ CORRETTO:**
-```html
-<button class="btn-primary">
-  <i class="bi bi-check"></i> <!-- Eredita bianco dal parent -->
-  Save
-</button>
-```
-
-### Toggle Switch (NON checkbox!)
-
-**REGOLA: Usare toggle switch per boolean, MAI checkbox nativi browser.**
-
-```scss
-.toggle {
-  width: 48px;
-  height: 26px;
-  border-radius: 26px;
-  background-color: #cbd5e1;
-  cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-
-  &.active {
-    background: linear-gradient(135deg, #64748b 0%, #475569 100%); // slate gradient
-  }
-}
-
-.toggle-thumb {
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  background-color: #ffffff;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-
-  .toggle.active & {
-    transform: translateX(22px);
-  }
-}
-```
-
-### Custom Checkbox (quando serve lista di opzioni)
-
-```scss
-.custom-checkbox {
-  width: 18px;
-  height: 18px;
-  border-radius: $radius-sm;
-  border: 2px solid $color-border-hover;
-  background-color: #ffffff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all $transition-fast;
-  
-  &:hover {
-    border-color: $color-accent;
-  }
-  
-  &.checked {
-    border: none;
-    background-color: $color-accent;
-    
-    .checkmark {
-      color: #ffffff;
+    &:hover {
+        background: linear-gradient(135deg, #475569, #334155);
     }
-  }
 }
 ```
 
-### Inputs
+### Toggle Styles
 
+**Two toggle styles exist in the app:**
+
+- **Style A (Vertical toggle):** ONLY for toolbar debug/advanced mode toggles in the navbar
+- **Style B (Horizontal switch):** Everywhere else — settings, properties, options, preferences
+
+**Standard horizontal switch (36×20px):**
 ```scss
-.input {
-  width: 100%;
-  height: 36px;
-  padding: 0 12px;
-  font-family: $font-family;
-  font-size: 14px;
-  color: $color-text-primary;
-  background-color: #ffffff;
-  border: 1px solid $color-border;
-  border-radius: $radius-md;
-  outline: none;
-  transition: border-color $transition-fast, box-shadow $transition-fast;
-  
-  &:focus {
-    border-color: $color-accent;
-    box-shadow: 0 0 0 3px $color-accent-light;
-  }
-  
-  &::placeholder {
-    color: $color-text-tertiary;
-  }
+.jjodel-switch {
+    width: 36px;
+    height: 20px;
+    background: #cbd5e1;        // inactive
+    border-radius: 10px;
+
+    &.active {
+        background: #334155;    // slate — NOT cyan
+    }
+
+    // Thumb: 16×16px white circle
+    &::after {
+        width: 16px;
+        height: 16px;
+        background: white;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+    }
 }
 ```
 
-### Select
+**Key rules:**
+- Active color: `#334155` (slate), NOT cyan
+- Inactive color: `#cbd5e1`
+- Knob: white circle with subtle shadow
+- Size: 36×20px (compact)
+- Label always to the LEFT of the switch, never inside it
 
+### Multi-Select (react-select)
+
+**Visual consistency with single-select:**
+- Same height (38px) as regular selects
+- Container grows only when tags wrap to second line
+- Borderless filter input (seamless typing)
+- Smaller, lighter indicator icons (14px)
+
+**Tag styling (light slate):**
 ```scss
-.select {
-  width: 100%;
-  height: 36px;
-  padding: 0 12px;
-  font-family: $font-family;
-  font-size: 14px;
-  color: $color-text-primary;
-  background-color: #ffffff;
-  border: 1px solid $color-border;
-  border-radius: $radius-md;
-  outline: none;
-  cursor: pointer;
-  appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%235c6370' d='M2 4l4 4 4-4'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 12px center;
-  
-  &:focus {
-    border-color: $color-accent;
-    box-shadow: 0 0 0 3px $color-accent-light;
-  }
+// Selected tag chips
+[class*="-multiValue"] {
+    background: #f1f5f9;           // slate-100 — light, subtle
+    border: 1px solid #e2e8f0;     // slate-200 border
+    border-radius: 4px;
 }
-```
 
-### Section Headers
-
-```scss
-.section-title {
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: $color-text-tertiary;
-  margin-bottom: 12px;
-}
-```
-
-### Badges
-
-```scss
-.badge {
-  display: inline-flex;
-  align-items: center;
-  padding: 3px 8px;
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-  border-radius: $radius-sm;
-  
-  &.badge-metamodel {
-    background-color: $color-accent-light;
-    color: $color-accent;
-  }
-  
-  &.badge-model {
-    background-color: rgba(59, 130, 246, 0.1);
-    color: #3b82f6;
-  }
-  
-  &.badge-class {
-    background-color: rgba(239, 68, 68, 0.1);
-    color: #ef4444;
-  }
-}
-```
-
-### Stat Cards
-
-```scss
-.stat-card {
-  padding: 12px;
-  background-color: $color-bg-secondary;
-  border-radius: $radius-lg;
-  
-  .stat-value {
-    font-size: 20px;
-    font-weight: 600;
-    color: $color-text-primary;
-    margin-bottom: 2px;
-  }
-  
-  .stat-label {
+[class*="-multiValue__label"] {
+    color: #334155;                // slate-700 — readable
     font-size: 12px;
-    color: $color-text-secondary;
-  }
+    font-weight: 500;
+    padding: 2px 6px;
+}
+
+[class*="-multiValue__remove"] {
+    color: #94a3b8;                // slate-400
+    &:hover {
+        background: #e2e8f0;       // slate-200
+        color: #ef4444;            // red on hover
+    }
 }
 ```
 
-### Tree Type Icons (Viewpoints/TreeView)
-
-**REGOLA: Usare colori pastel consistenti per tutti i tree.**
+**Dropdown menu styling:**
 ```scss
-// Viewpoint/View type colors
-$color-viewpoint: #8b5cf6;    // Purple - Viewpoints
-$color-view-vertex: #3b82f6;  // Blue - Vertex views
-$color-view-field: #64748b;   // Slate - Field views  
-$color-view-edge: #06b6d4;    // Cyan - Edge views
-$color-view-graph: #10b981;   // Green - Graph views
+// Selected option (subtle cyan, not solid)
+[class*="-option--is-selected"] {
+    background: rgba(14, 165, 233, 0.08);  // very subtle cyan
+    color: #0ea5e9;
+    font-weight: 500;
+}
 
-// Badge style: background 12-15% opacity, text full color
-.tree-icon {
-  width: 22px;
-  height: 22px;
-  border-radius: 4px;
-  font-size: 10px;
-  font-weight: 700;
-  
-  &.tree-DViewPoint {
-    background: rgba(139, 92, 246, 0.15);
-    color: #8b5cf6;
-  }
+// Hover state
+[class*="-option"]:hover {
+    background: #f1f5f9;           // slate-100
+}
+
+// Group header
+[class*="-groupHeading"] {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #94a3b8;
 }
 ```
 
-### Feature Badges (OCL/JS/EX)
+**Implementation:**
+- Uses `classNamePrefix="jjodel-select"` for reliable CSS targeting
+- Inline `styles` prop overrides react-select defaults
+- Files: `inputselect.scss`, `viewapplyto.scss`, `Input.tsx`
 
-**REGOLA: Muted colors, non saturati, per ridurre rumore visivo.**
-```scss
-.feature-badge {
-  min-width: 24px;
-  height: 20px;
-  font-size: 9px;
-  font-weight: 600;
-  border-radius: 4px;
-  
-  // OCL - subtle red
-  &.ocl { background: rgba(239, 68, 68, 0.1); color: #dc2626; }
-  
-  // JS - subtle amber  
-  &.js { background: rgba(245, 158, 11, 0.1); color: #d97706; }
-  
-  // EX - subtle green (or gray when inactive)
-  &.ex { background: rgba(16, 185, 129, 0.1); color: #059669; }
-  &.ex.inactive { background: rgba(148, 163, 184, 0.1); color: #94a3b8; }
+---
+
+## 📁 Struttura Progetto
+
+```
+frontend/src/
+├── components/
+│   ├── abstract/tabs/     # Tab components (ModelTab, MetamodelTab)
+│   ├── project/           # ProjectEditor, Dashboard
+│   └── shared/            # Componenti riutilizzabili
+├── jjtl/                  # Transformation Language
+│   ├── lexer/             # Tokenizer
+│   ├── parser/            # Parser -> AST
+│   ├── executor/          # Esecuzione trasformazioni
+│   ├── editor/            # Monaco integration
+│   ├── components/        # UI (ExecuteTransformationDialog)
+│   ├── views/             # MappingTraceView, DualMetamodelPanel
+│   └── types/             # AST types, transformation types
+├── jjscript/              # Scripting Language
+│   ├── parser/            # Grammar, tokenizer
+│   ├── executor/          # Command execution
+│   └── commands/          # create, copy, delete, etc.
+├── jjel/                  # Expression Language
+├── joiner/                # Core utilities, Redux, data layer
+└── pages/                 # Route pages
+```
+
+---
+
+## 🔧 Convenzioni Codice
+
+### Naming
+- **Componenti:** PascalCase (`MetamodelPanel.tsx`)
+- **Funzioni:** camelCase (`handleExecuteTransformation`)
+- **Costanti:** UPPER_SNAKE_CASE (`MAX_RESULTS`)
+- **File SCSS:** kebab-case (`dual-metamodel-panel.scss`)
+
+### TypeScript
+```typescript
+// Props interfaces esportate dal file del componente
+export interface MyComponentProps {
+    value: string;
+    onChange: (value: string) => void;
+}
+
+// Functional components con hooks
+export const MyComponent: React.FC<MyComponentProps> = ({ value, onChange }) => {
+    // ...
+};
+```
+
+### Imports
+```typescript
+// 1. React
+import React, { useState, useCallback } from 'react';
+
+// 2. Librerie esterne
+import { useSelector } from 'react-redux';
+
+// 3. Componenti interni
+import { DModel, LObject } from '../../joiner';
+
+// 4. Types
+import type { TransformationAST } from '../types';
+
+// 5. Styles
+import './MyComponent.scss';
+```
+
+---
+
+## 🏗 Pattern Architetturali
+
+### Progressive Disclosure
+- Modalità **Basic** (default) vs **Advanced**
+- Nascondere complessità finché non serve
+
+### State Management
+- **Redux** per stato globale (project, models, graphs)
+- **useState** per stato locale UI
+- **useRef** per valori che non devono triggerare re-render
+
+### Actions Pattern
+```typescript
+// Modifica campo di un oggetto
+SetFieldAction.new(objectId, 'fieldName', value, '+=', true);
+
+// Modifica stato root
+SetRootFieldAction.new('graphs', graphId, '+=', true);
+
+// Transazione atomica
+TRANSACTION('Description', () => {
+    // multiple actions
+});
+```
+
+### Data vs Logic Layer
+- **D*** (DModel, DObject): Dati puri, serializzabili
+- **L*** (LModel, LObject): Wrapper con logica, computed properties
+
+---
+
+## 📐 JjTL - Transformation Language
+
+### Sintassi
+```jjtl
+transformation NomeTransformazione
+
+from SourceMetamodel
+to   TargetMetamodel
+
+# Class mapping
+SourceClass -> TargetClass {
+    # Attribute mapping (copia diretta)
+    sourceAttr -> targetAttr
+    
+    # Con conversione
+    sourceAttr -> targetAttr : true=1, false=0
+    
+    # Con espressione
+    sourceAttr -> targetAttr : sourceAttr + "_suffix"
 }
 ```
 
----
+### AST Types
+```typescript
+interface TransformationAST {
+    type: 'Transformation';
+    name: string;
+    sourceMetamodel: string;
+    targetMetamodel: string;
+    mappings: ClassMappingAST[];
+}
 
-## 4. PAGE-SPECIFIC GUIDELINES
+interface ClassMappingAST {
+    type: 'ClassMapping';
+    sourceClass: string;
+    targetClass: string;
+    body: AttributeMappingAST[];
+}
 
-### Login Page
-
-**Layout:** Split screen — dark panel left, form right
-
-**Left Panel:**
-- Background: #1e2024 (dark)
-- Logo "Jjodel." in bianco
-- "Welcome to Jjodel" heading
-- Tagline in grigio chiaro
-- RESEARCH PARTNERS + 3 loghi (bianco/grigio, piccoli)
-- Link "jjodel.io" in basso
-
-**Right Panel:**
-- Background: #f8f9fa (grigio chiaro)
-- Form card bianca con ombra leggera
-- Bottone Login: teal primary
-- Bottone Offline mode: secondary outlined
-
-**❌ NON includere:**
-- Testo lungo del dipartimento (ridondante)
-- Feature icons (rimossi per pulizia)
-
-### Dashboard
-
-**LAYOUT GENERALE:**
-```
-┌─────────────────────────────────────────────────────────────────┐
-│ HEADER (60px)                                                    │
-│ Logo sx | Nav (Projects, Templates, Explore) | Help + Avatar dx │
-├────────────┬────────────────────────────────────────────────────┤
-│ SIDEBAR    │ CONTENT                                             │
-│ (240px)    │                                                     │
-│            │ Page Title          [Import] [+ New Project]        │
-│ All proj   │                                                     │
-│ Favorites  │ [Tabs: All | Public | Private | Collab]  [Grid/List]│
-│ Trash      │                                                     │
-│            │ ┌─────────────────────────────────────────────────┐ │
-│ ────────── │ │ PROJECT CARDS o EMPTY STATE                     │ │
-│ RECENTLY   │ │                                                 │ │
-│ (se pieno) │ │                                                 │ │
-│            │ └─────────────────────────────────────────────────┘ │
-│ ────────── │                                                     │
-│ SUPPORT    │                                                     │
-│ Docs       │                                                     │
-│ Tutorials  │                                                     │
-│            │                                                     │
-│ ────────── │                                                     │
-│ v2.0       │                                                     │
-└────────────┴────────────────────────────────────────────────────┘
-```
-
-**HEADER:**
-- Altezza: 60px
-- Background: #ffffff
-- Border-bottom: 1px solid #e2e4e8
-- Logo "Jjodel." a SINISTRA (non centrato), font-weight 700, color #374151
-- Nav tabs al centro-sinistra: Projects (active), Templates, Explore
-- Help button + Avatar a destra
-
-**SIDEBAR:**
-- Larghezza: 240px
-- Background: #ffffff
-- Border-right: 1px solid #e2e4e8
-- Sezioni:
-  1. Main nav: All projects, Favorites, Trash
-  2. Recently Modified (SOLO se ci sono progetti, altrimenti NASCOSTA)
-  3. Support: Documentation, Tutorials
-  4. Footer: solo "Jjodel v2.0"
-
-**CTA BUTTONS (in alto a destra del content):**
-- Solo 2 bottoni:
-  1. "Import" → btn-secondary (outlined)
-  2. "New Project" → btn-primary (slate gradient)
-- NO terzo bottone "Getting Started"
-- Gradienti slate consentiti per btn-primary
-
-**EMPTY STATE (quando 0 progetti):**
-```
-┌─────────────────────────────────────────┐
-│                                         │
-│        [icona bi-rocket-takeoff]        │
-│                                         │
-│        Welcome to Jjodel!               │
-│                                         │
-│  Create your first project to start     │
-│  modeling. Jjodel makes metamodeling    │
-│  accessible for research and education. │
-│                                         │
-│     [+ Create your first project]       │
-│                                         │
-│  New to Jjodel? Getting Started guide → │
-│                                         │
-└─────────────────────────────────────────┘
-```
-- Icona: bi-rocket-takeoff, 36px, color slate (#475569)
-- Titolo: "Welcome to Jjodel!", 22px, semibold
-- Descrizione: 15px, color secondary, max-width 400px
-- CTA: btn-primary grande
-- Link secondario: "New to Jjodel? Getting Started guide →"
-
-**PROJECT CARDS (quando ci sono progetti):**
-- Grid: auto-fill, minmax(280px, 1fr), gap 20px
-- Card: bg white, border-radius 12px, border 1px solid #e2e4e8
-- Preview area: 140px height, bg #f1f5f9, icona bi-diagram-3
-- Info: padding 16px, nome progetto, "Modified X ago", badge tipo
-
-**TABS FILTRO:**
-- Container: bg #f1f5f9, padding 4px, border-radius 8px
-- Tab attivo: bg white, shadow leggera
-- Tab inattivo: bg transparent
-
-**VIEW TOGGLE:**
-- Grid: bi-grid-3x3-gap
-- List: bi-list
-
-**❌ VIETATO NELLA DASHBOARD:**
-- Terzo bottone CTA colorato (es. "Getting Started" arancio)
-- Gradienti sui bottoni
-- "RECENTLY MODIFIED" visibile quando vuoto
-- "Sorry, no results matching..." come empty state
-- Footer "Made with ❤️"
-- Logo centrato nell'header
-
-**📁 IMPLEMENTATION FILES:**
-```
-Dashboard Components:
-├── /frontend/src/pages/components/Navbar.tsx      → Header con logo, nav tabs, avatar
-├── /frontend/src/pages/components/navbar.scss     → Stili header (60px height)
-├── /frontend/src/pages/components/LeftBar.tsx     → Sidebar 240px
-├── /frontend/src/pages/components/catalog/
-│   ├── Catalog.tsx                                → EmptyState, filter tabs, view toggle
-│   └── catalog.scss                               → Stili empty state, grid, tabs
-├── /frontend/src/pages/components/Project.tsx     → Project card component
-├── /frontend/src/pages/AllProjects.tsx            → CTA buttons row (Import + New Project)
-└── /frontend/src/pages/dashboard.scss             → Container layout, card styles
-```
-
-**Key Implementation Notes:**
-- `EmptyState` component in Catalog.tsx shows rocket icon when 0 projects
-- `hasProjects` check in LeftBar.tsx hides "Recently Modified" when empty
-- `NavTabs` component in Navbar.tsx shows Projects/Templates/Explore tabs
-- All icons use Bootstrap Icons (bi-*), no react-icons or emoji
-- Project cards use `.project-card-v2` class with hover border-color cyan
-
-### Properties Tab (Right Panel)
-
-**Struttura:**
-1. **Header** — icona + nome + badge tipo + descrizione
-2. **Overview** — grid 2x2 stats (Classes, Attributes, References, Operations)
-3. **Details** — form verticale (Name, Readonly toggle, Dependencies, State)
-4. **Info** — Created by, Last modified
-5. **Actions** — Edit (primary), Duplicate (secondary), Delete (danger icon)
-
-**Layout form:**
-- Labels sopra gli input (non accanto)
-- Input full width
-- Readonly usa TOGGLE, non checkbox
-- Sezioni separate da border-bottom sottile
-
----
-
-## 5. DO's AND DON'Ts
-
-### ✅ DO
-
-- Usare SOLO i colori del design system
-- Toggle switch per boolean
-- Bottoni con stili consistenti (primary/secondary/ghost/danger)
-- **Icone bianche (#ffffff) su bottoni con sfondo slate o gradient**
-- Layout verticale per form (label sopra, input sotto)
-- Spacing consistente (16px padding sezioni, 12px gap elementi)
-- Transizioni smooth su interazioni
-- Sezioni con titoli uppercase e spacing
-- Badge per indicare tipi (Metamodel, Model, Class)
-
-### ❌ DON'T
-
-- **MAI** checkbox nativi del browser
-- **MAI** gradienti non-slate (solo slate gradient consentito per primary/toggle)
-- **MAI** colori fuori dal design system (cyan, rosa, viola random)
-- **MAI** icone scure su bottoni con sfondo slate/scuro (devono essere bianche!)
-- **MAI** layout form orizzontale per input lunghi
-- **MAI** testo troppo denso senza gerarchia
-- **MAI** icone colorate casuali (usa slate o grigio)
-- **MAI** bottoni con dimensioni sproporzionate
-- **MAI** mix di stili diversi nella stessa area
-- **MAI** usare emoji (usa testo o Bootstrap Icons)
-
----
-
-## 6. TECH STACK
-
-- **Framework:** React con customizzazioni
-- **Styling:** SCSS
-- **State:** Redux
-- **Canvas:** SVG
-- **Font:** Inter Variable (già installato)
-- **Icons:** Bootstrap Icons (SOLO questa libreria)
-
----
-
-## 7. ICONS — BOOTSTRAP ICONS ONLY
-
-**REGOLA CRITICA: Usare ESCLUSIVAMENTE Bootstrap Icons.**
-
-Documentazione: https://icons.getbootstrap.com/
-
-### Formato utilizzo
-
-```jsx
-// In React/JSX
-<i className="bi bi-folder"></i>
-<i className="bi bi-plus-lg"></i>
-<i className="bi bi-star"></i>
-```
-
-### Icone approvate per Jjodel
-
-| Contesto | Icona | Classe |
-|----------|-------|--------|
-| Cartella/Projects | folder | `bi-folder` |
-| Nuovo/Aggiungi | plus | `bi-plus-lg` |
-| Preferiti | star | `bi-star` |
-| Cestino | trash | `bi-trash` |
-| File | file | `bi-file-earmark` |
-| Documento | document | `bi-file-text` |
-| Modifica/Edit | pencil | `bi-pencil` |
-| Duplica | copy | `bi-copy` |
-| Elimina | trash | `bi-trash` |
-| Impostazioni | gear | `bi-gear` |
-| Cerca | search | `bi-search` |
-| Chiudi | x | `bi-x-lg` |
-| Freccia destra | arrow | `bi-arrow-right` |
-| Freccia sinistra | arrow | `bi-arrow-left` |
-| Chevron giù | chevron | `bi-chevron-down` |
-| Chevron su | chevron | `bi-chevron-up` |
-| Download/Import | download | `bi-download` |
-| Upload/Export | upload | `bi-upload` |
-| Help | question | `bi-question-circle` |
-| Info | info | `bi-info-circle` |
-| Warning | warning | `bi-exclamation-triangle` |
-| Error | error | `bi-x-circle` |
-| Success | check | `bi-check-circle` |
-| User/Avatar | person | `bi-person-circle` |
-| Menu | list | `bi-list` |
-| Grid view | grid | `bi-grid-3x3-gap` |
-| List view | list | `bi-list-ul` |
-| Diagram/Model | diagram | `bi-diagram-3` |
-| Code | code | `bi-code-slash` |
-| Eye/View | eye | `bi-eye` |
-| Eye off | eye-slash | `bi-eye-slash` |
-| Lock | lock | `bi-lock` |
-| Unlock | unlock | `bi-unlock` |
-| Link | link | `bi-link-45deg` |
-| External link | external | `bi-box-arrow-up-right` |
-| Documentation | book | `bi-book` |
-| Tutorial | education | `bi-mortarboard` |
-| Rocket/Start | rocket | `bi-rocket-takeoff` |
-| Calendar | calendar | `bi-calendar` |
-| Clock | clock | `bi-clock` |
-| Filter | filter | `bi-funnel` |
-| Sort | sort | `bi-sort-down` |
-| Refresh | refresh | `bi-arrow-clockwise` |
-| Toggle on | toggle | `bi-toggle-on` |
-| Toggle off | toggle | `bi-toggle-off` |
-
-### Stile icone
-
-```scss
-// Dimensioni standard
-.icon-sm { font-size: 14px; }
-.icon-md { font-size: 16px; }
-.icon-lg { font-size: 20px; }
-.icon-xl { font-size: 24px; }
-
-// Colori (usare variabili)
-.bi {
-  color: inherit; // eredita dal parent
+interface AttributeMappingAST {
+    type: 'AttributeMapping';
+    sourceAttribute?: string;
+    targetAttribute: string;
+    conversion?: ConversionAST;
 }
 ```
 
-### ❌ VIETATO
+### Esecuzione Trasformazione
+1. Parse JjTL code → AST
+2. Trova source model instances
+3. Per ogni class mapping:
+   - Filtra istanze source per className
+   - Crea istanze target
+   - Applica attribute mappings
+4. Crea DModel + DGraph
+5. Aggiungi a Redux state
 
-- **MAI** usare emoji (🚀 ❌ ✅ 📁 etc.)
-- **MAI** usare Font Awesome
-- **MAI** usare Material Icons
-- **MAI** usare Heroicons
-- **MAI** usare icone SVG inline custom
-- **MAI** usare caratteri Unicode come icone (→ ← ✓ ✗)
+### ⚠️ Pattern Critici per Object Persistence (2026-02-09)
+
+#### DObject.new() — ID Temporanei
+`DObject.new()` ritorna un ID temporaneo che **NON corrisponde** all'ID reale dell'oggetto nel framework. Gli oggetti non sono accessibili tramite `store.getState()[dObject.id]`.
+
+```typescript
+// ❌ SBAGLIATO — l'ID è temporaneo
+const dObject = DObject.new(classId, modelId, DModel, name, true);
+store.getState()[dObject.id]; // → undefined!
+
+// ❌ SBAGLIATO — SetFieldAction non scrive valori leggibili dal proxy
+SetFieldAction.new(featurePointer, 'values', [value], '', true);
+
+// ✅ CORRETTO — trova per NOME via proxy LModel
+const lModel = LPointerTargetable.fromD(modelId) as LModel;
+const lObject = lModel.objects.find(o => o.name === objectName);
+
+// ✅ CORRETTO — scrivi valori via proxy
+(lObject as any)['$' + attrName].value = attrValue;
+```
+
+#### Pattern Deferred Attribute Setting
+Dopo una TRANSACTION che crea oggetti, i proxy non sono immediatamente disponibili. Usa `setTimeout` per attendere la propagazione Redux:
+
+```typescript
+// 1. Dentro TRANSACTION: accumula per NOME (non ID!)
+const pending: Array<{ objectName: string; attributes: Record<string, any> }> = [];
+
+TRANSACTION('Create Objects', () => {
+    const dObject = DObject.new(classId, modelId, DModel, name, true);
+    pending.push({ objectName: name, attributes: { label: 'value' } });
+});
+
+// 2. Dopo TRANSACTION: delay + proxy
+setTimeout(() => {
+    const lModel = LPointerTargetable.fromD(modelId) as LModel;
+    for (const { objectName, attributes } of pending) {
+        const lObj = lModel.objects.find(o => o.name === objectName);
+        if (!lObj) continue;
+        for (const [attr, val] of Object.entries(attributes)) {
+            (lObj as any)['$' + attr].value = val;
+        }
+    }
+}, 1000);
+```
+
+#### evaluatePropertyPath — 4 Strategie Fallback
+Il metodo `evaluatePropertyPath` nell'executor risolve nomi di proprietà con:
+1. **Direct access** — `source[path]` per proprietà dell'istanza
+2. **Context lookup** — `ctx.get(path)` per variabili di contesto
+3. **JjEL evaluation** — `jjelEval(path, record)` per espressioni complesse
+4. **Manual traversal** — split per `.` e traverse manuale per path come `source.owner.name`
+
+**CRITICO:** `contextToRecord()` deve includere TUTTE le proprietà dell'istanza source, non solo le variabili hardcoded.
+
+### JjTL — Development Plan
+
+For the complete JjTL development roadmap (8 phases + invertibility analysis track), see:
+**`/docs/jjtl/JJTL-DEVELOPMENT-PLAN.md`**
+
+JjTL is designed as both a user-facing transformation language AND a core IR (Intermediate Representation) that ATL and ETL can be translated into. The development plan covers:
+- Phase 1-5: Language features (trace model, rule system, expressions, imperative, modularity)
+- Phase 6-7: ATL and ETL front-ends (parse → translate to JjTL → execute)
+- Phase 8: Advanced features (bidirectionality, incrementality, AI-assisted transformation)
+- Cross-cutting: Static invertibility analysis with real-time IDE feedback
+
+### Modifica Sintassi JjTL — Checklist Obbligatoria
+
+Quando si modifica la grammatica JjTL, aggiornare **SEMPRE** tutti e 4 i file:
+
+1. **Lexer** (`frontend/src/jjtl/parser/lexer.ts`) — nuovi token se necessari
+2. **Parser** (`frontend/src/jjtl/parser/parser.ts`) — regole di parsing
+3. **Grammar Rules** (`frontend/src/jjtl/diagrams/types.ts`) — EBNF in `GRAMMAR_RULES`
+4. **Railroad Diagrams** (`frontend/src/jjtl/diagrams/GrammarDiagram.tsx`) — rendering visuale
+
+⚠️ Non aggiornare MAI solo il parser senza gli altri. I railroad diagrams sono la documentazione visiva per l'utente e non si aggiornano automaticamente.
+
+### Stato JjTL (Aggiornamento 2026-02-09)
+
+**Completato:**
+- ✅ Parser JjTL → AST
+- ✅ Executor: class mapping (A -> B)
+- ✅ Executor: attribute mapping diretto (name -> label)
+- ✅ Executor: evaluatePropertyPath con fallback multi-strategia
+- ✅ ProjectEditor: creazione modello target con DModel.new
+- ✅ ProjectEditor: creazione istanze con DObject.new
+- ✅ ProjectEditor: deferred attribute setting via LModel proxy
+- ✅ UI: Manhattan arrows per mapping visualization
+- ✅ UI: nomi trasformazioni con `_to_` (no trattini)
+- ✅ UI: nomi modelli unici con numerazione progressiva
+
+**Da Completare:**
+- ❌ Conversion expressions JjEL (name -> label : name + '_suffix') — da testare
+- ❌ Multi-attribute mapping — da testare
+- ❌ Reference mapping (oggetti collegati)
+- ❌ Guard conditions (`when` clause)
+- ❌ Undo/redo per trasformazioni
+- ❌ Cleanup log di debug
 
 ---
 
-## 7. FILE LOCATIONS
+## 🤖 AI Provider System (2026-02-11)
 
-- Design tokens: `/frontend/src/styles/_variables.scss` (o simile)
-- Components: `/frontend/src/components/`
-- Editors (right panel): `/frontend/src/components/editors/`
+Sistema unificato per la gestione dei provider AI in tutte le feature dell'applicazione.
+
+### Architettura
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    Settings Page                             │
+│  ┌─────────────────┐  ┌──────────────────────────────────┐  │
+│  │   Sidebar       │  │  AISettingsContent               │  │
+│  │   - Profile     │  │  - Default Provider selector     │  │
+│  │   - Providers ◄─┼──┼─ - Provider cards (API keys)     │  │
+│  │   - ...         │  │  - Model selection per provider  │  │
+│  └─────────────────┘  └──────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────┘
+                              ▲
+                              │ openSettings('providers')
+                              │
+┌─────────────────────────────┴───────────────────────────────┐
+│              SettingsModalContext                            │
+│  - openSettings(section?)  - Keyboard shortcut: Cmd+,       │
+│  - closeSettings()         - Renders UnifiedSettingsModal   │
+└─────────────────────────────────────────────────────────────┘
+                              ▲
+                              │ useSettingsModalSafe()
+                              │
+┌─────────────────────────────┴───────────────────────────────┐
+│              ProviderSelector Component                      │
+│  - Dropdown con icone distintive per provider               │
+│  - Supporta local options (non-AI)                          │
+│  - "Configure in Settings" link                             │
+│  - Compact mode per toolbar                                 │
+└─────────────────────────────────────────────────────────────┘
+                              ▲
+                              │ useAIProviderPreference(feature)
+                              │
+┌─────────────────────────────┴───────────────────────────────┐
+│              AIProviderPreferences Service                   │
+│  - Per-feature preferences (localStorage)                   │
+│  - Global default fallback                                  │
+│  - CustomEvent sync across components                       │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Features Supportate
+
+| Feature | AIFeature ID | Local Options |
+|---------|--------------|---------------|
+| Documentation | `'documentation'` | Local (Instant) |
+| Jjodie Chat | `'chat'` | - |
+| ScriptBlock | `'scriptblock'` | - |
+| Suggested Mappings | `'mappings'` | Simple (Local) |
+
+### Provider Resolution Order
+
+1. **Feature override** — preferenza specifica per la feature
+2. **Global default** — impostato in Settings
+3. **First configured** — primo provider con API key valida
+
+### Provider Icons
+
+Ogni provider ha un'icona Bootstrap distintiva con colore brand:
+
+| Provider | Icon | Color |
+|----------|------|-------|
+| OpenAI | `bi-circle` | `#10a37f` (green) |
+| Anthropic | `bi-chat-square-text` | `#d97706` (amber) |
+| DeepSeek | `bi-search` | `#4d6bfe` (blue) |
+| Mistral | `bi-wind` | `#ff7000` (orange) |
+| Gemini | `bi-gem` | `#4285f4` (Google blue) |
+| Groq | `bi-speedometer2` | `#f55036` (red) |
+| Kimi | `bi-moon` | `#6366f1` (purple) |
+| Ollama | `bi-hdd-network` | `#10b981` (green) |
+| Local | `bi-lightning` | `#f59e0b` (amber) |
+
+### Componenti Chiave
+
+| File | Descrizione |
+|------|-------------|
+| `services/AIProviderPreferences.ts` | Service per persistenza preferenze |
+| `hooks/useAIProviderPreference.ts` | Hook per accesso preferenze |
+| `components/common/ProviderSelector.tsx` | Dropdown riutilizzabile |
+| `contexts/SettingsModalContext.tsx` | Context per aprire Settings |
+| `components/settings/AISettingsContent.tsx` | UI configurazione provider |
+
+### Uso del ProviderSelector
+
+```typescript
+import { ProviderSelector, LocalOption } from '../common/ProviderSelector';
+
+// Con local options
+const LOCAL_OPTIONS: LocalOption[] = [
+    { id: 'local', label: 'Local (Instant)', icon: 'lightning' }
+];
+
+<ProviderSelector
+    feature="documentation"
+    localOptions={LOCAL_OPTIONS}
+    selectedLocalOption={isLocalMode ? 'local' : null}
+    onLocalOptionSelect={(id) => setLocalMode(id === 'local')}
+    compact
+/>
+
+// Solo AI providers
+<ProviderSelector feature="chat" />
+```
+
+### Navigazione a Settings
+
+```typescript
+import { useSettingsModalSafe } from '../../contexts/SettingsModalContext';
+
+const settingsModal = useSettingsModalSafe();
+
+// Apri Settings alla sezione Providers
+settingsModal?.openSettings('providers');
+```
 
 ---
 
-## 8. QUANDO HAI DUBBI
+## 🐛 Bug Noti e Soluzioni
 
-1. Rileggi questo file
-2. Pensa: "Un utente nuovo si spaventa?"
-3. Pensa: "È consistente con il resto?"
-4. Segui il principio: **Minimal, Friendly, Professionale**
+### Stale AST Bug (RISOLTO)
+**Problema:** L'AST nel callback era una closure stale
+**Soluzione:** Usa `useRef` per mantenere AST corrente
+```typescript
+const astRef = useRef<TransformationAST | null>(null);
+astRef.current = currentAST;
+// Nel callback usa astRef.current
+```
+
+### Target Model Non Visibile (RISOLTO)
+**Problema:** Modello creato ma tab bloccato su "Building the Graph..."
+**Soluzione:** 
+- Usa `SetRootFieldAction.new('graphs', graphId, '+=', true)` per aggiungere a state.graphs
+- Usa `setTimeout(200)` prima di aprire il tab
+
+### Attribute Mapping Non Funziona (RISOLTO 2026-02-09)
+**Problema:** `label` resta `undefined` dopo trasformazione
+**Root Causes:**
+1. `evaluatePropertyPath()` non passava proprietà istanza a `contextToRecord()`
+2. `DObject.new()` ritorna ID temporanei non usabili per lookup Redux
+3. `SetFieldAction` non scrive valori leggibili dal proxy
+
+**Soluzione:**
+1. Fix executor `evaluatePropertyPath` con accesso diretto + contextToRecord esteso
+2. Trovare oggetti per NOME via `lModel.objects.find(o => o.name)`
+3. Scrivere valori via proxy `$attr.value = val`
+
+### Nuovi Bug Aperti (2026-02-09)
+| Bug | Stato | Note |
+|-----|-------|------|
+| Valore duplicato (tutti B ricevono A_0) | ⚠️ APERTO | Da verificare executor loop |
+| Doppia esecuzione executor | ⚠️ APERTO | React double rendering |
+| "Error in View: Fallback" su target | ⚠️ APERTO | Rendering modello creato |
 
 ---
 
-*Ultimo aggiornamento: Gennaio 2026*
+## 🎯 UI Components - Decisioni
+
+### Mapping Arrows (DualMetamodelPanel)
+- **Stesso livello (|dy| < 5):** Linea dritta orizzontale
+- **Livelli diversi:** Percorso Manhattan con curve (radius 6px)
+- **Colori:**
+  - Class mapping: Verde (#10b981)
+  - Attribute mapping: Blu (#3b82f6) o varianti per tipo
+
+### Monaco Editor Configuration
+```typescript
+{
+    fontFamily: "'IBM Plex Mono', Monaco, Consolas, monospace",
+    fontSize: 13,
+    lineHeight: 20,
+    fontLigatures: false,
+    lineNumbers: 'on',
+    minimap: { enabled: false },
+    wordWrap: 'on',
+    renderLineHighlight: 'line',
+    cursorBlinking: 'smooth',
+    padding: { top: 8, bottom: 8 }
+}
+```
+
+### Console Panel
+- Font con ligatures per codice
+- Auto-scroll per nuovi messaggi
+- Resize handle con hover effect
+- Filtri per tipo messaggio (errors, warnings, info)
+
+### Transformation Names
+- Formato: `SourceMetamodel_to_TargetMetamodel`
+- NO trattini `-` (non validi in JjTL)
+- Numeri progressivi se duplicato: `name`, `name (1)`, `name (2)`
+
+---
+
+## 🔄 Workflow Preferito
+
+- Al termine di ogni task che introduce nuovi pattern o convenzioni, proponi un aggiornamento a questo file.
+
+### Per Feature Complesse
+1. **Discuti architettura** prima di implementare
+2. Crea un **prompt dettagliato e autocontenuto** con requisiti chiari
+3. Usa **Plan Mode** in Claude Code per verificare l'approccio
+4. Implementa in modo incrementale
+5. Testa e itera
+
+### Per Bug Fix
+1. **Analizza root cause** con log di debug
+2. Crea prompt con:
+   - Descrizione problema
+   - Log rilevanti
+   - Codice da modificare
+   - Risultato atteso
+3. Applica fix
+4. Verifica con test case specifico
+
+### Per Refactoring
+1. Spiega **motivazioni** prima del codice
+2. Mantieni backward compatibility
+3. Documenta breaking changes
+
+---
+
+## 📝 Note Aggiuntive
+
+### Cose da Evitare
+- ❌ Emoji nel codice (ok nelle risposte)
+- ❌ Librerie esterne senza discussione
+- ❌ Modifiche al core senza approvazione
+- ❌ Over-engineering per feature semplici
+- ❌ Usare `createM1()` per creare modelli target (genera nomi automatici)
+
+### Best Practices
+- ✅ Accessibility (WCAG guidelines)
+- ✅ Dark mode support
+- ✅ Lazy loading dove appropriato
+- ✅ Memoization per performance
+- ✅ Console.log con prefissi `[Component]` per debug
+
+### Documentazione
+- JSDoc per componenti pubblici
+- README per moduli complessi
+- Commenti per logica non ovvia
+
+---
+
+## 🔗 File Importanti
+
+| File | Descrizione |
+|------|-------------|
+| `ProjectEditor.tsx` | Dashboard principale, gestione progetto |
+| `DockManager.ts` | Gestione tabs e pannelli |
+| `executor.ts` (jjtl) | Esecuzione trasformazioni |
+| `MappingLinesOverlay.tsx` | Frecce di mapping |
+| `DualMetamodelPanel.tsx` | Vista side-by-side metamodelli |
+| `ExecuteTransformationDialog.tsx` | Dialog esecuzione |
+
+---
+
+## 📅 Ultimo Aggiornamento
+
+**Data:** Febbraio 2026
+**Stato JjTL Executor:** In debug - attribute mapping non funziona
+**Prossimi Step:** 
+1. Fix attribute mapping (verificare flusso executor → ProjectEditor)
+2. Completare UI redesign
+3. Implementare JjEL property aliases

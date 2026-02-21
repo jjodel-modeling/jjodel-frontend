@@ -328,6 +328,23 @@ $script-running: #3b82f6;
             background: rgba(239, 68, 68, 0.15);
         }
     }
+
+    &--close {
+        background: transparent;
+        color: $script-text-muted;
+        border: none;
+        margin-left: 4px;
+        padding: 4px 6px;
+
+        i {
+            font-size: 12px;
+        }
+
+        &:hover:not(:disabled) {
+            color: $script-error;
+            background: rgba(239, 68, 68, 0.1);
+        }
+    }
 }
 
 // ============================================
@@ -485,6 +502,20 @@ $script-running: #3b82f6;
 }
 
 // ============================================
+// AI DISCLAIMER
+// ============================================
+
+.script-block__disclaimer {
+    padding: 4px 12px;
+    background: rgba(0, 0, 0, 0.02);
+    border-top: 1px solid $script-border;
+
+    .ai-disclaimer--compact {
+        color: $script-text-muted;
+    }
+}
+
+// ============================================
 // SCROLLBAR
 // ============================================
 
@@ -551,7 +582,7 @@ $script-running: #3b82f6;
     border-radius: 12px;
     box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
     text-align: center;
-    padding: 32px 40px;
+    padding: 28px 36px;
     max-width: 400px;
     width: 90%;
     animation: slideUp 0.2s ease;
@@ -568,21 +599,29 @@ $script-running: #3b82f6;
     }
 
     .modal-icon {
-        font-size: 48px;
-        margin-bottom: 16px;
+        width: 56px;
+        height: 56px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 14px;
+        font-size: 28px;
 
         &.success {
+            background: rgba(16, 185, 129, 0.12);
             color: $script-success;
         }
 
         &.error {
+            background: rgba(239, 68, 68, 0.12);
             color: $script-error;
         }
     }
 
     h2 {
-        margin: 0 0 24px;
-        font-size: 20px;
+        margin: 0 0 20px;
+        font-size: 18px;
         font-weight: 600;
         color: $script-text;
     }
@@ -590,8 +629,8 @@ $script-running: #3b82f6;
     .execution-stats {
         display: flex;
         justify-content: center;
-        gap: 24px;
-        margin-bottom: 28px;
+        gap: 28px;
+        margin-bottom: 24px;
         flex-wrap: wrap;
     }
 
@@ -599,24 +638,32 @@ $script-running: #3b82f6;
         display: flex;
         flex-direction: column;
         align-items: center;
-        min-width: 60px;
+        min-width: 70px;
 
         .stat-value {
-            font-size: 24px;
+            font-size: 26px;
             font-weight: 700;
-            color: $script-running;
+            // Use !important to override global .stat-value from info-improvements.scss
+            // which sets color: #ffffff !important
+            color: $script-text !important;
+            line-height: 1.1;
         }
 
         .stat-label {
-            font-size: 11px;
+            font-size: 10px;
             color: $script-text-muted;
             text-transform: uppercase;
             letter-spacing: 0.5px;
-            margin-top: 2px;
+            margin-top: 4px;
+            font-weight: 500;
         }
 
         &.error .stat-value {
-            color: $script-error;
+            color: $script-error !important;
+        }
+
+        &.retry .stat-value {
+            color: $script-warning !important;
         }
     }
 
@@ -650,8 +697,8 @@ $script-running: #3b82f6;
             text-align: center;
         }
 
-        .modal-icon {
-            text-align: center;
+        .execution-stats {
+            justify-content: center;
         }
     }
 

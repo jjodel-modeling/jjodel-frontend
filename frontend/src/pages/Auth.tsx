@@ -258,7 +258,7 @@ return(<section className={`auth-split-screen ${action === 'register' ? 'registe
         <form className={'auth-form'} onSubmit={onSubmit}>
             <label className={'auth-form-header'}>
                 {action === 'register' && 'Create an Account'}
-                {action === 'login' && 'Sign In'}
+                {action === 'login' && 'Login'}
                 {action === 'retrieve-password' && 'Retrieve your Password'}
             </label>
 
@@ -652,12 +652,14 @@ return(<section className={`auth-split-screen ${action === 'register' ? 'registe
                         required={true} title={'At least 8 characters'}
                 />
                 </label>
-                <button className={'d-block btn btn-primary p-1 mx-auto mt-3 login-button'} type={'submit'} onClick={()=>setDirty(true)}>
-                    Login
-                </button>
-                {(window.location.host.includes('localhost') || window.location.href.indexOf('http')!==0) &&
-                    <button className={'d-block btn btn-primary p-1 mx-auto mt-3 login-button'} type='button' onClick={(e) => offline()}>Offline mode</button>
-                }
+                <div className="login-buttons">
+                    <button className={'btn btn-primary login-button'} type={'submit'} onClick={()=>setDirty(true)}>
+                        Login
+                    </button>
+                    {(window.location.host.includes('localhost') || window.location.href.indexOf('http') !== 0) &&
+                        <button className={'btn login-button login-button--secondary'} type='button' onClick={(e) => offline()}>Offline mode</button>
+                    }
+                </div>
             </>}
 
             {action === 'retrieve-password' &&
@@ -680,25 +682,33 @@ return(<section className={`auth-split-screen ${action === 'register' ? 'registe
             </>}
 
 
-            <label className={'mt-3 d-block text-center'}>
-                {action === 'register' && <>Already have an account? <span tabIndex={-1} onClick={e => {setAction('login')}} className={'ms-1 text-primary text-decoration-none cursor-pointer login-link'}>Sign In</span></>}
-                {action === 'login' &&
+            <div className="auth-footer-links">
+                {action === 'register' && (
+                    <div className="auth-footer-row">
+                        Already have an account? <span tabIndex={-1} onClick={e => {setAction('login')}} className={'login-link'}>Login</span>
+                    </div>
+                )}
+                {action === 'login' && (
                     <>
-                        Don't have an account? <span tabIndex={-1} onClick={e => {setAction('register')}} className={'ms-1 text-primary text-decoration-none cursor-pointer login-link'}>Register</span><br/>
-                        <span tabIndex={-1} onClick={e => {setAction('retrieve-password')}} className={'ms-1 text-primary text-decoration-none cursor-pointer login-link'}>Forgot your password?</span>
-                        {/* <div className="alert alert-primary" role="alert" style={{marginTop: '12px'}}>
-                            <b>Action required</b><br/> Please reset your password to continue using Jjodel 2.0.
-                        </div>*/}
+                        <div className="auth-footer-row">
+                            Don't have an account? <span tabIndex={-1} onClick={e => {setAction('register')}} className={'login-link'}>Register</span>
+                        </div>
+                        <div className="auth-footer-row">
+                            <span tabIndex={-1} onClick={e => {setAction('retrieve-password')}} className={'login-link'}>Forgot your password?</span>
+                        </div>
                     </>
-                }
-                {action === 'retrieve-password' &&
+                )}
+                {action === 'retrieve-password' && (
                     <>
-                        Go back to the <span tabIndex={-1} onClick={e => {setAction('login')}} className={'ms-1 text-primary text-decoration-none cursor-pointer login-link'}>Sign In</span> page<br/>
-                        Don't have an account? <span tabIndex={-1} onClick={e => {setAction('register')}} className={'ms-1 text-primary text-decoration-none cursor-pointer login-link'}>Register</span><br/>
+                        <div className="auth-footer-row">
+                            Go back to the <span tabIndex={-1} onClick={e => {setAction('login')}} className={'login-link'}>Login</span> page
+                        </div>
+                        <div className="auth-footer-row">
+                            Don't have an account? <span tabIndex={-1} onClick={e => {setAction('register')}} className={'login-link'}>Register</span>
+                        </div>
                     </>
-                }
-
-            </label>
+                )}
+            </div>
         </form>
     </div>
 

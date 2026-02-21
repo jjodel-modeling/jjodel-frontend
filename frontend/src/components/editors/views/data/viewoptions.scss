@@ -899,13 +899,13 @@ section.edgepoint-adjust input.switch[type="checkbox"],
     height: 28px !important;
     padding: 0 8px !important;
     font-size: 12px !important;
-    font-family: 'SF Mono', Monaco, 'Consolas', 'IBM Plex Mono', monospace !important;
+    font-family: 'IBM Plex Mono', Monaco, 'Consolas', monospace !important;
     text-align: right !important;
     color: #334155 !important;
     background: #ffffff !important;
     border: 1px solid #e2e8f0 !important;
     border-radius: 6px !important;
-    flex-shrink: 0 !important;
+    flex-shrink: 0 !important;        
 
     &:focus {
       border-color: #64748b !important;
@@ -938,13 +938,14 @@ section.edgepoint-adjust input.switch[type="checkbox"],
   height: 28px !important;
   padding: 0 8px !important;
   font-size: 12px !important;
-  font-family: 'SF Mono', Monaco, 'Consolas', 'IBM Plex Mono', monospace !important;
+  font-family: 'IBM Plex Mono', Monaco, 'Consolas', monospace !important;
   text-align: right !important;
   color: #334155 !important;
   background: #ffffff !important;
   border: 1px solid #e2e8f0 !important;
   border-radius: 6px !important;
   flex-shrink: 0 !important;
+
 }
 
 // ============================================

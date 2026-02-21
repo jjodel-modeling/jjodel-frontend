@@ -29,7 +29,7 @@ import { UpgradePrompt } from '../ModeSystem';
 import { Button } from '../ui';
 import { M2AnalyticsModal, M2AnalyticsData } from '../M2AnalyticsModal';
 
-// Custom toggle switch component (div-based to avoid global checkbox styles)
+// Custom toggle switch component (div-based horizontal switch)
 function PropertiesToggle(props: { data: LModelElement; field: string }) {
     const { data, field } = props;
     const value = !!(data as any)[field];
@@ -39,15 +39,14 @@ function PropertiesToggle(props: { data: LModelElement; field: string }) {
     };
 
     return (
-        <label className="toggle-switch">
-            <input
-                type="checkbox"
-                checked={value}
-                onChange={handleToggle}
-                aria-label={field}
-            />
-            <span className="toggle-slider" />
-        </label>
+        <button
+            type="button"
+            role="switch"
+            aria-checked={value}
+            aria-label={field}
+            className={`jjodel-switch ${value ? 'active' : ''}`}
+            onClick={handleToggle}
+        />
     );
 }
 

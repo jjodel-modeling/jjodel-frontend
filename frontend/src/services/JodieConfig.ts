@@ -21,9 +21,10 @@ const STORAGE_KEYS: Record<TAIProvider, string> = {
     [AIProvider.Gemini]: 'jjodie_provider_gemini',
     [AIProvider.Mistral]: 'jjodie_provider_mistral',
     [AIProvider.Groq]: 'jjodie_provider_groq',
-    [AIProvider.Ollama]: 'jjodie_provider_Ollama',
-    [AIProvider.Llama]: 'jjodie_provider_Llama',
-    [AIProvider.Copilot]: 'jjodie_provider_Copilot',
+    [AIProvider.Llama]: 'jjodie_provider_llama',
+    [AIProvider.Copilot]: 'jjodie_provider_copilot',
+    [AIProvider.Kimi]: 'jjodie_provider_kimi',
+    [AIProvider.Ollama]: 'jjodie_provider_ollama',
 };
 
 const ACTIVE_PROVIDER_KEY = 'jjodie_active_provider';
@@ -41,6 +42,7 @@ const SETTINGS_TO_JODIE_PROVIDER: Record<string, TAIProvider | null> = {
     'mistral': AIProvider.Mistral,
     'groq': AIProvider.Groq,
     'ollama': AIProvider.Ollama,
+    'kimi': AIProvider.Kimi,
     'custom': null,
 };
 
@@ -49,6 +51,7 @@ interface ProviderStorageFormat {
     model: string;
     enabled: boolean;
     lastTested?: number;
+    baseUrl?: string;  // Custom base URL (for Ollama non-default endpoints)
 }
 
 interface WindowState {
@@ -202,7 +205,12 @@ export class JodieConfigService {
      */
     static getProvider(provider: TAIProvider): ProviderConfig | null {
         const config = this.getProviderConfig(provider);
-        if (!config || !config.apiKey || !config.enabled) {
+        // Ollama doesn't require API key
+        if (!config || !config.enabled) {
+            return null;
+        }
+        // Other providers require API key
+        if (provider !== 'ollama' && !config.apiKey) {
             return null;
         }
 
@@ -211,6 +219,7 @@ export class JodieConfigService {
             apiKey: config.apiKey,
             model: config.model,
             enabled: config.enabled,
+            baseUrl: config.baseUrl,
         };
     }
 
@@ -243,18 +252,26 @@ export class JodieConfigService {
 
     /**
      * Check if a specific provider is properly configured
+     * Note: Ollama doesn't require an API key
      */
     static isProviderConfigured(provider: TAIProvider): boolean {
         const config = this.getProviderConfig(provider);
-        return !!(config && config.apiKey);
+        if (!config) return false;
+        // Ollama doesn't require API key
+        if (provider === AIProvider.Ollama) return true;
+        return !!config.apiKey;
     }
 
     /**
      * Check if a specific provider is enabled (configured + enabled flag)
+     * Note: Ollama doesn't require an API key
      */
     static isProviderEnabled(provider: TAIProvider): boolean {
         const config = this.getProviderConfig(provider);
-        return !!(config && config.apiKey && config.enabled);
+        if (!config || !config.enabled) return false;
+        // Ollama doesn't require API key
+        if (provider === AIProvider.Ollama) return true;
+        return !!config.apiKey;
     }
 
     /**

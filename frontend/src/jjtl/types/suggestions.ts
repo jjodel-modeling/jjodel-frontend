@@ -3,7 +3,7 @@
  * Supports both simple (name/type matching) and AI-assisted modes
  */
 
-export type SuggestionMode = 'simple' | 'ai';
+export type SuggestionMode = 'simple' | 'ai' | 'grammar';
 
 export type SuggestionConfidence = 'high' | 'medium' | 'low';
 

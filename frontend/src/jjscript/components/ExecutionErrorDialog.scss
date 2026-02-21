@@ -1,0 +1,551 @@
+/**
+ * ExecutionErrorDialog Styles
+ * Professional error dialog for JjScript execution
+ *
+ * Two modes:
+ * 1. Paused: Shows current error with Skip/Close options
+ * 2. Completed: Shows execution summary with skipped lines
+ */
+
+// ============================================
+// VARIABLES
+// ============================================
+
+$dialog-bg: #ffffff;
+$dialog-border: #e2e8f0;
+$dialog-text: #1e293b;
+$dialog-text-muted: #64748b;
+$dialog-text-light: #94a3b8;
+
+// Header variants
+$color-warning: #f59e0b;
+$color-warning-bg: rgba(245, 158, 11, 0.1);
+$color-error: #ef4444;
+$color-error-bg: rgba(239, 68, 68, 0.1);
+$color-success: #10b981;
+$color-success-bg: rgba(16, 185, 129, 0.1);
+
+// Buttons
+$dialog-primary: #475569;
+$dialog-primary-hover: #334155;
+$dialog-secondary-bg: #f1f5f9;
+$dialog-secondary-hover: #e2e8f0;
+
+// ============================================
+// OVERLAY
+// ============================================
+
+.exec-error-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    padding: 24px;
+}
+
+// ============================================
+// DIALOG
+// ============================================
+
+.exec-error-dialog {
+    background: $dialog-bg;
+    border-radius: 12px;
+    max-width: 480px;
+    width: 100%;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    animation: dialogSlideIn 0.2s ease-out;
+    overflow: hidden;
+}
+
+@keyframes dialogSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px) scale(0.98);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+// ============================================
+// HEADER
+// ============================================
+
+.exec-error-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 20px 24px;
+    border-bottom: 1px solid $dialog-border;
+
+    > i {
+        font-size: 24px;
+        flex-shrink: 0;
+    }
+
+    h2 {
+        margin: 0;
+        font-size: 16px;
+        font-weight: 600;
+        color: $dialog-text;
+        line-height: 1.3;
+    }
+
+    // Variants
+    &--warning {
+        background: $color-warning-bg;
+
+        > i {
+            color: $color-warning;
+        }
+    }
+
+    &--error {
+        background: $color-error-bg;
+
+        > i {
+            color: $color-error;
+        }
+    }
+
+    &--success {
+        background: $color-success-bg;
+
+        > i {
+            color: $color-success;
+        }
+    }
+}
+
+// ============================================
+// CONTENT
+// ============================================
+
+.exec-error-content {
+    padding: 20px 24px;
+    max-height: 400px;
+    overflow-y: auto;
+
+    // Custom scrollbar
+    &::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    &::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    &::-webkit-scrollbar-thumb {
+        background-color: #cbd5e1;
+        border-radius: 3px;
+
+        &:hover {
+            background-color: #94a3b8;
+        }
+    }
+}
+
+// Section container
+.exec-error-section {
+    margin-bottom: 16px;
+
+    &:last-child {
+        margin-bottom: 0;
+    }
+}
+
+// Section label
+.exec-error-label {
+    display: block;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: $dialog-text-light;
+    margin-bottom: 8px;
+}
+
+// Command display
+.exec-error-command {
+    background: #f8fafc;
+    border: 1px solid $dialog-border;
+    border-radius: 6px;
+    padding: 10px 12px;
+
+    code {
+        font-family: 'JetBrains Mono', 'IBM Plex Mono', monospace;
+        font-size: 13px;
+        color: $dialog-text;
+        word-break: break-all;
+        white-space: pre-wrap;
+    }
+}
+
+// Error message
+.exec-error-message {
+    background: $color-error-bg;
+    border-radius: 6px;
+    padding: 12px;
+
+    p {
+        margin: 0;
+        font-size: 13px;
+        color: $color-error;
+        line-height: 1.5;
+
+        &:not(:last-child) {
+            margin-bottom: 8px;
+        }
+    }
+}
+
+// Suggestion box
+.exec-error-suggestion {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    background: rgba(245, 158, 11, 0.08);
+    border-radius: 6px;
+    padding: 12px;
+    margin-top: 16px;
+
+    > i {
+        color: $color-warning;
+        font-size: 16px;
+        flex-shrink: 0;
+        margin-top: 1px;
+    }
+
+    span {
+        font-size: 13px;
+        color: #78350f;
+        line-height: 1.5;
+    }
+}
+
+// Success state
+.exec-error-success {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 24px 16px;
+    text-align: center;
+
+    > i {
+        font-size: 48px;
+        color: $color-success;
+    }
+
+    p {
+        margin: 0;
+        font-size: 14px;
+        color: $dialog-text-muted;
+    }
+}
+
+// Skipped lines display
+.exec-error-skipped-lines {
+    font-family: 'JetBrains Mono', 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    color: $dialog-text;
+    background: #fef3c7;
+    border-radius: 6px;
+    padding: 10px 12px;
+}
+
+// Error list
+.exec-error-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.exec-error-list-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    background: #fef2f2;
+    border-radius: 6px;
+    padding: 10px 12px;
+}
+
+.exec-error-list-line {
+    font-family: 'JetBrains Mono', 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    font-weight: 600;
+    color: $color-error;
+    flex-shrink: 0;
+}
+
+.exec-error-list-message {
+    font-size: 12px;
+    color: #991b1b;
+    line-height: 1.4;
+    word-break: break-word;
+}
+
+.exec-error-list-more {
+    font-size: 12px;
+    color: $dialog-text-muted;
+    font-style: italic;
+    padding: 8px 12px;
+    text-align: center;
+}
+
+// ============================================
+// STATS BAR
+// ============================================
+
+.exec-error-stats {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 12px 24px;
+    background: #f8fafc;
+    border-top: 1px solid $dialog-border;
+    font-size: 12px;
+    color: $dialog-text-muted;
+}
+
+.exec-error-stats-dot {
+    color: #cbd5e1;
+}
+
+.exec-error-stats-skipped {
+    color: $color-warning;
+    font-weight: 500;
+}
+
+// ============================================
+// ACTIONS
+// ============================================
+
+.exec-error-actions {
+    display: flex;
+    gap: 12px;
+    padding: 16px 24px;
+    border-top: 1px solid $dialog-border;
+    background: $dialog-bg;
+}
+
+.exec-error-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 6px;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s ease;
+
+    &:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+
+    i {
+        font-size: 14px;
+    }
+
+    &--primary {
+        flex: 1;
+        background: linear-gradient(135deg, #64748b 0%, #475569 100%);
+        color: #ffffff;
+
+        i {
+            color: #ffffff;
+        }
+
+        &:hover:not(:disabled) {
+            background: linear-gradient(135deg, #475569 0%, #334155 100%);
+        }
+    }
+
+    &--secondary {
+        background: $dialog-secondary-bg;
+        color: #475569;
+
+        &:hover:not(:disabled) {
+            background: $dialog-secondary-hover;
+        }
+    }
+}
+
+// ============================================
+// RESPONSIVE
+// ============================================
+
+@media (max-width: 500px) {
+    .exec-error-overlay {
+        padding: 16px;
+    }
+
+    .exec-error-header {
+        padding: 16px 20px;
+
+        h2 {
+            font-size: 15px;
+        }
+    }
+
+    .exec-error-content {
+        padding: 16px 20px;
+    }
+
+    .exec-error-actions {
+        flex-direction: column;
+        padding: 12px 20px;
+    }
+
+    .exec-error-btn--secondary {
+        order: 2;
+    }
+
+    .exec-error-stats {
+        flex-wrap: wrap;
+        gap: 8px;
+        padding: 10px 20px;
+    }
+}
+
+// ============================================
+// DARK MODE
+// ============================================
+
+[data-theme="dark"] {
+    .exec-error-dialog {
+        background: #1e1e1e;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    }
+
+    .exec-error-header {
+        border-color: #333;
+
+        h2 {
+            color: #e0e0e0;
+        }
+
+        &--warning {
+            background: rgba(245, 158, 11, 0.15);
+        }
+
+        &--error {
+            background: rgba(239, 68, 68, 0.15);
+        }
+
+        &--success {
+            background: rgba(16, 185, 129, 0.15);
+        }
+    }
+
+    .exec-error-content {
+        &::-webkit-scrollbar-thumb {
+            background-color: #444;
+
+            &:hover {
+                background-color: #555;
+            }
+        }
+    }
+
+    .exec-error-label {
+        color: #888;
+    }
+
+    .exec-error-command {
+        background: #252525;
+        border-color: #333;
+
+        code {
+            color: #e0e0e0;
+        }
+    }
+
+    .exec-error-message {
+        background: rgba(239, 68, 68, 0.15);
+
+        p {
+            color: #fca5a5;
+        }
+    }
+
+    .exec-error-suggestion {
+        background: rgba(245, 158, 11, 0.12);
+
+        span {
+            color: #fcd34d;
+        }
+    }
+
+    .exec-error-success {
+        p {
+            color: #a0a0a0;
+        }
+    }
+
+    .exec-error-skipped-lines {
+        background: rgba(245, 158, 11, 0.15);
+        color: #fcd34d;
+    }
+
+    .exec-error-list-item {
+        background: rgba(239, 68, 68, 0.12);
+    }
+
+    .exec-error-list-line {
+        color: #fca5a5;
+    }
+
+    .exec-error-list-message {
+        color: #fca5a5;
+    }
+
+    .exec-error-list-more {
+        color: #888;
+    }
+
+    .exec-error-stats {
+        background: #252525;
+        border-color: #333;
+        color: #888;
+    }
+
+    .exec-error-stats-dot {
+        color: #444;
+    }
+
+    .exec-error-stats-skipped {
+        color: #fbbf24;
+    }
+
+    .exec-error-actions {
+        border-color: #333;
+        background: #1e1e1e;
+    }
+
+    .exec-error-btn {
+        &--primary {
+            background: linear-gradient(135deg, #64748b 0%, #475569 100%);
+        }
+
+        &--secondary {
+            background: #333;
+            color: #e0e0e0;
+
+            &:hover:not(:disabled) {
+                background: #404040;
+            }
+        }
+    }
+}

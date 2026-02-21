@@ -3,7 +3,8 @@
  * Handles API calls to different AI providers (Claude, OpenAI, DeepSeek, Gemini)
  */
 
-import { AIProvider, TAIProvider, ChatMessage, ChatImage, ChatDocument, PROVIDER_ENDPOINTS } from '../types/jodie';
+import { AIProvider, TAIProvider, ChatMessage, ChatImage, ChatDocument, PROVIDER_ENDPOINTS,
+    getProxyEndpoint, OLLAMA_DEFAULT_BASE_URL } from '../types/jodie';
 import { JodieConfigService } from './JodieConfig';
 import { PromptService } from './PromptService';
 import { PromptContext } from '../types/prompts';
@@ -28,7 +29,11 @@ export class AIProviderService {
     ): Promise<string> {
         const config = JodieConfigService.getProvider(provider);
 
-        if (!config || !config.apiKey) {
+        // Ollama doesn't require API key
+        if (!config) {
+            throw new Error(`Provider ${provider} is not configured. Please configure it in Settings.`);
+        }
+        if (provider !== 'ollama' && !config.apiKey) {
             throw new Error(`Provider ${provider} is not configured. Please add your API key in Settings.`);
         }
 
@@ -51,6 +56,10 @@ export class AIProviderService {
                 return await this.chatMistral(message, config.apiKey, config.model, conversationHistory, systemPrompt, images);
             case AIProvider.Groq:
                 return await this.chatGroq(message, config.apiKey, config.model, conversationHistory, systemPrompt);
+            case AIProvider.Kimi:
+                return await this.chatKimi(message, config.apiKey, config.model, conversationHistory, systemPrompt);
+            case AIProvider.Ollama:
+                return await this.chatOllama(message, config.model, conversationHistory, systemPrompt, config.baseUrl);
             default:
                 throw new Error(`Unsupported provider: ${provider}`);
         }
@@ -86,7 +95,10 @@ export class AIProviderService {
 
         messages.push({ role: 'user' as const, content: currentContent });
 
-        const response = await fetch(PROVIDER_ENDPOINTS.claude, {
+        // Use proxy endpoint to avoid CORS issues
+        const proxyUrl = getProxyEndpoint('anthropic');
+
+        const response = await fetch(proxyUrl, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -95,7 +107,7 @@ export class AIProviderService {
             },
             body: JSON.stringify({
                 model,
-                max_tokens: 2000,
+                max_tokens: 4096,
                 system: systemPrompt,
                 messages,
             }),
@@ -314,21 +326,21 @@ export class AIProviderService {
             parts: currentParts,
         });
 
-        const response = await fetch(
-            `${PROVIDER_ENDPOINTS.gemini}/${model}:generateContent?key=${apiKey}`,
-            {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
+        // Use proxy endpoint to avoid CORS issues
+        const proxyUrl = `${getProxyEndpoint('gemini')}/${model}/generateContent?key=${apiKey}`;
+
+        const response = await fetch(proxyUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                contents,
+                generationConfig: {
+                    maxOutputTokens: 2000,
                 },
-                body: JSON.stringify({
-                    contents,
-                    generationConfig: {
-                        maxOutputTokens: 2000,
-                    },
-                }),
-            }
-        );
+            }),
+        });
 
         if (!response.ok) {
             const error = await response.text();
@@ -495,13 +507,104 @@ export class AIProviderService {
     }
 
     /**
+     * Chat with Kimi (Moonshot AI) - OpenAI-compatible API
+     */
+    private static async chatKimi(
+        message: string,
+        apiKey: string,
+        model: string,
+        history: ChatMessage[],
+        systemPrompt: string
+    ): Promise<string> {
+        // Build messages array (OpenAI-compatible format)
+        const messages = [
+            { role: 'system' as const, content: systemPrompt },
+            ...history.map(msg => ({
+                role: msg.role as 'user' | 'assistant',
+                content: msg.content,
+            })),
+            { role: 'user' as const, content: message },
+        ];
+
+        const response = await fetch(PROVIDER_ENDPOINTS.kimi, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${apiKey}`,
+            },
+            body: JSON.stringify({
+                model,
+                messages,
+                max_tokens: 2000,
+            }),
+        });
+
+        if (!response.ok) {
+            const error = await response.text();
+            throw new Error(`Kimi API error: ${response.status} - ${error}`);
+        }
+
+        const data = await response.json();
+        return data.choices[0].message.content;
+    }
+
+    /**
+     * Chat with Ollama (Local) - OpenAI-compatible API
+     */
+    private static async chatOllama(
+        message: string,
+        model: string,
+        history: ChatMessage[],
+        systemPrompt: string,
+        baseUrl?: string
+    ): Promise<string> {
+        // Build messages array (OpenAI-compatible format)
+        const messages = [
+            { role: 'system' as const, content: systemPrompt },
+            ...history.map(msg => ({
+                role: msg.role as 'user' | 'assistant',
+                content: msg.content,
+            })),
+            { role: 'user' as const, content: message },
+        ];
+
+        const ollamaBaseUrl = baseUrl || OLLAMA_DEFAULT_BASE_URL;
+        const endpoint = `${ollamaBaseUrl}/v1/chat/completions`;
+
+        const response = await fetch(endpoint, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                model,
+                messages,
+                stream: false,
+            }),
+        });
+
+        if (!response.ok) {
+            const error = await response.text();
+            throw new Error(`Ollama API error: ${response.status} - ${error}`);
+        }
+
+        const data = await response.json();
+        return data.choices[0].message.content;
+    }
+
+    /**
      * Test if a provider's API key is valid
      */
     static async testConnection(provider: TAIProvider): Promise<{ success: boolean; error?: string }> {
         try {
             const config = JodieConfigService.getProvider(provider);
 
-            if (!config || !config.apiKey) {
+            if (!config) {
+                return { success: false, error: 'Provider not configured' };
+            }
+
+            // Ollama doesn't require API key, other providers do
+            if (provider !== 'ollama' && !config.apiKey) {
                 return { success: false, error: 'API key not configured' };
             }
 
@@ -519,6 +622,10 @@ export class AIProviderService {
                     return await this.testMistral(config.apiKey, config.model);
                 case  AIProvider.Groq:
                     return await this.testGroq(config.apiKey, config.model);
+                case AIProvider.Kimi:
+                    return await this.testKimi(config.apiKey, config.model);
+                case AIProvider.Ollama:
+                    return await this.testOllama(config.model, config.baseUrl);
                 default:
                     return { success: false, error: `Unsupported provider: ${provider}` };
             }
@@ -543,7 +650,10 @@ export class AIProviderService {
                 };
             }
 
-            const response = await fetch(PROVIDER_ENDPOINTS.claude, {
+            // Use proxy endpoint to avoid CORS issues
+            const proxyUrl = getProxyEndpoint('anthropic');
+
+            const response = await fetch(proxyUrl, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -567,6 +677,8 @@ export class AIProviderService {
                         errorMsg = errorJson.error.message;
                     } else if (errorJson.message) {
                         errorMsg = errorJson.message;
+                    } else if (errorJson.error) {
+                        errorMsg = typeof errorJson.error === 'string' ? errorJson.error : JSON.stringify(errorJson.error);
                     }
                 } catch {
                     errorMsg += `: ${errorText.substring(0, 150)}`;
@@ -579,6 +691,8 @@ export class AIProviderService {
                     errorMsg = 'Rate limit exceeded. Please try again in a moment.';
                 } else if (response.status === 400) {
                     errorMsg = 'Bad request. The model may be incorrect or unavailable.';
+                } else if (response.status === 403) {
+                    errorMsg = 'Access denied. Origin not allowed by proxy.';
                 }
 
                 return { success: false, error: errorMsg };
@@ -592,7 +706,7 @@ export class AIProviderService {
             if (errorMessage.includes('Failed to fetch') || errorMessage.includes('NetworkError')) {
                 return {
                     success: false,
-                    error: 'Network error. Check your internet connection.',
+                    error: 'Network error. The proxy service may be unavailable.',
                 };
             }
 
@@ -698,23 +812,23 @@ export class AIProviderService {
     }
 
     /**
-     * Test Gemini API connection
+     * Test Gemini API connection (via proxy)
      */
     private static async testGemini(apiKey: string, model: string): Promise<{ success: boolean; error?: string }> {
         try {
-            const response = await fetch(
-                `${PROVIDER_ENDPOINTS.gemini}/${model}:generateContent?key=${apiKey}`,
-                {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        contents: [{ parts: [{ text: 'Hi' }] }],
-                        generationConfig: { maxOutputTokens: 10 },
-                    }),
-                }
-            );
+            // Use proxy endpoint to avoid CORS issues
+            const proxyUrl = `${getProxyEndpoint('gemini')}/${model}/generateContent?key=${apiKey}`;
+
+            const response = await fetch(proxyUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    contents: [{ parts: [{ text: 'Hi' }] }],
+                    generationConfig: { maxOutputTokens: 10 },
+                }),
+            });
 
             if (!response.ok) {
                 const errorText = await response.text();
@@ -727,7 +841,7 @@ export class AIProviderService {
                     errorMsg += `: ${errorText.substring(0, 150)}`;
                 }
 
-                if (response.status === 400) {
+                if (response.status === 400 || response.status === 403) {
                     errorMsg = 'Invalid API key or model. Check your key in Google AI Studio.';
                 }
 
@@ -739,7 +853,7 @@ export class AIProviderService {
         } catch (error) {
             const errorMessage = (error as Error).message;
             if (errorMessage.includes('Failed to fetch')) {
-                return { success: false, error: 'Network error. Check your internet connection.' };
+                return { success: false, error: 'Network error. The proxy service may be unavailable.' };
             }
             return { success: false, error: `Connection error: ${errorMessage}` };
         }
@@ -834,6 +948,105 @@ export class AIProviderService {
             const errorMessage = (error as Error).message;
             if (errorMessage.includes('Failed to fetch')) {
                 return { success: false, error: 'Network error. Check your internet connection.' };
+            }
+            return { success: false, error: `Connection error: ${errorMessage}` };
+        }
+    }
+
+    /**
+     * Test Kimi (Moonshot AI) API connection
+     */
+    private static async testKimi(apiKey: string, model: string): Promise<{ success: boolean; error?: string }> {
+        try {
+            const response = await fetch(PROVIDER_ENDPOINTS.kimi, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${apiKey}`,
+                },
+                body: JSON.stringify({
+                    model,
+                    max_tokens: 10,
+                    messages: [{ role: 'user', content: 'Hi' }],
+                }),
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                let errorMsg = `API Error (${response.status})`;
+
+                try {
+                    const errorJson = JSON.parse(errorText);
+                    errorMsg = errorJson.error?.message || errorJson.message || errorMsg;
+                } catch {
+                    errorMsg += `: ${errorText.substring(0, 150)}`;
+                }
+
+                if (response.status === 401) {
+                    errorMsg = 'Invalid API key. Please check your key in the Moonshot AI Console.';
+                }
+
+                return { success: false, error: errorMsg };
+            }
+
+            await response.json();
+            return { success: true };
+        } catch (error) {
+            const errorMessage = (error as Error).message;
+            if (errorMessage.includes('Failed to fetch')) {
+                return { success: false, error: 'Network error. Check your internet connection.' };
+            }
+            return { success: false, error: `Connection error: ${errorMessage}` };
+        }
+    }
+
+    /**
+     * Test Ollama (Local) connection
+     */
+    private static async testOllama(model: string, baseUrl?: string): Promise<{ success: boolean; error?: string }> {
+        try {
+            const ollamaBaseUrl = baseUrl || OLLAMA_DEFAULT_BASE_URL;
+            const endpoint = `${ollamaBaseUrl}/v1/chat/completions`;
+
+            const response = await fetch(endpoint, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    model,
+                    messages: [{ role: 'user', content: 'Hi' }],
+                    stream: false,
+                }),
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                let errorMsg = `API Error (${response.status})`;
+
+                try {
+                    const errorJson = JSON.parse(errorText);
+                    errorMsg = errorJson.error?.message || errorJson.message || errorJson.error || errorMsg;
+                } catch {
+                    errorMsg += `: ${errorText.substring(0, 150)}`;
+                }
+
+                if (response.status === 404) {
+                    errorMsg = `Model "${model}" not found. Make sure it's pulled in Ollama.`;
+                }
+
+                return { success: false, error: errorMsg };
+            }
+
+            await response.json();
+            return { success: true };
+        } catch (error) {
+            const errorMessage = (error as Error).message;
+            if (errorMessage.includes('Failed to fetch') || errorMessage.includes('NetworkError')) {
+                return {
+                    success: false,
+                    error: `Cannot connect to Ollama at ${baseUrl || OLLAMA_DEFAULT_BASE_URL}. Make sure Ollama is running.`
+                };
             }
             return { success: false, error: `Connection error: ${errorMessage}` };
         }

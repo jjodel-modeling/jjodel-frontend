@@ -16,6 +16,7 @@
   font-family: var(--font-family, 'Inter Variable', -apple-system, BlinkMacSystemFont, sans-serif) !important;
   font-size: var(--text-sm, 13px) !important;
   color: var(--color-text-primary, #0f172a) !important;
+  overflow-x: visible !important;  // Allow multi-select to expand horizontally
   overflow-y: auto !important;
   height: 100% !important;
   box-sizing: border-box !important;
@@ -38,6 +39,7 @@
   .form-field {
     margin-bottom: var(--space-4, 16px) !important;
     display: block !important;
+    overflow: visible !important;  // Allow multi-select tags to be visible
   }
 
   .form-label {
@@ -88,6 +90,21 @@
     }
   }
 
+  // EXCEPTION: Multi-select .form-select wrapper - auto height
+  // The className ends up on the label.input-container wrapper
+  .form-select:has([class*="-control"]),
+  .form-select:has(.jjodel-select__control),
+  label.form-select,
+  .input-container.form-select {
+    height: auto !important;
+    min-height: 38px !important;
+    max-height: 60px !important;
+    padding: 0 !important;
+    border: none !important;
+    background: transparent !important;
+    overflow: visible !important;
+  }
+
   select,
   .form-select {
     appearance: none !important;
@@ -107,9 +124,29 @@
     padding: 0 !important;
     margin: 0 !important;
     background: transparent !important;
+    overflow: visible !important;  // Allow multi-select to expand
 
     input, select {
       width: 100% !important;
+    }
+
+    // Reset height for react-select multi-select containers - auto with max
+    &:has([class*="-control"]) {
+      height: auto !important;
+      min-height: 38px !important;
+      max-height: 60px !important;
+    }
+
+    // Multi-select with form-select class - auto height
+    &.form-select:has([class*="-control"]),
+    &.form-select:has(.jjodel-select__control) {
+      height: auto !important;
+      min-height: 38px !important;
+      max-height: 60px !important;
+      padding: 0 !important;
+      border: none !important;
+      background: transparent !important;
+      overflow: visible !important;
     }
   }
 
@@ -260,124 +297,214 @@
 }
 
 // ============================================
-// APPLIABLE TO - Compact MultiSelect + Slate
+// APPLICABLE TO - Multi-select with auto height
 // ============================================
 .form-field:has([class*="-control"]) {
-  // Compact multiselect container
+  // 1. Control container - auto height with max limit
   [class*="-control"] {
-    min-height: 36px !important;
-    max-height: none !important;
-    border: 1px solid var(--color-border-primary, #e2e8f0) !important;
+    min-height: 38px !important;
+    height: auto !important;
+    max-height: 60px !important;
+    border: 0px solid var(--color-border-primary, #e2e8f0) !important;
     border-radius: var(--radius-md, 6px) !important;
     background: var(--color-bg-primary, #ffffff) !important;
     cursor: pointer !important;
-  }
-
-  [class*="-valueContainer"] {
-    padding: 2px 8px !important;
+    overflow: visible !important;
+    display: flex !important;
     flex-wrap: wrap !important;
-    gap: 4px !important;
+    align-items: center !important;
+
+    &:hover {
+      border-color: transparent!important; // #cbd5e1 !important;
+    }
   }
 
-  // SLATE badges for selected items
-  [class*="-multiValue"] {
-    background: linear-gradient(180deg, #64748b 0%, #475569 100%) !important;
-    border-radius: 4px !important;
+  // Value container - Input LEFT, Tags RIGHT
+  [class*="-valueContainer"] {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    align-items: center !important;
+    gap: 0 !important;  // Gap managed by margin
+    padding: 4px 8px !important;
+    overflow: visible !important;
+    flex: 1 1 0% !important;
+  }
+
+  // 2. Filter input - grows to push tags right
+  [class*="-Input"] {
+    flex: 1 1 auto !important;
+    min-width: 50px !important;
     margin: 0 !important;
-    border: none !important;
+    padding: 0 !important;
+
+    input {
+      border: none !important;
+      outline: none !important;
+      box-shadow: none !important;
+      background: transparent !important;
+      padding: 0 !important;
+      margin: 0 !important;
+      font-size: 13px !important;
+      width: 100% !important;
+    }
+  }
+
+  // FIRST tag - pushed to right with margin-left: auto
+  [class*="-multiValue"]:first-of-type {
+    margin-left: auto !important;
+  }
+
+  // ALL tags - styling and spacing
+  [class*="-multiValue"] {
+    background: #f1f5f9 !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 4px !important;
+    flex-shrink: 0 !important;
+    margin: 0 0 0 4px !important;
+
+    
+  }
+
+  .jjodel-select__input {    
+    width: max-content !important;
+    padding: 0!important;
+    margin-left: 6px !important;
+    height: 24px !important;
+    border: none!important;
+    outline: none!important;
+  }
+    
+  .jjodel-select__input:active, .jjodel-select__input:focus  {
+    border: none!important;
+    outline: none!important;
+  }
+
+
+
+
+  // HIDE clear indicator (X button)
+  [class*="-clearIndicator"] {
+    display: none !important;
   }
 
   [class*="-multiValue__label"] {
-    color: #ffffff !important;
+    color: #334155 !important;  // slate-700 — readable
     font-size: 12px !important;
     font-weight: 500 !important;
-    padding: 3px 8px !important;
+    padding: 2px 6px !important;
     padding-right: 4px !important;
   }
 
   [class*="-multiValue__remove"] {
-    color: rgba(255, 255, 255, 0.7) !important;
+    color: #94a3b8 !important;  // slate-400
     padding: 0 4px !important;
+    cursor: pointer !important;
+    border-radius: 0 4px 4px 0 !important;
 
     &:hover {
-      background: rgba(0, 0, 0, 0.2) !important;
-      color: #ffffff !important;
-      border-radius: 0 4px 4px 0 !important;
+      background: #e2e8f0 !important;  // slate-200
+      color: #ef4444 !important;  // red on hover
     }
+
+    svg {
+      width: 12px !important;
+      height: 12px !important;
+    }
+  }
+
+  // 3. Indicator icons - smaller, lighter
+  [class*="-indicatorContainer"],
+  [class*="-IndicatorsContainer"] {
+    padding: 0 4px !important;
+    align-self: center !important;
 
     svg {
       width: 14px !important;
       height: 14px !important;
+      color: #94a3b8 !important;
     }
-  }
 
-  // Indicators (dropdown arrow)
-  [class*="-indicatorContainer"] {
-    padding: 4px !important;
-    color: #94a3b8 !important;
-
-    &:hover {
+    &:hover svg {
       color: #64748b !important;
     }
   }
 
+  [class*="-dropdownIndicator"] {
+    padding: 4px !important;
+  }
+
+  [class*="-clearIndicator"] {
+    padding: 4px !important;
+
+    &:hover svg {
+      color: #ef4444 !important;
+    }
+  }
+
+  // Hide separator
   [class*="-indicatorSeparator"] {
     display: none !important;
   }
 
   // Placeholder
   [class*="-placeholder"] {
-    color: var(--color-text-tertiary, #9ca3af) !important;
-    font-size: 14px !important;
-  }
-
-  // Input
-  [class*="-Input"] {
-    margin: 0 !important;
-    padding: 0 !important;
+    color: #9ca3af !important;
+    font-size: 13px !important;
   }
 }
 
-// Dropdown menu
+// 4. Dropdown menu - match Jjodel design system
 .form-field [class*="-menu"] {
   z-index: 999 !important;
-  border: 1px solid var(--color-border-primary, #e2e8f0) !important;
-  border-radius: var(--radius-md, 6px) !important;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 6px !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08) !important;
   background: var(--color-bg-primary, #ffffff) !important;
   margin-top: 4px !important;
+  overflow: hidden !important;
 }
 
+// Option items
 .form-field [class*="-option"] {
   padding: 8px 12px !important;
   font-size: 13px !important;
+  color: #334155 !important;
   cursor: pointer !important;
+  background: transparent !important;
 
   &:hover {
-    background: rgba(71, 85, 105, 0.08) !important;
+    background: #f1f5f9 !important;  // slate-100
   }
 }
 
-.form-field [class*="-option--is-selected"] {
-  background: #475569 !important;
-  color: #ffffff !important;
-}
-
+// Focused option
 .form-field [class*="-option--is-focused"] {
-  background: rgba(71, 85, 105, 0.08) !important;
+  background: #f1f5f9 !important;  // slate-100
 }
 
-// Group label in dropdown
+// Selected/active option - subtle cyan
+.form-field [class*="-option--is-selected"] {
+  background: rgba(14, 165, 233, 0.08) !important;  // very subtle cyan
+  color: #0ea5e9 !important;
+  font-weight: 500 !important;
+
+  &:hover {
+    background: rgba(14, 165, 233, 0.12) !important;
+  }
+}
+
+// Group header ("APPLY TO")
 .form-field [class*="-group"] {
   padding: 0 !important;
 }
 
 .form-field [class*="-groupHeading"] {
   font-size: 10px !important;
-  font-weight: 600 !important;
+  font-weight: 700 !important;
   text-transform: uppercase !important;
-  letter-spacing: 0.5px !important;
-  color: var(--color-text-tertiary, #64748b) !important;
+  letter-spacing: 0.05em !important;
+  color: #94a3b8 !important;
   padding: 8px 12px 4px !important;
   margin: 0 !important;
 }
@@ -413,29 +540,30 @@ section.page-root {
 // DARK MODE SUPPORT
 // ============================================
 [data-theme="dark"] {
-  // Appliable to MultiSelect dark mode - SLATE
+  // Applicable to MultiSelect dark mode - SLATE
   .form-field:has([class*="-control"]) {
     [class*="-control"] {
       background: var(--color-bg-primary, #1e293b) !important;
       border-color: var(--color-border-primary, #334155) !important;
     }
 
-    // Slate badges - slightly brighter for dark mode
+    // Light slate badges for dark mode
     [class*="-multiValue"] {
-      background: linear-gradient(180deg, #64748b 0%, #475569 100%) !important;
-      border: none !important;
+      background: #334155 !important;  // slate-700 for dark mode
+      border: 1px solid #475569 !important;  // slate-600 border
     }
 
     [class*="-multiValue__label"] {
-      color: #ffffff !important;
+      color: #e2e8f0 !important;  // slate-200 — readable on dark
     }
 
     [class*="-multiValue__remove"] {
-      color: rgba(255, 255, 255, 0.7) !important;
+      color: #94a3b8 !important;  // slate-400
+      border-radius: 0 4px 4px 0 !important;
 
       &:hover {
-        background: rgba(0, 0, 0, 0.2) !important;
-        color: #ffffff !important;
+        background: #475569 !important;  // slate-600
+        color: #ef4444 !important;  // red on hover
       }
     }
 
@@ -554,7 +682,15 @@ section.page-root {
     background-color: #475569 !important;
 
     &.active {
-      background: linear-gradient(135deg, #64748b 0%, #475569 100%) !important;
+      background: #94a3b8 !important;
+
+      .apply-to-toggle-thumb {
+        background: #1e293b !important;
+      }
+    }
+
+    &:hover:not(.active) {
+      background-color: #64748b !important;
     }
   }
 }
@@ -570,7 +706,7 @@ section.page-root {
       background-color: #475569 !important;
     }
 
-    // MultiSelect dark mode for prefers-color-scheme - SLATE
+    // Applicable to MultiSelect dark mode for prefers-color-scheme
     .form-field:has([class*="-control"]) {
       [class*="-control"] {
         background: #1e293b !important;
@@ -578,16 +714,22 @@ section.page-root {
       }
 
       [class*="-multiValue"] {
-        background: linear-gradient(180deg, #64748b 0%, #475569 100%) !important;
-        border: none !important;
+        background: #334155 !important;  // slate-700 for dark mode
+        border: 1px solid #475569 !important;  // slate-600 border
       }
 
       [class*="-multiValue__label"] {
-        color: #ffffff !important;
+        color: #e2e8f0 !important;  // slate-200 — readable on dark
       }
 
       [class*="-multiValue__remove"] {
-        color: rgba(255, 255, 255, 0.7) !important;
+        color: #94a3b8 !important;  // slate-400
+        border-radius: 0 4px 4px 0 !important;
+
+        &:hover {
+          background: #475569 !important;  // slate-600
+          color: #ef4444 !important;  // red on hover
+        }
       }
     }
 
@@ -605,4 +747,21 @@ section.page-root {
       color: #ffffff !important;
     }
   }
+}
+
+// ============================================
+// GLOBAL OVERRIDE - Multi-select wrapper auto height
+// This rule has maximum specificity to override all other height rules
+// ============================================
+.apply-to-tab .form-field label.input-container.form-select,
+.apply-to-tab .form-field .input-container.form-select,
+label.input-container.form-select:has([class*="jjodel-select"]),
+label.input-container.form-select:has([class*="-control"]) {
+  height: auto !important;
+  min-height: 38px !important;
+  max-height: 60px !important;
+  padding: 0 !important;
+  border: none !important;
+  background: transparent !important;
+  overflow: visible !important;
 }

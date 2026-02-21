@@ -1,0 +1,285 @@
+// ============================================
+// GLOBAL DRAWER
+// Slide-in drawer panel (Settings, Account, Help)
+// ============================================
+
+.global-drawer-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.4);
+    z-index: 1000;
+    animation: fadeIn 150ms ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.global-drawer {
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: 520px;
+    max-width: 90vw;
+    height: 100vh;
+    background: #ffffff;
+    box-shadow: -4px 0 24px rgba(0, 0, 0, 0.12);
+    display: flex;
+    flex-direction: column;
+    animation: slideIn 200ms ease;
+    z-index: 1001;
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateX(100%);
+    }
+    to {
+        transform: translateX(0);
+    }
+}
+
+// ============================================
+// DRAWER HEADER
+// ============================================
+
+.global-drawer-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 24px;
+    border-bottom: 1px solid #e2e8f0;
+    background: #ffffff;
+    flex-shrink: 0;
+}
+
+.drawer-header-title {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+
+    i {
+        font-size: 20px;
+        color: #475569;
+    }
+
+    h2 {
+        margin: 0;
+        font-size: 18px;
+        font-weight: 600;
+        color: #1e293b;
+    }
+}
+
+.drawer-close-btn {
+    width: 36px;
+    height: 36px;
+    border: none;
+    background: transparent;
+    border-radius: 8px;
+    color: #64748b;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 150ms ease;
+
+    &:hover {
+        background: #f1f5f9;
+        color: #1e293b;
+    }
+
+    i {
+        font-size: 18px;
+    }
+}
+
+// ============================================
+// DRAWER CONTENT
+// ============================================
+
+.global-drawer-content {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+.drawer-placeholder {
+    padding: 40px 24px;
+    text-align: center;
+    color: #64748b;
+    font-size: 14px;
+}
+
+// ============================================
+// DRAWER SETTINGS LAYOUT
+// Vertical tabs inside drawer
+// ============================================
+
+.drawer-settings-layout {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.drawer-settings-tabs {
+    display: flex;
+    gap: 4px;
+    padding: 12px 16px;
+    border-bottom: 1px solid #e2e8f0;
+    background: #f8fafc;
+    overflow-x: auto;
+
+    &::-webkit-scrollbar {
+        display: none;
+    }
+}
+
+.drawer-tab {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 14px;
+    border: none;
+    background: transparent;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    color: #64748b;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 150ms ease;
+
+    i {
+        font-size: 14px;
+    }
+
+    &:hover {
+        background: #e2e8f0;
+        color: #475569;
+    }
+
+    &.active {
+        background: #ffffff;
+        color: #1e293b;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    }
+}
+
+.drawer-settings-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px 24px;
+}
+
+.drawer-section-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #e2e8f0;
+
+    i {
+        font-size: 18px;
+        color: #475569;
+    }
+
+    span {
+        font-size: 16px;
+        font-weight: 600;
+        color: #1e293b;
+    }
+}
+
+// ============================================
+// DARK MODE
+// ============================================
+
+@media (prefers-color-scheme: dark) {
+    .global-drawer-overlay {
+        background: rgba(0, 0, 0, 0.6);
+    }
+
+    .global-drawer {
+        background: #1e293b;
+        box-shadow: -4px 0 24px rgba(0, 0, 0, 0.3);
+    }
+
+    .global-drawer-header {
+        border-color: #334155;
+    }
+
+    .drawer-header-title {
+        i { color: #94a3b8; }
+        h2 { color: #f1f5f9; }
+    }
+
+    .drawer-close-btn {
+        color: #94a3b8;
+
+        &:hover {
+            background: #334155;
+            color: #f1f5f9;
+        }
+    }
+
+    .drawer-placeholder {
+        color: #94a3b8;
+    }
+
+    .drawer-settings-tabs {
+        background: #0f172a;
+        border-color: #334155;
+    }
+
+    .drawer-tab {
+        color: #94a3b8;
+
+        &:hover {
+            background: #334155;
+            color: #f1f5f9;
+        }
+
+        &.active {
+            background: #1e293b;
+            color: #f1f5f9;
+        }
+    }
+
+    .drawer-settings-content {
+        background: #1e293b;
+    }
+
+    .drawer-section-title {
+        border-color: #334155;
+
+        i { color: #94a3b8; }
+        span { color: #f1f5f9; }
+    }
+}
+
+// ============================================
+// RESPONSIVE
+// ============================================
+
+@media (max-width: 600px) {
+    .global-drawer {
+        width: 100%;
+        max-width: 100%;
+    }
+
+    .drawer-settings-tabs {
+        padding: 10px 12px;
+    }
+
+    .drawer-tab {
+        padding: 6px 10px;
+        font-size: 12px;
+    }
+
+    .drawer-settings-content {
+        padding: 16px;
+    }
+}

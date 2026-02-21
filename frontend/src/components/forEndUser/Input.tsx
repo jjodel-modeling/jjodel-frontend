@@ -322,6 +322,51 @@ export function InputComponent(props: AllProps) {
                 rootprops.onMouseLeave = (e:any) => { UX.stopEvt(e); old.onMouseLeave?.(); console.log('multiselect onMouseLeave'); };*/
                 // @ts-ignore
                 input = <MultiSelect {...inputProps} isMulti={true} options={options}
+                    classNamePrefix="jjodel-select"
+                    isClearable={false}
+                    styles={{
+                        control: (base: any) => ({
+                            ...base,
+                            minHeight: '38px',
+                            height: 'auto',
+                            maxHeight: '60px',
+                            overflow: 'visible',
+                            borderColor: '#e2e8f0',
+                        }),
+                        valueContainer: (base: any) => ({
+                            ...base,
+                            padding: '4px 8px',
+                            flexWrap: 'nowrap',
+                            gap: '4px',
+                            overflow: 'visible',
+                            display: 'flex',
+                            flexDirection: 'row',
+                        }),
+                        indicatorsContainer: (base: any) => ({
+                            ...base,
+                            alignSelf: 'center',
+                            padding: '0 4px',
+                        }),
+                        input: (base: any) => ({
+                            ...base,
+                            margin: 0,
+                            padding: 0,
+                            flex: '1 1 auto',
+                        }),
+                        multiValue: (base: any) => ({
+                            ...base,
+                            margin: '0 0 0 4px',
+                            flexShrink: 0,
+                        }),
+                        clearIndicator: () => ({
+                            display: 'none',
+                        }),
+                        placeholder: (base: any) => ({
+                            ...base,
+                            color: '#9ca3af',
+                            fontSize: '13px',
+                        }),
+                    }}
                     onChange={((v0: MultiSelectOption[]) => {
                         let v = v0.map(v => v.value);
                         confirmValue(undefined, v);

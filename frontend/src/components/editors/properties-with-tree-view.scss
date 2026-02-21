@@ -13,9 +13,12 @@ $color-text-tertiary: #9CA3AF;
 $color-accent: #475569;
 $color-accent-light: rgba(71, 85, 105, 0.1);
 $color-accent-blue: #3b82f6;
+$color-highlight: #0ea5e9;
+$color-executing: #10b981;
 
 $transition-fast: 150ms ease;
 $transition-normal: 250ms ease;
+$transition-smooth: 280ms cubic-bezier(0.4, 0, 0.2, 1);
 
 $radius-sm: 4px;
 $radius-md: 6px;
@@ -53,9 +56,9 @@ body.resizing-tree-view {
             user-select: none;
         }
 
-        .panel-resizer-handle {
-            background-color: $color-accent-blue;
-            height: 100px;
+        .resize-grip-icon-vertical {
+            color: #0ea5e9;
+            background-color: rgba(14, 165, 233, 0.06);
         }
     }
 }
@@ -85,7 +88,8 @@ body.resizing-tree-view {
 // ============================================
 
 .panel-resizer {
-    flex: 0 0 8px;
+    flex: 0 0 12px;
+    width: 12px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -94,6 +98,7 @@ body.resizing-tree-view {
     position: relative;
     z-index: 10;
     user-select: none;
+    flex-shrink: 0;
 
     // Expand hit area for easier grabbing
     &::before {
@@ -101,27 +106,32 @@ body.resizing-tree-view {
         position: absolute;
         top: 0;
         bottom: 0;
-        left: -6px;
-        right: -6px;
+        left: -4px;
+        right: -4px;
         cursor: col-resize;
+    }
+
+    // Focus state for keyboard accessibility
+    &:focus {
+        outline: none;
+
+        .resize-grip-icon-vertical {
+            color: #0ea5e9;
+            background-color: rgba(14, 165, 233, 0.06);
+        }
     }
 
     &:hover,
     &:active {
-        .panel-resizer-handle {
-            background-color: $color-accent-blue;
-            height: 80px;
+        .resize-grip-icon-vertical {
+            color: #0ea5e9;
+            background-color: rgba(14, 165, 233, 0.06);
         }
     }
 }
 
-.panel-resizer-handle {
-    width: 4px;
-    height: 40px;
-    background-color: darken($color-border, 5%);
-    border-radius: 3px;
-    transition: background-color $transition-fast, height $transition-fast;
-}
+// Icon styles are handled by .resize-grip-icon-vertical class in console-tab.scss
+// The icon inherits pointer-events: none from parent behavior
 
 // ============================================
 // TREE VIEW PANEL (RIGHT) - FIXED WIDTH
@@ -136,7 +146,73 @@ body.resizing-tree-view {
     background-color: $color-bg-primary;
     border-left: 1px solid $color-border;
     // Smooth transitions when toggling visibility
-    transition: flex-basis $transition-normal, width $transition-normal;
+    transition: flex-basis $transition-smooth, width $transition-smooth, border-color $transition-fast;
+
+    // Slide in animation when panel opens
+    animation: slideInFromRight $transition-smooth;
+
+    // Highlighted state (when auto-opened by script execution)
+    &--highlighted {
+        animation:
+            slideInFromRight $transition-smooth,
+            treeViewHighlight 1000ms ease-out 200ms;
+    }
+
+    // Executing state
+    &--executing {
+        border-left-color: $color-executing;
+
+        .tree-view-panel-header {
+            background: linear-gradient(135deg,
+                rgba($color-executing, 0.08) 0%,
+                rgba($color-executing, 0.04) 100%
+            );
+        }
+    }
+}
+
+// Keyframe animations
+@keyframes slideInFromRight {
+    from {
+        opacity: 0;
+        transform: translateX(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes treeViewHighlight {
+    0% {
+        box-shadow: inset 0 0 0 2px transparent;
+    }
+    20% {
+        box-shadow: inset 0 0 0 2px rgba($color-highlight, 0.6);
+    }
+    100% {
+        box-shadow: inset 0 0 0 2px transparent;
+    }
+}
+
+@keyframes pulseDot {
+    0%, 100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 0.5;
+        transform: scale(1.2);
+    }
+}
+
+@keyframes bounceLeft {
+    0%, 100% {
+        transform: translateX(0);
+    }
+    50% {
+        transform: translateX(-4px);
+    }
 }
 
 .tree-view-panel-header {
@@ -152,15 +228,39 @@ body.resizing-tree-view {
     text-transform: uppercase;
     letter-spacing: 0.5px;
     flex-shrink: 0;
+    transition: background $transition-fast;
 
     > i {
         font-size: 14px;
         color: $color-accent;
     }
 
-    > span {
+    > span:first-of-type {
         flex: 1;
     }
+}
+
+// Executing badge
+.tree-view-executing-badge {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    font-weight: 500;
+    color: $color-executing;
+    padding: 3px 10px;
+    background: rgba($color-executing, 0.1);
+    border-radius: 12px;
+    text-transform: none;
+    letter-spacing: normal;
+}
+
+.pulse-dot {
+    width: 6px;
+    height: 6px;
+    background: $color-executing;
+    border-radius: 50%;
+    animation: pulseDot 1.5s ease-in-out infinite;
 }
 
 .tree-view-toggle-btn {
@@ -205,13 +305,25 @@ body.resizing-tree-view {
 
         i {
             color: $color-text-primary;
+            transform: translateX(-2px);
         }
     }
 
     i {
         font-size: 14px;
         color: $color-text-tertiary;
-        transition: color $transition-fast;
+        transition: color $transition-fast, transform 200ms ease;
+    }
+
+    // Highlighted state when script wants to open it
+    &--highlighted {
+        background: rgba($color-highlight, 0.1);
+        border-left-color: $color-highlight;
+
+        i {
+            color: $color-highlight;
+            animation: bounceLeft 600ms ease infinite;
+        }
     }
 }
 
@@ -220,6 +332,18 @@ body.resizing-tree-view {
     overflow-y: auto;
     overflow-x: hidden;
     padding: 4px 0;
+
+    // Smooth content appearance
+    animation: fadeInContent 300ms ease 100ms both;
+
+    @keyframes fadeInContent {
+        from {
+            opacity: 0;
+        }
+        to {
+            opacity: 1;
+        }
+    }
 
     // Custom scrollbar
     &::-webkit-scrollbar {
@@ -420,13 +544,15 @@ body.resizing-tree-view {
         background-color: #1e1e1e;
     }
 
-    .panel-resizer-handle {
-        background-color: #555;
+    .resize-grip-icon-vertical {
+        color: #64748b;
+    }
 
-        .panel-resizer:hover &,
-        .panel-resizer:active & {
-            background-color: #60a5fa;
-        }
+    .panel-resizer:hover .resize-grip-icon-vertical,
+    .panel-resizer:active .resize-grip-icon-vertical,
+    .panel-resizer:focus .resize-grip-icon-vertical {
+        color: #60a5fa;
+        background-color: rgba(96, 165, 250, 0.1);
     }
 
     .tree-view-panel-container {

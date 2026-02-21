@@ -122,7 +122,7 @@ function computeUsageDeclarations(component: GraphElementComponent, allProps: Al
     } catch (e: any) {
         e.isSyntax = false;
         udret = {data: allProps.data, view, node: allProps.node, __invalidUsageDeclarations: e};// "@runtime:" +e};
-        Log.ee("Invalid usage declarations on " + view?.name, {e, str: view.usageDeclarations, view, data: allProps.data, stateProps: allProps});
+        Log.ee("[Usage Declaration Error]", view?.name, {e, str: view.usageDeclarations, view, data: allProps.data, stateProps: allProps});
     }
 
     transientProperties.node[allProps.nodeid].viewScores[vid].usageDeclarations = udret;
@@ -162,6 +162,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
     static mapViewStuff(state: DState, ret: GraphElementReduxStateProps, ownProps: GraphElementOwnProps) {
             // let dnode: DGraphElement | undefined = ownProps?.nodeid && DPointerTargetable.from(ownProps.nodeid, state) as any;
         //console.log("viewsss mapstate 3 " + ret.node?.className + " " + ret.data?.name, {views:ret.views, vv:ret.view, ownProps:{...ownProps}, stateProps:{...ret}, thiss:this});
+
         ret.parentviewid = ownProps.parentViewId;
 
         const explicitView: Pack1<LViewElement> | string | undefined = ret.view || ownProps.view;
@@ -187,7 +188,14 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         if (!ret.view) { // if view is not explicitly set or the assigned view is not found, match a new one.
             if (!scores) scores = getScores(ret, ownProps);
             ret.view = scores.mainView = LPointerTargetable.fromPointer((scores.mainView as any)?.id, state);
-            // console.log("viewsss mapstate 4 " + ret.node?.className + " " + ret.data?.name, {views:ret.views, vv:ret.view, ownProps:{...ownProps}, stateProps:{...ret}, thiss:this, scores});
+
+            // todo: remove after Debug: log what view was matched for attr elements
+            const dName = (ret.data?.__raw as any)?.name || '';
+            if (dName.toLowerCase().includes('attr') && !(GraphElementComponent as any)._loggedAttrView) {
+                (GraphElementComponent as any)._loggedAttrView = true;
+                console.error(`[VIEW MATCH] For ${dName}: view=${ret.view?.__raw?.name ?? 'NONE'}, viewId=${ret.view?.id ?? 'NONE'}, mainViewId=${(scores.mainView as any)?.id ?? 'NONE'}`);
+            }
+
             Log.w(!!explicitView, "Requested main view "+ownProps.view+" not found. Another view got assigned: " + ret.view?.__raw.name, {requested: ownProps.view, props: ownProps, state: ret});
         }
 
@@ -203,6 +211,17 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
             {data:ret.data, props: ownProps, state: ret, scores: (ret as any).viewScores,
                 nid: ownProps.nodeid, tn:transientProperties.node[ownProps.nodeid as any], ret, explicitView});
         if (!ret.view) {
+            {// todo: remove this inner block after Debug: log ALL fallback cases (first 3 only)
+            if (!(GraphElementComponent as any)._fallbackLogCount) (GraphElementComponent as any)._fallbackLogCount = 0;
+            if ((GraphElementComponent as any)._fallbackLogCount < 3) {
+                (GraphElementComponent as any)._fallbackLogCount++;
+                const dataName = (ret.data?.__raw as any)?.name ?? 'UNDEFINED';
+                const dataClassName = ret.data?.__raw?.className ?? 'UNDEFINED';
+                const nodeId = ownProps.nodeid ?? 'UNDEFINED';
+                const hasData = ret.data ? 'YES' : 'NO';
+                const viewScoresCount = tn?.viewScores ? Object.keys(tn.viewScores).length : 0;
+                console.error(`[FALLBACK DEBUG] #${(GraphElementComponent as any)._fallbackLogCount}: name=${dataName} class=${dataClassName} node=${nodeId} data=${hasData} scores=${viewScoresCount}`);
+            }}
             ret.view = LPointerTargetable.from(Defaults.Pointer_ViewFallback);
         }
 
@@ -682,7 +701,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
             let culpritlinesPre: string[] = jsxlines.slice(stackerrorlinenum.row-linesPre-1, stackerrorlinenum.row - 1);
             let culpritline: string = jsxlines[stackerrorlinenum.row - 1]; // stack start counting lines from 1
             let culpritlinesPost: string[] = jsxlines.slice(stackerrorlinenum.row, stackerrorlinenum.row + linesPost);
-            console.error("errr", {e, node, jsxlines, culpritlinesPre, culpritline, culpritlinesPost, stackerrorlinenum, icol, irow, stackerrorlast});
+            console.debug("[JSX Parse Error]", {e, node, jsxlines, culpritlinesPre, culpritline, culpritlinesPost, stackerrorlinenum, icol, irow, stackerrorlast});
 
             if (stackerrorlinenum.col - offset.col > culpritline?.length && stackerrorlinenum.row === 1) stackerrorlinenum.col = 0;
             let caretCursor = "▓" // ⵊ ꕯ 𝙸 Ꮖ
@@ -720,8 +739,6 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         let tnv = transientProperties.node[this.props.nodeid].viewScores[vid];
         //console.log("render debug view template 0: " + v.name, {tnv, s_up:tnv.shouldUpdate, oldjsx:tnv.jsxOutput});
         if (!tnv.shouldUpdate && tnv.jsxOutput) return tnv.jsxOutput;
-
-        //console.log("render debug view template 1: " + v.name,);
 
         let tv = transientProperties.view[vid];
         // console.log('gt3', tv.JSXFunction, context);
@@ -1307,7 +1324,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
             tnv:tn.viewScores[this.props.viewid], ud:tn.viewScores[this.props.viewid].usageDeclarations});*/
 
         // compute jsx
-        allviews = [mainView]; // todo: remove
+        // allviews = [mainView];
         const mainvid = mainView.id;
         for (let v of allviews) { // main view is the last
             const vid = v.id;
@@ -1349,7 +1366,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         //console.log("renderView", {dv, tnv, ud});
 
         if (ud.__invalidUsageDeclarations) {
-            console.error("renderView error ud:", {dv, tnv, ud});
+            console.debug("[renderView] error ud:", {dv, tnv, ud});
             return GraphElementComponent.displayError(ud.__invalidUsageDeclarations, "Usage Declaration " + (ud.__invalidUsageDeclarations.isSyntax ? "Syntax" : "Semantic"), v.__raw,
                 this.props.data?.__raw, this.props.node?.__raw, false, {ud});
         }
@@ -1360,7 +1377,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         let rnode: ReactNode;
         try { rnode = this.getTemplate3(vid, v, context); }
         catch (e: any) {
-            console.error("renderView error get template:", {e, dv, tnv});
+            console.debug("[renderView] error get template:", {e, dv, tnv});
             // rnode = undefined as any;
             // todo: move in reducer parser of jsx: catch (e: any) { return GraphElementComponent.displayError(e, "JSX Syntax", v.__raw, this.props.data?.__raw, this.props.node?.__raw); }
             rnode = GraphElementComponent.displayError(e, "JSX Semantic", v.__raw, this.props.data?.__raw, this.props.node?.__raw, false, {context});
@@ -1478,7 +1495,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
                 // debug.rawRElementPostfixdoubleroot = {node:rawRElement, text: getNodeText(rawRElement)};
                 // console.log("probem", {rawRElement, children:(rawRElement as any)?.children, pchildren:(rawRElement as any)?.props?.children});
             } catch (e: any) {
-                console.error("renderView error inject props:", {e, dv, tnv});
+                console.debug("[renderView] error inject props:", {e, dv, tnv});
                 rawRElement = DV.errorView("error while injecting props to subnodes\n:" + (e.message || '').split('\n')[0],
                     {e, rawRElement, key: props.key, newid: props.nodeid},
                     'Subelement props', props.data?.__raw, props.node?.__raw, dv) as ReactElement;

@@ -21,9 +21,10 @@ import type { ProjectDocumentation } from '../../../services/DocumentationServic
 import { JodieConfigService } from '../../../services/JodieConfig';
 import type {TAIProvider} from '../../../types/jodie';
 import { useAIProviderPreference } from '../../../hooks/useAIProviderPreference';
-import { useAISettingsSafe } from '../../../contexts/AISettingsContext';
-import {ALL_AI_PROVIDERS, DocumentationStatus } from '../../../types/jodie';
+import { useSettingsModalSafe } from '../../../contexts/SettingsModalContext';
+import { ALL_AI_PROVIDERS, DocumentationStatus } from '../../../types/jodie';
 import { markdownMonacoOptions } from '../../editors/monacoConfig';
+import { AIDisclaimer } from '../../common/AIDisclaimer';
 import './DocumentationTab.scss';
 
 // ============================================
@@ -582,7 +583,7 @@ function DocumentationTabComponent(props: AllProps) {
     // AI Provider selector (with persistence)
     const { selectedProvider, setSelectedProvider } = useAIProviderPreference('documentation');
     const [showProviderMenu, setShowProviderMenu] = useState(false);
-    const aiSettingsContext = useAISettingsSafe();
+    const settingsModal = useSettingsModalSafe();
 
     // Progress modal for regeneration
     const [showProgressModal, setShowProgressModal] = useState(false);
@@ -1059,7 +1060,7 @@ function DocumentationTabComponent(props: AllProps) {
                                                 className="provider-hint"
                                                 onClick={() => {
                                                     setShowProviderMenu(false);
-                                                    aiSettingsContext?.openAISettings();
+                                                    settingsModal?.openSettings('providers');
                                                 }}
                                             >
                                                 <i className="bi bi-gear" /> Configure in Settings
@@ -1203,6 +1204,11 @@ function DocumentationTabComponent(props: AllProps) {
                     />
                 )}
             </div>
+
+            {/* AI Disclaimer */}
+            {documentation && viewMode !== 'edit' && (
+                <AIDisclaimer />
+            )}
 
             {/* Footer with metadata */}
             {documentation && viewMode !== 'edit' && (

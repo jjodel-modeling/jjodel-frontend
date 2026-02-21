@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { sortSuggestionsByFrequency, updateSuggestionUsage } from './useSuggestionTracking';
+import type { ConsoleLanguage } from './LanguageToggle';
 
 interface ConsoleInputProps {
   value: string;
@@ -8,11 +9,31 @@ interface ConsoleInputProps {
   history: string[];
   contextKeys: string[];
   placeholder?: string;
+  language?: ConsoleLanguage;
 }
+
+// JjEL-specific keywords and operators
+const JJEL_KEYWORDS = ['if', 'then', 'else', 'and', 'or', 'not', 'is', 'true', 'false', 'null'];
+const JJEL_METHODS = [
+  // Collection methods
+  'filter', 'map', 'flatMap', 'first', 'last', 'any', 'all', 'none', 'count', 'size',
+  'isEmpty', 'isNotEmpty', 'contains', 'distinct', 'sortBy', 'sortByDescending',
+  'reverse', 'take', 'skip', 'flatten', 'groupBy', 'join', 'sum', 'avg', 'min', 'max',
+  // String methods
+  'toUpper', 'toLower', 'capitalize', 'camelCase', 'pascalCase', 'snakeCase', 'kebabCase',
+  'trim', 'startsWith', 'endsWith', 'substring', 'split', 'replace', 'matches',
+  // Number methods
+  'abs', 'round', 'floor', 'ceil', 'sqrt', 'pow'
+];
+
+// JavaScript-specific keywords
+const JS_KEYWORDS = ['const', 'let', 'var', 'function', 'return', 'if', 'else', 'for', 'while', 'switch', 'case'];
+const JS_METHODS = ['console.log', 'console.error', 'console.warn', 'JSON.stringify', 'JSON.parse'];
 
 const getAutocompleteSuggestions = (
   input: string,
-  contextKeys: string[]
+  contextKeys: string[],
+  language: ConsoleLanguage = 'js'
 ): string[] => {
   const trimmedInput = input.trim();
 
@@ -40,17 +61,27 @@ const getAutocompleteSuggestions = (
     key.toLowerCase().startsWith(lastToken.toLowerCase())
   );
 
-  // Match common JavaScript keywords
-  const keywords = ['const', 'let', 'var', 'function', 'return', 'if', 'else', 'for', 'while', 'switch', 'case'];
-  const matchingKeywords = keywords.filter(kw =>
-    kw.startsWith(lastToken.toLowerCase())
-  );
+  // Language-specific suggestions
+  let matchingKeywords: string[];
+  let matchingMethods: string[];
 
-  // Match common console methods
-  const methods = ['console.log', 'console.error', 'console.warn', 'JSON.stringify', 'JSON.parse'];
-  const matchingMethods = methods.filter(m =>
-    m.toLowerCase().includes(lastToken.toLowerCase())
-  );
+  if (language === 'jjel') {
+    // JjEL mode
+    matchingKeywords = JJEL_KEYWORDS.filter(kw =>
+      kw.toLowerCase().startsWith(lastToken.toLowerCase())
+    );
+    matchingMethods = JJEL_METHODS.filter(m =>
+      m.toLowerCase().startsWith(lastToken.toLowerCase())
+    );
+  } else {
+    // JavaScript mode
+    matchingKeywords = JS_KEYWORDS.filter(kw =>
+      kw.toLowerCase().startsWith(lastToken.toLowerCase())
+    );
+    matchingMethods = JS_METHODS.filter(m =>
+      m.toLowerCase().includes(lastToken.toLowerCase())
+    );
+  }
 
   const allMatches = [...new Set([...matchingKeys, ...matchingKeywords, ...matchingMethods])];
 
@@ -64,8 +95,14 @@ export const ConsoleInput: React.FC<ConsoleInputProps> = ({
   onExecute,
   history,
   contextKeys,
-  placeholder = 'Type JavaScript or /help for commands... (Shift+Enter for new line, ↑↓ for history)'
+  placeholder,
+  language = 'js'
 }) => {
+  // Language-aware placeholder
+  const defaultPlaceholder = language === 'jjel'
+    ? 'Type JjEL expression or /help for commands... (Shift+Enter for new line, ↑↓ for history)'
+    : 'Type JavaScript or /help for commands... (Shift+Enter for new line, ↑↓ for history)';
+  const finalPlaceholder = placeholder || defaultPlaceholder;
   const [historyIndex, setHistoryIndex] = useState(-1);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -147,7 +184,7 @@ export const ConsoleInput: React.FC<ConsoleInputProps> = ({
     textareaRef.current?.focus();
   };
 
-  // Update suggestions based on input
+  // Update suggestions based on input and language
   useEffect(() => {
     if (!value.trim()) {
       setSuggestions([]);
@@ -156,11 +193,11 @@ export const ConsoleInput: React.FC<ConsoleInputProps> = ({
       return;
     }
 
-    const newSuggestions = getAutocompleteSuggestions(value, contextKeys);
+    const newSuggestions = getAutocompleteSuggestions(value, contextKeys, language);
     setSuggestions(newSuggestions);
     setShowSuggestions(newSuggestions.length > 0);
     setShowAllSuggestions(false); // Reset when suggestions change
-  }, [value, contextKeys]);
+  }, [value, contextKeys, language]);
 
   // Auto-resize textarea based on content
   useEffect(() => {
@@ -180,9 +217,14 @@ export const ConsoleInput: React.FC<ConsoleInputProps> = ({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         onKeyDown={handleKeyDown}
-        placeholder={placeholder}
+        placeholder={finalPlaceholder}
         rows={1}
         spellCheck={false}
+        style={{
+          border: 'none',
+          outline: 'none',
+          boxShadow: 'none',
+        }}
       />
 
       {/* Autocomplete suggestions */}

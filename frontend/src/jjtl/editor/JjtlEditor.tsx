@@ -10,11 +10,18 @@ import { registerJjtlTheme, JJTL_THEME_ID } from './jjtlTheme';
 import { tokenize } from '../lexer';
 import { parse } from '../parser';
 import { ParserError } from '../types';
+import { largeMonacoOptions, mergeMonacoOptions } from '../../components/editors/monacoConfig';
+
+interface CursorPosition {
+    line: number;
+    column: number;
+}
 
 interface JjtlEditorProps {
     value: string;
     onChange?: (value: string) => void;
     onParse?: (result: { errors: ParserError[] }) => void;
+    onCursorPositionChange?: (position: CursorPosition) => void;
     height?: string | number;
     readOnly?: boolean;
 }
@@ -33,6 +40,7 @@ export const JjtlEditor: React.FC<JjtlEditorProps> = ({
     value,
     onChange,
     onParse,
+    onCursorPositionChange,
     height = '400px',
     readOnly = false,
 }) => {
@@ -74,21 +82,35 @@ export const JjtlEditor: React.FC<JjtlEditorProps> = ({
 
         ensureRegistered();
 
+        // JjTL Editor options - aligned with JSX Editor configuration
+        const jjtlEditorOptions = mergeMonacoOptions(largeMonacoOptions, {
+            // Font - same as JSX Editor
+            fontFamily: "'IBM Plex Mono', Monaco, Consolas, monospace",
+            fontSize: 13,
+            fontWeight: '400',
+            lineHeight: 20,
+            fontLigatures: false,
+
+            // Layout
+            wordWrap: 'on',
+            folding: true,
+
+            // Cursor
+            cursorBlinking: 'smooth',
+            cursorSmoothCaretAnimation: 'on',
+            cursorStyle: 'line',
+
+            // Tab
+            tabSize: 4,
+            insertSpaces: true,
+        });
+
         const editor = monaco.editor.create(containerRef.current, {
+            ...jjtlEditorOptions,
             value,
             language: JJTL_LANGUAGE_ID,
             theme: JJTL_THEME_ID,
-            minimap: { enabled: false },
-            fontSize: 13,
-            fontFamily: "'JetBrains Mono', 'SF Mono', 'Fira Code', monospace",
-            lineNumbers: 'on',
-            renderLineHighlight: 'line',
-            scrollBeyondLastLine: false,
-            automaticLayout: true,
-            tabSize: 4,
-            insertSpaces: true,
             readOnly,
-            wordWrap: 'on',
         });
 
         editorRef.current = editor;
@@ -100,8 +122,25 @@ export const JjtlEditor: React.FC<JjtlEditorProps> = ({
             parseContent(newValue);
         });
 
+        // Handle cursor position changes
+        editor.onDidChangeCursorPosition((e) => {
+            onCursorPositionChange?.({
+                line: e.position.lineNumber,
+                column: e.position.column,
+            });
+        });
+
         // Initial parse
         parseContent(value);
+
+        // Report initial cursor position
+        const initialPosition = editor.getPosition();
+        if (initialPosition) {
+            onCursorPositionChange?.({
+                line: initialPosition.lineNumber,
+                column: initialPosition.column,
+            });
+        }
 
         return () => {
             editor.dispose();

@@ -197,16 +197,18 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
                     const dragThrottleKey = `drag_${this.props.node?.id || 'unknown'}`;
                     cancelThrottle(dragThrottleKey);
 
+                    // Apply zoom correction at stop (position is recalculated by jQuery UI)
                     if (dragCacheZoom){
-                        /*ui.offset.left = (ui.position.left /= dragCacheZoom.x);
-                        ui.offset.top = (ui.position.top /= dragCacheZoom.y);*/
-                        dragCacheZoom = null;
+                        ui.offset.left = (ui.position.left /= dragCacheZoom.x);
+                        ui.offset.top = (ui.position.top /= dragCacheZoom.y);
                     }
 
                     TRANSACTION('Vertex dragEnd ' + this.props.node.name, ()=>{
                         this.setSize({x:ui.position.left, y:ui.position.top});
                         for (let vid of allviews) this.doMeasurableEvent(EMeasurableEvents.onDragEnd, vid);
-                    })
+                    });
+
+                    dragCacheZoom = null;
                 }
             };
             $measurable.draggable(this.draggableOptions);
@@ -425,21 +427,20 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
     // setSize(x_or_size_or_point: number | GraphSize | GraphPoint, y?: number, w?:number, h?:number): void;
     setSize(size0: Partial<GraphSize> | Partial<GraphPoint>): void {
         let size: {x?:number, y?: number, w?:number, h?:number} = size0;
-        /*if (size.w !== undefined && size.w < 0) size.w = 0;
+
+        // Clamp negative dimensions
+        if (size.w !== undefined && size.w < 0) size.w = 0;
         if (size.h !== undefined && size.h < 0) size.h = 0;
 
-        return this.props.node.size = size as any;
-        // console.log('setSize('+(this.props?.data as any).name+') thisss', this);
-        if (this.props.view.storeSize) {
-            let id = (this.props.data?.id || this.props.nodeid) as string;
-            this.props.view.updateSize(id, size);
-            return;
-        }
+        // Preserve existing values if not provided
         let olds = this.props.node.size;
-        size.x = size.x === undefined ? olds?.x : size.x;
-        size.y = size.y === undefined ? olds?.y : size.y;
-        // size.w = size.w === undefined ? olds?.w : size.w;
-        // size.h = size.h === undefined ? olds?.h : size.h;*/
+        if (olds) {
+            size.x = size.x === undefined ? olds.x : size.x;
+            size.y = size.y === undefined ? olds.y : size.y;
+            size.w = size.w === undefined ? olds.w : size.w;
+            size.h = size.h === undefined ? olds.h : size.h;
+        }
+
         this.props.node.size = size as GraphSize;
     }
 

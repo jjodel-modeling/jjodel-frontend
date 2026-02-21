@@ -1,0 +1,259 @@
+/**
+ * Clear Confirmation Dialog Styles
+ * Modal dialog for metamodel clear confirmation
+ */
+
+/* Overlay */
+.clear-dialog-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+    z-index: 10001;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+/* Dialog Container */
+.clear-dialog {
+    background: #FFFFFF;
+    border-radius: 16px;
+    box-shadow:
+        0 20px 60px rgba(0, 0, 0, 0.3),
+        0 0 0 1px rgba(0, 0, 0, 0.05);
+    max-width: 480px;
+    width: 100%;
+    padding: 32px;
+    animation: clearDialogScaleIn 0.2s ease-out;
+}
+
+@keyframes clearDialogScaleIn {
+    from {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+/* Warning Icon */
+.clear-dialog-icon {
+    width: 64px;
+    height: 64px;
+    margin: 0 auto 20px;
+    background: linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.2);
+}
+
+.clear-dialog-icon i {
+    font-size: 28px;
+    color: #D97706;
+}
+
+/* Title */
+.clear-dialog-title {
+    font-family: 'Inter', -apple-system, sans-serif;
+    font-size: 22px;
+    font-weight: 700;
+    color: #1E293B;
+    text-align: center;
+    margin: 0 0 12px;
+}
+
+/* Message */
+.clear-dialog-message {
+    font-family: 'Inter', -apple-system, sans-serif;
+    font-size: 14px;
+    color: #64748B;
+    text-align: center;
+    margin: 0 0 24px;
+    line-height: 1.6;
+}
+
+/* Options Container */
+.clear-dialog-options {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+/* Option Button Base */
+.clear-option {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 16px;
+    border: 2px solid #E2E8F0;
+    border-radius: 12px;
+    background: #FFFFFF;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-align: left;
+    width: 100%;
+}
+
+.clear-option:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.clear-option:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.2);
+}
+
+/* Option Icon */
+.option-icon {
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+    font-size: 20px;
+    flex-shrink: 0;
+}
+
+/* Option Content */
+.option-content {
+    flex: 1;
+}
+
+.option-label {
+    font-family: 'Inter', -apple-system, sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    color: #1E293B;
+    margin-bottom: 4px;
+}
+
+.option-description {
+    font-family: 'Inter', -apple-system, sans-serif;
+    font-size: 13px;
+    color: #64748B;
+    line-height: 1.4;
+}
+
+/* Danger Option (Clear Everything) */
+.clear-option.danger {
+    border-color: #FEE2E2;
+}
+
+.clear-option.danger:hover {
+    border-color: #EF4444;
+    background: #FEF2F2;
+}
+
+.clear-option.danger .option-icon {
+    background: linear-gradient(135deg, #FEE2E2 0%, #FECACA 100%);
+    color: #DC2626;
+}
+
+.clear-option.danger:hover .option-icon {
+    background: linear-gradient(135deg, #FECACA 0%, #FCA5A5 100%);
+}
+
+/* Primary Option (Keep Context) */
+.clear-option.primary {
+    border-color: #DBEAFE;
+}
+
+.clear-option.primary:hover {
+    border-color: #0EA5E9;
+    background: #F0F9FF;
+}
+
+.clear-option.primary .option-icon {
+    background: linear-gradient(135deg, #E0F2FE 0%, #BAE6FD 100%);
+    color: #0284C7;
+}
+
+.clear-option.primary:hover .option-icon {
+    background: linear-gradient(135deg, #BAE6FD 0%, #7DD3FC 100%);
+}
+
+/* Secondary Option (Cancel) */
+.clear-option.secondary {
+    border-color: #E2E8F0;
+}
+
+.clear-option.secondary:hover {
+    border-color: #CBD5E1;
+    background: #F8FAFC;
+}
+
+.clear-option.secondary .option-icon {
+    background: linear-gradient(135deg, #F1F5F9 0%, #E2E8F0 100%);
+    color: #64748B;
+}
+
+.clear-option.secondary:hover .option-icon {
+    background: linear-gradient(135deg, #E2E8F0 0%, #CBD5E1 100%);
+}
+
+/* Keyboard Hint */
+.clear-dialog-hint {
+    margin-top: 20px;
+    text-align: center;
+    font-family: 'Inter', -apple-system, sans-serif;
+    font-size: 12px;
+    color: #94A3B8;
+}
+
+.clear-dialog-hint kbd {
+    padding: 3px 6px;
+    background: #F1F5F9;
+    border: 1px solid #CBD5E1;
+    border-radius: 4px;
+    font-family: 'Inter', -apple-system, sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    color: #475569;
+    margin: 0 2px;
+}
+
+/* Responsive */
+@media (max-width: 500px) {
+    .clear-dialog {
+        padding: 24px;
+        margin: 16px;
+    }
+
+    .clear-dialog-icon {
+        width: 56px;
+        height: 56px;
+    }
+
+    .clear-dialog-icon i {
+        font-size: 24px;
+    }
+
+    .clear-dialog-title {
+        font-size: 20px;
+    }
+
+    .option-icon {
+        width: 40px;
+        height: 40px;
+        font-size: 18px;
+    }
+
+    .option-label {
+        font-size: 14px;
+    }
+
+    .option-description {
+        font-size: 12px;
+    }
+}

@@ -9,6 +9,7 @@ import { MarkdownMessage } from './MarkdownMessage';
 import { executeCommand, ScriptLineResult } from '../../jjscript';
 import { DUser, L, LUser, LProject, LModel, store } from '../../joiner';
 import { Selectors } from '../../redux/selectors/selectors';
+import { ProviderIcon } from '../icons';
 
 interface ChatMessagesProps {
     messages: ChatMessage[];
@@ -51,9 +52,9 @@ function MessageBubble({ message, onJjScriptExecute }: { message: ChatMessage; o
             {!isUser && !isJjScript && providerInfo && (
                 <div
                     className="jodie-message-avatar"
-                    style={{ backgroundColor: providerInfo.color }}
+                    style={{ backgroundColor: providerInfo.bgColor, color: providerInfo.color }}
                 >
-                    <span style={{ fontWeight: 600 }}>{providerInfo.textIcon}</span>
+                    <ProviderIcon provider={message.provider || ''} size={16} />
                 </div>
             )}
             <div className="jodie-message-content">

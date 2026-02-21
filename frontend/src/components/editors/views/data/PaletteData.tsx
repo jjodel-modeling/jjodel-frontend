@@ -22,6 +22,7 @@ import {Color} from '../../../forEndUser/Color';
 
 import {Btn, CommandBar} from '../../../commandbar/CommandBar';
 import {HRule} from '../../../widgets/Widgets';
+import { EdgeMarkerEditorModal } from '../../EdgeMarkerEditorModal';
 import {Info} from "../../../forEndUser/Info";
 import './palette-data.scss';
 
@@ -84,6 +85,10 @@ function PaletteDataComponent(props: AllProps) {
     const [wrap, setWrap] = useStateIfMounted(false);
     const [fullscreen, setFullscreen] = useStateIfMounted(false);
     const [showEditor, setShowEditor] = useStateIfMounted(true);
+
+    // State for marker editor modal
+    const [markerEditorOpen, setMarkerEditorOpen] = useStateIfMounted(false);
+    const [editingPathPrefix, setEditingPathPrefix] = useStateIfMounted<string | null>(null);
 
     const change = (value: string|undefined) => { if(value !== undefined) setCss(value); } // save in local state for frequent changes.
     const blur = () => view.css = css; // confirm in redux state for final state
@@ -678,11 +683,23 @@ function PaletteDataComponent(props: AllProps) {
                                 })()}
                             </select>
 
-                            {/* Path */}
-                            <CommandBar  style={{paddingRight: '4px', marginLeft: 'auto'}}>
-                                <Btn icon={'space'} />
-                                <Btn icon={"delete"} action={(e) => {removeControl(prefix)}} tip={'Remove path'}/>
-                            </CommandBar>
+                            {/* Path Actions */}
+                            <div className="path-actions" style={{display: 'flex', gap: '4px', marginLeft: 'auto', flexShrink: 0}}>
+                                <button
+                                    type="button"
+                                    className="marker-edit-btn"
+                                    onClick={() => {
+                                        setEditingPathPrefix(prefix);
+                                        setMarkerEditorOpen(true);
+                                    }}
+                                    disabled={readOnly}
+                                    aria-label={`Edit ${prefix} marker`}
+                                >
+                                    <i className="bi bi-pencil-square" />
+                                    <span>Edit</span>
+                                </button>
+                                <Btn icon={"delete"} action={(e) => {removeControl(prefix)}} tip={'Remove path'} disabled={readOnly}/>
+                            </div>
 
                         </div>)
                 }
@@ -796,6 +813,28 @@ function PaletteDataComponent(props: AllProps) {
         {false && <div className={"debug"}><div style={{whiteSpace:'pre'}}>{view.compiled_css}</div></div>}
         </div>
         {/* END CSS EDITOR SECTION */}
+
+        {/* Edge Marker Editor Modal */}
+        {editingPathPrefix && (
+            <EdgeMarkerEditorModal
+                isOpen={markerEditorOpen}
+                onClose={() => {
+                    setMarkerEditorOpen(false);
+                    setEditingPathPrefix(null);
+                }}
+                onApply={(newPath: string) => {
+                    if (editingPathPrefix && !readOnly) {
+                        let tmp: Dictionary<string, PathControl> = {...palette} as any;
+                        if (tmp[editingPathPrefix]) {
+                            tmp[editingPathPrefix] = {...tmp[editingPathPrefix], value: newPath};
+                            view.palette = tmp;
+                        }
+                    }
+                }}
+                initialPath={(palettes.path[editingPathPrefix] as PathControl)?.value || ''}
+                markerPosition={editingPathPrefix === 'head' || editingPathPrefix.includes('head') ? 'head' : 'tail'}
+            />
+        )}
 
     </section>);
 }

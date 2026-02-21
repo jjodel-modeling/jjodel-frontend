@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [Unreleased] - 2026-02-09
+
+### Fixed
+- **[CRITICAL] JjTL Attribute Mapping**: Transformation `A -> B { name -> label }` now correctly applies attribute values to target instances. Previously, all target attributes remained `undefined`/`null`.
+  - Fixed `evaluatePropertyPath()` in executor to resolve source instance properties via `contextToRecord()`
+  - Fixed ProjectEditor to use LModel proxy for finding objects by name instead of unreliable `DObject.new()` temporary IDs
+  - Fixed attribute writing to use proxy `$attr.value = val` instead of `SetFieldAction` on Redux store
+
+### Added
+- Multiple fallback strategies for source model className resolution (instanceof.name, raw Redux lookup, feature-based, name pattern extraction)
+- Deferred attribute setting pattern using `setTimeout` + `LPointerTargetable.fromD()` proxy after TRANSACTION completion
+
+### Technical
+- **Breaking discovery**: `DObject.new()` returns temporary IDs that do NOT correspond to the object's real ID in the framework. Never use `store.getState()[dObject.id]` for lookups after creation.
+- **Correct pattern**: Use `LPointerTargetable.fromD(modelId).objects.find(o => o.name)` to find objects, and `$attr.value = val` to write values.
+- Executor `evaluatePropertyPath` now has 4-strategy fallback: context lookup → direct access → JjEL eval → manual traversal
+
+### Known Issues
+- Target instances may receive duplicate values (all get first source value) — under investigation
+- Executor may be called twice per transformation (React double rendering)
+- "Error in View: Fallback" may appear in target model view after execution
+
+### Files Changed
+- `frontend/src/jjtl/executor/executor.ts`
+- `frontend/src/components/project/ProjectEditor.tsx`
+
+---
+
 ## [2.1.0] - 2026-02-01
 
 ### Added
@@ -446,5 +474,5 @@ title: <div className="tab-title active-on-mouseenter" data-type="metamodel">{mo
 
 ---
 
-**Last Updated:** 2026-01-31
+**Last Updated:** 2026-02-09
 **Maintained By:** Development Team

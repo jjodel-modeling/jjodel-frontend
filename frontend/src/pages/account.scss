@@ -349,34 +349,39 @@
     }
 }
 
+// Standard horizontal switch (36x20px)
 .preference-toggle {
-    width: 48px;
-    height: 28px;
+    width: 36px;
+    height: 20px;
     background: #cbd5e1;
-    border-radius: 14px;
+    border-radius: 10px;
     position: relative;
     cursor: pointer;
-    transition: background 0.2s;
+    transition: background 200ms ease;
     flex-shrink: 0;
 
     &__thumb {
         position: absolute;
-        top: 3px;
-        left: 3px;
-        width: 22px;
-        height: 22px;
+        top: 2px;
+        left: 2px;
+        width: 16px;
+        height: 16px;
         background: #ffffff;
         border-radius: 50%;
-        transition: transform 0.2s;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+        transition: transform 200ms ease;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
     }
 
     &--active {
-        background: linear-gradient(135deg, #64748b 0%, #475569 100%);
+        background: #334155; // slate solid, NOT cyan
 
         .preference-toggle__thumb {
-            transform: translateX(20px);
+            transform: translateX(16px);
         }
+    }
+
+    &:hover:not(&--active) {
+        background: #94a3b8;
     }
 }
 
@@ -539,7 +544,15 @@
         background: #475569;
 
         &--active {
-            background: linear-gradient(135deg, #64748b 0%, #475569 100%);
+            background: #94a3b8;
+
+            .preference-toggle__thumb {
+                background: #1e293b;
+            }
+        }
+
+        &:hover:not(&--active) {
+            background: #64748b;
         }
     }
 

@@ -27,6 +27,8 @@ import { executeUndo, executeRedo } from './commands/undoredo';
 import { executeClear } from './commands/clear';
 import { executeValidate } from './commands/validate';
 import { executeExtends } from './commands/extends';
+import { extractDependencies } from './dependencies';
+import { waitForDependencies } from './elementWaiter';
 
 // ============================================
 // EXECUTOR CLASS
@@ -78,6 +80,19 @@ export class JjScriptExecutor {
         const startTime = Date.now();
 
         try {
+            // PRE-CHECK: Wait for dependencies before executing
+            const dependencies = extractDependencies(ast);
+            if (dependencies.length > 0) {
+                const waitResult = await waitForDependencies(dependencies, this.context);
+                if (!waitResult.allResolved) {
+                    const missing = waitResult.unresolved.map(d => `${d.name.raw} (${d.role})`).join(', ');
+                    console.warn(`[JjScript] Unresolved dependencies after ${waitResult.waitedMs}ms: ${missing}`);
+                    // Don't fail here - let the command handler produce the proper error message
+                } else if (waitResult.waitedMs > 0) {
+                    console.log(`[JjScript] Dependencies resolved after ${waitResult.waitedMs}ms`);
+                }
+            }
+
             let result: ExecutionResult;
 
             switch (ast.command) {

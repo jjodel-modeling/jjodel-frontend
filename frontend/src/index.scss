@@ -1,5 +1,13 @@
 
 img { -webkit-user-drag: none; }
+
+/* NUCLEAR: Disable ALL ligatures system-wide */
+*, *::before, *::after {
+    font-variant-ligatures: none !important;
+    -webkit-font-feature-settings: 'liga' 0, 'calt' 0, 'clig' 0, 'dlig' 0 !important;
+    font-feature-settings: 'liga' 0, 'calt' 0, 'clig' 0, 'dlig' 0 !important;
+}
+
 body {
 
     color: var(--color);
@@ -62,4 +70,41 @@ body {
 
 .debug {
     border: 1px dashed red;
+}
+
+/* ============================================
+   GLOBAL: Disable ligatures for all code/mono
+   ============================================ */
+code,
+pre,
+kbd,
+samp,
+.inline-code,
+[class*="mono"],
+[class*="code"],
+[style*="monospace"] {
+    font-variant-ligatures: none !important;
+    -webkit-font-feature-settings: 'liga' 0, 'calt' 0, 'clig' 0, 'dlig' 0 !important;
+    font-feature-settings: 'liga' 0, 'calt' 0, 'clig' 0, 'dlig' 0 !important;
+}
+
+/* Extra aggressive: target JetBrains Mono specifically */
+*[style*="JetBrains"],
+.console-entry__code,
+.console-input__field,
+.json-viewer,
+.suggestion-item,
+.context-key,
+.help-output code,
+.help-output .inline-code {
+    font-variant-ligatures: none !important;
+    -webkit-font-feature-settings: 'liga' 0, 'calt' 0, 'clig' 0, 'dlig' 0 !important;
+    font-feature-settings: 'liga' 0, 'calt' 0, 'clig' 0, 'dlig' 0 !important;
+}
+.console-input__field {
+    padding-top: 0px!important;
+}
+
+.console-entry__result {
+    padding-bottom: 20px!important;
 }

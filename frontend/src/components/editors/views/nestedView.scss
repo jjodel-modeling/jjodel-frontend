@@ -957,46 +957,46 @@ section.viewpoint-tab {
     z-index: 10;
   }
 
+  // Standard horizontal switch (36x20px)
   .vp-toggle {
     position: relative;
-    width: 32px;
-    height: 18px;
-    border-radius: 18px;
-    background-color: #cbd5e1; // slate-300 (OFF)
+    width: 36px;
+    height: 20px;
+    border-radius: 10px;
+    background-color: #cbd5e1;
     cursor: pointer;
-    transition: all 150ms ease;
+    transition: all 200ms ease;
     pointer-events: auto;
     user-select: none;
 
     &__thumb {
       position: absolute;
-      width: 14px;
-      height: 14px;
+      width: 16px;
+      height: 16px;
       top: 2px;
       left: 2px;
       border-radius: 50%;
       background-color: #ffffff;
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
-      transition: all 150ms ease;
-      pointer-events: none; // Thumb doesn't capture clicks
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+      transition: all 200ms ease;
+      pointer-events: none;
     }
 
-    // Active state - SLATE color (consistent with design system)
+    // Active state - slate solid (#334155), NOT cyan
     &.active {
-      background-color: #475569; // slate-600
+      background-color: #334155;
 
       .vp-toggle__thumb {
-        transform: translateX(14px);
+        transform: translateX(16px);
       }
     }
 
-    // Hover states .viewpoint-box__header .icon.type.DViewPoint
     &:hover:not(.active) {
-      background-color: #94a3b8; // slate-400
+      background-color: #94a3b8;
     }
 
     &.active:hover {
-      background-color: #334155; // slate-700
+      background-color: #1e293b;
     }
   }
   // ============================================
@@ -1437,7 +1437,7 @@ section.viewpoint-tab {
     height: 22px;
     padding: 0 4px;
     font-size: 11px;
-    font-family: 'SF Mono', 'Monaco', monospace;
+    font-family: 'IBM Plex Mono', 'Monaco', monospace;
     text-align: center;
     border: 1px solid #e2e8f0;
     border-radius: 4px;
@@ -2012,22 +2012,26 @@ section.viewpoint-tab {
   // Dark mode support
   @media (prefers-color-scheme: dark) {
     .vp-toggle {
-      background-color: #475569; // slate-600 (OFF)
+      background-color: #475569;
 
       &__thumb {
-        background-color: #f8fafc;
+        background-color: #e2e8f0;
       }
 
       &.active {
-        background-color: #64748b; // slate-500
+        background-color: #94a3b8;
+
+        .vp-toggle__thumb {
+          background-color: #1e293b;
+        }
       }
 
       &:hover:not(.active) {
-        background-color: #64748b; // slate-500
+        background-color: #64748b;
       }
 
       &.active:hover {
-        background-color: #475569; // slate-600
+        background-color: #cbd5e1;
       }
     }
   }
@@ -2120,7 +2124,7 @@ section.viewpoint-tab {
       border: 1px solid #e2e8f0 !important;
       border-radius: 4px;
       font-size: 11px;
-      font-family: 'SF Mono', 'Monaco', monospace;
+      font-family: 'IBM Plex Mono', 'Monaco', monospace;
       background: #ffffff;
 
       // Hide spinner
@@ -2711,7 +2715,7 @@ section.viewpoint-tab {
     height: 22px;
     padding: 0 4px;
     font-size: 11px;
-    font-family: 'SF Mono', 'Monaco', monospace;
+    font-family: 'IBM Plex Mono', 'Monaco', monospace;
     text-align: center;
     border: 1px solid #e2e8f0;
     border-radius: 4px;

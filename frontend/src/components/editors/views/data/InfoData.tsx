@@ -36,7 +36,7 @@ function InfoDataComponent(props: AllProps) {
     const classesOptionsJSX = <optgroup label={'Object type'}>
             {objectTypes.map((o)=><option key={o} value={o}>{o ? o.substring(1) : 'anything'}</option>)}
     </optgroup>;
-    const classesOptions = [{label:'apply to', options: objectTypes.map(o=>({value:o, label:o ? o.substring(1) : 'anything'}))}];
+    const classesOptions = [{label:'', options: objectTypes.map(o=>({value:o, label:o ? o.substring(1) : 'anything'}))}];
 
     let isVP: boolean = view.className === DViewPoint.cname;
     let isV: boolean = !isVP;
@@ -111,9 +111,9 @@ function InfoDataComponent(props: AllProps) {
                 />
             </div>
 
-            {/* Appliable to - vertical layout */}
+            {/* Applicable to - vertical layout */}
             <div className="form-field">
-                <label className="form-label">Appliable to *** </label>
+                <label className="form-label">Applicable to</label>
                 <Select
                     data={view}
                     field={'appliableToClasses'}

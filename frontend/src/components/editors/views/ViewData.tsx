@@ -59,8 +59,9 @@ function ViewDataComponent(props: AllProps) {
     tabs.push({id: id(), title: 'Style', group: '1', closable: false, content: <Try><PaletteData viewID={view.id} readonly={readOnly} /></Try>});
     if(isV) tabs.push({id: id(), title: 'Events', group: '1', closable: false, content: <Try><EventsData viewID={view.id} readonly={readOnly} /></Try>});
     if(isV) tabs.push({id: id(), title: 'Options', group: '1', closable: false, content: <Try><GenericNodeData viewID={view.id} readonly={readOnly} /></Try>});
-    if(isV) tabs.push({id: id(), title: 'Permissions', group: '1', closable: false, content: <Try><PermissionViewTab viewID={view.id} readonly={readOnly} /></Try>});
-    if(isVP) tabs.push({id: id(), title: 'Permissions', group: '1', closable: false, content: <Try><PermissionViewpointTab viewID={view.id} readonly={readOnly} /></Try>});
+    // Permissions tabs removed from UI (kept components for future use)
+    // if(isV) tabs.push({id: id(), title: 'Permissions', group: '1', closable: false, content: <Try><PermissionViewTab viewID={view.id} readonly={readOnly} /></Try>});
+    // if(isVP) tabs.push({id: id(), title: 'Permissions', group: '1', closable: false, content: <Try><PermissionViewpointTab viewID={view.id} readonly={readOnly} /></Try>});
     if(isVP) tabs.push({id: id(), title: 'Components', group: '1', closable: false, content: <Try><ComponentsTab viewID={view.id} readonly={readOnly} /></Try>});
 
 

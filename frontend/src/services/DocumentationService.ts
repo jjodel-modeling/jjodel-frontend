@@ -361,6 +361,231 @@ export class DocumentationService {
     // ========================================
 
     /**
+     * Robustly extract and parse JSON from AI response
+     * Handles various response formats: pure JSON, markdown code blocks, text + JSON
+     */
+    private static extractJsonFromResponse(responseText: string): any {
+        const trimmed = responseText.trim();
+
+        // Strategy 1: Try direct parse (response is pure JSON)
+        try {
+            return JSON.parse(trimmed);
+        } catch {
+            // Continue to other strategies
+        }
+
+        // Strategy 2: Extract from markdown code blocks
+        // Matches ```json, ```JSON, ``` (any language), etc.
+        const codeBlockPatterns = [
+            /```json\s*([\s\S]*?)\s*```/i,
+            /```JSON\s*([\s\S]*?)\s*```/i,
+            /```\s*([\s\S]*?)\s*```/,
+        ];
+
+        for (const pattern of codeBlockPatterns) {
+            const match = trimmed.match(pattern);
+            if (match && match[1]) {
+                try {
+                    return JSON.parse(match[1].trim());
+                } catch {
+                    // Try to fix common JSON issues
+                    const fixed = this.fixCommonJsonIssues(match[1].trim());
+                    try {
+                        return JSON.parse(fixed);
+                    } catch {
+                        // Continue to next pattern
+                    }
+                }
+            }
+        }
+
+        // Strategy 3: Find JSON object in text (starts with { ends with })
+        const jsonObjectMatch = trimmed.match(/\{[\s\S]*\}/);
+        if (jsonObjectMatch) {
+            try {
+                return JSON.parse(jsonObjectMatch[0]);
+            } catch {
+                const fixed = this.fixCommonJsonIssues(jsonObjectMatch[0]);
+                try {
+                    return JSON.parse(fixed);
+                } catch {
+                    // Continue to next strategy
+                }
+            }
+        }
+
+        // Strategy 4: Find JSON array in text (starts with [ ends with ])
+        const jsonArrayMatch = trimmed.match(/\[[\s\S]*\]/);
+        if (jsonArrayMatch) {
+            try {
+                return JSON.parse(jsonArrayMatch[0]);
+            } catch {
+                const fixed = this.fixCommonJsonIssues(jsonArrayMatch[0]);
+                try {
+                    return JSON.parse(fixed);
+                } catch {
+                    // Continue
+                }
+            }
+        }
+
+        // Strategy 5: Try to find the last valid JSON in the response
+        // (Some models add explanations after the JSON)
+        const lines = trimmed.split('\n');
+        let jsonCandidate = '';
+        let braceCount = 0;
+        let inJson = false;
+
+        for (const line of lines) {
+            if (!inJson && line.trim().startsWith('{')) {
+                inJson = true;
+                jsonCandidate = '';
+            }
+
+            if (inJson) {
+                jsonCandidate += line + '\n';
+                braceCount += (line.match(/{/g) || []).length;
+                braceCount -= (line.match(/}/g) || []).length;
+
+                if (braceCount === 0 && jsonCandidate.trim()) {
+                    try {
+                        return JSON.parse(jsonCandidate.trim());
+                    } catch {
+                        const fixed = this.fixCommonJsonIssues(jsonCandidate.trim());
+                        try {
+                            return JSON.parse(fixed);
+                        } catch {
+                            // Reset and try to find another JSON object
+                            inJson = false;
+                            jsonCandidate = '';
+                        }
+                    }
+                }
+            }
+        }
+
+        // All strategies failed
+        throw new Error('Could not extract valid JSON from AI response');
+    }
+
+    /**
+     * Fix common JSON formatting issues from AI responses
+     */
+    private static fixCommonJsonIssues(jsonStr: string): string {
+        let fixed = jsonStr;
+
+        // Remove trailing commas before } or ]
+        fixed = fixed.replace(/,\s*([}\]])/g, '$1');
+
+        // Remove control characters that break JSON (except \n, \r, \t)
+        fixed = fixed.replace(/[\x00-\x1F\x7F]/g, (char) => {
+            if (char === '\n' || char === '\r' || char === '\t') {
+                return char; // Keep these
+            }
+            return ''; // Remove others
+        });
+
+        // Fix single quotes used instead of double quotes (some models do this)
+        // Only fix if the string doesn't parse as valid JSON
+        try {
+            JSON.parse(fixed);
+            return fixed; // Already valid
+        } catch {
+            // Try replacing single quotes with double quotes
+            // This is risky but sometimes necessary
+            const singleQuoteFixed = fixed
+                .replace(/'/g, '"')
+                .replace(/"\s*:\s*"/g, '": "'); // Fix spacing
+
+            try {
+                JSON.parse(singleQuoteFixed);
+                return singleQuoteFixed;
+            } catch {
+                // Return original fixed version
+                return fixed;
+            }
+        }
+    }
+
+    /**
+     * Create a fallback response by extracting what we can from the text
+     * Used when JSON parsing completely fails but we have useful text content
+     */
+    private static createFallbackResponse(
+        responseText: string,
+        lexicalData: ProjectLexicalData
+    ): JjodieResponse | null {
+        try {
+            // Try to extract domain from the response text
+            let domain = 'General';
+            const domainPatterns = [
+                /domain[:\s]+["']?([^"'\n,]+)["']?/i,
+                /this (?:is a|appears to be|represents)(?: an?)?\s+([^.]+)/i,
+                /(?:modeling|models)\s+(?:the\s+)?([^.]+)\s+domain/i,
+            ];
+
+            for (const pattern of domainPatterns) {
+                const match = responseText.match(pattern);
+                if (match && match[1]) {
+                    domain = match[1].trim().substring(0, 50);
+                    break;
+                }
+            }
+
+            // Extract any descriptions we can find
+            const projectDescription = this.extractDescription(responseText, lexicalData.project.name)
+                || `Documentation for ${lexicalData.project.name}`;
+
+            // Build minimal valid response
+            const fallbackResponse: JjodieResponse = {
+                domain,
+                domainConfidence: 30, // Low confidence for fallback
+                projectDescription,
+                metamodels: lexicalData.metamodels.map(mm => ({
+                    name: mm.name,
+                    description: this.extractDescription(responseText, mm.name)
+                        || `Metamodel containing ${mm.classes.length} classes.`,
+                    classes: mm.classes.map(cls => ({
+                        name: cls.name,
+                        description: this.extractDescription(responseText, cls.name)
+                            || this.generateClassDescriptionLocal(cls.name, cls, domain),
+                        attributeDescriptions: {},
+                        referenceDescriptions: {},
+                    })),
+                })),
+            };
+
+            return fallbackResponse;
+        } catch (error) {
+            console.error('[DocumentationService] Fallback response creation failed:', error);
+            return null;
+        }
+    }
+
+    /**
+     * Try to extract a description for a named element from text
+     */
+    private static extractDescription(text: string, elementName: string): string | null {
+        if (!elementName) return null;
+
+        // Look for patterns like "ElementName: description" or "ElementName is/represents..."
+        const patterns = [
+            new RegExp(`${elementName}[:\\s]+([^.]+\\.)`, 'i'),
+            new RegExp(`${elementName}\\s+(?:is|represents|defines|models)\\s+([^.]+\\.)`, 'i'),
+            new RegExp(`\\*\\*${elementName}\\*\\*[:\\s]+([^.]+\\.)`, 'i'),
+        ];
+
+        for (const pattern of patterns) {
+            const match = text.match(pattern);
+            if (match && match[1] && match[1].length > 10) {
+                return match[1].trim();
+            }
+        }
+
+        return null;
+    }
+
+    /**
      * Generate documentation with AI (Jjodie)
      */
     static async generateWithJjodie(project: LProject): Promise<GenerationResult> {
@@ -408,18 +633,25 @@ export class DocumentationService {
         );
         console.log('[DocumentationService] AI response received, length:', responseText.length);
 
-        // Parse JSON response
+        // Parse JSON response with robust extraction
         let aiResponse: JjodieResponse;
         try {
-            // Handle markdown code blocks
-            const jsonMatch = responseText.match(/```json\s*([\s\S]*?)\s*```/)
-                           || responseText.match(/```\s*([\s\S]*?)\s*```/)
-                           || [null, responseText];
-            const jsonStr = (jsonMatch[1] || responseText).trim();
-            aiResponse = JSON.parse(jsonStr);
+            aiResponse = this.extractJsonFromResponse(responseText);
+            console.log('[DocumentationService] Successfully parsed AI response');
         } catch (parseError) {
-            console.error('[DocumentationService] Failed to parse AI response:', responseText.substring(0, 500));
-            throw new Error('AI returned invalid JSON format');
+            console.error('[DocumentationService] Failed to parse AI response.');
+            console.error('[DocumentationService] Response preview:', responseText.substring(0, 1000));
+            console.error('[DocumentationService] Parse error:', parseError);
+
+            // Last resort: try to generate a minimal valid response from the text
+            const lexicalDataForFallback = this.extractLexicalData(project);
+            const fallbackResponse = this.createFallbackResponse(responseText, lexicalDataForFallback);
+            if (fallbackResponse) {
+                console.warn('[DocumentationService] Using fallback response from text extraction');
+                aiResponse = fallbackResponse;
+            } else {
+                throw new Error('AI returned invalid JSON format. Please try again or use Local generation.');
+            }
         }
 
         // Validate response
@@ -555,7 +787,19 @@ ${metamodelSections}
 
 7. **Confidence Score**: Rate 0-100 how confident you are in your domain identification
 
-## Output Format (JSON only, no markdown code blocks in the response):
+## CRITICAL: Output Format
+
+You MUST respond with ONLY a valid JSON object. No other text.
+
+RULES:
+1. Start your response with { and end with }
+2. Do NOT wrap in markdown code blocks (no \`\`\`json)
+3. Do NOT add any text before or after the JSON
+4. Do NOT add comments or explanations
+5. Ensure all strings are properly escaped
+6. Do NOT use trailing commas
+
+The JSON structure MUST be:
 {
     "domain": "Specific domain name",
     "domainConfidence": 85,
@@ -581,6 +825,7 @@ ${metamodelSections}
 }
 
 Be specific, detailed, and use domain terminology. Avoid generic descriptions.
+REMEMBER: Output ONLY the JSON object, nothing else.
 `;
     }
 

@@ -46,7 +46,7 @@ $color-border-hover: #d0d3d8;
 
 // Typography
 $font-family: 'Inter Variable', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-$font-family-mono: 'JetBrains Mono', 'SF Mono', 'Fira Code', monospace;
+$font-family-mono: 'JetBrains Mono', 'IBM Plex Mono', 'Fira Code', monospace;
 
 $font-size-xs: 11px;
 $font-size-sm: 12px;
@@ -92,7 +92,8 @@ $shadow-md: 0 1px 3px rgba(0, 0, 0, 0.08);
 
     &.jjtl-layout--editor-only {
         .jjtl-dev-env-side-panel,
-        .jjtl-dev-env-inferred-panel {
+        .jjtl-dev-env-inferred-panel,
+        .jjtl-dev-env-right-panel {
             display: none;
         }
     }
@@ -100,7 +101,8 @@ $shadow-md: 0 1px 3px rgba(0, 0, 0, 0.08);
     &.jjtl-layout--split-horizontal {
         flex-direction: row;
 
-        .jjtl-dev-env-inferred-panel {
+        .jjtl-dev-env-inferred-panel,
+        .jjtl-dev-env-right-panel {
             // Width is controlled via inline style (resizable)
             border-left: 1px solid $color-border;
         }
@@ -118,10 +120,177 @@ $shadow-md: 0 1px 3px rgba(0, 0, 0, 0.08);
     }
 }
 
+// ============================================
+// EDITOR CONTAINER
+// ============================================
+
 .jjtl-dev-env-editor {
+    position: relative;
     flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
     overflow: hidden;
+
+    // Fullscreen mode
+    &.fullscreen {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 1000;
+        background: $color-bg-primary;
+
+        .jjtl-editor-actions {
+            top: 56px; // Below fullscreen header
+            right: 16px;
+        }
+
+        // Editor takes remaining space below header
+        .jjtl-editor,
+        .monaco-editor,
+        .overflow-guard {
+            height: calc(100vh - 56px) !important;
+        }
+    }
 }
+
+// ============================================
+// EDITOR ACTION BUTTONS
+// ============================================
+
+.jjtl-editor-actions {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px;
+    background: rgba(255, 255, 255, 0.95);
+    border: 1px solid $color-border;
+    border-radius: $radius-lg;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    backdrop-filter: blur(8px);
+}
+
+.jjtl-editor-action-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    background: transparent;
+    border: none;
+    border-radius: $radius-md;
+    color: #64748b;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    i {
+        font-size: 16px;
+    }
+
+    &:hover:not(:disabled) {
+        background: $color-bg-tertiary;
+        color: $color-text-primary;
+    }
+
+    &:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+    }
+
+    // Copied state
+    &.copied {
+        color: $color-success;
+
+        &:hover {
+            background: $color-success-light;
+        }
+    }
+
+    // Primary button (Execute)
+    &--primary {
+        background: $color-accent-gradient;
+        color: #ffffff;
+
+        i {
+            color: #ffffff;
+        }
+
+        &:hover:not(:disabled) {
+            background: linear-gradient(135deg, #475569 0%, #334155 100%);
+            color: #ffffff;
+        }
+    }
+}
+
+.jjtl-editor-action-divider {
+    width: 1px;
+    height: 20px;
+    background: $color-border;
+    margin: 0 4px;
+}
+
+// ============================================
+// FULLSCREEN MODE
+// ============================================
+
+.jjtl-fullscreen-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: $spacing-md $spacing-lg;
+    background: $color-bg-secondary;
+    border-bottom: 1px solid $color-border;
+    flex-shrink: 0;
+}
+
+.jjtl-fullscreen-title {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    font-size: $font-size-md;
+    font-weight: 600;
+    color: $color-text-primary;
+
+    i {
+        font-size: 16px;
+        color: $color-text-secondary;
+    }
+}
+
+.jjtl-fullscreen-close {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    background: transparent;
+    border: none;
+    border-radius: $radius-md;
+    color: $color-text-secondary;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    &:hover {
+        background: $color-border;
+        color: $color-text-primary;
+    }
+
+    i {
+        font-size: 18px;
+    }
+}
+
+// ============================================
+// SIDE PANEL
+// ============================================
 
 .jjtl-dev-env-side-panel {
     position: relative;
@@ -141,36 +310,22 @@ $shadow-md: 0 1px 3px rgba(0, 0, 0, 0.08);
 .jjtl-side-panel-resize-handle {
     position: absolute;
     top: 0;
-    right: -2px;
+    right: -6px;
     bottom: 0;
-    width: 4px;
+    width: 12px;
     cursor: col-resize;
     background: transparent;
     z-index: 10;
-    transition: background-color 0.15s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    user-select: none;
+    flex-shrink: 0;
 
-    // Subtle visual indicator
-    &::after {
-        content: '';
-        position: absolute;
-        top: 0;
-        bottom: 0;
-        right: 1px;
-        width: 1px;
-        background: transparent;
-        transition: background-color 0.15s ease;
-    }
+    // Icon styling handled by .resize-grip-icon-vertical class in console-tab.scss
 
-    &:hover {
-        background: rgba(14, 165, 233, 0.3);
-
-        &::after {
-            background: #0ea5e9;
-        }
-    }
-
-    &:active {
-        background: rgba(14, 165, 233, 0.4);
+    &:focus {
+        outline: none;
     }
 }
 
@@ -211,6 +366,7 @@ $shadow-md: 0 1px 3px rgba(0, 0, 0, 0.08);
     }
 }
 
+// Legacy class (kept for compatibility)
 .jjtl-dev-env-inferred-panel {
     position: relative;
     background-color: $color-bg-primary;
@@ -224,40 +380,33 @@ $shadow-md: 0 1px 3px rgba(0, 0, 0, 0.08);
     }
 }
 
+// ============================================
+// Right Panel - Suggested Mappings
+// ============================================
+
+// Note: The right panel now only contains SuggestedMappingsPanel
+// (no tabs - simplified layout)
+
 // Resize handle for right panel (on left edge)
 .jjtl-right-panel-resize-handle {
     position: absolute;
     top: 0;
-    left: -2px;
+    left: -6px;
     bottom: 0;
-    width: 4px;
+    width: 12px;
     cursor: col-resize;
     background: transparent;
     z-index: 10;
-    transition: background-color 0.15s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    user-select: none;
+    flex-shrink: 0;
 
-    // Subtle visual indicator
-    &::after {
-        content: '';
-        position: absolute;
-        top: 0;
-        bottom: 0;
-        left: 1px;
-        width: 1px;
-        background: transparent;
-        transition: background-color 0.15s ease;
-    }
+    // Icon styling handled by .resize-grip-icon-vertical class in console-tab.scss
 
-    &:hover {
-        background: rgba(14, 165, 233, 0.3);
-
-        &::after {
-            background: #0ea5e9;
-        }
-    }
-
-    &:active {
-        background: rgba(14, 165, 233, 0.4);
+    &:focus {
+        outline: none;
     }
 }
 
@@ -266,12 +415,58 @@ $shadow-md: 0 1px 3px rgba(0, 0, 0, 0.08);
 // ============================================
 
 .jjtl-dev-env-bottom {
-    border-top: 1px solid $color-border;
+    min-height: 36px;
+    display: flex;
+    flex-direction: column;
+    border-top: none; // Resize handle provides top border when expanded
     background-color: $color-bg-primary;
+    position: relative;
+    flex-shrink: 0;
 
     &.collapsed {
+        height: 36px !important;
+        min-height: 36px;
+        border-top: 1px solid $color-border; // Restore border when collapsed
+
         .jjtl-dev-env-bottom-content {
             display: none;
+        }
+
+        .jjtl-bottom-panel-resize-handle {
+            display: none; // Hide resize handle when collapsed
+        }
+    }
+}
+
+.jjtl-bottom-panel-resize-handle {
+    height: 8px;
+    cursor: row-resize;
+    z-index: 100;
+    background: $color-bg-tertiary;
+    border-bottom: 1px solid $color-border;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color $transition-fast;
+
+    // Visible grip indicator in center
+    &::before {
+        content: '';
+        width: 48px;
+        height: 4px;
+        background: $color-border-hover;
+        border-radius: 2px;
+        transition: all $transition-fast;
+    }
+
+    &:hover,
+    &.resizing {
+        background: rgba(14, 165, 233, 0.2);
+
+        &::before {
+            background: $color-primary;
+            width: 64px;
         }
     }
 }
@@ -282,6 +477,8 @@ $shadow-md: 0 1px 3px rgba(0, 0, 0, 0.08);
     padding: 0 $spacing-sm;
     border-bottom: 1px solid $color-border;
     height: 36px;
+    min-height: 36px;
+    flex-shrink: 0;
 }
 
 .jjtl-dev-env-bottom-tab {
@@ -313,14 +510,28 @@ $shadow-md: 0 1px 3px rgba(0, 0, 0, 0.08);
 }
 
 .jjtl-dev-env-bottom-badge {
-    background-color: $color-error;
-    color: white;
     font-size: 10px;
     font-weight: 600;
     padding: 1px 6px;
     border-radius: 10px;
     min-width: 18px;
     text-align: center;
+
+    // Default: error style (for Problems tab)
+    background-color: $color-error;
+    color: white;
+
+    // Info variant (for Output and Trace tabs - neutral)
+    &--info {
+        background-color: $color-accent-light;
+        color: $color-accent;
+    }
+
+    // Success variant (optional)
+    &--success {
+        background-color: $color-success-light;
+        color: $color-success;
+    }
 }
 
 .jjtl-dev-env-bottom-spacer {
@@ -367,8 +578,10 @@ $shadow-md: 0 1px 3px rgba(0, 0, 0, 0.08);
 }
 
 .jjtl-dev-env-bottom-content {
-    height: 180px;
-    overflow: auto;
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    min-height: 0;
 }
 
 // ============================================
@@ -578,7 +791,27 @@ $shadow-md: 0 1px 3px rgba(0, 0, 0, 0.08);
 }
 
 .jjtl-statusbar-ok {
-    color: $color-success;
+    color: white;
+
+    i {
+        color: white;
+    }
+}
+
+// All status bar items should be white (except errors/warnings)
+.jjtl-statusbar-parser,
+.jjtl-statusbar-execution,
+.jjtl-statusbar-time,
+.jjtl-statusbar-mapped,
+.jjtl-statusbar-cursor,
+.jjtl-statusbar-line-ending,
+.jjtl-statusbar-encoding,
+.jjtl-statusbar-language {
+    color: white;
+
+    i {
+        color: white;
+    }
 }
 
 .jjtl-statusbar-language {
@@ -682,8 +915,9 @@ $shadow-md: 0 1px 3px rgba(0, 0, 0, 0.08);
 .jjtl-tree-node-content {
     display: flex;
     align-items: center;
-    gap: $spacing-xs;
+    gap: 2px;  // Reduced from $spacing-xs (4px) for more compact layout
     padding: $spacing-xs $spacing-sm;
+    padding-right: $spacing-xs;  // Reduced right padding to give more space for arrows
     cursor: pointer;
     transition: background-color $transition-fast;
 
@@ -737,6 +971,8 @@ $shadow-md: 0 1px 3px rgba(0, 0, 0, 0.08);
     font-size: $font-size-xs;
     color: $color-text-tertiary;
     font-family: $font-family-mono;
+    margin-left: 2px;  // Compact spacing before type
+    flex-shrink: 0;    // Prevent type from being squeezed
 }
 
 .jjtl-tree-multiplicity {
@@ -759,6 +995,15 @@ $shadow-md: 0 1px 3px rgba(0, 0, 0, 0.08);
     overflow: hidden;
     position: relative;
     z-index: 1;
+}
+
+.jjtl-dual-panel-source {
+    padding-right: 8px;  // Space between content and center divider
+}
+
+.jjtl-dual-panel-target {
+    padding-left: 8px;   // Space between center divider and content
+    padding-right: 16px; // ★ Right margin to prevent type touching the edge
 }
 
 .jjtl-dual-panel-center {
@@ -801,6 +1046,82 @@ $shadow-md: 0 1px 3px rgba(0, 0, 0, 0.08);
     border-radius: $radius-md;
     white-space: nowrap;
     box-shadow: $shadow-md;
+}
+
+// View mode toggle (Schema / Instances)
+.jjtl-dual-panel-view-toggle {
+    position: absolute;
+    top: $spacing-sm;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 2px;
+    padding: 3px;
+    background-color: $color-bg-tertiary;
+    border-radius: $radius-md;
+    z-index: 5;
+    box-shadow: $shadow-sm;
+}
+
+.jjtl-view-toggle-btn {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+    padding: $spacing-xs $spacing-sm;
+    background: none;
+    border: none;
+    border-radius: $radius-sm;
+    font-size: $font-size-xs;
+    font-weight: 500;
+    color: $color-text-secondary;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    i {
+        font-size: $font-size-sm;
+    }
+
+    &:hover {
+        color: $color-text-primary;
+        background-color: rgba(255, 255, 255, 0.5);
+    }
+
+    &.active {
+        background-color: $color-bg-primary;
+        color: $color-primary;
+        box-shadow: $shadow-sm;
+    }
+}
+
+.jjtl-view-toggle-badge {
+    font-size: 10px;
+    font-weight: 600;
+    padding: 1px 5px;
+    background-color: $color-primary-light;
+    color: $color-primary;
+    border-radius: 10px;
+    min-width: 16px;
+    text-align: center;
+}
+
+.jjtl-dual-panel-no-instances {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: $spacing-sm;
+    padding: $spacing-xl;
+    color: $color-text-tertiary;
+    text-align: center;
+
+    i {
+        font-size: 24px;
+        opacity: 0.5;
+    }
+
+    span {
+        font-size: $font-size-xs;
+    }
 }
 
 // ============================================
@@ -1556,16 +1877,66 @@ $shadow-md: 0 1px 3px rgba(0, 0, 0, 0.08);
     }
 }
 
-// Mode Selector
+// Mode Selector - ProviderSelector + Grammar button
 .mode-selector {
     display: flex;
-    gap: $spacing-xs;
+    align-items: center;
+    gap: $spacing-sm;
     padding: $spacing-sm $spacing-md;
     background-color: $color-bg-secondary;
     border-bottom: 1px solid $color-border;
+
+    // ProviderSelector takes available space
+    .provider-selector {
+        flex: 1;
+        min-width: 0;
+
+        .provider-btn {
+            width: 100%;
+            justify-content: flex-start;
+        }
+    }
 }
 
-.mode-btn {
+// Grammar button (standalone)
+.mode-btn.grammar-btn {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+    padding: $spacing-sm $spacing-md;
+    background-color: $color-bg-primary;
+    border: 1px solid $color-border;
+    border-radius: $radius-md;
+    font-size: $font-size-sm;
+    font-weight: 500;
+    color: $color-text-secondary;
+    cursor: pointer;
+    transition: all $transition-fast;
+    white-space: nowrap;
+    flex-shrink: 0;
+
+    &:hover {
+        border-color: $color-border-hover;
+        color: $color-text-primary;
+    }
+
+    &.active {
+        background: $color-accent-gradient;
+        border-color: transparent;
+        color: white;
+
+        i {
+            color: white;
+        }
+    }
+
+    i {
+        font-size: $font-size-md;
+    }
+}
+
+// Legacy mode-btn styles (for backward compat)
+.mode-btn:not(.grammar-btn) {
     display: flex;
     align-items: center;
     gap: $spacing-xs;
@@ -1612,6 +1983,12 @@ $shadow-md: 0 1px 3px rgba(0, 0, 0, 0.08);
     background-color: rgba(255, 255, 255, 0.2);
     border-radius: $radius-sm;
     text-transform: uppercase;
+}
+
+.provider-indicator {
+    font-size: $font-size-xs;
+    color: $color-primary;
+    font-weight: 500;
 }
 
 .mode-description {
@@ -2076,6 +2453,62 @@ $shadow-md: 0 1px 3px rgba(0, 0, 0, 0.08);
 
     span {
         font-size: $font-size-xs;
+    }
+}
+
+// ============================================
+// OUTPUT PANEL
+// ============================================
+
+.jjtl-output-panel {
+    height: 100%;
+    overflow: auto;
+    font-family: $font-family-mono;
+    font-size: $font-size-sm;
+    line-height: 1.6;
+    padding: $spacing-sm $spacing-md;
+    background: #fafafa;
+}
+
+.jjtl-output-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    min-height: 80px;
+    color: $color-text-tertiary;
+    text-align: center;
+    gap: $spacing-sm;
+
+    i {
+        font-size: 24px;
+        opacity: 0.5;
+    }
+
+    span {
+        font-size: $font-size-sm;
+        font-family: $font-family;
+    }
+}
+
+.jjtl-output-messages {
+    display: flex;
+    flex-direction: column;
+}
+
+.jjtl-output-line {
+    padding: 2px 0;
+    border-bottom: 1px solid #f1f5f9;
+    color: $color-text-primary;
+
+    &:last-child {
+        border-bottom: none;
+    }
+
+    // Timestamp styling (text inside brackets)
+    &::first-letter {
+        color: $color-text-secondary;
     }
 }
 

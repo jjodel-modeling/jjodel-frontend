@@ -25,7 +25,7 @@
 [data-nodetype="GraphVertex"],
 [data-nodetype="Edge"],
 [data-nodetype="EdgePoint"] {
-  font-family: 'JetBrains Mono', 'SF Mono', 'Fira Code', 'Consolas', monospace;
+  font-family: 'JetBrains Mono', 'IBM Plex Mono', 'Fira Code', 'Consolas', monospace;
   font-size: 12px;
 }
 
@@ -93,7 +93,7 @@
 
   /* Legacy class-name support */
   .class-name {
-    font-family: 'JetBrains Mono', 'SF Mono', 'Consolas', monospace;
+    font-family: 'JetBrains Mono', 'IBM Plex Mono', 'Consolas', monospace;
     font-weight: 600;
     font-size: 13px;
     color: var(--color-text-primary, #1a1a2e);
@@ -231,7 +231,7 @@
   .name,
   .field-name,
   .feature-name {
-    font-family: 'JetBrains Mono', 'SF Mono', 'Consolas', monospace;
+    font-family: 'JetBrains Mono', 'IBM Plex Mono', 'Consolas', monospace;
     font-weight: 500;
     font-size: 13px;
     color: #475569;
@@ -244,7 +244,7 @@
   .type-selector,
   .dropdown,
   .css-b62m3t-container {
-    font-family: 'JetBrains Mono', 'SF Mono', 'Consolas', monospace;
+    font-family: 'JetBrains Mono', 'IBM Plex Mono', 'Consolas', monospace;
     font-size: 12px;
     padding: 4px 8px;
     border: 1px solid var(--color-border-secondary, #e2e4e8);
@@ -274,7 +274,7 @@
     .css-13cymwt-control,
     .css-t3ipsp-control {
       min-height: 28px;
-      font-family: 'JetBrains Mono', 'SF Mono', 'Consolas', monospace;
+      font-family: 'JetBrains Mono', 'IBM Plex Mono', 'Consolas', monospace;
       font-size: 12px;
       border-color: var(--color-border-secondary, #e2e4e8);
       border-radius: 4px;
@@ -285,7 +285,7 @@
     }
 
     .css-1dimb5e-singleValue {
-      font-family: 'JetBrains Mono', 'SF Mono', 'Consolas', monospace;
+      font-family: 'JetBrains Mono', 'IBM Plex Mono', 'Consolas', monospace;
       font-size: 12px;
     }
   }
@@ -310,7 +310,7 @@
   justify-content: space-between;
   padding: 4px 10px;
   font-size: 12px;
-  font-family: 'SF Mono', Monaco, Consolas, monospace;
+  font-family: 'IBM Plex Mono', Monaco, Consolas, monospace;
   transition: background 0.15s ease;
 
   &:hover {
@@ -318,7 +318,7 @@
   }
 
   .feature-name {
-    font-family: 'JetBrains Mono', 'SF Mono', 'Consolas', monospace;
+    font-family: 'JetBrains Mono', 'IBM Plex Mono', 'Consolas', monospace;
     font-weight: 500;
     font-size: 12px;
     color: #334155;
@@ -371,7 +371,7 @@
   justify-content: space-between;
   padding: 4px 10px;
   font-size: 12px;
-  font-family: 'SF Mono', Monaco, Consolas, monospace;
+  font-family: 'IBM Plex Mono', Monaco, Consolas, monospace;
   transition: background 0.15s ease;
 
   &:hover {
@@ -379,7 +379,7 @@
   }
 
   .feature-name {
-    font-family: 'JetBrains Mono', 'SF Mono', 'Consolas', monospace;
+    font-family: 'JetBrains Mono', 'IBM Plex Mono', 'Consolas', monospace;
     font-weight: 500;
     font-size: 12px;
     color: #334155;
@@ -425,20 +425,20 @@
 
   .operation-name,
   .feature-name {
-    font-family: 'JetBrains Mono', 'SF Mono', 'Consolas', monospace;
+    font-family: 'JetBrains Mono', 'IBM Plex Mono', 'Consolas', monospace;
     font-weight: 500;
     font-size: 13px;
     color: #475569;
   }
 
   .operation-params {
-    font-family: 'JetBrains Mono', 'SF Mono', 'Consolas', monospace;
+    font-family: 'JetBrains Mono', 'IBM Plex Mono', 'Consolas', monospace;
     font-size: 12px;
     color: var(--color-text-secondary, #525866);
   }
 
   .operation-return {
-    font-family: 'JetBrains Mono', 'SF Mono', 'Consolas', monospace;
+    font-family: 'JetBrains Mono', 'IBM Plex Mono', 'Consolas', monospace;
     font-size: 12px;
     color: var(--color-text-tertiary, #717784);
     font-style: italic;
@@ -448,7 +448,7 @@
 /* Literal styling (for enums) */
 .literal {
   padding: 6px 8px;
-  font-family: 'JetBrains Mono', 'SF Mono', 'Consolas', monospace;
+  font-family: 'JetBrains Mono', 'IBM Plex Mono', 'Consolas', monospace;
   font-size: 12px;
   color: var(--color-text-primary, #1a1a2e);
   border-bottom: 1px solid var(--color-border-light, #f0f1f3);
@@ -567,7 +567,7 @@
   background-color: var(--color-bg-primary, #ffffff);
   border: 1px solid var(--color-border-primary, #e2e4e8);
   border-radius: 2px;
-  box-shadow: var(--shadow-sm, 0 1px 2px 0 rgba(0, 0, 0, 0.05));
+  //box-shadow: var(--shadow-sm, 0 1px 2px 0 rgba(0, 0, 0, 0.05));
 }
 
 
@@ -630,7 +630,7 @@
    ---------------------------------------- */
 
 /* SVG marker refinements */
-marker {
+.graph-canvas marker {
   path {
     fill: var(--color-border-primary, #d1d5db);
     stroke: none;
@@ -641,6 +641,8 @@ marker {
     }
   }
 }
+
+
 
 /* Arrow head styling classes */
 .arrow-head {

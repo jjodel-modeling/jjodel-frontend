@@ -1,27 +1,45 @@
-import React, { useState, useEffect, CSSProperties } from 'react';
+import React, { useState, useEffect, useCallback, CSSProperties } from 'react';
 
 interface SimpleFooterResizeHandleProps {
   onHeightChange: (height: number) => void;
   currentHeight: number;
   minHeight?: number;
-  maxHeight?: number;
-  containerSelector: string; // CSS selector for the container (e.g., '.console-tab-v2')
+  maxHeight?: number;           // Fixed max height (deprecated, use maxHeightPercent)
+  maxHeightPercent?: number;    // Percentage of container height (e.g., 0.4 = 40%)
+  containerSelector: string;    // CSS selector for the container (e.g., '.console-tab-v2')
 }
 
 /**
- * SimpleFooterResizeHandle - Adapted for footer resize within a container
+ * SimpleFooterResizeHandle - Barra di resize per il footer della console
  *
- * Calculates height from container bottom to mouse position (upward resize)
- * Perfect for resizing footers inside containers like Console
+ * Supports maxHeightPercent to limit resize to a percentage of container.
+ * Double-click to reset to default height (200px).
  */
 export const SimpleFooterResizeHandle: React.FC<SimpleFooterResizeHandleProps> = ({
   onHeightChange,
   currentHeight,
   minHeight = 100,
-  maxHeight = 400,
+  maxHeight,
+  maxHeightPercent = 0.4,  // Default: 40% of container
   containerSelector
 }) => {
   const [dragging, setDragging] = useState(false);
+  const [hovering, setHovering] = useState(false);
+
+  // Calculate max height based on container size
+  const getMaxHeight = useCallback((): number => {
+    const container = document.querySelector(containerSelector);
+    if (!container) return maxHeight || 400; // fallback
+
+    const containerHeight = container.getBoundingClientRect().height;
+    const percentMax = Math.floor(containerHeight * maxHeightPercent);
+
+    // If both maxHeight and maxHeightPercent are set, use the smaller one
+    if (maxHeight) {
+      return Math.min(maxHeight, percentMax);
+    }
+    return percentMax;
+  }, [containerSelector, maxHeightPercent, maxHeight]);
 
   useEffect(() => {
     if (!dragging) return;
@@ -33,12 +51,18 @@ export const SimpleFooterResizeHandle: React.FC<SimpleFooterResizeHandleProps> =
         return;
       }
 
-      const containerBottom = container.getBoundingClientRect().bottom;
+      const containerRect = container.getBoundingClientRect();
+      const containerBottom = containerRect.bottom;
       const mouseY = e.clientY;
+
+      // Calculate new height (distance from mouse to container bottom)
       const newHeight = containerBottom - mouseY;
 
+      // Calculate dynamic max height
+      const currentMaxHeight = getMaxHeight();
+
       // Clamp between min and max
-      const clamped = Math.max(minHeight, Math.min(maxHeight, newHeight));
+      const clamped = Math.max(minHeight, Math.min(currentMaxHeight, newHeight));
       onHeightChange(clamped);
     };
 
@@ -57,7 +81,7 @@ export const SimpleFooterResizeHandle: React.FC<SimpleFooterResizeHandleProps> =
       document.body.style.cursor = '';
       document.body.style.userSelect = '';
     };
-  }, [dragging, onHeightChange, minHeight, maxHeight, containerSelector]);
+  }, [dragging, onHeightChange, minHeight, getMaxHeight, containerSelector]);
 
   const handleStyle: CSSProperties = {
     position: 'relative',
@@ -67,27 +91,42 @@ export const SimpleFooterResizeHandle: React.FC<SimpleFooterResizeHandleProps> =
     zIndex: 100,
     display: 'flex',
     alignItems: 'center',
-    justifyContent: 'center'
+    justifyContent: 'center',
+    flexShrink: 0,
+    userSelect: 'none',
   };
 
+  // Barra originale con hover effect
   const indicatorStyle: CSSProperties = {
-    width: '40px',
+    width: hovering || dragging ? '80px' : '40px',
     height: '4px',
-    background: dragging ? '#3b82f6' : '#cbd5e1',
-    borderRadius: '2px',
-    transition: 'background 0.2s'
+    background: dragging ? '#475569' : hovering ? '#64748b' : '#cbd5e1',
+    borderRadius: '3px',
+    transition: 'background 150ms ease, width 150ms ease',
   };
 
   return (
     <div
       style={handleStyle}
+      onMouseEnter={() => setHovering(true)}
+      onMouseLeave={() => setHovering(false)}
       onMouseDown={(e) => {
         e.preventDefault();
-        console.log('[SimpleFooterResizeHandle] Mouse down - starting drag');
+        e.stopPropagation();
         setDragging(true);
       }}
+      onDoubleClick={() => {
+        // Double-click to reset to default
+        onHeightChange(200);
+      }}
+      role="separator"
+      aria-orientation="horizontal"
+      tabIndex={0}
+      title="Drag to resize - Double-click to reset"
     >
       <div style={indicatorStyle} />
     </div>
   );
 };
+
+export default SimpleFooterResizeHandle;

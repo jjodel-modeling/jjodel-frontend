@@ -39,21 +39,15 @@ export const SimpleResizeHandle: React.FC<SimpleResizeHandleProps> = ({
 
   const handleStyle: CSSProperties = {
     position: 'relative',
-    height: '8px',
+    height: '16px',
     background: 'transparent',
     cursor: 'ns-resize',
     zIndex: 100,
     display: 'flex',
     alignItems: 'center',
-    justifyContent: 'center'
-  };
-
-  const indicatorStyle: CSSProperties = {
-    width: '40px',
-    height: '4px',
-    background: dragging ? '#3b82f6' : '#cbd5e1',
-    borderRadius: '2px',
-    transition: 'background 0.2s'
+    justifyContent: 'center',
+    flexShrink: 0,
+    userSelect: 'none',
   };
 
   return (
@@ -61,11 +55,14 @@ export const SimpleResizeHandle: React.FC<SimpleResizeHandleProps> = ({
       style={handleStyle}
       onMouseDown={(e) => {
         e.preventDefault();
-        console.log('✅ MOUSE DOWN');
         setDragging(true);
       }}
+      role="separator"
+      aria-orientation="horizontal"
+      tabIndex={0}
+      title="Drag to resize"
     >
-      <div style={indicatorStyle} />
+      <i className={`bi bi-grip-horizontal resize-grip-icon ${dragging ? 'dragging' : ''}`} />
     </div>
   );
 };

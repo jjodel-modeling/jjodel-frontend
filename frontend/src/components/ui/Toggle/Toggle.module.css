@@ -35,19 +35,19 @@
   border-radius: 9999px;
   cursor: pointer;
 
-  transition: background-color 150ms ease;
+  transition: background-color 200ms ease;
 
-  /* Off state - gray-300 */
-  background-color: #d1d5db;
+  /* Off state - slate-300 */
+  background-color: #cbd5e1;
 }
 
 .toggle:hover:not(:disabled):not(.toggleChecked) {
-  background-color: #9ca3af; /* gray-400 */
+  background-color: #94a3b8; /* slate-400 */
 }
 
 .toggle:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 2px #ffffff, 0 0 0 4px rgba(14, 165, 233, 0.4);
+  box-shadow: 0 0 0 2px #ffffff, 0 0 0 4px rgba(51, 65, 85, 0.3);
 }
 
 .toggle:disabled {
@@ -55,53 +55,53 @@
   opacity: 0.5;
 }
 
-/* SIZES */
+/* SIZES - Standard: 36x20px */
 .toggleMd {
-  width: 44px;
-  height: 24px;
+  width: 36px;
+  height: 20px;
   padding: 2px;
 }
 
 .toggleSm {
-  width: 32px;
-  height: 18px;
+  width: 28px;
+  height: 16px;
   padding: 2px;
 }
 
-/* CHECKED STATE - slate gradient */
+/* CHECKED STATE - solid slate (not cyan!) */
 .toggleChecked {
-  background: linear-gradient(135deg, #64748b 0%, #475569 100%);
+  background: #334155;
 }
 
 .toggleChecked:hover:not(:disabled) {
-  background: linear-gradient(135deg, #475569 0%, #334155 100%);
+  background: #1e293b;
 }
 
-/* THUMB - 16px white circle */
+/* THUMB - white circle with shadow */
 .thumb {
   display: block;
   border-radius: 9999px;
   background-color: #ffffff;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
 
-  transition: transform 150ms ease;
+  transition: transform 200ms ease;
 }
 
 .toggleMd .thumb {
-  width: 20px;
-  height: 20px;
+  width: 16px;
+  height: 16px;
 }
 
 .toggleSm .thumb {
-  width: 14px;
-  height: 14px;
+  width: 12px;
+  height: 12px;
 }
 
 /* CHECKED THUMB POSITION */
 .toggleMd.toggleChecked .thumb {
-  transform: translateX(20px);
+  transform: translateX(16px);
 }
 
 .toggleSm.toggleChecked .thumb {
-  transform: translateX(14px);
+  transform: translateX(12px);
 }

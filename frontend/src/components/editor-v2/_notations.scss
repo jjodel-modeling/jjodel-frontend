@@ -1,0 +1,197 @@
+// ============================================================
+// Notation mode overrides
+// Each notation applies CSS-level changes via .notation-* class
+// on the root .editor-v2 element. Works orthogonally with themes.
+// ============================================================
+
+// ── UML (default) ──
+// No overrides — base styles in EditorV2.scss ARE the UML notation.
+
+// ── Simplified ──
+.editor-v2.notation-simplified {
+    .mm-node__stereotype { display: none; }
+    .mm-field__type { display: none; }
+    .mm-field__separator { display: none; }
+    .mm-field__bound { display: none; }
+    .mm-node__badge { display: none; }
+
+    .edge-cardinality { display: none; }
+}
+
+// ── Compact ──
+.editor-v2.notation-compact {
+    .mm-node {
+        min-width: 100px;
+    }
+
+    .mm-node__stereotype { display: none; }
+}
+
+// ── Wireframe ──
+.editor-v2.notation-wireframe {
+    // Override header backgrounds to transparent
+    --class-header-bg: transparent;
+    --class-abstract-header-bg: transparent;
+    --enum-header-bg: transparent;
+    --package-header-bg: transparent;
+
+    // Unify text colors
+    --node-header-text: var(--text-primary);
+
+    // Remove shadows
+    --node-shadow: transparent;
+    --node-shadow-deep: transparent;
+
+    // Transparent node backgrounds
+    --node-bg: transparent;
+    --package-body-bg: transparent;
+
+    .mm-node {
+        border-width: 1.5px;
+    }
+
+    .mm-package .mm-node__container {
+        border-style: dashed;
+    }
+
+    // No box-shadow on any node
+    .mm-node,
+    .mm-class,
+    .mm-enum,
+    .mm-package {
+        box-shadow: none !important;
+    }
+}
+
+// ── ER (Entity-Relationship) ──
+.editor-v2.notation-er {
+    .mm-node {
+        border-radius: 12px;
+    }
+
+    .mm-node__header {
+        border-radius: 11px 11px 0 0;
+    }
+
+    // When header is the only child (compact body hidden), full radius
+    .mm-node__header:last-child {
+        border-radius: 11px;
+    }
+
+    .mm-node__stereotype { display: none; }
+
+    // ER body: compact comma-separated style
+    .mm-node__body--er {
+        padding: 6px 10px;
+        font-size: 11px;
+        color: var(--text-secondary);
+        line-height: 1.5;
+    }
+
+    .mm-node__er-attrs {
+        color: var(--field-name-color);
+        font-weight: 400;
+    }
+
+    // ISA label on inheritance edges
+    .edge-label__isa {
+        font-weight: 600;
+        font-size: 10px;
+        font-style: italic;
+        letter-spacing: 0.05em;
+    }
+}
+
+// ── Notation selector dropdown (toolbar) ──
+.notation-selector {
+    position: relative;
+    flex-shrink: 0;
+    width:  fit-content!important;
+
+
+
+    &__trigger {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        width: fit-content!important;
+        padding: 4px 8px;
+        font-size: 11px;
+        white-space: nowrap;
+
+        i:first-child {
+            font-size: 14px;
+        }
+    }
+
+    &__label {
+        font-weight: 500;
+    }
+
+    &__chevron {
+        font-size: 10px;
+        opacity: 0.6;
+    }
+
+    &__dropdown {
+        position: absolute;
+        top: calc(100% + 4px);
+        left: 0;
+        z-index: 1000;
+        min-width: 200px;
+        background: white; // var(--surface-primary);
+        border: 1px solid var(--border-default);
+        border-radius: 6px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        padding: 4px 0;
+    }
+
+    &__option {
+        display: flex;
+        align-items: flex-start;
+        gap: 8px;
+        width: 100%;
+        padding: 6px 10px;
+        border: none;
+        background: transparent;
+        color: var(--text-secondary);
+        font-size: 12px;
+        cursor: pointer;
+        text-align: left;
+        outline: none;
+        transition: background-color 0.1s;
+
+        > i {
+            margin-top: 2px;
+            font-size: 14px;
+            width: 16px;
+            text-align: center;
+            flex-shrink: 0;
+        }
+
+        &:hover,
+        &:focus-visible {
+            background: var(--surface-hover);
+        }
+
+        &.active {
+            color: var(--accent);
+
+            > i {
+                color: var(--accent);
+            }
+        }
+    }
+
+    &__option-name {
+        font-weight: 500;
+        line-height: 1.3;
+    }
+
+    &__option-desc {
+        font-size: 10px;
+        color: var(--text-muted);
+        line-height: 1.3;
+        margin-top: 1px;
+    }
+}

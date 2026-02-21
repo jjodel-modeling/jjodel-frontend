@@ -4,6 +4,7 @@
  */
 
 import React, { useState, useCallback } from 'react';
+import { AIDisclaimer } from '../../components/common/AIDisclaimer';
 
 export interface InferredMapping {
     id: string;
@@ -224,6 +225,9 @@ export const InferredMappingsPanel: React.FC<InferredMappingsPanelProps> = ({
                     </>
                 )}
             </div>
+
+            {/* AI Disclaimer */}
+            {mappings.length > 0 && <AIDisclaimer />}
         </div>
     );
 };

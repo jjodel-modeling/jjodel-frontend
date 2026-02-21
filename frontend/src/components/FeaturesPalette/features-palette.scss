@@ -23,6 +23,8 @@ $transition-normal: 250ms ease;
 
 // Fixed sidebar width (200px as per design spec)
 $palette-width: 200px;
+$palette-collapsed-width: 48px;
+$transition-smooth: 250ms cubic-bezier(0.4, 0, 0.2, 1);
 
 .features-palette {
     display: flex;
@@ -36,6 +38,44 @@ $palette-width: 200px;
     flex-shrink: 0;
     overflow: hidden;
 
+    // Smooth transitions for expand/collapse
+    transition:
+        width $transition-smooth,
+        min-width $transition-smooth,
+        max-width $transition-smooth;
+
+    // Collapsed state
+    &--collapsed {
+        width: $palette-collapsed-width;
+        min-width: $palette-collapsed-width;
+        max-width: $palette-collapsed-width;
+
+        .features-palette__title {
+            opacity: 0;
+            width: 0;
+            overflow: hidden;
+        }
+
+        .features-palette__content {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .features-palette__header {
+            justify-content: center;
+            padding: 16px 8px;
+        }
+
+        .features-palette__header-icon {
+            margin: 0;
+        }
+
+        .features-palette__toggle {
+            position: absolute;
+            right: 8px;
+        }
+    }
+
     // Header with icon and title
     &__header {
         display: flex;
@@ -44,11 +84,14 @@ $palette-width: 200px;
         padding: 16px;
         border-bottom: 1px solid $color-border;
         background-color: $color-bg-primary;
+        position: relative;
+        transition: padding $transition-smooth, justify-content $transition-smooth;
     }
 
     &__header-icon {
         font-size: 16px;
         color: $color-text-secondary;
+        flex-shrink: 0;
     }
 
     &__title {
@@ -57,6 +100,34 @@ $palette-width: 200px;
         text-transform: uppercase;
         letter-spacing: 0.5px;
         color: $color-text-secondary;
+        white-space: nowrap;
+        transition: opacity $transition-smooth, width $transition-smooth;
+    }
+
+    // Toggle button for collapse/expand
+    &__toggle {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 24px;
+        height: 24px;
+        margin-left: auto;
+        padding: 0;
+        background: transparent;
+        border: none;
+        border-radius: $radius-md;
+        color: $color-text-tertiary;
+        cursor: pointer;
+        transition: all $transition-fast;
+
+        &:hover {
+            background-color: $color-accent-light;
+            color: $color-accent;
+        }
+
+        i {
+            font-size: 12px;
+        }
     }
 
     // Content container
@@ -67,6 +138,7 @@ $palette-width: 200px;
         padding: 12px;
         overflow-y: auto;
         overflow-x: hidden;
+        transition: opacity $transition-smooth;
     }
 
     // Items container
@@ -197,6 +269,15 @@ $palette-width: 200px;
             color: #94a3b8;
         }
 
+        &__toggle {
+            color: #64748b;
+
+            &:hover {
+                background-color: rgba(71, 85, 105, 0.2);
+                color: #94a3b8;
+            }
+        }
+
         &__item {
             background-color: #0f172a;
             border-color: #334155;
@@ -267,6 +348,15 @@ $palette-width: 200px;
 
         &__title {
             color: #94a3b8;
+        }
+
+        &__toggle {
+            color: #64748b;
+
+            &:hover {
+                background-color: rgba(71, 85, 105, 0.2);
+                color: #94a3b8;
+            }
         }
 
         &__item {

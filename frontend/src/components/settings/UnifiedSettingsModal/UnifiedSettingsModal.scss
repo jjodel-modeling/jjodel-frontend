@@ -1,0 +1,836 @@
+/**
+ * UnifiedSettingsModal Styles
+ * Unified modal for all settings - follows Jjodel design system
+ */
+
+// Variables
+$color-primary: #0ea5e9;
+$color-primary-light: rgba(14, 165, 233, 0.1);
+$color-text-primary: #1e293b;
+$color-text-secondary: #64748b;
+$color-text-tertiary: #94a3b8;
+$color-bg-primary: #ffffff;
+$color-bg-secondary: #f8fafc;
+$color-bg-tertiary: #f1f5f9;
+$color-border: #e2e8f0;
+$color-border-light: #f1f5f9;
+$color-danger: #ef4444;
+$color-danger-light: rgba(239, 68, 68, 0.1);
+$color-success: #22c55e;
+$color-success-light: rgba(34, 197, 94, 0.1);
+
+$font-family: 'Inter Variable', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+
+$radius-sm: 4px;
+$radius-md: 6px;
+$radius-lg: 8px;
+$radius-xl: 12px;
+
+$shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+$shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+$shadow-lg: 0 25px 60px rgba(0, 0, 0, 0.3);
+
+$transition-fast: 150ms ease;
+$transition-normal: 200ms ease-out;
+
+// ============================================
+// BACKDROP
+// ============================================
+
+.unified-settings-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    opacity: 0;
+    transition: opacity $transition-normal;
+
+    &.visible {
+        opacity: 1;
+    }
+}
+
+// ============================================
+// MODAL
+// ============================================
+
+.unified-settings-modal {
+    width: calc(100vw - 80px);
+    height: calc(100vh - 80px);
+    min-width: 900px;
+    max-width: 1400px;
+    background: $color-bg-primary;
+    border-radius: $radius-xl;
+    box-shadow: $shadow-lg;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    transform: scale(0.95);
+    opacity: 0;
+    transition: transform $transition-normal, opacity $transition-normal;
+
+    &.visible {
+        transform: scale(1);
+        opacity: 1;
+    }
+
+    // On smaller screens, go full viewport
+    @media (max-width: 960px) {
+        width: 100vw;
+        height: 100vh;
+        min-width: unset;
+        border-radius: 0;
+    }
+}
+
+// ============================================
+// HEADER
+// ============================================
+
+.unified-settings-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 24px;
+    border-bottom: 1px solid $color-border;
+    flex-shrink: 0;
+
+    h2 {
+        font-family: $font-family;
+        font-size: 16px;
+        font-weight: 600;
+        color: $color-text-primary;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin: 0;
+
+        i {
+            color: $color-text-secondary;
+            font-size: 18px;
+        }
+    }
+}
+
+.unified-settings-close {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    background: none;
+    border: none;
+    border-radius: $radius-md;
+    cursor: pointer;
+    color: $color-text-secondary;
+    transition: all $transition-fast;
+
+    &:hover {
+        background: $color-bg-tertiary;
+        color: $color-text-primary;
+    }
+
+    i {
+        font-size: 16px;
+    }
+}
+
+// ============================================
+// BODY
+// ============================================
+
+.unified-settings-body {
+    display: flex;
+    flex: 1;
+    min-height: 0;
+}
+
+// ============================================
+// SIDEBAR NAVIGATION
+// ============================================
+
+.unified-settings-sidebar {
+    width: 240px;
+    border-right: 1px solid $color-border;
+    padding: 20px 0;
+    overflow-y: auto;
+    flex-shrink: 0;
+    background: $color-bg-secondary;
+}
+
+.settings-nav-group {
+    margin-bottom: 16px;
+
+    &:last-child {
+        margin-bottom: 0;
+    }
+}
+
+.settings-nav-group-label {
+    display: block;
+    padding: 0 20px;
+    margin-bottom: 6px;
+    font-family: $font-family;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    color: $color-text-tertiary;
+    text-transform: uppercase;
+}
+
+.settings-nav-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 9px 20px;
+    background: none;
+    border: none;
+    border-left: 3px solid transparent;
+    cursor: pointer;
+    font-family: $font-family;
+    font-size: 13px;
+    color: $color-text-secondary;
+    text-align: left;
+    transition: all $transition-fast;
+
+    i {
+        font-size: 14px;
+        width: 18px;
+        text-align: center;
+    }
+
+    &:hover {
+        background: $color-bg-tertiary;
+        color: $color-text-primary;
+    }
+
+    &.active {
+        background: $color-primary-light;
+        border-left-color: $color-primary;
+        color: $color-primary;
+        font-weight: 500;
+    }
+}
+
+// ============================================
+// CONTENT AREA
+// ============================================
+
+.unified-settings-content {
+    flex: 1;
+    padding: 32px 40px;
+    overflow-y: auto;
+    min-height: 0;
+}
+
+// ============================================
+// SECTION COMMON STYLES
+// ============================================
+
+.settings-section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 24px;
+}
+
+.settings-section-header-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.settings-section-title {
+    font-family: $font-family;
+    font-size: 18px;
+    font-weight: 600;
+    color: $color-text-primary;
+    margin: 0 0 4px;
+}
+
+.settings-section-description {
+    font-family: $font-family;
+    font-size: 13px;
+    color: $color-text-secondary;
+    margin: 0;
+}
+
+// Unsaved changes badge
+.settings-unsaved-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 10px;
+    background: rgba(245, 158, 11, 0.1);
+    border-radius: 12px;
+    font-family: $font-family;
+    font-size: 11px;
+    font-weight: 500;
+    color: #92400e;
+    white-space: nowrap;
+    flex-shrink: 0;
+    margin-left: 16px;
+
+    &__dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: #f59e0b;
+    }
+}
+
+.settings-form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 16px;
+
+    &.single {
+        grid-template-columns: 1fr;
+    }
+}
+
+.settings-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+
+    &.full-width {
+        grid-column: 1 / -1;
+    }
+}
+
+.settings-field-label {
+    font-family: $font-family;
+    font-size: 13px;
+    font-weight: 500;
+    color: $color-text-primary;
+
+    .required {
+        color: $color-danger;
+        margin-left: 2px;
+    }
+}
+
+.settings-field-input {
+    padding: 9px 12px;
+    border: 1px solid $color-border;
+    border-radius: $radius-md;
+    font-family: $font-family;
+    font-size: 13px;
+    color: $color-text-primary;
+    background: $color-bg-primary;
+    transition: border-color $transition-fast, box-shadow $transition-fast;
+
+    &:focus {
+        outline: none;
+        border-color: $color-primary;
+        box-shadow: 0 0 0 3px $color-primary-light;
+    }
+
+    &::placeholder {
+        color: $color-text-tertiary;
+    }
+
+    &.error {
+        border-color: $color-danger;
+
+        &:focus {
+            box-shadow: 0 0 0 3px $color-danger-light;
+        }
+    }
+}
+
+.settings-field-select {
+    padding: 9px 12px;
+    padding-right: 32px;
+    border: 1px solid $color-border;
+    border-radius: $radius-md;
+    font-family: $font-family;
+    font-size: 13px;
+    color: $color-text-primary;
+    background: $color-bg-primary url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2364748b' d='M2 4l4 4 4-4'/%3E%3C/svg%3E") no-repeat right 12px center;
+    appearance: none;
+    cursor: pointer;
+    transition: border-color $transition-fast, box-shadow $transition-fast;
+
+    &:focus {
+        outline: none;
+        border-color: $color-primary;
+        box-shadow: 0 0 0 3px $color-primary-light;
+    }
+}
+
+.settings-field-error {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-family: $font-family;
+    font-size: 12px;
+    color: $color-danger;
+
+    i {
+        font-size: 12px;
+    }
+}
+
+.settings-field-hint {
+    font-family: $font-family;
+    font-size: 11px;
+    color: $color-text-tertiary;
+}
+
+// ============================================
+// PASSWORD INPUT
+// ============================================
+
+.settings-password-input {
+    position: relative;
+
+    input {
+        width: 100%;
+        padding-right: 40px;
+    }
+
+    .password-toggle {
+        position: absolute;
+        right: 8px;
+        top: 50%;
+        transform: translateY(-50%);
+        background: none;
+        border: none;
+        padding: 4px 8px;
+        cursor: pointer;
+        color: $color-text-tertiary;
+        transition: color $transition-fast;
+
+        &:hover {
+            color: $color-text-primary;
+        }
+    }
+}
+
+// ============================================
+// PASSWORD STRENGTH
+// ============================================
+
+.settings-password-strength {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 6px;
+
+    &-bar {
+        flex: 1;
+        height: 4px;
+        background: $color-bg-tertiary;
+        border-radius: 2px;
+        overflow: hidden;
+    }
+
+    &-fill {
+        height: 100%;
+        border-radius: 2px;
+        transition: width 300ms ease, background 300ms ease;
+
+        &.weak {
+            width: 33%;
+            background: $color-danger;
+        }
+
+        &.medium {
+            width: 66%;
+            background: #f59e0b;
+        }
+
+        &.strong {
+            width: 100%;
+            background: $color-success;
+        }
+    }
+
+    &-label {
+        font-family: $font-family;
+        font-size: 11px;
+        font-weight: 500;
+        white-space: nowrap;
+
+        &.weak {
+            color: $color-danger;
+        }
+
+        &.medium {
+            color: #f59e0b;
+        }
+
+        &.strong {
+            color: $color-success;
+        }
+    }
+}
+
+// ============================================
+// BUTTONS
+// ============================================
+
+.settings-btn-primary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 9px 20px;
+    background: linear-gradient(135deg, #334155, #1e293b);
+    color: white;
+    border: none;
+    border-radius: $radius-md;
+    font-family: $font-family;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    &:hover:not(:disabled) {
+        background: linear-gradient(135deg, #475569, #334155);
+        box-shadow: 0 2px 8px rgba(30, 41, 59, 0.3);
+    }
+
+    &:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    i {
+        font-size: 14px;
+        color: white;
+    }
+}
+
+.settings-btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 9px 20px;
+    background: $color-bg-primary;
+    color: $color-text-primary;
+    border: 1px solid $color-border;
+    border-radius: $radius-md;
+    font-family: $font-family;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    &:hover:not(:disabled) {
+        background: $color-bg-secondary;
+        border-color: darken($color-border, 5%);
+    }
+
+    &:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+}
+
+.settings-btn-danger {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 9px 20px;
+    background: $color-bg-primary;
+    color: $color-danger;
+    border: 1px solid rgba($color-danger, 0.3);
+    border-radius: $radius-md;
+    font-family: $font-family;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    &:hover:not(:disabled) {
+        background: $color-danger-light;
+        border-color: rgba($color-danger, 0.5);
+    }
+
+    &:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+}
+
+// ============================================
+// FORM ACTIONS
+// ============================================
+
+.settings-form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    margin-top: 24px;
+    padding-top: 16px;
+    border-top: 1px solid $color-border-light;
+}
+
+// ============================================
+// DIVIDER
+// ============================================
+
+.settings-divider {
+    height: 1px;
+    background: $color-border;
+    margin: 24px 0;
+}
+
+// ============================================
+// STATUS BADGE
+// ============================================
+
+.settings-status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 8px;
+    border-radius: $radius-sm;
+    font-family: $font-family;
+    font-size: 11px;
+    font-weight: 600;
+
+    &.unsaved {
+        background: rgba(#f59e0b, 0.1);
+        color: #d97706;
+    }
+
+    &.saved {
+        background: $color-success-light;
+        color: $color-success;
+    }
+}
+
+// ============================================
+// TOGGLE SWITCH
+// ============================================
+
+.settings-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 0;
+    border-bottom: 1px solid $color-border-light;
+    cursor: pointer;
+
+    &:last-child {
+        border-bottom: none;
+    }
+
+    &-content {
+        flex: 1;
+        margin-right: 16px;
+    }
+
+    &-title {
+        font-family: $font-family;
+        font-size: 13px;
+        font-weight: 500;
+        color: $color-text-primary;
+        margin-bottom: 2px;
+    }
+
+    &-description {
+        font-family: $font-family;
+        font-size: 12px;
+        color: $color-text-secondary;
+    }
+
+    &-switch {
+        position: relative;
+        width: 36px;
+        height: 20px;
+        background: #cbd5e1;
+        border-radius: 10px;
+        transition: background 200ms ease;
+        flex-shrink: 0;
+
+        &.active {
+            background: #334155; // slate — NOT cyan
+
+            .settings-toggle-thumb {
+                transform: translateX(16px);
+            }
+        }
+
+        &:hover:not(.active) {
+            background: #94a3b8;
+        }
+    }
+
+    &-thumb {
+        position: absolute;
+        top: 2px;
+        left: 2px;
+        width: 16px;
+        height: 16px;
+        background: white;
+        border-radius: 50%;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+        transition: transform 200ms ease;
+    }
+}
+
+// ============================================
+// CARD STYLES
+// ============================================
+
+.settings-card {
+    background: $color-bg-primary;
+    border: 1px solid $color-border;
+    border-radius: $radius-lg;
+    margin-bottom: 16px;
+    overflow: hidden;
+
+    &-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 14px 16px;
+        background: $color-bg-secondary;
+        border-bottom: 1px solid $color-border-light;
+        cursor: pointer;
+        transition: background $transition-fast;
+
+        &:hover {
+            background: $color-bg-tertiary;
+        }
+    }
+
+    &-info {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    &-icon {
+        width: 36px;
+        height: 36px;
+        border-radius: $radius-md;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        font-size: 14px;
+        color: white;
+        flex-shrink: 0;
+    }
+
+    &-details {
+        min-width: 0;
+    }
+
+    &-name {
+        font-family: $font-family;
+        font-size: 14px;
+        font-weight: 600;
+        color: $color-text-primary;
+    }
+
+    &-description {
+        font-family: $font-family;
+        font-size: 12px;
+        color: $color-text-secondary;
+        margin-top: 1px;
+    }
+
+    &-status {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-family: $font-family;
+        font-size: 11px;
+        font-weight: 600;
+        flex-shrink: 0;
+
+        &::before {
+            content: '';
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: currentColor;
+        }
+
+        &.connected {
+            color: $color-success;
+        }
+
+        &.ready {
+            color: $color-primary;
+        }
+
+        &.not-configured {
+            color: $color-text-tertiary;
+        }
+    }
+
+    &-chevron {
+        color: $color-text-tertiary;
+        font-size: 12px;
+        margin-left: 12px;
+        transition: transform 200ms ease;
+    }
+
+    &.expanded &-chevron {
+        transform: rotate(180deg);
+    }
+
+    &-body {
+        padding: 16px;
+    }
+}
+
+// ============================================
+// INFO BOX
+// ============================================
+
+.settings-info-box {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 12px 14px;
+    background: $color-bg-tertiary;
+    border-radius: $radius-md;
+    margin-top: 16px;
+
+    i {
+        color: $color-primary;
+        font-size: 14px;
+        flex-shrink: 0;
+        margin-top: 1px;
+    }
+
+    span {
+        font-family: $font-family;
+        font-size: 12px;
+        color: $color-text-secondary;
+        line-height: 1.5;
+    }
+}
+
+// ============================================
+// SPINNING ANIMATION
+// ============================================
+
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.spinning {
+    animation: spin 1s linear infinite;
+}

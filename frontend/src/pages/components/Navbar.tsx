@@ -57,6 +57,8 @@ import { AdvancedModeTutorial, shouldShowAdvancedModeTutorial } from '../../comp
 import { M2AnalyticsModal, M2AnalyticsData } from '../../components/M2AnalyticsModal';
 import { ShortcutsReference } from '../../components/ShortcutsReference';
 import { VerticalToggle } from '../../components/ui/VerticalToggle';
+import { useGlobalDrawer } from '../../contexts/GlobalDrawerContext';
+import { useSettingsModal } from '../../contexts/SettingsModalContext';
 
 
 let windoww = window as any;
@@ -1318,6 +1320,8 @@ function NavbarComponent(props: AllProps) {
     };
 
     const UserMenu = ()=> {
+        const { openDrawer } = useGlobalDrawer();
+        const { openSettings } = useSettingsModal();
         const userName = `${user?.name || ''} ${user?.surname || ''}`.trim();
         const userEmail = user?.email || '';
         const initials = userName.split(' ').map(n => n[0] || '').join('');
@@ -1349,12 +1353,10 @@ function NavbarComponent(props: AllProps) {
                         R.navigate('/allProjects');
                     }}>Dashboard</Item>
                     <Item icon={<i className="bi bi-person-circle" />} action={()=> {
-                        R.navigate('/account');
-                        U.resetState();
+                        openSettings('profile');
                     }}>Profile</Item>
                     <Item icon={<i className="bi bi-gear" />} action={()=> {
-                        R.navigate('/settings');
-                        U.resetState();
+                        openSettings();
                     }}>Settings</Item>
                     <Item icon={<i className="bi bi-box-arrow-left" />} action={async ()=> {
                         if (isProjectModified()) {

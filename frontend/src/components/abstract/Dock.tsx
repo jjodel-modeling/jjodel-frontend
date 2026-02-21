@@ -294,6 +294,7 @@ function DockComponent(props: AllProps) {
     const layout: LayoutData = {dockbox: {mode: 'horizontal', children: []}};
 
     // Calculate panel sizes based on layout mode
+    // Note: When JjTL is active, CSS handles hiding the right panel
     const { leftSize, rightSize } = calculatePanelSizes(layoutMode);
 
     // Left panel (Models Summary / Canvas)
@@ -313,7 +314,8 @@ function DockComponent(props: AllProps) {
 // if (?.type === 'collaborative') tabs.push(collaborative);
     if (false && LProject.getProject()?.type === 'collaborative') tabs.push(permissions);
     // Right panel (Editors) - Properties, Viewpoints, Node, Console
-    layout.dockbox.children.push({tabs});
+    // Note: JjTL editor hides this panel via DockManager.dock.loadLayout() in JjtlDevelopmentEnv.tsx
+    layout.dockbox.children.push({tabs, size: rightSize});
 
     return (<PinnableDock key={''+advanced} ref={dock => { DockManager.dock = dock }} defaultLayout={layout} groups={groups} />);
 }
