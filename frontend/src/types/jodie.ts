@@ -4,53 +4,38 @@
  */
 import type {Dictionary} from "../joiner";
 import {} from "../joiner";
+import JodieConfigService from "../services/JodieConfig";
 
-export class AI{
-    static GPT: AI;
-    static Claude: AI;
-    static DeepSeek: AI;
-    static Gemini: AI;
-    static Mistral: AI;
-    static Groq: AI;
-    static Ollama: AI;
-    static Llama: AI;
-    static Copilot: AI;
-    static Kimi: AI;
-    name: TAIProvider;
-    company: TAICompany;
-    constructor(name: TAIProvider, company: TAICompany) {
-        this.name = name;
-        this.company = company;
-        (AI as any)[name] = this;
-    }
-}
 
 export class AIProvider {
     static isValidProvider(provider: any): provider is TAIProvider { return !!companymap[provider as TAIProvider]; }
     static isValidCompany(company: any): company is TAICompany { return !!aimap[company as TAICompany]; }
 
-    public static Claude: "Claude" = "Claude";
-    public static GPT: "GPT" = "GPT";
-    public static DeepSeek: "DeepSeek" = "DeepSeek";
-    public static Gemini: "Gemini" = "Gemini";
-    public static Mistral: "Mistral" = "Mistral";
-    public static Groq: "Groq" = "Groq";
-    public static Ollama: "Ollama" = "Ollama"; // different company from llama
-    public static Llama: "Llama" = "Llama"; // from meta
-    public static Copilot: "Copilot" = "Copilot";
-    public static Kimi: "Kimi" = "Kimi";
+    public static Claude = "Claude" as const;
+    public static GPT = "GPT" as const;
+    public static DeepSeek = "DeepSeek" as const;
+    public static Gemini = "Gemini" as const;
+    public static Mistral = "Mistral" as const;
+    public static Groq = "Groq" as const;
+    public static Ollama = "Ollama" as const; // different company from llama
+    public static Llama = "Llama" as const; // from meta
+    public static Copilot = "Copilot" as const;
+    public static Kimi = "Kimi" as const;
+    public static Custom = "Custom" as const;
 }
+
 export class AICompany {
-    public static Anthropic: "Anthropic" = "Anthropic";
-    public static OpenAI: "OpenAI" = "OpenAI";
-    public static DeepSeek: "DeepSeek" = "DeepSeek";
-    public static Google: "Google" = "Google";
-    public static Mistral: "Mistral" = "Mistral";
-    public static Groq: "Groq" = "Groq";
-    public static Ollama: "Ollama" = "Ollama";
-    public static Meta: "Meta" = "Meta";
-    public static Microsoft: "Microsoft" = "Microsoft";
-    public static Moonshot: "Moonshot" = "Moonshot";
+    public static Anthropic = "Anthropic" as const;
+    public static OpenAI = "OpenAI" as const;
+    public static DeepSeek = "DeepSeek" as const;
+    public static Google = "Google" as const;
+    public static Mistral = "Mistral" as const;
+    public static Groq = "Groq" as const;
+    public static Ollama = "Ollama" as const;
+    public static Meta = "Meta" as const;
+    public static Microsoft = "Microsoft" as const;
+    public static Moonshot = "Moonshot" as const;
+    public static Custom = "Custom" as const;
 }
 
 const aimap: Dictionary<TAICompany, TAIProvider> = {
@@ -78,17 +63,270 @@ export type TAICompany  = Exclude<Exclude<Exclude<keyof typeof AICompany,  "prot
 export const ALL_AI_PROVIDERS: TAIProvider[] = Object.keys(companymap) as any;
 export const ALL_AI_COMPANIES: TAICompany[] = Object.keys(aimap) as any;
 
-export interface ProviderConfig {
-    provider: TAIProvider;
-    apiKey: string;
-    model: string;
-    enabled: boolean;
-    baseUrl?: string; // Custom base URL (used by Ollama for non-default endpoints)
+export class AI{
+    static GPT: AI;
+    static Claude: AI;
+    static DeepSeek: AI;
+    static Gemini: AI;
+    static Mistral: AI;
+    static Groq: AI;
+    static Ollama: AI;
+    static Llama: AI;
+    static Copilot: AI;
+    static Kimi: AI;
+    static Custom: AI;
+    static ACTIVE_PROVIDER_KEY = 'jjodie_active_provider';
+    static WINDOW_STATE_KEY = 'jjodel_jodie_window';
+    static LEGACY_SETTINGS_KEY = 'jjodie-settings';
+    static DOCUMENTATION_STORAGE_PREFIX = 'jjodie_doc_';
+    static activeProvider: TAIProvider;
+    static get(provider: TAIProvider): AI { return AI[provider]; }
+    name: TAIProvider;
+    company: TAICompany;
+    keyUrl: string;
+    storageKey: string;
+    versions: Dictionary<string, AIVersion> = {};
+    // version?: string;
+    endpoint!: string;
+    proxy?: string;
+    requiresKey: boolean = true;
+    // gui stuff
+    color!: string;
+    bgColor!: string;
+    keyPlaceholder!: string;
+    initial!: string;
+
+    constructor(name: TAIProvider, company: TAICompany,
+                keyUrl: string) {
+        this.name = name;
+        this.company = company;
+        this.keyUrl = keyUrl;
+        this.storageKey = "jjodie_provider_" + name.toLowerCase();
+        (AI as any)[name] = this;
+    }
+    addGUIinfo(initial: string, keyPlaceholder: string, color: string, background: string){
+        this.initial = initial;
+        this.keyPlaceholder = keyPlaceholder;
+        this.color = color;
+        this.bgColor = background;
+    }
+    add(name: string, label: string, pdf: boolean = false, vision: boolean = false, deprecated: boolean = false): this {
+        this.versions[name] = new AIVersion(label, pdf, vision, deprecated);
+        // if (!this.version) this.version = name;
+        return this;
+    }
+    getEndpoint(): string {
+        // Proxy endpoints for providers that don't support CORS
+        // Update the subdomain after deploying the Cloudflare Worker
+        const PROXY_URL = 'https://jjodel-ai-proxy.alfonso99.workers.dev';
+        const PROXY_LOCAL_URL = 'http://localhost:8787';
+        if (!this.proxy) return this.endpoint;
+        /*switch (this.name) {
+            case AIProvider.Claude:
+            case AIProvider.Gemini:
+            default: return '';
+        }*/
+        return (window.location.hostname === 'localhost' ? PROXY_LOCAL_URL : PROXY_URL) + this.proxy;
+    }
+    hasVision(version?: string): boolean{
+        let model = version && this.versions[version];
+        if (model) return model.capabilities.vision;
+        else return Object.values(this.versions).some(v=> v.capabilities.vision);
+    }
+    hasPdf(version?: string): boolean{
+        let model = version && this.versions[version];
+        if (model) return model.capabilities.pdf;
+        else return Object.values(this.versions).some(v=> v.capabilities.pdf);
+    }
+    hasAttachments(version?: string): boolean{
+        let model = version && this.versions[version];
+        if (model) return model.capabilities.vision || model.capabilities.pdf;
+        else return Object.values(this.versions).some(v=> v.capabilities.vision || v.capabilities.pdf);
+    }
 }
 
-export interface JodieConfig {
-    providers: Record<TAIProvider, ProviderConfig>;
-    activeProvider: TAIProvider;
+export class AIVersion {
+    label: string;
+    capabilities: {
+        pdf: boolean;
+        vision: boolean;
+    }
+    deprecated: boolean;
+    constructor(label: string, pdf: boolean = false, vision: boolean = false, deprecated: boolean = false) {
+        this.label = label;
+        this.capabilities = {pdf, vision};
+        this.deprecated = deprecated;
+    }
+}
+
+new AI(AIProvider.GPT,      AICompany.OpenAI,   'https://platform.openai.com/api-keys',       );
+new AI(AIProvider.Claude,   AICompany.Anthropic,'https://console.anthropic.com/settings/keys',);
+new AI(AIProvider.Gemini,   AICompany.Google,   'https://aistudio.google.com/apikey',         );
+new AI(AIProvider.DeepSeek, AICompany.DeepSeek, 'https://platform.deepseek.com/api_keys',     );
+new AI(AIProvider.Mistral,  AICompany.Mistral,  'https://console.mistral.ai/api-keys',        );
+new AI(AIProvider.Groq,     AICompany.Groq,     'https://console.groq.com/keys',              );
+new AI(AIProvider.Kimi,     AICompany.Moonshot, 'https://platform.moonshot.cn/console/api-keys',                                          );
+new AI(AIProvider.Ollama,   AICompany.Ollama,   '',); // Ollama is local, no API key page
+new AI(AIProvider.Llama,    AICompany.Meta,     '?',                                          );
+new AI(AIProvider.Copilot,  AICompany.Microsoft,'?',                                          );
+new AI(AIProvider.Custom,   AICompany.Custom,   '',                                           );
+AI.Ollama.requiresKey = false;
+
+// template new AI(AIProvider., AICompany., '', '', 'sk-...', );
+AI.GPT     .addGUIinfo('GPT','sk-...',      '#059669', '#D1FAE5',);
+AI.Claude  .addGUIinfo('C',  'sk-ant-...',  '#D97706', '#FEF3C7',);
+AI.Gemini  .addGUIinfo('Gm', 'AIza...',     '#7C3AED', '#EDE9FE',);
+AI.DeepSeek.addGUIinfo('D',  'sk-...',      '#2563EB', '#DBEAFE',);
+AI.Groq    .addGUIinfo('Gq', 'gsk_...',     '#EF4444', '#FEE2E2',);
+AI.Kimi    .addGUIinfo('K',  '?',           '#0891B2', '#CFFAFE',);
+AI.Ollama  .addGUIinfo('O',  '?',           '#475569', '#F1F5F9',);
+AI.Llama   .addGUIinfo('L',  '?',           '#8a6565', '#FEE2E2',);
+AI.Copilot .addGUIinfo('Cp', '?',           '#4ab409', '#FEE2E2',);
+AI.Custom  .addGUIinfo('-', 'Enter api key','#000',    '#fff',);
+
+
+AI.Claude
+    .add('claude-sonnet-4-20250514',  'Claude Sonnet 4',  true,  true)
+    .add('claude-opus-4-20250514',    'Claude Opus 4',    true,  true)
+    .add('claude-haiku-4-20250514',   'Claude Haiku 4',   true,  true)
+    .add('claude-3-5-sonnet-20241022','Claude 3.5 Sonnet',true,  true)
+    .add('claude-3-opus-20240229',    'Claude 3 Opus',    true,  true)
+    .add('claude-3-haiku-20240307',   'Claude 3 Haiku',   true,  true)
+AI.GPT
+    .add('gpt-4o',                    'GPT-4o',           true,  false)
+    .add('gpt-4o-mini',               'GPT-4o Mini',      true,  false)
+    .add('gpt-4-turbo',               'GPT-4 Turbo',      true,  false)
+    .add('gpt-4',                     'GPT-4',            false, false)
+    .add('gpt-3.5-turbo',             'GPT-3.5 Turbo',    false, false)
+AI.DeepSeek
+    .add('deepseek-chat',             'DeepSeek Chat',    false, false)
+    .add('deepseek-coder',            'DeepSeek Coder',   false, false)
+AI.Gemini
+    .add('gemini-2.0-flash-exp',      'Gemini 2.0 Flash', true,  true)
+    .add('gemini-1.5-pro',            'Gemini 1.5 Pro',   true,  true)
+    .add('gemini-1.5-flash',          'Gemini 1.5 Flash', true,  true)
+    .add('gemini-pro',                'Gemini Pro',       false, false, true)
+AI.Mistral
+    .add('mistral-large-latest',      'Mistral Large',    false, false)
+    .add('mistral-small-latest',      'Mistral Small',    false, false)
+    .add('pixtral-large-latest',      'Pixtral Large',    true,  false)
+    .add('pixtral-12b-2409',          'Pixtral 12B',      true,  false)
+    .add('codestral-latest',          'Codestral',        false, false)
+    .add('ministral-8b-latest',       'Ministral 8B',     false, false)
+AI.Llama
+    .add('llama-3.3-70b-versatile',   'Llama 3.3 70B',    false, false)
+    .add('llama-3.1-8b-instant',      'Llama 3.1 8B',     false, false)
+    .add('mixtral-8x7b-32768',        'Mixtral 8x7B',     false, false)
+    .add('llava-v1.5-7b-4096-preview','LLaVA 1.5 7B',     true,  false)
+    .add('gemma2-9b-it',              'Gemma 2 9B',       false, false)
+AI.Groq; // none?
+AI.Copilot;
+
+AI.Kimi
+    .add('moonshot-v1-8k',            'Moonshot V1 8K',   false, false)
+    .add('moonshot-v1-32k',           'Moonshot V1 32K',  false, false)
+    .add('moonshot-v1-128k',          'Moonshot V1 128K', false, false)
+AI.Ollama
+    .add('llama3.2',                  'Llama 3.2',        false, false)
+    .add('llama3.2:1b',               'Llama 3.2 1B',     false, false)
+    .add('llama3.1',                  'Llama 3.1',        false, false)
+    .add('mistral',                   'Mistral',          false, false)
+    .add('codellama',                 'Code Llama',       false, false)
+    .add('llava',                     'LLaVA',            true,  false)
+    .add('qwen2.5',                   'Qwen 2.5',         false, false)
+/*AI.???
+    .add('mixtral-8x7b-32768',               'Mixtral 8x7B',        false, false)
+    .add('llava-v1.5-7b-4096-preview',       'LLaVA 1.5 7B',        true,  false)
+    .add('gemma2-9b-it',                     'Gemma 2 9B',          false, false)
+    .add('llava-v1.5-7b-4096-preview',       'LLaVA 1.5 7B',        true,  false)
+*/
+AI.Claude.proxy = '/v1/anthropic/messages';
+AI.Gemini.proxy = '/v1/gemini';
+
+AI.Claude.endpoint = 'https://api.anthropic.com/v1/messages';
+AI.GPT.endpoint = 'https://api.openai.com/v1/chat/completions';
+AI.DeepSeek.endpoint = 'https://api.deepseek.com/v1/chat/completions';
+AI.Gemini.endpoint = 'https://generativelanguage.googleapis.com/v1beta/models';
+AI.Mistral.endpoint = 'https://api.mistral.ai/v1/chat/completions';
+AI.Groq.endpoint = 'https://api.groq.com/openai/v1/chat/completions';
+AI.Kimi.endpoint = 'https://api.moonshot.cn/v1/chat/completions';
+AI.Ollama.endpoint = 'http://localhost:11434/v1/chat/completions'; // Default local, configurable via baseUrl
+
+
+export class AIConfig{
+    static map: Dictionary<TAIProvider, ProviderConfig> = {} as any;
+    static default: AIConfig;
+    name: TAIProvider;
+    model: string;
+    enabled: boolean;
+    apiKey: string = '';
+    baseUrl: string;
+    lastTested?: number;
+    messages: ChatMessage[] = [];
+    isOpen: boolean = false;
+    isMinimized: boolean = false;
+    isWaiting: boolean = false;
+    hasUnread: boolean = false;
+    constructor(name: TAIProvider, model: string, url?:string) {
+        this.name = name;
+        this.model = model;
+        this.baseUrl = url || '';
+        this.enabled = false;
+        AIConfig.map[name] = this;
+    }
+
+    static get(provider: TAIProvider): AIConfig {
+        let config: AIConfig | null;
+        let llm = AI[provider];
+        try {
+            const json = localStorage.getItem(llm.storageKey);
+            if (!json) config = null;
+            else config = JSON.parse(json);
+        } catch {
+            config = null;
+        }
+        if (config) {
+            AIConfig.map[provider] = config;
+            // JodieConfig.current.providers[provider] = config;
+            return config;
+        }
+        return AIConfig.map[provider];
+    }
+    static set(provider: TAIProvider, config: Partial<AIConfig>): void {
+        try {
+            const existing = AIConfig.get(provider);
+            const updated: AIConfig = {...existing, ...config};
+
+            localStorage.setItem(AI[provider].storageKey, JSON.stringify(updated));
+
+            // Dispatch event to notify other components
+            window.dispatchEvent(new CustomEvent('ai-provider-changed', {
+                detail: { provider, config: updated }
+            }));
+        } catch (error) {
+            console.error(`Failed to save provider config for ${provider}:`, error);
+        }
+    }
+
+}
+
+new AIConfig(AIProvider.Claude, 'claude-sonnet-4-20250514');
+new AIConfig(AIProvider.GPT, 'gpt-4o');
+new AIConfig(AIProvider.DeepSeek, 'deepseek-chat');
+new AIConfig(AIProvider.Gemini, 'gemini-2.0-flash-exp');
+new AIConfig(AIProvider.Mistral, 'mistral-large-latest');
+new AIConfig(AIProvider.Groq, 'llama-3.3-70b-versatile');
+new AIConfig(AIProvider.Kimi, 'moonshot-v1-8k');
+new AIConfig(AIProvider.Ollama, 'llama3.2', 'http://localhost:11434');
+// NB: Default Ollama base URL (can be overridden in provider config)
+
+
+export type ProviderConfig = AIConfig;
+export class JodieConfig {
+    static default: JodieConfig = new JodieConfig();
+    static current: JodieConfig = JodieConfigService.load();
+    providers: Dictionary<TAIProvider, ProviderConfig> = AIConfig.map;
+    activeProvider: TAIProvider = AIProvider.Claude;
     position?: { x: number; y: number };
     size?: { width: number; height: number };
 }
@@ -133,7 +371,7 @@ export interface ChatMessage {
 /**
  * Check if a provider/model combination supports vision (image input)
  * Uses the model capabilities from PROVIDER_MODELS
- */
+ * /
 export function supportsVision(provider: TAIProvider, model?: string): boolean {
     // If model specified, check its capabilities
     if (model) {
@@ -154,7 +392,7 @@ export function supportsVision(provider: TAIProvider, model?: string): boolean {
 /**
  * Check if a provider/model combination supports PDF documents
  * Uses the model capabilities from PROVIDER_MODELS
- */
+ * /
 export function supportsPDF(provider: TAIProvider, model?: string): boolean {
     // If model specified, check its capabilities
     if (model) {
@@ -174,7 +412,7 @@ export function supportsPDF(provider: TAIProvider, model?: string): boolean {
 
 /**
  * Check if a provider/model supports any attachments (images or PDFs)
- */
+ * /
 export function supportsAttachments(provider: TAIProvider, model?: string): boolean {
     return supportsVision(provider, model) || supportsPDF(provider, model);
 }
@@ -186,7 +424,7 @@ export interface ChatState {
     isWaiting: boolean;
     hasUnread: boolean;
 }
-
+*/
 // ============================================
 // DOCUMENTATION TYPES
 // ============================================
@@ -225,50 +463,12 @@ export interface ProjectDocumentation {
 }
 
 /**
- * Documentation storage key pattern
- */
-export const DOCUMENTATION_STORAGE_PREFIX = 'jjodie_doc_' as const;
-
 // Provider endpoints
 export const PROVIDER_ENDPOINTS = {
-    claude: 'https://api.anthropic.com/v1/messages',
-    openai: 'https://api.openai.com/v1/chat/completions',
-    deepseek: 'https://api.deepseek.com/v1/chat/completions',
-    gemini: 'https://generativelanguage.googleapis.com/v1beta/models',
-    mistral: 'https://api.mistral.ai/v1/chat/completions',
-    groq: 'https://api.groq.com/openai/v1/chat/completions',
-    kimi: 'https://api.moonshot.cn/v1/chat/completions',
-    ollama: 'http://localhost:11434/v1/chat/completions', // Default local, configurable via baseUrl
 } as const;
 
-// Default Ollama base URL (can be overridden in provider config)
-export const OLLAMA_DEFAULT_BASE_URL = 'http://localhost:11434';
-
-// Proxy endpoints for providers that don't support CORS
-// Update the subdomain after deploying the Cloudflare Worker
-const PROXY_BASE_URL = 'https://jjodel-ai-proxy.alfonso99.workers.dev';
-const PROXY_BASE_URL_DEV = 'http://localhost:8787';
-
-export const PROXY_ENDPOINTS = {
-    anthropic: `${PROXY_BASE_URL}/v1/anthropic/messages`,
-    gemini: `${PROXY_BASE_URL}/v1/gemini`,
-} as const;
-
-// For local development
-export const PROXY_ENDPOINTS_DEV = {
-    anthropic: `${PROXY_BASE_URL_DEV}/v1/anthropic/messages`,
-    gemini: `${PROXY_BASE_URL_DEV}/v1/gemini`,
-} as const;
-
-// Helper to get correct proxy URL
-export function getProxyEndpoint(provider: 'anthropic' | 'gemini'): string {
-    const isDev = typeof window !== 'undefined' && window.location.hostname === 'localhost';
-    return isDev ? PROXY_ENDPOINTS_DEV[provider] : PROXY_ENDPOINTS[provider];
-}
-
-/**
  * Check if a provider needs proxy (doesn't support browser CORS)
- */
+ * /
 export function providerNeedsProxy(provider: AIProvider): boolean {
     return provider === 'claude' || provider === 'gemini';
 }
@@ -281,245 +481,19 @@ export interface ModelCapabilities {
     vision: boolean;      // Supports image input
     pdf: boolean;         // Supports PDF documents
 }
+type ModelInfo = AIVersion;
 
-export interface ModelInfo {
-    value: string;        // Model ID for API
-    label: string;        // Display name
-    capabilities: ModelCapabilities;
-    deprecated?: boolean; // If model is deprecated
-}
-
-// Available models per provider with capabilities
-export const PROVIDER_MODELS: Dictionary<TAIProvider, ModelInfo[]> = {
-    [AIProvider.Claude]: [
-        { value: 'claude-sonnet-4-20250514', label: 'Claude Sonnet 4', capabilities: { vision: true, pdf: true } },
-        { value: 'claude-opus-4-20250514', label: 'Claude Opus 4', capabilities: { vision: true, pdf: true } },
-        { value: 'claude-haiku-4-20250514', label: 'Claude Haiku 4', capabilities: { vision: true, pdf: true } },
-        { value: 'claude-3-5-sonnet-20241022', label: 'Claude 3.5 Sonnet', capabilities: { vision: true, pdf: true } },
-        { value: 'claude-3-opus-20240229', label: 'Claude 3 Opus', capabilities: { vision: true, pdf: true } },
-        { value: 'claude-3-haiku-20240307', label: 'Claude 3 Haiku', capabilities: { vision: true, pdf: true } },
-    ],
-    [AIProvider.GPT]: [
-        { value: 'gpt-4o', label: 'GPT-4o', capabilities: { vision: true, pdf: false } },
-        { value: 'gpt-4o-mini', label: 'GPT-4o Mini', capabilities: { vision: true, pdf: false } },
-        { value: 'gpt-4-turbo', label: 'GPT-4 Turbo', capabilities: { vision: true, pdf: false } },
-        { value: 'gpt-4', label: 'GPT-4', capabilities: { vision: false, pdf: false } },
-        { value: 'gpt-3.5-turbo', label: 'GPT-3.5 Turbo', capabilities: { vision: false, pdf: false } },
-    ],
-    [AIProvider.DeepSeek]: [
-        { value: 'deepseek-chat', label: 'DeepSeek Chat', capabilities: { vision: false, pdf: false } },
-        { value: 'deepseek-coder', label: 'DeepSeek Coder', capabilities: { vision: false, pdf: false } },
-    ],
-    [AIProvider.Gemini]: [
-        { value: 'gemini-2.0-flash-exp', label: 'Gemini 2.0 Flash', capabilities: { vision: true, pdf: true } },
-        { value: 'gemini-1.5-pro', label: 'Gemini 1.5 Pro', capabilities: { vision: true, pdf: true } },
-        { value: 'gemini-1.5-flash', label: 'Gemini 1.5 Flash', capabilities: { vision: true, pdf: true } },
-        { value: 'gemini-pro', label: 'Gemini Pro', capabilities: { vision: false, pdf: false }, deprecated: true },
-    ],
-    [AIProvider.Mistral]: [
-        { value: 'mistral-large-latest', label: 'Mistral Large', capabilities: { vision: false, pdf: false } },
-        { value: 'mistral-small-latest', label: 'Mistral Small', capabilities: { vision: false, pdf: false } },
-        { value: 'pixtral-large-latest', label: 'Pixtral Large', capabilities: { vision: true, pdf: false } },
-        { value: 'pixtral-12b-2409', label: 'Pixtral 12B', capabilities: { vision: true, pdf: false } },
-        { value: 'codestral-latest', label: 'Codestral', capabilities: { vision: false, pdf: false } },
-        { value: 'ministral-8b-latest', label: 'Ministral 8B', capabilities: { vision: false, pdf: false } },
-    ],
-    [AIProvider.Llama]: [
-        { value: 'llama-3.3-70b-versatile', label: 'Llama 3.3 70B', capabilities: { vision: false, pdf: false } },
-        { value: 'llama-3.1-8b-instant', label: 'Llama 3.1 8B', capabilities: { vision: false, pdf: false } },
-        { value: 'mixtral-8x7b-32768', label: 'Mixtral 8x7B', capabilities: { vision: false, pdf: false } },
-        { value: 'llava-v1.5-7b-4096-preview', label: 'LLaVA 1.5 7B', capabilities: { vision: true, pdf: false } },
-        { value: 'gemma2-9b-it', label: 'Gemma 2 9B', capabilities: { vision: false, pdf: false } },
-    ],
-    [AIProvider.Groq]: [
-    ],
-    [AIProvider.Copilot]: [
-    ],
-
-    [AIProvider.Kimi]: [
-        { value: 'moonshot-v1-8k', label: 'Moonshot V1 8K', capabilities: { vision: false, pdf: false } },
-        { value: 'moonshot-v1-32k', label: 'Moonshot V1 32K', capabilities: { vision: false, pdf: false } },
-        { value: 'moonshot-v1-128k', label: 'Moonshot V1 128K', capabilities: { vision: false, pdf: false } },
-    ],
-    [AIProvider.Ollama]: [
-        { value: 'llama3.2', label: 'Llama 3.2', capabilities: { vision: false, pdf: false } },
-        { value: 'llama3.2:1b', label: 'Llama 3.2 1B', capabilities: { vision: false, pdf: false } },
-        { value: 'llama3.1', label: 'Llama 3.1', capabilities: { vision: false, pdf: false } },
-        { value: 'mistral', label: 'Mistral', capabilities: { vision: false, pdf: false } },
-        { value: 'codellama', label: 'Code Llama', capabilities: { vision: false, pdf: false } },
-        { value: 'llava', label: 'LLaVA', capabilities: { vision: true, pdf: false } },
-        { value: 'qwen2.5', label: 'Qwen 2.5', capabilities: { vision: false, pdf: false } },
-    ],
-    /*[AIProvider.???]: [
-        { value: 'mixtral-8x7b-32768', label: 'Mixtral 8x7B', capabilities: { vision: false, pdf: false } },
-        { value: 'llava-v1.5-7b-4096-preview', label: 'LLaVA 1.5 7B', capabilities: { vision: true, pdf: false } },
-        { value: 'gemma2-9b-it', label: 'Gemma 2 9B', capabilities: { vision: false, pdf: false } },
-        { value: 'llava-v1.5-7b-4096-preview', label: 'LLaVA 1.5 7B', capabilities: { vision: true, pdf: false } },
-    ],*/
-};
-
-/**
+/ **
  * Get model info by provider and model ID
- */
-export function getModelInfo(provider: TAIProvider, modelId: string): ModelInfo | undefined {
-    return PROVIDER_MODELS[provider]?.find(m => m.value === modelId);
+ * /
+export function getModelInfo(provider: TAIProvider, modelId: string): AIVersion | undefined {
+    return AI[provider].versions[modelId];
 }
 
 /**
  * Get model capabilities by provider and model ID
- */
+ * /
 export function getModelCapabilities(provider: TAIProvider, modelId: string): ModelCapabilities {
     const model = getModelInfo(provider, modelId);
-    return model?.capabilities ?? { vision: false, pdf: false };
-}
-
-// Provider display info - colors for icon backgrounds
-export const PROVIDER_INFO: Dictionary<TAIProvider, {name: string, company: string, color: string, bgColor: string, textIcon:string}> = {
-    [AIProvider.Claude]: {
-        name: 'Claude',
-        company: 'Anthropic',
-        color: '#D97706',
-        bgColor: '#FEF3C7',
-        textIcon: 'C',
-    },
-    [AIProvider.GPT]: {
-        name: 'ChatGPT',
-        company: 'OpenAI',
-        color: '#059669',           // emerald-600
-        bgColor: '#D1FAE5',         // emerald-100
-    },
-    [AIProvider.DeepSeek]: {
-        name: 'DeepSeek',
-        company: 'DeepSeek AI',
-        color: '#2563EB',           // blue-600
-        bgColor: '#DBEAFE',         // blue-100
-    },
-    [AIProvider.Gemini]: {
-        name: 'Gemini',
-        company: 'Google',
-        color: '#7C3AED',           // violet-600
-        bgColor: '#EDE9FE',         // violet-100
-    },
-    [AIProvider.Mistral]: {
-        name: 'Mistral',
-        company: 'Mistral AI',
-        color: '#F97316',           // orange-600
-        bgColor: '#FFEDD5',         // orange-100
-    },
-    [AIProvider.Groq]: {
-        name: 'Groq',
-        company: 'Groq',
-        color: '#EF4444',           // red-600
-        bgColor: '#FEE2E2',         // red-100
-    },
-    [AIProvider.Kimi]: {
-        name: 'Kimi',
-        company: 'Moonshot AI',
-        color: '#0891B2',           // cyan-600
-        bgColor: '#CFFAFE',         // cyan-100
-    },
-    [AIProvider.Ollama]: {
-        name: 'Ollama',
-        company: 'Local',
-        color: '#475569',           // slate-600
-        bgColor: '#F1F5F9',         // slate-100
-        company: getAICompany(AIProvider.Ollama),
-        textIcon: 'OL',
-    },
-    [AIProvider.Llama]: {
-        name: AIProvider.Llama,
-        company: getAICompany(AIProvider.Llama),
-        color: '#8a6565',
-        bgColor: '#FEE2E2',
-        textIcon: 'LL',
-    },
-    [AIProvider.Copilot]: {
-        name: AIProvider.Copilot,
-        company: getAICompany(AIProvider.Copilot),
-        color: '#4ab409',
-        bgColor: '#FEE2E2',
-        textIcon: 'CP',
-    },
-} as const;
-
-// Default Jodie configuration
-export const DEFAULT_JODIE_CONFIG: JodieConfig = {
-    providers: {
-        claude: {
-            provider: 'claude',
-            apiKey: '',
-            model: 'claude-sonnet-4-20250514',
-            enabled: false,
-        },
-        openai: {
-            provider: 'openai',
-            apiKey: '',
-            model: 'gpt-4o',
-            enabled: false,
-        },
-        deepseek: {
-            provider: 'deepseek',
-            apiKey: '',
-            model: 'deepseek-chat',
-            enabled: false,
-        },
-        gemini: {
-            provider: 'gemini',
-            apiKey: '',
-            model: 'gemini-2.0-flash-exp',
-            enabled: false,
-        },
-        mistral: {
-            provider: 'mistral',
-            apiKey: '',
-            model: 'mistral-large-latest',
-            enabled: false,
-        },
-        groq: {
-            provider: 'groq',
-            apiKey: '',
-            model: 'llama-3.3-70b-versatile',
-            enabled: false,
-        },
-        kimi: {
-            provider: 'kimi',
-            apiKey: '',
-            model: 'moonshot-v1-8k',
-            enabled: false,
-        },
-        ollama: {
-            provider: 'ollama',
-            apiKey: '',  // Ollama doesn't require API key by default
-            model: 'llama3.2',
-            enabled: false,
-            baseUrl: 'http://localhost:11434',
-        },
-    },
-    activeProvider: 'claude',
-    position: undefined,
-    size: undefined,
-};
-
-
-// Aggiungi queste interface
-export interface ConfidenceScore {
-    overall: number;
-    sections: Record<string, number>;
-    factors: ConfidenceFactor[];
-}
-
-export interface ConfidenceFactor {
-    factor: string;
-    impact: 'positive' | 'negative';
-    weight: number;
-}
-
-// Modifica ProjectDocumentation aggiungendo:
-export interface ProjectDocumentation {
-    content: string;
-    generatedAt: number;
-    lastManualEdit?: number;
-    projectHash: string;
-    sections: DocumentationSection[];
-    confidence?: ConfidenceScore;  // ← AGGIUNGI QUESTA RIGA
-}
+    return model?.capabilities || { vision: false, pdf: false };
+}*/

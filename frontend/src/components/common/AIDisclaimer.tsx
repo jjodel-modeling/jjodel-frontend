@@ -11,7 +11,7 @@
 
 import React from 'react';
 import { JodieConfigService } from '../../services/JodieConfig';
-import type { AIProvider } from '../../types/jodie';
+import {AI, AIProvider} from '../../types/jodie';
 import './AIDisclaimer.scss';
 
 interface AIDisclaimerProps {
@@ -19,45 +19,18 @@ interface AIDisclaimerProps {
     compact?: boolean;
 }
 
-// Display names for each provider
-const PROVIDER_DISPLAY_NAMES: Record<AIProvider, string> = {
-    claude: 'Claude',
-    openai: 'OpenAI',
-    deepseek: 'DeepSeek',
-    gemini: 'Gemini',
-    mistral: 'Mistral',
-    groq: 'Groq',
-    kimi: 'Kimi',
-    ollama: 'Ollama',
-};
-
-/**
- * Get the display name for the currently active AI provider
- */
-const getProviderDisplayName = (): string => {
-    try {
-        const activeProvider = JodieConfigService.getActiveProvider();
-        if (activeProvider && activeProvider in PROVIDER_DISPLAY_NAMES) {
-            return PROVIDER_DISPLAY_NAMES[activeProvider];
-        }
-    } catch {
-        // Fallback if config service fails
-    }
-    return 'AI';
-};
-
 /**
  * Disclaimer shown wherever AI-generated content appears.
  * Automatically reads the current provider name from settings.
  */
 export const AIDisclaimer: React.FC<AIDisclaimerProps> = ({ compact = false }) => {
-    const providerName = getProviderDisplayName();
+    const llm = AI[JodieConfigService.getActiveProvider()];
 
     if (compact) {
         return (
             <span className="ai-disclaimer ai-disclaimer--compact">
                 <i className="bi bi-info-circle" />
-                {providerName} can make mistakes. Verify important information.
+                {llm.name} can make mistakes. Verify important information.
             </span>
         );
     }
@@ -66,7 +39,7 @@ export const AIDisclaimer: React.FC<AIDisclaimerProps> = ({ compact = false }) =
         <div className="ai-disclaimer">
             <i className="bi bi-info-circle" />
             <span>
-                Jjodel uses {providerName} and can make mistakes. Verify important information.
+                Jjodel uses {llm.name} and can make mistakes. Verify important information.
             </span>
         </div>
     );

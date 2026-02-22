@@ -10,28 +10,9 @@ import {
     TAIProvider,
     DEFAULT_JODIE_CONFIG,
     PROVIDER_MODELS,
-    ALL_AI_PROVIDERS
+    ALL_AI_PROVIDERS, AI, AIConfig
 } from '../types/jodie';
 
-// Storage keys - separate key per provider for security
-const STORAGE_KEYS: Record<TAIProvider, string> = {
-    [AIProvider.Claude]: 'jjodie_provider_claude',
-    [AIProvider.GPT]: 'jjodie_provider_openai',
-    [AIProvider.DeepSeek]: 'jjodie_provider_deepseek',
-    [AIProvider.Gemini]: 'jjodie_provider_gemini',
-    [AIProvider.Mistral]: 'jjodie_provider_mistral',
-    [AIProvider.Groq]: 'jjodie_provider_groq',
-    [AIProvider.Llama]: 'jjodie_provider_llama',
-    [AIProvider.Copilot]: 'jjodie_provider_copilot',
-    [AIProvider.Kimi]: 'jjodie_provider_kimi',
-    [AIProvider.Ollama]: 'jjodie_provider_ollama',
-};
-
-const ACTIVE_PROVIDER_KEY = 'jjodie_active_provider';
-const WINDOW_STATE_KEY = 'jjodel_jodie_window';
-
-// Legacy key for migration
-const LEGACY_SETTINGS_KEY = 'jjodie-settings';
 
 // Map from Settings page provider names to Jodie provider names
 const SETTINGS_TO_JODIE_PROVIDER: Record<string, TAIProvider | null> = {
@@ -46,13 +27,7 @@ const SETTINGS_TO_JODIE_PROVIDER: Record<string, TAIProvider | null> = {
     'custom': null,
 };
 
-interface ProviderStorageFormat {
-    apiKey: string;
-    model: string;
-    enabled: boolean;
-    lastTested?: number;
-    baseUrl?: string;  // Custom base URL (for Ollama non-default endpoints)
-}
+type ProviderStorageFormat = AIConfig
 
 interface WindowState {
     position?: { x: number; y: number };
@@ -72,17 +47,16 @@ interface LegacySettingsFormat {
 export class JodieConfigService {
     /**
      * Initialize and migrate from legacy settings if needed
-     */
+     * /
     static initialize(): void {
         this.migrateFromLegacySettings();
     }
 
-    /**
+    / **
      * Migrate from old single-key settings to new per-provider format
-     */
     private static migrateFromLegacySettings(): void {
         try {
-            const legacyJson = localStorage.getItem(LEGACY_SETTINGS_KEY);
+            const legacyJson = localStorage.getItem(AI.LEGACY_SETTINGS_KEY);
             if (!legacyJson) return;
 
             const legacy: LegacySettingsFormat = JSON.parse(legacyJson);
@@ -113,114 +87,61 @@ export class JodieConfigService {
             console.error('Failed to migrate legacy settings:', error);
         }
     }
+*/
 
     /**
      * Load full configuration from storage
      */
     static load(): JodieConfig {
+        if (JodieConfig.current) return JodieConfig.current;
         try {
             // Start with defaults
-            const config: JodieConfig = JSON.parse(JSON.stringify(DEFAULT_JODIE_CONFIG));
-
+            const config = JodieConfig.current = new JodieConfig();
             // Load each provider's config
-            for (const provider of ALL_AI_PROVIDERS) {
-                const providerConfig = this.getProviderConfig(provider);
-                if (providerConfig) {
-                    config.providers[provider] = {
-                        provider,
-                        apiKey: providerConfig.apiKey,
-                        model: providerConfig.model,
-                        enabled: providerConfig.enabled,
-                    };
-                }
-            }
+            for (const provider of ALL_AI_PROVIDERS) this.getProviderConfig(provider);
+
 
             // Load active provider
-            const activeProvider = localStorage.getItem(ACTIVE_PROVIDER_KEY);
+            const activeProvider = localStorage.getItem(AI.ACTIVE_PROVIDER_KEY)||'';
             if (activeProvider && AIProvider.isValidProvider(activeProvider)) {
                 config.activeProvider = activeProvider;
             } else {
                 // Default to first enabled provider
-                const firstEnabled = this.getEnabledProviders()[0];
-                config.activeProvider = firstEnabled || 'claude';
+                config.activeProvider = this.getEnabledProviders()[0] || AI.Claude;
             }
 
             // Load window state
-            const windowStateJson = localStorage.getItem(WINDOW_STATE_KEY);
+            const windowStateJson = localStorage.getItem(AI.WINDOW_STATE_KEY);
             if (windowStateJson) {
-                const windowState: WindowState = JSON.parse(windowStateJson);
-                config.position = windowState.position;
-                config.size = windowState.size;
+                let windowState: WindowState;
+                try {
+                    windowState = JSON.parse(windowStateJson);
+                    config.position = windowState.position;
+                    config.size = windowState.size;
+                } catch (error) {
+                    console.error('Failed to load Jodie window config:', error);
+                    // windowState = {position: {x:0, y:0}, size: {width:500, height:300}} as WindowState;
+                }
             }
-
             return config;
         } catch (error) {
             console.error('Failed to load Jodie config:', error);
-            return DEFAULT_JODIE_CONFIG;
+            return JodieConfig.current = new JodieConfig();
         }
     }
 
     /**
      * Get configuration for a specific provider
      */
-    static getProviderConfig(provider: TAIProvider): ProviderStorageFormat | null {
-        try {
-            const json = localStorage.getItem(STORAGE_KEYS[provider]);
-            if (!json) return null;
-            return JSON.parse(json);
-        } catch {
-            return null;
-        }
+    static getProviderConfig(provider: TAIProvider): AIConfig {
+        return AIConfig.get(provider);
     }
 
     /**
      * Save configuration for a specific provider
      */
-    static saveProviderConfig(provider: TAIProvider, config: Partial<ProviderStorageFormat>): void {
-        try {
-            const existing = this.getProviderConfig(provider) || {
-                apiKey: '',
-                model: PROVIDER_MODELS[provider][0].value,
-                enabled: false,
-            };
-
-            const updated: ProviderStorageFormat = {
-                ...existing,
-                ...config,
-            };
-
-            localStorage.setItem(STORAGE_KEYS[provider], JSON.stringify(updated));
-
-            // Dispatch event to notify other components
-            window.dispatchEvent(new CustomEvent('ai-provider-changed', {
-                detail: { provider, config: updated }
-            }));
-        } catch (error) {
-            console.error(`Failed to save provider config for ${provider}:`, error);
-        }
-    }
-
-    /**
-     * Get the provider config in the format expected by Jodie components
-     */
-    static getProvider(provider: TAIProvider): ProviderConfig | null {
-        const config = this.getProviderConfig(provider);
-        // Ollama doesn't require API key
-        if (!config || !config.enabled) {
-            return null;
-        }
-        // Other providers require API key
-        if (provider !== 'ollama' && !config.apiKey) {
-            return null;
-        }
-
-        return {
-            provider,
-            apiKey: config.apiKey,
-            model: config.model,
-            enabled: config.enabled,
-            baseUrl: config.baseUrl,
-        };
+    static saveProviderConfig(provider: TAIProvider, config: Partial<AIConfig>): void {
+        AIConfig.set(provider, config);
     }
 
     /**
@@ -246,7 +167,8 @@ export class JodieConfigService {
     static getEnabledProviders(): TAIProvider[] {
         return ALL_AI_PROVIDERS.filter(provider => {
             const config = this.getProviderConfig(provider);
-            return config && config.apiKey && config.enabled;
+            let llm = AI[provider];
+            return config && (!llm.requiresKey || config.apiKey) && config.enabled;
         });
     }
 
@@ -256,10 +178,9 @@ export class JodieConfigService {
      */
     static isProviderConfigured(provider: TAIProvider): boolean {
         const config = this.getProviderConfig(provider);
+        let llm = AI[provider];
         if (!config) return false;
-        // Ollama doesn't require API key
-        if (provider === AIProvider.Ollama) return true;
-        return !!config.apiKey;
+        return !llm.requiresKey || !!config.apiKey;
     }
 
     /**
@@ -278,24 +199,25 @@ export class JodieConfigService {
      * Get the currently active provider
      */
     static getActiveProvider(): TAIProvider {
-        const saved = localStorage.getItem(ACTIVE_PROVIDER_KEY);
+        if (AI.activeProvider) return AI.activeProvider;
+        const saved = localStorage.getItem(AI.ACTIVE_PROVIDER_KEY);
         if (saved && ALL_AI_PROVIDERS.includes(saved as TAIProvider)) {
             // Verify the saved provider is still enabled
-            if (this.isProviderEnabled(saved as TAIProvider)) {
-                return saved as TAIProvider;
-            }
+            if (this.isProviderEnabled(saved as TAIProvider))
+                return AI.activeProvider = saved as TAIProvider;
         }
 
         // Fall back to first enabled provider
         const enabled = this.getEnabledProviders();
-        return enabled[0] || 'claude';
+        return AI.activeProvider = enabled[0] || AIProvider.Claude;
     }
 
     /**
      * Set the active provider
      */
     static setActiveProvider(provider: TAIProvider): void {
-        localStorage.setItem(ACTIVE_PROVIDER_KEY, provider);
+        localStorage.setItem(AI.ACTIVE_PROVIDER_KEY, provider);
+        AI.activeProvider = provider;
 
         // Dispatch event to notify other components
         window.dispatchEvent(new CustomEvent('ai-settings-changed', {
@@ -305,7 +227,7 @@ export class JodieConfigService {
 
     /**
      * Mark a provider's connection as tested
-     */
+     * /
     static markProviderTested(provider: TAIProvider): void {
         const config = this.getProviderConfig(provider);
         if (config) {
@@ -318,7 +240,7 @@ export class JodieConfigService {
 
     /**
      * Get provider test timestamp
-     */
+     * /
     static getProviderLastTested(provider: TAIProvider): number | null {
         const config = this.getProviderConfig(provider);
         return config?.lastTested || null;

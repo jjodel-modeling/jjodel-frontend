@@ -3,8 +3,7 @@
  * Handles API calls to different AI providers (Claude, OpenAI, DeepSeek, Gemini)
  */
 
-import { AIProvider, TAIProvider, ChatMessage, ChatImage, ChatDocument, PROVIDER_ENDPOINTS,
-    getProxyEndpoint, OLLAMA_DEFAULT_BASE_URL } from '../types/jodie';
+import {AIProvider, TAIProvider, ChatMessage, ChatImage, ChatDocument, AI} from '../types/jodie';
 import { JodieConfigService } from './JodieConfig';
 import { PromptService } from './PromptService';
 import { PromptContext } from '../types/prompts';
@@ -28,12 +27,12 @@ export class AIProviderService {
         documents?: ChatDocument[]
     ): Promise<string> {
         const config = JodieConfigService.getProvider(provider);
-
+        let llm = AI[provider];
         // Ollama doesn't require API key
         if (!config) {
             throw new Error(`Provider ${provider} is not configured. Please configure it in Settings.`);
         }
-        if (provider !== 'ollama' && !config.apiKey) {
+        if (llm.requiresKey && !config.apiKey) {
             throw new Error(`Provider ${provider} is not configured. Please add your API key in Settings.`);
         }
 
@@ -96,7 +95,7 @@ export class AIProviderService {
         messages.push({ role: 'user' as const, content: currentContent });
 
         // Use proxy endpoint to avoid CORS issues
-        const proxyUrl = getProxyEndpoint('anthropic');
+        const proxyUrl = AI.Claude.proxy as string;
 
         const response = await fetch(proxyUrl, {
             method: 'POST',
@@ -195,7 +194,7 @@ export class AIProviderService {
 
         messages.push({ role: 'user' as const, content: currentContent });
 
-        const response = await fetch(PROVIDER_ENDPOINTS.openai, {
+        const response = await fetch(AI.GPT.endpoint, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -261,7 +260,7 @@ export class AIProviderService {
             { role: 'user' as const, content: message },
         ];
 
-        const response = await fetch(PROVIDER_ENDPOINTS.deepseek, {
+        const response = await fetch(AI.DeepSeek.endpoint, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -327,7 +326,7 @@ export class AIProviderService {
         });
 
         // Use proxy endpoint to avoid CORS issues
-        const proxyUrl = `${getProxyEndpoint('gemini')}/${model}/generateContent?key=${apiKey}`;
+        const proxyUrl = `${AI.Gemini.proxy}/${model}/generateContent?key=${apiKey}`;
 
         const response = await fetch(proxyUrl, {
             method: 'POST',
@@ -420,7 +419,7 @@ export class AIProviderService {
 
         messages.push({ role: 'user' as const, content: currentContent });
 
-        const response = await fetch(PROVIDER_ENDPOINTS.mistral, {
+        const response = await fetch(AI.Mistral.endpoint, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -484,7 +483,7 @@ export class AIProviderService {
             { role: 'user' as const, content: message },
         ];
 
-        const response = await fetch(PROVIDER_ENDPOINTS.groq, {
+        const response = await fetch(AI.Groq.endpoint, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -526,7 +525,7 @@ export class AIProviderService {
             { role: 'user' as const, content: message },
         ];
 
-        const response = await fetch(PROVIDER_ENDPOINTS.kimi, {
+        const response = await fetch(AI.Kimi.endpoint, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -568,8 +567,7 @@ export class AIProviderService {
             { role: 'user' as const, content: message },
         ];
 
-        const ollamaBaseUrl = baseUrl || OLLAMA_DEFAULT_BASE_URL;
-        const endpoint = `${ollamaBaseUrl}/v1/chat/completions`;
+        const endpoint = baseUrl ? `${baseUrl}/v1/chat/completions` : AI.Ollama.endpoint;
 
         const response = await fetch(endpoint, {
             method: 'POST',
@@ -598,15 +596,12 @@ export class AIProviderService {
     static async testConnection(provider: TAIProvider): Promise<{ success: boolean; error?: string }> {
         try {
             const config = JodieConfigService.getProvider(provider);
+            const llm = AI[provider];
 
-            if (!config) {
-                return { success: false, error: 'Provider not configured' };
-            }
+            if (!config) return { success: false, error: 'Provider not configured' };
 
             // Ollama doesn't require API key, other providers do
-            if (provider !== 'ollama' && !config.apiKey) {
-                return { success: false, error: 'API key not configured' };
-            }
+            if (llm.requiresKey && !config.apiKey) return { success: false, error: 'API key not configured' };
 
             // Use provider-specific test methods for better error handling
             switch (provider) {
@@ -632,7 +627,7 @@ export class AIProviderService {
         } catch (error) {
             return {
                 success: false,
-                error: (error as Error).message || 'Connection test failed',
+                error: 'Connection test failed.\n' + ((error as Error).message || ''),
             };
         }
     }
@@ -651,7 +646,7 @@ export class AIProviderService {
             }
 
             // Use proxy endpoint to avoid CORS issues
-            const proxyUrl = getProxyEndpoint('anthropic');
+            const proxyUrl = AI.Claude.proxy as string;
 
             const response = await fetch(proxyUrl, {
                 method: 'POST',
@@ -726,7 +721,7 @@ export class AIProviderService {
                 };
             }
 
-            const response = await fetch(PROVIDER_ENDPOINTS.openai, {
+            const response = await fetch(AI.GPT.endpoint, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -773,7 +768,7 @@ export class AIProviderService {
      */
     private static async testDeepSeek(apiKey: string, model: string): Promise<{ success: boolean; error?: string }> {
         try {
-            const response = await fetch(PROVIDER_ENDPOINTS.deepseek, {
+            const response = await fetch(AI.DeepSeek.endpoint, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -817,7 +812,7 @@ export class AIProviderService {
     private static async testGemini(apiKey: string, model: string): Promise<{ success: boolean; error?: string }> {
         try {
             // Use proxy endpoint to avoid CORS issues
-            const proxyUrl = `${getProxyEndpoint('gemini')}/${model}/generateContent?key=${apiKey}`;
+            const proxyUrl = `${AI.Gemini.proxy}/${model}/generateContent?key=${apiKey}`;
 
             const response = await fetch(proxyUrl, {
                 method: 'POST',
@@ -864,7 +859,7 @@ export class AIProviderService {
      */
     private static async testMistral(apiKey: string, model: string): Promise<{ success: boolean; error?: string }> {
         try {
-            const response = await fetch(PROVIDER_ENDPOINTS.mistral, {
+            const response = await fetch(AI.Mistral.endpoint, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -911,7 +906,7 @@ export class AIProviderService {
      */
     private static async testGroq(apiKey: string, model: string): Promise<{ success: boolean; error?: string }> {
         try {
-            const response = await fetch(PROVIDER_ENDPOINTS.groq, {
+            const response = await fetch(AI.Groq.endpoint, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -958,7 +953,7 @@ export class AIProviderService {
      */
     private static async testKimi(apiKey: string, model: string): Promise<{ success: boolean; error?: string }> {
         try {
-            const response = await fetch(PROVIDER_ENDPOINTS.kimi, {
+            const response = await fetch(AI.Kimi.endpoint, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -1004,10 +999,8 @@ export class AIProviderService {
      * Test Ollama (Local) connection
      */
     private static async testOllama(model: string, baseUrl?: string): Promise<{ success: boolean; error?: string }> {
+        const endpoint = baseUrl ? `${baseUrl}/v1/chat/completions` : AI.Ollama.endpoint;
         try {
-            const ollamaBaseUrl = baseUrl || OLLAMA_DEFAULT_BASE_URL;
-            const endpoint = `${ollamaBaseUrl}/v1/chat/completions`;
-
             const response = await fetch(endpoint, {
                 method: 'POST',
                 headers: {
@@ -1045,10 +1038,10 @@ export class AIProviderService {
             if (errorMessage.includes('Failed to fetch') || errorMessage.includes('NetworkError')) {
                 return {
                     success: false,
-                    error: `Cannot connect to Ollama at ${baseUrl || OLLAMA_DEFAULT_BASE_URL}. Make sure Ollama is running.`
+                    error: `Cannot connect to Ollama at ${endpoint}. Make sure Ollama is running.`
                 };
             }
-            return { success: false, error: `Connection error: ${errorMessage}` };
+            return {success: false, error: `Connection error: ${errorMessage}` };
         }
     }
 }

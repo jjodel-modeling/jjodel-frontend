@@ -4,58 +4,18 @@
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { AIProvider, PROVIDER_INFO, PROVIDER_MODELS, OLLAMA_DEFAULT_BASE_URL } from '../../types/jodie';
+import {TAIProvider, AI, AIConfig, AIProvider, JodieConfig} from '../../types/jodie';
 import { AIProviderService } from '../../services/AIProviderService';
 import { JodieConfigService } from '../../services/JodieConfig';
 import './ProviderConfigModal.scss';
 
-// Provider metadata (URLs for API key pages)
-const PROVIDER_KEY_URLS: Record<AIProvider, string | null> = {
-    openai: 'https://platform.openai.com/api-keys',
-    claude: 'https://console.anthropic.com/settings/keys',
-    gemini: 'https://aistudio.google.com/app/apikey',
-    deepseek: 'https://platform.deepseek.com/api_keys',
-    mistral: 'https://console.mistral.ai/api-keys/',
-    groq: 'https://console.groq.com/keys',
-    kimi: 'https://platform.moonshot.cn/console/api-keys',
-    ollama: null,  // Ollama is local, no API key page
-};
-
-const PROVIDER_COMPANIES: Record<AIProvider, string> = {
-    openai: 'OpenAI',
-    claude: 'Anthropic',
-    gemini: 'Google',
-    deepseek: 'DeepSeek AI',
-    mistral: 'Mistral AI',
-    groq: 'Groq Inc.',
-    kimi: 'Moonshot AI',
-    ollama: 'Local',
-};
-
-// Provider initials for slate icons (same as cards)
-const PROVIDER_INITIALS: Record<AIProvider, string> = {
-    openai: 'O',
-    claude: 'C',
-    gemini: 'G',
-    deepseek: 'D',
-    mistral: 'M',
-    groq: 'G',
-    kimi: 'K',
-    ollama: 'O',
-};
 
 interface ProviderConfigModalProps {
-    provider: AIProvider;
+    provider: TAIProvider;
     isOpen: boolean;
     onClose: () => void;
-    onSave: (provider: AIProvider, config: { apiKey: string; model: string; enabled: boolean; baseUrl?: string }) => void;
-    initialConfig: {
-        apiKey: string;
-        model: string;
-        enabled: boolean;
-        lastTested?: number;
-        baseUrl?: string;
-    };
+    onSave: (provider: TAIProvider, config: AIConfig) => void;
+    initialConfig: AIConfig;
 }
 
 type TestStatus = 'idle' | 'testing' | 'success' | 'error';
@@ -65,35 +25,29 @@ export const ProviderConfigModal: React.FC<ProviderConfigModalProps> = ({
     isOpen,
     onClose,
     onSave,
-    initialConfig,
 }) => {
+    let initialConfig = AIConfig.map[provider];
     const [apiKey, setApiKey] = useState(initialConfig.apiKey);
     const [model, setModel] = useState(initialConfig.model);
-    const [baseUrl, setBaseUrl] = useState(initialConfig.baseUrl || (provider === 'ollama' ? OLLAMA_DEFAULT_BASE_URL : ''));
+    const [baseUrl, setBaseUrl] = useState(initialConfig.baseUrl);
     const [showKey, setShowKey] = useState(false);
     const [testStatus, setTestStatus] = useState<TestStatus>('idle');
     const [testMessage, setTestMessage] = useState('');
 
     // Check if this provider requires an API key
-    const requiresApiKey = provider !== 'ollama';
-
-    const info = PROVIDER_INFO[provider];
-    const models = PROVIDER_MODELS[provider];
-    const keyUrl = PROVIDER_KEY_URLS[provider];
-    const company = PROVIDER_COMPANIES[provider];
+    const requiresApiKey = provider !== AIProvider.Ollama;
+    let llm = AI[provider];
 
     // Reset state when modal opens with new provider
     useEffect(() => {
         if (isOpen) {
             setApiKey(initialConfig.apiKey);
             setModel(initialConfig.model);
-            setBaseUrl(initialConfig.baseUrl || (provider === 'ollama' ? OLLAMA_DEFAULT_BASE_URL : ''));
+            setBaseUrl(initialConfig.baseUrl);
             setShowKey(false);
             // For Ollama: show success if enabled + lastTested (no API key required)
             // For others: show success if apiKey + enabled + lastTested
-            const wasSuccessfullyTested = provider === 'ollama'
-                ? initialConfig.enabled && initialConfig.lastTested
-                : initialConfig.apiKey && initialConfig.enabled && initialConfig.lastTested;
+            const wasSuccessfullyTested = (initialConfig.apiKey || !requiresApiKey) && initialConfig.enabled && initialConfig.lastTested;
             setTestStatus(wasSuccessfullyTested ? 'success' : 'idle');
             setTestMessage('');
         }
@@ -121,14 +75,12 @@ export const ProviderConfigModal: React.FC<ProviderConfigModalProps> = ({
 
         try {
             // Temporarily save config for testing
-            const configToSave: { apiKey: string; model: string; enabled: boolean; baseUrl?: string } = {
+            const configToSave: AIConfig = {...initialConfig,
                 apiKey,
                 model,
                 enabled: true,
             };
-            if (provider === 'ollama') {
-                configToSave.baseUrl = baseUrl;
-            }
+            if (!requiresApiKey) { configToSave.baseUrl = baseUrl; }
             JodieConfigService.saveProviderConfig(provider, configToSave);
 
             const result = await AIProviderService.testConnection(provider);
@@ -155,14 +107,12 @@ export const ProviderConfigModal: React.FC<ProviderConfigModalProps> = ({
     // Save and close
     const handleSave = useCallback(() => {
         const enabled = testStatus === 'success';
-        const config: { apiKey: string; model: string; enabled: boolean; baseUrl?: string } = {
+        const config: AIConfig = {...initialConfig,
             apiKey,
             model,
             enabled,
         };
-        if (provider === 'ollama') {
-            config.baseUrl = baseUrl;
-        }
+        if (!requiresApiKey) { config.baseUrl = baseUrl; }
         onSave(provider, config);
         onClose();
     }, [apiKey, model, baseUrl, testStatus, provider, onSave, onClose]);
@@ -207,10 +157,10 @@ export const ProviderConfigModal: React.FC<ProviderConfigModalProps> = ({
                 <div className="provider-modal-header">
                     <div className="provider-modal-identity">
                         <div className="provider-modal-icon">
-                            {PROVIDER_INITIALS[provider]}
+                            {llm.initial}
                         </div>
                         <div className="provider-modal-title">
-                            <h3>{info.name}</h3>
+                            <h3>{llm.name}</h3>
                             <span className="provider-company">Configure API access</span>
                         </div>
                     </div>
@@ -222,7 +172,7 @@ export const ProviderConfigModal: React.FC<ProviderConfigModalProps> = ({
                 {/* Body */}
                 <div className="provider-modal-body">
                     {/* Base URL Field (Ollama only) */}
-                    {provider === 'ollama' && (
+                    {!requiresApiKey && (
                         <div className="modal-field">
                             <label>Base URL</label>
                             <input
@@ -237,13 +187,13 @@ export const ProviderConfigModal: React.FC<ProviderConfigModalProps> = ({
 
                     {/* API Key Field */}
                     <div className="modal-field">
-                        <label>API Key{!requiresApiKey && ' (Optional)'}</label>
+                        <label>API Key{requiresApiKey ? '' : ' (Optional)'}</label>
                         <div className="api-key-input-wrapper">
                             <input
                                 type={showKey ? 'text' : 'password'}
                                 value={apiKey}
                                 onChange={(e) => setApiKey(e.target.value)}
-                                placeholder={requiresApiKey ? `Enter your ${info.name} API key` : 'Optional - leave empty for local'}
+                                placeholder={requiresApiKey ? `Enter your ${llm.name} API key` : 'Optional - leave empty for local'}
                                 className="modal-input"
                                 autoComplete="off"
                             />
@@ -266,10 +216,8 @@ export const ProviderConfigModal: React.FC<ProviderConfigModalProps> = ({
                             onChange={(e) => setModel(e.target.value)}
                             className="modal-select"
                         >
-                            {models.map((m) => (
-                                <option key={m.value} value={m.value}>
-                                    {m.label}
-                                </option>
+                            {Object.entries(llm.versions).map(([k, v]) => (
+                                <option key={k} value={k} disabled={v.deprecated}>{v.label}</option>
                             ))}
                         </select>
                     </div>
@@ -302,34 +250,26 @@ export const ProviderConfigModal: React.FC<ProviderConfigModalProps> = ({
 
                 {/* Footer */}
                 <div className="provider-modal-footer">
-                    {keyUrl && (
+                    {llm.keyUrl && (
                         <a
-                            href={keyUrl}
+                            href={llm.keyUrl}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="get-api-key-link"
                         >
                             <i className="bi bi-box-arrow-up-right" />
-                            How to get your {info.name} API key
+                            How to get your {llm.name} API key
                         </a>
                     )}
-                    {!keyUrl && (
-                        <span className="ollama-hint">
-                            Make sure Ollama is running locally
-                        </span>
-                    )}
+                    {!llm.keyUrl && <span className="ollama-hint">Make sure {llm.name} is running locally</span>}
 
                     <div className="modal-actions">
-                        <button className="modal-btn-secondary" onClick={onClose}>
-                            Cancel
-                        </button>
+                        <button className="modal-btn-secondary" onClick={onClose}>Cancel</button>
                         <button
                             className="modal-btn-primary"
                             onClick={handleSave}
                             disabled={requiresApiKey && !apiKey}
-                        >
-                            Save
-                        </button>
+                        >Save</button>
                     </div>
                 </div>
             </div>

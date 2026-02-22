@@ -2,6 +2,8 @@
 // Works immediately without npm install
 // Add encryption later when npm works
 
+import JodieConfigService from "./JodieConfig";
+
 export type ProviderType = 'openai' | 'anthropic' | 'google' | 'azure' | 'custom';
 
 export interface ProviderCredentials {
@@ -142,7 +144,8 @@ class CredentialsService {
    * Get active provider credentials
    */
   getActiveProvider(): ProviderCredentials | undefined {
-    const store = this.getStore();
+    return JodieConfigService.getActiveProvider();
+    /*const store = this.getStore();
     
     if (!store.activeProvider) {
       // Return first enabled provider if no active set
@@ -150,7 +153,7 @@ class CredentialsService {
       return enabled[0];
     }
     
-    return this.getProvider(store.activeProvider);
+    return this.getProvider(store.activeProvider);*/
   }
   
   /**

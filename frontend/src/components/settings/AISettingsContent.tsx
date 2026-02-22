@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { JodieConfigService } from '../../services/JodieConfig';
 import { AIProviderPreferences } from '../../services/AIProviderPreferences';
-import { PROVIDER_MODELS, ModelInfo, AIProvider, TAIProvider } from '../../types/jodie';
+import { AI, AIProvider, AIVersion, TAIProvider } from '../../types/jodie';
 import './AISettingsContent.scss';
 import type {Dictionary} from "../../joiner";
 
@@ -70,7 +70,7 @@ const PROVIDER_LOGOS: Record<string, { logo?: string; letter: string; color: str
 };
 
 // Component to show model capability badges
-function ModelCapabilitiesBadges({ model }: { model: ModelInfo | undefined }): JSX.Element | null {
+function ModelCapabilitiesBadges({ model }: { model: AIVersion | undefined }): JSX.Element | null {
     if (!model) return null;
 
     const { capabilities } = model;
@@ -78,21 +78,21 @@ function ModelCapabilitiesBadges({ model }: { model: ModelInfo | undefined }): J
     return (
         <div className="model-capabilities">
             {capabilities.vision && (
-                <span className="capability-badge vision" title="Supports image upload">
-                    <i className="bi bi-image" />
-                    Images
+                <span className="capability-badge vision d-flex" title="Supports image upload">
+                    <i className="bi bi-image my-auto" />
+                    <span className="my-auto">Images</span>
                 </span>
             )}
             {capabilities.pdf && (
-                <span className="capability-badge pdf" title="Supports PDF upload">
-                    <i className="bi bi-file-earmark-pdf" />
-                    PDF
+                <span className="capability-badge pdf d-flex" title="Supports PDF upload">
+                    <i className="bi bi-file-earmark-pdf my-auto" />
+                    <span className="my-auto">PDF</span>
                 </span>
             )}
             {!capabilities.vision && !capabilities.pdf && (
-                <span className="capability-badge text-only" title="Text only">
-                    <i className="bi bi-fonts" />
-                    Text only
+                <span className="capability-badge text-only d-flex" title="Text only">
+                    <i className="bi bi-fonts my-auto" />
+                    <span className="my-auto">Text only</span>
                 </span>
             )}
         </div>
@@ -145,7 +145,7 @@ export function AISettingsContent({
             const anthropic = JodieConfigService.getProvider(AIProvider.Claude);
             const mistral = JodieConfigService.getProvider(AIProvider.Mistral);
             const gemini = JodieConfigService.getProvider(AIProvider.Gemini);
-            const deepseek = JodieConfigService.getProvider(AIProvider.Deepseek);
+            const deepseek = JodieConfigService.getProvider(AIProvider.DeepSeek);
             const groq = JodieConfigService.getProvider(AIProvider.Groq);
             const kimi = JodieConfigService.getProvider(AIProvider.Kimi);
             const ollama = JodieConfigService.getProvider(AIProvider.Ollama);
