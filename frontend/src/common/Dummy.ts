@@ -6,20 +6,14 @@ import type {
     LViewPoint,
     Dictionary,
     DocString,
+    LogicContext,
     DModelElement,
-    LValue,
-    LModelElement, LogicContext,
+    LModelElement,
     LNamedElement,
-    DClassifier,
-    } from '../joiner';
+    LValue,
+} from '../joiner';
 import {
-    DPackage,
-    DModel,
-    DClass,
-    DEnumerator,
-    DEnumLiteral,
-    DReference,
-    DAttribute, DOperation, DParameter,
+    DPointerTargetable,
     DeleteElementAction,
     Log,
     SetFieldAction,
@@ -33,10 +27,17 @@ import {
     ShortAttribETypes,
     D,
     Uobj,
+    DModel,
+    DPackage,
+    DClassifier,
+    DClass,
+    DEnumerator,
+    DEnumLiteral,
+    DReference, DAttribute,
+    DOperation, DParameter,
 } from '../joiner';
 
 export class Dummy {
-
     static get_delete(thiss: L, context: any): () => void {
         const lDeleted: L & GObject = context.proxyObject;
         const dDeleted = context.data;
@@ -218,7 +219,7 @@ export class Dummy {
             let old = json;
             TRANSACTION(thiss.get_name(c) + '.t2m()', () => {
                 json = thiss._convertEcoreToJom_m2(json);
-                console.log('L'+c.data.className.substring(1)+'.t2m() called.', {d:c.data, j: JSON.parse(JSON.stringify(json)), old});
+                console.log('L'+c.data.className.substring(1)+'.t2m() called.', {d:c.data, j: JSON.parse(JSON.stringify(json)), jj: json, old});
                 let childrenToUpdateByID: Dictionary<Pointer,  {json:GObject, l: LModelElement, id: Pointer, k: string}> = {};
                 let childrenToUpdateByName: Dictionary<string, {json:GObject, l: LModelElement, id: Pointer, k: string, i: number}> = {};
                 let childrenToUpdateByIndex: {json:GObject, l: LModelElement, id: Pointer, k: string, i: number}[] = [];
@@ -563,28 +564,25 @@ export class Dummy {
 
                     switch (k) {
                         case '_state': thiss.set_state(v, c); continue;
-
                         default:
+                            if (DPointerTargetable.childKeys.includes(k)) continue;
                             // @ts-ignore
                             c.proxyObject[k] = v;
                             continue;
                     }
                 }
                 // do childs last
-                const childKeys = ['annotations', '__childrenToSort', 'packages', 'subpackages', 'classes', 'enumerators',
-                    'attributes', 'references', 'operations', 'parameters', 'literals'];
-                for (let k of childKeys) {
-                    switch (k) {
-                        case 'annotations':
-                            // todo
-                            continue;
-                        case '__childrenToSort': // if they got id or name they can be registered right away. not ambiguous.
-                        case 'packages': case 'subpackages': case 'classes': case 'enumerators':
-                        case 'attributes': case 'references': case 'operations': case 'parameters': case 'literals':
-                            registerChildren(k);
-                            break;
-                    }
-                }
+
+                for (let k of DPointerTargetable.childKeys) { switch (k) {
+                    case 'annotations':
+                        // todo
+                        continue;
+                    case '__childrenToSort': // if they got id or name they can be registered right away. not ambiguous.
+                    case 'packages': case 'subpackages': case 'classes': case 'enumerators':
+                    case 'attributes': case 'references': case 'operations': case 'parameters': case 'literals':
+                        registerChildren(k);
+                        break;
+                }}
 
                 // checks if there is an ambiguous match between id and name, to move it to ambiguous unregistered collection
                 for (let name in childrenToUpdateByName) {

@@ -522,7 +522,7 @@ export class SetFieldAction extends SetRootFieldAction {
         T extends (keyof D),
         VAL extends
             D[T] extends string | string[] ? 'must specify "isPointer" parameter' :
-                (AM extends undefined | '' ? D[T] : (AM extends '-=' ? number[] : (AM extends '+=' | '[]' | `[${number}]` | `.${number}` ? unArr<D[T]> | D[T] | D[T][] : any /*failed to narrow type by AM, unrecognized AM*/))),
+                (AM extends undefined | '' ? D[T] : (AM extends '-=' ? any[] : (AM extends '+=' | '[]' | `[${number}]` | `.${number}` ? unArr<D[T]> | D[T] | D[T][] : any /*failed to narrow type by AM, unrecognized AM*/))),
         // VAL extends (AM extends undefined | '' ? D[T] : (AM extends '-=' ? number[] : (AM extends '+=' | '[]' | `[${number}]` | `.${number}` ? unArr<D[T]> | D[T] | D[T][] : '_error_'))),
         /*VAL extends (AM extends undefined | '' ? (D[T] extends any[] ? StrictExclude<D[T], string[]> : StrictExclude<D[T], string>) :
             (AM extends '-=' ?
@@ -541,7 +541,7 @@ export class SetFieldAction extends SetRootFieldAction {
         D extends DPointerTargetable,
         T extends (keyof D),
         VAL extends AM extends '' | undefined ? orArr<string | null | undefined> :
-            (AM extends '-=' ? orArr<number> :
+            (AM extends '-=' ? orArr<any> :
                 (AM extends '+=' ? orArr<string | null | undefined> : '_am_typeerror_')),
         AM extends AccessModifier | undefined = undefined,
         >(me: D | Pointer<D>, field: T,

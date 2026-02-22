@@ -1404,7 +1404,7 @@ function test(){
         '    unique ordered attr EString attr_0;\n' +
         '    unique ordered ref Concept_0 ref_0;\n' +
         '}';
-    console.log('t2m test', parseT2M('Emfatic', s, true));
+    console.log('t2m test', parseT2M('Emfatic', s, true, undefined, undefined, 'DModel'));
 }
 
 export async function stateInitializer() {

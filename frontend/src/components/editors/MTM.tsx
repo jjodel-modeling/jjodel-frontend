@@ -236,6 +236,7 @@ function MTMEditor(props: EditorAllProps): JSX.Element{
     let [oldt2mEngine, set_oldt2mEngine] = useState(t2mengine);
     let [m2t_func, set_m2tfunc] = useState((!m2tpartials ? m2tobj?.__str : m2tobj[m2tfragment] as string) || m2t_placeholder);
     let [t2m_func, set_t2mfunc] = useState((!t2mpartials ? t2mobj?.__str : t2mobj[t2mfragment] as string) || t2m_placeholder);
+    let className = props.data?.className;
     // __jj_needs_reset__: if engine changed, the old m2tfunc is cached in react state,
     //      but the engine object changed, so i need to reinitialize at default val.
     if (oldm2tEngine !== m2tengine || oldm2tEngine === '__jj_needs_reset__') {
@@ -266,7 +267,7 @@ function MTMEditor(props: EditorAllProps): JSX.Element{
     if (test_text !== default_text) {
         try {
             let errOutput: {msg: string, e: GObject} = {} as any;
-            output_tmp = parseT2M(language, test_text, true, errOutput) || errOutput;
+            output_tmp = parseT2M(language, test_text, true, errOutput, undefined, className) || errOutput;
             // output_tmp = eval("("+t2m_func+")")(test_text);
         } catch (e: any) { output_tmp = {msg: e.message, stack: e.stack, e}; }
         console.log('t2m', {output_tmp, t2m_func, test_text});

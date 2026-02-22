@@ -12,7 +12,7 @@ import {
     RuntimeAccessible,
     ShortAttribETypes as SAType,
     U, Draggable, Measurable,
-    Language
+    Language, store, SetRootFieldAction
 } from '../joiner';
 import React, {ReactNode, useState} from "react";
 import {PaletteType} from "../view/viewElement/view";
@@ -27,13 +27,19 @@ let ShortAttribETypes: typeof SAType = (window as any).ShortAttribETypes;
 
 @RuntimeAccessible('DV')
 export class DV {
+    public static refresh(){
+        let s = store.getState();
+        let newLanguages = DV.defaultLanguages();
+        if (!s.languages) s.languages = newLanguages;
+        SetRootFieldAction.new('clonedCounter', (s as any).clonedCounter + 1);
+        return newLanguages;
+    }
     static defaultLanguages(): Dictionary<string, Language> {
-
         let m2t = undefined; //  {javascript:{__str:'function(model) {\n\treturn "Not implemented, this is a placeholder.";\n}'}};
         let t2m = undefined;
         let ret: Dictionary<string, Language> = {};
         ret.JSON = new Language(
-            {javascript:{allowPartials: true, __str:'function(modelData) {\n\treturn JSON.stringify(modelData.json, null, 4);\n}'}},
+            {javascript:{allowPartials: true, __str:'function(modelData) {\n\treturn JSON.stringify(modelData.deepJson, null, 4);\n}'}},
             {javascript:{allowPartials: true, __str:"function(text) {\n\treturn JSON.parse(text);\n}"}}
         );
         ret['Emfatic'] = new Language(

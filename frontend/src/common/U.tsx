@@ -1441,7 +1441,14 @@ export class U {
         // console.log(parseNested("aa b ( dd e (f g)) h (i)"));
     }
 
-    static isNumericString(o: any): boolean { return !isNaN(o); }
+    static isNumericString(o: any, allowDecimals: boolean = false): o is string {
+        if (!allowDecimals) return !isNaN(o); // !isNaN('0.5') === false
+        if (typeof o !== 'string') return false;
+        o = o.replace(/\s/gm, '');
+        if (!o) return false; // !isNaN('') === true  !isNaN('\n') === true
+        return isNaN(+o);
+    }
+
     // returns true only if parameter is already a number by type. UU.isNumber('3') will return false
     static isNumber(o: any): o is number { return typeof o === "number" && !isNaN(o); }
     static isPrimitive(o: any, returnIfNull=true, returnIfUndefined=true, returnIfSymbol = false): o is PrimitiveType {
@@ -1525,7 +1532,9 @@ export class U {
         return defaultVal;
     }
 
-    static arrayDifference<T>(starting: T[], final: T[]): {added: T[], removed: T[], starting: T[], final: T[]} { return Uarr.arrayDifference(starting, final); }
+    static arrayDifference<T>(starting: T[], final: T[], filter: boolean = false): {added: T[], removed: T[], starting: T[], final: T[]} {
+        return Uarr.arrayDifference(starting, final, filter);
+    }
 
     /*  {a: { b: { c1: 1, c2:2, c3:3 } }, d: 1 }     ---->  {"a.b.c1":1, "a.b.c2":2, "a.b.c3":3. "d":1}*/
     public static flattenObjectToRoot(obj: GObject, prefix: string = '', pathseparator: string = '.'): GObject{
@@ -2856,6 +2865,14 @@ export class Uarr{
         return ret;
     }
 
+    static shallowEqual<T extends any>(a1: T[], a2: T): boolean{
+        if (a1 === a2) return true;
+        if (!Array.isArray(a1) || !Array.isArray(a2)) return false;
+        if (a1.length !== a2.length) return false;
+        for (let i = 0; i < a1.length; i++) if (a1[i] !== a2[i]) return false;
+        return true;
+    }
+
     static arrayShallowCopy<T extends any | undefined | null>(arr: T, includeCustomKeys: boolean = true): T{
         if (!arr) return arr;
         if (!Array.isArray(arr)) return arr;
@@ -2875,7 +2892,7 @@ export class Uarr{
         return subarray.every((el) => array.includes(el));
     }
 
-    static arrayDifference<T>(starting: T[], final: T[]): {added: T[], removed: T[], starting: T[], final: T[]} {
+    public static arrayDifference<T>(starting: T[], final: T[], filter: boolean = false, unsorted = false): {added: T[], removed: T[], starting: T[], final: T[]} {
         let ret: {added: T[], removed: T[], starting: T[], final: T[]} = {} as any;
         ret.starting = starting;
         ret.final = final;
@@ -2883,6 +2900,10 @@ export class Uarr{
         if (!final) final = [];
         ret.removed = Uarr.arraySubtract(starting, final, false); // start & !end
         ret.added = Uarr.arraySubtract(final, starting, false); // end & !start
+        if (filter) {
+            ret.removed = ret.removed.filter(e => !!e);
+            ret.added = ret.added.filter(e => !!e);
+        }
         return ret;
     }
 
@@ -3276,6 +3297,10 @@ export class Keystrokes {
             if (keymap[Keystrokes.control]) {
                 if (!root[Keystrokes.control]) root = root[Keystrokes.control] = {};
                 else root = root[Keystrokes.control];
+            }
+            if (keymap[Keystrokes.meta]) {
+                if (!root[Keystrokes.meta]) root = root[Keystrokes.meta] = {};
+                else root = root[Keystrokes.meta];
             }
             let terminalKeys = entry.keystroke.filter(k => !(k in metakeysmap));
             Log.eDev(terminalKeys.length !== 1, "found a keystroke combination with multiple terminal keys", {entry, selector});
