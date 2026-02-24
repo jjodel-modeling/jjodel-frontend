@@ -4,52 +4,16 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { credentialsService, ProviderCredentials, ProviderType } from '../../services/CredentialsService';
 import './ProviderSettings.css';
+import {AI, AIConfig, ALL_AI_PROVIDERS, JodieConfig, TAIProvider} from "../../types/jodie";
+import {GObject, U} from "../../joiner";
+import JodieConfigService from "../../services/JodieConfig";
 
-interface ProviderInfo {
-    id: ProviderType;
-    name: string;
-    icon: string;
-    color: string;
-    models: string[];
-    docsUrl: string;
-    placeholder: string;
-}
-
-const AVAILABLE_PROVIDERS: ProviderInfo[] = [
-    {
-        id: 'openai',
-        name: 'OpenAI',
-        icon: 'chat-dots',
-        color: '#10A37F',
-        models: ['gpt-4o', 'gpt-4-turbo', 'gpt-4', 'gpt-3.5-turbo'],
-        docsUrl: 'https://platform.openai.com/api-keys',
-        placeholder: 'sk-...',
-    },
-    {
-        id: 'anthropic',
-        name: 'Anthropic Claude',
-        icon: 'robot',
-        color: '#D97757',
-        models: ['claude-sonnet-4-20250514', 'claude-3-5-sonnet-20241022', 'claude-3-opus-20240229', 'claude-3-haiku-20240307'],
-        docsUrl: 'https://console.anthropic.com/account/keys',
-        placeholder: 'sk-ant-...',
-    },
-    {
-        id: 'google',
-        name: 'Google AI',
-        icon: 'google',
-        color: '#4285F4',
-        models: ['gemini-2.0-flash', 'gemini-1.5-pro', 'gemini-1.5-flash'],
-        docsUrl: 'https://makersuite.google.com/app/apikey',
-        placeholder: 'AIza...',
-    },
-];
 
 export const ProviderSettings: React.FC = () => {
-    const [providers, setProviders] = useState<ProviderCredentials[]>([]);
-    const [editingProvider, setEditingProvider] = useState<string | null>(null);
+    const configs = Object.values(JodieConfig.current.providers); //.filter(e=>e.enabled);
+    const [providers, setProviders] = useState<AIConfig[]>(configs);
+    const [editingProvider, setEditingProvider] = useState<TAIProvider | null>(null);
     const [formData, setFormData] = useState({
         apiKey: '',
         model: '',
@@ -58,59 +22,16 @@ export const ProviderSettings: React.FC = () => {
     });
     const [showApiKey, setShowApiKey] = useState(false);
 
-    useEffect(() => {
-        loadProviders();
-    }, []);
-
-    const loadProviders = () => {
-        const configured = credentialsService.getProviders();
-        setProviders(configured);
-        console.log('[ProviderSettings] Loaded providers:', configured.length);
-    };
-
-    const handleEdit = (providerId: string) => {
-        setEditingProvider(providerId);
-        const existing = credentialsService.getProvider(providerId);
-
-        if (existing) {
-            setFormData({
-                apiKey: existing.apiKey,
-                model: existing.model || '',
-                baseUrl: existing.baseUrl || '',
-                enabled: existing.enabled,
-            });
-        } else {
-            setFormData({
-                apiKey: '',
-                model: '',
-                baseUrl: '',
-                enabled: true,
-            });
-        }
-        setShowApiKey(false);
-    };
-
-    const handleSave = (providerId: string) => {
-        if (!formData.apiKey.trim()) {
-            alert('Please enter an API key');
-            return;
-        }
-
-        console.log(`[ProviderSettings] Saving ${providerId}...`);
-
-        credentialsService.saveProvider({
-            provider: providerId as ProviderType,
-            apiKey: formData.apiKey.trim(),
-            model: formData.model || undefined,
-            baseUrl: formData.baseUrl || undefined,
-            enabled: formData.enabled,
+    const handleEdit = (providerId: TAIProvider) => {
+        const existing = AIConfig.get(providerId) || {} as GObject;
+        setFormData({
+            apiKey: existing.apiKey || '',
+            model: existing.model || '',
+            baseUrl: existing.baseUrl || '',
+            enabled: existing.enabled !== false,
         });
-
-        setEditingProvider(null);
-        setFormData({ apiKey: '', model: '', baseUrl: '', enabled: true });
-        loadProviders();
-
-        console.log(`[ProviderSettings] Saved ${providerId} successfully`);
+        setEditingProvider(providerId);
+        setShowApiKey(false);
     };
 
     const handleCancel = () => {
@@ -119,21 +40,6 @@ export const ProviderSettings: React.FC = () => {
         setShowApiKey(false);
     };
 
-    const handleRemove = (providerId: string, providerName: string) => {
-        if (window.confirm(`Remove ${providerName} credentials? This cannot be undone.`)) {
-            credentialsService.removeProvider(providerId);
-            loadProviders();
-            console.log(`[ProviderSettings] Removed ${providerId}`);
-        }
-    };
-
-    const isConfigured = (providerId: string): boolean => {
-        return providers.some(p => p.provider === providerId);
-    };
-
-    const getProviderData = (providerId: string): ProviderCredentials | undefined => {
-        return providers.find(p => p.provider === providerId);
-    };
 
     const maskApiKey = (apiKey: string): string => {
         if (apiKey.length <= 8) return '••••••••';
@@ -141,22 +47,14 @@ export const ProviderSettings: React.FC = () => {
     };
 
     const handleExport = () => {
-        const data = credentialsService.exportCredentials();
-        const blob = new Blob([data], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'jjodie-credentials-backup.json';
-        a.click();
-        URL.revokeObjectURL(url);
-        console.log('[ProviderSettings] Credentials exported');
+        U.download(JodieConfig.current.export(),
+            'jjodie-credentials-backup.json',
+            'application/json');
     };
 
     const handleClearAll = () => {
-        if (window.confirm('Clear ALL credentials? This cannot be undone!')) {
-            credentialsService.clearAll();
-            loadProviders();
-        }
+        JodieConfigService.clearAllProviders();
+        setProviders(configs);
     };
 
     return (
@@ -179,21 +77,23 @@ export const ProviderSettings: React.FC = () => {
 
             {/* Providers List */}
             <div className="providers-list">
-                {AVAILABLE_PROVIDERS.map(provider => {
-                    const configured = isConfigured(provider.id);
-                    const providerData = getProviderData(provider.id);
-                    const isEditing = editingProvider === provider.id;
+                {ALL_AI_PROVIDERS.map(name => {
+                    const config = AIConfig.get(name);
+                    const provider = AI[name];
+                    const configured = true;
+                    const providerData = config;
+                    const isEditing = editingProvider === name;
 
                     return (
-                        <div key={provider.id} className={`provider-card ${configured ? 'configured' : ''} ${isEditing ? 'editing' : ''}`}>
+                        <div key={provider.name} className={`provider-card ${configured ? 'configured' : ''} ${isEditing ? 'editing' : ''}`}>
                             {/* Header */}
                             <div className="provider-header">
                                 <div className="provider-info">
                                     <div
                                         className="provider-icon"
-                                        style={{ backgroundColor: `${provider.color}20`, color: provider.color }}
+                                        style={{ backgroundColor: provider.bgColor, color: provider.color }}
                                     >
-                                        <i className={`bi bi-${provider.icon}`}></i>
+                                        {provider.bi_icon ? <i className={`bi bi-${provider.bi_icon}`} /> : provider.initial}
                                     </div>
                                     <div className="provider-details">
                                         <h3>{provider.name}</h3>
@@ -222,10 +122,10 @@ export const ProviderSettings: React.FC = () => {
                             {isEditing && (
                                 <div className="provider-form">
                                     <div className="form-group">
-                                        <label htmlFor={`${provider.id}-apikey`}>
+                                        <label htmlFor={`${provider.name}-apikey`}>
                                             API Key
                                             <a
-                                                href={provider.docsUrl}
+                                                href={provider.keyUrl}
                                                 target="_blank"
                                                 rel="noopener noreferrer"
                                                 className="docs-link"
@@ -236,11 +136,14 @@ export const ProviderSettings: React.FC = () => {
                                         </label>
                                         <div className="input-with-toggle">
                                             <input
-                                                id={`${provider.id}-apikey`}
+                                                id={`${provider.name}-apikey`}
                                                 type={showApiKey ? 'text' : 'password'}
                                                 value={formData.apiKey}
-                                                onChange={e => setFormData({ ...formData, apiKey: e.target.value })}
-                                                placeholder={provider.placeholder}
+                                                onChange={e => {
+                                                    setFormData({...formData, apiKey: e.target.value});
+                                                    config.apiKey = e.target.value;
+                                                }}
+                                                placeholder={provider.keyPlaceholder}
                                                 className="form-input"
                                                 autoComplete="off"
                                             />
@@ -256,28 +159,27 @@ export const ProviderSettings: React.FC = () => {
                                     </div>
 
                                     <div className="form-group">
-                                        <label htmlFor={`${provider.id}-model`}>Model (optional)</label>
+                                        <label htmlFor={`${provider.name}-model`}>Model (optional)</label>
                                         <select
-                                            id={`${provider.id}-model`}
+                                            id={`${provider.name}-model`}
                                             value={formData.model}
-                                            onChange={e => setFormData({ ...formData, model: e.target.value })}
+                                            onChange={e => {
+                                                setFormData({ ...formData, model: e.target.value });
+                                                config.model = e.target.value;
+                                            }}
                                             className="form-select"
                                         >
                                             <option value="">Default model</option>
-                                            {provider.models.map(model => (
-                                                <option key={model} value={model}>{model}</option>
+                                            {Object.keys(provider.versions).map(name => (
+                                                <option key={name} value={name}>{provider.versions[name].label}</option>
                                             ))}
                                         </select>
                                     </div>
 
                                     <div className="form-actions">
-                                        <button className="btn btn-primary" onClick={() => handleSave(provider.id)}>
-                                            <i className="bi bi-check-lg"></i>
-                                            Save
-                                        </button>
                                         <button className="btn btn-secondary" onClick={handleCancel}>
                                             <i className="bi bi-x-lg"></i>
-                                            Cancel
+                                            Close
                                         </button>
                                     </div>
                                 </div>
@@ -298,7 +200,7 @@ export const ProviderSettings: React.FC = () => {
                                     )}
                                     {providerData.lastUsed && (
                                         <div className="info-row">
-                                            <span className="info-label">Last saved:</span>
+                                            <span className="info-label">Last used:</span>
                                             <span className="info-value">
                                                 {new Date(providerData.lastUsed).toLocaleString()}
                                             </span>
@@ -310,12 +212,12 @@ export const ProviderSettings: React.FC = () => {
                             {/* Actions */}
                             {!isEditing && (
                                 <div className="provider-actions">
-                                    <button className="btn btn-outline" onClick={() => handleEdit(provider.id)}>
+                                    <button className="btn btn-outline" onClick={() => handleEdit(provider.name)}>
                                         <i className="bi bi-pencil"></i>
                                         {configured ? 'Edit' : 'Configure'}
                                     </button>
 
-                                    {configured && (
+                                    {/*configured && (
                                         <button
                                             className="btn btn-danger"
                                             onClick={() => handleRemove(provider.id, provider.name)}
@@ -323,7 +225,7 @@ export const ProviderSettings: React.FC = () => {
                                             <i className="bi bi-trash"></i>
                                             Remove
                                         </button>
-                                    )}
+                                    )*/}
                                 </div>
                             )}
                         </div>

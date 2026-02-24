@@ -19,8 +19,7 @@ import type { FakeStateProps } from '../../../joiner/types';
 import DocumentationService from '../../../services/DocumentationService';
 import type { ProjectDocumentation } from '../../../services/DocumentationService';
 import { JodieConfigService } from '../../../services/JodieConfig';
-import type {TAIProvider} from '../../../types/jodie';
-import { useAIProviderPreference } from '../../../hooks/useAIProviderPreference';
+import {AI, AIConfig, JodieConfig, TAIProvider} from '../../../types/jodie';
 import { useSettingsModalSafe } from '../../../contexts/SettingsModalContext';
 import { ALL_AI_PROVIDERS, DocumentationStatus } from '../../../types/jodie';
 import { markdownMonacoOptions } from '../../editors/monacoConfig';
@@ -201,9 +200,7 @@ function formatDateTime(timestamp: number): string {
     const now = new Date();
     const isToday = date.toDateString() === now.toDateString();
 
-    if (isToday) {
-        return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    }
+    if (isToday) return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
     return date.toLocaleDateString([], {
         month: 'short',
@@ -581,7 +578,7 @@ function DocumentationTabComponent(props: AllProps) {
     const [editorCopyStatus, setEditorCopyStatus] = useState<'idle' | 'copied'>('idle');
 
     // AI Provider selector (with persistence)
-    const { selectedProvider, setSelectedProvider } = useAIProviderPreference('documentation');
+    const selectedProvider = AIConfig.getPreferred('documentation'); // useAIProviderPreference('documentation');
     const [showProviderMenu, setShowProviderMenu] = useState(false);
     const settingsModal = useSettingsModalSafe();
 
@@ -638,28 +635,7 @@ function DocumentationTabComponent(props: AllProps) {
     }, [documentation?.content, editContent, viewMode]);
 
     // Get available AI providers
-    const availableProviders = useMemo(() => {
-        const providers: Array<{ id: 'local' | TAIProvider; name: string; available: boolean }> = [
-            { id: 'local', name: 'Local (Instant)', available: true }
-        ];
-
-        // Add configured AI providers
-        for (const providerId of ALL_AI_PROVIDERS) {
-            if (JodieConfigService.isProviderEnabled(providerId)) {
-                const displayName = U.camelCase(providerId);
-                providers.push({ id: providerId, name: displayName, available: true });
-            }
-        }
-
-        return providers;
-    }, []);
-
-    // Get selected provider display name
-    const selectedProviderName = useMemo(() => {
-        if (selectedProvider === 'local') return 'Local';
-        const provider = availableProviders.find(p => p.id === selectedProvider);
-        return provider?.name || selectedProvider;
-    }, [selectedProvider, availableProviders]);
+    const availableProviders = JodieConfigService.getEnabledProviders();
 
     // Close provider menu when clicking outside
     useEffect(() => {
@@ -721,14 +697,14 @@ function DocumentationTabComponent(props: AllProps) {
         setShowRegenerateModal(false);
 
         // Determine if using AI or Local
-        const useAI = selectedProvider !== 'local' && DocumentationService.isAIAvailable();
+        const useAI = DocumentationService.isAIAvailable();
 
         // Initialize steps based on generation mode
         const initialSteps: GenerationStep[] = useAI ? [
             { id: 'extract', label: 'Extracting metamodel structure', status: 'pending' },
             { id: 'wikidata', label: 'Fetching Wikidata definitions', status: 'pending' },
             { id: 'prompt', label: 'Building AI prompt', status: 'pending' },
-            { id: 'generate', label: `Generating with ${selectedProviderName}`, status: 'pending' },
+            { id: 'generate', label: `Generating with ${selectedProvider}`, status: 'pending' },
             { id: 'parse', label: 'Parsing response', status: 'pending' },
             { id: 'merge', label: 'Merging protected sections', status: 'pending' },
             { id: 'save', label: 'Saving documentation', status: 'pending' },
@@ -822,7 +798,7 @@ function DocumentationTabComponent(props: AllProps) {
         } finally {
             setIsGenerating(false);
         }
-    }, [project, documentation, projectHash, selectedProvider, selectedProviderName]);
+    }, [project, documentation, projectHash, selectedProvider]);
 
     // Check if generation is complete
     const isGenerationComplete = useMemo(() => {
@@ -865,16 +841,11 @@ function DocumentationTabComponent(props: AllProps) {
     }, [editContent]);
 
     // Copy to clipboard
-    const handleCopy = useCallback(async () => {
-        const content = documentation?.content || '';
-        try {
-            await navigator.clipboard.writeText(content);
-            setCopyStatus('copied');
-            setTimeout(() => setCopyStatus('idle'), 2000);
-        } catch (err) {
-            console.error('Failed to copy:', err);
-        }
-    }, [documentation]);
+    const handleCopy = useCallback(async () =>
+        U.clipboardCopy(documentation?.content || '',
+            () => setCopyStatus('copied'),
+            () => console.error('Failed to copy')
+        ), [documentation]);
 
     // Export handler
     const handleExport = useCallback((format: ExportFormat) => {
@@ -1029,7 +1000,7 @@ function DocumentationTabComponent(props: AllProps) {
                                     title="Select AI provider for generation"
                                 >
                                     <i className="bi bi-cpu" />
-                                    <span>{selectedProviderName}</span>
+                                    <span>{selectedProvider}</span>
                                     <i className={`bi bi-chevron-${showProviderMenu ? 'up' : 'down'}`} />
                                 </button>
 
@@ -1039,17 +1010,17 @@ function DocumentationTabComponent(props: AllProps) {
 
                                         {availableProviders.map(provider => (
                                             <button
-                                                key={provider.id}
-                                                className={`provider-option ${selectedProvider === provider.id ? 'active' : ''}`}
+                                                key={provider}
+                                                className={`provider-option ${selectedProvider === provider ? 'active' : ''}`}
                                                 onClick={() => {
-                                                    setSelectedProvider(provider.id);
+                                                    JodieConfig.setGlobalDefault(provider);
                                                     setShowProviderMenu(false);
                                                 }}
-                                                disabled={!provider.available}
+                                                disabled={!AIConfig.get(provider).enabled}
                                             >
-                                                <i className={`bi ${provider.id === 'local' ? 'bi-lightning' : 'bi-stars'}`} />
-                                                <span>{provider.name}</span>
-                                                {selectedProvider === provider.id && (
+                                                <i className={`bi ${provider === 'local' ? 'bi-lightning' : 'bi-stars'}`} />
+                                                <span>{provider}</span>
+                                                {selectedProvider === provider && (
                                                     <i className="bi bi-check-lg check-icon" />
                                                 )}
                                             </button>

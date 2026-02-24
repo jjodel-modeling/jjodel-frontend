@@ -4,7 +4,7 @@
  */
 
 import { JjodieAPI } from './useMetamodelGeneration';
-import { DUser, DProject, DModel, L, LUser, LProject, LModel, SetFieldAction } from '../joiner';
+import {DUser, DProject, DModel, L, LUser, LProject, LModel, SetFieldAction, Pointer} from '../joiner';
 import { executeCommand as jjScriptExecuteCommand } from '../jjscript/executor/executor';
 
 // Snapshot storage for undo functionality
@@ -16,6 +16,7 @@ function generateId(): string {
 
 export function createJjodieAPI(): JjodieAPI {
     return {
+        // isn't identical to luser.project with logs added? i think it should be removed
         async getOpenProject() {
             try {
                 const user: LUser = L.fromPointer(DUser.current);
@@ -59,7 +60,7 @@ export function createJjodieAPI(): JjodieAPI {
         async createProject(name: string) {
             try {
                 const user: LUser = L.fromPointer(DUser.current);
-                const otherProjects = user?.projects || [];
+                /*const otherProjects = user?.projects || [];
 
                 // Create new project using DProject.new
                 // DProject.new(type, name, state, m2, m1, id, otherProjects)
@@ -71,10 +72,12 @@ export function createJjodieAPI(): JjodieAPI {
                     [],                  // models (m1)
                     undefined,           // id (auto-generated)
                     otherProjects        // for auto-naming conflict resolution
-                );
+                );*/
+                const newProject = DProject.new2({father: user.id, name}, (d)=>{ d.type = 'private'; })
 
                 // Add to user's projects
-                SetFieldAction.new(DUser.current, 'projects', newProject.id, '+=', true);
+                // damiano: it is already inserted by DProject.new, this makes a duplicate reference.
+                // SetFieldAction.new(DUser.current, 'projects', newProject.id, '+=', true);
 
                 console.log('[JjodieAPI] Project created:', newProject.id, newProject.name);
                 return { id: newProject.id };
@@ -84,7 +87,7 @@ export function createJjodieAPI(): JjodieAPI {
             }
         },
 
-        async createMetamodel(projectId: string, name: string) {
+        async createMetamodel(projectId: Pointer<DProject>, name: string) {
             try {
                 // Create new metamodel using DModel.new3 with father
                 // DModel.new3({ name, father, ... }, callback, persist)
@@ -106,7 +109,7 @@ export function createJjodieAPI(): JjodieAPI {
         },
 
         async openMetamodel(id: string) {
-            try {
+            /*try {
                 const model = L.fromPointer(id) as LModel;
                 if (model) {
                     // Set as current model for the user
@@ -115,7 +118,7 @@ export function createJjodieAPI(): JjodieAPI {
                 }
             } catch (err) {
                 console.warn('[JjodieAPI] openMetamodel error:', err);
-            }
+            }*/
         },
 
         async saveSnapshot() {

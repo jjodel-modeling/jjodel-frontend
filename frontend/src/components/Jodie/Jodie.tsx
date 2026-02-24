@@ -13,17 +13,14 @@ import {
     ChatImage,
     ChatDocument,
     ChatState,
-    PROVIDER_INFO,
-    supportsVision,
-    supportsPDF,
-    TAIProvider
+    TAIProvider, AIConfig, AI
 } from '../../types/jodie';
 import { JodieConfigService } from '../../services/JodieConfig';
 import { AIProviderService } from '../../services/AIProviderService';
 import { useSettingsModal } from '../../contexts/SettingsModalContext';
 import { JjodieContextService } from '../../services/JjodieContext';
 import { JjodieRagService } from '../../services/JjodieRagService';
-import { DUser, L, LUser, LProject } from '../../joiner';
+import {DUser, L, LUser, LProject, store} from '../../joiner';
 import DockManager from '../abstract/DockManager';
 import TabDataMaker from '../abstract/tabs/TabDataMaker';
 import { JjScriptService } from '../../jjscript';
@@ -56,47 +53,19 @@ export function Jodie(): JSX.Element {
     const lastIndexedProjectRef = useRef<string | null>(null);
     const [ragInitialized, setRagInitialized] = useState(false);
 
-    // Get current user name
-    const userName = useMemo(() => {
-        try {
-            const user: LUser = L.fromPointer(DUser.current);
-            if (user) {
-                const fullName = `${user.name || ''} ${user.surname || ''}`.trim();
-                return fullName || 'You';
-            }
-        } catch {
-            // Fallback if user not available
-        }
-        return 'You';
-    }, []);
-
-    // Check if current provider supports vision
-    const providerSupportsVision = useMemo(() => {
-        const config = JodieConfigService.getProvider(activeProvider);
-        return supportsVision(activeProvider, config?.model);
-    }, [activeProvider]);
-
-    // Check if current provider supports PDF documents
-    const providerSupportsPDF = useMemo(() => {
-        const config = JodieConfigService.getProvider(activeProvider);
-        return supportsPDF(activeProvider, config?.model);
-    }, [activeProvider]);
+    // using state just for caching, so project is not re-computed.
+    const user = useMemo(()=> (L.fromPointer(DUser.current) as LUser), []);
+    const project = useMemo(()=> user.project, []);
+    const userName = useMemo(() => `${user.name || ''} ${user.surname || ''}`.trim(), []);
+    const activeVersion = useMemo(() => AI.getActiveVersion(activeProvider), [activeProvider]);
+    const state = store.getState();
 
     // Get current project context for AI
-    const getProjectContext = useCallback((): string | undefined => {
-        try {
-            const user: LUser = L.fromPointer(DUser.current);
-            if (user?.project) {
-                const project = user.project as LProject;
-                if (project) {
-                    return JjodieContextService.getContextString(project);
-                }
-            }
-        } catch (err) {
-            console.warn('Could not get project context:', err);
-        }
-        return undefined;
-    }, []);
+    const projectContext = useMemo((): string | undefined => {
+        if (!project) return undefined;
+        try { return JjodieContextService.getContextString(project); }
+        catch (err) { console.warn('Could not get project context:', err); }
+    }, [state.idlookup.clonedCounter]);
 
     // Listen for open event
     useEffect(() => {
@@ -122,18 +91,6 @@ export function Jodie(): JSX.Element {
             window.removeEventListener('ai-settings-changed', handleSettingsChanged);
         };
     }, []);
-
-    // Auto-switch to first configured provider if current one is not configured
-    useEffect(() => {
-        const enabledProviders = JodieConfigService.getEnabledProviders();
-
-        if (enabledProviders.length > 0 && !enabledProviders.includes(activeProvider)) {
-            // Current provider not configured, switch to first available
-            const firstEnabled = enabledProviders[0];
-            setActiveProvider(firstEnabled);
-            JodieConfigService.setActiveProvider(firstEnabled);
-        }
-    }, [activeProvider]);
 
     // Initialize RAG and index project content
     useEffect(() => {
@@ -285,7 +242,7 @@ export function Jodie(): JSX.Element {
             const switchMessage: ChatMessage = {
                 id: generateMessageId(),
                 role: 'assistant',
-                content: `Switched to ${PROVIDER_INFO[firstEnabled].name} (your configured provider).`,
+                content: `Switched to ${AI[firstEnabled].name} (your configured provider).`,
                 timestamp: Date.now(),
             };
             setChatState(prev => ({
@@ -314,9 +271,6 @@ export function Jodie(): JSX.Element {
         try {
             // Get conversation history (excluding the message we just added)
             const history = chatState.messages;
-
-            // Get current project context (structural)
-            const projectContext = getProjectContext();
 
             // Get RAG-augmented context based on query
             let augmentedContext = projectContext;
@@ -368,7 +322,7 @@ export function Jodie(): JSX.Element {
                 isWaiting: false,
             }));
         }
-    }, [activeProvider, chatState.messages, getProjectContext, userName]);
+    }, [activeProvider, chatState.messages, state.idlookup.clonedCounter /*this means projectContext changed*/, userName]);
 
     // Open settings - open unified settings modal at Providers section
     const handleOpenSettings = useCallback(() => {
@@ -406,8 +360,8 @@ export function Jodie(): JSX.Element {
                     onOpenSettings={handleOpenSettings}
                     onOpenDocumentation={handleOpenDocumentation}
                     onJjScriptExecuted={handleJjScriptExecuted}
-                    supportsVision={providerSupportsVision}
-                    supportsPDF={providerSupportsPDF}
+                    supportsVision={activeVersion.capabilities.vision}
+                    supportsPDF={activeVersion.capabilities.pdf}
                 />
             ) : (
                 <JodieMinimized

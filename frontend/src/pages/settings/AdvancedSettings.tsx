@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { ConfirmDialog } from '../../components/ConfirmDialog/ConfirmDialog';
 
 type SettingProps = {
-    onDirtyChange: (...a:any)=>any
+    onDirtyChange?: (...a:any)=>any
 }
 
 export function AdvancedSettings(props: SettingProps) {

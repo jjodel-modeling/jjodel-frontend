@@ -22,14 +22,14 @@ export {
     BidirectionalityAnalyzer,
     analyzeBidirectionality,
     isBidirectional,
-} from './analyzer';
+} from "./analyzer/bidirectionality";
 export type {
     BidirectionalityLevel,
     BidirectionalityIssue,
     MappingAnalysis,
     AttributeAnalysis,
     BidirectionalityAnalysis,
-} from './analyzer';
+} from "./analyzer/bidirectionality";
 
 // Editor
 export { JjtlEditor, registerJjtlLanguage, registerJjtlTheme, registerJjtlCompletions, setCompletionContext } from './editor';

@@ -2,10 +2,19 @@
  * Jodie AI Assistant Types
  * Type definitions for the multi-provider AI assistant
  */
-import type {Dictionary} from "../joiner";
+import {Dictionary, GObject, U} from "../joiner";
 import {} from "../joiner";
 import JodieConfigService from "../services/JodieConfig";
 
+// Provider logo imports
+import openaiLogo from '../../assets/icons/providers/openai.svg';
+import anthropicLogo from '../../assets/icons/providers/anthropic.svg';
+import deepseekLogo from '../../assets/icons/providers/deepseek.svg';
+import mistralLogo from '../../assets/icons/providers/mistral.svg';
+import geminiLogo from '../../assets/icons/providers/gemini.svg';
+import groqLogo from '../../assets/icons/providers/groq.svg';
+import kimiLogo from '../../assets/icons/providers/kimi.svg';
+import ollamaLogo from '../../assets/icons/providers/ollama.svg';
 
 export class AIProvider {
     static isValidProvider(provider: any): provider is TAIProvider { return !!companymap[provider as TAIProvider]; }
@@ -49,6 +58,7 @@ const aimap: Dictionary<TAICompany, TAIProvider> = {
     [AICompany.Meta]:      AIProvider.Llama,
     [AICompany.Microsoft]: AIProvider.Copilot,
     [AICompany.Moonshot]:  AIProvider.Kimi,
+    [AICompany.Custom]:    AIProvider.Custom,
 };
 const companymap: Dictionary<TAIProvider, TAICompany> = {} as any;
 for (let k in aimap) { let k0 = k as TAICompany; let v = aimap[k0]; if (typeof v === 'string') companymap[v] = k0; }
@@ -62,6 +72,12 @@ export type TAICompany  = Exclude<Exclude<Exclude<keyof typeof AICompany,  "prot
 // All supported providers in display order
 export const ALL_AI_PROVIDERS: TAIProvider[] = Object.keys(companymap) as any;
 export const ALL_AI_COMPANIES: TAICompany[] = Object.keys(aimap) as any;
+
+export type AIFeature = 'documentation' | 'chat' | 'scriptblock' | 'mappings';
+export interface ProviderPreference {
+    providerId: string;
+    updatedAt: number;
+}
 
 export class AI{
     static GPT: AI;
@@ -79,7 +95,9 @@ export class AI{
     static WINDOW_STATE_KEY = 'jjodel_jodie_window';
     static LEGACY_SETTINGS_KEY = 'jjodie-settings';
     static DOCUMENTATION_STORAGE_PREFIX = 'jjodie_doc_';
-    static activeProvider: TAIProvider;
+    static GLOBAL_DEFAULT_KEY = 'jjodel_default_provider';
+    static STORAGE_PREFIX = 'jjodel_provider_';
+    static STORAGE_GLOBAL_CONFIG: string = 'jjodie-credentials';
     static get(provider: TAIProvider): AI { return AI[provider]; }
     name: TAIProvider;
     company: TAICompany;
@@ -95,21 +113,25 @@ export class AI{
     bgColor!: string;
     keyPlaceholder!: string;
     initial!: string;
+    logo?: string; // img url
+    bi_icon?: string; // bootstrap icon
 
-    constructor(name: TAIProvider, company: TAICompany,
-                keyUrl: string) {
+    constructor(name: TAIProvider, company: TAICompany, keyUrl: string) {
         this.name = name;
         this.company = company;
         this.keyUrl = keyUrl;
         this.storageKey = "jjodie_provider_" + name.toLowerCase();
         (AI as any)[name] = this;
     }
-    addGUIinfo(initial: string, keyPlaceholder: string, color: string, background: string){
+
+    addGUIinfo(initial: string, keyPlaceholder: string, color: string, background: string, logo?: string){
         this.initial = initial;
         this.keyPlaceholder = keyPlaceholder;
         this.color = color;
         this.bgColor = background;
+        this.logo = logo;
     }
+
     add(name: string, label: string, pdf: boolean = false, vision: boolean = false, deprecated: boolean = false): this {
         this.versions[name] = new AIVersion(label, pdf, vision, deprecated);
         // if (!this.version) this.version = name;
@@ -143,6 +165,11 @@ export class AI{
         if (model) return model.capabilities.vision || model.capabilities.pdf;
         else return Object.values(this.versions).some(v=> v.capabilities.vision || v.capabilities.pdf);
     }
+
+    static getActiveVersion(provider?: TAIProvider): AIVersion {
+        if (!provider) provider = JodieConfig.current.activeProvider;
+        return AI[provider].versions[AIConfig.get(provider).model]
+    }
 }
 
 export class AIVersion {
@@ -173,18 +200,24 @@ new AI(AIProvider.Custom,   AICompany.Custom,   '',                             
 AI.Ollama.requiresKey = false;
 
 // template new AI(AIProvider., AICompany., '', '', 'sk-...', );
-AI.GPT     .addGUIinfo('GPT','sk-...',      '#059669', '#D1FAE5',);
-AI.Claude  .addGUIinfo('C',  'sk-ant-...',  '#D97706', '#FEF3C7',);
-AI.Gemini  .addGUIinfo('Gm', 'AIza...',     '#7C3AED', '#EDE9FE',);
-AI.DeepSeek.addGUIinfo('D',  'sk-...',      '#2563EB', '#DBEAFE',);
-AI.Groq    .addGUIinfo('Gq', 'gsk_...',     '#EF4444', '#FEE2E2',);
-AI.Kimi    .addGUIinfo('K',  '?',           '#0891B2', '#CFFAFE',);
-AI.Ollama  .addGUIinfo('O',  '?',           '#475569', '#F1F5F9',);
-AI.Llama   .addGUIinfo('L',  '?',           '#8a6565', '#FEE2E2',);
-AI.Copilot .addGUIinfo('Cp', '?',           '#4ab409', '#FEE2E2',);
+AI.GPT     .addGUIinfo('GPT','sk-...',      '#059669', '#D1FAE5', openaiLogo);
+AI.Claude  .addGUIinfo('C',  'sk-ant-...',  '#D97706', '#FEF3C7', anthropicLogo);
+AI.Mistral .addGUIinfo('M',  '',            '#ff7000', '#EDE9FE', mistralLogo);
+AI.Gemini  .addGUIinfo('Gm', 'AIza...',     '#7C3AED', '#EDE9FE', geminiLogo);
+AI.DeepSeek.addGUIinfo('D',  'sk-...',      '#2563EB', '#DBEAFE', deepseekLogo);
+AI.Groq    .addGUIinfo('Gq', 'gsk_...',     '#EF4444', '#FEE2E2', groqLogo);
+AI.Kimi    .addGUIinfo('K',  '',            '#0891B2', '#CFFAFE', kimiLogo);
+AI.Ollama  .addGUIinfo('O',  '',            '#475569', '#F1F5F9', ollamaLogo);
+AI.Llama   .addGUIinfo('L',  '',            '#8a6565', '#FEE2E2', );
+AI.Copilot .addGUIinfo('Cp', '',            '#4ab409', '#FEE2E2', );
 AI.Custom  .addGUIinfo('-', 'Enter api key','#000',    '#fff',);
 
-
+AI.GPT
+    .add('gpt-4o',                    'GPT-4o',           true,  false)
+    .add('gpt-4o-mini',               'GPT-4o Mini',      true,  false)
+    .add('gpt-4-turbo',               'GPT-4 Turbo',      true,  false)
+    .add('gpt-4',                     'GPT-4',            false, false)
+    .add('gpt-3.5-turbo',             'GPT-3.5 Turbo',    false, false)
 AI.Claude
     .add('claude-sonnet-4-20250514',  'Claude Sonnet 4',  true,  true)
     .add('claude-opus-4-20250514',    'Claude Opus 4',    true,  true)
@@ -192,12 +225,6 @@ AI.Claude
     .add('claude-3-5-sonnet-20241022','Claude 3.5 Sonnet',true,  true)
     .add('claude-3-opus-20240229',    'Claude 3 Opus',    true,  true)
     .add('claude-3-haiku-20240307',   'Claude 3 Haiku',   true,  true)
-AI.GPT
-    .add('gpt-4o',                    'GPT-4o',           true,  false)
-    .add('gpt-4o-mini',               'GPT-4o Mini',      true,  false)
-    .add('gpt-4-turbo',               'GPT-4 Turbo',      true,  false)
-    .add('gpt-4',                     'GPT-4',            false, false)
-    .add('gpt-3.5-turbo',             'GPT-3.5 Turbo',    false, false)
 AI.DeepSeek
     .add('deepseek-chat',             'DeepSeek Chat',    false, false)
     .add('deepseek-coder',            'DeepSeek Coder',   false, false)
@@ -243,8 +270,8 @@ AI.Ollama
 AI.Claude.proxy = '/v1/anthropic/messages';
 AI.Gemini.proxy = '/v1/gemini';
 
-AI.Claude.endpoint = 'https://api.anthropic.com/v1/messages';
 AI.GPT.endpoint = 'https://api.openai.com/v1/chat/completions';
+AI.Claude.endpoint = 'https://api.anthropic.com/v1/messages';
 AI.DeepSeek.endpoint = 'https://api.deepseek.com/v1/chat/completions';
 AI.Gemini.endpoint = 'https://generativelanguage.googleapis.com/v1beta/models';
 AI.Mistral.endpoint = 'https://api.mistral.ai/v1/chat/completions';
@@ -252,22 +279,40 @@ AI.Groq.endpoint = 'https://api.groq.com/openai/v1/chat/completions';
 AI.Kimi.endpoint = 'https://api.moonshot.cn/v1/chat/completions';
 AI.Ollama.endpoint = 'http://localhost:11434/v1/chat/completions'; // Default local, configurable via baseUrl
 
+AI.GPT.bi_icon = 'chat-dots';
+AI.Claude.bi_icon = 'robot';
+AI.DeepSeek.bi_icon = '';
+AI.Gemini.bi_icon = 'google';
+AI.Mistral.bi_icon = '';
+AI.Groq.bi_icon = '';
+AI.Kimi.bi_icon = '';
+AI.Ollama.bi_icon = '';
 
+type TAIVersion = string;
 export class AIConfig{
-    static map: Dictionary<TAIProvider, ProviderConfig> = {} as any;
+    private static map: Dictionary<TAIProvider, ProviderConfig> = {} as any;
     static default: AIConfig;
     name: TAIProvider;
-    model: string;
+    model: TAIVersion;
     enabled: boolean;
     apiKey: string = '';
-    baseUrl: string;
+    baseUrl: string; // equivalent to AI.endpoint? redundant?
     lastTested?: number;
     messages: ChatMessage[] = [];
     isOpen: boolean = false;
     isMinimized: boolean = false;
     isWaiting: boolean = false;
     hasUnread: boolean = false;
-    constructor(name: TAIProvider, model: string, url?:string) {
+    lastUsed?: number;
+
+    // loads config if it was saved, or create a new config.
+    static new(name: TAIProvider, model: TAIVersion, url?:string){
+        let ret: AIConfig = AIConfig.get(name);
+        if (ret) return;
+        else return new AIConfig(name, model, url);
+    }
+
+    private constructor(name: TAIProvider, model: TAIVersion, url?:string) {
         this.name = name;
         this.model = model;
         this.baseUrl = url || '';
@@ -277,14 +322,13 @@ export class AIConfig{
 
     static get(provider: TAIProvider): AIConfig {
         let config: AIConfig | null;
-        let llm = AI[provider];
         try {
+            let llm = AI[provider];
             const json = localStorage.getItem(llm.storageKey);
             if (!json) config = null;
             else config = JSON.parse(json);
-        } catch {
-            config = null;
-        }
+            config = U.toInstanceOf(config, AIConfig as any);
+        } catch { config = null; }
         if (config) {
             AIConfig.map[provider] = config;
             // JodieConfig.current.providers[provider] = config;
@@ -292,12 +336,43 @@ export class AIConfig{
         }
         return AIConfig.map[provider];
     }
-    static set(provider: TAIProvider, config: Partial<AIConfig>): void {
+    static set(provider: TAIProvider, config: Partial<AIConfig>): void { AIConfig.get(provider).update(config); }
+
+    static getPreferred(feature: AIFeature): TAIProvider {
+        try {
+            // 1. Check per-feature override
+            const stored = localStorage.getItem(`${AI.STORAGE_PREFIX}${feature}`);
+            if (stored) {
+                const pref: ProviderPreference = JSON.parse(stored);
+                return pref.providerId as TAIProvider;
+            }
+        } catch (e) {
+            console.warn(`Failed to read provider preference for ${feature}:`, e);
+        }
+
+        // 2. default
+        return JodieConfig.default.activeProvider;
+    }
+
+    static setPreferred(feature: AIFeature, providerId: TAIProvider): void {
+        const pref: ProviderPreference = {providerId, updatedAt: Date.now()};
+        localStorage.setItem(`${AI.STORAGE_PREFIX}${feature}`, JSON.stringify(pref));
+    }
+
+    /**
+     * Resetta la preferenza al default
+     */
+    static resetPreference(feature: AIFeature): void {
+        localStorage.removeItem(`${AI.STORAGE_PREFIX}${feature}`);
+    }
+
+    update(config: Partial<AIConfig>): void{
+        let provider = this.name;
         try {
             const existing = AIConfig.get(provider);
-            const updated: AIConfig = {...existing, ...config};
-
-            localStorage.setItem(AI[provider].storageKey, JSON.stringify(updated));
+            const updated: AIConfig = {...existing, ...config} as AIConfig;
+            localStorage.setItem(AI[this.name].storageKey, JSON.stringify(updated));
+            AIConfig.map[this.name] = updated;
 
             // Dispatch event to notify other components
             window.dispatchEvent(new CustomEvent('ai-provider-changed', {
@@ -305,19 +380,48 @@ export class AIConfig{
             }));
         } catch (error) {
             console.error(`Failed to save provider config for ${provider}:`, error);
-        }
+        }}
+    save(cascadeGlobal: boolean = true){
+        localStorage.setItem(AI[this.name].storageKey, JSON.stringify(this));
+        // Dispatch event to notify other components
+        window.dispatchEvent(new CustomEvent('ai-provider-changed', {
+            detail: { provider: this.name, config: this }
+        }));
+        if (cascadeGlobal) JodieConfig.current.save(false);
+        // NB: no need to update JodieConfig.current too bcs this structure is nested in it.
     }
 
+    requiresKey() { return AI[this.name].requiresKey; }
+    hasValidKey() { return this.apiKey || !this.requiresKey(); }
+
+    // For Ollama: show success if enabled + lastTested (no API key required)
+    // For others: show success if apiKey + enabled + lastTested
+    wasSuccessfullyTested() { return this.hasValidKey() && this.enabled && this.lastTested; }
+
+    getStatus() {
+        const llm = AI[this.name];
+
+        // NB: when config is changed, lastTested is erased too in ProviderConfigModal
+        if (this.lastTested) {
+            if (this.enabled) return { text: 'Connected', class: 'connected' };
+            else return { text: 'Error', class: 'error' };
+        }
+
+        if (llm.requiresKey && !this.apiKey) return { text: 'Not configured', class: 'not-configured' };
+
+        // Has API key but not tested = Ready to test
+        return { text: 'Ready', class: 'ready' };
+    };
 }
 
-new AIConfig(AIProvider.Claude, 'claude-sonnet-4-20250514');
+/*new AIConfig(AIProvider.Claude, 'claude-sonnet-4-20250514');
 new AIConfig(AIProvider.GPT, 'gpt-4o');
 new AIConfig(AIProvider.DeepSeek, 'deepseek-chat');
 new AIConfig(AIProvider.Gemini, 'gemini-2.0-flash-exp');
 new AIConfig(AIProvider.Mistral, 'mistral-large-latest');
 new AIConfig(AIProvider.Groq, 'llama-3.3-70b-versatile');
 new AIConfig(AIProvider.Kimi, 'moonshot-v1-8k');
-new AIConfig(AIProvider.Ollama, 'llama3.2', 'http://localhost:11434');
+new AIConfig(AIProvider.Ollama, 'llama3.2', 'http://localhost:11434');*/
 // NB: Default Ollama base URL (can be overridden in provider config)
 
 
@@ -325,10 +429,67 @@ export type ProviderConfig = AIConfig;
 export class JodieConfig {
     static default: JodieConfig = new JodieConfig();
     static current: JodieConfig = JodieConfigService.load();
-    providers: Dictionary<TAIProvider, ProviderConfig> = AIConfig.map;
+    providers: Dictionary<TAIProvider, ProviderConfig>;
     activeProvider: TAIProvider = AIProvider.Claude;
     position?: { x: number; y: number };
     size?: { width: number; height: number };
+    appVersion: string =  '1.0.0';
+
+    constructor() {
+        AIConfig.map = {} as any;
+        for (let name of ALL_AI_PROVIDERS) {
+            let llm = AI[name];
+            AIConfig.new(name, Object.keys(llm.versions)[0], llm.requiresKey ? llm.endpoint : undefined);
+        }
+        this.providers = AIConfig.map;
+    }
+
+    public save(cascadeIndividuals: boolean = true): this{
+        try {
+            const json = JSON.stringify(this);
+            let name: TAIProvider;
+            localStorage.setItem(AI.STORAGE_GLOBAL_CONFIG, json);
+            if (cascadeIndividuals) for (name in this.providers) {
+                this.providers[name]?.save(false);
+            }
+            if (this.activeProvider) localStorage.setItem(AI.GLOBAL_DEFAULT_KEY, this.activeProvider);
+            else localStorage.removeItem(AI.GLOBAL_DEFAULT_KEY);
+
+            window.dispatchEvent(new CustomEvent('ai-provider-changed', {
+                detail: { type: 'global-default', provider:this.activeProvider, config: AIConfig.get(this.activeProvider) }
+            }));
+
+            // todo: is it really needed? individual configs are already saved in split format
+            // along with windows size etc.
+            console.log('[CredentialsService] Store saved successfully');
+        } catch (error) {
+            console.error('[CredentialsService] Failed to save store:', error);
+            throw new Error('Failed to save credentials');
+        }
+        return this;
+    }
+    static load(json: string | GObject): JodieConfig {
+        let data = (typeof json === 'string' ? JSON.parse(json) : json) as JodieConfig;
+        // Validate structure
+        if (!data || !Array.isArray(data.providers)) { throw new Error('Invalid credentials format'); }
+
+        data = U.toInstanceOf(data, JodieConfig);
+        AIConfig.map = data.providers;
+        let k: TAIProvider;
+        for (k in data.providers) {
+            data.providers[k] = U.toInstanceOf(data.providers[k], AIConfig as any);
+        }
+        JodieConfig.current = data;
+        return data.save(true);
+    }
+
+    static setGlobalDefault(providerId?: TAIProvider | null): void {
+        JodieConfig.default.activeProvider = providerId || AI.Claude.name;
+        JodieConfig.default.save();
+    }
+
+    export(): string { return JSON.stringify(this, null, 2); }
+
 }
 
 /**
@@ -416,6 +577,7 @@ export function supportsPDF(provider: TAIProvider, model?: string): boolean {
 export function supportsAttachments(provider: TAIProvider, model?: string): boolean {
     return supportsVision(provider, model) || supportsPDF(provider, model);
 }
+*/
 
 export interface ChatState {
     messages: ChatMessage[];
@@ -424,7 +586,6 @@ export interface ChatState {
     isWaiting: boolean;
     hasUnread: boolean;
 }
-*/
 // ============================================
 // DOCUMENTATION TYPES
 // ============================================

@@ -211,15 +211,6 @@ class DockManager {
         });
 
         try {
-            // Check if tab already exists
-            const existingTab = DockManager.dock.find(tabId);
-            if (existingTab) {
-                console.log('[DockManager] Updating and activating existing transformation tab');
-                // CRITICAL: Update tab content with fresh callbacks to avoid stale closures
-                DockManager.dock.updateTab(tabId, { content: tabContent }, true);
-                return;
-            }
-
             // Create new JjTL Development Environment tab
             const tab: TabData = {
                 id: tabId,
@@ -238,6 +229,15 @@ class DockManager {
                 closable: true,
                 content: tabContent
             };
+
+            // Check if tab already exists
+            const existingTab = DockManager.dock.find(tabId);
+            if (existingTab) {
+                console.log('[DockManager] Updating and activating existing transformation tab');
+                // CRITICAL: Update tab content with fresh callbacks to avoid stale closures
+                DockManager.dock.updateTab(tabId, { title: tab.title, content: tabContent }, true);
+                return;
+            }
 
             const layout = DockManager.dock.getLayout();
             if (layout?.dockbox?.children?.[0]) {

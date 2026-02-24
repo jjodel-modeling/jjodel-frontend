@@ -1524,12 +1524,17 @@ export class U {
         // nb: mind that typeof [] === 'object'
         return typeof v === 'object'; }
 
-    static objectFromArray<V extends any>(arr: V[], getKey: keyof V|((entry:V) => string)): Dictionary<string, V>{
+    static objectFromArray<V extends any>(arr: V[], getKey?: keyof V|((entry:V) => string)): Dictionary<string, V>{
         if (!arr || !Array.isArray(arr)) return {};
         // @ts-ignore
-        return arr.reduce((acc, val) => {
+        return arr.reduce((acc, val, i) => {
             // @ts-ignore
-            let key = typeof getKey === 'string' ? val[getKey] : getKey(val);
+            let key: string | number = null as any;
+            if (!getKey) key = val as any;
+            else if (typeof getKey === 'string') key = (val || {} as any)[getKey] as any;
+            else if (typeof getKey === 'function') key = getKey(val);
+            // else key = i;
+            if (key === null || key === undefined) return acc; // skip element
             // @ts-ignore
             acc[key] = val;
             return acc;
@@ -1651,11 +1656,12 @@ export class U {
     }
 
 
-    static download(filename: string = 'nameless.txt', text: string = '', debug: boolean = true): void {
+
+    static download(filename: string = 'nameless.txt', text: string = '', mimeType: string = 'text/plain', debug: boolean = true): void {
         if (!text) return;
         filename = U.toFileName(filename);
         const htmlA: HTMLAnchorElement = document.createElement('a');
-        const blob: Blob = new Blob([text], {type: 'text/plain', endings: 'native'});
+        const blob: Blob = new Blob([text], {type: mimeType, endings: 'native'});
         const blobUrl: string = URL.createObjectURL(blob);
         htmlA.style.display = 'none';
         htmlA.href = blobUrl;
@@ -2804,6 +2810,15 @@ export class U {
         setTimeout(trigger, 100+150);
         setTimeout(trigger, 100+150+300/1.4);  // ...prints again!
         */
+    }
+
+
+    public static toInstanceOf<T extends Constructor>(obj: GObject | null | undefined, Constructor: T): InstanceType<T> {
+        if (!obj || typeof obj !== 'object') return obj as any;
+        let ret: InstanceType<T> = new Constructor();
+        // @ts-ignore
+        for (let k in obj) { ret[k] = obj[k]; }
+        return ret;
     }
 
     public static camelCase(s: string): string {

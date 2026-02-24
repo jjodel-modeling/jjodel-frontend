@@ -8,41 +8,13 @@ import {
     ProviderConfig,
     AIProvider,
     TAIProvider,
-    DEFAULT_JODIE_CONFIG,
-    PROVIDER_MODELS,
     ALL_AI_PROVIDERS, AI, AIConfig
 } from '../types/jodie';
-
-
-// Map from Settings page provider names to Jodie provider names
-const SETTINGS_TO_JODIE_PROVIDER: Record<string, TAIProvider | null> = {
-    'anthropic': AIProvider.Claude,
-    'openai': AIProvider.GPT,
-    'google': AIProvider.Gemini,
-    'deepseek': AIProvider.DeepSeek,
-    'mistral': AIProvider.Mistral,
-    'groq': AIProvider.Groq,
-    'ollama': AIProvider.Ollama,
-    'kimi': AIProvider.Kimi,
-    'custom': null,
-};
-
-type ProviderStorageFormat = AIConfig
 
 interface WindowState {
     position?: { x: number; y: number };
     size?: { width: number; height: number };
 }
-
-interface LegacySettingsFormat {
-    provider: string;
-    model: string;
-    apiKey: string;
-    enabled: boolean;
-    autoSuggestOnErrors?: boolean;
-    baseUrl?: string;
-}
-
 
 export class JodieConfigService {
     /**
@@ -141,7 +113,7 @@ export class JodieConfigService {
      * Save configuration for a specific provider
      */
     static saveProviderConfig(provider: TAIProvider, config: Partial<AIConfig>): void {
-        AIConfig.set(provider, config);
+        AIConfig.get(provider).update(config);
     }
 
     /**
@@ -199,26 +171,25 @@ export class JodieConfigService {
      * Get the currently active provider
      */
     static getActiveProvider(): TAIProvider {
-        if (AI.activeProvider) return AI.activeProvider;
-        const saved = localStorage.getItem(AI.ACTIVE_PROVIDER_KEY);
+        if (JodieConfig.current.activeProvider) return JodieConfig.current.activeProvider;
+        /*const saved = localStorage.getItem(AI.ACTIVE_PROVIDER_KEY);
         if (saved && ALL_AI_PROVIDERS.includes(saved as TAIProvider)) {
             // Verify the saved provider is still enabled
             if (this.isProviderEnabled(saved as TAIProvider))
-                return AI.activeProvider = saved as TAIProvider;
+                return JodieConfig.current.activeProvider = saved as TAIProvider;
         }
 
-        // Fall back to first enabled provider
-        const enabled = this.getEnabledProviders();
-        return AI.activeProvider = enabled[0] || AIProvider.Claude;
+        // Fall back to first enabled provider */
+        return JodieConfig.current.activeProvider = this.getEnabledProviders()[0] || AIProvider.Claude;
     }
 
     /**
      * Set the active provider
      */
     static setActiveProvider(provider: TAIProvider): void {
+        JodieConfig.current.activeProvider = provider;
+        JodieConfig.current.save();
         localStorage.setItem(AI.ACTIVE_PROVIDER_KEY, provider);
-        AI.activeProvider = provider;
-
         // Dispatch event to notify other components
         window.dispatchEvent(new CustomEvent('ai-settings-changed', {
             detail: { activeProvider: provider }
@@ -251,10 +222,9 @@ export class JodieConfigService {
      */
     static updatePosition(position: { x: number; y: number }): void {
         try {
-            const windowStateJson = localStorage.getItem(WINDOW_STATE_KEY);
-            const windowState: WindowState = windowStateJson ? JSON.parse(windowStateJson) : {};
-            windowState.position = position;
-            localStorage.setItem(WINDOW_STATE_KEY, JSON.stringify(windowState));
+            let curr = JodieConfig.current;
+            localStorage.setItem(AI.WINDOW_STATE_KEY, JSON.stringify({position, size: curr.size}));
+            curr.position = position;
         } catch (error) {
             console.error('Failed to save window position:', error);
         }
@@ -265,10 +235,9 @@ export class JodieConfigService {
      */
     static updateSize(size: { width: number; height: number }): void {
         try {
-            const windowStateJson = localStorage.getItem(WINDOW_STATE_KEY);
-            const windowState: WindowState = windowStateJson ? JSON.parse(windowStateJson) : {};
-            windowState.size = size;
-            localStorage.setItem(WINDOW_STATE_KEY, JSON.stringify(windowState));
+            let curr = JodieConfig.current;
+            localStorage.setItem(AI.WINDOW_STATE_KEY, JSON.stringify({position: curr.position, size}));
+            JodieConfig.current.size = size;
         } catch (error) {
             console.error('Failed to save window size:', error);
         }
@@ -278,35 +247,27 @@ export class JodieConfigService {
      * Reset window state to defaults
      */
     static resetWindowState(): void {
-        localStorage.removeItem(WINDOW_STATE_KEY);
+        localStorage.removeItem(AI.WINDOW_STATE_KEY);
+        let neww = new JodieConfig();
+        JodieConfig.current.size = neww.size;
+        JodieConfig.current.position = neww.position;
     }
 
     /**
      * Clear all provider configurations
      */
     static clearAllProviders(): void {
-        for (const provider of ALL_AI_PROVIDERS) {
-            localStorage.removeItem(STORAGE_KEYS[provider]);
-        }
-        localStorage.removeItem(ACTIVE_PROVIDER_KEY);
+        for (const provider of ALL_AI_PROVIDERS) localStorage.removeItem(AI[provider].storageKey);
+        localStorage.removeItem(AI.ACTIVE_PROVIDER_KEY);
+        localStorage.removeItem(AI.STORAGE_GLOBAL_CONFIG);
+        JodieConfig.current = new JodieConfig();
     }
 
     /**
      * Export all configurations as JSON (for backup)
      */
     static exportConfig(): string {
-        const config: Record<string, any> = {};
-
-        for (const provider of ALL_AI_PROVIDERS) {
-            const providerConfig = this.getProviderConfig(provider);
-            if (providerConfig) {
-                config[provider] = providerConfig;
-            }
-        }
-
-        config.activeProvider = this.getActiveProvider();
-
-        return JSON.stringify(config, null, 2);
+        return JSON.stringify(JodieConfig.current, null, 2);
     }
 
     /**
@@ -314,25 +275,24 @@ export class JodieConfigService {
      */
     static importConfig(json: string): boolean {
         try {
-            const config = JSON.parse(json);
-
+            const config: JodieConfig = JSON.parse(json);
+            JodieConfig.current = new JodieConfig();
             for (const provider of ALL_AI_PROVIDERS) {
-                if (config[provider]) {
-                    this.saveProviderConfig(provider, config[provider]);
+                if (config.providers[provider]) {
+                    this.saveProviderConfig(provider, config.providers[provider]);
                 }
             }
 
             if (config.activeProvider && ALL_AI_PROVIDERS.includes(config.activeProvider)) {
                 this.setActiveProvider(config.activeProvider);
             }
-
             return true;
         } catch (error) {
             console.error('Failed to import config:', error);
             return false;
         }
     }
-
+/*
     static setProvider(service: string, param2: { apiKey: string; model: string, baseUrl?: string }) {
         console.error('JodieConfigService.setProvider: todo');
     }
@@ -346,10 +306,10 @@ export class JodieConfigService {
     }
     static reset(): any {
         console.error('JodieConfigService.reset: todo');
-    }
+    }*/
 }
 
 // Initialize on module load
-JodieConfigService.initialize();
+// JodieConfigService.initialize();
 
 export default JodieConfigService;

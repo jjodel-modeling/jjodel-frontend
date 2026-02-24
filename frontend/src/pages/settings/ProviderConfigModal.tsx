@@ -14,8 +14,7 @@ interface ProviderConfigModalProps {
     provider: TAIProvider;
     isOpen: boolean;
     onClose: () => void;
-    onSave: (provider: TAIProvider, config: AIConfig) => void;
-    initialConfig: AIConfig;
+    onSave?: (provider: TAIProvider, config: AIConfig) => void;
 }
 
 type TestStatus = 'idle' | 'testing' | 'success' | 'error';
@@ -26,10 +25,10 @@ export const ProviderConfigModal: React.FC<ProviderConfigModalProps> = ({
     onClose,
     onSave,
 }) => {
-    let initialConfig = AIConfig.map[provider];
-    const [apiKey, setApiKey] = useState(initialConfig.apiKey);
-    const [model, setModel] = useState(initialConfig.model);
-    const [baseUrl, setBaseUrl] = useState(initialConfig.baseUrl);
+    let config = AIConfig.get(provider);
+    const [apiKey, setApiKey] = useState(config.apiKey);
+    const [model, setModel] = useState(config.model);
+    const [baseUrl, setBaseUrl] = useState(config.baseUrl);
     const [showKey, setShowKey] = useState(false);
     const [testStatus, setTestStatus] = useState<TestStatus>('idle');
     const [testMessage, setTestMessage] = useState('');
@@ -41,25 +40,24 @@ export const ProviderConfigModal: React.FC<ProviderConfigModalProps> = ({
     // Reset state when modal opens with new provider
     useEffect(() => {
         if (isOpen) {
-            setApiKey(initialConfig.apiKey);
-            setModel(initialConfig.model);
-            setBaseUrl(initialConfig.baseUrl);
+            setApiKey(config.apiKey);
+            setModel(config.model);
+            setBaseUrl(config.baseUrl);
             setShowKey(false);
-            // For Ollama: show success if enabled + lastTested (no API key required)
-            // For others: show success if apiKey + enabled + lastTested
-            const wasSuccessfullyTested = (initialConfig.apiKey || !requiresApiKey) && initialConfig.enabled && initialConfig.lastTested;
-            setTestStatus(wasSuccessfullyTested ? 'success' : 'idle');
+            setTestStatus(config.wasSuccessfullyTested() ? 'success' : 'idle');
             setTestMessage('');
         }
-    }, [isOpen, provider, initialConfig]);
+    }, [isOpen, provider, config]);
 
     // Reset test status when config changes
     useEffect(() => {
-        const changed = apiKey !== initialConfig.apiKey || model !== initialConfig.model || baseUrl !== (initialConfig.baseUrl || '');
+        const changed = apiKey !== config.apiKey || model !== config.model || baseUrl !== (config.baseUrl || '');
         if (changed) {
             setTestStatus('idle');
+            config.lastTested = undefined;
+            config.save();
         }
-    }, [apiKey, model, baseUrl, initialConfig]);
+    }, [apiKey, model, baseUrl, config]);
 
     // Test connection
     const handleTest = useCallback(async () => {
@@ -75,39 +73,36 @@ export const ProviderConfigModal: React.FC<ProviderConfigModalProps> = ({
 
         try {
             // Temporarily save config for testing
-            const configToSave: AIConfig = {...initialConfig,
-                apiKey,
-                model,
-                enabled: true,
-            };
-            if (!requiresApiKey) { configToSave.baseUrl = baseUrl; }
-            JodieConfigService.saveProviderConfig(provider, configToSave);
+            config.enabled = true;
+            if (!requiresApiKey) config.baseUrl = baseUrl;
 
             const result = await AIProviderService.testConnection(provider);
 
             if (result.success) {
                 setTestStatus('success');
                 setTestMessage('Connected successfully!');
-                JodieConfigService.markProviderTested(provider);
+                config.lastTested = Date.now();
+                config.enabled = true;
+                config.save();
             } else {
                 setTestStatus('error');
                 setTestMessage(result.error || 'Connection failed');
                 // Revert enabled state on failure
-                JodieConfigService.saveProviderConfig(provider, {
-                    ...configToSave,
-                    enabled: false,
-                });
+                config.enabled = false;
+                config.save();
             }
         } catch (error: any) {
+            config.enabled = false;
+            config.save();
             setTestStatus('error');
             setTestMessage(error.message || 'Connection failed');
         }
     }, [apiKey, model, baseUrl, provider, requiresApiKey]);
 
-    // Save and close
+    /*/ Save and close
     const handleSave = useCallback(() => {
         const enabled = testStatus === 'success';
-        const config: AIConfig = {...initialConfig,
+        const config: AIConfig = {...config,
             apiKey,
             model,
             enabled,
@@ -115,18 +110,16 @@ export const ProviderConfigModal: React.FC<ProviderConfigModalProps> = ({
         if (!requiresApiKey) { config.baseUrl = baseUrl; }
         onSave(provider, config);
         onClose();
-    }, [apiKey, model, baseUrl, testStatus, provider, onSave, onClose]);
+    }, [apiKey, model, baseUrl, testStatus, provider, onSave, onClose]);*/
 
     // Handle escape key
     useEffect(() => {
         const handleEscape = (e: KeyboardEvent) => {
-            if (e.key === 'Escape' && isOpen) {
-                onClose();
-            }
+            if (e.key === 'Escape' && isOpen) { onClose(); }
         };
         document.addEventListener('keydown', handleEscape);
         return () => document.removeEventListener('keydown', handleEscape);
-    }, [isOpen, onClose]);
+    }, [isOpen]);
 
     if (!isOpen) return null;
 
@@ -141,7 +134,6 @@ export const ProviderConfigModal: React.FC<ProviderConfigModalProps> = ({
         if (testStatus === 'error') {
             return { text: testMessage || 'Error', class: 'error', dot: true };
         }
-        // Ollama doesn't require API key
         if (requiresApiKey && !apiKey) {
             return { text: 'Not configured', class: 'not-configured', dot: false };
         }
@@ -178,7 +170,10 @@ export const ProviderConfigModal: React.FC<ProviderConfigModalProps> = ({
                             <input
                                 type="text"
                                 value={baseUrl}
-                                onChange={(e) => setBaseUrl(e.target.value)}
+                                onChange={(e) => {
+                                    setBaseUrl(config.baseUrl = e.target.value);
+                                    config.save();
+                                }}
                                 placeholder="http://localhost:11434"
                                 className="modal-input"
                             />
@@ -192,7 +187,10 @@ export const ProviderConfigModal: React.FC<ProviderConfigModalProps> = ({
                             <input
                                 type={showKey ? 'text' : 'password'}
                                 value={apiKey}
-                                onChange={(e) => setApiKey(e.target.value)}
+                                onChange={(e) => {
+                                    setApiKey(config.apiKey = e.target.value);
+                                    config.save();
+                                }}
                                 placeholder={requiresApiKey ? `Enter your ${llm.name} API key` : 'Optional - leave empty for local'}
                                 className="modal-input"
                                 autoComplete="off"
@@ -213,7 +211,10 @@ export const ProviderConfigModal: React.FC<ProviderConfigModalProps> = ({
                         <label>Model</label>
                         <select
                             value={model}
-                            onChange={(e) => setModel(e.target.value)}
+                            onChange={(e) => {
+                                setModel(config.model = e.target.value);
+                                config.save();
+                            }}
                             className="modal-select"
                         >
                             {Object.entries(llm.versions).map(([k, v]) => (
@@ -234,15 +235,9 @@ export const ProviderConfigModal: React.FC<ProviderConfigModalProps> = ({
                             disabled={(requiresApiKey && !apiKey) || testStatus === 'testing'}
                         >
                             {testStatus === 'testing' ? (
-                                <>
-                                    <i className="bi bi-arrow-repeat spinning" />
-                                    Testing...
-                                </>
+                                <><i className="bi bi-arrow-repeat spinning" />Testing...</>
                             ) : (
-                                <>
-                                    <i className="bi bi-plug" />
-                                    Test Connection
-                                </>
+                                <><i className="bi bi-plug" />Test Connection</>
                             )}
                         </button>
                     </div>
@@ -264,12 +259,12 @@ export const ProviderConfigModal: React.FC<ProviderConfigModalProps> = ({
                     {!llm.keyUrl && <span className="ollama-hint">Make sure {llm.name} is running locally</span>}
 
                     <div className="modal-actions">
-                        <button className="modal-btn-secondary" onClick={onClose}>Cancel</button>
-                        <button
+                        <button className="modal-btn-secondary" onClick={onClose}>Close</button>
+                        {/*<button
                             className="modal-btn-primary"
                             onClick={handleSave}
                             disabled={requiresApiKey && !apiKey}
-                        >Save</button>
+                        >Save</button>*/}
                     </div>
                 </div>
             </div>

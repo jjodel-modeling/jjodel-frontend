@@ -2,8 +2,8 @@
  * AI Assistant Settings
  * Slate minimal design with proper test connection status
  */
-import React, { useState, useEffect } from 'react';
-import { TAIProvider, AIProvider, AI, ALL_AI_PROVIDERS } from '../../types/jodie';
+import React, { useState, useEffect, useCallback } from 'react';
+import {TAIProvider, AIProvider, AI, ALL_AI_PROVIDERS, AIConfig} from '../../types/jodie';
 import { JodieConfigService } from '../../services/JodieConfig';
 import { AIProviderService } from '../../services/AIProviderService';
 import type {Dictionary} from "../../joiner";
@@ -31,111 +31,58 @@ export interface AISettings {
     baseUrl?: string;
 }
 
-type ProvidersState = Dictionary<TAIProvider, ProviderState>;
-
 export function AIAssistantSettings() {
+    const [refresh, setRefresh] = useState(0);
+    // Modal state
+    const [selectedProvider, setSelectedProvider] = useState<TAIProvider | null>(null);
+
     // State for all providers
-    const [providers, setProviders] = useState<ProvidersState>(() => {
+    /*const [providers, setProviders] = useState<ProvidersState>(() => {
         const initial: Partial<ProvidersState> = {};
         for (const provider of ALL_AI_PROVIDERS) {
             const config = JodieConfigService.getProviderConfig(provider);
             initial[provider] = {
                 apiKey: config?.apiKey || '',
-                model: config?.model || PROVIDER_MODELS[provider]?.[0]?.value || '',
+                model: config?.model || Object.keys(AI[provider].versions)[0] || '';
                 enabled: config?.enabled || false,
                 lastTested: config?.lastTested,
                 baseUrl: config?.baseUrl,
             };
         }
         return initial as ProvidersState;
-    });
-
-    // Modal state
-    const [selectedProvider, setSelectedProvider] = useState<AIProvider | null>(null);
+    });*/
 
     // Load saved settings on mount
     useEffect(() => {
-        const loadSettings = () => {
-            const updated: Partial<ProvidersState> = {};
-            for (const provider of ALL_AI_PROVIDERS) {
-                const config = JodieConfigService.getProviderConfig(provider);
-                updated[provider] = {
-                    apiKey: config?.apiKey || '',
-                    model: config?.model || PROVIDER_MODELS[provider]?.[0]?.value || '',
-                    enabled: config?.enabled || false,
-                    lastTested: config?.lastTested,
-                    baseUrl: config?.baseUrl,
-                };
-            }
-            setProviders(updated as ProvidersState);
-        };
-
-        loadSettings();
-
         // Listen for external changes
-        const handleChange = () => loadSettings();
+        const handleChange = () => setRefresh(refresh +1);
         window.addEventListener('ai-provider-changed', handleChange);
         return () => window.removeEventListener('ai-provider-changed', handleChange);
     }, []);
 
-    // Open modal for a provider
-    const openModal = useCallback((provider: AIProvider) => {
-        setSelectedProvider(provider);
-    }, []);
-
-    // Close modal
-    const closeModal = useCallback(() => {
-        setSelectedProvider(null);
-    }, []);
-
-    // Save provider config from modal
-    const handleSaveProvider = useCallback((
-        provider: TAIProvider,
-        config: { apiKey: string; model: string; enabled: boolean; baseUrl?: string }
-    ) => {
-        // Update local state - preserve lastTested
-        setProviders(prev => ({
-            ...prev,
-            [provider]: {
-                ...config,
-                lastTested: prev[provider]?.lastTested,
-            },
-        }));
-
-        // Persist to storage
-        JodieConfigService.saveProviderConfig(provider, config);
-    }, []);
-
     // Get status for display - "Connected" only after successful test
     const getProviderStatus = (providerName: TAIProvider) => {
-        const state = providers[providerName];
+        const llm = AI[providerName];
+        const state = AIConfig.get(providerName);
         // Ollama doesn't require API key - check if it's been tested
-        if (providerName === 'ollama') {
-            if (state.enabled && state.lastTested) {
-                return { text: 'Connected', class: 'connected' };
-            }
+        if (!llm.requiresKey) {
+            if (state.enabled && state.lastTested) return { text: 'Connected', class: 'connected' };
             return { text: 'Ready', class: 'ready' };
         }
-
         // Other providers: No API key = not configured
-        if (!state.apiKey) {
-            return { text: 'Not configured', class: 'not-configured' };
-        }
+        else if (!state.apiKey) return { text: 'Not configured', class: 'not-configured' };
 
         // Has API key + enabled + has been tested = Connected
-        if (state.enabled && state.lastTested) {
-            return { text: 'Connected', class: 'connected' };
-        }
+        if (state.enabled && state.lastTested) return { text: 'Connected', class: 'connected' };
 
         // Has API key but not tested = Ready to test
         return { text: 'Ready', class: 'ready' };
     };
+
     // Get model label for display
-    const getModelLabel = (provider: AIProvider) => {
-        const state = providers[provider];
-        const models = PROVIDER_MODELS[provider];
-        const found = models.find(m => m.value === state.model);
-        return found?.label || state.model;
+    const getModelLabel = (provider: TAIProvider) => {
+        const config = AIConfig.get(provider);
+        return AI[provider].versions[config.model]?.label || config.model;
     };
 
     return (
@@ -147,40 +94,28 @@ export function AIAssistantSettings() {
 
             <div className="providers-list">
                 {ALL_AI_PROVIDERS.map(provider => {
-                    const state = providers[provider];
-                    const meta = PROVIDER_METADATA[provider];
-                    // const info = PROVIDER_INFO[provider];
-                    const models = PROVIDER_MODELS[provider];
-                    const info = state; // PROVIDER_INFO_MINIMAL[provider]
-                    const status = getProviderStatus(provider);
+                    const config = AIConfig.get(provider);
+                    const llm = AI[provider];
+                    const status = config.getStatus();
                     const modelLabel = getModelLabel(provider);
-
-                    // Determine status badge state
-                    const getBadgeStatus = () => {
-                        if (!state.apiKey) return 'not-configured';
-                        if (state.testStatus === 'error') return 'error';
-                        if (state.enabled) return 'enabled';
-                        return 'disabled';
-                    };
-                    const badgeStatus = getBadgeStatus();
 
                     return (
                         <div
                             key={provider}
                             className={`provider-card-slate ${status.class}`}
-                            onClick={() => openModal(provider)}
+                            onClick={() => setSelectedProvider(provider)}
                             role="button"
                             tabIndex={0}
-                            onKeyDown={(e) => e.key === 'Enter' && openModal(provider)}
+                            onKeyDown={(e) => e.key === 'Enter' && setSelectedProvider(provider)}
                         >
                             {/* Slate minimal icon with initial letter */}
                             <div className="provider-initial">
-                                {info.initial}
+                                {llm.initial}
                             </div>
 
                             {/* Provider info */}
                             <div className="provider-info">
-                                <span className="provider-name">{info.name}</span>
+                                <span className="provider-name">{llm.name}</span>
                                 <span className="provider-model">{modelLabel}</span>
                             </div>
 
@@ -199,8 +134,8 @@ export function AIAssistantSettings() {
                 <ProviderConfigModal
                     provider={selectedProvider}
                     isOpen={true}
-                    onClose={closeModal}
-                    onSave={handleSaveProvider}
+                    onClose={() => setSelectedProvider(null)}
+                    //onSave={handleSaveProvider}
                 />
             )}
         </div>

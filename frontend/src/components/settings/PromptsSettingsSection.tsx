@@ -11,10 +11,12 @@ import './PromptsSettingsSection.scss';
 
 interface PromptsSettingsSectionProps {
     projectId?: string;  // If provided, shows project-level settings
+    onDirtyChange?: (dirty: boolean)=>void;
 }
 
 export function PromptsSettingsSection({
-    projectId
+    projectId,
+    onDirtyChange
 }: PromptsSettingsSectionProps): JSX.Element {
     const [expandedPrompt, setExpandedPrompt] = useState<PromptType | null>(null);
     const [showCustomOnly, setShowCustomOnly] = useState(false);
@@ -70,7 +72,10 @@ export function PromptsSettingsSection({
                         <input
                             type="checkbox"
                             checked={showCustomOnly}
-                            onChange={(e) => setShowCustomOnly(e.target.checked)}
+                            onChange={(e) => {
+                                setShowCustomOnly(e.target.checked);
+                                onDirtyChange?.(true);
+                            }}
                         />
                         Show customized only
                     </label>
@@ -99,7 +104,10 @@ export function PromptsSettingsSection({
                                     {/* Card Header (clickable) */}
                                     <div
                                         className="prompt-card__header"
-                                        onClick={() => setExpandedPrompt(isExpanded ? null : type)}
+                                        onClick={() => {
+                                            setExpandedPrompt(isExpanded ? null : type);
+                                            onDirtyChange?.(true);
+                                        }}
                                     >
                                         <div className="prompt-card__info">
                                             <span className="prompt-card__name">{meta.name}</span>

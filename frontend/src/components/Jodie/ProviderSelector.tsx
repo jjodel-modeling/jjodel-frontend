@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import { TAIProvider, PROVIDER_INFO, PROVIDER_MODELS } from '../../types/jodie';
+import {TAIProvider, AI, JodieConfig, AIConfig} from '../../types/jodie';
 import { JodieConfigService } from '../../services/JodieConfig';
 
 interface ProviderSelectorProps {
@@ -16,7 +16,8 @@ interface ProviderSelectorProps {
 
 export function ProviderSelector({ activeProvider, onProviderChange, onOpenSettings, disabled }: ProviderSelectorProps): JSX.Element {
     const enabledProviders = JodieConfigService.getEnabledProviders();
-    const providerInfo = PROVIDER_INFO[activeProvider];
+    const providerInfo = AI[activeProvider];
+    const config = AIConfig.get(activeProvider);
 
     const handleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
         const newProvider = e.target.value as TAIProvider;
@@ -52,14 +53,12 @@ export function ProviderSelector({ activeProvider, onProviderChange, onOpenSetti
                 style={{ borderColor: providerInfo.color }}
             >
                 {enabledProviders.map(provider => {
-                    const info = PROVIDER_INFO[provider];
-                    const config = JodieConfigService.getProvider(provider);
-                    const modelLabel = PROVIDER_MODELS[provider].find(m => m.value === config?.model)?.label || config?.model;
+                    const llm = AI[provider];
+                    const config = AIConfig.get(provider);
+                    const version = llm.versions[config.model];
 
                     return (
-                        <option key={provider} value={provider}>
-                            {info.name} ({modelLabel})
-                        </option>
+                        <option key={provider} value={provider}>{provider} ({version.label})</option>
                     );
                 })}
             </select>

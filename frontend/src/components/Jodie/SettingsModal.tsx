@@ -8,12 +8,13 @@ import {
     AIProvider,
     TAIProvider,
     JodieConfig,
-    PROVIDER_INFO,
-    PROVIDER_MODELS,
+    AI,
+    AIConfig,
 } from '../../types/jodie';
-import { JodieConfigService } from '../../services/JodieConfig';
+import jodieConfig, { JodieConfigService } from '../../services/JodieConfig';
 import { AIProviderService } from '../../services/AIProviderService';
 import { ProviderIcon } from '../icons';
+import {GObject} from "../../joiner";
 
 interface SettingsModalProps {
     isOpen: boolean;
@@ -22,52 +23,32 @@ interface SettingsModalProps {
 
 interface ProviderSettingProps {
     provider: TAIProvider;
-    config: JodieConfig;
-    onUpdate: (provider: TAIProvider, updates: Partial<JodieConfig['providers'][TAIProvider]>) => void;
 }
 
 function API_Key_JSX(provider: TAIProvider) {// todo: should really make a class containing all info of a service instead of scattered data.
-    let info: {
-        url: string,
-        displayName: ReactNode;
-        tip?: ReactNode;
-    }
-    switch (provider) {
-        case AIProvider.Claude: info = {url: 'https://console.anthropic.com/settings/keys', displayName: 'console.anthropic.com'}; break;
-        case AIProvider.GPT: info = {url: 'https://platform.openai.com/api-keys', displayName: 'platform.openai'}; break;
-        case AIProvider.DeepSeek: info = {url: 'https://platform.deepseek.com/api_keys', displayName: 'platform.deepseek.com'}; break;
-        case AIProvider.Gemini: info = {url: 'https://aistudio.google.com/app/apikey', displayName: 'Google AI Studio'}; break;
-        default: info = {url: '#', displayName: 'Unsupported service 🚫'}; break;
-        // case 'template: info = {url: '', displayName: ''}; break;
-    }
-    if (!info.tip) info.tip = <>{" "}Keys start with <code>sk-ant-</code></>;
+    let info = AI[provider];
+
     return (
         <div className="jodie-settings-help">
             <i className="bi bi-info-circle" /> Get your API key from{' '}
-            <a href={info.url} target="_blank" rel="noopener noreferrer">{info.displayName}</a>.{info.tip}
+            <a href={info.keyUrl} target="_blank" rel="noopener noreferrer">{info.name}</a>.{info.keyPlaceholder}
         </div>);
 }
 
-function ProviderSetting({ provider, config, onUpdate }: ProviderSettingProps): JSX.Element {
+function ProviderSetting({ provider }: ProviderSettingProps): JSX.Element {
     const [showApiKey, setShowApiKey] = useState(false);
     const [testing, setTesting] = useState(false);
     const [testResult, setTestResult] = useState<{ success: boolean; error?: string } | null>(null);
 
-    const providerConfig = config.providers[provider];
-    const info = PROVIDER_INFO[provider];
-    const models = PROVIDER_MODELS[provider];
+    const providerConfig = AIConfig.get(provider);
+    const info = AI[provider];
+    const models = AI[provider].versions;
 
-    const handleApiKeyChange = (apiKey: string) => {
-        onUpdate(provider, { apiKey });
+    const change = (key: keyof AIConfig, val: any) => {
+        let config: AIConfig = AIConfig.get(provider);
+        (config as GObject)[key] = val;
+        config.save();
         setTestResult(null);
-    };
-
-    const handleModelChange = (model: string) => {
-        onUpdate(provider, { model });
-    };
-
-    const handleEnabledChange = (enabled: boolean) => {
-        onUpdate(provider, { enabled });
     };
 
     const handleTestConnection = async () => {
@@ -109,7 +90,7 @@ function ProviderSetting({ provider, config, onUpdate }: ProviderSettingProps): 
                     <input
                         type="checkbox"
                         checked={providerConfig.enabled}
-                        onChange={(e) => handleEnabledChange(e.target.checked)}
+                        onChange={(e) => change('enabled', e.target.checked)}
                     />
                     <span className="jodie-toggle-slider"></span>
                 </label>
@@ -123,7 +104,7 @@ function ProviderSetting({ provider, config, onUpdate }: ProviderSettingProps): 
                             <input
                                 type={showApiKey ? 'text' : 'password'}
                                 value={providerConfig.apiKey}
-                                onChange={(e) => handleApiKeyChange(e.target.value)}
+                                onChange={(e) => change('apiKey', e.target.value)}
                                 placeholder={`Enter your ${info.name} API key`}
                             />
                             <button
@@ -142,12 +123,10 @@ function ProviderSetting({ provider, config, onUpdate }: ProviderSettingProps): 
                         <label>Model</label>
                         <select
                             value={providerConfig.model}
-                            onChange={(e) => handleModelChange(e.target.value)}
+                            onChange={(e) => change('model', e.target.value)}
                         >
-                            {models.map(model => (
-                                <option key={model.value} value={model.value}>
-                                    {model.label}
-                                </option>
+                            {Object.keys(models).map(name => (
+                                <option key={name} value={name}>{models[name].label}</option>
                             ))}
                         </select>
                     </div>
@@ -159,15 +138,9 @@ function ProviderSetting({ provider, config, onUpdate }: ProviderSettingProps): 
                             disabled={!providerConfig.apiKey || testing}
                         >
                             {testing ? (
-                                <>
-                                    <i className="bi bi-arrow-clockwise jodie-spin" />
-                                    Testing...
-                                </>
+                                <><i className="bi bi-arrow-clockwise jodie-spin" />Testing...</>
                             ) : (
-                                <>
-                                    <i className="bi bi-plug" />
-                                    Test Connection
-                                </>
+                                <><i className="bi bi-plug" />Test Connection</>
                             )}
                         </button>
 
@@ -185,44 +158,21 @@ function ProviderSetting({ provider, config, onUpdate }: ProviderSettingProps): 
 }
 
 export function SettingsModal({ isOpen, onClose }: SettingsModalProps): JSX.Element | null {
-    const [config, setConfig] = useState<JodieConfig>(() => JodieConfigService.load());
+    // const [config, setConfig] = useState<JodieConfig>(() => JodieConfigService.load());
     const [showResetConfirm, setShowResetConfirm] = useState(false);
-
-    // Reload config when modal opens
-    useEffect(() => {
-        if (isOpen) {
-            setConfig(JodieConfigService.load());
-        }
-    }, [isOpen]);
-
-    const handleProviderUpdate = (provider: TAIProvider, updates: Partial<JodieConfig['providers'][TAIProvider]>) => {
-        const newConfig = {
-            ...config,
-            providers: {
-                ...config.providers,
-                [provider]: {
-                    ...config.providers[provider],
-                    ...updates,
-                },
-            },
-        };
-        setConfig(newConfig);
-        JodieConfigService.save(newConfig);
-    };
-
     const handleReset = () => {
         setShowResetConfirm(true);
     };
 
     const confirmReset = () => {
-        JodieConfigService.reset();
-        setConfig(JodieConfigService.load());
+        JodieConfig.current = new JodieConfig();
+        JodieConfig.current.save();
         setShowResetConfirm(false);
     };
 
     if (!isOpen) return null;
 
-    const providers: TAIProvider[] = [AIProvider.Claude, AIProvider.GPT, AIProvider.DeepSeek, AIProvider.Gemini];
+    const providers: TAIProvider[] = JodieConfigService.getEnabledProviders(); //[AIProvider.Claude, AIProvider.GPT, AIProvider.DeepSeek, AIProvider.Gemini];
 
     return (
         <div className="jodie-settings-overlay" onClick={onClose}>
@@ -248,8 +198,6 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps): JSX.Elem
                             <ProviderSetting
                                 key={provider}
                                 provider={provider}
-                                config={config}
-                                onUpdate={handleProviderUpdate}
                             />
                         ))}
                     </div>

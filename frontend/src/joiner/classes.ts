@@ -148,6 +148,7 @@ import {PinnableDock} from "../components/dock/MyRcDock";
 import type {VersionFixer as TypeVersionFixer} from "../redux/VersionFixer";
 import type {ProjectsApi as TypeProjectsAPI, UsersApi} from "../api/persistance";
 import type {Collaborative as CollaborativeT} from "../components/collaborative/Collaborative";
+import {names} from "tinycolor2";
 var windoww = window as any;
 
 // qui dichiarazioni di tipi che non sono importabili con "import type", ma che devono essere davvero importate a run-time (eg. per fare un "extend", chiamare un costruttore o usare un metodo statico)
@@ -2849,6 +2850,7 @@ export type WUser = getWParams<LUser, DUser>;
 export class ProjectPointers{
     id!: Pointer<DProject, 1, 1, LProject>;
     metamodels: Pointer<DModel, 0, 'N'> = [];
+    father!: Pointer<DUser>;
     models: Pointer<DModel, 0, 'N'> = [];
     graphs: Pointer<DGraph, 0, 'N'> = [];
     viewpoints: Pointer<DViewPoint, 0, 'N'> = [];
@@ -2867,6 +2869,7 @@ export class DProject extends DPointerTargetable {
     }
     id!: Pointer<DProject, 1, 1, LProject>;
     _Id?: string // db GUID
+    father!: Pointer<DUser>;
     type: 'public'|'private'|'collaborative' = 'public';
     name!: string;
     author: Pointer<DUser> = DUser.current;
@@ -2915,19 +2918,15 @@ export class DProject extends DPointerTargetable {
         return new Constructors(new DProject('dwc'), undefined, true, undefined)
             .DPointerTargetable().DProject(type, name, state || '', m2 || [], m1 || [], id).end(); }
 
-    static new2(pointers: Partial<ProjectPointers>, callback: undefined | ((d: DProject, c: Constructors) => void), otherProjects?:LProject[], persist: boolean = true): DProject {
-        let name = '';
+    static new2(pointers: Partial<ProjectPointers> & {name?: string}, callback: undefined | ((d: DProject, c: Constructors) => void), otherProjects?:LProject[], persist: boolean = true): DProject {
+        let name: string = (pointers as any).name || 'Project 1';
+        delete (pointers as any).name;
         // fix name
-        if (!otherProjects) otherProjects = LUser.getUser().projects;
-        if (!name) {
-            // autofix default name
-            let regexp = /Project (\d+)/;
-            const matches = otherProjects.map(p=>(+(regexp.exec(p.name)?.[1] as any) || 0));
-            let maxnum = Math.max(...matches, 0);
-            name = 'Project ' + (1 + maxnum);
-        }
+        if (!otherProjects) otherProjects = (pointers.father ? L.from(pointers.father) as LUser : LUser.getUser())?.projects || [];
+        let namesMap = U.objectFromArray(otherProjects, "name");
+        name = U.increaseEndingNumber(name, false, false, s=>!namesMap[s]);
 
-        return new Constructors(new DProject('dwc'), undefined, persist, undefined)
+        return new Constructors(new DProject('dwc'), pointers.father, persist, undefined)
             .DPointerTargetable().DProject('private', name, '', [], [], pointers.id).end(callback); }
 }
 
@@ -2942,6 +2941,7 @@ export class LProject<Context extends LogicContext<DProject> = any, D extends DP
 
     readonly id!: Pointer<DProject>;
     _Id?: string // db GUID
+    father!: LUser;
     type!: 'public'|'private'|'collaborative';
     author!: LUser;
     collaborators!: LUser[];

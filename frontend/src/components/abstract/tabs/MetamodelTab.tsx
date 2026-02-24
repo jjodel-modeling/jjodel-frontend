@@ -1,6 +1,16 @@
 import React, {Dispatch, ReactElement, ReactNode, useCallback, useRef, useEffect} from "react";
 import {connect} from "react-redux";
-import {DModel, Pointer, Try, U, GraphSize, transientProperties, SetFieldAction, TRANSACTION} from "../../../joiner";
+import {
+    DModel,
+    Pointer,
+    Try,
+    U,
+    GraphSize,
+    transientProperties,
+    SetFieldAction,
+    TRANSACTION,
+    Size
+} from "../../../joiner";
 import {
     DState,
     DGraph,
@@ -100,7 +110,7 @@ function MetamodelTabComponent(props: AllProps) {
                 const clientY = e.clientY - rect.top;
 
                 // Convert screen coords to graph coords using graph.translateHtmlSize
-                const graphCoords = graph.translateHtmlSize(new GraphSize(clientX, clientY, 0, 0));
+                const graphCoords = graph.translateHtmlSize(new Size(clientX, clientY, 0, 0));
                 dropX = graphCoords.x;
                 dropY = graphCoords.y;
             }
@@ -129,8 +139,8 @@ function MetamodelTabComponent(props: AllProps) {
                     const tm = transientProperties.modelElement[elementId!];
                     if (tm?.node?.__raw) {
                         TRANSACTION('Set drop position', () => {
-                            SetFieldAction.new(tm.node.__raw, 'x', dropX, '', false);
-                            SetFieldAction.new(tm.node.__raw, 'y', dropY, '', false);
+                            SetFieldAction.new(tm.node!.__raw, 'x', dropX, '', false);
+                            SetFieldAction.new(tm.node!.__raw, 'y', dropY, '', false);
                         });
                     } else if (retries < 10) {
                         // Node not created yet, retry after a short delay

@@ -6,6 +6,7 @@ import {
     useNodes,
     type EdgeProps,
 } from '@xyflow/react';
+import {LVoidEdge} from "../../../model/dataStructure";
 
 // Margin around nodes for routing
 const EDGE_PADDING = 20;

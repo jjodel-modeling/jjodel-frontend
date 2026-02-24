@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 
-export function AppearanceSettings() {
+export function AppearanceSettings({onDirtyChange}: {onDirtyChange?:((b:boolean)=>any)}) {
     const [theme, setThemeState] = useState<'light' | 'dark'>(() => {
         const stored = localStorage.getItem('theme');
         if (stored === 'dark' || stored === 'light') return stored;

@@ -1,4 +1,4 @@
-import {DStructuralFeature, LClass, LValue, LModel,  RuntimeAccessible} from "../../joiner";
+import {DStructuralFeature, LClass, LValue, LModel, RuntimeAccessible, DProject} from "../../joiner";
 import type {
     Pointer, PrimitiveType, DModelElement, DGraphElement,
     DModel, DPackage, DClass, DEnumerator, DEnumLiteral, DOperation, DAttribute, DReference,
@@ -14,7 +14,7 @@ class CommonStuff{
 export class ModelPointers extends CommonStuff{
     id!: Pointer<DAnnotation>;
     parent?: this["father"][];
-    father?: Pointer<DModelElement>;
+    father?: Pointer<DProject>;
     annotations?: Pointer<DAnnotation>[];
     roots!: Pointer<DObject>[];
     objects!: Pointer<DObject>[];

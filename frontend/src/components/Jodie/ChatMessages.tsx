@@ -4,7 +4,7 @@
  */
 
 import React, { useEffect, useRef, useCallback, useState } from 'react';
-import { ChatMessage, PROVIDER_INFO } from '../../types/jodie';
+import {AI, ChatMessage} from '../../types/jodie';
 import { MarkdownMessage } from './MarkdownMessage';
 import { executeCommand, ScriptLineResult } from '../../jjscript';
 import { DUser, L, LUser, LProject, LModel, store } from '../../joiner';
@@ -29,7 +29,7 @@ function getInitials(name: string): string {
 
 function MessageBubble({ message, onJjScriptExecute }: { message: ChatMessage; onJjScriptExecute?: (commands: string[]) => Promise<ScriptLineResult[]> }): JSX.Element {
     const isUser = message.role === 'user';
-    const providerInfo = message.provider ? PROVIDER_INFO[message.provider] : null;
+    const providerInfo = message.provider ? AI[message.provider] : null;
     const displayName = message.userName || 'You';
     const isJjScript = !!message.jjscriptResult;
     const jjScriptSuccess = message.jjscriptResult?.success ?? true;

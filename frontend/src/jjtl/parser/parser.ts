@@ -124,7 +124,7 @@ export class JjtlParser {
             this.consume(TokenType.RBRACE, "Expected '}' after condition");
         }
 
-        let body: AttributeMappingAST[] = [];
+        let body: MappingBodyItemAST[] = [];
         if (this.match(TokenType.LBRACE)) {
             body = this.mappingBody();
             this.consume(TokenType.RBRACE, "Expected '}'");
@@ -226,7 +226,7 @@ export class JjtlParser {
                     objectCreation = {
                         type: 'ObjectCreation',
                         targetClass: targetAttribute,
-                        body,
+                        body: body as any, // todo: error?
                         location: this.makeLocation(startToken, this.previous()),
                     };
                 }
@@ -280,7 +280,7 @@ export class JjtlParser {
         return {
             type: 'ObjectCreation',
             targetClass,
-            body,
+            body: body as any, // todo: error?
             location: this.makeLocation(startToken, this.previous()),
         };
     }

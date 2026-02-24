@@ -1,16 +1,14 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { AIFeature } from '../../services/AIProviderPreferences';
-import { useAIProviderPreference } from '../../hooks/useAIProviderPreference';
 import { JodieConfigService } from '../../services/JodieConfig';
 import { useSettingsModalSafe } from '../../contexts/SettingsModalContext';
 import './ProviderSelector.scss';
-import {AIProvider} from "../../types/jodie";
+import {AI, AIConfig, AIProvider, ALL_AI_PROVIDERS, JodieConfig, TAIProvider, AIFeature} from "../../types/jodie";
 
 /**
  * Local (non-AI) option configuration
  */
 export interface LocalOption {
-    id: string;
+    id: TAIProvider | "local" | "simple";
     label: string;
     icon: string;  // Bootstrap icon name without 'bi-' prefix
 }
@@ -60,7 +58,7 @@ export function ProviderSelector({
     onNavigateToSettings,
     compact = false,
 }: ProviderSelectorProps) {
-    const { selectedProvider, setSelectedProvider } = useAIProviderPreference(feature);
+    const selectedProvider = AIConfig.getPreferred(feature);
     const [showMenu, setShowMenu] = useState(false);
 
     // Use unified settings modal context (opens Settings page → Providers section)
@@ -68,71 +66,15 @@ export function ProviderSelector({
 
     // Resolve local options - use provided localOptions or fallback to legacy behavior
     const resolvedLocalOptions = useMemo<LocalOption[]>(() => {
-        if (localOptions) {
-            return localOptions;
-        }
+        if (localOptions) return localOptions;
         // Legacy behavior: if showLocalOption is true, show default local option
-        if (showLocalOption) {
-            return [{ id: 'local', label: 'Local (Instant)', icon: 'lightning' }];
-        }
+        if (showLocalOption) return [{ id: 'local', label: 'Local (Instant)', icon: 'lightning' }];
         return [];
     }, [localOptions, showLocalOption]);
 
     // Lista provider disponibili (AI providers only)
     // Icons chosen to be distinctive and evocative of each provider
-    const providers = useMemo<ProviderOption[]>(() => {
-        const list: ProviderOption[] = [];
-
-        // OpenAI - circle pattern (evokes their logo)
-        const openai = JodieConfigService.getProvider('openai');
-        if (openai?.apiKey) {
-            list.push({ id: 'openai', name: 'OpenAI', icon: 'bi-circle', available: true });
-        }
-
-        // Anthropic (Claude) - chat bubble (conversational focus)
-        const anthropic = JodieConfigService.getProvider('claude');
-        if (anthropic?.apiKey) {
-            list.push({ id: 'claude', name: 'Anthropic', icon: 'bi-chat-square-text', available: true });
-        }
-
-        // DeepSeek - search/compass (for "Seek")
-        const deepseek = JodieConfigService.getProvider('deepseek');
-        if (deepseek?.apiKey) {
-            list.push({ id: 'deepseek', name: 'DeepSeek', icon: 'bi-search', available: true });
-        }
-
-        // Mistral - wind (Mistral is a famous French wind)
-        const mistral = JodieConfigService.getProvider('mistral');
-        if (mistral?.apiKey) {
-            list.push({ id: 'mistral', name: 'Mistral', icon: 'bi-wind', available: true });
-        }
-
-        // Gemini - gem (for "Gemini")
-        const gemini = JodieConfigService.getProvider('gemini');
-        if (gemini?.apiKey) {
-            list.push({ id: 'gemini', name: 'Gemini', icon: 'bi-gem', available: true });
-        }
-
-        // Groq - speedometer (known for speed/performance)
-        const groq = JodieConfigService.getProvider('groq');
-        if (groq?.apiKey) {
-            list.push({ id: 'groq', name: 'Groq', icon: 'bi-speedometer2', available: true });
-        }
-
-        // Kimi - moon (Moonshot AI)
-        const kimi = JodieConfigService.getProvider('kimi');
-        if (kimi?.apiKey) {
-            list.push({ id: 'kimi', name: 'Kimi', icon: 'bi-moon', available: true });
-        }
-
-        // Ollama - server/network (local deployment)
-        const ollama = JodieConfigService.getProvider('ollama');
-        if (ollama?.baseUrl) {
-            list.push({ id: 'ollama', name: 'Ollama', icon: 'bi-hdd-network', available: true });
-        }
-
-        return list;
-    }, []);
+    const providers = JodieConfigService.getEnabledProviders();
 
     // Determine what's currently selected (local option or AI provider)
     const isLocalSelected = selectedLocalOption != null && resolvedLocalOptions.some(o => o.id === selectedLocalOption);
@@ -145,14 +87,14 @@ export function ProviderSelector({
             return localOpt?.label || selectedLocalOption;
         }
         // Otherwise show the AI provider name
-        const found = providers.find(p => p.id === selectedProvider);
+        const found = AI[selectedProvider];
         // Also check local options for backward compatibility (when 'local' was stored as provider)
         if (!found) {
             const localFound = resolvedLocalOptions.find(o => o.id === selectedProvider);
             if (localFound) return localFound.label;
         }
         return found?.name || selectedProvider;
-    }, [selectedProvider, providers, isLocalSelected, selectedLocalOption, resolvedLocalOptions]);
+    }, [selectedProvider, isLocalSelected, selectedLocalOption, resolvedLocalOptions]);
 
     // Icon for the trigger button
     const selectedIcon = useMemo(() => {
@@ -176,23 +118,18 @@ export function ProviderSelector({
     }, [showMenu]);
 
     // Handle selecting a local option
-    const handleLocalSelect = (optionId: string) => {
-        if (onLocalOptionSelect) {
-            onLocalOptionSelect(optionId);
-        } else {
-            // Backward compatibility: store as provider preference
-            setSelectedProvider(optionId);
-        }
+    const handleLocalSelect = (optionId: TAIProvider) => {
+        if (onLocalOptionSelect) onLocalOptionSelect(optionId);
+        // Backward compatibility: store as provider preference
+        else JodieConfig.setGlobalDefault(optionId);
         setShowMenu(false);
     };
 
     // Handle selecting an AI provider
-    const handleProviderSelect = (providerId: string) => {
+    const handleProviderSelect = (providerId: TAIProvider) => {
         // Clear local option selection if callback provided
-        if (onLocalOptionSelect) {
-            onLocalOptionSelect(null);
-        }
-        setSelectedProvider(providerId);
+        if (onLocalOptionSelect) onLocalOptionSelect(null);
+        JodieConfig.setGlobalDefault(providerId);
         setShowMenu(false);
     };
 
@@ -237,16 +174,16 @@ export function ProviderSelector({
 
                     {/* AI providers */}
                     {providers.map(provider => {
-                        const isActive = !isLocalSelected && selectedProvider === provider.id;
+                        const isActive = !isLocalSelected && selectedProvider === provider;
                         return (
                             <button
-                                key={provider.id}
+                                key={provider}
                                 className={`provider-option ${isActive ? 'active' : ''}`}
-                                onClick={() => handleProviderSelect(provider.id)}
-                                disabled={!provider.available}
+                                onClick={() => handleProviderSelect(provider)}
+                                disabled={!AIConfig.get(provider).enabled}
                             >
-                                <i className={`bi ${provider.icon}`} />
-                                <span>{provider.name}</span>
+                                <i className={`bi ${AI[provider].bi_icon}`} />
+                                <span>{provider}</span>
                                 {isActive && <i className="bi bi-check-lg check-icon" />}
                             </button>
                         );

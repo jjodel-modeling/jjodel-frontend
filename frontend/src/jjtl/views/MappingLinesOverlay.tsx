@@ -341,7 +341,7 @@ export const MappingLinesOverlay: React.FC<MappingLinesOverlayProps> = ({
                 const isHighlighted = isHovered || isSelected;
 
                 // Get unique color for this line
-                const strokeColor = getLineColor(index, isHighlighted);
+                const strokeColor = getLineColor(index, !!isHighlighted);
                 const strokeWidth = isHighlighted ? 2 : 1.2;
                 const strokeOpacity = isHighlighted ? 1 : 0.7;
                 const markerId = isHighlighted

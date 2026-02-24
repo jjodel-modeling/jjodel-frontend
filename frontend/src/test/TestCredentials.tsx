@@ -1,7 +1,8 @@
 import React, { useEffect } from 'react';
-import { credentialsService } from '../services/CredentialsService';
+// import { credentialsService } from '../services/CredentialsService';
 
 export const TestCredentials: React.FC = () => {
+  /*
   useEffect(() => {
     // Test save
     console.log('[Test] Saving OpenAI credentials...');
@@ -22,11 +23,13 @@ export const TestCredentials: React.FC = () => {
     
     // Test hasProviders
     console.log('[Test] Has providers:', credentialsService.hasProviders());
-  }, []);
+  }, []);*/
   
   return (
     <div style={{ padding: '20px' }}>
       <h2>Credentials Service Test</h2>
+      <p>Currently disabled</p>
+      {/*
       <p>Check console for results!</p>
       <button onClick={() => {
         const active = credentialsService.getActiveProvider();
@@ -34,6 +37,7 @@ export const TestCredentials: React.FC = () => {
       }}>
         Show Active Provider
       </button>
+      */}
     </div>
   );
 };

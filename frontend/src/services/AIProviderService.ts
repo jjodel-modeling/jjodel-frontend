@@ -3,7 +3,7 @@
  * Handles API calls to different AI providers (Claude, OpenAI, DeepSeek, Gemini)
  */
 
-import {AIProvider, TAIProvider, ChatMessage, ChatImage, ChatDocument, AI} from '../types/jodie';
+import {AIProvider, TAIProvider, ChatMessage, ChatImage, ChatDocument, AI, AIConfig} from '../types/jodie';
 import { JodieConfigService } from './JodieConfig';
 import { PromptService } from './PromptService';
 import { PromptContext } from '../types/prompts';
@@ -26,7 +26,7 @@ export class AIProviderService {
         images?: ChatImage[],
         documents?: ChatDocument[]
     ): Promise<string> {
-        const config = JodieConfigService.getProvider(provider);
+        const config = AIConfig.get(provider);
         let llm = AI[provider];
         // Ollama doesn't require API key
         if (!config) {
@@ -595,7 +595,7 @@ export class AIProviderService {
      */
     static async testConnection(provider: TAIProvider): Promise<{ success: boolean; error?: string }> {
         try {
-            const config = JodieConfigService.getProvider(provider);
+            const config = AIConfig.get(provider);
             const llm = AI[provider];
 
             if (!config) return { success: false, error: 'Provider not configured' };

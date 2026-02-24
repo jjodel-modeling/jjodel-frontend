@@ -12,7 +12,7 @@ import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { ScriptTarget, ScriptLineResult } from './ScriptBlock';
-import { ExecutionErrorDialog, ExecutionErrorInfo, ExecutionStats } from './ExecutionErrorDialog';
+import { ExecutionErrorDialog, ExecutionErrorInfo, ExecutionStats } from './ExecutionErrorDialog'; missing imports
 import './ScriptExecutionWindow.scss';
 
 // ============================================

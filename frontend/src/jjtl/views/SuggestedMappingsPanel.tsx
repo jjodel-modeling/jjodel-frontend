@@ -20,7 +20,7 @@ import { MappingCard } from './MappingCard';
 import GrammarTab from './GrammarTab';
 import type { GrammarRule } from '../components/GrammarDiagram/types';
 import { ProviderSelector, LocalOption } from '../../components/common/ProviderSelector';
-import { useAIProviderPreference } from '../../hooks/useAIProviderPreference';
+import {AIConfig} from "../../types/jodie";
 
 export interface SuggestedMappingsPanelProps {
     /** Static source metamodel data (use getSourceMetamodel for fresh data) */
@@ -139,7 +139,7 @@ export const SuggestedMappingsPanel: React.FC<SuggestedMappingsPanelProps> = ({
     const [selectedId, setSelectedId] = useState<string | null>(null);
 
     // AI provider preference for mappings feature
-    const { selectedProvider, resolvedProvider } = useAIProviderPreference('mappings');
+    const resolvedProvider= AIConfig.getPreferred('mappings');
 
     // Determine current mode based on selection
     const mode: SuggestionMode = useMemo(() => {

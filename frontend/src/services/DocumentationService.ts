@@ -11,7 +11,7 @@ import { LProject } from '../joiner';
 import AIProviderService from './AIProviderService';
 import { JodieConfigService } from './JodieConfig';
 import { JjodieContextService } from './JjodieContext';
-import { DOCUMENTATION_STORAGE_PREFIX } from '../types/jodie';
+import {AI} from "../types/jodie";
 
 // ============================================
 // TYPES
@@ -167,7 +167,7 @@ export class DocumentationService {
      */
     static load(projectId: string): ProjectDocumentation | null {
         try {
-            const stored = localStorage.getItem(`${DOCUMENTATION_STORAGE_PREFIX}${projectId}`);
+            const stored = localStorage.getItem(`${AI.DOCUMENTATION_STORAGE_PREFIX}${projectId}`);
             return stored ? JSON.parse(stored) : null;
         } catch {
             return null;
@@ -178,14 +178,14 @@ export class DocumentationService {
      * Save documentation to localStorage
      */
     static save(projectId: string, doc: ProjectDocumentation): void {
-        localStorage.setItem(`${DOCUMENTATION_STORAGE_PREFIX}${projectId}`, JSON.stringify(doc));
+        localStorage.setItem(`${AI.DOCUMENTATION_STORAGE_PREFIX}${projectId}`, JSON.stringify(doc));
     }
 
     /**
      * Delete documentation from localStorage
      */
     static delete(projectId: string): void {
-        localStorage.removeItem(`${DOCUMENTATION_STORAGE_PREFIX}${projectId}`);
+        localStorage.removeItem(`${AI.DOCUMENTATION_STORAGE_PREFIX}${projectId}`);
     }
 
     /**
