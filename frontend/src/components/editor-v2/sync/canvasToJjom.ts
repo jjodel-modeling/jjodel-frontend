@@ -21,7 +21,7 @@ import {
     GraphSize,
     store,
 } from '../../../joiner';
-import { markCanvasUpdated, markCanvasUpdatedBatch, setEdgeRefId } from './syncState';
+import { markCanvasUpdated, markCanvasUpdatedBatch } from './syncState';
 
 // ---------------------------------------------------------------------------
 // Position sync
@@ -74,8 +74,7 @@ export function syncSizeToJjom(vertexId: string, w: number, h: number): void {
 
 /**
  * Create an inheritance relationship in JjOM AND its graph edge (DEdge).
- * Both operations are wrapped in a single TRANSACTION to prevent
- * useJjomSync from firing between extends assignment and DEdge creation.
+ * Both operations are wrapped in a single TRANSACTION.
  * Returns the DEdge ID on success, null on failure.
  */
 export function syncInheritanceEdge(
@@ -100,7 +99,7 @@ export function syncInheritanceEdge(
         }
 
         const currentExtends = (sourceClass.extends ?? []).map((c: any) => c.id ?? c);
-        if (currentExtends.includes(targetClass.id)) return null; // already extends
+        if (currentExtends.includes(targetClass.id)) return null;
 
         let edgeId: string | null = null;
 
@@ -114,11 +113,12 @@ export function syncInheritanceEdge(
                 undefined,
                 sourceVertexId,
                 targetVertexId,
-                (d: DEdge) => { d.isExtend = true; },
+                (d: DEdge) => { d.isExtend = true; }
             );
             edgeId = dEdge.id;
         });
 
+        if (edgeId) markCanvasUpdated(edgeId);
         return edgeId;
     } catch (err) {
         console.warn('[canvasToJjom] Failed to create inheritance edge:', err);
@@ -129,14 +129,13 @@ export function syncInheritanceEdge(
 /**
  * Create a reference relationship in JjOM AND its graph edge (DEdge).
  * Both operations are wrapped in a single TRANSACTION to prevent
- * useJjomSync from firing between addReference and DEdge creation.
+ * useJjomSync from firing between addReference and DVoidEdge.new2.
  * Returns the DEdge ID on success, null on failure.
  */
 export function syncReferenceEdge(
     sourceVertexId: string,
     targetVertexId: string,
     name: string = 'newRef',
-    kind: string = 'association',
 ): string | null {
     try {
         const sourceProxy: any = LPointerTargetable.fromPointer(sourceVertexId);
@@ -156,81 +155,25 @@ export function syncReferenceEdge(
         }
 
         let edgeId: string | null = null;
-        let refIdOuter: string | undefined;
 
         TRANSACTION('EditorV2 create reference edge', () => {
-            // 1. Log della signature di addReference
-            console.log('[DEBUG] addReference function:', sourceClass.addReference?.toString?.()?.slice(0, 300));
-
-            // 2. Creazione
             const lRef = sourceClass.addReference(name, targetClass.id);
             const refId = lRef?.id ?? lRef;
-            refIdOuter = refId;
+            if (!refId) return;
 
-            // 3. Dump completo PRIMA dei nostri fix
-            const rawRef = store.getState()?.idlookup?.[refId] as any;
-            console.log('[DEBUG] DReference raw BEFORE fix:', JSON.stringify({
-                id: rawRef?.id,
-                type: rawRef?.type,
-                father: rawRef?.father,
-                upperBound: rawRef?.upperBound,
-            }, null, 2));
-
-            // 4. Tenta il fix
-            SetFieldAction.new(refId as any, 'type' as any, targetClass.id, undefined, false);
-
-            // 5. Dump DOPO il fix
-            const rawRefAfter = store.getState()?.idlookup?.[refId] as any;
-            console.log('[DEBUG] DReference raw AFTER fix:', JSON.stringify({
-                type: rawRefAfter?.type,
-                typeChanged: rawRefAfter?.type !== rawRef?.type,
-                targetClassId: targetClass.id,
-            }, null, 2));
-
-            SetFieldAction.new(refId as any, 'upperBound' as any, -1, undefined, false);
-
-            // Set kind on the DReference if not association
-            if (refId && kind !== 'association') {
-                const lRefKind: any = LPointerTargetable.fromPointer(refId);
-                if (lRefKind) {
-                    if (kind === 'composition') {
-                        lRefKind.composition = true;
-                    } else if (kind === 'aggregation') {
-                        lRefKind.aggregation = true;
-                    }
-                }
-            }
-
-            // 2. Create DEdge in the graph
             const dEdge = DVoidEdge.new2(
-                refId ?? undefined,
+                refId,
                 graphId,
                 graphId,
                 undefined,
                 sourceVertexId,
                 targetVertexId,
-                (d: DEdge) => { d.isReference = true; },
+                (d: DEdge) => { d.isReference = true; }
             );
             edgeId = dEdge.id;
-
-            if (edgeId && refId) {
-                setEdgeRefId(edgeId, refId);
-            }
         });
 
-        // Fix: type viene sovrascritto dal pending init, setTimeout aspetta che finisca
-        if (refIdOuter) {
-            const capturedRefId = refIdOuter;
-            const capturedTargetId = targetClass.id;
-            setTimeout(() => {
-                const lRef: any = LPointerTargetable.fromPointer(capturedRefId);
-                if (lRef) {
-                    lRef.type = capturedTargetId;
-                    lRef.upperBound = -1;
-                }
-            }, 0);
-        }
-
+        if (edgeId) markCanvasUpdated(edgeId);
         return edgeId;
     } catch (err) {
         console.warn('[canvasToJjom] Failed to create reference edge:', err);

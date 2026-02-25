@@ -546,6 +546,15 @@ function ClassNodeProperties({ node, onUpdate, isJjomMode }: { node: Node; onUpd
                             {references.length === 0 && (
                                 <div className="prop-empty">Draw reference edges between classes</div>
                             )}
+                            {(() => {
+                                console.log('[DEBUG references list]', references.map(r => ({
+                                    name: r.name,
+                                    targetClassId: r.targetClassId,
+                                    kind: r.kind,
+                                })));
+                                console.log('[DEBUG availableClasses]', availableClasses.map(c => ({ id: c.id, name: c.name })));
+                                return null;
+                            })()}
                             {references.map((ref) => (
                                 <div key={ref.id} className="prop-list-item prop-list-item--readonly">
                                     <span className="prop-info">{ref.name}</span>
