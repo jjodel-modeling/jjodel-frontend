@@ -158,6 +158,15 @@ export function syncReferenceEdge(
 
         TRANSACTION('EditorV2 create reference edge', () => {
             const lRef = sourceClass.addReference(name, targetClass.id);
+            // lRef è un LReference proxy — setta type direttamente
+            if (lRef && typeof lRef === 'object') {
+                lRef.type = targetClass.id;
+                lRef.upperBound = -1;
+                console.log('[DEBUG] direct lRef.type set:', {
+                    typeAfter: lRef.type?.name ?? lRef.type?.id ?? lRef.type,
+                    expected: targetClass.name,
+                });
+            }
             const refId = lRef?.id ?? lRef;
             if (!refId) return;
 

@@ -57,6 +57,7 @@ export interface MetaReference {
     upperBound: number;     // -1 = unbounded (*)
     containment: boolean;   // true per composition
     opposite?: string;      // nome della reference opposta (bidirezionale)
+    type?: { id: string; name: string };  // resolved type info from JjOM
 }
 
 // === Node Data ===

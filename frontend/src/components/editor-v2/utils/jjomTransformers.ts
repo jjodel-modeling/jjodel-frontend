@@ -69,6 +69,7 @@ function classVertexToRFNode(vertex: any): Node<ClassNodeData> {
                 upperBound: ref.upperBound ?? -1,
                 containment: !!ref.composition,
                 opposite: ref.opposite?.name,
+                type: ref.type ? { id: ref.type.id, name: ref.type.name } : undefined,
             });
         }
     } catch { /* proxy access can throw */ }
