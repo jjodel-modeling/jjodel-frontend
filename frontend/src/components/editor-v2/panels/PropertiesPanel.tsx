@@ -558,7 +558,8 @@ function ClassNodeProperties({ node, onUpdate, isJjomMode }: { node: Node; onUpd
                             {references.map((ref) => (
                                 <div key={ref.id} className="prop-list-item prop-list-item--readonly">
                                     <span className="prop-info">{ref.name}</span>
-                                    <span className="prop-info prop-info--type">{'\u2192'} {availableClasses.find(c => c.id === ref.targetClassId)?.name || '?'}</span>
+                                    <span className="prop-info prop-info--type">{'\u2192'} {availableClasses.find(c => c.id === ref.type)?.name || '?'}</span>
+                            
                                 </div>
                             ))}
                         </>
