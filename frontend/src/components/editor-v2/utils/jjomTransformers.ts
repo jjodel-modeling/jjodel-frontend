@@ -22,6 +22,7 @@ import type {
     InheritanceEdgeData,
     ReferenceKind,
 } from '../types';
+import { setEdgeRefId } from '../sync/syncState';
 
 // L-proxy types — using `any` for property access to avoid coupling to
 // the exact proxy shape which uses runtime magic getters.
@@ -183,6 +184,74 @@ export function jjomVertexToRFNode(vertex: any): Node | null {
 }
 
 /**
+ * Compute optimal source/target handle sides based on vertex positions.
+ * Returns handle IDs like 'top-0', 'bottom-0', etc.
+ *
+ * For inheritance edges, UML convention dictates the triangle marker is always
+ * at the bottom of the parent (target). So we force vertical routing:
+ * child (source) connects from top, parent (target) from bottom.
+ * Horizontal routing is only used if classes are at nearly the same Y level.
+ */
+function computeOptimalHandles(
+    sourceVertex: any,
+    targetVertex: any,
+    isInheritance: boolean = false,
+): { sourceHandle: string; targetHandle: string } {
+    const sx = sourceVertex.x ?? 0;
+    const sy = sourceVertex.y ?? 0;
+    const sw = sourceVertex.w ?? 180;
+    const sh = sourceVertex.h ?? 80;
+    const tx = targetVertex.x ?? 0;
+    const ty = targetVertex.y ?? 0;
+    const tw = targetVertex.w ?? 180;
+    const th = targetVertex.h ?? 80;
+
+    const scx = sx + sw / 2;
+    const scy = sy + sh / 2;
+    const tcx = tx + tw / 2;
+    const tcy = ty + th / 2;
+
+    const dx = tcx - scx;
+    const dy = tcy - scy;
+
+    if (isInheritance) {
+        // Inheritance: strongly prefer vertical routing.
+        // Child (source) at top, parent (target) at bottom.
+        // Only go horizontal if Y difference is negligible (< 30px).
+        if (Math.abs(dy) < 30 && Math.abs(dx) > 50) {
+            if (dx > 0) {
+                return { sourceHandle: 'right-0', targetHandle: 'left-0' };
+            } else {
+                return { sourceHandle: 'left-0', targetHandle: 'right-0' };
+            }
+        }
+        // Default: vertical — child top → parent bottom
+        if (dy < 0) {
+            // Target (parent) is above source (child) — normal case
+            return { sourceHandle: 'top-0', targetHandle: 'bottom-0' };
+        } else {
+            // Target (parent) is below source (child) — unusual but respect layout
+            return { sourceHandle: 'bottom-0', targetHandle: 'top-0' };
+        }
+    }
+
+    // Non-inheritance: use dominant axis
+    if (Math.abs(dy) >= Math.abs(dx)) {
+        if (dy < 0) {
+            return { sourceHandle: 'top-0', targetHandle: 'bottom-0' };
+        } else {
+            return { sourceHandle: 'bottom-0', targetHandle: 'top-0' };
+        }
+    } else {
+        if (dx > 0) {
+            return { sourceHandle: 'right-0', targetHandle: 'left-0' };
+        } else {
+            return { sourceHandle: 'left-0', targetHandle: 'right-0' };
+        }
+    }
+}
+
+/**
  * Transform a JjOM edge (LEdge) into a React Flow Edge.
  * Returns null if the edge cannot be mapped.
  */
@@ -193,17 +262,12 @@ export function jjomEdgeToRFEdge(edge: any): Edge | null {
     const endVertex = edge.end;
     if (!startVertex?.id || !endVertex?.id) return null;
 
-    if (edge.isExtend) {
-        // Inheritance edge: source extends target
-        return {
-            id: edge.id,
-            source: startVertex.id,
-            target: endVertex.id,
-            type: 'inheritance',
-            data: {} as InheritanceEdgeData,
-        };
-    }
+    // Compute optimal handle sides from vertex positions
+    const isInheritance = !!edge.isExtend;
+    const handles = computeOptimalHandles(startVertex, endVertex, isInheritance);
 
+    // Check isReference FIRST — it's more specific (DEdge.model points to a DReference).
+    // isExtend can give false positives when the source class happens to extend another class.
     if (edge.isReference) {
         // Reference edge — extract info from the model (DReference)
         const refModel = edge.model;
@@ -222,15 +286,37 @@ export function jjomEdgeToRFEdge(edge: any): Edge | null {
                 containment: !!refModel?.composition,
                 opposite: refModel?.opposite?.name,
             },
-        };
+            jjomRefId: refModel?.id,
+        } as any;
+
+        // Register in the stable module-level registry so commitLabel can
+        // always find the DReference ID regardless of React state merges.
+        if (refModel?.id) {
+            setEdgeRefId(edge.id, refModel.id);
+        }
 
         return {
             id: edge.id,
             source: startVertex.id,
             target: endVertex.id,
+            sourceHandle: handles.sourceHandle,
+            targetHandle: handles.targetHandle,
             type: 'reference',
             label: refModel?.name ?? '',
             data: refData,
+        };
+    }
+
+    if (edge.isExtend) {
+        // Inheritance edge: source extends target
+        return {
+            id: edge.id,
+            source: startVertex.id,
+            target: endVertex.id,
+            sourceHandle: handles.sourceHandle,
+            targetHandle: handles.targetHandle,
+            type: 'inheritance',
+            data: {} as InheritanceEdgeData,
         };
     }
 
@@ -239,6 +325,8 @@ export function jjomEdgeToRFEdge(edge: any): Edge | null {
         id: edge.id,
         source: startVertex.id,
         target: endVertex.id,
+        sourceHandle: handles.sourceHandle,
+        targetHandle: handles.targetHandle,
         type: 'reference',
         data: {
             reference: {

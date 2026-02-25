@@ -1,6 +1,6 @@
 import React from 'react';
 import { Handle, Position, useEdges, useNodes, useUpdateNodeInternals } from '@xyflow/react';
-import { useMemo, useEffect } from 'react';
+import { useMemo, useEffect, useRef } from 'react';
 import { computePortDistribution, type Side } from '../utils/portDistribution';
 
 const MAX_HANDLES_PER_SIDE = 4;
@@ -33,6 +33,29 @@ function DynamicHandles({ nodeId, maxHandlesPerSide = MAX_HANDLES_PER_SIDE }: Dy
     const nodes = useNodes();
     const updateNodeInternals = useUpdateNodeInternals();
 
+    // Stable edge fingerprint — only recompute when edge topology changes,
+    // not when edge data/labels change (which don't affect port distribution).
+    const edgeTopologyKey = useMemo(() => {
+        const relevant = edges
+            .filter(e => e.source === nodeId || e.target === nodeId)
+            .map(e => `${e.id}:${e.source}:${e.target}:${e.type}:${e.sourceHandle ?? ''}:${e.targetHandle ?? ''}`)
+            .sort()
+            .join('|');
+        return relevant;
+    }, [edges, nodeId]);
+
+    // Stable node positions — only recompute when positions actually change.
+    // We serialize to a string key to avoid Map reference instability.
+    const nodePositionsKey = useMemo(() => {
+        const parts: string[] = [];
+        for (const n of nodes) {
+            const w = (n.measured?.width ?? (n as any).width ?? 180) as number;
+            const h = (n.measured?.height ?? (n as any).height ?? 80) as number;
+            parts.push(`${n.id}:${Math.round(n.position.x)}:${Math.round(n.position.y)}:${Math.round(w)}:${Math.round(h)}`);
+        }
+        return parts.join('|');
+    }, [nodes]);
+
     const nodePositions = useMemo(() => {
         const map = new Map<string, { centerX: number; centerY: number }>();
         for (const n of nodes) {
@@ -44,9 +67,10 @@ function DynamicHandles({ nodeId, maxHandlesPerSide = MAX_HANDLES_PER_SIDE }: Dy
             });
         }
         return map;
-    }, [nodes]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [nodePositionsKey]);
 
-    // Compute which handles are active (connected to edges) and their positions (0–1)
+    // Compute which handles are active (connected to edges) and their positions (0-1)
     const activeHandles = useMemo(() => {
         const allNodeIds = nodes.map(n => n.id);
         const { nodeHandles } = computePortDistribution(edges, allNodeIds, nodePositions);
@@ -61,7 +85,8 @@ function DynamicHandles({ nodeId, maxHandlesPerSide = MAX_HANDLES_PER_SIDE }: Dy
             }
         }
         return active;
-    }, [edges, nodes, nodePositions, nodeId]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [edgeTopologyKey, nodePositionsKey, nodeId]);
 
     // Serialize active handle positions to detect changes
     const activeHandlesKey = useMemo(() => {
@@ -69,11 +94,20 @@ function DynamicHandles({ nodeId, maxHandlesPerSide = MAX_HANDLES_PER_SIDE }: Dy
         return entries.map(([id, pos]) => `${id}:${pos}`).join(',');
     }, [activeHandles]);
 
-    // Force React Flow to re-read handle DOM positions when they change.
-    // React Flow caches handle bounds on mount and only updates when
-    // position/id/type props change — NOT when style changes.
+    // Track last committed key to prevent cascade:
+    // updateNodeInternals -> RF re-measures -> nodes change -> recompute ->
+    // same key -> should NOT call updateNodeInternals again.
+    const lastCommittedKeyRef = useRef<string>('');
+
     useEffect(() => {
-        updateNodeInternals(nodeId);
+        if (activeHandlesKey !== lastCommittedKeyRef.current) {
+            lastCommittedKeyRef.current = activeHandlesKey;
+            // Debounce to batch multiple handle changes in a single frame
+            const raf = requestAnimationFrame(() => {
+                updateNodeInternals(nodeId);
+            });
+            return () => cancelAnimationFrame(raf);
+        }
     }, [activeHandlesKey, nodeId, updateNodeInternals]);
 
     return (

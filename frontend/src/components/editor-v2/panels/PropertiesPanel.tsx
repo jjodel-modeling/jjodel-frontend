@@ -28,10 +28,11 @@ import {
     syncAddEnumLiteral,
     syncUpdateEnumLiteral,
     syncRemoveEnumLiteral,
-    syncEdgeRefProperty,
+    syncUpdateReference,
     syncEdgeRefKind,
     syncNodeLabel,
 } from '../sync/canvasToJjom';
+import { getEdgeRefId } from '../sync/syncState';
 
 interface PropertiesPanelProps {
     selectedNodes: Node[];
@@ -41,6 +42,9 @@ interface PropertiesPanelProps {
     onConvertToInheritance?: (edgeId: string) => void;
     onConvertToReference?: (edgeId: string) => void;
     isJjomMode?: boolean;
+    modelInfo?: ModelInfo | null;
+    onModelNameChange?: (name: string) => void;
+    onModelUriChange?: (uri: string) => void;
 }
 
 // Collapsible section component
@@ -79,6 +83,133 @@ function Section({
     );
 }
 
+// ---------------------------------------------------------------------------
+// Model / Metamodel properties (shown when nothing is selected on canvas)
+// ---------------------------------------------------------------------------
+
+interface ModelInfo {
+    name: string;
+    uri: string;
+    className: string;
+    classCount: number;
+    abstractCount: number;
+    enumCount: number;
+    packageCount: number;
+    referenceCount: number;
+    totalClassifiers: number;
+}
+
+function ModelProperties({
+    modelInfo,
+    onNameChange,
+    onUriChange,
+}: {
+    modelInfo: ModelInfo;
+    onNameChange: (name: string) => void;
+    onUriChange: (uri: string) => void;
+}) {
+    const [name, setName] = useState(modelInfo.name);
+    const [uri, setUri] = useState(modelInfo.uri);
+
+    useEffect(() => {
+        setName(modelInfo.name);
+        setUri(modelInfo.uri);
+    }, [modelInfo.name, modelInfo.uri]);
+
+    const commitName = useCallback(() => {
+        if (name !== modelInfo.name) onNameChange(name);
+    }, [name, modelInfo.name, onNameChange]);
+
+    const commitUri = useCallback(() => {
+        if (uri !== modelInfo.uri) onUriChange(uri);
+    }, [uri, modelInfo.uri, onUriChange]);
+
+    const isModel = modelInfo.className === 'DModel';
+    const isPackage = modelInfo.className === 'DPackage';
+    const typeLabel = isModel ? 'Model' : isPackage ? 'Package' : 'Metamodel';
+    const typeIcon = isModel ? 'bi-box' : isPackage ? 'bi-folder' : 'bi-diagram-3';
+
+    return (
+        <aside className="properties-panel">
+            <div className="properties-panel__header">
+                <i className={`bi ${typeIcon}`} />
+                <span className="properties-panel__title">{typeLabel}</span>
+            </div>
+
+            <div className="properties-panel__body">
+                <Section title="GENERAL">
+                    <div className="prop-field">
+                        <label className="prop-label">Name</label>
+                        <input
+                            className="prop-input"
+                            value={name}
+                            onChange={(e) => setName(e.target.value)}
+                            onBlur={commitName}
+                            onKeyDown={(e) => { if (e.key === 'Enter') commitName(); }}
+                        />
+                    </div>
+                    <div className="prop-field">
+                        <label className="prop-label">URI</label>
+                        <input
+                            className="prop-input"
+                            value={uri}
+                            onChange={(e) => setUri(e.target.value)}
+                            onBlur={commitUri}
+                            onKeyDown={(e) => { if (e.key === 'Enter') commitUri(); }}
+                            placeholder="e.g. http://example.org/mymodel"
+                        />
+                    </div>
+                </Section>
+
+                <Section title="OVERVIEW" defaultOpen={true}>
+                    <div className="prop-stats">
+                        {modelInfo.classCount > 0 && (
+                            <div className="prop-stats__row">
+                                <i className="bi bi-circle" />
+                                <span>Classes</span>
+                                <span className="prop-stats__count">{modelInfo.classCount}</span>
+                            </div>
+                        )}
+                        {modelInfo.abstractCount > 0 && (
+                            <div className="prop-stats__row">
+                                <i className="bi bi-circle-half" />
+                                <span>Abstract Classes</span>
+                                <span className="prop-stats__count">{modelInfo.abstractCount}</span>
+                            </div>
+                        )}
+                        {modelInfo.enumCount > 0 && (
+                            <div className="prop-stats__row">
+                                <i className="bi bi-list-ul" />
+                                <span>Enumerations</span>
+                                <span className="prop-stats__count">{modelInfo.enumCount}</span>
+                            </div>
+                        )}
+                        {modelInfo.packageCount > 0 && (
+                            <div className="prop-stats__row">
+                                <i className="bi bi-folder" />
+                                <span>Packages</span>
+                                <span className="prop-stats__count">{modelInfo.packageCount}</span>
+                            </div>
+                        )}
+                        {modelInfo.referenceCount > 0 && (
+                            <div className="prop-stats__row">
+                                <i className="bi bi-arrow-right" />
+                                <span>References</span>
+                                <span className="prop-stats__count">{modelInfo.referenceCount}</span>
+                            </div>
+                        )}
+                        {modelInfo.totalClassifiers === 0 && (
+                            <div className="prop-stats__empty">
+                                No classifiers yet. Drag elements from the palette.
+                            </div>
+                        )}
+                    </div>
+                </Section>
+            </div>
+        </aside>
+    );
+}
+
 function PropertiesPanel({
     selectedNodes,
     selectedEdges,
@@ -87,12 +218,18 @@ function PropertiesPanel({
     onConvertToInheritance,
     onConvertToReference,
     isJjomMode,
+    modelInfo,
+    onModelNameChange,
+    onModelUriChange,
 }: PropertiesPanelProps) {
     const selectedNode = selectedNodes.length === 1 ? selectedNodes[0] : null;
     const selectedEdge = selectedEdges.length === 1 && selectedNodes.length === 0 ? selectedEdges[0] : null;
 
-    // Nothing selected
+    // Nothing selected — show model/metamodel properties if available
     if (!selectedNode && !selectedEdge && selectedNodes.length === 0 && selectedEdges.length === 0) {
+        if (modelInfo && isJjomMode && onModelNameChange && onModelUriChange) {
+            return <ModelProperties modelInfo={modelInfo} onNameChange={onModelNameChange} onUriChange={onModelUriChange} />;
+        }
         return (
             <aside className="properties-panel">
                 <div className="properties-panel__header">
@@ -219,20 +356,14 @@ function ClassNodeProperties({ node, onUpdate, isJjomMode }: { node: Node; onUpd
 
     // --- Name ---
     const commitName = () => {
-        if (isJjomMode) {
-            syncNodeLabel(node.id, name);
-        } else {
-            commit({ label: name });
-        }
+        commit({ label: name });
+        syncNodeLabel(node.id, name);
     };
 
     // --- Abstract ---
     const toggleAbstract = (checked: boolean) => {
-        if (isJjomMode) {
-            syncClassAbstract(node.id, checked);
-        } else {
-            commit({ isAbstract: checked });
-        }
+        commit({ isAbstract: checked });
+        syncClassAbstract(node.id, checked);
     };
 
     // --- Edit buffer helpers ---
@@ -255,40 +386,28 @@ function ClassNodeProperties({ node, onUpdate, isJjomMode }: { node: Node; onUpd
 
     // --- Attributes ---
     const addAttribute = () => {
-        if (isJjomMode) {
-            syncAddAttribute(node.id);
-        } else {
-            const updated = [...attributes, createAttribute()];
-            commit({ attributes: updated });
-        }
+        const updated = [...attributes, createAttribute()];
+        commit({ attributes: updated });
+        syncAddAttribute(node.id);
     };
 
     const commitAttrField = (attrId: string, field: string, value: string) => {
-        if (isJjomMode) {
-            syncUpdateAttribute(attrId, field, value, node.id);
-        } else {
-            const updated = attributes.map(a => a.id === attrId ? { ...a, [field]: value } : a);
-            commit({ attributes: updated });
-        }
+        const updated = attributes.map(a => a.id === attrId ? { ...a, [field]: value } : a);
+        commit({ attributes: updated });
+        syncUpdateAttribute(attrId, field, value, node.id);
         clearEditBuffer(attrId, field);
     };
 
     const handleAttrTypeChange = (attrId: string, value: string) => {
-        if (isJjomMode) {
-            syncUpdateAttribute(attrId, 'type', value, node.id);
-        } else {
-            const updated = attributes.map(a => a.id === attrId ? { ...a, type: value } : a);
-            commit({ attributes: updated });
-        }
+        const updated = attributes.map(a => a.id === attrId ? { ...a, type: value } : a);
+        commit({ attributes: updated });
+        syncUpdateAttribute(attrId, 'type', value, node.id);
     };
 
     const removeAttribute = (attrId: string) => {
-        if (isJjomMode) {
-            syncRemoveAttribute(attrId, node.id);
-        } else {
-            const updated = attributes.filter(a => a.id !== attrId);
-            commit({ attributes: updated });
-        }
+        const updated = attributes.filter(a => a.id !== attrId);
+        commit({ attributes: updated });
+        syncRemoveAttribute(attrId, node.id);
     };
 
     // --- References (inline) ---
@@ -311,40 +430,28 @@ function ClassNodeProperties({ node, onUpdate, isJjomMode }: { node: Node; onUpd
 
     // --- Operations ---
     const addOperation = () => {
-        if (isJjomMode) {
-            syncAddOperation(node.id);
-        } else {
-            const updated = [...operations, createOperation()];
-            commit({ operations: updated });
-        }
+        const updated = [...operations, createOperation()];
+        commit({ operations: updated });
+        syncAddOperation(node.id);
     };
 
     const commitOpField = (opId: string, field: string, value: string) => {
-        if (isJjomMode) {
-            syncUpdateOperation(opId, field, value, node.id);
-        } else {
-            const updated = operations.map(o => o.id === opId ? { ...o, [field]: value } : o);
-            commit({ operations: updated });
-        }
+        const updated = operations.map(o => o.id === opId ? { ...o, [field]: value } : o);
+        commit({ operations: updated });
+        syncUpdateOperation(opId, field, value, node.id);
         clearEditBuffer(opId, field);
     };
 
     const handleOpReturnTypeChange = (opId: string, value: string) => {
-        if (isJjomMode) {
-            syncUpdateOperation(opId, 'type', value, node.id);
-        } else {
-            const updated = operations.map(o => o.id === opId ? { ...o, returnType: value } : o);
-            commit({ operations: updated });
-        }
+        const updated = operations.map(o => o.id === opId ? { ...o, returnType: value } : o);
+        commit({ operations: updated });
+        syncUpdateOperation(opId, 'type', value, node.id);
     };
 
     const removeOperation = (opId: string) => {
-        if (isJjomMode) {
-            syncRemoveOperation(opId, node.id);
-        } else {
-            const updated = operations.filter(o => o.id !== opId);
-            commit({ operations: updated });
-        }
+        const updated = operations.filter(o => o.id !== opId);
+        commit({ operations: updated });
+        syncRemoveOperation(opId, node.id);
     };
 
     return (
@@ -550,14 +657,9 @@ function EnumNodeProperties({ node, onUpdate, isJjomMode }: { node: Node; onUpda
     }, [node.id, nodeData, onUpdate]);
 
     const commitName = () => {
-        if (isJjomMode) {
-            syncNodeLabel(node.id, name);
-        } else {
-            commit({ label: name });
-        }
+        commit({ label: name });
+        syncNodeLabel(node.id, name);
     };
-
-    // --- Edit buffer helpers ---
     const getEditValue = (id: string, field: string, original: string): string => {
         const key = `${id}:${field}`;
         return key in editBuffers ? editBuffers[key] : original;
@@ -577,37 +679,28 @@ function EnumNodeProperties({ node, onUpdate, isJjomMode }: { node: Node; onUpda
 
     // --- Literals ---
     const addLiteral = () => {
-        if (isJjomMode) {
-            syncAddEnumLiteral(node.id);
-        } else {
-            const nextValue = literals.length > 0 ? Math.max(...literals.map(l => l.value)) + 1 : 0;
-            const updated = [...literals, createLiteral('NEW_VALUE', nextValue)];
-            commit({ literals: updated });
-        }
+        const nextValue = literals.length > 0 ? Math.max(...literals.map(l => l.value)) + 1 : 0;
+        const updated = [...literals, createLiteral('NEW_VALUE', nextValue)];
+        commit({ literals: updated });
+        syncAddEnumLiteral(node.id);
     };
 
     const commitLitField = (litId: string, field: string, value: string) => {
-        if (isJjomMode) {
-            const finalValue = field === 'value' ? (parseInt(value) || 0) : value;
-            syncUpdateEnumLiteral(litId, field, finalValue, node.id);
-        } else {
-            const updated = literals.map(l =>
-                l.id === litId
-                    ? { ...l, [field]: field === 'value' ? (parseInt(value) || 0) : value }
-                    : l
-            );
-            commit({ literals: updated });
-        }
+        const finalValue = field === 'value' ? (parseInt(value) || 0) : value;
+        const updated = literals.map(l =>
+            l.id === litId
+                ? { ...l, [field]: finalValue }
+                : l
+        );
+        commit({ literals: updated });
+        syncUpdateEnumLiteral(litId, field, finalValue, node.id);
         clearEditBuffer(litId, field);
     };
 
     const removeLiteral = (litId: string) => {
-        if (isJjomMode) {
-            syncRemoveEnumLiteral(litId, node.id);
-        } else {
-            const updated = literals.filter(l => l.id !== litId);
-            commit({ literals: updated });
-        }
+        const updated = literals.filter(l => l.id !== litId);
+        commit({ literals: updated });
+        syncRemoveEnumLiteral(litId, node.id);
     };
 
     return (
@@ -686,11 +779,8 @@ function PackageNodeProperties({ node, onUpdate, isJjomMode }: { node: Node; onU
     }, [node.id, nodeData.label]);
 
     const commitName = () => {
-        if (isJjomMode) {
-            syncNodeLabel(node.id, name);
-        } else {
-            onUpdate(node.id, { ...nodeData, label: name });
-        }
+        onUpdate(node.id, { ...nodeData, label: name });
+        syncNodeLabel(node.id, name);
     };
 
     return (
@@ -978,48 +1068,39 @@ function ReferenceEdgeProperties({
     }, [name, kind, lowerBound, upperBound, edge.id, edge.target, ref, edgeData, onUpdate]);
 
     const commitName = () => {
-        if (isJjomMode) {
-            syncEdgeRefProperty(edge.id, 'name', name);
-        } else {
-            commitRF();
-        }
+        commitRF();
+        const refId = getEdgeRefId(edge.id) ?? ref?.id;
+        if (refId && refId !== edge.id) syncUpdateReference(refId, 'name', name);
     };
 
     const handleKindChange = (newKind: ReferenceKind) => {
         setKind(newKind);
-        if (isJjomMode) {
-            syncEdgeRefKind(edge.id, newKind);
-        } else {
-            const updatedRef: MetaReference = {
-                id: ref?.id || edge.id,
-                name,
-                kind: newKind,
-                targetClassId: edge.target,
-                lowerBound,
-                upperBound,
-                containment: newKind === 'composition',
-            };
-            onUpdate(edge.id, {
-                label: name,
-                data: { ...edgeData, reference: updatedRef } as ReferenceEdgeData,
-            });
-        }
+        const updatedRef: MetaReference = {
+            id: ref?.id || edge.id,
+            name,
+            kind: newKind,
+            targetClassId: edge.target,
+            lowerBound,
+            upperBound,
+            containment: newKind === 'composition',
+        };
+        onUpdate(edge.id, {
+            label: name,
+            data: { ...edgeData, reference: updatedRef } as ReferenceEdgeData,
+        });
+        syncEdgeRefKind(edge.id, newKind);
     };
 
     const commitLowerBound = () => {
-        if (isJjomMode) {
-            syncEdgeRefProperty(edge.id, 'lowerBound', lowerBound);
-        } else {
-            commitRF();
-        }
+        commitRF();
+        const refId = getEdgeRefId(edge.id) ?? ref?.id;
+        if (refId && refId !== edge.id) syncUpdateReference(refId, 'lowerBound', lowerBound);
     };
 
     const commitUpperBound = () => {
-        if (isJjomMode) {
-            syncEdgeRefProperty(edge.id, 'upperBound', upperBound);
-        } else {
-            commitRF();
-        }
+        commitRF();
+        const refId = getEdgeRefId(edge.id) ?? ref?.id;
+        if (refId && refId !== edge.id) syncUpdateReference(refId, 'upperBound', upperBound);
     };
 
     const sourceAnchor: AnchorConfig = edgeData?.sourceAnchor || { mode: 'auto', side: (edge.sourceHandle || 'right') as AnchorSide };
@@ -1150,4 +1231,5 @@ function ReferenceEdgeProperties({
     );
 }
 
+export type { ModelInfo };
 export default PropertiesPanel;

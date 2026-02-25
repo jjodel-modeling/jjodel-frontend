@@ -1029,6 +1029,7 @@ export class DGraph extends DGraphElement {
     // personal attributes
     zoom!: GraphPoint;
     offset!: GraphSize; // in-graph scrolling offset
+    graphStyle!: string; // 'v2-flow' for Editor v2, '' or undefined for classic/legacy
 
     public static new(htmlindex: number, model: DGraph["model"],
                       parentNodeID?: DGraphElement["father"], // immediate parent

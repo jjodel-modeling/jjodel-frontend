@@ -6,6 +6,8 @@ import {
     useNodes,
     type EdgeProps,
 } from '@xyflow/react';
+import { syncUpdateReference } from '../sync/canvasToJjom';
+import { getEdgeRefId } from '../sync/syncState';
 
 // Margin around nodes for routing
 const EDGE_PADDING = 20;
@@ -208,7 +210,11 @@ function ManhattanEdge(props: EdgeProps) {
         setEdges((edges) =>
             edges.map((e) => (e.id === id ? { ...e, label: labelText } : e))
         );
-    }, [id, labelText, setEdges]);
+        const refId = getEdgeRefId(id) ?? (props.data as any)?.jjomRefId ?? (props.data as any)?.reference?.id;
+        if (refId && refId !== id) {
+            syncUpdateReference(refId, 'name', labelText);
+        }
+    }, [id, labelText, setEdges, props.data]);
 
     const onKeyDown = useCallback(
         (e: React.KeyboardEvent) => {

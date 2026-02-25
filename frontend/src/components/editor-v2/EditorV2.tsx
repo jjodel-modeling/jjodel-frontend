@@ -39,7 +39,7 @@ import type { ClassNodeData, EnumNodeData, PackageNodeData, ReferenceEdgeData, I
 import { EdgeTypePopup, type EdgeTypeChoice } from './components/EdgeTypePopup';
 import { useJjomSync } from './hooks/useJjomSync';
 import { useJjomSelection } from './hooks/useJjomSelection';
-import { getSyncMode } from './sync/syncState';
+import { getSyncMode, markDropCreated } from './sync/syncState';
 import {
     syncPositionToJjom,
     syncPositionBatchToJjom,
@@ -51,6 +51,9 @@ import {
     syncCreateClass,
     syncCreateEnum,
     syncCreatePackage,
+    getModelInfo,
+    setModelName,
+    setModelUri,
 } from './sync/canvasToJjom';
 import { rafThrottle, cancelThrottle } from '../../utils/DragThrottle';
 
@@ -217,12 +220,19 @@ function EditorV2Inner({ modelid, onSwitchEditor }: EditorV2Props) {
     const [edges, setEdges, onEdgesChange] = useEdgesState(modelid ? [] : initialEdges);
 
     // Phase 3: bidirectional incremental sync with JjOM/Redux
-    const { isJjomMode, graphId } = useJjomSync(modelid, setNodes, setEdges);
+    // fitViewRef bridges the hook ordering: useJjomSync needs to call fitView
+    // after init, but fitView comes from useReactFlow() which is defined later.
+    const fitViewRef = useRef<(() => void) | null>(null);
+    const { isJjomMode, graphId } = useJjomSync(modelid, setNodes, setEdges, () => {
+        // Delay slightly so RF has measured nodes before fitting
+        setTimeout(() => fitViewRef.current?.(), 50);
+    });
 
     // Selection sync: standalone hook — updates Properties panel via _lastSelected
     const jjomSelection = useJjomSelection(modelid, isJjomMode);
 
     const { screenToFlowPosition, getNodes, getEdges, zoomIn, zoomOut, fitView, getViewport, setViewport } = useReactFlow();
+    fitViewRef.current = () => fitView({ padding: 0.2, maxZoom: 1 });
     const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
     const [snapEnabled, setSnapEnabled] = useState(true);
     const clipboard = useRef<ClipboardState>({ nodes: [], edges: [] });
@@ -373,14 +383,10 @@ function EditorV2Inner({ modelid, onSwitchEditor }: EditorV2Props) {
             takeSnapshot();
 
             const isInheritance = choice === 'inheritance';
-            const newEdgeId = isInheritance ? `inh_${Date.now()}` : `ref_${Date.now()}`;
             const edgeType = isInheritance ? 'inheritance' : 'reference';
 
             const currentEdges = getEdges();
 
-            // Always use occupancy-aware anchor selection.
-            // Connection handles from React Flow are arbitrary pool handles (closest to mouse),
-            // not intentional routing choices by the user.
             const optimal = getOptimalAnchors(
                 connection.source!,
                 connection.target!,
@@ -395,8 +401,30 @@ function EditorV2Inner({ modelid, onSwitchEditor }: EditorV2Props) {
             const sourceIndex = getNextFreeHandleIndex(connection.source!, sourceSide, 'source', currentEdges);
             const targetIndex = getNextFreeHandleIndex(connection.target!, targetSide, 'target', currentEdges);
 
+            // ── JjOM mode: create in JjOM FIRST, then use the real IDs ──
+            // This avoids a race condition where the sync sees the DEdge
+            // before markDropCreated is called, causing duplicates.
+            let edgeId: string;
+
+            if (isJjomMode) {
+                let dEdgeId: string | null = null;
+                if (isInheritance) {
+                    dEdgeId = syncInheritanceEdge(connection.source!, connection.target!);
+                } else {
+                    dEdgeId = syncReferenceEdge(connection.source!, connection.target!, 'newRef', choice);
+                }
+                if (!dEdgeId) {
+                    console.warn('[EditorV2] Failed to create JjOM edge');
+                    setPendingConnection(null);
+                    return;
+                }
+                edgeId = dEdgeId;
+            } else {
+                edgeId = isInheritance ? `inh_${Date.now()}` : `ref_${Date.now()}`;
+            }
+
             const newEdge: Edge = {
-                id: newEdgeId,
+                id: edgeId,
                 source: connection.source!,
                 target: connection.target!,
                 sourceHandle: `${sourceSide}-${sourceIndex}`,
@@ -406,7 +434,7 @@ function EditorV2Inner({ modelid, onSwitchEditor }: EditorV2Props) {
                     label: 'newRef',
                     data: {
                         reference: {
-                            id: newEdgeId,
+                            id: edgeId,
                             name: 'newRef',
                             kind: choice as ReferenceKind,
                             targetClassId: connection.target!,
@@ -428,15 +456,6 @@ function EditorV2Inner({ modelid, onSwitchEditor }: EditorV2Props) {
 
             setEdges((eds) => applyDistribution([...eds, newEdge]));
             setPendingConnection(null);
-
-            // Phase 3: sync edge creation to JjOM
-            if (isJjomMode) {
-                if (isInheritance) {
-                    syncInheritanceEdge(connection.source!, connection.target!);
-                } else {
-                    syncReferenceEdge(connection.source!, connection.target!, 'newRef');
-                }
-            }
         },
         [pendingConnection, setEdges, getEdges, takeSnapshot, getOptimalAnchors, applyDistribution, isJjomMode]
     );
@@ -468,24 +487,54 @@ function EditorV2Inner({ modelid, onSwitchEditor }: EditorV2Props) {
             position.y -= defaultNodeHeight / 2;
 
             // ── JjOM mode: create real model+vertex in JjOM ──────────────
-            // useJjomSync will detect the new DVertex in graph.subElements
-            // and create the RF node automatically.
+            // We also create the RF node directly for instant feedback (no flicker).
+            // markCanvasUpdated prevents useJjomSync from duplicating the node.
             if (isJjomMode && graphId) {
+                let vertexId: string | false = false;
+                let nodeType: string = 'classNode';
+                let defaultLabel = 'NewClass';
+                let nodeData: any = {};
+
                 switch (rawType) {
                     case 'classNode':
-                        syncCreateClass(graphId, position.x, position.y, false);
+                        vertexId = syncCreateClass(graphId, position.x, position.y, false);
+                        nodeType = 'classNode';
+                        defaultLabel = 'NewClass';
+                        nodeData = { label: defaultLabel, isAbstract: false, attributes: [], autoEdit: true };
                         break;
                     case 'classNode:abstract':
-                        syncCreateClass(graphId, position.x, position.y, true);
+                        vertexId = syncCreateClass(graphId, position.x, position.y, true);
+                        nodeType = 'classNode';
+                        defaultLabel = 'NewAbstractClass';
+                        nodeData = { label: defaultLabel, isAbstract: true, attributes: [], autoEdit: true };
                         break;
                     case 'enumNode':
-                        syncCreateEnum(graphId, position.x, position.y);
+                        vertexId = syncCreateEnum(graphId, position.x, position.y);
+                        nodeType = 'enumNode';
+                        defaultLabel = 'NewEnum';
+                        nodeData = { label: defaultLabel, literals: [], autoEdit: true };
                         break;
                     case 'packageNode':
-                        syncCreatePackage(graphId, position.x, position.y);
+                        vertexId = syncCreatePackage(graphId, position.x, position.y);
+                        nodeType = 'packageNode';
+                        defaultLabel = 'NewPackage';
+                        nodeData = { label: defaultLabel, autoEdit: true };
                         break;
                     default:
                         return;
+                }
+
+                // Create RF node instantly at drop position
+                if (vertexId) {
+                    markDropCreated(vertexId);
+                    const newNode: Node = {
+                        id: vertexId,
+                        type: nodeType,
+                        position,
+                        ...(nodeType === 'packageNode' ? { style: { zIndex: -1 } } : {}),
+                        data: nodeData,
+                    };
+                    setNodes((nds) => [...nds, newNode]);
                 }
                 return;
             }
@@ -922,10 +971,9 @@ function EditorV2Inner({ modelid, onSwitchEditor }: EditorV2Props) {
     const handleZoomIn = useCallback(() => zoomIn(), [zoomIn]);
     const handleZoomOut = useCallback(() => zoomOut(), [zoomOut]);
     const handleResetZoom = useCallback(() => {
-        const { x, y } = getViewport();
-        setViewport({ x, y, zoom: 1 });
-    }, [getViewport, setViewport]);
-    const handleFitView = useCallback(() => fitView({ padding: 0.2 }), [fitView]);
+        fitView({ padding: 0.2, maxZoom: 1, duration: 200 });
+    }, [fitView]);
+    const handleFitView = useCallback(() => fitView({ padding: 0.2, maxZoom: 1, duration: 200 }), [fitView]);
     const handleToggleSnap = useCallback(() => setSnapEnabled((prev) => !prev), []);
 
     // Properties panel handlers
@@ -1098,9 +1146,10 @@ function EditorV2Inner({ modelid, onSwitchEditor }: EditorV2Props) {
                     )({ x: c.position.x, y: c.position.y });
                 }
 
-                // -- Resize sync (always lazy — on resize end) --
+                // -- Resize sync (only on explicit user resize, NOT on RF
+                // auto-measurement which fires dimensions for every setNodes) --
                 if (hasResize) {
-                    for (const c of changes.filter((ch: any) => ch.type === 'dimensions')) {
+                    for (const c of changes.filter((ch: any) => ch.type === 'dimensions' && ch.resizing)) {
                         const node = nodes.find((n) => n.id === c.id);
                         const w = c.dimensions?.width ?? node?.measured?.width;
                         const h = c.dimensions?.height ?? node?.measured?.height;
@@ -1161,6 +1210,20 @@ function EditorV2Inner({ modelid, onSwitchEditor }: EditorV2Props) {
 
     const editorContextValue = useMemo(() => ({ takeSnapshot, notation, onEdgeDataChange: handleEdgeChange, recalculateAnchors }), [takeSnapshot, notation, handleEdgeChange, recalculateAnchors]);
 
+    // Model info for PropertiesPanel (when nothing is selected)
+    const modelInfoData = useMemo(() => {
+        if (!modelid || !isJjomMode) return null;
+        return getModelInfo(modelid);
+    }, [modelid, isJjomMode, nodes.length]); // re-compute when nodes change
+
+    const handleModelNameChange = useCallback((name: string) => {
+        if (modelid) setModelName(modelid, name);
+    }, [modelid]);
+
+    const handleModelUriChange = useCallback((uri: string) => {
+        if (modelid) setModelUri(modelid, uri);
+    }, [modelid]);
+
     return (
         <EditorContext.Provider value={editorContextValue}>
             <div className={`editor-v2 theme-${theme} notation-${notation}${colorScheme !== 'default' ? ` scheme-${colorScheme}` : ''}`} tabIndex={0} onKeyDown={onKeyDown}>
@@ -1215,8 +1278,9 @@ function EditorV2Inner({ modelid, onSwitchEditor }: EditorV2Props) {
                             edgeTypes={edgeTypes}
                             defaultEdgeOptions={defaultEdgeOptions}
                             connectionMode={ConnectionMode.Loose}
-                            fitView
-                            fitViewOptions={{ padding: 0.2 }}
+                            fitView={!isJjomMode && nodes.length > 0}
+                            fitViewOptions={{ padding: 0.2, maxZoom: 1 }}
+                            defaultViewport={{ x: 0, y: 0, zoom: 1 }}
                             snapToGrid={snapEnabled}
                             snapGrid={[16, 16]}
                             multiSelectionKeyCode="Shift"
@@ -1238,6 +1302,7 @@ function EditorV2Inner({ modelid, onSwitchEditor }: EditorV2Props) {
                                 color={theme === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.08)'}
                             />
                             <MiniMap
+                                position="bottom-right"
                                 nodeStrokeWidth={3}
                                 nodeColor={(node) => {
                                     if (node.type === 'classNode') return theme === 'dark' ? '#0ea5e9' : '#0284c7';
@@ -1268,6 +1333,9 @@ function EditorV2Inner({ modelid, onSwitchEditor }: EditorV2Props) {
                     onConvertToInheritance={convertToInheritance}
                     onConvertToReference={convertToReference}
                     isJjomMode={isJjomMode}
+                    modelInfo={modelInfoData}
+                    onModelNameChange={handleModelNameChange}
+                    onModelUriChange={handleModelUriChange}
                 />
 
                 {contextMenu && (

@@ -219,7 +219,7 @@ function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     const ret: StateProps = {} as any;
     ret.model = LModel.fromPointer(ownProps.modelid);
     const graphs: DGraph[] = DGraph.fromPointer(state.graphs);
-    const pointers = graphs.filter((graph) => { return graph.model === ret.model?.id });
+    const pointers = graphs.filter((graph) => { return graph.model === ret.model?.id && (graph as any).graphStyle !== 'v2-flow' });
     if (pointers.length > 0) ret.graph = LGraph.fromPointer(pointers[0].id);
     ret.isEdgePending = state.isEdgePending
     return ret;

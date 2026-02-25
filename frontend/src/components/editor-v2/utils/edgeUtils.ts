@@ -733,7 +733,7 @@ export function computeLabelPosition(path: string): { x: number; y: number } {
  */
 export function computeCardinalityPosition(
     path: string,
-    offset: number = 25
+    offset: number = 35
 ): { x: number; y: number } {
     const points = parsePathPoints(path);
     if (points.length < 2) return { x: 0, y: 0 };
