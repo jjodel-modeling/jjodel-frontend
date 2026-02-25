@@ -82,7 +82,7 @@ function UnifiedEdge(props: EdgeProps) {
 
     useEffect(() => {
         if (!editing) {
-            setLabelText(String(label || ref?.name || ''));
+            setLabelText(String(label || ref?.name + 'no_name' || ''));
         }
     }, [label, ref?.name, editing]);
 
@@ -547,7 +547,7 @@ function UnifiedEdge(props: EdgeProps) {
                         onClick={(e) => { if (selected) { e.stopPropagation(); setEditing(true); } }}
                     >
                         {editing ? (
-                            <input
+                            <><input
                                 autoFocus
                                 className="edge-label__input"
                                 value={labelText}
@@ -555,9 +555,9 @@ function UnifiedEdge(props: EdgeProps) {
                                 onBlur={commitLabel}
                                 onKeyDown={onKeyDown}
                                 onClick={(e) => e.stopPropagation()}
-                            />
+                            /></>
                         ) : (
-                            labelText && <span className="edge-label__text">{labelText}</span>
+                            labelText && labelText !== 'newRef' && <><span className="edge-label__text">{labelText}</span></>
                         )}
                     </div>
                 )}

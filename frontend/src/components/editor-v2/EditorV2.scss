@@ -1202,9 +1202,10 @@
     white-space: nowrap;
 }
 
+// Hide React Flow's built-in edge label — we render our own in UnifiedEdge
+.react-flow__edge-textbg,
 .react-flow__edge-text {
-    font-size: 10px;
-    fill: var(--text-muted);
+    display: none !important;
 }
 
 // .edge-cardinality styles merged above with .edge-label__text
