@@ -480,7 +480,7 @@
 
 // Ghost handles — hidden by default, for creating new connections
 .mm-anchor.mm-anchor--ghost {
-    border: 1.5px dashed var(--anchor-border) !important;
+    border: 1.5px solid var(--anchor-border) !important;
     opacity: 0 !important;
     pointer-events: none !important;
     cursor: crosshair !important;
@@ -505,10 +505,9 @@
 .react-flow .react-flow__handle.mm-anchor--pool-inactive {
     opacity: 0 !important;
     pointer-events: none !important;
-    width: 0 !important;
-    height: 0 !important;
-    min-width: 0 !important;
-    min-height: 0 !important;
+    // Dimensions MUST stay at 8x8 (from .mm-anchor) — React Flow uses
+    // getBoundingClientRect() to measure handle positions. width:0/height:0
+    // causes degenerate edge coordinates on the first render frame.
     border: none !important;
     background: transparent !important;
     padding: 0 !important;
@@ -523,7 +522,7 @@
     pointer-events: all !important;
     width: 8px !important;
     height: 8px !important;
-    border: 1.5px dashed var(--anchor-border) !important;
+    border: 1.5px solid var(--anchor-border) !important;
     background: var(--anchor-bg) !important;
 }
 

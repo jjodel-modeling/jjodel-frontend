@@ -382,11 +382,32 @@ function EditorV2Inner({ modelid, onSwitchEditor }: EditorV2Props) {
             const isInheritance = choice === 'inheritance';
             const edgeType = isInheritance ? 'inheritance' : 'reference';
 
+            // Normalize inheritance direction: UML convention requires
+            // source = child, target = parent (△ appears at target).
+            // If user dragged from parent to child (source is ABOVE target), swap.
+            let edgeSource = connection.source!;
+            let edgeTarget = connection.target!;
+
+            if (isInheritance) {
+                const sourceNode = getNodes().find(n => n.id === edgeSource);
+                const targetNode = getNodes().find(n => n.id === edgeTarget);
+                if (sourceNode && targetNode) {
+                    const sourceCenter = sourceNode.position.y +
+                        ((sourceNode.measured?.height ?? 80) / 2);
+                    const targetCenter = targetNode.position.y +
+                        ((targetNode.measured?.height ?? 80) / 2);
+                    // Source above target means user dragged parent→child; swap.
+                    if (sourceCenter < targetCenter) {
+                        [edgeSource, edgeTarget] = [edgeTarget, edgeSource];
+                    }
+                }
+            }
+
             const currentEdges = getEdges();
 
             const optimal = getOptimalAnchors(
-                connection.source!,
-                connection.target!,
+                edgeSource,
+                edgeTarget,
                 edgeType,
                 currentEdges,
             );
@@ -395,8 +416,8 @@ function EditorV2Inner({ modelid, onSwitchEditor }: EditorV2Props) {
 
             const sourceAnchor: AnchorConfig = { mode: 'auto', side: sourceSide as AnchorConfig['side'] };
             const targetAnchor: AnchorConfig = { mode: 'auto', side: targetSide as AnchorConfig['side'] };
-            const sourceIndex = getNextFreeHandleIndex(connection.source!, sourceSide, 'source', currentEdges);
-            const targetIndex = getNextFreeHandleIndex(connection.target!, targetSide, 'target', currentEdges);
+            const sourceIndex = getNextFreeHandleIndex(edgeSource, sourceSide, 'source', currentEdges);
+            const targetIndex = getNextFreeHandleIndex(edgeTarget, targetSide, 'target', currentEdges);
 
             // ── JjOM mode: create in JjOM FIRST, then use the real IDs ──
             // This avoids a race condition where the sync sees the DEdge
@@ -406,9 +427,9 @@ function EditorV2Inner({ modelid, onSwitchEditor }: EditorV2Props) {
             if (isJjomMode) {
                 let dEdgeId: string | null = null;
                 if (isInheritance) {
-                    dEdgeId = syncInheritanceEdge(connection.source!, connection.target!);
+                    dEdgeId = syncInheritanceEdge(edgeSource, edgeTarget);
                 } else {
-                    dEdgeId = syncReferenceEdge(connection.source!, connection.target!, 'newRef', choice);
+                    dEdgeId = syncReferenceEdge(edgeSource, edgeTarget, 'newRef');
                 }
                 if (!dEdgeId) {
                     console.warn('[EditorV2] Failed to create JjOM edge');
@@ -422,8 +443,8 @@ function EditorV2Inner({ modelid, onSwitchEditor }: EditorV2Props) {
 
             const newEdge: Edge = {
                 id: edgeId,
-                source: connection.source!,
-                target: connection.target!,
+                source: edgeSource,
+                target: edgeTarget,
                 sourceHandle: `${sourceSide}-${sourceIndex}`,
                 targetHandle: `${targetSide}-${targetIndex}`,
                 type: edgeType,
@@ -434,7 +455,7 @@ function EditorV2Inner({ modelid, onSwitchEditor }: EditorV2Props) {
                             id: edgeId,
                             name: 'newRef',
                             kind: choice as ReferenceKind,
-                            targetClassId: connection.target!,
+                            targetClassId: edgeTarget,
                             lowerBound: 0,
                             upperBound: -1,
                             containment: choice === 'composition',
@@ -454,7 +475,7 @@ function EditorV2Inner({ modelid, onSwitchEditor }: EditorV2Props) {
             setEdges((eds) => applyDistribution([...eds, newEdge]));
             setPendingConnection(null);
         },
-        [pendingConnection, setEdges, getEdges, takeSnapshot, getOptimalAnchors, applyDistribution, isJjomMode]
+        [pendingConnection, setEdges, getEdges, getNodes, takeSnapshot, getOptimalAnchors, applyDistribution, isJjomMode]
     );
 
     const handleEdgeTypeCancelled = useCallback(() => {

@@ -214,14 +214,10 @@ function DynamicHandles({ nodeId }: DynamicHandlesProps) {
                                 [positionProp]: '50%',
                                 opacity: 0,
                                 pointerEvents: 'none' as const,
-                                width: 0,
-                                height: 0,
-                                minWidth: 0,
-                                minHeight: 0,
+                                // NO width:0, NO height:0 — React Flow MUST be able to measure
+                                // via getBoundingClientRect(). Dimensions come from CSS .mm-anchor (8x8px).
                                 border: 'none',
                                 background: 'transparent',
-                                padding: 0,
-                                margin: 0,
                             };
 
                     handles.push(
