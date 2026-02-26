@@ -212,6 +212,7 @@ function DynamicHandles({ nodeId }: DynamicHandlesProps) {
                             ? { [positionProp]: '50%' }
                             : {
                                 [positionProp]: '50%',
+                                visibility: 'hidden' as const,
                                 opacity: 0,
                                 pointerEvents: 'none' as const,
                                 // NO width:0, NO height:0 — React Flow MUST be able to measure
