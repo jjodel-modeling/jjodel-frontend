@@ -451,52 +451,89 @@
 }
 
 // ============================================
-// ANCHOR HANDLES — Hidden by default, visible on hover/selection
+// ANCHOR HANDLES — Dynamic context-aware system
 // ============================================
 
+// Base shared styles for all anchor types
 .mm-anchor {
     width: 8px !important;
     height: 8px !important;
     background: var(--anchor-bg) !important;
-    border: 1.5px solid var(--anchor-border) !important;
     border-radius: 50% !important;
-    opacity: 0 !important;
-    transition: opacity 0.15s ease, transform 0.15s ease !important;
-    pointer-events: none !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
 }
 
-// Visible when NODE is hovered
-.mm-node:hover .mm-anchor {
+// Connected handles — ALWAYS visible where edges exist
+.mm-anchor.mm-anchor--connected {
+    border: 1.5px solid var(--anchor-border) !important;
     opacity: 1 !important;
     pointer-events: all !important;
+    transition: all 0.2s ease !important;
 }
 
-// Visible when NODE is selected
-.mm-node.selected .mm-anchor {
-    opacity: 1 !important;
-    pointer-events: all !important;
-}
-
-// Visible during connection creation
-.react-flow__node.connecting .mm-anchor,
-.react-flow.connecting .mm-anchor {
-    opacity: 0.6 !important;
-    pointer-events: all !important;
-}
-
-// Node target under mouse shows full anchors during connection
-.react-flow.connecting .react-flow__node:hover .mm-anchor {
-    opacity: 1 !important;
-}
-
-// Hover on anchor itself — highlight
-.mm-anchor:hover {
-    opacity: 1 !important;
+.mm-anchor.mm-anchor--connected:hover {
     background: var(--accent) !important;
     border-color: var(--text-primary) !important;
     transform: scale(1.3) !important;
 }
 
+// Ghost handles — hidden by default, for creating new connections
+.mm-anchor.mm-anchor--ghost {
+    border: 1.5px dashed var(--anchor-border) !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+    cursor: crosshair !important;
+    transition: opacity 0.15s ease !important;
+}
+
+// Ghost visible when its side is hovered
+.mm-anchor.mm-anchor--ghost-visible {
+    opacity: 0.5 !important;
+    pointer-events: all !important;
+}
+
+.mm-anchor.mm-anchor--ghost-visible:hover {
+    opacity: 0.8 !important;
+    transform: scale(1.2) !important;
+}
+
+// Pool inactive handles — always in DOM but completely hidden.
+// .react-flow ancestor ensures max specificity to override RF's default styles.
+// Inline styles on the Handle component provide the primary override;
+// this CSS is the safety net for any RF style injection we missed.
+.react-flow .react-flow__handle.mm-anchor--pool-inactive {
+    opacity: 0 !important;
+    pointer-events: none !important;
+    width: 0 !important;
+    height: 0 !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    border: none !important;
+    background: transparent !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+}
+
+// Ghost visible during connection mode (user dragging from another node)
+.react-flow.connecting .mm-anchor.mm-anchor--ghost,
+.react-flow.connecting .react-flow__handle.mm-anchor--pool-inactive {
+    opacity: 0.5 !important;
+    pointer-events: all !important;
+    width: 8px !important;
+    height: 8px !important;
+    border: 1.5px dashed var(--anchor-border) !important;
+    background: var(--anchor-bg) !important;
+}
+
+// Target node under mouse during connection — full opacity
+.react-flow.connecting .react-flow__node:hover .mm-anchor.mm-anchor--ghost,
+.react-flow.connecting .react-flow__node:hover .react-flow__handle.mm-anchor--pool-inactive {
+    opacity: 1 !important;
+}
+
+// RF validation states (applied by React Flow during connection)
 .react-flow__handle-connecting {
     opacity: 1 !important;
     background: var(--accent) !important;
@@ -508,23 +545,6 @@
     background: var(--anchor-valid) !important;
     border-color: var(--text-primary) !important;
     pointer-events: all !important;
-}
-
-// Pool handles — pre-allocated but inactive, always invisible
-.react-flow__handle.mm-anchor--pool,
-.mm-node:hover .react-flow__handle.mm-anchor--pool,
-.mm-node.selected .react-flow__handle.mm-anchor--pool,
-.react-flow__node.connecting .mm-anchor--pool,
-.react-flow.connecting .mm-anchor--pool,
-.react-flow.connecting .react-flow__node:hover .mm-anchor--pool {
-    opacity: 0 !important;
-    pointer-events: none !important;
-    width: 1px !important;
-    height: 1px !important;
-    min-width: 0 !important;
-    min-height: 0 !important;
-    background: transparent !important;
-    border: none !important;
 }
 
 // ============================================

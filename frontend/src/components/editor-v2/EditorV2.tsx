@@ -10,6 +10,7 @@ import {
     SelectionMode,
     ConnectionMode,
     PanOnScrollMode,
+    reconnectEdge,
     type Node,
     type Edge,
     type Connection,
@@ -31,9 +32,7 @@ import ContextMenu, { type ContextMenuItem } from './ContextMenu';
 import { useHistory } from './hooks/useHistory';
 import { useAlignment } from './hooks/useAlignment';
 import { useAutoAnchor, computeAnchorsWithHysteresis, getNodeRect } from './hooks/useAutoAnchor';
-import { useObstacleAwareAnchors } from './hooks/useObstacleAwareAnchors';
 import { EditorContext } from './contexts/EditorContext';
-import { ObstacleGridProvider } from './contexts/ObstacleGridContext';
 import { getNextFreeHandleIndex, computePortDistribution } from './utils/portDistribution';
 import type { ClassNodeData, EnumNodeData, PackageNodeData, ReferenceEdgeData, InheritanceEdgeData, AnchorConfig, ReferenceKind, NotationMode, ColorScheme } from './types';
 import { EdgeTypePopup, type EdgeTypeChoice } from './components/EdgeTypePopup';
@@ -298,8 +297,6 @@ function EditorV2Inner({ modelid, onSwitchEditor }: EditorV2Props) {
     // Auto-anchor for optimal edge routing
     const { getOptimalAnchors } = useAutoAnchor();
 
-    // Obstacle-aware post-pass: re-evaluates anchor sides using A* multi-candidate scoring
-    useObstacleAwareAnchors();
 
     // Helper: build node positions map for spatial port ordering
     const buildNodePositions = useCallback((nodeList: Node[]) => {
@@ -463,6 +460,21 @@ function EditorV2Inner({ modelid, onSwitchEditor }: EditorV2Props) {
     const handleEdgeTypeCancelled = useCallback(() => {
         setPendingConnection(null);
     }, []);
+
+    // Handle edge reconnection (drag endpoint to a new target/source)
+    const handleReconnect = useCallback(
+        (oldEdge: Edge, newConnection: Connection) => {
+            setEdges((eds) => {
+                const updated = reconnectEdge(oldEdge, newConnection, eds);
+                return applyDistribution(updated);
+            });
+        },
+        [setEdges, applyDistribution]
+    );
+
+    const handleReconnectStart = useCallback(() => {
+        takeSnapshot();
+    }, [takeSnapshot]);
 
     // Handle drop from palette
     const onDrop = useCallback(
@@ -1267,6 +1279,9 @@ function EditorV2Inner({ modelid, onSwitchEditor }: EditorV2Props) {
                             onEdgesChange={onEdgesChange}
                             onConnect={onConnect}
                             onConnectEnd={onConnectEnd}
+                            onReconnect={handleReconnect}
+                            onReconnectStart={handleReconnectStart}
+                            reconnectRadius={15}
                             onDrop={onDrop}
                             onDragOver={onDragOver}
                             onNodeContextMenu={onNodeContextMenu}
@@ -1358,9 +1373,7 @@ function EditorV2Inner({ modelid, onSwitchEditor }: EditorV2Props) {
 function EditorV2({ modelid, onSwitchEditor }: EditorV2Props) {
     return (
         <ReactFlowProvider>
-            <ObstacleGridProvider>
-                <EditorV2Inner modelid={modelid} onSwitchEditor={onSwitchEditor} />
-            </ObstacleGridProvider>
+            <EditorV2Inner modelid={modelid} onSwitchEditor={onSwitchEditor} />
         </ReactFlowProvider>
     );
 }

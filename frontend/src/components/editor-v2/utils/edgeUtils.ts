@@ -14,7 +14,7 @@ export const EDGE_PADDING = 25; // legacy — kept for ManhattanEdge.tsx compati
 const DETOUR_PADDING = 30; // used only for same-side and backward U-shape routing
 
 /** Toggle for Phase 7 A* obstacle avoidance. */
-export const OBSTACLE_AVOIDANCE_ENABLED = true;
+export const OBSTACLE_AVOIDANCE_ENABLED = false;
 
 /** Padding used for the fast-path obstruction check (matches ObstacleGrid's default). */
 const OBSTRUCTION_CHECK_PADDING = 10;

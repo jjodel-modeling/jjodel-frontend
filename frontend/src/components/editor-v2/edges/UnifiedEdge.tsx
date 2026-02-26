@@ -11,8 +11,6 @@ import { formatCardinality } from '../types';
 import { syncEdgeRefProperty } from '../sync/canvasToJjom';
 import {
     computeManhattanPath,
-    computeAStarPath,
-    OBSTACLE_AVOIDANCE_ENABLED,
     roundManhattanPath,
     computeSelfLoopPath,
     computeLabelPosition,
@@ -26,7 +24,6 @@ import {
     getEdgeCrossings,
     buildFinalPath,
 } from '../utils/edgeUtils';
-import { useObstacleGrid } from '../contexts/ObstacleGridContext';
 import { useEditorContextSafe } from '../contexts/EditorContext';
 import { useTreeLayout } from '../hooks/useTreeLayout';
 import { SegmentHandles } from './SegmentHandles';
@@ -82,7 +79,7 @@ function UnifiedEdge(props: EdgeProps) {
 
     useEffect(() => {
         if (!editing) {
-            setLabelText(String(label || ref?.name + 'no_name' || ''));
+            setLabelText(String(label || ref?.name || ''));
         }
     }, [label, ref?.name, editing]);
 
@@ -96,8 +93,6 @@ function UnifiedEdge(props: EdgeProps) {
         }
     }, [autoEdit, id, setEdges]);
 
-    // ─── Obstacle grid context ───
-    const { grid, nodeRects, version } = useObstacleGrid();
     const allNodes = useNodes();
     const allEdges = useEdges();
 
@@ -121,20 +116,10 @@ function UnifiedEdge(props: EdgeProps) {
         isInheritance,
     );
 
-    // ─── Compute base path — A* when enabled, classic otherwise ───
+    // ─── Compute base path — Manhattan routing ───
     const rawPath = useMemo(
-        () => {
-            if (OBSTACLE_AVOIDANCE_ENABLED && grid && nodeRects.length > 0) {
-                return computeAStarPath(
-                    grid, sourceX, sourceY, sourceSide,
-                    targetX, targetY, targetSide,
-                    source, target, nodeRects,
-                );
-            }
-            return computeManhattanPath(sourceX, sourceY, sourceSide, targetX, targetY, targetSide);
-        },
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-        [sourceX, sourceY, sourceSide, targetX, targetY, targetSide, grid, version, source, target]
+        () => computeManhattanPath(sourceX, sourceY, sourceSide, targetX, targetY, targetSide),
+        [sourceX, sourceY, sourceSide, targetX, targetY, targetSide]
     );
 
     // ─── Pipeline: parse → apply waypoints → round corners ───
@@ -153,9 +138,9 @@ function UnifiedEdge(props: EdgeProps) {
 
     // ─── Detect crossings with other edges ───
     const crossings = useMemo(
-        () => getEdgeCrossings(id, adjustedPoints, nodeRects),
+        () => getEdgeCrossings(id, adjustedPoints),
         // eslint-disable-next-line react-hooks/exhaustive-deps
-        [id, adjustedPoints, allNodes, allEdges, nodeRects]
+        [id, adjustedPoints, allNodes, allEdges]
     );
 
     // ─── Final path with rounding and bridge arcs ───
