@@ -212,21 +212,16 @@ class DockManager {
 
         try {
             // Create new JjTL Development Environment tab
+            const title = (
+                <div className="tab-title active-on-mouseenter">
+                    <i className='bi bi-arrow-left-right' style={{ marginRight: '6px', fontSize: '12px' }}/>
+                    {transformation.name || 'Transformation'}
+                </div>);
             const tab: TabData = {
                 id: tabId,
-                title: React.createElement('div', {
-                    className: 'tab-title active-on-mouseenter',
-                    'data-type': 'transformation'
-                }, [
-                    React.createElement('i', {
-                        key: 'icon',
-                        className: 'bi bi-arrow-left-right',
-                        style: { marginRight: '6px', fontSize: '12px' }
-                    }),
-                    transformation.name || 'Transformation'
-                ]),
                 group: 'models',
                 closable: true,
+                title,
                 content: tabContent
             };
 
@@ -235,7 +230,7 @@ class DockManager {
             if (existingTab) {
                 console.log('[DockManager] Updating and activating existing transformation tab');
                 // CRITICAL: Update tab content with fresh callbacks to avoid stale closures
-                DockManager.dock.updateTab(tabId, { title: tab.title, content: tabContent }, true);
+                DockManager.dock.updateTab(tabId, { title, content: tabContent }, true);
                 return;
             }
 

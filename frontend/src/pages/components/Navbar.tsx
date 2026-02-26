@@ -36,7 +36,7 @@ import {FakeStateProps} from '../../joiner/types';
 import {connect} from 'react-redux';
 import {AuthApi, ProjectsApi} from '../../api/persistance';
 import TabDataMaker from "../../../src/components/abstract/tabs/TabDataMaker";
-import DockManager from "../../../src/components/abstract/DockManager";
+import DockManager from "../../components/abstract/DockManager";
 
 import {Divisor, Item, Menu, UserHeader, SubMenu, SubMenuItem} from '../components/menu/Menu';
 

@@ -11,10 +11,10 @@
 import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism';
-import { ScriptTarget, ScriptLineResult } from './ScriptBlock';
-import { ExecutionErrorDialog, ExecutionErrorInfo, ExecutionStats } from './ExecutionErrorDialog'; missing imports
+import {ScriptTarget, ScriptLineResult, ExecutionErrorInfo, ExecutionStats} from './ScriptBlock';
+import { ExecutionErrorDialog, } from './ExecutionErrorDialog';
 import './ScriptExecutionWindow.scss';
-
+// import {ExecutionStats} from "../../jjtl/executor";
 // ============================================
 // TYPES
 // ============================================
@@ -86,7 +86,7 @@ export const ScriptExecutionWindow: React.FC<ScriptExecutionWindowProps> = ({
     // Error dialog state
     const [errorDialogOpen, setErrorDialogOpen] = useState(false);
     const [errorDialogInfo, setErrorDialogInfo] = useState<ExecutionErrorInfo | null>(null);
-    const [executionStats, setExecutionStats] = useState<ExecutionStats>({ commandsExecuted: 0, errors: 0, duration: 0 });
+    const [executionStats, setExecutionStats] = useState<ExecutionStats>(new ExecutionStats());
     const [executionStartTime, setExecutionStartTime] = useState<number>(0);
 
     // Refs
@@ -145,22 +145,23 @@ export const ScriptExecutionWindow: React.FC<ScriptExecutionWindowProps> = ({
     const showErrorDialog = useCallback((
         line: ParsedLine,
         errorMessage: string,
-        commandsExecuted: number,
+        executedCommands: number,
         errors: number
     ): Promise<'re-evaluate' | 'stop' | 'continue'> => {
         return new Promise((resolve) => {
             const duration = (Date.now() - executionStartTime) / 1000;
 
             setErrorDialogInfo({
-                line: line.index + 1,
+                lineNumber: line.index + 1,
                 command: line.text.trim(),
-                errorMessage,
+                error: errorMessage,
                 errorType: errorMessage.toLowerCase().includes('not found') ? 'not_found' :
                            errorMessage.toLowerCase().includes('parse') ? 'parse' : 'execution',
             });
 
             setExecutionStats({
-                commandsExecuted,
+                ...executionStats,
+                executedCommands,
                 errors,
                 duration,
             });

@@ -7,14 +7,14 @@ import {} from "../joiner";
 import JodieConfigService from "../services/JodieConfig";
 
 // Provider logo imports
-import openaiLogo from '../../assets/icons/providers/openai.svg';
-import anthropicLogo from '../../assets/icons/providers/anthropic.svg';
-import deepseekLogo from '../../assets/icons/providers/deepseek.svg';
-import mistralLogo from '../../assets/icons/providers/mistral.svg';
-import geminiLogo from '../../assets/icons/providers/gemini.svg';
-import groqLogo from '../../assets/icons/providers/groq.svg';
-import kimiLogo from '../../assets/icons/providers/kimi.svg';
-import ollamaLogo from '../../assets/icons/providers/ollama.svg';
+import openaiLogo from '../assets/icons/providers/openai.svg';
+import anthropicLogo from '../assets/icons/providers/anthropic.svg';
+import deepseekLogo from '../assets/icons/providers/deepseek.svg';
+import mistralLogo from '../assets/icons/providers/mistral.svg';
+import geminiLogo from '../assets/icons/providers/gemini.svg';
+import groqLogo from '../assets/icons/providers/groq.svg';
+import kimiLogo from '../assets/icons/providers/kimi.svg';
+import ollamaLogo from '../assets/icons/providers/ollama.svg';
 
 export class AIProvider {
     static isValidProvider(provider: any): provider is TAIProvider { return !!companymap[provider as TAIProvider]; }
@@ -281,12 +281,12 @@ AI.Ollama.endpoint = 'http://localhost:11434/v1/chat/completions'; // Default lo
 
 AI.GPT.bi_icon = 'chat-dots';
 AI.Claude.bi_icon = 'robot';
-AI.DeepSeek.bi_icon = '';
+AI.DeepSeek.bi_icon = 'robot';
 AI.Gemini.bi_icon = 'google';
-AI.Mistral.bi_icon = '';
-AI.Groq.bi_icon = '';
-AI.Kimi.bi_icon = '';
-AI.Ollama.bi_icon = '';
+AI.Mistral.bi_icon = 'robot';
+AI.Groq.bi_icon = 'robot';
+AI.Kimi.bi_icon = 'robot';
+AI.Ollama.bi_icon = 'robot';
 
 type TAIVersion = string;
 export class AIConfig{
@@ -436,12 +436,12 @@ export class JodieConfig {
     appVersion: string =  '1.0.0';
 
     constructor() {
-        AIConfig.map = {} as any;
+        (AIConfig as any).map = {};
         for (let name of ALL_AI_PROVIDERS) {
             let llm = AI[name];
             AIConfig.new(name, Object.keys(llm.versions)[0], llm.requiresKey ? llm.endpoint : undefined);
         }
-        this.providers = AIConfig.map;
+        this.providers = (AIConfig as any).map;
     }
 
     public save(cascadeIndividuals: boolean = true): this{
@@ -474,7 +474,7 @@ export class JodieConfig {
         if (!data || !Array.isArray(data.providers)) { throw new Error('Invalid credentials format'); }
 
         data = U.toInstanceOf(data, JodieConfig);
-        AIConfig.map = data.providers;
+        (AIConfig as any).map = data.providers;
         let k: TAIProvider;
         for (k in data.providers) {
             data.providers[k] = U.toInstanceOf(data.providers[k], AIConfig as any);

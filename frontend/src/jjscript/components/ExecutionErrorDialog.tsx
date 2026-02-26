@@ -10,6 +10,9 @@
 import React, { useEffect, useCallback } from 'react';
 import { JjScriptError, ExecutionPauseInfo, ExecutionSummary } from '../executor/errors';
 import './ExecutionErrorDialog.scss';
+import {ExecutionError} from "../types";
+import {ExecutionErrorInfo, ExecutionStats} from "./ScriptBlock";
+import {Keystrokes} from "../../common/U";
 
 // ============================================
 // TYPES
@@ -17,7 +20,7 @@ import './ExecutionErrorDialog.scss';
 
 export interface ExecutionErrorDialogProps {
     isOpen: boolean;
-    onClose: () => void;
+    onClose?: () => void;
 
     /** Current error info (when paused) */
     pauseInfo?: ExecutionPauseInfo;
@@ -30,6 +33,11 @@ export interface ExecutionErrorDialogProps {
 
     /** Retry current command */
     onRetry?: () => void;
+    error?: ExecutionErrorInfo;
+    stats?: ExecutionStats;
+    onReEvaluate?: (cmd: string) => Promise<boolean>;
+    onStop?: () => void;
+    onContinue?: () => void;
 }
 
 // ============================================
@@ -49,9 +57,7 @@ export const ExecutionErrorDialog: React.FC<ExecutionErrorDialogProps> = ({
         if (!isOpen) return;
 
         const handleKeyDown = (e: KeyboardEvent) => {
-            if (e.key === 'Escape') {
-                onClose();
-            }
+            if (e.key === Keystrokes.escape) { onClose?.(); }
         };
 
         window.addEventListener('keydown', handleKeyDown);

@@ -41,6 +41,7 @@ import {
     TraceElementRef,
     TraceLinkBuilder,
 } from './traceModel';
+import {U} from "../../joiner";
 
 // Re-export Jjodel converter utilities for convenience
 export {
@@ -1169,28 +1170,27 @@ export class JjtlExecutor {
                 case 'distinct':
                 case 'unique':
                     return [...new Set(obj)];
-                case 'sum': {
+                case 'sum':
                     if (args.length > 0) {
                         const selector = this.evaluateExpression(args[0], ctx);
-                        return obj.reduce((sum, item) => {
-                            const val = this.applyFunction(selector, [item], ctx);
-                            return sum + (typeof val === 'number' ? val : 0);
+                        return obj.reduce<number>((sum, item) => {
+                            const val = U.asNumber(this.applyFunction(selector, [item], ctx), 0, NaN);
+                            return sum + (isNaN(val) ? 0 : val);
                         }, 0);
                     }
-                    return obj.reduce((sum, val) => sum + (typeof val === 'number' ? val : 0), 0);
-                }
+                    return obj.reduce<number>((sum, val) => sum + U.asNumber(val, 0, NaN), 0);
                 case 'avg':
                 case 'average': {
                     if (obj.length === 0) return null;
                     if (args.length > 0) {
                         const selector = this.evaluateExpression(args[0], ctx);
-                        const sum = obj.reduce((s, item) => {
+                        const sum = obj.reduce<number>((s, item) => {
                             const val = this.applyFunction(selector, [item], ctx);
-                            return s + (typeof val === 'number' ? val : 0);
+                            return s + U.asNumber(val, 0, NaN);
                         }, 0);
                         return sum / obj.length;
                     }
-                    const sum = obj.reduce((s, val) => s + (typeof val === 'number' ? val : 0), 0);
+                    const sum = obj.reduce<number>((s, val) => s + U.asNumber(val, 0, NaN), 0);
                     return sum / obj.length;
                 }
                 case 'join': {
@@ -1202,8 +1202,8 @@ export class JjtlExecutor {
                     if (args.length > 0) {
                         const selector = this.evaluateExpression(args[0], ctx);
                         return [...obj].sort((a, b) => {
-                            const valA = this.applyFunction(selector, [a], ctx);
-                            const valB = this.applyFunction(selector, [b], ctx);
+                            const valA: any = this.applyFunction(selector, [a], ctx);
+                            const valB: any = this.applyFunction(selector, [b], ctx);
                             if (valA < valB) return -1;
                             if (valA > valB) return 1;
                             return 0;

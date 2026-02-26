@@ -1721,21 +1721,10 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
         // Use fresh views cache first, fall back to defaultViewsMap
         let newView: DViewElement | DViewPoint | undefined = Defaults.getFreshView(v.id);
         if (!newView) {
-            // Fallback to old maps if fresh cache not initialized
-            newView = Defaults.defaultViewPointsMap[v.id] || Defaults.defaultViewsMap[v.id];
-            console.log('[updateDefaultView] Using fallback for', v.id, 'newView:', typeof newView);
+            Log.ee('[updateDefaultView] Skipping', v.id, '- no fresh view found');
+            return; // not a default view
         }
-        if (!newView || typeof newView !== 'object') {
-            console.log('[updateDefaultView] Skipping', v.id, '- no fresh view found');
-            return; // not a default view or not initialized
-        }
-        // Debug log for key views
-        if ((newView as any).name === 'Attribute' || (newView as any).name === 'Class') {
-            console.log('[updateDefaultView] Updating', (newView as any).name,
-                'old appliableToClasses:', (v as any).appliableToClasses,
-                '-> new appliableToClasses:', (newView as any).appliableToClasses);
-        }
-        newView = {...newView} as any;
+        newView = {...newView} as DViewElement & DViewPoint;
         newView.css_MUST_RECOMPILE = true;
         newView.pointedBy = PointedBy.merge(newView, v);
         newView.subViews = {...newView.subViews, ...v.subViews};

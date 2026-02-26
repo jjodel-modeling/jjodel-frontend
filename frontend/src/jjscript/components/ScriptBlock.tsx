@@ -12,6 +12,8 @@ import './ScriptBlock.scss';
 import { ExecutionErrorDialog } from './ExecutionErrorDialog';
 import { parseError, ExecutionPauseInfo, ExecutionSummary, JjScriptError } from '../executor/errors';
 import { AIDisclaimer } from '../../components/common/AIDisclaimer';
+import {TransformationAST} from "../../jjtl";
+import {ExecutionContext} from "../../jjtl/executor";
 
 // ============================================
 // TYPES
@@ -65,18 +67,19 @@ interface LineState {
     result?: ScriptLineResult;
 }
 
-interface ExecutionStats {
-    totalCommands: number;
-    executedCommands: number;
-    skippedLines: number;
-    errors: number;
-    duration: number;
+export class ExecutionStats {
+    totalCommands: number = 0;
+    executedCommands: number = 0;
+    skippedLines: number = 0;
+    errors: number = 0;
+    duration: number = 0;
 }
 
-interface ExecutionErrorInfo {
+export interface ExecutionErrorInfo {
     command: string;
     lineNumber: number;
     error: string;
+    errorType?: string;
 }
 
 // Utility function for delay between commands

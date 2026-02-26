@@ -1482,6 +1482,14 @@ export class U {
         // console.log(parseNested("aa b ( dd e (f g)) h (i)"));
     }
 
+    // returnNaN is used if the original inptu is number and NaN, the returnInvalid if it's a NaN originated by parsing an invalid string/value.
+    static asNumber(val: any, returnInvalid: any = 0, returnNAN: any = NaN): number {
+        if (isNaN(val)) return returnNAN;
+        if (typeof val === 'number') return val;
+        let v = +val;
+        if (isNaN(v)) return returnInvalid;
+        return v;
+    }
     static isNumericString(o: any): boolean { return !isNaN(o); }
     // returns true only if parameter is already a number by type. UU.isNumber('3') will return false
     static isNumber(o: any): o is number { return typeof o === "number" && !isNaN(o); }

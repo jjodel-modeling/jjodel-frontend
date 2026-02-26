@@ -19,7 +19,7 @@ import type { FakeStateProps } from '../../../joiner/types';
 import DocumentationService from '../../../services/DocumentationService';
 import type { ProjectDocumentation } from '../../../services/DocumentationService';
 import { JodieConfigService } from '../../../services/JodieConfig';
-import {AI, AIConfig, JodieConfig, TAIProvider} from '../../../types/jodie';
+import {AI, AIConfig, AIProvider, JodieConfig, TAIProvider} from '../../../types/jodie';
 import { useSettingsModalSafe } from '../../../contexts/SettingsModalContext';
 import { ALL_AI_PROVIDERS, DocumentationStatus } from '../../../types/jodie';
 import { markdownMonacoOptions } from '../../editors/monacoConfig';
@@ -1018,11 +1018,9 @@ function DocumentationTabComponent(props: AllProps) {
                                                 }}
                                                 disabled={!AIConfig.get(provider).enabled}
                                             >
-                                                <i className={`bi ${provider === 'local' ? 'bi-lightning' : 'bi-stars'}`} />
+                                                <i className={`bi ${provider === AIProvider.Custom ? 'bi-lightning' : 'bi-stars'}`} />
                                                 <span>{provider}</span>
-                                                {selectedProvider === provider && (
-                                                    <i className="bi bi-check-lg check-icon" />
-                                                )}
+                                                {selectedProvider === provider && <i className="bi bi-check-lg check-icon" />}
                                             </button>
                                         ))}
 

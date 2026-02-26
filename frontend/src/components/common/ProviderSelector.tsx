@@ -59,54 +59,15 @@ export function ProviderSelector({
     compact = false,
 }: ProviderSelectorProps) {
     const selectedProvider = AIConfig.getPreferred(feature);
+    let llm = AI[selectedProvider];
     const [showMenu, setShowMenu] = useState(false);
 
     // Use unified settings modal context (opens Settings page → Providers section)
     const settingsModal = useSettingsModalSafe();
 
-    // Resolve local options - use provided localOptions or fallback to legacy behavior
-    const resolvedLocalOptions = useMemo<LocalOption[]>(() => {
-        if (localOptions) return localOptions;
-        // Legacy behavior: if showLocalOption is true, show default local option
-        if (showLocalOption) return [{ id: 'local', label: 'Local (Instant)', icon: 'lightning' }];
-        return [];
-    }, [localOptions, showLocalOption]);
-
     // Lista provider disponibili (AI providers only)
     // Icons chosen to be distinctive and evocative of each provider
     const providers = JodieConfigService.getEnabledProviders();
-
-    // Determine what's currently selected (local option or AI provider)
-    const isLocalSelected = selectedLocalOption != null && resolvedLocalOptions.some(o => o.id === selectedLocalOption);
-
-    // Nome del provider/option selezionato
-    const selectedName = useMemo(() => {
-        // If a local option is selected, show its label
-        if (isLocalSelected) {
-            const localOpt = resolvedLocalOptions.find(o => o.id === selectedLocalOption);
-            return localOpt?.label || selectedLocalOption;
-        }
-        // Otherwise show the AI provider name
-        const found = AI[selectedProvider];
-        // Also check local options for backward compatibility (when 'local' was stored as provider)
-        if (!found) {
-            const localFound = resolvedLocalOptions.find(o => o.id === selectedProvider);
-            if (localFound) return localFound.label;
-        }
-        return found?.name || selectedProvider;
-    }, [selectedProvider, isLocalSelected, selectedLocalOption, resolvedLocalOptions]);
-
-    // Icon for the trigger button
-    const selectedIcon = useMemo(() => {
-        if (isLocalSelected) {
-            const localOpt = resolvedLocalOptions.find(o => o.id === selectedLocalOption);
-            return localOpt?.icon || 'lightning';
-        }
-        // Check if selected provider is actually a local option (backward compat)
-        const localFound = resolvedLocalOptions.find(o => o.id === selectedProvider);
-        if (localFound) return localFound.icon;
-        return 'cpu';
-    }, [selectedProvider, isLocalSelected, selectedLocalOption, resolvedLocalOptions]);
 
     // Chiudi menu quando si clicca fuori
     useEffect(() => {
@@ -140,8 +101,8 @@ export function ProviderSelector({
                 onClick={(e) => { e.stopPropagation(); setShowMenu(!showMenu); }}
                 title="Select AI provider"
             >
-                <i className={`bi bi-${selectedIcon}`} />
-                <span>{selectedName}</span>
+                <i className={`bi bi-${llm.bi_icon}`} />
+                <span>{selectedProvider}</span>
                 <i className={`bi bi-chevron-${showMenu ? 'up' : 'down'} chevron`} />
             </button>
 
@@ -149,32 +110,9 @@ export function ProviderSelector({
                 <div className="provider-menu" onClick={(e) => e.stopPropagation()}>
                     <div className="provider-menu-header">AI PROVIDER</div>
 
-                    {/* Local options (non-AI) */}
-                    {resolvedLocalOptions.map(option => {
-                        const isActive = isLocalSelected
-                            ? selectedLocalOption === option.id
-                            : selectedProvider === option.id;
-                        return (
-                            <button
-                                key={option.id}
-                                className={`provider-option ${isActive ? 'active' : ''}`}
-                                onClick={() => handleLocalSelect(option.id)}
-                            >
-                                <i className={`bi bi-${option.icon}`} />
-                                <span>{option.label}</span>
-                                {isActive && <i className="bi bi-check-lg check-icon" />}
-                            </button>
-                        );
-                    })}
-
-                    {/* Divider between local and AI options */}
-                    {resolvedLocalOptions.length > 0 && providers.length > 0 && (
-                        <div className="provider-divider" />
-                    )}
-
                     {/* AI providers */}
                     {providers.map(provider => {
-                        const isActive = !isLocalSelected && selectedProvider === provider;
+                        const isActive = selectedProvider === provider;
                         return (
                             <button
                                 key={provider}
@@ -189,11 +127,7 @@ export function ProviderSelector({
                         );
                     })}
 
-                    {resolvedLocalOptions.length === 0 && providers.length === 0 && (
-                        <div className="provider-empty">
-                            No providers configured
-                        </div>
-                    )}
+                    {providers.length === 0 && <div className="provider-empty">No providers configured</div>}
 
                     <div className="provider-menu-footer">
                         <button
