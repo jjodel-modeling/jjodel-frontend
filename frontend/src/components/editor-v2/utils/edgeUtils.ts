@@ -14,7 +14,7 @@ export const EDGE_PADDING = 25; // legacy — kept for ManhattanEdge.tsx compati
 const DETOUR_PADDING = 30; // used only for same-side and backward U-shape routing
 
 /** Toggle for Phase 7 A* obstacle avoidance. */
-export const OBSTACLE_AVOIDANCE_ENABLED = true;
+export const OBSTACLE_AVOIDANCE_ENABLED = false;
 
 /** Padding used for the fast-path obstruction check (matches ObstacleGrid's default). */
 const OBSTRUCTION_CHECK_PADDING = 10;
@@ -733,7 +733,7 @@ export function computeLabelPosition(path: string): { x: number; y: number } {
  */
 export function computeCardinalityPosition(
     path: string,
-    offset: number = 25
+    offset: number = 35
 ): { x: number; y: number } {
     const points = parsePathPoints(path);
     if (points.length < 2) return { x: 0, y: 0 };

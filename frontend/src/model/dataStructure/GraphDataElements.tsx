@@ -1100,6 +1100,7 @@ export class DGraph extends DGraphElement {
     zoom!: GraphPoint;
     offset!: GraphSize; // in-graph scrolling offset
     grid?: {x?: number, y?: number, type?: "polar" | "cartesian", "center"?: TLCoord, visible?: boolean};
+    graphStyle!: string; // 'v2-flow' for Editor v2, '' or undefined for classic/legacy
 
     public static new(htmlindex: number, model: DGraph["model"],
                       parentNodeID?: DGraphElement["father"], // immediate parent

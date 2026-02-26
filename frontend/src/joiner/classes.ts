@@ -1275,6 +1275,7 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         thiss.graph = thiss.id; // no setPtr because i want to avoid circular pointedby reference
         thiss.zoom = new GraphPoint(1, 1);
         thiss.offset = new GraphSize(0, 0);  // GraphSize.apply(this, [0, 0, 0 ,0]);
+        thiss.graphStyle = '';  // empty = classic/legacy, 'v2-flow' = Editor v2
         thiss._subMaps = {zoom: true, graphSize: true}
         thiss.grid = undefined; // {x: 0, y: 0, type: 'cartesian', center: 'cc', visible: true};
 

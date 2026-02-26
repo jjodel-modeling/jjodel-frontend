@@ -28,6 +28,8 @@ import { NewTransformationDialog, TransformationsList } from '../../jjtl/compone
 import { JjtlTransformation, createTransformation, TransformationAST } from '../../jjtl/types';
 import { execute as executeTransformation, ExecutionResult } from '../../jjtl/executor';
 import { convertMetamodelToJjtl, findMetamodelById } from '../../jjtl/utils/metamodelConverter';
+import { EnvGenWizardModal, EnvGenPersistence, ENVGEN_CHANGE_EVENT, ENVGEN_OPEN_WIZARD_EVENT } from '../envgen';
+import type { EnvGenConfigSummary } from '../envgen';
 import './project-editor.scss';
 
 // Types for contextual menu
@@ -111,6 +113,11 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
     // Hidden file inputs for import
     const importJmmRef = useRef<HTMLInputElement>(null);
     const importEcoreRef = useRef<HTMLInputElement>(null);
+
+    // Environment Generation state
+    const [showEnvGenWizard, setShowEnvGenWizard] = useState(false);
+    const [envGenConfigs, setEnvGenConfigs] = useState<EnvGenConfigSummary[]>([]);
+    const [editingEnvGenId, setEditingEnvGenId] = useState<string | undefined>(undefined);
 
     // Unsaved changes tracking
     const [isDirty, setIsDirty] = useState(false);
@@ -207,6 +214,24 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
 
         // Disable when component unmounts
         return () => U.disableUnsavedChangesWarning();
+    }, []);
+
+    // Environment Generation: load configs from localStorage and listen for changes
+    useEffect(() => {
+        setEnvGenConfigs(EnvGenPersistence.getAll());
+        const handler = () => setEnvGenConfigs(EnvGenPersistence.getAll());
+        window.addEventListener(ENVGEN_CHANGE_EVENT, handler);
+        return () => window.removeEventListener(ENVGEN_CHANGE_EVENT, handler);
+    }, []);
+
+    // Environment Generation: listen for open-wizard event from Navbar
+    useEffect(() => {
+        const handler = () => {
+            setEditingEnvGenId(undefined);
+            setShowEnvGenWizard(true);
+        };
+        window.addEventListener(ENVGEN_OPEN_WIZARD_EVENT, handler);
+        return () => window.removeEventListener(ENVGEN_OPEN_WIZARD_EVENT, handler);
     }, []);
 
     // Mark project as dirty (unsaved changes)
@@ -1710,6 +1735,68 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                 )}
             </div>
 
+            {/* Environment Generation Section */}
+            <div className="project-section">
+                <div className="project-section__header">
+                    <h2 className="project-section__title">
+                        ENVIRONMENT GENERATION {envGenConfigs.length > 0 && `(${envGenConfigs.length})`}
+                    </h2>
+                    <button
+                        className="btn btn--primary"
+                        disabled={metamodels.length === 0}
+                        title={metamodels.length === 0 ? 'Create a metamodel first' : 'Generate new environment'}
+                        onClick={() => { setEditingEnvGenId(undefined); setShowEnvGenWizard(true); }}
+                    >
+                        + New
+                    </button>
+                </div>
+
+                {envGenConfigs.length === 0 ? (
+                    <div className="empty-state empty-state--secondary">
+                        <div className="empty-state__icon empty-state__icon--small">
+                            <i className="bi bi-box-seam" />
+                        </div>
+                        <h3 className="empty-state__title">No environments generated yet</h3>
+                        <p className="empty-state__description">
+                            Generate standalone modeling environments from your metamodels with AI-assisted prompt generation.
+                        </p>
+                    </div>
+                ) : (
+                    <div className="list-card">
+                        {envGenConfigs.map((cfg) => (
+                            <div
+                                className="list-card__item"
+                                key={cfg.id}
+                                onClick={() => { setEditingEnvGenId(cfg.id); setShowEnvGenWizard(true); }}
+                                role="button"
+                                tabIndex={0}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter' || e.key === ' ') {
+                                        e.preventDefault();
+                                        setEditingEnvGenId(cfg.id);
+                                        setShowEnvGenWizard(true);
+                                    }
+                                }}
+                                style={{ cursor: 'pointer' }}
+                            >
+                                <span className="list-card__icon list-card__icon--envgen">
+                                    <i className="bi bi-box-seam" />
+                                </span>
+                                <div className="list-card__content">
+                                    <div className="list-card__name">{cfg.name || 'Untitled'}</div>
+                                    <div className="list-card__type">
+                                        {cfg.techStackSummary} {cfg.metamodelName ? `· ${cfg.metamodelName}` : ''}
+                                    </div>
+                                </div>
+                                <span className={`envgen-status-badge envgen-status-badge--${cfg.status}`}>
+                                    {cfg.status === 'ready' ? 'Ready' : cfg.status === 'generating' ? 'Generating...' : 'Draft'}
+                                </span>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
+
             {/* Transformations Section */}
             <div className="project-section">
                 <div className="project-section__header">
@@ -1824,6 +1911,15 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                 )}
                 existingNames={transformations.map(t => t.name)}
                 metamodels={metamodels.map(mm => ({ id: mm.id, name: mm.name || 'Unnamed' }))}
+            />
+
+            {/* Environment Generation Wizard */}
+            <EnvGenWizardModal
+                isOpen={showEnvGenWizard}
+                onClose={() => setShowEnvGenWizard(false)}
+                metamodels={metamodels.map(mm => ({ id: mm.id, name: mm.name || 'Unnamed' }))}
+                existingConfigId={editingEnvGenId}
+                onConfigSaved={() => setEnvGenConfigs(EnvGenPersistence.getAll())}
             />
 
             {/* Unsaved Changes Dialog */}

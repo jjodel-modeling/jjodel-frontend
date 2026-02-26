@@ -1,4 +1,12 @@
 /**
+ * DISABLED — This hook is not currently in use.
+ * The obstacle avoidance system was disabled due to performance issues
+ * (~120ms setTimeout violations per cycle). The Manhattan base router
+ * is sufficient for current needs.
+ *
+ * To re-enable: import and call this hook in EditorV2.tsx,
+ * wrap with ObstacleGridProvider, and set OBSTACLE_AVOIDANCE_ENABLED = true.
+ *
  * useObstacleAwareAnchors — post-pass hook that improves anchor side selection
  * by evaluating A* paths for multiple anchor candidates.
  *

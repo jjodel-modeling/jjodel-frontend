@@ -4,13 +4,6 @@ import ViewpointRenderer from '../viewpoint/ViewpointRenderer';
 import DynamicHandles from '../components/DynamicHandles';
 import InlineTypeSelect from '../components/InlineTypeSelect';
 import { useEditorContextSafe } from '../contexts/EditorContext';
-import {
-    syncNodeLabel,
-    syncAddAttribute,
-    syncUpdateAttribute,
-    syncAddOperation,
-    syncUpdateOperation,
-} from '../sync/canvasToJjom';
 import type { ClassNodeData } from '../types';
 import { createAttribute, createOperation } from '../types';
 
@@ -82,7 +75,6 @@ function ClassNode({ id, data, selected }: NodeProps<ClassNodeType>) {
                         },
                     };
                 }));
-                syncUpdateAttribute(editingField.id, editingField.field, editValue, id);
             }
         } else {
             const op = data.operations?.find(o => o.id === editingField.id);
@@ -103,7 +95,6 @@ function ClassNode({ id, data, selected }: NodeProps<ClassNodeType>) {
                         },
                     };
                 }));
-                syncUpdateOperation(editingField.id, editingField.field, editValue, id);
             }
         }
         setEditingField(null);
@@ -130,7 +121,6 @@ function ClassNode({ id, data, selected }: NodeProps<ClassNodeType>) {
                     n.id === id ? { ...n, data: { ...n.data, label: name } } : n
                 )
             );
-            syncNodeLabel(id, name);
         }
     }, [id, name, data.label, setNodes, editorContext]);
 
@@ -171,7 +161,6 @@ function ClassNode({ id, data, selected }: NodeProps<ClassNodeType>) {
                     ? { ...n, data: { ...n.data, attributes: [...(n.data as ClassNodeData).attributes, newAttr] } }
                     : n
             ));
-            syncAddAttribute(id);
             // Auto-focus the new attribute name
             setEditingField({ id: newAttr.id, field: 'name', kind: 'attr' });
             setEditValue(newAttr.name);
@@ -185,7 +174,6 @@ function ClassNode({ id, data, selected }: NodeProps<ClassNodeType>) {
                     ? { ...n, data: { ...n.data, operations: [...((n.data as ClassNodeData).operations || []), newOp] } }
                     : n
             ));
-            syncAddOperation(id);
         }
 
         setDragOver(false);
@@ -316,7 +304,6 @@ function ClassNode({ id, data, selected }: NodeProps<ClassNodeType>) {
                                                             },
                                                         };
                                                     }));
-                                                    syncUpdateAttribute(attr.id, 'type', newType, id);
                                                     setEditingField(null);
                                                 }}
                                                 onClose={() => setEditingField(null)}
@@ -385,7 +372,6 @@ function ClassNode({ id, data, selected }: NodeProps<ClassNodeType>) {
                                                         },
                                                     };
                                                 }));
-                                                syncUpdateOperation(op.id, 'returnType', newType, id);
                                                 setEditingField(null);
                                             }}
                                             onClose={() => setEditingField(null)}

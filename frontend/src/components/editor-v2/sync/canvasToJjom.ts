@@ -4,6 +4,9 @@
  * Each function writes a canvas change to JjOM via the existing action system
  * (SetFieldAction, TRANSACTION, DeleteElementAction). All functions call
  * markCanvasUpdated() before dispatching so the JjOM→RF sync path skips
+ * re-transformation during drag/resize (position/size changes only).
+ * Data changes (attributes, labels, etc.) do NOT use anti-bounce — they
+ * let the sync re-transform from JjOM so the cache stays fresh.
  * re-transformation for that element (anti-bounce).
  */
 
@@ -13,7 +16,10 @@ import {
     DeleteElementAction,
     LPointerTargetable,
     DVertex,
+    DEdge,
+    DVoidEdge,
     GraphSize,
+    store,
 } from '../../../joiner';
 import { markCanvasUpdated, markCanvasUpdatedBatch } from './syncState';
 
@@ -67,10 +73,14 @@ export function syncSizeToJjom(vertexId: string, w: number, h: number): void {
 // ---------------------------------------------------------------------------
 
 /**
- * Create an inheritance (extends) relationship in JjOM.
- * The child class extends the parent class.
+ * Create an inheritance relationship in JjOM AND its graph edge (DEdge).
+ * Both operations are wrapped in a single TRANSACTION.
+ * Returns the DEdge ID on success, null on failure.
  */
-export function syncInheritanceEdge(sourceVertexId: string, targetVertexId: string): boolean {
+export function syncInheritanceEdge(
+    sourceVertexId: string,
+    targetVertexId: string,
+): string | null {
     try {
         const sourceProxy: any = LPointerTargetable.fromPointer(sourceVertexId);
         const targetProxy: any = LPointerTargetable.fromPointer(targetVertexId);
@@ -79,29 +89,54 @@ export function syncInheritanceEdge(sourceVertexId: string, targetVertexId: stri
 
         if (!sourceClass || !targetClass) {
             console.warn('[canvasToJjom] Cannot create inheritance: missing model on vertex');
-            return false;
+            return null;
         }
 
-        // Add target to source's extends list via L-proxy setter
-        // which handles validation and TRANSACTION internally
+        const graphId = sourceProxy?.graph?.id ?? sourceProxy?.__raw?.graph;
+        if (!graphId) {
+            console.warn('[canvasToJjom] Cannot find graphId from source vertex');
+            return null;
+        }
+
         const currentExtends = (sourceClass.extends ?? []).map((c: any) => c.id ?? c);
-        if (currentExtends.includes(targetClass.id)) return true; // already extends
-        sourceClass.extends = [...currentExtends, targetClass.id];
-        return true;
+        if (currentExtends.includes(targetClass.id)) return null;
+
+        let edgeId: string | null = null;
+
+        TRANSACTION('EditorV2 create inheritance edge', () => {
+            sourceClass.extends = [...currentExtends, targetClass.id];
+
+            const dEdge = DVoidEdge.new2(
+                undefined,
+                graphId,
+                graphId,
+                undefined,
+                sourceVertexId,
+                targetVertexId,
+                (d: DEdge) => { d.isExtend = true; }
+            );
+            edgeId = dEdge.id;
+        });
+
+        if (edgeId) markCanvasUpdated(edgeId);
+        return edgeId;
     } catch (err) {
         console.warn('[canvasToJjom] Failed to create inheritance edge:', err);
-        return false;
+        return null;
     }
 }
 
 /**
- * Create a reference relationship in JjOM.
+ * Create a reference relationship in JjOM AND its graph edge (DEdge).
+ * Both operations are wrapped in a single TRANSACTION to prevent
+ * useJjomSync from firing between addReference and DVoidEdge.new2.
+ * Returns the DEdge ID on success, null on failure.
  */
 export function syncReferenceEdge(
     sourceVertexId: string,
     targetVertexId: string,
     name: string = 'newRef',
-): boolean {
+): string | null {
     try {
         const sourceProxy: any = LPointerTargetable.fromPointer(sourceVertexId);
         const targetProxy: any = LPointerTargetable.fromPointer(targetVertexId);
@@ -110,15 +145,48 @@ export function syncReferenceEdge(
 
         if (!sourceClass || !targetClass) {
             console.warn('[canvasToJjom] Cannot create reference: missing model on vertex');
-            return false;
+            return null;
         }
 
-        // addReference is available on LClass via L-proxy
-        sourceClass.addReference(name, targetClass.id);
-        return true;
+        const graphId = sourceProxy?.graph?.id ?? sourceProxy?.__raw?.graph;
+        if (!graphId) {
+            console.warn('[canvasToJjom] Cannot find graphId from source vertex');
+            return null;
+        }
+
+        let edgeId: string | null = null;
+
+        TRANSACTION('EditorV2 create reference edge', () => {
+            const lRef = sourceClass.addReference(name, targetClass.id);
+            // lRef è un LReference proxy — setta type direttamente
+            if (lRef && typeof lRef === 'object') {
+                lRef.type = targetClass.id;
+                lRef.upperBound = -1;
+                console.log('[DEBUG] direct lRef.type set:', {
+                    typeAfter: lRef.type?.name ?? lRef.type?.id ?? lRef.type,
+                    expected: targetClass.name,
+                });
+            }
+            const refId = lRef?.id ?? lRef;
+            if (!refId) return;
+
+            const dEdge = DVoidEdge.new2(
+                refId,
+                graphId,
+                graphId,
+                undefined,
+                sourceVertexId,
+                targetVertexId,
+                (d: DEdge) => { d.isReference = true; }
+            );
+            edgeId = dEdge.id;
+        });
+
+        if (edgeId) markCanvasUpdated(edgeId);
+        return edgeId;
     } catch (err) {
         console.warn('[canvasToJjom] Failed to create reference edge:', err);
-        return false;
+        return null;
     }
 }
 
@@ -131,9 +199,41 @@ export function syncReferenceEdge(
  */
 export function syncDeleteVertex(vertexId: string): void {
     try {
-        markCanvasUpdated(vertexId);
-        // Delete the model element first (the graph vertex will be cleaned up)
         const vertexProxy: any = LPointerTargetable.fromPointer(vertexId);
+        if (!vertexProxy) return;
+
+        // Find and delete all connected DEdges in the same graph first.
+        // Without this, orphan edges remain in graph.subElements and the
+        // sync re-adds them as floating arrows.
+        const graphProxy: any = vertexProxy.graph;
+        if (graphProxy) {
+            const allEdges: any[] = graphProxy.edges ?? [];
+            const connectedEdges = allEdges.filter((e: any) => {
+                const startId = e?.start?.id ?? e?.__raw?.start;
+                const endId = e?.end?.id ?? e?.__raw?.end;
+                return startId === vertexId || endId === vertexId;
+            });
+            if (connectedEdges.length > 0) {
+                TRANSACTION('EditorV2 delete connected edges', () => {
+                    for (const edge of connectedEdges) {
+                        // Clean up inheritance extends arrays
+                        const startVertex: any = edge.start;
+                        const endVertex: any = edge.end;
+                        if (edge.isExtend && startVertex?.model && endVertex?.model) {
+                            const sourceClass = startVertex.model;
+                            const targetClass = endVertex.model;
+                            const currentExtends = (sourceClass.extends ?? [])
+                                .map((c: any) => c.id ?? c)
+                                .filter((id: string) => id !== targetClass.id);
+                            sourceClass.extends = currentExtends;
+                        }
+                        DeleteElementAction.new(edge.__raw ?? edge);
+                    }
+                });
+            }
+        }
+
+        // Delete the model element (DClass/DEnum)
         const modelElement = vertexProxy?.model;
         if (modelElement) {
             TRANSACTION('EditorV2 delete node', () => {
@@ -152,7 +252,7 @@ export function syncDeleteVertex(vertexId: string): void {
  */
 export function syncDeleteEdge(edgeId: string, isInheritance: boolean): void {
     try {
-        markCanvasUpdated(edgeId);
+
         const edgeProxy: any = LPointerTargetable.fromPointer(edgeId);
         if (!edgeProxy) return;
 
@@ -191,7 +291,7 @@ export function syncDeleteEdge(edgeId: string, isInheritance: boolean): void {
  */
 export function syncNodeLabel(vertexId: string, newName: string): void {
     try {
-        markCanvasUpdated(vertexId);
+
         const vertexProxy: any = LPointerTargetable.fromPointer(vertexId);
         const model = vertexProxy?.model;
         if (model) {
@@ -208,7 +308,7 @@ export function syncNodeLabel(vertexId: string, newName: string): void {
 
 export function syncClassAbstract(vertexId: string, isAbstract: boolean): void {
     try {
-        markCanvasUpdated(vertexId);
+
         const vertexProxy: any = LPointerTargetable.fromPointer(vertexId);
         const lClass = vertexProxy?.model;
         if (lClass) {
@@ -225,7 +325,7 @@ export function syncClassAbstract(vertexId: string, isAbstract: boolean): void {
 
 export function syncAddAttribute(vertexId: string): void {
     try {
-        markCanvasUpdated(vertexId);
+
         const vertexProxy: any = LPointerTargetable.fromPointer(vertexId);
         const lClass = vertexProxy?.model;
         if (lClass) {
@@ -240,10 +340,12 @@ export function syncUpdateAttribute(
     attrId: string,
     field: string,
     value: string | number,
-    vertexId: string,
+    _vertexId: string,
 ): void {
     try {
-        markCanvasUpdated(vertexId);
+        // Don't markCanvasUpdated here — the sync should re-transform this
+        // vertex from JjOM so the cache stays fresh. The local setNodes()
+        // in ClassNode provides immediate feedback; the sync confirms it.
         const lAttr: any = LPointerTargetable.fromPointer(attrId);
         if (lAttr) {
             (lAttr as any)[field] = value;
@@ -253,9 +355,38 @@ export function syncUpdateAttribute(
     }
 }
 
-export function syncRemoveAttribute(attrId: string, vertexId: string): void {
+/**
+ * Update a DReference property by its ID — same pattern as syncUpdateAttribute.
+ * The refId is the JjOM DReference ID, obtained from the edge registry or data.reference.id.
+ */
+export function syncUpdateReference(
+    refId: string,
+    field: string,
+    value: string | number | boolean,
+): void {
     try {
-        markCanvasUpdated(vertexId);
+        const lRef: any = LPointerTargetable.fromPointer(refId);
+        console.log('[syncUpdateReference] DIAG:', {
+            refId,
+            field,
+            value,
+            found: !!lRef,
+            currentName: lRef?.name,
+            className: lRef?.className ?? lRef?.__raw?.className,
+        });
+        if (lRef) {
+            (lRef as any)[field] = value;
+            console.log('[syncUpdateReference] AFTER write:', { field, newValue: (lRef as any)[field] });
+        } else {
+            console.warn('[canvasToJjom] syncUpdateReference: ref not found:', refId);
+        }
+    } catch (err) {
+        console.warn('[canvasToJjom] Failed to update reference:', err);
+    }
+}
+
+export function syncRemoveAttribute(attrId: string, _vertexId: string): void {
+    try {
         const lAttr: any = LPointerTargetable.fromPointer(attrId);
         if (lAttr) {
             TRANSACTION('EditorV2 remove attribute', () => {
@@ -273,7 +404,7 @@ export function syncRemoveAttribute(attrId: string, vertexId: string): void {
 
 export function syncAddOperation(vertexId: string): void {
     try {
-        markCanvasUpdated(vertexId);
+
         const vertexProxy: any = LPointerTargetable.fromPointer(vertexId);
         const lClass = vertexProxy?.model;
         if (lClass) {
@@ -291,7 +422,7 @@ export function syncUpdateOperation(
     vertexId: string,
 ): void {
     try {
-        markCanvasUpdated(vertexId);
+
         const lOp: any = LPointerTargetable.fromPointer(opId);
         if (lOp) {
             (lOp as any)[field] = value;
@@ -303,7 +434,7 @@ export function syncUpdateOperation(
 
 export function syncRemoveOperation(opId: string, vertexId: string): void {
     try {
-        markCanvasUpdated(vertexId);
+
         const lOp: any = LPointerTargetable.fromPointer(opId);
         if (lOp) {
             TRANSACTION('EditorV2 remove operation', () => {
@@ -321,7 +452,7 @@ export function syncRemoveOperation(opId: string, vertexId: string): void {
 
 export function syncAddEnumLiteral(vertexId: string): void {
     try {
-        markCanvasUpdated(vertexId);
+
         const vertexProxy: any = LPointerTargetable.fromPointer(vertexId);
         const lEnum = vertexProxy?.model;
         if (lEnum) {
@@ -343,7 +474,7 @@ export function syncUpdateEnumLiteral(
     vertexId: string,
 ): void {
     try {
-        markCanvasUpdated(vertexId);
+
         const lLit: any = LPointerTargetable.fromPointer(litId);
         if (lLit) {
             (lLit as any)[field] = value;
@@ -355,7 +486,7 @@ export function syncUpdateEnumLiteral(
 
 export function syncRemoveEnumLiteral(litId: string, vertexId: string): void {
     try {
-        markCanvasUpdated(vertexId);
+
         const lLit: any = LPointerTargetable.fromPointer(litId);
         if (lLit) {
             TRANSACTION('EditorV2 remove literal', () => {
@@ -371,17 +502,62 @@ export function syncRemoveEnumLiteral(litId: string, vertexId: string): void {
 // Edge Reference Properties
 // ---------------------------------------------------------------------------
 
+/**
+ * Update a property on the DReference linked to a DEdge.
+ * @param refId - optional direct DReference ID (bypasses edge.model lookup)
+ */
 export function syncEdgeRefProperty(
     edgeId: string,
     field: string,
     value: string | number | boolean,
+    refId?: string,
 ): void {
     try {
-        markCanvasUpdated(edgeId);
+        console.log('[DEBUG syncEdgeRefProperty] called with:', { edgeId, field, value, refId });
+        // Try direct refId first (most reliable)
+        if (refId) {
+            const lRef: any = LPointerTargetable.fromPointer(refId);
+            console.log('[DEBUG syncEdgeRefProperty] direct refId lookup:', { refId, found: !!lRef, name: lRef?.name });
+            if (lRef) {
+                (lRef as any)[field] = value;
+                console.log('[DEBUG syncEdgeRefProperty] wrote via direct refId, verify:', lRef[field]);
+                return;
+            }
+        }
+
+        // Fall back to edge.model
         const edgeProxy: any = LPointerTargetable.fromPointer(edgeId);
+        console.log('[DEBUG syncEdgeRefProperty] lEdge resolved:', {
+            found: !!edgeProxy,
+            hasModel: !!edgeProxy?.model,
+            modelName: edgeProxy?.model?.name,
+            modelId: edgeProxy?.model?.id,
+        });
+        if (!edgeProxy) {
+            console.warn('[canvasToJjom] syncEdgeRefProperty: edge not found:', edgeId);
+            return;
+        }
         const lRef = edgeProxy?.model;
         if (lRef) {
             (lRef as any)[field] = value;
+            console.log('[DEBUG syncEdgeRefProperty] wrote via edge.model, verify:', lRef[field]);
+            return;
+        }
+
+        // Last resort: find via source class references
+        console.warn('[canvasToJjom] syncEdgeRefProperty: no model, fallback via source class');
+        const startVertex: any = edgeProxy.start;
+        const sourceClass = startVertex?.model;
+        if (sourceClass) {
+            const refs: any[] = sourceClass.references ?? [];
+            const endVertex: any = edgeProxy.end;
+            const targetClassId = endVertex?.model?.id;
+            const matchingRef = refs.find((r: any) =>
+                (r.type?.id ?? r.__raw?.type) === targetClassId
+            );
+            if (matchingRef) {
+                (matchingRef as any)[field] = value;
+            }
         }
     } catch (err) {
         console.warn('[canvasToJjom] Failed to sync edge ref property:', err);
@@ -390,9 +566,29 @@ export function syncEdgeRefProperty(
 
 export function syncEdgeRefKind(edgeId: string, kind: string): void {
     try {
-        markCanvasUpdated(edgeId);
         const edgeProxy: any = LPointerTargetable.fromPointer(edgeId);
-        const lRef = edgeProxy?.model;
+        if (!edgeProxy) return;
+
+        let lRef = edgeProxy?.model;
+
+        // Fallback: find reference through source class if model link is missing
+        if (!lRef) {
+            const startVertex: any = edgeProxy.start;
+            const endVertex: any = edgeProxy.end;
+            const sourceClass = startVertex?.model;
+            const targetClassId = endVertex?.model?.id;
+            if (sourceClass && targetClassId) {
+                const refs: any[] = sourceClass.references ?? [];
+                lRef = refs.find((r: any) =>
+                    (r.type?.id ?? r.__raw?.type) === targetClassId
+                );
+                // Fix the model link for future operations
+                if (lRef?.id) {
+                    SetFieldAction.new(edgeId as any, 'model' as any, lRef.id, undefined, false);
+                }
+            }
+        }
+
         if (lRef) {
             if (kind === 'composition') {
                 lRef.composition = true;
@@ -460,7 +656,7 @@ export function syncCreateClass(
     x: number,
     y: number,
     isAbstract: boolean = false,
-): boolean {
+): string | false {
     try {
         const lModel = resolveModelFromGraph(graphId);
         if (!lModel) {
@@ -483,9 +679,10 @@ export function syncCreateClass(
 
         // Create the DVertex positioned at drop coordinates
         const size = new GraphSize(x, y, 140, 40);
-        DVertex.new(0, classId, graphId, graphId, undefined, size);
+        const dv = DVertex.new(0, classId, graphId, graphId, undefined, size);
+        const vertexId = dv?.id;
 
-        return true;
+        return vertexId || false;
     } catch (err) {
         console.warn('[canvasToJjom] Failed to create class:', err);
         return false;
@@ -499,7 +696,7 @@ export function syncCreateEnum(
     graphId: string,
     x: number,
     y: number,
-): boolean {
+): string | false {
     try {
         const lModel = resolveModelFromGraph(graphId);
         if (!lModel) {
@@ -516,9 +713,10 @@ export function syncCreateEnum(
         const enumId = lEnum.id ?? lEnum;
 
         const size = new GraphSize(x, y, 140, 40);
-        DVertex.new(0, enumId, graphId, graphId, undefined, size);
+        const dv = DVertex.new(0, enumId, graphId, graphId, undefined, size);
+        const vertexId = dv?.id;
 
-        return true;
+        return vertexId || false;
     } catch (err) {
         console.warn('[canvasToJjom] Failed to create enum:', err);
         return false;
@@ -532,7 +730,7 @@ export function syncCreatePackage(
     graphId: string,
     x: number,
     y: number,
-): boolean {
+): string | false {
     try {
         const lModel = resolveModelFromGraph(graphId);
         if (!lModel) {
@@ -549,11 +747,83 @@ export function syncCreatePackage(
         const packageId = lPackage.id ?? lPackage;
 
         const size = new GraphSize(x, y, 200, 120);
-        DVertex.new(0, packageId, graphId, graphId, undefined, size);
+        const dv = DVertex.new(0, packageId, graphId, graphId, undefined, size);
+        const vertexId = dv?.id;
 
-        return true;
+        return vertexId || false;
     } catch (err) {
         console.warn('[canvasToJjom] Failed to create package:', err);
         return false;
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Model/Metamodel info (for PropertiesPanel when nothing selected)
+// ---------------------------------------------------------------------------
+
+export interface ModelInfoData {
+    name: string;
+    uri: string;
+    className: string;
+    classCount: number;
+    abstractCount: number;
+    enumCount: number;
+    packageCount: number;
+    referenceCount: number;
+    totalClassifiers: number;
+}
+
+export function getModelInfo(modelid: string): ModelInfoData | null {
+    try {
+        const state = store.getState();
+        const dModel = state.idlookup?.[modelid] as any;
+        if (!dModel) return null;
+
+        const className = dModel.className ?? '';
+
+        const children = (dModel.classifiers ?? dModel.children ?? [])
+            .map((ptr: string) => state.idlookup?.[ptr])
+            .filter(Boolean);
+
+        const classes = children.filter((c: any) => c.className === 'DClass' && !c.abstract);
+        const abstractClasses = children.filter((c: any) => c.className === 'DClass' && c.abstract);
+        const enums = children.filter((c: any) => c.className === 'DEnumerator');
+        const packages = children.filter((c: any) => c.className === 'DPackage');
+
+        const references = children.flatMap((c: any) =>
+            (c.references ?? []).map((ptr: string) => state.idlookup?.[ptr]).filter(Boolean)
+        );
+
+        return {
+            className,
+            name: dModel.name ?? '',
+            uri: dModel.uri ?? '',
+            classCount: classes.length,
+            abstractCount: abstractClasses.length,
+            enumCount: enums.length,
+            packageCount: packages.length,
+            referenceCount: references.length,
+            totalClassifiers: children.length,
+        };
+    } catch {
+        return null;
+    }
+}
+
+export function setModelName(modelid: string, name: string): void {
+    try {
+        const lModel: any = LPointerTargetable.fromPointer(modelid);
+        if (lModel) lModel.name = name;
+    } catch (err) {
+        console.warn('[canvasToJjom] setModelName failed:', err);
+    }
+}
+
+export function setModelUri(modelid: string, uri: string): void {
+    try {
+        const lModel: any = LPointerTargetable.fromPointer(modelid);
+        if (lModel) lModel.uri = uri;
+    } catch (err) {
+        console.warn('[canvasToJjom] setModelUri failed:', err);
     }
 }

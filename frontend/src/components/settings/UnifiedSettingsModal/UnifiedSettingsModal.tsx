@@ -5,6 +5,7 @@
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
+import ReactDOM from 'react-dom';
 import { ProfileSection } from './sections/ProfileSection';
 import { SecuritySection } from './sections/SecuritySection';
 import { ProvidersSection } from './sections/ProvidersSection';
@@ -136,7 +137,7 @@ export const UnifiedSettingsModal: React.FC<UnifiedSettingsModalProps> = ({
 
     if (!isVisible) return null;
 
-    return (
+    return ReactDOM.createPortal(
         <div
             className={`unified-settings-backdrop ${isAnimating ? 'visible' : ''}`}
             onClick={handleBackdropClick}
@@ -190,7 +191,8 @@ export const UnifiedSettingsModal: React.FC<UnifiedSettingsModalProps> = ({
                     </div>
                 </div>
             </div>
-        </div>
+        </div>,
+        document.body
     );
 };
 

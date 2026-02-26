@@ -26,14 +26,62 @@ export function clearSyncModes(): void {
 }
 
 // ---------------------------------------------------------------------------
-// Anti-bounce — tracks IDs recently written from canvas to JjOM.
+// Drop-created IDs — tracks nodes created by the drop handler in EditorV2.
+//
+// When a node is dropped, EditorV2 creates the RF node instantly (for
+// responsiveness + autoEdit) and also syncs to JjOM. When useJjomSync
+// detects the new DVertex, it consumes the drop-created flag and just
+// populates its cache without triggering a re-render.
+// ---------------------------------------------------------------------------
+
+const dropCreatedIds = new Set<string>();
+
+export function markDropCreated(id: string): void {
+    console.log('[syncState] markDropCreated:', id);
+    dropCreatedIds.add(id);
+}
+
+export function consumeDropCreated(id: string): boolean {
+    const consumed = dropCreatedIds.delete(id);
+    if (consumed) console.log('[syncState] consumeDropCreated SUCCESS:', id);
+    return consumed;
+}
+
+export function clearDropCreated(): void {
+    dropCreatedIds.clear();
+}
+
+// ---------------------------------------------------------------------------
+// Edge → DReference ID registry.
+//
+// Maps DEdge IDs to their DReference IDs. This is the single source of truth
+// for finding the DReference from an edge, bypassing the unreliable
+// DEdge.model field. Set during edge creation and loaded from JjOM on init.
+// ---------------------------------------------------------------------------
+
+const edgeRefIds = new Map<string, string>();
+
+export function setEdgeRefId(edgeId: string, refId: string): void {
+    console.log('[syncState] setEdgeRefId:', { edgeId, refId });
+    edgeRefIds.set(edgeId, refId);
+}
+
+export function getEdgeRefId(edgeId: string): string | undefined {
+    const refId = edgeRefIds.get(edgeId);
+    console.log('[syncState] getEdgeRefId:', { edgeId, refId: refId ?? 'NOT FOUND', registrySize: edgeRefIds.size });
+    return refId;
+}
+
+export function clearEdgeRefIds(): void {
+    edgeRefIds.clear();
+}
 //
 // When the Redux change comes back, the JjOM→RF sync path checks this set
 // and skips re-transformation for those IDs (the RF state already has the
 // correct value from the user's canvas interaction).
 // ---------------------------------------------------------------------------
 
-const BOUNCE_WINDOW_MS = 150;
+const BOUNCE_WINDOW_MS = 300;
 
 /** id → timestamp of last canvas-originated write */
 const canvasUpdatedIds = new Map<string, number>();

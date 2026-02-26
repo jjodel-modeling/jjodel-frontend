@@ -1,7 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { NodeResizer, useReactFlow, type NodeProps, type Node } from '@xyflow/react';
 import DynamicHandles from '../components/DynamicHandles';
-import { syncNodeLabel } from '../sync/canvasToJjom';
 import type { PackageNodeData } from '../types';
 import { useEditorContextSafe } from '../contexts/EditorContext';
 
@@ -36,7 +35,6 @@ function PackageNode({ id, data, selected }: NodeProps<PackageNodeType>) {
                     n.id === id ? { ...n, data: { ...n.data, label: name } } : n
                 )
             );
-            syncNodeLabel(id, name);
         }
     }, [id, name, data.label, setNodes, editorContext]);
 

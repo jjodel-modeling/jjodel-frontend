@@ -1102,6 +1102,15 @@ function NavbarComponent(props: AllProps) {
                     },
                     {name: 'Custom Tools', icon: <i className="bi bi-gear" />, disabled: true}
                 ]),
+                // Environment Generation
+                {name: 'divisor'},
+                {name: 'Generate Environment...',
+                    function: () => {
+                        window.dispatchEvent(new CustomEvent('envgen-open-wizard'));
+                    },
+                    icon: <i className="bi bi-box-seam" />,
+                    disabled: isDashboard || metamodels.length === 0
+                },
                 // Debug Mode toggle - always visible (independent from Advanced Mode)
                 {name: 'divisor'},
                 {name: props.debug ? 'Disable Debug Mode' : 'Enable Debug Mode',

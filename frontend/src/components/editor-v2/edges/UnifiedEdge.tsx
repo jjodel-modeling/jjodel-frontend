@@ -8,10 +8,9 @@ import {
 } from '@xyflow/react';
 import type { ReferenceEdgeData, InheritanceEdgeData, ReferenceKind } from '../types';
 import { formatCardinality } from '../types';
+import { syncEdgeRefProperty } from '../sync/canvasToJjom';
 import {
     computeManhattanPath,
-    computeAStarPath,
-    OBSTACLE_AVOIDANCE_ENABLED,
     roundManhattanPath,
     computeSelfLoopPath,
     computeLabelPosition,
@@ -25,7 +24,6 @@ import {
     getEdgeCrossings,
     buildFinalPath,
 } from '../utils/edgeUtils';
-import { useObstacleGrid } from '../contexts/ObstacleGridContext';
 import { useEditorContextSafe } from '../contexts/EditorContext';
 import { useTreeLayout } from '../hooks/useTreeLayout';
 import { SegmentHandles } from './SegmentHandles';
@@ -95,8 +93,6 @@ function UnifiedEdge(props: EdgeProps) {
         }
     }, [autoEdit, id, setEdges]);
 
-    // ─── Obstacle grid context ───
-    const { grid, nodeRects, version } = useObstacleGrid();
     const allNodes = useNodes();
     const allEdges = useEdges();
 
@@ -120,20 +116,10 @@ function UnifiedEdge(props: EdgeProps) {
         isInheritance,
     );
 
-    // ─── Compute base path — A* when enabled, classic otherwise ───
+    // ─── Compute base path — Manhattan routing ───
     const rawPath = useMemo(
-        () => {
-            if (OBSTACLE_AVOIDANCE_ENABLED && grid && nodeRects.length > 0) {
-                return computeAStarPath(
-                    grid, sourceX, sourceY, sourceSide,
-                    targetX, targetY, targetSide,
-                    source, target, nodeRects,
-                );
-            }
-            return computeManhattanPath(sourceX, sourceY, sourceSide, targetX, targetY, targetSide);
-        },
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-        [sourceX, sourceY, sourceSide, targetX, targetY, targetSide, grid, version, source, target]
+        () => computeManhattanPath(sourceX, sourceY, sourceSide, targetX, targetY, targetSide),
+        [sourceX, sourceY, sourceSide, targetX, targetY, targetSide]
     );
 
     // ─── Pipeline: parse → apply waypoints → round corners ───
@@ -152,9 +138,9 @@ function UnifiedEdge(props: EdgeProps) {
 
     // ─── Detect crossings with other edges ───
     const crossings = useMemo(
-        () => getEdgeCrossings(id, adjustedPoints, nodeRects),
+        () => getEdgeCrossings(id, adjustedPoints),
         // eslint-disable-next-line react-hooks/exhaustive-deps
-        [id, adjustedPoints, allNodes, allEdges, nodeRects]
+        [id, adjustedPoints, allNodes, allEdges]
     );
 
     // ─── Final path with rounding and bridge arcs ───
@@ -224,11 +210,30 @@ function UnifiedEdge(props: EdgeProps) {
     }, [adjustedPath, sourceX, sourceY, targetX, targetY]);
 
     // ─── Label commit (reference edges) ───
+    // Same pattern as ClassNode's commitFieldEdit for attributes:
+    // 1. Update RF state immediately (optimistic)
+    // 2. Write to JjOM via direct pointer access using the DReference ID
     const commitLabel = useCallback(() => {
         setEditing(false);
+        console.log('[DEBUG commitLabel]', { id, labelText, edgeType: data });
+
+        // 1. Update RF edge: both label and data.reference.name
         setEdges((edges) =>
-            edges.map((e) => (e.id === id ? { ...e, label: labelText } : e))
+            edges.map((e) => {
+                if (e.id !== id) return e;
+                const edgeData = e.data as ReferenceEdgeData | undefined;
+                return {
+                    ...e,
+                    label: labelText,
+                    data: edgeData?.reference
+                        ? { ...edgeData, reference: { ...edgeData.reference, name: labelText } }
+                        : e.data,
+                };
+            })
         );
+
+        // 2. Sync to JjOM (safe in standalone mode — logs warning if edge not found)
+        syncEdgeRefProperty(id, 'name', labelText);
     }, [id, labelText, setEdges]);
 
     const onKeyDown = useCallback(
@@ -456,11 +461,11 @@ function UnifiedEdge(props: EdgeProps) {
                 {isInheritance && !isERNotation && (
                     <marker
                         id={markerTriangleId}
-                        viewBox="0 0 12 8"
+                        viewBox="0 0 12 10"
                         refX="12"
-                        refY="4"
+                        refY="5"
                         markerWidth="12"
-                        markerHeight="8"
+                        markerHeight="10"
                         orient="auto"
                     >
                         <path
@@ -537,7 +542,7 @@ function UnifiedEdge(props: EdgeProps) {
                                 onClick={(e) => e.stopPropagation()}
                             />
                         ) : (
-                            labelText && <span className="edge-label__text">{labelText}</span>
+                            labelText && labelText !== 'newRef' && <span className="edge-label__text">{labelText}</span>
                         )}
                     </div>
                 )}

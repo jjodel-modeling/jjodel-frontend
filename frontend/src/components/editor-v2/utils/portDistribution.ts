@@ -166,13 +166,18 @@ function computePortDistribution(
     // === STEP 4: Compute node handle configs ===
     const nodeHandles = new Map<string, Record<Side, PortInfo[]>>();
 
-    // Initialize all nodes with default single handle per side
+    // Initialize all nodes with EMPTY handles per side.
+    // Sides with no edges get no ports — the ghost handles in DynamicHandles
+    // provide connection points. This ensures the ghost handle ID ("side-0")
+    // matches what getNextFreeHandleIndex returns for the first edge,
+    // eliminating the chicken-and-egg timing issue where an edge would
+    // reference a handle ID that has no pre-measured DOM element.
     for (const nodeId of nodeIds) {
         nodeHandles.set(nodeId, {
-            top: [{ handleId: 'top-0', position: 0.5 }],
-            right: [{ handleId: 'right-0', position: 0.5 }],
-            bottom: [{ handleId: 'bottom-0', position: 0.5 }],
-            left: [{ handleId: 'left-0', position: 0.5 }],
+            top: [],
+            right: [],
+            bottom: [],
+            left: [],
         });
     }
 

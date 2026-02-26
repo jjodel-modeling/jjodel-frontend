@@ -577,6 +577,12 @@
       background: #D1FAE5;  // Emerald-100 - transformation arrows
       color: #059669;       // Emerald-600
     }
+
+    &--envgen {
+      background: #CFFAFE;  // Cyan-100
+      color: #0891B2;       // Cyan-600
+      font-size: 13px;
+    }
   }
 
   &__content {
@@ -1232,4 +1238,53 @@
       }
     }
   }
+
+  // EnvGen status badge dark mode
+  .envgen-status-badge {
+    &--ready {
+      background: rgba(34, 197, 94, 0.15);
+    }
+    &--draft {
+      background: #334155;
+      color: #64748b;
+    }
+    &--generating {
+      background: rgba(14, 165, 233, 0.15);
+    }
+  }
+}
+
+// ============================================
+// Environment Generation Status Badges
+// ============================================
+.envgen-status-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 4px;
+  white-space: nowrap;
+  margin-left: auto;
+
+  &--ready {
+    background: rgba(34, 197, 94, 0.1);
+    color: #16a34a;
+  }
+
+  &--draft {
+    background: #f1f5f9;
+    color: #94a3b8;
+  }
+
+  &--generating {
+    background: rgba(14, 165, 233, 0.1);
+    color: #0ea5e9;
+    animation: envgen-pulse 1.5s ease-in-out infinite;
+  }
+}
+
+@keyframes envgen-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
 }

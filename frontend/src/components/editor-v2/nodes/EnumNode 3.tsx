@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { NodeResizer, useReactFlow, type NodeProps, type Node } from '@xyflow/react';
 import DynamicHandles from '../components/DynamicHandles';
-import { syncNodeLabel, syncAddEnumLiteral, syncUpdateEnumLiteral } from '../sync/canvasToJjom';
+import { syncNodeLabel } from '../sync/canvasToJjom';
 import type { EnumNodeData } from '../types';
 import { createLiteral } from '../types';
 import { useEditorContextSafe } from '../contexts/EditorContext';
@@ -84,7 +84,6 @@ function EnumNode({ id, data, selected }: NodeProps<EnumNodeType>) {
                     },
                 };
             }));
-            syncUpdateEnumLiteral(editingLit, 'name', editValue, id);
         }
         setEditingLit(null);
     }, [editingLit, editValue, data.literals, id, setNodes, editorContext]);
@@ -122,7 +121,6 @@ function EnumNode({ id, data, selected }: NodeProps<EnumNodeType>) {
                     ? { ...n, data: { ...n.data, literals: [...(n.data as EnumNodeData).literals, newLit] } }
                     : n
             ));
-            syncAddEnumLiteral(id);
             // Auto-focus the new literal name
             setEditingLit(newLit.id);
             setEditValue(newLit.name);
