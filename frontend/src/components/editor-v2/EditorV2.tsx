@@ -405,14 +405,31 @@ function EditorV2Inner({ modelid, onSwitchEditor }: EditorV2Props) {
 
             const currentEdges = getEdges();
 
-            const optimal = getOptimalAnchors(
-                edgeSource,
-                edgeTarget,
-                edgeType,
-                currentEdges,
-            );
-            const sourceSide = optimal.sourceHandle;
-            const targetSide = optimal.targetHandle;
+            // For inheritance, compute sides directly here using getNodes()
+            // (always-current store) instead of getOptimalAnchors which uses
+            // useNodes() (React state, potentially one render behind).
+            // This eliminates stale-closure risk for the vertical constraint.
+            let sourceSide: string;
+            let targetSide: string;
+
+            if (isInheritance) {
+                const srcNode = getNodes().find(n => n.id === edgeSource);
+                const tgtNode = getNodes().find(n => n.id === edgeTarget);
+                const srcY = srcNode ? srcNode.position.y + ((srcNode.measured?.height ?? 80) / 2) : 0;
+                const tgtY = tgtNode ? tgtNode.position.y + ((tgtNode.measured?.height ?? 80) / 2) : 0;
+                const dy = tgtY - srcY;
+                sourceSide = dy < 0 ? 'top' : 'bottom';
+                targetSide = dy < 0 ? 'bottom' : 'top';
+            } else {
+                const optimal = getOptimalAnchors(
+                    edgeSource,
+                    edgeTarget,
+                    edgeType,
+                    currentEdges,
+                );
+                sourceSide = optimal.sourceHandle;
+                targetSide = optimal.targetHandle;
+            }
 
             const sourceAnchor: AnchorConfig = { mode: 'auto', side: sourceSide as AnchorConfig['side'] };
             const targetAnchor: AnchorConfig = { mode: 'auto', side: targetSide as AnchorConfig['side'] };
@@ -471,6 +488,18 @@ function EditorV2Inner({ modelid, onSwitchEditor }: EditorV2Props) {
                     } as InheritanceEdgeData,
                 }),
             };
+
+            // ── TEMPORARY DIAGNOSTIC — remove after verification ──
+            console.log('[EdgeCreation]', {
+                choice,
+                dragSource: connection.source,
+                dragTarget: connection.target,
+                normalizedSource: edgeSource,
+                normalizedTarget: edgeTarget,
+                computedSides: { sourceSide, targetSide },
+                finalSourceHandle: `${sourceSide}-${sourceIndex}`,
+                finalTargetHandle: `${targetSide}-${targetIndex}`,
+            });
 
             setEdges((eds) => applyDistribution([...eds, newEdge]));
             setPendingConnection(null);
@@ -1085,9 +1114,32 @@ function EditorV2Inner({ modelid, onSwitchEditor }: EditorV2Props) {
             const hasDragEnd = changes.some(
                 (c) => c.type === 'position' && c.dragging === false
             );
-            const hasResize = changes.some((c) => c.type === 'dimensions');
+            // Only trigger on EXPLICIT user resize, not React Flow auto-measurement.
+            // Auto-measurement fires type:'dimensions' after updateNodeInternals
+            // (from DynamicHandles), but without c.resizing === true.
+            // This was causing spurious anchor recalculation with stale nodeRects,
+            // which flipped inheritance edge directions.
+            const hasResize = changes.some(
+                (c) => c.type === 'dimensions' && c.resizing === true
+            );
 
             if (hasDragEnd || hasResize) {
+                // ── TEMPORARY DIAGNOSTIC — remove after verification ──
+                console.log('[handleNodesChange]', {
+                    hasDragEnd,
+                    hasResize,
+                    positionChanges: changes.filter((c: any) => c.type === 'position').map((c: any) => ({
+                        id: c.id,
+                        dragging: c.dragging,
+                        position: c.position,
+                    })),
+                    resizingChanges: changes.filter((c: any) => c.type === 'dimensions').map((c: any) => ({
+                        id: c.id,
+                        resizing: c.resizing,
+                        dimensions: c.dimensions,
+                    })),
+                });
+
                 takeSnapshot();
 
                 const movedNodeIds = new Set(
@@ -1096,9 +1148,27 @@ function EditorV2Inner({ modelid, onSwitchEditor }: EditorV2Props) {
                         .map((c) => c.id)
                 );
 
+                // Use getNodes() (always-current store) instead of `nodes`
+                // (React state, potentially stale by one render cycle).
+                // Then overlay positions from the current changes so we use
+                // the ACTUAL final positions, not the pre-batch ones.
                 const nodeRects = new Map(
-                    nodes.map((n) => [n.id, getNodeRect(n)])
+                    getNodes().map((n) => [n.id, getNodeRect(n)])
                 );
+                for (const c of changes) {
+                    if (c.type === 'position' && c.position) {
+                        const existing = nodeRects.get(c.id);
+                        if (existing) {
+                            nodeRects.set(c.id, {
+                                ...existing,
+                                x: c.position.x,
+                                y: c.position.y,
+                                centerX: c.position.x + existing.width / 2,
+                                centerY: c.position.y + existing.height / 2,
+                            });
+                        }
+                    }
+                }
 
                 setEdges((currentEdges) => {
                     const edgesToRecalculate = currentEdges.filter(
@@ -1183,7 +1253,7 @@ function EditorV2Inner({ modelid, onSwitchEditor }: EditorV2Props) {
                 // auto-measurement which fires dimensions for every setNodes) --
                 if (hasResize) {
                     for (const c of changes.filter((ch: any) => ch.type === 'dimensions' && ch.resizing)) {
-                        const node = nodes.find((n) => n.id === c.id);
+                        const node = getNodes().find((n) => n.id === c.id);
                         const w = c.dimensions?.width ?? node?.measured?.width;
                         const h = c.dimensions?.height ?? node?.measured?.height;
                         if (w !== undefined && h !== undefined) {
@@ -1195,7 +1265,7 @@ function EditorV2Inner({ modelid, onSwitchEditor }: EditorV2Props) {
 
             onNodesChange(changes);
         },
-        [onNodesChange, takeSnapshot, setEdges, nodes, applyDistribution, isJjomMode]
+        [onNodesChange, takeSnapshot, setEdges, getNodes, applyDistribution, isJjomMode]
     );
 
     // Recalculate anchors for a specific edge (called by SegmentHandles after drag).

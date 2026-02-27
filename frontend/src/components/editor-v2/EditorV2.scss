@@ -489,6 +489,7 @@
 
 // Ghost visible when its side is hovered
 .mm-anchor.mm-anchor--ghost-visible {
+    visibility: visible !important;
     opacity: 0.5 !important;
     pointer-events: all !important;
 }
@@ -503,6 +504,7 @@
 // Inline styles on the Handle component provide the primary override;
 // this CSS is the safety net for any RF style injection we missed.
 .react-flow .react-flow__handle.mm-anchor--pool-inactive {
+    visibility: hidden !important;
     opacity: 0 !important;
     pointer-events: none !important;
     // Dimensions MUST stay at 8x8 (from .mm-anchor) — React Flow uses
@@ -518,6 +520,7 @@
 // Ghost visible during connection mode (user dragging from another node)
 .react-flow.connecting .mm-anchor.mm-anchor--ghost,
 .react-flow.connecting .react-flow__handle.mm-anchor--pool-inactive {
+    visibility: visible !important;
     opacity: 0.5 !important;
     pointer-events: all !important;
     width: 8px !important;
@@ -529,17 +532,20 @@
 // Target node under mouse during connection — full opacity
 .react-flow.connecting .react-flow__node:hover .mm-anchor.mm-anchor--ghost,
 .react-flow.connecting .react-flow__node:hover .react-flow__handle.mm-anchor--pool-inactive {
+    visibility: visible !important;
     opacity: 1 !important;
 }
 
 // RF validation states (applied by React Flow during connection)
 .react-flow__handle-connecting {
+    visibility: visible !important;
     opacity: 1 !important;
     background: var(--accent) !important;
     pointer-events: all !important;
 }
 
 .react-flow__handle-valid {
+    visibility: visible !important;
     opacity: 1 !important;
     background: var(--anchor-valid) !important;
     border-color: var(--text-primary) !important;
