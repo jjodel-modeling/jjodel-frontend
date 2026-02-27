@@ -36,25 +36,6 @@ export function AIAssistantSettings() {
         return () => window.removeEventListener('ai-provider-changed', handleChange);
     }, []);
 
-    // Get status for display - "Connected" only after successful test
-    const getProviderStatus = (providerName: TAIProvider) => {
-        const llm = AI[providerName];
-        const state = AIConfig.get(providerName);
-        // Ollama doesn't require API key - check if it's been tested
-        if (!llm.requiresKey) {
-            if (state.enabled && state.lastTested) return { text: 'Connected', class: 'connected' };
-            return { text: 'Ready', class: 'ready' };
-        }
-        // Other providers: No API key = not configured
-        else if (!state.apiKey) return { text: 'Not configured', class: 'not-configured' };
-
-        // Has API key + enabled + has been tested = Connected
-        if (state.enabled && state.lastTested) return { text: 'Connected', class: 'connected' };
-
-        // Has API key but not tested = Ready to test
-        return { text: 'Ready', class: 'ready' };
-    };
-
     // Get model label for display
     const getModelLabel = (provider: TAIProvider) => {
         const config = AIConfig.get(provider);

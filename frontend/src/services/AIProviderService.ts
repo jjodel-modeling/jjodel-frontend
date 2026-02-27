@@ -31,7 +31,7 @@ export class AIProviderService {
         if (!config) {
             throw new Error(`Provider ${provider} is not configured. Please configure it in Settings.`);
         }
-        if (llm.requiresKey && !config.apiKey) {
+        if (!config.isConfigured()) {
             throw new Error(`Provider ${provider} is not configured. Please add your API key in Settings.`);
         }
 
@@ -600,7 +600,7 @@ export class AIProviderService {
             if (!config) return { success: false, error: 'Provider not configured' };
 
             // Ollama doesn't require API key, other providers do
-            if (llm.requiresKey && !config.apiKey) return { success: false, error: 'API key not configured' };
+            if (!config.isConfigured()) return { success: false, error: 'API key not configured' };
 
             // Use provider-specific test methods for better error handling
             switch (provider) {

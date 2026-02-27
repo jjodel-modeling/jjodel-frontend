@@ -401,26 +401,31 @@ export class AIConfig{
     }
 
     requiresKey() { return AI[this.name].requiresKey; }
-    hasValidKey() { return this.apiKey || !this.requiresKey(); }
+    hasValidKey() { return this.isConfigured(); } // this.apiKey || !this.requiresKey(); }
 
     // For Ollama: show success if enabled + lastTested (no API key required)
     // For others: show success if apiKey + enabled + lastTested
     wasSuccessfullyTested() { return this.hasValidKey() && this.enabled && this.lastTested; }
 
     getStatus() {
-        const llm = AI[this.name];
-
         // NB: when config is changed, lastTested is erased too in ProviderConfigModal
         if (this.lastTested) {
             if (this.enabled) return { text: 'Connected', class: 'connected' };
             else return { text: 'Error', class: 'error' };
         }
 
-        if (llm.requiresKey && !this.apiKey) return { text: 'Not configured', class: 'not-configured' };
+        if (this.isConfigured()) return { text: 'Not configured', class: 'not-configured' };
 
         // Has API key but not tested = Ready to test
         return { text: 'Ready', class: 'ready' };
     };
+
+    isConfigured() : boolean {
+        let llm = AI[this.name];
+        let config = this;
+        if (llm.name === AIProvider.Custom) return !!(config.baseUrl || config.apiKey);
+        else return !!(llm.requiresKey ? config.apiKey : config.baseUrl);
+    }
 }
 
 /*new AIConfig(AIProvider.Claude, 'claude-sonnet-4-20250514');
@@ -522,7 +527,7 @@ export class JodieConfig {
         return ALL_AI_PROVIDERS.filter(provider => {
             const config = AIConfig.get(provider);
             let llm = AI[provider];
-            return config && (!llm.requiresKey || config.apiKey) && config.enabled;
+            return !!config?.isConfigured()// && (!llm.requiresKey || config.apiKey) && config.enabled;
         });
     }
 

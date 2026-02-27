@@ -35,7 +35,7 @@ const SETTINGS_TO_PROVIDER: Record<string, AIProvider> = {
     ollama: 'ollama',
 };
 
-
+const nbsp = String.fromCharCode(160); // "&nbsp;"
 // Component to show model capability badges
 function ModelCapabilitiesBadges({ model }: { model: AIVersion | undefined }): JSX.Element | null {
     if (!model) return null;
@@ -77,7 +77,7 @@ export function AISettingsContent({
 
     // List of configured providers for the default selector
     const configuredProvidersList =
-        Object.values(JodieConfig.current.providers).filter(e=>e.apiKey || !AI[e.name].requiresKey)
+        Object.values(JodieConfig.current.providers).filter(e=>e.isConfigured())
 
     // Test provider connection
     const handleTestConnection = async (providerId: string) => {
@@ -108,14 +108,15 @@ export function AISettingsContent({
         name: TAIProvider,
         fields: {key: 'apiKey' | 'model' | 'baseUrl' /*| 'name'*/; label: string; type: 'text' | 'password' | 'model'; placeholder: string }[]
     ) => {
+        const [update, setUpdate] = useState(0);
         const isExpanded = expandedProvider === name;
         const config = AIConfig.get(name);
         let llm = AI[name];
         let versions = Object.values(llm.versions);
         let description: string = versions.slice(0, 3).map(e=>e.label).join() + (versions.length>3 ? "..." : "");
         if (!description) description = 'OpenAI-compatible endpoint';
-        const isConfigured = llm.requiresKey ? !!config.baseUrl
-            : (llm.name === AIProvider.Custom ? !!(config.baseUrl && config.apiKey) : !!config.apiKey);
+        const isConfigured: boolean = config.isConfigured();
+
         const status = testStatus[name] || 'idle';
 
         // Get available models for this provider
@@ -159,7 +160,9 @@ export function AISettingsContent({
                     <div className="provider-content">
                         {fields.map(field => (
                             <div key={field.key} className="form-group">
-                                <label>{field.label}</label>
+                                <label>{field.label} {llm.keyUrl && field.key === 'apiKey' ?
+                                    <a href={llm.keyUrl} target={"_blank"} title={"Get your key"}><i className="bi bi-link-45deg"/></a>
+                                    : null}</label>
 
                                 {field.key === 'model' && Object.keys(llm.versions).length > 0 ? (
                                     // Model select with capabilities
@@ -176,12 +179,12 @@ export function AISettingsContent({
                                             {Object.keys(llm.versions).map(name => {
                                                 let version = llm.versions[name];
                                                 let attachments: string[] = [
-                                                    version.capabilities.pdf ? "📄" : "&nbsp;",
-                                                    version.capabilities.vision ? "🖼️" : "&nbsp;"
+                                                    version.capabilities.pdf ? "📄" : nbsp,
+                                                    version.capabilities.vision ? "🖼️" : nbsp
                                                 ];
                                                 return (
                                                     <option key={name} value={name} disabled={version.deprecated}>
-                                                        {version.label + "&bbsp;" + attachments.join("") + (version.deprecated ? ' (deprecated)' : '')}
+                                                        {version.label + nbsp + attachments.join("") + (version.deprecated ? ' (deprecated)' : '')}
                                                     </option>);
                                             })}
                                         </optgroup></select>
@@ -209,6 +212,7 @@ export function AISettingsContent({
                                                 break;*/
                                             }
                                             config.save();
+                                            setUpdate(update + 1);
                                         }}
                                         placeholder={field.placeholder}
                                     />
