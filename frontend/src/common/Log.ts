@@ -96,9 +96,9 @@ export class Log{
 
     private static log(prefix: string, category: LoggerType, originalFunc: typeof console.log, b: boolean, canthrow: boolean, ...restArgs: any[]): string {
         if (!b) { return ''; }
-        const key: string = windoww.U.getCaller(1); // todo: remove replace heavy fumc
+        const key: string = windoww.U.getCaller(2); // todo: remove replace heavy func
         if (restArgs === null || restArgs === undefined) { restArgs = []; }
-        let str = key + ': ';
+        let str = '';
         for (let i = 0; i < restArgs.length; i++) {
             // console.log(prefix, {i, restArgs, curr:restArgs[i]});
             str += '' +

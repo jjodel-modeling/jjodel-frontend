@@ -7,8 +7,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { JodieHeader } from './JodieHeader';
 import { ChatMessages } from './ChatMessages';
 import { ChatInput } from './ChatInput';
-import { TAIProvider, ChatMessage, ChatImage, ChatDocument } from '../../types/jodie';
-import { JodieConfigService } from '../../services/JodieConfig';
+import {TAIProvider, ChatMessage, ChatImage, ChatDocument, JodieConfig} from '../../types/jodie';
 import { AIDisclaimer } from '../common/AIDisclaimer';
 
 interface JodieWindowProps {
@@ -73,7 +72,7 @@ export function JodieWindow({
     supportsPDF,
 }: JodieWindowProps): JSX.Element {
     // Load initial position/size from config
-    const config = JodieConfigService.load();
+    const config = JodieConfig.current;
     const initialPosition: Position = config.position || {
         x: window.innerWidth - DEFAULT_SIZE.width - 20,
         y: window.innerHeight - DEFAULT_SIZE.height - 20,
@@ -111,12 +110,14 @@ export function JodieWindow({
 
     // Persist position changes
     const savePosition = useCallback((pos: Position) => {
-        JodieConfigService.updatePosition(pos);
+        JodieConfig.current.position = pos;
+        JodieConfig.current.save();
     }, []);
 
     // Persist size changes
     const saveSize = useCallback((s: Size) => {
-        JodieConfigService.updateSize(s);
+        JodieConfig.current.size = s;
+        JodieConfig.current.save();
     }, []);
 
     // Handle dragging

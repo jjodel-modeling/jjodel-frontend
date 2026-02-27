@@ -1,9 +1,19 @@
 import {Dictionary, DModelElement, GObject, Log, RuntimeAccessible, windoww} from "../../joiner";
 
 import nearley, {Grammar, ParserOptions, Parser, Rule} from "nearley";
+// @ts-ignore
+import compile from "nearley/lib/compile";
+// @ts-ignore
+import generate from "nearley/lib/generate";
+// @ts-ignore
+import nearleyGrammar from "nearley/lib/nearley-language-bootstrapped";
+/*
+
 const compile = require("nearley/lib/compile");
 const generate = require("nearley/lib/generate");
 const nearleyGrammar = require("nearley/lib/nearley-language-bootstrapped");
+
+*/
 
 windoww.nnearley = nearley;
 class GrammarInfoObject{

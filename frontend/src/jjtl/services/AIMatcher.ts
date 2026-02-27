@@ -6,28 +6,13 @@
 
 import { MetamodelElement } from '../views/MetamodelTreeView';
 import { MappingSuggestion, SuggestionConfidence } from '../types/suggestions';
-import { JodieConfigService } from '../../services/JodieConfig';
 import { AIProviderService } from '../../services/AIProviderService';
+import {JodieConfig} from "../../types/jodie";
 
 export class AIMatcher {
     // Store elements for ID lookup after AI response
     private sourceElements: MetamodelElement[] = [];
     private targetElements: MetamodelElement[] = [];
-
-    /**
-     * Check if AI is available (any provider configured and enabled)
-     */
-    isAvailable(): boolean {
-        return JodieConfigService.hasValidConfiguration();
-    }
-
-    /**
-     * Get the name of the active provider for display
-     */
-    getActiveProviderName(): string | null {
-        if (!this.isAvailable()) return null;
-        return JodieConfigService.getActiveProvider();
-    }
 
     /**
      * Analyze metamodels using AI
@@ -38,7 +23,7 @@ export class AIMatcher {
         sourceMetamodelName: string = 'Source',
         targetMetamodelName: string = 'Target'
     ): Promise<MappingSuggestion[]> {
-        if (!this.isAvailable()) {
+        if (JodieConfig.getEnabledProviders().length == 0) {
             throw new Error('AI provider not configured. Please configure an AI provider in Settings.');
         }
 
@@ -54,7 +39,7 @@ export class AIMatcher {
         );
 
         try {
-            const provider = JodieConfigService.getActiveProvider();
+            const provider = JodieConfig.current.activeProvider;
             const response = await AIProviderService.chat(prompt, provider, [], undefined);
             return this.parseResponse(response);
         } catch (error) {

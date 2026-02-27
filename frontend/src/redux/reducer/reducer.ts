@@ -8,7 +8,7 @@ import {
     MouseUpEvent,
     GObject,
     U as UType, store,
-    LGraph, L,
+    LGraph, L, Constructors,
 } from '../../joiner';
 import {
     GraphDragManager,
@@ -1453,14 +1453,15 @@ export async function stateInitializer() {
             }
             let checkLoaded = (state: DState): boolean => {
                 if (!state.idlookup[DUser.current]) {
-                    console.error('init failed, user not found', DUser.current);
+                    console.warn('init looping, user not found yet', DUser.current);
                     return false;
                 }
                 if (!state.idlookup[pid]) {
-                    console.error('init failed, project not found', pid);
+                    console.warn('init looping, project not found yet', {pid, temp: project});
                     return false;
                 }
                 ProjectsApi.isLoading = false; // quits loading screen on project page
+                console.log('init completed');
                 return true;
                 /*
                 clearTimeout(windoww.__tmp_init_timer);
@@ -1469,11 +1470,6 @@ export async function stateInitializer() {
             }
 
             let state: DState;
-            if (!project.state) state = {...store.getState()} as DState; // NEEDS TO BE SHALLOW COPIED or the state won't update. new project just created, never saved.
-            else state = JSON.parse(await U.decompressState(project.state));
-            /*state['idlookup'][DUser.current] = user.__raw;
-            if (!state['users'].includes(DUser.current)) state['users'].push(DUser.current);*/
-            console.log('project load', state);
             let recursiveCheck = ()=>{
                 AFTER_TRANSACTION((state)=>{
                     if (checkLoaded(state)) return;
@@ -1481,17 +1477,28 @@ export async function stateInitializer() {
                     // setTimeout(recursiveCheck, 0);
                 });
             }
+            if (!project.state) {
+                // state = {...store.getState()} as DState; // NEEDS TO BE SHALLOW COPIED or the state won't update. new project just created, never saved.
+                // }
+                Constructors.persist(project);
+                recursiveCheck();
+                return; // empty new project, keep initializing actions.
+            }
+            else state = JSON.parse(await U.decompressState(project.state));
+            /*state['idlookup'][DUser.current] = user.__raw;
+            if (!state['users'].includes(DUser.current)) state['users'].push(DUser.current);*/
+            console.log('project load', state);
             recursiveCheck();
             // needs to stay before load for some reason? seems like action firing can be done synchronously some times?
             SaveManager.load(state, project);
-            console.error('init completed');
+            console.log('init (load) completed');
             // user.project = LProject.fromPointer(project.id);
         }
         else if (isDashboardPage) {
             await ProjectsApi.getAll();
         }
     } catch (error) {
-        console.error('Failed to fetch projects', {error});
+        Log.eDevv('Failed to fetch projects', {error});
         // await AuthApi.logout();
         // DUser.current = ''; // forces redirect routing to auth
         // console.error('init error, redirect to auth');

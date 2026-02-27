@@ -4,7 +4,6 @@
  */
 
 import {AIProvider, TAIProvider, ChatMessage, ChatImage, ChatDocument, AI, AIConfig} from '../types/jodie';
-import { JodieConfigService } from './JodieConfig';
 import { PromptService } from './PromptService';
 import { PromptContext } from '../types/prompts';
 

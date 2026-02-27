@@ -289,8 +289,12 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
             todo: quando il componente si aggiorna questo viene perso, come posso rendere permanente un settaggio di reduxstate in mapstatetoprops? o devo metterlo nello stato normale?
         }*/
 
+        if (!ownProps.nodeid) {
+            Log.ee('Error in creating vertex, inject props did not inject the id', {ownProps});
+            return;
+        }
         let graph: DGraph = DPointerTargetable.from(graphid, state) as DGraphElement as any; // se non c'è un grafo lo creo
-        if (!state.idlookup[graphid] && !DPointerTargetable.pendingCreation[graphid]) {
+        if (!graph) {
             // Log.exDev(!dataid, 'attempted to make a Graph element without model', {dataid, ownProps, ret, thiss:this});
             if (ret.data) CreateElementAction.new(DGraph.new(0, ret.data.id, parentnodeid, graphid, graphid)); }
         /*else {
@@ -300,7 +304,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         let dnode: DGraphElement = DPointerTargetable.from(nodeid, state) as DGraphElement;
 
         // console.log('dragx GE mapstate addGEStuff', {dGraphElementDataClass, created: new dGraphElementDataClass(false, nodeid, graphid)});
-        if (!dnode && !DPointerTargetable.pendingCreation[nodeid]) {
+        if (!dnode) {
             /*
             console.log("making node:", {dGraphElementDataClass, nodeid, parentnodeid, graphid, dataid, ownProps, ret,
                 pendings: {...DPointerTargetable.pendingCreation}, pending:DPointerTargetable.pendingCreation[nodeid]});*/
@@ -353,6 +357,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
             }
             else {
                 let initialSize = ownProps.initialSize;
+                console.log('create node', {ownProps, mid:ret?.data?.id, nodeid});
                 dge = dGraphElementDataClass.new(ownProps.htmlindex as number, ret.data?.id, parentnodeid, graphid, nodeid, initialSize);
                 if (!tn) transientProperties.node[nodeid] = new NodeTransientProperties();
                 tn.onDelete = ownProps.onDelete;
@@ -1022,8 +1027,15 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
                     // 10 units of range checked for 3-loops = 10*3*1.2 = 36 units * 300ms = 10.8sec.   9U = 9.72sec
                     let deltas = loopcheck.calls.map((e, i, a) => i === a.length-1 ? thischange - e : a[i+1] - a[i]);
                     loopcheck.stopUpdateEvents = v.clonedCounter;
-                    // Reduced logging - loop detection still works but doesn't spam console
-                    console.debug("loop in \""+v.name+"\".onDataUpdate - event disabled until view changes");
+                    Log.eDevv("loop in \""+v.name+"\".onDataUpdate." +
+                        " The event has been disabled until the view changes.", {
+                        change_log: loopcheck.calls,
+                        component: this,
+                        loopcheck,
+                        deltas,
+                        updatingTimer:U.UpdatingTimer,
+                        timediff: (thischange - loopcheck.calls[loopcheck.calls.length - observationRange])
+                    } as any);
                 }
             }
         }
@@ -1467,6 +1479,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
                 // htmlValidProps_static(injectProps); read func comment
 
                 let debug: GObject = {};
+                // console.warn('rrenderView pre inject', {props, nid: props.nodeid, node: props.node});
                 injectProps.children = UX.recursiveMap(rawRElement/*.props.children*/,
                     (rn: ReactNode, index: number, depthIndexes: number[]) => {
                         let injectOffset: undefined | LGraph = ((this.props as any).isGraph && !depthIndexes[0] && !index) && (this.props.node as LGraph);

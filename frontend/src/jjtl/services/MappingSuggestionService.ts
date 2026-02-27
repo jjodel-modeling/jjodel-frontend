@@ -11,6 +11,7 @@ import {
 } from '../types/suggestions';
 import { SimpleMatcher } from './SimpleMatcher';
 import { AIMatcher } from './AIMatcher';
+import {JodieConfig} from "../../types/jodie";
 
 export interface AnalyzeOptions {
     mode: SuggestionMode;
@@ -26,20 +27,6 @@ export class MappingSuggestionService {
     constructor() {
         this.simpleMatcher = new SimpleMatcher();
         this.aiMatcher = new AIMatcher();
-    }
-
-    /**
-     * Check if AI mode is available
-     */
-    isAIAvailable(): boolean {
-        return this.aiMatcher.isAvailable();
-    }
-
-    /**
-     * Get the active AI provider name
-     */
-    getAIProviderName(): string | null {
-        return this.aiMatcher.getActiveProviderName();
     }
 
     /**
@@ -59,7 +46,7 @@ export class MappingSuggestionService {
                 suggestions = this.simpleMatcher.analyze(sourceElements, targetElements);
             } else {
                 // AI mode
-                if (!this.isAIAvailable()) {
+                if (!JodieConfig.hasEnabledProviders()) {
                     return {
                         mode,
                         suggestions: [],

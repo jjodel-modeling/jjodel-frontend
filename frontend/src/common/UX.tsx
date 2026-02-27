@@ -120,6 +120,7 @@ export class UX{
         // const parentComponent = this;
         let type = (re.type as any).WrappedComponent?.name || re.type;
         if (type && (typeof type == "object" || typeof type == "function")) type = (type as any).cname;
+        if (type && type[type.length - 1] === '2') type = type.substring(0, type.length - 1); // vite is adding a "2" at the end of all my classes?
 
         let injectProps: GraphElementOwnProps = {} as any;
         /* if (false && injectOffset) {
@@ -139,6 +140,8 @@ export class UX{
         // add "view" (view id) prop as default to sub-elements of any depth to inherit the view of the parent unless the user forced another view to apply
         let rprops: GObject = re.props as any;
 
+
+        // console.log('renderView in inject', {type, re, parentComponent, parentnodeid});
         switch (type) {
             default:
                 // console.count('ux.injectingProp case default: ' + type);
@@ -225,6 +228,7 @@ export class UX{
             // case windoww.Components.Vertex.name:
             case EdgeComponent.cname:
             case windoww.Components.VertexComponent.cname:
+                // console.log('renderView in inject node', {type, re, parentComponent});
                 injectProps.parentViewId = parentComponent.props.view.id || (parentComponent.props.view as any); // re.props.view ||  thiss.props.view
                 injectProps.parentnodeid = parentComponent.props.node?.id;
                 injectProps.graphid = parentComponent.props.graphid;

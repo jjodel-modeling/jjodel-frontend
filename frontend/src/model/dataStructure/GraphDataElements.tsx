@@ -652,7 +652,7 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
             if (!html || (c.data.clonedCounter && (c.data.clonedCounter || -1) !== +(html.dataset.clonedcounter as string))) {
                 // canTriggerSet = {w: false, h: false};
                 console.warn('adaptSize mismatching clonedcounter', {cc:c.data.clonedCounter, htmlcc:html?.dataset?.clonedcounter,
-                    cw: canTriggerSet.w, ch: canTriggerSet.h, ret:{...ret}, actualSize, cumulativeZoom});
+                    cw: canTriggerSet.w, ch: canTriggerSet.h, ret:{...ret}, actualSize, cumulativeZoom, data: c.data});
                 return;
             }
 
@@ -1100,7 +1100,7 @@ export class DGraph extends DGraphElement {
     zoom!: GraphPoint;
     offset!: GraphSize; // in-graph scrolling offset
     grid?: {x?: number, y?: number, type?: "polar" | "cartesian", "center"?: TLCoord, visible?: boolean};
-    graphStyle!: string; // 'v2-flow' for Editor v2, '' or undefined for classic/legacy
+    graphStyle?: 'v2-flow' | ''; // 'v2-flow' for Editor v2, '' or undefined for classic/legacy
 
     public static new(htmlindex: number, model: DGraph["model"],
                       parentNodeID?: DGraphElement["father"], // immediate parent
@@ -1159,6 +1159,7 @@ export class LGraph<Context extends LogicContext<DGraph> = any, D extends DGraph
 
     grid!: GraphPoint & {type: "polar" | "cartesian", "center": TLCoord, visible: boolean};
     __info_of__grid: Info = Info.grid;
+    graphStyle?: 'v2-flow' | ''; // 'v2-flow' for Editor v2, '' or undefined for classic/legacy
 
     get_grid(c: LogicContext<DGraph>): this['grid'] {
         if (c.data.grid) return LViewElement.GetGrid_impl(c);

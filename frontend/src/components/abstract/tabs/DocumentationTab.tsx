@@ -18,7 +18,6 @@ import { DState, LProject, LUser, DUser, LModel, U } from '../../../joiner';
 import type { FakeStateProps } from '../../../joiner/types';
 import DocumentationService from '../../../services/DocumentationService';
 import type { ProjectDocumentation } from '../../../services/DocumentationService';
-import { JodieConfigService } from '../../../services/JodieConfig';
 import {AI, AIConfig, AIProvider, JodieConfig, TAIProvider} from '../../../types/jodie';
 import { useSettingsModalSafe } from '../../../contexts/SettingsModalContext';
 import { ALL_AI_PROVIDERS, DocumentationStatus } from '../../../types/jodie';
@@ -635,7 +634,7 @@ function DocumentationTabComponent(props: AllProps) {
     }, [documentation?.content, editContent, viewMode]);
 
     // Get available AI providers
-    const availableProviders = JodieConfigService.getEnabledProviders();
+    const availableProviders = JodieConfig.getEnabledProviders();
 
     // Close provider menu when clicking outside
     useEffect(() => {
@@ -653,7 +652,7 @@ function DocumentationTabComponent(props: AllProps) {
         setIsGenerating(true);
         try {
             // Use AI if available, otherwise local
-            const useJjodie = DocumentationService.isAIAvailable();
+            const useJjodie = JodieConfig.hasEnabledProviders();
             const result = await DocumentationService.generate(project, useJjodie);
 
             // Content already includes @protected section from DocumentationService
@@ -697,7 +696,7 @@ function DocumentationTabComponent(props: AllProps) {
         setShowRegenerateModal(false);
 
         // Determine if using AI or Local
-        const useAI = DocumentationService.isAIAvailable();
+        const useAI = JodieConfig.hasEnabledProviders();
 
         // Initialize steps based on generation mode
         const initialSteps: GenerationStep[] = useAI ? [

@@ -1,9 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { JodieConfigService } from '../../services/JodieConfig';
-import {  } from '../../services/AIProviderPreferences';
 import {AI, AIConfig, AIProvider, AIVersion, ALL_AI_PROVIDERS, JodieConfig, TAIProvider} from '../../types/jodie';
 import './AISettingsContent.scss';
-import type {Dictionary} from "../../joiner";
+import type {Dictionary, GObject} from "../../joiner";
+import {U} from "../../joiner";
 
 
 interface AISettingsContentProps {

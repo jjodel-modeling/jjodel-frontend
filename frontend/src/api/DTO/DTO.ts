@@ -12,6 +12,7 @@ abstract class DTO<S extends GObject = GObject>{
             this._dto_convert(src, setFields);
             let diff = U.arrayDifference(Object.keys(this), Object.keys(setFields));
             Log.eDev(diff.added.length+diff.removed.length > 0, 'incomplete conversion to DTO', {dto: {...this}, setFields, diff, src});
+            let a = 0;
         }
         catch(e) {
             Log.eDevv('failed to convert to DTO', {dto: {...this}, src, e});

@@ -13,9 +13,8 @@ import {
     ChatImage,
     ChatDocument,
     ChatState,
-    TAIProvider, AIConfig, AI
+    TAIProvider, AIConfig, AI, JodieConfig
 } from '../../types/jodie';
-import { JodieConfigService } from '../../services/JodieConfig';
 import { AIProviderService } from '../../services/AIProviderService';
 import { useSettingsModal } from '../../contexts/SettingsModalContext';
 import { JjodieContextService } from '../../services/JjodieContext';
@@ -45,9 +44,7 @@ export function Jodie(): JSX.Element {
     });
 
     // Active provider
-    const [activeProvider, setActiveProvider] = useState<TAIProvider>(() =>
-        JodieConfigService.getActiveProvider()
-    );
+    const [activeProvider, setActiveProvider] = useState<TAIProvider>(() => JodieConfig.current.activeProvider);
 
     // RAG state
     const lastIndexedProjectRef = useRef<string | null>(null);
@@ -83,7 +80,7 @@ export function Jodie(): JSX.Element {
     useEffect(() => {
         const handleSettingsChanged = () => {
             // Refresh active provider when settings change
-            setActiveProvider(JodieConfigService.getActiveProvider());
+            setActiveProvider(JodieConfig.current.activeProvider);
         };
 
         window.addEventListener('ai-settings-changed', handleSettingsChanged);
@@ -144,7 +141,8 @@ export function Jodie(): JSX.Element {
     // Change provider
     const handleProviderChange = useCallback((provider: TAIProvider) => {
         setActiveProvider(provider);
-        JodieConfigService.setActiveProvider(provider);
+        JodieConfig.current.activeProvider = provider;
+        JodieConfig.current.save();
     }, []);
 
     // Send message
@@ -214,8 +212,8 @@ export function Jodie(): JSX.Element {
         let providerToUse = activeProvider;
 
         // Validate that current provider is configured
-        if (!JodieConfigService.isProviderConfigured(activeProvider)) {
-            const enabledProviders = JodieConfigService.getEnabledProviders();
+        if (!AIConfig.get(activeProvider).enabled) {
+            const enabledProviders = JodieConfig.getEnabledProviders();
 
             if (enabledProviders.length === 0) {
                 // No providers configured at all
@@ -236,7 +234,8 @@ export function Jodie(): JSX.Element {
             const firstEnabled = enabledProviders[0];
             providerToUse = firstEnabled;
             setActiveProvider(firstEnabled);
-            JodieConfigService.setActiveProvider(firstEnabled);
+            JodieConfig.current.activeProvider = firstEnabled;
+            JodieConfig.current.save();
 
             // Add info message about switching
             const switchMessage: ChatMessage = {

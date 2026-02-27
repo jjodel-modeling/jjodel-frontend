@@ -664,8 +664,8 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
                     LOG('Element attempted to be created twice with same id', {new:d, old: Constructors.pending[e.id]});
                     return;
                 }
-                let subElements = e._derivedSubElements;
-                let callbacks = e._persistCallbacks;
+                let subElements = e._derivedSubElements || [];
+                let callbacks = e._persistCallbacks || [];
                 delete (e as Partial<DPointerTargetable>)._derivedSubElements;
                 delete (e as Partial<DPointerTargetable>)._persistCallbacks;
                 // then create subelements (object -> values) and fire their actions.

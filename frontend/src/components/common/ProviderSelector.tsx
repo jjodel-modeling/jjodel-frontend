@@ -1,5 +1,4 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { JodieConfigService } from '../../services/JodieConfig';
 import { useSettingsModalSafe } from '../../contexts/SettingsModalContext';
 import './ProviderSelector.scss';
 import {AI, AIConfig, AIProvider, ALL_AI_PROVIDERS, JodieConfig, TAIProvider, AIFeature} from "../../types/jodie";
@@ -67,7 +66,7 @@ export function ProviderSelector({
 
     // Lista provider disponibili (AI providers only)
     // Icons chosen to be distinctive and evocative of each provider
-    const providers = JodieConfigService.getEnabledProviders();
+    const providers = JodieConfig.getEnabledProviders();
 
     // Chiudi menu quando si clicca fuori
     useEffect(() => {

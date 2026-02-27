@@ -131,7 +131,7 @@ everytime you put hands into a D-Object shape or valid values, you should docume
             let e = s.idlookup[k];
             if (!e || typeof e !== 'object') continue;
             let v: DViewElement|DViewPoint = e as any;
-            if (v.version !== VersionFixer.highestVersion && !v.clonedCounter){ // NB: for untouched views clonedCounter is undefined, not 0.
+            if (v.className.includes("View") && v.version !== VersionFixer.highestVersion && !v.clonedCounter){ // NB: for untouched views clonedCounter is undefined, not 0.
                 LViewElement.updateDefaultView(v, s);
             }
         }

@@ -324,7 +324,7 @@ class Online {
                 pointers.activeViewpoint = raw.activeViewpoint;
 
                 //const dproject = DProject.new(raw.type as 'public' |'private' | 'collaborative', raw.name , raw.state, [], [], raw.id);
-                const dproject = DProject.new2(pointers, (d: GObject<DProject>)=>{
+                DProject.new2(pointers, (d: GObject<DProject>)=>{
                     for (let k in raw) {
                         if (k in pointers) continue;
                         d[k] = raw[k];

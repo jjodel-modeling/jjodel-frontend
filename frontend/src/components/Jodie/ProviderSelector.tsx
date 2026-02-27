@@ -5,7 +5,6 @@
 
 import React from 'react';
 import {TAIProvider, AI, JodieConfig, AIConfig} from '../../types/jodie';
-import { JodieConfigService } from '../../services/JodieConfig';
 
 interface ProviderSelectorProps {
     activeProvider: TAIProvider;
@@ -15,14 +14,15 @@ interface ProviderSelectorProps {
 }
 
 export function ProviderSelector({ activeProvider, onProviderChange, onOpenSettings, disabled }: ProviderSelectorProps): JSX.Element {
-    const enabledProviders = JodieConfigService.getEnabledProviders();
+    const enabledProviders = JodieConfig.getEnabledProviders();
     const providerInfo = AI[activeProvider];
     const config = AIConfig.get(activeProvider);
 
     const handleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
         const newProvider = e.target.value as TAIProvider;
         // Persist to localStorage first
-        JodieConfigService.setActiveProvider(newProvider);
+        JodieConfig.current.activeProvider = newProvider;
+        JodieConfig.current.save();
         // Then notify parent component
         onProviderChange(newProvider);
     };

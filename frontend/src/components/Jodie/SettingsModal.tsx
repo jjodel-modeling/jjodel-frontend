@@ -11,7 +11,6 @@ import {
     AI,
     AIConfig,
 } from '../../types/jodie';
-import jodieConfig, { JodieConfigService } from '../../services/JodieConfig';
 import { AIProviderService } from '../../services/AIProviderService';
 import { ProviderIcon } from '../icons';
 import {GObject} from "../../joiner";
@@ -172,7 +171,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps): JSX.Elem
 
     if (!isOpen) return null;
 
-    const providers: TAIProvider[] = JodieConfigService.getEnabledProviders(); //[AIProvider.Claude, AIProvider.GPT, AIProvider.DeepSeek, AIProvider.Gemini];
+    const providers: TAIProvider[] = JodieConfig.getEnabledProviders(); //[AIProvider.Claude, AIProvider.GPT, AIProvider.DeepSeek, AIProvider.Gemini];
 
     return (
         <div className="jodie-settings-overlay" onClick={onClose}>

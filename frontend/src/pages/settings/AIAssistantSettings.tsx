@@ -3,33 +3,9 @@
  * Slate minimal design with proper test connection status
  */
 import React, { useState, useEffect, useCallback } from 'react';
-import {TAIProvider, AIProvider, AI, ALL_AI_PROVIDERS, AIConfig} from '../../types/jodie';
-import { JodieConfigService } from '../../services/JodieConfig';
-import { AIProviderService } from '../../services/AIProviderService';
 import type {Dictionary} from "../../joiner";
+import {TAIProvider, AI, ALL_AI_PROVIDERS, AIConfig} from '../../types/jodie';
 import { ProviderConfigModal } from './ProviderConfigModal';
-
-
-interface ProviderState {
-    apiKey: string;
-    model: string;
-    enabled: boolean;
-    showKey: boolean;
-    testStatus: 'idle' | 'testing' | 'success' | 'error';
-    testMessage: string;
-}
-
-type ProvidersState = Record<TAIProvider, ProviderState>;
-
-// Re-export for backward compatibility
-export interface AISettings {
-    provider: 'openai' | 'anthropic' | 'google' | 'deepseek' | 'mistral' | 'groq' | 'ollama' | 'custom';
-    model: string;
-    apiKey: string;
-    enabled: boolean;
-    autoSuggestOnErrors: boolean;
-    baseUrl?: string;
-}
 
 export function AIAssistantSettings() {
     const [refresh, setRefresh] = useState(0);

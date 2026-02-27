@@ -2,9 +2,12 @@
  * Jodie AI Assistant Types
  * Type definitions for the multi-provider AI assistant
  */
-import {Dictionary, GObject, U} from "../joiner";
-import {} from "../joiner";
-import JodieConfigService from "../services/JodieConfig";
+import type {Dictionary, GObject} from "../joiner";
+import {
+    Log,
+    RuntimeAccessible,
+    U
+} from "../joiner";
 
 // Provider logo imports
 import openaiLogo from '../assets/icons/providers/openai.svg';
@@ -79,7 +82,9 @@ export interface ProviderPreference {
     updatedAt: number;
 }
 
+@RuntimeAccessible('AI')
 export class AI{
+    static cname = 'AI';
     static GPT: AI;
     static Claude: AI;
     static DeepSeek: AI;
@@ -167,6 +172,7 @@ export class AI{
     }
 
     static getActiveVersion(provider?: TAIProvider): AIVersion {
+        console.log('getActiveVersion', {p0:provider, p1: JodieConfig.current.activeProvider});
         if (!provider) provider = JodieConfig.current.activeProvider;
         return AI[provider].versions[AIConfig.get(provider).model]
     }
@@ -289,7 +295,10 @@ AI.Kimi.bi_icon = 'robot';
 AI.Ollama.bi_icon = 'robot';
 
 type TAIVersion = string;
+
+@RuntimeAccessible('AIConfig')
 export class AIConfig{
+    static cname = 'AIConfig';
     private static map: Dictionary<TAIProvider, ProviderConfig> = {} as any;
     static default: AIConfig;
     name: TAIProvider;
@@ -426,9 +435,12 @@ new AIConfig(AIProvider.Ollama, 'llama3.2', 'http://localhost:11434');*/
 
 
 export type ProviderConfig = AIConfig;
+
+@RuntimeAccessible('JodieConfig')
 export class JodieConfig {
+    static cname = 'JodieConfig';
     static default: JodieConfig = new JodieConfig();
-    static current: JodieConfig = JodieConfigService.load();
+    static current: JodieConfig = JodieConfig.load();
     providers: Dictionary<TAIProvider, ProviderConfig>;
     activeProvider: TAIProvider = AIProvider.Claude;
     position?: { x: number; y: number };
@@ -468,10 +480,27 @@ export class JodieConfig {
         }
         return this;
     }
-    static load(json: string | GObject): JodieConfig {
-        let data = (typeof json === 'string' ? JSON.parse(json) : json) as JodieConfig;
+    static load(json?: string | GObject | null): JodieConfig {
+        let data: GObject<JodieConfig>;
+        if (!json) json = localStorage.getItem(AI.STORAGE_GLOBAL_CONFIG);
+        try {
+            data = (typeof json === 'string' ? JSON.parse(json) : json) as JodieConfig;
+        } catch (e) {
+            Log.eDevv('Failed to load JodieConfig:', {json});
+            if (!JodieConfig.current) JodieConfig.current = new JodieConfig();
+            return JodieConfig.current;
+        }
+
         // Validate structure
-        if (!data || !Array.isArray(data.providers)) { throw new Error('Invalid credentials format'); }
+        if (!data || !Array.isArray(data.providers)) {
+            // if it fails on first load (both no argument and no saved stuff in storage), just initialize at default
+            if (!JodieConfig.current) {
+                JodieConfig.current = new JodieConfig();
+                return JodieConfig.current;
+            }
+            Log.eDevv('JodieConfig: Invalid credentials format', {data, json});
+            return JodieConfig.current;
+        }
 
         data = U.toInstanceOf(data, JodieConfig);
         (AIConfig as any).map = data.providers;
@@ -486,6 +515,15 @@ export class JodieConfig {
     static setGlobalDefault(providerId?: TAIProvider | null): void {
         JodieConfig.default.activeProvider = providerId || AI.Claude.name;
         JodieConfig.default.save();
+    }
+
+    static hasEnabledProviders() { return JodieConfig.getEnabledProviders().length > 0; }
+    static getEnabledProviders(): TAIProvider[] {
+        return ALL_AI_PROVIDERS.filter(provider => {
+            const config = AIConfig.get(provider);
+            let llm = AI[provider];
+            return config && (!llm.requiresKey || config.apiKey) && config.enabled;
+        });
     }
 
     export(): string { return JSON.stringify(this, null, 2); }

@@ -7,11 +7,11 @@
  * previously duplicated between DocumentationSection.tsx and DocumentationTab.tsx
  */
 
+import type { Dictionary } from '../joiner';
 import { LProject } from '../joiner';
 import AIProviderService from './AIProviderService';
-import { JodieConfigService } from './JodieConfig';
 import { JjodieContextService } from './JjodieContext';
-import {AI} from "../types/jodie";
+import {AI, JodieConfig} from "../types/jodie";
 
 // ============================================
 // TYPES
@@ -145,17 +145,10 @@ export class DocumentationService {
     // ========================================
 
     /**
-     * Check if AI provider is configured and available
-     */
-    static isAIAvailable(): boolean {
-        return JodieConfigService.hasValidConfiguration();
-    }
-
-    /**
      * Generate documentation (auto-selects Local or Jjodie based on parameter)
      */
     static async generate(project: LProject, useJjodie: boolean): Promise<GenerationResult> {
-        if (useJjodie && this.isAIAvailable()) {
+        if (useJjodie && JodieConfig.getEnabledProviders().length > 0) {
             return await this.generateWithJjodie(project);
         } else {
             return this.generateLocal(project);
@@ -618,7 +611,7 @@ export class DocumentationService {
         console.log('[DocumentationService] Jjodie prompt built, length:', prompt.length);
 
         // Get active provider
-        const activeProvider = JodieConfigService.getActiveProvider();
+        const activeProvider = JodieConfig.current.activeProvider;
         if (!activeProvider) {
             throw new Error('No AI provider configured');
         }

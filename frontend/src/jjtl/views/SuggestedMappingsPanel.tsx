@@ -20,7 +20,7 @@ import { MappingCard } from './MappingCard';
 import GrammarTab from './GrammarTab';
 import type { GrammarRule } from '../components/GrammarDiagram/types';
 import { ProviderSelector, LocalOption } from '../../components/common/ProviderSelector';
-import {AIConfig} from "../../types/jodie";
+import {AIConfig, JodieConfig} from "../../types/jodie";
 
 export interface SuggestedMappingsPanelProps {
     /** Static source metamodel data (use getSourceMetamodel for fresh data) */
@@ -152,10 +152,10 @@ export const SuggestedMappingsPanel: React.FC<SuggestedMappingsPanelProps> = ({
     const hoveredId = hoveredMapping ?? internalHoveredId;
 
     // Check AI availability
-    const isAIAvailable = useMemo(() => mappingSuggestionService.isAIAvailable(), []);
+    const isAIAvailable = useMemo(() => JodieConfig.hasEnabledProviders(), []);
     const aiProviderName = useMemo(() => {
         if (selectedLocalOption === 'simple') return null;
-        return mappingSuggestionService.getAIProviderName() || resolvedProvider;
+        return JodieConfig.current.activeProvider || resolvedProvider;
     }, [selectedLocalOption, resolvedProvider]);
 
     // Filter suggestions by status

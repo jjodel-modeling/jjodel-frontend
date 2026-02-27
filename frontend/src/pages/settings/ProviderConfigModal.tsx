@@ -6,7 +6,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {TAIProvider, AI, AIConfig, AIProvider, JodieConfig} from '../../types/jodie';
 import { AIProviderService } from '../../services/AIProviderService';
-import { JodieConfigService } from '../../services/JodieConfig';
 import './ProviderConfigModal.scss';
 
 

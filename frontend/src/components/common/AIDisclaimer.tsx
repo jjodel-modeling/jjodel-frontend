@@ -10,8 +10,7 @@
  */
 
 import React from 'react';
-import { JodieConfigService } from '../../services/JodieConfig';
-import {AI, AIProvider} from '../../types/jodie';
+import {AI, AIProvider, JodieConfig} from '../../types/jodie';
 import './AIDisclaimer.scss';
 
 interface AIDisclaimerProps {
@@ -24,7 +23,7 @@ interface AIDisclaimerProps {
  * Automatically reads the current provider name from settings.
  */
 export const AIDisclaimer: React.FC<AIDisclaimerProps> = ({ compact = false }) => {
-    const llm = AI[JodieConfigService.getActiveProvider()];
+    const llm = AI[JodieConfig.current.activeProvider];
 
     if (compact) {
         return (

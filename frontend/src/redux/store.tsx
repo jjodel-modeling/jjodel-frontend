@@ -400,7 +400,6 @@ otherwise you would click the edge container instead of the graph-elements benea
 
 
 function makeDefaultGraphViews(vp: DViewPoint, validationVP: DViewPoint): DViewElement[] {
-
     let errorOverlayView: DViewElement = DViewElement.new2('Generic error view', DV.semanticErrorOverlay(), validationVP, (v) => {
         v.jsCondition = 'let nstate = node?.state || {};\nObject.keys(nstate).filter(k => k.indexOf("error_")===0 && nstate[k]).length>0';
         v.usageDeclarations = "(ret)=>{\n" +
