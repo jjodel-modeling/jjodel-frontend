@@ -359,8 +359,8 @@ export function Jodie(): JSX.Element {
                     onOpenSettings={handleOpenSettings}
                     onOpenDocumentation={handleOpenDocumentation}
                     onJjScriptExecuted={handleJjScriptExecuted}
-                    supportsVision={activeVersion.capabilities.vision}
-                    supportsPDF={activeVersion.capabilities.pdf}
+                    supportsVision={activeVersion?.capabilities.vision || false}
+                    supportsPDF={activeVersion?.capabilities.pdf || false}
                 />
             ) : (
                 <JodieMinimized

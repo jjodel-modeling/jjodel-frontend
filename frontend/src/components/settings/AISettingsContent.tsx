@@ -74,6 +74,7 @@ export function AISettingsContent({
     const [testStatus, setTestStatus] = useState<Dictionary<string, 'idle' | 'testing' | 'success' | 'error'>>({});
     const [expandedProvider, setExpandedProvider] = useState<TAIProvider | null>(null);
     const [defaultProvider, setDefaultProvider] = useState<TAIProvider | null>(JodieConfig.current.activeProvider);
+    // const [update, setUpdate] = useState(0);
 
     // List of configured providers for the default selector
     const configuredProvidersList =
@@ -174,6 +175,7 @@ export function AISettingsContent({
                                                 let val = e.target.value;
                                                 config.model = val;
                                                 config.save();
+                                                setUpdate(update + 1);
                                             }}
                                         ><optgroup label="Select a model">
                                             {Object.keys(llm.versions).map(name => {

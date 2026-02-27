@@ -58,7 +58,7 @@ export function ProviderSelector({ activeProvider, onProviderChange, onOpenSetti
                     const version = llm.versions[config.model];
 
                     return (
-                        <option key={provider} value={provider}>{provider} ({version.label})</option>
+                        <option key={provider} value={provider}>{provider} ({version?.label || 'Unknown model'})</option>
                     );
                 })}
             </select>

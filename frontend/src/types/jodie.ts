@@ -171,10 +171,10 @@ export class AI{
         else return Object.values(this.versions).some(v=> v.capabilities.vision || v.capabilities.pdf);
     }
 
-    static getActiveVersion(provider?: TAIProvider): AIVersion {
+    static getActiveVersion(provider?: TAIProvider): AIVersion | null {
         console.log('getActiveVersion', {p0:provider, p1: JodieConfig.current.activeProvider});
         if (!provider) provider = JodieConfig.current.activeProvider;
-        return AI[provider].versions[AIConfig.get(provider).model]
+        return AI[provider].versions[AIConfig.get(provider).model] || null;
     }
 }
 
@@ -252,7 +252,6 @@ AI.Llama
     .add('mixtral-8x7b-32768',        'Mixtral 8x7B',     false, false)
     .add('llava-v1.5-7b-4096-preview','LLaVA 1.5 7B',     true,  false)
     .add('gemma2-9b-it',              'Gemma 2 9B',       false, false)
-AI.Groq; // none?
 AI.Copilot;
 
 AI.Kimi
@@ -267,6 +266,34 @@ AI.Ollama
     .add('codellama',                 'Code Llama',       false, false)
     .add('llava',                     'LLaVA',            true,  false)
     .add('qwen2.5',                   'Qwen 2.5',         false, false)
+const unkn = false;
+AI.Groq // NB: groq is infrastructure provider, not llm. but have a LLM made of mergers of other models?
+// Groq
+    .add('groq/compound', 'Compound', unkn, unkn)
+    .add('groq/compound-mini', 'Compound Mini', unkn, unkn)
+// Meta
+    .add('llama-3.1-8b-instant', 'Llama 3.1 8B', unkn, unkn)
+    .add('llama-3.3-70b-versatile', 'Llama 3.3 70B', unkn, unkn)
+    // .add('meta-llama/llama-4-maverick-17b-128e-instruct', '', unkn, unkn) // Deprecated
+    .add('meta-llama/llama-4-scout-17b-16e-instruct', 'Llama 4 scout 17B 16E', unkn, unkn)
+    // .add('meta-llama/llama-guard-4-12b', '', unkn, unkn) // Deprecated
+    .add('meta-llama/llama-prompt-guard-2-22m', 'Llama Prompt Guard 2 22M', unkn, unkn)
+    .add('meta-llama/llama-prompt-guard-2-86m', 'Prompt Guard 2 86M', unkn, unkn)
+// OpenAI
+    .add('openai/gpt-oss-120b', 'GPT OSS 120B', unkn, unkn)
+    .add('openai/gpt-oss-20b', 'GPT OSS 20B', unkn, unkn)
+    .add('openai/gpt-oss-safeguard-20b', 'Safety GPT OSS 20B', unkn, unkn)
+    .add('whisper-large-v3', 'Whisper', unkn, unkn)
+    .add('whisper-large-v3-turbo', 'Whisper Large V3 Turbo', unkn, unkn)
+// Moonshot AI
+    // .add('moonshotai/kimi-k2-instruct', 'Kimi K2 Instruct', unkn, unkn) // Deprecated
+    .add('moonshotai/kimi-k2-instruct-0905', 'Kimi K2 0905', unkn, unkn)
+// Alibaba Cloud
+    .add('qwen/qwen3-32b', 'Qwen3-32B', unkn, unkn)
+// Canopy Labs
+    // arabic language ai is too niche .add('canopylabs/orpheus-arabic-saudi', 'Canopy Labs Orpheus Arabic Saudi', unkn, unkn)
+    .add('canopylabs/orpheus-v1-english', 'Canopy Labs Orpheus V1 English', unkn, unkn)
+
 /*AI.???
     .add('mixtral-8x7b-32768',               'Mixtral 8x7B',        false, false)
     .add('llava-v1.5-7b-4096-preview',       'LLaVA 1.5 7B',        true,  false)
@@ -285,14 +312,15 @@ AI.Groq.endpoint = 'https://api.groq.com/openai/v1/chat/completions';
 AI.Kimi.endpoint = 'https://api.moonshot.cn/v1/chat/completions';
 AI.Ollama.endpoint = 'http://localhost:11434/v1/chat/completions'; // Default local, configurable via baseUrl
 
-AI.GPT.bi_icon = 'chat-dots';
-AI.Claude.bi_icon = 'robot';
-AI.DeepSeek.bi_icon = 'robot';
-AI.Gemini.bi_icon = 'google';
-AI.Mistral.bi_icon = 'robot';
-AI.Groq.bi_icon = 'robot';
-AI.Kimi.bi_icon = 'robot';
-AI.Ollama.bi_icon = 'robot';
+AI.GPT.bi_icon = 'openai'; // chat-dots bubble speech generic candidate
+AI.Claude.bi_icon = 'claude';
+AI.DeepSeek.bi_icon = 'robot'; // missing
+AI.Gemini.bi_icon = 'stars';
+AI.Mistral.bi_icon = 'robot'; // missing
+AI.Groq.bi_icon = 'robot'; // missing
+AI.Llama.bi_icon = 'meta';
+AI.Kimi.bi_icon = 'moon';
+AI.Ollama.bi_icon = 'robot'; // missing
 
 type TAIVersion = string;
 
