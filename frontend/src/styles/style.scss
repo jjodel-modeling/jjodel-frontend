@@ -36,6 +36,8 @@ button, input, select, textarea {
   visibility: visible !important;
   appearance: auto !important;
   display: block !important;
+  opacity: 1 !important;
+  ::before, ::after { display: none !important; }
 }
 
 /* classes */
@@ -499,9 +501,10 @@ select {
 
   &:hover:not(:disabled) {
     background: var(--color-bg-hover);
-    border-color: var(--color-border-hover);
+    border-color: transparent;
     transform: translateY(-1px);
     box-shadow: var(--shadow-button-hover);
+    outline: 2px solid var(--color-border-hover);
   }
 
   &:active:not(:disabled) {
@@ -761,10 +764,10 @@ i.bi {
     color: var(--palette-1-hover);
   }
 }
+/*
 .btn i.bi, .bg i.bi{
   color: var(--palette-w);
 }
-/*
 .jj-btn-info, .jj-btn-view, .jj-btn-up, .jj-btn-back {
   font-size: 24px;
   color: var(--font-color-1);

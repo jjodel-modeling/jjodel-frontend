@@ -114,7 +114,7 @@ export function MTMComponent(props: AllProps): JSX.Element{
     return <section className={'w-100 h-100 p-2 MTM-tab'}>
         {/*<h1 className={"rightbar-title"}>Model → Text → Model</h1>*/}
         <h1 className={"rightbar-title"}>Languages (T2M, M2M, M2T)</h1>
-        <label className={'d-flex'} style={{flexWrap: 'wrap'}}>
+        <label className={'d-flex'}>
             <span className={'my-auto'}>Language&nbsp;</span>
             <select className={'my-auto'} onChange={(e) => setLanguage(e.target.value)} value={language}>
                 <optgroup label={"languages"}>{
@@ -130,6 +130,8 @@ export function MTMComponent(props: AllProps): JSX.Element{
         </label>
 
         <EditorToolbar
+            className={"my-2"}
+            style={{minHeight: '2ic', maxHeight: '2ic', padding: 0}}
             title={`${language} Output`}
             icon="bi-arrow-left-right"
             content={m2t_result}
@@ -364,9 +366,8 @@ function MTMEditor(props: EditorAllProps): JSX.Element{
                     <CommandBar className="my-auto ms-0 me-auto back-button">
                         <Btn icon={'back'} action={() => setEditor(false)} tip={'Back'}/>
                     </CommandBar>
-                    <label className="m-auto me-0" onClick={()=>setEditor(Date.now() as any)}>Editing:</label>
-                    <label className="m-auto me-0">{Math.random().toFixed(2)}</label>
-                    <Input className="m-auto ms-0 h-100 italic" hidden={true} getter={() => language} setter={(v0) => {
+                    <label className="m-auto me-0" onClick={()=>setEditor(Date.now() as any)}>Editing</label>
+                    <Input className="m-auto ms-1 h-100 italic" hidden={true} getter={() => language} setter={(v0) => {
                         let value = v0 as string;
                         TRANSACTION('rename language "'+language+'"', ()=> {
                             SetRootFieldAction.new('languages.'+value, langObj, '', false);
@@ -378,6 +379,7 @@ function MTMEditor(props: EditorAllProps): JSX.Element{
                             })
                         }, language, value)
                     }} style={{overflow: 'visible'}}/>
+                    <label className="m-auto me-0">{Math.random().toFixed(2)}</label>
                 </h2>
             </div>
             <div className={'d-flex editors'} style={{flexFlow: 'row'}}>
@@ -396,7 +398,7 @@ function MTMEditor(props: EditorAllProps): JSX.Element{
                         </select>
                     </h3>
                     <Tooltip tooltip={a.tooltip} inline={true}>
-                        <label className={'d-flex'}><Input
+                        <label className={'d-flex ms-3'}><Input
                             className={'my-auto'}
                             type={"checkbox"}
                             getter={() => a.allowPartials}
@@ -419,7 +421,7 @@ function MTMEditor(props: EditorAllProps): JSX.Element{
                         /><span className={'my-auto ms-1'}> Allow partial {a.operation}s</span></label>
                     </Tooltip>
                     {a.allowPartials ? <div className={'fragments d-flex ms-1'}><div className={'fill'}>{
-                        ['+', ...a.fragments].reverse().map(f=><div className={'fragment-btn btn ' +(f === a.fragment ? 'selected btn-secondary' : 'btn-outline-secondary')}
+                        ['+', ...a.fragments].reverse().map(f=><div className={'fragment-btn '/* +(f === a.fragment ? 'selected btn-secondary' : 'btn-outline-secondary')*/}
                                               onClick={() => {a.setFragment(f); a.set_oldEngine('__jj_needs_reset__')}}>
                             {f === 'Default'? <span>Default</span> : <Input placeholder={'Confirm to delete'} key={f} getter={()=>f} tooltip={'double click to '+(f==='+'?'add':'rename')+' fragment'} setter={(v)=>{
                                 if (!v) {

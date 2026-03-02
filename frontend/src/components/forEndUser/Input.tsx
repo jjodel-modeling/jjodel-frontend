@@ -1,4 +1,14 @@
-import React, {Dispatch, JSX, KeyboardEvent, LegacyRef, ReactElement, ReactNode, useRef} from 'react';
+import React, {
+    Dispatch,
+    JSX,
+    KeyboardEvent,
+    LegacyRef,
+    ReactElement,
+    ReactNode,
+    useEffect,
+    useLayoutEffect,
+    useRef
+} from 'react';
 import {connect} from 'react-redux';
 import {DState} from '../../redux/store';
 import {
@@ -84,12 +94,30 @@ export function InputComponent(props: AllProps) {
     const oldValue: PrimitiveType | PrimitiveType[] | LPointerTargetable = (getter) ? getter(data, field) : (data ? data[field] : undefined); // !== undefined); ? data[field] : 'undefined'
     let [value, setValue] = useStateIfMounted<PrimitiveType | PrimitiveType[] | LPointerTargetable>(oldValue);
     let [visible, setVisible] = useStateIfMounted<boolean>(props.clickHidden ? false : true);
-
     if (U.isError(data) || data && typeof data !== 'object') throw errorUpdate("Error on <" + (U.uppercaseFirstLetter(props.tag || "Input"))+"> data props invalid", data);
     if (U.isError(value)) throw errorUpdate("Error on <" + (U.uppercaseFirstLetter(props.tag || "Input"))+"> value getter", value);
     const [isTouched, setIsTouched] = useStateIfMounted(false);
     const inputRef = useRef<Element | null>(null);
     if (props.tag === 'select') value = oldValue; // select does not use state.
+    useLayoutEffect(() => {
+        if (visible && inputRef.current) {
+            let input = inputRef.current;
+            // input.select() works on inputs, but this works for contenteditable too
+            (inputRef.current as any)?.focus();
+            if (input.tagName === 'INPUT') (input as HTMLInputElement).select();
+            else {
+                const range = document.createRange();
+                range.selectNodeContents(input);
+                const selection = window.getSelection();
+                if (selection) {
+                    selection.removeAllRanges();
+                    selection.addRange(range);
+                }
+            }
+
+        }
+    }, [visible]);
+
     let serializeValue = (val: LPointerTargetable | PrimitiveType | PrimitiveType[], maxDepth=1, currDepth = 0): string | PrimitiveType | PrimitiveType[] => {
         if (Array.isArray(val)) {
             if (props.isMultiSelect && currDepth < maxDepth) {
@@ -392,7 +420,7 @@ export function InputComponent(props: AllProps) {
         // console.error('hidden input', {ref: rootprops.ref, rootprops});
         let html: Element | null = !rootprops.ref ? null : typeof rootprops.ref === 'function' ? rootprops.ref() : rootprops.ref.current;
         U.clickedOutside(html?.parentElement, ()=>setVisible(false));
-        return <span {...rootprops} onDoubleClick={(e)=>{rootprops.onDoubleClick?.(e); setVisible(true)}}>{valueStr}</span>;
+        return <span {...rootprops} onDoubleClick={(e)=>{ rootprops.onDoubleClick?.(e); setVisible(true)}}>{valueStr}</span>;
     }
     if (!wrap) return input;
 

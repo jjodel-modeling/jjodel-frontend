@@ -6,8 +6,9 @@
 
 import React, { useState, useCallback, ReactNode } from 'react';
 import './EditorToolbar.scss';
+import {GenericProps} from "../../joiner/types";
 
-export interface EditorToolbarProps {
+export interface EditorToolbarProps extends GenericProps {
   /** Titolo/label dell'editor (string o ReactNode per custom event name inputs) */
   title: ReactNode;
   /** Icona Bootstrap Icons (es: 'bi-code-slash') */
@@ -32,8 +33,6 @@ export interface EditorToolbarProps {
   onCollapseToggle?: () => void;
   /** Sola lettura - nasconde alcuni controlli */
   readOnly?: boolean;
-  /** Classe CSS aggiuntiva */
-  className?: string;
 }
 
 export function EditorToolbar({
@@ -50,6 +49,7 @@ export function EditorToolbar({
   onCollapseToggle,
   readOnly = false,
   className = '',
+  style={}
 }: EditorToolbarProps): JSX.Element {
   const [wrap, setWrap] = useState(initialWrap);
   const [expanded, setExpanded] = useState(initialExpanded);
@@ -97,7 +97,7 @@ export function EditorToolbar({
   }, [onCollapseToggle]);
 
   return (
-    <div className={`editor-toolbar ${className}`}>
+    <div className={`editor-toolbar ${className}`} style={style}>
       {/* Left side: collapse toggle + title */}
       <div className="editor-toolbar__left" onClick={handleLeftClick}>
         {onCollapseToggle && (

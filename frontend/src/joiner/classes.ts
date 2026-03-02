@@ -3852,11 +3852,11 @@ export class Language {
         if (!this.m2t.engine) this.m2t.engine = Object.keys(this.m2t)[0] || undefined as any;
         for (let k in m2t) {
             if (typeof m2t[k] !== 'object') continue;
-            if (m2t[k].allowPartials && m2t[k].__str && !m2t[k].Default) m2t[k].Default = m2t.__str;
+            if (m2t[k].allowPartials && m2t[k].__str && !m2t[k].Default) m2t[k].Default = m2t[k].__str;
         }
         for (let k in t2m) {
             if (typeof t2m[k] !== 'object') continue;
-            if (t2m[k].allowPartials && t2m[k].__str && !t2m[k].Default) t2m[k].Default = t2m.__str;
+            if (t2m[k].allowPartials && t2m[k].__str && !t2m[k].Default) t2m[k].Default = t2m[k].__str;
         }
         this.edited = false;
         this.v = windoww.VersionFixer.get_highestversion();
