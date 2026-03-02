@@ -86,7 +86,7 @@ export {Constructors, JsType, RuntimeAccessibleClass, DPointerTargetable,
     ViewScore,
     UserHistory,
     Language,
-    LUser, DUser, DProject, LProject, Pointers, PointedBy, PendingPointedByPaths, CoordinateMode, EdgeHead, EGraphElements, EModelElements, transientProperties,
+    LUser, DUser, DProject, LProject, Pointers, PointedBy, PendingPointedByPaths, CoordinateMode, EGraphElements, EModelElements, transientProperties,
     ViewEClassMatch
 } from "./classes";
 
@@ -102,7 +102,7 @@ export {Uarr, DDate, ParseNumberOrBooleanOptions, myFileReader,
     } from "../common/U";
 export {Uobj} from "../common/UObj";
 export {Log} from "../common/Log";
-export {DV} from '../common/DV';
+export {DV, EdgeHead} from '../common/DV';
 export {Defaults} from '../common/Defaults';
 export { CSSRuleSorted, CSSParser, TagNames } from "../common/Uhtml";
 // export {Log as Logg, Size, GraphSize, GraphPoint, IPoint, ISize, Point} from "../common/Log";

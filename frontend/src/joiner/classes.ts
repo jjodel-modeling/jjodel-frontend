@@ -522,19 +522,6 @@ export enum CoordinateMode {
 }
 
 export type EPSize = GraphSize & {currentCoordType: CoordinateMode};
-export enum EdgeHead {
-    composition = "Composition",
-    aggregation = "Aggregation",
-    reference   = "Association",
-    extend      = "Extension",
-    zero = "exactly zero / not present",
-    one = "exactly one, required",
-    many = "zero or many, optional, unbounded",
-    zeroOrOne = "zero or one, optional",
-    zeroOrMany = "zero or many, optional, unbounded",
-    oneOrMany = "one or many, at least one"
-}
-
 
 @RuntimeAccessible('UserHistory')
 export class UserHistory{

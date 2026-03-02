@@ -5,7 +5,6 @@ import {
     DViewPoint,
     DVoidEdge,
     EdgeBendingMode,
-    EdgeHead,
     GObject,
     GraphPoint, LPointerTargetable, LViewElement,
     Pointer,
@@ -577,12 +576,12 @@ end:`
         let ret: string;
         let headstr = head === "head" ? "segments.head" : "segments.tail";
         let styleTranslateRotate = 'transform:`translate(${' + headstr + '.x}px, ${' + headstr + '.y}px) rotate(${' + headstr + '.rad}rad)`,' +
-            ' transformOrigin:`${'+headstr+'.w/2}px ${'+headstr+'.h/2}px`, d:"var(--'+head+')"';
+            ' transformOrigin:`${'+headstr+'.w/2}px ${'+headstr+'.h/2}px`';
         let attrs = `\n\t\t\t\tstyle={{`+styleTranslateRotate +`}}\n\t\t\t\tclassName={"` + head + ` ` + type +` preview"}`;
         let hoverAttrs = `\n\t\t\t\tstyle={{`+styleTranslateRotate +`}}\n\t\t\t\tclassName={"` + head + ` ` + type +` clickable content"} tabIndex="-1"`;
         let d: string = '';
         console.log('svgHeadTail', {head, type});
-        switch (type) {
+        /*switch (type) {
             default:
                 return "edge '" + head + "' with type: '" +type + "' not found";
             case EdgeHead.extend:
@@ -626,7 +625,7 @@ end:`
                 //if (head === "head") return undefined;
                 d = `M 0 y/2   L x/2 0   L x y/2   L x/2 y   Z`;
                 break;
-        }
+        }*/
 
         d = '';
 
@@ -641,65 +640,27 @@ end:`
 
     static edgeView(modename: EdgeHead, headSize: GraphPoint, tailSize: GraphPoint, dashing: string | undefined, vp: DViewElement, name: string): DViewElement {
         let fill: string;
-        switch (modename){
-            case EdgeHead.reference:
-            default: fill = '#fff0'; break;
+        switch (modename) {
+            case EdgeHead.reference: default: fill = '#fff0'; break;
             case EdgeHead.composition: fill = '#6A6A6A'; break;
             case EdgeHead.aggregation:
             case EdgeHead.extend: fill = '#fff'; break;
         }
 
-        const uml = "-- UML relationships";
-            const agglabel = "◇ Aggregation / Composition";
-            const extendlabel = "△ "+EdgeHead.extend;
-            const asslabel = "Λ "+EdgeHead.reference;
-        const e1 = "--- 1";
-
-        const cardinality = "-- Cardinality";
-
-            const zerolabel = "[0] " + EdgeHead.zero;
-            const onelabel = "[1] " + EdgeHead.one;
-            const manylabel = "[*] " + EdgeHead.many;
-            const zeroOrOneLabel = "[0..1] " + EdgeHead.zeroOrOne;
-            const zeroOrManyLabel = "[0..*] " + EdgeHead.zeroOrMany;
-            const oneOrManyLabel = "[1..*] " + EdgeHead.oneOrMany;
-
-        const e2 = "--- 2";
-
-        let headdict: Dictionary<string, string> = {
-            [uml]: 'UML Relationships',
-                [asslabel]: 'M11.354 5.646a.5.5 90 010 .708l-6.035 6.089a.5.5 90 01-.156-.116L11.375 5.999l-6.406-6.211a.5.5 90 01.208-.115z',
-                [extendlabel]: 'M 0 0   L x y/2   L 0 y   Z',
-                [agglabel]: 'M7.7198-.2722c.5684-.4437 1.4898-.4437 2.0582 0l6.3853 4.9847c.5684.4437.5684 1.162 0 1.605L9.7781 11.3022c-.5684.4437-1.4888.4437-2.0562 0L1.3344 6.3182a1.4505 1.1322 0 010-1.605z',
-            [e1]: '--',
-
-            [cardinality]: 'Cardinality',
-                [zerolabel]: 'M-11.985 5.981A1 1 0 000 6 1 1 0 00-12 6',
-                [onelabel]: 'M0 0V12',
-                [manylabel]: 'M12 1 0 6 12 11H12M12 6H0',
-                [zeroOrOneLabel]: 'M-11.985 5.981A1 1 0 000 6 1 1 0 00-12 6M6 0V12',
-                [zeroOrManyLabel]: 'M-11.985 5.981A1 1 0 000 6 1 1 0 00-12 6M6 0M12 1 0 6 12 11H12M12 6H0',
-                [oneOrManyLabel]: 'M0 0V12M12 1 0 6 12 11H12M12 6H0',
-            [e2]: '--'
-        };
-        let predefinedPaths: {k:string, v:string}[] = Object.entries(headdict).map((e)=>({k:e[0], v:e[1]}));
-
         let headPath: string = '', tailPath: string = '';
         switch (modename) {
             default: break;
-            case EdgeHead.extend: headPath = extendlabel; break;
-            case EdgeHead.reference: headPath = asslabel; break;
-            case EdgeHead.aggregation: tailPath = agglabel; break;
-            case EdgeHead.composition: tailPath = agglabel; break;
-            case EdgeHead.zero: headPath = zerolabel; break;
-            case EdgeHead.one: headPath = onelabel; break;
-            case EdgeHead.many: headPath = manylabel; break;
-            case EdgeHead.zeroOrOne: headPath = zeroOrOneLabel; break;
-            case EdgeHead.zeroOrMany: headPath = zeroOrManyLabel; break;
-            case EdgeHead.oneOrMany: headPath = oneOrManyLabel; break;
+            case EdgeHead.extend:      headPath = EdgeHead.Head_extend;      tailPath = EdgeHead.Tail_extend;      break;
+            case EdgeHead.reference:   headPath = EdgeHead.Head_reference;   tailPath = EdgeHead.Tail_reference;   break;
+            case EdgeHead.aggregation: headPath = EdgeHead.Head_aggregation; tailPath = EdgeHead.Tail_aggregation; break;
+            case EdgeHead.composition: headPath = EdgeHead.Head_composition; tailPath = EdgeHead.Tail_composition; break;
+            case EdgeHead.zero:        headPath = EdgeHead.Head_zero;        tailPath = EdgeHead.Tail_zero;        break;
+            case EdgeHead.one:         headPath = EdgeHead.Head_one;         tailPath = EdgeHead.Tail_one;         break;
+            case EdgeHead.many:        headPath = EdgeHead.Head_many;        tailPath = EdgeHead.Tail_many;        break;
+            case EdgeHead.zeroOrOne:   headPath = EdgeHead.Head_zeroOrOne;   tailPath = EdgeHead.Tail_zeroOrOne;   break;
+            case EdgeHead.zeroOrMany:  headPath = EdgeHead.Head_zeroOrMany;  tailPath = EdgeHead.Tail_zeroOrMany;  break;
+            case EdgeHead.oneOrMany:   headPath = EdgeHead.Head_oneOrMany;   tailPath = EdgeHead.Tail_oneOrMany;   break;
         }
-        headPath = headdict[headPath] || '';
-        tailPath = headdict[tailPath] || '';
 
         let palette: PaletteType = {
             'anchorSize': {type: 'number', value:15, unit:'px'},
@@ -708,8 +669,8 @@ end:`
             'stroke-width': {value:1, type: 'number', unit: 'px'},
             'stroke-color-hover': U.hexToPalette('#000'),
             'stroke-width-hover': {value:3, type: 'number', unit: 'px'},
-            'head': {type:'path', value:headPath, options: predefinedPaths, x:'edgeHeadSize.x', y:'edgeHeadSize.y'},
-            'tail': {type:'path', value:tailPath, options: predefinedPaths, x:'edgeTailSize.x', y:'edgeTailSize.y'},
+            'head': {type:'path', value:headPath, options: EdgeHead.predefinedPaths, x:'view.edgeHeadSize.x', y:'view.edgeHeadSize.y'},
+            'tail': {type:'path', value:tailPath, options: EdgeHead.predefinedPaths, x:'view.edgeTailSize.x', y:'view.edgeTailSize.y'},
             'fill': U.hexToPalette(fill),
         };
 
@@ -1140,6 +1101,84 @@ valuecolormap[ShortAttribETypes.EChar] = "green";
 valuecolormap[ShortAttribETypes.EVoid] = "gray";
 
 let valuecolormap_str = JSON.stringify(valuecolormap); // can this be declared inside view.constants ?
+
+
+export class EdgeHead{
+    static composition = "Composition";
+    static aggregation = "Aggregation";
+    static reference   = "Association";
+    static extend      = "Extension";
+    static zero = "exactly zero / not present";
+    static one = "exactly one, required";
+    static many = "zero or many, optional, unbounded";
+    static zeroOrOne = "zero or one, optional";
+    static zeroOrMany = "zero or many, optional, unbounded";
+    static oneOrMany = "one or many, at least one";
+
+    static Head_composition = "";
+    static Tail_composition = "M8.5776-.9085c.6316-.522 1.6553-.522 2.2869 0l7.0948 5.8644c.6316.522.6316 1.3671 0 1.8882L10.8645 12.7085c-.6316.522-1.6542.522-2.2847 0L1.4827 6.845a1.6117 1.332 0 010-1.8882z";
+    
+    static Head_aggregation = "";
+    static Tail_aggregation = EdgeHead.Tail_composition;
+
+    static Head_reference   = "M11.354 5.646a.5.5 90 010 .708l-6.035 6.089a.5.5 90 01-.156-.116L11.375 5.999l-6.406-6.211a.5.5 90 01.208-.115z";
+    static Tail_reference   = "";
+
+    static Head_extend      = "M 0 0   L x y/2   L 0 y   Z";
+    static Tail_extend      = "";
+
+    static Head_zero        = "M-11.985 5.981A1 1 0 000 6 1 1 0 00-12 6";
+    static Tail_zero        = "";
+
+    static Head_one         = "M0 0V12";
+    static Tail_one         = "";
+
+    static Head_many        = "M12 1 0 6 12 11H12M12 6H0";
+    static Tail_many        = "";
+
+    static Head_zeroOrOne   = "M-11.985 5.981A1 1 0 000 6 1 1 0 00-12 6M6 0V12";
+    static Tail_zeroOrOne   = "";
+
+    static Head_zeroOrMany  = "M-11.985 5.981A1 1 0 000 6 1 1 0 00-12 6M6 0M12 1 0 6 12 11H12M12 6H0";
+    static Tail_zeroOrMany  = "";
+
+    static Head_oneOrMany   = "M0 0V12M12 1 0 6 12 11H12M12 6H0";
+    static Tail_oneOrMany   = "";
+
+
+    static uml            = "-- UML relationships";
+    static agglabel       = "◇ Aggregation / Composition";
+    static extendlabel    = "△ "+EdgeHead.extend;
+    static asslabel       = "Λ "+EdgeHead.reference;
+    static e1             = "--- 1";
+    static cardinality    = "-- Multiplicity";
+    static zerolabel      = "[0]    exactly zero / not present";
+    static onelabel       = "[1]    exactly one, required";
+    static manylabel      = "[0..*] zero or many, optional, unbounded";
+    static zeroOrOneLabel = "[0..1] zero or one, optional";
+    static zeroOrManyLabel= "[0..*] zero or many, optional, unbounded "; // was "[0..*] "
+    static oneOrManyLabel = "[1..*] one or many, at least one";
+    static e2             = "--- 2";
+
+
+    static headdict = {
+        [EdgeHead.uml]: 'UML Relationships',
+        [EdgeHead.asslabel]: EdgeHead.Head_reference,
+        [EdgeHead.extendlabel]: EdgeHead.Head_extend,
+        [EdgeHead.agglabel]: EdgeHead.Tail_aggregation,
+        [EdgeHead.e1]: '--- 1',
+        [EdgeHead.cardinality]: 'Multiplicity',
+        [EdgeHead.zerolabel]: EdgeHead.Tail_zero,
+        [EdgeHead.onelabel]: EdgeHead.Tail_one,
+        [EdgeHead.manylabel]: EdgeHead.Tail_many,
+        [EdgeHead.zeroOrOneLabel]: EdgeHead.Tail_zeroOrOne,
+        [EdgeHead.zeroOrManyLabel]: EdgeHead.Tail_zeroOrMany,
+        [EdgeHead.oneOrManyLabel]: EdgeHead.Tail_oneOrMany,
+        [EdgeHead.e2]: '--- 2'
+    } as const;
+    static predefinedPaths: {k:string, v:string}[] = Object.entries(EdgeHead.headdict).map((e)=>({k:e[0], v:e[1]}));
+
+}
 
 
 type ErrorProps = {

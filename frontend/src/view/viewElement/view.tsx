@@ -4,7 +4,7 @@ import type {
     DocString,
     getWParams,
     GObject,
-    LogicContext,
+    LogicContext, NestedArray,
     Pointer,
 } from "../../joiner";
 import {
@@ -823,6 +823,7 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
             } else if (palette0.type === 'path'){
                 // check and resolve for JOM.navigational.variables.
                 try {
+                    // problem here with parsing palette path with variables
                     let palette: PathControl = palette0;
                     let val = palette.value;
                     // val = U.replaceAll(val, 'view.', '');
@@ -830,22 +831,29 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
                     // val = U.replaceAll(val, 'x', palette.x);
                     // val = U.replaceAll(val, 'y', palette.y);
                     let pathArr = U.parseParenthesis(val, '(', ')', true);
-                    // console.log('evaluating path variables pre:', {val, pre: [...pathArr], post:pathArr});
-                    pathArr.map(e=> {
+                    let px = palette.x;
+                    let py = palette.y;
+                    let constants: GObject = this.get_constants(c);
+                    let context: GObject =  {...constants, constants, 'this': c.proxyObject, view: c.proxyObject};
+                    console.log('evaluating path variables pre:', {val, pre: [...pathArr], post:pathArr, palette, px:palette.x, context});
+                    px = U.evalInContextAndScope("("+px+")", context, context);
+                    context.x = px;
+                    py = U.evalInContextAndScope("("+py+")", context, context);
+                    context.y = py;
+                    let pathArr2 = pathArr.map(e=> {
                         e = Array.isArray(e) ? e.join('') : e;
                         if (e[0] !== '(') { // outside of parenthesis, i only replace x, y
-                            e = U.replaceAll(e, 'x', palette.x);
-                            e = U.replaceAll(e, 'y', palette.y);
+                            e = U.replaceAll(e, 'x', px);
+                            e = U.replaceAll(e, 'y', py);
                             return e;
                         }
 
                         // inside parenthesis, i eval
-                        let constants: GObject = this.get_constants(c);
-                        let context: GObject =  {...constants, constants, 'this': c.proxyObject, view: c.proxyObject, x: palette.x, y: palette.y};
                         return U.evalInContextAndScope(e, context);
                     })
-                    val = pathArr.join('');
+                    val = pathArr2.join('');
                     val = "'"+val+"'";
+                    console.log('evaluating path variables post:', {val, post:pathArr, pathArr2});
                     if (allowLESS) s += "\t@" + paletteName + ": " + val + ';\n';
                     s += "\t--" + paletteName + ': ' + val + ';\n';
                 } catch (e) {

@@ -198,40 +198,8 @@ function PaletteDataComponent(props: AllProps) {
         switch (type){
             default: Log.exDevv("unexpected case in addControl:" + type); return;
             case 'path':
-                const uml = "-- UML relationships";
-                    const agglabel = "◇ Aggregation / Composition";
-                    const extendlabel = "△ "+EdgeHead.extend;
-                    const asslabel = "Λ "+EdgeHead.reference;
-                const e1 = "--- 1";
-                const cardinality       = "-- Multiplicity";
-                    const zerolabel         = "[0]    exactly zero / not present";
-                    const onelabel          = "[1]    exactly one, required";
-                    const manylabel         = "[0..*] zero or many, optional, unbounded";
-                    const zeroOrOneLabel    = "[0..1] zero or one, optional";
-                    const zeroOrManyLabel   = "[0..*] zero or many, optional, unbounded "; // was "[0..*] "
-                    const oneOrManyLabel    = "[1..*] one or many, at least one";
-                const e2 = "--- 2";
-
-
-                let headdict: Dictionary<string, string> = {
-                    [uml]: 'UML Relationships',
-                        [asslabel]: 'M7.7198-.2722c.5684-.4437 1.4898-.4437 2.0582 0l6.3853 4.9847c.5684.4437.5684 1.162 0 1.605L9.7781 11.3022c-.5684.4437-1.4888.4437-2.0562 0L1.3344 6.3182a1.4505 1.1322 0 010-1.605z',
-                        [extendlabel]: 'M 0 0   L x y/2   L 0 y   Z',
-                        [agglabel]: 'M8.5776-.9085c.6316-.522 1.6553-.522 2.2869 0l7.0948 5.8644c.6316.522.6316 1.3671 0 1.8882L10.8645 12.7085c-.6316.522-1.6542.522-2.2847 0L1.4827 6.845a1.6117 1.332 0 010-1.8882z',
-                    [e1]: '--- 1',
-                    [cardinality]: 'Multiplicity',
-                        [zerolabel]: 'M-11.985 5.981A1 1 0 000 6 1 1 0 00-12 6',
-                        [onelabel]: 'M0 0V12',
-                        [manylabel]: 'M12 1 0 6 12 11H12M12 6H0',
-                        [zeroOrOneLabel]: 'M-11.985 5.981A1 1 0 000 6 1 1 0 00-12 6M6 0V12',
-                        [zeroOrManyLabel]: 'M-11.985 5.981A1 1 0 000 6 1 1 0 00-12 6M6 0M12 1 0 6 12 11H12M12 6H0',
-                        [oneOrManyLabel]: 'M0 0V12M12 1 0 6 12 11H12M12 6H0',
-                    [e2]: '--- 2'
-                };
-                let predefinedPaths: {k:string, v:string}[] = Object.entries(headdict).map((e)=>({k:e[0], v:e[1]}));
-
                 tmp = {...palette};
-                tmp[prefix] = {type: 'path', value: '', x:'edgeHeadSize.x', y:'edgeHeadSize.y', options: predefinedPaths};
+                tmp[prefix] = {type: 'path', value: '', x:'view.edgeHeadSize.x', y:'view.edgeHeadSize.y', options: EdgeHead.predefinedPaths};
                 break;
             case 'text':
                 tmp = {...palette};

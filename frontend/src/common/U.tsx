@@ -1070,6 +1070,7 @@ export class U {
                         key = key.trim();
                         if (!key || !U.validIdentfierRegexp.test(key)) continue;
                     }
+                    if (key === "this") continue;
                     // anche se li assegno non cambiano i loro valori nel contesto fuori dall'eval, quindi lancio eccezioni con const.
                     prefixDeclarations += "const " + key + "=this." + key + ";";
                     postfixDeclarations = "";
@@ -1083,7 +1084,7 @@ export class U {
         if (scope && context) {
             if (typeof codeStr === "function") { codeStr = codeStr.toString(); } // functions cannot change scope (with statement is deprecated)
             (context as any)._eval = {__codeStr: codeStr}; // necessary to reach this._eval.codeStr inside the eval()
-            // console.log("evalincontextandscope: ", {fullCodeStr: prefixDeclarations + "return eval( this._eval._codeStr );" + postfixDeclarations, codeStr});
+            console.log("evalincontextandscope: ", {fullCodeStr: prefixDeclarations + "return eval( this._eval._codeStr );" + postfixDeclarations, codeStr});
             _ret = new (Function as any)(prefixDeclarations + "; return eval( this._eval.__codeStr );" + postfixDeclarations).call(context);
             delete (context as any)._eval;
         } else
@@ -1447,10 +1448,14 @@ export class U {
         const root: NestedArray<string> = [];
         const stack: NestedArray<string> = [root];
         let start = 0; // start index of next text fragment
+        str = opening + str + closing;
 
         const pushFragment = (endIndex: number) => {
-            if (endIndex > start) {
-                // Only push non-empty fragment
+            //if (endIndex >= str.length - 1)  console.log("push frag", {str, start, endIndex, includeParenthesis})
+            // skip artificial last parenthesis
+            if (endIndex >= str.length - 1) endIndex = str.length - (includeParenthesis ? 2 : 1);
+            // Only push non-empty fragment
+            if (endIndex >= start) {
                 const frag = str.substring(start, includeParenthesis ? endIndex + 1 : endIndex);
                 newArr.push(frag);
             }
@@ -1461,15 +1466,16 @@ export class U {
 
             if (ch === opening) {
                 pushFragment(i);         // push text before "("
-                start = includeParenthesis ? i : i + 1;           // next text starts right after "("
+                start = (i !== 0) && includeParenthesis ? i : i + 1;           // next text starts right after "("
                 stack.push(newArr = []);
             } else if (ch === closing) {
+                const completed = stack.pop() as NestedArray<string>;
+                newArr = completed;
                 pushFragment(i);         // push text before ")"
                 start = includeParenthesis ? i : i + 1;           // next fragment begins after ")"
 
                 // NB: stack only has NestedArray until the leaves, but we never reach the leaves here, we are at level -2 from leaves.
                 // (typeof stack[i] = at least string[] or more nested)
-                const completed = stack.pop() as NestedArray<string>;
                 (stack[stack.length - 1] as NestedArray<string>).push(completed);
             }
         }
@@ -1477,7 +1483,7 @@ export class U {
         // Remaining text after the last parenthesis
         pushFragment(str.length);
 
-        return root;
+        return root[0] as NestedArray<string>;
         // Example:
         // console.log(parseNested("aa b ( dd e (f g)) h (i)"));
     }
